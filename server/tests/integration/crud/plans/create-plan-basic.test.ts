@@ -32,9 +32,7 @@ test.concurrent(
 		const productId = "min_plan";
 		try {
 			await autumnV2.products.delete(productId);
-		} catch (_error) {
-			console.log(_error);
-		}
+		} catch (_error) {}
 
 		const created = await autumnV2.products.create<
 			ApiPlan,
@@ -355,7 +353,7 @@ test.concurrent(
 						billing_method: BillingMethod.UsageBased,
 						billing_units: 1000,
 						tiers: [
-							{ to: 100000, amount: 10 },
+							{ to: 200000, amount: 10 },
 							{ to: 500000, amount: 50 },
 							{ to: 1000000, amount: 40 },
 							{ to: TierInfinite, amount: 30 },
@@ -370,10 +368,6 @@ test.concurrent(
 						interval: BillingInterval.Month,
 						billing_method: BillingMethod.UsageBased,
 						billing_units: 1,
-					},
-					proration: {
-						on_increase: OnIncrease.ProrateImmediately,
-						on_decrease: OnDecrease.Prorate,
 					},
 				},
 			],
@@ -446,6 +440,7 @@ test.concurrent(
 			(i) => i.feature_id === TestFeature.Messages,
 		);
 		expect(meteredItem!.tiers).toHaveLength(4);
+		// V1.2 items expose tier bounds relative to included (200000 - 100000).
 		expect(meteredItem!.tiers![0]).toMatchObject({ to: 100000, amount: 10 });
 
 		const seatsItem = v1_2.items.find(

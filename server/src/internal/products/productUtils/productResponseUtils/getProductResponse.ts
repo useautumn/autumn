@@ -152,7 +152,7 @@ const getProductProperties = ({
 		is_one_off: isOneOffProduct({ product }),
 		interval_group: largestInterval?.interval,
 		has_trial: hasFreeTrial,
-		updateable: product.prices.some(
+		updateable: (product.prices ?? []).some(
 			(p: Price) =>
 				isPrepaidPrice(p) && p.config.interval !== BillingInterval.OneOff,
 		),
@@ -178,8 +178,8 @@ export const getProductResponse = async ({
 }) => {
 	// 1. Get items with display
 	const rawItems = mapToProductItems({
-		prices: product.prices,
-		entitlements: product.entitlements,
+		prices: product.prices ?? [],
+		entitlements: product.entitlements ?? [],
 		features: features,
 	});
 

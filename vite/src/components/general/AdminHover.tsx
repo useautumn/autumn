@@ -1,51 +1,9 @@
 import { PreviewCard } from "@base-ui/react/preview-card";
 import { Check, Copy } from "lucide-react";
 import type React from "react";
-import { forwardRef, useState, useSyncExternalStore } from "react";
+import { forwardRef, useState } from "react";
 import { cn } from "@/lib/utils";
 import { useAdmin } from "@/views/admin/hooks/useAdmin";
-
-let isOptionKeyPressed = false;
-const optionKeyListeners = new Set<() => void>();
-
-const setOptionKeyPressed = (pressed: boolean) => {
-	if (pressed === isOptionKeyPressed) return;
-	isOptionKeyPressed = pressed;
-	for (const listener of optionKeyListeners) listener();
-};
-
-const syncOptionKeyPressed = (event: KeyboardEvent) => {
-	setOptionKeyPressed(event.altKey);
-};
-
-const resetOptionKeyPressed = () => setOptionKeyPressed(false);
-
-const subscribeToOptionKey = (listener: () => void) => {
-	optionKeyListeners.add(listener);
-	if (optionKeyListeners.size === 1 && typeof window !== "undefined") {
-		// Observe modifier state without cancelling or changing keyboard events.
-		window.addEventListener("keydown", syncOptionKeyPressed);
-		window.addEventListener("keyup", syncOptionKeyPressed);
-		window.addEventListener("blur", resetOptionKeyPressed);
-	}
-
-	return () => {
-		optionKeyListeners.delete(listener);
-		if (optionKeyListeners.size === 0 && typeof window !== "undefined") {
-			window.removeEventListener("keydown", syncOptionKeyPressed);
-			window.removeEventListener("keyup", syncOptionKeyPressed);
-			window.removeEventListener("blur", resetOptionKeyPressed);
-			resetOptionKeyPressed();
-		}
-	};
-};
-
-const useOptionKeyPressed = () =>
-	useSyncExternalStore(
-		subscribeToOptionKey,
-		() => isOptionKeyPressed,
-		() => false,
-	);
 
 export const AdminHover = forwardRef<
 	HTMLElement,
@@ -63,11 +21,8 @@ export const AdminHover = forwardRef<
 		_ref,
 	) => {
 		const { isAdmin, skipHover } = useAdmin();
-		const optionKeyPressed = useOptionKeyPressed();
 
-		if (!isAdmin || hide || skipHover || !optionKeyPressed) {
-			return <>{children}</>;
-		}
+		if (!isAdmin || hide || skipHover) return <>{children}</>;
 
 		return (
 			<PreviewCard.Root>

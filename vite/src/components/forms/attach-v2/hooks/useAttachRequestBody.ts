@@ -162,8 +162,8 @@ export function buildAttachRequestBody({
 
 	if (startDate && !trialEnabled) {
 		body.starts_at = startDate;
-	} else if (planSchedule) {
-		body.plan_schedule = planSchedule;
+	} else {
+		body.plan_schedule = planSchedule ?? "immediate";
 	}
 
 	if (endDate) {

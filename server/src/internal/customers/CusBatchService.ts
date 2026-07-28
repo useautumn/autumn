@@ -216,6 +216,7 @@ export class CusBatchService {
 			customer_products: [],
 			customer_entitlements: [],
 			extra_customer_entitlements: [],
+			pooled_customer_entitlements: [],
 			customer_prices: [],
 			entitlements: [],
 			rollovers: [],
@@ -359,6 +360,8 @@ export class CusBatchService {
 			withSubs: true,
 			withEntities: true,
 			includeInvoices: true,
+			// Only the dashboard renders products_page / products_total_count.
+			withProductsPage: true,
 			entitiesLimit,
 			limit: internalIds ? internalIds.length : limit,
 			cursor:
@@ -384,6 +387,7 @@ export class CusBatchService {
 			customer_products: [],
 			customer_entitlements: [],
 			extra_customer_entitlements: [],
+			pooled_customer_entitlements: [],
 			customer_prices: [],
 			entitlements: [],
 			rollovers: [],

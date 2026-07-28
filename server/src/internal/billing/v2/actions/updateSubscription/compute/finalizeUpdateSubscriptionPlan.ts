@@ -2,12 +2,12 @@ import {
 	type AutumnBillingPlan,
 	isCustomerProductOneOff,
 	type UpdateSubscriptionBillingContext,
-	type UpdateSubscriptionV1Params,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { computeRefundPlan } from "@/internal/billing/v2/compute/finalize/computeRefundPlan";
 import { finalizeLineItems } from "@/internal/billing/v2/compute/finalize/finalizeLineItems";
 import { customerProductToBillingCycleAnchor } from "@/internal/billing/v2/utils/initFullCustomerProduct/cycleAnchorUtils";
+import { finalizeUpdateSubscriptionPooledBalancePlan } from "./finalizeUpdateSubscriptionPooledBalancePlan";
 
 const applyAnchorResetCustomerProductUpdate = ({
 	plan,
@@ -42,12 +42,10 @@ export const finalizeUpdateSubscriptionPlan = async ({
 	ctx,
 	plan,
 	billingContext,
-	params,
 }: {
 	ctx: AutumnContext;
 	plan: AutumnBillingPlan;
 	billingContext: UpdateSubscriptionBillingContext;
-	params: UpdateSubscriptionV1Params;
 }): Promise<AutumnBillingPlan> => {
 	plan = applyAnchorResetCustomerProductUpdate({ plan, billingContext });
 
@@ -73,6 +71,11 @@ export const finalizeUpdateSubscriptionPlan = async ({
 
 	plan.lineItems = filteredLineItems;
 	plan.refundPlan = refundPlan;
+	plan = finalizeUpdateSubscriptionPooledBalancePlan({
+		ctx,
+		plan,
+		billingContext,
+	});
 
 	return plan;
 };

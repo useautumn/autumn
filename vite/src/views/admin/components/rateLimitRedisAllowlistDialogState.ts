@@ -14,6 +14,11 @@ export const DEFAULT_CONFIG: RateLimitRedisAllowlistConfig = {
 	error: null,
 };
 
+export const RATE_LIMIT_REDIS_ALLOWLIST_QUERY_KEY = [
+	"admin-edge-config",
+	"rate-limit-redis-allowlist",
+] as const;
+
 export const getEditableConfig = ({
 	config,
 }: {

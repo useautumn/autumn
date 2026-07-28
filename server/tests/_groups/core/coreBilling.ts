@@ -1,6 +1,7 @@
 import type { TestGroup } from "../types";
 import { coreAttach } from "./coreAttach";
 import { coreBackSync } from "./coreBackSync";
+import { coreBatchReset } from "./coreBatchReset";
 import { coreBillingOthers } from "./coreBillingOthers";
 import { coreLegacy } from "./coreLegacy";
 import { coreLicensesBilling } from "./coreLicensesBilling";
@@ -28,5 +29,10 @@ export const coreBilling: TestGroup = {
 		...coreLicensesBilling.paths,
 		...coreLicensesCatalog.paths,
 		...corePlansCrud.paths,
+
+		// ── Pooled balances ──
+		"integration/billing/pooled-balances",
+		"integration/billing/migrations-v2/update-plan-operation/pooled-balances",
+		...coreBatchReset.paths,
 	],
 };

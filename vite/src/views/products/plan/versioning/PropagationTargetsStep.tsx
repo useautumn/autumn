@@ -51,7 +51,7 @@ export function PropagationTargetsStep({
 					return (
 						<button
 							className={cn(
-								"flex items-center gap-3 rounded-xl bg-secondary/40 px-3 py-2.5 text-left ring-1 transition-colors",
+								"flex items-center gap-3 rounded-xl bg-secondary/40 px-3 py-2.5 text-left ring-1 transition-colors cursor-pointer",
 								checked
 									? "ring-primary"
 									: "ring-transparent hover:bg-secondary/60",
@@ -60,7 +60,7 @@ export function PropagationTargetsStep({
 							onClick={() => onToggle(target.id)}
 							type="button"
 						>
-							<Checkbox checked={checked} />
+							<Checkbox checked={checked} className="pointer-events-none" />
 							<div className="flex min-w-0 flex-1 items-baseline gap-2">
 								<span className="text-sm font-medium text-foreground">
 									{target.name}

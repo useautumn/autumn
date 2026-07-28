@@ -15,6 +15,9 @@ mock.module("@/external/logtail/logtailUtils.js", () => ({
 
 const { runDbProbes } = await import("@/db/probes/runDbProbes.js");
 const { longTxnProbe } = await import("@/db/probes/longTxnProbe.js");
+const { replicationSlotProbe } = await import(
+	"@/db/probes/replicationSlotProbe.js"
+);
 
 // biome-ignore lint/suspicious/noExplicitAny: probes ignore the db in these tests
 const fakeDb = {} as any;
@@ -170,6 +173,132 @@ describe("longTxnProbe", () => {
 			blind: true,
 			longest_txn_seconds: null,
 			xmin_lag: null,
+		});
+	});
+});
+
+describe("replicationSlotProbe", () => {
+	const slotRow = (overrides: Record<string, unknown> = {}) => ({
+		in_recovery: false,
+		slot_name: "rw_slot",
+		slot_type: "logical",
+		active: true,
+		failover: true,
+		wal_status: "reserved",
+		confirmed_flush_lsn: "D9C/512A62A0",
+		retained_wal_bytes: "1048576",
+		...overrides,
+	});
+
+	const findCall = (type: string) =>
+		info.mock.calls.find(
+			(call) => (call[0] as { type?: string }).type === type,
+		)?.[0] as Record<string, unknown> | undefined;
+
+	it("emits a line per slot plus a summary naming every slot", async () => {
+		const db = {
+			execute: async () => [
+				slotRow(),
+				slotRow({ slot_name: "tinybird_slot", failover: false }),
+			],
+			// biome-ignore lint/suspicious/noExplicitAny: minimal db stub
+		} as any;
+
+		await replicationSlotProbe.run({ db });
+
+		expect(findCall("db_replication_slots")).toMatchObject({
+			blind: false,
+			in_recovery: false,
+			slot_count: 2,
+			slot_names: "rw_slot,tinybird_slot",
+		});
+
+		const slotLines = info.mock.calls
+			.map((call) => call[0] as Record<string, unknown>)
+			.filter((fields) => fields.type === "db_replication_slot");
+		expect(slotLines).toHaveLength(2);
+		expect(slotLines[0]).toMatchObject({
+			blind: false,
+			slot_name: "rw_slot",
+			slot_type: "logical",
+			active: true,
+			failover: true,
+			wal_status: "reserved",
+			confirmed_flush_lsn: "D9C/512A62A0",
+			retained_wal_bytes: 1_048_576,
+		});
+		expect(slotLines[1]).toMatchObject({
+			slot_name: "tinybird_slot",
+			failover: false,
+		});
+	});
+
+	it("warns when a primary reports no slots at all", async () => {
+		const db = {
+			execute: async () => [
+				slotRow({
+					slot_name: null,
+					slot_type: null,
+					active: null,
+					failover: null,
+					wal_status: null,
+					confirmed_flush_lsn: null,
+					retained_wal_bytes: null,
+				}),
+			],
+			// biome-ignore lint/suspicious/noExplicitAny: minimal db stub
+		} as any;
+
+		await replicationSlotProbe.run({ db });
+
+		expect(warn).toHaveBeenCalledTimes(1);
+		expect(warn.mock.calls[0][0]).toMatchObject({
+			type: "db_replication_slots_empty",
+		});
+		expect(findCall("db_replication_slots")).toMatchObject({
+			blind: false,
+			slot_count: 0,
+			slot_names: "",
+		});
+		expect(findCall("db_replication_slot")).toBeUndefined();
+	});
+
+	it("marks a standby reading blind so its slots can't look authoritative", async () => {
+		const db = {
+			execute: async () => [
+				slotRow({ in_recovery: true, retained_wal_bytes: null }),
+			],
+			// biome-ignore lint/suspicious/noExplicitAny: minimal db stub
+		} as any;
+
+		await replicationSlotProbe.run({ db });
+
+		expect(warn).toHaveBeenCalledTimes(1);
+		expect(warn.mock.calls[0][0]).toMatchObject({
+			type: "db_replication_slots_blind",
+			in_recovery: true,
+		});
+		expect(findCall("db_replication_slots")).toMatchObject({ blind: true });
+		expect(findCall("db_replication_slot")).toMatchObject({
+			blind: true,
+			retained_wal_bytes: null,
+		});
+	});
+
+	it("treats an empty result as blind rather than zero healthy slots", async () => {
+		// biome-ignore lint/suspicious/noExplicitAny: minimal db stub
+		const db = { execute: async () => [] } as any;
+
+		await replicationSlotProbe.run({ db });
+
+		expect(warn).toHaveBeenCalledTimes(1);
+		expect(warn.mock.calls[0][0]).toMatchObject({
+			type: "db_replication_slots_blind",
+		});
+		expect(findCall("db_replication_slots")).toMatchObject({
+			blind: true,
+			in_recovery: null,
+			slot_count: 0,
 		});
 	});
 });

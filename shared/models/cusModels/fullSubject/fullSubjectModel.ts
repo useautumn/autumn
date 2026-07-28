@@ -29,6 +29,11 @@ export const FullSubjectSchema = z.object({
 
 	customer_products: z.array(FullCusProductSchema),
 	extra_customer_entitlements: z.array(FullCustomerEntitlementSchema),
+	// Cache hydration always reconstructs this from the shared balance hashes.
+	// Default keeps schema parsing compatible with older FullSubject payloads.
+	pooled_customer_entitlements: z
+		.array(FullCustomerEntitlementSchema)
+		.default([]),
 
 	// Customer- or entity-scoped windowed-cap counters (one row per capped
 	// feature + window; internal_entity_id null = customer scope). On an entity

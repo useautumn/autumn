@@ -1,6 +1,7 @@
 import {
 	ErrCode,
 	type FullProduct,
+	ProductConfigSchema,
 	type ProductV2,
 	RecaseError,
 	type UpdateProductV2Params,
@@ -63,8 +64,15 @@ const normalizeVariantSettingValue = ({
 	// "" while a description-less plan stores null, which isn't a real change.
 	if (field === "description") return value || null;
 	if (field === "billing_controls") return canonicalizeBillingControls(value);
-	if (["config", "metadata"].includes(field)) {
-		return JSON.stringify(value ?? {});
+	// The read path defaults config through ProductConfigSchema (so the editor
+	// echoes back {ignore_past_due:false}) while the DB stores a bare {}. Parse
+	// both sides so those defaults line up and don't read as a change.
+	if (field === "config") {
+		const parsed = ProductConfigSchema.safeParse(value ?? {});
+		return JSON.stringify(sortDeep(parsed.success ? parsed.data : (value ?? {})));
+	}
+	if (field === "metadata") {
+		return JSON.stringify(sortDeep(value ?? {}));
 	}
 	return value;
 };

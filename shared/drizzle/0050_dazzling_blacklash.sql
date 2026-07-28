@@ -1,0 +1,3 @@
+ALTER TABLE "pooled_balances" DROP CONSTRAINT "unique_pooled_balance";--> statement-breakpoint
+ALTER TABLE "pooled_balances" ADD COLUMN "expires_at" numeric;--> statement-breakpoint
+ALTER TABLE "pooled_balances" ADD CONSTRAINT "unique_pooled_balance" UNIQUE NULLS NOT DISTINCT("internal_customer_id","internal_feature_id","interval","interval_count","reset_cycle_anchor","reset_mode","stripe_subscription_id","customer_license_link_id","rollover_signature","expires_at");

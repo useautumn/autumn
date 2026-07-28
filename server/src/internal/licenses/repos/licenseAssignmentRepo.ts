@@ -13,6 +13,7 @@ import {
 	count,
 	desc,
 	eq,
+	exists,
 	inArray,
 	isNotNull,
 	isNull,
@@ -20,9 +21,16 @@ import {
 	or,
 	sql,
 } from "drizzle-orm";
+import { alias } from "drizzle-orm/pg-core";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 
 export type DbLicenseAssignment = DbCustomerProduct;
+
+const activeCustomerLicense = alias(
+	customerLicenses,
+	"active_customer_license",
+);
+const activeLicenseParent = alias(customerProducts, "active_license_parent");
 
 const assignmentConditions = () => [
 	isNotNull(customerProducts.customer_license_link_id),
@@ -76,7 +84,34 @@ const listAssignmentsWithEntityAndProductByCustomer = async ({
 					: []),
 				...assignmentConditions(),
 				...(activeOnly
-					? [inArray(customerProducts.status, ACTIVE_STATUSES)]
+					? [
+							inArray(customerProducts.status, ACTIVE_STATUSES),
+							exists(
+								db
+									.select({ id: activeCustomerLicense.id })
+									.from(activeCustomerLicense)
+									.innerJoin(
+										activeLicenseParent,
+										eq(
+											activeCustomerLicense.parent_customer_product_id,
+											activeLicenseParent.id,
+										),
+									)
+									.where(
+										and(
+											eq(
+												activeCustomerLicense.link_id,
+												customerProducts.customer_license_link_id,
+											),
+											eq(
+												activeCustomerLicense.internal_customer_id,
+												customerProducts.internal_customer_id,
+											),
+											inArray(activeLicenseParent.status, ACTIVE_STATUSES),
+										),
+									),
+							),
+						]
 					: []),
 				...(entityId ? [eq(entities.id, entityId)] : []),
 				...(licenseInternalProductId

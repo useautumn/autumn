@@ -6,6 +6,7 @@ import {
 	normalizedToFullSubject,
 	type SubjectQueryRow,
 } from "@autumn/shared";
+import { executePrepared } from "@/db/executePrepared.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { checkPendingMigrationsForCustomer } from "@/internal/migrations/v2/lazy/checkPendingMigrationsForCustomer.js";
 import { lazyResetSubjectEntitlements } from "../../actions/resetCustomerEntitlementsV2/lazyResetSubjectEntitlements.js";
@@ -40,8 +41,10 @@ export async function getFullSubject({
 		env,
 		logger: ctx.logger,
 		queryFn: () =>
-			db.execute(
-				getFullSubjectQuery({
+			executePrepared({
+				db,
+				label: "getFullSubject",
+				query: getFullSubjectQuery({
 					orgId: org.id,
 					env,
 					customerId,
@@ -49,7 +52,7 @@ export async function getFullSubject({
 					inStatuses,
 					allowMissingEntity,
 				}),
-			),
+			}),
 	});
 
 	if (!result?.length) return undefined;
@@ -93,8 +96,10 @@ export async function getFullSubjectNormalized({
 		env,
 		logger: ctx.logger,
 		queryFn: () =>
-			db.execute(
-				getFullSubjectQuery({
+			executePrepared({
+				db,
+				label: "getFullSubject",
+				query: getFullSubjectQuery({
 					orgId: org.id,
 					env,
 					customerId,
@@ -102,7 +107,7 @@ export async function getFullSubjectNormalized({
 					inStatuses,
 					allowMissingEntity,
 				}),
-			),
+			}),
 	});
 
 	if (!result?.length) return undefined;

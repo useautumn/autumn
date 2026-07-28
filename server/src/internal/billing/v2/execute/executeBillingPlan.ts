@@ -58,6 +58,10 @@ export const executeBillingPlan = async ({
 					checkoutSessionUrl:
 						stripeBillingResult.stripeCheckoutSession.url ?? "",
 					checkoutSessionId: stripeBillingResult.stripeCheckoutSession.id ?? "",
+					expiresAt:
+						"expires_at" in stripeBillingResult.stripeCheckoutSession
+							? stripeBillingResult.stripeCheckoutSession.expires_at * 1000
+							: undefined,
 				},
 			});
 		}

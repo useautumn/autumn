@@ -16,6 +16,8 @@ import {
 	type FullCustomerEntitlement,
 	features,
 	type InsertCustomerEntitlement,
+	PooledBalanceResetMode,
+	pooledBalances,
 	prices,
 	products,
 	type ResetCusEnt,
@@ -246,6 +248,7 @@ export class CusEntService {
 			features: features,
 			customers: customers,
 			customer_products: customerProducts,
+			pooled_balances: pooledBalances,
 			parent_status: parentLateral.parent_status,
 			parent_subscription_ids: parentLateral.parent_subscription_ids,
 			sort_reset: sql`${customerEntitlements.next_reset_at}`.as("sort_reset"),
@@ -296,6 +299,18 @@ export class CusEntService {
 				? or(eq(customerEntitlements.separate_interval, true), notPriceBacked())
 				: notPriceBacked();
 
+		const isCronResettableLooseCustomerEntitlement = () =>
+			or(
+				eq(customerEntitlements.is_pooled_balance, false),
+				and(
+					eq(customerEntitlements.is_pooled_balance, true),
+					eq(pooledBalances.reset_mode, PooledBalanceResetMode.Lazy),
+				),
+			);
+
+		const isNotPooledBalanceSource = () =>
+			sql`${entitlements.pooled} IS NOT TRUE`;
+
 		// Branch 1: cusEnts with no customer_product. Left-join to
 		// customer_products on a false predicate so the row shape matches
 		// the other branches (customer_products columns come back NULL).
@@ -316,10 +331,15 @@ export class CusEntService {
 				eq(customerEntitlements.internal_customer_id, customers.internal_id),
 			)
 			.leftJoin(customerProducts, sql`false`)
+			.leftJoin(
+				pooledBalances,
+				eq(pooledBalances.customer_entitlement_id, customerEntitlements.id),
+			)
 			.leftJoinLateral(parentLateral1, sql`true`)
 			.where(
 				and(
 					isNull(customerEntitlements.customer_product_id),
+					isCronResettableLooseCustomerEntitlement(),
 					commonResetPredicates(),
 					afterCursor(),
 				),
@@ -346,11 +366,16 @@ export class CusEntService {
 				customerProducts,
 				sql`${customerEntitlements.customer_product_id} COLLATE "C" = ${customerProducts.id}`,
 			)
+			.leftJoin(
+				pooledBalances,
+				eq(pooledBalances.customer_entitlement_id, customerEntitlements.id),
+			)
 			.leftJoinLateral(parentLateral2, sql`true`)
 			.where(
 				and(
 					sql`${effectiveStatus(parentLateral2)} = ${CusProductStatus.Active}`,
 					commonResetPredicates(),
+					isNotPooledBalanceSource(),
 					resetOwnedByAutumn(),
 					afterCursor(),
 				),
@@ -382,12 +407,17 @@ export class CusEntService {
 				products,
 				eq(customerProducts.internal_product_id, products.internal_id),
 			)
+			.leftJoin(
+				pooledBalances,
+				eq(pooledBalances.customer_entitlement_id, customerEntitlements.id),
+			)
 			.leftJoinLateral(parentLateral3, sql`true`)
 			.where(
 				and(
 					sql`${effectiveStatus(parentLateral3)} = ${CusProductStatus.PastDue}`,
 					sql`(${products.config}->>'ignore_past_due')::boolean = true`,
 					commonResetPredicates(),
+					isNotPooledBalanceSource(),
 					resetOwnedByAutumn(),
 					afterCursor(),
 				),
@@ -462,6 +492,7 @@ export class CusEntService {
 						}
 					: item.customer_products,
 				customer: item.customers,
+				pooled_balance: item.pooled_balances ?? undefined,
 				replaceables: [],
 				rollovers: [],
 			})) as ResetCusEnt[];

@@ -76,7 +76,6 @@ components:
                     description: Whether auto top-up is enabled.
                   threshold:
                     type: number
-                    minimum: 0
                     description: When the balance drops below this threshold, an auto top-up will be
                       purchased.
                   quantity:
@@ -103,10 +102,16 @@ components:
                         type: number
                         minimum: 1
                         description: Maximum number of auto top-ups allowed within the interval.
+                      count:
+                        type: number
+                        minimum: 0
+                        description: Set the current window's consumed auto top-up count. Omit to leave
+                          runtime state unchanged.
                     required:
                       - interval
                       - limit
-                    description: Optional rate limit to cap how often auto top-ups occur.
+                    description: Optional rate limit to cap how often auto top-ups occur. Pass count
+                      to set the current window's consumed top-ups.
                   invoice_mode:
                     type: boolean
                     description: When true, auto top-up creates a send_invoice invoice instead of
@@ -339,7 +344,6 @@ components:
                     description: Whether auto top-up is enabled.
                   threshold:
                     type: number
-                    minimum: 0
                     description: When the balance drops below this threshold, an auto top-up will be
                       purchased.
                   quantity:
@@ -1996,7 +2000,6 @@ components:
                             description: Whether auto top-up is enabled.
                           threshold:
                             type: number
-                            minimum: 0
                             description: When the balance drops below this threshold, an auto top-up will be
                               purchased.
                           quantity:
@@ -2023,10 +2026,16 @@ components:
                                 type: number
                                 minimum: 1
                                 description: Maximum number of auto top-ups allowed within the interval.
+                              count:
+                                type: number
+                                minimum: 0
+                                description: Set the current window's consumed auto top-up count. Omit to leave
+                                  runtime state unchanged.
                             required:
                               - interval
                               - limit
-                            description: Optional rate limit to cap how often auto top-ups occur.
+                            description: Optional rate limit to cap how often auto top-ups occur. Pass count
+                              to set the current window's consumed top-ups.
                           invoice_mode:
                             type: boolean
                             description: When true, auto top-up creates a send_invoice invoice instead of
@@ -2197,7 +2206,6 @@ components:
                     description: Whether auto top-up is enabled.
                   threshold:
                     type: number
-                    minimum: 0
                     description: When the balance drops below this threshold, an auto top-up will be
                       purchased.
                   quantity:
@@ -2831,7 +2839,6 @@ paths:
                             description: Whether auto top-up is enabled.
                           threshold:
                             type: number
-                            minimum: 0
                             description: When the balance drops below this threshold, an auto top-up will be
                               purchased.
                           quantity:
@@ -2858,10 +2865,16 @@ paths:
                                 type: number
                                 minimum: 1
                                 description: Maximum number of auto top-ups allowed within the interval.
+                              count:
+                                type: number
+                                minimum: 0
+                                description: Set the current window's consumed auto top-up count. Omit to leave
+                                  runtime state unchanged.
                             required:
                               - interval
                               - limit
-                            description: Optional rate limit to cap how often auto top-ups occur.
+                            description: Optional rate limit to cap how often auto top-ups occur. Pass count
+                              to set the current window's consumed top-ups.
                           invoice_mode:
                             type: boolean
                             description: When true, auto top-up creates a send_invoice invoice instead of
@@ -3185,7 +3198,6 @@ paths:
                               description: Whether auto top-up is enabled.
                             threshold:
                               type: number
-                              minimum: 0
                               description: When the balance drops below this threshold, an auto top-up will be
                                 purchased.
                             quantity:
@@ -4261,7 +4273,6 @@ paths:
                                     description: Whether auto top-up is enabled.
                                   threshold:
                                     type: number
-                                    minimum: 0
                                     description: When the balance drops below this threshold, an auto top-up will be
                                       purchased.
                                   quantity:
@@ -5138,7 +5149,6 @@ paths:
                             description: Whether auto top-up is enabled.
                           threshold:
                             type: number
-                            minimum: 0
                             description: When the balance drops below this threshold, an auto top-up will be
                               purchased.
                           quantity:
@@ -5165,10 +5175,16 @@ paths:
                                 type: number
                                 minimum: 1
                                 description: Maximum number of auto top-ups allowed within the interval.
+                              count:
+                                type: number
+                                minimum: 0
+                                description: Set the current window's consumed auto top-up count. Omit to leave
+                                  runtime state unchanged.
                             required:
                               - interval
                               - limit
-                            description: Optional rate limit to cap how often auto top-ups occur.
+                            description: Optional rate limit to cap how often auto top-ups occur. Pass count
+                              to set the current window's consumed top-ups.
                           invoice_mode:
                             type: boolean
                             description: When true, auto top-up creates a send_invoice invoice instead of
@@ -5404,7 +5420,6 @@ paths:
                               description: Whether auto top-up is enabled.
                             threshold:
                               type: number
-                              minimum: 0
                               description: When the balance drops below this threshold, an auto top-up will be
                                 purchased.
                             quantity:
@@ -6789,13 +6804,6 @@ paths:
                         propertyNames:
                           type: string
                         additionalProperties: {}
-                      version:
-                        type: integer
-                        minimum: 1
-                        maximum: 9007199254740991
-                        description: Pin the link to a specific version of the license plan. Omitted, an
-                          existing link keeps its pinned version and a new link
-                          resolves to the latest.
                     required:
                       - license_plan_id
                   description: Plans offered as assignable licenses under this plan. The full set
@@ -6858,7 +6866,6 @@ paths:
                             description: Whether auto top-up is enabled.
                           threshold:
                             type: number
-                            minimum: 0
                             description: When the balance drops below this threshold, an auto top-up will be
                               purchased.
                           quantity:
@@ -6885,10 +6892,16 @@ paths:
                                 type: number
                                 minimum: 1
                                 description: Maximum number of auto top-ups allowed within the interval.
+                              count:
+                                type: number
+                                minimum: 0
+                                description: Set the current window's consumed auto top-up count. Omit to leave
+                                  runtime state unchanged.
                             required:
                               - interval
                               - limit
-                            description: Optional rate limit to cap how often auto top-ups occur.
+                            description: Optional rate limit to cap how often auto top-ups occur. Pass count
+                              to set the current window's consumed top-ups.
                           invoice_mode:
                             type: boolean
                             description: When true, auto top-up creates a send_invoice invoice instead of
@@ -7850,7 +7863,6 @@ paths:
                                       description: Whether auto top-up is enabled.
                                     threshold:
                                       type: number
-                                      minimum: 0
                                       description: When the balance drops below this threshold, an auto top-up will be
                                         purchased.
                                     quantity:
@@ -7877,10 +7889,17 @@ paths:
                                           type: number
                                           minimum: 1
                                           description: Maximum number of auto top-ups allowed within the interval.
+                                        count:
+                                          type: number
+                                          minimum: 0
+                                          description: Set the current window's consumed auto top-up count. Omit to leave
+                                            runtime state unchanged.
                                       required:
                                         - interval
                                         - limit
-                                      description: Optional rate limit to cap how often auto top-ups occur.
+                                      description: Optional rate limit to cap how often auto top-ups occur. Pass count
+                                        to set the current window's consumed
+                                        top-ups.
                                     invoice_mode:
                                       type: boolean
                                       description: When true, auto top-up creates a send_invoice invoice instead of
@@ -8054,7 +8073,6 @@ paths:
                               description: Whether auto top-up is enabled.
                             threshold:
                               type: number
-                              minimum: 0
                               description: When the balance drops below this threshold, an auto top-up will be
                                 purchased.
                             quantity:
@@ -9180,7 +9198,6 @@ paths:
                                       description: Whether auto top-up is enabled.
                                     threshold:
                                       type: number
-                                      minimum: 0
                                       description: When the balance drops below this threshold, an auto top-up will be
                                         purchased.
                                     quantity:
@@ -9207,10 +9224,17 @@ paths:
                                           type: number
                                           minimum: 1
                                           description: Maximum number of auto top-ups allowed within the interval.
+                                        count:
+                                          type: number
+                                          minimum: 0
+                                          description: Set the current window's consumed auto top-up count. Omit to leave
+                                            runtime state unchanged.
                                       required:
                                         - interval
                                         - limit
-                                      description: Optional rate limit to cap how often auto top-ups occur.
+                                      description: Optional rate limit to cap how often auto top-ups occur. Pass count
+                                        to set the current window's consumed
+                                        top-ups.
                                     invoice_mode:
                                       type: boolean
                                       description: When true, auto top-up creates a send_invoice invoice instead of
@@ -9384,7 +9408,6 @@ paths:
                               description: Whether auto top-up is enabled.
                             threshold:
                               type: number
-                              minimum: 0
                               description: When the balance drops below this threshold, an auto top-up will be
                                 purchased.
                             quantity:
@@ -10489,7 +10512,6 @@ paths:
                                             description: Whether auto top-up is enabled.
                                           threshold:
                                             type: number
-                                            minimum: 0
                                             description: When the balance drops below this threshold, an auto top-up will be
                                               purchased.
                                           quantity:
@@ -10516,10 +10538,17 @@ paths:
                                                 type: number
                                                 minimum: 1
                                                 description: Maximum number of auto top-ups allowed within the interval.
+                                              count:
+                                                type: number
+                                                minimum: 0
+                                                description: Set the current window's consumed auto top-up count. Omit to leave
+                                                  runtime state unchanged.
                                             required:
                                               - interval
                                               - limit
-                                            description: Optional rate limit to cap how often auto top-ups occur.
+                                            description: Optional rate limit to cap how often auto top-ups occur. Pass count
+                                              to set the current window's
+                                              consumed top-ups.
                                           invoice_mode:
                                             type: boolean
                                             description: When true, auto top-up creates a send_invoice invoice instead of
@@ -10694,7 +10723,6 @@ paths:
                                     description: Whether auto top-up is enabled.
                                   threshold:
                                     type: number
-                                    minimum: 0
                                     description: When the balance drops below this threshold, an auto top-up will be
                                       purchased.
                                   quantity:
@@ -11583,13 +11611,6 @@ paths:
                         propertyNames:
                           type: string
                         additionalProperties: {}
-                      version:
-                        type: integer
-                        minimum: 1
-                        maximum: 9007199254740991
-                        description: Pin the link to a specific version of the license plan. Omitted, an
-                          existing link keeps its pinned version and a new link
-                          resolves to the latest.
                     required:
                       - license_plan_id
                   description: Plans offered as assignable licenses under this plan. The full set
@@ -11655,7 +11676,6 @@ paths:
                             description: Whether auto top-up is enabled.
                           threshold:
                             type: number
-                            minimum: 0
                             description: When the balance drops below this threshold, an auto top-up will be
                               purchased.
                           quantity:
@@ -11682,10 +11702,16 @@ paths:
                                 type: number
                                 minimum: 1
                                 description: Maximum number of auto top-ups allowed within the interval.
+                              count:
+                                type: number
+                                minimum: 0
+                                description: Set the current window's consumed auto top-up count. Omit to leave
+                                  runtime state unchanged.
                             required:
                               - interval
                               - limit
-                            description: Optional rate limit to cap how often auto top-ups occur.
+                            description: Optional rate limit to cap how often auto top-ups occur. Pass count
+                              to set the current window's consumed top-ups.
                           invoice_mode:
                             type: boolean
                             description: When true, auto top-up creates a send_invoice invoice instead of
@@ -11883,6 +11909,23 @@ paths:
                     type: string
                   description: Variant plan IDs to apply this update to. Empty or omitted means no
                     propagation.
+                update_license_parents:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      plan_id:
+                        type: string
+                        minLength: 1
+                        pattern: ^[a-zA-Z0-9_-]+$
+                      version:
+                        type: integer
+                        minimum: 1
+                        maximum: 9007199254740991
+                    required:
+                      - plan_id
+                      - version
+                  description: Parent plan versions that should receive this license-plan update.
                 variants:
                   type: array
                   items:
@@ -12238,7 +12281,6 @@ paths:
                                       description: Whether auto top-up is enabled.
                                     threshold:
                                       type: number
-                                      minimum: 0
                                       description: When the balance drops below this threshold, an auto top-up will be
                                         purchased.
                                     quantity:
@@ -12265,10 +12307,17 @@ paths:
                                           type: number
                                           minimum: 1
                                           description: Maximum number of auto top-ups allowed within the interval.
+                                        count:
+                                          type: number
+                                          minimum: 0
+                                          description: Set the current window's consumed auto top-up count. Omit to leave
+                                            runtime state unchanged.
                                       required:
                                         - interval
                                         - limit
-                                      description: Optional rate limit to cap how often auto top-ups occur.
+                                      description: Optional rate limit to cap how often auto top-ups occur. Pass count
+                                        to set the current window's consumed
+                                        top-ups.
                                     invoice_mode:
                                       type: boolean
                                       description: When true, auto top-up creates a send_invoice invoice instead of
@@ -13223,7 +13272,6 @@ paths:
                                       description: Whether auto top-up is enabled.
                                     threshold:
                                       type: number
-                                      minimum: 0
                                       description: When the balance drops below this threshold, an auto top-up will be
                                         purchased.
                                     quantity:
@@ -13250,10 +13298,17 @@ paths:
                                           type: number
                                           minimum: 1
                                           description: Maximum number of auto top-ups allowed within the interval.
+                                        count:
+                                          type: number
+                                          minimum: 0
+                                          description: Set the current window's consumed auto top-up count. Omit to leave
+                                            runtime state unchanged.
                                       required:
                                         - interval
                                         - limit
-                                      description: Optional rate limit to cap how often auto top-ups occur.
+                                      description: Optional rate limit to cap how often auto top-ups occur. Pass count
+                                        to set the current window's consumed
+                                        top-ups.
                                     invoice_mode:
                                       type: boolean
                                       description: When true, auto top-up creates a send_invoice invoice instead of
@@ -13427,7 +13482,6 @@ paths:
                               description: Whether auto top-up is enabled.
                             threshold:
                               type: number
-                              minimum: 0
                               description: When the balance drops below this threshold, an auto top-up will be
                                 purchased.
                             quantity:
@@ -15419,7 +15473,6 @@ paths:
                                 description: Whether auto top-up is enabled.
                               threshold:
                                 type: number
-                                minimum: 0
                                 description: When the balance drops below this threshold, an auto top-up will be
                                   purchased.
                               quantity:
@@ -15446,10 +15499,16 @@ paths:
                                     type: number
                                     minimum: 1
                                     description: Maximum number of auto top-ups allowed within the interval.
+                                  count:
+                                    type: number
+                                    minimum: 0
+                                    description: Set the current window's consumed auto top-up count. Omit to leave
+                                      runtime state unchanged.
                                 required:
                                   - interval
                                   - limit
-                                description: Optional rate limit to cap how often auto top-ups occur.
+                                description: Optional rate limit to cap how often auto top-ups occur. Pass count
+                                  to set the current window's consumed top-ups.
                               invoice_mode:
                                 type: boolean
                                 description: When true, auto top-up creates a send_invoice invoice instead of
@@ -16864,7 +16923,6 @@ paths:
                                               description: Whether auto top-up is enabled.
                                             threshold:
                                               type: number
-                                              minimum: 0
                                               description: When the balance drops below this threshold, an auto top-up will be
                                                 purchased.
                                             quantity:
@@ -16891,10 +16949,17 @@ paths:
                                                   type: number
                                                   minimum: 1
                                                   description: Maximum number of auto top-ups allowed within the interval.
+                                                count:
+                                                  type: number
+                                                  minimum: 0
+                                                  description: Set the current window's consumed auto top-up count. Omit to leave
+                                                    runtime state unchanged.
                                               required:
                                                 - interval
                                                 - limit
-                                              description: Optional rate limit to cap how often auto top-ups occur.
+                                              description: Optional rate limit to cap how often auto top-ups occur. Pass count
+                                                to set the current window's
+                                                consumed top-ups.
                                             invoice_mode:
                                               type: boolean
                                               description: When true, auto top-up creates a send_invoice invoice instead of
@@ -17565,7 +17630,6 @@ paths:
                                             description: Whether auto top-up is enabled.
                                           threshold:
                                             type: number
-                                            minimum: 0
                                             description: When the balance drops below this threshold, an auto top-up will be
                                               purchased.
                                           quantity:
@@ -17592,10 +17656,17 @@ paths:
                                                 type: number
                                                 minimum: 1
                                                 description: Maximum number of auto top-ups allowed within the interval.
+                                              count:
+                                                type: number
+                                                minimum: 0
+                                                description: Set the current window's consumed auto top-up count. Omit to leave
+                                                  runtime state unchanged.
                                             required:
                                               - interval
                                               - limit
-                                            description: Optional rate limit to cap how often auto top-ups occur.
+                                            description: Optional rate limit to cap how often auto top-ups occur. Pass count
+                                              to set the current window's
+                                              consumed top-ups.
                                           invoice_mode:
                                             type: boolean
                                             description: When true, auto top-up creates a send_invoice invoice instead of
@@ -19284,7 +19355,6 @@ paths:
                                 description: Whether auto top-up is enabled.
                               threshold:
                                 type: number
-                                minimum: 0
                                 description: When the balance drops below this threshold, an auto top-up will be
                                   purchased.
                               quantity:
@@ -19311,10 +19381,16 @@ paths:
                                     type: number
                                     minimum: 1
                                     description: Maximum number of auto top-ups allowed within the interval.
+                                  count:
+                                    type: number
+                                    minimum: 0
+                                    description: Set the current window's consumed auto top-up count. Omit to leave
+                                      runtime state unchanged.
                                 required:
                                   - interval
                                   - limit
-                                description: Optional rate limit to cap how often auto top-ups occur.
+                                description: Optional rate limit to cap how often auto top-ups occur. Pass count
+                                  to set the current window's consumed top-ups.
                               invoice_mode:
                                 type: boolean
                                 description: When true, auto top-up creates a send_invoice invoice instead of
@@ -22075,7 +22151,6 @@ paths:
                                 description: Whether auto top-up is enabled.
                               threshold:
                                 type: number
-                                minimum: 0
                                 description: When the balance drops below this threshold, an auto top-up will be
                                   purchased.
                               quantity:
@@ -22102,10 +22177,16 @@ paths:
                                     type: number
                                     minimum: 1
                                     description: Maximum number of auto top-ups allowed within the interval.
+                                  count:
+                                    type: number
+                                    minimum: 0
+                                    description: Set the current window's consumed auto top-up count. Omit to leave
+                                      runtime state unchanged.
                                 required:
                                   - interval
                                   - limit
-                                description: Optional rate limit to cap how often auto top-ups occur.
+                                description: Optional rate limit to cap how often auto top-ups occur. Pass count
+                                  to set the current window's consumed top-ups.
                               invoice_mode:
                                 type: boolean
                                 description: When true, auto top-up creates a send_invoice invoice instead of
@@ -23437,7 +23518,6 @@ paths:
                                 description: Whether auto top-up is enabled.
                               threshold:
                                 type: number
-                                minimum: 0
                                 description: When the balance drops below this threshold, an auto top-up will be
                                   purchased.
                               quantity:
@@ -23464,10 +23544,16 @@ paths:
                                     type: number
                                     minimum: 1
                                     description: Maximum number of auto top-ups allowed within the interval.
+                                  count:
+                                    type: number
+                                    minimum: 0
+                                    description: Set the current window's consumed auto top-up count. Omit to leave
+                                      runtime state unchanged.
                                 required:
                                   - interval
                                   - limit
-                                description: Optional rate limit to cap how often auto top-ups occur.
+                                description: Optional rate limit to cap how often auto top-ups occur. Pass count
+                                  to set the current window's consumed top-ups.
                               invoice_mode:
                                 type: boolean
                                 description: When true, auto top-up creates a send_invoice invoice instead of
@@ -25921,7 +26007,6 @@ paths:
                                 description: Whether auto top-up is enabled.
                               threshold:
                                 type: number
-                                minimum: 0
                                 description: When the balance drops below this threshold, an auto top-up will be
                                   purchased.
                               quantity:
@@ -25948,10 +26033,16 @@ paths:
                                     type: number
                                     minimum: 1
                                     description: Maximum number of auto top-ups allowed within the interval.
+                                  count:
+                                    type: number
+                                    minimum: 0
+                                    description: Set the current window's consumed auto top-up count. Omit to leave
+                                      runtime state unchanged.
                                 required:
                                   - interval
                                   - limit
-                                description: Optional rate limit to cap how often auto top-ups occur.
+                                description: Optional rate limit to cap how often auto top-ups occur. Pass count
+                                  to set the current window's consumed top-ups.
                               invoice_mode:
                                 type: boolean
                                 description: When true, auto top-up creates a send_invoice invoice instead of
@@ -28076,7 +28167,6 @@ paths:
                                         description: Whether auto top-up is enabled.
                                       threshold:
                                         type: number
-                                        minimum: 0
                                         description: When the balance drops below this threshold, an auto top-up will be
                                           purchased.
                                       quantity:
@@ -28853,7 +28943,6 @@ paths:
                                         description: Whether auto top-up is enabled.
                                       threshold:
                                         type: number
-                                        minimum: 0
                                         description: When the balance drops below this threshold, an auto top-up will be
                                           purchased.
                                       quantity:
@@ -30642,6 +30731,251 @@ paths:
                 range="30d",
                 bin_size="day",
             )
+  /v1/invoices.insert:
+    post:
+      operationId: insertInvoices
+      description: Inserts or updates up to 500 historical invoices without reading or
+        mutating the billing processor.
+      tags:
+        - invoices
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                invoices:
+                  type: array
+                  maxItems: 500
+                  items:
+                    type: object
+                    properties:
+                      customer_id:
+                        type: string
+                        description: The customer this invoice belongs to.
+                      plan_ids:
+                        type: array
+                        items:
+                          type: string
+                        default: []
+                        description: Plan IDs represented by this invoice.
+                      stripe_id:
+                        type: string
+                        description: The processor's stable invoice ID.
+                      processor_type:
+                        enum:
+                          - stripe
+                          - revenuecat
+                        type: string
+                        default: stripe
+                        description: The billing processor that owns this invoice.
+                      status:
+                        enum:
+                          - draft
+                          - open
+                          - void
+                          - paid
+                          - uncollectible
+                        type: string
+                        description: The invoice status.
+                      total:
+                        type: number
+                        description: The invoice total in major currency units.
+                      amount_paid:
+                        anyOf:
+                          - type: number
+                          - type: "null"
+                        default: null
+                        description: The amount paid in major currency units.
+                      refunded_amount:
+                        type: number
+                        default: 0
+                        description: The refunded amount in major currency units.
+                      currency:
+                        type: string
+                        description: The currency code. Defaults to the organization's default currency.
+                      created_at:
+                        type: number
+                        description: The invoice creation timestamp in milliseconds.
+                      hosted_invoice_url:
+                        anyOf:
+                          - type: string
+                          - type: "null"
+                        default: null
+                        description: The hosted invoice URL, when available.
+                    required:
+                      - customer_id
+                      - stripe_id
+                      - status
+                      - total
+                      - created_at
+                  description: Invoices to insert or update, in response order.
+              required:
+                - invoices
+              title: InsertInvoicesParams
+              examples:
+                - &a72
+                  invoices:
+                    - customer_id: cus_123
+                      plan_ids:
+                        - pro
+                      stripe_id: in_legacy_123
+                      processor_type: stripe
+                      status: paid
+                      total: 29.99
+                      amount_paid: 29.99
+                      refunded_amount: 0
+                      currency: usd
+                      created_at: 1451606400000
+                      hosted_invoice_url: https://billing.example.com/invoices/legacy-123
+            example: *a72
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  invoices:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        plan_ids:
+                          type: array
+                          items:
+                            type: string
+                          description: Array of plan IDs included in this invoice
+                        stripe_id:
+                          type: string
+                          description: The Stripe invoice ID
+                        processor_type:
+                          enum:
+                            - stripe
+                            - revenuecat
+                          type: string
+                          default: stripe
+                          description: The billing processor that owns this invoice.
+                        status:
+                          type: string
+                          description: The status of the invoice
+                        total:
+                          type: number
+                          description: The total amount of the invoice
+                        currency:
+                          type: string
+                          description: The currency code for the invoice
+                        created_at:
+                          type: number
+                          description: Timestamp when the invoice was created
+                        hosted_invoice_url:
+                          anyOf:
+                            - type: string
+                            - type: "null"
+                          description: URL to the Stripe-hosted invoice page
+                        id:
+                          type: string
+                          description: The Autumn invoice ID.
+                        customer_id:
+                          type: string
+                          description: The customer this invoice belongs to.
+                        amount_paid:
+                          anyOf:
+                            - type: number
+                            - type: "null"
+                          description: The amount paid in major currency units.
+                        refunded_amount:
+                          type: number
+                          description: The refunded amount in major currency units.
+                      required:
+                        - plan_ids
+                        - stripe_id
+                        - status
+                        - total
+                        - currency
+                        - created_at
+                        - id
+                        - customer_id
+                        - amount_paid
+                        - refunded_amount
+                    description: Inserted or updated invoices in request order.
+                required:
+                  - invoices
+                examples:
+                  - &a73
+                    invoices:
+                      - id: inv_2b3c4d5e6f7g8h
+                        customer_id: cus_123
+                        plan_ids:
+                          - pro
+                        stripe_id: in_legacy_123
+                        processor_type: stripe
+                        status: paid
+                        total: 29.99
+                        amount_paid: 29.99
+                        refunded_amount: 0
+                        currency: usd
+                        created_at: 1451606400000
+                        hosted_invoice_url: https://billing.example.com/invoices/legacy-123
+              example: *a73
+      x-speakeasy-name-override: insert
+      parameters:
+        - *a5
+      x-codeSamples:
+        - lang: typescript
+          label: Typescript (SDK)
+          source: >-
+            import { Autumn } from 'autumn-js'
+
+
+            const autumn = new Autumn()
+
+
+            const result = await autumn.invoices.insert({
+              invoices: [
+                {
+                  customerId: "cus_123",
+                  planIds: [
+                    "pro",
+                  ],
+                  stripeId: "in_legacy_123",
+                  status: "paid",
+                  total: 29.99,
+                  amountPaid: 29.99,
+                  currency: "usd",
+                  createdAt: 1451606400000,
+                  hostedInvoiceUrl: "https://billing.example.com/invoices/legacy-123",
+                },
+              ],
+            });
+        - lang: python
+          label: Python (SDK)
+          source: >-
+            from autumn_sdk import Autumn
+
+
+            autumn = Autumn(secret_key="am_sk_test...")
+
+
+            res = autumn.invoices.insert(
+                invoices=[
+                    {
+                        "customer_id": "cus_123",
+                        "plan_ids": [
+                            "pro",
+                        ],
+                        "stripe_id": "in_legacy_123",
+                        "status": "paid",
+                        "total": 29.99,
+                        "amount_paid": 29.99,
+                        "currency": "usd",
+                        "created_at": 1451606400000,
+                        "hosted_invoice_url": "https://billing.example.com/invoices/legacy-123",
+                    },
+                ],
+            )
   /v1/invoices.list:
     post:
       operationId: listInvoices
@@ -30700,14 +31034,14 @@ paths:
                     before processor tracking count as stripe.
               title: ListInvoicesParams
               examples:
-                - &a72
+                - &a74
                   start_cursor: ""
                   limit: 10
                   customer_id: cus_123
                   status:
                     - open
                     - paid
-            example: *a72
+            example: *a74
       responses:
         "200":
           description: OK
@@ -30799,7 +31133,7 @@ paths:
                   - list
                   - next_cursor
                 examples:
-                  - &a73
+                  - &a75
                     list:
                       - id: inv_2b3c4d5e6f7g8h
                         customer_id: cus_123
@@ -30816,7 +31150,7 @@ paths:
                         created_at: 1759247877000
                         hosted_invoice_url: https://invoice.stripe.com/i/acct_123/test_456
                     next_cursor: null
-              example: *a73
+              example: *a75
       x-speakeasy-name-override: list
       parameters:
         - *a5
@@ -30895,13 +31229,13 @@ paths:
                 - entities
               title: AttachLicenseParams
               examples:
-                - &a74
+                - &a76
                   customer_id: cus_123
                   plan_id: seat_plan
                   entities:
                     - entity_id: user_123
                       name: Ada Lovelace
-            example: *a74
+            example: *a76
       responses:
         "200":
           description: OK
@@ -30980,12 +31314,12 @@ paths:
                 - entity_ids
               title: ReleaseLicenseParams
               examples:
-                - &a75
+                - &a77
                   customer_id: cus_123
                   license_plan_id: seat_plan
                   entity_ids:
                     - user_123
-            example: *a75
+            example: *a77
       responses:
         "200":
           description: OK
@@ -31056,10 +31390,10 @@ paths:
                 - customer_id
               title: ListLicenseAssignmentsParams
               examples:
-                - &a76
+                - &a78
                   customer_id: cus_123
                   active: true
-            example: *a76
+            example: *a78
       responses:
         "200":
           description: OK
@@ -31094,14 +31428,14 @@ paths:
                 required:
                   - list
                 examples:
-                  - &a77
+                  - &a79
                     list:
                       - id: lic_asn_123
                         entity_id: user_123
                         license_plan_id: seat_plan
                         started_at: 1759247877000
                         ended_at: null
-              example: *a77
+              example: *a79
       x-speakeasy-name-override: listAssignments
       x-speakeasy-ignore: true
       parameters:
@@ -31127,9 +31461,9 @@ paths:
                 - customer_id
               title: ListLicensesParams
               examples:
-                - &a78
+                - &a80
                   customer_id: cus_123
-            example: *a78
+            example: *a80
       responses:
         "200":
           description: OK
@@ -31175,7 +31509,7 @@ paths:
                 required:
                   - list
                 examples:
-                  - &a79
+                  - &a81
                     list:
                       - license_plan_id: seat_plan
                         parent_plan_id: pro_plan
@@ -31184,7 +31518,7 @@ paths:
                         usage: 3
                         remaining: 7
                         paid_quantity: 5
-              example: *a79
+              example: *a81
       x-speakeasy-name-override: list
       x-speakeasy-ignore: true
       parameters:
@@ -31370,650 +31704,11 @@ paths:
                 - entity_id
               title: CreateEntityParams
               examples:
-                - &a80
+                - &a82
                   customer_id: cus_123
                   entity_id: seat_42
                   feature_id: seats
                   name: Seat 42
-            example: *a80
-      responses:
-        "200":
-          description: OK
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  id:
-                    anyOf:
-                      - type: string
-                      - type: "null"
-                    description: The unique identifier of the entity
-                  name:
-                    anyOf:
-                      - type: string
-                      - type: "null"
-                    description: The name of the entity
-                  customer_id:
-                    anyOf:
-                      - type: string
-                      - type: "null"
-                    description: The customer ID this entity belongs to
-                  feature_id:
-                    anyOf:
-                      - type: string
-                      - type: "null"
-                    description: The feature ID this entity belongs to
-                  created_at:
-                    type: number
-                    description: Unix timestamp when the entity was created
-                  env:
-                    enum:
-                      - sandbox
-                      - live
-                    type: string
-                    description: The environment (sandbox/live)
-                  subscriptions:
-                    type: array
-                    items:
-                      type: object
-                      properties:
-                        id:
-                          type: string
-                          description: The unique identifier of this subscription. If a subscription_id
-                            was provided at attach time, it is used; otherwise,
-                            falls back to the internal ID.
-                        plan:
-                          $ref: "#/components/schemas/Plan"
-                          description: The full plan object if expanded.
-                        plan_id:
-                          type: string
-                          description: The unique identifier of the subscribed plan.
-                        auto_enable:
-                          type: boolean
-                          description: Whether the plan was automatically enabled for the customer.
-                        add_on:
-                          type: boolean
-                          description: Whether this is an add-on plan rather than a base subscription.
-                        status:
-                          enum:
-                            - active
-                            - scheduled
-                          type: string
-                          description: Current status of the subscription.
-                        past_due:
-                          type: boolean
-                          description: Whether the subscription has overdue payments.
-                        canceled_at:
-                          anyOf:
-                            - type: number
-                            - type: "null"
-                          description: Timestamp when the subscription was canceled, or null if not
-                            canceled.
-                        expires_at:
-                          anyOf:
-                            - type: number
-                            - type: "null"
-                          description: Timestamp when the subscription will expire, or null if no expiry
-                            set.
-                        trial_ends_at:
-                          anyOf:
-                            - type: number
-                            - type: "null"
-                          description: Timestamp when the trial period ends, or null if not on trial.
-                        started_at:
-                          type: number
-                          description: Timestamp when the subscription started.
-                        current_period_start:
-                          anyOf:
-                            - type: number
-                            - type: "null"
-                          description: Start timestamp of the current billing period.
-                        current_period_end:
-                          anyOf:
-                            - type: number
-                            - type: "null"
-                          description: End timestamp of the current billing period.
-                        quantity:
-                          type: number
-                          description: Number of units of this subscription (for per-seat plans).
-                        scope:
-                          enum:
-                            - customer
-                            - entity
-                          type: string
-                          description: Whether this subscription is attached at the customer level or
-                            entity level.
-                      required:
-                        - id
-                        - plan_id
-                        - auto_enable
-                        - add_on
-                        - status
-                        - past_due
-                        - canceled_at
-                        - expires_at
-                        - trial_ends_at
-                        - started_at
-                        - current_period_start
-                        - current_period_end
-                        - quantity
-                  purchases:
-                    type: array
-                    items:
-                      type: object
-                      properties:
-                        plan:
-                          $ref: "#/components/schemas/Plan"
-                          description: The full plan object if expanded.
-                        plan_id:
-                          type: string
-                          description: The unique identifier of the purchased plan.
-                        expires_at:
-                          anyOf:
-                            - type: number
-                            - type: "null"
-                          description: Timestamp when the purchase expires, or null for lifetime access.
-                        started_at:
-                          type: number
-                          description: Timestamp when the purchase was made.
-                        quantity:
-                          type: number
-                          description: Number of units purchased.
-                        scope:
-                          enum:
-                            - customer
-                            - entity
-                          type: string
-                          description: Whether this purchase is attached at the customer level or entity
-                            level.
-                      required:
-                        - plan_id
-                        - expires_at
-                        - started_at
-                        - quantity
-                  balances:
-                    type: object
-                    propertyNames:
-                      type: string
-                    additionalProperties:
-                      $ref: "#/components/schemas/Balance"
-                  flags:
-                    type: object
-                    propertyNames:
-                      type: string
-                    additionalProperties:
-                      type: object
-                      properties:
-                        id:
-                          type: string
-                          description: The unique identifier for this flag.
-                        plan_id:
-                          anyOf:
-                            - type: string
-                            - type: "null"
-                          description: The plan ID this flag originates from, or null for standalone
-                            flags.
-                        expires_at:
-                          anyOf:
-                            - type: number
-                            - type: "null"
-                          description: Timestamp when this flag expires, or null for no expiration.
-                        feature_id:
-                          type: string
-                          description: The feature ID this flag is for.
-                        feature:
-                          type: object
-                          properties:
-                            id:
-                              type: string
-                              description: The unique identifier for this feature, used in /check and /track
-                                calls.
-                            name:
-                              type: string
-                              description: Human-readable name displayed in the dashboard and billing UI.
-                            type:
-                              enum:
-                                - boolean
-                                - metered
-                                - credit_system
-                                - ai_credit_system
-                              type: string
-                              description: "Feature type: 'boolean' for on/off access, 'metered' for
-                                usage-tracked features, 'credit_system' for
-                                unified credit pools, 'ai_credit_system' for
-                                model-based token pricing."
-                            consumable:
-                              type: boolean
-                              description: "For metered features: true if usage resets periodically (API
-                                calls, credits), false if allocated persistently
-                                (seats, storage)."
-                            event_names:
-                              type: array
-                              items:
-                                type: string
-                              description: Event names that trigger this feature's balance. Allows multiple
-                                features to respond to a single event.
-                            credit_schema:
-                              type: array
-                              items:
-                                type: object
-                                properties:
-                                  metered_feature_id:
-                                    type: string
-                                    description: ID of the metered feature that draws from this credit system.
-                                  credit_cost:
-                                    type: number
-                                    description: Credits consumed per unit of the metered feature.
-                                required:
-                                  - metered_feature_id
-                                  - credit_cost
-                              description: "For credit_system features: maps metered features to their credit
-                                costs."
-                            model_markups:
-                              anyOf:
-                                - type: object
-                                  propertyNames:
-                                    type: string
-                                  additionalProperties:
-                                    type: object
-                                    properties:
-                                      markup:
-                                        type: number
-                                        minimum: -100
-                                      input_cost:
-                                        type: number
-                                        minimum: 0
-                                      output_cost:
-                                        type: number
-                                        minimum: 0
-                                - type: "null"
-                              description: Per-model markup overrides for AI credit systems.
-                            default_markup:
-                              type: number
-                              minimum: -100
-                              description: Default percentage markup for AI credit systems. Use -100 to make
-                                usage free.
-                            provider_markups:
-                              anyOf:
-                                - type: object
-                                  propertyNames:
-                                    type: string
-                                  additionalProperties:
-                                    type: object
-                                    properties:
-                                      markup:
-                                        type: number
-                                        minimum: -100
-                                    required:
-                                      - markup
-                                - type: "null"
-                              description: Per-provider default markup percentages for AI credit systems.
-                            display:
-                              type: object
-                              properties:
-                                singular:
-                                  anyOf:
-                                    - type: string
-                                    - type: "null"
-                                  description: Singular form for UI display (e.g., 'API call', 'seat').
-                                plural:
-                                  anyOf:
-                                    - type: string
-                                    - type: "null"
-                                  description: Plural form for UI display (e.g., 'API calls', 'seats').
-                              description: Display names for the feature in billing UI and customer-facing
-                                components.
-                            archived:
-                              type: boolean
-                              description: Whether the feature is archived and hidden from the dashboard.
-                          required:
-                            - id
-                            - name
-                            - type
-                            - consumable
-                            - archived
-                          description: The full feature object if expanded.
-                      required:
-                        - id
-                        - plan_id
-                        - expires_at
-                        - feature_id
-                      examples:
-                        - id: cus_ent_39qmLooixXLAqMywgXywjAz96rV
-                          plan_id: pro_plan
-                          expires_at: null
-                          feature_id: dashboard
-                  billing_controls:
-                    type: object
-                    properties:
-                      spend_limits:
-                        type: array
-                        items:
-                          type: object
-                          properties:
-                            feature_id:
-                              type: string
-                              description: Optional feature ID this spend limit applies to.
-                            enabled:
-                              type: boolean
-                              default: false
-                              description: Whether the overage spend limit is enabled.
-                            limit_type:
-                              enum:
-                                - absolute
-                                - usage_percentage
-                              type: string
-                              description: "How overage_limit is interpreted: an absolute overage cap
-                                (default) or a percentage of the main-plan
-                                allowance."
-                            overage_limit:
-                              type: number
-                              minimum: 0
-                              description: "Overage cap for the feature: absolute units, or a percent (e.g.
-                                120) when limit_type is usage_percentage."
-                            skip_overage_billing:
-                              type: boolean
-                              description: When true, overage for this feature is not posted to Stripe. Usage
-                                tracking and balance resets still behave
-                                normally.
-                            source:
-                              enum:
-                                - customer
-                                - plan
-                              type: string
-                              description: "Response-only: whether the entry is a customer-level override or
-                                inherited from an attached plan's defaults."
-                        description: List of spend limits per feature. Each entry caps overage
-                          (overage_limit) and/or per-interval usage
-                          (usage_limit).
-                      usage_limits:
-                        type: array
-                        items:
-                          type: object
-                          properties:
-                            feature_id:
-                              type: string
-                              description: The feature this usage limit applies to.
-                            enabled:
-                              type: boolean
-                              default: true
-                              description: Whether this usage limit is enabled.
-                            limit:
-                              type: number
-                              minimum: 0
-                              description: Maximum units allowed per interval.
-                            interval:
-                              enum:
-                                - day
-                                - week
-                                - month
-                                - year
-                              type: string
-                              description: Interval for the cap, aligned to the customer's billing cycle.
-                            filter:
-                              type: object
-                              properties:
-                                properties:
-                                  type: object
-                                  propertyNames:
-                                    type: string
-                                    minLength: 1
-                                    maxLength: 64
-                                  additionalProperties: {}
-                              required:
-                                - properties
-                              description: When set, only usage from events whose properties match counts
-                                toward this cap. Omit to count all usage of the
-                                feature.
-                            usage:
-                              type: number
-                              minimum: 0
-                              description: Current usage already consumed in the active interval.
-                                Response-only; not stored on billing controls.
-                            source:
-                              enum:
-                                - customer
-                                - plan
-                              type: string
-                              description: "Response-only: whether the entry is a customer-level override or
-                                inherited from an attached plan's defaults."
-                          required:
-                            - feature_id
-                            - limit
-                            - interval
-                        description: List of hard usage caps per feature for this entity. An entity
-                          entry overrides the customer's for that feature.
-                      usage_alerts:
-                        type: array
-                        items:
-                          type: object
-                          properties:
-                            feature_id:
-                              type: string
-                              description: The feature ID this alert applies to.
-                            enabled:
-                              type: boolean
-                              default: true
-                              description: Whether this usage alert is enabled.
-                            threshold:
-                              type: number
-                              minimum: 0
-                              description: The threshold value that triggers the alert. For usage or
-                                remaining, this is an absolute count. For
-                                usage_percentage or remaining_percentage, this
-                                is a percentage (0-100).
-                            threshold_type:
-                              enum:
-                                - usage
-                                - usage_percentage
-                                - remaining
-                                - remaining_percentage
-                              type: string
-                              description: Whether the threshold is an absolute count or a percentage of the
-                                usage allowance or remaining balance.
-                            name:
-                              type: string
-                              description: Optional user-defined label to distinguish multiple alerts on the
-                                same feature.
-                            source:
-                              enum:
-                                - customer
-                                - plan
-                              type: string
-                              description: "Response-only: whether the entry is a customer-level override or
-                                inherited from an attached plan's defaults."
-                          required:
-                            - threshold
-                            - threshold_type
-                        description: List of usage alert configurations per feature.
-                      overage_allowed:
-                        type: array
-                        items:
-                          type: object
-                          properties:
-                            feature_id:
-                              type: string
-                              description: The feature ID this overage allowed control applies to.
-                            enabled:
-                              type: boolean
-                              default: false
-                              description: Whether overage is allowed for this feature.
-                            source:
-                              enum:
-                                - customer
-                                - plan
-                              type: string
-                              description: "Response-only: whether the entry is a customer-level override or
-                                inherited from an attached plan's defaults."
-                          required:
-                            - feature_id
-                        description: List of overage allowed controls per feature. When enabled, usage
-                          can exceed balance.
-                    description: Billing controls for the entity.
-                  invoices:
-                    type: array
-                    items:
-                      type: object
-                      properties:
-                        plan_ids:
-                          type: array
-                          items:
-                            type: string
-                          description: Array of plan IDs included in this invoice
-                        stripe_id:
-                          type: string
-                          description: The Stripe invoice ID
-                        processor_type:
-                          enum:
-                            - stripe
-                            - revenuecat
-                          type: string
-                          default: stripe
-                          description: The billing processor that owns this invoice.
-                        status:
-                          type: string
-                          description: The status of the invoice
-                        total:
-                          type: number
-                          description: The total amount of the invoice
-                        currency:
-                          type: string
-                          description: The currency code for the invoice
-                        created_at:
-                          type: number
-                          description: Timestamp when the invoice was created
-                        hosted_invoice_url:
-                          anyOf:
-                            - type: string
-                            - type: "null"
-                          description: URL to the Stripe-hosted invoice page
-                      required:
-                        - plan_ids
-                        - stripe_id
-                        - status
-                        - total
-                        - currency
-                        - created_at
-                    description: Invoices for this entity (only included when expand=invoices)
-                required:
-                  - id
-                  - name
-                  - created_at
-                  - env
-                  - subscriptions
-                  - purchases
-                  - balances
-                  - flags
-                examples:
-                  - &a81
-                    id: seat_42
-                    name: Seat 42
-                    customer_id: cus_123
-                    feature_id: seats
-                    created_at: 1771409161016
-                    env: sandbox
-                    subscriptions:
-                      - plan_id: pro_plan
-                        auto_enable: true
-                        add_on: false
-                        status: active
-                        past_due: false
-                        canceled_at: null
-                        expires_at: null
-                        trial_ends_at: null
-                        started_at: 1771431921437
-                        current_period_start: 1771431921437
-                        current_period_end: 1771999921437
-                        quantity: 1
-                    purchases: []
-                    balances:
-                      messages:
-                        feature_id: messages
-                        granted: 100
-                        remaining: 72
-                        usage: 28
-                        unlimited: false
-                        overage_allowed: false
-                        max_purchase: null
-                        next_reset_at: 1773851121437
-                        breakdown:
-                          - id: cus_ent_39qmLooixXLAqMywgXywjAz96rV
-                            plan_id: pro_plan
-                            included_grant: 100
-                            prepaid_grant: 0
-                            remaining: 72
-                            usage: 28
-                            unlimited: false
-                            reset:
-                              interval: month
-                              resets_at: 1773851121437
-                            price: null
-                            expires_at: null
-                    invoices: []
-              example: *a81
-      x-speakeasy-name-override: create
-      parameters:
-        - *a5
-      x-codeSamples:
-        - lang: typescript
-          label: Typescript (SDK)
-          source: |-
-            import { Autumn } from 'autumn-js'
-
-            const autumn = new Autumn()
-
-            const result = await autumn.entities.create({
-              name: "Seat 42",
-              featureId: "seats",
-              customerId: "cus_123",
-              entityId: "seat_42",
-            });
-        - lang: python
-          label: Python (SDK)
-          source: |-
-            from autumn_sdk import Autumn
-
-            autumn = Autumn(secret_key="am_sk_test...")
-
-            res = autumn.entities.create(
-                feature_id="seats",
-                customer_id="cus_123",
-                entity_id="seat_42",
-                name="Seat 42",
-            )
-  /v1/entities.get:
-    post:
-      operationId: getEntity
-      description: >-
-        Fetches an entity by its ID.
-
-
-        Use this to read one entity's current state. Pass customerId when you
-        want to scope the lookup to a specific customer.
-      tags:
-        - entities
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              properties:
-                customer_id:
-                  type: string
-                  description: The ID of the customer to create the entity for.
-                entity_id:
-                  type: string
-                  description: The ID of the entity.
-              required:
-                - entity_id
-              title: GetEntityParams
-              examples:
-                - &a82
-                  entity_id: seat_42
-                - customer_id: cus_123
-                  entity_id: seat_42
             example: *a82
       responses:
         "200":
@@ -32591,6 +32286,645 @@ paths:
                             expires_at: null
                     invoices: []
               example: *a83
+      x-speakeasy-name-override: create
+      parameters:
+        - *a5
+      x-codeSamples:
+        - lang: typescript
+          label: Typescript (SDK)
+          source: |-
+            import { Autumn } from 'autumn-js'
+
+            const autumn = new Autumn()
+
+            const result = await autumn.entities.create({
+              name: "Seat 42",
+              featureId: "seats",
+              customerId: "cus_123",
+              entityId: "seat_42",
+            });
+        - lang: python
+          label: Python (SDK)
+          source: |-
+            from autumn_sdk import Autumn
+
+            autumn = Autumn(secret_key="am_sk_test...")
+
+            res = autumn.entities.create(
+                feature_id="seats",
+                customer_id="cus_123",
+                entity_id="seat_42",
+                name="Seat 42",
+            )
+  /v1/entities.get:
+    post:
+      operationId: getEntity
+      description: >-
+        Fetches an entity by its ID.
+
+
+        Use this to read one entity's current state. Pass customerId when you
+        want to scope the lookup to a specific customer.
+      tags:
+        - entities
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                customer_id:
+                  type: string
+                  description: The ID of the customer to create the entity for.
+                entity_id:
+                  type: string
+                  description: The ID of the entity.
+              required:
+                - entity_id
+              title: GetEntityParams
+              examples:
+                - &a84
+                  entity_id: seat_42
+                - customer_id: cus_123
+                  entity_id: seat_42
+            example: *a84
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    anyOf:
+                      - type: string
+                      - type: "null"
+                    description: The unique identifier of the entity
+                  name:
+                    anyOf:
+                      - type: string
+                      - type: "null"
+                    description: The name of the entity
+                  customer_id:
+                    anyOf:
+                      - type: string
+                      - type: "null"
+                    description: The customer ID this entity belongs to
+                  feature_id:
+                    anyOf:
+                      - type: string
+                      - type: "null"
+                    description: The feature ID this entity belongs to
+                  created_at:
+                    type: number
+                    description: Unix timestamp when the entity was created
+                  env:
+                    enum:
+                      - sandbox
+                      - live
+                    type: string
+                    description: The environment (sandbox/live)
+                  subscriptions:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id:
+                          type: string
+                          description: The unique identifier of this subscription. If a subscription_id
+                            was provided at attach time, it is used; otherwise,
+                            falls back to the internal ID.
+                        plan:
+                          $ref: "#/components/schemas/Plan"
+                          description: The full plan object if expanded.
+                        plan_id:
+                          type: string
+                          description: The unique identifier of the subscribed plan.
+                        auto_enable:
+                          type: boolean
+                          description: Whether the plan was automatically enabled for the customer.
+                        add_on:
+                          type: boolean
+                          description: Whether this is an add-on plan rather than a base subscription.
+                        status:
+                          enum:
+                            - active
+                            - scheduled
+                          type: string
+                          description: Current status of the subscription.
+                        past_due:
+                          type: boolean
+                          description: Whether the subscription has overdue payments.
+                        canceled_at:
+                          anyOf:
+                            - type: number
+                            - type: "null"
+                          description: Timestamp when the subscription was canceled, or null if not
+                            canceled.
+                        expires_at:
+                          anyOf:
+                            - type: number
+                            - type: "null"
+                          description: Timestamp when the subscription will expire, or null if no expiry
+                            set.
+                        trial_ends_at:
+                          anyOf:
+                            - type: number
+                            - type: "null"
+                          description: Timestamp when the trial period ends, or null if not on trial.
+                        started_at:
+                          type: number
+                          description: Timestamp when the subscription started.
+                        current_period_start:
+                          anyOf:
+                            - type: number
+                            - type: "null"
+                          description: Start timestamp of the current billing period.
+                        current_period_end:
+                          anyOf:
+                            - type: number
+                            - type: "null"
+                          description: End timestamp of the current billing period.
+                        quantity:
+                          type: number
+                          description: Number of units of this subscription (for per-seat plans).
+                        scope:
+                          enum:
+                            - customer
+                            - entity
+                          type: string
+                          description: Whether this subscription is attached at the customer level or
+                            entity level.
+                      required:
+                        - id
+                        - plan_id
+                        - auto_enable
+                        - add_on
+                        - status
+                        - past_due
+                        - canceled_at
+                        - expires_at
+                        - trial_ends_at
+                        - started_at
+                        - current_period_start
+                        - current_period_end
+                        - quantity
+                  purchases:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        plan:
+                          $ref: "#/components/schemas/Plan"
+                          description: The full plan object if expanded.
+                        plan_id:
+                          type: string
+                          description: The unique identifier of the purchased plan.
+                        expires_at:
+                          anyOf:
+                            - type: number
+                            - type: "null"
+                          description: Timestamp when the purchase expires, or null for lifetime access.
+                        started_at:
+                          type: number
+                          description: Timestamp when the purchase was made.
+                        quantity:
+                          type: number
+                          description: Number of units purchased.
+                        scope:
+                          enum:
+                            - customer
+                            - entity
+                          type: string
+                          description: Whether this purchase is attached at the customer level or entity
+                            level.
+                      required:
+                        - plan_id
+                        - expires_at
+                        - started_at
+                        - quantity
+                  balances:
+                    type: object
+                    propertyNames:
+                      type: string
+                    additionalProperties:
+                      $ref: "#/components/schemas/Balance"
+                  flags:
+                    type: object
+                    propertyNames:
+                      type: string
+                    additionalProperties:
+                      type: object
+                      properties:
+                        id:
+                          type: string
+                          description: The unique identifier for this flag.
+                        plan_id:
+                          anyOf:
+                            - type: string
+                            - type: "null"
+                          description: The plan ID this flag originates from, or null for standalone
+                            flags.
+                        expires_at:
+                          anyOf:
+                            - type: number
+                            - type: "null"
+                          description: Timestamp when this flag expires, or null for no expiration.
+                        feature_id:
+                          type: string
+                          description: The feature ID this flag is for.
+                        feature:
+                          type: object
+                          properties:
+                            id:
+                              type: string
+                              description: The unique identifier for this feature, used in /check and /track
+                                calls.
+                            name:
+                              type: string
+                              description: Human-readable name displayed in the dashboard and billing UI.
+                            type:
+                              enum:
+                                - boolean
+                                - metered
+                                - credit_system
+                                - ai_credit_system
+                              type: string
+                              description: "Feature type: 'boolean' for on/off access, 'metered' for
+                                usage-tracked features, 'credit_system' for
+                                unified credit pools, 'ai_credit_system' for
+                                model-based token pricing."
+                            consumable:
+                              type: boolean
+                              description: "For metered features: true if usage resets periodically (API
+                                calls, credits), false if allocated persistently
+                                (seats, storage)."
+                            event_names:
+                              type: array
+                              items:
+                                type: string
+                              description: Event names that trigger this feature's balance. Allows multiple
+                                features to respond to a single event.
+                            credit_schema:
+                              type: array
+                              items:
+                                type: object
+                                properties:
+                                  metered_feature_id:
+                                    type: string
+                                    description: ID of the metered feature that draws from this credit system.
+                                  credit_cost:
+                                    type: number
+                                    description: Credits consumed per unit of the metered feature.
+                                required:
+                                  - metered_feature_id
+                                  - credit_cost
+                              description: "For credit_system features: maps metered features to their credit
+                                costs."
+                            model_markups:
+                              anyOf:
+                                - type: object
+                                  propertyNames:
+                                    type: string
+                                  additionalProperties:
+                                    type: object
+                                    properties:
+                                      markup:
+                                        type: number
+                                        minimum: -100
+                                      input_cost:
+                                        type: number
+                                        minimum: 0
+                                      output_cost:
+                                        type: number
+                                        minimum: 0
+                                - type: "null"
+                              description: Per-model markup overrides for AI credit systems.
+                            default_markup:
+                              type: number
+                              minimum: -100
+                              description: Default percentage markup for AI credit systems. Use -100 to make
+                                usage free.
+                            provider_markups:
+                              anyOf:
+                                - type: object
+                                  propertyNames:
+                                    type: string
+                                  additionalProperties:
+                                    type: object
+                                    properties:
+                                      markup:
+                                        type: number
+                                        minimum: -100
+                                    required:
+                                      - markup
+                                - type: "null"
+                              description: Per-provider default markup percentages for AI credit systems.
+                            display:
+                              type: object
+                              properties:
+                                singular:
+                                  anyOf:
+                                    - type: string
+                                    - type: "null"
+                                  description: Singular form for UI display (e.g., 'API call', 'seat').
+                                plural:
+                                  anyOf:
+                                    - type: string
+                                    - type: "null"
+                                  description: Plural form for UI display (e.g., 'API calls', 'seats').
+                              description: Display names for the feature in billing UI and customer-facing
+                                components.
+                            archived:
+                              type: boolean
+                              description: Whether the feature is archived and hidden from the dashboard.
+                          required:
+                            - id
+                            - name
+                            - type
+                            - consumable
+                            - archived
+                          description: The full feature object if expanded.
+                      required:
+                        - id
+                        - plan_id
+                        - expires_at
+                        - feature_id
+                      examples:
+                        - id: cus_ent_39qmLooixXLAqMywgXywjAz96rV
+                          plan_id: pro_plan
+                          expires_at: null
+                          feature_id: dashboard
+                  billing_controls:
+                    type: object
+                    properties:
+                      spend_limits:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            feature_id:
+                              type: string
+                              description: Optional feature ID this spend limit applies to.
+                            enabled:
+                              type: boolean
+                              default: false
+                              description: Whether the overage spend limit is enabled.
+                            limit_type:
+                              enum:
+                                - absolute
+                                - usage_percentage
+                              type: string
+                              description: "How overage_limit is interpreted: an absolute overage cap
+                                (default) or a percentage of the main-plan
+                                allowance."
+                            overage_limit:
+                              type: number
+                              minimum: 0
+                              description: "Overage cap for the feature: absolute units, or a percent (e.g.
+                                120) when limit_type is usage_percentage."
+                            skip_overage_billing:
+                              type: boolean
+                              description: When true, overage for this feature is not posted to Stripe. Usage
+                                tracking and balance resets still behave
+                                normally.
+                            source:
+                              enum:
+                                - customer
+                                - plan
+                              type: string
+                              description: "Response-only: whether the entry is a customer-level override or
+                                inherited from an attached plan's defaults."
+                        description: List of spend limits per feature. Each entry caps overage
+                          (overage_limit) and/or per-interval usage
+                          (usage_limit).
+                      usage_limits:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            feature_id:
+                              type: string
+                              description: The feature this usage limit applies to.
+                            enabled:
+                              type: boolean
+                              default: true
+                              description: Whether this usage limit is enabled.
+                            limit:
+                              type: number
+                              minimum: 0
+                              description: Maximum units allowed per interval.
+                            interval:
+                              enum:
+                                - day
+                                - week
+                                - month
+                                - year
+                              type: string
+                              description: Interval for the cap, aligned to the customer's billing cycle.
+                            filter:
+                              type: object
+                              properties:
+                                properties:
+                                  type: object
+                                  propertyNames:
+                                    type: string
+                                    minLength: 1
+                                    maxLength: 64
+                                  additionalProperties: {}
+                              required:
+                                - properties
+                              description: When set, only usage from events whose properties match counts
+                                toward this cap. Omit to count all usage of the
+                                feature.
+                            usage:
+                              type: number
+                              minimum: 0
+                              description: Current usage already consumed in the active interval.
+                                Response-only; not stored on billing controls.
+                            source:
+                              enum:
+                                - customer
+                                - plan
+                              type: string
+                              description: "Response-only: whether the entry is a customer-level override or
+                                inherited from an attached plan's defaults."
+                          required:
+                            - feature_id
+                            - limit
+                            - interval
+                        description: List of hard usage caps per feature for this entity. An entity
+                          entry overrides the customer's for that feature.
+                      usage_alerts:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            feature_id:
+                              type: string
+                              description: The feature ID this alert applies to.
+                            enabled:
+                              type: boolean
+                              default: true
+                              description: Whether this usage alert is enabled.
+                            threshold:
+                              type: number
+                              minimum: 0
+                              description: The threshold value that triggers the alert. For usage or
+                                remaining, this is an absolute count. For
+                                usage_percentage or remaining_percentage, this
+                                is a percentage (0-100).
+                            threshold_type:
+                              enum:
+                                - usage
+                                - usage_percentage
+                                - remaining
+                                - remaining_percentage
+                              type: string
+                              description: Whether the threshold is an absolute count or a percentage of the
+                                usage allowance or remaining balance.
+                            name:
+                              type: string
+                              description: Optional user-defined label to distinguish multiple alerts on the
+                                same feature.
+                            source:
+                              enum:
+                                - customer
+                                - plan
+                              type: string
+                              description: "Response-only: whether the entry is a customer-level override or
+                                inherited from an attached plan's defaults."
+                          required:
+                            - threshold
+                            - threshold_type
+                        description: List of usage alert configurations per feature.
+                      overage_allowed:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            feature_id:
+                              type: string
+                              description: The feature ID this overage allowed control applies to.
+                            enabled:
+                              type: boolean
+                              default: false
+                              description: Whether overage is allowed for this feature.
+                            source:
+                              enum:
+                                - customer
+                                - plan
+                              type: string
+                              description: "Response-only: whether the entry is a customer-level override or
+                                inherited from an attached plan's defaults."
+                          required:
+                            - feature_id
+                        description: List of overage allowed controls per feature. When enabled, usage
+                          can exceed balance.
+                    description: Billing controls for the entity.
+                  invoices:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        plan_ids:
+                          type: array
+                          items:
+                            type: string
+                          description: Array of plan IDs included in this invoice
+                        stripe_id:
+                          type: string
+                          description: The Stripe invoice ID
+                        processor_type:
+                          enum:
+                            - stripe
+                            - revenuecat
+                          type: string
+                          default: stripe
+                          description: The billing processor that owns this invoice.
+                        status:
+                          type: string
+                          description: The status of the invoice
+                        total:
+                          type: number
+                          description: The total amount of the invoice
+                        currency:
+                          type: string
+                          description: The currency code for the invoice
+                        created_at:
+                          type: number
+                          description: Timestamp when the invoice was created
+                        hosted_invoice_url:
+                          anyOf:
+                            - type: string
+                            - type: "null"
+                          description: URL to the Stripe-hosted invoice page
+                      required:
+                        - plan_ids
+                        - stripe_id
+                        - status
+                        - total
+                        - currency
+                        - created_at
+                    description: Invoices for this entity (only included when expand=invoices)
+                required:
+                  - id
+                  - name
+                  - created_at
+                  - env
+                  - subscriptions
+                  - purchases
+                  - balances
+                  - flags
+                examples:
+                  - &a85
+                    id: seat_42
+                    name: Seat 42
+                    customer_id: cus_123
+                    feature_id: seats
+                    created_at: 1771409161016
+                    env: sandbox
+                    subscriptions:
+                      - plan_id: pro_plan
+                        auto_enable: true
+                        add_on: false
+                        status: active
+                        past_due: false
+                        canceled_at: null
+                        expires_at: null
+                        trial_ends_at: null
+                        started_at: 1771431921437
+                        current_period_start: 1771431921437
+                        current_period_end: 1771999921437
+                        quantity: 1
+                    purchases: []
+                    balances:
+                      messages:
+                        feature_id: messages
+                        granted: 100
+                        remaining: 72
+                        usage: 28
+                        unlimited: false
+                        overage_allowed: false
+                        max_purchase: null
+                        next_reset_at: 1773851121437
+                        breakdown:
+                          - id: cus_ent_39qmLooixXLAqMywgXywjAz96rV
+                            plan_id: pro_plan
+                            included_grant: 100
+                            prepaid_grant: 0
+                            remaining: 72
+                            usage: 28
+                            unlimited: false
+                            reset:
+                              interval: month
+                              resets_at: 1773851121437
+                            price: null
+                            expires_at: null
+                    invoices: []
+              example: *a85
       x-speakeasy-name-override: get
       parameters:
         - *a5
@@ -32688,12 +33022,12 @@ paths:
                     paginated call instead of iterating entities.get.
               title: ListEntitiesParams
               examples:
-                - &a84
+                - &a86
                   start_cursor: ""
                   limit: 10
                 - plans:
                     - id: pro_plan
-            example: *a84
+            example: *a86
       responses:
         "200":
           description: OK
@@ -33245,7 +33579,7 @@ paths:
                   - list
                   - next_cursor
                 examples:
-                  - &a85
+                  - &a87
                     list:
                       - id: seat_42
                         name: Seat 42
@@ -33292,7 +33626,7 @@ paths:
                                 expires_at: null
                         invoices: []
                     next_cursor: null
-              example: *a85
+              example: *a87
       x-speakeasy-name-override: list
       parameters:
         - *a5
@@ -33481,7 +33815,7 @@ paths:
                 - entity_id
               title: UpdateEntityParams
               examples:
-                - &a86
+                - &a88
                   customer_id: cus_123
                   entity_id: seat_42
                   billing_controls:
@@ -33490,7 +33824,7 @@ paths:
                         enabled: true
                         limit_type: usage_percentage
                         overage_limit: 120
-            example: *a86
+            example: *a88
       responses:
         "200":
           description: OK
@@ -34021,7 +34355,7 @@ paths:
                   - balances
                   - flags
                 examples:
-                  - &a87
+                  - &a89
                     id: seat_42
                     name: Seat 42
                     customer_id: cus_123
@@ -34066,7 +34400,7 @@ paths:
                             price: null
                             expires_at: null
                     invoices: []
-              example: *a87
+              example: *a89
       x-speakeasy-name-override: update
       parameters:
         - *a5
@@ -34141,10 +34475,10 @@ paths:
                 - entity_id
               title: DeleteEntityParams
               examples:
-                - &a88
+                - &a90
                   customer_id: cus_123
                   entity_id: seat_42
-            example: *a88
+            example: *a90
       responses:
         "200":
           description: OK
@@ -34158,9 +34492,9 @@ paths:
                 required:
                   - success
                 examples:
-                  - &a89
+                  - &a91
                     success: true
-              example: *a89
+              example: *a91
       x-speakeasy-name-override: delete
       parameters:
         - *a5
@@ -34211,10 +34545,10 @@ paths:
                 - program_id
               title: CreateReferralCodeParams
               examples:
-                - &a90
+                - &a92
                   customer_id: cus_123
                   program_id: prog_123
-            example: *a90
+            example: *a92
       responses:
         "200":
           description: OK
@@ -34237,11 +34571,11 @@ paths:
                   - customer_id
                   - created_at
                 examples:
-                  - &a91
+                  - &a93
                     code: <string>
                     customer_id: <string>
                     created_at: 123
-              example: *a91
+              example: *a93
       x-speakeasy-name-override: createCode
       parameters:
         - *a5
@@ -34292,10 +34626,10 @@ paths:
                 - customer_id
               title: RedeemReferralCodeParams
               examples:
-                - &a92
+                - &a94
                   code: REF123
                   customer_id: cus_456
-            example: *a92
+            example: *a94
       responses:
         "200":
           description: OK
@@ -34318,11 +34652,11 @@ paths:
                   - customer_id
                   - reward_id
                 examples:
-                  - &a93
+                  - &a95
                     id: <string>
                     customer_id: <string>
                     reward_id: <string>
-              example: *a93
+              example: *a95
       x-speakeasy-name-override: redeemCode
       parameters:
         - *a5
@@ -34363,8 +34697,8 @@ paths:
               type: object
               title: RewardsListParams
               examples:
-                - &a94 {}
-            example: *a94
+                - &a96 {}
+            example: *a96
       responses:
         "200":
           description: OK
@@ -34578,10 +34912,10 @@ paths:
                   - coupons
                   - feature_grants
                 examples:
-                  - &a95
+                  - &a97
                     coupons: []
                     feature_grants: []
-              example: *a95
+              example: *a97
       x-speakeasy-name-override: list
       parameters:
         - *a5
@@ -34628,10 +34962,10 @@ paths:
                 - customer_id
               title: RedeemRewardCodeParams
               examples:
-                - &a96
+                - &a98
                   code: REWARD10
                   customer_id: cus_456
-            example: *a96
+            example: *a98
       responses:
         "200":
           description: OK
@@ -34662,12 +34996,12 @@ paths:
                   - reward_id
                   - entitlements_granted
                 examples:
-                  - &a97
+                  - &a99
                     reward_id: reward_789
                     entitlements_granted:
                       - feature_id: messages
                         balance: 100
-              example: *a97
+              example: *a99
       x-speakeasy-name-override: redeemCode
       parameters:
         - *a5
@@ -34729,12 +35063,12 @@ paths:
                 - redirect_url
               title: LinkRevenueCatParams
               examples:
-                - &a98
+                - &a100
                   organization_slug: acme
                   env: test
                   project_name: acme-mobile
                   redirect_url: https://dashboard.useautumn.com/dev?tab=revenuecat
-            example: *a98
+            example: *a100
       responses:
         "200":
           description: OK
@@ -34749,9 +35083,9 @@ paths:
                   - oauth_url
                 title: LinkRevenueCatResponse
                 examples:
-                  - &a99
+                  - &a101
                     oauth_url: https://api.revenuecat.com/oauth2/authorize?client_id=...&redirect_uri=...&response_type=code&scope=project.read+project.write
-              example: *a99
+              example: *a101
       x-speakeasy-name-override: linkRevenueCat
       parameters:
         - *a5
@@ -34820,13 +35154,13 @@ paths:
                 - env
               title: SyncRevenueCatParams
               examples:
-                - &a100
+                - &a102
                   organization_slug: acme
                   env: test
                   product_ids:
                     - pro
                     - premium
-            example: *a100
+            example: *a102
       responses:
         "200":
           description: OK
@@ -34892,7 +35226,7 @@ paths:
                   - results
                 title: SyncRevenueCatResponse
                 examples:
-                  - &a101
+                  - &a103
                     results:
                       - plan_id: pro
                         status: synced
@@ -34903,7 +35237,7 @@ paths:
                             product: created
                             store_push: skipped
                             price: set
-              example: *a101
+              example: *a103
       x-speakeasy-name-override: syncRevenueCat
       parameters:
         - *a5
@@ -34968,10 +35302,10 @@ paths:
                 - env
               title: GetRevenueCatKeysParams
               examples:
-                - &a102
+                - &a104
                   organization_slug: acme
                   env: test
-            example: *a102
+            example: *a104
       responses:
         "200":
           description: OK
@@ -35034,7 +35368,7 @@ paths:
                   - oauth_access_token
                 title: GetRevenueCatKeysResponse
                 examples:
-                  - &a103
+                  - &a105
                     apps:
                       - app_id: app1a2b3c4d
                         app_type: test_store
@@ -35045,7 +35379,7 @@ paths:
                             environment: production
                             app_id: app1a2b3c4
                     oauth_access_token: atk_aBcDeFgHiJkLmNoPqRsTuVwXyZ
-              example: *a103
+              example: *a105
       x-speakeasy-name-override: getRevenueCatKeys
       parameters:
         - *a5
@@ -35100,9 +35434,9 @@ paths:
                 - customer_id
               title: MintKeyParams
               examples:
-                - &a104
+                - &a106
                   customer_id: cus_123
-            example: *a104
+            example: *a106
       responses:
         "200":
           description: OK
@@ -35131,12 +35465,12 @@ paths:
                   - access_token
                   - expires_at
                 examples:
-                  - &a105
+                  - &a107
                     access_token: am_jwt_eyJhbGciOiJIUzI1NiJ9...
                     refresh_token: am_jwt_eyJhbGciOiJIUzI1NiJ9...
                     expires_at: 1781113864000
                     refresh_expires_at: 1781196664000
-              example: *a105
+              example: *a107
       x-speakeasy-name-override: mint
       parameters:
         - *a5
@@ -35179,8 +35513,8 @@ paths:
               description: No body. The refresh token is supplied as the Bearer credential;
                 the response is a freshly rotated access + refresh pair.
               examples:
-                - &a106 {}
-            example: *a106
+                - &a108 {}
+            example: *a108
       responses:
         "200":
           description: OK
@@ -35209,12 +35543,12 @@ paths:
                   - access_token
                   - expires_at
                 examples:
-                  - &a107
+                  - &a109
                     access_token: am_jwt_eyJhbGciOiJIUzI1NiJ9...
                     refresh_token: am_jwt_eyJhbGciOiJIUzI1NiJ9...
                     expires_at: 1781113864000
                     refresh_expires_at: 1781196664000
-              example: *a107
+              example: *a109
       x-speakeasy-name-override: refresh
       parameters:
         - *a5
@@ -35260,9 +35594,9 @@ paths:
                 - customer_id
               title: RevokeKeyParams
               examples:
-                - &a108
+                - &a110
                   customer_id: cus_123
-            example: *a108
+            example: *a110
       responses:
         "200":
           description: OK
@@ -35276,9 +35610,9 @@ paths:
                 required:
                   - revoked
                 examples:
-                  - &a109
+                  - &a111
                     revoked: true
-              example: *a109
+              example: *a111
       x-speakeasy-name-override: revoke
       parameters:
         - *a5

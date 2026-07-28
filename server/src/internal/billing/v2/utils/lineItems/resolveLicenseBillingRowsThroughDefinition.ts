@@ -1,7 +1,4 @@
-import {
-	type FullPlanLicense,
-	type LicenseBillingPriceRow,
-} from "@autumn/shared";
+import type { FullPlanLicense, LicenseBillingPriceRow } from "@autumn/shared";
 
 /** Selects projected rows for this definition, otherwise persisted rows. */
 export const resolveLicenseBillingRowsThroughDefinition = ({
@@ -11,11 +8,11 @@ export const resolveLicenseBillingRowsThroughDefinition = ({
 }: {
 	licenseBillingRows: LicenseBillingPriceRow[];
 	planLicense: FullPlanLicense;
-	projectedPlanLicenseIds: Set<string>;
+	projectedPlanLicenseIds: string[];
 }): LicenseBillingPriceRow[] => {
 	const projectedRows = licenseBillingRows.filter(
 		(row) => row.source.planLicenseId === planLicense.id,
 	);
-	if (projectedPlanLicenseIds.has(planLicense.id)) return projectedRows;
+	if (projectedPlanLicenseIds.includes(planLicense.id)) return projectedRows;
 	return licenseBillingRows.filter((row) => !row.source.planLicenseId);
 };

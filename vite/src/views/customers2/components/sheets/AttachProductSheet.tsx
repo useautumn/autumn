@@ -9,6 +9,7 @@ import { toast } from "sonner";
 import {
 	AttachAdvancedSection,
 	AttachFormProvider,
+	AttachLicenseLossWarning,
 	AttachPlanOptions,
 	AttachPlanSection,
 	AttachProductSelection,
@@ -171,6 +172,7 @@ function ReviewPreviewBlock() {
 					transition={{ duration: 0.3, ease: [0.25, 0.1, 0.25, 1] }}
 				>
 					<AttachUpdatesSection />
+					<AttachLicenseLossWarning />
 					{error ? (
 						<SheetSection title="Pricing Preview" withSeparator>
 							<PreviewErrorDisplay error={error} />

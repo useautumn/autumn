@@ -76,6 +76,7 @@ export const filterCustomers = ({
 	includeProcessed,
 	batchSize,
 	limit,
+	afterInternalId,
 }: {
 	ctx: AutumnContext;
 	filter: CustomerFilter;
@@ -85,6 +86,7 @@ export const filterCustomers = ({
 	includeProcessed?: IncludeProcessed;
 	batchSize?: number;
 	limit?: number;
+	afterInternalId?: string;
 }): AsyncGenerator<CustomerRow[]> => {
 	const args = buildArgs({ ctx, filter, checkpoint, search, customerFilters });
 	const source = iterateOverFilterResults<CustomerRow>({
@@ -93,6 +95,7 @@ export const filterCustomers = ({
 			buildRowsSelect({ args, includeProcessed, limit, afterInternalId }),
 		batchSize:
 			limit === undefined ? batchSize : Math.min(batchSize ?? limit, limit),
+		afterInternalId,
 	});
 	return limit === undefined ? source : takeRows(source, limit);
 };

@@ -31,7 +31,10 @@ export const handleAttachLicenseErrors = ({
 		});
 	}
 
-	if (customerLicense.remaining < entityParams.length) {
+	if (
+		customerLicense.remaining <
+		context.existingEntities.length + newEntityParams.length
+	) {
 		throw new RecaseError({
 			message: "No available licenses for this plan.",
 			code: ErrCode.InvalidRequest,

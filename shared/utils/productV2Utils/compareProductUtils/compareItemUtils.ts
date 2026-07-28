@@ -40,6 +40,7 @@ export const findSimilarItem = ({
 			(i) =>
 				isFeatureItem(i) &&
 				i.feature_id === item.feature_id &&
+				i.entity_feature_id == item.entity_feature_id &&
 				entIntervalsSame({
 					intervalA: {
 						interval: itemToEntInterval({ item: i }),
@@ -58,6 +59,7 @@ export const findSimilarItem = ({
 			(i) =>
 				isFeaturePriceItem(i) &&
 				i.feature_id === item.feature_id &&
+				i.entity_feature_id == item.entity_feature_id &&
 				intervalsSame({
 					intervalA: {
 						interval: itemToBillingInterval({ item: i }),
@@ -187,6 +189,10 @@ export const featureItemsAreSame = ({
 		entity_feature_id: {
 			condition: item1.entity_feature_id == item2.entity_feature_id,
 			message: `Entity feature ID different: ${item1.entity_feature_id} != ${item2.entity_feature_id}`,
+		},
+		pooled: {
+			condition: (item1.pooled ?? false) === (item2.pooled ?? false),
+			message: `Pooled different: ${item1.pooled} != ${item2.pooled}`,
 		},
 		reset_usage_when_enabled: {
 			condition:
@@ -355,6 +361,10 @@ export const featurePriceItemsAreSame = ({
 		entity_feature_id: {
 			condition: item1.entity_feature_id == item2.entity_feature_id,
 			message: `Entity feature ID different: ${item1.entity_feature_id} != ${item2.entity_feature_id}`,
+		},
+		pooled: {
+			condition: (item1.pooled ?? false) === (item2.pooled ?? false),
+			message: `Pooled different: ${item1.pooled} != ${item2.pooled}`,
 		},
 
 		// config: {

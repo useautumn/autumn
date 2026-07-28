@@ -33,6 +33,8 @@ const virtualProduct = ({
 		...(current ?? {}),
 		id,
 		version,
+		prices: current?.prices ?? [],
+		entitlements: current?.entitlements ?? [],
 		archived: archived ?? current?.archived ?? false,
 		internal_id:
 			current?.version === version

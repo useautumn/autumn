@@ -471,10 +471,6 @@ await autumn.plans.update({
 
     <DynamicParamField body="metadata" type="object" />
 
-    <DynamicParamField body="version" type="integer">
-      Pin the link to a specific version of the license plan. Omitted, an existing link keeps its pinned version and a new link resolves to the latest.
-    </DynamicParamField>
-
   </Expandable>
 </DynamicParamField>
 
@@ -533,7 +529,7 @@ await autumn.plans.update({
         </DynamicParamField>
 
         <DynamicParamField body="purchase_limit" type="object">
-          Optional rate limit to cap how often auto top-ups occur.
+          Optional rate limit to cap how often auto top-ups occur. Pass count to set the current window's consumed top-ups.
           <Expandable title="properties">
             <DynamicParamField body="interval" type="'hour' | 'day' | 'week' | 'month'" required>
               The time interval for the purchase limit window.
@@ -545,6 +541,10 @@ await autumn.plans.update({
 
             <DynamicParamField body="limit" type="number" required>
               Maximum number of auto top-ups allowed within the interval.
+            </DynamicParamField>
+
+            <DynamicParamField body="count" type="number">
+              Set the current window's consumed auto top-up count. Omit to leave runtime state unchanged.
             </DynamicParamField>
 
           </Expandable>
@@ -695,6 +695,16 @@ await autumn.plans.update({
 
 <DynamicParamField body="update_variant_ids" type="string[]">
   Variant plan IDs to apply this update to. Empty or omitted means no propagation.
+</DynamicParamField>
+
+<DynamicParamField body="update_license_parents" type="object[]">
+  Parent plan versions that should receive this license-plan update.
+  <Expandable title="properties">
+    <DynamicParamField body="plan_id" type="string" required />
+
+    <DynamicParamField body="version" type="integer" required />
+
+  </Expandable>
 </DynamicParamField>
 
 <DynamicParamField body="variants" type="object[]">
@@ -948,7 +958,7 @@ await autumn.plans.update({
                 </DynamicParamField>
 
                 <DynamicParamField body="purchase_limit" type="object">
-                  Optional rate limit to cap how often auto top-ups occur.
+                  Optional rate limit to cap how often auto top-ups occur. Pass count to set the current window's consumed top-ups.
                   <Expandable title="properties">
                     <DynamicParamField body="interval" type="'hour' | 'day' | 'week' | 'month'" required>
                       The time interval for the purchase limit window.
@@ -960,6 +970,10 @@ await autumn.plans.update({
 
                     <DynamicParamField body="limit" type="number" required>
                       Maximum number of auto top-ups allowed within the interval.
+                    </DynamicParamField>
+
+                    <DynamicParamField body="count" type="number">
+                      Set the current window's consumed auto top-up count. Omit to leave runtime state unchanged.
                     </DynamicParamField>
 
                   </Expandable>
@@ -1659,7 +1673,7 @@ await autumn.plans.update({
                 </DynamicResponseField>
 
                 <DynamicResponseField name="purchase_limit" type="object">
-                  Optional rate limit to cap how often auto top-ups occur.
+                  Optional rate limit to cap how often auto top-ups occur. Pass count to set the current window's consumed top-ups.
                   <Expandable title="properties">
                     <DynamicResponseField name="interval" type="'hour' | 'day' | 'week' | 'month'">
                       The time interval for the purchase limit window.
@@ -1671,6 +1685,10 @@ await autumn.plans.update({
 
                     <DynamicResponseField name="limit" type="number">
                       Maximum number of auto top-ups allowed within the interval.
+                    </DynamicResponseField>
+
+                    <DynamicResponseField name="count" type="number">
+                      Set the current window's consumed auto top-up count. Omit to leave runtime state unchanged.
                     </DynamicResponseField>
 
                   </Expandable>

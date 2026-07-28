@@ -3,18 +3,19 @@ import {
 	customers,
 	ErrCode,
 	member,
-	organizations,
 	type Organization,
+	organizations,
 	RecaseError,
 } from "@autumn/shared";
-import { and, eq } from "drizzle-orm";
 import type { DrizzleCli } from "@server/db/initDrizzle.js";
+import { and, eq } from "drizzle-orm";
 import type { Logger } from "@/external/logtail/logtailUtils.js";
 import {
 	deleteStripeAccounts,
 	deleteStripeWebhooks,
 	deleteSvixWebhooks,
 } from "@/internal/orgs/orgUtils/deleteOrgUtils.js";
+import { clearOrgWithFeaturesCache } from "../orgUtils/cacheOrgWithFeatures.js";
 
 /**
  * Deletes a platform-created sub-org and all its dependencies.
@@ -68,4 +69,5 @@ export const deletePlatformSubOrg = async ({
 
 	logger.info("6. Deleting organization");
 	await db.delete(organizations).where(eq(organizations.id, org.id));
+	await clearOrgWithFeaturesCache({ orgId: org.id, logger });
 };

@@ -18,7 +18,9 @@ import {
 	type DashboardIntervalFilter,
 	type DashboardProductVersionFilter,
 	type DashboardStatusFilter,
+	EXTRA_CUSTOMER_ENTITLEMENT_LIMIT,
 	getCustomerListFilterSql,
+	POOLED_CUSTOMER_ENTITLEMENT_LIMIT,
 } from "./getFullCusQuery.js";
 
 export type CursorPaginatedFullCusQueryArgs = {
@@ -42,6 +44,8 @@ export type CursorPaginatedFullCusQueryArgs = {
 	intervalFilters?: DashboardIntervalFilter[];
 	cusProductLimit: number;
 	customerId?: string;
+	/** Emit products_page / products_total_count. Dashboard only. */
+	withProductsPage?: boolean;
 };
 
 /**
@@ -70,13 +74,23 @@ export const getCursorPaginatedFullCusQuery = ({
 	intervalFilters,
 	cusProductLimit,
 	customerId,
+	withProductsPage = false,
 }: CursorPaginatedFullCusQueryArgs) => {
 	const cpStatusFilter = cpStatusInClause(inStatuses);
 
-	const productsSeedCte = customerProductsSeedCte({
-		inStatuses: RELEVANT_STATUSES,
-		limit: CUSTOMER_PRODUCTS_DEFAULT_LIMIT,
-	});
+	// products_page / products_total_count are only rendered by the dashboard.
+	// The public API path never reads them, and building them costs two extra
+	// CTEs over customer_products plus ~12MB of the response on a 500-row page.
+	const productsSeedCte = withProductsPage
+		? sql`, ${customerProductsSeedCte({
+				inStatuses: RELEVANT_STATUSES,
+				limit: CUSTOMER_PRODUCTS_DEFAULT_LIMIT,
+			})}`
+		: sql``;
+
+	const productsSeedSelect = withProductsPage
+		? sql`, ${customerProductsSeedSelect}`
+		: sql``;
 
 	const customerListFilterSql = getCustomerListFilterSql({
 		internalCustomerIds,
@@ -165,6 +179,7 @@ export const getCursorPaginatedFullCusQuery = ({
 			SELECT
 				cp.id,
 				cp.internal_customer_id,
+				cp.internal_entity_id,
 				cp.internal_product_id,
 				cp.free_trial_id,
 				cp.subscription_ids,
@@ -186,6 +201,7 @@ export const getCursorPaginatedFullCusQuery = ({
 			SELECT
 				cp.id,
 				cp.internal_customer_id,
+				cp.internal_entity_id,
 				cp.internal_product_id,
 				cp.free_trial_id,
 				cp.subscription_ids,
@@ -203,9 +219,25 @@ export const getCursorPaginatedFullCusQuery = ({
 			GROUP BY internal_customer_id
 		),
 		ces_bound AS MATERIALIZED (
-			SELECT ce.id, ce.entitlement_id, row_to_json(ce) AS row_json
+			SELECT
+				ce.id,
+				ce.entitlement_id,
+				(
+					row_to_json(ce)::jsonb
+					|| CASE
+						WHEN pbc.id IS NULL THEN '{}'::jsonb
+						ELSE jsonb_build_object(
+							'pooled_balance_contribution',
+							to_jsonb(pbc)
+						)
+					END
+				)::json AS row_json
 			FROM cps_ranked
 			JOIN customer_entitlements ce ON ce.customer_product_id = cps_ranked.id
+			LEFT JOIN pooled_balance_contributions pbc
+				ON pbc.id = ce.pooled_contribution_id
+				AND pbc.source_customer_entitlement_id = ce.id
+				AND pbc.source_customer_product_id = cps_ranked.id
 		),
 		ces_loose AS MATERIALIZED (
 			SELECT ce.id, ce.entitlement_id, row_to_json(ce) AS row_json
@@ -215,26 +247,53 @@ export const getCursorPaginatedFullCusQuery = ({
 				FROM customer_entitlements ce
 				WHERE ce.internal_customer_id = cr.internal_id
 					AND ce.customer_product_id IS NULL
+					AND ce.pooled_balance_id IS NULL
+					AND ce.pooled_contribution_id IS NULL
 					AND (ce.expires_at IS NULL OR ce.expires_at > EXTRACT(EPOCH FROM now()) * 1000)
 				ORDER BY ce.id DESC
-				LIMIT 30
+				LIMIT ${EXTRA_CUSTOMER_ENTITLEMENT_LIMIT}
 			) ce ON true
+		),
+		ces_pooled AS MATERIALIZED (
+			SELECT
+				ce.id,
+				ce.entitlement_id,
+				(
+					row_to_json(ce)::jsonb
+					|| jsonb_build_object('pooled_balance', to_jsonb(pb))
+				)::json AS row_json
+			FROM cr
+			JOIN LATERAL (
+				SELECT ce.*
+				FROM customer_entitlements ce
+				WHERE ce.internal_customer_id = cr.internal_id
+					AND ce.customer_product_id IS NULL
+					AND ce.pooled_balance_id IS NOT NULL
+					AND ce.pooled_contribution_id IS NULL
+					AND (ce.expires_at IS NULL OR ce.expires_at > EXTRACT(EPOCH FROM now()) * 1000)
+				ORDER BY ce.id DESC
+				LIMIT ${POOLED_CUSTOMER_ENTITLEMENT_LIMIT}
+			) ce ON true
+			JOIN pooled_balances pb ON pb.id = ce.pooled_balance_id
 		),
 		ces_all AS MATERIALIZED (
 			SELECT id, entitlement_id FROM ces_bound
 			UNION ALL
 			SELECT id, entitlement_id FROM ces_loose
-		),
+			UNION ALL
+			SELECT id, entitlement_id FROM ces_pooled
+		)
 		${productsSeedCte}
 		${entitiesCte}
 		${invoicesCte}
 		SELECT
 			(SELECT COALESCE(json_agg(row_json), '[]'::json) FROM cr) AS customers,
-			(SELECT COALESCE(json_object_agg(internal_customer_id, n), '{}'::json) FROM cp_counts) AS product_counts,
-			${customerProductsSeedSelect},
+			(SELECT COALESCE(json_object_agg(internal_customer_id, n), '{}'::json) FROM cp_counts) AS product_counts
+			${productsSeedSelect},
 			(SELECT COALESCE(json_agg(row_json), '[]'::json) FROM cps_ranked) AS customer_products,
 			(SELECT COALESCE(json_agg(row_json), '[]'::json) FROM ces_bound) AS customer_entitlements,
 			(SELECT COALESCE(json_agg(row_json ORDER BY id DESC), '[]'::json) FROM ces_loose) AS extra_customer_entitlements,
+			(SELECT COALESCE(json_agg(row_json ORDER BY id DESC), '[]'::json) FROM ces_pooled) AS pooled_customer_entitlements,
 			(SELECT COALESCE(json_agg(row_to_json(cpr)::jsonb || jsonb_build_object('price', row_to_json(p))), '[]'::json)
 				FROM cps_ranked
 				JOIN customer_prices cpr ON cpr.customer_product_id = cps_ranked.id
@@ -245,14 +304,36 @@ export const getCursorPaginatedFullCusQuery = ({
 				JOIN entitlements e ON e.id = ce.entitlement_id
 				JOIN features f ON f.internal_id = e.internal_feature_id
 			) AS entitlements,
-			(SELECT COALESCE(json_agg(row_to_json(ro)), '[]'::json)
+			-- Rollovers and replaceables are gathered per cus_ent via a correlated
+			-- subquery, then flattened, rather than joined against ces_all directly.
+			-- A direct join lets the planner pick a merge join: pg_stats badly
+			-- underestimates n_distinct on customer_entitlements.customer_product_id,
+			-- so ces_all is estimated ~100x too large and one ordered scan of
+			-- rollovers looks cheaper than per-row probes. That scanned all 7.38M
+			-- rollover rows on every call (7.7s of an 8.3s query) to return zero.
+			-- Keeping the table access inside a scalar subquery removes the choice.
+			-- A plain CROSS JOIN LATERAL over the table is NOT sufficient — the
+			-- planner pulls it back up into the same join.
+			(SELECT COALESCE(json_agg(ro_row.value), '[]'::json)
 				FROM ces_all
-				JOIN rollovers ro ON ro.cus_ent_id = ces_all.id
-				WHERE ro.expires_at IS NULL OR ro.expires_at > EXTRACT(EPOCH FROM now()) * 1000
+				CROSS JOIN LATERAL json_array_elements(
+					COALESCE((
+						SELECT json_agg(row_to_json(ro))
+						FROM rollovers ro
+						WHERE ro.cus_ent_id = ces_all.id
+							AND (ro.expires_at IS NULL OR ro.expires_at > EXTRACT(EPOCH FROM now()) * 1000)
+					), '[]'::json)
+				) AS ro_row(value)
 			) AS rollovers,
-			(SELECT COALESCE(json_agg(row_to_json(r)), '[]'::json)
+			(SELECT COALESCE(json_agg(rep_row.value), '[]'::json)
 				FROM ces_all
-				JOIN replaceables r ON r.cus_ent_id = ces_all.id
+				CROSS JOIN LATERAL json_array_elements(
+					COALESCE((
+						SELECT json_agg(row_to_json(r))
+						FROM replaceables r
+						WHERE r.cus_ent_id = ces_all.id
+					), '[]'::json)
+				) AS rep_row(value)
 			) AS replaceables,
 			(SELECT COALESCE(json_agg(row_to_json(ft)), '[]'::json)
 				FROM (SELECT DISTINCT free_trial_id FROM cps_ranked WHERE free_trial_id IS NOT NULL) cps

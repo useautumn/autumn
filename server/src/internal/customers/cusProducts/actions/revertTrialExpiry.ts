@@ -1,12 +1,14 @@
 import {
 	type AutumnBillingPlan,
 	CusProductStatus,
-	customerProducts as customerProductsTable,
 	type customerProducts,
+	customerProducts as customerProductsTable,
+	findCustomerProductById,
 } from "@autumn/shared";
 import { and, eq, type InferSelectModel } from "drizzle-orm";
 import type { DrizzleCli } from "@/db/initDrizzle";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
+import { applyPooledBalanceCustomerProductTransitions } from "@/internal/billing/v2/pooledBalances/execute/applyPooledBalanceCustomerProductTransitions";
 import { sendBillingUpdatedWebhook } from "@/internal/billing/v2/workflows/sendBillingUpdatedWebhook/sendBillingUpdatedWebhook";
 import { CusService } from "@/internal/customers/CusService";
 import { RELEVANT_STATUSES } from "@/internal/customers/cusProducts/CusProductService";
@@ -53,32 +55,57 @@ export const tryProcessRevertExpiry = async ({
 		inStatuses: [...RELEVANT_STATUSES, CusProductStatus.Paused],
 	});
 
-	const trialFullCusProduct = fullCustomer.customer_products.find(
-		(cp) => cp.id === customerProduct.id,
-	);
-	const previousFullCusProduct = fullCustomer.customer_products.find(
-		(cp) => cp.id === previousCusProductId,
-	);
+	const trialFullCusProduct = findCustomerProductById({
+		fullCustomer,
+		customerProductId: customerProduct.id,
+	});
+	const previousFullCusProduct = findCustomerProductById({
+		fullCustomer,
+		customerProductId: previousCusProductId,
+	});
 
 	const now = Date.now();
-	await ctx.db.transaction(async (tx) => {
-		const txDb = tx as unknown as DrizzleCli;
+	const restoredPreviousCustomerProduct = await ctx.db.transaction(
+		async (tx) => {
+			const txDb = tx as unknown as DrizzleCli;
 
-		await txDb
-			.update(customerProductsTable)
-			.set({ status: CusProductStatus.Expired, updated_at: now })
-			.where(eq(customerProductsTable.id, customerProduct.id));
+			await txDb
+				.update(customerProductsTable)
+				.set({ status: CusProductStatus.Expired, updated_at: now })
+				.where(eq(customerProductsTable.id, customerProduct.id));
 
-		await txDb
-			.update(customerProductsTable)
-			.set({ status: CusProductStatus.Active, updated_at: now })
-			.where(
-				and(
-					eq(customerProductsTable.id, previousCusProductId),
-					eq(customerProductsTable.status, CusProductStatus.Paused),
-				),
-			);
-	});
+			const restoredRows = await txDb
+				.update(customerProductsTable)
+				.set({ status: CusProductStatus.Active, updated_at: now })
+				.where(
+					and(
+						eq(customerProductsTable.id, previousCusProductId),
+						eq(customerProductsTable.status, CusProductStatus.Paused),
+					),
+				)
+				.returning({ id: customerProductsTable.id });
+
+			return restoredRows.length > 0;
+		},
+	);
+
+	if (trialFullCusProduct) {
+		await applyPooledBalanceCustomerProductTransitions({
+			ctx,
+			fullCustomer,
+			outgoingCustomerProducts: [trialFullCusProduct],
+			incomingCustomerProducts:
+				restoredPreviousCustomerProduct && previousFullCusProduct
+					? [
+							{
+								...previousFullCusProduct,
+								status: CusProductStatus.Active,
+							},
+						]
+					: [],
+			now,
+		});
+	}
 
 	await deleteCachedFullCustomer({
 		ctx,

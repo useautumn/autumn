@@ -180,5 +180,6 @@ export const planItemV0ToProductItem = ({
 		price_id: priceId,
 
 		entity_feature_id: planItem.entity_feature_id ?? null,
+		pooled: planItem.pooled ?? false,
 	} satisfies ProductItem);
 };

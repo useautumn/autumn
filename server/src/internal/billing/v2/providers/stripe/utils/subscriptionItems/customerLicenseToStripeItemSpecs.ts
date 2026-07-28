@@ -27,8 +27,7 @@ export const customerLicenseToStripeItemSpecs = ({
 		billingContext.customerLicenseBillingContext?.licenseBillingPriceRows ?? []
 	).filter((row) => row.source.customerLicenseId === customerLicense.id);
 	const projectedPlanLicenseIds =
-		billingContext.customerLicenseBillingContext?.projectedPlanLicenseIds ??
-		new Set<string>();
+		billingContext.customerLicenseBillingContext?.projectedPlanLicenseIds ?? [];
 
 	// Desired state prices seats through the pool's (possibly repointed)
 	// definition — the read-time twin of the seat repoint executor.

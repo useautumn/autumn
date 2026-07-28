@@ -4,6 +4,7 @@ import type {
 	EventInsert,
 	Price,
 	TrackParams,
+	UpdateBalanceParamsV0,
 } from "@autumn/shared";
 import {
 	SendMessageBatchCommand,
@@ -11,6 +12,9 @@ import {
 	SendMessageCommand,
 } from "@aws-sdk/client-sqs";
 import { generateId } from "@server/utils/genUtils";
+import type { StripeWebhookReplayPayload } from "@/external/stripe/webhookReplay/runStripeWebhookReplay.js";
+import type { BatchResetCustomerEntitlementsV2Payload } from "@/internal/balances/batchReset/types.js";
+import type { CustomerCreationRecoveryPayload } from "@/internal/customers/recovery/customerCreationRecoveryTypes.js";
 import type { ClearCreditSystemCachePayload } from "@/internal/features/featureActions/runClearCreditSystemCacheTask.js";
 import type { GenerateFeatureDisplayPayload } from "@/internal/features/workflows/generateFeatureDisplay.js";
 import { getSqsClient } from "./initSqs.js";
@@ -79,10 +83,30 @@ export interface Payloads {
 		apiVersion: ApiVersion;
 		body: TrackParams;
 	};
+	[JobName.UpdateBalance]: {
+		orgId: string;
+		env: AppEnv;
+		customerId: string;
+		entityId?: string;
+		requestId: string;
+		params: UpdateBalanceParamsV0;
+		targetBalance?: number;
+	};
+	[JobName.SyncCustomerDirty]: {
+		customerId: string;
+		orgId: string;
+		env: AppEnv;
+		region?: string;
+		redisInstance: string;
+		timestamp: number;
+	};
+	[JobName.CustomerCreationRecovery]: CustomerCreationRecoveryPayload;
+	[JobName.StripeWebhookReplay]: StripeWebhookReplayPayload;
 	[JobName.ClearCreditSystemCustomerCache]: ClearCreditSystemCachePayload;
 	[JobName.GenerateFeatureDisplay]: GenerateFeatureDisplayPayload;
 	[JobName.SendProductsUpdated]: SendProductsUpdatedPayload;
 	[JobName.BatchResetCusEnts]: BatchResetCusEntsPayload;
+	[JobName.BatchResetCustomerEntitlementsV2]: BatchResetCustomerEntitlementsV2Payload;
 	[JobName.AutoTopUp]: {
 		orgId: string;
 		env: AppEnv;

@@ -51,17 +51,22 @@ export const applyCustomerLicenseTransitions = ({
 	for (const customerLicenseTransition of customerLicenseTransitions) {
 		const planLicenseId =
 			customerLicenseTransition.incomingCustomerLicense.planLicense?.id;
-		if (planLicenseId) {
-			customerLicenseBillingContext.projectedPlanLicenseIds.add(planLicenseId);
+		if (
+			planLicenseId &&
+			!customerLicenseBillingContext.projectedPlanLicenseIds.includes(
+				planLicenseId,
+			)
+		) {
+			customerLicenseBillingContext.projectedPlanLicenseIds.push(planLicenseId);
 		}
 		customerLicenseBillingContext.licenseBillingPriceRows.push(
 			...transitionLicenseBillingPriceRows({
 				licenseBillingPriceRows: persistedRows,
 				customerLicenseTransition,
 				assignedSeatCount:
-					customerLicenseBillingContext.assignedSeatCountByCustomerLicenseId.get(
-						customerLicenseTransition.outgoingCustomerLicense.id,
-					) ?? 0,
+					customerLicenseBillingContext.assignedSeatCountByCustomerLicenseId[
+						customerLicenseTransition.outgoingCustomerLicense.id
+					] ?? 0,
 			}),
 		);
 	}

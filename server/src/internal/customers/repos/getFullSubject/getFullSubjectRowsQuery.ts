@@ -1,4 +1,8 @@
-import { type CusProductStatus, RELEVANT_STATUSES } from "@autumn/shared";
+import {
+	ACTIVE_STATUSES,
+	type CusProductStatus,
+	RELEVANT_STATUSES,
+} from "@autumn/shared";
 import { type SQL, sql } from "drizzle-orm";
 import { planetScaleTag } from "@/db/dbUtils.js";
 import { notLicenseAssignmentSql } from "@/internal/licenses/repos/licenseAssignmentRepo.js";
@@ -66,34 +70,28 @@ export const getFullSubjectRowsQuery = ({
 	entityScopedOnly?: boolean;
 	queryTag?: string;
 }) => {
-	const statusFilter =
+	const entityAggregationStatuses =
 		inStatuses.length > 0
-			? sql`AND cp.status = ANY(ARRAY[${sql.join(
-					inStatuses.map((status) => sql`${status}`),
-					sql`, `,
-				)}])`
-			: sql``;
+			? ACTIVE_STATUSES.filter((status) => inStatuses.includes(status))
+			: ACTIVE_STATUSES;
+	// Status lists bind as a single array parameter rather than one placeholder
+	// per element. This keeps the generated SQL text identical regardless of how
+	// many statuses a caller passes, which is what lets the statement be reused
+	// as a named prepared statement instead of re-planned on every execution.
+	const entityAggregationStatusFilter =
+		entityAggregationStatuses.length > 0
+			? sql`AND cp.status = ANY(${sql.param(entityAggregationStatuses)}::text[])`
+			: sql`AND FALSE`;
 
 	// Seats own no lifecycle: their raw status column lags until the seat-sync
 	// cron converges it, so the candidate filter/rank must check the pool
 	// parent's LIVE status (via pcp_early) instead of cp.status for those rows.
 	const effectiveStatusFilter =
 		inStatuses.length > 0
-			? sql`AND COALESCE(pcp_early.status, cp.status) = ANY(ARRAY[${sql.join(
-					inStatuses.map((status) => sql`${status}`),
-					sql`, `,
-				)}])`
+			? sql`AND COALESCE(pcp_early.status, cp.status) = ANY(${sql.param(inStatuses)}::text[])`
 			: sql``;
 
-	const relevantStatusFirst = sql`CASE WHEN cp.status = ANY(ARRAY[${sql.join(
-		RELEVANT_STATUSES.map((status) => sql`${status}`),
-		sql`, `,
-	)}]) THEN 0 ELSE 1 END`;
-
-	const effectiveRelevantStatusFirst = sql`CASE WHEN COALESCE(pcp_early.status, cp.status) = ANY(ARRAY[${sql.join(
-		RELEVANT_STATUSES.map((status) => sql`${status}`),
-		sql`, `,
-	)}]) THEN 0 ELSE 1 END`;
+	const effectiveRelevantStatusFirst = sql`CASE WHEN COALESCE(pcp_early.status, cp.status) = ANY(${sql.param(RELEVANT_STATUSES)}::text[]) THEN 0 ELSE 1 END`;
 
 	const hasCustomerPrices = sql`EXISTS (
 		SELECT 1
@@ -103,7 +101,7 @@ export const getFullSubjectRowsQuery = ({
 
 	const entityFragments = includeEntityAggregations
 		? getEntityAggregateFragments({
-				statusFilter,
+				statusFilter: entityAggregationStatusFilter,
 			})
 		: emptyEntityFragments;
 	const customerLevelProductPredicate = sql`
@@ -198,6 +196,15 @@ export const getFullSubjectRowsQuery = ({
 					${effectiveRelevantStatusFirst} AS status_priority,
 					${hasCustomerPrices} AS has_customer_prices,
 					prod.is_add_on AS product_is_add_on,
+					-- Resolved once here and carried through cus_products so the
+					-- aggregate below doesn't repeat this LATERAL + join.
+					CASE WHEN pcl_early.id IS NULL THEN NULL ELSE to_jsonb(pcl_early) END
+						AS parent_customer_license,
+					CASE WHEN pcp_early.id IS NULL THEN NULL ELSE jsonb_build_object(
+						'status', pcp_early.status,
+						'subscription_ids', to_jsonb(pcp_early.subscription_ids),
+						'canceled_at', pcp_early.canceled_at
+					) END AS parent_customer_product,
 					cp.*
 				FROM customer_products cp
 				JOIN products prod
@@ -236,6 +243,8 @@ export const getFullSubjectRowsQuery = ({
 			FROM customer_entitlements ce
 			JOIN cus_products cp
 				ON cp.id = ce.customer_product_id
+			WHERE ce.pooled_balance_id IS NULL
+				AND ce.pooled_contribution_id IS NULL
 		),
 
 		extra_cus_entitlements AS (
@@ -250,10 +259,13 @@ export const getFullSubjectRowsQuery = ({
 						THEN 0
 						ELSE 1
 					END AS subject_entity_priority,
-					ce.*
+					ce.*,
+					NULL::json AS pooled_balance
 				FROM customer_entitlements ce
 				WHERE ce.internal_customer_id = sr.internal_customer_id
 					AND ce.customer_product_id IS NULL
+					AND ce.pooled_balance_id IS NULL
+					AND ce.pooled_contribution_id IS NULL
 					AND (ce.expires_at IS NULL OR ce.expires_at > EXTRACT(EPOCH FROM now()) * 1000)
 					AND (
 						ce.balance != 0
@@ -272,10 +284,40 @@ export const getFullSubjectRowsQuery = ({
 			) ce_ordered ON true
 		),
 
+		pooled_customer_entitlements AS (
+			SELECT ce_ordered.*
+			FROM subject_records sr
+			JOIN LATERAL (
+				SELECT
+					sr.subject_key,
+					CASE
+						WHEN sr.internal_entity_id IS NOT NULL
+							AND ce.internal_entity_id = sr.internal_entity_id
+						THEN 0
+						ELSE 1
+					END AS subject_entity_priority,
+					ce.*,
+					row_to_json(pb) AS pooled_balance
+				FROM customer_entitlements ce
+				JOIN pooled_balances pb
+					ON pb.id = ce.pooled_balance_id
+				WHERE ce.internal_customer_id = sr.internal_customer_id
+					AND ce.customer_product_id IS NULL
+					AND ce.pooled_balance_id IS NOT NULL
+					AND ce.pooled_contribution_id IS NULL
+					AND (ce.expires_at IS NULL OR ce.expires_at > EXTRACT(EPOCH FROM now()) * 1000)
+					${customerEntitlementSubjectPredicate}
+				ORDER BY subject_entity_priority ASC, ce.id DESC
+				LIMIT ${EXTRA_CUSTOMER_ENTITLEMENT_LIMIT}
+			) ce_ordered ON true
+		),
+
 		all_cus_ent_ids AS (
 			SELECT subject_key, id FROM cus_entitlements
 			UNION ALL
 			SELECT subject_key, id FROM extra_cus_entitlements
+			UNION ALL
+			SELECT subject_key, id FROM pooled_customer_entitlements
 		),
 
 		cus_rollovers AS (
@@ -343,6 +385,12 @@ export const getFullSubjectRowsQuery = ({
 				ece.internal_customer_id,
 				ece.entitlement_id
 			FROM extra_cus_entitlements ece
+			UNION
+			SELECT DISTINCT
+				pce.subject_key,
+				pce.internal_customer_id,
+				pce.entitlement_id
+			FROM pooled_customer_entitlements pce
 			${entityFragments.entitlementRefsUnion}
 		),
 
@@ -408,18 +456,11 @@ export const getFullSubjectRowsQuery = ({
 						- 'has_customer_prices'
 						- 'product_is_add_on'
 						- 'subject_rank'
-						-- Seat rows carry their pool + the parent's lifecycle snapshot
-						-- (fetched unfiltered: an expired parent is not in cus_products).
-						|| jsonb_build_object(
-							'parent_customer_license',
-							CASE WHEN pcl.id IS NULL THEN NULL ELSE to_jsonb(pcl) END,
-							'parent_customer_product',
-							CASE WHEN pcp_lifecycle.id IS NULL THEN NULL ELSE jsonb_build_object(
-								'status', pcp_lifecycle.status,
-								'subscription_ids', to_jsonb(pcp_lifecycle.subscription_ids),
-								'canceled_at', pcp_lifecycle.canceled_at
-							) END
-						)
+						-- parent_customer_license / parent_customer_product ride along
+						-- from all_cus_products (seat rows carry their pool and the
+						-- parent's unfiltered lifecycle snapshot), so they land in this
+						-- object via row_to_json. They used to be re-derived here by a
+						-- second copy of the same LATERAL + join.
 					)::json
 					ORDER BY
 						cp.subject_entity_priority ASC,
@@ -429,21 +470,6 @@ export const getFullSubjectRowsQuery = ({
 						cp.created_at DESC
 				) AS items
 			FROM cus_products cp
-			-- Links can match multiple pool rows (predecessors linger on expired
-			-- parents); seats inherit from the pool on the LIVE parent.
-			LEFT JOIN LATERAL (
-				SELECT pool.*
-				FROM customer_licenses pool
-				JOIN customer_products pool_parent
-					ON pool_parent.id = pool.parent_customer_product_id
-				WHERE cp.customer_license_link_id IS NOT NULL
-					AND pool.link_id = cp.customer_license_link_id
-				ORDER BY (pool_parent.status IN ('active', 'past_due', 'scheduled')) DESC,
-					pool.created_at DESC
-				LIMIT 1
-			) pcl ON true
-			LEFT JOIN customer_products pcp_lifecycle
-				ON pcp_lifecycle.id = pcl.parent_customer_product_id
 			GROUP BY cp.subject_key
 		),
 
@@ -474,7 +500,11 @@ export const getFullSubjectRowsQuery = ({
 					)::json
 					ORDER BY ece.subject_entity_priority ASC, ece.id DESC
 				) AS items
-			FROM extra_cus_entitlements ece
+			FROM (
+				SELECT * FROM extra_cus_entitlements
+				UNION ALL
+				SELECT * FROM pooled_customer_entitlements
+			) ece
 			GROUP BY ece.subject_key
 		),
 

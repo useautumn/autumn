@@ -31,6 +31,7 @@ export type RequestContext = {
 	oauthResource?: string;
 	customerId?: string;
 	entityId?: string;
+	requestBody?: unknown;
 
 	// Objects
 	db: DrizzleCli;
@@ -91,8 +92,12 @@ export type RequestContext = {
 	orgRateLimitDegraded?: boolean;
 
 	testOptions?: {
+		asyncBalanceUpdate?: boolean;
 		skipCacheDeletion?: boolean;
 		skipWebhooks?: boolean;
+		/** Per-request sync-coalesce gate override (non-prod only); undefined
+		 *  falls through to the edge config. */
+		syncCoalesce?: boolean;
 		eventId?: string;
 		keepInternalFields?: boolean;
 		useReplica?: boolean;

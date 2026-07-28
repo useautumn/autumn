@@ -161,6 +161,7 @@ export const toFeature = ({
 
 		carry_from_previous: !resetUsage,
 		entity_feature_id: item.entity_feature_id,
+		pooled: item.pooled ?? false,
 		usage_limit: null,
 
 		rollover: item.config?.rollover,
@@ -227,6 +228,7 @@ const toFeatureAndPrice = ({
 
 		carry_from_previous: !resetUsage,
 		entity_feature_id: item.entity_feature_id,
+		pooled: item.pooled ?? false,
 		usage_limit: item.usage_limit || null,
 
 		rollover: item.config?.rollover,

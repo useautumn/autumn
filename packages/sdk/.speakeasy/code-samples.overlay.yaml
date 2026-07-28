@@ -976,6 +976,42 @@ actions:
             }
 
             run();
+  - target: $["paths"]["/v1/invoices.insert"]["post"]
+    update:
+      x-codeSamples:
+        - lang: typescript
+          label: Typescript (SDK)
+          source: |-
+            import { Autumn } from "@useautumn/sdk";
+
+            const autumn = new Autumn({
+              xApiVersion: "2.3.0",
+              secretKey: process.env["AUTUMN_SECRET_KEY"] ?? "",
+            });
+
+            async function run() {
+              const result = await autumn.invoices.insert({
+                invoices: [
+                  {
+                    customerId: "cus_123",
+                    planIds: [
+                      "pro",
+                    ],
+                    stripeId: "in_legacy_123",
+                    status: "paid",
+                    total: 29.99,
+                    amountPaid: 29.99,
+                    currency: "usd",
+                    createdAt: 1451606400000,
+                    hostedInvoiceUrl: "https://billing.example.com/invoices/legacy-123",
+                  },
+                ],
+              });
+
+              console.log(result);
+            }
+
+            run();
   - target: $["paths"]["/v1/invoices.list"]["post"]
     update:
       x-codeSamples:

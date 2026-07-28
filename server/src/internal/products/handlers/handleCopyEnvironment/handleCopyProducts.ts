@@ -134,10 +134,13 @@ export const handleCopyProducts = async ({
 
 	await Promise.all(operations);
 
+	// inIds bypasses the products cache — the copy ops' invalidations land
+	// async, so a plain listFull can still see the pre-copy (empty) snapshot.
 	const copiedToProducts = await ProductService.listFull({
 		db,
 		orgId: toOrg.id,
 		env: toEnv,
+		inIds: fromProducts.map((product) => product.id),
 	});
 	await copyPlanLicenseLinks({
 		db,

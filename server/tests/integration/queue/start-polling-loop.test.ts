@@ -14,12 +14,12 @@ const makeAbortError = () => {
 
 describe("startPollingLoop", () => {
 	beforeEach(() => {
-		globalThis.setTimeout = (((callback: TimerHandler) => {
+		globalThis.setTimeout = ((callback: TimerHandler) => {
 			if (typeof callback === "function") {
 				callback();
 			}
 			return 0 as unknown as ReturnType<typeof setTimeout>;
-		}) as unknown) as typeof setTimeout;
+		}) as unknown as typeof setTimeout;
 	});
 
 	afterEach(() => {
@@ -32,6 +32,7 @@ describe("startPollingLoop", () => {
 
 		await startPollingLoop({
 			db: {} as never,
+			queueId: "track",
 			queueUrl: "https://sqs.eu-west-1.amazonaws.com/123/track.fifo",
 			isFifo: true,
 			getSqsClientFn: () =>
@@ -64,6 +65,7 @@ describe("startPollingLoop", () => {
 
 		await startPollingLoop({
 			db: {} as never,
+			queueId: "primary",
 			queueUrl: "https://sqs.eu-west-1.amazonaws.com/123/primary.fifo",
 			isFifo: true,
 			getSqsClientFn: () =>
@@ -106,6 +108,7 @@ describe("startPollingLoop", () => {
 
 		await startPollingLoop({
 			db: {} as never,
+			queueId: "track",
 			queueUrl: "https://sqs.eu-west-1.amazonaws.com/123/track.fifo",
 			isFifo: true,
 			getSqsClientFn: () => makeClient(false),

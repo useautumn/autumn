@@ -325,6 +325,7 @@ export const listPlansVariantDetailsPurchaseLimitSchema = z.object({
 	interval: listPlansVariantDetailsPurchaseLimitIntervalSchema,
 	intervalCount: z.number(),
 	limit: z.number(),
+	count: z.union([z.number(), z.undefined()]).optional(),
 });
 
 export const listPlansVariantDetailsAutoTopupSchema = z.object({

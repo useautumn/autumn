@@ -3,6 +3,7 @@ import { upsertAutumnInvoice } from "@/external/stripe/webhookHandlers/common/up
 import { convertToChargeAutomatically } from "@/external/stripe/webhookHandlers/handleStripeInvoicePaid/tasks/convertToChargeAutomatically.js";
 import { queueCheckoutRewardTasks } from "@/external/stripe/webhookHandlers/handleStripeInvoicePaid/tasks/queueCheckoutRewardTasks.js";
 import { sendEmailReceipt } from "@/external/stripe/webhookHandlers/handleStripeInvoicePaid/tasks/sendEmailReceipt.js";
+import { autoTopupLimitRepo } from "@/internal/balances/autoTopUp/repos";
 import type { StripeWebhookContext } from "../../webhookMiddlewares/stripeWebhookContext.js";
 import { setupStripeInvoicePaidContext } from "./setupStripeInvoicePaidContext.js";
 import { handleStripeInvoiceDiscounts } from "./tasks/handleStripeInvoiceDiscounts.js";
@@ -52,4 +53,18 @@ export const handleStripeInvoicePaid = async ({
 
 	// 4. Send email receipt
 	await sendEmailReceipt({ ctx, invoicePaidContext });
+
+	// 5. A successful payment clears any auto top-up suspension
+	if (ctx.fullCustomer) {
+		const cleared = await autoTopupLimitRepo.clearSuspensions({
+			ctx,
+			internalCustomerId: ctx.fullCustomer.internal_id,
+		});
+
+		if (cleared > 0) {
+			ctx.logger.info(
+				`[invoice.paid] Cleared ${cleared} auto top-up suspension(s) for customer ${ctx.fullCustomer.id}`,
+			);
+		}
+	}
 };

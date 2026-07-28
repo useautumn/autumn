@@ -21,6 +21,7 @@ import {
 	getPatchCustomerProducts,
 } from "@/internal/billing/v2/utils/billingPlan/customerProductPlanMutations";
 import { orgDisableStripeWrites } from "@/internal/orgs/orgUtils/convertOrgUtils";
+import { isStripeConnected } from "@/internal/orgs/orgUtils.js";
 import { checkStripeProductExists } from "@/internal/products/productUtils";
 import { applyStripeResourceReuseForProduct } from "@/internal/products/stripeResourceUtils/applyStripeResourceReuseForProduct";
 import { applyStripeReuseFromVariantFamilies } from "@/internal/products/stripeResourceUtils/applyStripeReuseFromVariantFamilies";
@@ -51,6 +52,9 @@ export const initStripeResourcesForProducts = async ({
 
 	if (env === AppEnv.Live) return;
 	if (orgDisableStripeWrites({ ctx, includeSandbox: true })) return;
+	// No Stripe account (e.g. fresh sandbox sub-orgs) — resources are
+	// created lazily once one is connected.
+	if (!isStripeConnected({ org, env })) return;
 
 	const batchProductUpdates = [];
 	for (const product of products) {

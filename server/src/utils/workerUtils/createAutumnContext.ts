@@ -12,7 +12,7 @@ import { getCtxWithCustomerRedis } from "@/external/redis/customerRedisRouting.j
 import { resolveRedisV2 } from "@/external/redis/resolveRedisV2.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { computeRolloutSnapshot } from "@/internal/misc/rollouts/rolloutUtils.js";
-import { OrgService } from "@/internal/orgs/OrgService.js";
+import { getOrgWithFeaturesCached } from "@/internal/orgs/orgUtils/cacheOrgWithFeatures.js";
 
 export const createWorkerAutumnContext = async ({
 	db,
@@ -28,7 +28,7 @@ export const createWorkerAutumnContext = async ({
 	workerId: string;
 }): Promise<AutumnContext> => {
 	// 1. Get org with features
-	const data = await OrgService.getWithFeatures({
+	const data = await getOrgWithFeaturesCached({
 		db,
 		orgId,
 		env,

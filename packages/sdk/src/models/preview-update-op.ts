@@ -769,7 +769,7 @@ export type PreviewUpdatePurchaseLimitInterval = ClosedEnum<
 >;
 
 /**
- * Optional rate limit to cap how often auto top-ups occur.
+ * Optional rate limit to cap how often auto top-ups occur. Pass count to set the current window's consumed top-ups.
  */
 export type PreviewUpdatePurchaseLimit = {
   /**
@@ -784,6 +784,10 @@ export type PreviewUpdatePurchaseLimit = {
    * Maximum number of auto top-ups allowed within the interval.
    */
   limit: number;
+  /**
+   * Set the current window's consumed auto top-up count. Omit to leave runtime state unchanged.
+   */
+  count?: number | undefined;
 };
 
 export type PreviewUpdateAutoTopup = {
@@ -804,7 +808,7 @@ export type PreviewUpdateAutoTopup = {
    */
   quantity: number;
   /**
-   * Optional rate limit to cap how often auto top-ups occur.
+   * Optional rate limit to cap how often auto top-ups occur. Pass count to set the current window's consumed top-ups.
    */
   purchaseLimit?: PreviewUpdatePurchaseLimit | undefined;
   /**
@@ -2917,6 +2921,7 @@ export type PreviewUpdatePurchaseLimit$Outbound = {
   interval: string;
   interval_count: number;
   limit: number;
+  count?: number | undefined;
 };
 
 /** @internal */
@@ -2928,6 +2933,7 @@ export const PreviewUpdatePurchaseLimit$outboundSchema: z.ZodMiniType<
     interval: PreviewUpdatePurchaseLimitInterval$outboundSchema,
     intervalCount: z._default(z.number(), 1),
     limit: z.number(),
+    count: z.optional(z.number()),
   }),
   z.transform((v) => {
     return remap$(v, {

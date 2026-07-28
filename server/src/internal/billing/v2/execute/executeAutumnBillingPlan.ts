@@ -10,6 +10,7 @@ import { executeOneOffPurchaseRebalance } from "@/internal/billing/v2/execute/ex
 import { executePatchCustomerProducts } from "@/internal/billing/v2/execute/executeAutumnActions/executePatchCustomerProducts";
 import { insertNewCusProducts } from "@/internal/billing/v2/execute/executeAutumnActions/insertNewCusProducts";
 import { updateCustomerEntitlements } from "@/internal/billing/v2/execute/executeAutumnActions/updateCustomerEntitlements";
+import { executePooledBalancePlan } from "@/internal/billing/v2/pooledBalances/execute/executePooledBalancePlan";
 import {
 	getDeleteCustomerProducts,
 	getUpdateCustomerProducts,
@@ -111,6 +112,11 @@ export const executeAutumnBillingPlan = async ({
 	await insertNewCusProducts({
 		ctx,
 		newCusProducts: insertCustomerProducts,
+	});
+
+	await executePooledBalancePlan({
+		ctx,
+		pooledBalancePlan: autumnBillingPlan.pooledBalancePlan,
 	});
 
 	await executeCustomerLicenseTransitions({

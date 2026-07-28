@@ -29,6 +29,7 @@ export const expectBalanceCorrect = ({
 	customer,
 	featureId,
 	granted,
+	includedGrant,
 	remaining,
 	planId,
 	usage,
@@ -37,10 +38,13 @@ export const expectBalanceCorrect = ({
 	breakdown,
 	rollovers,
 	positiveRolloverCount,
+	breakdownCount,
+	breakdownId,
 }: {
 	customer: ApiCustomerV5 | ApiEntityV2;
 	featureId: string;
 	granted?: number;
+	includedGrant?: number;
 	remaining?: number;
 	planId?: string | null;
 	usage?: number;
@@ -50,12 +54,20 @@ export const expectBalanceCorrect = ({
 	/** Expected rollovers in order (oldest first). Only specified fields are checked. */
 	rollovers?: Partial<ApiBalanceRollover>[];
 	positiveRolloverCount?: number;
+	breakdownCount?: number;
+	breakdownId?: string;
 }) => {
 	const balance = customer.balances[featureId];
 	expect(balance).toBeDefined();
 
 	if (typeof granted !== "undefined") {
 		expect(roundTo8Dp(balance.granted)).toBe(roundTo8Dp(granted));
+	}
+
+	if (typeof includedGrant !== "undefined") {
+		expect(roundTo8Dp(balance.breakdown?.[0]?.included_grant ?? 0)).toBe(
+			roundTo8Dp(includedGrant),
+		);
 	}
 
 	if (typeof remaining !== "undefined") {
@@ -124,5 +136,13 @@ export const expectBalanceCorrect = ({
 		expect(actual.filter((item) => item.balance > 0).length).toBe(
 			positiveRolloverCount,
 		);
+	}
+
+	if (typeof breakdownCount !== "undefined") {
+		expect(balance.breakdown).toHaveLength(breakdownCount);
+	}
+
+	if (typeof breakdownId !== "undefined") {
+		expect(balance.breakdown?.[0]?.id).toBe(breakdownId);
 	}
 };

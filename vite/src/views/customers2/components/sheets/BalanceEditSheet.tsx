@@ -24,6 +24,7 @@ import { useStore } from "@tanstack/react-form";
 import { useState } from "react";
 import { toast } from "sonner";
 import { ConfigRow } from "@/components/forms/shared/ConfigRow";
+import { OpenInStripeButton } from "@/components/v2/buttons/OpenInStripeButton";
 import { SheetHeader, SheetSection } from "@/components/v2/sheets/InlineSheet";
 import { useCustomerBalanceSheetStore } from "@/hooks/stores/useCustomerBalanceSheetStore";
 import { useSheetStore } from "@/hooks/stores/useSheetStore";
@@ -34,6 +35,7 @@ import { useCusQuery } from "@/views/customers/customer/hooks/useCusQuery";
 import { useCustomerContext } from "../../customer/CustomerContext";
 import { BalanceEditPreviews } from "./BalanceEditPreviews";
 import { GrantedBalancePopover } from "./GrantedBalancePopover";
+import { PooledBalanceContributions } from "./PooledBalanceContributions";
 import {
 	type BalanceEditFormInstance,
 	useBalanceEditForm,
@@ -155,6 +157,9 @@ function UnlimitedBalanceInfo({
 				/>
 			</SheetSection>
 			<RolloversSection selectedCusEnt={selectedCusEnt} />
+			<PooledBalanceContributions
+				pooledBalance={selectedCusEnt.pooled_balance}
+			/>
 		</div>
 	);
 }
@@ -213,6 +218,10 @@ function BalanceEditForm({
 				entityId={entityId}
 				selectedCusEnt={selectedCusEnt}
 				cusPrice={cusPrice}
+			/>
+
+			<PooledBalanceContributions
+				pooledBalance={selectedCusEnt.pooled_balance}
 			/>
 		</div>
 	);
@@ -315,6 +324,27 @@ function EntitlementInfoRows({
 					</span>
 				}
 			/>
+			{selectedCusEnt.pooled_balance?.stripe_subscription_id && (
+				<InfoRow
+					label="Stripe ID"
+					className="flex-1 min-w-0"
+					value={
+						<div className="flex items-center gap-2 min-w-0 w-full">
+							<CopyButton
+								text={selectedCusEnt.pooled_balance.stripe_subscription_id}
+								size="mini"
+								className="text-tertiary-foreground min-w-0 shrink"
+								innerClassName="text-tiny-id truncate !font-normal min-w-0"
+							/>
+							<OpenInStripeButton
+								subscriptionId={
+									selectedCusEnt.pooled_balance.stripe_subscription_id
+								}
+							/>
+						</div>
+					}
+				/>
+			)}
 			{isUnlimited && (
 				<InfoRow
 					label="Balance"

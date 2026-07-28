@@ -11,9 +11,7 @@ const licensePlanIdOf = (customerLicense: FullCustomerLicense) =>
 	customerLicense.planLicense?.product.id ??
 	customerLicense.license_internal_product_id;
 
-/** Blocks an immediate switch that would strand active assignments: a used
- * outgoing pool must have a successor (same license plan, or a 1:1 group
- * match) on the incoming plan. */
+/** Blocks ambiguous mappings; dropped pools inherit their parent's lifecycle. */
 export const handleDroppedLicenseErrors = ({
 	billingContext,
 }: {
@@ -28,20 +26,18 @@ export const handleDroppedLicenseErrors = ({
 	});
 
 	for (const { outgoingCustomerLicense, reason, group } of unmatched) {
+		if (reason === "dropped") continue;
 		const used = customerLicenseToUsage({
 			customerLicense: outgoingCustomerLicense,
 		});
 		if (used === 0) continue;
 
 		const licensePlanId = licensePlanIdOf(outgoingCustomerLicense);
-		const conflict =
-			reason === "ambiguous"
-				? `the licenses in group "${group}" are not a 1:1 match on the incoming plan`
-				: "the incoming plan drops the license";
 		throw new RecaseError({
 			message:
 				`License changes conflict with active license assignments: ` +
-				`${used} assigned for ${licensePlanId}, but ${conflict}. Release licenses first.`,
+				`${used} assigned for ${licensePlanId}, but the licenses in group "${group}" ` +
+				"are not a 1:1 match on the incoming plan. Release licenses first.",
 			code: ErrCode.InvalidRequest,
 			statusCode: 400,
 		});

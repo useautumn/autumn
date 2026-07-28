@@ -165,17 +165,70 @@ export const setupAutoTopupContext = async ({
 		quantity: roundedQuantity,
 	};
 
+	const vercelInstallationId = fullCustomer.processors?.vercel?.installation_id;
+	const shouldUseInvoiceMode =
+		autoTopupConfig.invoice_mode === true || Boolean(vercelInstallationId);
+
+	const invoiceMode = shouldUseInvoiceMode
+		? { finalizeInvoice: true, enableProductImmediately: true }
+		: undefined;
+
+	// Fetched before the preflight because the circuit breaker needs the current
+	// payment method to tell "same declining card" from "new payment info".
+	const { stripeCus, paymentMethod, testClockFrozenTime } =
+		await fetchStripeCustomerForBilling({ ctx, fullCus: fullCustomer });
+
+	if (!paymentMethod && !invoiceMode) {
+		const message = `No payment method for customer ${stripeCus?.id}, skipping`;
+		logger.warn(`[setupAutoTopupContext] ${message}`);
+		return {
+			ok: false,
+			failure: {
+				reason: "missing_payment_method",
+				message,
+				fullCustomer,
+				autoTopupConfig: normalizedAutoTopupConfig,
+			},
+		};
+	}
+
 	const { allowed, reason, blockedWindowEndsAt, limitState } =
 		await preflightAutoTopupLimits({
 			ctx,
 			payload,
 			fullCustomer,
 			autoTopupConfig: normalizedAutoTopupConfig,
+			paymentMethod,
 		});
 
 	if (!allowed) {
 		const message = `Preflight blocked for feature ${featureId}, customer ${customerId}, reason: ${reason}`;
 		logger.info(`[setupAutoTopupContext] ${message}`);
+
+		// Suspension has no window to expire, so key the suppression off when the
+		// breaker tripped — one webhook a day rather than one per deduction.
+		if (reason === "suspended_after_failures") {
+			return {
+				ok: false,
+				failure: {
+					reason,
+					message,
+					fullCustomer,
+					autoTopupConfig: normalizedAutoTopupConfig,
+					suppressionKey: [
+						"auto_topup_failed_webhook",
+						ctx.org.id,
+						ctx.env,
+						customerId,
+						featureId,
+						reason,
+						limitState.suspended_at,
+					].join(":"),
+					suppressionTtlMs: 24 * 60 * 60 * 1000,
+				},
+			};
+		}
+
 		return {
 			ok: false,
 			failure: {
@@ -200,31 +253,6 @@ export const setupAutoTopupContext = async ({
 							),
 						}
 					: {}),
-			},
-		};
-	}
-
-	const vercelInstallationId = fullCustomer.processors?.vercel?.installation_id;
-	const shouldUseInvoiceMode =
-		autoTopupConfig.invoice_mode === true || Boolean(vercelInstallationId);
-
-	const invoiceMode = shouldUseInvoiceMode
-		? { finalizeInvoice: true, enableProductImmediately: true }
-		: undefined;
-
-	const { stripeCus, paymentMethod, testClockFrozenTime } =
-		await fetchStripeCustomerForBilling({ ctx, fullCus: fullCustomer });
-
-	if (!paymentMethod && !invoiceMode) {
-		const message = `No payment method for customer ${stripeCus?.id}, skipping`;
-		logger.warn(`[setupAutoTopupContext] ${message}`);
-		return {
-			ok: false,
-			failure: {
-				reason: "missing_payment_method",
-				message,
-				fullCustomer,
-				autoTopupConfig: normalizedAutoTopupConfig,
 			},
 		};
 	}

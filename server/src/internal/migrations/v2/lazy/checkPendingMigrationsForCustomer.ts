@@ -2,6 +2,7 @@ import type { FullCustomer, MigrationItemRunData } from "@autumn/shared";
 import { customerFilterMatchesFullCustomer } from "@autumn/shared/api/customers/utils/match/index.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { shouldRunMigrationInline } from "@/internal/migrations/v2/utils/shouldRunMigrationInline.js";
+import { MIGRATION_LAZY_TASK_PRIORITY_SECONDS } from "@/trigger/migrations/migrationTaskQueue.js";
 import {
 	executeRunMigrationCustomer,
 	runMigrationCustomerTask,
@@ -80,8 +81,6 @@ export const checkPendingMigrationsForCustomer = async ({
 		};
 
 		if (shouldRunMigrationInline()) {
-			// Inline loses trigger.dev's concurrencyKey serialization; the
-			// server-side item-run claim is the real authority either way.
 			const inlineCtx = { ...ctx, insideTriggerTask: true };
 			void executeRunMigrationCustomer({
 				ctx: inlineCtx,
@@ -99,7 +98,7 @@ export const checkPendingMigrationsForCustomer = async ({
 		}
 
 		await runMigrationCustomerTask.trigger(payload, {
-			concurrencyKey: `${migration.internal_id}:${fullCustomer.internal_id}`,
+			priority: MIGRATION_LAZY_TASK_PRIORITY_SECONDS,
 		});
 	}
 };
