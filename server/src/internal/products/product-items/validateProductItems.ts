@@ -49,15 +49,15 @@ const validateProductItem = ({
 		});
 	}
 
-	if (
-		item.pooled &&
-		feature?.type === FeatureType.Boolean &&
-		(isFeaturePriceItem(item) ||
-			item.included_usage === Infinite ||
-			(typeof item.included_usage === "number" && item.included_usage !== 0) ||
-			notNullish(item.interval) ||
-			notNullish(item.config?.rollover))
-	) {
+	const isPooledBooleanItem =
+		item.pooled && feature?.type === FeatureType.Boolean;
+	const hasUnsupportedPooledBooleanFields =
+		isFeaturePriceItem(item) ||
+		(notNullish(item.included_usage) && item.included_usage !== 0) ||
+		notNullish(item.interval) ||
+		notNullish(item.config?.rollover);
+
+	if (isPooledBooleanItem && hasUnsupportedPooledBooleanFields) {
 		throw new RecaseError({
 			message: "Pooled boolean items cannot include balance or pricing fields",
 			code: ErrCode.InvalidProductItem,
