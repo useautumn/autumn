@@ -2,12 +2,14 @@
 import { describe, expect, test } from "bun:test";
 import {
 	createMigrationChunkScheduler,
-	getMigrationTriggerOptions,
 	MIGRATION_CHUNK_FETCH_SIZE,
-	MIGRATION_CHUNK_MAX_DURATION_SECONDS,
-	MIGRATION_LAZY_TASK_PRIORITY_SECONDS,
 	MIGRATION_RUN_CUSTOMER_CONCURRENCY,
 	MIGRATION_SLICE_DURATION_MS,
+} from "@/internal/migrations/v2/run/utils/migrationRunConstants.js";
+import {
+	getMigrationTriggerOptions,
+	MIGRATION_CHUNK_MAX_DURATION_SECONDS,
+	MIGRATION_LAZY_TASK_PRIORITY_SECONDS,
 	MIGRATION_TASK_QUEUE_CONCURRENCY,
 	MIGRATION_TASK_RETRY,
 	migrationTaskQueue,

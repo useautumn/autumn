@@ -1,4 +1,4 @@
-import type { IterateScopeCompletion } from "@/internal/migrations/v2/run/orchestrators/iterateScope.js";
+import type { IterateScopeCompletion } from "../orchestrators/iterateScope.js";
 
 export type MigrationChunkResult = {
 	processed: number;
@@ -12,7 +12,7 @@ export type MigrationChunkRunResult = {
 	canceled: boolean;
 };
 
-export const runMigrationInChunks = async ({
+export const iterateMigrationChunks = async ({
 	limit,
 	isCancelRequested,
 	runChunk,
@@ -36,11 +36,13 @@ export const runMigrationInChunks = async ({
 
 		const remainingLimit =
 			limit === undefined ? undefined : Math.max(0, limit - processed);
+
 		const chunk = await runChunk({
 			limit: remainingLimit,
 			chunkIndex: chunks,
 			cursor,
 		});
+
 		chunks++;
 		processed += chunk.processed;
 

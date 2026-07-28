@@ -1,6 +1,4 @@
-import { AppEnv } from "@autumn/shared";
 import { task } from "@trigger.dev/sdk/v3";
-import { z } from "zod/v4";
 import type { Logger } from "@/external/logtail/logtailUtils.js";
 import { warmupRegionalRedis } from "@/external/redis/initUtils/redisWarmup.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
@@ -11,19 +9,14 @@ import { migrateCustomer } from "@/internal/migrations/v2/run/migrateCustomer/in
 import { isMigrationCancelRequested } from "@/internal/migrations/v2/run/utils/migrationCancelToken.js";
 import { migrationTaskQueue } from "@/trigger/migrations/migrationTaskQueue.js";
 import { createTriggerContext } from "@/trigger/utils/createTriggerContext.js";
+import {
+	type RunMigrationCustomerPayload,
+	RunMigrationCustomerPayloadSchema,
+} from "./runMigrationCustomerPayload.js";
 
 const LAZY_MIGRATION_CUSTOMER_LOCK_MAX_WAIT_MS = 2 * 60 * 1000;
 
-const PayloadSchema = z.object({
-	orgId: z.string(),
-	env: z.enum(AppEnv),
-	migrationInternalId: z.string(),
-	migrationRunId: z.string(),
-	customerInternalId: z.string(),
-	customerId: z.string().nullable(),
-});
-
-export type RunMigrationCustomerPayload = z.infer<typeof PayloadSchema>;
+export type { RunMigrationCustomerPayload } from "./runMigrationCustomerPayload.js";
 
 /** Shared workload for the trigger.dev task and the local inline fallback. */
 export const executeRunMigrationCustomer = async ({
@@ -119,7 +112,7 @@ export const runMigrationCustomerTask = task({
 	queue: migrationTaskQueue,
 	maxDuration: 600,
 	run: async (rawPayload: unknown, { ctx: triggerCtx }) => {
-		const payload = PayloadSchema.parse(rawPayload);
+		const payload = RunMigrationCustomerPayloadSchema.parse(rawPayload);
 
 		const { ctx, logger } = await createTriggerContext({
 			orgId: payload.orgId,

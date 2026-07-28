@@ -5,8 +5,8 @@
 
 import { describe, expect, test } from "bun:test";
 import { AppEnv } from "@autumn/shared";
-import { RunMigrationChunkPayloadSchema } from "@/trigger/migrations/migrationTaskPayload.js";
-import { runMigrationInChunks } from "@/trigger/migrations/runMigrationInChunks.js";
+import { RunMigrationChunkPayloadSchema } from "@/internal/migrations/v2/run/types/migrationRunPayloads.js";
+import { iterateMigrationChunks } from "@/internal/migrations/v2/run/chunks/iterateMigrationChunks.js";
 
 describe("runMigrationInChunks", () => {
 	test("requires a frozen prepared migration snapshot for every chunk", () => {
@@ -60,7 +60,7 @@ describe("runMigrationInChunks", () => {
 		const limits: Array<number | undefined> = [];
 		const cursors: Array<string | undefined> = [];
 
-		const result = await runMigrationInChunks({
+		const result = await iterateMigrationChunks({
 			isCancelRequested: async () => false,
 			runChunk: async ({ limit, cursor }) => {
 				limits.push(limit);
@@ -79,7 +79,7 @@ describe("runMigrationInChunks", () => {
 	test("carries the remaining total limit into each continuation", async () => {
 		const limits: Array<number | undefined> = [];
 
-		const result = await runMigrationInChunks({
+		const result = await iterateMigrationChunks({
 			limit: 3,
 			isCancelRequested: async () => false,
 			runChunk: async ({ limit, chunkIndex }) => {
@@ -100,7 +100,7 @@ describe("runMigrationInChunks", () => {
 		let chunkCount = 0;
 		let cancelChecks = 0;
 
-		const result = await runMigrationInChunks({
+		const result = await iterateMigrationChunks({
 			isCancelRequested: async () => {
 				cancelChecks++;
 				return cancelChecks > 1;
@@ -120,7 +120,7 @@ describe("runMigrationInChunks", () => {
 	});
 
 	test("honors cancellation detected inside a chunk", async () => {
-		const result = await runMigrationInChunks({
+		const result = await iterateMigrationChunks({
 			isCancelRequested: async () => false,
 			runChunk: async () => ({
 				processed: 1,
@@ -134,7 +134,7 @@ describe("runMigrationInChunks", () => {
 
 	test("rejects a continuation that made no progress", async () => {
 		expect(
-			runMigrationInChunks({
+			iterateMigrationChunks({
 				isCancelRequested: async () => false,
 				runChunk: async () => ({
 					processed: 0,
@@ -147,7 +147,7 @@ describe("runMigrationInChunks", () => {
 
 	test("rejects a continuation without a stable cursor", async () => {
 		expect(
-			runMigrationInChunks({
+			iterateMigrationChunks({
 				isCancelRequested: async () => false,
 				runChunk: async () => ({
 					processed: 1,

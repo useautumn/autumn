@@ -6,7 +6,7 @@ import { MIGRATION_LAZY_TASK_PRIORITY_SECONDS } from "@/trigger/migrations/migra
 import {
 	executeRunMigrationCustomer,
 	runMigrationCustomerTask,
-} from "@/trigger/migrations/runMigrationCustomerTask.js";
+} from "@/trigger/migrations/runMigrationCustomerTask/runMigrationCustomerTask.js";
 
 /**
  * For each pending lazy migration on `ctx.org`, decide whether this customer

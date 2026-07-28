@@ -5,17 +5,13 @@ import { createRoute } from "@/honoMiddlewares/routeHandler";
 import { withMigrationRunClaim } from "@/internal/migrations/v2/actions/migrationRun/index.js";
 import { prepare } from "@/internal/migrations/v2/prepare/index.js";
 import { migrationRepo } from "@/internal/migrations/v2/repos/index.js";
+import { runMigrationInChunks } from "@/internal/migrations/v2/run/runMigrationInChunks.js";
+import type { RunMigrationPayload } from "@/internal/migrations/v2/run/types/migrationRunPayloads.js";
+import { MIGRATION_RUN_CUSTOMER_CONCURRENCY } from "@/internal/migrations/v2/run/utils/migrationRunConstants.js";
 import { RETRYABLE_MIGRATION_ITEM_RUN_STATUSES } from "@/internal/migrations/v2/run/utils/retryItemStatuses.js";
 import { shouldRunMigrationInline } from "@/internal/migrations/v2/utils/shouldRunMigrationInline.js";
-import {
-	getMigrationTriggerOptions,
-	MIGRATION_RUN_CUSTOMER_CONCURRENCY,
-} from "@/trigger/migrations/migrationTaskQueue.js";
-import {
-	executeRunMigration,
-	type RunMigrationPayload,
-	runMigrationTask,
-} from "@/trigger/migrations/runMigrationTask.js";
+import { getMigrationTriggerOptions } from "@/trigger/migrations/migrationTaskQueue.js";
+import { runMigrationTask } from "@/trigger/migrations/runMigrationTask/runMigrationTask.js";
 
 const LEGACY_MAX_REQUESTED_CONCURRENCY = 100;
 
@@ -118,10 +114,13 @@ export const handleRunMigration = createRoute({
 				{ data: { migrationRunId } },
 			);
 			const inlineCtx = { ...ctx, insideTriggerTask: true };
-			void executeRunMigration({
+			void runMigrationInChunks({
 				ctx: inlineCtx,
-				logger: ctx.logger,
-				payload,
+				migration,
+				migrationRunId: payload.migrationRunId,
+				dryRun: payload.dryRun,
+				lazyRun: payload.lazyRun,
+				controls: payload.controls,
 			}).catch((error) => {
 				ctx.logger.error("run-migration: inline execution failed", {
 					data: {

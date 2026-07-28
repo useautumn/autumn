@@ -2,6 +2,7 @@ import { AppEnv } from "@autumn/shared";
 import { MigrationFilterSchema } from "@autumn/shared/api/migrations/filters/migrationFilter.js";
 import { OperationsSchema } from "@autumn/shared/api/migrations/operations/operations.js";
 import { z } from "zod/v4";
+import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { PreparedStateSchema } from "@/internal/migrations/v2/prepare/types/index.js";
 import { RETRYABLE_MIGRATION_ITEM_RUN_STATUSES } from "@/internal/migrations/v2/run/utils/retryItemStatuses.js";
 
@@ -52,3 +53,43 @@ export const RunMigrationChunkPayloadSchema = RunMigrationPayloadSchema.extend({
 export type RunMigrationChunkPayload = z.infer<
 	typeof RunMigrationChunkPayloadSchema
 >;
+
+/** Assembles one chunk payload; the iterator's remaining `limit` overrides
+ * controls.limit so later chunks only process what's left of the budget. */
+export const buildRunMigrationChunkPayload = ({
+	ctx,
+	migrationId,
+	migrationRunId,
+	dryRun,
+	lazyRun,
+	migration,
+	controls,
+	limit,
+	chunkIndex,
+	cursor,
+}: {
+	ctx: AutumnContext;
+	migrationId: string;
+	migrationRunId: string;
+	dryRun: boolean;
+	lazyRun: boolean;
+	migration: RunMigrationChunkPayload["migration"];
+	controls: RunMigrationPayload["controls"];
+	limit: number | undefined;
+	chunkIndex: number;
+	cursor: string | undefined;
+}): RunMigrationChunkPayload => ({
+	orgId: ctx.org.id,
+	env: ctx.env,
+	migrationId,
+	migrationRunId,
+	dryRun,
+	lazyRun,
+	chunkIndex,
+	cursor,
+	migration,
+	controls: {
+		...(controls ?? {}),
+		...(limit === undefined ? {} : { limit }),
+	},
+});
