@@ -24,6 +24,7 @@ export const subscriptions = pgTable(
 
 		current_period_start: numeric({ mode: "number" }),
 		current_period_end: numeric({ mode: "number" }),
+		billing_cycle_anchor_seconds: numeric({ mode: "number" }),
 	},
 	(table) => [
 		foreignKey({

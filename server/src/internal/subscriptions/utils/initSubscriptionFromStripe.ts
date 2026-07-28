@@ -33,5 +33,6 @@ export const initSubscriptionFromStripe = ({
 		env,
 		currentPeriodStart: getEarliestPeriodStart({ sub: stripeSubscription }),
 		currentPeriodEnd: getLatestPeriodEnd({ sub: stripeSubscription }),
+		billingCycleAnchorSeconds: stripeSubscription.billing_cycle_anchor,
 	});
 };
