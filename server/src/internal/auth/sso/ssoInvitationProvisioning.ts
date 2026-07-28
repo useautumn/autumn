@@ -7,7 +7,7 @@ import {
 	ssoProvider,
 	user,
 } from "@autumn/shared";
-import { and, eq, gt } from "drizzle-orm";
+import { and, eq, gt, sql } from "drizzle-orm";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 
 export const getSsoProviderIdFromCallbackPath = (
@@ -37,53 +37,63 @@ export const ensureInvitedSsoMembership = async ({
 	});
 	if (!provider?.organizationId || !provider.domainVerified) return null;
 
-	const existing = await db.query.member.findFirst({
-		where: and(
-			eq(member.organizationId, provider.organizationId),
-			eq(member.userId, userId),
-		),
-	});
-	if (existing) {
-		return {
-			organizationId: provider.organizationId,
-			role: existing.role,
-		};
-	}
+	const organizationId = provider.organizationId;
+	const membershipWhere = and(
+		eq(member.organizationId, organizationId),
+		eq(member.userId, userId),
+	);
 
-	const authUser = await db.query.user.findFirst({
-		where: eq(user.id, userId),
-	});
-	if (!authUser) return null;
+	// `member` has no uniqueness on (organization_id, user_id), so eligibility and
+	// the write share a transaction guarded by an advisory lock on that pair.
+	// Racing callbacks queue instead of each inserting their own membership.
+	return db.transaction(async (tx) => {
+		await tx.execute(
+			sql`SELECT pg_advisory_xact_lock(hashtextextended(${`sso-membership:${organizationId}:${userId}`}, 0))`,
+		);
 
-	const pendingInvite = await db.query.invitation.findFirst({
-		where: and(
-			eq(invitation.organizationId, provider.organizationId),
-			eq(invitation.email, authUser.email),
-			eq(invitation.status, "pending"),
-			gt(invitation.expiresAt, new Date()),
-		),
-	});
-	if (!pendingInvite) return null;
+		const existing = await tx.query.member.findFirst({
+			where: membershipWhere,
+		});
+		if (existing) {
+			return { organizationId, role: existing.role };
+		}
 
-	const role = pendingInvite.role ?? "member";
-	await db.transaction(async (tx) => {
+		const authUser = await tx.query.user.findFirst({
+			where: eq(user.id, userId),
+		});
+		if (!authUser) return null;
+
+		const pendingInvite = await tx.query.invitation.findFirst({
+			where: and(
+				eq(invitation.organizationId, organizationId),
+				eq(invitation.email, authUser.email),
+				eq(invitation.status, "pending"),
+				gt(invitation.expiresAt, new Date()),
+			),
+		});
+		if (!pendingInvite) return null;
+
+		const role = pendingInvite.role ?? "member";
 		await tx.insert(member).values({
 			id: `mem_${crypto.randomUUID()}`,
-			organizationId: provider.organizationId!,
+			organizationId,
 			userId,
 			role,
 			createdAt: new Date(),
 		});
+
 		await tx
 			.update(invitation)
 			.set({ status: "accepted" })
-			.where(eq(invitation.id, pendingInvite.id));
-	});
+			.where(
+				and(
+					eq(invitation.id, pendingInvite.id),
+					eq(invitation.status, "pending"),
+				),
+			);
 
-	return {
-		organizationId: provider.organizationId,
-		role,
-	};
+		return { organizationId, role };
+	});
 };
 
 export const getSsoProviderOrganizationName = async ({
