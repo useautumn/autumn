@@ -67,7 +67,7 @@ export const cusProductToExistingBalanceCarryOvers = ({
 
 		if (isEntityScopedCusEnt(cusEnt)) {
 			const entityPairs = Object.entries(cusEnt.entities)
-				.filter(([, entityBalance]) => entityBalance.balance > 0)
+				.filter(([, entityBalance]) => entityBalance.balance !== 0)
 				.flatMap(([entityId, entityBalance]) => {
 					const entity = fullCustomer.entities?.find((e) => e.id === entityId);
 					if (!entity) return [];
@@ -94,7 +94,7 @@ export const cusProductToExistingBalanceCarryOvers = ({
 		}
 
 		const balance = cusEnt.balance ?? 0;
-		if (balance <= 0) continue;
+		if (balance === 0) continue;
 
 		const ent = initCarryOverEntitlement({
 			cusEnt,
