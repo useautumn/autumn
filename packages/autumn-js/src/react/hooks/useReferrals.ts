@@ -35,6 +35,7 @@ export type UseReferralsResult = HookResultWithMethods<
  * - `data` is the latest create-code response.
  * - Access the code as `data?.code`.
  * - Call `refetch()` to create/fetch the code for `programId`.
+ * @deprecated Autumn's React hooks are deprecated, as they don't scale well over time. Please use our backend SDK instead.
  */
 export const useReferrals = (
 	params: UseReferralsParams,

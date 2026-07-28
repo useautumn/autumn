@@ -13,6 +13,9 @@ export type UseListEventsParams = HookParams<
 	ListEventsResponse
 >;
 
+/**
+ * @deprecated Autumn's React hooks are deprecated, as they don't scale well over time. Please use our backend SDK instead.
+ */
 export const useListEvents = (params: UseListEventsParams = {}) => {
 	const client = useAutumnClient({ caller: "useListEvents" });
 	const {
