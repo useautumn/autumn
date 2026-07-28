@@ -35,9 +35,13 @@ export const getFeatureToUseForCheck = ({
 		return feature;
 	}
 
+	// Nothing allowed — prefer pools the subject actually has over catalog order
+	let ownedCreditSystem: Feature | undefined;
 	for (const creditSystem of creditSystems) {
 		const apiBalance = apiSubject.balances?.[creditSystem.id];
 		if (!apiBalance) continue;
+
+		ownedCreditSystem ??= creditSystem;
 
 		if (
 			apiBalanceToAllowed({
@@ -50,6 +54,9 @@ export const getFeatureToUseForCheck = ({
 			return creditSystem;
 		}
 	}
+
+	if (ownedCreditSystem) return ownedCreditSystem;
+	if (mainBalance) return feature;
 
 	return creditSystems[0];
 };
