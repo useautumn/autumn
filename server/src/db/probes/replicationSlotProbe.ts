@@ -30,7 +30,9 @@ export const replicationSlotProbe: DbProbe = {
 				slots.slot_name,
 				slots.slot_type,
 				slots.active,
-				slots.failover,
+				-- Read through jsonb: failover only exists on PG 17+, and naming it
+				-- directly would fail parsing and cost us every other slot field.
+				(to_jsonb(slots) ->> 'failover')::boolean AS failover,
 				slots.wal_status,
 				slots.confirmed_flush_lsn::text AS confirmed_flush_lsn,
 				CASE
