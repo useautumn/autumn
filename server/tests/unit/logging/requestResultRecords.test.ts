@@ -15,7 +15,7 @@ const request = {
 };
 
 describe("buildRequestResultRecords", () => {
-	test("keeps a compact Axiom success record and archives the complete payload", () => {
+	test("keeps the existing Axiom success record and archives the complete payload", () => {
 		const records = buildRequestResultRecords({
 			...request,
 			statusCode: 200,
@@ -29,8 +29,6 @@ describe("buildRequestResultRecords", () => {
 		expect(records.axiom).toEqual({
 			statusCode: 200,
 			durationMs: 12,
-			responseBodyBytes: 44,
-			responseArchiveRouted: true,
 			res: {
 				allowed: true,
 				balance: { remaining: 999 },
@@ -63,12 +61,15 @@ describe("buildRequestResultRecords", () => {
 			responseBody,
 		});
 
-		expect(records.axiom.res).toEqual(responseBody);
-		expect(records.axiom.responseArchiveRouted).toBe(false);
+		expect(records.axiom).toEqual({
+			statusCode: 400,
+			durationMs: 9,
+			res: responseBody,
+		});
 		expect(records.archive).toBeNull();
 	});
 
-	test("keeps queryable response signals but drops high-cardinality success data", () => {
+	test("keeps the complete success response in Axiom while archiving it", () => {
 		const records = buildRequestResultRecords({
 			...request,
 			statusCode: 200,
@@ -88,13 +89,21 @@ describe("buildRequestResultRecords", () => {
 			},
 		});
 
-		expect(records.axiom.res).toEqual({
-			allowed: false,
-			code: "insufficient_balance",
-			balance: {
-				granted: 100,
-				remaining: 0,
-				usage: 100,
+		expect(records.axiom).toEqual({
+			statusCode: 200,
+			durationMs: 7,
+			res: {
+				allowed: false,
+				code: "insufficient_balance",
+				balance: {
+					granted: 100,
+					remaining: 0,
+					usage: 100,
+					breakdown: [{ id: "grant_1", remaining: 0 }],
+				},
+				balances: {
+					messages: { breakdown: [{ id: "grant_1", remaining: 0 }] },
+				},
 			},
 		});
 		expect(records.archive?.response_body).toContain('"breakdown"');
@@ -111,8 +120,11 @@ describe("buildRequestResultRecords", () => {
 			archiveSuccessResponse: false,
 		});
 
-		expect(records.axiom.res).toEqual(responseBody);
-		expect(records.axiom.responseArchiveRouted).toBe(false);
+		expect(records.axiom).toEqual({
+			statusCode: 200,
+			durationMs: 7,
+			res: responseBody,
+		});
 		expect(records.archive).toBeNull();
 	});
 });

@@ -17,8 +17,6 @@ type RequestResultRecordParams = {
 type AxiomRequestResultRecord = {
 	statusCode: number;
 	durationMs: number;
-	responseBodyBytes: number;
-	responseArchiveRouted: boolean;
 	res: unknown;
 };
 
@@ -39,67 +37,8 @@ type ArchivedRequestResultRecord = {
 	response_body_bytes: number;
 };
 
-const RESPONSE_SUMMARY_KEYS = [
-	"allowed",
-	"code",
-	"status",
-	"success",
-	"id",
-	"customer_id",
-	"entity_id",
-] as const;
-
-const BALANCE_SUMMARY_KEYS = [
-	"granted",
-	"remaining",
-	"usage",
-	"unlimited",
-	"overage_allowed",
-	"next_reset_at",
-] as const;
-
 const serializeBody = ({ body }: { body: unknown }): string =>
 	JSON.stringify(body ?? null);
-
-const isSummaryValue = (value: unknown) =>
-	typeof value === "boolean" ||
-	typeof value === "number" ||
-	(typeof value === "string" && value.length <= 256);
-
-const buildResponseSummary = ({
-	responseBody,
-}: {
-	responseBody: unknown;
-}): Record<string, unknown> | null => {
-	if (
-		!responseBody ||
-		typeof responseBody !== "object" ||
-		Array.isArray(responseBody)
-	) {
-		return null;
-	}
-
-	const response = responseBody as Record<string, unknown>;
-	const summary = Object.fromEntries(
-		RESPONSE_SUMMARY_KEYS.flatMap((key) =>
-			isSummaryValue(response[key]) ? [[key, response[key]]] : [],
-		),
-	);
-	const balance = response.balance;
-	if (balance && typeof balance === "object" && !Array.isArray(balance)) {
-		const balanceRecord = balance as Record<string, unknown>;
-		const balanceSummary = Object.fromEntries(
-			BALANCE_SUMMARY_KEYS.flatMap((key) =>
-				isSummaryValue(balanceRecord[key]) ? [[key, balanceRecord[key]]] : [],
-			),
-		);
-		if (Object.keys(balanceSummary).length > 0) {
-			summary.balance = balanceSummary;
-		}
-	}
-
-	return Object.keys(summary).length > 0 ? summary : null;
-};
 
 export const buildRequestResultRecords = ({
 	requestId,
@@ -128,12 +67,7 @@ export const buildRequestResultRecords = ({
 		axiom: {
 			statusCode,
 			durationMs,
-			responseBodyBytes,
-			responseArchiveRouted,
-			res:
-				!isSuccess || !responseArchiveRouted
-					? (responseBody ?? null)
-					: buildResponseSummary({ responseBody }),
+			res: responseBody ?? null,
 		},
 		archive: responseArchiveRouted
 			? {
