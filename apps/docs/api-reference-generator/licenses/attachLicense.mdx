@@ -1,0 +1,13 @@
+---
+title: "Attach License"
+openapi: "openapi POST /v1/licenses.attach"
+---
+
+<Note>
+  License assignment is idempotent for an entity that already has an active
+  assignment for the same license plan. Autumn skips those entities without
+  consuming another license; mixed batches assign only unassigned entities. A
+  duplicate-only request still returns `200` with `{ "success": true }`.
+  Duplicate IDs within one batch and insufficient capacity for new assignments
+  still return an error.
+</Note>
