@@ -7,6 +7,7 @@ export const pooledBalanceToPooledBalanceIdentity = ({
 	pooledBalance: DbPooledBalance;
 }): PooledBalanceIdentity => ({
 	internalFeatureId: pooledBalance.internal_feature_id,
+	unlimited: pooledBalance.unlimited ?? false,
 	interval: pooledBalance.interval,
 	intervalCount: pooledBalance.interval_count,
 	resetCycleAnchor: pooledBalance.reset_cycle_anchor,

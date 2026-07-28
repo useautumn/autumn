@@ -14,7 +14,7 @@ const autumnRpc = new AutumnRpcCli({ version: ApiVersion.V2_1 });
 const expectPooledItemRejected = async ({
 	planId,
 	item,
-	errMessage = "Pooled items are only supported for finite metered features",
+	errMessage = "Pooled items are only supported for metered features",
 }: {
 	planId: string;
 	item: NonNullable<CreatePlanParamsV2Input["items"]>[number];
@@ -45,15 +45,21 @@ test.concurrent(
 );
 
 test.concurrent(
-	"pooled item validation: rejects unlimited metered features",
+	"pooled item validation: accepts unlimited metered features",
 	async () => {
-		await expectPooledItemRejected({
-			planId: `pooled-unlimited-${crypto.randomUUID()}`,
-			item: {
-				feature_id: TestFeature.Messages,
-				unlimited: true,
-				pooled: true,
-			},
+		const planId = `pooled-unlimited-${crypto.randomUUID()}`;
+		await autumnRpc.plans.create<unknown, CreatePlanParamsV2Input>({
+			plan_id: planId,
+			name: planId,
+			group: `group-${planId}`,
+			auto_enable: false,
+			items: [
+				{
+					feature_id: TestFeature.Messages,
+					unlimited: true,
+					pooled: true,
+				},
+			],
 		});
 	},
 );

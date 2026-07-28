@@ -42,13 +42,17 @@ export const upsertPooledBalance = ({
 			pooledBalanceIdentityToKey({ identity }),
 		);
 
-	const balanceDelta =
+	let balanceDelta = contributionCustomerEntitlement.balance ?? 0;
+	if (identity.unlimited) {
+		balanceDelta = 0;
+	} else if (
 		existingPooledCustomerEntitlement &&
 		computeContext.pooledBalanceIdsWithRemovedContributions.has(
 			existingPooledCustomerEntitlement.pooled_balance.id,
 		)
-			? contributionAmounts.currentContribution
-			: (contributionCustomerEntitlement.balance ?? 0);
+	) {
+		balanceDelta = contributionAmounts.currentContribution;
+	}
 
 	if (!existingPooledCustomerEntitlement) {
 		const insertedPooledCustomerEntitlement = initPooledBalanceGraph({
@@ -66,32 +70,40 @@ export const upsertPooledBalance = ({
 			computeContext,
 			pooledCustomerEntitlement: insertedPooledCustomerEntitlement,
 		});
-		carrySourceRolloversToPool({
-			pooledBalancePlan: computeContext.plan,
-			contributionCustomerEntitlement,
-			pooledCustomerEntitlement: insertedPooledCustomerEntitlement,
-		});
+		if (!identity.unlimited) {
+			carrySourceRolloversToPool({
+				pooledBalancePlan: computeContext.plan,
+				contributionCustomerEntitlement,
+				pooledCustomerEntitlement: insertedPooledCustomerEntitlement,
+			});
+		}
 
 		return insertedPooledCustomerEntitlement;
 	}
 
-	addToUpdatePoolBalances({
-		pooledBalancePlan: computeContext.plan,
-		pooledCustomerEntitlement: existingPooledCustomerEntitlement,
-		balance: addSafe({
-			left: existingPooledCustomerEntitlement.balance,
-			right: balanceDelta,
-		}),
-		granted: addSafe({
-			left: existingPooledCustomerEntitlement.pooled_balance.granted,
-			right: contributionAmounts.currentContribution,
-		}),
-	});
-	carrySourceRolloversToPool({
-		pooledBalancePlan: computeContext.plan,
-		contributionCustomerEntitlement,
-		pooledCustomerEntitlement: existingPooledCustomerEntitlement,
-	});
+	const shouldUpdateExistingPooledBalance =
+		balanceDelta !== 0 || contributionAmounts.currentContribution !== 0;
+	if (shouldUpdateExistingPooledBalance) {
+		addToUpdatePoolBalances({
+			pooledBalancePlan: computeContext.plan,
+			pooledCustomerEntitlement: existingPooledCustomerEntitlement,
+			balance: addSafe({
+				left: existingPooledCustomerEntitlement.balance,
+				right: balanceDelta,
+			}),
+			granted: addSafe({
+				left: existingPooledCustomerEntitlement.pooled_balance.granted,
+				right: contributionAmounts.currentContribution,
+			}),
+		});
+	}
+	if (!identity.unlimited) {
+		carrySourceRolloversToPool({
+			pooledBalancePlan: computeContext.plan,
+			contributionCustomerEntitlement,
+			pooledCustomerEntitlement: existingPooledCustomerEntitlement,
+		});
+	}
 
 	return existingPooledCustomerEntitlement;
 };

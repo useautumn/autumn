@@ -1,5 +1,6 @@
 import { sql } from "drizzle-orm";
 import {
+	boolean,
 	check,
 	foreignKey,
 	index,
@@ -29,6 +30,7 @@ export const pooledBalances = pgTable(
 		env: text().notNull(),
 		internal_customer_id: text().notNull(),
 		internal_feature_id: text().notNull(),
+		unlimited: boolean().notNull().default(false),
 		granted: numeric({ mode: "number" }).notNull().default(0),
 
 		interval: text().$type<EntInterval>().notNull(),
@@ -71,6 +73,7 @@ export const pooledBalances = pgTable(
 			.on(
 				table.internal_customer_id,
 				table.internal_feature_id,
+				table.unlimited,
 				table.interval,
 				table.interval_count,
 				table.reset_cycle_anchor,
