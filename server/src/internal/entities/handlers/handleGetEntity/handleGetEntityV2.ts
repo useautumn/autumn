@@ -6,6 +6,7 @@ import {
 } from "@autumn/shared";
 import { shed503OnTransientError } from "@/db/shed503OnTransientError.js";
 import { createRoute } from "@/honoMiddlewares/routeHandler.js";
+import { applySubjectLookupDbOnly } from "@/internal/misc/miscellaneousEdgeConfig/applySubjectLookupDbOnly.js";
 import { findCustomerForEntity } from "../../actions/findCustomer.js";
 import { getApiEntityByRollout } from "../../actions/getApiEntityByRollout.js";
 
@@ -17,6 +18,8 @@ export const handleGetEntityV2 = createRoute({
 		const ctx = c.get("ctx");
 		const body = c.req.valid("json");
 		let { customer_id: customerId, entity_id: entityId } = body;
+
+		applySubjectLookupDbOnly({ ctx });
 
 		// 1. Entity -> Customer ID
 		if (!customerId) {

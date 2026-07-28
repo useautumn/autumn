@@ -1,7 +1,6 @@
 import { Hono } from "hono";
 import { publicSsoRouter } from "@/internal/auth/sso/publicSsoRouter.js";
 import { publicCheckoutRouter } from "@/internal/checkouts/checkoutRouter.js";
-import { publicDevRouter } from "@/internal/dev/devRouter.js";
 import { publicTrmnlRouter } from "@/internal/misc/trmnl/trmnlRouter.js";
 import type { HonoEnv } from "../honoUtils/HonoEnv.js";
 import { publicInvoiceRouter } from "../internal/invoices/invoiceRouter.js";
@@ -9,6 +8,5 @@ import { publicInvoiceRouter } from "../internal/invoices/invoiceRouter.js";
 export const publicRouter = new Hono<HonoEnv>();
 publicRouter.route("/checkouts", publicCheckoutRouter);
 publicRouter.route("/invoices", publicInvoiceRouter);
-publicRouter.route("/dev", publicDevRouter);
 publicRouter.route("/trmnl", publicTrmnlRouter);
 publicRouter.route("/auth/sso", publicSsoRouter);

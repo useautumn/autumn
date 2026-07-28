@@ -17,8 +17,6 @@ const invalidateCachedFullSubjectExactOnRedis = async ({
 	source?: string;
 	redisV2: Redis;
 }): Promise<void> => {
-	if (redisV2.status !== "ready") return;
-
 	const { org, env, logger } = ctx;
 
 	const subjectKey = buildFullSubjectKey({
@@ -33,6 +31,7 @@ const invalidateCachedFullSubjectExactOnRedis = async ({
 		operation: () => redisV2.unlink(subjectKey),
 		source: "invalidateCachedFullSubjectExact",
 		redisInstance: redisV2,
+		queueIfNotReady: true,
 		onError: (error: unknown) => {
 			logger.error(
 				`[invalidateCachedFullSubjectExact] subject: ${subjectLabel}, source: ${source}, error: ${error}`,

@@ -10,7 +10,7 @@
  *       mismatch on that phase carrying `phase_starts_at`.
  */
 
-import { expect, test } from "bun:test";
+import { expect, spyOn, test as testSequentially } from "bun:test";
 import { type CreateScheduleParamsV0Input, ms } from "@autumn/shared";
 import { items } from "@tests/utils/fixtures/items";
 import { products } from "@tests/utils/fixtures/products";
@@ -61,7 +61,7 @@ const buildTwoPhaseSchedule = ({
 	return params;
 };
 
-test.concurrent(
+testSequentially(
 	`${chalk.yellowBright("billing-verify schedule-mismatches 1: schedule released externally -> missing_schedule")}`,
 	async () => {
 		const customerId = "verify-schedule-missing";
@@ -121,8 +121,10 @@ test.concurrent(
 	},
 );
 
-test.concurrent(
-	`${chalk.yellowBright("billing-verify schedule-mismatches 2: future phase item quantity drifted -> mismatch carries phase_starts_at")}`,
+// Delayed verification previously reported phase_start_mismatch for an unchanged current phase.
+// Phase zero must stay valid while genuine future-phase drift remains detectable.
+testSequentially(
+	`${chalk.yellowBright("billing-verify schedule-mismatches 2: delayed verification accepts current phase and detects future drift")}`,
 	async () => {
 		const customerId = "verify-schedule-phase-item";
 
@@ -171,32 +173,48 @@ test.concurrent(
 		expect(schedule.phases.length).toBe(2);
 
 		const secondPhase = schedule.phases[1];
-		const updatedPhases = schedule.phases.map((phase, index) => ({
-			start_date: phase.start_date,
-			end_date: phase.end_date,
-			proration_behavior: "none" as const,
-			items: phase.items.map((item, itemIndex) => ({
-				price: typeof item.price === "string" ? item.price : item.price.id,
-				quantity:
-					index === 1 && itemIndex === 0
-						? (item.quantity ?? 1) + 1
-						: item.quantity,
-			})),
-		}));
+		const verificationNow = Date.now() + ms.days(3);
+		const dateNow = spyOn(Date, "now").mockReturnValue(verificationNow);
 
-		await ctx.stripeCli.subscriptionSchedules.update(scheduleId, {
-			phases: updatedPhases,
-		});
+		try {
+			const unchanged = await verify({
+				ctx,
+				params: { customer_id: customerId },
+			});
+			expect(unchanged.subscriptions[0].mismatches).toEqual([]);
+			expect(unchanged.subscriptions[0].status).toBe("correct");
 
-		const result = await verify({ ctx, params: { customer_id: customerId } });
+			const updatedPhases = schedule.phases.map((phase, index) => ({
+				start_date: phase.start_date,
+				end_date: phase.end_date,
+				proration_behavior: "none" as const,
+				items: phase.items.map((item, itemIndex) => ({
+					price: typeof item.price === "string" ? item.price : item.price.id,
+					quantity:
+						index === 1 && itemIndex === 0
+							? (item.quantity ?? 1) + 1
+							: item.quantity,
+				})),
+			}));
 
-		expect(result.subscriptions.length).toBe(1);
-		expect(result.subscriptions[0].status).toBe("mismatched");
-		expect(result.subscriptions[0].mismatches.length).toBeGreaterThan(0);
-		for (const mismatch of result.subscriptions[0].mismatches) {
-			const phaseStartsAt = (mismatch as { phase_starts_at?: number })
-				.phase_starts_at;
-			expect(phaseStartsAt).toBe(secondPhase.start_date);
+			await ctx.stripeCli.subscriptionSchedules.update(scheduleId, {
+				phases: updatedPhases,
+			});
+
+			const drifted = await verify({
+				ctx,
+				params: { customer_id: customerId },
+			});
+
+			expect(drifted.subscriptions[0].status).toBe("mismatched");
+			expect(drifted.subscriptions[0].mismatches.length).toBeGreaterThan(0);
+			for (const mismatch of drifted.subscriptions[0].mismatches) {
+				const phaseStartsAt = (mismatch as { phase_starts_at?: number })
+					.phase_starts_at;
+				expect(phaseStartsAt).toBe(secondPhase.start_date);
+			}
+		} finally {
+			dateNow.mockRestore();
 		}
 	},
 );

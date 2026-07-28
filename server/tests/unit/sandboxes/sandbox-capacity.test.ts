@@ -45,7 +45,7 @@ mock.module("@/internal/orgs/orgUtils/provisionSubOrg.js", () => ({
 		return { id: "org_sandbox", slug, name };
 	},
 }));
-mock.module("@/internal/dev/api-keys/apiKeyUtils.js", () => ({
+mock.module("@/internal/dev/apiKeys/apiKeyUtils.js", () => ({
 	createKey: async () => "am_sk_test_generated",
 }));
 mock.module("@/internal/orgs/deleteOrg/deletePlatformSubOrg.js", () => ({

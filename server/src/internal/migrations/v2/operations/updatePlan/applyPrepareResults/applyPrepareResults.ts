@@ -2,8 +2,9 @@ import type { AutumnBillingPlan } from "@autumn/shared";
 import type { UpdatePlanOp } from "@autumn/shared/api/migrations/operations/customer/updatePlan/index.js";
 import type { ReusePricesAndEntitlements } from "@/internal/billing/v2/setup/patch/index.js";
 import {
-	EnsurePricesAndEntitlementsResultSchema,
 	type EnsurePricesAndEntitlementsResult,
+	EnsurePricesAndEntitlementsResultSchema,
+	hashPlanItemArtifact,
 	type PreparedArtifactRef,
 } from "@/internal/migrations/v2/prepare/modules/ensurePricesAndEntitlements/index.js";
 import { buildPrepareModuleKey } from "@/internal/migrations/v2/prepare/utils/index.js";
@@ -213,7 +214,7 @@ export const applyPrepareResultsToUpdatePlan = ({
 				kind: "add_item",
 				itemIndex,
 				internalProductId,
-				hash: hashJson({ value: item }),
+				hash: hashPlanItemArtifact({ item }),
 			});
 			addPreparedId({
 				ids: preparedIds,

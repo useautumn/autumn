@@ -3,10 +3,8 @@ import {
 	getRegionalRedis,
 	redis,
 } from "../../../external/redis/initRedis.js";
-import {
-	tryRedisRead,
-	tryRedisWrite,
-} from "../../../utils/cacheUtils/cacheUtils.js";
+import { tryRedisOp } from "../../../external/redis/utils/runRedisOp.js";
+import type { ApiKeyVerificationData } from "../repos/getApiKeyVerificationData.js";
 
 export const SECRET_KEY_CACHE_TTL_SECONDS = 3600;
 
@@ -14,19 +12,23 @@ export const buildSecretKeyCacheKey = (key: string) => {
 	return `secret_key:${key}`;
 };
 
-export const getCachedSecretKeyVerification = async <T>({
+export const getCachedSecretKeyVerification = async ({
 	hashedKey,
 }: {
 	hashedKey: string;
-}) => {
+}): Promise<ApiKeyVerificationData | null> => {
 	const cacheKey = buildSecretKeyCacheKey(hashedKey);
-	const cached = await tryRedisRead(() => redis.get(cacheKey));
+
+	const cached = await tryRedisOp({
+		operation: () => redis.get(cacheKey),
+		source: "secret-key-cache:get",
+	});
 
 	if (!cached) {
 		return null;
 	}
 
-	return JSON.parse(cached) as T;
+	return JSON.parse(cached) as ApiKeyVerificationData;
 };
 
 export const setCachedSecretKeyVerification = async ({
@@ -40,9 +42,10 @@ export const setCachedSecretKeyVerification = async ({
 }) => {
 	const cacheKey = buildSecretKeyCacheKey(hashedKey);
 
-	await tryRedisWrite(() =>
-		redis.set(cacheKey, JSON.stringify(data), "EX", ttl),
-	);
+	await tryRedisOp({
+		operation: () => redis.set(cacheKey, JSON.stringify(data), "EX", ttl),
+		source: "secret-key-cache:set",
+	});
 };
 
 export const clearSecretKeyCache = async ({
@@ -53,22 +56,18 @@ export const clearSecretKeyCache = async ({
 	logger?: Pick<Console, "error" | "warn">;
 }) => {
 	const cacheKey = buildSecretKeyCacheKey(hashedKey);
-	const deletePromises = getConfiguredRegions().map(async (region) => {
+
+	const deletePromises = getConfiguredRegions().map((region) => {
 		const regionalRedis = getRegionalRedis(region);
 
-		if (regionalRedis.status !== "ready") {
-			logger.warn(`[clearSecretKeyCache] ${region}: not_ready`);
-			return;
-		}
-
-		const deleted = await tryRedisWrite(
-			() => regionalRedis.del(cacheKey),
-			regionalRedis,
-		);
-
-		if (deleted === null) {
-			logger.warn(`[clearSecretKeyCache] ${region}: delete_failed`);
-		}
+		return tryRedisOp({
+			operation: () => regionalRedis.del(cacheKey),
+			source: `secret-key-cache:clear:${region}`,
+			redisInstance: regionalRedis,
+			onError: () => {
+				logger.warn(`[clearSecretKeyCache] ${region}: delete_failed`);
+			},
+		});
 	});
 
 	await Promise.all(deletePromises);

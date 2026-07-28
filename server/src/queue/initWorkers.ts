@@ -6,6 +6,7 @@ import {
 	DeleteMessageCommand,
 	type Message,
 	ReceiveMessageCommand,
+	type ReceiveMessageCommandOutput,
 	type SQSClient,
 } from "@aws-sdk/client-sqs";
 import * as Sentry from "@sentry/bun";
@@ -55,6 +56,7 @@ const MESSAGE_TIMEOUT_MS = 25_000;
 // anchor checks), so they get a longer one — never an unbounded one.
 const BATCH_RESET_MESSAGE_TIMEOUT_MS = ms.minutes(1);
 const SQS_RECEIVE_BATCH_LIMIT = 10;
+const SQS_RECEIVE_TIMEOUT_MS = ms.seconds(30);
 const QUEUE_CAPACITY_RETRY_MS = 1_000;
 const DELETE_RETRY_DELAYS_MS = [100, 250, 500] as const;
 
@@ -109,6 +111,53 @@ const ZERO_MESSAGE_ALERT_THRESHOLD = 20; // ~20 min of 0 messages
 const logPrefix = ({ queueUrl }: { queueUrl: string }) =>
 	`[SQS Worker ${process.pid}][${queueUrl.split("/").pop()}]`;
 
+class ReceiveMessageTimeoutError extends Error {
+	constructor({ timeoutMs }: { timeoutMs: number }) {
+		super(`ReceiveMessage timed out after ${timeoutMs}ms`);
+		this.name = "ReceiveMessageTimeoutError";
+	}
+}
+
+const receiveMessagesWithTimeout = async ({
+	sqs,
+	command,
+	shutdownSignal,
+	timeoutMs,
+}: {
+	sqs: SQSClient;
+	command: ReceiveMessageCommand;
+	shutdownSignal: AbortSignal;
+	timeoutMs: number;
+}): Promise<ReceiveMessageCommandOutput> => {
+	const requestController = new AbortController();
+	const abortRequest = () => requestController.abort();
+	if (shutdownSignal.aborted) abortRequest();
+	else shutdownSignal.addEventListener("abort", abortRequest, { once: true });
+
+	let timedOut = false;
+	let timeout: ReturnType<typeof setTimeout> | undefined;
+	const timeoutPromise = new Promise<never>((_, reject) => {
+		timeout = setTimeout(() => {
+			timedOut = true;
+			reject(new ReceiveMessageTimeoutError({ timeoutMs }));
+			abortRequest();
+		}, timeoutMs);
+	});
+
+	try {
+		return await Promise.race([
+			sqs.send(command, { abortSignal: requestController.signal }),
+			timeoutPromise,
+		]);
+	} catch (error) {
+		if (timedOut) throw new ReceiveMessageTimeoutError({ timeoutMs });
+		throw error;
+	} finally {
+		if (timeout) clearTimeout(timeout);
+		shutdownSignal.removeEventListener("abort", abortRequest);
+	}
+};
+
 // ============ Polling Loop (per-queue, per-loop state) ============
 
 export const startPollingLoop = async ({
@@ -120,6 +169,7 @@ export const startPollingLoop = async ({
 	recreateSqsClientFn,
 	shouldPoll = () => true,
 	visibilityTimeoutSeconds = 30,
+	receiveTimeoutMs = SQS_RECEIVE_TIMEOUT_MS,
 	workerActivity = createWorkerActivityTracker({
 		idleAfterMs: IDLE_SELF_KILL_MS,
 	}),
@@ -135,6 +185,7 @@ export const startPollingLoop = async ({
 	 * a message redelivered mid-processing means two workers mutating the same
 	 * rows concurrently. */
 	visibilityTimeoutSeconds?: number;
+	receiveTimeoutMs?: number;
 	workerActivity?: WorkerActivityTracker;
 }) => {
 	// Per-loop state
@@ -387,6 +438,12 @@ export const startPollingLoop = async ({
 	): Promise<SQSClient | null> => {
 		const err = error as { name?: string; message?: string };
 
+		if (err.name === "ReceiveMessageTimeoutError") {
+			console.warn(`${prefix} ${err.message} - recreating queue client`);
+			consecutiveEmptyPolls = 0;
+			return recreateSqsClientFn();
+		}
+
 		if (err.name === "AbortError" || err.name === "RequestAbortedError") {
 			console.log(`${prefix} Polling aborted (shutdown)`);
 			return null;
@@ -435,14 +492,14 @@ export const startPollingLoop = async ({
 			}
 
 			recordPollAttempt({ queueUrl });
-			const response = await sqs.send(
-				createReceiveCommand({
+			const response = await receiveMessagesWithTimeout({
+				sqs,
+				command: createReceiveCommand({
 					maxNumberOfMessages: capacityLease.capacity,
 				}),
-				{
-					abortSignal: abortController.signal,
-				},
-			);
+				shutdownSignal: abortController.signal,
+				timeoutMs: receiveTimeoutMs,
+			});
 
 			const messages = response.Messages ?? [];
 			if (messages.length > 0) {

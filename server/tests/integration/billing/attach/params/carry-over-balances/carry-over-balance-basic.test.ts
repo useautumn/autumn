@@ -1,17 +1,11 @@
-/**
- * Carry Over Balances - Basic Tests
- *
- * Tests for carry_over_balances: { enabled: true } on immediate plan upgrades.
- *
- * Key behaviors:
- * - Remaining balance is carried as a loose entitlement on upgrade
- * - Zero balance is a silent no-op (no loose entitlement created)
- * - Negative balance (overage) is not carried — new plan starts at full allowance
- */
+/** Regression: carry_over_balances previously dropped negative balances during immediate plan attachments.
+ * It must preserve overage so the incoming allowance is reduced by the carried debt. */
 
-import { test } from "bun:test";
+import { expect, test } from "bun:test";
 import type { ApiCustomerV3 } from "@autumn/shared";
+import { findCustomerEntitlement } from "@tests/balances/utils/findCustomerEntitlement";
 import { expectCustomerFeatureCorrect } from "@tests/integration/billing/utils/expectCustomerFeatureCorrect";
+import { waitForPostgresBalance } from "@tests/integration/cron/batch-reset-v2/batchResetV2TestUtils";
 import { TestFeature } from "@tests/setup/v2Features";
 import { items } from "@tests/utils/fixtures/items";
 import { products } from "@tests/utils/fixtures/products";
@@ -126,15 +120,9 @@ test.concurrent(`${chalk.yellowBright("carry-over-balance 2: zero balance is a n
 	});
 });
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// TEST 3: Negative balance (overage) — don't carry negative
-//
-// Pro: 100 messages + consumable overage, 120 used (balance=-20)
-// Upgrade to Premium (500) with carry_over_balances: { enabled: true }
-// Expected: balance = 500 (negative balance is not carried)
-// ═══════════════════════════════════════════════════════════════════════════════
+// Pro has -20 messages; carrying that over to Premium's 500 leaves 480.
 
-test.concurrent(`${chalk.yellowBright("carry-over-balance 3: negative balance (overage) is not carried — new plan starts at full allowance")}`, async () => {
+test.concurrent(`${chalk.yellowBright("carry-over-balance 3: negative balance carries over to the new plan")}`, async () => {
 	// Use a consumable item to allow overage past the included usage
 	const proMessages = items.consumableMessages({ includedUsage: 100 });
 	const premiumMessages = items.monthlyMessages({ includedUsage: 500 });
@@ -142,14 +130,15 @@ test.concurrent(`${chalk.yellowBright("carry-over-balance 3: negative balance (o
 	const pro = products.pro({ id: "pro", items: [proMessages] });
 	const premium = products.premium({ id: "premium", items: [premiumMessages] });
 
-	const { customerId, autumnV2_1, autumnV1 } = await initScenario({
-		customerId: "carry-over-balance-negative",
-		setup: [
-			s.customer({ paymentMethod: "success" }),
-			s.products({ list: [pro, premium] }),
-		],
-		actions: [s.attach({ productId: pro.id, timeout: 4000 })],
-	});
+	const { customerId, autumnV2_1, autumnV2_2, autumnV1, ctx } =
+		await initScenario({
+			customerId: "carry-over-balance-negative",
+			setup: [
+				s.customer({ paymentMethod: "success" }),
+				s.products({ list: [pro, premium] }),
+			],
+			actions: [s.attach({ productId: pro.id, timeout: 4000 })],
+		});
 
 	// Track 120 — 20 over the 100 allowance (balance: 100 → -20)
 	await autumnV2_1.track({
@@ -158,11 +147,19 @@ test.concurrent(`${chalk.yellowBright("carry-over-balance 3: negative balance (o
 		value: 120,
 	});
 
-	// Wait for Redis → Postgres sync
-	await new Promise((resolve) => setTimeout(resolve, 2000));
+	const cusEnt = await findCustomerEntitlement({
+		ctx,
+		customerId,
+		featureId: TestFeature.Messages,
+	});
+	expect(cusEnt).toBeDefined();
+	await waitForPostgresBalance({
+		db: ctx.db,
+		customerEntitlementId: cusEnt!.id,
+		expectedBalance: -20,
+	});
 
-	// Upgrade with carry_over_balances — negative balance must not be carried
-	await autumnV2_1.billing.attach({
+	await autumnV2_2.billing.attach({
 		customer_id: customerId,
 		plan_id: premium.id,
 		carry_over_balances: { enabled: true },
@@ -172,11 +169,10 @@ test.concurrent(`${chalk.yellowBright("carry-over-balance 3: negative balance (o
 
 	const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
 
-	// Balance = 500 only (negative not carried — no loose entitlement)
 	expectCustomerFeatureCorrect({
 		customer,
 		featureId: TestFeature.Messages,
-		balance: 500,
+		balance: 480,
 		usage: 0,
 	});
 });

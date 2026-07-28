@@ -1,9 +1,28 @@
-import { type AppEnv, apiKeys } from "@autumn/shared";
+import {
+	type AppEnv,
+	apiKeys,
+	type Feature,
+	type FullOrg,
+	type Organization,
+	type PendingMigration,
+} from "@autumn/shared";
+import type { User } from "better-auth";
 import { eq } from "drizzle-orm";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 import { orgRepo } from "@/internal/orgs/repos/index.js";
 
-export const verifyApiKey = async ({
+export type ApiKeyVerificationData = {
+	org: Organization;
+	features: Feature[];
+	pendingMigrations: PendingMigration[];
+	fullOrg: FullOrg;
+	env: AppEnv;
+	userId: string | null;
+	user: User | null;
+	scopes: string[] | null;
+};
+
+export const getApiKeyVerificationData = async ({
 	db,
 	hashedKey,
 	env,
@@ -11,7 +30,7 @@ export const verifyApiKey = async ({
 	db: DrizzleCli;
 	hashedKey: string;
 	env: AppEnv;
-}) => {
+}): Promise<ApiKeyVerificationData | null> => {
 	const apiKey = await db.query.apiKeys.findFirst({
 		where: eq(apiKeys.hashed_key, hashedKey),
 		with: { user: true },

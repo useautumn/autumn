@@ -1,14 +1,8 @@
 import crypto from "node:crypto";
-import { type ApiKey, AppEnv } from "@autumn/shared";
+import type { ApiKey, AppEnv } from "@autumn/shared";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 import { generateId } from "@/utils/genUtils.js";
-import { ApiKeyService } from "../ApiKeyService.js";
 import { apiKeyRepo } from "../repos/index.js";
-import {
-	getCachedSecretKeyVerification,
-	SECRET_KEY_CACHE_TTL_SECONDS,
-	setCachedSecretKeyVerification,
-} from "./cacheApiKeyUtils.js";
 
 export enum ApiKeyPrefix {
 	Sandbox = "am_sk_test",
@@ -78,7 +72,7 @@ export const createKey = async ({
 		scopes: scopes ?? null,
 	};
 
-	await ApiKeyService.insert({ db, apiKey: apiKeyData });
+	await apiKeyRepo.insert({ db, apiKey: apiKeyData });
 
 	return apiKey;
 };
@@ -107,7 +101,7 @@ export const createHardcodedKey = async ({
 	const hashedKey = hashApiKey(hardcodedKey);
 
 	// Check if key already exists
-	const existing = await ApiKeyService.verifyAndFetch({
+	const existing = await apiKeyRepo.getVerificationData({
 		db,
 		hashedKey,
 		env,
@@ -130,65 +124,7 @@ export const createHardcodedKey = async ({
 		scopes: scopes ?? null,
 	};
 
-	await ApiKeyService.insert({ db, apiKey: apiKeyData });
+	await apiKeyRepo.insert({ db, apiKey: apiKeyData });
 
 	return { key: hardcodedKey, alreadyExists: false };
-};
-
-export const verifyKey = async ({
-	db,
-	key,
-}: {
-	db: DrizzleCli;
-	key: string;
-}) => {
-	const hashedKey = hashApiKey(key);
-
-	const env = key.startsWith(ApiKeyPrefix.Sandbox)
-		? AppEnv.Sandbox
-		: AppEnv.Live;
-
-	const cached = await getCachedSecretKeyVerification<
-		Awaited<ReturnType<typeof apiKeyRepo.verify>>
-	>({
-		hashedKey,
-	});
-
-	if (cached) {
-		// Backfill `pendingMigrations` on payloads cached before the field
-		// existed — guarantees consumers can rely on the shape.
-		const pendingMigrations = cached.pendingMigrations ?? [];
-		return {
-			valid: true,
-			data: {
-				...cached,
-				pendingMigrations,
-				org: { ...cached.org, pendingMigrations },
-			},
-		};
-	}
-
-	const data = await apiKeyRepo.verify({
-		db,
-		hashedKey,
-		env,
-	});
-
-	if (!data) {
-		return {
-			valid: false,
-			data: null,
-		};
-	}
-
-	await setCachedSecretKeyVerification({
-		hashedKey,
-		data,
-		ttl: SECRET_KEY_CACHE_TTL_SECONDS,
-	});
-
-	return {
-		valid: true,
-		data: data,
-	};
 };

@@ -1,14 +1,14 @@
 import {
 	copyStripeResourcesToMatchingPrice,
 	type Entitlement,
-	findFeatureById,
 	type FullProduct,
+	findFeatureById,
 	type Price,
 } from "@autumn/shared";
 import type { UpdatePlanOp } from "@autumn/shared/api/migrations/operations/customer/updatePlan/index.js";
-import { planFilterMatchesProduct } from "@autumn/shared/api/products/utils/match/index.js";
 import { basePriceToProductItem } from "@autumn/shared/api/products/components/basePrice/basePriceToProductItem.js";
 import { planItemV1ToPriceAndEnt } from "@autumn/shared/api/products/items/mappers/planItemV1ToPriceAndEnt.js";
+import { planFilterMatchesProduct } from "@autumn/shared/api/products/utils/match/index.js";
 import { enrichEntitlementsWithFeatures } from "@autumn/shared/utils/productUtils/entUtils/enrichEntitlement.js";
 import { itemToPriceAndEnt } from "@autumn/shared/utils/productV2Utils/productItemUtils/mappers/itemToPriceAndEnt.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
@@ -19,6 +19,7 @@ import { PriceService } from "@/internal/products/prices/PriceService.js";
 import { applyStripeResourceReuseForProduct } from "@/internal/products/stripeResourceUtils/applyStripeResourceReuseForProduct.js";
 import { hashJson } from "@/utils/hash/hashJson.js";
 import type { PrepareModule } from "../../types/prepareModule.js";
+import { hashPlanItemArtifact } from "./hashPlanItemArtifact.js";
 import type {
 	EnsurePricesAndEntitlementsResult,
 	PreparedArtifactRef,
@@ -312,7 +313,7 @@ export const ensurePricesAndEntitlements: PrepareModule<
 						featureId: item.feature_id,
 						errorOnNotFound: true,
 					});
-					const hash = artifactHash({ value: item });
+					const hash = hashPlanItemArtifact({ item });
 					const entitlementId = entitlementIdFor({
 						scopeId,
 						opIndex,
@@ -357,7 +358,11 @@ export const ensurePricesAndEntitlements: PrepareModule<
 							ctx,
 							price: preparedPrice,
 							entitlement: newEnt
-								? { ...newEnt, id: entitlementId, internal_product_id: product.internal_id }
+								? {
+										...newEnt,
+										id: entitlementId,
+										internal_product_id: product.internal_id,
+									}
 								: undefined,
 							product,
 							basePlanVersionsCache,
