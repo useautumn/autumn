@@ -14,6 +14,12 @@ const FAIL_OPEN_OPERATION_IDS = new Set([
 	"getEntity",
 ]);
 
+const NETWORK_RETRY_PATHS = new Set([
+	"/v1/customers.get",
+	"/v1/customers.get_or_create",
+	"/v1/entities.get",
+]);
+
 const FAIL_OPEN_LOG_MESSAGE =
 	"[Autumn] Request failed — failing open. Learn more: https://docs.useautumn.com/documentation/fail-open";
 
@@ -72,12 +78,34 @@ export class FailOpenHook implements SDKInitHook, AfterErrorHook {
 
 		opts.httpClient = new HTTPClient({
 			fetcher: async (input, init) => {
+				const request = new Request(input, init);
+				const retryRequest = request.clone();
+				const startedAt = Date.now();
+
 				try {
-					return init == null ? await fetch(input) : await fetch(input, init);
+					return await fetch(request);
 				} catch (error) {
-					console.log(error);
+					let finalError = error;
+
+					if (
+						NETWORK_RETRY_PATHS.has(new URL(request.url).pathname) &&
+						!this.isExplicitAbort(error)
+					) {
+						try {
+							const elapsedMs = Date.now() - startedAt;
+							const signal = retryRequest.signal.aborted
+								? AbortSignal.timeout(Math.max(elapsedMs, 100))
+								: retryRequest.signal;
+
+							return await fetch(new Request(retryRequest, { signal }));
+						} catch (retryError) {
+							finalError = retryError;
+						}
+					}
+
+					console.log(finalError);
 					console.log(
-						`Network failed to reach Autumn: ${error}. Returning 555 Network Error.`,
+						`Network failed to reach Autumn: ${finalError}. Returning 555 Network Error.`,
 					);
 					return new Response(null, {
 						status: 555,
@@ -124,5 +152,14 @@ export class FailOpenHook implements SDKInitHook, AfterErrorHook {
 			}),
 			error: null,
 		};
+	}
+
+	private isExplicitAbort(error: unknown): boolean {
+		return (
+			typeof error === "object" &&
+			error !== null &&
+			"name" in error &&
+			error.name === "AbortError"
+		);
 	}
 }
