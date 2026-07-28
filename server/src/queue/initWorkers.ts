@@ -6,6 +6,7 @@ import {
 	DeleteMessageCommand,
 	type Message,
 	ReceiveMessageCommand,
+	type ReceiveMessageCommandOutput,
 	type SQSClient,
 } from "@aws-sdk/client-sqs";
 import * as Sentry from "@sentry/bun";
@@ -33,6 +34,10 @@ import {
 import { getSqsClient, QUEUE_URL, recreateSqsClient } from "./initSqs.js";
 import { JobName } from "./JobName.js";
 import { processMessage, type SqsJob } from "./processMessage.js";
+import {
+	createWorkerActivityTracker,
+	type WorkerActivityTracker,
+} from "./workerActivityTracker.js";
 
 // ============ Shared State ============
 let isRunning = true;
@@ -42,8 +47,7 @@ export const getAbortControllerCountForTesting = () => abortControllers.size;
 // Process recycling — exit after processing this many messages to prevent memory leaks
 const MAX_MESSAGES_BEFORE_RECYCLE = 50_000;
 
-// Idle self-kill — exit if worker processes 0 messages for this many consecutive intervals
-const IDLE_SELF_KILL_THRESHOLD = 5; // ~5 min of 0 messages (5 * 60s)
+const IDLE_SELF_KILL_MS = ms.minutes(5);
 const shouldIdleSelfKill = process.env.NODE_ENV !== "development";
 
 // Per-message processing timeout — must be under VisibilityTimeout (30s)
@@ -52,6 +56,7 @@ const MESSAGE_TIMEOUT_MS = 25_000;
 // anchor checks), so they get a longer one — never an unbounded one.
 const BATCH_RESET_MESSAGE_TIMEOUT_MS = ms.minutes(1);
 const SQS_RECEIVE_BATCH_LIMIT = 10;
+const SQS_RECEIVE_TIMEOUT_MS = ms.seconds(30);
 const QUEUE_CAPACITY_RETRY_MS = 1_000;
 const DELETE_RETRY_DELAYS_MS = [100, 250, 500] as const;
 
@@ -106,6 +111,53 @@ const ZERO_MESSAGE_ALERT_THRESHOLD = 20; // ~20 min of 0 messages
 const logPrefix = ({ queueUrl }: { queueUrl: string }) =>
 	`[SQS Worker ${process.pid}][${queueUrl.split("/").pop()}]`;
 
+class ReceiveMessageTimeoutError extends Error {
+	constructor({ timeoutMs }: { timeoutMs: number }) {
+		super(`ReceiveMessage timed out after ${timeoutMs}ms`);
+		this.name = "ReceiveMessageTimeoutError";
+	}
+}
+
+const receiveMessagesWithTimeout = async ({
+	sqs,
+	command,
+	shutdownSignal,
+	timeoutMs,
+}: {
+	sqs: SQSClient;
+	command: ReceiveMessageCommand;
+	shutdownSignal: AbortSignal;
+	timeoutMs: number;
+}): Promise<ReceiveMessageCommandOutput> => {
+	const requestController = new AbortController();
+	const abortRequest = () => requestController.abort();
+	if (shutdownSignal.aborted) abortRequest();
+	else shutdownSignal.addEventListener("abort", abortRequest, { once: true });
+
+	let timedOut = false;
+	let timeout: ReturnType<typeof setTimeout> | undefined;
+	const timeoutPromise = new Promise<never>((_, reject) => {
+		timeout = setTimeout(() => {
+			timedOut = true;
+			reject(new ReceiveMessageTimeoutError({ timeoutMs }));
+			abortRequest();
+		}, timeoutMs);
+	});
+
+	try {
+		return await Promise.race([
+			sqs.send(command, { abortSignal: requestController.signal }),
+			timeoutPromise,
+		]);
+	} catch (error) {
+		if (timedOut) throw new ReceiveMessageTimeoutError({ timeoutMs });
+		throw error;
+	} finally {
+		if (timeout) clearTimeout(timeout);
+		shutdownSignal.removeEventListener("abort", abortRequest);
+	}
+};
+
 // ============ Polling Loop (per-queue, per-loop state) ============
 
 export const startPollingLoop = async ({
@@ -117,6 +169,10 @@ export const startPollingLoop = async ({
 	recreateSqsClientFn,
 	shouldPoll = () => true,
 	visibilityTimeoutSeconds = 30,
+	receiveTimeoutMs = SQS_RECEIVE_TIMEOUT_MS,
+	workerActivity = createWorkerActivityTracker({
+		idleAfterMs: IDLE_SELF_KILL_MS,
+	}),
 }: {
 	db: DrizzleCli;
 	queueId: string;
@@ -129,6 +185,8 @@ export const startPollingLoop = async ({
 	 * a message redelivered mid-processing means two workers mutating the same
 	 * rows concurrently. */
 	visibilityTimeoutSeconds?: number;
+	receiveTimeoutMs?: number;
+	workerActivity?: WorkerActivityTracker;
 }) => {
 	// Per-loop state
 	let messagesProcessed = 0;
@@ -198,15 +256,10 @@ export const startPollingLoop = async ({
 		if (messagesProcessed === 0) {
 			consecutiveZeroMessageIntervals++;
 
-			if (
-				shouldIdleSelfKill &&
-				consecutiveZeroMessageIntervals >= IDLE_SELF_KILL_THRESHOLD &&
-				totalMessagesProcessed > 0 &&
-				activeMigrationJobs === 0 &&
-				process.env.NODE_ENV !== "development"
-			) {
+			const idleStatus = workerActivity.getIdleStatus();
+			if (shouldIdleSelfKill && idleStatus.shouldRecycle) {
 				console.log(
-					`${prefix} Idle self-kill: 0 messages for ${consecutiveZeroMessageIntervals} intervals after processing ${totalMessagesProcessed} total. Exiting for cluster respawn.`,
+					`[SQS Worker ${process.pid}] Idle self-kill: no messages received across any queue for ${Math.floor(idleStatus.idleForMs / 60_000)} minutes after receiving ${idleStatus.totalMessagesReceived} total. Exiting for cluster respawn.`,
 				);
 				process.exit(0);
 			}
@@ -385,6 +438,12 @@ export const startPollingLoop = async ({
 	): Promise<SQSClient | null> => {
 		const err = error as { name?: string; message?: string };
 
+		if (err.name === "ReceiveMessageTimeoutError") {
+			console.warn(`${prefix} ${err.message} - recreating queue client`);
+			consecutiveEmptyPolls = 0;
+			return recreateSqsClientFn();
+		}
+
 		if (err.name === "AbortError" || err.name === "RequestAbortedError") {
 			console.log(`${prefix} Polling aborted (shutdown)`);
 			return null;
@@ -413,6 +472,7 @@ export const startPollingLoop = async ({
 
 	while (isRunning) {
 		let capacityLease: QueueCapacityLease | null = null;
+		let batchWorkStarted = false;
 		try {
 			if (!shouldPoll()) {
 				consecutiveEmptyPolls = 0;
@@ -432,16 +492,21 @@ export const startPollingLoop = async ({
 			}
 
 			recordPollAttempt({ queueUrl });
-			const response = await sqs.send(
-				createReceiveCommand({
+			const response = await receiveMessagesWithTimeout({
+				sqs,
+				command: createReceiveCommand({
 					maxNumberOfMessages: capacityLease.capacity,
 				}),
-				{
-					abortSignal: abortController.signal,
-				},
-			);
+				shutdownSignal: abortController.signal,
+				timeoutMs: receiveTimeoutMs,
+			});
 
 			const messages = response.Messages ?? [];
+			if (messages.length > 0) {
+				workerActivity.recordMessagesReceived({ count: messages.length });
+				workerActivity.startWork();
+				batchWorkStarted = true;
+			}
 			const leasedMessages = await capacityLease.assign(messages);
 
 			if (messages.length > 0) {
@@ -458,6 +523,7 @@ export const startPollingLoop = async ({
 					const override = getJobOverride(job.name);
 					if (override?.dispatch === "background" && !capacityLease.isLimited) {
 						activeMigrationJobs++;
+						workerActivity.startWork();
 						handleSingleMessage({ sqs, message, db })
 							.catch((error) => {
 								console.error(
@@ -466,7 +532,10 @@ export const startPollingLoop = async ({
 								);
 								Sentry.captureException(error);
 							})
-							.finally(() => activeMigrationJobs--);
+							.finally(() => {
+								activeMigrationJobs--;
+								workerActivity.finishWork();
+							});
 					} else {
 						regularMessages.push({
 							message,
@@ -510,6 +579,7 @@ export const startPollingLoop = async ({
 			if (newClient) sqs = newClient;
 			else if ((error as { name?: string }).name === "AbortError") break;
 		} finally {
+			if (batchWorkStarted) workerActivity.finishWork();
 			await capacityLease?.release();
 		}
 	}
@@ -565,6 +635,9 @@ export const initWorkers = async ({
 		`[Worker ${process.pid}] ${queueImplementation} worker ready in ${startupDurationMs}ms`,
 	);
 	const pollingLoops = [];
+	const workerActivity = createWorkerActivityTracker({
+		idleAfterMs: IDLE_SELF_KILL_MS,
+	});
 
 	for (const {
 		queueId,
@@ -622,6 +695,7 @@ export const initWorkers = async ({
 					isJobQueueEnabled({ queue: queueId, defaultEnabled }) &&
 					isActiveSlot({ serviceName: "workers" }),
 				visibilityTimeoutSeconds,
+				workerActivity,
 			}),
 		);
 	}
