@@ -82,7 +82,7 @@ function FeatureSelectDropdown({
 					<CaretDownIcon className="size-3.5 text-tertiary-foreground" />
 				</Button>
 			</DropdownMenuTrigger>
-			<DropdownMenuContent align="end" className="min-w-48">
+			<DropdownMenuContent align="end" className="w-(--anchor-width)">
 				<DropdownMenuCheckboxItem
 					checked={isAllSelected}
 					onCheckedChange={() => onChange({ featureIds: [] })}
