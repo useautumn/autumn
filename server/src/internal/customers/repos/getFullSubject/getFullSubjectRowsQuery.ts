@@ -12,6 +12,24 @@ import { getEntityAggregateFragments } from "./getEntityAggregateFragments.js";
 export const CUSTOMER_PRODUCT_LIMIT = 200;
 export const EXTRA_CUSTOMER_ENTITLEMENT_LIMIT = 200;
 
+/**
+ * Every aggregate and `distinct_*` CTE below is declared `AS MATERIALIZED`.
+ *
+ * Postgres inlines a CTE referenced once, which is normally the better plan. But
+ * the row estimate for the subject set collapses to 1 — the planner multiplies
+ * org_id/internal_customer_id/env as independent conditions and clamps — while a
+ * multi-subject page (entities.list) really returns up to 1,000. So each
+ * `LEFT JOIN xxx_agg ON subject_key` was planned as a nested loop and the inlined
+ * aggregate re-ran once per output row, re-sorting its whole input each time to
+ * keep one group. Measured on mintlify's 12,212-entity customer: 28,450ms, of
+ * which cus_products_agg alone was 18,025ms across 1,001 loops.
+ *
+ * MATERIALIZED forces one evaluation into a tuplestore, so the estimate stops
+ * mattering. Same customer: 839ms. There is nothing to push down into these
+ * (they are already scoped by subject_records), so the usual cost of blocking
+ * predicate pushdown does not apply, and the single-subject getFullSubject path
+ * measured neutral — 585ms vs 570ms, byte-identical output.
+ */
 /** Aggregate CTE → SubjectQueryRow column. Each CTE must expose (subject_key, items). */
 const SUBJECT_AGGREGATES = [
 	{ cte: "cus_products_agg", column: "customer_products" },
@@ -356,7 +374,7 @@ export const getFullSubjectRowsQuery = ({
 		${entityFragments.ctes}
 		,
 
-		distinct_products AS (
+		distinct_products AS MATERIALIZED (
 			SELECT DISTINCT ON (src.subject_key, p.internal_id)
 				src.subject_key,
 				src.internal_customer_id,
@@ -373,7 +391,7 @@ export const getFullSubjectRowsQuery = ({
 			ORDER BY src.subject_key, p.internal_id
 		),
 
-		relevant_entitlement_records AS (
+		relevant_entitlement_records AS MATERIALIZED (
 			SELECT DISTINCT
 				ce.subject_key,
 				ce.internal_customer_id,
@@ -394,7 +412,7 @@ export const getFullSubjectRowsQuery = ({
 			${entityFragments.entitlementRefsUnion}
 		),
 
-		distinct_entitlements AS (
+		distinct_entitlements AS MATERIALIZED (
 			SELECT
 				rer.subject_key,
 				rer.internal_customer_id,
@@ -407,7 +425,7 @@ export const getFullSubjectRowsQuery = ({
 				ON e.internal_feature_id = f.internal_id
 		),
 
-		distinct_prices AS (
+		distinct_prices AS MATERIALIZED (
 			SELECT DISTINCT ON (src.subject_key, p.id)
 				src.subject_key,
 				src.internal_customer_id,
@@ -426,7 +444,7 @@ export const getFullSubjectRowsQuery = ({
 			ORDER BY src.subject_key, p.id
 		),
 
-		distinct_free_trials AS (
+		distinct_free_trials AS MATERIALIZED (
 			SELECT DISTINCT ON (src.subject_key, ft.id)
 				src.subject_key,
 				src.internal_customer_id,
@@ -444,7 +462,7 @@ export const getFullSubjectRowsQuery = ({
 			ORDER BY src.subject_key, ft.id
 		),
 
-		cus_products_agg AS (
+		cus_products_agg AS MATERIALIZED (
 			SELECT
 				cp.subject_key,
 				json_agg(
@@ -473,7 +491,7 @@ export const getFullSubjectRowsQuery = ({
 			GROUP BY cp.subject_key
 		),
 
-		cus_entitlements_agg AS (
+		cus_entitlements_agg AS MATERIALIZED (
 			SELECT
 				ce.subject_key,
 				json_agg((row_to_json(ce)::jsonb - 'subject_key')::json) AS items
@@ -481,7 +499,7 @@ export const getFullSubjectRowsQuery = ({
 			GROUP BY ce.subject_key
 		),
 
-		cus_prices_agg AS (
+		cus_prices_agg AS MATERIALIZED (
 			SELECT
 				cpr.subject_key,
 				json_agg((row_to_json(cpr)::jsonb - 'subject_key')::json) AS items
@@ -489,7 +507,7 @@ export const getFullSubjectRowsQuery = ({
 			GROUP BY cpr.subject_key
 		),
 
-		extra_cus_entitlements_agg AS (
+		extra_cus_entitlements_agg AS MATERIALIZED (
 			SELECT
 				ece.subject_key,
 				json_agg(
@@ -508,7 +526,7 @@ export const getFullSubjectRowsQuery = ({
 			GROUP BY ece.subject_key
 		),
 
-		replaceables_agg AS (
+		replaceables_agg AS MATERIALIZED (
 			SELECT
 				ace.subject_key,
 				json_agg(row_to_json(rep) ORDER BY rep.created_at ASC, rep.id ASC) AS items
@@ -518,7 +536,7 @@ export const getFullSubjectRowsQuery = ({
 			GROUP BY ace.subject_key
 		),
 
-		rollovers_agg AS (
+		rollovers_agg AS MATERIALIZED (
 			SELECT
 				ace.subject_key,
 				json_agg(
@@ -531,7 +549,7 @@ export const getFullSubjectRowsQuery = ({
 			GROUP BY ace.subject_key
 		),
 
-		usage_windows_agg AS (
+		usage_windows_agg AS MATERIALIZED (
 			SELECT
 				sr.subject_key,
 				json_agg(
@@ -544,7 +562,7 @@ export const getFullSubjectRowsQuery = ({
 			GROUP BY sr.subject_key
 		),
 
-		products_agg AS (
+		products_agg AS MATERIALIZED (
 			SELECT
 				p.subject_key,
 				json_agg(
@@ -555,7 +573,7 @@ export const getFullSubjectRowsQuery = ({
 			GROUP BY p.subject_key
 		),
 
-		entitlements_agg AS (
+		entitlements_agg AS MATERIALIZED (
 			SELECT
 				ent.subject_key,
 				json_agg((row_to_json(ent)::jsonb - 'internal_customer_id' - 'subject_key')::json) AS items
@@ -563,7 +581,7 @@ export const getFullSubjectRowsQuery = ({
 			GROUP BY ent.subject_key
 		),
 
-		prices_agg AS (
+		prices_agg AS MATERIALIZED (
 			SELECT
 				pr.subject_key,
 				json_agg(
@@ -574,7 +592,7 @@ export const getFullSubjectRowsQuery = ({
 			GROUP BY pr.subject_key
 		),
 
-		free_trials_agg AS (
+		free_trials_agg AS MATERIALIZED (
 			SELECT
 				ft.subject_key,
 				json_agg(
@@ -585,7 +603,7 @@ export const getFullSubjectRowsQuery = ({
 			GROUP BY ft.subject_key
 		),
 
-		subscriptions_agg AS (
+		subscriptions_agg AS MATERIALIZED (
 			SELECT
 				cs.subject_key,
 				json_agg(row_to_json(cs.subscription_row))
