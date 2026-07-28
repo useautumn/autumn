@@ -17,7 +17,6 @@ import { AcceptInvitation } from "./views/auth/AcceptInvitation";
 import { Consent } from "./views/auth/Consent";
 import { PasswordSignIn } from "./views/auth/components/PasswordSignIn";
 import { SignIn } from "./views/auth/SignIn";
-import { Otp } from "./views/cli/Otp";
 import CustomersPage from "./views/customers/CustomersPage";
 import { AnalyticsView } from "./views/customers/customer/analytics/AnalyticsView";
 import CustomerView2 from "./views/customers2/customer/CustomerView2";
@@ -135,7 +134,6 @@ export default function App() {
 						)}
 						{envRoutes("dev", <DevScreen />)}
 						{envRoutes("analytics", <AnalyticsView />)}
-						{envRoutes("dev/cli", <Otp />)}
 					</Route>
 				</Route>
 			</Routes>

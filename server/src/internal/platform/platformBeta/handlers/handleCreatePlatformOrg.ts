@@ -14,7 +14,7 @@ import { createRoute } from "@/honoMiddlewares/routeHandler.js";
 import { UserService } from "@/internal/auth/UserService.js";
 import { OrgService } from "@/internal/orgs/OrgService.js";
 import { provisionSubOrg } from "@/internal/orgs/orgUtils/provisionSubOrg.js";
-import { createKey } from "../../../dev/api-keys/apiKeyUtils.js";
+import { createKey } from "../../../dev/apiKeys/apiKeyUtils.js";
 
 const CreateOrganizationSchema = z.object({
 	user_email: z.email(),

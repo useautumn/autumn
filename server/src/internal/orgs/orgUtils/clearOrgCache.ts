@@ -1,6 +1,6 @@
 import type { AppEnv } from "@autumn/shared";
 import type { DrizzleCli } from "@server/db/initDrizzle.js";
-import { clearSecretKeyCache } from "@/internal/dev/api-keys/cacheApiKeyUtils.js";
+import { clearSecretKeyCache } from "@/internal/dev/apiKeys/cacheApiKeyUtils.js";
 import { OrgService } from "../OrgService.js";
 import { clearOrgWithFeaturesCache } from "./cacheOrgWithFeatures.js";
 

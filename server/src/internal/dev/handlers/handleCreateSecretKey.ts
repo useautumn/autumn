@@ -9,7 +9,7 @@ import { z } from "zod/v4";
 import { auth } from "@/utils/auth";
 import { captureOrgEvent } from "@/utils/posthog.js";
 import { createRoute } from "../../../honoMiddlewares/routeHandler";
-import { ApiKeyPrefix, createKey } from "../api-keys/apiKeyUtils";
+import { ApiKeyPrefix, createKey } from "../apiKeys/apiKeyUtils";
 export const handleCreateSecretKey = createRoute({
 	scopes: [Scopes.ApiKeys.Write],
 	body: z.object({
@@ -63,9 +63,7 @@ export const handleCreateSecretKey = createRoute({
 			prefix,
 			meta,
 			scopes:
-				requestedScopes && requestedScopes.length > 0
-					? requestedScopes
-					: null,
+				requestedScopes && requestedScopes.length > 0 ? requestedScopes : null,
 		});
 
 		await captureOrgEvent({
