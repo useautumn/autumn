@@ -2,12 +2,10 @@ import { describe, expect, test } from "bun:test";
 import {
 	AppEnv,
 	BillingInterval,
-	EntInterval,
 	FeatureType,
 	isCustomerProductOneOff,
 	type NormalizedFullSubject,
 	normalizedToFullSubject,
-	PooledBalanceResetMode,
 	PriceType,
 	SubjectType,
 } from "@autumn/shared";
@@ -287,12 +285,13 @@ describe("fullSubject cache model", () => {
 		).toEqual(["cus_ent_pooled"]);
 	});
 
-	test("preserves pooled boolean metadata across cache roundtrip", () => {
+	test("reconstructs pooled boolean without caching pool metadata", () => {
 		const normalized = buildNormalized();
 		const entitlement = {
 			...normalized.customer_entitlements[0].entitlement,
 			id: "ent_boolean",
 			internal_product_id: null,
+			is_custom: true,
 			allowance: null,
 			allowance_type: null,
 			interval: null,
@@ -317,29 +316,6 @@ describe("fullSubject cache model", () => {
 				internalEntityId: null,
 				expiresAt: null,
 				externalId: null,
-				isPooledBalance: true,
-				pooledBalanceId: "pool_boolean",
-				pooledBalance: {
-					id: "pool_boolean",
-					org_id: "org_1",
-					env: AppEnv.Live,
-					internal_customer_id: "cus_int_1",
-					internal_feature_id: "feat_boolean",
-					unlimited: false,
-					granted: 0,
-					interval: EntInterval.Lifetime,
-					interval_count: 1,
-					reset_cycle_anchor: null,
-					reset_mode: PooledBalanceResetMode.Lifetime,
-					stripe_subscription_id: null,
-					customer_license_link_id: null,
-					rollover_signature: "none",
-					customer_entitlement_id: "cus_ent_boolean",
-					last_applied_reset_at: null,
-					expires_at: null,
-					created_at: 1,
-					updated_at: 1,
-				},
 			},
 		};
 
@@ -347,6 +323,7 @@ describe("fullSubject cache model", () => {
 			normalized,
 			subjectViewEpoch: 0,
 		});
+		expect(cached.flags.dashboard).toEqual(normalized.flags.dashboard);
 		const reconstructed = cachedFullSubjectToNormalized({
 			cached,
 			customerEntitlements: [],
@@ -358,9 +335,10 @@ describe("fullSubject cache model", () => {
 		expect(fullSubject.pooled_customer_entitlements?.[0]).toMatchObject({
 			id: "cus_ent_boolean",
 			is_pooled_balance: true,
-			pooled_balance_id: "pool_boolean",
-			pooled_balance: { id: "pool_boolean" },
 		});
+		expect(
+			fullSubject.pooled_customer_entitlements?.[0]?.pooled_balance,
+		).toBeUndefined();
 	});
 
 	test("preserves fixed prices without entitlements across cache roundtrip", () => {

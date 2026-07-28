@@ -98,6 +98,11 @@ const subjectFlagToFullCustomerEntitlement = ({
 	internalCustomerId: string;
 	internalEntityId: string | null;
 }): FullCustomerEntitlement => {
+	const isPooledBalance =
+		fullEntitlement.pooled === true &&
+		fullEntitlement.internal_product_id === null &&
+		subjectFlag.customerProductId === null;
+
 	return {
 		id: subjectFlag.customerEntitlementId,
 		internal_customer_id: internalCustomerId,
@@ -112,9 +117,7 @@ const subjectFlagToFullCustomerEntitlement = ({
 		additional_balance: 0,
 		usage_allowed: null,
 		separate_interval: false,
-		is_pooled_balance: subjectFlag.isPooledBalance,
-		pooled_balance_id: subjectFlag.pooledBalanceId,
-		pooled_balance: subjectFlag.pooledBalance,
+		is_pooled_balance: isPooledBalance,
 		reset_cycle_anchor: null,
 		next_reset_at: null,
 		adjustment: 0,

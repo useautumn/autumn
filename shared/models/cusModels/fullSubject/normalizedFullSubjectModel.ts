@@ -47,25 +47,9 @@ export const SubjectFlagSchema = z.object({
 	internalEntityId: z.string().nullable(),
 	expiresAt: z.number().nullable(),
 	externalId: z.string().nullable(),
-	isPooledBalance: z.boolean().optional(),
-	pooledBalanceId: z.string().nullable().optional(),
-	pooledBalance: z.custom<DbPooledBalance>().optional(),
 });
 
-export type SubjectFlag = {
-	featureId: string;
-	internalFeatureId: string;
-	entitlementId: string;
-	customerEntitlementId: string;
-	customerProductId: string | null;
-	internalCustomerId: string;
-	internalEntityId: string | null;
-	expiresAt: number | null;
-	externalId: string | null;
-	isPooledBalance?: boolean;
-	pooledBalanceId?: string | null;
-	pooledBalance?: DbPooledBalance;
-};
+export type SubjectFlag = z.infer<typeof SubjectFlagSchema>;
 
 /**
  * Schema mirror of `SubjectBalance`. Extends `FullCustomerEntitlementSchema`
