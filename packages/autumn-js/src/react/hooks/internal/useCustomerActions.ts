@@ -42,6 +42,9 @@ const redirectToUrl = ({
 	}
 };
 
+/**
+ * @deprecated Autumn's React hooks are deprecated, as they don't scale well over time. Please use our backend SDK instead.
+ */
 export const useCustomerActions = ({
 	client,
 	customer,
