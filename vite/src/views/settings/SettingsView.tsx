@@ -6,6 +6,7 @@ import {
 	BotIcon,
 	BuildingIcon,
 	CreditCardIcon,
+	KeyRoundIcon,
 	MousePointerClickIcon,
 	PaletteIcon,
 	ReceiptIcon,
@@ -15,6 +16,7 @@ import {
 	UsersIcon,
 } from "lucide-react";
 import { useSearchParams } from "react-router";
+import { useAutumnFlags } from "@/hooks/common/useAutumnFlags";
 import { cn } from "@/lib/utils";
 import { AccountSection } from "./sections/AccountSection";
 import { AgentSection } from "./sections/AgentSection";
@@ -25,6 +27,7 @@ import { CustomButtonsSection } from "./sections/CustomButtonsSection";
 import { InvoicesSection } from "./sections/InvoicesSection";
 import { MembersSection } from "./sections/MembersSection";
 import { OrganizationSection } from "./sections/OrganizationSection";
+import { SsoSection } from "./sections/SsoSection";
 import { SubscriptionSection } from "./sections/SubscriptionSection";
 import { TransitionRulesSection } from "./sections/TransitionRulesSection";
 import { UsageAlertsSection } from "./sections/UsageAlertsSection";
@@ -37,6 +40,7 @@ type SettingsTab =
 	| "agent"
 	| "appearance"
 	| "apps"
+	| "sso"
 	| "custom-buttons"
 	| "billing"
 	| "invoices"
@@ -89,6 +93,11 @@ const SETTINGS_GROUPS: readonly SettingsNavGroup[] = [
 				icon: <ShieldCheckIcon className="size-4" />,
 			},
 			{
+				id: "sso",
+				label: "Single Sign-On",
+				icon: <KeyRoundIcon className="size-4" />,
+			},
+			{
 				id: "custom-buttons",
 				label: "Custom Buttons",
 				icon: <MousePointerClickIcon className="size-4" />,
@@ -135,6 +144,7 @@ const SECTION_MAP: Record<SettingsTab, React.ComponentType> = {
 	agent: AgentSection,
 	appearance: AppearanceSection,
 	apps: AuthorizedAppsSection,
+	sso: SsoSection,
 	"custom-buttons": CustomButtonsSection,
 	billing: BillingSettingsSection,
 	invoices: InvoicesSection,
@@ -142,9 +152,20 @@ const SECTION_MAP: Record<SettingsTab, React.ComponentType> = {
 	"transition-rules": TransitionRulesSection,
 };
 
+/** Tabs that only render while their feature flag is on. */
+const FLAGGED_TABS: Partial<Record<SettingsTab, "sso">> = {
+	sso: "sso",
+};
+
 export const SettingsView = () => {
 	const [searchParams, setSearchParams] = useSearchParams();
-	const activeTab = (searchParams.get("tab") as SettingsTab) || "account";
+	const flags = useAutumnFlags();
+	const isTabEnabled = (tab: SettingsTab) => {
+		const flag = FLAGGED_TABS[tab];
+		return flag ? Boolean(flags[flag]) : true;
+	};
+	const requestedTab = (searchParams.get("tab") as SettingsTab) || "account";
+	const activeTab = isTabEnabled(requestedTab) ? requestedTab : "account";
 	const ActiveSection = SECTION_MAP[activeTab] ?? AccountSection;
 
 	const handleTabChange = (tab: SettingsTab) => {
@@ -164,22 +185,24 @@ export const SettingsView = () => {
 							<span className="px-2 mb-1 text-xs font-medium text-subtle">
 								{group.label}
 							</span>
-							{group.items.map((tab) => (
-								<button
-									key={tab.id}
-									type="button"
-									onClick={() => handleTabChange(tab.id)}
-									className={cn(
-										"flex items-center gap-2 rounded-md px-2 py-1.5 text-sm transition-colors cursor-pointer text-left",
-										activeTab === tab.id
-											? "bg-interactive-secondary text-foreground font-medium"
-											: "text-tertiary-foreground hover:text-muted-foreground hover:bg-interactive-secondary/50",
-									)}
-								>
-									{tab.icon}
-									<span>{tab.label}</span>
-								</button>
-							))}
+							{group.items
+								.filter((tab) => isTabEnabled(tab.id))
+								.map((tab) => (
+									<button
+										key={tab.id}
+										type="button"
+										onClick={() => handleTabChange(tab.id)}
+										className={cn(
+											"flex items-center gap-2 rounded-md px-2 py-1.5 text-sm transition-colors cursor-pointer text-left",
+											activeTab === tab.id
+												? "bg-interactive-secondary text-foreground font-medium"
+												: "text-tertiary-foreground hover:text-muted-foreground hover:bg-interactive-secondary/50",
+										)}
+									>
+										{tab.icon}
+										<span>{tab.label}</span>
+									</button>
+								))}
 						</div>
 					))}
 				</div>

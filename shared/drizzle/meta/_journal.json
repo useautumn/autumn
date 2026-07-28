@@ -372,6 +372,20 @@
       "when": 1785177455125,
       "tag": "0052_keen_giant_girl",
       "breakpoints": true
+    },
+    {
+      "idx": 53,
+      "version": "7",
+      "when": 1785236772276,
+      "tag": "0053_true_giant_girl",
+      "breakpoints": true
+    },
+    {
+      "idx": 54,
+      "version": "7",
+      "when": 1785238643793,
+      "tag": "0054_aspiring_squadron_supreme",
+      "breakpoints": true
     }
   ]
 }

@@ -126,6 +126,8 @@ import {
 	oauthRefreshToken,
 	passkey,
 	session,
+	ssoConnection,
+	ssoProvider,
 	user,
 	verification,
 } from "./auth-schema.js";
@@ -227,6 +229,8 @@ export {
 	schedulePhases,
 	schedules,
 	session,
+	ssoConnection,
+	ssoProvider,
 	subscriptions,
 	usageWindows,
 	// Auth
