@@ -232,7 +232,7 @@ test.concurrent(
 		await expectCustomerInvoiceCorrect({
 			customer: customerV3,
 			count: 2,
-			latestTotal: 5,
+			latestTotal: preview.total,
 		});
 		const { subscription } = await getStripeSubscription({
 			customerId,
