@@ -32,7 +32,10 @@ export const composeCustomerLicensesCtes = () => sql`
 				ON pl.id = cl.plan_license_id
 		),
 
-		customer_licenses_agg AS (
+		-- MATERIALIZED for the same reason as the aggregates in
+		-- getFullSubjectRowsQuery: inlined, this re-runs once per output row on a
+		-- multi-subject page because the subject row estimate collapses to 1.
+		customer_licenses_agg AS MATERIALIZED (
 			SELECT
 				clr.subject_key,
 				json_agg(

@@ -1,4 +1,8 @@
-import { type LineItem, ms, type StripeDiscountWithCoupon } from "@autumn/shared";
+import {
+	type LineItem,
+	ms,
+	type StripeDiscountWithCoupon,
+} from "@autumn/shared";
 
 const discountWasActiveForCreditedPeriod = ({
 	discount,
@@ -35,6 +39,9 @@ export const discountAppliesToLineItem = ({
 	lineItem: LineItem;
 }): boolean => {
 	const isProrationCredit = lineItem.context.direction === "refund";
+	if (lineItem.amountAfterDiscountsFinalized) {
+		return false;
+	}
 	if (
 		isProrationCredit &&
 		!discountWasActiveForCreditedPeriod({ discount, lineItem })

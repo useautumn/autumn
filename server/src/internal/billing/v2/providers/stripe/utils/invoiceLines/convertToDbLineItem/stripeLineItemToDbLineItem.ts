@@ -24,12 +24,14 @@ export type SubscriptionItemMetadataMap = Map<string, Stripe.Metadata>;
  */
 export const stripeLineItemsToDbLineItems = ({
 	stripeLineItems,
+	stripeDiscounts,
 	invoiceId,
 	stripeInvoiceId,
 	autumnLineItems,
 	subscriptionItemMetadata,
 }: {
 	stripeLineItems: ExpandedStripeInvoiceLineItem[];
+	stripeDiscounts: Stripe.Discount[];
 	invoiceId: string;
 	stripeInvoiceId: string;
 	autumnLineItems?: LineItem[];
@@ -46,6 +48,7 @@ export const stripeLineItemsToDbLineItems = ({
 		const { dbLineItems, matchedAutumnLineItems } =
 			stripeLineItemGroupToDbLineItems({
 				group,
+				stripeDiscounts,
 				invoiceId,
 				stripeInvoiceId,
 				autumnLineItems: remainingAutumnLineItems,

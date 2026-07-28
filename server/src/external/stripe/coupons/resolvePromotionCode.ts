@@ -41,7 +41,7 @@ export const resolvePromotionCode = async ({
 			code,
 			active: true,
 			limit: 1,
-			expand: ["data.promotion.coupon.applies_to"],
+			expand: ["data.promotion.coupon", "data.promotion.coupon.applies_to"],
 		});
 
 		if (promos.data.length === 0) {

@@ -30,12 +30,14 @@ type SubscriptionItemMetadataMap = Map<string, Stripe.Metadata>;
  */
 export const stripeLineItemGroupToDbLineItems = ({
 	group,
+	stripeDiscounts,
 	invoiceId,
 	stripeInvoiceId,
 	autumnLineItems,
 	subscriptionItemMetadata,
 }: {
 	group: StripeLineItemGroup;
+	stripeDiscounts: Stripe.Discount[];
 	invoiceId: string;
 	stripeInvoiceId: string;
 	autumnLineItems: LineItem[];
@@ -75,6 +77,7 @@ export const stripeLineItemGroupToDbLineItems = ({
 			// Matched: inherit Autumn context, but use Stripe amounts/quantities
 			return mergeStripeAndBillingLineItems({
 				stripeLineItem,
+				stripeDiscounts,
 				billingLineItems: matchedLineItems,
 				invoiceId,
 				stripeInvoiceId,
@@ -85,6 +88,7 @@ export const stripeLineItemGroupToDbLineItems = ({
 		// Fallback: create from Stripe data only
 		return createDbLineItemFromStripeOnly({
 			stripeLineItem,
+			stripeDiscounts,
 			invoiceId,
 			stripeInvoiceId,
 			stripeSubscriptionItemId,
@@ -107,6 +111,7 @@ export const stripeLineItemGroupToDbLineItems = ({
  */
 const mergeStripeAndBillingLineItems = ({
 	stripeLineItem,
+	stripeDiscounts,
 	billingLineItems,
 	invoiceId,
 	stripeInvoiceId,
@@ -114,6 +119,7 @@ const mergeStripeAndBillingLineItems = ({
 	isMultiItemGroup,
 }: {
 	stripeLineItem: ExpandedStripeInvoiceLineItem;
+	stripeDiscounts: Stripe.Discount[];
 	billingLineItems: LineItem[];
 	invoiceId: string;
 	stripeInvoiceId: string;
@@ -176,6 +182,7 @@ const mergeStripeAndBillingLineItems = ({
 		});
 		discounts = stripeDiscountsToDbDiscounts({
 			discountAmounts: stripeLineItem.discount_amounts,
+			discounts: [...stripeDiscounts, ...stripeLineItem.discounts],
 			currency: stripeLineItem.currency,
 		});
 	}
@@ -300,11 +307,13 @@ const mergeStripeAndBillingLineItems = ({
  */
 const createDbLineItemFromStripeOnly = ({
 	stripeLineItem,
+	stripeDiscounts,
 	invoiceId,
 	stripeInvoiceId,
 	stripeSubscriptionItemId,
 }: {
 	stripeLineItem: ExpandedStripeInvoiceLineItem;
+	stripeDiscounts: Stripe.Discount[];
 	invoiceId: string;
 	stripeInvoiceId: string;
 	stripeSubscriptionItemId: string | null;
@@ -372,6 +381,7 @@ const createDbLineItemFromStripeOnly = ({
 
 		discounts: stripeDiscountsToDbDiscounts({
 			discountAmounts: stripeLineItem.discount_amounts,
+			discounts: [...stripeDiscounts, ...stripeLineItem.discounts],
 			currency: stripeLineItem.currency,
 		}),
 	};
