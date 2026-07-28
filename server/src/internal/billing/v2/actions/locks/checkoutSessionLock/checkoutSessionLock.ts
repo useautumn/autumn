@@ -4,9 +4,6 @@ import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { CacheManager } from "@/utils/cacheUtils/CacheManager";
 
 const FALLBACK_CHECKOUT_LOCK_TTL_SECONDS = 2 * 60;
-// Stripe sessions expire ~24h out; capping bounds how long a reservation that
-// escaped its clear path can 423 every billing action for the customer.
-const MAX_CHECKOUT_LOCK_TTL_SECONDS = 30 * 60;
 
 interface CheckoutSessionLockData {
 	paramsHash: string;
@@ -51,10 +48,7 @@ const set = async ({
 }): Promise<void> => {
 	try {
 		const ttlSeconds = data.expiresAt
-			? Math.min(
-					MAX_CHECKOUT_LOCK_TTL_SECONDS,
-					Math.max(1, Math.ceil((data.expiresAt - Date.now()) / 1000)),
-				)
+			? Math.max(1, Math.ceil((data.expiresAt - Date.now()) / 1000))
 			: FALLBACK_CHECKOUT_LOCK_TTL_SECONDS;
 		await CacheManager.setJson(buildKey({ ctx, customerId }), data, ttlSeconds);
 	} catch (error) {
