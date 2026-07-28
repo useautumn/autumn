@@ -46,7 +46,7 @@ const getSqsClientCacheKey = ({ queueUrl }: { queueUrl?: string } = {}) => {
 		extractRegionFromQueueUrl({ queueUrl: resolvedQueueUrl }) ||
 		DEFAULT_AWS_REGION;
 
-	return `${region}:${endpoint ?? "aws"}`;
+	return `${region}:${endpoint ?? "aws"}:${resolvedQueueUrl ?? "default"}`;
 };
 
 const sqsClientsByCacheKey = new Map<string, SQSClient>();
