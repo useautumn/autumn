@@ -7,6 +7,7 @@ import { getS3Client } from "@/external/aws/s3/initS3.js";
 import { getS3BodyAsString } from "@/external/aws/s3/s3Utils.js";
 import type { Logger } from "@/external/logtail/logtailUtils.js";
 import RecaseError from "@/utils/errorUtils.js";
+import { writeEdgeConfigTimestamp } from "./edgeConfigTimestamp.js";
 
 export type EdgeConfigStatus = {
 	configured: boolean;
@@ -175,6 +176,7 @@ export const createEdgeConfigStore = <T>({
 				ContentType: "application/json",
 			}),
 		);
+		await writeEdgeConfigTimestamp({ s3Client: client });
 
 		runtimeConfig = config;
 		runtimeStatus = {

@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, jest, test } from "bun:test";
 import type { S3Client } from "@aws-sdk/client-s3";
 import { z } from "zod/v4";
+import { ADMIN_EDGE_CONFIG_TIMESTAMP_KEY } from "@/external/aws/s3/adminS3Config.js";
 import { createEdgeConfigStore } from "@/internal/misc/edgeConfig/edgeConfigStore.js";
 
 const TestConfigSchema = z.object({
@@ -300,7 +301,7 @@ describe("createEdgeConfigStore", () => {
 			expect(store.getStatus().healthy).toBe(true);
 		});
 
-		test("calls S3 PutObject with correct payload", async () => {
+		test("writes the config followed by the shared timestamp", async () => {
 			const mockClient = createMockS3Client({
 				getResponse: () => makeBody(defaultConfig()),
 			});
@@ -319,9 +320,21 @@ describe("createEdgeConfigStore", () => {
 			const sendFn = (
 				mockClient as unknown as { send: ReturnType<typeof jest.fn> }
 			).send;
-			const calls = sendFn.mock.calls;
-			const lastCall = calls[calls.length - 1]?.[0];
-			expect(lastCall?.constructor?.name).toBe("PutObjectCommand");
+			const putCommands = sendFn.mock.calls
+				.map(([command]) => command)
+				.filter(
+					(command) => command?.constructor?.name === "PutObjectCommand",
+				) as { input: { Key: string; Body: string } }[];
+
+			expect(putCommands.map(({ input }) => input.Key)).toEqual([
+				"admin/test-config.json",
+				ADMIN_EDGE_CONFIG_TIMESTAMP_KEY,
+			]);
+			expect(JSON.parse(putCommands[0]!.input.Body)).toEqual({
+				enabled: true,
+				message: "test-write",
+			});
+			expect(JSON.parse(putCommands[1]!.input.Body).updatedAt).toBeString();
 		});
 	});
 
