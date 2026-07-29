@@ -1,19 +1,20 @@
 import { Hono } from "hono";
 import type { HonoEnv } from "../../honoUtils/HonoEnv";
 import {
-	handleDeleteAdminCacheV2Ramp,
-	handleGetAdminCacheV2Ramp,
-	handleUpdateAdminCacheV2RampMigration,
-	handleUpsertAdminCacheV2Ramp,
+    handleDeleteAdminCacheV2Ramp,
+    handleGetAdminCacheV2Ramp,
+    handleUpdateAdminCacheV2RampMigration,
+    handleUpsertAdminCacheV2Ramp,
 } from "./handleAdminCacheV2Ramp";
 import {
-	handleDeleteAdminOrgRedisConfig,
-	handleGetAdminOrgRedisConfig,
-	handleUpdateAdminOrgRedisMigration,
-	handleUpdateAdminOrgRedisPublicUrl,
-	handleUpsertAdminOrgRedisConfig,
+    handleDeleteAdminOrgRedisConfig,
+    handleGetAdminOrgRedisConfig,
+    handleUpdateAdminOrgRedisMigration,
+    handleUpdateAdminOrgRedisPublicUrl,
+    handleUpsertAdminOrgRedisConfig,
 } from "./handleAdminOrgRedisConfig";
 import { handleGetAdminAsyncBalanceUpdateConfig } from "./handleGetAdminAsyncBalanceUpdateConfig";
+import { handleGetAdminAsyncTrackConfig } from "./handleGetAdminAsyncTrackConfig";
 import { handleGetAdminBatchResetConfig } from "./handleGetAdminBatchResetConfig";
 import { handleGetAdminCustomerBlockConfig } from "./handleGetAdminCustomerBlockConfig";
 import { handleGetAdminEdgeConfigSources } from "./handleGetAdminEdgeConfigSources";
@@ -40,12 +41,14 @@ import { handleListAdminOrgs } from "./handleListAdminOrgs";
 import { handleListAdminUsers } from "./handleListAdminUsers";
 import { handleListOAuthClients } from "./handleListOAuthClients";
 import {
-	handleCreateSlackAdminInstall,
-	handleDeleteSlackAdminInstall,
-	handleGetSlackAdminInstall,
-	handleUpdateSlackAdminTarget,
+    handleCreateSlackAdminInstall,
+    handleDeleteSlackAdminInstall,
+    handleGetSlackAdminInstall,
+    handleUpdateSlackAdminTarget,
 } from "./handleSlackAdminChat";
+import { handleSyncCustomerEntitlementAnchors } from "./handleSyncCustomerEntitlementAnchors";
 import { handleUpsertAdminAsyncBalanceUpdateConfig } from "./handleUpsertAdminAsyncBalanceUpdateConfig";
+import { handleUpsertAdminAsyncTrackConfig } from "./handleUpsertAdminAsyncTrackConfig";
 import { handleUpsertAdminBatchResetConfig } from "./handleUpsertAdminBatchResetConfig";
 import { handleUpsertAdminCustomerBlockConfig } from "./handleUpsertAdminCustomerBlockConfig";
 import { handleUpsertAdminFeatureFlagsConfig } from "./handleUpsertAdminFeatureFlagsConfig";
@@ -130,6 +133,11 @@ honoAdminRouter.get(
 honoAdminRouter.put(
 	"/async-balance-update-config",
 	...handleUpsertAdminAsyncBalanceUpdateConfig,
+);
+honoAdminRouter.get("/async-track-config", ...handleGetAdminAsyncTrackConfig);
+honoAdminRouter.put(
+	"/async-track-config",
+	...handleUpsertAdminAsyncTrackConfig,
 );
 honoAdminRouter.get(
 	"/full-subject-gate-config",
@@ -229,6 +237,10 @@ honoAdminRouter.patch(
 );
 honoAdminRouter.delete("/chat/slack-admin", ...handleDeleteSlackAdminInstall);
 honoAdminRouter.post("/invoice-line-items", ...handleGetInvoiceLineItems);
+honoAdminRouter.post(
+	"/customer-entitlements/sync-anchor",
+	...handleSyncCustomerEntitlementAnchors,
+);
 
 honoAdminRouter.get("/rollouts", ...handleGetRollouts);
 honoAdminRouter.put("/rollouts/:rollout_id", ...handleUpdateRollout);

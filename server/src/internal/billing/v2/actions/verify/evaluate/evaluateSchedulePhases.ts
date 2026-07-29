@@ -2,8 +2,8 @@ import type { ScheduleMismatch, SubscriptionMismatch } from "@autumn/shared";
 import type Stripe from "stripe";
 import { similarUnix } from "@/internal/customers/attach/mergeUtils/phaseUtils/phaseUtils";
 import type {
-	CusPriceCatalog,
-	StoredPriceCatalog,
+    CusPriceCatalog,
+    StoredPriceCatalog,
 } from "../compute/buildStoredPriceCatalog";
 import { evaluateItems } from "./evaluateItems";
 
@@ -14,12 +14,14 @@ export const evaluateSchedulePhases = async ({
 	scheduledPhases,
 	storedPriceCatalog,
 	cusPriceCatalog,
+	strict,
 }: {
 	stripeCli: Stripe;
 	sub: Stripe.Subscription;
 	scheduledPhases: Stripe.SubscriptionScheduleUpdateParams.Phase[];
 	storedPriceCatalog: StoredPriceCatalog;
 	cusPriceCatalog: CusPriceCatalog;
+	strict?: boolean;
 }): Promise<SubscriptionMismatch[]> => {
 	if (!sub.schedule) {
 		return [
@@ -48,22 +50,30 @@ export const evaluateSchedulePhases = async ({
 		});
 	}
 
+	const currentPhaseStart =
+		schedule.current_phase?.start_date ?? schedule.phases[0]?.start_date;
 	for (let i = 0; i < scheduledPhases.length; i++) {
 		const expectedPhase = scheduledPhases[i];
 		const expectedStartSeconds = expectedPhase.start_date as number;
 
 		const actualPhase = schedule.phases.find((phase) =>
-			similarUnix({
-				unix1: expectedStartSeconds * 1000,
-				unix2: phase.start_date * 1000,
-			}),
+			i === 0 && currentPhaseStart
+				? phase.start_date === currentPhaseStart
+				: similarUnix({
+						unix1: expectedStartSeconds * 1000,
+						unix2: phase.start_date * 1000,
+					}),
 		);
+		const phaseStartsAt =
+			i === 0
+				? (currentPhaseStart ?? expectedStartSeconds)
+				: expectedStartSeconds;
 
 		if (!actualPhase) {
 			mismatches.push({
 				type: "schedule_mismatch",
 				reason: "phase_start_mismatch",
-				phase_starts_at: expectedStartSeconds,
+				phase_starts_at: phaseStartsAt,
 			});
 			continue;
 		}
@@ -75,7 +85,7 @@ export const evaluateSchedulePhases = async ({
 			mismatches.push({
 				type: "schedule_mismatch",
 				reason: "billing_cycle_anchor_mismatch",
-				phase_starts_at: expectedStartSeconds,
+				phase_starts_at: phaseStartsAt,
 			});
 		}
 
@@ -89,6 +99,7 @@ export const evaluateSchedulePhases = async ({
 				storedPriceCatalog,
 				cusPriceCatalog,
 				phaseStartsAt: expectedStartSeconds,
+				strict,
 			}),
 		);
 	}

@@ -14,6 +14,10 @@ export const SubscriptionSchema = z.object({
 	current_period_start: z.number().nullable(),
 	current_period_end: z.number().nullable(),
 
+	// Stripe subscription's billing_cycle_anchor, in unix seconds (same unit
+	// as current_period_start/current_period_end).
+	billing_cycle_anchor_seconds: z.number().nullable(),
+
 	env: z.nativeEnum(AppEnv),
 });
 

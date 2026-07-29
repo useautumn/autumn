@@ -22,14 +22,10 @@ const invalidateCachedFullSubjectOnRedis = async ({
 	redisV2: Redis;
 	flushBalances?: boolean;
 }): Promise<void> => {
-	if (redisV2.status !== "ready") {
-		const subjectLabel = entityId ? `${customerId}:${entityId}` : customerId;
-		ctx.logger.warn(
-			`[invalidateCachedFullSubject] redisV2 not_ready (status=${redisV2.status}), skipping subject: ${subjectLabel}, source: ${source}`,
-		);
-		return;
-	}
-
+	// No not-ready guard here: the unlink + epoch bump below queues through
+	// reconnect blips (queueIfNotReady). The balance-field flush still skips
+	// itself when the client isn't ready — its fail-fast read machinery treats
+	// a blip as "nothing to flush", same as before.
 	await invalidateSharedBalanceFields({
 		ctx,
 		customerId,
@@ -64,6 +60,7 @@ const invalidateCachedFullSubjectOnRedis = async ({
 		operation: () => pipeline.exec(),
 		source: "invalidateCachedFullSubject",
 		redisInstance: redisV2,
+		queueIfNotReady: true,
 		onError: (error: unknown) => {
 			logger.error(
 				`[invalidateCachedFullSubject] subject: ${subjectLabel}, source: ${source}, error: ${error}`,

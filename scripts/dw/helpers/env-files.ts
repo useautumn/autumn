@@ -76,7 +76,31 @@ export function mergeEnvFile(
 	return `${outLines.join("\n")}\n`;
 }
 
-function urlsForEntry(entry: RegistryEntry): { apiUrl: string; viteUrl: string } {
+/** Redis/queue endpoints for a worktree's own containers; must also be applied
+ *  to the dev spawn env, where Infisical's shared AWS values otherwise win. */
+export function provisionedInfraEnv(
+	worktreeNum: number,
+): Record<string, string> {
+	const elasticMqPort = elasticMqPortFor(worktreeNum);
+	const redisUrl = `redis://localhost:${dragonflyPortFor(worktreeNum)}`;
+	const queueUrl = (queueName: string) =>
+		`http://localhost:${elasticMqPort}/000000000000/${queueName}`;
+	return {
+		REDIS_URL: redisUrl,
+		CACHE_URL: redisUrl,
+		CACHE_V2_DRAGONFLY_URL: redisUrl,
+		SQS_QUEUE_URL: queueUrl("autumn.fifo"),
+		SQS_QUEUE_URL_V2: queueUrl("autumn.fifo"),
+		TRACK_SQS_QUEUE_URL: queueUrl("autumn-track.fifo"),
+		TRACK_ASYNC_SQS_QUEUE_URL: queueUrl("autumn-track.fifo"),
+		STRIPE_WEBHOOK_SQS_QUEUE_URL: queueUrl("autumn-stripe-webhook.fifo"),
+	};
+}
+
+function urlsForEntry(entry: RegistryEntry): {
+	apiUrl: string;
+	viteUrl: string;
+} {
 	if (isProvisioned(entry)) {
 		const aliases = aliasesFor(entry.worktreeNum);
 		return { apiUrl: aliases.apiUrl, viteUrl: aliases.viteUrl };
@@ -111,14 +135,7 @@ export function writeEnvLocalFiles(entry: RegistryEntry): void {
 		STRIPE_WEBHOOK_SKIP_VERIFY: "true",
 	};
 	if (isProvisioned(entry)) {
-		const dragonflyPort = dragonflyPortFor(worktreeNum);
-		const elasticMqPort = elasticMqPortFor(worktreeNum);
-		const redisUrl = `redis://localhost:${dragonflyPort}`;
-		serverEnv.REDIS_URL = redisUrl;
-		serverEnv.CACHE_URL = redisUrl;
-		serverEnv.CACHE_V2_DRAGONFLY_URL = redisUrl;
-		serverEnv.SQS_QUEUE_URL_V2 = `http://localhost:${elasticMqPort}/000000000000/autumn.fifo`;
-		serverEnv.TRACK_SQS_QUEUE_URL = `http://localhost:${elasticMqPort}/000000000000/autumn-track.fifo`;
+		Object.assign(serverEnv, provisionedInfraEnv(worktreeNum));
 	}
 	if (existsSync(portlessCa)) {
 		serverEnv.NODE_EXTRA_CA_CERTS = portlessCa;

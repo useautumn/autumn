@@ -28,6 +28,7 @@ export type EdgeConfigStatus = {
 export type EdgeConfigCardId =
 	| "feature-flags"
 	| "async-balance-update"
+	| "async-track"
 	| "request-block"
 	| "customer-block"
 	| "org-limits"
@@ -282,6 +283,24 @@ export const EDGE_CONFIG_SECTIONS: EdgeConfigSectionDef[] = [
 					"Enqueue balances.update calls for background processing by org.",
 				icon: Clock,
 				endpoint: "/admin/async-balance-update-config",
+				deriveStatus: (data) => {
+					const ids = asRecord(data).enabledOrgIds;
+					const count = Array.isArray(ids) ? ids.length : 0;
+
+					return count === 0
+						? { label: "No orgs enabled", tone: "neutral" }
+						: {
+								label: `${pluralize({ count, noun: "org" })} enabled`,
+								tone: "active",
+							};
+				},
+			},
+			{
+				id: "async-track",
+				title: "Async Track",
+				description: "Enqueue Track requests for background processing by org.",
+				icon: Waves,
+				endpoint: "/admin/async-track-config",
 				deriveStatus: (data) => {
 					const ids = asRecord(data).enabledOrgIds;
 					const count = Array.isArray(ids) ? ids.length : 0;

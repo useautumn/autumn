@@ -2,8 +2,9 @@ import { afterAll, beforeAll, describe, expect, test } from "bun:test";
 import { MigrationRunStatus, migrationRuns } from "@autumn/shared";
 import ctx from "@tests/utils/testInitUtils/createTestContext.js";
 import { and, eq } from "drizzle-orm";
-import { hashApiKey, verifyKey } from "@/internal/dev/api-keys/apiKeyUtils.js";
-import { clearSecretKeyCache } from "@/internal/dev/api-keys/cacheApiKeyUtils.js";
+import { verifyKey } from "@/internal/dev/apiKeys/actions/verifyKey.js";
+import { hashApiKey } from "@/internal/dev/apiKeys/apiKeyUtils.js";
+import { clearSecretKeyCache } from "@/internal/dev/apiKeys/cacheApiKeyUtils.js";
 import {
 	migrationRepo,
 	migrationRunRepo,
@@ -41,12 +42,11 @@ describe("secret-key-verification: verifyKey shape (DB + cache)", () => {
 	});
 
 	test("loads org + features with no pending migrations on first call (DB)", async () => {
-		const { valid, data } = await verifyKey({
+		const data = await verifyKey({
 			db: ctx.db,
 			key: ctx.orgSecretKey,
 		});
 
-		expect(valid).toBe(true);
 		expect(data).not.toBeNull();
 		if (!data) throw new Error("verifyKey returned no data");
 
@@ -59,12 +59,11 @@ describe("secret-key-verification: verifyKey shape (DB + cache)", () => {
 	});
 
 	test("second call returns identical shape from cache", async () => {
-		const { valid, data } = await verifyKey({
+		const data = await verifyKey({
 			db: ctx.db,
 			key: ctx.orgSecretKey,
 		});
 
-		expect(valid).toBe(true);
 		if (!data) throw new Error("verifyKey returned no data");
 
 		expect(data.org.id).toBe(ctx.org.id);
@@ -106,33 +105,27 @@ describe("secret-key-verification: verifyKey shape (DB + cache)", () => {
 		await clearSecretKeyCache({ hashedKey });
 
 		const fromDb = await verifyKey({ db: ctx.db, key: ctx.orgSecretKey });
-		expect(fromDb.valid).toBe(true);
-		if (!fromDb.data) throw new Error("verifyKey returned no data");
+		if (!fromDb) throw new Error("verifyKey returned no data");
 
-		expect(fromDb.data.pendingMigrations).toHaveLength(1);
-		expect(fromDb.data.pendingMigrations[0]?.internal_id).toBe(run.internal_id);
-		expect(fromDb.data.pendingMigrations[0]?.lazy_run).toBe(true);
-		const status = fromDb.data.pendingMigrations[0]?.status;
+		expect(fromDb.pendingMigrations).toHaveLength(1);
+		expect(fromDb.pendingMigrations[0]?.internal_id).toBe(run.internal_id);
+		expect(fromDb.pendingMigrations[0]?.lazy_run).toBe(true);
+		const status = fromDb.pendingMigrations[0]?.status;
 		expect(
 			status === MigrationRunStatus.Queued ||
 				status === MigrationRunStatus.Running,
 		).toBe(true);
-		expect(fromDb.data.pendingMigrations[0]?.migration.id).toBe(MIGRATION_ID);
-		expect(fromDb.data.org.pendingMigrations).toHaveLength(1);
-		expect(fromDb.data.org.pendingMigrations?.[0]?.migration.id).toBe(
-			MIGRATION_ID,
-		);
+		expect(fromDb.pendingMigrations[0]?.migration.id).toBe(MIGRATION_ID);
+		expect(fromDb.org.pendingMigrations).toHaveLength(1);
+		expect(fromDb.org.pendingMigrations?.[0]?.migration.id).toBe(MIGRATION_ID);
 
 		// Second call hits cache — should be the same shape (deep-equal).
 		const fromCache = await verifyKey({ db: ctx.db, key: ctx.orgSecretKey });
-		expect(fromCache.valid).toBe(true);
-		if (!fromCache.data) throw new Error("verifyKey returned no cached data");
+		if (!fromCache) throw new Error("verifyKey returned no cached data");
 
-		expect(fromCache.data.pendingMigrations).toEqual(
-			fromDb.data.pendingMigrations,
-		);
-		expect(fromCache.data.org.pendingMigrations).toEqual(
-			fromDb.data.org.pendingMigrations,
+		expect(fromCache.pendingMigrations).toEqual(fromDb.pendingMigrations);
+		expect(fromCache.org.pendingMigrations).toEqual(
+			fromDb.org.pendingMigrations,
 		);
 	});
 
@@ -168,7 +161,7 @@ describe("secret-key-verification: verifyKey shape (DB + cache)", () => {
 		});
 		expect(run).not.toBeNull();
 
-		const { data } = await verifyKey({
+		const data = await verifyKey({
 			db: ctx.db,
 			key: ctx.orgSecretKey,
 		});

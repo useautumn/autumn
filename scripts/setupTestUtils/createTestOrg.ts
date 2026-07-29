@@ -10,7 +10,7 @@ import type { DrizzleCli } from "@server/db/initDrizzle.js";
 import {
 	createHardcodedKey,
 	createKey,
-} from "@server/internal/dev/api-keys/apiKeyUtils.js";
+} from "@server/internal/dev/apiKeys/apiKeyUtils.js";
 import { afterOrgCreated } from "@server/utils/authUtils/afterOrgCreated.js";
 import { clearOrgDbOnly } from "@tests/utils/setup/clearOrg.js";
 import { setupOrg } from "@tests/utils/setup/setupOrg.js";

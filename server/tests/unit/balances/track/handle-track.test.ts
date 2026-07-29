@@ -3,6 +3,7 @@ import { ApiVersionClass, AppEnv, LATEST_VERSION } from "@autumn/shared";
 import type { SQSClient } from "@aws-sdk/client-sqs";
 import { Hono } from "hono";
 import type { AutumnContext, HonoEnv } from "@/honoUtils/HonoEnv.js";
+import { _setAsyncTrackConfigForTesting } from "@/internal/misc/asyncTrack/asyncTrackStore.js";
 import { getSqsClient } from "@/queue/initSqs.js";
 
 const trackAsyncQueueUrl =
@@ -15,10 +16,13 @@ const mockState = {
 
 import { handleTrack } from "@/internal/balances/handlers/handleTrack.js";
 
-const createCtx = ({ orgSlug = "test-org" } = {}): AutumnContext =>
+const createCtx = ({
+	orgId = "org_123",
+	orgSlug = "test-org",
+} = {}): AutumnContext =>
 	({
 		id: "req_track_1",
-		org: { id: "org_123", slug: orgSlug },
+		org: { id: orgId, slug: orgSlug },
 		env: AppEnv.Sandbox,
 		apiVersion: new ApiVersionClass(LATEST_VERSION),
 		features: [{ id: "messages" }],
@@ -48,6 +52,7 @@ describe("handleTrack", () => {
 
 	beforeEach(() => {
 		mockState.queueCommands = [];
+		_setAsyncTrackConfigForTesting({ config: { enabledOrgIds: [] } });
 		process.env.TRACK_ASYNC_SQS_QUEUE_URL = trackAsyncQueueUrl;
 		const sqsClient = getSqsClient({ queueUrl: trackAsyncQueueUrl });
 		mockState.originalSend = sqsClient.send.bind(sqsClient);
@@ -91,9 +96,13 @@ describe("handleTrack", () => {
 		});
 	});
 
-	test("returns 202 success for Firecrawl track", async () => {
+	test("returns 202 success for configured org slug", async () => {
+		_setAsyncTrackConfigForTesting({
+			config: { enabledOrgIds: ["configured-slug"] },
+		});
+
 		const response = await createApp({
-			ctx: createCtx({ orgSlug: "firecrawl" }),
+			ctx: createCtx({ orgSlug: "configured-slug" }),
 		}).request("/track", {
 			method: "POST",
 			headers: { "Content-Type": "application/json" },
@@ -110,6 +119,27 @@ describe("handleTrack", () => {
 			value: 1,
 			balance: null,
 		});
+		expect(mockState.queueCommands).toHaveLength(1);
+	});
+
+	test("returns 202 success for configured org ID", async () => {
+		_setAsyncTrackConfigForTesting({
+			config: { enabledOrgIds: ["org_async"] },
+		});
+
+		const response = await createApp({
+			ctx: createCtx({ orgId: "org_async" }),
+		}).request("/track", {
+			method: "POST",
+			headers: { "Content-Type": "application/json" },
+			body: JSON.stringify({
+				customer_id: "cus_123",
+				feature_id: "messages",
+				value: 1,
+			}),
+		});
+
+		expect(response.status).toBe(202);
 		expect(mockState.queueCommands).toHaveLength(1);
 	});
 });

@@ -2,6 +2,7 @@ import type {
 	ApiVersion,
 	AppEnv,
 	EventInsert,
+	FinalizeLockParamsV0,
 	Price,
 	TrackParams,
 	UpdateBalanceParamsV0,
@@ -30,28 +31,6 @@ export interface Payloads {
 		productId: string;
 		orgId: string;
 		env: AppEnv;
-	};
-	[JobName.SyncBalanceBatch]: {
-		orgId: string;
-		env: AppEnv;
-		item: {
-			customerId: string;
-			featureId: string;
-			orgId: string;
-			env: string;
-			entityId?: string;
-			timestamp: number;
-		};
-	};
-	[JobName.SyncBalanceBatchV3]: {
-		customerId: string;
-		orgId: string;
-		env: AppEnv;
-		region?: string;
-		timestamp: number;
-		cusEntIds: string[];
-		rolloverIds?: string[];
-		entityId?: string;
 	};
 	[JobName.SyncBalanceBatchV4]: {
 		customerId: string;
@@ -113,18 +92,19 @@ export interface Payloads {
 		customerId: string;
 		featureId: string;
 	};
-	[JobName.VerifyCacheConsistency]: {
-		customerId: string;
-		orgId: string;
-		env: string;
-		source: string;
-	};
 	[JobName.ExpireLockReceipt]: {
 		orgId: string;
 		env: AppEnv;
 		customerId: string;
 		lockId: string;
 		hashedKey: string;
+	};
+	[JobName.FinalizeLock]: {
+		orgId: string;
+		env: AppEnv;
+		customerId?: string;
+		requestId: string;
+		params: FinalizeLockParamsV0;
 	};
 	[key: string]: unknown;
 }

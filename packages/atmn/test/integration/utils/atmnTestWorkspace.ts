@@ -1,6 +1,6 @@
 import { spawn } from "node:child_process";
 import { existsSync, readFileSync } from "node:fs";
-import { mkdir, rm, writeFile } from "node:fs/promises";
+import { mkdir, rm, symlink, writeFile } from "node:fs/promises";
 import { join, relative, sep } from "node:path";
 import { fileURLToPath } from "node:url";
 import { AppEnv, migrationItemRuns, migrations } from "@autumn/shared";
@@ -8,7 +8,7 @@ import { and, eq, inArray } from "drizzle-orm";
 import {
 	createHardcodedKey,
 	hashApiKey,
-} from "../../../../../server/src/internal/dev/api-keys/apiKeyUtils.js";
+} from "../../../../../server/src/internal/dev/apiKeys/apiKeyUtils.js";
 import { FeatureService } from "../../../../../server/src/internal/features/FeatureService.js";
 import { invalidateProductsCache } from "../../../../../server/src/internal/products/productCacheUtils.js";
 import { CacheManager } from "../../../../../server/src/utils/cacheUtils/CacheManager.js";
@@ -300,9 +300,11 @@ export const prepareAtmnScenario = async ({
 };
 
 export const prepareAtmnIntegrationWorkspace = async ({
+	atmnPackageDir,
 	reset = true,
 	secretKey,
 }: {
+	atmnPackageDir?: string;
 	reset?: boolean;
 	secretKey: string;
 }): Promise<PreparedAtmnWorkspace> => {
@@ -314,6 +316,11 @@ export const prepareAtmnIntegrationWorkspace = async ({
 	}
 	await mkdir(workspaceDir, { recursive: true });
 	await ensureAtmnPackageShim(workspaceDir);
+	if (atmnPackageDir) {
+		const workspacePackageDir = join(workspaceDir, "node_modules/atmn");
+		await rm(workspacePackageDir, { force: true, recursive: true });
+		await symlink(atmnPackageDir, workspacePackageDir, "dir");
+	}
 
 	const configPath = join(workspaceDir, "autumn.config.ts");
 	await writeFile(
@@ -449,16 +456,20 @@ export const runAtmnCli = async ({
 
 export const runAtmnWorkspaceCli = async ({
 	args,
+	cliPath = atmnCliPath,
 	command,
 	headless = false,
 	workspace,
 }: {
 	args?: string[];
+	cliPath?: string;
 	command: AtmnCommand;
 	headless?: boolean;
 	workspace: PreparedAtmnWorkspace;
 }) => {
-	await ensureAtmnPackageShim(workspace.workspaceDir);
+	if (cliPath === atmnCliPath) {
+		await ensureAtmnPackageShim(workspace.workspaceDir);
+	}
 
 	if (command === "push" && !existsSync(workspace.configPath)) {
 		throw new Error("No autumn.config.ts found for atmn integration workspace");
@@ -468,7 +479,7 @@ export const runAtmnWorkspaceCli = async ({
 		"bun",
 		[
 			"--no-env-file",
-			atmnCliPath,
+			cliPath,
 			"--local",
 			...(headless ? ["--headless"] : []),
 			"--config",

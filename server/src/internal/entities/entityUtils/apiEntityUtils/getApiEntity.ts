@@ -6,12 +6,11 @@ import {
 	type FullCustomer,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
-import { getOrSetCachedFullCustomer } from "../../../customers/cusUtils/fullCustomerCacheUtils/getOrSetCachedFullCustomer.js";
 import { getApiEntityBase } from "./getApiEntityBase.js";
 import { getApiEntityExpand } from "./getApiEntityExpand.js";
 
 /**
- * Get full ApiEntity with expand fields and caching
+ * Get full ApiEntity with expand fields from a caller-provided FullCustomer
  */
 export const getApiEntity = async ({
 	ctx,
@@ -23,17 +22,10 @@ export const getApiEntity = async ({
 	ctx: AutumnContext;
 	customerId: string;
 	entityId: string;
-	fullCus?: FullCustomer;
+	fullCus: FullCustomer;
 	withAutumnId?: boolean;
 }): Promise<ApiEntityV2> => {
-	const fullCustomer =
-		fullCus ??
-		(await getOrSetCachedFullCustomer({
-			ctx,
-			customerId,
-			entityId,
-			source: "getApiEntity",
-		}));
+	const fullCustomer = fullCus;
 
 	if (!fullCustomer.entity) {
 		throw new EntityNotFoundError({ entityId });

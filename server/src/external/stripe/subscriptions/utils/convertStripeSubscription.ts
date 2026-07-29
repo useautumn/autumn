@@ -1,4 +1,4 @@
-import { CusProductStatus, secondsToMs } from "@autumn/shared";
+import { CusProductStatus, EntInterval, ms, secondsToMs } from "@autumn/shared";
 import type Stripe from "stripe";
 import type { ExpandedStripeSubscription } from "@/external/stripe/subscriptions/operations/getExpandedStripeSubscription";
 import { stripeTestClockToNowMs } from "@/external/stripe/testClocks/utils/convertStripeTestClock";
@@ -143,6 +143,47 @@ export const stripeSubscriptionToNowMs = async ({
 	}
 
 	return Date.now();
+};
+
+const STRIPE_INTERVAL_TO_ENT_INTERVAL: Partial<Record<string, EntInterval>> = {
+	day: EntInterval.Day,
+	week: EntInterval.Week,
+	month: EntInterval.Month,
+	year: EntInterval.Year,
+};
+
+const APPROX_INTERVAL_MS: Record<string, number> = {
+	day: ms.days(1),
+	week: ms.weeks(1),
+	month: ms.months(1),
+	year: ms.days(365),
+};
+
+const approxRecurringMs = (recurring: Stripe.Price.Recurring) =>
+	(APPROX_INTERVAL_MS[recurring.interval] ?? 0) *
+	(recurring.interval_count ?? 1);
+
+/** Largest recurring interval across the subscription's items, by approximate
+ * total duration (interval × count). Null when no item has a known interval. */
+export const stripeSubscriptionToLargestInterval = ({
+	stripeSubscription,
+}: {
+	stripeSubscription: Stripe.Subscription;
+}): { interval: EntInterval; intervalCount: number } | null => {
+	let largest: Stripe.Price.Recurring | null = null;
+	for (const item of stripeSubscription.items.data) {
+		const recurring = item.price?.recurring;
+		if (!recurring) continue;
+		if (!largest || approxRecurringMs(recurring) > approxRecurringMs(largest)) {
+			largest = recurring;
+		}
+	}
+
+	const interval = largest
+		? STRIPE_INTERVAL_TO_ENT_INTERVAL[largest.interval]
+		: undefined;
+	if (!largest || !interval) return null;
+	return { interval, intervalCount: largest.interval_count ?? 1 };
 };
 
 export const stripeSubscriptionToScheduleId = ({

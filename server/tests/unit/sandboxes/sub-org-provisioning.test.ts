@@ -80,7 +80,7 @@ mock.module("@/internal/orgs/OrgService.js", () => ({
 		listSandboxes: async () => [],
 	},
 }));
-mock.module("@/internal/dev/api-keys/apiKeyUtils.js", () => ({
+mock.module("@/internal/dev/apiKeys/apiKeyUtils.js", () => ({
 	createKey: async () => {
 		if (state.keyThrows) {
 			throw new Error("createKey failed");

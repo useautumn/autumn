@@ -4,8 +4,10 @@ import {
 	type FullCustomerEntitlement,
 	getCycleEnd,
 	InternalError,
+	isBooleanEntitlement,
 	isCustomerProductFree,
 	isCustomerProductPaidRecurring,
+	isUnlimitedEntitlement,
 	PooledBalanceResetMode,
 } from "@autumn/shared";
 import type {
@@ -65,6 +67,7 @@ const findExistingPoolResetCycleAnchor = ({
 	return computeContext.pooledCustomerEntitlements.find(
 		({ pooled_balance }) =>
 			pooled_balance.internal_feature_id === sourceIdentity.internalFeatureId &&
+			(pooled_balance.unlimited ?? false) === sourceIdentity.unlimited &&
 			pooled_balance.interval === sourceIdentity.interval &&
 			pooled_balance.interval_count === sourceIdentity.intervalCount &&
 			pooled_balance.reset_mode === resetMode &&
@@ -170,6 +173,12 @@ export const computePooledBalanceLifecycle = ({
 }): PooledBalanceLifecycle => {
 	const interval =
 		customerEntitlement.entitlement.interval ?? EntInterval.Lifetime;
+	const unlimited = isUnlimitedEntitlement({
+		entitlement: customerEntitlement.entitlement,
+	});
+	const isBoolean = isBooleanEntitlement({
+		entitlement: customerEntitlement.entitlement,
+	});
 
 	const resetMode = getResetMode({ customerProduct, interval });
 	const { stripeSubscriptionId, customerLicenseLinkId } =
@@ -178,6 +187,17 @@ export const computePooledBalanceLifecycle = ({
 			resetMode,
 			stripeSubscriptionId: existingStripeSubscriptionId,
 		});
+
+	if (unlimited || isBoolean) {
+		return {
+			resetMode,
+			resetCycleAnchor: null,
+			stripeSubscriptionId,
+			customerLicenseLinkId,
+			nextResetAt: null,
+		};
+	}
+
 	const resetCycleAnchor = resolveResetCycleAnchor({
 		computeContext,
 		customerEntitlement,

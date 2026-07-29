@@ -82,6 +82,7 @@ export class CusService {
 		withEvents = false,
 		explain = false,
 		skipReset = false,
+		cusProductLimit: cusProductLimitOverride,
 	}: {
 		ctx: AutumnContext;
 		idOrInternalId: string;
@@ -94,6 +95,8 @@ export class CusService {
 		withEvents?: boolean;
 		explain?: boolean;
 		skipReset?: boolean;
+		/** Overrides the org-configured customer-product page size. */
+		cusProductLimit?: number;
 	}): Promise<FullCustomer> {
 		const { db, org, env } = ctx;
 		const orgId = org.id;
@@ -113,10 +116,12 @@ export class CusService {
 				withSubs,
 			},
 			fn: async () => {
-				const cusProductLimit = getOrgCusProductLimit({
-					orgId,
-					orgSlug: org.slug,
-				});
+				const cusProductLimit =
+					cusProductLimitOverride ??
+					getOrgCusProductLimit({
+						orgId,
+						orgSlug: org.slug,
+					});
 				const entitiesLimit = getOrgEntitiesLimit({
 					orgId,
 					orgSlug: org.slug,

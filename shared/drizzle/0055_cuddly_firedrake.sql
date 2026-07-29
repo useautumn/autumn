@@ -1,0 +1,3 @@
+ALTER TABLE "pooled_balances" ADD COLUMN "unlimited" boolean DEFAULT false NOT NULL;--> statement-breakpoint
+CREATE UNIQUE INDEX CONCURRENTLY "unique_pooled_balance_unlimited_idx" ON "pooled_balances" USING btree ("internal_customer_id","internal_feature_id","unlimited","interval","interval_count","reset_cycle_anchor","reset_mode","stripe_subscription_id","customer_license_link_id","rollover_signature","expires_at") NULLS NOT DISTINCT;--> statement-breakpoint
+ALTER TABLE "pooled_balances" DROP CONSTRAINT "unique_pooled_balance", ADD CONSTRAINT "unique_pooled_balance" UNIQUE USING INDEX "unique_pooled_balance_unlimited_idx";

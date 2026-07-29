@@ -1,0 +1,1 @@
+ALTER TABLE "subscriptions" ADD COLUMN "billing_cycle_anchor_seconds" numeric;

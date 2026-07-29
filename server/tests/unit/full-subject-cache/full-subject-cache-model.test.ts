@@ -2,6 +2,7 @@ import { describe, expect, test } from "bun:test";
 import {
 	AppEnv,
 	BillingInterval,
+	FeatureType,
 	isCustomerProductOneOff,
 	type NormalizedFullSubject,
 	normalizedToFullSubject,
@@ -282,6 +283,62 @@ describe("fullSubject cache model", () => {
 				(customerEntitlement) => customerEntitlement.id,
 			),
 		).toEqual(["cus_ent_pooled"]);
+	});
+
+	test("reconstructs pooled boolean without caching pool metadata", () => {
+		const normalized = buildNormalized();
+		const entitlement = {
+			...normalized.customer_entitlements[0].entitlement,
+			id: "ent_boolean",
+			internal_product_id: null,
+			is_custom: true,
+			allowance: null,
+			allowance_type: null,
+			interval: null,
+			pooled: true,
+			feature: {
+				...normalized.customer_entitlements[0].entitlement.feature,
+				id: "dashboard",
+				internal_id: "feat_boolean",
+				type: FeatureType.Boolean,
+			},
+		};
+		normalized.customer_entitlements = [];
+		normalized.entitlements = [entitlement];
+		normalized.flags = {
+			dashboard: {
+				featureId: "dashboard",
+				internalFeatureId: "feat_boolean",
+				entitlementId: entitlement.id,
+				customerEntitlementId: "cus_ent_boolean",
+				customerProductId: null,
+				internalCustomerId: "cus_int_1",
+				internalEntityId: null,
+				expiresAt: null,
+				externalId: null,
+			},
+		};
+
+		const cached = normalizedToCachedFullSubject({
+			normalized,
+			subjectViewEpoch: 0,
+		});
+		expect(cached.flags.dashboard).toEqual(normalized.flags.dashboard);
+		const reconstructed = cachedFullSubjectToNormalized({
+			cached,
+			customerEntitlements: [],
+		});
+		const fullSubject = normalizedToFullSubject({ normalized: reconstructed });
+
+		expect(fullSubject.extra_customer_entitlements).toEqual([]);
+		expect(fullSubject.pooled_customer_entitlements).toHaveLength(1);
+		expect(fullSubject.pooled_customer_entitlements?.[0]).toMatchObject({
+			id: "cus_ent_boolean",
+			is_pooled_balance: true,
+		});
+		expect(
+			fullSubject.pooled_customer_entitlements?.[0]?.pooled_balance,
+		).toBeUndefined();
 	});
 
 	test("preserves fixed prices without entitlements across cache roundtrip", () => {

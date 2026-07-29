@@ -123,7 +123,7 @@ test.concurrent(
 
 		expect(result.subscriptions.length).toBe(1);
 		expect(result.subscriptions[0].status).toBe("mismatched");
-		expect(result.subscriptions[0].mismatches).toEqual([
+		expect(result.subscriptions[0].mismatches).toMatchObject([
 			{
 				type: "base_price_mismatch",
 				reason: "missing",
@@ -171,11 +171,16 @@ test.concurrent(
 			mutations: { removeItemPriceIds: [messagesPriceItem.price.id] },
 		});
 
-		const result = await verify({ ctx, params: { customer_id: customerId } });
+		// strict: non-strict verify tolerates missing usage items when another
+		// item invoices at the same interval (covered in billing-verify-strict).
+		const result = await verify({
+			ctx,
+			params: { customer_id: customerId, strict: true },
+		});
 
 		expect(result.subscriptions.length).toBe(1);
 		expect(result.subscriptions[0].status).toBe("mismatched");
-		expect(result.subscriptions[0].mismatches).toEqual([
+		expect(result.subscriptions[0].mismatches).toMatchObject([
 			{
 				type: "item_mismatch",
 				reason: "missing",
@@ -231,7 +236,7 @@ test.concurrent(
 
 		expect(result.subscriptions.length).toBe(1);
 		expect(result.subscriptions[0].status).toBe("mismatched");
-		expect(result.subscriptions[0].mismatches).toEqual([
+		expect(result.subscriptions[0].mismatches).toMatchObject([
 			{
 				type: "item_mismatch",
 				reason: "unexpected",

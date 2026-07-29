@@ -1,6 +1,9 @@
 import { httpInstrumentationMiddleware } from "@hono/otel";
+import { ssoProvider } from "@autumn/shared";
+import { eq } from "drizzle-orm";
 import { Hono } from "hono";
 import { cors } from "hono/cors";
+import { db } from "./db/initDrizzle.js";
 import { autumnWebhookRouter } from "./external/autumn/autumnWebhookRouter.js";
 import { revenuecatWebhookRouter } from "./external/revenueCat/revenuecatWebhookRouter.js";
 import { stripeWebhookRouter } from "./external/stripe/stripeWebhookRouter.js";
@@ -13,6 +16,7 @@ import type { HonoEnv } from "./honoUtils/HonoEnv.js";
 import { handleHealthCheck } from "./honoUtils/handleHealthCheck.js";
 import { handleReadyCheck } from "./honoUtils/handleReadyCheck.js";
 import { handleListAuthOrganizations } from "./internal/auth/handleListAuthOrganizations.js";
+import { withTrustedSsoOrigin } from "./internal/auth/sso/ssoTrustedOrigins.js";
 import { oauthRouter } from "./internal/auth/oauth/oauthRouter.js";
 import { cliRouter } from "./internal/dev/cli/cliRouter.js";
 import { handleRevenueCatOAuthCallback } from "./internal/orgs/handlers/revenueCatHandlers/handleRevenueCatOAuthCallback.js";
@@ -50,6 +54,17 @@ const ALLOWED_HEADERS = [
 	"User-Agent", // Required for better-auth v1.4.0+ compatibility with Safari/Zen browser
 ];
 
+const FACADE_ONLY_SSO_PATHS = new Set([
+	"/api/auth/sign-in/sso",
+	"/api/auth/sso/register",
+	"/api/auth/sso/request-domain-verification",
+	"/api/auth/sso/verify-domain",
+	"/api/auth/sso/providers",
+	"/api/auth/sso/get-provider",
+	"/api/auth/sso/update-provider",
+	"/api/auth/sso/delete-provider",
+]);
+
 export const createHonoApp = () => {
 	const app = new Hono<HonoEnv>();
 
@@ -73,7 +88,26 @@ export const createHonoApp = () => {
 	// Better Auth's joined Drizzle query defaults to 100 memberships.
 	app.get("/api/auth/organization/list", handleListAuthOrganizations);
 
-	app.on(["POST", "GET"], "/api/auth/*", (c) => {
+	app.on(["POST", "GET"], ["/api/auth/*"], async (c) => {
+		if (FACADE_ONLY_SSO_PATHS.has(c.req.path)) {
+			return c.json({ message: "Use the Autumn SSO flow" }, 404);
+		}
+		const callbackMatch = c.req.path.match(
+			/^\/api\/auth\/sso\/callback\/([^/]+)$/,
+		);
+		if (callbackMatch?.[1]) {
+			const providerId = decodeURIComponent(callbackMatch[1]);
+			const provider = await db.query.ssoProvider.findFirst({
+				where: eq(ssoProvider.providerId, providerId),
+			});
+			if (!provider) {
+				return c.json({ message: "SSO provider not found" }, 404);
+			}
+			return withTrustedSsoOrigin({
+				origin: new URL(provider.issuer).origin,
+				run: () => auth.handler(c.req.raw),
+			});
+		}
 		return auth.handler(c.req.raw);
 	});
 

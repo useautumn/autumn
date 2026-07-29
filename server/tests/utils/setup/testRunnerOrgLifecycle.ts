@@ -12,7 +12,7 @@ import { initDrizzle } from "@/db/initDrizzle.js";
 import {
 	ApiKeyPrefix,
 	createKey,
-} from "@/internal/dev/api-keys/apiKeyUtils.js";
+} from "@/internal/dev/apiKeys/apiKeyUtils.js";
 import { OrgService } from "@/internal/orgs/OrgService.js";
 import { generateId } from "@/utils/genUtils.js";
 import { clearOrg } from "./clearOrg.js";

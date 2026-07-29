@@ -248,6 +248,32 @@ describe("createEdgeConfigStore", () => {
 			expect(store.get().message).toBe("second");
 			expect(store.get().enabled).toBe(true);
 		});
+
+		test("retains cached config on refresh error when configured", async () => {
+			let callCount = 0;
+			const mockClient = createMockS3Client({
+				getResponse: () => {
+					if (callCount++ === 0) {
+						return makeBody({ enabled: true, message: "cached" });
+					}
+					throw new Error("NetworkingError");
+				},
+			});
+
+			store = createEdgeConfigStore<TestConfig>({
+				s3Key: "admin/test-config.json",
+				schema: TestConfigSchema,
+				defaultValue: defaultConfig,
+				retainOnError: true,
+				s3Client: mockClient,
+			});
+
+			await store.startPolling();
+			await store.refresh();
+
+			expect(store.get()).toEqual({ enabled: true, message: "cached" });
+			expect(store.getStatus().healthy).toBe(false);
+		});
 	});
 
 	describe("writeToSource", () => {
