@@ -46,9 +46,10 @@ export const V1_2_CheckChange = defineVersionChange({
 
 		const { featureToUse } = legacyData;
 
+		// Preserve upstream `allowed` (e.g. fail-open returns allowed: true with a null balance)
 		if (!input.balance) {
 			return {
-				allowed: false,
+				allowed: input.allowed,
 				code: "feature_found",
 				customer_id: input.customer_id,
 				feature_id: featureToUse.id,
