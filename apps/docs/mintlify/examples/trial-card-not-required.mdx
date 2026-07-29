@@ -50,19 +50,6 @@ If you switched the "auto-enable" flag to true, you can skip the attach step as 
 
 <CodeGroup>
 
-```tsx React
-import { useCustomer } from "autumn-js/react";
-
-const { attach } = useCustomer();
-
-const handleStartTrial = async () => {
-  await attach({ planId: "pro" });
-  console.log("Trial started");
-};
-
-<Button onClick={handleStartTrial}>Start Trial</Button>;
-```
-
 ```typescript TypeScript
 import { Autumn } from "autumn-js";
 
@@ -111,16 +98,6 @@ Customers can add a payment method and transition to the paid version of the pla
 If the customer does not add a payment method, the trial will expire and they will lose access to the plan.
 
 <CodeGroup>
-
-```tsx React
-import { useCustomer } from "autumn-js/react";
-
-const { setupPayment } = useCustomer();
-
-<Button onClick={() => setupPayment()}>
-  Add Payment Method
-</Button>;
-```
 
 ```typescript TypeScript
 import { Autumn } from "autumn-js";
@@ -181,30 +158,6 @@ Make sure to warn the user that this action will cancel their current trial befo
 </Warning>
 
 <CodeGroup>
-
-```tsx React
-import { useCustomer } from "autumn-js/react";
-
-const { updateSubscription, attach } = useCustomer();
-
-const handleEarlyEnd = async () => {
-  // Cancel the trial immediately
-  await updateSubscription({
-    planId: "pro",
-    cancelAction: "cancel_immediately",
-  });
-  
-  // Attach the plan again with a reward
-  await attach({
-    planId: "pro",
-    reward: "early_end",
-  });
-    
-  console.log("Trial ended early");
-};
-
-<Button onClick={handleEarlyEnd}>Upgrade Now</Button>;
-```
 
 ```typescript TypeScript
 import { Autumn } from "autumn-js";

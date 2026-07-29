@@ -98,9 +98,6 @@ Autumn will receive webhook updates from RevenueCat to update the customer's pla
 
         When integrating RevenueCat and initiating your `Purchases` instance, you must use the `appUserID` parameter to pass in the customer ID from your auth system.
         This will allow you to sync the customer ID into Autumn, whether its a new user or an existing user from Stripe.
-        <Tip>
-        if you are using [Expo](https://expo.dev/), you can use Autumn's [React hooks](/react/hooks/useCustomer) too
-        </Tip>
 
         <CodeGroup>
             ```typescript RevenueCatProvider.tsx

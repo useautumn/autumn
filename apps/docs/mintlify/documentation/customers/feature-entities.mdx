@@ -31,18 +31,6 @@ This means if you create 2 entities for "seats", your usage of "seats" will be 2
 
 <CodeGroup>
 
-```tsx React
-import { useCustomer } from "autumn-js/react";
-
-const { createEntity } = useCustomer();
-
-await createEntity({
-  id: "user_abc",
-  name: "John Doe",
-  featureId: "seats",
-});
-```
-
 ```typescript TypeScript
 import { Autumn } from "autumn-js";
 
@@ -91,24 +79,12 @@ Just like with normal features, you can check feature access and track usage eve
 
 <CodeGroup>
 
-```tsx React
-import { useEntity } from "autumn-js/react";
-
-const { check } = useEntity({ entityId: "user_abc" });
-
-const { allowed } = check({ featureId: "ai-messages" });
-
-if (allowed) {
-  console.log("User has access to AI messages");
-}
-```
-
 ```typescript TypeScript
 import { Autumn } from "autumn-js";
 
 const autumn = new Autumn({ secretKey: "am_sk_test_1234" });
 
-const response = await autumn.customers.check({
+const response = await autumn.check({
   customerId: "org_123",
   featureId: "ai-messages",
   entityId: "user_abc",
@@ -122,7 +98,7 @@ from autumn_sdk import Autumn
 
 autumn = Autumn("am_sk_test_1234")
 
-response = await autumn.customers.check(
+response = await autumn.check(
     customer_id="org_123",
     feature_id="ai-messages",
     entity_id="user_abc",
@@ -147,20 +123,12 @@ curl -X POST "https://api.useautumn.com/v1/check" \
 
 <CodeGroup>
 
-```tsx React
-import { useEntity } from "autumn-js/react";
-
-const { track } = useEntity({ entityId: "user_abc" });
-
-await track({ featureId: "ai-messages", value: 10 });
-```
-
 ```typescript TypeScript
 import { Autumn } from "autumn-js";
 
 const autumn = new Autumn({ secretKey: "am_sk_test_1234" });
 
-await autumn.customers.track({
+await autumn.track({
   customerId: "org_123",
   featureId: "ai-messages",
   entityId: "user_abc",
@@ -173,7 +141,7 @@ from autumn_sdk import Autumn
 
 autumn = Autumn("am_sk_test_1234")
 
-await autumn.customers.track(
+await autumn.track(
     customer_id="org_123",
     feature_id="ai-messages",
     entity_id="user_abc",

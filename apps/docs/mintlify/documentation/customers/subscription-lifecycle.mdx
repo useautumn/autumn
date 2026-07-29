@@ -34,17 +34,6 @@ Cancel a subscription using `billing.update` with the `cancelAction` parameter. 
 
 <CodeGroup>
 
-```tsx React
-import { useCustomer } from "autumn-js/react";
-
-const { updateSubscription } = useCustomer();
-
-await updateSubscription({
-  planId: "pro",
-  cancelAction: "cancel_end_of_cycle",
-});
-```
-
 ```typescript TypeScript
 const response = await autumn.billing.update({
   customerId: "user_123",
@@ -82,17 +71,6 @@ To cancel a subscription right away with a prorated refund:
 
 <CodeGroup>
 
-```tsx React
-import { useCustomer } from "autumn-js/react";
-
-const { updateSubscription } = useCustomer();
-
-await updateSubscription({
-  planId: "pro",
-  cancelAction: "cancel_immediately",
-});
-```
-
 ```typescript TypeScript
 const response = await autumn.billing.update({
   customerId: "user_123",
@@ -129,17 +107,6 @@ This ends the subscription immediately and issues a prorated refund for the rema
 If a subscription was scheduled for cancellation (via `cancel_end_of_cycle`), you can reverse it before the period ends using `uncancel`:
 
 <CodeGroup>
-
-```tsx React
-import { useCustomer } from "autumn-js/react";
-
-const { updateSubscription } = useCustomer();
-
-await updateSubscription({
-  planId: "pro",
-  cancelAction: "uncancel",
-});
-```
 
 ```typescript TypeScript
 const response = await autumn.billing.update({
@@ -181,19 +148,6 @@ You cannot uncancel a subscription that was already canceled immediately — onl
 When a downgrade or other plan change is **scheduled** for the end of the billing period, canceling it works the same way as uncanceling. Call `billing.update` with `cancelAction: "uncancel"` on the customer's **active** plan:
 
 <CodeGroup>
-
-```tsx React
-import { useCustomer } from "autumn-js/react";
-
-const { updateSubscription } = useCustomer();
-
-// Customer is on Pro with a scheduled downgrade to Basic.
-// Cancel the scheduled change and keep Pro.
-await updateSubscription({
-  planId: "pro",
-  cancelAction: "uncancel",
-});
-```
 
 ```typescript TypeScript
 // Customer is on Pro with a scheduled downgrade to Basic.
@@ -278,17 +232,6 @@ const response = await autumn.billing.attach({
 });
 ```
 
-```tsx React
-const { attach } = useCustomer();
-
-await attach({
-  planId: "enterprise",
-  carryOverBalances: {
-    enabled: true,
-  },
-});
-```
-
 ```python Python
 response = await autumn.billing.attach(
     customer_id="user_123",
@@ -327,17 +270,6 @@ Use `carryOverUsages` to deduct prior usage from the new plan's allowance, preve
 ```typescript TypeScript
 const response = await autumn.billing.attach({
   customerId: "user_123",
-  planId: "enterprise",
-  carryOverUsages: {
-    enabled: true,
-  },
-});
-```
-
-```tsx React
-const { attach } = useCustomer();
-
-await attach({
   planId: "enterprise",
   carryOverUsages: {
     enabled: true,

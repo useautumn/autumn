@@ -66,16 +66,6 @@ Generate a referral code for the customer making the referral:
 
 <CodeGroup>
 
-```jsx React
-import { useReferrals } from "autumn-js/react";
-
-const { data, refetch } = useReferrals({ programId: "free-month" });
-
-await refetch();
-
-console.log(data?.code); // "4EXWV1"
-```
-
 ```typescript TypeScript
 import { Autumn } from "autumn-js";
 
@@ -128,16 +118,6 @@ curl -X POST 'https://api.useautumn.com/v1/referrals.create_code' \
 From the new customer, redeem the referral code:
 
 <CodeGroup>
-
-```jsx React
-import { useReferrals } from "autumn-js/react";
-
-const { redeemCode } = useReferrals({ programId: "free-month" });
-
-const response = await redeemCode({ code: "4EXWV1" });
-
-console.log(response.rewardId); // "free-month"
-```
 
 ```typescript TypeScript
 import { Autumn } from "autumn-js";
