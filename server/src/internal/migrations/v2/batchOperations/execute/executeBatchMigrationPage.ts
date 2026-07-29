@@ -1,9 +1,9 @@
 import { withStatementTimeout } from "@/db/withStatementTimeout.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
+import { addCustomerEntitlementsForPage } from "../actions/addCustomerEntitlementsForPage/addCustomerEntitlementsForPage.js";
 import { listCustomersOnPlanFilterMatchedProducts } from "../repos/index.js";
 import type { BatchMigrationExecutionPlan } from "../types/index.js";
 import { markPageItemRuns } from "./claim/index.js";
-import { addCustomerEntitlementsForPage } from "./sql/index.js";
 import type {
 	BatchMigrationPageCustomer,
 	BatchMigrationPageResult,
@@ -35,7 +35,7 @@ export const executeBatchMigrationPage = async ({
 	];
 	const now = Date.now();
 
-	const matchedInternalIds = await withStatementTimeout(
+	const succeededInternalIds = await withStatementTimeout(
 		ctx.db,
 		async (transaction) => {
 			const matched = await listCustomersOnPlanFilterMatchedProducts({
@@ -44,34 +44,45 @@ export const executeBatchMigrationPage = async ({
 				planFilterMatchedProductIds,
 			});
 			const matchedIds = [...matched];
-			const skippedIds = pageInternalIds.filter((id) => !matched.has(id));
+			// Customers a patch cannot serve (e.g. no usable reset anchor) drop
+			// from succeeded into skipped — the per-customer lane's territory.
+			const excludedIds = new Set<string>();
 
 			if (matchedIds.length > 0) {
 				for (const patch of plan.patches) {
-					for (const add of patch.adds) {
-						const affected = await addCustomerEntitlementsForPage({
+					for (const add of patch.addEntitlementOps) {
+						const result = await addCustomerEntitlementsForPage({
 							db: transaction,
 							internalCustomerIds: matchedIds,
 							fromInternalProductId: patch.fromInternalProductId,
 							add,
 							now,
 						});
+						for (const id of result.excludedInternalCustomerIds) {
+							excludedIds.add(id);
+						}
 						ctx.logger.debug("batch-migration: add operation", {
 							data: {
 								opIndex: patch.opIndex,
 								planId: patch.planId,
 								featureId: add.entitlement.feature.id,
-								affected,
+								affected: result.affected,
+								excluded: result.excludedInternalCustomerIds.length,
 							},
 						});
 					}
 				}
 			}
 
+			const succeeded = new Set(
+				matchedIds.filter((id) => !excludedIds.has(id)),
+			);
+			const skippedIds = pageInternalIds.filter((id) => !succeeded.has(id));
+
 			await markPageItemRuns({
 				db: transaction,
 				migrationInternalId,
-				internalCustomerIds: matchedIds,
+				internalCustomerIds: [...succeeded],
 				status: "succeeded",
 			});
 			await markPageItemRuns({
@@ -81,17 +92,17 @@ export const executeBatchMigrationPage = async ({
 				status: "skipped",
 			});
 
-			return matched;
+			return succeeded;
 		},
 		BATCH_MIGRATION_PAGE_STATEMENT_TIMEOUT_MS,
 	);
 
 	return {
 		succeeded: customers.filter((customer) =>
-			matchedInternalIds.has(customer.internalId),
+			succeededInternalIds.has(customer.internalId),
 		),
 		skipped: customers.filter(
-			(customer) => !matchedInternalIds.has(customer.internalId),
+			(customer) => !succeededInternalIds.has(customer.internalId),
 		),
 	};
 };

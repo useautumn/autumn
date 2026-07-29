@@ -51,6 +51,7 @@ const runBatchMigrationLane = async ({
 		processed: result.processed,
 		chunks: result.summary.pages,
 		canceled: result.completion === "stopped",
+		lane: "batch",
 	};
 };
 
@@ -152,7 +153,7 @@ export const runMigrationInChunks = async ({
 						),
 				});
 
-				return chunkRun;
+				return { ...chunkRun, lane: "per_customer" as const };
 			},
 		});
 	} finally {

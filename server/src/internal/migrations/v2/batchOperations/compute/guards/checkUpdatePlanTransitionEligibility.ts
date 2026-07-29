@@ -1,8 +1,4 @@
-import {
-	type EntitlementPrice,
-	type FullProduct,
-	isResettingEntitlement,
-} from "@autumn/shared";
+import type { EntitlementPrice, FullProduct } from "@autumn/shared";
 import type { ProductTransitions } from "@/internal/billing/v2/actions/batchTransition/compute/transitions/computeProductTransitions.js";
 import type {
 	BatchMigrationAddEntitlementOp,
@@ -76,19 +72,6 @@ export const checkUpdatePlanTransitionEligibility = ({
 	for (const operation of operations) {
 		const entitlement = operation.entitlementPrice.entitlement;
 
-		if (isResettingEntitlement({ entitlement })) {
-			rejections.push({
-				code: "resetting_entitlement_add",
-				opIndex,
-				planId: fromProduct.id,
-				message:
-					"Adding a resetting entitlement needs a per-customer cycle anchor; not uniform across the set.",
-				details: {
-					featureId: entitlement.feature.id,
-					interval: entitlement.interval,
-				},
-			});
-		}
 		if (entitlement.entity_feature_id) {
 			rejections.push({
 				code: "entity_scoped_entitlement_add",

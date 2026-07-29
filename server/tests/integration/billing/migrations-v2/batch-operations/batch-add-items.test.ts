@@ -10,7 +10,7 @@
  *   - Plain customers' item runs are marked succeeded; products stay active.
  */
 
-import { expect, test } from "bun:test";
+import { test } from "bun:test";
 import { type ApiCustomerV5, MigrationItemRunStatus } from "@autumn/shared";
 import { expectCustomerProducts } from "@tests/integration/billing/utils/expectCustomerProductCorrect";
 import { expectBalanceCorrect } from "@tests/integration/utils/expectBalanceCorrect";
@@ -21,26 +21,8 @@ import { itemsV2 } from "@tests/utils/fixtures/itemsV2";
 import { products } from "@tests/utils/fixtures/products";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
-import { CusService } from "@/internal/customers/CusService.js";
-import { migrationItemRunRepo } from "@/internal/migrations/v2/repos/index.js";
 import { runChunkedMigration } from "../utils/runChunkedMigration";
-
-const getInternalCustomerId = async ({
-	customerId,
-	ctx,
-}: {
-	customerId: string;
-	ctx: Awaited<ReturnType<typeof initScenario>>["ctx"];
-}) => {
-	const customer = await CusService.get({
-		db: ctx.db,
-		idOrInternalId: customerId,
-		orgId: ctx.org.id,
-		env: ctx.env,
-	});
-	if (!customer) throw new Error(`Expected customer ${customerId}`);
-	return customer.internal_id;
-};
+import { expectMigrationItemRunStatus } from "./batchTestUtils";
 
 test.concurrent(`${chalk.yellowBright("batch migration: adds boolean + static entitlements across customers on a free plan")}`, async () => {
 	const plainIds = ["batch-add-items-first", "batch-add-items-second"];
@@ -94,23 +76,20 @@ test.concurrent(`${chalk.yellowBright("batch migration: adds boolean + static en
 		noBillingChanges: true,
 	});
 
-	const expectItemRunStatus = async ({
+	const expectItemRunStatus = ({
 		customerId,
 		status,
 	}: {
 		customerId: string;
 		status: MigrationItemRunStatus;
-	}) => {
-		const internalCustomerId = await getInternalCustomerId({ customerId, ctx });
-		const itemRun = await migrationItemRunRepo.getCustomer({
+	}) =>
+		expectMigrationItemRunStatus({
 			ctx,
 			migrationInternalId: migration.internal_id,
-			internalCustomerId,
-			dryRun: false,
 			migrationRunId,
+			customerId,
+			status,
 		});
-		expect(itemRun).toMatchObject({ status });
-	};
 
 	for (const customerId of plainIds) {
 		const customer = await autumnV2_2.customers.get<ApiCustomerV5>(customerId);

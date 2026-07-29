@@ -14,7 +14,7 @@ export const batchMigrationPlanToExecutionPlan = ({
 		opIndex: patch.opIndex,
 		planId: patch.planId,
 		fromInternalProductId: patch.fromProduct.internal_id,
-		adds: patch.operations.entitlements.map((operation) => ({
+		addEntitlementOps: patch.operations.entitlements.map((operation) => ({
 			entitlement: operation.entitlementPrice.entitlement,
 			initialState: operation.initialState,
 		})),

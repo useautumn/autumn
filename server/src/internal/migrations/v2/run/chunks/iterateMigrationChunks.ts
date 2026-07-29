@@ -6,10 +6,14 @@ export type MigrationChunkResult = {
 	cursor: string | null;
 };
 
+export type MigrationRunLane = "batch" | "per_customer";
+
 export type MigrationChunkRunResult = {
 	processed: number;
 	chunks: number;
 	canceled: boolean;
+	/** Stamped by runMigrationInChunks after the lane decision. */
+	lane?: MigrationRunLane;
 };
 
 export const iterateMigrationChunks = async ({

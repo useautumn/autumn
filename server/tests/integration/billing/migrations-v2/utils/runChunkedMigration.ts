@@ -7,6 +7,7 @@ import type { MigrationFilter } from "@autumn/shared/api/migrations/filters/migr
 import type { Operations } from "@autumn/shared/api/migrations/operations/operations.js";
 import { and, eq } from "drizzle-orm";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
+import type { MigrationChunkRunResult } from "@/internal/migrations/v2/run/chunks/iterateMigrationChunks.js";
 import { runMigrationInChunks } from "@/internal/migrations/v2/run/runMigrationInChunks.js";
 import { generateId } from "@/utils/genUtils.js";
 import { waitForMigrationResult } from "./runUpdatePlanMigration";
@@ -78,7 +79,12 @@ export const runChunkedMigration = async ({
 	waitFor?: () => Promise<unknown>;
 	timeoutMs?: number;
 	pollIntervalMs?: number;
-}): Promise<{ migration: Migration; migrationRunId: string }> => {
+}): Promise<{
+	migration: Migration;
+	migrationRunId: string;
+	/** Direct mode only — carries the executed lane for assertions. */
+	result?: MigrationChunkRunResult;
+}> => {
 	await clearMigrationRunHistory({ ctx, migrationId });
 	const migration = await migrationClient.migrationsV2.deleteAndCreate({
 		id: migrationId,
@@ -99,11 +105,11 @@ export const runChunkedMigration = async ({
 	}
 
 	const migrationRunId = generateId("mrun");
-	await runMigrationInChunks({
+	const result = await runMigrationInChunks({
 		ctx,
 		migration,
 		migrationRunId,
 		dryRun: false,
 	});
-	return { migration, migrationRunId };
+	return { migration, migrationRunId, result };
 };

@@ -1,4 +1,4 @@
-import { ACTIVE_STATUSES } from "@autumn/shared";
+import { MIGRATABLE_STATUSES } from "@autumn/shared";
 import { sql } from "drizzle-orm";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 import { sqlList } from "@/internal/billing/v2/actions/batchTransition/execute/sql/batchTransitionSqlUtils.js";
@@ -25,7 +25,7 @@ export const listCustomersOnPlanFilterMatchedProducts = async ({
 		FROM customer_products AS cp
 		WHERE cp.internal_customer_id IN (${sqlList({ values: internalCustomerIds })})
 			AND cp.internal_product_id IN (${sqlList({ values: planFilterMatchedProductIds })})
-			AND cp.status IN (${sqlList({ values: [...ACTIVE_STATUSES] })})
+			AND cp.status IN (${sqlList({ values: [...MIGRATABLE_STATUSES] })})
 			AND cp.is_custom = false
 			AND cp.customer_license_link_id IS NULL
 	`)) as Array<{ internal_customer_id: string }>;

@@ -12,11 +12,13 @@ export const BatchMigrationExecutionAddSchema = z.object({
 	initialState: BatchMigrationInitialStateSchema,
 });
 
+/** One op × one plan-filter-matched product: the scope every operation
+ * executes against. One field per operation category (batchTransition style). */
 export const BatchMigrationExecutionPatchSchema = z.object({
 	opIndex: z.number().int(),
 	planId: z.string(),
 	fromInternalProductId: z.string(),
-	adds: z.array(BatchMigrationExecutionAddSchema),
+	addEntitlementOps: z.array(BatchMigrationExecutionAddSchema),
 });
 
 /** The immutable, serializable plan chunk tasks execute — computed once at

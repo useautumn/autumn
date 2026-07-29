@@ -23,7 +23,6 @@ export type BatchMigrationRejectionCode =
 	| "missing_prepared_state"
 	| "base_price_transition"
 	| "paid_entitlement_transition"
-	| "resetting_entitlement_add"
 	| "entity_scoped_entitlement_add"
 	| "non_add_operation"
 	| "overlapping_operations";
