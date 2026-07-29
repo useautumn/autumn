@@ -154,7 +154,9 @@ export const { db: dbCritical, client: clientCritical } = initDrizzle({
 	databaseUrl: process.env.DATABASE_CRITICAL_URL,
 	poolConfig: {
 		application_name: "autumn-critical",
-		query_timeout: isProd ? 2_000 : 30_000,
+		// 5ms above the critical role's server-side statement_timeout (2s) so
+		// Postgres cancels and frees the backend before the client abandons it.
+		query_timeout: isProd ? 2_005 : 30_000,
 		// Keep warm conns to avoid TLS-handshake stampedes on bursty traffic.
 		min: Math.min(10, criticalPoolMax),
 	},
