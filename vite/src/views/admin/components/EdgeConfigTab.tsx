@@ -5,6 +5,7 @@ import { AsyncBalanceUpdateDialog } from "./AsyncBalanceUpdateDialog";
 import { AsyncTrackDialog } from "./AsyncTrackDialog";
 import { CacheV2RampDialog } from "./CacheV2RampDialog";
 import { CustomerBlockDialog } from "./CustomerBlockDialog";
+import { DbCapacityDialog } from "./DbCapacityDialog";
 import { EdgeConfigCard } from "./EdgeConfigCard";
 import { EdgeConfigDialog } from "./EdgeConfigDialog";
 import { EDGE_CONFIG_SECTIONS, type EdgeConfigCardId } from "./edgeConfigCards";
@@ -170,6 +171,11 @@ export function EdgeConfigTab() {
 
 			<FullSubjectGateDialog
 				open={openConfig === "full-subject-gate"}
+				onOpenChange={closeDialog}
+			/>
+
+			<DbCapacityDialog
+				open={openConfig === "db-capacity"}
 				onOpenChange={closeDialog}
 			/>
 

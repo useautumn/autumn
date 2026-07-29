@@ -39,6 +39,7 @@ export type EdgeConfigCardId =
 	| "main-redis-cache"
 	| "cache-v2-ramp"
 	| "full-subject-gate"
+	| "db-capacity"
 	| "miscellaneous";
 
 export type QueueCronCardId =
@@ -265,6 +266,32 @@ export const EDGE_CONFIG_SECTIONS: EdgeConfigSectionDef[] = [
 
 					return {
 						label: `${perCustomer} / ${perOrg} concurrent`,
+						tone: "neutral",
+					};
+				},
+			},
+			{
+				id: "db-capacity",
+				title: "Database Capacity",
+				description:
+					"Live pool limits and the fleet-wide PgBouncer connection budget.",
+				icon: Database,
+				endpoint: "/admin/db-capacity-config",
+				deriveStatus: (data) => {
+					const config = asRecord(data);
+					const critical = config.critical_pool_max;
+					const general = config.general_pool_max;
+					const replica = config.replica_pool_max;
+					if (
+						typeof critical !== "number" ||
+						typeof general !== "number" ||
+						typeof replica !== "number"
+					) {
+						return IDLE;
+					}
+
+					return {
+						label: `${critical} / ${general} / ${replica} pool max`,
 						tone: "neutral",
 					};
 				},

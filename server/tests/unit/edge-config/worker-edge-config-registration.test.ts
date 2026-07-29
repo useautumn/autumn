@@ -14,3 +14,24 @@ test("workers register miscellaneous edge config before polling starts", async (
 	expect(storeImportIndex).toBeGreaterThanOrEqual(0);
 	expect(pollingStartIndex).toBeGreaterThan(storeImportIndex);
 });
+
+test("all long-running processes register DB capacity before polling starts", async () => {
+	const sourcePaths = [
+		path.resolve(import.meta.dir, "../../../src/init.ts"),
+		path.resolve(import.meta.dir, "../../../src/workers.ts"),
+		path.resolve(import.meta.dir, "../../../src/cron.ts"),
+	];
+
+	for (const sourcePath of sourcePaths) {
+		const source = await Bun.file(sourcePath).text();
+		const storeImportIndex = source.indexOf(
+			"internal/misc/dbCapacity/dbCapacityConfigStore.js",
+		);
+		const pollingStartIndex = source.indexOf(
+			"startAllEdgeConfigPolling({ logger })",
+		);
+
+		expect(storeImportIndex).toBeGreaterThanOrEqual(0);
+		expect(pollingStartIndex).toBeGreaterThan(storeImportIndex);
+	}
+});

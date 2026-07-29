@@ -21,6 +21,7 @@ export const ADMIN_MISCELLANEOUS_EDGE_CONFIG_KEY =
 	"admin/miscellaneous-edge-config.json";
 export const ADMIN_FULL_SUBJECT_GATE_CONFIG_KEY =
 	"admin/full-subject-gate-config.json";
+export const ADMIN_DB_CAPACITY_CONFIG_KEY = "admin/db-capacity-config.json";
 export const ADMIN_ASYNC_BALANCE_UPDATE_CONFIG_KEY =
 	"admin/async-balance-update-config.json";
 export const ADMIN_ASYNC_TRACK_CONFIG_KEY = "admin/async-track-config.json";
@@ -113,6 +114,11 @@ export const getAdminEdgeConfigSources = () => ({
 			id: "full-subject-gate",
 			label: "FullSubject Concurrency Gate",
 			key: ADMIN_FULL_SUBJECT_GATE_CONFIG_KEY,
+		},
+		{
+			id: "db-capacity",
+			label: "Database Capacity",
+			key: ADMIN_DB_CAPACITY_CONFIG_KEY,
 		},
 		{
 			id: "async-balance-update",

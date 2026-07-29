@@ -60,6 +60,7 @@ export const createEdgeConfigStore = <T>({
 	schema,
 	defaultValue,
 	retainOnError = false,
+	onConfigChange,
 	pollIntervalMs = process.env.NODE_ENV === "development"
 		? ms.seconds(1)
 		: ms.seconds(10),
@@ -69,6 +70,7 @@ export const createEdgeConfigStore = <T>({
 	schema: z.ZodType<T>;
 	defaultValue: () => T;
 	retainOnError?: boolean;
+	onConfigChange?: (config: T) => void;
 	pollIntervalMs?: number;
 	s3Client?: S3Client;
 }) => {
@@ -79,6 +81,10 @@ export const createEdgeConfigStore = <T>({
 		error: "Edge config not yet initialized",
 	};
 	let pollTimer: ReturnType<typeof setInterval> | null = null;
+	const setRuntimeConfig = (config: T) => {
+		onConfigChange?.(config);
+		runtimeConfig = config;
+	};
 
 	// When the base64 test override is present, seed this store's config from it
 	// (or its default) once and operate fully in-memory — no S3, no polling.
@@ -86,9 +92,9 @@ export const createEdgeConfigStore = <T>({
 	if (override) {
 		const raw = override[s3Key];
 		try {
-			runtimeConfig = raw === undefined ? defaultValue() : schema.parse(raw);
+			setRuntimeConfig(raw === undefined ? defaultValue() : schema.parse(raw));
 		} catch {
-			runtimeConfig = defaultValue();
+			setRuntimeConfig(defaultValue());
 		}
 		runtimeStatus = {
 			configured: true,
@@ -146,7 +152,7 @@ export const createEdgeConfigStore = <T>({
 	const writeToSource = async ({ config }: { config: T }) => {
 		// Override mode: update the in-memory config only (no S3 creds available).
 		if (override) {
-			runtimeConfig = config;
+			setRuntimeConfig(config);
 			runtimeStatus = {
 				configured: true,
 				healthy: true,
@@ -176,7 +182,7 @@ export const createEdgeConfigStore = <T>({
 			}),
 		);
 
-		runtimeConfig = config;
+		setRuntimeConfig(config);
 		runtimeStatus = {
 			configured: true,
 			healthy: true,
@@ -199,7 +205,7 @@ export const createEdgeConfigStore = <T>({
 		};
 
 		if (!configured) {
-			runtimeConfig = defaultValue();
+			setRuntimeConfig(defaultValue());
 			runtimeStatus = {
 				configured: false,
 				healthy: false,
@@ -212,7 +218,7 @@ export const createEdgeConfigStore = <T>({
 
 		try {
 			const config = await readFromSource();
-			runtimeConfig = config;
+			setRuntimeConfig(config);
 			runtimeStatus = {
 				configured: true,
 				healthy: true,
@@ -225,7 +231,7 @@ export const createEdgeConfigStore = <T>({
 			const previouslyHealthy = runtimeStatus.healthy;
 			const sameError = runtimeStatus.error === errMsg;
 
-			if (!retainOnError) runtimeConfig = defaultValue();
+			if (!retainOnError) setRuntimeConfig(defaultValue());
 			runtimeStatus = {
 				configured: true,
 				healthy: false,
@@ -273,7 +279,7 @@ export const createEdgeConfigStore = <T>({
 		writeToSource,
 		/** Sets in-memory config without writing to S3. For testing only. */
 		_setRuntimeConfigForTesting: (config: T) => {
-			runtimeConfig = config;
+			setRuntimeConfig(config);
 		},
 	};
 };

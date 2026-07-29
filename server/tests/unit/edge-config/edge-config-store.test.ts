@@ -57,6 +57,29 @@ describe("createEdgeConfigStore", () => {
 	});
 
 	describe("initial fetch via startPolling", () => {
+		test("notifies after a valid runtime config is loaded", async () => {
+			const onConfigChange = jest.fn();
+			const mockClient = createMockS3Client({
+				getResponse: () => makeBody({ enabled: true, message: "from-s3" }),
+			});
+
+			store = createEdgeConfigStore<TestConfig>({
+				s3Key: "admin/test-config.json",
+				schema: TestConfigSchema,
+				defaultValue: defaultConfig,
+				s3Client: mockClient,
+				onConfigChange,
+			});
+
+			await store.startPolling();
+
+			expect(onConfigChange).toHaveBeenCalledTimes(1);
+			expect(onConfigChange).toHaveBeenCalledWith({
+				enabled: true,
+				message: "from-s3",
+			});
+		});
+
 		test("populates get() with parsed config from S3", async () => {
 			const mockClient = createMockS3Client({
 				getResponse: () => makeBody({ enabled: true, message: "from-s3" }),
