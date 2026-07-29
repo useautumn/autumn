@@ -1,3 +1,4 @@
 {
+	"installCommand": "cd .. && bun install --frozen-lockfile",
 	"rewrites": [{ "source": "/(.*)", "destination": "/" }]
 }
