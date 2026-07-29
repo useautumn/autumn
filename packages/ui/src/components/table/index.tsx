@@ -43,4 +43,7 @@ export { TableDropdownMenuCell } from "@autumn/ui/components/table/table-dropdow
 export { TableProvider } from "@autumn/ui/components/table/table-provider";
 export type { ColumnSkeletonMeta } from "@autumn/ui/components/table/table-row-cells";
 export * from "@autumn/ui/components/table/table-skeleton-presets";
-export { useCursorPagination } from "@autumn/ui/components/table/use-cursor-pagination";
+export {
+	type CursorPaginationState,
+	useCursorPagination,
+} from "@autumn/ui/components/table/use-cursor-pagination";

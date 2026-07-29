@@ -1,34 +1,22 @@
-import type { CustomerFilter, CustomerWithProducts } from "@autumn/shared";
 import {
-	IconButton,
-	Input,
-	Select,
-	SelectContent,
-	SelectItem,
-	SelectTrigger,
-	SelectValue,
-	Separator,
-} from "@autumn/ui";
-import {
-	ArrowSquareOutIcon,
-	CaretLeftIcon,
-	CaretRightIcon,
-	ListMagnifyingGlassIcon,
-} from "@phosphor-icons/react";
+	AppEnv,
+	type CustomerFilter,
+	type CustomerWithProducts,
+} from "@autumn/shared";
+import { Separator } from "@autumn/ui";
+import { ArrowSquareOutIcon } from "@phosphor-icons/react";
 import type { ColumnDef, Row } from "@tanstack/react-table";
 import { useDeferredValue, useState } from "react";
 import { Link } from "react-router";
-import { Table } from "@/components/general/table";
-import { useCursorPagination } from "@/components/general/table";
+import { Table, useCursorPagination } from "@/components/general/table";
 import { useMigrationFilterPreview } from "@/hooks/queries/useMigrationFilterPreview";
 import { cn } from "@/lib/utils";
-import {
-	CUSTOMER_LIST_PAGE_SIZE_OPTIONS,
-	DEFAULT_CUSTOMER_LIST_PAGE_SIZE,
-} from "@/utils/constants/customerListPagination";
+import { DEFAULT_CUSTOMER_LIST_PAGE_SIZE } from "@/utils/constants/customerListPagination";
+import { useEnv } from "@/utils/envUtils";
 import { pushPage } from "@/utils/genUtils";
 import { createCustomerListColumns } from "@/views/customers2/components/table/customer-list/CustomerListColumns";
 import { useProductTable } from "@/views/products/hooks/useProductTable";
+import { CustomerSearchToolbar } from "../shared/CustomerSearchToolbar";
 
 const previewColumns = createCustomerListColumns()
 	.filter((col) => col.id !== "actions")
@@ -66,23 +54,17 @@ export function CustomerPreview({ filter }: { filter: CustomerFilter }) {
 	const [search, setSearch] = useState("");
 	const deferredSearch = useDeferredValue(search.trim());
 	const [pageSize, setPageSize] = useState(DEFAULT_CUSTOMER_LIST_PAGE_SIZE);
-	const {
-		currentCursor,
-		currentPage,
-		pagination,
-		canPrev,
-		pushCursor,
-		popCursor,
-	} = useCursorPagination({
+	const cursorPagination = useCursorPagination({
 		pageSize,
 		resetKey: JSON.stringify({ filter, pageSize, search: search.trim() }),
 	});
+	const env = useEnv();
 
 	const { count, customers, nextCursor, isLoading } = useMigrationFilterPreview(
 		{
 			filter,
 			search: deferredSearch,
-			cursor: currentCursor,
+			cursor: cursorPagination.currentCursor,
 			pageSize,
 		},
 	);
@@ -96,77 +78,23 @@ export function CustomerPreview({ filter }: { filter: CustomerFilter }) {
 		options: {
 			manualPagination: true,
 			pageCount,
-			state: { pagination },
+			state: { pagination: cursorPagination.pagination },
 		},
 	});
-	const canGoNext = Boolean(nextCursor);
-	const isDisabled = isLoading;
 
 	return (
 		<div className="flex flex-col gap-3">
 			<Separator />
-			<div className="flex items-center gap-2">
-				<div className="relative flex items-center flex-1 min-w-0">
-					<ListMagnifyingGlassIcon
-						size={16}
-						className="text-tertiary-foreground absolute left-2.5 pointer-events-none"
-					/>
-					<Input
-						value={search}
-						onChange={(e) => setSearch(e.target.value)}
-						className="pl-8! text-sm"
-						placeholder={`Search ${count ?? 0} customers`}
-					/>
-				</div>
-				<div className="flex items-center gap-2 shrink-0">
-					<IconButton
-						variant="secondary"
-						size="default"
-						icon={<CaretLeftIcon size={12} weight="bold" />}
-						onClick={popCursor}
-						disabled={isDisabled || !canPrev}
-						className={cn(
-							(isDisabled || !canPrev) && "pointer-events-none opacity-50",
-						)}
-					/>
-					<span className="text-xs text-muted-foreground font-medium">
-						{currentPage} / {pageCount}
-					</span>
-					<IconButton
-						variant="secondary"
-						size="default"
-						icon={<CaretRightIcon size={12} weight="bold" />}
-						onClick={() => nextCursor && pushCursor(nextCursor)}
-						disabled={isDisabled || !canGoNext}
-						className={cn(
-							(isDisabled || !canGoNext) && "pointer-events-none opacity-50",
-						)}
-					/>
-					<Select
-						value={pageSize.toString()}
-						onValueChange={(v) => {
-							setPageSize(Number(v));
-						}}
-						items={Object.fromEntries(
-							CUSTOMER_LIST_PAGE_SIZE_OPTIONS.map((s) => [
-								s.toString(),
-								s.toString(),
-							]),
-						)}
-					>
-						<SelectTrigger className="h-7 w-fit px-2 text-xs">
-							<SelectValue />
-						</SelectTrigger>
-						<SelectContent>
-							{CUSTOMER_LIST_PAGE_SIZE_OPTIONS.map((s) => (
-								<SelectItem key={s} value={s.toString()}>
-									{s}
-								</SelectItem>
-							))}
-						</SelectContent>
-					</Select>
-				</div>
-			</div>
+			<CustomerSearchToolbar
+				search={search}
+				onSearchChange={setSearch}
+				count={count}
+				pageSize={pageSize}
+				onPageSizeChange={setPageSize}
+				pagination={cursorPagination}
+				nextCursor={nextCursor}
+				isLoading={isLoading}
+			/>
 			<Table.Provider
 				config={{
 					table,
@@ -179,7 +107,14 @@ export function CustomerPreview({ filter }: { filter: CustomerFilter }) {
 				}}
 			>
 				<Table.Container>
-					<Table.Content>
+					<Table.Content
+						className={cn(
+							"overflow-y-auto [&_thead]:sticky [&_thead]:top-0 [&_thead]:z-20 [&_thead]:bg-card",
+							env === AppEnv.Sandbox
+								? "max-h-[calc(100vh-425px)]"
+								: "max-h-[calc(100vh-385px)]",
+						)}
+					>
 						<Table.Header />
 						<Table.Body />
 					</Table.Content>

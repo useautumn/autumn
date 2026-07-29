@@ -1,12 +1,4 @@
-/**
- * TDD coverage for update_plan version preview scenarios.
- *
- * Contract under test:
- *   New behaviors:
- *     - Version previews use the webhook-shaped plan change contract.
- *     - Version previews emit balance_changes for metered grant changes and
- *       flag_changes for boolean removals.
- */
+/** Version previews expose structural, balance, and flag changes. */
 
 import { expect, test } from "bun:test";
 import { TestFeature } from "@tests/setup/v2Features";
@@ -59,12 +51,15 @@ test(`${chalk.yellowBright("migrations preview version: emits plan, balance, and
 	});
 
 	expectMigrationPreviewCorrect({ preview, customerId, log: false });
-	const planChange = expectPreviewPlanChange({
+	expectPreviewPlanChange({
 		preview,
 		action: "updated",
 		planId: base.id,
+		itemChanges: [
+			{ action: "created", feature_id: TestFeature.Credits },
+			{ action: "deleted", feature_id: TestFeature.AdminRights },
+		],
 	});
-	expect(planChange.item_changes).toEqual([]);
 	expectPreviewBalanceChange({
 		preview,
 		featureId: TestFeature.Messages,
