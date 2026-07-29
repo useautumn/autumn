@@ -459,24 +459,20 @@ type Price = PriceAmountOrTiers & {
 	intervalCount?: number;
 };
 
-/**
- * Plan item with a reset cycle (e.g. 100 messages per month).
- * Cannot have price — reset and price are mutually exclusive.
- */
+/** Plan item with a free reset cycle (e.g. 100 messages per month). */
 export type PlanItemWithReset = PlanItemBaseFields & {
 	/** Reset configuration for the included allowance */
 	reset: ResetConfig;
-	/** Cannot have price when using reset — use price.interval instead */
 	price?: never;
 };
 
 /**
- * Plan item with usage-based pricing (e.g. $0.10/message, billed monthly).
- * price.interval encodes the billing cycle, so reset is not allowed.
+ * Plan item with prepaid or usage-based pricing.
+ * Prepaid items may reset on a different cycle from billing.
  */
 export type PlanItemWithPrice = PlanItemBaseFields & {
-	/** Cannot have reset when using price — price.interval encodes the billing cycle */
-	reset?: never;
+	/** Reset configuration when it differs from the billing cycle */
+	reset?: ResetConfig;
 	/** Pricing configuration */
 	price: Price;
 };
@@ -493,9 +489,9 @@ export type PlanItemNoReset = PlanItemBaseFields & {
 };
 
 /**
- * Plan item configuration. reset and price are mutually exclusive:
+ * Plan item configuration:
  * - PlanItemWithReset: included allowance that resets on an interval (e.g. 100/month free)
- * - PlanItemWithPrice: usage-based pricing with its own billing cycle
+ * - PlanItemWithPrice: prepaid or usage-based pricing with a billing cycle
  * - PlanItemNoReset: no reset, no price (continuous-use or boolean features)
  */
 export type PlanItem = PlanItemWithReset | PlanItemWithPrice | PlanItemNoReset;

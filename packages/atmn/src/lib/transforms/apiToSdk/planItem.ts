@@ -2,15 +2,7 @@ import type { PlanItem } from "../../../compose/models/planModels.js";
 import type { ApiPlanItem } from "../../api/types/index.js";
 import { createTransformer } from "./Transformer.js";
 
-/**
- * Declarative plan item transformer
- *
- * Maps snake_case API fields to camelCase SDK fields.
- *
- * Handles mutually exclusive reset patterns:
- * - API reset.interval -> SDK top-level reset (when no price, or price without interval)
- * - API price.interval -> SDK price.interval (when price exists)
- */
+/** Maps API plan items to SDK config while omitting redundant reset cycles. */
 export const planItemTransformer = createTransformer<
 	ApiPlanItem,
 	PlanItem
@@ -30,23 +22,19 @@ export const planItemTransformer = createTransformer<
 		// Only include included if not unlimited
 		included: (api) => (api.unlimited ? undefined : api.included),
 
-		// Top-level reset: only from api.reset when there's no price with interval
-		// If price exists with interval, the interval belongs in price.interval, not top-level
 		reset: (api) => {
-			// If price exists with interval, the reset belongs in price.interval, not top-level
-			if (api.price?.interval) {
-				return undefined;
-			}
-			// Only use top-level reset from api.reset
-			if (api.reset) {
-				return {
-					interval: api.reset.interval,
-					...(api.reset.interval_count !== undefined && {
-						intervalCount: api.reset.interval_count,
-					}),
-				};
-			}
-			return undefined;
+			if (!api.reset) return undefined;
+			const matchesPrice =
+				String(api.reset.interval) === String(api.price?.interval) &&
+				(api.reset.interval_count ?? 1) ===
+					(api.price?.interval_count ?? 1);
+			if (matchesPrice) return undefined;
+			return {
+				interval: api.reset.interval,
+				...(api.reset.interval_count !== undefined && {
+					intervalCount: api.reset.interval_count,
+				}),
+			};
 		},
 
 		// Transform price object with camelCase fields
