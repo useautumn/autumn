@@ -1,4 +1,3 @@
-import type { SyncParamsV1, SyncPhase } from "@autumn/shared";
 import type {
 	PhaseMatch,
 	PlanWarning,
@@ -21,24 +20,11 @@ const findCurrentPhase = ({
 }): PhaseMatch | null =>
 	match.phaseMatches.find((phase) => phase.is_current) ?? null;
 
-const findCurrentSyncPhase = ({
-	params,
-}: {
-	params?: SyncParamsV1;
-}): SyncPhase | undefined => {
-	for (const phase of params?.phases ?? []) {
-		if (phase.starts_at === "now") return phase;
-	}
-	return undefined;
-};
-
 export const canAutoSync = ({
 	match,
-	params,
 	allowedWarnings = DEFAULT_ALLOWED_WARNINGS,
 }: {
 	match: SubscriptionMatch;
-	params?: SyncParamsV1;
 	allowedWarnings?: PlanWarning["type"][];
 }): AutoSyncEligibility => {
 	const currentPhase = findCurrentPhase({ match });
@@ -64,10 +50,8 @@ export const canAutoSync = ({
 		};
 	}
 
-	const syncPhase = findCurrentSyncPhase({ params });
 	const customFeaturePriceItems = filterBlockingCustomFeaturePriceItems({
 		phase: currentPhase,
-		syncPhase,
 	});
 	if (customFeaturePriceItems.length > 0) {
 		return {
@@ -78,6 +62,7 @@ export const canAutoSync = ({
 				.join(", ")}`,
 		};
 	}
+
 	// Add-ons may legitimately have no base price (feature-only billing,
 	// e.g. a prepaid add-on), and a parent present only via license seat
 	// items has no base of its own — neither blocks on absent base.
