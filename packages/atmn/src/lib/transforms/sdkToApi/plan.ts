@@ -78,13 +78,7 @@ export interface ApiPlanItemParams {
 	};
 }
 
-/**
- * Transform SDK PlanItem to API format
- *
- * Handles mutually exclusive reset patterns:
- * - SDK top-level reset -> API reset.interval
- * - SDK price.interval -> API price.interval
- */
+/** Transforms SDK plan items while preserving reset and billing cycles independently. */
 export function transformPlanItem(planItem: PlanItem): ApiPlanItemParams {
 	const result: ApiPlanItemParams = {
 		feature_id: planItem.featureId,
@@ -98,7 +92,6 @@ export function transformPlanItem(planItem: PlanItem): ApiPlanItemParams {
 		result.unlimited = planItem.unlimited;
 	}
 
-	// Top-level reset (for features without price.interval)
 	if (planItem.reset) {
 		result.reset = {
 			interval: planItem.reset.interval,
@@ -109,7 +102,6 @@ export function transformPlanItem(planItem: PlanItem): ApiPlanItemParams {
 	}
 
 	if (planItem.price) {
-		// Get interval from price.interval (reset and price are mutually exclusive)
 		const priceWithInterval = planItem.price as {
 			interval?: string;
 			intervalCount?: number;
