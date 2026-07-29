@@ -172,6 +172,46 @@ describe("buildIncrementalSyncParams", () => {
 		expect(result.params?.phases?.[0]?.plans[0]?.plan_id).toBe(current.id);
 	});
 
+	test("falls back to the only phase when no current sentinel exists", () => {
+		const pro = product({ id: "pro" });
+		const { match, params } = draft({
+			matchedPlans: [matchedPlan({ product: pro })],
+		});
+		params.phases![0]!.starts_at = 123;
+
+		const result = buildIncrementalSyncParams({
+			match,
+			params,
+			linkedCustomerProducts: [],
+		});
+
+		expect(result.shouldSync).toBe(true);
+		if (!result.shouldSync) throw new Error(result.reason);
+		expect(result.params?.phases?.[0]?.starts_at).toBe(123);
+	});
+
+	test("rejects multiple phases without a current sentinel", () => {
+		const pro = product({ id: "pro" });
+		const { match, params } = draft({
+			matchedPlans: [matchedPlan({ product: pro })],
+		});
+		params.phases = [
+			{ starts_at: 123, plans: params.phases![0]!.plans },
+			{ starts_at: 456, plans: params.phases![0]!.plans },
+		];
+
+		expect(
+			buildIncrementalSyncParams({
+				match,
+				params,
+				linkedCustomerProducts: [],
+			}),
+		).toMatchObject({
+			shouldSync: false,
+			reason: "unsupported_phase_shape",
+		});
+	});
+
 	test("keeps a plan when no linked customer product exists for its target", () => {
 		const pro = product({ id: "pro" });
 		const { match, params } = draft({
