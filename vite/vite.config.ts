@@ -50,7 +50,9 @@ export default defineConfig({
 	],
 
 	resolve: {
-		dedupe: ["react", "react-dom"],
+		// recharts builds on React context; two copies mean the chart's provider
+		// and its children read different stores and nothing renders.
+		dedupe: ["react", "react-dom", "recharts"],
 		alias: {
 			"@": path.resolve(__dirname, "./src"),
 
