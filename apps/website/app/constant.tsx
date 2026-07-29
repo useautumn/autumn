@@ -1349,6 +1349,7 @@ export type CustomerStory = {
 	slug: string;
 	name: string;
 	href?: string;
+	linkLabel?: string;
 	logo: string;
 	iconLogo: string;
 	logoClassName?: string;
@@ -1369,6 +1370,7 @@ export const customerStoriesData: CustomerStory[] = [
 		slug: "mintlify",
 		name: "Mintlify",
 		href: "/blog/how-mintlify-is-scaling-sales-led-gtm",
+		linkLabel: "How Mintlify is scaling sales-led GTM",
 		logo: "/images/logos/mintlify_logo.svg.svg",
 		iconLogo: "/images/logos/icons/mintlify.svg",
 		logoClassName: "scale-90",
@@ -1411,7 +1413,7 @@ export const customerStoriesData: CustomerStory[] = [
 		quote:
 			"I warned them ahead of time how complicated our billing was, but the team has been incredible to work with. There's no way we'd be able to iterate as fast as we are without Autumn.",
 		author: {
-			name: "Micha Stairs",
+			name: "Micah Stairs",
 			title: "Head of Support Engineering at Firecrawl",
 		},
 	},
@@ -1443,6 +1445,7 @@ export const customerStoriesData: CustomerStory[] = [
 		slug: "t3-chat",
 		name: "T3.chat",
 		href: "/blog/working-with-t3-chat-on-a-new-way-of-pricing",
+		linkLabel: "Consumer psychology is important in AI pricing",
 		logo: "/images/logos/T3_svg.svg",
 		iconLogo: "/images/logos/icons/t3-chat.svg",
 		logoClassName: "scale-65",
@@ -1461,7 +1464,7 @@ export const customerStoriesData: CustomerStory[] = [
 		],
 		quote:
 			"We were spending nearly as much on the Redis instance to handle this ourselves (less well) than the cost with Autumn. It makes the switch even more of a no brainer.",
-		author: { name: "Mark", title: "Co-Founder at T3 Chat" },
+		author: { name: "Mark Florkowski", title: "Co-Founder at T3 Chat" },
 	},
 ];
 
