@@ -1,6 +1,7 @@
 import { shed503OnTransientError } from "@/db/shed503OnTransientError.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { getOrSetCachedFullSubject } from "@/internal/customers/cache/fullSubject/index.js";
+import { isRedisFallbackToDbEnabled } from "@/internal/misc/miscellaneousEdgeConfig/miscellaneousEdgeConfigStore.js";
 import { isFullSubjectRolloutEnabled } from "@/internal/misc/rollouts/fullSubjectRolloutUtils.js";
 import { getApiCustomerV2 } from "../cusUtils/getApiCustomerV2/index.js";
 
@@ -20,10 +21,21 @@ export const getApiCustomerByRollout = async ({
 	if (isFullSubjectRolloutEnabled({ ctx })) {
 	}
 
+	const lookup = ({ skipCache }: { skipCache: boolean }) =>
+		getOrSetCachedFullSubject({
+			ctx: skipCache ? { ...ctx, skipCache: true } : ctx,
+			customerId,
+			entityId,
+			source,
+		});
+
 	const fullSubject = await shed503OnTransientError({
 		ctx,
 		source: "get_customer",
-		run: () => getOrSetCachedFullSubject({ ctx, customerId, entityId, source }),
+		run: () => lookup({ skipCache: false }),
+		fallbackOnRedisUnavailable: isRedisFallbackToDbEnabled()
+			? () => lookup({ skipCache: true })
+			: undefined,
 	});
 
 	return getApiCustomerV2({

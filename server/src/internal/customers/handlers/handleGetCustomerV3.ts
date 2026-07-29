@@ -7,6 +7,7 @@ import {
 	V0_2_InvoicesAlwaysExpanded,
 } from "@autumn/shared";
 import { createRoute } from "@/honoMiddlewares/routeHandler.js";
+import { applySubjectLookupDbOnly } from "@/internal/misc/miscellaneousEdgeConfig/applySubjectLookupDbOnly.js";
 import { getApiCustomerByRollout } from "../actions/getApiCustomerByRollout.js";
 
 export const handleGetCustomerV3 = createRoute({
@@ -15,6 +16,7 @@ export const handleGetCustomerV3 = createRoute({
 	resource: AffectedResource.Customer,
 	handler: async (c) => {
 		const ctx = c.get("ctx");
+		applySubjectLookupDbOnly({ ctx });
 		const { customer_id: customerId, with_autumn_id = false } =
 			c.req.valid("json");
 
