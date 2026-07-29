@@ -92,6 +92,7 @@ export const stripeLineItemGroupToDbLineItems = ({
 			invoiceId,
 			stripeInvoiceId,
 			stripeSubscriptionItemId,
+			subscriptionItemMetadata: subItemMetadata,
 		});
 	});
 
@@ -311,14 +312,19 @@ const createDbLineItemFromStripeOnly = ({
 	invoiceId,
 	stripeInvoiceId,
 	stripeSubscriptionItemId,
+	subscriptionItemMetadata,
 }: {
 	stripeLineItem: ExpandedStripeInvoiceLineItem;
 	stripeDiscounts: Stripe.Discount[];
 	invoiceId: string;
 	stripeInvoiceId: string;
 	stripeSubscriptionItemId: string | null;
+	subscriptionItemMetadata?: Stripe.Metadata;
 }): InsertDbInvoiceLineItem => {
-	const metadata = stripeLineItem.metadata;
+	const metadata = {
+		...stripeLineItem.metadata,
+		...subscriptionItemMetadata,
+	};
 	const priceDetails = stripeLineItem.pricing?.price_details;
 
 	const amount = stripeToAtmnAmount({

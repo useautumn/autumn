@@ -118,6 +118,14 @@ export const customerProducts = pgTable(
 		index("idx_customer_products_on_internal_entity_id").on(
 			table.internal_entity_id,
 		),
+		// COLLATE "C" matches customers.internal_id so migration-filter pages can
+		// walk this index in customer order and stop at the page limit.
+		index("idx_customer_products_product_customer_c")
+			.on(
+				table.internal_product_id,
+				sql`${table.internal_customer_id} COLLATE "C"`,
+			)
+			.concurrently(),
 		index("idx_customer_products_on_internal_product_id").on(
 			table.internal_product_id,
 		),

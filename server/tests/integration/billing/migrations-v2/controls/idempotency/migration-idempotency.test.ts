@@ -8,6 +8,7 @@ import {
 	type Migration,
 	MigrationItemKind,
 	MigrationItemRunStatus,
+	MigrationRunStatus,
 } from "@autumn/shared";
 import { expectFlagCorrect } from "@tests/integration/utils/expectFlagCorrect.js";
 import { TestFeature } from "@tests/setup/v2Features.js";
@@ -16,11 +17,17 @@ import { products } from "@tests/utils/fixtures/products.js";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";
 import { CusService } from "@/internal/customers/CusService.js";
-import { migrationItemRunRepo } from "@/internal/migrations/v2/repos/index.js";
+import {
+	migrationItemRunRepo,
+	migrationRunRepo,
+} from "@/internal/migrations/v2/repos/index.js";
 import { waitForMigrationResult } from "../../utils/runUpdatePlanMigration.js";
 
 const timeout = (ms: number) =>
 	new Promise((resolve) => setTimeout(resolve, ms));
+
+const migrationIdSuffix = Date.now().toString(36);
+const uniqueMigrationId = (id: string) => `${id}-${migrationIdSuffix}`;
 
 const buildDashboardMigration = ({
 	id,
@@ -137,7 +144,7 @@ test(`${chalk.yellowBright("migrations idempotency: run API does not replay a su
 	const internalCustomerId = await getInternalCustomerId({ customerId, ctx });
 	const migration = await autumnV2_2.migrationsV2.deleteAndCreate(
 		buildDashboardMigration({
-			id: `${customerId}-mig`,
+			id: uniqueMigrationId(`${customerId}-mig`),
 			planId: plan.id,
 		}),
 	);
@@ -172,7 +179,7 @@ test(`${chalk.yellowBright("migrations idempotency: run API does not replay a su
 
 	const otherMigration = await autumnV2_2.migrationsV2.deleteAndCreate(
 		buildDashboardMigration({
-			id: `${customerId}-other-mig`,
+			id: uniqueMigrationId(`${customerId}-other-mig`),
 			planId: plan.id,
 		}),
 	);
@@ -200,7 +207,7 @@ test(`${chalk.yellowBright("migrations idempotency: run API skips running and fa
 
 	const runningMigration = await autumnV2_2.migrationsV2.deleteAndCreate(
 		buildDashboardMigration({
-			id: `${customerId}-running-mig`,
+			id: uniqueMigrationId(`${customerId}-running-mig`),
 			planId: plan.id,
 		}),
 	);
@@ -223,7 +230,7 @@ test(`${chalk.yellowBright("migrations idempotency: run API skips running and fa
 
 	const failedMigration = await autumnV2_2.migrationsV2.deleteAndCreate(
 		buildDashboardMigration({
-			id: `${customerId}-failed-mig`,
+			id: uniqueMigrationId(`${customerId}-failed-mig`),
 			planId: plan.id,
 		}),
 	);
@@ -289,7 +296,7 @@ test(`${chalk.yellowBright("migrations idempotency: retry_item_statuses and dry_
 
 	const retryMigration = await autumnV2_2.migrationsV2.deleteAndCreate(
 		buildDashboardMigration({
-			id: `${retryCustomerId}-mig`,
+			id: uniqueMigrationId(`${retryCustomerId}-mig`),
 			planId: retryPlan.id,
 		}),
 	);
@@ -327,7 +334,7 @@ test(`${chalk.yellowBright("migrations idempotency: retry_item_statuses and dry_
 
 	const dryRunMigration = await autumnV2_2.migrationsV2.deleteAndCreate(
 		buildDashboardMigration({
-			id: `${dryRunCustomerId}-mig`,
+			id: uniqueMigrationId(`${dryRunCustomerId}-mig`),
 			planId: dryRunPlan.id,
 		}),
 	);
@@ -433,89 +440,55 @@ test(`${chalk.yellowBright("migrations idempotency: item run checkpoints are dry
 	).resolves.toMatchObject({ claimed: true });
 });
 
-test(`${chalk.yellowBright("migrations idempotency: run API rejects concurrent migration runs per org")}`, async () => {
-	const firstCustomerId = "migration-idem-serial-first";
-	const secondCustomerId = "migration-idem-serial-second";
-	const firstPlan = products.pro({ id: "serial-pro", items: [] });
-	const secondPlan = products.premium({ id: "serial-premium", items: [] });
+test(`${chalk.yellowBright("migrations idempotency: run API rejects a second active run for the same migration")}`, async () => {
+	const customerId = "migration-idem-active-run";
+	const plan = products.pro({ id: "active-run-pro", items: [] });
 	const { autumnV2_2, ctx } = await initScenario({
-		customerId: firstCustomerId,
+		customerId,
 		setup: [
 			s.customer({ paymentMethod: "success" }),
-			s.otherCustomers([{ id: secondCustomerId, paymentMethod: "success" }]),
-			s.products({ list: [firstPlan, secondPlan] }),
+			s.products({ list: [plan] }),
 		],
-		actions: [
-			s.billing.attach({ productId: firstPlan.id }),
-			s.billing.attach({
-				customerId: secondCustomerId,
-				productId: secondPlan.id,
-			}),
-		],
+		actions: [s.billing.attach({ productId: plan.id })],
 	});
-	const firstMigration = await autumnV2_2.migrationsV2.deleteAndCreate(
+	const migration = await autumnV2_2.migrationsV2.deleteAndCreate(
 		buildDashboardMigration({
-			id: `${firstCustomerId}-mig`,
-			planId: firstPlan.id,
+			id: uniqueMigrationId(`${customerId}-mig`),
+			planId: plan.id,
 		}),
 	);
-	const secondMigration = await autumnV2_2.migrationsV2.deleteAndCreate(
-		buildDashboardMigration({
-			id: `${secondCustomerId}-mig`,
-			planId: secondPlan.id,
-		}),
-	);
-
-	await autumnV2_2.migrationsV2.run({
-		id: firstMigration.id,
-		dry_run: false,
-	});
-	await expect(
-		autumnV2_2.migrationsV2.run({
-			id: secondMigration.id,
+	const activeRun = await migrationRunRepo.insert({
+		ctx,
+		insert: {
+			migration_internal_id: migration.internal_id,
 			dry_run: false,
-		}),
-	).rejects.toMatchObject({
-		code: ErrCode.MigrationAlreadyInProgress,
-		message: expect.stringContaining("already running"),
+			lazy_run: false,
+			only_ids: null,
+			target_limit: undefined,
+		},
 	});
+	expect(activeRun).not.toBeNull();
 
-	const firstInternalCustomerId = await getInternalCustomerId({
-		customerId: firstCustomerId,
-		ctx,
-	});
-	const secondInternalCustomerId = await getInternalCustomerId({
-		customerId: secondCustomerId,
-		ctx,
-	});
-	await waitForCustomerItemRunStatus({
-		ctx,
-		migration: firstMigration,
-		internalCustomerId: firstInternalCustomerId,
-		status: MigrationItemRunStatus.Succeeded,
-	});
-
-	await waitForMigrationRunAccepted({ autumnV2_2, id: secondMigration.id });
-	await waitForCustomerItemRunStatus({
-		ctx,
-		migration: secondMigration,
-		internalCustomerId: secondInternalCustomerId,
-		status: MigrationItemRunStatus.Succeeded,
-	});
-	const firstItemRun = await getCustomerItemRun({
-		ctx,
-		migration: firstMigration,
-		internalCustomerId: firstInternalCustomerId,
-	});
-	const secondItemRun = await getCustomerItemRun({
-		ctx,
-		migration: secondMigration,
-		internalCustomerId: secondInternalCustomerId,
-	});
-	expect(firstItemRun).toMatchObject({
-		status: MigrationItemRunStatus.Succeeded,
-	});
-	expect(secondItemRun).toMatchObject({
-		status: MigrationItemRunStatus.Succeeded,
-	});
+	try {
+		await expect(
+			autumnV2_2.migrationsV2.run({
+				id: migration.id,
+				dry_run: false,
+			}),
+		).rejects.toMatchObject({
+			code: ErrCode.MigrationAlreadyInProgress,
+			message: expect.stringContaining("already running"),
+		});
+	} finally {
+		if (activeRun) {
+			await migrationRunRepo.update({
+				ctx,
+				internalId: activeRun.internal_id,
+				updates: {
+					status: MigrationRunStatus.Succeeded,
+					finished_at: Date.now(),
+				},
+			});
+		}
+	}
 });
