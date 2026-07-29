@@ -19,7 +19,6 @@ const UNINVERTIBLE_POOLED_FIELDS = [
 	"deletePoolContributions",
 	"deletePoolBalances",
 	"expirePoolBalanceCandidates",
-	"insertPoolRollovers",
 ] as const;
 
 const ROLLBACK_INERT_FIELDS = [
@@ -88,6 +87,21 @@ export const handleRollbackPlanErrors = ({
 		if (uninvertibleFields.length > 0) {
 			throwRollbackError(
 				`unsupported pooled operations: ${uninvertibleFields.join(", ")}`,
+			);
+		}
+
+		// Rollovers cascade when their pool is deleted, so they are invertible
+		// only when every target pool was inserted by this same plan.
+		const insertedPoolCustomerEntitlementIds = new Set(
+			pooledBalancePlan.insertPoolBalances.map(({ id }) => id),
+		);
+		const strandedRollovers = pooledBalancePlan.insertPoolRollovers.filter(
+			(rollover) =>
+				!insertedPoolCustomerEntitlementIds.has(rollover.cus_ent_id),
+		);
+		if (strandedRollovers.length > 0) {
+			throwRollbackError(
+				"unsupported pooled operations: insertPoolRollovers targeting pre-existing pools",
 			);
 		}
 	}

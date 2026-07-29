@@ -1,7 +1,7 @@
 import {
-	type FullSubject,
-	fullSubjectToFullCustomer,
-	normalizedToFullSubject,
+    type FullSubject,
+    fullSubjectToFullCustomer,
+    normalizedToFullSubject,
 } from "@autumn/shared";
 import { isRedisMigrationCacheStale } from "@/external/redis/customerRedisRouting.js";
 import { runRedisOp } from "@/external/redis/utils/runRedisOp.js";
@@ -17,9 +17,9 @@ import { getCachedFeatureBalancesBatch } from "../balances/getCachedFeatureBalan
 import { buildFullSubjectKey } from "../builders/buildFullSubjectKey.js";
 import { buildFullSubjectViewEpochKey } from "../builders/buildFullSubjectViewEpochKey.js";
 import {
-	type CachedFullSubject,
-	cachedFullSubjectToNormalized,
-	FULL_SUBJECT_CACHE_SCHEMA_VERSION,
+    type CachedFullSubject,
+    cachedFullSubjectToNormalized,
+    FULL_SUBJECT_CACHE_SCHEMA_VERSION,
 } from "../fullSubjectCacheModel.js";
 import { sanitizeCachedFullSubject } from "../sanitize/index.js";
 import { invalidateCachedFullSubject } from "./invalidate/invalidateFullSubject.js";
@@ -37,12 +37,16 @@ export const getCachedFullSubject = async ({
 	entityId,
 	source,
 	staleWhileRevalidate = false,
+	runLazyResets = true,
+
 }: {
 	ctx: AutumnContext;
 	customerId: string;
 	entityId?: string;
 	source?: string;
 	staleWhileRevalidate?: boolean;
+	runLazyResets?: boolean;
+
 }): Promise<GetCachedFullSubjectResult> => {
 	const { org, env, logger, redisV2 } = ctx;
 	const subjectKey = buildFullSubjectKey({
@@ -264,12 +268,15 @@ export const getCachedFullSubject = async ({
 		});
 
 		const fullSubject = normalizedToFullSubject({ normalized });
-		await lazyResetSubjectEntitlements({ ctx, fullSubject });
-		await lazyResetSubjectUsageWindows({ ctx, fullSubject, normalized });
-		await checkPendingMigrationsForCustomer({
-			ctx,
-			fullCustomer: fullSubjectToFullCustomer({ fullSubject }),
-		});
+		if (runLazyResets) {
+			await lazyResetSubjectEntitlements({ ctx, fullSubject });
+			await lazyResetSubjectUsageWindows({ ctx, fullSubject, normalized });
+			await checkPendingMigrationsForCustomer({
+				ctx,
+				fullCustomer: fullSubjectToFullCustomer({ fullSubject }),
+			});
+		}
+		
 		return { fullSubject, subjectViewEpoch: currentSubjectViewEpoch };
 	} catch (error) {
 		logger.warn(
