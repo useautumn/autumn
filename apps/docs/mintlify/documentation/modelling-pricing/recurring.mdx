@@ -60,14 +60,6 @@ Use [billing.attach](/documentation/customers/payment-flow) to attach a subscrip
 
 <CodeGroup>
 
-```tsx React
-import { useCustomer } from "autumn-js/react";
-
-const { attach } = useCustomer();
-
-await attach({ planId: "pro", redirectMode: "always" });
-```
-
 ```typescript TypeScript
 import { Autumn } from "autumn-js";
 

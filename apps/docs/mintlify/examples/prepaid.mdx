@@ -69,18 +69,6 @@ When your user signs up, create an Autumn customer. This will automatically assi
 
 <CodeGroup>
 
-```jsx React
-import { useCustomer } from "autumn-js/react";
-
-const App = () => {
-  const { customer } = useCustomer();
-
-  console.log("Autumn customer:", customer);
-
-  return <h1>Welcome, {customer?.name || "user"}!</h1>;
-};
-```
-
 ```typescript Node.js
 import { Autumn } from "autumn-js";
 
@@ -132,25 +120,6 @@ curl --request POST \
 Before our user sends a message, we'll first check if they have a balance of messages remaining.
 
 <CodeGroup>
-
-```jsx React wrap
-import { useCustomer } from "autumn-js/react";
-
-export function CheckPremiumMessage() {
-  const { check, refetch } = useCustomer();
-
-  const handleCheckAccess = async () => {
-    const { data } = await check({ featureId: "messages" });
-
-    if (!data?.allowed) {
-      alert("You've run out of messages");
-    } else {
-      // proceed with sending message
-      await refetch();
-    }
-  };
-}
-```
 
 ```typescript Node.js
 import { Autumn } from "autumn-js";
@@ -288,31 +257,6 @@ curl -X POST "https://api.useautumn.com/v1/track" \
 When users run out of messages, they can purchase additional messages using our top-up plan. In this example, the user is purchasing 200 premium messages, which will cost them $20.
 
 <CodeGroup>
-
-```jsx React
-import { useCustomer, CheckoutDialog } from "autumn-js/react";
-
-export default function TopUpButton() {
-  const { checkout } = useCustomer();
-
-  return (
-    <button
-      onClick={async () => {
-        await checkout({
-          productId: "top_up",
-          dialog: CheckoutDialog,
-          options: [{
-            featureId: "messages",
-            quantity: 200,
-          }],
-        });
-      }}
-    >
-      Buy More Messages
-    </button>
-  );
-}
-```
 
 ```typescript Node.js
 import { Autumn } from "autumn-js";
@@ -467,31 +411,6 @@ Once the customer completes the payment, they will have an additional 200 premiu
 You can display to the user by getting balances from the `customer` method. Under the `customer.features` record, you'll be able to retrieve a current balance, total granted, and a `breakdown` of their monthly vs top-up messages.
 
 <CodeGroup>
-
-```jsx React [expandable]
-import { useCustomer } from "autumn-js/react";
-
-const { customer } = useCustomer();
-
-const messages = customer?.features?.messages;
-
-// Get breakdown of monthly vs prepaid balances
-const monthlyBalance = messages?.breakdown?.find(
-  (b) => b.interval === "month"
-);
-const prepaidBalance = messages?.breakdown?.find(
-  (b) => b.interval === "lifetime"
-);
-
-// Display both balances to the user
-return (
-  <div>
-    <p>Monthly: {monthlyBalance?.balance ?? 0} remaining</p>
-    <p>Prepaid: {prepaidBalance?.balance ?? 0} remaining</p>
-    <p>Total: {messages?.balance ?? 0} messages available</p>
-  </div>
-);
-```
 
 ```typescript Node.js [expandable]
 import { Autumn } from "autumn-js";
