@@ -1348,6 +1348,7 @@ export type CustomerStoryStat = { value: string; label: string };
 export type CustomerStory = {
 	slug: string;
 	name: string;
+	href?: string;
 	logo: string;
 	iconLogo: string;
 	logoClassName?: string;
@@ -1367,16 +1368,17 @@ export const customerStoriesData: CustomerStory[] = [
 	{
 		slug: "mintlify",
 		name: "Mintlify",
+		href: "/blog/how-mintlify-is-scaling-sales-led-gtm",
 		logo: "/images/logos/mintlify_logo.svg.svg",
 		iconLogo: "/images/logos/icons/mintlify.svg",
 		logoClassName: "scale-90",
 		accent: "#18E299",
 		surface: "#18E299",
 		textOn: "dark",
-		founderImage: "/images/customers/founder-placeholder.png",
+		founderImage: "/images/customers/mintlify-founder.png",
 		headline: {
-			lead: "Mintlify shipped usage-based docs billing",
-			emphasis: "in under a week.",
+			lead: "Mintlify combined billing and enablement",
+			emphasis: "into one model.",
 		},
 		stats: [
 			{ value: "5x", label: "Faster billing launch" },
@@ -1384,8 +1386,8 @@ export const customerStoriesData: CustomerStory[] = [
 			{ value: "0", label: "Stripe webhooks written" },
 		],
 		quote:
-			"Autumn replaced the entire billing layer we were dreading. Adding a new plan is now a config change, not a sprint.",
-		author: { name: "Han Wang", title: "Co-Founder & CEO at Mintlify" },
+			"I would literally recommend Autumn to every person who asked. Since the migration, I have a lot more confidence that customers are actually getting what they're paying for.",
+		author: { name: "Kyle Finken", title: "Engineering at Mintlify" },
 	},
 	{
 		slug: "firecrawl",
@@ -1396,7 +1398,7 @@ export const customerStoriesData: CustomerStory[] = [
 		accent: "#FF4D00",
 		surface: "#FF4D00",
 		textOn: "light",
-		founderImage: "/images/customers/founder-placeholder.png",
+		founderImage: "/images/customers/firecrawl-founder.png",
 		headline: {
 			lead: "Firecrawl metered every crawl with Autumn",
 			emphasis: "without touching Stripe.",
@@ -1407,8 +1409,11 @@ export const customerStoriesData: CustomerStory[] = [
 			{ value: "3", label: "Pricing models live" },
 		],
 		quote:
-			"We had crazy usage-based limits across features. Autumn gave us one source of truth for gating and billing overnight.",
-		author: { name: "Caleb Peffer", title: "Co-Founder & CEO at Firecrawl" },
+			"I warned them ahead of time how complicated our billing was, but the team has been incredible to work with. There's no way we'd be able to iterate as fast as we are without Autumn.",
+		author: {
+			name: "Micha Stairs",
+			title: "Head of Support Engineering at Firecrawl",
+		},
 	},
 	{
 		slug: "browser-use",
@@ -1437,13 +1442,14 @@ export const customerStoriesData: CustomerStory[] = [
 	{
 		slug: "t3-chat",
 		name: "T3.chat",
+		href: "/blog/working-with-t3-chat-on-a-new-way-of-pricing",
 		logo: "/images/logos/T3_svg.svg",
 		iconLogo: "/images/logos/icons/t3-chat.svg",
 		logoClassName: "scale-65",
 		accent: "#F6339A",
 		surface: "#F6339A",
 		textOn: "light",
-		founderImage: "/images/customers/founder-placeholder.png",
+		founderImage: "/images/customers/t3-founder.png",
 		headline: {
 			lead: "T3.chat handled a viral launch",
 			emphasis: "on Autumn from day one.",
@@ -1454,7 +1460,18 @@ export const customerStoriesData: CustomerStory[] = [
 			{ value: "$0", label: "Revenue leakage" },
 		],
 		quote:
-			"Literally cannot imagine going without it. Free trials, usage limits and AI credits across every feature.",
-		author: { name: "Theo Browne", title: "Founder at T3.chat" },
+			"We were spending nearly as much on the Redis instance to handle this ourselves (less well) than the cost with Autumn. It makes the switch even more of a no brainer.",
+		author: { name: "Mark", title: "Co-Founder at T3 Chat" },
 	},
 ];
+
+const FEATURED_STORY_SLUGS = ["mintlify", "firecrawl", "t3-chat"];
+
+export const featuredCustomerStories: CustomerStory[] =
+	FEATURED_STORY_SLUGS.map((slug) => {
+		const story = customerStoriesData.find((item) => item.slug === slug);
+		if (!story) {
+			throw new Error(`Unknown featured customer story slug: ${slug}`);
+		}
+		return story;
+	});

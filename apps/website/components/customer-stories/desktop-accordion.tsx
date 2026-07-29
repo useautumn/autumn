@@ -1,5 +1,5 @@
 import type { CSSProperties } from "react";
-import { customerStoriesData } from "@/app/constant";
+import { featuredCustomerStories } from "@/app/constant";
 import { BracketCorners } from "./bracket-corners";
 import { PixelDissolve } from "./pixel-dissolve";
 import { StoryPanel } from "./story-panel";
@@ -22,12 +22,12 @@ export function DesktopAccordion() {
 		dissolveDir,
 		contentWidth,
 		cardLayout,
-	} = useAccordion(customerStoriesData.length);
+	} = useAccordion(featuredCustomerStories.length);
 
 	const fromColor =
 		DISSOLVE_FROM === "dark"
 			? DARK_SURFACE
-			: customerStoriesData[prevActiveIndex].surface;
+			: featuredCustomerStories[prevActiveIndex].surface;
 
 	// Track laid out left→right by flex order: left spine, content, right spine.
 	// trackX gives each surface its slot offset so the directional gradient is
@@ -49,7 +49,7 @@ export function DesktopAccordion() {
 					} as CSSProperties
 				}
 			>
-				{customerStoriesData.map((story, index) => {
+				{featuredCustomerStories.map((story, index) => {
 					const { state, order } = cardLayout(index);
 					const isActive = state === "active";
 					return (

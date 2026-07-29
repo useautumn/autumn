@@ -48,13 +48,13 @@ export default function HomeSections() {
 			<Hero />
 
 			<LogoWall />
-			<SectionDivider title="THE PROBLEM" />
-			<LazySection>
-				<Problem />
-			</LazySection>
 			<SectionDivider title="CUSTOMER STORIES" />
 			<LazySection>
 				<CustomerStories />
+			</LazySection>
+			<SectionDivider title="THE PROBLEM" />
+			<LazySection>
+				<Problem />
 			</LazySection>
 			<SectionDivider title="THE SOLUTION" />
 			<LazySection>

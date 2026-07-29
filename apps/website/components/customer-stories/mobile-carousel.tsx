@@ -1,12 +1,12 @@
 import { motion } from "motion/react";
-import { customerStoriesData } from "@/app/constant";
+import { featuredCustomerStories } from "@/app/constant";
 import { BracketCorners } from "./bracket-corners";
 import { StoryPanel } from "./story-panel";
 import { useMobileCarousel } from "./use-mobile-carousel";
 
 export function MobileCarousel() {
 	const { containerRef, x, activeIndex, goTo, onDragEnd } = useMobileCarousel(
-		customerStoriesData.length,
+		featuredCustomerStories.length,
 	);
 
 	return (
@@ -19,7 +19,7 @@ export function MobileCarousel() {
 				dragElastic={0.18}
 				onDragEnd={onDragEnd}
 			>
-				{customerStoriesData.map((story) => (
+				{featuredCustomerStories.map((story) => (
 					<div
 						key={story.slug}
 						className="relative shrink-0 w-[86vw] h-[440px] overflow-hidden"
@@ -33,7 +33,7 @@ export function MobileCarousel() {
 			</motion.div>
 
 			<div className="flex justify-center gap-2 mt-5">
-				{customerStoriesData.map((story, index) => (
+				{featuredCustomerStories.map((story, index) => (
 					<button
 						key={story.slug}
 						type="button"
