@@ -2,6 +2,7 @@ import type { StripeWebhookContext } from "../../webhookMiddlewares/stripeWebhoo
 import { setupStripeSubscriptionCreatedContext } from "./setupStripeSubscriptionCreatedContext.js";
 import { autoSyncFromSubscriptionWithLock } from "./tasks/autoSyncFromSubscription.js";
 import { linkScheduledCustomerProductsToSubscription } from "./tasks/linkScheduledCustomerProductsToSubscription.js";
+import { upsertSubscriptionRow } from "./tasks/upsertSubscriptionRow.js";
 
 export const handleStripeSubscriptionCreated = async ({
 	ctx,
@@ -11,6 +12,11 @@ export const handleStripeSubscriptionCreated = async ({
 	const subscriptionCreatedContext =
 		await setupStripeSubscriptionCreatedContext({ ctx });
 	if (!subscriptionCreatedContext) return;
+
+	await upsertSubscriptionRow({
+		ctx,
+		subscription: subscriptionCreatedContext.subscription,
+	});
 
 	await linkScheduledCustomerProductsToSubscription({
 		ctx,
