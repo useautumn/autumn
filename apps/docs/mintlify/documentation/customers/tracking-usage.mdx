@@ -28,7 +28,7 @@ import { Autumn } from "autumn-js";
 
 const autumn = new Autumn({ secretKey: "am_sk_test_1234" });
 
-await autumn.customers.track({
+await autumn.track({
   customerId: "user_123",
   featureId: "ai-messages",
   value: 1,
@@ -40,7 +40,7 @@ from autumn_sdk import Autumn
 
 autumn = Autumn("am_sk_test_1234")
 
-await autumn.customers.track(
+await autumn.track(
     customer_id="user_123",
     feature_id="ai-messages",
     value=1,
@@ -245,7 +245,7 @@ import { Autumn } from "autumn-js";
 
 const autumn = new Autumn({ secretKey: "am_sk_test_1234" });
 
-await autumn.customers.track({
+await autumn.track({
   customerId: "user_123",
   eventName: "blog_post_generation",
   value: 1,
@@ -257,7 +257,7 @@ from autumn_sdk import Autumn
 
 autumn = Autumn("am_sk_test_1234")
 
-await autumn.customers.track(
+await autumn.track(
     customer_id="user_123",
     event_name="blog_post_generation",
     value=1,

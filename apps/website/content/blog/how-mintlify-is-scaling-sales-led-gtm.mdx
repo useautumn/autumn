@@ -1,0 +1,127 @@
+---
+title: "How Mintlify is scaling sales-led GTM"
+description: "Mintlify moved from product-led to sales-led growth, and had to rebuild billing and provisioning to keep up. Here's how they combined billing and enablement into one model."
+date: "2026-07-29"
+author: "Ayush, Autumn Co-Founder"
+slug: "how-mintlify-is-scaling-sales-led-gtm"
+image: "/images/blog/how-mintlify-is-scaling-sales-led-gtm.png"
+featured: true
+---
+
+Mintlify made developer documentation fun and beautiful to write, and doing so earned them intense, product-led product-market fit. As interest continues to arrive from larger and larger enterprises, they have rapidly built out a sales team, which today makes up close to half the company.
+
+When a business-model shift like this happens in a company's lifecycle, a lot underneath it has to change: the operational processes that turn a signed deal into a provisioned customer, and the pricing model sitting behind them. This is how Mintlify handled the transition.
+
+<img
+	alt="The Mintlify team"
+	className="aspect-[2/1] w-full rounded-xl border border-[#292929] object-cover object-center"
+	src="/images/blog/mintlify-team-photo.png"
+/>
+
+### What was broken
+
+The problem was that there were two separate systems being held together by people:
+
+1. Billing: a signed contract flowed from Salesforce to Stripe, from where invoices would get sent to customers
+2. Enablement: provisioning the plan, custom entitlements and credit quotas.
+
+These systems fell out of sync with each other frequently because these deals were often complex. The system they had built for self-service signups also had to handle custom plans, multiple deployments, enterprise pilot periods and ramp schedules. A sales or ops person needed to understand how everything worked together.
+
+<TestimonialQuote
+	avatarAlt="Kyle Finken"
+	avatarSrc="/images/blog/kyle-finken.png"
+	name="Kyle Finken"
+	role="Engineering at Mintlify"
+>
+
+The process for sales was very, very disjointed; they basically had to have the billing completely separate from actually enabling a customer.
+
+So there were times where enablement was missed, where a customer paid and they were like, 'hey, it's been a week, why don't I have my features?' And very frequently people would not have overage prices assigned in Stripe, so they just wouldn't get charged for them.
+
+</TestimonialQuote>
+
+As Mintlify moved upmarket, pricing changes came with it: new credit models and expansion options. But with each customer's state living partly in Stripe and partly spread across internal systems, making updates was slow and painful. They had a team of 2-4 engineers working on billing almost full-time.
+
+### One source of truth
+
+The solution was to combine billing and enablement into one model. A customer's plan became a single record that defines what they are charged, what they get, and when each of those applies. To apply a plan to a customer, all must be defined together.
+
+<PlanRecordDiagram />
+
+The temporal aspect is important and typically overlooked. It means that pilot periods can expire, enterprise plan trials can revert back to previous states after completion, and ramp schedules can automatically adjust quotas.
+
+It also narrows what sales can set up to configurations that are actually billable.
+
+> We effectively lock people down to a specific set of things that we have approved for actually setting up for billing... if this doesn't fit within the constraints we've set, you can't charge for it.
+>
+> I would prefer to go through the pain of finding a workaround for a one-off customer than loosen everything for everyone and then run into a ton of data issues down the road.
+>
+
+### A hierarchical account model
+
+A single customer can have many deployments, and each one can sit on a different plan, whether hobby, pro, or enterprise, bought either through self-serve or negotiated as part of a contract.
+
+Previously, that complexity carried into the billing: deployments, overage prices, and add-ons could each live in their own subscription, so one account could be split across several subscriptions and invoices.
+
+The account model now follows how customers are actually organized. Deployments still carry their own plans, but they roll up to one customer, billed as a single subscription with one monthly invoice.
+
+Entitlements can be segregated by deployment, but credit quotas are pooled at the customer level, so usage draws from a shared balance even when the deployments underneath are on different plans.
+
+<HierarchyDiagram />
+
+The change was moving from a single-deployment assumption to a multi-deployment hierarchy, which meant giving the data model more thought up front: what belongs to a deployment, what belongs to the customer above it, and how billing and usage aggregate across the two.
+
+### Automating provisioning
+
+Today, when a Mintlify deal closes in Salesforce, it posts into a Slack channel as a closed-won message with the account, the org, and the contract attached. An AI agent picks that up, reads the contract, and provisions the plan.
+
+In one API call, it determines the shape of the plan, adds custom credit amounts and entitlements, backdates the subscription when needed, and sends an invoice. The rules that used to live in a salesperson's head over multiple steps are now written down as instructions the Slack agent follows. A simplified version looks like this:
+
+```
+🎉 <Customer> closed-won! Provision this in Autumn from the attached contract.
+- Parse the contract for any custom credit amounts or entitlements
+- Backdate the subscription to the contract signing date if it differs from today.
+- Attach the plan to a specific deployment, not to the customer.
+- For Enterprise, enable the plan immediately rather than after payment.
+- If the contract lists multiple deployments, confirm the same number exists in Autumn. If they do not match, flag a human.
+- (+ a few more rules)
+```
+
+When anything is ambiguous, like a missing signature or a mismatch in the deployment count, it updates billing and flags a person rather than provisioning on a guess.
+
+People do still step in to correct off states. Plans occasionally get cancelled by accident, attached to the wrong deployment, or left in a legacy state from before the migration. However, the level of automation is much higher as the agent can intelligently parse the account data model, pick out any custom terms, and apply them in a single API call.
+
+### Repricing for expansion
+
+As Mintlify moved up-market, they reworked how the product is priced with two aims: make the model simpler to run, and tie expansion to how customers actually get value.
+
+They started by reworking their usage model. Pricing started as a flat $0.25 per assistant message, which only covered that one feature. As Mintlify added more AI surfaces, they moved to a single AI credit that customers can spend across the docs agent, workflows, and the slackbot, so one balance covers usage wherever it happens rather than a separate price per feature.
+
+They also completely dropped seat-based pricing. Charging per seat is a common way to grow a contract, but Mintlify's value sits in usage rather than headcount, so they made editor seats unlimited and let accounts expand through credits and usage instead.
+
+<img
+	alt="Mintlify's usage overview dashboard, showing credit usage by product over time"
+	className="mx-auto block w-4/5 rounded-xl border border-[#292929]"
+	src="/images/blog/mintlify-usage-overview-dark.png"
+/>
+
+With the tiers cleaned up and consistent, sales had a defined and explainable ladder to move customers up.
+
+### How Autumn helped
+
+The result is that billing stopped being a constraint on growth. Sales can structure a custom deal and have it provisioned the same day. Pricing and packaging can change as the market teaches them what to charge, without rebuilding billing each time. Customers are billed and provisioned more predictably, with cleaner underlying data.
+
+Instead of building this themselves, Mintlify worked with Autumn to put billing, entitlements and usage into our platform. That meant they got:
+
+- A single source of truth for customer state across PLG and enterprise, queryable in real-time from their app.
+- Trials, pilots, schedules and other complex deals handled out the box.
+- A parent-child account model to manage deployment-level entitlements under a single customer subscription.
+- Autumn team support to handle credit and seat pricing changes and other experiments.
+
+> Our experience has been great. I would literally recommend [it] to every person who asked.
+>
+> Since the migration, I have a lot more confidence that customers are actually getting what they're paying for.
+>
+> I have incredibly high trust in you guys right now. We put feature requests into a lot of vendors that take a long time, and it never does with you.
+
+We're proud to support the Mintlify team as they continue to scale beyond Series B and all the way past IPO!

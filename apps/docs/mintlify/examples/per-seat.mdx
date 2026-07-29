@@ -91,18 +91,6 @@ When your user signs up, create an Autumn customer. This will automatically assi
 
 <CodeGroup>
 
-```jsx React
-import { useCustomer } from "autumn-js/react";
-
-const App = () => {
-  const { customer } = useCustomer();
-
-  console.log("Autumn customer:", customer);
-
-  return <h1>Welcome, {customer?.name || "user"}!</h1>;
-};
-```
-
 ```typescript Node.js
 import { Autumn } from "autumn-js";
 
@@ -154,26 +142,6 @@ curl --request POST \
 Before adding a new team member, check if the customer has available seats.
 
 <CodeGroup>
-
-```jsx React
-import { useCustomer } from "autumn-js/react";
-
-export function AddTeamMember() {
-  const { check } = useCustomer();
-
-  const handleAddMember = async () => {
-    const { data } = check({ featureId: "seats" });
-
-    if (!data?.allowed) {
-      // Prompt upgrade or purchase more seats
-      alert("No seats available. Please upgrade your plan.");
-      return;
-    }
-
-    // Proceed with adding team member
-  };
-}
-```
 
 ```typescript Node.js
 import { Autumn } from "autumn-js";
@@ -336,32 +304,6 @@ The `quantity` in options represents the **additional paid seats only**, not tot
 
 <CodeGroup>
 
-```jsx React
-import { useCustomer, CheckoutDialog } from "autumn-js/react";
-
-export default function UpgradeButton() {
-  const { checkout } = useCustomer();
-
-  return (
-    <button
-      onClick={async () => {
-        // Customer wants 8 total seats (5 included + 3 paid)
-        await checkout({
-          productId: "pro",
-          dialog: CheckoutDialog,
-          options: [{
-            featureId: "seats",
-            quantity: 3, // 3 paid seats beyond the 5 included
-          }],
-        });
-      }}
-    >
-      Upgrade to Pro
-    </button>
-  );
-}
-```
-
 ```typescript Node.js
 import { Autumn } from "autumn-js";
 
@@ -441,33 +383,6 @@ How you update seat quantity depends on your billing model:
 For prepaid seats, use the `attach` endpoint with updated `options` to change the seat quantity. This will handle proration based on your configuration.
 
 <CodeGroup>
-
-```jsx React
-import { useCustomer, CheckoutDialog } from "autumn-js/react";
-
-export default function AddSeatsButton() {
-  const { checkout } = useCustomer();
-
-  return (
-    <button
-      onClick={async () => {
-        // Increase from 3 paid seats to 5 paid seats
-        // (8 total → 10 total)
-        await checkout({
-          productId: "pro",
-          dialog: CheckoutDialog,
-          options: [{
-            featureId: "seats",
-            quantity: 5, // New paid seat count
-          }],
-        });
-      }}
-    >
-      Add More Seats
-    </button>
-  );
-}
-```
 
 ```typescript Node.js
 import { Autumn } from "autumn-js";
