@@ -31,6 +31,9 @@ export const initCustomerEntitlementPooledIdentity = ({
 		!isBooleanEntitlement({
 			entitlement: customerEntitlement.entitlement,
 		});
+	const rollover = tracksBalance
+		? customerEntitlement.entitlement.rollover
+		: null;
 
 	return {
 		internalFeatureId: customerEntitlement.internal_feature_id,
@@ -41,10 +44,6 @@ export const initCustomerEntitlementPooledIdentity = ({
 		resetMode: lifecycle.resetMode,
 		stripeSubscriptionId: lifecycle.stripeSubscriptionId,
 		customerLicenseLinkId: lifecycle.customerLicenseLinkId,
-		rolloverSignature: tracksBalance
-			? rolloverConfigToSignature({
-					rollover: customerEntitlement.entitlement.rollover,
-				})
-			: "none",
+		rolloverSignature: rolloverConfigToSignature({ rollover }),
 	};
 };

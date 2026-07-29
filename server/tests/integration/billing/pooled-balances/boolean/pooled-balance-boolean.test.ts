@@ -45,7 +45,7 @@ test.concurrent(
 			id: "pooled-boolean-coalesce-plan",
 			items: [pooledDashboardItem()],
 		});
-		const { autumnV2_2, ctx, entities } = await initScenario({
+		const { autumnV2_2, autumnV2_3, ctx, entities } = await initScenario({
 			customerId,
 			setup: [
 				s.customer({ testClock: false }),
@@ -77,6 +77,7 @@ test.concurrent(
 			sources: { count: 2, balance: 0, adjustment: 0 },
 		});
 		const pooledCustomerEntitlement = state.poolCustomerEntitlements[0];
+		expect(state.pools[0]?.rollover_signature).toBe("none");
 		const pooledEntitlement = await ctx.db.query.entitlements.findFirst({
 			where: eq(entitlements.id, pooledCustomerEntitlement.entitlement_id),
 		});
@@ -102,7 +103,7 @@ test.concurrent(
 		expect(uncachedCustomer.balances[TestFeature.Dashboard]).toBeUndefined();
 
 		const cachedCustomer =
-			await autumnV2_2.customers.get<ApiCustomerV5>(customerId);
+			await autumnV2_3.customers.get<ApiCustomerV5>(customerId);
 		expectFlagCorrect({
 			customer: cachedCustomer,
 			featureId: TestFeature.Dashboard,
