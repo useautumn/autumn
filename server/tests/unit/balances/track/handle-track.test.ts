@@ -58,7 +58,11 @@ describe("handleTrack", () => {
 		mockState.originalSend = sqsClient.send.bind(sqsClient);
 		sqsClient.send = (async (command: { input: Record<string, unknown> }) => {
 			mockState.queueCommands.push(command.input);
-			return {};
+			const entries =
+				(command.input.Entries as Array<{ Id?: string }> | undefined) ?? [];
+			return {
+				Successful: entries.map((entry) => ({ Id: entry.Id })),
+			};
 		}) as typeof sqsClient.send;
 	});
 
@@ -92,8 +96,12 @@ describe("handleTrack", () => {
 		expect(mockState.queueCommands).toHaveLength(1);
 		expect(mockState.queueCommands[0]).toMatchObject({
 			QueueUrl: trackAsyncQueueUrl,
-			MessageDeduplicationId: "req_track_1",
 		});
+		const entries = mockState.queueCommands[0]?.Entries as Array<
+			Record<string, unknown>
+		>;
+		expect(entries).toHaveLength(1);
+		expect(entries[0]?.MessageDeduplicationId).toBe("req_track_1");
 	});
 
 	test("returns 202 success for configured org slug", async () => {
