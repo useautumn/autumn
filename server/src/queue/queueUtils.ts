@@ -12,6 +12,7 @@ import {
 	type SendMessageBatchCommandOutput,
 	SendMessageCommand,
 } from "@aws-sdk/client-sqs";
+import { metrics } from "@opentelemetry/api";
 import { generateId } from "@server/utils/genUtils";
 import type { StripeWebhookReplayPayload } from "@/external/stripe/webhookReplay/runStripeWebhookReplay.js";
 import type { BatchResetCustomerEntitlementsV2Payload } from "@/internal/balances/batchReset/types.js";
@@ -20,6 +21,10 @@ import type { ClearCreditSystemCachePayload } from "@/internal/features/featureA
 import type { GenerateFeatureDisplayPayload } from "@/internal/features/workflows/generateFeatureDisplay.js";
 import { getSqsClient } from "./initSqs.js";
 import { JobName } from "./JobName.js";
+import {
+	PrimarySqsSendBatcher,
+	type SendPrimarySqsBatchArgs,
+} from "./PrimarySqsSendBatcher.js";
 import type {
 	BatchResetCusEntsPayload,
 	SendProductsUpdatedPayload,
@@ -110,6 +115,119 @@ export interface Payloads {
 }
 
 const SQS_SEND_MESSAGE_BATCH_LIMIT = 10;
+const meter = metrics.getMeter("autumn-server");
+const sendBatchCallsCounter = meter.createCounter(
+	"autumn.sqs.send_batch.calls",
+	{ description: "SQS SendMessageBatch API calls" },
+);
+const sendBatchEntriesCounter = meter.createCounter(
+	"autumn.sqs.send_batch.entries",
+	{ description: "Entries submitted through SQS SendMessageBatch" },
+);
+const sendBatchFailuresCounter = meter.createCounter(
+	"autumn.sqs.send_batch.failures",
+	{ description: "Entries that failed during SQS SendMessageBatch" },
+);
+
+const getQueueName = ({ queueUrl }: { queueUrl: string }) =>
+	queueUrl.split("/").pop() ?? "unknown";
+
+const sendPrimarySqsBatch = async ({
+	queueUrl,
+	entries,
+}: SendPrimarySqsBatchArgs): Promise<{
+	failures: Array<{ index: number; reason: string }>;
+}> => {
+	const sqsClient = getSqsClient({ queueUrl });
+	const queueName = getQueueName({ queueUrl });
+	sendBatchCallsCounter.add(1, {
+		queue_name: queueName,
+		batch_size: entries.length,
+	});
+
+	const entryCountByJobName = new Map<string, number>();
+	for (const entry of entries) {
+		entryCountByJobName.set(
+			entry.jobName,
+			(entryCountByJobName.get(entry.jobName) ?? 0) + 1,
+		);
+	}
+	for (const [jobName, entryCount] of entryCountByJobName) {
+		sendBatchEntriesCounter.add(entryCount, {
+			queue_name: queueName,
+			job_name: jobName,
+		});
+	}
+
+	let response: SendMessageBatchCommandOutput;
+	try {
+		response = (await sqsClient.send(
+			new SendMessageBatchCommand({
+				QueueUrl: queueUrl,
+				Entries: entries.map((entry, index) => ({
+					Id: index.toString(),
+					MessageBody: entry.messageBody,
+					...(entry.delaySeconds !== undefined && {
+						DelaySeconds: entry.delaySeconds,
+					}),
+					...(entry.messageGroupId !== undefined && {
+						MessageGroupId: entry.messageGroupId,
+					}),
+					...(entry.messageDeduplicationId !== undefined && {
+						MessageDeduplicationId: entry.messageDeduplicationId,
+					}),
+				})),
+			}),
+		)) as SendMessageBatchCommandOutput;
+	} catch (error) {
+		sendBatchFailuresCounter.add(entries.length, {
+			queue_name: queueName,
+			failure_type: "transport",
+		});
+		throw error;
+	}
+
+	const successfulIds = new Set(
+		(response.Successful ?? []).map(({ Id }) => Id),
+	);
+	const failureReasonById = new Map(
+		(response.Failed ?? []).map(({ Id, Message, Code }) => [
+			Id,
+			Message ?? Code ?? "Unknown SQS batch failure",
+		]),
+	);
+	const failures: Array<{ index: number; reason: string }> = [];
+	for (const [index] of entries.entries()) {
+		const id = index.toString();
+		const failureReason = failureReasonById.get(id);
+		if (failureReason !== undefined) {
+			failures.push({ index, reason: failureReason });
+		} else if (!successfulIds.has(id)) {
+			failures.push({
+				index,
+				reason: "SQS batch response omitted the entry result",
+			});
+		}
+	}
+
+	if (failures.length > 0) {
+		sendBatchFailuresCounter.add(failures.length, {
+			queue_name: queueName,
+			failure_type: "entry",
+		});
+	}
+	return { failures };
+};
+
+const globalPrimarySqsSendBatcher = new PrimarySqsSendBatcher({
+	sendBatch: sendPrimarySqsBatch,
+});
+
+export const flushPrimarySqsSendBatcher = (): Promise<void> =>
+	globalPrimarySqsSendBatcher.flush();
+
+export const shutdownPrimarySqsSendBatcher = (): Promise<void> =>
+	globalPrimarySqsSendBatcher.shutdown();
 
 /**
  * Add a task to the queue (auto-detects SQS or BullMQ)
@@ -155,7 +273,7 @@ export const addTaskToQueue = async <T extends keyof Payloads>({
 			messageDeduplicationId ??
 			Bun.hash(messageId ?? generateId("dedup")).toString();
 
-		const command = new SendMessageCommand({
+		const messageInput = {
 			QueueUrl: resolvedQueueUrl,
 			MessageBody: JSON.stringify(message),
 			...(delaySeconds && { DelaySeconds: delaySeconds }),
@@ -164,8 +282,21 @@ export const addTaskToQueue = async <T extends keyof Payloads>({
 				MessageGroupId: messageGroupId || generateId("msg"),
 				MessageDeduplicationId: resolvedMessageDeduplicationId,
 			}),
-		});
+		};
 
+		if (resolvedQueueUrl === process.env.SQS_QUEUE_URL_V2) {
+			await globalPrimarySqsSendBatcher.enqueue({
+				queueUrl: resolvedQueueUrl,
+				jobName: jobName as string,
+				messageBody: messageInput.MessageBody,
+				messageGroupId: messageInput.MessageGroupId,
+				messageDeduplicationId: messageInput.MessageDeduplicationId,
+				delaySeconds: messageInput.DelaySeconds,
+			});
+			return;
+		}
+
+		const command = new SendMessageCommand(messageInput);
 		await sqsClient.send(command);
 		return;
 	}

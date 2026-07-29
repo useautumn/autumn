@@ -52,6 +52,7 @@ import {
 import { preWarmOrgRedisConnections } from "./external/redis/orgRedisPool.js";
 import { createHonoApp } from "./initHono.js";
 import { otelSdk } from "./instrumentation.js";
+import { shutdownPrimarySqsSendBatcher } from "./queue/queueUtils.js";
 import { checkEnvVars } from "./utils/initUtils.js";
 import { startMemoryMonitor } from "./utils/memoryMonitor.js";
 
@@ -168,6 +169,8 @@ async function gracefulShutdown() {
 	shuttingDown = true;
 	console.log("Shutting down worker, flushing telemetry and closing DB...");
 	try {
+		await shutdownPrimarySqsSendBatcher();
+
 		// Flush any buffered OTel spans before shutting down
 		if (otelSdk) {
 			await otelSdk.shutdown();
