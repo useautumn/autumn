@@ -22,6 +22,7 @@ import {
 	expectProductNotTrialing,
 	expectProductTrialing,
 } from "@tests/integration/billing/utils/expectCustomerProductTrialing";
+import { waitForInvoiceLineItems } from "@tests/integration/billing/utils/expectInvoiceLineItemsCorrect";
 import { expectSubToBeCorrect } from "@tests/merged/mergeUtils/expectSubCorrect";
 import { TestFeature } from "@tests/setup/v2Features";
 import { items } from "@tests/utils/fixtures/items";
@@ -43,6 +44,8 @@ import chalk from "chalk";
 // - Preview total = $10 (only one-off addon charged, recurring deferred)
 // - Invoice total = $10 ($0 for trial sub + $10 for one-off addon)
 // ═══════════════════════════════════════════════════════════════════
+// Red: Stripe's $0 trial line has no product and displays as "Custom Item".
+// Green: The trial line retains the Pro product ID and groups under "Pro".
 test.concurrent(`${chalk.yellowBright("multi-attach trial 1: trial inherited from recurring product")}`, async () => {
 	const messagesItem = items.monthlyMessages({ includedUsage: 500 });
 	const dashboardItem = items.dashboard();
@@ -111,6 +114,18 @@ test.concurrent(`${chalk.yellowBright("multi-attach trial 1: trial inherited fro
 		org: ctx.org,
 		env: ctx.env,
 	});
+
+	const invoice = customer.invoices?.[0];
+	expect(invoice?.stripe_id).toBeDefined();
+	const lineItems = await waitForInvoiceLineItems({
+		stripeInvoiceId: invoice!.stripe_id,
+	});
+	const trialLineItems = lineItems.filter(
+		(lineItem) =>
+			lineItem.amount === 0 && lineItem.stripe_subscription_item_id !== null,
+	);
+	expect(trialLineItems).toHaveLength(1);
+	expect(trialLineItems[0].product_id).toBe(proTrial.id);
 });
 
 // ═══════════════════════════════════════════════════════════════════
