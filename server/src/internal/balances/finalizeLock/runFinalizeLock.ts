@@ -2,8 +2,8 @@ import type { FinalizeLockParamsV0 } from "@autumn/shared";
 import { withRedisFailOpen } from "@/external/redis/utils/withRedisFailOpen.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { fetchLockReceipt } from "@/internal/balances/utils/lock/fetchLockReceipt.js";
-import { isFullSubjectRolloutEnabled } from "@/internal/misc/rollouts/fullSubjectRolloutUtils.js";
-import { addToExtraLogs } from "@/utils/logging/addToExtraLogs.js";
+import { releaseLockClaimMarker } from "@/internal/balances/utils/lockV2/releaseLockClaimMarker.js";
+import { queueFinalizeLock } from "./queueFinalizeLock.js";
 import { runFinalizeLockV2 } from "./runFinalizeLockV2.js";
 
 type RunFinalizeLockArgs = {
@@ -12,23 +12,30 @@ type RunFinalizeLockArgs = {
 };
 
 export const runFinalizeLock = async (args: RunFinalizeLockArgs) => {
-	if (isFullSubjectRolloutEnabled({ ctx: args.ctx })) {
-	}
-
 	return withRedisFailOpen({
 		source: "runFinalizeLock",
 		run: () => runFinalizeLockInner(args),
-		fallback: () => {
-			addToExtraLogs({
+		fallback: async (error) => {
+			// The dying attempt may have claimed the receipt; release so the
+			// queued replay can reclaim.
+			await releaseLockClaimMarker({
 				ctx: args.ctx,
-				extras: { finalizeLockFailedOpen: true },
+				lockId: args.params.lock_id,
 			});
-			return { success: true };
+			const queuedResponse = await queueFinalizeLock({
+				ctx: args.ctx,
+				params: args.params,
+			});
+			if (queuedResponse) return queuedResponse;
+			throw error;
 		},
 	});
 };
 
-const runFinalizeLockInner = async ({ ctx, params }: RunFinalizeLockArgs) => {
+export const runFinalizeLockInner = async ({
+	ctx,
+	params,
+}: RunFinalizeLockArgs) => {
 	const fetchedReceipt = await fetchLockReceipt({
 		ctx,
 		lockId: params.lock_id,

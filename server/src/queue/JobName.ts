@@ -40,6 +40,9 @@ export enum JobName {
 	/** Replays failed early-acked Stripe webhooks from the dedicated queue */
 	StripeWebhookReplay = "stripe-webhook-replay",
 
+	/** Queued finalize-lock replay when Redis was unavailable at finalize time */
+	FinalizeLock = "finalize-lock",
+
 	// EventBridge scheduled jobs
 	ExpireLockReceipt = "expire-lock-receipt",
 }
