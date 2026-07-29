@@ -13,6 +13,9 @@ const ctx = contexts.create({ features });
 const ambient = { orgId: "org_test", env: "live" };
 const RELEVANT_STATUS_PARAMS = ["active", "past_due", "scheduled"];
 
+/** Residual WHERE once the source consumed the whole plan quantifier. */
+const AMBIENT_ONLY_WHERE = "c.org_id = ? AND c.env = ? AND TRUE";
+
 const normalize = (sql: string) =>
 	sql.replace(/\s+/g, " ").replace(/\(\s+/g, "(").replace(/\s+\)/g, ")").trim();
 
@@ -23,6 +26,8 @@ const buildCandidate = (filter: CustomerFilter) =>
 		ambient,
 	});
 
+/** Unconsumed paths must keep the exact fallback WHERE (source is narrowing
+ * only, the WHERE re-proves everything). */
 const expectFallbackWhereParity = (filter: CustomerFilter) => {
 	const candidate = buildCandidate(filter);
 	const fallback = compileFilter({
@@ -37,14 +42,13 @@ const expectFallbackWhereParity = (filter: CustomerFilter) => {
 };
 
 describe("customer filter planner", () => {
-	test("plan.plan_id eq uses a products-driven candidate source", () => {
-		const candidate = expectFallbackWhereParity({
-			plan: { plan_id: "enterprise" },
-		});
+	test("plan.plan_id eq consumes the quantifier into the source", () => {
+		const candidate = buildCandidate({ plan: { plan_id: "enterprise" } });
 
 		expect(candidate.accessPath).toEqual({
 			kind: "planned",
 			id: "plan.plan_id",
+			consumed: true,
 		});
 		expect(normalize(candidate.source.sql)).toBe(
 			normalize(`
@@ -69,16 +73,19 @@ describe("customer filter planner", () => {
 			"org_test",
 			"live",
 		]);
+		expect(normalize(candidate.where.sql)).toBe(AMBIENT_ONLY_WHERE);
+		expect(candidate.where.params).toEqual(["org_test", "live"]);
 	});
 
-	test("plan.plan_id in uses the same candidate path", () => {
-		const candidate = expectFallbackWhereParity({
+	test("plan.plan_id in consumes via the same candidate path", () => {
+		const candidate = buildCandidate({
 			plan: { plan_id: { $in: ["enterprise", "pro"] } },
 		});
 
 		expect(candidate.accessPath).toEqual({
 			kind: "planned",
 			id: "plan.plan_id",
+			consumed: true,
 		});
 		expect(normalize(candidate.source.sql)).toContain("p.id IN (?, ?)");
 		expect(candidate.source.params).toEqual([
@@ -90,6 +97,118 @@ describe("customer filter planner", () => {
 			"org_test",
 			"live",
 		]);
+		expect(normalize(candidate.where.sql)).toBe(AMBIENT_ONLY_WHERE);
+	});
+
+	test("plan_id + version consumes version into the products CTE", () => {
+		const candidate = buildCandidate({
+			plan: { plan_id: "enterprise", version: 2 },
+		});
+
+		expect(candidate.accessPath).toEqual({
+			kind: "planned",
+			id: "plan.plan_id",
+			consumed: true,
+		});
+		expect(normalize(candidate.source.sql)).toContain(
+			"AND p.id = ? AND p.version = ?",
+		);
+		expect(candidate.source.params).toEqual([
+			"org_test",
+			"live",
+			"enterprise",
+			2,
+			...RELEVANT_STATUS_PARAMS,
+			"org_test",
+			"live",
+		]);
+		expect(normalize(candidate.where.sql)).toBe(AMBIENT_ONLY_WHERE);
+	});
+
+	test("plan_id + custom consumes is_custom onto the cp join", () => {
+		const candidate = buildCandidate({
+			plan: { plan_id: "enterprise", custom: false },
+		});
+
+		expect(candidate.accessPath).toEqual({
+			kind: "planned",
+			id: "plan.plan_id",
+			consumed: true,
+		});
+		expect(normalize(candidate.source.sql)).toContain(
+			"WHERE cp.status IN (?, ?, ?) AND cp.is_custom = ?",
+		);
+		expect(candidate.source.params).toEqual([
+			"org_test",
+			"live",
+			"enterprise",
+			...RELEVANT_STATUS_PARAMS,
+			false,
+			"org_test",
+			"live",
+		]);
+		expect(normalize(candidate.where.sql)).toBe(AMBIENT_ONLY_WHERE);
+	});
+
+	test("plan_id + version + addon + custom consumes all simple leaves", () => {
+		const candidate = buildCandidate({
+			plan: { plan_id: "enterprise", version: 2, addon: false, custom: false },
+		});
+
+		expect(candidate.accessPath).toEqual({
+			kind: "planned",
+			id: "plan.plan_id",
+			consumed: true,
+		});
+		expect(normalize(candidate.source.sql)).toContain(
+			"AND p.id = ? AND p.version = ? AND p.is_add_on = ?",
+		);
+		expect(normalize(candidate.source.sql)).toContain(
+			"WHERE cp.status IN (?, ?, ?) AND cp.is_custom = ?",
+		);
+		expect(candidate.source.params).toEqual([
+			"org_test",
+			"live",
+			"enterprise",
+			2,
+			false,
+			...RELEVANT_STATUS_PARAMS,
+			false,
+			"org_test",
+			"live",
+		]);
+		expect(normalize(candidate.where.sql)).toBe(AMBIENT_ONLY_WHERE);
+	});
+
+	test("consumed plan quantifier keeps sibling customer predicates residual", () => {
+		const candidate = buildCandidate({
+			customer_id: "cus_123",
+			plan: { plan_id: "enterprise" },
+		});
+
+		expect(candidate.accessPath).toEqual({
+			kind: "planned",
+			id: "plan.plan_id",
+			consumed: true,
+		});
+		expect(normalize(candidate.where.sql)).toBe(
+			"c.org_id = ? AND c.env = ? AND (c.id = ?)",
+		);
+		expect(candidate.where.params).toEqual(["org_test", "live", "cus_123"]);
+		expect(normalize(candidate.where.sql)).not.toContain("customer_products");
+	});
+
+	test("non-consumable version op keeps the full fallback WHERE", () => {
+		const candidate = expectFallbackWhereParity({
+			plan: { plan_id: "enterprise", version: { $gte: 2 } },
+		});
+
+		expect(candidate.accessPath).toEqual({
+			kind: "planned",
+			id: "plan.plan_id",
+			consumed: false,
+		});
+		expect(normalize(candidate.source.sql)).not.toContain("p.version");
 	});
 
 	test("compound filters use plan_id as a candidate and keep fallback semantics", () => {
@@ -103,60 +222,10 @@ describe("customer filter planner", () => {
 		expect(candidate.accessPath).toEqual({
 			kind: "planned",
 			id: "plan.plan_id",
+			consumed: false,
 		});
 		expect(normalize(candidate.source.sql)).toContain("p.id = ?");
 		expect(normalize(candidate.where.sql)).toContain("e.internal_feature_id = ?");
-	});
-
-	test("plan_id + version keeps version as a residual fallback predicate", () => {
-		const candidate = expectFallbackWhereParity({
-			plan: {
-				plan_id: "enterprise",
-				version: 2,
-			},
-		});
-
-		expect(candidate.accessPath).toEqual({
-			kind: "planned",
-			id: "plan.plan_id",
-		});
-		expect(normalize(candidate.source.sql)).toContain("p.id = ?");
-		expect(normalize(candidate.source.sql)).not.toContain("p.version = ?");
-		expect(normalize(candidate.where.sql)).toContain(
-			"(p.id = ? AND p.version = ?)",
-		);
-		expect(candidate.where.params).toEqual([
-			"org_test",
-			"live",
-			...RELEVANT_STATUS_PARAMS,
-			"enterprise",
-			2,
-		]);
-	});
-
-	test("plan_id + custom keeps customer-product custom state as a residual predicate", () => {
-		const candidate = expectFallbackWhereParity({
-			plan: {
-				plan_id: "enterprise",
-				custom: false,
-			},
-		});
-
-		expect(candidate.accessPath).toEqual({
-			kind: "planned",
-			id: "plan.plan_id",
-		});
-		expect(normalize(candidate.source.sql)).not.toContain("cp.is_custom = ?");
-		expect(normalize(candidate.where.sql)).toContain(
-			"(p.id = ? AND cp.is_custom = ?)",
-		);
-		expect(candidate.where.params).toEqual([
-			"org_test",
-			"live",
-			...RELEVANT_STATUS_PARAMS,
-			"enterprise",
-			false,
-		]);
 	});
 
 	test("plan_id + price keeps base-price existence as a residual predicate", () => {
@@ -170,6 +239,7 @@ describe("customer filter planner", () => {
 		expect(candidate.accessPath).toEqual({
 			kind: "planned",
 			id: "plan.plan_id",
+			consumed: false,
 		});
 		expect(normalize(candidate.source.sql)).not.toContain("base_cpr.id");
 		expect(normalize(candidate.where.sql)).toContain("base_cpr.id");
@@ -188,6 +258,7 @@ describe("customer filter planner", () => {
 		expect(candidate.accessPath).toEqual({
 			kind: "planned",
 			id: "plan.plan_id",
+			consumed: false,
 		});
 		expect(normalize(candidate.source.sql)).not.toContain("customer_prices");
 		expect(normalize(candidate.where.sql)).toContain("customer_prices cpr");
@@ -207,6 +278,7 @@ describe("customer filter planner", () => {
 		expect(candidate.accessPath).toEqual({
 			kind: "planned",
 			id: "plan.plan_id",
+			consumed: false,
 		});
 		expect(normalize(candidate.source.sql)).not.toContain("e.rollover");
 		expect(normalize(candidate.where.sql)).toContain("e.rollover IS NOT NULL");

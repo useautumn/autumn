@@ -5,6 +5,8 @@ type CursorState = {
 	stack: string[];
 };
 
+export type CursorPaginationState = ReturnType<typeof useCursorPagination>;
+
 export function useCursorPagination({
 	pageSize,
 	resetKey = "",

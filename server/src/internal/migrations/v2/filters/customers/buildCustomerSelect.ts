@@ -1,6 +1,14 @@
-import type { CustomerFilter, MigrationItemRunStatus } from "@autumn/shared";
-import type { ResolutionContext } from "@autumn/shared/api/migrations/compiler/filterToIr/resolutionContext.js";
-import { buildCustomerCandidateQuery } from "@autumn/shared/api/migrations/filters/planner/buildCustomerCandidateQuery.js";
+import {
+	buildCustomerCandidateQuery,
+	composeCustomerCount,
+	composeCustomerPage,
+	composeCustomerPreviewCount,
+	composeCustomerPreviewPage,
+	type CustomerFilter,
+	type CustomerPagePredicate,
+	type MigrationItemRunStatus,
+	type ResolutionContext,
+} from "@autumn/shared";
 import { type SQL, sql } from "drizzle-orm";
 import type { CustomerListFilters } from "@/internal/customers/customerListFilters.js";
 import {
@@ -9,7 +17,10 @@ import {
 	parseDashboardStatusFilter,
 	parseDashboardVersionFilter,
 } from "@/internal/customers/getFullCusQuery.js";
-import { rawWithParamsToDrizzle } from "../rawWithParamsToDrizzle.js";
+import {
+	drizzleToRawWithParams,
+	rawWithParamsToDrizzle,
+} from "../rawWithParamsToDrizzle.js";
 
 export type IncludeProcessed = {
 	migrationInternalId: string;
@@ -67,36 +78,74 @@ export type CustomerCheckpointExclusion = {
 	excludedStatuses: MigrationItemRunStatus[];
 };
 
+/** Single source of truth for the checkpoint exclusion predicate. The paged
+ * composer correlates it on the walk key; legacy queries on c.internal_id. */
+const buildCheckpointPredicateSql = (
+	checkpoint: CustomerCheckpointExclusion,
+	keyColumn: string,
+): { sql: string; params: unknown[] } => {
+	const params: unknown[] = [checkpoint.migrationInternalId];
+	let dryRunScope = "AND mir.dry_run = false";
+	if (checkpoint.dryRun) {
+		dryRunScope =
+			"AND (mir.dry_run = false OR (mir.dry_run = true AND mir.migration_run_id = ?))";
+		params.push(checkpoint.migrationRunId);
+	}
+	const statusPlaceholders = checkpoint.excludedStatuses
+		.map(() => "?")
+		.join(", ");
+	params.push(...checkpoint.excludedStatuses);
+
+	return {
+		sql: [
+			"NOT EXISTS (SELECT 1 FROM migration_item_runs mir",
+			"WHERE mir.migration_internal_id = ?",
+			dryRunScope,
+			"AND mir.item_kind = 'customer'",
+			`AND mir.item_id = ${keyColumn}`,
+			`AND mir.status IN (${statusPlaceholders}))`,
+		].join(" "),
+		params,
+	};
+};
+
 const buildCheckpointWhere = (
 	checkpoint: CustomerCheckpointExclusion | undefined,
 ): SQL => {
 	if (!checkpoint || checkpoint.excludedStatuses.length === 0) return sql``;
+	return sql`AND ${rawWithParamsToDrizzle(
+		buildCheckpointPredicateSql(checkpoint, "c.internal_id"),
+	)}`;
+};
 
-	const checkpointScope = checkpoint.dryRun
-		? sql`AND (
-				mir.dry_run = false
-				OR (
-					mir.dry_run = true
-					AND mir.migration_run_id = ${checkpoint.migrationRunId}
-				)
-			)`
-		: sql`AND mir.dry_run = false`;
-	const statuses = sql.join(
-		checkpoint.excludedStatuses.map((status) => sql`${status}`),
-		sql`, `,
+/** Caller predicates for the paged/count composers: checkpoint (sinks onto
+ * the walk key) + dashboard search/list filters (need the customer row). */
+const buildPagePredicates = ({
+	checkpoint,
+	orgId,
+	env,
+	search,
+	customerFilters,
+}: {
+	checkpoint?: CustomerCheckpointExclusion;
+	orgId: string;
+	env: string;
+	search?: string;
+	customerFilters?: CustomerListFilters;
+}): CustomerPagePredicate[] => {
+	const predicates: CustomerPagePredicate[] = [];
+	if (checkpoint && checkpoint.excludedStatuses.length > 0) {
+		predicates.push({
+			build: (keyColumn) => buildCheckpointPredicateSql(checkpoint, keyColumn),
+		});
+	}
+	const listWhere = drizzleToRawWithParams(
+		sql`TRUE ${buildCustomerListWhere({ orgId, env, search, customerFilters })}`,
 	);
-
-	return sql`
-		AND NOT EXISTS (
-			SELECT 1
-			FROM migration_item_runs mir
-			WHERE mir.migration_internal_id = ${checkpoint.migrationInternalId}
-				${checkpointScope}
-				AND mir.item_kind = 'customer'
-				AND mir.item_id = c.internal_id
-				AND mir.status IN (${statuses})
-		)
-	`;
+	if (listWhere.sql.trim() !== "TRUE") {
+		predicates.push({ needsCustomerAlias: true, build: () => listWhere });
+	}
+	return predicates;
 };
 
 const buildCustomerListWhere = ({
@@ -309,18 +358,35 @@ export const buildCustomerSelect = ({
 	limit?: number;
 	afterInternalId?: string;
 }): SQL => {
+	if (limit !== undefined) {
+		return rawWithParamsToDrizzle(
+			composeCustomerPage({
+				filter,
+				ctx,
+				ambient: { orgId, env },
+				limit,
+				cursor: afterInternalId || undefined,
+				predicates: buildPagePredicates({
+					checkpoint,
+					orgId,
+					env,
+					search,
+					customerFilters,
+				}),
+			}),
+		);
+	}
 	const candidate = compileCustomerCandidate({ orgId, env, filter, ctx });
-	const limitClause = limit !== undefined ? sql`LIMIT ${limit}` : sql``;
 	return sql`
 		SELECT c.internal_id, c.id, c.name, c.email
 		FROM ${candidate.source}
 		WHERE (${candidate.where}) ${buildCommonWhere({ checkpoint, orgId, env, search, customerFilters, afterInternalId })}
 		ORDER BY c.internal_id DESC
-		${limitClause}
 	`;
 };
 
-/** COUNT(*) applying the same filter. */
+/** COUNT(*) applying the same filter. The compiler picks the aggregation
+ * access path (cp-only vs batch-hash). */
 export const buildCustomerCount = ({
 	orgId,
 	env,
@@ -329,36 +395,29 @@ export const buildCustomerCount = ({
 	checkpoint,
 	search,
 	customerFilters,
-}: CustomerQueryArgs): SQL => {
-	const candidate = compileCustomerCandidate({ orgId, env, filter, ctx });
-	return sql`
-		SELECT COUNT(*)::bigint AS count
-		FROM ${candidate.source}
-		WHERE (${candidate.where}) ${buildCommonWhere({ checkpoint, orgId, env, search, customerFilters })}
-	`;
-};
+}: CustomerQueryArgs): SQL =>
+	rawWithParamsToDrizzle(
+		composeCustomerCount({
+			filter,
+			ctx,
+			ambient: { orgId, env },
+			predicates: buildPagePredicates({
+				checkpoint,
+				orgId,
+				env,
+				search,
+				customerFilters,
+			}),
+		}),
+	);
 
 export const buildLimitedCustomerCount = ({
 	limit,
 	...args
-}: CustomerQueryArgs & { limit: number }): SQL => {
-	const candidate = compileCustomerCandidate(args);
-	return sql`
-		SELECT COUNT(*)::bigint AS count
-		FROM (
-			SELECT 1
-			FROM ${candidate.source}
-			WHERE (${candidate.where}) ${buildCommonWhere({
-				checkpoint: args.checkpoint,
-				orgId: args.orgId,
-				env: args.env,
-				search: args.search,
-				customerFilters: args.customerFilters,
-			})}
-			LIMIT ${limit}
-		) limited
-	`;
-};
+}: CustomerQueryArgs & { limit: number }): SQL => sql`
+	SELECT COUNT(*)::bigint AS count
+	FROM (${buildCustomerSelect({ ...args, limit })}) limited
+`;
 
 // ─── Preview-only: filter set ∪ already-processed set ────────────────
 // The live view surfaces customers an in-flight migration already ran for,
@@ -387,10 +446,32 @@ export const buildProcessedPreviewSelect = ({
 	limit?: number;
 	afterInternalId?: string;
 }): SQL => {
+	const mode = getExecutionFilterMode(includeProcessed);
+	if (mode === "all" && limit !== undefined) {
+		return rawWithParamsToDrizzle(
+			composeCustomerPreviewPage({
+				filter,
+				ctx,
+				ambient: { orgId, env },
+				processed: {
+					migrationInternalId: includeProcessed.migrationInternalId,
+				},
+				limit,
+				cursor: afterInternalId || undefined,
+				predicates: buildPagePredicates({
+					checkpoint,
+					orgId,
+					env,
+					search,
+					customerFilters,
+				}),
+			}),
+		);
+	}
+
 	const candidate = compileCustomerCandidate({ orgId, env, filter, ctx });
 	const processed = buildProcessedIn(includeProcessed);
 	const limitClause = limit !== undefined ? sql`LIMIT ${limit}` : sql``;
-	const mode = getExecutionFilterMode(includeProcessed);
 
 	if (mode === "explicit_only") {
 		return sql`
@@ -438,9 +519,29 @@ export const buildProcessedPreviewCount = ({
 	customerFilters,
 	includeProcessed,
 }: ProcessedPreviewArgs): SQL => {
+	const mode = getExecutionFilterMode(includeProcessed);
+	if (mode === "all") {
+		return rawWithParamsToDrizzle(
+			composeCustomerPreviewCount({
+				filter,
+				ctx,
+				ambient: { orgId, env },
+				processed: {
+					migrationInternalId: includeProcessed.migrationInternalId,
+				},
+				predicates: buildPagePredicates({
+					checkpoint,
+					orgId,
+					env,
+					search,
+					customerFilters,
+				}),
+			}),
+		);
+	}
+
 	const candidate = compileCustomerCandidate({ orgId, env, filter, ctx });
 	const processed = buildProcessedIn(includeProcessed);
-	const mode = getExecutionFilterMode(includeProcessed);
 
 	if (mode === "explicit_only") {
 		return sql`

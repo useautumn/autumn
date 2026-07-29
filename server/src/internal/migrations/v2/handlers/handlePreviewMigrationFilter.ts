@@ -169,11 +169,21 @@ export const handlePreviewMigrationFilter = createRoute({
 			itemRuns.map((run) => [run.item_id, run]),
 		);
 
-		const grouped = groupByCustomer(enriched).map((customer) => ({
-			...customer,
-			migration_item_run:
-				itemRunsByCustomer.get(customer.internal_id as string) ?? null,
-		}));
+		// enrichCustomers returns join order — restore the page's cursor order.
+		const pageOrder = new Map(
+			pageRows.map((row, index) => [row.internal_id, index]),
+		);
+		const grouped = groupByCustomer(enriched)
+			.sort(
+				(a, b) =>
+					(pageOrder.get(a.internal_id as string) ?? 0) -
+					(pageOrder.get(b.internal_id as string) ?? 0),
+			)
+			.map((customer) => ({
+				...customer,
+				migration_item_run:
+					itemRunsByCustomer.get(customer.internal_id as string) ?? null,
+			}));
 
 		return c.json({
 			count,
