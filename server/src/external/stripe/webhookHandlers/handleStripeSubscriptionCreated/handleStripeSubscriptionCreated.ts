@@ -13,15 +13,15 @@ export const handleStripeSubscriptionCreated = async ({
 		await setupStripeSubscriptionCreatedContext({ ctx });
 	if (!subscriptionCreatedContext) return;
 
-	await upsertSubscriptionRow({
-		ctx,
-		subscription: subscriptionCreatedContext.subscription,
-	});
-
 	await linkScheduledCustomerProductsToSubscription({
 		ctx,
 		subscription: subscriptionCreatedContext.subscription,
 	});
 
 	await autoSyncFromSubscriptionWithLock({ ctx, subscriptionCreatedContext });
+
+	await upsertSubscriptionRow({
+		ctx,
+		subscription: subscriptionCreatedContext.subscription,
+	});
 };
