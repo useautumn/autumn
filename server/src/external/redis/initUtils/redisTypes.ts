@@ -2,88 +2,6 @@ import "ioredis";
 
 declare module "ioredis" {
 	interface RedisCommander {
-		batchDeduction(
-			requestsJson: string,
-			orgId: string,
-			env: string,
-			customerId: string,
-			adjustGrantedBalance?: string,
-		): Promise<string>;
-		getCustomer(
-			cacheCustomerVersion: string,
-			orgId: string,
-			env: string,
-			customerId: string,
-			skipEntityMerge: string,
-		): Promise<string>;
-		setCustomer(
-			customerData: string,
-			orgId: string,
-			env: string,
-			customerId: string,
-			fetchTimeMs: string,
-		): Promise<string>;
-		setEntitiesBatch(
-			entityBatch: string,
-			orgId: string,
-			env: string,
-		): Promise<string>;
-		getEntity(
-			cacheCustomerVersion: string,
-			orgId: string,
-			env: string,
-			customerId: string,
-			entityId: string,
-			skipCustomerMerge: string,
-		): Promise<string>;
-		setSubscriptions(
-			subscriptionsJson: string,
-			scheduledSubscriptionsJson: string,
-			orgId: string,
-			env: string,
-			customerId: string,
-		): Promise<string>;
-		setEntityProducts(
-			subscriptionsJson: string,
-			scheduledSubscriptionsJson: string,
-			orgId: string,
-			env: string,
-			customerId: string,
-			entityId: string,
-		): Promise<string>;
-		setInvoices(
-			invoicesJson: string,
-			orgId: string,
-			env: string,
-			customerId: string,
-		): Promise<string>;
-		setCustomerDetails(
-			updatesJson: string,
-			orgId: string,
-			env: string,
-			customerId: string,
-		): Promise<string>;
-		setGrantedBalance(
-			orgId: string,
-			env: string,
-			customerId: string,
-			customerBalancesJson: string,
-			entityBatchJson: string,
-		): Promise<string>;
-		deleteCustomer(
-			cacheCustomerVersion: string,
-			orgId: string,
-			env: string,
-			customerId: string,
-		): Promise<number>;
-		batchDeleteCustomers(
-			cacheCustomerVersion: string,
-			customersJson: string,
-		): Promise<number>;
-		deductFromCustomerEntitlements(
-			cacheKey: string,
-			paramsJson: string,
-		): Promise<string>;
 		deductFromSubjectBalances(
 			numberOfKeys: number,
 			...keysAndArgs: string[]
@@ -102,24 +20,10 @@ declare module "ioredis" {
 			guardTtl: string,
 			skipGuard: string,
 		): Promise<"SKIPPED" | "DELETED" | "NOT_FOUND">;
-		setFullCustomerCache(
-			guardKey: string,
-			cacheKey: string,
-			pathIndexKey: string,
-			fetchTimeMs: string,
-			cacheTtl: string,
-			serializedData: string,
-			overwrite: string,
-			pathIndexJson: string,
-		): Promise<"STALE_WRITE" | "CACHE_EXISTS" | "OK">;
 		setCachedFullSubject(
 			numKeys: number,
 			...args: string[]
 		): Promise<"OK" | "CACHE_EXISTS" | "STALE_WRITE">;
-		resetCustomerEntitlements(
-			cacheKey: string,
-			paramsJson: string,
-		): Promise<string>;
 		updateCustomerEntitlements(
 			cacheKey: string,
 			paramsJson: string,
@@ -177,6 +81,5 @@ declare module "ioredis" {
 			cacheKey: string,
 			paramsJson: string,
 		): Promise<string>;
-		claimLockReceipt(lockReceiptKey: string): Promise<string | null>;
 	}
 }
