@@ -2,12 +2,35 @@ import {
 	AllowanceType,
 	type FullCusProduct,
 	type FullCustomerEntitlement,
+	isBooleanEntitlement,
 	type PooledBalanceIdentity,
 	PooledBalanceResetMode,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { generateId } from "@/utils/genUtils";
 import type { MutablePooledCustomerEntitlement } from "../types/pooledBalanceComputeTypes";
+
+const getPooledEntitlementConfig = ({
+	isBoolean,
+	unlimited,
+	rollover,
+}: {
+	isBoolean: boolean;
+	unlimited: boolean;
+	rollover: FullCustomerEntitlement["entitlement"]["rollover"];
+}) => {
+	if (isBoolean) {
+		return { allowance: null, allowance_type: null, rollover: null };
+	}
+	if (unlimited) {
+		return {
+			allowance: null,
+			allowance_type: AllowanceType.Unlimited,
+			rollover: null,
+		};
+	}
+	return { allowance: 0, allowance_type: AllowanceType.Fixed, rollover };
+};
 
 export const initPooledBalanceGraph = ({
 	ctx,
@@ -31,18 +54,16 @@ export const initPooledBalanceGraph = ({
 	const entitlementId = generateId("ent");
 	const customerEntitlementId = generateId("cus_ent");
 	const pooledBalanceId = generateId("pool");
-	const pooledEntitlementConfig = identity.unlimited
-		? {
-				allowance: null,
-				allowance_type: AllowanceType.Unlimited,
-				rollover: null,
-			}
-		: {
-				allowance: 0,
-				allowance_type: AllowanceType.Fixed,
-				rollover: contributionCustomerEntitlement.entitlement.rollover,
-			};
+	const isBoolean = isBooleanEntitlement({
+		entitlement: contributionCustomerEntitlement.entitlement,
+	});
+	const pooledEntitlementConfig = getPooledEntitlementConfig({
+		isBoolean,
+		unlimited: identity.unlimited,
+		rollover: contributionCustomerEntitlement.entitlement.rollover,
+	});
 	const resetsViaInvoice =
+		!isBoolean &&
 		!identity.unlimited &&
 		identity.resetMode === PooledBalanceResetMode.Subscription;
 

@@ -10,6 +10,7 @@ type PoolExpectation = {
 	cacheVersion?: number;
 	granted: number;
 	unlimited?: boolean;
+	customerEntitlementUnlimited?: boolean | null;
 	interval: EntInterval;
 	nextResetAt: "present" | null;
 	resetCycleAnchor: "present" | null;
@@ -66,9 +67,13 @@ export const expectPooledBalanceCorrect = async ({
 	expect(state.pools).toHaveLength(poolCount);
 	expect(state.poolCustomerEntitlements).toHaveLength(poolCount);
 	for (const pooledCustomerEntitlement of state.poolCustomerEntitlements) {
+		const customerEntitlementUnlimited =
+			pool.customerEntitlementUnlimited === undefined
+				? (pool.unlimited ?? false)
+				: pool.customerEntitlementUnlimited;
 		expect(pooledCustomerEntitlement).toMatchObject({
 			is_pooled_balance: true,
-			unlimited: pool.unlimited ?? false,
+			unlimited: customerEntitlementUnlimited,
 			customer_product_id: null,
 			balance: pool.balance,
 			adjustment: pool.adjustment,

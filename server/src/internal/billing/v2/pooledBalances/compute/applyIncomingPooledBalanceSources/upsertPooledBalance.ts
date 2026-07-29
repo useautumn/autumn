@@ -2,6 +2,7 @@ import {
 	addSafe,
 	type FullCusProduct,
 	type FullCustomerEntitlement,
+	isBooleanEntitlement,
 	type PooledBalanceIdentity,
 	pooledBalanceIdentityToKey,
 } from "@autumn/shared";
@@ -41,11 +42,17 @@ export const upsertPooledBalance = ({
 		computeContext.pooledCustomerEntitlementByIdentity.get(
 			pooledBalanceIdentityToKey({ identity }),
 		);
+	const tracksBalance =
+		!identity.unlimited &&
+		!isBooleanEntitlement({
+			entitlement: contributionCustomerEntitlement.entitlement,
+		});
 
-	let balanceDelta = contributionCustomerEntitlement.balance ?? 0;
-	if (identity.unlimited) {
-		balanceDelta = 0;
-	} else if (
+	let balanceDelta = tracksBalance
+		? (contributionCustomerEntitlement.balance ?? 0)
+		: 0;
+	if (
+		tracksBalance &&
 		existingPooledCustomerEntitlement &&
 		computeContext.pooledBalanceIdsWithRemovedContributions.has(
 			existingPooledCustomerEntitlement.pooled_balance.id,
@@ -70,7 +77,7 @@ export const upsertPooledBalance = ({
 			computeContext,
 			pooledCustomerEntitlement: insertedPooledCustomerEntitlement,
 		});
-		if (!identity.unlimited) {
+		if (tracksBalance) {
 			carrySourceRolloversToPool({
 				pooledBalancePlan: computeContext.plan,
 				contributionCustomerEntitlement,
@@ -97,7 +104,7 @@ export const upsertPooledBalance = ({
 			}),
 		});
 	}
-	if (!identity.unlimited) {
+	if (tracksBalance) {
 		carrySourceRolloversToPool({
 			pooledBalancePlan: computeContext.plan,
 			contributionCustomerEntitlement,

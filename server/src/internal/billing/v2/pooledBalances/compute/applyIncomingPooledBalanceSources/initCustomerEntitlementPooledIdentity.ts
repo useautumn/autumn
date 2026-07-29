@@ -1,6 +1,7 @@
 import {
 	EntInterval,
 	type FullCustomerEntitlement,
+	isBooleanEntitlement,
 	isUnlimitedEntitlement,
 	type PooledBalanceIdentity,
 	rolloverConfigToSignature,
@@ -25,6 +26,14 @@ export const initCustomerEntitlementPooledIdentity = ({
 	const unlimited = isUnlimitedEntitlement({
 		entitlement: customerEntitlement.entitlement,
 	});
+	const tracksBalance =
+		!unlimited &&
+		!isBooleanEntitlement({
+			entitlement: customerEntitlement.entitlement,
+		});
+	const rollover = tracksBalance
+		? customerEntitlement.entitlement.rollover
+		: null;
 
 	return {
 		internalFeatureId: customerEntitlement.internal_feature_id,
@@ -35,10 +44,6 @@ export const initCustomerEntitlementPooledIdentity = ({
 		resetMode: lifecycle.resetMode,
 		stripeSubscriptionId: lifecycle.stripeSubscriptionId,
 		customerLicenseLinkId: lifecycle.customerLicenseLinkId,
-		rolloverSignature: unlimited
-			? "none"
-			: rolloverConfigToSignature({
-					rollover: customerEntitlement.entitlement.rollover,
-				}),
+		rolloverSignature: rolloverConfigToSignature({ rollover }),
 	};
 };
