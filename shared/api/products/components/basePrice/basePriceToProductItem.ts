@@ -1,13 +1,13 @@
 import { RecaseError } from "@api/errors/base/RecaseError";
 import { ProductErrorCode } from "@api/errors/codes/productErrCodes";
 import type {
-	BasePrice,
-	BasePriceParams,
+    BasePrice,
+    BasePriceParams,
 } from "@api/products/components/basePrice/basePrice";
 import { BillingInterval } from "@models/productModels/intervals/billingInterval";
 import {
-	type ProductItem,
-	ProductItemType,
+    type ProductItem,
+    ProductItemType,
 } from "@models/productV2Models/productItemModels/productItemModels";
 import { getProductItemDisplay } from "@utils/productDisplayUtils";
 import { billingToItemInterval } from "@utils/productV2Utils/productItemUtils/itemIntervalUtils";

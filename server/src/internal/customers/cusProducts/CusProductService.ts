@@ -545,6 +545,20 @@ export class CusProductService {
 			.returning();
 	}
 
+	static async deleteByIds({
+		ctx,
+		cusProductIds,
+	}: {
+		ctx: RepoContext;
+		cusProductIds: string[];
+	}) {
+		if (cusProductIds.length === 0) return [];
+		return await ctx.db
+			.delete(customerProducts)
+			.where(inArray(customerProducts.id, cusProductIds))
+			.returning();
+	}
+
 	static async getByFingerprint({
 		db,
 		productId,
