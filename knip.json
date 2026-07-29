@@ -75,6 +75,7 @@
 				"app/**/*.{ts,tsx,mdx}",
 				"components/**/*.{ts,tsx}",
 				"content/**/*.mdx",
+				"scripts/**/*.mjs",
 				"*.mjs"
 			],
 			"project": ["**/*.{ts,tsx,mdx,mjs}"]

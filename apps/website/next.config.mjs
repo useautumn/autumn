@@ -1,6 +1,13 @@
+import { join } from "node:path";
 import createMDX from "@next/mdx";
 
 const isProd = process.env.NODE_ENV === "production";
+
+// Stray ~/package.json + ~/pnpm-lock.yaml make Next infer $HOME as the
+// workspace root, so its watcher/file-tracing crawls the entire home dir
+// (tens of GB of RAM). Pin to the monorepo root (apps/website -> ../..),
+// which holds the hoisted node_modules the app symlinks into.
+const monorepoRoot = join(import.meta.dirname, "..", "..");
 
 const rehypePrettyCodeOptions = {
   theme: "github-dark-dimmed",
@@ -11,9 +18,13 @@ const rehypePrettyCodeOptions = {
 const nextConfig = {
   pageExtensions: ["ts", "tsx", "md", "mdx"],
   allowedDevOrigins: ["*.ngrok-free.dev"],
+  outputFileTracingRoot: monorepoRoot,
+  turbopack: {
+    root: monorepoRoot,
+  },
   experimental: {
     optimizePackageImports: ["motion", "gsap", "@gsap/react"],
-    optimizeCss: true,
+    optimizeCss: isProd,
   },
   images: {
     // Serve AVIF to supporting browsers (better compression than WebP),

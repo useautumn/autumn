@@ -13,7 +13,7 @@ import { getGsap } from "@/lib/lazyGsap";
 // viewports, so keep it out of the critical path for mobile users entirely.
 const AutumnConfig = dynamic(() => import("./autumn-config"), { ssr: false });
 
-const BADGE_TEXT = "// 100% open source";
+const BADGE_TEXT = "how to build a credit ledger";
 
 const getLoggedInHintCookie = () => {
 	if (typeof window === "undefined") return null;
@@ -27,7 +27,6 @@ const getLoggedInHintCookie = () => {
 
 export default function Hero() {
 	const containerRef = useRef<HTMLDivElement | null>(null);
-	const [displayedText, setDisplayedText] = useState("");
 	const [isLoggedIn, setIsLoggedIn] = useState(false);
 	// Gate the xl-only hero visual (background video + AutumnConfig syntax
 	// highlighter) behind an actual viewport check so mobile never downloads
@@ -46,45 +45,6 @@ export default function Hero() {
 		update();
 		mq.addEventListener("change", update);
 		return () => mq.removeEventListener("change", update);
-	}, []);
-
-	// Badge typewriter
-	useEffect(() => {
-		const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ!@#$%^&*0123456789";
-		let intervalId: ReturnType<typeof setInterval> | null = null;
-		let timeoutId: ReturnType<typeof setTimeout> | null = null;
-
-		const startTypewriter = () => {
-			timeoutId = setTimeout(() => {
-				let iteration = 0;
-				intervalId = setInterval(() => {
-					setDisplayedText(
-						BADGE_TEXT.split("")
-							.map((char, index) => {
-								if (char === " ") return " ";
-								if (index < Math.floor(iteration)) return char;
-								if (index === Math.floor(iteration))
-									return chars[Math.floor(Math.random() * chars.length)];
-								return "";
-							})
-							.join(""),
-					);
-
-					iteration += 0.4;
-
-					if (iteration >= BADGE_TEXT.length) {
-						if (intervalId) clearInterval(intervalId);
-						setDisplayedText(BADGE_TEXT);
-					}
-				}, 30);
-			}, 150);
-		};
-
-		startTypewriter();
-		return () => {
-			if (timeoutId) clearTimeout(timeoutId);
-			if (intervalId) clearInterval(intervalId);
-		};
 	}, []);
 
 	useEffect(() => {
@@ -113,10 +73,39 @@ export default function Hero() {
 
 				// hero-bg is intentionally NOT hidden — it is the LCP element and
 				// must be visible from first paint. The brightness flash still runs.
-				tl.to(".hero-bg", { filter: "brightness(1.6)", duration: 0.125, ease: "power2.in" })
-					.to(".hero-bg", { filter: "brightness(1)", duration: 0.125, ease: "power2.out" })
-					.to(".hero-reveal", { opacity: 1, y: 0, scale: 1, duration: 1.1, stagger: 0.1, ease: "power3.out" }, "-=0.2")
-					.to(".hero-cta", { opacity: 1, scale: 1, duration: 0.3, stagger: 0.06, ease: "back.out(1.5)" }, "-=0.1");
+				tl.to(".hero-bg", {
+					filter: "brightness(1.6)",
+					duration: 0.125,
+					ease: "power2.in",
+				})
+					.to(".hero-bg", {
+						filter: "brightness(1)",
+						duration: 0.125,
+						ease: "power2.out",
+					})
+					.to(
+						".hero-reveal",
+						{
+							opacity: 1,
+							y: 0,
+							scale: 1,
+							duration: 1.1,
+							stagger: 0.1,
+							ease: "power3.out",
+						},
+						"-=0.2",
+					)
+					.to(
+						".hero-cta",
+						{
+							opacity: 1,
+							scale: 1,
+							duration: 0.3,
+							stagger: 0.06,
+							ease: "back.out(1.5)",
+						},
+						"-=0.1",
+					);
 			}, container);
 		});
 
@@ -131,30 +120,48 @@ export default function Hero() {
 			<div className="relative hero-root flex flex-col items-stretch pb-0 mb-0 bg-[#0F0F0F]">
 				<div className="flex justify-between">
 					<div className="flex flex-col gap-6 px-4 xl:px-22.75 py-8 bg-[#0F0F0F] mt-26">
-						<h4 className="hero-reveal lg:opacity-0 relative uppercase font-mono tracking-[-2%] text-[12px] md:text-sm leading-sm text-white md:text-[#FFFFFF99] bg-[#2c2c2d] w-fit p-2 min-h-[30px] md:min-h-[36px] flex items-center">
-							<span className="invisible select-none" aria-hidden="true">
-								{BADGE_TEXT}
+						<Link
+							href="/blog/ai-billing-infrastructure"
+							className="hero-reveal lg:opacity-0 group relative overflow-hidden uppercase font-mono tracking-[-2%] text-[12px] md:text-sm leading-sm text-[#FFFFFF99] hover:text-white border border-[#9564ff4d] hover:border-[#9564ff] bg-[#9564ff14] hover:bg-[#9564ff26] w-fit px-3 min-h-[30px] md:min-h-[36px] flex items-center gap-2.5 transition-colors duration-300"
+						>
+							<span
+								aria-hidden="true"
+								className="pointer-events-none absolute inset-0 opacity-50 transition-opacity duration-300 group-hover:opacity-80"
+								style={{
+									backgroundImage:
+										"radial-gradient(rgba(176,138,255,0.85) 0.4px, transparent 0.4px)",
+									backgroundSize: "1.5px 1.5px",
+								}}
+							/>
+							<span className="relative font-medium text-[#b08aff]">New</span>
+							<span aria-hidden="true" className="relative text-[#9564ff66]">
+								&bull;
 							</span>
-							<span className="absolute inset-0 flex items-center p-2">
-								{displayedText}
+							<span className="relative">{BADGE_TEXT}</span>
+							<span
+								aria-hidden="true"
+								className="relative inline-flex items-center text-[1.05em] leading-none transition-transform duration-300 group-hover:-translate-y-0.5 group-hover:translate-x-0.5"
+							>
+								&#8599;
 							</span>
-						</h4>
+						</Link>
 						<div className="flex flex-col gap-6 w-full px-0 lg:px-0">
-							<h1 className="hero-reveal lg:opacity-0 text-[44px] md:text-[56px] w-full max-w-sm sm:max-w-[480px] md:max-w-xl leading-[44px] tracking-[-5%] md:leading-14 font-sans">
+							<h1 className="hero-reveal lg:opacity-0 text-[44px] md:text-[56px] w-full max-w-sm sm:max-w-[480px] md:max-w-xl leading-[44px] tracking-[-4%] md:leading-14 font-sans">
 								<span className="text-[#FFFFFF99] font-normal">
-									One API for
+									The API for
 								</span>{" "}
-								<span className="text-white block md:inline">plans, usage and AI credits</span>
+								<span className="text-white block md:inline">
+									plans, usage and AI credits
+								</span>
 							</h1>
 							<p className="hero-reveal lg:opacity-0 tracking-[-2%] w-full max-w-xs sm:max-w-[480px] md:max-w-xl text-[#FFFFFF99] md:text-[16px] text-[14px] font-light leading-5 font-sans">
-								Replace your in-house usage tracking, gating and asynchronous billing logic.
-								Autumn gives you a{" "}
+								Replace your in-house usage tracking, gating and asynchronous
+								billing logic. Autumn gives you a{" "}
 								<span className="text-white font-light">
 									flexible source of truth
 								</span>{" "}
 								across self-serve payments and enterprise deals.
 							</p>
-							
 						</div>
 					</div>
 					{/*
