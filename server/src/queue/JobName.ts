@@ -15,9 +15,6 @@ export enum JobName {
 	SendProductsUpdated = "send-products-updated",
 	HandleCustomerCreated = "handle-customer-created",
 
-	SyncBalanceBatch = "sync-balance-batch",
-	SyncBalanceBatchV2 = "sync-balance-batch-v2",
-	SyncBalanceBatchV3 = "sync-balance-batch-v3",
 	SyncBalanceBatchV4 = "sync-balance-batch-v4",
 	/** Signal-only sync: payload identifies the customer; selectors and
 	 *  usage-window snapshots live in the Redis dirty state. */
@@ -42,9 +39,6 @@ export enum JobName {
 
 	/** Replays failed early-acked Stripe webhooks from the dedicated queue */
 	StripeWebhookReplay = "stripe-webhook-replay",
-
-	// Hatchet workflows
-	VerifyCacheConsistency = "verify-cache-consistency",
 
 	// EventBridge scheduled jobs
 	ExpireLockReceipt = "expire-lock-receipt",

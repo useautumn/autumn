@@ -26,8 +26,6 @@ const MOCKED_MODULE_PATHS = [
 	"@/internal/customers/cache/fullSubject/index.js",
 	"@/internal/customers/recovery/queueFailedCustomerCreation.js",
 	"@/internal/customers/actions/ensureStripeCustomerFromCustomerData.js",
-	"@/internal/customers/cusUtils/apiCusUtils/getApiCustomer.js",
-	"@/internal/customers/cusUtils/fullCustomerCacheUtils/getOrCreateCachedFullCustomer.js",
 	"@/internal/customers/cusUtils/getApiCustomerV2/index.js",
 ] as const;
 const realModules = new Map<string, Record<string, unknown>>();
@@ -65,20 +63,6 @@ mock.module(
 	"@/internal/customers/actions/ensureStripeCustomerFromCustomerData.js",
 	() => ({
 		ensureStripeCustomerFromCustomerData: async () => {},
-	}),
-);
-
-mock.module(
-	"@/internal/customers/cusUtils/apiCusUtils/getApiCustomer.js",
-	() => ({
-		getApiCustomer: () => ({ id: "legacy" }),
-	}),
-);
-
-mock.module(
-	"@/internal/customers/cusUtils/fullCustomerCacheUtils/getOrCreateCachedFullCustomer.js",
-	() => ({
-		getOrCreateCachedFullCustomer: async () => ({ id: "legacy" }),
 	}),
 );
 

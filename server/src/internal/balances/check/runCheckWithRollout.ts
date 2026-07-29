@@ -4,9 +4,7 @@ import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import type { CheckData } from "@/internal/api/check/checkTypes/CheckData.js";
 import { getCheckFailOpenFallback } from "@/internal/api/check/checkUtils/getCheckFailOpenFallback.js";
 import { isFullSubjectGateRejection } from "@/internal/customers/repos/getFullSubject/getFullSubjectGate.js";
-import { isFullSubjectRolloutEnabled } from "@/internal/misc/rollouts/fullSubjectRolloutUtils.js";
 import type { CheckDataV2 } from "./checkTypes/CheckDataV2.js";
-import { runCheckLegacyFlow } from "./runCheckLegacyFlow.js";
 import { runCheckV2 } from "./runCheckV2.js";
 import type { RunCheckResult } from "./types.js";
 
@@ -29,10 +27,6 @@ export const runCheckWithRollout = async ({
 				error: new Error("org aggregate rate cap exceeded"),
 			}) as Record<string, unknown>,
 		};
-	}
-
-	if (!isFullSubjectRolloutEnabled({ ctx })) {
-		return runCheckLegacyFlow({ ctx, body, requiredBalance });
 	}
 
 	return withRedisFailOpen<RunCheckResult<CheckData | CheckDataV2>>({

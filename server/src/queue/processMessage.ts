@@ -20,7 +20,6 @@ import { expireLock } from "@/internal/balances/finalizeLock/expireLock.js";
 import { runQueuedTrack } from "@/internal/balances/track/runQueuedTrack.js";
 import { runUpdateBalanceV2 } from "@/internal/balances/updateBalance/v2/updateBalanceV2.js";
 import { refreshEntityAggregateCache } from "@/internal/balances/utils/refreshEntityAggregate/index.js";
-import { syncItemV3 } from "@/internal/balances/utils/sync/syncItemV3.js";
 import { syncItemV4 } from "@/internal/balances/utils/sync/syncItemV4.js";
 import { syncItemV5 } from "@/internal/balances/utils/sync/syncItemV5.js";
 import { grantCheckoutReward } from "@/internal/billing/v2/workflows/grantCheckoutReward/grantCheckoutReward.js";
@@ -64,7 +63,6 @@ export const shouldRetrySqsJobError = ({
 	switch (jobName) {
 		case JobName.CustomerCreationRecovery:
 			return isTransientDbError({ error }) || isTransientRedisError({ error });
-		case JobName.SyncBalanceBatchV3:
 		case JobName.SyncBalanceBatchV4:
 		case JobName.RefreshEntityAggregate:
 			return isTransientDbError({ error });
@@ -249,16 +247,6 @@ export const processMessage = async ({
 				payload: job.data,
 				logger: workerLogger,
 			});
-			return;
-		}
-
-		if (job.name === JobName.SyncBalanceBatchV3) {
-			if (!ctx) {
-				workerLogger.error("No context found for sync balance batch v3 job");
-				return;
-			}
-
-			await syncItemV3({ ctx, payload: job.data });
 			return;
 		}
 

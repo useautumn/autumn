@@ -22,15 +22,6 @@ type GenerateFeatureDisplayPayload = {
 	env: AppEnv;
 };
 
-type VerifyCacheConsistencyPayload = {
-	customerId: string;
-	orgId: string;
-	env: AppEnv;
-	source: string;
-	newCustomerProductId: string;
-	previousFullCustomer: string;
-};
-
 export type GrantCheckoutRewardPayload = {
 	orgId: string;
 	env: AppEnv;
@@ -111,11 +102,6 @@ const workflowRegistry = {
 		jobName: JobName.GenerateFeatureDisplay,
 		runner: "sqs",
 	} as WorkflowConfig<GenerateFeatureDisplayPayload>,
-
-	verifyCacheConsistency: {
-		jobName: JobName.VerifyCacheConsistency,
-		runner: "hatchet",
-	} as WorkflowConfig<VerifyCacheConsistencyPayload>,
 
 	grantCheckoutReward: {
 		jobName: JobName.GrantCheckoutReward,
@@ -218,11 +204,6 @@ export const workflows = {
 		payload: GenerateFeatureDisplayPayload,
 		options?: TriggerOptions,
 	) => triggerWorkflow({ name: "generateFeatureDisplay", payload, options }),
-
-	triggerVerifyCacheConsistency: (
-		payload: VerifyCacheConsistencyPayload,
-		options?: TriggerOptions,
-	) => triggerWorkflow({ name: "verifyCacheConsistency", payload, options }),
 
 	triggerGrantCheckoutReward: (
 		payload: GrantCheckoutRewardPayload,

@@ -10,7 +10,6 @@ import {
 
 const mockState = {
 	shouldUseRedis: true,
-	legacyCalls: [] as Record<string, unknown>[],
 	v2Calls: [] as Record<string, unknown>[],
 	v2Error: null as unknown,
 	warnCalls: [] as unknown[][],
@@ -18,16 +17,6 @@ const mockState = {
 
 mock.module("@/external/redis/initUtils/redisV2Availability.js", () => ({
 	shouldUseRedisV2: () => mockState.shouldUseRedis,
-}));
-
-mock.module("@/internal/balances/check/runCheckLegacyFlow.js", () => ({
-	runCheckLegacyFlow: async (args: Record<string, unknown>) => {
-		mockState.legacyCalls.push(args);
-		return {
-			checkData: { source: "legacy" },
-			response: { allowed: true, source: "legacy" },
-		};
-	},
 }));
 
 mock.module("@/internal/balances/check/runCheckV2.js", () => ({
@@ -47,7 +36,6 @@ import { runCheckWithRollout } from "@/internal/balances/check/runCheckWithRollo
 
 const resetMockState = () => {
 	mockState.shouldUseRedis = true;
-	mockState.legacyCalls = [];
 	mockState.v2Calls = [];
 	mockState.v2Error = null;
 	mockState.warnCalls = [];
@@ -73,24 +61,7 @@ const rolloutCtx = {
 } as never;
 
 describe("runCheckWithRollout", () => {
-	test("uses the legacy flow when the rollout is off", async () => {
-		const result = await runCheckWithRollout({
-			ctx: {
-				rolloutSnapshot: undefined,
-			} as never,
-			body: {} as never,
-			requiredBalance: 1,
-		});
-
-		expect(mockState.legacyCalls).toHaveLength(1);
-		expect(mockState.v2Calls).toHaveLength(0);
-		expect(result).toMatchObject({
-			checkData: { source: "legacy" },
-			response: { source: "legacy" },
-		});
-	});
-
-	test("uses the v2 flow when the full-subject rollout is enabled", async () => {
+	test("uses the v2 flow", async () => {
 		const result = await runCheckWithRollout({
 			ctx: {
 				rolloutSnapshot: {
@@ -106,7 +77,6 @@ describe("runCheckWithRollout", () => {
 			requiredBalance: 1,
 		});
 
-		expect(mockState.legacyCalls).toHaveLength(0);
 		expect(mockState.v2Calls).toHaveLength(1);
 		expect(result).toMatchObject({
 			checkData: { source: "v2" },
