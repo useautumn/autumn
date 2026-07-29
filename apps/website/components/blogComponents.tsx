@@ -3,6 +3,9 @@ import type { ComponentPropsWithoutRef, ElementType, ReactNode } from "react";
 import { CreditBucketsTable } from "./blogComponents/ai-billing-infrastructure/CreditBucketsTable";
 import { CreditsTable } from "./blogComponents/ai-billing-infrastructure/CreditsTable";
 import { LockAndReleaseDiagram } from "./blogComponents/ai-billing-infrastructure/LockAndReleaseDiagram";
+import { HierarchyDiagram } from "./blogComponents/how-mintlify-is-scaling-sales-led-gtm/HierarchyDiagram";
+import { PlanRecordDiagram } from "./blogComponents/how-mintlify-is-scaling-sales-led-gtm/PlanRecordDiagram";
+import { TestimonialQuote } from "./blogComponents/how-mintlify-is-scaling-sales-led-gtm/TestimonialQuote";
 import { ConfigAsCodeSimulator } from "./blogComponents/stop-rebuilding-your-billing-system/ConfigAsCodeSimulator";
 import {
 	ConfigSim,
@@ -52,7 +55,7 @@ export const mdxComponents = {
 					href={href}
 					target="_blank"
 					rel="noopener noreferrer"
-					className="text-[#9564ff] hover:text-[#b08aff] underline underline-offset-2 transition-colors"
+					className="font-normal text-[#9564ff] hover:text-[#b08aff] no-underline hover:underline decoration-[#9564ff]/60 decoration-1 underline-offset-4 transition-colors"
 					{...props}
 				>
 					{children}
@@ -62,7 +65,7 @@ export const mdxComponents = {
 		return (
 			<Link
 				href={href || "#"}
-				className="text-[#9564ff] hover:text-[#b08aff] underline underline-offset-2 transition-colors"
+				className="font-normal text-[#9564ff] hover:text-[#b08aff] no-underline hover:underline decoration-[#9564ff]/60 decoration-1 underline-offset-4 transition-colors"
 				{...props}
 			>
 				{children}
@@ -93,7 +96,7 @@ export const mdxComponents = {
 		...props
 	}: ComponentPropsWithoutRef<"blockquote">) => (
 		<blockquote
-			className="border-l-2 border-[#9564ff] pl-4 italic text-[#FFFFFF99]"
+			className="border-l-2 border-[#9564ff] bg-[#9564ff0d] py-4 pl-4 pr-4 not-italic font-normal text-[#FFFFFF99] [&>p]:my-0 [&>p]:text-[#FFFFFF99] [&>p+p]:mt-3"
 			{...props}
 		>
 			{children}
@@ -129,7 +132,10 @@ export const mdxComponents = {
 	ConfigAsCodeSimulator,
 	ConfigSim,
 	HierarchyFlatSimulator,
+	HierarchyDiagram,
 	HierarchyLayeredSimulator,
+	PlanRecordDiagram,
+	TestimonialQuote,
 	PostgresTablesHero,
 	RelationalDbSimulator,
 	StripeMappingDiagram,

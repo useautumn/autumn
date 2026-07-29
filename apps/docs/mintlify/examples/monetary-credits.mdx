@@ -89,18 +89,6 @@ When your user signs up, create an Autumn customer. This will automatically assi
 
 <CodeGroup>
 
-```jsx React
-import { useCustomer } from "autumn-js/react";
-
-const App = () => {
-  const { data: customer } = useCustomer();
-
-  console.log("Autumn customer:", customer);
-
-  return <h1>Welcome, {customer?.name || "user"}!</h1>;
-};
-```
-
 ```typescript TypeScript
 import { Autumn } from "autumn-js";
 
@@ -153,34 +141,12 @@ The `requiredBalance` parameter will convert the number of messages to credits. 
 
 <CodeGroup>
 
-```jsx React
-import { useCustomer } from "autumn-js/react";
-
-export function CheckBasicMessage() {
-  const { check, refetch } = useCustomer();
-
-  const handleCheckAccess = async () => {
-    const { allowed } = check({ 
-      featureId: "basic_messages", 
-      requiredBalance: 1 
-    });
-
-    if (!allowed) {
-      alert("You've run out of basic message credits");
-    } else {
-      // proceed with sending message
-      await refetch();
-    }
-  };
-}
-```
-
 ```typescript TypeScript
 import { Autumn } from "autumn-js";
 
 const autumn = new Autumn({ secretKey: "am_sk_test_1234" });
 
-const response = await autumn.customers.check({
+const response = await autumn.check({
   customerId: "user_123",
   featureId: "basic_messages",
   requiredBalance: 1,
@@ -197,7 +163,7 @@ from autumn_sdk import Autumn
 
 autumn = Autumn("am_sk_test_1234")
 
-response = await autumn.customers.check(
+response = await autumn.check(
     customer_id="user_123",
     feature_id="basic_messages",
     required_balance=1,
@@ -253,7 +219,7 @@ import { Autumn } from "autumn-js";
 
 const autumn = new Autumn({ secretKey: "am_sk_test_1234" });
 
-await autumn.customers.track({
+await autumn.track({
   customerId: "user_123",
   featureId: "basic_messages",
   value: 2,
@@ -265,7 +231,7 @@ from autumn_sdk import Autumn
 
 autumn = Autumn("am_sk_test_1234")
 
-await autumn.customers.track(
+await autumn.track(
     customer_id="user_123",
     feature_id="basic_messages",
     value=2,
@@ -310,20 +276,6 @@ curl -X POST "https://api.useautumn.com/v1/track" \
 We can prompt the user to upgrade. When they click our "upgrade" button, we can use the `billing.attach` route to get a checkout URL for them to make a payment.
 
 <CodeGroup>
-
-```jsx React
-import { useCustomer } from "autumn-js/react";
-
-export default function UpgradeButton() {
-  const { attach } = useCustomer();
-
-  return (
-    <button onClick={() => attach({ planId: "pro" })}>
-      Upgrade to Pro
-    </button>
-  );
-}
-```
 
 ```typescript TypeScript
 import { Autumn } from "autumn-js";
@@ -371,28 +323,6 @@ curl -X POST "https://api.useautumn.com/v1/attach" \
 When users run low on credits, they can purchase additional credits using our top-up plan. In this example, the user is purchasing 20 USD credits, which will cost them $20.
 
 <CodeGroup>
-
-```jsx React
-import { useCustomer } from "autumn-js/react";
-
-export default function TopUpButton() {
-  const { attach } = useCustomer();
-
-  return (
-    <button
-      onClick={() => attach({
-        planId: "top_up",
-        featureQuantities: [{
-          featureId: "usd_credits",
-          quantity: 20,
-        }],
-      })}
-    >
-      Buy More Credits
-    </button>
-  );
-}
-```
 
 ```typescript TypeScript
 import { Autumn } from "autumn-js";

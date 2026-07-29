@@ -21,45 +21,6 @@ Pass a `customerId` when listing plans and each plan will include a `customerEli
 
 <CodeGroup>
 
-```jsx React expandable
-import { useListPlans, useCustomer } from "autumn-js/react";
-
-const labels = {
-  activate: "Subscribe",
-  upgrade: "Upgrade",
-  downgrade: "Downgrade",
-  purchase: "Purchase",
-};
-
-const getLabel = (eligibility) => {
-
-  if (eligibility?.attachAction === "none") {
-    return eligibility.status === "scheduled" ? "Plan Scheduled" : "Current plan";
-  }
-
-  if (labels[eligibility?.attachAction]) {
-    return labels[eligibility.attachAction];
-  }
-
-  return "Get started";
-};
-
-export default function PricingPage() {
-  const { data: plans } = useListPlans();
-  const { attach } = useCustomer();
-
-  return plans?.map((plan) => (
-    <button
-      key={plan.id}
-      disabled={plan.customerEligibility?.attachAction === "none"}
-      onClick={() => attach({ planId: plan.id, redirectMode: "always" })}
-    >
-      {getLabel(plan.customerEligibility)}
-    </button>
-  ));
-}
-```
-
 ```typescript TypeScript
 import { Autumn } from "autumn-js";
 
@@ -97,29 +58,11 @@ curl -X POST 'https://api.useautumn.com/v1/plans.list' \
 
 </CodeGroup>
 
-<Tip>
-The React `useListPlans` hook automatically includes customer context from `AutumnProvider`, so `customerEligibility` is populated on every plan without extra configuration.
-</Tip>
-
 ## Switching plans
 
 Switching plans uses `billing.attach`. See [Attaching Plans](/documentation/customers/payment-flow) for the full guide.
 
 <CodeGroup>
-
-```jsx React
-import { useCustomer } from "autumn-js/react";
-
-export default function UpgradeButton() {
-  const { attach } = useCustomer();
-
-  return (
-    <button onClick={() => attach({ planId: "pro" })}>
-      Upgrade to Pro
-    </button>
-  );
-}
-```
 
 ```typescript TypeScript
 import { Autumn } from "autumn-js";
@@ -164,18 +107,6 @@ curl -X POST 'https://api.useautumn.com/v1/attach' \
 Cancel a subscription using `billing.update` with a `cancelAction`. See [Subscription Lifecycle](/documentation/customers/subscription-lifecycle#cancellations) for the full guide on immediate vs end-of-cycle cancellations.
 
 <CodeGroup>
-
-```jsx React
-import { useCustomer } from "autumn-js/react";
-
-const { updateSubscription } = useCustomer();
-
-// Cancel at end of billing cycle
-await updateSubscription({ 
-  planId: "pro", 
-  cancelAction: "cancel_end_of_cycle" 
-});
-```
 
 ```typescript TypeScript
 import { Autumn } from "autumn-js";
@@ -223,27 +154,6 @@ If a subscription has a pending cancellation, a scheduled downgrade, or a schedu
 A subscription is pending cancellation when `canceledAt` is not null while the subscription is still `active`.
 
 <CodeGroup>
-
-```jsx React
-import { useCustomer } from "autumn-js/react";
-
-export default function BillingPage() {
-  const { data: customer, updateSubscription } = useCustomer();
-
-  const cancellingSub = customer?.subscriptions.find(
-    (sub) => sub.status === "active" && sub.canceledAt !== null
-  );
-
-  return cancellingSub ? (
-    <button onClick={() => updateSubscription({ 
-      planId: cancellingSub.planId, 
-      cancelAction: "uncancel" 
-    })}>
-      Keep plan
-    </button>
-  ) : null;
-}
-```
 
 ```typescript TypeScript
 import { Autumn } from "autumn-js";
@@ -311,18 +221,6 @@ Display the plan the user is currently on. Users can have multiple active subscr
 - **`purchases`** - One-off plans (e.g., credit top-ups)
 
 <CodeGroup>
-```jsx React
-import { useCustomer } from "autumn-js/react";
-
-const { data: customer } = useCustomer();
-
-const active = customer?.subscriptions.filter(
-  (sub) => sub.status === "active"
-);
-
-console.log(active?.map((sub) => sub.planId).join(", "));
-```
-
 ```typescript TypeScript
 import { Autumn } from "autumn-js";
 
@@ -367,19 +265,6 @@ curl -X POST 'https://api.useautumn.com/v1/customers' \
 Metered features have `granted`, `usage`, and `remaining` fields. Use these to display current usage and remaining balance.
 
 <CodeGroup>
-
-```jsx React
-import { useCustomer } from "autumn-js/react";
-
-const { data: customer, refetch } = useCustomer();
-
-const messages = customer?.balances.messages;
-
-console.log(`${messages?.remaining} / ${messages?.granted}`);
-
-// After tracking usage or changing plans, call refetch() to update balances
-await refetch();
-```
 
 ```typescript TypeScript
 import { Autumn } from "autumn-js";
@@ -429,17 +314,6 @@ Enable the billing portal in your [Stripe settings](https://dashboard.stripe.com
 
 <CodeGroup>
 
-```jsx React
-import { useCustomer } from "autumn-js/react";
-
-const { openCustomerPortal } = useCustomer();
-
-// Opens Stripe billing portal in current tab
-await openCustomerPortal({ 
-  returnUrl: "https://your-app.com/billing" 
-});
-```
-
 ```typescript TypeScript
 import { Autumn } from "autumn-js";
 
@@ -483,18 +357,6 @@ curl -X POST 'https://api.useautumn.com/v1/billing.open_customer_portal' \
 Autumn provides aggregate time series queries for usage data. Pass the response to a charting library like Recharts.
 
 <CodeGroup>
-
-```jsx React
-import { useAggregateEvents } from "autumn-js/react";
-
-const { list, total } = useAggregateEvents({
-  featureId: "messages",
-  range: "30d",
-});
-
-// list: [{ period: 1234567890, values: { messages: 42 } }, ...]
-// total: { messages: { count: 100, sum: 500 } }
-```
 
 ```typescript TypeScript
 import { Autumn } from "autumn-js";

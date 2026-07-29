@@ -104,8 +104,9 @@ export const cusPriceToStripeItemSpec = ({
 		return null;
 	}
 
-	// Attach metadata for correlating Stripe items back to Autumn prices
+	// Correlate Stripe-generated invoice lines back to Autumn billing context.
 	spec.metadata = {
+		autumn_product_id: cusProduct.product.id,
 		autumn_price_id: price.id,
 		autumn_customer_price_id: cusPrice.id,
 		...(spec.metadata ?? {}),

@@ -5,7 +5,7 @@ description: "Hosted checkout pages vs building your own payment flow"
 
 ## Using hosted pages
 
-By default, `billing.attach` returns a `paymentUrl` — just redirect the customer and Autumn handles payment collection, confirmation, and activation.
+Pass `redirectMode: "always"` and `billing.attach` will always return a `paymentUrl` — just redirect the customer and Autumn handles payment collection, confirmation, and activation.
 
 <CodeGroup>
 
@@ -13,23 +13,17 @@ By default, `billing.attach` returns a `paymentUrl` — just redirect the custom
 const response = await autumn.billing.attach({
   customerId: "user_123",
   planId: "pro",
+  redirectMode: "always",
 });
 
 redirect(response.paymentUrl);
-```
-
-```tsx React
-import { useCustomer } from "autumn-js/react";
-
-const { attach } = useCustomer();
-
-await attach({ planId: "pro" });
 ```
 
 ```python Python
 response = await autumn.billing.attach(
     customer_id="user_123",
     plan_id="pro",
+    redirect_mode="always",
 )
 # Redirect to response.payment_url
 ```
@@ -40,7 +34,8 @@ curl -X POST 'https://api.useautumn.com/v1/billing.attach' \
   -H 'Content-Type: application/json' \
   -d '{
     "customer_id": "user_123",
-    "plan_id": "pro"
+    "plan_id": "pro",
+    "redirect_mode": "always"
   }'
 ```
 
@@ -78,14 +73,6 @@ const preview = await autumn.billing.previewAttach({
 // preview.lineItems  — array of charges and credits
 // preview.total      — net amount in cents
 // preview.currency   — e.g. "usd"
-```
-
-```tsx React
-import { useCustomer } from "autumn-js/react";
-
-const { previewAttach } = useCustomer();
-
-const preview = await previewAttach({ planId: "pro" });
 ```
 
 ```python Python
@@ -151,17 +138,6 @@ if (response.paymentUrl) {
 } else {
   showSuccess();
 }
-```
-
-```tsx React
-import { useCustomer } from "autumn-js/react";
-
-const { attach } = useCustomer();
-
-const response = await attach({
-  planId: "pro",
-  redirectMode: "if_required",
-});
 ```
 
 ```python Python

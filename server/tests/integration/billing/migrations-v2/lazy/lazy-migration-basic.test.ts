@@ -41,6 +41,9 @@ import {
 const timeout = (ms: number) =>
 	new Promise((resolve) => setTimeout(resolve, ms));
 
+const migrationIdSuffix = Date.now().toString(36);
+const uniqueMigrationId = (id: string) => `${id}-${migrationIdSuffix}`;
+
 test.concurrent(`${chalk.yellowBright("lazy migration: multiple customers on pro fetch + auto-migrate")}`, async () => {
 	const firstCustomerId = "lazy-basic-first";
 	const secondCustomerId = "lazy-basic-second";
@@ -73,7 +76,7 @@ test.concurrent(`${chalk.yellowBright("lazy migration: multiple customers on pro
 	const { migration, run_id } = await startLazyMigration({
 		autumnV2_2,
 		ctx,
-		id: `${firstCustomerId}-mig`,
+		id: uniqueMigrationId(`${firstCustomerId}-mig`),
 		planId: plan.id,
 	});
 
@@ -142,7 +145,7 @@ test.concurrent(`${chalk.yellowBright("lazy migration: non-matching customer is 
 	const { migration, run_id } = await startLazyMigration({
 		autumnV2_2,
 		ctx,
-		id: `${matchingCustomerId}-mig`,
+		id: uniqueMigrationId(`${matchingCustomerId}-mig`),
 		planId: proPlan.id,
 	});
 
@@ -190,13 +193,12 @@ test.concurrent(`${chalk.yellowBright("lazy migration: marking the run as done c
 	const { migration, run_id } = await startLazyMigration({
 		autumnV2_2,
 		ctx,
-		id: `${customerId}-mig`,
+		id: uniqueMigrationId(`${customerId}-mig`),
 		planId: plan.id,
 	});
 
 	try {
-		// Trigger the migration once and wait for it to land.
-		await getCustomerAndAwaitMigration({ autumnV2_2, customerId });
+		await autumnV2_2.customers.get(customerId);
 		await waitForCustomerItemRunStatus({
 			ctx,
 			migration,

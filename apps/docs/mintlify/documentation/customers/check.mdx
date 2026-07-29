@@ -36,21 +36,12 @@ If they still have messages remaining, they'll be allowed to send an AI message.
 </Info>
 <CodeGroup>
 
-```tsx React
-import { useCustomer } from "autumn-js/react";
-
-const { check } = useCustomer();
-
-// check the customer state object locally (no API call)
-const { allowed } = check({ featureId: "messages" });
-```
-
 ```typescript TypeScript
 import { Autumn } from "autumn-js";
 
 const autumn = new Autumn({ secretKey: "am_sk_test_1234" });
 
-const response = await autumn.customers.check({
+const response = await autumn.check({
   customerId: "user_123",
   featureId: "messages",
 });
@@ -63,7 +54,7 @@ from autumn_sdk import Autumn
 
 autumn = Autumn("am_sk_test_1234")
 
-response = await autumn.customers.check(
+response = await autumn.check(
     customer_id="user_123",
     feature_id="messages",
 )
@@ -114,20 +105,12 @@ By default, `requiredBalance` is 1, so not passing this parameter will return `a
 
 <CodeGroup>
 
-```tsx React
-import { useCustomer } from "autumn-js/react";
-
-const { check } = useCustomer();
-
-const { allowed } = check({ featureId: "messages", requiredBalance: 3 });
-```
-
 ```typescript TypeScript
 import { Autumn } from "autumn-js";
 
 const autumn = new Autumn({ secretKey: "am_sk_test_1234" });
 
-const response = await autumn.customers.check({
+const response = await autumn.check({
   customerId: "user_123",
   featureId: "messages",
   requiredBalance: 3,
@@ -141,7 +124,7 @@ from autumn_sdk import Autumn
 
 autumn = Autumn("am_sk_test_1234")
 
-response = await autumn.customers.check(
+response = await autumn.check(
     customer_id="user_123",
     feature_id="messages",
     required_balance=3,
@@ -162,9 +145,9 @@ curl -X POST "https://api.useautumn.com/v1/check" \
 
 </CodeGroup>
 
-## Checking and tracking atomically
+## Checking and reserving usage
 
-You can check access and record usage in a single, atomic API call using the `sendEvent` field. The usage value deducted from the balance will be the `requiredBalance` parameter. This is useful for concurrent events.
+When you don't know the final cost upfront — like AI completions or long-running jobs — reserve balance with a `lock` on the check call, then finalize it once the operation completes.
 
 <CodeGroup>
 
@@ -173,11 +156,16 @@ import { Autumn } from "autumn-js";
 
 const autumn = new Autumn({ secretKey: "am_sk_test_1234" });
 
-const response = await autumn.customers.check({
+const response = await autumn.check({
   customerId: "user_123",
   featureId: "api_calls",
   requiredBalance: 3,
   sendEvent: true,
+  lock: {
+    enabled: true,
+    lockId: "request_abc123",
+    expiresAt: Date.now() + 5 * 60 * 1000, // 5 minutes
+  },
 });
 
 console.log(response.allowed);
@@ -188,11 +176,16 @@ from autumn_sdk import Autumn
 
 autumn = Autumn("am_sk_test_1234")
 
-response = await autumn.customers.check(
+response = await autumn.check(
     customer_id="user_123",
     feature_id="api_calls",
     required_balance=3,
     send_event=True,
+    lock={
+        "enabled": True,
+        "lock_id": "request_abc123",
+        "expires_at": int(time.time() * 1000) + 5 * 60 * 1000,
+    },
 )
 print(response.allowed)
 ```
@@ -205,62 +198,66 @@ curl -X POST "https://api.useautumn.com/v1/check" \
     "customer_id": "user_123",
     "feature_id": "api_calls",
     "required_balance": 3,
-    "send_event": true
+    "send_event": true,
+    "lock": {
+      "enabled": true,
+      "lock_id": "request_abc123",
+      "expires_at": 1735689600000
+    }
   }'
 ```
 
 </CodeGroup>
 
-If the operation fails, you can then "refund" the usage with a negative usage `value` in the `track` endpoint.
+Once the operation completes, finalize the lock — `confirm` it to keep the deduction, or `release` it if the operation failed.
 
 <CodeGroup>
+
+```typescript TypeScript
+await autumn.balances.finalize({
+  lockId: "request_abc123",
+  action: "confirm",
+});
+```
+
+```python Python
+await autumn.balances.finalize(
+    lock_id="request_abc123",
+    action="confirm",
+)
+```
+
+```bash cURL
+curl -X POST "https://api.useautumn.com/v1/balances.finalize" \
+  -H "Authorization: Bearer am_sk_test_1234" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "lock_id": "request_abc123",
+    "action": "confirm"
+  }'
+```
+
+</CodeGroup>
+
+<Tip>
+See [Balance Locking](/documentation/customers/balance-locking) for the full guide, including releasing a lock and adjusting the final amount when actual usage differs from what you reserved.
+</Tip>
+
+## Checking boolean features
+
+For simple on/off features, use the check method to determine if a customer has access:
 
 ```typescript TypeScript
 import { Autumn } from "autumn-js";
 
 const autumn = new Autumn({ secretKey: "am_sk_test_1234" });
 
-await autumn.customers.track({
+const response = await autumn.check({
   customerId: "user_123",
-  featureId: "api_calls",
-  value: -3,
+  featureId: "premium-dashboard",
 });
-```
 
-```python Python
-from autumn_sdk import Autumn
-
-autumn = Autumn("am_sk_test_1234")
-
-await autumn.customers.track(
-    customer_id="user_123",
-    feature_id="api_calls",
-    value=-3,
-)
-```
-
-```bash cURL
-curl -X POST "https://api.useautumn.com/v1/track" \
-  -H "Authorization: Bearer am_sk_test_1234" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "customer_id": "user_123",
-    "feature_id": "api_calls",
-    "value": -3
-  }'
-```
-</CodeGroup>
-
-## Checking boolean features
-
-For simple on/off features, use the check method to determine if a customer has access:
-
-```tsx React
-const { check } = useCustomer();
-
-const { allowed } = check({ featureId: "premium-dashboard" });
-
-if (allowed) {
+if (response.allowed) {
   // Show premium dashboard
 }
 ```

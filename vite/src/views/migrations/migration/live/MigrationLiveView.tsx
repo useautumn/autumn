@@ -12,13 +12,7 @@ import {
 	DropdownMenuContent,
 	DropdownMenuItem,
 	DropdownMenuTrigger,
-	IconButton,
 	Input,
-	Select,
-	SelectContent,
-	SelectItem,
-	SelectTrigger,
-	SelectValue,
 	Separator,
 	ShortcutButton,
 	Switch,
@@ -26,11 +20,8 @@ import {
 import {
 	ArrowSquareOutIcon,
 	CaretDownIcon,
-	CaretLeftIcon,
-	CaretRightIcon,
 	CheckIcon,
 	EyeIcon,
-	ListMagnifyingGlassIcon,
 	PlayIcon,
 	StopIcon,
 	UsersIcon,
@@ -83,6 +74,7 @@ import { useProductTable } from "@/views/products/hooks/useProductTable";
 import { useRealtimeSubscriptions } from "../hooks/useRealtimeSubscriptions";
 import { ItemEventStatusBadge } from "../runs/RunStatusBadge";
 import { type StepId, StepIndicator } from "../StepIndicator";
+import { CustomerSearchToolbar } from "../shared/CustomerSearchToolbar";
 import { OperationsPreview } from "../shared/OperationsPreview";
 import { RunSummaryRows } from "../shared/RunSummaryRows";
 import { ActiveDot } from "./ActiveDot";
@@ -249,14 +241,7 @@ export function MigrationLiveView({
 			customerFilters.processor,
 		],
 	);
-	const {
-		currentCursor,
-		currentPage,
-		pagination,
-		canPrev,
-		pushCursor,
-		popCursor,
-	} = useCursorPagination({
+	const cursorPagination = useCursorPagination({
 		pageSize,
 		resetKey: JSON.stringify({
 			executionStatuses,
@@ -287,13 +272,6 @@ export function MigrationLiveView({
 	const resolvedRunControls = {
 		retryItemStatuses: buildRetryItemStatuses(runControls),
 	};
-
-	const handleSearchChange = useCallback(
-		(e: React.ChangeEvent<HTMLInputElement>) => {
-			setExecutionQuery({ q: e.target.value });
-		},
-		[setExecutionQuery],
-	);
 
 	const handleExecutionStatusesChange = useCallback(
 		(statuses: ExecutionStatus[]) => {
@@ -330,7 +308,7 @@ export function MigrationLiveView({
 		filter: filter.customer ?? {},
 		search: deferredSearch,
 		customerFilters: previewCustomerFilters,
-		cursor: currentCursor,
+		cursor: cursorPagination.currentCursor,
 		pageSize,
 		migrationId,
 		executionStatuses,
@@ -416,7 +394,7 @@ export function MigrationLiveView({
 	);
 
 	const pageCount =
-		count !== null ? Math.max(Math.ceil(count / pagination.pageSize), 1) : 1;
+		count !== null ? Math.max(Math.ceil(count / pageSize), 1) : 1;
 
 	const table = useProductTable<CustomerRow>({
 		data: enrichedCustomers,
@@ -424,11 +402,9 @@ export function MigrationLiveView({
 		options: {
 			manualPagination: true,
 			pageCount,
-			state: { pagination },
+			state: { pagination: cursorPagination.pagination },
 		},
 	});
-	const canGoNext = Boolean(nextCursor);
-	const isDisabled = isLoadingCustomers;
 
 	const latestFailedRun =
 		latestRun?.status === "failed" && latestRun.error_message
@@ -778,85 +754,37 @@ export function MigrationLiveView({
 				</Dialog>
 			</StepIndicator>
 
-			<div className="flex items-center gap-2">
-				<CustomerListFilterButton
-					extraMenuItems={
-						<ExecutionStatusSubMenu
-							selected={executionStatuses}
-							onChange={handleExecutionStatusesChange}
-						/>
-					}
-					hasActiveExtraFilters={hasActiveExecutionFilters(executionStatuses)}
-					onClearExtra={() => handleExecutionStatusesChange([])}
-					hideSavedViews
-				/>
-				<div className="relative flex items-center flex-1 min-w-0">
-					<ListMagnifyingGlassIcon
-						size={16}
-						className="text-tertiary-foreground absolute left-2.5 pointer-events-none"
+			<CustomerSearchToolbar
+				search={search}
+				onSearchChange={(value) => setExecutionQuery({ q: value })}
+				count={count}
+				pageSize={pageSize}
+				onPageSizeChange={(size) => setExecutionQuery({ pageSize: size })}
+				pagination={cursorPagination}
+				nextCursor={nextCursor}
+				isLoading={isLoadingCustomers}
+				leading={
+					<CustomerListFilterButton
+						extraMenuItems={
+							<ExecutionStatusSubMenu
+								selected={executionStatuses}
+								onChange={handleExecutionStatusesChange}
+							/>
+						}
+						hasActiveExtraFilters={hasActiveExecutionFilters(executionStatuses)}
+						onClearExtra={() => handleExecutionStatusesChange([])}
+						hideSavedViews
 					/>
-					<Input
-						value={search}
-						onChange={handleSearchChange}
-						className="pl-8! text-sm"
-						placeholder={`Search ${(count ?? 0).toLocaleString()} customers`}
-					/>
-				</div>
-				<div className="flex items-center gap-2 shrink-0">
-					<IconButton
-						variant="secondary"
-						size="default"
-						icon={<CaretLeftIcon size={12} weight="bold" />}
-						onClick={popCursor}
-						disabled={isDisabled || !canPrev}
-						className={cn(
-							(isDisabled || !canPrev) && "pointer-events-none opacity-50",
-						)}
-					/>
-					<span className="text-xs text-muted-foreground font-medium">
-						{currentPage} / {pageCount}
-					</span>
-					<IconButton
-						variant="secondary"
-						size="default"
-						icon={<CaretRightIcon size={12} weight="bold" />}
-						onClick={() => nextCursor && pushCursor(nextCursor)}
-						disabled={isDisabled || !canGoNext}
-						className={cn(
-							(isDisabled || !canGoNext) && "pointer-events-none opacity-50",
-						)}
-					/>
-					<Select
-						value={pageSize.toString()}
-						onValueChange={(v) => {
-							setExecutionQuery({ pageSize: Number(v) });
-						}}
-						items={Object.fromEntries(
-							CUSTOMER_LIST_PAGE_SIZE_OPTIONS.map((s) => [
-								s.toString(),
-								s.toString(),
-							]),
-						)}
-					>
-						<SelectTrigger className="h-7 w-fit px-2 text-xs">
-							<SelectValue />
-						</SelectTrigger>
-						<SelectContent>
-							{CUSTOMER_LIST_PAGE_SIZE_OPTIONS.map((s) => (
-								<SelectItem key={s} value={s.toString()}>
-									{s}
-								</SelectItem>
-							))}
-						</SelectContent>
-					</Select>
-					{progressCounts && (
+				}
+				trailing={
+					progressCounts && (
 						<ExecutionProgressBadge
 							completed={progressCounts.completed}
 							running={progressCounts.running}
 						/>
-					)}
-				</div>
-			</div>
+					)
+				}
+			/>
 
 			<Table.Provider
 				config={{

@@ -60,18 +60,6 @@ When an organization signs up, create an Autumn customer.
 
 <CodeGroup>
 
-```jsx React
-import { useCustomer } from "autumn-js/react";
-
-const App = () => {
-  const { customer } = useCustomer();
-
-  console.log("Autumn customer:", customer);
-
-  return <h1>Welcome, {customer?.name || "user"}!</h1>;
-};
-```
-
 ```typescript Node.js
 import { Autumn } from "autumn-js";
 
@@ -182,27 +170,6 @@ Since no plan is attached yet, this entity exists but has no balances. Once the 
 When the customer upgrades to Team, attach the plan. The checkout URL will show the \$30 base price.
 
 <CodeGroup>
-
-```jsx React
-import { useCustomer, CheckoutDialog } from "autumn-js/react";
-
-export default function UpgradeButton() {
-  const { checkout } = useCustomer();
-
-  return (
-    <button
-      onClick={async () => {
-        await checkout({
-          productId: "team",
-          dialog: CheckoutDialog,
-        });
-      }}
-    >
-      Upgrade to Team
-    </button>
-  );
-}
-```
 
 ```typescript Node.js
 import { Autumn } from "autumn-js";
@@ -323,29 +290,6 @@ Before generating a meeting summary, check if that specific user has remaining b
 
 <CodeGroup>
 
-```tsx React
-import { useEntity } from "autumn-js/react";
-
-function MeetingSummaryButton({ meetingId }: { meetingId: string }) {
-  // Pass the current user's entity ID
-  const { allowed, check } = useEntity("user_alice");
-
-  const handleSummarize = async () => {
-    const { data } = await check({ featureId: "meeting_summaries" });
-
-    if (!data?.allowed) {
-      alert("You've used all your meeting summaries this month");
-      return;
-    }
-
-    // Generate the summary
-    await generateSummary(meetingId);
-  };
-
-  return <button onClick={handleSummarize}>Summarize Meeting</button>;
-}
-```
-
 ```typescript Node.js
 import { Autumn } from "autumn-js";
 
@@ -425,18 +369,6 @@ curl -X POST "https://api.useautumn.com/v1/check" \
 When a user generates a summary, track the usage against their entity.
 
 <CodeGroup>
-
-```tsx React
-import { useEntity } from "autumn-js/react";
-
-const { track } = useEntity("user_alice");
-
-// After generating a meeting summary
-await track({
-  featureId: "meeting_summaries",
-  value: 1,
-});
-```
 
 ```typescript Node.js
 import { Autumn } from "autumn-js";
