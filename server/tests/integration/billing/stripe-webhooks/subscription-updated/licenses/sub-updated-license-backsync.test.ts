@@ -24,7 +24,7 @@
  * Post-impl green: subscription.updated sync maps the license price's
  * quantity delta onto the pool counters.
  */
-import { test } from "bun:test";
+import { expect, test } from "bun:test";
 import {
 	type ApiCustomerV5,
 	type ApiEntityV2,
@@ -244,6 +244,56 @@ test(`${chalk.yellowBright("sub.updated license back-sync: qty 3 -> 2 decrements
 		parentPlanId: parent.id,
 		paidQuantity: 2,
 	});
+});
+
+test(`${chalk.yellowBright("sub.updated license back-sync: current schedule quantity updates the pool")}`, async () => {
+	const customerId = "sub-updated-license-backsync-schedule";
+	const { autumnV2_3, parent, devSeat, subscription, seatItem } =
+		await setupLicenseSubscription({
+			customerId,
+			idPrefix: "lic-backsync-schedule",
+			quantity: 2,
+		});
+
+	const schedule = await ctx.stripeCli.subscriptionSchedules.create({
+		from_subscription: subscription.id,
+	});
+	const currentPhase = schedule.phases[0]!;
+	const currentEnd = currentPhase.end_date!;
+	const nextEnd = currentEnd + 31 * 24 * 60 * 60;
+	const phases = (quantity: number) => [
+		{
+			items: [{ price: seatItem.price.id, quantity }],
+			start_date: currentPhase.start_date,
+			end_date: currentEnd,
+		},
+		{
+			items: [{ price: seatItem.price.id, quantity: 1 }],
+			start_date: currentEnd,
+			end_date: nextEnd,
+		},
+	];
+
+	await ctx.stripeCli.subscriptionSchedules.update(schedule.id, {
+		phases: phases(2),
+	});
+	await ctx.stripeCli.subscriptionSchedules.update(schedule.id, {
+		phases: phases(3),
+	});
+
+	await waitForPoolCounters({
+		autumnV2_3,
+		customerId,
+		licensePlanId: devSeat.id,
+		parentPlanId: parent.id,
+		paidQuantity: 3,
+	});
+
+	const updatedSchedule =
+		await ctx.stripeCli.subscriptionSchedules.retrieve(schedule.id);
+	expect(updatedSchedule.phases.map((phase) => phase.items[0]?.quantity)).toEqual([
+		3, 1,
+	]);
 });
 
 // ═══════════════════════════════════════════════════════════════════════════
