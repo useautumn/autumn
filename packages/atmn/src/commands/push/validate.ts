@@ -100,12 +100,20 @@ function validatePlanFeature(
 	const hasPriceInterval = priceInterval !== undefined;
 	const hasAnyReset = hasTopLevelReset || hasPriceInterval;
 
-	// ========== MUTUAL EXCLUSIVITY ==========
-	// Cannot have both top-level reset AND price.interval
-	if (hasTopLevelReset && hasPriceInterval) {
+	const hasDifferentResetAndPriceInterval =
+		hasTopLevelReset &&
+		hasPriceInterval &&
+		(topLevelReset.interval !== priceInterval.interval ||
+			(topLevelReset.intervalCount ?? 1) !==
+				(priceInterval.intervalCount ?? 1));
+	if (
+		hasDifferentResetAndPriceInterval &&
+		planFeature.price?.billingMethod !== "prepaid"
+	) {
 		errors.push({
 			path: basePath,
-			message: `Cannot have both "reset" and "price.interval". Use "reset" for free allocations, or "price.interval" for usage-based pricing.`,
+			message:
+				"reset.interval and price.interval can only differ for prepaid prices.",
 		});
 	}
 
