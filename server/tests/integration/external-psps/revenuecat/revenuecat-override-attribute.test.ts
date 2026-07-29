@@ -265,29 +265,35 @@ test.concurrent(
 // ═══════════════════════════════════════════════════════════════════
 
 test.concurrent(
-	`${chalk.yellowBright("rc override: override wins even when a different customer matches by app_user_id")}`,
+	`${chalk.yellowBright("rc override: attribute-less cancellation uses the canonical customer")}`,
 	async () => {
 		const overrideId = "org_rc_override_wins";
-		const appUserId = "rc-override-appuser-match";
-		const RC_PRODUCT_ID = "com.app.rc_override_wins_pro";
+		const legacyId = `rc-override-legacy-email-${Date.now()}`;
+		const appUserId = "rc-override-appuser@example.com";
+		const RC_PRODUCT_ID = "com.app.rc_override_attrless_cancel_pro";
 		const proMonthly = rcProMonthly({ id: "rc-override-wins-pro" });
 
 		await setupRevenueCatOrg();
 
 		await initScenario({
-			customerId: appUserId,
+			customerId: legacyId,
 			setup: [
 				s.deleteCustomer({ customerId: overrideId }),
 				s.deleteCustomer({ customerId: appUserId }),
-				// Customer that WOULD match by customer_id == app_user_id.
+				s.deleteCustomer({ customerId: legacyId }),
 				s.customer({ testClock: false, skipWebhooks: true }),
-				s.products({ list: [proMonthly] }),
+				s.products({ list: [proMonthly], prefix: "rc-override-cancellation" }),
 			],
 			actions: [],
 		});
 
+		await ctx.db
+			.update(customers)
+			.set({ id: appUserId, email: appUserId })
+			.where(eq(customers.id, legacyId));
+
 		// Pre-create the override target so we can assert the plan lands here.
-		await initScenario({
+		const { autumnV1 } = await initScenario({
 			customerId: overrideId,
 			setup: [s.customer({ testClock: false, skipWebhooks: true })],
 			actions: [],
@@ -314,12 +320,24 @@ test.concurrent(
 		);
 		expect(overrideProductIds).toContain(proMonthly.id);
 
-		// The app_user_id-matched customer must NOT receive the plan.
 		const appUserCustomer = await getCustomerByCustomerId(appUserId);
 		const appUserProductIds = await activeRcProductIds(
 			appUserCustomer!.internal_id,
 		);
 		expect(appUserProductIds).not.toContain(proMonthly.id);
+
+		/** Pre-fix, an attribute-less cancellation returned 500 after an override.
+		 * Post-fix, the processor-mapped canonical customer is cancelled. */
+		expectWebhookSuccess(
+			await newRcClient().cancellation({
+				productId: RC_PRODUCT_ID,
+				appUserId,
+				originalTransactionId: "rc_override_wins_tx_001",
+			}),
+		);
+
+		const cancelledCustomer = await autumnV1.customers.get(overrideId);
+		expect(cancelledCustomer.products[0]?.canceled_at).toBeDefined();
 	},
 );
 

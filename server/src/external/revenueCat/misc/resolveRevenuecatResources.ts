@@ -298,24 +298,24 @@ const resolveRevenueCatCustomer = async ({
 		if (processorMatch) matchedBy = "processors_key_original_app_user_id";
 	}
 
-	// Customer_id fallback, read-both. Always run so ambiguity can be detected.
-	let customerIdMatch = await CusService.getFull({
-		ctx,
-		idOrInternalId: appUserId,
-		withEntities: true,
-		withSubs: true,
-		allowNotFound: true,
-	});
-	let customerIdMatchedBy = customerIdMatch ? "customer_id_app_user_id" : null;
+	// Don't let an invalid legacy id conflict with a canonical processor match.
+	const getCustomerIdMatch = (id: string) => {
+		if (processorMatch && !CreateCustomerSchema.shape.id.safeParse(id).success)
+			return null;
 
-	if (!customerIdMatch && hasOriginal) {
-		customerIdMatch = await CusService.getFull({
+		return CusService.getFull({
 			ctx,
-			idOrInternalId: originalAppUserId as string,
+			idOrInternalId: id,
 			withEntities: true,
 			withSubs: true,
 			allowNotFound: true,
 		});
+	};
+	let customerIdMatch = await getCustomerIdMatch(appUserId);
+	let customerIdMatchedBy = customerIdMatch ? "customer_id_app_user_id" : null;
+
+	if (!customerIdMatch && hasOriginal) {
+		customerIdMatch = await getCustomerIdMatch(originalAppUserId as string);
 		if (customerIdMatch)
 			customerIdMatchedBy = "customer_id_original_app_user_id";
 	}
