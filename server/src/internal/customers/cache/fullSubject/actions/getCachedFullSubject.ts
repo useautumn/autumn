@@ -1,9 +1,10 @@
 import {
-    type FullSubject,
-    fullSubjectToFullCustomer,
-    normalizedToFullSubject,
+	type FullSubject,
+	fullSubjectToFullCustomer,
+	normalizedToFullSubject,
 } from "@autumn/shared";
 import { isRedisMigrationCacheStale } from "@/external/redis/customerRedisRouting.js";
+import { REDIS_OP_TIMEOUT_MS } from "@/external/redis/utils/redisOpTimeouts.js";
 import { runRedisOp } from "@/external/redis/utils/runRedisOp.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { lazyResetSubjectEntitlements } from "@/internal/customers/actions/resetCustomerEntitlementsV2/lazyResetSubjectEntitlements.js";
@@ -17,9 +18,9 @@ import { getCachedFeatureBalancesBatch } from "../balances/getCachedFeatureBalan
 import { buildFullSubjectKey } from "../builders/buildFullSubjectKey.js";
 import { buildFullSubjectViewEpochKey } from "../builders/buildFullSubjectViewEpochKey.js";
 import {
-    type CachedFullSubject,
-    cachedFullSubjectToNormalized,
-    FULL_SUBJECT_CACHE_SCHEMA_VERSION,
+	type CachedFullSubject,
+	cachedFullSubjectToNormalized,
+	FULL_SUBJECT_CACHE_SCHEMA_VERSION,
 } from "../fullSubjectCacheModel.js";
 import { sanitizeCachedFullSubject } from "../sanitize/index.js";
 import { invalidateCachedFullSubject } from "./invalidate/invalidateFullSubject.js";
@@ -38,7 +39,6 @@ export const getCachedFullSubject = async ({
 	source,
 	staleWhileRevalidate = false,
 	runLazyResets = true,
-
 }: {
 	ctx: AutumnContext;
 	customerId: string;
@@ -46,7 +46,6 @@ export const getCachedFullSubject = async ({
 	source?: string;
 	staleWhileRevalidate?: boolean;
 	runLazyResets?: boolean;
-
 }): Promise<GetCachedFullSubjectResult> => {
 	const { org, env, logger, redisV2 } = ctx;
 	const subjectKey = buildFullSubjectKey({
@@ -69,6 +68,7 @@ export const getCachedFullSubject = async ({
 		operation: () => redisV2.pipeline().get(subjectKey).get(epochKey).exec(),
 		source: "getCachedFullSubject:pipeline",
 		redisInstance: redisV2,
+		timeoutMs: REDIS_OP_TIMEOUT_MS.subjectPipeline,
 	});
 
 	const subjectEntry = pipelineResults?.[0];
@@ -276,7 +276,7 @@ export const getCachedFullSubject = async ({
 				fullCustomer: fullSubjectToFullCustomer({ fullSubject }),
 			});
 		}
-		
+
 		return { fullSubject, subjectViewEpoch: currentSubjectViewEpoch };
 	} catch (error) {
 		logger.warn(
