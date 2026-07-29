@@ -1,0 +1,63 @@
+---
+title: "Saying goodbye to our React hooks and old positioning"
+description: "We built Autumn around React hooks and shadcn components for the developer experience. Here's why we're deprecating them, and how our positioning shifted as coding agents got better."
+date: "2026-07-29"
+author: "Ayush, Autumn Co-Founder"
+slug: "saying-goodbye-to-react-hooks"
+image: "/images/blog/saying-goodbye-to-react-hooks.png"
+featured: true
+---
+
+When we started Autumn a year ago, we thought our unique angle was our "developer experience". We heavily pushed our React hooks and [shadcn/ui](https://ui.shadcn.com) components, taking inspiration from tools like [Clerk](https://clerk.com).
+
+### Why we built them
+
+Early on, we were obsessed with cutting down the steps involved in taking payments. Our first users kept telling us they didn't want to generate payment links on the backend and pass them down, they just wanted it to work from the client. 
+
+So we got fixated on making billing work with as [little backend code ](/blog/backendless) as possible: a publishable key, then Next.js server actions, then encrypting the customer ID and threading it through server actions as our own homemade auth.
+
+We posted that last approach to [Hacker News](https://news.ycombinator.com/item?id=43995122) and got roasted. The feedback, fairly, was that we'd reinvented JWTs with more steps. We [threw it out](/blog/thanks-hn) and ended up building a React hooks library instead.
+
+The hooks (`useCustomer`, `useListPlans`, `useAutumn`) kept billing state on the frontend. You could attach a plan, check feature access, or track usage without writing the backend glue code that billing normally needs.
+
+```tsx
+import { useCustomer } from "autumn-js/react";
+
+const { check, attach } = useCustomer();
+
+// gate a feature
+const { allowed } = await check({ featureId: "messages" });
+
+// change a plan
+await attach({ productId: "pro" });
+```
+
+Alongside them we shipped a set of shadcn/ui components (pricing tables, paywalls, upgrade and downgrade flows) that you installed straight into your codebase and owned as your own files, which was its [own mess](/blog/component-fail).
+
+But our early users liked them! At the time, Cursor tab and short-running agents were the state of the art. The React library was genuinely helpful in integrating faster and cutting "glue code".
+
+### Why we're deprecating them
+
+The trade off with using these hooks was control, and in some cases, safety. We noticed that growing customers would over time switch to our backend SDK to match their design system, filter the raw API data, or add guards on what plans a customer could enable. 
+
+When billing logic runs on the frontend, details you'd rather keep private come with it. Your credit schema and markup end up readable by anyone who opens dev tools, which could expose your margins. A user can call `attach` with a plan ID you never meant to be public, like an internal or free plan you keep around for testing. In many cases, billing is just too sensitive of an operation to keep things exposed on the client.
+
+Still, we thought the time savings and DX improvements made the React library worth keeping. But that balance shifted when Opus 4.6 came out.
+
+From our testing, frontier agents don't benefit from using our React hooks at all. The integration time and error rate is the same. Having multiple integration paths just bloats the context window.
+
+There is a resurgence in the utility of lower level "plumbing". This take by [Alvin from Factory AI](https://x.com/alvinsng/status/2077114275412512868) is particularly interesting, on why they're even dropping SDKs in favor of raw APIs.
+
+So from today, we're recommending the backend SDK and API as the default way to build on Autumn. The backend keeps your secret key, your pricing internals, and your plan guards on the server, and lets you shape the raw API data before it ever reaches the client.
+
+If you're using our hooks today, nothing changes. The React hooks and shadcn components are still supported, and your integration will keep working exactly as it does today. We're simply pointing new projects at the backend SDK by default, and that's what our docs and quickstart will lead with going forward.
+
+### Where our attention goes now
+
+We're putting that maintenance time back into the API itself. The goal is one source of truth that everything generates from. Our app SDK, the raw API, the CLI, and our MCP server will all be generated from the same spec, so they stay in sync and every new capability shows up across all of them at once.
+
+For the past year we obsessed over the code integration experience, getting billing wired up in as few steps as possible. 
+
+That problem is mostly solved now, especially with agents doing the wiring. The harder problem is the ongoing management experience: making it easy for an agent to change a pricing model, provision a custom deal that's been signed, or debug a customer's billing history. That's where billing gets painful over time, and it's where we want Autumn to be strongest.
+
+Our value prop and positioning has changed with the times. For today, I am very excited that we have one less thing to maintain!

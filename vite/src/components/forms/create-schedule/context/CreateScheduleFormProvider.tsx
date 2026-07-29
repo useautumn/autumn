@@ -59,6 +59,8 @@ interface CreateScheduleFormContextValue {
 	isExistingSchedule: boolean;
 	/** First phase may start in the past — only when a new Stripe subscription will be created. */
 	allowFirstPhaseBackdate: boolean;
+	/** A new Stripe subscription with recurring/usage pricing is created by the immediate phase. */
+	createsRecurringSubscription: boolean;
 	isPhaseLocked: ({ phaseIndex }: { phaseIndex: number }) => boolean;
 
 	handleAddPhase: () => void;
@@ -172,6 +174,11 @@ export function CreateScheduleFormProvider({
 		!isExistingSchedule &&
 		!hasActiveSubscription &&
 		immediatePlansPaidRecurring;
+
+	// Mirrors attach: a new sub is created when there's no active subscription, and
+	// usage-only plans still bill recurring even though nothing is due immediately.
+	const createsRecurringSubscription =
+		!hasActiveSubscription && immediatePlansPaidRecurring;
 
 	const editingPlanValue = useMemo(() => {
 		if (!editingPlan) return null;
@@ -288,6 +295,7 @@ export function CreateScheduleFormProvider({
 			features,
 			isExistingSchedule,
 			allowFirstPhaseBackdate,
+			createsRecurringSubscription,
 			isPhaseLocked,
 			handleAddPhase,
 			handleInsertPhase,
@@ -318,6 +326,7 @@ export function CreateScheduleFormProvider({
 			features,
 			isExistingSchedule,
 			allowFirstPhaseBackdate,
+			createsRecurringSubscription,
 			isPhaseLocked,
 			handleAddPhase,
 			handleInsertPhase,

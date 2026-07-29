@@ -43,16 +43,6 @@ Enable the trial with the normal plan enablement flow. Only customers that have 
 
 <CodeGroup>
 
-```tsx React
-import { useCustomer } from "autumn-js/react";
-
-const { attach } = useCustomer();
-
-<Button onClick={() => attach({ planId: "pro" })}>
-  Start Trial
-</Button>;
-```
-
 ```typescript TypeScript
 import { Autumn } from "autumn-js";
 
@@ -94,16 +84,6 @@ curl -X POST "https://api.useautumn.com/v1/attach" \
 <Accordion title="With trial fee">
 
 <CodeGroup>
-
-```tsx React
-import { useCustomer } from "autumn-js/react";
-
-const { attach } = useCustomer();
-
-<Button onClick={() => attach({ planIds: ["pro", "trial_fee"] })}>
-  Start Trial
-</Button>;
-```
 
 ```typescript TypeScript
 import { Autumn } from "autumn-js";
@@ -159,30 +139,6 @@ After the trial ends, the customer will be automatically charged the full price 
 You can end the trial early by cancelling the plan immediately, and attaching it again. You may want to pass in a `reward` into the attach request to give the customer a discount for upgrading early.
 
 <CodeGroup>
-
-```tsx React
-import { useCustomer } from "autumn-js/react";
-
-const { updateSubscription, attach } = useCustomer();
-
-const handleEarlyEnd = async () => {
-  // Cancel the trial immediately
-  await updateSubscription({
-    planId: "pro",
-    cancelAction: "cancel_immediately",
-  });
-  
-  // Attach the plan again with a reward
-  await attach({
-    planId: "pro",
-    reward: "early_end",
-  });
-    
-  console.log("Trial ended early");
-};
-
-<Button onClick={handleEarlyEnd}>Upgrade Now</Button>;
-```
 
 ```typescript TypeScript
 import { Autumn } from "autumn-js";
@@ -259,19 +215,6 @@ Customers can cancel the trial at any time. If they cancel, the plan will expire
 You can uncancel the trial plan by attaching it again.
 
 <CodeGroup>
-
-```tsx React
-import { useCustomer } from "autumn-js/react";
-
-const { updateSubscription } = useCustomer();
-
-<Button onClick={() => updateSubscription({ 
-  planId: "pro",
-  cancelAction: "cancel_end_of_cycle" 
-})}>
-  Cancel Trial
-</Button>;
-```
 
 ```typescript TypeScript
 import { Autumn } from "autumn-js";

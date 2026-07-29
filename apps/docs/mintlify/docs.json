@@ -133,20 +133,19 @@
 							"documentation/rate-limits",
 							"documentation/external-providers/ai-sdk",
 							"documentation/external-providers/openrouter",
-							"documentation/external-providers/convex",
 							"documentation/external-providers/revenuecat",
-							"documentation/external-providers/vercel-marketplace"
-						]
-					},
-					{
-						"group": "Lakehouse",
-						"pages": [
-							"documentation/lakehouse/overview",
-							"documentation/lakehouse/connecting",
-							"documentation/lakehouse/schema",
-							"documentation/lakehouse/balance-semantics",
-							"documentation/lakehouse/working-with-invoices",
-							"documentation/lakehouse/querying"
+							"documentation/external-providers/vercel-marketplace",
+							{
+								"group": "Lakehouse",
+								"pages": [
+									"documentation/lakehouse/overview",
+									"documentation/lakehouse/connecting",
+									"documentation/lakehouse/schema",
+									"documentation/lakehouse/balance-semantics",
+									"documentation/lakehouse/working-with-invoices",
+									"documentation/lakehouse/querying"
+								]
+							}
 						]
 					}
 				]
@@ -162,26 +161,6 @@
 					"examples/entity-balances",
 					"examples/trial-card-required",
 					"examples/trial-card-not-required"
-				]
-			},
-			{
-				"tab": "React",
-				"icon": "react",
-				"groups": [
-					{
-						"group": "React Hooks",
-						"pages": [
-							"react/hooks/introduction",
-							"react/hooks/autumn-provider",
-							"react/hooks/autumn-handler",
-							"react/hooks/useCustomer",
-							"react/hooks/useEntity",
-							"react/hooks/useListEvents",
-							"react/hooks/useAggregateEvents",
-							"react/hooks/useListPlans",
-							"react/hooks/useReferrals"
-						]
-					}
 				]
 			},
 			{

@@ -52,14 +52,6 @@ If a recurring payment fails (e.g. card expired between billing cycles), the sub
 
 <CodeGroup>
 
-```tsx React
-import { useCustomer } from "autumn-js/react";
-
-const { openBillingPortal } = useCustomer();
-
-<Button onClick={() => openBillingPortal({ returnUrl: window.location.href })} />
-```
-
 ```typescript Node.js
 const { data } = await autumn.billing.openCustomerPortal("user_123", {
   returnUrl: "https://your-app.com/billing",

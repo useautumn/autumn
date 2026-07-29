@@ -62,17 +62,6 @@ const response = await autumn.billing.update({
 });
 ```
 
-```tsx React
-const { updateSubscription } = useCustomer();
-
-await updateSubscription({
-  planId: "team",
-  featureQuantities: [
-    { featureId: "seats", quantity: 10 }
-  ],
-});
-```
-
 ```python Python
 response = await autumn.billing.update(
     customer_id="user_123",
@@ -126,16 +115,6 @@ await autumn.billing.update({
 });
 ```
 
-```tsx React
-const { updateSubscription } = useCustomer();
-
-// Cancel at end of billing cycle
-await updateSubscription({
-  planId: "pro",
-  cancelAction: "cancel_end_of_cycle",
-});
-```
-
 ```python Python
 # Cancel at end of billing cycle
 await autumn.billing.update(
@@ -183,26 +162,6 @@ const preview = await autumn.billing.previewUpdate({
 
 // Display preview.lineItems, preview.total, preview.currency
 // Then call billing.update to execute
-```
-
-```tsx React
-const { previewUpdateSubscription, updateSubscription } = useCustomer();
-
-// Preview the change
-const preview = await previewUpdateSubscription({
-  planId: "team",
-  featureQuantities: [
-    { featureId: "seats", quantity: 10 }
-  ],
-});
-
-// Show confirmation UI, then execute
-await updateSubscription({
-  planId: "team",
-  featureQuantities: [
-    { featureId: "seats", quantity: 10 }
-  ],
-});
 ```
 
 ```python Python
