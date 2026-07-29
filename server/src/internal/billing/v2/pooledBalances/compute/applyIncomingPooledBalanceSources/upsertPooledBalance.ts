@@ -2,6 +2,7 @@ import {
 	addSafe,
 	type FullCusProduct,
 	type FullCustomerEntitlement,
+	isBooleanEntitlement,
 	type PooledBalanceIdentity,
 	pooledBalanceIdentityToKey,
 } from "@autumn/shared";
@@ -41,14 +42,24 @@ export const upsertPooledBalance = ({
 		computeContext.pooledCustomerEntitlementByIdentity.get(
 			pooledBalanceIdentityToKey({ identity }),
 		);
+	const tracksBalance =
+		!identity.unlimited &&
+		!isBooleanEntitlement({
+			entitlement: contributionCustomerEntitlement.entitlement,
+		});
 
-	const balanceDelta =
+	let balanceDelta = tracksBalance
+		? (contributionCustomerEntitlement.balance ?? 0)
+		: 0;
+	if (
+		tracksBalance &&
 		existingPooledCustomerEntitlement &&
 		computeContext.pooledBalanceIdsWithRemovedContributions.has(
 			existingPooledCustomerEntitlement.pooled_balance.id,
 		)
-			? contributionAmounts.currentContribution
-			: (contributionCustomerEntitlement.balance ?? 0);
+	) {
+		balanceDelta = contributionAmounts.currentContribution;
+	}
 
 	if (!existingPooledCustomerEntitlement) {
 		const insertedPooledCustomerEntitlement = initPooledBalanceGraph({
@@ -66,32 +77,40 @@ export const upsertPooledBalance = ({
 			computeContext,
 			pooledCustomerEntitlement: insertedPooledCustomerEntitlement,
 		});
-		carrySourceRolloversToPool({
-			pooledBalancePlan: computeContext.plan,
-			contributionCustomerEntitlement,
-			pooledCustomerEntitlement: insertedPooledCustomerEntitlement,
-		});
+		if (tracksBalance) {
+			carrySourceRolloversToPool({
+				pooledBalancePlan: computeContext.plan,
+				contributionCustomerEntitlement,
+				pooledCustomerEntitlement: insertedPooledCustomerEntitlement,
+			});
+		}
 
 		return insertedPooledCustomerEntitlement;
 	}
 
-	addToUpdatePoolBalances({
-		pooledBalancePlan: computeContext.plan,
-		pooledCustomerEntitlement: existingPooledCustomerEntitlement,
-		balance: addSafe({
-			left: existingPooledCustomerEntitlement.balance,
-			right: balanceDelta,
-		}),
-		granted: addSafe({
-			left: existingPooledCustomerEntitlement.pooled_balance.granted,
-			right: contributionAmounts.currentContribution,
-		}),
-	});
-	carrySourceRolloversToPool({
-		pooledBalancePlan: computeContext.plan,
-		contributionCustomerEntitlement,
-		pooledCustomerEntitlement: existingPooledCustomerEntitlement,
-	});
+	const shouldUpdateExistingPooledBalance =
+		balanceDelta !== 0 || contributionAmounts.currentContribution !== 0;
+	if (shouldUpdateExistingPooledBalance) {
+		addToUpdatePoolBalances({
+			pooledBalancePlan: computeContext.plan,
+			pooledCustomerEntitlement: existingPooledCustomerEntitlement,
+			balance: addSafe({
+				left: existingPooledCustomerEntitlement.balance,
+				right: balanceDelta,
+			}),
+			granted: addSafe({
+				left: existingPooledCustomerEntitlement.pooled_balance.granted,
+				right: contributionAmounts.currentContribution,
+			}),
+		});
+	}
+	if (tracksBalance) {
+		carrySourceRolloversToPool({
+			pooledBalancePlan: computeContext.plan,
+			contributionCustomerEntitlement,
+			pooledCustomerEntitlement: existingPooledCustomerEntitlement,
+		});
+	}
 
 	return existingPooledCustomerEntitlement;
 };

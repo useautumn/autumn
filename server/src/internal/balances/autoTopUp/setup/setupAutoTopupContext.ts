@@ -14,7 +14,6 @@ import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { fetchStripeCustomerForBilling } from "@/internal/billing/v2/providers/stripe/setup/fetchStripeCustomerForBilling.js";
 import { CusService } from "@/internal/customers/CusService.js";
 import { getCachedFullSubject } from "@/internal/customers/cache/fullSubject/actions/getCachedFullSubject.js";
-import { getCachedFullCustomer } from "@/internal/customers/cusUtils/fullCustomerCacheUtils/getCachedFullCustomer.js";
 import { getFullSubjectNormalized } from "@/internal/customers/repos/getFullSubject/index.js";
 import { isFullSubjectRolloutEnabled } from "@/internal/misc/rollouts/fullSubjectRolloutUtils.js";
 import type { AutoTopUpPayload } from "@/queue/workflows.js";
@@ -43,51 +42,39 @@ const getAutoTopupFullCustomer = async ({
 	customerId: string;
 }): Promise<FullCustomer | undefined> => {
 	if (isFullSubjectRolloutEnabled({ ctx })) {
-		const { fullSubject: cachedFullSubject } = await getCachedFullSubject({
-			ctx,
-			customerId,
-			source: "setupAutoTopupContext",
-		});
+	}
 
-		if (cachedFullSubject) {
-			return fullSubjectToFullCustomer({
-				fullSubject: cachedFullSubject,
-			});
-		}
+	const { fullSubject: cachedFullSubject } = await getCachedFullSubject({
+		ctx,
+		customerId,
+		source: "setupAutoTopupContext",
+	});
 
-		const normalizedFullSubject = await getFullSubjectNormalized({
-			ctx,
-			customerId,
-			inStatuses: ACTIVE_STATUSES,
-		});
-
-		if (normalizedFullSubject) {
-			return fullSubjectToFullCustomer({
-				fullSubject: normalizedFullSubject.fullSubject,
-			});
-		}
-
-		// Safety fallback to preserve previous behavior if subject query returns no row.
-		return CusService.getFull({
-			ctx,
-			idOrInternalId: customerId,
-			inStatuses: ACTIVE_STATUSES,
-			withSubs: true,
+	if (cachedFullSubject) {
+		return fullSubjectToFullCustomer({
+			fullSubject: cachedFullSubject,
 		});
 	}
 
-	let fullCustomer = await getCachedFullCustomer({ ctx, customerId });
+	const normalizedFullSubject = await getFullSubjectNormalized({
+		ctx,
+		customerId,
+		inStatuses: ACTIVE_STATUSES,
+	});
 
-	if (!fullCustomer) {
-		fullCustomer = await CusService.getFull({
-			ctx,
-			idOrInternalId: customerId,
-			inStatuses: ACTIVE_STATUSES,
-			withSubs: true,
+	if (normalizedFullSubject) {
+		return fullSubjectToFullCustomer({
+			fullSubject: normalizedFullSubject.fullSubject,
 		});
 	}
 
-	return fullCustomer;
+	// Safety fallback to preserve previous behavior if subject query returns no row.
+	return CusService.getFull({
+		ctx,
+		idOrInternalId: customerId,
+		inStatuses: ACTIVE_STATUSES,
+		withSubs: true,
+	});
 };
 
 /** Fetch full customer, auto-topup config, cusEnt, and Stripe context. */

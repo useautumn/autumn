@@ -387,7 +387,16 @@ test.concurrent("inverts pooled balance inserts and delta updates", () => {
 				},
 			],
 			expirePoolBalanceCandidates: [],
-			insertPoolRollovers: [],
+			insertPoolRollovers: [
+				{
+					id: "roll_carried",
+					cus_ent_id: insertedPool.id,
+					balance: 500,
+					usage: 0,
+					expires_at: null,
+					entities: {},
+				},
+			],
 			insertPoolContributions: [contribution],
 			updatePoolContributions: [],
 			deletePoolContributions: [],

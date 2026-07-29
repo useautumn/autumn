@@ -102,7 +102,9 @@ export function PooledBalanceContributions({
 											{planLabel(contribution)}
 										</span>
 										<span className="text-foreground font-medium tabular-nums">
-											+{numberWithCommas(contribution.current_contribution)}
+											{pooledBalance.unlimited
+												? "Unlimited"
+												: `+${numberWithCommas(contribution.current_contribution)}`}
 										</span>
 									</div>
 								</div>

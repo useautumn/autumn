@@ -1,17 +1,17 @@
 import { Hono } from "hono";
 import type { HonoEnv } from "../../honoUtils/HonoEnv";
 import {
-	handleDeleteAdminCacheV2Ramp,
-	handleGetAdminCacheV2Ramp,
-	handleUpdateAdminCacheV2RampMigration,
-	handleUpsertAdminCacheV2Ramp,
+    handleDeleteAdminCacheV2Ramp,
+    handleGetAdminCacheV2Ramp,
+    handleUpdateAdminCacheV2RampMigration,
+    handleUpsertAdminCacheV2Ramp,
 } from "./handleAdminCacheV2Ramp";
 import {
-	handleDeleteAdminOrgRedisConfig,
-	handleGetAdminOrgRedisConfig,
-	handleUpdateAdminOrgRedisMigration,
-	handleUpdateAdminOrgRedisPublicUrl,
-	handleUpsertAdminOrgRedisConfig,
+    handleDeleteAdminOrgRedisConfig,
+    handleGetAdminOrgRedisConfig,
+    handleUpdateAdminOrgRedisMigration,
+    handleUpdateAdminOrgRedisPublicUrl,
+    handleUpsertAdminOrgRedisConfig,
 } from "./handleAdminOrgRedisConfig";
 import { handleGetAdminAsyncBalanceUpdateConfig } from "./handleGetAdminAsyncBalanceUpdateConfig";
 import { handleGetAdminAsyncTrackConfig } from "./handleGetAdminAsyncTrackConfig";
@@ -41,11 +41,12 @@ import { handleListAdminOrgs } from "./handleListAdminOrgs";
 import { handleListAdminUsers } from "./handleListAdminUsers";
 import { handleListOAuthClients } from "./handleListOAuthClients";
 import {
-	handleCreateSlackAdminInstall,
-	handleDeleteSlackAdminInstall,
-	handleGetSlackAdminInstall,
-	handleUpdateSlackAdminTarget,
+    handleCreateSlackAdminInstall,
+    handleDeleteSlackAdminInstall,
+    handleGetSlackAdminInstall,
+    handleUpdateSlackAdminTarget,
 } from "./handleSlackAdminChat";
+import { handleSyncCustomerEntitlementAnchors } from "./handleSyncCustomerEntitlementAnchors";
 import { handleUpsertAdminAsyncBalanceUpdateConfig } from "./handleUpsertAdminAsyncBalanceUpdateConfig";
 import { handleUpsertAdminAsyncTrackConfig } from "./handleUpsertAdminAsyncTrackConfig";
 import { handleUpsertAdminBatchResetConfig } from "./handleUpsertAdminBatchResetConfig";
@@ -236,6 +237,10 @@ honoAdminRouter.patch(
 );
 honoAdminRouter.delete("/chat/slack-admin", ...handleDeleteSlackAdminInstall);
 honoAdminRouter.post("/invoice-line-items", ...handleGetInvoiceLineItems);
+honoAdminRouter.post(
+	"/customer-entitlements/sync-anchor",
+	...handleSyncCustomerEntitlementAnchors,
+);
 
 honoAdminRouter.get("/rollouts", ...handleGetRollouts);
 honoAdminRouter.put("/rollouts/:rollout_id", ...handleUpdateRollout);

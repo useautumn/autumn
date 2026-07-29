@@ -49,17 +49,7 @@ export const SubjectFlagSchema = z.object({
 	externalId: z.string().nullable(),
 });
 
-export type SubjectFlag = {
-	featureId: string;
-	internalFeatureId: string;
-	entitlementId: string;
-	customerEntitlementId: string;
-	customerProductId: string | null;
-	internalCustomerId: string;
-	internalEntityId: string | null;
-	expiresAt: number | null;
-	externalId: string | null;
-};
+export type SubjectFlag = z.infer<typeof SubjectFlagSchema>;
 
 /**
  * Schema mirror of `SubjectBalance`. Extends `FullCustomerEntitlementSchema`

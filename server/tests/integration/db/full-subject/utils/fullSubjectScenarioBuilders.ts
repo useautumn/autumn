@@ -404,6 +404,7 @@ const buildSubscription = ({
 	env: ctx.env,
 	current_period_start: now,
 	current_period_end: now + 30 * 24 * 60 * 60 * 1000,
+	billing_cycle_anchor_seconds: null,
 });
 
 const buildInvoice = ({

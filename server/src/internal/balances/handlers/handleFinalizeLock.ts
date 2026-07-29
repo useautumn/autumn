@@ -10,7 +10,7 @@ export const handleFinalizeLock = createRoute({
 		const params = c.req.valid("json");
 
 		const response = await runFinalizeLock({ ctx, params });
-		const status = ctx.extraLogs.finalizeLockFailedOpen ? 202 : 200;
+		const status = ctx.extraLogs.finalizeLockQueuedForReplay ? 202 : 200;
 
 		return c.json(response, status);
 	},

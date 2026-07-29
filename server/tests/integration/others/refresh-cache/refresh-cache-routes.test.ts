@@ -15,7 +15,6 @@ import {
 	getOrSetCachedFullSubject,
 } from "@/internal/customers/cache/fullSubject/index.js";
 import { buildFullCustomerCacheKey } from "@/internal/customers/cusUtils/fullCustomerCacheUtils/fullCustomerCacheConfig.js";
-import { getOrSetCachedFullCustomer } from "@/internal/customers/cusUtils/fullCustomerCacheUtils/getOrSetCachedFullCustomer.js";
 import { cleanupFullSubjectScenario } from "../../db/full-subject/utils/cleanupFullSubjectScenario.js";
 import { buildEntitySubjectScenario } from "../../db/full-subject/utils/fullSubjectScenarioBuilders.js";
 import { insertFullSubjectScenario } from "../../db/full-subject/utils/insertFullSubjectScenario.js";
@@ -107,11 +106,17 @@ const warmCaches = async ({
 	customerId: string;
 	entityIds: string[];
 }) => {
-	await getOrSetCachedFullCustomer({
-		ctx,
-		customerId,
-		source: "refreshCacheRoutesTest",
-	});
+	// Seed the legacy fullCustomer key directly — the legacy read/write helpers
+	// are deleted, but refreshCacheMiddleware still clears this key until the
+	// write side of the legacy cache is removed.
+	await redis.set(
+		buildFullCustomerCacheKey({
+			orgId: ctx.org.id,
+			env: ctx.env,
+			customerId,
+		}),
+		"{}",
+	);
 	await getOrSetCachedFullSubject({
 		ctx,
 		customerId,
@@ -173,7 +178,9 @@ describeDb("refreshCacheMiddleware routes", () => {
 	});
 
 	afterAll(async () => {
-		const customerKeys = await ctx.redisV2.keys(`{${scenario.ids.customerId}}:*`);
+		const customerKeys = await ctx.redisV2.keys(
+			`{${scenario.ids.customerId}}:*`,
+		);
 		if (customerKeys.length > 0) {
 			await ctx.redisV2.unlink(...customerKeys);
 		}
@@ -187,81 +194,82 @@ describeDb("refreshCacheMiddleware routes", () => {
 		await cleanupFullSubjectScenario({ ctx, scenario });
 	});
 
-	test.each(
-		REFRESH_CACHE_ROUTE_CONFIGS,
-	)("$method $url invalidates the expected caches", async (config) => {
-		await warmCaches({
-			ctx,
-			customerId: scenario.ids.customerId,
-			entityIds: scenario.ids.entityIds,
-		});
+	test.each(REFRESH_CACHE_ROUTE_CONFIGS)(
+		"$method $url invalidates the expected caches",
+		async (config) => {
+			await warmCaches({
+				ctx,
+				customerId: scenario.ids.customerId,
+				entityIds: scenario.ids.entityIds,
+			});
 
-		const { path, body, touchedEntityId } = buildRequestData({
-			config,
-			customerId: scenario.ids.customerId,
-			entityIds: scenario.ids.entityIds,
-		});
+			const { path, body, touchedEntityId } = buildRequestData({
+				config,
+				customerId: scenario.ids.customerId,
+				entityIds: scenario.ids.entityIds,
+			});
 
-		const response = await app.request(`http://localhost/v1${path}`, {
-			method: config.method,
-			headers: {
-				"content-type": "application/json",
-			},
-			body: body ? JSON.stringify(body) : undefined,
-		});
+			const response = await app.request(`http://localhost/v1${path}`, {
+				method: config.method,
+				headers: {
+					"content-type": "application/json",
+				},
+				body: body ? JSON.stringify(body) : undefined,
+			});
 
-		expect(response.status).toBe(200);
+			expect(response.status).toBe(200);
 
-		const oldCacheKey = buildFullCustomerCacheKey({
-			orgId: ctx.org.id,
-			env: ctx.env,
-			customerId: scenario.ids.customerId,
-		});
-		const customerSubjectKey = buildFullSubjectKey({
-			orgId: ctx.org.id,
-			env: ctx.env,
-			customerId: scenario.ids.customerId,
-		});
-		const entityASubjectKey = buildFullSubjectKey({
-			orgId: ctx.org.id,
-			env: ctx.env,
-			customerId: scenario.ids.customerId,
-			entityId: scenario.ids.entityIds[0],
-		});
-		const entityBSubjectKey = buildFullSubjectKey({
-			orgId: ctx.org.id,
-			env: ctx.env,
-			customerId: scenario.ids.customerId,
-			entityId: scenario.ids.entityIds[1],
-		});
-		const epochKey = buildFullSubjectViewEpochKey({
-			orgId: ctx.org.id,
-			env: ctx.env,
-			customerId: scenario.ids.customerId,
-		});
-
-		expect(await redis.exists(oldCacheKey)).toBe(0);
-		expect(await ctx.redisV2.exists(customerSubjectKey)).toBe(0);
-		expect(await ctx.redisV2.get(epochKey)).toBe("1");
-
-		if (touchedEntityId) {
-			const touchedEntityKey = buildFullSubjectKey({
+			const oldCacheKey = buildFullCustomerCacheKey({
 				orgId: ctx.org.id,
 				env: ctx.env,
 				customerId: scenario.ids.customerId,
-				entityId: touchedEntityId,
 			});
-			expect(await ctx.redisV2.exists(touchedEntityKey)).toBe(0);
+			const customerSubjectKey = buildFullSubjectKey({
+				orgId: ctx.org.id,
+				env: ctx.env,
+				customerId: scenario.ids.customerId,
+			});
+			const entityASubjectKey = buildFullSubjectKey({
+				orgId: ctx.org.id,
+				env: ctx.env,
+				customerId: scenario.ids.customerId,
+				entityId: scenario.ids.entityIds[0],
+			});
+			const entityBSubjectKey = buildFullSubjectKey({
+				orgId: ctx.org.id,
+				env: ctx.env,
+				customerId: scenario.ids.customerId,
+				entityId: scenario.ids.entityIds[1],
+			});
+			const epochKey = buildFullSubjectViewEpochKey({
+				orgId: ctx.org.id,
+				env: ctx.env,
+				customerId: scenario.ids.customerId,
+			});
 
-			const untouchedEntityKey =
-				touchedEntityId === scenario.ids.entityIds[0]
-					? entityBSubjectKey
-					: entityASubjectKey;
-			expect(await ctx.redisV2.exists(untouchedEntityKey)).toBe(1);
-			return;
-		}
+			expect(await redis.exists(oldCacheKey)).toBe(0);
+			expect(await ctx.redisV2.exists(customerSubjectKey)).toBe(0);
+			expect(await ctx.redisV2.get(epochKey)).toBe("1");
 
-		expect(await ctx.redisV2.exists(entityASubjectKey)).toBe(1);
-		expect(await ctx.redisV2.exists(entityBSubjectKey)).toBe(1);
-	});
+			if (touchedEntityId) {
+				const touchedEntityKey = buildFullSubjectKey({
+					orgId: ctx.org.id,
+					env: ctx.env,
+					customerId: scenario.ids.customerId,
+					entityId: touchedEntityId,
+				});
+				expect(await ctx.redisV2.exists(touchedEntityKey)).toBe(0);
+
+				const untouchedEntityKey =
+					touchedEntityId === scenario.ids.entityIds[0]
+						? entityBSubjectKey
+						: entityASubjectKey;
+				expect(await ctx.redisV2.exists(untouchedEntityKey)).toBe(1);
+				return;
+			}
+
+			expect(await ctx.redisV2.exists(entityASubjectKey)).toBe(1);
+			expect(await ctx.redisV2.exists(entityBSubjectKey)).toBe(1);
+		},
+	);
 });

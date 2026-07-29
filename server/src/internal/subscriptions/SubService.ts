@@ -70,6 +70,7 @@ export class SubService {
 					env,
 					current_period_start: null,
 					current_period_end: null,
+					billing_cycle_anchor_seconds: null,
 				},
 			});
 		}
@@ -125,6 +126,7 @@ export class SubService {
 			.set({
 				current_period_start: start,
 				current_period_end: end,
+				billing_cycle_anchor_seconds: stripeSub.billing_cycle_anchor,
 			})
 			.where(eq(subscriptions.stripe_id, stripeSub.id))
 			.returning();
@@ -230,6 +232,8 @@ export class SubService {
 				updates: {
 					current_period_start: subscription.current_period_start,
 					current_period_end: subscription.current_period_end,
+					billing_cycle_anchor_seconds:
+						subscription.billing_cycle_anchor_seconds,
 				},
 			});
 		} else {

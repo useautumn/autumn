@@ -4,6 +4,7 @@ import { join } from "node:path";
 import { PROJECT_ROOT } from "../constants.ts";
 import type { RegistryEntry } from "../types.ts";
 import { isProvisioned } from "./entry.ts";
+import { provisionedInfraEnv } from "./env-files.ts";
 import { registerPortlessAliases } from "./portless.ts";
 import { portlessHttpsUrl } from "./ports.ts";
 import { fatal, log } from "./shell.ts";
@@ -17,7 +18,13 @@ function applyProvisionedDevEnv(
 	const { worktreeNum, databaseUrl } = entry;
 	if (!databaseUrl) fatal("worktree missing databaseUrl");
 
-	let next = rewriteDbEnv(env, databaseUrl);
+	const next = rewriteDbEnv(env, databaseUrl);
+	const infra = provisionedInfraEnv(worktreeNum);
+	Object.assign(next, infra);
+	// Unmapped queue vars must not leak the shared AWS queues into this worktree.
+	for (const key of Object.keys(next)) {
+		if (key.includes("SQS_QUEUE_URL") && !(key in infra)) delete next[key];
+	}
 	if (!next.EMULATE_GOOGLE_URL) {
 		next.EMULATE_GOOGLE_URL = portlessHttpsUrl("google.emulate.localhost");
 	}

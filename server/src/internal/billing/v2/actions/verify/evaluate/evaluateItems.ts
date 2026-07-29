@@ -1,6 +1,9 @@
 import {
 	type BasePriceMismatch,
 	type ItemMismatch,
+	isAllocatedPrice,
+	isAllocatedV2Price,
+	isConsumablePrice,
 	isFixedPrice,
 	isPrepaidPrice,
 	type PrepaidQuantityMismatch,
@@ -9,6 +12,7 @@ import {
 	type StripeInlinePrice,
 	type SubscriptionMismatch,
 } from "@autumn/shared";
+import { priceToStripeRecurringParams } from "@utils/productUtils/priceUtils/convertPrice/priceToStripeRecurringParams";
 import type Stripe from "stripe";
 import { stripeInlinePriceMatchesStripePrice } from "@/internal/billing/v2/providers/stripe/utils/matchUtils/matchStripeInlinePrice";
 import { findPhaseItemForAutumnPrice } from "@/internal/billing/v2/providers/stripe/utils/sync/autumnToStripe/findPhaseItemForAutumnPrice";
@@ -278,6 +282,39 @@ const resolvePriceForItem = ({
 	return item.priceId ? storedPriceCatalog.get(item.priceId) : undefined;
 };
 
+const priceTypeOf = (price?: Price): ItemMismatch["price_type"] => {
+	if (!price) return undefined;
+	if (isPrepaidPrice(price)) return "prepaid";
+	if (isConsumablePrice(price)) return "usage";
+	if (isAllocatedPrice(price)) return "allocated";
+	if (isFixedPrice(price)) return "fixed";
+	return undefined;
+};
+
+/** Consumable / allocated-V2 prices bill as posted invoice line items — a
+ * missing Stripe item is fine as long as another item invoices at the same
+ * interval. Prorated allocated prices still need their Stripe quantity item. */
+const missingUsageItemCovered = ({
+	price,
+	candidates,
+}: {
+	price?: Price;
+	candidates: ActualCandidate[];
+}): boolean => {
+	if (!price) return false;
+	if (!isConsumablePrice(price) && !isAllocatedV2Price(price)) return false;
+
+	const recurring = priceToStripeRecurringParams({ price });
+	if (!recurring) return false;
+
+	return candidates.some(
+		(candidate) =>
+			candidate.price?.recurring?.interval === recurring.interval &&
+			(candidate.price?.recurring?.interval_count ?? 1) ===
+				(recurring.interval_count ?? 1),
+	);
+};
+
 /** Classifies a missing/unexpected expected item into its typed mismatch. */
 const buildMissingOrUnexpectedMismatch = ({
 	expected,
@@ -298,6 +335,8 @@ const buildMissingOrUnexpectedMismatch = ({
 		return {
 			type: "base_price_mismatch",
 			reason,
+			expected_price_id: expected?.priceId,
+			actual_price_id: actual?.priceId,
 			expected_amount: expected?.unitAmountDecimal,
 			actual_amount: actual?.unitAmountDecimal,
 			phase_starts_at: phaseStartsAt,
@@ -317,6 +356,9 @@ const buildMissingOrUnexpectedMismatch = ({
 	return {
 		type: "item_mismatch",
 		reason,
+		expected_price_id: expected?.priceId,
+		actual_price_id: actual?.priceId,
+		price_type: priceTypeOf(price),
 		feature_id: price?.config.feature_id ?? undefined,
 		expected_quantity: expected?.quantity,
 		actual_quantity: actual?.quantity,
@@ -336,6 +378,7 @@ export const evaluateItems = ({
 	storedPriceCatalog,
 	cusPriceCatalog,
 	phaseStartsAt,
+	strict = false,
 }: {
 	expectedRawItems: ExpectedPhaseItem[];
 	actualSubscriptionItems?: Stripe.SubscriptionItem[];
@@ -343,6 +386,7 @@ export const evaluateItems = ({
 	storedPriceCatalog: StoredPriceCatalog;
 	cusPriceCatalog: CusPriceCatalog;
 	phaseStartsAt?: number;
+	strict?: boolean;
 }): SubscriptionMismatch[] => {
 	const mismatches: SubscriptionMismatch[] = [];
 
@@ -397,6 +441,12 @@ export const evaluateItems = ({
 		});
 
 		if (!actual) {
+			if (
+				!strict &&
+				missingUsageItemCovered({ price: catalogEntry?.price, candidates })
+			) {
+				continue;
+			}
 			mismatches.push(
 				buildMissingOrUnexpectedMismatch({
 					expected,
@@ -422,6 +472,7 @@ export const evaluateItems = ({
 				mismatches.push({
 					type: "item_mismatch",
 					reason: "quantity_mismatch",
+					price_type: priceTypeOf(price),
 					feature_id: price?.config.feature_id ?? undefined,
 					expected_quantity: expected.quantity,
 					actual_quantity: actual.quantity,
@@ -456,6 +507,7 @@ export const evaluateItems = ({
 				mismatches.push({
 					type: "item_mismatch",
 					reason: "price_mismatch",
+					price_type: priceTypeOf(price),
 					feature_id: price?.config.feature_id ?? undefined,
 					phase_starts_at: phaseStartsAt,
 				});
@@ -465,6 +517,12 @@ export const evaluateItems = ({
 
 	for (let actualIndex = 0; actualIndex < actualItems.length; actualIndex++) {
 		if (claimed.has(actualIndex)) continue;
+		if (
+			!strict &&
+			candidates[actualIndex]?.price?.recurring?.usage_type === "metered"
+		) {
+			continue;
+		}
 		const actual = actualItems[actualIndex];
 		const catalogEntry = resolvePriceForItem({
 			item: actual,

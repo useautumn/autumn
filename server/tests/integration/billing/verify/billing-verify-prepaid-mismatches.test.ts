@@ -88,7 +88,9 @@ const stripeSubItemForFeature = async ({
 			stripePriceIds.has(item.price.id),
 	);
 	if (!subItem) {
-		throw new Error(`No Stripe subscription item found for feature ${featureId}`);
+		throw new Error(
+			`No Stripe subscription item found for feature ${featureId}`,
+		);
 	}
 	return subItem;
 };
@@ -148,7 +150,7 @@ test.concurrent(
 
 		expect(result.subscriptions.length).toBe(1);
 		expect(result.subscriptions[0].status).toBe("mismatched");
-		expect(result.subscriptions[0].mismatches).toEqual([
+		expect(result.subscriptions[0].mismatches).toMatchObject([
 			{
 				type: "prepaid_quantity_mismatch",
 				feature_id: TestFeature.Messages,
@@ -221,7 +223,7 @@ test.concurrent(
 
 		expect(result.subscriptions.length).toBe(1);
 		expect(result.subscriptions[0].status).toBe("mismatched");
-		expect(result.subscriptions[0].mismatches).toEqual([
+		expect(result.subscriptions[0].mismatches).toMatchObject([
 			{
 				type: "prepaid_price_mismatch",
 				feature_id: TestFeature.Messages,

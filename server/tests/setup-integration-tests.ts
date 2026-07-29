@@ -64,6 +64,16 @@ if (process.env.TESTS_ORG) {
 	);
 	const testContext = await createTestContext();
 
+	// Availability defaults to degraded until primed (normally at server boot);
+	// unprimed, in-process finalize/track calls silently fail open to SQS replays.
+	const { primeRedisMonitor } = await import(
+		"@/external/redis/initUtils/redisAvailability.js"
+	);
+	const { primeRedisV2Monitor } = await import(
+		"@/external/redis/initUtils/redisV2Availability.js"
+	);
+	await Promise.all([primeRedisMonitor(), primeRedisV2Monitor()]);
+
 	if (!testContext.org.config.multi_currency) {
 		const { db } = await import("@/db/initDrizzle.js");
 		const { OrgService } = await import("@/internal/orgs/OrgService.js");

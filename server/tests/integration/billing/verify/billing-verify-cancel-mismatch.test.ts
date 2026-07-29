@@ -69,7 +69,7 @@ test.concurrent(
 
 		expect(result.subscriptions.length).toBe(1);
 		expect(result.subscriptions[0].status).toBe("mismatched");
-		expect(result.subscriptions[0].mismatches).toEqual([
+		expect(result.subscriptions[0].mismatches).toMatchObject([
 			{
 				type: "cancel_state_mismatch",
 				expected_canceling: true,

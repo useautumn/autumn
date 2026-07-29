@@ -2,36 +2,36 @@
 
 import { generateKsuid } from "@autumn/ksuid";
 import {
-	AllocatedBillingBehavior,
-	AllowanceType,
-	BillingInterval,
-	BillingType,
-	BillWhen,
-	buildFixedPriceCurrencies,
-	buildUsagePriceCurrencies,
-	EntInterval,
-	type Entitlement,
-	ErrCode,
-	type Feature,
-	FeatureType,
-	FeatureUsageType,
-	type FixedPriceConfig,
-	Infinite,
-	itemToAllocatedBillingBehavior,
-	itemToBillingInterval,
-	itemToBillingIntervalCount,
-	itemToEntInterval,
-	itemToEntIntervalCount,
-	OnDecrease,
-	OnIncrease,
-	type Price,
-	PriceType,
-	type ProductItem,
-	shouldProrate,
-	TierInfinite,
-	UsageModel,
-	type UsagePriceConfig,
-	type UsageTier,
+    AllocatedBillingBehavior,
+    AllowanceType,
+    BillingInterval,
+    BillingType,
+    BillWhen,
+    buildFixedPriceCurrencies,
+    buildUsagePriceCurrencies,
+    EntInterval,
+    type Entitlement,
+    ErrCode,
+    type Feature,
+    FeatureType,
+    FeatureUsageType,
+    type FixedPriceConfig,
+    Infinite,
+    itemToAllocatedBillingBehavior,
+    itemToBillingInterval,
+    itemToBillingIntervalCount,
+    itemToEntInterval,
+    itemToEntIntervalCount,
+    OnDecrease,
+    OnIncrease,
+    type Price,
+    PriceType,
+    type ProductItem,
+    shouldProrate,
+    TierInfinite,
+    UsageModel,
+    type UsagePriceConfig,
+    type UsageTier,
 } from "@autumn/shared";
 import { RecaseError } from "../../../../api/errors/base/RecaseError";
 import { entsAreSame } from "../../../productUtils/entUtils/compareEnt/entsAreSame.js";
@@ -40,9 +40,9 @@ import { getBillingType } from "../../../productUtils/priceUtils.js";
 import { notNullish, nullish } from "../../../utils.js";
 import { itemCanBeProrated } from "../classifyItemUtils.js";
 import {
-	isFeatureItem,
-	isFeaturePriceItem,
-	isPriceItem,
+    isFeatureItem,
+    isFeaturePriceItem,
+    isPriceItem,
 } from "../getItemType.js";
 
 const priceId = () => generateKsuid({ prefix: "pr_" });
@@ -88,6 +88,7 @@ const toPrice = ({
 		amount: notNullish(item.price) ? item.price : item.tiers![0].amount,
 		interval: itemToBillingInterval({ item }) as BillingInterval,
 		interval_count: itemToBillingIntervalCount({ item }),
+		// stripe_price_id: item.stripe_price_id ?? null,
 		stripe_product_id: null,
 		stripe_price_id: item.stripe_price_id ?? undefined,
 		feature_id: null,
@@ -285,6 +286,7 @@ const toFeatureAndPrice = ({
 				})) as UsageTier[]),
 		interval: itemToBillingInterval({ item }) as BillingInterval,
 		interval_count: itemToBillingIntervalCount({ item }),
+		stripe_price_id: item.stripe_price_id ?? null,
 	};
 
 	const currencies = buildUsagePriceCurrencies({

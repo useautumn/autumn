@@ -1,7 +1,7 @@
 import {
-	CustomerNotFoundError,
-	EntityNotFoundError,
-	type FullSubject,
+    CustomerNotFoundError,
+    EntityNotFoundError,
+    type FullSubject,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { getFullSubjectNormalized } from "@/internal/customers/repos/getFullSubject/index.js";
@@ -15,12 +15,15 @@ export const getOrSetCachedFullSubject = async ({
 	entityId,
 	source,
 	staleWhileRevalidate = true,
+	runLazyResets = true,
 }: {
 	ctx: AutumnContext;
 	customerId: string;
 	entityId?: string;
 	source?: string;
 	staleWhileRevalidate?: boolean;
+	runLazyResets?: boolean;
+
 }): Promise<FullSubject> => {
 	const { skipCache, logger } = ctx;
 	const useRedis = !skipCache;
@@ -37,6 +40,7 @@ export const getOrSetCachedFullSubject = async ({
 				entityId,
 				source,
 				staleWhileRevalidate,
+				runLazyResets,
 			});
 		fetchedSubjectViewEpoch = subjectViewEpoch;
 
@@ -56,6 +60,7 @@ export const getOrSetCachedFullSubject = async ({
 		ctx,
 		customerId,
 		entityId,
+		runLazyResets,
 	});
 
 	if (!result) {

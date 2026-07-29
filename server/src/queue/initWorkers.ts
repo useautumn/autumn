@@ -13,7 +13,6 @@ import * as Sentry from "@sentry/bun";
 import { type DrizzleCli, initDrizzle } from "@/db/initDrizzle.js";
 import { startPgPoolMonitor, stopPgPoolMonitor } from "@/db/pgPoolMonitor.js";
 import { logger } from "@/external/logtail/logtailUtils.js";
-import { verifyCacheConsistency } from "@/internal/billing/v2/workflows/verifyCacheConsistency/verifyCacheConsistency.js";
 import {
 	isJobQueueEnabled,
 	JOB_QUEUE_IDS,
@@ -704,24 +703,8 @@ export const initWorkers = async ({
 };
 
 export const initHatchetWorker = async () => {
-	if (!hatchet) {
-		console.log("⏭️  Hatchet not configured, skipping worker startup");
-		return;
-	}
-
-	try {
-		console.log("Starting hatchet worker");
-
-		const worker = await hatchet.worker("hatchet-worker", {
-			workflows: [verifyCacheConsistency!],
-		});
-
-		worker.start().catch((error) => {
-			console.error("Hatchet worker error (non-fatal):", error.message);
-			Sentry.captureException(error);
-		});
-	} catch (error) {
-		console.error("Failed to start hatchet worker", error);
-		Sentry.captureException(error);
-	}
+	// verifyCacheConsistency (the only Hatchet workflow) was deleted with the
+	// legacy fullCustomer cache, so there is nothing to register. Remove the
+	// Hatchet plumbing entirely if no new workflows appear.
+	console.log("⏭️  No hatchet workflows registered, skipping worker startup");
 };

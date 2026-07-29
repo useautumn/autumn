@@ -5,7 +5,6 @@ import {
 	CusProductStatus,
 	type EntitlementWithFeature,
 	type FeatureOptions,
-	type FullCustomer,
 	type FullCustomerEntitlement,
 	getStartingBalance,
 	type Organization,
@@ -13,7 +12,6 @@ import {
 } from "@autumn/shared";
 import type { RepoContext } from "@/db/repoContext.js";
 import { addProductsUpdatedWebhookTask } from "@/internal/analytics/handlers/handleProductsUpdated.js";
-import { triggerVerifyCacheConsistency } from "@/internal/billing/v2/workflows/verifyCacheConsistency/triggerVerifyCacheConsistency.js";
 import { getEntRelatedPrice } from "@/internal/products/entitlements/entitlementUtils.js";
 import { getEntOptions } from "@/internal/products/prices/priceUtils.js";
 import { nullish } from "@/utils/genUtils.js";
@@ -184,12 +182,5 @@ export const updateOneTimeCusProduct = async ({
 		cusProduct: existingCusProduct,
 		scheduledCusProduct: undefined,
 		scenario: AttachScenario.New,
-	});
-
-	await triggerVerifyCacheConsistency({
-		newCustomerProduct: existingCusProduct,
-		previousFullCustomer: attachParams.customer as FullCustomer,
-		logger: ctx.logger,
-		source: "updateOneTimeCusProduct",
 	});
 };

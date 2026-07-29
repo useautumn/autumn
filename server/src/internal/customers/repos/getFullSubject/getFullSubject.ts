@@ -1,10 +1,10 @@
 import {
-	type CusProductStatus,
-	type FullSubject,
-	fullSubjectToFullCustomer,
-	type NormalizedFullSubject,
-	normalizedToFullSubject,
-	type SubjectQueryRow,
+    type CusProductStatus,
+    type FullSubject,
+    fullSubjectToFullCustomer,
+    type NormalizedFullSubject,
+    normalizedToFullSubject,
+    type SubjectQueryRow,
 } from "@autumn/shared";
 import { executePrepared } from "@/db/executePrepared.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
@@ -15,8 +15,8 @@ import { RELEVANT_STATUSES } from "../../cusProducts/CusProductService.js";
 import { runWithFullSubjectGate } from "./getFullSubjectGate.js";
 import { getFullSubjectQuery } from "./getFullSubjectQuery.js";
 import {
-	resultToFullSubject,
-	subjectQueryRowToNormalized,
+    resultToFullSubject,
+    subjectQueryRowToNormalized,
 } from "./subjectQueryRowToNormalized.js";
 
 /** Fetch full subject from DB and return as FullSubject. Runs lazy reset. */
@@ -71,7 +71,7 @@ export async function getFullSubject({
 	return fullSubject;
 }
 
-/** Fetch full subject from DB, run lazy reset, return normalized + fullSubject.
+/** Fetch full subject from DB, run lazy resets by default, return normalized + fullSubject.
  *  Both normalized and fullSubject are kept in sync after reset. */
 export async function getFullSubjectNormalized({
 	ctx,
@@ -79,12 +79,16 @@ export async function getFullSubjectNormalized({
 	entityId,
 	inStatuses = RELEVANT_STATUSES,
 	allowMissingEntity = false,
+	runLazyResets = true,
+
 }: {
 	ctx: AutumnContext;
 	customerId?: string;
 	entityId?: string;
 	inStatuses?: CusProductStatus[];
 	allowMissingEntity?: boolean;
+	runLazyResets?: boolean;
+
 }): Promise<
 	{ normalized: NormalizedFullSubject; fullSubject: FullSubject } | undefined
 > {
@@ -119,12 +123,15 @@ export async function getFullSubjectNormalized({
 	});
 
 	const fullSubject = normalizedToFullSubject({ normalized });
-	await lazyResetSubjectEntitlements({ ctx, fullSubject, normalized });
-	await lazyResetSubjectUsageWindows({ ctx, fullSubject, normalized });
-	await checkPendingMigrationsForCustomer({
-		ctx,
-		fullCustomer: fullSubjectToFullCustomer({ fullSubject }),
-	});
+	if (runLazyResets) {
+		await lazyResetSubjectEntitlements({ ctx, fullSubject, normalized });
+		await lazyResetSubjectUsageWindows({ ctx, fullSubject, normalized });
+		await checkPendingMigrationsForCustomer({
+			ctx,
+			fullCustomer: fullSubjectToFullCustomer({ fullSubject }),
+		});
+	}
+
 
 	return { normalized, fullSubject };
 }

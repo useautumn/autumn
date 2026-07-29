@@ -123,6 +123,7 @@ const buildSyntheticPooledCustomerEntitlement = ({
 		env: "test",
 		internal_customer_id: customerEntitlement.internal_customer_id,
 		internal_feature_id: customerEntitlement.internal_feature_id,
+		unlimited: false,
 		granted: 300,
 		interval: EntInterval.Month,
 		interval_count: 1,
