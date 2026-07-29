@@ -148,6 +148,30 @@ const draft = ({
 });
 
 describe("buildIncrementalSyncParams", () => {
+	test("syncs the current phase when future schedule phases exist", () => {
+		const current = product({ id: "current" });
+		const future = product({ id: "future" });
+		const { match, params } = draft({
+			matchedPlans: [matchedPlan({ product: current })],
+		});
+		params.phases?.push({
+			starts_at: 456,
+			plans: [syncPlan({ productId: future.id })],
+		});
+
+		const result = buildIncrementalSyncParams({
+			match,
+			params,
+			linkedCustomerProducts: [],
+		});
+
+		expect(result.shouldSync).toBe(true);
+		if (!result.shouldSync) throw new Error(result.reason);
+		expect(result.params?.phases).toHaveLength(1);
+		expect(result.params?.phases?.[0]?.starts_at).toBe("now");
+		expect(result.params?.phases?.[0]?.plans[0]?.plan_id).toBe(current.id);
+	});
+
 	test("keeps a plan when no linked customer product exists for its target", () => {
 		const pro = product({ id: "pro" });
 		const { match, params } = draft({

@@ -126,12 +126,9 @@ export const autoSyncUpdatedSubscription = async ({
 		return;
 	}
 
-	const currentPhase = params.phases?.find(
-		(phase) => phase.starts_at === "now",
-	);
 	const incremental = buildIncrementalSyncParams({
 		match,
-		params: currentPhase ? { ...params, phases: [currentPhase] } : params,
+		params,
 		linkedCustomerProducts,
 	});
 	if (!incremental.shouldSync) {

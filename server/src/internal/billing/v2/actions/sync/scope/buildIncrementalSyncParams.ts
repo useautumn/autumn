@@ -138,12 +138,8 @@ export const buildIncrementalSyncParams = ({
 		};
 	}
 
-	const phase = params.phases?.[0];
-	if (
-		!phase ||
-		params.phases?.length !== 1 ||
-		phase.plans.length !== phaseMatch.plans.length
-	) {
+	const phase = params.phases?.find((phase) => phase.starts_at === "now");
+	if (!phase || phase.plans.length !== phaseMatch.plans.length) {
 		return {
 			shouldSync: false,
 			reason: "unsupported_phase_shape",
