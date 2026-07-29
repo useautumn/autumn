@@ -2,6 +2,7 @@ import type {
 	ApiVersion,
 	AppEnv,
 	EventInsert,
+	FinalizeLockParamsV0,
 	Price,
 	TrackParams,
 	UpdateBalanceParamsV0,
@@ -97,6 +98,13 @@ export interface Payloads {
 		customerId: string;
 		lockId: string;
 		hashedKey: string;
+	};
+	[JobName.FinalizeLock]: {
+		orgId: string;
+		env: AppEnv;
+		customerId?: string;
+		requestId: string;
+		params: FinalizeLockParamsV0;
 	};
 	[key: string]: unknown;
 }

@@ -17,6 +17,7 @@ import { autoTopup } from "@/internal/balances/autoTopUp/autoTopup.js";
 import { batchResetCustomerEntitlementsV2 } from "@/internal/balances/batchReset/batchResetCustomerEntitlementsV2.js";
 import { runInsertEventBatch } from "@/internal/balances/events/runInsertEventBatch.js";
 import { expireLock } from "@/internal/balances/finalizeLock/expireLock.js";
+import { runQueuedFinalizeLock } from "@/internal/balances/finalizeLock/runQueuedFinalizeLock.js";
 import { runQueuedTrack } from "@/internal/balances/track/runQueuedTrack.js";
 import { runUpdateBalanceV2 } from "@/internal/balances/updateBalance/v2/updateBalanceV2.js";
 import { refreshEntityAggregateCache } from "@/internal/balances/utils/refreshEntityAggregate/index.js";
@@ -53,6 +54,17 @@ export interface SqsJob {
 	data: any;
 }
 
+const isClaimContestedError = ({ error }: { error: unknown }): boolean => {
+	if (!(error instanceof RecaseError)) return false;
+	const { data } = error;
+	return (
+		typeof data === "object" &&
+		data !== null &&
+		"blockingStatus" in data &&
+		data.blockingStatus === "RESERVATION_ALREADY_PROCESSING"
+	);
+};
+
 export const shouldRetrySqsJobError = ({
 	jobName,
 	error,
@@ -72,6 +84,14 @@ export const shouldRetrySqsJobError = ({
 		case JobName.Track:
 		case JobName.UpdateBalance:
 			return isTransientDbError({ error }) || isTransientRedisError({ error });
+		// Finalize replays also redeliver while a dying attempt's claim marker
+		// clears — dropping one leaks the customer's reserved balance.
+		case JobName.FinalizeLock:
+			return (
+				isTransientDbError({ error }) ||
+				isTransientRedisError({ error }) ||
+				isClaimContestedError({ error })
+			);
 		// Top-up shares the customer billing lock — retry instead of dropping the job
 		// when it collides with an attach or checkout materialization.
 		case JobName.AutoTopUp:
@@ -158,7 +178,9 @@ export const processMessage = async ({
 
 		// Jobs below need worker context
 		const usesCustomerCache =
-			job.name === JobName.Track || job.name === JobName.UpdateBalance;
+			job.name === JobName.Track ||
+			job.name === JobName.UpdateBalance ||
+			job.name === JobName.FinalizeLock;
 		const ctx = await createWorkerContext({
 			db,
 			payload: job.data,
@@ -403,6 +425,18 @@ export const processMessage = async ({
 			await expireLock({
 				ctx,
 				payload: job.data,
+			});
+			return;
+		}
+
+		if (job.name === JobName.FinalizeLock) {
+			if (!ctx) {
+				workerLogger.error("No context found for finalize lock job");
+				return;
+			}
+			await runQueuedFinalizeLock({
+				ctx,
+				params: job.data.params,
 			});
 			return;
 		}
