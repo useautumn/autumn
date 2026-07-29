@@ -54,7 +54,7 @@ const response = await autumn.billing.update({
 ```
 
 ```python Python
-response = await autumn.billing.update(
+response = autumn.billing.update(
     customer_id="user_123",
     plan_id="pro",
     cancel_action="cancel_end_of_cycle",
@@ -102,7 +102,7 @@ const response = await autumn.billing.update({
 ```
 
 ```python Python
-response = await autumn.billing.update(
+response = autumn.billing.update(
     customer_id="user_123",
     plan_id="pro",
     cancel_action="cancel_immediately",
@@ -150,7 +150,7 @@ const response = await autumn.billing.update({
 ```
 
 ```python Python
-response = await autumn.billing.update(
+response = autumn.billing.update(
     customer_id="user_123",
     plan_id="pro",
     cancel_action="uncancel",
@@ -208,7 +208,7 @@ const response = await autumn.billing.update({
 ```python Python
 # Customer is on Pro with a scheduled downgrade to Basic.
 # Cancel the scheduled change and keep Pro.
-response = await autumn.billing.update(
+response = autumn.billing.update(
     customer_id="user_123",
     plan_id="pro",
     cancel_action="uncancel",
@@ -290,7 +290,7 @@ await attach({
 ```
 
 ```python Python
-response = await autumn.billing.attach(
+response = autumn.billing.attach(
     customer_id="user_123",
     plan_id="enterprise",
     carry_over_balances={
@@ -346,7 +346,7 @@ await attach({
 ```
 
 ```python Python
-response = await autumn.billing.attach(
+response = autumn.billing.attach(
     customer_id="user_123",
     plan_id="enterprise",
     carry_over_usages={

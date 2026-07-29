@@ -80,7 +80,7 @@ from autumn_sdk import Autumn
 
 autumn = Autumn("am_sk_test_1234")
 
-plans = await autumn.plans.list(customer_id="user_123")
+plans = autumn.plans.list(customer_id="user_123")
 
 for plan in plans.list:
     print(plan.name, plan.customer_eligibility.attach_action)
@@ -140,7 +140,7 @@ from autumn_sdk import Autumn
 
 autumn = Autumn("am_sk_test_1234")
 
-response = await autumn.billing.attach(
+response = autumn.billing.attach(
     customer_id="user_123",
     plan_id="pro",
 )
@@ -148,7 +148,7 @@ response = await autumn.billing.attach(
 ```
 
 ```bash cURL
-curl -X POST 'https://api.useautumn.com/v1/attach' \
+curl -X POST 'https://api.useautumn.com/v1/billing.attach' \
   -H 'Authorization: Bearer am_sk_test_1234' \
   -H 'Content-Type: application/json' \
   -d '{
@@ -196,7 +196,7 @@ from autumn_sdk import Autumn
 autumn = Autumn("am_sk_test_1234")
 
 # Cancel at end of billing cycle
-await autumn.billing.update(
+autumn.billing.update(
     customer_id="user_123",
     plan_id="pro",
     cancel_action="cancel_end_of_cycle",
@@ -204,7 +204,7 @@ await autumn.billing.update(
 ```
 
 ```bash cURL
-curl -X POST 'https://api.useautumn.com/v1/billing/update' \
+curl -X POST 'https://api.useautumn.com/v1/billing.update' \
   -H 'Authorization: Bearer am_sk_test_1234' \
   -H 'Content-Type: application/json' \
   -d '{
@@ -272,7 +272,7 @@ from autumn_sdk import Autumn
 
 autumn = Autumn("am_sk_test_1234")
 
-customer = await autumn.customers.get_or_create(
+customer = autumn.customers.get_or_create(
     customer_id="user_123"
 )
 
@@ -283,7 +283,7 @@ cancelling_sub = next(
 )
 
 if cancelling_sub:
-    await autumn.billing.update(
+    autumn.billing.update(
         customer_id="user_123",
         plan_id=cancelling_sub.plan_id,
         cancel_action="uncancel",
@@ -291,7 +291,7 @@ if cancelling_sub:
 ```
 
 ```bash cURL
-curl -X POST 'https://api.useautumn.com/v1/billing/update' \
+curl -X POST 'https://api.useautumn.com/v1/billing.update' \
   -H 'Authorization: Bearer am_sk_test_1234' \
   -H 'Content-Type: application/json' \
   -d '{
@@ -344,7 +344,7 @@ from autumn_sdk import Autumn
 
 autumn = Autumn("am_sk_test_1234")
 
-customer = await autumn.customers.get_or_create(
+customer = autumn.customers.get_or_create(
     customer_id="user_123"
 )
 
@@ -353,7 +353,7 @@ print([s.plan_id for s in active])
 ```
 
 ```bash cURL
-curl -X POST 'https://api.useautumn.com/v1/customers' \
+curl -X POST 'https://api.useautumn.com/v1/customers.get_or_create' \
   -H 'Authorization: Bearer am_sk_test_1234' \
   -H 'Content-Type: application/json' \
   -d '{ "customer_id": "user_123" }'
@@ -399,7 +399,7 @@ from autumn_sdk import Autumn
 
 autumn = Autumn("am_sk_test_1234")
 
-customer = await autumn.customers.get_or_create(
+customer = autumn.customers.get_or_create(
     customer_id="user_123"
 )
 
@@ -408,7 +408,7 @@ print(f"{messages.remaining} / {messages.granted}")
 ```
 
 ```bash cURL
-curl -X POST 'https://api.useautumn.com/v1/customers' \
+curl -X POST 'https://api.useautumn.com/v1/customers.get_or_create' \
   -H 'Authorization: Bearer am_sk_test_1234' \
   -H 'Content-Type: application/json' \
   -d '{ "customer_id": "user_123" }'
@@ -458,7 +458,7 @@ from autumn_sdk import Autumn
 
 autumn = Autumn("am_sk_test_1234")
 
-response = await autumn.billing.open_customer_portal(
+response = autumn.billing.open_customer_portal(
     customer_id="user_123",
     return_url="https://your-app.com/billing",
 )
@@ -513,7 +513,7 @@ from autumn_sdk import Autumn
 
 autumn = Autumn("am_sk_test_1234")
 
-response = await autumn.events.aggregate(
+response = autumn.events.aggregate(
     customer_id="user_123",
     feature_id="messages",
     range="30d",

@@ -94,7 +94,7 @@ from autumn_sdk import Autumn
 
 autumn = Autumn("am_sk_test_1234")
 
-response = await autumn.referrals.create_code(
+response = autumn.referrals.create_code(
     customer_id="user_123",
     program_id="free-month",
 )
@@ -157,7 +157,7 @@ from autumn_sdk import Autumn
 
 autumn = Autumn("am_sk_test_1234")
 
-response = await autumn.referrals.redeem_code(
+response = autumn.referrals.redeem_code(
     code="4EXWV1",
     customer_id="new_user_123",
 )

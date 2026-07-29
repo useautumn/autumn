@@ -106,7 +106,7 @@ const model = withAutumn({
 
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
-| `autumn` | `Autumn` | Yes | Your Autumn SDK client instance |
+| `autumn` | `Autumn` | No | Autumn SDK client. If omitted, the wrapper uses `AUTUMN_API_KEY` or `AUTUMN_SECRET_KEY` |
 | `model` | `LanguageModelV3` | Yes | The AI SDK language model to wrap |
 | `customerId` | `string` | Yes | The Autumn customer ID to attribute usage to |
 | `providerId` | `string` | No | Override the provider prefix in the model name sent to Autumn. Falls back to the model's `provider` field |

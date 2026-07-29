@@ -50,7 +50,7 @@ autumn = Autumn('am_sk_42424242')
 
 async def main():
     # Check feature access
-    response = await autumn.check(
+    response = autumn.check(
         customer_id='user_or_org_id_from_auth',
         feature_id='messages',
         required_balance=1,
@@ -61,7 +61,7 @@ asyncio.run(main())
 
 ```bash cURL
 # Check feature access
-curl -X POST 'https://api.useautumn.com/v1/check' \
+curl -X POST 'https://api.useautumn.com/v1/balances.check' \
   -H 'Authorization: Bearer am_sk_42424242' \
   -H 'Content-Type: application/json' \
   -d '{
@@ -132,7 +132,7 @@ autumn = Autumn('am_sk_42424242')
 
 # Then record 1 message used
 async def main():
-    await autumn.track(
+    autumn.track(
         customer_id='user_or_org_id_from_auth',
         feature_id='messages',
         value=1,
@@ -145,7 +145,7 @@ asyncio.run(main())
 # Your own function to send the chat message
 
 # Then record 1 message used
-curl -X POST 'https://api.useautumn.com/v1/track' \
+curl -X POST 'https://api.useautumn.com/v1/balances.track' \
   -H 'Authorization: Bearer am_sk_42424242' \
   -H 'Content-Type: application/json' \
   -d '{

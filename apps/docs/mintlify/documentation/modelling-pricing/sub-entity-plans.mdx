@@ -100,7 +100,7 @@ from autumn_sdk import Autumn
 
 autumn = Autumn("am_sk_...")
 
-await autumn.entities.create(
+autumn.entities.create(
     customer_id="org_123",
     entity_id="workspace_a",
     feature_id="workspaces",
@@ -109,7 +109,7 @@ await autumn.entities.create(
 ```
 
 ```bash cURL
-curl -X POST "https://api.useautumn.com/v1/entities" \
+curl -X POST "https://api.useautumn.com/v1/entities.create" \
   -H "Authorization: Bearer am_sk_..." \
   -H "Content-Type: application/json" \
   -d '{
@@ -135,7 +135,7 @@ const response = await autumn.billing.attach({
 ```
 
 ```python Python
-response = await autumn.billing.attach(
+response = autumn.billing.attach(
     customer_id="org_123",
     plan_id="workspace_pro",
     entity_id="workspace_a",
@@ -164,17 +164,17 @@ Pass the `entity_id` to scope `check` and `track` calls to a specific entity:
 <CodeGroup>
 
 ```typescript TypeScript
-const { data } = await autumn.check({
-  customer_id: "org_123",
-  feature_id: "requests",
-  entity_id: "workspace_a",
+const data = await autumn.check({
+  customerId: "org_123",
+  featureId: "requests",
+  entityId: "workspace_a",
 });
 
 console.log(data.allowed);
 ```
 
 ```python Python
-response = await autumn.check(
+response = autumn.check(
     customer_id="org_123",
     feature_id="requests",
     entity_id="workspace_a",
@@ -184,7 +184,7 @@ print(response.allowed)
 ```
 
 ```bash cURL
-curl -X POST "https://api.useautumn.com/v1/check" \
+curl -X POST "https://api.useautumn.com/v1/balances.check" \
   -H "Authorization: Bearer am_sk_..." \
   -H "Content-Type: application/json" \
   -d '{
@@ -211,7 +211,7 @@ await autumn.billing.attach({
 ```
 
 ```python Python
-await autumn.billing.attach(
+autumn.billing.attach(
     customer_id="org_123",
     plan_id="workspace_pro",
     entity_id="workspace_a",
@@ -247,7 +247,7 @@ await autumn.billing.update({
 ```
 
 ```python Python
-await autumn.billing.update(
+autumn.billing.update(
     customer_id="org_123",
     plan_id="workspace_pro",
     entity_id="workspace_a",

@@ -34,7 +34,7 @@ from autumn_sdk import Autumn
 
 autumn = Autumn("am_sk_test_1234")
 
-customer = await autumn.customers.get_or_create(
+customer = autumn.customers.get_or_create(
     customer_id="user_123",
     name="John Doe",
     email="john@example.com",
@@ -42,7 +42,7 @@ customer = await autumn.customers.get_or_create(
 ```
 
 ```bash cURL
-curl -X POST "https://api.useautumn.com/v1/customers" \
+curl -X POST "https://api.useautumn.com/v1/customers.get_or_create" \
   -H "Authorization: Bearer am_sk_test_1234" \
   -H "Content-Type: application/json" \
   -d '{
@@ -131,7 +131,7 @@ await autumn.customers.getOrCreate({
 ```
 
 ```python Python
-await autumn.customers.get_or_create(
+autumn.customers.get_or_create(
     customer_id="user_123",
     name="John Doe",
     email="john@example.com",
@@ -140,7 +140,7 @@ await autumn.customers.get_or_create(
 ```
 
 ```bash cURL
-curl -X POST "https://api.useautumn.com/v1/customers" \
+curl -X POST "https://api.useautumn.com/v1/customers.get_or_create" \
   -H "Authorization: Bearer am_sk_test_1234" \
   -H "Content-Type: application/json" \
   -d '{
@@ -167,14 +167,14 @@ await autumn.customers.getOrCreate({
 ```
 
 ```python Python
-await autumn.customers.get_or_create(
+autumn.customers.get_or_create(
     customer_id="user_123",
     stripe_id="cus_abc123",
 )
 ```
 
 ```bash cURL
-curl -X POST "https://api.useautumn.com/v1/customers" \
+curl -X POST "https://api.useautumn.com/v1/customers.get_or_create" \
   -H "Authorization: Bearer am_sk_test_1234" \
   -H "Content-Type: application/json" \
   -d '{

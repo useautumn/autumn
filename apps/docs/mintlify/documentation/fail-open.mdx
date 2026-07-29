@@ -20,6 +20,7 @@ Fail-open is **enabled by default**. When Autumn is unreachable (network errors,
 | `check()` | `{ allowed: true }` | Users retain access to features |
 | `track()` | `{ value: 0, balance: null }` | Usage event is silently dropped |
 | `customers.getOrCreate()` | Sentinel customer with `id: null` | Returns a valid but empty customer object |
+| `entities.get()` | Sentinel entity with `id: null` | Returns a valid but empty entity object |
 
 <Warning>
 When fail-open triggers, the SDK logs a prominent error to your console so you're immediately aware of the issue.
@@ -67,7 +68,7 @@ const result = await autumn.check({
 });
 
 // Normal response: allowed is based on actual balance
-// Fail-open response: allowed is always true, customerId is ""
+// Fail-open response: allowed is always true, customerId is null
 ```
 
 When `customers.getOrCreate()` fails open, the returned customer will have `id: null`:
@@ -87,7 +88,7 @@ if (customer.id === null) {
 When fail-open triggers, you'll see this in your server logs:
 
 ```
-FATAL AUTUMN ERROR DETECTED; FAILING OPEN; LEARN MORE: https://docs.useautumn.com/docs/fail-open; STATUS PAGE: status.useautumn.com
+[Autumn] Request failed — failing open. Learn more: https://docs.useautumn.com/documentation/fail-open
   Operation: check | Status: 503 | Error: Server error
 ```
 

@@ -16,7 +16,7 @@ import { DynamicResponseExample } from "/snippets/dynamic-response-example.jsx";
 <CodeGroup>
 
 ```typescript Check feature access
-const { allowed, balance } = await autumn.balances.check({
+const { allowed, balance } = await autumn.check({
   customerId: "cus_123",
   featureId: "ai_messages"
 });
@@ -27,7 +27,7 @@ if (!allowed) {
 ```
 
 ```typescript Check and track atomically
-const { allowed } = await autumn.balances.check({
+const { allowed } = await autumn.check({
   customerId: "cus_123",
   featureId: "api_calls",
   requiredBalance: 1,
@@ -36,7 +36,7 @@ const { allowed } = await autumn.balances.check({
 ```
 
 ```typescript Get upgrade options when denied
-const { allowed, preview } = await autumn.balances.check({
+const { allowed, preview } = await autumn.check({
   customerId: "cus_123",
   featureId: "advanced_analytics",
   withPreview: true

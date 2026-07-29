@@ -118,7 +118,7 @@ from autumn_sdk import Autumn
 
 autumn = Autumn("am_sk_test_1234")
 
-customer = await autumn.customers.get_or_create(
+customer = autumn.customers.get_or_create(
     customer_id="user_123",
     name="John Yeo",
     email="john@example.com",
@@ -126,7 +126,7 @@ customer = await autumn.customers.get_or_create(
 ```
 
 ```bash cURL
-curl -X POST "https://api.useautumn.com/v1/customers" \
+curl -X POST "https://api.useautumn.com/v1/customers.get_or_create" \
   -H "Authorization: Bearer am_sk_test_1234" \
   -H "Content-Type: application/json" \
   -d '{
@@ -180,7 +180,7 @@ import { Autumn } from "autumn-js";
 
 const autumn = new Autumn({ secretKey: "am_sk_test_1234" });
 
-const response = await autumn.customers.check({
+const response = await autumn.check({
   customerId: "user_123",
   featureId: "basic_messages",
   requiredBalance: 1,
@@ -197,7 +197,7 @@ from autumn_sdk import Autumn
 
 autumn = Autumn("am_sk_test_1234")
 
-response = await autumn.customers.check(
+response = autumn.check(
     customer_id="user_123",
     feature_id="basic_messages",
     required_balance=1,
@@ -208,7 +208,7 @@ if not response.allowed:
 ```
 
 ```bash cURL
-curl -X POST "https://api.useautumn.com/v1/check" \
+curl -X POST "https://api.useautumn.com/v1/balances.check" \
   -H "Authorization: Bearer am_sk_test_1234" \
   -H "Content-Type: application/json" \
   -d '{
@@ -220,25 +220,6 @@ curl -X POST "https://api.useautumn.com/v1/check" \
 
 </CodeGroup>
 
-<Expandable title="check response">
-The credit system ID will be returned in the balance.
-```json
-{
-  "allowed": true,
-  "customerId": "user_123",
-  "requiredBalance": 0.01,
-  "balance": {
-    "featureId": "usd_credits",
-    "granted": 5,
-    "remaining": 5,
-    "usage": 0,
-    "unlimited": false,
-    "overageAllowed": false,
-    "nextResetAt": 1769110978704
-  }
-}
-```
-</Expandable>
 </Step>
 
 <Step>
@@ -253,7 +234,7 @@ import { Autumn } from "autumn-js";
 
 const autumn = new Autumn({ secretKey: "am_sk_test_1234" });
 
-await autumn.customers.track({
+await autumn.track({
   customerId: "user_123",
   featureId: "basic_messages",
   value: 2,
@@ -265,7 +246,7 @@ from autumn_sdk import Autumn
 
 autumn = Autumn("am_sk_test_1234")
 
-await autumn.customers.track(
+autumn.track(
     customer_id="user_123",
     feature_id="basic_messages",
     value=2,
@@ -273,7 +254,7 @@ await autumn.customers.track(
 ```
 
 ```bash cURL
-curl -X POST "https://api.useautumn.com/v1/track" \
+curl -X POST "https://api.useautumn.com/v1/balances.track" \
   -H "Authorization: Bearer am_sk_test_1234" \
   -H "Content-Type: application/json" \
   -d '{
@@ -285,23 +266,6 @@ curl -X POST "https://api.useautumn.com/v1/track" \
 
 </CodeGroup>
 
-<Expandable title="track response">
-```json
-{
-  "customerId": "user_123",
-  "value": 2,
-  "balance": {
-    "featureId": "usd_credits",
-    "granted": 5,
-    "remaining": 4.98,
-    "usage": 0.02,
-    "unlimited": false,
-    "overageAllowed": false,
-    "nextResetAt": 1769110978704
-  }
-}
-```
-</Expandable>
 </Step>
 
 <Step>
@@ -344,7 +308,7 @@ from autumn_sdk import Autumn
 
 autumn = Autumn("am_sk_test_1234")
 
-response = await autumn.billing.attach(
+response = autumn.billing.attach(
     customer_id="user_123",
     plan_id="pro",
 )
@@ -352,7 +316,7 @@ response = await autumn.billing.attach(
 ```
 
 ```bash cURL
-curl -X POST "https://api.useautumn.com/v1/attach" \
+curl -X POST "https://api.useautumn.com/v1/billing.attach" \
   -H "Authorization: Bearer am_sk_test_1234" \
   -H "Content-Type: application/json" \
   -d '{
@@ -416,7 +380,7 @@ from autumn_sdk import Autumn
 
 autumn = Autumn("am_sk_test_1234")
 
-response = await autumn.billing.attach(
+response = autumn.billing.attach(
     customer_id="user_123",
     plan_id="top_up",
     feature_quantities=[{
@@ -428,7 +392,7 @@ response = await autumn.billing.attach(
 ```
 
 ```bash cURL
-curl -X POST "https://api.useautumn.com/v1/attach" \
+curl -X POST "https://api.useautumn.com/v1/billing.attach" \
   -H "Authorization: Bearer am_sk_test_1234" \
   -H "Content-Type: application/json" \
   -d '{

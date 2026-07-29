@@ -27,7 +27,7 @@ await attach({ planId: "pro" });
 ```
 
 ```python Python
-response = await autumn.billing.attach(
+response = autumn.billing.attach(
     customer_id="user_123",
     plan_id="pro",
 )
@@ -89,7 +89,7 @@ const preview = await previewAttach({ planId: "pro" });
 ```
 
 ```python Python
-preview = await autumn.billing.preview_attach(
+preview = autumn.billing.preview_attach(
     customer_id="user_123",
     plan_id="pro",
 )
@@ -165,7 +165,7 @@ const response = await attach({
 ```
 
 ```python Python
-response = await autumn.billing.attach(
+response = autumn.billing.attach(
     customer_id="user_123",
     plan_id="pro",
     redirect_mode="if_required",

@@ -112,7 +112,7 @@ import { Autumn } from "autumn-js";
 
 const autumn = new Autumn({ secretKey: "am_sk_..." });
 
-const { data } = await autumn.billing.attach({
+const data = await autumn.billing.attach({
   customerId: "user_123",
   planId: "pro",
   featureQuantities: [
@@ -127,7 +127,7 @@ from autumn_sdk import Autumn
 
 autumn = Autumn("am_sk_...")
 
-response = await autumn.billing.attach(
+response = autumn.billing.attach(
     customer_id="user_123",
     plan_id="pro",
     feature_quantities=[
@@ -138,7 +138,7 @@ response = await autumn.billing.attach(
 ```
 
 ```bash cURL
-curl -X POST "https://api.useautumn.com/v1/billing/attach" \
+curl -X POST "https://api.useautumn.com/v1/billing.attach" \
   -H "Authorization: Bearer am_sk_..." \
   -H "Content-Type: application/json" \
   -d '{
@@ -171,7 +171,7 @@ await autumn.billing.update({
 ```
 
 ```python Python
-await autumn.billing.update(
+autumn.billing.update(
     customer_id="user_123",
     plan_id="pro",
     feature_quantities=[
@@ -182,7 +182,7 @@ await autumn.billing.update(
 ```
 
 ```bash cURL
-curl -X POST "https://api.useautumn.com/v1/billing/update" \
+curl -X POST "https://api.useautumn.com/v1/billing.update" \
   -H "Authorization: Bearer am_sk_..." \
   -H "Content-Type: application/json" \
   -d '{

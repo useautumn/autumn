@@ -64,7 +64,7 @@ When an organization signs up, create an Autumn customer.
 import { useCustomer } from "autumn-js/react";
 
 const App = () => {
-  const { customer } = useCustomer();
+  const { data: customer } = useCustomer();
 
   console.log("Autumn customer:", customer);
 
@@ -79,8 +79,8 @@ const autumn = new Autumn({
   secretKey: 'am_sk_42424242',
 });
 
-const { data, error } = await autumn.customers.create({
-  id: "org_123",
+const customer = await autumn.customers.getOrCreate({
+  customerId: "org_123",
   name: "Acme Corp",
   email: "admin@acme.com",
 });
@@ -88,13 +88,13 @@ const { data, error } = await autumn.customers.create({
 
 ```python Python
 import asyncio
-from autumn import Autumn
+from autumn_sdk import Autumn
 
 autumn = Autumn('am_sk_42424242')
 
 async def main():
-    customer = await autumn.customers.create(
-        id="org_123",
+    customer = autumn.customers.get_or_create(
+        customer_id="org_123",
         name="Acme Corp",
         email="admin@acme.com",
     )
@@ -104,11 +104,11 @@ asyncio.run(main())
 
 ```bash cURL
 curl --request POST \
-  --url https://api.useautumn.com/v1/customers \
+  --url https://api.useautumn.com/v1/customers.get_or_create \
   --header 'Authorization: Bearer am_sk_42424242' \
   --header 'Content-Type: application/json' \
   --data '{
-    "id": "org_123",
+    "customer_id": "org_123",
     "name": "Acme Corp",
     "email": "admin@acme.com"
   }'
@@ -132,24 +132,25 @@ const autumn = new Autumn({
 });
 
 // Create entity for the initial admin user
-await autumn.entities.create("org_123", {
-  id: "user_admin",
+await autumn.entities.create({
+  customerId: "org_123",
+  entityId: "user_admin",
   name: "Admin User",
-  feature_id: "seats",
+  featureId: "seats",
 });
 ```
 
 ```python Python
 import asyncio
-from autumn import Autumn
+from autumn_sdk import Autumn
 
 autumn = Autumn("am_sk_42424242")
 
 async def main():
     # Create entity for the initial admin user
-    await autumn.features.create_entity(
+    autumn.entities.create(
         customer_id="org_123",
-        id="user_admin",
+        entity_id="user_admin",
         name="Admin User",
         feature_id="seats",
     )
@@ -158,11 +159,12 @@ asyncio.run(main())
 ```
 
 ```bash cURL
-curl -X POST "https://api.useautumn.com/v1/customers/org_123/entities" \
+curl -X POST "https://api.useautumn.com/v1/entities.create" \
   -H "Authorization: Bearer am_sk_42424242" \
   -H "Content-Type: application/json" \
   -d '{
-    "id": "user_admin",
+    "customer_id": "org_123",
+    "entity_id": "user_admin",
     "name": "Admin User",
     "feature_id": "seats"
   }'
@@ -184,17 +186,16 @@ When the customer upgrades to Team, attach the plan. The checkout URL will show 
 <CodeGroup>
 
 ```jsx React
-import { useCustomer, CheckoutDialog } from "autumn-js/react";
+import { useCustomer } from "autumn-js/react";
 
 export default function UpgradeButton() {
-  const { checkout } = useCustomer();
+  const { attach } = useCustomer();
 
   return (
     <button
       onClick={async () => {
-        await checkout({
-          productId: "team",
-          dialog: CheckoutDialog,
+        await attach({
+          planId: "team",
         });
       }}
     >
@@ -211,29 +212,29 @@ const autumn = new Autumn({
   secretKey: 'am_sk_42424242',
 });
 
-const { data } = await autumn.checkout({
-  customer_id: "org_123",
-  product_id: "team",
+const data = await autumn.billing.attach({
+  customerId: "org_123",
+  planId: "team",
 });
 
-if (data.url) {
+if (data.paymentUrl) {
   // Redirect to Stripe checkout
 }
 ```
 
 ```python Python
 import asyncio
-from autumn import Autumn
+from autumn_sdk import Autumn
 
 autumn = Autumn("am_sk_42424242")
 
 async def main():
-    response = await autumn.checkout(
+    response = autumn.billing.attach(
         customer_id="org_123",
-        product_id="team",
+        plan_id="team",
     )
     
-    if response.url:
+    if response.payment_url:
         # Redirect to Stripe checkout
         pass
 
@@ -241,12 +242,12 @@ asyncio.run(main())
 ```
 
 ```bash cURL
-curl -X POST "https://api.useautumn.com/v1/checkout" \
+curl -X POST "https://api.useautumn.com/v1/billing.attach" \
   -H "Authorization: Bearer am_sk_42424242" \
   -H "Content-Type: application/json" \
   -d '{
     "customer_id": "org_123",
-    "product_id": "team"
+    "plan_id": "team"
   }'
 ```
 
@@ -269,25 +270,29 @@ const autumn = new Autumn({
   secretKey: 'am_sk_42424242',
 });
 
-// Create entities for team members
-await autumn.entities.create("org_123", [
-  { id: "user_alice", name: "Alice Smith", feature_id: "seats" },
-  { id: "user_bob", name: "Bob Jones", feature_id: "seats" },
-  { id: "user_charlie", name: "Charlie Brown", feature_id: "seats" },
-]);
+await Promise.all([
+  ["user_alice", "Alice Smith"],
+  ["user_bob", "Bob Jones"],
+  ["user_charlie", "Charlie Brown"],
+].map(([entityId, name]) => autumn.entities.create({
+  customerId: "org_123",
+  entityId,
+  name,
+  featureId: "seats",
+})));
 ```
 
 ```python Python
 import asyncio
-from autumn import Autumn
+from autumn_sdk import Autumn
 
 autumn = Autumn("am_sk_42424242")
 
 async def main():
     # Create entities for team members
-    await autumn.features.create_entity(
+    autumn.entities.create(
         customer_id="org_123",
-        id="user_alice",
+        entity_id="user_alice",
         name="Alice Smith",
         feature_id="seats",
     )
@@ -296,11 +301,12 @@ asyncio.run(main())
 ```
 
 ```bash cURL
-curl -X POST "https://api.useautumn.com/v1/customers/org_123/entities" \
+curl -X POST "https://api.useautumn.com/v1/entities.create" \
   -H "Authorization: Bearer am_sk_42424242" \
   -H "Content-Type: application/json" \
   -d '{
-    "id": "user_alice",
+    "customer_id": "org_123",
+    "entity_id": "user_alice",
     "name": "Alice Smith",
     "feature_id": "seats"
   }'
@@ -324,14 +330,16 @@ Before generating a meeting summary, check if that specific user has remaining b
 <CodeGroup>
 
 ```tsx React
-import { useEntity } from "autumn-js/react";
+import { useCustomer } from "autumn-js/react";
 
 function MeetingSummaryButton({ meetingId }: { meetingId: string }) {
-  // Pass the current user's entity ID
-  const { allowed, check } = useEntity("user_alice");
+  const { check } = useCustomer();
 
   const handleSummarize = async () => {
-    const { data } = await check({ featureId: "meeting_summaries" });
+    const data = check({
+      featureId: "meeting_summaries",
+      entityId: "user_alice",
+    });
 
     if (!data?.allowed) {
       alert("You've used all your meeting summaries this month");
@@ -354,28 +362,28 @@ const autumn = new Autumn({
 });
 
 // Check Alice's individual balance
-const { data } = await autumn.check({
-  customer_id: "org_123",
-  feature_id: "meeting_summaries",
-  entity_id: "user_alice",
+const data = await autumn.check({
+  customerId: "org_123",
+  featureId: "meeting_summaries",
+  entityId: "user_alice",
 });
 
 if (!data.allowed) {
   console.log("Alice has used all her meeting summaries");
 } else {
-  console.log(`Alice has ${data.balance} summaries remaining`);
+  console.log(`Alice has ${data.balance?.remaining} summaries remaining`);
 }
 ```
 
 ```python Python
 import asyncio
-from autumn import Autumn
+from autumn_sdk import Autumn
 
 autumn = Autumn("am_sk_42424242")
 
 async def main():
     # Check Alice's individual balance
-    response = await autumn.check(
+    response = autumn.check(
         customer_id="org_123",
         feature_id="meeting_summaries",
         entity_id="user_alice",
@@ -384,13 +392,13 @@ async def main():
     if not response.allowed:
         print("Alice has used all her meeting summaries")
     else:
-        print(f"Alice has {response.balance} summaries remaining")
+        print(f"Alice has {response.balance.remaining} summaries remaining")
 
 asyncio.run(main())
 ```
 
 ```bash cURL
-curl -X POST "https://api.useautumn.com/v1/check" \
+curl -X POST "https://api.useautumn.com/v1/balances.check" \
   -H "Authorization: Bearer am_sk_42424242" \
   -H "Content-Type: application/json" \
   -d '{
@@ -402,21 +410,6 @@ curl -X POST "https://api.useautumn.com/v1/check" \
 
 </CodeGroup>
 
-<Expandable title="check response (entity-level)">
-```json
-{
-  "allowed": true,
-  "customer_id": "org_123",
-  "feature_id": "meeting_summaries",
-  "entity_id": "user_alice",
-  "balance": 47,
-  "usage": 3,
-  "included_usage": 50,
-  "unlimited": false
-}
-```
-</Expandable>
-
 </Step>
 
 <Step>
@@ -425,18 +418,6 @@ curl -X POST "https://api.useautumn.com/v1/check" \
 When a user generates a summary, track the usage against their entity.
 
 <CodeGroup>
-
-```tsx React
-import { useEntity } from "autumn-js/react";
-
-const { track } = useEntity("user_alice");
-
-// After generating a meeting summary
-await track({
-  featureId: "meeting_summaries",
-  value: 1,
-});
-```
 
 ```typescript Node.js
 import { Autumn } from "autumn-js";
@@ -447,22 +428,22 @@ const autumn = new Autumn({
 
 // Track usage for Alice
 await autumn.track({
-  customer_id: "org_123",
-  feature_id: "meeting_summaries",
-  entity_id: "user_alice",
+  customerId: "org_123",
+  featureId: "meeting_summaries",
+  entityId: "user_alice",
   value: 1,
 });
 ```
 
 ```python Python
 import asyncio
-from autumn import Autumn
+from autumn_sdk import Autumn
 
 autumn = Autumn("am_sk_42424242")
 
 async def main():
     # Track usage for Alice
-    await autumn.track(
+    autumn.track(
         customer_id="org_123",
         feature_id="meeting_summaries",
         entity_id="user_alice",
@@ -473,7 +454,7 @@ asyncio.run(main())
 ```
 
 ```bash cURL
-curl -X POST "https://api.useautumn.com/v1/track" \
+curl -X POST "https://api.useautumn.com/v1/balances.track" \
   -H "Authorization: Bearer am_sk_42424242" \
   -H "Content-Type: application/json" \
   -d '{
@@ -485,77 +466,6 @@ curl -X POST "https://api.useautumn.com/v1/track" \
 ```
 
 </CodeGroup>
-
-</Step>
-
-<Step>
-#### Check Customer-level Balance (Optional)
-
-You can also check the total balance across all entities, useful for admin dashboards.
-
-<CodeGroup>
-
-```typescript Node.js
-import { Autumn } from "autumn-js";
-
-const autumn = new Autumn({
-  secretKey: 'am_sk_42424242',
-});
-
-// Check total balance across all users (omit entity_id)
-const { data } = await autumn.check({
-  customer_id: "org_123",
-  feature_id: "meeting_summaries",
-});
-
-// With 3 users at 50 each = 150 total
-console.log(`Team has ${data.balance} total summaries remaining`);
-```
-
-```python Python
-import asyncio
-from autumn import Autumn
-
-autumn = Autumn("am_sk_42424242")
-
-async def main():
-    # Check total balance across all users
-    response = await autumn.check(
-        customer_id="org_123",
-        feature_id="meeting_summaries",
-    )
-    
-    print(f"Team has {response.balance} total summaries remaining")
-
-asyncio.run(main())
-```
-
-```bash cURL
-curl -X POST "https://api.useautumn.com/v1/check" \
-  -H "Authorization: Bearer am_sk_42424242" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "customer_id": "org_123",
-    "feature_id": "meeting_summaries"
-  }'
-```
-
-</CodeGroup>
-
-<Expandable title="check response (customer-level)">
-```json
-{
-  "allowed": true,
-  "customer_id": "org_123",
-  "feature_id": "meeting_summaries",
-  "balance": 141,
-  "usage": 9,
-  "included_usage": 150,
-  "unlimited": false
-}
-```
-The total is the sum of all entity balances (3 users × 50 = 150 included).
-</Expandable>
 
 </Step>
 
@@ -576,25 +486,30 @@ const autumn = new Autumn({
 });
 
 // Remove Bob from the team
-await autumn.entities.delete("org_123", "user_bob");
+await autumn.entities.delete({
+  customerId: "org_123",
+  entityId: "user_bob",
+});
 ```
 
 ```python Python
 import asyncio
-from autumn import Autumn
+from autumn_sdk import Autumn
 
 autumn = Autumn("am_sk_42424242")
 
 async def main():
     # Remove Bob from the team
-    await autumn.features.delete_entity("org_123", "user_bob")
+    autumn.entities.delete(customer_id="org_123", entity_id="user_bob")
 
 asyncio.run(main())
 ```
 
 ```bash cURL
-curl -X DELETE "https://api.useautumn.com/v1/customers/org_123/entities/user_bob" \
-  -H "Authorization: Bearer am_sk_42424242"
+curl -X POST "https://api.useautumn.com/v1/entities.delete" \
+  -H "Authorization: Bearer am_sk_42424242" \
+  -H "Content-Type: application/json" \
+  -d '{ "customer_id": "org_123", "entity_id": "user_bob" }'
 ```
 
 </CodeGroup>
@@ -611,7 +526,6 @@ Deleting an entity automatically decrements the seat count. The customer's total
 | Level | Check/Track With | Use Case |
 |-------|------------------|----------|
 | **Entity-level** | `entity_id: "user_alice"` | Individual user limits, fair usage |
-| **Customer-level** | No `entity_id` | Admin dashboards, total consumption |
 
 Entity-level balances are ideal when you want to:
 - Ensure fair usage across team members

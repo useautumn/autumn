@@ -102,7 +102,7 @@ from autumn_sdk import Autumn
 
 autumn = Autumn("am_sk_...")
 
-await autumn.customers.update(
+autumn.customers.update(
     customer_id="user_123",
     billing_controls={
         "auto_topups": [{
@@ -116,7 +116,7 @@ await autumn.customers.update(
 ```
 
 ```bash cURL
-curl -X POST "https://api.useautumn.com/v1/customers/update" \
+curl -X POST "https://api.useautumn.com/v1/customers.update" \
   -H "Authorization: Bearer am_sk_..." \
   -H "Content-Type: application/json" \
   -d '{

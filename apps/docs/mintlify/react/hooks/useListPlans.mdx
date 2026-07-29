@@ -11,6 +11,18 @@ The `useListPlans` hook fetches all available plans configured in your Autumn da
 
 ## Parameters
 
+<ParamField body="customerId" type="string">
+  Return plan scenarios for a customer.
+</ParamField>
+
+<ParamField body="entityId" type="string">
+  Return plan scenarios for an entity.
+</ParamField>
+
+<ParamField body="includeArchived" type="boolean">
+  Include archived plans.
+</ParamField>
+
 <ParamField body="queryOptions" type="UseQueryOptions">
   Optional [TanStack Query options](https://tanstack.com/query/latest/docs/framework/react/reference/useQuery) to customize caching and refetching behavior.
 </ParamField>

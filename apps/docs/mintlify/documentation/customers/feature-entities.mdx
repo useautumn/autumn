@@ -31,18 +31,6 @@ This means if you create 2 entities for "seats", your usage of "seats" will be 2
 
 <CodeGroup>
 
-```tsx React
-import { useCustomer } from "autumn-js/react";
-
-const { createEntity } = useCustomer();
-
-await createEntity({
-  id: "user_abc",
-  name: "John Doe",
-  featureId: "seats",
-});
-```
-
 ```typescript TypeScript
 import { Autumn } from "autumn-js";
 
@@ -61,7 +49,7 @@ from autumn_sdk import Autumn
 
 autumn = Autumn("am_sk_test_1234")
 
-await autumn.entities.create(
+autumn.entities.create(
     customer_id="org_123",
     entity_id="user_abc",
     feature_id="seats",
@@ -70,7 +58,7 @@ await autumn.entities.create(
 ```
 
 ```bash cURL
-curl -X POST "https://api.useautumn.com/v1/entities" \
+curl -X POST "https://api.useautumn.com/v1/entities.create" \
   -H "Authorization: Bearer am_sk_test_1234" \
   -H "Content-Type: application/json" \
   -d '{
@@ -92,11 +80,14 @@ Just like with normal features, you can check feature access and track usage eve
 <CodeGroup>
 
 ```tsx React
-import { useEntity } from "autumn-js/react";
+import { useCustomer } from "autumn-js/react";
 
-const { check } = useEntity({ entityId: "user_abc" });
+const { check } = useCustomer();
 
-const { allowed } = check({ featureId: "ai-messages" });
+const { allowed } = check({
+  featureId: "ai-messages",
+  entityId: "user_abc",
+});
 
 if (allowed) {
   console.log("User has access to AI messages");
@@ -108,7 +99,7 @@ import { Autumn } from "autumn-js";
 
 const autumn = new Autumn({ secretKey: "am_sk_test_1234" });
 
-const response = await autumn.customers.check({
+const response = await autumn.check({
   customerId: "org_123",
   featureId: "ai-messages",
   entityId: "user_abc",
@@ -122,7 +113,7 @@ from autumn_sdk import Autumn
 
 autumn = Autumn("am_sk_test_1234")
 
-response = await autumn.customers.check(
+response = autumn.check(
     customer_id="org_123",
     feature_id="ai-messages",
     entity_id="user_abc",
@@ -131,7 +122,7 @@ print(response.allowed)
 ```
 
 ```bash cURL
-curl -X POST "https://api.useautumn.com/v1/check" \
+curl -X POST "https://api.useautumn.com/v1/balances.check" \
   -H "Authorization: Bearer am_sk_test_1234" \
   -H "Content-Type: application/json" \
   -d '{
@@ -147,20 +138,12 @@ curl -X POST "https://api.useautumn.com/v1/check" \
 
 <CodeGroup>
 
-```tsx React
-import { useEntity } from "autumn-js/react";
-
-const { track } = useEntity({ entityId: "user_abc" });
-
-await track({ featureId: "ai-messages", value: 10 });
-```
-
 ```typescript TypeScript
 import { Autumn } from "autumn-js";
 
 const autumn = new Autumn({ secretKey: "am_sk_test_1234" });
 
-await autumn.customers.track({
+await autumn.track({
   customerId: "org_123",
   featureId: "ai-messages",
   entityId: "user_abc",
@@ -173,7 +156,7 @@ from autumn_sdk import Autumn
 
 autumn = Autumn("am_sk_test_1234")
 
-await autumn.customers.track(
+autumn.track(
     customer_id="org_123",
     feature_id="ai-messages",
     entity_id="user_abc",
@@ -182,7 +165,7 @@ await autumn.customers.track(
 ```
 
 ```bash cURL
-curl -X POST "https://api.useautumn.com/v1/track" \
+curl -X POST "https://api.useautumn.com/v1/balances.track" \
   -H "Authorization: Bearer am_sk_test_1234" \
   -H "Content-Type: application/json" \
   -d '{
@@ -195,25 +178,10 @@ curl -X POST "https://api.useautumn.com/v1/track" \
 
 </CodeGroup>
 
-#### Customer-level vs entity-level balances
-
-A customer-level balance is the total balance for the feature across all entities. Entity-level balances are the balance for a specific entity. You can check access and track usage events either at the customer-level or entity-level.
-
-<Info>
-**Example**
-
-You have a product that allows 500 credits per user per month. However, the credits are shared across all users in the account.
-
-You can create a feature entity for "seats" and then check access and send usage events at the top-level.
-
-</Info>
-
-To use top-level balances, just omit the `entityId` from your check request.
-
 <Note>
-  This will increment the usage counter for the top-level balance, and also
-  deduct from the first-created entity so that the sum of the the entity
-  balances is always the same as the top-level balance.
+  Customer-level checks and usage do not aggregate entity-level balances.
+  Include `entityId` for per-entity limits; model a separate customer-level
+  balance when usage should be shared.
 </Note>
 
 ## Deleting Entities
@@ -241,17 +209,17 @@ from autumn_sdk import Autumn
 
 autumn = Autumn("am_sk_test_1234")
 
-await autumn.entities.delete(
+autumn.entities.delete(
     customer_id="org_123",
     entity_id="user_abc",
 )
 ```
 
 ```bash cURL
-curl -X DELETE "https://api.useautumn.com/v1/entities/user_abc" \
+curl -X POST "https://api.useautumn.com/v1/entities.delete" \
   -H "Authorization: Bearer am_sk_test_1234" \
   -H "Content-Type: application/json" \
-  -d '{ "customer_id": "org_123" }'
+  -d '{ "customer_id": "org_123", "entity_id": "user_abc" }'
 ```
 
 </CodeGroup>

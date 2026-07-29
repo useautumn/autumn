@@ -74,7 +74,7 @@ await updateSubscription({
 ```
 
 ```python Python
-response = await autumn.billing.update(
+response = autumn.billing.update(
     customer_id="user_123",
     plan_id="team",
     feature_quantities=[
@@ -84,7 +84,7 @@ response = await autumn.billing.update(
 ```
 
 ```bash cURL
-curl -X POST 'https://api.useautumn.com/v1/billing/update' \
+curl -X POST 'https://api.useautumn.com/v1/billing.update' \
   -H 'Authorization: Bearer am_sk_...' \
   -H 'Content-Type: application/json' \
   -d '{
@@ -138,7 +138,7 @@ await updateSubscription({
 
 ```python Python
 # Cancel at end of billing cycle
-await autumn.billing.update(
+autumn.billing.update(
     customer_id="user_123",
     plan_id="pro",
     cancel_action="cancel_end_of_cycle",
@@ -146,7 +146,7 @@ await autumn.billing.update(
 ```
 
 ```bash cURL
-curl -X POST 'https://api.useautumn.com/v1/billing/update' \
+curl -X POST 'https://api.useautumn.com/v1/billing.update' \
   -H 'Authorization: Bearer am_sk_...' \
   -H 'Content-Type: application/json' \
   -d '{
@@ -206,7 +206,7 @@ await updateSubscription({
 ```
 
 ```python Python
-preview = await autumn.billing.preview_update(
+preview = autumn.billing.preview_update(
     customer_id="user_123",
     plan_id="team",
     feature_quantities=[
@@ -218,7 +218,7 @@ preview = await autumn.billing.preview_update(
 ```
 
 ```bash cURL
-curl -X POST 'https://api.useautumn.com/v1/billing/preview-update' \
+curl -X POST 'https://api.useautumn.com/v1/billing.preview_update' \
   -H 'Authorization: Bearer am_sk_...' \
   -H 'Content-Type: application/json' \
   -d '{

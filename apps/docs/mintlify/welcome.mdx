@@ -76,7 +76,7 @@ Your subscriptions live in Stripe. You're never locked in.
 <Accordion title="Do I need to call Autumn before every action?">
 For latency-sensitive operations, you may not want to make an `autumn.check()` network call before every action.
 
-You can either cache the Autumn customer data on your end, or use the `customer.products.updated` webhook to replicate Autumn state into your own system.
+You can either cache the Autumn customer data on your end, or use the `billing.updated` webhook to replicate plan changes into your own system.
 </Accordion>
 
 <Accordion title="What if Autumn goes down?">
@@ -104,7 +104,7 @@ For larger companies, we provide a forward-deployed service: dual-write to your 
 </Accordion>
 
 <Accordion title="Can you handle our event volume?">
-Autumn supports 10,000+ events per second per end customer. If you have specific throughput requirements, reach out and we'll walk through the architecture.
+The default track limit is 10,000 requests per second per customer, with an organization-wide cap. See [Rate Limits](/documentation/rate-limits), or contact us for higher throughput.
 </Accordion>
 
 </AccordionGroup>

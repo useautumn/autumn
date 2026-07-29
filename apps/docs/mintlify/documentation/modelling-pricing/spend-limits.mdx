@@ -90,7 +90,7 @@ from autumn_sdk import Autumn
 
 autumn = Autumn("am_sk_...")
 
-await autumn.customers.update(
+autumn.customers.update(
     customer_id="user_123",
     billing_controls={
         "spend_limits": [{
@@ -103,7 +103,7 @@ await autumn.customers.update(
 ```
 
 ```bash cURL
-curl -X POST "https://api.useautumn.com/v1/customers/update" \
+curl -X POST "https://api.useautumn.com/v1/customers.update" \
   -H "Authorization: Bearer am_sk_..." \
   -H "Content-Type: application/json" \
   -d '{
@@ -153,7 +153,7 @@ await autumn.customers.update({
 ```
 
 ```python Python
-await autumn.customers.update(
+autumn.customers.update(
     customer_id="user_123",
     billing_controls={
         "spend_limits": [{
@@ -166,7 +166,7 @@ await autumn.customers.update(
 ```
 
 ```bash cURL
-curl -X POST "https://api.useautumn.com/v1/customers/update" \
+curl -X POST "https://api.useautumn.com/v1/customers.update" \
   -H "Authorization: Bearer am_sk_..." \
   -H "Content-Type: application/json" \
   -d '{
@@ -206,7 +206,7 @@ When a spend limit is configured, the `check` endpoint accounts for it in the `a
 <CodeGroup>
 
 ```typescript TypeScript
-const { data } = await autumn.check({
+const data = await autumn.check({
   customerId: "user_123",
   featureId: "api_calls",
 });
@@ -217,7 +217,7 @@ if (!data.allowed) {
 ```
 
 ```python Python
-response = await autumn.check(
+response = autumn.check(
     customer_id="user_123",
     feature_id="api_calls",
 )
@@ -227,7 +227,7 @@ if not response.allowed:
 ```
 
 ```bash cURL
-curl -X POST "https://api.useautumn.com/v1/check" \
+curl -X POST "https://api.useautumn.com/v1/balances.check" \
   -H "Authorization: Bearer am_sk_..." \
   -H "Content-Type: application/json" \
   -d '{
@@ -299,7 +299,7 @@ await autumn.entities.update({
 ```
 
 ```python Python
-await autumn.entities.update(
+autumn.entities.update(
     customer_id="user_123",
     entity_id="workspace_a",
     billing_controls={
@@ -313,7 +313,7 @@ await autumn.entities.update(
 ```
 
 ```bash cURL
-curl -X POST "https://api.useautumn.com/v1/entities/update" \
+curl -X POST "https://api.useautumn.com/v1/entities.update" \
   -H "Authorization: Bearer am_sk_..." \
   -H "Content-Type: application/json" \
   -d '{
@@ -352,7 +352,7 @@ await autumn.customers.update({
 ```
 
 ```python Python
-await autumn.customers.update(
+autumn.customers.update(
     customer_id="user_123",
     billing_controls={
         "spend_limits": [{
@@ -364,7 +364,7 @@ await autumn.customers.update(
 ```
 
 ```bash cURL
-curl -X POST "https://api.useautumn.com/v1/customers/update" \
+curl -X POST "https://api.useautumn.com/v1/customers.update" \
   -H "Authorization: Bearer am_sk_..." \
   -H "Content-Type: application/json" \
   -d '{
@@ -443,7 +443,7 @@ from autumn_sdk import Autumn
 
 autumn = Autumn("am_sk_...")
 
-await autumn.customers.update(
+autumn.customers.update(
     customer_id="user_123",
     billing_controls={
         "usage_alerts": [{
@@ -458,7 +458,7 @@ await autumn.customers.update(
 ```
 
 ```bash cURL
-curl -X POST "https://api.useautumn.com/v1/customers/update" \
+curl -X POST "https://api.useautumn.com/v1/customers.update" \
   -H "Authorization: Bearer am_sk_..." \
   -H "Content-Type: application/json" \
   -d '{
@@ -497,7 +497,7 @@ await autumn.customers.update({
 ```
 
 ```python Python
-await autumn.customers.update(
+autumn.customers.update(
     customer_id="user_123",
     billing_controls={
         "usage_alerts": [{
@@ -512,7 +512,7 @@ await autumn.customers.update(
 ```
 
 ```bash cURL
-curl -X POST "https://api.useautumn.com/v1/customers/update" \
+curl -X POST "https://api.useautumn.com/v1/customers.update" \
   -H "Authorization: Bearer am_sk_..." \
   -H "Content-Type: application/json" \
   -d '{
@@ -588,7 +588,7 @@ await autumn.customers.update({
 ```
 
 ```python Python
-await autumn.customers.update(
+autumn.customers.update(
     customer_id="user_123",
     billing_controls={
         "usage_alerts": [
@@ -612,7 +612,7 @@ await autumn.customers.update(
 ```
 
 ```bash cURL
-curl -X POST "https://api.useautumn.com/v1/customers/update" \
+curl -X POST "https://api.useautumn.com/v1/customers.update" \
   -H "Authorization: Bearer am_sk_..." \
   -H "Content-Type: application/json" \
   -d '{

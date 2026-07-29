@@ -8,22 +8,26 @@ import LearnHooksTip from '/snippets/learn-hooks-tip.mdx';
 
 The `useListEvents` hook provides access to individual event records with pagination. 
 
-It fetches data from the [/events/list](/api-reference/events/list-events) endpoint, allowing you to display detailed event logs and histories.
+It fetches data from the [`events.list`](/api-reference/events/listEvents) endpoint, allowing you to display detailed event logs and histories.
 
 <LearnHooksTip />
 
 ## Parameters
 
-<ParamField body="featureId" type="string | string[]" required>
+<ParamField body="featureId" type="string | string[]">
   The feature ID or array of feature IDs to query events for.
 </ParamField>
 
-<ParamField body="offset" type="number">
-  Number of events to skip for pagination. Defaults to 0.
+<ParamField body="entityId" type="string">
+  Filter events to an entity.
+</ParamField>
+
+<ParamField body="startCursor" type="string">
+  Cursor at which to start pagination.
 </ParamField>
 
 <ParamField body="limit" type="number">
-  Maximum number of events to return per page. Defaults to 50.
+  Maximum number of events to return per page. Defaults to 100.
 </ParamField>
 
 <ParamField body="customRange" type="object">
@@ -53,6 +57,7 @@ Array of individual event records. Each event object includes:
 - `customerId`: The customer that recorded this event
 - `value`: The numeric value recorded with the event
 - `properties`: Metadata and custom properties for the event
+- `deductions`: Balance deductions caused by the event, or `null`
 
 <Expandable title="list example">
 
@@ -121,9 +126,8 @@ Function to navigate to the previous page of events. Only call when `hasPrevious
 
 ### `goToPage()`
 
-Function to jump to a specific page number. Accepts a page number (1-based) as parameter.
+Jump to an already visited page with `goToPage({ pageNum })`. Page numbers are 0-based.
 
 ### `resetPagination()`
 
 Function to reset pagination back to the first page.
-

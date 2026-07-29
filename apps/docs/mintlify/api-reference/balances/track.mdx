@@ -16,7 +16,7 @@ import { DynamicResponseExample } from "/snippets/dynamic-response-example.jsx";
 <CodeGroup>
 
 ```typescript Track single usage
-await autumn.balances.track({
+await autumn.track({
   customerId: "cus_123",
   featureId: "ai_messages",
   value: 1
@@ -24,7 +24,7 @@ await autumn.balances.track({
 ```
 
 ```typescript Track with idempotency
-await autumn.balances.track({
+await autumn.track({
   customerId: "cus_123",
   featureId: "api_calls",
   value: 1,
@@ -33,7 +33,7 @@ await autumn.balances.track({
 ```
 
 ```typescript Credit balance (negative value)
-await autumn.balances.track({
+await autumn.track({
   customerId: "cus_123",
   featureId: "seats",
   value: -1 // Increases balance when removing a seat

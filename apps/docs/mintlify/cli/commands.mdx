@@ -72,6 +72,10 @@ atmn push [options]
 | Flag | Description |
 |------|-------------|
 | `-y, --yes` | Auto-confirm all prompts |
+| `--all-versions` | Push every historical plan version in the config |
+| `--plan-intents <json>` | Headless map of plan/version IDs to update intents |
+| `--migration-drafts <json>` | Headless map selecting migration-draft creation |
+| `--variant-propagations <json>` | Headless map of base plans to variants to update |
 
 The CLI compares your local config with what's in Autumn and shows a summary of changes before applying. If plans with existing customers are modified, it will prompt about versioning.
 
@@ -86,6 +90,8 @@ atmn pull [options]
 | Flag | Description |
 |------|-------------|
 | `-f, --force` | Overwrite config instead of smart in-place update |
+| `--all-versions` | Pull every historical plan version |
+| `--no-declaration-file` | Skip generating `@useautumn-sdk.d.ts` |
 
 By default, `pull` does a smart in-place update -- it adds new features and plans, updates existing ones, and removes deleted ones while preserving your formatting. Use `--force` to overwrite the entire file.
 

@@ -55,21 +55,22 @@ If a recurring payment fails (e.g. card expired between billing cycles), the sub
 ```tsx React
 import { useCustomer } from "autumn-js/react";
 
-const { openBillingPortal } = useCustomer();
+const { openCustomerPortal } = useCustomer();
 
-<Button onClick={() => openBillingPortal({ returnUrl: window.location.href })} />
+<Button onClick={() => openCustomerPortal({ returnUrl: window.location.href })} />
 ```
 
 ```typescript Node.js
-const { data } = await autumn.billing.openCustomerPortal("user_123", {
+const data = await autumn.billing.openCustomerPortal({
+  customerId: "user_123",
   returnUrl: "https://your-app.com/billing",
 });
 // Redirect to data.url
 ```
 
 ```python Python
-response = await autumn.billing.open_customer_portal(
-    "user_123",
+response = autumn.billing.open_customer_portal(
+    customer_id="user_123",
     return_url="https://your-app.com/billing",
 )
 # Redirect to response.url
@@ -94,7 +95,7 @@ When an upgrade generates a proration invoice that fails to pay, Autumn automati
 
 ## Concurrent Requests
 
-Autumn uses distributed locking to prevent race conditions across billing operations. All mutating billing endpoints — `attach`, `multi_attach`, and `update_subscription` — share a per-customer lock. If two requests arrive simultaneously for the same customer, the second request receives a `429` response. This prevents duplicate subscriptions, double charges, or conflicting subscription updates.
+Autumn uses distributed locking to prevent race conditions across billing operations. Mutating billing endpoints including `billing.attach`, `billing.multi_attach`, and `billing.update` share a per-customer lock. If two requests arrive simultaneously for the same customer, the second request receives a `429` response. This prevents duplicate subscriptions, double charges, or conflicting subscription updates.
 
 The same lock is shared with auto top-ups, so a top-up triggered by usage can't race against a manual attach for the same customer.
 
@@ -103,9 +104,3 @@ The same lock is shared with auto top-ups, so a top-up triggered by usage can't 
 Stripe may deliver the same webhook event multiple times. Autumn deduplicates webhooks using a per-event idempotency key — if the same Stripe event ID is received more than once within a 5-minute window, the duplicate is acknowledged without reprocessing.
 
 Additionally, when Autumn initiates a subscription change (e.g. a cancellation or upgrade), it sets a short-lived lock on the subscription. This prevents the resulting Stripe webhook from re-processing the change that Autumn already applied, avoiding double-counting or conflicting state updates.
-
-## API Idempotency
-
-All API requests support an `Idempotency-Key` header. If the same key is sent within 24 hours, the duplicate request is rejected with a `409` response. This is useful when retrying requests after network failures — you won't accidentally attach the same plan twice.
-
-For event tracking (`track`), the `idempotency_key` field on the request body provides the same guarantee, backed by both a Redis check and a database-level unique constraint.

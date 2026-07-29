@@ -12,11 +12,11 @@ The `useCustomer` hook fetches customer data and provides billing actions like a
 ## Parameters
 
 <ParamField body="errorOnNotFound" type="boolean">
-  Whether to throw an error if the customer is not found. Defaults to `false`.
+  Whether to throw when the request cannot identify a customer. Defaults to `true`.
 </ParamField>
 
 <ParamField body="expand" type="CustomerExpand[]">
-  Array of additional data to include in the response. Options: `invoices`, `trials_used`, `rewards`, `entities`, `referrals`, `payment_method`, `subscriptions.plan`, `purchases.plan`, `balances.feature`.
+  Additional data to include. Options: `invoices`, `trials_used`, `rewards`, `entities`, `referrals`, `payment_method`, `subscriptions.plan`, `purchases.plan`, `balances.feature`, `flags.feature`, `billing_controls.auto_topups.purchase_limit`.
 </ParamField>
 
 <ParamField body="queryOptions" type="UseQueryOptions">
@@ -159,7 +159,7 @@ export default function SendMessageButton() {
 
 **Parameters**
 
-<ParamField body="featureId" type="string">
+<ParamField body="featureId" type="string" required>
   The ID of the feature to check access for.
 </ParamField>
 

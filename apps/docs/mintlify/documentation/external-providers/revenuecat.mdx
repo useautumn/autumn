@@ -3,7 +3,7 @@ title: "RevenueCat"
 description: "Integrate Autumn with RevenueCat for mobile app billing"
 ---
 
-RevenueCat integration allows you to use Autumn alongside RevenueCat for managing mobile app subscriptions and billing. This is a _read-only_ integration, which means that you will handle billing through RevenueCat. 
+RevenueCat integration allows you to use Autumn alongside RevenueCat for mobile app subscriptions. RevenueCat handles payment; Autumn mirrors purchases into plans and balances.
 
 Autumn will receive webhook updates from RevenueCat to update the customer's plan and features. You keep the benefits of RevenueCat's paywalls, AB testing and SDK.
 
@@ -16,44 +16,18 @@ Autumn will receive webhook updates from RevenueCat to update the customer's pla
     <Step>
     #### Connect RevenueCat to Autumn
     
-        To connect RevenueCat to Autumn, you'll need:
-        - A RevenueCat project ID
-        - A RevenueCat API key
-
-        To get your RevenueCat project ID, visit your RevenueCat dashboard and copy the project ID from the URL. e.g. `https://app.revenuecat.com/projects/1234567890/overview` will have a project ID of `1234567890`.
-
-        <Frame>
-          <img src="/assets/screenshots/revenuecat/project-id.png" alt="RevenueCat dashboard showing where to find your project ID" />
-        </Frame>
-
-        To get your RevenueCat API key, visit the API keys section on your dashboard, select "New secret API key", and select the following configuration:
-
-        - API Version: V2
-        - Charts metrics permissions: No access
-        - Customer information permissions: Read only
-        - Project configuration permissions: Read only
-
-        <Frame>
-            <img src="/assets/screenshots/revenuecat/api-key.png" alt="RevenueCat dashboard showing where to find your API key" />
-        </Frame>
-
-        Then, visit your Autumn dashboard, and in the "Developer > RevenueCat" section,
-        set up your RevenueCat project ID and API key.
-
-        <Frame>
-            <img src="/assets/screenshots/revenuecat/savekeys.png" alt="Autumn dashboard showing where to set up your RevenueCat project ID and API key" />
-        </Frame>
+        In the Autumn dashboard, open **Developer → RevenueCat**, choose **Connect via OAuth**, and select your RevenueCat project. Existing API-key integrations can migrate to OAuth from the same page.
     </Step>
 
     <Step>
-    #### Map your RevenueCat products to Autumn products
+    #### Sync or map products
 
-    When a RevenueCat product is purchased, define which Autumn product should be enabled for the customer. 
+    With OAuth, use **Sync Products** to create or rename matching RevenueCat products from your Autumn plans. Names sync; App Store and Google Play prices remain managed by those stores. Legacy API-key connections use **Map Products** to select which Autumn plan each RevenueCat product enables.
     
         <Warning>
         RevenueCat is managing billing, so any plan prices in Autumn will be ignored. 
         
-        Since RevenueCat does not support usage-based or quantity-based pricing, any Autumn plans with these price types will not display in the mapping screen for safety. 
+        Usage-based feature prices are excluded because RevenueCat cannot collect them at runtime. Prepaid feature prices are supported: map each RevenueCat SKU to the quantity it grants.
 
         </Warning>
 
@@ -69,24 +43,13 @@ Autumn will receive webhook updates from RevenueCat to update the customer's pla
     <Step>
     #### Set up the webhook integration
 
-        For Autumn to recieve updates from RevenueCat, you'll need to set up a webhook integration.
-
-        In RevenueCat, visit "Integrations > Webhooks", and click "Add new configuration". Use the following configuration:
-
-        - Webhook URL: paste this from the Autumn dashboard
-        - Authorization header value: paste this from the Autumn dashboard
-        - Environments: Depending on your Autumn environment, you are given two different URLs. This means you should also separate your RevenueCat webhooks for test and live environments.
-        - Events filter: All apps, all events.
-
-        <Frame>
-            <img src="/assets/screenshots/revenuecat/webhooks.png" alt="RevenueCat dashboard showing where to set up your webhook integration" />
-        </Frame>
+        In **Developer → RevenueCat**, click **Register webhook**. Autumn registers the RevenueCat webhook automatically. The dashboard also shows the URL and authorization value if you need to configure it manually.
     </Step>
 
     <Step>
     #### Integration
     
-        **You should not call Autumn's `attach()` or `checkout()` functions. Instead you should either use RevenueCat's SDK or RevenueCat's paywalls.**
+        **Do not call Autumn's `attach()` function for mobile purchases. Use RevenueCat's SDK or paywalls instead.**
         
         When the user pays via mobile, the plan will automatically sync into Autumn. Once you have purchased a product or an add-on, you may then continue using `check()` or `track()` to manage your features.
         
@@ -124,39 +87,26 @@ Autumn will receive webhook updates from RevenueCat to update the customer's pla
             ```typescript app/api/autumn/[...all]+api.ts
             // Expo also supports better-auth :)
             import { auth } from "@/lib/auth";
-            import { autumnHandler } from "autumn-js/backend";
+            import { autumnHandler } from "autumn-js/fetch";
 
-            export async function GET(request: Request, { all }: { all: string }) {
-                // Get the session from Better Auth
+            const handler = autumnHandler({
+              identify: async (request) => {
                 const session = await auth.api.getSession({ headers: request.headers });
-                if (!session?.user?.id) {
-                    return Response.json(
-                        { error: "Unauthorized - Please sign in" },
-                        { status: 401 },
-                    );
-                }
+                if (!session?.user?.id) return null;
 
-                // Extract user data from session
-                const customerId = session.user.id;
-                const customerData = {
+                return {
+                  customerId: session.user.id,
+                  customerData: {
                     name: session.user.name || "Unknown User",
                     email: session.user.email || "",
+                  },
                 };
+              },
+            });
 
-                const autumnResponse = await autumnHandler({
-                    request,
-                    customerId,
-                    customerData
-                });
-
-                return Response.json(autumnResponse.response, { status: autumnResponse.statusCode });
-            }
-
-            export const POST = GET;
-            export const PUT = GET;
-            export const DELETE = GET;
-            export const PATCH = GET;
-            export const OPTIONS = GET;
+            export const GET = handler;
+            export const POST = handler;
+            export const DELETE = handler;
             ```
         </CodeGroup>
 
@@ -228,12 +178,12 @@ Autumn will receive webhook updates from RevenueCat to update the customer's pla
 
         <CodeGroup>
             ```typescript check.ts
-            const { data } = await autumn.check({
-                customer_id: "user_or_org_id_from_auth",
-                feature_id: "pro",
+            const result = await autumn.check({
+                customerId: "user_or_org_id_from_auth",
+                featureId: "pro",
             });
 
-            if (data.allowed) {
+            if (result.allowed) {
                 // User has access to the feature
             } else {
                 // User does not have access to the feature
@@ -241,9 +191,9 @@ Autumn will receive webhook updates from RevenueCat to update the customer's pla
             ```
 
             ```typescript track.ts
-            const { data } = await autumn.track({
-                customer_id: "john_doe",
-                feature_id: "messages",
+            await autumn.track({
+                customerId: "john_doe",
+                featureId: "messages",
                 value: 1,
             });
 
