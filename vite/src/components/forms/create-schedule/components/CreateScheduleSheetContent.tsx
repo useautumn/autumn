@@ -138,21 +138,51 @@ function getConfirmLabel({
 export function CreateScheduleReviewContent() {
 	const {
 		handleSubmit,
+		handleInvoiceSubmit,
 		isPending,
 		isPreviewLoading,
 		preview,
 		error,
 		entityId,
+		createsRecurringSubscription,
 	} = useCreateScheduleFormContext();
 	const { setSheet } = useSheetStore();
 	const hasSchedule = useHasSchedule({ entityId });
 
 	const confirmLabel = getConfirmLabel({ preview });
-	const isZeroAmount = preview && preview.total <= 0;
 
-	const invoiceDisabledReason = isZeroAmount
+	const hasNothingToInvoice =
+		!!preview && preview.total <= 0 && !createsRecurringSubscription;
+
+	const invoiceDisabledReason = hasNothingToInvoice
 		? "Cannot send an invoice for $0 amounts. Please confirm the change instead."
 		: null;
+
+	// Usage-only plans create a real recurring sub that bills at cycle end even
+	// though nothing is due now; a subtotal means a $0 invoice is still generated,
+	// so keep the invoice sheet for those and only start directly when nothing bills now.
+	const willCreateZeroDollarInvoice = (preview?.subtotal ?? 0) > 0;
+
+	const isInvoiceOnlyStart =
+		!!preview &&
+		preview.total <= 0 &&
+		createsRecurringSubscription &&
+		!willCreateZeroDollarInvoice;
+
+	const invoiceButtonLabel = isInvoiceOnlyStart
+		? "Start subscription in invoice mode"
+		: "Send an Invoice";
+
+	const handleInvoiceButtonClick = () => {
+		if (isInvoiceOnlyStart) {
+			handleInvoiceSubmit({
+				enableProductImmediately: true,
+				finalizeInvoice: true,
+			});
+			return;
+		}
+		setSheet({ type: "create-schedule-send-invoice" });
+	};
 
 	const isDisabled = isPreviewLoading || !!error;
 
@@ -195,11 +225,10 @@ export function CreateScheduleReviewContent() {
 										invoiceDisabledReason && "pointer-events-none opacity-50",
 									)}
 									disabled={!invoiceDisabledReason && (isPending || isDisabled)}
-									onClick={() =>
-										setSheet({ type: "create-schedule-send-invoice" })
-									}
+									isLoading={isInvoiceOnlyStart && isPending}
+									onClick={handleInvoiceButtonClick}
 								>
-									Send an Invoice
+									{invoiceButtonLabel}
 								</Button>
 							</span>
 						</TooltipTrigger>
