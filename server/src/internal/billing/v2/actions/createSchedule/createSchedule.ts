@@ -7,6 +7,7 @@ import type {
 import { CheckoutAction } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { checkCheckoutSessionLock } from "@/internal/billing/v2/actions/locks/checkoutSessionLock/checkCheckoutSessionLock";
+import { checkoutSessionLock } from "@/internal/billing/v2/actions/locks/checkoutSessionLock/checkoutSessionLock";
 import { createAutumnCheckout } from "@/internal/billing/v2/common/createAutumnCheckout";
 import { executeBillingPlan } from "@/internal/billing/v2/execute/executeBillingPlan";
 import { evaluateStripeBillingPlan } from "@/internal/billing/v2/providers/stripe/actionBuilders/evaluateStripeBillingPlan";
@@ -54,6 +55,10 @@ export const createSchedule = async ({
 	params: CreateScheduleParamsV0;
 	skipAutumnCheckout?: boolean;
 }): Promise<CreateScheduleResponse> => {
+	const checkoutReservation = !skipAutumnCheckout
+		? await checkoutSessionLock.get({ ctx, customerId: params.customer_id })
+		: undefined;
+
 	const billingContext = await setupCreateScheduleBillingContext({
 		ctx,
 		params,
@@ -90,6 +95,7 @@ export const createSchedule = async ({
 			params,
 			billingContext,
 			billingPlan,
+			existingLock: checkoutReservation,
 		});
 
 		if (cachedResult?.billingResult) {

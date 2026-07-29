@@ -57,7 +57,7 @@ export const setupBillingCycleAnchor = ({
 	}
 
 	const currentIsFree = isCustomerProductFree(customerProduct);
-	const newIsFree = isFreeProduct({ prices: newFullProduct.prices });
+	const newIsFree = isFreeProduct({ product: newFullProduct });
 
 	// Free -> Free: keep original anchor
 	if (currentIsFree && newIsFree) {
@@ -65,7 +65,7 @@ export const setupBillingCycleAnchor = ({
 	}
 
 	const currentIsOneOff = isCustomerProductOneOff(customerProduct);
-	const newIsOneOff = isOneOffProduct({ prices: newFullProduct.prices });
+	const newIsOneOff = isOneOffProduct({ product: newFullProduct });
 
 	// One-off -> One-off: keep original anchor
 	if (currentIsOneOff && newIsOneOff) {

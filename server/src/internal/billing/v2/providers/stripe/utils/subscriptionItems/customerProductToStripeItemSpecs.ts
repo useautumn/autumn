@@ -6,6 +6,7 @@ import {
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { cusPriceToStripeItemSpec } from "@/internal/billing/v2/providers/stripe/utils/stripeItemSpec/cusPriceToStripeItemSpec/cusPriceToStripeItemSpec";
+import { customerLicenseToStripeItemSpecs } from "./customerLicenseToStripeItemSpecs";
 
 /**
  * Converts a customer product to stripe item specs (recurring + one-off).
@@ -43,6 +44,17 @@ export const customerProductToStripeItemSpecs = ({
 			oneOffItems.push(spec);
 		} else {
 			recurringItems.push(spec);
+		}
+	}
+
+	if (billingContext) {
+		for (const customerLicense of customerProduct.customer_licenses ?? []) {
+			recurringItems.push(
+				...customerLicenseToStripeItemSpecs({
+					billingContext,
+					customerLicense,
+				}),
+			);
 		}
 	}
 

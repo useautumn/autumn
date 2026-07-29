@@ -43,6 +43,9 @@ export const planTransformer = createTransformer<ApiPlan, BasePlan>({
 				? {
 						amount: api.price.amount,
 						interval: api.price.interval,
+						...(api.price.additional_currencies?.length
+							? { additionalCurrencies: api.price.additional_currencies }
+							: {}),
 					}
 				: undefined,
 
@@ -66,6 +69,13 @@ export const planTransformer = createTransformer<ApiPlan, BasePlan>({
 			hasBillingControls(api.billing_controls)
 				? api.billing_controls
 				: undefined,
+
+		licenses: (api) =>
+			api.licenses?.map((license) => ({
+				licensePlanId: license.license_plan_id,
+				version: license.version,
+				included: license.included,
+			})),
 	},
 });
 
@@ -115,6 +125,12 @@ const transformApiCustomizePlan = (
 								interval: customize.price.interval,
 								...(customize.price.interval_count !== undefined
 									? { intervalCount: customize.price.interval_count }
+									: {}),
+								...(customize.price.additional_currencies?.length
+									? {
+											additionalCurrencies:
+												customize.price.additional_currencies,
+										}
 									: {}),
 							}
 						: null,

@@ -5,6 +5,7 @@
 import * as z from "zod/v4-mini";
 import { remap as remap$ } from "../lib/primitives.js";
 import { safeParse } from "../lib/schemas.js";
+import { ClosedEnum } from "../types/enums.js";
 import { Result as SafeParseResult } from "../types/fp.js";
 import * as types from "../types/primitives.js";
 import { SDKValidationError } from "./sdk-validation-error.js";
@@ -12,6 +13,20 @@ import { SDKValidationError } from "./sdk-validation-error.js";
 export type BatchTrackGlobals = {
   xApiVersion?: string | undefined;
 };
+
+/**
+ * How to handle usage that exceeds the available balance. "cap" (default) deducts only what fits, stopping at zero. "overflow" deducts the full value: the balance can go negative and usage limits do not clamp the deduction, though spend limits still apply.
+ */
+export const BatchTrackOverageBehavior = {
+  Cap: "cap",
+  Overflow: "overflow",
+} as const;
+/**
+ * How to handle usage that exceeds the available balance. "cap" (default) deducts only what fits, stopping at zero. "overflow" deducts the full value: the balance can go negative and usage limits do not clamp the deduction, though spend limits still apply.
+ */
+export type BatchTrackOverageBehavior = ClosedEnum<
+  typeof BatchTrackOverageBehavior
+>;
 
 export type BatchTrackLock = {
   /**
@@ -58,6 +73,10 @@ export type RequestBody = {
    */
   timestamp?: number | undefined;
   /**
+   * How to handle usage that exceeds the available balance. "cap" (default) deducts only what fits, stopping at zero. "overflow" deducts the full value: the balance can go negative and usage limits do not clamp the deduction, though spend limits still apply.
+   */
+  overageBehavior?: BatchTrackOverageBehavior | undefined;
+  /**
    * If true, enqueue the event for asynchronous processing and return 204 immediately. The response will not include balance information.
    */
   async?: boolean | undefined;
@@ -70,6 +89,11 @@ export type RequestBody = {
 export type BatchTrackResponse = {
   success: true;
 };
+
+/** @internal */
+export const BatchTrackOverageBehavior$outboundSchema: z.ZodMiniEnum<
+  typeof BatchTrackOverageBehavior
+> = z.enum(BatchTrackOverageBehavior);
 
 /** @internal */
 export type BatchTrackLock$Outbound = {
@@ -109,6 +133,7 @@ export type RequestBody$Outbound = {
   value?: number | undefined;
   properties?: { [k: string]: any } | undefined;
   timestamp?: number | undefined;
+  overage_behavior?: string | undefined;
   async?: boolean | undefined;
   lock?: BatchTrackLock$Outbound | undefined;
 };
@@ -126,6 +151,7 @@ export const RequestBody$outboundSchema: z.ZodMiniType<
     value: z.optional(z.number()),
     properties: z.optional(z.record(z.string(), z.any())),
     timestamp: z.optional(z.int()),
+    overageBehavior: z.optional(BatchTrackOverageBehavior$outboundSchema),
     async: z.optional(z.boolean()),
     lock: z.optional(z.lazy(() => BatchTrackLock$outboundSchema)),
   }),
@@ -135,6 +161,7 @@ export const RequestBody$outboundSchema: z.ZodMiniType<
       featureId: "feature_id",
       entityId: "entity_id",
       eventName: "event_name",
+      overageBehavior: "overage_behavior",
     });
   }),
 );

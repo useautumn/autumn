@@ -160,6 +160,9 @@ const setupCatalogUpdateCase = async ({ id }: { id: string }) => {
 		setup: [
 			s.platform.create({
 				slug: `${id}-${Math.random().toString(36).slice(2, 8)}`,
+				// Default userEmail is a shared literal; concurrent tests in this
+				// file would otherwise race on the same users.email unique index.
+				userEmail: `${id}-${Math.random().toString(36).slice(2, 8)}@autumn.test`,
 				configOverrides: { disable_stripe_writes: true },
 				setupDefaultFeatures: true,
 			}),

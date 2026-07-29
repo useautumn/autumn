@@ -521,6 +521,37 @@ export type GetCustomerPurchase = {
   scope?: GetCustomerPurchaseScope | undefined;
 };
 
+export type GetCustomerLicense = {
+  /**
+   * The plan offered as an assignable license.
+   */
+  licensePlanId: string;
+  /**
+   * The plan that offers this license.
+   */
+  parentPlanId: string;
+  /**
+   * Display name of the license plan.
+   */
+  licensePlanName: string;
+  /**
+   * Total seats the customer has for this license, included plus paid.
+   */
+  granted: number;
+  /**
+   * Seats currently assigned to entities.
+   */
+  usage: number;
+  /**
+   * Seats still available to assign.
+   */
+  remaining: number;
+  /**
+   * Paid seats purchased on top of the plan's included amount.
+   */
+  paidQuantity: number;
+};
+
 /**
  * Feature type: 'boolean' for on/off access, 'metered' for usage-tracked features, 'credit_system' for unified credit pools, 'ai_credit_system' for model-based token pricing.
  */
@@ -953,6 +984,10 @@ export type GetCustomerResponse = {
    * One-time purchases made by the customer.
    */
   purchases: Array<GetCustomerPurchase>;
+  /**
+   * License seat pools granted by the customer's plans, with seat counts.
+   */
+  licenses: Array<GetCustomerLicense>;
   /**
    * Feature balances keyed by feature ID, showing usage limits and remaining amounts.
    */
@@ -1481,6 +1516,40 @@ export function getCustomerPurchaseFromJSON(
     jsonString,
     (x) => GetCustomerPurchase$inboundSchema.parse(JSON.parse(x)),
     `Failed to parse 'GetCustomerPurchase' from JSON`,
+  );
+}
+
+/** @internal */
+export const GetCustomerLicense$inboundSchema: z.ZodMiniType<
+  GetCustomerLicense,
+  unknown
+> = z.pipe(
+  z.object({
+    license_plan_id: types.string(),
+    parent_plan_id: types.string(),
+    license_plan_name: types.string(),
+    granted: types.number(),
+    usage: types.number(),
+    remaining: types.number(),
+    paid_quantity: types.number(),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      "license_plan_id": "licensePlanId",
+      "parent_plan_id": "parentPlanId",
+      "license_plan_name": "licensePlanName",
+      "paid_quantity": "paidQuantity",
+    });
+  }),
+);
+
+export function getCustomerLicenseFromJSON(
+  jsonString: string,
+): SafeParseResult<GetCustomerLicense, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => GetCustomerLicense$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'GetCustomerLicense' from JSON`,
   );
 }
 
@@ -2020,6 +2089,7 @@ export const GetCustomerResponse$inboundSchema: z.ZodMiniType<
     billing_controls: z.lazy(() => GetCustomerBillingControls$inboundSchema),
     subscriptions: z.array(z.lazy(() => GetCustomerSubscription$inboundSchema)),
     purchases: z.array(z.lazy(() => GetCustomerPurchase$inboundSchema)),
+    licenses: z.array(z.lazy(() => GetCustomerLicense$inboundSchema)),
     balances: z.record(z.string(), Balance$inboundSchema),
     flags: z.record(z.string(), z.lazy(() => GetCustomerFlags$inboundSchema)),
     config: types.optional(z.lazy(() => GetCustomerConfig$inboundSchema)),

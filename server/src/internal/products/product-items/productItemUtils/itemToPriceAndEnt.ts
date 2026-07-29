@@ -1,32 +1,34 @@
 import {
-	AllocatedBillingBehavior,
-	AllowanceType,
-	BillingInterval,
-	BillingType,
-	BillWhen,
-	EntInterval,
-	type Entitlement,
-	ErrCode,
-	type Feature,
-	FeatureType,
-	FeatureUsageType,
-	type FixedPriceConfig,
-	Infinite,
-	itemToAllocatedBillingBehavior,
-	itemToBillingInterval,
-	itemToBillingIntervalCount,
-	itemToEntInterval,
-	itemToEntIntervalCount,
-	OnDecrease,
-	OnIncrease,
-	type Price,
-	PriceType,
-	type ProductItem,
-	shouldProrate,
-	TierInfinite,
-	UsageModel,
-	type UsagePriceConfig,
-	type UsageTier,
+    AllocatedBillingBehavior,
+    AllowanceType,
+    BillingInterval,
+    BillingType,
+    BillWhen,
+    buildFixedPriceCurrencies,
+    buildUsagePriceCurrencies,
+    EntInterval,
+    type Entitlement,
+    ErrCode,
+    type Feature,
+    FeatureType,
+    FeatureUsageType,
+    type FixedPriceConfig,
+    Infinite,
+    itemToAllocatedBillingBehavior,
+    itemToBillingInterval,
+    itemToBillingIntervalCount,
+    itemToEntInterval,
+    itemToEntIntervalCount,
+    OnDecrease,
+    OnIncrease,
+    type Price,
+    PriceType,
+    type ProductItem,
+    shouldProrate,
+    TierInfinite,
+    UsageModel,
+    type UsagePriceConfig,
+    type UsageTier,
 } from "@autumn/shared";
 import { entsAreSame } from "@server/internal/products/entitlements/entitlementUtils";
 import { pricesAreSame } from "@server/internal/products/prices/priceInitUtils";
@@ -35,9 +37,9 @@ import { itemCanBeProrated } from "@server/internal/products/product-items/produ
 import RecaseError from "@server/utils/errorUtils";
 import { generateId, notNullish, nullish } from "@server/utils/genUtils";
 import {
-	isFeatureItem,
-	isFeaturePriceItem,
-	isPriceItem,
+    isFeatureItem,
+    isFeaturePriceItem,
+    isPriceItem,
 } from "./getItemType.js";
 
 const getResetUsage = ({
@@ -80,11 +82,19 @@ const toPrice = ({
 		amount: notNullish(item.price) ? item.price : item.tiers![0].amount,
 		interval: itemToBillingInterval({ item }) as BillingInterval,
 		interval_count: itemToBillingIntervalCount({ item }),
-		stripe_price_id: item.stripe_price_id ?? null,
+
 		stripe_product_id: null,
+		stripe_price_id: item.stripe_price_id ?? undefined,
 		feature_id: null,
 		internal_feature_id: null,
 	};
+
+	const currencies = buildFixedPriceCurrencies(item.additional_currencies);
+	if (currencies) config.currencies = currencies;
+	const baseCurrency =
+		item.base_currency ??
+		(currencies ? curPrice?.config?.base_currency : undefined);
+	if (baseCurrency) config.base_currency = baseCurrency;
 
 	let price: Price = {
 		id: item.price_id || curPrice?.id || generateId("pr"),
@@ -152,6 +162,7 @@ export const toFeature = ({
 
 		carry_from_previous: !resetUsage,
 		entity_feature_id: item.entity_feature_id,
+		pooled: item.pooled ?? false,
 		usage_limit: null,
 
 		rollover: item.config?.rollover,
@@ -218,6 +229,7 @@ const toFeatureAndPrice = ({
 
 		carry_from_previous: !resetUsage,
 		entity_feature_id: item.entity_feature_id,
+		pooled: item.pooled ?? false,
 		usage_limit: item.usage_limit || null,
 
 		rollover: item.config?.rollover,
@@ -261,16 +273,26 @@ const toFeatureAndPrice = ({
 						to: TierInfinite,
 					},
 				]
-			: (item.tiers?.map((x) => {
-					return {
-						...x,
-						amount: x.amount ?? 0,
-					};
-				}) as UsageTier[]),
+			: (item.tiers?.map((x) => ({
+					to: x.to,
+					amount: x.amount ?? 0,
+					...(x.flat_amount != null ? { flat_amount: x.flat_amount } : {}),
+				})) as UsageTier[]),
 		interval: itemToBillingInterval({ item }) as BillingInterval,
 		interval_count: itemToBillingIntervalCount({ item }),
-		stripe_price_id: item.stripe_price_id ?? null,
+		stripe_price_id: item.stripe_price_id ?? undefined,
 	};
+
+	const currencies = buildUsagePriceCurrencies({
+		baseTiers: config.usage_tiers,
+		itemTiers: item.tiers,
+		flatCurrencies: item.additional_currencies,
+	});
+	if (currencies) {
+		config.currencies = currencies;
+		config.base_currency =
+			item.base_currency ?? curPrice?.config?.base_currency ?? undefined;
+	}
 
 	const canProrate =
 		itemCanBeProrated({ item, features }) && !itemIsAllocatedArrear;

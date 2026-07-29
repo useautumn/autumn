@@ -2,12 +2,15 @@ import {
 	AppEnv,
 	type AutumnBillingPlan,
 	type BillingContext,
+	billingContextToCurrency,
 	cusProductToProduct,
 	type FullProduct,
+	getPriceCurrencyStripeId,
 	isFixedPrice,
 	isFreeProduct,
 	isPrepaidPrice,
 	nullish,
+	orgToCurrency,
 	type Price,
 } from "@autumn/shared";
 import { createStripePriceIFNotExist } from "@/external/stripe/createStripePrice/createStripePrice";
@@ -18,9 +21,14 @@ import {
 	getPatchCustomerProducts,
 } from "@/internal/billing/v2/utils/billingPlan/customerProductPlanMutations";
 import { orgDisableStripeWrites } from "@/internal/orgs/orgUtils/convertOrgUtils";
+import { isStripeConnected } from "@/internal/orgs/orgUtils.js";
 import { checkStripeProductExists } from "@/internal/products/productUtils";
-import { applyStripeReuseFromVariantFamilies } from "@/internal/products/stripeResourceUtils/applyStripeReuseFromVariantFamilies";
 import { applyStripeResourceReuseForProduct } from "@/internal/products/stripeResourceUtils/applyStripeResourceReuseForProduct";
+import { applyStripeReuseFromVariantFamilies } from "@/internal/products/stripeResourceUtils/applyStripeReuseFromVariantFamilies";
+import {
+	planLicenseToCustomStripeInitProduct,
+	planLicenseToStripeInitProduct,
+} from "./licenseStripeResourceUtils";
 
 export const initStripeResourcesForProducts = async ({
 	ctx,
@@ -44,6 +52,9 @@ export const initStripeResourcesForProducts = async ({
 
 	if (env === AppEnv.Live) return;
 	if (orgDisableStripeWrites({ ctx, includeSandbox: true })) return;
+	// No Stripe account (e.g. fresh sandbox sub-orgs) — resources are
+	// created lazily once one is connected.
+	if (!isStripeConnected({ org, env })) return;
 
 	const batchProductUpdates = [];
 	for (const product of products) {
@@ -61,9 +72,17 @@ export const initStripeResourcesForProducts = async ({
 	}
 	await Promise.all(batchProductUpdates);
 
+	const customLicenseProducts = products.flatMap((parentProduct) =>
+		(parentProduct.licenses ?? [])
+			.map((planLicense) =>
+				planLicenseToCustomStripeInitProduct({ planLicense }),
+			)
+			.filter((licenseProduct) => licenseProduct !== null),
+	);
+
 	const batchPriceUpdates = [];
 
-	for (const product of products) {
+	for (const product of [...products, ...customLicenseProducts]) {
 		for (const price of product.prices) {
 			batchPriceUpdates.push(
 				createStripePriceIFNotExist({
@@ -97,10 +116,15 @@ export const initStripeResourcesForBillingPlan = async ({
 }) => {
 	const { db, org, env, logger } = ctx;
 
+	const currency = billingContextToCurrency({ org, billingContext });
+	const orgDefault = orgToCurrency({ org }).toLowerCase();
+
 	if (billingContext.dryRunStripe) {
 		applyPreviewStripeResourcesToBillingPlan({
 			autumnBillingPlan,
 			billingContext,
+			currency,
+			orgDefault,
 		});
 		return;
 	}
@@ -139,16 +163,61 @@ export const initStripeResourcesForBillingPlan = async ({
 			prices: product.prices.filter(
 				(price) =>
 					shouldInitializeStripePrice({ price }) &&
-					(nullish(price.config.stripe_price_id) ||
+					(nullish(
+						getPriceCurrencyStripeId({
+							config: price.config,
+							currency,
+							orgDefault,
+							slot: "stripe_price_id",
+						}),
+					) ||
 						(isPrepaidPrice(price) &&
-							nullish(price.config.stripe_prepaid_price_v2_id))),
+							nullish(
+								getPriceCurrencyStripeId({
+									config: price.config,
+									currency,
+									orgDefault,
+									slot: "stripe_prepaid_price_v2_id",
+								}),
+							))),
 			),
 		}))
 		.filter(
 			(product) => nullish(product.processor?.id) || product.prices.length > 0,
 		);
 
-	const targetProducts = [...newProducts, ...patchProducts, ...existingProducts];
+	// Definitions can share a child product id while carrying distinct custom rows.
+	const licenseProductsByDefinition = new Map<string, FullProduct>();
+	for (const customerProduct of [
+		...insertCustomerProducts,
+		...fullCustomer.customer_products,
+	]) {
+		for (const customerLicense of customerProduct.customer_licenses ?? []) {
+			const planLicense = customerLicense.planLicense;
+			if (!planLicense) continue;
+			licenseProductsByDefinition.set(
+				customerLicense.plan_license_id ?? planLicense.product.internal_id,
+				planLicenseToStripeInitProduct({ planLicense }),
+			);
+		}
+	}
+	// Transitions carry incoming definitions no persisted row references yet.
+	for (const transition of autumnBillingPlan.customerLicenseTransitions ?? []) {
+		const planLicense = transition.incomingCustomerLicense.planLicense;
+		if (!planLicense) continue;
+		licenseProductsByDefinition.set(
+			planLicense.id,
+			planLicenseToStripeInitProduct({ planLicense }),
+		);
+	}
+	const licenseProducts = Array.from(licenseProductsByDefinition.values());
+
+	const targetProducts = [
+		...newProducts,
+		...patchProducts,
+		...existingProducts,
+		...licenseProducts,
+	];
 	const internalEntityId = fullCustomer.entity?.internal_id;
 
 	await Promise.all(
@@ -191,6 +260,7 @@ export const initStripeResourcesForBillingPlan = async ({
 					product,
 					internalEntityId,
 					useCheckout: false,
+					currency,
 				}),
 			);
 		}

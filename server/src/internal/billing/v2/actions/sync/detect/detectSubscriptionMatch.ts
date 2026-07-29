@@ -5,8 +5,8 @@ import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { normalizeSubscriptionPhases } from "@/internal/billing/v2/providers/stripe/utils/sync/stripeItemSnapshot/normalizeSubscriptionPhases";
 import { findAutumnMatchForStripeItem } from "@/internal/billing/v2/providers/stripe/utils/sync/stripeToAutumn/findAutumnMatchForStripeItem";
 import { ProductService } from "@/internal/products/ProductService";
+import { itemDiffsToMatchedPlans } from "./itemDiffsToMatchedPlans/itemDiffsToMatchedPlans";
 import { rematchFeaturesWithinAnchoredPlans } from "./rematchFeaturesWithinAnchoredPlans";
-import { rollupMatchedPlans } from "./rollupMatchedPlans";
 import type { PhaseMatch, SubscriptionMatch } from "./types";
 
 /**
@@ -23,12 +23,14 @@ export const detectSubscriptionMatch = async ({
 	ctx,
 	subscription,
 	schedule,
+	billingCurrency,
 	nowSec,
 	fullProducts: preloadedFullProducts,
 }: {
 	ctx: AutumnContext;
 	subscription?: Stripe.Subscription;
 	schedule?: Stripe.SubscriptionSchedule;
+	billingCurrency?: string | null;
 	nowSec?: number;
 	/** Optional pre-fetched catalog (callers matching many subscriptions pass
 	 * this to avoid a per-call fetch). */
@@ -43,6 +45,7 @@ export const detectSubscriptionMatch = async ({
 	const phaseSnapshots = normalizeSubscriptionPhases({
 		subscription,
 		schedule,
+		billingCurrency,
 		nowSec,
 	});
 
@@ -68,7 +71,7 @@ export const detectSubscriptionMatch = async ({
 			),
 			org: ctx.org,
 		});
-		const plans = rollupMatchedPlans({ itemDiffs });
+		const plans = itemDiffsToMatchedPlans({ itemDiffs });
 		return {
 			start_date: snapshot.start_date,
 			end_date: snapshot.end_date,

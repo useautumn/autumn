@@ -5,7 +5,7 @@ import {
 	MigrationJobStep,
 	type Product,
 } from "@autumn/shared";
-import { and, asc, eq, gt, inArray } from "drizzle-orm";
+import { and, asc, eq, gt, inArray, isNull } from "drizzle-orm";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 import RecaseError from "@/utils/errorUtils.js";
 import { MigrationService } from "../MigrationService.js";
@@ -27,6 +27,7 @@ const getAllCustomersOnProduct = async ({
 			data = await db.query.customerProducts.findMany({
 				where: and(
 					eq(customerProducts.internal_product_id, internalProductId),
+					isNull(customerProducts.customer_license_link_id),
 					inArray(customerProducts.status, [
 						CusProductStatus.Active,
 						CusProductStatus.PastDue,
@@ -101,8 +102,10 @@ export const getMigrationCustomers = async ({
 		(cusProd) => cusProd.canceled_at !== null,
 	).length;
 
-	const customCount = cusProducts.filter((cusProd) => cusProd.is_custom).length;
-	const filteredCusProducts = cusProducts.filter((cp) => !cp.is_custom);
+	const isCustomized = (cusProd: { is_custom: boolean | null }) =>
+		cusProd.is_custom;
+	const customCount = cusProducts.filter(isCustomized).length;
+	const filteredCusProducts = cusProducts.filter((cp) => !isCustomized(cp));
 	const customers = filteredCusProducts.map((cusProd) => cusProd.customer);
 
 	if (migrationJobId) {

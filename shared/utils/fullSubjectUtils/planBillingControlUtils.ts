@@ -28,10 +28,16 @@ const appliesNow = ({
 }: {
 	customerProduct: FullCusProduct;
 	now: number;
-}) =>
-	(customerProduct.starts_at ?? 0) <= now &&
-	(customerProduct.access_starts_at ?? customerProduct.starts_at ?? 0) <= now &&
-	(customerProduct.ended_at == null || customerProduct.ended_at > now);
+}) => {
+	// Active statuses are authoritative when Stripe test clocks run ahead.
+	const statusAwareNow = Math.max(now, customerProduct.starts_at ?? now);
+	return (
+		(customerProduct.access_starts_at ?? customerProduct.starts_at ?? 0) <=
+			statusAwareNow &&
+		(customerProduct.ended_at == null ||
+			customerProduct.ended_at > statusAwareNow)
+	);
+};
 
 export const getPlanBillingControlProducts = ({
 	customerProducts,
@@ -45,6 +51,8 @@ export const getPlanBillingControlProducts = ({
 	customerProducts
 		.filter(
 			(customerProduct) =>
+				(customerProduct.customer_license_link_id == null ||
+					customerProduct.internal_entity_id == null) &&
 				inStatuses.includes(customerProduct.status) &&
 				appliesNow({ customerProduct, now }),
 		)
@@ -78,7 +86,9 @@ export const findPlanBillingControlWithProduct = <
 		| ((left: TControl, right: TControl) => TControl)
 		| undefined;
 
-	let winner: { control: TControl; customerProduct: FullCusProduct } | undefined;
+	let winner:
+		| { control: TControl; customerProduct: FullCusProduct }
+		| undefined;
 	let winnerNormalized: TControl | undefined;
 	for (const customerProduct of getPlanBillingControlProducts({
 		customerProducts,
@@ -182,13 +192,23 @@ export const fullSubjectToPlanProducts = ({
 	fullSubject,
 }: {
 	fullSubject: FullSubject;
-}) => [
-	...fullSubject.customer_products,
-	...(fullSubject.aggregated_customer_products ?? []),
-];
+}) =>
+	[
+		...fullSubject.customer_products,
+		...(fullSubject.aggregated_customer_products ?? []),
+	].filter(
+		(customerProduct) =>
+			customerProduct.customer_license_link_id == null ||
+			customerProduct.internal_entity_id == null,
+	);
 
 export const fullCustomerToPlanProducts = ({
 	fullCustomer,
 }: {
 	fullCustomer: FullCustomer;
-}) => fullCustomer.customer_products ?? [];
+}) =>
+	(fullCustomer.customer_products ?? []).filter(
+		(customerProduct) =>
+			customerProduct.customer_license_link_id == null ||
+			customerProduct.internal_entity_id == null,
+	);

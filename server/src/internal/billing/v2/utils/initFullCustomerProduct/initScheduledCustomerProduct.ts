@@ -1,6 +1,7 @@
 import {
 	BillingVersion,
 	CusProductStatus,
+	type CustomerLicenseQuantity,
 	type Entity,
 	type FeatureOptions,
 	type FullCusProduct,
@@ -23,6 +24,7 @@ export const initScheduledCustomerProduct = ({
 	fullCustomer,
 	fullProduct,
 	featureQuantities,
+	customerLicenseQuantities,
 	entity,
 	startsAt,
 	endsAt,
@@ -39,6 +41,7 @@ export const initScheduledCustomerProduct = ({
 	fullCustomer: FullCustomer;
 	fullProduct: FullProduct;
 	featureQuantities: FeatureOptions[];
+	customerLicenseQuantities?: CustomerLicenseQuantity[];
 	entity?: Entity;
 	startsAt: number;
 	endsAt: number | null | undefined;
@@ -67,6 +70,7 @@ export const initScheduledCustomerProduct = ({
 			fullCustomer,
 			fullProduct,
 			featureQuantities,
+			customerLicenseQuantities,
 			entity,
 			resetCycleAnchor: startsAtSecondsPrecision,
 			freeTrial: null,
@@ -76,7 +80,8 @@ export const initScheduledCustomerProduct = ({
 		initOptions: {
 			startsAt: startsAtSecondsPrecision,
 			endedAt: endsAtSecondsPrecision,
-			status: accessStartsAt === undefined ? CusProductStatus.Scheduled : undefined,
+			status:
+				accessStartsAt === undefined ? CusProductStatus.Scheduled : undefined,
 			accessStartsAt,
 			externalId,
 			isCustom,

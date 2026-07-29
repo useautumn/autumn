@@ -1,5 +1,6 @@
 import type { BillingContext, UpdateCustomerEntitlement } from "@autumn/shared";
 import {
+	billingContextToCurrency,
 	cusPriceToCusEntWithCusProduct,
 	cusProductToPrices,
 	customerProductToEntity,
@@ -12,7 +13,6 @@ import {
 	isV4Usage,
 	type LineItem,
 	type LineItemContext,
-	orgToCurrency,
 	usagePriceToLineItem,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
@@ -101,9 +101,7 @@ export const customerProductToArrearLineItems = ({
 			direction: "charge",
 			billingTiming: "in_arrear",
 			now: billingContext.currentEpochMs,
-			currency:
-				billingContext.stripeCustomer?.currency ??
-				orgToCurrency({ org: ctx.org }),
+			currency: billingContextToCurrency({ org: ctx.org, billingContext }),
 			entity,
 			customerProduct,
 			customerPrice: cusPrice,

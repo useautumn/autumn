@@ -1,6 +1,7 @@
 import {
 	BillingBehaviorSchema,
 	CancelActionSchema,
+	type CustomizePlanLicense,
 	FreeTrialDuration,
 	type ProductItem,
 } from "@autumn/shared";
@@ -11,6 +12,7 @@ import { RefundBehaviorSchema } from "@/components/forms/update-subscription-v2/
 
 export const UpdateSubscriptionFormSchema = z.object({
 	prepaidOptions: z.record(z.string(), z.number().nonnegative().optional()),
+	licenseQuantities: z.record(z.string(), z.number().nonnegative().optional()),
 
 	trialLength: z.number().positive().nullable(),
 	trialDuration: z.enum(FreeTrialDuration),
@@ -21,6 +23,7 @@ export const UpdateSubscriptionFormSchema = z.object({
 	version: z.number().positive(),
 
 	items: z.custom<ProductItem[]>().nullable(),
+	addLicenses: z.custom<CustomizePlanLicense[]>().nullable(),
 
 	cancelAction: CancelActionSchema.nullable(),
 	billingBehavior: BillingBehaviorSchema.nullable(),

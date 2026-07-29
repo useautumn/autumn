@@ -1,18 +1,19 @@
 import type {
-	SubscriptionMismatch,
-	VerifyParamsV1,
-	VerifyResponse,
+    SubscriptionMismatch,
+    VerifyParamsV1,
+    VerifyResponse,
 } from "@autumn/shared";
 import { createStripeCli } from "@/external/connect/createStripeCli";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
+import { setupCustomerLicenseBillingContext } from "@/internal/billing/v2/setup/customerLicenseBillingContext/setupCustomerLicenseBillingContext";
 import { computeExpectedSubscriptionState } from "./compute/computeExpectedSubscriptionState";
 import { evaluateCancelState } from "./evaluate/evaluateCancelState";
 import { evaluateItems } from "./evaluate/evaluateItems";
 import { evaluateSchedulePhases } from "./evaluate/evaluateSchedulePhases";
 import { verifyMismatchToMessage } from "./format/verifyMismatchToMessage";
 import {
-	setupVerifyContext,
-	type VerifyPrefetched,
+    setupVerifyContext,
+    type VerifyPrefetched,
 } from "./setup/setupVerifyContext";
 
 const stampMessages = (
@@ -55,6 +56,11 @@ export const verify = async ({
 		prefetched,
 	});
 
+	// Seat-snapshot specs need the license billing rows; free (in-memory gated)
+	// for customers without licenses. TODO(licenses): fold into setupVerifyContext.
+	const customerLicenseBillingContext =
+		await setupCustomerLicenseBillingContext({ ctx, fullCustomer });
+
 	const stripeCli = createStripeCli({ org: ctx.org, env: ctx.env });
 
 	const subscriptions: VerifyResponse["subscriptions"] = [];
@@ -70,6 +76,8 @@ export const verify = async ({
 	for (const target of targets) {
 		const { stripeSubscriptionId, stripeSubscription, relatedCusProducts } =
 			target;
+
+
 
 		const mismatches: SubscriptionMismatch[] = [];
 

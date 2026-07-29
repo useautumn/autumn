@@ -5,16 +5,9 @@ const sharedRedis = { name: "shared" } as unknown as Redis;
 const dedicatedRedis = { name: "dedicated" } as unknown as Redis;
 
 const mockState = {
-	jsonGetResult: null as string | null,
 	v2ResultsByRedis: new Map<object, { found: boolean }>(),
 	v2Calls: [] as object[],
 };
-
-mock.module("@/external/redis/initRedis.js", () => ({
-	redis: {
-		call: async () => mockState.jsonGetResult,
-	},
-}));
 
 mock.module("@/external/redis/orgRedisPool.js", () => ({
 	getOrgRedis: () => dedicatedRedis,
@@ -22,10 +15,6 @@ mock.module("@/external/redis/orgRedisPool.js", () => ({
 
 mock.module("@/external/redis/resolveRedisV2.js", () => ({
 	resolveRedisV2: () => sharedRedis,
-}));
-
-mock.module("@/utils/cacheUtils/cacheUtils.js", () => ({
-	tryRedisRead: async (operation: () => Promise<unknown>) => operation(),
 }));
 
 mock.module(
@@ -75,7 +64,6 @@ const makeContext = ({ migrationPercent }: { migrationPercent: number }) =>
 	}) as never;
 
 beforeEach(() => {
-	mockState.jsonGetResult = null;
 	mockState.v2ResultsByRedis.clear();
 	mockState.v2Calls = [];
 });
@@ -90,9 +78,6 @@ describe("fetchLockReceipt", () => {
 			lockId: "lock_123",
 		});
 
-		expect(result.source).toBe("redis_v2");
-		if (result.source !== "redis_v2")
-			throw new Error("Expected Redis V2 receipt");
 		expect(result.redisInstance).toBe(dedicatedRedis);
 		expect(mockState.v2Calls).toEqual([sharedRedis, dedicatedRedis]);
 	});
@@ -105,9 +90,6 @@ describe("fetchLockReceipt", () => {
 			lockId: "lock_123",
 		});
 
-		expect(result.source).toBe("redis_v2");
-		if (result.source !== "redis_v2")
-			throw new Error("Expected Redis V2 receipt");
 		expect(result.redisInstance).toBe(sharedRedis);
 		expect(mockState.v2Calls).toEqual([sharedRedis]);
 	});

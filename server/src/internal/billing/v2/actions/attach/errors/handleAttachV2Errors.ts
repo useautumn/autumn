@@ -17,7 +17,9 @@ import { handleStripeCheckoutErrors } from "@/internal/billing/v2/actions/attach
 import { handleTransitionConfigErrors } from "@/internal/billing/v2/actions/attach/errors/handleTransitionConfigErrors";
 import { handleProrationBehaviorErrors } from "@/internal/billing/v2/common/errors/handleBillingBehaviorErrors";
 import { handleCustomLineItemsErrors } from "@/internal/billing/v2/common/errors/handleCustomLineItemsErrors";
+import { handleEntityLicenseAssignmentErrors } from "@/internal/billing/v2/common/errors/handleEntityLicenseAssignmentErrors";
 import { handleExternalPSPErrors } from "@/internal/billing/v2/common/errors/handleExternalPSPErrors";
+import { handleLicenseAttachTargetErrors } from "@/internal/billing/v2/common/errors/handleLicenseAttachTargetErrors";
 import { handleSubscriptionIdErrors } from "@/internal/billing/v2/common/errors/handleSubscriptionIdErrors";
 import { handleStripeBillingPlanErrors } from "@/internal/billing/v2/providers/stripe/errors/handleStripeBillingPlanErrors";
 import { handleCustomPaymentMethodErrorsV2 } from "@/internal/customers/attach/attachUtils/handleAttachErrors";
@@ -53,13 +55,24 @@ export const handleAttachV2Errors = async ({
 	// 1.2. Custom Payment Method errors (Vercel)
 	handleCustomPaymentMethodErrorsV2({ billingContext });
 
+	// 1.3. Seat-holding entities are managed through their license
+	handleEntityLicenseAssignmentErrors({
+		fullCustomer: billingContext.fullCustomer,
+	});
+
+	// 1.4. License linkage preconditions on the attach target
+	handleLicenseAttachTargetErrors({
+		fullCustomer: billingContext.fullCustomer,
+		attachProduct: billingContext.attachProduct,
+	});
+
 	// 2. Current customer product errors (same product)
 	handleCurrentCustomerProductErrors({ billingContext });
 
 	// 3. new_billing_subscription validation errors
 	handleNewBillingSubscriptionErrors({ billingContext, params });
 
-	// 4. Stripe checkout errors (multi-interval)
+	// 4. Stripe checkout errors
 	handleStripeCheckoutErrors({ billingContext, autumnBillingPlan });
 
 	// 5. Invoice mode errors (deferred + downgrade)

@@ -13,6 +13,7 @@ import { getPlanResponse } from "@/internal/products/productUtils/productRespons
 import {
 	applyDiffToVariantPlan,
 	omitVariantOwnedSettings,
+	stripPlanRowIds,
 	type VariantSettingsPatch,
 } from "../common/planTransformUtils.js";
 import { resolveVariantUpdateSource } from "../common/variantUpdateSource.js";
@@ -103,7 +104,7 @@ export const previewAffectedVariants = async ({
 			const previewPlan = variantUpdate
 				? {
 						...applyDiffToVariantPlan({
-							plan: editedBasePlan,
+							plan: stripPlanRowIds({ plan: editedBasePlan }),
 							diff: variantUpdate.customize,
 						}),
 						id: variant.id,

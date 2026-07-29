@@ -49,7 +49,5 @@ export const filterBlockingCustomFeaturePriceItems = ({
 		if (plan?.product.is_add_on === true && plan.base.kind === "absent") {
 			return false;
 		}
-		if (plan?.base.kind === "matched") return false;
-
-		return !hasExactlyOneResolvingSyncPlan({ syncPhase, diff });
+		return plan?.base.kind !== "matched" && plan?.base.kind !== "custom";
 	});

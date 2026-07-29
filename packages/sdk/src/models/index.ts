@@ -3,6 +3,7 @@
  */
 
 export * from "./aggregate-events-op.js";
+export * from "./attach-license-op.js";
 export * from "./attach-op.js";
 export * from "./autumn-default-error.js";
 export * from "./autumn-error.js";
@@ -33,11 +34,13 @@ export * from "./get-plan-op.js";
 export * from "./get-revenue-cat-keys-op.js";
 export * from "./http-client-errors.js";
 export * from "./import-op.js";
+export * from "./insert-invoices-op.js";
 export * from "./link-revenue-cat-op.js";
 export * from "./list-customers-op.js";
 export * from "./list-entities-op.js";
 export * from "./list-events-op.js";
 export * from "./list-features-op.js";
+export * from "./list-invoices-op.js";
 export * from "./list-plans-op.js";
 export * from "./list-rewards-op.js";
 export * from "./mint-key-op.js";
@@ -52,6 +55,7 @@ export * from "./preview-update-op.js";
 export * from "./redeem-referral-code-op.js";
 export * from "./redeem-reward-code-op.js";
 export * from "./refresh-key-op.js";
+export * from "./release-license-op.js";
 export * from "./response-validation-error.js";
 export * from "./revoke-key-op.js";
 export * from "./sdk-validation-error.js";

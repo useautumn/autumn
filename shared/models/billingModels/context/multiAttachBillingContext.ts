@@ -24,4 +24,7 @@ export interface MultiAttachProductContext {
 export interface MultiAttachBillingContext extends BillingContext {
 	productContexts: MultiAttachProductContext[];
 	checkoutMode: CheckoutMode;
+
+	// Resolved billing currency for this multi-attach (requested -> customer -> org default).
+	currency?: string;
 }

@@ -4,6 +4,7 @@ import {
 	stripeToAtmnAmount,
 } from "@autumn/shared";
 import { createStripeCli } from "@/external/connect/createStripeCli.js";
+import { getStripeInvoice } from "@/external/stripe/invoices/operations/getStripeInvoice.js";
 import type { ExpandedStripeInvoiceLineItem } from "@/external/stripe/invoices/lineItems/operations/getStripeInvoiceLineItems.js";
 import { getStripeInvoiceLineItems } from "@/external/stripe/invoices/lineItems/operations/getStripeInvoiceLineItems.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
@@ -37,11 +38,25 @@ export const storeInvoiceLineItems = async ({
 	try {
 		const stripeCli = createStripeCli({ org, env });
 
-		// 1. Fetch invoice line items from Stripe
+		// 1. Fetch line items from Stripe.
 		const stripeLineItems = await getStripeInvoiceLineItems({
 			stripeClient: stripeCli,
 			invoiceId: stripeInvoiceId,
 		});
+
+		// Subscription discounts appear in discount_amounts on each line, but their
+		// expanded coupon is only available through invoice.discounts.
+		const stripeDiscounts = stripeLineItems.some(
+			(lineItem) => (lineItem.discount_amounts?.length ?? 0) > 0,
+		)
+			? (
+					await getStripeInvoice({
+						stripeClient: stripeCli,
+						invoiceId: stripeInvoiceId,
+						expand: ["discounts.source.coupon"],
+					})
+				).discounts
+			: [];
 
 		if (stripeLineItems.length === 0) {
 			ctx.logger.debug(
@@ -113,6 +128,7 @@ export const storeInvoiceLineItems = async ({
 
 		const dbLineItems = stripeLineItemsToDbLineItems({
 			stripeLineItems: remainingStripeLineItems,
+			stripeDiscounts,
 			invoiceId: autumnInvoiceId,
 			stripeInvoiceId,
 			autumnLineItems,

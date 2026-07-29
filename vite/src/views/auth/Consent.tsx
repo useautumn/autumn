@@ -45,21 +45,13 @@ type SessionWithScopes = {
 	scopes?: string[];
 };
 
-const OrgLogo = ({ org }: { org: { name: string; logo?: string | null } }) => {
-	const firstLetter = org?.name?.charAt(0).toUpperCase() || "A";
-
-	return (
-		<div className="rounded-md overflow-hidden flex items-center justify-center bg-zinc-200 dark:bg-zinc-700 w-5 h-5 min-w-5 min-h-5">
-			{org.logo ? (
-				<img src={org.logo} alt={org.name} className="w-full h-full" />
-			) : (
-				<span className="w-5 h-5 flex items-center justify-center bg-linear-to-r from-purple-600 via-purple-500 to-purple-400 text-white text-[10px] font-medium">
-					{firstLetter}
-				</span>
-			)}
-		</div>
-	);
-};
+const OrgLogo = () => (
+	<img
+		src="/autumn-logo.svg"
+		alt="Autumn"
+		className="w-5 h-5 min-w-5 rounded-md"
+	/>
+);
 
 const getConsentRedirectUrl = (data: unknown) => {
 	if (!data || typeof data !== "object") return null;
@@ -478,7 +470,7 @@ export const Consent = () => {
 									<SelectTrigger className="w-[200px]">
 										<SelectValue>
 											<span className="flex items-center gap-2 min-w-0">
-												<OrgLogo org={currentOrg} />
+												<OrgLogo />
 												<span className="truncate">{currentOrg.name}</span>
 											</span>
 										</SelectValue>
@@ -486,7 +478,7 @@ export const Consent = () => {
 									<SelectContent>
 										{orgs?.map((org) => (
 											<SelectItem key={org.id} value={org.id}>
-												<OrgLogo org={org} />
+												<OrgLogo />
 												<span className="truncate">{org.name}</span>
 											</SelectItem>
 										))}

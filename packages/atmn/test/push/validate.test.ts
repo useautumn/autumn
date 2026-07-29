@@ -32,3 +32,34 @@ test("validateConfig rejects plan items that reference unexported features", () 
 		]),
 	);
 });
+
+test("validateConfig rejects invalid license configuration and cycles", () => {
+	const result = validateConfig(
+		[],
+		[
+			{
+				id: "a",
+				name: "A",
+				licenses: [
+					{ licensePlanId: "a" },
+					{ licensePlanId: "b" },
+					{ licensePlanId: "b" },
+					{ licensePlanId: "missing" },
+				],
+			},
+			{ id: "b", name: "B", licenses: [{ licensePlanId: "a" }] },
+		],
+	);
+
+	expect(result.valid).toBe(false);
+	expect(result.errors.map((error) => error.message).join("\n")).toContain(
+		"Plan dependency cycle",
+	);
+	expect(result.errors.map((error) => error.message)).toEqual(
+		expect.arrayContaining([
+			"A plan cannot license itself.",
+			'Duplicate license link "b".',
+			'License plan "missing" is not exported from your config.',
+		]),
+	);
+});

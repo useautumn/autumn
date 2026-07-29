@@ -48,6 +48,17 @@ import { cmaVaults } from "../models/leafModels/cmaVaultsTable.js";
 import { harnessSessions } from "../models/leafModels/harnessSessionsTable.js";
 import { leafSchema } from "../models/leafModels/leafSchema.js";
 import { slackAdminThreads } from "../models/leafModels/slackAdminThreadsTable.js";
+import {
+	customerLicenses,
+	licenseEntitlements,
+	licensePrices,
+	planLicenses,
+} from "../models/licenseModels/licenseTable.js";
+import {
+	licenseEntitlementRelations,
+	licensePriceRelations,
+	planLicenseRelations,
+} from "../models/licenseModels/planLicenseRelations.js";
 // Migration Relations
 import { migrationErrorRelations } from "../models/migrationModels/migrationErrorRelations.js";
 import { migrationErrors } from "../models/migrationModels/migrationErrorTable.js";
@@ -62,7 +73,16 @@ import { migrations } from "../models/migrationV2Models/migrationTable.js";
 import { agentRules } from "../models/orgModels/agent/agentRulesTable.js";
 import { organizationsRelations } from "../models/orgModels/orgRelations.js";
 import { organizations } from "../models/orgModels/orgTable.js";
+import { transitionRules } from "../models/orgModels/transitionRules/transitionRulesTable.js";
 import { metadata } from "../models/otherModels/metadataTable.js";
+import {
+	pooledBalanceContributionsRelations,
+	pooledBalancesRelations,
+} from "../models/pooledBalanceModels/pooledBalanceRelations.js";
+import {
+	pooledBalanceContributions,
+	pooledBalances,
+} from "../models/pooledBalanceModels/pooledBalanceTable.js";
 import { revenuecatMappings } from "../models/processorModels/revenuecatModels/revenuecatMappingsTable.js";
 import { vercelResources } from "../models/processorModels/vercelModels/vercelResourcesTable.js";
 // Product Relations
@@ -106,6 +126,8 @@ import {
 	oauthRefreshToken,
 	passkey,
 	session,
+	ssoConnection,
+	ssoProvider,
 	user,
 	verification,
 } from "./auth-schema.js";
@@ -153,6 +175,9 @@ export {
 	invoiceRelations,
 	invoiceTemplates,
 	invoices,
+	customerLicenses,
+	licenseEntitlements,
+	licensePrices,
 	// OAuth Provider
 	jwks,
 	member,
@@ -170,8 +195,17 @@ export {
 	oauthConsent,
 	oauthRefreshToken,
 	agentRules,
+	transitionRules,
 	// Tables
 	organizations,
+	licenseEntitlementRelations,
+	licensePriceRelations,
+	planLicenses,
+	planLicenseRelations,
+	pooledBalanceContributions,
+	pooledBalanceContributionsRelations,
+	pooledBalances,
+	pooledBalancesRelations,
 	passkey,
 	// Relations
 	organizationsRelations,
@@ -195,6 +229,8 @@ export {
 	schedulePhases,
 	schedules,
 	session,
+	ssoConnection,
+	ssoProvider,
 	subscriptions,
 	usageWindows,
 	// Auth

@@ -1,5 +1,5 @@
 import { notNullish, type StripeDiscountWithCoupon } from "@autumn/shared";
-import type Stripe from "stripe";
+import Stripe from "stripe";
 import { createStripeCli } from "@/external/connect/createStripeCli";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 
@@ -36,6 +36,7 @@ export const subToDiscounts = async ({
 	// If deleted coupons exist, re-fetch the subscription via the legacy API which
 	// exposes discounts under `discount.coupon` with all original fields intact.
 	const deletedCouponMap = new Map<string, Stripe.Coupon>();
+	const currentCouponMap = new Map<string, Stripe.Coupon>();
 	if (hasDeletedCoupon) {
 		const legacyStripeCli = createStripeCli({
 			org: ctx.org,
@@ -53,6 +54,24 @@ export const subToDiscounts = async ({
 				deletedCouponMap.set(discount.id, coupon);
 			}
 		}
+
+		const stripeCli = createStripeCli({ org: ctx.org, env: ctx.env });
+		await Promise.all(
+			[...deletedCouponMap.values()].map(async (coupon) => {
+				try {
+					const currentCoupon = await stripeCli.coupons.retrieve(coupon.id, {
+						expand: ["applies_to"],
+					});
+					currentCouponMap.set(coupon.id, currentCoupon);
+				} catch (error) {
+					if (
+						!(error instanceof Stripe.errors.StripeError) ||
+						!error.code?.includes("resource_missing")
+					)
+						throw error;
+				}
+			}),
+		);
 	}
 
 	return sub.discounts
@@ -69,9 +88,15 @@ export const subToDiscounts = async ({
 			if ("deleted" in coupon && coupon.deleted) {
 				const fullCoupon = deletedCouponMap.get(discount.id);
 				if (!fullCoupon) return discount as StripeDiscountWithCoupon;
+				const currentCoupon = currentCouponMap.get(fullCoupon.id);
+				// Reapply same-ID replacements because old discount IDs retain deleted coupon scope.
 				return {
 					...discount,
-					source: { ...discount.source, coupon: fullCoupon },
+					id: currentCoupon ? undefined : discount.id,
+					source: {
+						...discount.source,
+						coupon: currentCoupon ?? fullCoupon,
+					},
 				} as StripeDiscountWithCoupon;
 			}
 

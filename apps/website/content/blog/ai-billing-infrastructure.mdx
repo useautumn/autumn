@@ -1,0 +1,204 @@
+---
+title: "How to build a credit ledger that scales"
+description: "Metering token usage needs a different type of infrastructure. This article is about how to build a counter and ledger that works at high throughput and concurrency."
+date: "2026-07-16"
+author: "Ayush and John, Autumn Co-Founders"
+slug: "ai-billing-infrastructure"
+image: "/images/blog/ai-billing-infrastructure-og.png"
+---
+
+## Introduction
+
+When we think about charging for AI applications and agents, we default to "usage-based billing".
+
+And while it's clear that tokens should be monetized this way, the infrastructure people are actually building to support this looks completely different from the existing systems that phrase was coined for.
+
+Existing billing services assumed that billing was asynchronous. You send events that are tallied up and added to the end of a monthly invoice. This worked well for compute and infrastructure.
+
+The most common form of AI billing, however, is "quota-based": a form of usage-billing where synchronous access decision needs to be made in every request path before tokens are spent. This is the business model behind growing companies like Cursor, Lovable and OpenAI (you can even read about Codex's billing architecture in [this blog](https://openai.com/index/beyond-rate-limits/) by Jonah Cohen).
+
+Customers buy some amount of usage **upfront** (usually in the form of credits), use them up, then **hit a hard limit**. These limits are a piece of state in constant flux: plan changes, billing cycles, user controls, promotional grants and other business logic.
+
+![A collage of credit- and tier-based pricing pages from AI products](/images/blog/ai-billing-infrastructure-pricing-pages.png)
+
+## What do you need?
+
+The infrastructure behind our billing has to satisfy three conditions at once: low-latency access decisions on whether a customer can do something (ie, use a credit), a provably correct and auditable record of their usage, and with all of it working under high throughput (millions to billions of monthly events) and concurrency.
+
+This article is aimed at AI companies on their second or third rewrite of billing. We will cover:
+
+* Understanding the counter and ledger, and why you need both
+* Using a cache to keep access decisions fast
+* Tracking usage under load, and why synchronous deduction is needed
+* Handling resets, expiry, and usage analytics
+
+Since credits are the most common way of billing for AI tokens, we'll use this as the example going forward. However, the principles apply to any model where quotas are enforced.
+
+## Real-time access decisions
+
+A reasonable first approach would be to ask: can't we just aggregate over all a user's usage events to see if someone has remaining credits when checking a request?
+
+This doesn't work for real-time enforcement (we've seen it tried!). Different plans have different limits, rollover logic, expirations. The query becomes complex, slow, and very hard to debug or iterate on.
+
+The solution is the counter: typically a static value for the remaining balance of credits or usage, and when that's positive (with some nuance for cases like overages) the action is allowed.
+
+#### The counter
+
+The first thing to consider is your data model for credits and balances. Imagine you have a plan which offers 100 credits every month. You would probably start with a schema that looks like this:
+
+<CreditsTable />
+
+Now what happens if you want to add single-purchase top ups? You might think to add another **column** `topup_balance` to your table.
+
+This works for exactly one new credit type. The moment a bucket needs rules of its own; top-ups that expire after 6 months, promotional credits, 3-month rollovers, a daily refresh, a single number stops being enough. Each bucket has its own balance, deduction rules, reset cycles and expiration dates.
+
+Therefore, a better approach is to treat each bucket of credits as a separate **row** within the table: each with its own source, balance, period and expiration date. When determining a user's counter balance, you aggregate over these rows.
+
+<CreditBucketsTable />
+
+The obvious place to keep this is your primary database. Balances and plan config already live in Postgres, so you query it directly: sum the customer's credit grant rows, compare against the cost, apply any plan rules, return allow or deny. This is correct and simple, and for many products it's all you ever need.
+
+The cost is latency. Every request runs a full aggregation, which is fine at low volume but costly when the check gates every AI call.
+
+#### Introducing a cache
+
+The fix is to split the read path from the source of truth. Keep authoritative balances in Postgres, but serve the access check from an in-memory store like Redis. You can maintain a single derived value per customer, their spendable balance, so the check is one key lookup rather than a query with joins.
+
+That value is seeded from Postgres. On a cache miss (a new customer, an evicted key, a cold start) you run the full aggregation over their grant rows once, write the result to Redis, and serve every subsequent check from memory. Plan rules that gate the decision, like whether overage is allowed, can be cached alongside the balance so the whole allow/deny resolves without touching the database.
+
+Reads stay sub-20ms even at high throughput, and the hot path no longer contends with writes to your primary DB. The trade off is that speed comes at a cost: Redis is now a cache that can drift from the truth in Postgres.
+
+## Recording usage
+
+The counter told us the user can proceed so now we need to record what the user actually did. For that, we add a ledger.
+
+The ledger is the durable, record of what happened at each event, and why. It's the source of truth for usage: the thing you replay and reconcile against, and what makes the system *provably correct.*
+
+{/* TODO: image — ledger table in the DB */}
+
+The core operation is a single deduction, and it has to be atomic. In one database transaction, you **decrement** the counter balance and **insert** the ledger row. They commit together or not at all, so you never end up with a balance change that isn't accounted for, or a record with no matching deduction.
+
+A single deduction may span several balance rows, all committed in that same transaction.
+
+#### Deducting from a balance (or many balances together)
+
+When you first build a credit system, decrementing a counter starts by updating a single row. However, now that we have multiple credit balances (monthly credits + one off credits), there's **waterfall logic** required when deducting. For example, you might want to:
+
+* **Expiration**: deduct from monthly credits first, then any one-off top-ups
+* **Pooled balances**: Spend a seat-level balance first, then draw from an org-level pool
+* **Overage logic**: Use up granted free credits first, then dip into billable overages
+
+```ts
+const deductCredits = async ({ userId, amount }) => {
+  const { monthly, oneoff } = await getBalances(userId);
+
+  const fromMonthly = Math.min(monthly, amount);
+  const fromOneOff = amount - fromMonthly;
+
+  await db.query(`
+    UPDATE credits
+    SET monthly_balance = monthly_balance - ${fromMonthly},
+        oneoff_balance = oneoff_balance - ${fromOneOff}
+    WHERE user_id = ${userId}
+  `);
+};
+```
+
+To make this atomic, you must lock the rows on read using SELECT ... FOR UPDATE. This blocks concurrent requests on the same user, forcing them to queue up and execute serially.
+
+However, that per-account locking is exactly what makes the simple, synchronous version hard to scale. The lock plus the hot-path DB write mean that under load, requests for the same user pile up, and the database becomes the bottleneck.
+
+How you fix that depends on one question: can you tolerate the balance lagging reality for a short window?
+
+#### Asynchronous deduction with a queue
+
+If a brief lag between spending and the balance updating is acceptable, you can take the deduction off the hot path. The counter approves, you emit an event carrying a stable idempotency key, and you return to the user immediately.
+
+A background worker consumes those events and runs the atomic decrement-plus-ledger-insert transaction afterwards.
+
+{/* TODO: image — decide → queue → settle flow */}
+
+The queue (Kafka, SQS, a Redis stream) absorbs bursts so writes reach Postgres at a rate it can handle, and partitioning by account serializes each user's debits so concurrent requests still can't race to spend the same credits.
+
+The idempotency key is what makes this safe to retry: if a worker crashes or an event is redelivered, the key lets the transaction no-op on anything already applied. Once it commits, refresh the Redis counter so the fast read reflects the new balance.
+
+## Why synchronous deduction is needed
+
+AI workloads and agents can be long-running, expensive and **spun up concurrently.** This makes asynchronous deduction a problem.
+
+To illustrate, imagine 5 sub-agents running in parallel:
+
+* A user has 600 credits remaining
+* Each of the 5 agent runs costs 500 credits
+* All 5 requests read the counter before the deductions settle, so all 5 are approved
+
+This allows the user to dramatically overspend their balance because the counter had a delayed update. In these cases, the flow you need looks more like this:
+
+* Request is made to spin up a sub-agent
+* Estimate the cost (eg 500 credits) and immediately deduct it from the user's balance up front
+* Process the request
+* Adjust the actual usage if it succeeds, refund the deduction if it fails
+
+We call this **lock-and-release** at Autumn, but it's really just a synchronous deduction flow.
+
+<LockAndReleaseDiagram />
+
+When we tried to build this on Postgres directly, transactions sharply limited throughput. Running even a couple of hundred deductions per second wasn't feasible. And once you add additional balances like rollovers, you span multiple tables and need joins, which limits concurrency further.
+
+To solve this, we added the ability to deduct from our counters in Redis using Lua scripts. All credit reads and writes happen on Redis, and each write is added to a batch job that syncs balances back to Postgres. Inside the Lua script, we enqueue a ledger insertion event.
+
+Writes stay atomic and extremely fast, typically sub-20ms, even at high throughput. But as with any infra decision, there are always trade-offs:
+
+* **Atomic with the ledger event, but not durable.** The Lua script commits the decrement and the enqueued ledger insert together, so there's never a balance change without a matching event, but that's an in-memory guarantee. There is a drift-risk on a Redis failure.
+* **Keeping Redis and Postgres consistent is its own project.** We kept Redis as a read/write cache rather than the source of truth, and there's real complexity in reconciling the two, with plenty of race conditions to handle.
+* **Redis isn't a silver bullet.** Choosing the right data type, watching costs, and deciding normalized vs de-normalized storage all matter. It's single-threaded, so one slow operation can bottleneck the whole system, and because writes are serial, any atomic system has a throughput ceiling, a single hot user can saturate it.
+
+## Resets and expiry
+
+In addition to a static value, every balance row can have a reset cycle and an expiry.
+
+A **reset** is a recurring grant refreshing: the balance returns to its granted allowance at the start of each cycle. An **expiry** is credits disappearing permanently. A **rollover** is just the two composed: leftover balance at a reset converts into a new bucket with its own expiry, rather than vanishing. There are a few ways to design this:
+
+#### Stripe webhooks
+
+The simplest way to handle credit resets and expiry would be to listen to Stripe's webhooks, such as `invoice.paid` or `invoice.created`. This approach is great because it ties credits directly to when the subscription renews, which minimizes drift.
+
+However, it offers limited customizability. For instance, it won't work if your users are on an annual subscription but have their credits reset monthly, or you grant credits on a different cycle (eg, 5 hour rate limits).
+
+#### Cron job
+
+You can also spin up a cron job that queries the DB for users that are due for a reset (in the above case, it's a simple `next_reset_at < NOW()`). Depending on how granular you want resets to be, you can either run this minutely, hourly or daily.
+
+Apart from adding another service, the other concern is that query time will grow linearly with your user base. At some point, you will need to optimize it.
+
+#### Lazy resets
+
+The final way you can handle resets is through a lazy strategy. Every time you fetch your user's credits, you do an in-memory check of whether they are due for a reset, and if so then perform the DB update.
+
+Lazy resets tend to age the best and work well in most cases, but the downside is that you don't have an accurate trigger for when credits are reset, and so aren't able to perform actions like sending out notifications to users when their credits refresh.
+
+In practise, you'll likely end up using multiple of these techniques. At Autumn, for posting overage bills to Stripe invoices, we have to rely on their webhooks. For sending events and emails (`balance.reset`), we'll use a cron. For most standard balance resets, we'll use the lazy approach. We have guards in place to make sure resets stay aligned with the billing cycle.
+
+## Analytics and Reporting
+
+Postgres is the right home for balances and the deduction ledger, where you need transactional guarantees, but it's a bad fit for analytical questions: usage over time, per-feature breakdowns, reconciliation across millions of events.
+
+This is a different kind of aggregation from the counter's: the counter resolves a single customer's current spendable balance on the hot path, whereas these run offline over historical events. For that, the events can be sent to a columnar store like ClickHouse.
+
+The cleanest way to keep the two in step is to treat ClickHouse as another consumer of the event stream you're already emitting, rather than dual-writing from your application: each deduction (or raw usage event) lands on the stream, the processor commits it to Postgres, and ClickHouse ingests from that same stream independently.
+
+ClickHouse is only powerful if you put the time in, though. You can't just create a table, start ingesting events, and call it a day. A few things we've had to work through:
+
+* Pre-aggregating common queries with materialized views. For instance, hourly or daily credit usage.
+* Being careful about properties on usage events. Low-cardinality fields (like AI model) are straightforward, but unbounded fields like request IDs get expensive quickly.
+* Planning around backfills and corrections. Updating historical events in ClickHouse is possible, but we've spent days on jobs that felt like they should've taken an hour.
+
+## Conclusion
+
+Despite how complex a billing system can get at scale, none of this has to be built at once. The right move is to build for the stage you're at, and most products can start with everything in a single DB.
+
+What stays constant though is the shape: a fast counter to decide access, and a durable ledger that makes usage provably correct. By getting this right early, later optimizations can be slotted in when needed.
+
+A good billing experience won't make users love your product, but a bad one can make them hate it. Ultimately, it's one part of your app that just has to be correct, so before letting your coding agents run wild, it's worth spending a little time on the system design.
+
+Another important aspect is your pricing and billing data model, and how you can ship changes to pricing without a rebuild. You can read more about that in our post on [how to make a flexible billing system](/blog/stop-rebuilding-billing).

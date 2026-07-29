@@ -6,7 +6,7 @@ import { AttachDiscountSchema } from "../attachV2/attachDiscount";
 import { BillingBehaviorSchema } from "../common/billingBehavior";
 import { BillingCycleAnchorSchema } from "../common/billingCycleAnchor";
 import {
-	CustomizePlanV1Schema,
+	CustomizePlanV1BaseSchema,
 	refineCustomizePlanV1Schema,
 } from "../common/customizePlan/customizePlanV1";
 
@@ -18,11 +18,16 @@ export enum StartingAfterDuration {
 // update_items is internal / not prod-ready — omit it from the schedule customize
 // surface so the agent never uses it.
 const CreateScheduleCustomizePlanSchema = refineCustomizePlanV1Schema(
-	CustomizePlanV1Schema.omit({
+	CustomizePlanV1BaseSchema.omit({
 		free_trial: true,
+		upsert_licenses: true,
 		update_items: true,
 	}).strict(),
-	{ includeFreeTrial: false, includeUpdateItems: false },
+	{
+		includeFreeTrial: false,
+		includeUpdateItems: false,
+		includeLicenses: false,
+	},
 );
 
 export const PhaseBillingCycleAnchorSchema = z.enum(["phase_start"]);
@@ -52,16 +57,20 @@ export const CreateScheduleStartingAfterSchema = z.object({
 		description: "The duration unit to offset this phase from the prior phase.",
 	}),
 	duration_count: z.number().int().positive().meta({
-		description: "How many duration_type periods after the prior phase to start.",
+		description:
+			"How many duration_type periods after the prior phase to start.",
 	}),
 });
 
 export const CreateSchedulePhaseSchema = z
 	.object({
-		starts_at: z.union([z.number(), z.literal("now")]).optional().meta({
-			description:
-				"When this phase should start, in epoch milliseconds, or 'now' for the immediate phase.",
-		}),
+		starts_at: z
+			.union([z.number(), z.literal("now")])
+			.optional()
+			.meta({
+				description:
+					"When this phase should start, in epoch milliseconds, or 'now' for the immediate phase.",
+			}),
 		starting_after: CreateScheduleStartingAfterSchema.optional().meta({
 			description:
 				"Relative start offset from the previous resolved schedule phase.",
@@ -137,7 +146,8 @@ export const CreateScheduleParamsV0Schema = z
 	})
 	.check((ctx) => {
 		const hasRelativeTiming = ctx.value.phases.some(
-			(phase) => phase.starts_at === "now" || phase.starting_after !== undefined,
+			(phase) =>
+				phase.starts_at === "now" || phase.starting_after !== undefined,
 		);
 
 		for (let index = 0; index < ctx.value.phases.length; index++) {

@@ -11,9 +11,9 @@ import {
 	uniqueIndex,
 } from "drizzle-orm/pg-core";
 import { collatePgColumn } from "../../db/utils.js";
-import { billingControlColumns } from "./billingControls/billingControlTableColumns.js";
 import type { ExternalProcessors } from "../genModels/processorSchemas.js";
 import { organizations } from "../orgModels/orgTable.js";
+import { billingControlColumns } from "./billingControls/billingControlTableColumns.js";
 
 export type CustomerConfig = {
 	disable_pooled_balance?: boolean;
@@ -42,6 +42,8 @@ export const customers = pgTable(
 			.$type<ExternalProcessors>()
 			.default({} as ExternalProcessors),
 		send_email_receipts: boolean("send_email_receipts").default(false),
+		// null = not yet locked; resolves to org.default_currency at use-time
+		currency: text(),
 		...billingControlColumns(),
 		config: jsonb().$type<CustomerConfig>().default({}),
 	},

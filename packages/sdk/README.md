@@ -204,6 +204,7 @@ const response = await client.track({ customerId: "cus_123", eventName: "ai_chat
 @param value - The amount of usage to record. Defaults to 1. Use negative values to credit balance (e.g., when removing a seat). (optional)
 @param properties - Additional properties to attach to this usage event. (optional)
 @param timestamp - Unix timestamp in milliseconds to use for the usage event. Defaults to the current time. (optional)
+@param overageBehavior - How to handle usage that exceeds the available balance. "cap" (default) deducts only what fits, stopping at zero. "overflow" deducts the full value: the balance can go negative and usage limits do not clamp the deduction, though spend limits still apply. (optional)
 @param async - If true, enqueue the event for asynchronous processing and return 204 immediately. The response will not include balance information. (optional)
 
 @returns The usage value recorded, with either a single updated balance or a map of updated balances. If Autumn is experiencing degraded service from a downstream provider, the API may return 202 after accepting the event for replay so it can be tracked as soon as the service is restored.
@@ -237,6 +238,7 @@ const response = await client.trackTokens({
 @param reasoningTokens - Number of reasoning tokens generated. (optional)
 @param properties - Additional properties to attach to this usage event. (optional)
 @param timestamp - Unix timestamp in milliseconds to use for the usage event. Defaults to the current time. (optional)
+@param overageBehavior - How to handle usage that exceeds the available balance. "cap" (default) deducts only what fits, stopping at zero. "overflow" deducts the full value: the balance can go negative and usage limits do not clamp the deduction, though spend limits still apply. (optional)
 @param async - If true, enqueue the event for asynchronous processing and return 204 immediately. The response will not include balance information. (optional)
 
 @returns The dollar value recorded and the updated AI credit system balance. If Autumn is experiencing degraded service from a downstream provider, the API may return 202 after accepting the token usage event for replay so it can be tracked as soon as the service is restored.
@@ -278,7 +280,7 @@ const response = await client.billing.attach({ customerId: "cus_123", planId: "p
 @param planId - The ID of the plan.
 @param featureQuantities - If this plan contains prepaid features, use this field to specify the quantity of each prepaid feature. This quantity includes the included amount and billing units defined when setting up the plan. (optional)
 @param version - The version of the plan to attach. (optional)
-@param customize - Customize the plan to attach. Can override the price, items, free trial, or a combination. (optional)
+@param customize - Customize the plan to attach. Can override the price, items, licenses, free trial, or a combination. (optional)
 @param invoiceMode - Invoice mode creates a draft or open invoice and sends it to the customer, instead of charging their card immediately. This uses Stripe's send_invoice collection method. (optional)
 @param prorationBehavior - How to handle proration when updating an existing subscription. 'prorate_immediately' charges/credits prorated amounts now, 'none' skips creating any charges. (optional)
 @param redirectMode - Controls when to return a checkout URL. 'always' returns a URL even if payment succeeds, 'if_required' only when payment action is needed, 'never' disables redirects. (optional)
@@ -296,10 +298,12 @@ const response = await client.billing.attach({ customerId: "cus_123", planId: "p
 @param processorSubscriptionId - The processor subscription ID to link. Use this to attach an existing Stripe subscription instead of creating a new one. (optional)
 @param carryOverBalances - Whether to carry over balances from the previous plan. (optional)
 @param carryOverUsages - Whether to carry over usages from the previous plan. (optional)
+@param licenseQuantities - Seat quantities for the plan's licenses, keyed by license plan. (optional)
 @param metadata - Key-value metadata to attach to the Stripe subscription, invoice, and checkout session created during this attach flow. Keys prefixed with 'autumn_' are reserved and will be stripped. (optional)
 @param noBillingChanges - If true, skips any billing changes for the attach operation. (optional)
 @param enablePlanImmediately - If true, the customer's plan is activated immediately even when payment is deferred (invoice mode) or pending (Stripe checkout). For Stripe checkout, the customer_product is inserted before the customer completes the hosted form. (optional)
 @param taxRateId - Stripe tax rate ID (txr_...) to apply as the default tax rate on the created subscription, invoice, or checkout session line items. (optional)
+@param currency - Currency to bill this attach in (e.g. usd, eur). Must match the customer's currency if they are already locked to one, and the plan must offer a paid price in it. Defaults to the customer's currency, then the org default. (optional)
 
 @returns A billing response with customer ID, invoice details, and payment URL (if checkout required).
 * [createSchedule](docs/sdks/billing/README.md#createschedule) - Creates a multi-phase subscription schedule for a customer. The first phase starts immediately and subsequent phases automatically transition at their scheduled start times.
@@ -309,7 +313,7 @@ Use this endpoint to schedule future plan changes (e.g. switch from a trial plan
 @example
 ```typescript
 // Schedule a transition from a trial plan to a paid plan
-const response = await client.billing.createSchedule({ customerId: "cus_123", phases: [{"startsAt":1783704123534,"plans":[{"planId":"trial_plan"}]},{"startsAt":1784913723534,"plans":[{"planId":"pro_plan"}]}] });
+const response = await client.billing.createSchedule({ customerId: "cus_123", phases: [{"startsAt":1784744849888,"plans":[{"planId":"trial_plan"}]},{"startsAt":1785954449888,"plans":[{"planId":"pro_plan"}]}] });
 ```
 
 @param customerId - The ID of the customer to create the schedule for.
@@ -351,6 +355,7 @@ const response = await client.billing.multiAttach({ customerId: "cus_123", plans
 @param entityId - The ID of the entity to attach the plans to. (optional)
 @param plans - The list of plans to attach to the customer.
 @param freeTrial - Free trial configuration applied to all plans. Pass an object to set a custom trial, or null to remove any trial. (optional)
+@param currency - Currency to bill this multi-attach in (e.g. usd, eur). Must match the customer's currency if they are already locked to one, and every plan must offer a paid price in it. Defaults to the customer's currency, then the org default. (optional)
 @param invoiceMode - Invoice mode creates a draft or open invoice and sends it to the customer, instead of charging their card immediately. (optional)
 @param discounts - List of discounts to apply. Each discount can be an Autumn reward ID, Stripe coupon ID, or Stripe promotion code. (optional)
 @param successUrl - URL to redirect to after successful checkout. (optional)
@@ -375,7 +380,7 @@ const response = await client.billing.previewAttach({ customerId: "cus_123", pla
 @param planId - The ID of the plan.
 @param featureQuantities - If this plan contains prepaid features, use this field to specify the quantity of each prepaid feature. This quantity includes the included amount and billing units defined when setting up the plan. (optional)
 @param version - The version of the plan to attach. (optional)
-@param customize - Customize the plan to attach. Can override the price, items, free trial, or a combination. (optional)
+@param customize - Customize the plan to attach. Can override the price, items, licenses, free trial, or a combination. (optional)
 @param invoiceMode - Invoice mode creates a draft or open invoice and sends it to the customer, instead of charging their card immediately. This uses Stripe's send_invoice collection method. (optional)
 @param prorationBehavior - How to handle proration when updating an existing subscription. 'prorate_immediately' charges/credits prorated amounts now, 'none' skips creating any charges. (optional)
 @param redirectMode - Controls when to return a checkout URL. 'always' returns a URL even if payment succeeds, 'if_required' only when payment action is needed, 'never' disables redirects. (optional)
@@ -393,10 +398,12 @@ const response = await client.billing.previewAttach({ customerId: "cus_123", pla
 @param processorSubscriptionId - The processor subscription ID to link. Use this to attach an existing Stripe subscription instead of creating a new one. (optional)
 @param carryOverBalances - Whether to carry over balances from the previous plan. (optional)
 @param carryOverUsages - Whether to carry over usages from the previous plan. (optional)
+@param licenseQuantities - Seat quantities for the plan's licenses, keyed by license plan. (optional)
 @param metadata - Key-value metadata to attach to the Stripe subscription, invoice, and checkout session created during this attach flow. Keys prefixed with 'autumn_' are reserved and will be stripped. (optional)
 @param noBillingChanges - If true, skips any billing changes for the attach operation. (optional)
 @param enablePlanImmediately - If true, the customer's plan is activated immediately even when payment is deferred (invoice mode) or pending (Stripe checkout). For Stripe checkout, the customer_product is inserted before the customer completes the hosted form. (optional)
 @param taxRateId - Stripe tax rate ID (txr_...) to apply as the default tax rate on the created subscription, invoice, or checkout session line items. (optional)
+@param currency - Currency to bill this attach in (e.g. usd, eur). Must match the customer's currency if they are already locked to one, and the plan must offer a paid price in it. Defaults to the customer's currency, then the org default. (optional)
 
 @returns A preview response with line items, totals, and effective dates for the proposed changes.
 * [previewMultiAttach](docs/sdks/billing/README.md#previewmultiattach) - Previews the billing changes that would occur when attaching multiple plans, without actually making any changes.
@@ -413,6 +420,7 @@ const response = await client.billing.previewMultiAttach({ customerId: "cus_123"
 @param entityId - The ID of the entity to attach the plans to. (optional)
 @param plans - The list of plans to attach to the customer.
 @param freeTrial - Free trial configuration applied to all plans. Pass an object to set a custom trial, or null to remove any trial. (optional)
+@param currency - Currency to bill this multi-attach in (e.g. usd, eur). Must match the customer's currency if they are already locked to one, and every plan must offer a paid price in it. Defaults to the customer's currency, then the org default. (optional)
 @param invoiceMode - Invoice mode creates a draft or open invoice and sends it to the customer, instead of charging their card immediately. (optional)
 @param discounts - List of discounts to apply. Each discount can be an Autumn reward ID, Stripe coupon ID, or Stripe promotion code. (optional)
 @param successUrl - URL to redirect to after successful checkout. (optional)
@@ -449,7 +457,7 @@ const response = await client.billing.update({ customerId: "cus_123", planId: "p
 @param planId - The ID of the plan to update. Optional if subscription_id is provided, or if the customer has only one product. (optional)
 @param featureQuantities - If this plan contains prepaid features, use this field to specify the quantity of each prepaid feature. This quantity includes the included amount and billing units defined when setting up the plan. (optional)
 @param version - The version of the plan to attach. (optional)
-@param customize - Customize the plan to attach. Can override the price, items, free trial, or a combination. (optional)
+@param customize - Customize the plan to attach. Can override the price, items, licenses, free trial, or a combination. (optional)
 @param invoiceMode - Invoice mode creates a draft or open invoice and sends it to the customer, instead of charging their card immediately. This uses Stripe's send_invoice collection method. (optional)
 @param prorationBehavior - How to handle proration when updating an existing subscription. 'prorate_immediately' charges/credits prorated amounts now, 'none' skips creating any charges. (optional)
 @param redirectMode - Controls when to return a checkout URL. 'always' returns a URL even if payment succeeds, 'if_required' only when payment action is needed, 'never' disables redirects. (optional)
@@ -461,6 +469,7 @@ const response = await client.billing.update({ customerId: "cus_123", planId: "p
 @param refundLastPayment - Controls how the last payment is refunded on immediate cancellation. 'prorated' refunds the unused portion, 'full' refunds the entire last payment. (optional)
 @param recalculateBalances - Controls whether balances should be recalculated during the subscription update. (optional)
 @param carryOverUsages - Whether to carry over usages from the previous plan. (optional)
+@param licenseQuantities - Total seat quantities (inclusive of the license's included count) per license plan offered by this plan. Licenses not listed keep their current paid quantity. (optional)
 
 @returns A billing response with customer ID, invoice details, and payment URL (if next action is required).
 * [previewUpdate](docs/sdks/billing/README.md#previewupdate) - Previews the billing changes that would occur when updating a subscription, without actually making any changes.
@@ -478,7 +487,7 @@ const response = await client.billing.previewUpdate({ customerId: "cus_123", pla
 @param planId - The ID of the plan to update. Optional if subscription_id is provided, or if the customer has only one product. (optional)
 @param featureQuantities - If this plan contains prepaid features, use this field to specify the quantity of each prepaid feature. This quantity includes the included amount and billing units defined when setting up the plan. (optional)
 @param version - The version of the plan to attach. (optional)
-@param customize - Customize the plan to attach. Can override the price, items, free trial, or a combination. (optional)
+@param customize - Customize the plan to attach. Can override the price, items, licenses, free trial, or a combination. (optional)
 @param invoiceMode - Invoice mode creates a draft or open invoice and sends it to the customer, instead of charging their card immediately. This uses Stripe's send_invoice collection method. (optional)
 @param prorationBehavior - How to handle proration when updating an existing subscription. 'prorate_immediately' charges/credits prorated amounts now, 'none' skips creating any charges. (optional)
 @param redirectMode - Controls when to return a checkout URL. 'always' returns a URL even if payment succeeds, 'if_required' only when payment action is needed, 'never' disables redirects. (optional)
@@ -490,6 +499,7 @@ const response = await client.billing.previewUpdate({ customerId: "cus_123", pla
 @param refundLastPayment - Controls how the last payment is refunded on immediate cancellation. 'prorated' refunds the unused portion, 'full' refunds the entire last payment. (optional)
 @param recalculateBalances - Controls whether balances should be recalculated during the subscription update. (optional)
 @param carryOverUsages - Whether to carry over usages from the previous plan. (optional)
+@param licenseQuantities - Total seat quantities (inclusive of the license's included count) per license plan offered by this plan. Licenses not listed keep their current paid quantity. (optional)
 
 @returns A preview response with line items showing prorated charges or credits for the proposed changes.
 * [multiUpdate](docs/sdks/billing/README.md#multiupdate) - Updates multiple plans on a customer in a single request. Currently supports cancel actions (immediately, end of cycle, or uncancel) across one or more subscriptions.
@@ -553,6 +563,7 @@ const response = await client.getOrCreate({ customerId: "cus_123", name: "John D
 @param createInStripe - Whether to create the customer in Stripe (optional)
 @param autoEnablePlanId - The ID of the free plan to auto-enable for the customer (optional)
 @param sendEmailReceipts - Whether to send email receipts to this customer (optional)
+@param currency - Currency to bill this customer in (e.g. usd, eur). Defaults to the organization's default currency. (optional)
 @param billingControls - Billing controls for the customer (auto top-ups, etc.) (optional)
 @param config - Miscellaneous configurations for the customer. (optional)
 @param expand - Fields to expand in the returned customer response, such as subscriptions.plan, purchases.plan, balances.feature, or flags.feature. (optional)
@@ -780,11 +791,21 @@ const response = await client.features.delete({ featureId: "old-feature" });
 
 @returns A success flag indicating the feature was deleted.
 
+### [Invoices](docs/sdks/invoices/README.md)
+
+* [insert](docs/sdks/invoices/README.md#insert) - Inserts or updates up to 500 historical invoices without reading or mutating the billing processor.
+* [list](docs/sdks/invoices/README.md#list) - Lists invoices with cursor pagination and optional filters (customer, entity, status, processor). Pass `start_cursor: ""` (or omit) for the first page; use `next_cursor` from a prior response for subsequent pages.
+
 ### [Keys](docs/sdks/keys/README.md)
 
 * [mint](docs/sdks/keys/README.md#mint) - Mints a per-customer token (a scoped `am_jwt_` credential) so a downstream / self-hosted app can call Autumn directly without your secret key. Returns a short-lived access token plus a rotating refresh token, both bound to the given customer. Authenticated with your secret key.
 * [refresh](docs/sdks/keys/README.md#refresh) - Exchanges a refresh token (sent as the Bearer credential) for a freshly rotated access + refresh pair. Self-service for the token holder — no secret key required. The previous refresh token is honored for one rotation as a grace window; replaying an older one revokes the customer's tokens.
 * [revoke](docs/sdks/keys/README.md#revoke) - Revokes every outstanding token (access and refresh) for a customer. Authenticated with your secret key. New tokens can be issued afterwards with `keys.mint`.
+
+### [Licenses](docs/sdks/licenses/README.md)
+
+* [attach](docs/sdks/licenses/README.md#attach) - Assigns licenses to one or more entities.
+* [release](docs/sdks/licenses/README.md#release) - Releases licenses assigned to one or more entities.
 
 ### [Plans](docs/sdks/plans/README.md)
 
@@ -860,7 +881,7 @@ const response = await client.billing.attach({ customerId: "cus_123", planId: "p
 @param planId - The ID of the plan.
 @param featureQuantities - If this plan contains prepaid features, use this field to specify the quantity of each prepaid feature. This quantity includes the included amount and billing units defined when setting up the plan. (optional)
 @param version - The version of the plan to attach. (optional)
-@param customize - Customize the plan to attach. Can override the price, items, free trial, or a combination. (optional)
+@param customize - Customize the plan to attach. Can override the price, items, licenses, free trial, or a combination. (optional)
 @param invoiceMode - Invoice mode creates a draft or open invoice and sends it to the customer, instead of charging their card immediately. This uses Stripe's send_invoice collection method. (optional)
 @param prorationBehavior - How to handle proration when updating an existing subscription. 'prorate_immediately' charges/credits prorated amounts now, 'none' skips creating any charges. (optional)
 @param redirectMode - Controls when to return a checkout URL. 'always' returns a URL even if payment succeeds, 'if_required' only when payment action is needed, 'never' disables redirects. (optional)
@@ -878,10 +899,12 @@ const response = await client.billing.attach({ customerId: "cus_123", planId: "p
 @param processorSubscriptionId - The processor subscription ID to link. Use this to attach an existing Stripe subscription instead of creating a new one. (optional)
 @param carryOverBalances - Whether to carry over balances from the previous plan. (optional)
 @param carryOverUsages - Whether to carry over usages from the previous plan. (optional)
+@param licenseQuantities - Seat quantities for the plan's licenses, keyed by license plan. (optional)
 @param metadata - Key-value metadata to attach to the Stripe subscription, invoice, and checkout session created during this attach flow. Keys prefixed with 'autumn_' are reserved and will be stripped. (optional)
 @param noBillingChanges - If true, skips any billing changes for the attach operation. (optional)
 @param enablePlanImmediately - If true, the customer's plan is activated immediately even when payment is deferred (invoice mode) or pending (Stripe checkout). For Stripe checkout, the customer_product is inserted before the customer completes the hosted form. (optional)
 @param taxRateId - Stripe tax rate ID (txr_...) to apply as the default tax rate on the created subscription, invoice, or checkout session line items. (optional)
+@param currency - Currency to bill this attach in (e.g. usd, eur). Must match the customer's currency if they are already locked to one, and the plan must offer a paid price in it. Defaults to the customer's currency, then the org default. (optional)
 
 @returns A billing response with customer ID, invoice details, and payment URL (if checkout required).
 - [`billingCreateSchedule`](docs/sdks/billing/README.md#createschedule) - Creates a multi-phase subscription schedule for a customer. The first phase starts immediately and subsequent phases automatically transition at their scheduled start times.
@@ -891,7 +914,7 @@ Use this endpoint to schedule future plan changes (e.g. switch from a trial plan
 @example
 ```typescript
 // Schedule a transition from a trial plan to a paid plan
-const response = await client.billing.createSchedule({ customerId: "cus_123", phases: [{"startsAt":1783704123534,"plans":[{"planId":"trial_plan"}]},{"startsAt":1784913723534,"plans":[{"planId":"pro_plan"}]}] });
+const response = await client.billing.createSchedule({ customerId: "cus_123", phases: [{"startsAt":1784744849888,"plans":[{"planId":"trial_plan"}]},{"startsAt":1785954449888,"plans":[{"planId":"pro_plan"}]}] });
 ```
 
 @param customerId - The ID of the customer to create the schedule for.
@@ -934,6 +957,7 @@ const response = await client.billing.multiAttach({ customerId: "cus_123", plans
 @param entityId - The ID of the entity to attach the plans to. (optional)
 @param plans - The list of plans to attach to the customer.
 @param freeTrial - Free trial configuration applied to all plans. Pass an object to set a custom trial, or null to remove any trial. (optional)
+@param currency - Currency to bill this multi-attach in (e.g. usd, eur). Must match the customer's currency if they are already locked to one, and every plan must offer a paid price in it. Defaults to the customer's currency, then the org default. (optional)
 @param invoiceMode - Invoice mode creates a draft or open invoice and sends it to the customer, instead of charging their card immediately. (optional)
 @param discounts - List of discounts to apply. Each discount can be an Autumn reward ID, Stripe coupon ID, or Stripe promotion code. (optional)
 @param successUrl - URL to redirect to after successful checkout. (optional)
@@ -980,7 +1004,7 @@ const response = await client.billing.previewAttach({ customerId: "cus_123", pla
 @param planId - The ID of the plan.
 @param featureQuantities - If this plan contains prepaid features, use this field to specify the quantity of each prepaid feature. This quantity includes the included amount and billing units defined when setting up the plan. (optional)
 @param version - The version of the plan to attach. (optional)
-@param customize - Customize the plan to attach. Can override the price, items, free trial, or a combination. (optional)
+@param customize - Customize the plan to attach. Can override the price, items, licenses, free trial, or a combination. (optional)
 @param invoiceMode - Invoice mode creates a draft or open invoice and sends it to the customer, instead of charging their card immediately. This uses Stripe's send_invoice collection method. (optional)
 @param prorationBehavior - How to handle proration when updating an existing subscription. 'prorate_immediately' charges/credits prorated amounts now, 'none' skips creating any charges. (optional)
 @param redirectMode - Controls when to return a checkout URL. 'always' returns a URL even if payment succeeds, 'if_required' only when payment action is needed, 'never' disables redirects. (optional)
@@ -998,10 +1022,12 @@ const response = await client.billing.previewAttach({ customerId: "cus_123", pla
 @param processorSubscriptionId - The processor subscription ID to link. Use this to attach an existing Stripe subscription instead of creating a new one. (optional)
 @param carryOverBalances - Whether to carry over balances from the previous plan. (optional)
 @param carryOverUsages - Whether to carry over usages from the previous plan. (optional)
+@param licenseQuantities - Seat quantities for the plan's licenses, keyed by license plan. (optional)
 @param metadata - Key-value metadata to attach to the Stripe subscription, invoice, and checkout session created during this attach flow. Keys prefixed with 'autumn_' are reserved and will be stripped. (optional)
 @param noBillingChanges - If true, skips any billing changes for the attach operation. (optional)
 @param enablePlanImmediately - If true, the customer's plan is activated immediately even when payment is deferred (invoice mode) or pending (Stripe checkout). For Stripe checkout, the customer_product is inserted before the customer completes the hosted form. (optional)
 @param taxRateId - Stripe tax rate ID (txr_...) to apply as the default tax rate on the created subscription, invoice, or checkout session line items. (optional)
+@param currency - Currency to bill this attach in (e.g. usd, eur). Must match the customer's currency if they are already locked to one, and the plan must offer a paid price in it. Defaults to the customer's currency, then the org default. (optional)
 
 @returns A preview response with line items, totals, and effective dates for the proposed changes.
 - [`billingPreviewMultiAttach`](docs/sdks/billing/README.md#previewmultiattach) - Previews the billing changes that would occur when attaching multiple plans, without actually making any changes.
@@ -1018,6 +1044,7 @@ const response = await client.billing.previewMultiAttach({ customerId: "cus_123"
 @param entityId - The ID of the entity to attach the plans to. (optional)
 @param plans - The list of plans to attach to the customer.
 @param freeTrial - Free trial configuration applied to all plans. Pass an object to set a custom trial, or null to remove any trial. (optional)
+@param currency - Currency to bill this multi-attach in (e.g. usd, eur). Must match the customer's currency if they are already locked to one, and every plan must offer a paid price in it. Defaults to the customer's currency, then the org default. (optional)
 @param invoiceMode - Invoice mode creates a draft or open invoice and sends it to the customer, instead of charging their card immediately. (optional)
 @param discounts - List of discounts to apply. Each discount can be an Autumn reward ID, Stripe coupon ID, or Stripe promotion code. (optional)
 @param successUrl - URL to redirect to after successful checkout. (optional)
@@ -1057,7 +1084,7 @@ const response = await client.billing.previewUpdate({ customerId: "cus_123", pla
 @param planId - The ID of the plan to update. Optional if subscription_id is provided, or if the customer has only one product. (optional)
 @param featureQuantities - If this plan contains prepaid features, use this field to specify the quantity of each prepaid feature. This quantity includes the included amount and billing units defined when setting up the plan. (optional)
 @param version - The version of the plan to attach. (optional)
-@param customize - Customize the plan to attach. Can override the price, items, free trial, or a combination. (optional)
+@param customize - Customize the plan to attach. Can override the price, items, licenses, free trial, or a combination. (optional)
 @param invoiceMode - Invoice mode creates a draft or open invoice and sends it to the customer, instead of charging their card immediately. This uses Stripe's send_invoice collection method. (optional)
 @param prorationBehavior - How to handle proration when updating an existing subscription. 'prorate_immediately' charges/credits prorated amounts now, 'none' skips creating any charges. (optional)
 @param redirectMode - Controls when to return a checkout URL. 'always' returns a URL even if payment succeeds, 'if_required' only when payment action is needed, 'never' disables redirects. (optional)
@@ -1069,6 +1096,7 @@ const response = await client.billing.previewUpdate({ customerId: "cus_123", pla
 @param refundLastPayment - Controls how the last payment is refunded on immediate cancellation. 'prorated' refunds the unused portion, 'full' refunds the entire last payment. (optional)
 @param recalculateBalances - Controls whether balances should be recalculated during the subscription update. (optional)
 @param carryOverUsages - Whether to carry over usages from the previous plan. (optional)
+@param licenseQuantities - Total seat quantities (inclusive of the license's included count) per license plan offered by this plan. Licenses not listed keep their current paid quantity. (optional)
 
 @returns A preview response with line items showing prorated charges or credits for the proposed changes.
 - [`billingSetupPayment`](docs/sdks/billing/README.md#setuppayment) - Create a payment setup session for a customer to add or update their payment method.
@@ -1099,7 +1127,7 @@ const response = await client.billing.update({ customerId: "cus_123", planId: "p
 @param planId - The ID of the plan to update. Optional if subscription_id is provided, or if the customer has only one product. (optional)
 @param featureQuantities - If this plan contains prepaid features, use this field to specify the quantity of each prepaid feature. This quantity includes the included amount and billing units defined when setting up the plan. (optional)
 @param version - The version of the plan to attach. (optional)
-@param customize - Customize the plan to attach. Can override the price, items, free trial, or a combination. (optional)
+@param customize - Customize the plan to attach. Can override the price, items, licenses, free trial, or a combination. (optional)
 @param invoiceMode - Invoice mode creates a draft or open invoice and sends it to the customer, instead of charging their card immediately. This uses Stripe's send_invoice collection method. (optional)
 @param prorationBehavior - How to handle proration when updating an existing subscription. 'prorate_immediately' charges/credits prorated amounts now, 'none' skips creating any charges. (optional)
 @param redirectMode - Controls when to return a checkout URL. 'always' returns a URL even if payment succeeds, 'if_required' only when payment action is needed, 'never' disables redirects. (optional)
@@ -1111,6 +1139,7 @@ const response = await client.billing.update({ customerId: "cus_123", planId: "p
 @param refundLastPayment - Controls how the last payment is refunded on immediate cancellation. 'prorated' refunds the unused portion, 'full' refunds the entire last payment. (optional)
 @param recalculateBalances - Controls whether balances should be recalculated during the subscription update. (optional)
 @param carryOverUsages - Whether to carry over usages from the previous plan. (optional)
+@param licenseQuantities - Total seat quantities (inclusive of the license's included count) per license plan offered by this plan. Licenses not listed keep their current paid quantity. (optional)
 
 @returns A billing response with customer ID, invoice details, and payment URL (if next action is required).
 - [`check`](docs/sdks/autumn/README.md#check) - Checks whether a customer currently has enough balance to use a feature.
@@ -1183,6 +1212,7 @@ const response = await client.getOrCreate({ customerId: "cus_123", name: "John D
 @param createInStripe - Whether to create the customer in Stripe (optional)
 @param autoEnablePlanId - The ID of the free plan to auto-enable for the customer (optional)
 @param sendEmailReceipts - Whether to send email receipts to this customer (optional)
+@param currency - Currency to bill this customer in (e.g. usd, eur). Defaults to the organization's default currency. (optional)
 @param billingControls - Billing controls for the customer (auto top-ups, etc.) (optional)
 @param config - Miscellaneous configurations for the customer. (optional)
 @param expand - Fields to expand in the returned customer response, such as subscriptions.plan, purchases.plan, balances.feature, or flags.feature. (optional)
@@ -1381,9 +1411,13 @@ const response = await client.features.update({ featureId: "deprecated-feature",
 @param newFeatureId - The new ID of the feature. Feature ID can only be updated if it's not being used by any customers. (optional)
 
 @returns The updated feature object.
+- [`invoicesInsert`](docs/sdks/invoices/README.md#insert) - Inserts or updates up to 500 historical invoices without reading or mutating the billing processor.
+- [`invoicesList`](docs/sdks/invoices/README.md#list) - Lists invoices with cursor pagination and optional filters (customer, entity, status, processor). Pass `start_cursor: ""` (or omit) for the first page; use `next_cursor` from a prior response for subsequent pages.
 - [`keysMint`](docs/sdks/keys/README.md#mint) - Mints a per-customer token (a scoped `am_jwt_` credential) so a downstream / self-hosted app can call Autumn directly without your secret key. Returns a short-lived access token plus a rotating refresh token, both bound to the given customer. Authenticated with your secret key.
 - [`keysRefresh`](docs/sdks/keys/README.md#refresh) - Exchanges a refresh token (sent as the Bearer credential) for a freshly rotated access + refresh pair. Self-service for the token holder — no secret key required. The previous refresh token is honored for one rotation as a grace window; replaying an older one revokes the customer's tokens.
 - [`keysRevoke`](docs/sdks/keys/README.md#revoke) - Revokes every outstanding token (access and refresh) for a customer. Authenticated with your secret key. New tokens can be issued afterwards with `keys.mint`.
+- [`licensesAttach`](docs/sdks/licenses/README.md#attach) - Assigns licenses to one or more entities.
+- [`licensesRelease`](docs/sdks/licenses/README.md#release) - Releases licenses assigned to one or more entities.
 - [`plansCreate`](docs/sdks/plans/README.md#create) - Create a plan
 - [`plansDelete`](docs/sdks/plans/README.md#delete) - Delete a plan
 - [`plansGet`](docs/sdks/plans/README.md#get) - Get a plan
@@ -1419,6 +1453,7 @@ const response = await client.track({ customerId: "cus_123", eventName: "ai_chat
 @param value - The amount of usage to record. Defaults to 1. Use negative values to credit balance (e.g., when removing a seat). (optional)
 @param properties - Additional properties to attach to this usage event. (optional)
 @param timestamp - Unix timestamp in milliseconds to use for the usage event. Defaults to the current time. (optional)
+@param overageBehavior - How to handle usage that exceeds the available balance. "cap" (default) deducts only what fits, stopping at zero. "overflow" deducts the full value: the balance can go negative and usage limits do not clamp the deduction, though spend limits still apply. (optional)
 @param async - If true, enqueue the event for asynchronous processing and return 204 immediately. The response will not include balance information. (optional)
 
 @returns The usage value recorded, with either a single updated balance or a map of updated balances. If Autumn is experiencing degraded service from a downstream provider, the API may return 202 after accepting the event for replay so it can be tracked as soon as the service is restored.
@@ -1452,6 +1487,7 @@ const response = await client.trackTokens({
 @param reasoningTokens - Number of reasoning tokens generated. (optional)
 @param properties - Additional properties to attach to this usage event. (optional)
 @param timestamp - Unix timestamp in milliseconds to use for the usage event. Defaults to the current time. (optional)
+@param overageBehavior - How to handle usage that exceeds the available balance. "cap" (default) deducts only what fits, stopping at zero. "overflow" deducts the full value: the balance can go negative and usage limits do not clamp the deduction, though spend limits still apply. (optional)
 @param async - If true, enqueue the event for asynchronous processing and return 204 immediately. The response will not include balance information. (optional)
 
 @returns The dollar value recorded and the updated AI credit system balance. If Autumn is experiencing degraded service from a downstream provider, the API may return 202 after accepting the token usage event for replay so it can be tracked as soon as the service is restored.

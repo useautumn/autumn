@@ -80,14 +80,20 @@ export const hasMissingStripeResourcesForProduct = ({
 }: {
 	product: FullProduct;
 }) => {
-	if (
-		!isFreeProduct({ prices: product.prices }) &&
-		!hasUsableStripeId(product.processor?.id)
-	) {
-		return true;
-	}
+	const resourceProducts = [
+		product,
+		...(product.licenses ?? []).map((license) => license.product),
+	];
 
-	return product.prices.some((price) =>
-		priceHasMissingStripeResources({ price, product }),
+	return resourceProducts.some(
+		(resourceProduct) =>
+			(!isFreeProduct({ prices: resourceProduct.prices }) &&
+				!hasUsableStripeId(resourceProduct.processor?.id)) ||
+			resourceProduct.prices.some((price) =>
+				priceHasMissingStripeResources({
+					price,
+					product: resourceProduct,
+				}),
+			),
 	);
 };

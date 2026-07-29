@@ -47,14 +47,11 @@ export const getEntityAggregateFragments = ({
 	statusFilter: SQL;
 	internalFeatureIds?: string[];
 }) => {
+	// Single array parameter, not one placeholder per id — keeps the SQL text
+	// stable across callers so the statement stays preparable.
 	const featureFilter =
 		internalFeatureIds && internalFeatureIds.length > 0
-			? sql`AND ce.internal_feature_id = ANY(ARRAY[${sql.join(
-					internalFeatureIds.map(
-						(internalFeatureId) => sql`${internalFeatureId}`,
-					),
-					sql`, `,
-				)}])`
+			? sql`AND ce.internal_feature_id = ANY(${sql.param(internalFeatureIds)}::text[])`
 			: sql``;
 
 	if (entityId) {
@@ -78,6 +75,7 @@ export const getEntityAggregateFragments = ({
 			FROM customer_products cp
 			WHERE cp.internal_customer_id IN (SELECT internal_id FROM subject_customer_records)
 				AND cp.internal_entity_id IS NOT NULL
+				AND cp.customer_license_link_id IS NULL
 				${statusFilter}
 		),
 
@@ -87,7 +85,8 @@ export const getEntityAggregateFragments = ({
 			SELECT ce.*, cp.internal_entity_id AS cp_entity_key
 			FROM entity_cus_products cp
 			JOIN customer_entitlements ce ON ce.customer_product_id = cp.id
-			WHERE 1 = 1
+			WHERE ce.pooled_balance_id IS NULL
+				AND ce.pooled_contribution_id IS NULL
 				${featureFilter}
 
 			UNION ALL
@@ -97,6 +96,8 @@ export const getEntityAggregateFragments = ({
 			WHERE ce.internal_customer_id IN (SELECT internal_id FROM subject_customer_records)
 				AND ce.customer_product_id IS NULL
 				AND ce.internal_entity_id IS NOT NULL
+				AND ce.pooled_balance_id IS NULL
+				AND ce.pooled_contribution_id IS NULL
 				AND (ce.expires_at IS NULL OR ce.expires_at > EXTRACT(EPOCH FROM now()) * 1000)
 				AND (ce.balance != 0 OR ce.unlimited IS TRUE)
 				${featureFilter}

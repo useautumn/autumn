@@ -5,6 +5,8 @@ import type {
 	FrontendProduct,
 	MigrationFilter,
 	Operations,
+	PlanLicenseParams,
+	ProductItem,
 	UpdatePlanOp,
 	UpdatePlanParamsV2Input,
 } from "@autumn/shared";
@@ -17,6 +19,7 @@ import {
 	sortProductItems,
 } from "@autumn/shared";
 import { migrationUid } from "@/views/migrations/migration/shared/operationUtils";
+import { alignTierCurrencyShapes } from "../utils/currencyUtils";
 
 export interface MigrationDraft {
 	id: string;
@@ -43,6 +46,9 @@ export function frontendProductToApiPlanV1(
 	const basePrice: ApiPlanV1["price"] = basePriceItem
 		? {
 				amount: basePriceItem.price,
+				...(basePriceItem.additional_currencies?.length
+					? { additional_currencies: basePriceItem.additional_currencies }
+					: {}),
 				interval: itemToBillingInterval({ item: basePriceItem }),
 				...(basePriceItem.interval_count !== 1 &&
 				typeof basePriceItem.interval_count === "number"
@@ -111,12 +117,22 @@ export function buildInPlaceUpdatePlanParams({
 	baseProduct,
 	editedProduct,
 	features,
+	licenses,
 }: {
 	baseProduct: FrontendProduct;
 	editedProduct: FrontendProduct;
 	features: Feature[];
+	licenses?: PlanLicenseParams[];
 }): UpdatePlanParamsV2Input {
-	const plan = frontendProductToApiPlanV1(editedProduct, features);
+	const plan = frontendProductToApiPlanV1(
+		{
+			...editedProduct,
+			items: editedProduct.items.map((item) =>
+				alignTierCurrencyShapes(item as ProductItem),
+			) as typeof editedProduct.items,
+		},
+		features,
+	);
 
 	return {
 		plan_id: baseProduct.id,
@@ -131,6 +147,7 @@ export function buildInPlaceUpdatePlanParams({
 		free_trial: plan.free_trial ?? null,
 		config: plan.config,
 		billing_controls: plan.billing_controls,
+		...(licenses !== undefined ? { licenses } : {}),
 		disable_version: true,
 	} satisfies UpdatePlanParamsV2Input;
 }
@@ -141,19 +158,44 @@ export function buildPreviewUpdatePlanParams({
 	baseProduct,
 	editedProduct,
 	features,
+	licenses,
 }: {
 	baseProduct: FrontendProduct | null;
 	editedProduct: FrontendProduct;
 	features: Feature[];
+	licenses?: PlanLicenseParams[];
 }): UpdatePlanParamsV2Input {
 	const params = buildInPlaceUpdatePlanParams({
 		baseProduct: baseProduct ?? editedProduct,
 		editedProduct,
 		features,
+		licenses,
 	});
 	delete params.disable_version;
 	params.include_versions = true;
 	params.include_variants = true;
+	params.include_license_parents = true;
+	return params;
+}
+
+export function buildVersionUpdatePlanParams({
+	baseProduct,
+	editedProduct,
+	features,
+	licenses,
+}: {
+	baseProduct: FrontendProduct;
+	editedProduct: FrontendProduct;
+	features: Feature[];
+	licenses?: PlanLicenseParams[];
+}): UpdatePlanParamsV2Input {
+	const params = buildInPlaceUpdatePlanParams({
+		baseProduct,
+		editedProduct,
+		features,
+		licenses,
+	});
+	delete params.disable_version;
 	return params;
 }
 

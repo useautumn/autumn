@@ -13,6 +13,7 @@ import type { RequestContext } from "@/honoUtils/HonoEnv.js";
 import { invoicesToResponse } from "../../../invoices/invoiceUtils.js";
 import { getCusProcessors } from "../cusResponseUtils/getCusProcessors.js";
 import { getApiBalancesV2 } from "./getApiBalance/getApiBalancesV2.js";
+import { getApiCustomerLicenses } from "./getApiCustomerLicense/getApiCustomerLicenses.js";
 import { getApiSubscriptionsV2 } from "./getApiSubscription/getApiSubscriptionsV2.js";
 
 /**
@@ -47,6 +48,11 @@ export const getApiCustomerBaseV2 = async ({
 		fullSubject,
 	});
 
+	const apiLicenses = getApiCustomerLicenses({
+		ctx,
+		customerProducts: fullSubject.customer_products,
+	});
+
 	const customer = fullSubject.customer;
 	const usageLimits = fullSubjectToApiUsageLimits({
 		fullSubject,
@@ -68,6 +74,7 @@ export const getApiCustomerBaseV2 = async ({
 		metadata: customer.metadata ?? {},
 		subscriptions: apiSubscriptions,
 		purchases: apiPurchases,
+		licenses: apiLicenses,
 		balances: apiBalances,
 		flags: apiFlags,
 		send_email_receipts: customer.send_email_receipts ?? false,

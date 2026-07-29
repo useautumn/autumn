@@ -787,6 +787,59 @@ actions:
 
                 # Handle response
                 print(res)
+  - target: $["paths"]["/v1/invoices.insert"]["post"]
+    update:
+      x-codeSamples:
+        - lang: python
+          label: Python (SDK)
+          source: |-
+            from autumn_sdk import Autumn
+
+
+            with Autumn(
+                x_api_version="2.3.0",
+                secret_key="<YOUR_BEARER_TOKEN_HERE>",
+            ) as autumn:
+
+                res = autumn.invoices.insert(invoices=[
+                    {
+                        "customer_id": "cus_123",
+                        "plan_ids": [
+                            "pro",
+                        ],
+                        "stripe_id": "in_legacy_123",
+                        "status": "paid",
+                        "total": 29.99,
+                        "amount_paid": 29.99,
+                        "currency": "usd",
+                        "created_at": 1451606400000,
+                        "hosted_invoice_url": "https://billing.example.com/invoices/legacy-123",
+                    },
+                ])
+
+                # Handle response
+                print(res)
+  - target: $["paths"]["/v1/invoices.list"]["post"]
+    update:
+      x-codeSamples:
+        - lang: python
+          label: Python (SDK)
+          source: |-
+            from autumn_sdk import Autumn
+
+
+            with Autumn(
+                x_api_version="2.3.0",
+                secret_key="<YOUR_BEARER_TOKEN_HERE>",
+            ) as autumn:
+
+                res = autumn.invoices.list(start_cursor="", limit=10, customer_id="cus_123", status=[
+                    "open",
+                    "paid",
+                ])
+
+                # Handle response
+                print(res)
   - target: $["paths"]["/v1/keys.mint"]["post"]
     update:
       x-codeSamples:
@@ -838,6 +891,49 @@ actions:
             ) as autumn:
 
                 res = autumn.keys.revoke(customer_id="cus_123")
+
+                # Handle response
+                print(res)
+  - target: $["paths"]["/v1/licenses.attach"]["post"]
+    update:
+      x-codeSamples:
+        - lang: python
+          label: Python (SDK)
+          source: |-
+            from autumn_sdk import Autumn
+
+
+            with Autumn(
+                x_api_version="2.3.0",
+                secret_key="<YOUR_BEARER_TOKEN_HERE>",
+            ) as autumn:
+
+                res = autumn.licenses.attach(customer_id="cus_123", plan_id="seat_plan", entities=[
+                    {
+                        "entity_id": "user_123",
+                        "name": "Ada Lovelace",
+                    },
+                ])
+
+                # Handle response
+                print(res)
+  - target: $["paths"]["/v1/licenses.release"]["post"]
+    update:
+      x-codeSamples:
+        - lang: python
+          label: Python (SDK)
+          source: |-
+            from autumn_sdk import Autumn
+
+
+            with Autumn(
+                x_api_version="2.3.0",
+                secret_key="<YOUR_BEARER_TOKEN_HERE>",
+            ) as autumn:
+
+                res = autumn.licenses.release(customer_id="cus_123", entity_ids=[
+                    "user_123",
+                ], license_plan_id="seat_plan")
 
                 # Handle response
                 print(res)

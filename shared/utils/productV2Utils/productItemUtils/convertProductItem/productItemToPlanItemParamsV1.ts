@@ -71,11 +71,13 @@ export const productItemToPlanItemParamsV1 = ({
 		feature_id: planItemV1.feature_id,
 		included: planItemV1.included,
 		unlimited: planItemV1.unlimited,
+		pooled: planItemV1.pooled ?? false,
 		reset: planItemV1.reset ?? undefined,
 		price: planItemV1.price
 			? {
 					stripe_price_id: item.stripe_price_id ?? undefined,
 					amount: planItemV1.price.amount,
+					additional_currencies: planItemV1.price.additional_currencies,
 					tiers: planItemV1.price.tiers,
 					interval: planItemV1.price.interval,
 					interval_count: planItemV1.price.interval_count,
@@ -87,8 +89,7 @@ export const productItemToPlanItemParamsV1 = ({
 			: undefined,
 		proration: proration
 			? {
-					on_increase:
-						proration.on_increase ?? OnIncrease.ProrateImmediately,
+					on_increase: proration.on_increase ?? OnIncrease.ProrateImmediately,
 					on_decrease: proration.on_decrease ?? OnDecrease.Prorate,
 				}
 			: undefined,

@@ -7,7 +7,7 @@ import { cva, type VariantProps } from "class-variance-authority";
 import * as React from "react";
 
 const buttonVariants = cva(
-	`inline-flex items-center justify-center gap-2 whitespace-nowrap text-sm disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*='size-'])]:size-4 shrink-0 [&_svg]:shrink-0 outline-none cursor-pointer
+	`relative inline-flex items-center justify-center gap-2 whitespace-nowrap text-sm disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*='size-'])]:size-4 shrink-0 [&_svg]:shrink-0 outline-none cursor-pointer
   rounded-lg group/btn transition-colors  w-fit transform-gpu
   `,
 	{
@@ -138,17 +138,27 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
 				disabled={isLoading || props.disabled}
 				{...props}
 			>
-				{effectiveRender ? undefined : isLoading ? (
-					<SmallSpinner
-						size={14}
-						className={variant === "primary" ? "relative z-10" : undefined}
-					/>
-				) : variant === "primary" ? (
-					<span className="relative z-10 inline-flex items-center gap-2 transition-none">
-						{children}
-					</span>
-				) : (
-					children
+				{effectiveRender ? undefined : (
+					<>
+						{isLoading && (
+							<SmallSpinner
+								size={14}
+								className={cn(
+									"absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2",
+									variant === "primary" && "z-10",
+								)}
+							/>
+						)}
+						<span
+							className={cn(
+								"inline-flex items-center gap-2",
+								variant === "primary" && "relative z-10 transition-none",
+								isLoading && "invisible",
+							)}
+						>
+							{children}
+						</span>
+					</>
 				)}
 			</ButtonPrimitive>
 		);

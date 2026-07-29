@@ -4,9 +4,9 @@ import { isUniqueConstraintError } from "@/db/dbUtils.js";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { executeAutumnBillingPlan } from "@/internal/billing/v2/execute/executeAutumnBillingPlan.js";
-import { sendBillingUpdatedWebhook } from "@/internal/billing/v2/workflows/sendBillingUpdatedWebhook/sendBillingUpdatedWebhook.js";
-import { billingPlanToSendProductsUpdated } from "@/internal/billing/v2/workflows/sendProductsUpdated/billingPlanToSendProductsUpdated.js";
 import type { CreateCustomerContext } from "@/internal/customers/actions/createWithDefaults/createCustomerContext.js";
+import { syncAutoTopupPurchaseLimitCounts } from "@/internal/customers/actions/update/syncAutoTopupPurchaseLimitCounts.js";
+import { setCustomerCreationRecoveryStage } from "@/internal/customers/recovery/customerCreationRecoveryStage.js";
 import { captureOrgEvent } from "@/utils/posthog.js";
 import { CusService } from "../../../CusService.js";
 
@@ -19,6 +19,10 @@ export type ExecuteAutumnResult = { type: "created" } | { type: "existing" };
  * 2. Handle race conditions by returning existing customer
  *
  * Returns discriminated union to indicate if customer was created or already existed.
+ *
+ * Does NOT emit webhooks — the caller emits after the Stripe customer id is
+ * persisted, so webhook consumers calling customers.get see a non-null
+ * stripe_id (see createCustomerWithDefaults).
  */
 export const executeAutumnCreateCustomerPlan = async ({
 	ctx,
@@ -49,6 +53,12 @@ export const executeAutumnCreateCustomerPlan = async ({
 				return;
 			}
 
+			await syncAutoTopupPurchaseLimitCounts({
+				ctx: { ...ctx, db: txDb },
+				customer: fullCustomer,
+				autoTopups: context.autoTopups ?? [],
+			});
+
 			await executeAutumnBillingPlan({
 				ctx: { ...ctx, db: txDb },
 				autumnBillingPlan,
@@ -61,6 +71,7 @@ export const executeAutumnCreateCustomerPlan = async ({
 			logger.info(
 				`Customer already exists, returning existing: ${fullCustomer.id || fullCustomer.email}`,
 			);
+			setCustomerCreationRecoveryStage({ ctx, stage: "existing" });
 			const existingCustomer = await CusService.getFull({
 				ctx,
 				idOrInternalId: fullCustomer.id || fullCustomer.internal_id,
@@ -78,6 +89,7 @@ export const executeAutumnCreateCustomerPlan = async ({
 		logger.info(
 			`Customer already exists (claimed or existing): ${fullCustomer.id || fullCustomer.internal_id}`,
 		);
+		setCustomerCreationRecoveryStage({ ctx, stage: "existing" });
 		const existingCustomer = await CusService.getFull({
 			ctx,
 			idOrInternalId: fullCustomer.internal_id,
@@ -89,19 +101,7 @@ export const executeAutumnCreateCustomerPlan = async ({
 		return { type: "existing" };
 	}
 
-	// Queue webhooks after transaction commits successfully
-	await billingPlanToSendProductsUpdated({
-		ctx,
-		autumnBillingPlan,
-		billingContext: context,
-	});
-
-	// Fire-and-forget: don't block customer creation on svix delivery
-	void sendBillingUpdatedWebhook({
-		ctx,
-		autumnBillingPlan,
-		originalFullCustomer: context.fullCustomer,
-	});
+	setCustomerCreationRecoveryStage({ ctx, stage: "autumn_committed" });
 
 	if (ctx.authType === AuthType.SecretKey) {
 		await captureOrgEvent({

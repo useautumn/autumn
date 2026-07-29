@@ -16,14 +16,15 @@ import { updateFeature } from "@/internal/features/featureActions/updateFeature.
 import { getObjectsUsingFeature } from "@/internal/features/utils/updateFeatureUtils/getObjectsUsingFeature.js";
 import { createProduct } from "@/internal/product/actions/createProduct.js";
 import { deleteProduct } from "@/internal/product/actions/deleteProduct.js";
-import { updateProduct } from "@/internal/product/actions/updateProduct.js";
 import {
 	createPlanMigrationDraft,
 	getVariantMigrationSnapshots,
 	validateNoDirectVariantMigrationDrafts,
 } from "@/internal/product/actions/updateProduct/createPlanMigrationDraft.js";
+import { updateProduct } from "@/internal/product/actions/updateProduct.js";
 import { ProductService } from "@/internal/products/ProductService.js";
 import { getPlanResponse } from "@/internal/products/productUtils/productResponseUtils/getPlanResponse.js";
+import { sortCatalogPlansByDependencies } from "../catalogPlanDependencies.js";
 import {
 	deriveReplaceFeatureIds,
 	deriveReplacePlanRemovals,
@@ -31,6 +32,7 @@ import {
 } from "../deriveReplaceRemovals.js";
 import { sortRemoveFeatureIds } from "../featureRemovalOrder.js";
 import { getFeatureUpdateBlockedReason } from "../previewUpdateCatalog/previewFeature.js";
+import { previewUpdateCatalog } from "../previewUpdateCatalog/previewUpdateCatalog.js";
 import {
 	validateCatalogVariantUpdates,
 	validateCatalogVariantVersionTargets,
@@ -124,8 +126,12 @@ const upsertPlans = async ({
 }) => {
 	const { db, org, env } = ctx;
 	const skipPlanIds = new Set(params.skip_plan_ids);
-
-	for (const planParams of params.plans) {
+	const activePlans = params.plans.filter(
+		(plan) =>
+			!skipPlanIds.has(plan.plan_id) &&
+			(!plan.new_plan_id || !skipPlanIds.has(plan.new_plan_id)),
+	);
+	for (const planParams of sortCatalogPlansByDependencies(activePlans)) {
 		const {
 			plan_id,
 			new_plan_id,
@@ -134,19 +140,14 @@ const upsertPlans = async ({
 			migration,
 			force_version,
 			update_variant_ids,
+			update_license_parents,
 			variants,
 			version,
 			include_versions: _includeVersions,
 			include_variants: _includeVariants,
+			include_license_parents: _includeLicenseParents,
 			...rest
 		} = planParams;
-		if (
-			skipPlanIds.has(plan_id) ||
-			(new_plan_id !== undefined && skipPlanIds.has(new_plan_id))
-		) {
-			continue;
-		}
-
 		const current = await ProductService.getFull({
 			db,
 			idOrInternalId: plan_id,
@@ -158,6 +159,32 @@ const upsertPlans = async ({
 
 		if (!current) {
 			const variantUpdates = variants ?? [];
+			const latest =
+				version === undefined
+					? null
+					: await ProductService.getFull({
+							db,
+							idOrInternalId: plan_id,
+							orgId: org.id,
+							env,
+							allowNotFound: true,
+						});
+			if (latest) {
+				const updates = apiPlan.map.paramsV1ToProductV2({
+					ctx,
+					currentFullProduct: latest,
+					params: { id: new_plan_id ?? plan_id, ...rest },
+				}) as UpdateProductV2Params;
+				await updateProduct({
+					ctx,
+					productId: plan_id,
+					query: { force_version: true },
+					updates,
+					initialFullProduct: latest,
+					variantUpdates,
+				});
+				continue;
+			}
 			const createParams = apiPlan.map.paramsV1ToProductV2({
 				ctx,
 				params: {
@@ -251,6 +278,7 @@ const upsertPlans = async ({
 			updates: updateParams,
 			initialFullProduct: current,
 			propagateToVariants: update_variant_ids ?? [],
+			licenseParentUpdates: update_license_parents,
 			variantUpdates,
 		});
 
@@ -273,7 +301,8 @@ const upsertPlans = async ({
 			ctx,
 			current,
 			fromPlan,
-			includeCustom: migration?.include_custom ?? params.migration?.include_custom,
+			includeCustom:
+				migration?.include_custom ?? params.migration?.include_custom,
 			mode: all_versions ? "all_versions" : "version",
 			planId: plan_id,
 			selectedVariantIds,
@@ -467,11 +496,15 @@ export const updateCatalog = async ({
 	ctx: AutumnContext;
 	params: CatalogUpdateParams;
 }) => {
+	// Preflight the whole virtual catalog before any mutation; individual writes
+	// revalidate against the real product identities created by earlier plans.
+	await previewUpdateCatalog({ ctx, params });
 	const { db, org, env } = ctx;
 	const productsBeforeUpdate = await ProductService.listFull({
 		db,
 		orgId: org.id,
 		env,
+		returnAll: true,
 	});
 	validateCatalogVariantVersionTargets({
 		params,

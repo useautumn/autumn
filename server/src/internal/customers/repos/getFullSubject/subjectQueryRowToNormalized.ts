@@ -15,6 +15,7 @@ import {
 	type Entity,
 	type EntityAggregations,
 	FeatureType,
+	type FullCustomerLicense,
 	type FullCustomerPrice,
 	type FullSubject,
 	InternalError,
@@ -161,7 +162,7 @@ export const subjectQueryRowToNormalized = ({
 	};
 
 	const partitionCustomerEntitlement = (
-		customerEntitlement: DbCustomerEntitlement,
+		customerEntitlement: SubjectQueryRow["customer_entitlements"][number],
 	) => {
 		const catalogEntitlement = entitlementsByEntitlementId.get(
 			customerEntitlement.entitlement_id,
@@ -205,6 +206,7 @@ export const subjectQueryRowToNormalized = ({
 				adjustment: customerEntitlement.adjustment ?? 0,
 				additional_balance: customerEntitlement.additional_balance ?? 0,
 				cache_version: customerEntitlement.cache_version ?? 0,
+				pooled_balance: customerEntitlement.pooled_balance ?? undefined,
 				entities: customerEntitlement.entities ?? null,
 				entitlement: catalogEntitlement as EntitlementWithFeature,
 				replaceables: replaceablesByCusEntId.get(customerEntitlement.id) ?? [],
@@ -270,6 +272,14 @@ export const subjectQueryRowToNormalized = ({
 		};
 	}
 
+	// Same assembly as getFullCustomerLicenses: bundle → FullCustomerLicense.
+	const customerLicenses: FullCustomerLicense[] = (
+		row.customer_licenses ?? []
+	).map(({ customerLicense, planLicense, product }) => ({
+		...customerLicense,
+		planLicense: planLicense ? { ...planLicense, product } : null,
+	}));
+
 	return {
 		subjectType: (isEntitySubject ? "entity" : "customer") as SubjectType,
 		customerId: customer.id ?? customer.internal_id,
@@ -285,6 +295,7 @@ export const subjectQueryRowToNormalized = ({
 		customer_products: row.customer_products,
 		customer_entitlements: meteredCustomerEntitlements,
 		customer_prices: row.customer_prices,
+		customer_licenses: customerLicenses,
 		usage_windows: (row.usage_windows ?? []) as DbUsageWindow[],
 		flags,
 		products: row.products as DbProduct[],

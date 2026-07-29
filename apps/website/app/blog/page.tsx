@@ -71,13 +71,24 @@ export default function BlogListingPage() {
 					</p>
 				)}
 
-				<div className="flex flex-col gap-1">
+				<div className="flex flex-col">
 					{posts.map((post) => (
 						<Link
 							key={post.slug}
 							href={`/blog/${post.slug}`}
-							className="group flex items-center gap-6 border border-[#292929] hover:border-[#3f3f3f] hover:bg-[#080808] transition-colors duration-300 p-6 md:p-8"
+							className="group flex items-center gap-6 border-b border-[#292929] last:border-b-0 transition-colors duration-300 py-10 md:py-12"
 						>
+							{post.image && (
+								<div className="relative hidden sm:block w-[140px] md:w-[180px] aspect-[2/1] overflow-hidden shrink-0">
+									<Image
+										src={post.image}
+										alt={post.title}
+										fill
+										className="object-cover"
+										sizes="(max-width: 640px) 0px, (max-width: 768px) 140px, 180px"
+									/>
+								</div>
+							)}
 							<div className="flex flex-col gap-3 flex-1 min-w-0">
 								<div className="flex items-center gap-3 font-mono text-[12px] md:text-[14px] uppercase tracking-[-2%] text-[#FFFFFF66]">
 									<span>{formatDate(post.date)}</span>
@@ -93,17 +104,6 @@ export default function BlogListingPage() {
 								</p>
 								)}
 							</div>
-							{post.image && (
-								<div className="relative hidden sm:block w-[140px] md:w-[180px] aspect-[3/2] overflow-hidden shrink-0">
-									<Image
-										src={post.image}
-										alt={post.title}
-										fill
-										className="object-cover"
-										sizes="(max-width: 640px) 0px, (max-width: 768px) 140px, 180px"
-									/>
-								</div>
-							)}
 						</Link>
 					))}
 				</div>

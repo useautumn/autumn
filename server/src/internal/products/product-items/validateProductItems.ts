@@ -32,9 +32,11 @@ import {
 const validateProductItem = ({
 	item,
 	features,
+	multiCurrencyEnabled,
 }: {
 	item: ProductItem;
 	features: Feature[];
+	multiCurrencyEnabled: boolean;
 }) => {
 	item = ProductItemSchema.parse(item);
 	const feature = features.find((f) => f.id === item.feature_id);
@@ -47,6 +49,26 @@ const validateProductItem = ({
 		});
 	}
 
+	if (item.pooled && feature?.type === FeatureType.Boolean) {
+		throw new RecaseError({
+			message: "Pooled items are only supported for metered features",
+			code: ErrCode.InvalidProductItem,
+			statusCode: StatusCodes.BAD_REQUEST,
+		});
+	}
+
+	if (
+		item.pooled &&
+		isFeaturePriceItem(item) &&
+		item.usage_model === UsageModel.PayPerUse
+	) {
+		throw new RecaseError({
+			message: "Pooled items cannot use usage-based pricing",
+			code: ErrCode.InvalidProductItem,
+			statusCode: StatusCodes.BAD_REQUEST,
+		});
+	}
+
 	// 1. Check if amount and tiers are not null
 	if (notNullish(item.price) && notNullish(item.tiers)) {
 		throw new RecaseError({
@@ -54,6 +76,43 @@ const validateProductItem = ({
 			code: ErrCode.InvalidProductItem,
 			statusCode: StatusCodes.BAD_REQUEST,
 		});
+	}
+
+	const hasAdditionalCurrencies =
+		(item.additional_currencies?.length ?? 0) > 0 ||
+		(item.tiers?.some(
+			(tier) => (tier.additional_currencies?.length ?? 0) > 0,
+		) ??
+			false);
+	if (hasAdditionalCurrencies && !multiCurrencyEnabled) {
+		throw new RecaseError({
+			message: "Multi-currency is not enabled for this organization",
+			code: ErrCode.InvalidProductItem,
+			statusCode: StatusCodes.BAD_REQUEST,
+		});
+	}
+	if (hasAdditionalCurrencies && nullish(item.base_currency)) {
+		throw new RecaseError({
+			message: `'base_currency' is required when 'additional_currencies' are set`,
+			code: ErrCode.InvalidProductItem,
+			statusCode: StatusCodes.BAD_REQUEST,
+		});
+	}
+	if ((item.additional_currencies?.length ?? 0) > 0) {
+		if (notNullish(item.tiers)) {
+			throw new RecaseError({
+				message: `Tiered items carry 'additional_currencies' on each tier, not at the item level`,
+				code: ErrCode.InvalidProductItem,
+				statusCode: StatusCodes.BAD_REQUEST,
+			});
+		}
+		if (notNullish(item.price) && item.price <= 0) {
+			throw new RecaseError({
+				message: `'additional_currencies' require a non-zero 'price' — a plan that is free in the base currency is free in every currency`,
+				code: ErrCode.InvalidProductItem,
+				statusCode: StatusCodes.BAD_REQUEST,
+			});
+		}
 	}
 
 	// 2. If amount is set, it must be greater than 0
@@ -301,11 +360,13 @@ export const validateProductItems = ({
 	features,
 	orgId,
 	env,
+	multiCurrencyEnabled,
 }: {
 	newItems: ProductItem[];
 	features: Feature[];
 	orgId: string;
 	env: AppEnv;
+	multiCurrencyEnabled: boolean;
 }) => {
 	const { allFeatures, newFeatures } = createFeaturesFromItems({
 		items: newItems,
@@ -325,7 +386,11 @@ export const validateProductItems = ({
 
 	// 1. Check values
 	for (let index = 0; index < newItems.length; index++) {
-		validateProductItem({ item: newItems[index], features });
+		validateProductItem({
+			item: newItems[index],
+			features,
+			multiCurrencyEnabled,
+		});
 		const feature = features.find((f) => f.id === newItems[index].feature_id);
 
 		if (feature && feature.type === FeatureType.Metered) {

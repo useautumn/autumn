@@ -7,14 +7,15 @@ import {
 	UsageModel,
 } from "@autumn/shared";
 import { SheetAccordion, SheetAccordionItem } from "@autumn/ui";
+import { useProduct } from "@/components/v2/inline-custom-plan-editor/PlanEditorContext";
 import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
 import {
 	getFeatureCreditSystem,
 	getFeatureUsageType,
 } from "@/utils/product/entitlementUtils";
 import { useProductItemContext } from "@/views/products/product/product-item/ProductItemContext";
-import { useHasEntityFeatureId } from "../../hooks/useHasEntityFeatureId";
 import { EntityFeatureConfig } from "./advanced-settings/EntityFeatureConfig";
+import { PooledBalanceConfig } from "./advanced-settings/PooledBalanceConfig";
 import { ProrationConfig } from "./advanced-settings/ProrationConfig";
 import { ResetIntervalConfig } from "./advanced-settings/ResetIntervalConfig";
 import { RolloverConfig } from "./advanced-settings/RolloverConfig";
@@ -23,7 +24,7 @@ import { UsageLimit } from "./advanced-settings/UsageLimit";
 export function AdvancedSettings() {
 	const { features } = useFeaturesQuery();
 	const { item } = useProductItemContext();
-	const { hasEntityFeatureId } = useHasEntityFeatureId();
+	const { product } = useProduct();
 
 	if (!item) return null;
 
@@ -31,17 +32,14 @@ export function AdvancedSettings() {
 	const hasCreditSystem = getFeatureCreditSystem({ item, features });
 	const isPriced = isFeaturePriceItem(item);
 
-	// Check if there are other continuous use features (for entity feature config)
-	const hasOtherContinuousFeatures = features.some(
-		(f) =>
-			f.config?.usage_type === FeatureUsageType.Continuous &&
-			f.id !== item.feature_id,
-	);
-
-	// Determine what will show in Advanced section
 	const showUsageLimits = isPriced;
 	const showRollover = hasCreditSystem || usageType === FeatureUsageType.Single;
-	const showEntityFeature = hasEntityFeatureId && hasOtherContinuousFeatures;
+	// Deprecated in favor of licenses. Surface it whenever any item in the plan
+	// uses an entity feature, so all items in such plans keep working.
+	const showEntityFeature =
+		item.entity_feature_id != null ||
+		(product?.items?.some((planItem) => planItem?.entity_feature_id != null) ??
+			false);
 	// Proration shows for prepaid or continuous use features (not consumable + pay-per-use)
 	const showProration =
 		isPriced &&
@@ -56,16 +54,6 @@ export function AdvancedSettings() {
 		usageType === FeatureUsageType.Single &&
 		itemToBillingInterval({ item }) !== BillingInterval.OneOff;
 
-	// Hide Advanced section if nothing will render inside it
-	const hasAnyContent =
-		showUsageLimits ||
-		showRollover ||
-		showEntityFeature ||
-		showProration ||
-		showResetInterval;
-
-	if (!hasAnyContent) return null;
-
 	return (
 		<SheetAccordion type="single" withSeparator={false} collapsible={true}>
 			<SheetAccordionItem
@@ -73,7 +61,9 @@ export function AdvancedSettings() {
 				title="Advanced"
 				// description="Additional configuration options for this feature"
 			>
-				<div className="space-y-6 pt-2 pb-10 [>&_.advanced-input-width]:w-xs">
+				<div className="flex flex-col gap-6 pt-2 pb-10 [>&_.advanced-input-width]:w-xs">
+					<PooledBalanceConfig />
+
 					{/* Usage Limits */}
 					{showUsageLimits && <UsageLimit />}
 

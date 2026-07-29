@@ -56,6 +56,21 @@ MultiAttachPriceInterval = Literal[
 r"""Billing interval (e.g. 'month', 'year')."""
 
 
+class MultiAttachAdditionalCurrencyTypedDict(TypedDict):
+    currency: str
+    r"""Three-letter Stripe-supported currency code (e.g. 'eur', 'gbp')."""
+    amount: float
+    r"""Price amount in this currency. Set explicitly per currency, not converted from the base amount."""
+
+
+class MultiAttachAdditionalCurrency(BaseModel):
+    currency: str
+    r"""Three-letter Stripe-supported currency code (e.g. 'eur', 'gbp')."""
+
+    amount: float
+    r"""Price amount in this currency. Set explicitly per currency, not converted from the base amount."""
+
+
 class MultiAttachBasePriceTypedDict(TypedDict):
     r"""Base price configuration for a plan."""
 
@@ -65,6 +80,8 @@ class MultiAttachBasePriceTypedDict(TypedDict):
     r"""Billing interval (e.g. 'month', 'year')."""
     interval_count: NotRequired[float]
     r"""Number of intervals per billing cycle. Defaults to 1."""
+    additional_currencies: NotRequired[List[MultiAttachAdditionalCurrencyTypedDict]]
+    r"""Base price amounts in additional currencies. The base 'amount' is in the org's default currency."""
 
 
 class MultiAttachBasePrice(BaseModel):
@@ -79,9 +96,12 @@ class MultiAttachBasePrice(BaseModel):
     interval_count: Optional[float] = None
     r"""Number of intervals per billing cycle. Defaults to 1."""
 
+    additional_currencies: Optional[List[MultiAttachAdditionalCurrency]] = None
+    r"""Base price amounts in additional currencies. The base 'amount' is in the org's default currency."""
+
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
-        optional_fields = set(["interval_count"])
+        optional_fields = set(["interval_count", "additional_currencies"])
         serialized = handler(self)
         m = {}
 
@@ -145,16 +165,63 @@ class MultiAttachReset(BaseModel):
         return m
 
 
+class MultiAttachItemAdditionalCurrencyTypedDict(TypedDict):
+    currency: str
+    r"""Three-letter Stripe-supported currency code (e.g. 'eur', 'gbp')."""
+    amount: float
+    r"""Price amount in this currency. Set explicitly per currency, not converted from the base amount."""
+
+
+class MultiAttachItemAdditionalCurrency(BaseModel):
+    currency: str
+    r"""Three-letter Stripe-supported currency code (e.g. 'eur', 'gbp')."""
+
+    amount: float
+    r"""Price amount in this currency. Set explicitly per currency, not converted from the base amount."""
+
+
 MultiAttachToTypedDict = TypeAliasType("MultiAttachToTypedDict", Union[float, str])
 
 
 MultiAttachTo = TypeAliasType("MultiAttachTo", Union[float, str])
 
 
+class MultiAttachTierAdditionalCurrencyTypedDict(TypedDict):
+    currency: NotRequired[Any]
+    amount: NotRequired[Any]
+    flat_amount: NotRequired[Any]
+
+
+class MultiAttachTierAdditionalCurrency(BaseModel):
+    currency: Optional[Any] = None
+
+    amount: Optional[Any] = None
+
+    flat_amount: Optional[Any] = None
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        optional_fields = set(["currency", "amount", "flat_amount"])
+        serialized = handler(self)
+        m = {}
+
+        for n, f in type(self).model_fields.items():
+            k = f.alias or n
+            val = serialized.get(k, serialized.get(n))
+
+            if val != UNSET_SENTINEL:
+                if val is not None or k not in optional_fields:
+                    m[k] = val
+
+        return m
+
+
 class MultiAttachTierTypedDict(TypedDict):
     to: MultiAttachToTypedDict
     amount: NotRequired[float]
     flat_amount: NotRequired[float]
+    additional_currencies: NotRequired[List[MultiAttachTierAdditionalCurrencyTypedDict]]
+    r"""Per-currency amounts for this tier. Tier boundaries ('to') are shared across all currencies."""
 
 
 class MultiAttachTier(BaseModel):
@@ -164,9 +231,12 @@ class MultiAttachTier(BaseModel):
 
     flat_amount: Optional[float] = None
 
+    additional_currencies: Optional[List[MultiAttachTierAdditionalCurrency]] = None
+    r"""Per-currency amounts for this tier. Tier boundaries ('to') are shared across all currencies."""
+
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
-        optional_fields = set(["amount", "flat_amount"])
+        optional_fields = set(["amount", "flat_amount", "additional_currencies"])
         serialized = handler(self)
         m = {}
 
@@ -214,6 +284,8 @@ class MultiAttachPriceTypedDict(TypedDict):
     r"""'prepaid' for upfront payment (seats), 'usage_based' for pay-as-you-go."""
     amount: NotRequired[float]
     r"""Price per billing_units after included usage. Either 'amount' or 'tiers' is required."""
+    additional_currencies: NotRequired[List[MultiAttachItemAdditionalCurrencyTypedDict]]
+    r"""Amounts in additional currencies for this flat price. The base 'amount' is in the org's default currency. Only valid with 'amount', not 'tiers'."""
     tiers: NotRequired[List[MultiAttachTierTypedDict]]
     r"""Tiered pricing.  Either 'amount' or 'tiers' is required."""
     tier_behavior: NotRequired[MultiAttachTierBehavior]
@@ -237,6 +309,9 @@ class MultiAttachPrice(BaseModel):
     amount: Optional[float] = None
     r"""Price per billing_units after included usage. Either 'amount' or 'tiers' is required."""
 
+    additional_currencies: Optional[List[MultiAttachItemAdditionalCurrency]] = None
+    r"""Amounts in additional currencies for this flat price. The base 'amount' is in the org's default currency. Only valid with 'amount', not 'tiers'."""
+
     tiers: Optional[List[MultiAttachTier]] = None
     r"""Tiered pricing.  Either 'amount' or 'tiers' is required."""
 
@@ -256,6 +331,7 @@ class MultiAttachPrice(BaseModel):
         optional_fields = set(
             [
                 "amount",
+                "additional_currencies",
                 "tiers",
                 "tier_behavior",
                 "interval_count",
@@ -439,7 +515,7 @@ class MultiAttachPlanItem(BaseModel):
 
 
 class MultiAttachCustomizeTypedDict(TypedDict):
-    r"""Customize the plan to attach. Can override the price or items."""
+    r"""Customize the plan to attach. Can override the price, items, or licenses."""
 
     price: NotRequired[Nullable[MultiAttachBasePriceTypedDict]]
     r"""Override the base price of the plan. Pass null to remove the base price."""
@@ -448,7 +524,7 @@ class MultiAttachCustomizeTypedDict(TypedDict):
 
 
 class MultiAttachCustomize(BaseModel):
-    r"""Customize the plan to attach. Can override the price or items."""
+    r"""Customize the plan to attach. Can override the price, items, or licenses."""
 
     price: OptionalNullable[MultiAttachBasePrice] = UNSET
     r"""Override the base price of the plan. Pass null to remove the base price."""
@@ -526,7 +602,7 @@ class MultiAttachPlanTypedDict(TypedDict):
     plan_id: str
     r"""The ID of the plan to attach."""
     customize: NotRequired[MultiAttachCustomizeTypedDict]
-    r"""Customize the plan to attach. Can override the price or items."""
+    r"""Customize the plan to attach. Can override the price, items, or licenses."""
     feature_quantities: NotRequired[List[MultiAttachFeatureQuantityTypedDict]]
     r"""If this plan contains prepaid features, use this field to specify the quantity of each prepaid feature."""
     version: NotRequired[float]
@@ -540,7 +616,7 @@ class MultiAttachPlan(BaseModel):
     r"""The ID of the plan to attach."""
 
     customize: Optional[MultiAttachCustomize] = None
-    r"""Customize the plan to attach. Can override the price or items."""
+    r"""Customize the plan to attach. Can override the price, items, or licenses."""
 
     feature_quantities: Optional[List[MultiAttachFeatureQuantity]] = None
     r"""If this plan contains prepaid features, use this field to specify the quantity of each prepaid feature."""
@@ -1046,6 +1122,8 @@ class MultiAttachParamsTypedDict(TypedDict):
     r"""The ID of the entity to attach the plans to."""
     free_trial: NotRequired[Nullable[MultiAttachFreeTrialParamsTypedDict]]
     r"""Free trial configuration applied to all plans. Pass an object to set a custom trial, or null to remove any trial."""
+    currency: NotRequired[str]
+    r"""Currency to bill this multi-attach in (e.g. usd, eur). Must match the customer's currency if they are already locked to one, and every plan must offer a paid price in it. Defaults to the customer's currency, then the org default."""
     invoice_mode: NotRequired[MultiAttachInvoiceModeTypedDict]
     r"""Invoice mode creates a draft or open invoice and sends it to the customer, instead of charging their card immediately."""
     discounts: NotRequired[List[MultiAttachAttachDiscountTypedDict]]
@@ -1077,6 +1155,9 @@ class MultiAttachParams(BaseModel):
 
     free_trial: OptionalNullable[MultiAttachFreeTrialParams] = UNSET
     r"""Free trial configuration applied to all plans. Pass an object to set a custom trial, or null to remove any trial."""
+
+    currency: Optional[str] = None
+    r"""Currency to bill this multi-attach in (e.g. usd, eur). Must match the customer's currency if they are already locked to one, and every plan must offer a paid price in it. Defaults to the customer's currency, then the org default."""
 
     invoice_mode: Optional[MultiAttachInvoiceMode] = None
     r"""Invoice mode creates a draft or open invoice and sends it to the customer, instead of charging their card immediately."""
@@ -1110,6 +1191,7 @@ class MultiAttachParams(BaseModel):
             [
                 "entity_id",
                 "free_trial",
+                "currency",
                 "invoice_mode",
                 "discounts",
                 "success_url",

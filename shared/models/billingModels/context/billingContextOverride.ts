@@ -1,6 +1,7 @@
-import type { PaymentBehaviorIntent } from "@models/billingModels/context/paymentBehaviorIntent";
 import type { BillingVersion } from "@models/billingModels/context/billingContext";
+import type { PaymentBehaviorIntent } from "@models/billingModels/context/paymentBehaviorIntent";
 import type { TransitionConfig } from "@models/billingModels/context/transitionConfig";
+import type { InsertPlanLicenseSpec } from "@models/billingModels/plan/customerLicensePlan";
 import type { StripeDiscountWithCoupon } from "@models/billingModels/stripe/stripeDiscountWithCoupon";
 import type { FullCustomer } from "@models/cusModels/fullCusModel";
 import type {
@@ -33,6 +34,7 @@ export interface BillingContextOverride {
 		customerProduct?: FullCusProduct;
 		customPrices?: Price[];
 		customEnts?: Entitlement[];
+		insertPlanLicenses?: InsertPlanLicenseSpec[];
 	};
 
 	featureQuantities?: FeatureOptions[];

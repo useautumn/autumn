@@ -5,7 +5,7 @@ import type {
 } from "@autumn/shared";
 import { FeatureType, type FullCusProduct } from "@autumn/shared";
 import { Button, SectionTag } from "@autumn/ui";
-import { CubeIcon, PlusIcon } from "@phosphor-icons/react";
+import { LegoIcon, PlusIcon } from "@phosphor-icons/react";
 import { type ExpandedState, getExpandedRowModel } from "@tanstack/react-table";
 import { useMemo, useState } from "react";
 import { Table } from "@/components/general/table";
@@ -23,6 +23,7 @@ import {
 	createFeaturesMap,
 	deduplicateEntitlements,
 	flattenCustomerEntitlements,
+	flattenStandaloneCustomerEntitlements,
 	processNonBooleanEntitlements,
 } from "./customerFeatureUsageUtils";
 
@@ -64,26 +65,28 @@ export function CustomerFeatureUsageTable() {
 		// Add extra entitlements (loose entitlements not tied to a product)
 		// Customer level: show ALL loose entitlements (customer can access entity-scoped balances at top level)
 		// Entity level: show ONLY that entity's loose entitlements
-		const extraEnts: FullCusEntWithFullCusProduct[] = (
-			customer?.extra_customer_entitlements || []
-		)
-			.filter((ent: FullCustomerEntitlement) => {
-				// If no entity selected (customer level), show ALL loose entitlements
-				if (!selectedEntity) {
-					return true;
-				}
-				// If entity selected, show ONLY that entity's loose entitlements
-				return ent.internal_entity_id === selectedEntity.internal_id;
-			})
-			.map((ent: FullCustomerEntitlement) => ({
-				...ent,
-				customer_product: null,
-			}));
+		const visibleExtraEntitlements = (
+			customer?.extra_customer_entitlements ?? []
+		).filter((ent: FullCustomerEntitlement) => {
+			// If no entity selected (customer level), show ALL loose entitlements
+			if (!selectedEntity) {
+				return true;
+			}
+			// If entity selected, show ONLY that entity's loose entitlements
+			return ent.internal_entity_id === selectedEntity.internal_id;
+		});
+		const extraEnts = flattenStandaloneCustomerEntitlements({
+			customerEntitlements: visibleExtraEntitlements,
+		});
+		const pooledEnts = flattenStandaloneCustomerEntitlements({
+			customerEntitlements: customer?.pooled_customer_entitlements ?? [],
+		});
 
-		return [...productEnts, ...extraEnts];
+		return [...productEnts, ...extraEnts, ...pooledEnts];
 	}, [
 		filteredCustomerProducts,
 		customer?.extra_customer_entitlements,
+		customer?.pooled_customer_entitlements,
 		selectedEntity,
 	]);
 
@@ -177,7 +180,7 @@ export function CustomerFeatureUsageTable() {
 				<Table.Container>
 					<Table.Toolbar>
 						<Table.Heading>
-							<CubeIcon size={16} weight="fill" className="text-subtle" />
+							<LegoIcon size={16} weight="fill" className="text-subtle" />
 							Features
 						</Table.Heading>
 						<Table.Actions>

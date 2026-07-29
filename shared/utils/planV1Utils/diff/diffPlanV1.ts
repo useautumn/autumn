@@ -1,17 +1,22 @@
 import type { BasePriceParams } from "@api/products/components/basePrice/basePrice.js";
-import { FreeTrialDuration } from "@models/productModels/freeTrialModels/freeTrialEnums.js";
-import { TierBehavior } from "@models/productModels/priceModels/priceConfig/usagePriceConfig.js";
 import {
 	type ApiPlanV1,
 	type CreatePlanItemParamsV1,
-	CustomizePlanV1Schema,
+	CustomizePlanV1BaseSchema,
 	type PlanItemFilter,
+	refineCustomizePlanV1Schema,
 } from "@autumn/shared";
+import { FreeTrialDuration } from "@models/productModels/freeTrialModels/freeTrialEnums.js";
+import { TierBehavior } from "@models/productModels/priceModels/priceConfig/usagePriceConfig.js";
 import type { z } from "zod/v4";
 
-export const DiffedCustomizePlanV1Schema = CustomizePlanV1Schema.omit({
-	items: true,
-});
+export const DiffedCustomizePlanV1Schema = refineCustomizePlanV1Schema(
+	CustomizePlanV1BaseSchema.omit({
+		items: true,
+		upsert_licenses: true,
+	}).strict(),
+	{ includeItems: false, includeLicenses: false },
+);
 
 export type DiffedCustomizePlanV1 = z.infer<typeof DiffedCustomizePlanV1Schema>;
 
@@ -20,26 +25,80 @@ type PlanItemInput = ApiPlanItem | CreatePlanItemParamsV1;
 type PlanItemPrice = NonNullable<PlanItemInput["price"]>;
 type PlanItemRollover = NonNullable<PlanItemInput["rollover"]>;
 type PlanItemProration = NonNullable<PlanItemInput["proration"]>;
+type AdditionalCurrencyInput = {
+	currency: string;
+	amount?: number | null;
+	flat_amount?: number | null;
+};
+
 type BasePriceInput = {
 	amount: number;
 	interval?: string | null;
 	interval_count?: number | null;
+	additional_currencies?: AdditionalCurrencyInput[] | null;
 };
 
-const toBasePriceParams = (
-	price: NonNullable<ApiPlanV1["price"]>,
+type PlanParamsMapperOptions = {
+	includeInternalIds?: boolean;
+};
+
+// Adding or removing a catalog currency doesn't change what existing
+// customers pay (their prices are snapshots), so neither forces a version or
+// migration; only changed amounts for a currency present on both sides do.
+const additionalCurrenciesCompatible = (
+	from: AdditionalCurrencyInput[] | null | undefined,
+	to: AdditionalCurrencyInput[] | null | undefined,
+): boolean =>
+	(from ?? []).every((entry) => {
+		const match = (to ?? []).find(
+			(other) => other.currency.toLowerCase() === entry.currency.toLowerCase(),
+		);
+		return (
+			!match ||
+			((entry.amount ?? null) === (match.amount ?? null) &&
+				(entry.flat_amount ?? null) === (match.flat_amount ?? null))
+		);
+	});
+
+export const toBasePriceParams = (
+	price: NonNullable<ApiPlanV1["price"]> | BasePriceParams,
+	{ includeInternalIds = false }: PlanParamsMapperOptions = {},
 ): BasePriceParams => ({
 	amount: price.amount,
 	interval: price.interval,
 	...(price.interval_count !== undefined
 		? { interval_count: price.interval_count }
 		: {}),
+	...(price.additional_currencies?.length
+		? { additional_currencies: price.additional_currencies }
+		: {}),
+	...(includeInternalIds && price.entitlement_id !== undefined
+		? { entitlement_id: price.entitlement_id }
+		: {}),
+	...(includeInternalIds && price.price_id !== undefined
+		? { price_id: price.price_id }
+		: {}),
+	...(includeInternalIds &&
+	"stripe_price_id" in price &&
+	price.stripe_price_id !== undefined
+		? { stripe_price_id: price.stripe_price_id }
+		: {}),
 });
 
-const toCreatePlanItemParams = (item: ApiPlanItem): CreatePlanItemParamsV1 => {
+export const toCreatePlanItemParams = (
+	item: ApiPlanItem,
+	{ includeInternalIds = false }: PlanParamsMapperOptions = {},
+): CreatePlanItemParamsV1 => {
 	const out: CreatePlanItemParamsV1 = { feature_id: item.feature_id };
 	if (item.entity_feature_id !== undefined)
 		out.entity_feature_id = item.entity_feature_id;
+	// Only when true: false is the schema default, so emitting it would leak a
+	// no-op field into every migration diff.
+	if (item.pooled) out.pooled = item.pooled;
+	if (includeInternalIds && item.entitlement_id !== undefined)
+		out.entitlement_id = item.entitlement_id;
+	if (includeInternalIds && item.price_id !== undefined)
+		out.price_id = item.price_id;
 	if (item.included !== undefined && item.included !== null)
 		out.included = item.included;
 	if (item.unlimited !== undefined && item.unlimited !== null)
@@ -94,10 +153,12 @@ export const composeMatchKey = (item: MatchKeyItem): string => {
 /** Match key for a remove_items filter, in the same format as composeMatchKey
  * (buildRemoveFilter already flattens the matched item's fields onto it). */
 export const planItemFilterMatchKey = (filter: PlanItemFilter): string =>
-	`${filter.feature_id}|${filter.billing_method ?? ""}|${filter.interval ?? ""}|${normalizeIntervalCount({
-		interval: filter.interval,
-		intervalCount: filter.interval_count,
-	})}`;
+	`${filter.feature_id}|${filter.billing_method ?? ""}|${filter.interval ?? ""}|${normalizeIntervalCount(
+		{
+			interval: filter.interval,
+			intervalCount: filter.interval_count,
+		},
+	)}`;
 
 const normalizeIntervalCount = ({
 	interval,
@@ -130,7 +191,11 @@ const pricesEqual = (
 	return (
 		a.amount === b.amount &&
 		a.interval === b.interval &&
-		(a.interval_count ?? 1) === (b.interval_count ?? 1)
+		(a.interval_count ?? 1) === (b.interval_count ?? 1) &&
+		additionalCurrenciesCompatible(
+			a.additional_currencies,
+			b.additional_currencies,
+		)
 	);
 };
 
@@ -162,7 +227,11 @@ const tiersEqual = (
 		return (
 			tier.to === other.to &&
 			(tier.amount ?? 0) === (other.amount ?? 0) &&
-			(tier.flat_amount ?? null) === (other.flat_amount ?? null)
+			(tier.flat_amount ?? null) === (other.flat_amount ?? null) &&
+			additionalCurrenciesCompatible(
+				tier.additional_currencies,
+				other.additional_currencies,
+			)
 		);
 	});
 };
@@ -182,6 +251,10 @@ const itemPricesEqual = (
 
 	return (
 		(a.amount ?? null) === (b.amount ?? null) &&
+		additionalCurrenciesCompatible(
+			a.additional_currencies,
+			b.additional_currencies,
+		) &&
 		tiersEqual(a.tiers, b.tiers) &&
 		aTierBehavior === bTierBehavior &&
 		a.interval === b.interval &&
@@ -213,8 +286,7 @@ const rolloversEqual = (
 
 	return (
 		a.expiry_duration_type === b.expiry_duration_type &&
-		(a.expiry_duration_length ?? null) ===
-			(b.expiry_duration_length ?? null) &&
+		(a.expiry_duration_length ?? null) === (b.expiry_duration_length ?? null) &&
 		(a.max ?? null) === (b.max ?? null) &&
 		(a.max_percentage ?? null) === (b.max_percentage ?? null)
 	);
@@ -225,6 +297,7 @@ export const itemsEqual = (a: PlanItemInput, b: PlanItemInput): boolean => {
 	return (
 		a.feature_id === b.feature_id &&
 		(a.entity_feature_id ?? null) === (b.entity_feature_id ?? null) &&
+		(a.pooled ?? false) === (b.pooled ?? false) &&
 		(a.included ?? 0) === (b.included ?? 0) &&
 		(a.unlimited ?? false) === (b.unlimited ?? false) &&
 		(a.reset?.interval ?? null) === (b.reset?.interval ?? null) &&
@@ -235,10 +308,7 @@ export const itemsEqual = (a: PlanItemInput, b: PlanItemInput): boolean => {
 	);
 };
 
-const removeFiltersEqual = (
-	a: PlanItemFilter,
-	b: PlanItemFilter,
-): boolean =>
+const removeFiltersEqual = (a: PlanItemFilter, b: PlanItemFilter): boolean =>
 	a.feature_id === b.feature_id &&
 	(a.billing_method ?? null) === (b.billing_method ?? null) &&
 	(a.interval ?? null) === (b.interval ?? null) &&

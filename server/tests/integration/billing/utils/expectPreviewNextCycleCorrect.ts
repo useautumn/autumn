@@ -1,9 +1,5 @@
 import { expect } from "bun:test";
-import {
-	type AttachPreviewResponse,
-	type BillingPreviewResponse,
-	formatMs,
-} from "@autumn/shared";
+import { type BillingPreviewResponse, formatMs } from "@autumn/shared";
 
 const ONE_DAY_MS = 24 * 60 * 60 * 1000;
 
@@ -21,7 +17,7 @@ export const expectPreviewNextCycleCorrect = ({
 	total,
 	toleranceMs = ONE_DAY_MS,
 }: {
-	preview: BillingPreviewResponse | AttachPreviewResponse;
+	preview: Pick<BillingPreviewResponse, "next_cycle">;
 	/** Whether next_cycle should be defined (default: true) */
 	expectDefined?: boolean;
 	/** Expected starts_at as absolute Unix timestamp (ms) */

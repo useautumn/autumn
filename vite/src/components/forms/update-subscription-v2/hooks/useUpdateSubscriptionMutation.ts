@@ -1,6 +1,7 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import type { AxiosError } from "axios";
 import { toast } from "sonner";
+import { invalidateCustomerBillingQueries } from "@/components/forms/shared/utils/invalidateCustomerBillingQueries";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
 import type { UpdateSubscriptionFormContext } from "../context/UpdateSubscriptionFormProvider";
 
@@ -72,9 +73,7 @@ export function useUpdateSubscriptionMutation({
 				onSuccess?.();
 			}
 
-			if (customerId) {
-				queryClient.invalidateQueries({ queryKey: ["customer", customerId] });
-			}
+			invalidateCustomerBillingQueries({ queryClient, customerId });
 		},
 		onError: (error) => {
 			toast.error(

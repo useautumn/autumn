@@ -59,10 +59,17 @@ class Billing(BaseSDK):
         carry_over_usages: Optional[
             Union[models.AttachCarryOverUsages, models.AttachCarryOverUsagesTypedDict]
         ] = None,
+        license_quantities: Optional[
+            Union[
+                List[models.AttachLicenseQuantity],
+                List[models.AttachLicenseQuantityTypedDict],
+            ]
+        ] = None,
         metadata: Optional[Dict[str, str]] = None,
         no_billing_changes: Optional[bool] = None,
         enable_plan_immediately: Optional[bool] = None,
         tax_rate_id: Optional[str] = None,
+        currency: Optional[str] = None,
         retries: OptionalNullable[utils.RetryConfig] = UNSET,
         server_url: Optional[str] = None,
         timeout_ms: Optional[int] = None,
@@ -77,7 +84,7 @@ class Billing(BaseSDK):
         :param entity_id: The ID of the entity to attach the plan to.
         :param feature_quantities: If this plan contains prepaid features, use this field to specify the quantity of each prepaid feature. This quantity includes the included amount and billing units defined when setting up the plan.
         :param version: The version of the plan to attach.
-        :param customize: Customize the plan to attach. Can override the price, items, free trial, or a combination.
+        :param customize: Customize the plan to attach. Can override the price, items, licenses, free trial, or a combination.
         :param invoice_mode: Invoice mode creates a draft or open invoice and sends it to the customer, instead of charging their card immediately. This uses Stripe's send_invoice collection method.
         :param proration_behavior: How to handle proration when updating an existing subscription. 'prorate_immediately' charges/credits prorated amounts now, 'none' skips creating any charges.
         :param redirect_mode: Controls when to return a checkout URL. 'always' returns a URL even if payment succeeds, 'if_required' only when payment action is needed, 'never' disables redirects.
@@ -94,10 +101,12 @@ class Billing(BaseSDK):
         :param processor_subscription_id: The processor subscription ID to link. Use this to attach an existing Stripe subscription instead of creating a new one.
         :param carry_over_balances: Whether to carry over balances from the previous plan.
         :param carry_over_usages: Whether to carry over usages from the previous plan.
+        :param license_quantities: Seat quantities for the plan's licenses, keyed by license plan.
         :param metadata: Key-value metadata to attach to the Stripe subscription, invoice, and checkout session created during this attach flow. Keys prefixed with 'autumn_' are reserved and will be stripped.
         :param no_billing_changes: If true, skips any billing changes for the attach operation.
         :param enable_plan_immediately: If true, the customer's plan is activated immediately even when payment is deferred (invoice mode) or pending (Stripe checkout). For Stripe checkout, the customer_product is inserted before the customer completes the hosted form.
         :param tax_rate_id: Stripe tax rate ID (txr_...) to apply as the default tax rate on the created subscription, invoice, or checkout session line items.
+        :param currency: Currency to bill this attach in (e.g. usd, eur). Must match the customer's currency if they are already locked to one, and the plan must offer a paid price in it. Defaults to the customer's currency, then the org default.
         :param retries: Override the default retry configuration for this method
         :param server_url: Override the default server URL for this method
         :param timeout_ms: Override the default request timeout configuration for this method in milliseconds
@@ -150,10 +159,14 @@ class Billing(BaseSDK):
             carry_over_usages=utils.get_pydantic_model(
                 carry_over_usages, Optional[models.AttachCarryOverUsages]
             ),
+            license_quantities=utils.get_pydantic_model(
+                license_quantities, Optional[List[models.AttachLicenseQuantity]]
+            ),
             metadata=metadata,
             no_billing_changes=no_billing_changes,
             enable_plan_immediately=enable_plan_immediately,
             tax_rate_id=tax_rate_id,
+            currency=currency,
         )
 
         req = self._build_request(
@@ -265,10 +278,17 @@ class Billing(BaseSDK):
         carry_over_usages: Optional[
             Union[models.AttachCarryOverUsages, models.AttachCarryOverUsagesTypedDict]
         ] = None,
+        license_quantities: Optional[
+            Union[
+                List[models.AttachLicenseQuantity],
+                List[models.AttachLicenseQuantityTypedDict],
+            ]
+        ] = None,
         metadata: Optional[Dict[str, str]] = None,
         no_billing_changes: Optional[bool] = None,
         enable_plan_immediately: Optional[bool] = None,
         tax_rate_id: Optional[str] = None,
+        currency: Optional[str] = None,
         retries: OptionalNullable[utils.RetryConfig] = UNSET,
         server_url: Optional[str] = None,
         timeout_ms: Optional[int] = None,
@@ -283,7 +303,7 @@ class Billing(BaseSDK):
         :param entity_id: The ID of the entity to attach the plan to.
         :param feature_quantities: If this plan contains prepaid features, use this field to specify the quantity of each prepaid feature. This quantity includes the included amount and billing units defined when setting up the plan.
         :param version: The version of the plan to attach.
-        :param customize: Customize the plan to attach. Can override the price, items, free trial, or a combination.
+        :param customize: Customize the plan to attach. Can override the price, items, licenses, free trial, or a combination.
         :param invoice_mode: Invoice mode creates a draft or open invoice and sends it to the customer, instead of charging their card immediately. This uses Stripe's send_invoice collection method.
         :param proration_behavior: How to handle proration when updating an existing subscription. 'prorate_immediately' charges/credits prorated amounts now, 'none' skips creating any charges.
         :param redirect_mode: Controls when to return a checkout URL. 'always' returns a URL even if payment succeeds, 'if_required' only when payment action is needed, 'never' disables redirects.
@@ -300,10 +320,12 @@ class Billing(BaseSDK):
         :param processor_subscription_id: The processor subscription ID to link. Use this to attach an existing Stripe subscription instead of creating a new one.
         :param carry_over_balances: Whether to carry over balances from the previous plan.
         :param carry_over_usages: Whether to carry over usages from the previous plan.
+        :param license_quantities: Seat quantities for the plan's licenses, keyed by license plan.
         :param metadata: Key-value metadata to attach to the Stripe subscription, invoice, and checkout session created during this attach flow. Keys prefixed with 'autumn_' are reserved and will be stripped.
         :param no_billing_changes: If true, skips any billing changes for the attach operation.
         :param enable_plan_immediately: If true, the customer's plan is activated immediately even when payment is deferred (invoice mode) or pending (Stripe checkout). For Stripe checkout, the customer_product is inserted before the customer completes the hosted form.
         :param tax_rate_id: Stripe tax rate ID (txr_...) to apply as the default tax rate on the created subscription, invoice, or checkout session line items.
+        :param currency: Currency to bill this attach in (e.g. usd, eur). Must match the customer's currency if they are already locked to one, and the plan must offer a paid price in it. Defaults to the customer's currency, then the org default.
         :param retries: Override the default retry configuration for this method
         :param server_url: Override the default server URL for this method
         :param timeout_ms: Override the default request timeout configuration for this method in milliseconds
@@ -356,10 +378,14 @@ class Billing(BaseSDK):
             carry_over_usages=utils.get_pydantic_model(
                 carry_over_usages, Optional[models.AttachCarryOverUsages]
             ),
+            license_quantities=utils.get_pydantic_model(
+                license_quantities, Optional[List[models.AttachLicenseQuantity]]
+            ),
             metadata=metadata,
             no_billing_changes=no_billing_changes,
             enable_plan_immediately=enable_plan_immediately,
             tax_rate_id=tax_rate_id,
+            currency=currency,
         )
 
         req = self._build_request_async(
@@ -705,6 +731,7 @@ class Billing(BaseSDK):
                 models.MultiAttachFreeTrialParamsTypedDict,
             ]
         ] = UNSET,
+        currency: Optional[str] = None,
         invoice_mode: Optional[
             Union[models.MultiAttachInvoiceMode, models.MultiAttachInvoiceModeTypedDict]
         ] = None,
@@ -738,6 +765,7 @@ class Billing(BaseSDK):
         :param plans: The list of plans to attach to the customer.
         :param entity_id: The ID of the entity to attach the plans to.
         :param free_trial: Free trial configuration applied to all plans. Pass an object to set a custom trial, or null to remove any trial.
+        :param currency: Currency to bill this multi-attach in (e.g. usd, eur). Must match the customer's currency if they are already locked to one, and every plan must offer a paid price in it. Defaults to the customer's currency, then the org default.
         :param invoice_mode: Invoice mode creates a draft or open invoice and sends it to the customer, instead of charging their card immediately.
         :param discounts: List of discounts to apply. Each discount can be an Autumn reward ID, Stripe coupon ID, or Stripe promotion code.
         :param success_url: URL to redirect to after successful checkout.
@@ -769,6 +797,7 @@ class Billing(BaseSDK):
             free_trial=utils.get_pydantic_model(
                 free_trial, OptionalNullable[models.MultiAttachFreeTrialParams]
             ),
+            currency=currency,
             invoice_mode=utils.get_pydantic_model(
                 invoice_mode, Optional[models.MultiAttachInvoiceMode]
             ),
@@ -861,6 +890,7 @@ class Billing(BaseSDK):
                 models.MultiAttachFreeTrialParamsTypedDict,
             ]
         ] = UNSET,
+        currency: Optional[str] = None,
         invoice_mode: Optional[
             Union[models.MultiAttachInvoiceMode, models.MultiAttachInvoiceModeTypedDict]
         ] = None,
@@ -894,6 +924,7 @@ class Billing(BaseSDK):
         :param plans: The list of plans to attach to the customer.
         :param entity_id: The ID of the entity to attach the plans to.
         :param free_trial: Free trial configuration applied to all plans. Pass an object to set a custom trial, or null to remove any trial.
+        :param currency: Currency to bill this multi-attach in (e.g. usd, eur). Must match the customer's currency if they are already locked to one, and every plan must offer a paid price in it. Defaults to the customer's currency, then the org default.
         :param invoice_mode: Invoice mode creates a draft or open invoice and sends it to the customer, instead of charging their card immediately.
         :param discounts: List of discounts to apply. Each discount can be an Autumn reward ID, Stripe coupon ID, or Stripe promotion code.
         :param success_url: URL to redirect to after successful checkout.
@@ -925,6 +956,7 @@ class Billing(BaseSDK):
             free_trial=utils.get_pydantic_model(
                 free_trial, OptionalNullable[models.MultiAttachFreeTrialParams]
             ),
+            currency=currency,
             invoice_mode=utils.get_pydantic_model(
                 invoice_mode, Optional[models.MultiAttachInvoiceMode]
             ),
@@ -1060,10 +1092,17 @@ class Billing(BaseSDK):
                 models.PreviewAttachCarryOverUsagesTypedDict,
             ]
         ] = None,
+        license_quantities: Optional[
+            Union[
+                List[models.PreviewAttachLicenseQuantity],
+                List[models.PreviewAttachLicenseQuantityTypedDict],
+            ]
+        ] = None,
         metadata: Optional[Dict[str, str]] = None,
         no_billing_changes: Optional[bool] = None,
         enable_plan_immediately: Optional[bool] = None,
         tax_rate_id: Optional[str] = None,
+        currency: Optional[str] = None,
         retries: OptionalNullable[utils.RetryConfig] = UNSET,
         server_url: Optional[str] = None,
         timeout_ms: Optional[int] = None,
@@ -1078,7 +1117,7 @@ class Billing(BaseSDK):
         :param entity_id: The ID of the entity to attach the plan to.
         :param feature_quantities: If this plan contains prepaid features, use this field to specify the quantity of each prepaid feature. This quantity includes the included amount and billing units defined when setting up the plan.
         :param version: The version of the plan to attach.
-        :param customize: Customize the plan to attach. Can override the price, items, free trial, or a combination.
+        :param customize: Customize the plan to attach. Can override the price, items, licenses, free trial, or a combination.
         :param invoice_mode: Invoice mode creates a draft or open invoice and sends it to the customer, instead of charging their card immediately. This uses Stripe's send_invoice collection method.
         :param proration_behavior: How to handle proration when updating an existing subscription. 'prorate_immediately' charges/credits prorated amounts now, 'none' skips creating any charges.
         :param redirect_mode: Controls when to return a checkout URL. 'always' returns a URL even if payment succeeds, 'if_required' only when payment action is needed, 'never' disables redirects.
@@ -1095,10 +1134,12 @@ class Billing(BaseSDK):
         :param processor_subscription_id: The processor subscription ID to link. Use this to attach an existing Stripe subscription instead of creating a new one.
         :param carry_over_balances: Whether to carry over balances from the previous plan.
         :param carry_over_usages: Whether to carry over usages from the previous plan.
+        :param license_quantities: Seat quantities for the plan's licenses, keyed by license plan.
         :param metadata: Key-value metadata to attach to the Stripe subscription, invoice, and checkout session created during this attach flow. Keys prefixed with 'autumn_' are reserved and will be stripped.
         :param no_billing_changes: If true, skips any billing changes for the attach operation.
         :param enable_plan_immediately: If true, the customer's plan is activated immediately even when payment is deferred (invoice mode) or pending (Stripe checkout). For Stripe checkout, the customer_product is inserted before the customer completes the hosted form.
         :param tax_rate_id: Stripe tax rate ID (txr_...) to apply as the default tax rate on the created subscription, invoice, or checkout session line items.
+        :param currency: Currency to bill this attach in (e.g. usd, eur). Must match the customer's currency if they are already locked to one, and the plan must offer a paid price in it. Defaults to the customer's currency, then the org default.
         :param retries: Override the default retry configuration for this method
         :param server_url: Override the default server URL for this method
         :param timeout_ms: Override the default request timeout configuration for this method in milliseconds
@@ -1152,10 +1193,14 @@ class Billing(BaseSDK):
             carry_over_usages=utils.get_pydantic_model(
                 carry_over_usages, Optional[models.PreviewAttachCarryOverUsages]
             ),
+            license_quantities=utils.get_pydantic_model(
+                license_quantities, Optional[List[models.PreviewAttachLicenseQuantity]]
+            ),
             metadata=metadata,
             no_billing_changes=no_billing_changes,
             enable_plan_immediately=enable_plan_immediately,
             tax_rate_id=tax_rate_id,
+            currency=currency,
         )
 
         req = self._build_request(
@@ -1274,10 +1319,17 @@ class Billing(BaseSDK):
                 models.PreviewAttachCarryOverUsagesTypedDict,
             ]
         ] = None,
+        license_quantities: Optional[
+            Union[
+                List[models.PreviewAttachLicenseQuantity],
+                List[models.PreviewAttachLicenseQuantityTypedDict],
+            ]
+        ] = None,
         metadata: Optional[Dict[str, str]] = None,
         no_billing_changes: Optional[bool] = None,
         enable_plan_immediately: Optional[bool] = None,
         tax_rate_id: Optional[str] = None,
+        currency: Optional[str] = None,
         retries: OptionalNullable[utils.RetryConfig] = UNSET,
         server_url: Optional[str] = None,
         timeout_ms: Optional[int] = None,
@@ -1292,7 +1344,7 @@ class Billing(BaseSDK):
         :param entity_id: The ID of the entity to attach the plan to.
         :param feature_quantities: If this plan contains prepaid features, use this field to specify the quantity of each prepaid feature. This quantity includes the included amount and billing units defined when setting up the plan.
         :param version: The version of the plan to attach.
-        :param customize: Customize the plan to attach. Can override the price, items, free trial, or a combination.
+        :param customize: Customize the plan to attach. Can override the price, items, licenses, free trial, or a combination.
         :param invoice_mode: Invoice mode creates a draft or open invoice and sends it to the customer, instead of charging their card immediately. This uses Stripe's send_invoice collection method.
         :param proration_behavior: How to handle proration when updating an existing subscription. 'prorate_immediately' charges/credits prorated amounts now, 'none' skips creating any charges.
         :param redirect_mode: Controls when to return a checkout URL. 'always' returns a URL even if payment succeeds, 'if_required' only when payment action is needed, 'never' disables redirects.
@@ -1309,10 +1361,12 @@ class Billing(BaseSDK):
         :param processor_subscription_id: The processor subscription ID to link. Use this to attach an existing Stripe subscription instead of creating a new one.
         :param carry_over_balances: Whether to carry over balances from the previous plan.
         :param carry_over_usages: Whether to carry over usages from the previous plan.
+        :param license_quantities: Seat quantities for the plan's licenses, keyed by license plan.
         :param metadata: Key-value metadata to attach to the Stripe subscription, invoice, and checkout session created during this attach flow. Keys prefixed with 'autumn_' are reserved and will be stripped.
         :param no_billing_changes: If true, skips any billing changes for the attach operation.
         :param enable_plan_immediately: If true, the customer's plan is activated immediately even when payment is deferred (invoice mode) or pending (Stripe checkout). For Stripe checkout, the customer_product is inserted before the customer completes the hosted form.
         :param tax_rate_id: Stripe tax rate ID (txr_...) to apply as the default tax rate on the created subscription, invoice, or checkout session line items.
+        :param currency: Currency to bill this attach in (e.g. usd, eur). Must match the customer's currency if they are already locked to one, and the plan must offer a paid price in it. Defaults to the customer's currency, then the org default.
         :param retries: Override the default retry configuration for this method
         :param server_url: Override the default server URL for this method
         :param timeout_ms: Override the default request timeout configuration for this method in milliseconds
@@ -1366,10 +1420,14 @@ class Billing(BaseSDK):
             carry_over_usages=utils.get_pydantic_model(
                 carry_over_usages, Optional[models.PreviewAttachCarryOverUsages]
             ),
+            license_quantities=utils.get_pydantic_model(
+                license_quantities, Optional[List[models.PreviewAttachLicenseQuantity]]
+            ),
             metadata=metadata,
             no_billing_changes=no_billing_changes,
             enable_plan_immediately=enable_plan_immediately,
             tax_rate_id=tax_rate_id,
+            currency=currency,
         )
 
         req = self._build_request_async(
@@ -1446,6 +1504,7 @@ class Billing(BaseSDK):
                 models.PreviewMultiAttachFreeTrialParamsTypedDict,
             ]
         ] = UNSET,
+        currency: Optional[str] = None,
         invoice_mode: Optional[
             Union[
                 models.PreviewMultiAttachInvoiceMode,
@@ -1485,6 +1544,7 @@ class Billing(BaseSDK):
         :param plans: The list of plans to attach to the customer.
         :param entity_id: The ID of the entity to attach the plans to.
         :param free_trial: Free trial configuration applied to all plans. Pass an object to set a custom trial, or null to remove any trial.
+        :param currency: Currency to bill this multi-attach in (e.g. usd, eur). Must match the customer's currency if they are already locked to one, and every plan must offer a paid price in it. Defaults to the customer's currency, then the org default.
         :param invoice_mode: Invoice mode creates a draft or open invoice and sends it to the customer, instead of charging their card immediately.
         :param discounts: List of discounts to apply. Each discount can be an Autumn reward ID, Stripe coupon ID, or Stripe promotion code.
         :param success_url: URL to redirect to after successful checkout.
@@ -1516,6 +1576,7 @@ class Billing(BaseSDK):
             free_trial=utils.get_pydantic_model(
                 free_trial, OptionalNullable[models.PreviewMultiAttachFreeTrialParams]
             ),
+            currency=currency,
             invoice_mode=utils.get_pydantic_model(
                 invoice_mode, Optional[models.PreviewMultiAttachInvoiceMode]
             ),
@@ -1609,6 +1670,7 @@ class Billing(BaseSDK):
                 models.PreviewMultiAttachFreeTrialParamsTypedDict,
             ]
         ] = UNSET,
+        currency: Optional[str] = None,
         invoice_mode: Optional[
             Union[
                 models.PreviewMultiAttachInvoiceMode,
@@ -1648,6 +1710,7 @@ class Billing(BaseSDK):
         :param plans: The list of plans to attach to the customer.
         :param entity_id: The ID of the entity to attach the plans to.
         :param free_trial: Free trial configuration applied to all plans. Pass an object to set a custom trial, or null to remove any trial.
+        :param currency: Currency to bill this multi-attach in (e.g. usd, eur). Must match the customer's currency if they are already locked to one, and every plan must offer a paid price in it. Defaults to the customer's currency, then the org default.
         :param invoice_mode: Invoice mode creates a draft or open invoice and sends it to the customer, instead of charging their card immediately.
         :param discounts: List of discounts to apply. Each discount can be an Autumn reward ID, Stripe coupon ID, or Stripe promotion code.
         :param success_url: URL to redirect to after successful checkout.
@@ -1679,6 +1742,7 @@ class Billing(BaseSDK):
             free_trial=utils.get_pydantic_model(
                 free_trial, OptionalNullable[models.PreviewMultiAttachFreeTrialParams]
             ),
+            currency=currency,
             invoice_mode=utils.get_pydantic_model(
                 invoice_mode, Optional[models.PreviewMultiAttachInvoiceMode]
             ),
@@ -1803,6 +1867,12 @@ class Billing(BaseSDK):
                 models.BillingUpdateCarryOverUsagesTypedDict,
             ]
         ] = None,
+        license_quantities: Optional[
+            Union[
+                List[models.BillingUpdateLicenseQuantity],
+                List[models.BillingUpdateLicenseQuantityTypedDict],
+            ]
+        ] = None,
         retries: OptionalNullable[utils.RetryConfig] = UNSET,
         server_url: Optional[str] = None,
         timeout_ms: Optional[int] = None,
@@ -1817,7 +1887,7 @@ class Billing(BaseSDK):
         :param plan_id: The ID of the plan to update. Optional if subscription_id is provided, or if the customer has only one product.
         :param feature_quantities: If this plan contains prepaid features, use this field to specify the quantity of each prepaid feature. This quantity includes the included amount and billing units defined when setting up the plan.
         :param version: The version of the plan to attach.
-        :param customize: Customize the plan to attach. Can override the price, items, free trial, or a combination.
+        :param customize: Customize the plan to attach. Can override the price, items, licenses, free trial, or a combination.
         :param invoice_mode: Invoice mode creates a draft or open invoice and sends it to the customer, instead of charging their card immediately. This uses Stripe's send_invoice collection method.
         :param proration_behavior: How to handle proration when updating an existing subscription. 'prorate_immediately' charges/credits prorated amounts now, 'none' skips creating any charges.
         :param redirect_mode: Controls when to return a checkout URL. 'always' returns a URL even if payment succeeds, 'if_required' only when payment action is needed, 'never' disables redirects.
@@ -1828,6 +1898,7 @@ class Billing(BaseSDK):
         :param refund_last_payment: Controls how the last payment is refunded on immediate cancellation. 'prorated' refunds the unused portion, 'full' refunds the entire last payment.
         :param recalculate_balances: Controls whether balances should be recalculated during the subscription update.
         :param carry_over_usages: Whether to carry over usages from the previous plan.
+        :param license_quantities: Total seat quantities (inclusive of the license's included count) per license plan offered by this plan. Licenses not listed keep their current paid quantity.
         :param retries: Override the default retry configuration for this method
         :param server_url: Override the default server URL for this method
         :param timeout_ms: Override the default request timeout configuration for this method in milliseconds
@@ -1871,6 +1942,9 @@ class Billing(BaseSDK):
             ),
             carry_over_usages=utils.get_pydantic_model(
                 carry_over_usages, Optional[models.BillingUpdateCarryOverUsages]
+            ),
+            license_quantities=utils.get_pydantic_model(
+                license_quantities, Optional[List[models.BillingUpdateLicenseQuantity]]
             ),
         )
 
@@ -1979,6 +2053,12 @@ class Billing(BaseSDK):
                 models.BillingUpdateCarryOverUsagesTypedDict,
             ]
         ] = None,
+        license_quantities: Optional[
+            Union[
+                List[models.BillingUpdateLicenseQuantity],
+                List[models.BillingUpdateLicenseQuantityTypedDict],
+            ]
+        ] = None,
         retries: OptionalNullable[utils.RetryConfig] = UNSET,
         server_url: Optional[str] = None,
         timeout_ms: Optional[int] = None,
@@ -1993,7 +2073,7 @@ class Billing(BaseSDK):
         :param plan_id: The ID of the plan to update. Optional if subscription_id is provided, or if the customer has only one product.
         :param feature_quantities: If this plan contains prepaid features, use this field to specify the quantity of each prepaid feature. This quantity includes the included amount and billing units defined when setting up the plan.
         :param version: The version of the plan to attach.
-        :param customize: Customize the plan to attach. Can override the price, items, free trial, or a combination.
+        :param customize: Customize the plan to attach. Can override the price, items, licenses, free trial, or a combination.
         :param invoice_mode: Invoice mode creates a draft or open invoice and sends it to the customer, instead of charging their card immediately. This uses Stripe's send_invoice collection method.
         :param proration_behavior: How to handle proration when updating an existing subscription. 'prorate_immediately' charges/credits prorated amounts now, 'none' skips creating any charges.
         :param redirect_mode: Controls when to return a checkout URL. 'always' returns a URL even if payment succeeds, 'if_required' only when payment action is needed, 'never' disables redirects.
@@ -2004,6 +2084,7 @@ class Billing(BaseSDK):
         :param refund_last_payment: Controls how the last payment is refunded on immediate cancellation. 'prorated' refunds the unused portion, 'full' refunds the entire last payment.
         :param recalculate_balances: Controls whether balances should be recalculated during the subscription update.
         :param carry_over_usages: Whether to carry over usages from the previous plan.
+        :param license_quantities: Total seat quantities (inclusive of the license's included count) per license plan offered by this plan. Licenses not listed keep their current paid quantity.
         :param retries: Override the default retry configuration for this method
         :param server_url: Override the default server URL for this method
         :param timeout_ms: Override the default request timeout configuration for this method in milliseconds
@@ -2047,6 +2128,9 @@ class Billing(BaseSDK):
             ),
             carry_over_usages=utils.get_pydantic_model(
                 carry_over_usages, Optional[models.BillingUpdateCarryOverUsages]
+            ),
+            license_quantities=utils.get_pydantic_model(
+                license_quantities, Optional[List[models.BillingUpdateLicenseQuantity]]
             ),
         )
 
@@ -2155,6 +2239,12 @@ class Billing(BaseSDK):
                 models.PreviewUpdateCarryOverUsagesTypedDict,
             ]
         ] = None,
+        license_quantities: Optional[
+            Union[
+                List[models.PreviewUpdateLicenseQuantity],
+                List[models.PreviewUpdateLicenseQuantityTypedDict],
+            ]
+        ] = None,
         retries: OptionalNullable[utils.RetryConfig] = UNSET,
         server_url: Optional[str] = None,
         timeout_ms: Optional[int] = None,
@@ -2169,7 +2259,7 @@ class Billing(BaseSDK):
         :param plan_id: The ID of the plan to update. Optional if subscription_id is provided, or if the customer has only one product.
         :param feature_quantities: If this plan contains prepaid features, use this field to specify the quantity of each prepaid feature. This quantity includes the included amount and billing units defined when setting up the plan.
         :param version: The version of the plan to attach.
-        :param customize: Customize the plan to attach. Can override the price, items, free trial, or a combination.
+        :param customize: Customize the plan to attach. Can override the price, items, licenses, free trial, or a combination.
         :param invoice_mode: Invoice mode creates a draft or open invoice and sends it to the customer, instead of charging their card immediately. This uses Stripe's send_invoice collection method.
         :param proration_behavior: How to handle proration when updating an existing subscription. 'prorate_immediately' charges/credits prorated amounts now, 'none' skips creating any charges.
         :param redirect_mode: Controls when to return a checkout URL. 'always' returns a URL even if payment succeeds, 'if_required' only when payment action is needed, 'never' disables redirects.
@@ -2180,6 +2270,7 @@ class Billing(BaseSDK):
         :param refund_last_payment: Controls how the last payment is refunded on immediate cancellation. 'prorated' refunds the unused portion, 'full' refunds the entire last payment.
         :param recalculate_balances: Controls whether balances should be recalculated during the subscription update.
         :param carry_over_usages: Whether to carry over usages from the previous plan.
+        :param license_quantities: Total seat quantities (inclusive of the license's included count) per license plan offered by this plan. Licenses not listed keep their current paid quantity.
         :param retries: Override the default retry configuration for this method
         :param server_url: Override the default server URL for this method
         :param timeout_ms: Override the default request timeout configuration for this method in milliseconds
@@ -2224,6 +2315,9 @@ class Billing(BaseSDK):
             ),
             carry_over_usages=utils.get_pydantic_model(
                 carry_over_usages, Optional[models.PreviewUpdateCarryOverUsages]
+            ),
+            license_quantities=utils.get_pydantic_model(
+                license_quantities, Optional[List[models.PreviewUpdateLicenseQuantity]]
             ),
         )
 
@@ -2332,6 +2426,12 @@ class Billing(BaseSDK):
                 models.PreviewUpdateCarryOverUsagesTypedDict,
             ]
         ] = None,
+        license_quantities: Optional[
+            Union[
+                List[models.PreviewUpdateLicenseQuantity],
+                List[models.PreviewUpdateLicenseQuantityTypedDict],
+            ]
+        ] = None,
         retries: OptionalNullable[utils.RetryConfig] = UNSET,
         server_url: Optional[str] = None,
         timeout_ms: Optional[int] = None,
@@ -2346,7 +2446,7 @@ class Billing(BaseSDK):
         :param plan_id: The ID of the plan to update. Optional if subscription_id is provided, or if the customer has only one product.
         :param feature_quantities: If this plan contains prepaid features, use this field to specify the quantity of each prepaid feature. This quantity includes the included amount and billing units defined when setting up the plan.
         :param version: The version of the plan to attach.
-        :param customize: Customize the plan to attach. Can override the price, items, free trial, or a combination.
+        :param customize: Customize the plan to attach. Can override the price, items, licenses, free trial, or a combination.
         :param invoice_mode: Invoice mode creates a draft or open invoice and sends it to the customer, instead of charging their card immediately. This uses Stripe's send_invoice collection method.
         :param proration_behavior: How to handle proration when updating an existing subscription. 'prorate_immediately' charges/credits prorated amounts now, 'none' skips creating any charges.
         :param redirect_mode: Controls when to return a checkout URL. 'always' returns a URL even if payment succeeds, 'if_required' only when payment action is needed, 'never' disables redirects.
@@ -2357,6 +2457,7 @@ class Billing(BaseSDK):
         :param refund_last_payment: Controls how the last payment is refunded on immediate cancellation. 'prorated' refunds the unused portion, 'full' refunds the entire last payment.
         :param recalculate_balances: Controls whether balances should be recalculated during the subscription update.
         :param carry_over_usages: Whether to carry over usages from the previous plan.
+        :param license_quantities: Total seat quantities (inclusive of the license's included count) per license plan offered by this plan. Licenses not listed keep their current paid quantity.
         :param retries: Override the default retry configuration for this method
         :param server_url: Override the default server URL for this method
         :param timeout_ms: Override the default request timeout configuration for this method in milliseconds
@@ -2401,6 +2502,9 @@ class Billing(BaseSDK):
             ),
             carry_over_usages=utils.get_pydantic_model(
                 carry_over_usages, Optional[models.PreviewUpdateCarryOverUsages]
+            ),
+            license_quantities=utils.get_pydantic_model(
+                license_quantities, Optional[List[models.PreviewUpdateLicenseQuantity]]
             ),
         )
 
@@ -3108,10 +3212,17 @@ class Billing(BaseSDK):
                 models.SetupPaymentCarryOverUsagesTypedDict,
             ]
         ] = None,
+        license_quantities: Optional[
+            Union[
+                List[models.SetupPaymentLicenseQuantity],
+                List[models.SetupPaymentLicenseQuantityTypedDict],
+            ]
+        ] = None,
         metadata: Optional[Dict[str, str]] = None,
         no_billing_changes: Optional[bool] = None,
         enable_plan_immediately: Optional[bool] = None,
         tax_rate_id: Optional[str] = None,
+        currency: Optional[str] = None,
         retries: OptionalNullable[utils.RetryConfig] = UNSET,
         server_url: Optional[str] = None,
         timeout_ms: Optional[int] = None,
@@ -3124,7 +3235,7 @@ class Billing(BaseSDK):
         :param plan_id: If specified, the plan will be attached to the customer after setup.
         :param feature_quantities: If this plan contains prepaid features, use this field to specify the quantity of each prepaid feature. This quantity includes the included amount and billing units defined when setting up the plan.
         :param version: The version of the plan to attach.
-        :param customize: Customize the plan to attach. Can override the price, items, free trial, or a combination.
+        :param customize: Customize the plan to attach. Can override the price, items, licenses, free trial, or a combination.
         :param proration_behavior: How to handle proration when updating an existing subscription. 'prorate_immediately' charges/credits prorated amounts now, 'none' skips creating any charges.
         :param subscription_id: A unique ID to identify this subscription. Can be used to target specific subscriptions in update operations when a customer has multiple products with the same plan.
         :param discounts: List of discounts to apply. Each discount can be an Autumn reward ID, Stripe coupon ID, or Stripe promotion code.
@@ -3136,10 +3247,12 @@ class Billing(BaseSDK):
         :param processor_subscription_id: The processor subscription ID to link. Use this to attach an existing Stripe subscription instead of creating a new one.
         :param carry_over_balances: Whether to carry over balances from the previous plan.
         :param carry_over_usages: Whether to carry over usages from the previous plan.
+        :param license_quantities: Seat quantities for the plan's licenses, keyed by license plan.
         :param metadata: Key-value metadata to attach to the Stripe subscription, invoice, and checkout session created during this attach flow. Keys prefixed with 'autumn_' are reserved and will be stripped.
         :param no_billing_changes: If true, skips any billing changes for the attach operation.
         :param enable_plan_immediately: If true, the customer's plan is activated immediately even when payment is deferred (invoice mode) or pending (Stripe checkout). For Stripe checkout, the customer_product is inserted before the customer completes the hosted form.
         :param tax_rate_id: Stripe tax rate ID (txr_...) to apply as the default tax rate on the created subscription, invoice, or checkout session line items.
+        :param currency: Currency to bill this attach in (e.g. usd, eur). Must match the customer's currency if they are already locked to one, and the plan must offer a paid price in it. Defaults to the customer's currency, then the org default.
         :param retries: Override the default retry configuration for this method
         :param server_url: Override the default server URL for this method
         :param timeout_ms: Override the default request timeout configuration for this method in milliseconds
@@ -3185,10 +3298,14 @@ class Billing(BaseSDK):
             carry_over_usages=utils.get_pydantic_model(
                 carry_over_usages, Optional[models.SetupPaymentCarryOverUsages]
             ),
+            license_quantities=utils.get_pydantic_model(
+                license_quantities, Optional[List[models.SetupPaymentLicenseQuantity]]
+            ),
             metadata=metadata,
             no_billing_changes=no_billing_changes,
             enable_plan_immediately=enable_plan_immediately,
             tax_rate_id=tax_rate_id,
+            currency=currency,
         )
 
         req = self._build_request(
@@ -3297,10 +3414,17 @@ class Billing(BaseSDK):
                 models.SetupPaymentCarryOverUsagesTypedDict,
             ]
         ] = None,
+        license_quantities: Optional[
+            Union[
+                List[models.SetupPaymentLicenseQuantity],
+                List[models.SetupPaymentLicenseQuantityTypedDict],
+            ]
+        ] = None,
         metadata: Optional[Dict[str, str]] = None,
         no_billing_changes: Optional[bool] = None,
         enable_plan_immediately: Optional[bool] = None,
         tax_rate_id: Optional[str] = None,
+        currency: Optional[str] = None,
         retries: OptionalNullable[utils.RetryConfig] = UNSET,
         server_url: Optional[str] = None,
         timeout_ms: Optional[int] = None,
@@ -3313,7 +3437,7 @@ class Billing(BaseSDK):
         :param plan_id: If specified, the plan will be attached to the customer after setup.
         :param feature_quantities: If this plan contains prepaid features, use this field to specify the quantity of each prepaid feature. This quantity includes the included amount and billing units defined when setting up the plan.
         :param version: The version of the plan to attach.
-        :param customize: Customize the plan to attach. Can override the price, items, free trial, or a combination.
+        :param customize: Customize the plan to attach. Can override the price, items, licenses, free trial, or a combination.
         :param proration_behavior: How to handle proration when updating an existing subscription. 'prorate_immediately' charges/credits prorated amounts now, 'none' skips creating any charges.
         :param subscription_id: A unique ID to identify this subscription. Can be used to target specific subscriptions in update operations when a customer has multiple products with the same plan.
         :param discounts: List of discounts to apply. Each discount can be an Autumn reward ID, Stripe coupon ID, or Stripe promotion code.
@@ -3325,10 +3449,12 @@ class Billing(BaseSDK):
         :param processor_subscription_id: The processor subscription ID to link. Use this to attach an existing Stripe subscription instead of creating a new one.
         :param carry_over_balances: Whether to carry over balances from the previous plan.
         :param carry_over_usages: Whether to carry over usages from the previous plan.
+        :param license_quantities: Seat quantities for the plan's licenses, keyed by license plan.
         :param metadata: Key-value metadata to attach to the Stripe subscription, invoice, and checkout session created during this attach flow. Keys prefixed with 'autumn_' are reserved and will be stripped.
         :param no_billing_changes: If true, skips any billing changes for the attach operation.
         :param enable_plan_immediately: If true, the customer's plan is activated immediately even when payment is deferred (invoice mode) or pending (Stripe checkout). For Stripe checkout, the customer_product is inserted before the customer completes the hosted form.
         :param tax_rate_id: Stripe tax rate ID (txr_...) to apply as the default tax rate on the created subscription, invoice, or checkout session line items.
+        :param currency: Currency to bill this attach in (e.g. usd, eur). Must match the customer's currency if they are already locked to one, and the plan must offer a paid price in it. Defaults to the customer's currency, then the org default.
         :param retries: Override the default retry configuration for this method
         :param server_url: Override the default server URL for this method
         :param timeout_ms: Override the default request timeout configuration for this method in milliseconds
@@ -3374,10 +3500,14 @@ class Billing(BaseSDK):
             carry_over_usages=utils.get_pydantic_model(
                 carry_over_usages, Optional[models.SetupPaymentCarryOverUsages]
             ),
+            license_quantities=utils.get_pydantic_model(
+                license_quantities, Optional[List[models.SetupPaymentLicenseQuantity]]
+            ),
             metadata=metadata,
             no_billing_changes=no_billing_changes,
             enable_plan_immediately=enable_plan_immediately,
             tax_rate_id=tax_rate_id,
+            currency=currency,
         )
 
         req = self._build_request_async(

@@ -54,7 +54,7 @@ import { Result } from "../types/fp.js";
  * @param planId - The ID of the plan to update. Optional if subscription_id is provided, or if the customer has only one product. (optional)
  * @param featureQuantities - If this plan contains prepaid features, use this field to specify the quantity of each prepaid feature. This quantity includes the included amount and billing units defined when setting up the plan. (optional)
  * @param version - The version of the plan to attach. (optional)
- * @param customize - Customize the plan to attach. Can override the price, items, free trial, or a combination. (optional)
+ * @param customize - Customize the plan to attach. Can override the price, items, licenses, free trial, or a combination. (optional)
  * @param invoiceMode - Invoice mode creates a draft or open invoice and sends it to the customer, instead of charging their card immediately. This uses Stripe's send_invoice collection method. (optional)
  * @param prorationBehavior - How to handle proration when updating an existing subscription. 'prorate_immediately' charges/credits prorated amounts now, 'none' skips creating any charges. (optional)
  * @param redirectMode - Controls when to return a checkout URL. 'always' returns a URL even if payment succeeds, 'if_required' only when payment action is needed, 'never' disables redirects. (optional)
@@ -66,6 +66,7 @@ import { Result } from "../types/fp.js";
  * @param refundLastPayment - Controls how the last payment is refunded on immediate cancellation. 'prorated' refunds the unused portion, 'full' refunds the entire last payment. (optional)
  * @param recalculateBalances - Controls whether balances should be recalculated during the subscription update. (optional)
  * @param carryOverUsages - Whether to carry over usages from the previous plan. (optional)
+ * @param licenseQuantities - Total seat quantities (inclusive of the license's included count) per license plan offered by this plan. Licenses not listed keep their current paid quantity. (optional)
  *
  * @returns A billing response with customer ID, invoice details, and payment URL (if next action is required).
  */

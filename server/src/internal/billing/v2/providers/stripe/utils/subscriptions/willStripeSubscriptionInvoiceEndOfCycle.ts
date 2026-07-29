@@ -1,5 +1,6 @@
 import {
-AutumnBillingPlan, 	type BillingContext,
+	type AutumnBillingPlan,
+	type BillingContext,
 	type FullCusProduct,
 	isConsumablePrice,
 } from "@autumn/shared";

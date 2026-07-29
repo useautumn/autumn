@@ -12,7 +12,7 @@ import { sql } from "drizzle-orm";
  */
 export const getEntityOptionsAggregateFragments = () => {
 	const ctes = sql`
-		entity_option_rows AS (
+		entity_option_rows AS MATERIALIZED (
 			SELECT
 				ecp.internal_customer_id,
 				ecp.id AS customer_product_id,
@@ -25,7 +25,7 @@ export const getEntityOptionsAggregateFragments = () => {
 			) AS option_row(option_value)
 		),
 
-		entity_option_prepaid_rows AS (
+		entity_option_prepaid_rows AS MATERIALIZED (
 			SELECT
 				ce.internal_feature_id,
 				ce.internal_customer_id,
@@ -55,8 +55,7 @@ export const getEntityOptionsAggregateFragments = () => {
 					cpr.created_at DESC
 				LIMIT 1
 			) prepaid_price ON true
-			WHERE
-				(
+			WHERE (
 					eor.option_internal_feature_id IS NOT NULL
 					AND ce.internal_feature_id = eor.option_internal_feature_id
 				)
@@ -69,7 +68,7 @@ export const getEntityOptionsAggregateFragments = () => {
 				)
 		),
 
-		entity_prepaid_grant_from_options AS (
+		entity_prepaid_grant_from_options AS MATERIALIZED (
 			SELECT
 				internal_feature_id,
 				internal_customer_id,

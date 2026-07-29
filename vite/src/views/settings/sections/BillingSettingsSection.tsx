@@ -1,11 +1,10 @@
-import type { FrontendOrg, OrgConfig } from "@autumn/shared";
+import type { OrgConfig } from "@autumn/shared";
 import { Button, Switch } from "@autumn/ui";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation } from "@tanstack/react-query";
 import { useState } from "react";
 import { toast } from "sonner";
 import { useOrg } from "@/hooks/common/useOrg";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
-import { useEnv } from "@/utils/envUtils";
 import { SettingsSection } from "../SettingsSection";
 
 const BILLING_TOGGLES = [
@@ -59,6 +58,11 @@ const BILLING_TOGGLES = [
 		label: "Automatic tax",
 		description: "Enable Stripe Tax for automatic tax calculation",
 	},
+	{
+		key: "multi_currency",
+		label: "Multi-currency",
+		description: "Enable prices and billing in multiple currencies",
+	},
 ] as const satisfies readonly {
 	key: keyof OrgConfig;
 	label: string;
@@ -66,11 +70,8 @@ const BILLING_TOGGLES = [
 }[];
 
 export const BillingSettingsSection = () => {
-	const { org } = useOrg();
+	const { org, mutate: refetchOrg } = useOrg();
 	const axiosInstance = useAxiosInstance();
-	const queryClient = useQueryClient();
-	const env = useEnv();
-	const queryKey = ["org", env];
 	const [pending, setPending] = useState<Partial<OrgConfig>>({});
 
 	const serverConfig = org?.config ?? {};
@@ -85,16 +86,13 @@ export const BillingSettingsSection = () => {
 			);
 			return data as { config: OrgConfig };
 		},
-		onSuccess: (data) => {
+		onSuccess: async () => {
+			await refetchOrg();
 			setPending({});
-			queryClient.setQueryData<FrontendOrg>(queryKey, (old) =>
-				old ? { ...old, config: data.config } : old,
-			);
 			toast.success("Billing settings saved");
 		},
 		onError: () => {
 			toast.error("Failed to update billing settings");
-			queryClient.invalidateQueries({ queryKey });
 		},
 	});
 
@@ -133,6 +131,7 @@ export const BillingSettingsSection = () => {
 							</span>
 						</div>
 						<Switch
+							aria-label={label}
 							checked={!!displayConfig[key]}
 							onCheckedChange={(val) => handleToggle(key, val)}
 							disabled={isPending}
@@ -140,15 +139,17 @@ export const BillingSettingsSection = () => {
 					</div>
 				))}
 			</div>
-			<Button
-				variant="primary"
-				onClick={handleSave}
-				disabled={!isDirty}
-				isLoading={isPending}
-				className="w-full"
-			>
-				Save Changes
-			</Button>
+			<div className="pb-8">
+				<Button
+					variant="primary"
+					onClick={handleSave}
+					disabled={!isDirty}
+					isLoading={isPending}
+					className="w-full"
+				>
+					Save Changes
+				</Button>
+			</div>
 		</SettingsSection>
 	);
 };

@@ -1,5 +1,6 @@
 import { isSyncableEvent, processStripeSyncEvent } from "@autumn/stripe-sync";
 import type { Context, Next } from "hono";
+import { orgToAccountId } from "@/external/connect/connectUtils.js";
 import { isStripeSyncEnabled } from "@/internal/misc/stripeSync/stripeSyncStore.js";
 import type {
 	StripeWebhookContext,
@@ -7,16 +8,15 @@ import type {
 } from "./stripeWebhookContext.js";
 
 /**
- * Post-handler middleware that syncs Stripe events to the sync DB.
- * Fire-and-forget -- errors are caught and logged, never propagated.
+ * Mirrors a Stripe event into the sync DB. Fire-and-forget — errors are
+ * caught and logged, never propagated. Shared by the webhook route and the
+ * SQS replay worker.
  */
-export const stripeSyncMiddleware = async (
-	c: Context<StripeWebhookHonoEnv>,
-	next: Next,
-) => {
-	await next();
-
-	const ctx = c.get("ctx") as StripeWebhookContext;
+export const syncStripeEventToSyncDb = ({
+	ctx,
+}: {
+	ctx: StripeWebhookContext;
+}) => {
 	const { logger, org, stripeEvent } = ctx;
 
 	if (!org || !stripeEvent) return;
@@ -29,7 +29,10 @@ export const stripeSyncMiddleware = async (
 	if (!isSyncableEvent({ eventType: stripeEvent.type })) return;
 
 	try {
-		const stripeAccountId = stripeEvent.account ?? undefined;
+		// Events from account-registered webhooks carry no `account` — resolve
+		// from org connect config so sync rows are never left tenant-unstamped.
+		const stripeAccountId =
+			stripeEvent.account ?? orgToAccountId({ org, env: ctx.env });
 
 		void processStripeSyncEvent({
 			event: stripeEvent,
@@ -51,4 +54,17 @@ export const stripeSyncMiddleware = async (
 	} catch (error) {
 		logger.error(`Stripe sync middleware error: ${error}`);
 	}
+};
+
+/**
+ * Post-handler middleware that syncs Stripe events to the sync DB.
+ */
+export const stripeSyncMiddleware = async (
+	c: Context<StripeWebhookHonoEnv>,
+	next: Next,
+) => {
+	await next();
+
+	const ctx = c.get("ctx") as StripeWebhookContext;
+	syncStripeEventToSyncDb({ ctx });
 };

@@ -28,8 +28,9 @@ type SetProduct = (
 	product: FrontendProduct | ((prev: FrontendProduct) => FrontendProduct),
 ) => void;
 
-interface ProductContextValue {
+export interface ProductContextValue {
 	product: FrontendProduct;
+	isLicenseEditor?: boolean;
 	setProduct: SetProduct;
 	initialProduct?: FrontendProduct;
 	sheetType: string | null;
@@ -89,6 +90,11 @@ export function ProductProvider({
 	return (
 		<ProductContext.Provider value={value}>{children}</ProductContext.Provider>
 	);
+}
+
+/** True inside a license card's editor; the page-level plan editor is never one. */
+export function useIsLicenseEditor() {
+	return useContext(ProductContext)?.isLicenseEditor ?? false;
 }
 
 /** Hook to get product and setProduct. Uses context if available, otherwise Zustand. */
@@ -287,6 +293,11 @@ export function useHasPlanChanges() {
 
 		const versionsSame = product.version === initialProduct.version;
 
-		return !(itemsSame && freeTrialsSame && billingControlsSame && versionsSame);
+		return !(
+			itemsSame &&
+			freeTrialsSame &&
+			billingControlsSame &&
+			versionsSame
+		);
 	}, [context?.itemDraft, product, initialProduct, features]);
 }

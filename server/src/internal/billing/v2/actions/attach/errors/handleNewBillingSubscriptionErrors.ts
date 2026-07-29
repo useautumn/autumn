@@ -1,12 +1,10 @@
 import {
-	ACTIVE_STATUSES,
 	type AttachBillingContext,
 	type AttachParamsV1,
-	CusProductStatus,
-	cusProductToPrices,
 	ErrCode,
-	isFreeProduct,
-	isOneOffProduct,
+	hasActivePaidSubscription,
+	isCustomerProductFree,
+	isProductPaidAndRecurring,
 	RecaseError,
 } from "@autumn/shared";
 import { StatusCodes } from "http-status-codes";
@@ -24,34 +22,14 @@ export const handleNewBillingSubscriptionErrors = ({
 	const { fullCustomer, currentCustomerProduct, attachProduct } =
 		billingContext;
 
-	const isAttachPaidRecurring =
-		!isOneOffProduct({ prices: attachProduct.prices }) &&
-		!isFreeProduct({ prices: attachProduct.prices });
+	const isAttachPaidRecurring = isProductPaidAndRecurring(attachProduct);
 
-	const hasPaidRecurringSubscription = fullCustomer.customer_products.some(
-		(customerProduct) => {
-			const hasActiveOrTrialingStatus =
-				ACTIVE_STATUSES.includes(customerProduct.status) ||
-				customerProduct.status === CusProductStatus.Trialing;
-
-			if (!hasActiveOrTrialingStatus) return false;
-			if (!customerProduct.subscription_ids?.length) return false;
-
-			const prices = cusProductToPrices({
-				cusProduct: customerProduct,
-			});
-
-			return !isOneOffProduct({ prices }) && !isFreeProduct({ prices });
-		},
-	);
+	const hasPaidRecurringSubscription = hasActivePaidSubscription({
+		customerProducts: fullCustomer.customer_products,
+	});
 
 	const isTransitionFromFree =
-		!!currentCustomerProduct &&
-		isFreeProduct({
-			prices: cusProductToPrices({
-				cusProduct: currentCustomerProduct,
-			}),
-		});
+		!!currentCustomerProduct && isCustomerProductFree(currentCustomerProduct);
 
 	// Only respect new_billing_subscription for non-transition scenarios
 	// (add-ons, entity products). Upgrades/downgrades ignore the flag.

@@ -10,7 +10,7 @@ import type { DrizzleCli } from "@server/db/initDrizzle.js";
 import {
 	createHardcodedKey,
 	createKey,
-} from "@server/internal/dev/api-keys/apiKeyUtils.js";
+} from "@server/internal/dev/apiKeys/apiKeyUtils.js";
 import { afterOrgCreated } from "@server/utils/authUtils/afterOrgCreated.js";
 import { clearOrgDbOnly } from "@tests/utils/setup/clearOrg.js";
 import { setupOrg } from "@tests/utils/setup/setupOrg.js";
@@ -149,7 +149,7 @@ export async function createTestOrg({
 		created_at: TEST_ORG_CONFIG.created_at,
 		stripe_connected: false,
 		default_currency: "usd",
-		config: {} as OrgConfig,
+		config: { multi_currency: true } as OrgConfig,
 		onboarded: true,
 	};
 

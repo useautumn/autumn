@@ -26,7 +26,7 @@ describe("MCP OAuth auth resolution", () => {
 	test("advertises the Leaf OAuth scope allowlist", () => {
 		expect(
 			getProtectedResourceMetadata({ resourceUrl }).scopes_supported,
-		).toEqual([...DEFAULT_OAUTH_RESOURCE_SCOPES]);
+		).toEqual([...DEFAULT_OAUTH_RESOURCE_SCOPES, "offline_access"]);
 	});
 
 	test("returns a WWW-Authenticate challenge without a bearer token", async () => {

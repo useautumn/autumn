@@ -8,15 +8,18 @@ import { Scopes } from "@autumn/shared";
 import { Hono } from "hono";
 import { createRoute } from "@/honoMiddlewares/routeHandler.js";
 import type { HonoEnv } from "@/honoUtils/HonoEnv.js";
-import { handleGetProducts } from "@/internal/products/internalHandlers/handleGetProducts.js";
+import {
+	handleGetLicenseProducts,
+	handleGetProducts,
+} from "@/internal/products/internalHandlers/handleGetProducts.js";
 import { handleGetProductsByPriceIds } from "@/internal/products/internalHandlers/handleGetProductsByPriceIds.js";
 import { handleCopyEnvironment } from "./handlers/handleCopyEnvironment/handleCopyEnvironment.js";
+import { handleListPlanVariants } from "./handlers/handleListPlanVariants.js";
 import { handleGetFeatures } from "./internalHandlers/handleGetFeatures.js";
 import { handleGetMigrations } from "./internalHandlers/handleGetMigrations.js";
 import { handleGetProductCount } from "./internalHandlers/handleGetProductCount.js";
 import { handleGetProductCounts } from "./internalHandlers/handleGetProductCounts.js";
 import { handleGetProductInternal } from "./internalHandlers/handleGetProductInternal.js";
-import { handleListPlanVariants } from "./handlers/handleListPlanVariants.js";
 import { handleGetRewards } from "./internalHandlers/handleGetRewards.js";
 import { handleGetStripeCoupons } from "./internalHandlers/handleGetStripeCoupons.js";
 
@@ -24,6 +27,7 @@ import { handleGetStripeCoupons } from "./internalHandlers/handleGetStripeCoupon
 export const internalProductRouter = new Hono<HonoEnv>();
 
 internalProductRouter.get("/products", ...handleGetProducts);
+internalProductRouter.get("/license_products", ...handleGetLicenseProducts);
 internalProductRouter.get(
 	"/products/by-price-ids",
 	...handleGetProductsByPriceIds,

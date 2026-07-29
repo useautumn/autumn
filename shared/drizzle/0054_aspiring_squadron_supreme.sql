@@ -1,0 +1,1 @@
+ALTER TABLE "sso_provider" ADD CONSTRAINT "sso_provider_domain_unique" UNIQUE("domain");

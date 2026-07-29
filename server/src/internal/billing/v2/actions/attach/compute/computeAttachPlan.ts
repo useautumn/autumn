@@ -1,26 +1,22 @@
-import type {
-	AttachBillingContext,
-	AttachParamsV1,
-	AutumnBillingPlan,
+import {
+	type AttachBillingContext,
+	type AttachParamsV1,
+	type AutumnBillingPlan,
+	isFreeProduct,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { buildAutumnLineItems } from "@/internal/billing/v2/compute/computeAutumnUtils/buildAutumnLineItems";
+import { computeCustomerLicenseTransitions } from "@/internal/billing/v2/compute/customerLicenseTransitions/computeCustomerLicenseTransitions";
+import { computeAttachPooledBalancePlan } from "@/internal/billing/v2/pooledBalances/compute/computeAttachPooledBalancePlan";
 import { cusProductToExistingBalanceCarryOvers } from "@/internal/billing/v2/utils/handleCarryOvers/cusProductToExistingBalanceCarryOvers";
 import { cusProductToOneOffPrepaidCarryOvers } from "@/internal/billing/v2/utils/handleOneOffPrepaidCarryOvers/cusProductToOneOffPrepaidCarryOvers";
 import { computeAttachNewCustomerProduct } from "./computeAttachNewCustomerProduct";
 import { computeAttachTransitionUpdates } from "./computeAttachTransitionUpdates";
+import { computeOneOffPurchaseRebalance } from "./computeOneOffPurchaseRebalance";
 import { finalizeAttachPlan } from "./finalizeAttachPlan";
 import { shouldBuildImmediateLineItems } from "./shouldBuildImmediateLineItems";
 
-/**
- * Computes the billing plan for attaching a product.
- *
- * Scenarios:
- * - Add-on/One-time (no currentCustomerProduct): Just insert new product
- * - First main product (no currentCustomerProduct): Just insert new product
- * - Upgrade (currentCustomerProduct exists, planTiming=immediate): Expire current, insert new active
- * - Downgrade (currentCustomerProduct exists, planTiming=end_of_cycle): Cancel current at end of cycle, insert new scheduled
- */
+/** Computes new attachments and immediate or scheduled product transitions. */
 export const computeAttachPlan = ({
 	ctx,
 	attachBillingContext,
@@ -44,11 +40,29 @@ export const computeAttachPlan = ({
 		attachBillingContext,
 		params,
 	});
+	const oneOffPurchaseRebalance = computeOneOffPurchaseRebalance({
+		ctx,
+		newCustomerProduct,
+	});
 
 	const updateCustomerProduct = computeAttachTransitionUpdates({
 		attachBillingContext,
 		params,
 	});
+
+	// Customer licenses follow the incoming definitions on immediate swaps;
+	// scheduled swaps transition at activation instead.
+	const computedCustomerLicenseTransitions = currentCustomerProduct
+		? computeCustomerLicenseTransitions({
+				outgoingCustomerProducts: [currentCustomerProduct],
+				incomingCustomerProducts: [newCustomerProduct],
+				customerLicenseBillingContext:
+					attachBillingContext.customerLicenseBillingContext,
+				carryCustomerLicenseState: planTiming === "immediate",
+			})
+		: [];
+	const customerLicenseTransitions =
+		planTiming === "immediate" ? computedCustomerLicenseTransitions : [];
 
 	const {
 		entitlements: carriedOverEntitlements,
@@ -88,9 +102,34 @@ export const computeAttachPlan = ({
 				})
 			: { allLineItems: [], updateCustomerEntitlements: [] };
 
+	const { customerProduct: preparedNewCustomerProduct, pooledBalancePlan } =
+		computeAttachPooledBalancePlan({
+			ctx,
+			attachBillingContext,
+			newCustomerProduct,
+		});
+
+	// Lock the customer's currency on the first paid attach (only when they have
+	// none yet). Free attaches don't commit a currency. Applied conditionally at execute.
+	const {
+		fullCustomer,
+		attachProduct,
+		currency: resolvedCurrency,
+	} = attachBillingContext;
+	const lockCustomerCurrency =
+		resolvedCurrency &&
+		!fullCustomer.currency &&
+		!isFreeProduct({ product: attachProduct })
+			? {
+					internalCustomerId: fullCustomer.internal_id,
+					currency: resolvedCurrency,
+				}
+			: undefined;
+
 	let plan: AutumnBillingPlan = {
 		customerId: attachBillingContext.fullCustomer?.id ?? "",
-		insertCustomerProducts: [newCustomerProduct],
+		insertCustomerProducts: [preparedNewCustomerProduct],
+		lockCustomerCurrency,
 		updateCustomerProduct,
 		deleteCustomerProduct: scheduledCustomerProduct,
 		customPrices,
@@ -100,12 +139,16 @@ export const computeAttachPlan = ({
 			...oneOffPrepaidCarryOvers.entitlements,
 		],
 		customFreeTrial: trialContext?.customFreeTrial,
+		insertPlanLicenses: attachBillingContext.insertPlanLicenses,
+		customerLicenseTransitions,
 		lineItems,
 		insertCustomerEntitlements: [
 			...(carriedOverCustomerEntitlements ?? []),
 			...oneOffPrepaidCarryOvers.customerEntitlements,
 		],
 		updateCustomerEntitlements,
+		pooledBalancePlan,
+		oneOffPurchaseRebalance,
 	};
 
 	plan = finalizeAttachPlan({

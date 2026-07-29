@@ -181,7 +181,7 @@ test(`${chalk.yellowBright("migrations idempotency: run API does not replay a su
 		ctx,
 		migration: otherMigration,
 		internalCustomerId,
-		status: MigrationItemRunStatus.Succeeded,
+		status: MigrationItemRunStatus.Skipped,
 	});
 });
 

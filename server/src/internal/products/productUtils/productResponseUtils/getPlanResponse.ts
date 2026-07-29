@@ -3,6 +3,8 @@ import {
 	ApiFreeTrialV2Schema,
 	type ApiPlanV1,
 	ApiPlanV1Schema,
+	billingControlsFromColumns,
+	diffPlanV1,
 	type Feature,
 	type FullCustomer,
 	type FullProduct,
@@ -12,11 +14,11 @@ import {
 	productItemsToPlanItemsV1,
 	productV2ToBasePrice,
 	productV2ToFeatureItems,
-	billingControlsFromColumns,
-	diffPlanV1,
 	sortProductItems,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
+import { toApiPlanLicenseWithCustomize } from "@/internal/licenses/actions/customize/toApiPlanLicenseWithCustomize.js";
+
 import { ProductService } from "../../ProductService.js";
 import { mapToProductItems } from "../../productV2Utils.js";
 import { buildCustomerEligibility } from "./buildCustomerEligibility.js";
@@ -62,8 +64,8 @@ export const getPlanResponse = async ({
 }): Promise<ApiPlanV1> => {
 	// 1. Convert prices/entitlements to items
 	const rawItems = mapToProductItems({
-		prices: product.prices,
-		entitlements: product.entitlements,
+		prices: product.prices ?? [],
+		entitlements: product.entitlements ?? [],
 		features: features,
 	});
 
@@ -78,11 +80,15 @@ export const getPlanResponse = async ({
 	const basePrice: ApiPlanV1["price"] | null = basePriceItem
 		? {
 				amount: basePriceItem.price,
+				...(basePriceItem.additional_currencies?.length
+					? { additional_currencies: basePriceItem.additional_currencies }
+					: {}),
 				interval: itemToBillingInterval({ item: basePriceItem }),
 				interval_count:
 					itemToBillingIntervalCount({ item: basePriceItem }) !== 1
 						? itemToBillingIntervalCount({ item: basePriceItem })
 						: undefined,
+				price_id: basePriceItem.price_id ?? undefined,
 				display: getProductItemDisplay({
 					item: basePriceItem,
 					features,
@@ -118,6 +124,23 @@ export const getPlanResponse = async ({
 		fullCus,
 		fullProduct: product,
 	});
+	const apiLicenses = product.licenses?.length
+		? await Promise.all(
+				product.licenses.map((license) =>
+					toApiPlanLicenseWithCustomize({
+						license,
+						resolvePlan: (licenseProduct) =>
+							getPlanResponse({
+								product: licenseProduct,
+								features,
+								expand,
+								currency,
+								resolveBaseFullProduct: false,
+							}),
+					}),
+				),
+			)
+		: undefined;
 
 	// 9. Build Plan response
 	const plan = {
@@ -132,12 +155,13 @@ export const getPlanResponse = async ({
 
 		price: basePrice,
 		items: planItems ?? [],
+		licenses: apiLicenses,
 		free_trial: freeTrial,
 
-		created_at: product.created_at,
-		env: product.env,
+		created_at: product.created_at ?? 0,
+		env: product.env ?? ctx?.env ?? "sandbox",
 		archived: product.archived,
-		base_variant_id: product.base_variant_id,
+		base_variant_id: product.base_variant_id ?? null,
 
 		config: product.config ?? { ignore_past_due: false },
 		billing_controls: billingControlsFromColumns(product),

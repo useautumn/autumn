@@ -7,6 +7,7 @@ import {
 	type SyncPlanInstance,
 } from "@autumn/shared";
 import type { MatchedPlan, SubscriptionMatch } from "../detect/types";
+import { findLicenseQuantityDrifts } from "./findLicenseQuantityDrifts";
 import {
 	linkedCustomerProductsToTargetGroupMap,
 	matchedPlanToTargetGroupLink,
@@ -137,12 +138,11 @@ export const buildIncrementalSyncParams = ({
 		};
 	}
 
-	const phase = params.phases?.[0];
-	if (
-		!phase ||
-		params.phases?.length !== 1 ||
-		phase.plans.length !== phaseMatch.plans.length
-	) {
+	const phases = params.phases ?? [];
+	const phase =
+		phases.find((phase) => phase.starts_at === "now") ??
+		(phases.length === 1 ? phases[0] : undefined);
+	if (!phase || phase.plans.length !== phaseMatch.plans.length) {
 		return {
 			shouldSync: false,
 			reason: "unsupported_phase_shape",
@@ -221,9 +221,25 @@ export const buildIncrementalSyncParams = ({
 		}
 
 		const linkedProduct = linkedTargets.targets.get(target.key);
-		if (!linkedProduct || linkedProduct.product.id !== target.productId) {
+		const versionChanged =
+			syncPlan.version !== undefined &&
+			linkedProduct?.product.version !== syncPlan.version;
+		if (
+			!linkedProduct ||
+			linkedProduct.product.id !== target.productId ||
+			versionChanged
+		) {
 			changedPlans.push(syncPlan);
+			continue;
 		}
+
+		// Same product still attached — seat quantity changes converge the
+		// pool in place instead of re-attaching the parent.
+		const licenseQuantityDrifts = findLicenseQuantityDrifts({
+			linkedCustomerProduct: linkedProduct,
+			syncPlan,
+		});
+		if (licenseQuantityDrifts.length > 0) changedPlans.push(syncPlan);
 	}
 
 	// Linked add-ons whose Stripe items disappeared from the sub get expired.

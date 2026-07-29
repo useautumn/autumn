@@ -1,4 +1,5 @@
 import {
+	type Feature,
 	formatAmount,
 	formatInterval,
 	formatTiers,
@@ -22,10 +23,17 @@ export const CustomDotIcon = () => (
 );
 
 /** The left/dot/right feature icon trio. Shared so every item row renders the
- * same glyphs, including non-label rows like the migration filter rows. */
-export const FeatureIconCluster = ({ item }: { item: ProductItem }) => (
+ * same glyphs, including non-label rows like the migration filter rows.
+ * `leftIcon` overrides the feature-type glyph for synthetic rows (e.g. a license). */
+export const FeatureIconCluster = ({
+	item,
+	leftIcon,
+}: {
+	item: ProductItem;
+	leftIcon?: ReactNode;
+}) => (
 	<div className="flex flex-row items-center gap-1 shrink-0 pointer-events-auto">
-		<PlanFeatureIcon item={item} position="left" />
+		{leftIcon ?? <PlanFeatureIcon item={item} position="left" />}
 		<CustomDotIcon />
 		<PlanFeatureIcon item={item} position="right" />
 	</div>
@@ -263,27 +271,30 @@ function PriceText({
 	item,
 	currency,
 	text,
+	compact = false,
 }: {
 	item: ProductItem;
 	currency: string;
 	text: string;
+	compact?: boolean;
 }) {
+	const secondaryClass = compact
+		? "text-xs text-subtle"
+		: "text-body-secondary";
+	const amountClass = compact ? "text-xs font-medium" : "text-body";
 	const content =
 		tieredPriceChip({ item, currency, text }) ??
 		highlightPrice({
 			item,
 			currency,
 			text,
-			renderPrice: (priceStr) => <span className="text-body">{priceStr}</span>,
+			renderPrice: (priceStr) => (
+				<span className={amountClass}>{priceStr}</span>
+			),
 		}) ??
 		text;
 
-	return (
-		<span className="text-body-secondary">
-			{" "}
-			{content}
-		</span>
-	);
+	return <span className={secondaryClass}> {content}</span>;
 }
 
 interface PlanItemLabelProps {
@@ -292,6 +303,14 @@ interface PlanItemLabelProps {
 	wrapIcons?: (icons: ReactNode) => ReactNode;
 	/** Text shown when the feature has no name yet. */
 	unnamedText?: string;
+	compact?: boolean;
+	/** Display currency for amounts; defaults to the org default. */
+	currency?: string;
+	/** Resolve the item against this feature instead of the features query — for
+	 * synthetic rows (e.g. a license) whose "feature" isn't in the catalog. */
+	feature?: Feature;
+	/** Overrides the left feature-type glyph in the icon cluster. */
+	featureIcon?: ReactNode;
 }
 
 /** Feature icon cluster + label text + rollover indicator. Shared by the plan
@@ -300,10 +319,15 @@ export function PlanItemLabel({
 	item,
 	wrapIcons,
 	unnamedText = "Name your feature",
+	compact = false,
+	currency: currencyOverride,
+	feature: featureOverride,
+	featureIcon,
 }: PlanItemLabelProps) {
 	const { org } = useOrg();
-	const { features } = useFeaturesQuery();
-	const currency = org?.default_currency || "USD";
+	const { features: queriedFeatures } = useFeaturesQuery();
+	const features = featureOverride ? [featureOverride] : queriedFeatures;
+	const currency = currencyOverride || org?.default_currency || "USD";
 
 	const display = getProductItemDisplay({
 		item,
@@ -318,13 +342,23 @@ export function PlanItemLabel({
 	const displayText = hasFeatureName ? display.primary_text : unnamedText;
 	const rollover = itemCanRollOver(item) ? item.config?.rollover : undefined;
 
-	const icons = <FeatureIconCluster item={item} />;
+	const icons = <FeatureIconCluster item={item} leftIcon={featureIcon} />;
 
 	return (
 		<>
 			{wrapIcons ? wrapIcons(icons) : icons}
-			<p className="whitespace-nowrap truncate flex-1 min-w-0 text-body-secondary">
-				<span className={cn("text-body", !hasFeatureName && "text-subtle!")}>
+			<p
+				className={cn(
+					"whitespace-nowrap truncate flex-1 min-w-0",
+					compact ? "text-xs text-subtle" : "text-body-secondary",
+				)}
+			>
+				<span
+					className={cn(
+						compact ? "text-xs font-medium" : "text-body",
+						!hasFeatureName && "text-subtle!",
+					)}
+				>
 					{hasFeatureName
 						? (tieredPriceChip({ item, currency, text: displayText }) ??
 							displayText)
@@ -332,6 +366,7 @@ export function PlanItemLabel({
 				</span>
 				{display.secondary_text && (
 					<PriceText
+						compact={compact}
 						currency={currency}
 						item={item}
 						text={display.secondary_text}

@@ -10,6 +10,7 @@ export enum PaginationType {
 	SearchCustomers = "search_customers",
 	FullCustomers = "full_customers",
 	ListCustomerProducts = "list_customer_products",
+	ListInvoices = "list_invoices",
 }
 
 export type PaginationConfig = {
@@ -37,5 +38,9 @@ export const PAGINATION_CONFIGS: Record<PaginationType, PaginationConfig> = {
 	[PaginationType.ListCustomerProducts]: {
 		defaultLimit: CUSTOMER_PRODUCTS_DEFAULT_LIMIT,
 		maxLimit: CUSTOMER_PRODUCTS_MAX_LIMIT,
+	},
+	[PaginationType.ListInvoices]: {
+		defaultLimit: PaginationDefaults.DefaultLimit,
+		maxLimit: PaginationDefaults.MaxLimit,
 	},
 };

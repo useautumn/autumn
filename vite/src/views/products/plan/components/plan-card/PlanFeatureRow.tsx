@@ -6,12 +6,14 @@ import { TrashIcon } from "@phosphor-icons/react";
 import { useEffect, useRef, useState } from "react";
 import { AdminHover } from "@/components/general/AdminHover";
 import {
+	useIsLicenseEditor,
 	useProduct,
 	useSheet,
 } from "@/components/v2/inline-custom-plan-editor/PlanEditorContext";
 import { PlanItemLabel } from "@/components/v2/PlanItemLabel";
 import { cn } from "@/lib/utils";
 import { getItemId } from "@/utils/product/productItemUtils";
+import { getProductItemHoverTexts } from "@/views/admin/adminUtils";
 import { useOnboarding3QueryState } from "@/views/onboarding3/hooks/useOnboarding3QueryState";
 import { useOnboardingStore } from "@/views/onboarding3/store/useOnboardingStore";
 import { OnboardingStep } from "@/views/onboarding3/utils/onboardingUtils";
@@ -23,6 +25,8 @@ interface PlanFeatureRowProps {
 	index: number;
 	readOnly?: boolean;
 	prepaidQuantity?: number | null;
+	/** Display currency for amounts; defaults to the org default. */
+	currency?: string;
 }
 
 export const PlanFeatureRow = ({
@@ -31,9 +35,11 @@ export const PlanFeatureRow = ({
 	index,
 	readOnly = false,
 	prepaidQuantity,
+	currency,
 }: PlanFeatureRowProps) => {
 	const { setItem } = useProductItemContext();
 	const { product } = useProduct();
+	const isLicenseEditor = useIsLicenseEditor();
 	const { itemId, setSheet } = useSheet();
 	const isOnboarding = useOnboardingStore((s) => s.isOnboarding);
 	const playgroundMode = useOnboardingStore((s) => s.playgroundMode);
@@ -72,60 +78,6 @@ export const PlanFeatureRow = ({
 		if (onDelete) {
 			onDelete(item);
 		}
-	};
-
-	const adminHoverText = () => {
-		return [
-			...(item.entitlement_id
-				? [
-						{
-							key: "Entitlement ID",
-							value: item.entitlement_id || "N/A",
-						},
-					]
-				: []),
-			...(item.price_id
-				? [
-						{
-							key: "Price ID",
-							value: item.price_id || "N/A",
-						},
-					]
-				: []),
-			...(item.price_config?.stripe_price_id
-				? [
-						{
-							key: "Stripe Price ID",
-							value: item.price_config?.stripe_price_id || "N/A",
-						},
-					]
-				: []),
-			...(item.price_config?.stripe_empty_price_id
-				? [
-						{
-							key: "Stripe Empty Price ID",
-							value: item.price_config?.stripe_empty_price_id || "N/A",
-						},
-					]
-				: []),
-			...(item.price_config?.stripe_product_id
-				? [
-						{
-							key: "Stripe Product ID",
-							value: item.price_config?.stripe_product_id || "N/A",
-						},
-					]
-				: []),
-
-			...(item.price_config?.stripe_prepaid_price_v2_id
-				? [
-						{
-							key: "Stripe Prepaid Price V2 ID",
-							value: item.price_config?.stripe_prepaid_price_v2_id || "N/A",
-						},
-					]
-				: []),
-		];
 	};
 
 	const renderContent = (contentRef?: React.Ref<HTMLDivElement>) => (
@@ -169,9 +121,13 @@ export const PlanFeatureRow = ({
 		>
 			<div className="flex flex-row items-center flex-1 gap-2 min-w-0 overflow-hidden">
 				<PlanItemLabel
+					compact={isLicenseEditor}
 					item={item}
+					currency={currency}
 					wrapIcons={(icons) => (
-						<AdminHover texts={adminHoverText()}>{icons}</AdminHover>
+						<AdminHover texts={getProductItemHoverTexts({ item })}>
+							{icons}
+						</AdminHover>
 					)}
 				/>
 

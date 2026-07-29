@@ -16,6 +16,7 @@ import {
 } from "@autumn/shared";
 import { Badge } from "@autumn/ui";
 import { GitForkIcon, UsersIcon, WarningIcon } from "@phosphor-icons/react";
+import { PlanDiffBody } from "@/components/v2/PlanDiffBody";
 import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
 import { cn } from "@/lib/utils";
 import { InfoBox } from "@/views/onboarding2/integrate/components/InfoBox";
@@ -23,7 +24,6 @@ import { getFeatureIconConfig } from "@/views/products/features/utils/getFeature
 import { conflictSentence } from "@/views/products/plan/versioning/variantConflicts";
 import type { ResolvedFeature, ResolveFeature } from "./CreditSchemaSheet";
 import { CreditSystemRow, isCreditSystem } from "./CreditSystemRow";
-import { PlanDiffBody } from "./PlanDiffBody";
 import { PlanPreviewCard, PlansBackdrop } from "./PlanPreviewCard";
 
 const asRecord = (value: unknown): Record<string, unknown> | null =>

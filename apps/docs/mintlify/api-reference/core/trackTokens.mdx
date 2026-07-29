@@ -61,6 +61,10 @@ import { DynamicResponseExample } from "/snippets/dynamic-response-example.jsx";
   Unix timestamp in milliseconds to use for the usage event. Defaults to the current time.
 </DynamicParamField>
 
+<DynamicParamField body="overage_behavior" type="'cap' | 'overflow'">
+  How to handle usage that exceeds the available balance. "cap" (default) deducts only what fits, stopping at zero. "overflow" deducts the full value: the balance can go negative and usage limits do not clamp the deduction, though spend limits still apply.
+</DynamicParamField>
+
 <DynamicParamField body="async" type="boolean">
   If true, enqueue the event for asynchronous processing and return 204 immediately. The response will not include balance information.
 </DynamicParamField>

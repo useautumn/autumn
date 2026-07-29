@@ -7,23 +7,22 @@ import {
 	ProductItemInterval,
 	productV2ToBasePrice,
 } from "@autumn/shared";
-import {
-	Button,
-	FormLabel,
-	GroupedTabButton,
-	InputGroup,
-	InputGroupAddon,
-	InputGroupInput,
-} from "@autumn/ui";
+import { Button, FormLabel, GroupedTabButton } from "@autumn/ui";
 import {
 	ArrowsClockwiseIcon,
 	CheckCircleIcon,
 	PlusIcon,
 	TrashIcon,
 } from "@phosphor-icons/react";
-import { useProduct } from "@/components/v2/inline-custom-plan-editor/PlanEditorContext";
+import {
+	useIsLicenseEditor,
+	useProduct,
+} from "@/components/v2/inline-custom-plan-editor/PlanEditorContext";
 import { SheetSection } from "@/components/v2/sheets/InlineSheet";
 import { useOrg } from "@/hooks/common/useOrg";
+import { stampBaseCurrency } from "../../utils/currencyUtils";
+import { AdditionalCurrenciesEditor } from "../shared/AdditionalCurrenciesEditor";
+import { CurrencyAmountInput } from "../shared/CurrencyAmountInput";
 import { FreeTrialOption } from "./FreeTrialOption";
 import { SelectBillingCycle } from "./SelectBillingCycle";
 
@@ -36,6 +35,7 @@ export const BasePriceSection = ({
 }) => {
 	const { product, setProduct } = useProduct();
 	const { org } = useOrg();
+	const isLicenseEditor = useIsLicenseEditor();
 	const defaultCurrency = org?.default_currency?.toUpperCase() ?? "USD";
 
 	if (!product.items) return null;
@@ -58,6 +58,21 @@ export const BasePriceSection = ({
 		const newItems = [...product.items];
 		newItems[getBasePriceIndex()] = item;
 		setProduct({ ...product, items: newItems });
+	};
+
+	const basePriceItem =
+		getBasePriceIndex() !== -1 ? product.items[getBasePriceIndex()] : undefined;
+
+	const handleCurrenciesChange = (
+		currencies: NonNullable<ProductItem["additional_currencies"]>,
+	) => {
+		if (!basePriceItem) return;
+		setItem(
+			stampBaseCurrency({
+				item: { ...basePriceItem, additional_currencies: currencies },
+				orgCurrency: defaultCurrency,
+			}),
+		);
 	};
 
 	const handleUpdateBasePrice = ({
@@ -139,10 +154,14 @@ export const BasePriceSection = ({
 
 	return (
 		<SheetSection
-			title={isPaid ? "Base price" : undefined}
+			title={
+				isPaid ? (isLicenseEditor ? "Price per license" : "Base price") : undefined
+			}
 			description={
 				isPaid
-					? "Add a fixed price for the plan. Optional for per-unit or usage-based plans."
+					? isLicenseEditor
+						? "Charged for each license assigned beyond the included quantity."
+						: "Add a fixed price for the plan. Optional for per-unit or usage-based plans."
 					: undefined
 			}
 			className={className}
@@ -196,29 +215,13 @@ export const BasePriceSection = ({
 							<div className="flex gap-2">
 								<div className="w-full">
 									<FormLabel disabled={disabled}>Price</FormLabel>
-									<InputGroup>
-										<InputGroupInput
-											type="number"
-											placeholder="eg. 100"
-											value={basePrice?.price ?? ""}
-											onKeyDown={(e) => {
-												if (e.key === "-" || e.key === "Minus") {
-													e.preventDefault();
-												}
-											}}
-											onChange={(e) => {
-												const cleanedValue = e.target.value.replace(/-/g, "");
-												if (Number(cleanedValue) >= 0) {
-													handleUpdateBasePrice({ amount: cleanedValue });
-												}
-											}}
-										/>
-										<InputGroupAddon align="inline-end">
-											<span className="text-tertiary-foreground text-xs">
-												{defaultCurrency}
-											</span>
-										</InputGroupAddon>
-									</InputGroup>
+									<CurrencyAmountInput
+										currencyCode={defaultCurrency}
+										displayValue={basePrice?.price?.toString() ?? ""}
+										onRawChange={(raw) =>
+											handleUpdateBasePrice({ amount: raw })
+										}
+									/>
 								</div>
 								{billingType === "recurring" && (
 									<div className="w-full">
@@ -231,6 +234,14 @@ export const BasePriceSection = ({
 									</div>
 								)}
 							</div>
+
+							{!disabled && org?.config?.multi_currency && (
+								<AdditionalCurrenciesEditor
+									currencies={basePriceItem?.additional_currencies}
+									onChange={handleCurrenciesChange}
+									baseCurrency={defaultCurrency}
+								/>
+							)}
 						</div>
 					) : (
 						<Button
@@ -243,7 +254,8 @@ export const BasePriceSection = ({
 							Add a base price
 						</Button>
 					))}
-				<FreeTrialOption />
+				{/* The backend nulls free_trial on license products. */}
+				{!isLicenseEditor && <FreeTrialOption />}
 			</div>
 		</SheetSection>
 	);

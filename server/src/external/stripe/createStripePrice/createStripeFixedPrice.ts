@@ -4,7 +4,11 @@ import type {
 	Price,
 	Product,
 } from "@autumn/shared";
-import { atmnToStripeAmount } from "@autumn/shared";
+import {
+	atmnToStripeAmount,
+	priceConfigForCurrency,
+	setPriceCurrencyStripeId,
+} from "@autumn/shared";
 import type { DrizzleCli } from "@server/db/initDrizzle";
 import { PriceService } from "@server/internal/products/prices/PriceService";
 import type Stripe from "stripe";
@@ -16,18 +20,31 @@ export const createStripeFixedPrice = async ({
 	price,
 	product,
 	org,
+	currency: targetCurrency,
 }: {
 	db: DrizzleCli;
 	stripeCli: Stripe;
 	price: Price;
 	product: Product;
 	org: Organization;
+	currency?: string;
 }) => {
 	const config = price.config as FixedPriceConfig;
-	const currency = org.default_currency || "usd";
+	const orgDefault = (org.default_currency || "usd").toLowerCase();
+	const currency = (
+		targetCurrency ??
+		config.base_currency ??
+		orgDefault
+	).toLowerCase();
+
+	const { amount: currencyAmount } = priceConfigForCurrency({
+		config,
+		currency,
+		orgDefault,
+	});
 
 	const amount = atmnToStripeAmount({
-		amount: config.amount,
+		amount: currencyAmount ?? config.amount,
 		currency,
 	});
 
@@ -45,7 +62,13 @@ export const createStripeFixedPrice = async ({
 		nickname: `Autumn Price (Fixed)`,
 	});
 
-	config.stripe_price_id = stripePrice.id;
+	setPriceCurrencyStripeId({
+		config,
+		currency,
+		orgDefault,
+		slot: "stripe_price_id",
+		id: stripePrice.id,
+	});
 	config.stripe_product_id = stripePrice.product as string;
 
 	await PriceService.update({

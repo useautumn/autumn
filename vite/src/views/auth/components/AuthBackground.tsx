@@ -18,6 +18,7 @@ export function AuthBackground({ children }: AuthBackgroundProps) {
 					src="/auth-hero.avif"
 					alt=""
 					aria-hidden="true"
+					decoding="async"
 					className="absolute inset-0 w-full h-full object-cover"
 				/>
 				<div className="absolute inset-0 dark:bg-black/50" aria-hidden="true" />

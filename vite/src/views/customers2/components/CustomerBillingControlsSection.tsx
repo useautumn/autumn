@@ -34,7 +34,10 @@ const PlanBadge = ({ planName }: { planName: string }) => (
 	<Tooltip>
 		<TooltipTrigger asChild>
 			<span className="flex max-w-[10rem] shrink-0 items-center gap-1 rounded-md bg-muted px-1.5 py-0.5 text-xs font-medium text-tertiary-foreground">
-				<CubeIcon className="size-3 shrink-0 text-violet-500" weight="duotone" />
+				<CubeIcon
+					className="size-3 shrink-0 text-violet-500"
+					weight="duotone"
+				/>
 				<span className="truncate">{planName}</span>
 			</span>
 		</TooltipTrigger>

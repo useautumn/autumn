@@ -1,6 +1,6 @@
 import { Redis } from "ioredis";
 import { instrumentRedis } from "../otel/instrumentRedis.js";
-import { cacheBackupUrl } from "./redisConfig.js";
+import { redisDnsLookup } from "./redisDnsLookup.js";
 import { registerRedisCommands } from "./registerRedisCommands.js";
 
 const REDIS_COMMAND_TIMEOUT_MS =
@@ -22,11 +22,13 @@ const formatRedisEndpoint = ({ cacheUrl }: { cacheUrl: string }) => {
 export const createRedisClient = ({
 	cacheUrl,
 	region,
+	cacheCert = process.env.CACHE_CERT || null,
 	supportsUpstashShebang = false,
 	commandTimeout = REDIS_COMMAND_TIMEOUT_MS,
 }: {
 	cacheUrl: string;
 	region: string;
+	cacheCert?: string | null;
 	supportsUpstashShebang?: boolean;
 	commandTimeout?: number;
 }): Redis => {
@@ -34,10 +36,13 @@ export const createRedisClient = ({
 		`[Redis] ${region}: connecting to ${formatRedisEndpoint({ cacheUrl })}`,
 	);
 
+	const usesTls = cacheUrl.startsWith("rediss:");
+
 	const instance = new Redis(cacheUrl, {
-		tls:
-			process.env.CACHE_CERT && !cacheBackupUrl
-				? { ca: process.env.CACHE_CERT }
+		tls: cacheCert
+			? { ca: cacheCert }
+			: usesTls
+				? { lookup: redisDnsLookup }
 				: undefined,
 		family: 4,
 		keepAlive: 10000,

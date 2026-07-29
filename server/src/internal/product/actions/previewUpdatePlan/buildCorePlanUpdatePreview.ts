@@ -30,6 +30,7 @@ export const buildCorePlanUpdatePreview = ({
 
 	return {
 		plan_id: planId,
+		license_changes: [],
 		...(shouldExpandPlanFromScopedCtx ? { plan: preview } : {}),
 		has_customers: hasCustomers,
 		customer_count: customerCount,

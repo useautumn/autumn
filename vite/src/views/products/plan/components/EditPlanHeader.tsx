@@ -51,6 +51,7 @@ import {
 import { CreateVariantButton } from "./CreateVariantButton";
 import { CreateVariantDialog } from "./CreateVariantDialog";
 import { PlanToolbar } from "./PlanToolbar.tsx";
+import { BackToPlanButton } from "./plan-licenses/BackToPlanButton";
 
 const MIGRATE_CUSTOMERS = "__migrate_customers__";
 
@@ -331,6 +332,7 @@ export const EditPlanHeader = () => {
 						)}
 						{!isCusPlanEditor && (
 							<>
+								<BackToPlanButton />
 								<CreateVariantButton />
 								<PlanToolbar />
 							</>

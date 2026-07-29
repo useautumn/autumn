@@ -6,7 +6,7 @@ import * as z from "zod/v4-mini";
 import { remap as remap$ } from "../lib/primitives.js";
 import { safeParse } from "../lib/schemas.js";
 import * as openEnums from "../types/enums.js";
-import { OpenEnum } from "../types/enums.js";
+import { ClosedEnum, OpenEnum } from "../types/enums.js";
 import { Result as SafeParseResult } from "../types/fp.js";
 import * as types from "../types/primitives.js";
 import { smartUnion } from "../types/smart-union.js";
@@ -16,6 +16,20 @@ import { SDKValidationError } from "./sdk-validation-error.js";
 export type TrackTokensGlobals = {
   xApiVersion?: string | undefined;
 };
+
+/**
+ * How to handle usage that exceeds the available balance. "cap" (default) deducts only what fits, stopping at zero. "overflow" deducts the full value: the balance can go negative and usage limits do not clamp the deduction, though spend limits still apply.
+ */
+export const TrackTokensOverageBehavior = {
+  Cap: "cap",
+  Overflow: "overflow",
+} as const;
+/**
+ * How to handle usage that exceeds the available balance. "cap" (default) deducts only what fits, stopping at zero. "overflow" deducts the full value: the balance can go negative and usage limits do not clamp the deduction, though spend limits still apply.
+ */
+export type TrackTokensOverageBehavior = ClosedEnum<
+  typeof TrackTokensOverageBehavior
+>;
 
 export type TrackTokensParams = {
   /**
@@ -70,6 +84,10 @@ export type TrackTokensParams = {
    * Unix timestamp in milliseconds to use for the usage event. Defaults to the current time.
    */
   timestamp?: number | undefined;
+  /**
+   * How to handle usage that exceeds the available balance. "cap" (default) deducts only what fits, stopping at zero. "overflow" deducts the full value: the balance can go negative and usage limits do not clamp the deduction, though spend limits still apply.
+   */
+  overageBehavior?: TrackTokensOverageBehavior | undefined;
   /**
    * If true, enqueue the event for asynchronous processing and return 204 immediately. The response will not include balance information.
    */
@@ -265,6 +283,11 @@ export type TrackTokensResponse =
   | TrackTokensResponseBody2;
 
 /** @internal */
+export const TrackTokensOverageBehavior$outboundSchema: z.ZodMiniEnum<
+  typeof TrackTokensOverageBehavior
+> = z.enum(TrackTokensOverageBehavior);
+
+/** @internal */
 export type TrackTokensParams$Outbound = {
   customer_id: string;
   entity_id?: string | undefined;
@@ -279,6 +302,7 @@ export type TrackTokensParams$Outbound = {
   reasoning_tokens?: number | undefined;
   properties?: { [k: string]: any } | undefined;
   timestamp?: number | undefined;
+  overage_behavior?: string | undefined;
   async?: boolean | undefined;
 };
 
@@ -301,6 +325,7 @@ export const TrackTokensParams$outboundSchema: z.ZodMiniType<
     reasoningTokens: z.optional(z.int()),
     properties: z.optional(z.record(z.string(), z.any())),
     timestamp: z.optional(z.int()),
+    overageBehavior: z.optional(TrackTokensOverageBehavior$outboundSchema),
     async: z.optional(z.boolean()),
   }),
   z.transform((v) => {
@@ -316,6 +341,7 @@ export const TrackTokensParams$outboundSchema: z.ZodMiniType<
       audioInputTokens: "audio_input_tokens",
       audioOutputTokens: "audio_output_tokens",
       reasoningTokens: "reasoning_tokens",
+      overageBehavior: "overage_behavior",
     });
   }),
 );

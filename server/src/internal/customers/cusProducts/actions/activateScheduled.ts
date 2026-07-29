@@ -1,26 +1,20 @@
 import {
 	AttachScenario,
 	CusProductStatus,
+	type CustomerProductUpdate,
 	type FullCusProduct,
 	type FullCustomer,
 	type InsertCustomerProduct,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { addProductsUpdatedWebhookTask } from "@/internal/analytics/handlers/handleProductsUpdated";
+import { computeCustomerLicenseTransitions } from "@/internal/billing/v2/compute/customerLicenseTransitions/computeCustomerLicenseTransitions.js";
+import { executeAutumnBillingPlan } from "@/internal/billing/v2/execute/executeAutumnBillingPlan.js";
+import { findTransitionSourceCustomerProduct } from "@/internal/billing/v2/utils/initFullCustomerProduct/findTransitionSourceCustomerProduct";
 import { reapplyExistingRolloversToCustomerProduct } from "@/internal/billing/v2/utils/initFullCustomerProduct/reapplyExistingRolloversToCustomerProduct";
 import { reapplyExistingUsagesToCustomerProduct } from "@/internal/billing/v2/utils/initFullCustomerProduct/reapplyExistingUsagesToCustomerProduct";
-import { CusProductService } from "@/internal/customers/cusProducts/CusProductService";
 
-/**
- * Activates a scheduled customer product.
- *
- * This action:
- * 1. Sets status to Active
- * 2. Updates subscription_ids and scheduled_ids
- * 3. Sends products_updated webhook with New scenario
- *
- * @returns The updates applied to the customer product (for tracking)
- */
+/** Activates a scheduled product and converges its inherited license state. */
 export const activateScheduledCustomerProduct = async ({
 	ctx,
 	fromCustomerProduct,
@@ -36,22 +30,25 @@ export const activateScheduledCustomerProduct = async ({
 	subscriptionIds?: string[];
 	scheduledIds?: string[];
 }): Promise<{ updates: Partial<InsertCustomerProduct> }> => {
-	const { db, org, env, logger } = ctx;
+	const { org, env, logger } = ctx;
 
 	logger.info(
 		`[activateScheduledCustomerProduct] Activating ${customerProduct.product.name}${customerProduct.entity_id ? `@${customerProduct.entity_id}` : ""}`,
 	);
+	const transitionSource =
+		fromCustomerProduct ??
+		findTransitionSourceCustomerProduct({ fullCustomer, customerProduct });
 
 	await reapplyExistingUsagesToCustomerProduct({
 		ctx,
-		fromCustomerProduct,
+		fromCustomerProduct: transitionSource,
 		customerProduct,
 		fullCustomer,
 	});
 
 	await reapplyExistingRolloversToCustomerProduct({
 		ctx,
-		fromCustomerProduct,
+		fromCustomerProduct: transitionSource,
 		customerProduct,
 		fullCustomer,
 	});
@@ -62,11 +59,28 @@ export const activateScheduledCustomerProduct = async ({
 		subscription_ids: subscriptionIds,
 		scheduled_ids: scheduledIds,
 	};
+	const customerLicenseTransitions = transitionSource
+		? computeCustomerLicenseTransitions({
+				outgoingCustomerProducts: [transitionSource],
+				incomingCustomerProducts: [customerProduct],
+			})
+		: [];
 
-	await CusProductService.update({
+	// Executing through the shared plan runs the license lifecycle for
+	// activations that bring license-bearing parents live.
+	await executeAutumnBillingPlan({
 		ctx,
-		cusProductId: customerProduct.id,
-		updates,
+		autumnBillingPlan: {
+			customerId: fullCustomer.id || fullCustomer.internal_id,
+			insertCustomerProducts: [],
+			updateCustomerProducts: [
+				{
+					customerProduct,
+					updates: updates as CustomerProductUpdate["updates"],
+				},
+			],
+			customerLicenseTransitions,
+		},
 	});
 
 	// 2. Send webhook

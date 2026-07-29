@@ -1,31 +1,7 @@
-import {
-	type Feature,
-	type PlanUpdatePreviewItemChange,
-	type ProductItem,
-	planItemV0ToProductItem,
-	planItemV1ToV0,
-	type SharedContext,
-} from "@autumn/shared";
+import type { Feature, PlanUpdatePreviewItemChange } from "@autumn/shared";
 import { SubscriptionItemRow } from "@/components/forms/update-subscription-v2/components/SubscriptionItemRow";
 import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
-
-function toProductItem({
-	item,
-	features,
-}: {
-	item: PlanUpdatePreviewItemChange["item"];
-	features: Feature[];
-}): ProductItem | null {
-	const ctx = { features } as unknown as SharedContext;
-	try {
-		return planItemV0ToProductItem({
-			ctx,
-			planItem: planItemV1ToV0({ ctx, item }),
-		});
-	} catch {
-		return null;
-	}
-}
+import { planItemV1ToProductItem } from "@/utils/product/productItemUtils/planItemV1ToProductItem";
 
 export function ItemChangeRow({
 	change,
@@ -35,7 +11,7 @@ export function ItemChangeRow({
 	features?: Feature[];
 }) {
 	const { features: orgFeatures = [] } = useFeaturesQuery();
-	const productItem = toProductItem({
+	const productItem = planItemV1ToProductItem({
 		item: change.item,
 		features: featureOverride ?? orgFeatures,
 	});

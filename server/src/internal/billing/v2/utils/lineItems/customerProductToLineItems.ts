@@ -5,6 +5,7 @@
 import type { BillingContext } from "@autumn/shared";
 import {
 	addCusProductToCusEnt,
+	billingContextToCurrency,
 	cusPriceToCusEnt,
 	customerProductToEntity,
 	type FullCusProduct,
@@ -14,12 +15,12 @@ import {
 	isOneOffPrice,
 	type LineItem,
 	type LineItemContext,
-	orgToCurrency,
 	usagePriceToLineItem,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { getBillingCycleAnchorForDirection } from "@/internal/billing/v2/utils/billingContext/getBillingCycleAnchorForDirection";
 import { augmentBillingContextForAnchorResetRefund } from "./augmentBillingContextForAnchorResetRefund";
+import { customerLicenseToLineItems } from "./customerLicenseToLineItems";
 import { getBackdatedLineItemContext } from "./getBackdatedLineItemContext";
 import { getLineItemBillingPeriod } from "./getLineItemBillingPeriod";
 
@@ -117,7 +118,7 @@ export const customerProductToLineItems = ({
 			direction,
 			billingTiming: "in_advance",
 			now: effectiveNow,
-			currency: orgToCurrency({ org: ctx.org }),
+			currency: billingContextToCurrency({ org: ctx.org, billingContext }),
 			entity,
 			customerProduct,
 			customerPrice: cusPrice,
@@ -163,7 +164,17 @@ export const customerProductToLineItems = ({
 		);
 	}
 
-	// lineItems = lineItems.filter((item) => item.amount !== 0);
+	for (const customerLicense of customerProduct.customer_licenses ?? []) {
+		lineItems.push(
+			...customerLicenseToLineItems({
+				ctx,
+				billingContext,
+				customerProduct,
+				customerLicense,
+				direction,
+			}),
+		);
+	}
 
 	return lineItems;
 };

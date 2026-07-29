@@ -60,6 +60,7 @@ export const processUpdatePlan = async ({
 
 	let nextPlan = plan;
 	const billingContexts: UpdateSubscriptionBillingContext[] = [];
+	let matchedCustomerProductCount = matchedCustomerProducts.length;
 
 	for (const customerProduct of matchedCustomerProducts) {
 		const productContext = await setupUpdatePlanProductContext({
@@ -70,7 +71,10 @@ export const processUpdatePlan = async ({
 			projectedFullCustomer,
 			customerProduct,
 		});
-		if (!productContext) continue;
+		if (!productContext) {
+			matchedCustomerProductCount -= 1;
+			continue;
+		}
 
 		appendMigrationBillingLog({
 			ctx,
@@ -119,7 +123,7 @@ export const processUpdatePlan = async ({
 	return {
 		plan: nextPlan,
 		projectedFullCustomer,
-		matchedCustomerProducts: matchedCustomerProducts.length,
+		matchedCustomerProducts: matchedCustomerProductCount,
 		billingContexts,
 	};
 };

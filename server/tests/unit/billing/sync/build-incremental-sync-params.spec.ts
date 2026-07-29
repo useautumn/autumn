@@ -15,27 +15,30 @@ import type {
 	SyncParamsV1,
 	SyncPlanInstance,
 } from "@autumn/shared";
-import { buildIncrementalSyncParams } from "@/internal/billing/v2/actions/sync/scope/buildIncrementalSyncParams";
 import type {
 	ItemDiff,
 	MatchedPlan,
 	SubscriptionMatch,
 } from "@/internal/billing/v2/actions/sync/detect/types";
+import { buildIncrementalSyncParams } from "@/internal/billing/v2/actions/sync/scope/buildIncrementalSyncParams";
 
 const product = ({
 	id,
 	group = "main",
 	isAddOn = false,
+	version = 1,
 }: {
 	id: string;
 	group?: string | null;
 	isAddOn?: boolean;
+	version?: number;
 }): FullProduct =>
 	({
 		id,
 		internal_id: `${id}_internal`,
 		group,
 		is_add_on: isAddOn,
+		version,
 		prices: [],
 		entitlements: [],
 		items: [],
@@ -145,9 +148,75 @@ const draft = ({
 });
 
 describe("buildIncrementalSyncParams", () => {
+	test("syncs the current phase when future schedule phases exist", () => {
+		const current = product({ id: "current" });
+		const future = product({ id: "future" });
+		const { match, params } = draft({
+			matchedPlans: [matchedPlan({ product: current })],
+		});
+		params.phases?.push({
+			starts_at: 456,
+			plans: [syncPlan({ productId: future.id })],
+		});
+
+		const result = buildIncrementalSyncParams({
+			match,
+			params,
+			linkedCustomerProducts: [],
+		});
+
+		expect(result.shouldSync).toBe(true);
+		if (!result.shouldSync) throw new Error(result.reason);
+		expect(result.params?.phases).toHaveLength(1);
+		expect(result.params?.phases?.[0]?.starts_at).toBe("now");
+		expect(result.params?.phases?.[0]?.plans[0]?.plan_id).toBe(current.id);
+	});
+
+	test("falls back to the only phase when no current sentinel exists", () => {
+		const pro = product({ id: "pro" });
+		const { match, params } = draft({
+			matchedPlans: [matchedPlan({ product: pro })],
+		});
+		params.phases![0]!.starts_at = 123;
+
+		const result = buildIncrementalSyncParams({
+			match,
+			params,
+			linkedCustomerProducts: [],
+		});
+
+		expect(result.shouldSync).toBe(true);
+		if (!result.shouldSync) throw new Error(result.reason);
+		expect(result.params?.phases?.[0]?.starts_at).toBe(123);
+	});
+
+	test("rejects multiple phases without a current sentinel", () => {
+		const pro = product({ id: "pro" });
+		const { match, params } = draft({
+			matchedPlans: [matchedPlan({ product: pro })],
+		});
+		params.phases = [
+			{ starts_at: 123, plans: params.phases![0]!.plans },
+			{ starts_at: 456, plans: params.phases![0]!.plans },
+		];
+
+		expect(
+			buildIncrementalSyncParams({
+				match,
+				params,
+				linkedCustomerProducts: [],
+			}),
+		).toMatchObject({
+			shouldSync: false,
+			reason: "unsupported_phase_shape",
+		});
+	});
+
 	test("keeps a plan when no linked customer product exists for its target", () => {
 		const pro = product({ id: "pro" });
-		const { match, params } = draft({ matchedPlans: [matchedPlan({ product: pro })] });
+		const { match, params } = draft({
+			matchedPlans: [matchedPlan({ product: pro })],
+		});
 
 		const result = buildIncrementalSyncParams({
 			match,
@@ -158,14 +227,16 @@ describe("buildIncrementalSyncParams", () => {
 		expect(result.shouldSync).toBe(true);
 		if (!result.shouldSync) throw new Error(result.reason);
 		if (!result.params) throw new Error("expected incremental params");
-		expect(result.params.phases?.[0]?.plans.map((plan) => plan.plan_id)).toEqual([
-			"pro",
-		]);
+		expect(
+			result.params.phases?.[0]?.plans.map((plan) => plan.plan_id),
+		).toEqual(["pro"]);
 	});
 
 	test("prunes a plan when the linked target already has the same product", () => {
 		const pro = product({ id: "pro" });
-		const { match, params } = draft({ matchedPlans: [matchedPlan({ product: pro })] });
+		const { match, params } = draft({
+			matchedPlans: [matchedPlan({ product: pro })],
+		});
 
 		const result = buildIncrementalSyncParams({
 			match,
@@ -177,6 +248,27 @@ describe("buildIncrementalSyncParams", () => {
 			shouldSync: false,
 			reason: "no_changed_targets",
 		});
+	});
+
+	test("keeps a plan when the public id matches but the version changed", () => {
+		const proV1 = product({ id: "pro", version: 1 });
+		const proV2 = product({ id: "pro", version: 2 });
+		const { match, params } = draft({
+			matchedPlans: [matchedPlan({ product: proV2 })],
+			syncPlans: [{ ...syncPlan({ productId: "pro" }), version: 2 }],
+		});
+
+		const result = buildIncrementalSyncParams({
+			match,
+			params,
+			linkedCustomerProducts: [linkedCustomerProduct({ product: proV1 })],
+		});
+
+		expect(result.shouldSync).toBe(true);
+		if (!result.shouldSync) throw new Error(result.reason);
+		expect(result.params?.phases?.[0]?.plans).toEqual([
+			{ expire_previous: true, plan_id: "pro", quantity: 1, version: 2 },
+		]);
 	});
 
 	test("keeps a plan when the linked target has a different product", () => {
@@ -202,7 +294,6 @@ describe("buildIncrementalSyncParams", () => {
 	test("preserves params metadata and sync plan fields while pruning no-op targets", () => {
 		const pro = product({ id: "pro", group: "main" });
 		const premium = product({ id: "premium", group: "main" });
-		const analytics = product({ id: "analytics", group: "analytics" });
 		const analyticsV2 = product({ id: "analytics_v2", group: "analytics" });
 		const featureQuantities: FeatureOptions[] = [
 			{
@@ -239,7 +330,9 @@ describe("buildIncrementalSyncParams", () => {
 		if (!result.shouldSync) throw new Error(result.reason);
 		if (!result.params) throw new Error("expected incremental params");
 		expect(result.params.customer_id).toBe(params.customer_id);
-		expect(result.params.stripe_subscription_id).toBe(params.stripe_subscription_id);
+		expect(result.params.stripe_subscription_id).toBe(
+			params.stripe_subscription_id,
+		);
 		expect(result.params.stripe_schedule_id).toBe("sched_incremental");
 		expect(result.params.carry_over_usage).toBe(false);
 		expect(result.params.phases?.[0]?.starts_at).toBe("now");
@@ -271,7 +364,9 @@ describe("buildIncrementalSyncParams", () => {
 	test("rejects duplicate linked targets", () => {
 		const pro = product({ id: "pro" });
 		const premium = product({ id: "premium" });
-		const { match, params } = draft({ matchedPlans: [matchedPlan({ product: pro })] });
+		const { match, params } = draft({
+			matchedPlans: [matchedPlan({ product: pro })],
+		});
 
 		const result = buildIncrementalSyncParams({
 			match,
@@ -305,17 +400,19 @@ describe("buildIncrementalSyncParams", () => {
 
 			expect(result.shouldSync).toBe(true);
 			if (!result.shouldSync) throw new Error(result.reason);
-		if (!result.params) throw new Error("expected incremental params");
-			expect(result.params.phases?.[0]?.plans.map((plan) => plan.plan_id)).toEqual([
-				unsupported.id,
-			]);
+			if (!result.params) throw new Error("expected incremental params");
+			expect(
+				result.params.phases?.[0]?.plans.map((plan) => plan.plan_id),
+			).toEqual([unsupported.id]);
 		}
 	});
 
 	test("syncs a downgrade between two ungrouped products with a single linked target (production regression)", () => {
 		const ultra = product({ id: "poke_ultra", group: "" });
 		const pro = product({ id: "poke_pro", group: "" });
-		const { match, params } = draft({ matchedPlans: [matchedPlan({ product: pro })] });
+		const { match, params } = draft({
+			matchedPlans: [matchedPlan({ product: pro })],
+		});
 
 		const result = buildIncrementalSyncParams({
 			match,
@@ -326,9 +423,9 @@ describe("buildIncrementalSyncParams", () => {
 		expect(result.shouldSync).toBe(true);
 		if (!result.shouldSync) throw new Error(result.reason);
 		if (!result.params) throw new Error("expected incremental params");
-		expect(result.params.phases?.[0]?.plans.map((plan) => plan.plan_id)).toEqual([
-			"poke_pro",
-		]);
+		expect(
+			result.params.phases?.[0]?.plans.map((plan) => plan.plan_id),
+		).toEqual(["poke_pro"]);
 	});
 
 	test("rejects genuinely ambiguous ungrouped linked targets", () => {

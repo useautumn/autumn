@@ -1,8 +1,9 @@
 import {
-	cusProductToPrices,
+	customerProductToEffectivePrices,
 	type FullCusProduct,
 	type FullProduct,
 	isProductUpgrade,
+	productToEffectivePrices,
 } from "@autumn/shared";
 
 /**
@@ -20,12 +21,12 @@ export const isAttachUpgrade = ({
 		return false;
 	}
 
-	const currentPrices = cusProductToPrices({
-		cusProduct: currentCustomerProduct,
+	const currentPrices = customerProductToEffectivePrices({
+		customerProduct: currentCustomerProduct,
 	});
 
 	return isProductUpgrade({
 		prices1: currentPrices,
-		prices2: attachProduct.prices,
+		prices2: productToEffectivePrices({ product: attachProduct }),
 	});
 };

@@ -17,6 +17,7 @@ export const V1_2_UpdateSubscriptionParamsChange = defineVersionChange({
 	description: [
 		"Maps free_trial {length,duration} to {duration_length,duration_type}",
 		"Maps top-level items to customize.items",
+		"Maps top-level upsert_licenses to customize.upsert_licenses",
 	],
 	affectedResources: [AffectedResource.ApiSubscriptionUpdate],
 	newSchema: UpdateSubscriptionV1ParamsSchema,
@@ -32,9 +33,7 @@ export const V1_2_UpdateSubscriptionParamsChange = defineVersionChange({
 	}): z.infer<typeof UpdateSubscriptionV1ParamsSchema> => {
 		const customizeV1 = billingParamsV0ToCustomizeV1({
 			ctx,
-			items: input.items,
-			freeTrial: input.free_trial,
-			billingControls: input.billing_controls,
+			billingParams: input,
 		});
 
 		const newPlanId = input.product_id ?? undefined;

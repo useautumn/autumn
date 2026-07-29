@@ -1,12 +1,12 @@
 import { describe, expect, test } from "bun:test";
 import {
-	AllowanceType,
 	AllocatedBillingBehavior,
+	AllowanceType,
 	AppEnv,
 	BillingInterval,
 	BillWhen,
-	customerEntitlementShouldBeBilled,
 	CusProductStatus,
+	customerEntitlementShouldBeBilled,
 	EntInterval,
 	type Entitlement,
 	type Feature,
@@ -36,9 +36,9 @@ import { CreatePlanItemParamsV1Schema } from "@autumn/shared/api/products/items/
 import { planItemV0ToProductItem } from "@autumn/shared/api/products/items/mappers/planItemV0ToProductItem";
 import { planItemV1ToV0 } from "@autumn/shared/api/products/items/mappers/planItemV1ToV0";
 import { itemsAreSame } from "@autumn/shared/utils/productV2Utils/compareProductUtils/compareItemUtils";
-import { toProductItem } from "@autumn/shared/utils/productV2Utils/productItemUtils/mapToItem";
 import { productItemToPlanItemParamsV1 } from "@autumn/shared/utils/productV2Utils/productItemUtils/convertProductItem/productItemToPlanItemParamsV1";
 import { productItemsToPlanItemsV1 } from "@autumn/shared/utils/productV2Utils/productItemUtils/convertProductItem/productItemToPlanItemV1";
+import { toProductItem } from "@autumn/shared/utils/productV2Utils/productItemUtils/mapToItem";
 import type { DrizzleCli } from "@server/db/initDrizzle";
 import { handleNewProductItems } from "@/internal/products/product-items/productItemUtils/handleNewProductItems";
 
@@ -460,6 +460,7 @@ const runHandleNewProductItems = ({
 		isCustom: false,
 		newVersion: true,
 		saveToDb: false,
+		multiCurrencyEnabled: true,
 	});
 
 describe("handleNewProductItems allocated v2 inheritance", () => {

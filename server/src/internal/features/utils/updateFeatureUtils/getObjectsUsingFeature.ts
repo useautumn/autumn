@@ -38,8 +38,8 @@ export const getObjectsUsingFeature = async ({
 		}),
 	]);
 
-	const allPrices = allProducts.flatMap((p) => p.prices);
-	const allEnts = allProducts.flatMap((p) => p.entitlements);
+	const allPrices = allProducts.flatMap((p) => p.prices ?? []);
+	const allEnts = allProducts.flatMap((p) => p.entitlements ?? []);
 	const creditSystems = getCreditSystemsFromFeature({
 		featureId: feature.id,
 		features: ctx.features,

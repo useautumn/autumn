@@ -5,7 +5,11 @@ import type {
 	StripeWebhookHonoEnv,
 } from "./stripeWebhookContext.js";
 
-const updateProductEvents = ["customer.subscription.updated"];
+// sub.created included: auto-sync can insert customer products on first delivery.
+const updateProductEvents = [
+	"customer.subscription.created",
+	"customer.subscription.updated",
+];
 
 const coreEvents = [
 	"customer.subscription.deleted",

@@ -49,6 +49,7 @@ export const handleCheckoutSub = async ({
 			env: attachParams.customer.env,
 			currentPeriodStart: start,
 			currentPeriodEnd: end,
+			billingCycleAnchorSeconds: subscription.billing_cycle_anchor,
 		}),
 	});
 

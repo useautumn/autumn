@@ -35,7 +35,7 @@ export type UpdateCustomerPurchaseLimitIntervalRequestBody = ClosedEnum<
 >;
 
 /**
- * Optional rate limit to cap how often auto top-ups occur.
+ * Optional rate limit to cap how often auto top-ups occur. Pass count to set the current window's consumed top-ups.
  */
 export type UpdateCustomerPurchaseLimitRequest = {
   /**
@@ -50,6 +50,10 @@ export type UpdateCustomerPurchaseLimitRequest = {
    * Maximum number of auto top-ups allowed within the interval.
    */
   limit: number;
+  /**
+   * Set the current window's consumed auto top-up count. Omit to leave runtime state unchanged.
+   */
+  count?: number | undefined;
 };
 
 export type UpdateCustomerAutoTopupRequest = {
@@ -70,7 +74,7 @@ export type UpdateCustomerAutoTopupRequest = {
    */
   quantity: number;
   /**
-   * Optional rate limit to cap how often auto top-ups occur.
+   * Optional rate limit to cap how often auto top-ups occur. Pass count to set the current window's consumed top-ups.
    */
   purchaseLimit?: UpdateCustomerPurchaseLimitRequest | undefined;
   /**
@@ -283,6 +287,10 @@ export type UpdateCustomerParams = {
    * Whether to send email receipts to this customer
    */
   sendEmailReceipts?: boolean | undefined;
+  /**
+   * Currency to bill this customer in (e.g. usd, eur). Defaults to the organization's default currency.
+   */
+  currency?: string | null | undefined;
   /**
    * Billing controls for the customer (auto top-ups, etc.)
    */
@@ -787,6 +795,37 @@ export type UpdateCustomerPurchase = {
   scope?: UpdateCustomerPurchaseScope | undefined;
 };
 
+export type UpdateCustomerLicense = {
+  /**
+   * The plan offered as an assignable license.
+   */
+  licensePlanId: string;
+  /**
+   * The plan that offers this license.
+   */
+  parentPlanId: string;
+  /**
+   * Display name of the license plan.
+   */
+  licensePlanName: string;
+  /**
+   * Total seats the customer has for this license, included plus paid.
+   */
+  granted: number;
+  /**
+   * Seats currently assigned to entities.
+   */
+  usage: number;
+  /**
+   * Seats still available to assign.
+   */
+  remaining: number;
+  /**
+   * Paid seats purchased on top of the plan's included amount.
+   */
+  paidQuantity: number;
+};
+
 /**
  * Feature type: 'boolean' for on/off access, 'metered' for usage-tracked features, 'credit_system' for unified credit pools, 'ai_credit_system' for model-based token pricing.
  */
@@ -1031,6 +1070,10 @@ export type UpdateCustomerResponse = {
    */
   purchases: Array<UpdateCustomerPurchase>;
   /**
+   * License seat pools granted by the customer's plans, with seat counts.
+   */
+  licenses: Array<UpdateCustomerLicense>;
+  /**
    * Feature balances keyed by feature ID, showing usage limits and remaining amounts.
    */
   balances: { [k: string]: Balance };
@@ -1059,6 +1102,7 @@ export type UpdateCustomerPurchaseLimitRequest$Outbound = {
   interval: string;
   interval_count: number;
   limit: number;
+  count?: number | undefined;
 };
 
 /** @internal */
@@ -1070,6 +1114,7 @@ export const UpdateCustomerPurchaseLimitRequest$outboundSchema: z.ZodMiniType<
     interval: UpdateCustomerPurchaseLimitIntervalRequestBody$outboundSchema,
     intervalCount: z._default(z.number(), 1),
     limit: z.number(),
+    count: z.optional(z.number()),
   }),
   z.transform((v) => {
     return remap$(v, {
@@ -1442,6 +1487,7 @@ export type UpdateCustomerParams$Outbound = {
   metadata?: { [k: string]: any } | null | undefined;
   stripe_id?: string | null | undefined;
   send_email_receipts?: boolean | undefined;
+  currency?: string | null | undefined;
   billing_controls?: UpdateCustomerBillingControlsRequest$Outbound | undefined;
   config?: UpdateCustomerConfigRequest$Outbound | undefined;
   new_customer_id?: string | undefined;
@@ -1460,6 +1506,7 @@ export const UpdateCustomerParams$outboundSchema: z.ZodMiniType<
     metadata: z.optional(z.nullable(z.record(z.string(), z.any()))),
     stripeId: z.optional(z.nullable(z.string())),
     sendEmailReceipts: z.optional(z.boolean()),
+    currency: z.optional(z.nullable(z.string())),
     billingControls: z.optional(
       z.lazy(() => UpdateCustomerBillingControlsRequest$outboundSchema),
     ),
@@ -1952,6 +1999,40 @@ export function updateCustomerPurchaseFromJSON(
 }
 
 /** @internal */
+export const UpdateCustomerLicense$inboundSchema: z.ZodMiniType<
+  UpdateCustomerLicense,
+  unknown
+> = z.pipe(
+  z.object({
+    license_plan_id: types.string(),
+    parent_plan_id: types.string(),
+    license_plan_name: types.string(),
+    granted: types.number(),
+    usage: types.number(),
+    remaining: types.number(),
+    paid_quantity: types.number(),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      "license_plan_id": "licensePlanId",
+      "parent_plan_id": "parentPlanId",
+      "license_plan_name": "licensePlanName",
+      "paid_quantity": "paidQuantity",
+    });
+  }),
+);
+
+export function updateCustomerLicenseFromJSON(
+  jsonString: string,
+): SafeParseResult<UpdateCustomerLicense, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => UpdateCustomerLicense$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'UpdateCustomerLicense' from JSON`,
+  );
+}
+
+/** @internal */
 export const UpdateCustomerType$inboundSchema: z.ZodMiniType<
   UpdateCustomerType,
   unknown
@@ -2263,6 +2344,7 @@ export const UpdateCustomerResponse$inboundSchema: z.ZodMiniType<
       z.lazy(() => UpdateCustomerSubscription$inboundSchema),
     ),
     purchases: z.array(z.lazy(() => UpdateCustomerPurchase$inboundSchema)),
+    licenses: z.array(z.lazy(() => UpdateCustomerLicense$inboundSchema)),
     balances: z.record(z.string(), Balance$inboundSchema),
     flags: z.record(
       z.string(),

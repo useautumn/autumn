@@ -3,6 +3,7 @@ import {
 	apiSubscription,
 	type CusProductLegacyData,
 	type FullCustomer,
+	fullCustomerToPlanProducts,
 	isCustomerProductOneOff,
 } from "@autumn/shared";
 import type { RequestContext } from "@/honoUtils/HonoEnv.js";
@@ -18,7 +19,7 @@ export const getApiSubscriptions = async ({
 	const apiSubs: ApiSubscriptionV1[] = [];
 	const apiPurchasesAsSubscriptions: ApiSubscriptionV1[] = [];
 
-	const cusProducts = fullCus.customer_products;
+	const cusProducts = fullCustomerToPlanProducts({ fullCustomer: fullCus });
 
 	const legacyData: Record<string, CusProductLegacyData> = {};
 	for (const cusProduct of cusProducts) {

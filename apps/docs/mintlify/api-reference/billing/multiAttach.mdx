@@ -25,7 +25,7 @@ import { DynamicResponseExample } from "/snippets/dynamic-response-example.jsx";
     </DynamicParamField>
 
     <DynamicParamField body="customize" type="object">
-      Customize the plan to attach. Can override the price or items.
+      Customize the plan to attach. Can override the price, items, or licenses.
       <Expandable title="properties">
         <DynamicParamField body="price" type="object | null">
           Base price configuration for a plan.
@@ -40,6 +40,20 @@ import { DynamicResponseExample } from "/snippets/dynamic-response-example.jsx";
 
             <DynamicParamField body="interval_count" type="number">
               Number of intervals per billing cycle. Defaults to 1.
+            </DynamicParamField>
+
+            <DynamicParamField body="additional_currencies" type="object[]">
+              Base price amounts in additional currencies. The base 'amount' is in the org's default currency.
+              <Expandable title="properties">
+                <DynamicParamField body="currency" type="string" required>
+                  Three-letter Stripe-supported currency code (e.g. 'eur', 'gbp').
+                </DynamicParamField>
+
+                <DynamicParamField body="amount" type="number" required>
+                  Price amount in this currency. Set explicitly per currency, not converted from the base amount.
+                </DynamicParamField>
+
+              </Expandable>
             </DynamicParamField>
 
           </Expandable>
@@ -81,6 +95,20 @@ import { DynamicResponseExample } from "/snippets/dynamic-response-example.jsx";
                   Price per billing_units after included usage. Either 'amount' or 'tiers' is required.
                 </DynamicParamField>
 
+                <DynamicParamField body="additional_currencies" type="object[]">
+                  Amounts in additional currencies for this flat price. The base 'amount' is in the org's default currency. Only valid with 'amount', not 'tiers'.
+                  <Expandable title="properties">
+                    <DynamicParamField body="currency" type="string" required>
+                      Three-letter Stripe-supported currency code (e.g. 'eur', 'gbp').
+                    </DynamicParamField>
+
+                    <DynamicParamField body="amount" type="number" required>
+                      Price amount in this currency. Set explicitly per currency, not converted from the base amount.
+                    </DynamicParamField>
+
+                  </Expandable>
+                </DynamicParamField>
+
                 <DynamicParamField body="tiers" type="object[]">
                   Tiered pricing. Either 'amount' or 'tiers' is required.
                   <Expandable title="properties">
@@ -89,6 +117,18 @@ import { DynamicResponseExample } from "/snippets/dynamic-response-example.jsx";
                     <DynamicParamField body="amount" type="number" />
 
                     <DynamicParamField body="flat_amount" type="number" />
+
+                    <DynamicParamField body="additional_currencies" type="object[]">
+                      Per-currency amounts for this tier. Tier boundaries ('to') are shared across all currencies.
+                      <Expandable title="properties">
+                        <DynamicParamField body="currency" type="any" />
+
+                        <DynamicParamField body="amount" type="any" />
+
+                        <DynamicParamField body="flat_amount" type="any" />
+
+                      </Expandable>
+                    </DynamicParamField>
 
                   </Expandable>
                 </DynamicParamField>
@@ -211,6 +251,10 @@ import { DynamicResponseExample } from "/snippets/dynamic-response-example.jsx";
   </Expandable>
 </DynamicParamField>
 
+<DynamicParamField body="currency" type="string">
+  Currency to bill this multi-attach in (e.g. usd, eur). Must match the customer's currency if they are already locked to one, and every plan must offer a paid price in it. Defaults to the customer's currency, then the org default.
+</DynamicParamField>
+
 <DynamicParamField body="invoice_mode" type="object">
   Invoice mode creates a draft or open invoice and sends it to the customer, instead of charging their card immediately.
   <Expandable title="properties">
@@ -306,6 +350,10 @@ import { DynamicResponseExample } from "/snippets/dynamic-response-example.jsx";
       Whether to send email receipts to this customer
     </DynamicParamField>
 
+    <DynamicParamField body="currency" type="string | null">
+      Currency to bill this customer in (e.g. usd, eur). Defaults to the organization's default currency.
+    </DynamicParamField>
+
     <DynamicParamField body="billing_controls" type="object">
       Billing controls for the customer (auto top-ups, etc.)
       <Expandable title="properties">
@@ -329,7 +377,7 @@ import { DynamicResponseExample } from "/snippets/dynamic-response-example.jsx";
             </DynamicParamField>
 
             <DynamicParamField body="purchase_limit" type="object">
-              Optional rate limit to cap how often auto top-ups occur.
+              Optional rate limit to cap how often auto top-ups occur. Pass count to set the current window's consumed top-ups.
               <Expandable title="properties">
                 <DynamicParamField body="interval" type="'hour' | 'day' | 'week' | 'month'" required>
                   The time interval for the purchase limit window.
@@ -341,6 +389,10 @@ import { DynamicResponseExample } from "/snippets/dynamic-response-example.jsx";
 
                 <DynamicParamField body="limit" type="number" required>
                   Maximum number of auto top-ups allowed within the interval.
+                </DynamicParamField>
+
+                <DynamicParamField body="count" type="number">
+                  Set the current window's consumed auto top-up count. Omit to leave runtime state unchanged.
                 </DynamicParamField>
 
               </Expandable>

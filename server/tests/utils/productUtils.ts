@@ -1,14 +1,15 @@
 import {
 	type AppEnv,
-	customerProducts,
 	type CreateReward,
 	type CreateRewardProgram,
+	customerProducts,
 	isUsagePrice,
+	planLicenses,
 } from "@autumn/shared";
+import { eq, inArray, or } from "drizzle-orm";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 import type { AutumnInt } from "@/external/autumn/autumnCli.js";
 import { ProductService } from "@/internal/products/ProductService.js";
-import { eq } from "drizzle-orm";
 
 export const createProduct = async ({
 	db,
@@ -42,6 +43,20 @@ export const createProduct = async ({
 			await db
 				.delete(customerProducts)
 				.where(eq(customerProducts.internal_product_id, prod.internal_id));
+		}
+
+		// license_entitlements/license_prices RESTRICT their item rows; drop
+		// plan_license first so the product delete can cascade items freely.
+		const internalIds = products.map((prod) => prod.internal_id);
+		if (internalIds.length > 0) {
+			await db
+				.delete(planLicenses)
+				.where(
+					or(
+						inArray(planLicenses.parent_internal_product_id, internalIds),
+						inArray(planLicenses.license_internal_product_id, internalIds),
+					),
+				);
 		}
 
 		const batchDelete = [];
@@ -119,7 +134,15 @@ export const createProducts = async ({
 	const batchCreate = [];
 	for (const product of products) {
 		batchCreate.push(
-			createProduct({ db, orgId, env, autumn, product, prefix, createInStripe }),
+			createProduct({
+				db,
+				orgId,
+				env,
+				autumn,
+				product,
+				prefix,
+				createInStripe,
+			}),
 		);
 	}
 

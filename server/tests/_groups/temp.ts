@@ -1,26 +1,12 @@
 import type { TestGroup } from "./types";
 
-const activeTempPaths = [
-	"integration/crud/plans/variants/core-contract.test.ts",
-	"integration/crud/plans/variants/feature-drop-propagation.test.ts",
-	"integration/crud/plans/variants/interval-family.test.ts",
-	"integration/crud/plans/variants/lifecycle.test.ts",
-	"integration/crud/plans/variants/reset-tier-ladder.test.ts",
-	"integration/crud/plans/variants/rollover-disambiguation.test.ts",
-	"integration/crud/plans/variants/stripe-resource-carryover.test.ts",
-	"integration/crud/plans/previewUpdate/preview-update-plan-basic.test.ts",
-	"integration/crud/plans/update/in-place/in-place-add.test.ts",
-	"integration/crud/plans/update/in-place/in-place-base-price.test.ts",
-	"integration/crud/plans/update/in-place/in-place-delete.test.ts",
-	"integration/crud/plans/update/in-place/in-place-isolation.test.ts",
-	"integration/crud/plans/update/in-place/in-place-update.test.ts",
-	"integration/crud/plans/versioning/pro-annual-propagation.test.ts",
-	"integration/crud/plans/versioning/pro-usage-ladder-variants.test.ts",
-];
+// Empty: everything from `bun tw --max=300` (run ms0mtl7z-xv6q4d) is resolved.
+// Add paths here while triaging a run, then clear them again.
+const activeTempPaths: string[] = [];
 
 export const temp: TestGroup = {
 	name: "temp",
-	description: "Plan variant regression tests",
+	description: "Scratch group for triaging a failing tw run",
 	tier: "domain",
 	paths: activeTempPaths,
 	maxConcurrency: 2,

@@ -1,12 +1,15 @@
 import {
 	BillingVersion,
+	type FullProduct,
 	type InvoiceMode,
+	isFreeProduct,
 	isOneOffProduct,
 	isProductPaidAndRecurring,
 	type MultiAttachBillingContext,
 	type MultiAttachParamsV0,
 	type MultiAttachProductContext,
 	orgToReturnUrl,
+	resolveCustomerCurrency,
 } from "@autumn/shared";
 import type { FreeTrialParamsV1 } from "@shared/api/common/freeTrial/freeTrialParamsV1";
 import type Stripe from "stripe";
@@ -30,16 +33,22 @@ const setupImmediateMultiProductCheckoutMode = ({
 	paymentMethod,
 	redirectMode,
 	invoiceMode,
+	fullProducts,
 }: {
 	paymentMethod?: Stripe.PaymentMethod;
 	redirectMode?: MultiAttachParamsV0["redirect_mode"];
 	invoiceMode?: InvoiceMode;
+	fullProducts: FullProduct[];
 }) => {
 	if (redirectMode === "never") {
 		return null;
 	}
 
 	if (invoiceMode) {
+		return null;
+	}
+
+	if (fullProducts.every((product) => isFreeProduct({ product }))) {
 		return null;
 	}
 
@@ -70,7 +79,7 @@ const setupImmediateMultiProductTrialContext = async ({
 		isProductPaidAndRecurring(product),
 	);
 	const recurringProduct = fullProducts.find(
-		(product) => !isOneOffProduct({ prices: product.prices }),
+		(product) => !isOneOffProduct({ product }),
 	);
 	const targetProduct =
 		paidRecurringProduct ?? recurringProduct ?? fullProducts[0];
@@ -188,7 +197,9 @@ export const setupImmediateMultiProductBillingContext = async ({
 		fullCustomer,
 		targetCustomerProduct: undefined,
 		params,
-		skipSubscriptionFetching: fullProducts.every(isOneOffProduct),
+		skipSubscriptionFetching: fullProducts.every((product) =>
+			isOneOffProduct({ product }),
+		),
 		newBillingSubscription: params.new_billing_subscription || undefined,
 		includeScheduledProductsForScheduleLookup,
 		createStripeCustomerIfMissing: !preview,
@@ -249,6 +260,12 @@ export const setupImmediateMultiProductBillingContext = async ({
 		fullCustomer,
 		fullProducts,
 		productContexts,
+		currency: resolveCustomerCurrency({
+			customer: fullCustomer,
+			org: ctx.org,
+			requested: params.currency,
+			stripeCurrency: stripeCustomer?.currency,
+		}),
 		featureQuantities: productContexts.flatMap(
 			(productContext) => productContext.featureQuantities,
 		),
@@ -277,6 +294,7 @@ export const setupImmediateMultiProductBillingContext = async ({
 			paymentMethod,
 			redirectMode: params.redirect_mode,
 			invoiceMode,
+			fullProducts,
 		}),
 		billingVersion: BillingVersion.V2,
 		actionSource: "multiAttach",

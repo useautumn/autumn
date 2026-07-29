@@ -23,6 +23,7 @@ import { ProductService } from "@/internal/products/ProductService.js";
 const autumnRpc = new AutumnRpcCli({ version: ApiVersion.V2_1 });
 const autumnV1_2 = new AutumnInt({ version: ApiVersion.V1_2 });
 const autumnV2_0 = new AutumnInt({ version: ApiVersion.V2_0 });
+const autumnV2_3 = new AutumnInt({ version: ApiVersion.V2_3 });
 
 const { db, org, env } = ctx;
 type UpdatePlanRpcInput = Omit<UpdatePlanParamsV2Input, "plan_id">;
@@ -236,7 +237,7 @@ test.concurrent(
 
 		await autumnV1_2.attach({ customer_id: customerId, product_id: planId });
 
-		const updated = await autumnV2_0.products.update<
+		const updated = await autumnV2_3.products.update<
 			ApiPlan & { metadata?: Record<string, unknown> },
 			UpdatePlanParamsInput
 		>(planId, {

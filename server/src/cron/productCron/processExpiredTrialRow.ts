@@ -8,6 +8,7 @@ import {
 import { customerProductToDefaultProduct } from "@utils/cusProductUtils/convertCusProduct/customerProductToDefaultProduct";
 import type { InferSelectModel } from "drizzle-orm";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
+import { executeAutumnBillingPlan } from "@/internal/billing/v2/execute/executeAutumnBillingPlan.js";
 import { sendBillingUpdatedWebhook } from "@/internal/billing/v2/workflows/sendBillingUpdatedWebhook/sendBillingUpdatedWebhook";
 import { CusService } from "@/internal/customers/CusService";
 import { activateFreeDefaultProduct } from "@/internal/customers/cusProducts/actions/activateFreeDefaultProduct";
@@ -82,11 +83,19 @@ export const processExpiredTrialRow = async ({
 			defaultProduct,
 		});
 	}
-	await CusProductService.update({
+	// Executing through the shared plan runs the license lifecycle when the
+	// expiring trial carried license state.
+	await executeAutumnBillingPlan({
 		ctx,
-		cusProductId: trialFullCusProduct.id,
-		updates: {
-			status: CusProductStatus.Expired,
+		autumnBillingPlan: {
+			customerId: fullCustomer.id || fullCustomer.internal_id,
+			insertCustomerProducts: [],
+			updateCustomerProducts: [
+				{
+					customerProduct: trialFullCusProduct,
+					updates: { status: CusProductStatus.Expired },
+				},
+			],
 		},
 	});
 

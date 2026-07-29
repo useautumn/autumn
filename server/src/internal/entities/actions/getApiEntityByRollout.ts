@@ -3,7 +3,6 @@ import { shed503OnTransientError } from "@/db/shed503OnTransientError.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { getOrSetCachedFullSubject } from "@/internal/customers/cache/fullSubject/index.js";
 import { isFullSubjectRolloutEnabled } from "@/internal/misc/rollouts/fullSubjectRolloutUtils.js";
-import { getApiEntity } from "../entityUtils/apiEntityUtils/getApiEntity.js";
 import { getApiEntityV2 } from "../entityUtils/getApiEntityV2/getApiEntityV2.js";
 
 export const getApiEntityByRollout = async ({
@@ -20,24 +19,17 @@ export const getApiEntityByRollout = async ({
 	withAutumnId?: boolean;
 }): Promise<ApiEntityV2> => {
 	if (isFullSubjectRolloutEnabled({ ctx })) {
-		const fullSubject = await shed503OnTransientError({
-			ctx,
-			source: "entities.get",
-			run: () =>
-				getOrSetCachedFullSubject({ ctx, customerId, entityId, source }),
-		});
-
-		return getApiEntityV2({
-			ctx,
-			fullSubject,
-			withAutumnId,
-		});
 	}
 
-	return getApiEntity({
+	const fullSubject = await shed503OnTransientError({
 		ctx,
-		customerId,
-		entityId,
+		source: "entities.get",
+		run: () => getOrSetCachedFullSubject({ ctx, customerId, entityId, source }),
+	});
+
+	return getApiEntityV2({
+		ctx,
+		fullSubject,
 		withAutumnId,
 	});
 };

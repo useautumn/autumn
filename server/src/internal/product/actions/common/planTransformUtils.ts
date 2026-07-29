@@ -51,6 +51,19 @@ export const fullProductToApiPlanV1 = ({
 		features: ctx.features,
 	});
 
+// Row ids on a plan response belong to the source product; strip them whenever
+// the plan seeds a different product so it mints its own entitlement/price rows.
+export const stripPlanRowIds = ({ plan }: { plan: ApiPlanV1 }): ApiPlanV1 => ({
+	...plan,
+	price: plan.price
+		? (({ entitlement_id: _entitlementId, price_id: _priceId, ...rest }) =>
+				rest)(plan.price)
+		: plan.price,
+	items: plan.items.map(
+		({ entitlement_id: _entitlementId, price_id: _priceId, ...rest }) => rest,
+	),
+});
+
 export const getApiPlanDiff = ({
 	from,
 	to,

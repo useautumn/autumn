@@ -1,20 +1,12 @@
 import * as http from "node:http";
 import * as arctic from "arctic";
 import open from "open";
-import { BACKEND_URL, LOCAL_BACKEND_URL } from "../../constants.js";
-import { isLocal } from "../../lib/env/cliContext.js";
+import { getBackendUrl } from "../../lib/env/backendUrl.js";
 import {
 	getErrorHtml,
 	getSuccessHtml,
 } from "../../views/html/oauth-callback.js";
 import { getOAuthRedirectUri, OAUTH_PORTS } from "./constants.js";
-
-/**
- * Get the current backend URL based on CLI flags
- */
-function getBackendUrl(): string {
-	return isLocal() ? LOCAL_BACKEND_URL : BACKEND_URL;
-}
 
 const getAuthorizationEndpoint = () =>
 	`${getBackendUrl()}/api/auth/oauth2/authorize`;

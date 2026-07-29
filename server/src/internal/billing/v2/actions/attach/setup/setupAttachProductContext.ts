@@ -15,6 +15,7 @@ import {
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { setupPatchContext } from "@/internal/billing/v2/setup/patch";
+import { setupCustomizeLicenses } from "@/internal/billing/v2/setup/setupCustomizeLicenses";
 import { initFullCustomerProduct } from "@/internal/billing/v2/utils/initFullCustomerProduct/initFullCustomerProduct";
 import { getEntsWithFeature } from "@/internal/products/entitlements/entitlementUtils";
 import { ProductService } from "@/internal/products/ProductService";
@@ -115,27 +116,31 @@ const resolveAttachProductContext = async ({
 		orgId: org.id,
 		env,
 		version: params.version,
-		logResult: true,
-		logger: ctx.logger,
 	});
 
-	if (fullCustomer) {
-		const patchProductContext = setupAttachPatchProductContext({
-			ctx,
-			params,
-			fullCustomer,
-			fullProduct,
-			currentEpochMs,
-		});
-
-		if (patchProductContext) return patchProductContext;
-	}
+	const patchProductContext = fullCustomer
+		? setupAttachPatchProductContext({
+				ctx,
+				params,
+				fullCustomer,
+				fullProduct,
+				currentEpochMs,
+			})
+		: undefined;
 
 	// 2. Handle custom items if provided
-	return await setupCustomFullProduct({
+	const productContext =
+		patchProductContext ??
+		(await setupCustomFullProduct({
+			ctx,
+			currentFullProduct: fullProduct,
+			customizePlan: params.customize,
+		}));
+
+	return await setupCustomizeLicenses({
 		ctx,
-		currentFullProduct: fullProduct,
-		customizePlan: params.customize,
+		customize: params.customize,
+		productContext,
 	});
 };
 

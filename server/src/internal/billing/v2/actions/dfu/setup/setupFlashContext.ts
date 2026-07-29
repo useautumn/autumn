@@ -177,7 +177,6 @@ const buildPlanContext = async ({
 		orgId: ctx.org.id,
 		env: ctx.env,
 		version: plan.version,
-		logger: ctx.logger,
 	});
 
 	const featureQuantities = setupFeatureQuantitiesContext({

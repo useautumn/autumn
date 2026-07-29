@@ -1,12 +1,12 @@
-import { ToolbarButton } from "@autumn/ui";
-import { Trash } from "lucide-react";
-import { useState } from "react";
 import {
 	DropdownMenu,
 	DropdownMenuContent,
 	DropdownMenuItem,
 	DropdownMenuTrigger,
+	ToolbarButton,
 } from "@autumn/ui";
+import { Trash } from "lucide-react";
+import { useState } from "react";
 import { DeleteCustomerDialog } from "@/views/customers/customer/components/DeleteCustomerDialog";
 import type { CustomerWithProducts } from "./CustomerListColumns";
 

@@ -1,5 +1,6 @@
 import {
 	type BillingBehavior,
+	type CustomizePlanLicense,
 	FreeTrialDuration,
 	type PlanTiming,
 	type ProductItem,
@@ -17,7 +18,9 @@ export interface FormCustomLineItem {
 export const AttachFormSchema = z.object({
 	productId: z.string(),
 	prepaidOptions: z.record(z.string(), z.number().nonnegative().optional()),
+	licenseQuantities: z.record(z.string(), z.number().nonnegative().optional()),
 	items: z.custom<ProductItem[]>().nullable(),
+	addLicenses: z.custom<CustomizePlanLicense[]>().nullable(),
 	isCustom: z.boolean(),
 	version: z.number().positive().optional(),
 	trialLength: z.number().positive().nullable(),
@@ -34,6 +37,7 @@ export const AttachFormSchema = z.object({
 	resetBillingCycle: z.boolean(),
 	discounts: z.custom<FormDiscount[]>(),
 	grantFree: z.boolean(),
+	currency: z.string().nullable(),
 
 	noBillingChanges: z.boolean(),
 	enablePlanImmediately: z.boolean(),

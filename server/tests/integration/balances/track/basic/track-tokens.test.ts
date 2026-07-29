@@ -9,6 +9,7 @@ import type {
 	TrackResponseV3,
 } from "@autumn/shared";
 import { ApiVersion, ErrCode, events, FeatureType } from "@autumn/shared";
+import { eventsDb } from "@tests/integration/balances/utils/events/getCustomerEvents.js";
 import { expectBalanceCorrect } from "@tests/integration/utils/expectBalanceCorrect.js";
 import { TestFeature } from "@tests/setup/v2Features.js";
 import { expectAutumnError } from "@tests/utils/expectUtils/expectErrUtils.js";
@@ -19,7 +20,6 @@ import { initScenario, s } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";
 import { Decimal } from "decimal.js";
 import { and, desc, eq } from "drizzle-orm";
-import { db } from "@/db/initDrizzle.js";
 import { AutumnInt } from "@/external/autumn/autumnCli.js";
 import { getModelCreditCost } from "@/internal/features/aiCreditSystemUtils.js";
 import { getModelsDevPricing } from "@/internal/features/utils/getModelPricing.js";
@@ -205,7 +205,7 @@ test.concurrent(
 		const customer = (await autumnV2_2.customers.get(customerId, {
 			with_autumn_id: true,
 		})) as ApiCustomerV5 & { autumn_id?: string };
-		const eventRows = await db
+		const eventRows = await eventsDb()
 			.select({
 				created_at: events.created_at,
 				timestamp: events.timestamp,

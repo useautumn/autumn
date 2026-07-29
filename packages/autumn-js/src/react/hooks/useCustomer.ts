@@ -130,6 +130,7 @@ export type UseCustomerResult = HookResultWithMethods<
  * Fetches or creates an Autumn customer and provides billing actions.
  *
  * @returns Customer data along with billing methods: `attach`, `previewAttach`, `updateSubscription`, `previewUpdateSubscription`, `multiAttach`, `previewMultiAttach`, `check`, `setupPayment`, and `openCustomerPortal`.
+ * @deprecated Autumn's React hooks are deprecated, as they don't scale well over time. Please use our backend SDK instead.
  */
 export const useCustomer = (
 	params: UseCustomerParams = {},

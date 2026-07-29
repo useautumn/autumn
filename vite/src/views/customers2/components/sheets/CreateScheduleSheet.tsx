@@ -62,15 +62,16 @@ function hasSchedulePhaseBillingCycleReset({
 	schedule: FullCustomerSchedule;
 	nowMs: number;
 }) {
-	return schedule.phases.some((phase) =>
-		phase.starts_at > nowMs &&
-		phase.customer_product_ids.some((cpId) => {
-			const cusProduct = findCustomerProductById({
-				fullCustomer: customer,
-				customerProductId: cpId,
-			});
-			return cusProduct?.billing_cycle_anchor_resets_at === phase.starts_at;
-		}),
+	return schedule.phases.some(
+		(phase) =>
+			phase.starts_at > nowMs &&
+			phase.customer_product_ids.some((cpId) => {
+				const cusProduct = findCustomerProductById({
+					fullCustomer: customer,
+					customerProductId: cpId,
+				});
+				return cusProduct?.billing_cycle_anchor_resets_at === phase.starts_at;
+			}),
 	);
 }
 

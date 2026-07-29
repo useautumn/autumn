@@ -63,6 +63,7 @@ export const usePricingConfigSave = ({
 					items: agentProduct.items ?? [],
 					free_trial: agentProduct.free_trial ?? null,
 				} satisfies UpdateProductV2Params,
+				orgCurrency: org?.default_currency,
 				onSuccess: async () => {},
 			});
 		}

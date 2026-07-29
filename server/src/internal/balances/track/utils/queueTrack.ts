@@ -9,6 +9,7 @@ export const queueTrack = async ({
 	ctx,
 	body,
 	queueUrl,
+	messageGroupId,
 	messageDeduplicationId,
 	logFallback = true,
 	markQueuedForReplay = true,
@@ -16,6 +17,7 @@ export const queueTrack = async ({
 	ctx: AutumnContext;
 	body: TrackParams;
 	queueUrl?: string;
+	messageGroupId?: string;
 	messageDeduplicationId?: string;
 	logFallback?: boolean;
 	markQueuedForReplay?: boolean;
@@ -32,7 +34,9 @@ export const queueTrack = async ({
 		await addTaskToQueue({
 			jobName: JobName.Track,
 			queueUrl: resolvedQueueUrl,
-			messageGroupId: `${ctx.org.id}:${ctx.env}:${body.customer_id}:${body.entity_id ?? "none"}`,
+			messageGroupId:
+				messageGroupId ??
+				`${ctx.org.id}:${ctx.env}:${body.customer_id}:${body.entity_id ?? "none"}`,
 			messageDeduplicationId: messageDeduplicationId ?? ctx.id,
 			payload: {
 				orgId: ctx.org.id,

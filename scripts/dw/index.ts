@@ -1,5 +1,6 @@
 import { cmdAdmin } from "./commands/admin.ts";
 import { cmdAttach } from "./commands/attach.ts";
+import { cmdCleanup } from "./commands/cleanup.ts";
 import { cmdDefault } from "./commands/default.ts";
 import { cmdDisable } from "./commands/disable.ts";
 import { cmdEnable } from "./commands/enable.ts";
@@ -31,6 +32,9 @@ async function main(): Promise<void> {
 		case "list":
 			cmdList();
 			break;
+		case "cleanup":
+			cmdCleanup({ dryRun: process.argv.includes("--dry-run") });
+			break;
 		case "reset":
 			await cmdReset();
 			break;
@@ -54,7 +58,7 @@ async function main(): Promise<void> {
 			break;
 		default:
 			fatal(
-				`unknown subcommand: ${sub} (use: setup | run | teardown | list | reset | logs | attach | identify | enable | disable | admin)`,
+				`unknown subcommand: ${sub} (use: setup | run | teardown | cleanup | list | reset | logs | attach | identify | enable | disable | admin)`,
 			);
 	}
 }

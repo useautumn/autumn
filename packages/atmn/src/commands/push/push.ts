@@ -523,7 +523,10 @@ function getPlanFeatureIds(plan: Plan): string[] {
  * Strips default/empty values so semantically identical plans
  * produce the same representation.
  */
-function normalizePlanForCompare(plan: Plan): Record<string, unknown> {
+function normalizePlanForCompare(
+	plan: Plan,
+	licenseVersionFallbacks?: Map<string, number | undefined>,
+): Record<string, unknown> {
 	const result: Record<string, unknown> = {
 		id: plan.id,
 		name: plan.name,
@@ -562,6 +565,14 @@ function normalizePlanForCompare(plan: Plan): Record<string, unknown> {
 			.sort((a, b) => a.featureId.localeCompare(b.featureId))
 			.map(normalizePlanFeatureForCompare);
 	}
+	result.licenses = [...(plan.licenses ?? [])]
+		.sort((a, b) => a.licensePlanId.localeCompare(b.licensePlanId))
+		.map((license) => ({
+			licensePlanId: license.licensePlanId,
+			version:
+				license.version ?? licenseVersionFallbacks?.get(license.licensePlanId),
+			included: license.included ?? 0,
+		}));
 
 	return result;
 }
@@ -582,9 +593,16 @@ function hasFeatureChanged(local: Feature, remoteRaw: unknown): boolean {
  * Transforms the remote API data to SDK format before comparing.
  */
 function hasPlanChanged(local: Plan, remoteRaw: unknown): boolean {
+	const remote = remoteRaw as Plan;
+	const licenseVersionFallbacks = new Map(
+		(remote.licenses ?? []).map((license) => [
+			license.licensePlanId,
+			license.version,
+		]),
+	);
 	return !valuesEqual(
-		normalizePlanForCompare(local),
-		normalizePlanForCompare(remoteRaw as Plan),
+		normalizePlanForCompare(local, licenseVersionFallbacks),
+		normalizePlanForCompare(remote),
 	);
 }
 

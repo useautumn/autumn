@@ -1,6 +1,5 @@
 import type { MDXComponents } from "mdx/types";
 import type { Metadata } from "next";
-import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { mdxComponents } from "@/components/blogComponents";
@@ -143,28 +142,15 @@ export default async function BlogPostPage({ params }: { params: BlogParams }) {
 					)}
 				</header>
 
-				{HeroComponent ? (
+				{HeroComponent && (
 					<div className="mb-12">
 						<HeroComponent />
 					</div>
-				) : (
-					post.image && (
-						<div className="relative w-full aspect-[2/1] overflow-hidden border border-[#292929] bg-[#080808] mb-12">
-							<Image
-								src={post.image}
-								alt={post.title}
-								fill
-								className="object-contain"
-								priority
-								sizes="(max-width: 768px) 100vw, 720px"
-							/>
-						</div>
-					)
 				)}
 
 				<hr className="border-[#292929] mb-12" />
 
-				<article className="prose prose-invert prose-lg max-w-none prose-p:text-[#E5E5E5] prose-li:text-[#E5E5E5] prose-code:before:content-none prose-code:after:content-none">
+				<article className="prose prose-invert prose-lg max-w-none prose-p:text-[#E5E5E5] prose-p:leading-relaxed prose-p:my-5 prose-li:text-[#E5E5E5] prose-li:my-1 prose-code:before:content-none prose-code:after:content-none">
 					<Content components={mdxComponents} />
 				</article>
 			</div>

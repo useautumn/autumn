@@ -14,12 +14,20 @@ import type { AutumnContext } from "@/honoUtils/HonoEnv";
 
 const mockState = {
 	priceIds: [] as string[],
+	currencies: [] as (string | undefined)[],
 	productCalls: 0,
 };
 
 mock.module("@/external/stripe/createStripePrice/createStripePrice", () => ({
-	createStripePriceIFNotExist: async ({ price }: { price: Price }) => {
+	createStripePriceIFNotExist: async ({
+		price,
+		currency,
+	}: {
+		price: Price;
+		currency?: string;
+	}) => {
 		mockState.priceIds.push(price.id);
+		mockState.currencies.push(currency);
 	},
 }));
 
@@ -146,6 +154,7 @@ const customerProduct = ({
 describe("initStripeResourcesForBillingPlan", () => {
 	beforeEach(() => {
 		mockState.priceIds = [];
+		mockState.currencies = [];
 		mockState.productCalls = 0;
 	});
 
@@ -306,7 +315,7 @@ describe("initStripeResourcesForBillingPlan", () => {
 		});
 
 		const stripeItemSpecs = customerProductToStripeItemSpecs({
-			ctx: {} as AutumnContext,
+			ctx: { org: { default_currency: "usd" } } as unknown as AutumnContext,
 			customerProduct: freeCustomerProduct,
 		});
 
@@ -361,6 +370,37 @@ describe("initStripeResourcesForBillingPlan", () => {
 
 		expect(mockState.priceIds).toContain("price_kept");
 		expect(mockState.priceIds).not.toContain("price_removed");
+	});
+
+	test("forwards the customer's resolved currency into price creation", async () => {
+		const basePrice = fixedPrice({ id: "price_base" });
+		const newCustomerProduct = customerProduct({
+			customerPrices: [
+				customerPrice({ id: "cus_price_base", price: basePrice }),
+			],
+		});
+
+		await initStripeResourcesForBillingPlan({
+			ctx: {
+				db: {},
+				org: { id: "org_1", default_currency: "usd" },
+				env: "sandbox",
+				logger: { debug: () => undefined },
+			} as unknown as AutumnContext,
+			billingContext: {
+				fullCustomer: {
+					internal_id: "cus_internal",
+					currency: "eur",
+					customer_products: [],
+				},
+			} as unknown as BillingContext,
+			autumnBillingPlan: {
+				customerId: "cus_1",
+				insertCustomerProducts: [newCustomerProduct],
+			} as AutumnBillingPlan,
+		});
+
+		expect(mockState.currencies).toEqual(["eur"]);
 	});
 });
 

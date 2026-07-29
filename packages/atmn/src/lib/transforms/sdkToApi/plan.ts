@@ -1,8 +1,25 @@
 import type { Plan, PlanItem } from "../../../compose/models/index.js";
 
+export interface ApiPlanLicenseParams {
+	license_plan_id: string;
+	version?: number;
+	included: number;
+}
+
 /**
  * API plan format expected by the server's CreatePlanParams schema
  */
+export interface ApiAdditionalCurrency {
+	currency: string;
+	amount: number;
+}
+
+export interface ApiAdditionalCurrencyTier {
+	currency: string;
+	amount?: number;
+	flat_amount?: number;
+}
+
 export interface ApiPlanParams {
 	id: string;
 	name: string;
@@ -13,6 +30,7 @@ export interface ApiPlanParams {
 	price?: {
 		amount: number;
 		interval: string;
+		additional_currencies?: ApiAdditionalCurrency[];
 	};
 	items?: ApiPlanItemParams[];
 	free_trial?: {
@@ -21,6 +39,7 @@ export interface ApiPlanParams {
 		card_required: boolean;
 	};
 	billing_controls?: Plan["billingControls"];
+	licenses: ApiPlanLicenseParams[];
 }
 
 export interface ApiPlanItemParams {
@@ -33,13 +52,19 @@ export interface ApiPlanItemParams {
 	};
 	price?: {
 		amount?: number;
-		tiers?: Array<{ to: number | "inf"; amount: number; flat_amount?: number }>;
+		tiers?: Array<{
+			to: number | "inf";
+			amount: number;
+			flat_amount?: number;
+			additional_currencies?: ApiAdditionalCurrencyTier[];
+		}>;
 		interval: string;
 		interval_count?: number;
 		billing_units?: number;
 		billing_method: string;
 		max_purchase?: number;
 		tier_behavior?: string;
+		additional_currencies?: ApiAdditionalCurrency[];
 	};
 	proration?: {
 		on_increase: string;
@@ -106,17 +131,34 @@ export function transformPlanItem(planItem: PlanItem): ApiPlanItemParams {
 			...(planItem.price.amount !== undefined && {
 				amount: planItem.price.amount,
 			}),
+			...(planItem.price.additionalCurrencies && {
+				additional_currencies: planItem.price.additionalCurrencies,
+			}),
 			...(planItem.price.tiers && {
 				tiers: planItem.price.tiers.map((tier) => {
 					const t = tier as {
 						to: number | "inf";
 						amount: number;
 						flatAmount?: number;
+						additionalCurrencies?: Array<{
+							currency: string;
+							amount?: number;
+							flatAmount?: number;
+						}>;
 					};
 					return {
 						to: t.to,
 						amount: t.amount,
 						...(t.flatAmount !== undefined && { flat_amount: t.flatAmount }),
+						...(t.additionalCurrencies && {
+							additional_currencies: t.additionalCurrencies.map((entry) => ({
+								currency: entry.currency,
+								...(entry.amount !== undefined && { amount: entry.amount }),
+								...(entry.flatAmount !== undefined && {
+									flat_amount: entry.flatAmount,
+								}),
+							})),
+						}),
 					};
 				}),
 			}),
@@ -165,6 +207,11 @@ export function transformPlanToApi(plan: Plan): ApiPlanParams {
 	const result: ApiPlanParams = {
 		id: plan.id,
 		name: plan.name,
+		licenses: (plan.licenses ?? []).map((license) => ({
+			license_plan_id: license.licensePlanId,
+			...(license.version !== undefined ? { version: license.version } : {}),
+			included: license.included ?? 0,
+		})),
 	};
 
 	if (plan.description !== undefined) {
@@ -187,6 +234,9 @@ export function transformPlanToApi(plan: Plan): ApiPlanParams {
 		result.price = {
 			amount: plan.price.amount,
 			interval: plan.price.interval,
+			...(plan.price.additionalCurrencies && {
+				additional_currencies: plan.price.additionalCurrencies,
+			}),
 		};
 	}
 

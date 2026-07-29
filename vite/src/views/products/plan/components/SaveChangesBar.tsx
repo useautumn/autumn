@@ -1,9 +1,14 @@
-import { isFeaturePriceItem } from "@autumn/shared";
+import {
+	isFeaturePriceItem,
+	type PlanLicenseParams,
+	type PlanUpdatePreview,
+} from "@autumn/shared";
 import { Button, ShortcutButton } from "@autumn/ui";
 import { useState } from "react";
 import { toast } from "sonner";
+import { useOrg } from "@/hooks/common/useOrg";
 import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
-import { usePrefetchPlanUpdatePreview } from "@/hooks/queries/usePlanUpdatePreview";
+import { useFetchPlanUpdatePreview } from "@/hooks/queries/usePlanUpdatePreview";
 import { usePlanVariants } from "@/hooks/queries/usePlanVariants";
 import { useProductsQuery } from "@/hooks/queries/useProductsQuery";
 import {
@@ -13,14 +18,21 @@ import {
 	useProductStore,
 } from "@/hooks/stores/useProductStore";
 import { useSheetStore } from "@/hooks/stores/useSheetStore";
-import { ProductService } from "@/services/products/ProductService";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
-import { useProductCountsQuery } from "../../product/hooks/queries/useProductCountsQuery";
+import { getBackendErr } from "@/utils/genUtils";
 import { useProductQuery } from "../../product/hooks/useProductQuery";
 import { useProductContext } from "../../product/ProductContext";
 import { updateProduct } from "../../product/utils/updateProduct";
+import { checkItemCurrenciesValid } from "../utils/currencyUtils";
 import { buildPreviewUpdatePlanParams } from "../versioning/buildMigrationDraft";
+import { previewHasLicenseParentTargets } from "../versioning/previewHasAffectedCustomers";
 import { PlanEditorBar } from "./PlanEditorBar";
+import {
+	discardAllLicenses,
+	getLicenseUpdatePayload,
+	saveAllLicenses,
+	useHasLicenseChanges,
+} from "./plan-licenses/useLicenseSaveRegistry";
 
 interface SaveChangesBarProps {
 	isOnboarding?: boolean;
@@ -30,32 +42,33 @@ export const SaveChangesBar = ({
 	isOnboarding = false,
 }: SaveChangesBarProps) => {
 	const axiosInstance = useAxiosInstance();
-	const { setShowNewVersionDialog } = useProductContext();
+	const { org } = useOrg();
+	const { setShowNewVersionDialog, catalogLicenses } = useProductContext();
 
 	// Get product state from store
 	const product = useProductStore((s) => s.product);
 	const baseProduct = useProductStore((s) => s.baseProduct);
 	const setProduct = useProductStore((s) => s.setProduct);
 	const { type: sheetType } = useSheetStore();
-	const hasChanges = useHasChanges();
+	const planHasChanges = useHasChanges();
+	const licenseHasChanges = useHasLicenseChanges();
+	const hasChanges = planHasChanges || licenseHasChanges;
+	const planLicenses = catalogLicenses.map(({ planLicense }) => planLicense);
 	const { features = [] } = useFeaturesQuery();
-	const prefetchPlanUpdatePreview = usePrefetchPlanUpdatePreview();
+	const fetchPlanUpdatePreview = useFetchPlanUpdatePreview();
 
 	const [saving, setSaving] = useState(false);
 
 	const { invalidate: invalidateProducts } = useProductsQuery();
-	const {
-		refetch: queryRefetch,
-		invalidate: invalidateProduct,
-		versionCounts,
-	} = useProductQuery();
-	const { counts, isLoading: isCountsLoading } = useProductCountsQuery(
-		product.version ? { version: product.version } : {},
-	);
+	const { refetch: queryRefetch, invalidate: invalidateProduct } =
+		useProductQuery();
 
 	const isCusPlanEditor = useIsCusPlanEditor();
 	const isMetadataOnlyChange = useIsMetadataOnlyChange();
-	const saveButtonText = isCusPlanEditor ? "Save and Return" : "Save";
+	let saveButtonText = "Save";
+	if (isCusPlanEditor) {
+		saveButtonText = "Save and Return";
+	}
 
 	const { data: variants = [] } = usePlanVariants(
 		product.id,
@@ -63,43 +76,53 @@ export const SaveChangesBar = ({
 	);
 
 	const handleSaveClicked = async () => {
-		// if (
-		// 	product.planType === "paid" &&
-		// 	product.basePriceType !== "usage" &&
-		// 	!basePrice?.price
-		// ) {
-		// 	toast.error("Please add a plan price greater than 0, or remove it.");
-		// 	setSaving(false);
-		// 	return;
-		// }
+		for (const item of product.items) {
+			if (!checkItemCurrenciesValid(item)) return;
+		}
+		let licenses: PlanLicenseParams[] | undefined;
+		try {
+			licenses = getLicenseUpdatePayload({
+				persistedLinks: planLicenses,
+			});
+		} catch (error) {
+			toast.error(
+				error instanceof Error
+					? error.message
+					: "Complete the license price before saving",
+			);
+			return;
+		}
 
-		if (!isOnboarding) {
-			if (isCountsLoading) {
-				toast.error("Plan counts are loading");
+		if (!isOnboarding && hasChanges) {
+			let preview: PlanUpdatePreview;
+			setSaving(true);
+			try {
+				preview = await fetchPlanUpdatePreview({
+					planId: product.id,
+					params: buildPreviewUpdatePlanParams({
+						baseProduct,
+						editedProduct: product,
+						features,
+						licenses,
+					}),
+				});
+			} catch (error) {
+				toast.error(getBackendErr(error, "Failed to preview plan changes"));
 				return;
+			} finally {
+				setSaving(false);
 			}
-			// Customers on any version (not just the one being edited) mean the
-			// change could affect grandfathered users, so surface the versioning
-			// dialog with its "update existing/all versions" options.
-			const hasCustomersOnAnyVersion =
-				(counts?.all ?? 0) > 0 ||
-				Object.values(versionCounts).some((vc) => (vc.active ?? 0) > 0);
-			const hasCustomers = hasCustomersOnAnyVersion && !isMetadataOnlyChange;
-			if (hasCustomers || variants.length > 0) {
-				// Warm the preview so the dialog opens with data already present.
-				setSaving(true);
-				try {
-					await prefetchPlanUpdatePreview({
-						planId: product.id,
-						params: buildPreviewUpdatePlanParams({
-							baseProduct,
-							editedProduct: product,
-							features,
-						}),
-					});
-				} finally {
-					setSaving(false);
-				}
+
+			const needsVersionChoice =
+				licenseHasChanges || (planHasChanges && !isMetadataOnlyChange);
+			const hasCustomers = preview.has_customers && needsVersionChoice;
+			const hasParentPropagationDecision =
+				planHasChanges && previewHasLicenseParentTargets(preview);
+			if (
+				hasCustomers ||
+				hasParentPropagationDecision ||
+				(planHasChanges && variants.length > 0)
+			) {
 				setShowNewVersionDialog(true);
 				return;
 			}
@@ -115,19 +138,33 @@ export const SaveChangesBar = ({
 				basePriceType: "usage",
 			});
 		}
-		const result = await updateProduct({
-			axiosInstance,
-			productId: product.id,
-			product,
-			version: product.version,
-			onSuccess: async () => {
-				await queryRefetch();
-				await Promise.all([invalidateProduct(), invalidateProducts()]);
-			},
-		});
 
-		// Only show success toast if update was successful
-		if (result) {
+		const planSaved = planHasChanges
+			? await updateProduct({
+					axiosInstance,
+					productId: product.id,
+					product,
+					version: product.version,
+					orgCurrency: org?.default_currency,
+					onSuccess: async () => {
+						await queryRefetch();
+						await Promise.all([invalidateProduct(), invalidateProducts()]);
+					},
+				})
+			: true;
+		const licensesSaved = planSaved
+			? await saveAllLicenses({
+					axiosInstance,
+					parentPlanId: product.id,
+					persistedLinks: planLicenses,
+					onSuccess: () =>
+						Promise.all([invalidateProduct(), invalidateProducts()]),
+				})
+			: false;
+
+		// License failures already toast their own error, so only the combined
+		// success gets a toast here.
+		if (planSaved && licensesSaved) {
 			toast.success("Changes saved successfully");
 		}
 
@@ -139,6 +176,7 @@ export const SaveChangesBar = ({
 		if (baseProduct) {
 			setProduct(baseProduct);
 		}
+		discardAllLicenses();
 		// If we're editing or creating a feature, go back to edit-plan
 		// if (sheetType === "edit-feature" || sheetType === "new-feature") {
 		// 	setSheet({ type: "edit-plan", itemId: null });

@@ -47,7 +47,11 @@ BEGIN
       CONTINUE;
     END IF;
 
-    IF current_entities IS NOT NULL AND current_entities != '{}'::jsonb THEN
+    -- entities can hold jsonb scalar null (COALESCE only catches SQL NULL);
+    -- jsonb_object_keys on a scalar throws, so require a real object.
+    IF current_entities IS NOT NULL
+      AND jsonb_typeof(current_entities) = 'object'
+      AND current_entities != '{}'::jsonb THEN
       IF target_entity_id IS NOT NULL THEN
         entity_balance := COALESCE(
           (current_entities->target_entity_id->>'balance')::numeric,

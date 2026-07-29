@@ -14,6 +14,7 @@ import {
 } from "@autumn/ui/ai-elements";
 import { ArrowUpIcon } from "@phosphor-icons/react";
 import type { ReactNode } from "react";
+import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import type {
 	DecidingState,
@@ -23,8 +24,14 @@ import type {
 } from "../chatTypes";
 import { ApprovalCard } from "./ApprovalCard";
 import { CatalogDecisionCard } from "./CatalogDecisionCard";
+import { LeafImageAttachments } from "./LeafImageAttachments";
+import { LeafImageUploadButton } from "./LeafImageUploadButton";
 import { QuestionOptions } from "./QuestionOptions";
 import { ToolStepsGroup, type WorkedEntry } from "./ToolSteps";
+
+const ACCEPTED_IMAGE_TYPES = "image/png,image/jpeg,image/webp,image/gif";
+const MAX_IMAGE_FILES = 4;
+const MAX_IMAGE_BYTES = 20 * 1024 * 1024;
 
 interface LeafChatPanelProps {
 	messages: LeafUIMessage[];
@@ -303,10 +310,14 @@ export function LeafChatPanel({
 				))}
 				<PromptInput
 					onSubmit={onSubmit}
-					accept="image/*"
+					accept={ACCEPTED_IMAGE_TYPES}
+					maxFiles={MAX_IMAGE_FILES}
+					maxFileSize={MAX_IMAGE_BYTES}
 					multiple
+					onError={({ message }) => toast.error(message)}
 					className="[&_[data-slot=prompt-input]]:rounded-xl [&_[data-slot=prompt-input]]:shadow-sm"
 				>
+					<LeafImageAttachments />
 					<PromptInputBody>
 						{/* Keep the composer typable during a turn (like Claude/ChatGPT);
 						    only submission is gated on the stream finishing. */}
@@ -317,7 +328,8 @@ export function LeafChatPanel({
 							placeholder={placeholder}
 						/>
 					</PromptInputBody>
-					<PromptInputFooter className="justify-end px-2 pb-2">
+					<PromptInputFooter className="px-2 pb-2">
+						<LeafImageUploadButton />
 						{/* Never disabled: submit must fire mid-turn so handleSubmit can
 						    queue the message (Enter is a no-op when this is disabled). */}
 						<PromptInputSubmit

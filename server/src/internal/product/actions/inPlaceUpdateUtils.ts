@@ -1,12 +1,19 @@
-import type { Feature, FullProduct, ProductItem } from "@autumn/shared";
 import {
+	entitlements,
+	type Feature,
+	type FullProduct,
 	findSimilarItem,
 	itemsAreSame,
 	mapToProductItems,
+	type ProductItem,
+	prices,
+	products,
 } from "@autumn/shared";
 import type { DrizzleCli } from "@server/db/initDrizzle";
+import { eq, inArray } from "drizzle-orm";
 import { CusEntService } from "@/internal/customers/cusProducts/cusEnts/CusEntitlementService.js";
 import { CusPriceService } from "@/internal/customers/cusProducts/cusPrices/CusPriceService.js";
+import { licenseItemRepo } from "@/internal/licenses/repos/licenseItemRepo.js";
 import { EntitlementService } from "@/internal/products/entitlements/EntitlementService.js";
 import { PriceService } from "@/internal/products/prices/PriceService.js";
 
@@ -24,6 +31,90 @@ const currentItemsOf = ({
 		entitlements: currentFullProduct.entitlements,
 		features,
 	});
+
+/** Serializes item writers before they reload the current catalog rows. */
+export const lockProductForItemUpdate = async ({
+	db,
+	internalProductId,
+}: {
+	db: DrizzleCli;
+	internalProductId: string;
+}) => {
+	await db
+		.select({ internalId: products.internal_id })
+		.from(products)
+		.where(eq(products.internal_id, internalProductId))
+		.for("no key update");
+};
+
+/** Locks sorted item rows so customer references cannot race item retirement. */
+export const lockProductItemsForUpdate = async ({
+	db,
+	currentFullProduct,
+}: {
+	db: DrizzleCli;
+	currentFullProduct: FullProduct;
+}) => {
+	const entitlementIds = currentFullProduct.entitlements
+		.map((entitlement) => entitlement.id)
+		.sort();
+	const priceIds = currentFullProduct.prices.map((price) => price.id).sort();
+
+	if (entitlementIds.length > 0) {
+		await db
+			.select({ id: entitlements.id })
+			.from(entitlements)
+			.where(inArray(entitlements.id, entitlementIds))
+			.orderBy(entitlements.id)
+			.for("update");
+	}
+
+	if (priceIds.length > 0) {
+		await db
+			.select({ id: prices.id })
+			.from(prices)
+			.where(inArray(prices.id, priceIds))
+			.orderBy(prices.id)
+			.for("update");
+	}
+};
+
+export const productItemsHaveCustomerReferences = async ({
+	db,
+	currentFullProduct,
+}: {
+	db: DrizzleCli;
+	currentFullProduct: FullProduct;
+}): Promise<boolean> => {
+	const entitlementIds = currentFullProduct.entitlements.map(
+		(entitlement) => entitlement.id,
+	);
+	const priceIds = currentFullProduct.prices.map((price) => price.id);
+	const [
+		hasEntitlementReferences,
+		hasPriceReferences,
+		licenseEntitlementReferences,
+		licensePriceReferences,
+	] = await Promise.all([
+		CusEntService.hasAnyEntitlementReferences({
+			db,
+			entitlementIds,
+		}),
+		CusPriceService.hasAnyPriceReferences({
+			db,
+			priceIds,
+		}),
+		licenseItemRepo.listReferencedEntitlementIds({ db, entitlementIds }),
+		licenseItemRepo.listReferencedPriceIds({ db, priceIds }),
+	]);
+
+	return (
+		hasEntitlementReferences ||
+		hasPriceReferences ||
+		licenseEntitlementReferences.size > 0 ||
+		licensePriceReferences.size > 0
+	);
+};
 
 /**
  * Callers rarely echo back entitlement_id / price_id, so without this match the
@@ -68,22 +159,22 @@ const retireOrDeleteRows = async ({
 	entitlementIds: string[];
 	priceIds: string[];
 }) => {
-	const referencedEnts = await CusEntService.getReferencedEntitlementIds({
-		db,
-		entitlementIds,
-	});
-	const referencedPrices = await CusPriceService.getReferencedPriceIds({
-		db,
-		priceIds,
-	});
+	const [customerEnts, customerPrices, licenseEnts, licensePrices] =
+		await Promise.all([
+			CusEntService.getReferencedEntitlementIds({ db, entitlementIds }),
+			CusPriceService.getReferencedPriceIds({ db, priceIds }),
+			licenseItemRepo.listReferencedEntitlementIds({ db, entitlementIds }),
+			licenseItemRepo.listReferencedPriceIds({ db, priceIds }),
+		]);
+	const referencedEnts = new Set([...customerEnts, ...licenseEnts]);
+	const referencedPrices = new Set([...customerPrices, ...licensePrices]);
 	const priceRows = await PriceService.getInIds({ db, ids: priceIds });
 	const entitlementsReferencedByRetainedPrices = new Set(
-		priceRows
-			.flatMap((price) =>
-				referencedPrices.has(price.id) && price.entitlement_id
-					? [price.entitlement_id]
-					: [],
-			),
+		priceRows.flatMap((price) =>
+			referencedPrices.has(price.id) && price.entitlement_id
+				? [price.entitlement_id]
+				: [],
+		),
 	);
 
 	for (const priceId of priceIds) {

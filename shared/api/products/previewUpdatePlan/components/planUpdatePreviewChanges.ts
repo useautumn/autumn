@@ -1,6 +1,6 @@
+import { z } from "zod/v4";
 import { ApiPlanV1Schema } from "../../apiPlanV1.js";
 import { ApiPlanItemV1Schema } from "../../items/apiPlanItemV1.js";
-import { z } from "zod/v4";
 
 export const PlanUpdatePreviewPriceChangeSchema = z.object({
 	previous: ApiPlanV1Schema.shape.price.meta({

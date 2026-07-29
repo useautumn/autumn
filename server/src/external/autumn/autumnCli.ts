@@ -8,14 +8,15 @@ import {
 	type ApiCusFeatureV3,
 	type ApiCusProductV3,
 	type ApiCustomerV3,
-	type CatalogPreviewUpdateResponse,
-	type CatalogUpdateParamsInput,
-	type CatalogUpdateResponse,
 	type ApiEntityBillingControlsParams,
 	type ApiEntityV0,
 	type AttachBodyV0,
+	type AttachLicenseParamsV0,
 	type AttachParamsV0Input,
 	type CancelBody,
+	type CatalogPreviewUpdateResponse,
+	type CatalogUpdateParamsInput,
+	type CatalogUpdateResponse,
 	type CheckoutParamsV0,
 	type CheckoutResponseV0,
 	type CheckParams,
@@ -48,6 +49,7 @@ import {
 	type ProductItem,
 	type RecalculateBalanceParamsV0,
 	type RecalculateBalancePreview,
+	type ReleaseLicenseParamsV0,
 	type RestoreParamsV1,
 	type RestoreResponse,
 	type RewardRedemption,
@@ -1121,6 +1123,7 @@ export class AutumnInt {
 			dry_run?: boolean;
 			only?: string[];
 			limit?: number;
+			/** @deprecated Migration concurrency is fleet-managed. */
 			concurrency?: number;
 			lazy_run?: boolean;
 			retry_item_statuses?: ("failed" | "skipped")[];
@@ -1189,8 +1192,11 @@ export class AutumnInt {
 			);
 			return data;
 		},
-		update: async (params: UpdateBalanceParamsV0) => {
-			const data = await this.post(`/balances/update`, params);
+		update: async (
+			params: UpdateBalanceParamsV0,
+			{ headers }: { headers?: Record<string, string> } = {},
+		) => {
+			const data = await this.post(`/balances/update`, params, headers);
 			return data;
 		},
 		delete: async (params: DeleteBalanceParamsV0) => {
@@ -1254,6 +1260,22 @@ export class AutumnInt {
 		): Promise<any> => {
 			const data = await this.post(`/billing.preview_update`, params);
 			return data;
+		},
+	};
+
+	licenses = {
+		/** Provisions seats: upserts entities and assigns one seat each. */
+		attach: async <TInput = AttachLicenseParamsV0>(
+			params: TInput,
+		): Promise<{ success: true }> => {
+			return await this.post(`/licenses.attach`, params);
+		},
+
+		/** Releases each entity's seat back to its pool for reuse. */
+		release: async <TInput = ReleaseLicenseParamsV0>(
+			params: TInput,
+		): Promise<{ success: true }> => {
+			return await this.post(`/licenses.release`, params);
 		},
 	};
 

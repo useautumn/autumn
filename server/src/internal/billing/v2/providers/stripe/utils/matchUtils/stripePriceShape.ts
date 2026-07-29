@@ -47,7 +47,9 @@ type StripeItemSnapshotLike = {
 		| {
 				up_to: number | null;
 				unit_amount: number | null;
+				unit_amount_decimal?: string | null;
 				flat_amount: number | null;
+				flat_amount_decimal?: string | null;
 		  }[]
 		| null;
 	recurring_interval: Stripe.Price.Recurring.Interval | null;
@@ -187,9 +189,11 @@ export const stripeItemSnapshotToShape = ({
 						tiers: item.tiers?.map((tier) => ({
 							upTo: stripeTierUpTo(tier.up_to),
 							unitAmountDecimal: stripeTierAmountDecimal({
+								decimal: tier.unit_amount_decimal,
 								amount: tier.unit_amount,
 							}),
 							flatAmountDecimal: stripeTierAmountDecimal({
+								decimal: tier.flat_amount_decimal,
 								amount: tier.flat_amount,
 							}),
 						})),

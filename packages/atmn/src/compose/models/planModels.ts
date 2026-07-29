@@ -4,9 +4,33 @@
 
 import { z } from "zod/v4";
 
+export const AdditionalCurrencySchema = z.object({
+	currency: z.string().meta({
+		description: "Three-letter ISO currency code (e.g. 'eur', 'gbp').",
+	}),
+	amount: z.number().meta({
+		description: "Amount in this currency.",
+	}),
+});
+
+export const AdditionalCurrencyTierSchema = z.object({
+	currency: z.string().meta({
+		description: "Three-letter ISO currency code (e.g. 'eur', 'gbp').",
+	}),
+	amount: z.number().optional().meta({
+		description: "Per-unit amount for this tier in this currency.",
+	}),
+	flatAmount: z.number().optional().meta({
+		description: "Flat amount for this tier in this currency.",
+	}),
+});
+
 export const UsageTierSchema = z.object({
 	to: z.union([z.number(), z.literal("inf")]),
 	amount: z.number(),
+	additionalCurrencies: z.array(AdditionalCurrencyTierSchema).optional().meta({
+		description: "Per-tier amounts in additional currencies.",
+	}),
 });
 
 const BasePriceParamsSchema = z.object({
@@ -20,6 +44,9 @@ const BasePriceParamsSchema = z.object({
 		z.literal("year"),
 	]),
 	intervalCount: z.number().optional(),
+	additionalCurrencies: z.array(AdditionalCurrencySchema).optional().meta({
+		description: "Base price amounts in additional currencies.",
+	}),
 });
 
 const idRegex = /^[a-zA-Z0-9_-]+$/;
@@ -125,6 +152,10 @@ export const PlanItemSchema = z.object({
 			}),
 			tiers: z.array(UsageTierSchema).optional().meta({
 				description: "Tiered pricing.  Either 'amount' or 'tiers' is required.",
+			}),
+			additionalCurrencies: z.array(AdditionalCurrencySchema).optional().meta({
+				description:
+					"Flat price amounts in additional currencies. Tiered prices carry these per tier instead.",
 			}),
 			tier_behavior: z
 				.union([z.literal("graduated"), z.literal("volume")])
@@ -241,6 +272,12 @@ export const FreeTrialSchema = z.object({
 
 export const BillingControlsSchema = z.custom<BillingControls>();
 
+export const PlanLicenseSchema = z.object({
+	licensePlanId: z.string().nonempty(),
+	version: z.number().int().min(1).optional(),
+	included: z.number().int().min(0).optional(),
+});
+
 export const PlanSchema = z.object({
 	description: z.string().nullable().default(null).meta({
 		description: "Optional description of the plan.",
@@ -268,6 +305,7 @@ export const PlanSchema = z.object({
 	billingControls: BillingControlsSchema.optional().meta({
 		description: "Plan-level billing controls used as customer defaults.",
 	}),
+	licenses: z.array(PlanLicenseSchema).optional(),
 	/** Unique identifier for the plan */
 	id: z.string().nonempty().regex(idRegex),
 	/** Display name for the plan */
@@ -308,6 +346,22 @@ export type PlanPriceInterval =
 export type BillingMethod = "prepaid" | "usage_based";
 export type OnIncrease = "prorate" | "charge_immediately";
 export type OnDecrease = "prorate" | "refund_immediately" | "no_action";
+
+export type AdditionalCurrency = {
+	/** Three-letter ISO currency code (e.g. 'eur', 'gbp') */
+	currency: string;
+	/** Amount in this currency */
+	amount: number;
+};
+
+export type AdditionalCurrencyTier = {
+	/** Three-letter ISO currency code (e.g. 'eur', 'gbp') */
+	currency: string;
+	/** Per-unit amount for this tier in this currency */
+	amount?: number;
+	/** Flat amount for this tier in this currency */
+	flatAmount?: number;
+};
 
 // Base type for PlanItem
 type PlanItemBase = z.infer<typeof PlanItemSchema>;
@@ -372,6 +426,8 @@ type PriceWithAmount = PriceBaseFields & {
 	amount: number;
 	/** Cannot have tiers when using flat amount */
 	tiers?: never;
+	/** Flat price amounts in additional currencies */
+	additionalCurrencies?: AdditionalCurrency[];
 };
 
 // Price with tiered pricing (no flat amount)
@@ -379,9 +435,17 @@ type PriceWithTiers = PriceBaseFields & {
 	/** Cannot have flat amount when using tiers */
 	amount?: never;
 	/** Tiered pricing structure based on usage ranges */
-	tiers: Array<{ to: number | "inf"; amount: number; flatAmount?: number }>;
+	tiers: Array<{
+		to: number | "inf";
+		amount: number;
+		flatAmount?: number;
+		/** Per-tier amounts in additional currencies */
+		additionalCurrencies?: AdditionalCurrencyTier[];
+	}>;
 	/** Required when tiers is defined: how tiers are applied */
 	tierBehavior: "graduated" | "volume";
+	/** Tiered prices carry additional currencies per tier, not at price level */
+	additionalCurrencies?: never;
 };
 
 // Price must have either amount OR tiers (not both, not neither)
@@ -439,6 +503,7 @@ export type PlanItem = PlanItemWithReset | PlanItemWithPrice | PlanItemNoReset;
 // Override Plan type to use PlanItem discriminated union
 type PlanBase = z.infer<typeof PlanSchema>;
 export type FreeTrial = z.infer<typeof FreeTrialSchema>;
+export type PlanLicense = z.infer<typeof PlanLicenseSchema>;
 
 export type Plan = {
 	/** Unique identifier for the plan. */
@@ -466,6 +531,9 @@ export type Plan = {
 
 		/** Billing frequency */
 		interval: PlanPriceInterval;
+
+		/** Base price amounts in additional currencies */
+		additionalCurrencies?: AdditionalCurrency[];
 	};
 
 	/** Feature configurations for this plan. Each item defines included units, pricing, and reset behavior. */
@@ -476,6 +544,9 @@ export type Plan = {
 
 	/** Plan-level billing controls used as customer defaults */
 	billingControls?: BillingControls;
+
+	/** Plans offered as assignable licenses under this plan. */
+	licenses?: PlanLicense[];
 
 	/** Whether the plan is archived */
 	archived?: boolean;

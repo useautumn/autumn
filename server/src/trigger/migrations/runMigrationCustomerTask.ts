@@ -9,7 +9,10 @@ import { withMigrationItemTracking } from "@/internal/migrations/v2/actions/migr
 import { migrationRepo } from "@/internal/migrations/v2/repos/index.js";
 import { migrateCustomer } from "@/internal/migrations/v2/run/migrateCustomer/index.js";
 import { isMigrationCancelRequested } from "@/internal/migrations/v2/run/utils/migrationCancelToken.js";
+import { migrationTaskQueue } from "@/trigger/migrations/migrationTaskQueue.js";
 import { createTriggerContext } from "@/trigger/utils/createTriggerContext.js";
+
+const LAZY_MIGRATION_CUSTOMER_LOCK_MAX_WAIT_MS = 2 * 60 * 1000;
 
 const PayloadSchema = z.object({
 	orgId: z.string(),
@@ -32,8 +35,12 @@ export const executeRunMigrationCustomer = async ({
 	logger: Logger;
 	payload: RunMigrationCustomerPayload;
 }) => {
-	const { migrationInternalId, migrationRunId, customerInternalId, customerId } =
-		payload;
+	const {
+		migrationInternalId,
+		migrationRunId,
+		customerInternalId,
+		customerId,
+	} = payload;
 
 	await warmupRegionalRedis().catch((error) => {
 		logger.warn("run-migration-customer: redis warmup failed (continuing)", {
@@ -85,6 +92,8 @@ export const executeRunMigrationCustomer = async ({
 				ctx,
 				customerId: cacheKey,
 				migration,
+				migrationCustomerLockMaxWaitMs:
+					LAZY_MIGRATION_CUSTOMER_LOCK_MAX_WAIT_MS,
 			});
 
 			return {
@@ -104,17 +113,10 @@ export const executeRunMigrationCustomer = async ({
 	});
 };
 
-/**
- * Per-customer lazy migration task. Enqueued by `checkPendingMigrationsForCustomer`
- * on the customer-fetch path. Claims the `migration_item_runs` row, busts the
- * customer cache, then runs `migrateCustomer` under the existing tracking machinery.
- *
- * Trigger.dev's `concurrencyKey` (set at enqueue time) serializes parallel
- * requests for the same customer + migration; the server-side claim is the
- * real authority if another worker raced ahead.
- */
+/** Lazy customer work shares fleet capacity; the item claim remains the duplicate authority. */
 export const runMigrationCustomerTask = task({
 	id: "run-migration-customer",
+	queue: migrationTaskQueue,
 	maxDuration: 600,
 	run: async (rawPayload: unknown, { ctx: triggerCtx }) => {
 		const payload = PayloadSchema.parse(rawPayload);

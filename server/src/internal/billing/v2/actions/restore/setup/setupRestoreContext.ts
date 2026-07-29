@@ -1,11 +1,9 @@
 import {
 	ACTIVE_STATUSES,
 	CusProductStatus,
-	cusProductToPrices,
 	type FullCusProduct,
 	type FullCustomer,
-	isFreeProduct,
-	isOneOffProduct,
+	isCustomerProductPaidRecurring,
 } from "@autumn/shared";
 import type Stripe from "stripe";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
@@ -24,8 +22,7 @@ const isPaidRecurring = (customerProduct: FullCusProduct) => {
 		customerProduct.status === CusProductStatus.Trialing;
 	if (!hasActiveStatus) return false;
 
-	const prices = cusProductToPrices({ cusProduct: customerProduct });
-	return !isOneOffProduct({ prices }) && !isFreeProduct({ prices });
+	return isCustomerProductPaidRecurring(customerProduct);
 };
 
 export const setupRestoreContext = async ({

@@ -1,6 +1,7 @@
 import {
 	type BillingContext,
 	BillingVersion,
+	type CustomerLicenseBillingContext,
 	type FullCusProduct,
 	type FullCustomer,
 } from "@autumn/shared";
@@ -35,10 +36,12 @@ export const computeExpectedSubscriptionState = ({
 	ctx,
 	fullCustomer,
 	relatedCusProducts,
+	customerLicenseBillingContext,
 }: {
 	ctx: AutumnContext;
 	fullCustomer: FullCustomer;
 	relatedCusProducts: FullCusProduct[];
+	customerLicenseBillingContext?: CustomerLicenseBillingContext;
 }): ExpectedSubscriptionState => {
 	const billingContext: BillingContext = {
 		fullCustomer,
@@ -49,6 +52,7 @@ export const computeExpectedSubscriptionState = ({
 		resetCycleAnchorMs: "now",
 		billingVersion: relatedCusProducts[0]?.billing_version ?? BillingVersion.V2,
 		actionSource: "verify",
+		customerLicenseBillingContext,
 	};
 
 	const rawPhases = buildStripePhasesUpdate({

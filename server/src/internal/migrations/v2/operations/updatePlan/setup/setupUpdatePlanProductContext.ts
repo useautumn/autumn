@@ -3,12 +3,14 @@ import {
 	type FullCusProduct,
 	type FullCustomer,
 	orgDisableStripeWrites,
+	resolveCustomerCurrency,
 	type UpdateSubscriptionBillingContext,
 	UpdateSubscriptionIntent,
 	type UpdateSubscriptionV1Params,
 } from "@autumn/shared";
 import type { UpdatePlanOp } from "@autumn/shared/api/migrations/operations/customer/updatePlan/index.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
+import { planOffersCurrency } from "@/internal/billing/v2/actions/attach/errors/handleCurrencyMismatchErrors.js";
 import { setupUpdateSubscriptionProductContext } from "@/internal/billing/v2/actions/updateSubscription/setup/setupUpdateSubscriptionProductContext.js";
 import { setupAdjustableQuantities } from "@/internal/billing/v2/setup/setupAdjustableQuantities.js";
 import { setupAnchorResetRefund } from "@/internal/billing/v2/setup/setupAnchorResetRefund.js";
@@ -60,10 +62,19 @@ export const setupUpdatePlanProductContext = async ({
 		...preparedOp.customize,
 		...(addItems ? { add_items: addItems } : {}),
 	};
+	const allRequestedAddItemsAlreadyExist =
+		(preparedOp.customize?.add_items?.length ?? 0) > 0 &&
+		addItems?.length === 0;
+	const versionToApply =
+		allRequestedAddItemsAlreadyExist &&
+		preparedOp.version === customerProduct.product.version &&
+		!customerProduct.is_custom
+			? undefined
+			: preparedOp.version;
 	if (
-		preparedOp.version === undefined &&
+		versionToApply === undefined &&
 		customize.price === undefined &&
-		customize.add_items?.length === 0 &&
+		(customize.add_items === undefined || customize.add_items.length === 0) &&
 		customize.remove_items === undefined &&
 		(customize.update_items === undefined ||
 			customize.update_items.length === 0)
@@ -98,7 +109,7 @@ export const setupUpdatePlanProductContext = async ({
 		entity_id: customerProduct.entity_id ?? undefined,
 		customer_product_id: customerProduct.id,
 		plan_id: customerProduct.product.id,
-		version: preparedOp.version,
+		version: versionToApply,
 		...(preparedOp.customize ? { customize } : {}),
 		...(strategyFeatureQuantities.length > 0
 			? { feature_quantities: strategyFeatureQuantities }
@@ -122,7 +133,7 @@ export const setupUpdatePlanProductContext = async ({
 		fullCustomer: productFullCustomer,
 		params,
 		reusePricesAndEntitlements,
-		resetToCatalogVersion: typeof preparedOp.version === "number",
+		resetToCatalogVersion: typeof versionToApply === "number",
 	});
 
 	const operationBillingContext = await setupMigrationOperationBillingContext({
@@ -132,6 +143,27 @@ export const setupUpdatePlanProductContext = async ({
 		customerProduct: targetCustomerProduct,
 		fullProduct,
 	});
+
+	// A customer billed in a currency the target plan no longer offers stays
+	// grandfathered on their current prices instead of failing at Stripe.
+	const targetPrices = customPrices?.length ? customPrices : fullProduct.prices;
+	const customerCurrency = resolveCustomerCurrency({
+		customer: productFullCustomer,
+		org: ctx.org,
+		stripeCurrency: operationBillingContext.stripeSubscription?.currency,
+	});
+	if (
+		!planOffersCurrency({
+			ctx,
+			prices: targetPrices,
+			currency: customerCurrency,
+		})
+	) {
+		ctx.logger.warn(
+			`[migration] skipping customer product ${customerProduct.id}: target plan has no '${customerCurrency}' price`,
+		);
+		return undefined;
+	}
 
 	const featureQuantities = setupFeatureQuantitiesContext({
 		ctx,

@@ -4,8 +4,8 @@ import {
 	type CustomizePlanV1,
 	ErrCode,
 	type FeatureOptions,
-	filterCustomerProductsByStripeSubscriptionId,
 	type FullCustomer,
+	filterCustomerProductsByStripeSubscriptionId,
 	findFeatureByIdOrInternalId,
 	isPrepaidPrice,
 	RecaseError,
@@ -21,8 +21,8 @@ import { setupAttachTransitionContext } from "@/internal/billing/v2/actions/atta
 import { setupCustomFullProduct } from "@/internal/billing/v2/setup/setupCustomFullProduct";
 import { initFullCustomerProduct } from "@/internal/billing/v2/utils/initFullCustomerProduct/initFullCustomerProduct";
 import { CusService } from "@/internal/customers/CusService";
-import { deleteCachedFullCustomer } from "@/internal/customers/cusUtils/fullCustomerCacheUtils/deleteCachedFullCustomer";
 import { ACTIVE_STATUSES } from "@/internal/customers/cusProducts/CusProductService";
+import { deleteCachedFullCustomer } from "@/internal/customers/cusUtils/fullCustomerCacheUtils/deleteCachedFullCustomer";
 import { ProductService } from "@/internal/products/ProductService";
 import { initSubscriptionFromStripe } from "@/internal/subscriptions/utils/initSubscriptionFromStripe";
 import { executeAutumnBillingPlan } from "../../execute/executeAutumnBillingPlan";
@@ -129,7 +129,6 @@ const processSyncMapping = async ({
 		idOrInternalId: mapping.plan_id,
 		orgId: org.id,
 		env,
-		logger: ctx.logger,
 	});
 
 	// 3. Apply custom items if provided

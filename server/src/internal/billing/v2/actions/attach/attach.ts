@@ -7,15 +7,18 @@ import {
 import { ms } from "@shared/utils/common/unixUtils";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { computeAttachPlan } from "@/internal/billing/v2/actions/attach/compute/computeAttachPlan";
+import { handleAttachComputeErrors } from "@/internal/billing/v2/actions/attach/errors/handleAttachComputeErrors";
 import { handleAttachV2Errors } from "@/internal/billing/v2/actions/attach/errors/handleAttachV2Errors";
 import { logAttachContext } from "@/internal/billing/v2/actions/attach/logs/logAttachContext";
 import { setupAttachBillingContext } from "@/internal/billing/v2/actions/attach/setup/setupAttachBillingContext";
 import { checkCheckoutSessionLock } from "@/internal/billing/v2/actions/locks/checkoutSessionLock/checkCheckoutSessionLock";
+import { checkoutSessionLock } from "@/internal/billing/v2/actions/locks/checkoutSessionLock/checkoutSessionLock";
 import { executeBillingPlan } from "@/internal/billing/v2/execute/executeBillingPlan";
 import { evaluateStripeBillingPlan } from "@/internal/billing/v2/providers/stripe/actionBuilders/evaluateStripeBillingPlan";
 import { logStripeBillingPlan } from "@/internal/billing/v2/providers/stripe/logs/logStripeBillingPlan";
 import { logStripeBillingResult } from "@/internal/billing/v2/providers/stripe/logs/logStripeBillingResult";
 import { computeAttachPreviewBillingPlan } from "@/internal/billing/v2/utils/billingPlan/preview/computeAttachPreviewBillingPlan";
+import { resolveCarryOverUsagesParam } from "@/internal/billing/v2/utils/handleCarryOvers/resolveCarryOverUsagesParam";
 import { logAutumnBillingPlan } from "@/internal/billing/v2/utils/logs/logAutumnBillingPlan";
 import { hashJson } from "@/utils/hash/hashJson";
 import {
@@ -40,6 +43,22 @@ export async function attach({
 
 	contextOverride?: BillingContextOverride;
 }): Promise<CreateAutumnCheckoutResult<AttachBillingContext>> {
+	const checkoutReservation =
+		!preview && !skipAutumnCheckout
+			? await checkoutSessionLock.get({
+					ctx,
+					customerId: params.customer_id,
+				})
+			: undefined;
+
+	params = {
+		...params,
+		carry_over_usages: await resolveCarryOverUsagesParam({
+			ctx,
+			carryOverUsages: params.carry_over_usages,
+		}),
+	};
+
 	// 1. Setup
 	const billingContext = await setupAttachBillingContext({
 		ctx,
@@ -58,6 +77,12 @@ export async function attach({
 	});
 
 	logAutumnBillingPlan({ ctx, plan: autumnBillingPlan, billingContext });
+	await handleAttachComputeErrors({
+		ctx,
+		billingContext,
+		autumnBillingPlan,
+		params,
+	});
 
 	// 3. Evaluate Stripe billing plan (handles checkout mode internally)
 	const stripeBillingPlan = await evaluateStripeBillingPlan({
@@ -123,6 +148,7 @@ export async function attach({
 			params: autumnCheckoutParams,
 			billingContext,
 			billingPlan,
+			existingLock: checkoutReservation,
 		});
 
 		if (cachedResult) return cachedResult;

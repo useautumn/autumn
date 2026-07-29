@@ -2,6 +2,7 @@ import {
 	isFixedPrice,
 	nullish,
 	type Price,
+	priceAmountsForCurrency,
 	tiersToLineAmount,
 } from "@autumn/shared";
 import { Decimal } from "decimal.js";
@@ -18,16 +19,20 @@ export const priceToLineAmount = ({
 	overage,
 	allowance = 0,
 	multiplier = 1,
+	currency,
 }: {
 	price: Price;
 	overage?: number;
 	allowance?: number;
 	multiplier?: number;
+	currency?: string;
 }): number => {
 	// Fixed prices: flat amount × multiplier
 	if (isFixedPrice(price)) {
 		const config = price.config;
-		return new Decimal(config.amount).mul(multiplier).toNumber();
+		const amount =
+			priceAmountsForCurrency({ config, currency }).amount ?? config.amount;
+		return new Decimal(amount).mul(multiplier).toNumber();
 	}
 
 	// Usage-based prices: tiered calculation
@@ -42,5 +47,6 @@ export const priceToLineAmount = ({
 		overage,
 		allowance,
 		billingUnits: price.config.billing_units ?? 1,
+		currency,
 	});
 };

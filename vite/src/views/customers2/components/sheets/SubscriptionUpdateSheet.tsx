@@ -69,6 +69,7 @@ function EditContent() {
 		productWithFormItems,
 		handlePlanEditorSave,
 		handlePlanEditorCancel,
+		formValues,
 	} = useUpdateSubscriptionFormContext();
 
 	const { customerProduct } = formContext;
@@ -123,6 +124,8 @@ function EditContent() {
 						onSave={handlePlanEditorSave}
 						onCancel={handlePlanEditorCancel}
 						isOpen={showPlanEditor}
+						enableLicenseEditing
+						initialAddLicenses={formValues.addLicenses}
 					/>
 				)}
 			</div>

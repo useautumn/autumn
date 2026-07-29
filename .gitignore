@@ -137,6 +137,7 @@ TAKEHOME.md
 # .context/
 
 # ai-sync: generated files (source of truth is ai/)
+.pi-subagents/
 .cursor/
 .claude/
 .codex/
@@ -156,6 +157,7 @@ server/.turbo
 notes.txt
 server/experiments/results/*
 !server/experiments/results/.gitkeep
+server/experiments/out/getFullSubject-*
 
 # Leaf contract fixtures are synced from private S3.
 apps/leaf/contracts/
@@ -175,3 +177,5 @@ apps/leaf/src/harness/claudeCode/runner/runner.mjs
 tmp/
 .env*.local
 .neon
+scripts/ops/.duckdb_export.sql
+scripts/ops/.backfill_neon_done

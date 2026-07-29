@@ -37,6 +37,7 @@ export const finalizeLineItems = ({
 
 	if (
 		billingContext.requestedProrationBehavior === "none" &&
+		billingContext.stripeSubscription &&
 		!billingContext.anchorResetRefund?.noPartialRefund
 	) {
 		return [];

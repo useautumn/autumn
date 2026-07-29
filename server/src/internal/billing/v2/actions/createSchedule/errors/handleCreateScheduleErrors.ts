@@ -8,6 +8,7 @@ import {
 } from "@autumn/shared";
 import type { DrizzleCli } from "@/db/initDrizzle";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
+import { handleUnsupportedLicenseActionErrors } from "@/internal/billing/v2/common/errors/handleUnsupportedLicenseActionErrors";
 import { handleStripeBillingPlanErrors } from "@/internal/billing/v2/providers/stripe/errors/handleStripeBillingPlanErrors";
 import { handleFirstPhaseStartDateErrors } from "./handleFirstPhaseStartDateErrors";
 
@@ -20,6 +21,21 @@ export const handleCreateScheduleErrors = async ({
 	billingContext: CreateScheduleBillingContext;
 	preview?: boolean;
 }) => {
+	handleUnsupportedLicenseActionErrors({
+		actionLabel: "billing.create_schedule",
+		fullProducts: [
+			...billingContext.fullProducts,
+			...billingContext.scheduledPhaseContexts.flatMap((phase) =>
+				phase.productContexts.map(
+					(scheduledProductContext) => scheduledProductContext.fullProduct,
+				),
+			),
+		],
+		customerProducts: billingContext.productContexts.map(
+			(productContext) => productContext.currentCustomerProduct,
+		),
+	});
+
 	if (
 		billingContext.checkoutMode === "stripe_checkout" &&
 		billingContext.enablePlanImmediately &&
@@ -36,7 +52,7 @@ export const handleCreateScheduleErrors = async ({
 	handleFirstPhaseStartDateErrors({ billingContext, preview });
 
 	const allImmediateProductsFree = billingContext.fullProducts.every(
-		(product) => isFreeProduct({ prices: product.prices }),
+		(product) => isFreeProduct({ product }),
 	);
 
 	if (allImmediateProductsFree && billingContext.stripeSubscription) {

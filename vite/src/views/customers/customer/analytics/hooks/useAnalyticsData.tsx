@@ -85,6 +85,8 @@ export const useAnalyticsData = ({
 			const { data } = await axiosInstance.post("/query/events", postBody);
 			return data;
 		},
+		staleTime: 30 * 1000,
+		refetchOnWindowFocus: true,
 	});
 
 	const queryLoading = !isReady || isLoading;
@@ -161,6 +163,8 @@ export const useRawAnalyticsData = () => {
 			const { data } = await axiosInstance.post("/query/raw", postBody);
 			return data;
 		},
+		staleTime: 30 * 1000,
+		refetchOnWindowFocus: true,
 	});
 
 	const queryLoading = !isReady || isLoading;

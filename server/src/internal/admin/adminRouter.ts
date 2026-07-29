@@ -1,23 +1,27 @@
 import { Hono } from "hono";
 import type { HonoEnv } from "../../honoUtils/HonoEnv";
 import {
-	handleDeleteAdminCacheV2Ramp,
-	handleGetAdminCacheV2Ramp,
-	handleUpdateAdminCacheV2RampMigration,
-	handleUpsertAdminCacheV2Ramp,
+    handleDeleteAdminCacheV2Ramp,
+    handleGetAdminCacheV2Ramp,
+    handleUpdateAdminCacheV2RampMigration,
+    handleUpsertAdminCacheV2Ramp,
 } from "./handleAdminCacheV2Ramp";
 import {
-	handleDeleteAdminOrgRedisConfig,
-	handleGetAdminOrgRedisConfig,
-	handleUpdateAdminOrgRedisMigration,
-	handleUpdateAdminOrgRedisPublicUrl,
-	handleUpsertAdminOrgRedisConfig,
+    handleDeleteAdminOrgRedisConfig,
+    handleGetAdminOrgRedisConfig,
+    handleUpdateAdminOrgRedisMigration,
+    handleUpdateAdminOrgRedisPublicUrl,
+    handleUpsertAdminOrgRedisConfig,
 } from "./handleAdminOrgRedisConfig";
+import { handleGetAdminAsyncBalanceUpdateConfig } from "./handleGetAdminAsyncBalanceUpdateConfig";
+import { handleGetAdminAsyncTrackConfig } from "./handleGetAdminAsyncTrackConfig";
+import { handleGetAdminBatchResetConfig } from "./handleGetAdminBatchResetConfig";
 import { handleGetAdminCustomerBlockConfig } from "./handleGetAdminCustomerBlockConfig";
 import { handleGetAdminEdgeConfigSources } from "./handleGetAdminEdgeConfigSources";
 import { handleGetAdminFeatureFlagsConfig } from "./handleGetAdminFeatureFlagsConfig";
 import { handleGetAdminFullSubjectGateConfig } from "./handleGetAdminFullSubjectGateConfig";
 import { handleGetAdminJobQueueConfig } from "./handleGetAdminJobQueueConfig";
+import { handleGetAdminMainRedisCacheConfig } from "./handleGetAdminMainRedisCacheConfig";
 import { handleGetAdminMiscellaneousEdgeConfig } from "./handleGetAdminMiscellaneousEdgeConfig";
 import { handleGetAdminOrgLimitsConfig } from "./handleGetAdminOrgLimitsConfig";
 import { handleGetAdminOrgRequestBlock } from "./handleGetAdminOrgRequestBlock";
@@ -25,6 +29,8 @@ import { handleGetAdminRateLimitOverridesConfig } from "./handleGetAdminRateLimi
 import { handleGetAdminRateLimitRedisAllowlistConfig } from "./handleGetAdminRateLimitRedisAllowlistConfig";
 import { handleGetAdminRedisV2CacheConfig } from "./handleGetAdminRedisV2CacheConfig";
 import { handleGetAdminRequestBlockConfig } from "./handleGetAdminRequestBlockConfig";
+import { handleGetAdminResetJobConfig } from "./handleGetAdminResetJobConfig";
+import { handleGetAdminResetJobV2Config } from "./handleGetAdminResetJobV2Config";
 import { handleGetAdminStripeSyncConfig } from "./handleGetAdminStripeSyncConfig";
 
 import { handleGetDefaultStripeAccount } from "./handleGetDefaultStripeAccount";
@@ -35,16 +41,20 @@ import { handleListAdminOrgs } from "./handleListAdminOrgs";
 import { handleListAdminUsers } from "./handleListAdminUsers";
 import { handleListOAuthClients } from "./handleListOAuthClients";
 import {
-	handleCreateSlackAdminInstall,
-	handleDeleteSlackAdminInstall,
-	handleGetSlackAdminInstall,
-	handleUpdateSlackAdminTarget,
+    handleCreateSlackAdminInstall,
+    handleDeleteSlackAdminInstall,
+    handleGetSlackAdminInstall,
+    handleUpdateSlackAdminTarget,
 } from "./handleSlackAdminChat";
 import { handleSyncCustomerEntitlementAnchors } from "./handleSyncCustomerEntitlementAnchors";
+import { handleUpsertAdminAsyncBalanceUpdateConfig } from "./handleUpsertAdminAsyncBalanceUpdateConfig";
+import { handleUpsertAdminAsyncTrackConfig } from "./handleUpsertAdminAsyncTrackConfig";
+import { handleUpsertAdminBatchResetConfig } from "./handleUpsertAdminBatchResetConfig";
 import { handleUpsertAdminCustomerBlockConfig } from "./handleUpsertAdminCustomerBlockConfig";
 import { handleUpsertAdminFeatureFlagsConfig } from "./handleUpsertAdminFeatureFlagsConfig";
 import { handleUpsertAdminFullSubjectGateConfig } from "./handleUpsertAdminFullSubjectGateConfig";
 import { handleUpsertAdminJobQueueConfig } from "./handleUpsertAdminJobQueueConfig";
+import { handleUpsertAdminMainRedisCacheConfig } from "./handleUpsertAdminMainRedisCacheConfig";
 import { handleUpsertAdminMiscellaneousEdgeConfig } from "./handleUpsertAdminMiscellaneousEdgeConfig";
 import { handleUpsertAdminOrgLimitsConfig } from "./handleUpsertAdminOrgLimitsConfig";
 import { handleUpsertAdminOrgRequestBlock } from "./handleUpsertAdminOrgRequestBlock";
@@ -52,6 +62,8 @@ import { handleUpsertAdminRateLimitOverridesConfig } from "./handleUpsertAdminRa
 import { handleUpsertAdminRateLimitRedisAllowlistConfig } from "./handleUpsertAdminRateLimitRedisAllowlistConfig";
 import { handleUpsertAdminRedisV2CacheConfig } from "./handleUpsertAdminRedisV2CacheConfig";
 import { handleUpsertAdminRequestBlockConfig } from "./handleUpsertAdminRequestBlockConfig";
+import { handleUpsertAdminResetJobConfig } from "./handleUpsertAdminResetJobConfig";
+import { handleUpsertAdminResetJobV2Config } from "./handleUpsertAdminResetJobV2Config";
 import { handleUpsertAdminStripeSyncConfig } from "./handleUpsertAdminStripeSyncConfig";
 import { handleUpsertSlackMcpOAuthClient } from "./handleUpsertSlackMcpOAuthClient";
 import { handleDeleteRollout } from "./rollouts/handleDeleteRollout";
@@ -115,6 +127,19 @@ honoAdminRouter.put(
 	...handleUpsertAdminMiscellaneousEdgeConfig,
 );
 honoAdminRouter.get(
+	"/async-balance-update-config",
+	...handleGetAdminAsyncBalanceUpdateConfig,
+);
+honoAdminRouter.put(
+	"/async-balance-update-config",
+	...handleUpsertAdminAsyncBalanceUpdateConfig,
+);
+honoAdminRouter.get("/async-track-config", ...handleGetAdminAsyncTrackConfig);
+honoAdminRouter.put(
+	"/async-track-config",
+	...handleUpsertAdminAsyncTrackConfig,
+);
+honoAdminRouter.get(
 	"/full-subject-gate-config",
 	...handleGetAdminFullSubjectGateConfig,
 );
@@ -150,6 +175,18 @@ honoAdminRouter.put(
 );
 honoAdminRouter.get("/job-queue-config", ...handleGetAdminJobQueueConfig);
 honoAdminRouter.put("/job-queue-config", ...handleUpsertAdminJobQueueConfig);
+honoAdminRouter.get("/batch-reset-config", ...handleGetAdminBatchResetConfig);
+honoAdminRouter.put(
+	"/batch-reset-config",
+	...handleUpsertAdminBatchResetConfig,
+);
+honoAdminRouter.get("/reset-job-config", ...handleGetAdminResetJobConfig);
+honoAdminRouter.put("/reset-job-config", ...handleUpsertAdminResetJobConfig);
+honoAdminRouter.get("/reset-job-v2-config", ...handleGetAdminResetJobV2Config);
+honoAdminRouter.put(
+	"/reset-job-v2-config",
+	...handleUpsertAdminResetJobV2Config,
+);
 honoAdminRouter.get("/stripe-sync-config", ...handleGetAdminStripeSyncConfig);
 honoAdminRouter.put(
 	"/stripe-sync-config",
@@ -163,6 +200,14 @@ honoAdminRouter.put(
 	"/redis-v2-cache-config",
 	...handleUpsertAdminRedisV2CacheConfig,
 );
+honoAdminRouter.get(
+	"/main-redis-cache-config",
+	...handleGetAdminMainRedisCacheConfig,
+);
+honoAdminRouter.put(
+	"/main-redis-cache-config",
+	...handleUpsertAdminMainRedisCacheConfig,
+);
 honoAdminRouter.get("/cache-v2-ramp", ...handleGetAdminCacheV2Ramp);
 honoAdminRouter.patch("/cache-v2-ramp", ...handleUpsertAdminCacheV2Ramp);
 honoAdminRouter.patch(
@@ -172,7 +217,10 @@ honoAdminRouter.patch(
 honoAdminRouter.delete("/cache-v2-ramp", ...handleDeleteAdminCacheV2Ramp);
 honoAdminRouter.get("/org-member", ...handleGetOrgMember);
 honoAdminRouter.get("/master-stripe-account", ...handleGetMasterStripeAccount);
-honoAdminRouter.get("/default-stripe-account", ...handleGetDefaultStripeAccount);
+honoAdminRouter.get(
+	"/default-stripe-account",
+	...handleGetDefaultStripeAccount,
+);
 honoAdminRouter.get("/oauth-clients", ...handleListOAuthClients);
 honoAdminRouter.post(
 	"/oauth-clients/slack-mcp",

@@ -380,8 +380,10 @@ test.concurrent(
 			update_variant_ids: [variantId],
 		});
 
+		// Customer is on the base, not the variant — the variant has no
+		// customers of its own, so it patches in place instead of versioning.
 		const variantVersions = await getAllVersions(variantId);
-		expect(variantVersions.length).toBe(2);
+		expect(variantVersions.length).toBe(1);
 
 		const v2Plan = await getVariantPlan(variantId);
 		expect(v2Plan.items.find((i: any) => i.feature_id === TestFeature.Dashboard)).toBeDefined();
@@ -441,8 +443,10 @@ test.concurrent(
 			update_variant_ids: [variantId],
 		});
 
+		// Customer is on the base, not the variant — the variant has no
+		// customers of its own, so it patches in place instead of versioning.
 		const variantVersions = await getAllVersions(variantId);
-		expect(variantVersions.length).toBe(2);
+		expect(variantVersions.length).toBe(1);
 
 		const v2Plan = await getVariantPlan(variantId);
 		const dayCredits = v2Plan.items.find(
@@ -467,7 +471,7 @@ test.concurrent(
 // 7. base versions on rollover change with customer
 // ═══════════════════════════════════════════════════════════════════
 test.concurrent(
-	`${chalk.yellowBright("rollover base+variant version: customer on base triggers both versioning")}`,
+	`${chalk.yellowBright("rollover base+variant version: customer on base versions the base, customer-less variant patches in place")}`,
 	async () => {
 			const rid = readableVariantTestId("rv_base_variant_version");
 			const baseId = `base_${rid}`;
@@ -496,16 +500,17 @@ test.concurrent(
 		expect(baseVersions.length).toBe(2);
 		expect(baseVersions.find((v: any) => v.version === 2)).toBeDefined();
 
+		// Variant has no customers of its own, so it patches in place onto the
+		// base's new version instead of versioning itself.
 		const variantVersions = await getAllVersions(variantId);
-		expect(variantVersions.length).toBe(2);
-		expect(variantVersions.find((v: any) => v.version === 2)).toBeDefined();
+		expect(variantVersions.length).toBe(1);
 
 		const newBase = baseVersions.find((v: any) => v.version === 2)!;
-		const newVariant = variantVersions.find((v: any) => v.version === 2)!;
+		const newVariant = variantVersions.find((v: any) => v.version === 1)!;
 		expectVariantProductCorrect({
 			base: newBase,
 			variant: newVariant,
-			version: 2,
+			version: 1,
 		});
 
 		await cleanup(baseId, variantId);

@@ -3,6 +3,7 @@ import type { FullSubject } from "../../models/cusModels/fullSubject/fullSubject
 import type { CustomerEntitlementFilters } from "../../models/cusProductModels/cusEntModels/cusEntModels.js";
 import type { FullCusEntWithFullCusProduct } from "../../models/cusProductModels/cusEntModels/cusEntWithProduct.js";
 import { CusProductStatus } from "../../models/cusProductModels/cusProductEnums.js";
+import { isPooledBalanceSourceCustomerEntitlement } from "../cusEntUtils/classifyCusEnt/isPooledBalanceCustomerEntitlement.js";
 import { cusEntMatchesEntity } from "../cusEntUtils/filterCusEntUtils.js";
 import { sortCusEntsForDeduction } from "../cusEntUtils/sortCusEntsForDeduction.js";
 import { notNullish } from "../utils.js";
@@ -40,20 +41,33 @@ export const fullSubjectToCustomerEntitlements = ({
 		});
 	}
 
+	// Guarded for subjects built without going through the schema, which fills
+	// this in via .default([]).
+	for (const customerEntitlement of fullSubject.pooled_customer_entitlements ??
+		[]) {
+		customerEntitlements.push({
+			...customerEntitlement,
+			customer_product: null,
+		});
+	}
+
+	customerEntitlements = customerEntitlements.filter(
+		(customerEntitlement) =>
+			!isPooledBalanceSourceCustomerEntitlement({ customerEntitlement }),
+	);
+
 	if (featureIds) {
 		customerEntitlements = customerEntitlements.filter((customerEntitlement) =>
 			featureIds.includes(customerEntitlement.entitlement.feature.id),
 		);
 	}
 
-	if (fullSubject.entity) {
-		customerEntitlements = customerEntitlements.filter((customerEntitlement) =>
-			cusEntMatchesEntity({
-				cusEnt: customerEntitlement,
-				entity: fullSubject.entity,
-			}),
-		);
-	}
+	customerEntitlements = customerEntitlements.filter((customerEntitlement) =>
+		cusEntMatchesEntity({
+			cusEnt: customerEntitlement,
+			entity: fullSubject.entity,
+		}),
+	);
 
 	const now = Date.now();
 	customerEntitlements = customerEntitlements.filter(

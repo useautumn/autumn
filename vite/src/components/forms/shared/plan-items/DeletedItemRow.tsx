@@ -6,9 +6,11 @@ import { LAYOUT_TRANSITION } from "@/components/v2/sheets/SharedSheetComponents"
 export function DeletedItemRow({
 	item,
 	index,
+	currency,
 }: {
 	item: ProductItem;
 	index: number;
+	currency?: string;
 }) {
 	return (
 		<motion.div
@@ -16,7 +18,7 @@ export function DeletedItemRow({
 			layout="position"
 			transition={{ layout: LAYOUT_TRANSITION }}
 		>
-			<SubscriptionItemRow item={item} isDeleted />
+			<SubscriptionItemRow currency={currency} item={item} isDeleted />
 		</motion.div>
 	);
 }

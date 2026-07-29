@@ -4,6 +4,7 @@ import { planV0ToProductItems } from "@api/products/mappers/planV0ToProductItems
 export * from "./apiFreeTrial";
 export * from "./apiPlanV1";
 export * from "./components/apiFreeTrialV2";
+export * from "./components/basePrice/basePriceToProductItem";
 export * from "./components/billingMethod";
 export * from "./components/display";
 export * from "./components/planExpand";

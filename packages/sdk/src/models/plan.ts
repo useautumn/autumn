@@ -12,6 +12,17 @@ import * as types from "../types/primitives.js";
 import { smartUnion } from "../types/smart-union.js";
 import { SDKValidationError } from "./sdk-validation-error.js";
 
+export type AdditionalCurrency = {
+  /**
+   * Three-letter Stripe-supported currency code (e.g. 'eur', 'gbp').
+   */
+  currency: string;
+  /**
+   * Price amount in this currency. Set explicitly per currency, not converted from the base amount.
+   */
+  amount: number;
+};
+
 /**
  * Billing interval (e.g. 'month', 'year').
  */
@@ -47,6 +58,10 @@ export type PlanPrice = {
    * Base price amount for the plan.
    */
   amount: number;
+  /**
+   * Base price amounts in additional currencies. The base 'amount' is in the org's default currency.
+   */
+  additionalCurrencies?: Array<AdditionalCurrency> | undefined;
   /**
    * Billing interval (e.g. 'month', 'year').
    */
@@ -159,12 +174,39 @@ export type PlanItemReset = {
   intervalCount?: number | undefined;
 };
 
+export type ItemAdditionalCurrency = {
+  /**
+   * Three-letter Stripe-supported currency code (e.g. 'eur', 'gbp').
+   */
+  currency: string;
+  /**
+   * Price amount in this currency. Set explicitly per currency, not converted from the base amount.
+   */
+  amount: number;
+};
+
 export type PlanItemTo = number | string;
+
+export type ItemTierAdditionalCurrency = {
+  /**
+   * Three-letter Stripe-supported currency code (e.g. 'eur', 'gbp').
+   */
+  currency: string;
+  /**
+   * Per-unit amount for this tier in this currency.
+   */
+  amount?: number | undefined;
+  /**
+   * Flat amount for this tier in this currency, if the tier uses one.
+   */
+  flatAmount?: number | undefined;
+};
 
 export type PlanItemTier = {
   to: number | string;
   amount: number;
   flatAmount?: number | undefined;
+  additionalCurrencies?: Array<ItemTierAdditionalCurrency> | undefined;
 };
 
 export const PlanItemTierBehavior = {
@@ -206,6 +248,10 @@ export type PlanItemPrice = {
    * Price per billing_units after included usage is consumed. Mutually exclusive with tiers.
    */
   amount?: number | undefined;
+  /**
+   * Amounts in additional currencies for this flat price. The base 'amount' is in the org's default currency. Only valid with 'amount', not 'tiers' (tiered prices carry per-currency amounts on each tier).
+   */
+  additionalCurrencies?: Array<ItemAdditionalCurrency> | undefined;
   /**
    * Tiered pricing configuration. Each tier's 'to' INCLUDES the included amount. Either 'tiers' or 'amount' is required.
    */
@@ -387,6 +433,17 @@ export type PlanPriceVariantDetailsInterval = OpenEnum<
   typeof PlanPriceVariantDetailsInterval
 >;
 
+export type VariantDetailsAdditionalCurrency = {
+  /**
+   * Three-letter Stripe-supported currency code (e.g. 'eur', 'gbp').
+   */
+  currency: string;
+  /**
+   * Price amount in this currency. Set explicitly per currency, not converted from the base amount.
+   */
+  amount: number;
+};
+
 /**
  * Base price configuration for a plan.
  */
@@ -403,12 +460,16 @@ export type BasePrice = {
    * Number of intervals per billing cycle. Defaults to 1.
    */
   intervalCount?: number | undefined;
+  /**
+   * Base price amounts in additional currencies. The base 'amount' is in the org's default currency.
+   */
+  additionalCurrencies?: Array<VariantDetailsAdditionalCurrency> | undefined;
 };
 
 /**
  * Interval at which balance resets (e.g. 'month', 'year'). For consumable features only.
  */
-export const PlanAddItemResetInterval = {
+export const PlanVariantDetailsResetInterval = {
   OneOff: "one_off",
   Minute: "minute",
   Hour: "hour",
@@ -422,8 +483,8 @@ export const PlanAddItemResetInterval = {
 /**
  * Interval at which balance resets (e.g. 'month', 'year'). For consumable features only.
  */
-export type PlanAddItemResetInterval = OpenEnum<
-  typeof PlanAddItemResetInterval
+export type PlanVariantDetailsResetInterval = OpenEnum<
+  typeof PlanVariantDetailsResetInterval
 >;
 
 /**
@@ -433,19 +494,48 @@ export type PlanVariantDetailsReset = {
   /**
    * Interval at which balance resets (e.g. 'month', 'year'). For consumable features only.
    */
-  interval: PlanAddItemResetInterval;
+  interval: PlanVariantDetailsResetInterval;
   /**
    * Number of intervals between resets. Defaults to 1.
    */
   intervalCount?: number | undefined;
 };
 
+export type AddItemAdditionalCurrency = {
+  /**
+   * Three-letter Stripe-supported currency code (e.g. 'eur', 'gbp').
+   */
+  currency: string;
+  /**
+   * Price amount in this currency. Set explicitly per currency, not converted from the base amount.
+   */
+  amount: number;
+};
+
 export type PlanVariantDetailsTo = number | string;
+
+export type VariantDetailsTierAdditionalCurrency = {
+  /**
+   * Three-letter Stripe-supported currency code (e.g. 'eur', 'gbp').
+   */
+  currency: string;
+  /**
+   * Per-unit amount for this tier in this currency.
+   */
+  amount?: number | undefined;
+  /**
+   * Flat amount for this tier in this currency, if the tier uses one.
+   */
+  flatAmount?: number | undefined;
+};
 
 export type PlanVariantDetailsTier = {
   to: number | string;
   amount: number;
   flatAmount?: number | undefined;
+  additionalCurrencies?:
+    | Array<VariantDetailsTierAdditionalCurrency>
+    | undefined;
 };
 
 export const PlanVariantDetailsTierBehavior = {
@@ -496,6 +586,10 @@ export type PlanVariantDetailsPrice = {
    * Price per billing_units after included usage. Either 'amount' or 'tiers' is required.
    */
   amount?: number | undefined;
+  /**
+   * Amounts in additional currencies for this flat price. The base 'amount' is in the org's default currency. Only valid with 'amount', not 'tiers'.
+   */
+  additionalCurrencies?: Array<AddItemAdditionalCurrency> | undefined;
   /**
    * Tiered pricing.  Either 'amount' or 'tiers' is required.
    */
@@ -775,7 +869,7 @@ export type PlanVariantDetailsPurchaseLimitInterval = OpenEnum<
 >;
 
 /**
- * Optional rate limit to cap how often auto top-ups occur.
+ * Optional rate limit to cap how often auto top-ups occur. Pass count to set the current window's consumed top-ups.
  */
 export type PlanVariantDetailsPurchaseLimit = {
   /**
@@ -790,6 +884,10 @@ export type PlanVariantDetailsPurchaseLimit = {
    * Maximum number of auto top-ups allowed within the interval.
    */
   limit: number;
+  /**
+   * Set the current window's consumed auto top-up count. Omit to leave runtime state unchanged.
+   */
+  count?: number | undefined;
 };
 
 export type PlanVariantDetailsAutoTopup = {
@@ -810,7 +908,7 @@ export type PlanVariantDetailsAutoTopup = {
    */
   quantity: number;
   /**
-   * Optional rate limit to cap how often auto top-ups occur.
+   * Optional rate limit to cap how often auto top-ups occur. Pass count to set the current window's consumed top-ups.
    */
   purchaseLimit?: PlanVariantDetailsPurchaseLimit | undefined;
   /**
@@ -1369,6 +1467,25 @@ export type Plan = {
 };
 
 /** @internal */
+export const AdditionalCurrency$inboundSchema: z.ZodMiniType<
+  AdditionalCurrency,
+  unknown
+> = z.object({
+  currency: types.string(),
+  amount: types.number(),
+});
+
+export function additionalCurrencyFromJSON(
+  jsonString: string,
+): SafeParseResult<AdditionalCurrency, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => AdditionalCurrency$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'AdditionalCurrency' from JSON`,
+  );
+}
+
+/** @internal */
 export const PlanPriceInterval$inboundSchema: z.ZodMiniType<
   PlanPriceInterval,
   unknown
@@ -1406,12 +1523,16 @@ export const PlanPrice$inboundSchema: z.ZodMiniType<PlanPrice, unknown> = z
   .pipe(
     z.object({
       amount: types.number(),
+      additional_currencies: types.optional(
+        z.array(z.lazy(() => AdditionalCurrency$inboundSchema)),
+      ),
       interval: PlanPriceInterval$inboundSchema,
       interval_count: types.optional(types.number()),
       display: types.optional(z.lazy(() => PlanPriceDisplay$inboundSchema)),
     }),
     z.transform((v) => {
       return remap$(v, {
+        "additional_currencies": "additionalCurrencies",
         "interval_count": "intervalCount",
       });
     }),
@@ -1542,6 +1663,25 @@ export function planItemResetFromJSON(
 }
 
 /** @internal */
+export const ItemAdditionalCurrency$inboundSchema: z.ZodMiniType<
+  ItemAdditionalCurrency,
+  unknown
+> = z.object({
+  currency: types.string(),
+  amount: types.number(),
+});
+
+export function itemAdditionalCurrencyFromJSON(
+  jsonString: string,
+): SafeParseResult<ItemAdditionalCurrency, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => ItemAdditionalCurrency$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'ItemAdditionalCurrency' from JSON`,
+  );
+}
+
+/** @internal */
 export const PlanItemTo$inboundSchema: z.ZodMiniType<PlanItemTo, unknown> =
   smartUnion([types.number(), types.string()]);
 
@@ -1556,16 +1696,47 @@ export function planItemToFromJSON(
 }
 
 /** @internal */
+export const ItemTierAdditionalCurrency$inboundSchema: z.ZodMiniType<
+  ItemTierAdditionalCurrency,
+  unknown
+> = z.pipe(
+  z.object({
+    currency: types.string(),
+    amount: types.optional(types.number()),
+    flat_amount: types.optional(types.number()),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      "flat_amount": "flatAmount",
+    });
+  }),
+);
+
+export function itemTierAdditionalCurrencyFromJSON(
+  jsonString: string,
+): SafeParseResult<ItemTierAdditionalCurrency, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => ItemTierAdditionalCurrency$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'ItemTierAdditionalCurrency' from JSON`,
+  );
+}
+
+/** @internal */
 export const PlanItemTier$inboundSchema: z.ZodMiniType<PlanItemTier, unknown> =
   z.pipe(
     z.object({
       to: smartUnion([types.number(), types.string()]),
       amount: types.number(),
       flat_amount: types.optional(types.number()),
+      additional_currencies: types.optional(
+        z.array(z.lazy(() => ItemTierAdditionalCurrency$inboundSchema)),
+      ),
     }),
     z.transform((v) => {
       return remap$(v, {
         "flat_amount": "flatAmount",
+        "additional_currencies": "additionalCurrencies",
       });
     }),
   );
@@ -1605,6 +1776,9 @@ export const PlanItemPrice$inboundSchema: z.ZodMiniType<
 > = z.pipe(
   z.object({
     amount: types.optional(types.number()),
+    additional_currencies: types.optional(
+      z.array(z.lazy(() => ItemAdditionalCurrency$inboundSchema)),
+    ),
     tiers: types.optional(z.array(z.lazy(() => PlanItemTier$inboundSchema))),
     tier_behavior: types.optional(PlanItemTierBehavior$inboundSchema),
     interval: PlanPriceItemInterval$inboundSchema,
@@ -1615,6 +1789,7 @@ export const PlanItemPrice$inboundSchema: z.ZodMiniType<
   }),
   z.transform((v) => {
     return remap$(v, {
+      "additional_currencies": "additionalCurrencies",
       "tier_behavior": "tierBehavior",
       "interval_count": "intervalCount",
       "billing_units": "billingUnits",
@@ -1776,16 +1951,39 @@ export const PlanPriceVariantDetailsInterval$inboundSchema: z.ZodMiniType<
 > = openEnums.inboundSchema(PlanPriceVariantDetailsInterval);
 
 /** @internal */
+export const VariantDetailsAdditionalCurrency$inboundSchema: z.ZodMiniType<
+  VariantDetailsAdditionalCurrency,
+  unknown
+> = z.object({
+  currency: types.string(),
+  amount: types.number(),
+});
+
+export function variantDetailsAdditionalCurrencyFromJSON(
+  jsonString: string,
+): SafeParseResult<VariantDetailsAdditionalCurrency, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => VariantDetailsAdditionalCurrency$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'VariantDetailsAdditionalCurrency' from JSON`,
+  );
+}
+
+/** @internal */
 export const BasePrice$inboundSchema: z.ZodMiniType<BasePrice, unknown> = z
   .pipe(
     z.object({
       amount: types.number(),
       interval: PlanPriceVariantDetailsInterval$inboundSchema,
       interval_count: types.optional(types.number()),
+      additional_currencies: types.optional(
+        z.array(z.lazy(() => VariantDetailsAdditionalCurrency$inboundSchema)),
+      ),
     }),
     z.transform((v) => {
       return remap$(v, {
         "interval_count": "intervalCount",
+        "additional_currencies": "additionalCurrencies",
       });
     }),
   );
@@ -1801,10 +1999,10 @@ export function basePriceFromJSON(
 }
 
 /** @internal */
-export const PlanAddItemResetInterval$inboundSchema: z.ZodMiniType<
-  PlanAddItemResetInterval,
+export const PlanVariantDetailsResetInterval$inboundSchema: z.ZodMiniType<
+  PlanVariantDetailsResetInterval,
   unknown
-> = openEnums.inboundSchema(PlanAddItemResetInterval);
+> = openEnums.inboundSchema(PlanVariantDetailsResetInterval);
 
 /** @internal */
 export const PlanVariantDetailsReset$inboundSchema: z.ZodMiniType<
@@ -1812,7 +2010,7 @@ export const PlanVariantDetailsReset$inboundSchema: z.ZodMiniType<
   unknown
 > = z.pipe(
   z.object({
-    interval: PlanAddItemResetInterval$inboundSchema,
+    interval: PlanVariantDetailsResetInterval$inboundSchema,
     interval_count: types.optional(types.number()),
   }),
   z.transform((v) => {
@@ -1833,6 +2031,25 @@ export function planVariantDetailsResetFromJSON(
 }
 
 /** @internal */
+export const AddItemAdditionalCurrency$inboundSchema: z.ZodMiniType<
+  AddItemAdditionalCurrency,
+  unknown
+> = z.object({
+  currency: types.string(),
+  amount: types.number(),
+});
+
+export function addItemAdditionalCurrencyFromJSON(
+  jsonString: string,
+): SafeParseResult<AddItemAdditionalCurrency, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => AddItemAdditionalCurrency$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'AddItemAdditionalCurrency' from JSON`,
+  );
+}
+
+/** @internal */
 export const PlanVariantDetailsTo$inboundSchema: z.ZodMiniType<
   PlanVariantDetailsTo,
   unknown
@@ -1849,6 +2066,34 @@ export function planVariantDetailsToFromJSON(
 }
 
 /** @internal */
+export const VariantDetailsTierAdditionalCurrency$inboundSchema: z.ZodMiniType<
+  VariantDetailsTierAdditionalCurrency,
+  unknown
+> = z.pipe(
+  z.object({
+    currency: types.string(),
+    amount: types.optional(types.number()),
+    flat_amount: types.optional(types.number()),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      "flat_amount": "flatAmount",
+    });
+  }),
+);
+
+export function variantDetailsTierAdditionalCurrencyFromJSON(
+  jsonString: string,
+): SafeParseResult<VariantDetailsTierAdditionalCurrency, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) =>
+      VariantDetailsTierAdditionalCurrency$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'VariantDetailsTierAdditionalCurrency' from JSON`,
+  );
+}
+
+/** @internal */
 export const PlanVariantDetailsTier$inboundSchema: z.ZodMiniType<
   PlanVariantDetailsTier,
   unknown
@@ -1857,10 +2102,14 @@ export const PlanVariantDetailsTier$inboundSchema: z.ZodMiniType<
     to: smartUnion([types.number(), types.string()]),
     amount: types.number(),
     flat_amount: types.optional(types.number()),
+    additional_currencies: types.optional(
+      z.array(z.lazy(() => VariantDetailsTierAdditionalCurrency$inboundSchema)),
+    ),
   }),
   z.transform((v) => {
     return remap$(v, {
       "flat_amount": "flatAmount",
+      "additional_currencies": "additionalCurrencies",
     });
   }),
 );
@@ -1900,6 +2149,9 @@ export const PlanVariantDetailsPrice$inboundSchema: z.ZodMiniType<
 > = z.pipe(
   z.object({
     amount: types.optional(types.number()),
+    additional_currencies: types.optional(
+      z.array(z.lazy(() => AddItemAdditionalCurrency$inboundSchema)),
+    ),
     tiers: types.optional(
       z.array(z.lazy(() => PlanVariantDetailsTier$inboundSchema)),
     ),
@@ -1912,6 +2164,7 @@ export const PlanVariantDetailsPrice$inboundSchema: z.ZodMiniType<
   }),
   z.transform((v) => {
     return remap$(v, {
+      "additional_currencies": "additionalCurrencies",
       "tier_behavior": "tierBehavior",
       "interval_count": "intervalCount",
       "billing_units": "billingUnits",
@@ -2162,6 +2415,7 @@ export const PlanVariantDetailsPurchaseLimit$inboundSchema: z.ZodMiniType<
     interval: PlanVariantDetailsPurchaseLimitInterval$inboundSchema,
     interval_count: z._default(types.number(), 1),
     limit: types.number(),
+    count: types.optional(types.number()),
   }),
   z.transform((v) => {
     return remap$(v, {

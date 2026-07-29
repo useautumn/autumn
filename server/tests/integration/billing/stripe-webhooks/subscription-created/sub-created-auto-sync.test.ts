@@ -14,7 +14,7 @@ import { TestFeature } from "@tests/setup/v2Features";
 import { completeStripeCheckoutFormV2 } from "@tests/utils/browserPool/completeStripeCheckoutFormV2";
 import { items } from "@tests/utils/fixtures/items";
 import { products } from "@tests/utils/fixtures/products";
-import { timeout } from "@tests/utils/genUtils";
+import { pollUntil, timeout } from "@tests/utils/genUtils";
 import ctx from "@tests/utils/testInitUtils/createTestContext";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
@@ -199,11 +199,13 @@ test(`${chalk.yellowBright("customer.subscription.created auto-sync: links produ
 	expect(checkoutSession.url).toContain("checkout.stripe.com");
 
 	await completeStripeCheckoutFormV2({ url: checkoutSession.url! });
-	await timeout(12000);
 
-	const completedSession = await ctx.stripeCli.checkout.sessions.retrieve(
-		checkoutSession.id,
-	);
+	const completedSession = await pollUntil({
+		fetch: () => ctx.stripeCli.checkout.sessions.retrieve(checkoutSession.id),
+		until: (session) => Boolean(session.subscription),
+		timeoutMs: 30_000,
+		intervalMs: 1_000,
+	});
 	const subscriptionId =
 		typeof completedSession.subscription === "string"
 			? completedSession.subscription
@@ -214,7 +216,16 @@ test(`${chalk.yellowBright("customer.subscription.created auto-sync: links produ
 	const stripeSubscription =
 		await ctx.stripeCli.subscriptions.retrieve(subscriptionId);
 
-	const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
+	const customer = await pollUntil({
+		fetch: () =>
+			autumnV1.customers.get<ApiCustomerV3>(customerId, {
+				skip_cache: "true",
+			}),
+		until: (candidate) =>
+			candidate.features[TestFeature.Messages] !== undefined,
+		timeoutMs: 30_000,
+		intervalMs: 500,
+	});
 	await expectProductActive({ customer, productId: pro.id });
 	expectCustomerFeatureCorrect({
 		customer,

@@ -1,9 +1,14 @@
 import {
 	BillingType,
 	type EntitlementWithFeature,
+	ErrCode,
 	type FullProduct,
+	getPriceCurrencyStripeId,
 	type Price,
+	priceHasCurrencyAmounts,
 	priceUtils,
+	RecaseError,
+	setPriceCurrencyStripeId,
 	type UsagePriceConfig,
 } from "@autumn/shared";
 import { PriceService } from "@server/internal/products/prices/PriceService";
@@ -14,11 +19,11 @@ import { createStripePrepaidPriceV2 } from "@/external/stripe/createStripePrice/
 import { assertNoPreviewStripeIdsOnProduct } from "@/external/stripe/previewStripeResourceIds.js";
 import { getStripePrice } from "@/external/stripe/prices/operations/getStripePrice.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
-import { billingIntervalToStripe } from "../stripePriceUtils.js";
 import {
 	createStripeArrearProrated,
 	createStripeMeteredPrice,
 } from "./createStripeArrearProrated";
+import { createStripeEmptyPrice } from "./createStripeEmptyPrice";
 import { createStripeFixedPrice } from "./createStripeFixedPrice";
 import { createStripeInArrearPrice } from "./createStripeInArrear";
 import { createStripeOneOffTieredProduct } from "./createStripeOneOffTiered";
@@ -30,24 +35,44 @@ const checkCurStripePrice = async ({
 	price,
 	stripeCli,
 	currency,
+	orgDefault,
 }: {
 	price: Price;
 	stripeCli: Stripe;
 	currency: string;
+	orgDefault: string;
 }) => {
 	const config = price.config! as UsagePriceConfig;
+	const stripePriceId = getPriceCurrencyStripeId({
+		config,
+		currency,
+		orgDefault,
+		slot: "stripe_price_id",
+	});
+	const emptyPriceId = getPriceCurrencyStripeId({
+		config,
+		currency,
+		orgDefault,
+		slot: "stripe_empty_price_id",
+	});
+	const prepaidV2Id = getPriceCurrencyStripeId({
+		config,
+		currency,
+		orgDefault,
+		slot: "stripe_prepaid_price_v2_id",
+	});
 
 	let stripePrice: Stripe.Price | null = null;
-	if (!config.stripe_price_id) {
+	if (!stripePriceId) {
 		stripePrice = null;
 	} else {
 		try {
-			stripePrice = await stripeCli.prices.retrieve(config.stripe_price_id!, {
+			stripePrice = await stripeCli.prices.retrieve(stripePriceId, {
 				expand: ["product"],
 			});
 
 			if (!stripePrice.active) {
-				stripePrice = await stripeCli.prices.update(config.stripe_price_id!, {
+				stripePrice = await stripeCli.prices.update(stripePriceId, {
 					active: true,
 				});
 			}
@@ -87,12 +112,12 @@ const checkCurStripePrice = async ({
 
 	const getStripePrepaidPriceV2 = async () => {
 		let stripePrepaidPriceV2: Stripe.Price | undefined;
-		if (!config.stripe_prepaid_price_v2_id) {
+		if (!prepaidV2Id) {
 			stripePrepaidPriceV2 = undefined;
 		} else {
 			stripePrepaidPriceV2 = await getStripePrice({
 				stripeClient: stripeCli,
-				stripePriceId: config.stripe_prepaid_price_v2_id,
+				stripePriceId: prepaidV2Id,
 			});
 		}
 
@@ -132,6 +157,7 @@ export const createStripePriceIFNotExist = async ({
 	product,
 	internalEntityId,
 	useCheckout = false,
+	currency: targetCurrency,
 }: {
 	ctx: AutumnContext;
 	price: Price;
@@ -139,6 +165,7 @@ export const createStripePriceIFNotExist = async ({
 	product: FullProduct;
 	internalEntityId?: string;
 	useCheckout?: boolean;
+	currency?: string;
 }) => {
 	// Fetch latest price data...
 
@@ -146,17 +173,42 @@ export const createStripePriceIFNotExist = async ({
 	assertNoPreviewStripeIdsOnProduct({ product });
 	const stripeCli = createStripeCli({ org, env });
 
+	const config = price.config! as UsagePriceConfig;
+	const orgDefault = (org.default_currency || "usd").toLowerCase();
+	const currency = (
+		targetCurrency ??
+		config.base_currency ??
+		orgDefault
+	).toLowerCase();
+
 	const billingType = getBillingType(price.config!);
+
+	const isFixed =
+		billingType === BillingType.FixedCycle ||
+		billingType === BillingType.OneOff;
+	if (!priceHasCurrencyAmounts({ config, currency, orgDefault, isFixed })) {
+		throw new RecaseError({
+			code: ErrCode.CurrencyMismatch,
+			message: `Price ${price.id} has no '${currency}' amounts in config.currencies — cannot create a Stripe price in that currency`,
+			statusCode: 400,
+		});
+	}
 
 	const { stripePrice, stripeEmptyPrice, stripePrepaidPriceV2, stripeProd } =
 		await checkCurStripePrice({
 			price,
 			stripeCli,
-			currency: org.default_currency || "usd",
+			currency,
+			orgDefault,
 		});
 
-	const config = price.config! as UsagePriceConfig;
-	config.stripe_price_id = stripePrice?.id;
+	setPriceCurrencyStripeId({
+		config,
+		currency,
+		orgDefault,
+		slot: "stripe_price_id",
+		id: stripePrice?.id,
+	});
 	config.stripe_product_id = stripeProd?.id;
 
 	const isOneOffAndTiered = priceUtils.isTieredOneOff({ price, product });
@@ -173,6 +225,7 @@ export const createStripePriceIFNotExist = async ({
 				price,
 				product,
 				org,
+				currency,
 			});
 		}
 	}
@@ -200,6 +253,7 @@ export const createStripePriceIFNotExist = async ({
 				product,
 				org,
 				curStripeProd: stripeProd,
+				currency,
 			});
 		}
 
@@ -210,11 +264,18 @@ export const createStripePriceIFNotExist = async ({
 				price,
 				product,
 				currentStripeProduct: stripeProd ?? undefined,
+				currency,
 			});
 		}
 	}
 
 	if (billingType === BillingType.InArrearProrated) {
+		const placeholderPriceId = getPriceCurrencyStripeId({
+			config,
+			currency,
+			orgDefault,
+			slot: "stripe_placeholder_price_id",
+		});
 		if (!stripePrice) {
 			logger.info(`Creating stripe in arrear prorated product`);
 			await createStripeArrearProrated({
@@ -225,8 +286,9 @@ export const createStripePriceIFNotExist = async ({
 				product,
 				org,
 				curStripeProd: stripeProd,
+				currency,
 			});
-		} else if (!config.stripe_placeholder_price_id) {
+		} else if (!placeholderPriceId) {
 			logger.info(`Creating stripe placeholder price`);
 			const placeholderPrice = await createStripeMeteredPrice({
 				stripeCli,
@@ -234,8 +296,15 @@ export const createStripePriceIFNotExist = async ({
 				entitlements,
 				product,
 				org,
+				currency,
 			});
-			config.stripe_placeholder_price_id = placeholderPrice.id;
+			setPriceCurrencyStripeId({
+				config,
+				currency,
+				orgDefault,
+				slot: "stripe_placeholder_price_id",
+				id: placeholderPrice.id,
+			});
 			await PriceService.update({
 				db,
 				id: price.id!,
@@ -257,34 +326,19 @@ export const createStripePriceIFNotExist = async ({
 			curStripeProduct: stripeProd,
 			internalEntityId,
 			useCheckout,
+			currency,
 		});
 
 		if (CREATE_STRIPE_EMPTY_PRICES && !stripeEmptyPrice) {
-			try {
-				logger.info(`Creating stripe empty price`);
-				const emptyPrice = await stripeCli.prices.create({
-					product: config.stripe_product_id || product.processor?.id,
-					unit_amount: 0,
-					currency: org.default_currency || "usd",
-					recurring: {
-						...(billingIntervalToStripe({
-							interval: price.config!.interval!,
-							intervalCount: price.config!.interval_count!,
-						}) as any),
-					},
-				});
-
-				config.stripe_empty_price_id = emptyPrice.id;
-				await PriceService.update({
-					db,
-					id: price.id!,
-					update: { config },
-				});
-			} catch (error) {
-				logger.error(`Error creating stripe empty price!`, {
-					error,
-				});
-			}
+			await createStripeEmptyPrice({
+				db,
+				stripeCli,
+				price,
+				product,
+				org,
+				logger,
+				currency,
+			});
 		}
 	}
 };

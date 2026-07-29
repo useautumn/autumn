@@ -7,12 +7,19 @@ import {
 	type ProductV2,
 	productsAreSame,
 	RecaseError,
+	type UpdateLicenseParentParams,
 	UpdateProductSchema,
 	type UpdateProductV2Params,
 	type UpdateVariantParams,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { initStripeResourcesForProducts } from "@/internal/billing/v2/providers/stripe/utils/common/initStripeResourcesForProducts.js";
+import {
+	applyPreparedPlanLicenseSync,
+	validatePlanLicenseUpdate,
+} from "@/internal/licenses/actions/links/syncPlanLicenses.js";
+import { applyLicenseParentPropagation } from "@/internal/licenses/actions/propagation/applyLicenseParentPropagation.js";
+import { prepareLicenseParentPropagation } from "@/internal/licenses/actions/propagation/prepareLicenseParentPropagation.js";
 import { updateVariants } from "@/internal/product/actions/updateVariants/updateVariants.js";
 import {
 	handleNewFreeTrial,
@@ -21,14 +28,16 @@ import {
 import { handleUpdateProductDetails } from "@/internal/products/handlers/handleUpdatePlan/updateProductDetails.js";
 import { handleVersionProductV2 } from "@/internal/products/handlers/handleVersionProduct.js";
 import { ProductService } from "@/internal/products/ProductService.js";
+import { getPlanResponse } from "@/internal/products/productUtils/productResponseUtils/getPlanResponse.js";
 import { getProductResponse } from "@/internal/products/productUtils/productResponseUtils/getProductResponse.js";
 import { productRepo } from "@/internal/products/repos/productRepo.js";
 import { JobName } from "@/queue/JobName.js";
 import { addTaskToQueue } from "@/queue/queueUtils.js";
+import { applyOtherProductVersions } from "./updateProduct/applyOtherProductVersions.js";
+import { prepareProductLicenseSync } from "./updateProduct/licenses/prepareProductLicenseSync.js";
 import { setupUpdateProductContext } from "./updateProduct/setupUpdateProductContext.js";
 import { shouldApplyVariantUpdates } from "./updateProduct/shouldApplyVariantUpdates.js";
 import { updateProductItems } from "./updateProduct/updateProductItems.js";
-import { applyOtherProductVersions } from "./updateProduct/applyOtherProductVersions.js";
 import { validateVariantSettingsUpdate } from "./updateProduct/validateVariantSettingsUpdate.js";
 import { validateDefaultFlag } from "./validateDefaultFlag.js";
 
@@ -47,8 +56,10 @@ interface UpdateProductParams {
 	baseInternalProductId?: string | null;
 	propagateToVariants?: string[];
 	variantUpdates?: UpdateVariantParams[];
+	licenseParentUpdates?: UpdateLicenseParentParams[];
 	allowVariantSettingsUpdate?: boolean;
 	skipVariantUpdates?: boolean;
+	skipLicenseParentPropagation?: boolean;
 }
 
 const resolveBaseInternalProductId = async ({
@@ -95,15 +106,24 @@ export const updateProduct = async ({
 	baseInternalProductId,
 	propagateToVariants = [],
 	variantUpdates = [],
+	licenseParentUpdates,
 	allowVariantSettingsUpdate = false,
 	skipVariantUpdates = false,
+	skipLicenseParentPropagation = false,
 }: UpdateProductParams) => {
 	const { db, org, env, features } = ctx;
-	const { version, upsert, disable_version, force_version, all_versions } =
-		query;
+	const { version, disable_version, force_version, all_versions } = query;
 	const effectiveDisableVersion = disable_version || all_versions;
 	const basePlanIdProvided = "base_plan_id" in rawProductUpdates;
-	const { base_plan_id: basePlanId, ...productUpdates } = rawProductUpdates;
+	const {
+		base_plan_id: basePlanId,
+		licenses,
+		...productUpdates
+	} = rawProductUpdates;
+	validatePlanLicenseUpdate({
+		allVersions: all_versions,
+		licenses,
+	});
 
 	if (force_version && disable_version) {
 		throw new RecaseError({
@@ -139,6 +159,20 @@ export const updateProduct = async ({
 		version,
 		initialFullProduct,
 	});
+	const preparedLicenseParentPropagation = skipLicenseParentPropagation
+		? undefined
+		: await prepareLicenseParentPropagation({
+				ctx,
+				child: fullProduct,
+				targets: licenseParentUpdates ?? [],
+			});
+	const inPlaceLicenseParentTargets =
+		preparedLicenseParentPropagation?.selectedParents
+			.filter(({ hasCustomers }) => !hasCustomers && !force_version)
+			.map(({ parent }) => ({
+				plan_id: parent.id,
+				version: parent.version,
+			})) ?? [];
 	const resolvedBaseInternalProductId = basePlanIdProvided
 		? await resolveBaseInternalProductId({
 				ctx,
@@ -195,6 +229,38 @@ export const updateProduct = async ({
 			allVersions: all_versions,
 		});
 	};
+	const applyLicenseParentUpdates = async ({
+		latestChild,
+	}: {
+		latestChild: FullProduct;
+	}) => {
+		const latestChildPlan = await getPlanResponse({
+			ctx,
+			product: latestChild,
+			features,
+		});
+		await applyLicenseParentPropagation({
+			prepared: preparedLicenseParentPropagation,
+			oldChild: fullProduct,
+			newChild: latestChild,
+			newChildPlan: latestChildPlan,
+			forceVersion: force_version,
+			updateParent: async ({ parent, licenses, versioning }) => {
+				const updateInPlace = versioning === "in_place";
+				await updateProduct({
+					ctx,
+					productId: parent.id,
+					query: {
+						version: parent.version,
+						disable_version: updateInPlace ? true : effectiveDisableVersion,
+						force_version: updateInPlace ? undefined : force_version,
+					},
+					updates: { licenses },
+					skipLicenseParentPropagation: true,
+				});
+			},
+		});
+	};
 	const applyHistoricalVersions = async ({
 		latestProduct,
 	}: {
@@ -235,7 +301,7 @@ export const updateProduct = async ({
 		),
 	};
 
-	if (Object.keys(productUpdates).length === 0) {
+	if (Object.keys(productUpdates).length === 0 && licenses === undefined) {
 		await applyBasePlanLink();
 		const latestProduct = basePlanIdProvided
 			? await ProductService.getFull({
@@ -264,6 +330,67 @@ export const updateProduct = async ({
 	const versionableCustomerProductExists =
 		customerUsage.hasVersionableCustomerProducts;
 	const freeTrialProvided = "free_trial" in productUpdates;
+	const billingControlsProvided = "billing_controls" in productUpdates;
+	const licensesProvided = licenses !== undefined;
+
+	const same = productsAreSame({ newProductV2, curProductV2, features });
+	const billingControlsOnlyChanged =
+		billingControlsProvided &&
+		!same.billingControlsSame &&
+		same.itemsSame &&
+		same.freeTrialsSame &&
+		same.detailsSame &&
+		same.configSame &&
+		same.optionsSame &&
+		same.metadataSame;
+	const productVersioningEligible =
+		versionableCustomerProductExists &&
+		!effectiveDisableVersion &&
+		(itemsExist || freeTrialProvided || licensesProvided);
+	const productChanged =
+		!same.itemsSame || !same.freeTrialsSame || licensesProvided;
+	const billingControlsWillVersion =
+		!force_version &&
+		versionableCustomerProductExists &&
+		!effectiveDisableVersion &&
+		billingControlsOnlyChanged;
+	const productWillVersion = productVersioningEligible && productChanged;
+	const willVersion =
+		force_version || billingControlsWillVersion || productWillVersion;
+	const preparedLicenseSync = await prepareProductLicenseSync({
+		ctx,
+		fromInternalProductId: fullProduct.internal_id,
+		newProductV2,
+		baseProduct: fullProduct,
+		org,
+		features,
+		licenses,
+		newParentVersion: willVersion,
+	});
+	const createVersion = async () => {
+		const newProduct = await handleVersionProductV2({
+			ctx,
+			newProductV2,
+			latestProduct: fullProduct,
+			org,
+			env,
+			baseInternalProductId: nextBaseInternalProductId,
+			preparedPlanLicenseSync: preparedLicenseSync,
+		});
+		const latestBase = await ProductService.getFull({
+			db,
+			idOrInternalId: newProduct.id,
+			orgId: org.id,
+			env,
+		});
+		await applyVariantUpdates({ latestBase });
+		await applyLicenseParentUpdates({ latestChild: latestBase });
+		return newProduct;
+	};
+
+	if (billingControlsWillVersion) {
+		return createVersion();
+	}
 
 	await handleUpdateProductDetails({
 		db,
@@ -275,6 +402,12 @@ export const updateProduct = async ({
 		rewardPrograms,
 		logger: ctx.logger,
 	});
+	if (preparedLicenseSync && !willVersion) {
+		await applyPreparedPlanLicenseSync({
+			ctx,
+			prepared: preparedLicenseSync,
+		});
+	}
 
 	if (notNullish(productUpdates.metadata)) {
 		await productRepo.updateMetadataByExternalId({
@@ -289,60 +422,17 @@ export const updateProduct = async ({
 
 	// Check if versioning is needed (customers exist AND items or free trial changed)
 	if (force_version) {
-		const newProduct = await handleVersionProductV2({
-			ctx,
-			newProductV2: newProductV2,
-			latestProduct: fullProduct,
-			org,
-			env,
-			baseInternalProductId: nextBaseInternalProductId,
-		});
-		const latestBase = await ProductService.getFull({
-			db,
-			idOrInternalId: newProduct.id,
-			orgId: org.id,
-			env,
-		});
-		await applyVariantUpdates({ latestBase });
-		return newProduct;
+		return createVersion();
 	}
 
-	if (
-		versionableCustomerProductExists &&
-		!effectiveDisableVersion &&
-		(itemsExist || freeTrialProvided)
-	) {
-		const { itemsSame, freeTrialsSame } = productsAreSame({
-			newProductV2: newProductV2,
-			curProductV1: fullProduct,
-			features,
-		});
-
-		const productSame = itemsSame && freeTrialsSame;
-
-		if (!productSame) {
-			const newProduct = await handleVersionProductV2({
-				ctx,
-				newProductV2: newProductV2,
-				latestProduct: fullProduct,
-				org,
-				env,
-				baseInternalProductId: nextBaseInternalProductId,
-			});
-
-			const latestBase = await ProductService.getFull({
-				db,
-				idOrInternalId: newProduct.id,
-				orgId: org.id,
-				env,
-			});
-			await applyVariantUpdates({ latestBase });
-
-			return newProduct;
+	if (productVersioningEligible) {
+		if (productWillVersion) {
+			return createVersion();
 		}
 
 		await applyHistoricalVersions({ latestProduct: fullProduct });
 		await applyVariantUpdates({ latestBase: fullProduct });
+		await applyLicenseParentUpdates({ latestChild: fullProduct });
 		await applyBasePlanLink();
 		return fullProduct;
 	}
@@ -357,13 +447,13 @@ export const updateProduct = async ({
 			newItems: productUpdates.items,
 			features,
 			useInPlaceEdit: customerProductExists,
+			propagateToLicenseParents: inPlaceLicenseParentTargets,
 		});
 	}
 
 	const latestProductId = productUpdates.id || fullProduct.id;
 	await applyBasePlanLink();
 
-	// New full product
 	let newFullProduct = await ProductService.getFull({
 		db,
 		idOrInternalId: latestProductId,
@@ -394,10 +484,9 @@ export const updateProduct = async ({
 		});
 	}
 
-	// New full product
-
 	await applyHistoricalVersions({ latestProduct: newFullProduct });
 	await applyVariantUpdates({ latestBase: newFullProduct });
+	await applyLicenseParentUpdates({ latestChild: newFullProduct });
 
 	await initStripeResourcesForProducts({
 		ctx,

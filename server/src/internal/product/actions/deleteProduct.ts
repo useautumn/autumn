@@ -2,6 +2,7 @@ import { ProductNotFoundError, products, RecaseError } from "@autumn/shared";
 import { and, desc, eq, lt } from "drizzle-orm";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { CusProdReadService } from "@/internal/customers/cusProducts/CusProdReadService.js";
+import { planLicenseRepo } from "@/internal/licenses/repos/planLicenseRepo.js";
 import { ProductService } from "@/internal/products/ProductService.js";
 
 const relinkVariantsBeforeDeletingBase = async ({
@@ -60,7 +61,19 @@ export const deleteProduct = async ({
 		throw new ProductNotFoundError({ productId: productId });
 	}
 
-	const [latestCounts, allCounts] = await Promise.all([
+	const deletionInternalProductIds = allVersions
+		? (
+				await db.query.products.findMany({
+					where: and(
+						eq(products.id, productId),
+						eq(products.org_id, org.id),
+						eq(products.env, env),
+					),
+					columns: { internal_id: true },
+				})
+			).map(({ internal_id }) => internal_id)
+		: [product.internal_id];
+	const [latestCounts, allCounts, parentLinks] = await Promise.all([
 		CusProdReadService.getCounts({
 			db,
 			internalProductId: product.internal_id,
@@ -71,7 +84,17 @@ export const deleteProduct = async ({
 			orgId: org.id,
 			env,
 		}),
+		planLicenseRepo.listCatalogByLicenseInternalProductIds({
+			db,
+			licenseInternalProductIds: deletionInternalProductIds,
+		}),
 	]);
+
+	if (parentLinks.length > 0) {
+		throw new RecaseError({
+			message: `Product ${productId} is linked to a parent plan as a license and therefore cannot be deleted`,
+		});
+	}
 
 	const cusProdCount = allVersions ? allCounts.all : latestCounts.all;
 

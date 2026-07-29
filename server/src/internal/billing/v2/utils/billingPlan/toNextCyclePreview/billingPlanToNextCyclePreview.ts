@@ -5,6 +5,7 @@ import {
 	cp,
 	type FullCusProduct,
 	hasCustomerProductEnded,
+	hasCustomerProductStarted,
 } from "@autumn/shared";
 import type { Decimal } from "decimal.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
@@ -102,10 +103,19 @@ export const billingPlanToNextCyclePreview = ({
 		? finalFullCustomer.customer_products.filter(customerProductFilter)
 		: finalFullCustomer.customer_products;
 
-	const customerProducts = allCustomerProducts.filter(
-		(customerProduct) =>
-			cp(customerProduct).paid().recurring().hasRelevantStatus().valid,
-	);
+	const customerProducts = allCustomerProducts.filter((customerProduct) => {
+		const isPaidRecurring = cp(customerProduct)
+			.paid()
+			.recurring()
+			.hasRelevantStatus().valid;
+		const startsInFuture =
+			cp(customerProduct).scheduled().valid &&
+			!hasCustomerProductStarted(customerProduct, {
+				nowMs: billingContext.currentEpochMs,
+				// toleranceMs: 0,
+			});
+		return isPaidRecurring || startsInFuture;
+	});
 
 	const currentCustomerProducts = allCustomerProducts.filter(
 		(customerProduct) =>

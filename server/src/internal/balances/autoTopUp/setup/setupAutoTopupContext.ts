@@ -14,7 +14,6 @@ import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { fetchStripeCustomerForBilling } from "@/internal/billing/v2/providers/stripe/setup/fetchStripeCustomerForBilling.js";
 import { CusService } from "@/internal/customers/CusService.js";
 import { getCachedFullSubject } from "@/internal/customers/cache/fullSubject/actions/getCachedFullSubject.js";
-import { getCachedFullCustomer } from "@/internal/customers/cusUtils/fullCustomerCacheUtils/getCachedFullCustomer.js";
 import { getFullSubjectNormalized } from "@/internal/customers/repos/getFullSubject/index.js";
 import { isFullSubjectRolloutEnabled } from "@/internal/misc/rollouts/fullSubjectRolloutUtils.js";
 import type { AutoTopUpPayload } from "@/queue/workflows.js";
@@ -43,51 +42,39 @@ const getAutoTopupFullCustomer = async ({
 	customerId: string;
 }): Promise<FullCustomer | undefined> => {
 	if (isFullSubjectRolloutEnabled({ ctx })) {
-		const { fullSubject: cachedFullSubject } = await getCachedFullSubject({
-			ctx,
-			customerId,
-			source: "setupAutoTopupContext",
-		});
+	}
 
-		if (cachedFullSubject) {
-			return fullSubjectToFullCustomer({
-				fullSubject: cachedFullSubject,
-			});
-		}
+	const { fullSubject: cachedFullSubject } = await getCachedFullSubject({
+		ctx,
+		customerId,
+		source: "setupAutoTopupContext",
+	});
 
-		const normalizedFullSubject = await getFullSubjectNormalized({
-			ctx,
-			customerId,
-			inStatuses: ACTIVE_STATUSES,
-		});
-
-		if (normalizedFullSubject) {
-			return fullSubjectToFullCustomer({
-				fullSubject: normalizedFullSubject.fullSubject,
-			});
-		}
-
-		// Safety fallback to preserve previous behavior if subject query returns no row.
-		return CusService.getFull({
-			ctx,
-			idOrInternalId: customerId,
-			inStatuses: ACTIVE_STATUSES,
-			withSubs: true,
+	if (cachedFullSubject) {
+		return fullSubjectToFullCustomer({
+			fullSubject: cachedFullSubject,
 		});
 	}
 
-	let fullCustomer = await getCachedFullCustomer({ ctx, customerId });
+	const normalizedFullSubject = await getFullSubjectNormalized({
+		ctx,
+		customerId,
+		inStatuses: ACTIVE_STATUSES,
+	});
 
-	if (!fullCustomer) {
-		fullCustomer = await CusService.getFull({
-			ctx,
-			idOrInternalId: customerId,
-			inStatuses: ACTIVE_STATUSES,
-			withSubs: true,
+	if (normalizedFullSubject) {
+		return fullSubjectToFullCustomer({
+			fullSubject: normalizedFullSubject.fullSubject,
 		});
 	}
 
-	return fullCustomer;
+	// Safety fallback to preserve previous behavior if subject query returns no row.
+	return CusService.getFull({
+		ctx,
+		idOrInternalId: customerId,
+		inStatuses: ACTIVE_STATUSES,
+		withSubs: true,
+	});
 };
 
 /** Fetch full customer, auto-topup config, cusEnt, and Stripe context. */
@@ -165,17 +152,70 @@ export const setupAutoTopupContext = async ({
 		quantity: roundedQuantity,
 	};
 
+	const vercelInstallationId = fullCustomer.processors?.vercel?.installation_id;
+	const shouldUseInvoiceMode =
+		autoTopupConfig.invoice_mode === true || Boolean(vercelInstallationId);
+
+	const invoiceMode = shouldUseInvoiceMode
+		? { finalizeInvoice: true, enableProductImmediately: true }
+		: undefined;
+
+	// Fetched before the preflight because the circuit breaker needs the current
+	// payment method to tell "same declining card" from "new payment info".
+	const { stripeCus, paymentMethod, testClockFrozenTime } =
+		await fetchStripeCustomerForBilling({ ctx, fullCus: fullCustomer });
+
+	if (!paymentMethod && !invoiceMode) {
+		const message = `No payment method for customer ${stripeCus?.id}, skipping`;
+		logger.warn(`[setupAutoTopupContext] ${message}`);
+		return {
+			ok: false,
+			failure: {
+				reason: "missing_payment_method",
+				message,
+				fullCustomer,
+				autoTopupConfig: normalizedAutoTopupConfig,
+			},
+		};
+	}
+
 	const { allowed, reason, blockedWindowEndsAt, limitState } =
 		await preflightAutoTopupLimits({
 			ctx,
 			payload,
 			fullCustomer,
 			autoTopupConfig: normalizedAutoTopupConfig,
+			paymentMethod,
 		});
 
 	if (!allowed) {
 		const message = `Preflight blocked for feature ${featureId}, customer ${customerId}, reason: ${reason}`;
 		logger.info(`[setupAutoTopupContext] ${message}`);
+
+		// Suspension has no window to expire, so key the suppression off when the
+		// breaker tripped — one webhook a day rather than one per deduction.
+		if (reason === "suspended_after_failures") {
+			return {
+				ok: false,
+				failure: {
+					reason,
+					message,
+					fullCustomer,
+					autoTopupConfig: normalizedAutoTopupConfig,
+					suppressionKey: [
+						"auto_topup_failed_webhook",
+						ctx.org.id,
+						ctx.env,
+						customerId,
+						featureId,
+						reason,
+						limitState.suspended_at,
+					].join(":"),
+					suppressionTtlMs: 24 * 60 * 60 * 1000,
+				},
+			};
+		}
+
 		return {
 			ok: false,
 			failure: {
@@ -200,31 +240,6 @@ export const setupAutoTopupContext = async ({
 							),
 						}
 					: {}),
-			},
-		};
-	}
-
-	const vercelInstallationId = fullCustomer.processors?.vercel?.installation_id;
-	const shouldUseInvoiceMode =
-		autoTopupConfig.invoice_mode === true || Boolean(vercelInstallationId);
-
-	const invoiceMode = shouldUseInvoiceMode
-		? { finalizeInvoice: true, enableProductImmediately: true }
-		: undefined;
-
-	const { stripeCus, paymentMethod, testClockFrozenTime } =
-		await fetchStripeCustomerForBilling({ ctx, fullCus: fullCustomer });
-
-	if (!paymentMethod && !invoiceMode) {
-		const message = `No payment method for customer ${stripeCus?.id}, skipping`;
-		logger.warn(`[setupAutoTopupContext] ${message}`);
-		return {
-			ok: false,
-			failure: {
-				reason: "missing_payment_method",
-				message,
-				fullCustomer,
-				autoTopupConfig: normalizedAutoTopupConfig,
 			},
 		};
 	}

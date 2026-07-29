@@ -55,6 +55,21 @@ UpdatePlanPriceIntervalRequestBody = Literal[
 r"""Billing interval (e.g. 'month', 'year')."""
 
 
+class UpdatePlanAdditionalCurrencyRequestBodyTypedDict(TypedDict):
+    currency: str
+    r"""Three-letter Stripe-supported currency code (e.g. 'eur', 'gbp')."""
+    amount: float
+    r"""Price amount in this currency. Set explicitly per currency, not converted from the base amount."""
+
+
+class UpdatePlanAdditionalCurrencyRequestBody(BaseModel):
+    currency: str
+    r"""Three-letter Stripe-supported currency code (e.g. 'eur', 'gbp')."""
+
+    amount: float
+    r"""Price amount in this currency. Set explicitly per currency, not converted from the base amount."""
+
+
 class UpdatePlanBasePriceRequestTypedDict(TypedDict):
     r"""Base price configuration for a plan."""
 
@@ -64,6 +79,10 @@ class UpdatePlanBasePriceRequestTypedDict(TypedDict):
     r"""Billing interval (e.g. 'month', 'year')."""
     interval_count: NotRequired[float]
     r"""Number of intervals per billing cycle. Defaults to 1."""
+    additional_currencies: NotRequired[
+        List[UpdatePlanAdditionalCurrencyRequestBodyTypedDict]
+    ]
+    r"""Base price amounts in additional currencies. The base 'amount' is in the org's default currency."""
 
 
 class UpdatePlanBasePriceRequest(BaseModel):
@@ -78,9 +97,14 @@ class UpdatePlanBasePriceRequest(BaseModel):
     interval_count: Optional[float] = None
     r"""Number of intervals per billing cycle. Defaults to 1."""
 
+    additional_currencies: Optional[List[UpdatePlanAdditionalCurrencyRequestBody]] = (
+        None
+    )
+    r"""Base price amounts in additional currencies. The base 'amount' is in the org's default currency."""
+
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
-        optional_fields = set(["interval_count"])
+        optional_fields = set(["interval_count", "additional_currencies"])
         serialized = handler(self)
         m = {}
 
@@ -144,6 +168,21 @@ class UpdatePlanItemResetRequestBody(BaseModel):
         return m
 
 
+class UpdatePlanItemAdditionalCurrencyRequestBodyTypedDict(TypedDict):
+    currency: str
+    r"""Three-letter Stripe-supported currency code (e.g. 'eur', 'gbp')."""
+    amount: float
+    r"""Price amount in this currency. Set explicitly per currency, not converted from the base amount."""
+
+
+class UpdatePlanItemAdditionalCurrencyRequestBody(BaseModel):
+    currency: str
+    r"""Three-letter Stripe-supported currency code (e.g. 'eur', 'gbp')."""
+
+    amount: float
+    r"""Price amount in this currency. Set explicitly per currency, not converted from the base amount."""
+
+
 UpdatePlanItemToRequestBodyTypedDict = TypeAliasType(
     "UpdatePlanItemToRequestBodyTypedDict", Union[float, str]
 )
@@ -154,10 +193,50 @@ UpdatePlanItemToRequestBody = TypeAliasType(
 )
 
 
+class UpdatePlanItemTierAdditionalCurrencyRequestBodyTypedDict(TypedDict):
+    currency: str
+    r"""Three-letter Stripe-supported currency code (e.g. 'eur', 'gbp')."""
+    amount: NotRequired[float]
+    r"""Per-unit amount for this tier in this currency."""
+    flat_amount: NotRequired[float]
+    r"""Flat amount for this tier in this currency, if the tier uses one."""
+
+
+class UpdatePlanItemTierAdditionalCurrencyRequestBody(BaseModel):
+    currency: str
+    r"""Three-letter Stripe-supported currency code (e.g. 'eur', 'gbp')."""
+
+    amount: Optional[float] = None
+    r"""Per-unit amount for this tier in this currency."""
+
+    flat_amount: Optional[float] = None
+    r"""Flat amount for this tier in this currency, if the tier uses one."""
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        optional_fields = set(["amount", "flat_amount"])
+        serialized = handler(self)
+        m = {}
+
+        for n, f in type(self).model_fields.items():
+            k = f.alias or n
+            val = serialized.get(k, serialized.get(n))
+
+            if val != UNSET_SENTINEL:
+                if val is not None or k not in optional_fields:
+                    m[k] = val
+
+        return m
+
+
 class UpdatePlanItemTierRequestBodyTypedDict(TypedDict):
     to: UpdatePlanItemToRequestBodyTypedDict
     amount: NotRequired[float]
     flat_amount: NotRequired[float]
+    additional_currencies: NotRequired[
+        List[UpdatePlanItemTierAdditionalCurrencyRequestBodyTypedDict]
+    ]
+    r"""Per-currency amounts for this tier. Tier boundaries ('to') are shared across all currencies."""
 
 
 class UpdatePlanItemTierRequestBody(BaseModel):
@@ -167,9 +246,14 @@ class UpdatePlanItemTierRequestBody(BaseModel):
 
     flat_amount: Optional[float] = None
 
+    additional_currencies: Optional[
+        List[UpdatePlanItemTierAdditionalCurrencyRequestBody]
+    ] = None
+    r"""Per-currency amounts for this tier. Tier boundaries ('to') are shared across all currencies."""
+
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
-        optional_fields = set(["amount", "flat_amount"])
+        optional_fields = set(["amount", "flat_amount", "additional_currencies"])
         serialized = handler(self)
         m = {}
 
@@ -217,6 +301,10 @@ class UpdatePlanItemPriceRequestBodyTypedDict(TypedDict):
     r"""'prepaid' for upfront payment (seats), 'usage_based' for pay-as-you-go."""
     amount: NotRequired[float]
     r"""Price per billing_units after included usage. Either 'amount' or 'tiers' is required."""
+    additional_currencies: NotRequired[
+        List[UpdatePlanItemAdditionalCurrencyRequestBodyTypedDict]
+    ]
+    r"""Amounts in additional currencies for this flat price. The base 'amount' is in the org's default currency. Only valid with 'amount', not 'tiers'."""
     tiers: NotRequired[List[UpdatePlanItemTierRequestBodyTypedDict]]
     r"""Tiered pricing.  Either 'amount' or 'tiers' is required."""
     tier_behavior: NotRequired[UpdatePlanItemTierBehaviorRequestBody]
@@ -240,6 +328,11 @@ class UpdatePlanItemPriceRequestBody(BaseModel):
     amount: Optional[float] = None
     r"""Price per billing_units after included usage. Either 'amount' or 'tiers' is required."""
 
+    additional_currencies: Optional[
+        List[UpdatePlanItemAdditionalCurrencyRequestBody]
+    ] = None
+    r"""Amounts in additional currencies for this flat price. The base 'amount' is in the org's default currency. Only valid with 'amount', not 'tiers'."""
+
     tiers: Optional[List[UpdatePlanItemTierRequestBody]] = None
     r"""Tiered pricing.  Either 'amount' or 'tiers' is required."""
 
@@ -259,6 +352,7 @@ class UpdatePlanItemPriceRequestBody(BaseModel):
         optional_fields = set(
             [
                 "amount",
+                "additional_currencies",
                 "tiers",
                 "tier_behavior",
                 "interval_count",
@@ -441,6 +535,668 @@ class UpdatePlanItemPlanItem(BaseModel):
         return m
 
 
+UpdatePlanPriceLicenseInterval = Literal[
+    "one_off",
+    "week",
+    "month",
+    "quarter",
+    "semi_annual",
+    "year",
+]
+r"""Billing interval (e.g. 'month', 'year')."""
+
+
+class UpdatePlanLicenseAdditionalCurrencyTypedDict(TypedDict):
+    currency: str
+    r"""Three-letter Stripe-supported currency code (e.g. 'eur', 'gbp')."""
+    amount: float
+    r"""Price amount in this currency. Set explicitly per currency, not converted from the base amount."""
+
+
+class UpdatePlanLicenseAdditionalCurrency(BaseModel):
+    currency: str
+    r"""Three-letter Stripe-supported currency code (e.g. 'eur', 'gbp')."""
+
+    amount: float
+    r"""Price amount in this currency. Set explicitly per currency, not converted from the base amount."""
+
+
+class UpdatePlanLicenseBasePriceTypedDict(TypedDict):
+    r"""Base price configuration for a plan."""
+
+    amount: float
+    r"""Base price amount for the plan."""
+    interval: UpdatePlanPriceLicenseInterval
+    r"""Billing interval (e.g. 'month', 'year')."""
+    interval_count: NotRequired[float]
+    r"""Number of intervals per billing cycle. Defaults to 1."""
+    additional_currencies: NotRequired[
+        List[UpdatePlanLicenseAdditionalCurrencyTypedDict]
+    ]
+    r"""Base price amounts in additional currencies. The base 'amount' is in the org's default currency."""
+
+
+class UpdatePlanLicenseBasePrice(BaseModel):
+    r"""Base price configuration for a plan."""
+
+    amount: float
+    r"""Base price amount for the plan."""
+
+    interval: UpdatePlanPriceLicenseInterval
+    r"""Billing interval (e.g. 'month', 'year')."""
+
+    interval_count: Optional[float] = None
+    r"""Number of intervals per billing cycle. Defaults to 1."""
+
+    additional_currencies: Optional[List[UpdatePlanLicenseAdditionalCurrency]] = None
+    r"""Base price amounts in additional currencies. The base 'amount' is in the org's default currency."""
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        optional_fields = set(["interval_count", "additional_currencies"])
+        serialized = handler(self)
+        m = {}
+
+        for n, f in type(self).model_fields.items():
+            k = f.alias or n
+            val = serialized.get(k, serialized.get(n))
+
+            if val != UNSET_SENTINEL:
+                if val is not None or k not in optional_fields:
+                    m[k] = val
+
+        return m
+
+
+UpdatePlanLicenseResetInterval = Literal[
+    "one_off",
+    "minute",
+    "hour",
+    "day",
+    "week",
+    "month",
+    "quarter",
+    "semi_annual",
+    "year",
+]
+r"""Interval at which balance resets (e.g. 'month', 'year'). For consumable features only."""
+
+
+class UpdatePlanLicenseResetTypedDict(TypedDict):
+    r"""Reset configuration for consumable features. Omit for non-consumable features like seats."""
+
+    interval: UpdatePlanLicenseResetInterval
+    r"""Interval at which balance resets (e.g. 'month', 'year'). For consumable features only."""
+    interval_count: NotRequired[float]
+    r"""Number of intervals between resets. Defaults to 1."""
+
+
+class UpdatePlanLicenseReset(BaseModel):
+    r"""Reset configuration for consumable features. Omit for non-consumable features like seats."""
+
+    interval: UpdatePlanLicenseResetInterval
+    r"""Interval at which balance resets (e.g. 'month', 'year'). For consumable features only."""
+
+    interval_count: Optional[float] = None
+    r"""Number of intervals between resets. Defaults to 1."""
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        optional_fields = set(["interval_count"])
+        serialized = handler(self)
+        m = {}
+
+        for n, f in type(self).model_fields.items():
+            k = f.alias or n
+            val = serialized.get(k, serialized.get(n))
+
+            if val != UNSET_SENTINEL:
+                if val is not None or k not in optional_fields:
+                    m[k] = val
+
+        return m
+
+
+class UpdatePlanLicenseAddItemAdditionalCurrencyTypedDict(TypedDict):
+    currency: str
+    r"""Three-letter Stripe-supported currency code (e.g. 'eur', 'gbp')."""
+    amount: float
+    r"""Price amount in this currency. Set explicitly per currency, not converted from the base amount."""
+
+
+class UpdatePlanLicenseAddItemAdditionalCurrency(BaseModel):
+    currency: str
+    r"""Three-letter Stripe-supported currency code (e.g. 'eur', 'gbp')."""
+
+    amount: float
+    r"""Price amount in this currency. Set explicitly per currency, not converted from the base amount."""
+
+
+UpdatePlanLicenseToTypedDict = TypeAliasType(
+    "UpdatePlanLicenseToTypedDict", Union[float, str]
+)
+
+
+UpdatePlanLicenseTo = TypeAliasType("UpdatePlanLicenseTo", Union[float, str])
+
+
+class UpdatePlanLicenseTierAdditionalCurrencyTypedDict(TypedDict):
+    currency: NotRequired[Any]
+    amount: NotRequired[Any]
+    flat_amount: NotRequired[Any]
+
+
+class UpdatePlanLicenseTierAdditionalCurrency(BaseModel):
+    currency: Optional[Any] = None
+
+    amount: Optional[Any] = None
+
+    flat_amount: Optional[Any] = None
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        optional_fields = set(["currency", "amount", "flat_amount"])
+        serialized = handler(self)
+        m = {}
+
+        for n, f in type(self).model_fields.items():
+            k = f.alias or n
+            val = serialized.get(k, serialized.get(n))
+
+            if val != UNSET_SENTINEL:
+                if val is not None or k not in optional_fields:
+                    m[k] = val
+
+        return m
+
+
+class UpdatePlanLicenseTierTypedDict(TypedDict):
+    to: UpdatePlanLicenseToTypedDict
+    amount: NotRequired[float]
+    flat_amount: NotRequired[float]
+    additional_currencies: NotRequired[
+        List[UpdatePlanLicenseTierAdditionalCurrencyTypedDict]
+    ]
+    r"""Per-currency amounts for this tier. Tier boundaries ('to') are shared across all currencies."""
+
+
+class UpdatePlanLicenseTier(BaseModel):
+    to: UpdatePlanLicenseTo
+
+    amount: Optional[float] = None
+
+    flat_amount: Optional[float] = None
+
+    additional_currencies: Optional[List[UpdatePlanLicenseTierAdditionalCurrency]] = (
+        None
+    )
+    r"""Per-currency amounts for this tier. Tier boundaries ('to') are shared across all currencies."""
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        optional_fields = set(["amount", "flat_amount", "additional_currencies"])
+        serialized = handler(self)
+        m = {}
+
+        for n, f in type(self).model_fields.items():
+            k = f.alias or n
+            val = serialized.get(k, serialized.get(n))
+
+            if val != UNSET_SENTINEL:
+                if val is not None or k not in optional_fields:
+                    m[k] = val
+
+        return m
+
+
+UpdatePlanLicenseTierBehavior = Literal[
+    "graduated",
+    "volume",
+]
+
+
+UpdatePlanLicenseAddItemPriceInterval = Literal[
+    "one_off",
+    "week",
+    "month",
+    "quarter",
+    "semi_annual",
+    "year",
+]
+r"""Billing interval. For consumable features, should match reset.interval."""
+
+
+UpdatePlanLicenseAddItemBillingMethod = Literal[
+    "prepaid",
+    "usage_based",
+]
+r"""'prepaid' for upfront payment (seats), 'usage_based' for pay-as-you-go."""
+
+
+class UpdatePlanLicensePriceTypedDict(TypedDict):
+    r"""Pricing for usage beyond included units. Omit for free features."""
+
+    interval: UpdatePlanLicenseAddItemPriceInterval
+    r"""Billing interval. For consumable features, should match reset.interval."""
+    billing_method: UpdatePlanLicenseAddItemBillingMethod
+    r"""'prepaid' for upfront payment (seats), 'usage_based' for pay-as-you-go."""
+    amount: NotRequired[float]
+    r"""Price per billing_units after included usage. Either 'amount' or 'tiers' is required."""
+    additional_currencies: NotRequired[
+        List[UpdatePlanLicenseAddItemAdditionalCurrencyTypedDict]
+    ]
+    r"""Amounts in additional currencies for this flat price. The base 'amount' is in the org's default currency. Only valid with 'amount', not 'tiers'."""
+    tiers: NotRequired[List[UpdatePlanLicenseTierTypedDict]]
+    r"""Tiered pricing.  Either 'amount' or 'tiers' is required."""
+    tier_behavior: NotRequired[UpdatePlanLicenseTierBehavior]
+    interval_count: NotRequired[float]
+    r"""Number of intervals per billing cycle. Defaults to 1."""
+    billing_units: NotRequired[float]
+    r"""Units per price increment. Usage is rounded UP when billed (e.g. billing_units=100 means 101 rounds to 200)."""
+    max_purchase: NotRequired[Nullable[float]]
+    r"""Max units purchasable beyond included. E.g. included=100, max_purchase=300 allows 400 total. Null for no limit."""
+
+
+class UpdatePlanLicensePrice(BaseModel):
+    r"""Pricing for usage beyond included units. Omit for free features."""
+
+    interval: UpdatePlanLicenseAddItemPriceInterval
+    r"""Billing interval. For consumable features, should match reset.interval."""
+
+    billing_method: UpdatePlanLicenseAddItemBillingMethod
+    r"""'prepaid' for upfront payment (seats), 'usage_based' for pay-as-you-go."""
+
+    amount: Optional[float] = None
+    r"""Price per billing_units after included usage. Either 'amount' or 'tiers' is required."""
+
+    additional_currencies: Optional[
+        List[UpdatePlanLicenseAddItemAdditionalCurrency]
+    ] = None
+    r"""Amounts in additional currencies for this flat price. The base 'amount' is in the org's default currency. Only valid with 'amount', not 'tiers'."""
+
+    tiers: Optional[List[UpdatePlanLicenseTier]] = None
+    r"""Tiered pricing.  Either 'amount' or 'tiers' is required."""
+
+    tier_behavior: Optional[UpdatePlanLicenseTierBehavior] = None
+
+    interval_count: Optional[float] = 1
+    r"""Number of intervals per billing cycle. Defaults to 1."""
+
+    billing_units: Optional[float] = 1
+    r"""Units per price increment. Usage is rounded UP when billed (e.g. billing_units=100 means 101 rounds to 200)."""
+
+    max_purchase: OptionalNullable[float] = UNSET
+    r"""Max units purchasable beyond included. E.g. included=100, max_purchase=300 allows 400 total. Null for no limit."""
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        optional_fields = set(
+            [
+                "amount",
+                "additional_currencies",
+                "tiers",
+                "tier_behavior",
+                "interval_count",
+                "billing_units",
+                "max_purchase",
+            ]
+        )
+        nullable_fields = set(["max_purchase"])
+        serialized = handler(self)
+        m = {}
+
+        for n, f in type(self).model_fields.items():
+            k = f.alias or n
+            val = serialized.get(k, serialized.get(n))
+            is_nullable_and_explicitly_set = (
+                k in nullable_fields
+                and (self.__pydantic_fields_set__.intersection({n}))  # pylint: disable=no-member
+            )
+
+            if val != UNSET_SENTINEL:
+                if (
+                    val is not None
+                    or k not in optional_fields
+                    or is_nullable_and_explicitly_set
+                ):
+                    m[k] = val
+
+        return m
+
+
+UpdatePlanLicenseOnIncrease = Literal[
+    "bill_immediately",
+    "prorate_immediately",
+    "prorate_next_cycle",
+    "bill_next_cycle",
+]
+r"""Billing behavior when quantity increases mid-cycle."""
+
+
+UpdatePlanLicenseOnDecrease = Literal[
+    "prorate",
+    "prorate_immediately",
+    "prorate_next_cycle",
+    "none",
+    "no_prorations",
+]
+r"""Credit behavior when quantity decreases mid-cycle."""
+
+
+class UpdatePlanLicenseProrationTypedDict(TypedDict):
+    r"""Proration settings for prepaid features. Controls mid-cycle quantity change billing."""
+
+    on_increase: UpdatePlanLicenseOnIncrease
+    r"""Billing behavior when quantity increases mid-cycle."""
+    on_decrease: UpdatePlanLicenseOnDecrease
+    r"""Credit behavior when quantity decreases mid-cycle."""
+
+
+class UpdatePlanLicenseProration(BaseModel):
+    r"""Proration settings for prepaid features. Controls mid-cycle quantity change billing."""
+
+    on_increase: UpdatePlanLicenseOnIncrease
+    r"""Billing behavior when quantity increases mid-cycle."""
+
+    on_decrease: UpdatePlanLicenseOnDecrease
+    r"""Credit behavior when quantity decreases mid-cycle."""
+
+
+UpdatePlanLicenseExpiryDurationType = Literal[
+    "month",
+    "forever",
+]
+r"""When rolled over units expire."""
+
+
+class UpdatePlanLicenseRolloverTypedDict(TypedDict):
+    r"""Rollover config for unused units. If set, unused included units carry over."""
+
+    expiry_duration_type: UpdatePlanLicenseExpiryDurationType
+    r"""When rolled over units expire."""
+    max: NotRequired[float]
+    r"""Max rollover units. Omit for unlimited rollover."""
+    max_percentage: NotRequired[float]
+    r"""Maximum rollover as a percentage (0-100) of included + prepaid grant. Mutually exclusive with max."""
+    expiry_duration_length: NotRequired[float]
+    r"""Number of periods before expiry."""
+
+
+class UpdatePlanLicenseRollover(BaseModel):
+    r"""Rollover config for unused units. If set, unused included units carry over."""
+
+    expiry_duration_type: UpdatePlanLicenseExpiryDurationType
+    r"""When rolled over units expire."""
+
+    max: Optional[float] = None
+    r"""Max rollover units. Omit for unlimited rollover."""
+
+    max_percentage: Optional[float] = None
+    r"""Maximum rollover as a percentage (0-100) of included + prepaid grant. Mutually exclusive with max."""
+
+    expiry_duration_length: Optional[float] = None
+    r"""Number of periods before expiry."""
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        optional_fields = set(["max", "max_percentage", "expiry_duration_length"])
+        serialized = handler(self)
+        m = {}
+
+        for n, f in type(self).model_fields.items():
+            k = f.alias or n
+            val = serialized.get(k, serialized.get(n))
+
+            if val != UNSET_SENTINEL:
+                if val is not None or k not in optional_fields:
+                    m[k] = val
+
+        return m
+
+
+class UpdatePlanLicensePlanItemTypedDict(TypedDict):
+    r"""Configuration for a feature item in a plan, including usage limits, pricing, and rollover settings."""
+
+    feature_id: str
+    r"""The ID of the feature to configure."""
+    included: NotRequired[float]
+    r"""Number of free units included. Balance resets to this each interval for consumable features."""
+    unlimited: NotRequired[bool]
+    r"""If true, customer has unlimited access to this feature."""
+    reset: NotRequired[UpdatePlanLicenseResetTypedDict]
+    r"""Reset configuration for consumable features. Omit for non-consumable features like seats."""
+    price: NotRequired[UpdatePlanLicensePriceTypedDict]
+    r"""Pricing for usage beyond included units. Omit for free features."""
+    proration: NotRequired[UpdatePlanLicenseProrationTypedDict]
+    r"""Proration settings for prepaid features. Controls mid-cycle quantity change billing."""
+    rollover: NotRequired[UpdatePlanLicenseRolloverTypedDict]
+    r"""Rollover config for unused units. If set, unused included units carry over."""
+
+
+class UpdatePlanLicensePlanItem(BaseModel):
+    r"""Configuration for a feature item in a plan, including usage limits, pricing, and rollover settings."""
+
+    feature_id: str
+    r"""The ID of the feature to configure."""
+
+    included: Optional[float] = None
+    r"""Number of free units included. Balance resets to this each interval for consumable features."""
+
+    unlimited: Optional[bool] = None
+    r"""If true, customer has unlimited access to this feature."""
+
+    reset: Optional[UpdatePlanLicenseReset] = None
+    r"""Reset configuration for consumable features. Omit for non-consumable features like seats."""
+
+    price: Optional[UpdatePlanLicensePrice] = None
+    r"""Pricing for usage beyond included units. Omit for free features."""
+
+    proration: Optional[UpdatePlanLicenseProration] = None
+    r"""Proration settings for prepaid features. Controls mid-cycle quantity change billing."""
+
+    rollover: Optional[UpdatePlanLicenseRollover] = None
+    r"""Rollover config for unused units. If set, unused included units carry over."""
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        optional_fields = set(
+            ["included", "unlimited", "reset", "price", "proration", "rollover"]
+        )
+        serialized = handler(self)
+        m = {}
+
+        for n, f in type(self).model_fields.items():
+            k = f.alias or n
+            val = serialized.get(k, serialized.get(n))
+
+            if val != UNSET_SENTINEL:
+                if val is not None or k not in optional_fields:
+                    m[k] = val
+
+        return m
+
+
+UpdatePlanLicenseRemoveItemBillingMethod = Literal[
+    "prepaid",
+    "usage_based",
+]
+r"""Match items with this billing method (prepaid or usage_based)."""
+
+
+UpdatePlanIntervalLicenseRemoveItemEnum2 = Literal[
+    "one_off",
+    "minute",
+    "hour",
+    "day",
+    "week",
+    "month",
+    "quarter",
+    "semi_annual",
+    "year",
+]
+
+
+UpdatePlanIntervalLicenseRemoveItemEnum1 = Literal[
+    "one_off",
+    "week",
+    "month",
+    "quarter",
+    "semi_annual",
+    "year",
+]
+
+
+UpdatePlanLicenseIntervalUnionTypedDict = TypeAliasType(
+    "UpdatePlanLicenseIntervalUnionTypedDict",
+    Union[
+        UpdatePlanIntervalLicenseRemoveItemEnum1,
+        UpdatePlanIntervalLicenseRemoveItemEnum2,
+    ],
+)
+r"""Match items with this interval. Accepts either a BillingInterval (price-side) or a ResetInterval (reset-side, includes day/hour/minute) so price-less items keyed by reset.interval can be disambiguated."""
+
+
+UpdatePlanLicenseIntervalUnion = TypeAliasType(
+    "UpdatePlanLicenseIntervalUnion",
+    Union[
+        UpdatePlanIntervalLicenseRemoveItemEnum1,
+        UpdatePlanIntervalLicenseRemoveItemEnum2,
+    ],
+)
+r"""Match items with this interval. Accepts either a BillingInterval (price-side) or a ResetInterval (reset-side, includes day/hour/minute) so price-less items keyed by reset.interval can be disambiguated."""
+
+
+class UpdatePlanLicensePlanItemFilterTypedDict(TypedDict):
+    r"""Filter for matching plan items. All provided fields must match (AND)."""
+
+    feature_id: NotRequired[str]
+    r"""Match items linked to this feature."""
+    billing_method: NotRequired[UpdatePlanLicenseRemoveItemBillingMethod]
+    r"""Match items with this billing method (prepaid or usage_based)."""
+    interval: NotRequired[UpdatePlanLicenseIntervalUnionTypedDict]
+    r"""Match items with this interval. Accepts either a BillingInterval (price-side) or a ResetInterval (reset-side, includes day/hour/minute) so price-less items keyed by reset.interval can be disambiguated."""
+    interval_count: NotRequired[int]
+    r"""Match items with this interval_count. Disambiguates between items that share an interval but differ in count."""
+
+
+class UpdatePlanLicensePlanItemFilter(BaseModel):
+    r"""Filter for matching plan items. All provided fields must match (AND)."""
+
+    feature_id: Optional[str] = None
+    r"""Match items linked to this feature."""
+
+    billing_method: Optional[UpdatePlanLicenseRemoveItemBillingMethod] = None
+    r"""Match items with this billing method (prepaid or usage_based)."""
+
+    interval: Optional[UpdatePlanLicenseIntervalUnion] = None
+    r"""Match items with this interval. Accepts either a BillingInterval (price-side) or a ResetInterval (reset-side, includes day/hour/minute) so price-less items keyed by reset.interval can be disambiguated."""
+
+    interval_count: Optional[int] = None
+    r"""Match items with this interval_count. Disambiguates between items that share an interval but differ in count."""
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        optional_fields = set(
+            ["feature_id", "billing_method", "interval", "interval_count"]
+        )
+        serialized = handler(self)
+        m = {}
+
+        for n, f in type(self).model_fields.items():
+            k = f.alias or n
+            val = serialized.get(k, serialized.get(n))
+
+            if val != UNSET_SENTINEL:
+                if val is not None or k not in optional_fields:
+                    m[k] = val
+
+        return m
+
+
+class UpdatePlanLicenseCustomizeTypedDict(TypedDict):
+    price: NotRequired[Nullable[UpdatePlanLicenseBasePriceTypedDict]]
+    add_items: NotRequired[List[UpdatePlanLicensePlanItemTypedDict]]
+    remove_items: NotRequired[List[UpdatePlanLicensePlanItemFilterTypedDict]]
+
+
+class UpdatePlanLicenseCustomize(BaseModel):
+    price: OptionalNullable[UpdatePlanLicenseBasePrice] = UNSET
+
+    add_items: Optional[List[UpdatePlanLicensePlanItem]] = None
+
+    remove_items: Optional[List[UpdatePlanLicensePlanItemFilter]] = None
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        optional_fields = set(["price", "add_items", "remove_items"])
+        nullable_fields = set(["price"])
+        serialized = handler(self)
+        m = {}
+
+        for n, f in type(self).model_fields.items():
+            k = f.alias or n
+            val = serialized.get(k, serialized.get(n))
+            is_nullable_and_explicitly_set = (
+                k in nullable_fields
+                and (self.__pydantic_fields_set__.intersection({n}))  # pylint: disable=no-member
+            )
+
+            if val != UNSET_SENTINEL:
+                if (
+                    val is not None
+                    or k not in optional_fields
+                    or is_nullable_and_explicitly_set
+                ):
+                    m[k] = val
+
+        return m
+
+
+class UpdatePlanLicenseTypedDict(TypedDict):
+    license_plan_id: str
+    included: NotRequired[int]
+    prepaid_only: NotRequired[bool]
+    customize: NotRequired[Nullable[UpdatePlanLicenseCustomizeTypedDict]]
+    metadata: NotRequired[Dict[str, Any]]
+
+
+class UpdatePlanLicense(BaseModel):
+    license_plan_id: str
+
+    included: Optional[int] = None
+
+    prepaid_only: Optional[bool] = None
+
+    customize: OptionalNullable[UpdatePlanLicenseCustomize] = UNSET
+
+    metadata: Optional[Dict[str, Any]] = None
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        optional_fields = set(["included", "prepaid_only", "customize", "metadata"])
+        nullable_fields = set(["customize"])
+        serialized = handler(self)
+        m = {}
+
+        for n, f in type(self).model_fields.items():
+            k = f.alias or n
+            val = serialized.get(k, serialized.get(n))
+            is_nullable_and_explicitly_set = (
+                k in nullable_fields
+                and (self.__pydantic_fields_set__.intersection({n}))  # pylint: disable=no-member
+            )
+
+            if val != UNSET_SENTINEL:
+                if (
+                    val is not None
+                    or k not in optional_fields
+                    or is_nullable_and_explicitly_set
+                ):
+                    m[k] = val
+
+        return m
+
+
 UpdatePlanDurationTypeRequest = Literal[
     "day",
     "month",
@@ -541,7 +1297,7 @@ r"""The time interval for the purchase limit window."""
 
 
 class UpdatePlanPurchaseLimitRequestTypedDict(TypedDict):
-    r"""Optional rate limit to cap how often auto top-ups occur."""
+    r"""Optional rate limit to cap how often auto top-ups occur. Pass count to set the current window's consumed top-ups."""
 
     interval: UpdatePlanPurchaseLimitIntervalRequestBody
     r"""The time interval for the purchase limit window."""
@@ -549,10 +1305,12 @@ class UpdatePlanPurchaseLimitRequestTypedDict(TypedDict):
     r"""Maximum number of auto top-ups allowed within the interval."""
     interval_count: NotRequired[float]
     r"""Number of intervals in the purchase limit window."""
+    count: NotRequired[float]
+    r"""Set the current window's consumed auto top-up count. Omit to leave runtime state unchanged."""
 
 
 class UpdatePlanPurchaseLimitRequest(BaseModel):
-    r"""Optional rate limit to cap how often auto top-ups occur."""
+    r"""Optional rate limit to cap how often auto top-ups occur. Pass count to set the current window's consumed top-ups."""
 
     interval: UpdatePlanPurchaseLimitIntervalRequestBody
     r"""The time interval for the purchase limit window."""
@@ -563,9 +1321,12 @@ class UpdatePlanPurchaseLimitRequest(BaseModel):
     interval_count: Optional[float] = 1
     r"""Number of intervals in the purchase limit window."""
 
+    count: Optional[float] = None
+    r"""Set the current window's consumed auto top-up count. Omit to leave runtime state unchanged."""
+
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
-        optional_fields = set(["interval_count"])
+        optional_fields = set(["interval_count", "count"])
         serialized = handler(self)
         m = {}
 
@@ -590,7 +1351,7 @@ class UpdatePlanAutoTopupRequestTypedDict(TypedDict):
     enabled: NotRequired[bool]
     r"""Whether auto top-up is enabled."""
     purchase_limit: NotRequired[UpdatePlanPurchaseLimitRequestTypedDict]
-    r"""Optional rate limit to cap how often auto top-ups occur."""
+    r"""Optional rate limit to cap how often auto top-ups occur. Pass count to set the current window's consumed top-ups."""
     invoice_mode: NotRequired[bool]
     r"""When true, auto top-up creates a send_invoice invoice instead of auto-charging."""
 
@@ -609,7 +1370,7 @@ class UpdatePlanAutoTopupRequest(BaseModel):
     r"""Whether auto top-up is enabled."""
 
     purchase_limit: Optional[UpdatePlanPurchaseLimitRequest] = None
-    r"""Optional rate limit to cap how often auto top-ups occur."""
+    r"""Optional rate limit to cap how often auto top-ups occur. Pass count to set the current window's consumed top-ups."""
 
     invoice_mode: Optional[bool] = None
     r"""When true, auto top-up creates a send_invoice invoice instead of auto-charging."""
@@ -940,6 +1701,17 @@ class Migration(BaseModel):
         return m
 
 
+class UpdateLicenseParentTypedDict(TypedDict):
+    plan_id: str
+    version: int
+
+
+class UpdateLicenseParent(BaseModel):
+    plan_id: str
+
+    version: int
+
+
 PriceVariantInterval = Literal[
     "one_off",
     "week",
@@ -951,6 +1723,21 @@ PriceVariantInterval = Literal[
 r"""Billing interval (e.g. 'month', 'year')."""
 
 
+class VariantAdditionalCurrencyTypedDict(TypedDict):
+    currency: str
+    r"""Three-letter Stripe-supported currency code (e.g. 'eur', 'gbp')."""
+    amount: float
+    r"""Price amount in this currency. Set explicitly per currency, not converted from the base amount."""
+
+
+class VariantAdditionalCurrency(BaseModel):
+    currency: str
+    r"""Three-letter Stripe-supported currency code (e.g. 'eur', 'gbp')."""
+
+    amount: float
+    r"""Price amount in this currency. Set explicitly per currency, not converted from the base amount."""
+
+
 class VariantBasePriceTypedDict(TypedDict):
     r"""Base price configuration for a plan."""
 
@@ -960,6 +1747,8 @@ class VariantBasePriceTypedDict(TypedDict):
     r"""Billing interval (e.g. 'month', 'year')."""
     interval_count: NotRequired[float]
     r"""Number of intervals per billing cycle. Defaults to 1."""
+    additional_currencies: NotRequired[List[VariantAdditionalCurrencyTypedDict]]
+    r"""Base price amounts in additional currencies. The base 'amount' is in the org's default currency."""
 
 
 class VariantBasePrice(BaseModel):
@@ -974,9 +1763,12 @@ class VariantBasePrice(BaseModel):
     interval_count: Optional[float] = None
     r"""Number of intervals per billing cycle. Defaults to 1."""
 
+    additional_currencies: Optional[List[VariantAdditionalCurrency]] = None
+    r"""Base price amounts in additional currencies. The base 'amount' is in the org's default currency."""
+
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
-        optional_fields = set(["interval_count"])
+        optional_fields = set(["interval_count", "additional_currencies"])
         serialized = handler(self)
         m = {}
 
@@ -1040,16 +1832,63 @@ class VariantReset(BaseModel):
         return m
 
 
+class VariantAddItemAdditionalCurrencyTypedDict(TypedDict):
+    currency: str
+    r"""Three-letter Stripe-supported currency code (e.g. 'eur', 'gbp')."""
+    amount: float
+    r"""Price amount in this currency. Set explicitly per currency, not converted from the base amount."""
+
+
+class VariantAddItemAdditionalCurrency(BaseModel):
+    currency: str
+    r"""Three-letter Stripe-supported currency code (e.g. 'eur', 'gbp')."""
+
+    amount: float
+    r"""Price amount in this currency. Set explicitly per currency, not converted from the base amount."""
+
+
 VariantToTypedDict = TypeAliasType("VariantToTypedDict", Union[float, str])
 
 
 VariantTo = TypeAliasType("VariantTo", Union[float, str])
 
 
+class VariantTierAdditionalCurrencyTypedDict(TypedDict):
+    currency: NotRequired[Any]
+    amount: NotRequired[Any]
+    flat_amount: NotRequired[Any]
+
+
+class VariantTierAdditionalCurrency(BaseModel):
+    currency: Optional[Any] = None
+
+    amount: Optional[Any] = None
+
+    flat_amount: Optional[Any] = None
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        optional_fields = set(["currency", "amount", "flat_amount"])
+        serialized = handler(self)
+        m = {}
+
+        for n, f in type(self).model_fields.items():
+            k = f.alias or n
+            val = serialized.get(k, serialized.get(n))
+
+            if val != UNSET_SENTINEL:
+                if val is not None or k not in optional_fields:
+                    m[k] = val
+
+        return m
+
+
 class VariantTierTypedDict(TypedDict):
     to: VariantToTypedDict
     amount: NotRequired[float]
     flat_amount: NotRequired[float]
+    additional_currencies: NotRequired[List[VariantTierAdditionalCurrencyTypedDict]]
+    r"""Per-currency amounts for this tier. Tier boundaries ('to') are shared across all currencies."""
 
 
 class VariantTier(BaseModel):
@@ -1059,9 +1898,12 @@ class VariantTier(BaseModel):
 
     flat_amount: Optional[float] = None
 
+    additional_currencies: Optional[List[VariantTierAdditionalCurrency]] = None
+    r"""Per-currency amounts for this tier. Tier boundaries ('to') are shared across all currencies."""
+
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
-        optional_fields = set(["amount", "flat_amount"])
+        optional_fields = set(["amount", "flat_amount", "additional_currencies"])
         serialized = handler(self)
         m = {}
 
@@ -1109,6 +1951,8 @@ class VariantPriceTypedDict(TypedDict):
     r"""'prepaid' for upfront payment (seats), 'usage_based' for pay-as-you-go."""
     amount: NotRequired[float]
     r"""Price per billing_units after included usage. Either 'amount' or 'tiers' is required."""
+    additional_currencies: NotRequired[List[VariantAddItemAdditionalCurrencyTypedDict]]
+    r"""Amounts in additional currencies for this flat price. The base 'amount' is in the org's default currency. Only valid with 'amount', not 'tiers'."""
     tiers: NotRequired[List[VariantTierTypedDict]]
     r"""Tiered pricing.  Either 'amount' or 'tiers' is required."""
     tier_behavior: NotRequired[VariantTierBehavior]
@@ -1132,6 +1976,9 @@ class VariantPrice(BaseModel):
     amount: Optional[float] = None
     r"""Price per billing_units after included usage. Either 'amount' or 'tiers' is required."""
 
+    additional_currencies: Optional[List[VariantAddItemAdditionalCurrency]] = None
+    r"""Amounts in additional currencies for this flat price. The base 'amount' is in the org's default currency. Only valid with 'amount', not 'tiers'."""
+
     tiers: Optional[List[VariantTier]] = None
     r"""Tiered pricing.  Either 'amount' or 'tiers' is required."""
 
@@ -1151,6 +1998,7 @@ class VariantPrice(BaseModel):
         optional_fields = set(
             [
                 "amount",
+                "additional_currencies",
                 "tiers",
                 "tier_behavior",
                 "interval_count",
@@ -1494,7 +2342,7 @@ r"""The time interval for the purchase limit window."""
 
 
 class VariantPurchaseLimitTypedDict(TypedDict):
-    r"""Optional rate limit to cap how often auto top-ups occur."""
+    r"""Optional rate limit to cap how often auto top-ups occur. Pass count to set the current window's consumed top-ups."""
 
     interval: VariantPurchaseLimitInterval
     r"""The time interval for the purchase limit window."""
@@ -1502,10 +2350,12 @@ class VariantPurchaseLimitTypedDict(TypedDict):
     r"""Maximum number of auto top-ups allowed within the interval."""
     interval_count: NotRequired[float]
     r"""Number of intervals in the purchase limit window."""
+    count: NotRequired[float]
+    r"""Set the current window's consumed auto top-up count. Omit to leave runtime state unchanged."""
 
 
 class VariantPurchaseLimit(BaseModel):
-    r"""Optional rate limit to cap how often auto top-ups occur."""
+    r"""Optional rate limit to cap how often auto top-ups occur. Pass count to set the current window's consumed top-ups."""
 
     interval: VariantPurchaseLimitInterval
     r"""The time interval for the purchase limit window."""
@@ -1516,9 +2366,12 @@ class VariantPurchaseLimit(BaseModel):
     interval_count: Optional[float] = 1
     r"""Number of intervals in the purchase limit window."""
 
+    count: Optional[float] = None
+    r"""Set the current window's consumed auto top-up count. Omit to leave runtime state unchanged."""
+
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
-        optional_fields = set(["interval_count"])
+        optional_fields = set(["interval_count", "count"])
         serialized = handler(self)
         m = {}
 
@@ -1543,7 +2396,7 @@ class VariantAutoTopupTypedDict(TypedDict):
     enabled: NotRequired[bool]
     r"""Whether auto top-up is enabled."""
     purchase_limit: NotRequired[VariantPurchaseLimitTypedDict]
-    r"""Optional rate limit to cap how often auto top-ups occur."""
+    r"""Optional rate limit to cap how often auto top-ups occur. Pass count to set the current window's consumed top-ups."""
     invoice_mode: NotRequired[bool]
     r"""When true, auto top-up creates a send_invoice invoice instead of auto-charging."""
 
@@ -1562,7 +2415,7 @@ class VariantAutoTopup(BaseModel):
     r"""Whether auto top-up is enabled."""
 
     purchase_limit: Optional[VariantPurchaseLimit] = None
-    r"""Optional rate limit to cap how often auto top-ups occur."""
+    r"""Optional rate limit to cap how often auto top-ups occur. Pass count to set the current window's consumed top-ups."""
 
     invoice_mode: Optional[bool] = None
     r"""When true, auto top-up creates a send_invoice invoice instead of auto-charging."""
@@ -2022,6 +2875,8 @@ class UpdatePlanParamsTypedDict(TypedDict):
     r"""The price of the plan. Set to null to remove the base price."""
     items: NotRequired[List[UpdatePlanItemPlanItemTypedDict]]
     r"""Feature configurations for this plan. Each item defines included units, pricing, and reset behavior."""
+    licenses: NotRequired[List[UpdatePlanLicenseTypedDict]]
+    r"""Plans offered as assignable licenses under this plan. The full set replaces existing links."""
     free_trial: NotRequired[Nullable[UpdatePlanFreeTrialParamsRequestTypedDict]]
     r"""The free trial of the plan. Set to null to remove the free trial."""
     config: NotRequired[UpdatePlanConfigRequestTypedDict]
@@ -2045,6 +2900,8 @@ class UpdatePlanParamsTypedDict(TypedDict):
     r"""Force versioning even when no customers exist. Mutually exclusive with disable_version."""
     update_variant_ids: NotRequired[List[str]]
     r"""Variant plan IDs to apply this update to. Empty or omitted means no propagation."""
+    update_license_parents: NotRequired[List[UpdateLicenseParentTypedDict]]
+    r"""Parent plan versions that should receive this license-plan update."""
     variants: NotRequired[List[VariantTypedDict]]
     r"""Additive variant updates for this base plan. Missing variants are created when name is provided."""
     is_default: NotRequired[bool]
@@ -2073,6 +2930,9 @@ class UpdatePlanParams(BaseModel):
 
     items: Optional[List[UpdatePlanItemPlanItem]] = None
     r"""Feature configurations for this plan. Each item defines included units, pricing, and reset behavior."""
+
+    licenses: Optional[List[UpdatePlanLicense]] = None
+    r"""Plans offered as assignable licenses under this plan. The full set replaces existing links."""
 
     free_trial: OptionalNullable[UpdatePlanFreeTrialParamsRequest] = UNSET
     r"""The free trial of the plan. Set to null to remove the free trial."""
@@ -2111,6 +2971,9 @@ class UpdatePlanParams(BaseModel):
     update_variant_ids: Optional[List[str]] = None
     r"""Variant plan IDs to apply this update to. Empty or omitted means no propagation."""
 
+    update_license_parents: Optional[List[UpdateLicenseParent]] = None
+    r"""Parent plan versions that should receive this license-plan update."""
+
     variants: Optional[List[Variant]] = None
     r"""Additive variant updates for this base plan. Missing variants are created when name is provided."""
 
@@ -2128,6 +2991,7 @@ class UpdatePlanParams(BaseModel):
                 "auto_enable",
                 "price",
                 "items",
+                "licenses",
                 "free_trial",
                 "config",
                 "billing_controls",
@@ -2142,6 +3006,7 @@ class UpdatePlanParams(BaseModel):
                 "migration",
                 "force_version",
                 "update_variant_ids",
+                "update_license_parents",
                 "variants",
                 "is_default",
             ]
@@ -2167,6 +3032,21 @@ class UpdatePlanParams(BaseModel):
                     m[k] = val
 
         return m
+
+
+class UpdatePlanAdditionalCurrencyResponseTypedDict(TypedDict):
+    currency: str
+    r"""Three-letter Stripe-supported currency code (e.g. 'eur', 'gbp')."""
+    amount: float
+    r"""Price amount in this currency. Set explicitly per currency, not converted from the base amount."""
+
+
+class UpdatePlanAdditionalCurrencyResponse(BaseModel):
+    currency: str
+    r"""Three-letter Stripe-supported currency code (e.g. 'eur', 'gbp')."""
+
+    amount: float
+    r"""Price amount in this currency. Set explicitly per currency, not converted from the base amount."""
 
 
 UpdatePlanPriceIntervalResponse = Union[
@@ -2223,6 +3103,10 @@ class UpdatePlanPriceResponseTypedDict(TypedDict):
     r"""Base price amount for the plan."""
     interval: UpdatePlanPriceIntervalResponse
     r"""Billing interval (e.g. 'month', 'year')."""
+    additional_currencies: NotRequired[
+        List[UpdatePlanAdditionalCurrencyResponseTypedDict]
+    ]
+    r"""Base price amounts in additional currencies. The base 'amount' is in the org's default currency."""
     interval_count: NotRequired[float]
     r"""Number of intervals per billing cycle. Defaults to 1."""
     display: NotRequired[UpdatePlanPriceDisplayTypedDict]
@@ -2236,6 +3120,9 @@ class UpdatePlanPriceResponse(BaseModel):
     interval: UpdatePlanPriceIntervalResponse
     r"""Billing interval (e.g. 'month', 'year')."""
 
+    additional_currencies: Optional[List[UpdatePlanAdditionalCurrencyResponse]] = None
+    r"""Base price amounts in additional currencies. The base 'amount' is in the org's default currency."""
+
     interval_count: Optional[float] = None
     r"""Number of intervals per billing cycle. Defaults to 1."""
 
@@ -2244,7 +3131,7 @@ class UpdatePlanPriceResponse(BaseModel):
 
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
-        optional_fields = set(["interval_count", "display"])
+        optional_fields = set(["additional_currencies", "interval_count", "display"])
         serialized = handler(self)
         m = {}
 
@@ -2415,6 +3302,21 @@ class UpdatePlanItemResetResponse(BaseModel):
         return m
 
 
+class UpdatePlanItemAdditionalCurrencyResponseTypedDict(TypedDict):
+    currency: str
+    r"""Three-letter Stripe-supported currency code (e.g. 'eur', 'gbp')."""
+    amount: float
+    r"""Price amount in this currency. Set explicitly per currency, not converted from the base amount."""
+
+
+class UpdatePlanItemAdditionalCurrencyResponse(BaseModel):
+    currency: str
+    r"""Three-letter Stripe-supported currency code (e.g. 'eur', 'gbp')."""
+
+    amount: float
+    r"""Price amount in this currency. Set explicitly per currency, not converted from the base amount."""
+
+
 UpdatePlanItemToResponseTypedDict = TypeAliasType(
     "UpdatePlanItemToResponseTypedDict", Union[float, str]
 )
@@ -2423,10 +3325,49 @@ UpdatePlanItemToResponseTypedDict = TypeAliasType(
 UpdatePlanItemToResponse = TypeAliasType("UpdatePlanItemToResponse", Union[float, str])
 
 
+class UpdatePlanItemTierAdditionalCurrencyResponseTypedDict(TypedDict):
+    currency: str
+    r"""Three-letter Stripe-supported currency code (e.g. 'eur', 'gbp')."""
+    amount: NotRequired[float]
+    r"""Per-unit amount for this tier in this currency."""
+    flat_amount: NotRequired[float]
+    r"""Flat amount for this tier in this currency, if the tier uses one."""
+
+
+class UpdatePlanItemTierAdditionalCurrencyResponse(BaseModel):
+    currency: str
+    r"""Three-letter Stripe-supported currency code (e.g. 'eur', 'gbp')."""
+
+    amount: Optional[float] = None
+    r"""Per-unit amount for this tier in this currency."""
+
+    flat_amount: Optional[float] = None
+    r"""Flat amount for this tier in this currency, if the tier uses one."""
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        optional_fields = set(["amount", "flat_amount"])
+        serialized = handler(self)
+        m = {}
+
+        for n, f in type(self).model_fields.items():
+            k = f.alias or n
+            val = serialized.get(k, serialized.get(n))
+
+            if val != UNSET_SENTINEL:
+                if val is not None or k not in optional_fields:
+                    m[k] = val
+
+        return m
+
+
 class UpdatePlanItemTierResponseTypedDict(TypedDict):
     to: UpdatePlanItemToResponseTypedDict
     amount: float
     flat_amount: NotRequired[float]
+    additional_currencies: NotRequired[
+        List[UpdatePlanItemTierAdditionalCurrencyResponseTypedDict]
+    ]
 
 
 class UpdatePlanItemTierResponse(BaseModel):
@@ -2436,9 +3377,13 @@ class UpdatePlanItemTierResponse(BaseModel):
 
     flat_amount: Optional[float] = None
 
+    additional_currencies: Optional[
+        List[UpdatePlanItemTierAdditionalCurrencyResponse]
+    ] = None
+
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
-        optional_fields = set(["flat_amount"])
+        optional_fields = set(["flat_amount", "additional_currencies"])
         serialized = handler(self)
         m = {}
 
@@ -2497,6 +3442,10 @@ class UpdatePlanItemPriceResponseTypedDict(TypedDict):
     r"""Maximum units a customer can purchase beyond included. E.g. if included=100 and max_purchase=300, customer can use up to 400 total before usage is capped. Null for no limit."""
     amount: NotRequired[float]
     r"""Price per billing_units after included usage is consumed. Mutually exclusive with tiers."""
+    additional_currencies: NotRequired[
+        List[UpdatePlanItemAdditionalCurrencyResponseTypedDict]
+    ]
+    r"""Amounts in additional currencies for this flat price. The base 'amount' is in the org's default currency. Only valid with 'amount', not 'tiers' (tiered prices carry per-currency amounts on each tier)."""
     tiers: NotRequired[List[UpdatePlanItemTierResponseTypedDict]]
     r"""Tiered pricing configuration. Each tier's 'to' INCLUDES the included amount. Either 'tiers' or 'amount' is required."""
     tier_behavior: NotRequired[UpdatePlanItemTierBehaviorResponse]
@@ -2520,6 +3469,11 @@ class UpdatePlanItemPriceResponse(BaseModel):
     amount: Optional[float] = None
     r"""Price per billing_units after included usage is consumed. Mutually exclusive with tiers."""
 
+    additional_currencies: Optional[List[UpdatePlanItemAdditionalCurrencyResponse]] = (
+        None
+    )
+    r"""Amounts in additional currencies for this flat price. The base 'amount' is in the org's default currency. Only valid with 'amount', not 'tiers' (tiered prices carry per-currency amounts on each tier)."""
+
     tiers: Optional[List[UpdatePlanItemTierResponse]] = None
     r"""Tiered pricing configuration. Each tier's 'to' INCLUDES the included amount. Either 'tiers' or 'amount' is required."""
 
@@ -2530,7 +3484,15 @@ class UpdatePlanItemPriceResponse(BaseModel):
 
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
-        optional_fields = set(["amount", "tiers", "tier_behavior", "interval_count"])
+        optional_fields = set(
+            [
+                "amount",
+                "additional_currencies",
+                "tiers",
+                "tier_behavior",
+                "interval_count",
+            ]
+        )
         nullable_fields = set(["max_purchase"])
         serialized = handler(self)
         m = {}
@@ -2821,6 +3783,21 @@ UpdatePlanPriceVariantDetailsInterval = Union[
 r"""Billing interval (e.g. 'month', 'year')."""
 
 
+class UpdatePlanVariantDetailsAdditionalCurrencyTypedDict(TypedDict):
+    currency: str
+    r"""Three-letter Stripe-supported currency code (e.g. 'eur', 'gbp')."""
+    amount: float
+    r"""Price amount in this currency. Set explicitly per currency, not converted from the base amount."""
+
+
+class UpdatePlanVariantDetailsAdditionalCurrency(BaseModel):
+    currency: str
+    r"""Three-letter Stripe-supported currency code (e.g. 'eur', 'gbp')."""
+
+    amount: float
+    r"""Price amount in this currency. Set explicitly per currency, not converted from the base amount."""
+
+
 class UpdatePlanBasePriceResponseTypedDict(TypedDict):
     r"""Base price configuration for a plan."""
 
@@ -2830,6 +3807,10 @@ class UpdatePlanBasePriceResponseTypedDict(TypedDict):
     r"""Billing interval (e.g. 'month', 'year')."""
     interval_count: NotRequired[float]
     r"""Number of intervals per billing cycle. Defaults to 1."""
+    additional_currencies: NotRequired[
+        List[UpdatePlanVariantDetailsAdditionalCurrencyTypedDict]
+    ]
+    r"""Base price amounts in additional currencies. The base 'amount' is in the org's default currency."""
 
 
 class UpdatePlanBasePriceResponse(BaseModel):
@@ -2844,9 +3825,14 @@ class UpdatePlanBasePriceResponse(BaseModel):
     interval_count: Optional[float] = None
     r"""Number of intervals per billing cycle. Defaults to 1."""
 
+    additional_currencies: Optional[
+        List[UpdatePlanVariantDetailsAdditionalCurrency]
+    ] = None
+    r"""Base price amounts in additional currencies. The base 'amount' is in the org's default currency."""
+
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
-        optional_fields = set(["interval_count"])
+        optional_fields = set(["interval_count", "additional_currencies"])
         serialized = handler(self)
         m = {}
 
@@ -2913,6 +3899,21 @@ class UpdatePlanVariantDetailsReset(BaseModel):
         return m
 
 
+class UpdatePlanVariantDetailsAddItemAdditionalCurrencyTypedDict(TypedDict):
+    currency: str
+    r"""Three-letter Stripe-supported currency code (e.g. 'eur', 'gbp')."""
+    amount: float
+    r"""Price amount in this currency. Set explicitly per currency, not converted from the base amount."""
+
+
+class UpdatePlanVariantDetailsAddItemAdditionalCurrency(BaseModel):
+    currency: str
+    r"""Three-letter Stripe-supported currency code (e.g. 'eur', 'gbp')."""
+
+    amount: float
+    r"""Price amount in this currency. Set explicitly per currency, not converted from the base amount."""
+
+
 UpdatePlanVariantDetailsToTypedDict = TypeAliasType(
     "UpdatePlanVariantDetailsToTypedDict", Union[float, str]
 )
@@ -2923,10 +3924,49 @@ UpdatePlanVariantDetailsTo = TypeAliasType(
 )
 
 
+class UpdatePlanVariantDetailsTierAdditionalCurrencyTypedDict(TypedDict):
+    currency: str
+    r"""Three-letter Stripe-supported currency code (e.g. 'eur', 'gbp')."""
+    amount: NotRequired[float]
+    r"""Per-unit amount for this tier in this currency."""
+    flat_amount: NotRequired[float]
+    r"""Flat amount for this tier in this currency, if the tier uses one."""
+
+
+class UpdatePlanVariantDetailsTierAdditionalCurrency(BaseModel):
+    currency: str
+    r"""Three-letter Stripe-supported currency code (e.g. 'eur', 'gbp')."""
+
+    amount: Optional[float] = None
+    r"""Per-unit amount for this tier in this currency."""
+
+    flat_amount: Optional[float] = None
+    r"""Flat amount for this tier in this currency, if the tier uses one."""
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        optional_fields = set(["amount", "flat_amount"])
+        serialized = handler(self)
+        m = {}
+
+        for n, f in type(self).model_fields.items():
+            k = f.alias or n
+            val = serialized.get(k, serialized.get(n))
+
+            if val != UNSET_SENTINEL:
+                if val is not None or k not in optional_fields:
+                    m[k] = val
+
+        return m
+
+
 class UpdatePlanVariantDetailsTierTypedDict(TypedDict):
     to: UpdatePlanVariantDetailsToTypedDict
     amount: float
     flat_amount: NotRequired[float]
+    additional_currencies: NotRequired[
+        List[UpdatePlanVariantDetailsTierAdditionalCurrencyTypedDict]
+    ]
 
 
 class UpdatePlanVariantDetailsTier(BaseModel):
@@ -2936,9 +3976,13 @@ class UpdatePlanVariantDetailsTier(BaseModel):
 
     flat_amount: Optional[float] = None
 
+    additional_currencies: Optional[
+        List[UpdatePlanVariantDetailsTierAdditionalCurrency]
+    ] = None
+
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
-        optional_fields = set(["flat_amount"])
+        optional_fields = set(["flat_amount", "additional_currencies"])
         serialized = handler(self)
         m = {}
 
@@ -2995,6 +4039,10 @@ class UpdatePlanVariantDetailsPriceTypedDict(TypedDict):
     r"""'prepaid' for upfront payment (seats), 'usage_based' for pay-as-you-go."""
     amount: NotRequired[float]
     r"""Price per billing_units after included usage. Either 'amount' or 'tiers' is required."""
+    additional_currencies: NotRequired[
+        List[UpdatePlanVariantDetailsAddItemAdditionalCurrencyTypedDict]
+    ]
+    r"""Amounts in additional currencies for this flat price. The base 'amount' is in the org's default currency. Only valid with 'amount', not 'tiers'."""
     tiers: NotRequired[List[UpdatePlanVariantDetailsTierTypedDict]]
     r"""Tiered pricing.  Either 'amount' or 'tiers' is required."""
     tier_behavior: NotRequired[UpdatePlanVariantDetailsTierBehavior]
@@ -3018,6 +4066,11 @@ class UpdatePlanVariantDetailsPrice(BaseModel):
     amount: Optional[float] = None
     r"""Price per billing_units after included usage. Either 'amount' or 'tiers' is required."""
 
+    additional_currencies: Optional[
+        List[UpdatePlanVariantDetailsAddItemAdditionalCurrency]
+    ] = None
+    r"""Amounts in additional currencies for this flat price. The base 'amount' is in the org's default currency. Only valid with 'amount', not 'tiers'."""
+
     tiers: Optional[List[UpdatePlanVariantDetailsTier]] = None
     r"""Tiered pricing.  Either 'amount' or 'tiers' is required."""
 
@@ -3037,6 +4090,7 @@ class UpdatePlanVariantDetailsPrice(BaseModel):
         optional_fields = set(
             [
                 "amount",
+                "additional_currencies",
                 "tiers",
                 "tier_behavior",
                 "interval_count",
@@ -3413,7 +4467,7 @@ r"""The time interval for the purchase limit window."""
 
 
 class UpdatePlanVariantDetailsPurchaseLimitTypedDict(TypedDict):
-    r"""Optional rate limit to cap how often auto top-ups occur."""
+    r"""Optional rate limit to cap how often auto top-ups occur. Pass count to set the current window's consumed top-ups."""
 
     interval: UpdatePlanVariantDetailsPurchaseLimitInterval
     r"""The time interval for the purchase limit window."""
@@ -3421,10 +4475,12 @@ class UpdatePlanVariantDetailsPurchaseLimitTypedDict(TypedDict):
     r"""Maximum number of auto top-ups allowed within the interval."""
     interval_count: NotRequired[float]
     r"""Number of intervals in the purchase limit window."""
+    count: NotRequired[float]
+    r"""Set the current window's consumed auto top-up count. Omit to leave runtime state unchanged."""
 
 
 class UpdatePlanVariantDetailsPurchaseLimit(BaseModel):
-    r"""Optional rate limit to cap how often auto top-ups occur."""
+    r"""Optional rate limit to cap how often auto top-ups occur. Pass count to set the current window's consumed top-ups."""
 
     interval: UpdatePlanVariantDetailsPurchaseLimitInterval
     r"""The time interval for the purchase limit window."""
@@ -3435,9 +4491,12 @@ class UpdatePlanVariantDetailsPurchaseLimit(BaseModel):
     interval_count: Optional[float] = 1
     r"""Number of intervals in the purchase limit window."""
 
+    count: Optional[float] = None
+    r"""Set the current window's consumed auto top-up count. Omit to leave runtime state unchanged."""
+
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
-        optional_fields = set(["interval_count"])
+        optional_fields = set(["interval_count", "count"])
         serialized = handler(self)
         m = {}
 
@@ -3462,7 +4521,7 @@ class UpdatePlanVariantDetailsAutoTopupTypedDict(TypedDict):
     enabled: NotRequired[bool]
     r"""Whether auto top-up is enabled."""
     purchase_limit: NotRequired[UpdatePlanVariantDetailsPurchaseLimitTypedDict]
-    r"""Optional rate limit to cap how often auto top-ups occur."""
+    r"""Optional rate limit to cap how often auto top-ups occur. Pass count to set the current window's consumed top-ups."""
     invoice_mode: NotRequired[bool]
     r"""When true, auto top-up creates a send_invoice invoice instead of auto-charging."""
 
@@ -3481,7 +4540,7 @@ class UpdatePlanVariantDetailsAutoTopup(BaseModel):
     r"""Whether auto top-up is enabled."""
 
     purchase_limit: Optional[UpdatePlanVariantDetailsPurchaseLimit] = None
-    r"""Optional rate limit to cap how often auto top-ups occur."""
+    r"""Optional rate limit to cap how often auto top-ups occur. Pass count to set the current window's consumed top-ups."""
 
     invoice_mode: Optional[bool] = None
     r"""When true, auto top-up creates a send_invoice invoice instead of auto-charging."""

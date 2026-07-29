@@ -1,6 +1,6 @@
 import {
 	type BillingContext,
-	orgToCurrency,
+	billingContextToCurrency,
 	type StripeDiscountWithCoupon,
 	type StripeInvoiceAction,
 } from "@autumn/shared";
@@ -99,7 +99,9 @@ export const createInvoiceForBilling = async ({
 		stripeSubId,
 		// Subscription-linked invoices inherit currency from the subscription;
 		// standalone invoices default to the account currency, not the org's.
-		currency: stripeSubId ? undefined : orgToCurrency({ org: ctx.org }),
+		currency: stripeSubId
+			? undefined
+			: billingContextToCurrency({ org: ctx.org, billingContext }),
 		collectionMethod,
 		daysUntilDue: invoiceMode?.daysUntilDue,
 		footer: invoiceMode?.footer,

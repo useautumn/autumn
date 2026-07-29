@@ -15,7 +15,9 @@ import { Customers } from "./customers.js";
 import { Entities } from "./entities.js";
 import { Events } from "./events.js";
 import { Features } from "./features.js";
+import { Invoices } from "./invoices.js";
 import { Keys } from "./keys.js";
+import { Licenses } from "./licenses.js";
 import { Plans } from "./plans.js";
 import { Platform } from "./platform.js";
 import { Referrals } from "./referrals.js";
@@ -50,6 +52,16 @@ export class Autumn extends ClientSDK {
   private _events?: Events;
   get events(): Events {
     return (this._events ??= new Events(this._options));
+  }
+
+  private _invoices?: Invoices;
+  get invoices(): Invoices {
+    return (this._invoices ??= new Invoices(this._options));
+  }
+
+  private _licenses?: Licenses;
+  get licenses(): Licenses {
+    return (this._licenses ??= new Licenses(this._options));
   }
 
   private _entities?: Entities;
@@ -146,6 +158,7 @@ export class Autumn extends ClientSDK {
    * @param value - The amount of usage to record. Defaults to 1. Use negative values to credit balance (e.g., when removing a seat). (optional)
    * @param properties - Additional properties to attach to this usage event. (optional)
    * @param timestamp - Unix timestamp in milliseconds to use for the usage event. Defaults to the current time. (optional)
+   * @param overageBehavior - How to handle usage that exceeds the available balance. "cap" (default) deducts only what fits, stopping at zero. "overflow" deducts the full value: the balance can go negative and usage limits do not clamp the deduction, though spend limits still apply. (optional)
    * @param async - If true, enqueue the event for asynchronous processing and return 204 immediately. The response will not include balance information. (optional)
    *
    * @returns The usage value recorded, with either a single updated balance or a map of updated balances. If Autumn is experiencing degraded service from a downstream provider, the API may return 202 after accepting the event for replay so it can be tracked as soon as the service is restored.
@@ -192,6 +205,7 @@ export class Autumn extends ClientSDK {
    * @param reasoningTokens - Number of reasoning tokens generated. (optional)
    * @param properties - Additional properties to attach to this usage event. (optional)
    * @param timestamp - Unix timestamp in milliseconds to use for the usage event. Defaults to the current time. (optional)
+   * @param overageBehavior - How to handle usage that exceeds the available balance. "cap" (default) deducts only what fits, stopping at zero. "overflow" deducts the full value: the balance can go negative and usage limits do not clamp the deduction, though spend limits still apply. (optional)
    * @param async - If true, enqueue the event for asynchronous processing and return 204 immediately. The response will not include balance information. (optional)
    *
    * @returns The dollar value recorded and the updated AI credit system balance. If Autumn is experiencing degraded service from a downstream provider, the API may return 202 after accepting the token usage event for replay so it can be tracked as soon as the service is restored.

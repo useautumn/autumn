@@ -20,11 +20,13 @@ import { stripeItemSpecToCheckoutLineItem } from "../stripeItemSpec/stripeItemSp
 export const updateOneOffTieredItems = ({
 	oneOffItemSpecs,
 	org,
+	currency: targetCurrency,
 }: {
 	oneOffItemSpecs: StripeItemSpec[];
 	org: Organization;
+	currency?: string;
 }): Stripe.Checkout.SessionCreateParams.LineItem[] => {
-	const currency = orgToCurrency({ org });
+	const currency = targetCurrency ?? orgToCurrency({ org });
 
 	return oneOffItemSpecs.map((item) => {
 		const { autumnPrice, autumnProduct, autumnCusEnt } = item;

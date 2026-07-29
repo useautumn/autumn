@@ -819,6 +819,46 @@ class GetCustomerPurchase(BaseModel):
         return m
 
 
+class GetCustomerLicenseTypedDict(TypedDict):
+    license_plan_id: str
+    r"""The plan offered as an assignable license."""
+    parent_plan_id: str
+    r"""The plan that offers this license."""
+    license_plan_name: str
+    r"""Display name of the license plan."""
+    granted: float
+    r"""Total seats the customer has for this license, included plus paid."""
+    usage: float
+    r"""Seats currently assigned to entities."""
+    remaining: float
+    r"""Seats still available to assign."""
+    paid_quantity: float
+    r"""Paid seats purchased on top of the plan's included amount."""
+
+
+class GetCustomerLicense(BaseModel):
+    license_plan_id: str
+    r"""The plan offered as an assignable license."""
+
+    parent_plan_id: str
+    r"""The plan that offers this license."""
+
+    license_plan_name: str
+    r"""Display name of the license plan."""
+
+    granted: float
+    r"""Total seats the customer has for this license, included plus paid."""
+
+    usage: float
+    r"""Seats currently assigned to entities."""
+
+    remaining: float
+    r"""Seats still available to assign."""
+
+    paid_quantity: float
+    r"""Paid seats purchased on top of the plan's included amount."""
+
+
 GetCustomerFlagsType = Union[
     Literal[
         "boolean",
@@ -1628,6 +1668,8 @@ class GetCustomerResponseTypedDict(TypedDict):
     r"""Active and scheduled recurring plans that this customer has attached."""
     purchases: List[GetCustomerPurchaseTypedDict]
     r"""One-time purchases made by the customer."""
+    licenses: List[GetCustomerLicenseTypedDict]
+    r"""License seat pools granted by the customer's plans, with seat counts."""
     balances: Dict[str, BalanceTypedDict]
     r"""Feature balances keyed by feature ID, showing usage limits and remaining amounts."""
     flags: Dict[str, GetCustomerFlagsTypedDict]
@@ -1688,6 +1730,9 @@ class GetCustomerResponse(BaseModel):
 
     purchases: List[GetCustomerPurchase]
     r"""One-time purchases made by the customer."""
+
+    licenses: List[GetCustomerLicense]
+    r"""License seat pools granted by the customer's plans, with seat counts."""
 
     balances: Dict[str, Balance]
     r"""Feature balances keyed by feature ID, showing usage limits and remaining amounts."""

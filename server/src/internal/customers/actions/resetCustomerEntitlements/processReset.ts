@@ -1,10 +1,8 @@
 import {
-	cusEntToOptions,
-	cusEntToCusPrice,
+	cusEntToStartingBalance,
 	type EntityBalance,
 	type FullCusEntWithFullCusProduct,
 	type FullCusEntWithProduct,
-	getStartingBalance,
 	isLifetimeEntitlement,
 	isUnlimitedEntitlement,
 	orgPersistFreeOverage,
@@ -52,14 +50,7 @@ export const processReset = async ({
 		return null;
 	}
 
-	const options = cusEntToOptions({ cusEnt });
-
-	const resetBalance = getStartingBalance({
-		entitlement: cusEnt.entitlement,
-		options,
-		relatedPrice: cusEntToCusPrice({ cusEnt })?.price,
-		productQuantity: cusProduct?.quantity ?? 1,
-	});
+	const resetBalance = cusEntToStartingBalance({ cusEnt });
 
 	if (!cusEnt.next_reset_at) {
 		logger.error(

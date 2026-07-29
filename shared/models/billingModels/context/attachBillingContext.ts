@@ -1,4 +1,8 @@
-import type { FullCusProduct, FullProduct } from "@autumn/shared";
+import type {
+	FullCusProduct,
+	FullProduct,
+	InsertPlanLicenseSpec,
+} from "@autumn/shared";
 import { z } from "zod/v4";
 import type { BillingContext } from "./billingContext";
 
@@ -21,6 +25,10 @@ export interface AttachBillingContext extends BillingContext {
 	// The product being attached
 	attachProduct: FullProduct;
 
+	// Resolved billing currency for this attach (requested -> customer -> org default).
+	// Optional so multi-attach/schedule contexts spread into this type without it.
+	currency?: string;
+
 	// Transition context (only for main recurring products)
 	currentCustomerProduct?: FullCusProduct; // To transition from
 	scheduledCustomerProduct?: FullCusProduct; // To delete
@@ -34,6 +42,10 @@ export interface AttachBillingContext extends BillingContext {
 
 	// User-provided subscription ID for targeting
 	externalId?: string;
+
+	// Custom plan_license definitions resolved at setup from
+	// customize.upsert_licenses; execute inserts them before pools.
+	insertPlanLicenses?: InsertPlanLicenseSpec[];
 }
 
 // export interface AttachBillingContextOverride {

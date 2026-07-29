@@ -47,7 +47,13 @@ function shouldCloseSheetOnMouseDown({
  * Shared overlay component for plan editors.
  * Portals to [data-main-content] by default, or renders inline if `inline` prop is true.
  */
-export function SheetOverlay({ inline = false }: { inline?: boolean }) {
+export function SheetOverlay({
+	inline = false,
+	zIndex = 40,
+}: {
+	inline?: boolean;
+	zIndex?: number;
+}) {
 	const { sheetType, closeSheet } = useSheet();
 
 	const handleMouseDown = (e: React.MouseEvent<HTMLDivElement>) => {
@@ -65,7 +71,7 @@ export function SheetOverlay({ inline = false }: { inline?: boolean }) {
 					exit={{ opacity: 0 }}
 					data-slot="sheet-overlay"
 					className="absolute inset-0 bg-white/70 dark:bg-black/70"
-					style={{ zIndex: 40 }}
+					style={{ zIndex }}
 					onMouseDown={handleMouseDown}
 				/>
 			)}

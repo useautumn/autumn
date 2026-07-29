@@ -15,6 +15,10 @@ import { useOrg } from "@/hooks/common/useOrg";
 import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
 import { useProductsQuery } from "@/hooks/queries/useProductsQuery";
 import {
+	AdditionalCurrenciesHint,
+	getCurrencyChangeStates,
+} from "@/views/products/plan/components/plan-card/AdditionalCurrenciesHint";
+import {
 	filterToProductItem,
 	getFilterSummary,
 	type ItemFilter,
@@ -23,14 +27,21 @@ import { extractPlanIds } from "../operations/UpdatePlanOpForm";
 import { migrationItemToProductItem } from "./migrationItemUtils";
 
 /** Full-width row matching SubscriptionItemRow, with an amber dot for an edited value. */
-function EditedRow({ icon, text }: { icon: ReactNode; text: ReactNode }) {
+function EditedRow({
+	icon,
+	text,
+	hint,
+}: {
+	icon: ReactNode;
+	text: ReactNode;
+	hint?: ReactNode;
+}) {
 	return (
 		<div className="flex items-center flex-1 min-w-0 h-10 px-3 rounded-xl input-base gap-2">
 			<div className="flex flex-row items-center flex-1 gap-2 min-w-0 overflow-hidden">
 				{icon}
-				<p className="whitespace-nowrap truncate flex-1 min-w-0 text-body">
-					{text}
-				</p>
+				<p className="whitespace-nowrap truncate min-w-0 text-body">{text}</p>
+				{hint}
 			</div>
 			<span className="size-2 rounded-full shrink-0 bg-amber-500" />
 		</div>
@@ -93,6 +104,34 @@ export function OperationsPreview({ operations }: { operations: Operations }) {
 					const addItems = customize?.add_items ?? [];
 					const removeItems = customize?.remove_items ?? [];
 
+					const priceCurrencies = customize?.price?.additional_currencies ?? [];
+					const previousCurrencies =
+						customize?.previous_price?.additional_currencies ?? [];
+					const removedCurrencies = previousCurrencies.filter(
+						(previous) =>
+							!priceCurrencies.some(
+								(current) =>
+									current.currency.toLowerCase() ===
+									previous.currency.toLowerCase(),
+							),
+					);
+					const hintCurrencies = [...priceCurrencies, ...removedCurrencies];
+					const currencyChangeStates =
+						customize?.previous_price !== undefined
+							? {
+									...getCurrencyChangeStates({
+										entries: previousCurrencies,
+										others: priceCurrencies,
+										missingState: "removed",
+									}),
+									...getCurrencyChangeStates({
+										entries: priceCurrencies,
+										others: previousCurrencies,
+										missingState: "added",
+									}),
+								}
+							: undefined;
+
 					return (
 						<div key={`op-${index}`} className="flex flex-col gap-2 min-w-0">
 							<div className="flex items-center gap-2 min-w-0">
@@ -121,6 +160,15 @@ export function OperationsPreview({ operations }: { operations: Operations }) {
 
 							{customize?.price !== undefined && (
 								<EditedRow
+									hint={
+										hintCurrencies.length > 0 ? (
+											<AdditionalCurrenciesHint
+												changeStates={currencyChangeStates}
+												count={priceCurrencies.length}
+												currencies={hintCurrencies}
+											/>
+										) : undefined
+									}
 									icon={
 										<CurrencyCircleDollarIcon
 											size={16}

@@ -1,5 +1,6 @@
 import {
 	type BillingContext,
+	billingContextToCurrency,
 	type FullCusProduct,
 	filterCustomerProductsByActiveStatuses,
 	isPrepaidPrice,
@@ -188,6 +189,7 @@ export const buildStripeCheckoutSessionItems = ({
 	const oneOffLineItems = updateOneOffTieredItems({
 		oneOffItemSpecs,
 		org: ctx.org,
+		currency: billingContextToCurrency({ org: ctx.org, billingContext }),
 	})
 		.map((lineItem, index) =>
 			applyAdjustableQuantityToPrepaidLineItem({

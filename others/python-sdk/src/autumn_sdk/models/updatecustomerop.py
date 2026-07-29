@@ -56,7 +56,7 @@ r"""The time interval for the purchase limit window."""
 
 
 class UpdateCustomerPurchaseLimitRequestTypedDict(TypedDict):
-    r"""Optional rate limit to cap how often auto top-ups occur."""
+    r"""Optional rate limit to cap how often auto top-ups occur. Pass count to set the current window's consumed top-ups."""
 
     interval: UpdateCustomerPurchaseLimitIntervalRequestBody
     r"""The time interval for the purchase limit window."""
@@ -64,10 +64,12 @@ class UpdateCustomerPurchaseLimitRequestTypedDict(TypedDict):
     r"""Maximum number of auto top-ups allowed within the interval."""
     interval_count: NotRequired[float]
     r"""Number of intervals in the purchase limit window."""
+    count: NotRequired[float]
+    r"""Set the current window's consumed auto top-up count. Omit to leave runtime state unchanged."""
 
 
 class UpdateCustomerPurchaseLimitRequest(BaseModel):
-    r"""Optional rate limit to cap how often auto top-ups occur."""
+    r"""Optional rate limit to cap how often auto top-ups occur. Pass count to set the current window's consumed top-ups."""
 
     interval: UpdateCustomerPurchaseLimitIntervalRequestBody
     r"""The time interval for the purchase limit window."""
@@ -78,9 +80,12 @@ class UpdateCustomerPurchaseLimitRequest(BaseModel):
     interval_count: Optional[float] = 1
     r"""Number of intervals in the purchase limit window."""
 
+    count: Optional[float] = None
+    r"""Set the current window's consumed auto top-up count. Omit to leave runtime state unchanged."""
+
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
-        optional_fields = set(["interval_count"])
+        optional_fields = set(["interval_count", "count"])
         serialized = handler(self)
         m = {}
 
@@ -105,7 +110,7 @@ class UpdateCustomerAutoTopupRequestTypedDict(TypedDict):
     enabled: NotRequired[bool]
     r"""Whether auto top-up is enabled."""
     purchase_limit: NotRequired[UpdateCustomerPurchaseLimitRequestTypedDict]
-    r"""Optional rate limit to cap how often auto top-ups occur."""
+    r"""Optional rate limit to cap how often auto top-ups occur. Pass count to set the current window's consumed top-ups."""
     invoice_mode: NotRequired[bool]
     r"""When true, auto top-up creates a send_invoice invoice instead of auto-charging."""
 
@@ -124,7 +129,7 @@ class UpdateCustomerAutoTopupRequest(BaseModel):
     r"""Whether auto top-up is enabled."""
 
     purchase_limit: Optional[UpdateCustomerPurchaseLimitRequest] = None
-    r"""Optional rate limit to cap how often auto top-ups occur."""
+    r"""Optional rate limit to cap how often auto top-ups occur. Pass count to set the current window's consumed top-ups."""
 
     invoice_mode: Optional[bool] = None
     r"""When true, auto top-up creates a send_invoice invoice instead of auto-charging."""
@@ -480,6 +485,8 @@ class UpdateCustomerParamsTypedDict(TypedDict):
     r"""Stripe customer ID if you already have one"""
     send_email_receipts: NotRequired[bool]
     r"""Whether to send email receipts to this customer"""
+    currency: NotRequired[Nullable[str]]
+    r"""Currency to bill this customer in (e.g. usd, eur). Defaults to the organization's default currency."""
     billing_controls: NotRequired[UpdateCustomerBillingControlsRequestTypedDict]
     r"""Billing controls for the customer (auto top-ups, etc.)"""
     config: NotRequired[UpdateCustomerConfigRequestTypedDict]
@@ -510,6 +517,9 @@ class UpdateCustomerParams(BaseModel):
     send_email_receipts: Optional[bool] = None
     r"""Whether to send email receipts to this customer"""
 
+    currency: OptionalNullable[str] = UNSET
+    r"""Currency to bill this customer in (e.g. usd, eur). Defaults to the organization's default currency."""
+
     billing_controls: Optional[UpdateCustomerBillingControlsRequest] = None
     r"""Billing controls for the customer (auto top-ups, etc.)"""
 
@@ -529,12 +539,15 @@ class UpdateCustomerParams(BaseModel):
                 "metadata",
                 "stripe_id",
                 "send_email_receipts",
+                "currency",
                 "billing_controls",
                 "config",
                 "new_customer_id",
             ]
         )
-        nullable_fields = set(["name", "email", "fingerprint", "metadata", "stripe_id"])
+        nullable_fields = set(
+            ["name", "email", "fingerprint", "metadata", "stripe_id", "currency"]
+        )
         serialized = handler(self)
         m = {}
 
@@ -1301,6 +1314,46 @@ class UpdateCustomerPurchase(BaseModel):
         return m
 
 
+class UpdateCustomerLicenseTypedDict(TypedDict):
+    license_plan_id: str
+    r"""The plan offered as an assignable license."""
+    parent_plan_id: str
+    r"""The plan that offers this license."""
+    license_plan_name: str
+    r"""Display name of the license plan."""
+    granted: float
+    r"""Total seats the customer has for this license, included plus paid."""
+    usage: float
+    r"""Seats currently assigned to entities."""
+    remaining: float
+    r"""Seats still available to assign."""
+    paid_quantity: float
+    r"""Paid seats purchased on top of the plan's included amount."""
+
+
+class UpdateCustomerLicense(BaseModel):
+    license_plan_id: str
+    r"""The plan offered as an assignable license."""
+
+    parent_plan_id: str
+    r"""The plan that offers this license."""
+
+    license_plan_name: str
+    r"""Display name of the license plan."""
+
+    granted: float
+    r"""Total seats the customer has for this license, included plus paid."""
+
+    usage: float
+    r"""Seats currently assigned to entities."""
+
+    remaining: float
+    r"""Seats still available to assign."""
+
+    paid_quantity: float
+    r"""Paid seats purchased on top of the plan's included amount."""
+
+
 UpdateCustomerType = Union[
     Literal[
         "boolean",
@@ -1728,6 +1781,8 @@ class UpdateCustomerResponseTypedDict(TypedDict):
     r"""Active and scheduled recurring plans that this customer has attached."""
     purchases: List[UpdateCustomerPurchaseTypedDict]
     r"""One-time purchases made by the customer."""
+    licenses: List[UpdateCustomerLicenseTypedDict]
+    r"""License seat pools granted by the customer's plans, with seat counts."""
     balances: Dict[str, BalanceTypedDict]
     r"""Feature balances keyed by feature ID, showing usage limits and remaining amounts."""
     flags: Dict[str, UpdateCustomerFlagsTypedDict]
@@ -1776,6 +1831,9 @@ class UpdateCustomerResponse(BaseModel):
 
     purchases: List[UpdateCustomerPurchase]
     r"""One-time purchases made by the customer."""
+
+    licenses: List[UpdateCustomerLicense]
+    r"""License seat pools granted by the customer's plans, with seat counts."""
 
     balances: Dict[str, Balance]
     r"""Feature balances keyed by feature ID, showing usage limits and remaining amounts."""

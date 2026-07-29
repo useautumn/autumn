@@ -1,8 +1,8 @@
 import { describe, expect, test } from "bun:test";
 import {
 	AppEnv,
-	BillWhen,
 	BillingInterval,
+	BillWhen,
 	type FullProduct,
 	hasMissingStripeResourcesForProduct,
 	type Price,
@@ -155,5 +155,34 @@ describe("hasMissingStripeResourcesForProduct", () => {
 				}),
 			}),
 		).toBe(true);
+	});
+
+	test("checks Stripe resources on license products", () => {
+		const licenseProduct = product({
+			id: "license",
+			internal_id: "license_internal",
+			processor: null,
+			prices: [fixedPrice()],
+		});
+		const parent = product({
+			prices: [],
+			licenses: [
+				{
+					id: "plan_license",
+					parent_internal_product_id: "prod_internal",
+					is_custom: false,
+					license_internal_product_id: "license_internal",
+					included: 5,
+					prepaid_only: false,
+					customized: false,
+					metadata: null,
+					created_at: 1,
+					updated_at: 1,
+					product: licenseProduct,
+				},
+			],
+		});
+
+		expect(hasMissingStripeResourcesForProduct({ product: parent })).toBe(true);
 	});
 });

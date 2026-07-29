@@ -1,13 +1,16 @@
 import {
 	type AutumnBillingPlan,
+	type CustomerLicenseUpdate,
 	CusProductStatus,
 	type Entitlement,
 	type FullCusProduct,
+	type InsertPlanLicenseSpec,
 	type Price,
 	type SyncBillingContext,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
-import { carryOverEntitlementUsage } from "./carryOverUsage";
+import { computeCustomerLicenseQuantityChanges } from "@/internal/billing/v2/compute/computeCustomerLicenseQuantityChanges";
+import { resolveSyncExistingUsagesConfig } from "@/internal/billing/v2/utils/handleCarryOvers/resolveSyncExistingUsagesConfig";
 import { initImmediateSyncCustomerProduct } from "./initImmediateSyncCustomerProduct";
 
 type CustomerProductUpdate = NonNullable<
@@ -19,6 +22,8 @@ export type ImmediatePhaseResult = {
 	updateCustomerProducts: CustomerProductUpdate[];
 	customPrices: Price[];
 	customEntitlements: Entitlement[];
+	insertPlanLicenses: InsertPlanLicenseSpec[];
+	customerLicenseUpdates: CustomerLicenseUpdate[];
 };
 
 const expireCustomerProduct = ({
@@ -57,6 +62,7 @@ export const computeSyncImmediatePhase = ({
 		stripeSubscription,
 		currentEpochMs,
 		carryOverUsage,
+		carryOverUsages,
 	} = syncContext;
 	if (!immediatePhase || !stripeSubscription) {
 		return {
@@ -64,6 +70,8 @@ export const computeSyncImmediatePhase = ({
 			updateCustomerProducts: [],
 			customPrices: [],
 			customEntitlements: [],
+			insertPlanLicenses: [],
+			customerLicenseUpdates: [],
 		};
 	}
 
@@ -71,26 +79,46 @@ export const computeSyncImmediatePhase = ({
 	const updateCustomerProducts: CustomerProductUpdate[] = [];
 	const customPrices: Price[] = [];
 	const customEntitlements: Entitlement[] = [];
+	const insertPlanLicenses: InsertPlanLicenseSpec[] = [];
+	const customerLicenseUpdates: CustomerLicenseUpdate[] = [];
 
 	for (const productContext of immediatePhase.productContexts) {
+		const currentCustomerProduct = productContext.currentCustomerProduct;
+		if (currentCustomerProduct?.product_id === productContext.fullProduct.id) {
+			const licenseQuantityChanges = computeCustomerLicenseQuantityChanges({
+				customerProduct: currentCustomerProduct,
+				customerLicenseQuantities: productContext.customerLicenseQuantities,
+			});
+			if (licenseQuantityChanges.length > 0) {
+				customerLicenseUpdates.push(
+					...licenseQuantityChanges.map(({ update }) => update),
+				);
+				continue;
+			}
+		}
+
+		const existingUsagesConfig =
+			carryOverUsage && currentCustomerProduct
+				? resolveSyncExistingUsagesConfig({
+						ctx,
+						carryOverUsages,
+						currentCustomerProduct,
+					})
+				: undefined;
+
 		const insertedCustomerProduct = initImmediateSyncCustomerProduct({
 			ctx,
 			fullCustomer,
 			productContext,
 			stripeSubscription,
 			currentEpochMs,
+			existingUsagesConfig,
 		});
-
-		if (carryOverUsage && productContext.currentCustomerProduct) {
-			carryOverEntitlementUsage({
-				inserted: insertedCustomerProduct,
-				expiring: productContext.currentCustomerProduct,
-			});
-		}
 
 		insertCustomerProducts.push(insertedCustomerProduct);
 		customPrices.push(...productContext.customPrices);
 		customEntitlements.push(...productContext.customEntitlements);
+		insertPlanLicenses.push(...(productContext.insertPlanLicenses ?? []));
 
 		if (productContext.currentCustomerProduct) {
 			updateCustomerProducts.push(
@@ -107,5 +135,7 @@ export const computeSyncImmediatePhase = ({
 		updateCustomerProducts,
 		customPrices,
 		customEntitlements,
+		insertPlanLicenses,
+		customerLicenseUpdates,
 	};
 };

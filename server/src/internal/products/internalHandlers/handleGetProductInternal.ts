@@ -10,6 +10,7 @@ import { CusProdReadService } from "@/internal/customers/cusProducts/CusProdRead
 import { buildCorePlanUpdatePreview } from "@/internal/product/actions/previewUpdatePlan/buildCorePlanUpdatePreview.js";
 import { ProductService } from "../ProductService.js";
 import { getPlanResponse } from "../productUtils/productResponseUtils/getPlanResponse.js";
+import { buildProductDataCatalogLicenses } from "./buildProductDataCatalogLicenses.js";
 
 const GetProductInternalQuerySchema = z.object({
 	version: queryInteger().optional(),
@@ -103,6 +104,11 @@ export const handleGetProductInternal = createRoute({
 
 		return c.json({
 			product: productV2,
+			catalogLicenses: buildProductDataCatalogLicenses({
+				product,
+				apiLicenses: basePlan.licenses,
+				features,
+			}),
 			variants,
 			numVersions: latestProduct.version,
 			versionCounts,

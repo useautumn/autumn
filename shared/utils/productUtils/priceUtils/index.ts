@@ -10,6 +10,7 @@ export * from "./convertAmountUtils.js";
 export * from "./convertPrice/priceToStripeTiersMode.js";
 export * from "./convertPriceUtils.js";
 export * from "./findPrice/findPriceByFeatureId.js";
+export * from "./findPrice/findPriceSuccessor.js";
 export * from "./formatPriceUtils.js";
 export * from "./getPriceForOverage.js";
 

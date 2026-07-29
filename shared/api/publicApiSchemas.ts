@@ -26,6 +26,7 @@ export { ListCustomersV2_3ParamsSchema } from "./customers/crud/listCustomersPar
 export { UpdateCustomerParamsV1Schema } from "./customers/crud/updateCustomerParams.js";
 export { CreateEntityParamsV1Schema } from "./entities/crud/createEntityParams.js";
 export { PreviewUpdateFeatureResponseSchema } from "./features/previewUpdateFeature/previewUpdateFeatureResponse.js";
+export { ListInvoicesParamsSchema } from "./others/apiInvoice/listInvoicesParams.js";
 export { CreatePlanParamsV2Schema } from "./products/crud/createPlanParamsV1.js";
 export { GetPlanParamsV0Schema } from "./products/crud/getPlanParamsV0.js";
 export { ListPlanParamsSchema } from "./products/crud/listPlanParams.js";

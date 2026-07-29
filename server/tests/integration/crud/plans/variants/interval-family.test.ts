@@ -21,7 +21,9 @@ import {
 	type ApiPlanV1,
 	ApiVersion,
 	BillingInterval,
+	type FullProduct,
 	ResetInterval,
+	resetIntvToEntIntv,
 	type UpdatePlanParamsV2Input,
 } from "@autumn/shared";
 import { TestFeature } from "@tests/setup/v2Features";
@@ -31,11 +33,11 @@ import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
 import { AutumnRpcCli } from "@/external/autumn/autumnRpcCli.js";
 import { ProductService } from "@/internal/products/ProductService.js";
+import { expectPreviewVariantsCorrect } from "./utils/expectVariantPreviewCorrect.js";
 import {
 	expectStripeResourcesCarriedToVariant,
 	expectVariantProductCorrect,
 } from "./utils/expectVariantProductCorrect.js";
-import { expectPreviewVariantsCorrect } from "./utils/expectVariantPreviewCorrect.js";
 import { readableVariantTestId } from "./utils/readableVariantTestId.js";
 import { createVariantPlan } from "./utils/variantTestPlanUtils.js";
 
@@ -181,14 +183,28 @@ const updateVariantInterval = async (
 };
 
 const getMsgAllowance = (full: any) =>
-	full.entitlements.find(
-		(e: any) => e.feature_id === TestFeature.Messages,
+	full.entitlements.find((e: any) => e.feature_id === TestFeature.Messages)
+		?.allowance;
+
+// Different intervals don't merge: a variant can carry more than one Messages
+// entitlement (one per interval) once the base propagates a new-interval item
+// alongside an existing one, so lookups here must disambiguate by interval.
+const getMsgAllowanceForInterval = (
+	full: FullProduct,
+	interval: ResetInterval,
+) => {
+	// One-off resets persist as lifetime entitlements.
+	const entInterval = resetIntvToEntIntv({ resetIntv: interval });
+	return full.entitlements.find(
+		(entitlement) =>
+			entitlement.feature_id === TestFeature.Messages &&
+			entitlement.interval === entInterval,
 	)?.allowance;
+};
 
 const getUsersAllowance = (full: any) =>
-	full.entitlements.find(
-		(e: any) => e.feature_id === TestFeature.Users,
-	)?.allowance;
+	full.entitlements.find((e: any) => e.feature_id === TestFeature.Users)
+		?.allowance;
 
 const getStripeProductId = (full: any) =>
 	full.prices.find((p: any) => p.config?.type === "fixed")?.config
@@ -205,10 +221,7 @@ test.concurrent(
 	`${chalk.yellowBright("interval-family create: 5 variants — all get base_internal_product_id, version=1, share stripe_product_id")}`,
 	async () => {
 		const cid = readableVariantTestId("if_create_family");
-		const { ctx, rpc, baseId } = await setupBase(
-			cid,
-			`iv_base_${cid}`,
-		);
+		const { ctx, rpc, baseId } = await setupBase(cid, `iv_base_${cid}`);
 
 		const variantIds = await create5Variants(rpc, baseId, cid);
 		const baseFull = await getFull(ctx, baseId);
@@ -237,6 +250,7 @@ test.concurrent(
 		const res = await rpc.post("/plans.preview_update", {
 			plan_id: baseId,
 			items: [monthlyItem(200)],
+			include_variants: true,
 		});
 
 		expectPreviewVariantsCorrect({
@@ -310,10 +324,11 @@ test.concurrent(
 );
 
 // ═════════════════════════════════════════════════════════════════
-// 5. customer on one variant — that one versions, other 4 patch in place
+// 5. base disable_version cascades: no targeted variant versions,
+//    all patch in place regardless of their own customer status
 // ═════════════════════════════════════════════════════════════════
-	test.concurrent(
-	`${chalk.yellowBright("interval-family propagate: customer on one variant — that one versions, other 4 patch in place")}`,
+test.concurrent(
+	`${chalk.yellowBright("interval-family propagate: base disable_version cascades — all 5 variants patch in place, none version")}`,
 	async () => {
 		const cid = readableVariantTestId("if_variant_customer");
 		const { autumnV2_2, ctx, rpc, baseId } = await setupBaseWithPM(
@@ -334,12 +349,8 @@ test.concurrent(
 			update_variant_ids: variantIds,
 		});
 
-		const v0 = await getFull(ctx, variantIds[0]);
-		expect(v0.version).toBe(2);
-		expect(getMsgAllowance(v0)).toBe(200);
-
-		for (let i = 1; i < 5; i++) {
-			const v = await getFull(ctx, variantIds[i]);
+		for (const variantId of variantIds) {
+			const v = await getFull(ctx, variantId);
 			expect(v.version).toBe(1);
 			expect(getMsgAllowance(v)).toBe(200);
 		}
@@ -350,10 +361,11 @@ test.concurrent(
 );
 
 // ═════════════════════════════════════════════════════════════════
-// 6. customer on base — base v2 + all 5 variants v2, pin to new base v2
+// 6. customer on base — base v2, customer-less variants patch in place
+//    onto base v2 without versioning themselves
 // ═════════════════════════════════════════════════════════════════
 test.concurrent(
-	`${chalk.yellowBright("interval-family propagate: customer on base — base v2 + all 5 variants v2, pin to new base v2 internal_id")}`,
+	`${chalk.yellowBright("interval-family propagate: customer on base — base v2, customer-less variants patch in place onto base v2")}`,
 	async () => {
 		const cid = readableVariantTestId("if_base_customer");
 		const { ctx, rpc, baseId } = await setupBaseWithCustomer(
@@ -373,7 +385,7 @@ test.concurrent(
 
 		for (const vid of variantIds) {
 			const v = await getFull(ctx, vid);
-			expectVariantProductCorrect({ base: baseV2, variant: v, version: 2 });
+			expectVariantProductCorrect({ base: baseV2, variant: v, version: 1 });
 			expect(getMsgAllowance(v)).toBe(200);
 		}
 	},
@@ -461,10 +473,14 @@ test.concurrent(
 			update_variant_ids: variantIds,
 		});
 
-		// Variants with non-monthly intervals should NOT be affected
+		// Variants with non-monthly intervals should NOT be affected: each
+		// variant's own-interval Messages entitlement stays at 100. The base's
+		// propagated Month-interval item lands as a separate entitlement
+		// alongside it (different intervals don't merge), so lookups must
+		// disambiguate by interval rather than feature_id alone.
 		for (let i = 0; i < 5; i++) {
 			const v = await getFull(ctx, variantIds[i]);
-			const msgAllowance = getMsgAllowance(v);
+			const msgAllowance = getMsgAllowanceForInterval(v, VARIANT_INTERVALS[i]);
 			expect(msgAllowance).toBe(100);
 		}
 	},
@@ -511,12 +527,7 @@ test.concurrent(
 		const variantIds = await create5Variants(rpc, baseId, cid);
 
 		const err = await catchErr(() =>
-			createVariant(
-				rpc,
-				variantIds[0],
-				`iv_nested_${cid}`,
-				"Nested",
-			),
+			createVariant(rpc, variantIds[0], `iv_nested_${cid}`, "Nested"),
 		);
 
 		expect(err).not.toBeNull();
@@ -527,7 +538,7 @@ test.concurrent(
 // ═════════════════════════════════════════════════════════════════
 // 11. Stripe carry-forward — variant v2 retains stripe_price_id from v1
 // ═════════════════════════════════════════════════════════════════
-	test.concurrent(
+test.concurrent(
 	`${chalk.yellowBright("interval-family stripe: carry-forward — variant v2 retains stripe_price_id from v1 for unchanged prices")}`,
 	async () => {
 		const cid = readableVariantTestId("if_stripe_price");
@@ -547,9 +558,11 @@ test.concurrent(
 		const v1StripePriceId = getStripePriceId(v1Full);
 		expect(v1StripePriceId).toBeDefined();
 
+		// No disable_version here: the variant carries its own customer, so it
+		// versions on its own regardless of the base — that's what this test
+		// needs to actually exercise the v1 -> v2 stripe carry-forward path.
 		await rpc.plans.update<ApiPlanV1, RpcUpdate>(baseId, {
 			items: [monthlyItem(200)],
-			disable_version: true,
 			update_variant_ids: [variantIds[0]],
 		});
 

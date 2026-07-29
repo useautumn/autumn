@@ -57,23 +57,9 @@ const resetMockState = () => {
 beforeEach(resetMockState);
 afterEach(resetMockState);
 
-const rolloutCtx = {
+const ctx = {
 	org: { id: "org_123" },
 	env: "sandbox",
-	rolloutSnapshot: {
-		rolloutId: "v2-cache",
-		enabled: true,
-		percent: 100,
-		previousPercent: 0,
-		changedAt: 1,
-		customerBucket: 10,
-	},
-} as never;
-
-const nonRolloutCtx = {
-	org: { id: "org_123" },
-	env: "sandbox",
-	rolloutSnapshot: undefined,
 } as never;
 
 const params = {
@@ -82,8 +68,8 @@ const params = {
 } as never;
 
 describe("runFinalizeLock", () => {
-	test("runs finalize v2 when the rollout is enabled", async () => {
-		const result = await runFinalizeLock({ ctx: rolloutCtx, params });
+	test("runs finalize v2", async () => {
+		const result = await runFinalizeLock({ ctx, params });
 
 		expect(result).toEqual({ success: true });
 		expect(mockState.fetchCalls).toHaveLength(1);
@@ -93,7 +79,7 @@ describe("runFinalizeLock", () => {
 	test("fails open when Redis is unavailable before fetching the receipt", async () => {
 		mockState.shouldUseRedis = false;
 
-		const result = await runFinalizeLock({ ctx: rolloutCtx, params });
+		const result = await runFinalizeLock({ ctx, params });
 
 		expect(result).toEqual({ success: true });
 		expect(mockState.fetchCalls).toHaveLength(0);
@@ -106,7 +92,7 @@ describe("runFinalizeLock", () => {
 			reason: "timeout",
 		});
 
-		const result = await runFinalizeLock({ ctx: rolloutCtx, params });
+		const result = await runFinalizeLock({ ctx, params });
 
 		expect(result).toEqual({ success: true });
 		expect(mockState.fetchCalls).toHaveLength(1);
@@ -116,32 +102,18 @@ describe("runFinalizeLock", () => {
 	test("fails open when finalize v2 hits a transient Redis error", async () => {
 		mockState.finalizeV2Error = new Error("Command timed out");
 
-		const result = await runFinalizeLock({ ctx: rolloutCtx, params });
+		const result = await runFinalizeLock({ ctx, params });
 
 		expect(result).toEqual({ success: true });
 		expect(mockState.fetchCalls).toHaveLength(1);
 		expect(mockState.finalizeV2Calls).toHaveLength(1);
 	});
 
-	test("does not fail open when the rollout is disabled", async () => {
-		mockState.fetchError = new RedisUnavailableError({
-			source: "unit-test",
-			reason: "timeout",
-		});
-
-		await expect(runFinalizeLock({ ctx: nonRolloutCtx, params })).rejects.toBe(
-			mockState.fetchError,
-		);
-		expect(mockState.fetchCalls).toHaveLength(1);
-	});
-
 	test("throws non-transient errors", async () => {
 		const error = new Error("application bug");
 		mockState.finalizeV2Error = error;
 
-		await expect(runFinalizeLock({ ctx: rolloutCtx, params })).rejects.toBe(
-			error,
-		);
+		await expect(runFinalizeLock({ ctx, params })).rejects.toBe(error);
 	});
 });
 

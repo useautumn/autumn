@@ -2,6 +2,7 @@
 import {
 	FixedPriceConfigSchema,
 	type Price,
+	type PriceCurrencyConfig,
 	PriceType,
 	UsagePriceConfigSchema,
 	type UsageTier,
@@ -21,6 +22,25 @@ export const tiersAreSame = (tiers1: UsageTier[], tiers2: UsageTier[]) => {
 
 		if (tier1.amount !== tier2.amount) return false;
 		if ((tier1.flat_amount ?? 0) !== (tier2.flat_amount ?? 0)) return false;
+	}
+	return true;
+};
+
+const currenciesAreSame = (
+	currencies1: Record<string, PriceCurrencyConfig> | null | undefined,
+	currencies2: Record<string, PriceCurrencyConfig> | null | undefined,
+) => {
+	const keys1 = Object.keys(currencies1 ?? {});
+	const keys2 = Object.keys(currencies2 ?? {});
+	if (keys1.length !== keys2.length) return false;
+	for (const key of keys1) {
+		const block1 = currencies1?.[key];
+		const block2 = currencies2?.[key];
+		if (!block2) return false;
+		if ((block1?.amount ?? null) !== (block2.amount ?? null)) return false;
+		if (!tiersAreSame(block1?.usage_tiers ?? [], block2.usage_tiers ?? [])) {
+			return false;
+		}
 	}
 	return true;
 };
@@ -53,6 +73,19 @@ export const pricesAreSame = (
 			interval_count: {
 				condition: fixedConfig1.interval_count !== fixedConfig2.interval_count,
 				message: `Interval count different: ${fixedConfig1.interval_count} !== ${fixedConfig2.interval_count}`,
+			},
+			base_currency: {
+				condition:
+					(fixedConfig1.base_currency ?? null) !==
+					(fixedConfig2.base_currency ?? null),
+				message: `Base currency different: ${fixedConfig1.base_currency} !== ${fixedConfig2.base_currency}`,
+			},
+			currencies: {
+				condition: !currenciesAreSame(
+					fixedConfig1.currencies,
+					fixedConfig2.currencies,
+				),
+				message: "Additional currencies different",
 			},
 		};
 
@@ -117,6 +150,19 @@ export const pricesAreSame = (
 				message: `Usage tiers different: ${usageConfig1.usage_tiers.map(
 					(t) => `${t.to} (${t.amount}, flat: ${t.flat_amount ?? 0})`,
 				)} !== ${usageConfig2.usage_tiers.map((t) => `${t.to} (${t.amount}, flat: ${t.flat_amount ?? 0})`)}`,
+			},
+			base_currency: {
+				condition:
+					(usageConfig1.base_currency ?? null) !==
+					(usageConfig2.base_currency ?? null),
+				message: `Base currency different: ${usageConfig1.base_currency} !== ${usageConfig2.base_currency}`,
+			},
+			currencies: {
+				condition: !currenciesAreSame(
+					usageConfig1.currencies,
+					usageConfig2.currencies,
+				),
+				message: "Additional currencies different",
 			},
 		};
 

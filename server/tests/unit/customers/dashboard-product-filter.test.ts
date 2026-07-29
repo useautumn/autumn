@@ -1,6 +1,9 @@
 import { describe, expect, test } from "bun:test";
-import { sql } from "drizzle-orm";
+import { AppEnv } from "@autumn/shared";
+import { type SQL, sql } from "drizzle-orm";
 import { PgDialect } from "drizzle-orm/pg-core";
+import type { DrizzleCli } from "@/db/initDrizzle.js";
+import { CusSearchService } from "@/internal/customers/CusSearchService.js";
 import {
 	getCustomerListFilterSql,
 	parseDashboardVersionFilter,
@@ -56,5 +59,29 @@ describe("dashboard product filters", () => {
 		expect(normalized).toContain("p_dash.version = $4");
 		expect(normalized).toContain("cp_dash.is_custom = true");
 		expect(params).toEqual(["active", "past_due", "pro", 2, "pro"]);
+	});
+
+	/** Red: numbered plan search joined globally; green: products are scoped to the requesting org and environment. */
+	test("numbered plan cursor lookup scopes the product join", async () => {
+		let capturedQuery: ReturnType<PgDialect["sqlToQuery"]> | undefined;
+		const db = {
+			execute: async (query: SQL) => {
+				capturedQuery = dialect.sqlToQuery(query);
+				return [];
+			},
+		} as unknown as DrizzleCli;
+
+		await CusSearchService.resolveInternalIdsByCursor({
+			db,
+			orgId: "org_target",
+			env: AppEnv.Live,
+			search: "",
+			filters: { version: ["enterprise:1"] },
+			limit: 50,
+		});
+
+		const query = normalize(capturedQuery!.sql);
+		expect(query).toContain('"products"."org_id" =');
+		expect(query).toContain('"products"."env" =');
 	});
 });

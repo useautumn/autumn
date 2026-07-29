@@ -32,7 +32,7 @@ export type GetOrCreateCustomerPurchaseLimitInterval = ClosedEnum<
 >;
 
 /**
- * Optional rate limit to cap how often auto top-ups occur.
+ * Optional rate limit to cap how often auto top-ups occur. Pass count to set the current window's consumed top-ups.
  */
 export type GetOrCreateCustomerPurchaseLimit = {
   /**
@@ -47,6 +47,10 @@ export type GetOrCreateCustomerPurchaseLimit = {
    * Maximum number of auto top-ups allowed within the interval.
    */
   limit: number;
+  /**
+   * Set the current window's consumed auto top-up count. Omit to leave runtime state unchanged.
+   */
+  count?: number | undefined;
 };
 
 export type GetOrCreateCustomerAutoTopup = {
@@ -67,7 +71,7 @@ export type GetOrCreateCustomerAutoTopup = {
    */
   quantity: number;
   /**
-   * Optional rate limit to cap how often auto top-ups occur.
+   * Optional rate limit to cap how often auto top-ups occur. Pass count to set the current window's consumed top-ups.
    */
   purchaseLimit?: GetOrCreateCustomerPurchaseLimit | undefined;
   /**
@@ -286,6 +290,10 @@ export type GetOrCreateCustomerParams = {
    */
   sendEmailReceipts?: boolean | undefined;
   /**
+   * Currency to bill this customer in (e.g. usd, eur). Defaults to the organization's default currency.
+   */
+  currency?: string | null | undefined;
+  /**
    * Billing controls for the customer (auto top-ups, etc.)
    */
   billingControls?: GetOrCreateCustomerBillingControls | undefined;
@@ -310,6 +318,7 @@ export type GetOrCreateCustomerPurchaseLimit$Outbound = {
   interval: string;
   interval_count: number;
   limit: number;
+  count?: number | undefined;
 };
 
 /** @internal */
@@ -321,6 +330,7 @@ export const GetOrCreateCustomerPurchaseLimit$outboundSchema: z.ZodMiniType<
     interval: GetOrCreateCustomerPurchaseLimitInterval$outboundSchema,
     intervalCount: z._default(z.number(), 1),
     limit: z.number(),
+    count: z.optional(z.number()),
   }),
   z.transform((v) => {
     return remap$(v, {
@@ -688,6 +698,7 @@ export type GetOrCreateCustomerParams$Outbound = {
   create_in_stripe?: boolean | undefined;
   auto_enable_plan_id?: string | undefined;
   send_email_receipts?: boolean | undefined;
+  currency?: string | null | undefined;
   billing_controls?: GetOrCreateCustomerBillingControls$Outbound | undefined;
   config?: GetOrCreateCustomerConfig$Outbound | undefined;
   expand?: Array<string> | undefined;
@@ -708,6 +719,7 @@ export const GetOrCreateCustomerParams$outboundSchema: z.ZodMiniType<
     createInStripe: z.optional(z.boolean()),
     autoEnablePlanId: z.optional(z.string()),
     sendEmailReceipts: z.optional(z.boolean()),
+    currency: z.optional(z.nullable(z.string())),
     billingControls: z.optional(
       z.lazy(() => GetOrCreateCustomerBillingControls$outboundSchema),
     ),

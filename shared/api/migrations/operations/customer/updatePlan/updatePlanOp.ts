@@ -8,6 +8,11 @@ import { PlanFilterSchema } from "../../../filters/planFilter.js";
 export const MigrationUpdatePlanCustomizeSchema = z
 	.object({
 		price: BasePriceParamsSchema.nullable().optional(),
+		previous_price: BasePriceParamsSchema.nullable().optional().meta({
+			internal: true,
+			description:
+				"Base price before the plan update that created this migration. Display-only.",
+		}),
 		add_items: z.array(CreatePlanItemParamsV1Schema).optional(),
 		remove_items: z.array(PlanItemFilterSchema).optional(),
 		update_items: z.array(UpdatePlanItemParamsV1Schema).optional().meta({
