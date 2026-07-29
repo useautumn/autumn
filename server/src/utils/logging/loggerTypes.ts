@@ -21,6 +21,8 @@ export type LogRequestContext = {
 	name: string;
 };
 
+export type InternalLogRequestContext = Omit<LogRequestContext, "body">;
+
 /** App context - emits as context.* fields. */
 export type LogAppContext = {
 	org_id: string;

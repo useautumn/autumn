@@ -17,6 +17,7 @@ import {
 	type ResolvedThresholds,
 	resolveThresholds,
 } from "./redisSlowlogConfig.js";
+import { buildRedisSpanOutcomeAttributes } from "./redisSpanOutcomeAttributes.js";
 
 const TRACER_NAME = "autumn.redis";
 const INSTRUMENTED = new WeakSet<object>();
@@ -67,15 +68,12 @@ const finalizeSpan = ({
 		spanCtx;
 	try {
 		const durationMs = performance.now() - startedAt;
-		span.setAttribute("db.redis.duration_ms", durationMs);
-
-		if (durationMs > thresholds.slowMs) {
-			span.setAttribute("db.redis.slow", true);
-			span.setAttribute(
-				"db.redis.breach_ratio",
-				thresholds.slowMs > 0 ? durationMs / thresholds.slowMs : 0,
-			);
-		}
+		span.setAttributes(
+			buildRedisSpanOutcomeAttributes({
+				durationMs,
+				slowMs: thresholds.slowMs,
+			}),
+		);
 
 		if (durationMs > thresholds.severeMs) {
 			emitRedisSlowLog({
