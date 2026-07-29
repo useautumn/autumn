@@ -32,19 +32,17 @@ const CandidateRowSchema = z.object({
  * this also makes replay idempotent). `includeAnchorSources` adds the cycle
  * anchor columns resetting (consumable/credit) adds need for enrichment.
  */
-export const selectAddCandidateRows = async ({
-	db,
+export const buildAddCandidateRowsQuery = ({
 	internalCustomerIds,
 	fromInternalProductId,
 	entitlement,
 	includeAnchorSources,
 }: {
-	db: DrizzleCli;
 	internalCustomerIds: string[];
 	fromInternalProductId: string;
 	entitlement: EntitlementWithFeature;
 	includeAnchorSources: boolean;
-}): Promise<CycleEnrichmentCandidate[]> => {
+}) => {
 	const targetInterval = String(entitlement.interval ?? EntInterval.Lifetime);
 	const targetIntervalCount = entitlement.interval_count ?? 1;
 
@@ -101,7 +99,7 @@ export const selectAddCandidateRows = async ({
 			) AS sibling ON true`
 		: sql``;
 
-	const rows = await db.execute(sql`
+	return sql`
 		SELECT
 			cp.id AS customer_product_id,
 			cp.internal_customer_id,
@@ -127,7 +125,30 @@ export const selectAddCandidateRows = async ({
 					${dedupIntervalCondition}
 			)
 		ORDER BY cp.id
-	`);
+	`;
+};
+
+export const selectAddCandidateRows = async ({
+	db,
+	internalCustomerIds,
+	fromInternalProductId,
+	entitlement,
+	includeAnchorSources,
+}: {
+	db: DrizzleCli;
+	internalCustomerIds: string[];
+	fromInternalProductId: string;
+	entitlement: EntitlementWithFeature;
+	includeAnchorSources: boolean;
+}): Promise<CycleEnrichmentCandidate[]> => {
+	const rows = await db.execute(
+		buildAddCandidateRowsQuery({
+			internalCustomerIds,
+			fromInternalProductId,
+			entitlement,
+			includeAnchorSources,
+		}),
+	);
 
 	return rows.map((row) => {
 		const parsed = CandidateRowSchema.parse(row);

@@ -13,6 +13,10 @@ import {
 	BATCH_MIGRATION_MAX_PAGES,
 	BATCH_MIGRATION_PAGE_SIZE,
 } from "./utils/batchMigrationExecutionConstants.js";
+import {
+	type BatchMigrationPagePhases,
+	timePhase,
+} from "./utils/pagePhaseTimings.js";
 
 /**
  * Runs one batch chunk: pages from `afterInternalId` until the filter is
@@ -35,7 +39,13 @@ export const runBatchMigrationChunk = async ({
 	maxPages?: number;
 }): Promise<BatchMigrationChunkResult> => {
 	const migrationInternalId = getMigrationEventInternalId(migration);
-	const summary = { pages: 0, succeeded: 0, skipped: 0 };
+	const chunkPhases: BatchMigrationPagePhases = {};
+	const summary = {
+		pages: 0,
+		succeeded: 0,
+		skipped: 0,
+		phases: chunkPhases,
+	};
 	let cursor: string | null = afterInternalId ?? null;
 
 	ctx.logger.info("batch-migration: chunk starting", {
@@ -73,6 +83,7 @@ export const runBatchMigrationChunk = async ({
 				`batch-migration: exceeded ${BATCH_MIGRATION_MAX_PAGES} pages — aborting run`,
 			);
 
+		const pagePhases: BatchMigrationPagePhases = {};
 		const page = await claimNextBatchMigrationPage({
 			ctx,
 			migration,
@@ -80,6 +91,7 @@ export const runBatchMigrationChunk = async ({
 			migrationRunId,
 			afterInternalId: cursor ?? undefined,
 			limit: BATCH_MIGRATION_PAGE_SIZE,
+			phases: pagePhases,
 		});
 		if (page.selectedCount === 0) return finish("exhausted");
 		cursor = page.cursor ?? cursor;
@@ -90,15 +102,33 @@ export const runBatchMigrationChunk = async ({
 			migrationInternalId,
 			plan,
 			customers: page.customers,
+			phases: pagePhases,
 		});
-		await finalizeBatchMigrationPage({
-			ctx,
-			migrationInternalId,
-			migrationRunId,
-			pageResult,
+		await timePhase({
+			phases: pagePhases,
+			phase: "finalize",
+			run: () =>
+				finalizeBatchMigrationPage({
+					ctx,
+					migrationInternalId,
+					migrationRunId,
+					pageResult,
+				}),
 		});
 		summary.pages += 1;
 		summary.succeeded += pageResult.succeeded.length;
 		summary.skipped += pageResult.skipped.length;
+		for (const [phase, ms] of Object.entries(pagePhases)) {
+			chunkPhases[phase] = (chunkPhases[phase] ?? 0) + ms;
+		}
+		ctx.logger.info("batch-migration: page executed", {
+			data: {
+				migrationRunId,
+				page: summary.pages,
+				succeeded: pageResult.succeeded.length,
+				skipped: pageResult.skipped.length,
+				...pagePhases,
+			},
+		});
 	}
 };

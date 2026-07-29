@@ -9,6 +9,10 @@ import type {
 	BatchMigrationPageResult,
 } from "./types/batchMigrationExecutionTypes.js";
 import { BATCH_MIGRATION_PAGE_STATEMENT_TIMEOUT_MS } from "./utils/batchMigrationExecutionConstants.js";
+import {
+	type BatchMigrationPagePhases,
+	timePhase,
+} from "./utils/pagePhaseTimings.js";
 
 /**
  * Executes one claimed page in a single transaction: every patch's add ops
@@ -21,11 +25,13 @@ export const executeBatchMigrationPage = async ({
 	migrationInternalId,
 	plan,
 	customers,
+	phases,
 }: {
 	ctx: AutumnContext;
 	migrationInternalId: string;
 	plan: BatchMigrationExecutionPlan;
 	customers: BatchMigrationPageCustomer[];
+	phases?: BatchMigrationPagePhases;
 }): Promise<BatchMigrationPageResult> => {
 	if (customers.length === 0) return { succeeded: [], skipped: [] };
 
@@ -38,10 +44,15 @@ export const executeBatchMigrationPage = async ({
 	const succeededInternalIds = await withStatementTimeout(
 		ctx.db,
 		async (transaction) => {
-			const matched = await listCustomersOnPlanFilterMatchedProducts({
-				db: transaction,
-				internalCustomerIds: pageInternalIds,
-				planFilterMatchedProductIds,
+			const matched = await timePhase({
+				phases,
+				phase: "partition",
+				run: () =>
+					listCustomersOnPlanFilterMatchedProducts({
+						db: transaction,
+						internalCustomerIds: pageInternalIds,
+						planFilterMatchedProductIds,
+					}),
 			});
 			const matchedIds = [...matched];
 			// Customers a patch cannot serve (e.g. no usable reset anchor) drop
@@ -57,6 +68,7 @@ export const executeBatchMigrationPage = async ({
 							fromInternalProductId: patch.fromInternalProductId,
 							add,
 							now,
+							phases,
 						});
 						for (const id of result.excludedInternalCustomerIds) {
 							excludedIds.add(id);
@@ -79,17 +91,23 @@ export const executeBatchMigrationPage = async ({
 			);
 			const skippedIds = pageInternalIds.filter((id) => !succeeded.has(id));
 
-			await markPageItemRuns({
-				db: transaction,
-				migrationInternalId,
-				internalCustomerIds: [...succeeded],
-				status: "succeeded",
-			});
-			await markPageItemRuns({
-				db: transaction,
-				migrationInternalId,
-				internalCustomerIds: skippedIds,
-				status: "skipped",
+			await timePhase({
+				phases,
+				phase: "marks",
+				run: async () => {
+					await markPageItemRuns({
+						db: transaction,
+						migrationInternalId,
+						internalCustomerIds: [...succeeded],
+						status: "succeeded",
+					});
+					await markPageItemRuns({
+						db: transaction,
+						migrationInternalId,
+						internalCustomerIds: skippedIds,
+						status: "skipped",
+					});
+				},
 			});
 
 			return succeeded;

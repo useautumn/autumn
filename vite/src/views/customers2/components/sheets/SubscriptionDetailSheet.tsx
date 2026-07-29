@@ -113,7 +113,7 @@ export function SubscriptionDetailSheet() {
 	const hasPlanItems = (displayItems?.length ?? 0) > 0;
 	const licenseRows = cusProductLicenses(cusProduct);
 	const prepaidDisplayQuantities = backendToDisplayQuantity({
-		backendOptions: cusProduct.options,
+		backendOptions: cusProduct.options ?? [],
 		prepaidItems,
 	});
 

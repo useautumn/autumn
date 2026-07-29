@@ -4,6 +4,7 @@ import { migrationRepo } from "@/internal/migrations/v2/repos/index.js";
 import { runMigrationInChunks } from "@/internal/migrations/v2/run/runMigrationInChunks.js";
 import { RunMigrationPayloadSchema } from "@/internal/migrations/v2/run/types/migrationRunPayloads.js";
 import { MIGRATION_TASK_RETRY } from "@/trigger/migrations/migrationTaskQueue.js";
+import { runBatchMigrationChunkTask } from "@/trigger/migrations/runBatchMigrationChunkTask/runBatchMigrationChunkTask.js";
 import { runMigrationChunkTask } from "@/trigger/migrations/runMigrationChunkTask/runMigrationChunkTask.js";
 import { createTriggerContext } from "@/trigger/utils/createTriggerContext.js";
 
@@ -46,6 +47,13 @@ export const runMigrationTask = task({
 				runMigrationChunkTask
 					.triggerAndWait(chunkPayload, {
 						idempotencyKey: `migration-chunk:${chunkPayload.migrationRunId}:${chunkPayload.chunkIndex}`,
+						idempotencyKeyTTL: "7d",
+					})
+					.unwrap(),
+			runBatchChunk: (chunkPayload) =>
+				runBatchMigrationChunkTask
+					.triggerAndWait(chunkPayload, {
+						idempotencyKey: `batch-migration-chunk:${chunkPayload.migrationRunId}:${chunkPayload.chunkIndex}`,
 						idempotencyKeyTTL: "7d",
 					})
 					.unwrap(),

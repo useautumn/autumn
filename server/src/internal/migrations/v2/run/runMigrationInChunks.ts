@@ -2,12 +2,15 @@ import type { Migration } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { batchMigrationPlanToExecutionPlan } from "@/internal/migrations/v2/batchOperations/compute/index.js";
 import { runBatchMigrationChunk } from "@/internal/migrations/v2/batchOperations/execute/runBatchMigrationChunk.js";
+import type { BatchMigrationChunkResult } from "@/internal/migrations/v2/batchOperations/execute/types/batchMigrationExecutionTypes.js";
+import { BATCH_MIGRATION_PAGES_PER_CHUNK } from "@/internal/migrations/v2/batchOperations/execute/utils/batchMigrationExecutionConstants.js";
 import type { BatchMigrationExecutionPlan } from "@/internal/migrations/v2/batchOperations/types/index.js";
 import { clearOrgCache } from "@/internal/orgs/orgUtils/clearOrgCache.js";
 import { generateId } from "@/utils/genUtils.js";
 import { withMigrationRunTracking } from "../actions/migrationRun/index.js";
 import type { MigrationRuntimeWithEventId } from "../types/migrationDefinition.js";
 import { shouldRunBatchLane } from "../utils/shouldRunBatchLane.js";
+import { iterateBatchMigrationChunks } from "./chunks/iterateBatchMigrationChunks.js";
 import {
 	iterateMigrationChunks,
 	type MigrationChunkResult,
@@ -16,8 +19,10 @@ import {
 import { executeRunMigrationChunk } from "./executeRunMigrationChunk.js";
 import { prepareMigration } from "./runMigration.js";
 import {
+	buildRunBatchMigrationChunkPayload,
 	buildRunMigrationChunkPayload,
 	PreparedMigrationSnapshotSchema,
+	type RunBatchMigrationChunkPayload,
 	type RunMigrationChunkPayload,
 	type RunMigrationPayload,
 } from "./types/migrationRunPayloads.js";
@@ -28,29 +33,56 @@ export type RunMigrationChunkRunner = (
 	payload: RunMigrationChunkPayload,
 ) => Promise<MigrationChunkResult>;
 
-/** The batch lane: one inline, unbudgeted chunk running to exhaustion — the
- * lane's own claim/paging machinery provides durability, no trigger dispatch. */
+export type RunBatchMigrationChunkRunner = (
+	payload: RunBatchMigrationChunkPayload,
+) => Promise<BatchMigrationChunkResult>;
+
+/** The batch lane: budgeted chunks (PAGES_PER_CHUNK pages each) dispatched
+ * through `runBatchChunk` — the trigger path shares migrationTaskQueue so
+ * concurrent migrations interleave fairly; in-process runs use the same
+ * budget loop. */
 const runBatchMigrationLane = async ({
 	ctx,
 	migrationRunId,
 	migrationSnapshot,
 	plan,
+	runBatchChunk,
 }: {
 	ctx: AutumnContext;
 	migrationRunId: string;
-	migrationSnapshot: MigrationRuntimeWithEventId;
+	migrationSnapshot: RunBatchMigrationChunkPayload["migration"];
 	plan: BatchMigrationExecutionPlan;
+	runBatchChunk?: RunBatchMigrationChunkRunner;
 }): Promise<MigrationChunkRunResult> => {
-	const result = await runBatchMigrationChunk({
-		ctx,
-		migration: migrationSnapshot,
-		migrationRunId,
-		plan,
+	const executeBatchChunk: RunBatchMigrationChunkRunner =
+		runBatchChunk ??
+		((payload) =>
+			runBatchMigrationChunk({
+				ctx,
+				migration: payload.migration,
+				migrationRunId: payload.migrationRunId,
+				plan: payload.plan,
+				afterInternalId: payload.cursor,
+				maxPages: BATCH_MIGRATION_PAGES_PER_CHUNK,
+			}));
+
+	const result = await iterateBatchMigrationChunks({
+		runChunk: ({ chunkIndex, cursor }) =>
+			executeBatchChunk(
+				buildRunBatchMigrationChunkPayload({
+					ctx,
+					migrationRunId,
+					migration: migrationSnapshot,
+					plan,
+					chunkIndex,
+					cursor,
+				}),
+			),
 	});
 	return {
 		processed: result.processed,
-		chunks: result.summary.pages,
-		canceled: result.completion === "stopped",
+		chunks: result.pages,
+		canceled: result.canceled,
 		lane: "batch",
 	};
 };
@@ -65,6 +97,7 @@ export const runMigrationInChunks = async ({
 	lazyRun = false,
 	controls,
 	runChunk,
+	runBatchChunk,
 }: {
 	ctx: AutumnContext;
 	migration: Migration;
@@ -73,6 +106,7 @@ export const runMigrationInChunks = async ({
 	lazyRun?: boolean;
 	controls?: RunMigrationPayload["controls"];
 	runChunk?: RunMigrationChunkRunner;
+	runBatchChunk?: RunBatchMigrationChunkRunner;
 }): Promise<MigrationChunkRunResult> => {
 	const eventMigrationRunId = migrationRunId ?? generateId("mrun");
 
@@ -121,6 +155,7 @@ export const runMigrationInChunks = async ({
 						migrationRunId: eventMigrationRunId,
 						migrationSnapshot,
 						plan: batchMigrationPlanToExecutionPlan({ plan: batchLane.plan }),
+						runBatchChunk,
 					});
 				}
 

@@ -1,5 +1,10 @@
 import { isResettingEntitlement } from "@autumn/shared";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
+import {
+	addPhaseDuration,
+	type BatchMigrationPagePhases,
+	timePhase,
+} from "@/internal/migrations/v2/batchOperations/execute/utils/pagePhaseTimings.js";
 import type { BatchMigrationExecutionAdd } from "@/internal/migrations/v2/batchOperations/types/index.js";
 import { enrichCustomerEntitlementCycles } from "@/internal/migrations/v2/batchOperations/utils/enrichCustomerEntitlementCycles.js";
 import { generateId } from "@/utils/genUtils.js";
@@ -24,25 +29,33 @@ export const addCustomerEntitlementsForPage = async ({
 	fromInternalProductId,
 	add,
 	now,
+	phases,
 }: {
 	db: DrizzleCli;
 	internalCustomerIds: string[];
 	fromInternalProductId: string;
 	add: BatchMigrationExecutionAdd;
 	now: number;
+	phases?: BatchMigrationPagePhases;
 }): Promise<AddCustomerEntitlementsForPageResult> => {
 	const resetting = isResettingEntitlement({ entitlement: add.entitlement });
 
-	const candidates = await selectAddCandidateRows({
-		db,
-		internalCustomerIds,
-		fromInternalProductId,
-		entitlement: add.entitlement,
-		includeAnchorSources: resetting,
+	const candidates = await timePhase({
+		phases,
+		phase: "candidates",
+		run: () =>
+			selectAddCandidateRows({
+				db,
+				internalCustomerIds,
+				fromInternalProductId,
+				entitlement: add.entitlement,
+				includeAnchorSources: resetting,
+			}),
 	});
 	if (candidates.length === 0)
 		return { affected: 0, excludedInternalCustomerIds: [] };
 
+	const enrichStartedAt = Date.now();
 	const { rows, excludedInternalCustomerIds } = resetting
 		? enrichCustomerEntitlementCycles({
 				candidates,
@@ -57,14 +70,20 @@ export const addCustomerEntitlementsForPage = async ({
 				})),
 				excludedInternalCustomerIds: [],
 			};
+	addPhaseDuration({ phases, phase: "enrich", startedAt: enrichStartedAt });
 
-	const affected = await insertCustomerEntitlementRows({
-		db,
-		fromInternalProductId,
-		entitlement: add.entitlement,
-		initialState: add.initialState,
-		rows: rows.map((row) => ({ ...row, id: generateId("cus_ent") })),
-		now,
+	const affected = await timePhase({
+		phases,
+		phase: "insert",
+		run: () =>
+			insertCustomerEntitlementRows({
+				db,
+				fromInternalProductId,
+				entitlement: add.entitlement,
+				initialState: add.initialState,
+				rows: rows.map((row) => ({ ...row, id: generateId("cus_ent") })),
+				now,
+			}),
 	});
 
 	return { affected, excludedInternalCustomerIds };

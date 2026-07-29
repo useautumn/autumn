@@ -19,6 +19,8 @@ export type BatchMigrationExecutionSummary = {
 	pages: number;
 	succeeded: number;
 	skipped: number;
+	/** Phase ms summed across the chunk's pages. */
+	phases: Record<string, number>;
 };
 
 /** One executeBatchMigrationChunk invocation. Contract-compatible with the

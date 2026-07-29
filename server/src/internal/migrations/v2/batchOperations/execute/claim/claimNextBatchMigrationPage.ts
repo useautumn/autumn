@@ -10,6 +10,10 @@ import type { CustomerRow } from "@/internal/migrations/v2/filters/customers/fil
 import type { MigrationRuntimeWithEventId } from "@/internal/migrations/v2/types/migrationDefinition.js";
 import { generateId } from "@/utils/genUtils.js";
 import type { BatchMigrationPageCustomer } from "../types/batchMigrationExecutionTypes.js";
+import {
+	type BatchMigrationPagePhases,
+	timePhase,
+} from "../utils/pagePhaseTimings.js";
 
 export type ClaimedBatchMigrationPage = {
 	/** Rows the filter select returned — drives the cursor and loop end. */
@@ -33,6 +37,7 @@ export const claimNextBatchMigrationPage = async ({
 	migrationRunId,
 	afterInternalId,
 	limit,
+	phases,
 }: {
 	ctx: AutumnContext;
 	migration: MigrationRuntimeWithEventId;
@@ -40,6 +45,7 @@ export const claimNextBatchMigrationPage = async ({
 	migrationRunId: string;
 	afterInternalId?: string;
 	limit: number;
+	phases?: BatchMigrationPagePhases;
 }): Promise<ClaimedBatchMigrationPage> => {
 	const select = buildCustomerSelect({
 		orgId: ctx.org.id,
@@ -61,7 +67,11 @@ export const claimNextBatchMigrationPage = async ({
 		limit,
 		afterInternalId,
 	});
-	const selected = (await ctx.db.execute(select)) as CustomerRow[];
+	const selected = (await timePhase({
+		phases,
+		phase: "claim_select",
+		run: () => ctx.db.execute(select),
+	})) as CustomerRow[];
 	if (selected.length === 0)
 		return { selectedCount: 0, cursor: afterInternalId, customers: [] };
 
@@ -77,23 +87,28 @@ export const claimNextBatchMigrationPage = async ({
 		created_at: now,
 		updated_at: null,
 	}));
-	const claimed = await ctx.db
-		.insert(migrationItemRuns)
-		.values(values)
-		.onConflictDoUpdate({
-			target: [
-				migrationItemRuns.migration_internal_id,
-				migrationItemRuns.item_kind,
-				migrationItemRuns.item_id,
-			],
-			targetWhere: sql`${migrationItemRuns.dry_run} = false`,
-			set: {
-				migration_run_id: migrationRunId,
-				updated_at: now,
-			},
-			setWhere: sql`${migrationItemRuns.status} = ${MigrationItemRunStatus.Running}`,
-		})
-		.returning({ item_id: migrationItemRuns.item_id });
+	const claimed = await timePhase({
+		phases,
+		phase: "claim_upsert",
+		run: () =>
+			ctx.db
+				.insert(migrationItemRuns)
+				.values(values)
+				.onConflictDoUpdate({
+					target: [
+						migrationItemRuns.migration_internal_id,
+						migrationItemRuns.item_kind,
+						migrationItemRuns.item_id,
+					],
+					targetWhere: sql`${migrationItemRuns.dry_run} = false`,
+					set: {
+						migration_run_id: migrationRunId,
+						updated_at: now,
+					},
+					setWhere: sql`${migrationItemRuns.status} = ${MigrationItemRunStatus.Running}`,
+				})
+				.returning({ item_id: migrationItemRuns.item_id }),
+	});
 
 	const claimedIds = new Set(claimed.map((row) => row.item_id));
 	return {
