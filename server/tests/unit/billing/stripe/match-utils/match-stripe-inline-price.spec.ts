@@ -66,13 +66,21 @@ describe("matchStripeInlinePrice", () => {
 		).toBe(true);
 	});
 
+	test("ignores tax behavior when matching", () => {
+		expect(
+			stripeInlinePriceMatchesStripePrice({
+				inlinePrice,
+				stripePrice: subscriptionItem({ taxBehavior: "exclusive" }).price,
+			}),
+		).toBe(true);
+	});
+
 	test("does not match non-inline-compatible Stripe prices", () => {
 		const incompatiblePrices = [
 			subscriptionItem({ billingScheme: "tiered", tiersMode: "graduated" }),
 			subscriptionItem({
 				transformQuantity: { divide_by: 10, round: "up" },
 			}),
-			subscriptionItem({ taxBehavior: "exclusive" }),
 		];
 
 		for (const item of incompatiblePrices) {

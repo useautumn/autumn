@@ -1,4 +1,5 @@
 import type { ExpandedStripeSubscription } from "@/external/stripe/subscriptions/operations/getExpandedStripeSubscription";
+import { isStripeSubscriptionCanceling } from "@/external/stripe/subscriptions/utils/classifyStripeSubscriptionUtils";
 import { notNullish, nullish } from "@/utils/genUtils";
 import type { SubscriptionPreviousAttributes } from "../../stripeSubscriptionUpdatedContext";
 
@@ -32,13 +33,18 @@ export const isStripeSubscriptionRenewedEvent = ({
 		notNullish(previousAttributes.cancel_at) &&
 		nullish(stripeSubscription.cancel_at);
 
-	// canceled_at was set (edge case)
+	// canceled_at was set, now cleared
 	const uncanceledAt =
 		notNullish(previousAttributes.canceled_at) &&
-		stripeSubscription.canceled_at;
+		nullish(stripeSubscription.canceled_at);
+
+	// Duplicate cancel calls can wiggle individual cancel fields (e.g. switch
+	// cancel_at_period_end to an explicit cancel_at) — never a renewal.
+	const stillCanceling = isStripeSubscriptionCanceling(stripeSubscription);
 
 	return {
-		renewed: !!(uncanceledAtPeriodEnd || uncancelAt || uncanceledAt),
+		renewed:
+			!stillCanceling && !!(uncanceledAtPeriodEnd || uncancelAt || uncanceledAt),
 		renewedAtMs: Date.now(),
 	};
 };

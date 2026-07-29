@@ -79,6 +79,9 @@ export const applyExistingUsages = ({
 				cusEnts,
 				amountToDeduct: entityUsage,
 				targetEntityId: entityId,
+				// Carried usage is never floored: prior usage above the new
+				// allowance lands as a negative balance, not a silent reset.
+				allowOverage: true,
 			});
 		}
 
@@ -86,6 +89,7 @@ export const applyExistingUsages = ({
 		deductFromCusEntsTypescript({
 			cusEnts,
 			amountToDeduct: existingUsage.usage,
+			allowOverage: true,
 		});
 
 		for (const newCusEnt of cusEnts) {

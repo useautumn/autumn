@@ -5,6 +5,34 @@ export const timeout = (ms: number) => {
 	return new Promise((resolve) => setTimeout(resolve, ms));
 };
 
+/**
+ * Polls `fetch` until `until(value)` holds or the deadline passes; returns the
+ * last value (or rethrows the last error) so asserts surface the real mismatch.
+ */
+export const pollUntil = async <T>({
+	fetch,
+	until,
+	timeoutMs = 60_000,
+	intervalMs = 500,
+}: {
+	fetch: () => Promise<T>;
+	until: (value: T) => boolean;
+	timeoutMs?: number;
+	intervalMs?: number;
+}): Promise<T> => {
+	const deadline = Date.now() + timeoutMs;
+	while (true) {
+		const isLastAttempt = Date.now() >= deadline;
+		try {
+			const value = await fetch();
+			if (until(value) || isLastAttempt) return value;
+		} catch (error) {
+			if (isLastAttempt) throw error;
+		}
+		await timeout(intervalMs);
+	}
+};
+
 export const batchSendCountEvents = async ({
 	customerId,
 	eventCount,

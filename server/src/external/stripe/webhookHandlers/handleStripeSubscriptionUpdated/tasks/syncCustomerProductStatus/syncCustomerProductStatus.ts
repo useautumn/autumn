@@ -3,6 +3,7 @@ import {
 	type CollectionMethod,
 	CusProductStatus,
 	cp,
+	type FullCusProduct,
 	type InsertCustomerProduct,
 } from "@autumn/shared";
 import { getStripeInvoice } from "@/external/stripe/invoices/operations/getStripeInvoice";
@@ -22,30 +23,44 @@ import type {
 } from "../../stripeSubscriptionUpdatedContext";
 import { fixUnexpectedStatuses } from "./fixUnexpectedStatuses";
 
-/**
- * In cases where a manual invoice was created due to an upgrade, we don't want to treat it as a past due.
- * Only applies when the subscription just transitioned to past_due from a healthy state.
- * If the sub was already past_due before this event, it's a real past_due.
- */
+const isManualBillingUpdateInvoice = (
+	invoice: { metadata?: Record<string, string> | null },
+) =>
+	invoice.metadata?.autumn_billing_update &&
+	invoice.metadata?.autumn_invoice_mode !== "true";
+
+const getInvoiceId = (invoice: string | { id?: string } | null | undefined) =>
+	typeof invoice === "string" ? invoice : invoice?.id;
+
+/** Manual billing-update invoices should not make an otherwise-active subscription past_due. */
 const handleFalsePositivePastDue = async ({
 	ctx,
 	stripeSubscription,
 	autumnStatus,
 	previousAttributes,
+	customerProducts,
 }: {
 	ctx: StripeWebhookContext;
 	stripeSubscription: ExpandedStripeSubscription;
 	autumnStatus: CusProductStatus;
 	previousAttributes: SubscriptionPreviousAttributes;
+	customerProducts: FullCusProduct[];
 }): Promise<CusProductStatus> => {
 	if (!isStripeSubscriptionPastDue(stripeSubscription)) return autumnStatus;
 
-	// If the status didn't change in this event or was already past_due,
-	// the subscription was genuinely past_due — don't override.
-	const wasAlreadyPastDue =
-		previousAttributes.status === undefined ||
-		previousAttributes.status === "past_due";
-	if (wasAlreadyPastDue) return autumnStatus;
+	if (previousAttributes.status === "past_due") return autumnStatus;
+
+	const statusChanged = previousAttributes.status !== undefined;
+	const latestInvoiceChanged = previousAttributes.latest_invoice !== undefined;
+	if (!statusChanged && !latestInvoiceChanged) return autumnStatus;
+
+	const hasActiveCustomerProduct = customerProducts.some((customerProduct) => {
+		const { valid } = cp(customerProduct)
+			.recurring()
+			.onStripeSubscription({ stripeSubscriptionId: stripeSubscription.id });
+		return valid && customerProduct.status === CusProductStatus.Active;
+	});
+	if (!hasActiveCustomerProduct) return autumnStatus;
 
 	const latestInvoice = await getStripeInvoice({
 		stripeClient: ctx.stripeCli,
@@ -53,16 +68,21 @@ const handleFalsePositivePastDue = async ({
 		expand: [],
 	});
 
-	const metadata = latestInvoice?.metadata;
+	if (!isManualBillingUpdateInvoice(latestInvoice)) return autumnStatus;
 
-	if (
-		metadata?.autumn_billing_update &&
-		metadata?.autumn_invoice_mode !== "true"
-	) {
-		return CusProductStatus.Active;
+	if (!statusChanged) {
+		const previousInvoiceId = getInvoiceId(previousAttributes.latest_invoice);
+		if (!previousInvoiceId) return autumnStatus;
+
+		const previousInvoice = await getStripeInvoice({
+			stripeClient: ctx.stripeCli,
+			invoiceId: previousInvoiceId,
+			expand: [],
+		});
+		if (!isManualBillingUpdateInvoice(previousInvoice)) return autumnStatus;
 	}
 
-	return autumnStatus;
+	return CusProductStatus.Active;
 };
 
 /**
@@ -100,9 +120,8 @@ export const syncCustomerProductStatus = async ({
 		stripeSubscription,
 		autumnStatus,
 		previousAttributes,
+		customerProducts,
 	});
-
-	// Don't transition autumn status to past_due if the stripe invoice has metadata: autumn_billing_update, and invoice_mode is false.
 
 	// Get trial_ends_at and collection_method from Stripe
 	const trialEndsAt = stripeSubscriptionToTrialEndsAtMs({ stripeSubscription });

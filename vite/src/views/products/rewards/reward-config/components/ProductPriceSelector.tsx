@@ -1,6 +1,6 @@
 import type { ProductItem, ProductV2 } from "@autumn/shared";
+import { Checkbox } from "@autumn/ui";
 import { PackageIcon, XIcon } from "@phosphor-icons/react";
-import { Checkbox } from "@/components/v2/checkboxes/Checkbox";
 import {
 	DropdownMenu,
 	DropdownMenuContent,
@@ -10,7 +10,7 @@ import {
 	DropdownMenuSubContent,
 	DropdownMenuSubTrigger,
 	DropdownMenuTrigger,
-} from "@/components/v2/dropdowns/DropdownMenu";
+} from "@autumn/ui";
 import { useOrg } from "@/hooks/common/useOrg";
 import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
 import { useProductsByPriceIdsQuery } from "@/hooks/queries/useProductsByPriceIdsQuery";

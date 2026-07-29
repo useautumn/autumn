@@ -13,16 +13,11 @@ import {
 import { collatePgColumn } from "../../db/utils.js";
 import type { ExternalProcessors } from "../genModels/processorSchemas.js";
 import { organizations } from "../orgModels/orgTable.js";
-import type {
-	AutoTopup,
-	DbOverageAllowed,
-	DbSpendLimit,
-	DbUsageAlert,
-	DbUsageLimit,
-} from "./billingControls/customerBillingControls.js";
+import { billingControlColumns } from "./billingControls/billingControlTableColumns.js";
 
 export type CustomerConfig = {
 	disable_pooled_balance?: boolean;
+	disable_overage_billing?: boolean;
 };
 
 export type CustomerProcessor = {
@@ -47,11 +42,9 @@ export const customers = pgTable(
 			.$type<ExternalProcessors>()
 			.default({} as ExternalProcessors),
 		send_email_receipts: boolean("send_email_receipts").default(false),
-		auto_topups: jsonb().$type<AutoTopup[]>(),
-		spend_limits: jsonb().$type<DbSpendLimit[]>(),
-		usage_limits: jsonb().$type<DbUsageLimit[]>(),
-		usage_alerts: jsonb().$type<DbUsageAlert[]>(),
-		overage_allowed: jsonb().$type<DbOverageAllowed[]>(),
+		// null = not yet locked; resolves to org.default_currency at use-time
+		currency: text(),
+		...billingControlColumns(),
 		config: jsonb().$type<CustomerConfig>().default({}),
 	},
 	(table) => [
@@ -99,6 +92,13 @@ export const customers = pgTable(
 		),
 		index("idx_customers_processors_revenuecat").on(
 			sql`(${table.processors} ->> 'revenuecat')`,
+		),
+		index("idx_customers_processors_revenuecat_id").on(
+			sql`(${table.processors} -> 'revenuecat' ->> 'id')`,
+		),
+		index("idx_customers_processors_revenuecat_aliases").using(
+			"gin",
+			sql`(${table.processors} -> 'revenuecat' -> 'aliases')`,
 		),
 		index("idx_customers_processors_vercel").on(
 			sql`(${table.processors} ->> 'vercel')`,

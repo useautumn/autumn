@@ -1,5 +1,5 @@
+import { StepBadge } from "@autumn/ui";
 import type { ReactNode } from "react";
-import { StepBadge } from "@/components/v2/badges/StepBadge";
 import { cn } from "@/lib/utils";
 
 interface SectionHeaderProps {

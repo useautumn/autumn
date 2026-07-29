@@ -1,0 +1,45 @@
+{
+	"name": "@autumn/testbench",
+	"private": true,
+	"version": "0.0.0",
+	"type": "module",
+	"scripts": {
+		"dev": "vite",
+		"build": "vite build",
+		"preview": "vite preview",
+		"ts": "bunx tsgo --build --noEmit"
+	},
+	"dependencies": {
+		"@autumn/shared": "workspace:*",
+		"@base-ui/react": "^1.4.1",
+		"@squircle/tailwindcss": "^1.0.6",
+		"@tailwindcss/vite": "catalog:",
+		"@tanstack/react-table": "^8.21.3",
+		"@wterm/core": "0.3.0",
+		"@wterm/dom": "0.3.0",
+		"@wterm/react": "0.3.0",
+		"class-variance-authority": "^0.7.1",
+		"clsx": "^2.1.1",
+		"lucide-react": "^0.562.0",
+		"react": "^18.2.0",
+		"react-dom": "^18.2.0",
+		"react-resizable-panels": "^4.11.0",
+		"react-router-dom": "^7.13.0",
+		"recharts": "^3.3.0",
+		"tailwind-merge": "^3.0.2",
+		"tailwind-scrollbar-hide": "^4.0.0",
+		"tailwindcss": "^4.0.13",
+		"tailwindcss-animate": "^1.0.7",
+		"vite-tsconfig-paths": "catalog:"
+	},
+	"devDependencies": {
+		"@types/bun": "^1.3.1",
+		"@types/node": "^24.10.1",
+		"@types/react": "^18.3.18",
+		"@types/react-dom": "^18.3.5",
+		"@typescript/native-preview": "catalog:",
+		"@vitejs/plugin-react": "catalog:",
+		"typescript": "~5.9.3",
+		"vite": "catalog:"
+	}
+}

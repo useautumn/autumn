@@ -24,6 +24,7 @@ describe("dispatchThreadMessage", () => {
 		const run = registerRun({
 			key: "co1",
 			kind: "message",
+			ownerProviderUserId: "U1",
 			sendInterrupt: async (sessionId) => {
 				interrupts.push(sessionId);
 			},
@@ -52,6 +53,7 @@ describe("dispatchThreadMessage", () => {
 		const run = registerRun({
 			key: "co2",
 			kind: "message",
+			ownerProviderUserId: "U1",
 			sendInterrupt: async () => {
 				sent.push("interrupt");
 			},
@@ -114,6 +116,7 @@ describe("dispatchThreadMessage", () => {
 		const run = registerRun({
 			key: "co4",
 			kind: "message",
+			ownerProviderUserId: "U1",
 			sendInterrupt: async () => {
 				throw new Error("session busy");
 			},
@@ -137,7 +140,11 @@ describe("dispatchThreadMessage", () => {
 	});
 
 	test("attachment-bearing follow-ups wait for the active run", async () => {
-		const run = registerRun({ key: "co5", kind: "message" });
+		const run = registerRun({
+			key: "co5",
+			kind: "message",
+			ownerProviderUserId: "U1",
+		});
 		run.resolveSessionId("sesn_1");
 		let newRuns = 0;
 
@@ -153,5 +160,39 @@ describe("dispatchThreadMessage", () => {
 
 		expect(newRuns).toBe(1);
 		closeRun({ key: "co5", run });
+	});
+
+	test("does not inject a different sender's message into the owner's run", async () => {
+		const sent: string[] = [];
+		const run = registerRun({
+			key: "co6",
+			kind: "message",
+			ownerProviderUserId: "U1",
+			sendInterrupt: async () => {
+				sent.push("interrupt");
+			},
+			sendUserMessage: async ({ text }) => {
+				sent.push(`message:${text}`);
+			},
+		});
+		run.resolveSessionId("sesn_1");
+		let newRuns = 0;
+
+		// A second Slack user posts into the same thread mid-run. It must not be
+		// injected into U1's authenticated session — it starts its own run.
+		await dispatchThreadMessage({
+			hasAttachments: false,
+			providerUserId: "U2",
+			runKey: "co6",
+			runNewMessage: async () => {
+				newRuns += 1;
+			},
+			text: "attach the enterprise plan to cus_1",
+		});
+
+		expect(sent).toEqual([]);
+		expect(run.pendingTurns).toBe(0);
+		expect(newRuns).toBe(1);
+		closeRun({ key: "co6", run });
 	});
 });

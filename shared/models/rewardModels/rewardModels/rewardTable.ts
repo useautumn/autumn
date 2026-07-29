@@ -1,5 +1,12 @@
 import type { InferInsertModel, InferSelectModel } from "drizzle-orm";
-import { foreignKey, jsonb, numeric, pgTable, text } from "drizzle-orm/pg-core";
+import {
+	foreignKey,
+	index,
+	jsonb,
+	numeric,
+	pgTable,
+	text,
+} from "drizzle-orm/pg-core";
 import { organizations } from "../../orgModels/orgTable";
 import type {
 	DiscountConfig,
@@ -30,6 +37,7 @@ export const rewards = pgTable(
 			foreignColumns: [organizations.id],
 			name: "coupons_org_id_fkey",
 		}).onDelete("cascade"),
+		index("idx_rewards_org_id_env").on(table.org_id, table.env),
 	],
 );
 

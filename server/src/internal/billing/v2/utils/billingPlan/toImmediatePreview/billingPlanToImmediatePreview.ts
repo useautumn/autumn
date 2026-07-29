@@ -1,16 +1,26 @@
-import type { BillingPlan, LineItem, PreviewLineItem } from "@autumn/shared";
+import type {
+	BillingContext,
+	BillingPlan,
+	LineItem,
+	PreviewLineItem,
+} from "@autumn/shared";
 import { sumValues } from "@autumn/shared";
 import { Decimal } from "decimal.js";
 import { customLineItemToPreviewLineItem } from "../../lineItems/customLineItemToPreviewLineItem";
+import { customLineItemsToLineItems } from "../../lineItems/customLineItemsToLineItems";
 import { lineItemToPreviewLineItem } from "../../lineItems/lineItemToPreviewLineItem";
 
 const roundAmount = ({ amount }: { amount: number }) =>
 	new Decimal(amount).toDP(2).toNumber();
 
 export const billingPlanToImmediatePreview = ({
+	billingContext,
 	billingPlan,
+	currency,
 }: {
+	billingContext: BillingContext;
 	billingPlan: BillingPlan;
+	currency: string;
 }): {
 	immediateLineItems: LineItem[];
 	previewLineItems: PreviewLineItem[];
@@ -25,8 +35,16 @@ export const billingPlanToImmediatePreview = ({
 	);
 
 	if (customLineItems?.length) {
-		const previewLineItems = customLineItems.map(
-			customLineItemToPreviewLineItem,
+		const customLineItemsWithDiscounts = customLineItemsToLineItems({
+			customLineItems,
+			currency,
+			stripeDiscounts: billingContext.stripeDiscounts ?? [],
+		});
+		const previewLineItems = customLineItems.map((item, index) =>
+			customLineItemToPreviewLineItem(
+				item,
+				customLineItemsWithDiscounts[index],
+			),
 		);
 		const subtotal = roundAmount({
 			amount: sumValues(customLineItems.map((item) => item.amount)),
@@ -36,7 +54,9 @@ export const billingPlanToImmediatePreview = ({
 			immediateLineItems,
 			previewLineItems,
 			subtotal,
-			total: subtotal,
+			total: roundAmount({
+				amount: sumValues(previewLineItems.map((line) => line.total)),
+			}),
 		};
 	}
 

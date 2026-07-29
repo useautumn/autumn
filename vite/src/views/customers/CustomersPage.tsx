@@ -1,6 +1,6 @@
 "use client";
 
-import { PageContainer } from "@/components/general/PageContainer";
+import { PageContainer } from "@autumn/ui";
 import { useOrg } from "@/hooks/common/useOrg";
 import { useProductsQuery } from "@/hooks/queries/useProductsQuery";
 import { useProductStore } from "@/hooks/stores/useProductStore";

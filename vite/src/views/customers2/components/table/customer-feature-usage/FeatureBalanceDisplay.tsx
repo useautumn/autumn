@@ -41,7 +41,9 @@ export function FeatureBalanceDisplay({
 		<div className={cn("flex items-baseline gap-1 truncate", className)}>
 			{shouldShowOutOfBalance && (
 				<>
-					<span className="text-foreground">{formatNumber(displayBalance)}</span>
+					<span className="text-foreground">
+						{formatNumber(displayBalance)}
+					</span>
 					{allowance > 0 && (
 						<span className="text-subtle">
 							{compact

@@ -1,3 +1,4 @@
+import { IconButton, SearchableSelect } from "@autumn/ui";
 import { XIcon } from "@phosphor-icons/react";
 import { CheckIcon } from "lucide-react";
 import {
@@ -5,8 +6,6 @@ import {
 	type DiscountOption,
 } from "@/components/forms/attach-v2/utils/discountOptionUtils";
 import type { FormDiscount } from "@/components/forms/attach-v2/utils/discountUtils";
-import { IconButton } from "@/components/v2/buttons/IconButton";
-import { SearchableSelect } from "@/components/v2/selects/SearchableSelect";
 import { useRewardsQuery } from "@/hooks/queries/useRewardsQuery";
 import { useStripeCouponsQuery } from "@/hooks/queries/useStripeCouponsQuery";
 
@@ -75,7 +74,11 @@ export function DiscountRow({
 					)}
 					renderValue={(option: DiscountOption | undefined) => {
 						if (!option)
-							return <span className="text-tertiary-foreground">Select discount...</span>;
+							return (
+								<span className="text-tertiary-foreground">
+									Select discount...
+								</span>
+							);
 						return (
 							<span className="flex items-center gap-2">
 								<span className="truncate">{option.label}</span>

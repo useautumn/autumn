@@ -47,7 +47,7 @@ import { Result } from "../types/fp.js";
  * @param customerId - The ID of the customer.
  * @param entityId - The ID of the entity for entity-scoped balances. (optional)
  * @param featureId - The ID of the AI credit system feature. Auto-detected from the customer's entitlements if omitted — only required when a customer has multiple AI credit systems. (optional)
- * @param modelId - The AI model as '<provider>/<model>' (e.g. 'anthropic/claude-opus-4-8', 'openrouter/openai/gpt-4o'). The provider is the first path segment and must match a provider + model key in models.dev.
+ * @param modelId - The AI model as '[provider]/[model]' (e.g. 'anthropic/claude-opus-4-8', 'openrouter/openai/gpt-4o'). The provider is the first path segment and must match a provider + model key in models.dev.
  * @param inputTokens - Number of non-cached text input tokens consumed. Exclusive of cache and audio token pools.
  * @param outputTokens - Number of text output tokens consumed. Exclusive of the reasoning and audio output pools.
  * @param cacheReadTokens - Number of cached input tokens read. (optional)
@@ -56,6 +56,9 @@ import { Result } from "../types/fp.js";
  * @param audioOutputTokens - Number of audio output tokens generated. (optional)
  * @param reasoningTokens - Number of reasoning tokens generated. (optional)
  * @param properties - Additional properties to attach to this usage event. (optional)
+ * @param timestamp - Unix timestamp in milliseconds to use for the usage event. Defaults to the current time. (optional)
+ * @param overageBehavior - How to handle usage that exceeds the available balance. "cap" (default) deducts only what fits, stopping at zero. "overflow" deducts the full value: the balance can go negative and usage limits do not clamp the deduction, though spend limits still apply. (optional)
+ * @param async - If true, enqueue the event for asynchronous processing and return 204 immediately. The response will not include balance information. (optional)
  *
  * @returns The dollar value recorded and the updated AI credit system balance. If Autumn is experiencing degraded service from a downstream provider, the API may return 202 after accepting the token usage event for replay so it can be tracked as soon as the service is restored.
  */

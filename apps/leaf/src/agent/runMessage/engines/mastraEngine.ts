@@ -1,19 +1,17 @@
 import { Mastra } from "@mastra/core/mastra";
 import { InMemoryStore } from "@mastra/core/storage";
+import { autumnOrgContextService } from "../../../internal/autumnMcp/orgContextService.js";
 import { createLeafTracingOptions } from "../../../internal/observability/leafTracingOptions.js";
-import { sandboxConfig } from "../../../internal/sandbox/config.js";
-import { createE2bSandboxProvider } from "../../../internal/sandbox/e2b/sandboxProvider.js";
-import { createSandboxTools } from "../../../internal/sandbox/tool/createSandboxTools.js";
 import { leafChatAgentDefaults } from "../../../lib/chatAgentConfig.js";
 import { env as chatEnv } from "../../../lib/env.js";
 import { createMastraBraintrustObservability } from "../../../providers/braintrust/index.js";
 import { agentOutputSchema } from "../../../types.js";
 import {
 	createAutumnMcpClient,
+	createReadAutumnDocTool,
 	getAutumnMcpTools,
 } from "../../tools/autumnMcp.js";
 import { createFirecrawlTools } from "../../tools/firecrawl.js";
-import { createPreviewCapture } from "../../tools/toolPolicy.js";
 import { recentMessageContext } from "../setup/selectChatEnv.js";
 import type { AgentEngine, MessageParams } from "../types.js";
 import { createAutumnChatAgent } from "./autumnChatAgent.js";
@@ -36,13 +34,12 @@ const toMessageListInput = (params: MessageParams) => [
 export const mastraEngine: AgentEngine = {
 	name: "mastra",
 	run: async ({ ctx, params }) => {
-		const { agentTools, env, logger, onAction, org, thread, token } = ctx;
+		const { env, logger, onAction, org, thread, token } = ctx;
 		const mcp = createAutumnMcpClient({
 			token,
 			appEnv: env,
 			options: { requireApproval: true },
 		});
-		const previewCapture = createPreviewCapture();
 		try {
 			logger.info("Starting chat agent", {
 				event: "leaf.agent_started",
@@ -56,43 +53,29 @@ export const mastraEngine: AgentEngine = {
 					applyApprovalPolicy: true,
 					logger,
 					onToolCall: onAction,
-					previewCapture,
 				},
 			});
 			const firecrawlTools = createFirecrawlTools({
 				apiKey: chatEnv.FIRECRAWL_API_KEY,
 				onAction,
 			});
-			const sandboxTools =
-				sandboxConfig.enabled && chatEnv.E2B_API_KEY
-					? createSandboxTools({
-							logger,
-							onAction,
-							provider: createE2bSandboxProvider({
-								apiKey: chatEnv.E2B_API_KEY,
-								context: {
-									channelId: thread.channelId,
-									env,
-									orgId: org.id,
-									provider: thread.provider,
-									threadId: thread.threadId,
-									workspaceId: thread.workspaceId,
-								},
-								sessionTimeoutMs: sandboxConfig.sessionTimeoutMs,
-							}),
-						})
-					: {};
-			if (sandboxConfig.enabled && !chatEnv.E2B_API_KEY) {
-				logger.warn("Sandbox is enabled without an E2B API key", {
-					event: "leaf.sandbox_disabled",
-				});
-			}
+			const readAutumnDoc = createReadAutumnDocTool({ mcp, onAction });
+			// Preload the org's plans/features/agent rules once, on the first turn,
+			// so the agent doesn't have to fetch them itself (mirrors the CMA flow).
+			const isFirstMessage = !params.recentMessages?.some(
+				(message) => message.isBot === true,
+			);
+			const orgContext = isFirstMessage
+				? await autumnOrgContextService.load({ env, logger, token })
+				: undefined;
+
 			await onAction?.("Reasoning over the request");
 			const agent = createAutumnChatAgent({
-				docsText: agentTools.docsText,
 				env,
+				// Skills are read on demand via readAutumnDoc instead of inlined.
+				inlineSkills: false,
 				model: chatEnv.CHAT_MODEL,
-				tools: { ...tools, ...firecrawlTools, ...sandboxTools },
+				tools: { ...tools, ...firecrawlTools, readAutumnDoc },
 			});
 			const mastra = new Mastra({
 				agents: { chat: agent },
@@ -105,6 +88,11 @@ export const mastraEngine: AgentEngine = {
 
 			const output = await chatAgent.generate(toMessageListInput(params), {
 				maxSteps: leafChatAgentDefaults.maxSteps,
+				providerOptions: {
+					openai: {
+						reasoningEffort: "low",
+					},
+				},
 				context: [
 					{
 						role: "system",
@@ -113,6 +101,14 @@ export const mastraEngine: AgentEngine = {
 							"Answer the latest user message. Use prior thread messages only as context.",
 						].join("\n\n"),
 					},
+					...(orgContext?.text
+						? [
+								{
+									role: "system" as const,
+									content: `Org context (already-run Autumn tool results — don't re-fetch unless a record is absent or the user asks to refresh):\n${orgContext.text}`,
+								},
+							]
+						: []),
 					...recentMessageContext(params.recentMessages),
 				],
 				tracingOptions: createLeafTracingOptions({
@@ -135,11 +131,7 @@ export const mastraEngine: AgentEngine = {
 					run_id: output.runId,
 				},
 			});
-			return agentOutputSchema.parse({
-				...output,
-				env,
-				previewApproval: previewCapture.captured,
-			});
+			return agentOutputSchema.parse({ ...output, env });
 		} finally {
 			await mcp.disconnect();
 			logger.debug("Disconnected Autumn MCP client", {

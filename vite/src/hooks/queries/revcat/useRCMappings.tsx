@@ -3,16 +3,21 @@ import { toast } from "sonner";
 import { useQueryKeyFactory } from "@/hooks/common/useQueryKeyFactory";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
 
+export type RCFeatureQuantity = { feature_id: string; quantity?: number };
+export type RCFeatureQuantities = Record<string, RCFeatureQuantity[]>;
+
 interface RCMapping {
 	org_id: string;
 	env: string;
 	autumn_product_id: string;
 	revenuecat_product_ids: string[];
+	feature_quantities?: RCFeatureQuantities | null;
 }
 
 interface SaveMappingInput {
 	autumn_product_id: string;
 	revenuecat_product_ids: string[];
+	feature_quantities?: RCFeatureQuantities | null;
 }
 
 export const useRCMappings = () => {

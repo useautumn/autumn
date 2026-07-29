@@ -35,6 +35,12 @@ export const UsageWindowLimitSchema = z.object({
 	scope_type: UsageWindowScopeSchema,
 	entity_id: z.string().nullable(),
 	internal_entity_id: z.string().nullable(),
+	// Canonical filter identity (sorted key=value pairs); null = unfiltered.
+	// Counter rows are matched on this, never on config-object hashes.
+	filter_key: z.string().nullable(),
+	// Equality conditions the event's properties must satisfy for this limit to
+	// apply; evaluated TS-side, the deduction script never sees non-matching limits.
+	filter_properties: z.record(z.string(), z.string()).nullable(),
 	interval: z.enum(EntInterval),
 	window_start_at: z.number(),
 	window_end_at: z.number(),

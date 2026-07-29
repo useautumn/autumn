@@ -284,6 +284,7 @@ test.concurrent(
 			internal_entity_id: null,
 			feature_id: TestFeature.Messages,
 			internal_feature_id: messagesFeature?.internal_id as string,
+			filter_key: null,
 			anchor_customer_entitlement_id: null,
 			window_start_at: windowStartAt,
 			window_end_at: windowEndAt,

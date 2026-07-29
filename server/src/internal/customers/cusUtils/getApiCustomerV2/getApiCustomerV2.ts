@@ -4,6 +4,7 @@ import {
 	applyResponseVersionChanges,
 	CustomerExpand,
 	type FullSubject,
+	mergePlanBillingControlsForResponse,
 } from "@autumn/shared";
 import type { RequestContext } from "@/honoUtils/HonoEnv.js";
 import { getApiCustomerExpandV2 } from "../apiCusUtils/getApiCustomerExpandV2.js";
@@ -27,8 +28,16 @@ export const getApiCustomerV2 = async ({
 		withAutumnId,
 	});
 
+	const billingControls = mergePlanBillingControlsForResponse({
+		billingControls: baseCustomer.billing_controls,
+		planCustomerProducts: fullSubject.customer_products,
+		fullSubject,
+		features: ctx.features,
+	});
+
 	const cleanedBaseCustomer: ApiCustomerV5 = {
 		...baseCustomer,
+		billing_controls: billingControls,
 		entities: undefined,
 		autumn_id: withAutumnId ? baseCustomer.autumn_id : undefined,
 		invoices: ctx.expand.includes(CustomerExpand.Invoices)
@@ -39,6 +48,7 @@ export const getApiCustomerV2 = async ({
 	const apiCustomerExpand = await getApiCustomerExpandV2({
 		ctx,
 		fullSubject,
+		autoTopupsConfig: billingControls.auto_topups,
 	});
 
 	const { billing_controls_override, ...standardExpand } = apiCustomerExpand;

@@ -1,6 +1,6 @@
 import {
 	cp,
-	cusProductsToPrices,
+	customerProductsToEffectivePrices,
 	type FullCusProduct,
 	getSmallestInterval,
 } from "@autumn/shared";
@@ -35,12 +35,12 @@ export const getSmallestIntervalForNextCycle = ({
 					(customerProduct) => customerProduct.starts_at === scheduledStartMs,
 				);
 
-	const currentPrices = cusProductsToPrices({
-		cusProducts: currentCustomerProducts,
+	const currentPrices = customerProductsToEffectivePrices({
+		customerProducts: currentCustomerProducts,
 		filters: { excludeOneOffPrices: true },
 	});
-	const scheduledStartPrices = cusProductsToPrices({
-		cusProducts: scheduledStartCustomerProducts,
+	const scheduledStartPrices = customerProductsToEffectivePrices({
+		customerProducts: scheduledStartCustomerProducts,
 		filters: { excludeOneOffPrices: true },
 	});
 

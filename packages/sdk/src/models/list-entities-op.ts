@@ -335,6 +335,32 @@ export type ListEntitiesFlags = {
   feature?: ListEntitiesFeature | undefined;
 };
 
+/**
+ * How overage_limit is interpreted: an absolute overage cap (default) or a percentage of the main-plan allowance.
+ */
+export const ListEntitiesLimitType = {
+  Absolute: "absolute",
+  UsagePercentage: "usage_percentage",
+} as const;
+/**
+ * How overage_limit is interpreted: an absolute overage cap (default) or a percentage of the main-plan allowance.
+ */
+export type ListEntitiesLimitType = OpenEnum<typeof ListEntitiesLimitType>;
+
+/**
+ * Response-only: whether the entry is a customer-level override or inherited from an attached plan's defaults.
+ */
+export const ListEntitiesSpendLimitSource = {
+  Customer: "customer",
+  Plan: "plan",
+} as const;
+/**
+ * Response-only: whether the entry is a customer-level override or inherited from an attached plan's defaults.
+ */
+export type ListEntitiesSpendLimitSource = OpenEnum<
+  typeof ListEntitiesSpendLimitSource
+>;
+
 export type ListEntitiesSpendLimit = {
   /**
    * Optional feature ID this spend limit applies to.
@@ -345,9 +371,21 @@ export type ListEntitiesSpendLimit = {
    */
   enabled: boolean;
   /**
-   * Maximum allowed overage spend for the target feature.
+   * How overage_limit is interpreted: an absolute overage cap (default) or a percentage of the main-plan allowance.
+   */
+  limitType?: ListEntitiesLimitType | undefined;
+  /**
+   * Overage cap for the feature: absolute units, or a percent (e.g. 120) when limit_type is usage_percentage.
    */
   overageLimit?: number | undefined;
+  /**
+   * When true, overage for this feature is not posted to Stripe. Usage tracking and balance resets still behave normally.
+   */
+  skipOverageBilling?: boolean | undefined;
+  /**
+   * Response-only: whether the entry is a customer-level override or inherited from an attached plan's defaults.
+   */
+  source?: ListEntitiesSpendLimitSource | undefined;
 };
 
 /**
@@ -364,11 +402,36 @@ export const ListEntitiesInterval = {
  */
 export type ListEntitiesInterval = OpenEnum<typeof ListEntitiesInterval>;
 
+/**
+ * When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature.
+ */
+export type ListEntitiesFilter = {
+  properties: { [k: string]: any };
+};
+
+/**
+ * Response-only: whether the entry is a customer-level override or inherited from an attached plan's defaults.
+ */
+export const ListEntitiesUsageLimitSource = {
+  Customer: "customer",
+  Plan: "plan",
+} as const;
+/**
+ * Response-only: whether the entry is a customer-level override or inherited from an attached plan's defaults.
+ */
+export type ListEntitiesUsageLimitSource = OpenEnum<
+  typeof ListEntitiesUsageLimitSource
+>;
+
 export type ListEntitiesUsageLimit = {
   /**
    * The feature this usage limit applies to.
    */
   featureId: string;
+  /**
+   * Whether this usage limit is enabled.
+   */
+  enabled: boolean;
   /**
    * Maximum units allowed per interval.
    */
@@ -378,9 +441,17 @@ export type ListEntitiesUsageLimit = {
    */
   interval: ListEntitiesInterval;
   /**
+   * When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature.
+   */
+  filter?: ListEntitiesFilter | undefined;
+  /**
    * Current usage already consumed in the active interval. Response-only; not stored on billing controls.
    */
   usage?: number | undefined;
+  /**
+   * Response-only: whether the entry is a customer-level override or inherited from an attached plan's defaults.
+   */
+  source?: ListEntitiesUsageLimitSource | undefined;
 };
 
 /**
@@ -397,6 +468,20 @@ export const ListEntitiesThresholdType = {
  */
 export type ListEntitiesThresholdType = OpenEnum<
   typeof ListEntitiesThresholdType
+>;
+
+/**
+ * Response-only: whether the entry is a customer-level override or inherited from an attached plan's defaults.
+ */
+export const ListEntitiesUsageAlertSource = {
+  Customer: "customer",
+  Plan: "plan",
+} as const;
+/**
+ * Response-only: whether the entry is a customer-level override or inherited from an attached plan's defaults.
+ */
+export type ListEntitiesUsageAlertSource = OpenEnum<
+  typeof ListEntitiesUsageAlertSource
 >;
 
 export type ListEntitiesUsageAlert = {
@@ -420,7 +505,25 @@ export type ListEntitiesUsageAlert = {
    * Optional user-defined label to distinguish multiple alerts on the same feature.
    */
   name?: string | undefined;
+  /**
+   * Response-only: whether the entry is a customer-level override or inherited from an attached plan's defaults.
+   */
+  source?: ListEntitiesUsageAlertSource | undefined;
 };
+
+/**
+ * Response-only: whether the entry is a customer-level override or inherited from an attached plan's defaults.
+ */
+export const ListEntitiesOverageAllowedSource = {
+  Customer: "customer",
+  Plan: "plan",
+} as const;
+/**
+ * Response-only: whether the entry is a customer-level override or inherited from an attached plan's defaults.
+ */
+export type ListEntitiesOverageAllowedSource = OpenEnum<
+  typeof ListEntitiesOverageAllowedSource
+>;
 
 export type ListEntitiesOverageAllowed = {
   /**
@@ -431,6 +534,10 @@ export type ListEntitiesOverageAllowed = {
    * Whether overage is allowed for this feature.
    */
   enabled: boolean;
+  /**
+   * Response-only: whether the entry is a customer-level override or inherited from an attached plan's defaults.
+   */
+  source?: ListEntitiesOverageAllowedSource | undefined;
 };
 
 /**
@@ -917,6 +1024,18 @@ export function listEntitiesFlagsFromJSON(
 }
 
 /** @internal */
+export const ListEntitiesLimitType$inboundSchema: z.ZodMiniType<
+  ListEntitiesLimitType,
+  unknown
+> = openEnums.inboundSchema(ListEntitiesLimitType);
+
+/** @internal */
+export const ListEntitiesSpendLimitSource$inboundSchema: z.ZodMiniType<
+  ListEntitiesSpendLimitSource,
+  unknown
+> = openEnums.inboundSchema(ListEntitiesSpendLimitSource);
+
+/** @internal */
 export const ListEntitiesSpendLimit$inboundSchema: z.ZodMiniType<
   ListEntitiesSpendLimit,
   unknown
@@ -924,12 +1043,17 @@ export const ListEntitiesSpendLimit$inboundSchema: z.ZodMiniType<
   z.object({
     feature_id: types.optional(types.string()),
     enabled: z._default(types.boolean(), false),
+    limit_type: types.optional(ListEntitiesLimitType$inboundSchema),
     overage_limit: types.optional(types.number()),
+    skip_overage_billing: types.optional(types.boolean()),
+    source: types.optional(ListEntitiesSpendLimitSource$inboundSchema),
   }),
   z.transform((v) => {
     return remap$(v, {
       "feature_id": "featureId",
+      "limit_type": "limitType",
       "overage_limit": "overageLimit",
+      "skip_overage_billing": "skipOverageBilling",
     });
   }),
 );
@@ -951,15 +1075,42 @@ export const ListEntitiesInterval$inboundSchema: z.ZodMiniType<
 > = openEnums.inboundSchema(ListEntitiesInterval);
 
 /** @internal */
+export const ListEntitiesFilter$inboundSchema: z.ZodMiniType<
+  ListEntitiesFilter,
+  unknown
+> = z.object({
+  properties: z.record(z.string(), z.any()),
+});
+
+export function listEntitiesFilterFromJSON(
+  jsonString: string,
+): SafeParseResult<ListEntitiesFilter, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => ListEntitiesFilter$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'ListEntitiesFilter' from JSON`,
+  );
+}
+
+/** @internal */
+export const ListEntitiesUsageLimitSource$inboundSchema: z.ZodMiniType<
+  ListEntitiesUsageLimitSource,
+  unknown
+> = openEnums.inboundSchema(ListEntitiesUsageLimitSource);
+
+/** @internal */
 export const ListEntitiesUsageLimit$inboundSchema: z.ZodMiniType<
   ListEntitiesUsageLimit,
   unknown
 > = z.pipe(
   z.object({
     feature_id: types.string(),
+    enabled: z._default(types.boolean(), true),
     limit: types.number(),
     interval: ListEntitiesInterval$inboundSchema,
+    filter: types.optional(z.lazy(() => ListEntitiesFilter$inboundSchema)),
     usage: types.optional(types.number()),
+    source: types.optional(ListEntitiesUsageLimitSource$inboundSchema),
   }),
   z.transform((v) => {
     return remap$(v, {
@@ -985,6 +1136,12 @@ export const ListEntitiesThresholdType$inboundSchema: z.ZodMiniType<
 > = openEnums.inboundSchema(ListEntitiesThresholdType);
 
 /** @internal */
+export const ListEntitiesUsageAlertSource$inboundSchema: z.ZodMiniType<
+  ListEntitiesUsageAlertSource,
+  unknown
+> = openEnums.inboundSchema(ListEntitiesUsageAlertSource);
+
+/** @internal */
 export const ListEntitiesUsageAlert$inboundSchema: z.ZodMiniType<
   ListEntitiesUsageAlert,
   unknown
@@ -995,6 +1152,7 @@ export const ListEntitiesUsageAlert$inboundSchema: z.ZodMiniType<
     threshold: types.number(),
     threshold_type: ListEntitiesThresholdType$inboundSchema,
     name: types.optional(types.string()),
+    source: types.optional(ListEntitiesUsageAlertSource$inboundSchema),
   }),
   z.transform((v) => {
     return remap$(v, {
@@ -1015,6 +1173,12 @@ export function listEntitiesUsageAlertFromJSON(
 }
 
 /** @internal */
+export const ListEntitiesOverageAllowedSource$inboundSchema: z.ZodMiniType<
+  ListEntitiesOverageAllowedSource,
+  unknown
+> = openEnums.inboundSchema(ListEntitiesOverageAllowedSource);
+
+/** @internal */
 export const ListEntitiesOverageAllowed$inboundSchema: z.ZodMiniType<
   ListEntitiesOverageAllowed,
   unknown
@@ -1022,6 +1186,7 @@ export const ListEntitiesOverageAllowed$inboundSchema: z.ZodMiniType<
   z.object({
     feature_id: types.string(),
     enabled: z._default(types.boolean(), false),
+    source: types.optional(ListEntitiesOverageAllowedSource$inboundSchema),
   }),
   z.transform((v) => {
     return remap$(v, {

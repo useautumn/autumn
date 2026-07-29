@@ -6,6 +6,10 @@ import {
 	resetIntvToItemIntv,
 	UsageModel,
 } from "@autumn/shared";
+import {
+	toPlanLicenses,
+	type VersionedPlanLicense,
+} from "@/hooks/queries/usePlanLicensesQuery";
 
 /**
  * Converts outgoing checkout changes into baseline ProductItems for diff comparison.
@@ -159,6 +163,28 @@ function planItemToProductItem({
 			planItem.reset?.interval_count ?? planItem.price?.interval_count,
 		entity_feature_id: planItem.entity_feature_id,
 	};
+}
+
+/** Flattens the outgoing plans' license links for the review transition diff,
+ * keeping the first link when multiple outgoing plans share a license. */
+export function outgoingToPlanLicenses({
+	outgoing,
+}: {
+	outgoing: BillingPreviewChange[] | undefined;
+}): VersionedPlanLicense[] {
+	if (!outgoing) return [];
+
+	const seen = new Set<string>();
+	return outgoing.flatMap((change) =>
+		toPlanLicenses({
+			parentPlanId: change.plan_id,
+			licenses: change.plan?.licenses ?? [],
+		}).filter((license) => {
+			if (seen.has(license.license_plan_id)) return false;
+			seen.add(license.license_plan_id);
+			return true;
+		}),
+	);
 }
 
 export function outgoingToProductItems({

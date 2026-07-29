@@ -1,18 +1,13 @@
+import { Button, Popover, PopoverContent, PopoverTrigger } from "@autumn/ui";
 import { TrashIcon } from "@phosphor-icons/react";
 import { useState } from "react";
 import { toast } from "sonner";
-import { Button } from "@/components/v2/buttons/Button";
-import {
-	Popover,
-	PopoverContent,
-	PopoverTrigger,
-} from "@/components/ui/popover";
 import {
 	DropdownMenuGroup,
 	DropdownMenuItem,
 	DropdownMenuLabel,
 	DropdownMenuSeparator,
-} from "@/components/v2/dropdowns/DropdownMenu";
+} from "@autumn/ui";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
 import { getBackendErr } from "@/utils/genUtils";
 import { useCustomerFilters } from "../../hooks/useCustomerFilters";
@@ -48,6 +43,7 @@ export const SavedViews = ({
 			const versionParam = params.get("version") || "";
 			const noneParam = params.get("none");
 			const processorParam = params.get("processor") || "";
+			const intervalParam = params.get("interval") || "";
 
 			setFilters({
 				q: params.get("q") || "",
@@ -56,6 +52,9 @@ export const SavedViews = ({
 				none: noneParam === "true",
 				processor: processorParam
 					? processorParam.split(",").filter(Boolean)
+					: [],
+				interval: intervalParam
+					? intervalParam.split(",").filter(Boolean)
 					: [],
 			});
 

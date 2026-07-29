@@ -37,6 +37,7 @@ export const finalizeLineItems = ({
 
 	if (
 		billingContext.requestedProrationBehavior === "none" &&
+		billingContext.stripeSubscription &&
 		!billingContext.anchorResetRefund?.noPartialRefund
 	) {
 		return [];
@@ -74,7 +75,7 @@ export const finalizeLineItems = ({
 			lineItems: finalizedLineItems,
 			discounts: billingContext.stripeDiscounts,
 			options: {
-				disableDiscountableForRecurringDiscounts: true,
+				disableDiscountableForFreshDiscounts: true,
 			},
 		});
 	}

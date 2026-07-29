@@ -3,10 +3,6 @@ import type Anthropic from "@anthropic-ai/sdk";
 import type { AutumnLogger } from "@autumn/logging";
 import { AppEnv, type ChatApproval } from "@autumn/shared";
 import type { ActionEvent } from "chat";
-import {
-	createPreviewCapture,
-	isToolErrorResult,
-} from "../../../src/agent/tools/toolPolicy.js";
 import { approvalErrorResult } from "../../../src/internal/approvals/utils/approvalErrors.js";
 import { approvalRequestFromOutput } from "../../../src/internal/approvals/utils/approvalRequest.js";
 import type { AgentOutput } from "../../../src/types.js";
@@ -30,17 +26,13 @@ const testLogger = {
 } as unknown as AutumnLogger;
 
 describe("approval flow", () => {
-	test("maps suspended destructive tool output to a pending approval request", () => {
+	test("maps a suspended write to a pending approval request", () => {
 		const request = approvalRequestFromOutput({
 			env: AppEnv.Sandbox,
 			finishReason: "suspended",
 			runId: "run_1",
-			suspendPayload: {
+			suspension: {
 				toolCallId: "call_1",
-				toolName: "attach",
-				args: { request: { customer_id: "cus_1", plan_id: "pro" } },
-			},
-			previewApproval: {
 				toolName: "attach",
 				toolArgs: { request: { customer_id: "cus_1", plan_id: "pro" } },
 				preview: { total: 20 },
@@ -58,102 +50,35 @@ describe("approval flow", () => {
 		});
 	});
 
-	test("backfills suspended tool metadata from the preview capture", () => {
-		const request = approvalRequestFromOutput({
-			env: AppEnv.Sandbox,
-			finishReason: "suspended",
-			runId: "run_1",
-			suspendPayload: {
-				toolCallId: "call_1",
-				toolName: "unknown",
-				args: {},
-			},
-			previewApproval: {
-				toolName: "attach",
-				toolArgs: { request: { customer_id: "cus_1", plan_id: "pro" } },
-				preview: { total: 20 },
-			},
-		} satisfies AgentOutput);
-
-		expect(request).toEqual({
-			env: AppEnv.Sandbox,
-			runId: "run_1",
-			toolCallId: "call_1",
-			toolName: "attach",
-			toolArgs: { request: { customer_id: "cus_1", plan_id: "pro" } },
-			preview: { total: 20 },
-		});
-	});
-
-	test("maps preview output to the matching write approval request", () => {
+	test("maps a suspended write whose preview wasn't captured (card backfills later)", () => {
 		const request = approvalRequestFromOutput({
 			env: AppEnv.Live,
-			previewApproval: {
+			finishReason: "suspended",
+			runId: "run_2",
+			suspension: {
+				toolCallId: "call_2",
 				toolName: "updateSubscription",
 				toolArgs: { request: { customer_id: "cus_1", plan_id: "pro" } },
-				preview: { total: 100 },
 			},
 		} satisfies AgentOutput);
 
 		expect(request).toEqual({
 			env: AppEnv.Live,
-			runId: undefined,
-			toolCallId: undefined,
+			runId: "run_2",
+			toolCallId: "call_2",
 			toolName: "updateSubscription",
 			toolArgs: { request: { customer_id: "cus_1", plan_id: "pro" } },
-			preview: { total: 100 },
+			preview: undefined,
 		});
 	});
 
-	test("reset clears captured previews so superseded turns cannot nudge", () => {
-		const previewCapture = createPreviewCapture();
-		previewCapture.onToolCall({
-			name: "previewAttach",
-			input: { request: { customer_id: "cus_1", plan_id: "pro" } },
-		});
-		previewCapture.onToolResult({
-			name: "previewAttach",
-			output: { content: [{ type: "text", text: "{}" }], isError: false },
-		});
-		expect(previewCapture.captured).toBeDefined();
-
-		previewCapture.reset();
-		expect(previewCapture.captured).toBeUndefined();
-
-		// Pending args recorded before the reset must not capture afterwards.
-		previewCapture.onToolResult({
-			name: "previewAttach",
-			output: { content: [{ type: "text", text: "{}" }], isError: false },
-		});
-		expect(previewCapture.captured).toBeUndefined();
-	});
-
-	test("does not capture failed previews as approval candidates", () => {
-		const previewCapture = createPreviewCapture();
-		const failedPreview = {
-			isError: true,
-			content: [
-				{
-					type: "text",
-					text: JSON.stringify({
-						id: "TOOL_EXECUTION_FAILED",
-						details: { errorMessage: "plan_already_attached" },
-					}),
-				},
-			],
-		};
-
-		expect(isToolErrorResult(failedPreview)).toBe(true);
-		previewCapture.onToolCall({
-			name: "previewAttach",
-			input: { customer_id: "cus_1", product_id: "enterprise" },
-		});
-		previewCapture.onToolResult({
-			name: "previewAttach",
-			output: failedPreview,
-		});
-
-		expect(previewCapture.captured).toBeUndefined();
+	test("returns nothing when the turn did not suspend", () => {
+		expect(
+			approvalRequestFromOutput({
+				env: AppEnv.Sandbox,
+				text: "Done.",
+			} satisfies AgentOutput),
+		).toBeUndefined();
 	});
 
 	test("formats Autumn API errors for Slack approval cards", () => {
@@ -222,10 +147,63 @@ describe("approval flow", () => {
 		).toBe(true);
 	});
 
+	test("direct approver token approvals fail MCP isError results and release the suspended session via deny", async () => {
+		setLeafTestEnv();
+		const { resumeClaudeManagedApproval } = await import(
+			"../../../src/harness/claudeManaged/approval.js"
+		);
+		const calls: string[] = [];
+		let finishNotify: (() => void) | undefined;
+		const approval = {
+			env: AppEnv.Sandbox,
+			org_id: "org_1",
+			run_id: "session_1",
+			tool_call_id: "tool_1",
+			tool_name: "attach",
+			tool_args: { request: { customer_id: "cus_1", plan_id: "pro" } },
+		} as unknown as ChatApproval;
+
+		const resultPromise = resumeClaudeManagedApproval({
+			approval,
+			providerUserId: "U1",
+			approverToken: "am_oauth_clicker",
+			deps: {
+				executeTool: async () => {
+					calls.push("execute");
+					return {
+						isError: true,
+						content: [{ type: "text", text: "Tool failed" }],
+					};
+				},
+				notifySuspendedToolDenied: async () => {
+					calls.push("notify:start");
+					await new Promise<void>((resolve) => {
+						finishNotify = resolve;
+					});
+					calls.push("notify:end");
+				},
+				driveSessionTurn: async () => {
+					throw new Error("should not drive the live session");
+				},
+				findSessionToolResult: async () => {
+					throw new Error("should not recover session history");
+				},
+			},
+		});
+		await Promise.resolve();
+		await Promise.resolve();
+		expect(calls).toEqual(["execute", "notify:start"]);
+		finishNotify?.();
+		const result = await resultPromise;
+
+		expect(result).toEqual({ error: true, message: "Tool failed" });
+		expect(calls).toEqual(["execute", "notify:start", "notify:end"]);
+	});
+
 	test("edits the approval message to failed when the approved tool fails", async () => {
 		setLeafTestEnv();
 		const { handleApprovalActionWithDeps } = await import(
-			"../../../src/internal/approvals/actions/handleApprovalAction.js"
+			"../../../src/internal/approvals/surfaces/slack/decide.js"
 		);
 		const edits: unknown[] = [];
 		const replies: string[] = [];
@@ -252,7 +230,7 @@ describe("approval flow", () => {
 		await handleApprovalActionWithDeps({
 			event,
 			deps: {
-				approveAndRun: async () => ({
+				resolveApproval: async () => ({
 					error: true,
 					message: "Missing email.",
 				}),
@@ -283,11 +261,12 @@ describe("approval flow", () => {
 	test("claims before acknowledging and posts the outcome to the thread", async () => {
 		setLeafTestEnv();
 		const { handleApprovalActionWithDeps } = await import(
-			"../../../src/internal/approvals/actions/handleApprovalAction.js"
+			"../../../src/internal/approvals/surfaces/slack/decide.js"
 		);
 		const calls: string[] = [];
 		const edits: unknown[] = [];
 		const replies: string[] = [];
+		const typing: string[] = [];
 		const approval = {
 			env: AppEnv.Sandbox,
 			expires_at: Date.now() + 60_000,
@@ -298,6 +277,11 @@ describe("approval flow", () => {
 		const event = {
 			actionId: "approve_billing_action",
 			messageId: "message_1",
+			thread: {
+				startTyping: async (message: string) => {
+					typing.push(message);
+				},
+			},
 			threadId: "thread_1",
 			user: { userId: "U1" },
 			value: "approval_1",
@@ -306,7 +290,7 @@ describe("approval flow", () => {
 		await handleApprovalActionWithDeps({
 			event,
 			deps: {
-				approveAndRun: async () => {
+				resolveApproval: async () => {
 					calls.push("run");
 					return { result: { status: "active" }, text: "All done!" };
 				},
@@ -328,15 +312,182 @@ describe("approval flow", () => {
 		});
 
 		expect(calls).toEqual(["claim", "edit", "run", "edit"]);
+		expect(typing).toEqual([]);
 		expect(replies).toEqual(["All done!"]);
 		expect(JSON.stringify(edits[1])).toContain("✅ Attached **pro**");
 		expect(JSON.stringify(edits[1])).toContain("approved by <@U1>");
 	});
 
+	test("releases the claim and does not run when the Slack approver lacks Autumn scopes", async () => {
+		setLeafTestEnv();
+		const { handleApprovalActionWithDeps } = await import(
+			"../../../src/internal/approvals/surfaces/slack/decide.js"
+		);
+		const calls: string[] = [];
+		const replies: string[] = [];
+		const approval = {
+			env: AppEnv.Sandbox,
+			expires_at: Date.now() + 60_000,
+			status: "pending",
+			tool_name: "createPlan",
+			tool_args: { request: { plan_id: "pro" } },
+		} as unknown as ChatApproval;
+		const event = {
+			actionId: "approve_billing_action",
+			messageId: "message_1",
+			threadId: "thread_1",
+			user: { userId: "U1" },
+			value: "approval_1",
+		} as unknown as ActionEvent;
+
+		await handleApprovalActionWithDeps({
+			event,
+			deps: {
+				resolveApproval: async () => {
+					calls.push("run");
+					return { result: {}, text: "ran" };
+				},
+				cancelApproval: async () => approval,
+				authorizeApprovalClicker: async () => ({
+					allowed: false,
+					text: "Missing plans:write.",
+				}),
+				claimApproval: async () => {
+					calls.push("claim");
+					return approval;
+				},
+				releaseApproval: async () => {
+					calls.push("release");
+					return approval;
+				},
+				editActionMessage: async () => {
+					calls.push("edit");
+				},
+				getApproval: async () => approval,
+				logger: { error: () => {}, info: () => {}, warn: () => {} },
+				postThreadReply: async ({ markdown }) => {
+					replies.push(markdown);
+				},
+			},
+		});
+
+		// Claim wins first, then authorization denies and releases it back to
+		// pending; the write never runs and no card edit happens.
+		expect(calls).toEqual(["claim", "release"]);
+		expect(replies).toEqual(["Missing plans:write."]);
+	});
+
+	test("releases the claim and does not run when Slack approver authorization throws", async () => {
+		setLeafTestEnv();
+		const { handleApprovalActionWithDeps } = await import(
+			"../../../src/internal/approvals/surfaces/slack/decide.js"
+		);
+		const calls: string[] = [];
+		const replies: string[] = [];
+		const edits: unknown[] = [];
+		const approval = {
+			env: AppEnv.Sandbox,
+			expires_at: Date.now() + 60_000,
+			status: "pending",
+			tool_name: "createPlan",
+			tool_args: { request: { plan_id: "pro" } },
+		} as unknown as ChatApproval;
+		const event = {
+			actionId: "approve_billing_action",
+			messageId: "message_1",
+			threadId: "thread_1",
+			user: { userId: "U1" },
+			value: "approval_1",
+		} as unknown as ActionEvent;
+
+		await handleApprovalActionWithDeps({
+			event,
+			deps: {
+				resolveApproval: async () => {
+					calls.push("run");
+					return { result: {}, text: "ran" };
+				},
+				cancelApproval: async () => approval,
+				authorizeApprovalClicker: async () => {
+					calls.push("authorize");
+					throw new Error("auth exploded");
+				},
+				claimApproval: async () => {
+					calls.push("claim");
+					return approval;
+				},
+				releaseApproval: async () => {
+					calls.push("release");
+					return approval;
+				},
+				editActionMessage: async ({ content }) => {
+					calls.push("edit");
+					edits.push(content);
+				},
+				getApproval: async () => approval,
+				logger: { error: () => {}, info: () => {}, warn: () => {} },
+				postThreadReply: async ({ markdown }) => {
+					calls.push("reply");
+					replies.push(markdown);
+				},
+			},
+		});
+
+		expect(calls).toEqual(["claim", "authorize", "release", "reply"]);
+		expect(edits).toEqual([]);
+		expect(replies).toEqual([
+			"I couldn't verify your Autumn permissions, so I didn't run this action. Please try again.",
+		]);
+	});
+
+	test("passes the authorized Slack approver token to the approval resolver", async () => {
+		setLeafTestEnv();
+		const { handleApprovalActionWithDeps } = await import(
+			"../../../src/internal/approvals/surfaces/slack/decide.js"
+		);
+		let resolverApproverToken: string | undefined;
+		const approval = {
+			env: AppEnv.Sandbox,
+			expires_at: Date.now() + 60_000,
+			status: "pending",
+			tool_name: "createPlan",
+			tool_args: { request: { plan_id: "pro" } },
+		} as unknown as ChatApproval;
+		const event = {
+			actionId: "approve_billing_action",
+			messageId: "message_1",
+			threadId: "thread_1",
+			user: { userId: "U1" },
+			value: "approval_1",
+		} as unknown as ActionEvent;
+
+		await handleApprovalActionWithDeps({
+			event,
+			deps: {
+				resolveApproval: async ({ approverToken }) => {
+					resolverApproverToken = approverToken;
+					return { result: {}, text: "" };
+				},
+				cancelApproval: async () => approval,
+				authorizeApprovalClicker: async () => ({
+					allowed: true,
+					approverToken: "am_oauth_clicker",
+				}),
+				claimApproval: async () => approval,
+				editActionMessage: async () => {},
+				getApproval: async () => approval,
+				logger: { error: () => {}, info: () => {}, warn: () => {} },
+				postThreadReply: async () => {},
+			},
+		});
+
+		expect(resolverApproverToken).toBe("am_oauth_clicker");
+	});
+
 	test("shows the current state when a claim is rejected", async () => {
 		setLeafTestEnv();
 		const { handleApprovalActionWithDeps } = await import(
-			"../../../src/internal/approvals/actions/handleApprovalAction.js"
+			"../../../src/internal/approvals/surfaces/slack/decide.js"
 		);
 		const edits: unknown[] = [];
 		const approval = {
@@ -358,7 +509,7 @@ describe("approval flow", () => {
 		await handleApprovalActionWithDeps({
 			event,
 			deps: {
-				approveAndRun: async () => {
+				resolveApproval: async () => {
 					throw new Error("should not run");
 				},
 				cancelApproval: async () => undefined,
@@ -380,7 +531,7 @@ describe("approval flow", () => {
 	test("shows the expired state when a stale pending approval is clicked", async () => {
 		setLeafTestEnv();
 		const { handleApprovalActionWithDeps } = await import(
-			"../../../src/internal/approvals/actions/handleApprovalAction.js"
+			"../../../src/internal/approvals/surfaces/slack/decide.js"
 		);
 		const edits: unknown[] = [];
 		const approval = {
@@ -401,7 +552,7 @@ describe("approval flow", () => {
 		await handleApprovalActionWithDeps({
 			event,
 			deps: {
-				approveAndRun: async () => {
+				resolveApproval: async () => {
 					throw new Error("should not run");
 				},
 				cancelApproval: async () => undefined,

@@ -44,6 +44,10 @@ export const sendBillingUpdatedWebhook = async ({
 			tags,
 		});
 
+		// console.log("response", response);
+		// console.log("response", response);
+		// console.log("response", response);
+
 		if (!billingChangeResponseHasContent(response)) return;
 
 		// Svix message tags (separate from the payload `tags` field) — used

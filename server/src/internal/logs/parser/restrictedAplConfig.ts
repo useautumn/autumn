@@ -103,7 +103,7 @@ export const RESTRICTED_APL_NESTED_ROOTS = {
 
 export type RestrictedAplNestedRoot = keyof typeof RESTRICTED_APL_NESTED_ROOTS;
 
-/** Numeric aggregates are restricted to fields with stable numeric types. */
+/** Top-level numeric aggregates need stable numeric types; nested body paths are coerced with todouble. */
 export const RESTRICTED_APL_NUMERIC_AGGREGATE_FIELDS =
 	new Set<RestrictedAplTopLevelField>(["status_code"]);
 

@@ -2,10 +2,16 @@
 // Generated from @autumn/shared schemas
 // Run `pnpm gen:atmn` to regenerate
 
-import type { Plan, PlanItem, FreeTrial } from "../models/planModels.js";
 import type { Feature } from "../models/featureModels.js";
+import type {
+	BillingControls,
+	FreeTrial,
+	Plan,
+	PlanItem,
+} from "../models/planModels.js";
 
-type PlanInput = Omit<Plan, 'description' | 'addOn' | 'autoEnable' | 'group'> & Partial<Pick<Plan, 'description' | 'addOn' | 'autoEnable' | 'group'>>;
+type PlanInput = Omit<Plan, "description" | "addOn" | "autoEnable" | "group"> &
+	Partial<Pick<Plan, "description" | "addOn" | "autoEnable" | "group">>;
 
 /**
  * Define a pricing plan in your Autumn configuration
@@ -30,13 +36,13 @@ type PlanInput = Omit<Plan, 'description' | 'addOn' | 'autoEnable' | 'group'> & 
  * });
  */
 export const plan = (params: PlanInput): Plan => {
-  return {
-    ...params,
-    description: params.description ?? null,
-    addOn: params.addOn ?? false,
-    autoEnable: params.autoEnable ?? false,
-    group: params.group ?? ""
-  };
+	return {
+		...params,
+		description: params.description ?? null,
+		addOn: params.addOn ?? false,
+		autoEnable: params.autoEnable ?? false,
+		group: params.group ?? "",
+	};
 };
 
 /**
@@ -64,7 +70,7 @@ export const plan = (params: PlanInput): Plan => {
  * });
  */
 export const feature = (params: Feature): Feature => {
-  return params;
+	return params;
 };
 
 /**
@@ -98,5 +104,9 @@ export const feature = (params: Feature): Feature => {
  * })
  */
 export const item = (params: PlanItem): PlanItem => {
-  return params;
+	return params;
+};
+
+export const billingControls = (params: BillingControls): BillingControls => {
+	return params;
 };

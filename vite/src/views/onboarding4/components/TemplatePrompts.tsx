@@ -1,4 +1,4 @@
-import { Button } from "@/components/v2/buttons/Button";
+import { Button } from "@autumn/ui";
 import { PRICING_TEMPLATE_PROMPTS } from "../pricingTemplateConfigs";
 
 interface TemplatePromptsProps {
@@ -12,7 +12,9 @@ export function TemplatePrompts({ onSelectTemplate }: TemplatePromptsProps) {
 
 			<div className="flex items-center gap-3 w-full justify-center">
 				<div className="h-px w-8 bg-border border-border/50" />
-				<span className=" text-subtle font-normal text-xs">Copy a template</span>
+				<span className=" text-subtle font-normal text-xs">
+					Copy a template
+				</span>
 				<div className="h-px w-8 bg-border border-border/50" />
 			</div>
 

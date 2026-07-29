@@ -1,13 +1,13 @@
 import type { Entity } from "@autumn/shared";
-import { useNavigate } from "react-router";
-import { AdminHover } from "@/components/general/AdminHover";
 import {
 	Breadcrumb,
 	BreadcrumbItem,
 	BreadcrumbLink,
 	BreadcrumbList,
 	BreadcrumbSeparator,
-} from "@/components/ui/breadcrumb";
+} from "@autumn/ui";
+import { useNavigate } from "react-router";
+import { AdminHover } from "@/components/general/AdminHover";
 import { useEntity } from "@/hooks/stores/useSubscriptionStore";
 import { useEnv } from "@/utils/envUtils";
 import { navigateTo } from "@/utils/genUtils";

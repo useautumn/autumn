@@ -5,6 +5,7 @@ import {
 	saveRegistry,
 	hasOtherActiveWorktrees,
 } from "../helpers/registry.ts";
+import { isPlainCanonical } from "../helpers/entry.ts";
 import { deleteBranch } from "../helpers/neon.ts";
 import { deleteReservedDomain } from "../helpers/ngrok.ts";
 import { unregisterPortlessAliases } from "../helpers/portless.ts";
@@ -12,29 +13,29 @@ import { tmuxSessionName, killTmuxSession } from "../helpers/tmux.ts";
 import { removeComposeStack, removeAllAutumnComposeStacks } from "../helpers/compose.ts";
 import { removeEnvLocalFiles } from "../helpers/env-files.ts";
 import { stopEmulateAndPortless } from "../helpers/emulate.ts";
-import type { Registry } from "../types.ts";
+import type { Registry, RegistryEntry } from "../types.ts";
 
 export async function cmdTeardown(opts: { all?: boolean }): Promise<void> {
 	let registry = loadRegistry();
 
 	if (opts.all) {
 		for (const entry of Object.values(registry)) {
-			if (entry.worktreeNum === 1) continue;
-			if (entry.branchName) deleteBranch(entry.branchName);
-			if (entry.reservedDomainId) {
-				await deleteReservedDomain(entry.reservedDomainId);
-			}
-			unregisterPortlessAliases(entry.worktreeNum);
-			killTmuxSession(tmuxSessionName(entry.worktreeNum));
+			if (isPlainCanonical(entry)) continue;
+			await teardownEntry(entry);
 		}
 		removeAllAutumnComposeStacks();
 		const next: Registry = {};
 		for (const [p, e] of Object.entries(registry)) {
-			if (e.worktreeNum === 1) next[p] = e;
+			if (e.worktreeNum === 1) {
+				next[p] = {
+					path: e.path,
+					worktreeNum: 1,
+					createdAt: e.createdAt,
+					lastUsedAt: Date.now(),
+				};
+			}
 		}
 		saveRegistry(next);
-		// Only the cwd's .env.local lives at PROJECT_ROOT; other worktrees own
-		// their own copy and aren't reachable from here. Acceptable trade-off.
 		removeEnvLocalFiles();
 		stopEmulateAndPortless();
 		log("teardown --all complete");
@@ -47,17 +48,21 @@ export async function cmdTeardown(opts: { all?: boolean }): Promise<void> {
 		log(`no registry entry for ${cwd}, nothing to teardown`);
 		return;
 	}
-	if (entry.worktreeNum === 1) {
+	if (isPlainCanonical(entry)) {
 		fatal("refusing to teardown canonical worktree (worktreeNum=1)");
 	}
-	if (entry.branchName) deleteBranch(entry.branchName);
-	if (entry.reservedDomainId) {
-		await deleteReservedDomain(entry.reservedDomainId);
+
+	await teardownEntry(entry);
+	if (entry.worktreeNum === 1) {
+		registry[cwd] = {
+			path: entry.path,
+			worktreeNum: 1,
+			createdAt: entry.createdAt,
+			lastUsedAt: Date.now(),
+		};
+	} else {
+		delete registry[cwd];
 	}
-	unregisterPortlessAliases(entry.worktreeNum);
-	killTmuxSession(tmuxSessionName(entry.worktreeNum));
-	removeComposeStack(entry.worktreeNum);
-	delete registry[cwd];
 	saveRegistry(registry);
 	removeEnvLocalFiles();
 	log(`tore down ${entry.branchName ?? "worktree " + entry.worktreeNum}`);
@@ -67,4 +72,18 @@ export async function cmdTeardown(opts: { all?: boolean }): Promise<void> {
 	} else {
 		log("other agent worktrees still active; leaving emulate + portless running");
 	}
+}
+
+async function teardownEntry(entry: RegistryEntry): Promise<void> {
+	if (entry.branchName) {
+		deleteBranch(entry.branchName, { projectId: entry.neonProjectId });
+	}
+	if (entry.reservedDomainId) {
+		await deleteReservedDomain(entry.reservedDomainId);
+	}
+	if (entry.worktreeNum > 1) {
+		unregisterPortlessAliases(entry.worktreeNum);
+		killTmuxSession(tmuxSessionName(entry.worktreeNum));
+	}
+	removeComposeStack(entry.worktreeNum, entry.branchName);
 }

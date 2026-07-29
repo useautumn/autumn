@@ -17,7 +17,9 @@ import type Stripe from "stripe";
 import { z } from "zod/v4";
 import type { FullCustomer } from "../../cusModels/fullCusModel";
 import type { FullProduct } from "../../productModels/productModels";
+import type { CustomerLicenseQuantity } from "../customerLicenseQuantity";
 import type { StripeDiscountWithCoupon } from "../stripe/stripeDiscountWithCoupon";
+import type { CustomerLicenseBillingContext } from "./customerLicenseBillingContext";
 
 const InvoiceModeSchema = z.object({
 	finalizeInvoice: z.boolean().default(false),
@@ -58,6 +60,7 @@ export interface BillingContext {
 
 	featureQuantities: FeatureOptions[];
 	adjustableFeatureQuantities?: string[];
+	customerLicenseQuantities?: CustomerLicenseQuantity[];
 	transitionConfig?: TransitionConfig;
 	invoiceMode?: InvoiceMode;
 
@@ -82,6 +85,10 @@ export interface BillingContext {
 	// Optional - only needed for custom plan flows
 	customPrices?: Price[];
 	customEnts?: Entitlement[];
+
+	// License billing state loaded at setup; absent when the customer
+	// touches no licenses.
+	customerLicenseBillingContext?: CustomerLicenseBillingContext;
 
 	// Trial context
 	trialContext?: TrialContext;

@@ -1,20 +1,52 @@
 import { isOneOffProductV2, type ProductV2 } from "@autumn/shared";
+import { SectionTag } from "@autumn/ui";
 import type { SortingState } from "@tanstack/react-table";
 import { useCallback, useMemo, useState } from "react";
 import { Table } from "@/components/general/table";
-import { SectionTag } from "@/components/v2/badges/SectionTag";
 import { EmptyState } from "@/components/v2/empty-states/EmptyState";
-import { useProductsQuery } from "@/hooks/queries/useProductsQuery";
+import {
+	type ProductListItem,
+	useProductsQuery,
+} from "@/hooks/queries/useProductsQuery";
+import { useSandboxesQuery } from "@/hooks/queries/useSandboxesQuery";
 import { pushPage } from "@/utils/genUtils";
 import { useProductsQueryState } from "@/views/products/hooks/useProductsQueryState";
 import { useProductTable } from "@/views/products/hooks/useProductTable";
 import { DeletePlanDialog } from "@/views/products/plan/components/DeletePlanDialog";
+import { LicenseListTable } from "./LicenseListTable";
 import { createProductListColumns } from "./ProductListColumns";
 import { ProductListCreateButton } from "./ProductListCreateButton";
 
-type ProductWithCounts = ProductV2 & {
+type ProductWithCounts = ProductListItem & {
 	active_count?: number;
+	subRows?: ProductWithCounts[];
 };
+
+/**
+ * Nest variants (base_id set) under their base plan as subRows. Variants whose
+ * base isn't in the list fall back to top-level rows.
+ */
+function nestVariants(plans: ProductWithCounts[]): ProductWithCounts[] {
+	const byId = new Map(plans.map((p) => [p.id, p]));
+	const bases: ProductWithCounts[] = [];
+	const childrenByBase = new Map<string, ProductWithCounts[]>();
+
+	for (const plan of plans) {
+		const baseId = plan.base_id;
+		if (baseId && byId.has(baseId)) {
+			const siblings = childrenByBase.get(baseId) ?? [];
+			siblings.push(plan);
+			childrenByBase.set(baseId, siblings);
+		} else {
+			bases.push(plan);
+		}
+	}
+
+	return bases.map((base) => {
+		const subRows = childrenByBase.get(base.id);
+		return subRows && subRows.length > 0 ? { ...base, subRows } : base;
+	});
+}
 
 export function ProductListTable() {
 	const { products, counts, isCountsLoading } = useProductsQuery();
@@ -33,14 +65,29 @@ export function ProductListTable() {
 		setDeleteDialog({ open: true, product });
 	}, []);
 
+	const { licenseProducts, nonLicenseProducts } = useMemo(() => {
+		const licenseProducts: ProductListItem[] = [];
+		const nonLicenseProducts: ProductListItem[] = [];
+
+		for (const product of products) {
+			if ((product.parent_plan_licenses?.length ?? 0) > 0) {
+				licenseProducts.push(product);
+			} else {
+				nonLicenseProducts.push(product);
+			}
+		}
+
+		return { licenseProducts, nonLicenseProducts };
+	}, [products]);
+
 	const { recurringBasePlans, recurringAddOnPlans, oneTimePlans } =
 		useMemo(() => {
-			const filtered = products?.filter((product) =>
+			const visibleProducts = nonLicenseProducts.filter((product) =>
 				queryStates.showArchivedProducts ? product.archived : !product.archived,
 			);
 
 			// Deduplicate by ID, keeping the latest version
-			const deduplicated = filtered?.reduce((acc, product) => {
+			const deduplicated = visibleProducts.reduce((acc, product) => {
 				const existingIndex = acc.findIndex((p) => p.id === product.id);
 
 				if (existingIndex === -1) {
@@ -67,7 +114,7 @@ export function ProductListTable() {
 				}
 
 				return acc;
-			}, [] as ProductV2[]);
+			}, [] as ProductListItem[]);
 
 			// Add counts to products
 			const productsWithCounts = deduplicated?.map((product) => ({
@@ -86,11 +133,13 @@ export function ProductListTable() {
 				) || [];
 
 			// Then split recurring by add-on status
-			const recurringBasePlans = recurringPlans.filter((p) => !p.is_add_on);
+			const recurringBasePlans = nestVariants(
+				recurringPlans.filter((p) => !p.is_add_on),
+			);
 			const recurringAddOnPlans = recurringPlans.filter((p) => p.is_add_on);
 
 			return { recurringBasePlans, recurringAddOnPlans, oneTimePlans };
-		}, [products, counts, queryStates.showArchivedProducts]);
+		}, [nonLicenseProducts, counts, queryStates.showArchivedProducts]);
 
 	// Check if any product has a group
 	const hasAnyGroup = useMemo(
@@ -101,13 +150,19 @@ export function ProductListTable() {
 		[recurringBasePlans, recurringAddOnPlans, oneTimePlans],
 	);
 
+	// Fetched once here (not per row) and passed into the toolbar, so a large
+	// product list doesn't spawn one sandboxes-query observer per row.
+	const { sandboxes } = useSandboxesQuery({ enabled: true });
+
 	const columns = useMemo(
 		() =>
 			createProductListColumns({
 				showGroup: hasAnyGroup,
+				isCountsLoading,
 				onDeleteClick: handleDeleteClick,
+				sandboxes,
 			}),
-		[hasAnyGroup, handleDeleteClick],
+		[hasAnyGroup, isCountsLoading, handleDeleteClick, sandboxes],
 	);
 
 	const recurringBaseTable = useProductTable({
@@ -119,6 +174,10 @@ export function ProductListTable() {
 			enableSorting: true,
 			state: { sorting },
 			onSortingChange: setSorting,
+			getSubRows: (row: ProductWithCounts) => row.subRows,
+			getRowId: (row: ProductWithCounts) => row.id,
+			autoResetExpanded: false,
+			initialState: { expanded: false },
 		},
 	});
 
@@ -154,6 +213,7 @@ export function ProductListTable() {
 	const hasRecurringBasePlans = recurringBasePlans.length > 0;
 	const hasRecurringAddOns = recurringAddOnPlans.length > 0;
 	const hasOneTimePlans = oneTimePlans.length > 0;
+	const hasLicensePlans = licenseProducts.length > 0;
 
 	// For archived view, always show table structure even if empty
 	// For non-archived view, show EmptyState when no plans exist
@@ -161,7 +221,8 @@ export function ProductListTable() {
 		queryStates.showArchivedProducts ||
 		hasRecurringBasePlans ||
 		hasRecurringAddOns ||
-		hasOneTimePlans;
+		hasOneTimePlans ||
+		hasLicensePlans;
 
 	return (
 		<div className="flex flex-col gap-8">
@@ -174,8 +235,11 @@ export function ProductListTable() {
 								table: recurringBaseTable,
 								numberOfColumns: columns.length,
 								enableSorting,
-								isLoading: isCountsLoading,
 								getRowHref,
+								getRowClassName: (product: ProductWithCounts) =>
+									product.base_id
+										? "bg-background hover:bg-background dark:hover:bg-background"
+										: undefined,
 								emptyStateText: queryStates.showArchivedProducts
 									? "You haven't archived any plans yet"
 									: "Recurring plans that bill customers on a regular schedule",
@@ -198,7 +262,6 @@ export function ProductListTable() {
 									table: recurringAddOnTable,
 									numberOfColumns: columns.length,
 									enableSorting,
-									isLoading: isCountsLoading,
 									getRowHref,
 									rowClassName: "h-10",
 								}}
@@ -218,7 +281,6 @@ export function ProductListTable() {
 								table: oneTimeTable,
 								numberOfColumns: columns.length,
 								enableSorting,
-								isLoading: isCountsLoading,
 								getRowHref,
 								emptyStateText:
 									"One-time prices for top-ups or lifetime purchases",
@@ -232,6 +294,13 @@ export function ProductListTable() {
 								</Table.Content>
 							</Table.Container>
 						</Table.Provider>
+
+						<LicenseListTable
+							licenseProducts={licenseProducts}
+							counts={counts}
+							isCountsLoading={isCountsLoading}
+							showArchivedProducts={queryStates.showArchivedProducts}
+						/>
 					</div>
 				</>
 			) : (

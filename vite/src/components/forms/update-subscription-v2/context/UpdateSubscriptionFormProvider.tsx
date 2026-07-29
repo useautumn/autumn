@@ -1,11 +1,15 @@
 import type {
+	CustomizePlanLicense,
 	Feature,
 	FrontendProduct,
 	FullCusProduct,
 	ProductItem,
 	ProductV2,
 } from "@autumn/shared";
-import { productV2ToFrontendProduct } from "@autumn/shared";
+import {
+	ProductItemFeatureType,
+	productV2ToFrontendProduct,
+} from "@autumn/shared";
 import { useStore } from "@tanstack/react-form";
 
 import {
@@ -16,6 +20,10 @@ import {
 	useMemo,
 	useState,
 } from "react";
+import {
+	licenseRowHasBillingChanges,
+	usePlanLicenseRows,
+} from "@/components/forms/shared/plan-items/PlanLicensesSummary";
 import { applyDefinedFormPatchFields } from "@/components/forms/shared/utils/formPatchUtils";
 import {
 	type UseUpdateSubscriptionPreviewReturn,
@@ -25,6 +33,10 @@ import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
 import { useProductVersionQuery } from "@/hooks/queries/useProductVersionQuery";
 import type { PrepaidItemWithFeature } from "@/hooks/stores/useProductStore";
 import { useHasBillingChanges } from "@/hooks/stores/useProductStore";
+import {
+	customerLicenseTotals,
+	hasStagedLicenseQuantityChanges,
+} from "@/utils/billing/licenseQuantityUtils";
 import { useHasSubscriptionChanges } from "../hooks/useHasSubscriptionChanges";
 import {
 	type UseTrialStateReturn,
@@ -77,7 +89,10 @@ interface UpdateSubscriptionFormContextValue {
 	// Plan editor state
 	showPlanEditor: boolean;
 	handleEditPlan: () => void;
-	handlePlanEditorSave: (product: FrontendProduct) => void;
+	handlePlanEditorSave: (
+		product: FrontendProduct,
+		addLicenses?: CustomizePlanLicense[],
+	) => void;
 	handlePlanEditorCancel: () => void;
 
 	// Mutation
@@ -222,9 +237,18 @@ export function UpdateSubscriptionFormProvider({
 		[formValues, normalizedPrepaidOptions],
 	);
 
+	const initialLicenseQuantities = useMemo(
+		() =>
+			customerLicenseTotals({
+				customerLicenses: customerProduct.customer_licenses,
+			}),
+		[customerProduct.customer_licenses],
+	);
+
 	const hasChanges = useHasSubscriptionChanges({
 		formValues: normalizedFormValues,
 		initialPrepaidOptions,
+		initialLicenseQuantities,
 		initialBillingBehavior,
 		prepaidItems,
 		customerProduct,
@@ -242,8 +266,14 @@ export function UpdateSubscriptionFormProvider({
 			const item = currentPrepaidItems.find(
 				(it) => it.feature_id === featureId,
 			);
-			const isOneOff = item?.interval == null;
-			if (quantity !== initialPrepaidOptions[featureId] || isOneOff) {
+			const initialQuantity = initialPrepaidOptions[featureId];
+			const isOneOffTopUp =
+				item?.interval == null &&
+				item?.feature_type !== ProductItemFeatureType.ContinuousUse;
+			const changedQuantity = isOneOffTopUp
+				? quantity > (initialQuantity ?? 0)
+				: quantity !== initialQuantity;
+			if (changedQuantity) {
 				changed[featureId] = quantity;
 			}
 		}
@@ -273,12 +303,26 @@ export function UpdateSubscriptionFormProvider({
 		newProduct: newProduct as FrontendProduct,
 	});
 
+	// The parent-product comparison above can't see license-level changes:
+	// staged seat totals and license customize price edits bill too.
+	const { rows: licenseRows } = usePlanLicenseRows({
+		planId: product?.id,
+		addLicenses: normalizedFormValues.addLicenses,
+		features,
+	});
+	const hasLicenseBillingChanges =
+		hasStagedLicenseQuantityChanges({
+			licenseQuantities: normalizedFormValues.licenseQuantities,
+			initialLicenseQuantities,
+		}) || licenseRows.some(licenseRowHasBillingChanges);
+
 	const hasPrepaidQuantityChanges = changedPrepaidOptions !== undefined;
 	const isVersionLoading = isVersionChanged && !isVersionReady;
 	const hasNoBillingChanges =
 		normalizedFormValues.noBillingChanges ||
 		(hasChanges &&
 			!hasBillingChanges &&
+			!hasLicenseBillingChanges &&
 			!hasPrepaidQuantityChanges &&
 			!isVersionLoading &&
 			!normalizedFormValues.resetBillingCycle);
@@ -316,7 +360,10 @@ export function UpdateSubscriptionFormProvider({
 	}, [productWithFormItems, onPlanEditorOpen]);
 
 	const handlePlanEditorSave = useCallback(
-		(draftProduct: FrontendProduct) => {
+		(
+			draftProduct: FrontendProduct,
+			editedAddLicenses?: CustomizePlanLicense[],
+		) => {
 			if (!productWithFormItems) {
 				setShowPlanEditor(false);
 				onPlanEditorClose?.();
@@ -349,6 +396,10 @@ export function UpdateSubscriptionFormProvider({
 					form.setFieldValue(field, value);
 				},
 			});
+
+			if (editedAddLicenses) {
+				form.setFieldValue("addLicenses", editedAddLicenses);
+			}
 
 			setShowPlanEditor(false);
 			onPlanEditorClose?.();

@@ -1,9 +1,4 @@
-import {
-	Select,
-	SelectContent,
-	SelectItem,
-	SelectTrigger,
-} from "@/components/v2/selects/Select";
+import { Select, SelectContent, SelectItem, SelectTrigger } from "@autumn/ui";
 
 interface FilterOption<T extends string> {
 	value: T;

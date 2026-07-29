@@ -3,7 +3,7 @@ import {
 	type ChatOAuthCredential,
 	chatOAuthCredentials,
 } from "@autumn/shared";
-import { and, eq } from "drizzle-orm";
+import { and, eq, isNull } from "drizzle-orm";
 import type { ChatDb } from "../../../lib/db.js";
 
 export type ChatOAuthCredentialInsert =
@@ -14,17 +14,26 @@ export const getChatOAuthCredentialByInstallationEnv = async ({
 	chatInstallationId,
 	env,
 	orgId,
+	userId,
 }: {
 	db: ChatDb;
 	chatInstallationId: string;
 	env: AppEnv;
 	orgId?: string;
+	// Web chat credentials are per-user; always pass userId there. Slack omits it
+	// (one installation-scoped credential per install).
+	userId?: string | null;
 }) =>
 	db.query.chatOAuthCredentials.findFirst({
 		where: and(
 			eq(chatOAuthCredentials.chat_installation_id, chatInstallationId),
 			eq(chatOAuthCredentials.env, env),
 			orgId ? eq(chatOAuthCredentials.org_id, orgId) : undefined,
+			userId === null
+				? isNull(chatOAuthCredentials.user_id)
+				: userId
+					? eq(chatOAuthCredentials.user_id, userId)
+					: undefined,
 		),
 	});
 
@@ -43,6 +52,7 @@ export const upsertChatOAuthCredential = async ({
 				chatOAuthCredentials.chat_installation_id,
 				chatOAuthCredentials.org_id,
 				chatOAuthCredentials.env,
+				chatOAuthCredentials.user_id,
 			],
 			set: {
 				org_id: credential.org_id,
@@ -51,6 +61,7 @@ export const upsertChatOAuthCredential = async ({
 				access_token: credential.access_token,
 				refresh_token: credential.refresh_token,
 				access_token_expires_at: credential.access_token_expires_at,
+				refresh_token_expires_at: credential.refresh_token_expires_at,
 				scopes: credential.scopes,
 				updated_at: credential.updated_at,
 			},
@@ -66,6 +77,7 @@ export const updateChatOAuthCredentialTokens = async ({
 	accessToken,
 	refreshToken,
 	accessTokenExpiresAt,
+	refreshTokenExpiresAt,
 	scopes,
 	updatedAt,
 }: {
@@ -74,6 +86,7 @@ export const updateChatOAuthCredentialTokens = async ({
 	accessToken: string;
 	refreshToken: string;
 	accessTokenExpiresAt: number;
+	refreshTokenExpiresAt?: number;
 	scopes: string[];
 	updatedAt: number;
 }) => {
@@ -83,6 +96,9 @@ export const updateChatOAuthCredentialTokens = async ({
 			access_token: accessToken,
 			refresh_token: refreshToken,
 			access_token_expires_at: accessTokenExpiresAt,
+			...(refreshTokenExpiresAt !== undefined
+				? { refresh_token_expires_at: refreshTokenExpiresAt }
+				: {}),
 			scopes,
 			updated_at: updatedAt,
 		})

@@ -1,26 +1,30 @@
 import type {
+	CustomizePlanLicense,
 	Feature,
 	FeatureOptions,
 	FrontendProduct,
+	PlanLicense,
 	ProductItem,
 } from "@autumn/shared";
 import { sortPlanItems, splitBooleanItems } from "@autumn/shared";
+import { Button } from "@autumn/ui";
 import { PencilSimpleIcon } from "@phosphor-icons/react";
 import { LayoutGroup, motion } from "motion/react";
 import { useMemo } from "react";
 import type { UseAttachForm } from "@/components/forms/attach-v2/hooks/useAttachForm";
 import type { AdminPlanIds } from "@/components/forms/shared/admin/AdminPlanIdsTooltip";
 import type { UseUpdateSubscriptionForm } from "@/components/forms/update-subscription-v2/hooks/useUpdateSubscriptionForm";
-import { Button } from "@/components/v2/buttons/Button";
 import { LAYOUT_TRANSITION } from "@/components/v2/sheets/SharedSheetComponents";
 import { CollapsedBooleanItems } from "./plan-items/CollapsedBooleanItems";
 import { DeletedItemRow } from "./plan-items/DeletedItemRow";
+import type { LicenseQuantityEditor } from "./plan-items/LicenseQuantityControl";
 import { PlanEditButton } from "./plan-items/PlanEditButton";
 import {
 	getItemMatchKey,
 	hasItemChanged,
 	PlanItemRow,
 } from "./plan-items/PlanItemRow";
+import { PlanLicensesSummary } from "./plan-items/PlanLicensesSummary";
 import { PlanPriceHeader } from "./plan-items/PlanPriceHeader";
 import {
 	PlanTrialEditor,
@@ -60,10 +64,22 @@ export interface PlanItemsSectionProps {
 	priceChange?: PriceChange | null;
 	versionChange?: VersionChange | null;
 	trialConfig?: TrialConfig;
+	/** add_licenses patch entries staged by the editor; null = unchanged,
+	 * undefined = the flow does not support license editing. */
+	addLicenses?: CustomizePlanLicense[] | null;
+	/** Present in flows that support buying extra license seats (attach, update). */
+	licenseQuantityEditor?: LicenseQuantityEditor;
+	/** Outgoing plan's licenses (attach review) — diffs license rows as a transition. */
+	outgoingLicenses?: (PlanLicense & { version?: number })[];
 
 	gateDeletedItemsByDiff?: boolean;
 	changesOnly?: boolean;
 	readOnly?: boolean;
+	disableBooleanCollapse?: boolean;
+	/** Off when the price renders elsewhere (e.g. a license's parent-plan row). */
+	showPriceHeader?: boolean;
+	/** Off when the caller renders the edit button itself (e.g. below license sections). */
+	showEditButton?: boolean;
 
 	adminIds?: AdminPlanIds;
 }
@@ -151,9 +167,15 @@ export function PlanItemsSection({
 	priceChange,
 	versionChange,
 	trialConfig,
+	addLicenses,
+	licenseQuantityEditor,
+	outgoingLicenses,
 	gateDeletedItemsByDiff = false,
 	changesOnly = false,
 	readOnly = false,
+	disableBooleanCollapse = false,
+	showPriceHeader = true,
+	showEditButton = true,
 	adminIds,
 }: PlanItemsSectionProps) {
 	const {
@@ -173,19 +195,39 @@ export function PlanItemsSection({
 			}),
 		[product, originalItems, showDiff, gateDeletedItemsByDiff],
 	);
-	const visibleItems = changesOnly ? diffVisibleItems : allVisibleItems;
-	const collapsedBooleanItems = changesOnly
+	const visibleItemsRaw = changesOnly ? diffVisibleItems : allVisibleItems;
+	const collapsedBooleanItemsRaw = changesOnly
 		? diffCollapsedBooleanItems
 		: allCollapsedBooleanItems;
+	const visibleItems = disableBooleanCollapse
+		? [...visibleItemsRaw, ...collapsedBooleanItemsRaw]
+		: visibleItemsRaw;
+	const collapsedBooleanItems = disableBooleanCollapse
+		? []
+		: collapsedBooleanItemsRaw;
 
 	const hasItems = (product?.items?.length ?? 0) > 0 || deletedItems.length > 0;
 
 	if (!hasItems) {
 		return (
-			<Button variant="secondary" onClick={onEditPlan} className="w-full">
-				<PencilSimpleIcon size={14} className="mr-1" />
-				Create Custom Plan
-			</Button>
+			<div className="flex flex-col gap-2">
+				<PlanLicensesSummary
+					planId={product?.id}
+					addLicenses={addLicenses}
+					features={features}
+					showDiff={showDiff}
+					changesOnly={changesOnly}
+					quantityEditor={licenseQuantityEditor}
+					currency={currency}
+					outgoingLicenses={outgoingLicenses}
+				/>
+				{showEditButton && (
+					<Button variant="secondary" onClick={onEditPlan} className="w-full">
+						<PencilSimpleIcon size={14} className="mr-1" />
+						Create Custom Plan
+					</Button>
+				)}
+			</div>
 		);
 	}
 
@@ -199,6 +241,7 @@ export function PlanItemsSection({
 		form,
 		showDiff,
 		readOnly,
+		currency,
 	};
 
 	const itemKey = (item: ProductItem) =>
@@ -206,12 +249,14 @@ export function PlanItemsSection({
 
 	return (
 		<div>
-			<PlanPriceHeader
-				priceChange={priceChange}
-				product={product}
-				currency={currency}
-				adminIds={adminIds}
-			/>
+			{showPriceHeader && (!changesOnly || priceChange) && (
+				<PlanPriceHeader
+					priceChange={priceChange}
+					product={product}
+					currency={currency}
+					adminIds={adminIds}
+				/>
+			)}
 			<LayoutGroup>
 				<motion.div
 					className="flex flex-col gap-0"
@@ -245,11 +290,24 @@ export function PlanItemsSection({
 							key={`deleted-${itemKey(item)}`}
 							item={item}
 							index={index}
+							currency={currency}
 						/>
 					))}
+					<PlanLicensesSummary
+						planId={product?.id}
+						addLicenses={addLicenses}
+						features={features}
+						showDiff={showDiff}
+						changesOnly={changesOnly}
+						quantityEditor={licenseQuantityEditor}
+						currency={currency}
+						outgoingLicenses={outgoingLicenses}
+					/>
 					<PlanVersionChangeRow versionChange={versionChange} />
 					<PlanTrialEditor trialConfig={trialConfig} form={form} />
-					{!readOnly && <PlanEditButton onEditPlan={onEditPlan} />}
+					{!readOnly && showEditButton && (
+						<PlanEditButton onEditPlan={onEditPlan} />
+					)}
 				</motion.div>
 			</LayoutGroup>
 		</div>

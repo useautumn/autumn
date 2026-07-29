@@ -1,29 +1,29 @@
 import type { ProductV2 } from "@autumn/shared";
-import type { AxiosError } from "axios";
-import { useState } from "react";
-import { toast } from "sonner";
-import { Button } from "@/components/v2/buttons/Button";
 import {
+	Button,
 	Dialog,
 	DialogContent,
 	DialogDescription,
 	DialogFooter,
 	DialogHeader,
 	DialogTitle,
-} from "@/components/v2/dialogs/Dialog";
-import {
 	Select,
 	SelectContent,
 	SelectItem,
 	SelectTrigger,
 	SelectValue,
-} from "@/components/v2/selects/Select";
+} from "@autumn/ui";
+import type { AxiosError } from "axios";
+import { useState } from "react";
+import { toast } from "sonner";
 import { useGeneralQuery } from "@/hooks/queries/useGeneralQuery";
+import { useLicenseProductsQuery } from "@/hooks/queries/useLicenseProductsQuery";
 import { useProductsQuery } from "@/hooks/queries/useProductsQuery";
 import { useProductStore } from "@/hooks/stores/useProductStore";
 import { ProductService } from "@/services/products/ProductService";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
 import { getBackendErr } from "@/utils/genUtils";
+import { InfoBox } from "@/views/onboarding2/integrate/components/InfoBox";
 import { useProductQuery } from "../../product/hooks/useProductQuery";
 
 export const DeletePlanDialog = ({
@@ -49,8 +49,16 @@ export const DeletePlanDialog = ({
 
 	const [loading, setLoading] = useState(false);
 	const [deleteAllVersions, setDeleteAllVersions] = useState(false);
-	const { invalidate: invalidateProducts } = useProductsQuery();
+	const { products, invalidate: invalidateProducts } = useProductsQuery();
+	const { invalidate: invalidateLicenseProducts } = useLicenseProductsQuery();
 	const { invalidate: invalidateProduct } = useProductQuery();
+
+	// A base variant is a plan that other variants point to via base_id.
+	const isBaseVariant = products.some(
+		(p) => p.base_id === product.id && p.id !== product.id,
+	);
+	const willDetachVariants =
+		isBaseVariant && (deleteAllVersions || product.version === 1);
 
 	const { data: productInfo, isLoading } = useGeneralQuery({
 		url: `/products/${product.id}/info`,
@@ -73,7 +81,11 @@ export const DeletePlanDialog = ({
 			toast.success("Plan deleted successfully");
 
 			// Invalidate in background (don't await - let table update async)
-			Promise.all([invalidateProducts(), invalidateProduct()]);
+			Promise.all([
+				invalidateProducts(),
+				invalidateProduct(),
+				invalidateLicenseProducts(),
+			]);
 
 			// Call onDeleteSuccess callback if provided (for navigation)
 			if (onDeleteSuccess) {
@@ -98,7 +110,11 @@ export const DeletePlanDialog = ({
 			toast.success(`${product.name} archived successfully`);
 
 			// Invalidate in background (don't await)
-			Promise.all([invalidateProducts(), invalidateProduct()]);
+			Promise.all([
+				invalidateProducts(),
+				invalidateProduct(),
+				invalidateLicenseProducts(),
+			]);
 
 			if (onDeleteSuccess) {
 				await onDeleteSuccess();
@@ -122,7 +138,11 @@ export const DeletePlanDialog = ({
 			toast.success(`${product.name} unarchived successfully`);
 
 			// Invalidate in background (don't await)
-			Promise.all([invalidateProducts(), invalidateProduct()]);
+			Promise.all([
+				invalidateProducts(),
+				invalidateProduct(),
+				invalidateLicenseProducts(),
+			]);
 
 			if (onDeleteSuccess) {
 				await onDeleteSuccess();
@@ -225,14 +245,21 @@ export const DeletePlanDialog = ({
 					</DialogDescription>
 				</DialogHeader>
 
+				{willDetachVariants && !hasCusProducts && !product.archived && (
+					<InfoBox variant="warning">
+						This is a base variant. Deleting this plan will convert variants of
+						this plan into base plans.
+					</InfoBox>
+				)}
+
 				{productInfo.numVersion > 1 &&
 					!product.archived &&
 					!productInfo.hasCusProductsLatest && (
-					<Select
-						value={deleteAllVersions ? "all" : "latest"}
-						onValueChange={(value) => setDeleteAllVersions(value === "all")}
-						items={{ latest: "Delete latest version", all: "Archive plan" }}
-					>
+						<Select
+							value={deleteAllVersions ? "all" : "latest"}
+							onValueChange={(value) => setDeleteAllVersions(value === "all")}
+							items={{ latest: "Delete latest version", all: "Archive plan" }}
+						>
 							<SelectTrigger className="w-6/12">
 								<SelectValue placeholder="Select a version" />
 							</SelectTrigger>

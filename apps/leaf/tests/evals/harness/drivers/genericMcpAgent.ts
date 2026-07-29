@@ -148,13 +148,13 @@ export const createGenericMcpAgentDriver = ({
 		const rememberApproval = (output: {
 			finishReason?: string;
 			runId?: string;
-			suspendPayload?: { toolCallId?: string };
+			suspension?: { toolCallId?: string };
 		}) => {
 			pendingApproval =
 				output.finishReason === "suspended" && output.runId
 					? {
 							runId: output.runId,
-							toolCallId: output.suspendPayload?.toolCallId,
+							toolCallId: output.suspension?.toolCallId,
 						}
 					: null;
 			if (pendingApproval) trace.event({ type: "approval_pending" });

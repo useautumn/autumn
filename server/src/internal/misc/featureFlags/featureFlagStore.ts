@@ -31,14 +31,13 @@ export const getRuntimeFeatureFlag = ({ path }: { path: string }): boolean => {
 	return value === true;
 };
 
-/** Returns the list of customer IDs with skip-overage override for a given org. */
-export const getSkipOverageSubmissionCustomers = ({
+export const getDisableOverageBillingCustomers = ({
 	orgId,
 }: {
 	orgId: string;
 }): string[] => {
 	const config = store.get();
-	return config.skipOverageSubmissionFlags[orgId] ?? [];
+	return config.disableOverageBillingFlags[orgId] ?? [];
 };
 
 export const getFeatureFlagConfigFromSource =

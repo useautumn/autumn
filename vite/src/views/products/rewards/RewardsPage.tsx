@@ -65,11 +65,7 @@ export const RewardsPage = () => {
 				<Table.Toolbar>
 					<div className="flex w-full justify-between items-center">
 						<Table.Heading>
-							<UsersThreeIcon
-								size={16}
-								weight="fill"
-								className="text-subtle"
-							/>
+							<UsersThreeIcon size={16} weight="fill" className="text-subtle" />
 							Referral Programs
 						</Table.Heading>
 						<Table.Actions>

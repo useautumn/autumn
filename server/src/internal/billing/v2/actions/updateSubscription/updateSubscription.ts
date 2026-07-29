@@ -6,6 +6,7 @@ import {
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { computeUpdateSubscriptionPlan } from "@/internal/billing/v2/actions/updateSubscription/compute/computeUpdateSubscriptionPlan";
+import { handleUpdateSubscriptionComputeErrors } from "@/internal/billing/v2/actions/updateSubscription/errors/handleUpdateSubscriptionComputeErrors";
 import { handleUpdateSubscriptionErrors } from "@/internal/billing/v2/actions/updateSubscription/errors/handleUpdateSubscriptionErrors";
 import { logUpdateSubscriptionContext } from "@/internal/billing/v2/actions/updateSubscription/logs/logUpdateSubscriptionContext";
 import { setupUpdateSubscriptionBillingContext } from "@/internal/billing/v2/actions/updateSubscription/setup/setupUpdateSubscriptionBillingContext";
@@ -57,6 +58,10 @@ export async function updateSubscription({
 		params,
 	});
 	logAutumnBillingPlan({ ctx, plan: autumnBillingPlan, billingContext });
+	await handleUpdateSubscriptionComputeErrors({
+		ctx,
+		autumnBillingPlan,
+	});
 
 	// 3. Evaluate Stripe billing plan
 	const stripeBillingPlan = await evaluateStripeBillingPlan({

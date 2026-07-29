@@ -18,10 +18,6 @@
 			"view"
 		]
 	},
-	"banner": {
-		"content": "You're viewing the docs for Autumn's v2 API. You can find the previous API version [here](https://docs-v1.useautumn.com).",
-		"dismissible": true
-	},
 	"favicon": "/favicon.svg",
 	"interaction": {
 		"drilldown": true
@@ -55,7 +51,6 @@
 						"group": " ",
 						"pages": [
 							"welcome",
-							"documentation/mcp",
 							{
 								"group": "Concepts",
 								"pages": [
@@ -68,7 +63,8 @@
 									"documentation/concepts/stripe"
 								]
 							},
-							"documentation/getting-started/migration"
+							"documentation/getting-started/migration",
+							"documentation/mcp"
 						]
 					},
 					{
@@ -84,6 +80,7 @@
 						"group": "Configure Pricing",
 						"pages": [
 							"documentation/modelling-pricing/recurring",
+							"documentation/modelling-pricing/plan-variants",
 							"documentation/modelling-pricing/one-off-purchases",
 							"documentation/modelling-pricing/free-plans",
 							"documentation/modelling-pricing/credit-systems",
@@ -211,7 +208,17 @@
 							"api-reference/billing/setupPayment",
 							"api-reference/billing/previewMultiAttach",
 							"api-reference/billing/multiAttach",
-							"api-reference/billing/createSchedule"
+							"api-reference/billing/previewMultiUpdate",
+							"api-reference/billing/multiUpdate",
+							"api-reference/billing/createSchedule",
+							"api-reference/billing/import",
+							{
+								"group": "Licenses",
+								"pages": [
+									"api-reference/licenses/attachLicense",
+									"api-reference/licenses/releaseLicense"
+								]
+							}
 						]
 					},
 					{
@@ -234,7 +241,17 @@
 							"api-reference/customers/getCustomer",
 							"api-reference/customers/listCustomers",
 							"api-reference/customers/updateCustomer",
-							"api-reference/customers/deleteCustomer"
+							"api-reference/customers/deleteCustomer",
+							"api-reference/invoices/insertInvoices",
+							"api-reference/invoices/listInvoices"
+						]
+					},
+					{
+						"group": "Authorization",
+						"pages": [
+							"api-reference/keys/mintKey",
+							"api-reference/keys/refreshKey",
+							"api-reference/keys/revokeKey"
 						]
 					},
 					{
@@ -279,6 +296,7 @@
 						"pages": [
 							"api-reference/referrals/createReferralCode",
 							"api-reference/referrals/redeemReferralCode",
+							"api-reference/rewards/listRewards",
 							"api-reference/rewards/redeemRewardCode"
 						]
 					},
@@ -295,6 +313,7 @@
 							{
 								"group": "Billing",
 								"pages": [
+									"api-reference/webhooks/billingAutoTopupFailed",
 									"api-reference/webhooks/billingAutoTopupSucceeded",
 									"api-reference/webhooks/billingUpdated"
 								]

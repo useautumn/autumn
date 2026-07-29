@@ -6,6 +6,7 @@ export const BalanceEditFormSchema = z
 		balance: z.number().nullable(),
 		grantedAndPurchasedBalance: z.number().nullable(),
 		nextResetAt: z.number().nullable(),
+		expiresAt: z.number().nullable(),
 		addValue: z.number().nullable(),
 		updateGrantedBalance: z.boolean(),
 	})

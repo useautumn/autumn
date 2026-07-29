@@ -122,6 +122,44 @@ const couponToStripeValue = ({
 	}
 };
 
+const getStripeProductIdForCoupon = ({
+	price,
+}: {
+	price: Price & { product: Product };
+}) => {
+	const stripeProductId =
+		price.config.type === PriceType.Fixed
+			? price.product.processor?.id
+			: (price.config as UsagePriceConfig).stripe_product_id;
+
+	if (!stripeProductId) {
+		throw new RecaseError({
+			message: `Plan ${price.product.id} doesn't exist in Stripe yet. Call attach to generate a checkout URL and it will be created in Stripe automatically.`,
+			code: ErrCode.ProductNotInStripe,
+			statusCode: 400,
+		});
+	}
+
+	return stripeProductId;
+};
+
+/** Throws product_not_in_stripe for any plan missing in Stripe. Run before deleting an existing coupon. */
+export const resolveCouponStripeProductIds = ({
+	reward,
+	prices,
+}: {
+	reward: Reward;
+	prices: (Price & { product: Product })[];
+}) => {
+	const appliesToSpecificProducts =
+		reward.type !== RewardType.FreeProduct &&
+		!reward.discount_config!.apply_to_all;
+
+	return appliesToSpecificProducts
+		? prices.map((price) => getStripeProductIdForCoupon({ price }))
+		: [];
+};
+
 const getPromoCouponId = (promo: Stripe.PromotionCode): string | null => {
 	const coupon =
 		promo.promotion?.coupon ??
@@ -146,6 +184,13 @@ export const createStripeCoupon = async ({
 	legacyVersion?: boolean;
 }) => {
 	const discountConfig = reward.discount_config;
+
+	const appliesToSpecificProducts =
+		reward.type !== RewardType.FreeProduct && !discountConfig!.apply_to_all;
+
+	// Resolve Stripe product ids before any Stripe writes so a missing
+	// plan fails cleanly instead of after the existing coupon is deleted.
+	const stripeProdIds = resolveCouponStripeProductIds({ reward, prices });
 
 	const stripeCli = createStripeCli({
 		org,
@@ -177,28 +222,7 @@ export const createStripeCoupon = async ({
 		await stripeCli.coupons.del(reward.id);
 	} catch (_) {}
 
-	const stripeProdIds = prices.map((price) => {
-		if (price.config!.type === PriceType.Fixed) {
-			return price.product.processor?.id;
-		} else {
-			const config = price.config as UsagePriceConfig;
-			if (!config.stripe_product_id) {
-				logger.warn("No stripe product id for price", { price });
-				logger.warn("Config", { config });
-				throw new RecaseError({
-					message: `No stripe product id for price ${price.id}`,
-					code: ErrCode.InternalError,
-				});
-			}
-
-			return config.stripe_product_id;
-		}
-	});
-
 	// Collect Autumn product IDs for metadata when coupon applies to specific products
-	const appliesToSpecificProducts =
-		reward.type !== RewardType.FreeProduct && !discountConfig!.apply_to_all;
-
 	const autumnProductIds = appliesToSpecificProducts
 		? [...new Set(prices.map((price) => price.product.id))]
 		: [];

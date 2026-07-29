@@ -204,23 +204,6 @@ export class CusProductService {
 		return data as FullCusProduct | undefined;
 	}
 
-	static async getByInternalProductId({
-		db,
-		internalProductId,
-		limit = 1,
-	}: {
-		db: DrizzleCli;
-		internalProductId: string;
-		limit?: number;
-	}) {
-		const data = await db.query.customerProducts.findMany({
-			where: eq(customerProducts.internal_product_id, internalProductId),
-			limit,
-		});
-
-		return data as CusProduct[];
-	}
-
 	static async getByProductId({
 		db,
 		productId,
@@ -562,6 +545,20 @@ export class CusProductService {
 			.returning();
 	}
 
+	static async deleteByIds({
+		ctx,
+		cusProductIds,
+	}: {
+		ctx: RepoContext;
+		cusProductIds: string[];
+	}) {
+		if (cusProductIds.length === 0) return [];
+		return await ctx.db
+			.delete(customerProducts)
+			.where(inArray(customerProducts.id, cusProductIds))
+			.returning();
+	}
+
 	static async getByFingerprint({
 		db,
 		productId,
@@ -630,6 +627,22 @@ export class CusProductService {
 		});
 
 		return data;
+	}
+
+	static async hasByFreeTrialId({
+		db,
+		freeTrialId,
+	}: {
+		db: DrizzleCli;
+		freeTrialId: string;
+	}) {
+		const data = await db
+			.select({ id: customerProducts.id })
+			.from(customerProducts)
+			.where(eq(customerProducts.free_trial_id, freeTrialId))
+			.limit(1);
+
+		return data.length > 0;
 	}
 
 	static async deleteByProduct({

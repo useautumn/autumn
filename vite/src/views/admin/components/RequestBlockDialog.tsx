@@ -1,17 +1,17 @@
-import { Plus, Trash2 } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
-import { toast } from "sonner";
-import { Input } from "@/components/v2/inputs/Input";
-import { Badge } from "@/components/v2/badges/Badge";
-import { Button } from "@/components/v2/buttons/Button";
 import {
+	Badge,
+	Button,
 	Dialog,
 	DialogContent,
 	DialogDescription,
 	DialogFooter,
 	DialogHeader,
 	DialogTitle,
-} from "@/components/v2/dialogs/Dialog";
+	Input,
+} from "@autumn/ui";
+import { Plus, Trash2 } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
+import { toast } from "sonner";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
 import { getBackendErr } from "@/utils/genUtils";
 
@@ -159,7 +159,9 @@ export function RequestBlockDialog({
 				</DialogHeader>
 
 				{loading ? (
-					<div className="text-sm text-tertiary-foreground">Loading request block state...</div>
+					<div className="text-sm text-tertiary-foreground">
+						Loading request block state...
+					</div>
 				) : (
 					<div className="flex flex-col gap-4">
 						<div className="flex items-center justify-between rounded-lg border border-border p-3">

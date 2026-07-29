@@ -10,3 +10,8 @@ export const DbOverageAllowedSchema = z.object({
 });
 
 export type DbOverageAllowed = z.infer<typeof DbOverageAllowedSchema>;
+
+export const pickStricterOverageAllowed = (
+	left: DbOverageAllowed,
+	right: DbOverageAllowed,
+): DbOverageAllowed => (left.enabled ? right : left);

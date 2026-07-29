@@ -1,7 +1,9 @@
-import type { SyncParamsV1 } from "@autumn/shared";
+import { CusProductStatus, type SyncParamsV1 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { persistCreateSchedule } from "@/internal/billing/v2/actions/createSchedule/utils/persistCreateSchedule";
 import { executeAutumnBillingPlan } from "@/internal/billing/v2/execute/executeAutumnBillingPlan";
+import { sendBillingUpdatedWebhook } from "@/internal/billing/v2/workflows/sendBillingUpdatedWebhook/sendBillingUpdatedWebhook";
+import { reconcileLicenseStateForCustomer } from "@/internal/licenses/actions/reconcile/reconcileLicenseState";
 import { computeSyncPlan } from "./compute/computeSyncPlan";
 import { handleSyncErrors } from "./errors/handleSyncErrors";
 import { logSyncContext } from "./logs/logSyncContext";
@@ -26,22 +28,15 @@ export type SyncV2Result = {
 
 /**
  * Sync a Stripe subscription/schedule into Autumn state.
- *
- * Mirrors the v2 action convention used by createSchedule.ts:
- *   1. setup   — fetch sub, schedule, customer, products
- *   2. errors  — validate inputs against detection result
- *   3. compute — apply caller overrides and produce an AutumnBillingPlan
- *   4. execute — run the billing plan (cusProduct inserts/updates)
- *   5. persist — write any scheduled phase rows (reuses createSchedule's
- *                `persistCreateSchedule` so the schedule + schedule_phases
- *                tables are written identically across actions)
  */
 export const syncV2 = async ({
 	ctx,
 	params,
+	tags,
 }: {
 	ctx: AutumnContext;
 	params: SyncParamsV1;
+	tags?: string[];
 }): Promise<SyncV2Result> => {
 	// 1. Setup
 	const syncContext = await setupSyncContext({ ctx, params });
@@ -56,6 +51,13 @@ export const syncV2 = async ({
 
 	// 4. Execute
 	await executeAutumnBillingPlan({ ctx, autumnBillingPlan });
+	if ((autumnBillingPlan.customerLicenseUpdates?.length ?? 0) > 0) {
+		await reconcileLicenseStateForCustomer({
+			ctx,
+			idOrInternalId: syncContext.customer_id,
+			deleteCache: true,
+		});
+	}
 
 	// 5. Persist scheduled phases (only when sync produced more than one phase)
 	let scheduleId: string | null = null;
@@ -72,6 +74,21 @@ export const syncV2 = async ({
 		scheduledPhases = persisted.insertedPhases;
 	}
 
+	void sendBillingUpdatedWebhook({
+		ctx,
+		autumnBillingPlan,
+		originalFullCustomer: syncContext.fullCustomer,
+		tags,
+	});
+
+	const customerProductUpdates = (
+		autumnBillingPlan.updateCustomerProducts ?? []
+	).concat(
+		autumnBillingPlan.updateCustomerProduct
+			? [autumnBillingPlan.updateCustomerProduct]
+			: [],
+	);
+
 	return {
 		customer_id: syncContext.customer_id,
 		stripe_subscription_id: syncContext.stripeSubscription?.id ?? null,
@@ -79,12 +96,8 @@ export const syncV2 = async ({
 		inserted_cus_product_ids: autumnBillingPlan.insertCustomerProducts.map(
 			(cp) => cp.id,
 		),
-		expired_cus_product_ids: (autumnBillingPlan.updateCustomerProducts ?? [])
-			.concat(
-				autumnBillingPlan.updateCustomerProduct
-					? [autumnBillingPlan.updateCustomerProduct]
-					: [],
-			)
+		expired_cus_product_ids: customerProductUpdates
+			.filter(({ updates }) => updates.status === CusProductStatus.Expired)
 			.map((u) => u.customerProduct.id),
 		schedule_id: scheduleId,
 		scheduled_phases: scheduledPhases,

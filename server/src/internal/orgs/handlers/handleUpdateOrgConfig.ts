@@ -46,6 +46,9 @@ export const handleUpdateOrgConfig = createRoute({
 		await clearOrgCache({ db, orgId: org.id });
 
 		const config = (rows as unknown as { config: OrgConfig }[])[0]?.config;
-		return c.json({ success: true, config: OrgConfigSchema.parse(config ?? {}) });
+		return c.json({
+			success: true,
+			config: OrgConfigSchema.parse(config ?? {}),
+		});
 	},
 });

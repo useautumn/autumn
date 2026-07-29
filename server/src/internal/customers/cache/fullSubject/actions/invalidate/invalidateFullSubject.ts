@@ -13,25 +13,24 @@ const invalidateCachedFullSubjectOnRedis = async ({
 	ctx,
 	source,
 	redisV2,
+	flushBalances,
 }: {
 	customerId: string;
 	entityId?: string;
 	ctx: AutumnContext;
 	source?: string;
 	redisV2: Redis;
+	flushBalances?: boolean;
 }): Promise<void> => {
-	if (redisV2.status !== "ready") {
-		const subjectLabel = entityId ? `${customerId}:${entityId}` : customerId;
-		ctx.logger.warn(
-			`[invalidateCachedFullSubject] redisV2 not_ready (status=${redisV2.status}), skipping subject: ${subjectLabel}, source: ${source}`,
-		);
-		return;
-	}
-
+	// No not-ready guard here: the unlink + epoch bump below queues through
+	// reconnect blips (queueIfNotReady). The balance-field flush still skips
+	// itself when the client isn't ready — its fail-fast read machinery treats
+	// a blip as "nothing to flush", same as before.
 	await invalidateSharedBalanceFields({
 		ctx,
 		customerId,
 		redisV2,
+		flushBalances,
 	});
 
 	const { org, env, logger } = ctx;
@@ -61,6 +60,7 @@ const invalidateCachedFullSubjectOnRedis = async ({
 		operation: () => pipeline.exec(),
 		source: "invalidateCachedFullSubject",
 		redisInstance: redisV2,
+		queueIfNotReady: true,
 		onError: (error: unknown) => {
 			logger.error(
 				`[invalidateCachedFullSubject] subject: ${subjectLabel}, source: ${source}, error: ${error}`,
@@ -80,11 +80,16 @@ export const invalidateCachedFullSubject = async ({
 	entityId,
 	ctx,
 	source,
+	flushBalances,
 }: {
 	customerId: string;
 	entityId?: string;
 	ctx: AutumnContext;
 	source?: string;
+	/** Flush cached balances to Postgres before deleting them. Only safe when
+	 *  the caller has NOT just written balances to Postgres directly — the
+	 *  cached balances must still be the source of truth. */
+	flushBalances?: boolean;
 }): Promise<void> => {
 	if (!customerId) return;
 
@@ -99,6 +104,7 @@ export const invalidateCachedFullSubject = async ({
 				ctx,
 				source,
 				redisV2,
+				flushBalances,
 			}),
 		),
 	);

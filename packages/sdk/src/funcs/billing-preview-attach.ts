@@ -42,7 +42,7 @@ import { Result } from "../types/fp.js";
  * @param planId - The ID of the plan.
  * @param featureQuantities - If this plan contains prepaid features, use this field to specify the quantity of each prepaid feature. This quantity includes the included amount and billing units defined when setting up the plan. (optional)
  * @param version - The version of the plan to attach. (optional)
- * @param customize - Customize the plan to attach. Can override the price, items, free trial, or a combination. (optional)
+ * @param customize - Customize the plan to attach. Can override the price, items, licenses, free trial, or a combination. (optional)
  * @param invoiceMode - Invoice mode creates a draft or open invoice and sends it to the customer, instead of charging their card immediately. This uses Stripe's send_invoice collection method. (optional)
  * @param prorationBehavior - How to handle proration when updating an existing subscription. 'prorate_immediately' charges/credits prorated amounts now, 'none' skips creating any charges. (optional)
  * @param redirectMode - Controls when to return a checkout URL. 'always' returns a URL even if payment succeeds, 'if_required' only when payment action is needed, 'never' disables redirects. (optional)
@@ -55,14 +55,17 @@ import { Result } from "../types/fp.js";
  * @param startsAt - Unix timestamp in milliseconds for when the attached plan should start. Future dates create a scheduled subscription. (optional)
  * @param endsAt - Unix timestamp in milliseconds for when the attached plan should end. (optional)
  * @param checkoutSessionParams - Additional parameters to pass into the creation of the Stripe checkout session. (optional)
+ * @param longLivedCheckout - If true, returns an Autumn-hosted checkout link that can create a fresh Stripe checkout session when opened. (optional)
  * @param customLineItems - Custom line items that override the auto-generated proration invoice. Only valid for immediate plan changes (eg. upgrades or one off plans). (optional)
  * @param processorSubscriptionId - The processor subscription ID to link. Use this to attach an existing Stripe subscription instead of creating a new one. (optional)
  * @param carryOverBalances - Whether to carry over balances from the previous plan. (optional)
  * @param carryOverUsages - Whether to carry over usages from the previous plan. (optional)
+ * @param licenseQuantities - Seat quantities for the plan's licenses, keyed by license plan. (optional)
  * @param metadata - Key-value metadata to attach to the Stripe subscription, invoice, and checkout session created during this attach flow. Keys prefixed with 'autumn_' are reserved and will be stripped. (optional)
  * @param noBillingChanges - If true, skips any billing changes for the attach operation. (optional)
  * @param enablePlanImmediately - If true, the customer's plan is activated immediately even when payment is deferred (invoice mode) or pending (Stripe checkout). For Stripe checkout, the customer_product is inserted before the customer completes the hosted form. (optional)
  * @param taxRateId - Stripe tax rate ID (txr_...) to apply as the default tax rate on the created subscription, invoice, or checkout session line items. (optional)
+ * @param currency - Currency to bill this attach in (e.g. usd, eur). Must match the customer's currency if they are already locked to one, and the plan must offer a paid price in it. Defaults to the customer's currency, then the org default. (optional)
  *
  * @returns A preview response with line items, totals, and effective dates for the proposed changes.
  */

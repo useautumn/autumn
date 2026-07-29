@@ -5,6 +5,7 @@ import { useAxiosInstance } from "@/services/useAxiosInstance";
 interface RevenueCatProduct {
 	id: string;
 	name: string;
+	platforms: string[];
 }
 
 interface RevenueCatProductsResponse {

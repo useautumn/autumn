@@ -15,7 +15,7 @@ export function applyCommittedMigrations(
 	branchName: string,
 	databaseUrl: string,
 ): void {
-	log(`applying committed migrations to ${branchName}`);
+	log(`applying committed migrations to ${branchName} (this may take a few minutes)`);
 
 	const code = shInherit("bun", ["db", "migrate", "--bootstrap"], {
 		cwd: PROJECT_ROOT,

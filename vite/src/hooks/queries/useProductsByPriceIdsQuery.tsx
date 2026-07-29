@@ -13,11 +13,7 @@ export const useProductsByPriceIdsQuery = (priceIds: string[]) => {
 	const buildKey = useQueryKeyFactory();
 
 	const sortedIds = [...priceIds].sort();
-	const queryKey = buildKey([
-		"products",
-		"by-price-ids",
-		sortedIds.join(","),
-	]);
+	const queryKey = buildKey(["products", "by-price-ids", sortedIds.join(",")]);
 
 	const { data, isLoading, error, refetch } = useQuery<{
 		products: ProductV2[];

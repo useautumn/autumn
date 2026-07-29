@@ -69,6 +69,7 @@ function EditContent() {
 		productWithFormItems,
 		handlePlanEditorSave,
 		handlePlanEditorCancel,
+		formValues,
 	} = useUpdateSubscriptionFormContext();
 
 	const { customerProduct } = formContext;
@@ -123,6 +124,8 @@ function EditContent() {
 						onSave={handlePlanEditorSave}
 						onCancel={handlePlanEditorCancel}
 						isOpen={showPlanEditor}
+						enableLicenseEditing
+						initialAddLicenses={formValues.addLicenses}
 					/>
 				)}
 			</div>
@@ -211,7 +214,9 @@ export function SubscriptionUpdateSheet() {
 					title="Update Subscription"
 					description="Loading product..."
 				/>
-				<div className="p-4 text-sm text-tertiary-foreground">Loading product data...</div>
+				<div className="p-4 text-sm text-tertiary-foreground">
+					Loading product data...
+				</div>
 			</div>
 		);
 	}

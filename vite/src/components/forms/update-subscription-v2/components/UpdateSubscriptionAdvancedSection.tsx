@@ -1,3 +1,4 @@
+import { IconButton, Switch } from "@autumn/ui";
 import { PlusIcon } from "@phosphor-icons/react";
 import { AnimatePresence, motion } from "motion/react";
 import {
@@ -10,8 +11,6 @@ import {
 	ConfigRow,
 } from "@/components/forms/shared/advanced-section";
 import { DiscountRow } from "@/components/forms/shared/discount-row/DiscountRow";
-import { Switch } from "@/components/ui/switch";
-import { IconButton } from "@/components/v2/buttons/IconButton";
 import { useUpdateSubscriptionFormContext } from "../context/UpdateSubscriptionFormProvider";
 
 export function UpdateSubscriptionAdvancedSection() {

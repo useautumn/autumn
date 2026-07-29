@@ -4,6 +4,7 @@ import type {
 	ListEntitiesParams,
 } from "@autumn/shared";
 import { type SQL, sql } from "drizzle-orm";
+import { planetScaleTag } from "@/db/dbUtils.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { getFullSubjectRowsQuery } from "@/internal/customers/repos/getFullSubject/getFullSubjectRowsQuery.js";
 
@@ -175,6 +176,7 @@ export const getPaginatedEntitySubjectsQuery = ({
 		includeInvoices: false,
 		includeEntityAggregations: false,
 		entityScopedOnly: true,
+		queryTag: "getPaginatedEntitySubjects",
 	});
 };
 
@@ -192,6 +194,7 @@ const countEntities = async ({
 			env: ctx.env,
 			filterSql,
 		})}
+		${planetScaleTag({ query: "countEntities" })}
 	`);
 	const rawCount = (rows[0] as { total_count?: string | number } | undefined)
 		?.total_count;

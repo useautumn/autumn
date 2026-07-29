@@ -4,12 +4,14 @@ import { useMemo, useState } from "react";
 interface MultiSelectOption {
 	label: string;
 	value: string;
+	description?: string;
 }
 
 interface MultiSelectProps {
 	options: MultiSelectOption[];
 	defaultValue?: string[];
 	visibleOptionCount?: number;
+	onBack?: () => void;
 	onChange?: (values: string[]) => void;
 	onSubmit?: (values: string[]) => void;
 }
@@ -22,6 +24,7 @@ export function MultiSelect({
 	options,
 	defaultValue = [],
 	visibleOptionCount = 5,
+	onBack,
 	onChange,
 	onSubmit,
 }: MultiSelectProps) {
@@ -38,6 +41,11 @@ export function MultiSelect({
 	}, [options, visibleFrom, effectiveVisibleCount]);
 
 	useInput((input, key) => {
+		if (key.leftArrow) {
+			onBack?.();
+			return;
+		}
+
 		if (key.downArrow) {
 			const nextIndex = Math.min(focusedIndex + 1, options.length - 1);
 			setFocusedIndex(nextIndex);
@@ -82,13 +90,20 @@ export function MultiSelect({
 				const isSelected = selectedValues.has(option.value);
 
 				return (
-					<Box key={option.value}>
-						<Text color={isFocused ? "cyan" : undefined}>
-							{isFocused ? POINTER : " "}{" "}
-						</Text>
-						<Text color={isSelected ? "green" : isFocused ? "cyan" : undefined}>
-							{isSelected ? TICK : CIRCLE} {option.label}
-						</Text>
+					<Box flexDirection="column" key={option.value}>
+						<Box>
+							<Text color={isFocused ? "cyan" : undefined}>
+								{isFocused ? POINTER : " "}{" "}
+							</Text>
+							<Text
+								color={isSelected ? "green" : isFocused ? "cyan" : undefined}
+							>
+								{isSelected ? TICK : CIRCLE} {option.label}
+							</Text>
+						</Box>
+						{option.description && (
+							<Text color="gray"> {option.description}</Text>
+						)}
 					</Box>
 				);
 			})}

@@ -38,6 +38,11 @@ export const ExtUpdateBalanceParamsV0Schema = BalanceParamsBaseSchema.extend({
 		description:
 			"The next reset time for the balance. If there are multiple breakdowns, this will update the breakdown with the next reset time.",
 	}),
+
+	expires_at: z.number().optional().meta({
+		description:
+			"Unix timestamp (milliseconds) when the balance expires. Targets a specific balance via balance_id / interval when the customer has multiple balances for the same feature.",
+	}),
 });
 
 export const UpdateBalanceParamsV0Schema =

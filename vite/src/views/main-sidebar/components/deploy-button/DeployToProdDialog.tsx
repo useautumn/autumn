@@ -1,6 +1,3 @@
-import { ArrowRightIcon } from "@phosphor-icons/react";
-import { useState } from "react";
-import { IconButton } from "@/components/v2/buttons/IconButton";
 import {
 	Dialog,
 	DialogContent,
@@ -8,12 +5,13 @@ import {
 	DialogFooter,
 	DialogHeader,
 	DialogTitle,
-} from "@/components/v2/dialogs/Dialog";
-import {
+	IconButton,
 	Tooltip,
 	TooltipContent,
 	TooltipTrigger,
-} from "@/components/v2/tooltips/Tooltip";
+} from "@autumn/ui";
+import { ArrowRightIcon } from "@phosphor-icons/react";
+import { useState } from "react";
 import { useOrg } from "@/hooks/common/useOrg";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
 import { Step1ConnectStripe } from "../../deploy-dialog/Step1ConnectStripe";

@@ -146,6 +146,7 @@ const createPlan = ({
 	name: name ?? planNameFromId(planId),
 	price: basePrice,
 	version,
+	metadata: {},
 });
 
 /** Plan fixtures default to realistic base prices and accept plan items directly. */

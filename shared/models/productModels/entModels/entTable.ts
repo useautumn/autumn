@@ -31,6 +31,7 @@ export const entitlements = pgTable(
 
 		carry_from_previous: boolean("carry_from_previous").default(false),
 		entity_feature_id: text("entity_feature_id").default(sql`null`),
+		pooled: boolean().notNull().default(false),
 
 		// Optional fields
 		org_id: text("org_id"),
@@ -68,6 +69,12 @@ export const entitlements = pgTable(
 			table.internal_reward_id,
 			table.internal_feature_id,
 		),
+		index("idx_entitlements_internal_feature_id_c")
+			.on(sql`${table.internal_feature_id} COLLATE "C"`)
+			.concurrently(),
+		index("idx_entitlements_internal_feature_id")
+			.on(table.internal_feature_id)
+			.concurrently(),
 		// Serves joins on rewards.internal_id (collation C). The plain
 		// internal_reward_id index above is default-collation and can't be used
 		// when the join collation is C.

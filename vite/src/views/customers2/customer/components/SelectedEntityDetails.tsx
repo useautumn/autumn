@@ -1,9 +1,7 @@
+import { Button, CopyButton, SearchableSelect } from "@autumn/ui";
 import { PlusIcon, TrashIcon, XIcon } from "@phosphor-icons/react";
 import { CheckIcon } from "lucide-react";
 import { useState } from "react";
-import { Button } from "@/components/v2/buttons/Button";
-import { CopyButton } from "@/components/v2/buttons/CopyButton";
-import { SearchableSelect } from "@/components/v2/selects/SearchableSelect";
 import { cn } from "@/lib/utils";
 import { useEntitySelector } from "../hooks/useEntitySelector";
 import { CreateEntity } from "./CreateEntity";
@@ -57,7 +55,7 @@ export const SelectedEntityDetails = () => {
 								)}
 							>
 								{entity
-									? (entity.name || entity.id || PLACEHOLDER)
+									? entity.name || entity.id || PLACEHOLDER
 									: "Select entity"}
 							</span>
 						)}

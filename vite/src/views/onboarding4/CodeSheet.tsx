@@ -1,9 +1,8 @@
 import { type CreditSystemConfig, FeatureType } from "@autumn/shared";
+import { Button, Sheet, SheetContent } from "@autumn/ui";
 import { Code } from "@phosphor-icons/react";
 import { useEffect, useState } from "react";
-import { Button } from "@/components/v2/buttons/Button";
 import { SDKSelector } from "@/components/v2/SDKSelector";
-import { Sheet, SheetContent } from "@/components/v2/sheets/Sheet";
 import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
 import { useSDKStore } from "@/hooks/stores/useSDKStore";
 import {
@@ -164,7 +163,9 @@ export function CodeSheet({ stepId, title, description }: CodeSheetProps) {
 								excludeSDKs={stepId === "usage" ? ["react"] : undefined}
 							/>
 						</div>
-						<p className="text-tertiary-foreground text-sm mt-1.5">{description}</p>
+						<p className="text-tertiary-foreground text-sm mt-1.5">
+							{description}
+						</p>
 					</div>
 
 					<div className="px-4 pb-4 pt-4">

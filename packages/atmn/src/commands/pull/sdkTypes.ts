@@ -1,11 +1,20 @@
 import { writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import prettier from "prettier";
-import type { Feature, Plan } from "../../compose/models/index.js";
+import type { Feature } from "../../compose/models/index.js";
+import type { Plan } from "../../compose/models/variantModels.js";
 import {
 	featureIdToVarName,
 	planIdToVarName,
 } from "../../lib/transforms/index.js";
+
+const versionedCodegenId = ({
+	id,
+	version,
+}: {
+	id: string;
+	version?: number;
+}) => (version === undefined ? id : `${id}-v-${version}`);
 
 /**
  * Generate SDK types file (@useautumn-sdk.d.ts)
@@ -46,7 +55,7 @@ export async function generateSdkTypes(options: {
 	if (plans.length > 0) {
 		sections.push(`  // Plans`);
 		for (const plan of plans) {
-			const varName = planIdToVarName(plan.id);
+			const varName = planIdToVarName(versionedCodegenId(plan));
 			sections.push(`  export const ${varName}: Plan;`);
 		}
 		sections.push(``);

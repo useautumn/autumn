@@ -1,13 +1,13 @@
 import type { Feature } from "@autumn/shared";
+import { Button } from "@autumn/ui";
 import { CaretDownIcon, PlusIcon } from "@phosphor-icons/react";
 import { useRef, useState } from "react";
-import { Button } from "@/components/v2/buttons/Button";
 import {
 	DropdownMenu,
 	DropdownMenuContent,
 	DropdownMenuItem,
 	DropdownMenuTrigger,
-} from "@/components/v2/dropdowns/DropdownMenu";
+} from "@autumn/ui";
 import { cn } from "@/lib/utils";
 import { InlineCreateFeatureForm } from "@/views/products/features/credit-systems/components/InlineCreateFeatureForm";
 import { getFeatureIcon } from "@/views/products/features/utils/getFeatureIcon";
@@ -99,7 +99,10 @@ export function FeatureSelectDropdown({
 									setTimeout(() => nameInputRef.current?.focus(), 0);
 								}}
 							>
-								<PlusIcon className="size-[14px] text-muted-foreground" weight="regular" />
+								<PlusIcon
+									className="size-[14px] text-muted-foreground"
+									weight="regular"
+								/>
 								Create new feature
 							</Button>
 						</div>

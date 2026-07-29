@@ -5,121 +5,91 @@ import {
 	type Feature,
 	type FullCustomer,
 	fullCustomerToTags,
+	usageLimitFilterMatchesProperties,
 	WebhookEventType,
 } from "@autumn/shared";
 import { sendSvixEvent } from "@/external/svix/svixHelpers.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
-import { getApiCustomerBase } from "@/internal/customers/cusUtils/apiCusUtils/getApiCustomerBase.js";
-import { getApiEntityBase } from "@/internal/entities/entityUtils/apiEntityUtils/getApiEntityBase.js";
 
-const checkLimitForSubject = async ({
-	ctx,
-	oldFullCus,
-	newFullCus,
-	feature,
-	entityId,
-}: {
-	ctx: AutumnContext;
-	oldFullCus: FullCustomer;
-	newFullCus: FullCustomer;
-	feature: Feature;
-	entityId?: string;
-}) => {
-	const entity = entityId
-		? newFullCus.entities?.find((e) => e.id === entityId)
-		: undefined;
-
-	let oldSubject: ApiCustomerV5 | ApiEntityV2 | undefined;
-	let newSubject: ApiCustomerV5 | ApiEntityV2 | undefined;
-
-	if (entity) {
-		const { apiEntity: oldApiEntity } = await getApiEntityBase({
-			ctx,
-			entity,
-			fullCus: oldFullCus,
-		});
-		const { apiEntity: newApiEntity } = await getApiEntityBase({
-			ctx,
-			entity,
-			fullCus: newFullCus,
-		});
-		oldSubject = oldApiEntity;
-		newSubject = newApiEntity;
-	} else {
-		const { apiCustomer: oldApiCustomer } = await getApiCustomerBase({
-			ctx,
-			fullCus: oldFullCus,
-		});
-		const { apiCustomer: newApiCustomer } = await getApiCustomerBase({
-			ctx,
-			fullCus: newFullCus,
-		});
-		oldSubject = oldApiCustomer;
-		newSubject = newApiCustomer;
-	}
-
-	const oldBalance = oldSubject.balances?.[feature.id];
-	const newBalance = newSubject.balances?.[feature.id];
-
-	if (!oldBalance || !newBalance) return;
-
-	const oldResult = apiBalanceToAllowed({
-		apiBalance: oldBalance,
-		apiSubject: oldSubject,
-		feature,
-		requiredBalance: 0.0000001,
-	});
-
-	const newResult = apiBalanceToAllowed({
-		apiBalance: newBalance,
-		apiSubject: newSubject,
-		feature,
-		requiredBalance: 0.0000001,
-	});
-
-	if (!oldResult.allowed || newResult.allowed) return;
-
-	const customerId = newFullCus.id || newFullCus.internal_id;
-	const tags = fullCustomerToTags({ fullCustomer: newFullCus });
-
-	await sendSvixEvent({
-		ctx,
-		eventType: WebhookEventType.BalancesLimitReached,
-		data: {
-			customer_id: customerId,
-			feature_id: feature.id,
-			limit_type: newResult.limitType ?? "included",
-			...(entityId && { entity_id: entityId }),
-		},
-		tags,
-	});
-
-	ctx.logger.info(
-		`Limit reached for customer ${customerId}, feature ${feature.id}, type ${newResult.limitType ?? "included"}${entityId ? `, entity ${entityId}` : ""}`,
-	);
-};
-
+// Subjects must be built via buildEvaluationSubject, or plan-level / percentage
+// caps are invisible here and the allowed -> blocked transition never fires.
 export const checkLimitReached = async ({
 	ctx,
-	oldFullCus,
+	oldEvalSubject,
+	newEvalSubject,
 	newFullCus,
 	feature,
 	entityId,
+	eventProperties,
 }: {
 	ctx: AutumnContext;
-	oldFullCus: FullCustomer;
+	oldEvalSubject: ApiCustomerV5 | ApiEntityV2;
+	newEvalSubject: ApiCustomerV5 | ApiEntityV2;
 	newFullCus: FullCustomer;
 	feature: Feature;
 	entityId?: string;
+	eventProperties?: Record<string, unknown> | null;
 }) => {
 	try {
-		await checkLimitForSubject({
-			ctx,
-			oldFullCus,
-			newFullCus,
+		const oldBalance = oldEvalSubject.balances?.[feature.id];
+		const newBalance = newEvalSubject.balances?.[feature.id];
+
+		if (!oldBalance || !newBalance) return;
+
+		const oldResult = apiBalanceToAllowed({
+			apiBalance: oldBalance,
+			apiSubject: oldEvalSubject,
 			feature,
-			entityId,
+			requiredBalance: 0.0000001,
+			properties: eventProperties,
 		});
+
+		const newResult = apiBalanceToAllowed({
+			apiBalance: newBalance,
+			apiSubject: newEvalSubject,
+			feature,
+			requiredBalance: 0.0000001,
+			properties: eventProperties,
+		});
+
+		if (!oldResult.allowed || newResult.allowed) return;
+
+		// When the blocking cap is a filtered usage limit, attach its filter so
+		// the receiver knows WHICH slice (e.g. which API key) hit its cap.
+		const blockedFilter =
+			newResult.limitType === "usage_limit" && eventProperties
+				? newEvalSubject.billing_controls?.usage_limits?.find(
+						(usageLimit) =>
+							usageLimit.feature_id === feature.id &&
+							usageLimit.enabled !== false &&
+							usageLimit.filter != null &&
+							usageLimitFilterMatchesProperties({
+								filterProperties: usageLimit.filter.properties,
+								eventProperties,
+							}) &&
+							(usageLimit.usage ?? 0) >= usageLimit.limit,
+					)?.filter
+				: undefined;
+
+		const customerId = newFullCus.id || newFullCus.internal_id;
+		const tags = fullCustomerToTags({ fullCustomer: newFullCus });
+
+		await sendSvixEvent({
+			ctx,
+			eventType: WebhookEventType.BalancesLimitReached,
+			data: {
+				customer_id: customerId,
+				feature_id: feature.id,
+				limit_type: newResult.limitType ?? "included",
+				...(entityId && { entity_id: entityId }),
+				...(blockedFilter && { filter: blockedFilter }),
+			},
+			tags,
+		});
+
+		ctx.logger.info(
+			`Limit reached for customer ${customerId}, feature ${feature.id}, type ${newResult.limitType ?? "included"}${entityId ? `, entity ${entityId}` : ""}`,
+		);
 	} catch (error) {
 		ctx.logger.error(`[checkLimitReached] error: ${error}`, { error });
 	}

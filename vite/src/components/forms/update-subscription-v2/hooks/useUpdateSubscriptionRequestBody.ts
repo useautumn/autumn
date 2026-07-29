@@ -1,10 +1,16 @@
 import type {
+	CustomizePlanLicense,
 	ProductItem,
 	ProductItemInterval,
 	UpdateSubscriptionV0Params,
 } from "@autumn/shared";
-import { useCallback } from "react";
+import { ProductItemFeatureType } from "@autumn/shared";
+import { useCallback, useMemo } from "react";
 import { normalizeBillingRequestItems } from "@/components/forms/shared/utils/normalizeBillingRequestItems";
+import {
+	convertLicenseQuantitiesToParams,
+	customerLicenseTotals,
+} from "@/utils/billing/licenseQuantityUtils";
 import type { UpdateSubscriptionFormContext } from "../context/UpdateSubscriptionFormProvider";
 import { getFreeTrial } from "../utils/getFreeTrial";
 import type { UseUpdateSubscriptionForm } from "./useUpdateSubscriptionForm";
@@ -14,6 +20,7 @@ type PrepaidItemInput = {
 	feature?: { internal_id?: string | null } | null;
 	included_usage?: number | "inf" | null;
 	interval?: ProductItemInterval | null;
+	feature_type?: ProductItemFeatureType | null;
 };
 
 /** Pure function to build update subscription options from prepaid form values. Extracted for testability. */
@@ -63,31 +70,57 @@ export function buildUpdateSubscriptionOptions({
 							includedUsage: getIncludedUsage({ item }),
 						});
 			const currentIncludedUsage = getIncludedUsage({ item });
-			const purchasedQuantityChanged =
-				getPurchasedQuantity({
-					totalQuantity: normalizedInputQuantity ?? initialQuantity,
-					includedUsage: currentIncludedUsage,
-				}) !== (initialBackendQuantities[featureId] ?? 0);
-
-			// One-off items resubmit even when oldQuant === newQuant
-			// (each submission is a fresh top-up purchase).
-			const isOneOff = item.interval === null;
-			const quantityChanged = normalizedInputQuantity !== initialQuantity;
 
 			if (
-				normalizedInputQuantity !== undefined &&
-				normalizedInputQuantity !== null &&
-				featureId &&
-				(quantityChanged || purchasedQuantityChanged || isOneOff)
+				normalizedInputQuantity === undefined ||
+				normalizedInputQuantity === null ||
+				!featureId
 			) {
-				return {
-					feature_id: featureId,
-					quantity: normalizedInputQuantity,
-				};
+				return null;
+			}
+
+			const newPurchasedQuantity = getPurchasedQuantity({
+				totalQuantity: normalizedInputQuantity,
+				includedUsage: currentIncludedUsage,
+			});
+			const currentPurchasedQuantity = getPurchasedQuantity({
+				totalQuantity: initialQuantity,
+				includedUsage: currentIncludedUsage,
+			});
+
+			// Only consumable (single-use) items top up by delta. Non-consumables
+			// are continuous-use levels with interval === null — always absolute.
+			const isOneOffTopUp =
+				item.interval === null &&
+				item.feature_type !== ProductItemFeatureType.ContinuousUse;
+			if (isOneOffTopUp) {
+				const topUpDelta = newPurchasedQuantity - currentPurchasedQuantity;
+				if (topUpDelta <= 0) return null;
+				return { feature_id: featureId, quantity: topUpDelta };
+			}
+
+			const purchasedQuantityChanged =
+				newPurchasedQuantity !== (initialBackendQuantities[featureId] ?? 0);
+			const quantityChanged = normalizedInputQuantity !== initialQuantity;
+			if (quantityChanged || purchasedQuantityChanged) {
+				return { feature_id: featureId, quantity: normalizedInputQuantity };
 			}
 			return null;
 		})
 		.filter((o): o is { feature_id: string; quantity: number } => o !== null);
+}
+
+export function buildUpdateSubscriptionCustomizationParams({
+	items,
+	addLicenses,
+}: {
+	items: ProductItem[] | null;
+	addLicenses: CustomizePlanLicense[] | null;
+}): Pick<UpdateSubscriptionV0Params, "items" | "upsert_licenses"> {
+	return {
+		items: normalizeBillingRequestItems({ items }),
+		upsert_licenses: addLicenses ?? undefined,
+	};
 }
 
 export function useUpdateSubscriptionRequestBody({
@@ -102,21 +135,37 @@ export function useUpdateSubscriptionRequestBody({
 	const { customerId, product, entityId, customerProduct } =
 		updateSubscriptionFormContext;
 
-	const initialPrepaidOptions =
-		form.options.defaultValues?.prepaidOptions ?? {};
-	const initialBackendQuantities = customerProduct.options.reduce(
-		(acc, option) => {
-			acc[option.feature_id] = option.quantity;
-			return acc;
-		},
-		{} as Record<string, number>,
+	const initialPrepaidOptions = useMemo(
+		() => form.options.defaultValues?.prepaidOptions ?? {},
+		[form.options.defaultValues?.prepaidOptions],
+	);
+	const initialBackendQuantities = useMemo(
+		() =>
+			customerProduct.options.reduce(
+				(acc, option) => {
+					acc[option.feature_id] = option.quantity;
+					return acc;
+				},
+				{} as Record<string, number>,
+			),
+		[customerProduct.options],
 	);
 	const initialVersion = form.options.defaultValues?.version;
+	const initialLicenseQuantities = useMemo(
+		() =>
+			customerLicenseTotals({
+				customerLicenses: customerProduct.customer_licenses,
+			}),
+		[customerProduct.customer_licenses],
+	);
+	const customerProductId =
+		customerProduct.id ?? customerProduct.internal_product_id;
 
 	const buildRequestBody = useCallback((): UpdateSubscriptionV0Params => {
 		const formValues = form.store.state.values;
 		const {
 			prepaidOptions,
+			licenseQuantities,
 			trialLength,
 			trialDuration,
 			removeTrial,
@@ -124,6 +173,7 @@ export function useUpdateSubscriptionRequestBody({
 			trialCardRequired,
 			version,
 			items,
+			addLicenses,
 			cancelAction,
 			billingBehavior,
 			resetBillingCycle,
@@ -142,8 +192,7 @@ export function useUpdateSubscriptionRequestBody({
 			customer_id: customerId ?? "",
 			product_id: product?.id,
 			entity_id: entityId,
-			customer_product_id:
-				customerProduct.id ?? customerProduct.internal_product_id,
+			customer_product_id: customerProductId,
 		};
 
 		// For cancel actions, only include cancellation-related fields
@@ -171,6 +220,16 @@ export function useUpdateSubscriptionRequestBody({
 			initialBackendQuantities,
 		});
 
+		// Only send totals the user actually changed; omitted licenses keep
+		// their current paid quantity server-side.
+		const changedLicenseQuantities = Object.fromEntries(
+			Object.entries(licenseQuantities ?? {}).filter(
+				([licenseId, quantity]) =>
+					quantity !== undefined &&
+					quantity !== initialLicenseQuantities[licenseId],
+			),
+		);
+
 		const freeTrial = getFreeTrial({
 			removeTrial,
 			trialLength,
@@ -182,8 +241,11 @@ export function useUpdateSubscriptionRequestBody({
 		return {
 			...base,
 			options: options.length > 0 ? options : undefined,
+			license_quantities: convertLicenseQuantitiesToParams({
+				licenseQuantities: changedLicenseQuantities,
+			}),
 			free_trial: freeTrial,
-			items: normalizeBillingRequestItems({ items }),
+			...buildUpdateSubscriptionCustomizationParams({ items, addLicenses }),
 			version: version !== initialVersion ? version : undefined,
 			billing_behavior: billingBehavior || undefined,
 			billing_cycle_anchor: resetBillingCycle ? "now" : undefined,
@@ -196,13 +258,12 @@ export function useUpdateSubscriptionRequestBody({
 		customerId,
 		product?.id,
 		entityId,
-		customerProduct.id,
-		customerProduct.internal_product_id,
-		customerProduct.options,
+		customerProductId,
 		initialVersion,
 		currentPrepaidItems,
 		initialPrepaidOptions,
 		initialBackendQuantities,
+		initialLicenseQuantities,
 	]);
 
 	return { buildRequestBody };

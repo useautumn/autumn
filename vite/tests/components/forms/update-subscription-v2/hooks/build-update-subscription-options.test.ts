@@ -1,5 +1,9 @@
 import { describe, expect, test } from "bun:test";
-import { type ProductItem, ProductItemInterval } from "@autumn/shared";
+import {
+	type ProductItem,
+	ProductItemFeatureType,
+	ProductItemInterval,
+} from "@autumn/shared";
 import { normalizeBillingRequestItems } from "@/components/forms/shared/utils/normalizeBillingRequestItems";
 import { buildUpdateSubscriptionOptions } from "@/components/forms/update-subscription-v2/hooks/useUpdateSubscriptionRequestBody";
 
@@ -192,7 +196,9 @@ describe("buildUpdateSubscriptionOptions — included usage handling", () => {
 		expect(result).toEqual([{ feature_id: "int_messages", quantity: 3000 }]);
 	});
 
-	test("should include one-off items even when quantity has not changed", () => {
+	test("should NOT resubmit a one-off item when its quantity has not changed", () => {
+		// A one-off top-up is a fresh purchase the backend ADDS — resubmitting the
+		// unchanged total would re-buy the whole balance on every update.
 		const result = buildUpdateSubscriptionOptions({
 			prepaidItems: [
 				{ feature_id: "credits", included_usage: 0, interval: null },
@@ -202,7 +208,94 @@ describe("buildUpdateSubscriptionOptions — included usage handling", () => {
 			initialBackendQuantities: { credits: 1000 },
 		});
 
-		expect(result).toEqual([{ feature_id: "credits", quantity: 1000 }]);
+		expect(result).toEqual([]);
+	});
+
+	test("should send only the increase (delta) when a one-off quantity grows", () => {
+		const result = buildUpdateSubscriptionOptions({
+			prepaidItems: [
+				{ feature_id: "credits", included_usage: 0, interval: null },
+			],
+			prepaidOptions: { credits: 1500 },
+			initialPrepaidOptions: { credits: 1000 },
+			initialBackendQuantities: { credits: 1000 },
+		});
+
+		expect(result).toEqual([{ feature_id: "credits", quantity: 500 }]);
+	});
+
+	test("should NOT resubmit a one-off item when its quantity decreases", () => {
+		// One-off top-ups can't be negative — a lower total is not a purchase.
+		const result = buildUpdateSubscriptionOptions({
+			prepaidItems: [
+				{ feature_id: "credits", included_usage: 0, interval: null },
+			],
+			prepaidOptions: { credits: 800 },
+			initialPrepaidOptions: { credits: 1000 },
+			initialBackendQuantities: { credits: 1000 },
+		});
+
+		expect(result).toEqual([]);
+	});
+
+	test("should send the absolute total for a non-consumable item (interval null, continuous use)", () => {
+		// Non-consumables are continuous-use levels that happen to have interval null.
+		// They must send the selected total, never the delta.
+		const result = buildUpdateSubscriptionOptions({
+			prepaidItems: [
+				{
+					feature_id: "mailable_contacts",
+					included_usage: 0,
+					interval: null,
+					feature_type: ProductItemFeatureType.ContinuousUse,
+				},
+			],
+			prepaidOptions: { mailable_contacts: 352 },
+			initialPrepaidOptions: { mailable_contacts: 350 },
+			initialBackendQuantities: { mailable_contacts: 350 },
+		});
+
+		expect(result).toEqual([
+			{ feature_id: "mailable_contacts", quantity: 352 },
+		]);
+	});
+
+	test("should still send the delta for a consumable one-off item (interval null, single use)", () => {
+		const result = buildUpdateSubscriptionOptions({
+			prepaidItems: [
+				{
+					feature_id: "credits",
+					included_usage: 0,
+					interval: null,
+					feature_type: ProductItemFeatureType.SingleUse,
+				},
+			],
+			prepaidOptions: { credits: 1500 },
+			initialPrepaidOptions: { credits: 1000 },
+			initialBackendQuantities: { credits: 1000 },
+		});
+
+		expect(result).toEqual([{ feature_id: "credits", quantity: 500 }]);
+	});
+
+	test("should resubmit a decreased non-consumable total (no delta clamping)", () => {
+		const result = buildUpdateSubscriptionOptions({
+			prepaidItems: [
+				{
+					feature_id: "mailable_contacts",
+					included_usage: 0,
+					interval: null,
+					feature_type: ProductItemFeatureType.ContinuousUse,
+				},
+			],
+			prepaidOptions: { mailable_contacts: 300 },
+			initialPrepaidOptions: { mailable_contacts: 350 },
+			initialBackendQuantities: { mailable_contacts: 350 },
+		});
+
+		expect(result).toEqual([
+			{ feature_id: "mailable_contacts", quantity: 300 },
+		]);
 	});
 
 	test("should still skip recurring items when quantity has not changed", () => {

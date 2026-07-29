@@ -21,6 +21,7 @@ import { insertReferralCode } from "./insertReferralCode.js";
 import { insertReward } from "./insertReward.js";
 import { insertRewardProgram } from "./insertRewardProgram.js";
 import { listRewardPrograms } from "./listRewardPrograms.js";
+import { listApiRewards } from "./listApiRewards.js";
 import { listRewards } from "./listRewards.js";
 import { resetCustomerRedemptions } from "./resetCustomerRedemptions.js";
 import { updateRedemption } from "./updateRedemption.js";
@@ -33,6 +34,7 @@ export const rewardRepo = {
 	getByIdOrCode: getRewardsByIdOrCode,
 	getInIds: getRewardsInIds,
 	list: listRewards,
+	listApiRewards,
 	insert: insertReward,
 	update: updateReward,
 	delete: deleteReward,

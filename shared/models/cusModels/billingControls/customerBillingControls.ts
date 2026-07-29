@@ -7,11 +7,31 @@ import {
 import {
 	type DbOverageAllowed,
 	DbOverageAllowedSchema,
+	pickStricterOverageAllowed,
 } from "./overageAllowed.js";
 import { PurchaseLimitIntervalEnum } from "./purchaseLimitInterval.js";
-import { type DbSpendLimit, DbSpendLimitSchema } from "./spendLimit.js";
+import {
+	type DbSpendLimit,
+	DbSpendLimitSchema,
+	pickStricterSpendLimit,
+} from "./spendLimit.js";
 import { type DbUsageAlert, DbUsageAlertSchema } from "./usageAlert.js";
-import { type DbUsageLimit, DbUsageLimitSchema } from "./usageLimit.js";
+import {
+	type DbUsageLimit,
+	DbUsageLimitSchema,
+	pickStricterUsageLimit,
+	usageLimitFilterKey,
+} from "./usageLimit.js";
+
+export const BILLING_CONTROL_KEYS = [
+	"auto_topups",
+	"spend_limits",
+	"usage_limits",
+	"usage_alerts",
+	"overage_allowed",
+] as const;
+
+export type BillingControlKey = (typeof BILLING_CONTROL_KEYS)[number];
 
 export const AutoTopupPurchaseLimitSchema = z.object({
 	interval: PurchaseLimitIntervalEnum.meta({
@@ -25,6 +45,19 @@ export const AutoTopupPurchaseLimitSchema = z.object({
 	}),
 });
 
+/**
+ * Customer create/update params only. `count` is runtime state written to
+ * `auto_topup_limit_states` and must never be persisted on `customers.auto_topups`
+ * / `products.auto_topups` JSONB — strip via `stripAutoTopupCountsForStorage`.
+ */
+export const AutoTopupPurchaseLimitParamsSchema =
+	AutoTopupPurchaseLimitSchema.extend({
+		count: z.number().min(0).optional().meta({
+			description:
+				"Set the current window's consumed auto top-up count. Omit to leave runtime state unchanged.",
+		}),
+	});
+
 export const AutoTopupSchema = z.object({
 	feature_id: z.string().meta({
 		description: "The ID of the feature (credit balance) to auto top-up.",
@@ -32,7 +65,7 @@ export const AutoTopupSchema = z.object({
 	enabled: z.boolean().default(false).meta({
 		description: "Whether auto top-up is enabled.",
 	}),
-	threshold: z.number().min(0).meta({
+	threshold: z.number().meta({
 		description:
 			"When the balance drops below this threshold, an auto top-up will be purchased.",
 	}),
@@ -45,6 +78,13 @@ export const AutoTopupSchema = z.object({
 	invoice_mode: z.boolean().optional().meta({
 		description:
 			"When true, auto top-up creates a send_invoice invoice instead of auto-charging.",
+	}),
+});
+
+export const AutoTopupParamsSchema = AutoTopupSchema.extend({
+	purchase_limit: AutoTopupPurchaseLimitParamsSchema.optional().meta({
+		description:
+			"Optional rate limit to cap how often auto top-ups occur. Pass count to set the current window's consumed top-ups.",
 	}),
 });
 
@@ -87,8 +127,10 @@ export const ExpandedPurchaseLimitSchema = z.object({
  * strict — see `CustomerBillingControlsParamsSchema`.
  */
 export const AutoTopupResponseSchema = AutoTopupSchema.extend({
+	// Expanded first: its required count/next_reset_at would otherwise be
+	// silently stripped by the laxer static member on re-parse.
 	purchase_limit: z
-		.union([AutoTopupPurchaseLimitSchema, ExpandedPurchaseLimitSchema])
+		.union([ExpandedPurchaseLimitSchema, AutoTopupPurchaseLimitSchema])
 		.optional()
 		.meta({
 			description:
@@ -117,9 +159,134 @@ export const CustomerBillingControlsSchema = z.object({
 	}),
 });
 
+export const DbBillingControlsSchema = z.object({
+	auto_topups: z.array(AutoTopupSchema).nullish(),
+	spend_limits: z.array(DbSpendLimitSchema).nullish(),
+	usage_limits: z.array(DbUsageLimitSchema).nullish(),
+	usage_alerts: z.array(DbUsageAlertSchema).nullish(),
+	overage_allowed: z.array(DbOverageAllowedSchema).nullish(),
+});
+
+export type AutoTopupPurchaseLimit = z.infer<
+	typeof AutoTopupPurchaseLimitSchema
+>;
+export type AutoTopupPurchaseLimitParams = z.input<
+	typeof AutoTopupPurchaseLimitParamsSchema
+>;
+export type ExpandedPurchaseLimit = z.infer<typeof ExpandedPurchaseLimitSchema>;
+export type AutoTopup = z.infer<typeof AutoTopupSchema>;
+export type AutoTopupParams = z.input<typeof AutoTopupParamsSchema>;
+export type AutoTopupResponse = z.infer<typeof AutoTopupResponseSchema>;
+export type CustomerBillingControls = z.infer<
+	typeof CustomerBillingControlsSchema
+>;
+export type DbBillingControls = z.infer<typeof DbBillingControlsSchema>;
+
+/** Strip runtime `count` before persisting auto_topups JSONB. */
+export const stripAutoTopupCountsForStorage = (
+	autoTopups: AutoTopupParams[] | AutoTopup[] | null | undefined,
+): AutoTopup[] | null | undefined => {
+	if (autoTopups == null) return autoTopups;
+
+	return autoTopups.map((topup) =>
+		AutoTopupSchema.parse({
+			...topup,
+			purchase_limit: topup.purchase_limit
+				? {
+						interval: topup.purchase_limit.interval,
+						interval_count: topup.purchase_limit.interval_count ?? 1,
+						limit: topup.purchase_limit.limit,
+					}
+				: undefined,
+		}),
+	);
+};
+
+export const pickBillingControlColumns = (
+	source: Partial<DbBillingControls> | null | undefined,
+): Partial<DbBillingControls> => {
+	if (!source) return {};
+
+	const picked = Object.fromEntries(
+		BILLING_CONTROL_KEYS.flatMap((key) =>
+			source[key] === undefined ? [] : [[key, source[key]]],
+		),
+	) as Partial<DbBillingControls>;
+
+	if (picked.auto_topups !== undefined) {
+		picked.auto_topups = stripAutoTopupCountsForStorage(
+			picked.auto_topups as AutoTopupParams[] | null | undefined,
+		);
+	}
+
+	return picked;
+};
+
+export const billingControlsFromColumns = (
+	source: Partial<DbBillingControls> | null | undefined,
+): CustomerBillingControls => {
+	if (!source) return {};
+
+	return Object.fromEntries(
+		BILLING_CONTROL_KEYS.flatMap((key) =>
+			source[key] == null ? [] : [[key, source[key]]],
+		),
+	) as CustomerBillingControls;
+};
+
+/** Canonical form for change detection: skip_overage_billing false ≡ unset. */
+export const normalizeBillingControlsForCompare = (
+	billingControls: CustomerBillingControls | null | undefined,
+): CustomerBillingControls | undefined => {
+	if (!billingControls?.spend_limits) return billingControls ?? undefined;
+
+	return {
+		...billingControls,
+		spend_limits: billingControls.spend_limits.map((spendLimit) => {
+			if (spendLimit.skip_overage_billing === true) return spendLimit;
+			const { skip_overage_billing: _dropped, ...rest } = spendLimit;
+			return rest;
+		}),
+	};
+};
+
+export const mergeBillingControls = (
+	current: CustomerBillingControls | null | undefined,
+	patch: CustomerBillingControls | null | undefined,
+): CustomerBillingControls | undefined => {
+	if (!patch) return current ?? undefined;
+
+	return billingControlsFromColumns({
+		...(current ?? {}),
+		...pickBillingControlColumns(patch),
+	});
+};
+
 export const CustomerBillingControlsParamsSchema =
-	CustomerBillingControlsSchema.check((ctx) => {
+	CustomerBillingControlsSchema.extend({
+		auto_topups: z.array(AutoTopupParamsSchema).optional().meta({
+			description: "List of auto top-up configurations per feature.",
+		}),
+	}).check((ctx) => {
 		const billingControls = ctx.value;
+		const autoTopupFeatureIds = new Set<string>();
+
+		for (const [index, autoTopup] of (
+			billingControls.auto_topups ?? []
+		).entries()) {
+			if (autoTopupFeatureIds.has(autoTopup.feature_id)) {
+				ctx.issues.push({
+					code: "custom",
+					message: "Only one auto top-up entry is allowed per feature_id",
+					input: autoTopup.feature_id,
+					path: ["auto_topups", index, "feature_id"],
+				});
+				return;
+			}
+
+			autoTopupFeatureIds.add(autoTopup.feature_id);
+		}
+
 		const spendLimitFeatureIds = new Set<string>();
 
 		for (const [index, spendLimit] of (
@@ -142,22 +309,24 @@ export const CustomerBillingControlsParamsSchema =
 			spendLimitFeatureIds.add(spendLimit.feature_id);
 		}
 
-		const usageLimitFeatureIds = new Set<string>();
+		const usageLimitIdentities = new Set<string>();
 
 		for (const [index, usageLimit] of (
 			billingControls.usage_limits ?? []
 		).entries()) {
-			if (usageLimitFeatureIds.has(usageLimit.feature_id)) {
+			const identity = `${usageLimit.feature_id}|${usageLimitFilterKey(usageLimit.filter)}`;
+			if (usageLimitIdentities.has(identity)) {
 				ctx.issues.push({
 					code: "custom",
-					message: "Only one usage limit entry is allowed per feature_id",
+					message:
+						"Only one usage limit entry is allowed per feature_id and filter",
 					input: usageLimit.feature_id,
 					path: ["usage_limits", index, "feature_id"],
 				});
 				return;
 			}
 
-			usageLimitFeatureIds.add(usageLimit.feature_id);
+			usageLimitIdentities.add(identity);
 		}
 
 		const overageAllowedFeatureIds = new Set<string>();
@@ -179,16 +348,6 @@ export const CustomerBillingControlsParamsSchema =
 		}
 	});
 
-export type AutoTopupPurchaseLimit = z.infer<
-	typeof AutoTopupPurchaseLimitSchema
->;
-export type ExpandedPurchaseLimit = z.infer<typeof ExpandedPurchaseLimitSchema>;
-export type AutoTopup = z.infer<typeof AutoTopupSchema>;
-export type AutoTopupResponse = z.infer<typeof AutoTopupResponseSchema>;
-export type CustomerBillingControls = z.infer<
-	typeof CustomerBillingControlsSchema
->;
-
 export type CustomerBillingControlsParams = z.input<
 	typeof CustomerBillingControlsParamsSchema
 >;
@@ -207,4 +366,16 @@ export {
 	DbUsageAlertSchema,
 	DbUsageLimitSchema,
 	EntityBillingControlsSchema,
+	pickStricterOverageAllowed,
+	pickStricterSpendLimit,
+	pickStricterUsageLimit,
 };
+export {
+	USAGE_LIMIT_FILTER_MAX_KEY_LENGTH,
+	USAGE_LIMIT_FILTER_MAX_KEYS,
+	USAGE_LIMIT_FILTER_MAX_VALUE_LENGTH,
+	type UsageLimitFilter,
+	UsageLimitFilterSchema,
+	usageLimitFilterKey,
+	usageLimitFilterMatchesProperties,
+} from "./usageLimit.js";

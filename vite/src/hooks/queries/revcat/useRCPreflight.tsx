@@ -16,7 +16,11 @@ export interface RCPreflightItem {
 	rc_price: RCPreflightPrice | null;
 }
 
-export const useRCPreflight = ({ enabled = true }: { enabled?: boolean } = {}) => {
+export const useRCPreflight = ({
+	enabled = true,
+}: {
+	enabled?: boolean;
+} = {}) => {
 	const axiosInstance = useAxiosInstance();
 	const buildKey = useQueryKeyFactory();
 

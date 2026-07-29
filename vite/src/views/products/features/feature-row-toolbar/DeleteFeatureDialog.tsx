@@ -1,16 +1,16 @@
 import type { Feature } from "@autumn/shared";
-import type { AxiosError } from "axios";
-import { useEffect, useState } from "react";
-import { toast } from "sonner";
-import { Button } from "@/components/v2/buttons/Button";
 import {
+	Button,
 	Dialog,
 	DialogContent,
 	DialogDescription,
 	DialogFooter,
 	DialogHeader,
 	DialogTitle,
-} from "@/components/v2/dialogs/Dialog";
+} from "@autumn/ui";
+import type { AxiosError } from "axios";
+import { useEffect, useState } from "react";
+import { toast } from "sonner";
 import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
 import { useGeneralQuery } from "@/hooks/queries/useGeneralQuery";
 import { FeatureService } from "@/services/FeatureService";

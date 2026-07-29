@@ -1,7 +1,3 @@
-import { useState } from "react";
-import { useNavigate } from "react-router";
-import { toast } from "sonner";
-import { ShortcutButton } from "@/components/v2/buttons/ShortcutButton";
 import {
 	Dialog,
 	DialogContent,
@@ -9,9 +5,13 @@ import {
 	DialogFooter,
 	DialogHeader,
 	DialogTitle,
-} from "@/components/v2/dialogs/Dialog";
-import { FormLabel as FieldLabel } from "@/components/v2/form/FormLabel";
-import { Input } from "@/components/v2/inputs/Input";
+	FormLabel as FieldLabel,
+	Input,
+	ShortcutButton,
+} from "@autumn/ui";
+import { useState } from "react";
+import { useNavigate } from "react-router";
+import { toast } from "sonner";
 import { useSwitchActiveOrg } from "@/hooks/common/useOrg";
 import { authClient } from "@/lib/auth-client";
 import { slugify } from "@/utils/formatUtils/formatTextUtils";

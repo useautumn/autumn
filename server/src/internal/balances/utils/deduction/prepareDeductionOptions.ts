@@ -5,9 +5,10 @@ import type { FeatureDeduction } from "../types/featureDeduction.js";
 
 /** Deduction options with all defaults resolved (no optional fields) */
 type ResolvedDeductionOptions = Required<
-	Omit<DeductionOptions, "customerEntitlementFilters">
+	Omit<DeductionOptions, "customerEntitlementFilters" | "eventProperties">
 > & {
 	customerEntitlementFilters: DeductionOptions["customerEntitlementFilters"];
+	eventProperties: DeductionOptions["eventProperties"];
 };
 
 /**
@@ -37,6 +38,7 @@ export const prepareDeductionOptions = ({
 		skipAdditionalBalance: true, // not used today
 		alterGrantedBalance: options.alterGrantedBalance ?? false,
 		customerEntitlementFilters: options.customerEntitlementFilters,
+		eventProperties: options.eventProperties,
 		paidAllocatedV1: isPaidAllocatedV1,
 
 		triggerAutoTopUp: options.triggerAutoTopUp ?? false,

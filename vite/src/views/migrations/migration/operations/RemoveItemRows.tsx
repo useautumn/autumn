@@ -1,24 +1,24 @@
-import { useState } from "react";
-import { Button } from "@/components/v2/buttons/Button";
 import {
+	Button,
 	DropdownMenu,
 	DropdownMenuContent,
 	DropdownMenuItem,
 	DropdownMenuTrigger,
-} from "@/components/v2/dropdowns/DropdownMenu";
-import { FeatureSearchDropdown } from "@/components/v2/dropdowns/FeatureSearchDropdown";
-import { Sheet, SheetContent } from "@/components/v2/sheets/Sheet";
-import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
+	Sheet,
+	SheetContent,
+} from "@autumn/ui";
 import { CaretDownIcon } from "@phosphor-icons/react";
-import { PlanFeatureIcon } from "@/views/products/plan/components/plan-card/PlanFeatureIcon";
-import { CustomDotIcon } from "@/views/products/plan/components/plan-card/PlanFeatureRow";
+import { useState } from "react";
+import { FeatureSearchDropdown } from "@/components/v2/dropdowns/FeatureSearchDropdown";
+import { FeatureIconCluster } from "@/components/v2/PlanItemLabel";
+import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
 import { RemoveButton } from "../shared/RemoveButton";
 import {
 	BillingMethodDropdown,
-	type ItemFilter,
-	INTERVAL_OPTIONS,
 	filterToProductItem,
 	getFilterSummary,
+	INTERVAL_OPTIONS,
+	type ItemFilter,
 } from "./operationItemUtils";
 
 export function RemoveItemRows({
@@ -49,17 +49,7 @@ export function RemoveItemRows({
 				>
 					{hasFeature ? (
 						<>
-							<div className="flex flex-row items-center gap-1 shrink-0">
-								<PlanFeatureIcon
-									item={filterToProductItem(filter)}
-									position="left"
-								/>
-								<CustomDotIcon />
-								<PlanFeatureIcon
-									item={filterToProductItem(filter)}
-									position="right"
-								/>
-							</div>
+							<FeatureIconCluster item={filterToProductItem(filter)} />
 							<span className="text-body whitespace-nowrap truncate flex-1 min-w-0">
 								{getFilterSummary(filter, features)}
 							</span>
@@ -129,9 +119,7 @@ function RemoveItemSheetContent({
 	onCancel: () => void;
 }) {
 	const { features } = useFeaturesQuery();
-	const [draft, setDraft] = useState<ItemFilter>(() =>
-		structuredClone(item),
-	);
+	const [draft, setDraft] = useState<ItemFilter>(() => structuredClone(item));
 
 	const canSave = !!draft.feature_id;
 
@@ -143,8 +131,8 @@ function RemoveItemSheetContent({
 						Remove Item
 					</h3>
 					<p className="text-xs text-tertiary-foreground">
-						Select a feature to remove from the plan. Use interval
-						and billing method to narrow the match.
+						Select a feature to remove from the plan. Use interval and billing
+						method to narrow the match.
 					</p>
 				</div>
 
@@ -156,9 +144,7 @@ function RemoveItemSheetContent({
 						<FeatureSearchDropdown
 							features={features}
 							value={draft.feature_id ?? null}
-							onSelect={(v) =>
-								setDraft({ ...draft, feature_id: v })
-							}
+							onSelect={(v) => setDraft({ ...draft, feature_id: v })}
 							placeholder="Select feature..."
 						/>
 					</div>
@@ -175,7 +161,9 @@ function RemoveItemSheetContent({
 								>
 									<span className="truncate">
 										{draft.interval
-											? INTERVAL_OPTIONS.find((o) => o.value === draft.interval)?.label ?? draft.interval
+											? (INTERVAL_OPTIONS.find(
+													(o) => o.value === draft.interval,
+												)?.label ?? draft.interval)
 											: "Any interval"}
 									</span>
 									<CaretDownIcon className="size-4 opacity-50" />
@@ -187,9 +175,7 @@ function RemoveItemSheetContent({
 							>
 								{draft.interval && (
 									<DropdownMenuItem
-										onClick={() =>
-											setDraft({ ...draft, interval: undefined })
-										}
+										onClick={() => setDraft({ ...draft, interval: undefined })}
 										className="py-1.5 px-2 text-muted-foreground"
 									>
 										Any interval
@@ -198,9 +184,7 @@ function RemoveItemSheetContent({
 								{INTERVAL_OPTIONS.map((o) => (
 									<DropdownMenuItem
 										key={o.value}
-										onClick={() =>
-											setDraft({ ...draft, interval: o.value })
-										}
+										onClick={() => setDraft({ ...draft, interval: o.value })}
 										className="py-1.5 px-2"
 									>
 										{o.label}
@@ -209,8 +193,8 @@ function RemoveItemSheetContent({
 							</DropdownMenuContent>
 						</DropdownMenu>
 						<p className="text-xs text-tertiary-foreground">
-							Narrow the match when the same feature appears at
-							multiple intervals.
+							Narrow the match when the same feature appears at multiple
+							intervals.
 						</p>
 					</div>
 
@@ -220,20 +204,14 @@ function RemoveItemSheetContent({
 						</label>
 						<BillingMethodDropdown
 							value={draft.billing_method ?? null}
-							onChange={(v) =>
-								setDraft({ ...draft, billing_method: v })
-							}
+							onChange={(v) => setDraft({ ...draft, billing_method: v })}
 						/>
 					</div>
 				</div>
 			</div>
 
 			<div className="shrink-0 p-4 border-t border-border/40 flex gap-2">
-				<Button
-					variant="secondary"
-					onClick={onCancel}
-					className="flex-1"
-				>
+				<Button variant="secondary" onClick={onCancel} className="flex-1">
 					Cancel
 				</Button>
 				<Button

@@ -20,15 +20,15 @@ export type SvixConfig = {
 };
 
 export type StripeConfig = {
-	test_api_key?: string;
-	live_api_key?: string;
-	test_webhook_secret?: string;
-	live_webhook_secret?: string;
+	test_api_key?: string | null;
+	live_api_key?: string | null;
+	test_webhook_secret?: string | null;
+	live_webhook_secret?: string | null;
 	sandbox_success_url?: string;
 	success_url?: string;
 
-	test_connect_webhook_secret?: string;
-	live_connect_webhook_secret?: string;
+	test_connect_webhook_secret?: string | null;
+	live_connect_webhook_secret?: string | null;
 };
 export interface VersionConfig {
 	sandbox?: string;
@@ -46,6 +46,11 @@ export type StripeConnectConfig = {
 export type OrgRedisConfig = {
 	/** AES-256-CBC encrypted full Redis connection string via encryptData() */
 	connectionString: string;
+	/**
+	 * AES-256-CBC encrypted public/reachable-from-outside-the-VPC connection
+	 * string, used off-AWS (local dev, trigger.dev) in place of `connectionString`.
+	 */
+	publicConnectionString?: string;
 	/** Plain domain/host only, used for pool URL-change detection */
 	url: string;
 	/** Percentage of customers routed to the dedicated Redis (0-100) */
@@ -105,6 +110,9 @@ export const organizations = pgTable(
 		created_by: text("created_by"),
 		onboarded: boolean("onboarded").default(false),
 		deployed: boolean("deployed").default(false),
+		is_sandbox: boolean("is_sandbox").default(false).notNull(),
+		sandbox_color: text("sandbox_color"),
+		sandbox_icon: text("sandbox_icon"),
 
 		redis_config: jsonb("redis_config").$type<OrgRedisConfig>(),
 	},
@@ -119,6 +127,20 @@ export const organizations = pgTable(
 			sql`${table.createdAt} DESC`,
 			sql`${table.id} DESC`,
 		),
+		// Stripe Connect webhooks resolve an org by external account id. Without
+		// these, the three OR'd ->> predicates in OrgService.getByAccountId force a
+		// seq scan; Postgres turns them into a BitmapOr instead. The table is only
+		// ~531 rows but its wide jsonb columns bloat it to ~37MB, so a scan cost
+		// ~20ms per webhook.
+		index("idx_orgs_test_connect_default_account")
+			.on(sql`(${table.test_stripe_connect}->>'default_account_id')`)
+			.concurrently(),
+		index("idx_orgs_test_connect_account")
+			.on(sql`(${table.test_stripe_connect}->>'account_id')`)
+			.concurrently(),
+		index("idx_orgs_live_connect_account")
+			.on(sql`(${table.live_stripe_connect}->>'account_id')`)
+			.concurrently(),
 		unique("organizations_test_pkey_key").on(table.test_pkey),
 		unique("organizations_live_pkey_key").on(table.live_pkey),
 	],

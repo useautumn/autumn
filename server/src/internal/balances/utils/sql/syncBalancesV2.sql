@@ -17,9 +17,8 @@
 --   usage_window_updates: array of objects with:
 --     - internal_customer_id: string
 --     - feature_id: string
---     - usage_windows: jsonb array of DbUsageWindow rows (the COMPLETE set for
---       that customer+feature; Redis is authoritative and prunes closed
---       windows, so rows are full-replaced per customer+feature)
+--     - usage_windows: jsonb array of DbUsageWindow rows to upsert; empty arrays
+--       mean no Redis rows to flush, not a delete/prune signal
 --
 -- Returns JSONB with:
 --   updates: object mapping customer_entitlement_id -> { balance, adjustment, entities }
@@ -151,7 +150,12 @@ BEGIN
         balance = COALESCE(ent_balance, ce.balance),
         adjustment = COALESCE(ent_adjustment, ce.adjustment),
         entities = COALESCE(ent_entities, ce.entities)
-      WHERE ce.id = ent_id;
+      WHERE ce.id = ent_id
+        AND (
+          ce.balance IS DISTINCT FROM COALESCE(ent_balance, ce.balance)
+          OR ce.adjustment IS DISTINCT FROM COALESCE(ent_adjustment, ce.adjustment)
+          OR ce.entities IS DISTINCT FROM COALESCE(ent_entities, ce.entities)
+        );
 
       IF FOUND THEN
         updates_json := jsonb_set(
@@ -204,9 +208,10 @@ BEGIN
   -- ============================================================================
   -- STEP 4: Mirror usage-window counters (race-safe upsert)
   -- ============================================================================
-  -- ONE mutable row per (customer, feature, entity scope); bounds roll in
-  -- place. Upsert on the scope key (never on id) so concurrent creates can't
-  -- abort, with an updated_at guard so older snapshots never clobber newer.
+  -- ONE mutable row per (customer, feature, entity scope, filter); bounds
+  -- roll in place. Upsert on the scope key (never on id) so concurrent
+  -- creates can't abort, with an updated_at guard so older snapshots never
+  -- clobber newer.
   IF usage_window_updates_param IS NOT NULL THEN
     FOR uw_obj IN SELECT * FROM jsonb_array_elements(usage_window_updates_param)
     LOOP
@@ -224,7 +229,7 @@ BEGIN
 
         INSERT INTO usage_windows (
           id, internal_customer_id, internal_entity_id, feature_id,
-          internal_feature_id, anchor_customer_entitlement_id,
+          internal_feature_id, filter_key, anchor_customer_entitlement_id,
           window_start_at, window_end_at, usage, updated_at
         )
         SELECT
@@ -233,6 +238,7 @@ BEGIN
           w->>'internal_entity_id',
           uw_feature_id,
           w->>'internal_feature_id',
+          w->>'filter_key',
           CASE
             WHEN w->>'anchor_customer_entitlement_id' IS NOT NULL
               AND EXISTS (
@@ -255,7 +261,7 @@ BEGIN
           )
         ON CONFLICT (
           internal_customer_id, internal_feature_id,
-          COALESCE(internal_entity_id, '')
+          COALESCE(internal_entity_id, ''), COALESCE(filter_key, '')
         )
         DO UPDATE SET
           usage = EXCLUDED.usage,

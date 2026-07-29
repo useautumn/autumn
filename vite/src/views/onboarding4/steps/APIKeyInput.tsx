@@ -1,8 +1,7 @@
+import { Button, Input } from "@autumn/ui";
 import { Check, Copy } from "@phosphor-icons/react";
 import { useState } from "react";
 import { toast } from "sonner";
-import { Button } from "@/components/v2/buttons/Button";
-import { Input } from "@/components/v2/inputs/Input";
 import { useSecretKeyStore } from "@/hooks/stores/useSecretKeyStore";
 import { DevService } from "@/services/DevService";
 import { useAxiosInstance } from "@/services/useAxiosInstance";

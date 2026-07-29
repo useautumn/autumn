@@ -2,6 +2,7 @@ import { RecaseError, tryCatch } from "@autumn/shared";
 import * as Sentry from "@sentry/bun";
 import type { Logger } from "pino";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
+import { neonEventsDb } from "@/db/initNeonEvents.js";
 import { EventService } from "@/internal/api/events/EventService.js";
 import type { JobName } from "@/queue/JobName.js";
 import type { Payloads } from "@/queue/queueUtils.js";
@@ -38,6 +39,11 @@ export const runInsertEventBatch = async ({
 
 	logger.debug(`Inserting ${eventInserts.length} events`);
 
+	// prod without NEON_EVENTS_DATABASE_URL -> same no-op as today
+	const eventsDb =
+		neonEventsDb ?? (process.env.NODE_ENV === "development" ? db : null);
+	if (!eventsDb) return;
+
 	// Group events by internal_customer_id
 	const eventsByCustomer = new Map<string, typeof eventInserts>();
 	for (const event of eventInserts) {
@@ -58,7 +64,7 @@ export const runInsertEventBatch = async ({
 	const insertPromises = Array.from(eventsByCustomer.entries()).map(
 		async ([customerId, customerEvents]) => {
 			const { error } = await tryCatch(
-				EventService.insert({ db, event: customerEvents, logger }),
+				EventService.insert({ db: eventsDb, event: customerEvents, logger }),
 			);
 
 			if (error) {

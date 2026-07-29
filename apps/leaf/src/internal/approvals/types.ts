@@ -10,14 +10,36 @@ export type ActionMessageContent = Parameters<
 >[2];
 
 export type ApprovalRunResult =
-	| { error: true; message: string }
-	| { result: unknown; text: string; toolName?: string };
+	// `retryable` means the write never ran to completion (a session crash /
+	// interruption), so the approval stays pending and the user can re-apply.
+	| { error: true; message: string; retryable?: boolean }
+	| {
+			/** The resumed turn parked on another gated write — surfaces that mimic
+			 * chat (Slack) post this row's card; the dashboard picks it up by poll. */
+			chainedApprovalId?: string;
+			/** The resumed turn parked on an ask_question — rich surfaces render
+			 * the options as buttons. */
+			question?: {
+				options: { id?: string; label?: string }[];
+				prompt: string;
+				requestId: string;
+				sessionId: string;
+			};
+			result: unknown;
+			text: string;
+			toolName?: string;
+	  };
+
+export type ApprovalAuthorization =
+	| { allowed: true; approverToken?: string }
+	| { allowed: false; text: string };
 
 export type ApprovalActionDeps = {
-	approveAndRun: (input: {
+	resolveApproval: (input: {
 		approval: ChatApproval;
 		onProgress?: (statusLine: string) => void;
 		providerUserId: string;
+		approverToken?: string;
 	}) => Promise<ApprovalRunResult>;
 	cancelApproval: (input: {
 		approvalId: string;
@@ -27,6 +49,14 @@ export type ApprovalActionDeps = {
 		approvalId: string;
 		providerUserId: string;
 	}) => Promise<ChatApproval | undefined>;
+	releaseApproval?: (input: {
+		approvalId: string;
+		providerUserId: string;
+	}) => Promise<ChatApproval | undefined>;
+	authorizeApprovalClicker?: (input: {
+		approval: ChatApproval;
+		providerUserId: string;
+	}) => Promise<ApprovalAuthorization>;
 	editActionMessage: (input: {
 		content: ActionMessageContent;
 		event: ActionEvent;

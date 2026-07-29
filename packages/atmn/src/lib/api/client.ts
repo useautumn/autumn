@@ -1,12 +1,4 @@
-import { BACKEND_URL, LOCAL_BACKEND_URL } from "../../constants.js";
-import { isLocal } from "../env/cliContext.js";
-
-/**
- * Get the current backend URL based on CLI flags
- */
-function getBackendUrl(): string {
-	return isLocal() ? LOCAL_BACKEND_URL : BACKEND_URL;
-}
+import { getBackendUrl } from "../env/backendUrl.js";
 
 /**
  * Low-level API client for making authenticated requests
@@ -38,10 +30,12 @@ export function formatError(err: unknown): string {
 	}
 
 	const apiError = err as ApiError;
-	const lines: string[] = [];
+	const response = apiError.response as { message?: unknown } | undefined;
+	const message =
+		typeof response?.message === "string" ? response.message : err.message;
+	if (!process.env.ATMN_DEBUG) return message;
 
-	// Start with the basic error message
-	lines.push(err.message);
+	const lines = [message];
 
 	// Add request context if available
 	if (apiError.method && apiError.url) {
@@ -107,7 +101,7 @@ export async function request<T = unknown>(
 	// Make request
 	try {
 		// Debug: log the request URL (can be removed later)
-		if (process.env['ATMN_DEBUG']) {
+		if (process.env.ATMN_DEBUG) {
 			console.log(`[DEBUG] ${method} ${url.toString()}`);
 		}
 		const response = await fetch(url.toString(), requestInit);

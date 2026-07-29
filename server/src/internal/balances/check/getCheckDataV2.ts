@@ -1,5 +1,4 @@
 import {
-	type ApiEntityV2,
 	ApiVersion,
 	type CheckParams,
 	type Feature,
@@ -7,17 +6,16 @@ import {
 	findFeatureById,
 	fullSubjectToFullCustomer,
 	getFeatureToUseForCheck,
-	mergeCustomerBillingControlsForCheck,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import {
 	getOrCreateCachedPartialFullSubject,
 	getOrSetCachedPartialFullSubject,
 } from "@/internal/customers/cache/fullSubject/index.js";
-import { getApiCustomerBaseV2 } from "@/internal/customers/cusUtils/getApiCustomerV2/getApiCustomerBaseV2.js";
 import { getApiSubject } from "@/internal/customers/cusUtils/getApiCustomerV2/getApiSubject.js";
 import { getCreditSystemsFromFeature } from "@/internal/features/creditSystemUtils.js";
 import { triggerAutoTopUp } from "../autoTopUp/triggerAutoTopUp.js";
+import { buildEvaluationSubject } from "./buildEvaluationSubject.js";
 import type { CheckDataV2 } from "./checkTypes/CheckDataV2.js";
 
 const getFeatureAndCreditSystems = ({
@@ -83,28 +81,11 @@ export const getCheckDataV2 = async ({
 		fullSubject,
 		includeAggregations: true,
 	});
-	let evaluationApiSubject = await getApiSubject({
+	const evaluationApiSubject = await buildEvaluationSubject({
 		ctx,
 		fullSubject,
-		includeAggregations: false,
+		entityId: entity_id,
 	});
-
-	if (fullSubject.subjectType === "entity") {
-		const { apiCustomer } = await getApiCustomerBaseV2({
-			ctx,
-			fullSubject: {
-				...fullSubject,
-				aggregated_customer_products: undefined,
-				aggregated_customer_entitlements: undefined,
-				aggregated_subject_flags: undefined,
-			},
-			withAutumnId: true,
-		});
-		evaluationApiSubject = mergeCustomerBillingControlsForCheck({
-			entityApiSubject: evaluationApiSubject as ApiEntityV2,
-			customerApiSubject: apiCustomer,
-		});
-	}
 
 	const featureToUseMin = getFeatureToUseForCheck({
 		creditSystems,

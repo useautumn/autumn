@@ -1,21 +1,19 @@
 import type { Entity, FullCusProduct } from "@autumn/shared";
-import { useEffect, useState } from "react";
-import { toast } from "sonner";
-import { Button } from "@/components/v2/buttons/Button";
 import {
+	Button,
 	Dialog,
 	DialogContent,
 	DialogFooter,
 	DialogHeader,
 	DialogTitle,
-} from "@/components/v2/dialogs/Dialog";
-import {
 	Select,
 	SelectContent,
 	SelectItem,
 	SelectTrigger,
 	SelectValue,
-} from "@/components/v2/selects/Select";
+} from "@autumn/ui";
+import { useEffect, useState } from "react";
+import { toast } from "sonner";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
 import { getBackendErr } from "@/utils/genUtils";
 import { useCusQuery } from "@/views/customers/customer/hooks/useCusQuery";
@@ -97,7 +95,7 @@ export const TransferProductDialog = ({
 	return (
 		<Dialog open={open} onOpenChange={setOpen}>
 			<DialogContent
-				className="w-md bg-card"
+				className="w-full max-w-[calc(100vw-2rem)] sm:max-w-md bg-card"
 				onClick={(e) => e.stopPropagation()}
 			>
 				<DialogHeader>

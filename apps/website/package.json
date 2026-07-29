@@ -9,6 +9,7 @@
 		"lint": "eslint"
 	},
 	"dependencies": {
+		"@bydefault/vercel": "^0.1.4",
 		"@gsap/react": "^2.1.2",
 		"@mdx-js/loader": "^3.1.1",
 		"@mdx-js/mdx": "^3.1.1",

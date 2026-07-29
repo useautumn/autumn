@@ -5,6 +5,7 @@ import { BillingCycleAnchorSchema } from "../common/billingCycleAnchor";
 import { BillingParamsBaseV1Schema } from "../common/billingParamsBase/billingParamsBaseV1";
 import { CancelActionSchema } from "../common/cancelAction";
 import { CarryOverUsagesSchema } from "../common/carryOverUsages";
+import { LicenseQuantityParamsSchema } from "../common/licenseQuantityParams";
 import { RedirectModeSchema } from "../common/redirectMode";
 import { RefundLastPaymentSchema } from "../common/refundLastPayment";
 
@@ -36,9 +37,7 @@ export const ExtUpdateSubscriptionV1ParamsSchema =
 				"If true, the subscription is updated internally without applying billing changes in Stripe.",
 		}),
 
-		refund_last_payment: RefundLastPaymentSchema.optional().meta({
-			internal: true,
-		}),
+		refund_last_payment: RefundLastPaymentSchema.optional(),
 
 		recalculate_balances: z
 			.object({
@@ -55,6 +54,11 @@ export const ExtUpdateSubscriptionV1ParamsSchema =
 
 		carry_over_usages: CarryOverUsagesSchema,
 
+		license_quantities: z.array(LicenseQuantityParamsSchema).optional().meta({
+			description:
+				"Total seat quantities (inclusive of the license's included count) per license plan offered by this plan. Licenses not listed keep their current paid quantity.",
+		}),
+
 		status: z
 			.enum([
 				CusProductStatus.Active,
@@ -69,6 +73,7 @@ export const ExtUpdateSubscriptionV1ParamsSchema =
 
 const UPDATE_FIELDS = [
 	"feature_quantities",
+	"license_quantities",
 	"version",
 	"customize",
 	"cancel_action",

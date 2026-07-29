@@ -4,6 +4,7 @@ import {
 	InternalError,
 } from "@autumn/shared";
 import { sql } from "drizzle-orm";
+import { planetScaleTag } from "@/db/dbUtils.js";
 import { withLock } from "@/external/redis/redisUtils.js";
 import { triggerAutoTopUp } from "@/internal/balances/autoTopUp/triggerAutoTopUp.js";
 import { rollbackDeduction } from "@/internal/balances/utils/paidAllocatedFeature/rollbackDeduction.js";
@@ -132,28 +133,28 @@ export const executePostgresDeduction = async ({
 				continue;
 			}
 
-			// Call the stored function to deduct from entitlements with credit costs
-			const result = await db.execute(
-				sql`SELECT * FROM deduct_from_cus_ents(
-				${JSON.stringify({
-					sorted_entitlements: customerEntitlementDeductions,
-					spend_limit_by_feature_id: spendLimitByFeatureId ?? null,
-					usage_based_cus_ent_ids_by_feature_id:
-						usageBasedCusEntIdsByFeatureId ?? null,
-					amount_to_deduct: toDeduct ?? null,
-					target_balance: targetBalance ?? null,
-					lock_receipt: lockReceipt ?? null,
-					unwind_value: unwindValue ?? null,
-					target_entity_id: entityId || null,
-					rollovers: rollovers.length > 0 ? rollovers : null,
-					cus_ent_ids: customerEntitlements.map((ce) => ce.id),
-					skip_additional_balance: resolvedOptions.skipAdditionalBalance,
-					alter_granted_balance: resolvedOptions.alterGrantedBalance,
-					overage_behaviour: resolvedOptions.overageBehaviour,
-					feature_id: feature.id,
-				})}::jsonb
-			)`,
-			);
+		// Call the stored function to deduct from entitlements with credit costs
+		const result = await db.execute(
+			sql`SELECT * FROM deduct_from_cus_ents(
+			${JSON.stringify({
+				sorted_entitlements: customerEntitlementDeductions,
+				spend_limit_by_feature_id: spendLimitByFeatureId ?? null,
+				usage_based_cus_ent_ids_by_feature_id:
+					usageBasedCusEntIdsByFeatureId ?? null,
+				amount_to_deduct: toDeduct ?? null,
+				target_balance: targetBalance ?? null,
+				lock_receipt: lockReceipt ?? null,
+				unwind_value: unwindValue ?? null,
+				target_entity_id: entityId || null,
+				rollovers: rollovers.length > 0 ? rollovers : null,
+				cus_ent_ids: customerEntitlements.map((ce) => ce.id),
+				skip_additional_balance: resolvedOptions.skipAdditionalBalance,
+				alter_granted_balance: resolvedOptions.alterGrantedBalance,
+				overage_behaviour: resolvedOptions.overageBehaviour,
+				feature_id: feature.id,
+			})}::jsonb
+		) ${planetScaleTag({ query: "deductFromCusEnts" })}`,
+		);
 
 			// Parse the JSONB result
 			const resultJson = result[0]?.deduct_from_cus_ents as {

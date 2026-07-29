@@ -1,4 +1,4 @@
-import type { ProductItem } from "@autumn/shared";
+import type { FrontendProduct, ProductItem } from "@autumn/shared";
 import { useEffect } from "react";
 import { create } from "zustand";
 
@@ -15,6 +15,8 @@ export type SheetType =
 	| "attach-checkout-session"
 	| "attach-schedule-plan"
 	| "subscription-detail"
+	| "license-detail"
+	| "license-pool-detail"
 	| "subscription-update"
 	| "subscription-update-send-invoice"
 	| "subscription-cancel"
@@ -25,6 +27,7 @@ export type SheetType =
 	| "invoice-detail"
 	| "sync-stripe"
 	| "sync-stripe-v2"
+	| "customer-config-edit"
 	| "billing-auto-topup-add"
 	| "billing-auto-topup-edit"
 	| "billing-spend-limit-add"
@@ -54,6 +57,8 @@ interface SheetState {
 	data: Record<string, unknown> | null;
 	// Initial item state when sheet opened (for change detection)
 	initialItem: ProductItem | null;
+	// Initial product snapshot when a plan-level sheet opened (for change detection)
+	initialProduct: FrontendProduct | null;
 
 	// Actions
 	setSheet: (params: {
@@ -62,6 +67,7 @@ interface SheetState {
 		data?: Record<string, unknown> | null;
 	}) => void;
 	setInitialItem: (item: ProductItem | null) => void;
+	setInitialProduct: (product: FrontendProduct | null) => void;
 	updateItemId: (itemId: string) => void;
 	closeSheet: () => void;
 	reset: () => void;
@@ -74,6 +80,7 @@ const initialState = {
 	itemId: null as string | null,
 	data: null as Record<string, unknown> | null,
 	initialItem: null as ProductItem | null,
+	initialProduct: null as FrontendProduct | null,
 };
 
 export const useSheetStore = create<SheetState>((set) => ({
@@ -86,12 +93,16 @@ export const useSheetStore = create<SheetState>((set) => ({
 			type,
 			itemId,
 			data,
-			// Clear initialItem when sheet changes
+			// Clear snapshots when sheet changes
 			initialItem: null,
+			initialProduct: null,
 		})),
 
 	// Set the initial item state for change detection
 	setInitialItem: (item) => set({ initialItem: item }),
+
+	// Set the initial product snapshot for plan-level change detection
+	setInitialProduct: (product) => set({ initialProduct: product }),
 
 	// Update just the itemId without clearing other state
 	updateItemId: (itemId) => set({ itemId }),
@@ -104,6 +115,7 @@ export const useSheetStore = create<SheetState>((set) => ({
 			itemId: null,
 			data: null,
 			initialItem: null,
+			initialProduct: null,
 		})),
 
 	// Reset to initial state

@@ -26,7 +26,7 @@ export const createClaudeManagedLiveDriver = ({
 		const mockUrl = context.mcpServer.url;
 
 		const tunnel = await openMockTunnel({ mockPort: Number(mockUrl.port) });
-		const { destructiveTools, docsText } = await loadMcpMetadata({
+		const { destructiveTools } = await loadMcpMetadata({
 			url: mockUrl,
 		});
 
@@ -34,7 +34,6 @@ export const createClaudeManagedLiveDriver = ({
 		const { agentId, environmentId } = await ensureEvalAgent({
 			client,
 			destructiveTools,
-			docsText,
 			env,
 			mcpUrl: tunnel.mcpUrl,
 			model,

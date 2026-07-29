@@ -730,7 +730,7 @@ describe("sanitizeCachedFullSubject — processor_type (Option A walker behavior
 // ═══════════════════════════════════════════════════════════════════════════════
 // processor_type — FullCustomer (v1) cache rollover
 //
-// The FullCustomer cache (`getCachedFullCustomer`) uses the cacheUtils walker
+// The legacy FullCustomer cache read path (now deleted) used the cacheUtils walker
 // at `server/src/utils/cacheUtils/normalizeFromSchema.ts`, NOT the FullSubject
 // sanitize walker. The cacheUtils walker has a known asymmetry: it does not
 // apply leaf-level ZodDefault for primitives (documented limitation; the
@@ -1115,12 +1115,11 @@ describe("sanitizeCachedFullSubject — product.config (commit ce100dbf)", () =>
 
 describe("normalizeFromSchema — empty-array-as-object regression (commit ce100dbf)", () => {
 	test("cacheUtils walker rebuilds ZodObject from empty array on nested products", () => {
-		// Direct exercise of the cacheUtils walker — used by
-		// getCachedFullCustomer. The structural fix from commit ce100dbf:
+		// Direct exercise of the cacheUtils walker. The structural fix from
+		// commit ce100dbf:
 		// nested `config: []` must become `config: {}` so downstream
 		// "Expected object, received array" errors stop firing. (This walker
-		// does NOT re-apply ZodDefault values; the belt-and-suspenders block
-		// in getCachedFullCustomer handles defaults for product.config.)
+		// does NOT re-apply ZodDefault values.)
 		const TestSchema = z.object({
 			products: z.array(ProductSchema),
 		});

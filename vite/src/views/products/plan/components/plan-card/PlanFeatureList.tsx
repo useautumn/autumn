@@ -12,6 +12,8 @@ import {
 } from "@/components/v2/inline-custom-plan-editor/PlanEditorContext";
 import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
 import { getItemId } from "@/utils/product/productItemUtils";
+import { LicensePlanRow } from "../plan-licenses/LicensePlanRow";
+import { useResolvedPlanLicenses } from "../plan-licenses/useResolvedPlanLicenses";
 import { AddFeatureRow } from "./AddFeatureRow";
 import { DummyPlanFeatureRow } from "./DummyPlanFeatureRow";
 import { PlanFeatureRow } from "./PlanFeatureRow";
@@ -33,10 +35,7 @@ export const PlanFeatureList = ({
 }) => {
 	const { product, setProduct } = useProduct();
 	const { sheetType, itemId, setSheet } = useSheet();
-
-	const isCreatingFeature = sheetType === "new-feature" || itemId === "new";
-	const isAddButtonDisabled =
-		isCreatingFeature || sheetType === "select-feature";
+	const licenses = useResolvedPlanLicenses();
 
 	const filteredItems = useMemo(
 		() => (product ? productV2ToFeatureItems({ items: product.items }) : []),
@@ -69,25 +68,22 @@ export const PlanFeatureList = ({
 		}
 	};
 
-	const handleAddFeature = () => {
-		setSheet({ type: "new-feature", itemId: "new" });
-	};
-
 	const isCreatingNewFeature = sheetType === "new-feature";
+
+	const renderLicenseRows = () =>
+		licenses.map(({ planLicense, license }) => (
+			<LicensePlanRow
+				key={planLicense.id}
+				planLicense={planLicense}
+				license={license}
+			/>
+		));
 
 	if (filteredItems.length === 0) {
 		return (
-			<div className="space-y-1">
-				<div className="space-y-1">
-					{isCreatingNewFeature ? (
-						<DummyPlanFeatureRow />
-					) : (
-						<AddFeatureRow
-							onClick={handleAddFeature}
-							disabled={isAddButtonDisabled}
-						/>
-					)}
-				</div>
+			<div className="space-y-2">
+				{renderLicenseRows()}
+				{isCreatingNewFeature ? <DummyPlanFeatureRow /> : <AddFeatureRow />}
 			</div>
 		);
 	}
@@ -139,15 +135,10 @@ export const PlanFeatureList = ({
 				/>
 			)}
 
+			{renderLicenseRows()}
+
 			{allowAddFeature &&
-				(isCreatingNewFeature ? (
-					<DummyPlanFeatureRow />
-				) : (
-					<AddFeatureRow
-						onClick={handleAddFeature}
-						disabled={isAddButtonDisabled}
-					/>
-				))}
+				(isCreatingNewFeature ? <DummyPlanFeatureRow /> : <AddFeatureRow />)}
 		</div>
 	);
 };

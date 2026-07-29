@@ -3,41 +3,56 @@ import { homedir } from "node:os";
 import { join } from "node:path";
 import { PROJECT_ROOT } from "../constants.ts";
 import type { RegistryEntry } from "../types.ts";
+import { isProvisioned } from "./entry.ts";
+import { provisionedInfraEnv } from "./env-files.ts";
 import { registerPortlessAliases } from "./portless.ts";
 import { portlessHttpsUrl } from "./ports.ts";
 import { fatal, log } from "./shell.ts";
 import { spawnDevInTmux, tmuxSessionName } from "./tmux.ts";
 import { rewriteDbEnv } from "./url.ts";
 
+function applyProvisionedDevEnv(
+	entry: RegistryEntry,
+	env: Record<string, string>,
+): Record<string, string> {
+	const { worktreeNum, databaseUrl } = entry;
+	if (!databaseUrl) fatal("worktree missing databaseUrl");
+
+	const next = rewriteDbEnv(env, databaseUrl);
+	const infra = provisionedInfraEnv(worktreeNum);
+	Object.assign(next, infra);
+	// Unmapped queue vars must not leak the shared AWS queues into this worktree.
+	for (const key of Object.keys(next)) {
+		if (key.includes("SQS_QUEUE_URL") && !(key in infra)) delete next[key];
+	}
+	if (!next.EMULATE_GOOGLE_URL) {
+		next.EMULATE_GOOGLE_URL = portlessHttpsUrl("google.emulate.localhost");
+	}
+	const portlessCa = join(homedir(), ".portless", "ca.pem");
+	if (existsSync(portlessCa) && !next.NODE_EXTRA_CA_CERTS) {
+		next.NODE_EXTRA_CA_CERTS = portlessCa;
+	}
+	const aliases = registerPortlessAliases(worktreeNum);
+	next.BETTER_AUTH_URL = aliases.apiUrl;
+	next.CLIENT_URL = aliases.viteUrl;
+	next.VITE_BACKEND_URL = aliases.apiUrl;
+	next.VITE_FRONTEND_URL = aliases.viteUrl;
+	if (entry.ngrokUrl && !next.NGROK_URL) {
+		next.NGROK_URL = entry.ngrokUrl;
+	}
+	return next;
+}
+
 export function buildDevEnvAndArgs(entry: RegistryEntry): {
 	env: Record<string, string>;
 	args: string[];
 } {
-	const { worktreeNum, databaseUrl } = entry;
+	const { worktreeNum } = entry;
 	let env: Record<string, string> = {
 		...(process.env as Record<string, string>),
 	};
-	if (worktreeNum > 1) {
-		if (!databaseUrl) fatal("agent worktree missing databaseUrl");
-		env = rewriteDbEnv(env, databaseUrl);
-		if (!env.EMULATE_GOOGLE_URL) {
-			env.EMULATE_GOOGLE_URL = portlessHttpsUrl("google.emulate.localhost");
-		}
-		const portlessCa = join(homedir(), ".portless", "ca.pem");
-		if (existsSync(portlessCa) && !env.NODE_EXTRA_CA_CERTS) {
-			env.NODE_EXTRA_CA_CERTS = portlessCa;
-		}
-		const aliases = registerPortlessAliases(worktreeNum);
-		env.BETTER_AUTH_URL = aliases.apiUrl;
-		env.CLIENT_URL = aliases.viteUrl;
-		env.VITE_BACKEND_URL = aliases.apiUrl;
-		env.VITE_FRONTEND_URL = aliases.viteUrl;
-		// Hand the worktree's tunnel to dev.ts, which derives MCP_SERVER_URL /
-		// CHAT_URL / SLACK_BOT_URL from NGROK_URL. Set at `bun dw setup`; reused
-		// here on a plain `bun dw run`.
-		if (entry.ngrokUrl && !env.NGROK_URL) {
-			env.NGROK_URL = entry.ngrokUrl;
-		}
+	if (isProvisioned(entry)) {
+		env = applyProvisionedDevEnv(entry, env);
 	}
 
 	const args = [
@@ -57,9 +72,6 @@ export function startDev(
 	const { worktreeNum, branchName } = entry;
 	const { env, args } = buildDevEnvAndArgs(entry);
 
-	// Agent worktrees (N > 1) in a non-TTY invocation: wrap in detached tmux
-	// so the calling agent doesn't block. Canonical (N=1) stays inline always.
-	// Node/Bun sets isTTY to true when stdout is a TTY and undefined otherwise.
 	const useTmux =
 		(opts?.allowTmux ?? true) && worktreeNum > 1 && !process.stdout.isTTY;
 	if (useTmux) {

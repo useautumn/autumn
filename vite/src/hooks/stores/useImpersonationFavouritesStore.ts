@@ -28,55 +28,54 @@ interface ImpersonationFavouritesState {
 	isUserFav: (user_id: string) => boolean;
 }
 
-export const useImpersonationFavouritesStore = create<ImpersonationFavouritesState>()(
-	persist(
-		(set, get) => ({
-			favourites: [],
+export const useImpersonationFavouritesStore =
+	create<ImpersonationFavouritesState>()(
+		persist(
+			(set, get) => ({
+				favourites: [],
 
-			addOrg: (fav) =>
-				set((state) => {
-					const filtered = state.favourites.filter(
-						(f) => !(f.kind === "org" && f.org_id === fav.org_id),
-					);
-					return { favourites: [fav, ...filtered] };
-				}),
+				addOrg: (fav) =>
+					set((state) => {
+						const filtered = state.favourites.filter(
+							(f) => !(f.kind === "org" && f.org_id === fav.org_id),
+						);
+						return { favourites: [fav, ...filtered] };
+					}),
 
-			removeOrg: (org_id) =>
-				set((state) => ({
-					favourites: state.favourites.filter(
-						(f) => !(f.kind === "org" && f.org_id === org_id),
+				removeOrg: (org_id) =>
+					set((state) => ({
+						favourites: state.favourites.filter(
+							(f) => !(f.kind === "org" && f.org_id === org_id),
+						),
+					})),
+
+				addUser: (fav) =>
+					set((state) => {
+						const filtered = state.favourites.filter(
+							(f) => !(f.kind === "user" && f.user_id === fav.user_id),
+						);
+						return { favourites: [fav, ...filtered] };
+					}),
+
+				removeUser: (user_id) =>
+					set((state) => ({
+						favourites: state.favourites.filter(
+							(f) => !(f.kind === "user" && f.user_id === user_id),
+						),
+					})),
+
+				isOrgFav: (org_id) =>
+					get().favourites.some((f) => f.kind === "org" && f.org_id === org_id),
+
+				isUserFav: (user_id) =>
+					get().favourites.some(
+						(f) => f.kind === "user" && f.user_id === user_id,
 					),
-				})),
-
-			addUser: (fav) =>
-				set((state) => {
-					const filtered = state.favourites.filter(
-						(f) => !(f.kind === "user" && f.user_id === fav.user_id),
-					);
-					return { favourites: [fav, ...filtered] };
-				}),
-
-			removeUser: (user_id) =>
-				set((state) => ({
-					favourites: state.favourites.filter(
-						(f) => !(f.kind === "user" && f.user_id === user_id),
-					),
-				})),
-
-			isOrgFav: (org_id) =>
-				get().favourites.some(
-					(f) => f.kind === "org" && f.org_id === org_id,
-				),
-
-			isUserFav: (user_id) =>
-				get().favourites.some(
-					(f) => f.kind === "user" && f.user_id === user_id,
-				),
-		}),
-		{
-			name: "autumn:impersonation-favourites",
-		},
-	),
-);
+			}),
+			{
+				name: "autumn:impersonation-favourites",
+			},
+		),
+	);
 
 export default useImpersonationFavouritesStore;

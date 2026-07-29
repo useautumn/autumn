@@ -2,7 +2,8 @@ import { readFileSync } from "node:fs";
 import { useMutation } from "@tanstack/react-query";
 import { useEffect } from "react";
 import { pull } from "../../commands/pull/pull.js";
-import type { Feature, Plan } from "../../compose/models/index.js";
+import type { Feature } from "../../compose/models/index.js";
+import type { Plan } from "../../compose/models/variantModels.js";
 import { formatError } from "../api/client.js";
 import { AppEnv } from "../env/index.js";
 import type { UpdateResult } from "../transforms/inPlaceUpdate/index.js";
@@ -20,6 +21,7 @@ interface PullParams {
 	environment?: AppEnv;
 	forceOverwrite?: boolean;
 	noDeclarationFile?: boolean;
+	allVersions?: boolean;
 }
 
 interface PullData {
@@ -45,12 +47,14 @@ export function usePull(options?: {
 	onComplete?: () => void;
 	forceOverwrite?: boolean;
 	noDeclarationFile?: boolean;
+	allVersions?: boolean;
 }) {
 	const effectiveCwd = options?.cwd ?? process.cwd();
 	const environment = options?.environment ?? AppEnv.Sandbox;
 	const onComplete = options?.onComplete;
 	const forceOverwrite = options?.forceOverwrite ?? false;
 	const noDeclarationFile = options?.noDeclarationFile ?? false;
+	const allVersions = options?.allVersions ?? false;
 
 	// Get org info using TanStack Query (this IS a query)
 	const orgQuery = useOrganization(effectiveCwd, environment);
@@ -64,6 +68,7 @@ export function usePull(options?: {
 				environment: params.environment ?? AppEnv.Sandbox,
 				forceOverwrite: params.forceOverwrite,
 				noDeclarationFile: params.noDeclarationFile,
+				allVersions: params.allVersions,
 			});
 
 			const files: GeneratedFile[] = [];
@@ -116,6 +121,7 @@ export function usePull(options?: {
 				environment,
 				forceOverwrite,
 				noDeclarationFile,
+				allVersions,
 			});
 		}
 	}, [
@@ -125,6 +131,7 @@ export function usePull(options?: {
 		environment,
 		forceOverwrite,
 		noDeclarationFile,
+		allVersions,
 	]);
 
 	const error = orgQuery.error || pullMutation.error;

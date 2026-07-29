@@ -1,57 +1,51 @@
-import { CheckIcon, CopyIcon } from "@phosphor-icons/react";
 import { Tabs as TabsPrimitive } from "@base-ui/react/tabs";
+import { CheckIcon, CopyIcon } from "@phosphor-icons/react";
 import * as React from "react";
 import { useTheme } from "@/contexts/ThemeProvider";
 import { highlightCode } from "@/lib/shikiHighlighter";
 import { cn } from "@/lib/utils";
 
-interface CodeGroupProps
-	extends TabsPrimitive.Root.Props {}
+interface CodeGroupProps extends TabsPrimitive.Root.Props {}
 
-const CodeGroup = React.forwardRef<
-	HTMLDivElement,
-	CodeGroupProps
->(({ ...props }, ref) => <TabsPrimitive.Root ref={ref} {...props} />);
+const CodeGroup = React.forwardRef<HTMLDivElement, CodeGroupProps>(
+	({ ...props }, ref) => <TabsPrimitive.Root ref={ref} {...props} />,
+);
 CodeGroup.displayName = "CodeGroup";
 
-interface CodeGroupListProps
-	extends TabsPrimitive.List.Props {}
+interface CodeGroupListProps extends TabsPrimitive.List.Props {}
 
-const CodeGroupList = React.forwardRef<
-	HTMLDivElement,
-	CodeGroupListProps
->(({ className, ...props }, ref) => (
-	<TabsPrimitive.List
-		ref={ref}
-		className={cn("flex items-center w-full border-b-0 h-6", className)}
-		{...props}
-	/>
-));
+const CodeGroupList = React.forwardRef<HTMLDivElement, CodeGroupListProps>(
+	({ className, ...props }, ref) => (
+		<TabsPrimitive.List
+			ref={ref}
+			className={cn("flex items-center w-full border-b-0 h-6", className)}
+			{...props}
+		/>
+	),
+);
 CodeGroupList.displayName = "CodeGroupList";
 
-interface CodeGroupTabProps
-	extends TabsPrimitive.Tab.Props {}
+interface CodeGroupTabProps extends TabsPrimitive.Tab.Props {}
 
-const CodeGroupTab = React.forwardRef<
-	HTMLButtonElement,
-	CodeGroupTabProps
->(({ className, ...props }, ref) => (
-	<TabsPrimitive.Tab
-		ref={ref}
-		className={cn(
-			"flex items-center justify-center flex-1 min-w-0 h-6 px-2 py-1 text-[13px] font-semibold tracking-[-0.039px] leading-normal whitespace-nowrap",
-			"bg-interactive-secondary border border-r-0",
-			"text-tertiary-foreground transition-none outline-none",
-			"hover:text-primary",
-			"focus-visible:text-primary",
-			"data-selected:bg-interactive-secondary-hover  data-selected:shadow-[0px_3px_4px_0px_inset_rgba(0,0,0,0.04)]",
-			"data-unselected:shadow-[0px_-3px_4px_0px_inset_rgba(0,0,0,0.04)]",
-			"first:rounded-tl-md first:border-l",
-			className,
-		)}
-		{...props}
-	/>
-));
+const CodeGroupTab = React.forwardRef<HTMLButtonElement, CodeGroupTabProps>(
+	({ className, ...props }, ref) => (
+		<TabsPrimitive.Tab
+			ref={ref}
+			className={cn(
+				"flex items-center justify-center flex-1 min-w-0 h-6 px-2 py-1 text-[13px] font-semibold tracking-[-0.039px] leading-normal whitespace-nowrap",
+				"bg-interactive-secondary border border-r-0",
+				"text-tertiary-foreground transition-none outline-none",
+				"hover:text-primary",
+				"focus-visible:text-primary",
+				"data-selected:bg-interactive-secondary-hover  data-selected:shadow-[0px_3px_4px_0px_inset_rgba(0,0,0,0.04)]",
+				"data-unselected:shadow-[0px_-3px_4px_0px_inset_rgba(0,0,0,0.04)]",
+				"first:rounded-tl-md first:border-l",
+				className,
+			)}
+			{...props}
+		/>
+	),
+);
 CodeGroupTab.displayName = "CodeGroupTab";
 
 interface CodeGroupCopyButtonProps
@@ -101,8 +95,7 @@ const CodeGroupCopyButton = React.forwardRef<
 });
 CodeGroupCopyButton.displayName = "CodeGroupCopyButton";
 
-interface CodeGroupContentProps
-	extends TabsPrimitive.Panel.Props {
+interface CodeGroupContentProps extends TabsPrimitive.Panel.Props {
 	copyText?: string;
 }
 

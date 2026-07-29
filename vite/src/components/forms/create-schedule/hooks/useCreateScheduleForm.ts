@@ -12,9 +12,15 @@ export function useCreateScheduleForm({
 	initialValues?: CreateScheduleForm;
 } = {}) {
 	const defaultValues: CreateScheduleForm = initialValues ?? {
-		phases: [{ startsAt: null, plans: [{ ...EMPTY_SCHEDULE_PLAN }] }],
+		phases: [
+			{
+				startsAt: null,
+				plans: [{ ...EMPTY_SCHEDULE_PLAN }],
+			},
+		],
 		billingBehavior: null,
 		resetBillingCycle: false,
+		enablePlanImmediately: false,
 	};
 
 	const initialValuesRef = useRef<CreateScheduleForm>(defaultValues);

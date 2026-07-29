@@ -1,10 +1,10 @@
+import { IconCheckbox } from "@autumn/ui";
 import { ProhibitIcon } from "@phosphor-icons/react";
 import {
 	AdvancedSection,
 	AdvancedToggleRow,
 } from "@/components/forms/shared/advanced-section";
 import { useUpdateSubscriptionFormContext } from "@/components/forms/update-subscription-v2";
-import { IconCheckbox } from "@/components/v2/checkboxes/IconCheckbox";
 import { cn } from "@/lib/utils";
 
 export function CancelAdvancedSection() {

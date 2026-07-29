@@ -9,7 +9,7 @@ import {
 } from "./fetchExpiredTrialProducts";
 import { processExpiredTrialRow } from "./processExpiredTrialRow";
 
-const partitionRevertRows = (rows: ExpiredTrialRow[]) => {
+export const partitionRevertRows = (rows: ExpiredTrialRow[]) => {
 	const revert: ExpiredTrialRow[] = [];
 	const standard: ExpiredTrialRow[] = [];
 	for (const row of rows) {
@@ -68,7 +68,11 @@ export const runProductCron = async ({
 		while (iteration < maxIterations && Date.now() - startTime < timeoutMs) {
 			iteration++;
 
-			const results = await fetchExpiredTrialProducts({ batchSize, db });
+			const results = await fetchExpiredTrialProducts({
+				batchSize,
+				db,
+				nowMs: Date.now(),
+			});
 
 			if (results.length === 0) break;
 

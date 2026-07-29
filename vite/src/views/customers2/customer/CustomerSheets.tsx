@@ -20,7 +20,10 @@ import { BillingUsageAlertSheet } from "../components/sheets/BillingUsageAlertSh
 import { BillingUsageLimitSheet } from "../components/sheets/BillingUsageLimitSheet";
 import { CheckBalanceSheet } from "../components/sheets/CheckBalanceSheet";
 import { CreateScheduleSheet } from "../components/sheets/CreateScheduleSheet";
+import { CustomerConfigSheet } from "../components/sheets/CustomerConfigSheet";
 import { InvoiceDetailSheet } from "../components/sheets/InvoiceDetailSheet";
+import { LicenseDetailSheet } from "../components/sheets/LicenseDetailSheet";
+import { LicensePoolDetailSheet } from "../components/sheets/LicensePoolDetailSheet";
 import { RecordUsageSheet } from "../components/sheets/RecordUsageSheet";
 import { SubscriptionDetailSheet } from "../components/sheets/SubscriptionDetailSheet";
 import { SyncStripeSheet } from "../components/sync-stripe/SyncStripeSheet";
@@ -50,6 +53,10 @@ export function CustomerSheets() {
 			// 	return <AttachProductSheetV3 />;
 			case "subscription-detail":
 				return <SubscriptionDetailSheet />;
+			case "license-detail":
+				return <LicenseDetailSheet />;
+			case "license-pool-detail":
+				return <LicensePoolDetailSheet />;
 			case "subscription-update":
 			case "subscription-update-send-invoice":
 				return <SubscriptionUpdateSheet />;
@@ -73,6 +80,8 @@ export function CustomerSheets() {
 				return <SyncStripeSheet />;
 			case "sync-stripe-v2":
 				return <SyncStripeSheetV2 />;
+			case "customer-config-edit":
+				return <CustomerConfigSheet />;
 			case "billing-auto-topup-add":
 			case "billing-auto-topup-edit":
 				return <BillingAutoTopupSheet />;

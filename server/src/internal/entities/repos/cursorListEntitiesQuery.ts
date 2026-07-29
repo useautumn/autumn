@@ -152,5 +152,6 @@ export const getCursorPaginatedEntitySubjectsQuery = ({
 		includeInvoices: false,
 		includeEntityAggregations: false,
 		entityScopedOnly: true,
+		queryTag: "getCursorPaginatedEntitySubjects",
 	});
 };

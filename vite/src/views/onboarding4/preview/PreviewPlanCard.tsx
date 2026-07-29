@@ -1,9 +1,4 @@
-import {
-	Card,
-	CardContent,
-	CardFooter,
-	CardHeader,
-} from "@/components/v2/cards/Card";
+import { Card, CardContent, CardFooter, CardHeader } from "@autumn/ui";
 import { cn } from "@/lib/utils";
 import { PreviewCheckoutButton } from "./PreviewCheckoutButton";
 import { PreviewFeatureRow } from "./PreviewFeatureRow";

@@ -49,7 +49,7 @@ describe("runQueuedTrack", () => {
 	});
 
 	test("replays queued track through runTrackV3", async () => {
-		const timestamp = Date.UTC(2024, 1, 15, 12, 30, 0);
+		const timestamp = Date.now() - 10_000;
 		await runQueuedTrack({
 			ctx,
 			body: {

@@ -8,6 +8,7 @@ export type UsageWindowRoll = {
 	id: string;
 	feature_id: string;
 	internal_entity_id: string | null;
+	filter_key: string | null;
 	/** True when the stored window closed: the count must zero. A roll never
 	 *  writes a count otherwise, so it can't clobber a concurrent deduction. */
 	zero_usage: boolean;
@@ -76,6 +77,7 @@ export const computeUsageWindowRolls = ({
 			id: usageWindow.id,
 			feature_id: usageWindow.feature_id,
 			internal_entity_id: usageWindow.internal_entity_id ?? null,
+			filter_key: usageWindow.filter_key ?? null,
 			// A count never survives its stamped window; an anchor-only
 			// re-point (e.g. an ent recreated with the same cycle) keeps it.
 			zero_usage: expired || windowMoved,

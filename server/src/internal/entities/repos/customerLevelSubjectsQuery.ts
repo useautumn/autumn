@@ -38,5 +38,6 @@ export const getCustomerLevelSubjectRowsQuery = ({
 		inStatuses,
 		includeInvoices: false,
 		includeEntityAggregations: false,
+		queryTag: "getCustomerLevelSubjectRows",
 	});
 };

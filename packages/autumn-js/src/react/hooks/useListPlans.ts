@@ -1,19 +1,22 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
-import type { Plan } from "@useautumn/sdk";
+import type { ListPlansList } from "@useautumn/sdk";
 import type { ListPlansParams } from "../../types";
 import { useAutumnClient } from "../AutumnContext";
 import type { AutumnClientError } from "../client/AutumnClientError";
 import type { HookParams } from "./types";
 
-export type UseListPlansParams = HookParams<ListPlansParams, Plan[]>;
+export type UseListPlansParams = HookParams<ListPlansParams, ListPlansList[]>;
 
+/**
+ * @deprecated Autumn's React hooks are deprecated, as they don't scale well over time. Please use our backend SDK instead.
+ */
 export const useListPlans = (params: UseListPlansParams = {}) => {
 	const client = useAutumnClient({ caller: "useListPlans" });
 	const { queryOptions, ...listPlansParams } = params;
 
-	return useQuery<Plan[], AutumnClientError>({
+	return useQuery<ListPlansList[], AutumnClientError>({
 		queryKey: ["autumn", "plans", listPlansParams],
 		queryFn: async () => {
 			const response = await client.listPlans(listPlansParams);

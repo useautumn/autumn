@@ -235,8 +235,15 @@ Use this endpoint to update prepaid quantities, cancel a subscription (immediate
 * [preview_update](docs/sdks/billing/README.md#preview_update) - Previews the billing changes that would occur when updating a subscription, without actually making any changes.
 
 Use this endpoint to show customers prorated charges or refunds before confirming subscription modifications.
+* [multi_update](docs/sdks/billing/README.md#multi_update) - Updates multiple plans on a customer in a single request. Currently supports cancel actions (immediately, end of cycle, or uncancel) across one or more subscriptions.
+
+Use this endpoint to cancel or uncancel several plans atomically in one call — for example canceling a main plan together with its add-ons, or plans across multiple entities.
+* [preview_multi_update](docs/sdks/billing/README.md#preview_multi_update) - Previews the billing changes of a multi-plan update without making any changes. Returns one core preview per affected subscription.
+
+Use this endpoint to show customers the credits and next-cycle changes of canceling multiple plans before confirming.
 * [open_customer_portal](docs/sdks/billing/README.md#open_customer_portal) - Create a billing portal session for a customer to manage their subscription.
 * [setup_payment](docs/sdks/billing/README.md#setup_payment) - Create a payment setup session for a customer to add or update their payment method.
+* [import_](docs/sdks/billing/README.md#import_) - Import
 
 ### [Customers](docs/sdks/customers/README.md)
 
@@ -291,6 +298,22 @@ Use this to modify feature properties like name, display settings, or to archive
 
 Use this to permanently remove a feature. Note: features that are used in products cannot be deleted - archive them instead.
 
+### [Invoices](docs/sdks/invoices/README.md)
+
+* [insert](docs/sdks/invoices/README.md#insert) - Inserts or updates up to 500 historical invoices without reading or mutating the billing processor.
+* [list](docs/sdks/invoices/README.md#list) - Lists invoices with cursor pagination and optional filters (customer, entity, status, processor). Pass `start_cursor: ""` (or omit) for the first page; use `next_cursor` from a prior response for subsequent pages.
+
+### [Keys](docs/sdks/keys/README.md)
+
+* [mint](docs/sdks/keys/README.md#mint) - Mints a per-customer token (a scoped `am_jwt_` credential) so a downstream / self-hosted app can call Autumn directly without your secret key. Returns a short-lived access token plus a rotating refresh token, both bound to the given customer. Authenticated with your secret key.
+* [refresh](docs/sdks/keys/README.md#refresh) - Exchanges a refresh token (sent as the Bearer credential) for a freshly rotated access + refresh pair. Self-service for the token holder — no secret key required. The previous refresh token is honored for one rotation as a grace window; replaying an older one revokes the customer's tokens.
+* [revoke](docs/sdks/keys/README.md#revoke) - Revokes every outstanding token (access and refresh) for a customer. Authenticated with your secret key. New tokens can be issued afterwards with `keys.mint`.
+
+### [Licenses](docs/sdks/licenses/README.md)
+
+* [attach](docs/sdks/licenses/README.md#attach) - Assigns licenses to one or more entities.
+* [release](docs/sdks/licenses/README.md#release) - Releases licenses assigned to one or more entities.
+
 ### [Plans](docs/sdks/plans/README.md)
 
 * [create](docs/sdks/plans/README.md#create) - Create a plan
@@ -312,6 +335,7 @@ Use this to permanently remove a feature. Note: features that are used in produc
 
 ### [Rewards](docs/sdks/rewardssdk/README.md)
 
+* [list](docs/sdks/rewardssdk/README.md#list) - List the coupons and feature grants configured for the org.
 * [redeem_code](docs/sdks/rewardssdk/README.md#redeem_code) - Redeem a reward promo code for a customer.
 
 </details>

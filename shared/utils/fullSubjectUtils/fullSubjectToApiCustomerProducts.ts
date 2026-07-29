@@ -5,13 +5,14 @@ export const fullSubjectToApiCustomerProducts = ({
 	fullSubject,
 }: {
 	fullSubject: FullSubject;
-}): FullCusProduct[] => {
-	if (fullSubject.subjectType === "entity") {
-		return fullSubject.customer_products;
-	}
-
-	return [
-		...fullSubject.customer_products,
-		...(fullSubject.aggregated_customer_products ?? []),
-	];
-};
+}): FullCusProduct[] =>
+	fullSubject.subjectType === "entity"
+		? [
+				...fullSubject.customer_products,
+				// ...(fullSubject.aggregated_customer_products ?? []),
+			]
+		: [
+				...fullSubject.customer_products,
+				...(fullSubject.aggregated_customer_products ?? []),
+			];
+// : fullSubjectToPlanProducts({ fullSubject });

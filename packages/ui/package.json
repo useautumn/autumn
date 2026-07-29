@@ -1,0 +1,75 @@
+{
+	"name": "@autumn/ui",
+	"version": "0.0.1",
+	"type": "module",
+	"private": true,
+	"author": "Autumn",
+	"sideEffects": [
+		"*.css"
+	],
+	"main": "./src/index.ts",
+	"types": "./src/index.ts",
+	"exports": {
+		".": {
+			"types": "./src/index.ts",
+			"import": "./src/index.ts",
+			"default": "./src/index.ts"
+		},
+		"./ai-elements": {
+			"types": "./src/components/ai-elements/index.ts",
+			"import": "./src/components/ai-elements/index.ts",
+			"default": "./src/components/ai-elements/index.ts"
+		},
+		"./table": {
+			"types": "./src/components/table/index.tsx",
+			"import": "./src/components/table/index.tsx",
+			"default": "./src/components/table/index.tsx"
+		},
+		"./styles.css": "./src/styles/index.css"
+	},
+	"files": [
+		"src"
+	],
+	"scripts": {
+		"ts": "tsc --noEmit"
+	},
+	"dependencies": {
+		"@base-ui/react": "^1.4.1",
+		"@phosphor-icons/react": "^2.1.10",
+		"@squircle/tailwindcss": "^1.0.6",
+		"@tanstack/react-table": "^8.21.3",
+		"@tanstack/react-virtual": "^3.13.18",
+		"@xyflow/react": "^12.11.0",
+		"ai": "^6.0.5",
+		"class-variance-authority": "^0.7.1",
+		"clsx": "^2.1.1",
+		"cmdk": "^1.1.1",
+		"date-fns": "^3.6.0",
+		"embla-carousel-react": "^8.6.0",
+		"input-otp": "^1.4.2",
+		"lucide-react": "^0.562.0",
+		"motion": "^12.26.1",
+		"nanoid": "^5.1.6",
+		"react-day-picker": "^8.10.1",
+		"react-hotkeys-hook": "^4.6.1",
+		"react-resizable-panels": "^4.11.0",
+		"recharts": "^3.3.0",
+		"shiki": "^3.20.0",
+		"streamdown": "^1.6.10",
+		"tailwind-merge": "^3.0.2",
+		"tailwind-scrollbar-hide": "^4.0.0",
+		"tailwindcss": "^4.0.13",
+		"tailwindcss-animate": "^1.0.7",
+		"tokenlens": "^1.3.1",
+		"use-stick-to-bottom": "^1.1.1"
+	},
+	"peerDependencies": {
+		"react": "^19.0.0",
+		"react-dom": "^19.0.0"
+	},
+	"devDependencies": {
+		"@types/react": "^19.0.0",
+		"@types/react-dom": "^19.0.0",
+		"typescript": "~5.7.2"
+	}
+}

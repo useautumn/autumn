@@ -20,6 +20,7 @@ export const buildUsageWindowKey = ({
 	dimensionFeatureId,
 	interval,
 	windowStartAt,
+	filterKey,
 }: {
 	scopeType: UsageWindowScope;
 	internalEntityId: string | null;
@@ -27,6 +28,7 @@ export const buildUsageWindowKey = ({
 	dimensionFeatureId: string | null;
 	interval: EntInterval;
 	windowStartAt: number;
+	filterKey?: string | null;
 }): string => {
 	for (const segment of [internalEntityId, dimensionFeatureId]) {
 		if (
@@ -39,12 +41,19 @@ export const buildUsageWindowKey = ({
 		}
 	}
 
-	return [
+	const segments: Array<string | number> = [
 		scopeType,
 		internalEntityId ?? NULL_SEGMENT,
 		dimensionType,
 		dimensionFeatureId ?? NULL_SEGMENT,
 		interval,
 		windowStartAt,
-	].join(DELIMITER);
+	];
+	// Appended only for filtered windows so pre-filter keys stay byte-identical
+	// (live unfiltered counters keep their identity). Filter values are
+	// user-controlled: URI-encode to keep the delimiter unambiguous.
+	if (filterKey) {
+		segments.push(`f=${encodeURIComponent(filterKey)}`);
+	}
+	return segments.join(DELIMITER);
 };

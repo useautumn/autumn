@@ -33,6 +33,9 @@ if TYPE_CHECKING:
     from autumn_sdk.entities import Entities
     from autumn_sdk.events import Events
     from autumn_sdk.features import Features
+    from autumn_sdk.invoices import Invoices
+    from autumn_sdk.keys import Keys
+    from autumn_sdk.licenses import Licenses
     from autumn_sdk.plans import Plans
     from autumn_sdk.platform import Platform
     from autumn_sdk.referrals import Referrals
@@ -46,10 +49,13 @@ class Autumn(BaseSDK):
     billing: "Billing"
     balances: "Balances"
     events: "Events"
+    invoices: "Invoices"
+    licenses: "Licenses"
     entities: "Entities"
     referrals: "Referrals"
     rewards: "RewardsSDK"
     platform: "Platform"
+    keys: "Keys"
     _sub_sdk_map = {
         "customers": ("autumn_sdk.customers", "Customers"),
         "plans": ("autumn_sdk.plans", "Plans"),
@@ -57,10 +63,13 @@ class Autumn(BaseSDK):
         "billing": ("autumn_sdk.billing", "Billing"),
         "balances": ("autumn_sdk.balances", "Balances"),
         "events": ("autumn_sdk.events", "Events"),
+        "invoices": ("autumn_sdk.invoices", "Invoices"),
+        "licenses": ("autumn_sdk.licenses", "Licenses"),
         "entities": ("autumn_sdk.entities", "Entities"),
         "referrals": ("autumn_sdk.referrals", "Referrals"),
         "rewards": ("autumn_sdk.rewards_sdk", "RewardsSDK"),
         "platform": ("autumn_sdk.platform", "Platform"),
+        "keys": ("autumn_sdk.keys", "Keys"),
     }
 
     def __init__(
@@ -463,6 +472,8 @@ class Autumn(BaseSDK):
         event_name: Optional[str] = None,
         value: Optional[float] = None,
         properties: Optional[Dict[str, Any]] = None,
+        timestamp: Optional[int] = None,
+        overage_behavior: Optional[models.TrackOverageBehavior] = None,
         async_: Optional[bool] = None,
         lock: Optional[Union[models.TrackLock, models.TrackLockTypedDict]] = None,
         retries: OptionalNullable[utils.RetryConfig] = UNSET,
@@ -480,7 +491,9 @@ class Autumn(BaseSDK):
         :param event_name: Event name to track usage for. Use instead of feature_id when multiple features should be tracked from a single event.
         :param value: The amount of usage to record. Defaults to 1. Use negative values to credit balance (e.g., when removing a seat).
         :param properties: Additional properties to attach to this usage event.
-        :param async_: If true, enqueue the event for asynchronous processing and return 202 immediately. The response will not include balance information.
+        :param timestamp: Unix timestamp in milliseconds to use for the usage event. Defaults to the current time.
+        :param overage_behavior: How to handle usage that exceeds the available balance. \"cap\" (default) deducts only what fits, stopping at zero. \"overflow\" deducts the full value: the balance can go negative and usage limits do not clamp the deduction, though spend limits still apply.
+        :param async_: If true, enqueue the event for asynchronous processing and return 204 immediately. The response will not include balance information.
         :param lock:
         :param retries: Override the default retry configuration for this method
         :param server_url: Override the default server URL for this method
@@ -504,6 +517,8 @@ class Autumn(BaseSDK):
             event_name=event_name,
             value=value,
             properties=properties,
+            timestamp=timestamp,
+            overage_behavior=overage_behavior,
             async_=async_,
             lock=utils.get_pydantic_model(lock, Optional[models.TrackLock]),
         )
@@ -578,6 +593,8 @@ class Autumn(BaseSDK):
         event_name: Optional[str] = None,
         value: Optional[float] = None,
         properties: Optional[Dict[str, Any]] = None,
+        timestamp: Optional[int] = None,
+        overage_behavior: Optional[models.TrackOverageBehavior] = None,
         async_: Optional[bool] = None,
         lock: Optional[Union[models.TrackLock, models.TrackLockTypedDict]] = None,
         retries: OptionalNullable[utils.RetryConfig] = UNSET,
@@ -595,7 +612,9 @@ class Autumn(BaseSDK):
         :param event_name: Event name to track usage for. Use instead of feature_id when multiple features should be tracked from a single event.
         :param value: The amount of usage to record. Defaults to 1. Use negative values to credit balance (e.g., when removing a seat).
         :param properties: Additional properties to attach to this usage event.
-        :param async_: If true, enqueue the event for asynchronous processing and return 202 immediately. The response will not include balance information.
+        :param timestamp: Unix timestamp in milliseconds to use for the usage event. Defaults to the current time.
+        :param overage_behavior: How to handle usage that exceeds the available balance. \"cap\" (default) deducts only what fits, stopping at zero. \"overflow\" deducts the full value: the balance can go negative and usage limits do not clamp the deduction, though spend limits still apply.
+        :param async_: If true, enqueue the event for asynchronous processing and return 204 immediately. The response will not include balance information.
         :param lock:
         :param retries: Override the default retry configuration for this method
         :param server_url: Override the default server URL for this method
@@ -619,6 +638,8 @@ class Autumn(BaseSDK):
             event_name=event_name,
             value=value,
             properties=properties,
+            timestamp=timestamp,
+            overage_behavior=overage_behavior,
             async_=async_,
             lock=utils.get_pydantic_model(lock, Optional[models.TrackLock]),
         )
@@ -699,6 +720,9 @@ class Autumn(BaseSDK):
         audio_output_tokens: Optional[int] = None,
         reasoning_tokens: Optional[int] = None,
         properties: Optional[Dict[str, Any]] = None,
+        timestamp: Optional[int] = None,
+        overage_behavior: Optional[models.TrackTokensOverageBehavior] = None,
+        async_: Optional[bool] = None,
         retries: OptionalNullable[utils.RetryConfig] = UNSET,
         server_url: Optional[str] = None,
         timeout_ms: Optional[int] = None,
@@ -709,7 +733,7 @@ class Autumn(BaseSDK):
         Use this after an LLM request when you have input and output token counts. Autumn converts token usage to a dollar amount using the configured model pricing and markup, then tracks that value against the customer's AI credit system.
 
         :param customer_id: The ID of the customer.
-        :param model_id: The AI model as '<provider>/<model>' (e.g. 'anthropic/claude-opus-4-8', 'openrouter/openai/gpt-4o'). The provider is the first path segment and must match a provider + model key in models.dev.
+        :param model_id: The AI model as '[provider]/[model]' (e.g. 'anthropic/claude-opus-4-8', 'openrouter/openai/gpt-4o'). The provider is the first path segment and must match a provider + model key in models.dev.
         :param input_tokens: Number of non-cached text input tokens consumed. Exclusive of cache and audio token pools.
         :param output_tokens: Number of text output tokens consumed. Exclusive of the reasoning and audio output pools.
         :param entity_id: The ID of the entity for entity-scoped balances.
@@ -720,6 +744,9 @@ class Autumn(BaseSDK):
         :param audio_output_tokens: Number of audio output tokens generated.
         :param reasoning_tokens: Number of reasoning tokens generated.
         :param properties: Additional properties to attach to this usage event.
+        :param timestamp: Unix timestamp in milliseconds to use for the usage event. Defaults to the current time.
+        :param overage_behavior: How to handle usage that exceeds the available balance. \"cap\" (default) deducts only what fits, stopping at zero. \"overflow\" deducts the full value: the balance can go negative and usage limits do not clamp the deduction, though spend limits still apply.
+        :param async_: If true, enqueue the event for asynchronous processing and return 204 immediately. The response will not include balance information.
         :param retries: Override the default retry configuration for this method
         :param server_url: Override the default server URL for this method
         :param timeout_ms: Override the default request timeout configuration for this method in milliseconds
@@ -748,6 +775,9 @@ class Autumn(BaseSDK):
             audio_output_tokens=audio_output_tokens,
             reasoning_tokens=reasoning_tokens,
             properties=properties,
+            timestamp=timestamp,
+            overage_behavior=overage_behavior,
+            async_=async_,
         )
 
         req = self._build_request(
@@ -826,6 +856,9 @@ class Autumn(BaseSDK):
         audio_output_tokens: Optional[int] = None,
         reasoning_tokens: Optional[int] = None,
         properties: Optional[Dict[str, Any]] = None,
+        timestamp: Optional[int] = None,
+        overage_behavior: Optional[models.TrackTokensOverageBehavior] = None,
+        async_: Optional[bool] = None,
         retries: OptionalNullable[utils.RetryConfig] = UNSET,
         server_url: Optional[str] = None,
         timeout_ms: Optional[int] = None,
@@ -836,7 +869,7 @@ class Autumn(BaseSDK):
         Use this after an LLM request when you have input and output token counts. Autumn converts token usage to a dollar amount using the configured model pricing and markup, then tracks that value against the customer's AI credit system.
 
         :param customer_id: The ID of the customer.
-        :param model_id: The AI model as '<provider>/<model>' (e.g. 'anthropic/claude-opus-4-8', 'openrouter/openai/gpt-4o'). The provider is the first path segment and must match a provider + model key in models.dev.
+        :param model_id: The AI model as '[provider]/[model]' (e.g. 'anthropic/claude-opus-4-8', 'openrouter/openai/gpt-4o'). The provider is the first path segment and must match a provider + model key in models.dev.
         :param input_tokens: Number of non-cached text input tokens consumed. Exclusive of cache and audio token pools.
         :param output_tokens: Number of text output tokens consumed. Exclusive of the reasoning and audio output pools.
         :param entity_id: The ID of the entity for entity-scoped balances.
@@ -847,6 +880,9 @@ class Autumn(BaseSDK):
         :param audio_output_tokens: Number of audio output tokens generated.
         :param reasoning_tokens: Number of reasoning tokens generated.
         :param properties: Additional properties to attach to this usage event.
+        :param timestamp: Unix timestamp in milliseconds to use for the usage event. Defaults to the current time.
+        :param overage_behavior: How to handle usage that exceeds the available balance. \"cap\" (default) deducts only what fits, stopping at zero. \"overflow\" deducts the full value: the balance can go negative and usage limits do not clamp the deduction, though spend limits still apply.
+        :param async_: If true, enqueue the event for asynchronous processing and return 204 immediately. The response will not include balance information.
         :param retries: Override the default retry configuration for this method
         :param server_url: Override the default server URL for this method
         :param timeout_ms: Override the default request timeout configuration for this method in milliseconds
@@ -875,6 +911,9 @@ class Autumn(BaseSDK):
             audio_output_tokens=audio_output_tokens,
             reasoning_tokens=reasoning_tokens,
             properties=properties,
+            timestamp=timestamp,
+            overage_behavior=overage_behavior,
+            async_=async_,
         )
 
         req = self._build_request_async(

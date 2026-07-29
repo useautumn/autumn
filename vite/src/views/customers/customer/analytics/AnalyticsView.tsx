@@ -1,9 +1,9 @@
 import { ErrCode } from "@autumn/shared";
+import { PageContainer } from "@autumn/ui";
 import { ChartBarIcon } from "@phosphor-icons/react";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
-import { PageContainer } from "@/components/general/PageContainer";
 import { useFeatureFlags } from "@/hooks/useFeatureFlags";
 import { useEnv } from "@/utils/envUtils";
 import { OnboardingGuide } from "@/views/onboarding4/OnboardingGuide";
@@ -12,6 +12,13 @@ import { EventsBarChart } from "./AnalyticsGraph";
 import { colors } from "./components/analytics-types";
 import { ChartLegend, type ChartLegendEntry } from "./components/ChartLegend";
 import { ChartSkeleton } from "./components/ChartSkeleton";
+import { EventsTable } from "./components/EventsTable";
+import { QueryTopbar } from "./components/QueryTopbar";
+import {
+	useAnalyticsData,
+	useRawAnalyticsData,
+} from "./hooks/useAnalyticsData";
+import { RevenueMetricsSection } from "./revenue/RevenueMetricsSection";
 import {
 	DEFAULT_PLOT_INSETS,
 	getCachedPlotInsets,
@@ -20,13 +27,6 @@ import {
 	plotInsetsEqual,
 	setCachedPlotInsets,
 } from "./utils/chartGeometry";
-import { EventsTable } from "./components/EventsTable";
-import { QueryTopbar } from "./components/QueryTopbar";
-import {
-	useAnalyticsData,
-	useRawAnalyticsData,
-} from "./hooks/useAnalyticsData";
-import { RevenueMetricsSection } from "./revenue/RevenueMetricsSection";
 import { extractPropertyKeys } from "./utils/extractPropertyKeys";
 import {
 	generateChartConfig,
@@ -159,9 +159,13 @@ export const AnalyticsView = () => {
 		// 1. Drop raw rows where every feature column is zero — cuts ~95%
 		//    of rows before the pivot so it runs on hundreds, not thousands.
 		const groupCol =
-			groupBy === "customer_id" || groupBy === "entity_id" || groupBy === "plan_id"
+			groupBy === "customer_id" ||
+			groupBy === "entity_id" ||
+			groupBy === "plan_id"
 				? groupBy
-				: groupBy ? `properties.${groupBy}` : null;
+				: groupBy
+					? `properties.${groupBy}`
+					: null;
 		const skipKeys = new Set(["period", groupCol].filter(Boolean) as string[]);
 		const nonZeroData = filteredEvents.data.filter(
 			(row: Record<string, string | number>) => {
@@ -172,9 +176,10 @@ export const AnalyticsView = () => {
 				return false;
 			},
 		);
-		const nonZeroEvents = nonZeroData.length === filteredEvents.data.length
-			? filteredEvents
-			: { ...filteredEvents, data: nonZeroData, rows: nonZeroData.length };
+		const nonZeroEvents =
+			nonZeroData.length === filteredEvents.data.length
+				? filteredEvents
+				: { ...filteredEvents, data: nonZeroData, rows: nonZeroData.length };
 
 		// 2. Pivot into one column per group×feature
 		const transformed = transformGroupedData({
@@ -196,7 +201,16 @@ export const AnalyticsView = () => {
 		});
 
 		return { chartData: trimmed, chartConfig: config };
-	}, [events, features, groupBy, groupFilter, planDeselected, entityNames, customerNames, planNames]);
+	}, [
+		events,
+		features,
+		groupBy,
+		groupFilter,
+		planDeselected,
+		entityNames,
+		customerNames,
+		planNames,
+	]);
 
 	const { barFractions, chartDomainMax } = useMemo(() => {
 		const rows = chartData?.data;
@@ -226,10 +240,7 @@ export const AnalyticsView = () => {
 			entries = chartConfig.map((s) => {
 				const sum = chartData.data.reduce(
 					(acc, row) =>
-						acc +
-						Number(
-							(row as Record<string, string | number>)[s.yKey] ?? 0,
-						),
+						acc + Number((row as Record<string, string | number>)[s.yKey] ?? 0),
 					0,
 				);
 				return {
@@ -243,8 +254,7 @@ export const AnalyticsView = () => {
 		} else {
 			entries = responseEventNames.map((name) => {
 				const entry = totals?.[name] ?? { count: 0, sum: 0 };
-				const primary =
-					entry.sum !== entry.count ? entry.sum : entry.count;
+				const primary = entry.sum !== entry.count ? entry.sum : entry.count;
 				const series = chartConfig?.find(
 					(c) => c.yKey === `${name}_count` || c.yKey === name,
 				);
@@ -261,9 +271,7 @@ export const AnalyticsView = () => {
 				};
 			});
 		}
-		return entries
-			.filter((e) => e.value > 0)
-			.sort((a, b) => b.value - a.value);
+		return entries.filter((e) => e.value > 0).sort((a, b) => b.value - a.value);
 	}, [chartData, chartConfig, groupBy, responseEventNames, totals]);
 
 	useEffect(() => {
@@ -323,7 +331,9 @@ export const AnalyticsView = () => {
 	if (clickHouseDisabled) {
 		return (
 			<div className="flex flex-col items-center justify-center h-full">
-				<h3 className="text-sm text-muted-foreground font-bold">Tinybird is disabled</h3>
+				<h3 className="text-sm text-muted-foreground font-bold">
+					Tinybird is disabled
+				</h3>
 			</div>
 		);
 	}
@@ -333,8 +343,7 @@ export const AnalyticsView = () => {
 		!isFeatureFlagsLoading &&
 		!flags.maintenanceModes.analytics.disableRevenueMetrics;
 
-	const hasChart =
-		!queryLoading && !!chartData && chartData.data.length > 0;
+	const hasChart = !queryLoading && !!chartData && chartData.data.length > 0;
 	const isEmpty = !queryLoading && !hasChart;
 	const chartRevealDelay = reduceMotion ? 0 : 0.85;
 
@@ -351,66 +360,68 @@ export const AnalyticsView = () => {
 						</div>
 						<QueryTopbar />
 					</div>
-				<div className="relative flex flex-col bg-interactive-secondary border rounded-lg aspect-[3/1] overflow-hidden">
-					{(queryLoading || hasChart) && (
-						<div className="absolute inset-0 flex flex-col">
-							<ChartSkeleton
-								targets={hasChart ? barFractions : null}
-								geometry={plotInsets}
-							/>
-						</div>
-					)}
-					<AnimatePresence>
-						{hasChart && (
-							<motion.div
-								key="chart"
-								className="absolute inset-0 flex flex-col bg-interactive-secondary"
-								initial={{ opacity: 0 }}
-								animate={{
-									opacity: 1,
-									transition: {
-										duration: 0.85,
-										delay: chartRevealDelay,
-										ease: [0.23, 1, 0.32, 1],
-									},
-								}}
-								exit={{
-									opacity: 0,
-									transition: { duration: 0.2, ease: [0.23, 1, 0.32, 1] },
-								}}
-							>
-								<ChartLegend
-									entries={legendEntries}
-									showLabels={!!groupBy || legendEntries.length <= 3}
+					<div className="relative flex flex-col bg-interactive-secondary border rounded-lg aspect-[3/1] overflow-hidden">
+						{(queryLoading || hasChart) && (
+							<div className="absolute inset-0 flex flex-col">
+								<ChartSkeleton
+									targets={hasChart ? barFractions : null}
+									geometry={plotInsets}
 								/>
-								<div className="flex-1 min-h-0">
-									<EventsBarChart
-										data={
-											chartData as Parameters<typeof EventsBarChart>[0]["data"]
-										}
-										chartConfig={chartConfig}
-										domainMax={chartDomainMax}
-										onGeometry={handlePlotGeometry}
-									/>
-								</div>
-							</motion.div>
+							</div>
 						)}
-					</AnimatePresence>
-					{isEmpty && (
-						<div className="absolute inset-0 flex flex-col items-center justify-center gap-2">
-							<ChartBarIcon
-								size={28}
-								weight="duotone"
-								className="text-muted-foreground/50"
-							/>
-							<p className="text-muted-foreground text-sm">
-								{eventNames.length === 0
-									? "Start sending events to view usage data."
-									: "No events found for these filters."}
-							</p>
-						</div>
-					)}
-				</div>
+						<AnimatePresence>
+							{hasChart && (
+								<motion.div
+									key="chart"
+									className="absolute inset-0 flex flex-col bg-interactive-secondary"
+									initial={{ opacity: 0 }}
+									animate={{
+										opacity: 1,
+										transition: {
+											duration: 0.85,
+											delay: chartRevealDelay,
+											ease: [0.23, 1, 0.32, 1],
+										},
+									}}
+									exit={{
+										opacity: 0,
+										transition: { duration: 0.2, ease: [0.23, 1, 0.32, 1] },
+									}}
+								>
+									<ChartLegend
+										entries={legendEntries}
+										showLabels={!!groupBy || legendEntries.length <= 3}
+									/>
+									<div className="flex-1 min-h-0">
+										<EventsBarChart
+											data={
+												chartData as Parameters<
+													typeof EventsBarChart
+												>[0]["data"]
+											}
+											chartConfig={chartConfig}
+											domainMax={chartDomainMax}
+											onGeometry={handlePlotGeometry}
+										/>
+									</div>
+								</motion.div>
+							)}
+						</AnimatePresence>
+						{isEmpty && (
+							<div className="absolute inset-0 flex flex-col items-center justify-center gap-2">
+								<ChartBarIcon
+									size={28}
+									weight="duotone"
+									className="text-muted-foreground/50"
+								/>
+								<p className="text-muted-foreground text-sm">
+									{eventNames.length === 0
+										? "Start sending events to view usage data."
+										: "No events found for these filters."}
+								</p>
+							</div>
+						)}
+					</div>
 				</div>
 
 				<div className="flex-1 min-h-[200px] pb-2">

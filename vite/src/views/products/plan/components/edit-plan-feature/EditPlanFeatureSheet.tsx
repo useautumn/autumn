@@ -1,7 +1,9 @@
 import { FeatureType, isAnyCreditSystem, TierBehavior } from "@autumn/shared";
+import { IconButton } from "@autumn/ui";
 import { PencilSimpleIcon } from "@phosphor-icons/react";
 import { useState } from "react";
-import { IconButton } from "@/components/v2/buttons/IconButton";
+import { useHotkeys } from "react-hotkeys-hook";
+import { toast } from "sonner";
 import {
 	useHasItemChanges,
 	useProduct,
@@ -14,6 +16,8 @@ import { isFeaturePriceItem } from "@/utils/product/getItemType";
 import UpdateFeatureSheet from "@/views/products/features/components/UpdateFeatureSheet";
 import UpdateCreditSystemSheet from "@/views/products/features/credit-systems/components/UpdateCreditSystemSheet";
 import { useProductItemContext } from "@/views/products/product/product-item/ProductItemContext";
+import { migrateTierCurrenciesForMode } from "../../utils/currencyUtils";
+import { copyPlanItemToClipboard } from "../../utils/planItemClipboard";
 import {
 	cleanTiersForMode,
 	type VolumePricingMode,
@@ -58,6 +62,10 @@ export function EditPlanFeatureSheet({
 				newItem.tiers = newItem.tiers.map((tier) => ({
 					...tier,
 					flat_amount: undefined,
+					additional_currencies: migrateTierCurrenciesForMode({
+						entries: tier.additional_currencies,
+						mode: "per_unit",
+					}),
 				}));
 			}
 		}
@@ -69,17 +77,23 @@ export function EditPlanFeatureSheet({
 		if (!item?.tiers) return;
 
 		const migratedTiers = item.tiers.map((tier) => {
+			const additionalCurrencies = migrateTierCurrenciesForMode({
+				entries: tier.additional_currencies,
+				mode,
+			});
 			if (mode === "flat") {
 				return {
 					...tier,
 					flat_amount: tier.flat_amount ?? tier.amount,
 					amount: 0,
+					additional_currencies: additionalCurrencies,
 				};
 			}
 			return {
 				...tier,
 				amount: tier.amount !== 0 ? tier.amount : (tier.flat_amount ?? 0),
 				flat_amount: undefined,
+				additional_currencies: additionalCurrencies,
 			};
 		});
 
@@ -110,11 +124,27 @@ export function EditPlanFeatureSheet({
 		}
 	};
 
+	const feature = getFeature(item?.feature_id ?? "", features);
+
+	const handleCopyItem = async () => {
+		if (!item) return;
+		try {
+			await copyPlanItemToClipboard({ item });
+		} catch {
+			toast.error("Failed to copy to clipboard");
+		}
+	};
+
+	// Copy the open item unless the user is copying selected text
+	useHotkeys("mod+c", () => {
+		if (window.getSelection()?.toString()) return;
+		handleCopyItem();
+	});
+
 	if (!item) {
 		return null;
 	}
 
-	const feature = getFeature(item?.feature_id ?? "", features);
 	const isFeaturePrice = isFeaturePriceItem(item);
 
 	// Allow confirming a priced feature that has a $0 tier (valid zero-price config)
@@ -124,7 +154,7 @@ export function EditPlanFeatureSheet({
 		item.tiers[0].amount === 0 &&
 		!item.included_usage;
 
-	const hasChanges = hasItemChanges || isZeroPriceItem || !isUpdate;
+	const canConfirm = hasItemChanges || isZeroPriceItem || !isUpdate;
 
 	return (
 		<div className="flex flex-col h-full overflow-hidden">
@@ -218,7 +248,8 @@ export function EditPlanFeatureSheet({
 
 			{/* Footer stays at bottom */}
 			<SheetFooterActions
-				hasChanges={hasChanges}
+				isDirty={hasItemChanges}
+				canConfirm={canConfirm}
 				onBeforeCommit={handleBeforeCommit}
 			/>
 

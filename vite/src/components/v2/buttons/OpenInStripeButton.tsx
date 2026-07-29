@@ -1,8 +1,11 @@
-import { IconTooltipButton } from "@/components/v2/buttons/IconTooltipButton";
+import { IconTooltipButton } from "@autumn/ui";
 import { StripeIcon } from "@/components/v2/icons/AutumnIcons";
 import { useOrgStripeQuery } from "@/hooks/queries/useOrgStripeQuery";
 import { useEnv } from "@/utils/envUtils";
-import { getStripeConnectViewAsLink, getStripeSubLink } from "@/utils/linkUtils";
+import {
+	getStripeConnectViewAsLink,
+	getStripeSubLink,
+} from "@/utils/linkUtils";
 import { useAdmin } from "@/views/admin/hooks/useAdmin";
 import { useMasterStripeAccount } from "@/views/admin/hooks/useMasterStripeAccount";
 

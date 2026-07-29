@@ -105,6 +105,8 @@ import { Result } from "../types/fp.js";
  * @param items - Feature configurations for this plan. Each item defines included units, pricing, and reset behavior. (optional)
  * @param freeTrial - Free trial configuration. Customers can try this plan before being charged. (optional)
  * @param config - Miscellaneous plan-level configuration flags. (optional)
+ * @param billingControls - Plan-level billing controls used as customer defaults. (optional)
+ * @param metadata - Arbitrary key-value metadata defined by you for your own use (e.g. UI copy, feature highlights). Values can be any JSON-serializable value. Shared across all versions of the plan. (optional)
  *
  * @returns The created plan object.
  */

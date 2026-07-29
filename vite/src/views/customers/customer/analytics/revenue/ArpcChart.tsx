@@ -116,7 +116,9 @@ export function ArpcChart({
 
 				{isEmpty && (
 					<div className="h-[260px] flex items-center justify-center">
-						<p className="text-sm text-tertiary-foreground">No data available</p>
+						<p className="text-sm text-tertiary-foreground">
+							No data available
+						</p>
 					</div>
 				)}
 

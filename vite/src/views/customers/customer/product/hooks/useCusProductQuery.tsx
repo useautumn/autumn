@@ -63,6 +63,7 @@ export const useCusProductQuery = () => {
 			stableStates.entity_id,
 		]),
 		queryFn: fetcher,
+		enabled: !!customer_id && !!product_id,
 	});
 
 	useEffect(() => {

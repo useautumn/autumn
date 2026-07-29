@@ -4,50 +4,74 @@ import type { User } from "better-auth";
 import type { Organization as BetterAuthOrganization } from "better-auth/plugins/organization";
 import { isUniqueConstraintError } from "@/db/dbUtils.js";
 import { db } from "@/db/initDrizzle.js";
+import { deleteConnectedAccount } from "@/external/connect/connectUtils.js";
 import { logger } from "@/external/logtail/logtailUtils.js";
-import { createSvixApp } from "@/external/svix/svixHelpers.js";
+import { createSvixApp, deleteSvixApp } from "@/external/svix/svixHelpers.js";
 import { OrgService } from "@/internal/orgs/OrgService.js";
 import { createConnectAccount } from "@/internal/orgs/orgUtils/createConnectAccount.js";
 import { generatePublishableKey } from "../encryptUtils.js";
 import { captureOrgEvent } from "../posthog.js";
 
+type CreatedResources = { stripeAccountId?: string; svixAppIds: string[] };
+
 const initOrgSvixApps = async ({ id, slug }: { id: string; slug: string }) => {
-	const batchCreate = [];
-	batchCreate.push(
+	const [sandboxApp, liveApp] = await Promise.all([
 		createSvixApp({
 			name: `${slug}_${AppEnv.Sandbox}`,
 			orgId: id,
 			env: AppEnv.Sandbox,
 		}),
-	);
-	batchCreate.push(
 		createSvixApp({
 			name: `${slug}_${AppEnv.Live}`,
 			orgId: id,
 			env: AppEnv.Live,
 		}),
-	);
-
-	const [sandboxApp, liveApp] = await Promise.all(batchCreate);
+	]);
 
 	return { sandboxApp, liveApp };
 };
 
-export const afterOrgCreated = async ({
+// Best-effort, ordered rollback; the delete helpers swallow their own errors.
+const rollbackOrgResources = async (created: CreatedResources) => {
+	if (!created.stripeAccountId && created.svixAppIds.length === 0) {
+		return;
+	}
+	logger.error(
+		`Rolling back partial org provisioning: stripe=${created.stripeAccountId ?? "-"}, svix=[${created.svixAppIds.join(",")}]`,
+	);
+	for (const appId of created.svixAppIds) {
+		await deleteSvixApp({ appId });
+	}
+	if (created.stripeAccountId) {
+		await deleteConnectedAccount({
+			accountId: created.stripeAccountId,
+			env: AppEnv.Sandbox,
+			logger,
+		});
+	}
+};
+
+/** Provision an org's external resources (Stripe account, svix apps, pkeys).
+ *  `strict` (sub-org create) fails if svix is configured-but-unprovisioned and
+ *  rolls back everything it created on any error, so nothing orphans. Default is
+ *  best-effort (legacy self-service signup): write what succeeds, never roll back. */
+export const provisionOrgResources = async ({
 	org,
 	user,
 	createStripeAccount = true,
 	pkey,
 	livePkey,
+	strict = false,
 }: {
 	org: Organization | BetterAuthOrganization;
 	user: User;
 	createStripeAccount?: boolean;
 	pkey?: string;
 	livePkey?: string;
+	strict?: boolean;
 }) => {
-	logger.info(`Org created: ${org.id} (${org.slug})`);
 	const { id, slug, createdAt } = org;
+	const created: CreatedResources = { svixAppIds: [] };
 
 	try {
 		await OrgService.update({
@@ -58,13 +82,11 @@ export const afterOrgCreated = async ({
 			},
 		});
 
-		// 1. Add stripe connect config
+		// 1. Add stripe connect config (track the account id before the DB write
+		// so a failed write can still roll the external account back).
 		if (createStripeAccount) {
-			console.log("Creating stripe connect account");
-			const stripeConnectAccount = await createConnectAccount({
-				org: org,
-				user,
-			});
+			const stripeConnectAccount = await createConnectAccount({ org, user });
+			created.stripeAccountId = stripeConnectAccount.id;
 
 			await OrgService.update({
 				db,
@@ -78,11 +100,24 @@ export const afterOrgCreated = async ({
 			});
 		}
 
-		// 1. Create svix webhoooks
-		const { sandboxApp, liveApp } = await initOrgSvixApps({
-			slug,
-			id,
-		});
+		// 2. Create svix webhooks
+		const { sandboxApp, liveApp } = await initOrgSvixApps({ slug, id });
+		if (sandboxApp?.id) {
+			created.svixAppIds.push(sandboxApp.id);
+		}
+		if (liveApp?.id) {
+			created.svixAppIds.push(liveApp.id);
+		}
+
+		// Svix is skipped when unconfigured (dev/test); under strict provisioning a
+		// configured failure must not silently leave a sandbox with broken webhooks.
+		if (
+			strict &&
+			process.env.SVIX_API_KEY &&
+			(!sandboxApp?.id || !liveApp?.id)
+		) {
+			throw new Error(`Failed to provision svix apps for org ${id}`);
+		}
 
 		await OrgService.update({
 			db,
@@ -110,12 +145,43 @@ export const afterOrgCreated = async ({
 				},
 			});
 		}
+	} catch (error) {
+		if (strict) {
+			await rollbackOrgResources(created);
+		}
+		throw error;
+	}
+};
+
+/** Best-effort wrapper around `provisionOrgResources`: swallows failures so a
+ *  provisioning hiccup never blocks org creation (e.g. self-service signup). */
+export const afterOrgCreated = async ({
+	org,
+	user,
+	createStripeAccount = true,
+	pkey,
+	livePkey,
+}: {
+	org: Organization | BetterAuthOrganization;
+	user: User;
+	createStripeAccount?: boolean;
+	pkey?: string;
+	livePkey?: string;
+}) => {
+	logger.info(`Org created: ${org.id} (${org.slug})`);
+
+	try {
+		await provisionOrgResources({
+			org,
+			user,
+			createStripeAccount,
+			pkey,
+			livePkey,
+		});
 		// biome-ignore lint/suspicious/noExplicitAny: don't know what error this is.
 	} catch (error: any) {
 		if (isUniqueConstraintError(error)) {
-			logger.error(
-				`Org ${id} already exists in Supabase -- skipping creationg`,
-			);
+			logger.error(`Org ${org.id} already exists in Supabase -- skipping`);
 			return;
 		}
 		logger.error(

@@ -3,12 +3,14 @@ import {
 	type FullCusProduct,
 	type FullCustomer,
 	orgDisableStripeWrites,
+	resolveCustomerCurrency,
 	type UpdateSubscriptionBillingContext,
 	UpdateSubscriptionIntent,
 	type UpdateSubscriptionV1Params,
 } from "@autumn/shared";
 import type { UpdatePlanOp } from "@autumn/shared/api/migrations/operations/customer/updatePlan/index.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
+import { planOffersCurrency } from "@/internal/billing/v2/actions/attach/errors/handleCurrencyMismatchErrors.js";
 import { setupUpdateSubscriptionProductContext } from "@/internal/billing/v2/actions/updateSubscription/setup/setupUpdateSubscriptionProductContext.js";
 import { setupAdjustableQuantities } from "@/internal/billing/v2/setup/setupAdjustableQuantities.js";
 import { setupAnchorResetRefund } from "@/internal/billing/v2/setup/setupAnchorResetRefund.js";
@@ -17,6 +19,7 @@ import { setupInvoiceModeContext } from "@/internal/billing/v2/setup/setupInvoic
 import { setupMigrationOperationBillingContext } from "@/internal/migrations/v2/run/migrateCustomer/setup/index.js";
 import type { MigrateCustomerContext } from "../../types/index.js";
 import { applyPrepareResultsToUpdatePlan } from "../applyPrepareResults/index.js";
+import { resolveFeatureQuantityStrategy } from "../compute/resolveFeatureQuantityStrategy.js";
 import { itemAlreadyExists } from "./itemAlreadyExists.js";
 import type { UpdatePlanProductContext } from "./types.js";
 
@@ -59,10 +62,19 @@ export const setupUpdatePlanProductContext = async ({
 		...preparedOp.customize,
 		...(addItems ? { add_items: addItems } : {}),
 	};
+	const allRequestedAddItemsAlreadyExist =
+		(preparedOp.customize?.add_items?.length ?? 0) > 0 &&
+		addItems?.length === 0;
+	const versionToApply =
+		allRequestedAddItemsAlreadyExist &&
+		preparedOp.version === customerProduct.product.version &&
+		!customerProduct.is_custom
+			? undefined
+			: preparedOp.version;
 	if (
-		preparedOp.version === undefined &&
+		versionToApply === undefined &&
 		customize.price === undefined &&
-		customize.add_items?.length === 0 &&
+		(customize.add_items === undefined || customize.add_items.length === 0) &&
 		customize.remove_items === undefined &&
 		(customize.update_items === undefined ||
 			customize.update_items.length === 0)
@@ -82,14 +94,30 @@ export const setupUpdatePlanProductContext = async ({
 		? { ...projectedFullCustomer, entity }
 		: projectedFullCustomer;
 
+	const strategyFeatureQuantities = preparedOp.feature_quantities_strategy
+		? resolveFeatureQuantityStrategy({
+				strategies: preparedOp.feature_quantities_strategy,
+				customerProduct,
+				addItems: customize.add_items,
+			})
+		: [];
+
+	const allowCharges = preparedOp.proration === true;
+
 	const params: UpdateSubscriptionV1Params = {
 		customer_id: customerId,
 		entity_id: customerProduct.entity_id ?? undefined,
 		customer_product_id: customerProduct.id,
 		plan_id: customerProduct.product.id,
-		version: preparedOp.version,
+		version: versionToApply,
 		...(preparedOp.customize ? { customize } : {}),
-		proration_behavior: "none",
+		...(strategyFeatureQuantities.length > 0
+			? { feature_quantities: strategyFeatureQuantities }
+			: {}),
+		// Explicitly "none" unless proration is true (internal-only op field,
+		// never settable from the frontend) — default migration behavior stays
+		// charge-free for every op that doesn't opt in.
+		proration_behavior: allowCharges ? undefined : "none",
 		no_billing_changes:
 			context.migration.no_billing_changes === true ? true : undefined,
 	};
@@ -105,7 +133,7 @@ export const setupUpdatePlanProductContext = async ({
 		fullCustomer: productFullCustomer,
 		params,
 		reusePricesAndEntitlements,
-		resetToCatalogVersion: typeof preparedOp.version === "number",
+		resetToCatalogVersion: typeof versionToApply === "number",
 	});
 
 	const operationBillingContext = await setupMigrationOperationBillingContext({
@@ -115,6 +143,27 @@ export const setupUpdatePlanProductContext = async ({
 		customerProduct: targetCustomerProduct,
 		fullProduct,
 	});
+
+	// A customer billed in a currency the target plan no longer offers stays
+	// grandfathered on their current prices instead of failing at Stripe.
+	const targetPrices = customPrices?.length ? customPrices : fullProduct.prices;
+	const customerCurrency = resolveCustomerCurrency({
+		customer: productFullCustomer,
+		org: ctx.org,
+		stripeCurrency: operationBillingContext.stripeSubscription?.currency,
+	});
+	if (
+		!planOffersCurrency({
+			ctx,
+			prices: targetPrices,
+			currency: customerCurrency,
+		})
+	) {
+		ctx.logger.warn(
+			`[migration] skipping customer product ${customerProduct.id}: target plan has no '${customerCurrency}' price`,
+		);
+		return undefined;
+	}
 
 	const featureQuantities = setupFeatureQuantitiesContext({
 		ctx,
@@ -158,6 +207,10 @@ export const setupUpdatePlanProductContext = async ({
 		billingVersion: BillingVersion.V2,
 		actionSource: "migration",
 		skipBillingChanges,
+		allowCharges,
+		// Preview never creates real Stripe resources — seed placeholder ids
+		// instead, same mechanism attach/updateSubscription previews use.
+		dryRunStripe: context.preview,
 		checkoutMode: null,
 		anchorResetRefund: setupAnchorResetRefund({
 			billingCycleAnchor: params.billing_cycle_anchor,

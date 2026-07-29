@@ -75,13 +75,13 @@ describe("Autumn operation tools", () => {
 			"attach",
 			"updateSubscription",
 			"createSchedule",
+			"updateCustomer",
 		] as const) {
 			expect(tools[name].mcp?.annotations?.destructiveHint).toBe(true);
 		}
 
 		for (const name of [
 			"listCustomers",
-			"updateCustomer",
 			"getCustomer",
 			"listFeatures",
 			"listPlans",
@@ -557,9 +557,15 @@ describe("Autumn operation tools", () => {
 			expect(init?.method).toBe("GET");
 			expect(init?.body).toBeUndefined();
 			return Response.json({
+				id: "org_unit_tests",
 				name: "Unit Tests",
 				slug: "unit-tests",
 				env: "sandbox",
+				user: {
+					id: "user_unit_tests",
+					email: "unit@tests.dev",
+					name: "Unit Tester",
+				},
 			});
 		}) as typeof fetch;
 
@@ -575,9 +581,15 @@ describe("Autumn operation tools", () => {
 					{ mcp: { extra: { authInfo: auth } } } as never,
 				),
 			).resolves.toEqual({
+				id: "org_unit_tests",
 				name: "Unit Tests",
 				slug: "unit-tests",
 				env: "sandbox",
+				user: {
+					id: "user_unit_tests",
+					email: "unit@tests.dev",
+					name: "Unit Tester",
+				},
 			});
 		} finally {
 			globalThis.fetch = originalFetch;

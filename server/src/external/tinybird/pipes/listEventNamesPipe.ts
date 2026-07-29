@@ -16,6 +16,8 @@ export const listEventNamesPipeParamsSchema = z.object({
 	org_id: z.string(),
 	env: z.string(),
 	limit: z.number().optional(),
+	start_date: z.string().optional(),
+	end_date: z.string().optional(),
 });
 
 export type ListEventNamesPipeParams = z.infer<

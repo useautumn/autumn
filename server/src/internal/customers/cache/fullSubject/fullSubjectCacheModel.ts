@@ -6,6 +6,7 @@ import {
 	EntityAggregationsSchema,
 	EntitySchema,
 	FreeTrialSchema,
+	FullCustomerLicenseSchema,
 	InvoiceSchema,
 	MigrationItemRunSchema,
 	type NormalizedFullSubject,
@@ -38,6 +39,31 @@ export type CachedFullSubject = Omit<
 
 export const FULL_SUBJECT_CACHE_SCHEMA_VERSION = 2;
 
+export const normalizedToUsageWindowFeatureIds = ({
+	normalized,
+}: {
+	normalized: NormalizedFullSubject;
+}) => {
+	const productById = new Map(
+		normalized.products.map((product) => [product.internal_id, product]),
+	);
+	const planUsageLimits = (customerProduct: { internal_product_id: string }) =>
+		productById.get(customerProduct.internal_product_id)?.usage_limits ?? [];
+
+	return [
+		...new Set(
+			[
+				...(normalized.customer.usage_limits ?? []),
+				...(normalized.entity?.usage_limits ?? []),
+				...normalized.customer_products.flatMap(planUsageLimits),
+				...(
+					normalized.entity_aggregations?.aggregated_customer_products ?? []
+				).flatMap(planUsageLimits),
+			].map((usageLimit) => usageLimit.feature_id),
+		),
+	];
+};
+
 /**
  * Schema mirror of `CachedFullSubject` used by the cache-hole-filling walker
  * ({@link normalizeFromSchema}) to locate nullable positions in cached
@@ -60,6 +86,8 @@ export const CachedFullSubjectSchema = z.object({
 
 	customer_products: z.array(CusProductSchema),
 	customer_prices: z.array(CustomerPriceSchema),
+	// `.default([])`: entries written before licenses existed hole-fill empty.
+	customer_licenses: z.array(FullCustomerLicenseSchema).default([]),
 	flags: z.record(z.string(), SubjectFlagSchema),
 
 	products: z.array(ProductSchema),
@@ -117,14 +145,9 @@ export const normalizedToCachedFullSubject = ({
 
 	const meteredFeatures = [...meteredFeatureSet];
 
-	const usageWindowFeatureIds = [
-		...new Set(
-			[
-				...(normalized.customer.usage_limits ?? []),
-				...(normalized.entity?.usage_limits ?? []),
-			].map((usageLimit) => usageLimit.feature_id),
-		),
-	];
+	const usageWindowFeatureIds = normalizedToUsageWindowFeatureIds({
+		normalized,
+	});
 
 	return {
 		subjectType: normalized.subjectType,
@@ -136,6 +159,7 @@ export const normalizedToCachedFullSubject = ({
 		entity: normalized.entity,
 		customer_products: normalized.customer_products,
 		customer_prices: normalized.customer_prices,
+		customer_licenses: normalized.customer_licenses ?? [],
 		flags: normalized.flags,
 		products: normalized.products,
 		entitlements: normalized.entitlements,
@@ -171,6 +195,8 @@ export const cachedFullSubjectToNormalized = ({
 		entity: cached.entity,
 		customer_products: cached.customer_products,
 		customer_entitlements: customerEntitlements,
+		// Entries written before licenses existed lack the field entirely.
+		customer_licenses: cached.customer_licenses ?? [],
 		customer_prices: cached.customer_prices,
 		flags: cached.flags,
 		products: cached.products,

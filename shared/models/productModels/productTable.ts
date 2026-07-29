@@ -10,12 +10,16 @@ import {
 	unique,
 } from "drizzle-orm/pg-core";
 import { sqlNow } from "../../db/utils";
+import { billingControlColumns } from "../cusModels/billingControls/billingControlTableColumns";
 import { organizations } from "../orgModels/orgTable";
 import type { ProductConfig } from "./productConfig/productConfig";
+import type { ProductMetadata } from "./productMetadata";
 
 type ProductProcessor = {
 	type: string;
 	id: string;
+	/** Legacy/alias Stripe product ids that also map to this product. */
+	additional_ids?: string[];
 };
 
 export const products = pgTable(
@@ -34,11 +38,14 @@ export const products = pgTable(
 		version: numeric({ mode: "number" }).notNull().default(1),
 		processor: jsonb().$type<ProductProcessor>().default(sql`null`),
 		base_variant_id: text("base_variant_id"),
+		base_internal_product_id: text("base_internal_product_id"),
 		archived: boolean("archived").notNull().default(false),
-		config: jsonb()
-			.$type<ProductConfig>()
+		config: jsonb().$type<ProductConfig>().notNull().default(sql`'{}'::jsonb`),
+		metadata: jsonb()
+			.$type<ProductMetadata>()
 			.notNull()
 			.default(sql`'{}'::jsonb`),
+		...billingControlColumns(),
 	},
 	(table) => [
 		foreignKey({
@@ -52,6 +59,10 @@ export const products = pgTable(
 			table.id,
 			table.version,
 		),
+		index("idx_products_org_env_base_internal_product_id")
+			.on(table.org_id, table.env, table.base_internal_product_id)
+			.where(sql`${table.base_internal_product_id} IS NOT NULL`)
+			.concurrently(),
 		unique("unique_product").on(
 			table.org_id,
 			table.id,

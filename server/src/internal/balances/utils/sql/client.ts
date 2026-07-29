@@ -1,5 +1,6 @@
 import type { EntityBalance, Rollover } from "@autumn/shared";
 import { sql } from "drizzle-orm";
+import { planetScaleTag } from "@/db/dbUtils.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 
 export type ResetCusEntParam = {
@@ -49,7 +50,7 @@ export const resetCusEnts = async ({
 	const result = await db.execute(
 		sql`SELECT * FROM reset_customer_entitlements(${JSON.stringify({
 			resets,
-		})}::jsonb)`,
+		})}::jsonb) ${planetScaleTag({ query: "resetCustomerEntitlements" })}`,
 	);
 
 	const raw = result[0]?.reset_customer_entitlements as

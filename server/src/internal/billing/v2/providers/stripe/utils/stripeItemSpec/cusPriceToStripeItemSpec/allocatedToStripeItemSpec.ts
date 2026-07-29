@@ -1,6 +1,7 @@
 import {
 	cusEntToBillingObjects,
 	type FullCusEntWithFullCusProduct,
+	getPriceCurrencyStripeId,
 	InternalError,
 	roundUsageToNearestBillingUnit,
 	type StripeItemSpec,
@@ -14,8 +15,12 @@ import { cusEntToInvoiceUsage } from "@shared/utils/cusEntUtils/overageUtils/cus
  */
 export const allocatedToStripeItemSpec = ({
 	cusEntWithCusProduct,
+	currency,
+	orgDefault,
 }: {
 	cusEntWithCusProduct: FullCusEntWithFullCusProduct;
+	currency: string;
+	orgDefault: string;
 }): StripeItemSpec | null => {
 	const billing = cusEntToBillingObjects({ cusEnt: cusEntWithCusProduct });
 	if (!billing) return null;
@@ -23,9 +28,15 @@ export const allocatedToStripeItemSpec = ({
 	const { price, product } = billing;
 	const config = price.config as UsagePriceConfig;
 
-	if (!config.stripe_price_id) {
+	const stripePriceId = getPriceCurrencyStripeId({
+		config,
+		currency,
+		orgDefault,
+		slot: "stripe_price_id",
+	});
+	if (!stripePriceId) {
 		throw new InternalError({
-			message: `[allocatedToStripeItemSpec] config.stripe_price_id is empty for autumn price: ${price.id}`,
+			message: `[allocatedToStripeItemSpec] no stripe_price_id for currency '${currency}' on autumn price: ${price.id}`,
 		});
 	}
 
@@ -41,7 +52,7 @@ export const allocatedToStripeItemSpec = ({
 	});
 
 	return {
-		stripePriceId: config.stripe_price_id,
+		stripePriceId,
 		quantity: roundedUsage,
 		autumnPrice: price,
 		autumnProduct: product,

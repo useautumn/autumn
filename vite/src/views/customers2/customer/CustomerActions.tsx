@@ -1,29 +1,30 @@
 import type { FullCusProduct } from "@autumn/shared";
 import { AppEnv, ProcessorType } from "@autumn/shared";
 import {
+	Button,
+	Dialog,
+	DropdownMenu,
+	DropdownMenuContent,
+	DropdownMenuItem,
+	DropdownMenuSeparator,
+	DropdownMenuTrigger,
+	useDropdownShortcut,
+} from "@autumn/ui";
+import {
 	ArrowSquareOutIcon,
 	ArrowsClockwiseIcon,
 	BroomIcon,
 	CaretDownIcon,
 	PencilSimpleIcon,
+	SlidersHorizontalIcon,
 	SubtractIcon,
 	TicketIcon,
 	TrashIcon,
 } from "@phosphor-icons/react";
 import { useState } from "react";
 import { toast } from "sonner";
-import { Button } from "@/components/v2/buttons/Button";
-import { Dialog } from "@/components/v2/dialogs/Dialog";
-import {
-	DropdownMenu,
-	DropdownMenuContent,
-	DropdownMenuItem,
-	DropdownMenuSeparator,
-	DropdownMenuTrigger,
-} from "@/components/v2/dropdowns/DropdownMenu";
 import { useOrg } from "@/hooks/common/useOrg";
 import { useSheetStore } from "@/hooks/stores/useSheetStore";
-import { useDropdownShortcut } from "@/hooks/useDropdownShortcut";
 import { cn } from "@/lib/utils";
 import { CusService } from "@/services/customers/CusService";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
@@ -45,7 +46,7 @@ export function CustomerActions() {
 	const [actionsOpen, setActionsOpen] = useState(false);
 	const [clearCacheLoading, setClearCacheLoading] = useState(false);
 	const { customer } = useCusQuery();
-	const { org } = useOrg();
+	const { org } = useOrg({ skipSandbox: false });
 	const { isAdmin } = useAdmin();
 	const setSheet = useSheetStore((s) => s.setSheet);
 	const env = useEnv();
@@ -114,6 +115,17 @@ export function CustomerActions() {
 					>
 						<PencilSimpleIcon />
 						Edit customer
+					</DropdownMenuItem>
+					<DropdownMenuItem
+						onClick={() => {
+							setSheet({ type: "customer-config-edit" });
+							setActionsOpen(false);
+						}}
+						className="flex gap-2"
+						shortcut="g"
+					>
+						<SlidersHorizontalIcon />
+						Edit config
 					</DropdownMenuItem>
 					<DropdownMenuItem
 						onClick={() => setCreateEntityOpen(true)}

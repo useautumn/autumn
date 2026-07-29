@@ -1,5 +1,7 @@
+import { existsSync } from "node:fs";
 import { join } from "node:path";
-import { sh, log } from "./shell.ts";
+import { PROJECT_ROOT } from "../constants.ts";
+import { getCanonicalWorktree } from "./git.ts";
 import {
 	composeProjectName,
 	dragonflyPortFor,
@@ -7,9 +9,19 @@ import {
 	ngrokApiPortFor,
 	serverPortFor,
 } from "./ports.ts";
-import { SCRIPT_DIR } from "../constants.ts";
+import { log, sh } from "./shell.ts";
 
-const composeFilePath = join(SCRIPT_DIR, "../setup/dw.compose.yml");
+function getComposeFilePath(): string {
+	const canonicalPath = join(
+		getCanonicalWorktree(),
+		"scripts/setup/dw.compose.yml",
+	);
+	if (existsSync(canonicalPath)) return canonicalPath;
+
+	return join(PROJECT_ROOT, "scripts/setup/dw.compose.yml");
+}
+
+const composeFilePath = getComposeFilePath();
 
 export function dockerComposeAvailable(): boolean {
 	const res = sh("docker", ["compose", "version"]);
@@ -18,9 +30,10 @@ export function dockerComposeAvailable(): boolean {
 
 export function ensureComposeStack(
 	worktreeNum: number,
+	branchName: string | undefined,
 	ngrokDomainArg?: string,
 ): { ngrokEnabled: boolean } {
-	if (worktreeNum === 1) return { ngrokEnabled: false };
+	if (worktreeNum === 1 && !branchName) return { ngrokEnabled: false };
 	if (!dockerComposeAvailable()) {
 		log("docker compose not available; skipping infra stack");
 		return { ngrokEnabled: false };
@@ -84,9 +97,7 @@ export async function readNgrokTunnelUrl(
 	const maxAttempts = 60;
 	for (let attempt = 0; attempt < maxAttempts; attempt++) {
 		try {
-			const response = await fetch(
-				`http://127.0.0.1:${apiPort}/api/tunnels`,
-			);
+			const response = await fetch(`http://127.0.0.1:${apiPort}/api/tunnels`);
 			const data = (await response.json()) as {
 				tunnels?: Array<{ public_url?: string; proto?: string }>;
 			};
@@ -109,8 +120,11 @@ export async function readNgrokTunnelUrl(
 	return undefined;
 }
 
-export function removeComposeStack(worktreeNum: number): void {
-	if (worktreeNum === 1) return;
+export function removeComposeStack(
+	worktreeNum: number,
+	branchName: string | undefined,
+): void {
+	if (worktreeNum === 1 && !branchName) return;
 	const project = composeProjectName(worktreeNum);
 	const down = sh("docker", [
 		"compose",
@@ -118,6 +132,8 @@ export function removeComposeStack(worktreeNum: number): void {
 		composeFilePath,
 		"-p",
 		project,
+		"--profile",
+		"ngrok",
 		"down",
 		"-v",
 	]);
@@ -146,6 +162,8 @@ export function removeAllAutumnComposeStacks(): void {
 				composeFilePath,
 				"-p",
 				p.Name,
+				"--profile",
+				"ngrok",
 				"down",
 				"-v",
 			]);
@@ -160,4 +178,40 @@ export function removeAllAutumnComposeStacks(): void {
 	} catch {
 		/* JSON parse failed, ignore */
 	}
+}
+
+export function listAutumnComposeProjects(): string[] {
+	if (!dockerComposeAvailable()) return [];
+	const ls = sh("docker", ["compose", "ls", "--all", "--format", "json"]);
+	if (ls.code !== 0 || !ls.stdout) return [];
+	try {
+		return (JSON.parse(ls.stdout) as { Name: string }[])
+			.map((project) => project.Name)
+			.filter((name) => /^autumn-wt-\d+$/.test(name));
+	} catch {
+		return [];
+	}
+}
+
+export function removeComposeProject(project: string): boolean {
+	if (!/^autumn-wt-\d+$/.test(project)) return false;
+	const down = sh("docker", [
+		"compose",
+		"-f",
+		composeFilePath,
+		"-p",
+		project,
+		"--profile",
+		"ngrok",
+		"down",
+		"--remove-orphans",
+	]);
+	if (down.code === 0) {
+		log(`removed inactive compose stack ${project}`);
+		return true;
+	}
+	console.error(
+		`[dw] failed to remove compose stack ${project}: ${down.stderr}`,
+	);
+	return false;
 }

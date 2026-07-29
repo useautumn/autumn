@@ -1,16 +1,16 @@
-import { useEffect, useState } from "react";
-import { toast } from "sonner";
-import { Textarea } from "@/components/ui/textarea";
-import { Button } from "@/components/v2/buttons/Button";
 import {
+	Button,
 	Dialog,
 	DialogContent,
 	DialogDescription,
 	DialogFooter,
 	DialogHeader,
 	DialogTitle,
-} from "@/components/v2/dialogs/Dialog";
-import { TagInput } from "@/components/v2/inputs/TagInput";
+	TagInput,
+	Textarea,
+} from "@autumn/ui";
+import { useEffect, useState } from "react";
+import { toast } from "sonner";
 import { authClient } from "@/lib/auth-client";
 import { getBackendErr } from "@/utils/genUtils";
 

@@ -1,13 +1,26 @@
-import type { Plan } from "../../../compose/models/planModels.js";
+import type { Plan as BasePlan } from "../../../compose/models/planModels.js";
+import type {
+	CustomizePlan,
+	Plan,
+	PlanItemFilter,
+	Variant,
+} from "../../../compose/models/variantModels.js";
 import type { ApiPlan } from "../../api/types/index.js";
 import { transformApiPlanItem } from "./planItem.js";
 import { createTransformer } from "./Transformer.js";
 
+const hasBillingControls = (value: unknown): boolean =>
+	Boolean(
+		value &&
+			typeof value === "object" &&
+			Object.keys(value as Record<string, unknown>).length > 0,
+	);
+
 /**
  * Declarative plan transformer - replaces 57 lines with ~20 lines of config
  */
-export const planTransformer = createTransformer<ApiPlan, Plan>({
-	copy: ["id", "name", "description", "group"],
+export const planTransformer = createTransformer<ApiPlan, BasePlan>({
+	copy: ["id", "name", "description", "group", "archived"],
 
 	// Rename snake_case API fields → camelCase SDK fields
 	rename: {
@@ -30,6 +43,9 @@ export const planTransformer = createTransformer<ApiPlan, Plan>({
 				? {
 						amount: api.price.amount,
 						interval: api.price.interval,
+						...(api.price.additional_currencies?.length
+							? { additionalCurrencies: api.price.additional_currencies }
+							: {}),
 					}
 				: undefined,
 
@@ -48,9 +64,171 @@ export const planTransformer = createTransformer<ApiPlan, Plan>({
 						cardRequired: api.free_trial.card_required,
 					}
 				: undefined,
+
+		billingControls: (api) =>
+			hasBillingControls(api.billing_controls)
+				? api.billing_controls
+				: undefined,
+
+		licenses: (api) =>
+			api.licenses?.map((license) => ({
+				licensePlanId: license.license_plan_id,
+				version: license.version,
+				included: license.included,
+			})),
 	},
 });
 
-export function transformApiPlan(apiPlan: ApiPlan): Plan {
-	return planTransformer.transform(apiPlan);
+export function transformApiPlan(
+	apiPlan: ApiPlan,
+	options: { includeVersion?: boolean } = {},
+): Plan {
+	const plan = planTransformer.transform(apiPlan);
+	return options.includeVersion ? { ...plan, version: apiPlan.version } : plan;
+}
+
+type ApiCustomizePlan = NonNullable<
+	NonNullable<ApiPlan["variant_details"]>["customize"]
+> & {
+	items?: ApiPlan["items"];
+};
+type ApiPlanItemInput = Parameters<typeof transformApiPlanItem>[0];
+
+const transformApiCompatiblePlanItem = (
+	item: ApiPlanItemInput | NonNullable<ApiCustomizePlan["add_items"]>[number],
+) => transformApiPlanItem(item as ApiPlanItemInput);
+
+const transformApiPlanItemFilter = (
+	filter: NonNullable<ApiCustomizePlan["remove_items"]>[number],
+): PlanItemFilter => ({
+	...(filter.feature_id !== undefined ? { featureId: filter.feature_id } : {}),
+	...(filter.billing_method !== undefined
+		? { billingMethod: filter.billing_method }
+		: {}),
+	...(filter.interval !== undefined ? { interval: filter.interval } : {}),
+	...(filter.interval_count !== undefined
+		? { intervalCount: filter.interval_count }
+		: {}),
+});
+
+const transformApiCustomizePlan = (
+	customize: ApiCustomizePlan | undefined,
+): CustomizePlan | undefined => {
+	if (!customize) return undefined;
+
+	const result: CustomizePlan = {
+		...(customize.price !== undefined
+			? {
+					price: customize.price
+						? {
+								amount: customize.price.amount,
+								interval: customize.price.interval,
+								...(customize.price.interval_count !== undefined
+									? { intervalCount: customize.price.interval_count }
+									: {}),
+								...(customize.price.additional_currencies?.length
+									? {
+											additionalCurrencies:
+												customize.price.additional_currencies,
+										}
+									: {}),
+							}
+						: null,
+				}
+			: {}),
+		...(customize.items !== undefined
+			? { items: customize.items.map(transformApiCompatiblePlanItem) }
+			: {}),
+		...(customize.add_items !== undefined
+			? { addItems: customize.add_items.map(transformApiCompatiblePlanItem) }
+			: {}),
+		...(customize.remove_items !== undefined
+			? { removeItems: customize.remove_items.map(transformApiPlanItemFilter) }
+			: {}),
+		...(customize.free_trial !== undefined
+			? {
+					freeTrial: customize.free_trial
+						? {
+								durationLength: customize.free_trial.duration_length,
+								durationType: customize.free_trial.duration_type,
+								cardRequired: customize.free_trial.card_required,
+							}
+						: null,
+				}
+			: {}),
+	};
+
+	return Object.keys(result).length > 0 ? result : undefined;
+};
+
+const transformApiPlanVariant = (
+	apiPlan: ApiPlan,
+	options: { includeVersion?: boolean } = {},
+): Variant => {
+	const customize = transformApiCustomizePlan(
+		apiPlan.variant_details?.customize,
+	);
+
+	return {
+		id: apiPlan.id,
+		name: apiPlan.name,
+		...(options.includeVersion ? { version: apiPlan.version } : {}),
+		...(customize ? { customize } : {}),
+	};
+};
+
+const sortByIdVersion = (a: ApiPlan, b: ApiPlan) =>
+	a.id.localeCompare(b.id) || a.version - b.version;
+
+export function transformApiPlans(
+	apiPlans: ApiPlan[],
+	options: { allVersions?: boolean } = {},
+): Plan[] {
+	const { allVersions = false } = options;
+	const planById = new Map(apiPlans.map((apiPlan) => [apiPlan.id, apiPlan]));
+	const variantsByBaseId = new Map<string, Variant[]>();
+	const basePlanIds = new Set<string>();
+	const basePlans = apiPlans.filter((apiPlan) => !apiPlan.variant_details);
+	const latestBaseVersionById = new Map<string, number>();
+
+	for (const apiPlan of basePlans) {
+		const latestVersion = latestBaseVersionById.get(apiPlan.id) ?? 0;
+		if (apiPlan.version > latestVersion) {
+			latestBaseVersionById.set(apiPlan.id, apiPlan.version);
+		}
+	}
+
+	for (const apiPlan of apiPlans) {
+		const basePlanId = apiPlan.variant_details?.base_plan_id;
+		if (!basePlanId || !planById.has(basePlanId)) continue;
+
+		basePlanIds.add(apiPlan.id);
+		const variants = variantsByBaseId.get(basePlanId) ?? [];
+		variants.push(
+			transformApiPlanVariant(apiPlan, { includeVersion: allVersions }),
+		);
+		variantsByBaseId.set(basePlanId, variants);
+	}
+
+	const transformed = apiPlans
+		.filter((apiPlan) => !basePlanIds.has(apiPlan.id))
+		.sort(allVersions ? sortByIdVersion : () => 0)
+		.map((apiPlan) => {
+			const plan = transformApiPlan(apiPlan, {
+				includeVersion: allVersions,
+			}) as Plan;
+			const isLatestBase =
+				!allVersions ||
+				apiPlan.version === latestBaseVersionById.get(apiPlan.id);
+			const variants = isLatestBase
+				? variantsByBaseId.get(apiPlan.id)?.sort((a, b) => {
+						const byId = a.id.localeCompare(b.id);
+						if (byId !== 0) return byId;
+						return (a.version ?? 0) - (b.version ?? 0);
+					})
+				: undefined;
+			return variants && variants.length > 0 ? { ...plan, variants } : plan;
+		});
+
+	return transformed;
 }

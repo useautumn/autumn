@@ -10,6 +10,13 @@ export interface LoadedConfig {
 	features: Feature[];
 }
 
+const isVariantExport = (value: unknown): boolean =>
+	Boolean(
+		value &&
+			typeof value === "object" &&
+			(value as { __atmnType?: unknown }).__atmnType === "variant",
+	);
+
 export const loadConfig = async ({
 	cwd = process.cwd(),
 }: {
@@ -64,6 +71,7 @@ export const loadConfig = async ({
 		// New format: individual named exports
 		for (const [key, value] of Object.entries(modRecord)) {
 			if (key === "default") continue;
+			if (isVariantExport(value)) continue;
 
 			const obj = value as { items?: unknown; type?: unknown; id?: string };
 			// Detect if it's a plan (has items array or id+name without type) or feature (has type)

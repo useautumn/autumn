@@ -33,14 +33,20 @@ export const customerEntitlements = pgTable(
 		next_reset_at: numeric({ mode: "number" }),
 		usage_allowed: boolean("usage_allowed").default(false),
 		separate_interval: boolean("separate_interval").notNull().default(false),
+		is_pooled_balance: boolean("is_pooled_balance").notNull().default(false),
+		/** Denormalized reverse link; pooled_balances.customer_entitlement_id is canonical. */
+		pooled_balance_id: text("pooled_balance_id"),
+		/** Denormalized reverse link; source_customer_entitlement_id is canonical. */
+		pooled_contribution_id: text("pooled_contribution_id"),
 
 		// Adjustment is how much balance changes. Eg. balance goes from 100 -> 200, adjustment is +100 (will deprecate soon)
 		adjustment: numeric({ mode: "number" }),
 
-		// New field, free_balance: how much balance can be deducted
+		/** @deprecated Legacy free-balance field. */
 		additional_balance: numeric({ mode: "number" }).notNull().default(0),
 
-		// Need to work on free balance...
+		/** @deprecated Still used by the legacy entityFeatureId flow.
+		 * New features should not read or write this field. */
 		entities: jsonb("entities").$type<Record<string, EntityBalance>>(),
 
 		// Expiry for loose entitlements (entitlements without reset intervals)
@@ -52,6 +58,15 @@ export const customerEntitlements = pgTable(
 		feature_id: text("feature_id"),
 
 		external_id: text("external_id"),
+
+		// Denormalized parent-product expiry; nullable tri-state so a manual `false`
+		// stays sticky and the backfill cron only flips NULL -> true.
+		expired: boolean("expired"),
+
+		// Denormalized "invoice.created owns this reset" (price-backed on a live
+		// subscription). Written lazily by the batch reset worker's verdicts;
+		// filters these rows out of the reset scan so they stop re-entering it.
+		reset_by_invoice: boolean("reset_by_invoice"),
 	},
 	(table) => [
 		foreignKey({
@@ -87,6 +102,23 @@ export const customerEntitlements = pgTable(
 			table.internal_customer_id,
 		),
 		index("idx_customer_entitlements_entitlement_id").on(table.entitlement_id),
+		index("idx_customer_entitlements_internal_feature_id_c")
+			.on(sql`${table.internal_feature_id} COLLATE "C"`)
+			.concurrently(),
+		index("idx_ce_internal_feature_id")
+			.on(table.internal_feature_id)
+			.concurrently(),
+		index("idx_ce_customer_product_id_c")
+			.on(sql`${table.customer_product_id} COLLATE "C"`)
+			.concurrently(),
+		index("idx_ce_loose_next_reset")
+			.on(table.next_reset_at)
+			.where(sql`${table.customer_product_id} IS NULL`)
+			.concurrently(),
+		index("idx_customer_entitlements_nonnull_entity_by_id")
+			.on(table.id)
+			.where(sql`${table.internal_entity_id} IS NOT NULL`)
+			.concurrently(),
 		index("idx_customer_entitlements_internal_entity_id").using(
 			"hash",
 			table.internal_entity_id,
@@ -101,6 +133,24 @@ export const customerEntitlements = pgTable(
 		index("idx_customer_entitlements_loose_customer_expires")
 			.on(table.internal_customer_id, table.expires_at)
 			.where(sql`${table.customer_product_id} IS NULL`),
+		index("idx_customer_entitlements_next_reset_not_expired")
+			.on(table.next_reset_at)
+			.where(
+				sql`${table.expired} IS NOT TRUE AND ${table.next_reset_at} IS NOT NULL`,
+			)
+			.concurrently(),
+		index("idx_customer_entitlements_pooled_contribution")
+			.on(table.pooled_contribution_id)
+			.where(sql`${table.pooled_contribution_id} IS NOT NULL`)
+			.concurrently(),
+		// Every reset predicate leg except expiry, which stays a heap filter. Legs
+		// live here so the planner drops them instead of costing their selectivity.
+		index("idx_customer_entitlements_reset_scan")
+			.on(table.next_reset_at, sql`${table.id} COLLATE "C"`)
+			.where(
+				sql`${table.expired} IS NOT TRUE AND ${table.reset_by_invoice} IS NOT TRUE AND ${table.pooled_contribution_id} IS NULL AND ${table.next_reset_at} IS NOT NULL`,
+			)
+			.concurrently(),
 	],
 );
 
@@ -109,7 +159,6 @@ collatePgColumn(customerEntitlements.internal_customer_id, "C");
 
 export type InsertCustomerEntitlement =
 	typeof customerEntitlements.$inferInsert;
-export type DbCustomerEntitlement =
-	typeof customerEntitlements.$inferSelect;
+export type DbCustomerEntitlement = typeof customerEntitlements.$inferSelect;
 export type InsertDbCustomerEntitlement =
 	typeof customerEntitlements.$inferInsert;

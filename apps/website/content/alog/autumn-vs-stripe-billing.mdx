@@ -1,0 +1,87 @@
+---
+slug: autumn-vs-stripe-billing
+title: Autumn vs Stripe Billing
+description: Stripe Billing is the subscription, invoice, and payment layer. Autumn runs on Stripe and adds product-facing billing state for credits, entitlements, access checks, and pricing iteration.
+date: "2026-06-22"
+updated: "2026-06-22"
+author: Autumn
+category: Comparisons
+summary: Stripe Billing handles subscriptions, invoices, payments, and usage billing. Autumn complements Stripe when your app needs credits, entitlements, limits, and pricing changes enforced in product.
+relatedDocs:
+  - { label: "Autumn overview", href: "https://docs.useautumn.com/welcome" }
+  - { label: "Checking access", href: "https://docs.useautumn.com/documentation/customers/check" }
+  - { label: "Autumn and Stripe", href: "https://useautumn.com/blog/we-built-a-billing-company-but-didnt-replace-stripe-billing" }
+relatedAlog:
+  - autumn-and-stripe
+  - autumn-vs-metronome
+  - autumn-vs-orb
+  - credits-entitlements-and-usage-limits
+---
+
+# Autumn vs Stripe Billing
+
+> Stripe Billing is the billing and payments foundation. Autumn is the product-facing billing state layer built on top of Stripe.
+
+## Short Answer
+
+Autumn and Stripe Billing are not mutually exclusive. Autumn uses Stripe underneath, so subscriptions, invoices, payments, taxes, and payment methods still live in Stripe.
+
+The difference is not that one replaces the other. Stripe remains the underlying system for subscriptions, invoices, payments, and native billing workflows. Autumn is the layer your application talks to when those Stripe-backed plans need to drive product behavior: "can this customer do this right now?" across credits, limits, entitlements, custom packages, and usage-based plans.
+
+For a more detailed narrative view, read [We built a billing company but didn't replace Stripe Billing](/blog/we-built-a-billing-company-but-didnt-replace-stripe-billing).
+
+## When To Add Autumn To Stripe
+
+- You already use Stripe, but your app needs product-facing billing state.
+- You sell credits, allowances, seats, feature access, or hybrid subscription plus usage plans.
+- You need `check()` before a user action and `track()` after usage happens.
+- You are PLG, sales-led, or hybrid, and deal with custom enterprise packages.
+- You iterate on pricing often and want plan changes to map cleanly to Stripe.
+
+## When Stripe Billing Alone May Be Enough
+
+- You mostly need subscriptions, invoices, checkout, tax, and payment collection.
+- Your feature access and entitlements are simple enough to model directly from Stripe products.
+- You do not need complex credit behavior like rollovers, monthly versus lifetime balances, or product-level usage limits.
+- You want to build and manage the billing-state layer yourself instead of outsourcing that logic.
+
+## How Autumn Uses Stripe
+
+Autumn does not replace Stripe Billing. It sits between your application and Stripe.
+
+You define the package your customer should have in Autumn: plan, credits, limits, entitlements, add-ons, custom enterprise terms, and reset behavior. Autumn maps the payment-facing parts of that package to Stripe, so Stripe still handles subscriptions, invoices, payments, taxes, and payment methods.
+
+Your application then talks to Autumn at runtime. `check()` answers whether the customer can use a feature or consume credits, and `track()` records usage. Stripe remains the billing and payment system; Autumn keeps the product-facing billing logic in sync with it.
+
+## Usage-Based Billing
+
+Stripe's usage-based billing docs now point advanced usage-based billing to Metronome, a Stripe product for real-time metering, pricing, billing, and reporting. If your main problem is pure usage rating, large-scale metering, or invoice generation from complex usage data, see [Autumn vs Metronome](/alog/autumn-vs-metronome).
+
+Autumn is different from both Stripe Billing and Metronome because it focuses on the product path: checking access, updating credit balances, enforcing limits, and keeping that state aligned with Stripe. This is the layer described in [We built a billing company but didn't replace Stripe Billing](/blog/we-built-a-billing-company-but-didnt-replace-stripe-billing).
+
+## Implementation Model
+
+With Stripe Billing alone, the typical model is:
+
+```text
+Stripe -> subscriptions / invoices / payments
+Your DB -> plans / credits / usage / rate limits / entitlements
+Your app -> Stripe webhooks + your DB -> product access
+```
+
+With Autumn and Stripe, the typical model is:
+
+```text
+Autumn -> plans / credits / usage / rate limits / entitlements
+Your app -> Autumn check() / track() -> product access and usage
+Autumn -> Stripe -> subscriptions / invoices / payments
+```
+
+## Sources
+
+- Autumn: [overview](https://docs.useautumn.com/welcome), [checking access](https://docs.useautumn.com/documentation/customers/check), [Autumn and Stripe](https://useautumn.com/blog/we-built-a-billing-company-but-didnt-replace-stripe-billing)
+- Stripe: [Billing](https://stripe.com/billing), [Entitlements](https://docs.stripe.com/billing/entitlements), [usage-based billing](https://docs.stripe.com/billing/usage-based), [Metronome with Stripe](https://docs.stripe.com/billing/how-metronome-works-with-stripe)
+
+## Last Updated
+
+2026-06-22

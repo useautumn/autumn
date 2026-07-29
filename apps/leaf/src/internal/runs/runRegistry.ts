@@ -1,5 +1,4 @@
 import Anthropic from "@anthropic-ai/sdk";
-import { env as chatEnv } from "../../lib/env.js";
 import { logger } from "../../lib/logger.js";
 
 const client = new Anthropic();
@@ -16,6 +15,7 @@ export type ActiveRun = {
 	key: string;
 	kind: "approval" | "message";
 	logAction?: (message: string) => Promise<void> | void;
+	ownerProviderUserId: string;
 	pendingTurns: number;
 	requestStop: (input: {
 		byUserId: string;
@@ -61,31 +61,16 @@ const defaultSendUserMessage = async ({
 	});
 };
 
-// The vercel harness interrupts via a local AbortController, not session events,
-// and doesn't support mid-turn injection — so stop is cooperative (run.stop,
-// checked by the engine loop) and a follow-up degrades to a queued new run.
-const noopSendInterrupt = async () => {
-	/* cooperative stop via run.stop */
-};
-const unsupportedSendUserMessage = async () => {
-	throw new Error(
-		"mid-run follow-up injection is unsupported for this harness",
-	);
-};
-const usesSessionEvents = () => chatEnv.AGENT_HARNESS !== "vercel";
-
 export const registerRun = ({
 	key,
 	kind,
-	sendInterrupt = usesSessionEvents()
-		? defaultSendInterrupt
-		: noopSendInterrupt,
-	sendUserMessage = usesSessionEvents()
-		? defaultSendUserMessage
-		: unsupportedSendUserMessage,
+	ownerProviderUserId,
+	sendInterrupt = defaultSendInterrupt,
+	sendUserMessage = defaultSendUserMessage,
 }: {
 	key: string;
 	kind: ActiveRun["kind"];
+	ownerProviderUserId: string;
 	sendInterrupt?: (sessionId: string) => Promise<void>;
 	sendUserMessage?: (input: {
 		sessionId: string;
@@ -109,6 +94,7 @@ export const registerRun = ({
 	const run: ActiveRun = {
 		key,
 		kind,
+		ownerProviderUserId,
 		pendingTurns: 0,
 		resolveSessionId,
 		sessionId,

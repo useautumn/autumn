@@ -1,13 +1,12 @@
 import type { RewardProgram } from "@autumn/shared";
+import { Sheet, SheetContent, ShortcutButton } from "@autumn/ui";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
-import { ShortcutButton } from "@/components/v2/buttons/ShortcutButton";
 import {
 	SheetFooter,
 	SheetHeader,
 	SheetSection,
 } from "@/components/v2/sheets/SharedSheetComponents";
-import { Sheet, SheetContent } from "@/components/v2/sheets/Sheet";
 import { useRewardsQuery } from "@/hooks/queries/useRewardsQuery";
 import { RewardProgramService } from "@/services/products/RewardProgramService";
 import { useAxiosInstance } from "@/services/useAxiosInstance";

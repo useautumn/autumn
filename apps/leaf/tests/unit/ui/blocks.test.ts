@@ -48,11 +48,11 @@ describe("approval card", () => {
 		expect(json).toContain(
 			"Attach **enterprise** to **<https://app.useautumn.com/sandbox/customers/kp-customer-1000|kp-customer-1000>**?",
 		);
-		expect(json).toContain("Due today");
+		expect(json).toContain("Due now");
 		expect(json).toContain("$400.00");
-		expect(json).toContain("then $400.00 from Jul 12, 2026");
-		expect(json).toContain("draft invoice");
-		expect(json).toContain("billed by invoice");
+		expect(json).toContain("Next cycle · Jul 12, 2026 — $400.00");
+		expect(json).toContain("✓ Invoice (draft)");
+		expect(json).not.toContain("Prorations");
 		expect(card.children.at(-1)?.type).toBe("actions");
 		expect(json).toContain("approve_billing_action");
 		expect(json).toContain("Dismiss");
@@ -94,7 +94,7 @@ describe("approval card", () => {
 		expect(json).not.toContain('"customize"');
 	});
 
-	test("omits fields and modifiers when there is nothing to show", () => {
+	test("omits badges and money facts when nothing was set", () => {
 		const card = approvalCard({
 			id: "approval_1",
 			toolName: "attach",
@@ -103,6 +103,7 @@ describe("approval card", () => {
 
 		const types = card.children.map((child) => child.type);
 		expect(types).toEqual(["text", "actions"]);
+		expect(JSON.stringify(card)).not.toContain("Prorations");
 	});
 
 	test("shows negative due-now amounts as a credit", () => {
@@ -116,9 +117,9 @@ describe("approval card", () => {
 		});
 
 		const json = JSON.stringify(card);
-		expect(json).toContain("Credit today");
+		expect(json).toContain("Credit due now");
 		expect(json).toContain("$250.50");
-		expect(json).not.toContain("Due today");
+		expect(json).not.toContain("Due now");
 		expect(json).not.toContain("-$250.50");
 	});
 
@@ -194,17 +195,14 @@ describe("approval card", () => {
 		});
 
 		const json = JSON.stringify(card);
-		expect(json).toContain("**Added to plan**");
-		expect(json).toContain("• **seats** — unlimited");
+		expect(json).toContain("**Plan changes**");
+		expect(json).toContain("＋ seats — unlimited");
 		expect(json).toContain(
-			"• **credits** — 5,000 included, then $0.10 each · usage-based · monthly",
+			"＋ credits — 5,000 included, then $0.10 each · usage-based · monthly",
 		);
-		expect(json).toContain("• **api_calls** — $5.00 per 1,000 · usage-based");
-		expect(json).toContain("**Removed from plan**");
-		expect(json).toContain("• **audit_logs**");
-		expect(json).toContain("• prepaid · yearly");
-		// A divider sets the changes apart from the money facts above.
-		expect(card.children.some((child) => child.type === "divider")).toBe(true);
+		expect(json).toContain("＋ api_calls — $5.00 per 1,000 · usage-based");
+		expect(json).toContain("− audit_logs");
+		expect(json).toContain("− prepaid · yearly");
 	});
 
 	test("omits the changes block when nothing is customized", () => {
@@ -215,8 +213,7 @@ describe("approval card", () => {
 		});
 
 		const json = JSON.stringify(card);
-		expect(json).not.toContain("Added to plan");
-		expect(json).not.toContain("Removed from plan");
+		expect(json).not.toContain("Plan changes");
 		expect(card.children.some((child) => child.type === "divider")).toBe(false);
 	});
 });
@@ -269,7 +266,7 @@ describe("approval status card", () => {
 		expect(json).toContain(
 			"Attaching **enterprise** to **<https://app.useautumn.com/sandbox/customers/kp-customer-1000|kp-customer-1000>**…",
 		);
-		expect(json).toContain("Due today");
+		expect(json).toContain("Due now");
 		expect(json).toContain("$400.00");
 		// No misleading placeholder — the running "…" sentence carries the state.
 		expect(json).not.toContain("▸");
@@ -345,7 +342,7 @@ describe("approval status card", () => {
 		// Title and money facts survive the edit-in-place instead of collapsing.
 		expect(card.title).toBe("Attach plan");
 		expect(json).toContain("✅ Attached **enterprise**");
-		expect(json).toContain("Due today");
+		expect(json).toContain("Due now");
 		expect(json).toContain("$400.00");
 		expect(card.subtitle).toContain("approved by <@U1>");
 	});
@@ -494,7 +491,7 @@ describe("approval status card", () => {
 		expect(json).toContain(
 			"Attach **enterprise** to **<https://app.useautumn.com/sandbox/customers/kp-customer-1000|kp-customer-1000>**?",
 		);
-		expect(json).toContain("Due today");
+		expect(json).toContain("Due now");
 		expect(json).toContain("$400.00");
 		expect(json).toContain("Dismissed by <@U2>");
 		// Settled state is a non-interactive status line, not a (fake) button row.
@@ -530,7 +527,7 @@ describe("approval status card", () => {
 		expect(supersededJson).toContain(
 			"Attach **enterprise** to **<https://app.useautumn.com/sandbox/customers/kp-customer-1000|kp-customer-1000>**?",
 		);
-		expect(supersededJson).toContain("Due today");
+		expect(supersededJson).toContain("Due now");
 		expect(supersededJson).toContain("$400.00");
 		expect(supersededJson).toContain("Superseded");
 		// Settled state is a non-interactive status line, not a (fake) button row.

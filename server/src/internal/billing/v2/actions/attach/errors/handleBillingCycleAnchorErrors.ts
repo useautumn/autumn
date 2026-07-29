@@ -41,7 +41,7 @@ export const handleBillingCycleAnchorErrors = ({
 	}
 
 	// Cannot use billing_cycle_anchor on one-off products
-	if (isOneOffProduct({ prices: billingContext.attachProduct.prices })) {
+	if (isOneOffProduct({ product: billingContext.attachProduct })) {
 		throw new RecaseError({
 			message:
 				"billing_cycle_anchor is not supported for one-off products. One-off products do not have a recurring billing cycle.",

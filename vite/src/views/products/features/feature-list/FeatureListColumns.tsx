@@ -1,7 +1,7 @@
 import type { Feature } from "@autumn/shared";
+import { MiniCopyButton } from "@autumn/ui";
 import type { ColumnDef, Row } from "@tanstack/react-table";
 import { AdminHover } from "@/components/general/AdminHover";
-import { MiniCopyButton } from "@/components/v2/buttons/CopyButton";
 import { getFeatureHoverTexts } from "@/views/admin/adminUtils";
 import { getFeatureIcon, getFeatureIconConfig } from "../utils/getFeatureIcon";
 import { FeatureListRowToolbar } from "./FeatureListRowToolbar";
@@ -55,7 +55,9 @@ export const createFeatureListColumns = ({
 			return (
 				<div className="flex items-center gap-2 text-muted-foreground">
 					{getFeatureIcon({ feature })}
-					<span className="text-xs text-tertiary-foreground">{config.label}</span>
+					<span className="text-xs text-tertiary-foreground">
+						{config.label}
+					</span>
 				</div>
 			);
 		},
@@ -72,7 +74,9 @@ export const createFeatureListColumns = ({
 							feature.event_names && feature.event_names.length > 0
 								? feature.event_names.join(", ")
 								: "—";
-						return <div className="text-muted-foreground truncate">{eventNames}</div>;
+						return (
+							<div className="text-muted-foreground truncate">{eventNames}</div>
+						);
 					},
 				},
 			]

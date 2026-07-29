@@ -1,4 +1,5 @@
 import type { AgentPricingConfig } from "@autumn/shared";
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@autumn/ui";
 import {
 	CodeGroup,
 	CodeGroupCode,
@@ -6,12 +7,6 @@ import {
 	CodeGroupList,
 	CodeGroupTab,
 } from "@/components/v2/CodeGroup";
-import {
-	Sheet,
-	SheetContent,
-	SheetHeader,
-	SheetTitle,
-} from "@/components/v2/sheets/Sheet";
 
 interface PricingConfigSheetProps {
 	open: boolean;

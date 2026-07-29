@@ -12,6 +12,7 @@ export const useAutumnFlags = () => {
 		platform: false,
 		vercel: false,
 		revenuecat: false,
+		sso: false,
 	});
 
 	useEffect(() => {
@@ -23,6 +24,7 @@ export const useAutumnFlags = () => {
 			platform: notNullish(customer.flags.platform),
 			vercel: notNullish(customer.flags.vercel),
 			revenuecat: notNullish(customer.flags.revenuecat),
+			sso: notNullish(customer.flags.sso),
 		};
 
 		// Only update storage/state when values actually change
@@ -31,7 +33,8 @@ export const useAutumnFlags = () => {
 			flags.stripe_key !== nextFlags.stripe_key ||
 			flags.platform !== nextFlags.platform ||
 			flags.vercel !== nextFlags.vercel ||
-			flags.revenuecat !== nextFlags.revenuecat
+			flags.revenuecat !== nextFlags.revenuecat ||
+			flags.sso !== nextFlags.sso
 		) {
 			setFlags(nextFlags);
 		}

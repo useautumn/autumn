@@ -15,6 +15,7 @@ import { type ApiCustomerV3, atmnToStripeAmount } from "@autumn/shared";
 import { expectCustomerInvoiceCorrect } from "@tests/integration/billing/utils/expectCustomerInvoiceCorrect";
 import { expectCustomerProducts } from "@tests/integration/billing/utils/expectCustomerProductCorrect";
 import { expectStripeSubscriptionCorrect } from "@tests/integration/billing/utils/expectStripeSubCorrect";
+import { createPercentCoupon } from "@tests/integration/billing/utils/discounts/discountTestUtils";
 import { items } from "@tests/utils/fixtures/items";
 import { products } from "@tests/utils/fixtures/products";
 import ctx from "@tests/utils/testInitUtils/createTestContext";
@@ -190,6 +191,60 @@ test.concurrent(`${chalk.yellowBright("custom-line-items 2: preview with custom 
 	expect(subtotals).toContain(3.5);
 	expect(totals).toContain(10);
 	expect(totals).toContain(3.5);
+});
+
+test.concurrent(`${chalk.yellowBright("custom-line-items 2b: fresh discount applies to custom line items")}`, async () => {
+	const customerId = "cli-discounted-custom-lines";
+
+	const messagesItem = items.monthlyMessages({ includedUsage: 500 });
+	const pro = products.pro({
+		id: "pro",
+		items: [messagesItem],
+	});
+
+	const premiumMessagesItem = items.monthlyMessages({ includedUsage: 1000 });
+	const premium = products.premium({
+		id: "premium",
+		items: [premiumMessagesItem],
+	});
+
+	const { autumnV1 } = await initScenario({
+		customerId,
+		setup: [
+			s.customer({ paymentMethod: "success" }),
+			s.products({ list: [pro, premium] }),
+		],
+		actions: [s.billing.attach({ productId: pro.id })],
+	});
+
+	const coupon = await createPercentCoupon({
+		stripeCli: ctx.stripeCli,
+		percentOff: 25,
+	});
+	const customLineItems = [{ amount: 20, description: "Custom upgrade charge" }];
+	const params = {
+		customer_id: customerId,
+		product_id: premium.id,
+		redirect_mode: "if_required" as const,
+		custom_line_items: customLineItems,
+		discounts: [{ reward_id: coupon.id }],
+	};
+
+	const preview = await autumnV1.billing.previewAttach(params);
+
+	expect(preview.subtotal).toBe(20);
+	expect(preview.total).toBe(15);
+	expect(preview.line_items[0].discounts[0].amount_off).toBe(5);
+
+	const result = await autumnV1.billing.attach(params);
+	expect(result.invoice?.stripe_id).toBeDefined();
+
+	const stripeInvoice = await ctx.stripeCli.invoices.retrieve(
+		result.invoice!.stripe_id,
+	);
+	expect(stripeInvoice.total).toBe(
+		atmnToStripeAmount({ amount: 15, currency: "usd" }),
+	);
 });
 
 // ═══════════════════════════════════════════════════════════════════════════════

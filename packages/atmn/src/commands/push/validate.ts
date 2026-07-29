@@ -1,4 +1,5 @@
-import type { Feature, Plan, PlanItem } from "../../compose/models/index.js";
+import type { Feature, PlanItem } from "../../compose/models/index.js";
+import type { Plan } from "../../compose/models/variantModels.js";
 
 /**
  * Validation errors with user-friendly messages.
@@ -12,6 +13,25 @@ export interface ValidationResult {
 	valid: boolean;
 	errors: ValidationError[];
 }
+
+const hasPlanLicenseCycle = (plans: Plan[]): boolean => {
+	const byId = new Map(plans.map((plan) => [plan.id, plan]));
+	const visiting = new Set<string>();
+	const visited = new Set<string>();
+	const visit = (plan: Plan): boolean => {
+		if (visiting.has(plan.id)) return true;
+		if (visited.has(plan.id)) return false;
+		visiting.add(plan.id);
+		for (const license of plan.licenses ?? []) {
+			const dependency = byId.get(license.licensePlanId);
+			if (dependency !== plan && dependency && visit(dependency)) return true;
+		}
+		visiting.delete(plan.id);
+		visited.add(plan.id);
+		return false;
+	};
+	return plans.some(visit);
+};
 
 /**
  * Get the price.interval from a PlanItem (handling the discriminated union)
@@ -66,6 +86,12 @@ function validatePlanFeature(
 	const featureDefinition = features.find(
 		(f) => f.id === planFeature.featureId,
 	);
+	if (planFeature.featureId && !featureDefinition) {
+		errors.push({
+			path: basePath,
+			message: `Feature "${planFeature.featureId}" is referenced by this item but is not exported from your config.`,
+		});
+	}
 
 	// Get reset configuration from either top-level or price.interval
 	const topLevelReset = planFeature.reset;
@@ -74,12 +100,20 @@ function validatePlanFeature(
 	const hasPriceInterval = priceInterval !== undefined;
 	const hasAnyReset = hasTopLevelReset || hasPriceInterval;
 
-	// ========== MUTUAL EXCLUSIVITY ==========
-	// Cannot have both top-level reset AND price.interval
-	if (hasTopLevelReset && hasPriceInterval) {
+	const hasDifferentResetAndPriceInterval =
+		hasTopLevelReset &&
+		hasPriceInterval &&
+		(topLevelReset.interval !== priceInterval.interval ||
+			(topLevelReset.intervalCount ?? 1) !==
+				(priceInterval.intervalCount ?? 1));
+	if (
+		hasDifferentResetAndPriceInterval &&
+		planFeature.price?.billingMethod !== "prepaid"
+	) {
 		errors.push({
 			path: basePath,
-			message: `Cannot have both "reset" and "price.interval". Use "reset" for free allocations, or "price.interval" for usage-based pricing.`,
+			message:
+				"reset.interval and price.interval can only differ for prepaid prices.",
 		});
 	}
 
@@ -175,6 +209,27 @@ function validatePlanFeature(
 	return errors;
 }
 
+function validateFeatureReference({
+	featureId,
+	features,
+	path,
+}: {
+	featureId?: string;
+	features: Feature[];
+	path: string;
+}): ValidationError[] {
+	if (!featureId) {
+		return [{ path, message: `"featureId" is required.` }];
+	}
+	if (features.some((feature) => feature.id === featureId)) return [];
+	return [
+		{
+			path,
+			message: `Feature "${featureId}" is referenced here but is not exported from your config.`,
+		},
+	];
+}
+
 /**
  * Validate a plan has all required fields.
  */
@@ -237,6 +292,39 @@ function validatePlan(plan: Plan, features: Feature[]): ValidationError[] {
 				}
 				errors.push(...validatePlanFeature(planFeature, planId, i, features));
 			}
+		}
+	}
+
+	for (const [variantIndex, variant] of (plan.variants ?? []).entries()) {
+		const variantPath = `plan "${planId}" → variants[${variantIndex}] (${variant.id})`;
+		for (const [itemIndex, item] of (
+			variant.customize?.addItems ?? []
+		).entries()) {
+			if (!item.featureId) {
+				errors.push({
+					path: `${variantPath} → customize.addItems[${itemIndex}]`,
+					message: `"featureId" is required.`,
+				});
+			}
+			errors.push(
+				...validatePlanFeature(
+					item,
+					`${planId}.${variant.id}`,
+					itemIndex,
+					features,
+				),
+			);
+		}
+		for (const [itemIndex, item] of (
+			variant.customize?.removeItems ?? []
+		).entries()) {
+			errors.push(
+				...validateFeatureReference({
+					featureId: item.featureId,
+					features,
+					path: `${variantPath} → customize.removeItems[${itemIndex}]`,
+				}),
+			);
 		}
 	}
 
@@ -318,6 +406,33 @@ export function validateConfig(
 	// Validate plans (passing features for feature type lookups)
 	for (const plan of plans) {
 		errors.push(...validatePlan(plan, features));
+	}
+
+	const localPlanIds = new Set(plans.map((plan) => plan.id));
+	for (const plan of plans) {
+		const seen = new Set<string>();
+		for (const [index, license] of (plan.licenses ?? []).entries()) {
+			const path = `plan "${plan.id}" → licenses[${index}]`;
+			if (seen.has(license.licensePlanId)) {
+				errors.push({
+					path,
+					message: `Duplicate license link "${license.licensePlanId}".`,
+				});
+			}
+			seen.add(license.licensePlanId);
+			if (!localPlanIds.has(license.licensePlanId)) {
+				errors.push({
+					path,
+					message: `License plan "${license.licensePlanId}" is not exported from your config.`,
+				});
+			}
+			if (license.licensePlanId === plan.id) {
+				errors.push({ path, message: "A plan cannot license itself." });
+			}
+		}
+	}
+	if (hasPlanLicenseCycle(plans)) {
+		errors.push({ path: "plans", message: "Plan dependency cycle detected" });
 	}
 
 	return {

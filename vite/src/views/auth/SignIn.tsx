@@ -1,3 +1,4 @@
+import { IconButton, Input } from "@autumn/ui";
 import { faGoogle } from "@fortawesome/free-brands-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { Mail } from "lucide-react";
@@ -5,13 +6,16 @@ import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router";
 import { toast } from "sonner";
 import { CustomToaster } from "@/components/general/CustomToaster";
-import { IconButton } from "@/components/v2/buttons/IconButton";
-import { Input } from "@/components/v2/inputs/Input";
 import { authClient, signIn, useSession } from "@/lib/auth-client";
+import { isSafeSsoRedirectUrl } from "@/lib/sso/ssoCallback";
+import { getSsoHint } from "@/lib/sso/ssoHint";
+import { resolveSso } from "@/lib/sso/ssoResolve";
+import type { SsoOrgHint } from "@/lib/sso/ssoTypes";
 import { getBackendErr, getSafeNextPath } from "@/utils/genUtils";
 import { AuthBackground } from "./components/AuthBackground";
 import { AutumnWordmark } from "./components/AutumnWordmark";
 import { OTPSignIn } from "./components/OTPSignIn";
+import { RememberedSsoSignIn } from "./components/RememberedSsoSignIn";
 
 /**
  * Check if URL has OAuth parameters (from OAuth provider redirect)
@@ -35,6 +39,8 @@ export const SignIn = () => {
 	const [googleLoading, setGoogleLoading] = useState(false);
 	const [sendOtpLoading, setSendOtpLoading] = useState(false);
 	const [otpSent, setOtpSent] = useState(false);
+	const [ssoHint, setSsoHint] = useState<SsoOrgHint | null>(() => getSsoHint());
+	const [emailFallback, setEmailFallback] = useState(false);
 
 	const { data: session } = useSession();
 	const navigate = useNavigate();
@@ -89,14 +95,33 @@ export const SignIn = () => {
 		}
 		setSendOtpLoading(true);
 		try {
+			// The backend owns the decision: an active SSO domain never falls
+			// through to an email code.
+			let resolved: Awaited<ReturnType<typeof resolveSso>>;
+			try {
+				resolved = await resolveSso({ email });
+			} catch {
+				toast.error(
+					"Couldn't check how your organization signs in. Please try again.",
+				);
+				return;
+			}
+
+			if (resolved.action === "sso") {
+				if (!isSafeSsoRedirectUrl(resolved.url)) {
+					toast.error("Received an invalid sign-in URL. Please try again.");
+					return;
+				}
+				window.location.assign(resolved.url);
+				return;
+			}
+
 			const { error } = await authClient.emailOtp.sendVerificationOtp({
 				email: email,
 				type: "sign-in",
 			});
 			if (error) {
-				toast.error(
-					error.message || "Something went wrong. Please try again.",
-				);
+				toast.error(error.message || "Something went wrong. Please try again.");
 			} else {
 				setOtpSent(true);
 			}
@@ -113,7 +138,8 @@ export const SignIn = () => {
 			const frontendUrl = import.meta.env.VITE_FRONTEND_URL;
 			const googleCallbackUrl =
 				oauthRedirectUrl || `${frontendUrl}${defaultPath}`;
-			const googleNewUserUrl = oauthRedirectUrl || `${frontendUrl}${defaultPath}`;
+			const googleNewUserUrl =
+				oauthRedirectUrl || `${frontendUrl}${defaultPath}`;
 			const { error } = await signIn.social({
 				provider: "google",
 				callbackURL: googleCallbackUrl,
@@ -146,6 +172,15 @@ export const SignIn = () => {
 						email={email}
 						newPath={newPath}
 						callbackPath={callbackPath}
+					/>
+				) : ssoHint && !emailFallback ? (
+					<RememberedSsoSignIn
+						hint={ssoHint}
+						onUseAnotherEmail={() => setEmailFallback(true)}
+						onForget={() => {
+							setSsoHint(null);
+							setEmailFallback(true);
+						}}
 					/>
 				) : (
 					<div className="w-full space-y-5">

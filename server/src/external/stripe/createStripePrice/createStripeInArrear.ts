@@ -7,7 +7,9 @@ import {
 	type Organization,
 	type Price,
 	type Product,
+	priceConfigForCurrency,
 	priceToEnt,
+	setPriceCurrencyStripeId,
 	TierInfinite,
 	type UsagePriceConfig,
 } from "@autumn/shared";
@@ -60,6 +62,31 @@ const searchStripeMeter = async ({
 	return stripeMeter;
 };
 
+const getFeatureStripeMeter = async ({
+	feature,
+	stripeCli,
+	logger,
+}: {
+	feature: Feature;
+	stripeCli: Stripe;
+	logger: any;
+}) => {
+	const featureStripeMeter = feature.stripe_meter;
+	if (!featureStripeMeter?.id || !featureStripeMeter.event_name) {
+		return null;
+	}
+
+	try {
+		return await stripeCli.billing.meters.retrieve(featureStripeMeter.id);
+	} catch (error) {
+		logger.warn?.(
+			`Feature ${feature.id} has Stripe meter ${featureStripeMeter.id}, but it could not be retrieved`,
+			error,
+		);
+		return null;
+	}
+};
+
 const getStripeMeter = async ({
 	product,
 	feature,
@@ -74,6 +101,15 @@ const getStripeMeter = async ({
 	logger: any;
 }) => {
 	const config = price.config as UsagePriceConfig;
+
+	const featureStripeMeter = await getFeatureStripeMeter({
+		feature,
+		stripeCli,
+		logger,
+	});
+	if (featureStripeMeter) {
+		return featureStripeMeter;
+	}
 
 	try {
 		const stripeMeter = await searchStripeMeter({
@@ -106,12 +142,25 @@ export const priceToInArrearTiers = ({
 	price,
 	entitlement,
 	org,
+	currency: targetCurrency,
 }: {
 	price: Price;
 	entitlement: Entitlement;
 	org: Organization;
+	currency?: string;
 }) => {
-	const usageConfig = structuredClone(price.config) as UsagePriceConfig;
+	const config = price.config as UsagePriceConfig;
+	const orgDefault = (org.default_currency || "usd").toLowerCase();
+	const currency = (
+		targetCurrency ??
+		config.base_currency ??
+		orgDefault
+	).toLowerCase();
+	const usageTiers = structuredClone(
+		priceConfigForCurrency({ config, currency, orgDefault }).usage_tiers ??
+			config.usage_tiers,
+	);
+
 	const tiers: any[] = [];
 	if (entitlement.allowance) {
 		tiers.push({
@@ -119,23 +168,21 @@ export const priceToInArrearTiers = ({
 			up_to: entitlement.allowance,
 		});
 
-		for (let i = 0; i < usageConfig.usage_tiers.length; i++) {
-			const tier = usageConfig.usage_tiers[i];
+		for (const tier of usageTiers) {
 			if (tier.to !== -1 && tier.to !== TierInfinite) {
-				usageConfig.usage_tiers[i].to = (tier.to || 0) + entitlement.allowance;
+				tier.to = (tier.to || 0) + entitlement.allowance;
 			}
 		}
 	}
 
-	for (let i = 0; i < usageConfig.usage_tiers.length; i++) {
-		const tier = usageConfig.usage_tiers[i];
+	for (const tier of usageTiers) {
 		const atmnUnitAmount = new Decimal(tier.amount).div(
-			usageConfig.billing_units ?? 1,
+			config.billing_units ?? 1,
 		);
 
 		const stripeUnitAmountDecimal = atmnToStripeAmountDecimal({
 			amount: atmnUnitAmount,
-			currency: org.default_currency || undefined,
+			currency,
 		});
 
 		const stripeTier: Record<string, unknown> = {
@@ -146,7 +193,7 @@ export const priceToInArrearTiers = ({
 		if (tier.flat_amount) {
 			stripeTier.flat_amount_decimal = atmnToStripeAmountDecimal({
 				amount: tier.flat_amount,
-				currency: org.default_currency || undefined,
+				currency,
 			});
 		}
 
@@ -168,6 +215,7 @@ export const createStripeInArrearPrice = async ({
 	curStripeProduct,
 	internalEntityId,
 	useCheckout = false,
+	currency: targetCurrency,
 }: {
 	db: DrizzleCli;
 	stripeCli: Stripe;
@@ -180,8 +228,15 @@ export const createStripeInArrearPrice = async ({
 	curStripeProduct?: Stripe.Product | null;
 	internalEntityId?: string;
 	useCheckout?: boolean;
+	currency?: string;
 }) => {
 	const config = price.config as UsagePriceConfig;
+	const orgDefault = (org.default_currency || "usd").toLowerCase();
+	const currency = (
+		targetCurrency ??
+		config.base_currency ??
+		orgDefault
+	).toLowerCase();
 
 	// 1. Create meter
 	const relatedEnt = priceToEnt({
@@ -237,11 +292,13 @@ export const createStripeInArrearPrice = async ({
 	});
 
 	config.stripe_meter_id = meter.id;
+	config.stripe_event_name = meter.event_name;
 
 	const tiers = priceToInArrearTiers({
 		price,
 		entitlement: relatedEnt,
 		org,
+		currency,
 	});
 
 	let priceAmountData = {};
@@ -279,7 +336,7 @@ export const createStripeInArrearPrice = async ({
 	const stripePrice = await stripeCli.prices.create({
 		...productData,
 		...priceAmountData,
-		currency: org.default_currency || "usd",
+		currency,
 		recurring: recurringData?.interval
 			? {
 					interval: recurringData.interval,
@@ -291,9 +348,16 @@ export const createStripeInArrearPrice = async ({
 		nickname: `Autumn Price (${relatedEnt.feature.name})`,
 	});
 
-	config.stripe_price_id = stripePrice.id;
+	setPriceCurrencyStripeId({
+		config,
+		currency,
+		orgDefault,
+		slot: "stripe_price_id",
+		id: stripePrice.id,
+	});
 	config.stripe_product_id = stripePrice.product as string;
 	config.stripe_meter_id = meter.id;
+	config.stripe_event_name = meter.event_name;
 
 	await PriceService.update({
 		db,

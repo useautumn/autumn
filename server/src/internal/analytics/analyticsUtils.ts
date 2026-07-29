@@ -9,13 +9,58 @@ import {
 	RecaseError,
 	type Subscription,
 } from "@autumn/shared";
+import { UTCDate } from "@date-fns/utc";
+import { format, startOfDay, startOfHour, sub } from "date-fns";
+import type Stripe from "stripe";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 import { createStripeCli } from "@/external/connect/createStripeCli.js";
 import { subToPeriodStartEnd } from "@/external/stripe/stripeSubUtils/convertSubUtils.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { ACTIVE_STATUSES } from "@/internal/customers/cusProducts/CusProductService.js";
 import { isFreeProduct } from "../products/productUtils.js";
-import type Stripe from "stripe";
+
+export const STANDARD_INTERVAL_DAYS: Record<string, number> = {
+	"24h": 1,
+	"7d": 7,
+	"30d": 30,
+	"90d": 90,
+};
+
+const CLICKHOUSE_DATE_FORMAT = "yyyy-MM-dd'T'HH:mm:ss";
+
+/** Resolves the start/end window the event-name ranking should query so it
+ * matches the chart's visible range. A custom range takes precedence; otherwise
+ * a standard interval is resolved with the same boundary alignment the chart
+ * uses — hour for 24h, day for 7d/30d/90d. Returns undefined when neither
+ * applies (e.g. billing-cycle intervals), leaving callers on all-time ranking. */
+export const getEventRankingWindow = ({
+	interval,
+	customRange,
+}: {
+	interval?: string;
+	customRange?: { start: number; end: number };
+}): { startDate: string; endDate: string } | undefined => {
+	if (customRange) {
+		return {
+			startDate: format(new UTCDate(customRange.start), CLICKHOUSE_DATE_FORMAT),
+			endDate: format(new UTCDate(customRange.end), CLICKHOUSE_DATE_FORMAT),
+		};
+	}
+
+	const days = interval ? STANDARD_INTERVAL_DAYS[interval] : undefined;
+	if (!days) {
+		return undefined;
+	}
+
+	const now = new UTCDate();
+	const unaligned = sub(now, { days });
+	const start =
+		interval === "24h" ? startOfHour(unaligned) : startOfDay(unaligned);
+	return {
+		startDate: format(start, CLICKHOUSE_DATE_FORMAT),
+		endDate: format(now, CLICKHOUSE_DATE_FORMAT),
+	};
+};
 
 export async function getBillingCycleStartDate({
 	customer,
@@ -153,7 +198,9 @@ function getDateRangesFromStripeSubscriptions(
 
 				startDates.push(formatDateToString(new Date(period.start * 1000)));
 				endDates.push(formatDateToString(new Date(period.end * 1000)));
-				createdDates.push(formatDateToString(new Date(subscription.created * 1000)));
+				createdDates.push(
+					formatDateToString(new Date(subscription.created * 1000)),
+				);
 			}
 		}
 	}
@@ -232,9 +279,7 @@ function getDateRangesFromEntitlements(customerProducts?: FullCusProduct[]): {
 
 		for (const entitlement of product.customer_entitlements) {
 			if (entitlement.next_reset_at) {
-				endDates.push(
-					formatDateToString(new Date(entitlement.next_reset_at)),
-				);
+				endDates.push(formatDateToString(new Date(entitlement.next_reset_at)));
 			}
 
 			const startDate = calculateStartDateFromInterval(
@@ -296,7 +341,7 @@ function calculateBillingCycleResult(
 
 	const gapMultiplier = intervalType === "1bc" ? 1 : 3;
 	const now = new Date();
-	
+
 	// For analytics, we look BACKWARD from today for N billing cycles
 	// End date is today, start date is today - (gap * multiplier)
 	const adjustedStartDate = new Date(now.getTime() - gap * gapMultiplier);

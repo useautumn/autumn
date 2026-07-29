@@ -179,12 +179,11 @@ const mockAutumnApi = ({
 			toolEntries.find(([, path]) => endpoint.endsWith(path))?.[0] ?? null;
 		const fixture = toolName ? fixtures[toolName] : undefined;
 		const parsedBody = toolName ? schemaByTool[toolName].parse(body) : body;
-		calls.push({
-			toolName,
-			endpoint,
-			body: parsedBody as never,
-			rawBody: body,
-		});
+		const call: AutumnApiCall | UnknownAutumnApiCall =
+			toolName === null
+				? { toolName, endpoint, body: parsedBody as never, rawBody: body }
+				: { toolName, endpoint, body: parsedBody as never, rawBody: body };
+		calls.push(call);
 
 		if (fixture === undefined) {
 			return Response.json(

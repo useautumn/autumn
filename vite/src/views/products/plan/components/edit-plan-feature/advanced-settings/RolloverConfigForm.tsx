@@ -2,16 +2,16 @@ import {
 	type RolloverConfig as RolloverConfigType,
 	RolloverExpiryDurationType,
 } from "@autumn/shared";
-import { AreaCheckbox } from "@/components/v2/checkboxes/AreaCheckbox";
-import { FormLabel } from "@/components/v2/form/FormLabel";
-import { Input } from "@/components/v2/inputs/Input";
 import {
+	AreaCheckbox,
+	FormLabel,
+	Input,
 	Select,
 	SelectContent,
 	SelectItem,
 	SelectTrigger,
 	SelectValue,
-} from "@/components/v2/selects/Select";
+} from "@autumn/ui";
 
 type MaxMode = "absolute" | "percentage" | "unlimited";
 
@@ -95,11 +95,15 @@ export function RolloverConfigForm({
 				<div className="space-y-2 w-full">
 					<FormLabel>Maximum rollover</FormLabel>
 					<div className="flex items-center gap-2">
-					<Select
-						value={maxMode}
-						onValueChange={(v) => handleMaxModeChange(v as MaxMode)}
-						items={{ unlimited: "Unlimited", absolute: "Absolute", percentage: "Percentage" }}
-					>
+						<Select
+							value={maxMode}
+							onValueChange={(v) => handleMaxModeChange(v as MaxMode)}
+							items={{
+								unlimited: "Unlimited",
+								absolute: "Absolute",
+								percentage: "Percentage",
+							}}
+						>
 							<SelectTrigger
 								className="w-32"
 								onClick={(e) => e.stopPropagation()}
@@ -171,16 +175,21 @@ export function RolloverConfigForm({
 								onClick={(e) => e.stopPropagation()}
 							/>
 						)}
-					<Select
-						value={rollover?.duration}
-						onValueChange={(v) => {
-							setRolloverConfigKey(
-								"duration",
-								v as RolloverExpiryDurationType,
-							);
-						}}
-						items={Object.fromEntries(Object.values(RolloverExpiryDurationType).map((duration) => [duration, duration]))}
-					>
+						<Select
+							value={rollover?.duration}
+							onValueChange={(v) => {
+								setRolloverConfigKey(
+									"duration",
+									v as RolloverExpiryDurationType,
+								);
+							}}
+							items={Object.fromEntries(
+								Object.values(RolloverExpiryDurationType).map((duration) => [
+									duration,
+									duration,
+								]),
+							)}
+						>
 							<SelectTrigger
 								className="flex-1"
 								onClick={(e) => e.stopPropagation()}

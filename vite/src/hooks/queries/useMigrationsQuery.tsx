@@ -1,6 +1,4 @@
-import type { Migration } from "@autumn/shared";
-import type { MigrationFilter } from "@autumn/shared/api/migrations/filters/migrationFilter.js";
-import type { Operations } from "@autumn/shared/api/migrations/operations/operations.js";
+import type { Migration, MigrationFilter, Operations } from "@autumn/shared";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useQueryKeyFactory } from "@/hooks/common/useQueryKeyFactory";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
@@ -105,7 +103,6 @@ export const useMigrationsQuery = () => {
 			dry_run?: boolean;
 			limit?: number;
 			only?: string[];
-			concurrency?: number;
 			lazy_run?: boolean;
 			retry_item_statuses?: RetryableMigrationItemRunStatus[];
 		}) => {
@@ -113,7 +110,7 @@ export const useMigrationsQuery = () => {
 				migration_id: string;
 				dry_run: boolean;
 				lazy_run: boolean;
-				concurrency?: number;
+				concurrency: number;
 				run_id: string;
 				trigger_run_id?: string;
 				public_access_token?: string;

@@ -6,6 +6,7 @@ import type {
 	FullCustomerEntitlement,
 	FullCustomerPrice,
 	FullProduct,
+	InsertPlanLicenseSpec,
 	Price,
 	StripeBillingContextOverride,
 } from "@autumn/shared";
@@ -13,6 +14,8 @@ import type { BillingContext, BillingVersion } from "./billingContext";
 
 export enum UpdateSubscriptionIntent {
 	UpdateQuantity = "update_quantity",
+	/** Converge license pool paid quantities in place — no plan restructure. */
+	UpdateLicenseQuantity = "update_license_quantity",
 	UpdatePlan = "update_plan",
 	CancelAction = "cancel_action",
 	/** Add credits to a one-off prepaid item hosted on a paid-recurring cusProduct. */
@@ -47,6 +50,9 @@ export interface UpdateSubscriptionBillingContext extends BillingContext {
 
 	intent: UpdateSubscriptionIntent;
 
+	/** Custom license definitions (is_custom plan licenses) to persist. */
+	insertPlanLicenses?: InsertPlanLicenseSpec[];
+
 	/**
 	 * Mirror of `UpdateSubscriptionBillingContextOverride.chargeExistingOverages`.
 	 * Read by `computeCustomPlan` to decide whether to call
@@ -63,6 +69,13 @@ export interface UpdateSubscriptionBillingContext extends BillingContext {
 
 	/** Customer-facing `carry_over_usages` param; resolved into the carry config per reader. */
 	carryOverUsages?: CarryOverUsages;
+
+	/**
+	 * Set by migrations-v2's `update_plan` operation when `op.proration === true`.
+	 * Lets `evaluateMigrateCustomerStripe` skip its no-charge guard for this
+	 * subscription only — every other migration keeps the guard.
+	 */
+	allowCharges?: boolean;
 }
 
 export interface UpdateSubscriptionBillingContextOverrides {

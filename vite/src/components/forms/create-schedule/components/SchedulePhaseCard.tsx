@@ -1,12 +1,12 @@
-import { InfoIcon, PlusIcon, TrashIcon } from "@phosphor-icons/react";
-import { InlineAction } from "@/components/v2/buttons/InlineAction";
-import { CalendarIcon } from "lucide-react";
-import { DateInputUnix } from "@/components/general/DateInputUnix";
 import {
+	DateInputUnix,
+	InlineAction,
 	Tooltip,
 	TooltipContent,
 	TooltipTrigger,
-} from "@/components/v2/tooltips/Tooltip";
+} from "@autumn/ui";
+import { InfoIcon, PlusIcon, TrashIcon } from "@phosphor-icons/react";
+import { CalendarIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useCreateScheduleFormContext } from "../context/CreateScheduleFormProvider";
 import {

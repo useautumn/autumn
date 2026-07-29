@@ -4,7 +4,12 @@ import type {
 	ProductItem,
 	ProductV2,
 } from "@autumn/shared";
-import { CusProductStatus, mapToProductItems } from "@autumn/shared";
+import {
+	CusProductStatus,
+	findCustomerProductById,
+	mapToProductItems,
+} from "@autumn/shared";
+import { Button } from "@autumn/ui";
 import { motion } from "motion/react";
 import { useMemo } from "react";
 import { toast } from "sonner";
@@ -32,7 +37,6 @@ import {
 	STAGGER_CONTAINER,
 	STAGGER_ITEM,
 } from "@/components/forms/update-subscription-v2/constants/animationConstants";
-import { Button } from "@/components/v2/buttons/Button";
 import { InlinePlanEditor } from "@/components/v2/inline-custom-plan-editor/InlinePlanEditor";
 import {
 	LayoutGroup,
@@ -48,6 +52,28 @@ import { backendToDisplayQuantity } from "@/utils/billing/prepaidQuantityUtils";
 import { useEnv } from "@/utils/envUtils";
 import { useCusQuery } from "@/views/customers/customer/hooks/useCusQuery";
 import { useCustomerContext } from "@/views/customers2/customer/CustomerContext";
+
+function hasSchedulePhaseBillingCycleReset({
+	customer,
+	schedule,
+	nowMs,
+}: {
+	customer: FullCustomer | undefined;
+	schedule: FullCustomerSchedule;
+	nowMs: number;
+}) {
+	return schedule.phases.some(
+		(phase) =>
+			phase.starts_at > nowMs &&
+			phase.customer_product_ids.some((cpId) => {
+				const cusProduct = findCustomerProductById({
+					fullCustomer: customer,
+					customerProductId: cpId,
+				});
+				return cusProduct?.billing_cycle_anchor_resets_at === phase.starts_at;
+			}),
+	);
+}
 
 function reconstructCustomItems({
 	cusProduct,
@@ -123,11 +149,13 @@ export function buildInitialValues({
 	schedule,
 	products,
 	entityId,
+	nowMs = Date.now(),
 }: {
 	customer: FullCustomer | undefined;
 	schedule: FullCustomerSchedule | undefined;
 	products: ProductV2[];
 	entityId?: string;
+	nowMs?: number;
 }): CreateScheduleForm {
 	if (schedule?.phases?.length) {
 		return {
@@ -135,16 +163,21 @@ export function buildInitialValues({
 				startsAt: phase.starts_at,
 				persistedStartsAt: phase.starts_at,
 				plans: phase.customer_product_ids.map((cpId) => {
-					const cusProduct = customer?.customer_products.find(
-						(cp) => cp.id === cpId,
-					);
+					const cusProduct = findCustomerProductById({
+						fullCustomer: customer,
+						customerProductId: cpId,
+					});
 					return cusProduct
 						? cusProductToPlan({ cusProduct, products })
 						: { ...EMPTY_SCHEDULE_PLAN };
 				}),
 			})),
 			billingBehavior: null,
-			resetBillingCycle: false,
+			resetBillingCycle: hasSchedulePhaseBillingCycleReset({
+				customer,
+				schedule,
+				nowMs,
+			}),
 			enablePlanImmediately: false,
 		};
 	}
@@ -383,8 +416,9 @@ export function CreateScheduleSheet() {
 				schedule,
 				products,
 				entityId: scopeEntityId,
+				nowMs: testClockFrozenTimeMs,
 			}),
-		[fullCustomer, schedule, products, scopeEntityId],
+		[fullCustomer, schedule, products, scopeEntityId, testClockFrozenTimeMs],
 	);
 
 	// Intentionally no `key` on CreateScheduleFormProvider: scope changes should

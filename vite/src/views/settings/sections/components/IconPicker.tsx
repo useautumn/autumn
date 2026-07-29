@@ -1,15 +1,10 @@
+import { Input, Popover, PopoverContent, PopoverTrigger } from "@autumn/ui";
 import { useDeferredValue, useMemo, useState } from "react";
-import {
-	Popover,
-	PopoverContent,
-	PopoverTrigger,
-} from "@/components/ui/popover";
 import { PhosphorIcon } from "@/components/v2/icons/PhosphorIcon";
 import {
 	PHOSPHOR_ICON_NAMES,
 	STARTER_PHOSPHOR_ICONS,
 } from "@/components/v2/icons/phosphorIcons";
-import { Input } from "@/components/v2/inputs/Input";
 import { cn } from "@/lib/utils";
 
 const MAX_RESULTS = 60;
@@ -68,9 +63,8 @@ export function IconPicker({
 							aria-label={humanize(name)}
 							onClick={() => select(name)}
 							className={cn(
-								"flex aspect-square items-center justify-center rounded-md text-tertiary-foreground transition-colors hover:bg-interactive-secondary-hover hover:text-foreground",
-								value === name &&
-									"bg-interactive-secondary-hover text-foreground ring-1 ring-primary",
+								"flex aspect-square items-center justify-center rounded-md text-tertiary-foreground outline-none transition-colors hover:bg-interactive-secondary-hover hover:text-foreground focus-visible:bg-interactive-secondary-hover focus-visible:text-foreground",
+								value === name && "bg-interactive-secondary text-foreground",
 							)}
 						>
 							<PhosphorIcon name={name} className="size-4" />

@@ -31,9 +31,8 @@ export const setupAttachCheckoutMode = ({
 	const hasPaymentMethod = !!paymentMethod;
 	const hasExistingSubscription = !!stripeSubscription;
 
-	const prices = attachProduct.prices;
-	const productIsOneOff = isOneOffProduct({ prices });
-	const productIsFree = isFreeProduct({ prices });
+	const productIsOneOff = isOneOffProduct({ product: attachProduct });
+	const productIsFree = isFreeProduct({ product: attachProduct });
 	const productIsPaidRecurring = !productIsOneOff && !productIsFree;
 
 	if (redirectMode === "never") {

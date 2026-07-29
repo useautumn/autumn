@@ -40,6 +40,7 @@ export const findSimilarItem = ({
 			(i) =>
 				isFeatureItem(i) &&
 				i.feature_id === item.feature_id &&
+				i.entity_feature_id == item.entity_feature_id &&
 				entIntervalsSame({
 					intervalA: {
 						interval: itemToEntInterval({ item: i }),
@@ -58,6 +59,7 @@ export const findSimilarItem = ({
 			(i) =>
 				isFeaturePriceItem(i) &&
 				i.feature_id === item.feature_id &&
+				i.entity_feature_id == item.entity_feature_id &&
 				intervalsSame({
 					intervalA: {
 						interval: itemToBillingInterval({ item: i }),
@@ -88,10 +90,40 @@ export const findSimilarItem = ({
 	return null;
 };
 
+type CurrencyEntryLike = {
+	currency: string;
+	amount?: number | null;
+	flat_amount?: number | null;
+};
+
 type TierLike = {
 	to: number | "inf";
 	amount: number;
 	flat_amount?: number | null;
+	additional_currencies?: CurrencyEntryLike[] | null;
+};
+
+const additionalCurrenciesAreSame = (
+	entries1: CurrencyEntryLike[] | null | undefined,
+	entries2: CurrencyEntryLike[] | null | undefined,
+) => {
+	const list1 = entries1 ?? [];
+	const list2 = entries2 ?? [];
+	if (list1.length !== list2.length) {
+		return false;
+	}
+
+	const byCurrency = (a: CurrencyEntryLike, b: CurrencyEntryLike) =>
+		a.currency.localeCompare(b.currency);
+	const sorted1 = [...list1].sort(byCurrency);
+	const sorted2 = [...list2].sort(byCurrency);
+
+	return sorted1.every(
+		(entry, index) =>
+			entry.currency === sorted2[index].currency &&
+			(entry.amount ?? null) === (sorted2[index].amount ?? null) &&
+			(entry.flat_amount ?? null) === (sorted2[index].flat_amount ?? null),
+	);
 };
 
 const tiersAreSame = (tiers1: TierLike[] | null, tiers2: TierLike[] | null) => {
@@ -111,7 +143,11 @@ const tiersAreSame = (tiers1: TierLike[] | null, tiers2: TierLike[] | null) => {
 		(tier, index) =>
 			tier.amount === tiers2[index].amount &&
 			tier.to === tiers2[index].to &&
-			tier.flat_amount === tiers2[index].flat_amount,
+			tier.flat_amount === tiers2[index].flat_amount &&
+			additionalCurrenciesAreSame(
+				tier.additional_currencies,
+				tiers2[index].additional_currencies,
+			),
 	);
 };
 
@@ -153,6 +189,10 @@ export const featureItemsAreSame = ({
 		entity_feature_id: {
 			condition: item1.entity_feature_id == item2.entity_feature_id,
 			message: `Entity feature ID different: ${item1.entity_feature_id} != ${item2.entity_feature_id}`,
+		},
+		pooled: {
+			condition: (item1.pooled ?? false) === (item2.pooled ?? false),
+			message: `Pooled different: ${item1.pooled} != ${item2.pooled}`,
 		},
 		reset_usage_when_enabled: {
 			condition:
@@ -200,7 +240,11 @@ export const priceItemsAreSame = ({
 		itemToBillingInterval({ item: item1 }) ==
 			itemToBillingInterval({ item: item2 }) &&
 		itemToBillingIntervalCount({ item: item1 }) ==
-			itemToBillingIntervalCount({ item: item2 });
+			itemToBillingIntervalCount({ item: item2 }) &&
+		additionalCurrenciesAreSame(
+			item1.additional_currencies,
+			item2.additional_currencies,
+		);
 
 	if (!same && logDifferences) {
 		console.log(`Price items different: ${item1.price}`);
@@ -317,6 +361,10 @@ export const featurePriceItemsAreSame = ({
 		entity_feature_id: {
 			condition: item1.entity_feature_id == item2.entity_feature_id,
 			message: `Entity feature ID different: ${item1.entity_feature_id} != ${item2.entity_feature_id}`,
+		},
+		pooled: {
+			condition: (item1.pooled ?? false) === (item2.pooled ?? false),
+			message: `Pooled different: ${item1.pooled} != ${item2.pooled}`,
 		},
 
 		// config: {

@@ -15,5 +15,12 @@ export const useCurrentMembership = () => {
 	const isAdmin = currentRole === "admin" || currentRole === "owner";
 	const isOwner = currentRole === "owner";
 
-	return { currentMembership, currentRole, isAdmin, isOwner, userId, isLoading };
+	return {
+		currentMembership,
+		currentRole,
+		isAdmin,
+		isOwner,
+		userId,
+		isLoading,
+	};
 };

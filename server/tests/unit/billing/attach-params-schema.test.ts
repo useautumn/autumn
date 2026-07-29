@@ -37,3 +37,14 @@ describe("attach params starts_at", () => {
 		},
 	);
 });
+
+describe("attach params currency", () => {
+	test.each(schemas)("%s preserves currency", (_, schema, params) => {
+		const result = schema.safeParse({
+			...params,
+			currency: "eur",
+		});
+		expect(result.success).toBe(true);
+		expect(result.data).toMatchObject({ currency: "eur" });
+	});
+});

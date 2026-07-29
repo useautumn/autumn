@@ -1,11 +1,10 @@
 import { type ProductItem, productV2ToFeatureItems } from "@autumn/shared";
-import { useEffect, useRef } from "react";
+import { useEffect, useId, useRef } from "react";
+import { createPortal } from "react-dom";
 import {
-	useDiscardItemAndClose,
 	useProduct,
 	useSheet,
 } from "@/components/v2/inline-custom-plan-editor/PlanEditorContext";
-import { InlineSheetPanel } from "@/components/v2/sheets/InlineSheetPanel";
 import { getItemId } from "@/utils/product/productItemUtils";
 
 import { ProductItemContext } from "../product/product-item/ProductItemContext";
@@ -14,7 +13,11 @@ import { EditPlanSheet } from "./components/EditPlanSheet";
 import { EditPlanFeatureSheet } from "./components/edit-plan-feature/EditPlanFeatureSheet";
 import { NewFeatureSheet } from "./components/new-feature/NewFeatureSheet";
 import { SelectFeatureSheet } from "./components/SelectFeatureSheet";
-import { SHEET_ANIMATION } from "./planAnimations";
+import {
+	useIsActiveSheetOwner,
+	useSheetPanelActivation,
+	useSheetPanelTarget,
+} from "./components/SheetPanelHost";
 
 export const ProductSheets = () => {
 	const { product, setProduct } = useProduct();
@@ -27,6 +30,19 @@ export const ProductSheets = () => {
 		closeSheet,
 		itemDraft,
 	} = useSheet();
+
+	const panelTarget = useSheetPanelTarget();
+	const { activate, deactivate } = useSheetPanelActivation();
+	const editorId = useId();
+	const isActiveOwner = useIsActiveSheetOwner(editorId);
+
+	// Claim the shared sheet panel while this editor's sheet is open, releasing it
+	// on close/unmount, so the one panel reflects whichever editor is active.
+	useEffect(() => {
+		if (!sheetType) return;
+		activate({ id: editorId, close: closeSheet });
+		return () => deactivate(editorId);
+	}, [sheetType, activate, deactivate, editorId, closeSheet]);
 	const {
 		enabled: hasDraftItemSessionSupport,
 		session: draftItemSession,
@@ -35,8 +51,6 @@ export const ProductSheets = () => {
 		commitItem: commitItemDraft,
 		clearItemSession: clearItemDraftSession,
 	} = itemDraft;
-
-	const discardAndClose = useDiscardItemAndClose();
 
 	const featureItems = productV2ToFeatureItems({ items: product.items });
 
@@ -185,13 +199,9 @@ export const ProductSheets = () => {
 		}
 	};
 
-	return (
-		<InlineSheetPanel
-			isOpen={!!sheetType}
-			onClose={discardAndClose}
-			transition={SHEET_ANIMATION}
-		>
-			{renderSheet()}
-		</InlineSheetPanel>
-	);
+	// Only the active owner portals — prevents two editors writing to the shared
+	// panel during the single render between a switch and the loser's cleanup.
+	if (!sheetType || !panelTarget || !isActiveOwner) return null;
+
+	return createPortal(renderSheet(), panelTarget);
 };

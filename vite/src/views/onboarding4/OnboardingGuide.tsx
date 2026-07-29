@@ -2,6 +2,14 @@
 
 import { AppEnv } from "@autumn/shared";
 import {
+	CopyButton,
+	IconButton,
+	Skeleton,
+	Tooltip,
+	TooltipContent,
+	TooltipTrigger,
+} from "@autumn/ui";
+import {
 	BatteryHighIcon,
 	CheckCircleIcon,
 	ClockIcon,
@@ -14,14 +22,6 @@ import { AnimatePresence, motion } from "motion/react";
 import type { ReactNode } from "react";
 import { useState } from "react";
 import { useNavigate } from "react-router";
-import { Skeleton } from "@/components/ui/skeleton";
-import { CopyButton } from "@/components/v2/buttons/CopyButton";
-import { IconButton } from "@/components/v2/buttons/IconButton";
-import {
-	Tooltip,
-	TooltipContent,
-	TooltipTrigger,
-} from "@/components/v2/tooltips/Tooltip";
 import type { StepId } from "@/lib/snippets";
 import { cn } from "@/lib/utils";
 import { useEnv } from "@/utils/envUtils";
@@ -152,7 +152,9 @@ function StepCard({
 							<h3 className="font-medium text-sm text-foreground mb-1">
 								{step.title}
 							</h3>
-							<p className="text-xs text-muted-foreground">{step.description}</p>
+							<p className="text-xs text-muted-foreground">
+								{step.description}
+							</p>
 						</div>
 
 						<div className="flex flex-col gap-3 items-end justify-center">

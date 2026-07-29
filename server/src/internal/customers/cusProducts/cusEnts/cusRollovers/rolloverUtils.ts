@@ -96,6 +96,41 @@ function hasFullCusProduct(
 	);
 }
 
+/** Effective rollover cap for a cusEnt: null = unlimited (or no config). */
+export const cusEntToEffectiveRolloverMax = ({
+	cusEnt,
+}: {
+	cusEnt: FullCusEntWithProduct;
+}): number | null => {
+	const rolloverConfig = cusEnt.entitlement.rollover;
+	if (!rolloverConfig) return null;
+
+	if (rolloverConfig.max_percentage == null) return rolloverConfig.max ?? null;
+
+	let startingBalance: number;
+	if (cusEnt.pooled_balance) {
+		startingBalance = cusEntToStartingBalance({ cusEnt });
+	} else if (hasFullCusProduct(cusEnt)) {
+		startingBalance = cusEntToStartingBalance({ cusEnt });
+	} else {
+		const options = entToOptions({
+			ent: cusEnt.entitlement,
+			options: cusEnt.customer_product?.options ?? [],
+		});
+		startingBalance = getStartingBalance({
+			entitlement: cusEnt.entitlement,
+			options,
+			productQuantity: cusEnt.customer_product?.quantity ?? 1,
+		});
+	}
+
+	return new Decimal(startingBalance)
+		.mul(rolloverConfig.max_percentage)
+		.div(100)
+		.floor()
+		.toNumber();
+};
+
 export function performMaximumClearing({
 	rows,
 	cusEnt,
@@ -109,30 +144,7 @@ export function performMaximumClearing({
 		return { toDelete: [], toUpdate: [] };
 	}
 
-	let effectiveMax: number | null = rolloverConfig.max ?? null;
-	if (rolloverConfig.max_percentage != null) {
-		let startingBalance: number;
-
-		if (hasFullCusProduct(cusEnt)) {
-			startingBalance = cusEntToStartingBalance({ cusEnt });
-		} else {
-			const options = entToOptions({
-				ent: cusEnt.entitlement,
-				options: cusEnt.customer_product?.options ?? [],
-			});
-			startingBalance = getStartingBalance({
-				entitlement: cusEnt.entitlement,
-				options,
-				productQuantity: cusEnt.customer_product?.quantity ?? 1,
-			});
-		}
-
-		effectiveMax = new Decimal(startingBalance)
-			.mul(rolloverConfig.max_percentage)
-			.div(100)
-			.floor()
-			.toNumber();
-	}
+	const effectiveMax = cusEntToEffectiveRolloverMax({ cusEnt });
 
 	if (effectiveMax == null) {
 		return { toDelete: [], toUpdate: [] };
@@ -167,7 +179,12 @@ export function performMaximumClearing({
 				newBalance = newBalance.sub(toDeduct);
 				toDeduct = new Decimal(0);
 
-				toUpdate.push({ ...row, balance: newBalance.toNumber() });
+				// Drop fully-drained rows instead of keeping zero-balance zombies.
+				if (newBalance.isZero()) {
+					toDelete.push(row.id);
+				} else {
+					toUpdate.push({ ...row, balance: newBalance.toNumber() });
+				}
 			} else {
 				newBalance = new Decimal(0);
 				toDeduct = toDeduct.sub(curBalance);
@@ -207,7 +224,9 @@ export function performMaximumClearing({
 
 			if (curBalance.gte(toDeduct)) {
 				newBalance = newBalance.sub(toDeduct);
-				entityIdToTotal[entityId] = 0;
+				// Remaining running total after the full deduction (== effectiveMax),
+				// keeping the same invariant as the else-branch below.
+				entityIdToTotal[entityId] = entityTotal - toDeduct.toNumber();
 				shouldUpdate = true;
 				update.entities[entityId] = {
 					id: entityId,
@@ -216,7 +235,9 @@ export function performMaximumClearing({
 				};
 			} else {
 				newBalance = new Decimal(0);
-				entityIdToTotal[entityId] = toDeduct.sub(curBalance).toNumber();
+				// Carry the remaining running total (not the residual deduction) so
+				// the next row recomputes toDeduct correctly.
+				entityIdToTotal[entityId] = entityTotal - curBalance.toNumber();
 				shouldUpdate = true;
 				update.entities[entityId] = {
 					id: entityId,

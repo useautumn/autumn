@@ -44,6 +44,33 @@ const startMcpServer = () =>
 		});
 	});
 
+const legacyJsonSchemaIdPaths = (schema: unknown, path = "$"): string[] => {
+	if (!schema || typeof schema !== "object") return [];
+	if (Array.isArray(schema)) {
+		return schema.flatMap((item, index) =>
+			legacyJsonSchemaIdPaths(item, `${path}[${index}]`),
+		);
+	}
+
+	const paths: string[] = [];
+	for (const [key, value] of Object.entries(schema)) {
+		if (key === "id") paths.push(`${path}.id`);
+		if (key === "properties" && value && typeof value === "object") {
+			for (const [propertyName, propertySchema] of Object.entries(value)) {
+				paths.push(
+					...legacyJsonSchemaIdPaths(
+						propertySchema,
+						`${path}.properties.${propertyName}`,
+					),
+				);
+			}
+			continue;
+		}
+		paths.push(...legacyJsonSchemaIdPaths(value, `${path}.${key}`));
+	}
+	return paths;
+};
+
 describe("Autumn MCP server", () => {
 	test("advertises Autumn MCP instructions during initialize", async () => {
 		const server = await startMcpServer();
@@ -57,11 +84,12 @@ describe("Autumn MCP server", () => {
 			const instructions = mcp.getServerInstructions().autumn;
 
 			expect(instructions).toContain("# Autumn MCP Instructions");
-			expect(instructions).toContain("autumn://docs/plan-management");
-			expect(instructions).toContain("call them in the same tool batch");
-			expect(instructions).toContain(
-				"Use preview tools before billing writes.",
-			);
+			expect(instructions).toContain("autumn://docs/catalog");
+			expect(instructions).toContain("autumn://docs/billing");
+			expect(instructions).toContain("autumn://docs/logs");
+			expect(instructions).toContain("call them in one tool batch");
+			expect(instructions).toContain("Preview before every write");
+			expect(instructions).toContain("previewUpdateCatalog");
 		} finally {
 			await mcp.disconnect();
 			await server.close();
@@ -87,6 +115,8 @@ describe("Autumn MCP server", () => {
 			"getPlan",
 			"hasCustomers",
 			"updatePlan",
+			"previewUpdateCatalog",
+			"updateCatalog",
 			"createBalance",
 			"searchRequestLogs",
 			"queryRequestLogs",
@@ -117,7 +147,7 @@ describe("Autumn MCP server", () => {
 			"updateSubscription",
 		]) {
 			const tool = tools.tools.find((tool) => tool.name === name);
-			expect(JSON.stringify(tool?.inputSchema)).not.toContain('"id":');
+			expect(legacyJsonSchemaIdPaths(tool?.inputSchema)).toEqual([]);
 		}
 	});
 
@@ -129,11 +159,14 @@ describe("Autumn MCP server", () => {
 		expect(resourceUris).toEqual([
 			"autumn://docs/concepts",
 			"autumn://docs/plan-management",
-			"autumn://docs/billing",
-			"autumn://docs/logs",
 		]);
 		expect(resources.resources.map((resource) => resource.uri)).toEqual(
-			resourceUris,
+			expect.arrayContaining([
+				...resourceUris,
+				"autumn://docs/catalog",
+				"autumn://docs/billing",
+				"autumn://docs/logs",
+			]),
 		);
 
 		for (const uri of resourceUris) {
@@ -147,15 +180,16 @@ describe("Autumn MCP server", () => {
 			conceptsText.indexOf("### Feature"),
 		);
 		expect(conceptsText).toContain("Autumn is a database");
-		expect(conceptsText).toContain("## Object Graph");
+		expect(conceptsText).toContain("## Object graph");
 		expect(conceptsText).toContain("### Plan");
 		expect(conceptsText).toContain("### Customer and Entity");
 		expect(conceptsText).toContain("### Billing Controls");
 		expect(conceptsText).toContain("actual balance source");
 		expect(conceptsText).toContain("Auto top-ups are customer-level only");
 		expect(conceptsText).toContain("Never use `auto_enable: true`");
-		expect(conceptsText).toContain('no concept of "variants"');
-		expect(conceptsText).toContain("`pro_monthly` or `pro_annual`");
+		expect(conceptsText).toContain("Variants group related plans");
+		expect(conceptsText).toContain("variant_details.customize");
+		expect(conceptsText).toContain("Annual interval variant");
 		expect(conceptsText).toContain("Do not create duplicate features");
 		expect(conceptsText).toContain("`monthly_tokens` and `one_time_tokens`");
 		expect(conceptsText).toContain("Boolean plan items cannot be paid today");
@@ -170,39 +204,53 @@ describe("Autumn MCP server", () => {
 		expect(planManagementText).toContain("never assume behavior");
 		expect(planManagementText).toContain("usage-based or prepaid");
 
+		const catalog = await server.readResource("autumn://docs/catalog");
+		const catalogText = String(catalog.contents[0]?.text ?? "");
+		expect(catalogText).toContain("# Catalog");
+		expect(catalogText).toContain("features");
+		expect(catalogText).toContain("plans");
+		expect(catalogText).toContain("Pricing patterns");
+		expect(catalogText).toContain("Usage-Based Pricing");
+
 		const billing = await server.readResource("autumn://docs/billing");
 		const billingText = String(billing.contents[0]?.text ?? "");
 		expect(billingText).toContain("# Billing");
 		expect(billingText).toContain("Read `autumn://docs/concepts`");
-		expect(billingText).toContain("<goal>");
-		expect(billingText).toContain("<action-selection>");
-		expect(billingText).toContain("<target-resolution>");
+		expect(billingText).toContain("## Goal");
+		expect(billingText).toContain("## Target resolution");
+		expect(billingText).toContain("## Action selection");
+		expect(billingText).toContain("## Param checklist");
+		expect(billingText).toContain("## Billing customizations");
+		expect(billingText).toContain("## Timing and schedules");
+		expect(billingText).toContain("## Billing behavior");
+		expect(billingText).toContain("## Preview and approval");
+		expect(billingText).toContain("## Completion response");
 		expect(billingText).toContain(
 			"If preloaded `listPlans` / `listFeatures` results are present",
 		);
 		expect(billingText).toContain(
-			"Do not call them again unless the needed record is absent or the user asks to refresh",
+			"Do not call them again unless the needed record is absent",
 		);
-		expect(billingText.indexOf("<target-resolution>")).toBeLessThan(
-			billingText.indexOf("<action-selection>"),
+		expect(billingText.indexOf("## Target resolution")).toBeLessThan(
+			billingText.indexOf("## Action selection"),
 		);
-		expect(billingText.indexOf("<action-selection>")).toBeLessThan(
-			billingText.indexOf("<param-checklist>"),
+		expect(billingText.indexOf("## Action selection")).toBeLessThan(
+			billingText.indexOf("## Param checklist"),
 		);
-		expect(billingText.indexOf("<param-checklist>")).toBeLessThan(
-			billingText.indexOf("<customizations>"),
+		expect(billingText.indexOf("## Param checklist")).toBeLessThan(
+			billingText.indexOf("## Billing customizations"),
 		);
-		expect(billingText.indexOf("<customizations>")).toBeLessThan(
-			billingText.indexOf("<timing-and-schedules>"),
+		expect(billingText.indexOf("## Billing customizations")).toBeLessThan(
+			billingText.indexOf("## Timing and schedules"),
 		);
-		expect(billingText.indexOf("<timing-and-schedules>")).toBeLessThan(
-			billingText.indexOf("<billing-behavior>"),
+		expect(billingText.indexOf("## Timing and schedules")).toBeLessThan(
+			billingText.indexOf("## Billing behavior"),
 		);
-		expect(billingText.indexOf("<billing-behavior>")).toBeLessThan(
-			billingText.indexOf("<preview-and-approval>"),
+		expect(billingText.indexOf("## Billing behavior")).toBeLessThan(
+			billingText.indexOf("## Preview and approval"),
 		);
-		expect(billingText.indexOf("<preview-and-approval>")).toBeLessThan(
-			billingText.indexOf("<completion-response>"),
+		expect(billingText.indexOf("## Preview and approval")).toBeLessThan(
+			billingText.indexOf("## Completion response"),
 		);
 		expect(billingText).toContain(
 			"Usually choose `attach` or `updateSubscription`",
@@ -210,18 +258,12 @@ describe("Autumn MCP server", () => {
 		expect(billingText).toContain(
 			"You MUST follow this checklist in order for every billing request",
 		);
-		expect(billingText).toContain("Resolve targets with <target-resolution>");
-		expect(billingText).toContain(
-			"Choose the operation with <action-selection>",
-		);
-		expect(billingText).toContain(
-			"Collect action-specific params with <param-checklist>",
-		);
-		expect(billingText).toContain("Resolve custom terms with <customizations>");
-		expect(billingText).toContain("Resolve timing with <timing-and-schedules>");
-		expect(billingText).toContain(
-			"Resolve invoice, checkout, and proration behavior with <billing-behavior>",
-		);
+		expect(billingText).toContain("Resolve targets");
+		expect(billingText).toContain("Choose the operation");
+		expect(billingText).toContain("Collect action-specific params");
+		expect(billingText).toContain("Resolve custom terms");
+		expect(billingText).toContain("Resolve timing");
+		expect(billingText).toContain("Resolve invoice, checkout, and proration behavior");
 		expect(billingText).toContain(
 			"Gather all remaining missing questions from the checklist and ask them together",
 		);
@@ -231,26 +273,26 @@ describe("Autumn MCP server", () => {
 
 		const logs = await server.readResource("autumn://docs/logs");
 		const logsText = String(logs.contents[0]?.text ?? "");
-		expect(logsText).toContain("# Logs");
+		expect(logsText).toContain("# Investigate");
 		expect(logsText).toContain("searchRequestLogs");
 		expect(logsText).toContain("queryRequestLogs");
-		expect(logsText).toContain("## Stripe Webhooks");
+		expect(logsText).toContain("# Stripe Webhook Investigations");
 		expect(logsText).toContain("## Analytics");
 		expect(billingText).toContain(
 			"Once approved, apply the exact previewed billing action",
 		);
-		expect(billingText).toContain("<param-checklist>");
 		expect(billingText).toContain(
-			"Never use `customize.items` (PUT-style full replacement) or `update_items`",
+			"For general `customize` patch rules and examples",
 		);
-		expect(billingText).toContain("Change prepaid to usage-based");
+		expect(conceptsText).toContain(
+			"Plan item changes are PATCH-style: use `add_items` and `remove_items`",
+		);
+		expect(conceptsText).toContain("Change prepaid to usage-based");
 		expect(billingText).toContain('plan_schedule: "immediate"');
-		expect(billingText).toContain("<attach-timing>");
 		expect(billingText).toContain("dateToEpochMilliseconds");
 		expect(billingText).toContain('`starts_at: "now"`');
 		expect(billingText).toContain("`starting_after`");
 		expect(billingText).toContain("Future first-phase `starts_at`");
-		expect(billingText).toContain("<billing-behavior>");
 		expect(billingText).toContain(
 			"Default operator-led billing actions to invoice mode",
 		);
@@ -263,7 +305,6 @@ describe("Autumn MCP server", () => {
 		expect(billingText).toContain(
 			'If the customer has no existing subscriptions, do not pass `proration_behavior: "none"`',
 		);
-		expect(billingText).toContain("<preview-and-approval>");
 		expect(billingText).toContain(
 			"A mutating billing action requires approval before it takes effect",
 		);
@@ -275,7 +316,7 @@ describe("Autumn MCP server", () => {
 		expect(billingText).toContain("one bullet point per question");
 		expect(billingText).toContain("do not explain plan internals");
 		expect(billingText).toContain(
-			"resolve any required `customize` params identified in <customizations>",
+			"resolve any required `customize` params identified in Customizations",
 		);
 		expect(billingText).toContain(
 			"If the plan has prepaid items and quantity is missing",
@@ -284,7 +325,7 @@ describe("Autumn MCP server", () => {
 		expect(billingText).toContain("`feature_quantities.quantity` is inclusive");
 		expect(
 			billingText.match(
-				/ask the user whether they want to customize the base price/g,
+				/ask whether they want to customize the base price/g,
 			) ?? [],
 		).toHaveLength(1);
 		expect(billingText).toContain("Enterprise or custom placeholder plan");
@@ -292,7 +333,6 @@ describe("Autumn MCP server", () => {
 		expect(billingText).toContain("Lead with immediate impact");
 		expect(billingText).toContain("facts that affect approval");
 		expect(billingText).toContain("Apply only the exact previewed request");
-		expect(billingText).toContain("<completion-response>");
 		expect(billingText).toContain("payment_url");
 		expect(billingText).toContain("invoice.hosted_invoice_url");
 		expect(billingText).toContain("Stripe dashboard invoice URL");

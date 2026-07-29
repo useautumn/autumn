@@ -37,16 +37,21 @@ export async function cmdMigrate(
 		);
 	}
 
-	const client = new pg.Client({ connectionString: databaseUrl });
+	const client = new pg.Client({
+		connectionString: databaseUrl,
+		connectionTimeoutMillis: 60_000,
+	});
 	await client.connect();
 	let pending: PendingMigration[];
 	try {
 		pending = await getPendingMigrations(client);
-	} finally {
+	} catch (err) {
 		await client.end();
+		throw err;
 	}
 
 	if (pending.length === 0) {
+		await client.end();
 		console.log("no pending migrations");
 		return;
 	}
@@ -59,6 +64,7 @@ export async function cmdMigrate(
 	const blockers = opts.bootstrap ? [] : collectBlockers(pending);
 
 	if (opts.dryRun) {
+		await client.end();
 		console.log("");
 		console.log("--- SQL preview ---");
 		for (const migration of pending) {
@@ -79,11 +85,16 @@ export async function cmdMigrate(
 	}
 
 	if (blockers.length > 0) {
+		await client.end();
 		printBlockerError(blockers);
 		process.exit(1);
 	}
 
-	await applyPending(databaseUrl, pending);
+	try {
+		await applyPending(client, pending);
+	} finally {
+		await client.end();
+	}
 }
 
 /**
@@ -92,7 +103,7 @@ export async function cmdMigrate(
  * which — unlike drizzle's migrate() — can run CONCURRENTLY outside a transaction.
  */
 async function applyPending(
-	databaseUrl: string,
+	client: pg.Client,
 	pending: PendingMigration[],
 ): Promise<void> {
 	const pendingByMillis = new Map(pending.map((m) => [m.when, m.tag]));
@@ -100,11 +111,12 @@ async function applyPending(
 		.filter((m) => pendingByMillis.has(m.folderMillis))
 		.sort((a, b) => a.folderMillis - b.folderMillis);
 
-	const client = new pg.Client({ connectionString: databaseUrl });
-	await client.connect();
+	console.log(`\napplying ${toApply.length} migration(s)...`);
+
 	try {
 		for (const migration of toApply) {
 			const tag = pendingByMillis.get(migration.folderMillis) ?? "migration";
+			console.log(`  applying ${tag}...`);
 			const { transactional } = await applyMigration(client, migration);
 			console.log(`  applied ${tag}${transactional ? "" : " (concurrent)"}`);
 		}
@@ -113,8 +125,6 @@ async function applyPending(
 		console.error(`\nmigration failed: ${message}`);
 		process.exitCode = 1;
 		return;
-	} finally {
-		await client.end();
 	}
 
 	console.log(`done — applied ${toApply.length} migration(s)`);

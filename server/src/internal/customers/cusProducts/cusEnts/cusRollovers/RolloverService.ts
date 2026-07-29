@@ -3,7 +3,7 @@ import {
 	type Rollover,
 	rollovers,
 } from "@autumn/shared";
-import { and, eq, gte, inArray } from "drizzle-orm";
+import { and, eq, gt, inArray, isNull, or, type SQL, sql } from "drizzle-orm";
 import type { CronContext } from "@/cron/utils/CronContext.js";
 import { buildConflictUpdateColumns } from "@/db/dbUtils.js";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
@@ -31,17 +31,33 @@ export class RolloverService {
 		return data;
 	}
 
-	static async upsert({ db, rows }: { db: DrizzleCli; rows: Rollover[] }) {
+	static async upsert({
+		db,
+		rows,
+		queryTag,
+	}: {
+		db: DrizzleCli;
+		rows: Rollover[];
+		queryTag?: SQL;
+	}) {
 		if (Array.isArray(rows) && rows.length === 0) return;
 
 		const updateColumns = buildConflictUpdateColumns(rollovers, ["id"]);
-		await db
+		const query = db
 			.insert(rollovers)
 			.values(rows as any)
 			.onConflictDoUpdate({
 				target: rollovers.id,
 				set: updateColumns,
 			});
+
+		if (queryTag) {
+			// getSQL() splices verbatim — embedding the builder itself would
+			// parenthesize it, and `(INSERT ...)` is invalid SQL.
+			await db.execute(sql`${query.getSQL()} ${queryTag}`);
+		} else {
+			await query;
+		}
 	}
 
 	// static async bulkUpdate({ db, rows }: { db: DrizzleCli; rows: Rollover[] }) {
@@ -75,7 +91,10 @@ export class RolloverService {
 			.where(
 				and(
 					eq(rollovers.cus_ent_id, cusEntID),
-					gte(rollovers.expires_at, new Date().getTime()),
+					or(
+						isNull(rollovers.expires_at),
+						gt(rollovers.expires_at, Date.now()),
+					),
 				),
 			);
 	}
@@ -118,6 +137,9 @@ export class RolloverService {
 		overwrites: Rollover[];
 	}> {
 		const { db } = ctx;
+		// Trust the caller's rollover set: the lazy/cached path carries live
+		// Redis balances that lead Postgres, so re-reading here would clear
+		// against stale rows. The cron path loads the set before calling insert.
 		const curRollovers = [...fullCusEnt.rollovers, ...newRows];
 
 		const { toDelete, toUpdate } = performMaximumClearing({
@@ -133,15 +155,35 @@ export class RolloverService {
 			await RolloverService.upsert({ db, rows: toUpdate });
 		}
 
-		const rollovers = curRollovers
+		const remainingRollovers = curRollovers
 			.filter((r) => !toDelete.includes(r.id))
 			.map((r) => toUpdate.find((u) => u.id === r.id) ?? r);
 
-		return { rollovers, deletedIds: toDelete, overwrites: toUpdate };
+		return {
+			rollovers: remainingRollovers,
+			deletedIds: toDelete,
+			overwrites: toUpdate,
+		};
 	}
 
-	static async delete({ db, ids }: { db: DrizzleCli; ids: string[] }) {
+	static async delete({
+		db,
+		ids,
+		queryTag,
+	}: {
+		db: DrizzleCli;
+		ids: string[];
+		queryTag?: SQL;
+	}) {
 		if (ids.length === 0) return;
-		const data = await db.delete(rollovers).where(inArray(rollovers.id, ids));
+		const query = db.delete(rollovers).where(inArray(rollovers.id, ids));
+
+		if (queryTag) {
+			// getSQL() splices verbatim — embedding the builder itself would
+			// parenthesize it, and `(DELETE ...)` is invalid SQL.
+			await db.execute(sql`${query.getSQL()} ${queryTag}`);
+		} else {
+			await query;
+		}
 	}
 }

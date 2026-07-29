@@ -36,6 +36,7 @@ export const refreshCacheMiddleware = async (
 		entityId: ctx.entityId,
 		ctx,
 		source: "refreshCacheMiddleware",
+		flushBalances: routeConfig.flushBalances,
 	});
 
 	warmFullSubjectCache({

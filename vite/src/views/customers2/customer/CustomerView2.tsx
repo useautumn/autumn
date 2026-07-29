@@ -1,22 +1,22 @@
 "use client";
 
 import { AppEnv, ProcessorType } from "@autumn/shared";
+import {
+	SheetBackdrop,
+	Tooltip,
+	TooltipContent,
+	TooltipProvider,
+	TooltipTrigger,
+	useIsMobile,
+} from "@autumn/ui";
 import { ClockIcon } from "@phosphor-icons/react";
 import { motion } from "motion/react";
 import { useState } from "react";
 import { Link } from "react-router";
 import { RevenueCatIcon } from "@/components/v2/icons/AutumnIcons";
-import { SheetBackdrop } from "@/components/v2/sheets/SheetBackdrop";
-import {
-	Tooltip,
-	TooltipContent,
-	TooltipProvider,
-	TooltipTrigger,
-} from "@/components/v2/tooltips/Tooltip";
 import { useCusRewardsQuery } from "@/hooks/queries/useCusRewardsQuery";
 import { useSheetStore } from "@/hooks/stores/useSheetStore";
 import { useEntity } from "@/hooks/stores/useSubscriptionStore";
-import { useIsMobile } from "@/hooks/useIsMobile";
 import { cn } from "@/lib/utils";
 import { useEnv } from "@/utils/envUtils";
 import { pushPage } from "@/utils/genUtils";
@@ -28,6 +28,8 @@ import { useCusQuery } from "../../customers/customer/hooks/useCusQuery";
 import { useCusReferralQuery } from "../../customers/customer/hooks/useCusReferralQuery";
 import { CustomerBillingControlsSection } from "../components/CustomerBillingControlsSection";
 import { CustomerPlansSection } from "../components/CustomerPlansSection";
+import { CustomerLicensePoolsSection } from "../components/customer-licenses/CustomerLicensePoolsSection";
+import { CustomerLicensesSection } from "../components/customer-licenses/CustomerLicensesSection";
 import { CustomerFeatureUsageTable } from "../components/table/customer-feature-usage/CustomerFeatureUsageTable";
 import { CustomerInvoicesTable } from "../components/table/customer-invoices/CustomerInvoicesTable";
 import { CustomerUsageAnalyticsTable } from "../components/table/customer-usage-analytics/CustomerUsageAnalyticsTable";
@@ -117,7 +119,7 @@ export default function CustomerView2() {
 										<CustomerBreadcrumbs />
 										<CustomerHeaderActions />
 									</div>
-									<div className="flex items-center justify-between w-full pt-2 gap-2">
+									<div className="flex flex-col sm:flex-row sm:items-center sm:justify-between w-full pt-2 gap-2">
 										<div className="flex items-center gap-2 min-w-0">
 											<h3
 												className={`text-md font-semibold truncate min-w-0 ${
@@ -201,6 +203,8 @@ export default function CustomerView2() {
 							</div>
 							<div className="flex flex-col gap-16 w-full">
 								<CustomerPlansSection />
+								<CustomerLicensePoolsSection />
+								<CustomerLicensesSection />
 								<CustomerFeatureUsageTable />
 								{!entityId && <CustomerUsageAnalyticsTable />}
 								<CustomerBillingControlsSection />

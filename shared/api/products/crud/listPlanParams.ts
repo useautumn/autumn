@@ -17,6 +17,10 @@ export const ListPlanParamsSchema = z
 			.boolean()
 			.optional()
 			.meta({ description: "If true, includes archived plans in the response." }),
+		all_versions: z
+			.boolean()
+			.optional()
+			.meta({ description: "If true, includes all plan versions." }),
 	})
 	.optional();
 
@@ -34,6 +38,10 @@ export const ListPlansQuerySchema = z.object({
 	}),
 	include_archived: z.boolean().optional().meta({
 		description: "If true, includes archived plans in the response.",
+		internal: true,
+	}),
+	all_versions: z.boolean().optional().meta({
+		description: "If true, includes all plan versions.",
 		internal: true,
 	}),
 	v1_schema: z.boolean().optional().meta({

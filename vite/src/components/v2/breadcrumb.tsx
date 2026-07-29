@@ -1,11 +1,11 @@
-import React from "react";
-import { useNavigate } from "react-router";
 import {
 	Breadcrumb,
 	BreadcrumbItem,
 	BreadcrumbList,
 	BreadcrumbSeparator,
-} from "@/components/ui/breadcrumb";
+} from "@autumn/ui";
+import React from "react";
+import { useNavigate } from "react-router";
 import { cn } from "@/lib/utils";
 import { useEnv } from "@/utils/envUtils";
 import { navigateTo } from "@/utils/genUtils";
@@ -27,7 +27,10 @@ export default function V2Breadcrumb({
 
 	return (
 		<Breadcrumb
-			className={cn("text-tertiary-foreground pt-6 pl-4 flex justify-center", className)}
+			className={cn(
+				"text-tertiary-foreground pt-6 pl-4 flex justify-center",
+				className,
+			)}
 		>
 			<BreadcrumbList className="text-tertiary-foreground text-xs w-full">
 				{items.map((item, index) => (

@@ -3,7 +3,6 @@ import { AppEnv } from "@autumn/shared";
 import { all } from "better-all";
 import type { ThreadRef } from "../../../agent/runMessage/types.js";
 import type { ChatDb } from "../../../lib/db.js";
-import { orgMemoryInstructions } from "../../common/instructions/index.js";
 import { buildThreadKey } from "../../common/threadKey.js";
 import { cmaRepo } from "../repos/claudeManagedRepo.js";
 
@@ -20,13 +19,15 @@ export const getClaudeManagedSession = async ({
 	env,
 	orgId,
 	thread,
+	userId,
 }: {
 	db: ChatDb;
 	env: AppEnv;
 	orgId: string;
 	thread: ThreadRef;
+	userId?: string;
 }) => {
-	const threadKey = buildThreadKey({ env, thread });
+	const threadKey = buildThreadKey({ env, thread, userId });
 	const existingSession = await cmaRepo.getSession({
 		db,
 		env,
@@ -48,14 +49,22 @@ export const findClaudeManagedSessionForThread = async ({
 	db,
 	orgId,
 	thread,
+	userId,
 }: {
 	db: ChatDb;
 	orgId: string;
 	thread: ThreadRef;
+	userId?: string;
 }) => {
 	const sessions = await all({
 		async live() {
-			return getClaudeManagedSession({ db, env: AppEnv.Live, orgId, thread });
+			return getClaudeManagedSession({
+				db,
+				env: AppEnv.Live,
+				orgId,
+				thread,
+				userId,
+			});
 		},
 		async sandbox() {
 			return getClaudeManagedSession({
@@ -63,6 +72,7 @@ export const findClaudeManagedSessionForThread = async ({
 				env: AppEnv.Sandbox,
 				orgId,
 				thread,
+				userId,
 			});
 		},
 	});
@@ -78,6 +88,7 @@ export const createClaudeManagedSession = async ({
 	memoryStoreId,
 	orgId,
 	thread,
+	userId,
 	vaultId,
 }: {
 	agentId: string;
@@ -88,9 +99,10 @@ export const createClaudeManagedSession = async ({
 	memoryStoreId?: string;
 	orgId: string;
 	thread: ThreadRef;
+	userId?: string;
 	vaultId: string;
 }) => {
-	const threadKey = buildThreadKey({ env, thread });
+	const threadKey = buildThreadKey({ env, thread, userId });
 
 	const session = await client.beta.sessions.create({
 		agent: agentId,
@@ -101,7 +113,8 @@ export const createClaudeManagedSession = async ({
 					resources: [
 						{
 							access: "read_write" as const,
-							instructions: orgMemoryInstructions,
+							instructions:
+								"Org context across threads. Use and inspect this memory autonomously when it is relevant. Save durable facts like customers, preferences, and decisions.",
 							memory_store_id: memoryStoreId,
 							type: "memory_store" as const,
 						},
@@ -137,6 +150,7 @@ export const ensureClaudeManagedSession = async ({
 	memoryStoreId,
 	orgId,
 	thread,
+	userId,
 	vaultId,
 }: {
 	agentId: string;
@@ -147,9 +161,10 @@ export const ensureClaudeManagedSession = async ({
 	memoryStoreId?: string;
 	orgId: string;
 	thread: ThreadRef;
+	userId?: string;
 	vaultId: string;
 }) =>
-	(await getClaudeManagedSession({ db, env, orgId, thread })) ??
+	(await getClaudeManagedSession({ db, env, orgId, thread, userId })) ??
 	createClaudeManagedSession({
 		agentId,
 		client,
@@ -159,5 +174,6 @@ export const ensureClaudeManagedSession = async ({
 		memoryStoreId,
 		orgId,
 		thread,
+		userId,
 		vaultId,
 	});

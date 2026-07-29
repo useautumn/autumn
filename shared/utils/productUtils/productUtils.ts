@@ -11,7 +11,9 @@ import {
 	isFeaturePriceItem,
 	isPriceItem,
 } from "../productV2Utils/productItemUtils/getItemType.js";
+import { itemToBillingInterval } from "../productV2Utils/productItemUtils/itemIntervalUtils.js";
 import { nullish } from "../utils.js";
+import { BillingInterval } from "../../models/productModels/intervals/billingInterval.js";
 
 export const isDefaultTrialV2 = ({
 	freeTrial,
@@ -32,14 +34,14 @@ export const isDefaultTrialV2 = ({
 };
 
 export const isOneOffProductV2 = ({ items }: { items: ProductItem[] }) => {
+	const pricedItems = items.filter(
+		(i) => isPriceItem(i) || isFeaturePriceItem(i),
+	);
 	return (
-		items.some((i) => isPriceItem(i) || isFeaturePriceItem(i)) &&
-		items.every((i) => {
-			if (isPriceItem(i) || isFeaturePriceItem(i)) {
-				return i.interval === null;
-			}
-			return true;
-		})
+		pricedItems.length > 0 &&
+		pricedItems.every(
+			(i) => itemToBillingInterval({ item: i }) === BillingInterval.OneOff,
+		)
 	);
 };
 

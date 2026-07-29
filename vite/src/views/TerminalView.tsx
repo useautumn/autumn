@@ -1,26 +1,24 @@
-import { useCustomer } from "autumn-js/react";
-import { Info, Terminal } from "lucide-react";
-import { useEffect, useState } from "react";
-import { toast } from "sonner";
-import { Button } from "@/components/v2/buttons/Button";
 import {
+	Button,
 	Card,
 	CardContent,
 	CardDescription,
 	CardHeader,
 	CardTitle,
-} from "@/components/v2/cards/Card";
-import { TextCheckbox } from "@/components/v2/checkboxes/TextCheckbox";
-import { FormLabel } from "@/components/v2/form/FormLabel";
-import { Input } from "@/components/v2/inputs/Input";
-import {
+	FormLabel,
+	Input,
+	TextCheckbox,
 	Tooltip,
 	TooltipContent,
 	TooltipTrigger,
-} from "@/components/v2/tooltips/Tooltip";
-import { useAxiosInstance } from "@/services/useAxiosInstance";
+} from "@autumn/ui";
 import { useQuery } from "@tanstack/react-query";
+import { useCustomer } from "autumn-js/react";
+import { Info, Terminal } from "lucide-react";
+import { useEffect, useState } from "react";
+import { toast } from "sonner";
 import { useQueryKeyFactory } from "@/hooks/common/useQueryKeyFactory";
+import { useAxiosInstance } from "@/services/useAxiosInstance";
 import { getBackendErr } from "@/utils/genUtils";
 import LoadingScreen from "./general/LoadingScreen";
 
@@ -137,8 +135,8 @@ export const TerminalView = () => {
 												</span>
 											</TooltipTrigger>
 											<TooltipContent sideOffset={8}>
-												Enable this for privacy if you do not want to show revenue
-												numbers on your display.
+												Enable this for privacy if you do not want to show
+												revenue numbers on your display.
 											</TooltipContent>
 										</Tooltip>
 									</span>

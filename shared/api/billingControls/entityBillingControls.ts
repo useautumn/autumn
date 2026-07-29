@@ -1,5 +1,7 @@
 import { z } from "zod/v4";
+import { DbOverageAllowedSchema } from "../../models/cusModels/billingControls/overageAllowed.js";
 import { DbSpendLimitSchema } from "../../models/cusModels/billingControls/spendLimit.js";
+import { DbUsageAlertSchema } from "../../models/cusModels/billingControls/usageAlert.js";
 import { DbUsageLimitSchema } from "../../models/cusModels/billingControls/usageLimit.js";
 import { ApiOverageAllowedSchema } from "./overageAllowed.js";
 import { ApiSpendLimitSchema } from "./spendLimit.js";
@@ -33,10 +35,10 @@ const ApiEntityBillingControlsParamsBaseSchema = z.object({
 		description:
 			"List of hard usage caps per feature for this entity. An entity entry overrides the customer's for that feature.",
 	}),
-	usage_alerts: z.array(ApiUsageAlertSchema).optional().meta({
+	usage_alerts: z.array(DbUsageAlertSchema).optional().meta({
 		description: "List of usage alert configurations per feature.",
 	}),
-	overage_allowed: z.array(ApiOverageAllowedSchema).optional().meta({
+	overage_allowed: z.array(DbOverageAllowedSchema).optional().meta({
 		description:
 			"List of overage allowed controls per feature. When enabled, usage can exceed balance.",
 	}),

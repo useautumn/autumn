@@ -10,8 +10,8 @@ import {
 import { TestFeature } from "@tests/setup/v2Features.js";
 import { items } from "@tests/utils/fixtures/items.js";
 import { products } from "@tests/utils/fixtures/products.js";
+import { pollUntil } from "@tests/utils/genUtils.js";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario.js";
-import { timeout } from "@tests/utils/genUtils.js";
 import chalk from "chalk";
 import { Decimal } from "decimal.js";
 import { getCreditCost } from "@/internal/features/creditSystemUtils.js";
@@ -355,8 +355,10 @@ test.concurrent(
 			items: [messagesItem],
 		});
 
+		// Run-unique id: the shared Tinybird workspace retains events from
+		// prior runs, so a fixed id could match stale rows in events.list.
 		const { customerId, autumnV1, autumnV2_2 } = await initScenario({
-			customerId: "track-deductions-g",
+			customerId: `track-deductions-g-${crypto.randomUUID().slice(0, 8)}`,
 			setup: [
 				s.customer({ testClock: false }),
 				s.products({ list: [freeProd] }),
@@ -370,14 +372,19 @@ test.concurrent(
 			value: 12,
 		});
 
-		// Wait for the EventBatchingManager flush (350ms window) plus Tinybird
-		// ingest propagation. Existing credit-system tests use ~2s for cache
-		// sync; ~3s gives Tinybird a bit more slack.
-		await timeout(3000);
-
-		const eventsList = (await autumnV1.events.list({
-			customer_id: customerId,
-		})) as ApiEventsListResponse;
+		const eventsList = await pollUntil({
+			fetch: () =>
+				autumnV1.events.list({
+					customer_id: customerId,
+				}) as Promise<ApiEventsListResponse>,
+			until: ({ list }) =>
+				list.some(
+					(event) =>
+						event.feature_id === TestFeature.Messages && event.value === 12,
+				),
+			timeoutMs: 20_000,
+			intervalMs: 500,
+		});
 
 		expect(eventsList.list.length).toBeGreaterThan(0);
 		const trackedEvent = eventsList.list.find(

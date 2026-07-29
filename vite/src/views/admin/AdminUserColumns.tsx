@@ -1,6 +1,6 @@
+import { MiniCopyButton } from "@autumn/ui";
 import type { ColumnDef, Row } from "@tanstack/react-table";
 import { format } from "date-fns";
-import { MiniCopyButton } from "@/components/v2/buttons/CopyButton";
 import { ImpersonateButton } from "./components/ImpersonateBtn";
 
 export type AdminUser = {

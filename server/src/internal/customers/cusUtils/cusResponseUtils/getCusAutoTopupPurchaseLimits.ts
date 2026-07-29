@@ -1,8 +1,4 @@
-import {
-	type AutoTopup,
-	type AutoTopupResponse,
-	CustomerExpand,
-} from "@autumn/shared";
+import { type AutoTopupResponse, CustomerExpand } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { normalizeWindowCounter } from "@/internal/balances/autoTopUp/helpers/limits/autoTopupLimitWindowUtils.js";
 import { autoTopupLimitRepo } from "@/internal/balances/autoTopUp/repos";
@@ -33,7 +29,7 @@ export const getCusAutoTopupPurchaseLimits = async ({
 }: {
 	ctx: AutumnContext;
 	internalCustomerId: string;
-	autoTopupsConfig: AutoTopup[] | null | undefined;
+	autoTopupsConfig: AutoTopupResponse[] | null | undefined;
 	expand: CustomerExpand[];
 }): Promise<AutoTopupResponse[] | undefined> => {
 	if (!expand.includes(CustomerExpand.AutoTopupsPurchaseLimit)) {
@@ -60,7 +56,10 @@ export const getCusAutoTopupPurchaseLimits = async ({
 			return config;
 		}
 
-		const configuredLimit = config.purchase_limit;
+		const configuredLimit =
+			config.purchase_limit && !("count" in config.purchase_limit)
+				? config.purchase_limit
+				: undefined;
 		const normalized = normalizeWindowCounter({
 			now: Date.now(),
 			windowEndsAt: row.purchase_window_ends_at,

@@ -4,6 +4,7 @@ import {
 	AppEnv,
 	type ChatOAuthCredential,
 	chatInstallations,
+	chatThreadContexts,
 	chatOAuthCredentials,
 	createChatInstallState,
 	ErrCode,
@@ -243,6 +244,9 @@ export const handleDeleteSlackAdminInstall = createRoute({
 				db: tx,
 				credentials: oauthCredentials,
 			});
+			await tx
+				.delete(chatThreadContexts)
+				.where(eq(chatThreadContexts.chat_installation_id, installation.id));
 			await tx
 				.delete(slackAdminThreads)
 				.where(eq(slackAdminThreads.chat_installation_id, installation.id));

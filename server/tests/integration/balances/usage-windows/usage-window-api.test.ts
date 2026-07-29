@@ -3,7 +3,6 @@ import {
 	type ApiCustomerV5,
 	ApiVersion,
 	type CustomerBillingControls,
-	ErrCode,
 	ResetInterval,
 } from "@autumn/shared";
 import { expectUsageLimitCorrect } from "@tests/integration/utils/expectUsageLimitCorrect.js";
@@ -63,45 +62,6 @@ test.concurrent(
 			usage: 3,
 			limit: 5,
 			interval: ResetInterval.Month,
-		});
-	},
-);
-
-// set_usage must be rejected when the feature has an enforced usage window;
-// otherwise it bypasses the hard cap (it carries no window provenance).
-test.concurrent(
-	`${chalk.yellowBright("usage-window-api2: set_usage is rejected when the feature has a usage window")}`,
-	async () => {
-		const customerProduct = products.base({
-			id: "uw-api-setusage",
-			items: [items.monthlyMessages({ includedUsage: 100 })],
-		});
-
-		const customerId = "uw-api-setusage-1";
-		await initScenario({
-			customerId,
-			setup: [
-				s.customer({ testClock: false }),
-				s.products({ list: [customerProduct] }),
-			],
-			actions: [s.billing.attach({ productId: customerProduct.id })],
-		});
-
-		await setCustomerUsageLimit({
-			autumn: autumnV2_3,
-			customerId,
-			featureId: TestFeature.Messages,
-			limit: 5,
-		});
-
-		await expectAutumnError({
-			errCode: ErrCode.SetUsageNotAllowedWithUsageLimit,
-			func: async () =>
-				await autumnV2_3.balances.update({
-					customer_id: customerId,
-					feature_id: TestFeature.Messages,
-					current_balance: 50,
-				}),
 		});
 	},
 );

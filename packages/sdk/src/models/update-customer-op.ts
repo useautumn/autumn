@@ -35,7 +35,7 @@ export type UpdateCustomerPurchaseLimitIntervalRequestBody = ClosedEnum<
 >;
 
 /**
- * Optional rate limit to cap how often auto top-ups occur.
+ * Optional rate limit to cap how often auto top-ups occur. Pass count to set the current window's consumed top-ups.
  */
 export type UpdateCustomerPurchaseLimitRequest = {
   /**
@@ -50,6 +50,10 @@ export type UpdateCustomerPurchaseLimitRequest = {
    * Maximum number of auto top-ups allowed within the interval.
    */
   limit: number;
+  /**
+   * Set the current window's consumed auto top-up count. Omit to leave runtime state unchanged.
+   */
+  count?: number | undefined;
 };
 
 export type UpdateCustomerAutoTopupRequest = {
@@ -70,7 +74,7 @@ export type UpdateCustomerAutoTopupRequest = {
    */
   quantity: number;
   /**
-   * Optional rate limit to cap how often auto top-ups occur.
+   * Optional rate limit to cap how often auto top-ups occur. Pass count to set the current window's consumed top-ups.
    */
   purchaseLimit?: UpdateCustomerPurchaseLimitRequest | undefined;
   /**
@@ -78,6 +82,20 @@ export type UpdateCustomerAutoTopupRequest = {
    */
   invoiceMode?: boolean | undefined;
 };
+
+/**
+ * How overage_limit is interpreted: an absolute overage cap (default) or a percentage of the main-plan allowance.
+ */
+export const UpdateCustomerLimitTypeRequestBody = {
+  Absolute: "absolute",
+  UsagePercentage: "usage_percentage",
+} as const;
+/**
+ * How overage_limit is interpreted: an absolute overage cap (default) or a percentage of the main-plan allowance.
+ */
+export type UpdateCustomerLimitTypeRequestBody = ClosedEnum<
+  typeof UpdateCustomerLimitTypeRequestBody
+>;
 
 export type UpdateCustomerSpendLimitRequest = {
   /**
@@ -89,9 +107,17 @@ export type UpdateCustomerSpendLimitRequest = {
    */
   enabled?: boolean | undefined;
   /**
-   * Maximum allowed overage spend for the target feature.
+   * How overage_limit is interpreted: an absolute overage cap (default) or a percentage of the main-plan allowance.
+   */
+  limitType?: UpdateCustomerLimitTypeRequestBody | undefined;
+  /**
+   * Overage cap for the feature: absolute units, or a percent (e.g. 120) when limit_type is usage_percentage.
    */
   overageLimit?: number | undefined;
+  /**
+   * When true, overage for this feature is not posted to Stripe. Usage tracking and balance resets still behave normally.
+   */
+  skipOverageBilling?: boolean | undefined;
 };
 
 /**
@@ -110,11 +136,24 @@ export type UpdateCustomerUsageLimitIntervalRequestBody = ClosedEnum<
   typeof UpdateCustomerUsageLimitIntervalRequestBody
 >;
 
+export type UpdateCustomerProperties = string | number | boolean;
+
+/**
+ * When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature.
+ */
+export type UpdateCustomerFilterRequest = {
+  properties: { [k: string]: string | number | boolean };
+};
+
 export type UpdateCustomerUsageLimitRequest = {
   /**
    * The feature this usage limit applies to.
    */
   featureId: string;
+  /**
+   * Whether this usage limit is enabled.
+   */
+  enabled?: boolean | undefined;
   /**
    * Maximum units allowed per interval.
    */
@@ -123,6 +162,10 @@ export type UpdateCustomerUsageLimitRequest = {
    * Interval for the cap, aligned to the customer's billing cycle.
    */
   interval: UpdateCustomerUsageLimitIntervalRequestBody;
+  /**
+   * When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature.
+   */
+  filter?: UpdateCustomerFilterRequest | undefined;
 };
 
 /**
@@ -209,6 +252,10 @@ export type UpdateCustomerConfigRequest = {
    * Whether to disable the shared customer-level pool for entities.
    */
   disablePooledBalance?: boolean | undefined;
+  /**
+   * Stops Autumn from posting usage-overage line items to Stripe for this customer. Check/track and balance resets still behave normally. When set, this overrides the organization-level disable_overage_billing setting.
+   */
+  disableOverageBilling?: boolean | undefined;
 };
 
 export type UpdateCustomerParams = {
@@ -241,6 +288,10 @@ export type UpdateCustomerParams = {
    */
   sendEmailReceipts?: boolean | undefined;
   /**
+   * Currency to bill this customer in (e.g. usd, eur). Defaults to the organization's default currency.
+   */
+  currency?: string | null | undefined;
+  /**
    * Billing controls for the customer (auto top-ups, etc.)
    */
   billingControls?: UpdateCustomerBillingControlsRequest | undefined;
@@ -266,21 +317,52 @@ export const UpdateCustomerEnv = {
  */
 export type UpdateCustomerEnv = OpenEnum<typeof UpdateCustomerEnv>;
 
+/**
+ * The time interval for the purchase limit window.
+ */
 export const UpdateCustomerPurchaseLimitIntervalResponse2 = {
   Hour: "hour",
   Day: "day",
   Week: "week",
   Month: "month",
 } as const;
+/**
+ * The time interval for the purchase limit window.
+ */
 export type UpdateCustomerPurchaseLimitIntervalResponse2 = OpenEnum<
   typeof UpdateCustomerPurchaseLimitIntervalResponse2
 >;
 
 export type UpdateCustomerPurchaseLimitResponse2 = {
   /**
+   * The time interval for the purchase limit window.
+   */
+  interval: UpdateCustomerPurchaseLimitIntervalResponse2;
+  /**
+   * Number of intervals in the purchase limit window.
+   */
+  intervalCount: number;
+  /**
+   * Maximum number of auto top-ups allowed within the interval.
+   */
+  limit: number;
+};
+
+export const UpdateCustomerPurchaseLimitIntervalResponse1 = {
+  Hour: "hour",
+  Day: "day",
+  Week: "week",
+  Month: "month",
+} as const;
+export type UpdateCustomerPurchaseLimitIntervalResponse1 = OpenEnum<
+  typeof UpdateCustomerPurchaseLimitIntervalResponse1
+>;
+
+export type UpdateCustomerPurchaseLimitResponse1 = {
+  /**
    * The time interval for the purchase limit window. Null when no purchase limit is configured.
    */
-  interval: UpdateCustomerPurchaseLimitIntervalResponse2 | null;
+  interval: UpdateCustomerPurchaseLimitIntervalResponse1 | null;
   /**
    * Number of intervals in the purchase limit window. Null when no purchase limit is configured.
    */
@@ -300,42 +382,25 @@ export type UpdateCustomerPurchaseLimitResponse2 = {
 };
 
 /**
- * The time interval for the purchase limit window.
- */
-export const UpdateCustomerPurchaseLimitIntervalResponse1 = {
-  Hour: "hour",
-  Day: "day",
-  Week: "week",
-  Month: "month",
-} as const;
-/**
- * The time interval for the purchase limit window.
- */
-export type UpdateCustomerPurchaseLimitIntervalResponse1 = OpenEnum<
-  typeof UpdateCustomerPurchaseLimitIntervalResponse1
->;
-
-export type UpdateCustomerPurchaseLimitResponse1 = {
-  /**
-   * The time interval for the purchase limit window.
-   */
-  interval: UpdateCustomerPurchaseLimitIntervalResponse1;
-  /**
-   * Number of intervals in the purchase limit window.
-   */
-  intervalCount: number;
-  /**
-   * Maximum number of auto top-ups allowed within the interval.
-   */
-  limit: number;
-};
-
-/**
  * Optional rate limit to cap how often auto top-ups occur. Expand billing_controls.auto_topups.purchase_limit for a count of top ups and the next_reset_at.
  */
 export type UpdateCustomerPurchaseLimitUnion =
-  | UpdateCustomerPurchaseLimitResponse2
-  | UpdateCustomerPurchaseLimitResponse1;
+  | UpdateCustomerPurchaseLimitResponse1
+  | UpdateCustomerPurchaseLimitResponse2;
+
+/**
+ * Response-only: whether the entry is a customer-level override or inherited from an attached plan's defaults.
+ */
+export const UpdateCustomerAutoTopupSource = {
+  Customer: "customer",
+  Plan: "plan",
+} as const;
+/**
+ * Response-only: whether the entry is a customer-level override or inherited from an attached plan's defaults.
+ */
+export type UpdateCustomerAutoTopupSource = OpenEnum<
+  typeof UpdateCustomerAutoTopupSource
+>;
 
 export type UpdateCustomerAutoTopupResponse = {
   /**
@@ -358,14 +423,46 @@ export type UpdateCustomerAutoTopupResponse = {
    * Optional rate limit to cap how often auto top-ups occur. Expand billing_controls.auto_topups.purchase_limit for a count of top ups and the next_reset_at.
    */
   purchaseLimit?:
-    | UpdateCustomerPurchaseLimitResponse2
     | UpdateCustomerPurchaseLimitResponse1
+    | UpdateCustomerPurchaseLimitResponse2
     | undefined;
   /**
    * When true, auto top-up creates a send_invoice invoice instead of auto-charging.
    */
   invoiceMode?: boolean | undefined;
+  /**
+   * Response-only: whether the entry is a customer-level override or inherited from an attached plan's defaults.
+   */
+  source?: UpdateCustomerAutoTopupSource | undefined;
 };
+
+/**
+ * How overage_limit is interpreted: an absolute overage cap (default) or a percentage of the main-plan allowance.
+ */
+export const UpdateCustomerLimitTypeResponse = {
+  Absolute: "absolute",
+  UsagePercentage: "usage_percentage",
+} as const;
+/**
+ * How overage_limit is interpreted: an absolute overage cap (default) or a percentage of the main-plan allowance.
+ */
+export type UpdateCustomerLimitTypeResponse = OpenEnum<
+  typeof UpdateCustomerLimitTypeResponse
+>;
+
+/**
+ * Response-only: whether the entry is a customer-level override or inherited from an attached plan's defaults.
+ */
+export const UpdateCustomerSpendLimitSource = {
+  Customer: "customer",
+  Plan: "plan",
+} as const;
+/**
+ * Response-only: whether the entry is a customer-level override or inherited from an attached plan's defaults.
+ */
+export type UpdateCustomerSpendLimitSource = OpenEnum<
+  typeof UpdateCustomerSpendLimitSource
+>;
 
 export type UpdateCustomerSpendLimitResponse = {
   /**
@@ -377,9 +474,21 @@ export type UpdateCustomerSpendLimitResponse = {
    */
   enabled: boolean;
   /**
-   * Maximum allowed overage spend for the target feature.
+   * How overage_limit is interpreted: an absolute overage cap (default) or a percentage of the main-plan allowance.
+   */
+  limitType?: UpdateCustomerLimitTypeResponse | undefined;
+  /**
+   * Overage cap for the feature: absolute units, or a percent (e.g. 120) when limit_type is usage_percentage.
    */
   overageLimit?: number | undefined;
+  /**
+   * When true, overage for this feature is not posted to Stripe. Usage tracking and balance resets still behave normally.
+   */
+  skipOverageBilling?: boolean | undefined;
+  /**
+   * Response-only: whether the entry is a customer-level override or inherited from an attached plan's defaults.
+   */
+  source?: UpdateCustomerSpendLimitSource | undefined;
 };
 
 /**
@@ -398,11 +507,36 @@ export type UpdateCustomerUsageLimitIntervalResponse = OpenEnum<
   typeof UpdateCustomerUsageLimitIntervalResponse
 >;
 
+/**
+ * When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature.
+ */
+export type UpdateCustomerFilterResponse = {
+  properties: { [k: string]: any };
+};
+
+/**
+ * Response-only: whether the entry is a customer-level override or inherited from an attached plan's defaults.
+ */
+export const UpdateCustomerUsageLimitSource = {
+  Customer: "customer",
+  Plan: "plan",
+} as const;
+/**
+ * Response-only: whether the entry is a customer-level override or inherited from an attached plan's defaults.
+ */
+export type UpdateCustomerUsageLimitSource = OpenEnum<
+  typeof UpdateCustomerUsageLimitSource
+>;
+
 export type UpdateCustomerUsageLimitResponse = {
   /**
    * The feature this usage limit applies to.
    */
   featureId: string;
+  /**
+   * Whether this usage limit is enabled.
+   */
+  enabled: boolean;
   /**
    * Maximum units allowed per interval.
    */
@@ -412,9 +546,17 @@ export type UpdateCustomerUsageLimitResponse = {
    */
   interval: UpdateCustomerUsageLimitIntervalResponse;
   /**
+   * When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature.
+   */
+  filter?: UpdateCustomerFilterResponse | undefined;
+  /**
    * Current usage already consumed in the active interval. Response-only; not stored on billing controls.
    */
   usage?: number | undefined;
+  /**
+   * Response-only: whether the entry is a customer-level override or inherited from an attached plan's defaults.
+   */
+  source?: UpdateCustomerUsageLimitSource | undefined;
 };
 
 /**
@@ -431,6 +573,20 @@ export const UpdateCustomerThresholdTypeResponse = {
  */
 export type UpdateCustomerThresholdTypeResponse = OpenEnum<
   typeof UpdateCustomerThresholdTypeResponse
+>;
+
+/**
+ * Response-only: whether the entry is a customer-level override or inherited from an attached plan's defaults.
+ */
+export const UpdateCustomerUsageAlertSource = {
+  Customer: "customer",
+  Plan: "plan",
+} as const;
+/**
+ * Response-only: whether the entry is a customer-level override or inherited from an attached plan's defaults.
+ */
+export type UpdateCustomerUsageAlertSource = OpenEnum<
+  typeof UpdateCustomerUsageAlertSource
 >;
 
 export type UpdateCustomerUsageAlertResponse = {
@@ -454,7 +610,25 @@ export type UpdateCustomerUsageAlertResponse = {
    * Optional user-defined label to distinguish multiple alerts on the same feature.
    */
   name?: string | undefined;
+  /**
+   * Response-only: whether the entry is a customer-level override or inherited from an attached plan's defaults.
+   */
+  source?: UpdateCustomerUsageAlertSource | undefined;
 };
+
+/**
+ * Response-only: whether the entry is a customer-level override or inherited from an attached plan's defaults.
+ */
+export const UpdateCustomerOverageAllowedSource = {
+  Customer: "customer",
+  Plan: "plan",
+} as const;
+/**
+ * Response-only: whether the entry is a customer-level override or inherited from an attached plan's defaults.
+ */
+export type UpdateCustomerOverageAllowedSource = OpenEnum<
+  typeof UpdateCustomerOverageAllowedSource
+>;
 
 export type UpdateCustomerOverageAllowedResponse = {
   /**
@@ -465,6 +639,10 @@ export type UpdateCustomerOverageAllowedResponse = {
    * Whether overage is allowed for this feature.
    */
   enabled: boolean;
+  /**
+   * Response-only: whether the entry is a customer-level override or inherited from an attached plan's defaults.
+   */
+  source?: UpdateCustomerOverageAllowedSource | undefined;
 };
 
 /**
@@ -617,6 +795,37 @@ export type UpdateCustomerPurchase = {
   scope?: UpdateCustomerPurchaseScope | undefined;
 };
 
+export type UpdateCustomerLicense = {
+  /**
+   * The plan offered as an assignable license.
+   */
+  licensePlanId: string;
+  /**
+   * The plan that offers this license.
+   */
+  parentPlanId: string;
+  /**
+   * Display name of the license plan.
+   */
+  licensePlanName: string;
+  /**
+   * Total seats the customer has for this license, included plus paid.
+   */
+  granted: number;
+  /**
+   * Seats currently assigned to entities.
+   */
+  usage: number;
+  /**
+   * Seats still available to assign.
+   */
+  remaining: number;
+  /**
+   * Paid seats purchased on top of the plan's included amount.
+   */
+  paidQuantity: number;
+};
+
 /**
  * Feature type: 'boolean' for on/off access, 'metered' for usage-tracked features, 'credit_system' for unified credit pools, 'ai_credit_system' for model-based token pricing.
  */
@@ -750,6 +959,10 @@ export type UpdateCustomerConfigResponse = {
    * Whether to disable the shared customer-level pool for entities.
    */
   disablePooledBalance?: boolean | undefined;
+  /**
+   * Stops Autumn from posting usage-overage line items to Stripe for this customer. Check/track and balance resets still behave normally. When set, this overrides the organization-level disable_overage_billing setting.
+   */
+  disableOverageBilling?: boolean | undefined;
 };
 
 /**
@@ -857,6 +1070,10 @@ export type UpdateCustomerResponse = {
    */
   purchases: Array<UpdateCustomerPurchase>;
   /**
+   * License seat pools granted by the customer's plans, with seat counts.
+   */
+  licenses: Array<UpdateCustomerLicense>;
+  /**
    * Feature balances keyed by feature ID, showing usage limits and remaining amounts.
    */
   balances: { [k: string]: Balance };
@@ -885,6 +1102,7 @@ export type UpdateCustomerPurchaseLimitRequest$Outbound = {
   interval: string;
   interval_count: number;
   limit: number;
+  count?: number | undefined;
 };
 
 /** @internal */
@@ -896,6 +1114,7 @@ export const UpdateCustomerPurchaseLimitRequest$outboundSchema: z.ZodMiniType<
     interval: UpdateCustomerPurchaseLimitIntervalRequestBody$outboundSchema,
     intervalCount: z._default(z.number(), 1),
     limit: z.number(),
+    count: z.optional(z.number()),
   }),
   z.transform((v) => {
     return remap$(v, {
@@ -959,10 +1178,17 @@ export function updateCustomerAutoTopupRequestToJSON(
 }
 
 /** @internal */
+export const UpdateCustomerLimitTypeRequestBody$outboundSchema: z.ZodMiniEnum<
+  typeof UpdateCustomerLimitTypeRequestBody
+> = z.enum(UpdateCustomerLimitTypeRequestBody);
+
+/** @internal */
 export type UpdateCustomerSpendLimitRequest$Outbound = {
   feature_id?: string | undefined;
   enabled: boolean;
+  limit_type?: string | undefined;
   overage_limit?: number | undefined;
+  skip_overage_billing?: boolean | undefined;
 };
 
 /** @internal */
@@ -973,12 +1199,16 @@ export const UpdateCustomerSpendLimitRequest$outboundSchema: z.ZodMiniType<
   z.object({
     featureId: z.optional(z.string()),
     enabled: z._default(z.boolean(), false),
+    limitType: z.optional(UpdateCustomerLimitTypeRequestBody$outboundSchema),
     overageLimit: z.optional(z.number()),
+    skipOverageBilling: z.optional(z.boolean()),
   }),
   z.transform((v) => {
     return remap$(v, {
       featureId: "feature_id",
+      limitType: "limit_type",
       overageLimit: "overage_limit",
+      skipOverageBilling: "skip_overage_billing",
     });
   }),
 );
@@ -1000,10 +1230,55 @@ export const UpdateCustomerUsageLimitIntervalRequestBody$outboundSchema:
   );
 
 /** @internal */
+export type UpdateCustomerProperties$Outbound = string | number | boolean;
+
+/** @internal */
+export const UpdateCustomerProperties$outboundSchema: z.ZodMiniType<
+  UpdateCustomerProperties$Outbound,
+  UpdateCustomerProperties
+> = smartUnion([z.string(), z.number(), z.boolean()]);
+
+export function updateCustomerPropertiesToJSON(
+  updateCustomerProperties: UpdateCustomerProperties,
+): string {
+  return JSON.stringify(
+    UpdateCustomerProperties$outboundSchema.parse(updateCustomerProperties),
+  );
+}
+
+/** @internal */
+export type UpdateCustomerFilterRequest$Outbound = {
+  properties: { [k: string]: string | number | boolean };
+};
+
+/** @internal */
+export const UpdateCustomerFilterRequest$outboundSchema: z.ZodMiniType<
+  UpdateCustomerFilterRequest$Outbound,
+  UpdateCustomerFilterRequest
+> = z.object({
+  properties: z.record(
+    z.string(),
+    smartUnion([z.string(), z.number(), z.boolean()]),
+  ),
+});
+
+export function updateCustomerFilterRequestToJSON(
+  updateCustomerFilterRequest: UpdateCustomerFilterRequest,
+): string {
+  return JSON.stringify(
+    UpdateCustomerFilterRequest$outboundSchema.parse(
+      updateCustomerFilterRequest,
+    ),
+  );
+}
+
+/** @internal */
 export type UpdateCustomerUsageLimitRequest$Outbound = {
   feature_id: string;
+  enabled: boolean;
   limit: number;
   interval: string;
+  filter?: UpdateCustomerFilterRequest$Outbound | undefined;
 };
 
 /** @internal */
@@ -1013,8 +1288,12 @@ export const UpdateCustomerUsageLimitRequest$outboundSchema: z.ZodMiniType<
 > = z.pipe(
   z.object({
     featureId: z.string(),
+    enabled: z._default(z.boolean(), true),
     limit: z.number(),
     interval: UpdateCustomerUsageLimitIntervalRequestBody$outboundSchema,
+    filter: z.optional(
+      z.lazy(() => UpdateCustomerFilterRequest$outboundSchema),
+    ),
   }),
   z.transform((v) => {
     return remap$(v, {
@@ -1169,6 +1448,7 @@ export function updateCustomerBillingControlsRequestToJSON(
 /** @internal */
 export type UpdateCustomerConfigRequest$Outbound = {
   disable_pooled_balance?: boolean | undefined;
+  disable_overage_billing?: boolean | undefined;
 };
 
 /** @internal */
@@ -1178,10 +1458,12 @@ export const UpdateCustomerConfigRequest$outboundSchema: z.ZodMiniType<
 > = z.pipe(
   z.object({
     disablePooledBalance: z.optional(z.boolean()),
+    disableOverageBilling: z.optional(z.boolean()),
   }),
   z.transform((v) => {
     return remap$(v, {
       disablePooledBalance: "disable_pooled_balance",
+      disableOverageBilling: "disable_overage_billing",
     });
   }),
 );
@@ -1205,6 +1487,7 @@ export type UpdateCustomerParams$Outbound = {
   metadata?: { [k: string]: any } | null | undefined;
   stripe_id?: string | null | undefined;
   send_email_receipts?: boolean | undefined;
+  currency?: string | null | undefined;
   billing_controls?: UpdateCustomerBillingControlsRequest$Outbound | undefined;
   config?: UpdateCustomerConfigRequest$Outbound | undefined;
   new_customer_id?: string | undefined;
@@ -1223,6 +1506,7 @@ export const UpdateCustomerParams$outboundSchema: z.ZodMiniType<
     metadata: z.optional(z.nullable(z.record(z.string(), z.any()))),
     stripeId: z.optional(z.nullable(z.string())),
     sendEmailReceipts: z.optional(z.boolean()),
+    currency: z.optional(z.nullable(z.string())),
     billingControls: z.optional(
       z.lazy(() => UpdateCustomerBillingControlsRequest$outboundSchema),
     ),
@@ -1267,18 +1551,13 @@ export const UpdateCustomerPurchaseLimitResponse2$inboundSchema: z.ZodMiniType<
   unknown
 > = z.pipe(
   z.object({
-    interval: types.nullable(
-      UpdateCustomerPurchaseLimitIntervalResponse2$inboundSchema,
-    ),
-    interval_count: types.nullable(types.number()),
-    limit: types.nullable(types.number()),
-    count: types.number(),
-    next_reset_at: types.number(),
+    interval: UpdateCustomerPurchaseLimitIntervalResponse2$inboundSchema,
+    interval_count: z._default(types.number(), 1),
+    limit: types.number(),
   }),
   z.transform((v) => {
     return remap$(v, {
       "interval_count": "intervalCount",
-      "next_reset_at": "nextResetAt",
     });
   }),
 );
@@ -1305,13 +1584,18 @@ export const UpdateCustomerPurchaseLimitResponse1$inboundSchema: z.ZodMiniType<
   unknown
 > = z.pipe(
   z.object({
-    interval: UpdateCustomerPurchaseLimitIntervalResponse1$inboundSchema,
-    interval_count: z._default(types.number(), 1),
-    limit: types.number(),
+    interval: types.nullable(
+      UpdateCustomerPurchaseLimitIntervalResponse1$inboundSchema,
+    ),
+    interval_count: types.nullable(types.number()),
+    limit: types.nullable(types.number()),
+    count: types.number(),
+    next_reset_at: types.number(),
   }),
   z.transform((v) => {
     return remap$(v, {
       "interval_count": "intervalCount",
+      "next_reset_at": "nextResetAt",
     });
   }),
 );
@@ -1332,8 +1616,8 @@ export const UpdateCustomerPurchaseLimitUnion$inboundSchema: z.ZodMiniType<
   UpdateCustomerPurchaseLimitUnion,
   unknown
 > = smartUnion([
-  z.lazy(() => UpdateCustomerPurchaseLimitResponse2$inboundSchema),
   z.lazy(() => UpdateCustomerPurchaseLimitResponse1$inboundSchema),
+  z.lazy(() => UpdateCustomerPurchaseLimitResponse2$inboundSchema),
 ]);
 
 export function updateCustomerPurchaseLimitUnionFromJSON(
@@ -1347,6 +1631,12 @@ export function updateCustomerPurchaseLimitUnionFromJSON(
 }
 
 /** @internal */
+export const UpdateCustomerAutoTopupSource$inboundSchema: z.ZodMiniType<
+  UpdateCustomerAutoTopupSource,
+  unknown
+> = openEnums.inboundSchema(UpdateCustomerAutoTopupSource);
+
+/** @internal */
 export const UpdateCustomerAutoTopupResponse$inboundSchema: z.ZodMiniType<
   UpdateCustomerAutoTopupResponse,
   unknown
@@ -1357,10 +1647,11 @@ export const UpdateCustomerAutoTopupResponse$inboundSchema: z.ZodMiniType<
     threshold: types.number(),
     quantity: types.number(),
     purchase_limit: types.optional(smartUnion([
-      z.lazy(() => UpdateCustomerPurchaseLimitResponse2$inboundSchema),
       z.lazy(() => UpdateCustomerPurchaseLimitResponse1$inboundSchema),
+      z.lazy(() => UpdateCustomerPurchaseLimitResponse2$inboundSchema),
     ])),
     invoice_mode: types.optional(types.boolean()),
+    source: types.optional(UpdateCustomerAutoTopupSource$inboundSchema),
   }),
   z.transform((v) => {
     return remap$(v, {
@@ -1382,6 +1673,18 @@ export function updateCustomerAutoTopupResponseFromJSON(
 }
 
 /** @internal */
+export const UpdateCustomerLimitTypeResponse$inboundSchema: z.ZodMiniType<
+  UpdateCustomerLimitTypeResponse,
+  unknown
+> = openEnums.inboundSchema(UpdateCustomerLimitTypeResponse);
+
+/** @internal */
+export const UpdateCustomerSpendLimitSource$inboundSchema: z.ZodMiniType<
+  UpdateCustomerSpendLimitSource,
+  unknown
+> = openEnums.inboundSchema(UpdateCustomerSpendLimitSource);
+
+/** @internal */
 export const UpdateCustomerSpendLimitResponse$inboundSchema: z.ZodMiniType<
   UpdateCustomerSpendLimitResponse,
   unknown
@@ -1389,12 +1692,17 @@ export const UpdateCustomerSpendLimitResponse$inboundSchema: z.ZodMiniType<
   z.object({
     feature_id: types.optional(types.string()),
     enabled: z._default(types.boolean(), false),
+    limit_type: types.optional(UpdateCustomerLimitTypeResponse$inboundSchema),
     overage_limit: types.optional(types.number()),
+    skip_overage_billing: types.optional(types.boolean()),
+    source: types.optional(UpdateCustomerSpendLimitSource$inboundSchema),
   }),
   z.transform((v) => {
     return remap$(v, {
       "feature_id": "featureId",
+      "limit_type": "limitType",
       "overage_limit": "overageLimit",
+      "skip_overage_billing": "skipOverageBilling",
     });
   }),
 );
@@ -1415,15 +1723,44 @@ export const UpdateCustomerUsageLimitIntervalResponse$inboundSchema:
     .inboundSchema(UpdateCustomerUsageLimitIntervalResponse);
 
 /** @internal */
+export const UpdateCustomerFilterResponse$inboundSchema: z.ZodMiniType<
+  UpdateCustomerFilterResponse,
+  unknown
+> = z.object({
+  properties: z.record(z.string(), z.any()),
+});
+
+export function updateCustomerFilterResponseFromJSON(
+  jsonString: string,
+): SafeParseResult<UpdateCustomerFilterResponse, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => UpdateCustomerFilterResponse$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'UpdateCustomerFilterResponse' from JSON`,
+  );
+}
+
+/** @internal */
+export const UpdateCustomerUsageLimitSource$inboundSchema: z.ZodMiniType<
+  UpdateCustomerUsageLimitSource,
+  unknown
+> = openEnums.inboundSchema(UpdateCustomerUsageLimitSource);
+
+/** @internal */
 export const UpdateCustomerUsageLimitResponse$inboundSchema: z.ZodMiniType<
   UpdateCustomerUsageLimitResponse,
   unknown
 > = z.pipe(
   z.object({
     feature_id: types.string(),
+    enabled: z._default(types.boolean(), true),
     limit: types.number(),
     interval: UpdateCustomerUsageLimitIntervalResponse$inboundSchema,
+    filter: types.optional(
+      z.lazy(() => UpdateCustomerFilterResponse$inboundSchema),
+    ),
     usage: types.optional(types.number()),
+    source: types.optional(UpdateCustomerUsageLimitSource$inboundSchema),
   }),
   z.transform((v) => {
     return remap$(v, {
@@ -1449,6 +1786,12 @@ export const UpdateCustomerThresholdTypeResponse$inboundSchema: z.ZodMiniType<
 > = openEnums.inboundSchema(UpdateCustomerThresholdTypeResponse);
 
 /** @internal */
+export const UpdateCustomerUsageAlertSource$inboundSchema: z.ZodMiniType<
+  UpdateCustomerUsageAlertSource,
+  unknown
+> = openEnums.inboundSchema(UpdateCustomerUsageAlertSource);
+
+/** @internal */
 export const UpdateCustomerUsageAlertResponse$inboundSchema: z.ZodMiniType<
   UpdateCustomerUsageAlertResponse,
   unknown
@@ -1459,6 +1802,7 @@ export const UpdateCustomerUsageAlertResponse$inboundSchema: z.ZodMiniType<
     threshold: types.number(),
     threshold_type: UpdateCustomerThresholdTypeResponse$inboundSchema,
     name: types.optional(types.string()),
+    source: types.optional(UpdateCustomerUsageAlertSource$inboundSchema),
   }),
   z.transform((v) => {
     return remap$(v, {
@@ -1479,6 +1823,12 @@ export function updateCustomerUsageAlertResponseFromJSON(
 }
 
 /** @internal */
+export const UpdateCustomerOverageAllowedSource$inboundSchema: z.ZodMiniType<
+  UpdateCustomerOverageAllowedSource,
+  unknown
+> = openEnums.inboundSchema(UpdateCustomerOverageAllowedSource);
+
+/** @internal */
 export const UpdateCustomerOverageAllowedResponse$inboundSchema: z.ZodMiniType<
   UpdateCustomerOverageAllowedResponse,
   unknown
@@ -1486,6 +1836,7 @@ export const UpdateCustomerOverageAllowedResponse$inboundSchema: z.ZodMiniType<
   z.object({
     feature_id: types.string(),
     enabled: z._default(types.boolean(), false),
+    source: types.optional(UpdateCustomerOverageAllowedSource$inboundSchema),
   }),
   z.transform((v) => {
     return remap$(v, {
@@ -1644,6 +1995,40 @@ export function updateCustomerPurchaseFromJSON(
     jsonString,
     (x) => UpdateCustomerPurchase$inboundSchema.parse(JSON.parse(x)),
     `Failed to parse 'UpdateCustomerPurchase' from JSON`,
+  );
+}
+
+/** @internal */
+export const UpdateCustomerLicense$inboundSchema: z.ZodMiniType<
+  UpdateCustomerLicense,
+  unknown
+> = z.pipe(
+  z.object({
+    license_plan_id: types.string(),
+    parent_plan_id: types.string(),
+    license_plan_name: types.string(),
+    granted: types.number(),
+    usage: types.number(),
+    remaining: types.number(),
+    paid_quantity: types.number(),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      "license_plan_id": "licensePlanId",
+      "parent_plan_id": "parentPlanId",
+      "license_plan_name": "licensePlanName",
+      "paid_quantity": "paidQuantity",
+    });
+  }),
+);
+
+export function updateCustomerLicenseFromJSON(
+  jsonString: string,
+): SafeParseResult<UpdateCustomerLicense, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => UpdateCustomerLicense$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'UpdateCustomerLicense' from JSON`,
   );
 }
 
@@ -1832,10 +2217,12 @@ export const UpdateCustomerConfigResponse$inboundSchema: z.ZodMiniType<
 > = z.pipe(
   z.object({
     disable_pooled_balance: types.optional(types.boolean()),
+    disable_overage_billing: types.optional(types.boolean()),
   }),
   z.transform((v) => {
     return remap$(v, {
       "disable_pooled_balance": "disablePooledBalance",
+      "disable_overage_billing": "disableOverageBilling",
     });
   }),
 );
@@ -1957,6 +2344,7 @@ export const UpdateCustomerResponse$inboundSchema: z.ZodMiniType<
       z.lazy(() => UpdateCustomerSubscription$inboundSchema),
     ),
     purchases: z.array(z.lazy(() => UpdateCustomerPurchase$inboundSchema)),
+    licenses: z.array(z.lazy(() => UpdateCustomerLicense$inboundSchema)),
     balances: z.record(z.string(), Balance$inboundSchema),
     flags: z.record(
       z.string(),

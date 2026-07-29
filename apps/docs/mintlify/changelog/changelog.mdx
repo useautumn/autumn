@@ -4,6 +4,312 @@ mode: "center"
 description: "Some new things we've shipped at Autumn HQ"
 ---
 
+<Update label="July 24th 2026">
+  ## License plan customization & propagation
+
+  License plans are now fully customizable per parent. You can override items, prices, and included seat counts on individual license plans, and Autumn rebases those overrides automatically when the base license plan changes — Stripe items and subscription lifecycle stay in sync. [`plans.update`](/api-reference/plans/updatePlan) accepts a `licenses[].customize` block per parent, and responses now include the effective `customize` payload on each license link. Pair with the new `include_license_parents` on [`plans.preview_update`](/api-reference/plans/updatePlan) to see downstream impacts before saving.
+
+  ## Overflow tracking on usage
+
+  [`track`](/api-reference/core/track), [`track_tokens`](/api-reference/core/trackTokens), and [`batchTrack`](/api-reference/core/batchTrack) now accept `overage_behavior: "overflow"`, deducting the full amount past zero and letting balances go negative. Usage-window caps are bypassed, but customer and entity spend limits still clamp — useful when you want to record real usage even when a customer has run out of included balance.
+
+  ## Writable auto top-up purchase counter
+
+  You can now reset or set the runtime purchase counter for [auto top-ups](/documentation/modelling-pricing/auto-top-ups) directly through [`customers.update`](/api-reference/customers/updateCustomer). Pass `billing_controls.auto_topups[].purchase_limit.count` to nudge or reset a customer's purchase count without waiting for the interval to roll over. `count > limit` is rejected with a clean 400, and active windows are preserved.
+
+  ## Automatic recovery for failed customer creation
+
+  Customer create and get-or-create requests that hit rate limits or transient database/Redis errors are now automatically queued and replayed in the background, with globally serialized concurrency and deterministic dedupe. Requests come back with their original semantics and Autumn records whether the replay created or fetched the customer — no more one-off failures during traffic spikes.
+
+  ## License transitions & drop handling
+
+  Plan transitions that drop a license pool (e.g. Team → Pro) now release the affected seat assignments and restore pool capacity in a single atomic step, unblocking migrations that previously errored out. The Attach Product preview warns you when a transition will remove licenses and lists the entities that will be released. Assignments carried across matched successor pools stay intact.
+
+  <AccordionGroup>
+    <Accordion title="Improvements">
+      - License catalog updates preview and apply cleanly across parent-plan versioning and in-place edits, preserving existing customer license definitions — [#2288](https://github.com/useautumn/autumn/pull/2288)
+      - Row-batched license transitions preserve quantities, billing state, and Stripe linkage across immediate and scheduled changes — [#2306](https://github.com/useautumn/autumn/pull/2306)
+      - Child license plan propagation now previews linked parent-plan impacts and supports explicit propagation targets — [#2295](https://github.com/useautumn/autumn/pull/2295)
+      - Auto top-up thresholds can now be negative, so you can trigger top-ups once a balance dips below zero — [#2354](https://github.com/useautumn/autumn/pull/2354)
+      - New Stripe customers imported via `stripe_id` on customer creation now pull in eligible subscriptions and schedules automatically — [#2308](https://github.com/useautumn/autumn/pull/2308)
+      - Customer dashboard plan filters now resolve in milliseconds instead of tens of seconds on large orgs — [#2362](https://github.com/useautumn/autumn/pull/2362)
+    </Accordion>
+    <Accordion title="Fixes">
+      - Create-schedule previews now show unavoidable immediate charges (initial subscription lines, automatic tax, invoice credits) so previews match the final invoice — [#2329](https://github.com/useautumn/autumn/pull/2329)
+      - Attach form plan-schedule preview now defaults to **immediate** when unset, matching the UI — [#2345](https://github.com/useautumn/autumn/pull/2345)
+      - Long checkout URLs in the dashboard truncate from the end with a proper ellipsis instead of clipping both sides — [#2344](https://github.com/useautumn/autumn/pull/2344)
+      - License assignments are now treated as active only when their pool link has an active parent, so dropped and matched pool transitions behave consistently — [#2353](https://github.com/useautumn/autumn/pull/2353)
+      - Same-batch customized license plan previews no longer crash on virtual catalog products (empty prices/entitlements) — [#2343](https://github.com/useautumn/autumn/pull/2343)
+      - Catalog sync tolerates partial product collections, missing entitlements, and missing prices without erroring — [#2317](https://github.com/useautumn/autumn/pull/2317), [#2319](https://github.com/useautumn/autumn/pull/2319), [#2322](https://github.com/useautumn/autumn/pull/2322), [#2324](https://github.com/useautumn/autumn/pull/2324)
+      - Versioned license schedules and matched plan versions are preserved through Stripe sync — [#2297](https://github.com/useautumn/autumn/pull/2297), [#2284](https://github.com/useautumn/autumn/pull/2284)
+      - OAuth organization list deduplicates when a user has multiple memberships in the same org — [#2346](https://github.com/useautumn/autumn/pull/2346)
+      - MCP `getCurrentOrganization` schema now matches the `organization/me` API response, adding `id` and tolerating a missing `user` — [#2140](https://github.com/useautumn/autumn/pull/2140)
+      - Rate limits on establish routes now return a standard `429` (no `Retry-After`); check and track routes still fail open — [#2384](https://github.com/useautumn/autumn/pull/2384)
+      - Concurrent migrations no longer duplicate customer plans — [#2282](https://github.com/useautumn/autumn/pull/2282)
+      - Versioned license pricing renders correctly in the plan dashboard — [#2291](https://github.com/useautumn/autumn/pull/2291)
+    </Accordion>
+  </AccordionGroup>
+</Update>
+
+<Update label="July 17th 2026">
+  ## Multi-currency pricing and billing
+
+  Plans can now be priced in **multiple currencies** end-to-end. Add `base_currency` and `additional_currencies` to any fixed, tiered, or usage-based price, and customers get billed in their resolved currency across checkout, invoices, top-ups, refunds, upgrades, and previews. Customers pick up a `currency` field that locks on their first paid attach — pass `currency` on [`billing.attach`](/api-reference/billing/attach) or [`billing.multi_attach`](/api-reference/billing/multiAttach) to choose, and attaches in a different currency return a clean `currency_mismatch` 400. Reach out to enable the `multi_currency` org flag.
+
+  ## Licenses
+
+  The full **licenses** stack is live: plans can offer other plans as assignable seats with `included` free counts, prepaid seat quantities, and per-customer overrides. New endpoints — [`licenses.attach`](/api-reference/licenses/attachLicense), [`licenses.release`](/api-reference/licenses/releaseLicense), [`licenses.list`](/api-reference/licenses/listLicenses), and [`licenses.list_assignments`](/api-reference/licenses/listLicenseAssignments) — let you provision, release, and inspect seats on entities, with balance tracking and dashboard management for the whole lifecycle. Priced licenses require the license plan to be attached to the customer first (via [`billing.attach`](/api-reference/billing/attach)); free licenses assign directly.
+
+  ## List invoices endpoint
+
+  Fetch a customer's invoices programmatically with the new [`invoices.list`](/api-reference/invoices/listInvoices) endpoint — the same data the dashboard uses, now available on the API for building portals, reconciliation flows, and audit tooling.
+
+  ## Pay down overages on one-off add-ons
+
+  One-off prepaid add-ons now **pay down existing overages** at attach time, so a customer who's already over their included balance immediately settles the outstanding usage on their next invoice instead of waiting for the cycle to close. Behavior is gated by the price's `persist_free_overage` flag for finer control.
+
+  ## Back-sync carry usage on Stripe imports
+
+  When you import an existing Stripe subscription that's mid-cycle on a usage feature, Autumn now **carries the already-consumed usage** into the new customer product so balances line up with what the customer has actually used, instead of resetting on import.
+
+  ## Invoice-mode start for usage-in-arrears
+
+  Subscriptions with usage-in-arrears pricing can now be started directly in **invoice mode** — useful for large customers you're billing outside checkout — without needing a card on file up front.
+
+  ## Attach-time currency selection
+
+  The [`billing.attach`](/api-reference/billing/attach) flow now accepts a `currency` parameter, and dashboard attach/preview sheets show amounts in the customer's currency. Pair with multi-currency plans to sell in EUR, GBP, or any additional currency you configure.
+
+  <AccordionGroup>
+    <Accordion title="Improvements">
+      - Rollovers now carry to the best-candidate bucket on plan updates, so leftover balance doesn't disappear when you switch a customer between plans — [#2266](https://github.com/useautumn/autumn/pull/2266)
+      - Multi-currency plan updates work through preview, save, and migration flows — [#2236](https://github.com/useautumn/autumn/pull/2236)
+      - Multi-currency Stripe sync now imports historical subscriptions in their original currency — [#2227](https://github.com/useautumn/autumn/pull/2227)
+      - Attach schedule now always defaults to **immediate**, so plans go live on save unless you explicitly schedule them — [#2232](https://github.com/useautumn/autumn/pull/2232)
+      - Analytics dashboard refetches on window focus, so numbers stay fresh when you tab back in — [#2241](https://github.com/useautumn/autumn/pull/2241)
+      - `billing.updated` webhooks now fire after the Stripe customer ID is persisted, so downstream consumers always see the linked Stripe record — [#2267](https://github.com/useautumn/autumn/pull/2267)
+      - Plan **variants** now stamp their own `previous_price` history, so each variant keeps an independent price trail — [#2238](https://github.com/useautumn/autumn/pull/2238)
+      - Consent screen shows the Autumn brand logo in the org selector — [#2249](https://github.com/useautumn/autumn/pull/2249)
+      - Faster reset cron and invoice cron for large workspaces — [#2222](https://github.com/useautumn/autumn/pull/2222), [#2257](https://github.com/useautumn/autumn/pull/2257)
+    </Accordion>
+    <Accordion title="Bug fixes">
+      - Coupon **scope** updates now apply cleanly to existing subscriptions instead of only new ones — [#2260](https://github.com/useautumn/autumn/pull/2260)
+      - Catalog updates that reference customers across plan versions no longer error — [#2244](https://github.com/useautumn/autumn/pull/2244)
+      - Non-consumable prepaid quantities update correctly on plan changes — [#2220](https://github.com/useautumn/autumn/pull/2220)
+      - Dashboard no longer shows false "unsaved changes" errors when saving plans — [#2276](https://github.com/useautumn/autumn/pull/2276)
+      - Entity creation is serialized per customer, avoiding duplicate rows under concurrent attaches — [#2242](https://github.com/useautumn/autumn/pull/2242)
+      - Pending invoice cleanup cron backs off gracefully instead of retrying tight — [#2239](https://github.com/useautumn/autumn/pull/2239)
+    </Accordion>
+  </AccordionGroup>
+</Update>
+
+<Update label="July 10th 2026">
+  ## Multi-update billing endpoint
+
+  Cancel or uncancel multiple plans for a customer in a **single atomic request** with the new [`billing.multi_update`](/api-reference/billing/multiUpdate) endpoint. Updates are grouped per Stripe subscription and executed as one merged plan, so proration and invoicing land as a single combined result. Preview it first with [`billing.preview_multi_update`](/api-reference/billing/previewMultiUpdate) to see per-subscription and combined totals.
+
+  ## Plan-inherited billing controls on customer reads
+
+  API v2.3 customer and entity reads now include **plan-inherited** [billing controls](/documentation/customers/billing-controls) — `usage_limits`, `spend_limits`, `overage_allowed`, `auto_topups`, and `usage_alerts` — alongside customer-level overrides, with each entry tagged `source: "customer" | "plan"`. Inherited usage limits also return the current-window usage. Older clients keep the previous response shape.
+
+  ## Eve: new default AI agent for Slack and dashboard chat
+
+  Eve is now the default agent harness for Slack and the dashboard streaming chat, with in-thread approvals, follow-up questions, richer status updates, and interactive **catalog decision cards** for versioning and variant changes. Rejecting an approval in Slack or the web app now also clears the underlying suspension cleanly.
+
+  ## Auto top-up failure webhook
+
+  Subscribe to the new [`billing.auto_topup.failed`](/api-reference/webhooks/billingAutoTopupFailed) webhook to react to auto top-up charges that don't go through — pause features, notify the customer, or fall back to manual top-up.
+
+  ## Expiring free recurring balances
+
+  Free recurring balances can now carry an **`expires_at`** timestamp, and the [`balances.update`](/api-reference/balances/updateBalance) endpoint accepts `expires_at` so you can extend or shorten grants after the fact. The dashboard has matching controls in the balance sheet.
+
+  ## Licenses (early)
+
+  Foundational support for **licenses** has landed: a new licenses model, API schema, and a `licenses` field on the [`plans.list`](/api-reference/plans/listPlans) response. Reach out if you'd like to try it early.
+
+  ## RevenueCat: email and fingerprint identifiers
+
+  The [RevenueCat integration](/documentation/external-providers/revenuecat) now recognizes `autumn_customer_email` and `autumn_customer_fingerprint` subscriber attributes on incoming webhooks, so you can match RevenueCat purchases to Autumn customers by email or fingerprint instead of only by ID.
+
+  ## Any-shape customer import
+
+  [`billing.import`](/api-reference/billing/import) can now ingest customers from **any billing processor in any shape** — the processor and per-item `billable.processor` are configurable, and identity updates honor `dry_run`. Email-only `customer_data` payloads are validated before import runs.
+
+  ## Property filters on usage limits
+
+  [Usage limits](/documentation/modelling-pricing/spend-limits) now support **property filters**, so a single limit can target a subset of events (for example, only requests to a specific model or region) instead of the whole feature. `balances.limit_reached` also now fires for plan-level and percentage-based spend and usage limits.
+
+  ## Copyable sandboxes
+
+  Spin up a new sandbox as a **copy** of an existing one, so you can branch off staging or QA without rebuilding your catalog from scratch.
+
+  ## billing.updated on manual sync
+
+  Manual sync operations now emit the [`billing.updated`](/api-reference/webhooks/billingUpdated) webhook, so downstream consumers stay in sync when you re-pull state from Stripe by hand.
+
+  <AccordionGroup>
+    <Accordion title="Improvements">
+      - `set_usage` now composes with usage windows: setting a balance no longer errors when a feature has an active window, and window caps still hold after the reset — [#2205](https://github.com/useautumn/autumn/pull/2205)
+      - Auto top-up expand path returns `purchase_limit` for plan-inherited entries too — [#2205](https://github.com/useautumn/autumn/pull/2205)
+      - Refund-last-payment is now exposed on the API — [#2179](https://github.com/useautumn/autumn/pull/2179)
+      - Slack app: additional options for matching a Slack user to an Autumn user — [#2100](https://github.com/useautumn/autumn/pull/2100)
+      - Archived plans now include an `archived` flag when pulled via the CLI — [#2152](https://github.com/useautumn/autumn/pull/2152)
+      - Webhook tags: customer and entity IDs are sanitized to the Svix charset so deliveries don't fail on unusual characters — [#2150](https://github.com/useautumn/autumn/pull/2150)
+      - Free first schedule phase is now supported in plan schedules — [#2137](https://github.com/useautumn/autumn/pull/2137)
+      - Refreshed checkout favicon — [#2162](https://github.com/useautumn/autumn/pull/2162), [#2161](https://github.com/useautumn/autumn/pull/2161)
+      - Cleaner subscription sheet tooltips, coupon error messages, and plan ID chip in mappings — [#2157](https://github.com/useautumn/autumn/pull/2157)
+    </Accordion>
+    <Accordion title="Bug fixes">
+      - Renewal edge case that could mis-schedule the next cycle is fixed — [#2200](https://github.com/useautumn/autumn/pull/2200)
+      - Manual `tax_rate_id` is now applied to one-time and deferred charges, not just recurring items — [#2204](https://github.com/useautumn/autumn/pull/2204)
+      - `check` with a lock correctly returns `allowed: false` when the customer has no entitlement — [#2174](https://github.com/useautumn/autumn/pull/2174)
+      - Promo minimum validation is now consistent across all billing flows — [#2168](https://github.com/useautumn/autumn/pull/2168)
+      - ACH processing invoices are handled correctly through the past-due flow — [#2167](https://github.com/useautumn/autumn/pull/2167), [#2128](https://github.com/useautumn/autumn/pull/2128), [#2053](https://github.com/useautumn/autumn/pull/2053)
+      - Skip overage billing when no overage is due, avoiding empty invoice items — [#2190](https://github.com/useautumn/autumn/pull/2190), [#2182](https://github.com/useautumn/autumn/pull/2182)
+      - Cardinality gate no longer false-fires on legitimate usage — [#2184](https://github.com/useautumn/autumn/pull/2184)
+      - Scheduled customer products now resync `starts_at` when a Stripe schedule is updated — [#2177](https://github.com/useautumn/autumn/pull/2177)
+      - Filter button on the customers page is visible even when a customer only has expired products — [#2165](https://github.com/useautumn/autumn/pull/2165)
+      - Variant Stripe product renames now propagate correctly — [#2149](https://github.com/useautumn/autumn/pull/2149)
+      - Product cron trial expiry now paginates correctly at scale — [#2144](https://github.com/useautumn/autumn/pull/2144)
+      - Schedule phase billing anchors are reset when the phase changes; Stripe anchor reset day is clamped to valid values — [#2133](https://github.com/useautumn/autumn/pull/2133), [#2115](https://github.com/useautumn/autumn/pull/2115)
+      - Discount upgrades apply cleanly to the upgraded plan — [#1815](https://github.com/useautumn/autumn/pull/1815)
+      - `billing.import` correctly updates `customer_data` and filters one-off / usage-based balances — [#2154](https://github.com/useautumn/autumn/pull/2154), [#2156](https://github.com/useautumn/autumn/pull/2156)
+      - Assorted usage-window, coupon, and sync-back fixes — [#2159](https://github.com/useautumn/autumn/pull/2159), [#2186](https://github.com/useautumn/autumn/pull/2186)
+    </Accordion>
+  </AccordionGroup>
+</Update>
+
+<Update label="June 26th 2026">
+  ## Multiple sandbox environments per org
+
+  Organizations can now spin up **multiple sandboxes** alongside production — each with its own API keys, teams, color, and icon — so you can isolate staging, QA, demo, and per-engineer environments without juggling accounts. Provision, switch, edit, and tear down sandboxes directly from the dashboard.
+
+  ## Per-customer JWT credentials
+
+  Issue and rotate **per-customer JWT credentials** for the frontend SDK. State is now persisted in Postgres, so credentials survive restarts and can be managed cleanly per customer.
+
+  ## Percentage-based spend limits
+
+  [Spend limits](/documentation/modelling-pricing/spend-limits) now support a `usage_percentage` mode, letting you cap overage as a percentage of included usage instead of an absolute number — useful for plans where the included quota changes between tiers.
+
+  ## Plan metadata
+
+  Attach arbitrary **metadata to plans** and read it back through the API. Use it to tag plans with internal flags, feature gates, or marketing copy without forking your pricing model.
+
+  ## List rewards endpoint
+
+  New [rewards endpoint](/api-reference/rewards/redeemRewardCode) returns both coupons and feature grants in a single paginated response, making it easier to render available rewards in your own UI.
+
+  ## Track events with custom timestamps
+
+  The `track` endpoint now accepts an explicit `timestamp` field, so you can backfill events or record usage that happened earlier without losing chronological accuracy.
+
+  ## Plan billing controls
+
+  Custom plans get a refreshed **billing controls** panel — clearer toggles, keyboard-focusable tooltips, simplified auto top-up resolution, and improved copy throughout. See [custom plans](/documentation/customers/custom-plans).
+
+  ## Dual-auth Stripe keys
+
+  You can now connect Stripe using **either** OAuth or a restricted API key, and switch between them per organization. The Stripe Keys UI has been redesigned around the new dual-auth flow, with cleaner copy and a smoother delete experience.
+
+  <AccordionGroup>
+    <Accordion title="Improvements">
+      - Add interval filter to the customers list page — [#2038](https://github.com/useautumn/autumn/pull/2038)
+      - "Create more" mode in the create-entity dialog for bulk entity setup — [#1988](https://github.com/useautumn/autumn/pull/1988)
+      - Plan editor: cleaner update logic and feature-creation flow — [#2035](https://github.com/useautumn/autumn/pull/2035)
+      - Net payment terms UI refreshed inside the invoice settings accordion — [#2034](https://github.com/useautumn/autumn/pull/2034)
+      - Customizable buttons in transactional emails — [#1991](https://github.com/useautumn/autumn/pull/1991)
+      - Customer IDs now accept colons for namespaced identifiers — [#1995](https://github.com/useautumn/autumn/pull/1995)
+      - Mobile dashboard cleanup, including card-style tables on small screens — [#2013](https://github.com/useautumn/autumn/pull/2013)
+      - [RevenueCat import](/documentation/external-providers/revenuecat): paginated product list and raw-mapping escape hatch for custom field mapping — [#2040](https://github.com/useautumn/autumn/pull/2040)
+      - MCP OAuth now grants Leaf scopes when only OIDC scopes are requested — [#2012](https://github.com/useautumn/autumn/pull/2012), [#2023](https://github.com/useautumn/autumn/pull/2023)
+      - Website content negotiation: canonical URLs serve markdown to clients that ask for it — [#2004](https://github.com/useautumn/autumn/pull/2004), [#2007](https://github.com/useautumn/autumn/pull/2007), [#2009](https://github.com/useautumn/autumn/pull/2009)
+      - Cleaner Stripe connect dialog and improved Stripe-related copy across the dashboard — [#2020](https://github.com/useautumn/autumn/pull/2020), [#2047](https://github.com/useautumn/autumn/pull/2047)
+      - Customer portal now has rate limiting to protect against abuse — [#2033](https://github.com/useautumn/autumn/pull/2033)
+    </Accordion>
+    <Accordion title="Bug fixes">
+      - Auto top-ups now charge the most recently attached plan's one-off price — [#2049](https://github.com/useautumn/autumn/pull/2049)
+      - Event table filtering corrected so filters apply to the right columns — [#2005](https://github.com/useautumn/autumn/pull/2005)
+      - Long event values no longer overflow the events table — [#2048](https://github.com/useautumn/autumn/pull/2048)
+      - Trialing customers downgrading to Free are correctly anchored to trial end — [#2000](https://github.com/useautumn/autumn/pull/2000)
+      - Sync no longer adds phantom allowance for imported prepaid Stripe items, and carries prepaid usage correctly when expiring a plan — [#1978](https://github.com/useautumn/autumn/pull/1978)
+      - Hourly rollovers now enforce the configured max cap on the reset cron — [#2022](https://github.com/useautumn/autumn/pull/2022)
+      - Rewards: reject duplicate reward IDs and promo codes, and clean up promos on delete — [#2031](https://github.com/useautumn/autumn/pull/2031)
+      - Event ranking window aligned with the chart for accurate top-events lists — [#2003](https://github.com/useautumn/autumn/pull/2003)
+      - Separate billing intervals render correctly in the plan editor — [#2001](https://github.com/useautumn/autumn/pull/2001), [#2042](https://github.com/useautumn/autumn/pull/2042), [#2043](https://github.com/useautumn/autumn/pull/2043)
+      - Prevent horizontal overscroll on the marketing site — [#2019](https://github.com/useautumn/autumn/pull/2019)
+      - MCP and Leaf auth edge cases resolved — [#2026](https://github.com/useautumn/autumn/pull/2026)
+    </Accordion>
+  </AccordionGroup>
+</Update>
+
+<Update label="June 19th 2026">
+  ## Autumn Lakehouse
+
+  Stream every event, balance change, and invoice straight into your own data warehouse via the new **Autumn Lakehouse**. Connect once and query Autumn data with the SQL engine of your choice — Snowflake, BigQuery, DuckDB, Athena, Spark, or anything else that speaks Apache Iceberg.
+
+  See the [Lakehouse overview](/documentation/lakehouse/overview) and [connecting guide](/documentation/lakehouse/connecting) to get started.
+
+  ## Instant customer products table
+
+  The customer detail page now renders its products table immediately, with the rest of the list paginated in the background. Loading a customer with hundreds of products is no longer a wait.
+
+  ## Weekly analytics granularity
+
+  Analytics now supports a **weekly** bin size, and granularity options are tailored per time range (no more greyed-out choices). The granularity picker has moved into the time-period dropdown for fewer clicks.
+
+  ## Plan version migrations: filter compiler & migrate dialog
+
+  Plan version migrations get a new **filter compiler** for targeting exactly the customers you want, a refreshed migrate dialog, and clearer visibility into billing changes before you commit. See [custom plans](/documentation/customers/custom-plans).
+
+  ## Rewards: boolean grants & first-time conditions
+
+  Rewards can now grant **boolean features** (e.g. unlock an add-on as a perk) and can be gated to a customer's **first-time** purchase only. Useful for launch promos and onboarding incentives.
+
+  ## OpenRouter support in the AI gateway
+
+  The Autumn [AI gateway](/documentation/external-providers/openrouter) now supports OpenRouter as a provider, so you can meter and bill OpenRouter usage the same way as direct OpenAI, Anthropic, and others.
+
+  <AccordionGroup>
+    <Accordion title="Improvements">
+      - New `carry_over_usages` option on [`billing.update`](/api-reference/billing/billingUpdate) to preserve usage across plan changes — [#1974](https://github.com/useautumn/autumn/pull/1974)
+      - New `next_reset_at` parameter on [create balance](/api-reference/balances/createBalance) for scheduling the first reset — [#1950](https://github.com/useautumn/autumn/pull/1950)
+      - Long-lived Stripe checkout sessions so links stay valid for longer — [#1976](https://github.com/useautumn/autumn/pull/1976)
+      - Consolidated customer header actions, entity-scoped views, and direct Stripe Connect links from the customer page — [#1964](https://github.com/useautumn/autumn/pull/1964)
+      - Separate billing intervals per price component — [#1961](https://github.com/useautumn/autumn/pull/1961)
+      - Discounts now support a max-redemptions cap — [#1939](https://github.com/useautumn/autumn/pull/1939)
+      - Past-due cancellations void the open invoice immediately — [#1948](https://github.com/useautumn/autumn/pull/1948)
+      - Option to ignore past-due state and preserve the subscription — [#1963](https://github.com/useautumn/autumn/pull/1963)
+      - Clearer error messages across the dashboard and API — [#1943](https://github.com/useautumn/autumn/pull/1943)
+      - Refreshed reward selectors and coupon update confirmation — [#1928](https://github.com/useautumn/autumn/pull/1928)
+      - Org logos now upload to S3 with reliable hosting — [#1225](https://github.com/useautumn/autumn/pull/1225)
+      - Custom buttons in the dashboard — [#1987](https://github.com/useautumn/autumn/pull/1987)
+      - AI credit systems are now treated as generic credit systems in the plan editor — [#1903](https://github.com/useautumn/autumn/pull/1903)
+    </Accordion>
+    <Accordion title="Bug fixes">
+      - Patch migrations no longer skip custom products — [#1953](https://github.com/useautumn/autumn/pull/1953)
+      - Multi-entity granted amounts now display correctly in balance sub-rows — [#1947](https://github.com/useautumn/autumn/pull/1947)
+      - Free-trial dedup is now scoped per entity so each entity gets its own trial — [#1956](https://github.com/useautumn/autumn/pull/1956)
+      - `billing.updated` webhook now fires on trial-to-paid conversion — [#1972](https://github.com/useautumn/autumn/pull/1972)
+      - Tax and discounts now render correctly in [attach preview](/api-reference/billing/previewAttach) — [#1944](https://github.com/useautumn/autumn/pull/1944)
+      - [`createSchedule`](/api-reference/billing/createSchedule) phases now snap to the cycle boundary — [#1975](https://github.com/useautumn/autumn/pull/1975)
+      - Checkout page no longer renders blank on certain React versions — [#1937](https://github.com/useautumn/autumn/pull/1937)
+      - Usage limits now respect the AI credit dimension — [#1912](https://github.com/useautumn/autumn/pull/1912)
+      - Onboarding fee no longer double-charges in edge cases — [#1946](https://github.com/useautumn/autumn/pull/1946)
+      - Environment selection and org switching in the dashboard — [#1952](https://github.com/useautumn/autumn/pull/1952), [#1970](https://github.com/useautumn/autumn/pull/1970)
+      - Copy entity ID and allow duplicate plans in the sync editor — [#1957](https://github.com/useautumn/autumn/pull/1957)
+      - Sync expire no longer fails on certain customer states — [#1967](https://github.com/useautumn/autumn/pull/1967)
+      - Batch operations are now idempotent — [#1981](https://github.com/useautumn/autumn/pull/1981)
+      - Slack admin and dashboard gate fixes — [#1986](https://github.com/useautumn/autumn/pull/1986), [#1984](https://github.com/useautumn/autumn/pull/1984)
+      - CLI auth and Claude OAuth flows — [#1926](https://github.com/useautumn/autumn/pull/1926), [#1925](https://github.com/useautumn/autumn/pull/1925)
+      - `atmn` CLI now exits with a non-zero code on interactive push/pull errors — [#1927](https://github.com/useautumn/autumn/pull/1927)
+      - Copy product API call no longer fires with missing required fields — [#1585](https://github.com/useautumn/autumn/pull/1585)
+      - Keyboard shortcut and scroll fixes in the dashboard — [#1915](https://github.com/useautumn/autumn/pull/1915), [#1942](https://github.com/useautumn/autumn/pull/1942)
+    </Accordion>
+  </AccordionGroup>
+</Update>
+
 <Update label="May 29th 2026">
   ## Autumn MCP server
 

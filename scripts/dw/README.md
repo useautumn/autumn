@@ -34,6 +34,7 @@ bun dw logs         # tail last 2000 lines without attaching
 bun dw reset        # nuke DB branch + containers → re-provision
 bun dw teardown     # full cleanup of this worktree
 bun dw teardown --all   # full cleanup of every agent worktree
+bun dw cleanup      # stop inactive or orphaned Docker compose stacks
 bun dw disable      # rename .env.local -> .env.local.disabled (fall back to canonical env)
 bun dw enable       # rename .env.local.disabled -> .env.local
 bun dw admin   # set the better-auth global role to 'admin' for every user in this worktree's DB
@@ -93,6 +94,16 @@ Shows all registered worktrees with ports and age.
 bun dw list
 #  1 | (canonical)              | server :8080 vite :3000 | 0d | /Users/.../main
 #  3 | dw-wt-3-a1b2c3d           | server :8280 vite :3200 | 2d | /Users/.../wt3
+```
+
+### `bun dw cleanup`
+Stops inactive or orphaned `autumn-wt-*` Docker Compose stacks while preserving
+the current worktree and stacks with a live dev port or tmux session. It does
+not delete Git worktrees, Neon branches, registry entries, images, or volumes.
+
+```sh
+bun dw cleanup --dry-run
+bun dw cleanup
 ```
 
 ### `bun dw reset`

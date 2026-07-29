@@ -15,6 +15,9 @@ import { Customers } from "./customers.js";
 import { Entities } from "./entities.js";
 import { Events } from "./events.js";
 import { Features } from "./features.js";
+import { Invoices } from "./invoices.js";
+import { Keys } from "./keys.js";
+import { Licenses } from "./licenses.js";
 import { Plans } from "./plans.js";
 import { Platform } from "./platform.js";
 import { Referrals } from "./referrals.js";
@@ -51,6 +54,16 @@ export class Autumn extends ClientSDK {
     return (this._events ??= new Events(this._options));
   }
 
+  private _invoices?: Invoices;
+  get invoices(): Invoices {
+    return (this._invoices ??= new Invoices(this._options));
+  }
+
+  private _licenses?: Licenses;
+  get licenses(): Licenses {
+    return (this._licenses ??= new Licenses(this._options));
+  }
+
   private _entities?: Entities;
   get entities(): Entities {
     return (this._entities ??= new Entities(this._options));
@@ -69,6 +82,11 @@ export class Autumn extends ClientSDK {
   private _platform?: Platform;
   get platform(): Platform {
     return (this._platform ??= new Platform(this._options));
+  }
+
+  private _keys?: Keys;
+  get keys(): Keys {
+    return (this._keys ??= new Keys(this._options));
   }
 
   /**
@@ -139,7 +157,9 @@ export class Autumn extends ClientSDK {
    * @param eventName - Event name to track usage for. Use instead of feature_id when multiple features should be tracked from a single event. (optional)
    * @param value - The amount of usage to record. Defaults to 1. Use negative values to credit balance (e.g., when removing a seat). (optional)
    * @param properties - Additional properties to attach to this usage event. (optional)
-   * @param async - If true, enqueue the event for asynchronous processing and return 202 immediately. The response will not include balance information. (optional)
+   * @param timestamp - Unix timestamp in milliseconds to use for the usage event. Defaults to the current time. (optional)
+   * @param overageBehavior - How to handle usage that exceeds the available balance. "cap" (default) deducts only what fits, stopping at zero. "overflow" deducts the full value: the balance can go negative and usage limits do not clamp the deduction, though spend limits still apply. (optional)
+   * @param async - If true, enqueue the event for asynchronous processing and return 204 immediately. The response will not include balance information. (optional)
    *
    * @returns The usage value recorded, with either a single updated balance or a map of updated balances. If Autumn is experiencing degraded service from a downstream provider, the API may return 202 after accepting the event for replay so it can be tracked as soon as the service is restored.
    */
@@ -175,7 +195,7 @@ export class Autumn extends ClientSDK {
    * @param customerId - The ID of the customer.
    * @param entityId - The ID of the entity for entity-scoped balances. (optional)
    * @param featureId - The ID of the AI credit system feature. Auto-detected from the customer's entitlements if omitted — only required when a customer has multiple AI credit systems. (optional)
-   * @param modelId - The AI model as '<provider>/<model>' (e.g. 'anthropic/claude-opus-4-8', 'openrouter/openai/gpt-4o'). The provider is the first path segment and must match a provider + model key in models.dev.
+   * @param modelId - The AI model as '[provider]/[model]' (e.g. 'anthropic/claude-opus-4-8', 'openrouter/openai/gpt-4o'). The provider is the first path segment and must match a provider + model key in models.dev.
    * @param inputTokens - Number of non-cached text input tokens consumed. Exclusive of cache and audio token pools.
    * @param outputTokens - Number of text output tokens consumed. Exclusive of the reasoning and audio output pools.
    * @param cacheReadTokens - Number of cached input tokens read. (optional)
@@ -184,6 +204,9 @@ export class Autumn extends ClientSDK {
    * @param audioOutputTokens - Number of audio output tokens generated. (optional)
    * @param reasoningTokens - Number of reasoning tokens generated. (optional)
    * @param properties - Additional properties to attach to this usage event. (optional)
+   * @param timestamp - Unix timestamp in milliseconds to use for the usage event. Defaults to the current time. (optional)
+   * @param overageBehavior - How to handle usage that exceeds the available balance. "cap" (default) deducts only what fits, stopping at zero. "overflow" deducts the full value: the balance can go negative and usage limits do not clamp the deduction, though spend limits still apply. (optional)
+   * @param async - If true, enqueue the event for asynchronous processing and return 204 immediately. The response will not include balance information. (optional)
    *
    * @returns The dollar value recorded and the updated AI credit system balance. If Autumn is experiencing degraded service from a downstream provider, the API may return 202 after accepting the token usage event for replay so it can be tracked as soon as the service is restored.
    */

@@ -10,6 +10,7 @@ import { computeCustomPlanNewCustomerProduct } from "@/internal/billing/v2/actio
 import { buildAutumnLineItems } from "@/internal/billing/v2/compute/computeAutumnUtils/buildAutumnLineItems";
 import { computePatchCustomerProductPlan } from "@/internal/billing/v2/compute/computePatchPlan";
 import { computeSchedulePhaseReplacements } from "@/internal/billing/v2/compute/computeSchedulePhaseReplacements";
+import { computeCustomerLicenseTransitions } from "@/internal/billing/v2/compute/customerLicenseTransitions/computeCustomerLicenseTransitions";
 import { applyOneOffPrepaidCarryOvers } from "@/internal/billing/v2/utils/handleOneOffPrepaidCarryOvers/applyOneOffPrepaidCarryOvers";
 
 export const computeCustomPlan = async ({
@@ -61,15 +62,31 @@ export const computeCustomPlan = async ({
 	const isUpdatingScheduledProduct =
 		customerProduct.status === CusProductStatus.Scheduled;
 
-	const { allLineItems } = buildAutumnLineItems({
-		ctx,
-		newCustomerProducts: [newFullCustomerProduct],
-		deletedCustomerProduct: customerProduct,
-		billingContext: updateSubscriptionContext,
+	// Expire+insert: the replanted pool adopts the outgoing link + counters,
+	// so seats never strand. Scheduled swaps transition at activation.
+	const customerLicenseTransitions = isUpdatingScheduledProduct
+		? []
+		: computeCustomerLicenseTransitions({
+				outgoingCustomerProducts: [customerProduct],
+				incomingCustomerProducts: [newFullCustomerProduct],
+				customerLicenseBillingContext:
+					updateSubscriptionContext.customerLicenseBillingContext,
+			});
 
-		includeArrearLineItems:
-			updateSubscriptionContext.chargeExistingOverages === true,
-	});
+	// A scheduled cusProduct hasn't started billing yet, so there's nothing to
+	// prorate — its future phase item swap is applied wholesale via
+	// schedulePhaseCustomerProductReplacements, not an immediate invoice line.
+	const { allLineItems } = isUpdatingScheduledProduct
+		? { allLineItems: [] }
+		: buildAutumnLineItems({
+				ctx,
+				newCustomerProducts: [newFullCustomerProduct],
+				deletedCustomerProduct: customerProduct,
+				billingContext: updateSubscriptionContext,
+
+				includeArrearLineItems:
+					updateSubscriptionContext.chargeExistingOverages === true,
+			});
 
 	// If customer product is canceling, compute the scheduled product to delete
 	const deleteCustomerProduct = computeDeleteCustomerProduct({
@@ -101,6 +118,8 @@ export const computeCustomPlan = async ({
 			...oneOffPrepaidCarryOvers.entitlements,
 		],
 		customFreeTrial: trialContext?.customFreeTrial,
+		insertPlanLicenses: updateSubscriptionContext.insertPlanLicenses,
+		customerLicenseTransitions,
 		lineItems: allLineItems,
 		insertCustomerEntitlements: oneOffPrepaidCarryOvers.customerEntitlements,
 	} satisfies AutumnBillingPlan;

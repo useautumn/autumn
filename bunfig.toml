@@ -23,4 +23,5 @@ minimumReleaseAgeExcludes = [
 	"@ai-sdk/provider-utils",
 	"@ai-sdk/gateway",
 	"@vercel/sandbox",
+	"drizzle-orm",
 ]

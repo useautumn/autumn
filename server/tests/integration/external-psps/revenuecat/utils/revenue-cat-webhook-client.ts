@@ -27,6 +27,13 @@ interface ExpirationEvent extends BaseWebhookEvent {
 	expiration_at_ms?: number;
 }
 
+/** Fixtures the server-side RC read client serves in mock mode (via testOptions). */
+export interface RevenueCatMockFixtures {
+	subscriptions?: unknown[];
+	purchases?: unknown[];
+	products?: unknown[];
+}
+
 interface RevenueCatWebhookClientConfig {
 	orgId: string;
 	env: AppEnv;
@@ -47,7 +54,7 @@ export class RevenueCatWebhookClient {
 		orgId,
 		env,
 		webhookSecret,
-		baseUrl = "http://localhost:8080",
+		baseUrl = process.env.AUTUMN_TEST_BASE_URL || "http://localhost:8080",
 	}: RevenueCatWebhookClientConfig) {
 		this.orgId = orgId;
 		this.env = env;
@@ -62,22 +69,45 @@ export class RevenueCatWebhookClient {
 	private async sendEvent({
 		type,
 		event,
+		mock,
+		subscriberAttributes,
 	}: {
 		type: RevenueCatEventType;
 		event: Record<string, unknown>;
+		mock?: RevenueCatMockFixtures;
+		subscriberAttributes?: Record<string, string>;
 	}): Promise<{ response: Response; data: unknown }> {
+		const headers: Record<string, string> = {
+			"Content-Type": "application/json",
+			Authorization: this.webhookSecret,
+		};
+
+		// Mirror the RC webhook shape: { [key]: { updated_at_ms, value } }.
+		const subscriber_attributes = subscriberAttributes
+			? Object.fromEntries(
+					Object.entries(subscriberAttributes).map(([key, value]) => [
+						key,
+						{ updated_at_ms: Date.now(), value },
+					]),
+				)
+			: undefined;
+
+		// Server-side RC read client is served from these fixtures via testOptions.
+		if (mock) {
+			headers["x-mock-revenuecat"] = "true";
+			headers["x-mock-revenuecat-fixtures"] = JSON.stringify(mock);
+		}
+
 		const response = await fetch(this.webhookUrl, {
 			method: "POST",
 			body: JSON.stringify({
 				event: {
 					type,
 					...event,
+					...(subscriber_attributes ? { subscriber_attributes } : {}),
 				},
 			}),
-			headers: {
-				"Content-Type": "application/json",
-				Authorization: this.webhookSecret,
-			},
+			headers,
 		});
 
 		const data = await response.json();
@@ -96,6 +126,8 @@ export class RevenueCatWebhookClient {
 		price,
 		currency,
 		purchasedAtMs,
+		mock,
+		subscriberAttributes,
 	}: {
 		productId: string;
 		appUserId: string;
@@ -105,6 +137,8 @@ export class RevenueCatWebhookClient {
 		price?: number | null;
 		currency?: string;
 		purchasedAtMs?: number;
+		mock?: RevenueCatMockFixtures;
+		subscriberAttributes?: Record<string, string>;
 	}) {
 		return this.sendEvent({
 			type: "INITIAL_PURCHASE",
@@ -120,6 +154,8 @@ export class RevenueCatWebhookClient {
 				currency,
 				purchased_at_ms: purchasedAtMs,
 			},
+			mock,
+			subscriberAttributes,
 		});
 	}
 
@@ -135,6 +171,7 @@ export class RevenueCatWebhookClient {
 		price,
 		currency,
 		purchasedAtMs,
+		subscriberAttributes,
 	}: {
 		productId: string;
 		appUserId: string;
@@ -144,6 +181,7 @@ export class RevenueCatWebhookClient {
 		price?: number | null;
 		currency?: string;
 		purchasedAtMs?: number;
+		subscriberAttributes?: Record<string, string>;
 	}) {
 		return this.sendEvent({
 			type: "RENEWAL",
@@ -159,6 +197,7 @@ export class RevenueCatWebhookClient {
 				currency,
 				purchased_at_ms: purchasedAtMs,
 			},
+			subscriberAttributes,
 		});
 	}
 
@@ -266,6 +305,7 @@ export class RevenueCatWebhookClient {
 		price,
 		currency,
 		purchasedAtMs,
+		mock,
 	}: {
 		productId: string;
 		appUserId: string;
@@ -275,6 +315,7 @@ export class RevenueCatWebhookClient {
 		price?: number | null;
 		currency?: string;
 		purchasedAtMs?: number;
+		mock?: RevenueCatMockFixtures;
 	}) {
 		return this.sendEvent({
 			type: "NON_RENEWING_PURCHASE",
@@ -290,6 +331,7 @@ export class RevenueCatWebhookClient {
 				currency,
 				purchased_at_ms: purchasedAtMs,
 			},
+			mock,
 		});
 	}
 

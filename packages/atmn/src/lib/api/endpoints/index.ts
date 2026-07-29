@@ -1,4 +1,11 @@
 export {
+	previewUpdateCatalog,
+	type CatalogPreviewUpdateResponse,
+	type CatalogUpdateParams,
+	type CatalogUpdateResponse,
+	updateCatalog,
+} from "./catalog.js";
+export {
 	type AggregateBinSize,
 	type AggregateFeatureTotal,
 	type AggregateRange,

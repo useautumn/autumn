@@ -1,4 +1,4 @@
-import { sql, type InferInsertModel, type InferSelectModel } from "drizzle-orm";
+import { type InferInsertModel, type InferSelectModel, sql } from "drizzle-orm";
 import {
 	boolean,
 	foreignKey,
@@ -7,6 +7,7 @@ import {
 	numeric,
 	pgTable,
 	text,
+	uniqueIndex,
 } from "drizzle-orm/pg-core";
 import { collatePgColumn } from "../../db/utils.js";
 import { customers } from "../cusModels/cusTable.js";
@@ -52,6 +53,12 @@ export const customerProducts = pgTable(
 		quantity: numeric({ mode: "number" }).default(1),
 
 		is_custom: boolean("is_custom").default(false).notNull(),
+		// Anchors the seat to its pool's stable link identity — successor pool
+		// rows copy the link, so plan transitions never touch seats.
+		customer_license_link_id: text("customer_license_link_id"),
+		// When the seat was released back to its pool (entity unlinked);
+		// unused-seat reuse picks the longest-released first.
+		released_at: numeric({ mode: "number" }),
 
 		// Optional...
 		customer_id: text("customer_id"),
@@ -98,6 +105,16 @@ export const customerProducts = pgTable(
 			table.internal_customer_id,
 			table.status,
 		),
+		index("idx_customer_products_customer_status_created_at")
+			.on(
+				table.internal_customer_id,
+				table.status,
+				sql`${table.created_at} DESC`,
+			)
+			.concurrently(),
+		index("idx_customer_products_product_status")
+			.on(table.internal_product_id, table.status)
+			.concurrently(),
 		index("idx_customer_products_on_internal_entity_id").on(
 			table.internal_entity_id,
 		),
@@ -115,9 +132,57 @@ export const customerProducts = pgTable(
 		index("idx_customer_products_stripe_checkout_session_id").on(
 			table.stripe_checkout_session_id,
 		),
+		index("idx_customer_products_customer_license")
+			.on(table.customer_license_link_id)
+			.where(sql`${table.customer_license_link_id} IS NOT NULL`)
+			.concurrently(),
+		// Top-N walk for "earliest `included` seats per customer license".
+		index("idx_customer_products_license_seat_order")
+			.on(table.customer_license_link_id, table.created_at, table.id)
+			.where(sql`${table.customer_license_link_id} IS NOT NULL`)
+			.concurrently(),
+		// Seat-sync cron keyset walk: all seats ordered by id.
+		index("idx_customer_products_seat_sync")
+			.on(table.id)
+			.where(sql`${table.customer_license_link_id} IS NOT NULL`)
+			.concurrently(),
+		// Released seats waiting for reuse, longest-released first.
+		index("idx_customer_products_unused_seats")
+			.on(table.customer_license_link_id, table.released_at)
+			.where(
+				sql`${table.customer_license_link_id} IS NOT NULL AND ${table.internal_entity_id} IS NULL`,
+			)
+			.concurrently(),
+		// One active seat per (pool link, entity); the link survives successor
+		// pool rows, so the guard holds across plan transitions.
+		uniqueIndex("unique_active_pool_assignment")
+			.on(table.customer_license_link_id, table.internal_entity_id)
+			.where(
+				sql`${table.customer_license_link_id} IS NOT NULL AND ${table.internal_entity_id} IS NOT NULL AND ${table.status} IN ('active', 'past_due')`,
+			)
+			.concurrently(),
+		index("idx_customer_products_free_trial_id")
+			.on(table.free_trial_id)
+			.where(sql`${table.free_trial_id} IS NOT NULL`)
+			.concurrently(),
 		index("idx_customer_products_revenuecat_processor")
 			.on(table.internal_customer_id)
 			.where(sql`(${table.processor} ->> 'type') = 'revenuecat'`),
+		index("idx_customer_products_ended_at")
+			.on(table.ended_at)
+			.where(
+				sql`${table.status} IN ('active', 'past_due') AND ${table.ended_at} IS NOT NULL`,
+			)
+			.concurrently(),
+		index("idx_customer_products_trial_ends_at")
+			.on(table.trial_ends_at)
+			.where(
+				sql`${table.status} IN ('active', 'past_due') AND ${table.trial_ends_at} IS NOT NULL`,
+			)
+			.concurrently(),
+		index("idx_customer_products_product_id")
+			.on(table.product_id)
+			.concurrently(),
 	],
 );
 

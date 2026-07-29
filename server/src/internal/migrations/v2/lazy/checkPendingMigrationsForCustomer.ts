@@ -1,7 +1,12 @@
 import type { FullCustomer, MigrationItemRunData } from "@autumn/shared";
 import { customerFilterMatchesFullCustomer } from "@autumn/shared/api/customers/utils/match/index.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
-import { runMigrationCustomerTask } from "@/trigger/migrations/runMigrationCustomerTask.js";
+import { shouldRunMigrationInline } from "@/internal/migrations/v2/utils/shouldRunMigrationInline.js";
+import { MIGRATION_LAZY_TASK_PRIORITY_SECONDS } from "@/trigger/migrations/migrationTaskQueue.js";
+import {
+	executeRunMigrationCustomer,
+	runMigrationCustomerTask,
+} from "@/trigger/migrations/runMigrationCustomerTask.js";
 
 /**
  * For each pending lazy migration on `ctx.org`, decide whether this customer
@@ -66,18 +71,34 @@ export const checkPendingMigrationsForCustomer = async ({
 			continue;
 		}
 
-		await runMigrationCustomerTask.trigger(
-			{
-				orgId: ctx.org.id,
-				env: ctx.env,
-				migrationInternalId: migration.internal_id,
-				migrationRunId,
-				customerInternalId: fullCustomer.internal_id,
-				customerId: fullCustomer.id ?? null,
-			},
-			{
-				concurrencyKey: `${migration.internal_id}:${fullCustomer.internal_id}`,
-			},
-		);
+		const payload = {
+			orgId: ctx.org.id,
+			env: ctx.env,
+			migrationInternalId: migration.internal_id,
+			migrationRunId,
+			customerInternalId: fullCustomer.internal_id,
+			customerId: fullCustomer.id ?? null,
+		};
+
+		if (shouldRunMigrationInline()) {
+			const inlineCtx = { ...ctx, insideTriggerTask: true };
+			void executeRunMigrationCustomer({
+				ctx: inlineCtx,
+				logger: ctx.logger,
+				payload,
+			}).catch((error) => {
+				ctx.logger.error("lazy-migration: inline execution failed", {
+					data: {
+						migrationRunId,
+						error: error instanceof Error ? error.message : String(error),
+					},
+				});
+			});
+			continue;
+		}
+
+		await runMigrationCustomerTask.trigger(payload, {
+			priority: MIGRATION_LAZY_TASK_PRIORITY_SECONDS,
+		});
 	}
 };

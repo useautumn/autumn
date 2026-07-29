@@ -74,14 +74,49 @@ export type CreateScheduleRedirectMode = ClosedEnum<
 /**
  * Whether to prorate the immediate phase. 'none' skips proration charges and credits.
  */
-export const BillingBehavior = {
+export const CreateScheduleBillingBehavior = {
   ProrateImmediately: "prorate_immediately",
   None: "none",
 } as const;
 /**
  * Whether to prorate the immediate phase. 'none' skips proration charges and credits.
  */
-export type BillingBehavior = ClosedEnum<typeof BillingBehavior>;
+export type CreateScheduleBillingBehavior = ClosedEnum<
+  typeof CreateScheduleBillingBehavior
+>;
+
+/**
+ * When this phase should start, in epoch milliseconds, or 'now' for the immediate phase.
+ */
+export type StartsAt2 = number | string;
+
+/**
+ * The duration unit to offset this phase from the prior phase.
+ */
+export const CreateScheduleDurationType2 = {
+  Month: "month",
+  Year: "year",
+} as const;
+/**
+ * The duration unit to offset this phase from the prior phase.
+ */
+export type CreateScheduleDurationType2 = ClosedEnum<
+  typeof CreateScheduleDurationType2
+>;
+
+/**
+ * Relative start offset from the previous resolved schedule phase.
+ */
+export type StartingAfter2 = {
+  /**
+   * The duration unit to offset this phase from the prior phase.
+   */
+  durationType: CreateScheduleDurationType2;
+  /**
+   * How many duration_type periods after the prior phase to start.
+   */
+  durationCount: number;
+};
 
 /**
  * Quantity configuration for a prepaid feature.
@@ -119,6 +154,17 @@ export type CreateSchedulePriceInterval2 = ClosedEnum<
   typeof CreateSchedulePriceInterval2
 >;
 
+export type CreateScheduleAdditionalCurrency2 = {
+  /**
+   * Three-letter Stripe-supported currency code (e.g. 'eur', 'gbp').
+   */
+  currency: string;
+  /**
+   * Price amount in this currency. Set explicitly per currency, not converted from the base amount.
+   */
+  amount: number;
+};
+
 /**
  * Base price configuration for a plan.
  */
@@ -135,6 +181,10 @@ export type CreateScheduleBasePrice2 = {
    * Number of intervals per billing cycle. Defaults to 1.
    */
   intervalCount?: number | undefined;
+  /**
+   * Base price amounts in additional currencies. The base 'amount' is in the org's default currency.
+   */
+  additionalCurrencies?: Array<CreateScheduleAdditionalCurrency2> | undefined;
 };
 
 /**
@@ -172,10 +222,16 @@ export type CreateScheduleItemReset2 = {
   intervalCount?: number | undefined;
 };
 
+export type CreateScheduleItemAdditionalCurrency2 = {
+  currency?: any | undefined;
+  amount?: any | undefined;
+};
+
 export type CreateScheduleItemTier2 = {
   to?: any | undefined;
   amount?: any | undefined;
   flatAmount?: any | undefined;
+  additionalCurrencies?: any | undefined;
 };
 
 export const CreateScheduleItemTierBehavior2 = {
@@ -226,6 +282,12 @@ export type CreateScheduleItemPrice2 = {
    * Price per billing_units after included usage. Either 'amount' or 'tiers' is required.
    */
   amount?: number | undefined;
+  /**
+   * Amounts in additional currencies for this flat price. The base 'amount' is in the org's default currency. Only valid with 'amount', not 'tiers'.
+   */
+  additionalCurrencies?:
+    | Array<CreateScheduleItemAdditionalCurrency2>
+    | undefined;
   /**
    * Tiered pricing.  Either 'amount' or 'tiers' is required.
    */
@@ -405,10 +467,16 @@ export type CreateScheduleAddItemReset2 = {
   intervalCount?: number | undefined;
 };
 
+export type CreateScheduleAddItemAdditionalCurrency2 = {
+  currency?: any | undefined;
+  amount?: any | undefined;
+};
+
 export type CreateScheduleAddItemTier2 = {
   to?: any | undefined;
   amount?: any | undefined;
   flatAmount?: any | undefined;
+  additionalCurrencies?: any | undefined;
 };
 
 export const CreateScheduleAddItemTierBehavior2 = {
@@ -459,6 +527,12 @@ export type CreateScheduleAddItemPrice2 = {
    * Price per billing_units after included usage. Either 'amount' or 'tiers' is required.
    */
   amount?: number | undefined;
+  /**
+   * Amounts in additional currencies for this flat price. The base 'amount' is in the org's default currency. Only valid with 'amount', not 'tiers'.
+   */
+  additionalCurrencies?:
+    | Array<CreateScheduleAddItemAdditionalCurrency2>
+    | undefined;
   /**
    * Tiered pricing.  Either 'amount' or 'tiers' is required.
    */
@@ -677,6 +751,230 @@ export type CreateSchedulePlanItemFilter2 = {
 };
 
 /**
+ * The time interval for the purchase limit window.
+ */
+export const CreateSchedulePurchaseLimitInterval2 = {
+  Hour: "hour",
+  Day: "day",
+  Week: "week",
+  Month: "month",
+} as const;
+/**
+ * The time interval for the purchase limit window.
+ */
+export type CreateSchedulePurchaseLimitInterval2 = ClosedEnum<
+  typeof CreateSchedulePurchaseLimitInterval2
+>;
+
+/**
+ * Optional rate limit to cap how often auto top-ups occur. Pass count to set the current window's consumed top-ups.
+ */
+export type CreateSchedulePurchaseLimit2 = {
+  /**
+   * The time interval for the purchase limit window.
+   */
+  interval: CreateSchedulePurchaseLimitInterval2;
+  /**
+   * Number of intervals in the purchase limit window.
+   */
+  intervalCount?: number | undefined;
+  /**
+   * Maximum number of auto top-ups allowed within the interval.
+   */
+  limit: number;
+  /**
+   * Set the current window's consumed auto top-up count. Omit to leave runtime state unchanged.
+   */
+  count?: number | undefined;
+};
+
+export type CreateScheduleAutoTopup2 = {
+  /**
+   * The ID of the feature (credit balance) to auto top-up.
+   */
+  featureId: string;
+  /**
+   * Whether auto top-up is enabled.
+   */
+  enabled?: boolean | undefined;
+  /**
+   * When the balance drops below this threshold, an auto top-up will be purchased.
+   */
+  threshold: number;
+  /**
+   * Amount of credits to add per auto top-up.
+   */
+  quantity: number;
+  /**
+   * Optional rate limit to cap how often auto top-ups occur. Pass count to set the current window's consumed top-ups.
+   */
+  purchaseLimit?: CreateSchedulePurchaseLimit2 | undefined;
+  /**
+   * When true, auto top-up creates a send_invoice invoice instead of auto-charging.
+   */
+  invoiceMode?: boolean | undefined;
+};
+
+/**
+ * How overage_limit is interpreted: an absolute overage cap (default) or a percentage of the main-plan allowance.
+ */
+export const CreateScheduleLimitType2 = {
+  Absolute: "absolute",
+  UsagePercentage: "usage_percentage",
+} as const;
+/**
+ * How overage_limit is interpreted: an absolute overage cap (default) or a percentage of the main-plan allowance.
+ */
+export type CreateScheduleLimitType2 = ClosedEnum<
+  typeof CreateScheduleLimitType2
+>;
+
+export type CreateScheduleSpendLimit2 = {
+  /**
+   * Optional feature ID this spend limit applies to.
+   */
+  featureId?: string | undefined;
+  /**
+   * Whether the overage spend limit is enabled.
+   */
+  enabled?: boolean | undefined;
+  /**
+   * How overage_limit is interpreted: an absolute overage cap (default) or a percentage of the main-plan allowance.
+   */
+  limitType?: CreateScheduleLimitType2 | undefined;
+  /**
+   * Overage cap for the feature: absolute units, or a percent (e.g. 120) when limit_type is usage_percentage.
+   */
+  overageLimit?: number | undefined;
+  /**
+   * When true, overage for this feature is not posted to Stripe. Usage tracking and balance resets still behave normally.
+   */
+  skipOverageBilling?: boolean | undefined;
+};
+
+/**
+ * Interval for the cap, aligned to the customer's billing cycle.
+ */
+export const CreateScheduleUsageLimitInterval2 = {
+  Day: "day",
+  Week: "week",
+  Month: "month",
+  Year: "year",
+} as const;
+/**
+ * Interval for the cap, aligned to the customer's billing cycle.
+ */
+export type CreateScheduleUsageLimitInterval2 = ClosedEnum<
+  typeof CreateScheduleUsageLimitInterval2
+>;
+
+/**
+ * When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature.
+ */
+export type CreateScheduleFilter2 = {
+  properties: { [k: string]: any };
+};
+
+export type CreateScheduleUsageLimit2 = {
+  /**
+   * The feature this usage limit applies to.
+   */
+  featureId: string;
+  /**
+   * Whether this usage limit is enabled.
+   */
+  enabled?: boolean | undefined;
+  /**
+   * Maximum units allowed per interval.
+   */
+  limit: number;
+  /**
+   * Interval for the cap, aligned to the customer's billing cycle.
+   */
+  interval: CreateScheduleUsageLimitInterval2;
+  /**
+   * When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature.
+   */
+  filter?: CreateScheduleFilter2 | undefined;
+};
+
+/**
+ * Whether the threshold is an absolute count or a percentage of the usage allowance or remaining balance.
+ */
+export const CreateScheduleThresholdType2 = {
+  Usage: "usage",
+  UsagePercentage: "usage_percentage",
+  Remaining: "remaining",
+  RemainingPercentage: "remaining_percentage",
+} as const;
+/**
+ * Whether the threshold is an absolute count or a percentage of the usage allowance or remaining balance.
+ */
+export type CreateScheduleThresholdType2 = ClosedEnum<
+  typeof CreateScheduleThresholdType2
+>;
+
+export type CreateScheduleUsageAlert2 = {
+  /**
+   * The feature ID this alert applies to.
+   */
+  featureId?: string | undefined;
+  /**
+   * Whether this usage alert is enabled.
+   */
+  enabled?: boolean | undefined;
+  /**
+   * The threshold value that triggers the alert. For usage or remaining, this is an absolute count. For usage_percentage or remaining_percentage, this is a percentage (0-100).
+   */
+  threshold: number;
+  /**
+   * Whether the threshold is an absolute count or a percentage of the usage allowance or remaining balance.
+   */
+  thresholdType: CreateScheduleThresholdType2;
+  /**
+   * Optional user-defined label to distinguish multiple alerts on the same feature.
+   */
+  name?: string | undefined;
+};
+
+export type CreateScheduleOverageAllowed2 = {
+  /**
+   * The feature ID this overage allowed control applies to.
+   */
+  featureId: string;
+  /**
+   * Whether overage is allowed for this feature.
+   */
+  enabled?: boolean | undefined;
+};
+
+/**
+ * Override the plan's billing controls (auto top-ups, spend limits, usage limits, usage alerts, overage allowed) for this customer.
+ */
+export type CreateScheduleBillingControls2 = {
+  /**
+   * List of auto top-up configurations per feature.
+   */
+  autoTopups?: Array<CreateScheduleAutoTopup2> | undefined;
+  /**
+   * List of overage spend limits per feature (caps overage spend).
+   */
+  spendLimits?: Array<CreateScheduleSpendLimit2> | undefined;
+  /**
+   * List of hard usage caps per feature (max units per interval).
+   */
+  usageLimits?: Array<CreateScheduleUsageLimit2> | undefined;
+  /**
+   * List of usage alert configurations per feature.
+   */
+  usageAlerts?: Array<CreateScheduleUsageAlert2> | undefined;
+  /**
+   * List of overage allowed controls per feature. When enabled, usage can exceed balance.
+   */
+  overageAllowed?: Array<CreateScheduleOverageAllowed2> | undefined;
+};
+
+/**
  * Customize the plan to schedule. Can override price, replace items, or patch items with add_items and remove_items.
  */
 export type CreateScheduleCustomize2 = {
@@ -696,6 +994,10 @@ export type CreateScheduleCustomize2 = {
    * Filters selecting items to remove from the plan.
    */
   removeItems?: Array<CreateSchedulePlanItemFilter2> | undefined;
+  /**
+   * Override the plan's billing controls (auto top-ups, spend limits, usage limits, usage alerts, overage allowed) for this customer.
+   */
+  billingControls?: CreateScheduleBillingControls2 | undefined;
 };
 
 export type CreateSchedulePlan2 = {
@@ -721,18 +1023,37 @@ export type CreateSchedulePlan2 = {
   subscriptionId?: string | undefined;
 };
 
-export type PhaseRequest2 = {
+/**
+ * Pass 'phase_start' to reset the Stripe billing cycle anchor when this phase starts.
+ */
+export const BillingCycleAnchor2 = {
+  PhaseStart: "phase_start",
+} as const;
+/**
+ * Pass 'phase_start' to reset the Stripe billing cycle anchor when this phase starts.
+ */
+export type BillingCycleAnchor2 = ClosedEnum<typeof BillingCycleAnchor2>;
+
+export type PhaseStart = {
   /**
-   * When this phase should start, in epoch milliseconds.
+   * When this phase should start, in epoch milliseconds, or 'now' for the immediate phase.
    */
-  startsAt: number;
+  startsAt?: number | string | undefined;
+  /**
+   * Relative start offset from the previous resolved schedule phase.
+   */
+  startingAfter?: StartingAfter2 | undefined;
   /**
    * Plans to materialize for this phase.
    */
   plans: Array<CreateSchedulePlan2>;
+  /**
+   * Pass 'phase_start' to reset the Stripe billing cycle anchor when this phase starts.
+   */
+  billingCycleAnchor?: BillingCycleAnchor2 | undefined;
 };
 
-export type Phase = PhaseRequest2;
+export type PhaseStartUnion = PhaseStart;
 
 export type CreateScheduleParams = {
   /**
@@ -766,7 +1087,7 @@ export type CreateScheduleParams = {
   /**
    * Whether to prorate the immediate phase. 'none' skips proration charges and credits.
    */
-  billingBehavior?: BillingBehavior | undefined;
+  billingBehavior?: CreateScheduleBillingBehavior | undefined;
   /**
    * Pass 'now' to reset the billing cycle anchor of the immediate phase to the current time.
    */
@@ -778,7 +1099,7 @@ export type CreateScheduleParams = {
   /**
    * Ordered phase definitions for the schedule.
    */
-  phases: Array<PhaseRequest2>;
+  phases: Array<PhaseStart>;
 };
 
 /**
@@ -841,6 +1162,7 @@ export const CreateScheduleCode = {
   ThreedsRequired: "3ds_required",
   PaymentMethodRequired: "payment_method_required",
   PaymentFailed: "payment_failed",
+  PaymentProcessing: "payment_processing",
 } as const;
 /**
  * The type of action required to complete the payment.
@@ -970,9 +1292,54 @@ export const CreateScheduleRedirectMode$outboundSchema: z.ZodMiniEnum<
 > = z.enum(CreateScheduleRedirectMode);
 
 /** @internal */
-export const BillingBehavior$outboundSchema: z.ZodMiniEnum<
-  typeof BillingBehavior
-> = z.enum(BillingBehavior);
+export const CreateScheduleBillingBehavior$outboundSchema: z.ZodMiniEnum<
+  typeof CreateScheduleBillingBehavior
+> = z.enum(CreateScheduleBillingBehavior);
+
+/** @internal */
+export type StartsAt2$Outbound = number | string;
+
+/** @internal */
+export const StartsAt2$outboundSchema: z.ZodMiniType<
+  StartsAt2$Outbound,
+  StartsAt2
+> = smartUnion([z.number(), z.string()]);
+
+export function startsAt2ToJSON(startsAt2: StartsAt2): string {
+  return JSON.stringify(StartsAt2$outboundSchema.parse(startsAt2));
+}
+
+/** @internal */
+export const CreateScheduleDurationType2$outboundSchema: z.ZodMiniEnum<
+  typeof CreateScheduleDurationType2
+> = z.enum(CreateScheduleDurationType2);
+
+/** @internal */
+export type StartingAfter2$Outbound = {
+  duration_type: string;
+  duration_count: number;
+};
+
+/** @internal */
+export const StartingAfter2$outboundSchema: z.ZodMiniType<
+  StartingAfter2$Outbound,
+  StartingAfter2
+> = z.pipe(
+  z.object({
+    durationType: CreateScheduleDurationType2$outboundSchema,
+    durationCount: z.int(),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      durationType: "duration_type",
+      durationCount: "duration_count",
+    });
+  }),
+);
+
+export function startingAfter2ToJSON(startingAfter2: StartingAfter2): string {
+  return JSON.stringify(StartingAfter2$outboundSchema.parse(startingAfter2));
+}
 
 /** @internal */
 export type CreateScheduleFeatureQuantity2$Outbound = {
@@ -1014,10 +1381,38 @@ export const CreateSchedulePriceInterval2$outboundSchema: z.ZodMiniEnum<
 > = z.enum(CreateSchedulePriceInterval2);
 
 /** @internal */
+export type CreateScheduleAdditionalCurrency2$Outbound = {
+  currency: string;
+  amount: number;
+};
+
+/** @internal */
+export const CreateScheduleAdditionalCurrency2$outboundSchema: z.ZodMiniType<
+  CreateScheduleAdditionalCurrency2$Outbound,
+  CreateScheduleAdditionalCurrency2
+> = z.object({
+  currency: z.string(),
+  amount: z.number(),
+});
+
+export function createScheduleAdditionalCurrency2ToJSON(
+  createScheduleAdditionalCurrency2: CreateScheduleAdditionalCurrency2,
+): string {
+  return JSON.stringify(
+    CreateScheduleAdditionalCurrency2$outboundSchema.parse(
+      createScheduleAdditionalCurrency2,
+    ),
+  );
+}
+
+/** @internal */
 export type CreateScheduleBasePrice2$Outbound = {
   amount: number;
   interval: string;
   interval_count?: number | undefined;
+  additional_currencies?:
+    | Array<CreateScheduleAdditionalCurrency2$Outbound>
+    | undefined;
 };
 
 /** @internal */
@@ -1029,10 +1424,14 @@ export const CreateScheduleBasePrice2$outboundSchema: z.ZodMiniType<
     amount: z.number(),
     interval: CreateSchedulePriceInterval2$outboundSchema,
     intervalCount: z.optional(z.number()),
+    additionalCurrencies: z.optional(
+      z.array(z.lazy(() => CreateScheduleAdditionalCurrency2$outboundSchema)),
+    ),
   }),
   z.transform((v) => {
     return remap$(v, {
       intervalCount: "interval_count",
+      additionalCurrencies: "additional_currencies",
     });
   }),
 );
@@ -1081,10 +1480,37 @@ export function createScheduleItemReset2ToJSON(
 }
 
 /** @internal */
+export type CreateScheduleItemAdditionalCurrency2$Outbound = {
+  currency?: any | undefined;
+  amount?: any | undefined;
+};
+
+/** @internal */
+export const CreateScheduleItemAdditionalCurrency2$outboundSchema:
+  z.ZodMiniType<
+    CreateScheduleItemAdditionalCurrency2$Outbound,
+    CreateScheduleItemAdditionalCurrency2
+  > = z.object({
+    currency: z.optional(z.any()),
+    amount: z.optional(z.any()),
+  });
+
+export function createScheduleItemAdditionalCurrency2ToJSON(
+  createScheduleItemAdditionalCurrency2: CreateScheduleItemAdditionalCurrency2,
+): string {
+  return JSON.stringify(
+    CreateScheduleItemAdditionalCurrency2$outboundSchema.parse(
+      createScheduleItemAdditionalCurrency2,
+    ),
+  );
+}
+
+/** @internal */
 export type CreateScheduleItemTier2$Outbound = {
   to?: any | undefined;
   amount?: any | undefined;
   flat_amount?: any | undefined;
+  additional_currencies?: any | undefined;
 };
 
 /** @internal */
@@ -1096,10 +1522,12 @@ export const CreateScheduleItemTier2$outboundSchema: z.ZodMiniType<
     to: z.optional(z.any()),
     amount: z.optional(z.any()),
     flatAmount: z.optional(z.any()),
+    additionalCurrencies: z.optional(z.any()),
   }),
   z.transform((v) => {
     return remap$(v, {
       flatAmount: "flat_amount",
+      additionalCurrencies: "additional_currencies",
     });
   }),
 );
@@ -1130,6 +1558,9 @@ export const CreateScheduleItemBillingMethod2$outboundSchema: z.ZodMiniEnum<
 /** @internal */
 export type CreateScheduleItemPrice2$Outbound = {
   amount?: number | undefined;
+  additional_currencies?:
+    | Array<CreateScheduleItemAdditionalCurrency2$Outbound>
+    | undefined;
   tiers?: Array<CreateScheduleItemTier2$Outbound> | undefined;
   tier_behavior?: string | undefined;
   interval: string;
@@ -1146,6 +1577,11 @@ export const CreateScheduleItemPrice2$outboundSchema: z.ZodMiniType<
 > = z.pipe(
   z.object({
     amount: z.optional(z.number()),
+    additionalCurrencies: z.optional(
+      z.array(
+        z.lazy(() => CreateScheduleItemAdditionalCurrency2$outboundSchema),
+      ),
+    ),
     tiers: z.optional(
       z.array(z.lazy(() => CreateScheduleItemTier2$outboundSchema)),
     ),
@@ -1158,6 +1594,7 @@ export const CreateScheduleItemPrice2$outboundSchema: z.ZodMiniType<
   }),
   z.transform((v) => {
     return remap$(v, {
+      additionalCurrencies: "additional_currencies",
       tierBehavior: "tier_behavior",
       intervalCount: "interval_count",
       billingUnits: "billing_units",
@@ -1346,10 +1783,38 @@ export function createScheduleAddItemReset2ToJSON(
 }
 
 /** @internal */
+export type CreateScheduleAddItemAdditionalCurrency2$Outbound = {
+  currency?: any | undefined;
+  amount?: any | undefined;
+};
+
+/** @internal */
+export const CreateScheduleAddItemAdditionalCurrency2$outboundSchema:
+  z.ZodMiniType<
+    CreateScheduleAddItemAdditionalCurrency2$Outbound,
+    CreateScheduleAddItemAdditionalCurrency2
+  > = z.object({
+    currency: z.optional(z.any()),
+    amount: z.optional(z.any()),
+  });
+
+export function createScheduleAddItemAdditionalCurrency2ToJSON(
+  createScheduleAddItemAdditionalCurrency2:
+    CreateScheduleAddItemAdditionalCurrency2,
+): string {
+  return JSON.stringify(
+    CreateScheduleAddItemAdditionalCurrency2$outboundSchema.parse(
+      createScheduleAddItemAdditionalCurrency2,
+    ),
+  );
+}
+
+/** @internal */
 export type CreateScheduleAddItemTier2$Outbound = {
   to?: any | undefined;
   amount?: any | undefined;
   flat_amount?: any | undefined;
+  additional_currencies?: any | undefined;
 };
 
 /** @internal */
@@ -1361,10 +1826,12 @@ export const CreateScheduleAddItemTier2$outboundSchema: z.ZodMiniType<
     to: z.optional(z.any()),
     amount: z.optional(z.any()),
     flatAmount: z.optional(z.any()),
+    additionalCurrencies: z.optional(z.any()),
   }),
   z.transform((v) => {
     return remap$(v, {
       flatAmount: "flat_amount",
+      additionalCurrencies: "additional_currencies",
     });
   }),
 );
@@ -1395,6 +1862,9 @@ export const CreateScheduleAddItemBillingMethod2$outboundSchema: z.ZodMiniEnum<
 /** @internal */
 export type CreateScheduleAddItemPrice2$Outbound = {
   amount?: number | undefined;
+  additional_currencies?:
+    | Array<CreateScheduleAddItemAdditionalCurrency2$Outbound>
+    | undefined;
   tiers?: Array<CreateScheduleAddItemTier2$Outbound> | undefined;
   tier_behavior?: string | undefined;
   interval: string;
@@ -1411,9 +1881,12 @@ export const CreateScheduleAddItemPrice2$outboundSchema: z.ZodMiniType<
 > = z.pipe(
   z.object({
     amount: z.optional(z.number()),
-    tiers: z.optional(
-      z.array(z.lazy(() => CreateScheduleAddItemTier2$outboundSchema)),
-    ),
+    additionalCurrencies: z.optional(z.array(z.lazy(() =>
+      CreateScheduleAddItemAdditionalCurrency2$outboundSchema
+    ))),
+    tiers: z.optional(z.array(z.lazy(() =>
+      CreateScheduleAddItemTier2$outboundSchema
+    ))),
     tierBehavior: z.optional(CreateScheduleAddItemTierBehavior2$outboundSchema),
     interval: CreateScheduleAddItemPriceInterval2$outboundSchema,
     intervalCount: z._default(z.number(), 1),
@@ -1423,6 +1896,7 @@ export const CreateScheduleAddItemPrice2$outboundSchema: z.ZodMiniType<
   }),
   z.transform((v) => {
     return remap$(v, {
+      additionalCurrencies: "additional_currencies",
       tierBehavior: "tier_behavior",
       intervalCount: "interval_count",
       billingUnits: "billing_units",
@@ -1661,11 +2135,327 @@ export function createSchedulePlanItemFilter2ToJSON(
 }
 
 /** @internal */
+export const CreateSchedulePurchaseLimitInterval2$outboundSchema: z.ZodMiniEnum<
+  typeof CreateSchedulePurchaseLimitInterval2
+> = z.enum(CreateSchedulePurchaseLimitInterval2);
+
+/** @internal */
+export type CreateSchedulePurchaseLimit2$Outbound = {
+  interval: string;
+  interval_count: number;
+  limit: number;
+  count?: number | undefined;
+};
+
+/** @internal */
+export const CreateSchedulePurchaseLimit2$outboundSchema: z.ZodMiniType<
+  CreateSchedulePurchaseLimit2$Outbound,
+  CreateSchedulePurchaseLimit2
+> = z.pipe(
+  z.object({
+    interval: CreateSchedulePurchaseLimitInterval2$outboundSchema,
+    intervalCount: z._default(z.number(), 1),
+    limit: z.number(),
+    count: z.optional(z.number()),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      intervalCount: "interval_count",
+    });
+  }),
+);
+
+export function createSchedulePurchaseLimit2ToJSON(
+  createSchedulePurchaseLimit2: CreateSchedulePurchaseLimit2,
+): string {
+  return JSON.stringify(
+    CreateSchedulePurchaseLimit2$outboundSchema.parse(
+      createSchedulePurchaseLimit2,
+    ),
+  );
+}
+
+/** @internal */
+export type CreateScheduleAutoTopup2$Outbound = {
+  feature_id: string;
+  enabled: boolean;
+  threshold: number;
+  quantity: number;
+  purchase_limit?: CreateSchedulePurchaseLimit2$Outbound | undefined;
+  invoice_mode?: boolean | undefined;
+};
+
+/** @internal */
+export const CreateScheduleAutoTopup2$outboundSchema: z.ZodMiniType<
+  CreateScheduleAutoTopup2$Outbound,
+  CreateScheduleAutoTopup2
+> = z.pipe(
+  z.object({
+    featureId: z.string(),
+    enabled: z._default(z.boolean(), false),
+    threshold: z.number(),
+    quantity: z.number(),
+    purchaseLimit: z.optional(
+      z.lazy(() => CreateSchedulePurchaseLimit2$outboundSchema),
+    ),
+    invoiceMode: z.optional(z.boolean()),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      featureId: "feature_id",
+      purchaseLimit: "purchase_limit",
+      invoiceMode: "invoice_mode",
+    });
+  }),
+);
+
+export function createScheduleAutoTopup2ToJSON(
+  createScheduleAutoTopup2: CreateScheduleAutoTopup2,
+): string {
+  return JSON.stringify(
+    CreateScheduleAutoTopup2$outboundSchema.parse(createScheduleAutoTopup2),
+  );
+}
+
+/** @internal */
+export const CreateScheduleLimitType2$outboundSchema: z.ZodMiniEnum<
+  typeof CreateScheduleLimitType2
+> = z.enum(CreateScheduleLimitType2);
+
+/** @internal */
+export type CreateScheduleSpendLimit2$Outbound = {
+  feature_id?: string | undefined;
+  enabled: boolean;
+  limit_type?: string | undefined;
+  overage_limit?: number | undefined;
+  skip_overage_billing?: boolean | undefined;
+};
+
+/** @internal */
+export const CreateScheduleSpendLimit2$outboundSchema: z.ZodMiniType<
+  CreateScheduleSpendLimit2$Outbound,
+  CreateScheduleSpendLimit2
+> = z.pipe(
+  z.object({
+    featureId: z.optional(z.string()),
+    enabled: z._default(z.boolean(), false),
+    limitType: z.optional(CreateScheduleLimitType2$outboundSchema),
+    overageLimit: z.optional(z.number()),
+    skipOverageBilling: z.optional(z.boolean()),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      featureId: "feature_id",
+      limitType: "limit_type",
+      overageLimit: "overage_limit",
+      skipOverageBilling: "skip_overage_billing",
+    });
+  }),
+);
+
+export function createScheduleSpendLimit2ToJSON(
+  createScheduleSpendLimit2: CreateScheduleSpendLimit2,
+): string {
+  return JSON.stringify(
+    CreateScheduleSpendLimit2$outboundSchema.parse(createScheduleSpendLimit2),
+  );
+}
+
+/** @internal */
+export const CreateScheduleUsageLimitInterval2$outboundSchema: z.ZodMiniEnum<
+  typeof CreateScheduleUsageLimitInterval2
+> = z.enum(CreateScheduleUsageLimitInterval2);
+
+/** @internal */
+export type CreateScheduleFilter2$Outbound = {
+  properties: { [k: string]: any };
+};
+
+/** @internal */
+export const CreateScheduleFilter2$outboundSchema: z.ZodMiniType<
+  CreateScheduleFilter2$Outbound,
+  CreateScheduleFilter2
+> = z.object({
+  properties: z.record(z.string(), z.any()),
+});
+
+export function createScheduleFilter2ToJSON(
+  createScheduleFilter2: CreateScheduleFilter2,
+): string {
+  return JSON.stringify(
+    CreateScheduleFilter2$outboundSchema.parse(createScheduleFilter2),
+  );
+}
+
+/** @internal */
+export type CreateScheduleUsageLimit2$Outbound = {
+  feature_id: string;
+  enabled: boolean;
+  limit: number;
+  interval: string;
+  filter?: CreateScheduleFilter2$Outbound | undefined;
+};
+
+/** @internal */
+export const CreateScheduleUsageLimit2$outboundSchema: z.ZodMiniType<
+  CreateScheduleUsageLimit2$Outbound,
+  CreateScheduleUsageLimit2
+> = z.pipe(
+  z.object({
+    featureId: z.string(),
+    enabled: z._default(z.boolean(), true),
+    limit: z.number(),
+    interval: CreateScheduleUsageLimitInterval2$outboundSchema,
+    filter: z.optional(z.lazy(() => CreateScheduleFilter2$outboundSchema)),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      featureId: "feature_id",
+    });
+  }),
+);
+
+export function createScheduleUsageLimit2ToJSON(
+  createScheduleUsageLimit2: CreateScheduleUsageLimit2,
+): string {
+  return JSON.stringify(
+    CreateScheduleUsageLimit2$outboundSchema.parse(createScheduleUsageLimit2),
+  );
+}
+
+/** @internal */
+export const CreateScheduleThresholdType2$outboundSchema: z.ZodMiniEnum<
+  typeof CreateScheduleThresholdType2
+> = z.enum(CreateScheduleThresholdType2);
+
+/** @internal */
+export type CreateScheduleUsageAlert2$Outbound = {
+  feature_id?: string | undefined;
+  enabled: boolean;
+  threshold: number;
+  threshold_type: string;
+  name?: string | undefined;
+};
+
+/** @internal */
+export const CreateScheduleUsageAlert2$outboundSchema: z.ZodMiniType<
+  CreateScheduleUsageAlert2$Outbound,
+  CreateScheduleUsageAlert2
+> = z.pipe(
+  z.object({
+    featureId: z.optional(z.string()),
+    enabled: z._default(z.boolean(), true),
+    threshold: z.number(),
+    thresholdType: CreateScheduleThresholdType2$outboundSchema,
+    name: z.optional(z.string()),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      featureId: "feature_id",
+      thresholdType: "threshold_type",
+    });
+  }),
+);
+
+export function createScheduleUsageAlert2ToJSON(
+  createScheduleUsageAlert2: CreateScheduleUsageAlert2,
+): string {
+  return JSON.stringify(
+    CreateScheduleUsageAlert2$outboundSchema.parse(createScheduleUsageAlert2),
+  );
+}
+
+/** @internal */
+export type CreateScheduleOverageAllowed2$Outbound = {
+  feature_id: string;
+  enabled: boolean;
+};
+
+/** @internal */
+export const CreateScheduleOverageAllowed2$outboundSchema: z.ZodMiniType<
+  CreateScheduleOverageAllowed2$Outbound,
+  CreateScheduleOverageAllowed2
+> = z.pipe(
+  z.object({
+    featureId: z.string(),
+    enabled: z._default(z.boolean(), false),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      featureId: "feature_id",
+    });
+  }),
+);
+
+export function createScheduleOverageAllowed2ToJSON(
+  createScheduleOverageAllowed2: CreateScheduleOverageAllowed2,
+): string {
+  return JSON.stringify(
+    CreateScheduleOverageAllowed2$outboundSchema.parse(
+      createScheduleOverageAllowed2,
+    ),
+  );
+}
+
+/** @internal */
+export type CreateScheduleBillingControls2$Outbound = {
+  auto_topups?: Array<CreateScheduleAutoTopup2$Outbound> | undefined;
+  spend_limits?: Array<CreateScheduleSpendLimit2$Outbound> | undefined;
+  usage_limits?: Array<CreateScheduleUsageLimit2$Outbound> | undefined;
+  usage_alerts?: Array<CreateScheduleUsageAlert2$Outbound> | undefined;
+  overage_allowed?: Array<CreateScheduleOverageAllowed2$Outbound> | undefined;
+};
+
+/** @internal */
+export const CreateScheduleBillingControls2$outboundSchema: z.ZodMiniType<
+  CreateScheduleBillingControls2$Outbound,
+  CreateScheduleBillingControls2
+> = z.pipe(
+  z.object({
+    autoTopups: z.optional(
+      z.array(z.lazy(() => CreateScheduleAutoTopup2$outboundSchema)),
+    ),
+    spendLimits: z.optional(
+      z.array(z.lazy(() => CreateScheduleSpendLimit2$outboundSchema)),
+    ),
+    usageLimits: z.optional(
+      z.array(z.lazy(() => CreateScheduleUsageLimit2$outboundSchema)),
+    ),
+    usageAlerts: z.optional(
+      z.array(z.lazy(() => CreateScheduleUsageAlert2$outboundSchema)),
+    ),
+    overageAllowed: z.optional(
+      z.array(z.lazy(() => CreateScheduleOverageAllowed2$outboundSchema)),
+    ),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      autoTopups: "auto_topups",
+      spendLimits: "spend_limits",
+      usageLimits: "usage_limits",
+      usageAlerts: "usage_alerts",
+      overageAllowed: "overage_allowed",
+    });
+  }),
+);
+
+export function createScheduleBillingControls2ToJSON(
+  createScheduleBillingControls2: CreateScheduleBillingControls2,
+): string {
+  return JSON.stringify(
+    CreateScheduleBillingControls2$outboundSchema.parse(
+      createScheduleBillingControls2,
+    ),
+  );
+}
+
+/** @internal */
 export type CreateScheduleCustomize2$Outbound = {
   price?: CreateScheduleBasePrice2$Outbound | null | undefined;
   items?: Array<CreateScheduleItemPlanItem2$Outbound> | undefined;
   add_items?: Array<CreateScheduleAddItemPlanItem2$Outbound> | undefined;
   remove_items?: Array<CreateSchedulePlanItemFilter2$Outbound> | undefined;
+  billing_controls?: CreateScheduleBillingControls2$Outbound | undefined;
 };
 
 /** @internal */
@@ -1686,11 +2476,15 @@ export const CreateScheduleCustomize2$outboundSchema: z.ZodMiniType<
     removeItems: z.optional(
       z.array(z.lazy(() => CreateSchedulePlanItemFilter2$outboundSchema)),
     ),
+    billingControls: z.optional(
+      z.lazy(() => CreateScheduleBillingControls2$outboundSchema),
+    ),
   }),
   z.transform((v) => {
     return remap$(v, {
       addItems: "add_items",
       removeItems: "remove_items",
+      billingControls: "billing_controls",
     });
   }),
 );
@@ -1748,40 +2542,55 @@ export function createSchedulePlan2ToJSON(
 }
 
 /** @internal */
-export type PhaseRequest2$Outbound = {
-  starts_at: number;
+export const BillingCycleAnchor2$outboundSchema: z.ZodMiniEnum<
+  typeof BillingCycleAnchor2
+> = z.enum(BillingCycleAnchor2);
+
+/** @internal */
+export type PhaseStart$Outbound = {
+  starts_at?: number | string | undefined;
+  starting_after?: StartingAfter2$Outbound | undefined;
   plans: Array<CreateSchedulePlan2$Outbound>;
+  billing_cycle_anchor?: string | undefined;
 };
 
 /** @internal */
-export const PhaseRequest2$outboundSchema: z.ZodMiniType<
-  PhaseRequest2$Outbound,
-  PhaseRequest2
+export const PhaseStart$outboundSchema: z.ZodMiniType<
+  PhaseStart$Outbound,
+  PhaseStart
 > = z.pipe(
   z.object({
-    startsAt: z.number(),
+    startsAt: z.optional(smartUnion([z.number(), z.string()])),
+    startingAfter: z.optional(z.lazy(() => StartingAfter2$outboundSchema)),
     plans: z.array(z.lazy(() => CreateSchedulePlan2$outboundSchema)),
+    billingCycleAnchor: z.optional(BillingCycleAnchor2$outboundSchema),
   }),
   z.transform((v) => {
     return remap$(v, {
       startsAt: "starts_at",
+      startingAfter: "starting_after",
+      billingCycleAnchor: "billing_cycle_anchor",
     });
   }),
 );
 
-export function phaseRequest2ToJSON(phaseRequest2: PhaseRequest2): string {
-  return JSON.stringify(PhaseRequest2$outboundSchema.parse(phaseRequest2));
+export function phaseStartToJSON(phaseStart: PhaseStart): string {
+  return JSON.stringify(PhaseStart$outboundSchema.parse(phaseStart));
 }
 
 /** @internal */
-export type Phase$Outbound = PhaseRequest2$Outbound;
+export type PhaseStartUnion$Outbound = PhaseStart$Outbound;
 
 /** @internal */
-export const Phase$outboundSchema: z.ZodMiniType<Phase$Outbound, Phase> = z
-  .lazy(() => PhaseRequest2$outboundSchema);
+export const PhaseStartUnion$outboundSchema: z.ZodMiniType<
+  PhaseStartUnion$Outbound,
+  PhaseStartUnion
+> = z.lazy(() => PhaseStart$outboundSchema);
 
-export function phaseToJSON(phase: Phase): string {
-  return JSON.stringify(Phase$outboundSchema.parse(phase));
+export function phaseStartUnionToJSON(
+  phaseStartUnion: PhaseStartUnion,
+): string {
+  return JSON.stringify(PhaseStartUnion$outboundSchema.parse(phaseStartUnion));
 }
 
 /** @internal */
@@ -1796,7 +2605,7 @@ export type CreateScheduleParams$Outbound = {
   billing_behavior?: string | undefined;
   billing_cycle_anchor?: "now" | undefined;
   enable_plan_immediately?: boolean | undefined;
-  phases: Array<PhaseRequest2$Outbound>;
+  phases: Array<PhaseStart$Outbound>;
 };
 
 /** @internal */
@@ -1819,10 +2628,10 @@ export const CreateScheduleParams$outboundSchema: z.ZodMiniType<
       CreateScheduleRedirectMode$outboundSchema,
       "if_required",
     ),
-    billingBehavior: z.optional(BillingBehavior$outboundSchema),
+    billingBehavior: z.optional(CreateScheduleBillingBehavior$outboundSchema),
     billingCycleAnchor: z.optional(z.literal("now")),
     enablePlanImmediately: z.optional(z.boolean()),
-    phases: z.array(z.lazy(() => PhaseRequest2$outboundSchema)),
+    phases: z.array(z.lazy(() => PhaseStart$outboundSchema)),
   }),
   z.transform((v) => {
     return remap$(v, {

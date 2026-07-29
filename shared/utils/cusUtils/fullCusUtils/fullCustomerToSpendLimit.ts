@@ -1,7 +1,11 @@
-import type { DbSpendLimit } from "@models/cusModels/billingControls/customerBillingControls.js";
+import type { DbSpendLimit } from "@models/cusModels/billingControls/spendLimit.js";
 import type { FullCustomer } from "@models/cusModels/fullCusModel.js";
-import { cusEntToCusPrice } from "@utils/cusEntUtils";
-import { isPayPerUsePrice } from "@utils/productUtils/priceUtils/index";
+import { resolveSpendLimitOverageLimit } from "@utils/cusEntUtils";
+import {
+	DEFAULT_PLAN_CONTROL_STATUSES,
+	fullCustomerToPlanProducts,
+	resolveBillingControl,
+} from "../../fullSubjectUtils/planBillingControlUtils.js";
 import { fullCustomerToCustomerEntitlements } from "./fullCustomerToCustomerEntitlements";
 
 /**
@@ -32,14 +36,51 @@ export const fullCustomerToSpendLimitByFeatureId = ({
 	for (const featureId of uniqueFeatureIds) {
 		const isMatch = (candidate: DbSpendLimit) =>
 			candidate.feature_id === featureId &&
-			candidate.enabled &&
 			candidate.overage_limit !== undefined;
 
-		const spendLimit =
-			entitySpendLimits.find(isMatch) ?? customerSpendLimits.find(isMatch);
+		const cusEnts = fullCustomerToCustomerEntitlements({
+			fullCustomer,
+			featureIds: [featureId],
+			entity,
+			inStatuses: DEFAULT_PLAN_CONTROL_STATUSES,
+		});
+		const entityIdForResolve = entity?.id ?? entity?.internal_id ?? undefined;
+		const normalizeForCompare = (control: DbSpendLimit): DbSpendLimit => {
+			if (control.limit_type !== "usage_percentage") return control;
+			return {
+				...control,
+				overage_limit: resolveSpendLimitOverageLimit({
+					spendLimit: control,
+					cusEnts,
+					entityId: entityIdForResolve,
+				}),
+				limit_type: "absolute",
+			};
+		};
 
-		if (spendLimit) {
-			spendLimitByFeatureId[featureId] = spendLimit;
+		const spendLimit = resolveBillingControl<DbSpendLimit, "spend_limits">({
+			controlLists: [entitySpendLimits, customerSpendLimits],
+			customerProducts: fullCustomerToPlanProducts({ fullCustomer }),
+			controlKey: "spend_limits",
+			matches: isMatch,
+			normalizeForCompare,
+		});
+
+		if (spendLimit?.enabled) {
+			const resolved = resolveSpendLimitOverageLimit({
+				spendLimit,
+				cusEnts,
+				entityId: entityIdForResolve,
+			});
+
+			// Resolve to absolute so Lua deduction reads overage_limit as absolute units.
+			if (resolved !== undefined) {
+				spendLimitByFeatureId[featureId] = {
+					...spendLimit,
+					overage_limit: resolved,
+					limit_type: "absolute",
+				};
+			}
 		}
 	}
 
@@ -66,21 +107,16 @@ export const fullCustomerToUsageBasedCusEntsByFeatureId = ({
 		featureIds,
 		entity,
 	});
-	const usageBasedCusEntsByFeatureId: Record<string, string[]> = {};
+	// Every ent for the feature counts toward the overage limit: control-based
+	// (overage_allowed) overage has no price, so it isn't pay-per-use.
+	const overageCusEntsByFeatureId: Record<string, string[]> = {};
 
 	for (const cusEnt of cusEnts) {
-		const cusPrice = cusEntToCusPrice({ cusEnt });
-
-		if (!cusPrice || !isPayPerUsePrice({ price: cusPrice.price })) {
-			continue;
+		if (!overageCusEntsByFeatureId[cusEnt.feature_id]) {
+			overageCusEntsByFeatureId[cusEnt.feature_id] = [];
 		}
-
-		if (!usageBasedCusEntsByFeatureId[cusEnt.feature_id]) {
-			usageBasedCusEntsByFeatureId[cusEnt.feature_id] = [];
-		}
-
-		usageBasedCusEntsByFeatureId[cusEnt.feature_id].push(cusEnt.id);
+		overageCusEntsByFeatureId[cusEnt.feature_id].push(cusEnt.id);
 	}
 
-	return usageBasedCusEntsByFeatureId;
+	return overageCusEntsByFeatureId;
 };

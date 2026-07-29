@@ -1,5 +1,29 @@
 import { AppEnv, type MigrationFilter, type Operations } from "@autumn/shared";
 import {
+	Badge,
+	Button,
+	Dialog,
+	DialogContent,
+	DialogDescription,
+	DialogFooter,
+	DialogHeader,
+	DialogTitle,
+	DropdownMenu,
+	DropdownMenuContent,
+	DropdownMenuItem,
+	DropdownMenuTrigger,
+	IconButton,
+	Input,
+	Select,
+	SelectContent,
+	SelectItem,
+	SelectTrigger,
+	SelectValue,
+	Separator,
+	ShortcutButton,
+	Switch,
+} from "@autumn/ui";
+import {
 	ArrowSquareOutIcon,
 	CaretDownIcon,
 	CaretLeftIcon,
@@ -23,38 +47,16 @@ import {
 	useQueryState,
 	useQueryStates,
 } from "nuqs";
-import { useCallback, useDeferredValue, useMemo, useState } from "react";
+import {
+	type ReactNode,
+	useCallback,
+	useDeferredValue,
+	useMemo,
+	useState,
+} from "react";
 import { Link } from "react-router";
 import { toast } from "sonner";
-import { Table } from "@/components/general/table";
-import { Switch } from "@/components/ui/switch";
-import { Badge } from "@/components/v2/badges/Badge";
-import { Button } from "@/components/v2/buttons/Button";
-import { IconButton } from "@/components/v2/buttons/IconButton";
-import { ShortcutButton } from "@/components/v2/buttons/ShortcutButton";
-import {
-	Dialog,
-	DialogContent,
-	DialogDescription,
-	DialogFooter,
-	DialogHeader,
-	DialogTitle,
-} from "@/components/v2/dialogs/Dialog";
-import {
-	DropdownMenu,
-	DropdownMenuContent,
-	DropdownMenuItem,
-	DropdownMenuTrigger,
-} from "@/components/v2/dropdowns/DropdownMenu";
-import { Input } from "@/components/v2/inputs/Input";
-import {
-	Select,
-	SelectContent,
-	SelectItem,
-	SelectTrigger,
-	SelectValue,
-} from "@/components/v2/selects/Select";
-import { Separator } from "@/components/v2/separator";
+import { Table, useCursorPagination } from "@/components/general/table";
 import {
 	type MigrationPreviewCustomer,
 	useMigrationFilterPreview,
@@ -83,7 +85,6 @@ import { ItemEventStatusBadge } from "../runs/RunStatusBadge";
 import { type StepId, StepIndicator } from "../StepIndicator";
 import { OperationsPreview } from "../shared/OperationsPreview";
 import { RunSummaryRows } from "../shared/RunSummaryRows";
-import { useCursorPagination } from "@/components/general/table/useCursorPagination";
 import { ActiveDot } from "./ActiveDot";
 import {
 	EXECUTION_STATUS_VALUES,
@@ -99,24 +100,10 @@ import {
 import { RealtimeRunWatcher } from "./RealtimeRunWatcher";
 import { useMigrationSheetStore } from "./useMigrationSheetStore";
 
-type AdminRunControls = {
-	lazyRun: boolean;
+type MigrationRunControlsState = {
 	retryErrored: boolean;
 	retrySkipped: boolean;
-	concurrency: string;
 };
-
-const MIN_CONCURRENCY = 1;
-const MAX_CONCURRENCY = 5;
-
-function parseConcurrency(value: string): number | undefined {
-	const trimmed = value.trim();
-	if (trimmed === "") return undefined;
-	const parsed = Number(trimmed);
-	if (!Number.isInteger(parsed)) return undefined;
-	if (parsed < MIN_CONCURRENCY || parsed > MAX_CONCURRENCY) return undefined;
-	return parsed;
-}
 
 type CustomerRow = MigrationPreviewCustomer & {
 	_event?: MigrationItemEvent;
@@ -127,7 +114,7 @@ type CustomerRow = MigrationPreviewCustomer & {
 function buildRetryItemStatuses({
 	retryErrored,
 	retrySkipped,
-}: Pick<AdminRunControls, "retryErrored" | "retrySkipped">) {
+}: Pick<MigrationRunControlsState, "retryErrored" | "retrySkipped">) {
 	const statuses: RetryableMigrationItemRunStatus[] = [];
 	if (retryErrored) statuses.push("failed");
 	if (retrySkipped) statuses.push("skipped");
@@ -216,6 +203,7 @@ export function MigrationLiveView({
 	noBillingChanges,
 	step,
 	onStepChange,
+	headerActions,
 }: {
 	migrationId: string;
 	filter: MigrationFilter;
@@ -223,6 +211,7 @@ export function MigrationLiveView({
 	noBillingChanges: boolean;
 	step: StepId;
 	onStepChange: (step: StepId) => void;
+	headerActions?: ReactNode;
 }) {
 	const { queryStates: customerFilters } = useCustomerFilters();
 	const env = useEnv();
@@ -282,11 +271,9 @@ export function MigrationLiveView({
 		parseAsBoolean.withDefault(false),
 	);
 	const [isCancelDialogOpen, setIsCancelDialogOpen] = useState(false);
-	const [runControls, setRunControls] = useState<AdminRunControls>({
-		lazyRun: true,
+	const [runControls, setRunControls] = useState<MigrationRunControlsState>({
 		retryErrored: false,
 		retrySkipped: false,
-		concurrency: String(MAX_CONCURRENCY),
 	});
 	const [sample, setSample] = useState({
 		open: false,
@@ -298,13 +285,8 @@ export function MigrationLiveView({
 	const { cancelRun, isCanceling } = useMigrationsQuery();
 
 	const resolvedRunControls = {
-		lazyRun: runControls.lazyRun,
 		retryItemStatuses: buildRetryItemStatuses(runControls),
-		concurrency: parseConcurrency(runControls.concurrency),
 	};
-	const invalidConcurrency =
-		runControls.concurrency.trim() !== "" &&
-		parseConcurrency(runControls.concurrency) === undefined;
 
 	const handleSearchChange = useCallback(
 		(e: React.ChangeEvent<HTMLInputElement>) => {
@@ -403,12 +385,10 @@ export function MigrationLiveView({
 					c.migration_item_run?.migration_run_id === activeRunId;
 				const hasResultForRun =
 					!!hasEventInActiveRun ||
-					(isClaimedInActiveRun &&
-						c.migration_item_run?.status !== "running");
+					(isClaimedInActiveRun && c.migration_item_run?.status !== "running");
 				const hasPersistedResult =
 					!!event ||
-					(!!c.migration_item_run &&
-						c.migration_item_run.status !== "running");
+					(!!c.migration_item_run && c.migration_item_run.status !== "running");
 				const showPending =
 					!!pendingRunStatus &&
 					isTargeted &&
@@ -481,6 +461,7 @@ export function MigrationLiveView({
 			)}
 
 			<StepIndicator step={step} onStepChange={onStepChange}>
+				{headerActions}
 				{activeRun && (
 					<Button
 						variant="secondary"
@@ -604,7 +585,6 @@ export function MigrationLiveView({
 						<MigrationRunControls
 							value={runControls}
 							onChange={setRunControls}
-							invalidConcurrency={invalidConcurrency}
 							hasFailedItems={(progressCounts?.failed ?? 0) > 0}
 							hasSkippedItems={(progressCounts?.skipped ?? 0) > 0}
 						/>
@@ -618,7 +598,7 @@ export function MigrationLiveView({
 									triggerRun({ dryRun: false, ...resolvedRunControls });
 								}}
 								isLoading={isRunning}
-								disabled={isRunInProgress || invalidConcurrency}
+								disabled={isRunInProgress}
 							>
 								<PlayIcon size={14} weight="fill" />
 								Run
@@ -714,8 +694,6 @@ export function MigrationLiveView({
 							<MigrationRunControls
 								value={runControls}
 								onChange={setRunControls}
-								invalidConcurrency={invalidConcurrency}
-								lazyDisabled={sample.mode === "select"}
 								hasFailedItems={(progressCounts?.failed ?? 0) > 0}
 								hasSkippedItems={(progressCounts?.skipped ?? 0) > 0}
 							/>
@@ -727,7 +705,6 @@ export function MigrationLiveView({
 								isLoading={sample.running === "dry"}
 								disabled={
 									isRunInProgress ||
-									invalidConcurrency ||
 									sample.running !== null ||
 									(sample.mode === "limit"
 										? !sample.limit || Number(sample.limit) < 1
@@ -767,7 +744,6 @@ export function MigrationLiveView({
 								isLoading={sample.running === "live"}
 								disabled={
 									isRunInProgress ||
-									invalidConcurrency ||
 									sample.running !== null ||
 									(sample.mode === "limit"
 										? !sample.limit || Number(sample.limit) < 1
@@ -927,68 +903,19 @@ function ExecutionProgressBadge({
 function MigrationRunControls({
 	value,
 	onChange,
-	invalidConcurrency = false,
-	lazyDisabled = false,
 	hasFailedItems = false,
 	hasSkippedItems = false,
 }: {
-	value: AdminRunControls;
-	onChange: (value: AdminRunControls) => void;
-	invalidConcurrency?: boolean;
-	lazyDisabled?: boolean;
+	value: MigrationRunControlsState;
+	onChange: (value: MigrationRunControlsState) => void;
 	hasFailedItems?: boolean;
 	hasSkippedItems?: boolean;
 }) {
+	if (!hasFailedItems && !hasSkippedItems) return null;
+
 	return (
 		<div className="flex flex-col gap-3">
 			<Separator />
-			<div
-				className={cn(
-					"flex items-center justify-between gap-4",
-					lazyDisabled && "opacity-50",
-				)}
-			>
-				<div className="flex flex-col gap-0.5">
-					<span className="text-sm font-medium text-foreground">Lazy run</span>
-					<span className="text-xs text-tertiary-foreground">
-						Remaining customers migrate when queried.
-					</span>
-				</div>
-				<Switch
-					checked={value.lazyRun && !lazyDisabled}
-					disabled={lazyDisabled}
-					onCheckedChange={(checked) =>
-						onChange({ ...value, lazyRun: checked === true })
-					}
-				/>
-			</div>
-			<div className="flex items-center justify-between gap-4">
-				<div className="flex flex-col gap-0.5">
-					<span className="text-sm font-medium text-foreground">
-						Concurrency
-					</span>
-					<span className="text-xs text-tertiary-foreground">
-						Customers processed in parallel. Max {MAX_CONCURRENCY}.
-					</span>
-				</div>
-				<Input
-					type="number"
-					min={MIN_CONCURRENCY}
-					max={MAX_CONCURRENCY}
-					value={value.concurrency}
-					onChange={(e) => onChange({ ...value, concurrency: e.target.value })}
-					placeholder="Auto"
-					className={cn(
-						"w-20 text-sm",
-						invalidConcurrency && "border-red-500 focus-visible:ring-red-500",
-					)}
-				/>
-			</div>
-			{invalidConcurrency && (
-				<span className="text-xs text-red-500">
-					Concurrency must be less than {MAX_CONCURRENCY}.
-				</span>
-			)}
 			{hasFailedItems && (
 				<div className="flex items-center justify-between gap-4">
 					<div className="flex flex-col gap-0.5">

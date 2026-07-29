@@ -46,7 +46,8 @@ export const initCustomerProduct = ({
 	const internalEntityId =
 		initOptions?.internalEntityId ?? fullCustomer.entity?.internal_id;
 	const entityId =
-		initOptions?.internalEntityId && initOptions.internalEntityId !== fullCustomer.entity?.internal_id
+		initOptions?.internalEntityId &&
+		initOptions.internalEntityId !== fullCustomer.entity?.internal_id
 			? fullCustomer.entities?.find(
 					(e) => e.internal_id === initOptions.internalEntityId,
 				)?.id
@@ -130,6 +131,8 @@ export const initCustomerProduct = ({
 		quantity: 1,
 
 		is_custom: isCustom ?? false,
+		customer_license_link_id: initOptions?.customerLicenseLinkId ?? null,
+		released_at: null,
 
 		api_semver: apiSemver ?? null,
 

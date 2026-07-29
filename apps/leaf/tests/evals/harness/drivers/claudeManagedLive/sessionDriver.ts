@@ -68,9 +68,7 @@ export const createLiveSessionDriver = ({
 			throw error;
 		});
 		if (outcome.suspendedQueue?.length) {
-			pendingToolUseIds = outcome.suspendedQueue.map(
-				(call) => call.toolCallId,
-			);
+			pendingToolUseIds = outcome.suspendedQueue.map((call) => call.toolCallId);
 			trace.event({ type: "approval_pending" });
 		}
 		const text = outcome.textParts.join("\n\n");

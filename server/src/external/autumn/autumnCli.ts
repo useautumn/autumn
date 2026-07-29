@@ -11,8 +11,12 @@ import {
 	type ApiEntityBillingControlsParams,
 	type ApiEntityV0,
 	type AttachBodyV0,
+	type AttachLicenseParamsV0,
 	type AttachParamsV0Input,
 	type CancelBody,
+	type CatalogPreviewUpdateResponse,
+	type CatalogUpdateParamsInput,
+	type CatalogUpdateResponse,
 	type CheckoutParamsV0,
 	type CheckoutResponseV0,
 	type CheckParams,
@@ -37,11 +41,15 @@ import {
 	type Migration,
 	type MigrationFilter,
 	type MigrationRun,
+	type MultiUpdateParamsV0Input,
 	type Operations,
 	type OrgConfig,
+	type PlanUpdatePreview,
+	type PreviewUpdatePlanParamsV2Input,
 	type ProductItem,
 	type RecalculateBalanceParamsV0,
 	type RecalculateBalancePreview,
+	type ReleaseLicenseParamsV0,
 	type RestoreParamsV1,
 	type RestoreResponse,
 	type RewardRedemption,
@@ -60,11 +68,21 @@ import type { PrepareResponse } from "@/internal/migrations/v2/prepare/types";
 export default class AutumnError extends Error {
 	message: string;
 	code: string;
+	statusCode?: number;
 
-	constructor({ message, code }: { message: string; code: string }) {
+	constructor({
+		message,
+		code,
+		statusCode,
+	}: {
+		message: string;
+		code: string;
+		statusCode?: number;
+	}) {
 		super(message);
 		this.message = message;
 		this.code = code;
+		this.statusCode = statusCode;
 	}
 
 	toString(): string {
@@ -771,6 +789,49 @@ export class AutumnInt {
 		},
 	};
 
+	plans = {
+		previewUpdate: async <
+			TResponse = PlanUpdatePreview,
+			TInput = PreviewUpdatePlanParamsV2Input,
+		>(
+			params: TInput,
+		): Promise<TResponse> => {
+			const data = await this.post(`/plans.preview_update`, params);
+			return data as TResponse;
+		},
+
+		createVariant: async <TResponse = any>(params: {
+			base_plan_id: string;
+			variant_plan_id: string;
+			name: string;
+		}): Promise<TResponse> => {
+			const data = await this.post(`/plans.create_variant`, params);
+			return data as TResponse;
+		},
+	};
+
+	catalog = {
+		previewUpdate: async <
+			TResponse = CatalogPreviewUpdateResponse,
+			TInput = CatalogUpdateParamsInput,
+		>(
+			params: TInput,
+		): Promise<TResponse> => {
+			const data = await this.post(`/catalog.preview_update`, params);
+			return data as TResponse;
+		},
+
+		update: async <
+			TResponse = CatalogUpdateResponse,
+			TInput = CatalogUpdateParamsInput,
+		>(
+			params: TInput,
+		): Promise<TResponse> => {
+			const data = await this.post(`/catalog.update`, params);
+			return data as TResponse;
+		},
+	};
+
 	rewards = {
 		get: async (rewardId: string) => {
 			const data = await this.get(`/rewards/${rewardId}`);
@@ -812,6 +873,11 @@ export class AutumnInt {
 				code,
 				customer_id: customerId,
 			});
+			return data;
+		},
+
+		list: async () => {
+			const data = await this.post("/rewards.list", {});
 			return data;
 		},
 	};
@@ -888,7 +954,11 @@ export class AutumnInt {
 		aggregate: async (params: {
 			customer_id: string;
 			entity_id?: string;
-			feature_id?: string;
+			feature_id?: string | string[];
+			group_by?: string;
+			range?: string;
+			bin_size?: string;
+			max_groups?: number;
 		}) => {
 			const data = await this.post(`/events/aggregate`, params);
 			return data;
@@ -1053,6 +1123,7 @@ export class AutumnInt {
 			dry_run?: boolean;
 			only?: string[];
 			limit?: number;
+			/** @deprecated Migration concurrency is fleet-managed. */
 			concurrency?: number;
 			lazy_run?: boolean;
 			retry_item_statuses?: ("failed" | "skipped")[];
@@ -1121,8 +1192,11 @@ export class AutumnInt {
 			);
 			return data;
 		},
-		update: async (params: UpdateBalanceParamsV0) => {
-			const data = await this.post(`/balances/update`, params);
+		update: async (
+			params: UpdateBalanceParamsV0,
+			{ headers }: { headers?: Record<string, string> } = {},
+		) => {
+			const data = await this.post(`/balances/update`, params, headers);
 			return data;
 		},
 		delete: async (params: DeleteBalanceParamsV0) => {
@@ -1186,6 +1260,22 @@ export class AutumnInt {
 		): Promise<any> => {
 			const data = await this.post(`/billing.preview_update`, params);
 			return data;
+		},
+	};
+
+	licenses = {
+		/** Provisions seats: upserts entities and assigns one seat each. */
+		attach: async <TInput = AttachLicenseParamsV0>(
+			params: TInput,
+		): Promise<{ success: true }> => {
+			return await this.post(`/licenses.attach`, params);
+		},
+
+		/** Releases each entity's seat back to its pool for reuse. */
+		release: async <TInput = ReleaseLicenseParamsV0>(
+			params: TInput,
+		): Promise<{ success: true }> => {
+			return await this.post(`/licenses.release`, params);
 		},
 	};
 
@@ -1333,6 +1423,43 @@ export class AutumnInt {
 				...params,
 				redirect_mode: "if_required",
 			});
+			return data;
+		},
+
+		multiUpdate: async <TInput = MultiUpdateParamsV0Input>(
+			params: TInput,
+			{
+				skipWebhooks,
+				timeout,
+			}: {
+				skipWebhooks?: boolean;
+				timeout?: number;
+			} = {},
+		): Promise<any> => {
+			const headers: Record<string, string> = {};
+			if (skipWebhooks !== undefined) {
+				headers["x-skip-webhooks"] = skipWebhooks ? "true" : "false";
+			}
+
+			const data = await this.post(
+				`/billing.multi_update`,
+				params,
+				Object.keys(headers).length > 0 ? headers : undefined,
+			);
+
+			const concurrency = Number(process.env.TEST_FILE_CONCURRENCY || "0");
+			const defaultTimeout = concurrency > 1 ? 5000 : 4000;
+			const finalTimeout = timeout ?? defaultTimeout;
+			if (finalTimeout) {
+				await new Promise((resolve) => setTimeout(resolve, finalTimeout));
+			}
+			return data;
+		},
+
+		previewMultiUpdate: async <TInput = MultiUpdateParamsV0Input>(
+			params: TInput,
+		): Promise<any> => {
+			const data = await this.post(`/billing.preview_multi_update`, params);
 			return data;
 		},
 

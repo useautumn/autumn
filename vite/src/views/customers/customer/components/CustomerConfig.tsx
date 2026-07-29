@@ -1,6 +1,5 @@
 import type { CreateCustomer } from "@autumn/shared";
-import { FormLabel as FieldLabel } from "@/components/v2/form/FormLabel";
-import { Input } from "@/components/v2/inputs/Input";
+import { FormLabel as FieldLabel, Input } from "@autumn/ui";
 
 export const CustomerConfig = ({
 	customer,

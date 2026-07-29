@@ -10,6 +10,7 @@ import {
 	type Entitlement,
 	type FreeTrial,
 	type FullProduct,
+	orgMultiCurrencyEnabled,
 	type Price,
 	ProductAlreadyExistsError,
 	Scopes,
@@ -19,17 +20,16 @@ import { createRoute } from "@/honoMiddlewares/routeHandler.js";
 import { JobName } from "@/queue/JobName.js";
 import { addTaskToQueue } from "@/queue/queueUtils.js";
 import { captureOrgEvent } from "@/utils/posthog.js";
+import { validateDefaultFlag } from "../../../product/actions/validateDefaultFlag.js";
 import { getEntsWithFeature } from "../../entitlements/entitlementUtils.js";
 import {
 	handleNewFreeTrial,
 	validateOneOffTrial,
 } from "../../free-trials/freeTrialUtils.js";
-
 import { ProductService } from "../../ProductService.js";
 import { handleNewProductItems } from "../../product-items/productItemUtils/handleNewProductItems.js";
 import { getPlanResponse } from "../../productUtils/productResponseUtils/getPlanResponse.js";
 import { constructProduct, initProductInStripe } from "../../productUtils.js";
-import { validateDefaultFlag } from "../../../product/actions/validateDefaultFlag.js";
 
 /**
  * Route: POST /products - Create a product
@@ -97,6 +97,7 @@ export const handleCreatePlan = createRoute({
 				logger,
 				isCustom: false,
 				newVersion: false,
+				multiCurrencyEnabled: orgMultiCurrencyEnabled({ org }),
 			});
 			prices = res.prices;
 			entitlements = res.entitlements;

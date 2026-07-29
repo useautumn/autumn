@@ -4,7 +4,7 @@ import {
 	CardDescription,
 	CardHeader,
 	CardTitle,
-} from "@/components/v2/cards/Card";
+} from "@autumn/ui";
 
 interface SettingsSectionProps {
 	readonly title: string;

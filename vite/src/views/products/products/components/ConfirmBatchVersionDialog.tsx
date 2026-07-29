@@ -1,14 +1,14 @@
-import { useState } from "react";
-import { Button } from "@/components/v2/buttons/Button";
 import {
+	Button,
 	Dialog,
 	DialogContent,
 	DialogDescription,
 	DialogFooter,
 	DialogHeader,
 	DialogTitle,
-} from "@/components/v2/dialogs/Dialog";
-import { Input } from "@/components/v2/inputs/Input";
+	Input,
+} from "@autumn/ui";
+import { useState } from "react";
 
 const CONFIRM_TEXT = "confirm";
 
@@ -67,7 +67,8 @@ export function ConfirmBatchVersionDialog({
 							))}
 						</ul>
 						<p>
-							Type <code className="font-bold">{CONFIRM_TEXT}</code> to continue.
+							Type <code className="font-bold">{CONFIRM_TEXT}</code> to
+							continue.
 						</p>
 						<Input
 							value={confirmText}

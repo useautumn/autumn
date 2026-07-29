@@ -4,15 +4,14 @@ import {
 	itemToBillingInterval,
 	type ProductItem,
 } from "@autumn/shared";
-
-import { FormLabel } from "@/components/v2/form/FormLabel";
 import {
+	FormLabel,
 	Select,
 	SelectContent,
 	SelectItem,
 	SelectTrigger,
 	SelectValue,
-} from "@/components/v2/selects/Select";
+} from "@autumn/ui";
 import { formatIntervalText } from "@/utils/formatUtils/formatTextUtils";
 import { CustomiseIntervalPopover } from "../CustomiseIntervalPopover";
 
@@ -30,25 +29,35 @@ export const SelectBillingCycle = ({
 	return (
 		<div className="w-full">
 			<FormLabel disabled={disabled}>Billing Interval</FormLabel>
-		<Select
-			disabled={disabled}
-			value={item ? itemToBillingInterval({ item }) : BillingInterval.Month}
-			defaultValue={BillingInterval.Month}
-			onValueChange={(value) => {
-				if (!item) return;
-				setItem({
-					...item,
-					interval: billingToItemInterval({
-						billingInterval: value as BillingInterval,
-					}),
-				});
-			}}
-			items={Object.fromEntries(
-				Object.values(BillingInterval)
-					.filter((interval) => !filterOneOff || interval !== BillingInterval.OneOff)
-					.map((interval) => [interval, formatIntervalText({ billingInterval: interval, intervalCount: item?.interval_count || 1, isBillingInterval: true })])
-			)}
-		>
+			<Select
+				disabled={disabled}
+				value={item ? itemToBillingInterval({ item }) : BillingInterval.Month}
+				defaultValue={BillingInterval.Month}
+				onValueChange={(value) => {
+					if (!item) return;
+					setItem({
+						...item,
+						interval: billingToItemInterval({
+							billingInterval: value as BillingInterval,
+						}),
+					});
+				}}
+				items={Object.fromEntries(
+					Object.values(BillingInterval)
+						.filter(
+							(interval) =>
+								!filterOneOff || interval !== BillingInterval.OneOff,
+						)
+						.map((interval) => [
+							interval,
+							formatIntervalText({
+								billingInterval: interval,
+								intervalCount: item?.interval_count || 1,
+								isBillingInterval: true,
+							}),
+						]),
+				)}
+			>
 				<SelectTrigger className="w-full">
 					<SelectValue placeholder="Select interval" />
 				</SelectTrigger>

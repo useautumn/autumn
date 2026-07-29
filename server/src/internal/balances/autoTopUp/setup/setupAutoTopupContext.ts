@@ -1,5 +1,7 @@
 import {
 	ACTIVE_STATUSES,
+	type AutoTopup,
+	type BillingAutoTopupFailureReason,
 	BillingVersion,
 	cusEntToCusPrice,
 	cusProductToProduct,
@@ -12,13 +14,25 @@ import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { fetchStripeCustomerForBilling } from "@/internal/billing/v2/providers/stripe/setup/fetchStripeCustomerForBilling.js";
 import { CusService } from "@/internal/customers/CusService.js";
 import { getCachedFullSubject } from "@/internal/customers/cache/fullSubject/actions/getCachedFullSubject.js";
-import { getCachedFullCustomer } from "@/internal/customers/cusUtils/fullCustomerCacheUtils/getCachedFullCustomer.js";
 import { getFullSubjectNormalized } from "@/internal/customers/repos/getFullSubject/index.js";
 import { isFullSubjectRolloutEnabled } from "@/internal/misc/rollouts/fullSubjectRolloutUtils.js";
 import type { AutoTopUpPayload } from "@/queue/workflows.js";
 import type { AutoTopupContext } from "../autoTopupContext.js";
 import { fullCustomerToAutoTopupObjects } from "../helpers/fullCustomerToAutoTopupObjects.js";
 import { preflightAutoTopupLimits } from "../helpers/limits/preflightAutoTopupLimits.js";
+
+export type AutoTopupSetupFailure = {
+	reason: BillingAutoTopupFailureReason;
+	message: string;
+	fullCustomer?: FullCustomer;
+	autoTopupConfig?: AutoTopup;
+	suppressionKey?: string;
+	suppressionTtlMs?: number;
+};
+
+export type SetupAutoTopupContextResult =
+	| { ok: true; autoTopupContext: AutoTopupContext }
+	| { ok: false; failure?: AutoTopupSetupFailure };
 
 const getAutoTopupFullCustomer = async ({
 	ctx,
@@ -28,61 +42,49 @@ const getAutoTopupFullCustomer = async ({
 	customerId: string;
 }): Promise<FullCustomer | undefined> => {
 	if (isFullSubjectRolloutEnabled({ ctx })) {
-		const { fullSubject: cachedFullSubject } = await getCachedFullSubject({
-			ctx,
-			customerId,
-			source: "setupAutoTopupContext",
-		});
+	}
 
-		if (cachedFullSubject) {
-			return fullSubjectToFullCustomer({
-				fullSubject: cachedFullSubject,
-			});
-		}
+	const { fullSubject: cachedFullSubject } = await getCachedFullSubject({
+		ctx,
+		customerId,
+		source: "setupAutoTopupContext",
+	});
 
-		const normalizedFullSubject = await getFullSubjectNormalized({
-			ctx,
-			customerId,
-			inStatuses: ACTIVE_STATUSES,
-		});
-
-		if (normalizedFullSubject) {
-			return fullSubjectToFullCustomer({
-				fullSubject: normalizedFullSubject.fullSubject,
-			});
-		}
-
-		// Safety fallback to preserve previous behavior if subject query returns no row.
-		return CusService.getFull({
-			ctx,
-			idOrInternalId: customerId,
-			inStatuses: ACTIVE_STATUSES,
-			withSubs: true,
+	if (cachedFullSubject) {
+		return fullSubjectToFullCustomer({
+			fullSubject: cachedFullSubject,
 		});
 	}
 
-	let fullCustomer = await getCachedFullCustomer({ ctx, customerId });
+	const normalizedFullSubject = await getFullSubjectNormalized({
+		ctx,
+		customerId,
+		inStatuses: ACTIVE_STATUSES,
+	});
 
-	if (!fullCustomer) {
-		fullCustomer = await CusService.getFull({
-			ctx,
-			idOrInternalId: customerId,
-			inStatuses: ACTIVE_STATUSES,
-			withSubs: true,
+	if (normalizedFullSubject) {
+		return fullSubjectToFullCustomer({
+			fullSubject: normalizedFullSubject.fullSubject,
 		});
 	}
 
-	return fullCustomer;
+	// Safety fallback to preserve previous behavior if subject query returns no row.
+	return CusService.getFull({
+		ctx,
+		idOrInternalId: customerId,
+		inStatuses: ACTIVE_STATUSES,
+		withSubs: true,
+	});
 };
 
-/** Fetch full customer, auto-topup config, cusEnt, and Stripe context. Returns null if any prerequisite is missing. */
+/** Fetch full customer, auto-topup config, cusEnt, and Stripe context. */
 export const setupAutoTopupContext = async ({
 	ctx,
 	payload,
 }: {
 	ctx: AutumnContext;
 	payload: AutoTopUpPayload;
-}): Promise<AutoTopupContext | null> => {
+}): Promise<SetupAutoTopupContextResult> => {
 	const { logger } = ctx;
 	const { customerId, featureId } = payload;
 
@@ -95,10 +97,16 @@ export const setupAutoTopupContext = async ({
 	});
 
 	if (!fullCustomer?.processor?.id) {
-		logger.warn(
-			`[setupAutoTopupContext] Customer ${customerId} not found or no Stripe customer ID, skipping`,
-		);
-		return null;
+		const message = `Customer ${customerId} not found or no Stripe customer ID, skipping`;
+		logger.warn(`[setupAutoTopupContext] ${message}`);
+		return {
+			ok: false,
+			failure: {
+				reason: "customer_unavailable",
+				message,
+				fullCustomer,
+			},
+		};
 	}
 
 	// 2. Extract auto-topup objects (config, cusEnt) from fullCustomer
@@ -107,14 +115,25 @@ export const setupAutoTopupContext = async ({
 		featureId,
 	});
 
-	if (!resolved?.balanceBelowThreshold) {
-		ctx.logger.info(
-			`[setupAutoTopupContext] balance not below threshold, skipping`,
-			{
-				data: resolved,
+	if (!resolved) {
+		const message = `No enabled auto top-up configuration or chargeable prepaid entitlement for feature ${featureId}, customer ${customerId}, skipping`;
+		ctx.logger.info(`[setupAutoTopupContext] ${message}`);
+		return {
+			ok: false,
+			failure: {
+				reason: "configuration_unavailable",
+				message,
+				fullCustomer,
 			},
-		);
-		return null;
+		};
+	}
+
+	if (!resolved.balanceBelowThreshold) {
+		const message = `Balance not below threshold for feature ${featureId}, customer ${customerId}, skipping`;
+		ctx.logger.info(`[setupAutoTopupContext] ${message}`, {
+			data: resolved,
+		});
+		return { ok: false };
 	}
 
 	const { autoTopupConfig, customerEntitlement } = resolved;
@@ -133,22 +152,7 @@ export const setupAutoTopupContext = async ({
 		quantity: roundedQuantity,
 	};
 
-	const { allowed, reason, limitState } = await preflightAutoTopupLimits({
-		ctx,
-		payload,
-		fullCustomer,
-		autoTopupConfig: normalizedAutoTopupConfig,
-	});
-
-	if (!allowed) {
-		logger.info(
-			`[setupAutoTopupContext] Preflight blocked for feature ${featureId}, customer ${customerId}, reason: ${reason}`,
-		);
-		return null;
-	}
-
-	const vercelInstallationId =
-		fullCustomer.processors?.vercel?.installation_id;
+	const vercelInstallationId = fullCustomer.processors?.vercel?.installation_id;
 	const shouldUseInvoiceMode =
 		autoTopupConfig.invoice_mode === true || Boolean(vercelInstallationId);
 
@@ -156,14 +160,88 @@ export const setupAutoTopupContext = async ({
 		? { finalizeInvoice: true, enableProductImmediately: true }
 		: undefined;
 
+	// Fetched before the preflight because the circuit breaker needs the current
+	// payment method to tell "same declining card" from "new payment info".
 	const { stripeCus, paymentMethod, testClockFrozenTime } =
 		await fetchStripeCustomerForBilling({ ctx, fullCus: fullCustomer });
 
 	if (!paymentMethod && !invoiceMode) {
-		logger.warn(
-			`[setupAutoTopupContext] No payment method for customer ${stripeCus?.id}, skipping`,
-		);
-		return null;
+		const message = `No payment method for customer ${stripeCus?.id}, skipping`;
+		logger.warn(`[setupAutoTopupContext] ${message}`);
+		return {
+			ok: false,
+			failure: {
+				reason: "missing_payment_method",
+				message,
+				fullCustomer,
+				autoTopupConfig: normalizedAutoTopupConfig,
+			},
+		};
+	}
+
+	const { allowed, reason, blockedWindowEndsAt, limitState } =
+		await preflightAutoTopupLimits({
+			ctx,
+			payload,
+			fullCustomer,
+			autoTopupConfig: normalizedAutoTopupConfig,
+			paymentMethod,
+		});
+
+	if (!allowed) {
+		const message = `Preflight blocked for feature ${featureId}, customer ${customerId}, reason: ${reason}`;
+		logger.info(`[setupAutoTopupContext] ${message}`);
+
+		// Suspension has no window to expire, so key the suppression off when the
+		// breaker tripped — one webhook a day rather than one per deduction.
+		if (reason === "suspended_after_failures") {
+			return {
+				ok: false,
+				failure: {
+					reason,
+					message,
+					fullCustomer,
+					autoTopupConfig: normalizedAutoTopupConfig,
+					suppressionKey: [
+						"auto_topup_failed_webhook",
+						ctx.org.id,
+						ctx.env,
+						customerId,
+						featureId,
+						reason,
+						limitState.suspended_at,
+					].join(":"),
+					suppressionTtlMs: 24 * 60 * 60 * 1000,
+				},
+			};
+		}
+
+		return {
+			ok: false,
+			failure: {
+				reason: reason ?? "execution_error",
+				message,
+				fullCustomer,
+				autoTopupConfig: normalizedAutoTopupConfig,
+				...(reason && blockedWindowEndsAt
+					? {
+							suppressionKey: [
+								"auto_topup_failed_webhook",
+								ctx.org.id,
+								ctx.env,
+								customerId,
+								featureId,
+								reason,
+								blockedWindowEndsAt,
+							].join(":"),
+							suppressionTtlMs: Math.max(
+								blockedWindowEndsAt - Date.now(),
+								60_000,
+							),
+						}
+					: {}),
+			},
+		};
 	}
 
 	const currentEpochMs = testClockFrozenTime ?? Date.now();
@@ -171,29 +249,39 @@ export const setupAutoTopupContext = async ({
 	const cusProduct = customerEntitlement.customer_product;
 
 	if (!cusProduct) {
-		logger.error(
-			`[setupAutoTopupContext] No customer product found for customer ${customerId}`,
-		);
-		return null;
+		const message = `No customer product found for customer ${customerId}`;
+		logger.error(`[setupAutoTopupContext] ${message}`);
+		return {
+			ok: false,
+			failure: {
+				reason: "missing_customer_product",
+				message,
+				fullCustomer,
+				autoTopupConfig: normalizedAutoTopupConfig,
+			},
+		};
 	}
 
 	return {
-		// BillingContext fields
-		fullCustomer,
-		fullProducts: [cusProductToProduct({ cusProduct })],
-		featureQuantities: [],
-		invoiceMode,
-		currentEpochMs,
-		billingCycleAnchorMs: "now",
-		resetCycleAnchorMs: "now",
-		stripeCustomer: stripeCus,
-		paymentMethod,
-		billingVersion: BillingVersion.V2,
+		ok: true,
+		autoTopupContext: {
+			// BillingContext fields
+			fullCustomer,
+			fullProducts: [cusProductToProduct({ cusProduct })],
+			featureQuantities: [],
+			invoiceMode,
+			currentEpochMs,
+			billingCycleAnchorMs: "now",
+			resetCycleAnchorMs: "now",
+			stripeCustomer: stripeCus,
+			paymentMethod,
+			billingVersion: BillingVersion.V2,
 
-		// Auto top-up specific fields
-		autoTopupConfig: normalizedAutoTopupConfig,
-		customerEntitlement,
+			// Auto top-up specific fields
+			autoTopupConfig: normalizedAutoTopupConfig,
+			customerEntitlement,
 
-		limitState,
+			limitState,
+		},
 	};
 };

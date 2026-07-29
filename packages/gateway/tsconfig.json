@@ -11,7 +11,8 @@
     "isolatedModules": true,
     "noEmit": true,
     "outDir": "dist",
-    "lib": ["ES2022"],
+    "lib": ["ES2022", "DOM"],
+    "types": ["node"],
     "skipLibCheck": true
   },
   "include": ["src"],

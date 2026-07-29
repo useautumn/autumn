@@ -11,20 +11,95 @@ export const billingUpdateFeatureQuantitySchema = z.object({
 	adjustable: z.union([z.boolean(), z.undefined()]).optional(),
 });
 
+export const billingUpdateAdditionalCurrencySchema = z.object({
+	currency: z.string(),
+	amount: z.number(),
+});
+
+export const billingUpdateItemAdditionalCurrencySchema = z.object({
+	currency: z.string(),
+	amount: z.number(),
+});
+
 export const billingUpdateItemToSchema = z.union([z.number(), z.string()]);
+
+export const billingUpdateItemTierAdditionalCurrencySchema = z.object({
+	currency: z.string(),
+	amount: z.union([z.number(), z.undefined()]).optional(),
+	flatAmount: z.union([z.number(), z.undefined()]).optional(),
+});
 
 export const billingUpdateItemTierSchema = z.object({
 	to: z.union([z.number(), z.string()]),
 	amount: z.union([z.number(), z.undefined()]).optional(),
 	flatAmount: z.union([z.number(), z.undefined()]).optional(),
+	additionalCurrencies: z
+		.union([
+			z.array(billingUpdateItemTierAdditionalCurrencySchema),
+			z.undefined(),
+		])
+		.optional(),
+});
+
+export const billingUpdateAddItemAdditionalCurrencySchema = z.object({
+	currency: z.string(),
+	amount: z.number(),
 });
 
 export const billingUpdateAddItemToSchema = z.union([z.number(), z.string()]);
+
+export const billingUpdateAddItemTierAdditionalCurrencySchema = z.object({
+	currency: z.string(),
+	amount: z.union([z.number(), z.undefined()]).optional(),
+	flatAmount: z.union([z.number(), z.undefined()]).optional(),
+});
 
 export const billingUpdateAddItemTierSchema = z.object({
 	to: z.union([z.number(), z.string()]),
 	amount: z.union([z.number(), z.undefined()]).optional(),
 	flatAmount: z.union([z.number(), z.undefined()]).optional(),
+	additionalCurrencies: z
+		.union([
+			z.array(billingUpdateAddItemTierAdditionalCurrencySchema),
+			z.undefined(),
+		])
+		.optional(),
+});
+
+export const billingUpdatePropertiesSchema = z.union([
+	z.string(),
+	z.number(),
+	z.boolean(),
+]);
+
+export const billingUpdateFilterSchema = z.object({
+	properties: z.record(
+		z.string(),
+		z.union([z.string(), z.number(), z.boolean()]),
+	),
+});
+
+export const billingUpdateOverageAllowedSchema = z.object({
+	featureId: z.string(),
+	enabled: z.union([z.boolean(), z.undefined()]).optional(),
+});
+
+export const billingUpdateUpsertLicenseAdditionalCurrencySchema = z.object({
+	currency: z.string(),
+	amount: z.number(),
+});
+
+export const billingUpdateUpsertLicenseAddItemAdditionalCurrencySchema =
+	z.object({
+		currency: z.string(),
+		amount: z.number(),
+	});
+
+export const billingUpdateUpsertLicenseTierSchema = z.object({
+	to: z.union([z.any(), z.undefined()]).optional(),
+	amount: z.union([z.number(), z.undefined()]).optional(),
+	flatAmount: z.union([z.number(), z.undefined()]).optional(),
+	additionalCurrencies: z.union([z.array(z.any()), z.undefined()]).optional(),
 });
 
 export const billingUpdateInvoiceModeSchema = z.object({
@@ -44,6 +119,16 @@ export const billingUpdateRecalculateBalancesSchema = z.object({
 	enabled: z.boolean(),
 });
 
+export const billingUpdateCarryOverUsagesSchema = z.object({
+	enabled: z.boolean(),
+	featureIds: z.union([z.array(z.string()), z.undefined()]).optional(),
+});
+
+export const billingUpdateLicenseQuantitySchema = z.object({
+	licensePlanId: z.string(),
+	quantity: z.number(),
+});
+
 export const billingUpdateInvoiceSchema = z.object({
 	status: z.string().nullable(),
 	stripeId: z.string(),
@@ -58,10 +143,21 @@ export const billingUpdateFeatureQuantityOutboundSchema = z.object({
 	adjustable: z.union([z.boolean(), z.undefined()]).optional(),
 });
 
+export const billingUpdateAdditionalCurrencyOutboundSchema = z.object({
+	currency: z.string(),
+	amount: z.number(),
+});
+
 export const billingUpdateBasePriceOutboundSchema = z.object({
 	amount: z.number(),
 	interval: z.string(),
 	interval_count: z.union([z.number(), z.undefined()]).optional(),
+	additional_currencies: z
+		.union([
+			z.array(billingUpdateAdditionalCurrencyOutboundSchema),
+			z.undefined(),
+		])
+		.optional(),
 });
 
 export const billingUpdateItemResetOutboundSchema = z.object({
@@ -69,19 +165,42 @@ export const billingUpdateItemResetOutboundSchema = z.object({
 	interval_count: z.union([z.number(), z.undefined()]).optional(),
 });
 
+export const billingUpdateItemAdditionalCurrencyOutboundSchema = z.object({
+	currency: z.string(),
+	amount: z.number(),
+});
+
 export const billingUpdateItemToOutboundSchema = z.union([
 	z.number(),
 	z.string(),
 ]);
 
-export const billingUpdateItemTierOutboundSchema = z.object({
-	to: z.union([z.number(), z.string()]),
+export const billingUpdateItemTierAdditionalCurrencyOutboundSchema = z.object({
+	currency: z.string(),
 	amount: z.union([z.number(), z.undefined()]).optional(),
 	flat_amount: z.union([z.number(), z.undefined()]).optional(),
 });
 
+export const billingUpdateItemTierOutboundSchema = z.object({
+	to: z.union([z.number(), z.string()]),
+	amount: z.union([z.number(), z.undefined()]).optional(),
+	flat_amount: z.union([z.number(), z.undefined()]).optional(),
+	additional_currencies: z
+		.union([
+			z.array(billingUpdateItemTierAdditionalCurrencyOutboundSchema),
+			z.undefined(),
+		])
+		.optional(),
+});
+
 export const billingUpdateItemPriceOutboundSchema = z.object({
 	amount: z.union([z.number(), z.undefined()]).optional(),
+	additional_currencies: z
+		.union([
+			z.array(billingUpdateItemAdditionalCurrencyOutboundSchema),
+			z.undefined(),
+		])
+		.optional(),
 	tiers: z
 		.union([z.array(billingUpdateItemTierOutboundSchema), z.undefined()])
 		.optional(),
@@ -128,19 +247,43 @@ export const billingUpdateAddItemResetOutboundSchema = z.object({
 	interval_count: z.union([z.number(), z.undefined()]).optional(),
 });
 
+export const billingUpdateAddItemAdditionalCurrencyOutboundSchema = z.object({
+	currency: z.string(),
+	amount: z.number(),
+});
+
 export const billingUpdateAddItemToOutboundSchema = z.union([
 	z.number(),
 	z.string(),
 ]);
 
+export const billingUpdateAddItemTierAdditionalCurrencyOutboundSchema =
+	z.object({
+		currency: z.string(),
+		amount: z.union([z.number(), z.undefined()]).optional(),
+		flat_amount: z.union([z.number(), z.undefined()]).optional(),
+	});
+
 export const billingUpdateAddItemTierOutboundSchema = z.object({
 	to: z.union([z.number(), z.string()]),
 	amount: z.union([z.number(), z.undefined()]).optional(),
 	flat_amount: z.union([z.number(), z.undefined()]).optional(),
+	additional_currencies: z
+		.union([
+			z.array(billingUpdateAddItemTierAdditionalCurrencyOutboundSchema),
+			z.undefined(),
+		])
+		.optional(),
 });
 
 export const billingUpdateAddItemPriceOutboundSchema = z.object({
 	amount: z.union([z.number(), z.undefined()]).optional(),
+	additional_currencies: z
+		.union([
+			z.array(billingUpdateAddItemAdditionalCurrencyOutboundSchema),
+			z.undefined(),
+		])
+		.optional(),
 	tiers: z
 		.union([z.array(billingUpdateAddItemTierOutboundSchema), z.undefined()])
 		.optional(),
@@ -201,6 +344,218 @@ export const billingUpdateFreeTrialParamsOutboundSchema = z.object({
 	on_end: z.union([z.string(), z.undefined()]).optional(),
 });
 
+export const billingUpdatePurchaseLimitOutboundSchema = z.object({
+	interval: z.string(),
+	interval_count: z.number(),
+	limit: z.number(),
+	count: z.union([z.number(), z.undefined()]).optional(),
+});
+
+export const billingUpdateAutoTopupOutboundSchema = z.object({
+	feature_id: z.string(),
+	enabled: z.boolean(),
+	threshold: z.number(),
+	quantity: z.number(),
+	purchase_limit: z
+		.union([billingUpdatePurchaseLimitOutboundSchema, z.undefined()])
+		.optional(),
+	invoice_mode: z.union([z.boolean(), z.undefined()]).optional(),
+});
+
+export const billingUpdateSpendLimitOutboundSchema = z.object({
+	feature_id: z.union([z.string(), z.undefined()]).optional(),
+	enabled: z.boolean(),
+	limit_type: z.union([z.string(), z.undefined()]).optional(),
+	overage_limit: z.union([z.number(), z.undefined()]).optional(),
+	skip_overage_billing: z.union([z.boolean(), z.undefined()]).optional(),
+});
+
+export const billingUpdatePropertiesOutboundSchema = z.union([
+	z.string(),
+	z.number(),
+	z.boolean(),
+]);
+
+export const billingUpdateFilterOutboundSchema = z.object({
+	properties: z.record(
+		z.string(),
+		z.union([z.string(), z.number(), z.boolean()]),
+	),
+});
+
+export const billingUpdateUsageLimitOutboundSchema = z.object({
+	feature_id: z.string(),
+	enabled: z.boolean(),
+	limit: z.number(),
+	interval: z.string(),
+	filter: z
+		.union([billingUpdateFilterOutboundSchema, z.undefined()])
+		.optional(),
+});
+
+export const billingUpdateUsageAlertOutboundSchema = z.object({
+	feature_id: z.union([z.string(), z.undefined()]).optional(),
+	enabled: z.boolean(),
+	threshold: z.number(),
+	threshold_type: z.string(),
+	name: z.union([z.string(), z.undefined()]).optional(),
+});
+
+export const billingUpdateOverageAllowedOutboundSchema = z.object({
+	feature_id: z.string(),
+	enabled: z.boolean(),
+});
+
+export const billingUpdateBillingControlsOutboundSchema = z.object({
+	auto_topups: z
+		.union([z.array(billingUpdateAutoTopupOutboundSchema), z.undefined()])
+		.optional(),
+	spend_limits: z
+		.union([z.array(billingUpdateSpendLimitOutboundSchema), z.undefined()])
+		.optional(),
+	usage_limits: z
+		.union([z.array(billingUpdateUsageLimitOutboundSchema), z.undefined()])
+		.optional(),
+	usage_alerts: z
+		.union([z.array(billingUpdateUsageAlertOutboundSchema), z.undefined()])
+		.optional(),
+	overage_allowed: z
+		.union([z.array(billingUpdateOverageAllowedOutboundSchema), z.undefined()])
+		.optional(),
+});
+
+export const billingUpdateUpsertLicenseAdditionalCurrencyOutboundSchema =
+	z.object({
+		currency: z.string(),
+		amount: z.number(),
+	});
+
+export const billingUpdateUpsertLicenseBasePriceOutboundSchema = z.object({
+	amount: z.number(),
+	interval: z.string(),
+	interval_count: z.union([z.number(), z.undefined()]).optional(),
+	additional_currencies: z
+		.union([
+			z.array(billingUpdateUpsertLicenseAdditionalCurrencyOutboundSchema),
+			z.undefined(),
+		])
+		.optional(),
+});
+
+export const billingUpdateUpsertLicenseResetOutboundSchema = z.object({
+	interval: z.string(),
+	interval_count: z.union([z.number(), z.undefined()]).optional(),
+});
+
+export const billingUpdateUpsertLicenseAddItemAdditionalCurrencyOutboundSchema =
+	z.object({
+		currency: z.string(),
+		amount: z.number(),
+	});
+
+export const billingUpdateUpsertLicenseTierOutboundSchema = z.object({
+	to: z.union([z.any(), z.undefined()]).optional(),
+	amount: z.union([z.number(), z.undefined()]).optional(),
+	flat_amount: z.union([z.number(), z.undefined()]).optional(),
+	additional_currencies: z.union([z.array(z.any()), z.undefined()]).optional(),
+});
+
+export const billingUpdateUpsertLicensePriceOutboundSchema = z.object({
+	amount: z.union([z.number(), z.undefined()]).optional(),
+	additional_currencies: z
+		.union([
+			z.array(
+				billingUpdateUpsertLicenseAddItemAdditionalCurrencyOutboundSchema,
+			),
+			z.undefined(),
+		])
+		.optional(),
+	tiers: z
+		.union([
+			z.array(billingUpdateUpsertLicenseTierOutboundSchema),
+			z.undefined(),
+		])
+		.optional(),
+	tier_behavior: z.union([z.string(), z.undefined()]).optional(),
+	interval: z.string(),
+	interval_count: z.number(),
+	billing_units: z.number(),
+	billing_method: z.string(),
+	max_purchase: z.union([z.number(), z.undefined()]).optional().nullable(),
+});
+
+export const billingUpdateUpsertLicenseProrationOutboundSchema = z.object({
+	on_increase: z.string(),
+	on_decrease: z.string(),
+});
+
+export const billingUpdateUpsertLicenseRolloverOutboundSchema = z.object({
+	max: z.union([z.number(), z.undefined()]).optional(),
+	max_percentage: z.union([z.number(), z.undefined()]).optional(),
+	expiry_duration_type: z.string(),
+	expiry_duration_length: z.union([z.number(), z.undefined()]).optional(),
+});
+
+export const billingUpdateUpsertLicensePlanItemOutboundSchema = z.object({
+	feature_id: z.string(),
+	included: z.union([z.number(), z.undefined()]).optional(),
+	unlimited: z.union([z.boolean(), z.undefined()]).optional(),
+	reset: z
+		.union([billingUpdateUpsertLicenseResetOutboundSchema, z.undefined()])
+		.optional(),
+	price: z
+		.union([billingUpdateUpsertLicensePriceOutboundSchema, z.undefined()])
+		.optional(),
+	proration: z
+		.union([billingUpdateUpsertLicenseProrationOutboundSchema, z.undefined()])
+		.optional(),
+	rollover: z
+		.union([billingUpdateUpsertLicenseRolloverOutboundSchema, z.undefined()])
+		.optional(),
+});
+
+export const billingUpdateUpsertLicenseIntervalUnionOutboundSchema = z.union([
+	z.string(),
+	z.string(),
+]);
+
+export const billingUpdateUpsertLicensePlanItemFilterOutboundSchema = z.object({
+	feature_id: z.union([z.string(), z.undefined()]).optional(),
+	billing_method: z.union([z.string(), z.undefined()]).optional(),
+	interval: z.union([z.string(), z.string(), z.undefined()]).optional(),
+	interval_count: z.union([z.number(), z.undefined()]).optional(),
+});
+
+export const billingUpdateUpsertLicenseCustomizeOutboundSchema = z.object({
+	price: z
+		.union([billingUpdateUpsertLicenseBasePriceOutboundSchema, z.undefined()])
+		.optional()
+		.nullable(),
+	add_items: z
+		.union([
+			z.array(billingUpdateUpsertLicensePlanItemOutboundSchema),
+			z.undefined(),
+		])
+		.optional(),
+	remove_items: z
+		.union([
+			z.array(billingUpdateUpsertLicensePlanItemFilterOutboundSchema),
+			z.undefined(),
+		])
+		.optional(),
+});
+
+export const billingUpdateUpsertLicenseOutboundSchema = z.object({
+	license_plan_id: z.string(),
+	included: z.union([z.number(), z.undefined()]).optional(),
+	prepaid_only: z.union([z.boolean(), z.undefined()]).optional(),
+	customize: z
+		.union([billingUpdateUpsertLicenseCustomizeOutboundSchema, z.undefined()])
+		.optional()
+		.nullable(),
+	metadata: z.union([z.record(z.string(), z.any()), z.undefined()]).optional(),
+});
+
 export const billingUpdateCustomizeOutboundSchema = z.object({
 	price: z
 		.union([billingUpdateBasePriceOutboundSchema, z.undefined()])
@@ -219,6 +574,12 @@ export const billingUpdateCustomizeOutboundSchema = z.object({
 		.union([billingUpdateFreeTrialParamsOutboundSchema, z.undefined()])
 		.optional()
 		.nullable(),
+	billing_controls: z
+		.union([billingUpdateBillingControlsOutboundSchema, z.undefined()])
+		.optional(),
+	upsert_licenses: z
+		.union([z.array(billingUpdateUpsertLicenseOutboundSchema), z.undefined()])
+		.optional(),
 });
 
 export const billingUpdateInvoiceModeOutboundSchema = z.object({
@@ -236,6 +597,16 @@ export const billingUpdateAttachDiscountOutboundSchema = z.object({
 
 export const billingUpdateRecalculateBalancesOutboundSchema = z.object({
 	enabled: z.boolean(),
+});
+
+export const billingUpdateCarryOverUsagesOutboundSchema = z.object({
+	enabled: z.boolean(),
+	feature_ids: z.union([z.array(z.string()), z.undefined()]).optional(),
+});
+
+export const billingUpdateLicenseQuantityOutboundSchema = z.object({
+	license_plan_id: z.string(),
+	quantity: z.number(),
 });
 
 export const updateSubscriptionParamsOutboundSchema = z.object({
@@ -261,8 +632,15 @@ export const updateSubscriptionParamsOutboundSchema = z.object({
 	cancel_action: z.union([z.string(), z.undefined()]).optional(),
 	billing_cycle_anchor: z.union([z.literal("now"), z.undefined()]).optional(),
 	no_billing_changes: z.union([z.boolean(), z.undefined()]).optional(),
+	refund_last_payment: z.union([z.string(), z.undefined()]).optional(),
 	recalculate_balances: z
 		.union([billingUpdateRecalculateBalancesOutboundSchema, z.undefined()])
+		.optional(),
+	carry_over_usages: z
+		.union([billingUpdateCarryOverUsagesOutboundSchema, z.undefined()])
+		.optional(),
+	license_quantities: z
+		.union([z.array(billingUpdateLicenseQuantityOutboundSchema), z.undefined()])
 		.optional(),
 });
 
@@ -276,6 +654,9 @@ export const billingUpdateBasePriceSchema = z.object({
 	amount: z.number(),
 	interval: billingUpdatePriceIntervalSchema,
 	intervalCount: z.union([z.number(), z.undefined()]).optional(),
+	additionalCurrencies: z
+		.union([z.array(billingUpdateAdditionalCurrencySchema), z.undefined()])
+		.optional(),
 });
 
 export const billingUpdateItemResetIntervalSchema = closedEnumSchema;
@@ -293,6 +674,9 @@ export const billingUpdateItemBillingMethodSchema = closedEnumSchema;
 
 export const billingUpdateItemPriceSchema = z.object({
 	amount: z.union([z.number(), z.undefined()]).optional(),
+	additionalCurrencies: z
+		.union([z.array(billingUpdateItemAdditionalCurrencySchema), z.undefined()])
+		.optional(),
 	tiers: z
 		.union([z.array(billingUpdateItemTierSchema), z.undefined()])
 		.optional(),
@@ -353,6 +737,12 @@ export const billingUpdateAddItemBillingMethodSchema = closedEnumSchema;
 
 export const billingUpdateAddItemPriceSchema = z.object({
 	amount: z.union([z.number(), z.undefined()]).optional(),
+	additionalCurrencies: z
+		.union([
+			z.array(billingUpdateAddItemAdditionalCurrencySchema),
+			z.undefined(),
+		])
+		.optional(),
 	tiers: z
 		.union([z.array(billingUpdateAddItemTierSchema), z.undefined()])
 		.optional(),
@@ -437,6 +827,220 @@ export const billingUpdateFreeTrialParamsSchema = z.object({
 	onEnd: z.union([billingUpdateOnEndSchema, z.undefined()]).optional(),
 });
 
+export const billingUpdatePurchaseLimitIntervalSchema = closedEnumSchema;
+
+export const billingUpdatePurchaseLimitSchema = z.object({
+	interval: billingUpdatePurchaseLimitIntervalSchema,
+	intervalCount: z.union([z.number(), z.undefined()]).optional(),
+	limit: z.number(),
+	count: z.union([z.number(), z.undefined()]).optional(),
+});
+
+export const billingUpdateAutoTopupSchema = z.object({
+	featureId: z.string(),
+	enabled: z.union([z.boolean(), z.undefined()]).optional(),
+	threshold: z.number(),
+	quantity: z.number(),
+	purchaseLimit: z
+		.union([billingUpdatePurchaseLimitSchema, z.undefined()])
+		.optional(),
+	invoiceMode: z.union([z.boolean(), z.undefined()]).optional(),
+});
+
+export const billingUpdateLimitTypeSchema = closedEnumSchema;
+
+export const billingUpdateSpendLimitSchema = z.object({
+	featureId: z.union([z.string(), z.undefined()]).optional(),
+	enabled: z.union([z.boolean(), z.undefined()]).optional(),
+	limitType: z.union([billingUpdateLimitTypeSchema, z.undefined()]).optional(),
+	overageLimit: z.union([z.number(), z.undefined()]).optional(),
+	skipOverageBilling: z.union([z.boolean(), z.undefined()]).optional(),
+});
+
+export const billingUpdateUsageLimitIntervalSchema = closedEnumSchema;
+
+export const billingUpdateUsageLimitSchema = z.object({
+	featureId: z.string(),
+	enabled: z.union([z.boolean(), z.undefined()]).optional(),
+	limit: z.number(),
+	interval: billingUpdateUsageLimitIntervalSchema,
+	filter: z.union([billingUpdateFilterSchema, z.undefined()]).optional(),
+});
+
+export const billingUpdateThresholdTypeSchema = closedEnumSchema;
+
+export const billingUpdateUsageAlertSchema = z.object({
+	featureId: z.union([z.string(), z.undefined()]).optional(),
+	enabled: z.union([z.boolean(), z.undefined()]).optional(),
+	threshold: z.number(),
+	thresholdType: billingUpdateThresholdTypeSchema,
+	name: z.union([z.string(), z.undefined()]).optional(),
+});
+
+export const billingUpdateBillingControlsSchema = z.object({
+	autoTopups: z
+		.union([z.array(billingUpdateAutoTopupSchema), z.undefined()])
+		.optional(),
+	spendLimits: z
+		.union([z.array(billingUpdateSpendLimitSchema), z.undefined()])
+		.optional(),
+	usageLimits: z
+		.union([z.array(billingUpdateUsageLimitSchema), z.undefined()])
+		.optional(),
+	usageAlerts: z
+		.union([z.array(billingUpdateUsageAlertSchema), z.undefined()])
+		.optional(),
+	overageAllowed: z
+		.union([z.array(billingUpdateOverageAllowedSchema), z.undefined()])
+		.optional(),
+});
+
+export const billingUpdatePriceUpsertLicenseIntervalSchema = closedEnumSchema;
+
+export const billingUpdateUpsertLicenseBasePriceSchema = z.object({
+	amount: z.number(),
+	interval: billingUpdatePriceUpsertLicenseIntervalSchema,
+	intervalCount: z.union([z.number(), z.undefined()]).optional(),
+	additionalCurrencies: z
+		.union([
+			z.array(billingUpdateUpsertLicenseAdditionalCurrencySchema),
+			z.undefined(),
+		])
+		.optional(),
+});
+
+export const billingUpdateUpsertLicenseResetIntervalSchema = closedEnumSchema;
+
+export const billingUpdateUpsertLicenseResetSchema = z.object({
+	interval: billingUpdateUpsertLicenseResetIntervalSchema,
+	intervalCount: z.union([z.number(), z.undefined()]).optional(),
+});
+
+export const billingUpdateUpsertLicenseTierBehaviorSchema = closedEnumSchema;
+
+export const billingUpdateUpsertLicenseAddItemPriceIntervalSchema =
+	closedEnumSchema;
+
+export const billingUpdateUpsertLicenseAddItemBillingMethodSchema =
+	closedEnumSchema;
+
+export const billingUpdateUpsertLicensePriceSchema = z.object({
+	amount: z.union([z.number(), z.undefined()]).optional(),
+	additionalCurrencies: z
+		.union([
+			z.array(billingUpdateUpsertLicenseAddItemAdditionalCurrencySchema),
+			z.undefined(),
+		])
+		.optional(),
+	tiers: z
+		.union([z.array(billingUpdateUpsertLicenseTierSchema), z.undefined()])
+		.optional(),
+	tierBehavior: z
+		.union([billingUpdateUpsertLicenseTierBehaviorSchema, z.undefined()])
+		.optional(),
+	interval: billingUpdateUpsertLicenseAddItemPriceIntervalSchema,
+	intervalCount: z.union([z.number(), z.undefined()]).optional(),
+	billingUnits: z.union([z.number(), z.undefined()]).optional(),
+	billingMethod: billingUpdateUpsertLicenseAddItemBillingMethodSchema,
+	maxPurchase: z.union([z.number(), z.undefined()]).optional().nullable(),
+});
+
+export const billingUpdateUpsertLicenseOnIncreaseSchema = closedEnumSchema;
+
+export const billingUpdateUpsertLicenseOnDecreaseSchema = closedEnumSchema;
+
+export const billingUpdateUpsertLicenseProrationSchema = z.object({
+	onIncrease: billingUpdateUpsertLicenseOnIncreaseSchema,
+	onDecrease: billingUpdateUpsertLicenseOnDecreaseSchema,
+});
+
+export const billingUpdateUpsertLicenseExpiryDurationTypeSchema =
+	closedEnumSchema;
+
+export const billingUpdateUpsertLicenseRolloverSchema = z.object({
+	max: z.union([z.number(), z.undefined()]).optional(),
+	maxPercentage: z.union([z.number(), z.undefined()]).optional(),
+	expiryDurationType: billingUpdateUpsertLicenseExpiryDurationTypeSchema,
+	expiryDurationLength: z.union([z.number(), z.undefined()]).optional(),
+});
+
+export const billingUpdateUpsertLicensePlanItemSchema = z.object({
+	featureId: z.string(),
+	included: z.union([z.number(), z.undefined()]).optional(),
+	unlimited: z.union([z.boolean(), z.undefined()]).optional(),
+	reset: z
+		.union([billingUpdateUpsertLicenseResetSchema, z.undefined()])
+		.optional(),
+	price: z
+		.union([billingUpdateUpsertLicensePriceSchema, z.undefined()])
+		.optional(),
+	proration: z
+		.union([billingUpdateUpsertLicenseProrationSchema, z.undefined()])
+		.optional(),
+	rollover: z
+		.union([billingUpdateUpsertLicenseRolloverSchema, z.undefined()])
+		.optional(),
+});
+
+export const billingUpdateUpsertLicenseRemoveItemBillingMethodSchema =
+	closedEnumSchema;
+
+export const billingUpdateIntervalUpsertLicenseRemoveItemEnum2Schema =
+	closedEnumSchema;
+
+export const billingUpdateIntervalUpsertLicenseRemoveItemEnum1Schema =
+	closedEnumSchema;
+
+export const billingUpdateUpsertLicenseIntervalUnionSchema = z.union([
+	billingUpdateIntervalUpsertLicenseRemoveItemEnum1Schema,
+	billingUpdateIntervalUpsertLicenseRemoveItemEnum2Schema,
+]);
+
+export const billingUpdateUpsertLicensePlanItemFilterSchema = z.object({
+	featureId: z.union([z.string(), z.undefined()]).optional(),
+	billingMethod: z
+		.union([
+			billingUpdateUpsertLicenseRemoveItemBillingMethodSchema,
+			z.undefined(),
+		])
+		.optional(),
+	interval: z
+		.union([
+			billingUpdateIntervalUpsertLicenseRemoveItemEnum1Schema,
+			billingUpdateIntervalUpsertLicenseRemoveItemEnum2Schema,
+			z.undefined(),
+		])
+		.optional(),
+	intervalCount: z.union([z.number(), z.undefined()]).optional(),
+});
+
+export const billingUpdateUpsertLicenseCustomizeSchema = z.object({
+	price: z
+		.union([billingUpdateUpsertLicenseBasePriceSchema, z.undefined()])
+		.optional()
+		.nullable(),
+	addItems: z
+		.union([z.array(billingUpdateUpsertLicensePlanItemSchema), z.undefined()])
+		.optional(),
+	removeItems: z
+		.union([
+			z.array(billingUpdateUpsertLicensePlanItemFilterSchema),
+			z.undefined(),
+		])
+		.optional(),
+});
+
+export const billingUpdateUpsertLicenseSchema = z.object({
+	licensePlanId: z.string(),
+	included: z.union([z.number(), z.undefined()]).optional(),
+	prepaidOnly: z.union([z.boolean(), z.undefined()]).optional(),
+	customize: z
+		.union([billingUpdateUpsertLicenseCustomizeSchema, z.undefined()])
+		.optional()
+		.nullable(),
+	metadata: z.union([z.record(z.string(), z.any()), z.undefined()]).optional(),
+});
+
 export const billingUpdateCustomizeSchema = z.object({
 	price: z
 		.union([billingUpdateBasePriceSchema, z.undefined()])
@@ -455,6 +1059,12 @@ export const billingUpdateCustomizeSchema = z.object({
 		.union([billingUpdateFreeTrialParamsSchema, z.undefined()])
 		.optional()
 		.nullable(),
+	billingControls: z
+		.union([billingUpdateBillingControlsSchema, z.undefined()])
+		.optional(),
+	upsertLicenses: z
+		.union([z.array(billingUpdateUpsertLicenseSchema), z.undefined()])
+		.optional(),
 });
 
 export const billingUpdateProrationBehaviorSchema = closedEnumSchema;
@@ -462,6 +1072,8 @@ export const billingUpdateProrationBehaviorSchema = closedEnumSchema;
 export const billingUpdateRedirectModeSchema = closedEnumSchema;
 
 export const billingUpdateCancelActionSchema = closedEnumSchema;
+
+export const billingUpdateRefundLastPaymentSchema = closedEnumSchema;
 
 export const updateSubscriptionParamsSchema = z.object({
 	customerId: z.string(),
@@ -490,8 +1102,17 @@ export const updateSubscriptionParamsSchema = z.object({
 		.optional(),
 	billingCycleAnchor: z.union([z.literal("now"), z.undefined()]).optional(),
 	noBillingChanges: z.union([z.boolean(), z.undefined()]).optional(),
+	refundLastPayment: z
+		.union([billingUpdateRefundLastPaymentSchema, z.undefined()])
+		.optional(),
 	recalculateBalances: z
 		.union([billingUpdateRecalculateBalancesSchema, z.undefined()])
+		.optional(),
+	carryOverUsages: z
+		.union([billingUpdateCarryOverUsagesSchema, z.undefined()])
+		.optional(),
+	licenseQuantities: z
+		.union([z.array(billingUpdateLicenseQuantitySchema), z.undefined()])
 		.optional(),
 });
 

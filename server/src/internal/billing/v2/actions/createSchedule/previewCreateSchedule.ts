@@ -7,8 +7,12 @@ import type {
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { evaluateStripeBillingPlan } from "@/internal/billing/v2/providers/stripe/actionBuilders/evaluateStripeBillingPlan";
 import { billingPlanToAttachPreview } from "@/internal/billing/v2/utils/billingPlan/billingPlanToAttachPreview";
+import { computeAttachPreviewBillingPlan } from "@/internal/billing/v2/utils/billingPlan/preview/computeAttachPreviewBillingPlan";
 import { computeCreateSchedulePlan } from "./compute/computeCreateSchedulePlan";
-import { handleCreateScheduleErrors } from "./errors/handleCreateScheduleErrors";
+import {
+	handleCreateScheduleBillingPlanErrors,
+	handleCreateScheduleErrors,
+} from "./errors/handleCreateScheduleErrors";
 import { setupCreateScheduleBillingContext } from "./setup/setupCreateScheduleBillingContext";
 
 type PreviewCreateScheduleResult = {
@@ -49,13 +53,25 @@ export const previewCreateScheduleWithContext = async ({
 
 	const billingPlan = { autumn: autumnBillingPlan, stripe: stripeBillingPlan };
 
+	handleCreateScheduleBillingPlanErrors({ ctx, billingContext, billingPlan });
+
+	const previewBillingPlan = await computeAttachPreviewBillingPlan({
+		ctx,
+		billingContext,
+		autumnBillingPlan,
+	});
+	const billingPlanWithPreview = {
+		...billingPlan,
+		preview: previewBillingPlan,
+	};
+
 	return {
 		billingContext,
-		billingPlan,
+		billingPlan: billingPlanWithPreview,
 		preview: await billingPlanToAttachPreview({
 			ctx,
 			billingContext,
-			billingPlan,
+			billingPlan: billingPlanWithPreview,
 		}),
 	};
 };

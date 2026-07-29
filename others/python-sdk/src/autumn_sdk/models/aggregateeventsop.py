@@ -64,6 +64,7 @@ r"""Time range to aggregate events for. Either range or custom_range must be pro
 BinSize = Literal[
     "day",
     "hour",
+    "week",
     "month",
 ]
 r"""Size of the time bins to aggregate events for. Defaults to hour if range is 24h, otherwise day"""

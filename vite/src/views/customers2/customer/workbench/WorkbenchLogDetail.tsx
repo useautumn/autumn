@@ -1,4 +1,4 @@
-import CopyButton from "@/components/general/CopyButton";
+import { CopyTextButton } from "@autumn/ui";
 import {
 	type RequestLogEntry,
 	useCusRequestLogsQuery,
@@ -93,7 +93,9 @@ const DetailHeader = ({ log }: { log: RequestLogEntry }) => (
 			<span className={cn("font-semibold", methodColorClass(log.method))}>
 				{log.method ?? "—"}
 			</span>
-			<span className="text-foreground break-all">{log.path ?? "(unknown)"}</span>
+			<span className="text-foreground break-all">
+				{log.path ?? "(unknown)"}
+			</span>
 		</div>
 	</div>
 );
@@ -128,7 +130,7 @@ const DetailRows = ({ log }: { log: RequestLogEntry }) => (
 			<Row label="Request ID">
 				<div className="flex items-center gap-1.5 min-w-0">
 					<span className="font-mono break-all">{log.reqId}</span>
-					<CopyButton
+					<CopyTextButton
 						text={log.reqId}
 						className="bg-transparent shadow-none hover:bg-stone-200 dark:hover:bg-stone-800 w-5 gap-0 h-5 !px-0 py-0 flex items-center justify-center text-tertiary-foreground shrink-0"
 					/>

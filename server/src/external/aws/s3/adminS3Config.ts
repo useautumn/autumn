@@ -10,12 +10,20 @@ export const ADMIN_RATE_LIMIT_REDIS_ALLOWLIST_CONFIG_KEY =
 	"admin/rate-limit-redis-allowlist-config.json";
 export const ADMIN_REDIS_V2_CACHE_CONFIG_KEY =
 	"admin/redis-v2-cache-config.json";
+export const ADMIN_MAIN_REDIS_CACHE_CONFIG_KEY =
+	"admin/main-redis-cache-config.json";
 export const ADMIN_CACHE_V2_RAMP_CONFIG_KEY = "admin/cache-v2-ramp-config.json";
 export const ADMIN_JOB_QUEUE_CONFIG_KEY = "admin/job-queue-config.json";
+export const ADMIN_BATCH_RESET_CONFIG_KEY = "admin/batch-reset-config.json";
+export const ADMIN_RESET_JOB_CONFIG_KEY = "admin/reset-job-config.json";
+export const ADMIN_RESET_JOB_V2_CONFIG_KEY = "admin/reset-job-v2-config.json";
 export const ADMIN_MISCELLANEOUS_EDGE_CONFIG_KEY =
 	"admin/miscellaneous-edge-config.json";
 export const ADMIN_FULL_SUBJECT_GATE_CONFIG_KEY =
 	"admin/full-subject-gate-config.json";
+export const ADMIN_ASYNC_BALANCE_UPDATE_CONFIG_KEY =
+	"admin/async-balance-update-config.json";
+export const ADMIN_ASYNC_TRACK_CONFIG_KEY = "admin/async-track-config.json";
 export const BLUE_GREEN_ACTIVE_SLOT_KEY = "admin/blue-green-active-slot.json";
 export const BLUE_GREEN_CRON_ACTIVE_SLOT_KEY =
 	"admin/blue-green-cron-active-slot.json";
@@ -67,6 +75,11 @@ export const getAdminEdgeConfigSources = () => ({
 			key: ADMIN_REDIS_V2_CACHE_CONFIG_KEY,
 		},
 		{
+			id: "main-redis-cache",
+			label: "Main Redis Instance",
+			key: ADMIN_MAIN_REDIS_CACHE_CONFIG_KEY,
+		},
+		{
 			id: "cache-v2-ramp",
 			label: "Cache V2 Ramp",
 			key: ADMIN_CACHE_V2_RAMP_CONFIG_KEY,
@@ -77,6 +90,21 @@ export const getAdminEdgeConfigSources = () => ({
 			key: ADMIN_JOB_QUEUE_CONFIG_KEY,
 		},
 		{
+			id: "batch-resets",
+			label: "Lazy Batch Resets",
+			key: ADMIN_BATCH_RESET_CONFIG_KEY,
+		},
+		{
+			id: "reset-job",
+			label: "Reset Job",
+			key: ADMIN_RESET_JOB_CONFIG_KEY,
+		},
+		{
+			id: "reset-job-v2",
+			label: "Reset Job V2",
+			key: ADMIN_RESET_JOB_V2_CONFIG_KEY,
+		},
+		{
 			id: "miscellaneous",
 			label: "Miscellaneous",
 			key: ADMIN_MISCELLANEOUS_EDGE_CONFIG_KEY,
@@ -85,6 +113,16 @@ export const getAdminEdgeConfigSources = () => ({
 			id: "full-subject-gate",
 			label: "FullSubject Concurrency Gate",
 			key: ADMIN_FULL_SUBJECT_GATE_CONFIG_KEY,
+		},
+		{
+			id: "async-balance-update",
+			label: "Async Balance Update",
+			key: ADMIN_ASYNC_BALANCE_UPDATE_CONFIG_KEY,
+		},
+		{
+			id: "async-track",
+			label: "Async Track",
+			key: ADMIN_ASYNC_TRACK_CONFIG_KEY,
 		},
 		{
 			id: "stripe-sync",

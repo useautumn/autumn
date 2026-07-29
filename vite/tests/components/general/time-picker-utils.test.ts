@@ -3,7 +3,7 @@ import {
 	getArrowByType,
 	getDateByType,
 	setDateByType,
-} from "@/components/general/timePickerUtils";
+} from "@autumn/ui";
 
 describe("timePickerUtils seconds support", () => {
 	test("setDateByType sets seconds when type is seconds", () => {

@@ -1,13 +1,13 @@
 import type { AutumnLogger } from "@autumn/logging";
 import type { AppEnv } from "@autumn/shared";
-import { readDocs } from "../../prompts/readDocs.js";
 import {
 	createAutumnMcpClient,
 	getAutumnMcpTools,
 } from "../../tools/autumnMcp.js";
 import type { AgentToolContext } from "../types.js";
 
-/** One MCP metadata roundtrip per message, shared by every engine. */
+/** Resolve the agent's tool set + which tools are destructive. Knowledge no
+ * longer rides here — it's the agent-docs skills inlined/attached in the prompt. */
 export const setupAgentToolContext = async ({
 	env,
 	logger,
@@ -19,16 +19,13 @@ export const setupAgentToolContext = async ({
 }): Promise<AgentToolContext> => {
 	const mcp = createAutumnMcpClient({ token, appEnv: env });
 	try {
-		const [tools, docsText] = await Promise.all([
-			getAutumnMcpTools({ mcp, options: { logger } }),
-			readDocs({ mcp }),
-		]);
+		const tools = await getAutumnMcpTools({ mcp, options: { logger } });
 		const destructiveTools = new Set(
 			Object.entries(tools)
 				.filter(([, tool]) => tool.mcp?.annotations?.destructiveHint === true)
 				.map(([name]) => name),
 		);
-		return { destructiveTools, docsText };
+		return { destructiveTools };
 	} finally {
 		await mcp.disconnect();
 	}

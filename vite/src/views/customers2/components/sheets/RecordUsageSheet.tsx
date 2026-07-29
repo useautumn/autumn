@@ -5,16 +5,18 @@ import type {
 	FullCustomer,
 } from "@autumn/shared";
 import { FeatureType, LATEST_VERSION } from "@autumn/shared";
+import {
+	Button,
+	FormLabel,
+	Input,
+	SearchableSelect,
+	ShortcutButton,
+} from "@autumn/ui";
 import { PlusIcon, TrashIcon } from "@phosphor-icons/react";
 import { useQueryClient } from "@tanstack/react-query";
 import { CheckIcon } from "lucide-react";
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
-import { Button } from "@/components/v2/buttons/Button";
-import { ShortcutButton } from "@/components/v2/buttons/ShortcutButton";
-import { FormLabel } from "@/components/v2/form/FormLabel";
-import { Input } from "@/components/v2/inputs/Input";
-import { SearchableSelect } from "@/components/v2/selects/SearchableSelect";
 import {
 	LayoutGroup,
 	SheetFooter,
@@ -29,6 +31,61 @@ import { getBackendErr } from "@/utils/genUtils";
 import { useCusQuery } from "@/views/customers/customer/hooks/useCusQuery";
 import { getFeatureIcon } from "@/views/products/features/utils/getFeatureIcon";
 import { EntityScopeSelector } from "./EntityScopeSelector";
+
+type TrackResponse = {
+	deductions?: { value: number }[];
+	balance?: {
+		remaining?: number | null;
+		overage_allowed?: boolean | null;
+	} | null;
+};
+
+// Track always records the event; warn when caps/exhaustion deduct less than
+// requested so the unchanged balance reads as expected, not broken.
+const showRecordUsageToast = ({
+	requested,
+	response,
+	featureName,
+}: {
+	requested: number;
+	response: TrackResponse;
+	featureName?: string;
+}) => {
+	const feature = featureName ?? "feature";
+
+	if (requested <= 0 || response.deductions === undefined) {
+		toast.success("Usage recorded");
+		return;
+	}
+
+	const deducted = response.deductions.reduce(
+		(sum, deduction) => sum + deduction.value,
+		0,
+	);
+
+	if (deducted >= requested) {
+		toast.success("Usage recorded");
+		return;
+	}
+
+	const remaining = response.balance?.remaining ?? 0;
+	const overageOff = response.balance?.overage_allowed === false;
+	const reason =
+		remaining <= 0 && overageOff
+			? `no ${feature} balance remaining`
+			: "a usage limit was reached";
+
+	if (deducted <= 0) {
+		toast.warning("Usage recorded but not deducted", {
+			description: `The event was logged, but nothing was deducted because ${reason}.`,
+		});
+		return;
+	}
+
+	toast.warning("Usage partially deducted", {
+		description: `Recorded ${requested}, but only ${deducted} was deducted because ${reason}.`,
+	});
+};
 
 export function RecordUsageSheet() {
 	const closeSheet = useSheetStore((s) => s.closeSheet);
@@ -140,9 +197,16 @@ export function RecordUsageSheet() {
 
 		setIsSubmitting(true);
 		try {
-			await axiosInstance.post("/v1/track", params);
+			const { data } = await axiosInstance.post<TrackResponse>(
+				"/v1/track",
+				params,
+			);
 			closeSheet();
-			toast.success("Usage recorded");
+			showRecordUsageToast({
+				requested: parsedValue,
+				response: data,
+				featureName: trackingFeatureName,
+			});
 			await new Promise((resolve) => setTimeout(resolve, 500));
 			await queryClient.invalidateQueries({ queryKey: ["customer"] });
 			await queryClient.invalidateQueries({

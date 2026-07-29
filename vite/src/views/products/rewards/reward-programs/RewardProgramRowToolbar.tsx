@@ -1,15 +1,14 @@
 import type { RewardProgram } from "@autumn/shared";
+import { SmallSpinner, ToolbarButton } from "@autumn/ui";
 import { Delete } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
-import SmallSpinner from "@/components/general/SmallSpinner";
-import { ToolbarButton } from "@/components/general/table-components/ToolbarButton";
 import {
 	DropdownMenu,
 	DropdownMenuContent,
 	DropdownMenuItem,
 	DropdownMenuTrigger,
-} from "@/components/v2/dropdowns/DropdownMenu";
+} from "@autumn/ui";
 import { useRewardsQuery } from "@/hooks/queries/useRewardsQuery";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
 import { getBackendErr } from "@/utils/genUtils";

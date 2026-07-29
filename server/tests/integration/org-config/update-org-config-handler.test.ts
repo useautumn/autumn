@@ -119,3 +119,44 @@ test(`${chalk.yellowBright("org config handler: array field (usage_alerts) merge
 			.where(eq(organizations.id, org.id));
 	}
 });
+
+test(`${chalk.yellowBright("org config handler: disable_overage_billing saves and preserves other fields")}`, async () => {
+	const { ctx } = await initScenario({ setup: [], actions: [] });
+	const { db, org } = ctx;
+	const originalConfig = org.config;
+
+	const readDbConfig = async (): Promise<OrgConfig> => {
+		const [row] = await db
+			.select({ config: organizations.config })
+			.from(organizations)
+			.where(eq(organizations.id, org.id))
+			.limit(1);
+		return OrgConfigSchema.parse(row?.config ?? {});
+	};
+
+	try {
+		await db
+			.update(organizations)
+			.set({ config: {} as OrgConfig })
+			.where(eq(organizations.id, org.id));
+
+		const autumn = new AutumnInt({ secretKey: ctx.orgSecretKey });
+
+		await autumn.patch("/organization/config", { automatic_tax: true });
+		const response = (await autumn.patch("/organization/config", {
+			disable_overage_billing: true,
+		})) as { success: boolean; config: OrgConfig };
+
+		expect(response.config.disable_overage_billing).toBe(true);
+		expect(response.config.automatic_tax).toBe(true);
+
+		const persisted = await readDbConfig();
+		expect(persisted.disable_overage_billing).toBe(true);
+		expect(persisted.automatic_tax).toBe(true);
+	} finally {
+		await db
+			.update(organizations)
+			.set({ config: originalConfig })
+			.where(eq(organizations.id, org.id));
+	}
+});

@@ -1,4 +1,5 @@
 import type { AppEnv, FullCusProduct, ProductV2 } from "@autumn/shared";
+import { SearchableSelect } from "@autumn/ui";
 import {
 	ArrowSquareOutIcon,
 	CheckCircleIcon,
@@ -8,7 +9,6 @@ import {
 	TrashIcon,
 	WarningCircleIcon,
 } from "@phosphor-icons/react";
-import { SearchableSelect } from "@/components/v2/selects/SearchableSelect";
 import { cn } from "@/lib/utils";
 import {
 	getStripeConnectViewAsLink,
@@ -264,7 +264,8 @@ export function SyncProposalCard({
 							<span
 								className={cn(
 									"text-muted-foreground truncate min-w-0",
-									!item.stripe_product_name && "font-mono text-tertiary-foreground",
+									!item.stripe_product_name &&
+										"font-mono text-tertiary-foreground",
 								)}
 							>
 								{displayName}
@@ -283,7 +284,9 @@ export function SyncProposalCard({
 			{/* Plan mappings */}
 			{isEnabled && (
 				<div className="space-y-3.5">
-					<span className="text-xs text-tertiary-foreground font-medium">Autumn plans</span>
+					<span className="text-xs text-tertiary-foreground font-medium">
+						Autumn plans
+					</span>
 					<div className="space-y-1.5">
 						{mappings.map((mapping, index) => (
 							<SyncMappingRow

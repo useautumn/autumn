@@ -6,7 +6,7 @@ import {
 } from "@autumn/shared";
 import { buildConflictUpdateColumns } from "@server/db/dbUtils";
 import type { DrizzleCli } from "@server/db/initDrizzle";
-import { and, eq, inArray } from "drizzle-orm";
+import { and, eq, inArray, sql } from "drizzle-orm";
 
 export class EntitlementService {
 	static async getByOrg({
@@ -50,7 +50,7 @@ export class EntitlementService {
 		internalFeatureId: string;
 	}) {
 		return await db.query.entitlements.findFirst({
-			where: eq(entitlements.internal_feature_id, internalFeatureId),
+			where: sql`${entitlements.internal_feature_id} COLLATE "C" = ${internalFeatureId}`,
 			with: {
 				feature: true,
 			},

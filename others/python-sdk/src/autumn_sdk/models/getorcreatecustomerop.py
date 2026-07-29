@@ -12,8 +12,8 @@ from autumn_sdk.types import (
 from autumn_sdk.utils import FieldMetadata, HeaderMetadata
 import pydantic
 from pydantic import model_serializer
-from typing import Any, Dict, List, Literal, Optional
-from typing_extensions import Annotated, NotRequired, TypedDict
+from typing import Any, Dict, List, Literal, Optional, Union
+from typing_extensions import Annotated, NotRequired, TypeAliasType, TypedDict
 
 
 class GetOrCreateCustomerGlobalsTypedDict(TypedDict):
@@ -54,7 +54,7 @@ r"""The time interval for the purchase limit window."""
 
 
 class GetOrCreateCustomerPurchaseLimitTypedDict(TypedDict):
-    r"""Optional rate limit to cap how often auto top-ups occur."""
+    r"""Optional rate limit to cap how often auto top-ups occur. Pass count to set the current window's consumed top-ups."""
 
     interval: GetOrCreateCustomerPurchaseLimitInterval
     r"""The time interval for the purchase limit window."""
@@ -62,10 +62,12 @@ class GetOrCreateCustomerPurchaseLimitTypedDict(TypedDict):
     r"""Maximum number of auto top-ups allowed within the interval."""
     interval_count: NotRequired[float]
     r"""Number of intervals in the purchase limit window."""
+    count: NotRequired[float]
+    r"""Set the current window's consumed auto top-up count. Omit to leave runtime state unchanged."""
 
 
 class GetOrCreateCustomerPurchaseLimit(BaseModel):
-    r"""Optional rate limit to cap how often auto top-ups occur."""
+    r"""Optional rate limit to cap how often auto top-ups occur. Pass count to set the current window's consumed top-ups."""
 
     interval: GetOrCreateCustomerPurchaseLimitInterval
     r"""The time interval for the purchase limit window."""
@@ -76,9 +78,12 @@ class GetOrCreateCustomerPurchaseLimit(BaseModel):
     interval_count: Optional[float] = 1
     r"""Number of intervals in the purchase limit window."""
 
+    count: Optional[float] = None
+    r"""Set the current window's consumed auto top-up count. Omit to leave runtime state unchanged."""
+
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
-        optional_fields = set(["interval_count"])
+        optional_fields = set(["interval_count", "count"])
         serialized = handler(self)
         m = {}
 
@@ -103,7 +108,7 @@ class GetOrCreateCustomerAutoTopupTypedDict(TypedDict):
     enabled: NotRequired[bool]
     r"""Whether auto top-up is enabled."""
     purchase_limit: NotRequired[GetOrCreateCustomerPurchaseLimitTypedDict]
-    r"""Optional rate limit to cap how often auto top-ups occur."""
+    r"""Optional rate limit to cap how often auto top-ups occur. Pass count to set the current window's consumed top-ups."""
     invoice_mode: NotRequired[bool]
     r"""When true, auto top-up creates a send_invoice invoice instead of auto-charging."""
 
@@ -122,7 +127,7 @@ class GetOrCreateCustomerAutoTopup(BaseModel):
     r"""Whether auto top-up is enabled."""
 
     purchase_limit: Optional[GetOrCreateCustomerPurchaseLimit] = None
-    r"""Optional rate limit to cap how often auto top-ups occur."""
+    r"""Optional rate limit to cap how often auto top-ups occur. Pass count to set the current window's consumed top-ups."""
 
     invoice_mode: Optional[bool] = None
     r"""When true, auto top-up creates a send_invoice invoice instead of auto-charging."""
@@ -144,13 +149,24 @@ class GetOrCreateCustomerAutoTopup(BaseModel):
         return m
 
 
+GetOrCreateCustomerLimitType = Literal[
+    "absolute",
+    "usage_percentage",
+]
+r"""How overage_limit is interpreted: an absolute overage cap (default) or a percentage of the main-plan allowance."""
+
+
 class GetOrCreateCustomerSpendLimitTypedDict(TypedDict):
     feature_id: NotRequired[str]
     r"""Optional feature ID this spend limit applies to."""
     enabled: NotRequired[bool]
     r"""Whether the overage spend limit is enabled."""
+    limit_type: NotRequired[GetOrCreateCustomerLimitType]
+    r"""How overage_limit is interpreted: an absolute overage cap (default) or a percentage of the main-plan allowance."""
     overage_limit: NotRequired[float]
-    r"""Maximum allowed overage spend for the target feature."""
+    r"""Overage cap for the feature: absolute units, or a percent (e.g. 120) when limit_type is usage_percentage."""
+    skip_overage_billing: NotRequired[bool]
+    r"""When true, overage for this feature is not posted to Stripe. Usage tracking and balance resets still behave normally."""
 
 
 class GetOrCreateCustomerSpendLimit(BaseModel):
@@ -160,12 +176,26 @@ class GetOrCreateCustomerSpendLimit(BaseModel):
     enabled: Optional[bool] = False
     r"""Whether the overage spend limit is enabled."""
 
+    limit_type: Optional[GetOrCreateCustomerLimitType] = None
+    r"""How overage_limit is interpreted: an absolute overage cap (default) or a percentage of the main-plan allowance."""
+
     overage_limit: Optional[float] = None
-    r"""Maximum allowed overage spend for the target feature."""
+    r"""Overage cap for the feature: absolute units, or a percent (e.g. 120) when limit_type is usage_percentage."""
+
+    skip_overage_billing: Optional[bool] = None
+    r"""When true, overage for this feature is not posted to Stripe. Usage tracking and balance resets still behave normally."""
 
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
-        optional_fields = set(["feature_id", "enabled", "overage_limit"])
+        optional_fields = set(
+            [
+                "feature_id",
+                "enabled",
+                "limit_type",
+                "overage_limit",
+                "skip_overage_billing",
+            ]
+        )
         serialized = handler(self)
         m = {}
 
@@ -189,6 +219,28 @@ GetOrCreateCustomerUsageLimitInterval = Literal[
 r"""Interval for the cap, aligned to the customer's billing cycle."""
 
 
+GetOrCreateCustomerPropertiesTypedDict = TypeAliasType(
+    "GetOrCreateCustomerPropertiesTypedDict", Union[str, float, bool]
+)
+
+
+GetOrCreateCustomerProperties = TypeAliasType(
+    "GetOrCreateCustomerProperties", Union[str, float, bool]
+)
+
+
+class GetOrCreateCustomerFilterTypedDict(TypedDict):
+    r"""When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature."""
+
+    properties: Dict[str, GetOrCreateCustomerPropertiesTypedDict]
+
+
+class GetOrCreateCustomerFilter(BaseModel):
+    r"""When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature."""
+
+    properties: Dict[str, GetOrCreateCustomerProperties]
+
+
 class GetOrCreateCustomerUsageLimitTypedDict(TypedDict):
     feature_id: str
     r"""The feature this usage limit applies to."""
@@ -196,6 +248,10 @@ class GetOrCreateCustomerUsageLimitTypedDict(TypedDict):
     r"""Maximum units allowed per interval."""
     interval: GetOrCreateCustomerUsageLimitInterval
     r"""Interval for the cap, aligned to the customer's billing cycle."""
+    enabled: NotRequired[bool]
+    r"""Whether this usage limit is enabled."""
+    filter_: NotRequired[GetOrCreateCustomerFilterTypedDict]
+    r"""When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature."""
 
 
 class GetOrCreateCustomerUsageLimit(BaseModel):
@@ -207,6 +263,30 @@ class GetOrCreateCustomerUsageLimit(BaseModel):
 
     interval: GetOrCreateCustomerUsageLimitInterval
     r"""Interval for the cap, aligned to the customer's billing cycle."""
+
+    enabled: Optional[bool] = True
+    r"""Whether this usage limit is enabled."""
+
+    filter_: Annotated[
+        Optional[GetOrCreateCustomerFilter], pydantic.Field(alias="filter")
+    ] = None
+    r"""When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature."""
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        optional_fields = set(["enabled", "filter"])
+        serialized = handler(self)
+        m = {}
+
+        for n, f in type(self).model_fields.items():
+            k = f.alias or n
+            val = serialized.get(k, serialized.get(n))
+
+            if val != UNSET_SENTINEL:
+                if val is not None or k not in optional_fields:
+                    m[k] = val
+
+        return m
 
 
 GetOrCreateCustomerThresholdType = Literal[
@@ -358,6 +438,8 @@ class GetOrCreateCustomerConfigTypedDict(TypedDict):
 
     disable_pooled_balance: NotRequired[bool]
     r"""Whether to disable the shared customer-level pool for entities."""
+    disable_overage_billing: NotRequired[bool]
+    r"""Stops Autumn from posting usage-overage line items to Stripe for this customer. Check/track and balance resets still behave normally. When set, this overrides the organization-level disable_overage_billing setting."""
 
 
 class GetOrCreateCustomerConfig(BaseModel):
@@ -366,9 +448,12 @@ class GetOrCreateCustomerConfig(BaseModel):
     disable_pooled_balance: Optional[bool] = None
     r"""Whether to disable the shared customer-level pool for entities."""
 
+    disable_overage_billing: Optional[bool] = None
+    r"""Stops Autumn from posting usage-overage line items to Stripe for this customer. Check/track and balance resets still behave normally. When set, this overrides the organization-level disable_overage_billing setting."""
+
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
-        optional_fields = set(["disable_pooled_balance"])
+        optional_fields = set(["disable_pooled_balance", "disable_overage_billing"])
         serialized = handler(self)
         m = {}
 
@@ -401,6 +486,8 @@ class GetOrCreateCustomerParamsTypedDict(TypedDict):
     r"""The ID of the free plan to auto-enable for the customer"""
     send_email_receipts: NotRequired[bool]
     r"""Whether to send email receipts to this customer"""
+    currency: NotRequired[Nullable[str]]
+    r"""Currency to bill this customer in (e.g. usd, eur). Defaults to the organization's default currency."""
     billing_controls: NotRequired[GetOrCreateCustomerBillingControlsTypedDict]
     r"""Billing controls for the customer (auto top-ups, etc.)"""
     config: NotRequired[GetOrCreateCustomerConfigTypedDict]
@@ -436,6 +523,9 @@ class GetOrCreateCustomerParams(BaseModel):
     send_email_receipts: Optional[bool] = None
     r"""Whether to send email receipts to this customer"""
 
+    currency: OptionalNullable[str] = UNSET
+    r"""Currency to bill this customer in (e.g. usd, eur). Defaults to the organization's default currency."""
+
     billing_controls: Optional[GetOrCreateCustomerBillingControls] = None
     r"""Billing controls for the customer (auto top-ups, etc.)"""
 
@@ -457,13 +547,22 @@ class GetOrCreateCustomerParams(BaseModel):
                 "create_in_stripe",
                 "auto_enable_plan_id",
                 "send_email_receipts",
+                "currency",
                 "billing_controls",
                 "config",
                 "expand",
             ]
         )
         nullable_fields = set(
-            ["customer_id", "name", "email", "fingerprint", "metadata", "stripe_id"]
+            [
+                "customer_id",
+                "name",
+                "email",
+                "fingerprint",
+                "metadata",
+                "stripe_id",
+                "currency",
+            ]
         )
         serialized = handler(self)
         m = {}
@@ -485,3 +584,9 @@ class GetOrCreateCustomerParams(BaseModel):
                     m[k] = val
 
         return m
+
+
+try:
+    GetOrCreateCustomerUsageLimit.model_rebuild()
+except NameError:
+    pass

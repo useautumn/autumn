@@ -1,15 +1,14 @@
 import type { CustomButton } from "@autumn/shared";
+import { Button, IconTooltipButton } from "@autumn/ui";
 import { DotsThreeIcon } from "@phosphor-icons/react";
 import { useState } from "react";
 import { toast } from "sonner";
-import { Button } from "@/components/v2/buttons/Button";
-import { IconTooltipButton } from "@/components/v2/buttons/IconTooltipButton";
 import {
 	DropdownMenu,
 	DropdownMenuContent,
 	DropdownMenuItem,
 	DropdownMenuTrigger,
-} from "@/components/v2/dropdowns/DropdownMenu";
+} from "@autumn/ui";
 import { PhosphorIcon } from "@/components/v2/icons/PhosphorIcon";
 import {
 	isSafeCustomButtonUrl,
@@ -23,7 +22,7 @@ export function CustomButtons({
 	customer,
 }: {
 	buttons: CustomButton[];
-	customer: { id?: string | null } | undefined;
+	customer: { id?: string | null; email?: string | null } | undefined;
 }) {
 	const [overflowOpen, setOverflowOpen] = useState(false);
 

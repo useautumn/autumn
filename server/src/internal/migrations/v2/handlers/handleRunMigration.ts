@@ -6,37 +6,38 @@ import { withMigrationRunClaim } from "@/internal/migrations/v2/actions/migratio
 import { prepare } from "@/internal/migrations/v2/prepare/index.js";
 import { migrationRepo } from "@/internal/migrations/v2/repos/index.js";
 import { RETRYABLE_MIGRATION_ITEM_RUN_STATUSES } from "@/internal/migrations/v2/run/utils/retryItemStatuses.js";
-import { runMigrationTask } from "@/trigger/migrations/runMigrationTask.js";
+import { shouldRunMigrationInline } from "@/internal/migrations/v2/utils/shouldRunMigrationInline.js";
+import {
+	getMigrationTriggerOptions,
+	MIGRATION_RUN_CUSTOMER_CONCURRENCY,
+} from "@/trigger/migrations/migrationTaskQueue.js";
+import {
+	executeRunMigration,
+	type RunMigrationPayload,
+	runMigrationTask,
+} from "@/trigger/migrations/runMigrationTask.js";
 
-const MAX_CONCURRENCY = 5;
+const LEGACY_MAX_REQUESTED_CONCURRENCY = 100;
 
 const RunMigrationBody = z.object({
 	id: z.string(),
 	dry_run: z.boolean().default(false),
 	limit: z.number().int().min(1).optional(),
 	only: z.array(z.string()).optional(),
-	concurrency: z.number().int().min(1).max(MAX_CONCURRENCY).optional(),
+	/** Accepted for backward compatibility; migration concurrency is fleet-managed. */
+	concurrency: z
+		.number()
+		.int()
+		.min(1)
+		.max(LEGACY_MAX_REQUESTED_CONCURRENCY)
+		.optional()
+		.describe("Deprecated: migration concurrency is fleet-managed"),
 	retry_item_statuses: z
 		.array(z.enum(RETRYABLE_MIGRATION_ITEM_RUN_STATUSES))
 		.optional(),
-	/** When true, claim a lazy run alongside the background sweeper. Customers
-	 *  hit on the request path get migrated lazily via `runMigrationCustomerTask`
-	 *  before the sweeper reaches them. Background and lazy run on the same
-	 *  migration_run row — the claim is shared. */
+	/** Lazy runs share one run row with the sweeper and enqueue request-path customer work.
+	 * Targeted `only` is incompatible because lazy matching happens on customer reads. */
 	lazy_run: z.boolean().default(false),
-});
-
-const getRunMigrationTriggerOptions = ({
-	orgId,
-	migrationId,
-	isDev,
-}: {
-	orgId: string;
-	migrationId: string;
-	isDev: boolean;
-}) => ({
-	...(isDev ? { region: "eu-central-1" } : {}),
-	concurrencyKey: `${orgId}:${migrationId}`,
 });
 
 export const handleRunMigration = createRoute({
@@ -49,7 +50,6 @@ export const handleRunMigration = createRoute({
 			dry_run: dryRun,
 			limit,
 			only,
-			concurrency,
 			retry_item_statuses: retryItemStatuses,
 			lazy_run: lazyRun,
 		} = c.req.valid("json");
@@ -73,6 +73,8 @@ export const handleRunMigration = createRoute({
 		}
 
 		const isDev = process.env.NODE_ENV === "development";
+		const runInline = shouldRunMigrationInline();
+		let inlinePayload: RunMigrationPayload | undefined;
 		const { migrationRunId, triggerRunId } = await withMigrationRunClaim({
 			ctx,
 			migration,
@@ -84,30 +86,51 @@ export const handleRunMigration = createRoute({
 				if (lazyRun && !dryRun) {
 					await prepare({ ctx, migration, dryRun: false });
 				}
-				const handle = await runMigrationTask.trigger(
-					{
-						orgId: ctx.org.id,
-						env: ctx.env,
-						migrationId: id,
-						migrationRunId,
-						dryRun,
-						lazyRun,
-						controls: {
-							limit,
-							only,
-							concurrency,
-							retryItemStatuses,
-						},
+				const payload: RunMigrationPayload = {
+					orgId: ctx.org.id,
+					env: ctx.env,
+					migrationId: id,
+					migrationRunId,
+					dryRun,
+					lazyRun,
+					controls: {
+						limit,
+						only,
+						retryItemStatuses,
 					},
-					getRunMigrationTriggerOptions({
-						orgId: ctx.org.id,
-						migrationId: id,
-						isDev,
-					}),
+				};
+				if (runInline) {
+					inlinePayload = payload;
+					return {};
+				}
+				const handle = await runMigrationTask.trigger(
+					payload,
+					getMigrationTriggerOptions({ isDev }),
 				);
 				return { triggerRunId: handle.id };
 			},
 		});
+
+		if (inlinePayload) {
+			const payload = inlinePayload;
+			ctx.logger.warn(
+				"run-migration: trigger.dev not configured — running migration inline",
+				{ data: { migrationRunId } },
+			);
+			const inlineCtx = { ...ctx, insideTriggerTask: true };
+			void executeRunMigration({
+				ctx: inlineCtx,
+				logger: ctx.logger,
+				payload,
+			}).catch((error) => {
+				ctx.logger.error("run-migration: inline execution failed", {
+					data: {
+						migrationRunId,
+						error: error instanceof Error ? error.message : String(error),
+					},
+				});
+			});
+		}
 
 		let publicAccessToken: string | undefined;
 		if (triggerRunId) {
@@ -125,7 +148,7 @@ export const handleRunMigration = createRoute({
 			migration_id: id,
 			dry_run: dryRun,
 			lazy_run: lazyRun,
-			concurrency,
+			concurrency: MIGRATION_RUN_CUSTOMER_CONCURRENCY,
 			run_id: migrationRunId,
 			trigger_run_id: triggerRunId,
 			public_access_token: publicAccessToken,

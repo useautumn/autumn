@@ -440,6 +440,7 @@ test.concurrent(
 			usage_limits: [
 				{
 					feature_id: TestFeature.Action1,
+					enabled: true,
 					limit: 5,
 					interval: ResetInterval.Month,
 				},

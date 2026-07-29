@@ -31,6 +31,7 @@ export const setEntityUsageLimit = async ({
 		usage_limits: [
 			{
 				feature_id: featureId,
+				enabled: true,
 				limit,
 				interval,
 			},

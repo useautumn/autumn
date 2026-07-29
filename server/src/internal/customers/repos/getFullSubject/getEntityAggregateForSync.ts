@@ -5,6 +5,7 @@ import {
 	type CusProductStatus,
 } from "@autumn/shared";
 import { sql } from "drizzle-orm";
+import { planetScaleTag } from "@/db/dbUtils.js";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 import { RELEVANT_STATUSES } from "@/internal/customers/cusProducts/CusProductService.js";
 import { getEntityAggregateFragments } from "@/internal/customers/repos/getFullSubject/getEntityAggregateFragments.js";
@@ -58,6 +59,7 @@ export const getEntityAggregateForSync = async ({
 
 		SELECT *
 		FROM entity_aggregated_cus_entitlements
+		${planetScaleTag({ query: "getEntityAggregateForSync" })}
 	`;
 
 	const result = await db.execute(query);

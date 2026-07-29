@@ -1,4 +1,5 @@
 import { stripOAuthTokenPrefix } from "@autumn/auth";
+import { getOAuthResourceScopes } from "@autumn/auth/oauth";
 import {
 	AppEnv,
 	checkScopes,
@@ -173,7 +174,7 @@ export const getExternalOAuthApiKeyForToken = async ({
 		});
 	}
 
-	const scopes = requestedScopes ?? tokenRecord.scopes;
+	const scopes = requestedScopes ?? getOAuthResourceScopes(tokenRecord.scopes);
 	const apiKey = await rotateOAuthConsentApiKey({
 		db,
 		consent,

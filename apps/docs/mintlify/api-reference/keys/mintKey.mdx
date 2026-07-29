@@ -1,0 +1,76 @@
+---
+title: "Mint"
+openapi: "openapi POST /v1/keys.mint"
+---
+
+import { DynamicParamField } from "/snippets/dynamic-param-field.jsx";
+import { DynamicResponseField } from "/snippets/dynamic-response-field.jsx";
+import { DynamicResponseExample } from "/snippets/dynamic-response-example.jsx";
+
+<Note>
+  Mints a per-customer token — a scoped `am_jwt_` credential — so a self-hosted or downstream app can call Autumn directly without your secret key. Authenticated with your **secret key**. Returns a short-lived access token (1h) and a rotating refresh token (24h), both bound to a single customer.
+</Note>
+
+### How it works
+
+1. Your backend calls `keys.mint` with your secret key to issue a token pair for a customer.
+2. Hand the **access token** to that customer's app. It can call `check`, `track`, `customers.get` and `entities.get` — always scoped to that customer, even if a different `customer_id` is sent.
+3. Before the access token expires, the app calls [`keys.refresh`](/api-reference/keys/refreshKey) with its **refresh token** to rotate a fresh pair — no secret key required.
+
+<CodeGroup>
+
+```typescript TypeScript
+const { accessToken, refreshToken } = await autumn.keys.mint({
+  customerId: "cus_123",
+});
+```
+
+```bash cURL
+curl -X POST "https://api.useautumn.com/v1/keys.mint" \
+  -H "Authorization: Bearer am_sk_live_..." \
+  -H "Content-Type: application/json" \
+  -d '{ "customer_id": "cus_123" }'
+```
+
+</CodeGroup>
+
+### Body Parameters
+
+<DynamicParamField body="customer_id" type="string" required>
+  The customer to mint a token for.
+</DynamicParamField>
+
+<DynamicParamField body="indefinite" type="boolean">
+  If true, mint a non-expiring access token (no refresh token). Revoke via keys.revoke.
+</DynamicParamField>
+
+
+### Response
+
+<DynamicResponseField name="access_token" type="string">
+  Access token (1h, or non-expiring if indefinite), prefixed `am_jwt_`.
+</DynamicResponseField>
+
+<DynamicResponseField name="refresh_token" type="string">
+  Rotating refresh token (24h). Omitted for indefinite tokens.
+</DynamicResponseField>
+
+<DynamicResponseField name="expires_at" type="number | null">
+  Access-token expiry, ms since epoch. null for indefinite tokens.
+</DynamicResponseField>
+
+<DynamicResponseField name="refresh_expires_at" type="number">
+  Refresh-token expiry, ms since epoch. Omitted for indefinite tokens.
+</DynamicResponseField>
+
+
+<ResponseExample>
+```json 200
+{
+  "access_token": "am_jwt_eyJhbGciOiJIUzI1NiJ9...",
+  "refresh_token": "am_jwt_eyJhbGciOiJIUzI1NiJ9...",
+  "expires_at": 1781113864000,
+  "refresh_expires_at": 1781196664000
+}
+```
+</ResponseExample>

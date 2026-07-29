@@ -24,7 +24,9 @@ COPY apps/leaf/package.json apps/leaf/
 COPY apps/checkout/package.json apps/checkout/
 COPY apps/docs/package.json apps/docs/
 COPY apps/sdk-test/package.json apps/sdk-test/
+COPY apps/testbench/package.json apps/testbench/
 COPY apps/website/package.json apps/website/
+COPY packages/agent-docs/package.json packages/agent-docs/
 COPY packages/atmn/package.json packages/atmn/
 COPY packages/atmn-tests/package.json packages/atmn-tests/
 COPY packages/auth/package.json packages/auth/
@@ -34,8 +36,11 @@ COPY packages/ksuid/package.json packages/ksuid/
 COPY packages/logging/package.json packages/logging/
 COPY packages/mcp/package.json packages/mcp/
 COPY packages/openapi/package.json packages/openapi/
+COPY packages/render/package.json packages/render/
 COPY packages/sdk/package.json packages/sdk/
 COPY packages/stripe-sync/package.json packages/stripe-sync/
+COPY packages/ui/package.json packages/ui/
+COPY apps/sso-test-idp/package.json apps/sso-test-idp/
 
 # bunfig.toml preloads ./scripts/preload-env.ts on every bun run; stub it so the
 # install step doesn't fail before the real source is copied.

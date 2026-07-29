@@ -3,11 +3,12 @@ import * as Sentry from "@sentry/react";
 import { init } from "@squircle/core";
 import * as React from "react";
 import { useEffect } from "react";
-import { BrowserRouter, Route, Routes } from "react-router";
+import { BrowserRouter, Navigate, Route, Routes } from "react-router";
 import { DashboardGate } from "./app/DashboardGate";
 import { MainLayout } from "./app/layout";
 import { OnboardingLayout } from "./app/OnboardingLayout";
 import { useSession } from "./lib/auth-client";
+import { SSO_CALLBACK_PATH } from "./lib/sso/ssoCallback";
 import { identifyUser } from "./utils/posthogTracking";
 import { AdminView } from "./views/admin/AdminView";
 import { EdgeConfigView } from "./views/admin/edge-config/EdgeConfigView";
@@ -17,7 +18,7 @@ import { AcceptInvitation } from "./views/auth/AcceptInvitation";
 import { Consent } from "./views/auth/Consent";
 import { PasswordSignIn } from "./views/auth/components/PasswordSignIn";
 import { SignIn } from "./views/auth/SignIn";
-import { Otp } from "./views/cli/Otp";
+import { SsoCallback } from "./views/auth/SsoCallback";
 import CustomersPage from "./views/customers/CustomersPage";
 import { AnalyticsView } from "./views/customers/customer/analytics/AnalyticsView";
 import CustomerView2 from "./views/customers2/customer/CustomerView2";
@@ -47,6 +48,11 @@ const envRoutes = (
 	<Route
 		key={`sandbox-${path}`}
 		path={`/sandbox/${path}`}
+		element={sandboxElement}
+	/>,
+	<Route
+		key={`sandbox-named-${path}`}
+		path={`/sandbox/:sandboxSlug/${path}`}
 		element={sandboxElement}
 	/>,
 ];
@@ -86,7 +92,13 @@ export default function App() {
 				<Route path="/pw-sign-in" element={<PasswordSignIn />} />
 				<Route path="/consent" element={<Consent />} />
 				<Route path="/accept" element={<AcceptInvitation />} />
+				<Route path={SSO_CALLBACK_PATH} element={<SsoCallback />} />
 				<Route path="/close" element={<CloseScreen />} />
+
+				<Route
+					path="/sandbox/:sandboxSlug"
+					element={<Navigate replace to="products" />}
+				/>
 
 				{/* Onboarding routes without sidebar */}
 				<Route element={<OnboardingLayout />}>
@@ -125,7 +137,6 @@ export default function App() {
 						)}
 						{envRoutes("dev", <DevScreen />)}
 						{envRoutes("analytics", <AnalyticsView />)}
-						{envRoutes("dev/cli", <Otp />)}
 					</Route>
 				</Route>
 			</Routes>

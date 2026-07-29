@@ -5,6 +5,10 @@ import { z } from "zod";
 import { DEFAULT_CHAT_ENV_MODEL } from "../../../lib/chatAgentConfig.js";
 import { logger as rootLogger } from "../../../lib/logger.js";
 import type { ChatContextMessage } from "../../../types.js";
+import {
+	chatEnvSelectorInstructions,
+	chatEnvSelectorOutputInstructions,
+} from "../../prompts/selectorPrompts.js";
 
 const envSelectionSchema = z.strictObject({
 	env: z.nativeEnum(AppEnv),
@@ -43,14 +47,14 @@ export const selectChatEnv = async ({
 	const agent = new Agent({
 		id: "autumn-chat-env",
 		name: "Autumn Chat Env",
-		instructions: `Choose the Autumn environment for the latest user request. Default to ${getDefaultChatEnv()}. Use the other environment only when the user clearly asks for it.`,
+		instructions: chatEnvSelectorInstructions(getDefaultChatEnv()),
 		model: DEFAULT_CHAT_ENV_MODEL,
 	});
 	const output = await agent.generate(message, {
 		maxSteps: 1,
 		structuredOutput: {
 			schema: envSelectionSchema,
-			instructions: `Return ${getDefaultChatEnv()} unless the latest user request clearly asks to use the other environment.`,
+			instructions: chatEnvSelectorOutputInstructions(getDefaultChatEnv()),
 		},
 		context: [...recentMessageContext(recentMessages)],
 	});

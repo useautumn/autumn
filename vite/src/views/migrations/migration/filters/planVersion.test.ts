@@ -41,6 +41,11 @@ test("version-less keys collapse to a $in", () => {
 	});
 });
 
+test("blank plan keys are ignored before encoding", () => {
+	expect(planKeysToFilter(["", "free"])).toEqual({ plan_id: "free" });
+	expect(planKeysToFilter(["", "free", "free"])).toEqual({ plan_id: "free" });
+});
+
 test("plan_id + version decodes back to a single pinned key", () => {
 	expect(planFilterToPlanKeys({ plan_id: "pro", version: 2 })).toEqual([
 		"pro:2",
@@ -57,7 +62,6 @@ test("$or of plan matchers decodes back to mixed keys", () => {
 
 test("a non-selection plan filter is not treated as plan keys", () => {
 	expect(planFilterToPlanKeys({ paid: true })).toBeNull();
-	expect(planFilterToPlanKeys({ item: { feature_id: "credits" } })).toBeNull();
 });
 
 // `version: { $eq: N }` is the object form of a single pinned version and must

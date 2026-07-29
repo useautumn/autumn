@@ -2,15 +2,7 @@ import type { PlanItem } from "../../../compose/models/planModels.js";
 import type { ApiPlanItem } from "../../api/types/index.js";
 import { createTransformer } from "./Transformer.js";
 
-/**
- * Declarative plan item transformer
- *
- * Maps snake_case API fields to camelCase SDK fields.
- *
- * Handles mutually exclusive reset patterns:
- * - API reset.interval -> SDK top-level reset (when no price, or price without interval)
- * - API price.interval -> SDK price.interval (when price exists)
- */
+/** Maps API plan items to SDK config while omitting redundant reset cycles. */
 export const planItemTransformer = createTransformer<
 	ApiPlanItem,
 	PlanItem
@@ -30,23 +22,19 @@ export const planItemTransformer = createTransformer<
 		// Only include included if not unlimited
 		included: (api) => (api.unlimited ? undefined : api.included),
 
-		// Top-level reset: only from api.reset when there's no price with interval
-		// If price exists with interval, the interval belongs in price.interval, not top-level
 		reset: (api) => {
-			// If price exists with interval, the reset belongs in price.interval, not top-level
-			if (api.price?.interval) {
-				return undefined;
-			}
-			// Only use top-level reset from api.reset
-			if (api.reset) {
-				return {
-					interval: api.reset.interval,
-					...(api.reset.interval_count !== undefined && {
-						intervalCount: api.reset.interval_count,
-					}),
-				};
-			}
-			return undefined;
+			if (!api.reset) return undefined;
+			const matchesPrice =
+				String(api.reset.interval) === String(api.price?.interval) &&
+				(api.reset.interval_count ?? 1) ===
+					(api.price?.interval_count ?? 1);
+			if (matchesPrice) return undefined;
+			return {
+				interval: api.reset.interval,
+				...(api.reset.interval_count !== undefined && {
+					intervalCount: api.reset.interval_count,
+				}),
+			};
 		},
 
 		// Transform price object with camelCase fields
@@ -55,16 +43,35 @@ export const planItemTransformer = createTransformer<
 
 			return {
 				amount: api.price.amount,
-				tiers: api.price.tiers?.map(
-					(tier: { to: number | "inf"; amount: number; flat_amount?: number }) => {
-					const t = tier as { to: number | "inf"; amount: number; flat_amount?: number };
+				tiers: api.price.tiers?.map((tier) => {
+					const t = tier as {
+						to: number | "inf";
+						amount: number;
+						flat_amount?: number;
+						additional_currencies?: Array<{
+							currency: string;
+							amount?: number;
+							flat_amount?: number;
+						}>;
+					};
 					return {
 						to: t.to,
 						amount: t.amount,
 						...(t.flat_amount !== undefined && { flatAmount: t.flat_amount }),
+						...(t.additional_currencies?.length && {
+							additionalCurrencies: t.additional_currencies.map((entry) => ({
+								currency: entry.currency,
+								...(entry.amount !== undefined && { amount: entry.amount }),
+								...(entry.flat_amount !== undefined && {
+									flatAmount: entry.flat_amount,
+								}),
+							})),
+						}),
 					};
-					},
-				),
+				}),
+				...(api.price.additional_currencies?.length && {
+					additionalCurrencies: api.price.additional_currencies,
+				}),
 				billingUnits: api.price.billing_units,
 				maxPurchase: api.price.max_purchase ?? undefined,
 				billingMethod: api.price.billing_method,
@@ -90,7 +97,12 @@ export const planItemTransformer = createTransformer<
 		rollover: (api) =>
 			api.rollover
 				? {
-						max: api.rollover.max ?? 0,
+						...(api.rollover.max_percentage == null && {
+							max: api.rollover.max ?? 0,
+						}),
+						...(api.rollover.max_percentage != null && {
+							maxPercentage: api.rollover.max_percentage,
+						}),
 						expiryDurationType: api.rollover.expiry_duration_type,
 						...(api.rollover.expiry_duration_length !== undefined && {
 							expiryDurationLength: api.rollover.expiry_duration_length,

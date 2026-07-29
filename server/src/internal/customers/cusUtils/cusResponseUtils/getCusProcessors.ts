@@ -43,7 +43,9 @@ export const getCusProcessors = ({
 		processorType: ProcessorType.RevenueCat,
 	}).filter(customerProductHasActiveStatus);
 	const revenuecat =
-		rcProducts.length > 0 ? { id: customer.id ?? null } : undefined;
+		rcProducts.length > 0
+			? { id: customer.processors?.revenuecat?.id ?? customer.id ?? null }
+			: undefined;
 
 	if (!stripe && !vercel && !revenuecat) return undefined;
 

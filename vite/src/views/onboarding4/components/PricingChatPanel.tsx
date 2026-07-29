@@ -1,24 +1,20 @@
 import type { AgentPricingConfig } from "@autumn/shared";
-import type { UIMessage } from "ai";
+import { Button } from "@autumn/ui";
 import {
 	Conversation,
 	ConversationContent,
-} from "@/components/ai-elements/conversation";
-import {
 	Message,
 	MessageContent,
 	MessageResponse,
-} from "@/components/ai-elements/message";
-import {
 	PromptInput,
 	PromptInputBody,
 	PromptInputFooter,
 	type PromptInputMessage,
 	PromptInputSubmit,
 	PromptInputTextarea,
-} from "@/components/ai-elements/prompt-input";
-import { Shimmer } from "@/components/ai-elements/shimmer";
-import { Button } from "@/components/v2/buttons/Button";
+	Shimmer,
+} from "@autumn/ui/ai-elements";
+import type { UIMessage } from "ai";
 import { cn } from "@/lib/utils";
 import {
 	AttachmentsHeader,
@@ -36,7 +32,17 @@ interface PricingChatPanelProps {
 	placeholder?: string;
 	className?: string;
 	inputClassName?: string;
+	/** Per-surface overrides for the message bubble (e.g. tighter chat styling). */
+	messageContentClassName?: string;
+	/** Status shown while the agent is working before any reply text streams. */
+	thinkingLabel?: string;
 }
+
+const hasAssistantText = (message?: UIMessage) =>
+	message?.role === "assistant" &&
+	message.parts.some(
+		(part) => part.type === "text" && part.text.trim().length > 0,
+	);
 
 /**
  * Reusable chat panel for pricing agent conversations.
@@ -52,14 +58,17 @@ export function PricingChatPanel({
 	placeholder = "Describe your app's pricing",
 	className,
 	inputClassName,
+	messageContentClassName,
+	thinkingLabel = "Planning next steps",
 }: PricingChatPanelProps) {
+	const showThinking = isLoading && !hasAssistantText(messages.at(-1));
 	return (
 		<div className={cn("flex flex-col min-h-0", className)}>
 			<Conversation className="flex-1">
 				<ConversationContent className="px-6">
 					{messages.map((message) => (
 						<Message key={message.id} from={message.role}>
-							<MessageContent>
+							<MessageContent className={messageContentClassName}>
 								{message.parts.map((part, partIndex) => {
 									switch (part.type) {
 										case "text":
@@ -137,13 +146,11 @@ export function PricingChatPanel({
 							</MessageContent>
 						</Message>
 					))}
-					{isLoading &&
-						messages.length > 0 &&
-						messages[messages.length - 1]?.role === "user" && (
-							<div className="flex items-center gap-2 text-tertiary-foreground text-sm">
-								<Shimmer>Planning next steps</Shimmer>
-							</div>
-						)}
+					{showThinking && (
+						<div className="flex items-center gap-2 text-tertiary-foreground text-sm">
+							<Shimmer>{thinkingLabel}</Shimmer>
+						</div>
+					)}
 				</ConversationContent>
 			</Conversation>
 

@@ -1,6 +1,8 @@
 import type {
 	FullCusEntWithProduct,
+	FullCusProduct,
 	FullCustomer,
+	FullCustomerEntitlement,
 	Rollover,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
@@ -13,25 +15,40 @@ export type RolloverClearingInfo = {
 	overwrites: Rollover[];
 };
 
-/** Find a cusEnt on the FullCustomer by ID, attaching the parent cusProduct.
- *  Uses Object.assign to preserve the original reference so in-place mutations
- *  (balance, rollovers, etc.) propagate back to the FullCustomer object. */
+/** Finds the stored entitlement and its parent without adding a back-reference.
+ * Mutations stay on the stored entitlement so FullCustomer remains serializable. */
 const findCusEnt = ({
 	fullCus,
 	cusEntId,
 }: {
 	fullCus: FullCustomer;
 	cusEntId: string;
-}): FullCusEntWithProduct | null => {
+}): {
+	customerEntitlement: FullCustomerEntitlement;
+	customerProduct: FullCusProduct | null;
+} | null => {
 	for (const cusProduct of fullCus.customer_products) {
 		for (const cusEnt of cusProduct.customer_entitlements) {
 			if (cusEnt.id === cusEntId)
-				return Object.assign(cusEnt, { customer_product: cusProduct });
+				return {
+					customerEntitlement: cusEnt,
+					customerProduct: cusProduct,
+				};
 		}
 	}
 	for (const cusEnt of fullCus.extra_customer_entitlements || []) {
 		if (cusEnt.id === cusEntId)
-			return Object.assign(cusEnt, { customer_product: null });
+			return {
+				customerEntitlement: cusEnt,
+				customerProduct: null,
+			};
+	}
+	for (const cusEnt of fullCus.pooled_customer_entitlements || []) {
+		if (cusEnt.id === cusEntId)
+			return {
+				customerEntitlement: cusEnt,
+				customerProduct: null,
+			};
 	}
 	return null;
 };
@@ -61,8 +78,9 @@ export const applyResetResults = async ({
 	const generalCtx = { ...ctx, db: ctx.dbGeneral };
 
 	for (const { cusEntId, result } of computed) {
-		const original = findCusEnt({ fullCus, cusEntId });
-		if (!original) continue;
+		const match = findCusEnt({ fullCus, cusEntId });
+		if (!match) continue;
+		const { customerEntitlement: original, customerProduct } = match;
 
 		const { updates } = result;
 		if (updates.balance !== null) original.balance = updates.balance;
@@ -81,7 +99,10 @@ export const applyResetResults = async ({
 				await RolloverService.clearExcessRollovers({
 					ctx: generalCtx,
 					newRows: result.rolloverInsert.rows,
-					fullCusEnt: original,
+					fullCusEnt: {
+						...original,
+						customer_product: customerProduct,
+					} satisfies FullCusEntWithProduct,
 				});
 			original.rollovers = rollovers;
 

@@ -1,14 +1,10 @@
+import { Tooltip, TooltipContent, TooltipTrigger } from "@autumn/ui";
 import {
 	BoxArrowDownIcon,
 	MoneyWavyIcon,
 	WalletIcon,
 } from "@phosphor-icons/react";
 import type React from "react";
-import {
-	Tooltip,
-	TooltipContent,
-	TooltipTrigger,
-} from "@/components/v2/tooltips/Tooltip";
 import { getFeatureIconConfig } from "@/views/products/features/utils/getFeatureIcon";
 import type { PreviewProductItem } from "./previewTypes";
 

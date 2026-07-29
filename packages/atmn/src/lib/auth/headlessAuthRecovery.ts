@@ -20,6 +20,9 @@ export async function handleHeadlessAuthError(
 	if (!isAuthError(error)) {
 		return false;
 	}
+	if (process.env.ATMN_DISABLE_AUTH_RECOVERY === "1") {
+		return false;
+	}
 
 	console.log(chalk.yellow("\n🔐 Session expired. Re-authenticating...\n"));
 	console.log(

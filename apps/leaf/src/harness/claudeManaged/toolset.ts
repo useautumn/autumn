@@ -1,8 +1,8 @@
 import { claudeManagedConfig } from "./config.js";
 
-/** Built-in CMA sandbox tools the managed agent gets alongside Autumn MCP. Empty
- * omits the sandbox toolset entirely — smaller prefill and no sandbox provisioning,
- * since the billing agent only needs Autumn MCP tools. */
+/** Built-in CMA sandbox tools the managed agent gets alongside Autumn MCP.
+ * `read` is required for attached skills — the agent loads each skill's SKILL.md
+ * + references from the environment filesystem on demand. */
 export type ClaudeManagedBuiltinTool =
 	| "bash"
 	| "edit"
@@ -13,7 +13,9 @@ export type ClaudeManagedBuiltinTool =
 	| "web_fetch"
 	| "web_search";
 
-export const claudeManagedBuiltinTools: readonly ClaudeManagedBuiltinTool[] = [];
+export const claudeManagedBuiltinTools: readonly ClaudeManagedBuiltinTool[] = [
+	"read",
+];
 
 const ALL_BUILTIN_TOOLS: readonly ClaudeManagedBuiltinTool[] = [
 	"bash",

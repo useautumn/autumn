@@ -9,39 +9,39 @@ import {
 	type FullCustomer,
 	formatAmount,
 	fullCustomerToCustomerEntitlements,
-	isPrepaidCustomerEntitlement,
+	isOneOffPrice,
+	isPrepaidPrice,
+	isVolumeBasedCusEnt,
 	PurchaseLimitInterval,
 	type UsagePriceConfig,
 } from "@autumn/shared";
-import { format } from "date-fns";
-import { useMemo, useState } from "react";
-import { toast } from "sonner";
-import FieldLabel from "@/components/general/modal-components/FieldLabel";
 import {
+	Button,
+	Checkbox,
+	FieldLabel,
+	FormLabel,
+	Input,
 	Popover,
 	PopoverContent,
 	PopoverTrigger,
-} from "@/components/ui/popover";
-import { Switch } from "@/components/ui/switch";
-import { Button } from "@/components/v2/buttons/Button";
-import { Checkbox } from "@/components/v2/checkboxes/Checkbox";
-import { FeatureSearchDropdown } from "@/components/v2/dropdowns/FeatureSearchDropdown";
-import { FormLabel } from "@/components/v2/form/FormLabel";
-import { Input } from "@/components/v2/inputs/Input";
-import {
 	Select,
 	SelectContent,
 	SelectItem,
 	SelectTrigger,
 	SelectValue,
-} from "@/components/v2/selects/Select";
+	Switch,
+} from "@autumn/ui";
+import { format } from "date-fns";
+import { useMemo, useState } from "react";
+import { toast } from "sonner";
+import { FeatureSearchDropdown } from "@/components/v2/dropdowns/FeatureSearchDropdown";
 import {
 	LayoutGroup,
 	SheetFooter,
 	SheetHeader,
 	SheetSection,
 } from "@/components/v2/sheets/SharedSheetComponents";
-import { useOrg } from "@/hooks/common/useOrg";
+import { useCustomerDisplayCurrency } from "@/hooks/common/useCustomerDisplayCurrency";
 import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
 import { useSheetStore } from "@/hooks/stores/useSheetStore";
 import { CusService } from "@/services/customers/CusService";
@@ -62,8 +62,8 @@ export function BillingAutoTopupSheet() {
 	const sheetData = useSheetStore((s) => s.data);
 	const sheetType = useSheetStore((s) => s.type);
 	const { customer, refetch } = useCusQuery();
+	const { displayCurrency } = useCustomerDisplayCurrency();
 	const { features } = useFeaturesQuery();
-	const { org } = useOrg();
 	const axiosInstance = useAxiosInstance();
 
 	const isEdit = sheetType === "billing-auto-topup-edit";
@@ -86,7 +86,8 @@ export function BillingAutoTopupSheet() {
 		existingItem?.quantity?.toString() ?? "",
 	);
 	const [hasPurchaseLimit, setHasPurchaseLimit] = useState(
-		!!existingItem?.purchase_limit?.limit && !!existingItem?.purchase_limit?.interval,
+		!!existingItem?.purchase_limit?.limit &&
+			!!existingItem?.purchase_limit?.interval,
 	);
 	const [purchaseLimitInterval, setPurchaseLimitInterval] = useState(
 		existingItem?.purchase_limit?.interval ?? "",
@@ -117,9 +118,25 @@ export function BillingAutoTopupSheet() {
 			featureId,
 		});
 
-		const prepaidCusEnt = cusEnts.find((cusEnt: FullCusEntWithFullCusProduct) =>
-			isPrepaidCustomerEntitlement(cusEnt),
-		);
+		const isOneOffPrepaid = (cusEnt: FullCusEntWithFullCusProduct) => {
+			const cusPrice = cusEntToCusPrice({ cusEnt });
+			return (
+				cusPrice &&
+				isOneOffPrice(cusPrice.price) &&
+				isPrepaidPrice(cusPrice.price) &&
+				!isVolumeBasedCusEnt(cusEnt)
+			);
+		};
+
+		// Mirror the backend's resolution for customer-level auto-topups: the
+		// most recently attached product's one-off prepaid price is charged.
+		const prepaidCusEnt = cusEnts
+			.filter(isOneOffPrepaid)
+			.sort(
+				(left, right) =>
+					(right.customer_product?.created_at ?? 0) -
+					(left.customer_product?.created_at ?? 0),
+			)[0];
 
 		if (!prepaidCusEnt) return { hasPrice: false as const };
 
@@ -144,7 +161,7 @@ export function BillingAutoTopupSheet() {
 			return null;
 		}
 		const parsedThreshold = Number.parseFloat(threshold);
-		if (Number.isNaN(parsedThreshold) || parsedThreshold < 0) {
+		if (Number.isNaN(parsedThreshold)) {
 			toast.error("Please enter a valid threshold");
 			return null;
 		}
@@ -284,7 +301,7 @@ export function BillingAutoTopupSheet() {
 							<InfoBox variant="note">
 								{topupPriceInfo.isTiered
 									? "Pricing for this feature is tiered — the charge per top-up depends on current usage."
-									: `Customer will be charged ${formatAmount({ org, amount: topupPriceInfo.unitAmount })} per ${topupPriceInfo.billingUnits === 1 ? "unit" : `${topupPriceInfo.billingUnits} units`}.`}
+									: `Customer will be charged ${formatAmount({ currency: displayCurrency, amount: topupPriceInfo.unitAmount })} per ${topupPriceInfo.billingUnits === 1 ? "unit" : `${topupPriceInfo.billingUnits} units`}.`}
 							</InfoBox>
 						) : (
 							<InfoBox variant="warning">
@@ -342,10 +359,11 @@ export function BillingAutoTopupSheet() {
 					</div>
 
 					{hasPurchaseLimit && expandedPurchaseLimit && (
-						<InfoBox variant="note"
-						classNames={{
-							infoBox: "my-3"
-						}}
+						<InfoBox
+							variant="note"
+							classNames={{
+								infoBox: "my-3",
+							}}
 						>
 							{expandedPurchaseLimit.count} of{" "}
 							{expandedPurchaseLimit.limit ?? "∞"} top-ups used this window
@@ -365,14 +383,24 @@ export function BillingAutoTopupSheet() {
 						<div className="flex flex-col gap-3">
 							<div>
 								<FormLabel>Interval</FormLabel>
-							<Select
-								value={purchaseLimitInterval}
-								onValueChange={setPurchaseLimitInterval}
-								items={Object.fromEntries(Object.entries(INTERVAL_LABELS).map(([value, label]) => {
-									const count = Number.parseInt(purchaseLimitIntervalCount, 10);
-									return [value, count > 1 ? `Every ${count} ${label.toLowerCase()}s` : label];
-								}))}
-							>
+								<Select
+									value={purchaseLimitInterval}
+									onValueChange={setPurchaseLimitInterval}
+									items={Object.fromEntries(
+										Object.entries(INTERVAL_LABELS).map(([value, label]) => {
+											const count = Number.parseInt(
+												purchaseLimitIntervalCount,
+												10,
+											);
+											return [
+												value,
+												count > 1
+													? `Every ${count} ${label.toLowerCase()}s`
+													: label,
+											];
+										}),
+									)}
+								>
 									<SelectTrigger className="w-full">
 										<SelectValue placeholder="Select interval" />
 									</SelectTrigger>

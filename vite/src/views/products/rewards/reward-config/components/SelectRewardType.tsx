@@ -1,5 +1,5 @@
+import { PanelButton } from "@autumn/ui";
 import { GiftIcon, LightningIcon, PercentIcon } from "@phosphor-icons/react";
-import { PanelButton } from "@/components/v2/buttons/PanelButton";
 import { SheetSection } from "@/components/v2/sheets/SharedSheetComponents";
 import {
 	FrontendDiscountType,

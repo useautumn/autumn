@@ -1,12 +1,11 @@
 import type { FrontendProduct, FullCusProduct } from "@autumn/shared";
 import { FreeTrialDuration, productV2ToFrontendProduct } from "@autumn/shared";
+import { Button, SmallSpinner } from "@autumn/ui";
 import { useCallback, useMemo, useState } from "react";
 import {
 	getProductWithSupportedPlanFormValues,
 	getSupportedPlanFormPatchFromDraftProduct,
 } from "@/components/forms/shared/utils/planCustomizationUtils";
-import SmallSpinner from "@/components/general/SmallSpinner";
-import { Button } from "@/components/v2/buttons/Button";
 import { InlinePlanEditor } from "@/components/v2/inline-custom-plan-editor/InlinePlanEditor";
 import { SheetHeader } from "@/components/v2/sheets/SharedSheetComponents";
 import { useOrgStripeQuery } from "@/hooks/queries/useOrgStripeQuery";
@@ -275,11 +274,7 @@ export function SyncStripeSheet() {
 
 				{proposals.length > 0 && (
 					<div className="flex items-center gap-2 pt-2">
-						<Button
-							variant="secondary"
-							onClick={closeSheet}
-							className="flex-1"
-						>
+						<Button variant="secondary" onClick={closeSheet} className="flex-1">
 							Cancel
 						</Button>
 						<Button

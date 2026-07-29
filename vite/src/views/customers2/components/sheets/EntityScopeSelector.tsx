@@ -1,7 +1,7 @@
 import type { Entity } from "@autumn/shared";
+import { SearchableSelect } from "@autumn/ui";
 import { CheckIcon } from "lucide-react";
 import type { ReactNode } from "react";
-import { SearchableSelect } from "@/components/v2/selects/SearchableSelect";
 import { SheetSection } from "@/components/v2/sheets/SharedSheetComponents";
 
 const CUSTOMER_LEVEL_VALUE = "";

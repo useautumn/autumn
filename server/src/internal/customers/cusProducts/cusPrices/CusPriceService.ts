@@ -8,6 +8,23 @@ import { eq, inArray } from "drizzle-orm";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 
 export class CusPriceService {
+	/** Whether any customer price references one of these catalog rows. */
+	static async hasAnyPriceReferences({
+		db,
+		priceIds,
+	}: {
+		db: DrizzleCli;
+		priceIds: string[];
+	}): Promise<boolean> {
+		if (priceIds.length === 0) return false;
+		const row = await db
+			.select({ id: customerPrices.id })
+			.from(customerPrices)
+			.where(inArray(customerPrices.price_id, priceIds))
+			.limit(1);
+		return row.length > 0;
+	}
+
 	/** Which of these catalog prices are referenced by any customer_prices row. */
 	static async getReferencedPriceIds({
 		db,

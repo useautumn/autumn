@@ -1,14 +1,21 @@
 import type { AutumnBillingPlan, Invoice } from "@autumn/shared";
 import type Stripe from "stripe";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
+import { EntityService } from "@/internal/api/entities/EntityService";
 import { executeAutoTopupRebalance } from "@/internal/billing/v2/execute/executeAutumnActions/executeAutoTopupRebalance";
+import { executeCustomerLicenseTransitions } from "@/internal/billing/v2/execute/executeAutumnActions/executeCustomerLicenseTransitions";
+import { executeCustomerLicenseUpdates } from "@/internal/billing/v2/execute/executeAutumnActions/executeCustomerLicenseUpdates";
+import { executeInsertPlanLicenses } from "@/internal/billing/v2/execute/executeAutumnActions/executeInsertPlanLicenses";
+import { executeOneOffPurchaseRebalance } from "@/internal/billing/v2/execute/executeAutumnActions/executeOneOffPurchaseRebalance";
 import { executePatchCustomerProducts } from "@/internal/billing/v2/execute/executeAutumnActions/executePatchCustomerProducts";
 import { insertNewCusProducts } from "@/internal/billing/v2/execute/executeAutumnActions/insertNewCusProducts";
 import { updateCustomerEntitlements } from "@/internal/billing/v2/execute/executeAutumnActions/updateCustomerEntitlements";
+import { executePooledBalancePlan } from "@/internal/billing/v2/pooledBalances/execute/executePooledBalancePlan";
 import {
 	getDeleteCustomerProducts,
 	getUpdateCustomerProducts,
 } from "@/internal/billing/v2/utils/billingPlan/customerProductPlanMutations";
+import { CusService } from "@/internal/customers/CusService";
 import { CusProductService } from "@/internal/customers/cusProducts/CusProductService";
 import { CusEntService } from "@/internal/customers/cusProducts/cusEnts/CusEntitlementService";
 import { replaceScheduledPhaseCustomerProductIds } from "@/internal/customers/schedules/repos/replaceScheduledPhaseCustomerProductIds";
@@ -68,6 +75,11 @@ export const executeAutumnBillingPlan = async ({
 		});
 	}
 
+	await executeInsertPlanLicenses({
+		ctx,
+		insertPlanLicenses: autumnBillingPlan.insertPlanLicenses,
+	});
+
 	if (insertCustomerEntitlements) {
 		await CusEntService.insert({
 			ctx,
@@ -84,19 +96,49 @@ export const executeAutumnBillingPlan = async ({
 		});
 	}
 
-	// ctx.logger.debug(
-	// 	`[execAutumnPlan] inserting new customer products: ${insertCustomerProducts.map((cp) => cp.product.id).join(", ")}`,
-	// );
+	await executeCustomerLicenseUpdates({
+		ctx,
+		customerLicenseUpdates: autumnBillingPlan.customerLicenseUpdates,
+	});
+
+	if (autumnBillingPlan.insertEntities?.length) {
+		await EntityService.insert({
+			db,
+			data: autumnBillingPlan.insertEntities,
+		});
+	}
+
 	// 2. Insert new customer products
 	await insertNewCusProducts({
 		ctx,
 		newCusProducts: insertCustomerProducts,
 	});
 
+	await executePooledBalancePlan({
+		ctx,
+		pooledBalancePlan: autumnBillingPlan.pooledBalancePlan,
+	});
+
+	await executeCustomerLicenseTransitions({
+		ctx,
+		customerLicenseTransitions: autumnBillingPlan.customerLicenseTransitions,
+	});
+
 	await replaceScheduledPhaseCustomerProductIds({
 		ctx,
 		replacements: autumnBillingPlan.schedulePhaseCustomerProductReplacements,
 	});
+
+	// Lock the customer's currency on the first paid attach (conditional: no-op if
+	// already set). Runs on commit only — never in preview.
+	if (autumnBillingPlan.lockCustomerCurrency) {
+		await CusService.lockCurrencyIfUnset({
+			ctx,
+			internalCustomerId:
+				autumnBillingPlan.lockCustomerCurrency.internalCustomerId,
+			currency: autumnBillingPlan.lockCustomerCurrency.currency,
+		});
+	}
 
 	// 3. Update customer product (DB only)
 	for (const { customerProduct, updates } of updateCustomerProducts) {
@@ -130,6 +172,14 @@ export const executeAutumnBillingPlan = async ({
 		customerId: autumnBillingPlan.customerId,
 		updates: autumnBillingPlan.updateCustomerEntitlements,
 	});
+
+	if (autumnBillingPlan.oneOffPurchaseRebalance) {
+		await executeOneOffPurchaseRebalance({
+			ctx,
+			customerId: autumnBillingPlan.customerId,
+			rebalance: autumnBillingPlan.oneOffPurchaseRebalance,
+		});
+	}
 
 	// 5a. Auto top-up rebalance: apply pre-computed paydown + remainder deltas as
 	// atomic SQL `balance + delta` increments.

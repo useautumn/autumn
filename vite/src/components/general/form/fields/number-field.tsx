@@ -1,6 +1,5 @@
+import { Input, Label } from "@autumn/ui";
 import { FieldInfo } from "@/components/general/form/field-info";
-import { Label } from "@/components/ui/label";
-import { Input } from "@/components/v2/inputs/Input";
 import { useFieldContext } from "@/hooks/form/form-context";
 import { cn } from "@/lib/utils";
 
@@ -53,7 +52,9 @@ export function NumberField({
 	return (
 		<div className={cn("*:not-first:mt-2", className)}>
 			{label && <Label>{label}</Label>}
-			{description && <p className="text-tertiary-foreground text-xs">{description}</p>}
+			{description && (
+				<p className="text-tertiary-foreground text-xs">{description}</p>
+			)}
 			<Input
 				type="number"
 				min={min}

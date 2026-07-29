@@ -12,6 +12,7 @@ import type { ExpandedStripeSubscription } from "@/external/stripe/subscriptions
  */
 export interface SubscriptionPreviousAttributes {
 	status?: Stripe.Subscription.Status;
+	latest_invoice?: string | Stripe.Invoice | null;
 	cancel_at_period_end?: boolean;
 	cancel_at?: number | null;
 	canceled_at?: number | null;

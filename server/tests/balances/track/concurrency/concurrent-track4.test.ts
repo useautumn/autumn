@@ -1,7 +1,7 @@
 import { beforeAll, describe, expect, test } from "bun:test";
 import { ApiVersion } from "@autumn/shared";
 import { TestFeature } from "@tests/setup/v2Features.js";
-import { timeout } from "@tests/utils/genUtils.js";
+import { pollUntil } from "@tests/utils/genUtils.js";
 import ctx from "@tests/utils/testInitUtils/createTestContext.js";
 import chalk from "chalk";
 import { AutumnInt } from "@/external/autumn/autumnCli.js";
@@ -116,16 +116,15 @@ describe(`${chalk.yellowBright(`${testCase}: Testing usage_limits with pay_per_u
 		expect(customer.features[TestFeature.Messages]?.usage_limit).toBe(10);
 	});
 
-	test("should reflect concurrent deductions in non-cached customer after 2s", async () => {
+	test("should reflect concurrent deductions in non-cached customer after sync", async () => {
 		// Expected: 3 successful requests × 3 units each = 9 units used
 		// Starting balance: 5, usage: 9, final balance: 5 - 9 = -4
 
-		// Wait 2 seconds for DB sync
-		await timeout(5000);
-
-		// Fetch customer with skip_cache=true
-		const customer = await autumnV1.customers.get(customerId, {
-			skip_cache: "true",
+		// The Redis→Postgres sync is batched + queued; poll instead of a fixed wait.
+		const customer = await pollUntil({
+			fetch: () =>
+				autumnV1.customers.get(customerId, { skip_cache: "true" }),
+			until: (result) => result.features[TestFeature.Messages]?.balance === -4,
 		});
 
 		expect(customer.features[TestFeature.Messages]?.balance).toBe(-4);

@@ -1,6 +1,7 @@
 import {
 	cusEntToBillingObjects,
 	type FullCusEntWithFullCusProduct,
+	getPriceCurrencyStripeId,
 	InternalError,
 	isConsumablePrice,
 	type StripeItemSpec,
@@ -13,8 +14,12 @@ import {
  */
 export const consumableToStripeItemSpec = ({
 	cusEntWithCusProduct,
+	currency,
+	orgDefault,
 }: {
 	cusEntWithCusProduct: FullCusEntWithFullCusProduct;
+	currency: string;
+	orgDefault: string;
 }): StripeItemSpec | null => {
 	const billing = cusEntToBillingObjects({ cusEnt: cusEntWithCusProduct });
 	if (!billing) return null;
@@ -29,10 +34,22 @@ export const consumableToStripeItemSpec = ({
 
 	const config = price.config as UsagePriceConfig;
 
-	const priceId = config.stripe_price_id ?? config.stripe_empty_price_id;
+	const priceId =
+		getPriceCurrencyStripeId({
+			config,
+			currency,
+			orgDefault,
+			slot: "stripe_price_id",
+		}) ??
+		getPriceCurrencyStripeId({
+			config,
+			currency,
+			orgDefault,
+			slot: "stripe_empty_price_id",
+		});
 	if (!priceId) {
 		throw new InternalError({
-			message: `[consumableToStripeItemSpec] config.stripe_price_id is empty for autumn price: ${price.id}`,
+			message: `[consumableToStripeItemSpec] no stripe_price_id for currency '${currency}' on autumn price: ${price.id}`,
 		});
 	}
 

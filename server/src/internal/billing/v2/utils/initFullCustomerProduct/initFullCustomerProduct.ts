@@ -5,9 +5,11 @@ import {
 	type InitFullCustomerProductOptions,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
+import { customerProductHasPaidLicenses } from "@/internal/billing/v2/utils/customerProductHasPaidLicenses.js";
 import { applyExistingStatesToCustomerProduct } from "@/internal/billing/v2/utils/initFullCustomerProduct/applyExisting/applyExistingStatesToCustomerProduct";
 import { generateId } from "@/utils/genUtils";
 import { initCustomerEntitlement } from "./initCustomerEntitlement/initCustomerEntitlement";
+import { initCustomerLicenses } from "./initCustomerLicenses/initCustomerLicenses";
 import { initCustomerPrice } from "./initCustomerPrice";
 import { initCustomerProduct } from "./initCustomerProduct";
 
@@ -53,13 +55,18 @@ export const initFullCustomerProduct = ({
 
 	const { entitlements: _ents, prices: _prices, ...rawProduct } = fullProduct;
 
-	const newFullCustomerProduct = {
+	const newFullCustomerProduct: FullCusProduct = {
 		...newCusProduct,
 		product: rawProduct,
 		customer_entitlements: newFullCusEnts,
 		customer_prices: newCusPrices,
 		free_trial: initContext.freeTrial ?? null,
 	};
+	newFullCustomerProduct.customer_licenses = initCustomerLicenses({
+		customerProduct: newFullCustomerProduct,
+		fullProduct,
+		customerLicenseQuantities: initContext.customerLicenseQuantities,
+	});
 
 	applyExistingStatesToCustomerProduct({
 		ctx,
@@ -73,7 +80,11 @@ export const initFullCustomerProduct = ({
 		.paid()
 		.recurring();
 
-	if (!isPaidRecurring && !initOptions?.keepSubscriptionIds) {
+	if (
+		!isPaidRecurring &&
+		!customerProductHasPaidLicenses(newFullCustomerProduct) &&
+		!initOptions?.keepSubscriptionIds
+	) {
 		newFullCustomerProduct.subscription_ids = [];
 		newFullCustomerProduct.scheduled_ids = [];
 	}

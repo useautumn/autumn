@@ -49,7 +49,9 @@ function CustomTooltip({
 	const entry = payload[0].payload;
 	return (
 		<div className="rounded-md border bg-background px-3 py-2 text-xs shadow-sm">
-			<p className="font-medium text-muted-foreground capitalize">{entry.status}</p>
+			<p className="font-medium text-muted-foreground capitalize">
+				{entry.status}
+			</p>
 			<p className="text-tertiary-foreground">
 				{entry.invoice_count} invoice{entry.invoice_count !== 1 ? "s" : ""}{" "}
 				&middot; {formatCurrency({ value: entry.total_volume, currency })}
@@ -94,7 +96,9 @@ export function InvoiceStatusChart({
 			<div className="border rounded-lg overflow-hidden bg-interactive-secondary p-4 flex items-center justify-center min-h-[260px] flex-1">
 				{loading && <div className="h-[220px] w-full shimmer rounded" />}
 
-				{isEmpty && <p className="text-sm text-tertiary-foreground">No data available</p>}
+				{isEmpty && (
+					<p className="text-sm text-tertiary-foreground">No data available</p>
+				)}
 
 				{!loading && slices.length > 0 && (
 					<div className="flex items-center gap-4 w-full">
@@ -133,7 +137,9 @@ export function InvoiceStatusChart({
 									<p className="text-lg font-semibold text-foreground tabular-nums">
 										{totalInvoices}
 									</p>
-									<p className="text-[10px] text-tertiary-foreground">invoices</p>
+									<p className="text-[10px] text-tertiary-foreground">
+										invoices
+									</p>
 								</div>
 							</div>
 						</div>
@@ -151,7 +157,9 @@ export function InvoiceStatusChart({
 												DEFAULT_STATUS_COLOR,
 										}}
 									/>
-									<span className="text-muted-foreground capitalize">{slice.status}</span>
+									<span className="text-muted-foreground capitalize">
+										{slice.status}
+									</span>
 									<span className="text-tertiary-foreground ml-auto whitespace-nowrap tabular-nums">
 										{slice.invoice_count} &middot;{" "}
 										{formatCurrency({

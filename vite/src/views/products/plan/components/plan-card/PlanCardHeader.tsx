@@ -1,7 +1,7 @@
 import { productV2ToBasePrice } from "@autumn/shared";
+import { CardHeader } from "@autumn/ui";
 import { AdminHover } from "@/components/general/AdminHover";
 import { PlanTypeBadges } from "@/components/v2/badges/PlanTypeBadges";
-import { CardHeader } from "@/components/v2/cards/Card";
 import {
 	useCurrentItem,
 	useProduct,

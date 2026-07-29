@@ -36,21 +36,21 @@
 			],
 			"project": ["src/**/*.ts", "tests/**/*.ts"],
 			"ignoreDependencies": ["@react-email/components", "@axiomhq/pino"],
-			"ignore": ["src/external/tinybird/connections/eventsS3.ts"]
+			"ignore": [
+				"src/external/tinybird/connections/eventsS3.ts",
+				"src/external/connect/attachSandboxStripeAccount.ts",
+				"src/cron/resetCron/runClearExpiredResetCron.ts",
+				"src/external/stripe/common/simulateTestWebhookFailure.ts"
+			]
 		},
 		"shared": {
+			"entry": ["**/*.test.ts", "drizzle.config.events.ts"],
 			"project": ["**/*.ts", "!utils/**"],
 			"includeEntryExports": false
 		},
 		"vite": {
 			"entry": ["tests/**/*.{ts,tsx}", "src/**/*.test.{ts,tsx}"],
 			"project": ["src/**/*.{ts,tsx}", "tests/**/*.{ts,tsx}"],
-			"ignore": [
-				"src/components/ai-elements/**",
-				"src/components/ui/scroll-area.tsx",
-				"src/hooks/useControllableState.ts",
-				"src/types/**/*.d.ts"
-			],
 			"ignoreDependencies": [
 				"tailwindcss",
 				"tailwind-scrollbar-hide",
@@ -64,7 +64,7 @@
 		},
 		"apps/docs": {
 			"entry": ["**/*"],
-			"project": ["**/*.{ts,js,jsx,css,mdx}"]
+			"project": ["**/*.{ts,js,jsx}"]
 		},
 		"apps/sdk-test": {
 			"entry": ["app/**/*.{ts,tsx}", "lib/**/*.{ts,tsx}", "*.ts"],
@@ -98,6 +98,13 @@
 		"packages/stripe-sync": {
 			"entry": ["scripts/**/*.ts"],
 			"project": ["src/**/*.ts", "scripts/**/*.ts"]
+		},
+		"packages/render": {
+			"project": ["src/**/*.ts"]
+		},
+		"apps/testbench": {
+			"entry": ["**/*.ts"],
+			"project": ["**/*.ts"]
 		}
 	},
 	"ignoreBinaries": ["infisical", "lsof", "serve"]

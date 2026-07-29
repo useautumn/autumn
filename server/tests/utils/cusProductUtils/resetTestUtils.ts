@@ -1,7 +1,8 @@
 import {
+	CusProductStatus,
+	cusProductsToCusEnts,
 	customerEntitlements,
 	type FullCustomer,
-	fullCustomerToCustomerEntitlements,
 } from "@autumn/shared";
 import { findCustomerEntitlement } from "@tests/balances/utils/findCustomerEntitlement.js";
 import type { TestContext } from "@tests/utils/testInitUtils/createTestContext.js";
@@ -213,9 +214,12 @@ export const expireAllCusEntsForReset = async ({
 		idOrInternalId: customerId,
 	});
 
-	const cusEnts = fullCustomerToCustomerEntitlements({
-		fullCustomer,
-		featureId,
+	// cusProductsToCusEnts skips the entity scoping filter — "ALL" here
+	// includes entity-scoped products' entitlements.
+	const cusEnts = cusProductsToCusEnts({
+		cusProducts: fullCustomer.customer_products,
+		featureIds: [featureId],
+		inStatuses: [CusProductStatus.Active, CusProductStatus.PastDue],
 	});
 
 	if (cusEnts.length === 0) {

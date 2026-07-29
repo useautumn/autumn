@@ -7,6 +7,7 @@ import { toast } from "sonner";
 import { useAppForm } from "@/hooks/form/form";
 import { useMigrationsQuery } from "@/hooks/queries/useMigrationsQuery";
 import { getBackendErr } from "@/utils/genUtils";
+import { inheritPlanFilterIntoOperations } from "./shared/inheritPlanFilter";
 
 const AUTO_SAVE_DEBOUNCE_MS = 1000;
 
@@ -17,13 +18,19 @@ const FRIENDLY_MESSAGES: Record<string, string> = {
 		"Add at least one operation",
 };
 
-/**
- * Persist filter-only drafts: an operations block with no entries is sent as
- * `null`, since the empty `{}` shape fails the server's resource-block check. A
- * non-empty (even mid-edit) block is kept so in-progress operations aren't lost.
- */
-export function toOperationsPayload(operations: Operations): Operations | null {
-	return (operations.customer?.length ?? 0) === 0 ? null : operations;
+// Empty operations persist as null because `{}` fails the server resource-block
+// check; non-empty drafts are kept so in-progress operations aren't lost.
+export function toOperationsPayload({
+	operations,
+	filter,
+}: {
+	operations: Operations;
+	filter?: MigrationFilter;
+}): Operations | null {
+	const normalized = filter
+		? inheritPlanFilterIntoOperations({ filter, operations })
+		: operations;
+	return (normalized.customer?.length ?? 0) === 0 ? null : normalized;
 }
 
 function humanizeValidationError(raw: string): string {
@@ -61,7 +68,10 @@ export function useMigrationEditorForm({
 					id: migration.id,
 					updates: {
 						filter: value.filter,
-						operations: toOperationsPayload(value.operations),
+						operations: toOperationsPayload({
+							operations: value.operations,
+							filter: value.filter,
+						}),
 						no_billing_changes: value.noBillingChanges,
 					},
 				});
@@ -88,7 +98,7 @@ export function useMigrationEditorForm({
 						id: migration.id,
 						updates: {
 							filter,
-							operations: toOperationsPayload(operations),
+							operations: toOperationsPayload({ operations, filter }),
 							no_billing_changes: noBillingChanges,
 						},
 					});

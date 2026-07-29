@@ -1,67 +1,96 @@
-import type { FullProduct } from "@autumn/shared";
-import type {
-	ItemDiff,
-	ItemMatch,
-} from "@/internal/billing/v2/actions/sync/detect/types";
-import { findStripeMatchForAutumnPrice } from "../matchUtils/findStripeMatchForAutumnPrice";
+import type { FullProduct, Organization } from "@autumn/shared";
+import type { ItemDiff } from "@/internal/billing/v2/actions/sync/detect/types";
+import {
+	findProductLevelMatchForStripeItem,
+	type ProductLevelMatchCandidate,
+} from "../matchUtils/findProductLevelMatchForStripeItem";
 import { findStripeMatchForAutumnProduct } from "../matchUtils/findStripeMatchForAutumnProduct";
+import { getStripePriceIdsForAutumnPrice } from "../matchUtils/getStripePriceIdsForAutumnPrice";
+import { climbLicenseMatch } from "../matchUtils/licenseMatchUtils/climbLicenseMatch";
+import { findLicenseMatchForStripeItem } from "../matchUtils/licenseMatchUtils/findLicenseMatchForStripeItem";
 import type { StripeItemSnapshot } from "../stripeItemSnapshot/types";
 
-/**
- * Match a single StripeItemSnapshot against the supplied Autumn products.
- *
- * Walks every Autumn price (priority 1+2) before falling back to the
- * product-level match (priority 3). The matched Autumn resource(s) are
- * embedded on the returned ItemMatch so callers never need to re-look-up
- * by id.
- *
- * Pure: no I/O, no sibling-aware decisions.
- */
+/** Matches exact top-level prices, license links, then product-level identity. */
 export const findAutumnMatchForStripeItem = ({
 	item,
 	fullProducts,
+	org,
 }: {
 	item: StripeItemSnapshot;
 	fullProducts: FullProduct[];
+	org?: Organization;
 }): ItemDiff => {
-	const stripePriceIds = new Set([item.stripe_price_id]);
-	const stripeProductIds = new Set([item.stripe_product_id]);
-
 	for (const product of fullProducts) {
 		for (const price of product.prices) {
-			const matched_on = findStripeMatchForAutumnPrice({
-				price,
-				product,
-				stripePriceIds,
-				stripeProductIds,
-			});
-			if (matched_on) {
+			const matchedPriceId = getStripePriceIdsForAutumnPrice({ price }).find(
+				(id) => id === item.stripe_price_id,
+			);
+			if (matchedPriceId) {
 				return {
 					stripe: item,
-					match: {
-						kind: "autumn_price",
-						matched_on,
-						price,
-						product,
-					},
+					match: climbLicenseMatch({
+						item,
+						match: {
+							kind: "autumn_price",
+							matched_on: {
+								type: "stripe_price_id",
+								stripe_price_id: matchedPriceId,
+							},
+							price,
+							product,
+						},
+					}),
 				};
 			}
 		}
 	}
 
+	const licenseMatch = findLicenseMatchForStripeItem({ fullProducts, item });
+	if (licenseMatch) return { stripe: item, match: licenseMatch };
+
+	const stripeProductIds = new Set([item.stripe_product_id]);
+	const productCandidates: ProductLevelMatchCandidate[] = [];
 	for (const product of fullProducts) {
 		const matched_on = findStripeMatchForAutumnProduct({
 			product,
 			stripeProductIds,
 		});
 		if (matched_on) {
-			return {
-				stripe: item,
-				match: { kind: "autumn_product", matched_on, product },
-			};
+			productCandidates.push({ matched_on, product });
 		}
 	}
 
-	const noMatch: ItemMatch = { kind: "none" };
-	return { stripe: item, match: noMatch };
+	const productMatch = findProductLevelMatchForStripeItem({
+		item,
+		candidates: productCandidates,
+		org,
+	});
+	if (!productMatch) return { stripe: item, match: { kind: "none" } };
+
+	if (productMatch.priceMatch) {
+		return {
+			stripe: item,
+			match: climbLicenseMatch({
+				item,
+				match: {
+					kind: "autumn_price",
+					matched_on: productMatch.priceMatch.matched_on,
+					price: productMatch.priceMatch.price,
+					product: productMatch.product,
+				},
+			}),
+		};
+	}
+
+	return {
+		stripe: item,
+		match: climbLicenseMatch({
+			item,
+			match: {
+				kind: "autumn_product",
+				matched_on: productMatch.matched_on,
+				product: productMatch.product,
+			},
+		}),
+	};
 };

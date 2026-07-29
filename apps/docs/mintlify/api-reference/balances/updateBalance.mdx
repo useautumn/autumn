@@ -49,6 +49,10 @@ import { DynamicResponseExample } from "/snippets/dynamic-response-example.jsx";
   The next reset time for the balance. If there are multiple breakdowns, this will update the breakdown with the next reset time.
 </DynamicParamField>
 
+<DynamicParamField body="expires_at" type="number">
+  Unix timestamp (milliseconds) when the balance expires. Targets a specific balance via balance_id / interval when the customer has multiple balances for the same feature.
+</DynamicParamField>
+
 
 ### Response
 

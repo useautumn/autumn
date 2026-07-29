@@ -1,32 +1,14 @@
+import {
+	STRIPE_THREE_DECIMAL_CURRENCIES,
+	stripeMinorUnitFactor,
+} from "@utils/currencyUtils/stripeCurrencies.js";
 import { Decimal } from "decimal.js";
 
 /**
- * Zero-decimal currencies that Stripe handles without decimal places.
- * These currencies don't require multiplying/dividing by 100.
- */
-const ZERO_DECIMAL_CURRENCIES = [
-	"BIF", // Burundian Franc
-	"CLP", // Chilean Peso
-	"DJF", // Djiboutian Franc
-	"GNF", // Guinean Franc
-	"JPY", // Japanese Yen
-	"KMF", // Comorian Franc
-	"KRW", // South Korean Won
-	"MGA", // Malagasy Ariary
-	"PYG", // Paraguayan Guaraní
-	"RWF", // Rwandan Franc
-	"UGX", // Ugandan Shilling
-	"VND", // Vietnamese Đồng
-	"VUV", // Vanuatu Vatu
-	"XAF", // Central African CFA Franc
-	"XOF", // West African CFA Franc
-	"XPF", // CFP Franc
-];
-
-/**
- * Converts an Autumn amount to a Stripe amount.
- * For most currencies, multiplies by 100 (e.g., $1.00 -> 100 cents).
- * For zero-decimal currencies like JPY, rounds to the nearest integer.
+ * Converts an Autumn amount to a Stripe integer amount (`amount` / `unit_amount`).
+ * Multiplies by the currency's minor-unit factor: 1 (JPY), 100 (USD), 1000 (BHD).
+ * Three-decimal currencies must be evenly divisible by ten, so they are rounded
+ * to two decimals of precision before scaling.
  */
 export const atmnToStripeAmount = ({
 	amount,
@@ -35,17 +17,19 @@ export const atmnToStripeAmount = ({
 	amount: number;
 	currency?: string;
 }): number => {
-	if (ZERO_DECIMAL_CURRENCIES.includes(currency.toUpperCase())) {
-		return new Decimal(amount).round().toNumber();
+	if (STRIPE_THREE_DECIMAL_CURRENCIES.has(currency.toLowerCase())) {
+		return new Decimal(amount).mul(100).round().mul(10).toNumber();
 	}
-	return new Decimal(amount).mul(100).round().toNumber();
+	return new Decimal(amount)
+		.mul(stripeMinorUnitFactor(currency))
+		.round()
+		.toNumber();
 };
 
 /**
- * Converts an Autumn amount to a Stripe decimal string.
- * For most currencies, multiplies by 100 and returns as string with decimal places.
- * For zero-decimal currencies like JPY, returns the amount as-is with decimal places.
- * Used for Stripe API calls that require unit_amount_decimal as a string.
+ * Converts an Autumn amount to a Stripe decimal string (`unit_amount_decimal`).
+ * Scales by the currency's minor-unit factor; keeps sub-unit precision, so the
+ * divisible-by-ten rule (which only applies to integer amounts) is not enforced.
  */
 export const atmnToStripeAmountDecimal = ({
 	amount,
@@ -57,17 +41,15 @@ export const atmnToStripeAmountDecimal = ({
 	decimalPlaces?: number;
 }): string => {
 	const decimal = amount instanceof Decimal ? amount : new Decimal(amount);
-
-	if (ZERO_DECIMAL_CURRENCIES.includes(currency.toUpperCase())) {
-		return decimal.toDecimalPlaces(decimalPlaces).toString();
-	}
-	return decimal.mul(100).toDecimalPlaces(decimalPlaces).toString();
+	return decimal
+		.mul(stripeMinorUnitFactor(currency))
+		.toDecimalPlaces(decimalPlaces)
+		.toString();
 };
 
 /**
- * Converts a Stripe amount to an Autumn amount.
- * For most currencies, divides by 100 (e.g., 100 cents -> $1.00).
- * For zero-decimal currencies like JPY, returns the amount as-is.
+ * Converts a Stripe amount back to an Autumn amount by dividing out the
+ * currency's minor-unit factor (100 cents -> 1.00, 1000 fils -> 1.000).
  */
 export const stripeToAtmnAmount = ({
 	amount,
@@ -80,11 +62,9 @@ export const stripeToAtmnAmount = ({
 	decimalPlaces?: number;
 	round?: boolean;
 }): number => {
-	let finalAmount = amount;
-
-	if (!ZERO_DECIMAL_CURRENCIES.includes(currency.toUpperCase())) {
-		finalAmount = new Decimal(amount).div(100).toNumber();
-	}
+	const finalAmount = new Decimal(amount)
+		.div(stripeMinorUnitFactor(currency))
+		.toNumber();
 
 	if (round) {
 		return new Decimal(finalAmount).toDecimalPlaces(decimalPlaces).toNumber();

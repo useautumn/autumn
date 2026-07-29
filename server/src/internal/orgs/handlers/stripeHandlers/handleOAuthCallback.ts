@@ -5,6 +5,7 @@ import { createStripeCli } from "@/external/connect/createStripeCli.js";
 import { initMasterStripe } from "@/external/connect/initStripeCli.js";
 import type { HonoEnv } from "@/honoUtils/HonoEnv.js";
 import { OrgService } from "@/internal/orgs/OrgService.js";
+import { isStripeConnected } from "@/internal/orgs/orgUtils.js";
 import { consumeOAuthState } from "@/internal/platform/platformBeta/utils/oauthStateUtils.js";
 
 /**
@@ -121,6 +122,40 @@ export const handleOAuthCallback = async (c: Context<HonoEnv>) => {
 				existingOrg.slug || "",
 			);
 			return c.redirect(redirectUrl.toString());
+		}
+
+		// Both channels must point at the same Stripe account, else OAuth webhooks
+		// (this account) would be processed against secret-key billing state.
+		const secretKeyConnected = isStripeConnected({
+			org,
+			env,
+			throughSecretKey: true,
+		});
+		if (secretKeyConnected) {
+			try {
+				const secretKeyCli = createStripeCli({
+					org,
+					env,
+					throughSecretKey: true,
+				});
+				const secretKeyAccount = await secretKeyCli.accounts.retrieve();
+				if (secretKeyAccount.id !== accountId) {
+					redirectUrl.searchParams.set("error", "account_mismatch");
+					redirectUrl.searchParams.set("account_id", accountId);
+					redirectUrl.searchParams.set(
+						"secret_key_account_id",
+						secretKeyAccount.id,
+					);
+					return c.redirect(redirectUrl.toString());
+				}
+			} catch (error) {
+				console.error(
+					`Failed to verify account match against secret key for org ${org.id} (${org.slug}):`,
+					error,
+				);
+				redirectUrl.searchParams.set("error", "account_mismatch_check_failed");
+				return c.redirect(redirectUrl.toString());
+			}
 		}
 
 		// Update organization with Stripe Connect account

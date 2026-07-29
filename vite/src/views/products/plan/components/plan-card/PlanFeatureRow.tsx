@@ -1,28 +1,23 @@
 /** biome-ignore-all lint/a11y/noStaticElementInteractions: needed */
 /** biome-ignore-all lint/a11y/useSemanticElements: needed */
 import type { ProductItem } from "@autumn/shared";
-import { getProductItemDisplay } from "@autumn/shared";
+import { IconButton } from "@autumn/ui";
 import { TrashIcon } from "@phosphor-icons/react";
 import { useEffect, useRef, useState } from "react";
 import { AdminHover } from "@/components/general/AdminHover";
-import { IconButton } from "@/components/v2/buttons/IconButton";
 import {
+	useIsLicenseEditor,
 	useProduct,
 	useSheet,
 } from "@/components/v2/inline-custom-plan-editor/PlanEditorContext";
-import { useOrg } from "@/hooks/common/useOrg";
-import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
+import { PlanItemLabel } from "@/components/v2/PlanItemLabel";
 import { cn } from "@/lib/utils";
 import { getItemId } from "@/utils/product/productItemUtils";
+import { getProductItemHoverTexts } from "@/views/admin/adminUtils";
 import { useOnboarding3QueryState } from "@/views/onboarding3/hooks/useOnboarding3QueryState";
 import { useOnboardingStore } from "@/views/onboarding3/store/useOnboardingStore";
 import { OnboardingStep } from "@/views/onboarding3/utils/onboardingUtils";
 import { useProductItemContext } from "@/views/products/product/product-item/ProductItemContext";
-import { PlanFeatureIcon } from "./PlanFeatureIcon";
-
-export const CustomDotIcon = () => {
-	return <div className="w-[2px] h-[2px] mx-0.5 bg-current rounded-full" />;
-};
 
 interface PlanFeatureRowProps {
 	item: ProductItem;
@@ -30,6 +25,8 @@ interface PlanFeatureRowProps {
 	index: number;
 	readOnly?: boolean;
 	prepaidQuantity?: number | null;
+	/** Display currency for amounts; defaults to the org default. */
+	currency?: string;
 }
 
 export const PlanFeatureRow = ({
@@ -38,11 +35,11 @@ export const PlanFeatureRow = ({
 	index,
 	readOnly = false,
 	prepaidQuantity,
+	currency,
 }: PlanFeatureRowProps) => {
-	const { org } = useOrg();
-	const { features } = useFeaturesQuery();
 	const { setItem } = useProductItemContext();
 	const { product } = useProduct();
+	const isLicenseEditor = useIsLicenseEditor();
 	const { itemId, setSheet } = useSheet();
 	const isOnboarding = useOnboardingStore((s) => s.isOnboarding);
 	const playgroundMode = useOnboardingStore((s) => s.playgroundMode);
@@ -57,21 +54,6 @@ export const PlanFeatureRow = ({
 			playgroundMode !== "edit");
 
 	const item = readOnly ? itemProp : product.items?.[index] || itemProp;
-
-	const display = getProductItemDisplay({
-		item,
-		features,
-		currency: org?.default_currency || "USD",
-		fullDisplay: true,
-		amountFormatOptions: { currencyDisplay: "narrowSymbol" },
-	});
-
-	const feature = features.find((f) => f.id === item.feature_id);
-	const hasFeatureName = feature?.name && feature.name.trim() !== "";
-
-	const displayText = hasFeatureName
-		? display.primary_text
-		: "Name your feature";
 
 	const currentItemId = getItemId({ item, itemIndex: index });
 	const isSelected = itemId === currentItemId;
@@ -98,60 +80,6 @@ export const PlanFeatureRow = ({
 		}
 	};
 
-	const adminHoverText = () => {
-		return [
-			...(item.entitlement_id
-				? [
-						{
-							key: "Entitlement ID",
-							value: item.entitlement_id || "N/A",
-						},
-					]
-				: []),
-			...(item.price_id
-				? [
-						{
-							key: "Price ID",
-							value: item.price_id || "N/A",
-						},
-					]
-				: []),
-			...(item.price_config?.stripe_price_id
-				? [
-						{
-							key: "Stripe Price ID",
-							value: item.price_config?.stripe_price_id || "N/A",
-						},
-					]
-				: []),
-			...(item.price_config?.stripe_empty_price_id
-				? [
-						{
-							key: "Stripe Empty Price ID",
-							value: item.price_config?.stripe_empty_price_id || "N/A",
-						},
-					]
-				: []),
-			...(item.price_config?.stripe_product_id
-				? [
-						{
-							key: "Stripe Product ID",
-							value: item.price_config?.stripe_product_id || "N/A",
-						},
-					]
-				: []),
-
-			...(item.price_config?.stripe_prepaid_price_v2_id
-				? [
-						{
-							key: "Stripe Prepaid Price V2 ID",
-							value: item.price_config?.stripe_prepaid_price_v2_id || "N/A",
-						},
-					]
-				: []),
-		];
-	};
-
 	const renderContent = (contentRef?: React.Ref<HTMLDivElement>) => (
 		<div
 			ref={contentRef}
@@ -161,7 +89,7 @@ export const PlanFeatureRow = ({
 			data-pressed={isPressed}
 			className={cn(
 				"flex items-center w-full group group/row select-none rounded-xl hover:relative hover:z-95",
-				!readOnly && "h-10! input-base input-state-open-tiny",
+				!readOnly && "h-10! input-base input-state-open-tiny cursor-pointer",
 				readOnly && "py-1",
 				isDisabled && "pointer-events-none cursor-default",
 				isSelected &&
@@ -192,34 +120,22 @@ export const PlanFeatureRow = ({
 			}}
 		>
 			<div className="flex flex-row items-center flex-1 gap-2 min-w-0 overflow-hidden">
-				<AdminHover texts={adminHoverText()}>
-					<div className="flex flex-row items-center gap-1 shrink-0 pointer-events-auto">
-						<PlanFeatureIcon item={item} position="left" />
-
-						<CustomDotIcon />
-
-						<PlanFeatureIcon item={item} position="right" />
-					</div>
-				</AdminHover>
-
-				<p className="whitespace-nowrap truncate flex-1 min-w-0">
-					<span className={cn("text-body", !hasFeatureName && "text-subtle!")}>
-						{displayText}
-					</span>
-
-					{display.secondary_text && (
-						<span className="text-body-secondary">
-							{" "}
-							{display.secondary_text}
-						</span>
+				<PlanItemLabel
+					compact={isLicenseEditor}
+					item={item}
+					currency={currency}
+					wrapIcons={(icons) => (
+						<AdminHover texts={getProductItemHoverTexts({ item })}>
+							{icons}
+						</AdminHover>
 					)}
-				</p>
+				/>
 
 				<div
 					className={cn(
-						"flex items-center max-w-0 opacity-0 overflow-hidden group-hover:max-w-[200px] shrink-0",
+						"flex items-center max-w-0 opacity-0 overflow-hidden shrink-0",
 						isSelected && "max-w-[200px] opacity-100",
-						!readOnly && " group-hover:opacity-100",
+						!readOnly && "group-hover:max-w-[200px] group-hover:opacity-100",
 					)}
 				>
 					<IconButton

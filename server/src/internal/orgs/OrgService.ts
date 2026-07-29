@@ -153,6 +153,22 @@ export class OrgService {
 		};
 	}
 
+	static async listSandboxes({
+		db,
+		masterOrgId,
+	}: {
+		db: DrizzleCli;
+		masterOrgId: string;
+	}) {
+		return await db.query.organizations.findMany({
+			where: and(
+				eq(organizations.created_by, masterOrgId),
+				eq(organizations.is_sandbox, true),
+			),
+			orderBy: (orgs, { desc }) => [desc(orgs.createdAt)],
+		});
+	}
+
 	static async listWithFeatures({
 		db,
 		env,

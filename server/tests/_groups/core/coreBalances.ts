@@ -12,6 +12,7 @@ export const coreBalances: TestGroup = {
 		"balances/check/misc",
 		"integration/balances/check/spend-limit/check-entity-product-spend-limit.test.ts",
 		"integration/balances/check/spend-limit/check-customer-spend-limit.test.ts",
+		"integration/balances/check/pooled-balances",
 
 		// ── Track ──
 		"balances/track/basic",
@@ -26,6 +27,9 @@ export const coreBalances: TestGroup = {
 		"integration/balances/track/track-misc.test.ts",
 		"integration/balances/track/spend-limit/track-entity-product-spend-limit.test.ts",
 		"integration/balances/track/spend-limit/track-customer-spend-limit.test.ts",
+		"integration/balances/track/pooled-balances",
+		"integration/balances/track/spend-limit/pooled-balances",
+		"integration/balances/track/usage-alerts/pooled-balances",
 
 		// ── Lock ──
 		"integration/balances/lock/basic",
@@ -39,5 +43,6 @@ export const coreBalances: TestGroup = {
 		// ── Usage ──
 		"integration/balances/update/usage/update-usage-basic.test.ts",
 		"integration/balances/update/usage/update-usage-paid-allocated.test.ts",
+		"integration/balances/usage-windows/pooled-balances",
 	],
 };

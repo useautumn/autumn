@@ -4,7 +4,7 @@ import { AppEnv, apiKeys } from "@autumn/shared";
 import ctx from "@tests/utils/testInitUtils/createTestContext.js";
 import { eq } from "drizzle-orm";
 import { createHonoApp } from "@/initHono.js";
-import { hashApiKey } from "@/internal/dev/api-keys/apiKeyUtils.js";
+import { hashApiKey } from "@/internal/dev/apiKeys/apiKeyUtils.js";
 import { generateId } from "@/utils/genUtils.js";
 
 /*
@@ -613,19 +613,6 @@ const ROUTES = [
 		isWebhookExempt: false,
 	},
 	{
-		handlerName: "handleCliStripe",
-		handlerFile: "src/internal/dev/handlers/handleCliStripe.ts",
-		method: "POST",
-		path: "/dev/cli/stripe",
-		style: "REST",
-		group: "dev",
-		mountChain: ["", "/dev", "/cli/stripe"],
-		sourceRouterFile: "src/internal/dev/devRouter.ts",
-		routeKind: "createRoute",
-		needsScopes: true,
-		isWebhookExempt: false,
-	},
-	{
 		handlerName: "handleGetDevData",
 		handlerFile: "src/internal/dev/handlers/handleGetDevData.ts",
 		method: "GET",
@@ -633,32 +620,6 @@ const ROUTES = [
 		style: "REST",
 		group: "dev",
 		mountChain: ["", "/dev", "/data"],
-		sourceRouterFile: "src/internal/dev/devRouter.ts",
-		routeKind: "createRoute",
-		needsScopes: true,
-		isWebhookExempt: false,
-	},
-	{
-		handlerName: "handleCreateOtp",
-		handlerFile: "src/internal/dev/handlers/handleCreateOtp.ts",
-		method: "POST",
-		path: "/dev/otp",
-		style: "REST",
-		group: "dev",
-		mountChain: ["", "/dev", "/otp"],
-		sourceRouterFile: "src/internal/dev/devRouter.ts",
-		routeKind: "createRoute",
-		needsScopes: true,
-		isWebhookExempt: false,
-	},
-	{
-		handlerName: "handleGetOtp",
-		handlerFile: "src/internal/dev/handlers/handleGetOtp.ts",
-		method: "GET",
-		path: "/dev/otp/:otp",
-		style: "REST",
-		group: "dev",
-		mountChain: ["", "/dev", "/otp/:otp"],
 		sourceRouterFile: "src/internal/dev/devRouter.ts",
 		routeKind: "createRoute",
 		needsScopes: true,
@@ -2323,19 +2284,6 @@ const ROUTES = [
 		isWebhookExempt: false,
 	},
 	{
-		handlerName: "handleMigrateProductV2",
-		handlerFile: "src/internal/products/handlers/handleMigrateProductV2.ts",
-		method: "POST",
-		path: "/v1/migrations",
-		style: "REST",
-		group: "v1/migrations",
-		mountChain: ["/v1", "", "/migrations"],
-		sourceRouterFile: "src/internal/products/planRouter.ts",
-		routeKind: "createRoute",
-		needsScopes: true,
-		isWebhookExempt: false,
-	},
-	{
 		handlerName: "handleGetOrg",
 		handlerFile: "src/internal/orgs/handlers/crudHandlers/handleGetOrg.ts",
 		method: "GET",
@@ -3975,32 +3923,11 @@ const SCOPE_DECISIONS: Record<
 		shape: "array",
 		decidedAt: "2026-04-24T15:16:54.341Z",
 	},
-	"POST|/dev/cli/stripe|handleCliStripe": {
-		decision: "decided",
-		scopes: ["public"],
-		shape: "array",
-		note: "Mounted on the public router; auth is handled internally via the OTP token in the Authorization header.",
-		decidedAt: "2026-04-24T15:18:12.814Z",
-	},
 	"GET|/dev/data|handleGetDevData": {
 		decision: "decided",
 		scopes: ["organisation:read"],
 		shape: "array",
 		decidedAt: "2026-04-24T15:21:14.841Z",
-	},
-	"POST|/dev/otp|handleCreateOtp": {
-		decision: "decided",
-		scopes: ["public"],
-		shape: "array",
-		note: "DISMOUNT: route is deprecated/unused; delete in follow-up PR",
-		decidedAt: "2026-04-24T17:11:05.951Z",
-	},
-	"GET|/dev/otp/:otp|handleGetOtp": {
-		decision: "decided",
-		scopes: ["public"],
-		shape: "array",
-		note: "DISMOUNT: route is deprecated/unused; delete in follow-up PR",
-		decidedAt: "2026-04-24T17:11:05.951Z",
 	},
 	"POST|/feedback|handleSubmitFeedback": {
 		decision: "decided",
@@ -4696,12 +4623,6 @@ const SCOPE_DECISIONS: Record<
 		scopes: ["billing:read"],
 		shape: "array",
 		decidedAt: "2026-04-24T15:40:49.153Z",
-	},
-	"POST|/v1/migrations|handleMigrateProductV2": {
-		decision: "decided",
-		scopes: ["billing:write"],
-		shape: "array",
-		decidedAt: "2026-04-24T15:41:37.994Z",
 	},
 	"GET|/v1/organization|handleGetOrg": {
 		decision: "decided",

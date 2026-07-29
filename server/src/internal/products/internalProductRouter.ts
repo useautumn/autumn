@@ -8,9 +8,13 @@ import { Scopes } from "@autumn/shared";
 import { Hono } from "hono";
 import { createRoute } from "@/honoMiddlewares/routeHandler.js";
 import type { HonoEnv } from "@/honoUtils/HonoEnv.js";
-import { handleGetProducts } from "@/internal/products/internalHandlers/handleGetProducts.js";
+import {
+	handleGetLicenseProducts,
+	handleGetProducts,
+} from "@/internal/products/internalHandlers/handleGetProducts.js";
 import { handleGetProductsByPriceIds } from "@/internal/products/internalHandlers/handleGetProductsByPriceIds.js";
 import { handleCopyEnvironment } from "./handlers/handleCopyEnvironment/handleCopyEnvironment.js";
+import { handleListPlanVariants } from "./handlers/handleListPlanVariants.js";
 import { handleGetFeatures } from "./internalHandlers/handleGetFeatures.js";
 import { handleGetMigrations } from "./internalHandlers/handleGetMigrations.js";
 import { handleGetProductCount } from "./internalHandlers/handleGetProductCount.js";
@@ -23,6 +27,7 @@ import { handleGetStripeCoupons } from "./internalHandlers/handleGetStripeCoupon
 export const internalProductRouter = new Hono<HonoEnv>();
 
 internalProductRouter.get("/products", ...handleGetProducts);
+internalProductRouter.get("/license_products", ...handleGetLicenseProducts);
 internalProductRouter.get(
 	"/products/by-price-ids",
 	...handleGetProductsByPriceIds,
@@ -36,6 +41,7 @@ internalProductRouter.get("/migrations", ...handleGetMigrations);
 // SINGLE PRODUCT ENDPOINTS
 internalProductRouter.get("/:productId/count", ...handleGetProductCount);
 internalProductRouter.get("/:productId/data", ...handleGetProductInternal);
+internalProductRouter.get("/:productId/variants", ...handleListPlanVariants);
 internalProductRouter.post("/copy_to_production", ...handleCopyEnvironment);
 internalProductRouter.get("/:productId/info", ...handleGetProductDeleteInfo);
 internalProductRouter.get(

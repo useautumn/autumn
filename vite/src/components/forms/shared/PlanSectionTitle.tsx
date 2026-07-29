@@ -1,17 +1,15 @@
-import { InfoIcon } from "@phosphor-icons/react";
-import type { ReactNode } from "react";
 import {
 	Select,
 	SelectContent,
 	SelectItem,
 	SelectTrigger,
 	SelectValue,
-} from "@/components/v2/selects/Select";
-import {
 	Tooltip,
 	TooltipContent,
 	TooltipTrigger,
-} from "@/components/v2/tooltips/Tooltip";
+} from "@autumn/ui";
+import { InfoIcon } from "@phosphor-icons/react";
+import type { ReactNode } from "react";
 
 interface PlanSectionTitleProps {
 	hasCustomizations: boolean;
@@ -62,15 +60,17 @@ export function PlanSectionTitle({
 			<span className="flex items-center gap-2">
 				{trialAction}
 				{showVersionSelector && (
-				<Select
-					value={
-						selectedVersion !== undefined
-							? String(selectedVersion)
-							: undefined
-					}
-					onValueChange={(value) => onVersionChange?.(Number(value))}
-					items={Object.fromEntries(versionOptions.map((option) => [option.value, option.label]))}
-				>
+					<Select
+						value={
+							selectedVersion !== undefined
+								? String(selectedVersion)
+								: undefined
+						}
+						onValueChange={(value) => onVersionChange?.(Number(value))}
+						items={Object.fromEntries(
+							versionOptions.map((option) => [option.value, option.label]),
+						)}
+					>
 						<SelectTrigger className="w-fit h-7 text-xs whitespace-nowrap">
 							<SelectValue />
 						</SelectTrigger>

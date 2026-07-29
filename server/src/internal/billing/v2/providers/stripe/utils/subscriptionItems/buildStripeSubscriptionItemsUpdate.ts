@@ -18,6 +18,7 @@ import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { findMatchingInlineSubscriptionItem } from "@/internal/billing/v2/providers/stripe/utils/matchUtils/matchStripeInlinePrice";
 import { customerProductsToRecurringStripeItemSpecs } from "@/internal/billing/v2/providers/stripe/utils/stripeItemSpec/customerProductsToRecurringStripeItemSpecs";
 import { stripeItemSpecToSubscriptionItem } from "@/internal/billing/v2/providers/stripe/utils/stripeItemSpec/stripeItemSpecToStripeParam";
+import { getPatchCustomerProducts } from "@/internal/billing/v2/utils/billingPlan/customerProductPlanMutations";
 import { findStripeItemSpecByStripePriceId } from "./findStripeItemSpec";
 
 /**
@@ -139,12 +140,21 @@ export const buildStripeSubscriptionItemsUpdate = ({
 	});
 
 	// 2a. Exclude orphan paid-recurring cusProducts (no sub link, not freshly inserted) — their recurring prices would otherwise leak into a new sub on the next attach.
-	const insertedIds = new Set(
-		autumnBillingPlan.insertCustomerProducts.map((cp) => cp.id),
-	);
+	const mutatedCustomerProductIds = new Set([
+		...autumnBillingPlan.insertCustomerProducts.map(
+			(customerProduct) => customerProduct.id,
+		),
+		...getPatchCustomerProducts({ autumnBillingPlan }).map(
+			(patch) => patch.customerProduct.id,
+		),
+		...(autumnBillingPlan.customerLicenseTransitions ?? []).map(
+			(transition) =>
+				transition.incomingCustomerLicense.parent_customer_product_id,
+		),
+	]);
 	const nonOrphanCustomerProducts = stripeManagedCustomerProducts.filter(
 		(customerProduct) => {
-			if (insertedIds.has(customerProduct.id)) return true;
+			if (mutatedCustomerProductIds.has(customerProduct.id)) return true;
 			const isPaidRecurringOrphan =
 				cp(customerProduct).paid().recurring().valid &&
 				!cp(customerProduct).hasSubscription().valid;

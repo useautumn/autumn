@@ -1,8 +1,5 @@
 import type { Reward } from "@autumn/shared";
 import { RewardType } from "@autumn/shared";
-import { useState } from "react";
-import { toast } from "sonner";
-import { ShortcutButton } from "@/components/v2/buttons/ShortcutButton";
 import {
 	Dialog,
 	DialogContent,
@@ -10,14 +7,15 @@ import {
 	DialogFooter,
 	DialogHeader,
 	DialogTitle,
-} from "@/components/v2/dialogs/Dialog";
-import {
 	Select,
 	SelectContent,
 	SelectItem,
 	SelectTrigger,
 	SelectValue,
-} from "@/components/v2/selects/Select";
+	ShortcutButton,
+} from "@autumn/ui";
+import { useState } from "react";
+import { toast } from "sonner";
 import { useRewardsQuery } from "@/hooks/queries/useRewardsQuery";
 import { CusService } from "@/services/customers/CusService";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
@@ -117,20 +115,24 @@ export const AddCouponDialog = ({
 					</InfoBox>
 				)}
 				<div className="space-y-3">
-				<Select
-					value={couponSelected?.internal_id}
-					onValueChange={(value) => {
-						const coupon = rewards.find(
-							(c: Reward) => c.internal_id === value,
-						);
+					<Select
+						value={couponSelected?.internal_id}
+						onValueChange={(value) => {
+							const coupon = rewards.find(
+								(c: Reward) => c.internal_id === value,
+							);
 
-						if (!coupon) return;
+							if (!coupon) return;
 
-						setCouponSelected(coupon);
-						setPromoCodeSelected(null);
-					}}
-					items={Object.fromEntries(rewards.filter((c: Reward) => c.type !== RewardType.FreeProduct).map((c: Reward) => [c.internal_id, c.name]))}
-				>
+							setCouponSelected(coupon);
+							setPromoCodeSelected(null);
+						}}
+						items={Object.fromEntries(
+							rewards
+								.filter((c: Reward) => c.type !== RewardType.FreeProduct)
+								.map((c: Reward) => [c.internal_id, c.name]),
+						)}
+					>
 						<SelectTrigger className="w-full">
 							<SelectValue placeholder="Select Reward" />
 						</SelectTrigger>
@@ -156,11 +158,16 @@ export const AddCouponDialog = ({
 					</Select>
 
 					{couponSelected?.type === RewardType.FeatureGrant && (
-					<Select
-						value={promoCodeSelected || undefined}
-						onValueChange={setPromoCodeSelected}
-						items={Object.fromEntries(promoCodeOptions.map((promoCode) => [promoCode.code, promoCode.code]))}
-					>
+						<Select
+							value={promoCodeSelected || undefined}
+							onValueChange={setPromoCodeSelected}
+							items={Object.fromEntries(
+								promoCodeOptions.map((promoCode) => [
+									promoCode.code,
+									promoCode.code,
+								]),
+							)}
+						>
 							<SelectTrigger className="w-full">
 								<SelectValue placeholder="Select Promo Code" />
 							</SelectTrigger>

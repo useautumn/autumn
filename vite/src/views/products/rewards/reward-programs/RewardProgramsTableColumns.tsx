@@ -1,6 +1,6 @@
 import { type RewardProgram, RewardTriggerEvent } from "@autumn/shared";
+import { CopyButton } from "@autumn/ui";
 import type { ColumnDef, Row } from "@tanstack/react-table";
-import { CopyButton } from "@/components/v2/buttons/CopyButton";
 import { keyToTitle } from "@/utils/formatUtils/formatTextUtils";
 import { RewardProgramRowToolbar } from "./RewardProgramRowToolbar";
 

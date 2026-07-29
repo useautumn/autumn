@@ -1,16 +1,20 @@
 import {
 	type ApiInvoiceV1,
 	type Customer,
+	customers,
 	ErrCode,
+	entities,
 	type Feature,
 	type InsertInvoice,
 	type Invoice,
 	type InvoiceItem,
 	type InvoiceStatus,
 	invoices,
+	type ListInvoicesParams,
 	type Organization,
 	ProcessorType,
 	RecaseError,
+	StandardCursor,
 	stripeToAtmnAmount,
 } from "@autumn/shared";
 import type { DrizzleCli } from "@server/db/initDrizzle.js";
@@ -101,6 +105,91 @@ export class InvoiceService {
 		})) as (Invoice & {
 			customer: Customer & { org: Organization & { master: Organization } };
 		})[];
+	}
+
+	static async getCursorPage({
+		ctx,
+		query,
+	}: {
+		ctx: AutumnContext;
+		query: ListInvoicesParams;
+	}): Promise<{
+		rows: {
+			invoice: Invoice;
+			customer_id: string | null;
+			entity_id: string | null;
+		}[];
+		nextCursor: string | null;
+	}> {
+		const cursor = StandardCursor.decode(query.start_cursor);
+
+		const conditions = [
+			eq(customers.org_id, ctx.org.id),
+			eq(customers.env, ctx.env),
+		];
+
+		if (query.customer_id) {
+			conditions.push(eq(customers.id, query.customer_id));
+		}
+		if (query.entity_id) {
+			conditions.push(eq(entities.id, query.entity_id));
+		}
+		if (query.status?.length) {
+			conditions.push(inArray(invoices.status, query.status));
+		}
+		if (query.processor_types?.length) {
+			// Rows predating processor tracking have NULL processor_type and are Stripe.
+			const processorCondition = query.processor_types.includes(
+				ProcessorType.Stripe,
+			)
+				? or(
+						inArray(invoices.processor_type, query.processor_types),
+						isNull(invoices.processor_type),
+					)
+				: inArray(invoices.processor_type, query.processor_types);
+			if (processorCondition) {
+				conditions.push(processorCondition);
+			}
+		}
+		if (cursor) {
+			conditions.push(
+				sql`(${invoices.created_at}, ${invoices.id}) < (${cursor.t}, ${cursor.id})`,
+			);
+		}
+
+		const results = await ctx.db
+			.select({
+				invoice: invoices,
+				customer_id: customers.id,
+				entity_id: entities.id,
+			})
+			.from(invoices)
+			.innerJoin(
+				customers,
+				eq(invoices.internal_customer_id, customers.internal_id),
+			)
+			.leftJoin(entities, eq(invoices.internal_entity_id, entities.internal_id))
+			.where(and(...conditions))
+			.orderBy(desc(invoices.created_at), desc(invoices.id))
+			.limit(query.limit + 1);
+
+		const hasMore = results.length > query.limit;
+		const rows = (hasMore ? results.slice(0, query.limit) : results) as {
+			invoice: Invoice;
+			customer_id: string | null;
+			entity_id: string | null;
+		}[];
+
+		const last = rows[rows.length - 1];
+		const nextCursor =
+			hasMore && last
+				? StandardCursor.encode({
+						id: last.invoice.id,
+						t: last.invoice.created_at,
+					})
+				: null;
+
+		return { rows, nextCursor };
 	}
 
 	static async assertOwnership({

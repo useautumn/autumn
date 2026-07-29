@@ -1,12 +1,4 @@
-import "./index.css";
-import "./styles/button.css";
-
-import "./styles/form/base.css";
-import "./styles/form/effects.css";
-import "./styles/form/states.css";
-
-import "./styles/typography.css";
-import "./styles/custom.css";
+import "@autumn/ui/styles.css";
 import * as Sentry from "@sentry/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { PostHogProvider } from "posthog-js/react";

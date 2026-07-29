@@ -1,8 +1,6 @@
+import { Button, FormLabel, Input } from "@autumn/ui";
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
-import { Button } from "@/components/v2/buttons/Button";
-import { FormLabel } from "@/components/v2/form/FormLabel";
-import { Input } from "@/components/v2/inputs/Input";
 import { authClient, useSession } from "@/lib/auth-client";
 
 export const UserDetails = () => {
@@ -53,7 +51,11 @@ export const UserDetails = () => {
 					<FormLabel>
 						<span className="text-muted-foreground">Email</span>
 					</FormLabel>
-					<Input value={user?.email || ""} disabled className="text-tertiary-foreground" />
+					<Input
+						value={user?.email || ""}
+						disabled
+						className="text-tertiary-foreground"
+					/>
 				</div>
 			</div>
 			<div>

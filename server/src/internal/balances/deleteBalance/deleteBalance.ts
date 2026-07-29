@@ -3,15 +3,21 @@ import {
 	type DeleteBalanceParamsV0,
 	fullCustomerToCustomerEntitlements,
 	isPaidCustomerEntitlement,
+	isPooledBalanceSourceCustomerEntitlement,
+	isSyntheticPooledBalanceCustomerEntitlement,
 	RecaseError,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { CusService } from "@/internal/customers/CusService";
-import { CusProductService } from "@/internal/customers/cusProducts/CusProductService";
 import { CusEntService } from "@/internal/customers/cusProducts/cusEnts/CusEntitlementService";
 import { deleteCachedFullCustomer } from "@/internal/customers/cusUtils/fullCustomerCacheUtils/deleteCachedFullCustomer";
 import { buildCustomerEntitlementFilters } from "../utils/buildCustomerEntitlementFilters";
 import { reapplyFeatureUsageDeduction } from "../utils/reapplyFeatureUsageDeduction";
+import {
+	findOverageCusEnt,
+	markCusProductCustom,
+	preserveBalanceAsOverage,
+} from "./deleteBalanceUtils";
 
 export const deleteBalance = async ({
 	ctx,
@@ -60,6 +66,20 @@ export const deleteBalance = async ({
 				statusCode: 409,
 			});
 		}
+
+		// Deleting either half orphans the other: the pool would keep granted for a
+		// source that no longer exists, or contributions would point at nothing.
+		if (
+			isSyntheticPooledBalanceCustomerEntitlement({
+				customerEntitlement: cusEnt,
+			}) ||
+			isPooledBalanceSourceCustomerEntitlement({ customerEntitlement: cusEnt })
+		) {
+			throw new RecaseError({
+				message: `Cannot delete pooled balance for feature ${feature_id} and customer ${customer_id}. Remove the contributing plans instead.`,
+				statusCode: 409,
+			});
+		}
 	}
 
 	const usageToRecalculate = recalculate_balances
@@ -68,22 +88,36 @@ export const deleteBalance = async ({
 				entityId: fullCustomer.entity?.id ?? undefined,
 			})
 		: 0;
+	const sameFeatureCusEnts = fullCustomerToCustomerEntitlements({
+		fullCustomer,
+		featureId: feature_id,
+		entity: fullCustomer.entity,
+	});
+	const overageCusEnt = findOverageCusEnt({
+		recalculateBalances: recalculate_balances,
+		usageToRecalculate,
+		customerEntitlements,
+		sameFeatureCusEnts,
+	});
 
 	for (const cusEnt of customerEntitlements) {
+		if (cusEnt.id === overageCusEnt?.id) {
+			await preserveBalanceAsOverage({
+				ctx,
+				cusEnt,
+				customerEntitlements,
+				fullCustomer,
+				usageToRecalculate,
+			});
+			continue;
+		}
+
 		await CusEntService.delete({
 			db: ctx.db,
 			id: cusEnt.id,
 		});
 
-		if (cusEnt.customer_product_id) {
-			await CusProductService.update({
-				ctx,
-				cusProductId: cusEnt.customer_product_id,
-				updates: {
-					is_custom: true,
-				},
-			});
-		}
+		await markCusProductCustom({ ctx, cusEnt });
 	}
 
 	await deleteCachedFullCustomer({
@@ -92,6 +126,10 @@ export const deleteBalance = async ({
 	});
 
 	if (!recalculate_balances || usageToRecalculate === 0) {
+		return;
+	}
+
+	if (overageCusEnt) {
 		return;
 	}
 

@@ -7,6 +7,7 @@ import { analyticsMiddleware } from "../honoMiddlewares/analyticsMiddleware.js";
 import { apiVersionMiddleware } from "../honoMiddlewares/apiVersionMiddleware.js";
 import { criticalDbMiddleware } from "../honoMiddlewares/criticalDbMiddleware.js";
 import { customerBlockMiddleware } from "../honoMiddlewares/customerBlockMiddleware.js";
+import { customerJwtVersionMiddleware } from "../honoMiddlewares/customerJwtVersionMiddleware.js";
 import { idempotencyMiddleware } from "../honoMiddlewares/idempotencyMiddleware.js";
 import { orgConfigMiddleware } from "../honoMiddlewares/orgConfigMiddleware.js";
 import { orgRedisMiddleware } from "../honoMiddlewares/orgRedisMiddleware.js";
@@ -38,7 +39,6 @@ import { platformBetaRouter } from "../internal/platform/platformBeta/platformBe
 import {
 	honoProductBetaRouter,
 	honoProductRouter,
-	migrationRouter,
 } from "../internal/products/productRouter.js";
 import { rpcRouter } from "./rpcRouter.js";
 
@@ -52,6 +52,7 @@ apiRouter.use("*", orgConfigMiddleware);
 apiRouter.use("*", rolloutMiddleware);
 apiRouter.use("*", orgRedisMiddleware);
 apiRouter.use("*", apiVersionMiddleware);
+apiRouter.use("*", customerJwtVersionMiddleware);
 apiRouter.use("*", traceEnrichMiddleware);
 apiRouter.use("*", refreshCacheMiddleware);
 apiRouter.use("*", refreshProductsCacheMiddleware);
@@ -64,7 +65,6 @@ apiRouter.use("*", idempotencyMiddleware);
 apiRouter.route("", rpcRouter);
 apiRouter.route("", billingRouter);
 apiRouter.route("", balancesRouter);
-apiRouter.route("", migrationRouter);
 apiRouter.route("", entityRouter);
 apiRouter.route("/customers", cusRouter);
 apiRouter.route("/invoices", invoiceRouter);

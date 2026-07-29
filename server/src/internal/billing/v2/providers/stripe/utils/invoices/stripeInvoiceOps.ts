@@ -1,5 +1,6 @@
 import type Stripe from "stripe";
 import { createStripeCli } from "@/external/connect/createStripeCli";
+import { autumnStripeRequestOptions } from "@/external/stripe/common/autumnStripeIdempotency";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 
 // ============================================
@@ -18,6 +19,7 @@ type CreateInvoiceParams = {
 	footer?: string;
 	metadata?: Stripe.InvoiceCreateParams["metadata"];
 	automaticTax?: boolean;
+	defaultTaxRates?: string[];
 };
 
 export const createStripeInvoice = async ({
@@ -32,21 +34,30 @@ export const createStripeInvoice = async ({
 	metadata,
 	discounts,
 	automaticTax,
+	defaultTaxRates,
 }: CreateInvoiceParams): Promise<Stripe.Invoice> => {
-	const invoice = await stripeCli.invoices.create({
-		customer: stripeCusId,
-		auto_advance: false,
-		...(stripeSubId ? { subscription: stripeSubId } : {}),
-		...(currency ? { currency } : {}),
-		...(description ? { description } : {}),
-		...(footer ? { footer } : {}),
-		...(metadata ? { metadata } : {}),
-		collection_method: collectionMethod,
-		days_until_due:
-			collectionMethod === "send_invoice" ? (daysUntilDue ?? 30) : undefined,
-		...(discounts ? { discounts } : {}),
-		...(automaticTax ? { automatic_tax: { enabled: true } } : {}),
-	});
+	// Stripe rejects default_tax_rates alongside automatic_tax; a manual rate takes precedence.
+	const hasManualTaxRates = Boolean(defaultTaxRates?.length);
+	const invoice = await stripeCli.invoices.create(
+		{
+			customer: stripeCusId,
+			auto_advance: false,
+			...(stripeSubId ? { subscription: stripeSubId } : {}),
+			...(currency ? { currency } : {}),
+			...(description ? { description } : {}),
+			...(footer ? { footer } : {}),
+			...(metadata ? { metadata } : {}),
+			collection_method: collectionMethod,
+			days_until_due:
+				collectionMethod === "send_invoice" ? (daysUntilDue ?? 30) : undefined,
+			...(discounts ? { discounts } : {}),
+			...(hasManualTaxRates ? { default_tax_rates: defaultTaxRates } : {}),
+			...(automaticTax && !hasManualTaxRates
+				? { automatic_tax: { enabled: true } }
+				: {}),
+		},
+		autumnStripeRequestOptions({ source: "invoice.create" }),
+	);
 
 	return invoice;
 };
@@ -66,9 +77,13 @@ export const addStripeInvoiceLines = async ({
 	invoiceId,
 	lines,
 }: AddInvoiceLinesParams): Promise<Stripe.Invoice> => {
-	const invoice = await stripeCli.invoices.addLines(invoiceId, {
-		lines,
-	});
+	const invoice = await stripeCli.invoices.addLines(
+		invoiceId,
+		{
+			lines,
+		},
+		autumnStripeRequestOptions({ source: "invoice.addLines" }),
+	);
 
 	return invoice;
 };
@@ -88,7 +103,11 @@ export const updateStripeInvoice = async ({
 	invoiceId,
 	params,
 }: UpdateInvoiceParams): Promise<Stripe.Invoice> => {
-	const invoice = await stripeCli.invoices.update(invoiceId, params);
+	const invoice = await stripeCli.invoices.update(
+		invoiceId,
+		params,
+		autumnStripeRequestOptions({ source: "invoice.update" }),
+	);
 
 	return invoice;
 };
@@ -108,9 +127,13 @@ export const finalizeStripeInvoice = async ({
 	invoiceId,
 	autoAdvance = false,
 }: FinalizeInvoiceParams): Promise<Stripe.Invoice> => {
-	const invoice = await stripeCli.invoices.finalizeInvoice(invoiceId, {
-		auto_advance: autoAdvance,
-	});
+	const invoice = await stripeCli.invoices.finalizeInvoice(
+		invoiceId,
+		{
+			auto_advance: autoAdvance,
+		},
+		autumnStripeRequestOptions({ source: "invoice.finalize" }),
+	);
 
 	return invoice;
 };
@@ -131,6 +154,11 @@ export const createStripeInvoiceItems = async ({
 	const stripeCli = createStripeCli({ org: ctx.org, env: ctx.env });
 
 	return Promise.all(
-		invoiceItems.map((item) => stripeCli.invoiceItems.create(item)),
+		invoiceItems.map((item) =>
+			stripeCli.invoiceItems.create(
+				item,
+				autumnStripeRequestOptions({ source: "invoiceItems.create" }),
+			),
+		),
 	);
 };

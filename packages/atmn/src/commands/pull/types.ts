@@ -1,4 +1,5 @@
-import type { Feature, Plan } from "../../compose/models/index.js";
+import type { Feature } from "../../compose/models/index.js";
+import type { Plan } from "../../compose/models/variantModels.js";
 import type { AppEnv } from "../../lib/env/index.js";
 import type { UpdateResult } from "../../lib/transforms/inPlaceUpdate/index.js";
 
@@ -16,6 +17,8 @@ export interface PullOptions {
 	forceOverwrite?: boolean;
 	/** Skip generating @useautumn-sdk.d.ts */
 	noDeclarationFile?: boolean;
+	/** Pull every historical plan version */
+	allVersions?: boolean;
 }
 
 /**

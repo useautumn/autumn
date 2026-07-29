@@ -36,18 +36,29 @@ import { customerProducts } from "../models/cusProductModels/cusProductTable.js"
 import { apiKeyRelations } from "../models/devModels/apiKeyRelations.js";
 // Other Tables
 import { apiKeys } from "../models/devModels/apiKeyTable.js";
+import { customerJwtFamilies } from "../models/devModels/customerJwtFamilyTable.js";
 import { events } from "../models/eventModels/eventTable.js";
 import { featureRelations } from "../models/featureModels/featureRelations.js";
 import { features } from "../models/featureModels/featureTable.js";
 import { invoiceTemplates } from "../models/invoiceTemplateModels/invoiceTemplateTable.js";
-import {
-	cmaMemory,
-	cmaSessions,
-	cmaVaults,
-	harnessSessions,
-	slackAdminThreads,
-} from "../models/leafModels/cmaStateTable.js";
+import { chatThreadContexts } from "../models/leafModels/chatThreadContextsTable.js";
+import { cmaMemory } from "../models/leafModels/cmaMemoryTable.js";
+import { cmaSessions } from "../models/leafModels/cmaSessionsTable.js";
+import { cmaVaults } from "../models/leafModels/cmaVaultsTable.js";
+import { harnessSessions } from "../models/leafModels/harnessSessionsTable.js";
 import { leafSchema } from "../models/leafModels/leafSchema.js";
+import { slackAdminThreads } from "../models/leafModels/slackAdminThreadsTable.js";
+import {
+	customerLicenses,
+	licenseEntitlements,
+	licensePrices,
+	planLicenses,
+} from "../models/licenseModels/licenseTable.js";
+import {
+	licenseEntitlementRelations,
+	licensePriceRelations,
+	planLicenseRelations,
+} from "../models/licenseModels/planLicenseRelations.js";
 // Migration Relations
 import { migrationErrorRelations } from "../models/migrationModels/migrationErrorRelations.js";
 import { migrationErrors } from "../models/migrationModels/migrationErrorTable.js";
@@ -62,7 +73,16 @@ import { migrations } from "../models/migrationV2Models/migrationTable.js";
 import { agentRules } from "../models/orgModels/agent/agentRulesTable.js";
 import { organizationsRelations } from "../models/orgModels/orgRelations.js";
 import { organizations } from "../models/orgModels/orgTable.js";
+import { transitionRules } from "../models/orgModels/transitionRules/transitionRulesTable.js";
 import { metadata } from "../models/otherModels/metadataTable.js";
+import {
+	pooledBalanceContributionsRelations,
+	pooledBalancesRelations,
+} from "../models/pooledBalanceModels/pooledBalanceRelations.js";
+import {
+	pooledBalanceContributions,
+	pooledBalances,
+} from "../models/pooledBalanceModels/pooledBalanceTable.js";
 import { revenuecatMappings } from "../models/processorModels/revenuecatModels/revenuecatMappingsTable.js";
 import { vercelResources } from "../models/processorModels/vercelModels/vercelResourcesTable.js";
 // Product Relations
@@ -106,6 +126,8 @@ import {
 	oauthRefreshToken,
 	passkey,
 	session,
+	ssoConnection,
+	ssoProvider,
 	user,
 	verification,
 } from "./auth-schema.js";
@@ -115,6 +137,7 @@ export {
 	actions,
 	apiKeyRelations,
 	apiKeys,
+	customerJwtFamilies,
 	autoTopupLimitStates as autoTopupLimits,
 	chatApprovals,
 	chatInstallations,
@@ -125,6 +148,7 @@ export {
 	cmaMemory,
 	cmaSessions,
 	cmaVaults,
+	chatThreadContexts,
 	harnessSessions,
 	slackAdminThreads,
 	leafSchema,
@@ -151,6 +175,9 @@ export {
 	invoiceRelations,
 	invoiceTemplates,
 	invoices,
+	customerLicenses,
+	licenseEntitlements,
+	licensePrices,
 	// OAuth Provider
 	jwks,
 	member,
@@ -168,8 +195,17 @@ export {
 	oauthConsent,
 	oauthRefreshToken,
 	agentRules,
+	transitionRules,
 	// Tables
 	organizations,
+	licenseEntitlementRelations,
+	licensePriceRelations,
+	planLicenses,
+	planLicenseRelations,
+	pooledBalanceContributions,
+	pooledBalanceContributionsRelations,
+	pooledBalances,
+	pooledBalancesRelations,
 	passkey,
 	// Relations
 	organizationsRelations,
@@ -193,6 +229,8 @@ export {
 	schedulePhases,
 	schedules,
 	session,
+	ssoConnection,
+	ssoProvider,
 	subscriptions,
 	usageWindows,
 	// Auth

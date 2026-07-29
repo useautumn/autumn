@@ -1,10 +1,89 @@
 import {
 	type AppEnv,
+	BillingInterval,
 	CusProductStatus,
 	type ListCustomersV2Params,
 	RELEVANT_STATUSES,
 } from "@autumn/shared";
 import { type SQL, sql } from "drizzle-orm";
+import { planetScaleTag } from "@/db/dbUtils.js";
+
+const RECURRING_BILLING_INTERVALS = [
+	BillingInterval.Week,
+	BillingInterval.Month,
+	BillingInterval.Quarter,
+	BillingInterval.SemiAnnual,
+	BillingInterval.Year,
+] as const;
+
+export const EXTRA_CUSTOMER_ENTITLEMENT_LIMIT = 30;
+export const POOLED_CUSTOMER_ENTITLEMENT_LIMIT = 100;
+
+const buildFullCustomerEntitlementJson = ({
+	withPooledBalance = false,
+	withPooledBalanceContribution = false,
+}: {
+	withPooledBalance?: boolean;
+	withPooledBalanceContribution?: boolean;
+} = {}) => sql`
+	to_jsonb(ce.*) || jsonb_build_object(
+		'entitlement', (
+			SELECT row_to_json(ent_with_feature)
+			FROM (
+				SELECT e.*, row_to_json(f) AS feature
+				FROM entitlements e
+				JOIN features f ON e.internal_feature_id = f.internal_id
+				WHERE e.id = ce.entitlement_id
+			) AS ent_with_feature
+		),
+		'replaceables', (
+			SELECT COALESCE(
+				json_agg(row_to_json(r)) FILTER (WHERE r.id IS NOT NULL),
+				'[]'::json
+			)
+			FROM replaceables r
+			WHERE r.cus_ent_id = ce.id
+		),
+		'rollovers', (
+			SELECT COALESCE(
+				json_agg(row_to_json(ro) ORDER BY ro.expires_at ASC NULLS LAST)
+				FILTER (
+					WHERE ro.expires_at > EXTRACT(EPOCH FROM now()) * 1000
+						OR ro.expires_at IS NULL
+				),
+				'[]'::json
+			)
+			FROM rollovers ro
+			WHERE ro.cus_ent_id = ce.id
+		)
+	)
+	${
+		withPooledBalance
+			? sql`|| jsonb_build_object('pooled_balance', to_jsonb(pb))`
+			: sql``
+	}
+	${
+		withPooledBalanceContribution
+			? sql`|| CASE
+				WHEN pbc.id IS NULL THEN '{}'::jsonb
+				ELSE jsonb_build_object(
+					'pooled_balance_contribution',
+					to_jsonb(pbc)
+				)
+			END`
+			: sql``
+	}
+`;
+
+export type DashboardIntervalFilter =
+	(typeof RECURRING_BILLING_INTERVALS)[number];
+
+export const parseDashboardIntervalFilter = (
+	raw: string[] | undefined,
+): DashboardIntervalFilter[] =>
+	(raw ?? []).filter((value): value is DashboardIntervalFilter =>
+		RECURRING_BILLING_INTERVALS.includes(value as DashboardIntervalFilter),
+	);
 
 export type DashboardStatusFilter =
 	| "active"
@@ -83,6 +162,20 @@ const dashboardProductFilterToCustomerListSql = (
 				)`
 			: sql`(p_dash.id = ${filter.productId} AND p_dash.version = ${filter.version})`;
 
+const intervalFilterToCustomerListSql = (
+	intervals: DashboardIntervalFilter[],
+): SQL =>
+	sql`EXISTS (
+		SELECT 1
+		FROM customer_prices cpr_interval
+		JOIN prices p_interval ON p_interval.id = cpr_interval.price_id
+		WHERE cpr_interval.customer_product_id = cp_dash.id
+			AND p_interval.config->>'interval' = ANY(ARRAY[${sql.join(
+				intervals.map((interval) => sql`${interval}`),
+				sql`, `,
+			)}])
+	)`;
+
 const buildOptimizedCusProductsCTE = ({
 	inStatuses,
 	cusProductLimit,
@@ -119,7 +212,13 @@ const buildOptimizedCusProductsCTE = ({
         row_to_json(prod) AS product,
         cpr_data.customer_prices,
         ce_data.customer_entitlements,
-        ft_data.free_trial
+        ft_data.free_trial,
+        CASE WHEN pcl.id IS NULL THEN NULL ELSE to_jsonb(pcl) END AS parent_customer_license,
+        CASE WHEN pcp.id IS NULL THEN NULL ELSE jsonb_build_object(
+          'status', pcp.status,
+          'subscription_ids', to_jsonb(pcp.subscription_ids),
+          'canceled_at', pcp.canceled_at
+        ) END AS parent_customer_product
 
       FROM customer_products cp
       JOIN products prod ON cp.internal_product_id = prod.internal_id
@@ -137,37 +236,17 @@ const buildOptimizedCusProductsCTE = ({
       LEFT JOIN LATERAL (
         SELECT COALESCE(
           json_agg(
-            to_jsonb(ce.*) || jsonb_build_object(
-              'entitlement', (
-                SELECT row_to_json(ent_with_feature)
-                FROM (
-                  SELECT e.*, row_to_json(f) AS feature
-                  FROM entitlements e
-                  JOIN features f ON e.internal_feature_id = f.internal_id
-                  WHERE e.id = ce.entitlement_id
-                ) AS ent_with_feature
-              ),
-              'replaceables', (
-                SELECT COALESCE(
-                  json_agg(row_to_json(r)) FILTER (WHERE r.id IS NOT NULL),
-                  '[]'::json
-                )
-                FROM replaceables r
-                WHERE r.cus_ent_id = ce.id
-              ),
-              'rollovers', (
-                SELECT COALESCE(
-                  json_agg(row_to_json(ro) ORDER BY ro.expires_at ASC NULLS LAST) FILTER (WHERE ro.expires_at > EXTRACT(EPOCH FROM now()) * 1000 OR ro.expires_at IS NULL),
-                  '[]'::json
-                )
-                FROM rollovers ro
-                WHERE ro.cus_ent_id = ce.id
-              )
-            )
+            ${buildFullCustomerEntitlementJson({
+							withPooledBalanceContribution: true,
+						})}
           ) FILTER (WHERE ce.id IS NOT NULL),
           '[]'::json
         ) AS customer_entitlements
         FROM customer_entitlements ce
+        LEFT JOIN pooled_balance_contributions pbc
+          ON pbc.id = ce.pooled_contribution_id
+          AND pbc.source_customer_entitlement_id = ce.id
+          AND pbc.source_customer_product_id = cp.id
         WHERE ce.customer_product_id = cp.id
       ) ce_data ON true
       LEFT JOIN LATERAL (
@@ -175,7 +254,31 @@ const buildOptimizedCusProductsCTE = ({
         FROM free_trials ft
         WHERE ft.id = cp.free_trial_id
       ) ft_data ON true
+      -- Links can match multiple pool rows (predecessors linger on expired
+      -- parents); seats inherit from the pool on the LIVE parent.
+      LEFT JOIN LATERAL (
+        SELECT pool.*
+        FROM customer_licenses pool
+        JOIN customer_products pool_parent
+          ON pool_parent.id = pool.parent_customer_product_id
+        WHERE cp.customer_license_link_id IS NOT NULL
+          AND pool.link_id = cp.customer_license_link_id
+        ORDER BY (pool_parent.status IN ('active', 'past_due', 'scheduled')) DESC,
+          pool.created_at DESC
+        LIMIT 1
+      ) pcl ON true
+      LEFT JOIN customer_products pcp
+        ON pcp.id = pcl.parent_customer_product_id
       WHERE cp.internal_customer_id = (SELECT internal_id FROM customer_record)
+      -- Seat rows (license assignments) hydrate only for the selected entity.
+      AND ${
+				entityId
+					? sql`(
+        cp.customer_license_link_id IS NULL
+        OR cp.internal_entity_id = (SELECT internal_id FROM entity_record)
+      )`
+					: sql`cp.customer_license_link_id IS NULL`
+			}
       ${withStatusFilter()}
       ORDER BY ${entityId ? sql`CASE WHEN cp.entity_id = ${entityId} OR cp.internal_entity_id = ${entityId} THEN 0 WHEN cp.entity_id IS NULL THEN 1 ELSE 2 END,` : sql``} ${relevantStatusFirst}, ${hasCustomerPrices} DESC, prod.is_add_on ASC, cp.created_at DESC
       LIMIT ${cusProductLimit}
@@ -290,34 +393,7 @@ const buildExtraEntitlementsCTE = () => {
       SELECT
         COALESCE(
           json_agg(
-            to_jsonb(ce.*) || jsonb_build_object(
-              'entitlement', (
-                SELECT row_to_json(ent_with_feature)
-                FROM (
-                  SELECT e.*, row_to_json(f) AS feature
-                  FROM entitlements e
-                  JOIN features f ON e.internal_feature_id = f.internal_id
-                  WHERE e.id = ce.entitlement_id
-                ) AS ent_with_feature
-              ),
-              'replaceables', (
-                SELECT COALESCE(
-                  json_agg(row_to_json(r)) FILTER (WHERE r.id IS NOT NULL),
-                  '[]'::json
-                )
-                FROM replaceables r
-                WHERE r.cus_ent_id = ce.id
-              ),
-              'rollovers', (
-                SELECT COALESCE(
-                  json_agg(row_to_json(ro) ORDER BY ro.expires_at ASC NULLS LAST)
-                  FILTER (WHERE ro.expires_at > EXTRACT(EPOCH FROM now()) * 1000 OR ro.expires_at IS NULL),
-                  '[]'::json
-                )
-                FROM rollovers ro
-                WHERE ro.cus_ent_id = ce.id
-              )
-            )
+            ${buildFullCustomerEntitlementJson()}
             ORDER BY ce.id DESC
           ) FILTER (WHERE ce.id IS NOT NULL),
           '[]'::json
@@ -327,13 +403,39 @@ const buildExtraEntitlementsCTE = () => {
         FROM customer_entitlements ce
         WHERE ce.internal_customer_id = (SELECT internal_id FROM customer_record)
           AND ce.customer_product_id IS NULL
+		  AND ce.pooled_balance_id IS NULL
+		  AND ce.pooled_contribution_id IS NULL
           AND (ce.expires_at IS NULL OR ce.expires_at > EXTRACT(EPOCH FROM now()) * 1000)
         ORDER BY ce.id DESC
-        LIMIT 30
+		LIMIT ${EXTRA_CUSTOMER_ENTITLEMENT_LIMIT}
       ) ce
     )
   `;
 };
+
+const buildPooledCustomerEntitlementsCTE = () => sql`
+	pooled_customer_entitlements AS (
+		SELECT COALESCE(
+			json_agg(
+				${buildFullCustomerEntitlementJson({ withPooledBalance: true })}
+				ORDER BY ce.id DESC
+			) FILTER (WHERE ce.id IS NOT NULL),
+			'[]'::json
+		) AS pooled_customer_entitlements
+		FROM (
+			SELECT *
+			FROM customer_entitlements ce
+			WHERE ce.internal_customer_id = (SELECT internal_id FROM customer_record)
+				AND ce.customer_product_id IS NULL
+				AND ce.pooled_balance_id IS NOT NULL
+				AND ce.pooled_contribution_id IS NULL
+				AND (ce.expires_at IS NULL OR ce.expires_at > EXTRACT(EPOCH FROM now()) * 1000)
+			ORDER BY ce.id DESC
+			LIMIT ${POOLED_CUSTOMER_ENTITLEMENT_LIMIT}
+		) ce
+		JOIN pooled_balances pb ON pb.id = ce.pooled_balance_id
+	)
+`;
 
 const buildInvoicesCTE = (hasEntityCTE: boolean) => {
 	const entityFilter = hasEntityCTE
@@ -421,7 +523,9 @@ export const getFullCusQuery = ({
 	// Add customer products CTE
 	sqlChunks.push(sql`, `);
 	// sqlChunks.push(buildCusProductsCTE(inStatuses));
-	sqlChunks.push(buildOptimizedCusProductsCTE({ inStatuses, cusProductLimit, entityId }));
+	sqlChunks.push(
+		buildOptimizedCusProductsCTE({ inStatuses, cusProductLimit, entityId }),
+	);
 
 	// Conditionally add trials used CTE
 	if (withTrialsUsed) {
@@ -438,6 +542,10 @@ export const getFullCusQuery = ({
 	// Unconditionally add extra entitlements CTE
 	sqlChunks.push(sql`, `);
 	sqlChunks.push(buildExtraEntitlementsCTE());
+
+	// Unconditionally add synthetic pooled customer entitlements.
+	sqlChunks.push(sql`, `);
+	sqlChunks.push(buildPooledCustomerEntitlementsCTE());
 
 	// Conditionally add invoices CTE
 	if (includeInvoices) {
@@ -550,6 +658,8 @@ export const getFullCusQuery = ({
 
 	selectFieldsChunks.push(sql`,
     (SELECT extra_customer_entitlements FROM extra_customer_entitlements) AS extra_customer_entitlements`);
+	selectFieldsChunks.push(sql`,
+    (SELECT pooled_customer_entitlements FROM pooled_customer_entitlements) AS pooled_customer_entitlements`);
 
 	if (includeInvoices) {
 		selectFieldsChunks.push(sql`,
@@ -572,6 +682,8 @@ export const getFullCusQuery = ({
     SELECT ${sql.join(selectFieldsChunks, sql``)}
     FROM customer_record cr
   `);
+
+	sqlChunks.push(planetScaleTag({ query: "getFullCusQuery" }));
 
 	return sql.join(sqlChunks, sql``);
 };
@@ -638,34 +750,7 @@ export const getPaginatedFullCusQuery = ({
       cr.internal_id AS internal_customer_id,
       COALESCE(
         json_agg(
-          to_jsonb(ce.*) || jsonb_build_object(
-            'entitlement', (
-              SELECT row_to_json(ent_with_feature)
-              FROM (
-                SELECT e.*, row_to_json(f) AS feature
-                FROM entitlements e
-                JOIN features f ON e.internal_feature_id = f.internal_id
-                WHERE e.id = ce.entitlement_id
-              ) AS ent_with_feature
-            ),
-            'replaceables', (
-              SELECT COALESCE(
-                json_agg(row_to_json(r)) FILTER (WHERE r.id IS NOT NULL),
-                '[]'::json
-              )
-              FROM replaceables r
-              WHERE r.cus_ent_id = ce.id
-            ),
-            'rollovers', (
-              SELECT COALESCE(
-                json_agg(row_to_json(ro) ORDER BY ro.expires_at ASC NULLS LAST)
-                FILTER (WHERE ro.expires_at > EXTRACT(EPOCH FROM now()) * 1000 OR ro.expires_at IS NULL),
-                '[]'::json
-              )
-              FROM rollovers ro
-              WHERE ro.cus_ent_id = ce.id
-            )
-          )
+          ${buildFullCustomerEntitlementJson()}
           ORDER BY ce.id DESC
         ) FILTER (WHERE ce.id IS NOT NULL),
         '[]'::json
@@ -676,12 +761,40 @@ export const getPaginatedFullCusQuery = ({
       FROM customer_entitlements ce
       WHERE ce.internal_customer_id = cr.internal_id
         AND ce.customer_product_id IS NULL
+		AND ce.pooled_balance_id IS NULL
+		AND ce.pooled_contribution_id IS NULL
         AND (ce.expires_at IS NULL OR ce.expires_at > EXTRACT(EPOCH FROM now()) * 1000)
       ORDER BY ce.id DESC
-      LIMIT 30
+	  LIMIT ${EXTRA_CUSTOMER_ENTITLEMENT_LIMIT}
     ) ce ON true
     GROUP BY cr.internal_id
   )`;
+
+	const pooledCustomerEntitlementsCTE = sql`, pooled_customer_entitlements AS (
+		SELECT
+			cr.internal_id AS internal_customer_id,
+			COALESCE(
+				json_agg(
+					${buildFullCustomerEntitlementJson({ withPooledBalance: true })}
+					ORDER BY ce.id DESC
+				) FILTER (WHERE ce.id IS NOT NULL),
+				'[]'::json
+			) AS pooled_customer_entitlements
+		FROM customer_records cr
+		LEFT JOIN LATERAL (
+			SELECT *
+			FROM customer_entitlements ce
+			WHERE ce.internal_customer_id = cr.internal_id
+				AND ce.customer_product_id IS NULL
+				AND ce.pooled_balance_id IS NOT NULL
+				AND ce.pooled_contribution_id IS NULL
+				AND (ce.expires_at IS NULL OR ce.expires_at > EXTRACT(EPOCH FROM now()) * 1000)
+			ORDER BY ce.id DESC
+			LIMIT ${POOLED_CUSTOMER_ENTITLEMENT_LIMIT}
+		) ce ON true
+		JOIN pooled_balances pb ON pb.id = ce.pooled_balance_id
+		GROUP BY cr.internal_id
+	)`;
 
 	return sql`
     WITH customer_records AS (
@@ -707,6 +820,7 @@ export const getPaginatedFullCusQuery = ({
         SELECT *
         FROM customer_products cp
         WHERE cp.internal_customer_id = cr.internal_id
+        AND cp.customer_license_link_id IS NULL
         ${withStatusFilter()}
         ORDER BY (SELECT p.is_add_on FROM products p WHERE p.internal_id = cp.internal_product_id) ASC, cp.created_at DESC
         LIMIT ${cusProductLimit}
@@ -726,37 +840,17 @@ export const getPaginatedFullCusQuery = ({
       LEFT JOIN LATERAL (
         SELECT COALESCE(
           json_agg(
-            to_jsonb(ce.*) || jsonb_build_object(
-              'entitlement', (
-                SELECT row_to_json(ent_with_feature)
-                FROM (
-                  SELECT e.*, row_to_json(f) AS feature
-                  FROM entitlements e
-                  JOIN features f ON e.internal_feature_id = f.internal_id
-                  WHERE e.id = ce.entitlement_id
-                ) AS ent_with_feature
-              ),
-              'replaceables', (
-                SELECT COALESCE(
-                  json_agg(row_to_json(r)) FILTER (WHERE r.id IS NOT NULL),
-                  '[]'::json
-                )
-                FROM replaceables r
-                WHERE r.cus_ent_id = ce.id
-              ),
-              'rollovers', (
-                SELECT COALESCE(
-                  json_agg(row_to_json(ro) ORDER BY ro.expires_at ASC NULLS LAST) FILTER (WHERE ro.expires_at > EXTRACT(EPOCH FROM now()) * 1000 OR ro.expires_at IS NULL),
-                  '[]'::json
-                )
-                FROM rollovers ro
-                WHERE ro.cus_ent_id = ce.id
-              )
-            )
+            ${buildFullCustomerEntitlementJson({
+							withPooledBalanceContribution: true,
+						})}
           ) FILTER (WHERE ce.id IS NOT NULL),
           '[]'::json
         ) AS customer_entitlements
         FROM customer_entitlements ce
+        LEFT JOIN pooled_balance_contributions pbc
+          ON pbc.id = ce.pooled_contribution_id
+          AND pbc.source_customer_entitlement_id = ce.id
+          AND pbc.source_customer_product_id = cp.id
         WHERE ce.customer_product_id = cp.id
       ) ce_data ON true
       LEFT JOIN LATERAL (
@@ -887,6 +981,7 @@ export const getPaginatedFullCusQuery = ({
 		}
 
     ${extraEntitlementsCTE}
+	${pooledCustomerEntitlementsCTE}
     
     SELECT 
       cr.*,
@@ -897,6 +992,7 @@ export const getPaginatedFullCusQuery = ({
       ${withTrialsUsed ? sql`, COALESCE(ctu.trials_used, '[]'::json) AS trials_used` : sql``}
       ${withEvents ? sql`, COALESCE(cev.events, '[]'::json) AS events` : sql``}
       , COALESCE(ece.extra_customer_entitlements, '[]'::json) AS extra_customer_entitlements
+	  , COALESCE(pce.pooled_customer_entitlements, '[]'::json) AS pooled_customer_entitlements
     FROM customer_records cr
     LEFT JOIN customer_products_aggregated cpa ON cpa.internal_customer_id = cr.internal_id
     ${withSubs ? sql`LEFT JOIN customer_subscriptions cs ON cs.internal_customer_id = cr.internal_id` : sql``}
@@ -905,6 +1001,7 @@ export const getPaginatedFullCusQuery = ({
     ${withTrialsUsed ? sql`LEFT JOIN customer_trials_used ctu ON ctu.internal_customer_id = cr.internal_id` : sql``}
     ${withEvents ? sql`LEFT JOIN customer_events cev ON cev.internal_customer_id = cr.internal_id` : sql``}
     LEFT JOIN extra_customer_entitlements ece ON ece.internal_customer_id = cr.internal_id
+	LEFT JOIN pooled_customer_entitlements pce ON pce.internal_customer_id = cr.internal_id
     ORDER BY cr.created_at DESC
   `;
 };
@@ -941,6 +1038,7 @@ export const getCustomerListFilterSql = ({
 	statusFilters,
 	noneFilter,
 	productVersionFilters,
+	intervalFilters,
 }: {
 	internalCustomerIds?: string[];
 	orgId?: string;
@@ -952,6 +1050,7 @@ export const getCustomerListFilterSql = ({
 	statusFilters?: DashboardStatusFilter[];
 	noneFilter?: boolean;
 	productVersionFilters?: DashboardProductVersionFilter[];
+	intervalFilters?: DashboardIntervalFilter[];
 }) => {
 	const filters = [];
 
@@ -1035,12 +1134,14 @@ export const getCustomerListFilterSql = ({
 	}
 
 	const productFilters = productVersionFilters ?? [];
+	const intervals = intervalFilters ?? [];
 	const hasStatus = statusFilters && statusFilters.length > 0;
 	const hasProductFilter = productFilters.length > 0;
+	const hasInterval = intervals.length > 0;
 	const hasVersion = productFilters.some(isVersionDashboardProductFilter);
 	const canUseProductCandidateSet =
 		orgId && env && productFilters.every(isVersionDashboardProductFilter);
-	if (hasStatus || hasProductFilter) {
+	if (hasStatus || hasProductFilter || hasInterval) {
 		const innerClauses: SQL[] = [];
 
 		// Mirrors CusSearchService.buildSearchPredicates productMode:
@@ -1081,10 +1182,14 @@ export const getCustomerListFilterSql = ({
 		}
 
 		if (hasProductFilter) {
-			const versionClauses = productFilters.map(
-				(filter) => dashboardProductFilterToCustomerListSql(filter, { orgId, env }),
+			const versionClauses = productFilters.map((filter) =>
+				dashboardProductFilterToCustomerListSql(filter, { orgId, env }),
 			);
 			innerClauses.push(sql`(${sql.join(versionClauses, sql` OR `)})`);
+		}
+
+		if (hasInterval) {
+			innerClauses.push(intervalFilterToCustomerListSql(intervals));
 		}
 
 		if (canUseProductCandidateSet) {
@@ -1096,10 +1201,10 @@ export const getCustomerListFilterSql = ({
 			return sql.join(filters, sql` `);
 		}
 
-		const joinProducts = hasVersion
-			&& !(orgId && env)
-			? sql`JOIN products p_dash ON cp_dash.internal_product_id = p_dash.internal_id`
-			: sql``;
+		const joinProducts =
+			hasVersion && !(orgId && env)
+				? sql`JOIN products p_dash ON cp_dash.internal_product_id = p_dash.internal_id`
+				: sql``;
 
 		filters.push(sql`AND EXISTS (
 			SELECT 1

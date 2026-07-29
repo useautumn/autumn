@@ -1,4 +1,5 @@
 import type { Entity, ProductV2, SyncPlanInstance } from "@autumn/shared";
+import { Badge, Button, Input, SearchableSelect } from "@autumn/ui";
 import {
 	BuildingsIcon,
 	PackageIcon,
@@ -8,16 +9,10 @@ import {
 } from "@phosphor-icons/react";
 import { CheckIcon } from "lucide-react";
 import { useState } from "react";
-import { Badge } from "@/components/v2/badges/Badge";
-import { Button } from "@/components/v2/buttons/Button";
-import { Input } from "@/components/v2/inputs/Input";
-import { SearchableSelect } from "@/components/v2/selects/SearchableSelect";
-import { useOrg } from "@/hooks/common/useOrg";
+import { useCustomerDisplayCurrency } from "@/hooks/common/useCustomerDisplayCurrency";
+import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
 import { cn } from "@/lib/utils";
-import {
-	applyCustomizeToProduct,
-	getBasePriceLabel,
-} from "./syncPlanRowUtils";
+import { applyCustomizeToProduct, getBasePriceLabel } from "./syncPlanRowUtils";
 
 export type DraftPlan = SyncPlanInstance & { _key: string };
 
@@ -66,7 +61,9 @@ const EntityScopeSubRow = ({
 						: option.id || option.internal_id
 				}
 				getOptionLabel={(option) =>
-					option === null ? "Customer-level" : option.name || option.id || "PENDING"
+					option === null
+						? "Customer-level"
+						: option.name || option.id || "PENDING"
 				}
 				triggerClassName="w-full h-input"
 				placeholder="Select entity"
@@ -75,7 +72,9 @@ const EntityScopeSubRow = ({
 				emptyText="No entities found"
 				renderValue={(option) =>
 					option === null || option === undefined ? (
-						<span className="text-muted-foreground text-xs">Customer-level</span>
+						<span className="text-muted-foreground text-xs">
+							Customer-level
+						</span>
 					) : (
 						<span className="text-muted-foreground text-xs truncate">
 							{option.name || option.id || "PENDING"}
@@ -125,8 +124,8 @@ export function SyncPlanRow({
 	onRemove: () => void;
 	onCustomize: () => void;
 }) {
-	const { org } = useOrg();
-	const currency = org?.default_currency ?? "USD";
+	const { features } = useFeaturesQuery();
+	const { displayCurrency, productForDisplay } = useCustomerDisplayCurrency();
 
 	const availableProducts = products.filter((p) => !p.archived);
 	const selectedProduct = products.find((p) => p.id === plan.plan_id);
@@ -160,14 +159,21 @@ export function SyncPlanRow({
 		? applyCustomizeToProduct({
 				product: selectedProduct,
 				customize: plan.customize,
+				features: features ?? [],
 			})
 		: null;
 
 	const originalPriceLabel = selectedProduct
-		? getBasePriceLabel({ product: selectedProduct, currency })
+		? getBasePriceLabel({
+				product: productForDisplay(selectedProduct),
+				currency: displayCurrency,
+			})
 		: null;
 	const currentPriceLabel = customizedProduct
-		? getBasePriceLabel({ product: customizedProduct, currency })
+		? getBasePriceLabel({
+				product: productForDisplay(customizedProduct),
+				currency: displayCurrency,
+			})
 		: null;
 	const isPriceCustom =
 		hasCustomize &&
@@ -221,10 +227,7 @@ export function SyncPlanRow({
 							</Badge>
 						)}
 						{currentPriceLabel && (
-							<PriceLabel
-								label={currentPriceLabel}
-								isCustom={isPriceCustom}
-							/>
+							<PriceLabel label={currentPriceLabel} isCustom={isPriceCustom} />
 						)}
 					</div>
 					<div
@@ -272,9 +275,7 @@ export function SyncPlanRow({
 				<EntityScopeSubRow
 					entities={entities}
 					scopeEntityId={plan.entity_id}
-					onChange={(entityId) =>
-						onChange({ ...plan, entity_id: entityId })
-					}
+					onChange={(entityId) => onChange({ ...plan, entity_id: entityId })}
 				/>
 			)}
 		</div>

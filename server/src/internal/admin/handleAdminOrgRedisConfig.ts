@@ -4,11 +4,23 @@ import { getOrgRedis, removeOrgRedis } from "@/external/redis/orgRedisPool.js";
 import { createRoute } from "@/honoMiddlewares/routeHandler.js";
 import { OrgService } from "@/internal/orgs/OrgService.js";
 import { clearOrgCache } from "@/internal/orgs/orgUtils/clearOrgCache.js";
-import { encryptData } from "@/utils/encryptUtils.js";
+import { decryptData, encryptData } from "@/utils/encryptUtils.js";
 
 const REDIS_PROTOCOLS = new Set(["redis:", "rediss:"]);
 
 const orgIdParam = z.object({ org_id: z.string().min(1) });
+
+/** Host of the encrypted public mirror, for display — never the credentials. */
+const publicHostForDisplay = (
+	publicConnectionString: string | undefined,
+): string | null => {
+	if (!publicConnectionString) return null;
+	try {
+		return new URL(decryptData(publicConnectionString)).host;
+	} catch {
+		return null;
+	}
+};
 
 /**
  * GET /admin/orgs/:org_id/redis
@@ -28,6 +40,10 @@ export const handleGetAdminOrgRedisConfig = createRoute({
 			redis_config: org.redis_config
 				? {
 						host: org.redis_config.url,
+						hasPublicUrl: Boolean(org.redis_config.publicConnectionString),
+						publicHost: publicHostForDisplay(
+							org.redis_config.publicConnectionString,
+						),
 						migrationPercent: org.redis_config.migrationPercent,
 						previousMigrationPercent: org.redis_config.previousMigrationPercent,
 						migrationChangedAt: org.redis_config.migrationChangedAt,
@@ -45,13 +61,20 @@ export const handleGetAdminOrgRedisConfig = createRoute({
 export const handleUpsertAdminOrgRedisConfig = createRoute({
 	scopes: [Scopes.Superuser],
 	params: orgIdParam,
-	body: z.object({ connectionString: z.string().min(1) }),
+	body: z.object({
+		connectionString: z.string().min(1),
+		publicConnectionString: z.string().min(1).optional(),
+	}),
 	handler: async (c) => {
 		const ctx = c.get("ctx");
 		const { db, logger } = ctx;
 		const { org_id: orgId } = c.req.param();
-		const { connectionString: rawConnectionString } = c.req.valid("json");
+		const {
+			connectionString: rawConnectionString,
+			publicConnectionString: rawPublicConnectionString,
+		} = c.req.valid("json");
 		const connectionString = rawConnectionString.trim();
+		const publicConnectionString = rawPublicConnectionString?.trim();
 
 		const org = await OrgService.get({ db, orgId });
 
@@ -82,6 +105,27 @@ export const handleUpsertAdminOrgRedisConfig = createRoute({
 			});
 		}
 
+		if (publicConnectionString) {
+			let publicRedisUrl: URL;
+			try {
+				publicRedisUrl = new URL(publicConnectionString);
+			} catch {
+				throw new RecaseError({
+					message: "Invalid public connection string: could not parse URL",
+					code: ErrCode.InvalidRequest,
+					statusCode: 400,
+				});
+			}
+			if (!REDIS_PROTOCOLS.has(publicRedisUrl.protocol)) {
+				throw new RecaseError({
+					message:
+						"Invalid public connection string: expected redis:// or rediss://",
+					code: ErrCode.InvalidRequest,
+					statusCode: 400,
+				});
+			}
+		}
+
 		const now = Date.now();
 		const updatedOrg = await OrgService.update({
 			db,
@@ -89,6 +133,9 @@ export const handleUpsertAdminOrgRedisConfig = createRoute({
 			updates: {
 				redis_config: {
 					connectionString: encryptData(connectionString),
+					publicConnectionString: publicConnectionString
+						? encryptData(publicConnectionString)
+						: undefined,
 					url: redisUrl.host,
 					migrationPercent: 0,
 					previousMigrationPercent: 0,
@@ -104,6 +151,75 @@ export const handleUpsertAdminOrgRedisConfig = createRoute({
 				`[admin/handleUpsertAdminOrgRedisConfig] org=${org.id}: redis_config created, url=${redisUrl.host}, actor=${ctx.user?.email ?? ctx.userId ?? "unknown"}`,
 			);
 		}
+
+		return c.json({ success: true });
+	},
+});
+
+/**
+ * PATCH /admin/orgs/:org_id/redis/public-url  body: { publicConnectionString }
+ * Set or update the public mirror on an existing config — the create route
+ * refuses once a config exists, and delete is blocked mid-migration.
+ */
+export const handleUpdateAdminOrgRedisPublicUrl = createRoute({
+	scopes: [Scopes.Superuser],
+	params: orgIdParam,
+	body: z.object({ publicConnectionString: z.string().min(1) }),
+	handler: async (c) => {
+		const ctx = c.get("ctx");
+		const { db, logger } = ctx;
+		const { org_id: orgId } = c.req.param();
+		const { publicConnectionString: rawPublicConnectionString } =
+			c.req.valid("json");
+		const publicConnectionString = rawPublicConnectionString.trim();
+
+		const org = await OrgService.get({ db, orgId });
+
+		if (!org.redis_config) {
+			throw new RecaseError({
+				message: "No Redis config set on this org. Connect one first.",
+				code: ErrCode.InvalidRequest,
+				statusCode: 400,
+			});
+		}
+
+		let publicRedisUrl: URL;
+		try {
+			publicRedisUrl = new URL(publicConnectionString);
+		} catch {
+			throw new RecaseError({
+				message: "Invalid public connection string: could not parse URL",
+				code: ErrCode.InvalidRequest,
+				statusCode: 400,
+			});
+		}
+		if (!REDIS_PROTOCOLS.has(publicRedisUrl.protocol)) {
+			throw new RecaseError({
+				message:
+					"Invalid public connection string: expected redis:// or rediss://",
+				code: ErrCode.InvalidRequest,
+				statusCode: 400,
+			});
+		}
+
+		await OrgService.update({
+			db,
+			orgId: org.id,
+			updates: {
+				redis_config: {
+					...org.redis_config,
+					publicConnectionString: encryptData(publicConnectionString),
+				},
+			},
+		});
+		await clearOrgCache({ db, orgId: org.id, env: ctx.env, logger });
+		// Pool keys on redis_config.url, which didn't change — evict so the next
+		// getOrgRedis re-resolves with the new public string.
+		removeOrgRedis({ orgId: org.id });
+
+		logger.info(
+			`[admin/handleUpdateAdminOrgRedisPublicUrl] org=${org.id}: public url set to ${publicRedisUrl.host}, actor=${ctx.user?.email ?? ctx.userId ?? "unknown"}`,
+		);
 
 		return c.json({ success: true });
 	},

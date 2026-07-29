@@ -8,6 +8,7 @@ import {
 import { customerProductToDefaultProduct } from "@utils/cusProductUtils/convertCusProduct/customerProductToDefaultProduct";
 import type { InferSelectModel } from "drizzle-orm";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
+import { executeAutumnBillingPlan } from "@/internal/billing/v2/execute/executeAutumnBillingPlan.js";
 import { sendBillingUpdatedWebhook } from "@/internal/billing/v2/workflows/sendBillingUpdatedWebhook/sendBillingUpdatedWebhook";
 import { CusService } from "@/internal/customers/CusService";
 import { activateFreeDefaultProduct } from "@/internal/customers/cusProducts/actions/activateFreeDefaultProduct";
@@ -45,10 +46,27 @@ export const processExpiredTrialRow = async ({
 		withSubs: true,
 	});
 
-	const trialFullCusProduct = fullCustomer.customer_products.find(
+	const customerPageTrialCusProduct = fullCustomer.customer_products.find(
 		(cp) => cp.id === customerProduct.id,
 	);
+	const trialFullCusProduct =
+		customerPageTrialCusProduct ??
+		(await CusProductService.getFull({
+			db: ctx.db,
+			id: customerProduct.id,
+			inStatuses: [CusProductStatus.Active, CusProductStatus.PastDue],
+		}));
 	if (!trialFullCusProduct) return;
+
+	const originalFullCustomer = customerPageTrialCusProduct
+		? fullCustomer
+		: {
+				...fullCustomer,
+				customer_products: [
+					...fullCustomer.customer_products,
+					trialFullCusProduct,
+				],
+			};
 
 	const defaultProduct = customerProductToDefaultProduct({
 		ctx,
@@ -61,15 +79,23 @@ export const processExpiredTrialRow = async ({
 		activatedDefault = await activateFreeDefaultProduct({
 			ctx,
 			customerProduct: trialFullCusProduct,
-			fullCustomer,
+			fullCustomer: originalFullCustomer,
 			defaultProduct,
 		});
 	}
-	await CusProductService.update({
+	// Executing through the shared plan runs the license lifecycle when the
+	// expiring trial carried license state.
+	await executeAutumnBillingPlan({
 		ctx,
-		cusProductId: trialFullCusProduct.id,
-		updates: {
-			status: CusProductStatus.Expired,
+		autumnBillingPlan: {
+			customerId: fullCustomer.id || fullCustomer.internal_id,
+			insertCustomerProducts: [],
+			updateCustomerProducts: [
+				{
+					customerProduct: trialFullCusProduct,
+					updates: { status: CusProductStatus.Expired },
+				},
+			],
 		},
 	});
 
@@ -82,7 +108,7 @@ export const processExpiredTrialRow = async ({
 	void sendBillingUpdatedWebhook({
 		ctx,
 		autumnBillingPlan: {
-			customerId: fullCustomer.id ?? fullCustomer.internal_id,
+			customerId: originalFullCustomer.id ?? originalFullCustomer.internal_id,
 			insertCustomerProducts: activatedDefault ? [activatedDefault] : [],
 			updateCustomerProducts: [
 				{
@@ -91,7 +117,7 @@ export const processExpiredTrialRow = async ({
 				},
 			],
 		},
-		originalFullCustomer: fullCustomer,
+		originalFullCustomer,
 		tags: ["trial_ended"],
 	});
 };

@@ -1,15 +1,11 @@
 import { type Feature, FeatureType, FeatureUsageType } from "@autumn/shared";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@autumn/ui";
 import {
 	BooleanIcon,
 	CoinsIcon,
 	ContinuousUseIcon,
 	UsageBasedIcon,
 } from "@/components/v2/icons/AutumnIcons";
-import {
-	Tooltip,
-	TooltipContent,
-	TooltipTrigger,
-} from "@/components/v2/tooltips/Tooltip";
 
 interface CustomerFeatureConfigurationProps {
 	feature: Feature | undefined;

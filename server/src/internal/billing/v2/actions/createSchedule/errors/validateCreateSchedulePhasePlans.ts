@@ -9,10 +9,7 @@ export const validateCreateSchedulePhasePlans = ({
 	const groupedProducts = new Map<string, FullProduct[]>();
 
 	for (const fullProduct of fullProducts) {
-		if (
-			fullProduct.is_add_on ||
-			isOneOffProduct({ prices: fullProduct.prices })
-		) {
+		if (fullProduct.is_add_on || isOneOffProduct({ product: fullProduct })) {
 			continue;
 		}
 

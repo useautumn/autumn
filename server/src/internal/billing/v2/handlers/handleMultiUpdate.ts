@@ -1,0 +1,55 @@
+import {
+	AffectedResource,
+	InternalError,
+	MultiUpdateParamsV0Schema,
+	Scopes,
+} from "@autumn/shared";
+import { billingActions } from "@/internal/billing/v2/actions";
+import { buildBillingLockKey } from "@/internal/billing/v2/utils/billingLock/buildBillingLockKey";
+import { createRoute } from "../../../../honoMiddlewares/routeHandler";
+import { billingResultToResponse } from "../utils/billingResult/billingResultToResponse";
+
+export const handleMultiUpdate = createRoute({
+	scopes: [Scopes.Billing.Write],
+	body: MultiUpdateParamsV0Schema,
+	resource: AffectedResource.ApiSubscriptionUpdate,
+	lock:
+		process.env.NODE_ENV !== "development"
+			? {
+					ttlMs: 120000,
+					errorMessage:
+						"Multi-update already in progress for this customer, try again in a few seconds",
+					getKey: (c) => {
+						const ctx = c.get("ctx");
+						const body = c.req.valid("json");
+						return buildBillingLockKey({
+							orgId: ctx.org.id,
+							env: ctx.env,
+							customerId: body.customer_id,
+						});
+					},
+				}
+			: undefined,
+	handler: async (c) => {
+		const ctx = c.get("ctx");
+		const body = c.req.valid("json");
+
+		const { billingContext, billingResult } = await billingActions.multiUpdate({
+			ctx,
+			params: body,
+		});
+
+		if (!billingResult) {
+			throw new InternalError({
+				message: "billingResult not returned from multiUpdate action",
+			});
+		}
+
+		const response = billingResultToResponse({
+			billingContext,
+			billingResult,
+		});
+
+		return c.json(response, 200);
+	},
+});

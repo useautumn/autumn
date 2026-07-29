@@ -2,9 +2,8 @@
 
 import { TriangleIcon, WebhooksLogoIcon } from "@phosphor-icons/react";
 import "svix-react/style.css";
+import { PageContainer, PageHeader } from "@autumn/ui";
 import { AppPortal } from "svix-react";
-import { PageContainer } from "@/components/general/PageContainer";
-import { PageHeader } from "@/components/general/PageHeader";
 import { StripeIcon } from "@/components/v2/icons/AutumnIcons";
 import { useTheme } from "@/contexts/ThemeProvider";
 import { useAppQueryStates } from "@/hooks/common/useAppQueryStates";
@@ -23,7 +22,7 @@ export default function DevScreen() {
 	const { queryStates } = useAppQueryStates({ defaultTab: "api_keys" });
 
 	const tab = queryStates.tab;
-	const { pkey, webhooks, vercel, revenuecat } = useAutumnFlags();
+	const { pkey, webhooks, vercel } = useAutumnFlags();
 
 	if (isLoading) return <LoadingScreen />;
 
@@ -71,19 +70,29 @@ export default function DevScreen() {
 					<ConfigureVercel />
 				</div>
 			)}
-			{tab === "revenuecat" && revenuecat && <ConfigureRevenueCat />}
+			{tab === "revenuecat" && <ConfigureRevenueCat />}
 		</PageContainer>
 	);
 }
 
-const ConfigureWebhookSection = ({ dashboardUrl }: any) => {
+const withNoGutters = (dashboardUrl: string) => {
+	const url = new URL(dashboardUrl);
+	url.searchParams.set("noGutters", "true");
+	return url.toString();
+};
+
+const ConfigureWebhookSection = ({
+	dashboardUrl,
+}: {
+	dashboardUrl: string;
+}) => {
 	const { isDark } = useTheme();
 
 	return (
 		<div className="h-full">
 			{dashboardUrl ? (
 				<AppPortal
-					url={dashboardUrl}
+					url={withNoGutters(dashboardUrl)}
 					darkMode={isDark}
 					style={{ height: "100%", borderRadius: "none" }}
 					fullSize

@@ -1,0 +1,226 @@
+## Recurring Plans
+
+Recurring plans let you grant customers a fixed allowance of consumable features -- like messages, credits, or API calls -- that resets each billing period. Customers pay a base price at a regular interval (monthly, quarterly, annually), and receive a fresh grant of their included features at the start of each cycle.
+
+> **Example** <br />
+> An AI writing tool offers a Pro plan at $20/month that grants 1,000 messages per month. When the billing period resets, the customer's message balance is reset back to 1,000.
+
+## Setting up
+
+<Tabs>
+<Tab title="CLI">
+
+Define a recurring plan in your `autumn.config.ts`:
+
+```ts autumn.config.ts expandable
+import { feature, item, plan } from 'atmn';
+
+export const messages = feature({
+  id: 'messages',
+  name: 'Messages',
+  type: 'metered',
+  consumable: true,
+});
+
+export const pro = plan({
+  id: 'pro',
+  name: 'Pro',
+  price: { amount: 20, interval: 'month' },
+  items: [
+    item({
+      featureId: messages.id,
+      included: 1000,
+      reset: { interval: 'month' },
+    }),
+  ],
+});
+```
+
+Push changes with `atmn push`.
+
+</Tab>
+<Tab title="Dashboard">
+
+1. Navigate to **Plans** in the Autumn dashboard
+2. Click **Create Plan**
+3. Set a **name** and **ID** for the plan (e.g., "Pro", `pro`)
+4. Under **Price**, set the amount and select a billing interval (`month`, `quarter`, `semi_annual`, or `year`)
+5. Add consumable features to the plan -- set grant amounts and reset intervals. These will be granted to the customer each billing period once they subscribe.
+6. Save your changes
+
+</Tab>
+</Tabs>
+
+## Attaching a subscription
+
+Use [billing.attach](/documentation/customers/payment-flow) to attach a subscription to a customer. With `redirectMode: "always"`, a checkout URL is always returned for the customer to complete payment or confirm the plan change.
+
+<CodeGroup>
+
+```tsx React
+import { useCustomer } from "autumn-js/react";
+
+const { attach } = useCustomer();
+
+await attach({ planId: "pro", redirectMode: "always" });
+```
+
+```typescript TypeScript
+import { Autumn } from "autumn-js";
+
+const autumn = new Autumn({ secretKey: "am_sk_..." });
+
+const response = await autumn.billing.attach({
+  customerId: "user_123",
+  planId: "pro",
+  redirectMode: "always",
+});
+
+// Redirect customer to complete payment or confirm plan change
+redirect(response.paymentUrl);
+```
+
+```python Python
+import asyncio
+from autumn_sdk import Autumn
+
+autumn = Autumn("am_sk_...")
+
+async def main():
+    response = await autumn.billing.attach(
+        customer_id="user_123",
+        plan_id="pro",
+        redirect_mode="always",
+    )
+
+    # Redirect customer to response.payment_url
+
+asyncio.run(main())
+```
+
+```bash cURL
+curl -X POST "https://api.useautumn.com/v1/attach" \
+  -H "Authorization: Bearer am_sk_..." \
+  -H "Content-Type: application/json" \
+  -d '{
+    "customer_id": "user_123",
+    "plan_id": "pro",
+    "redirect_mode": "always"
+  }'
+```
+
+</CodeGroup>
+
+<Expandable title="customer object after attaching">
+```json
+{
+  "id": "user_123",
+  "name": "Jane Smith",
+  "email": "jane@example.com",
+  "createdAt": 1771409161016,
+  "fingerprint": null,
+  "stripeId": "cus_U0BKxpq1mFhuJO",
+  "env": "sandbox",
+  "metadata": {},
+  "sendEmailReceipts": false,
+  "billingControls": {
+    "autoTopups": []
+  },
+  "subscriptions": [
+    {
+      "planId": "pro",
+      "autoEnable": false,
+      "addOn": false,
+      "status": "active",
+      "pastDue": false,
+      "canceledAt": null,
+      "expiresAt": null,
+      "trialEndsAt": null,
+      "startedAt": 1771431921437,
+      "currentPeriodStart": 1771431921437,
+      "currentPeriodEnd": 1773851121437,
+      "quantity": 1
+    }
+  ],
+  "purchases": [],
+  "balances": {
+    "messages": {
+      "featureId": "messages",
+      "granted": 1000,
+      "remaining": 1000,
+      "usage": 0,
+      "unlimited": false,
+      "overageAllowed": false,
+      "maxPurchase": null,
+      "nextResetAt": 1773851121437,
+      "breakdown": [
+        {
+          "id": "cus_ent_abc123",
+          "planId": "pro",
+          "includedGrant": 1000,
+          "prepaidGrant": 0,
+          "remaining": 1000,
+          "usage": 0,
+          "unlimited": false,
+          "reset": {
+            "interval": "month",
+            "resetsAt": 1773851121437
+          },
+          "price": null,
+          "expiresAt": null
+        }
+      ]
+    }
+  }
+}
+```
+</Expandable>
+
+When a subscription is created, Autumn:
+
+1. Creates a Stripe subscription with the plan's prices
+2. Grants the customer their included [balances](/documentation/concepts/balances) for each consumable feature
+3. Starts the billing cycle -- balances reset automatically at the start of each period
+
+## Billing intervals
+
+Plans support the following billing intervals:
+
+| Interval | Description |
+|----------|-------------|
+| `week` | Billed every week |
+| `month` | Billed every month |
+| `quarter` | Billed every 3 months |
+| `semi_annual` | Billed every 6 months |
+| `year` | Billed annually |
+
+You can create a separate plan for each interval you want to support. For example, if you want to support monthly and annual plans, you can create a `pro_monthly` plan and a `pro_annual` plan.
+
+You can also configure a custom `interval_count` to charge at non-standard intervals (e.g., every 2 months).
+
+### Billing interval vs reset interval
+
+The billing interval (how often the customer is charged) and the reset interval (how often their feature balance replenishes) are configured independently. They don't have to match.
+
+> **Example** <br />
+> A plan billed at $200/year could grant 100 messages/month. The customer pays once a year, but their message balance resets to 100 every month.
+
+This is useful when you want to offer an annual discount while still metering usage on a shorter cycle.
+
+## Managing subscriptions
+
+Once a customer has an active subscription, you can manage upgrades, downgrades, and cancellations. See [Managing Subscriptions](/documentation/customers/subscription-lifecycle) for details on:
+
+- **Upgrades** — prorated charges for switching to a higher-priced plan
+- **Downgrades** — scheduled at end of billing period
+- **Cancellations** — immediate or end-of-period
+
+## Subscription statuses
+
+| Status | Description |
+|--------|-------------|
+| `active` | Subscription is in good standing |
+| `trialing` | Customer is in a [free trial](/documentation/modelling-pricing/trials) period |
+| `past_due` | Payment failed, needs attention |
+| `scheduled` | Will activate at end of current billing period (e.g., downgrade) |
+| `expired` | Subscription has ended |

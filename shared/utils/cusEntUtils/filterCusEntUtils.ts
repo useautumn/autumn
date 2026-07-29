@@ -12,29 +12,29 @@ export const cusEntMatchesEntity = ({
 	entity?: Entity;
 	features?: Feature[];
 }) => {
-	if (!entity) return true;
+	if (!entity) {
+		return (
+			nullish(cusEnt.customer_product?.internal_entity_id) &&
+			nullish(cusEnt.internal_entity_id)
+		);
+	}
 
-	// Check 1: customer_product level entity (entity-level products)
 	let cusProductMatch = true;
 	if (notNullish(cusEnt.customer_product?.internal_entity_id)) {
 		cusProductMatch =
 			cusEnt.customer_product.internal_entity_id === entity.internal_id;
 	}
 
-	// Check 2: entity_feature_id match (per-entity features)
 	let entityFeatureIdMatch = true;
 	if (notNullish(cusEnt.entitlement.entity_feature_id)) {
 		entityFeatureIdMatch =
 			cusEnt.entitlement.entity_feature_id === entity.feature_id;
 	}
 
-	// Check 3: cusEnt-level entity (for loose entitlements / extra_customer_entitlements)
 	let cusEntEntityMatch = true;
 	if (notNullish(cusEnt.internal_entity_id)) {
-		// NEW APPROACH: direct internal_entity_id on the customer_entitlement row
 		cusEntEntityMatch = cusEnt.internal_entity_id === entity.internal_id;
 	} else if (cusEnt.entities && Object.keys(cusEnt.entities).length > 0) {
-		// OLD APPROACH: entities object uses external entity.id as keys
 		cusEntEntityMatch = entity.id !== null && entity.id in cusEnt.entities;
 	}
 

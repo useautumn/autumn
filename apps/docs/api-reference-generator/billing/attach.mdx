@@ -73,3 +73,9 @@ const response = await autumn.billing.attach({
 Use `checkoutSessionParams` to pass additional data to the Stripe checkout session. Values you provide are deep-merged with Autumn's internal parameters, so your fields are preserved alongside ones Autumn sets automatically (like `trial_end` or internal metadata).
 
 This is useful for attaching custom metadata to the Stripe subscription created during checkout — for example, linking subscriptions to internal user IDs or tracking the source of the purchase.
+
+### Currency
+
+Pass `currency` to bill the attach in a specific currency the plan offers via [`additional_currencies`](/documentation/concepts/plans#multiple-currencies). If omitted, Autumn uses the customer's currency, falling back to your organization's default.
+
+A customer who has paid is locked to their currency: passing a different one, or attaching a plan that doesn't offer a paid price in their currency, fails with a `currency_mismatch` error before any billing happens.

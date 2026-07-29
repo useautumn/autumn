@@ -1,4 +1,3 @@
-import { BillingMethod } from "@api/products/components/billingMethod.js";
 import { PlanExpand } from "@api/products/components/planExpand.js";
 import {
 	type ApiPlanItemV1,
@@ -24,6 +23,7 @@ import {
 	itemToBillingIntervalCount,
 	itemToEntIntervalCount,
 } from "../itemIntervalUtils.js";
+import { itemToBillingMethod } from "../matchPlanItem.js";
 import { addIncludedToTiers } from "../tierUtils.js";
 import { itemIntvToResetIntv } from "./planItemIntervals.js";
 
@@ -67,6 +67,16 @@ const itemToPlanFeaturePrice = ({
 	const price =
 		item.tiers && item.tiers.length === 1 ? item.tiers[0].amount : item.price;
 
+	// A single tier collapses to a flat price, so its currencies surface at the
+	// price level (mirroring `price` above); multi-tier currencies stay per-tier.
+	const additionalCurrencies =
+		item.tiers && item.tiers.length === 1
+			? item.tiers[0].additional_currencies?.map((c) => ({
+					currency: c.currency,
+					amount: c.amount ?? 0,
+				}))
+			: (item.additional_currencies ?? undefined);
+
 	// Internal: tier `to` does NOT include included usage.
 	// V1 API: tier `to` INCLUDES included usage.
 	const tiers =
@@ -78,17 +88,27 @@ const itemToPlanFeaturePrice = ({
 						flat_amount: tier.flat_amount ?? undefined,
 					})),
 					included: includedUsage,
-				})
+				}).map((tier, index) => ({
+					...tier,
+					...(item.tiers?.[index]?.additional_currencies?.length
+						? {
+								additional_currencies: item.tiers[index].additional_currencies,
+							}
+						: {}),
+				}))
 			: undefined;
 
 	// V1 schema uses billing_method, NOT usage_model
-	const billingMethod =
-		item.usage_model === UsageModel.PayPerUse
-			? BillingMethod.UsageBased
-			: BillingMethod.Prepaid;
+	const billingMethod = itemToBillingMethod({ item });
+	if (!billingMethod) {
+		throw new InternalError({
+			message: `Missing billing method for item ${item.feature_id}`,
+		});
+	}
 
 	return {
 		amount: price ?? undefined,
+		additional_currencies: additionalCurrencies,
 		tiers: tiers,
 		tier_behavior: item.tier_behavior ?? undefined,
 
@@ -191,12 +211,16 @@ export const productItemsToPlanItemsV1 = ({
 			feature: apiFeature,
 			included: included,
 			unlimited: item.included_usage === Infinite,
+			pooled: item.pooled ?? false,
 
 			reset,
 			price, // V1: price can be null (no need for conditional spread)
 
 			rollover,
 			proration,
+			entity_feature_id: item.entity_feature_id ?? undefined,
+			entitlement_id: item.entitlement_id ?? undefined,
+			price_id: item.price_id ?? undefined,
 
 			display: getProductItemDisplay({ item, features, currency }),
 		});

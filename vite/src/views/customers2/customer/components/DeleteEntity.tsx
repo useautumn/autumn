@@ -1,15 +1,15 @@
 import type { Entity } from "@autumn/shared";
-import { useState } from "react";
-import { useLocation, useNavigate } from "react-router";
-import { toast } from "sonner";
-import { Button } from "@/components/v2/buttons/Button";
 import {
+	Button,
 	Dialog,
 	DialogContent,
 	DialogFooter,
 	DialogHeader,
 	DialogTitle,
-} from "@/components/v2/dialogs/Dialog";
+} from "@autumn/ui";
+import { useState } from "react";
+import { useLocation, useNavigate } from "react-router";
+import { toast } from "sonner";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
 import { getBackendErr } from "@/utils/genUtils";
 import { useCusQuery } from "@/views/customers/customer/hooks/useCusQuery";
@@ -77,19 +77,27 @@ export const DeleteEntity = ({
 					<div className="flex flex-col gap-2 bg-secondary p-3 rounded-lg border shrink-0">
 						{entity.name && (
 							<div className="flex gap-2">
-								<span className="text-tertiary-foreground text-sm font-medium">Name:</span>
-								<span className="text-foreground text-sm truncate">{entity.name}</span>
+								<span className="text-tertiary-foreground text-sm font-medium">
+									Name:
+								</span>
+								<span className="text-foreground text-sm truncate">
+									{entity.name}
+								</span>
 							</div>
 						)}
 						<div className="flex gap-2">
-							<span className="text-tertiary-foreground text-sm font-medium">ID:</span>
+							<span className="text-tertiary-foreground text-sm font-medium">
+								ID:
+							</span>
 							<span className="text-foreground text-sm font-mono truncate">
 								{entity.id || entity.internal_id}
 							</span>
 						</div>
 						{entity.feature_id && (
 							<div className="flex gap-2">
-								<span className="text-tertiary-foreground text-sm font-medium">Feature:</span>
+								<span className="text-tertiary-foreground text-sm font-medium">
+									Feature:
+								</span>
 								<span className="text-foreground text-sm truncate">
 									{entity.feature_id}
 								</span>

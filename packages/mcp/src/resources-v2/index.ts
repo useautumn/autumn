@@ -3,26 +3,6 @@ import type { MCPServerResources } from "@mastra/mcp";
 import { parseResourceMarkdown } from "../resources/compileResources.js";
 import type { AutumnMcpResourceDoc } from "../resources/types.js";
 
-const billingResource = {
-	name: "billing",
-	title: "Billing",
-	description: "How agents should perform Autumn billing workflows.",
-	priority: 0.94,
-	audience: ["assistant"],
-	file: "./billing/billing.md",
-	parts: [
-		{ marker: "<!-- Action selection -->", file: "./billing/actions.md" },
-		{ marker: "<!-- Customizations -->", file: "./billing/customize.md" },
-		{
-			marker: "<!-- Timing and schedules -->",
-			file: "./billing/timing-schedules.md",
-		},
-		{
-			marker: "<!-- Billing behavior -->",
-			file: "./billing/billing-behavior.md",
-		},
-	],
-} as const;
 const conceptResource = {
 	name: "concepts",
 	title: "Concepts",
@@ -40,11 +20,11 @@ const conceptResource = {
 	],
 } as const;
 
+// billing + logs now live in @autumn/agent-docs and are merged in via
+// withAgentDocResources; only concepts + plan-management remain here.
 const resourceOrder = [
 	"autumn://docs/concepts",
 	"autumn://docs/plan-management",
-	"autumn://docs/billing",
-	"autumn://docs/logs",
 ] as const;
 
 const planManagementResource = {
@@ -52,10 +32,6 @@ const planManagementResource = {
 	parts: [
 		{ marker: "<!-- Modeling -->", file: "./plan-management/modeling.md" },
 	],
-} as const;
-const logsResource = {
-	file: "./logs/logs.md",
-	parts: [],
 } as const;
 
 const readResourceFile = ({
@@ -150,23 +126,8 @@ const compileResources = ({
 		file: planManagementResource.file,
 		parts: planManagementResource.parts,
 	});
-	const billing = compileMarkdownResourceWithParts({
-		baseUrl,
-		file: billingResource.file,
-		parts: billingResource.parts,
-	});
-	const logs = compileMarkdownResourceWithParts({
-		baseUrl,
-		file: logsResource.file,
-		parts: logsResource.parts,
-	});
 
-	return orderResources([
-		concepts,
-		planManagement,
-		billing,
-		logs,
-	]);
+	return orderResources([concepts, planManagement]);
 };
 
 export const createAutumnMcpResources = ({

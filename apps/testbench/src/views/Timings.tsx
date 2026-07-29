@@ -1,0 +1,150 @@
+import { useMemo } from "react";
+import type { Snapshot } from "../types";
+import { FileStatusBadge } from "../widgets";
+
+// Literal hex — theme chart vars proved unreliable in this standalone app.
+const BAR_COLOR = "#27a7ff";
+
+/** Bucket edges in seconds — log-ish steps so both 5s and 5min files read well. */
+const BUCKETS_S = [10, 20, 30, 45, 60, 90, 120, 180, 240, 360, 600];
+
+const bucketLabel = (index: number): string => {
+	if (index === 0) {
+		return `<${BUCKETS_S[0]}s`;
+	}
+	if (index >= BUCKETS_S.length) {
+		return `>${BUCKETS_S[BUCKETS_S.length - 1] / 60}m`;
+	}
+	const lo = BUCKETS_S[index - 1];
+	const hi = BUCKETS_S[index];
+	return hi >= 120 ? `${lo / 60}-${hi / 60}m` : `${lo}-${hi}s`;
+};
+
+/** Plain-div bar chart — no chart library, so it cannot render blank. */
+function DurationHistogram({
+	histogram,
+}: {
+	histogram: { bucket: string; count: number }[];
+}) {
+	const max = Math.max(1, ...histogram.map((b) => b.count));
+	return (
+		<div className="flex h-56 w-full items-stretch">
+			<div className="flex min-w-0 flex-1 items-stretch gap-1.5 border-border border-l pl-1.5">
+				{histogram.map(({ bucket, count }) => (
+					<div
+						className="flex min-w-0 flex-1 flex-col"
+						key={bucket}
+						title={`${bucket}: ${count} file${count === 1 ? "" : "s"}`}
+					>
+						<div className="flex min-h-0 flex-1 flex-col justify-end border-border border-b">
+							{count > 0 ? (
+								<>
+									<div className="pb-0.5 text-center font-mono text-[10px] text-muted-foreground tabular-nums">
+										{count}
+									</div>
+									<div
+										className="w-full rounded-t-[3px]"
+										style={{
+											backgroundColor: BAR_COLOR,
+											height: `${Math.max(2, (count / max) * 82)}%`,
+										}}
+									/>
+								</>
+							) : null}
+						</div>
+						<div className="h-5 truncate pt-1 text-center text-[10px] text-muted-foreground">
+							{bucket}
+						</div>
+					</div>
+				))}
+			</div>
+		</div>
+	);
+}
+
+/**
+ * Live distribution of per-file wall durations (dispatch → verdict) plus the
+ * slowest-files leaderboard — the "which tests are worth remaking" view.
+ */
+export function Timings({ snap }: { snap: Snapshot }) {
+	const timed = useMemo(
+		() =>
+			snap.files
+				.filter(
+					(f): f is typeof f & { durationMs: number } =>
+						typeof f.durationMs === "number" && f.durationMs > 0,
+				)
+				.sort((a, b) => b.durationMs - a.durationMs),
+		[snap.files],
+	);
+
+	const histogram = useMemo(() => {
+		const counts = new Array(BUCKETS_S.length + 1).fill(0);
+		for (const f of timed) {
+			const s = f.durationMs / 1000;
+			const index = BUCKETS_S.findIndex((edge) => s < edge);
+			counts[index === -1 ? BUCKETS_S.length : index]++;
+		}
+		return counts.map((count, index) => ({
+			bucket: bucketLabel(index),
+			count,
+		}));
+	}, [timed]);
+
+	if (timed.length === 0) {
+		return (
+			<div className="flex h-full items-center justify-center text-muted-foreground text-sm">
+				waiting for the first completed file…
+			</div>
+		);
+	}
+
+	const totalMs = timed.reduce((sum, f) => sum + f.durationMs, 0);
+	const median = timed[Math.floor(timed.length / 2)]?.durationMs ?? 0;
+
+	return (
+		<div className="flex h-full min-h-0 flex-col gap-4 overflow-auto">
+			<div className="flex shrink-0 flex-wrap items-center gap-4 text-muted-foreground text-xs">
+				<span>
+					{timed.length} completed · median{" "}
+					<span className="font-mono text-foreground tabular-nums">
+						{(median / 1000).toFixed(1)}s
+					</span>{" "}
+					· cumulative test time{" "}
+					<span className="font-mono text-foreground tabular-nums">
+						{(totalMs / 60000).toFixed(1)}min
+					</span>
+				</span>
+			</div>
+			<div className="shrink-0 rounded-lg border bg-card p-3">
+				<div className="mb-2 font-medium text-muted-foreground text-xs">
+					duration distribution
+				</div>
+				<DurationHistogram histogram={histogram} />
+			</div>
+			<div className="min-h-0 rounded-lg border bg-card">
+				<div className="border-b p-3 font-medium text-muted-foreground text-xs">
+					slowest files
+				</div>
+				<div className="divide-y">
+					{timed.slice(0, 30).map((f) => (
+						<div
+							className="flex items-center justify-between gap-2 px-3 py-1.5"
+							key={f.file}
+						>
+							<span className="truncate font-mono text-tertiary-foreground text-xs">
+								{f.name}
+							</span>
+							<span className="flex shrink-0 items-center gap-2">
+								<FileStatusBadge status={f.status} />
+								<span className="w-16 text-right font-mono text-foreground text-xs tabular-nums">
+									{(f.durationMs / 1000).toFixed(1)}s
+								</span>
+							</span>
+						</div>
+					))}
+				</div>
+			</div>
+		</div>
+	);
+}

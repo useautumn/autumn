@@ -145,6 +145,10 @@ declare module "ioredis" {
 			cacheTtlSeconds: string,
 			nowMs: string,
 		): Promise<string>;
+		getDelFullSubjectBalanceFields(
+			numKeys: number,
+			...args: string[]
+		): Promise<string>;
 		updateFullSubjectCustomerProductV2(
 			subjectKey: string,
 			paramsJson: string,

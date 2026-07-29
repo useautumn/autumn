@@ -1,0 +1,1 @@
+ALTER TABLE "revenuecat_mappings" ADD COLUMN "feature_quantities" jsonb;

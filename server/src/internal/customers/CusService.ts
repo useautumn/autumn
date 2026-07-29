@@ -15,6 +15,7 @@ import {
 	type FullCusProduct,
 	type FullCustomer,
 	InternalError,
+	inheritParentCustomerProductProperties,
 	type ListCustomerProductsParams,
 	type ListCustomersV2Params,
 	type Organization,
@@ -29,6 +30,7 @@ import {
 	getTableColumns,
 	ilike,
 	inArray,
+	isNull,
 	or,
 	sql,
 	type Table,
@@ -37,6 +39,7 @@ import type { DrizzleCli } from "@/db/initDrizzle.js";
 import { executeWithHealthTracking } from "@/db/pgHealthMonitor.js";
 import type { RepoContext } from "@/db/repoContext.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
+import { hydrateFullCustomerLicenses } from "@/internal/licenses/actions/hydrateFullCustomerLicenses.js";
 import { checkPendingMigrationsForCustomer } from "@/internal/migrations/v2/lazy/checkPendingMigrationsForCustomer.js";
 import { withSpan } from "../analytics/tracer/spanUtils.js";
 import {
@@ -79,6 +82,7 @@ export class CusService {
 		withEvents = false,
 		explain = false,
 		skipReset = false,
+		cusProductLimit: cusProductLimitOverride,
 	}: {
 		ctx: AutumnContext;
 		idOrInternalId: string;
@@ -91,6 +95,8 @@ export class CusService {
 		withEvents?: boolean;
 		explain?: boolean;
 		skipReset?: boolean;
+		/** Overrides the org-configured customer-product page size. */
+		cusProductLimit?: number;
 	}): Promise<FullCustomer> {
 		const { db, org, env } = ctx;
 		const orgId = org.id;
@@ -110,10 +116,12 @@ export class CusService {
 				withSubs,
 			},
 			fn: async () => {
-				const cusProductLimit = getOrgCusProductLimit({
-					orgId,
-					orgSlug: org.slug,
-				});
+				const cusProductLimit =
+					cusProductLimitOverride ??
+					getOrgCusProductLimit({
+						orgId,
+						orgSlug: org.slug,
+					});
 				const entitiesLimit = getOrgEntitiesLimit({
 					orgId,
 					orgSlug: org.slug,
@@ -183,6 +191,7 @@ export class CusService {
 						customer_products: [],
 						customer_entitlements: [],
 						extra_customer_entitlements: [],
+						pooled_customer_entitlements: [],
 						customer_prices: [],
 						entitlements: [],
 						rollovers: [],
@@ -239,14 +248,32 @@ export class CusService {
 					orgId === "GG6tnmO7cHb40PNhwYBTZtxQdeL74NHF" &&
 					idOrInternalId === "698fb72e4c5fa12c1cd11ddc"
 				) {
-					fullCus.customer_products = (
-						fullCus.customer_products as FullCusProduct[]
-					)
-						.sort((a, b) => b.customer_prices.length - a.customer_prices.length)
-						.slice(0, 5);
+					if (fullCus.customer_products) {
+						fullCus.customer_products = (
+							fullCus.customer_products as FullCusProduct[]
+						)
+							.sort(
+								(a, b) => b.customer_prices.length - a.customer_prices.length,
+							)
+							.slice(0, 5);
+					}
 
-					fullCus.entities = (fullCus.entities as Entity[]).slice(0, 50);
+					if (fullCus.entities) {
+						fullCus.entities = (fullCus.entities as Entity[]).slice(0, 50);
+					}
 				}
+				await hydrateFullCustomerLicenses({
+					ctx,
+					fullCustomer: fullCus,
+				});
+
+				// Seats (hydrated only on entityId fetches, with their pool +
+				// parent snapshot from the query) mirror the parent's lifecycle
+				// before the lazy reset below gates on status.
+				inheritParentCustomerProductProperties({
+					customerProducts: fullCus.customer_products ?? [],
+				});
+
 				if (!usedReplica && !skipReset) {
 					// Skip reset only when executeWithHealthTracking explicitly chose the
 					// replica. Lazy reset writes themselves go through dbGeneral.
@@ -747,6 +774,31 @@ export class CusService {
 		}
 	}
 
+	// Sets currency only when still null, so concurrent first-paid attaches can't
+	// clobber each other (a locked-to-different currency is already blocked upstream).
+	static async lockCurrencyIfUnset({
+		ctx,
+		internalCustomerId,
+		currency,
+	}: {
+		ctx: RepoContext;
+		internalCustomerId: string;
+		currency: string;
+	}) {
+		const { db, org, env } = ctx;
+		await db
+			.update(customers)
+			.set({ currency })
+			.where(
+				and(
+					eq(customers.internal_id, internalCustomerId),
+					eq(customers.org_id, org.id),
+					eq(customers.env, env),
+					isNull(customers.currency),
+				),
+			);
+	}
+
 	static async deleteByInternalId({
 		db,
 		internalId,
@@ -865,5 +917,41 @@ export class CusService {
 				expand,
 			})) as FullCustomer;
 		}
+	}
+
+	static async getByRevenueCatAppUserId({
+		ctx,
+		appUserId,
+		withEntities = false,
+		withSubs = false,
+	}: {
+		ctx: AutumnContext;
+		appUserId: string;
+		withEntities?: boolean;
+		withSubs?: boolean;
+	}): Promise<FullCustomer | null> {
+		const { db, org, env } = ctx;
+
+		const results = await db
+			.select()
+			.from(customers as unknown as Table)
+			.where(
+				and(
+					eq(customers.org_id, org.id),
+					eq(customers.env, env),
+					sql`(${customers.processors}->'revenuecat'->>'id' = ${appUserId} OR ${customers.processors}->'revenuecat'->'aliases' ? ${appUserId})`,
+				),
+			)
+			.limit(1);
+
+		const customer = results[0] ?? null;
+		if (!customer) return null;
+
+		return (await CusService.getFull({
+			ctx,
+			idOrInternalId: customer.internal_id,
+			withEntities,
+			withSubs,
+		})) as FullCustomer;
 	}
 }

@@ -17,6 +17,12 @@ export const VercelProcessorSchema = z.object({
  */
 export const ExternalProcessorsSchema = z.object({
 	vercel: VercelProcessorSchema.optional(),
+	// Internal-only RC identity alias set: `id` is the primary app_user_id (set once,
+	// never updated); `aliases` holds every other RC id ever seen (append-only). Match
+	// if any equals a webhook id. Never gates the API response.
+	revenuecat: z
+		.object({ id: z.string(), aliases: z.array(z.string()).default([]) })
+		.optional(),
 });
 
 /**

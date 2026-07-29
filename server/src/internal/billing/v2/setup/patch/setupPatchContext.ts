@@ -1,14 +1,18 @@
 import {
+	type CustomizePlanV1,
 	cusProductToProduct,
 	type FullCusProduct,
 	type FullProduct,
 	isCustomizePlanPatchStyle,
+	mapToProductItems,
+	orgMultiCurrencyEnabled,
 	type PatchContext,
 	type SharedContext,
 	type UpdateSubscriptionV1Params,
 } from "@autumn/shared";
 import { isFixedPrice } from "@shared/utils/productUtils/priceUtils/classifyPriceUtils";
 import { duplicateCustomerProduct } from "@/internal/billing/v2/utils/initFullCustomerProduct/duplicateCustomerProduct";
+import { validateProductItems } from "@/internal/products/product-items/validateProductItems";
 import { generateId } from "@/utils/genUtils";
 import { handleCustomizeAddItems } from "./handleCustomizeAddItems";
 import { handleCustomizeDeleteItems } from "./handleCustomizeDeleteItems";
@@ -81,14 +85,30 @@ export const setupPatchContext = ({
 	customerProduct,
 	fullProduct,
 	reusePricesAndEntitlements,
+	includeUpsertLicenses = false,
 }: {
 	ctx: SharedContext;
 	params: UpdateSubscriptionV1Params;
 	customerProduct: FullCusProduct;
 	fullProduct: FullProduct;
 	reusePricesAndEntitlements?: ReusePricesAndEntitlements;
+	/** Treat upsert_licenses as patch-style: pools repoint on the same row. */
+	includeUpsertLicenses?: boolean;
 }): PatchContext | undefined => {
-	if (!isCustomizePlanPatchStyle(params.customize)) return undefined;
+	// Version changes replace the row anyway — upsert-only + version rides
+	// the expire+insert path, where transitions carry the pool across rows.
+	const upsertsLicenses =
+		includeUpsertLicenses &&
+		params.version === undefined &&
+		(params.customize?.upsert_licenses?.length ?? 0) > 0;
+	// The guard also narrows: upsert-only customize is patch-shaped too (no
+	// item fields), it just fails the classifier's presence checks.
+	const customize = isCustomizePlanPatchStyle(params.customize)
+		? params.customize
+		: upsertsLicenses
+			? ((params.customize ?? {}) as CustomizePlanV1)
+			: undefined;
+	if (!customize) return undefined;
 
 	const mode =
 		params.version !== undefined &&
@@ -109,7 +129,7 @@ export const setupPatchContext = ({
 		customerProduct: finalCustomerProduct,
 	});
 
-	if (mode === "new" && params.customize?.price === undefined) {
+	if (mode === "new" && customize.price === undefined) {
 		applyProductBasePriceToCustomerProduct({
 			fullProduct,
 			customerProduct: finalCustomerProduct,
@@ -120,7 +140,7 @@ export const setupPatchContext = ({
 		customerPrices: deleteCustomerPrices,
 		customerEntitlements: deleteCustomerEntitlements,
 	} = handleCustomizeDeleteItems({
-		customize: params.customize,
+		customize,
 		targetCustomerProduct: finalCustomerProduct,
 	});
 
@@ -131,11 +151,25 @@ export const setupPatchContext = ({
 		entitlements: updateNewEntitlements,
 		carryLinks: updateItemCarryLinks,
 	} = handleCustomizeUpdateItems({
-		customize: params.customize ?? {},
+		customize,
 		targetCustomerProduct: finalCustomerProduct,
 		features: ctx.features,
 	});
 
+	const {
+		customerPrices: deletePriceCustomerPrices,
+		prices: customPricePrices,
+	} = handleCustomizePrice({
+		ctx,
+		customize,
+		targetCustomerProduct: finalCustomerProduct,
+		orgId: finalCustomerProduct.product.org_id,
+		internalProductId: finalCustomerProduct.product.internal_id,
+		reusePricesAndEntitlements,
+	});
+
+	// Snapshot only after every handler that mutates finalCustomerProduct, so it
+	// can't drift from the customer product it's derived from.
 	const patchFullProduct = cusProductToProduct({
 		cusProduct: finalCustomerProduct,
 	});
@@ -150,21 +184,10 @@ export const setupPatchContext = ({
 		if (!feature) continue;
 		patchFullProduct.entitlements.push({ ...newEnt, feature });
 	}
-	patchFullProduct.prices.push(...updateNewPrices);
-
-	const {
-		customerPrices: deletePriceCustomerPrices,
-		prices: customPricePrices,
-	} = handleCustomizePrice({
-		ctx,
-		customize: params.customize,
-		targetCustomerProduct: finalCustomerProduct,
-		fullProduct: patchFullProduct,
-		reusePricesAndEntitlements,
-	});
+	patchFullProduct.prices.push(...updateNewPrices, ...customPricePrices);
 
 	const { addItems: nonNoopAddItems } = handleCustomizeNoopItems({
-		customize: params.customize,
+		customize,
 		targetCustomerProduct: finalCustomerProduct,
 		features: ctx.features,
 	});
@@ -172,10 +195,22 @@ export const setupPatchContext = ({
 	const { prices: customItemPrices, entitlements: customEntitlements } =
 		handleCustomizeAddItems({
 			ctx,
-			customize: { ...params.customize, add_items: nonNoopAddItems },
+			customize: { ...customize, add_items: nonNoopAddItems },
 			fullProduct: patchFullProduct,
 			reusePricesAndEntitlements,
 		});
+
+	validateProductItems({
+		newItems: mapToProductItems({
+			prices: patchFullProduct.prices,
+			entitlements: patchFullProduct.entitlements,
+			features: ctx.features,
+		}),
+		features: ctx.features,
+		orgId: patchFullProduct.org_id,
+		env: patchFullProduct.env,
+		multiCurrencyEnabled: orgMultiCurrencyEnabled({ org: ctx.org }),
+	});
 
 	const patchContext: PatchContext = {
 		originalCustomerProduct: customerProduct,

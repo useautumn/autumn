@@ -1,7 +1,9 @@
 import "dotenv/config";
 import { ALL_SCOPES, ac, invitation, roles, schemas } from "@autumn/shared";
+import { getScopesForUserInOrg } from "@autumn/shared/utils/auth/getScopesForUserInOrg";
 import { oauthProvider } from "@better-auth/oauth-provider";
 import { passkey } from "@better-auth/passkey";
+import { sso } from "@better-auth/sso";
 import { type BetterAuthOptions, betterAuth, type User } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import {
@@ -11,12 +13,15 @@ import {
 	jwt,
 	type Organization,
 	organization,
+	testUtils,
 } from "better-auth/plugins";
 import type { AccessControl } from "better-auth/plugins/access";
 import { eq } from "drizzle-orm";
 import { db } from "@/db/initDrizzle.js";
 import { logger } from "@/external/logtail/logtailUtils.js";
 import { createLoopsContact } from "@/external/resend/loopsUtils.js";
+import { SSO_VERIFICATION_PREFIX } from "@/internal/auth/sso/ssoDomainUtils.js";
+import { getTrustedSsoOrigins } from "@/internal/auth/sso/ssoTrustedOrigins.js";
 import { sendInvitationEmail } from "@/internal/emails/sendInvitationEmail.js";
 import { sendOnboardingEmail } from "@/internal/emails/sendOnboardingEmail.js";
 import sendOTPEmail from "@/internal/emails/sendOTPEmail.js";
@@ -24,7 +29,6 @@ import { afterOrgCreated } from "./authUtils/afterOrgCreated.js";
 import { afterSessionCreated } from "./authUtils/afterSessionCreated.js";
 import { afterSessionDeleted } from "./authUtils/afterSessionDeleted.js";
 import { beforeSessionCreated } from "./authUtils/beforeSessionCreated.js";
-import { getScopesForUserInOrg } from "./authUtils/customSessionScopes.js";
 import { ADMIN_USER_IDs } from "./constants.js";
 
 // emulate.dev Google: rewrite outbound Google OAuth host so agent worktrees
@@ -64,8 +68,12 @@ const emulateGoogleUrl =
 // HTTPS agent worktrees go through portless (e.g. wtN-api.localhost). The
 // OAuth flow leaves and returns via a third-party host (emulate.dev), so the
 // state cookie must be SameSite=None+Secure to survive the round trip.
-const isHttpsBaseUrl = process.env.BETTER_AUTH_URL?.startsWith("https://");
 const isProductionAuth = process.env.NODE_ENV === "production";
+const configuredAuthBaseUrl = process.env.BETTER_AUTH_URL?.trim() || undefined;
+const authBaseUrl =
+	configuredAuthBaseUrl ??
+	(isProductionAuth ? undefined : "http://localhost:8080");
+const isHttpsBaseUrl = authBaseUrl?.startsWith("https://");
 
 const parseMcpResourceUrl = (rawUrl: string) => {
 	const resourceUrl = rawUrl.trim();
@@ -92,11 +100,9 @@ const chatServerUrl =
 	(isProductionAuth ? "https://chat.useautumn.com" : "http://localhost:3099");
 
 const mcpResourcePaths = ["/mcp"];
-const mcpResourceBases = [
-	process.env.BETTER_AUTH_URL,
-	mcpServerUrl,
-	chatServerUrl,
-].filter((base): base is string => Boolean(base));
+const mcpResourceBases = [authBaseUrl, mcpServerUrl, chatServerUrl].filter(
+	(base): base is string => Boolean(base),
+);
 
 const mcpResourceUrls = [
 	...new Set([
@@ -145,7 +151,7 @@ if (
 }
 
 const options = {
-	baseURL: process.env.BETTER_AUTH_URL,
+	baseURL: authBaseUrl,
 	telemetry: {
 		enabled: false,
 	},
@@ -209,6 +215,7 @@ const options = {
 			"https://staging.useautumn.com",
 			"https://*.useautumn.com",
 		];
+		origins.push(...getTrustedSsoOrigins());
 		if (process.env.NODE_ENV === "production") return origins;
 
 		// Worktree ports follow worktreeOffset = (N-1)*100; accept any localhost
@@ -221,7 +228,7 @@ const options = {
 			origins.push(origin);
 		}
 		if (process.env.CLIENT_URL) origins.push(process.env.CLIENT_URL);
-		if (process.env.BETTER_AUTH_URL) origins.push(process.env.BETTER_AUTH_URL);
+		if (authBaseUrl) origins.push(authBaseUrl);
 		return origins;
 	},
 	emailAndPassword: {
@@ -238,7 +245,9 @@ const options = {
 		google: {
 			clientId: process.env.GOOGLE_CLIENT_ID!,
 			clientSecret: process.env.GOOGLE_CLIENT_SECRET,
-			redirectURI: `${process.env.BETTER_AUTH_URL}/api/auth/callback/google`,
+			redirectURI: authBaseUrl
+				? `${authBaseUrl}/api/auth/callback/google`
+				: undefined,
 			...(emulateGoogleUrl
 				? {
 						// HS256-signed id_tokens from emulate fail real Google's RS256 JWKS check.
@@ -271,7 +280,7 @@ const options = {
 			// Resource-based scopes with R/W actions (plus legacy CRUDL +
 			// meta scopes — see shared/utils/scopeDefinitions.ts).
 			scopes: [...ALL_SCOPES],
-			validAudiences: [process.env.BETTER_AUTH_URL, ...mcpResourceUrls].filter(
+			validAudiences: [authBaseUrl, ...mcpResourceUrls].filter(
 				Boolean,
 			) as string[],
 			allowDynamicClientRegistration: true,
@@ -354,6 +363,19 @@ const options = {
 				},
 			},
 		}),
+		sso({
+			domainVerification: {
+				enabled: true,
+				tokenPrefix: SSO_VERIFICATION_PREFIX,
+			},
+			// Otherwise SSO users are stored emailVerified:false and the
+			// account-linking guard locks them out of their own provider.
+			trustEmailVerified: true,
+			organizationProvisioning: {
+				disabled: true,
+			},
+			providersLimit: 100,
+		}),
 	],
 } satisfies BetterAuthOptions;
 
@@ -361,6 +383,8 @@ export const auth = betterAuth({
 	...options,
 	plugins: [
 		...options.plugins,
+		// Test-only: exposes privileged ctx.test helpers (no HTTP routes). Off in prod.
+		...(process.env.NODE_ENV !== "production" ? [testUtils()] : []),
 		/**
 		 * Attach `role` and `scopes` to every session response.
 		 *

@@ -15,6 +15,7 @@ import {
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { setupPatchContext } from "@/internal/billing/v2/setup/patch";
+import { setupCustomizeLicenses } from "@/internal/billing/v2/setup/setupCustomizeLicenses";
 import { initFullCustomerProduct } from "@/internal/billing/v2/utils/initFullCustomerProduct/initFullCustomerProduct";
 import { getEntsWithFeature } from "@/internal/products/entitlements/entitlementUtils";
 import { ProductService } from "@/internal/products/ProductService";
@@ -95,6 +96,54 @@ const setupAttachPatchProductContext = ({
 	};
 };
 
+const resolveAttachProductContext = async ({
+	ctx,
+	params,
+	fullCustomer,
+	currentEpochMs,
+}: {
+	ctx: AutumnContext;
+	params: AttachParamsV1 | MultiAttachParamsV0["plans"][number];
+	fullCustomer?: FullCustomer;
+	currentEpochMs?: number;
+}) => {
+	const { db, org, env } = ctx;
+
+	// 1. Fetch the product being attached
+	const fullProduct = await ProductService.getFull({
+		db,
+		idOrInternalId: params.plan_id,
+		orgId: org.id,
+		env,
+		version: params.version,
+	});
+
+	const patchProductContext = fullCustomer
+		? setupAttachPatchProductContext({
+				ctx,
+				params,
+				fullCustomer,
+				fullProduct,
+				currentEpochMs,
+			})
+		: undefined;
+
+	// 2. Handle custom items if provided
+	const productContext =
+		patchProductContext ??
+		(await setupCustomFullProduct({
+			ctx,
+			currentFullProduct: fullProduct,
+			customizePlan: params.customize,
+		}));
+
+	return await setupCustomizeLicenses({
+		ctx,
+		customize: params.customize,
+		productContext,
+	});
+};
+
 /**
  * Loads the product being attached, handling version and custom items params.
  */
@@ -114,47 +163,10 @@ export const setupAttachProductContext = async ({
 	const { productContext } = contextOverride;
 	if (productContext) return productContext;
 
-	const { db, org, env } = ctx;
-
-	// 1. Fetch the product being attached
-	const fullProduct = await ProductService.getFull({
-		db,
-		idOrInternalId: params.plan_id,
-		orgId: org.id,
-		env,
-		version: params.version,
-		logResult: true,
-		logger: ctx.logger,
-	});
-
-	if (fullCustomer) {
-		const patchProductContext = setupAttachPatchProductContext({
-			ctx,
-			params,
-			fullCustomer,
-			fullProduct,
-			currentEpochMs,
-		});
-
-		if (patchProductContext) {
-			return patchProductContext;
-		}
-	}
-
-	// 2. Handle custom items if provided
-	const {
-		fullProduct: customFullProduct,
-		customPrices,
-		customEnts,
-	} = await setupCustomFullProduct({
+	return await resolveAttachProductContext({
 		ctx,
-		currentFullProduct: fullProduct,
-		customizePlan: params.customize,
+		params,
+		fullCustomer,
+		currentEpochMs,
 	});
-
-	return {
-		fullProduct: customFullProduct,
-		customPrices,
-		customEnts,
-	};
 };

@@ -1,16 +1,16 @@
+import { BetaBadge } from "@autumn/ui";
 import { ArrowsClockwiseIcon } from "@phosphor-icons/react";
 import { useMemo } from "react";
 import { Table } from "@/components/general/table";
-import { BetaBadge } from "@/components/v2/badges/BetaBadge";
 import { EmptyState } from "@/components/v2/empty-states/EmptyState";
 import {
-	useMigrationsQuery,
 	type MigrationWithRunInfo,
+	useMigrationsQuery,
 } from "@/hooks/queries/useMigrationsQuery";
 import { pushPage } from "@/utils/genUtils";
-import { useProductTable } from "@/views/products/hooks/useProductTable";
 import { useMigrationsQueryState } from "@/views/migrations/hooks/useMigrationsQueryState";
 import { InfoBox } from "@/views/onboarding2/integrate/components/InfoBox";
+import { useProductTable } from "@/views/products/hooks/useProductTable";
 import { createMigrationListColumns } from "./MigrationListColumns";
 import { MigrationListCreateButton } from "./MigrationListCreateButton";
 import { MigrationListMenuButton } from "./MigrationListMenuButton";

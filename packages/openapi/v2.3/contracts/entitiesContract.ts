@@ -172,7 +172,8 @@ export const updateEntityContract = oc
 							{
 								feature_id: "messages",
 								enabled: true,
-								overage_limit: 25,
+								limit_type: "usage_percentage",
+								overage_limit: 120,
 							},
 						],
 					},

@@ -1,7 +1,7 @@
+import { Button } from "@autumn/ui";
 import { CalendarBlankIcon } from "@phosphor-icons/react";
 import { motion } from "motion/react";
 import type { ReactNode } from "react";
-import { Button } from "@/components/v2/buttons/Button";
 import { useSheetStore } from "@/hooks/stores/useSheetStore";
 import { useHasSchedule } from "../hooks/useHasSchedule";
 
@@ -25,7 +25,9 @@ export function ScheduledPlanGuard({
 			transition={{ duration: 0.2, ease: [0.23, 1, 0.32, 1] }}
 		>
 			<div className="space-y-1">
-				<p className="text-sm font-medium text-foreground">Managed by a schedule</p>
+				<p className="text-sm font-medium text-foreground">
+					Managed by a schedule
+				</p>
 				<p className="text-xs text-tertiary-foreground leading-relaxed">
 					Updates to this plan must be made through the active schedule.
 				</p>

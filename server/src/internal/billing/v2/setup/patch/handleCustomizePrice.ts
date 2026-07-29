@@ -2,7 +2,6 @@ import type {
 	CustomizePlanV1,
 	FullCusProduct,
 	FullCustomerPrice,
-	FullProduct,
 	Price,
 	SharedContext,
 } from "@autumn/shared";
@@ -37,17 +36,21 @@ const removeCurrentBasePrice = ({
 	return customerPrices;
 };
 
+/** Replaces the customer product's base price in place. Callers surface the
+ * returned prices on their product snapshot, as with the other patch handlers. */
 export const handleCustomizePrice = ({
 	ctx,
 	customize,
 	targetCustomerProduct,
-	fullProduct,
+	orgId,
+	internalProductId,
 	reusePricesAndEntitlements,
 }: {
 	ctx: SharedContext;
 	customize: CustomizePlanV1;
 	targetCustomerProduct: FullCusProduct;
-	fullProduct: FullProduct;
+	orgId: string;
+	internalProductId: string;
 	reusePricesAndEntitlements?: ReusePricesAndEntitlements;
 }): {
 	customerPrices: FullCustomerPrice[];
@@ -74,16 +77,14 @@ export const handleCustomizePrice = ({
 		});
 		const { newPrice, updatedPrice } = itemToPriceAndEnt({
 			item,
-			orgId: fullProduct.org_id,
-			internalProductId: fullProduct.internal_id,
+			orgId,
+			internalProductId,
 			isCustom: true,
 			features: ctx.features,
 		});
 		price = newPrice ?? updatedPrice ?? undefined;
 	}
 	const prices = price ? [price] : [];
-
-	fullProduct.prices.push(...prices);
 
 	return { customerPrices, prices };
 };

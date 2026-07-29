@@ -16,15 +16,12 @@ export interface FetchFeaturesResponse {
 export async function fetchFeatures(
 	options: FetchFeaturesOptions,
 ): Promise<ApiFeature[]> {
-	const { secretKey, includeArchived = true } = options;
+	const { secretKey } = options;
 
 	const response = await request<FetchFeaturesResponse>({
-		method: "GET",
-		path: "/v1/features",
+		method: "POST",
+		path: "/v1/features.list",
 		secretKey,
-		queryParams: {
-			include_archived: includeArchived,
-		},
 	});
 
 	return response.list;

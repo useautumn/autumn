@@ -1,5 +1,9 @@
 import type { DbOverageAllowed } from "@models/cusModels/billingControls/customerBillingControls.js";
 import type { FullCustomer } from "@models/cusModels/fullCusModel.js";
+import {
+	fullCustomerToPlanProducts,
+	resolveBillingControl,
+} from "../../fullSubjectUtils/planBillingControlUtils.js";
 
 /**
  * Extract overage_allowed entries for the requested features from a FullCustomer.
@@ -27,13 +31,15 @@ export const fullCustomerToOverageAllowedByFeatureId = ({
 	const uniqueFeatureIds = [...new Set(featureIds)];
 
 	for (const featureId of uniqueFeatureIds) {
-		const overageAllowed =
-			entityOverageAllowed.find(
-				(candidate) => candidate.feature_id === featureId,
-			) ??
-			customerOverageAllowed.find(
-				(candidate) => candidate.feature_id === featureId,
-			);
+		const overageAllowed = resolveBillingControl<
+			DbOverageAllowed,
+			"overage_allowed"
+		>({
+			controlLists: [entityOverageAllowed, customerOverageAllowed],
+			customerProducts: fullCustomerToPlanProducts({ fullCustomer }),
+			controlKey: "overage_allowed",
+			matches: (candidate) => candidate.feature_id === featureId,
+		});
 
 		if (overageAllowed) {
 			overageAllowedByFeatureId[featureId] = overageAllowed;

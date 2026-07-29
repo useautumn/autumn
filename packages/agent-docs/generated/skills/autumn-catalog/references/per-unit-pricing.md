@@ -1,0 +1,269 @@
+## Per-Unit Pricing
+
+Per-unit pricing charges customers based on the quantity of a resource they use — seats, workspaces, environments, or any other non-consumable feature. Customers either commit to a quantity upfront (prepaid) or are billed based on actual usage at the end of each billing cycle (usage-based).
+
+> **Example** <br />
+> A collaboration tool charges $10/seat/month. The plan includes 5 seats for free, and each additional seat costs $10.
+
+## Setting up
+
+<Tabs>
+<Tab title="CLI">
+
+Create a `non-consumable` metered feature and add it to a plan with a per-unit price:
+
+```ts autumn.config.ts
+import { feature, item, plan } from 'atmn';
+
+export const seats = feature({
+  id: 'seats',
+  name: 'Seats',
+  type: 'metered',
+  consumable: false,
+});
+
+export const pro = plan({
+  id: 'pro',
+  name: 'Pro',
+  price: { amount: 20, interval: 'month' },
+  items: [
+    item({
+      featureId: seats.id,
+      included: 5,
+      price: {
+        amount: 10,
+        interval: 'month',
+        billingMethod: 'usage_based',
+      },
+    }),
+  ],
+});
+```
+
+Push changes with `atmn push`.
+
+</Tab>
+<Tab title="Dashboard">
+
+1. Navigate to **Plans** and create or edit a plan
+2. Add a `metered`, `non-consumable` feature (e.g., "Seats")
+3. Set an **included** amount (e.g., 5 seats for free)
+4. Add a **price** per unit (e.g., $10 per seat per month)
+5. Choose the **billing method**:
+   - **Prepaid** — customer selects quantity at checkout, charged upfront
+   - **Usage-based** — billed for actual usage at end of billing cycle
+6. Under **Advanced**, configure [proration](/documentation/modelling-pricing/proration) behavior for mid-cycle changes
+7. Save the plan
+
+</Tab>
+</Tabs>
+
+## Billing methods
+
+| Method | When charged | Quantity | Best for |
+|--------|-------------|----------|----------|
+| **Prepaid** | Upfront at purchase | Customer selects a fixed quantity | Seat licenses with committed counts |
+| **Usage-based** | End of billing cycle (prorated on changes) | Automatic — tracks actual usage | Seats that fluctuate frequently |
+
+### Prepaid per-unit
+
+With prepaid, the customer selects a **total quantity** when purchasing. The `quantity` includes any free included amount — Autumn subtracts the included amount and charges for the remainder.
+
+For example, with 5 included seats at $10/extra seat, a customer who selects `quantity: 10` gets 10 seats total and pays for 5 extra seats ($50/month).
+
+Pass the quantity via `featureQuantities`:
+
+<CodeGroup>
+
+```typescript TypeScript
+import { Autumn } from "autumn-js";
+
+const autumn = new Autumn({ secretKey: "am_sk_..." });
+
+const { data } = await autumn.billing.attach({
+  customerId: "user_123",
+  planId: "pro",
+  featureQuantities: [{
+    featureId: "seats",
+    quantity: 10,
+  }],
+});
+```
+
+```python Python
+from autumn_sdk import Autumn
+
+autumn = Autumn("am_sk_...")
+
+response = await autumn.billing.attach(
+    customer_id="user_123",
+    plan_id="pro",
+    feature_quantities=[{
+        "feature_id": "seats",
+        "quantity": 10,
+    }],
+)
+```
+
+```bash cURL
+curl -X POST "https://api.useautumn.com/v1/billing/attach" \
+  -H "Authorization: Bearer am_sk_..." \
+  -H "Content-Type: application/json" \
+  -d '{
+    "customer_id": "user_123",
+    "plan_id": "pro",
+    "feature_quantities": [{
+      "feature_id": "seats",
+      "quantity": 10
+    }]
+  }'
+```
+
+</CodeGroup>
+
+The customer's balance is set to the total quantity (10). If they're upgrading and already have seats in use, the existing usage is carried over — so a customer with 3 seats in use would see a remaining balance of 7.
+
+Autumn does not prevent you from passing a `quantity` lower than the customer's current usage. If the customer has 5 seats in use and you pass `quantity: 3`, the balance goes negative (-2). The `check` endpoint will return `allowed: false`, preventing new seats from being added, but existing seats are not forcibly removed.
+
+### Usage-based per-unit
+
+With usage-based billing, no quantity is needed at purchase time. Track seat additions and removals as they happen, and Autumn bills for the actual number of seats in use.
+
+<CodeGroup>
+
+```typescript TypeScript
+import { Autumn } from "autumn-js";
+
+const autumn = new Autumn({ secretKey: "am_sk_..." });
+
+// Add a seat
+await autumn.track({
+  customer_id: "user_123",
+  feature_id: "seats",
+  value: 1,
+});
+
+// Remove a seat
+await autumn.track({
+  customer_id: "user_123",
+  feature_id: "seats",
+  value: -1,
+});
+```
+
+```python Python
+from autumn_sdk import Autumn
+
+autumn = Autumn("am_sk_...")
+
+# Add a seat
+await autumn.track(
+    customer_id="user_123",
+    feature_id="seats",
+    value=1,
+)
+
+# Remove a seat
+await autumn.track(
+    customer_id="user_123",
+    feature_id="seats",
+    value=-1,
+)
+```
+
+```bash cURL
+# Add a seat
+curl -X POST "https://api.useautumn.com/v1/track" \
+  -H "Authorization: Bearer am_sk_..." \
+  -H "Content-Type: application/json" \
+  -d '{
+    "customer_id": "user_123",
+    "feature_id": "seats",
+    "value": 1
+  }'
+```
+
+</CodeGroup>
+
+When a customer purchases the plan, any seats already in use are **automatically reflected** in their subscription from day one. For example, if a customer has 3 seats in use and purchases a plan with 5 included seats at $10/extra seat:
+
+- Their balance starts at 5 (the included amount)
+- The 3 existing seats are carried over, leaving a remaining balance of 2
+- No extra charge yet — they're within the included amount
+- As they add seats beyond 5, each additional seat is billed at $10/month with [proration](/documentation/modelling-pricing/proration)
+
+## Existing usage on upgrade
+
+When a customer upgrades from one plan to another, Autumn **automatically carries over** their current seat usage to the new plan. This ensures there's no gap in tracking — existing seats don't disappear or go unbilled.
+
+### Prepaid
+
+The customer's balance is set to their chosen quantity. Existing usage is then deducted from that balance.
+
+> **Example**: Customer has **3 seats** in use. They purchase a plan with 5 included seats, passing `quantity: 10`.
+> - Balance is set to 10 (5 included + 5 purchased)
+> - 3 existing seats are deducted → **7 remaining**
+> - Stripe charges for 10 seats (with 5 in the free tier)
+
+### Usage-based
+
+No quantity is needed. The Stripe subscription quantity is set to the customer's current usage automatically.
+
+> **Example**: Customer has **3 seats** in use. They purchase a plan with 5 included seats at $10/extra seat.
+> - Balance starts at 5 (included amount)
+> - 3 existing seats are deducted → **2 remaining**
+> - Stripe subscription reflects 3 seats in use (within the free tier, so no extra charge)
+> - When they add a 6th seat, billing begins at $10/seat for the overage
+
+| Scenario | Prepaid (qty: 8) | Usage-based |
+|----------|------------------|-------------|
+| **3 in use, 5 included** | Balance: 8 → 5 remaining. Charged for 3 extra. | Balance: 5 → 2 remaining. No extra charge. |
+| **3 in use, 0 included** | Balance: 8 → 5 remaining. Charged for 8. | Balance: 0 → -3. Charged for 3 seats. |
+| **7 in use, 5 included** | Balance: 8 → 1 remaining. Charged for 3 extra. | Balance: 5 → -2. Charged for 2 extra seats. |
+
+## Checking access
+
+Before allowing a user to add a new seat, check if they have capacity:
+
+<CodeGroup>
+
+```typescript TypeScript
+const { data } = await autumn.check({
+  customer_id: "user_123",
+  feature_id: "seats",
+});
+
+if (!data.allowed) {
+  // Prompt user to purchase more seats or upgrade
+}
+```
+
+```python Python
+response = await autumn.check(
+    customer_id="user_123",
+    feature_id="seats",
+)
+
+if not response.allowed:
+    # Prompt user to purchase more seats or upgrade
+```
+
+```bash cURL
+curl -X POST "https://api.useautumn.com/v1/check" \
+  -H "Authorization: Bearer am_sk_..." \
+  -H "Content-Type: application/json" \
+  -d '{
+    "customer_id": "user_123",
+    "feature_id": "seats"
+  }'
+```
+
+</CodeGroup>
+
+For **prepaid**, `allowed` is `true` when the customer has remaining prepaid balance (ie. unused seats).
+
+For **usage-based**, `allowed` is `true` as long as the customer has a usage-based price configured — additional seats are simply billed at the per-unit rate, so there's no hard cap.
+
+## Proration on quantity changes
+
+When a customer increases or decreases their seat count mid-billing-cycle, you can configure how the price adjustment is handled. See [Proration](/documentation/modelling-pricing/proration) for details.

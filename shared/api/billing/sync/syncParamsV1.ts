@@ -1,11 +1,26 @@
+import { LicenseQuantityParamsSchema } from "@api/billing/common/licenseQuantityParams";
 import { MultiPlanInstanceSchema } from "@api/billing/common/multi/multiPlanInstance";
 import { z } from "zod/v4";
+import {
+	CustomizePlanV1BaseSchema,
+	refineCustomizePlanV1Schema,
+} from "../common/customizePlan/customizePlanV1";
+
+const SyncCustomizePlanSchema = refineCustomizePlanV1Schema(
+	CustomizePlanV1BaseSchema.strict(),
+);
 
 /**
  * Per-plan sync intent. Extends the shared `MultiPlanInstance` with
  * sync-specific overrides.
  */
-export const SyncPlanInstanceSchema = MultiPlanInstanceSchema.extend({
+export const SyncPlanInstanceSchema = MultiPlanInstanceSchema.omit({
+	customize: true,
+}).extend({
+	customize: SyncCustomizePlanSchema.optional().meta({
+		description:
+			"Override the plan's price, items, or free trial. Wins over anything detection inferred for the same plan.",
+	}),
 	quantity: z.number().int().min(1).optional().meta({
 		description:
 			"Number of customer product instances to create from this plan entry. Defaults to 1. Used to express add-ons with quantity > 1.",
@@ -21,6 +36,10 @@ export const SyncPlanInstanceSchema = MultiPlanInstanceSchema.extend({
 	enable_plan_immediately: z.boolean().optional().meta({
 		description:
 			"If true for a future schedule-only sync plan, grant access immediately while billing still starts at the phase starts_at.",
+	}),
+	license_quantities: z.array(LicenseQuantityParamsSchema).optional().meta({
+		description:
+			"Total seat quantities (inclusive of the catalog link's included count) per license plan offered by this plan. Same semantics as attach.",
 	}),
 });
 
@@ -85,6 +104,11 @@ export const SyncParamsV1Schema = z
 		phases: z.array(SyncPhaseSchema).optional().meta({
 			description:
 				"Caller-supplied plan instances grouped by phase. Omit for pure auto-sync.",
+		}),
+
+		carry_over_usage: z.boolean().optional().meta({
+			description:
+				"When a synced plan expires an existing plan (via expire_previous), carry the existing plan's consumed usage onto the new plan's balances for any shared feature on the same subject. Defaults to true. Set false to sync without touching balances.",
 		}),
 
 		acknowledge_warnings: z.array(z.string()).optional().meta({

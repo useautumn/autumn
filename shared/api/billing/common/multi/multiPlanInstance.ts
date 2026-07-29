@@ -20,7 +20,7 @@ export const MultiPlanInstanceSchema = z
 		}),
 		customize: CustomizePlanV1Schema.optional().meta({
 			description:
-				"Override the plan's price, items, or free trial. Wins over anything detection inferred for the same plan.",
+				"Override the plan's price, items, licenses, or free trial. Wins over anything detection inferred for the same plan.",
 		}),
 		feature_quantities: z.array(FeatureQuantityParamsV0Schema).optional().meta({
 			description:

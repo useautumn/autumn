@@ -115,6 +115,11 @@ const deleteFullCustomerCacheRowsForOrg = async ({
 /**
  * Batch delete multiple FullCustomer caches across ALL regions.
  */
+/**
+ * @deprecated Only clears the legacy FullCustomer cache + path index — it
+ * does NOT invalidate fullSubject caches. Use deleteCachedFullCustomer
+ * (which calls invalidateCachedFullSubject) for lifecycle changes.
+ */
 export const batchDeleteCachedFullCustomers = async ({
 	customers,
 }: {

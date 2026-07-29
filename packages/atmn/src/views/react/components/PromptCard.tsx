@@ -1,4 +1,4 @@
-import { Box, Text } from "ink";
+import { Box, Text, useInput } from "ink";
 import SelectInput from "ink-select-input";
 import React, { type ReactNode, useEffect, useId, useMemo } from "react";
 import { useCardWidth } from "./providers/CardWidthContext.js";
@@ -10,6 +10,7 @@ const BORDER_PADDING_OVERHEAD = 6;
 interface PromptOption {
 	label: string;
 	value: string;
+	description?: string;
 }
 
 interface PromptCardProps {
@@ -17,6 +18,7 @@ interface PromptCardProps {
 	icon?: string;
 	children: ReactNode;
 	options: PromptOption[];
+	onBack?: () => void;
 	onSelect: (value: string) => void;
 }
 
@@ -82,6 +84,28 @@ function extractTextContent(children: ReactNode): string[] {
 	return lines;
 }
 
+function PromptOptionItem({
+	description,
+	isSelected = false,
+	label,
+}: {
+	description?: string;
+	isSelected?: boolean;
+	label: string;
+}) {
+	return (
+		<Box flexDirection="column">
+			<Text color={isSelected ? "blue" : undefined}>{label}</Text>
+			{description && (
+				<Text color="gray">
+					{"  "}
+					{description}
+				</Text>
+			)}
+		</Box>
+	);
+}
+
 /**
  * Card component with a select menu for prompts
  * Coordinates width with other Cards via CardWidthContext
@@ -91,6 +115,7 @@ export function PromptCard({
 	icon,
 	children,
 	options,
+	onBack,
 	onSelect,
 }: PromptCardProps) {
 	const id = useId();
@@ -99,6 +124,12 @@ export function PromptCard({
 	const handleSelect = (item: { value: string }) => {
 		onSelect(item.value);
 	};
+
+	useInput((_input, key) => {
+		if (key.leftArrow) {
+			onBack?.();
+		}
+	});
 
 	// Calculate the content width needed for this card
 	const contentWidth = useMemo(() => {
@@ -124,6 +155,12 @@ export function PromptCard({
 			const optWidth = getStringWidth(opt.label) + 4;
 			if (optWidth > maxLineWidth) {
 				maxLineWidth = optWidth;
+			}
+			if (opt.description) {
+				const descriptionWidth = getStringWidth(opt.description) + 6;
+				if (descriptionWidth > maxLineWidth) {
+					maxLineWidth = descriptionWidth;
+				}
 			}
 		}
 
@@ -158,9 +195,15 @@ export function PromptCard({
 			<Box flexDirection="column" marginTop={1}>
 				{children}
 			</Box>
-			<Box marginTop={1}>
-				<SelectInput items={options} onSelect={handleSelect} />
-			</Box>
+			{options.length > 0 && (
+				<Box marginTop={1}>
+					<SelectInput
+						itemComponent={PromptOptionItem as never}
+						items={options}
+						onSelect={handleSelect}
+					/>
+				</Box>
+			)}
 		</Box>
 	);
 }

@@ -10,7 +10,6 @@ import {
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { getOrSetCachedFullSubject } from "@/internal/customers/cache/fullSubject/actions/getOrSetCachedFullSubject.js";
-import { getOrSetCachedFullCustomer } from "@/internal/customers/cusUtils/fullCustomerCacheUtils/getOrSetCachedFullCustomer.js";
 import { getModelCreditCostBreakdown } from "@/internal/features/aiCreditSystemUtils.js";
 import { isFullSubjectRolloutEnabled } from "@/internal/misc/rollouts/fullSubjectRolloutUtils.js";
 import type { FeatureDeduction } from "../../utils/types/featureDeduction.js";
@@ -49,21 +48,17 @@ const resolveAiCreditFeatureFromEntitlements = async ({
 	customerId: string;
 	entityId?: string;
 }): Promise<Feature> => {
-	const fullCustomer = isFullSubjectRolloutEnabled({ ctx })
-		? fullSubjectToFullCustomer({
-				fullSubject: await getOrSetCachedFullSubject({
-					ctx,
-					customerId,
-					entityId,
-					source: "resolveAiCreditFeature",
-				}),
-			})
-		: await getOrSetCachedFullCustomer({
-				ctx,
-				customerId,
-				entityId,
-				source: "resolveAiCreditFeature",
-			});
+	if (isFullSubjectRolloutEnabled({ ctx })) {
+	}
+
+	const fullCustomer = fullSubjectToFullCustomer({
+		fullSubject: await getOrSetCachedFullSubject({
+			ctx,
+			customerId,
+			entityId,
+			source: "resolveAiCreditFeature",
+		}),
+	});
 
 	const entity = entityId
 		? fullCustomer.entities?.find((e) => e.id === entityId)

@@ -1,3 +1,4 @@
+import { Tooltip, TooltipContent, TooltipTrigger } from "@autumn/ui";
 import {
 	ClockIcon,
 	PlusCircleIcon,
@@ -5,11 +6,6 @@ import {
 } from "@phosphor-icons/react";
 import { cva, type VariantProps } from "class-variance-authority";
 import { DefaultIcon } from "@/components/v2/icons/AutumnIcons";
-import {
-	Tooltip,
-	TooltipContent,
-	TooltipTrigger,
-} from "@/components/v2/tooltips/Tooltip";
 import { cn } from "@/lib/utils";
 
 const badgeVariants = cva(
@@ -57,7 +53,11 @@ export const PlanTypeBadge = ({
 				);
 			case "addon":
 				return (
-					<PlusCircleIcon size={13} className="text-subtle mt-0.25" weight="fill" />
+					<PlusCircleIcon
+						size={13}
+						className="text-subtle mt-0.25"
+						weight="fill"
+					/>
 				);
 			case "autoTrial":
 				return (
@@ -67,7 +67,11 @@ export const PlanTypeBadge = ({
 							className="text-subtle mt-0.25"
 							weight="fill"
 						/>
-						<ClockIcon size={13} className="text-subtle mt-0.25" weight="fill" />
+						<ClockIcon
+							size={13}
+							className="text-subtle mt-0.25"
+							weight="fill"
+						/>
 					</>
 				);
 			default:

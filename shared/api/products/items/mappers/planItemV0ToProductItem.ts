@@ -155,6 +155,7 @@ export const planItemV0ToProductItem = ({
 		price_interval_count: priceIntervalCount,
 
 		price: planItem.price?.amount,
+		stripe_price_id: planItem.price?.stripe_price_id,
 
 		tiers: planItem.price?.tiers?.map((tier) => ({
 			amount: tier.amount,
@@ -179,6 +180,7 @@ export const planItemV0ToProductItem = ({
 		entitlement_id: entitlementId,
 		price_id: priceId,
 
-		entity_feature_id: planItem.entity_feature_id,
+		entity_feature_id: planItem.entity_feature_id ?? null,
+		pooled: planItem.pooled ?? false,
 	} satisfies ProductItem);
 };

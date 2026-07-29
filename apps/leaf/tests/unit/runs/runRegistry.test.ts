@@ -19,7 +19,11 @@ describe("runRegistry", () => {
 	});
 
 	test("registers, resolves, and closes runs", () => {
-		const run = registerRun({ key: "k1", kind: "message" });
+		const run = registerRun({
+			key: "k1",
+			kind: "message",
+			ownerProviderUserId: "U1",
+		});
 		expect(getRun("k1")).toBe(run);
 
 		closeRun({ key: "k1", run });
@@ -28,7 +32,11 @@ describe("runRegistry", () => {
 	});
 
 	test("injection is rejected once a run is closed", async () => {
-		const run = registerRun({ key: "k1b", kind: "message" });
+		const run = registerRun({
+			key: "k1b",
+			kind: "message",
+			ownerProviderUserId: "U1",
+		});
 		run.resolveSessionId("sesn_1");
 		closeRun({ key: "k1b", run });
 
@@ -38,8 +46,16 @@ describe("runRegistry", () => {
 	});
 
 	test("close ignores entries replaced by a newer run", () => {
-		const first = registerRun({ key: "k2", kind: "message" });
-		const second = registerRun({ key: "k2", kind: "message" });
+		const first = registerRun({
+			key: "k2",
+			kind: "message",
+			ownerProviderUserId: "U1",
+		});
+		const second = registerRun({
+			key: "k2",
+			kind: "message",
+			ownerProviderUserId: "U1",
+		});
 
 		closeRun({ key: "k2", run: first });
 		expect(getRun("k2")).toBe(second);
@@ -51,6 +67,7 @@ describe("runRegistry", () => {
 		const run = registerRun({
 			key: "k3",
 			kind: "message",
+			ownerProviderUserId: "U1",
 			sendInterrupt: async (sessionId) => {
 				interrupted.push(sessionId);
 			},

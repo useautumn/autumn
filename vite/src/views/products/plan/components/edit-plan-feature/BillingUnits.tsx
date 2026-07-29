@@ -1,15 +1,16 @@
 import { type Feature, getFeatureName } from "@autumn/shared";
-import { useEffect, useState } from "react";
-import { Button } from "@/components/v2/buttons/Button";
 import {
+	Button,
+	LabelInput,
 	Popover,
 	PopoverContent,
 	PopoverTrigger,
-} from "@/components/ui/popover";
-import { LabelInput } from "@/components/v2/inputs/LabelInput";
+} from "@autumn/ui";
+import { useEffect, useState } from "react";
 import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
 import { cn } from "@/lib/utils";
 import { useProductItemContext } from "@/views/products/product/product-item/ProductItemContext";
+import { billingUnitsLabel } from "../../utils/billingUnitsUtils";
 
 export function BillingUnits() {
 	const { features } = useFeaturesQuery();
@@ -50,16 +51,11 @@ export function BillingUnits() {
 						)}
 					>
 						<span className={cn("truncate text-xs")}>
-							{item.billing_units === 1
-								? `per ${unitName}`
-								: `per ${item.billing_units} ${unitName}`}
+							{billingUnitsLabel({ item, features })}
 						</span>
 					</Button>
 				</PopoverTrigger>
-				<PopoverContent
-					className="max-w-[200px] p-3 pt-2"
-					align="start"
-				>
+				<PopoverContent className="max-w-[200px] p-3 pt-2" align="start">
 					<LabelInput
 						label={`Billing units (${unitName})`}
 						type="number"

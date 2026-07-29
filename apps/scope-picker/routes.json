@@ -1,7 +1,7 @@
 {
   "generatedAt": "2026-04-24T17:11:56.348Z",
-  "totalRoutes": 260,
-  "totalRoutesNeedingScopes": 243,
+  "totalRoutes": 257,
+  "totalRoutesNeedingScopes": 240,
   "totalPlainRoutes": 16,
   "totalWebhookExempt": 20,
   "totalOrphans": 0,
@@ -721,23 +721,6 @@
       "isWebhookExempt": false
     },
     {
-      "handlerName": "handleCliStripe",
-      "handlerFile": "src/internal/dev/handlers/handleCliStripe.ts",
-      "method": "POST",
-      "path": "/dev/cli/stripe",
-      "style": "REST",
-      "group": "dev",
-      "mountChain": [
-        "",
-        "/dev",
-        "/cli/stripe"
-      ],
-      "sourceRouterFile": "src/internal/dev/devRouter.ts",
-      "routeKind": "createRoute",
-      "needsScopes": true,
-      "isWebhookExempt": false
-    },
-    {
       "handlerName": "handleGetDevData",
       "handlerFile": "src/internal/dev/handlers/handleGetDevData.ts",
       "method": "GET",
@@ -748,40 +731,6 @@
         "",
         "/dev",
         "/data"
-      ],
-      "sourceRouterFile": "src/internal/dev/devRouter.ts",
-      "routeKind": "createRoute",
-      "needsScopes": true,
-      "isWebhookExempt": false
-    },
-    {
-      "handlerName": "handleCreateOtp",
-      "handlerFile": "src/internal/dev/handlers/handleCreateOtp.ts",
-      "method": "POST",
-      "path": "/dev/otp",
-      "style": "REST",
-      "group": "dev",
-      "mountChain": [
-        "",
-        "/dev",
-        "/otp"
-      ],
-      "sourceRouterFile": "src/internal/dev/devRouter.ts",
-      "routeKind": "createRoute",
-      "needsScopes": true,
-      "isWebhookExempt": false
-    },
-    {
-      "handlerName": "handleGetOtp",
-      "handlerFile": "src/internal/dev/handlers/handleGetOtp.ts",
-      "method": "GET",
-      "path": "/dev/otp/:otp",
-      "style": "REST",
-      "group": "dev",
-      "mountChain": [
-        "",
-        "/dev",
-        "/otp/:otp"
       ],
       "sourceRouterFile": "src/internal/dev/devRouter.ts",
       "routeKind": "createRoute",
@@ -2834,23 +2783,6 @@
         "/:stripe_invoice_id/stripe"
       ],
       "sourceRouterFile": "src/internal/invoices/invoiceRouter.ts",
-      "routeKind": "createRoute",
-      "needsScopes": true,
-      "isWebhookExempt": false
-    },
-    {
-      "handlerName": "handleMigrateProductV2",
-      "handlerFile": "src/internal/products/handlers/handleMigrateProductV2.ts",
-      "method": "POST",
-      "path": "/v1/migrations",
-      "style": "REST",
-      "group": "v1/migrations",
-      "mountChain": [
-        "/v1",
-        "",
-        "/migrations"
-      ],
-      "sourceRouterFile": "src/internal/products/planRouter.ts",
       "routeKind": "createRoute",
       "needsScopes": true,
       "isWebhookExempt": false

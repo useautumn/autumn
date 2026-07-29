@@ -1,11 +1,11 @@
 import type { CustomButton } from "@autumn/shared";
+import { Button } from "@autumn/ui";
 import {
 	ArrowSquareOutIcon,
 	PencilSimpleIcon,
 	TrashIcon,
 } from "@phosphor-icons/react";
 import { motion } from "motion/react";
-import { Button } from "@/components/v2/buttons/Button";
 import { PhosphorIcon } from "@/components/v2/icons/PhosphorIcon";
 
 export function CustomButtonRow({

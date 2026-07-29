@@ -5,6 +5,7 @@ import {
 	ErrCode,
 	type FeatureOptions,
 	type FullCustomer,
+	filterCustomerProductsByStripeSubscriptionId,
 	findFeatureByIdOrInternalId,
 	isPrepaidPrice,
 	RecaseError,
@@ -20,6 +21,7 @@ import { setupAttachTransitionContext } from "@/internal/billing/v2/actions/atta
 import { setupCustomFullProduct } from "@/internal/billing/v2/setup/setupCustomFullProduct";
 import { initFullCustomerProduct } from "@/internal/billing/v2/utils/initFullCustomerProduct/initFullCustomerProduct";
 import { CusService } from "@/internal/customers/CusService";
+import { ACTIVE_STATUSES } from "@/internal/customers/cusProducts/CusProductService";
 import { deleteCachedFullCustomer } from "@/internal/customers/cusUtils/fullCustomerCacheUtils/deleteCachedFullCustomer";
 import { ProductService } from "@/internal/products/ProductService";
 import { initSubscriptionFromStripe } from "@/internal/subscriptions/utils/initSubscriptionFromStripe";
@@ -127,7 +129,6 @@ const processSyncMapping = async ({
 		idOrInternalId: mapping.plan_id,
 		orgId: org.id,
 		env,
-		logger: ctx.logger,
 	});
 
 	// 3. Apply custom items if provided
@@ -148,6 +149,20 @@ const processSyncMapping = async ({
 		currentFullProduct: fullProduct,
 		customizePlan,
 	});
+
+	// 3.5 Skip if this subscription is already linked to an active instance of
+	// this product — avoids double-attaching when auto-sync got there first.
+	// expire_previous: true means the caller intends to expire-and-replace it
+	// (the V0 repair flow), so only the no-op dedup case skips here.
+	const alreadyLinked = filterCustomerProductsByStripeSubscriptionId({
+		customerProducts: fullCustomer.customer_products,
+		stripeSubscriptionId: mapping.stripe_subscription_id,
+	}).find(
+		(customerProduct) =>
+			customerProduct.product_id === finalProduct.id &&
+			ACTIVE_STATUSES.includes(customerProduct.status),
+	);
+	if (alreadyLinked && !mapping.expire_previous) return;
 
 	// 4. Find transition context (current cusProduct to expire)
 	const { currentCustomerProduct } = setupAttachTransitionContext({

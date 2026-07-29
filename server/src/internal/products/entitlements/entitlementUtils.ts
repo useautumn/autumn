@@ -150,8 +150,12 @@ export const entsAreSame = (ent1: Entitlement, ent2: Entitlement) => {
 			message: `Carry from previous different: ${ent1.carry_from_previous} !== ${ent2.carry_from_previous}`,
 		},
 		entityFeatureId: {
-			condition: ent1.entity_feature_id !== ent2.entity_feature_id,
+			condition: ent1.entity_feature_id != ent2.entity_feature_id,
 			message: `Entity feature ID different: ${ent1.entity_feature_id} !== ${ent2.entity_feature_id}`,
+		},
+		pooled: {
+			condition: (ent1.pooled ?? false) !== (ent2.pooled ?? false),
+			message: `Pooled different: ${ent1.pooled} !== ${ent2.pooled}`,
 		},
 		usageLimit: {
 			condition: ent1.usage_limit != ent2.usage_limit,

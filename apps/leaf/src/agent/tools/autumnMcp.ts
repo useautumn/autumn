@@ -1,17 +1,47 @@
 import type { AutumnLogger } from "@autumn/logging";
+import { createTool } from "@mastra/core/tools";
 import type { MCPClient } from "@mastra/mcp";
+import { z } from "zod";
 import {
 	autumnMcpHeaders,
 	createAutumnMcpClient,
 	executeAutumnMcpTool,
 } from "../../internal/autumnMcp/client.js";
 import { logger as rootLogger } from "../../lib/logger.js";
-import {
-	type createPreviewCapture,
-	getWriteToolForPreview,
-	isSilentTool,
-	toolGerund,
-} from "./toolPolicy.js";
+import { isSilentTool, toolGerund } from "./toolPolicy.js";
+
+/** Lets mastra read an Autumn knowledge doc on demand (instead of inlining every
+ * skill into context) — the MCP server exposes them as `autumn://docs/*` resources. */
+export const createReadAutumnDocTool = ({
+	mcp,
+	onAction,
+}: {
+	mcp: MCPClient;
+	onAction?: (message: string) => Promise<void> | void;
+}) =>
+	createTool({
+		id: "readAutumnDoc",
+		description:
+			"Read an Autumn knowledge doc before modelling pricing or doing billing/investigation work. concepts = Autumn's model; catalog = features/plans/pricing; billing = attach/subscriptions/schedules; logs = request logs + Stripe webhooks.",
+		inputSchema: z
+			.object({
+				uri: z.enum([
+					"autumn://docs/concepts",
+					"autumn://docs/catalog",
+					"autumn://docs/billing",
+					"autumn://docs/logs",
+				]),
+			})
+			.strict(),
+		execute: async ({ uri }) => {
+			await onAction?.(`Reading ${uri.split("/").pop()} guidance`);
+			const result = await mcp.resources.read("autumn", uri);
+			const content = (result.contents ?? [])
+				.map((entry) => ("text" in entry ? entry.text : ""))
+				.join("\n\n");
+			return { content, uri };
+		},
+	});
 
 type AutumnTool = {
 	execute?: (
@@ -27,10 +57,14 @@ type ToolOptions = {
 	applyApprovalPolicy?: boolean;
 	logger?: AutumnLogger;
 	onToolCall?: (message: string) => Promise<void> | void;
-	previewCapture?: ReturnType<typeof createPreviewCapture>;
 };
 
 export { autumnMcpHeaders, createAutumnMcpClient, executeAutumnMcpTool };
+
+const stripMastraRuntimeArgs = (args: Record<string, unknown>) => {
+	const { id: _id, user: _user, ...toolArgs } = args;
+	return toolArgs;
+};
 
 export const formatToolAction = ({
 	toolName,
@@ -86,29 +120,20 @@ export const getAutumnMcpTools = async ({
 			tool.requireApproval = tool.mcp?.annotations?.destructiveHint === true;
 			if (!tool.requireApproval) tool.needsApprovalFn = undefined;
 		}
-		if (tool.execute && (options.onToolCall || options.previewCapture)) {
+		if (tool.execute && options.onToolCall) {
 			const execute = tool.execute.bind(tool);
 			tool.execute = async (args, ...rest) => {
+				const toolArgs = stripMastraRuntimeArgs(args);
 				logger.info("Calling Autumn MCP tool", {
 					event: "leaf.mcp_tool_called",
 					tool: toolName,
 				});
 				if (!isSilentTool(toolName)) {
-					await options.onToolCall?.(formatToolAction({ toolName, args }));
+					await options.onToolCall?.(
+						formatToolAction({ toolName, args: toolArgs }),
+					);
 				}
-				const result = await execute(args, ...rest);
-				if (getWriteToolForPreview(toolName)) {
-					logger.info("Captured Autumn MCP preview", {
-						event: "leaf.mcp_preview_captured",
-						data: { preview_tool: toolName },
-					});
-					options.previewCapture?.captureFromExecution({
-						args,
-						preview: result,
-						toolName,
-					});
-				}
-				return result;
+				return execute(toolArgs, ...rest);
 			};
 		}
 	}

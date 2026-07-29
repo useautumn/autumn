@@ -26,6 +26,7 @@ const FILTER_PARAM_KEYS = [
 	"version",
 	"none",
 	"processor",
+	"interval",
 	"pageSize",
 ] as const;
 
@@ -34,6 +35,7 @@ type PersistedCustomerFilters = {
 	version: string[];
 	none: boolean;
 	processor: string[];
+	interval: string[];
 	pageSize: number;
 };
 
@@ -67,6 +69,7 @@ function buildRestoredState({
 		version: filters?.version?.length ? filters.version : null,
 		none: filters?.none ? true : null,
 		processor: filters?.processor?.length ? filters.processor : null,
+		interval: filters?.interval?.length ? filters.interval : null,
 		pageSize:
 			filters?.pageSize && filters.pageSize !== DEFAULT_CUSTOMER_LIST_PAGE_SIZE
 				? filters.pageSize
@@ -80,10 +83,31 @@ const queryStatesConfig = {
 	version: parseAsArrayOf(parseAsString).withDefault([]),
 	none: parseAsBoolean.withDefault(false),
 	processor: parseAsArrayOf(parseAsString).withDefault([]),
+	interval: parseAsArrayOf(parseAsString).withDefault([]),
 	pageSize: parseAsInteger.withDefault(DEFAULT_CUSTOMER_LIST_PAGE_SIZE),
 };
 
 type QueryStates = ReturnType<typeof useQueryStates<typeof queryStatesConfig>>;
+
+export function hasActiveCustomerFilters(queryStates: QueryStates[0]) {
+	return (
+		queryStates.status.length > 0 ||
+		queryStates.version.length > 0 ||
+		queryStates.none ||
+		queryStates.processor.length > 0 ||
+		queryStates.interval.length > 0
+	);
+}
+
+export function buildCustomerFilterPayload(queryStates: QueryStates[0]) {
+	return {
+		status: queryStates.status,
+		version: queryStates.version,
+		none: queryStates.none,
+		processor: queryStates.processor,
+		interval: queryStates.interval,
+	};
+}
 
 type CursorStack = string[];
 
@@ -103,9 +127,7 @@ interface CustomerFiltersContextValue {
 const CustomerFiltersContext =
 	createContext<CustomerFiltersContextValue | null>(null);
 
-export function CustomerFiltersProvider({
-	children,
-}: { children: ReactNode }) {
+export function CustomerFiltersProvider({ children }: { children: ReactNode }) {
 	const { org } = useOrg();
 	const orgId = org?.id;
 	const env = useEnv();
@@ -123,8 +145,7 @@ export function CustomerFiltersProvider({
 		[],
 	);
 	const popCursor = useCallback(
-		() =>
-			setCursorStack((s) => (s.length > 1 ? s.slice(0, -1) : s)),
+		() => setCursorStack((s) => (s.length > 1 ? s.slice(0, -1) : s)),
 		[],
 	);
 	const resetCursor = useCallback(() => setCursorStack([""]), []);
@@ -180,6 +201,7 @@ export function CustomerFiltersProvider({
 					version: queryStates.version,
 					none: queryStates.none,
 					processor: queryStates.processor,
+					interval: queryStates.interval,
 					pageSize: queryStates.pageSize,
 				}),
 			);
@@ -192,6 +214,7 @@ export function CustomerFiltersProvider({
 		queryStates.version,
 		queryStates.none,
 		queryStates.processor,
+		queryStates.interval,
 		queryStates.pageSize,
 	]);
 

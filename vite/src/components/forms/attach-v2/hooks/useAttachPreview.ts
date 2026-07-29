@@ -59,6 +59,7 @@ export function useAttachPreview({
 		},
 		enabled: shouldEnable,
 		staleTime: 0,
+		refetchOnWindowFocus: false,
 		placeholderData: keepPreviousData,
 		retry: (failureCount, error) => {
 			const status = (error as AxiosError)?.response?.status;

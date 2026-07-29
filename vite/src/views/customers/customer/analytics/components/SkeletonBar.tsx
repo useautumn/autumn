@@ -1,5 +1,5 @@
+import { Skeleton } from "@autumn/ui";
 import { motion, type Transition } from "motion/react";
-import { Skeleton } from "@/components/ui/skeleton";
 import type { SkeletonBarConfig } from "../utils/chartGeometry";
 
 type BarMode = "settled" | "breathing" | "static";

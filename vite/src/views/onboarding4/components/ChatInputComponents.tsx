@@ -1,12 +1,12 @@
 import type { AgentPricingConfig } from "@autumn/shared";
-import { ImageIcon } from "lucide-react";
 import {
 	PromptInputAttachment,
 	PromptInputAttachments,
 	PromptInputButton,
 	PromptInputHeader,
 	usePromptInputAttachments,
-} from "@/components/ai-elements/prompt-input";
+} from "@autumn/ui/ai-elements";
+import { ImageIcon } from "lucide-react";
 
 /**
  * Type for the build_pricing tool part returned by the AI

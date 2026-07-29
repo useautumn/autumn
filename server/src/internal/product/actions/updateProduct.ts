@@ -1,18 +1,26 @@
 import {
+	ErrCode,
 	type FreeTrial,
 	type FullProduct,
-	mapToProductV2,
+	mergeBillingControls,
 	notNullish,
-	ProductNotFoundError,
 	type ProductV2,
 	productsAreSame,
 	RecaseError,
+	type UpdateLicenseParentParams,
 	UpdateProductSchema,
 	type UpdateProductV2Params,
+	type UpdateVariantParams,
 } from "@autumn/shared";
-import type { DrizzleCli } from "@/db/initDrizzle.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
-import { CusProductService } from "@/internal/customers/cusProducts/CusProductService.js";
+import { initStripeResourcesForProducts } from "@/internal/billing/v2/providers/stripe/utils/common/initStripeResourcesForProducts.js";
+import {
+	applyPreparedPlanLicenseSync,
+	validatePlanLicenseUpdate,
+} from "@/internal/licenses/actions/links/syncPlanLicenses.js";
+import { applyLicenseParentPropagation } from "@/internal/licenses/actions/propagation/applyLicenseParentPropagation.js";
+import { prepareLicenseParentPropagation } from "@/internal/licenses/actions/propagation/prepareLicenseParentPropagation.js";
+import { updateVariants } from "@/internal/product/actions/updateVariants/updateVariants.js";
 import {
 	handleNewFreeTrial,
 	validateOneOffTrial,
@@ -20,13 +28,17 @@ import {
 import { handleUpdateProductDetails } from "@/internal/products/handlers/handleUpdatePlan/updateProductDetails.js";
 import { handleVersionProductV2 } from "@/internal/products/handlers/handleVersionProduct.js";
 import { ProductService } from "@/internal/products/ProductService.js";
-import { handleNewProductItems } from "@/internal/products/product-items/productItemUtils/handleNewProductItems.js";
+import { getPlanResponse } from "@/internal/products/productUtils/productResponseUtils/getPlanResponse.js";
 import { getProductResponse } from "@/internal/products/productUtils/productResponseUtils/getProductResponse.js";
-import { initProductInStripe } from "@/internal/products/productUtils.js";
-import { rewardProgramRepo } from "@/internal/rewards/repos/index.js";
+import { productRepo } from "@/internal/products/repos/productRepo.js";
 import { JobName } from "@/queue/JobName.js";
 import { addTaskToQueue } from "@/queue/queueUtils.js";
-import { resolveInPlaceEdit } from "./inPlaceUpdateUtils.js";
+import { applyOtherProductVersions } from "./updateProduct/applyOtherProductVersions.js";
+import { prepareProductLicenseSync } from "./updateProduct/licenses/prepareProductLicenseSync.js";
+import { setupUpdateProductContext } from "./updateProduct/setupUpdateProductContext.js";
+import { shouldApplyVariantUpdates } from "./updateProduct/shouldApplyVariantUpdates.js";
+import { updateProductItems } from "./updateProduct/updateProductItems.js";
+import { validateVariantSettingsUpdate } from "./updateProduct/validateVariantSettingsUpdate.js";
 import { validateDefaultFlag } from "./validateDefaultFlag.js";
 
 interface UpdateProductParams {
@@ -36,167 +48,413 @@ interface UpdateProductParams {
 		upsert?: boolean;
 		version?: number;
 		disable_version?: boolean;
+		force_version?: boolean;
+		all_versions?: boolean;
 	};
 	updates: UpdateProductV2Params;
 	initialFullProduct?: FullProduct;
+	baseInternalProductId?: string | null;
+	propagateToVariants?: string[];
+	variantUpdates?: UpdateVariantParams[];
+	licenseParentUpdates?: UpdateLicenseParentParams[];
+	allowVariantSettingsUpdate?: boolean;
+	skipVariantUpdates?: boolean;
+	skipLicenseParentPropagation?: boolean;
 }
+
+const resolveBaseInternalProductId = async ({
+	ctx,
+	productId,
+	basePlanId,
+}: {
+	ctx: AutumnContext;
+	productId: string;
+	basePlanId: string | null;
+}) => {
+	if (basePlanId === null) return null;
+	if (basePlanId === productId) {
+		throw new RecaseError({
+			message: "A plan cannot be linked to itself as a base plan.",
+			code: ErrCode.InvalidPropagationTarget,
+			statusCode: 400,
+		});
+	}
+
+	const base = await ProductService.getFull({
+		db: ctx.db,
+		idOrInternalId: basePlanId,
+		orgId: ctx.org.id,
+		env: ctx.env,
+	});
+	if (base.base_internal_product_id !== null) {
+		throw new RecaseError({
+			message: "A variant plan cannot be used as a base plan.",
+			code: ErrCode.InvalidPropagationTarget,
+			statusCode: 400,
+		});
+	}
+
+	return base.internal_id;
+};
+
 export const updateProduct = async ({
 	ctx,
 	query,
 	productId,
-	updates,
+	updates: rawProductUpdates,
 	initialFullProduct,
+	baseInternalProductId,
+	propagateToVariants = [],
+	variantUpdates = [],
+	licenseParentUpdates,
+	allowVariantSettingsUpdate = false,
+	skipVariantUpdates = false,
+	skipLicenseParentPropagation = false,
 }: UpdateProductParams) => {
-	const { db, org, env, features, logger } = ctx;
-	const { version, upsert, disable_version } = query;
+	const { db, org, env, features } = ctx;
+	const { version, disable_version, force_version, all_versions } = query;
+	const effectiveDisableVersion = disable_version || all_versions;
+	const basePlanIdProvided = "base_plan_id" in rawProductUpdates;
+	const {
+		base_plan_id: basePlanId,
+		licenses,
+		...productUpdates
+	} = rawProductUpdates;
+	validatePlanLicenseUpdate({
+		allVersions: all_versions,
+		licenses,
+	});
 
-	const getFullProduct = async () => {
-		if (initialFullProduct) return initialFullProduct;
-		return ProductService.getFull({
+	if (force_version && disable_version) {
+		throw new RecaseError({
+			message: "Cannot use both force_version and disable_version",
+			code: ErrCode.ConflictingVersionFlags,
+			statusCode: 400,
+		});
+	}
+	if (all_versions && disable_version) {
+		throw new RecaseError({
+			message: "Cannot use both all_versions and disable_version",
+			code: ErrCode.ConflictingVersionFlags,
+			statusCode: 400,
+		});
+	}
+	if (all_versions && force_version) {
+		throw new RecaseError({
+			message: "Cannot use both all_versions and force_version",
+			code: ErrCode.ConflictingVersionFlags,
+			statusCode: 400,
+		});
+	}
+
+	const {
+		fullProduct,
+		baseBeforeUpdate,
+		currentProductV2: curProductV2,
+		rewardPrograms,
+		customerUsage,
+	} = await setupUpdateProductContext({
+		ctx,
+		productId,
+		version,
+		initialFullProduct,
+	});
+	const preparedLicenseParentPropagation = skipLicenseParentPropagation
+		? undefined
+		: await prepareLicenseParentPropagation({
+				ctx,
+				child: fullProduct,
+				targets: licenseParentUpdates ?? [],
+			});
+	const inPlaceLicenseParentTargets =
+		preparedLicenseParentPropagation?.selectedParents
+			.filter(({ hasCustomers }) => !hasCustomers && !force_version)
+			.map(({ parent }) => ({
+				plan_id: parent.id,
+				version: parent.version,
+			})) ?? [];
+	const resolvedBaseInternalProductId = basePlanIdProvided
+		? await resolveBaseInternalProductId({
+				ctx,
+				productId: fullProduct.id,
+				basePlanId: basePlanId ?? null,
+			})
+		: undefined;
+	const nextBaseInternalProductId =
+		resolvedBaseInternalProductId !== undefined
+			? resolvedBaseInternalProductId
+			: baseInternalProductId;
+	const applyBasePlanLink = async () => {
+		if (!basePlanIdProvided) return;
+		await ProductService.updateByInternalId({
 			db,
-			idOrInternalId: productId,
-			orgId: org.id,
-			env,
-			version,
+			internalId: fullProduct.internal_id,
+			update: { base_internal_product_id: resolvedBaseInternalProductId },
 		});
 	};
-
-	const [fullProduct, rewardPrograms, _defaultProds] = await Promise.all([
-		getFullProduct(),
-		rewardProgramRepo.getByProductId({
-			db,
-			productIds: [productId],
-			orgId: org.id,
-			env,
-		}),
-		ProductService.listDefault({
-			db,
-			orgId: org.id,
-			env,
-		}),
-	]);
-
-	if (!fullProduct) throw new ProductNotFoundError({ productId: productId });
-
-	const cusProductsCurVersion = await CusProductService.getByInternalProductId({
-		db,
-		internalProductId: fullProduct.internal_id,
+	validateVariantSettingsUpdate({
+		allowVariantSettingsUpdate,
+		fullProduct,
+		currentProduct: curProductV2,
+		updates: productUpdates,
 	});
 
-	const curProductV2 = mapToProductV2({
-		product: fullProduct,
-		features,
-	});
+	const applyVariantUpdates = async ({
+		latestBase,
+	}: {
+		latestBase: FullProduct;
+	}) => {
+		if (skipVariantUpdates) return;
+		if (baseBeforeUpdate.base_internal_product_id !== null) return;
+		if (
+			!shouldApplyVariantUpdates({
+				oldBase: baseBeforeUpdate,
+				latestBase,
+				propagateToVariants,
+				variantUpdates,
+				updates: productUpdates,
+			})
+		) {
+			return;
+		}
 
+		await updateVariants({
+			ctx,
+			oldBase: baseBeforeUpdate,
+			newBase: latestBase,
+			propagateToVariants,
+			variantUpdates,
+			disableVersion: effectiveDisableVersion,
+			forceVersion: force_version,
+			allVersions: all_versions,
+		});
+	};
+	const applyLicenseParentUpdates = async ({
+		latestChild,
+	}: {
+		latestChild: FullProduct;
+	}) => {
+		const latestChildPlan = await getPlanResponse({
+			ctx,
+			product: latestChild,
+			features,
+		});
+		await applyLicenseParentPropagation({
+			prepared: preparedLicenseParentPropagation,
+			oldChild: fullProduct,
+			newChild: latestChild,
+			newChildPlan: latestChildPlan,
+			forceVersion: force_version,
+			updateParent: async ({ parent, licenses, versioning }) => {
+				const updateInPlace = versioning === "in_place";
+				await updateProduct({
+					ctx,
+					productId: parent.id,
+					query: {
+						version: parent.version,
+						disable_version: updateInPlace ? true : effectiveDisableVersion,
+						force_version: updateInPlace ? undefined : force_version,
+					},
+					updates: { licenses },
+					skipLicenseParentPropagation: true,
+				});
+			},
+		});
+	};
+	const applyHistoricalVersions = async ({
+		latestProduct,
+	}: {
+		latestProduct: FullProduct;
+	}) => {
+		await applyOtherProductVersions({
+			ctx,
+			enabled: all_versions,
+			productBeforeUpdate: baseBeforeUpdate,
+			latestProduct,
+			updateVersion: async ({ product, updates }) => {
+				await updateProduct({
+					ctx,
+					productId: product.id,
+					query: { version: product.version, disable_version: true },
+					updates,
+					initialFullProduct: product,
+					allowVariantSettingsUpdate,
+					skipVariantUpdates: true,
+				});
+			},
+		});
+	};
 	const newFreeTrial =
-		"free_trial" in updates
-			? ((updates.free_trial as FreeTrial | undefined) ?? undefined)
+		"free_trial" in productUpdates
+			? ((productUpdates.free_trial as FreeTrial | undefined) ?? undefined)
 			: (curProductV2.free_trial ?? undefined);
 
 	const newProductV2: ProductV2 = {
 		...curProductV2,
-		...updates,
-		group: updates.group || curProductV2.group || "",
-		items: updates.items || [],
+		...productUpdates,
+		group: productUpdates.group || curProductV2.group || "",
+		items: productUpdates.items ?? curProductV2.items,
 		free_trial: newFreeTrial,
+		billing_controls: mergeBillingControls(
+			curProductV2.billing_controls,
+			productUpdates.billing_controls,
+		),
 	};
+
+	if (Object.keys(productUpdates).length === 0 && licenses === undefined) {
+		await applyBasePlanLink();
+		const latestProduct = basePlanIdProvided
+			? await ProductService.getFull({
+					db,
+					idOrInternalId: fullProduct.id,
+					orgId: org.id,
+					env,
+					version: fullProduct.version,
+				})
+			: fullProduct;
+		await applyVariantUpdates({ latestBase: fullProduct });
+		return getProductResponse({
+			product: latestProduct,
+			features,
+		});
+	}
 
 	await validateDefaultFlag({
 		ctx,
-		body: updates,
+		body: productUpdates,
 		curProduct: fullProduct,
 	});
+
+	const itemsExist = notNullish(productUpdates.items);
+	const customerProductExists = customerUsage.hasAnyCustomerProducts;
+	const versionableCustomerProductExists =
+		customerUsage.hasVersionableCustomerProducts;
+	const freeTrialProvided = "free_trial" in productUpdates;
+	const billingControlsProvided = "billing_controls" in productUpdates;
+	const licensesProvided = licenses !== undefined;
+
+	const same = productsAreSame({ newProductV2, curProductV2, features });
+	const billingControlsOnlyChanged =
+		billingControlsProvided &&
+		!same.billingControlsSame &&
+		same.itemsSame &&
+		same.freeTrialsSame &&
+		same.detailsSame &&
+		same.configSame &&
+		same.optionsSame &&
+		same.metadataSame;
+	const productVersioningEligible =
+		versionableCustomerProductExists &&
+		!effectiveDisableVersion &&
+		(itemsExist || freeTrialProvided || licensesProvided);
+	const productChanged =
+		!same.itemsSame || !same.freeTrialsSame || licensesProvided;
+	const billingControlsWillVersion =
+		!force_version &&
+		versionableCustomerProductExists &&
+		!effectiveDisableVersion &&
+		billingControlsOnlyChanged;
+	const productWillVersion = productVersioningEligible && productChanged;
+	const willVersion =
+		force_version || billingControlsWillVersion || productWillVersion;
+	const preparedLicenseSync = await prepareProductLicenseSync({
+		ctx,
+		fromInternalProductId: fullProduct.internal_id,
+		newProductV2,
+		baseProduct: fullProduct,
+		org,
+		features,
+		licenses,
+		newParentVersion: willVersion,
+	});
+	const createVersion = async () => {
+		const newProduct = await handleVersionProductV2({
+			ctx,
+			newProductV2,
+			latestProduct: fullProduct,
+			org,
+			env,
+			baseInternalProductId: nextBaseInternalProductId,
+			preparedPlanLicenseSync: preparedLicenseSync,
+		});
+		const latestBase = await ProductService.getFull({
+			db,
+			idOrInternalId: newProduct.id,
+			orgId: org.id,
+			env,
+		});
+		await applyVariantUpdates({ latestBase });
+		await applyLicenseParentUpdates({ latestChild: latestBase });
+		return newProduct;
+	};
+
+	if (billingControlsWillVersion) {
+		return createVersion();
+	}
 
 	await handleUpdateProductDetails({
 		db,
 		curProduct: fullProduct,
-		newProduct: UpdateProductSchema.parse(updates),
+		newProduct: UpdateProductSchema.parse(productUpdates),
 		newFreeTrial: newFreeTrial,
-		items: updates.items || curProductV2.items,
+		items: productUpdates.items || curProductV2.items,
 		org,
 		rewardPrograms,
 		logger: ctx.logger,
 	});
+	if (preparedLicenseSync && !willVersion) {
+		await applyPreparedPlanLicenseSync({
+			ctx,
+			prepared: preparedLicenseSync,
+		});
+	}
 
-	const itemsExist = notNullish(updates.items);
-
-	const cusProductExists = cusProductsCurVersion.length > 0;
+	if (notNullish(productUpdates.metadata)) {
+		await productRepo.updateMetadataByExternalId({
+			db,
+			orgId: org.id,
+			env,
+			id: productUpdates.id || fullProduct.id,
+			metadata: productUpdates.metadata,
+		});
+		fullProduct.metadata = productUpdates.metadata;
+	}
 
 	// Check if versioning is needed (customers exist AND items or free trial changed)
-	const freeTrialProvided = "free_trial" in updates;
-	if (
-		cusProductExists &&
-		!disable_version &&
-		(itemsExist || freeTrialProvided)
-	) {
-		const { itemsSame, freeTrialsSame } = productsAreSame({
-			newProductV2: newProductV2,
-			curProductV1: fullProduct,
-			features,
-		});
+	if (force_version) {
+		return createVersion();
+	}
 
-		const productSame = itemsSame && freeTrialsSame;
-
-		if (!productSame) {
-			const newProduct = await handleVersionProductV2({
-				ctx,
-				newProductV2: newProductV2,
-				latestProduct: fullProduct,
-				org,
-				env,
-			});
-
-			return newProduct;
+	if (productVersioningEligible) {
+		if (productWillVersion) {
+			return createVersion();
 		}
 
+		await applyHistoricalVersions({ latestProduct: fullProduct });
+		await applyVariantUpdates({ latestBase: fullProduct });
+		await applyLicenseParentUpdates({ latestChild: fullProduct });
+		await applyBasePlanLink();
 		return fullProduct;
 	}
 
-	const { free_trial } = updates;
+	const { free_trial } = productUpdates;
 
-	if (updates.items) {
-		const newItems = updates.items;
-		if (cusProductExists && disable_version) {
-			// Retire the shared catalog rows + insert their replacements atomically:
-			// a failure between the two must not leave the plan with retired rows
-			// and no replacement.
-			await db.transaction(async (transaction) => {
-				const tx = transaction as unknown as DrizzleCli;
-				const inPlace = await resolveInPlaceEdit({
-					db: tx,
-					items: newItems,
-					currentFullProduct: fullProduct,
-					features,
-				});
-				await handleNewProductItems({
-					db: tx,
-					curPrices: inPlace.curPrices,
-					curEnts: inPlace.curEnts,
-					newItems: inPlace.items,
-					features,
-					product: fullProduct,
-					logger: ctx.logger,
-					isCustom: false,
-				});
-			});
-		} else {
-			await handleNewProductItems({
-				db,
-				curPrices: fullProduct.prices,
-				curEnts: fullProduct.entitlements,
-				newItems,
-				features,
-				product: fullProduct,
-				logger: ctx.logger,
-				isCustom: false,
-			});
-		}
+	if (productUpdates.items) {
+		await updateProductItems({
+			ctx,
+			db,
+			fullProduct,
+			newItems: productUpdates.items,
+			features,
+			useInPlaceEdit: customerProductExists,
+			propagateToLicenseParents: inPlaceLicenseParentTargets,
+		});
 	}
 
-	const latestProductId = updates.id || fullProduct.id;
+	const latestProductId = productUpdates.id || fullProduct.id;
+	await applyBasePlanLink();
 
-	// New full product
-	const newFullProduct = await ProductService.getFull({
+	let newFullProduct = await ProductService.getFull({
 		db,
 		idOrInternalId: latestProductId,
 		orgId: org.id,
@@ -217,22 +475,32 @@ export const updateProduct = async ({
 			internalProductId: fullProduct.internal_id,
 			isCustom: false,
 		});
+		newFullProduct = await ProductService.getFull({
+			db,
+			idOrInternalId: latestProductId,
+			orgId: org.id,
+			env,
+			version: fullProduct.version,
+		});
 	}
 
-	// New full product
+	await applyHistoricalVersions({ latestProduct: newFullProduct });
+	await applyVariantUpdates({ latestBase: newFullProduct });
+	await applyLicenseParentUpdates({ latestChild: newFullProduct });
 
-	await initProductInStripe({
+	await initStripeResourcesForProducts({
 		ctx,
-		product: newFullProduct,
+		products: [newFullProduct],
+		candidateProducts: [fullProduct],
 	});
 
-	logger.info("Adding task to queue to detect base variant");
-	await addTaskToQueue({
-		jobName: JobName.DetectBaseVariant,
-		payload: {
-			curProduct: newFullProduct,
-		},
-	});
+	// logger.info("Adding task to queue to detect base variant");
+	// await addTaskToQueue({
+	// 	jobName: JobName.DetectBaseVariant,
+	// 	payload: {
+	// 		curProduct: newFullProduct,
+	// 	},
+	// });
 
 	await addTaskToQueue({
 		jobName: JobName.RewardMigration,

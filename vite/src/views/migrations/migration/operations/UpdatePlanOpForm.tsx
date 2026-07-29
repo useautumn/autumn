@@ -6,6 +6,13 @@ import type {
 } from "@autumn/shared";
 import { productV2ToBasePrice } from "@autumn/shared";
 import {
+	Select,
+	SelectContent,
+	SelectItem,
+	SelectTrigger,
+	SelectValue,
+} from "@autumn/ui";
+import {
 	CurrencyCircleDollarIcon,
 	GitBranchIcon,
 	PlusIcon,
@@ -16,14 +23,7 @@ import {
 	DropdownMenuContent,
 	DropdownMenuItem,
 	DropdownMenuTrigger,
-} from "@/components/v2/dropdowns/DropdownMenu";
-import {
-	Select,
-	SelectContent,
-	SelectItem,
-	SelectTrigger,
-	SelectValue,
-} from "@/components/v2/selects/Select";
+} from "@autumn/ui";
 import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
 import { useProductsQuery } from "@/hooks/queries/useProductsQuery";
 import { DASHED_BUTTON_CLASS } from "../shared/AddButton";
@@ -271,7 +271,9 @@ export function UpdatePlanOpForm({
 
 			{addItems.map((item, index) => (
 				<div key={`add-${index}`} className="flex items-center gap-2 group/row">
-					<span className="text-xs text-green-500/60 w-14 shrink-0 select-none">Add</span>
+					<span className="text-xs text-green-500/60 w-14 shrink-0 select-none">
+						Add
+					</span>
 					<ItemSummaryRow
 						item={item}
 						onClick={() => openSheet("edit-feature", index)}

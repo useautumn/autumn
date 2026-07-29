@@ -19,7 +19,10 @@ import {
 	FeatureOptionsSchema,
 } from "../../cusProductModels/cusProductModels.js";
 import type { DbCustomerProduct } from "../../cusProductModels/cusProductTable.js";
+import type { DbCustomerLicense } from "../../licenseModels/customerLicenseTable.js";
+import type { FullCustomerLicense } from "../../licenseModels/fullCustomerLicense.js";
 import type { MigrationItemRunData } from "../../migrationV2Models/migrationItemRunSchema.js";
+import type { DbPooledBalance } from "../../pooledBalanceModels/pooledBalanceTable.js";
 import type { EntitlementWithFeature } from "../../productModels/entModels/entModels.js";
 import type { DbFreeTrial } from "../../productModels/freeTrialModels/freeTrialTable.js";
 import type { DbPrice } from "../../productModels/priceModels/priceTable.js";
@@ -46,17 +49,7 @@ export const SubjectFlagSchema = z.object({
 	externalId: z.string().nullable(),
 });
 
-export type SubjectFlag = {
-	featureId: string;
-	internalFeatureId: string;
-	entitlementId: string;
-	customerEntitlementId: string;
-	customerProductId: string | null;
-	internalCustomerId: string;
-	internalEntityId: string | null;
-	expiresAt: number | null;
-	externalId: string | null;
-};
+export type SubjectFlag = z.infer<typeof SubjectFlagSchema>;
 
 /**
  * Schema mirror of `SubjectBalance`. Extends `FullCustomerEntitlementSchema`
@@ -87,6 +80,10 @@ export type SubjectBalance = {
 	additional_balance: number;
 	usage_allowed: boolean | null;
 	separate_interval: boolean;
+	is_pooled_balance?: boolean;
+	pooled_balance_id?: string | null;
+	pooled_contribution_id?: string | null;
+	pooled_balance?: DbPooledBalance;
 	reset_cycle_anchor: number | null;
 	next_reset_at: number | null;
 	expires_at: number | null;
@@ -167,9 +164,18 @@ export type NormalizedFullSubject = {
 	customer: Customer;
 	entity?: Entity;
 
-	customer_products: DbCustomerProduct[];
+	customer_products: (DbCustomerProduct & {
+		parent_customer_license?: DbCustomerLicense | null;
+		parent_customer_product?: Pick<
+			DbCustomerProduct,
+			"status" | "subscription_ids" | "canceled_at"
+		> | null;
+	})[];
 	customer_entitlements: SubjectBalance[];
 	customer_prices: DbCustomerPrice[];
+	/** Self-contained rows (effective plan license + product pre-resolved);
+	 *  customer subjects only — entity subjects always carry []. */
+	customer_licenses: FullCustomerLicense[];
 
 	/** Windowed-cap counter rows for ALL scopes (customer + entity;
 	 *  internal_entity_id null = customer scope), live-read from the

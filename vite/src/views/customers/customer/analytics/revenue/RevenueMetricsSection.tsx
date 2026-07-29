@@ -1,6 +1,6 @@
+import { Badge } from "@autumn/ui";
 import { CurrencyCircleDollarIcon } from "@phosphor-icons/react";
 import { useState } from "react";
-import { Badge } from "@/components/v2/badges/Badge";
 import {
 	useArpc,
 	useCustomerLeaderboard,

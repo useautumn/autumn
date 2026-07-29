@@ -43,6 +43,7 @@ export type Range = ClosedEnum<typeof Range>;
 export const BinSize = {
   Day: "day",
   Hour: "hour",
+  Week: "week",
   Month: "month",
 } as const;
 /**

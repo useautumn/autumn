@@ -1,13 +1,22 @@
-import { AUTUMN_ADMIN_OAUTH_CLIENT_ID } from "@autumn/auth/oauth";
+import {
+	AUTUMN_ADMIN_OAUTH_CLIENT_ID,
+	WEB_MCP_OAUTH_CLIENT_ID,
+} from "@autumn/auth/oauth";
 import { type AppEnv, oauthConsent } from "@autumn/shared";
-import { and, eq, isNull, ne, or, sql } from "drizzle-orm";
+import { and, eq, isNull, ne, notInArray, or, sql } from "drizzle-orm";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
+
+export const HIDDEN_OAUTH_CONSENT_CLIENT_IDS = [
+	AUTUMN_ADMIN_OAUTH_CLIENT_ID,
+	WEB_MCP_OAUTH_CLIENT_ID,
+] as const;
 
 export type OAuthConsentApiKeyRecord = {
 	id: string;
 	env: AppEnv | null;
 	oauthApiKeyId: string | null;
 	redirectUri: string | null;
+	metadata: Record<string, unknown> | null;
 };
 
 export const listOAuthConsentsByReferenceId = async ({
@@ -20,8 +29,12 @@ export const listOAuthConsentsByReferenceId = async ({
 	referenceId: string;
 	env?: AppEnv;
 	includeInternal?: boolean;
-}) =>
-	db
+}) => {
+	// The dashboard/CMA reaches the Autumn MCP through this first-party client;
+	// hide it from a user's authorized apps alongside admin/slack-admin consents.
+	const internalMcpClientId = process.env.INTERNAL_MCP_OAUTH_CLIENT_ID;
+
+	return db
 		.select({
 			id: oauthConsent.id,
 			clientId: oauthConsent.clientId,
@@ -41,11 +54,17 @@ export const listOAuthConsentsByReferenceId = async ({
 				includeInternal
 					? undefined
 					: and(
-							ne(oauthConsent.clientId, AUTUMN_ADMIN_OAUTH_CLIENT_ID),
+							notInArray(oauthConsent.clientId, [
+								...HIDDEN_OAUTH_CONSENT_CLIENT_IDS,
+							]),
+							internalMcpClientId
+								? ne(oauthConsent.clientId, internalMcpClientId)
+								: undefined,
 							sql`COALESCE(${oauthConsent.metadata}->>'kind', '') != 'slack_admin'`,
 						),
 			),
 		);
+};
 
 export const getOAuthConsentOwner = async ({
 	db,
@@ -81,12 +100,29 @@ export const getOAuthConsentApiKeyRecord = async ({
 			oauthApiKeyId: oauthConsent.oauthApiKeyId,
 			redirectUri: oauthConsent.redirectUri,
 			scopes: oauthConsent.scopes,
+			metadata: oauthConsent.metadata,
 		})
 		.from(oauthConsent)
 		.where(eq(oauthConsent.id, consentId))
 		.limit(1);
 
 	return consent ?? null;
+};
+
+export const getOAuthConsentMetadataById = async ({
+	db,
+	consentId,
+}: {
+	db: DrizzleCli;
+	consentId: string;
+}) => {
+	const [consent] = await db
+		.select({ metadata: oauthConsent.metadata })
+		.from(oauthConsent)
+		.where(eq(oauthConsent.id, consentId))
+		.limit(1);
+
+	return consent?.metadata ?? null;
 };
 
 export const listOAuthConsentsForClientUserOrg = async ({
@@ -215,6 +251,7 @@ export const oauthConsentRepo = {
 	listByReferenceId: listOAuthConsentsByReferenceId,
 	getOwner: getOAuthConsentOwner,
 	getApiKeyRecord: getOAuthConsentApiKeyRecord,
+	getMetadataById: getOAuthConsentMetadataById,
 	listForClientUserOrg: listOAuthConsentsForClientUserOrg,
 	updateEnv: updateOAuthConsentEnv,
 	getForClientUserOrg: getOAuthConsentForClientUserOrg,

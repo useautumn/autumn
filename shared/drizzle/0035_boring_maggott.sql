@@ -1,0 +1,1 @@
+CREATE INDEX CONCURRENTLY "idx_customer_products_free_trial_id" ON "customer_products" USING btree ("free_trial_id") WHERE "customer_products"."free_trial_id" IS NOT NULL;

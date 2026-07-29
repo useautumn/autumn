@@ -1,6 +1,7 @@
 import { z } from "zod/v4";
 import { CustomerBillingControlsParamsSchema } from "../../models/cusModels/billingControls/customerBillingControls";
 import { ExternalProcessorsSchema } from "../../models/genModels/processorSchemas";
+import { isValidCurrencyCode } from "../../utils/currencyUtils/stripeCurrencies";
 
 // for internal use only
 export const CreateCustomerInternalOptionsSchema = z.object({
@@ -12,6 +13,12 @@ export const CreateCustomerInternalOptionsSchema = z.object({
 	}),
 });
 
+// Canonical customer email validation — reuse anywhere an email is accepted.
+export const CustomerEmailSchema = z.email({
+	pattern: z.regexes.unicodeEmail,
+	message: "not a valid email address",
+});
+
 // Base schema without top-level .meta() to avoid side effects during imports
 // Individual field descriptions are kept as they don't cause registry conflicts
 export const CustomerDataSchema = z
@@ -19,15 +26,9 @@ export const CustomerDataSchema = z
 		name: z.string().nullish().meta({
 			description: "Customer's name",
 		}),
-		email: z
-			.email({
-				pattern: z.regexes.unicodeEmail,
-				message: "not a valid email address",
-			})
-			.nullish()
-			.meta({
-				description: "Customer's email address",
-			}),
+		email: CustomerEmailSchema.nullish().meta({
+			description: "Customer's email address",
+		}),
 
 		fingerprint: z.string().nullish().meta({
 			description:
@@ -56,6 +57,15 @@ export const CustomerDataSchema = z
 			description: "Whether to send email receipts to this customer",
 		}),
 
+		currency: z
+			.string()
+			.refine(isValidCurrencyCode, "must be a Stripe-supported currency code")
+			.nullish()
+			.meta({
+				description:
+					"Currency to bill this customer in (e.g. usd, eur). Defaults to the organization's default currency.",
+			}),
+
 		billing_controls: CustomerBillingControlsParamsSchema.optional().meta({
 			description: "Billing controls for the customer (auto top-ups, etc.)",
 		}),
@@ -65,6 +75,10 @@ export const CustomerDataSchema = z
 				disable_pooled_balance: z.boolean().optional().meta({
 					description:
 						"Whether to disable the shared customer-level pool for entities.",
+				}),
+				disable_overage_billing: z.boolean().optional().meta({
+					description:
+						"Stops Autumn from posting usage-overage line items to Stripe for this customer. Check/track and balance resets still behave normally. When set, this overrides the organization-level disable_overage_billing setting.",
 				}),
 			})
 			.optional()

@@ -1,10 +1,4 @@
-import {
-	Table,
-	TableBody,
-	TableHead,
-	TableHeader,
-	TableRow,
-} from "@/components/ui/table";
+import { Table, TableBody, TableHead, TableHeader, TableRow } from "@autumn/ui";
 
 interface SettingsTableColumn {
 	readonly label: string;
@@ -36,15 +30,13 @@ export const SettingsTable = ({ columns, children }: SettingsTableProps) => {
 						<TableHead className="h-7 w-10" style={{ width: "5%" }} />
 					</TableRow>
 				</TableHeader>
-				<TableBody className="bg-interactive-secondary">
-					{children}
-				</TableBody>
+				<TableBody className="bg-interactive-secondary">{children}</TableBody>
 			</Table>
 		</div>
 	);
 };
 
-export { TableCell, TableRow } from "@/components/ui/table";
+export { TableCell, TableRow } from "@autumn/ui";
 
 export const SETTINGS_ROW_CLASS =
 	"text-tertiary-foreground h-10 hover:bg-interactive-secondary-hover";

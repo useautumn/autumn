@@ -28,6 +28,12 @@ export const customerProductsToPhaseInvoiceItems = ({
 	const addInvoiceItems: Stripe.SubscriptionScheduleUpdateParams.Phase.AddInvoiceItem[] =
 		[];
 
+	// One-off items don't inherit the subscription's default_tax_rates, so a manual
+	// rate must be set per item or the deferred charge is billed untaxed.
+	const taxRates = billingContext.taxRateId
+		? [billingContext.taxRateId]
+		: undefined;
+
 	for (const customerProduct of customerProducts) {
 		const productStartsAt = customerProduct.starts_at;
 		const startsInThisPhase =
@@ -43,7 +49,12 @@ export const customerProductsToPhaseInvoiceItems = ({
 
 		for (const item of oneOffItems) {
 			if (item.quantity !== undefined && item.quantity <= 0) continue;
-			addInvoiceItems.push(stripeItemSpecToPhaseAddInvoiceItem({ spec: item }));
+			const addInvoiceItem = stripeItemSpecToPhaseAddInvoiceItem({
+				spec: item,
+			});
+			addInvoiceItems.push(
+				taxRates ? { ...addInvoiceItem, tax_rates: taxRates } : addInvoiceItem,
+			);
 		}
 	}
 

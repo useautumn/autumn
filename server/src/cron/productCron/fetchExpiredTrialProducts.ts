@@ -16,7 +16,6 @@ import {
 	lt,
 	notExists,
 	or,
-	sql,
 } from "drizzle-orm";
 import type { DrizzleCli } from "@/db/initDrizzle";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
@@ -39,9 +38,13 @@ export type OrgEnvExpiredTrials = {
 export const fetchExpiredTrialProducts = async ({
 	batchSize,
 	db,
+	nowMs = Date.now(),
+	internalCustomerId,
 }: {
 	batchSize: number;
 	db: DrizzleCli;
+	nowMs?: number;
+	internalCustomerId?: string;
 }) => {
 	return db
 		.select({
@@ -68,10 +71,10 @@ export const fetchExpiredTrialProducts = async ({
 				),
 				inArray(customerProducts.status, ACTIVE_STATUSES),
 				isNotNull(customerProducts.trial_ends_at),
-				lt(
-					customerProducts.trial_ends_at,
-					sql`(EXTRACT(EPOCH FROM NOW()) * 1000)::bigint`,
-				),
+				lt(customerProducts.trial_ends_at, nowMs),
+				internalCustomerId
+					? eq(customerProducts.internal_customer_id, internalCustomerId)
+					: undefined,
 			),
 		)
 		.limit(batchSize);

@@ -91,6 +91,7 @@ const buildCustomer = ({
 	processor: null,
 	processors: {},
 	send_email_receipts: false,
+	currency: null,
 	auto_topups: null,
 	spend_limits: null,
 	usage_limits: null,
@@ -149,8 +150,15 @@ const buildProduct = ({
 	version: 1,
 	processor: null,
 	base_variant_id: null,
+	base_internal_product_id: null,
 	archived: false,
 	config: { ignore_past_due: false },
+	auto_topups: null,
+	spend_limits: null,
+	usage_limits: null,
+	usage_alerts: null,
+	overage_allowed: null,
+	metadata: {},
 });
 
 const buildEntitlement = ({
@@ -182,6 +190,7 @@ const buildEntitlement = ({
 	interval_count: 1,
 	carry_from_previous: false,
 	entity_feature_id: entityFeatureId,
+	pooled: false,
 	org_id: ctx.org.id,
 	feature_id: feature.id,
 	usage_limit: null,
@@ -283,6 +292,8 @@ const buildCustomerProduct = ({
 	stripe_checkout_session_id: null,
 	previous_customer_product_id: null,
 	on_trial_end: null,
+	customer_license_link_id: null,
+	released_at: null,
 });
 
 const buildCustomerPrice = ({
@@ -334,11 +345,14 @@ const buildCustomerEntitlement = ({
 	unlimited: false,
 	balance,
 	created_at: now,
-		next_reset_at: now + 30 * 24 * 60 * 60 * 1000,
-		usage_allowed: false,
-		separate_interval: false,
-		reset_cycle_anchor: null,
-		adjustment: 0,
+	next_reset_at: now + 30 * 24 * 60 * 60 * 1000,
+	usage_allowed: false,
+	separate_interval: false,
+	is_pooled_balance: false,
+	pooled_balance_id: null,
+	pooled_contribution_id: null,
+	reset_cycle_anchor: null,
+	adjustment: 0,
 	additional_balance: 0,
 	entities: null,
 	expires_at: expiresAt,
@@ -346,6 +360,8 @@ const buildCustomerEntitlement = ({
 	customer_id: customer.id ?? null,
 	feature_id: entitlement.feature_id ?? null,
 	external_id: `bal_${key}_${suffix}`,
+	expired: null,
+	reset_by_invoice: null,
 });
 
 const buildRollover = ({
@@ -388,6 +404,7 @@ const buildSubscription = ({
 	env: ctx.env,
 	current_period_start: now,
 	current_period_end: now + 30 * 24 * 60 * 60 * 1000,
+	billing_cycle_anchor_seconds: null,
 });
 
 const buildInvoice = ({

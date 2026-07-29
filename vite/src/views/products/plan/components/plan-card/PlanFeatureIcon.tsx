@@ -1,5 +1,6 @@
 import type { Feature, ProductItem } from "@autumn/shared";
 import { UsageModel } from "@autumn/shared";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@autumn/ui";
 import {
 	BoxArrowDownIcon,
 	MoneyWavyIcon,
@@ -7,11 +8,6 @@ import {
 	XIcon,
 } from "@phosphor-icons/react";
 import type React from "react";
-import {
-	Tooltip,
-	TooltipContent,
-	TooltipTrigger,
-} from "@/components/v2/tooltips/Tooltip";
 import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
 import { getFeatureIconConfig } from "@/views/products/features/utils/getFeatureIcon";
 
@@ -102,9 +98,15 @@ const getRightIcon = (
 				color: "text-yellow-500",
 			}; // Paid - orange
 		case "none":
-			return { icon: <XIcon size={size} weight={weight} />, color: "text-subtle" }; // None - gray
+			return {
+				icon: <XIcon size={size} weight={weight} />,
+				color: "text-subtle",
+			}; // None - gray
 		default:
-			return { icon: <XIcon size={size} weight={weight} />, color: "text-subtle" }; // Default - gray
+			return {
+				icon: <XIcon size={size} weight={weight} />,
+				color: "text-subtle",
+			}; // Default - gray
 	}
 };
 

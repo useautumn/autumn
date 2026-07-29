@@ -1,11 +1,9 @@
+import { Button, Input, Label } from "@autumn/ui";
 import { Minus, Plus } from "lucide-react";
 import { FieldInfo } from "@/components/general/form/field-info";
-import { Label } from "@/components/ui/label";
-import { Button } from "@/components/v2/buttons/Button";
-import { Input } from "@/components/v2/inputs/Input";
 import { useFieldContext } from "@/hooks/form/form-context";
 import { cn } from "@/lib/utils";
-import SmallSpinner from "../../SmallSpinner";
+import { SmallSpinner } from "@autumn/ui";
 
 export function QuantityField({
 	label,

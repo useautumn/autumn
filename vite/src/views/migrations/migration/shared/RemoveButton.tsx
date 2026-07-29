@@ -1,5 +1,5 @@
+import { Button } from "@autumn/ui";
 import { XIcon } from "@phosphor-icons/react";
-import { Button } from "@/components/v2/buttons/Button";
 import { cn } from "@/lib/utils";
 
 export function RemoveButton({

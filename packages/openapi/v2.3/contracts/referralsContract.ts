@@ -1,8 +1,10 @@
 import {
+	ApiRewardsListV0Schema,
 	CreateReferralCodeParamsSchema,
 	CreateReferralCodeResponseSchema,
 	RedeemReferralCodeParamsSchema,
 	RedeemReferralCodeResponseSchema,
+	RewardsListParamsSchema,
 } from "@autumn/shared";
 import { oc } from "@orpc/contract";
 import { z } from "zod/v4";
@@ -107,6 +109,35 @@ export const referralsRedeemCodeContract = oc
 					id: "<string>",
 					customer_id: "<string>",
 					reward_id: "<string>",
+				},
+			],
+		}),
+	);
+
+export const rewardsListContract = oc
+	.route({
+		method: "POST",
+		path: "/v1/rewards.list",
+		operationId: "listRewards",
+		tags: ["rewards"],
+		description: "List the coupons and feature grants configured for the org.",
+		spec: (spec) => ({
+			...spec,
+			"x-speakeasy-name-override": "list",
+		}),
+	})
+	.input(
+		RewardsListParamsSchema.meta({
+			title: "RewardsListParams",
+			examples: [{}],
+		}),
+	)
+	.output(
+		ApiRewardsListV0Schema.meta({
+			examples: [
+				{
+					coupons: [],
+					feature_grants: [],
 				},
 			],
 		}),

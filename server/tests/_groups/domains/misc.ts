@@ -5,5 +5,11 @@ export const misc: TestGroup = {
 	description:
 		"Cron jobs, external PSPs, scenarios, rate limits, archived tests",
 	tier: "domain",
-	paths: [],
+	paths: [
+		"integration/cron",
+		"integration/external-psps",
+		"scenarios",
+		"archives",
+		"integration/others/rate-limits",
+	],
 };

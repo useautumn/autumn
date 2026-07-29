@@ -1,11 +1,11 @@
 import type { Event } from "@autumn/shared";
-import { CopyablePre } from "@/components/general/CopyablePre";
 import {
+	CopyablePre,
 	Dialog,
 	DialogContent,
 	DialogHeader,
 	DialogTitle,
-} from "@/components/v2/dialogs/Dialog";
+} from "@autumn/ui";
 
 export function EventDetailsDialog({
 	event,
@@ -31,7 +31,7 @@ export function EventDetailsDialog({
 
 	return (
 		<Dialog open={open} onOpenChange={setOpen}>
-			<DialogContent className="max-w-xl">
+			<DialogContent className="max-w-xl [&>*]:min-w-0">
 				<DialogHeader>
 					<DialogTitle>Event Details</DialogTitle>
 				</DialogHeader>

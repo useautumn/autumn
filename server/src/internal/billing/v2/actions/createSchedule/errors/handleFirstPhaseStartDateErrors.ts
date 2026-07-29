@@ -8,7 +8,7 @@ import {
 import { assertNoBackdateWithExistingSubscription } from "@/internal/billing/v2/utils/backdate/assertNoBackdateWithExistingSubscription";
 import { assertStripeBackdateInvoiceLineItemLimit } from "@/internal/billing/v2/utils/backdate/stripeBackdateInvoiceLimit";
 
-const FIRST_PHASE_TOLERANCE_MS = ms.minutes(15);
+export const FIRST_PHASE_TOLERANCE_MS = ms.minutes(15);
 
 export const handleFirstPhaseStartDateErrors = ({
 	billingContext,

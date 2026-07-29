@@ -11,7 +11,13 @@
  */
 
 import { expect, test } from "bun:test";
-import { type ApiCustomerV3, applyProration } from "@autumn/shared";
+import {
+	type ApiCustomerV3,
+	applyProration,
+	type LimitedItem,
+	OnDecrease,
+	OnIncrease,
+} from "@autumn/shared";
 import { expectCustomerInvoiceCorrect } from "@tests/integration/billing/utils/expectCustomerInvoiceCorrect";
 import {
 	expectProductActive,
@@ -24,6 +30,7 @@ import { products } from "@tests/utils/fixtures/products";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
 import { Decimal } from "decimal.js";
+import { constructArrearProratedItem } from "@/utils/scriptUtils/constructItem.js";
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // TEST 1: Cancel immediately - base price + prepaid messages (start of cycle)
@@ -388,9 +395,17 @@ test.concurrent(`${chalk.yellowBright("cancel immediately billing: base + alloca
 	const pricePerSeat = 10;
 	const basePrice = 20;
 
-	const allocatedItem = items.allocatedUsers({
+	// Mid-cycle seat adds must prorate — the fixture default (bill_immediately)
+	// charges the full cycle price, which this test's proration math doesn't model.
+	const allocatedItem = constructArrearProratedItem({
+		featureId: TestFeature.Users,
+		pricePerUnit: pricePerSeat,
 		includedUsage: 0, // No free seats
-	});
+		config: {
+			on_increase: OnIncrease.ProrateImmediately,
+			on_decrease: OnDecrease.None,
+		},
+	}) as LimitedItem;
 
 	const pro = products.pro({
 		id: "pro",

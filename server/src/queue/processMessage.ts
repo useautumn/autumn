@@ -1,3 +1,4 @@
+import { ErrCode, RecaseError } from "@autumn/shared";
 import type { Message } from "@aws-sdk/client-sqs";
 import * as Sentry from "@sentry/bun";
 import chalk from "chalk";
@@ -6,29 +7,38 @@ import { isTransientDbError } from "@/db/dbUtils.js";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 import { logger } from "@/external/logtail/logtailUtils.js";
 import { isTransientRedisError } from "@/external/redis/utils/isTransientRedisError.js";
+import {
+	runStripeWebhookReplay,
+	StripeWebhookReplayInFlightError,
+} from "@/external/stripe/webhookReplay/runStripeWebhookReplay.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { runActionHandlerTask } from "@/internal/analytics/runActionHandlerTask.js";
 import { autoTopup } from "@/internal/balances/autoTopUp/autoTopup.js";
+import { batchResetCustomerEntitlementsV2 } from "@/internal/balances/batchReset/batchResetCustomerEntitlementsV2.js";
 import { runInsertEventBatch } from "@/internal/balances/events/runInsertEventBatch.js";
 import { expireLock } from "@/internal/balances/finalizeLock/expireLock.js";
+import { runQueuedFinalizeLock } from "@/internal/balances/finalizeLock/runQueuedFinalizeLock.js";
 import { runQueuedTrack } from "@/internal/balances/track/runQueuedTrack.js";
+import { runUpdateBalanceV2 } from "@/internal/balances/updateBalance/v2/updateBalanceV2.js";
 import { refreshEntityAggregateCache } from "@/internal/balances/utils/refreshEntityAggregate/index.js";
-import { syncItemV3 } from "@/internal/balances/utils/sync/syncItemV3.js";
 import { syncItemV4 } from "@/internal/balances/utils/sync/syncItemV4.js";
+import { syncItemV5 } from "@/internal/balances/utils/sync/syncItemV5.js";
 import { grantCheckoutReward } from "@/internal/billing/v2/workflows/grantCheckoutReward/grantCheckoutReward.js";
 import { sendProductsUpdated } from "@/internal/billing/v2/workflows/sendProductsUpdated/sendProductsUpdated.js";
 import { storeDeferredInvoiceLineItems } from "@/internal/billing/v2/workflows/storeDeferredInvoiceLineItems/storeDeferredInvoiceLineItems.js";
 import { storeInvoiceLineItems } from "@/internal/billing/v2/workflows/storeInvoiceLineItems/storeInvoiceLineItems.js";
 import { batchResetCustomerEntitlements } from "@/internal/customers/actions/resetCustomerEntitlements/batchResetCustomerEntitlements.js";
+import { replayFailedCustomerCreation } from "@/internal/customers/recovery/replayFailedCustomerCreation.js";
 import { runClearCreditSystemCacheTask } from "@/internal/features/featureActions/runClearCreditSystemCacheTask.js";
 import { generateFeatureDisplay } from "@/internal/features/workflows/generateFeatureDisplay.js";
 import { runMigrationTask } from "@/internal/migrations/runMigrationTask.js";
 import { runRewardMigrationTask } from "@/internal/migrations/runRewardMigrationTask.js";
+import { isBatchResetEnabled } from "@/internal/misc/batchReset/batchResetConfigStore.js";
 import { detectBaseVariant } from "@/internal/products/productUtils/detectProductVariant.js";
 import { runTriggerCheckoutReward } from "@/internal/rewards/actions/triggerCheckoutReward.js";
 import { generateId } from "@/utils/genUtils.js";
 import { addWorkflowToLogs } from "@/utils/logging/addContextToLogs.js";
-import { maskExtraLogs } from "@/utils/logging/maskExtraLogs.js";
+import { logContextExtras } from "@/utils/logging/logContextExtras.js";
 import { withWorkerSpan } from "@/utils/otel/withWorkerSpan.js";
 import { setSentryTags } from "../external/sentry/sentryUtils.js";
 import { createWorkerContext } from "./createWorkerContext.js";
@@ -44,6 +54,17 @@ export interface SqsJob {
 	data: any;
 }
 
+const isClaimContestedError = ({ error }: { error: unknown }): boolean => {
+	if (!(error instanceof RecaseError)) return false;
+	const { data } = error;
+	return (
+		typeof data === "object" &&
+		data !== null &&
+		"blockingStatus" in data &&
+		data.blockingStatus === "RESERVATION_ALREADY_PROCESSING"
+	);
+};
+
 export const shouldRetrySqsJobError = ({
 	jobName,
 	error,
@@ -52,12 +73,37 @@ export const shouldRetrySqsJobError = ({
 	error: unknown;
 }) => {
 	switch (jobName) {
-		case JobName.SyncBalanceBatchV3:
+		case JobName.CustomerCreationRecovery:
+			return isTransientDbError({ error }) || isTransientRedisError({ error });
 		case JobName.SyncBalanceBatchV4:
 		case JobName.RefreshEntityAggregate:
 			return isTransientDbError({ error });
+		// Signal jobs are meaningless without Redis: an unreachable Redis must
+		// leave the message in SQS for redelivery, not swallow-and-ack.
+		case JobName.SyncCustomerDirty:
 		case JobName.Track:
+		case JobName.UpdateBalance:
 			return isTransientDbError({ error }) || isTransientRedisError({ error });
+		// Finalize replays also redeliver while a dying attempt's claim marker
+		// clears — dropping one leaks the customer's reserved balance.
+		case JobName.FinalizeLock:
+			return (
+				isTransientDbError({ error }) ||
+				isTransientRedisError({ error }) ||
+				isClaimContestedError({ error })
+			);
+		// Top-up shares the customer billing lock — retry instead of dropping the job
+		// when it collides with an attach or checkout materialization.
+		case JobName.AutoTopUp:
+			return (
+				error instanceof RecaseError && error.code === ErrCode.LockAlreadyExists
+			);
+		case JobName.StripeWebhookReplay:
+			return (
+				error instanceof StripeWebhookReplayInFlightError ||
+				isTransientDbError({ error }) ||
+				isTransientRedisError({ error })
+			);
 		default:
 			return false;
 	}
@@ -95,6 +141,23 @@ export const processMessage = async ({
 	let workerCtx: AutumnContext | undefined;
 
 	const executeJob = async () => {
+		if (job.name === JobName.BatchResetCusEnts && !isBatchResetEnabled()) {
+			workerLogger.info(
+				"Batch reset skipped because the edge config is disabled",
+			);
+			return;
+		}
+
+		// Reset-ID payload (no orgId/env): builds its own per-org contexts.
+		if (job.name === JobName.BatchResetCustomerEntitlementsV2) {
+			await batchResetCustomerEntitlementsV2({
+				db,
+				logger: workerLogger,
+				payload: job.data,
+			});
+			return;
+		}
+
 		if (job.name === JobName.DetectBaseVariant) {
 			await detectBaseVariant({
 				db,
@@ -114,11 +177,15 @@ export const processMessage = async ({
 		}
 
 		// Jobs below need worker context
+		const usesCustomerCache =
+			job.name === JobName.Track ||
+			job.name === JobName.UpdateBalance ||
+			job.name === JobName.FinalizeLock;
 		const ctx = await createWorkerContext({
 			db,
 			payload: job.data,
 			logger: workerLogger,
-			skipCache: job.name !== JobName.Track,
+			skipCache: !usesCustomerCache,
 		});
 		workerCtx = ctx;
 
@@ -135,6 +202,29 @@ export const processMessage = async ({
 				return;
 			}
 			await runMigrationTask({ ctx, payload: job.data });
+			return;
+		}
+
+		if (job.name === JobName.CustomerCreationRecovery) {
+			if (!ctx) {
+				throw new Error("No context found for customer creation recovery job");
+			}
+			await replayFailedCustomerCreation({
+				ctx,
+				payload: job.data,
+			});
+			return;
+		}
+
+		if (job.name === JobName.StripeWebhookReplay) {
+			if (!ctx) {
+				workerLogger.error("No context found for stripe webhook replay job");
+				return;
+			}
+			await runStripeWebhookReplay({
+				ctx,
+				payload: job.data,
+			});
 			return;
 		}
 
@@ -182,16 +272,6 @@ export const processMessage = async ({
 			return;
 		}
 
-		if (job.name === JobName.SyncBalanceBatchV3) {
-			if (!ctx) {
-				workerLogger.error("No context found for sync balance batch v3 job");
-				return;
-			}
-
-			await syncItemV3({ ctx, payload: job.data });
-			return;
-		}
-
 		if (job.name === JobName.SyncBalanceBatchV4) {
 			if (!ctx) {
 				workerLogger.error("No context found for sync balance batch v4 job");
@@ -199,6 +279,16 @@ export const processMessage = async ({
 			}
 
 			await syncItemV4({ ctx, payload: job.data });
+			return;
+		}
+
+		if (job.name === JobName.SyncCustomerDirty) {
+			if (!ctx) {
+				workerLogger.error("No context found for sync customer dirty job");
+				return;
+			}
+
+			await syncItemV5({ ctx, payload: job.data });
 			return;
 		}
 
@@ -213,6 +303,21 @@ export const processMessage = async ({
 				body: job.data.body,
 				apiVersion: job.data.apiVersion,
 			});
+			return;
+		}
+
+		if (job.name === JobName.UpdateBalance) {
+			if (!ctx) {
+				workerLogger.error("No context found for update balance job");
+				return;
+			}
+
+			await runUpdateBalanceV2({
+				ctx,
+				params: job.data.params,
+				targetBalance: job.data.targetBalance,
+			});
+
 			return;
 		}
 
@@ -323,7 +428,24 @@ export const processMessage = async ({
 			});
 			return;
 		}
+
+		if (job.name === JobName.FinalizeLock) {
+			if (!ctx) {
+				workerLogger.error("No context found for finalize lock job");
+				return;
+			}
+			await runQueuedFinalizeLock({
+				ctx,
+				params: job.data.params,
+			});
+			return;
+		}
 	};
+
+	// Queue dwell = SQS SentTimestamp → processing start. Total message age:
+	// includes prior delivery attempts on retry (SentTimestamp never resets).
+	const sentAtMs = Number(message.Attributes?.SentTimestamp);
+	const receiveCount = Number(message.Attributes?.ApproximateReceiveCount);
 
 	try {
 		await withWorkerSpan({
@@ -333,6 +455,14 @@ export const processMessage = async ({
 				org_id: job.data?.orgId,
 				env: job.data?.env,
 				customer_id: job.data?.customerId,
+			},
+			attributes: {
+				...(Number.isFinite(sentAtMs) && {
+					"queue.dwell_ms": Math.max(0, Date.now() - sentAtMs),
+				}),
+				...(Number.isFinite(receiveCount) && {
+					"queue.receive_count": receiveCount,
+				}),
 			},
 			fn: executeJob,
 		});
@@ -364,19 +494,8 @@ export const processMessage = async ({
 			});
 		}
 	} finally {
-		if (workerCtx && Object.keys(workerCtx.extraLogs).length > 0) {
-			const maskedLogs = maskExtraLogs(workerCtx.extraLogs);
-			const finalLogger = workerCtx.logger ?? workerLogger;
-			finalLogger.info(`[${job.name}] Finished`, {
-				extras: maskedLogs,
-				done: true,
-			});
-
-			if (process.env.NODE_ENV === "development") {
-				finalLogger.debug(
-					`FINISHED PROCESSING JOB ${job.name}, EXTRA LOGS: ${JSON.stringify(maskedLogs, null, 2)}`,
-				);
-			}
+		if (workerCtx) {
+			logContextExtras({ ctx: workerCtx, message: `[${job.name}] Finished` });
 		}
 	}
 };

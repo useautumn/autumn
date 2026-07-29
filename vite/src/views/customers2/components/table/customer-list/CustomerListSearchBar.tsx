@@ -1,7 +1,7 @@
+import { Input } from "@autumn/ui";
 import { ListMagnifyingGlassIcon } from "@phosphor-icons/react";
 import { debounce } from "lodash";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Input } from "@/components/v2/inputs/Input";
 import { useCusSearchQuery } from "@/views/customers/hooks/useCusSearchQuery";
 import { useCustomerFilters } from "@/views/customers/hooks/useCustomerFilters";
 
@@ -43,13 +43,17 @@ export function CustomerListSearchBar() {
 			/>
 			<Input
 				value={localQuery}
-			onChange={(e) => {
-				const raw = e.target.value;
-				setLocalQuery(raw);
-				debouncedSearch(raw.trim());
-			}}
+				onChange={(e) => {
+					const raw = e.target.value;
+					setLocalQuery(raw);
+					debouncedSearch(raw.trim());
+				}}
 				className="pl-8! text-sm w-full"
-				placeholder={totalCount > 0 ? `Search ${Intl.NumberFormat("en-US").format(totalCount)} customers` : "Search customers"}
+				placeholder={
+					totalCount > 0
+						? `Search ${Intl.NumberFormat("en-US").format(totalCount)} customers`
+						: "Search customers"
+				}
 			/>
 		</div>
 	);

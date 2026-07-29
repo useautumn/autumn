@@ -17,6 +17,7 @@ import {
 	member,
 	organizations,
 } from "@autumn/shared";
+import { DEFAULT_SLACK_BOT_SCOPES } from "@autumn/shared/utils/auth/slackScopes";
 import { eq } from "drizzle-orm";
 import { db } from "../src/lib/db.js";
 import { replaceInstallation } from "../src/providers/slack/installations.js";
@@ -25,25 +26,6 @@ import { replaceInstallation } from "../src/providers/slack/installations.js";
 const SEED_ORG_SLUG = "unit-test-org";
 const SEED_ORG_ID_FALLBACK = "org_2sWv2S8LJ9iaTjLI6UtNsfL88Kt";
 const SEED_USER_FALLBACK = "user_setup_test_inviter";
-
-// Stored on the installation but not consulted at runtime; mirror the dev app's
-// bot scopes for fidelity.
-const SLACK_BOT_SCOPES = [
-	"app_mentions:read",
-	"assistant:write",
-	"channels:history",
-	"channels:read",
-	"chat:write",
-	"files:read",
-	"groups:history",
-	"groups:read",
-	"im:history",
-	"im:read",
-	"im:write",
-	"mpim:history",
-	"mpim:read",
-	"users:read",
-];
 
 const log = (message: string) => console.log(`[seed-slack] ${message}`);
 
@@ -117,7 +99,7 @@ const main = async () => {
 		botAccessToken: botToken,
 		botUserId: auth.user_id,
 		provider: "slack",
-		scopes: SLACK_BOT_SCOPES,
+		scopes: [...DEFAULT_SLACK_BOT_SCOPES],
 		state,
 		workspaceId: auth.team_id,
 		workspaceName: auth.team ?? auth.team_id,

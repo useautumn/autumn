@@ -1,26 +1,25 @@
 import { AppEnv, type ProductV2 } from "@autumn/shared";
-import type { AxiosError } from "axios";
-import { useState } from "react";
-import { useNavigate } from "react-router";
-import { toast } from "sonner";
-import { Button } from "@/components/v2/buttons/Button";
 import {
+	Button,
 	Dialog,
 	DialogContent,
 	DialogFooter,
 	DialogHeader,
 	DialogTitle,
-} from "@/components/v2/dialogs/Dialog";
-import { FormLabel } from "@/components/v2/form/FormLabel";
-import { Input } from "@/components/v2/inputs/Input";
-import {
+	FormLabel,
+	Input,
 	Select,
 	SelectContent,
 	SelectItem,
 	SelectTrigger,
 	SelectValue,
-} from "@/components/v2/selects/Select";
+} from "@autumn/ui";
+import type { AxiosError } from "axios";
+import { useState } from "react";
+import { useNavigate } from "react-router";
+import { toast } from "sonner";
 import { useProductsQuery } from "@/hooks/queries/useProductsQuery";
+import { useActiveSandbox } from "@/hooks/sandbox/useActiveSandbox";
 import { ProductService } from "@/services/products/ProductService";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
 import { useEnv } from "@/utils/envUtils";
@@ -41,8 +40,13 @@ export const CopyProductDialog = ({
 }) => {
 	const env = useEnv();
 	const axiosInstance = useAxiosInstance({ env });
+	const activeSandbox = useActiveSandbox();
 	const { refetch } = useProductsQuery();
 	const navigate = useNavigate();
+
+	// Inside a named sandbox, "Copy to Sandbox/Production" promotes into the
+	// master org (a different org), so a same-env same-id copy isn't a collision.
+	const inNamedSandbox = env === AppEnv.Sandbox && !!activeSandbox;
 
 	const [loading, setLoading] = useState(false);
 	const [name, setName] = useState(product.name);
@@ -62,8 +66,9 @@ export const CopyProductDialog = ({
 			else toast.error("ID cannot be empty");
 			return;
 		}
-		// 2. If env is the same and id is same, throw error
-		if (env === effectiveEnv && id === product.id) {
+		// 2. Same-org same-env copy with an unchanged id would collide (skip this
+		// when promoting from a named sandbox — the target is the master org).
+		if (!inNamedSandbox && env === effectiveEnv && id === product.id) {
 			toast.error("Plan ID already exists");
 			return;
 		}
@@ -89,12 +94,12 @@ export const CopyProductDialog = ({
 
 			if (onSuccess) {
 				await onSuccess(copiedProduct);
-			} else if (env === effectiveEnv) {
-				// Only navigate if copying to the same environment
+			} else if (!inNamedSandbox && env === effectiveEnv) {
+				// Same-org duplicate lands in this view; a promote goes to another
+				// org, so don't navigate to a same-id plan in the current context.
 				navigateTo(`/products/${id}`, navigate);
 			}
 		} catch (error: unknown) {
-			console.log("Error copying product", error);
 			toast.error(getBackendErr(error as AxiosError, "Failed to copy plan"));
 		} finally {
 			setLoading(false);
@@ -134,11 +139,14 @@ export const CopyProductDialog = ({
 					{!targetEnv && (
 						<div>
 							<FormLabel>Copy to environment</FormLabel>
-						<Select
-							value={toEnv}
-							onValueChange={(value) => setToEnv(value as AppEnv)}
-							items={{ [AppEnv.Live]: "Production", [AppEnv.Sandbox]: "Sandbox" }}
-						>
+							<Select
+								value={toEnv}
+								onValueChange={(value) => setToEnv(value as AppEnv)}
+								items={{
+									[AppEnv.Live]: "Production",
+									[AppEnv.Sandbox]: "Sandbox",
+								}}
+							>
 								<SelectTrigger className="w-5/12">
 									<SelectValue placeholder="Select environment" />
 								</SelectTrigger>

@@ -1,16 +1,20 @@
-import Editor from "@monaco-editor/react";
-import { useEffect, useState } from "react";
-import { toast } from "sonner";
-import { Badge } from "@/components/v2/badges/Badge";
-import { Button } from "@/components/v2/buttons/Button";
 import {
+	Badge,
+	Button,
 	Dialog,
 	DialogContent,
 	DialogDescription,
 	DialogFooter,
 	DialogHeader,
 	DialogTitle,
-} from "@/components/v2/dialogs/Dialog";
+	Input,
+	Separator,
+	Skeleton,
+	Switch,
+} from "@autumn/ui";
+import Editor from "@monaco-editor/react";
+import { useEffect, useState } from "react";
+import { toast } from "sonner";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
 import { getBackendErr } from "@/utils/genUtils";
 
@@ -20,7 +24,7 @@ type FeatureFlagConfig = {
 			disableRevenueMetrics: boolean;
 		};
 	};
-	skipOverageSubmissionFlags: Record<string, string[]>;
+	disableOverageBillingFlags: Record<string, string[]>;
 	configHealthy: boolean;
 	configConfigured: boolean;
 	lastSuccessAt: string | null;
@@ -29,48 +33,20 @@ type FeatureFlagConfig = {
 
 const DEFAULT_CONFIG: FeatureFlagConfig = {
 	maintenanceModes: { analytics: { disableRevenueMetrics: false } },
-	skipOverageSubmissionFlags: {},
+	disableOverageBillingFlags: {},
 	configHealthy: false,
 	configConfigured: false,
 	lastSuccessAt: null,
 	error: null,
 };
 
-function FlagToggle({
-	label,
-	description,
-	checked,
-	onChange,
-}: {
-	label: string;
-	description: string;
-	checked: boolean;
-	onChange: (v: boolean) => void;
-}) {
-	return (
-		<div className="flex items-center justify-between rounded-lg border border-border p-3">
-			<div className="flex flex-col gap-0.5">
-				<div className="text-sm font-medium text-foreground">{label}</div>
-				<div className="text-xs text-tertiary-foreground">{description}</div>
-			</div>
-			<button
-				type="button"
-				role="switch"
-				aria-checked={checked}
-				onClick={() => onChange(!checked)}
-				className={`relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors focus-visible:outline-none ${
-					checked ? "bg-red-500" : "bg-input"
-				}`}
-			>
-				<span
-					className={`pointer-events-none inline-block h-4 w-4 rounded-full bg-white shadow-lg transform transition-transform ${
-						checked ? "translate-x-4" : "translate-x-0"
-					}`}
-				/>
-			</button>
-		</div>
-	);
-}
+const getStatusMessage = ({ config }: { config: FeatureFlagConfig }) => {
+	if (config.configConfigured === false) {
+		return "Feature flags config is missing in S3, so every flag below stays off.";
+	}
+
+	return config.error ?? "Saved changes reach all servers within 10 seconds.";
+};
 
 export function FeatureFlagsDialog({
 	open,
@@ -86,8 +62,6 @@ export function FeatureFlagsDialog({
 	const [jsonText, setJsonText] = useState("");
 	const [jsonError, setJsonError] = useState<string | null>(null);
 	const [syncSource, setSyncSource] = useState<"form" | "json">("form");
-
-	// Overage submission form state
 	const [newOrgId, setNewOrgId] = useState("");
 	const [newCustomerIds, setNewCustomerIds] = useState("");
 
@@ -112,18 +86,25 @@ export function FeatureFlagsDialog({
 							...(data.maintenanceModes?.analytics ?? {}),
 						},
 					},
-					skipOverageSubmissionFlags: {
-						...DEFAULT_CONFIG.skipOverageSubmissionFlags,
-						...(data.skipOverageSubmissionFlags ?? {}),
+					disableOverageBillingFlags: {
+						...DEFAULT_CONFIG.disableOverageBillingFlags,
+						...(data.disableOverageBillingFlags ?? {}),
 					},
 				};
 				setConfig(merged);
-				const { configHealthy: _h, configConfigured: _c, lastSuccessAt: _l, error: _e, ...flagsOnly } = merged;
+				const {
+					configHealthy: _h,
+					configConfigured: _c,
+					lastSuccessAt: _l,
+					error: _e,
+					...flagsOnly
+				} = merged;
 				setJsonText(JSON.stringify(flagsOnly, null, 2));
 				setSyncSource("form");
 			})
 			.catch((error) => {
-				if (!cancelled) toast.error(getBackendErr(error, "Failed to load feature flags"));
+				if (!cancelled)
+					toast.error(getBackendErr(error, "Failed to load feature flags"));
 			})
 			.finally(() => {
 				if (!cancelled) setLoading(false);
@@ -137,7 +118,13 @@ export function FeatureFlagsDialog({
 	// Form -> JSON sync
 	useEffect(() => {
 		if (syncSource !== "form") return;
-		const { configHealthy: _h, configConfigured: _c, lastSuccessAt: _l, error: _e, ...flagsOnly } = config;
+		const {
+			configHealthy: _h,
+			configConfigured: _c,
+			lastSuccessAt: _l,
+			error: _e,
+			...flagsOnly
+		} = config;
 		setJsonText(JSON.stringify(flagsOnly, null, 2));
 		setJsonError(null);
 	}, [config, syncSource]);
@@ -146,7 +133,10 @@ export function FeatureFlagsDialog({
 		setSyncSource("form");
 		setConfig((prev) => {
 			const next = structuredClone(prev);
-			let node: Record<string, unknown> = next as unknown as Record<string, unknown>;
+			let node: Record<string, unknown> = next as unknown as Record<
+				string,
+				unknown
+			>;
 			for (let i = 0; i < path.length - 1; i++) {
 				node = node[path[i]] as Record<string, unknown>;
 			}
@@ -171,7 +161,8 @@ export function FeatureFlagsDialog({
 						...(parsed.maintenanceModes?.analytics ?? {}),
 					},
 				},
-				skipOverageSubmissionFlags: parsed.skipOverageSubmissionFlags ?? prev.skipOverageSubmissionFlags,
+				disableOverageBillingFlags:
+					parsed.disableOverageBillingFlags ?? prev.disableOverageBillingFlags,
 			}));
 			setJsonError(null);
 		} catch {
@@ -205,17 +196,20 @@ export function FeatureFlagsDialog({
 		}
 	};
 
-	const addOverageEntry = () => {
+	const addDisableOverageBillingEntry = () => {
 		if (!newOrgId.trim() || !newCustomerIds.trim()) return;
 		const orgId = newOrgId.trim();
-		const customerIds = newCustomerIds.split(",").map((id) => id.trim()).filter(Boolean);
+		const customerIds = newCustomerIds
+			.split(",")
+			.map((id) => id.trim())
+			.filter(Boolean);
 		if (customerIds.length === 0) return;
 
 		setSyncSource("form");
 		setConfig((prev) => ({
 			...prev,
-			skipOverageSubmissionFlags: {
-				...prev.skipOverageSubmissionFlags,
+			disableOverageBillingFlags: {
+				...prev.disableOverageBillingFlags,
 				[orgId]: customerIds,
 			},
 		}));
@@ -223,12 +217,12 @@ export function FeatureFlagsDialog({
 		setNewCustomerIds("");
 	};
 
-	const removeOverageEntry = (orgId: string) => {
+	const removeDisableOverageBillingEntry = (orgId: string) => {
 		setSyncSource("form");
 		setConfig((prev) => {
-			const next = { ...prev.skipOverageSubmissionFlags };
+			const next = { ...prev.disableOverageBillingFlags };
 			delete next[orgId];
-			return { ...prev, skipOverageSubmissionFlags: next };
+			return { ...prev, disableOverageBillingFlags: next };
 		});
 	};
 
@@ -236,97 +230,146 @@ export function FeatureFlagsDialog({
 		<Dialog open={open} onOpenChange={onOpenChange}>
 			<DialogContent className="max-w-4xl bg-card">
 				<DialogHeader>
-					<DialogTitle>Feature Flags</DialogTitle>
-					<DialogDescription>
-						Toggle flags on/off. Changes propagate to all servers within 30 seconds.
+					<DialogTitle className="text-balance">Feature Flags</DialogTitle>
+					<DialogDescription className="text-pretty">
+						Kill switches for live behavior. Everything here takes effect the
+						moment you save.
 					</DialogDescription>
 				</DialogHeader>
 
-				{loading ? (
-					<div className="py-8 text-sm text-tertiary-foreground text-center">Loading...</div>
-				) : (
+				{loading && (
 					<div className="grid grid-cols-[300px_1fr] gap-6">
-						{/* Left: toggles */}
+						<Skeleton className="h-64" />
+						<Skeleton className="h-64" />
+					</div>
+				)}
+
+				{!loading && (
+					<div className="grid grid-cols-[300px_1fr] gap-6">
 						<div className="flex flex-col gap-4">
-							<div className="text-xs font-medium text-tertiary-foreground uppercase tracking-wide">Maintenance Modes</div>
+							<div className="text-xs font-medium text-tertiary-foreground uppercase tracking-wide">
+								Maintenance modes
+							</div>
 
-							<FlagToggle
-								label="Disable Revenue Metrics"
-								description="Disables revenue analytics charts and API endpoints."
-								checked={config.maintenanceModes.analytics.disableRevenueMetrics}
-								onChange={(v) => setFlag(["maintenanceModes", "analytics", "disableRevenueMetrics"], v)}
-							/>
-
-							<div className="text-xs font-medium text-tertiary-foreground uppercase tracking-wide">Skip Overage Submission</div>
-							<div className="rounded-lg border border-border p-3 flex flex-col gap-2">
-								{Object.entries(config.skipOverageSubmissionFlags).length === 0 && (
-									<div className="text-xs text-tertiary-foreground italic">No entries</div>
-								)}
-								{Object.entries(config.skipOverageSubmissionFlags).map(([orgId, customerIds]) => (
-									<div key={orgId} className="flex items-center justify-between gap-2">
-										<div className="min-w-0 flex-1">
-											<div className="text-xs font-mono text-foreground truncate">{orgId}</div>
-											<div className="text-xs text-tertiary-foreground truncate">{customerIds.join(", ")}</div>
-										</div>
-										<button
-											type="button"
-											onClick={() => removeOverageEntry(orgId)}
-											className="shrink-0 text-tertiary-foreground hover:text-red-500 transition-colors"
-										>
-											<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-												<path d="M18 6L6 18M6 6l12 12" />
-											</svg>
-										</button>
+							<div className="flex items-center justify-between gap-6 rounded-lg border border-border p-3">
+								<div className="flex flex-col gap-1">
+									<div className="text-sm font-medium text-foreground">
+										Turn off revenue metrics
 									</div>
-								))}
+									<div className="text-pretty text-xs text-tertiary-foreground">
+										Revenue charts and endpoints stop returning data.
+									</div>
+								</div>
+								<Switch
+									aria-label="Turn off revenue metrics"
+									checked={
+										config.maintenanceModes.analytics.disableRevenueMetrics
+									}
+									onCheckedChange={(value) =>
+										setFlag(
+											[
+												"maintenanceModes",
+												"analytics",
+												"disableRevenueMetrics",
+											],
+											value,
+										)
+									}
+								/>
+							</div>
+
+							<div className="flex flex-col gap-1">
+								<div className="text-xs font-medium text-tertiary-foreground uppercase tracking-wide">
+									Overage billing exemptions
+								</div>
+								<div className="text-pretty text-xs text-tertiary-foreground">
+									Listed customers stop being billed for overages.
+								</div>
+							</div>
+							<div className="rounded-lg border border-border p-3 flex flex-col gap-2">
+								{Object.entries(config.disableOverageBillingFlags).length ===
+									0 && (
+									<div className="text-pretty text-xs text-tertiary-foreground italic">
+										No exemptions — every customer is billed for overages.
+									</div>
+								)}
+								{Object.entries(config.disableOverageBillingFlags).map(
+									([orgId, customerIds]) => (
+										<div
+											key={orgId}
+											className="flex items-center justify-between gap-2"
+										>
+											<div className="min-w-0 flex-1">
+												<div className="text-xs font-mono text-foreground truncate">
+													{orgId}
+												</div>
+												<div className="text-xs text-tertiary-foreground truncate">
+													{customerIds.join(", ")}
+												</div>
+											</div>
+											<Button
+												variant="secondary"
+												size="sm"
+												onClick={() => removeDisableOverageBillingEntry(orgId)}
+											>
+												Remove
+											</Button>
+										</div>
+									),
+								)}
 								<div className="flex flex-col gap-2 pt-2 border-t border-border">
-									<input
+									<Input
 										type="text"
 										placeholder="Org ID"
 										value={newOrgId}
 										onChange={(e) => setNewOrgId(e.target.value)}
-										className="w-full px-2 py-1 text-xs rounded border border-border bg-input text-foreground placeholder:text-tertiary-foreground focus:outline-none focus:ring-1 focus:ring-ring"
 									/>
-									<input
+									<Input
 										type="text"
 										placeholder="Customer IDs (comma-separated)"
 										value={newCustomerIds}
 										onChange={(e) => setNewCustomerIds(e.target.value)}
-										className="w-full px-2 py-1 text-xs rounded border border-border bg-input text-foreground placeholder:text-tertiary-foreground focus:outline-none focus:ring-1 focus:ring-ring"
 									/>
-									<Button variant="secondary" size="sm" onClick={addOverageEntry} disabled={!newOrgId.trim() || !newCustomerIds.trim()}>
+									<Button
+										variant="secondary"
+										size="sm"
+										onClick={addDisableOverageBillingEntry}
+										disabled={!newOrgId.trim() || !newCustomerIds.trim()}
+									>
 										Add
 									</Button>
 								</div>
 							</div>
 
-							<div className="rounded-lg border border-border p-3 text-xs text-tertiary-foreground">
-								<div className="mb-2 flex items-center gap-2">
-									<Badge
-										variant="muted"
-										className={
-											config.configHealthy
-												? "bg-emerald-50 text-emerald-700 border-emerald-200"
-												: "bg-amber-50 text-amber-700 border-amber-200"
-										}
-									>
-										{config.configHealthy ? "Config healthy" : "Config unavailable"}
+							<div className="flex flex-col gap-3 text-xs text-tertiary-foreground">
+								<Separator />
+								<div className="flex flex-wrap items-center gap-2">
+									<Badge variant="muted">
+										{config.configHealthy
+											? "Config healthy"
+											: "Config unavailable"}
 									</Badge>
 									{config.lastSuccessAt && (
-										<span>Last refresh: {new Date(config.lastSuccessAt).toLocaleString()}</span>
+										<span className="tabular-nums">
+											Last refresh:{" "}
+											{new Date(config.lastSuccessAt).toLocaleString()}
+										</span>
 									)}
 								</div>
-								<div>
-									{config.configConfigured === false
-										? "S3 feature flags config is not configured."
-										: config.error || "Flags update within 30s of saving."}
-								</div>
+								<p className="text-pretty">{getStatusMessage({ config })}</p>
 							</div>
 						</div>
 
-						{/* Right: Monaco */}
 						<div className="flex flex-col gap-2">
-							<div className="text-xs font-medium text-tertiary-foreground uppercase tracking-wide">Raw JSON</div>
+							<div className="flex flex-col gap-1">
+								<div className="text-xs font-medium text-tertiary-foreground uppercase tracking-wide">
+									Raw JSON
+								</div>
+								<div className="text-pretty text-xs text-tertiary-foreground">
+									Edits here and in the controls stay in sync. This is what gets
+									saved.
+								</div>
+							</div>
 							<div className="rounded-md border border-border overflow-hidden h-[300px]">
 								<Editor
 									height="100%"
@@ -345,7 +388,11 @@ export function FeatureFlagsDialog({
 									theme="vs-dark"
 								/>
 							</div>
-							{jsonError && <div className="text-xs text-red-500">{jsonError}</div>}
+							{jsonError && (
+								<div role="alert" className="text-xs text-destructive">
+									{jsonError}
+								</div>
+							)}
 						</div>
 					</div>
 				)}

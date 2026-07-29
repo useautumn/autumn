@@ -1,6 +1,10 @@
 import { NEON_TEMPLATE_BRANCH, PROJECT_ROOT } from "../constants.ts";
 import type { RegistryEntry } from "../types.ts";
-import { applyCommittedMigrations, loadDbFunctions } from "./migration.ts";
+import {
+	applyCommittedMigrations,
+	loadDbFunctions,
+} from "./migration.ts";
+import { hasPendingMigrations } from "./migrationStatus.ts";
 import {
 	connectionString,
 	createBranch,
@@ -13,32 +17,42 @@ import { fatal, log, shInherit } from "./shell.ts";
 export async function setupAgentWorktree(
 	entry: RegistryEntry,
 	registry: Record<string, RegistryEntry>,
-): Promise<RegistryEntry> {
+): Promise<{ entry: RegistryEntry; created: boolean }> {
 	const { branchName } = entry;
 	if (!branchName) fatal("entry missing branchName");
 
-	// If branch already exists on Neon and we have a URL, just refresh.
-	if (entry.branchId && findBranchByName(branchName)) {
+	const existing = findBranchByName(branchName);
+
+	if (existing) {
+		const directUrl = connectionString(branchName, { pooled: false });
+		if (await hasPendingMigrations(directUrl)) {
+			log(`branch ${branchName} schema incomplete — applying migrations`);
+			applyCommittedMigrations(branchName, directUrl);
+			loadDbFunctions(branchName, directUrl);
+		}
 		const url = connectionString(branchName, { pooled: true });
 		const next: RegistryEntry = {
 			...entry,
+			branchId: existing.id,
 			databaseUrl: url,
 			lastUsedAt: Date.now(),
 		};
 		registry[entry.path] = next;
 		saveRegistry(registry);
-		return next;
+		return { entry: next, created: false };
 	}
 
-	// First-run provisioning.
+	if (entry.branchId || entry.databaseUrl) {
+		log(`neon branch ${branchName} missing — re-provisioning`);
+	}
+
+	// First-run (or recreate after teardown).
 	log(`first run for ${branchName} — provisioning neon branch`);
 	ensureTemplateBranch();
 	const branch = createBranch(branchName, NEON_TEMPLATE_BRANCH);
-	// Use direct (non-pooled) URL for DDL; pooler can interfere with some DDL paths.
 	const directUrl = connectionString(branchName, { pooled: false });
 	applyCommittedMigrations(branchName, directUrl);
 	loadDbFunctions(branchName, directUrl);
-	// Pooled URL for runtime.
 	const pooledUrl = connectionString(branchName, { pooled: true });
 	const next: RegistryEntry = {
 		...entry,
@@ -48,13 +62,11 @@ export async function setupAgentWorktree(
 	};
 	registry[entry.path] = next;
 	saveRegistry(registry);
-	return next;
+	return { entry: next, created: true };
 }
 
 // Auto-seed unit test org into the per-worktree Neon branch.
-// setup-test is idempotent so we always invoke it on dw default;
-// failures are non-fatal (log + continue) since downstream dev
-// might still be useful without the seed.
+// Only invoked on first Neon branch creation (see provisionWorktree).
 export async function autoSetupTestOrg(entry: RegistryEntry): Promise<void> {
 	if (!entry.databaseUrl) {
 		log("autoSetupTestOrg: no databaseUrl on entry, skipping");

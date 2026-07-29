@@ -1,11 +1,9 @@
 import { AppEnv, type Entity, type FullCusProduct } from "@autumn/shared";
+import { Button, IconButton } from "@autumn/ui";
 import { ArrowSquareOutIcon, PackageIcon } from "@phosphor-icons/react";
 import type { Row } from "@tanstack/react-table";
 import { useMemo, useState } from "react";
-
 import { Table } from "@/components/general/table";
-import { Button } from "@/components/v2/buttons/Button";
-import { IconButton } from "@/components/v2/buttons/IconButton";
 import { useSheetStore } from "@/hooks/stores/useSheetStore";
 import { useEntity } from "@/hooks/stores/useSubscriptionStore";
 import { useEnv } from "@/utils/envUtils";
@@ -92,6 +90,10 @@ export function CustomerProductsTable() {
 
 	const totalPages = totalCount > 0 ? Math.ceil(totalCount / pageSize) : null;
 	const showFooter = totalCount >= CUSTOMER_PRODUCTS_PAGE_SIZES[0];
+
+	const hasActiveFilters = kind !== "all" || showExpired;
+	const hasAnyProducts = customer.customer_products.length > 0;
+	const showFilter = hasAnyProducts || hasActiveFilters;
 
 	const [transferOpen, setTransferOpen] = useState(false);
 	const [selectedProduct, setSelectedProduct] = useState<FullCusProduct | null>(
@@ -201,6 +203,7 @@ export function CustomerProductsTable() {
 					onRowClick: handleRowClick,
 					emptyStateChildren,
 					flexibleTableColumns: true,
+					mobileCards: true,
 					selectedItemId,
 					virtualization: { containerHeight: "428px", skeletonRowCount: 3 },
 				}}
@@ -212,12 +215,14 @@ export function CustomerProductsTable() {
 							Plans
 						</Table.Heading>
 						<Table.Actions>
-							<CustomerProductsFilterButton
-								kind={kind}
-								setKind={setKind}
-								showExpired={showExpired}
-								setShowExpired={setShowExpired}
-							/>
+							{showFilter && (
+								<CustomerProductsFilterButton
+									kind={kind}
+									setKind={setKind}
+									showExpired={showExpired}
+									setShowExpired={setShowExpired}
+								/>
+							)}
 							<AttachProductSheetTrigger />
 						</Table.Actions>
 					</Table.Toolbar>

@@ -24,6 +24,8 @@ export * from "./api/customers/components/customerExpand/customerExpand";
 export * from "./api/entities/crud/createEntityParams";
 export * from "./api/entities/crud/getEntityParams";
 export * from "./api/entities/crud/listEntitiesParamsV2_3";
+// Customer keys (per-customer JWTs)
+export * from "./api/keys/keysModels";
 // Migrations v2 (operations + entity schemas)
 export * from "./api/migrations/filters/index";
 export * from "./api/migrations/operations/index";
@@ -52,6 +54,7 @@ export * from "./models/attachModels/attachEnums/AttachConfig";
 export * from "./models/attachModels/attachEnums/AttachFunction";
 export * from "./models/attachModels/attachPreviewModels";
 export * from "./models/authModels/membership";
+export * from "./models/chatModels/chatEnums";
 export * from "./models/chatModels/chatTable";
 export * from "./models/chatResultModels/chatResultFeature";
 export * from "./models/chatResultModels/chatResultFeature";
@@ -63,7 +66,18 @@ export * from "./models/cusModels/billingControls/autoTopupLimitTable";
 export * from "./models/cusModels/billingControls/customerBillingControls";
 export * from "./models/cusModels/billingControls/purchaseLimitInterval";
 export * from "./models/cusModels/cusModels";
-export * from "./models/leafModels/cmaStateTable";
+export * from "./models/leafModels/chatThreadContextsTable";
+export * from "./models/leafModels/cmaMemoryTable";
+export * from "./models/leafModels/cmaSessionsTable";
+export * from "./models/leafModels/cmaVaultsTable";
+export * from "./models/leafModels/harnessSessionsTable";
+export * from "./models/leafModels/slackAdminThreadsTable";
+export * from "./models/licenseModels/fullCustomerLicense";
+export * from "./models/licenseModels/fullPlanLicenseModel";
+export * from "./models/licenseModels/licenseModels";
+export * from "./models/licenseModels/licenseTable";
+export * from "./models/pooledBalanceModels/pooledBalanceIdentity";
+export * from "./models/pooledBalanceModels/pooledBalanceTable";
 // Processor Models
 export * from "./models/processorModels/processorModels";
 export * from "./utils/chatState";
@@ -100,10 +114,12 @@ export * from "./models/cusProductModels/cusProductModels";
 export * from "./models/cusProductModels/cusProductTable";
 export * from "./models/devModels/apiKeyModels";
 export * from "./models/devModels/apiKeyTable";
+export * from "./models/devModels/customerJwtFamilyTable";
 
 // 5. Others: events, apiKeys
 export * from "./models/eventModels/eventModels";
 export * from "./models/eventModels/eventTable";
+export * from "./models/eventModels/eventTableNeon";
 export * from "./models/eventModels/eventTypes";
 export * from "./models/featureModels/featureConfig/creditConfig";
 export * from "./models/featureModels/featureConfig/meteredConfig";
@@ -112,12 +128,15 @@ export * from "./models/featureModels/featureModels";
 
 // export * from "./models/featureModels/featureResModels";
 
-export * from "./api/products/items/previousVersions/apiPlanItemV0";
+export * from "./api/features/previewUpdateFeature/previewUpdateFeatureResponse";
 export * from "./api/products/components/billingMethod";
-export type { CreatePlanItemParamsV1Input } from "./api/products/items/crud/createPlanItemParamsV1";
-export * from "./api/products/items/utils/display";
 export type { CreatePlanParamsV2Input } from "./api/products/crud/createPlanParamsV1";
+export type { CreatePlanItemParamsV1Input } from "./api/products/items/crud/createPlanItemParamsV1";
+export * from "./api/products/items/previousVersions/apiPlanItemV0";
+export * from "./api/products/items/utils/display";
 export * from "./api/products/utils/display";
+// AI Models
+export * from "./models/aiModels/modelsDevTypes";
 // Attach Function Response
 export * from "./models/attachModels/attachFunctionResponse";
 // Billing Models (all from single index)
@@ -144,13 +163,17 @@ export * from "./models/migrationV2Models/migrationTable";
 export * from "./models/migrationV2Models/pendingMigrationModel";
 export * from "./models/orgModels/agent/agentRules";
 export * from "./models/orgModels/agent/agentRulesTable";
-export * from "./models/orgModels/frontendOrg";
+export * from "./models/orgModels/transitionRules/transitionRules";
+export * from "./models/orgModels/transitionRules/transitionRulesTable";
 // 1. Org Models
 export * from "./models/orgModels/customButton";
+export * from "./models/orgModels/frontendOrg";
 export * from "./models/orgModels/frontendOrg";
 export * from "./models/orgModels/fullOrgModel";
 export * from "./models/orgModels/orgConfig";
 export * from "./models/orgModels/orgTable";
+export * from "./models/orgModels/sandboxDisplay";
+export * from "./models/orgModels/sandboxName";
 export * from "./models/otherModels/metadataTable";
 // Duration Types
 export * from "./models/productModels/durationTypes/rolloverExpiryDurationType";
@@ -171,6 +194,8 @@ export * from "./models/productModels/intervals/productItemInterval";
 export * from "./models/productModels/intervals/productItemInterval";
 export * from "./models/productModels/intervals/resetInterval";
 export * from "./models/productModels/intervals/resetInterval";
+export * from "./models/productModels/priceModels/priceConfig/buildPriceCurrencies";
+export * from "./models/productModels/priceModels/priceConfig/priceCurrencyView";
 export * from "./models/productModels/priceModels/priceConfig/fixedPriceConfig";
 // Price Models
 export * from "./models/productModels/priceModels/priceConfig/fixedPriceConfig";
@@ -186,6 +211,7 @@ export * from "./models/productModels/priceModels/priceTable";
 // 5. Product Models
 export * from "./models/productModels/productConfig/productConfig";
 export * from "./models/productModels/productEnums";
+export * from "./models/productModels/productMetadata";
 export * from "./models/productModels/productModels";
 export * from "./models/productModels/productRelations";
 export * from "./models/productModels/productTable";
@@ -213,11 +239,11 @@ export * from "./models/rewardModels/rewardProgramModels/rewardProgramTable";
 export * from "./models/scheduleModels/scheduleTable";
 export * from "./models/subModels/subModels";
 export * from "./models/subModels/subTable";
-// AI Models
-export * from "./models/aiModels/modelsDevTypes";
 export * from "./types";
 // Agent Types (for pricing agent AI)
 export * from "./utils/agentTypes";
+export * from "./utils/auth/autumnOAuthScopes";
+export * from "./utils/auth/oauthScopeUtils";
 export * from "./utils/authAccessControl";
 export * from "./utils/billingUtils/index";
 // Checkout Utils
@@ -235,7 +261,6 @@ export * from "./utils/fullSubjectUtils";
 export * from "./utils/index";
 export * from "./utils/intervalUtils";
 export * from "./utils/invoices/index";
-export * from "./utils/leafOAuthScopes";
 export * from "./utils/planFeatureUtils/planToDbFreeTrial";
 export * from "./utils/productDisplayUtils";
 export * from "./utils/productDisplayUtils/sortProductItems";

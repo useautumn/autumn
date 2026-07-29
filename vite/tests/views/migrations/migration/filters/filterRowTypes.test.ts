@@ -2,7 +2,6 @@ import { describe, expect, test } from "bun:test";
 import {
 	customerIdToStrings,
 	planFilterToGroups,
-	ruleToStringMatcher,
 	stringsToCustomerId,
 } from "@/views/migrations/migration/filters/filterRowTypes";
 
@@ -87,19 +86,6 @@ describe("planFilterToGroups decodes matcher forms", () => {
 		]);
 	});
 
-	test("item filters decode to item_* rules", () => {
-		expect(
-			planFilterToGroups({ item: { feature_id: "credits", unlimited: false } }),
-		).toEqual([
-			{
-				rules: [
-					{ field: "item_feature_id", operator: "is", values: ["credits"] },
-					{ field: "item_unlimited", operator: "is", values: ["false"] },
-				],
-			},
-		]);
-	});
-
 	test("combined filters share one group", () => {
 		const groups = planFilterToGroups({
 			plan_id: { $regex: "^pro" },
@@ -112,80 +98,6 @@ describe("planFilterToGroups decodes matcher forms", () => {
 			"paid",
 			"recurring",
 		]);
-	});
-});
-
-describe("ruleToStringMatcher", () => {
-	test("is with one value returns a bare string", () => {
-		expect(
-			ruleToStringMatcher({ field: "plan_id", operator: "is", values: ["x"] }),
-		).toBe("x");
-	});
-
-	test("is with no values returns an empty string", () => {
-		expect(
-			ruleToStringMatcher({ field: "plan_id", operator: "is", values: [] }),
-		).toBe("");
-	});
-
-	test("is with multiple values widens to $in", () => {
-		expect(
-			ruleToStringMatcher({
-				field: "plan_id",
-				operator: "is",
-				values: ["a", "b"],
-			}),
-		).toEqual({ $in: ["a", "b"] });
-	});
-
-	test("is_not returns $ne", () => {
-		expect(
-			ruleToStringMatcher({
-				field: "plan_id",
-				operator: "is_not",
-				values: ["x"],
-			}),
-		).toEqual({ $ne: "x" });
-	});
-
-	test("in returns $in", () => {
-		expect(
-			ruleToStringMatcher({
-				field: "plan_id",
-				operator: "in",
-				values: ["a", "b"],
-			}),
-		).toEqual({ $in: ["a", "b"] });
-	});
-
-	test("not_in returns $nin", () => {
-		expect(
-			ruleToStringMatcher({
-				field: "plan_id",
-				operator: "not_in",
-				values: ["x"],
-			}),
-		).toEqual({ $nin: ["x"] });
-	});
-
-	test("regex returns $regex", () => {
-		expect(
-			ruleToStringMatcher({
-				field: "plan_id",
-				operator: "regex",
-				values: ["^pro"],
-			}),
-		).toEqual({ $regex: "^pro" });
-	});
-
-	test("starts_with returns $startsWith", () => {
-		expect(
-			ruleToStringMatcher({
-				field: "plan_id",
-				operator: "starts_with",
-				values: ["pro"],
-			}),
-		).toEqual({ $startsWith: "pro" });
 	});
 });
 

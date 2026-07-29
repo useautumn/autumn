@@ -140,6 +140,14 @@ export const isFullSubjectGateRejection = (error: unknown): boolean => {
 	);
 };
 
+// Configured caps are cluster-wide; each process enforces an even share.
+// Floor (not round) so cluster-wide capacity never EXCEEDS the configured target.
+export const toPerProcessLimit = (
+	clusterWideTarget: number,
+	fleetProcessCount: number,
+): number =>
+	Math.max(1, Math.floor(clusterWideTarget / Math.max(1, fleetProcessCount)));
+
 export const runWithFullSubjectGate = async <T>({
 	customerId,
 	orgId,
@@ -159,11 +167,21 @@ export const runWithFullSubjectGate = async <T>({
 		max_wait_ms,
 		per_customer_pending_max,
 		per_org_pending_max,
+		fleet_process_count,
 	} = getRuntimeFullSubjectGateConfig();
 	const enqueuedAt = Date.now();
 	const labels = attrs({ orgId, env });
 
-	const orgLimiter = getOrgLimiter({ orgId, env, limit: per_org_limit });
+	const perProcessOrgLimit = toPerProcessLimit(
+		per_org_limit,
+		fleet_process_count,
+	);
+	const perProcessOrgPendingMax = toPerProcessLimit(
+		per_org_pending_max,
+		fleet_process_count,
+	);
+
+	const orgLimiter = getOrgLimiter({ orgId, env, limit: perProcessOrgLimit });
 
 	let customerLimiter: LimitFunction | undefined;
 	if (customerId) {
@@ -171,12 +189,15 @@ export const runWithFullSubjectGate = async <T>({
 			orgId,
 			env,
 			customerId,
-			limit: per_customer_limit,
+			limit: toPerProcessLimit(per_customer_limit, fleet_process_count),
 		});
-		if (customerLimiter.pendingCount >= per_customer_pending_max) {
+		if (
+			customerLimiter.pendingCount >=
+			toPerProcessLimit(per_customer_pending_max, fleet_process_count)
+		) {
 			rejectOverloaded({ reason: "per_customer_queue_full", labels });
 		}
-	} else if (orgLimiter.pendingCount >= per_org_pending_max) {
+	} else if (orgLimiter.pendingCount >= perProcessOrgPendingMax) {
 		rejectOverloaded({ reason: "per_org_queue_full", labels });
 	}
 
@@ -207,7 +228,7 @@ export const runWithFullSubjectGate = async <T>({
 
 	if (customerLimiter) {
 		return customerLimiter(() => {
-			if (orgLimiter.pendingCount >= per_org_pending_max) {
+			if (orgLimiter.pendingCount >= perProcessOrgPendingMax) {
 				rejectOverloaded({ reason: "per_org_queue_full", labels });
 			}
 			return orgLimiter(execute);

@@ -1,17 +1,17 @@
 import { expect } from "bun:test";
-import {
-	customerProductsToStripeSubscriptionIds,
-	notNullish,
-} from "@autumn/shared";
 import type { TestContext } from "@tests/utils/testInitUtils/createTestContext";
+import { isStripeSubscriptionCanceling } from "@/external/stripe/subscriptions/utils/classifyStripeSubscriptionUtils";
+import { evaluateRewards } from "@/internal/billing/v2/actions/verify/evaluate/evaluateRewards";
+import { verify } from "@/internal/billing/v2/actions/verify/verify";
 import { CusService } from "@/internal/customers/CusService";
 import type { ExpectStripeSubOptions } from "./types";
-import { verifySubscription } from "./verifySubscription";
 
 /**
  * Verifies that all Stripe subscriptions for a customer match the expected state
- * derived from their customer products. Handles multiple subscriptions (new_billing_subscription),
- * inline entity-scoped prices, schedules, and cancellation.
+ * derived from their customer products, via the production `/billing.verify` action.
+ * Handles multiple subscriptions (new_billing_subscription), inline entity-scoped
+ * prices, schedules, and cancellation, plus test-only assertions (`status`,
+ * `shouldBeCanceling`, `rewards`) that aren't part of the verify contract.
  */
 export const expectStripeSubscriptionCorrect = async ({
 	ctx,
@@ -22,17 +22,12 @@ export const expectStripeSubscriptionCorrect = async ({
 	customerId: string;
 	options?: ExpectStripeSubOptions;
 }) => {
-	// 1. Fetch full customer
-	const fullCustomer = await CusService.getFull({
-		ctx,
-		idOrInternalId: customerId,
-		withEntities: true,
-	});
-
-	const cusProducts = fullCustomer.customer_products;
-
-	// 2. Validate total subscription count if requested
 	if (options?.subCount !== undefined) {
+		const fullCustomer = await CusService.getFull({
+			ctx,
+			idOrInternalId: customerId,
+			withEntities: true,
+		});
 		const stripeCustomerId = fullCustomer.processor?.id;
 		expect(
 			stripeCustomerId,
@@ -45,37 +40,58 @@ export const expectStripeSubscriptionCorrect = async ({
 		expect(subs.data.length).toBe(options.subCount);
 	}
 
-	// 3. Determine which subscriptions to verify
-	if (options?.subId) {
-		await verifySubscription({
-			ctx,
-			subId: options.subId,
-			cusProducts,
-			options,
-		});
-		return;
-	}
-
-	// Verify ALL subscriptions referenced by cusProducts
-	const subIds = customerProductsToStripeSubscriptionIds({
-		customerProducts: cusProducts,
-	}).filter(notNullish);
-
-	if (options?.debug) {
-		console.log(`\nFound ${subIds.length} subscription(s) to verify:`, subIds);
-	}
+	const result = await verify({
+		ctx,
+		params: {
+			customer_id: customerId,
+			subscription_ids: options?.subId ? [options.subId] : undefined,
+		},
+	});
 
 	expect(
-		subIds.length,
+		result.subscriptions.length,
 		"Expected at least one subscription ID on customer products",
 	).toBeGreaterThan(0);
 
-	for (const subId of subIds) {
-		await verifySubscription({
-			ctx,
-			subId,
-			cusProducts,
-			options,
-		});
+	if (options?.debug) {
+		console.log(
+			`\nFound ${result.subscriptions.length} subscription(s) to verify:`,
+		);
+		console.log(JSON.stringify(result.subscriptions, null, 2));
+	}
+
+	for (const subResult of result.subscriptions) {
+		expect(
+			subResult.mismatches,
+			`[sub:${subResult.stripe_subscription_id}] mismatches`,
+		).toEqual([]);
+	}
+
+	const needsLiveSubCheck =
+		options?.status !== undefined ||
+		options?.shouldBeCanceling !== undefined ||
+		options?.rewards !== undefined;
+	if (!needsLiveSubCheck) return;
+
+	for (const subResult of result.subscriptions) {
+		const sub = await ctx.stripeCli.subscriptions.retrieve(
+			subResult.stripe_subscription_id,
+			{ expand: ["discounts.coupon"] },
+		);
+
+		if (options?.status) {
+			expect(sub.status).toBe(options.status);
+		}
+
+		if (options?.shouldBeCanceling !== undefined) {
+			expect(isStripeSubscriptionCanceling(sub)).toBe(
+				options.shouldBeCanceling,
+			);
+		}
+
+		if (options?.rewards) {
+			const rewardMismatch = evaluateRewards({ sub, rewards: options.rewards });
+			expect(rewardMismatch, `[sub:${sub.id}] reward mismatch`).toBeUndefined();
+		}
 	}
 };

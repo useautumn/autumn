@@ -2,6 +2,7 @@ import { describe, expect, test } from "bun:test";
 import {
 	AppEnv,
 	BillingInterval,
+	FeatureType,
 	isCustomerProductOneOff,
 	type NormalizedFullSubject,
 	normalizedToFullSubject,
@@ -13,6 +14,7 @@ import {
 	FULL_SUBJECT_CACHE_SCHEMA_VERSION,
 	normalizedToCachedFullSubject,
 } from "@/internal/customers/cache/fullSubject/fullSubjectCacheModel.js";
+import { sanitizeCachedFullSubject } from "@/internal/customers/cache/fullSubject/sanitize/sanitizeCachedFullSubject.js";
 
 const buildNormalized = (): NormalizedFullSubject =>
 	({
@@ -186,6 +188,23 @@ describe("fullSubject cache model", () => {
 		expect(cached._cachedAt).toBeTypeOf("number");
 	});
 
+	test("sanitizes cached customer config without disable_overage_billing", () => {
+		const normalized = buildNormalized();
+		normalized.customer.config = { disable_pooled_balance: true };
+		const cached = normalizedToCachedFullSubject({
+			normalized,
+			subjectViewEpoch: 0,
+		});
+
+		expect(() =>
+			sanitizeCachedFullSubject({ cachedFullSubject: cached }),
+		).not.toThrow();
+
+		const sanitized = sanitizeCachedFullSubject({ cachedFullSubject: cached });
+		expect(sanitized.customer.config?.disable_pooled_balance).toBe(true);
+		expect(sanitized.customer.config?.disable_overage_billing).toBeUndefined();
+	});
+
 	test("stores subject view epoch for entity subjects", () => {
 		const normalized = {
 			...buildNormalized(),
@@ -237,6 +256,91 @@ describe("fullSubject cache model", () => {
 		expect(reconstructed.customer_prices).toEqual([]);
 	});
 
+	test("reconstructs pooled customer entitlements from a legacy cached subject", () => {
+		const normalized = buildNormalized();
+		const pooledCustomerEntitlement = {
+			...normalized.customer_entitlements[0],
+			id: "cus_ent_pooled",
+			customer_product_id: null,
+			is_pooled_balance: true,
+			pooled_balance_id: "pool_1",
+		};
+		normalized.customer_entitlements = [pooledCustomerEntitlement];
+
+		const cached = normalizedToCachedFullSubject({
+			normalized,
+			subjectViewEpoch: 0,
+		});
+		const reconstructed = cachedFullSubjectToNormalized({
+			cached,
+			customerEntitlements: normalized.customer_entitlements,
+		});
+		const fullSubject = normalizedToFullSubject({ normalized: reconstructed });
+
+		expect(fullSubject.extra_customer_entitlements).toEqual([]);
+		expect(
+			fullSubject.pooled_customer_entitlements?.map(
+				(customerEntitlement) => customerEntitlement.id,
+			),
+		).toEqual(["cus_ent_pooled"]);
+	});
+
+	test("reconstructs pooled boolean without caching pool metadata", () => {
+		const normalized = buildNormalized();
+		const entitlement = {
+			...normalized.customer_entitlements[0].entitlement,
+			id: "ent_boolean",
+			internal_product_id: null,
+			is_custom: true,
+			allowance: null,
+			allowance_type: null,
+			interval: null,
+			pooled: true,
+			feature: {
+				...normalized.customer_entitlements[0].entitlement.feature,
+				id: "dashboard",
+				internal_id: "feat_boolean",
+				type: FeatureType.Boolean,
+			},
+		};
+		normalized.customer_entitlements = [];
+		normalized.entitlements = [entitlement];
+		normalized.flags = {
+			dashboard: {
+				featureId: "dashboard",
+				internalFeatureId: "feat_boolean",
+				entitlementId: entitlement.id,
+				customerEntitlementId: "cus_ent_boolean",
+				customerProductId: null,
+				internalCustomerId: "cus_int_1",
+				internalEntityId: null,
+				expiresAt: null,
+				externalId: null,
+			},
+		};
+
+		const cached = normalizedToCachedFullSubject({
+			normalized,
+			subjectViewEpoch: 0,
+		});
+		expect(cached.flags.dashboard).toEqual(normalized.flags.dashboard);
+		const reconstructed = cachedFullSubjectToNormalized({
+			cached,
+			customerEntitlements: [],
+		});
+		const fullSubject = normalizedToFullSubject({ normalized: reconstructed });
+
+		expect(fullSubject.extra_customer_entitlements).toEqual([]);
+		expect(fullSubject.pooled_customer_entitlements).toHaveLength(1);
+		expect(fullSubject.pooled_customer_entitlements?.[0]).toMatchObject({
+			id: "cus_ent_boolean",
+			is_pooled_balance: true,
+		});
+		expect(
+			fullSubject.pooled_customer_entitlements?.[0]?.pooled_balance,
+		).toBeUndefined();
+	});
+
 	test("preserves fixed prices without entitlements across cache roundtrip", () => {
 		const normalized = buildMixedIntervalNormalized();
 		const cached = normalizedToCachedFullSubject({
@@ -252,8 +356,8 @@ describe("fullSubject cache model", () => {
 
 		expect(customerProduct).toBeDefined();
 		expect(
-			customerProduct!.customer_prices.map((customerPrice) =>
-				customerPrice.price_id,
+			customerProduct!.customer_prices.map(
+				(customerPrice) => customerPrice.price_id,
 			),
 		).toEqual(["price_fixed", "price_usage"]);
 		expect(isCustomerProductOneOff(customerProduct)).toBe(false);

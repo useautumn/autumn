@@ -1,7 +1,15 @@
+import { CustomerBillingControlsSchema } from "@models/cusModels/billingControls/customerBillingControls.js";
 import { AppEnv } from "@models/genModels/genEnums.js";
+import { LicenseCustomizeSchema } from "@models/licenseModels/licenseModels.js";
 import { BillingInterval } from "@models/productModels/intervals/billingInterval.js";
 import { ProductConfigSchema } from "@models/productModels/productConfig/productConfig.js";
+import { ProductMetadataSchema } from "@models/productModels/productMetadata.js";
 import { z } from "zod/v4";
+import {
+	CustomizePlanV1BaseSchema,
+	refineCustomizePlanV1Schema,
+} from "../billing/common/customizePlan/customizePlanV1.js";
+import { AdditionalCurrencyPriceArraySchema } from "./components/additionalCurrencies.js";
 import { ApiFreeTrialV2Schema } from "./components/apiFreeTrialV2.js";
 import { CustomerEligibilitySchema } from "./components/customerEligibility.js";
 import { DisplaySchema } from "./components/display.js";
@@ -42,7 +50,41 @@ export const API_PLAN_V1_EXAMPLE = {
 	config: {
 		ignore_past_due: false,
 	},
+	billing_controls: {},
+	metadata: {},
 };
+
+const VariantCustomizeSchema = refineCustomizePlanV1Schema(
+	CustomizePlanV1BaseSchema.omit({
+		items: true,
+		upsert_licenses: true,
+	}).strict(),
+	{ includeItems: false, includeLicenses: false },
+);
+
+export const ApiPlanLicenseV1Schema = z.object({
+	license_plan_id: z.string().meta({
+		description: "The plan offered as a license under this plan.",
+	}),
+	version: z.number().int().min(1).meta({
+		description: "The exact license-plan version pinned by this link.",
+	}),
+	included: z.number().meta({
+		description:
+			"Number of license assignments included with this plan for free.",
+	}),
+	prepaid_only: z.boolean().meta({
+		internal: true,
+		description:
+			"Assignments are capped at the included quantity. Must be true for now; overflow billing (false) is not yet available.",
+	}),
+	customize: LicenseCustomizeSchema.optional().meta({
+		internal: true,
+		description: "The item and price diff applied to this parent-plan link.",
+	}),
+});
+
+export type ApiPlanLicenseV1 = z.infer<typeof ApiPlanLicenseV1Schema>;
 
 export const ApiPlanV1Schema = z.object({
 	id: z.string().meta({
@@ -77,11 +119,23 @@ export const ApiPlanV1Schema = z.object({
 			amount: z.number().meta({
 				description: "Base price amount for the plan.",
 			}),
+			additional_currencies: AdditionalCurrencyPriceArraySchema.optional().meta(
+				{
+					description:
+						"Base price amounts in additional currencies. The base 'amount' is in the org's default currency.",
+				},
+			),
 			interval: z.enum(BillingInterval).meta({
 				description: "Billing interval (e.g. 'month', 'year').",
 			}),
 			interval_count: z.number().optional().meta({
 				description: "Number of intervals per billing cycle. Defaults to 1.",
+			}),
+			entitlement_id: z.string().optional().meta({
+				internal: true,
+			}),
+			price_id: z.string().optional().meta({
+				internal: true,
 			}),
 			display: DisplaySchema.optional().meta({
 				description: "Display text for showing this price in pricing pages.",
@@ -96,6 +150,11 @@ export const ApiPlanV1Schema = z.object({
 	items: z.array(ApiPlanItemV1Schema).meta({
 		description:
 			"Feature configurations included in this plan. Each item defines included units, pricing, and reset behavior for a feature.",
+	}),
+	licenses: z.array(ApiPlanLicenseV1Schema).optional().meta({
+		internal: true,
+		description:
+			"Plans offered as assignable licenses under this plan. Omitted when the plan has none.",
 	}),
 	free_trial: ApiFreeTrialV2Schema.optional().meta({
 		description:
@@ -114,11 +173,35 @@ export const ApiPlanV1Schema = z.object({
 	}),
 	base_variant_id: z.string().nullable().meta({
 		description:
-			"If this is a variant, the ID of the base plan it was created from.",
+			"Deprecated. Use variant_details.base_plan_id instead. If this is a variant, the ID of the base plan it was created from.",
+		deprecated: true,
 	}),
+	variant_details: z
+		.object({
+			base_plan_id: z.string().meta({
+				description: "The ID of the base plan this variant was derived from.",
+			}),
+			customize: VariantCustomizeSchema.optional().meta({
+				description:
+					"The customization that transforms the base plan into this variant.",
+			}),
+		})
+		.optional()
+		.meta({
+			description:
+				"Details about how this variant relates to its latest base plan.",
+		}),
 
 	config: ProductConfigSchema.meta({
 		description: "Miscellaneous plan-level configuration flags.",
+	}),
+	billing_controls: CustomerBillingControlsSchema.optional().meta({
+		description: "Plan-level billing controls used as customer defaults.",
+	}),
+
+	metadata: ProductMetadataSchema.meta({
+		description:
+			"Arbitrary key-value metadata defined by you for your own use. Shared across all versions of the plan.",
 	}),
 
 	customer_eligibility: CustomerEligibilitySchema.optional(),

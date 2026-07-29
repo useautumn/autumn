@@ -1,4 +1,5 @@
 import {
+	type AdditionalCurrencyPrice,
 	type FrontendProduct,
 	formatAmount,
 	formatInterval,
@@ -17,6 +18,7 @@ export type BasePriceDisplayResult = {
 	formattedAmount?: string;
 	intervalText?: string;
 	displayText: string;
+	additionalCurrencies?: AdditionalCurrencyPrice[];
 };
 
 /**
@@ -65,6 +67,7 @@ export const getBasePriceDisplay = ({
 			formattedAmount,
 			intervalText,
 			displayText: `${formattedAmount} ${intervalText}`,
+			additionalCurrencies: basePrice.additional_currencies ?? undefined,
 		};
 	}
 

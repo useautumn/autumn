@@ -2,10 +2,15 @@ import { readdir } from "node:fs/promises";
 import { join, relative } from "node:path";
 import { core } from "./core";
 import { coreAttach } from "./core/coreAttach";
+import { coreBackSync } from "./core/coreBackSync";
 import { coreBalances } from "./core/coreBalances";
 import { coreBilling } from "./core/coreBilling";
 import { coreLegacy } from "./core/coreLegacy";
+import { coreLicensesBilling } from "./core/coreLicensesBilling";
+import { coreLicensesCatalog } from "./core/coreLicensesCatalog";
 import { coreMigrations } from "./core/coreMigrations";
+import { coreMultiUpdate } from "./core/coreMultiUpdate";
+import { corePlansCrud } from "./core/corePlansCrud";
 import { coreStripe } from "./core/coreStripe";
 import { coreUpdateSubscription } from "./core/coreUpdateSubscription";
 import { advanced } from "./domains/advanced";
@@ -18,22 +23,31 @@ import { billingDiscounts } from "./domains/billing/billingDiscounts";
 import { billingV1 } from "./domains/billing/billingV1";
 import { billingV2 } from "./domains/billing/billingV2";
 import { billingV2Misc } from "./domains/billing/billingV2Misc";
+import { sync } from "./domains/billing/sync";
 import { crud } from "./domains/crud";
+import { licenses } from "./domains/licenses";
 import { misc } from "./domains/misc";
 import { webhooks } from "./domains/webhooks";
 import { suites } from "./suites";
+import { all } from "./all";
 import { temp } from "./temp";
 import type { TestGroup, TestSuite } from "./types";
 
 export type { TestGroup, TestSuite, TestTier } from "./types";
 
 const allGroups: TestGroup[] = [
+	all,
 	core,
 	coreBilling,
 	coreAttach,
+	coreBackSync,
 	coreBalances,
 	coreLegacy,
+	coreLicensesBilling,
+	coreLicensesCatalog,
 	coreMigrations,
+	coreMultiUpdate,
+	corePlansCrud,
 	coreStripe,
 	coreUpdateSubscription,
 	balances,
@@ -45,8 +59,10 @@ const allGroups: TestGroup[] = [
 	billingV1,
 	billingV2,
 	billingV2Misc,
+	sync,
 	temp,
 	crud,
+	licenses,
 	webhooks,
 	advanced,
 	misc,

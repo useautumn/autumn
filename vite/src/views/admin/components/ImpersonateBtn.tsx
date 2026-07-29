@@ -1,6 +1,6 @@
+import { Button } from "@autumn/ui";
 import { useState } from "react";
 import { toast } from "sonner";
-import { Button } from "@/components/v2/buttons/Button";
 import { impersonateUser } from "../adminUtils";
 
 export const ImpersonateButton = ({ userId }: { userId?: string }) => {

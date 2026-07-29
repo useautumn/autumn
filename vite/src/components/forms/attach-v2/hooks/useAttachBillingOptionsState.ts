@@ -63,6 +63,23 @@ export function useAttachBillingOptionsState() {
 		(outgoingPlan?.price?.amount ?? 0) > 0 &&
 		outgoingPlan?.price?.interval !== BillingInterval.OneOff;
 
+	const createsNewStripeSubscription =
+		!hasActiveSubscription || newBillingSubscription;
+
+	// Usage-only plans have a null base price (billing lives on items), so a
+	// recurring sub can be created even when the base price and immediate total are $0.
+	const incomingPlanHasRecurringPrice =
+		(incomingPlan?.price != null &&
+			incomingPlan.price.interval !== BillingInterval.OneOff) ||
+		(incomingPlan?.items?.some(
+			(item) =>
+				item.price != null && item.price.interval !== BillingInterval.OneOff,
+		) ??
+			false);
+
+	const createsRecurringSubscription =
+		incomingPlanHasRecurringPrice && createsNewStripeSubscription;
+
 	const isDirectPaidTransition =
 		hasOutgoing && isPaidRecurringAttach && isOutgoingPaidRecurring;
 
@@ -71,15 +88,8 @@ export function useAttachBillingOptionsState() {
 		hasPaidRecurringSubscription &&
 		!isDirectPaidTransition;
 
-	const defaultPlanSchedule = useMemo((): PlanTiming => {
-		if (!previewData || !hasOutgoing) return "immediate";
-
-		const incomingPrice = previewData.incoming[0]?.plan.price?.amount ?? 0;
-		const outgoingPrice = previewData.outgoing[0]?.plan.price?.amount ?? 0;
-		const isUpgrade = incomingPrice > outgoingPrice;
-
-		return isUpgrade ? "immediate" : "end_of_cycle";
-	}, [previewData, hasOutgoing]);
+	// Always default to immediate; users can opt into end-of-cycle explicitly.
+	const defaultPlanSchedule: PlanTiming = "immediate";
 
 	const effectivePlanSchedule = !hasOutgoing
 		? "immediate"
@@ -118,8 +128,12 @@ export function useAttachBillingOptionsState() {
 		normalizedProrationBehavior !== null &&
 		normalizedProrationBehavior !== "none";
 
-	const isImmediateSelected = effectivePlanSchedule === "immediate";
-	const isEndOfCycleSelected = effectivePlanSchedule === "end_of_cycle";
+	const hasResolvedPlanSchedule =
+		planSchedule !== null || previewData !== undefined;
+	const isImmediateSelected =
+		hasResolvedPlanSchedule && effectivePlanSchedule === "immediate";
+	const isEndOfCycleSelected =
+		hasResolvedPlanSchedule && effectivePlanSchedule === "end_of_cycle";
 	const movePastStartDateToNow = useCallback(() => {
 		if (startDate !== null && startDate < Date.now()) {
 			form.setFieldValue("startDate", Date.now());
@@ -200,6 +214,8 @@ export function useAttachBillingOptionsState() {
 		hasOutgoing,
 		hasPaidRecurringSubscription,
 		canChooseBillingCycle,
+		createsNewStripeSubscription,
+		createsRecurringSubscription,
 		defaultPlanSchedule,
 		effectivePlanSchedule,
 		showProrationRow,

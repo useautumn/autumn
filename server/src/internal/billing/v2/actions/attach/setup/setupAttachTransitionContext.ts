@@ -1,12 +1,13 @@
 import type { PlanTiming } from "@autumn/shared";
 import {
-	cusProductToPrices,
+	customerProductToEffectivePrices,
 	type FullCustomer,
 	type FullProduct,
 	findMainActiveCustomerProductByGroup,
 	findMainScheduledCustomerProductByGroup,
 	isOneOffProduct,
 	isProductUpgrade,
+	productToEffectivePrices,
 } from "@autumn/shared";
 
 /**
@@ -17,15 +18,20 @@ export const setupAttachTransitionContext = ({
 	fullCustomer,
 	attachProduct,
 	planScheduleOverride,
+	internalEntityId,
 }: {
 	fullCustomer: FullCustomer;
 	attachProduct: FullProduct;
 	planScheduleOverride?: PlanTiming;
+	/** Scope the transition lookup to a specific entity. When omitted, the
+	 * finders fall back to the customer's current entity context (customer
+	 * level for a customer-scoped attach). Required so an entity-scoped attach
+	 * transitions from the existing product on that same entity. */
+	internalEntityId?: string;
 }) => {
 	// Only main recurring products can trigger transitions
 	const isMainRecurring =
-		!attachProduct.is_add_on &&
-		!isOneOffProduct({ prices: attachProduct.prices });
+		!attachProduct.is_add_on && !isOneOffProduct({ product: attachProduct });
 
 	if (!isMainRecurring) {
 		return {
@@ -38,24 +44,26 @@ export const setupAttachTransitionContext = ({
 	const currentCustomerProduct = findMainActiveCustomerProductByGroup({
 		fullCus: fullCustomer,
 		productGroup: attachProduct.group,
+		internalEntityId,
 	});
 
 	const scheduledCustomerProduct = findMainScheduledCustomerProductByGroup({
 		fullCustomer,
 		productGroup: attachProduct.group,
+		internalEntityId,
 	});
 
 	// Compute planTiming (upgrade = immediate, downgrade = end_of_cycle)
 	let planTiming: PlanTiming = "immediate";
 
 	if (currentCustomerProduct) {
-		const currentPrices = cusProductToPrices({
-			cusProduct: currentCustomerProduct,
+		const currentPrices = customerProductToEffectivePrices({
+			customerProduct: currentCustomerProduct,
 		});
 
 		const isUpgrade = isProductUpgrade({
 			prices1: currentPrices,
-			prices2: attachProduct.prices,
+			prices2: productToEffectivePrices({ product: attachProduct }),
 		});
 
 		planTiming = isUpgrade ? "immediate" : "end_of_cycle";

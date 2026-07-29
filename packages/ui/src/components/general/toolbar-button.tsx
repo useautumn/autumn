@@ -1,0 +1,28 @@
+import { Button, type ButtonProps } from "@autumn/ui/components/ui/button";
+import { cn } from "@autumn/ui/lib/utils";
+import { EllipsisVertical } from "lucide-react";
+import { forwardRef } from "react";
+
+export const ToolbarButton = forwardRef<HTMLButtonElement, ButtonProps>(
+	(props, ref) => {
+		return (
+			<Button
+				ref={ref}
+				variant="skeleton"
+				size="icon"
+				className={cn(
+					"rounded-lg !h-5 !w-5 p-0 transition-all duration-100",
+					props?.className,
+				)}
+				{...props}
+				onClick={(e) => {
+					e.stopPropagation();
+					e.preventDefault();
+					props.onClick?.(e);
+				}}
+			>
+				<EllipsisVertical size={12} />
+			</Button>
+		);
+	},
+);

@@ -1,7 +1,6 @@
+import { Button, ShortcutButton } from "@autumn/ui";
 import { parseAsInteger, parseAsString, useQueryStates } from "nuqs";
 import { useNavigate } from "react-router";
-import { Button } from "@/components/v2/buttons/Button";
-import { ShortcutButton } from "@/components/v2/buttons/ShortcutButton";
 import {
 	useHasChanges,
 	useIsLatestVersion,

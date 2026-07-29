@@ -8,9 +8,7 @@ export const isFullSubjectRolloutEnabled = ({
 	ctx,
 }: {
 	ctx: AutumnContext;
-}): boolean =>
-	ctx.rolloutSnapshot?.rolloutId === FULL_SUBJECT_ROLLOUT_ID &&
-	ctx.rolloutSnapshot.enabled;
+}): boolean => true;
 
 export const getFullSubjectRolloutSnapshot = ({
 	ctx,

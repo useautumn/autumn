@@ -1,4 +1,5 @@
 import { AttachScenario } from "@models/checkModels/checkPreviewModels.js";
+import { CustomerBillingControlsSchema } from "@models/cusModels/billingControls/customerBillingControls.js";
 import { AppEnv } from "@models/genModels/genEnums.js";
 import { z } from "zod/v4";
 import { ApiFreeTrialSchema } from "../apiFreeTrial.js";
@@ -180,6 +181,10 @@ export const ApiProductSchema = z.object({
 		.string()
 		.nullable()
 		.describe("ID of the base variant this product is derived from"),
+
+	billing_controls: CustomerBillingControlsSchema.optional().describe(
+		"Plan-level billing controls used as customer defaults",
+	),
 
 	scenario: z
 		.enum(AttachScenario)

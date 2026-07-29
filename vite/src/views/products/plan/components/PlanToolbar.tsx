@@ -1,18 +1,19 @@
-import { Copy, EllipsisVerticalIcon, Trash2 } from "lucide-react";
-import { useState } from "react";
-import { useNavigate } from "react-router";
 import {
 	DropdownMenu,
 	DropdownMenuContent,
 	DropdownMenuItem,
 	DropdownMenuTrigger,
-} from "@/components/v2/dropdowns/DropdownMenu";
-import { IconButton } from "@/components/v2/buttons/IconButton";
+	IconButton,
+} from "@autumn/ui";
+import { Copy, EllipsisVerticalIcon, Trash2 } from "lucide-react";
+import { useState } from "react";
+import { useNavigate } from "react-router";
 import { useProductStore } from "@/hooks/stores/useProductStore";
 import { cn } from "@/lib/utils";
 import { pushPage } from "@/utils/genUtils";
 import { CopyProductDialog } from "../../products/components/CopyProductDialog";
 import { DeletePlanDialog } from "./DeletePlanDialog";
+import { LinkLicenseMenuItem } from "./plan-licenses/LinkLicenseMenuItem";
 
 export const PlanToolbar = () => {
 	const [deleteOpen, setDeleteOpen] = useState(false);
@@ -52,32 +53,33 @@ export const PlanToolbar = () => {
 					/>
 				</DropdownMenuTrigger>
 				<DropdownMenuContent align="end">
-				<DropdownMenuItem
-					className="flex items-center text-xs"
-					onClick={(e) => {
-						e.stopPropagation();
-						e.preventDefault();
-						setDropdownOpen(false);
-						setCopyOpen(true);
-					}}
-				>
-					<div className="flex items-center justify-between w-full gap-2">
-						Copy
-						<Copy size={12} className="text-tertiary-foreground" />
-					</div>
-				</DropdownMenuItem>
-				<DropdownMenuItem
-					className="flex items-center text-xs"
-					onClick={(e) => {
-						e.stopPropagation();
-						e.preventDefault();
-						setDropdownOpen(false);
-						setDeleteOpen(true);
-					}}
-				>
-						<div className="flex items-center justify-between w-full gap-2">
-							Delete Plan
+					<LinkLicenseMenuItem />
+					<DropdownMenuItem
+						className="flex items-center text-xs"
+						onClick={(e) => {
+							e.stopPropagation();
+							e.preventDefault();
+							setDropdownOpen(false);
+							setCopyOpen(true);
+						}}
+					>
+						<div className="flex items-center gap-2">
+							<Copy size={12} className="text-tertiary-foreground" />
+							Copy
+						</div>
+					</DropdownMenuItem>
+					<DropdownMenuItem
+						className="flex items-center text-xs"
+						onClick={(e) => {
+							e.stopPropagation();
+							e.preventDefault();
+							setDropdownOpen(false);
+							setDeleteOpen(true);
+						}}
+					>
+						<div className="flex items-center gap-2">
 							<Trash2 size={12} className="text-tertiary-foreground" />
+							Delete Plan
 						</div>
 					</DropdownMenuItem>
 				</DropdownMenuContent>

@@ -1,12 +1,11 @@
 import { AppEnv } from "@autumn/shared";
+import { IconButton, SandboxBanner } from "@autumn/ui";
 import { ArrowRightIcon } from "@phosphor-icons/react";
 import { AutumnProvider } from "autumn-js/react";
 import { NuqsAdapter } from "nuqs/adapters/react-router/v7";
 import { useEffect, useRef, useState } from "react";
 import { Outlet } from "react-router";
 import { CustomToaster } from "@/components/general/CustomToaster";
-import { SandboxBanner } from "@/components/general/SandboxBanner";
-import { IconButton } from "@/components/v2/buttons/IconButton";
 import { PortalContainerContext } from "@/contexts/PortalContainerContext";
 import { useAutumnFlags } from "@/hooks/common/useAutumnFlags";
 import { useGlobalErrorHandler } from "@/hooks/common/useGlobalErrorHandler";
@@ -14,9 +13,11 @@ import { useOrg } from "@/hooks/common/useOrg";
 import { useDevQuery } from "@/hooks/queries/useDevQuery";
 import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
 import { useRewardsQuery } from "@/hooks/queries/useRewardsQuery";
+import { useSyncSandboxFromUrl } from "@/hooks/sandbox/useSyncSandboxFromUrl";
 import { useFeatureFlags } from "@/hooks/useFeatureFlags";
 import { cn } from "@/lib/utils";
 import { useEnv } from "@/utils/envUtils";
+import { LeafPanel } from "@/views/chat/LeafPanel";
 import CommandBar from "@/views/command-bar/CommandBar";
 import { useEventNames } from "@/views/customers/customer/analytics/hooks/useEventNames";
 import LoadingScreen from "@/views/general/LoadingScreen";
@@ -54,26 +55,52 @@ export function MainLayout() {
 				<PortalContainerContext.Provider value={containerRef}>
 					<div className="w-screen h-screen flex bg-outer-background">
 						<CustomToaster />
-						<div className="hidden sm:flex">
-							<MainSidebar />
-						</div>
-						<MobileSidebar
-							open={mobileSidebarOpen}
-							onOpenChange={setMobileSidebarOpen}
-						/>
-						<InviteNotifications />
-						<MainContent
+						<DashboardShell
 							containerRef={containerRef}
-							onOpenMobileSidebar={() => setMobileSidebarOpen(true)}
+							mobileSidebarOpen={mobileSidebarOpen}
+							onMobileSidebarOpenChange={setMobileSidebarOpen}
 						/>
-						{/* <ChatWidget /> */}
-						<CommandBar />
 					</div>
 				</PortalContainerContext.Provider>
 			</NuqsAdapter>
 		</AutumnProvider>
 	);
 }
+
+const DashboardShell = ({
+	containerRef,
+	mobileSidebarOpen,
+	onMobileSidebarOpenChange,
+}: {
+	containerRef: React.RefObject<HTMLDivElement>;
+	mobileSidebarOpen: boolean;
+	onMobileSidebarOpenChange: (open: boolean) => void;
+}) => {
+	const { sandboxUrlResolved } = useSyncSandboxFromUrl();
+
+	if (!sandboxUrlResolved) {
+		return <LoadingScreen fullPage />;
+	}
+
+	return (
+		<>
+			<div className="hidden sm:flex">
+				<MainSidebar />
+			</div>
+			<MobileSidebar
+				open={mobileSidebarOpen}
+				onOpenChange={onMobileSidebarOpenChange}
+			/>
+			<InviteNotifications />
+			<MainContent
+				containerRef={containerRef}
+				onOpenMobileSidebar={() => onMobileSidebarOpenChange(true)}
+			/>
+			<CommandBar />
+			<LeafPanel />
+		</>
+	);
+};
 
 const MainContent = ({
 	containerRef,

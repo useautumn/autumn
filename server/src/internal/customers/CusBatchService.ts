@@ -25,6 +25,7 @@ import type { CustomerListFilters } from "./customerListFilters.js";
 import { getApiCustomerBase } from "./cusUtils/apiCusUtils/getApiCustomerBase.js";
 import {
 	getPaginatedFullCusQuery,
+	parseDashboardIntervalFilter,
 	parseDashboardProcessorFilter,
 	parseDashboardStatusFilter,
 	parseDashboardVersionFilter,
@@ -215,6 +216,7 @@ export class CusBatchService {
 			customer_products: [],
 			customer_entitlements: [],
 			extra_customer_entitlements: [],
+			pooled_customer_entitlements: [],
 			customer_prices: [],
 			entitlements: [],
 			rollovers: [],
@@ -316,12 +318,15 @@ export class CusBatchService {
 
 		const productVersionFilters = parseDashboardVersionFilter(filters?.version);
 
+		const intervalFilters = parseDashboardIntervalFilter(filters?.interval);
+
 		// Status/none/version filter on a different table (customer_products) than
 		// the cursor (customers). Folding it into the main query forces a merge join
 		// that abandons idx_customers_cursor and degrades to seconds.
 		const requiresResolveStep =
 			statusFilters.length > 0 ||
 			productVersionFilters.length > 0 ||
+			intervalFilters.length > 0 ||
 			!!filters?.none;
 
 		const tResolveStart = performance.now();
@@ -355,6 +360,8 @@ export class CusBatchService {
 			withSubs: true,
 			withEntities: true,
 			includeInvoices: true,
+			// Only the dashboard renders products_page / products_total_count.
+			withProductsPage: true,
 			entitiesLimit,
 			limit: internalIds ? internalIds.length : limit,
 			cursor:
@@ -380,6 +387,7 @@ export class CusBatchService {
 			customer_products: [],
 			customer_entitlements: [],
 			extra_customer_entitlements: [],
+			pooled_customer_entitlements: [],
 			customer_prices: [],
 			entitlements: [],
 			rollovers: [],

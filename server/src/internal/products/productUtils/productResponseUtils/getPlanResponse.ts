@@ -3,6 +3,8 @@ import {
 	ApiFreeTrialV2Schema,
 	type ApiPlanV1,
 	ApiPlanV1Schema,
+	billingControlsFromColumns,
+	diffPlanV1,
 	type Feature,
 	type FullCustomer,
 	type FullProduct,
@@ -15,6 +17,9 @@ import {
 	sortProductItems,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
+import { toApiPlanLicenseWithCustomize } from "@/internal/licenses/actions/customize/toApiPlanLicenseWithCustomize.js";
+
+import { ProductService } from "../../ProductService.js";
 import { mapToProductItems } from "../../productV2Utils.js";
 import { buildCustomerEligibility } from "./buildCustomerEligibility.js";
 
@@ -45,6 +50,8 @@ export const getPlanResponse = async ({
 	fullCus,
 	expand = [],
 	currency = "usd",
+	baseFullProduct,
+	resolveBaseFullProduct = true,
 }: {
 	ctx?: AutumnContext;
 	product: FullProduct;
@@ -52,11 +59,13 @@ export const getPlanResponse = async ({
 	fullCus?: FullCustomer;
 	expand?: string[];
 	currency?: string;
+	baseFullProduct?: FullProduct;
+	resolveBaseFullProduct?: boolean;
 }): Promise<ApiPlanV1> => {
 	// 1. Convert prices/entitlements to items
 	const rawItems = mapToProductItems({
-		prices: product.prices,
-		entitlements: product.entitlements,
+		prices: product.prices ?? [],
+		entitlements: product.entitlements ?? [],
 		features: features,
 	});
 
@@ -71,11 +80,15 @@ export const getPlanResponse = async ({
 	const basePrice: ApiPlanV1["price"] | null = basePriceItem
 		? {
 				amount: basePriceItem.price,
+				...(basePriceItem.additional_currencies?.length
+					? { additional_currencies: basePriceItem.additional_currencies }
+					: {}),
 				interval: itemToBillingInterval({ item: basePriceItem }),
 				interval_count:
 					itemToBillingIntervalCount({ item: basePriceItem }) !== 1
 						? itemToBillingIntervalCount({ item: basePriceItem })
 						: undefined,
+				price_id: basePriceItem.price_id ?? undefined,
 				display: getProductItemDisplay({
 					item: basePriceItem,
 					features,
@@ -111,9 +124,26 @@ export const getPlanResponse = async ({
 		fullCus,
 		fullProduct: product,
 	});
+	const apiLicenses = product.licenses?.length
+		? await Promise.all(
+				product.licenses.map((license) =>
+					toApiPlanLicenseWithCustomize({
+						license,
+						resolvePlan: (licenseProduct) =>
+							getPlanResponse({
+								product: licenseProduct,
+								features,
+								expand,
+								currency,
+								resolveBaseFullProduct: false,
+							}),
+					}),
+				),
+			)
+		: undefined;
 
 	// 9. Build Plan response
-	return ApiPlanV1Schema.parse({
+	const plan = {
 		id: product.id,
 		name: product.name || "",
 		description: product.description || null,
@@ -125,15 +155,55 @@ export const getPlanResponse = async ({
 
 		price: basePrice,
 		items: planItems ?? [],
+		licenses: apiLicenses,
 		free_trial: freeTrial,
 
-		created_at: product.created_at,
-		env: product.env,
+		created_at: product.created_at ?? 0,
+		env: product.env ?? ctx?.env ?? "sandbox",
 		archived: product.archived,
-		base_variant_id: product.base_variant_id,
+		base_variant_id: product.base_variant_id ?? null,
 
 		config: product.config ?? { ignore_past_due: false },
+		billing_controls: billingControlsFromColumns(product),
+		metadata: product.metadata ?? {},
 
 		customer_eligibility: customerEligibility,
+	} satisfies ApiPlanV1;
+
+	const resolvedBaseFullProduct =
+		baseFullProduct ??
+		(resolveBaseFullProduct && ctx && product.base_internal_product_id
+			? ((await ProductService.getFull({
+					db: ctx.db,
+					idOrInternalId: product.base_internal_product_id,
+					orgId: ctx.org.id,
+					env: ctx.env,
+					allowNotFound: true,
+				})) ?? undefined)
+			: undefined);
+	const basePlan = resolvedBaseFullProduct
+		? await getPlanResponse({
+				ctx,
+				product: resolvedBaseFullProduct,
+				features,
+				expand,
+				currency,
+			})
+		: undefined;
+	const customize = basePlan
+		? diffPlanV1({ from: basePlan, to: plan })
+		: undefined;
+	const hasCustomize = customize && Object.keys(customize).length > 0;
+
+	return ApiPlanV1Schema.parse({
+		...plan,
+		...(basePlan
+			? {
+					variant_details: {
+						base_plan_id: basePlan.id,
+						...(hasCustomize ? { customize } : {}),
+					},
+				}
+			: {}),
 	} satisfies ApiPlanV1);
 };

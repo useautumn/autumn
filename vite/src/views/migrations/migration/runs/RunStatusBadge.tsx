@@ -1,10 +1,10 @@
+import { Badge } from "@autumn/ui";
 import {
 	CheckCircleIcon,
 	type Icon,
 	MinusCircleIcon,
 	XCircleIcon,
 } from "@phosphor-icons/react";
-import { Badge } from "@/components/v2/badges/Badge";
 import type { MigrationItemEventStatus } from "@/hooks/queries/useMigrationRunsQuery";
 import { cn } from "@/lib/utils";
 

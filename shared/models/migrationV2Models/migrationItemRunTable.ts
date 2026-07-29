@@ -48,6 +48,15 @@ export const migrationItemRuns = pgTable(
 		uniqueIndex("migration_item_runs_live_unique")
 			.on(table.migration_internal_id, table.item_kind, table.item_id)
 			.where(sql`${table.dry_run} = false`),
+		// item_id COLLATE "C" so the candidate-query anti-join (item_id = customers.internal_id, which is "C") index-seeks instead of seq-scanning
+		index("migration_item_runs_live_c_idx")
+			.on(
+				table.migration_internal_id,
+				table.item_kind,
+				sql`${table.item_id} COLLATE "C"`,
+			)
+			.where(sql`${table.dry_run} = false`)
+			.concurrently(),
 		uniqueIndex("migration_item_runs_dry_run_unique")
 			.on(
 				table.migration_internal_id,

@@ -2,6 +2,7 @@ import { ErrCode, type FullCustomer, RecaseError, Scopes } from "@autumn/shared"
 import { StatusCodes } from "http-status-codes";
 import { z } from "zod/v4";
 import { createRoute } from "@/honoMiddlewares/routeHandler.js";
+import { EventService } from "@/internal/api/events/EventService.js";
 import { CusService } from "@/internal/customers/CusService.js";
 import { eventActions } from "../actions/eventActions.js";
 
@@ -54,18 +55,38 @@ export const handleInternalListRawEvents = createRoute({
 			}
 		}
 
-		const events = await eventActions.listRawEvents({
-			ctx,
-			params: {
-				customer_id: customer?.id ?? undefined,
-				entity_id: entity_id,
-				interval: interval ?? undefined,
-				custom_range: custom_range ?? undefined,
-				event_names: event_names?.filter((name) => name !== ""),
-				customer,
-				aggregateAll,
-			},
-		});
+		let events: Awaited<ReturnType<typeof eventActions.listRawEvents>>;
+		try {
+			events = await eventActions.listRawEvents({
+				ctx,
+				params: {
+					customer_id: customer?.id ?? undefined,
+					entity_id: entity_id,
+					interval: interval ?? undefined,
+					custom_range: custom_range ?? undefined,
+					event_names: event_names?.filter((name) => name !== ""),
+					customer,
+					aggregateAll,
+				},
+			});
+		} catch (error) {
+			// Dev stacks often lack ClickHouse credentials; the PG events buffer
+			// (empty in production) keeps raw queries usable there.
+			if (process.env.NODE_ENV === "production" || !customer) throw error;
+			ctx.logger.warn(
+				`[/query/raw] ClickHouse query failed, falling back to PG events: ${error}`,
+			);
+			const rows = await EventService.getByCustomerId({
+				db,
+				orgId: org.id,
+				internalCustomerId: customer.internal_id,
+				env,
+				limit: 1000,
+			});
+			events = { data: rows } as unknown as Awaited<
+				ReturnType<typeof eventActions.listRawEvents>
+			>;
+		}
 
 		return c.json({
 			rawEvents: events,

@@ -1,6 +1,6 @@
+import { Button } from "@autumn/ui";
 import { type ReactNode, useEffect, useState } from "react";
 import { useUpdateSubscriptionFormContext } from "@/components/forms/update-subscription-v2";
-import { Button } from "@/components/v2/buttons/Button";
 import { SheetFooter } from "@/components/v2/sheets/SharedSheetComponents";
 
 const FOOTER_DELAY_MS = 350;
@@ -36,6 +36,10 @@ export function UncancelFooter() {
 
 	const handleGoBack = () => {
 		form.setFieldValue("cancelAction", "uncancel");
+		form.setFieldValue("billingBehavior", null);
+		form.setFieldValue("refundBehavior", null);
+		form.setFieldValue("refundAmount", null);
+		form.setFieldValue("noBillingChanges", false);
 	};
 
 	if (!showFooter) return null;

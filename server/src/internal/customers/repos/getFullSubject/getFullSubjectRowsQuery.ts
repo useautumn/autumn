@@ -1,15 +1,41 @@
-import { type CusProductStatus, RELEVANT_STATUSES } from "@autumn/shared";
+import {
+	ACTIVE_STATUSES,
+	type CusProductStatus,
+	RELEVANT_STATUSES,
+} from "@autumn/shared";
 import { type SQL, sql } from "drizzle-orm";
+import { planetScaleTag } from "@/db/dbUtils.js";
+import { notLicenseAssignmentSql } from "@/internal/licenses/repos/licenseAssignmentRepo.js";
+import { composeCustomerLicensesCtes } from "./composeCustomerLicensesCtes.js";
 import { getEntityAggregateFragments } from "./getEntityAggregateFragments.js";
 
 export const CUSTOMER_PRODUCT_LIMIT = 200;
 export const EXTRA_CUSTOMER_ENTITLEMENT_LIMIT = 200;
 
+/**
+ * Every aggregate and `distinct_*` CTE below is declared `AS MATERIALIZED`.
+ *
+ * Postgres inlines a CTE referenced once, which is normally the better plan. But
+ * the row estimate for the subject set collapses to 1 — the planner multiplies
+ * org_id/internal_customer_id/env as independent conditions and clamps — while a
+ * multi-subject page (entities.list) really returns up to 1,000. So each
+ * `LEFT JOIN xxx_agg ON subject_key` was planned as a nested loop and the inlined
+ * aggregate re-ran once per output row, re-sorting its whole input each time to
+ * keep one group. Measured on mintlify's 12,212-entity customer: 28,450ms, of
+ * which cus_products_agg alone was 18,025ms across 1,001 loops.
+ *
+ * MATERIALIZED forces one evaluation into a tuplestore, so the estimate stops
+ * mattering. Same customer: 839ms. There is nothing to push down into these
+ * (they are already scoped by subject_records), so the usual cost of blocking
+ * predicate pushdown does not apply, and the single-subject getFullSubject path
+ * measured neutral — 585ms vs 570ms, byte-identical output.
+ */
 /** Aggregate CTE → SubjectQueryRow column. Each CTE must expose (subject_key, items). */
 const SUBJECT_AGGREGATES = [
 	{ cte: "cus_products_agg", column: "customer_products" },
 	{ cte: "cus_entitlements_agg", column: "customer_entitlements" },
 	{ cte: "cus_prices_agg", column: "customer_prices" },
+	{ cte: "customer_licenses_agg", column: "customer_licenses" },
 	{ cte: "extra_cus_entitlements_agg", column: "extra_customer_entitlements" },
 	{ cte: "replaceables_agg", column: "replaceables" },
 	{ cte: "rollovers_agg", column: "rollovers" },
@@ -52,6 +78,7 @@ export const getFullSubjectRowsQuery = ({
 	includeInvoices,
 	includeEntityAggregations,
 	entityScopedOnly = false,
+	queryTag = "getFullSubject",
 }: {
 	leadingCtes: SQL;
 	inStatuses: CusProductStatus[];
@@ -59,19 +86,30 @@ export const getFullSubjectRowsQuery = ({
 	includeEntityAggregations: boolean;
 	/** Only hydrate rows scoped to the subject's entity (requires non-null internal_entity_id on every subject). Customer-level rows must be merged back in separately. */
 	entityScopedOnly?: boolean;
+	queryTag?: string;
 }) => {
-	const statusFilter =
+	const entityAggregationStatuses =
 		inStatuses.length > 0
-			? sql`AND cp.status = ANY(ARRAY[${sql.join(
-					inStatuses.map((status) => sql`${status}`),
-					sql`, `,
-				)}])`
+			? ACTIVE_STATUSES.filter((status) => inStatuses.includes(status))
+			: ACTIVE_STATUSES;
+	// Status lists bind as a single array parameter rather than one placeholder
+	// per element. This keeps the generated SQL text identical regardless of how
+	// many statuses a caller passes, which is what lets the statement be reused
+	// as a named prepared statement instead of re-planned on every execution.
+	const entityAggregationStatusFilter =
+		entityAggregationStatuses.length > 0
+			? sql`AND cp.status = ANY(${sql.param(entityAggregationStatuses)}::text[])`
+			: sql`AND FALSE`;
+
+	// Seats own no lifecycle: their raw status column lags until the seat-sync
+	// cron converges it, so the candidate filter/rank must check the pool
+	// parent's LIVE status (via pcp_early) instead of cp.status for those rows.
+	const effectiveStatusFilter =
+		inStatuses.length > 0
+			? sql`AND COALESCE(pcp_early.status, cp.status) = ANY(${sql.param(inStatuses)}::text[])`
 			: sql``;
 
-	const relevantStatusFirst = sql`CASE WHEN cp.status = ANY(ARRAY[${sql.join(
-		RELEVANT_STATUSES.map((status) => sql`${status}`),
-		sql`, `,
-	)}]) THEN 0 ELSE 1 END`;
+	const effectiveRelevantStatusFirst = sql`CASE WHEN COALESCE(pcp_early.status, cp.status) = ANY(${sql.param(RELEVANT_STATUSES)}::text[]) THEN 0 ELSE 1 END`;
 
 	const hasCustomerPrices = sql`EXISTS (
 		SELECT 1
@@ -81,18 +119,21 @@ export const getFullSubjectRowsQuery = ({
 
 	const entityFragments = includeEntityAggregations
 		? getEntityAggregateFragments({
-				statusFilter,
+				statusFilter: entityAggregationStatusFilter,
 			})
 		: emptyEntityFragments;
+	const customerLevelProductPredicate = sql`
+		cp.internal_entity_id IS NULL
+		AND ${sql.raw(notLicenseAssignmentSql("cp"))}`;
 
 	const customerProductSubjectPredicate = entityScopedOnly
 		? sql`cp.internal_entity_id = sr.internal_entity_id`
 		: sql`cp.internal_customer_id = sr.internal_customer_id
 					AND (
-						(sr.internal_entity_id IS NULL AND cp.internal_entity_id IS NULL)
+						(sr.internal_entity_id IS NULL AND ${customerLevelProductPredicate})
 						OR
 						(sr.internal_entity_id IS NOT NULL AND (
-							cp.internal_entity_id IS NULL
+							${customerLevelProductPredicate}
 							OR cp.internal_entity_id = sr.internal_entity_id
 						))
 					)`;
@@ -170,15 +211,40 @@ export const getFullSubjectRowsQuery = ({
 						THEN 0
 						ELSE 1
 					END AS subject_entity_priority,
-					${relevantStatusFirst} AS status_priority,
+					${effectiveRelevantStatusFirst} AS status_priority,
 					${hasCustomerPrices} AS has_customer_prices,
 					prod.is_add_on AS product_is_add_on,
+					-- Resolved once here and carried through cus_products so the
+					-- aggregate below doesn't repeat this LATERAL + join.
+					CASE WHEN pcl_early.id IS NULL THEN NULL ELSE to_jsonb(pcl_early) END
+						AS parent_customer_license,
+					CASE WHEN pcp_early.id IS NULL THEN NULL ELSE jsonb_build_object(
+						'status', pcp_early.status,
+						'subscription_ids', to_jsonb(pcp_early.subscription_ids),
+						'canceled_at', pcp_early.canceled_at
+					) END AS parent_customer_product,
 					cp.*
 				FROM customer_products cp
 				JOIN products prod
 					ON prod.internal_id = cp.internal_product_id
+				-- Seats own no lifecycle: the raw status column lags until the
+				-- seat-sync cron converges it, so the filter/rank below must
+				-- resolve the pool parent's LIVE status, not cp.status.
+				LEFT JOIN LATERAL (
+					SELECT pool.*
+					FROM customer_licenses pool
+					JOIN customer_products pool_parent
+						ON pool_parent.id = pool.parent_customer_product_id
+					WHERE cp.customer_license_link_id IS NOT NULL
+						AND pool.link_id = cp.customer_license_link_id
+					ORDER BY (pool_parent.status IN ('active', 'past_due', 'scheduled')) DESC,
+						pool.created_at DESC
+					LIMIT 1
+				) pcl_early ON true
+				LEFT JOIN customer_products pcp_early
+					ON pcp_early.id = pcl_early.parent_customer_product_id
 				WHERE ${customerProductSubjectPredicate}
-					${statusFilter}
+					${effectiveStatusFilter}
 			) cp_candidates ON true
 		),
 
@@ -195,6 +261,8 @@ export const getFullSubjectRowsQuery = ({
 			FROM customer_entitlements ce
 			JOIN cus_products cp
 				ON cp.id = ce.customer_product_id
+			WHERE ce.pooled_balance_id IS NULL
+				AND ce.pooled_contribution_id IS NULL
 		),
 
 		extra_cus_entitlements AS (
@@ -209,10 +277,13 @@ export const getFullSubjectRowsQuery = ({
 						THEN 0
 						ELSE 1
 					END AS subject_entity_priority,
-					ce.*
+					ce.*,
+					NULL::json AS pooled_balance
 				FROM customer_entitlements ce
 				WHERE ce.internal_customer_id = sr.internal_customer_id
 					AND ce.customer_product_id IS NULL
+					AND ce.pooled_balance_id IS NULL
+					AND ce.pooled_contribution_id IS NULL
 					AND (ce.expires_at IS NULL OR ce.expires_at > EXTRACT(EPOCH FROM now()) * 1000)
 					AND (
 						ce.balance != 0
@@ -231,10 +302,40 @@ export const getFullSubjectRowsQuery = ({
 			) ce_ordered ON true
 		),
 
+		pooled_customer_entitlements AS (
+			SELECT ce_ordered.*
+			FROM subject_records sr
+			JOIN LATERAL (
+				SELECT
+					sr.subject_key,
+					CASE
+						WHEN sr.internal_entity_id IS NOT NULL
+							AND ce.internal_entity_id = sr.internal_entity_id
+						THEN 0
+						ELSE 1
+					END AS subject_entity_priority,
+					ce.*,
+					row_to_json(pb) AS pooled_balance
+				FROM customer_entitlements ce
+				JOIN pooled_balances pb
+					ON pb.id = ce.pooled_balance_id
+				WHERE ce.internal_customer_id = sr.internal_customer_id
+					AND ce.customer_product_id IS NULL
+					AND ce.pooled_balance_id IS NOT NULL
+					AND ce.pooled_contribution_id IS NULL
+					AND (ce.expires_at IS NULL OR ce.expires_at > EXTRACT(EPOCH FROM now()) * 1000)
+					${customerEntitlementSubjectPredicate}
+				ORDER BY subject_entity_priority ASC, ce.id DESC
+				LIMIT ${EXTRA_CUSTOMER_ENTITLEMENT_LIMIT}
+			) ce_ordered ON true
+		),
+
 		all_cus_ent_ids AS (
 			SELECT subject_key, id FROM cus_entitlements
 			UNION ALL
 			SELECT subject_key, id FROM extra_cus_entitlements
+			UNION ALL
+			SELECT subject_key, id FROM pooled_customer_entitlements
 		),
 
 		cus_rollovers AS (
@@ -265,13 +366,15 @@ export const getFullSubjectRowsQuery = ({
 			FROM customer_prices cpr
 			JOIN cus_products cp
 				ON cp.id = cpr.customer_product_id
-		)
+		),
+
+		${composeCustomerLicensesCtes()}
 
 		${invoicesCte}
 		${entityFragments.ctes}
 		,
 
-		distinct_products AS (
+		distinct_products AS MATERIALIZED (
 			SELECT DISTINCT ON (src.subject_key, p.internal_id)
 				src.subject_key,
 				src.internal_customer_id,
@@ -288,7 +391,7 @@ export const getFullSubjectRowsQuery = ({
 			ORDER BY src.subject_key, p.internal_id
 		),
 
-		relevant_entitlement_records AS (
+		relevant_entitlement_records AS MATERIALIZED (
 			SELECT DISTINCT
 				ce.subject_key,
 				ce.internal_customer_id,
@@ -300,10 +403,16 @@ export const getFullSubjectRowsQuery = ({
 				ece.internal_customer_id,
 				ece.entitlement_id
 			FROM extra_cus_entitlements ece
+			UNION
+			SELECT DISTINCT
+				pce.subject_key,
+				pce.internal_customer_id,
+				pce.entitlement_id
+			FROM pooled_customer_entitlements pce
 			${entityFragments.entitlementRefsUnion}
 		),
 
-		distinct_entitlements AS (
+		distinct_entitlements AS MATERIALIZED (
 			SELECT
 				rer.subject_key,
 				rer.internal_customer_id,
@@ -316,7 +425,7 @@ export const getFullSubjectRowsQuery = ({
 				ON e.internal_feature_id = f.internal_id
 		),
 
-		distinct_prices AS (
+		distinct_prices AS MATERIALIZED (
 			SELECT DISTINCT ON (src.subject_key, p.id)
 				src.subject_key,
 				src.internal_customer_id,
@@ -335,7 +444,7 @@ export const getFullSubjectRowsQuery = ({
 			ORDER BY src.subject_key, p.id
 		),
 
-		distinct_free_trials AS (
+		distinct_free_trials AS MATERIALIZED (
 			SELECT DISTINCT ON (src.subject_key, ft.id)
 				src.subject_key,
 				src.internal_customer_id,
@@ -353,7 +462,7 @@ export const getFullSubjectRowsQuery = ({
 			ORDER BY src.subject_key, ft.id
 		),
 
-		cus_products_agg AS (
+		cus_products_agg AS MATERIALIZED (
 			SELECT
 				cp.subject_key,
 				json_agg(
@@ -365,6 +474,11 @@ export const getFullSubjectRowsQuery = ({
 						- 'has_customer_prices'
 						- 'product_is_add_on'
 						- 'subject_rank'
+						-- parent_customer_license / parent_customer_product ride along
+						-- from all_cus_products (seat rows carry their pool and the
+						-- parent's unfiltered lifecycle snapshot), so they land in this
+						-- object via row_to_json. They used to be re-derived here by a
+						-- second copy of the same LATERAL + join.
 					)::json
 					ORDER BY
 						cp.subject_entity_priority ASC,
@@ -377,7 +491,7 @@ export const getFullSubjectRowsQuery = ({
 			GROUP BY cp.subject_key
 		),
 
-		cus_entitlements_agg AS (
+		cus_entitlements_agg AS MATERIALIZED (
 			SELECT
 				ce.subject_key,
 				json_agg((row_to_json(ce)::jsonb - 'subject_key')::json) AS items
@@ -385,7 +499,7 @@ export const getFullSubjectRowsQuery = ({
 			GROUP BY ce.subject_key
 		),
 
-		cus_prices_agg AS (
+		cus_prices_agg AS MATERIALIZED (
 			SELECT
 				cpr.subject_key,
 				json_agg((row_to_json(cpr)::jsonb - 'subject_key')::json) AS items
@@ -393,7 +507,7 @@ export const getFullSubjectRowsQuery = ({
 			GROUP BY cpr.subject_key
 		),
 
-		extra_cus_entitlements_agg AS (
+		extra_cus_entitlements_agg AS MATERIALIZED (
 			SELECT
 				ece.subject_key,
 				json_agg(
@@ -404,11 +518,15 @@ export const getFullSubjectRowsQuery = ({
 					)::json
 					ORDER BY ece.subject_entity_priority ASC, ece.id DESC
 				) AS items
-			FROM extra_cus_entitlements ece
+			FROM (
+				SELECT * FROM extra_cus_entitlements
+				UNION ALL
+				SELECT * FROM pooled_customer_entitlements
+			) ece
 			GROUP BY ece.subject_key
 		),
 
-		replaceables_agg AS (
+		replaceables_agg AS MATERIALIZED (
 			SELECT
 				ace.subject_key,
 				json_agg(row_to_json(rep) ORDER BY rep.created_at ASC, rep.id ASC) AS items
@@ -418,7 +536,7 @@ export const getFullSubjectRowsQuery = ({
 			GROUP BY ace.subject_key
 		),
 
-		rollovers_agg AS (
+		rollovers_agg AS MATERIALIZED (
 			SELECT
 				ace.subject_key,
 				json_agg(
@@ -431,7 +549,7 @@ export const getFullSubjectRowsQuery = ({
 			GROUP BY ace.subject_key
 		),
 
-		usage_windows_agg AS (
+		usage_windows_agg AS MATERIALIZED (
 			SELECT
 				sr.subject_key,
 				json_agg(
@@ -444,7 +562,7 @@ export const getFullSubjectRowsQuery = ({
 			GROUP BY sr.subject_key
 		),
 
-		products_agg AS (
+		products_agg AS MATERIALIZED (
 			SELECT
 				p.subject_key,
 				json_agg(
@@ -455,7 +573,7 @@ export const getFullSubjectRowsQuery = ({
 			GROUP BY p.subject_key
 		),
 
-		entitlements_agg AS (
+		entitlements_agg AS MATERIALIZED (
 			SELECT
 				ent.subject_key,
 				json_agg((row_to_json(ent)::jsonb - 'internal_customer_id' - 'subject_key')::json) AS items
@@ -463,7 +581,7 @@ export const getFullSubjectRowsQuery = ({
 			GROUP BY ent.subject_key
 		),
 
-		prices_agg AS (
+		prices_agg AS MATERIALIZED (
 			SELECT
 				pr.subject_key,
 				json_agg(
@@ -474,7 +592,7 @@ export const getFullSubjectRowsQuery = ({
 			GROUP BY pr.subject_key
 		),
 
-		free_trials_agg AS (
+		free_trials_agg AS MATERIALIZED (
 			SELECT
 				ft.subject_key,
 				json_agg(
@@ -485,7 +603,7 @@ export const getFullSubjectRowsQuery = ({
 			GROUP BY ft.subject_key
 		),
 
-		subscriptions_agg AS (
+		subscriptions_agg AS MATERIALIZED (
 			SELECT
 				cs.subject_key,
 				json_agg(row_to_json(cs.subscription_row))
@@ -521,5 +639,6 @@ export const getFullSubjectRowsQuery = ({
 		LEFT JOIN entities er
 			ON er.internal_id = sr.internal_entity_id
 		ORDER BY sr.subject_order
+		${planetScaleTag({ query: queryTag })}
 	`;
 };

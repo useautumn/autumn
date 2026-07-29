@@ -36,6 +36,7 @@ export const setupStripeBillingContext = async ({
 	newBillingSubscription,
 	skipBillingFetching,
 	skipSubscriptionFetching,
+	includeScheduledProductsForScheduleLookup = false,
 	createStripeCustomerIfMissing = true,
 	fetchTaxRate = false,
 }: {
@@ -48,6 +49,7 @@ export const setupStripeBillingContext = async ({
 	newBillingSubscription?: boolean;
 	skipBillingFetching?: boolean;
 	skipSubscriptionFetching?: boolean;
+	includeScheduledProductsForScheduleLookup?: boolean;
 	createStripeCustomerIfMissing?: boolean;
 	fetchTaxRate?: boolean;
 }) => {
@@ -88,9 +90,7 @@ export const setupStripeBillingContext = async ({
 		async stripeSubscription() {
 			// If no target customer product, skip subscription/schedule fetching
 			// Skip if product being attached is one off
-			const attachingOneOff = product
-				? isOneOffProduct({ prices: product.prices })
-				: false;
+			const attachingOneOff = product ? isOneOffProduct({ product }) : false;
 
 			return attachingOneOff || skipSubscriptionFetching
 				? undefined
@@ -106,7 +106,9 @@ export const setupStripeBillingContext = async ({
 		async stripeSubscriptionSchedule() {
 			const localStripeSubscription = await this.$.stripeSubscription;
 
-			return targetCustomerProduct || notNullish(localStripeSubscription)
+			return targetCustomerProduct ||
+				notNullish(localStripeSubscription) ||
+				includeScheduledProductsForScheduleLookup
 				? fetchStripeSubscriptionScheduleForBilling({
 						ctx,
 						fullCus: fullCustomer,

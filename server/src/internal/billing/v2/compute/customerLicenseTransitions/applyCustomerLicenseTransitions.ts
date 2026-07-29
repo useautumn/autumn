@@ -1,0 +1,73 @@
+import type {
+	CustomerLicenseBillingContext,
+	CustomerLicenseTransition,
+	FullCusProduct,
+} from "@autumn/shared";
+import { transitionLicenseBillingPriceRows } from "./transitionLicenseBillingPriceRows.js";
+
+/** Mirrors pool transitions in memory for downstream billing computation. */
+export const applyCustomerLicenseTransitions = ({
+	customerProductsToMutate,
+	customerLicenseTransitions,
+	customerLicenseBillingContext,
+}: {
+	customerProductsToMutate: FullCusProduct[];
+	customerLicenseTransitions: CustomerLicenseTransition[];
+	customerLicenseBillingContext?: CustomerLicenseBillingContext;
+}): void => {
+	if (customerLicenseTransitions.length === 0) return;
+
+	const transitionByIncomingId = new Map(
+		customerLicenseTransitions.map((transition) => [
+			transition.incomingCustomerLicense.id,
+			transition,
+		]),
+	);
+
+	for (const customerProduct of customerProductsToMutate) {
+		for (const customerLicense of customerProduct.customer_licenses ?? []) {
+			const transition = transitionByIncomingId.get(customerLicense.id);
+			if (!transition) continue;
+
+			customerLicense.link_id = transition.updates.linkId;
+			customerLicense.granted = transition.updates.granted;
+			customerLicense.remaining = transition.updates.remaining;
+			customerLicense.paid_quantity = transition.updates.paidQuantity;
+			// Repoint the definition too: unassigned buffer seats must bill at
+			// the incoming (possibly customized) price, not the stock one.
+			customerLicense.plan_license_id =
+				transition.incomingCustomerLicense.plan_license_id;
+			customerLicense.planLicense =
+				transition.incomingCustomerLicense.planLicense;
+		}
+	}
+
+	if (!customerLicenseBillingContext) return;
+
+	// Projected rows append so refund paths can keep reading persisted state.
+	const persistedRows = [
+		...customerLicenseBillingContext.licenseBillingPriceRows,
+	];
+	for (const customerLicenseTransition of customerLicenseTransitions) {
+		const planLicenseId =
+			customerLicenseTransition.incomingCustomerLicense.planLicense?.id;
+		if (
+			planLicenseId &&
+			!customerLicenseBillingContext.projectedPlanLicenseIds.includes(
+				planLicenseId,
+			)
+		) {
+			customerLicenseBillingContext.projectedPlanLicenseIds.push(planLicenseId);
+		}
+		customerLicenseBillingContext.licenseBillingPriceRows.push(
+			...transitionLicenseBillingPriceRows({
+				licenseBillingPriceRows: persistedRows,
+				customerLicenseTransition,
+				assignedSeatCount:
+					customerLicenseBillingContext.assignedSeatCountByCustomerLicenseId[
+						customerLicenseTransition.outgoingCustomerLicense.id
+					] ?? 0,
+			}),
+		);
+	}
+};

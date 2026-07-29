@@ -126,8 +126,7 @@ const applyRevertTrialUnpause = ({
 		(cp) => cp.id === customerProduct.previous_customer_product_id,
 	);
 
-	const canRestore =
-		previousCusProduct?.status === CusProductStatus.Paused;
+	const canRestore = previousCusProduct?.status === CusProductStatus.Paused;
 
 	if (!canRestore) return plan;
 

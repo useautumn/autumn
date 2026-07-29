@@ -5,11 +5,7 @@ import { useQueryKeyFactory } from "@/hooks/common/useQueryKeyFactory";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
 import { getBackendErr } from "@/utils/genUtils";
 
-export const useSyncProposalsV2 = ({
-	customerId,
-}: {
-	customerId: string;
-}) => {
+export const useSyncProposalsV2 = ({ customerId }: { customerId: string }) => {
 	const axiosInstance = useAxiosInstance();
 	const queryKeyFactory = useQueryKeyFactory();
 	const queryClient = useQueryClient();
@@ -28,10 +24,7 @@ export const useSyncProposalsV2 = ({
 
 	const syncMutation = useMutation({
 		mutationFn: async (params: SyncParamsV1) => {
-			const { data } = await axiosInstance.post(
-				"/v1/billing.sync_v2",
-				params,
-			);
+			const { data } = await axiosInstance.post("/v1/billing.sync_v2", params);
 			return data;
 		},
 		onSuccess: () => {

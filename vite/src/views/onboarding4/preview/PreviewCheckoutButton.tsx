@@ -1,6 +1,6 @@
+import { Button } from "@autumn/ui";
 import { Loader2 } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
-import { Button } from "@/components/v2/buttons/Button";
 
 type CheckoutState = "idle" | "waiting_for_sync" | "creating_checkout";
 

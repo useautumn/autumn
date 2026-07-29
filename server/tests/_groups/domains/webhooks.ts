@@ -5,5 +5,8 @@ export const webhooks: TestGroup = {
 	description: "Stripe and Autumn webhook handlers",
 	tier: "domain",
 	maxConcurrency: 3,
-	paths: [],
+	paths: [
+		"integration/billing/stripe-webhooks",
+		"integration/billing/autumn-webhooks",
+	],
 };

@@ -1,13 +1,13 @@
-import { Skeleton } from "@/components/ui/skeleton";
-import { Button } from "@/components/v2/buttons/Button";
 import {
+	Button,
 	Card,
 	CardContent,
 	CardDescription,
 	CardHeader,
 	CardTitle,
-} from "@/components/v2/cards/Card";
-import { FormLabel } from "@/components/v2/form/FormLabel";
+	FormLabel,
+	Skeleton,
+} from "@autumn/ui";
 
 interface RevenueCatConnectionCardProps {
 	isLoading: boolean;

@@ -1,20 +1,20 @@
 import type { CreateRewardProgram, RewardProgram } from "@autumn/shared";
 import { RewardReceivedBy, RewardTriggerEvent } from "@autumn/shared";
+import {
+	Button,
+	Sheet,
+	SheetContent,
+	SheetTrigger,
+	ShortcutButton,
+} from "@autumn/ui";
 import type { AxiosError } from "axios";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
-import { Button } from "@/components/v2/buttons/Button";
-import { ShortcutButton } from "@/components/v2/buttons/ShortcutButton";
 import {
 	SheetFooter,
 	SheetHeader,
 	SheetSection,
 } from "@/components/v2/sheets/SharedSheetComponents";
-import {
-	Sheet,
-	SheetContent,
-	SheetTrigger,
-} from "@/components/v2/sheets/Sheet";
 import { useRewardsQuery } from "@/hooks/queries/useRewardsQuery";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
 import { getBackendErr } from "@/utils/genUtils";

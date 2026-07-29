@@ -1,8 +1,12 @@
+import { PageContainer, PageHeader } from "@autumn/ui";
 import { GearIcon } from "@phosphor-icons/react";
 import {
+	ArrowRightLeftIcon,
 	BellIcon,
 	BotIcon,
 	BuildingIcon,
+	CreditCardIcon,
+	KeyRoundIcon,
 	MousePointerClickIcon,
 	PaletteIcon,
 	ReceiptIcon,
@@ -12,8 +16,7 @@ import {
 	UsersIcon,
 } from "lucide-react";
 import { useSearchParams } from "react-router";
-import { PageContainer } from "@/components/general/PageContainer";
-import { PageHeader } from "@/components/general/PageHeader";
+import { useAutumnFlags } from "@/hooks/common/useAutumnFlags";
 import { cn } from "@/lib/utils";
 import { AccountSection } from "./sections/AccountSection";
 import { AgentSection } from "./sections/AgentSection";
@@ -24,19 +27,25 @@ import { CustomButtonsSection } from "./sections/CustomButtonsSection";
 import { InvoicesSection } from "./sections/InvoicesSection";
 import { MembersSection } from "./sections/MembersSection";
 import { OrganizationSection } from "./sections/OrganizationSection";
+import { SsoSection } from "./sections/SsoSection";
+import { SubscriptionSection } from "./sections/SubscriptionSection";
+import { TransitionRulesSection } from "./sections/TransitionRulesSection";
 import { UsageAlertsSection } from "./sections/UsageAlertsSection";
 
 type SettingsTab =
 	| "account"
 	| "organization"
+	| "subscription"
 	| "members"
 	| "agent"
 	| "appearance"
 	| "apps"
+	| "sso"
 	| "custom-buttons"
 	| "billing"
 	| "invoices"
-	| "usage-alerts";
+	| "usage-alerts"
+	| "transition-rules";
 
 interface SettingsNavItem {
 	readonly id: SettingsTab;
@@ -64,6 +73,11 @@ const SETTINGS_GROUPS: readonly SettingsNavGroup[] = [
 				icon: <BuildingIcon className="size-4" />,
 			},
 			{
+				id: "subscription",
+				label: "Subscription",
+				icon: <CreditCardIcon className="size-4" />,
+			},
+			{
 				id: "members",
 				label: "Members",
 				icon: <UsersIcon className="size-4" />,
@@ -77,6 +91,11 @@ const SETTINGS_GROUPS: readonly SettingsNavGroup[] = [
 				id: "apps",
 				label: "Authorized Apps",
 				icon: <ShieldCheckIcon className="size-4" />,
+			},
+			{
+				id: "sso",
+				label: "Single Sign-On",
+				icon: <KeyRoundIcon className="size-4" />,
 			},
 			{
 				id: "custom-buttons",
@@ -108,6 +127,11 @@ const SETTINGS_GROUPS: readonly SettingsNavGroup[] = [
 				label: "Usage Alerts",
 				icon: <BellIcon className="size-4" />,
 			},
+			{
+				id: "transition-rules",
+				label: "Transition Rules",
+				icon: <ArrowRightLeftIcon className="size-4" />,
+			},
 		],
 	},
 ];
@@ -115,19 +139,33 @@ const SETTINGS_GROUPS: readonly SettingsNavGroup[] = [
 const SECTION_MAP: Record<SettingsTab, React.ComponentType> = {
 	account: AccountSection,
 	organization: OrganizationSection,
+	subscription: SubscriptionSection,
 	members: MembersSection,
 	agent: AgentSection,
 	appearance: AppearanceSection,
 	apps: AuthorizedAppsSection,
+	sso: SsoSection,
 	"custom-buttons": CustomButtonsSection,
 	billing: BillingSettingsSection,
 	invoices: InvoicesSection,
 	"usage-alerts": UsageAlertsSection,
+	"transition-rules": TransitionRulesSection,
+};
+
+/** Tabs that only render while their feature flag is on. */
+const FLAGGED_TABS: Partial<Record<SettingsTab, "sso">> = {
+	sso: "sso",
 };
 
 export const SettingsView = () => {
 	const [searchParams, setSearchParams] = useSearchParams();
-	const activeTab = (searchParams.get("tab") as SettingsTab) || "account";
+	const flags = useAutumnFlags();
+	const isTabEnabled = (tab: SettingsTab) => {
+		const flag = FLAGGED_TABS[tab];
+		return flag ? Boolean(flags[flag]) : true;
+	};
+	const requestedTab = (searchParams.get("tab") as SettingsTab) || "account";
+	const activeTab = isTabEnabled(requestedTab) ? requestedTab : "account";
 	const ActiveSection = SECTION_MAP[activeTab] ?? AccountSection;
 
 	const handleTabChange = (tab: SettingsTab) => {
@@ -147,22 +185,24 @@ export const SettingsView = () => {
 							<span className="px-2 mb-1 text-xs font-medium text-subtle">
 								{group.label}
 							</span>
-							{group.items.map((tab) => (
-								<button
-									key={tab.id}
-									type="button"
-									onClick={() => handleTabChange(tab.id)}
-									className={cn(
-										"flex items-center gap-2 rounded-md px-2 py-1.5 text-sm transition-colors cursor-pointer text-left",
-										activeTab === tab.id
-											? "bg-interactive-secondary text-foreground font-medium"
-											: "text-tertiary-foreground hover:text-muted-foreground hover:bg-interactive-secondary/50",
-									)}
-								>
-									{tab.icon}
-									<span>{tab.label}</span>
-								</button>
-							))}
+							{group.items
+								.filter((tab) => isTabEnabled(tab.id))
+								.map((tab) => (
+									<button
+										key={tab.id}
+										type="button"
+										onClick={() => handleTabChange(tab.id)}
+										className={cn(
+											"flex items-center gap-2 rounded-md px-2 py-1.5 text-sm transition-colors cursor-pointer text-left",
+											activeTab === tab.id
+												? "bg-interactive-secondary text-foreground font-medium"
+												: "text-tertiary-foreground hover:text-muted-foreground hover:bg-interactive-secondary/50",
+										)}
+									>
+										{tab.icon}
+										<span>{tab.label}</span>
+									</button>
+								))}
 						</div>
 					))}
 				</div>

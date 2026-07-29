@@ -45,7 +45,7 @@ export const handleGetFeatureDeletionInfo = createRoute({
 			)
 			.where(
 				and(
-					eq(entitlements.internal_feature_id, feature.internal_id!),
+					sql`${entitlements.internal_feature_id} COLLATE "C" = ${feature.internal_id!}`,
 					eq(products.env, ctx.env),
 					eq(products.org_id, ctx.org.id),
 				),

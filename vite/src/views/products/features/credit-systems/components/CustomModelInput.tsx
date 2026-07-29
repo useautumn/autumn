@@ -1,12 +1,15 @@
+import { Input } from "@autumn/ui";
 import { useState } from "react";
-import { Input } from "@/components/v2/inputs/Input";
 
 interface CustomModelInputProps {
 	modelKey: string;
 	onRename: (newKey: string) => void;
 }
 
-export function CustomModelInput({ modelKey, onRename }: CustomModelInputProps) {
+export function CustomModelInput({
+	modelKey,
+	onRename,
+}: CustomModelInputProps) {
 	const [local, setLocal] = useState(modelKey);
 	return (
 		<Input

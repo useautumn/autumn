@@ -8,7 +8,9 @@ import type { McpRouteOptions } from "./types.js";
 
 export const createMcpRouter = (options: McpRouteOptions) => {
 	const router = new Hono<{ Bindings: HttpBindings }>();
-	const mcpServer = createAutumnOperationsMCPServer();
+	// Our own agent connects here — don't force the analytics `intent` field on it
+	// (it occasionally omits it, which would fail the tool call).
+	const mcpServer = createAutumnOperationsMCPServer({ requireIntent: false });
 
 	router.get(
 		PROTECTED_RESOURCE_METADATA_PATH,

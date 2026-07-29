@@ -8,7 +8,7 @@ import {
 import { generateId } from "better-auth";
 import { eq } from "drizzle-orm";
 import { createRoute } from "@/honoMiddlewares/routeHandler.js";
-import { createKey } from "@/internal/dev/api-keys/apiKeyUtils.js";
+import { createKey } from "@/internal/dev/apiKeys/apiKeyUtils.js";
 import { OrgService } from "@/internal/orgs/OrgService.js";
 import { afterOrgCreated } from "@/utils/authUtils/afterOrgCreated.js";
 

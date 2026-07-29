@@ -1,11 +1,11 @@
 import { useChat } from "@ai-sdk/react";
 import type { AgentPricingConfig } from "@autumn/shared";
+import type { PromptInputMessage } from "@autumn/ui/ai-elements";
 import {
 	DefaultChatTransport,
 	lastAssistantMessageIsCompleteWithToolCalls,
 } from "ai";
 import { useCallback, useEffect, useId, useRef, useState } from "react";
-import type { PromptInputMessage } from "@/components/ai-elements/prompt-input";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
 import type { PreviewOrg } from "../components/ChatInputComponents";
 

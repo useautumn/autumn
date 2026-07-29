@@ -1,8 +1,5 @@
-import {
-	groupAndFormatScopes,
-	type ScopeActionType,
-} from "@autumn/shared";
-import { Badge } from "@/components/v2/badges/Badge";
+import { groupAndFormatScopes, type ScopeActionType } from "@autumn/shared";
+import { Badge } from "@autumn/ui";
 
 export type ScopePreviewProps = {
 	scopes: string[] | null | undefined;

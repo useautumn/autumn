@@ -366,8 +366,7 @@ export type Role = "owner" | "admin" | "developer" | "sales" | "member";
  * - `admin` receives only `admin` — full product access but NOT
  *   owner-gated actions (e.g. delete organisation).
  * - Neither automatically receives `superuser`: that is manually
- *   injected at the request layer for Autumn staff only (see
- *   useAdmin on the client; customSessionScopes on the server).
+ *   injected at the request layer for Autumn staff only.
  */
 export const ROLE_SCOPES: Record<Role, ScopeString[]> = {
 	owner: ["owner", "admin", ...MODERN_SCOPES],

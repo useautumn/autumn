@@ -1,9 +1,9 @@
 // Billing utils
 export * from "./common/unixUtils";
-
+// Currency utils
+export * from "./currencyUtils/stripeCurrencies";
 // Cursor pagination utils
 export * from "./cursorUtils";
-
 // Balance utils
 export * from "./cusEntUtils/balanceUtils/cusEntsToBalance";
 export * from "./cusEntUtils/balanceUtils/cusEntsToCurrentBalance";
@@ -12,16 +12,12 @@ export * from "./cusEntUtils/balanceUtils/cusEntsToPurchasedBalance";
 export * from "./cusEntUtils/balanceUtils/cusEntsToReset";
 export * from "./cusEntUtils/balanceUtils/cusEntsToRollovers";
 export * from "./cusEntUtils/balanceUtils/cusEntToStartingBalance";
-
 // Cus ent utils
 export * from "./cusEntUtils/index";
-
 // Cus price utils
 export * from "./cusPriceUtils/index";
-
 // Cus product utils
 export * from "./cusProductUtils/index";
-
 // Cus utils
 export * from "./cusUtils/index";
 export * from "./expandUtils";
@@ -29,6 +25,7 @@ export * from "./featureUtils";
 // Feature utils
 export * from "./featureUtils/apiFeatureToDbFeature";
 export * from "./featureUtils/convertFeatureUtils";
+export * from "./featureUtils/diffFeature/diffFeatureV1";
 export * from "./featureUtils/findFeatureUtils";
 export * from "./featureUtils/index";
 
@@ -38,9 +35,15 @@ export * from "./intervalUtils/priceIntervalUtils";
 
 // Org utils
 export * from "./orgUtils/convertOrgUtils";
+export * from "./planV1Utils/diff/applyDiff";
+// Plan V1 diff/apply utils
+export * from "./planV1Utils/diff/diffPlanV1";
+export * from "./planV1Utils/diff/diffPlanV1PreviewFields";
+export * from "./pooledBalanceUtils/index";
 export * from "./productUtils/classifyProduct/classifyProductUtils";
+export * from "./productUtils/classifyProduct/hasMissingStripeResourcesForProduct";
 export * from "./productUtils/classifyProduct/isProductPaidAndRecurring";
-
+export * from "./productUtils/convertProduct/productToEffectivePrices";
 // Product utils
 export * from "./productUtils/convertProductUtils";
 export * from "./productUtils/entUtils/index";
@@ -61,13 +64,10 @@ export * from "./productV2Utils/productItemUtils/mapToItem";
 export * from "./productV2Utils/productItemUtils/matchPlanItem";
 export * from "./productV2Utils/productItemUtils/productItemUtils";
 export * from "./productV2Utils/productItemUtils/sortPlanItems";
+export * from "./productV2Utils/productV2ToApiPlanV1";
 export * from "./productV2Utils/productV2ToFrontendProduct";
 export * from "./productV2Utils/productV2ToV1";
 export * from "./productV3Utils/productItemUtils/productV3ItemUtils";
-
-// Plan V1 diff/apply utils
-export * from "./planV1Utils/diff/diffPlanV1";
-export * from "./planV1Utils/diff/applyDiff";
 
 // Stripe resource utils
 export * from "./stripeUtils/classifyStripeResource/isPreviewStripeId";

@@ -123,13 +123,17 @@ export class FeatureService {
 				.returning();
 		}
 
+		// The row may have been deleted between read and update (e.g. async
+		// display generation racing an org/feature teardown).
+		if (updatedFeatures.length === 0) return null;
+
 		await clearOrgCache({
 			db,
 			orgId: updatedFeatures[0].org_id!,
 			env: updatedFeatures[0].env as AppEnv,
 		});
 
-		return updatedFeatures.length > 0 ? (updatedFeatures[0] as Feature) : null;
+		return updatedFeatures[0] as Feature;
 	}
 
 	static async insert({

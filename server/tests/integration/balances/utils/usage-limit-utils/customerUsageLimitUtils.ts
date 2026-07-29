@@ -30,6 +30,7 @@ export const setCustomerUsageLimit = async ({
 		usage_limits: [
 			{
 				feature_id: featureId,
+				enabled: true,
 				limit,
 				interval,
 			},
@@ -74,6 +75,7 @@ export const expectCustomerUsageLimit = async ({
 	featureId,
 	usage,
 	limit,
+	filterProperties,
 	skipCache = false,
 }: {
 	autumn: AutumnInt;
@@ -81,11 +83,18 @@ export const expectCustomerUsageLimit = async ({
 	featureId: string;
 	usage?: number;
 	limit?: number;
+	filterProperties?: Record<string, string> | null;
 	skipCache?: boolean;
 }) => {
 	const customer = await autumn.customers.get<ApiCustomerV5>(
 		customerId,
 		skipCache ? { skip_cache: "true" } : undefined,
 	);
-	expectUsageLimitCorrect({ customer, featureId, usage, limit });
+	expectUsageLimitCorrect({
+		customer,
+		featureId,
+		usage,
+		limit,
+		filterProperties,
+	});
 };

@@ -14,8 +14,8 @@ from autumn_sdk.types import (
 from autumn_sdk.utils import FieldMetadata, HeaderMetadata
 import pydantic
 from pydantic import model_serializer
-from typing import Dict, List, Literal, Optional, Union
-from typing_extensions import Annotated, NotRequired, TypedDict
+from typing import Any, Dict, List, Literal, Optional, Union
+from typing_extensions import Annotated, NotRequired, TypeAliasType, TypedDict
 
 
 class UpdateEntityGlobalsTypedDict(TypedDict):
@@ -46,13 +46,24 @@ class UpdateEntityGlobals(BaseModel):
         return m
 
 
+UpdateEntityLimitTypeRequestBody = Literal[
+    "absolute",
+    "usage_percentage",
+]
+r"""How overage_limit is interpreted: an absolute overage cap (default) or a percentage of the main-plan allowance."""
+
+
 class UpdateEntitySpendLimitRequestTypedDict(TypedDict):
     feature_id: NotRequired[str]
     r"""Optional feature ID this spend limit applies to."""
     enabled: NotRequired[bool]
     r"""Whether the overage spend limit is enabled."""
+    limit_type: NotRequired[UpdateEntityLimitTypeRequestBody]
+    r"""How overage_limit is interpreted: an absolute overage cap (default) or a percentage of the main-plan allowance."""
     overage_limit: NotRequired[float]
-    r"""Maximum allowed overage spend for the target feature."""
+    r"""Overage cap for the feature: absolute units, or a percent (e.g. 120) when limit_type is usage_percentage."""
+    skip_overage_billing: NotRequired[bool]
+    r"""When true, overage for this feature is not posted to Stripe. Usage tracking and balance resets still behave normally."""
 
 
 class UpdateEntitySpendLimitRequest(BaseModel):
@@ -62,12 +73,26 @@ class UpdateEntitySpendLimitRequest(BaseModel):
     enabled: Optional[bool] = False
     r"""Whether the overage spend limit is enabled."""
 
+    limit_type: Optional[UpdateEntityLimitTypeRequestBody] = None
+    r"""How overage_limit is interpreted: an absolute overage cap (default) or a percentage of the main-plan allowance."""
+
     overage_limit: Optional[float] = None
-    r"""Maximum allowed overage spend for the target feature."""
+    r"""Overage cap for the feature: absolute units, or a percent (e.g. 120) when limit_type is usage_percentage."""
+
+    skip_overage_billing: Optional[bool] = None
+    r"""When true, overage for this feature is not posted to Stripe. Usage tracking and balance resets still behave normally."""
 
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
-        optional_fields = set(["feature_id", "enabled", "overage_limit"])
+        optional_fields = set(
+            [
+                "feature_id",
+                "enabled",
+                "limit_type",
+                "overage_limit",
+                "skip_overage_billing",
+            ]
+        )
         serialized = handler(self)
         m = {}
 
@@ -91,6 +116,28 @@ UpdateEntityIntervalRequestBody = Literal[
 r"""Interval for the cap, aligned to the customer's billing cycle."""
 
 
+UpdateEntityPropertiesTypedDict = TypeAliasType(
+    "UpdateEntityPropertiesTypedDict", Union[str, float, bool]
+)
+
+
+UpdateEntityProperties = TypeAliasType(
+    "UpdateEntityProperties", Union[str, float, bool]
+)
+
+
+class UpdateEntityFilterRequestTypedDict(TypedDict):
+    r"""When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature."""
+
+    properties: Dict[str, UpdateEntityPropertiesTypedDict]
+
+
+class UpdateEntityFilterRequest(BaseModel):
+    r"""When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature."""
+
+    properties: Dict[str, UpdateEntityProperties]
+
+
 class UpdateEntityUsageLimitRequestTypedDict(TypedDict):
     feature_id: str
     r"""The feature this usage limit applies to."""
@@ -98,6 +145,10 @@ class UpdateEntityUsageLimitRequestTypedDict(TypedDict):
     r"""Maximum units allowed per interval."""
     interval: UpdateEntityIntervalRequestBody
     r"""Interval for the cap, aligned to the customer's billing cycle."""
+    enabled: NotRequired[bool]
+    r"""Whether this usage limit is enabled."""
+    filter_: NotRequired[UpdateEntityFilterRequestTypedDict]
+    r"""When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature."""
 
 
 class UpdateEntityUsageLimitRequest(BaseModel):
@@ -109,6 +160,30 @@ class UpdateEntityUsageLimitRequest(BaseModel):
 
     interval: UpdateEntityIntervalRequestBody
     r"""Interval for the cap, aligned to the customer's billing cycle."""
+
+    enabled: Optional[bool] = True
+    r"""Whether this usage limit is enabled."""
+
+    filter_: Annotated[
+        Optional[UpdateEntityFilterRequest], pydantic.Field(alias="filter")
+    ] = None
+    r"""When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature."""
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        optional_fields = set(["enabled", "filter"])
+        serialized = handler(self)
+        m = {}
+
+        for n, f in type(self).model_fields.items():
+            k = f.alias or n
+            val = serialized.get(k, serialized.get(n))
+
+            if val != UNSET_SENTINEL:
+                if val is not None or k not in optional_fields:
+                    m[k] = val
+
+        return m
 
 
 UpdateEntityThresholdTypeRequestBody = Literal[
@@ -753,13 +828,39 @@ class UpdateEntityFlags(BaseModel):
         return m
 
 
+UpdateEntityLimitTypeResponse = Union[
+    Literal[
+        "absolute",
+        "usage_percentage",
+    ],
+    UnrecognizedStr,
+]
+r"""How overage_limit is interpreted: an absolute overage cap (default) or a percentage of the main-plan allowance."""
+
+
+UpdateEntitySpendLimitSource = Union[
+    Literal[
+        "customer",
+        "plan",
+    ],
+    UnrecognizedStr,
+]
+r"""Response-only: whether the entry is a customer-level override or inherited from an attached plan's defaults."""
+
+
 class UpdateEntitySpendLimitResponseTypedDict(TypedDict):
     feature_id: NotRequired[str]
     r"""Optional feature ID this spend limit applies to."""
     enabled: NotRequired[bool]
     r"""Whether the overage spend limit is enabled."""
+    limit_type: NotRequired[UpdateEntityLimitTypeResponse]
+    r"""How overage_limit is interpreted: an absolute overage cap (default) or a percentage of the main-plan allowance."""
     overage_limit: NotRequired[float]
-    r"""Maximum allowed overage spend for the target feature."""
+    r"""Overage cap for the feature: absolute units, or a percent (e.g. 120) when limit_type is usage_percentage."""
+    skip_overage_billing: NotRequired[bool]
+    r"""When true, overage for this feature is not posted to Stripe. Usage tracking and balance resets still behave normally."""
+    source: NotRequired[UpdateEntitySpendLimitSource]
+    r"""Response-only: whether the entry is a customer-level override or inherited from an attached plan's defaults."""
 
 
 class UpdateEntitySpendLimitResponse(BaseModel):
@@ -769,12 +870,30 @@ class UpdateEntitySpendLimitResponse(BaseModel):
     enabled: Optional[bool] = False
     r"""Whether the overage spend limit is enabled."""
 
+    limit_type: Optional[UpdateEntityLimitTypeResponse] = None
+    r"""How overage_limit is interpreted: an absolute overage cap (default) or a percentage of the main-plan allowance."""
+
     overage_limit: Optional[float] = None
-    r"""Maximum allowed overage spend for the target feature."""
+    r"""Overage cap for the feature: absolute units, or a percent (e.g. 120) when limit_type is usage_percentage."""
+
+    skip_overage_billing: Optional[bool] = None
+    r"""When true, overage for this feature is not posted to Stripe. Usage tracking and balance resets still behave normally."""
+
+    source: Optional[UpdateEntitySpendLimitSource] = None
+    r"""Response-only: whether the entry is a customer-level override or inherited from an attached plan's defaults."""
 
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
-        optional_fields = set(["feature_id", "enabled", "overage_limit"])
+        optional_fields = set(
+            [
+                "feature_id",
+                "enabled",
+                "limit_type",
+                "overage_limit",
+                "skip_overage_billing",
+                "source",
+            ]
+        )
         serialized = handler(self)
         m = {}
 
@@ -801,6 +920,28 @@ UpdateEntityIntervalResponse = Union[
 r"""Interval for the cap, aligned to the customer's billing cycle."""
 
 
+class UpdateEntityFilterResponseTypedDict(TypedDict):
+    r"""When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature."""
+
+    properties: Dict[str, Any]
+
+
+class UpdateEntityFilterResponse(BaseModel):
+    r"""When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature."""
+
+    properties: Dict[str, Any]
+
+
+UpdateEntityUsageLimitSource = Union[
+    Literal[
+        "customer",
+        "plan",
+    ],
+    UnrecognizedStr,
+]
+r"""Response-only: whether the entry is a customer-level override or inherited from an attached plan's defaults."""
+
+
 class UpdateEntityUsageLimitResponseTypedDict(TypedDict):
     feature_id: str
     r"""The feature this usage limit applies to."""
@@ -808,8 +949,14 @@ class UpdateEntityUsageLimitResponseTypedDict(TypedDict):
     r"""Maximum units allowed per interval."""
     interval: UpdateEntityIntervalResponse
     r"""Interval for the cap, aligned to the customer's billing cycle."""
+    enabled: NotRequired[bool]
+    r"""Whether this usage limit is enabled."""
+    filter_: NotRequired[UpdateEntityFilterResponseTypedDict]
+    r"""When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature."""
     usage: NotRequired[float]
     r"""Current usage already consumed in the active interval. Response-only; not stored on billing controls."""
+    source: NotRequired[UpdateEntityUsageLimitSource]
+    r"""Response-only: whether the entry is a customer-level override or inherited from an attached plan's defaults."""
 
 
 class UpdateEntityUsageLimitResponse(BaseModel):
@@ -822,12 +969,23 @@ class UpdateEntityUsageLimitResponse(BaseModel):
     interval: UpdateEntityIntervalResponse
     r"""Interval for the cap, aligned to the customer's billing cycle."""
 
+    enabled: Optional[bool] = True
+    r"""Whether this usage limit is enabled."""
+
+    filter_: Annotated[
+        Optional[UpdateEntityFilterResponse], pydantic.Field(alias="filter")
+    ] = None
+    r"""When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature."""
+
     usage: Optional[float] = None
     r"""Current usage already consumed in the active interval. Response-only; not stored on billing controls."""
 
+    source: Optional[UpdateEntityUsageLimitSource] = None
+    r"""Response-only: whether the entry is a customer-level override or inherited from an attached plan's defaults."""
+
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
-        optional_fields = set(["usage"])
+        optional_fields = set(["enabled", "filter", "usage", "source"])
         serialized = handler(self)
         m = {}
 
@@ -854,6 +1012,16 @@ UpdateEntityThresholdTypeResponse = Union[
 r"""Whether the threshold is an absolute count or a percentage of the usage allowance or remaining balance."""
 
 
+UpdateEntityUsageAlertSource = Union[
+    Literal[
+        "customer",
+        "plan",
+    ],
+    UnrecognizedStr,
+]
+r"""Response-only: whether the entry is a customer-level override or inherited from an attached plan's defaults."""
+
+
 class UpdateEntityUsageAlertResponseTypedDict(TypedDict):
     threshold: float
     r"""The threshold value that triggers the alert. For usage or remaining, this is an absolute count. For usage_percentage or remaining_percentage, this is a percentage (0-100)."""
@@ -865,6 +1033,8 @@ class UpdateEntityUsageAlertResponseTypedDict(TypedDict):
     r"""Whether this usage alert is enabled."""
     name: NotRequired[str]
     r"""Optional user-defined label to distinguish multiple alerts on the same feature."""
+    source: NotRequired[UpdateEntityUsageAlertSource]
+    r"""Response-only: whether the entry is a customer-level override or inherited from an attached plan's defaults."""
 
 
 class UpdateEntityUsageAlertResponse(BaseModel):
@@ -883,9 +1053,12 @@ class UpdateEntityUsageAlertResponse(BaseModel):
     name: Optional[str] = None
     r"""Optional user-defined label to distinguish multiple alerts on the same feature."""
 
+    source: Optional[UpdateEntityUsageAlertSource] = None
+    r"""Response-only: whether the entry is a customer-level override or inherited from an attached plan's defaults."""
+
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
-        optional_fields = set(["feature_id", "enabled", "name"])
+        optional_fields = set(["feature_id", "enabled", "name", "source"])
         serialized = handler(self)
         m = {}
 
@@ -900,11 +1073,23 @@ class UpdateEntityUsageAlertResponse(BaseModel):
         return m
 
 
+UpdateEntityOverageAllowedSource = Union[
+    Literal[
+        "customer",
+        "plan",
+    ],
+    UnrecognizedStr,
+]
+r"""Response-only: whether the entry is a customer-level override or inherited from an attached plan's defaults."""
+
+
 class UpdateEntityOverageAllowedResponseTypedDict(TypedDict):
     feature_id: str
     r"""The feature ID this overage allowed control applies to."""
     enabled: NotRequired[bool]
     r"""Whether overage is allowed for this feature."""
+    source: NotRequired[UpdateEntityOverageAllowedSource]
+    r"""Response-only: whether the entry is a customer-level override or inherited from an attached plan's defaults."""
 
 
 class UpdateEntityOverageAllowedResponse(BaseModel):
@@ -914,9 +1099,12 @@ class UpdateEntityOverageAllowedResponse(BaseModel):
     enabled: Optional[bool] = False
     r"""Whether overage is allowed for this feature."""
 
+    source: Optional[UpdateEntityOverageAllowedSource] = None
+    r"""Response-only: whether the entry is a customer-level override or inherited from an attached plan's defaults."""
+
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
-        optional_fields = set(["enabled"])
+        optional_fields = set(["enabled", "source"])
         serialized = handler(self)
         m = {}
 
@@ -1144,3 +1332,13 @@ class UpdateEntityResponse(BaseModel):
                     m[k] = val
 
         return m
+
+
+try:
+    UpdateEntityUsageLimitRequest.model_rebuild()
+except NameError:
+    pass
+try:
+    UpdateEntityUsageLimitResponse.model_rebuild()
+except NameError:
+    pass

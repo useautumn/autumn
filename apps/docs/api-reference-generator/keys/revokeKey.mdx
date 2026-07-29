@@ -1,0 +1,23 @@
+---
+title: "Revoke"
+openapi: "openapi POST /v1/keys.revoke"
+---
+
+<Note>
+  Revokes every outstanding token — access and refresh — for a customer. Authenticated with your **secret key**. Issue new tokens afterwards with [`keys.mint`](/api-reference/keys/mintKey).
+</Note>
+
+<CodeGroup>
+
+```typescript TypeScript
+await autumn.keys.revoke({ customerId: "cus_123" });
+```
+
+```bash cURL
+curl -X POST "https://api.useautumn.com/v1/keys.revoke" \
+  -H "Authorization: Bearer am_sk_live_..." \
+  -H "Content-Type: application/json" \
+  -d '{ "customer_id": "cus_123" }'
+```
+
+</CodeGroup>

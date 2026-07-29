@@ -27,6 +27,8 @@ export enum TestFeature {
 	Action3 = "action3", // single use (pay per use)
 	Credits2 = "credits2", // credit system
 
+	Credits3 = "credits3", // credit system (overlaps with credits on action1)
+
 	AiCredits = "ai_credits", // AI credit system (models.dev pricing)
 	AiCredits2 = "ai_credits_2", // second AI credit system (for disambiguation tests)
 	AiCreditsTiered = "ai_credits_tiered", // AI credit system with global + provider markup tiers
@@ -125,6 +127,18 @@ export const getFeatures = ({ orgId }: { orgId: string }) => ({
 			{
 				metered_feature_id: TestFeature.Action3,
 				credit_cost: 1.4,
+			},
+		],
+	}),
+	// Overlaps with Credits on action1, and is seeded after it in the catalog
+	[TestFeature.Credits3]: constructCreditSystem({
+		featureId: TestFeature.Credits3,
+		orgId,
+		env: AppEnv.Sandbox,
+		schema: [
+			{
+				metered_feature_id: TestFeature.Action1,
+				credit_cost: 2,
 			},
 		],
 	}),

@@ -40,141 +40,167 @@ import chalk from "chalk";
  * - Entity 1 has pro canceling + free scheduled
  * - Entity 2 unchanged (pro active)
  */
-test.concurrent(`${chalk.yellowBright("scheduled-switch-entities-basic 1: entity 1 pro, entity 2 pro, downgrade entity 1 to free")}`, async () => {
-	const customerId = "sched-switch-ent-one-downgrade";
+test.concurrent(
+	`${chalk.yellowBright("scheduled-switch-entities-basic 1a: entity 1 pro, entity 2 pro, downgrade entity 1 to free (mid-cycle)")}`,
+	async () => {
+		const customerId = "sched-switch-ent-one-downgrade-a";
 
-	const messagesItem = items.monthlyMessages({ includedUsage: 100 });
-	const pro = products.pro({
-		id: "pro",
-		items: [messagesItem],
-	});
+		const messagesItem = items.monthlyMessages({ includedUsage: 100 });
+		const pro = products.pro({
+			id: "pro",
+			items: [messagesItem],
+		});
 
-	const freeMessages = items.monthlyMessages({ includedUsage: 50 });
-	const free = products.base({
-		id: "free",
-		items: [freeMessages],
-	});
+		const freeMessages = items.monthlyMessages({ includedUsage: 50 });
+		const free = products.base({
+			id: "free",
+			items: [freeMessages],
+		});
 
-	const { autumnV1, entities, ctx } = await initScenario({
-		customerId,
-		setup: [
-			s.customer({ paymentMethod: "success" }),
-			s.products({ list: [pro, free] }),
-			s.entities({ count: 2, featureId: TestFeature.Users }),
-		],
-		actions: [
-			s.billing.attach({ productId: pro.id, entityIndex: 0 }),
-			s.billing.attach({ productId: pro.id, entityIndex: 1 }),
-		],
-	});
+		const { autumnV1, entities, ctx } = await initScenario({
+			customerId,
+			setup: [
+				s.customer({ paymentMethod: "success" }),
+				s.products({ list: [pro, free] }),
+				s.entities({ count: 2, featureId: TestFeature.Users }),
+			],
+			actions: [
+				s.billing.attach({ productId: pro.id, entityIndex: 0 }),
+				s.billing.attach({ productId: pro.id, entityIndex: 1 }),
+			],
+		});
 
-	// Verify Stripe subscription after initial attaches
-	await expectSubToBeCorrect({
-		db: ctx.db,
-		customerId,
-		org: ctx.org,
-		env: ctx.env,
-	});
+		// Verify Stripe subscription after initial attaches
+		await expectSubToBeCorrect({
+			db: ctx.db,
+			customerId,
+			org: ctx.org,
+			env: ctx.env,
+		});
 
-	// Downgrade entity 1 to free
-	await autumnV1.billing.attach({
-		customer_id: customerId,
-		product_id: free.id,
-		entity_id: entities[0].id,
-		redirect_mode: "if_required",
-	});
+		// Downgrade entity 1 to free
+		await autumnV1.billing.attach({
+			customer_id: customerId,
+			product_id: free.id,
+			entity_id: entities[0].id,
+			redirect_mode: "if_required",
+		});
 
-	// Verify entity 1: pro canceling, free scheduled
-	const entity1 = await autumnV1.entities.get<ApiEntityV0>(
-		customerId,
-		entities[0].id,
-	);
-	await expectProductCanceling({
-		customer: entity1,
-		productId: pro.id,
-	});
-	await expectProductScheduled({
-		customer: entity1,
-		productId: free.id,
-	});
+		// Verify entity 1: pro canceling, free scheduled
+		const entity1 = await autumnV1.entities.get<ApiEntityV0>(
+			customerId,
+			entities[0].id,
+		);
+		await expectProductCanceling({
+			customer: entity1,
+			productId: pro.id,
+		});
+		await expectProductScheduled({
+			customer: entity1,
+			productId: free.id,
+		});
 
-	// Verify entity 2: pro still active
-	const entity2 = await autumnV1.entities.get<ApiEntityV0>(
-		customerId,
-		entities[1].id,
-	);
-	await expectProductActive({
-		customer: entity2,
-		productId: pro.id,
-	});
+		// Verify entity 2: pro still active
+		const entity2 = await autumnV1.entities.get<ApiEntityV0>(
+			customerId,
+			entities[1].id,
+		);
+		await expectProductActive({
+			customer: entity2,
+			productId: pro.id,
+		});
 
-	// Verify Stripe subscription after scheduling downgrade
-	await expectSubToBeCorrect({
-		db: ctx.db,
-		customerId,
-		org: ctx.org,
-		env: ctx.env,
-	});
+		// Verify Stripe subscription after scheduling downgrade
+		await expectSubToBeCorrect({
+			db: ctx.db,
+			customerId,
+			org: ctx.org,
+			env: ctx.env,
+		});
+	},
+);
 
-	// Advance to next cycle
-	const { autumnV1: autumnV1After, entities: entitiesAfter, ctx: ctxAfter } = await initScenario({
-		customerId,
-		setup: [
-			s.customer({ paymentMethod: "success" }),
-			s.products({ list: [pro, free] }),
-			s.entities({ count: 2, featureId: TestFeature.Users }),
-		],
-		actions: [
-			s.billing.attach({ productId: pro.id, entityIndex: 0 }),
-			s.billing.attach({ productId: pro.id, entityIndex: 1 }),
-			s.billing.attach({ productId: free.id, entityIndex: 0 }), // Downgrade entity 1
-			s.advanceToNextInvoice(),
-		],
-	});
+test.concurrent(
+	`${chalk.yellowBright("scheduled-switch-entities-basic 1b: entity 1 pro, entity 2 pro, downgrade entity 1 to free (after cycle)")}`,
+	async () => {
+		const customerId = "sched-switch-ent-one-downgrade-b";
 
-	// After cycle: entity 1 on free, entity 2 still on pro
-	const entity1After = await autumnV1After.entities.get<ApiEntityV0>(
-		customerId,
-		entitiesAfter[0].id,
-	);
-	const entity2After = await autumnV1After.entities.get<ApiEntityV0>(
-		customerId,
-		entitiesAfter[1].id,
-	);
+		const messagesItem = items.monthlyMessages({ includedUsage: 100 });
+		const pro = products.pro({
+			id: "pro",
+			items: [messagesItem],
+		});
 
-	await expectCustomerProducts({
-		customer: entity1After,
-		active: [free.id],
-		notPresent: [pro.id],
-	});
-	await expectCustomerProducts({
-		customer: entity2After,
-		active: [pro.id],
-		notPresent: [free.id],
-	});
+		const freeMessages = items.monthlyMessages({ includedUsage: 50 });
+		const free = products.base({
+			id: "free",
+			items: [freeMessages],
+		});
 
-	// Features at respective tiers
-	expectCustomerFeatureCorrect({
-		customer: entity1After,
-		featureId: TestFeature.Messages,
-		balance: 50,
-		usage: 0,
-	});
-	expectCustomerFeatureCorrect({
-		customer: entity2After,
-		featureId: TestFeature.Messages,
-		balance: 100,
-		usage: 0,
-	});
+		// Advance to next cycle
+		const {
+			autumnV1: autumnV1After,
+			entities: entitiesAfter,
+			ctx: ctxAfter,
+		} = await initScenario({
+			customerId,
+			setup: [
+				s.customer({ paymentMethod: "success" }),
+				s.products({ list: [pro, free] }),
+				s.entities({ count: 2, featureId: TestFeature.Users }),
+			],
+			actions: [
+				s.billing.attach({ productId: pro.id, entityIndex: 0 }),
+				s.billing.attach({ productId: pro.id, entityIndex: 1 }),
+				s.billing.attach({ productId: free.id, entityIndex: 0 }), // Downgrade entity 1
+				s.advanceToNextInvoice(),
+			],
+		});
 
-	// Verify Stripe subscription after cycle (entity 2 still has pro)
-	await expectSubToBeCorrect({
-		db: ctxAfter.db,
-		customerId,
-		org: ctxAfter.org,
-		env: ctxAfter.env,
-	});
-});
+		// After cycle: entity 1 on free, entity 2 still on pro
+		const entity1After = await autumnV1After.entities.get<ApiEntityV0>(
+			customerId,
+			entitiesAfter[0].id,
+		);
+		const entity2After = await autumnV1After.entities.get<ApiEntityV0>(
+			customerId,
+			entitiesAfter[1].id,
+		);
+
+		await expectCustomerProducts({
+			customer: entity1After,
+			active: [free.id],
+			notPresent: [pro.id],
+		});
+		await expectCustomerProducts({
+			customer: entity2After,
+			active: [pro.id],
+			notPresent: [free.id],
+		});
+
+		// Features at respective tiers
+		expectCustomerFeatureCorrect({
+			customer: entity1After,
+			featureId: TestFeature.Messages,
+			balance: 50,
+			usage: 0,
+		});
+		expectCustomerFeatureCorrect({
+			customer: entity2After,
+			featureId: TestFeature.Messages,
+			balance: 100,
+			usage: 0,
+		});
+
+		// Verify Stripe subscription after cycle (entity 2 still has pro)
+		await expectSubToBeCorrect({
+			db: ctxAfter.db,
+			customerId,
+			org: ctxAfter.org,
+			env: ctxAfter.env,
+		});
+	},
+);
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // TEST 2: Entity 1 pro, entity 2 pro, downgrade both to free
@@ -190,80 +216,83 @@ test.concurrent(`${chalk.yellowBright("scheduled-switch-entities-basic 1: entity
  * - Both have free scheduled
  * - After cycle: both on free
  */
-test.concurrent(`${chalk.yellowBright("scheduled-switch-entities-basic 2: entity 1 pro, entity 2 pro, downgrade both to free")}`, async () => {
-	const customerId = "sched-switch-ent-both-downgrade";
+test.concurrent(
+	`${chalk.yellowBright("scheduled-switch-entities-basic 2: entity 1 pro, entity 2 pro, downgrade both to free")}`,
+	async () => {
+		const customerId = "sched-switch-ent-both-downgrade";
 
-	const messagesItem = items.monthlyMessages({ includedUsage: 100 });
-	const pro = products.pro({
-		id: "pro",
-		items: [messagesItem],
-	});
+		const messagesItem = items.monthlyMessages({ includedUsage: 100 });
+		const pro = products.pro({
+			id: "pro",
+			items: [messagesItem],
+		});
 
-	const freeMessages = items.monthlyMessages({ includedUsage: 50 });
-	const free = products.base({
-		id: "free",
-		items: [freeMessages],
-	});
+		const freeMessages = items.monthlyMessages({ includedUsage: 50 });
+		const free = products.base({
+			id: "free",
+			items: [freeMessages],
+		});
 
-	const { autumnV1, entities, ctx } = await initScenario({
-		customerId,
-		setup: [
-			s.customer({ paymentMethod: "success" }),
-			s.products({ list: [pro, free] }),
-			s.entities({ count: 2, featureId: TestFeature.Users }),
-		],
-		actions: [
-			s.billing.attach({ productId: pro.id, entityIndex: 0 }),
-			s.billing.attach({ productId: pro.id, entityIndex: 1 }),
-			s.billing.attach({ productId: free.id, entityIndex: 0 }), // Downgrade entity 1
-			s.billing.attach({ productId: free.id, entityIndex: 1 }), // Downgrade entity 2
-			s.advanceToNextInvoice(),
-		],
-	});
+		const { autumnV1, entities, ctx } = await initScenario({
+			customerId,
+			setup: [
+				s.customer({ paymentMethod: "success" }),
+				s.products({ list: [pro, free] }),
+				s.entities({ count: 2, featureId: TestFeature.Users }),
+			],
+			actions: [
+				s.billing.attach({ productId: pro.id, entityIndex: 0 }),
+				s.billing.attach({ productId: pro.id, entityIndex: 1 }),
+				s.billing.attach({ productId: free.id, entityIndex: 0 }), // Downgrade entity 1
+				s.billing.attach({ productId: free.id, entityIndex: 1 }), // Downgrade entity 2
+				s.advanceToNextInvoice(),
+			],
+		});
 
-	// After cycle: both entities on free
-	const entity1 = await autumnV1.entities.get<ApiEntityV0>(
-		customerId,
-		entities[0].id,
-	);
-	const entity2 = await autumnV1.entities.get<ApiEntityV0>(
-		customerId,
-		entities[1].id,
-	);
+		// After cycle: both entities on free
+		const entity1 = await autumnV1.entities.get<ApiEntityV0>(
+			customerId,
+			entities[0].id,
+		);
+		const entity2 = await autumnV1.entities.get<ApiEntityV0>(
+			customerId,
+			entities[1].id,
+		);
 
-	await expectCustomerProducts({
-		customer: entity1,
-		active: [free.id],
-		notPresent: [pro.id],
-	});
-	await expectCustomerProducts({
-		customer: entity2,
-		active: [free.id],
-		notPresent: [pro.id],
-	});
+		await expectCustomerProducts({
+			customer: entity1,
+			active: [free.id],
+			notPresent: [pro.id],
+		});
+		await expectCustomerProducts({
+			customer: entity2,
+			active: [free.id],
+			notPresent: [pro.id],
+		});
 
-	// Features at free tier
-	expectCustomerFeatureCorrect({
-		customer: entity1,
-		featureId: TestFeature.Messages,
-		balance: 50,
-		usage: 0,
-	});
-	expectCustomerFeatureCorrect({
-		customer: entity2,
-		featureId: TestFeature.Messages,
-		balance: 50,
-		usage: 0,
-	});
+		// Features at free tier
+		expectCustomerFeatureCorrect({
+			customer: entity1,
+			featureId: TestFeature.Messages,
+			balance: 50,
+			usage: 0,
+		});
+		expectCustomerFeatureCorrect({
+			customer: entity2,
+			featureId: TestFeature.Messages,
+			balance: 50,
+			usage: 0,
+		});
 
-	// After both downgraded to free, there should be no Stripe subscriptions
-	await expectNoStripeSubscription({
-		db: ctx.db,
-		customerId,
-		org: ctx.org,
-		env: ctx.env,
-	});
-});
+		// After both downgraded to free, there should be no Stripe subscriptions
+		await expectNoStripeSubscription({
+			db: ctx.db,
+			customerId,
+			org: ctx.org,
+			env: ctx.env,
+		});
+	},
+);
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // TEST 3: Entity 1 & 2 premium, downgrade both to free, entity 2 changes to pro
@@ -279,159 +308,191 @@ test.concurrent(`${chalk.yellowBright("scheduled-switch-entities-basic 2: entity
  * - Entity 1: Premium canceling, Free scheduled
  * - Entity 2: Premium canceling, Pro scheduled
  */
-test.concurrent(`${chalk.yellowBright("scheduled-switch-entities-basic 3: entity 1 & 2 premium, downgrade both to free, entity 2 changes to pro")}`, async () => {
-	const customerId = "sched-switch-ent-replace";
+test.concurrent(
+	`${chalk.yellowBright("scheduled-switch-entities-basic 3a: entity 1 & 2 premium, downgrade both to free, entity 2 changes to pro (mid-cycle)")}`,
+	async () => {
+		const customerId = "sched-switch-ent-replace-a";
 
-	const freeMessages = items.monthlyMessages({ includedUsage: 50 });
-	const free = products.base({
-		id: "free",
-		items: [freeMessages],
-	});
+		const freeMessages = items.monthlyMessages({ includedUsage: 50 });
+		const free = products.base({
+			id: "free",
+			items: [freeMessages],
+		});
 
-	const proMessages = items.monthlyMessages({ includedUsage: 100 });
-	const pro = products.pro({
-		id: "pro",
-		items: [proMessages],
-	});
+		const proMessages = items.monthlyMessages({ includedUsage: 100 });
+		const pro = products.pro({
+			id: "pro",
+			items: [proMessages],
+		});
 
-	const premiumMessages = items.monthlyMessages({ includedUsage: 500 });
-	const premium = products.premium({
-		id: "premium",
-		items: [premiumMessages],
-	});
+		const premiumMessages = items.monthlyMessages({ includedUsage: 500 });
+		const premium = products.premium({
+			id: "premium",
+			items: [premiumMessages],
+		});
 
-	const { autumnV1, entities, ctx } = await initScenario({
-		customerId,
-		setup: [
-			s.customer({ paymentMethod: "success" }),
-			s.products({ list: [free, pro, premium] }),
-			s.entities({ count: 2, featureId: TestFeature.Users }),
-		],
-		actions: [
-			s.billing.attach({ productId: premium.id, entityIndex: 0 }),
-			s.billing.attach({ productId: premium.id, entityIndex: 1 }),
-			s.billing.attach({ productId: free.id, entityIndex: 0 }), // Downgrade entity 1
-			s.billing.attach({ productId: free.id, entityIndex: 1 }), // Downgrade entity 2
-		],
-	});
+		const { autumnV1, entities, ctx } = await initScenario({
+			customerId,
+			setup: [
+				s.customer({ paymentMethod: "success" }),
+				s.products({ list: [free, pro, premium] }),
+				s.entities({ count: 2, featureId: TestFeature.Users }),
+			],
+			actions: [
+				s.billing.attach({ productId: premium.id, entityIndex: 0 }),
+				s.billing.attach({ productId: premium.id, entityIndex: 1 }),
+				s.billing.attach({ productId: free.id, entityIndex: 0 }), // Downgrade entity 1
+				s.billing.attach({ productId: free.id, entityIndex: 1 }), // Downgrade entity 2
+			],
+		});
 
-	// Verify Stripe subscription
-	await expectSubToBeCorrect({
-		db: ctx.db,
-		customerId,
-		org: ctx.org,
-		env: ctx.env,
-	});
+		// Verify Stripe subscription
+		await expectSubToBeCorrect({
+			db: ctx.db,
+			customerId,
+			org: ctx.org,
+			env: ctx.env,
+		});
 
-	// Entity 2: Change scheduled product to pro (replaces free)
-	await autumnV1.billing.attach({
-		customer_id: customerId,
-		product_id: pro.id,
-		entity_id: entities[1].id,
-		redirect_mode: "if_required",
-	});
+		// Entity 2: Change scheduled product to pro (replaces free)
+		await autumnV1.billing.attach({
+			customer_id: customerId,
+			product_id: pro.id,
+			entity_id: entities[1].id,
+			redirect_mode: "if_required",
+		});
 
-	// Verify entity 1: premium canceling, free scheduled
-	const entity1 = await autumnV1.entities.get<ApiEntityV0>(
-		customerId,
-		entities[0].id,
-	);
-	await expectProductCanceling({
-		customer: entity1,
-		productId: premium.id,
-	});
-	await expectProductScheduled({
-		customer: entity1,
-		productId: free.id,
-	});
+		// Verify entity 1: premium canceling, free scheduled
+		const entity1 = await autumnV1.entities.get<ApiEntityV0>(
+			customerId,
+			entities[0].id,
+		);
+		await expectProductCanceling({
+			customer: entity1,
+			productId: premium.id,
+		});
+		await expectProductScheduled({
+			customer: entity1,
+			productId: free.id,
+		});
 
-	// Verify entity 2: premium canceling, pro scheduled (free was replaced)
-	const entity2 = await autumnV1.entities.get<ApiEntityV0>(
-		customerId,
-		entities[1].id,
-	);
-	await expectProductCanceling({
-		customer: entity2,
-		productId: premium.id,
-	});
-	await expectProductScheduled({
-		customer: entity2,
-		productId: pro.id,
-	});
-	await expectProductNotPresent({
-		customer: entity2,
-		productId: free.id,
-	});
+		// Verify entity 2: premium canceling, pro scheduled (free was replaced)
+		const entity2 = await autumnV1.entities.get<ApiEntityV0>(
+			customerId,
+			entities[1].id,
+		);
+		await expectProductCanceling({
+			customer: entity2,
+			productId: premium.id,
+		});
+		await expectProductScheduled({
+			customer: entity2,
+			productId: pro.id,
+		});
+		await expectProductNotPresent({
+			customer: entity2,
+			productId: free.id,
+		});
 
-	// Verify Stripe subscription
-	await expectSubToBeCorrect({
-		db: ctx.db,
-		customerId,
-		org: ctx.org,
-		env: ctx.env,
-	});
+		// Verify Stripe subscription
+		await expectSubToBeCorrect({
+			db: ctx.db,
+			customerId,
+			org: ctx.org,
+			env: ctx.env,
+		});
+	},
+);
 
-	// Advance to next cycle
-	const { autumnV1: autumnV1After, entities: entitiesAfter, ctx: ctxAfter } = await initScenario({
-		customerId,
-		setup: [
-			s.customer({ paymentMethod: "success" }),
-			s.products({ list: [free, pro, premium] }),
-			s.entities({ count: 2, featureId: TestFeature.Users }),
-		],
-		actions: [
-			s.billing.attach({ productId: premium.id, entityIndex: 0 }),
-			s.billing.attach({ productId: premium.id, entityIndex: 1 }),
-			s.billing.attach({ productId: free.id, entityIndex: 0 }), // Downgrade entity 1 to free
-			s.billing.attach({ productId: free.id, entityIndex: 1 }), // Downgrade entity 2 to free
-			s.billing.attach({ productId: pro.id, entityIndex: 1 }), // Entity 2 changes to pro
-			s.advanceToNextInvoice(),
-		],
-	});
+test.concurrent(
+	`${chalk.yellowBright("scheduled-switch-entities-basic 3b: entity 1 & 2 premium, downgrade both to free, entity 2 changes to pro (after cycle)")}`,
+	async () => {
+		const customerId = "sched-switch-ent-replace-b";
 
-	// After cycle: entity 1 on free, entity 2 on pro
-	const entity1After = await autumnV1After.entities.get<ApiEntityV0>(
-		customerId,
-		entitiesAfter[0].id,
-	);
-	const entity2After = await autumnV1After.entities.get<ApiEntityV0>(
-		customerId,
-		entitiesAfter[1].id,
-	);
+		const freeMessages = items.monthlyMessages({ includedUsage: 50 });
+		const free = products.base({
+			id: "free",
+			items: [freeMessages],
+		});
 
-	await expectCustomerProducts({
-		customer: entity1After,
-		active: [free.id],
-		notPresent: [premium.id, pro.id],
-	});
-	await expectCustomerProducts({
-		customer: entity2After,
-		active: [pro.id],
-		notPresent: [premium.id, free.id],
-	});
+		const proMessages = items.monthlyMessages({ includedUsage: 100 });
+		const pro = products.pro({
+			id: "pro",
+			items: [proMessages],
+		});
 
-	// Features at respective tiers
-	expectCustomerFeatureCorrect({
-		customer: entity1After,
-		featureId: TestFeature.Messages,
-		balance: 50,
-		usage: 0,
-	});
-	expectCustomerFeatureCorrect({
-		customer: entity2After,
-		featureId: TestFeature.Messages,
-		balance: 100,
-		usage: 0,
-	});
+		const premiumMessages = items.monthlyMessages({ includedUsage: 500 });
+		const premium = products.premium({
+			id: "premium",
+			items: [premiumMessages],
+		});
 
-	// Verify Stripe subscription after cycle (entity 2 has pro)
-	await expectSubToBeCorrect({
-		db: ctxAfter.db,
-		customerId,
-		org: ctxAfter.org,
-		env: ctxAfter.env,
-	});
-});
+		// Advance to next cycle
+		const {
+			autumnV1: autumnV1After,
+			entities: entitiesAfter,
+			ctx: ctxAfter,
+		} = await initScenario({
+			customerId,
+			setup: [
+				s.customer({ paymentMethod: "success" }),
+				s.products({ list: [free, pro, premium] }),
+				s.entities({ count: 2, featureId: TestFeature.Users }),
+			],
+			actions: [
+				s.billing.attach({ productId: premium.id, entityIndex: 0 }),
+				s.billing.attach({ productId: premium.id, entityIndex: 1 }),
+				s.billing.attach({ productId: free.id, entityIndex: 0 }), // Downgrade entity 1 to free
+				s.billing.attach({ productId: free.id, entityIndex: 1 }), // Downgrade entity 2 to free
+				s.billing.attach({ productId: pro.id, entityIndex: 1 }), // Entity 2 changes to pro
+				s.advanceToNextInvoice(),
+			],
+		});
+
+		// After cycle: entity 1 on free, entity 2 on pro
+		const entity1After = await autumnV1After.entities.get<ApiEntityV0>(
+			customerId,
+			entitiesAfter[0].id,
+		);
+		const entity2After = await autumnV1After.entities.get<ApiEntityV0>(
+			customerId,
+			entitiesAfter[1].id,
+		);
+
+		await expectCustomerProducts({
+			customer: entity1After,
+			active: [free.id],
+			notPresent: [premium.id, pro.id],
+		});
+		await expectCustomerProducts({
+			customer: entity2After,
+			active: [pro.id],
+			notPresent: [premium.id, free.id],
+		});
+
+		// Features at respective tiers
+		expectCustomerFeatureCorrect({
+			customer: entity1After,
+			featureId: TestFeature.Messages,
+			balance: 50,
+			usage: 0,
+		});
+		expectCustomerFeatureCorrect({
+			customer: entity2After,
+			featureId: TestFeature.Messages,
+			balance: 100,
+			usage: 0,
+		});
+
+		// Verify Stripe subscription after cycle (entity 2 has pro)
+		await expectSubToBeCorrect({
+			db: ctxAfter.db,
+			customerId,
+			org: ctxAfter.org,
+			env: ctxAfter.env,
+		});
+	},
+);
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // TEST 4: Entity 1 premium, entity 2 premium, downgrade both to pro, then downgrade entity 1 to free
@@ -447,156 +508,188 @@ test.concurrent(`${chalk.yellowBright("scheduled-switch-entities-basic 3: entity
  * - Entity 1: Premium canceling, Free scheduled
  * - Entity 2: Premium canceling, Pro scheduled
  */
-test.concurrent(`${chalk.yellowBright("scheduled-switch-entities-basic 4: entity 1 premium, entity 2 premium, downgrade both to pro, then downgrade entity 1 to free")}`, async () => {
-	const customerId = "sched-switch-ent-chained";
+test.concurrent(
+	`${chalk.yellowBright("scheduled-switch-entities-basic 4a: entity 1 premium, entity 2 premium, downgrade both to pro, then downgrade entity 1 to free (mid-cycle)")}`,
+	async () => {
+		const customerId = "sched-switch-ent-chained-a";
 
-	const freeMessages = items.monthlyMessages({ includedUsage: 50 });
-	const free = products.base({
-		id: "free",
-		items: [freeMessages],
-	});
+		const freeMessages = items.monthlyMessages({ includedUsage: 50 });
+		const free = products.base({
+			id: "free",
+			items: [freeMessages],
+		});
 
-	const proMessages = items.monthlyMessages({ includedUsage: 100 });
-	const pro = products.pro({
-		id: "pro",
-		items: [proMessages],
-	});
+		const proMessages = items.monthlyMessages({ includedUsage: 100 });
+		const pro = products.pro({
+			id: "pro",
+			items: [proMessages],
+		});
 
-	const premiumMessages = items.monthlyMessages({ includedUsage: 500 });
-	const premium = products.premium({
-		id: "premium",
-		items: [premiumMessages],
-	});
+		const premiumMessages = items.monthlyMessages({ includedUsage: 500 });
+		const premium = products.premium({
+			id: "premium",
+			items: [premiumMessages],
+		});
 
-	const { autumnV1, entities, ctx } = await initScenario({
-		customerId,
-		setup: [
-			s.customer({ paymentMethod: "success" }),
-			s.products({ list: [free, pro, premium] }),
-			s.entities({ count: 2, featureId: TestFeature.Users }),
-		],
-		actions: [
-			s.billing.attach({ productId: premium.id, entityIndex: 0 }),
-			s.billing.attach({ productId: premium.id, entityIndex: 1 }),
-			s.billing.attach({ productId: pro.id, entityIndex: 0 }), // Downgrade entity 1 to pro
-			s.billing.attach({ productId: pro.id, entityIndex: 1 }), // Downgrade entity 2 to pro
-		],
-	});
+		const { autumnV1, entities, ctx } = await initScenario({
+			customerId,
+			setup: [
+				s.customer({ paymentMethod: "success" }),
+				s.products({ list: [free, pro, premium] }),
+				s.entities({ count: 2, featureId: TestFeature.Users }),
+			],
+			actions: [
+				s.billing.attach({ productId: premium.id, entityIndex: 0 }),
+				s.billing.attach({ productId: premium.id, entityIndex: 1 }),
+				s.billing.attach({ productId: pro.id, entityIndex: 0 }), // Downgrade entity 1 to pro
+				s.billing.attach({ productId: pro.id, entityIndex: 1 }), // Downgrade entity 2 to pro
+			],
+		});
 
-	// Verify Stripe subscription
-	await expectSubToBeCorrect({
-		db: ctx.db,
-		customerId,
-		org: ctx.org,
-		env: ctx.env,
-	});
+		// Verify Stripe subscription
+		await expectSubToBeCorrect({
+			db: ctx.db,
+			customerId,
+			org: ctx.org,
+			env: ctx.env,
+		});
 
-	// Downgrade entity 1 to free (replaces scheduled pro)
-	await autumnV1.billing.attach({
-		customer_id: customerId,
-		product_id: free.id,
-		entity_id: entities[0].id,
-		redirect_mode: "if_required",
-	});
+		// Downgrade entity 1 to free (replaces scheduled pro)
+		await autumnV1.billing.attach({
+			customer_id: customerId,
+			product_id: free.id,
+			entity_id: entities[0].id,
+			redirect_mode: "if_required",
+		});
 
-	// Verify entity 1: premium canceling, free scheduled (pro was replaced)
-	const entity1 = await autumnV1.entities.get<ApiEntityV0>(
-		customerId,
-		entities[0].id,
-	);
-	await expectProductCanceling({
-		customer: entity1,
-		productId: premium.id,
-	});
-	await expectProductScheduled({
-		customer: entity1,
-		productId: free.id,
-	});
-	await expectProductNotPresent({
-		customer: entity1,
-		productId: pro.id,
-	});
+		// Verify entity 1: premium canceling, free scheduled (pro was replaced)
+		const entity1 = await autumnV1.entities.get<ApiEntityV0>(
+			customerId,
+			entities[0].id,
+		);
+		await expectProductCanceling({
+			customer: entity1,
+			productId: premium.id,
+		});
+		await expectProductScheduled({
+			customer: entity1,
+			productId: free.id,
+		});
+		await expectProductNotPresent({
+			customer: entity1,
+			productId: pro.id,
+		});
 
-	// Verify entity 2: premium canceling, pro still scheduled
-	const entity2 = await autumnV1.entities.get<ApiEntityV0>(
-		customerId,
-		entities[1].id,
-	);
-	await expectProductCanceling({
-		customer: entity2,
-		productId: premium.id,
-	});
-	await expectProductScheduled({
-		customer: entity2,
-		productId: pro.id,
-	});
+		// Verify entity 2: premium canceling, pro still scheduled
+		const entity2 = await autumnV1.entities.get<ApiEntityV0>(
+			customerId,
+			entities[1].id,
+		);
+		await expectProductCanceling({
+			customer: entity2,
+			productId: premium.id,
+		});
+		await expectProductScheduled({
+			customer: entity2,
+			productId: pro.id,
+		});
 
-	// Verify Stripe subscription
-	await expectSubToBeCorrect({
-		db: ctx.db,
-		customerId,
-		org: ctx.org,
-		env: ctx.env,
-	});
+		// Verify Stripe subscription
+		await expectSubToBeCorrect({
+			db: ctx.db,
+			customerId,
+			org: ctx.org,
+			env: ctx.env,
+		});
+	},
+);
 
-	// Advance to next cycle
-	const { autumnV1: autumnV1After, entities: entitiesAfter, ctx: ctxAfter } = await initScenario({
-		customerId,
-		setup: [
-			s.customer({ paymentMethod: "success" }),
-			s.products({ list: [free, pro, premium] }),
-			s.entities({ count: 2, featureId: TestFeature.Users }),
-		],
-		actions: [
-			s.billing.attach({ productId: premium.id, entityIndex: 0 }),
-			s.billing.attach({ productId: premium.id, entityIndex: 1 }),
-			s.billing.attach({ productId: pro.id, entityIndex: 0 }), // Downgrade entity 1 to pro
-			s.billing.attach({ productId: pro.id, entityIndex: 1 }), // Downgrade entity 2 to pro
-			s.billing.attach({ productId: free.id, entityIndex: 0 }), // Downgrade entity 1 to free (replaces pro)
-			s.advanceToNextInvoice(),
-		],
-	});
+test.concurrent(
+	`${chalk.yellowBright("scheduled-switch-entities-basic 4b: entity 1 premium, entity 2 premium, downgrade both to pro, then downgrade entity 1 to free (after cycle)")}`,
+	async () => {
+		const customerId = "sched-switch-ent-chained-b";
 
-	// After cycle: entity 1 on free, entity 2 on pro
-	const entity1After = await autumnV1After.entities.get<ApiEntityV0>(
-		customerId,
-		entitiesAfter[0].id,
-	);
-	const entity2After = await autumnV1After.entities.get<ApiEntityV0>(
-		customerId,
-		entitiesAfter[1].id,
-	);
+		const freeMessages = items.monthlyMessages({ includedUsage: 50 });
+		const free = products.base({
+			id: "free",
+			items: [freeMessages],
+		});
 
-	await expectCustomerProducts({
-		customer: entity1After,
-		active: [free.id],
-		notPresent: [premium.id, pro.id],
-	});
-	await expectCustomerProducts({
-		customer: entity2After,
-		active: [pro.id],
-		notPresent: [premium.id, free.id],
-	});
+		const proMessages = items.monthlyMessages({ includedUsage: 100 });
+		const pro = products.pro({
+			id: "pro",
+			items: [proMessages],
+		});
 
-	// Features at respective tiers
-	expectCustomerFeatureCorrect({
-		customer: entity1After,
-		featureId: TestFeature.Messages,
-		balance: 50,
-		usage: 0,
-	});
-	expectCustomerFeatureCorrect({
-		customer: entity2After,
-		featureId: TestFeature.Messages,
-		balance: 100,
-		usage: 0,
-	});
+		const premiumMessages = items.monthlyMessages({ includedUsage: 500 });
+		const premium = products.premium({
+			id: "premium",
+			items: [premiumMessages],
+		});
 
-	// Verify Stripe subscription after cycle (entity 2 has pro)
-	await expectSubToBeCorrect({
-		db: ctxAfter.db,
-		customerId,
-		org: ctxAfter.org,
-		env: ctxAfter.env,
-	});
-});
+		// Advance to next cycle
+		const {
+			autumnV1: autumnV1After,
+			entities: entitiesAfter,
+			ctx: ctxAfter,
+		} = await initScenario({
+			customerId,
+			setup: [
+				s.customer({ paymentMethod: "success" }),
+				s.products({ list: [free, pro, premium] }),
+				s.entities({ count: 2, featureId: TestFeature.Users }),
+			],
+			actions: [
+				s.billing.attach({ productId: premium.id, entityIndex: 0 }),
+				s.billing.attach({ productId: premium.id, entityIndex: 1 }),
+				s.billing.attach({ productId: pro.id, entityIndex: 0 }), // Downgrade entity 1 to pro
+				s.billing.attach({ productId: pro.id, entityIndex: 1 }), // Downgrade entity 2 to pro
+				s.billing.attach({ productId: free.id, entityIndex: 0 }), // Downgrade entity 1 to free (replaces pro)
+				s.advanceToNextInvoice(),
+			],
+		});
+
+		// After cycle: entity 1 on free, entity 2 on pro
+		const entity1After = await autumnV1After.entities.get<ApiEntityV0>(
+			customerId,
+			entitiesAfter[0].id,
+		);
+		const entity2After = await autumnV1After.entities.get<ApiEntityV0>(
+			customerId,
+			entitiesAfter[1].id,
+		);
+
+		await expectCustomerProducts({
+			customer: entity1After,
+			active: [free.id],
+			notPresent: [premium.id, pro.id],
+		});
+		await expectCustomerProducts({
+			customer: entity2After,
+			active: [pro.id],
+			notPresent: [premium.id, free.id],
+		});
+
+		// Features at respective tiers
+		expectCustomerFeatureCorrect({
+			customer: entity1After,
+			featureId: TestFeature.Messages,
+			balance: 50,
+			usage: 0,
+		});
+		expectCustomerFeatureCorrect({
+			customer: entity2After,
+			featureId: TestFeature.Messages,
+			balance: 100,
+			usage: 0,
+		});
+
+		// Verify Stripe subscription after cycle (entity 2 has pro)
+		await expectSubToBeCorrect({
+			db: ctxAfter.db,
+			customerId,
+			org: ctxAfter.org,
+			env: ctxAfter.env,
+		});
+	},
+);

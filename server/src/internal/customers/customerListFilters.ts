@@ -5,6 +5,7 @@ export const CustomerListFiltersSchema = z.object({
 	version: z.array(z.string()).optional(),
 	none: z.boolean().optional(),
 	processor: z.array(z.string()).optional(),
+	interval: z.array(z.string()).optional(),
 });
 
 export type CustomerListFilters = z.infer<typeof CustomerListFiltersSchema>;

@@ -1,8 +1,8 @@
 import type { Invite, Role } from "@autumn/shared";
+import { Badge, TableCell, TableRow } from "@autumn/ui";
 import { isFuture } from "date-fns";
-import { TableCell, TableRow } from "@/components/ui/table";
-import { Badge } from "@/components/v2/badges/Badge";
 import { ROLE_META } from "@/components/v2/selects/RoleSelect";
+import { useInNamedSandbox } from "@/hooks/sandbox/useInNamedSandbox";
 import { formatDateStr } from "@/utils/formatUtils/formatDateUtils";
 import {
 	SETTINGS_ROW_CLASS,
@@ -22,6 +22,7 @@ const COLUMNS = [
 export const OrgInvitesList = () => {
 	const { invites, isLoading } = useMemberships();
 	const { isAdmin } = useCurrentMembership();
+	const inNamedSandbox = useInNamedSandbox();
 
 	if (isLoading) return null;
 
@@ -31,7 +32,11 @@ export const OrgInvitesList = () => {
 	});
 
 	if (pendingInvites.length === 0) {
-		return <p className="text-tertiary-foreground text-sm py-4">No pending invites</p>;
+		return (
+			<p className="text-tertiary-foreground text-sm py-4">
+				No pending invites
+			</p>
+		);
 	}
 
 	return (
@@ -43,8 +48,12 @@ export const OrgInvitesList = () => {
 					"";
 				return (
 					<TableRow key={invite.id} className={SETTINGS_ROW_CLASS}>
-						<TableCell className="pl-4 text-foreground">{invite.email}</TableCell>
-						<TableCell className="text-tertiary-foreground">{invite.status}</TableCell>
+						<TableCell className="pl-4 text-foreground">
+							{invite.email}
+						</TableCell>
+						<TableCell className="text-tertiary-foreground">
+							{invite.status}
+						</TableCell>
 						<TableCell>
 							<Badge variant="muted">{roleLabel}</Badge>
 						</TableCell>
@@ -53,7 +62,9 @@ export const OrgInvitesList = () => {
 						</TableCell>
 						<TableCell className="pr-2">
 							<div className="flex justify-end">
-								{isAdmin && <MemberRowToolbar invite={invite} />}
+								{isAdmin && !inNamedSandbox && (
+									<MemberRowToolbar invite={invite} />
+								)}
 							</div>
 						</TableCell>
 					</TableRow>

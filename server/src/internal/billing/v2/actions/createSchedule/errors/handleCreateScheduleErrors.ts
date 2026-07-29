@@ -1,10 +1,15 @@
 import {
+	type BillingPlan,
 	type CreateScheduleBillingContext,
 	ErrCode,
 	isFreeProduct,
+	isProductPaidAndRecurring,
 	RecaseError,
 } from "@autumn/shared";
 import type { DrizzleCli } from "@/db/initDrizzle";
+import type { AutumnContext } from "@/honoUtils/HonoEnv";
+import { handleUnsupportedLicenseActionErrors } from "@/internal/billing/v2/common/errors/handleUnsupportedLicenseActionErrors";
+import { handleStripeBillingPlanErrors } from "@/internal/billing/v2/providers/stripe/errors/handleStripeBillingPlanErrors";
 import { handleFirstPhaseStartDateErrors } from "./handleFirstPhaseStartDateErrors";
 
 export const handleCreateScheduleErrors = async ({
@@ -16,6 +21,21 @@ export const handleCreateScheduleErrors = async ({
 	billingContext: CreateScheduleBillingContext;
 	preview?: boolean;
 }) => {
+	handleUnsupportedLicenseActionErrors({
+		actionLabel: "billing.create_schedule",
+		fullProducts: [
+			...billingContext.fullProducts,
+			...billingContext.scheduledPhaseContexts.flatMap((phase) =>
+				phase.productContexts.map(
+					(scheduledProductContext) => scheduledProductContext.fullProduct,
+				),
+			),
+		],
+		customerProducts: billingContext.productContexts.map(
+			(productContext) => productContext.currentCustomerProduct,
+		),
+	});
+
 	if (
 		billingContext.checkoutMode === "stripe_checkout" &&
 		billingContext.enablePlanImmediately &&
@@ -32,7 +52,7 @@ export const handleCreateScheduleErrors = async ({
 	handleFirstPhaseStartDateErrors({ billingContext, preview });
 
 	const allImmediateProductsFree = billingContext.fullProducts.every(
-		(product) => isFreeProduct({ prices: product.prices }),
+		(product) => isFreeProduct({ product }),
 	);
 
 	if (allImmediateProductsFree && billingContext.stripeSubscription) {
@@ -51,8 +71,14 @@ export const handleCreateScheduleErrors = async ({
 		const subscriptionWillBeCanceled =
 			productsOnSub.length > 0 &&
 			productsOnSub.every((cp) => transitioningOutIds.has(cp.id));
+		const hasFuturePaidRecurringPhase =
+			billingContext.scheduledPhaseContexts.some((phase) =>
+				phase.productContexts.some((ctx) =>
+					isProductPaidAndRecurring(ctx.fullProduct),
+				),
+			);
 
-		if (subscriptionWillBeCanceled) {
+		if (subscriptionWillBeCanceled && !hasFuturePaidRecurringPhase) {
 			throw new RecaseError({
 				message:
 					"Cannot create a schedule with a free first phase while the customer has an active subscription. Please cancel the existing subscription first.",
@@ -61,4 +87,16 @@ export const handleCreateScheduleErrors = async ({
 			});
 		}
 	}
+};
+
+export const handleCreateScheduleBillingPlanErrors = ({
+	ctx,
+	billingContext,
+	billingPlan,
+}: {
+	ctx: AutumnContext;
+	billingContext: CreateScheduleBillingContext;
+	billingPlan: BillingPlan;
+}) => {
+	handleStripeBillingPlanErrors({ ctx, billingContext, billingPlan });
 };

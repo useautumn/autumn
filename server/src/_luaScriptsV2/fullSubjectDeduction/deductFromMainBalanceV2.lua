@@ -49,11 +49,13 @@ local function calculate_change(balance, amount, params)
   else
     -- DEDUCTION: amount is positive, we want to SUBTRACT from balance
     if pass_number == 2 then
-      -- Pass 2: Floor at min_balance (can go below 0)
-      if overage_behavior_is_allow then
-        return amount  -- No floor constraint
-      elseif not is_nil(params.available_overage) then
+      -- Pass 2: Floor at min_balance (can go below 0). The spend-limit clamp
+      -- outranks the allow shortcut: under 'overflow' the gate computes it, under
+      -- 'allow' it is never computed so behavior is unchanged.
+      if not is_nil(params.available_overage) then
         return math.max(0, math.min(amount, params.available_overage))
+      elseif overage_behavior_is_allow then
+        return amount  -- No floor constraint
       elseif params.min_balance then
         local to_deduct = math.min(amount, balance - params.min_balance)
         return math.max(0, to_deduct)

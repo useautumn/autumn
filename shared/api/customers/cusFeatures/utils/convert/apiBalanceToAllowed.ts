@@ -20,6 +20,8 @@ export type ApiBalanceInput = {
 	/** The checked feature when it differs from the evaluated one (credit
 	 *  system member), so metered usage caps on it can gate the check. */
 	originalFeature?: Feature;
+	/** The check's event properties; filtered usage caps only gate when these match. */
+	properties?: Record<string, unknown> | null;
 };
 
 export const apiBalanceToAllowed = ({
@@ -28,6 +30,7 @@ export const apiBalanceToAllowed = ({
 	feature,
 	requiredBalance,
 	originalFeature,
+	properties,
 }: ApiBalanceInput): AllowedResult => {
 	if (!apiBalance) return { allowed: false };
 
@@ -42,6 +45,7 @@ export const apiBalanceToAllowed = ({
 		apiSubject,
 		feature,
 		originalFeature,
+		properties,
 	});
 	if (
 		notNullish(usageLimitHeadroom) &&

@@ -8,6 +8,8 @@ import {
 	fullCustomerToCustomerEntitlements,
 	hasRecalculableScope,
 	isPaidCustomerEntitlement,
+	isPooledBalanceSourceCustomerEntitlement,
+	isSyntheticPooledBalanceCustomerEntitlement,
 	type RecalculateBalanceParamsV0,
 } from "@autumn/shared";
 
@@ -17,11 +19,19 @@ export const getCustomerBalanceId = ({
 	balance: FullCusEntWithFullCusProduct;
 }) => balance.external_id ?? balance.id;
 
+/** Pooled balances are owned by their contributing plans, not deletable on their own. */
 export const canDeleteCustomerBalance = ({
 	balance,
 }: {
 	balance: FullCusEntWithFullCusProduct;
-}) => !isPaidCustomerEntitlement(balance);
+}) =>
+	!(
+		isPaidCustomerEntitlement(balance) ||
+		isSyntheticPooledBalanceCustomerEntitlement({
+			customerEntitlement: balance,
+		}) ||
+		isPooledBalanceSourceCustomerEntitlement({ customerEntitlement: balance })
+	);
 
 export function getCustomerBalanceSourceParts({
 	balance,

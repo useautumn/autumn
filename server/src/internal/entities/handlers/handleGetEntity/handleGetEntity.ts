@@ -5,6 +5,7 @@ import {
 	Scopes,
 } from "@autumn/shared";
 import { createRoute } from "@/honoMiddlewares/routeHandler.js";
+import { applySubjectLookupDbOnly } from "@/internal/misc/miscellaneousEdgeConfig/applySubjectLookupDbOnly.js";
 import { getApiEntityByRollout } from "../../actions/getApiEntityByRollout.js";
 
 export const handleGetEntity = createRoute({
@@ -18,6 +19,8 @@ export const handleGetEntity = createRoute({
 		const { customer_id, entity_id } = c.req.param();
 		const ctx = c.get("ctx");
 		const { with_autumn_id } = c.req.valid("query");
+
+		applySubjectLookupDbOnly({ ctx });
 
 		const apiEntity = await getApiEntityByRollout({
 			ctx,

@@ -31,6 +31,7 @@ export type RequestContext = {
 	oauthResource?: string;
 	customerId?: string;
 	entityId?: string;
+	requestBody?: unknown;
 
 	// Objects
 	db: DrizzleCli;
@@ -46,6 +47,18 @@ export type RequestContext = {
 	isPublic: boolean;
 	useReplicaDb?: boolean;
 	authType: AuthType;
+	/** True when this request authenticated via a per-customer JWT. Set by
+	 *  customerJwtMiddleware; read by customerJwtVersionMiddleware to enforce
+	 *  the v2.3+ floor. */
+	isCustomerJwt?: boolean;
+	/** Verified per-customer JWT claims. Set by customerJwtMiddleware; read by
+	 *  keys.refresh to rotate the family. */
+	customerJwt?: {
+		customerId: string;
+		internalCustomerId: string;
+		epoch: number;
+		refreshKid: number;
+	};
 	apiVersion: ApiVersionClass;
 	timestamp: number;
 
@@ -79,13 +92,23 @@ export type RequestContext = {
 	orgRateLimitDegraded?: boolean;
 
 	testOptions?: {
+		asyncBalanceUpdate?: boolean;
 		skipCacheDeletion?: boolean;
 		skipWebhooks?: boolean;
+		/** Per-request sync-coalesce gate override (non-prod only); undefined
+		 *  falls through to the edge config. */
+		syncCoalesce?: boolean;
 		eventId?: string;
 		keepInternalFields?: boolean;
 		useReplica?: boolean;
 		mockVercelApi?: boolean;
 		allowVercelTestOidc?: boolean;
+		mockRevenueCat?: boolean;
+		revenueCat?: {
+			subscriptions?: unknown[];
+			purchases?: unknown[];
+			products?: unknown[];
+		};
 	};
 };
 

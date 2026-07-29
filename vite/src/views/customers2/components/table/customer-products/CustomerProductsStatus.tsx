@@ -1,4 +1,10 @@
 import { CusProductStatus, formatMsToDate } from "@autumn/shared";
+import {
+	Tooltip,
+	TooltipContent,
+	TooltipProvider,
+	TooltipTrigger,
+} from "@autumn/ui";
 import { DotIcon } from "@phosphor-icons/react";
 import { formatDistance } from "date-fns";
 import {
@@ -10,12 +16,6 @@ import {
 	PauseIcon,
 	XIcon,
 } from "lucide-react";
-import {
-	Tooltip,
-	TooltipContent,
-	TooltipProvider,
-	TooltipTrigger,
-} from "@/components/v2/tooltips/Tooltip";
 import { cn } from "@/lib/utils";
 
 type StatusConfig = {
@@ -166,7 +166,9 @@ export function CustomerProductsStatus({
 						<TooltipContent>
 							<span className="text-sm">{config.label} </span>
 							{subtext && (
-								<span className="text-sm text-tertiary-foreground">({subtext})</span>
+								<span className="text-sm text-tertiary-foreground">
+									({subtext})
+								</span>
 							)}
 						</TooltipContent>
 					</Tooltip>
@@ -184,7 +186,9 @@ export function CustomerProductsStatus({
 			{subtext && (
 				<>
 					<DotIcon size={16} />
-					<span className="text-sm text-tertiary-foreground pl-1 truncate">{subtext}</span>
+					<span className="text-sm text-tertiary-foreground pl-1 truncate">
+						{subtext}
+					</span>
 				</>
 			)}
 		</div>

@@ -4,6 +4,7 @@ import type { UsageWindowLimit } from "../../../models/cusProductModels/cusEntMo
 import type { CusProductStatus } from "../../../models/cusProductModels/cusProductEnums.js";
 import type { Feature } from "../../../models/featureModels/featureModels.js";
 import { resetIntvToEntIntv } from "../../productV2Utils/productItemUtils/convertProductItem/planItemIntervals.js";
+import { usageLimitFilterKey } from "../../../models/cusModels/billingControls/usageLimit.js";
 import { buildUsageWindowKey } from "../buildUsageWindowKey.js";
 import { findUsageWindowAnchor } from "../findUsageWindowAnchor/findUsageWindowAnchor.js";
 import { getUsageWindowAnchorTimestamp } from "../getUsageWindowAnchorTimestamp.js";
@@ -68,6 +69,8 @@ export const usageLimitToUsageWindowLimit = ({
 		anchor: getUsageWindowAnchorTimestamp({ anchorCustomerEntitlement }),
 	});
 
+	const filterKey = usageLimitFilterKey(usageLimit.filter);
+
 	return {
 		feature_id: feature.id,
 		internal_feature_id: feature.internal_id,
@@ -79,12 +82,15 @@ export const usageLimitToUsageWindowLimit = ({
 			dimensionFeatureId,
 			interval,
 			windowStartAt,
+			filterKey,
 		}),
 		dimension_type: dimensionType,
 		dimension_feature_id: dimensionFeatureId,
 		scope_type: scopeType,
 		entity_id: entityScope?.entityId ?? null,
 		internal_entity_id: entityScope?.internalEntityId ?? null,
+		filter_key: filterKey || null,
+		filter_properties: usageLimit.filter?.properties ?? null,
 		interval,
 		window_start_at: windowStartAt,
 		window_end_at: windowEndAt,

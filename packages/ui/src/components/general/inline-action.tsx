@@ -1,0 +1,27 @@
+import { cn } from "@autumn/ui/lib/utils";
+import type { ComponentProps, ReactNode } from "react";
+
+interface InlineActionProps extends ComponentProps<"button"> {
+	icon?: ReactNode;
+}
+
+export function InlineAction({
+	icon,
+	children,
+	className,
+	...props
+}: InlineActionProps) {
+	return (
+		<button
+			type="button"
+			className={cn(
+				"flex items-center gap-1 text-xs text-subtle hover:text-muted-foreground transition-colors py-1 disabled:opacity-40 disabled:pointer-events-none",
+				className,
+			)}
+			{...props}
+		>
+			{icon}
+			{children}
+		</button>
+	);
+}

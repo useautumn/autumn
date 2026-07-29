@@ -7,14 +7,47 @@ import {
 	generateTrialChanges,
 	generateVersionChanges,
 	type ProductItem,
+	ProductItemFeatureType,
+	type ProductItemInterval,
 } from "@autumn/shared";
 import { useMemo } from "react";
 import type { PrepaidItemWithFeature } from "@/hooks/stores/useProductStore";
+import { hasStagedLicenseQuantityChanges } from "@/utils/billing/licenseQuantityUtils";
 import type { UpdateSubscriptionForm } from "../updateSubscriptionFormSchema";
+
+type PrepaidChangeItem = {
+	interval?: ProductItemInterval | null;
+	feature_type?: ProductItemFeatureType | null;
+};
+
+/** Whether a prepaid quantity change counts as a subscription change. Extracted for testability. */
+export function shouldCountPrepaidChange({
+	item,
+	newlyAdded,
+	initialQuantity,
+	updatedQuantity,
+}: {
+	item?: PrepaidChangeItem;
+	newlyAdded: boolean;
+	initialQuantity: number;
+	updatedQuantity: number;
+}): boolean {
+	if (newlyAdded) return false;
+	// Consumable one-off top-ups only count when increasing; non-consumables
+	// (continuous use) count on any delta, including a decrease.
+	const isConsumableOneOff =
+		item?.interval == null &&
+		item?.feature_type !== ProductItemFeatureType.ContinuousUse;
+	if (isConsumableOneOff) {
+		return updatedQuantity > initialQuantity;
+	}
+	return true;
+}
 
 export function useHasSubscriptionChanges({
 	formValues,
 	initialPrepaidOptions,
+	initialLicenseQuantities,
 	initialBillingBehavior,
 	prepaidItems,
 	customerProduct,
@@ -24,6 +57,7 @@ export function useHasSubscriptionChanges({
 }: {
 	formValues: UpdateSubscriptionForm;
 	initialPrepaidOptions: Record<string, number | undefined>;
+	initialLicenseQuantities?: Record<string, number>;
 	initialBillingBehavior: BillingBehavior | null;
 	prepaidItems: PrepaidItemWithFeature[];
 	customerProduct: FullCusProduct;
@@ -35,16 +69,17 @@ export function useHasSubscriptionChanges({
 		if (formValues.billingBehavior !== initialBillingBehavior) return true;
 		if (formValues.resetBillingCycle) return true;
 		if (formValues.noBillingChanges) return true;
+		if (formValues.addLicenses !== null) return true;
+
+		if (
+			hasStagedLicenseQuantityChanges({
+				licenseQuantities: formValues.licenseQuantities,
+				initialLicenseQuantities,
+			})
+		)
+			return true;
 
 		if (formValues.discounts?.length > 0) return true;
-
-		const hasOneOffPrepaidWithQty = prepaidItems.some(
-			(item) =>
-				item.interval == null &&
-				item.feature_id &&
-				(formValues.prepaidOptions[item.feature_id] ?? 0) > 0,
-		);
-		if (hasOneOffPrepaidWithQty) return true;
 
 		const trialChanges = generateTrialChanges({
 			customerProduct,
@@ -85,7 +120,13 @@ export function useHasSubscriptionChanges({
 			originalOptions: initialPrepaidOptions,
 		}).filter((change) => {
 			const featureId = change.id.replace("prepaid-", "");
-			return !newlyAddedFeatureIds.has(featureId);
+			const item = prepaidItems.find((it) => it.feature_id === featureId);
+			return shouldCountPrepaidChange({
+				item,
+				newlyAdded: newlyAddedFeatureIds.has(featureId),
+				initialQuantity: initialPrepaidOptions[featureId] ?? 0,
+				updatedQuantity: formValues.prepaidOptions[featureId] ?? 0,
+			});
 		});
 
 		return prepaidChanges.length > 0;
@@ -102,8 +143,11 @@ export function useHasSubscriptionChanges({
 		formValues.trialCardRequired,
 		formValues.version,
 		formValues.items,
+		formValues.addLicenses,
 		formValues.prepaidOptions,
+		formValues.licenseQuantities,
 		initialPrepaidOptions,
+		initialLicenseQuantities,
 		prepaidItems,
 		customerProduct,
 		currentVersion,

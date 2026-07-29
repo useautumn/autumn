@@ -1,7 +1,12 @@
 import type {
 	ApiPlanV1,
+	DiffedCustomizePlanV1,
 	Feature,
 	FrontendProduct,
+	MigrationFilter,
+	Operations,
+	PlanLicenseParams,
+	ProductItem,
 	UpdatePlanOp,
 	UpdatePlanParamsV2Input,
 } from "@autumn/shared";
@@ -13,10 +18,8 @@ import {
 	productV2ToFeatureItems,
 	sortProductItems,
 } from "@autumn/shared";
-import type { DiffedCustomizePlanV1 } from "@autumn/shared/utils/planV1Utils/diff/diffPlanV1.js";
-import type { MigrationFilter } from "@autumn/shared/api/migrations/filters/migrationFilter.js";
-import type { Operations } from "@autumn/shared/api/migrations/operations/operations.js";
 import { migrationUid } from "@/views/migrations/migration/shared/operationUtils";
+import { alignTierCurrencyShapes } from "../utils/currencyUtils";
 
 export interface MigrationDraft {
 	id: string;
@@ -43,6 +46,9 @@ export function frontendProductToApiPlanV1(
 	const basePrice: ApiPlanV1["price"] = basePriceItem
 		? {
 				amount: basePriceItem.price,
+				...(basePriceItem.additional_currencies?.length
+					? { additional_currencies: basePriceItem.additional_currencies }
+					: {}),
 				interval: itemToBillingInterval({ item: basePriceItem }),
 				...(basePriceItem.interval_count !== 1 &&
 				typeof basePriceItem.interval_count === "number"
@@ -78,42 +84,55 @@ export function frontendProductToApiPlanV1(
 		archived: product.archived ?? false,
 		base_variant_id: null,
 		config: product.config ?? { ignore_past_due: false },
+		billing_controls: product.billing_controls,
 	} satisfies ApiPlanV1;
 }
 
 function planItemsToUpdateParams(
 	items: ApiPlanV1["items"],
 ): NonNullable<UpdatePlanParamsV2Input["items"]> {
-	return items.map(({ feature, display, reset, price, proration, rollover, ...item }) => ({
-		...item,
-		...(reset ? { reset } : {}),
-		...(price ? { price } : {}),
-		...(proration ? { proration } : {}),
-		...(rollover
-			? {
-					rollover: {
-						expiry_duration_type: rollover.expiry_duration_type,
-						expiry_duration_length: rollover.expiry_duration_length,
-						...(rollover.max != null ? { max: rollover.max } : {}),
-						...(rollover.max_percentage != null
-							? { max_percentage: rollover.max_percentage }
-							: {}),
-					},
-				}
-			: {}),
-	}));
+	return items.map(
+		({ feature, display, reset, price, proration, rollover, ...item }) => ({
+			...item,
+			...(reset ? { reset } : {}),
+			...(price ? { price } : {}),
+			...(proration ? { proration } : {}),
+			...(rollover
+				? {
+						rollover: {
+							expiry_duration_type: rollover.expiry_duration_type,
+							expiry_duration_length: rollover.expiry_duration_length,
+							...(rollover.max != null ? { max: rollover.max } : {}),
+							...(rollover.max_percentage != null
+								? { max_percentage: rollover.max_percentage }
+								: {}),
+						},
+					}
+				: {}),
+		}),
+	);
 }
 
 export function buildInPlaceUpdatePlanParams({
 	baseProduct,
 	editedProduct,
 	features,
+	licenses,
 }: {
 	baseProduct: FrontendProduct;
 	editedProduct: FrontendProduct;
 	features: Feature[];
+	licenses?: PlanLicenseParams[];
 }): UpdatePlanParamsV2Input {
-	const plan = frontendProductToApiPlanV1(editedProduct, features);
+	const plan = frontendProductToApiPlanV1(
+		{
+			...editedProduct,
+			items: editedProduct.items.map((item) =>
+				alignTierCurrencyShapes(item as ProductItem),
+			) as typeof editedProduct.items,
+		},
+		features,
+	);
 
 	return {
 		plan_id: baseProduct.id,
@@ -127,8 +146,57 @@ export function buildInPlaceUpdatePlanParams({
 		items: planItemsToUpdateParams(plan.items),
 		free_trial: plan.free_trial ?? null,
 		config: plan.config,
+		billing_controls: plan.billing_controls,
+		...(licenses !== undefined ? { licenses } : {}),
 		disable_version: true,
 	} satisfies UpdatePlanParamsV2Input;
+}
+
+// Preview params mirror the in-place update but drop disable_version so the
+// backend reports whether applying in place would version.
+export function buildPreviewUpdatePlanParams({
+	baseProduct,
+	editedProduct,
+	features,
+	licenses,
+}: {
+	baseProduct: FrontendProduct | null;
+	editedProduct: FrontendProduct;
+	features: Feature[];
+	licenses?: PlanLicenseParams[];
+}): UpdatePlanParamsV2Input {
+	const params = buildInPlaceUpdatePlanParams({
+		baseProduct: baseProduct ?? editedProduct,
+		editedProduct,
+		features,
+		licenses,
+	});
+	delete params.disable_version;
+	params.include_versions = true;
+	params.include_variants = true;
+	params.include_license_parents = true;
+	return params;
+}
+
+export function buildVersionUpdatePlanParams({
+	baseProduct,
+	editedProduct,
+	features,
+	licenses,
+}: {
+	baseProduct: FrontendProduct;
+	editedProduct: FrontendProduct;
+	features: Feature[];
+	licenses?: PlanLicenseParams[];
+}): UpdatePlanParamsV2Input {
+	const params = buildInPlaceUpdatePlanParams({
+		baseProduct,
+		editedProduct,
+		features,
+		licenses,
+	});
+	delete params.disable_version;
+	return params;
 }
 
 function diffHasBillingChanges(diff: DiffedCustomizePlanV1): boolean {
@@ -214,15 +282,18 @@ export function buildVersionMigrationDraft({
 		plan_filter: { ...basePlanFilter, custom },
 		version: latestVersion,
 	});
+	const versionOpWithoutCustom = (): UpdatePlanOp => ({
+		type: "update_plan",
+		plan_filter: basePlanFilter,
+		version: latestVersion,
+	});
 
 	const filter: MigrationFilter = {
 		customer: { plan: planFilter },
 	};
 
 	const operations: Operations = {
-		customer: includeCustom
-			? [versionOp(false), versionOp(true)]
-			: [versionOp(false)],
+		customer: includeCustom ? [versionOpWithoutCustom()] : [versionOp(false)],
 	};
 
 	const suffix = scope === "all" ? "migrate-all" : `migrate-v${scope}`;
@@ -258,16 +329,14 @@ export function buildMigrationDraft({
 
 	const basePlanFilter = {
 		plan_id: baseProduct.id,
-		...(scope === "this_version"
-			? { version: baseProduct.version }
-			: {}),
+		...(scope === "this_version" ? { version: baseProduct.version } : {}),
 	};
 	const planFilter = includeCustom
 		? basePlanFilter
 		: { ...basePlanFilter, custom: false };
 	const updatePlanOp: UpdatePlanOp = {
 		type: "update_plan",
-		plan_filter: basePlanFilter,
+		plan_filter: planFilter,
 		...(customize ? { customize } : {}),
 	};
 
@@ -275,8 +344,7 @@ export function buildMigrationDraft({
 		customer: { plan: planFilter },
 	};
 
-	const suffix =
-		scope === "all_customers" ? "update-all" : "update";
+	const suffix = scope === "all_customers" ? "update-all" : "update";
 
 	return {
 		id: `${baseProduct.id}-${suffix}-${migrationUid()}`,
@@ -285,5 +353,109 @@ export function buildMigrationDraft({
 			customer: [updatePlanOp],
 		},
 		no_billing_changes: diffHasBillingChanges(migrationDiff) === false,
+	};
+}
+
+export interface CombinedVariantTarget {
+	id: string;
+	version: number;
+}
+
+export interface AllVersionsUpdateMigrationTarget {
+	id: string;
+	customize: DiffedCustomizePlanV1 | null;
+}
+
+// Version resets re-materialize customer entitlements from the updated catalog.
+export function buildCombinedVariantMigrationDraft({
+	variants,
+	hasPricingChange,
+	includeCustom = false,
+}: {
+	variants: CombinedVariantTarget[];
+	hasPricingChange: boolean;
+	includeCustom?: boolean;
+}): MigrationDraft | null {
+	if (variants.length === 0) return null;
+
+	const planIds = variants.map((v) => v.id);
+	const planMatcher = planIds.length === 1 ? planIds[0] : { $in: planIds };
+
+	const basePlanFilter = { plan_id: planMatcher };
+	const planFilter = includeCustom
+		? basePlanFilter
+		: { ...basePlanFilter, custom: false };
+
+	const byVersion = new Map<number, string[]>();
+	for (const variant of variants) {
+		const ids = byVersion.get(variant.version) ?? [];
+		ids.push(variant.id);
+		byVersion.set(variant.version, ids);
+	}
+
+	const versionOps = (custom: boolean | undefined): UpdatePlanOp[] =>
+		Array.from(byVersion.entries()).map(([version, ids]) => ({
+			type: "update_plan",
+			plan_filter: {
+				plan_id: ids.length === 1 ? ids[0] : { $in: ids },
+				...(custom === undefined ? {} : { custom }),
+			},
+			version,
+		}));
+
+	const operations: Operations = {
+		customer: includeCustom ? versionOps(undefined) : versionOps(false),
+	};
+
+	return {
+		id: `plan-migrate-${planIds.length}-${migrationUid()}`,
+		filter: { customer: { plan: planFilter } },
+		operations,
+		no_billing_changes: !hasPricingChange,
+	};
+}
+
+export function buildAllVersionsUpdateMigrationDraft({
+	targets,
+	hasPricingChange,
+	includeCustom = false,
+}: {
+	targets: AllVersionsUpdateMigrationTarget[];
+	hasPricingChange: boolean;
+	includeCustom?: boolean;
+}): MigrationDraft | null {
+	const ops = targets.flatMap((target): UpdatePlanOp[] => {
+		if (!target.customize) return [];
+		const customize = getMigratablePlanDiff(target.customize);
+		if (Object.keys(customize).length === 0) return [];
+
+		const op = (custom: boolean | undefined): UpdatePlanOp => ({
+			type: "update_plan",
+			plan_filter: {
+				plan_id: target.id,
+				...(custom === undefined ? {} : { custom }),
+			},
+			customize,
+		});
+
+		return [op(includeCustom ? undefined : false)];
+	});
+	if (ops.length === 0) return null;
+
+	const planIds = [...new Set(targets.map((target) => target.id))];
+	const planMatcher = planIds.length === 1 ? planIds[0] : { $in: planIds };
+	const basePlanFilter = { plan_id: planMatcher };
+
+	return {
+		id: `plan-update-all-${planIds.length}-${migrationUid()}`,
+		filter: {
+			customer: {
+				plan: includeCustom
+					? basePlanFilter
+					: { ...basePlanFilter, custom: false },
+			},
+		},
+		operations: { customer: ops },
+		no_billing_changes: !hasPricingChange,
 	};
 }

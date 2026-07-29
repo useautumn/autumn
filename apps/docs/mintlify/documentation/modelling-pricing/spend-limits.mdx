@@ -126,11 +126,68 @@ curl -X POST "https://api.useautumn.com/v1/customers/update" \
 |-------|------|-------------|
 | `feature_id` | string | The feature to apply the spend limit to |
 | `enabled` | boolean | Whether the spend limit is active |
-| `overage_limit` | number | Maximum overage units allowed beyond the included amount |
+| `overage_limit` | number (optional) | Maximum overage units allowed beyond the included amount |
+| `skip_overage_billing` | boolean (optional) | When `true`, overage on this feature is never billed — usage beyond the included amount is not added to the customer's invoice. Usage tracking and balance resets are unaffected. |
 
 <Note>
 The `overage_limit` is measured in the same units as the feature's balance — not in dollars. For example, if your feature is "API calls", an `overage_limit` of 5,000 means 5,000 additional API calls beyond the included amount.
 </Note>
+
+## Skipping overage billing
+
+Set `skip_overage_billing` to `true` on a spend limit to let a customer use overage without being charged for it. Usage tracking, `check` responses, and end-of-cycle balance resets all behave as normal — the overage line items are simply never added to the customer's invoice.
+
+<CodeGroup>
+
+```typescript TypeScript
+await autumn.customers.update({
+  customerId: "user_123",
+  billingControls: {
+    spendLimits: [{
+      featureId: "api_calls",
+      enabled: true,
+      skipOverageBilling: true,
+    }],
+  },
+});
+```
+
+```python Python
+await autumn.customers.update(
+    customer_id="user_123",
+    billing_controls={
+        "spend_limits": [{
+            "feature_id": "api_calls",
+            "enabled": True,
+            "skip_overage_billing": True,
+        }],
+    },
+)
+```
+
+```bash cURL
+curl -X POST "https://api.useautumn.com/v1/customers/update" \
+  -H "Authorization: Bearer am_sk_..." \
+  -H "Content-Type: application/json" \
+  -d '{
+    "customer_id": "user_123",
+    "billing_controls": {
+      "spend_limits": [{
+        "feature_id": "api_calls",
+        "enabled": true,
+        "skip_overage_billing": true
+      }]
+    }
+  }'
+```
+
+</CodeGroup>
+
+The spend limit must be `enabled` and have a `feature_id`. It can also be set on an [entity](/documentation/customers/feature-entities) — resolution is per-feature, and the nearest configuration wins: entity-level spend limit, then customer-level, then plan-level billing controls.
+
+<Tip>
+Combine `skip_overage_billing` with an `overage_limit` to allow a bounded amount of free overage: the customer is blocked once they hit the cap, and the overage they did use is never billed.
+</Tip>
 
 ## How it works
 

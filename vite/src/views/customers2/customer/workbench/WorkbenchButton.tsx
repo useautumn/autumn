@@ -1,7 +1,7 @@
+import { useIsMobile } from "@autumn/ui";
 import { TerminalWindowIcon } from "@phosphor-icons/react";
 import { useMatch } from "react-router";
 import { useWorkbenchStore } from "@/hooks/stores/useWorkbenchStore";
-import { useIsMobile } from "@/hooks/useIsMobile";
 import { cn } from "@/lib/utils";
 import { useAdmin } from "@/views/admin/hooks/useAdmin";
 import { useSidebarContext } from "@/views/main-sidebar/SidebarContext";
@@ -29,7 +29,8 @@ export const WorkbenchButton = () => {
 			}}
 			className={cn(
 				"cursor-pointer font-medium text-sm flex items-center text-muted-foreground px-2 h-7 rounded-lg w-full hover:text-foreground border border-transparent focus:outline-none focus-visible:outline-none",
-				isOpen && "border border-border !text-foreground bg-interactive-secondary",
+				isOpen &&
+					"border border-border !text-foreground bg-interactive-secondary",
 			)}
 		>
 			<div className="flex items-center gap-2">

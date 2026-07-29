@@ -55,6 +55,7 @@ export const ErrCode = {
 	// Stripe
 	StripeError: "stripe_error",
 	StripeKeyInvalid: "stripe_key_invalid",
+	StripeAccountMismatch: "stripe_account_mismatch",
 	StripeConfigNotFound: "stripe_config_not_found",
 	StripeDeleteCustomerFailed: "stripe_delete_customer_failed",
 	StripeCreateCustomerFailed: "stripe_create_customer_failed",
@@ -89,6 +90,7 @@ export const ErrCode = {
 	CustomerEntitlementNotFound: "customer_entitlement_not_found",
 	MultipleCustomersFound: "multiple_customers_found",
 	InvalidUpdateCustomerParams: "invalid_update_customer_params",
+	CurrencyMismatch: "currency_mismatch",
 
 	// Stripe errors...?
 	CreateStripeProductFailed: "create_stripe_product_failed",
@@ -104,7 +106,6 @@ export const ErrCode = {
 	CreateEntitlementFailed: "create_entitlement_failed",
 	DeleteEntitlementFailed: "delete_entitlement_failed",
 	InsufficientBalance: "insufficient_balance",
-	SetUsageNotAllowedWithUsageLimit: "set_usage_not_allowed_with_usage_limit",
 
 	// Invoice
 	CreateInvoiceFailed: "create_invoice_failed",
@@ -126,6 +127,9 @@ export const ErrCode = {
 
 	// Rewards
 	InvalidReward: "invalid_reward",
+	ProductNotInStripe: "product_not_in_stripe",
+	DuplicateRewardId: "duplicate_reward_id",
+	DuplicatePromoCode: "duplicate_promo_code",
 	PromoCodeAlreadyExistsInStripe: "promo_code_already_exists_in_stripe",
 	PromoCodeFirstTimeOnly: "promo_code_first_time_only",
 
@@ -189,6 +193,18 @@ export const ErrCode = {
 
 	// Products
 	ProductNotFound: "product_not_found",
+
+	// Variants
+	NestedVariantNotAllowed: "nested_variant_not_allowed",
+	CannotForkArchivedBase: "cannot_fork_archived_base",
+	ProductIdAlreadyExists: "product_id_already_exists",
+	CannotPreviewOnVariant: "cannot_preview_on_variant",
+	InvalidPropagationTarget: "invalid_propagation_target",
+	TooManyVariants: "too_many_variants",
+	ConflictingVersionFlags: "conflicting_version_flags",
+	VariantCannotBeDefault: "variant_cannot_be_default",
+	HistoricalPlanVersionCannotBeDefault:
+		"historical_plan_version_cannot_be_default",
 
 	// Maintenance
 	UnderMaintenance: "under_maintenance",

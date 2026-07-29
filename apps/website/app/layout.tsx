@@ -20,11 +20,12 @@ const url = "https://useautumn.com";
 
 export const metadata: Metadata = {
 	title: {
-		default: "Autumn — Billing Infrastructure for AI Startups",
+		default: "Billing Infrastructure for AI Startups | Autumn",
 		template: "%s | Autumn",
 	},
 	description:
-		"The drop-in billing layer for AI startups. Stop rebuilding usage limits, credit systems, and subscription logic. Autumn keeps webhooks, payments, and usage perfectly in-sync.",
+		"Drop-in billing for AI startups. Stop rebuilding usage limits, credits, and subscription logic. Autumn keeps payments, webhooks, and usage in sync.",
+	applicationName: "Autumn",
 	keywords: [
 		"AI billing",
 		"usage-based billing",
@@ -38,6 +39,14 @@ export const metadata: Metadata = {
 	authors: [{ name: "Autumn" }],
 	creator: "Autumn",
 	metadataBase: new URL(url),
+	icons: {
+		icon: [
+			{ url: "/favicon.ico", sizes: "48x48", type: "image/x-icon" },
+			{ url: "/favicon-48x48.png", sizes: "48x48", type: "image/png" },
+			{ url: "/icon-192.png", sizes: "192x192", type: "image/png" },
+		],
+		apple: [{ url: "/apple-touch-icon.png", sizes: "180x180" }],
+	},
 	openGraph: {
 		type: "website",
 		locale: "en_US",
@@ -83,10 +92,10 @@ export default function RootLayout({ children }: LayoutProps) {
 			className={cn(
 				geistSans.variable,
 				geistMono.variable,
-				"h-full bg-black antialiased",
+				"h-full max-w-full overflow-x-clip overscroll-x-none bg-black antialiased",
 			)}
 		>
-			<body className="min-h-full flex flex-col">{children}</body>
+			<body className="min-h-full max-w-full overflow-x-clip overscroll-x-none flex flex-col">{children}</body>
 		</html>
 	);
 }

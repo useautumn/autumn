@@ -30,12 +30,14 @@ type SubscriptionItemMetadataMap = Map<string, Stripe.Metadata>;
  */
 export const stripeLineItemGroupToDbLineItems = ({
 	group,
+	stripeDiscounts,
 	invoiceId,
 	stripeInvoiceId,
 	autumnLineItems,
 	subscriptionItemMetadata,
 }: {
 	group: StripeLineItemGroup;
+	stripeDiscounts: Stripe.Discount[];
 	invoiceId: string;
 	stripeInvoiceId: string;
 	autumnLineItems: LineItem[];
@@ -75,6 +77,7 @@ export const stripeLineItemGroupToDbLineItems = ({
 			// Matched: inherit Autumn context, but use Stripe amounts/quantities
 			return mergeStripeAndBillingLineItems({
 				stripeLineItem,
+				stripeDiscounts,
 				billingLineItems: matchedLineItems,
 				invoiceId,
 				stripeInvoiceId,
@@ -85,9 +88,11 @@ export const stripeLineItemGroupToDbLineItems = ({
 		// Fallback: create from Stripe data only
 		return createDbLineItemFromStripeOnly({
 			stripeLineItem,
+			stripeDiscounts,
 			invoiceId,
 			stripeInvoiceId,
 			stripeSubscriptionItemId,
+			subscriptionItemMetadata: subItemMetadata,
 		});
 	});
 
@@ -107,6 +112,7 @@ export const stripeLineItemGroupToDbLineItems = ({
  */
 const mergeStripeAndBillingLineItems = ({
 	stripeLineItem,
+	stripeDiscounts,
 	billingLineItems,
 	invoiceId,
 	stripeInvoiceId,
@@ -114,6 +120,7 @@ const mergeStripeAndBillingLineItems = ({
 	isMultiItemGroup,
 }: {
 	stripeLineItem: ExpandedStripeInvoiceLineItem;
+	stripeDiscounts: Stripe.Discount[];
 	billingLineItems: LineItem[];
 	invoiceId: string;
 	stripeInvoiceId: string;
@@ -176,6 +183,7 @@ const mergeStripeAndBillingLineItems = ({
 		});
 		discounts = stripeDiscountsToDbDiscounts({
 			discountAmounts: stripeLineItem.discount_amounts,
+			discounts: [...stripeDiscounts, ...stripeLineItem.discounts],
 			currency: stripeLineItem.currency,
 		});
 	}
@@ -300,16 +308,23 @@ const mergeStripeAndBillingLineItems = ({
  */
 const createDbLineItemFromStripeOnly = ({
 	stripeLineItem,
+	stripeDiscounts,
 	invoiceId,
 	stripeInvoiceId,
 	stripeSubscriptionItemId,
+	subscriptionItemMetadata,
 }: {
 	stripeLineItem: ExpandedStripeInvoiceLineItem;
+	stripeDiscounts: Stripe.Discount[];
 	invoiceId: string;
 	stripeInvoiceId: string;
 	stripeSubscriptionItemId: string | null;
+	subscriptionItemMetadata?: Stripe.Metadata;
 }): InsertDbInvoiceLineItem => {
-	const metadata = stripeLineItem.metadata;
+	const metadata = {
+		...stripeLineItem.metadata,
+		...subscriptionItemMetadata,
+	};
 	const priceDetails = stripeLineItem.pricing?.price_details;
 
 	const amount = stripeToAtmnAmount({
@@ -372,6 +387,7 @@ const createDbLineItemFromStripeOnly = ({
 
 		discounts: stripeDiscountsToDbDiscounts({
 			discountAmounts: stripeLineItem.discount_amounts,
+			discounts: [...stripeDiscounts, ...stripeLineItem.discounts],
 			currency: stripeLineItem.currency,
 		}),
 	};

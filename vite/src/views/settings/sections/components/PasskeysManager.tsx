@@ -1,19 +1,20 @@
-import { KeyRound, Trash2 } from "lucide-react";
-import { useState } from "react";
-import { toast } from "sonner";
-import { TableCell, TableRow } from "@/components/ui/table";
-import { Badge } from "@/components/v2/badges/Badge";
-import { Button } from "@/components/v2/buttons/Button";
 import {
+	Badge,
+	Button,
 	Dialog,
 	DialogContent,
 	DialogDescription,
 	DialogFooter,
 	DialogHeader,
 	DialogTitle,
-} from "@/components/v2/dialogs/Dialog";
-import { FormLabel } from "@/components/v2/form/FormLabel";
-import { Input } from "@/components/v2/inputs/Input";
+	FormLabel,
+	Input,
+	TableCell,
+	TableRow,
+} from "@autumn/ui";
+import { KeyRound, Trash2 } from "lucide-react";
+import { useState } from "react";
+import { toast } from "sonner";
 import { authClient } from "@/lib/auth-client";
 import { formatDateStr } from "@/utils/formatUtils/formatDateUtils";
 import {
@@ -83,8 +84,7 @@ export const PasskeysManager = () => {
 			setPasskeyName("");
 		} catch (err) {
 			// User-cancelled WebAuthn prompts surface as DOMExceptions
-			const msg =
-				err instanceof Error ? err.message : "Failed to add passkey";
+			const msg = err instanceof Error ? err.message : "Failed to add passkey";
 			if (
 				msg.toLowerCase().includes("cancel") ||
 				msg.toLowerCase().includes("aborted") ||
@@ -192,9 +192,13 @@ export const PasskeysManager = () => {
 			</div>
 
 			{isLoading ? (
-				<p className="text-tertiary-foreground text-sm py-4">Loading passkeys…</p>
+				<p className="text-tertiary-foreground text-sm py-4">
+					Loading passkeys…
+				</p>
 			) : isError ? (
-				<p className="text-tertiary-foreground text-sm py-4">Failed to load passkeys.</p>
+				<p className="text-tertiary-foreground text-sm py-4">
+					Failed to load passkeys.
+				</p>
 			) : passkeys.length === 0 ? (
 				<p className="text-tertiary-foreground text-sm py-4">
 					No passkeys yet. Add one to sign in without a code.
@@ -243,8 +247,8 @@ export const PasskeysManager = () => {
 					<DialogHeader>
 						<DialogTitle>Remove passkey</DialogTitle>
 						<DialogDescription>
-							Are you sure you want to remove this passkey? This action
-							cannot be undone.
+							Are you sure you want to remove this passkey? This action cannot
+							be undone.
 						</DialogDescription>
 					</DialogHeader>
 					<DialogFooter>

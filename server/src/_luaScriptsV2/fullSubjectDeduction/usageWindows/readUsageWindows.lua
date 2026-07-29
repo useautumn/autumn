@@ -20,17 +20,23 @@
 
 local USAGE_WINDOWS_FIELD = '_usage_windows'
 
--- ONE mutable counter row per scope: a row matches its limit on
--- internal_entity_id alone. Bounds are payload, not identity.
+-- ONE mutable counter row per scope + filter: a row matches its limit on
+-- internal_entity_id and filter_key (absent/null = the unfiltered counter,
+-- which also matches pre-filter rows). Bounds are payload, not identity.
 local function find_usage_window(windows, limit)
   local limit_entity = limit.internal_entity_id
+  local limit_filter = limit.filter_key
   for _, window in ipairs(windows) do
     if type(window) == 'table' then
       local window_entity = window.internal_entity_id
+      local window_filter = window.filter_key
       local entities_match =
         (is_nil(limit_entity) and is_nil(window_entity))
         or limit_entity == window_entity
-      if entities_match then
+      local filters_match =
+        (is_nil(limit_filter) and is_nil(window_filter))
+        or limit_filter == window_filter
+      if entities_match and filters_match then
         return window
       end
     end
@@ -38,9 +44,11 @@ local function find_usage_window(windows, limit)
   return nil
 end
 
--- Returns { [feature_id] = { balance_key, windows, dirty, limit,
--- dimension_type, headroom, consumed } }, one entry per distinct capped
--- feature in usage_window_limits.
+-- Returns { [feature_id] = { balance_key, windows, dirty, entries } } where
+-- entries = { [limit.key] = { limit, dimension_type, headroom, consumed } },
+-- one entry per resolved limit. Limits on the same feature (filtered +
+-- unfiltered) share ONE decoded windows array and ONE write-back, so
+-- concurrent per-limit increments cannot clobber each other.
 local function read_usage_windows(params)
   local limits = params.usage_window_limits or {}
   local balance_keys_by_feature_id =
@@ -49,7 +57,8 @@ local function read_usage_windows(params)
 
   for _, limit in ipairs(limits) do
     local feature_id = limit.feature_id
-    if usage_windows[feature_id] == nil then
+    local feature_windows = usage_windows[feature_id]
+    if feature_windows == nil then
       local balance_key = balance_keys_by_feature_id[feature_id]
       local windows = nil
 
@@ -69,7 +78,17 @@ local function read_usage_windows(params)
         windows = new_empty_array()
       end
 
-      local existing = find_usage_window(windows, limit)
+      feature_windows = {
+        balance_key = not is_nil(balance_key) and balance_key or nil,
+        windows = windows,
+        dirty = false,
+        entries = {},
+      }
+      usage_windows[feature_id] = feature_windows
+    end
+
+    if feature_windows.entries[limit.key] == nil then
+      local existing = find_usage_window(feature_windows.windows, limit)
       -- A count is valid only within its exact stamped window: derive 0 when
       -- it expired OR its bounds no longer match the current derivation (the
       -- lazy roll persists the zero; this read must not trust it blindly).
@@ -85,10 +104,7 @@ local function read_usage_windows(params)
         headroom = 0
       end
 
-      usage_windows[feature_id] = {
-        balance_key = not is_nil(balance_key) and balance_key or nil,
-        windows = windows,
-        dirty = false,
+      feature_windows.entries[limit.key] = {
         limit = limit,
         dimension_type = limit.dimension_type,
         headroom = headroom,

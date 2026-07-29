@@ -1,6 +1,7 @@
 import {
 	type FeatureQuantityParamsV0,
 	isPrepaidPrice,
+	notNullish,
 	priceToEnt,
 } from "@autumn/shared";
 import { Decimal } from "decimal.js";
@@ -68,16 +69,23 @@ export const buildFeatureQuantities = ({
 		const billingUnits = price.config.billing_units ?? 1;
 		const allowance = entitlement.allowance ?? 0;
 		const stripePriceIdOnSub = itemDiff.stripe.stripe_price_id;
-		const isV2Prepaid =
-			"stripe_prepaid_price_v2_id" in price.config &&
-			stripePriceIdOnSub === price.config.stripe_prepaid_price_v2_id;
+
+		// Stripe quantity counts EXTRAS only for the explicit V1 prepaid price id,
+		// where the allowance is implicit/unbilled and must be added back. For the
+		// V2 id — or any imported / Stripe-native price id on the sub — the
+		// quantity is the TOTAL (allowance-inclusive), so it passes through.
+		// Defaulting non-V1 ids to the "extras" branch folded Stripe's default
+		// `quantity: 1` into a phantom +1 credit on top of the allowance.
+		const isV1ExtrasOnly =
+			notNullish(price.config.stripe_price_id) &&
+			stripePriceIdOnSub === price.config.stripe_price_id;
 
 		const stripeQuantityInUnits = new Decimal(itemDiff.stripe.quantity)
 			.mul(billingUnits)
 			.toNumber();
-		const featureUnits = isV2Prepaid
-			? stripeQuantityInUnits
-			: stripeQuantityInUnits + allowance;
+		const featureUnits = isV1ExtrasOnly
+			? stripeQuantityInUnits + allowance
+			: stripeQuantityInUnits;
 
 		result.push({
 			feature_id: entitlement.feature.id,

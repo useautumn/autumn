@@ -7,7 +7,7 @@ import type {
 	StripeInvoiceAction,
 	StripeInvoiceItemsAction,
 } from "@autumn/shared";
-import { orgToCurrency } from "@autumn/shared";
+import { billingContextToCurrency } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { buildCustomerProductsForStripe } from "@/internal/billing/v2/providers/stripe/actionBuilders/buildCustomerProductsForStripe";
 import { buildStripeRefundAction } from "@/internal/billing/v2/providers/stripe/actionBuilders/buildStripeRefundAction.js";
@@ -109,12 +109,13 @@ export const evaluateStripeBillingPlan = async ({
 
 	if (createManualInvoice) {
 		const { customLineItems } = autumnBillingPlan;
-		const currency = orgToCurrency({ org: ctx.org });
+		const currency = billingContextToCurrency({ org: ctx.org, billingContext });
 
 		stripeInvoiceAction = buildStripeInvoiceAction({
 			lineItems: autumnBillingPlan.lineItems ?? undefined,
 			customLineItems,
 			currency,
+			stripeDiscounts: billingContext.stripeDiscounts ?? [],
 		});
 
 		// Invoice items only apply when using normal line items (not custom)

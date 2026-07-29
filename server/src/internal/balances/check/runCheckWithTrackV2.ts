@@ -20,6 +20,37 @@ import { featureToCreditSystem } from "@/internal/features/creditSystemUtils.js"
 import { workflows } from "@/queue/workflows.js";
 import type { CheckDataV2 } from "./checkTypes/CheckDataV2.js";
 
+/**
+ * Checks if the customer has any entitlement for the requested feature.
+ * Returns false when apiBalance is undefined, indicating no customer_entitlement exists.
+ */
+const customerHasEntitlementForFeature = (
+	checkData: CheckDataV2,
+): boolean => {
+	return checkData.apiBalance !== undefined;
+};
+
+/**
+ * Builds a check response for when the customer has no entitlement for the feature.
+ */
+const buildNoEntitlementResponse = ({
+	checkData,
+	requiredBalance,
+}: {
+	checkData: CheckDataV2;
+	requiredBalance: number;
+}) => {
+	return CheckResponseV3Schema.parse({
+		allowed: false,
+		customer_id: checkData.customerId || "",
+		entity_id: checkData.entityId,
+		required_balance: requiredBalance,
+		balance: null,
+		balances: undefined,
+		flag: checkData.apiFlag ?? null,
+	});
+};
+
 export const runCheckWithTrackV2 = async ({
 	ctx,
 	body,
@@ -60,6 +91,12 @@ export const runCheckWithTrackV2 = async ({
 			code: ErrCode.InvalidRequest,
 			statusCode: 400,
 		});
+	}
+
+	// No entitlement means the Lua deduction script no-ops successfully,
+	// which would incorrectly surface as allowed: true.
+	if (!customerHasEntitlementForFeature(checkData) && requiredBalance > 0) {
+		return buildNoEntitlementResponse({ checkData, requiredBalance });
 	}
 
 	const featureDeductions = getTrackFeatureDeductions({

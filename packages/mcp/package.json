@@ -5,7 +5,8 @@
   "type": "module",
   "sideEffects": false,
   "exports": {
-    ".": "./src/index.ts"
+    ".": "./src/index.ts",
+    "./approval-gated": "./src/tools/approvalGated.ts"
   },
   "files": [
     "README.md",
@@ -20,6 +21,7 @@
     "prepublishOnly": "bun run build"
   },
   "dependencies": {
+    "@autumn/agent-docs": "workspace:*",
     "@autumn/auth": "workspace:*",
     "@autumn/logging": "workspace:*",
 		"@autumn/shared": "workspace:*",

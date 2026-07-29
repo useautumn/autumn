@@ -3,11 +3,9 @@ import {
 	type Feature,
 	isAiCreditSystem,
 } from "@autumn/shared";
+import { FormLabel, IconButton, Input } from "@autumn/ui";
 import { PlusIcon } from "@phosphor-icons/react";
 import { X } from "lucide-react";
-import { IconButton } from "@/components/v2/buttons/IconButton";
-import { FormLabel } from "@/components/v2/form/FormLabel";
-import { Input } from "@/components/v2/inputs/Input";
 import { useCreditSchema } from "../hooks/useCreditSchema";
 import type { CreditSystemFormInstance } from "../hooks/useCreditSystemForm";
 import { FeatureSelectDropdown } from "./FeatureSelectDropdown";

@@ -4,13 +4,14 @@ import {
 	wasImmediateStripeCancellation,
 } from "@/external/stripe/subscriptions/utils/classifyStripeSubscriptionUtils";
 import { eventContextToArrearLineItems } from "@/external/stripe/webhookHandlers/common";
+import { shouldDisableOverageBilling } from "@/external/stripe/webhookHandlers/common/shouldDisableOverageBilling";
 import type { StripeWebhookContext } from "@/external/stripe/webhookMiddlewares/stripeWebhookContext";
 import { lineItemsToInvoiceAddLinesParams } from "@/internal/billing/v2/providers/stripe/utils/invoiceLines/lineItemsToInvoiceAddLinesParams";
 import { createInvoiceForBilling } from "@/internal/billing/v2/providers/stripe/utils/invoices/createInvoiceForBilling";
 import { upsertInvoiceFromBilling } from "@/internal/billing/v2/utils/upsertFromStripe/upsertInvoiceFromBilling";
 import { CusEntService } from "@/internal/customers/cusProducts/cusEnts/CusEntitlementService";
 import { deleteCachedFullCustomer } from "@/internal/customers/cusUtils/fullCustomerCacheUtils/deleteCachedFullCustomer";
-import { parseSkipOverageSubmissionFlag } from "@/internal/misc/featureFlags/parseSkipOverageSubmission";
+import { addToExtraLogs } from "@/utils/logging/addToExtraLogs";
 import type { StripeSubscriptionDeletedContext } from "../setupStripeSubscriptionDeletedContext";
 
 /**
@@ -84,11 +85,14 @@ export const processConsumablePricesForSubscriptionDeleted = async ({
 			// No cusEntFilter - bill all consumable entitlements on cancellation
 		});
 
-	const skipOverageSubmission = parseSkipOverageSubmissionFlag({
+	const disableOverageBilling = shouldDisableOverageBilling({
 		org: ctx.org,
 		customerId: eventContext.fullCustomer.id,
 	});
-	if (lineItems.length > 0 && !skipOverageSubmission) {
+	if (disableOverageBilling && lineItems.length > 0) {
+		addToExtraLogs({ ctx, extras: { overageBillingDisabledByConfig: true } });
+	}
+	if (lineItems.length > 0 && !disableOverageBilling) {
 		// 2. Create, finalize, and pay a single invoice with all line items
 		const invoiceLines = lineItemsToInvoiceAddLinesParams({ lineItems });
 

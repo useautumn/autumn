@@ -3,6 +3,7 @@ import type { Context } from "hono";
 import { type DrizzleCli, db } from "@/db/initDrizzle.js";
 import { auth } from "@/utils/auth.js";
 import { oauthClientRepo } from "../repos/index.js";
+import { ensureAtmnAuthorizeScopes } from "./atmnOAuthClients.js";
 import { ensureSummerOAuthClient } from "./summerOAuthClient.js";
 
 const INTERNAL_MCP_CLIENT_ID = process.env.INTERNAL_MCP_OAUTH_CLIENT_ID;
@@ -93,6 +94,17 @@ export const handleInternalMcpOAuthAuthorize = async (c: Context) => {
 	const url = new URL(c.req.raw.url);
 	const clientId = url.searchParams.get("client_id");
 	await ensureSummerOAuthClient({ db, clientId });
+
+	// Old atmn CLIs request legacy CRUDL scopes; keep the reserved atmn client's
+	// stored scopes covering them so better-auth /authorize never rejects.
+	if (clientId) {
+		await ensureAtmnAuthorizeScopes({
+			db,
+			clientId,
+			scope: url.searchParams.get("scope"),
+		});
+	}
+
 	if (!clientId || !(await isInternalMcpOAuthClientId({ db, clientId }))) {
 		return auth.handler(c.req.raw);
 	}

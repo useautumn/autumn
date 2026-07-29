@@ -1,14 +1,14 @@
-import { useState } from "react";
-import { Skeleton } from "@/components/ui/skeleton";
-import { Badge } from "@/components/v2/badges/Badge";
-import { Button } from "@/components/v2/buttons/Button";
 import {
+	Badge,
+	Button,
 	Card,
 	CardContent,
 	CardDescription,
 	CardHeader,
 	CardTitle,
-} from "@/components/v2/cards/Card";
+	Skeleton,
+} from "@autumn/ui";
+import { useState } from "react";
 import {
 	CodeGroup,
 	CodeGroupCodeSolidColour,
@@ -43,7 +43,9 @@ const WebhookCodeBlock = ({
 	const tabs = [
 		url ? { value: "url", label: "Webhook URL", text: url } : null,
 		secret ? { value: "secret", label: "Webhook Secret", text: secret } : null,
-	].filter((tab): tab is { value: string; label: string; text: string } => !!tab);
+	].filter(
+		(tab): tab is { value: string; label: string; text: string } => !!tab,
+	);
 
 	const [active, setActive] = useState(tabs[0]?.value ?? "url");
 
@@ -88,9 +90,21 @@ export function RevenueCatWebhookCard() {
 		useRCWebhook();
 
 	const indicator = {
-		registered: { dot: "green" as const, label: "Active", variant: "green" as const },
-		not_registered: { dot: "red" as const, label: "Not set up", variant: "muted" as const },
-		unknown: { dot: "muted" as const, label: "Can't verify", variant: "muted" as const },
+		registered: {
+			dot: "green" as const,
+			label: "Active",
+			variant: "green" as const,
+		},
+		not_registered: {
+			dot: "red" as const,
+			label: "Not set up",
+			variant: "muted" as const,
+		},
+		unknown: {
+			dot: "muted" as const,
+			label: "Can't verify",
+			variant: "muted" as const,
+		},
 	}[status];
 
 	return (
@@ -106,8 +120,8 @@ export function RevenueCatWebhookCard() {
 					</div>
 				</div>
 				<CardDescription>
-					RevenueCat sends purchase events here so Autumn can grant entitlements.
-					Autumn registers this automatically.
+					RevenueCat sends purchase events here so Autumn can grant
+					entitlements. Autumn registers this automatically.
 				</CardDescription>
 			</CardHeader>
 			<CardContent className="flex flex-col gap-4">

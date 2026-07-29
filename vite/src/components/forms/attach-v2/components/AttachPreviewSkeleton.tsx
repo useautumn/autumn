@@ -1,9 +1,9 @@
+import { Skeleton } from "@autumn/ui";
 import { motion } from "motion/react";
 import {
 	STAGGER_CONTAINER,
 	STAGGER_ITEM,
 } from "@/components/forms/update-subscription-v2/constants/animationConstants";
-import { Skeleton } from "@/components/ui/skeleton";
 import { SheetSection } from "@/components/v2/sheets/SharedSheetComponents";
 
 /** Skeleton for the pricing preview section -- mirrors LineItemsPreview layout */

@@ -1,39 +1,29 @@
 import type { ProductV2 } from "@autumn/shared";
+import { MiniCopyButton, Skeleton } from "@autumn/ui";
 import type { Row } from "@tanstack/react-table";
-import { AdminHover } from "@/components/general/AdminHover";
-import { PlanTypeBadges } from "@/components/v2/badges/PlanTypeBadges";
-import { MiniCopyButton } from "@/components/v2/buttons/CopyButton";
+import type { SandboxSummary } from "@/hooks/queries/useSandboxesQuery";
 import { formatUnixToDateTime } from "@/utils/formatUtils/formatDateUtils";
-import { getPlanHoverTexts } from "@/views/admin/adminUtils";
 import { ProductCountsTooltip } from "@/views/products/products/product-row-toolbar/ProductCountsTooltip";
 import { ProductListRowToolbar } from "./ProductListRowToolbar";
+import { ProductNameCell } from "./ProductNameCell";
 
 export const createProductListColumns = ({
 	showGroup = false,
+	isCountsLoading = false,
 	onDeleteClick,
+	sandboxes = [],
 }: {
 	showGroup?: boolean;
+	isCountsLoading?: boolean;
 	onDeleteClick?: (product: ProductV2) => void;
+	sandboxes?: SandboxSummary[];
 } = {}) => [
 	{
 		size: 300,
 		header: "Name",
 		accessorKey: "name",
 		enableSorting: true,
-		cell: ({ row }: { row: Row<ProductV2> }) => {
-			return (
-				<div className="font-medium text-foreground flex gap-1">
-					<AdminHover texts={getPlanHoverTexts({ plan: row.original })}>
-						{row.original.name}
-					</AdminHover>
-					<PlanTypeBadges
-						product={row.original}
-						iconOnly
-						className="bg-transparent"
-					/>
-				</div>
-			);
-		},
+		cell: ({ row }: { row: Row<ProductV2> }) => <ProductNameCell row={row} />,
 	},
 	{
 		header: "ID",
@@ -59,7 +49,11 @@ export const createProductListColumns = ({
 					accessorKey: "group",
 					enableSorting: false,
 					cell: ({ row }: { row: Row<ProductV2> }) => {
-						return <div className="text-muted-foreground">{row.original.group || ""}</div>;
+						return (
+							<div className="text-muted-foreground">
+								{row.original.group || ""}
+							</div>
+						);
 					},
 				},
 			]
@@ -71,7 +65,11 @@ export const createProductListColumns = ({
 		cell: ({ row }: { row: Row<ProductV2 & { active_count?: number }> }) => {
 			return (
 				<div className="text-muted-foreground">
-					<ProductCountsTooltip product={row.original} />
+					{isCountsLoading ? (
+						<Skeleton aria-label="Loading" className="h-4 w-14" />
+					) : (
+						<ProductCountsTooltip product={row.original} />
+					)}
 				</div>
 			);
 		},
@@ -103,6 +101,7 @@ export const createProductListColumns = ({
 					<ProductListRowToolbar
 						product={row.original}
 						onDeleteClick={onDeleteClick}
+						sandboxes={sandboxes}
 					/>
 				</div>
 			);

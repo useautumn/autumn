@@ -1,6 +1,6 @@
+import { Checkbox } from "@autumn/ui";
 import { useId } from "react";
 import { FieldInfo } from "@/components/general/form/field-info";
-import { Checkbox } from "@/components/v2/checkboxes/Checkbox";
 import { useFieldContext } from "@/hooks/form/form-context";
 
 export function CheckboxField({
@@ -25,7 +25,10 @@ export function CheckboxField({
 					checked={field.state.value}
 					onCheckedChange={(checked) => field.handleChange(checked === true)}
 				/>
-				<label htmlFor={id} className={labelClassName ?? "text-sm text-tertiary-foreground"}>
+				<label
+					htmlFor={id}
+					className={labelClassName ?? "text-sm text-tertiary-foreground"}
+				>
 					{label}
 				</label>
 			</div>

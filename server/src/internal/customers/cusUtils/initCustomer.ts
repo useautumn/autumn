@@ -1,6 +1,30 @@
-import type { Customer, CustomerData, FullCustomer } from "@autumn/shared";
+import {
+	type Customer,
+	type CustomerData,
+	ErrCode,
+	type FullCustomer,
+	orgMultiCurrencyEnabled,
+	RecaseError,
+	stripAutoTopupCountsForStorage,
+} from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { generateId } from "@/utils/genUtils.js";
+
+export const assertCustomerCurrencyAllowed = ({
+	ctx,
+	currency,
+}: {
+	ctx: AutumnContext;
+	currency?: string | null;
+}) => {
+	if (currency && !orgMultiCurrencyEnabled({ org: ctx.org })) {
+		throw new RecaseError({
+			code: ErrCode.InvalidRequest,
+			message: "Multi-currency is not enabled for this organization",
+			statusCode: 400,
+		});
+	}
+};
 
 /**
  * Build a Customer object ready for insertion.
@@ -16,6 +40,8 @@ const initCustomer = ({
 }): Customer => {
 	const { org, env } = ctx;
 	const internalId = generateId("cus");
+
+	assertCustomerCurrencyAllowed({ ctx, currency: customerData?.currency });
 
 	return {
 		internal_id: internalId,
@@ -33,9 +59,14 @@ const initCustomer = ({
 					type: "stripe",
 				}
 			: null,
+		processors: customerData?.processors ?? null,
 		send_email_receipts: customerData?.send_email_receipts ?? false,
-		auto_topups: customerData?.billing_controls?.auto_topups,
+		currency: customerData?.currency?.toLowerCase() || null,
+		auto_topups: stripAutoTopupCountsForStorage(
+			customerData?.billing_controls?.auto_topups,
+		),
 		spend_limits: customerData?.billing_controls?.spend_limits,
+		usage_limits: customerData?.billing_controls?.usage_limits,
 		usage_alerts: customerData?.billing_controls?.usage_alerts,
 		overage_allowed: customerData?.billing_controls?.overage_allowed,
 		config: customerData?.config,

@@ -2,6 +2,7 @@ import type { BillingContext, FullCusProduct, LineItem } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { customerProductToLineItems } from "./customerProductToLineItems";
 import { invoiceCreditFromStoredLineItems } from "./invoiceCreditFromStoredLineItems";
+import { licenseInvoiceCreditFromStoredLineItems } from "./licenseInvoiceCreditFromStoredLineItems";
 
 export const getRefundLineItems = ({
 	ctx,
@@ -28,8 +29,19 @@ export const getRefundLineItems = ({
 		billingContext,
 	});
 
-	if (allPricesResolved) return matchedCredits;
-	if (!includeCatalogFallback) return matchedCredits;
+	const licenseCredits = (customerProduct.customer_licenses ?? []).flatMap(
+		(customerLicense) =>
+			licenseInvoiceCreditFromStoredLineItems({
+				ctx,
+				billingContext,
+				customerProduct,
+				customerLicense,
+			}),
+	);
+
+	if (allPricesResolved || !includeCatalogFallback) {
+		return [...matchedCredits, ...licenseCredits];
+	}
 
 	const catalogCredits = customerProductToLineItems({
 		ctx,

@@ -7,7 +7,7 @@ import {
 	SelectItem,
 	SelectTrigger,
 	SelectValue,
-} from "./selects/Select";
+} from "@autumn/ui";
 
 interface SDKSelectorProps {
 	className?: string;

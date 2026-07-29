@@ -1,9 +1,12 @@
+import { CustomerBillingControlsParamsSchema } from "@models/cusModels/billingControls/customerBillingControls.js";
 import { CreateFreeTrialSchema } from "@models/productModels/freeTrialModels/freeTrialModels.js";
 import { ProductConfigParamsSchema } from "@models/productModels/productConfig/productConfig.js";
+import { ProductMetadataSchema } from "@models/productModels/productMetadata.js";
 import { ProductItemSchema } from "@models/productV2Models/productItemModels/productItemModels.js";
 import { idRegex } from "@utils/utils.js";
 import { z } from "zod/v4";
 import { AppEnv } from "../../models/genModels/genEnums.js";
+import { PlanLicenseParamsSchema } from "./crud/licenses/planLicenseParams.js";
 
 // Use the full ProductItemSchema but mark backend fields as internal
 export const CreateProductItemParamsSchema = ProductItemSchema;
@@ -51,6 +54,8 @@ const descriptions = {
 	items:
 		"Array of product items that define the product's features and pricing",
 	free_trial: "Free trial configuration for this product, if available",
+	metadata:
+		"Arbitrary key-value metadata for your own use (e.g. UI copy, feature highlights). Values can be any JSON-serializable value. Metadata is shared across all versions of a plan.",
 
 	// Update only
 	archived:
@@ -92,6 +97,13 @@ export const CreateProductV2ParamsSchema = z
 			description: descriptions.items,
 		}),
 
+		// internal: dashboard-only license catalog surface, not part of the public product API yet.
+		licenses: z.array(PlanLicenseParamsSchema).optional().meta({
+			internal: true,
+			description:
+				"Plans offered as assignable licenses under this plan. The full set replaces existing links.",
+		}),
+
 		free_trial: CreateFreeTrialSchema.nullish().default(null).meta({
 			description: descriptions.free_trial,
 		}),
@@ -99,8 +111,19 @@ export const CreateProductV2ParamsSchema = z
 		config: ProductConfigParamsSchema.optional().meta({
 			description: "Miscellaneous product-level configuration flags.",
 		}),
+		billing_controls: CustomerBillingControlsParamsSchema.optional().meta({
+			description: "Plan-level billing controls used as customer defaults.",
+		}),
+
+		metadata: ProductMetadataSchema.optional().meta({
+			description: descriptions.metadata,
+		}),
 
 		create_in_stripe: z.boolean().optional().meta({
+			internal: true,
+		}),
+
+		base_internal_product_id: z.string().nullable().optional().meta({
 			internal: true,
 		}),
 	})
@@ -128,6 +151,16 @@ export const UpdateProductV2ParamsSchema = z.object({
 	is_default: z.boolean().optional().meta({
 		description: descriptions.is_default,
 	}),
+	base_plan_id: z
+		.string()
+		.nonempty()
+		.regex(idRegex)
+		.nullable()
+		.optional()
+		.meta({
+			description:
+				"The base plan this plan should be linked to as a variant. Set to null to detach it from its base plan.",
+		}),
 
 	description: z.string().nullish().optional().meta({
 		description: descriptions.description,
@@ -143,12 +176,24 @@ export const UpdateProductV2ParamsSchema = z.object({
 	}),
 
 	items: z.array(CreateProductItemParamsSchema).optional(),
+	licenses: z.array(PlanLicenseParamsSchema).optional().meta({
+		internal: true,
+		description:
+			"Plans offered as assignable licenses under this plan. The full set replaces existing links.",
+	}),
 	free_trial: CreateFreeTrialSchema.nullish().meta({
 		description: descriptions.free_trial,
 	}),
 
 	config: ProductConfigParamsSchema.optional().meta({
 		description: "Miscellaneous product-level configuration flags.",
+	}),
+	billing_controls: CustomerBillingControlsParamsSchema.optional().meta({
+		description: "Plan-level billing controls used as customer defaults.",
+	}),
+
+	metadata: ProductMetadataSchema.optional().meta({
+		description: descriptions.metadata,
 	}),
 });
 

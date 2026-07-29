@@ -121,7 +121,7 @@ export const createStripeTieredPriceUnderProduct = async ({
 	ctx.stripeCli.prices.create({
 		product: stripeProductId,
 		currency,
-		recurring: { interval, usage_type: "metered" },
+		recurring: { interval, usage_type: "licensed" },
 		billing_scheme: "tiered",
 		tiers_mode: tiersMode,
 		tiers,

@@ -39,8 +39,7 @@ export const handleEndDateErrors = ({
 		});
 	}
 
-	const prices = billingContext.attachProduct.prices;
-	if (isFreeProduct({ prices })) {
+	if (isFreeProduct({ product: billingContext.attachProduct })) {
 		throw new RecaseError({
 			message: "ends_at is only supported for paid plans.",
 			code: ErrCode.InvalidRequest,

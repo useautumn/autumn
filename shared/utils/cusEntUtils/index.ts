@@ -26,11 +26,13 @@ export * from "./balanceUtils/rollovers/cusEntsToRolloverUsage";
 export * from "./balanceUtils/rollovers/cusEntsToRolloverUsage";
 export * from "./classifyCusEnt/cusEntsHaveUnlimited";
 export * from "./classifyCusEnt/cusEntsHaveUsageAllowed";
+export * from "./classifyCusEnt/isPooledBalanceCustomerEntitlement";
 // Classify utils
 export * from "./classifyCusEntUtils";
 // Convert utils barrel
 export * from "./convertCusEntUtils";
 // Convert utils
+export * from "./convertCusEntUtils/cusEntsToMainPlanAllowance";
 export * from "./convertCusEntUtils/cusEntsToMaxPurchase";
 export * from "./convertCusEntUtils/cusEntsToStartingBalance";
 export * from "./convertCusEntUtils/cusEntToBillingObjects";
@@ -38,12 +40,14 @@ export * from "./convertCusEntUtils/cusEntToCusPrice";
 export * from "./convertCusEntUtils/cusEntToKey";
 export * from "./convertCusEntUtils/cusEntToStripeIds";
 export * from "./convertCusEntUtils/customerEntitlementToBillingCycleEnd";
-export * from "./convertCusEntUtils/customerEntitlementToPlanItemV1";
 // Convert utils barrel
 export * from "./convertCusEntUtils/customerEntitlementToOptions";
+export * from "./convertCusEntUtils/customerEntitlementToPlanItemV1";
+export * from "./convertCusEntUtils/resolveSpendLimitOverageLimit";
 // Core utils
 export * from "./cusEntUtils";
 export * from "./filterCusEntUtils";
+export * from "./filterCustomerEntitlements/filterCustomerEntitlementsByPooledBalanceSource";
 export * from "./findCustomerEntitlement/findCustomerEntitlementByFeature";
 // Find utils
 export * from "./findCustomerEntitlement/findCustomerEntitlementById";

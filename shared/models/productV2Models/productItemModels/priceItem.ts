@@ -8,6 +8,9 @@ export const PriceItemSchema = ProductItemSchema.pick({
 
 	price_id: true,
 	price_config: true,
+
+	additional_currencies: true,
+	base_currency: true,
 }).extend({
 	price: z.number().nonnegative(),
 });

@@ -1,13 +1,13 @@
 import { type Feature, FeatureType } from "@autumn/shared";
-import { ArchiveRestore, Delete, Pen } from "lucide-react";
-import { useState } from "react";
-import { ToolbarButton } from "@/components/general/table-components/ToolbarButton";
 import {
 	DropdownMenu,
 	DropdownMenuContent,
 	DropdownMenuItem,
 	DropdownMenuTrigger,
-} from "@/components/v2/dropdowns/DropdownMenu";
+	ToolbarButton,
+} from "@autumn/ui";
+import { ArchiveRestore, Delete, Pen } from "lucide-react";
+import { useState } from "react";
 import UpdateFeatureSheet from "../components/UpdateFeatureSheet";
 import UpdateCreditSystemSheet from "../credit-systems/components/UpdateCreditSystemSheet";
 import { DeleteFeatureDialog } from "../feature-row-toolbar/DeleteFeatureDialog";

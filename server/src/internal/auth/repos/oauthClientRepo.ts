@@ -1,5 +1,5 @@
 import { oauthClient } from "@autumn/shared";
-import { desc, eq } from "drizzle-orm";
+import { desc, eq, sql } from "drizzle-orm";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 
 export type OAuthClientRecord = {
@@ -132,10 +132,44 @@ export const upsertOAuthClient = async ({
 	return getOAuthClientByClientId({ db, clientId: insert.clientId });
 };
 
+export const addOAuthClientScopesByClientId = async ({
+	db,
+	clientId,
+	scopes,
+}: {
+	db: DrizzleCli;
+	clientId: string;
+	scopes: string[];
+}) => {
+	if (scopes.length === 0) return getOAuthClientByClientId({ db, clientId });
+
+	const addArray = sql`ARRAY[${sql.join(
+		scopes.map((s) => sql`${s}`),
+		sql`, `,
+	)}]::text[]`;
+
+	const [client] = await db
+		.update(oauthClient)
+		.set({
+			scopes: sql`(
+				SELECT array_agg(DISTINCT s)
+				FROM unnest(
+					array_cat(coalesce(${oauthClient.scopes}, ARRAY[]::text[]), ${addArray})
+				) AS s
+			)`,
+			updatedAt: new Date(),
+		})
+		.where(eq(oauthClient.clientId, clientId))
+		.returning(oauthClientSelect);
+
+	return client ?? null;
+};
+
 export const oauthClientRepo = {
 	list: listOAuthClients,
 	listForAdmin: listOAuthClientsForAdmin,
 	getByClientId: getOAuthClientByClientId,
 	updateById: updateOAuthClientById,
+	addScopesByClientId: addOAuthClientScopesByClientId,
 	upsert: upsertOAuthClient,
 };

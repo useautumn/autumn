@@ -1,9 +1,5 @@
+import { Tooltip, TooltipContent, TooltipTrigger } from "@autumn/ui";
 import { ArrowsClockwiseIcon } from "@phosphor-icons/react";
-import {
-	Tooltip,
-	TooltipContent,
-	TooltipTrigger,
-} from "@/components/v2/tooltips/Tooltip";
 import type { EstimatedMrrResult } from "../hooks/useRevenueAnalytics";
 
 const formatCurrency = ({

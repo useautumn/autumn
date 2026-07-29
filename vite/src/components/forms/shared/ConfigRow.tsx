@@ -26,10 +26,12 @@ export function ConfigRow({
 	return (
 		<div className="flex flex-col gap-2">
 			<div className="flex items-center justify-between gap-3">
-				<div className="flex flex-col gap-0.5 min-w-0">
+				<div className="flex flex-col gap-px min-w-0">
 					<span className="text-sm font-medium text-foreground">{title}</span>
 					{description && (
-						<span className="text-xs text-tertiary-foreground">{description}</span>
+						<span className="text-xs leading-snug text-tertiary-foreground/70">
+							{description}
+						</span>
 					)}
 				</div>
 				{action && <div className="flex shrink-0">{action}</div>}
@@ -39,19 +41,19 @@ export function ConfigRow({
 					{expanded && children && (
 						<motion.div
 							initial={{ height: 0, opacity: 0 }}
-						animate={{
-							height: "auto",
-							opacity: 1,
-							transition: {
-								height: EXPAND_TRANSITION,
-								opacity: { duration: 0.15, delay: 0.05 },
-							},
-						}}
-						exit={{
-							height: 0,
-							opacity: 0,
-							transition: EXPAND_TRANSITION,
-						}}
+							animate={{
+								height: "auto",
+								opacity: 1,
+								transition: {
+									height: EXPAND_TRANSITION,
+									opacity: { duration: 0.15, delay: 0.05 },
+								},
+							}}
+							exit={{
+								height: 0,
+								opacity: 0,
+								transition: EXPAND_TRANSITION,
+							}}
 							className="overflow-hidden"
 						>
 							{children}

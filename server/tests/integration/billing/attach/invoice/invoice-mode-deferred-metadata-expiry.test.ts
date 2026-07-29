@@ -85,7 +85,12 @@ test.concurrent(
 			},
 		});
 
-		const voidableMetadata = await getExpiredInvoiceMetadata({ db: ctx.db });
+		const voidableMetadata = await getExpiredInvoiceMetadata({
+			db: ctx.db,
+			now: Date.now(),
+			limit: 500,
+			cursor: null,
+		});
 		const voidableIds = new Set(voidableMetadata.map((row) => row.id));
 
 		expect(voidableIds.has(deferredMetadata!.id)).toBe(false);

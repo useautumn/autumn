@@ -1,0 +1,139 @@
+---
+title: "Multi Update"
+openapi: "openapi POST /v1/billing.multi_update"
+---
+
+import { DynamicParamField } from "/snippets/dynamic-param-field.jsx";
+import { DynamicResponseField } from "/snippets/dynamic-response-field.jsx";
+import { DynamicResponseExample } from "/snippets/dynamic-response-example.jsx";
+
+<Note>
+    The multi update endpoint applies updates to multiple plans in a single,
+    atomic request. It currently supports cancel actions. For updating a single
+    plan (like changing quantities or customizing items), use
+    [update](/api-reference/billing/billingUpdate) instead.
+</Note>
+
+### Common Use Cases
+
+<CodeGroup>
+
+```typescript Cancel a plan and its add-on
+const response = await autumn.billing.multiUpdate({
+    customerId: "cus_123",
+    updates: [
+        { planId: "pro_plan", cancelAction: "cancel_end_of_cycle" },
+        { planId: "addon_seats", cancelAction: "cancel_end_of_cycle" },
+    ],
+});
+```
+
+</CodeGroup>
+
+### Body Parameters
+
+<DynamicParamField body="customer_id" type="string" required>
+  The ID of the customer to update plans for.
+</DynamicParamField>
+
+<DynamicParamField body="entity_id" type="string">
+  The ID of the entity to update plans for. Individual updates can override this with their own entity_id.
+</DynamicParamField>
+
+<DynamicParamField body="updates" type="object[]" required>
+  The list of plan updates to apply to the customer.
+  <Expandable title="properties">
+    <DynamicParamField body="plan_id" type="string">
+      The ID of the plan to update. Optional if subscription_id is provided.
+    </DynamicParamField>
+
+    <DynamicParamField body="subscription_id" type="string">
+      A unique ID to identify the subscription to update. Useful when a customer has multiple products with the same plan.
+    </DynamicParamField>
+
+    <DynamicParamField body="entity_id" type="string">
+      The ID of the entity this update targets. Overrides the top-level entity_id for this update.
+    </DynamicParamField>
+
+    <DynamicParamField body="cancel_action" type="'cancel_immediately' | 'cancel_end_of_cycle' | 'uncancel'" required>
+      Action to perform for cancellation. 'cancel_immediately' cancels now with prorated refund, 'cancel_end_of_cycle' cancels at period end, 'uncancel' reverses a pending cancellation.
+    </DynamicParamField>
+
+    <DynamicParamField body="proration_behavior" type="'prorate_immediately' | 'none'">
+      How to handle proration for this update. 'prorate_immediately' charges/credits prorated amounts now, 'none' skips creating any charges.
+    </DynamicParamField>
+
+  </Expandable>
+</DynamicParamField>
+
+
+### Response
+
+<DynamicResponseField name="customer_id" type="string">
+  The ID of the customer.
+</DynamicResponseField>
+
+<DynamicResponseField name="entity_id" type="string">
+  The ID of the entity, if the plan was attached to an entity.
+</DynamicResponseField>
+
+<DynamicResponseField name="invoice" type="object">
+  Invoice details if an invoice was created. Only present when a charge was made.
+  <Expandable title="properties">
+    <DynamicResponseField name="status" type="string | null">
+      The status of the invoice (e.g., 'paid', 'open', 'draft').
+    </DynamicResponseField>
+
+    <DynamicResponseField name="stripe_id" type="string">
+      The Stripe invoice ID.
+    </DynamicResponseField>
+
+    <DynamicResponseField name="total" type="number">
+      The total amount of the invoice in cents.
+    </DynamicResponseField>
+
+    <DynamicResponseField name="currency" type="string">
+      The three-letter ISO currency code (e.g., 'usd').
+    </DynamicResponseField>
+
+    <DynamicResponseField name="hosted_invoice_url" type="string | null">
+      URL to the hosted invoice page where the customer can view and pay the invoice.
+    </DynamicResponseField>
+
+  </Expandable>
+</DynamicResponseField>
+
+<DynamicResponseField name="payment_url" type="string | null">
+  URL to redirect the customer to complete payment. Null if no payment action is required.
+</DynamicResponseField>
+
+<DynamicResponseField name="required_action" type="object">
+  Details about any action required to complete the payment. Present when the payment could not be processed automatically.
+  <Expandable title="properties">
+    <DynamicResponseField name="code" type="'3ds_required' | 'payment_method_required' | 'payment_failed' | 'payment_processing'">
+      The type of action required to complete the payment.
+    </DynamicResponseField>
+
+    <DynamicResponseField name="reason" type="string">
+      A human-readable explanation of why this action is required.
+    </DynamicResponseField>
+
+  </Expandable>
+</DynamicResponseField>
+
+
+<ResponseExample>
+```json 200
+{
+  "customer_id": "cus_123",
+  "invoice": {
+    "status": "paid",
+    "stripe_id": "in_1234",
+    "total": -20,
+    "currency": "usd",
+    "hosted_invoice_url": "https://invoice.stripe.com/..."
+  },
+  "payment_url": null
+}
+```
+</ResponseExample>

@@ -46,6 +46,9 @@ export const customerPrices = pgTable(
 			.on(sql`${table.internal_customer_id} COLLATE "C"`)
 			.where(sql`${table.internal_customer_id} IS NOT NULL`)
 			.concurrently(),
+		index("idx_cpr_customer_product_id_c")
+			.on(sql`${table.customer_product_id} COLLATE "C"`)
+			.concurrently(),
 	],
 );
 

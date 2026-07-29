@@ -1,7 +1,7 @@
 import { CusProductStatus, cp } from "@autumn/shared";
+import { PanelButton } from "@autumn/ui";
 import { CalendarIcon, LightningIcon } from "@phosphor-icons/react";
 import { useUpdateSubscriptionFormContext } from "@/components/forms/update-subscription-v2";
-import { PanelButton } from "@/components/v2/buttons/PanelButton";
 import { SheetSection } from "@/components/v2/sheets/SharedSheetComponents";
 
 export function CancelModeSection() {

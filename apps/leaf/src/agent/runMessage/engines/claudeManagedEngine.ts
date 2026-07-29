@@ -16,6 +16,7 @@ import { cancelPendingSessionApprovals } from "../../../internal/approvals/actio
 import { autumnOrgContextService } from "../../../internal/autumnMcp/orgContextService.js";
 import { claudeManagedMemoryEnabled } from "../../../lib/chatAgentConfig.js";
 import { db } from "../../../lib/db.js";
+import { createPhaseTimer } from "../../../lib/perf.js";
 import { createBraintrustLogger } from "../../../providers/braintrust/index.js";
 import type { AgentEngine } from "../types.js";
 
@@ -38,6 +39,7 @@ export const claudeManagedEngine: AgentEngine = {
 	name: "claude-managed",
 	run: async ({ ctx, params }) => {
 		const {
+			autumnUserId,
 			env,
 			logger,
 			onAction,
@@ -52,9 +54,18 @@ export const claudeManagedEngine: AgentEngine = {
 			claudeManagedSession,
 		} = ctx;
 
+		const perf = createPhaseTimer(logger);
 		const existingSession =
 			claudeManagedSession ??
-			(await getClaudeManagedSession({ db, env, orgId: org.id, thread }));
+			(await perf.time("lookup_session", () =>
+				getClaudeManagedSession({
+					db,
+					env,
+					orgId: org.id,
+					thread,
+					userId: autumnUserId,
+				}),
+			));
 
 		let sessionRef = existingSession;
 		let orgContext: Awaited<ReturnType<typeof autumnOrgContextService.load>>;
@@ -66,16 +77,27 @@ export const claudeManagedEngine: AgentEngine = {
 				vaultId,
 			} = await all({
 				async resources() {
-					return ensureLeafResources({ client, env, logger, token });
+					return perf.time("ensure_resources", () =>
+						ensureLeafResources({
+							client,
+							env,
+							logger,
+							surface: thread.provider === "web" ? "dashboard" : "slack",
+							token,
+						}),
+					);
 				},
 				async vaultId() {
-					return ensureAutumnVault({
-						client,
-						env,
-						orgId: org.id,
-						provider: thread.provider,
-						workspaceId: thread.workspaceId,
-					});
+					return perf.time("ensure_vault", () =>
+						ensureAutumnVault({
+							client,
+							env,
+							orgId: org.id,
+							provider: thread.provider,
+							workspaceId: thread.workspaceId,
+							userId: autumnUserId,
+						}),
+					);
 				},
 				async memoryStoreId() {
 					return claudeManagedMemoryEnabled
@@ -83,21 +105,26 @@ export const claudeManagedEngine: AgentEngine = {
 						: undefined;
 				},
 				async orgContext() {
-					return autumnOrgContextService.load({ env, logger, token });
+					return perf.time("org_context", () =>
+						autumnOrgContextService.load({ env, logger, token }),
+					);
 				},
 			});
 			orgContext = loadedOrgContext;
-			sessionRef = await createClaudeManagedSession({
-				agentId,
-				client,
-				db,
-				env,
-				environmentId,
-				memoryStoreId,
-				orgId: org.id,
-				thread,
-				vaultId,
-			});
+			sessionRef = await perf.time("session_create", () =>
+				createClaudeManagedSession({
+					agentId,
+					client,
+					db,
+					env,
+					environmentId,
+					memoryStoreId,
+					orgId: org.id,
+					thread,
+					userId: autumnUserId,
+					vaultId,
+				}),
+			);
 		}
 
 		const {
@@ -117,6 +144,7 @@ export const claudeManagedEngine: AgentEngine = {
 				orgId: org.id,
 				provider: thread.provider,
 				workspaceId: thread.workspaceId,
+				userId: autumnUserId,
 			});
 
 			const { cancelledApprovals, cancelledCount } =
@@ -143,6 +171,10 @@ export const claudeManagedEngine: AgentEngine = {
 		// Startup (resource/session provisioning) is done — release the
 		// "Starting Autumn" bootstrap card before the first turn runs.
 		await onAgentReady?.();
+		perf.done("leaf.cma_setup_latency", {
+			new_session: newSession,
+			provider: thread.provider,
+		});
 
 		const content = buildUserMessageContent({
 			attachments: params.attachments,
@@ -176,19 +208,17 @@ export const claudeManagedEngine: AgentEngine = {
 					.then(() => undefined),
 			newSession,
 			params,
-			runTurn: ({ isCancelled, onTurnEnd, previewCapture, span }) =>
+			runTurn: ({ onTurnEnd, span }) =>
 				runClaudeManagedTurn({
 					client,
 					content,
 					env,
-					isCancelled,
 					logger,
 					onAction,
 					onActionKeyed,
 					onThinking,
 					onTurnEnd,
 					orgId: org.id,
-					previewCapture,
 					sessionId: activeSessionId,
 					span,
 				}),

@@ -1,5 +1,5 @@
+import { CopyButton } from "@autumn/ui";
 import { FingerprintIcon, TicketIcon } from "@phosphor-icons/react";
-import { CopyButton } from "@/components/v2/buttons/CopyButton";
 import { useCusReferralQuery } from "@/views/customers/customer/hooks/useCusReferralQuery";
 import { CustomerActions } from "./CustomerActions";
 import { useCustomerContext } from "./CustomerContext";
@@ -21,8 +21,8 @@ export const CustomerPageDetails = () => {
 		customer.fingerprint ?? "This user's fingerprint is undefined";
 
 	return (
-		<div className="flex min-w-0 items-center">
-			<div className="flex gap-2 flex-wrap">
+		<div className="flex w-full sm:w-auto min-w-0 items-center justify-between gap-2 sm:justify-start">
+			<div className="flex gap-2 flex-wrap min-w-0">
 				{customer.email && (
 					<CopyButton
 						text={customer.email ?? placeholderText}
@@ -53,8 +53,8 @@ export const CustomerPageDetails = () => {
 						<span className="truncate">{appliedCoupon.coupon}</span>
 					</div>
 				)}
-				<CustomerActions />
 			</div>
+			<CustomerActions />
 		</div>
 	);
 };

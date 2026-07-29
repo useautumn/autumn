@@ -43,6 +43,9 @@ export const aggregateGroupablePipeParamsSchema = z.object({
 	filter_key_4: z.string().optional(),
 	filter_value_4: z.string().optional(),
 	max_groups: z.number().int().min(1).max(250).optional(),
+	// "1" forces the ungated events_hourly_mv path when the property key is
+	// absent from events_property_mv (its value-shape gate drops UUID values)
+	skip_property_rollup: z.enum(["0", "1"]).optional(),
 });
 
 export type AggregateGroupablePipeParams = z.infer<

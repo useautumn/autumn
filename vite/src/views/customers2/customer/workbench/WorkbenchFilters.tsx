@@ -1,6 +1,6 @@
+import { Input } from "@autumn/ui";
 import { MagnifyingGlassIcon } from "@phosphor-icons/react";
 import { useEffect, useState } from "react";
-import { Input } from "@/components/v2/inputs/Input";
 import {
 	filterMethods,
 	filterStatuses,

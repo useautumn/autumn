@@ -2,6 +2,8 @@ import { CustomLineItemSchema } from "@api/billing/common/customLineItem";
 import { FeatureQuantityParamsV0Schema } from "@api/billing/common/featureQuantity/featureQuantityParamsV0";
 import { TransitionRulesSchema } from "@api/billing/common/transitionRules";
 import { FreeTrialParamsV0Schema } from "@api/common/freeTrial/freeTrialParamsV0";
+import { CustomerBillingControlsParamsSchema } from "@models/cusModels/billingControls/customerBillingControls";
+import { CustomizePlanLicenseSchema } from "@models/licenseModels/licenseModels";
 import { ProductItemSchema } from "@models/productV2Models/productItemModels/productItemModels";
 import { z } from "zod/v4";
 import { CustomerDataSchema } from "../../../common/customerData";
@@ -19,6 +21,9 @@ export const BillingParamsBaseV0Schema = z.object({
 	version: z.number().optional(),
 	free_trial: FreeTrialParamsV0Schema.nullable().optional(),
 	items: z.array(ProductItemSchema).optional(),
+	// Upserts license links for this subscription, keyed by license_plan_id
+	upsert_licenses: z.array(CustomizePlanLicenseSchema).optional(),
+	billing_controls: CustomerBillingControlsParamsSchema.optional(),
 
 	transition_rules: TransitionRulesSchema.optional(),
 	subscription_id: z.string().optional(),

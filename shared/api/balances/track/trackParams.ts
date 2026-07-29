@@ -5,6 +5,8 @@ import { queryStringArray } from "../../common/queryHelpers";
 import { CheckExpand } from "../check/enums/CheckExpand";
 import { BalanceParamsBaseSchema } from "../common/balanceParamsBase";
 import { LockParamsSchema } from "../common/lockParams";
+import { OverageBehaviorSchema } from "./overageBehavior";
+import { TrackTimestampSchema } from "./trackTimestamp";
 
 export const TrackQuerySchema = z.object({
 	expand: queryStringArray(z.enum([CheckExpand.BalanceFeature])).optional(),
@@ -33,13 +35,9 @@ export const TrackParamsSchema = BalanceParamsBaseSchema.extend({
 		internal: true,
 	}),
 
-	timestamp: z.number().optional().meta({
-		internal: true,
-	}),
+	timestamp: TrackTimestampSchema.optional(),
 
-	overage_behavior: z.enum(["cap", "reject"]).optional().meta({
-		internal: true,
-	}),
+	overage_behavior: OverageBehaviorSchema.optional(),
 
 	customer_data: CustomerDataSchema.optional().meta({
 		internal: true,

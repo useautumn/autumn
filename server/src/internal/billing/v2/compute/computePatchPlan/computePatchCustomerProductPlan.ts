@@ -9,6 +9,7 @@ import {
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { buildAutumnLineItems } from "@/internal/billing/v2/compute/computeAutumnUtils/buildAutumnLineItems";
 import { computeSchedulePhaseReplacements } from "@/internal/billing/v2/compute/computeSchedulePhaseReplacements";
+import { computeCustomerLicenseTransitions } from "@/internal/billing/v2/compute/customerLicenseTransitions/computeCustomerLicenseTransitions";
 import { entitlementToResetCycleAnchor } from "@/internal/billing/v2/utils/initFullCustomerProduct/cycleAnchorUtils";
 import { initPatchCustomerProduct } from "@/internal/billing/v2/utils/initFullCustomerProduct/initPatchedCustomerProduct";
 
@@ -30,27 +31,44 @@ export const computePatchCustomerProductPlan = ({
 		finalCustomerProduct,
 		customerProductUpdates,
 		oneOffPrepaidCarryOverCustomerEntitlements,
-	} =
-		initPatchCustomerProduct({
-			ctx,
-			billingContext: updateSubscriptionContext,
-			patchContext,
-		});
-
-	const { allLineItems } = buildAutumnLineItems({
+	} = initPatchCustomerProduct({
 		ctx,
-		newCustomerProducts: [finalCustomerProduct],
-		deletedCustomerProduct: patchContext.originalCustomerProduct,
 		billingContext: updateSubscriptionContext,
-		includeArrearLineItems:
-			updateSubscriptionContext.chargeExistingOverages === true,
+		patchContext,
 	});
 
+	const isUpdatingScheduledProduct =
+		patchContext.originalCustomerProduct.status === CusProductStatus.Scheduled;
+
+	// Same-row license transitions: outgoing = the pristine original,
+	// incoming = the patched working copy (converged pools).
+	const customerLicenseTransitions = computeCustomerLicenseTransitions({
+		outgoingCustomerProducts: [patchContext.originalCustomerProduct],
+		incomingCustomerProducts: [finalCustomerProduct],
+		customerLicenseBillingContext:
+			updateSubscriptionContext.customerLicenseBillingContext,
+	});
+
+	// A scheduled cusProduct hasn't started billing yet, so there's nothing to
+	// prorate — its future phase item swap is applied wholesale via
+	// schedulePhaseCustomerProductReplacements, not an immediate invoice line.
+	const { allLineItems } = isUpdatingScheduledProduct
+		? { allLineItems: [] }
+		: buildAutumnLineItems({
+				ctx,
+				newCustomerProducts: [finalCustomerProduct],
+				deletedCustomerProduct: patchContext.originalCustomerProduct,
+				billingContext: updateSubscriptionContext,
+				includeArrearLineItems:
+					updateSubscriptionContext.chargeExistingOverages === true,
+			});
 	const basePlan = {
 		customerId: fullCustomer?.id ?? "",
 		customPrices: patchContext.customPrices,
 		customEntitlements: patchContext.customEntitlements,
 		customFreeTrial: trialContext?.customFreeTrial,
+		insertPlanLicenses: updateSubscriptionContext.insertPlanLicenses,
+		customerLicenseTransitions,
 		lineItems: allLineItems,
 		insertCustomerEntitlements: oneOffPrepaidCarryOverCustomerEntitlements,
 		updateCustomerEntitlements: computeAnchorResetEntitlementUpdates({
@@ -60,9 +78,6 @@ export const computePatchCustomerProductPlan = ({
 	} satisfies Partial<AutumnBillingPlan>;
 
 	if (patchContext.mode === "new") {
-		const isUpdatingScheduledProduct =
-			patchContext.originalCustomerProduct.status === CusProductStatus.Scheduled;
-
 		return {
 			...basePlan,
 			insertCustomerProducts: [finalCustomerProduct],
@@ -119,14 +134,14 @@ const computeAnchorResetEntitlementUpdates = ({
 	updateSubscriptionContext: UpdateSubscriptionBillingContext;
 	finalCustomerProduct: UpdateSubscriptionBillingContext["customerProduct"];
 }): AutumnBillingPlan["updateCustomerEntitlements"] => {
-	if (updateSubscriptionContext.requestedBillingCycleAnchor !== "now") return [];
+	if (updateSubscriptionContext.requestedBillingCycleAnchor !== "now")
+		return [];
 
 	return finalCustomerProduct.customer_entitlements
 		.filter((customerEntitlement) => {
 			const { entitlement } = customerEntitlement;
 			return (
-				!isBooleanEntitlement({ entitlement }) &&
-				entitlement.allowance !== null
+				!isBooleanEntitlement({ entitlement }) && entitlement.allowance !== null
 			);
 		})
 		.map((customerEntitlement) => ({

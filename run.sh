@@ -61,5 +61,15 @@ if [[ "$resolved" == "$repo_root/packages/mcp/tests/"* && "$resolved" == *".test
 	exec bun test "$rel" "${@:2}"
 fi
 
+if [[ "$resolved" == "$repo_root/packages/atmn/test/integration/"* && "$resolved" == *".test.ts" ]]; then
+	cd "$repo_root/server"
+	rel="../${resolved#$repo_root/}"
+	if [[ "${2:-}" =~ ^[0-9]+$ ]]; then
+		test_name="$(bun "$repo_root/scripts/testScripts/getDescribeAtCursor.ts" "$resolved" "$2")"
+		exec env ENV_FILE=.env infisical run --env=dev --recursive -- bun test --timeout 0 "$rel" -t "$test_name"
+	fi
+	exec env ENV_FILE=.env infisical run --env=dev --recursive -- bun test --timeout 0 "$rel" "${@:2}"
+fi
+
 echo "no router for: $resolved" >&2
 exit 1

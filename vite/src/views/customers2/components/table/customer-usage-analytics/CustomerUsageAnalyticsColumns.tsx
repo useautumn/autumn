@@ -98,7 +98,9 @@ export function generatePropertyColumns({
 		cell: ({ getValue }: { getValue: () => unknown }) => {
 			const value = String(getValue() ?? "");
 			return (
-				<div className="text-tertiary-foreground text-tiny truncate font-mono">{value}</div>
+				<div className="text-tertiary-foreground text-tiny truncate font-mono">
+					{value}
+				</div>
 			);
 		},
 	}));

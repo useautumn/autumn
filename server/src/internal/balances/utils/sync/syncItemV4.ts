@@ -1,23 +1,23 @@
-import {
-	type AppEnv,
-	type EntityBalance,
-	type EntityRolloverBalance,
-	type SubjectBalance,
-	tryCatch,
-} from "@autumn/shared";
+import { type AppEnv, type SubjectBalance, tryCatch } from "@autumn/shared";
 import { sql } from "drizzle-orm";
+import { planetScaleTag } from "@/db/dbUtils.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { getCachedFeatureBalance } from "@/internal/customers/cache/fullSubject/balances/getCachedFeatureBalances.js";
 import { deleteCachedFullCustomer } from "@/internal/customers/cusUtils/fullCustomerCacheUtils/deleteCachedFullCustomer.js";
 import { globalRefreshEntityAggregateBatchingManager } from "../refreshEntityAggregate/RefreshEntityAggregateBatchingManager";
 import type { UsageWindowUpdate } from "../types/usageWindowUpdate.js";
+import {
+	type RolloverSyncEntry,
+	SYNC_CONFLICT_CODES,
+	type SyncEntry,
+	subjectBalanceToSyncEntry,
+} from "./flushSubjectBalancesToDb.js";
 import { logSyncItem } from "./logs/logSyncItem";
 
-const SYNC_CONFLICT_CODES = {
-	ResetAtMismatch: "RESET_AT_MISMATCH",
-	EntityCountMismatch: "ENTITY_COUNT_MISMATCH",
-	CacheVersionMismatch: "CACHE_VERSION_MISMATCH",
-} as const;
+export type {
+	RolloverSyncEntry,
+	SyncEntry,
+} from "./flushSubjectBalancesToDb.js";
 
 const handleSyncPostgresError = async ({
 	error,
@@ -74,41 +74,6 @@ interface SyncItemV4 {
 	 *  via full-replace per (customer, feature). */
 	usageWindowUpdates?: UsageWindowUpdate[];
 }
-
-export interface SyncEntry {
-	customer_entitlement_id: string;
-	feature_id: string;
-	balance: number;
-	adjustment: number;
-	entities: Record<string, EntityBalance> | null;
-	next_reset_at: number | null;
-	entity_count: number;
-	cache_version: number | null;
-}
-
-export interface RolloverSyncEntry {
-	rollover_id: string;
-	balance: number;
-	usage: number;
-	entities: Record<string, EntityRolloverBalance> | null;
-}
-
-const subjectBalanceToSyncEntry = ({
-	subjectBalance,
-}: {
-	subjectBalance: SubjectBalance;
-}): SyncEntry => ({
-	customer_entitlement_id: subjectBalance.id,
-	feature_id: subjectBalance.feature_id,
-	balance: subjectBalance.balance ?? 0,
-	adjustment: subjectBalance.adjustment ?? 0,
-	entities: subjectBalance.entities ?? null,
-	next_reset_at: subjectBalance.next_reset_at ?? null,
-	entity_count: subjectBalance.entities
-		? Object.keys(subjectBalance.entities).length
-		: 0,
-	cache_version: subjectBalance.cache_version ?? 0,
-});
 
 /** Sync cached subject balances to Postgres using targeted hash reads. */
 export const syncItemV4 = async ({
@@ -206,7 +171,7 @@ export const syncItemV4 = async ({
 				customer_entitlement_updates: entries,
 				rollover_updates: rolloverEntries,
 				usage_window_updates: usageWindowEntries,
-			})}::jsonb)`,
+			})}::jsonb) ${planetScaleTag({ query: "syncItemV4" })}`,
 		),
 	);
 

@@ -1,6 +1,8 @@
 import { z } from "zod/v4";
 import { CustomerDataSchema } from "../../common/customerData";
 import { EntityDataSchema } from "../../common/entityData";
+import { OverageBehaviorSchema } from "./overageBehavior";
+import { TrackTimestampSchema } from "./trackTimestamp";
 
 export const TrackTokensParamsSchema = z.object({
 	customer_id: z.string().meta({
@@ -15,7 +17,7 @@ export const TrackTokensParamsSchema = z.object({
 	}),
 	model_id: z.string().meta({
 		description:
-			"The AI model as '<provider>/<model>' (e.g. 'anthropic/claude-opus-4-8', 'openrouter/openai/gpt-4o'). The provider is the first path segment and must match a provider + model key in models.dev.",
+			"The AI model as '[provider]/[model]' (e.g. 'anthropic/claude-opus-4-8', 'openrouter/openai/gpt-4o'). The provider is the first path segment and must match a provider + model key in models.dev.",
 	}),
 	input_tokens: z.number().int().nonnegative().meta({
 		description:
@@ -46,12 +48,8 @@ export const TrackTokensParamsSchema = z.object({
 	idempotency_key: z.string().optional().meta({
 		internal: true,
 	}),
-	timestamp: z.number().optional().meta({
-		internal: true,
-	}),
-	overage_behavior: z.enum(["cap", "reject"]).optional().meta({
-		internal: true,
-	}),
+	timestamp: TrackTimestampSchema.optional(),
+	overage_behavior: OverageBehaviorSchema.optional(),
 	customer_data: CustomerDataSchema.optional().meta({
 		internal: true,
 	}),

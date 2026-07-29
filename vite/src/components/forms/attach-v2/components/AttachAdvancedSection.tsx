@@ -4,6 +4,17 @@ import {
 	isFreeProductV2,
 	isOneOffProductV2,
 } from "@autumn/shared";
+import {
+	Button,
+	DateInputUnix,
+	IconButton,
+	IconCheckbox,
+	Input,
+	Switch,
+	Tooltip,
+	TooltipContent,
+	TooltipTrigger,
+} from "@autumn/ui";
 import { CaretDownIcon, PlusIcon, XIcon } from "@phosphor-icons/react";
 import { addDays } from "date-fns";
 import { AnimatePresence, motion } from "motion/react";
@@ -13,24 +24,13 @@ import {
 	AdvancedToggleRow,
 	ConfigRow,
 } from "@/components/forms/shared/advanced-section";
-import { DateInputUnix } from "@/components/general/DateInputUnix";
-import { Switch } from "@/components/ui/switch";
-import { Button } from "@/components/v2/buttons/Button";
-import { IconButton } from "@/components/v2/buttons/IconButton";
-import { IconCheckbox } from "@/components/v2/checkboxes/IconCheckbox";
 import {
 	DropdownMenu,
 	DropdownMenuCheckboxItem,
 	DropdownMenuContent,
 	DropdownMenuSeparator,
 	DropdownMenuTrigger,
-} from "@/components/v2/dropdowns/DropdownMenu";
-import { Input } from "@/components/v2/inputs/Input";
-import {
-	Tooltip,
-	TooltipContent,
-	TooltipTrigger,
-} from "@/components/v2/tooltips/Tooltip";
+} from "@autumn/ui";
 import { cn } from "@/lib/utils";
 import { useCusQuery } from "@/views/customers/customer/hooks/useCusQuery";
 import type { FormCustomLineItem } from "../attachFormSchema";
@@ -82,7 +82,7 @@ function FeatureSelectDropdown({
 					<CaretDownIcon className="size-3.5 text-tertiary-foreground" />
 				</Button>
 			</DropdownMenuTrigger>
-			<DropdownMenuContent align="end" className="min-w-48">
+			<DropdownMenuContent align="end" className="w-(--anchor-width)">
 				<DropdownMenuCheckboxItem
 					checked={isAllSelected}
 					onCheckedChange={() => onChange({ featureIds: [] })}
@@ -158,6 +158,7 @@ export function AttachAdvancedSection() {
 		isEndOfCycleSelected,
 		isNoChargesAllowed,
 		canChooseBillingCycle,
+		createsNewStripeSubscription,
 		handleScheduleChange,
 		handleBillingCycleChange,
 		handleProrationBehaviorChange,
@@ -172,8 +173,6 @@ export function AttachAdvancedSection() {
 		isPaidRecurringProduct &&
 		!trialEnabled &&
 		effectivePlanSchedule !== "end_of_cycle";
-	const createsNewStripeSubscription =
-		!hasActiveSubscription || newBillingSubscription;
 	const allowBackdatedStartDate = showStartDate && createsNewStripeSubscription;
 	const showEndDate = !!product && !isFreeProductV2({ items: product.items });
 	const attachStartsAt =

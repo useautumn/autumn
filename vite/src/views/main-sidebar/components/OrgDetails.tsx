@@ -1,9 +1,6 @@
+import { Button, FormLabel, Input, Separator } from "@autumn/ui";
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
-import { Separator } from "@/components/v2/separator";
-import { Button } from "@/components/v2/buttons/Button";
-import { FormLabel } from "@/components/v2/form/FormLabel";
-import { Input } from "@/components/v2/inputs/Input";
 import { useOrg } from "@/hooks/common/useOrg";
 import { authClient } from "@/lib/auth-client";
 import OrgLogoUploader from "@/views/main-sidebar/org-dropdown/manage-org/OrgLogoUploader";

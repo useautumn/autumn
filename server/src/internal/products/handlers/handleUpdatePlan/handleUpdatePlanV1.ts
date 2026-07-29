@@ -5,38 +5,18 @@ import {
 	ApiVersionClass,
 	apiPlan,
 	applyResponseVersionChanges,
-	ErrCode,
-	type FreeTrial,
-	mapToProductV2,
-	notNullish,
-	ProductNotFoundError,
-	type ProductV2,
-	productsAreSame,
 	RecaseError,
+	Scopes,
 	UpdatePlanParamsV1Schema,
 	UpdatePlanQuerySchema,
 	UpdateProductQuerySchema,
-	UpdateProductSchema,
 	type UpdateProductV2Params,
 	UpdateProductV2ParamsSchema,
-	Scopes,
 } from "@autumn/shared";
 import { createRoute } from "@/honoMiddlewares/routeHandler.js";
-import { CusProductService } from "@/internal/customers/cusProducts/CusProductService.js";
-import { rewardProgramRepo } from "@/internal/rewards/repos/index.js";
-import { JobName } from "@/queue/JobName.js";
-import { addTaskToQueue } from "@/queue/queueUtils.js";
-import { validateDefaultFlag } from "../../../product/actions/validateDefaultFlag.js";
-import {
-	handleNewFreeTrial,
-	validateOneOffTrial,
-} from "../../free-trials/freeTrialUtils.js";
+import { updateProduct } from "../../../product/actions/updateProduct.js";
 import { ProductService } from "../../ProductService.js";
-import { handleNewProductItems } from "../../product-items/productItemUtils/handleNewProductItems.js";
 import { getPlanResponse } from "../../productUtils/productResponseUtils/getPlanResponse.js";
-import { initProductInStripe } from "../../productUtils.js";
-import { handleVersionProductV2 } from "../handleVersionProduct.js";
-import { handleUpdateProductDetails } from "./updateProductDetails.js";
 
 export const handleUpdatePlanV1 = createRoute({
 	scopes: [Scopes.Plans.Write],
@@ -54,7 +34,7 @@ export const handleUpdatePlanV1 = createRoute({
 		const ctx = c.get("ctx");
 		const productId = c.req.param("product_id");
 
-		const { db, org, env, features, logger } = ctx;
+		const { db, org, env, features } = ctx;
 		const query = c.req.valid("query") || {};
 		const { version, upsert, disable_version } = query;
 
@@ -74,164 +54,28 @@ export const handleUpdatePlanV1 = createRoute({
 				}) as UpdateProductV2Params)
 			: (body as UpdateProductV2Params);
 
-		const [fullProduct, rewardPrograms, _defaultProds] = await Promise.all([
-			ProductService.getFull({
-				db,
-				idOrInternalId: productId,
-				orgId: org.id,
-				env,
-				version: version ? version : undefined,
-				allowNotFound: upsert === true,
-			}),
-			rewardProgramRepo.getByProductId({
-				db,
-				productIds: [productId],
-				orgId: org.id,
-				env,
-			}),
-			ProductService.listDefault({
-				db,
-				orgId: org.id,
-				env,
-			}),
-		]);
-
-		if (!fullProduct) throw new ProductNotFoundError({ productId: productId });
-
-		const cusProductsCurVersion =
-			await CusProductService.getByInternalProductId({
-				db,
-				internalProductId: fullProduct.internal_id,
-			});
-
-		const curProductV2 = mapToProductV2({
-			product: fullProduct,
-			features,
-		});
-
-		// Handle free_trial: distinguish between not provided, null (unset), and value (set)
-		const freeTrialExplicitlyProvided = "free_trial" in v1_2Body;
-		const newFreeTrial = freeTrialExplicitlyProvided
-			? ((v1_2Body.free_trial as FreeTrial | null | undefined) ?? null)
-			: (curProductV2.free_trial ?? undefined);
-		const newProductV2: ProductV2 = {
-			...curProductV2,
-			...v1_2Body,
-			group: v1_2Body.group || curProductV2.group || "",
-			items: v1_2Body.items || [],
-			free_trial: newFreeTrial,
-		};
-
-		await validateDefaultFlag({
+		await updateProduct({
 			ctx,
-			body: v1_2Body,
-			curProduct: fullProduct,
+			productId,
+			query: {
+				version: version ? Number(version) : undefined,
+				upsert,
+				disable_version,
+			},
+			updates: v1_2Body,
 		});
 
-		await handleUpdateProductDetails({
-			db,
-			curProduct: fullProduct,
-			newProduct: UpdateProductSchema.parse(v1_2Body),
-			newFreeTrial,
-			items: v1_2Body.items || curProductV2.items,
-			org,
-			rewardPrograms,
-			logger: ctx.logger,
-		});
-
-		const itemsExist = notNullish(v1_2Body.items);
-
-		const cusProductExists = cusProductsCurVersion.length > 0;
-
-		// Check if versioning is needed (customers exist AND items or free trial changed)
-		const freeTrialProvided = "free_trial" in body;
-		if (cusProductExists && !disable_version && (itemsExist || freeTrialProvided)) {
-			const { itemsSame, freeTrialsSame } = productsAreSame({
-				newProductV2: newProductV2,
-				curProductV1: fullProduct,
-				curProductV2: curProductV2,
-				features,
-			});
-
-			const productSame = itemsSame && freeTrialsSame;
-
-			if (!productSame) {
-				const newProduct = await handleVersionProductV2({
-					ctx,
-					newProductV2: newProductV2,
-					latestProduct: fullProduct,
-					org,
-					env,
-				});
-
-				return c.json(newProduct);
-			}
-
-			// Product details (name, group, etc.) may have changed via handleUpdateProductDetails
-			return c.json(fullProduct);
-		}
-
-		const { free_trial } = v1_2Body;
-
-		if (v1_2Body.items) {
-			await handleNewProductItems({
-				db,
-				curPrices: fullProduct.prices,
-				curEnts: fullProduct.entitlements,
-				newItems: v1_2Body.items,
-				features,
-				product: fullProduct,
-				logger: ctx.logger,
-				isCustom: false,
-			});
-		}
-
-		// New full product
+		const latestProductId = v1_2Body.id || productId;
 		const newFullProduct = await ProductService.getFull({
 			db,
-			idOrInternalId: v1_2Body.id || fullProduct.id,
+			idOrInternalId: latestProductId,
 			orgId: org.id,
 			env,
-		});
-
-		if (free_trial !== undefined) {
-			await validateOneOffTrial({
-				prices: newFullProduct.prices,
-				freeTrial: free_trial,
-			});
-
-			await handleNewFreeTrial({
-				db,
-				curFreeTrial: fullProduct.free_trial,
-				newFreeTrial: free_trial,
-				internalProductId: fullProduct.internal_id,
-				isCustom: false,
-			});
-		}
-
-		// New full product
-
-		await initProductInStripe({
-			ctx,
-			product: newFullProduct,
-		});
-
-		logger.info("Adding task to queue to detect base variant");
-		await addTaskToQueue({
-			jobName: JobName.DetectBaseVariant,
-			payload: {
-				curProduct: newFullProduct,
-			},
-		});
-
-		await addTaskToQueue({
-			jobName: JobName.RewardMigration,
-			payload: {
-				oldPrices: fullProduct.prices,
-				productId: v1_2Body.id || fullProduct.id,
-				orgId: org.id,
-				env,
-			},
+			version: disable_version
+				? version
+					? Number(version)
+					: undefined
+				: undefined,
 		});
 
 		const planResponse = await getPlanResponse({

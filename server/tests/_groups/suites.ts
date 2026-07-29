@@ -9,6 +9,14 @@ export const suites: TestSuite[] = [
 	{
 		name: "all-domain",
 		description: "All domain-level test groups",
-		groups: ["balances", "billing", "crud", "webhooks", "advanced", "misc"],
+		groups: [
+			"balances",
+			"billing",
+			"crud",
+			"licenses",
+			"webhooks",
+			"advanced",
+			"misc",
+		],
 	},
 ];

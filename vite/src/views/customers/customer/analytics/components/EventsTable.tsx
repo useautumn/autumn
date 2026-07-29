@@ -1,19 +1,23 @@
-import { CaretLeftIcon, CaretRightIcon, DatabaseIcon } from "@phosphor-icons/react";
-import { memo, useState } from "react";
-import { Table } from "@/components/general/table";
-import { IconButton } from "@/components/v2/buttons/IconButton";
 import {
+	IconButton,
 	Select,
 	SelectContent,
 	SelectItem,
 	SelectTrigger,
 	SelectValue,
-} from "@/components/v2/selects/Select";
+} from "@autumn/ui";
+import {
+	CaretLeftIcon,
+	CaretRightIcon,
+	DatabaseIcon,
+} from "@phosphor-icons/react";
+import { memo, useState } from "react";
+import { Table } from "@/components/general/table";
 import { cn } from "@/lib/utils";
+import { useEventsTable } from "../hooks/useEventsTable";
 import type { IRow } from "./analytics-types";
 import { createEventsColumns } from "./EventsColumns";
 import { RowClickDialog } from "./RowClickDialog";
-import { useEventsTable } from "../hooks/useEventsTable";
 
 const PAGE_SIZE_OPTIONS = [100, 500, 1000] as const;
 
@@ -85,7 +89,9 @@ export const EventsTable = memo(function EventsTable({
 							icon={<CaretLeftIcon size={12} weight="bold" />}
 							onClick={() => table.previousPage()}
 							disabled={!canGoPrev || isDisabled}
-							className={cn((!canGoPrev || isDisabled) && "pointer-events-none opacity-50")}
+							className={cn(
+								(!canGoPrev || isDisabled) && "pointer-events-none opacity-50",
+							)}
 						/>
 						<span className="text-muted-foreground text-xs font-medium">
 							{isLoading ? "–" : `${currentPage} / ${Math.max(totalPages, 1)}`}
@@ -96,14 +102,20 @@ export const EventsTable = memo(function EventsTable({
 							icon={<CaretRightIcon size={12} weight="bold" />}
 							onClick={() => table.nextPage()}
 							disabled={!canGoNext || isDisabled}
-							className={cn((!canGoNext || isDisabled) && "pointer-events-none opacity-50")}
+							className={cn(
+								(!canGoNext || isDisabled) && "pointer-events-none opacity-50",
+							)}
 						/>
 					</div>
 				)}
 			</div>
 			{isEmpty ? (
 				<div className="flex flex-col items-center justify-center gap-2 rounded-lg border bg-interactive-secondary min-h-[200px]">
-					<DatabaseIcon size={28} weight="duotone" className="text-muted-foreground/50" />
+					<DatabaseIcon
+						size={28}
+						weight="duotone"
+						className="text-muted-foreground/50"
+					/>
 					<p className="text-muted-foreground text-sm">{emptyMessage}</p>
 				</div>
 			) : (

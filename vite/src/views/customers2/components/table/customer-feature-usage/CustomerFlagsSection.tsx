@@ -1,6 +1,6 @@
 import type { FullCusEntWithFullCusProduct } from "@autumn/shared";
+import { SectionTag } from "@autumn/ui";
 import { CheckCircleIcon } from "@phosphor-icons/react";
-import { SectionTag } from "@/components/v2/badges/SectionTag";
 
 export function CustomerFlagsSection({
 	booleanEnts,

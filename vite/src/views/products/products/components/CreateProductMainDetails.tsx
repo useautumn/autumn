@@ -1,12 +1,12 @@
-import { FormLabel } from "@/components/v2/form/FormLabel";
-import { Input } from "@/components/v2/inputs/Input";
+import { FormLabel, Input } from "@autumn/ui";
+import { useProduct } from "@/components/v2/inline-custom-plan-editor/PlanEditorContext";
 import { SheetSection } from "@/components/v2/sheets/InlineSheet";
 import { useAutoSlug } from "@/hooks/common/useAutoSlug";
-import { useProductStore } from "@/hooks/stores/useProductStore";
 
 export const CreateProductMainDetails = () => {
-	const product = useProductStore((s) => s.product);
-	const setProduct = useProductStore((s) => s.setProduct);
+	// Context-first (the create sheet's local draft); falls back to the store
+	// on pages without a ProductProvider.
+	const { product, setProduct } = useProduct();
 
 	const { setSource, setTarget } = useAutoSlug({
 		setState: setProduct,

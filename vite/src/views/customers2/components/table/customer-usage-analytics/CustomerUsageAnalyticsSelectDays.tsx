@@ -1,12 +1,12 @@
-import { CaretDownIcon, CheckIcon } from "@phosphor-icons/react";
-import { useState } from "react";
-import { Button } from "@/components/v2/buttons/Button";
 import {
+	Button,
 	DropdownMenu,
 	DropdownMenuContent,
 	DropdownMenuItem,
 	DropdownMenuTrigger,
-} from "@/components/v2/dropdowns/DropdownMenu";
+} from "@autumn/ui";
+import { CaretDownIcon, CheckIcon } from "@phosphor-icons/react";
+import { useState } from "react";
 import { cn } from "@/lib/utils";
 
 const DAY_OPTIONS = [7, 30];

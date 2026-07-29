@@ -1,6 +1,7 @@
 import type { z } from "zod/v4";
 import { BalancesLimitReachedSchema } from "./balances/balancesLimitReached.js";
 import { BalancesUsageAlertTriggeredSchema } from "./balances/balancesUsageAlertTriggered.js";
+import { BillingAutoTopupFailedSchema } from "./billing/billingAutoTopupFailed.js";
 import { BillingAutoTopupSucceededSchema } from "./billing/billingAutoTopupSucceeded.js";
 import { BillingUpdatedSchema } from "./billing/billingUpdated.js";
 import { VercelResourceDeletedSchema } from "./vercel/vercelResourceDeleted.js";
@@ -43,6 +44,15 @@ export const webhookRegistry: WebhookDefinition[] = [
 	},
 
 	// ── Billing ───────────────────────────────────────────────────────────
+	{
+		eventType: WebhookEventType.BillingAutoTopupFailed,
+		operationId: "billingAutoTopupFailed",
+		title: "Auto Top-Up Failed",
+		schema: BillingAutoTopupFailedSchema,
+		group: "Billing",
+		description:
+			"Fired when an automatic top-up is blocked, declined, or fails before granting additional prepaid balance.",
+	},
 	{
 		eventType: WebhookEventType.BillingAutoTopupSucceeded,
 		operationId: "billingAutoTopupSucceeded",

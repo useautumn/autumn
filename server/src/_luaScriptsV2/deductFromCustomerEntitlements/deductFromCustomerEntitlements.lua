@@ -36,7 +36,7 @@
       cus_ent_ids: string[] | nil,
       skip_additional_balance: boolean,
       alter_granted_balance: boolean,
-      overage_behaviour: "cap" | "reject" | "allow",
+      overage_behaviour: "cap" | "reject" | "allow" | "overflow",
       feature_id: string
     }
 

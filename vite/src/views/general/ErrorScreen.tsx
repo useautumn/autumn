@@ -1,9 +1,9 @@
 import React from "react";
 import { Link, useNavigate } from "react-router";
-import { authClient } from "@/lib/auth-client";
-import { getRedirectUrl } from "@/utils/genUtils";
-import { useEnv } from "@/utils/envUtils";
 import { useSwitchActiveOrg } from "@/hooks/common/useOrg";
+import { authClient } from "@/lib/auth-client";
+import { useEnv } from "@/utils/envUtils";
+import { getRedirectUrl } from "@/utils/genUtils";
 
 function ErrorScreen({
 	children,
@@ -71,7 +71,9 @@ function ErrorScreen({
 
 	return (
 		<div className="flex h-full w-full items-center justify-center flex-col gap-2">
-			<div className="text-muted-foreground text-sm max-w-sm text-center">{children}</div>
+			<div className="text-muted-foreground text-sm max-w-sm text-center">
+				{children}
+			</div>
 			{returnUrl && (
 				<Link
 					className="text-tertiary-foreground text-sm hover:underline"

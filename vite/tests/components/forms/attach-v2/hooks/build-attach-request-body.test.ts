@@ -29,6 +29,8 @@ const baseParams: Omit<
 	customerId: "cus_123",
 	entityId: undefined,
 	items: null,
+	licenseQuantities: {},
+	addLicenses: null,
 	grantFree: false,
 	version: undefined,
 	trialLength: null,
@@ -50,7 +52,36 @@ const baseParams: Omit<
 	customLineItems: [],
 	disableProration: false,
 	enablePlanImmediately: false,
+	currency: null,
 };
+
+describe("buildAttachRequestBody — license quantity handling", () => {
+	const product = makeProduct({ items: [] });
+
+	test("omits untouched zero-display license quantities", () => {
+		const result = buildAttachRequestBody({
+			...baseParams,
+			product,
+			prepaidOptions: {},
+			licenseQuantities: { seat: undefined },
+		});
+
+		expect(result?.license_quantities).toBeUndefined();
+	});
+
+	test("preserves an explicitly entered zero quantity", () => {
+		const result = buildAttachRequestBody({
+			...baseParams,
+			product,
+			prepaidOptions: {},
+			licenseQuantities: { seat: 0 },
+		});
+
+		expect(result?.license_quantities).toEqual([
+			{ license_plan_id: "seat", quantity: 0 },
+		]);
+	});
+});
 
 describe("buildAttachRequestBody — billing_units handling", () => {
 	test("should pass display quantities through as-is, not multiply by billing_units", () => {
@@ -187,6 +218,17 @@ describe("buildAttachRequestBody — starts_at handling", () => {
 				interval: "month",
 			},
 		],
+	});
+
+	/** Pre-fix omitted the selected default; post-fix sends "immediate" to keep the preview aligned with the UI. */
+	test("defaults plan_schedule to immediate", () => {
+		const result = buildAttachRequestBody({
+			...baseParams,
+			product,
+			prepaidOptions: {},
+		});
+
+		expect(result?.plan_schedule).toBe("immediate");
 	});
 
 	test("sends starts_at instead of silently falling back to plan_schedule", () => {

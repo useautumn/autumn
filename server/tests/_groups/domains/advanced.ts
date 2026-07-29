@@ -5,5 +5,5 @@ export const advanced: TestGroup = {
 	description:
 		"Coupons, referrals, custom intervals, usage limits, multi-feature",
 	tier: "domain",
-	paths: [],
+	paths: ["advanced"],
 };

@@ -47,7 +47,7 @@ const main = async () => {
 	const output = await claudeManagedEngine.run({
 		ctx: {
 			// Unused by the CMA engine (it fetches docs/tools when ensuring the agent).
-			agentTools: { destructiveTools: new Set(), docsText: "" },
+			agentTools: { destructiveTools: new Set() },
 			env,
 			id: crypto.randomUUID(),
 			logger,

@@ -46,3 +46,10 @@ export {
 	listEventsPaginatedPipeParamsSchema,
 	listEventsPaginatedPipeResponseSchema,
 } from "./listEventsPaginatedPipe.js";
+export {
+	createPropertyKeyExistsPipe,
+	type PropertyKeyExistsPipeParams,
+	type PropertyKeyExistsPipeRow,
+	propertyKeyExistsPipeParamsSchema,
+	propertyKeyExistsPipeResponseSchema,
+} from "./propertyKeyExistsPipe.js";

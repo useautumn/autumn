@@ -1,6 +1,5 @@
 import { existsSync, readdirSync, readFileSync } from "node:fs";
 import {
-	additionalFiles,
 	additionalPackages,
 	aptGet,
 	syncEnvVars,
@@ -8,9 +7,8 @@ import {
 import { defineConfig } from "@trigger.dev/sdk/v3";
 import { fetchInfisicalSecretsFromEnv } from "./server/src/external/infisical/fetchInfisicalSecrets.js";
 
-// Derived from the root package.json workspaces so new workspace packages are
-// picked up automatically — the deploy image COPYs every workspace
-// package.json, and a missing one makes `bun install` fail against bun.lock.
+// Bun requires every configured workspace to contain a package.json, even
+// though Trigger bundles workspace code and only installs external packages.
 const rootPackageJson = JSON.parse(readFileSync("package.json", "utf-8")) as {
 	workspaces: string[] | { packages: string[] };
 };
@@ -29,15 +27,24 @@ const expandWorkspacePattern = (pattern: string): string[] => {
 		.map((entry) => `${baseDir}/${entry.name}`);
 };
 
-const workspacePackageJsonPaths = workspacePatterns
+const workspacePackageDirs = workspacePatterns
 	.flatMap(expandWorkspacePattern)
-	.map((dir) => `${dir}/package.json`)
-	.filter((path) => existsSync(path))
+	.filter((dir) => existsSync(`${dir}/package.json`))
 	.sort();
 
-const workspacePackageDirs = workspacePackageJsonPaths.map((path) =>
-	path.replace(/\/package\.json$/, ""),
-);
+const workspacePackageStubs = workspacePackageDirs.map((dir) => {
+	const packageJson = JSON.parse(
+		readFileSync(`${dir}/package.json`, "utf-8"),
+	) as { name?: string };
+	if (!packageJson.name) {
+		throw new Error(`Workspace package ${dir} is missing a name`);
+	}
+
+	return {
+		dir,
+		contents: JSON.stringify({ name: packageJson.name, private: true }),
+	};
+});
 
 export default defineConfig({
 	project: "proj_cwiutfmpdzfcshxevkok",
@@ -54,7 +61,10 @@ export default defineConfig({
 			randomize: true,
 		},
 	},
-	dirs: ["server/src/trigger"],
+	dirs: [
+		"server/src/trigger",
+		"server/src/internal/billing/v2/actions/batchTransition/tasks",
+	],
 	build: {
 		// Native / heavy deps stay external — bundling them inflates the deploy
 		// and breaks platform-specific binaries (pg, ioredis, etc.).
@@ -70,9 +80,6 @@ export default defineConfig({
 			"zod",
 		],
 		extensions: [
-			additionalFiles({
-				files: workspacePackageJsonPaths,
-			}),
 			{
 				name: "monorepo-workspace-manifests",
 				onBuildComplete: (context) => {
@@ -85,11 +92,7 @@ export default defineConfig({
 						image: {
 							instructions: [
 								"WORKDIR /app",
-								`RUN mkdir -p ${workspacePackageDirs.join(" ")} && chown -R bun:bun ${workspacePackageDirs.join(" ")}`,
-								...workspacePackageJsonPaths.map(
-									(path) => `COPY --chown=bun:bun ${path} ./${path}`,
-								),
-								"RUN chown -R bun:bun /app",
+								`RUN mkdir -p ${workspacePackageDirs.join(" ")} && ${workspacePackageStubs.map(({ dir, contents }) => `printf '${contents}' > ${dir}/package.json`).join(" && ")} && chown -R bun:bun /app`,
 							],
 						},
 					});

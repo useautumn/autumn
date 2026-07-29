@@ -16,6 +16,7 @@
       ttl_seconds: number,
       rolls: [{
         internal_entity_id: string | null,   -- scope selector
+        filter_key: string | null,           -- filter selector (null = unfiltered row)
         zero_usage: boolean,                 -- stored window closed: count dies
         window_start_at: number,
         window_end_at: number,
@@ -45,13 +46,18 @@ end
 local rolled = 0
 for _, roll in ipairs(params.rolls or {}) do
   local roll_entity = roll.internal_entity_id
+  local roll_filter = roll.filter_key
   for _, window in ipairs(windows) do
     if type(window) == 'table' then
       local window_entity = window.internal_entity_id
+      local window_filter = window.filter_key
       local entities_match =
         (is_nil(roll_entity) and is_nil(window_entity))
         or roll_entity == window_entity
-      if entities_match then
+      local filters_match =
+        (is_nil(roll_filter) and is_nil(window_filter))
+        or roll_filter == window_filter
+      if entities_match and filters_match then
         if roll.zero_usage then
           window.usage = 0
         end

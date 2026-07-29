@@ -43,7 +43,10 @@ function normalizeFeatureForCompare(f: Feature): Rec {
 	if (f.creditSchema && f.creditSchema.length > 0) {
 		result.creditSchema = [...f.creditSchema]
 			.sort((a, b) => a.meteredFeatureId.localeCompare(b.meteredFeatureId))
-			.map((cs) => ({ meteredFeatureId: cs.meteredFeatureId, creditCost: cs.creditCost }));
+			.map((cs) => ({
+				meteredFeatureId: cs.meteredFeatureId,
+				creditCost: cs.creditCost,
+			}));
 	}
 	return result;
 }
@@ -55,7 +58,8 @@ function normalizePlanFeatureForCompare(pf: Rec): Rec {
 	const reset = pf.reset as Rec | undefined;
 	if (reset != null) {
 		const r: Rec = { interval: reset.interval };
-		if (reset.intervalCount != null && reset.intervalCount !== 1) r.intervalCount = reset.intervalCount;
+		if (reset.intervalCount != null && reset.intervalCount !== 1)
+			r.intervalCount = reset.intervalCount;
 		result.reset = r;
 	}
 	const price = pf.price as Rec | undefined;
@@ -64,9 +68,16 @@ function normalizePlanFeatureForCompare(pf: Rec): Rec {
 		if (price.amount != null) p.amount = price.amount;
 		if (price.billingMethod != null) p.billingMethod = price.billingMethod;
 		if (price.interval != null) p.interval = price.interval;
-		if (price.intervalCount != null && price.intervalCount !== 1) p.intervalCount = price.intervalCount;
-		if (price.tiers != null && Array.isArray(price.tiers) && price.tiers.length > 0) p.tiers = price.tiers;
-		if (price.billingUnits != null && price.billingUnits !== 1) p.billingUnits = price.billingUnits;
+		if (price.intervalCount != null && price.intervalCount !== 1)
+			p.intervalCount = price.intervalCount;
+		if (
+			price.tiers != null &&
+			Array.isArray(price.tiers) &&
+			price.tiers.length > 0
+		)
+			p.tiers = price.tiers;
+		if (price.billingUnits != null && price.billingUnits !== 1)
+			p.billingUnits = price.billingUnits;
 		if (price.maxPurchase != null) p.maxPurchase = price.maxPurchase;
 		if (Object.keys(p).length > 0) result.price = p;
 	}
@@ -79,7 +90,8 @@ function normalizePlanFeatureForCompare(pf: Rec): Rec {
 
 function normalizePlanForCompare(plan: Plan): Rec {
 	const result: Rec = { id: plan.id, name: plan.name };
-	if (plan.description != null && plan.description !== "") result.description = plan.description;
+	if (plan.description != null && plan.description !== "")
+		result.description = plan.description;
 	if (plan.group != null && plan.group !== "") result.group = plan.group;
 	if (plan.addOn === true) result.addOn = true;
 	if (plan.autoEnable === true) result.autoEnable = true;
@@ -113,8 +125,8 @@ function diffObjects(a: Rec, b: Rec, path = ""): string[] {
 		if (!valuesEqual(av, bv)) {
 			diffs.push(
 				`  ${chalk.yellow(fullPath)}:\n` +
-				`    local:  ${chalk.green(JSON.stringify(av))}\n` +
-				`    remote: ${chalk.red(JSON.stringify(bv))}`,
+					`    local:  ${chalk.green(JSON.stringify(av))}\n` +
+					`    remote: ${chalk.red(JSON.stringify(bv))}`,
 			);
 		}
 	}
@@ -123,10 +135,21 @@ function diffObjects(a: Rec, b: Rec, path = ""): string[] {
 
 // ── Config loader (same as headless.ts) ──────────────────────────────────────
 
-async function loadLocalConfig(cwd: string): Promise<{ features: Feature[]; plans: Plan[] }> {
+const isVariantExport = (value: unknown): boolean =>
+	Boolean(
+		value &&
+			typeof value === "object" &&
+			(value as { __atmnType?: unknown }).__atmnType === "variant",
+	);
+
+async function loadLocalConfig(
+	cwd: string,
+): Promise<{ features: Feature[]; plans: Plan[] }> {
 	const configPath = resolveConfigPath(cwd);
 	if (!fs.existsSync(configPath)) {
-		throw new Error(`Config file not found at ${configPath}. Run 'atmn pull' first.`);
+		throw new Error(
+			`Config file not found at ${configPath}. Run 'atmn pull' first.`,
+		);
 	}
 	const absolutePath = resolve(configPath);
 	const fileUrl = pathToFileURL(absolutePath).href;
@@ -136,21 +159,28 @@ async function loadLocalConfig(cwd: string): Promise<{ features: Feature[]; plan
 	const plans: Plan[] = [];
 	const features: Feature[] = [];
 	const modRecord = mod as { default?: unknown } & Record<string, unknown>;
-	const defaultExport = modRecord.default as { plans?: Plan[]; features?: Feature[]; products?: Plan[] } | undefined;
+	const defaultExport = modRecord.default as
+		| { plans?: Plan[]; features?: Feature[]; products?: Plan[] }
+		| undefined;
 
 	if (defaultExport?.plans && defaultExport?.features) {
 		if (Array.isArray(defaultExport.plans)) plans.push(...defaultExport.plans);
-		if (Array.isArray(defaultExport.features)) features.push(...defaultExport.features);
+		if (Array.isArray(defaultExport.features))
+			features.push(...defaultExport.features);
 	} else if (defaultExport?.products && defaultExport?.features) {
-		if (Array.isArray(defaultExport.products)) plans.push(...defaultExport.products);
-		if (Array.isArray(defaultExport.features)) features.push(...defaultExport.features);
+		if (Array.isArray(defaultExport.products))
+			plans.push(...defaultExport.products);
+		if (Array.isArray(defaultExport.features))
+			features.push(...defaultExport.features);
 	} else {
 		for (const [key, value] of Object.entries(modRecord)) {
 			if (key === "default") continue;
+			if (isVariantExport(value)) continue;
 			const obj = value as { items?: unknown; type?: unknown };
 			if (obj && typeof obj === "object") {
 				if ("type" in obj) features.push(obj as unknown as Feature);
-				else if (Array.isArray(obj.items) || "id" in obj) plans.push(obj as unknown as Plan);
+				else if (Array.isArray(obj.items) || "id" in obj)
+					plans.push(obj as unknown as Plan);
 			}
 		}
 	}
@@ -161,7 +191,9 @@ async function loadLocalConfig(cwd: string): Promise<{ features: Feature[]; plan
 
 export async function testDiffCommand(): Promise<void> {
 	console.log(chalk.cyan("Loading local config..."));
-	const { features: localFeatures, plans: localPlans } = await loadLocalConfig(process.cwd());
+	const { features: localFeatures, plans: localPlans } = await loadLocalConfig(
+		process.cwd(),
+	);
 
 	console.log(chalk.cyan("Fetching remote data..."));
 	const remoteData = await fetchRemoteData();
@@ -223,8 +255,18 @@ export async function testDiffCommand(): Promise<void> {
 		const localNorm = normalizePlanForCompare(local);
 		const remoteNorm = normalizePlanForCompare(remote);
 		console.log(chalk.cyan(`\n  [${local.id}] local:`));
-		console.log(JSON.stringify(localNorm, null, 2).split("\n").map((l) => `    ${l}`).join("\n"));
+		console.log(
+			JSON.stringify(localNorm, null, 2)
+				.split("\n")
+				.map((l) => `    ${l}`)
+				.join("\n"),
+		);
 		console.log(chalk.magenta(`  [${local.id}] remote:`));
-		console.log(JSON.stringify(remoteNorm, null, 2).split("\n").map((l) => `    ${l}`).join("\n"));
+		console.log(
+			JSON.stringify(remoteNorm, null, 2)
+				.split("\n")
+				.map((l) => `    ${l}`)
+				.join("\n"),
+		);
 	}
 }

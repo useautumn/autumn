@@ -1,6 +1,7 @@
 import crypto from "node:crypto";
 import { isFuture } from "date-fns";
 import { z } from "zod";
+import { CHAT_AUTH_MODES } from "../models/chatModels/chatEnums.js";
 import { AppEnv } from "../models/genModels/genEnums.js";
 
 const chatInstallStateSchema = z.strictObject({
@@ -11,7 +12,7 @@ const chatInstallStateSchema = z.strictObject({
 	orgId: z.string(),
 	userId: z.string(),
 	env: z.nativeEnum(AppEnv),
-	// Autumn OAuth scopes to mint for the bot credential; omitted = full default set.
+	mode: z.enum(CHAT_AUTH_MODES).optional(),
 	scopes: z.array(z.string()).optional(),
 	expiresAt: z.number(),
 	nonce: z.string(),

@@ -20,6 +20,13 @@ export const getCheckoutActionRequiredCopy = ({
 					"This payment needs extra verification before it can go through.",
 				ctaLabel: "Complete payment",
 			};
+		case "payment_processing":
+			return {
+				title: "Payment processing",
+				description:
+					"Your payment is still settling. We'll update this checkout once it completes.",
+				ctaLabel: "View invoice",
+			};
 		case "payment_failed":
 		default:
 			return {

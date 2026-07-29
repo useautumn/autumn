@@ -1,4 +1,4 @@
-import { StepBadge } from "@/components/v2/badges/StepBadge";
+import { StepBadge } from "@autumn/ui";
 import { StackSelector } from "@/components/v2/StackSelector";
 import type { Snippet, StackConfig } from "@/lib/snippets";
 import { SnippetCodeBlock } from "./SnippetCodeBlock";
@@ -22,7 +22,9 @@ export function BackendSetupStep({
 				<StepBadge>{stepNumber}</StepBadge>
 				<span className="font-medium text-sm">{snippet.title}</span>
 			</div>
-			<p className="text-sm text-muted-foreground pl-[34px]">{snippet.description}</p>
+			<p className="text-sm text-muted-foreground pl-[34px]">
+				{snippet.description}
+			</p>
 
 			<div className="pl-[34px]">
 				<StackSelector

@@ -21,6 +21,9 @@ export const ApiPlanItemV0Schema = z
 
 		granted_balance: z.number(),
 		unlimited: z.boolean(),
+		pooled: z.boolean().default(false).optional().meta({
+			internal: true,
+		}),
 
 		reset: z
 			.object({
@@ -32,6 +35,9 @@ export const ApiPlanItemV0Schema = z
 
 		price: z
 			.object({
+				stripe_price_id: z.string().optional().meta({
+					internal: true,
+				}),
 				amount: z.number().optional(),
 				tiers: z.array(UsageTierSchema).optional(),
 				tier_behavior: z.enum(TierBehavior).optional(),

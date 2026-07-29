@@ -1,3 +1,4 @@
+import { repairCachedProductCollections } from "../../repairCachedProductCollections.js";
 import {
 	type CachedFullSubject,
 	CachedFullSubjectSchema,
@@ -19,13 +20,10 @@ export const sanitizeCachedFullSubject = ({
 		data: cachedFullSubject,
 	});
 
-	// Safeguard for new product fields: Upstash Lua cjson collapses `{}` to `[]`,
-	// and pre-existing cache entries may not have these fields at all.
+	// Safeguard for product collection fields: Upstash cjson collapses `{}` to
+	// `[]`, and pre-existing entries may lack the field entirely.
 	for (const product of normalized.products ?? []) {
-		const productAsRecord = product as { config?: unknown };
-		if (!productAsRecord.config || Array.isArray(productAsRecord.config)) {
-			productAsRecord.config = {};
-		}
+		repairCachedProductCollections(product);
 	}
 
 	return normalized;

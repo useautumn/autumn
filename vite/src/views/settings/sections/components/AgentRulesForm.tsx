@@ -1,11 +1,8 @@
 import type { AgentRules, Feature } from "@autumn/shared";
+import { Button, Card, Switch, Textarea } from "@autumn/ui";
 import { useStore } from "@tanstack/react-form";
 import { SparklesIcon } from "lucide-react";
 import { toast } from "sonner";
-import { Switch } from "@/components/ui/switch";
-import { Textarea } from "@/components/ui/textarea";
-import { Button } from "@/components/v2/buttons/Button";
-import { Card } from "@/components/v2/cards/Card";
 import { FeatureSearchDropdown } from "@/components/v2/dropdowns/FeatureSearchDropdown";
 import { useAppForm } from "@/hooks/form/form";
 import type {

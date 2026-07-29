@@ -1,0 +1,96 @@
+---
+slug: autumn-vs-metronome
+title: Autumn vs Metronome
+description: Metronome is built for sophisticated usage metering and rating. Autumn is built for AI and SaaS companies that need credits, entitlements, enterprise contracts, committed spend, and Stripe billing state in one application-facing system.
+date: "2026-06-22"
+updated: "2026-06-22"
+author: Autumn
+category: Comparisons
+summary: Metronome fits teams that need sophisticated usage rating and invoicing. Autumn fits teams that need credits, limits, entitlements, and pricing changes enforced inside the product.
+relatedDocs:
+  - { label: "Autumn overview", href: "https://docs.useautumn.com/welcome" }
+  - { label: "Checking access", href: "https://docs.useautumn.com/documentation/customers/check" }
+  - { label: "Credit systems", href: "https://docs.useautumn.com/documentation/modelling-pricing/credit-systems" }
+relatedAlog:
+  - autumn-vs-orb
+  - autumn-vs-stripe-billing
+  - usage-based-billing-for-ai-startups
+---
+
+# Autumn vs Metronome
+
+> Metronome works best when billing starts from usage data. Autumn works best when product access starts from billing state.
+
+## Short Answer
+
+Metronome is a strong fit for companies with complex usage streams, billable metrics, and finance-led invoicing workflows. If you are doing pure usage-based billing, such as charging per hour of compute, storage consumed, or multi-dimensional usage metrics, Metronome is built for that world.
+
+Autumn is a better fit when billing state needs to be enforced inside the product in real time: credits, committed spend, rollovers, reset intervals, usage limits, alerts, plan changes, add-ons, entitlements, enterprise contracts, and custom sales-led deals. In that model, Stripe remains the payment and invoice layer while Autumn owns the product-facing billing state.
+
+## When Autumn Fits
+
+- You sell credits, allowances, feature access, or hybrid subscription plus usage plans.
+- You need to check access before a user action, then record usage after it happens.
+- You want credits, entitlements, subscriptions, usage limits, and feature gating in one system.
+- You are PLG, sales-led, or hybrid, and deal with custom enterprise packages.
+- You need custom enterprise contracts, committed spend, or negotiated credit grants to map directly to product access.
+- You iterate on pricing often and do not want each change to become a billing rewrite.
+- You want Stripe to remain the payment and invoice system, while Autumn owns the product-facing billing logic.
+
+## When Metronome Fits
+
+- Your hardest problem is turning large usage streams into invoice line items.
+- You need complex billable metrics over raw events, such as custom aggregations or multi-dimensional rating.
+- Your billing motion is primarily infrastructure-style usage rating and invoice generation.
+- You have, or prefer to own, entitlement checks, product gating, and access control in your application.
+- You want a dedicated usage rating and invoicing layer for sophisticated contracts.
+
+## Product Difference
+
+Metronome starts from usage events. You define billable metrics, products, rate cards, contracts, credits, commits, and invoice behavior. It can also send webhook notifications when spend, usage, or credit thresholds are reached. That is powerful when billing depends on complex event aggregation, alerting, and contract terms.
+
+Autumn starts from the customer's billing state. A customer has plans, balances, entitlements, credit systems, limits, and Stripe subscriptions. Your app can call `check()` before allowing access and `track()` after usage. That makes Autumn a better fit when billing needs to sit directly in the product path.
+
+## Credits and Usage Limits
+
+Both products can support credit-based models, but they optimize for different workflows.
+
+Metronome credits and commits are tied into contracts, usage rating, and invoices. This is useful when the hard part is applying contract terms to large volumes of usage data and turning the result into invoices.
+
+Autumn credits and commits are designed as product state. They can gate access, reset on different intervals, roll over, power usage alerts, support customer-specific enterprise grants, model committed spend, and work alongside entitlements. This is the pattern many AI products need: before an AI message, agent run, API call, or premium action, the app needs to know whether the customer is allowed to proceed.
+
+## Enterprise and PLG
+
+Autumn is designed for teams that sell through both self-serve and sales-led motions.
+
+The same billing model can power checkout, credits, and paywalls for self-serve users, while also supporting custom plans, credit grants, reset behavior, committed spend, and negotiated enterprise terms. That matters when pricing changes often: you can adapt packages without splitting PLG and enterprise customers into separate billing systems.
+
+Metronome's enterprise strength is different: sophisticated usage rating, invoice workflows, and finance operations over high-volume usage data.
+
+## Implementation Model
+
+With Metronome, the typical model is:
+
+```text
+Application -> usage events -> Metronome -> rated usage / invoices
+Metronome -> alerts / webhooks / APIs -> application policy
+```
+
+With Autumn, the typical model is:
+
+```text
+Application -> Autumn check() -> allow or block access
+Application -> Autumn track() -> update usage and balances
+Autumn -> Stripe -> subscriptions, invoices, and payments
+```
+
+The difference is not whether either system is real time. The difference is where the access decision lives. Metronome gives your application billing signals through alerts, webhooks, and APIs. Autumn combines the billing state and product policy behind a synchronous `check()` API.
+
+## Sources
+
+- Autumn: [overview](https://docs.useautumn.com/welcome), [checking access](https://docs.useautumn.com/documentation/customers/check), [credit systems](https://docs.useautumn.com/documentation/modelling-pricing/credit-systems)
+- Metronome: [overview](https://docs.metronome.com/guides/get-started/how-metronome-works), [notifications](https://docs.metronome.com/guides/customers-billing/set-up-notifications/create-and-manage-notifications), [credits and commits](https://docs.metronome.com/guides/pricing-packaging/apply-credits-and-commits/create-a-pre-paid-commit), [billable metrics](https://docs.metronome.com/guides/implement-metronome/core-concepts/create-billable-metrics)
+
+## Last Updated
+
+2026-06-22

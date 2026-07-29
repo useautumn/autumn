@@ -1,11 +1,28 @@
-import { ApiVersion, isUsagePrice, type Organization } from "@autumn/shared";
+import {
+	ApiVersion,
+	isUsagePrice,
+	type Organization,
+	type UsagePriceConfig,
+} from "@autumn/shared";
 import type Stripe from "stripe";
-import { getEmptyPriceItem } from "@/external/stripe/priceToStripeItem/priceToStripeItem";
 import type { AttachParams } from "@/internal/customers/cusProducts/AttachParams.js";
+
+const getEmptyPriceReplacement = ({
+	price,
+}: {
+	price: AttachParams["prices"][number];
+}) => {
+	const config = price.config as UsagePriceConfig;
+	if (!config.stripe_empty_price_id) return null;
+
+	return {
+		price: config.stripe_empty_price_id,
+		quantity: 0,
+	};
+};
 
 export const handleRemainingSets = async ({
 	stripeCli,
-	org,
 	checkoutSession,
 	attachParams,
 	checkoutSub,
@@ -29,7 +46,6 @@ export const handleRemainingSets = async ({
 		if (!isUsagePrice({ price })) continue;
 
 		const config = price.config;
-		const emptyPrice = config.stripe_empty_price_id;
 
 		if (
 			attachParams.internalEntityId ||
@@ -40,12 +56,16 @@ export const handleRemainingSets = async ({
 			);
 
 			if (replaceIndex !== -1) {
-				remainingItems[replaceIndex] = emptyPrice
-					? {
-							price: config.stripe_empty_price_id,
-							quantity: 0,
-						}
-					: (getEmptyPriceItem({ price, org }) as any);
+				const replacementItem = getEmptyPriceReplacement({ price });
+				if (!replacementItem) {
+					attachParams.req?.logger.warn(
+						"checkout.completed: skipping remaining empty price replacement because usage price has no empty Stripe price",
+						{ priceId: price.id },
+					);
+					continue;
+				}
+
+				remainingItems[replaceIndex] = replacementItem;
 			}
 		}
 	}

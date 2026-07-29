@@ -1,14 +1,14 @@
+import { Button } from "@autumn/ui";
 import { CaretDownIcon, CheckIcon } from "@phosphor-icons/react";
 import { useState } from "react";
 import { ConfigRow } from "@/components/forms/shared/ConfigRow";
 import { FreeTrialConfigRow } from "@/components/forms/shared/FreeTrialConfigRow";
-import { Button } from "@/components/v2/buttons/Button";
 import {
 	DropdownMenu,
 	DropdownMenuContent,
 	DropdownMenuItem,
 	DropdownMenuTrigger,
-} from "@/components/v2/dropdowns/DropdownMenu";
+} from "@autumn/ui";
 import { SheetSection } from "@/components/v2/sheets/SharedSheetComponents";
 import { cn } from "@/lib/utils";
 import { useUpdateSubscriptionFormContext } from "../context/UpdateSubscriptionFormProvider";

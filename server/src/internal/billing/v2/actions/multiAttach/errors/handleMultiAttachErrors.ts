@@ -1,6 +1,8 @@
-import type { MultiAttachBillingContext } from "@autumn/shared";
+import type { BillingPlan, MultiAttachBillingContext } from "@autumn/shared";
 import type { DrizzleCli } from "@/db/initDrizzle";
+import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { handleSubscriptionIdErrors } from "@/internal/billing/v2/common/errors/handleSubscriptionIdErrors";
+import { handleStripeBillingPlanErrors } from "@/internal/billing/v2/providers/stripe/errors/handleStripeBillingPlanErrors";
 import { handleMultiAttachCurrentProductErrors } from "./handleMultiAttachCurrentProductErrors";
 import { handleMultiAttachRedirectErrors } from "./handleMultiAttachRedirectErrors";
 
@@ -29,4 +31,16 @@ export const handleMultiAttachErrors = async ({
 		internalCustomerId: billingContext.fullCustomer.internal_id,
 		subscriptionIds: billingContext.productContexts.map((pc) => pc.externalId),
 	});
+};
+
+export const handleMultiAttachBillingPlanErrors = ({
+	ctx,
+	billingContext,
+	billingPlan,
+}: {
+	ctx: AutumnContext;
+	billingContext: MultiAttachBillingContext;
+	billingPlan: BillingPlan;
+}) => {
+	handleStripeBillingPlanErrors({ ctx, billingContext, billingPlan });
 };

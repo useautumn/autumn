@@ -1,0 +1,21 @@
+DESCRIPTION >
+    Probe: does events_property_mv contain ANY row for (org_id, env, property_key)?
+    Used by the server to route unfiltered property group-by queries. The rollup's
+    insert-time value-shape gate drops high-entropy values (UUID / long-hex / opaque),
+    so a key whose values are all gate-dropped has zero rows here even though the raw
+    events exist — querying the rollup for it silently returns an empty result. The
+    server calls this probe first and falls back to events_hourly_mv when the key is
+    absent. Near-free: the sort key leads (org_id, env, property_key).
+
+TOKEN "property_key_exists_read" READ
+
+NODE endpoint
+TYPE endpoint
+SQL >
+    %
+    SELECT 1 as key_exists
+    FROM events_property_mv
+    WHERE org_id = {{ String(org_id, '') }}
+        AND env = {{ String(env, 'test') }}
+        AND property_key = {{ String(property_key, '') }}
+    LIMIT 1

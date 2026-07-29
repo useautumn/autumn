@@ -1,15 +1,13 @@
 import type { ProductItem, ProductV2 } from "@autumn/shared";
+import { Badge, Button, SearchableSelect } from "@autumn/ui";
 import {
 	PackageIcon,
 	PencilSimpleIcon,
 	PuzzlePieceIcon,
 	XIcon,
 } from "@phosphor-icons/react";
-import { Badge } from "@/components/v2/badges/Badge";
-import { Button } from "@/components/v2/buttons/Button";
 import { PriceDisplay } from "@/components/forms/update-subscription-v2/components/PriceDisplay";
-import { SearchableSelect } from "@/components/v2/selects/SearchableSelect";
-import { useOrg } from "@/hooks/common/useOrg";
+import { useCustomerDisplayCurrency } from "@/hooks/common/useCustomerDisplayCurrency";
 import { cn } from "@/lib/utils";
 import { useCreateScheduleFormContext } from "../context/CreateScheduleFormProvider";
 import { CopyFromPreviousPhaseButton } from "./CopyFromPreviousPhaseButton";
@@ -44,7 +42,7 @@ export function SchedulePlanRow({
 		isPhaseLocked,
 		setEditingPlan,
 	} = useCreateScheduleFormContext();
-	const { org } = useOrg();
+	const { displayCurrency, productForDisplay } = useCustomerDisplayCurrency();
 
 	const plan = formValues.phases[phaseIndex]?.plans[planIndex];
 	if (!plan) return null;
@@ -53,12 +51,13 @@ export function SchedulePlanRow({
 	const availableProducts = products.filter((p) => !p.archived);
 	const selectedProduct = products.find((p) => p.id === plan.productId);
 	const hasCustomizations = plan.isCustom;
-	const priceProduct = selectedProduct
+	const basePriceProduct = selectedProduct
 		? getSchedulePlanPriceProduct({
 				product: selectedProduct,
 				customItems: plan.items,
 			})
 		: null;
+	const priceProduct = basePriceProduct && productForDisplay(basePriceProduct);
 
 	const selectedProductIdsInPhase = new Set(
 		formValues.phases[phaseIndex]?.plans
@@ -115,9 +114,7 @@ export function SchedulePlanRow({
 								)}
 						</>
 					)}
-					header={
-						<CopyFromPreviousPhaseButton phaseIndex={phaseIndex} />
-					}
+					header={<CopyFromPreviousPhaseButton phaseIndex={phaseIndex} />}
 					placeholder="Select product..."
 					searchable
 					searchPlaceholder="Search products..."
@@ -158,10 +155,7 @@ export function SchedulePlanRow({
 					)}
 					{priceProduct && (
 						<span className="text-xs text-tertiary-foreground tabular-nums">
-							<PriceDisplay
-								product={priceProduct}
-								currency={org?.default_currency ?? "USD"}
-							/>
+							<PriceDisplay product={priceProduct} currency={displayCurrency} />
 						</span>
 					)}
 				</div>

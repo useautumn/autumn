@@ -19,6 +19,22 @@ import { resolveEntityId } from "./utils/resolveEntityId.js";
 const SENSITIVE_REQUEST_BODY_KEYS = new Set(["connectionString"]);
 const REDACTED_REQUEST_BODY_VALUE = "[REDACTED]";
 
+const parseMockRevenueCatFixtures = (
+	raw: string | undefined,
+): {
+	subscriptions?: unknown[];
+	purchases?: unknown[];
+	products?: unknown[];
+} => {
+	if (!raw) return {};
+	try {
+		const parsed = JSON.parse(raw);
+		return parsed && typeof parsed === "object" ? parsed : {};
+	} catch {
+		return {};
+	}
+};
+
 const redactSensitiveRequestBody = ({ body }: { body: unknown }): unknown => {
 	if (!body || typeof body !== "object") return body;
 
@@ -108,6 +124,7 @@ export const baseMiddleware = async (c: Context<HonoEnv>, next: Next) => {
 		userId: undefined,
 		customerId,
 		entityId,
+		requestBody: body,
 		authType: AuthType.Unknown,
 		env: AppEnv.Sandbox, // maybe use app_env headers
 		scopes: [],
@@ -122,15 +139,35 @@ export const baseMiddleware = async (c: Context<HonoEnv>, next: Next) => {
 		extraLogs: {},
 
 		testOptions: {
+			asyncBalanceUpdate:
+				process.env.NODE_ENV !== "production" &&
+				c.req.header("x-async-balance-update") === "true",
 			eventId: c.req.header("x-event-id"),
 			skipCacheDeletion: c.req.header("x-skip-cache-deletion") === "true",
 			skipWebhooks: c.req.header("x-skip-webhooks") === "true",
+			syncCoalesce:
+				process.env.NODE_ENV !== "production"
+					? c.req.header("x-sync-coalesce") === "true"
+						? true
+						: c.req.header("x-sync-coalesce") === "false"
+							? false
+							: undefined
+					: undefined,
 			keepInternalFields: c.req.header("x-strip-internal") === "false",
 			useReplica: c.req.header("x-use-replica") === "true",
 			mockVercelApi: c.req.header("x-mock-vercel-api") === "true",
 			allowVercelTestOidc:
 				process.env.NODE_ENV !== "production" &&
 				c.req.header("x-allow-vercel-test-oidc") === "true",
+			mockRevenueCat:
+				process.env.NODE_ENV !== "production" &&
+				c.req.header("x-mock-revenuecat") === "true",
+			revenueCat:
+				process.env.NODE_ENV !== "production"
+					? parseMockRevenueCatFixtures(
+							c.req.header("x-mock-revenuecat-fixtures"),
+						)
+					: {},
 		},
 	});
 

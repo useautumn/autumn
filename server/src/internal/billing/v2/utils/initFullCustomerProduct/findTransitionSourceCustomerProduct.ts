@@ -5,7 +5,7 @@ import {
 } from "@autumn/shared";
 import { cp } from "@utils/cusProductUtils/classifyCustomerProduct/cpBuilder";
 
-const PHASE_BOUNDARY_TOLERANCE_MS = 10 * 60 * 1000;
+export const PHASE_BOUNDARY_TOLERANCE_MS = 10 * 60 * 1000;
 
 export const findTransitionSourceCustomerProduct = ({
 	fullCustomer,

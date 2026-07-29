@@ -37,6 +37,7 @@ export const EntitlementSchema = z.object({
 
 	carry_from_previous: z.boolean().default(false).optional(),
 	entity_feature_id: z.string().nullish(),
+	pooled: z.boolean().default(false).optional(),
 
 	// Part of create entitlement
 	org_id: z.string().optional(),
@@ -58,6 +59,7 @@ export const CreateEntitlementSchema = z.object({
 	interval_count: z.number().nullish(),
 	carry_from_previous: z.boolean().default(false),
 	entity_feature_id: z.string().nullish(),
+	pooled: z.boolean().default(false).optional(),
 	usage_limit: z.number().nullish().default(null),
 	rollover: RolloverConfigSchema.nullish(),
 });

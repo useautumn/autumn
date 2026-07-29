@@ -14,11 +14,13 @@ export const withWorkerSpan = async <T>({
 	workflowName,
 	workflowId,
 	tenantAttrs,
+	attributes,
 	fn,
 }: {
 	workflowName: string;
 	workflowId: string;
 	tenantAttrs?: TenantAttrs;
+	attributes?: Record<string, string | number>;
 	fn: () => Promise<T>;
 }): Promise<T> => {
 	return tracer.startActiveSpan(
@@ -26,6 +28,7 @@ export const withWorkerSpan = async <T>({
 		{ kind: SpanKind.CONSUMER },
 		async (span) => {
 			span.setAttributes({
+				...attributes,
 				workflow_id: workflowId,
 				workflow_name: workflowName,
 			});

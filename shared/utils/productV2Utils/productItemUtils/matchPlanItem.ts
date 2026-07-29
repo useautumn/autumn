@@ -9,11 +9,14 @@ import {
 	itemToBillingIntervalCount,
 } from "./itemIntervalUtils.js";
 
-const usageModelToBillingMethod = (
-	usageModel: ProductItem["usage_model"],
-): BillingMethod | undefined => {
-	if (usageModel === UsageModel.Prepaid) return BillingMethod.Prepaid;
-	if (usageModel === UsageModel.PayPerUse) return BillingMethod.UsageBased;
+export const itemToBillingMethod = ({
+	item,
+}: {
+	item: ProductItem;
+}): BillingMethod | undefined => {
+	if (item.usage_model === UsageModel.Prepaid) return BillingMethod.Prepaid;
+	if (item.usage_model === UsageModel.PayPerUse)
+		return BillingMethod.UsageBased;
 	return undefined;
 };
 
@@ -28,7 +31,7 @@ export const matchesPlanItemFilter = ({
 		return false;
 
 	if (filter.billing_method !== undefined) {
-		const itemBillingMethod = usageModelToBillingMethod(item.usage_model);
+		const itemBillingMethod = itemToBillingMethod({ item });
 		if (itemBillingMethod !== filter.billing_method) return false;
 	}
 

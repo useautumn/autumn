@@ -2,10 +2,12 @@ import type { BillingContext, StripeDiscountWithCoupon } from "@autumn/shared";
 import {
 	customerProductsHaveDuplicateProductId,
 	type FullCusProduct,
+	isOneOffPrice,
 	msToSeconds,
 	truncateMsToSecondPrecision,
 } from "@autumn/shared";
 import type Stripe from "stripe";
+import { billingIntervalToStripe } from "@/external/stripe/stripePriceUtils";
 import { logPhase } from "@/external/stripe/subscriptionSchedules/utils/logStripeSchedulePhaseUtils";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { stripeItemSpecToPhaseItem } from "@/internal/billing/v2/providers/stripe/utils/stripeItemSpec/stripeItemSpecToStripeParam";
@@ -77,6 +79,44 @@ const customerProductsToPhaseItems = ({
 	return [...storedItems, ...inlineItems];
 };
 
+export const buildFreeRecurringPlaceholderItem = ({
+	ctx,
+	customerProducts,
+}: {
+	ctx: AutumnContext;
+	customerProducts: FullCusProduct[];
+}): Stripe.SubscriptionScheduleUpdateParams.Phase.Item | undefined => {
+	for (const customerProduct of customerProducts) {
+		const stripeProductId = customerProduct.product.processor?.id;
+		if (!stripeProductId) continue;
+
+		const recurringPrice = customerProduct.customer_prices.find(
+			({ price }) => !isOneOffPrice(price) && price.config.interval,
+		)?.price;
+		if (!recurringPrice) continue;
+
+		const recurring = billingIntervalToStripe({
+			interval: recurringPrice.config.interval,
+			intervalCount: recurringPrice.config.interval_count,
+		});
+		if (!recurring.interval) continue;
+
+		return {
+			price_data: {
+				product: stripeProductId,
+				unit_amount: 0,
+				currency: ctx.org.default_currency || "usd",
+				recurring: {
+					interval: recurring.interval,
+					interval_count: recurring.interval_count,
+				},
+			},
+			quantity: 1,
+			metadata: { autumn_free_phase_placeholder: "true" },
+		};
+	}
+};
+
 /**
  * Converts billing context discounts to the format expected by Stripe schedule phases.
  * Uses the existing discount ID so Stripe reuses the same discount object,
@@ -108,14 +148,14 @@ const stripeDiscountsToPhaseDiscounts = ({
 	);
 };
 
-const getBillingCycleAnchorResetAt = ({
+export const getBillingCycleAnchorResetAts = ({
 	customerProducts,
 	nowMs,
 }: {
 	customerProducts: FullCusProduct[];
 	nowMs: number;
 }) => {
-	const futureResetTimestamps = Array.from(
+	return Array.from(
 		new Set(
 			customerProducts
 				.map(
@@ -123,16 +163,25 @@ const getBillingCycleAnchorResetAt = ({
 				)
 				.filter(
 					(resetAt): resetAt is number =>
-						typeof resetAt === "number" && resetAt > nowMs,
+						typeof resetAt === "number" && resetAt >= nowMs,
 				),
 		),
 	).sort((a, b) => a - b);
+};
 
-	if (futureResetTimestamps.length === 0) {
-		return undefined;
-	}
+export const getBillingCycleAnchorResetAt = ({
+	customerProducts,
+	nowMs,
+}: {
+	customerProducts: FullCusProduct[];
+	nowMs: number;
+}) => {
+	const resetTimestamps = getBillingCycleAnchorResetAts({
+		customerProducts,
+		nowMs,
+	});
 
-	return futureResetTimestamps[0];
+	return resetTimestamps[0];
 };
 
 /**
@@ -161,7 +210,7 @@ export const buildStripePhasesUpdate = ({
 	const normalizedCustomerProducts = customerProducts.map(
 		normalizeCustomerProductTimestamps,
 	);
-	const billingCycleAnchorResetAt = getBillingCycleAnchorResetAt({
+	const billingCycleAnchorResetAts = getBillingCycleAnchorResetAts({
 		customerProducts: normalizedCustomerProducts,
 		nowMs,
 	});
@@ -171,7 +220,7 @@ export const buildStripePhasesUpdate = ({
 		customerProducts: normalizedCustomerProducts,
 		nowMs,
 		trialEndsAt: normalizedTrialEndsAt,
-		newBillingCycleAnchorMs: billingCycleAnchorResetAt,
+		newBillingCycleAnchorMs: billingCycleAnchorResetAts,
 	});
 
 	const debugLogs = false;
@@ -217,6 +266,25 @@ export const buildStripePhasesUpdate = ({
 			phaseStartMs: startMs,
 			phaseEndMs: endMs,
 		});
+		const needsFreePhasePlaceholder =
+			endMs &&
+			(activeCustomerProducts.length > 0 ||
+				(normalizedCustomerProducts.some(
+					(product) => product.starts_at < startMs,
+				) &&
+					normalizedCustomerProducts.some(
+						(product) => product.starts_at >= endMs,
+					)));
+		if (
+			phaseItems.length === 0 &&
+			needsFreePhasePlaceholder
+		) {
+			const placeholderItem = buildFreeRecurringPlaceholderItem({
+				ctx,
+				customerProducts: normalizedCustomerProducts,
+			});
+			if (placeholderItem) phaseItems.push(placeholderItem);
+		}
 
 		// Only set trial_end if trial extends into this phase
 		// Constraint: trial_end must be ≤ phase end_date
@@ -238,7 +306,7 @@ export const buildStripePhasesUpdate = ({
 
 		const phaseStartDateSeconds = msToSeconds(startMs);
 		const isBillingCycleAnchorResetPhase =
-			billingCycleAnchorResetAt === startMs;
+			billingCycleAnchorResetAts.includes(startMs);
 		const hasOneOffInvoiceItems = phaseAddInvoiceItems.length > 0;
 		const shouldInvoicePhaseTransition =
 			phaseIndex > 0 && phaseItems.length > 0;

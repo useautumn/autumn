@@ -1,6 +1,6 @@
 import { cn } from "@/lib/utils";
 import { stripeCurrencyCodes } from "@/utils/constants/stripeCurrencyCodes";
-import { SearchableSelect } from "./SearchableSelect";
+import { SearchableSelect } from "@autumn/ui";
 
 export const CurrencySelect = ({
 	defaultCurrency,

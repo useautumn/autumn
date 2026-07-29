@@ -13,9 +13,11 @@ import {
 	billingAttachContract,
 	billingCreateScheduleContract,
 	billingMultiAttachContract,
+	billingMultiUpdateContract,
 	billingOpenCustomerPortalContract,
 	billingPreviewAttachContract,
 	billingPreviewMultiAttachContract,
+	billingPreviewMultiUpdateContract,
 	billingPreviewUpdateContract,
 	billingSetupPaymentContract,
 	billingUpdateContract,
@@ -27,6 +29,7 @@ import {
 	listCustomersContract,
 	updateCustomerContract,
 } from "./customersContract.js";
+import { dfuFlashContract } from "./dfuContract.js";
 import {
 	createEntityContract,
 	deleteEntityContract,
@@ -46,6 +49,21 @@ import {
 	updateFeatureContract,
 } from "./featuresContract.js";
 import {
+	insertInvoicesContract,
+	listInvoicesContract,
+} from "./invoicesContract.js";
+import {
+	keysMintContract,
+	keysRefreshContract,
+	keysRevokeContract,
+} from "./keysContract.js";
+import {
+	attachLicenseContract,
+	listLicenseAssignmentsContract,
+	listLicensesContract,
+	releaseLicenseContract,
+} from "./licensesContract.js";
+import {
 	createPlanContract,
 	deletePlanContract,
 	getPlanContract,
@@ -60,6 +78,7 @@ import {
 import {
 	referralsCreateCodeContract,
 	referralsRedeemCodeContract,
+	rewardsListContract,
 	rewardsRedeemCodeContract,
 } from "./referralsContract.js";
 
@@ -93,8 +112,13 @@ export const v2_3ContractRouter = oc.router({
 	billingPreviewMultiAttach: billingPreviewMultiAttachContract,
 	billingUpdate: billingUpdateContract,
 	billingPreviewUpdate: billingPreviewUpdateContract,
+	billingMultiUpdate: billingMultiUpdateContract,
+	billingPreviewMultiUpdate: billingPreviewMultiUpdateContract,
 	billingOpenCustomerPortal: billingOpenCustomerPortalContract,
 	billingSetupPayment: billingSetupPaymentContract,
+
+	// DFU (customer imaging / live migration)
+	dfuFlash: dfuFlashContract,
 
 	// Balances
 	balancesCreate: balancesCreateContract,
@@ -103,12 +127,22 @@ export const v2_3ContractRouter = oc.router({
 	balancesFinalize: balancesFinalizeContract,
 	balancesCheck: balancesCheckContract,
 	balancesTrack: balancesTrackContract,
-balancesTrackTokens: balancesTrackTokensContract,
+	balancesTrackTokens: balancesTrackTokensContract,
 	balancesBatchTrack: balancesBatchTrackContract,
 
 	// Events
 	eventsList: eventsListContract,
 	eventsAggregate: eventsAggregateContract,
+
+	// Invoices
+	invoicesInsert: insertInvoicesContract,
+	invoicesList: listInvoicesContract,
+
+	// Licenses
+	licensesAttach: attachLicenseContract,
+	licensesRelease: releaseLicenseContract,
+	licensesListAssignments: listLicenseAssignmentsContract,
+	licensesList: listLicensesContract,
 
 	// Entities
 	entitiesCreate: createEntityContract,
@@ -120,10 +154,16 @@ balancesTrackTokens: balancesTrackTokensContract,
 	// Rewards & Referrals
 	referralsCreateCode: referralsCreateCodeContract,
 	referralsRedeemCode: referralsRedeemCodeContract,
+	rewardsList: rewardsListContract,
 	rewardsRedeemCode: rewardsRedeemCodeContract,
 
 	// Platform
 	platformLinkRevenueCat: platformLinkRevenueCatContract,
 	platformSyncRevenueCat: platformSyncRevenueCatContract,
 	platformGetRevenueCatKeys: platformGetRevenueCatKeysContract,
+
+	// Customer Keys (per-customer JWTs)
+	keysMint: keysMintContract,
+	keysRefresh: keysRefreshContract,
+	keysRevoke: keysRevokeContract,
 });

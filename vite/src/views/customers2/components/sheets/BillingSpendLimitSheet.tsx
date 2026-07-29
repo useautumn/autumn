@@ -3,14 +3,28 @@ import {
 	type Feature,
 	FeatureType,
 	type FullCustomer,
+	type SpendLimitType,
 } from "@autumn/shared";
-import { useState } from "react";
+import {
+	Button,
+	FormLabel,
+	Input,
+	Select,
+	SelectContent,
+	SelectItem,
+	SelectTrigger,
+	SelectValue,
+	Switch,
+} from "@autumn/ui";
+import { type ChangeEvent, useState } from "react";
 import { toast } from "sonner";
-import { Switch } from "@/components/ui/switch";
-import { Button } from "@/components/v2/buttons/Button";
+import {
+	OVERAGE_BILLING_OPTIONS,
+	type OverageBillingOption,
+	optionToSkipOverageBilling,
+	skipOverageBillingToOption,
+} from "@/components/billing-controls/overageBillingOptions";
 import { FeatureSearchDropdown } from "@/components/v2/dropdowns/FeatureSearchDropdown";
-import { FormLabel } from "@/components/v2/form/FormLabel";
-import { Input } from "@/components/v2/inputs/Input";
 import {
 	LayoutGroup,
 	SheetFooter,
@@ -24,6 +38,11 @@ import { useAxiosInstance } from "@/services/useAxiosInstance";
 import { getBackendErr } from "@/utils/genUtils";
 import { useCusQuery } from "@/views/customers/customer/hooks/useCusQuery";
 import { useCustomerContext } from "../../customer/CustomerContext";
+
+const LIMIT_TYPE_LABELS: Record<SpendLimitType, string> = {
+	absolute: "Absolute",
+	usage_percentage: "Usage %",
+};
 
 export function BillingSpendLimitSheet() {
 	const closeSheet = useSheetStore((s) => s.closeSheet);
@@ -51,6 +70,14 @@ export function BillingSpendLimitSheet() {
 	const [overageLimit, setOverageLimit] = useState(
 		existingItem?.overage_limit?.toString() ?? "",
 	);
+	const [limitType, setLimitType] = useState<SpendLimitType>(
+		existingItem?.limit_type ?? "absolute",
+	);
+	const [overageBilling, setOverageBilling] = useState<OverageBillingOption>(
+		skipOverageBillingToOption(existingItem?.skip_overage_billing),
+	);
+
+	const isUsagePercentage = limitType === "usage_percentage";
 
 	const nonArchivedFeatures = (features ?? []).filter(
 		(f: Feature) => !f.archived && f.type !== FeatureType.Boolean,
@@ -95,22 +122,27 @@ export function BillingSpendLimitSheet() {
 		const parsedOverageLimit =
 			overageLimit.trim() === "" ? undefined : Number.parseFloat(overageLimit);
 
+		// A spend limit only applies to a specific feature; without one it is
+		// silently ignored server-side.
+		if (!featureId) {
+			toast.error("Feature is required for a spend limit");
+			return;
+		}
+
 		if (parsedOverageLimit !== undefined) {
 			if (Number.isNaN(parsedOverageLimit) || parsedOverageLimit < 0) {
 				toast.error("Please enter a valid overage limit");
 				return;
 			}
-			if (!featureId) {
-				toast.error("Feature is required when overage limit is set");
-				return;
-			}
 		}
 
-		const item: DbSpendLimit = {
+		const item = {
 			feature_id: featureId || undefined,
 			enabled,
 			overage_limit: parsedOverageLimit,
-		};
+			limit_type: limitType,
+			skip_overage_billing: optionToSkipOverageBilling(overageBilling),
+		} satisfies DbSpendLimit;
 
 		const currentSpendLimits = getCurrentSpendLimits();
 
@@ -187,13 +219,71 @@ export function BillingSpendLimitSheet() {
 						</div>
 
 						<div>
-							<FormLabel>Overage limit</FormLabel>
+							<FormLabel>Limit type</FormLabel>
+							<Select
+								value={limitType}
+								onValueChange={(value: string) => {
+									// Clear the amount: units and percent aren't interchangeable.
+									setLimitType(value as SpendLimitType);
+									setOverageLimit("");
+								}}
+								items={LIMIT_TYPE_LABELS}
+							>
+								<SelectTrigger className="w-full">
+									<SelectValue />
+								</SelectTrigger>
+								<SelectContent>
+									<SelectItem value="absolute">
+										{LIMIT_TYPE_LABELS.absolute}
+									</SelectItem>
+									<SelectItem value="usage_percentage">
+										{LIMIT_TYPE_LABELS.usage_percentage}
+									</SelectItem>
+								</SelectContent>
+							</Select>
+						</div>
+
+						<div>
+							<FormLabel>
+								{isUsagePercentage ? "Overage limit (%)" : "Overage limit"}
+							</FormLabel>
 							<Input
-								placeholder="Optional — leave empty for no limit"
+								placeholder={
+									isUsagePercentage
+										? "eg, 120"
+										: "Optional — leave empty for no limit"
+								}
 								type="number"
 								value={overageLimit}
-								onChange={(e) => setOverageLimit(e.target.value)}
+								onChange={(e: ChangeEvent<HTMLInputElement>) =>
+									setOverageLimit(e.target.value)
+								}
 							/>
+						</div>
+
+						<div>
+							<FormLabel>Overage billing</FormLabel>
+							<Select
+								value={overageBilling}
+								onValueChange={(value: string) =>
+									setOverageBilling(value as OverageBillingOption)
+								}
+								items={OVERAGE_BILLING_OPTIONS}
+							>
+								<SelectTrigger className="w-full">
+									<SelectValue />
+								</SelectTrigger>
+								<SelectContent>
+									{OVERAGE_BILLING_OPTIONS.map((option) => (
+										<SelectItem key={option.value} value={option.value}>
+											{option.label}
+										</SelectItem>
+									))}
+								</SelectContent>
+							</Select>
+							<div className="mt-1 text-xs text-tertiary-foreground">
+								Skipped usage still resets each cycle but is never invoiced.
+							</div>
 						</div>
 					</div>
 				</SheetSection>

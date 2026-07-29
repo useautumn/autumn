@@ -1,14 +1,14 @@
 import type { Invite, Membership } from "@autumn/shared";
+import { IconButton } from "@autumn/ui";
 import { EllipsisVertical, TrashIcon } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
-import { IconButton } from "@/components/v2/buttons/IconButton";
 import {
 	DropdownMenu,
 	DropdownMenuContent,
 	DropdownMenuItem,
 	DropdownMenuTrigger,
-} from "@/components/v2/dropdowns/DropdownMenu";
+} from "@autumn/ui";
 import { authClient } from "@/lib/auth-client";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
 import { useMemberships } from "../hooks/useMemberships";

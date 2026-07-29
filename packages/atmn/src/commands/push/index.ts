@@ -4,6 +4,9 @@ export {
 	createFeatureDeletePrompt,
 	createPlanArchivedPrompt,
 	createPlanDeletePrompt,
+	createPlanMigrationPrompt,
+	createPlanVariantPropagationGroupPrompt,
+	createPlanVariantPropagationPrompt,
 	createPlanVersioningPrompt,
 	createProdConfirmationPrompt,
 	type PromptType,
@@ -11,12 +14,23 @@ export {
 } from "./prompts.js";
 export {
 	analyzePush,
+	buildLatestPlanVersionById,
+	buildCatalogUpdateParams,
+	catalogFeatureChangeHasChanges,
+	catalogPlanChangeHasChanges,
+	catalogPreviewHasChanges,
+	catalogPreviewToPushResult,
 	checkFeatureDeleteInfo,
 	archiveFeature,
 	archivePlan,
 	deleteFeature,
 	deletePlan,
 	fetchRemoteData,
+	isHistoricalPlan,
+	planChangeHasHistoricalVersions,
+	planTargetKey,
+	previewCatalogPush,
+	pushCatalog,
 	refreshPlansForVersioning,
 	pushFeature,
 	pushPlan,
@@ -25,11 +39,17 @@ export {
 } from "./push.js";
 export type {
 	FeatureDeleteInfo,
+	PlanMigrationSelections,
 	PlanDeleteInfo,
 	PlanUpdateInfo,
+	PlanUpdateIntentSelections,
 	PushAnalysis,
 	PushResult,
 	RemoteData,
+	VariantUpdateInfo,
+	VariantMigrationSelections,
+	VariantPropagationSelections,
+	VariantUpdateIntentSelections,
 } from "./types.js";
 
 export {

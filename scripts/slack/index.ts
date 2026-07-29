@@ -9,6 +9,7 @@ import {
 } from "node:fs";
 import { homedir, tmpdir } from "node:os";
 import { join, resolve } from "node:path";
+import { DEFAULT_SLACK_BOT_SCOPES } from "@autumn/shared/utils/auth/slackScopes";
 import chalk from "chalk";
 import inquirer from "inquirer";
 
@@ -62,23 +63,6 @@ const resolveWorktreeNgrokUrl = ({
 
 	return includeEnvFallback ? process.env.NGROK_URL : undefined;
 };
-
-const defaultSlackScopes = [
-	"app_mentions:read",
-	"assistant:write",
-	"channels:history",
-	"channels:read",
-	"chat:write",
-	"files:read",
-	"groups:history",
-	"groups:read",
-	"im:history",
-	"im:read",
-	"im:write",
-	"mpim:history",
-	"mpim:read",
-	"users:read",
-];
 
 const defaultBotEvents = [
 	"app_mention",
@@ -293,7 +277,7 @@ const parseArgs = ({ argv }: { argv: string[] }): Args => {
 		provider,
 		scopes: scopes
 			? scopes.split(",").map((scope) => scope.trim())
-			: defaultSlackScopes,
+			: [...DEFAULT_SLACK_BOT_SCOPES],
 		target:
 			targetArg === "local" ||
 			targetArg === "prod" ||

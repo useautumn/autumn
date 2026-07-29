@@ -1,38 +1,39 @@
 import {
+	Button,
+	CopyButton,
+	IconBadge,
+	Select,
+	SelectContent,
+	SelectItem,
+	SelectSeparator,
+	SelectTrigger,
+	SelectValue,
+	SmallSpinner,
+	Tooltip,
+	TooltipContent,
+	TooltipTrigger,
+} from "@autumn/ui";
+import {
 	ArrowsClockwiseIcon,
 	TriangleIcon,
 	UserIcon,
 } from "@phosphor-icons/react";
-import { IconButton } from "@/components/v2/buttons/IconButton";
+import { PlusIcon } from "lucide-react";
 import { parseAsString, useQueryStates } from "nuqs";
 import { useMemo, useState } from "react";
 import { useNavigate } from "react-router";
 import { AdminHover } from "@/components/general/AdminHover";
-import SmallSpinner from "@/components/general/SmallSpinner";
-import { IconBadge } from "@/components/v2/badges/IconBadge";
 import V2Breadcrumb from "@/components/v2/breadcrumb";
-import { Button } from "@/components/v2/buttons/Button";
-import { CopyButton } from "@/components/v2/buttons/CopyButton.tsx";
 import { RevenueCatIcon } from "@/components/v2/icons/AutumnIcons";
-import {
-	Select,
-	SelectContent,
-	SelectItem,
-	SelectTrigger,
-	SelectValue,
-} from "@/components/v2/selects/Select";
-import {
-	Tooltip,
-	TooltipContent,
-	TooltipTrigger,
-} from "@/components/v2/tooltips/Tooltip";
 import { useAutumnFlags } from "@/hooks/common/useAutumnFlags";
 import { useOrg } from "@/hooks/common/useOrg";
 import { useRCMappings } from "@/hooks/queries/revcat/useRCMappings";
+import { useProductsQuery } from "@/hooks/queries/useProductsQuery";
 import {
 	useIsCusPlanEditor,
 	useProductStore,
 } from "@/hooks/stores/useProductStore.ts";
+import { useVariantViewStore } from "@/hooks/stores/useVariantViewStore.ts";
 import { useEnv } from "@/utils/envUtils";
 import { pushPage } from "@/utils/genUtils";
 import { useCusQuery } from "@/views/customers/customer/hooks/useCusQuery.tsx";
@@ -42,11 +43,17 @@ import {
 	useProductQuery,
 	useProductQueryState,
 } from "../../product/hooks/useProductQuery";
+import { useCreateVariant } from "../hooks/useCreateVariant";
 import {
 	MigrateCustomersDialog,
 	useMigratableVersions,
 } from "../versioning/MigrateCustomersDialog";
+import { CreateVariantButton } from "./CreateVariantButton";
+import { CreateVariantDialog } from "./CreateVariantDialog";
 import { PlanToolbar } from "./PlanToolbar.tsx";
+import { BackToPlanButton } from "./plan-licenses/BackToPlanButton";
+
+const MIGRATE_CUSTOMERS = "__migrate_customers__";
 
 export const EditPlanHeader = () => {
 	const { numVersions, versionCounts, isLoading } = useProductQuery();
@@ -59,10 +66,11 @@ export const EditPlanHeader = () => {
 	const isCusPlanEditor = useIsCusPlanEditor();
 	const flags = useAutumnFlags();
 	const { mappings } = useRCMappings();
-	const { org } = useOrg();
+	const { org } = useOrg({ skipSandbox: false });
 	const env = useEnv();
 	const currency = org?.default_currency ?? "USD";
 	const [migrateDialogOpen, setMigrateDialogOpen] = useState(false);
+	const showAllVariants = useVariantViewStore((s) => s.showAllVariants);
 
 	const pastVersionsWithCustomers = useMemo(() => {
 		if (!numVersions || numVersions <= 1) return [];
@@ -105,7 +113,13 @@ export const EditPlanHeader = () => {
 	);
 	const currentVersion = queryStates.version || product.version;
 
+	const canMigrate = pastVersionsWithCustomers.length > 0 && !isCusPlanEditor;
+
 	const handleVersionChange = (version: string) => {
+		if (version === MIGRATE_CUSTOMERS) {
+			setMigrateDialogOpen(true);
+			return;
+		}
 		const versionNumber = parseInt(version, 10);
 		if (versionNumber === numVersions && !isCusPlanEditor) {
 			// Remove version param for latest version
@@ -246,31 +260,40 @@ export const EditPlanHeader = () => {
 					</div>
 
 					<div className="flex flex-row gap-2 items-center">
-						{pastVersionsWithCustomers.length > 0 && !isCusPlanEditor && (
-							<IconButton
-								variant="secondary"
-								size="mini"
-								icon={<ArrowsClockwiseIcon />}
-								iconOrientation="left"
-								onClick={() => setMigrateDialogOpen(true)}
-							>
-								Migrate customers
-							</IconButton>
-						)}
+						<VariantSelect />
 						{numVersions && numVersions > 1 && (
 							<Select
 								value={currentVersion.toString()}
 								onValueChange={handleVersionChange}
-								items={Object.fromEntries(
-									versionOptions.map((version) => [
-										version.toString(),
-										`Version ${version}`,
-									]),
-								)}
+								disabled={showAllVariants}
+								items={{
+									...Object.fromEntries(
+										versionOptions.map((version) => [
+											version.toString(),
+											`Version ${version}`,
+										]),
+									),
+									...(canMigrate
+										? { [MIGRATE_CUSTOMERS]: "Migrate customers" }
+										: {}),
+								}}
 							>
-								<SelectTrigger className="w-fit min-w-28 !h-6" size="sm">
-									<SelectValue placeholder="Version" />
-								</SelectTrigger>
+								{showAllVariants ? (
+									<Tooltip>
+										<TooltipTrigger render={<span />}>
+											<SelectTrigger className="w-fit min-w-28 !h-6" size="sm">
+												<SelectValue placeholder="Version" />
+											</SelectTrigger>
+										</TooltipTrigger>
+										<TooltipContent>
+											Latest versions of all plans are shown
+										</TooltipContent>
+									</Tooltip>
+								) : (
+									<SelectTrigger className="w-fit min-w-28 !h-6" size="sm">
+										<SelectValue placeholder="Version" />
+									</SelectTrigger>
+								)}
 								<SelectContent>
 									{versionOptions.map((version) => {
 										const count = versionCounts[version]?.active || 0;
@@ -293,13 +316,127 @@ export const EditPlanHeader = () => {
 											</SelectItem>
 										);
 									})}
+									{canMigrate && (
+										<>
+											<SelectSeparator />
+											<SelectItem value={MIGRATE_CUSTOMERS}>
+												<div className="flex items-center gap-2">
+													<ArrowsClockwiseIcon />
+													<span>Migrate customers</span>
+												</div>
+											</SelectItem>
+										</>
+									)}
 								</SelectContent>
 							</Select>
 						)}
-						{!isCusPlanEditor && <PlanToolbar />}
+						{!isCusPlanEditor && (
+							<>
+								<BackToPlanButton />
+								<CreateVariantButton />
+								<PlanToolbar />
+							</>
+						)}
 					</div>
 				</div>
 			</div>
+		</>
+	);
+};
+
+const SHOW_ALL_VARIANTS = "__show_all_variants__";
+const CREATE_VARIANT = "__create_variant__";
+
+const VariantSelect = () => {
+	const product = useProductStore((s) => s.product);
+	const { products } = useProductsQuery();
+	const navigate = useNavigate();
+	const showAllVariants = useVariantViewStore((s) => s.showAllVariants);
+	const setShowAllVariants = useVariantViewStore((s) => s.setShowAllVariants);
+
+	// base_id is only populated on products-list entries, not the store product,
+	// so resolve it from the list. A base plan is its own base.
+	const baseId = useMemo(() => {
+		const current = products.find((p) => p.id === product.id);
+		return current?.base_id ?? product.id;
+	}, [products, product.id]);
+
+	const variantOptions = useMemo(() => {
+		const base = products.find((p) => p.id === baseId);
+		const variants = products
+			.filter((p) => p.base_id === baseId)
+			.sort((a, b) => a.name.localeCompare(b.name));
+		return base ? [base, ...variants] : variants;
+	}, [products, baseId]);
+
+	const baseProduct = products.find((p) => p.id === baseId);
+	const createVariant = useCreateVariant(baseProduct ?? product);
+
+	const hasVariants = variantOptions.some((p) => p.id !== baseId);
+	if (!hasVariants) return null;
+
+	const handleChange = (id: string) => {
+		if (id === CREATE_VARIANT) {
+			createVariant.setOpen(true);
+			return;
+		}
+		if (id === SHOW_ALL_VARIANTS) {
+			setShowAllVariants(true);
+			// Variant cards only exist on the base, so focus it.
+			if (product.id !== baseId) {
+				pushPage({
+					navigate,
+					path: `/products/${baseId}`,
+					preserveParams: false,
+				});
+			}
+			return;
+		}
+		setShowAllVariants(false);
+		if (id === product.id) return;
+		pushPage({ navigate, path: `/products/${id}`, preserveParams: false });
+	};
+
+	return (
+		<>
+			<Select
+				value={showAllVariants ? SHOW_ALL_VARIANTS : product.id}
+				onValueChange={handleChange}
+				items={{
+					...Object.fromEntries(variantOptions.map((v) => [v.id, v.name])),
+					[SHOW_ALL_VARIANTS]: "All variants",
+				}}
+			>
+				<SelectTrigger className="w-fit min-w-28 max-w-48 !h-6" size="sm">
+					<SelectValue placeholder="Variant" className="min-w-0 truncate" />
+				</SelectTrigger>
+				<SelectContent>
+					{variantOptions.map((variant) => (
+						<SelectItem key={variant.id} value={variant.id}>
+							<div className="flex items-center justify-between w-full gap-3">
+								<span>{variant.name}</span>
+								{variant.id === baseId && (
+									<span className="text-tertiary-foreground text-xs">Base</span>
+								)}
+							</div>
+						</SelectItem>
+					))}
+					<SelectSeparator />
+					<SelectItem value={SHOW_ALL_VARIANTS}>
+						<span>Show all variants</span>
+					</SelectItem>
+					<SelectSeparator />
+					<SelectItem value={CREATE_VARIANT}>
+						<div className="flex items-center gap-2">
+							<PlusIcon size={12} className="text-tertiary-foreground" />
+							<span>Create variant</span>
+						</div>
+					</SelectItem>
+				</SelectContent>
+			</Select>
+			{createVariant.open && (
+				<CreateVariantDialog {...createVariant.dialogProps} />
+			)}
 		</>
 	);
 };

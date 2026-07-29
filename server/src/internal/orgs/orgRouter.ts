@@ -11,6 +11,7 @@ import { handlePreflightRevenueCatSync } from "@/external/revenueCat/handlers/ha
 import { handleSaveRCMappings } from "@/external/revenueCat/handlers/handleSaveRevenuecatMappings.js";
 import { handleSyncRevenueCatProducts } from "@/external/revenueCat/handlers/handleSyncRevenueCatProducts.js";
 import type { HonoEnv } from "@/honoUtils/HonoEnv.js";
+import { organizationSsoRouter } from "@/internal/auth/sso/ssoRouter.js";
 import { handleDisconnectRevenueCat } from "@/internal/orgs/handlers/revenueCatHandlers/handleDisconnectRevenueCat.js";
 import {
 	handleGetRevenueCatWebhook,
@@ -35,6 +36,10 @@ import {
 	handleGetRevenueCatConfig,
 	handleUpsertRevenueCatConfig,
 } from "./handlers/handleRevenueCatConfig.js";
+import {
+	handleGetTransitionRules,
+	handleUpdateTransitionRules,
+} from "./handlers/handleTransitionRules.js";
 import { handleUpdateOrg } from "./handlers/handleUpdateOrg.js";
 import { handleUpdateOrgConfig } from "./handlers/handleUpdateOrgConfig.js";
 import {
@@ -49,6 +54,8 @@ import { handleConnectStripe } from "./handlers/stripeHandlers/handleConnectStri
 import { handleDeleteStripe } from "./handlers/stripeHandlers/handleDeleteStripe.js";
 import { handleGetOAuthUrl } from "./handlers/stripeHandlers/handleGetOAuthUrl.js";
 import { handleGetStripeAccount } from "./handlers/stripeHandlers/handleGetStripeAccount.js";
+import { handleResolveStripeProducts } from "./handlers/stripeHandlers/handleResolveStripeProducts.js";
+import { handleSearchStripeProducts } from "./handlers/stripeHandlers/handleSearchStripeProducts.js";
 
 export const internalOrgRouter = new Hono<HonoEnv>();
 
@@ -57,11 +64,14 @@ internalOrgRouter.delete("", ...handleDeleteOrg);
 internalOrgRouter.patch("/config", ...handleUpdateOrgConfig);
 internalOrgRouter.get("/custom-buttons", ...handleGetCustomButtons);
 internalOrgRouter.patch("/custom-buttons", ...handleUpdateCustomButtons);
+internalOrgRouter.get("/transition_rules", ...handleGetTransitionRules);
+internalOrgRouter.patch("/transition_rules", ...handleUpdateTransitionRules);
 internalOrgRouter.get("/members", ...handleGetOrgMembers);
 internalOrgRouter.post("/remove-member", ...handleRemoveMember);
 internalOrgRouter.get("/upload_url", ...handleGetUploadUrl);
 internalOrgRouter.delete("/logo", ...handleDeleteOrgLogo);
 internalOrgRouter.get("/invites", ...handleGetInvites);
+internalOrgRouter.route("/sso", organizationSsoRouter);
 
 export const honoOrgRouter = new Hono<HonoEnv>();
 honoOrgRouter.get("", ...handleGetOrg);
@@ -93,7 +103,11 @@ honoOrgRouter.patch("", ...handleUpdateOrg);
 honoOrgRouter.patch("/config", ...handleUpdateOrgConfig);
 honoOrgRouter.get("/custom-buttons", ...handleGetCustomButtons);
 honoOrgRouter.patch("/custom-buttons", ...handleUpdateCustomButtons);
+honoOrgRouter.get("/transition_rules", ...handleGetTransitionRules);
+honoOrgRouter.patch("/transition_rules", ...handleUpdateTransitionRules);
 honoOrgRouter.get("/stripe", ...handleGetStripeAccount);
+honoOrgRouter.get("/stripe/products/search", ...handleSearchStripeProducts);
+honoOrgRouter.post("/stripe/products/resolve", ...handleResolveStripeProducts);
 honoOrgRouter.delete("/stripe", ...handleDeleteStripe);
 honoOrgRouter.post("/stripe", ...handleConnectStripe);
 honoOrgRouter.get("/stripe/oauth_url", ...handleGetOAuthUrl);

@@ -63,12 +63,16 @@ export const deleteConnectedAccount = async ({
 	env: AppEnv;
 	logger: Logger;
 }) => {
-	const masterStripe = initMasterStripe({ env });
+	const masterStripe = initMasterStripe({ env, legacyVersion: false });
 	try {
-		await masterStripe.accounts.del(accountId);
-		logger.info(`Deleted account ${accountId} for ${env}`);
+		// These accounts are created via v2 `core.accounts.create`, which are
+		// closed (not v1-deleted); all applied configurations must be passed.
+		await masterStripe.v2.core.accounts.close(accountId, {
+			applied_configurations: ["merchant"],
+		});
+		logger.info(`Closed account ${accountId} for ${env}`);
 	} catch (error) {
-		logger.error(`Failed to delete account ${accountId} for ${env}`, error);
+		logger.error(`Failed to close account ${accountId} for ${env}`, error);
 	}
 };
 

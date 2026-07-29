@@ -72,11 +72,7 @@ interface CreateScheduleFormContextValue {
 		phaseIndex: number;
 		planIndex: number;
 	}) => void;
-	handleCopyFromPreviousPhase: ({
-		phaseIndex,
-	}: {
-		phaseIndex: number;
-	}) => void;
+	handleCopyFromPreviousPhase: ({ phaseIndex }: { phaseIndex: number }) => void;
 
 	editingPlan: EditingPlan | null;
 	editingPlanValue: SchedulePlan | null;

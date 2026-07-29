@@ -1,5 +1,6 @@
 import type { AgentPricingConfig } from "@autumn/shared";
 import type { ReactNode } from "react";
+import { useOrg } from "@/hooks/common/useOrg";
 import { GroupedPlanCards } from "./preview/GroupedPlanCards";
 import { PreviewCreditSchemaCard } from "./preview/PreviewCreditSchemaCard";
 import {
@@ -29,12 +30,15 @@ export function PricingPreview({
 	isSyncing,
 	headerActions,
 }: PricingPreviewProps) {
+	const { org } = useOrg();
+	const currency = org?.default_currency ?? "USD";
 	const hasProducts = config && config.products.length > 0;
 
 	const previewProducts = hasProducts
 		? transformToPreviewProducts({
 				products: config.products,
 				features: config.features,
+				currency,
 			})
 		: [];
 

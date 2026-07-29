@@ -1,4 +1,4 @@
-import type { InferInsertModel, InferSelectModel } from "drizzle-orm";
+import { type InferInsertModel, type InferSelectModel, sql } from "drizzle-orm";
 import {
 	boolean,
 	foreignKey,
@@ -88,6 +88,18 @@ export const invoiceLineItems = pgTable(
 			"gin",
 			table.customer_product_ids,
 		),
+		index("idx_invoice_line_items_stripe_invoice_id")
+			.on(table.stripe_invoice_id)
+			.where(sql`${table.stripe_invoice_id} IS NOT NULL`)
+			.concurrently(),
+		index("idx_invoice_line_items_invoice_id")
+			.on(table.invoice_id)
+			.where(sql`${table.invoice_id} IS NOT NULL`)
+			.concurrently(),
+		index("idx_invoice_line_items_stripe_invoice_item_id")
+			.on(table.stripe_invoice_item_id)
+			.where(sql`${table.stripe_invoice_item_id} IS NOT NULL`)
+			.concurrently(),
 	],
 );
 

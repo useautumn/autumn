@@ -4,13 +4,18 @@ import type { AppEnv } from "@autumn/shared";
 import type { Span } from "braintrust";
 import { formatToolAction } from "../../../agent/tools/autumnMcp.js";
 import {
-	type createPreviewCapture,
 	isSilentTool,
+	isToolErrorResult,
+	normalizeToolName,
+	sandboxToolLabel,
 	toolLabel,
 } from "../../../agent/tools/toolPolicy.js";
 import { approvalErrorResult } from "../../../internal/approvals/utils/approvalErrors.js";
+import {
+	isPreviewTool,
+	writeToPreviewTool,
+} from "../../../internal/approvals/utils/toolRegistry.js";
 import type { KeyedActionLogger } from "../../../ui/progress.js";
-import { buildPreviewNudgeText } from "../../common/previewNudge.js";
 import { claudeManagedConfig } from "../config.js";
 import {
 	driveSessionTurn,
@@ -50,43 +55,22 @@ const interruptSession = async ({
 		sessionId,
 	});
 
-const mergeTurnOutcomes = (
-	first: SessionTurnOutcome,
-	second: SessionTurnOutcome,
-): SessionTurnOutcome => ({
-	errorMessage: second.errorMessage ?? first.errorMessage,
-	suspendedQueue: second.suspendedQueue,
-	textParts: [...first.textParts, ...second.textParts],
-	usage: {
-		cacheCreationInputTokens:
-			first.usage.cacheCreationInputTokens +
-			second.usage.cacheCreationInputTokens,
-		cacheReadInputTokens:
-			first.usage.cacheReadInputTokens + second.usage.cacheReadInputTokens,
-		inputTokens: first.usage.inputTokens + second.usage.inputTokens,
-		outputTokens: first.usage.outputTokens + second.usage.outputTokens,
-	},
-});
-
 export const runClaudeManagedTurn = async ({
 	client,
 	content,
 	env,
-	isCancelled,
 	logger,
 	onAction,
 	onActionKeyed,
 	onThinking,
 	onTurnEnd,
 	orgId,
-	previewCapture,
 	sessionId,
 	span,
 }: {
 	client: Anthropic;
 	content: UserMessageContentBlock[];
 	env: AppEnv;
-	isCancelled?: () => boolean;
 	logger: AutumnLogger;
 	onAction?: (message: string) => Promise<void> | void;
 	onActionKeyed?: KeyedActionLogger;
@@ -95,10 +79,12 @@ export const runClaudeManagedTurn = async ({
 		turn: SessionTurnOutcome,
 	) => Promise<"continue" | "stop"> | "continue" | "stop";
 	orgId: string;
-	previewCapture: ReturnType<typeof createPreviewCapture>;
 	sessionId: string;
 	span?: Span;
 }) => {
+	// The agent previews then writes in one turn (per the system prompt); capture
+	// the latest preview result so the approval card shows the cost.
+	let lastPreview: { preview: unknown; previewTool: string } | undefined;
 	const driveTurn = ({
 		content,
 		span,
@@ -122,7 +108,6 @@ export const runClaudeManagedTurn = async ({
 				if (!isSilentTool(name)) {
 					await onAction?.(formatToolAction({ args: input, toolName: name }));
 				}
-				previewCapture.onToolCall({ input, name });
 				if (span) {
 					openToolSpans.set(
 						id,
@@ -131,7 +116,12 @@ export const runClaudeManagedTurn = async ({
 				}
 			},
 			onAutumnToolResult: ({ id, name, output }) => {
-				previewCapture.onToolResult({ name, output });
+				if (isPreviewTool(name) && !isToolErrorResult(output)) {
+					lastPreview = {
+						preview: output,
+						previewTool: normalizeToolName(name),
+					};
+				}
 				const toolSpan = openToolSpans.get(id);
 				if (toolSpan) {
 					toolSpan.log({ output });
@@ -139,7 +129,7 @@ export const runClaudeManagedTurn = async ({
 					openToolSpans.delete(id);
 				}
 			},
-			onSandboxTool: async ({ input }) => {
+			onSandboxTool: async ({ input, name }) => {
 				const command = typeof input.command === "string" ? input.command : "";
 				const seconds = Number(command.match(SLEEP_COMMAND_REGEX)?.[1] ?? 0);
 				if (seconds >= SURFACED_SLEEP_MIN_SECONDS) {
@@ -147,7 +137,10 @@ export const runClaudeManagedTurn = async ({
 						key: "sandbox_wait",
 						message: `Waiting ${seconds}s before retrying…`,
 					});
+					return;
 				}
+				// Surface other sandbox tools (e.g. `read` loading a skill) live.
+				await onAction?.(sandboxToolLabel(name, input));
 			},
 			onThinking,
 			onSessionRetry: async ({ message }) => {
@@ -199,37 +192,16 @@ export const runClaudeManagedTurn = async ({
 		}
 	};
 
-	const first = await driveTurnWithInterruptRetry({ content, span });
-	const captured = previewCapture.captured;
-	if (
-		first.suspendedQueue?.length ||
-		first.errorMessage ||
-		!captured ||
-		isCancelled?.()
-	) {
-		return first;
-	}
+	const outcome = await driveTurnWithInterruptRetry({ content, span });
 
-	logger.info("Nudging Claude Managed agent to call write tool", {
-		event: "leaf.claude_managed_preview_nudge",
-		context: { env, org_id: orgId },
-		tool: captured.toolName,
-	});
-	const nudge = await driveTurn({
-		content: [
-			{
-				text: buildPreviewNudgeText({ toolName: captured.toolName }),
-				type: "text",
-			},
-		],
-		span,
-	});
-	if (!nudge.suspendedQueue?.length) {
-		logger.warn("Claude Managed agent did not suspend after nudge", {
-			event: "leaf.claude_managed_preview_nudge_failed",
-			context: { env, org_id: orgId },
-			tool: captured.toolName,
-		});
+	// Attach the captured preview to the suspended write so the card shows cost.
+	const suspended = outcome.suspendedQueue?.[0];
+	if (
+		suspended &&
+		lastPreview &&
+		writeToPreviewTool(suspended.toolName) === lastPreview.previewTool
+	) {
+		suspended.preview = lastPreview.preview;
 	}
-	return mergeTurnOutcomes(first, nudge);
+	return outcome;
 };

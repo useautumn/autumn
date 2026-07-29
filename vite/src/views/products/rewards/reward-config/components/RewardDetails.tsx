@@ -1,5 +1,4 @@
-import { FormLabel } from "@/components/v2/form/FormLabel";
-import { Input } from "@/components/v2/inputs/Input";
+import { FormLabel, Input } from "@autumn/ui";
 import { SheetSection } from "@/components/v2/sheets/SharedSheetComponents";
 import { useAutoSlug } from "@/hooks/common/useAutoSlug";
 import type { FrontendReward } from "../../types/frontendReward";

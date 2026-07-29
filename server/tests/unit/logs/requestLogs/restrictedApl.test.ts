@@ -3,6 +3,7 @@ import { AppEnv } from "@autumn/shared";
 import { buildRequestLogsApl } from "@/internal/logs/actions/searchRequestLogs/buildRequestLogsApl.js";
 import {
 	parseRestrictedApl,
+	RestrictedAplStageNotAllowedError,
 	restrictedAplToApl,
 } from "@/internal/logs/parser/restrictedApl.js";
 
@@ -186,6 +187,157 @@ describe("restricted request-log APL", () => {
 				allowedStages: ["where", "orderBy", "limit"],
 			}),
 		).toThrow("Unsupported query stage: summarize");
+	});
+
+	test("parses time-bucketed aggregates with bin(timestamp, interval)", () => {
+		const ast = parseRestrictedApl({
+			query:
+				"where customer_id == 'cus_123' | summarize failed = countif(status_code >= 400), total = count() by bin(timestamp, 1d) | order by timestamp desc",
+			allowedStages: ["where", "summarize", "orderBy", "limit"],
+		});
+
+		expect(restrictedAplToApl(ast)).toEqual([
+			"| where customer_id == 'cus_123'",
+			"| summarize failed = countif(status_code >= 400), total = count() by timestamp = bin(timestamp, 1d)",
+			"| order by timestamp desc",
+		]);
+	});
+
+	test("parses bin combined with other grouping fields", () => {
+		const ast = parseRestrictedApl({
+			query:
+				"summarize total = count() by bin(timestamp, 6h), request_path | order by timestamp asc",
+			allowedStages: ["summarize", "orderBy"],
+		});
+
+		expect(restrictedAplToApl(ast)).toEqual([
+			"| summarize total = count() by timestamp = bin(timestamp, 6h), request_path",
+			"| order by timestamp asc",
+		]);
+	});
+
+	test("rejects invalid bin targets and intervals", () => {
+		expect(() =>
+			parseRestrictedApl({
+				query: "summarize total = count() by bin(status_code, 1h)",
+				allowedStages: ["summarize"],
+			}),
+		).toThrow("bin() only supports the timestamp field");
+		expect(() =>
+			parseRestrictedApl({
+				query: "summarize total = count() by bin(timestamp, 1w)",
+				allowedStages: ["summarize"],
+			}),
+		).toThrow("bin() interval unit must be m, h, or d");
+		expect(() =>
+			parseRestrictedApl({
+				query: "summarize total = count() by bin(timestamp, 0d)",
+				allowedStages: ["summarize"],
+			}),
+		).toThrow("bin() interval must be a positive integer");
+	});
+
+	test("parses numeric aggregates over nested body fields", () => {
+		const ast = parseRestrictedApl({
+			query:
+				"where customer_id == 'cus_123' and request_path contains 'track' | summarize tracked = sum(request_body.value), events = count() by request_body.event_name | order by tracked desc",
+			allowedStages: ["where", "summarize", "orderBy"],
+		});
+
+		expect(restrictedAplToApl(ast)).toEqual([
+			"| where (customer_id == 'cus_123' and request_path contains 'track')",
+			"| summarize tracked = sum(todouble(request_body['value'])), events = count() by request_body_event_name = tostring(request_body['event_name'])",
+			"| order by tracked desc",
+		]);
+	});
+
+	test("still rejects numeric aggregates over non-numeric top-level fields", () => {
+		expect(() =>
+			parseRestrictedApl({
+				query: "summarize total = sum(customer_id)",
+				allowedStages: ["summarize"],
+			}),
+		).toThrow("Field cannot be used in numeric aggregation");
+	});
+
+	// Shapes below are sanitized reproductions of real failed production queries.
+	test("accepts bare predicates with an implicit where", () => {
+		const ast = parseRestrictedApl({
+			query: "customer_id == 'cus_123'",
+		});
+
+		expect(restrictedAplToApl(ast)).toEqual([
+			"| where customer_id == 'cus_123'",
+		]);
+	});
+
+	test("accepts double-quoted strings, single =, &&, and sort by", () => {
+		const ast = parseRestrictedApl({
+			query:
+				'method == "POST" && path contains "attach" | sort by timestamp desc | limit 10',
+		});
+
+		expect(restrictedAplToApl(ast)).toEqual([
+			"| where (request_method == 'POST' and request_path contains 'attach')",
+			"| order by timestamp desc",
+			"| limit 10",
+		]);
+	});
+
+	test("accepts = as equality in bare predicates", () => {
+		const ast = parseRestrictedApl({
+			query: "customer_id = 'cus_123'",
+		});
+
+		expect(restrictedAplToApl(ast)).toEqual([
+			"| where customer_id == 'cus_123'",
+		]);
+	});
+
+	test("accepts anonymous aggregates with derived aliases", () => {
+		const ast = parseRestrictedApl({
+			query:
+				"where customer_id == 'cus_123' | summarize count() by path, status_code",
+			allowedStages: ["where", "summarize"],
+		});
+
+		expect(restrictedAplToApl(ast)).toEqual([
+			"| where customer_id == 'cus_123'",
+			"| summarize count = count() by request_path, status_code",
+		]);
+	});
+
+	test("deduplicates repeated anonymous aggregate aliases", () => {
+		const ast = parseRestrictedApl({
+			query: "summarize count(), count(), sum(request_body.value)",
+			allowedStages: ["summarize"],
+		});
+
+		expect(restrictedAplToApl(ast)).toEqual([
+			"| summarize count = count(), count_2 = count(), sum = sum(todouble(request_body['value']))",
+		]);
+	});
+
+	test("throws a typed error for stages the endpoint disallows", () => {
+		expect(() =>
+			parseRestrictedApl({
+				query:
+					"where customer_id == 'cus_123' | summarize cnt = count() by request_path",
+				allowedStages: ["where", "orderBy", "limit"],
+			}),
+		).toThrow(RestrictedAplStageNotAllowedError);
+	});
+
+	test("still rejects free-text and wildcard queries", () => {
+		expect(() =>
+			parseRestrictedApl({ query: "vercel_process_website" }),
+		).toThrow("Unknown query field: vercel_process_website");
+		expect(() => parseRestrictedApl({ query: "*" })).toThrow(
+			"Unsupported query character: *",
+		);
+		expect(() =>
+			parseRestrictedApl({ query: "customer_id == `cus_123`" }),
+		).toThrow("Unsupported query character: `");
 	});
 
 	test("rejects unsupported aggregate functions", () => {

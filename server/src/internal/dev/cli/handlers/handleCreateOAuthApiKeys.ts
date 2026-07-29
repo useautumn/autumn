@@ -12,7 +12,7 @@ import {
 	getOAuthAccessTokenRecord,
 } from "@/internal/auth/oauth/oauthAccessTokenApiKey.js";
 import { oauthConsentRepo } from "@/internal/auth/repos/index.js";
-import { ApiKeyPrefix, createKey } from "../../api-keys/apiKeyUtils.js";
+import { ApiKeyPrefix, createKey } from "../../apiKeys/apiKeyUtils.js";
 import {
 	type OAuthApiKeyRequestBody,
 	OAuthApiKeyRequestBodySchema,

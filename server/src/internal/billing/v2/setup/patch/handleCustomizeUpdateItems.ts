@@ -1,9 +1,3 @@
-import {
-	ErrCode,
-	RecaseError,
-	ResetInterval,
-	resetIntvToEntIntv,
-} from "@autumn/shared";
 import type {
 	CustomizePlanV1,
 	Entitlement,
@@ -14,6 +8,12 @@ import type {
 	FullCustomerPrice,
 	Price,
 	UpdatePlanItemParamsV1,
+} from "@autumn/shared";
+import {
+	ErrCode,
+	RecaseError,
+	ResetInterval,
+	resetIntvToEntIntv,
 } from "@autumn/shared";
 import { planItemFilterMatchesCustomerPair } from "@shared/api/products/items/utils/match";
 import { cusEntToCusPrice } from "@shared/utils/cusEntUtils/convertCusEntUtils/cusEntToCusPrice";
@@ -183,7 +183,10 @@ export const handleCustomizeUpdateItems = ({
 			deleteCustomerEntitlements.push(pair.customerEntitlement);
 			deleteCustomerEntitlementIds.add(pair.customerEntitlement.id);
 
-			if (pair.customerPrice && !deleteCustomerPriceIds.has(pair.customerPrice.id)) {
+			if (
+				pair.customerPrice &&
+				!deleteCustomerPriceIds.has(pair.customerPrice.id)
+			) {
 				const newPrice = applyOverridesToPrice({
 					source: pair.customerPrice.price,
 					newEntitlementId: newEntitlement.id,

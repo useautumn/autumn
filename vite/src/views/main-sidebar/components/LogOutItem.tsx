@@ -1,6 +1,6 @@
 import { LogOut } from "lucide-react";
 import React from "react";
-import { DropdownMenuItem } from "@/components/v2/dropdowns/DropdownMenu";
+import { DropdownMenuItem } from "@autumn/ui";
 import { authClient } from "@/lib/auth-client";
 
 export const LogOutItem = () => {

@@ -1,6 +1,6 @@
+import { Input } from "@autumn/ui";
 import { useStore } from "@tanstack/react-form";
 import { useState } from "react";
-import { Input } from "@/components/v2/inputs/Input";
 import type { CreditSystemFormInstance } from "../hooks/useCreditSystemForm";
 
 interface EditableNumberCellProps {

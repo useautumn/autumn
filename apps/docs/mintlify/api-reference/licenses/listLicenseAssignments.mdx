@@ -1,0 +1,53 @@
+---
+title: "List License Assignments"
+openapi: "openapi POST /v1/licenses.list_assignments"
+---
+
+import { DynamicParamField } from "/snippets/dynamic-param-field.jsx";
+import { DynamicResponseField } from "/snippets/dynamic-response-field.jsx";
+import { DynamicResponseExample } from "/snippets/dynamic-response-example.jsx";
+
+### Body Parameters
+
+<DynamicParamField body="customer_id" type="string" required />
+
+<DynamicParamField body="entity_id" type="string" />
+
+<DynamicParamField body="plan_id" type="string" />
+
+<DynamicParamField body="active" type="boolean" />
+
+
+### Response
+
+<DynamicResponseField name="list" type="object[]">
+  <Expandable title="properties">
+    <DynamicResponseField name="id" type="string" />
+
+    <DynamicResponseField name="entity_id" type="string" />
+
+    <DynamicResponseField name="license_plan_id" type="string" />
+
+    <DynamicResponseField name="started_at" type="number" />
+
+    <DynamicResponseField name="ended_at" type="number | null" />
+
+  </Expandable>
+</DynamicResponseField>
+
+
+<ResponseExample>
+```json 200
+{
+  "list": [
+    {
+      "id": "lic_asn_123",
+      "entity_id": "user_123",
+      "license_plan_id": "seat_plan",
+      "started_at": 1759247877000,
+      "ended_at": null
+    }
+  ]
+}
+```
+</ResponseExample>

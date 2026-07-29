@@ -24,3 +24,21 @@ export function getCurrentWorktree(): string {
 	if (res.code !== 0) fatal("not inside a git worktree");
 	return res.stdout;
 }
+
+export function getCurrentBranch(): string {
+	const res = sh("git", ["branch", "--show-current"], { cwd: PROJECT_ROOT });
+	if (res.code !== 0 || !res.stdout) {
+		fatal("could not determine current git branch");
+	}
+	return res.stdout;
+}
+
+export function getDefaultBranch(): string {
+	const res = sh("git", ["symbolic-ref", "refs/remotes/origin/HEAD"], {
+		cwd: PROJECT_ROOT,
+	});
+	if (res.code === 0) {
+		return res.stdout.replace("refs/remotes/origin/", "");
+	}
+	return "dev";
+}

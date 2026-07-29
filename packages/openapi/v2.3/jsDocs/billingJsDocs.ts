@@ -1,6 +1,7 @@
 import {
 	AttachParamsV1Schema,
 	CreateScheduleParamsV0Schema,
+	ExtMultiUpdateParamsV0Schema,
 	MultiAttachParamsV0Schema,
 	UpdateSubscriptionV1ParamsSchema,
 } from "@autumn/shared";
@@ -141,7 +142,10 @@ export const billingMultiAttachJsDoc = createJSDocDescription({
 				customerId: "cus_123",
 				plans: [
 					{ planId: "pro_plan" },
-					{ planId: "addon_seats", featureQuantities: [{ featureId: "seats", quantity: 5 }] },
+					{
+						planId: "addon_seats",
+						featureQuantities: [{ featureId: "seats", quantity: 5 }],
+					},
 				],
 			},
 		}),
@@ -149,10 +153,7 @@ export const billingMultiAttachJsDoc = createJSDocDescription({
 			description: "Attach with free trial applied to all plans",
 			values: {
 				customerId: "cus_123",
-				plans: [
-					{ planId: "pro_plan" },
-					{ planId: "addon_storage" },
-				],
+				plans: [{ planId: "pro_plan" }, { planId: "addon_storage" }],
 				freeTrial: {
 					durationLength: 14,
 					durationType: "day",
@@ -222,7 +223,10 @@ export const billingPreviewMultiAttachJsDoc = createJSDocDescription({
 				customerId: "cus_123",
 				plans: [
 					{ planId: "pro_plan" },
-					{ planId: "addon_seats", featureQuantities: [{ featureId: "seats", quantity: 5 }] },
+					{
+						planId: "addon_seats",
+						featureQuantities: [{ featureId: "seats", quantity: 5 }],
+					},
 				],
 			},
 		}),
@@ -230,4 +234,60 @@ export const billingPreviewMultiAttachJsDoc = createJSDocDescription({
 	methodName: "billing.previewMultiAttach",
 	returns:
 		"A preview response with line items, totals, and effective dates for the proposed multi-plan attachment.",
+});
+
+export const billingMultiUpdateJsDoc = createJSDocDescription({
+	description:
+		"Updates multiple plans on a customer in a single request. Currently supports cancel actions (immediately, end of cycle, or uncancel) across one or more subscriptions.",
+	whenToUse:
+		"Use this endpoint to cancel or uncancel several plans atomically in one call — for example canceling a main plan together with its add-ons, or plans across multiple entities.",
+	body: ExtMultiUpdateParamsV0Schema,
+	examples: [
+		example({
+			description: "Cancel a plan and an add-on at end of cycle",
+			values: {
+				customerId: "cus_123",
+				updates: [
+					{ planId: "pro_plan", cancelAction: "cancel_end_of_cycle" },
+					{ planId: "addon_seats", cancelAction: "cancel_end_of_cycle" },
+				],
+			},
+		}),
+		example({
+			description: "Uncancel one plan and cancel another immediately",
+			values: {
+				customerId: "cus_123",
+				updates: [
+					{ planId: "pro_plan", cancelAction: "uncancel" },
+					{ planId: "addon_seats", cancelAction: "cancel_immediately" },
+				],
+			},
+		}),
+	],
+	methodName: "billing.multiUpdate",
+	returns:
+		"A billing response with the resulting invoice summary (one credit invoice per affected subscription for immediate cancels).",
+});
+
+export const billingPreviewMultiUpdateJsDoc = createJSDocDescription({
+	description:
+		"Previews the billing changes of a multi-plan update without making any changes. Returns one core preview per affected subscription.",
+	whenToUse:
+		"Use this endpoint to show customers the credits and next-cycle changes of canceling multiple plans before confirming.",
+	body: ExtMultiUpdateParamsV0Schema,
+	examples: [
+		example({
+			description: "Preview canceling two plans immediately",
+			values: {
+				customerId: "cus_123",
+				updates: [
+					{ planId: "pro_plan", cancelAction: "cancel_immediately" },
+					{ planId: "addon_seats", cancelAction: "cancel_immediately" },
+				],
+			},
+		}),
+	],
+	methodName: "billing.previewMultiUpdate",
+	returns:
+		"A preview with the combined total plus one entry per subscription, each with its own line items, totals, and next-cycle preview.",
 });

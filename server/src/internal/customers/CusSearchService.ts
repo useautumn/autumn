@@ -22,13 +22,16 @@ import {
 	sql,
 } from "drizzle-orm";
 import { alias } from "drizzle-orm/pg-core";
+import { planetScaleTag } from "@/db/dbUtils.js";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 import { getOrgCusProductLimit } from "../misc/edgeConfig/orgLimitsStore.js";
 import type { CustomerListFilters } from "./customerListFilters.js";
 import {
+	type DashboardIntervalFilter,
 	type DashboardProductVersionFilter,
 	isCustomDashboardProductFilter,
 	isVersionDashboardProductFilter,
+	parseDashboardIntervalFilter,
 	parseDashboardVersionFilter,
 } from "./getFullCusQuery.js";
 
@@ -61,24 +64,55 @@ const productFields = {
 	is_add_on: products.is_add_on,
 };
 
-const dashboardProductFilterToDrizzleSql = (
-	filter: DashboardProductVersionFilter,
-) =>
+const dashboardProductFilterToDrizzleSql = ({
+	filter,
+	orgId,
+	env,
+}: {
+	filter: DashboardProductVersionFilter;
+	orgId: string;
+	env: AppEnv;
+}) =>
 	and(
 		isCustomDashboardProductFilter(filter)
 			? and(
 					eq(customerProducts.product_id, filter.productId),
 					eq(customerProducts.is_custom, true),
 				)
-			: and(eq(products.id, filter.productId), eq(products.version, filter.version)),
+			: and(
+					eq(products.org_id, orgId),
+					eq(products.env, env),
+					eq(products.id, filter.productId),
+					eq(products.version, filter.version),
+				),
 	);
 
-const dashboardProductFilterToRawSql = (
-	filter: DashboardProductVersionFilter,
-) =>
+const dashboardProductFilterToRawSql = ({
+	filter,
+	orgId,
+	env,
+}: {
+	filter: DashboardProductVersionFilter;
+	orgId: string;
+	env: AppEnv;
+}) =>
 	isCustomDashboardProductFilter(filter)
 		? sql`(${customerProducts.product_id} = ${filter.productId} AND ${customerProducts.is_custom} = true)`
-		: sql`(${products.id} = ${filter.productId} AND ${products.version} = ${filter.version})`;
+		: sql`(${products.org_id} = ${orgId} AND ${products.env} = ${env} AND ${products.id} = ${filter.productId} AND ${products.version} = ${filter.version})`;
+
+const dashboardIntervalFilterToRawSql = (
+	intervals: DashboardIntervalFilter[],
+) =>
+	sql`EXISTS (
+		SELECT 1
+		FROM customer_prices cpr_interval
+		JOIN prices p_interval ON p_interval.id = cpr_interval.price_id
+		WHERE cpr_interval.customer_product_id = ${customerProducts.id}
+			AND p_interval.config->>'interval' = ANY(ARRAY[${sql.join(
+				intervals.map((interval) => sql`${interval}`),
+				sql`, `,
+			)}])
+	)`;
 
 type SearchFilters = CustomerListFilters;
 
@@ -180,7 +214,9 @@ export class CusSearchService {
 			// New product:version filtering
 			productVersionFilters.length > 0
 				? or(
-						...productVersionFilters.map(dashboardProductFilterToDrizzleSql),
+						...productVersionFilters.map((filter) =>
+							dashboardProductFilterToDrizzleSql({ filter, orgId, env }),
+						),
 					)
 				: undefined,
 			// Legacy product filtering (fallback)
@@ -841,6 +877,7 @@ export class CusSearchService {
 				${cursorClause}
 				ORDER BY ${customers.created_at} DESC, ${customers.id} DESC
 				LIMIT ${fetchLimit}
+				${planetScaleTag({ query: "searchCustomersByProductMode" })}
 			`)) as unknown as Array<{
 				internal_id: string;
 				created_at: number;
@@ -858,6 +895,7 @@ export class CusSearchService {
 			${cursorClause}
 			ORDER BY ${customers.created_at} DESC, ${customers.id} DESC
 			LIMIT ${fetchLimit}
+			${planetScaleTag({ query: "searchCustomersByProduct" })}
 		`)) as unknown as Array<{
 			internal_id: string;
 			created_at: number;
@@ -967,8 +1005,14 @@ const buildSearchPredicates = ({
 	const hasNumberedVersion = productVersionFilters.some(
 		isVersionDashboardProductFilter,
 	);
+	const intervalFilters = parseDashboardIntervalFilter(filters?.interval);
 
-	if (statuses.length === 0 && productVersionFilters.length === 0) {
+	const hasProductLevelFilter =
+		statuses.length > 0 ||
+		productVersionFilters.length > 0 ||
+		intervalFilters.length > 0;
+
+	if (!hasProductLevelFilter) {
 		return {
 			kind: "default",
 			where: and(...cusBaseClauses),
@@ -1009,9 +1053,16 @@ const buildSearchPredicates = ({
 	const versionRaw =
 		productVersionFilters.length > 0
 			? sql`(${sql.join(
-					productVersionFilters.map(dashboardProductFilterToRawSql),
+					productVersionFilters.map((filter) =>
+						dashboardProductFilterToRawSql({ filter, orgId, env }),
+					),
 					sql` OR `,
 				)})`
+			: null;
+
+	const intervalRaw =
+		intervalFilters.length > 0
+			? dashboardIntervalFilterToRawSql(intervalFilters)
 			: null;
 
 	const hasNonActiveStatus = statuses.some(
@@ -1025,6 +1076,7 @@ const buildSearchPredicates = ({
 		shouldApplyActiveFilter ? activeProdRaw : null,
 		statusRaw,
 		versionRaw,
+		intervalRaw,
 	].filter((c): c is NonNullable<typeof c> => c !== null);
 
 	const whereRaw =
@@ -1039,8 +1091,13 @@ const buildSearchPredicates = ({
 	const filtersDrizzle = and(
 		productVersionFilters.length > 0
 			? or(
-					...productVersionFilters.map(dashboardProductFilterToDrizzleSql),
+					...productVersionFilters.map((filter) =>
+						dashboardProductFilterToDrizzleSql({ filter, orgId, env }),
+					),
 				)
+			: undefined,
+		intervalFilters.length > 0
+			? dashboardIntervalFilterToRawSql(intervalFilters)
 			: undefined,
 		statuses.length > 0
 			? or(

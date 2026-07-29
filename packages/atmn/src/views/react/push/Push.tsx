@@ -15,6 +15,7 @@ import {
 
 interface PushViewProps {
 	environment?: AppEnv;
+	allVersions?: boolean;
 	yes?: boolean;
 	onComplete?: () => void;
 }
@@ -25,10 +26,11 @@ interface PushViewProps {
  */
 export function PushView({
 	environment = AppEnv.Sandbox,
+	allVersions = false,
 	yes = false,
 	onComplete,
 }: PushViewProps) {
-	const push = usePush({ environment, yes, onComplete });
+	const push = usePush({ environment, allVersions, yes, onComplete });
 	const duration = ((Date.now() - push.startTime) / 1000).toFixed(1);
 
 	// Error state
@@ -40,6 +42,7 @@ export function PushView({
 	const allPlans = [
 		...(push.analysis?.plansToCreate ?? []),
 		...(push.analysis?.plansToUpdate?.map((p) => p.plan) ?? []),
+		...(push.analysis?.variantsToUpdate?.map((p) => p.variant) ?? []),
 	];
 
 	return (
@@ -79,6 +82,7 @@ export function PushView({
 				{/* Current Prompt - if any */}
 				{push.currentPrompt && (
 					<PushPromptCard
+						onBack={push.goBackPrompt}
 						prompt={push.currentPrompt}
 						onRespond={push.respondToPrompt}
 					/>

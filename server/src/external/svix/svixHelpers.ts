@@ -62,7 +62,12 @@ export const sendSvixEvent = async ({
 
 		const svix = createSvixCli();
 		const appId = getSvixAppId({ org, env });
-		if (!appId) return null;
+		if (!appId) {
+			ctx.logger.warn(
+				`[svix] No app id for org ${org.id} (${env}); skipping ${eventType}`,
+			);
+			return null;
+		}
 
 		return await svix.message.create(
 			appId,
@@ -78,7 +83,12 @@ export const sendSvixEvent = async ({
 			idempotencyKey ? { idempotencyKey } : undefined,
 		);
 	} catch (error) {
-		ctx.logger.error(`[svix] Failed to send ${eventType}: ${error}`);
+		// Log the tags (the usual culprit) so tag-validation rejections aren't
+		// invisible. Don't log Svix's raw error body — it can echo request data.
+		const status = error as { code?: number; statusCode?: number };
+		ctx.logger.error(
+			`[svix] Failed to send ${eventType}: ${error} | status=${status.code ?? status.statusCode} | tags=${JSON.stringify(tags ?? [])}`,
+		);
 		Sentry.captureException(error, {
 			tags: getSentryTags({ ctx }),
 		});

@@ -34,6 +34,10 @@ export const computeScheduledCustomerProducts = ({
 				endsAt: phaseContext.endsAt,
 				currentEpochMs: billingContext.currentEpochMs,
 				externalId: productContext.externalId,
+				billingCycleAnchorResetsAt:
+					phaseContext.billingCycleAnchor === "phase_start"
+						? phaseContext.startsAt
+						: null,
 				isCustom:
 					productContext.customPrices.length > 0 ||
 					productContext.customEntitlements.length > 0,

@@ -8,6 +8,7 @@ export const initSubscription = ({
 	env,
 	currentPeriodStart,
 	currentPeriodEnd,
+	billingCycleAnchorSeconds,
 }: {
 	stripeId?: string;
 	stripeScheduleId?: string;
@@ -15,6 +16,7 @@ export const initSubscription = ({
 	env: AppEnv;
 	currentPeriodStart?: number;
 	currentPeriodEnd?: number;
+	billingCycleAnchorSeconds?: number;
 }) => {
 	const newSub: Subscription = {
 		id: generateId("sub"),
@@ -26,6 +28,7 @@ export const initSubscription = ({
 		env: env,
 		current_period_start: currentPeriodStart || null,
 		current_period_end: currentPeriodEnd || null,
+		billing_cycle_anchor_seconds: billingCycleAnchorSeconds ?? null,
 	};
 
 	return newSub;

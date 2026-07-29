@@ -22,8 +22,12 @@ const productRoutes = [
 
 	// RPC plan routes
 	{ method: "POST", url: "/plans.create" },
+	{ method: "POST", url: "/plans.create_variant" },
 	{ method: "POST", url: "/plans.update" },
 	{ method: "POST", url: "/plans.delete" },
+
+	// Batch catalog write (features + plans upsert)
+	{ method: "POST", url: "/catalog.update" },
 ];
 
 /**

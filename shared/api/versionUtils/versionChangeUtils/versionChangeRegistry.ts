@@ -25,6 +25,7 @@ import { V1_2_InvoiceChange } from "@api/others/apiInvoice/changes/V1.2_InvoiceC
 // Import product changes
 
 import { V2_0_CustomerChange } from "@api/customers/changes/V2.0_CustomerChange";
+import { V2_2_PlanInheritedBillingControls } from "@api/customers/changes/V2.2_PlanInheritedBillingControls";
 import { V1_2_ProductChanges } from "@api/products/changes/V1.2_ProductChanges";
 import { V2_0_PlanChanges } from "@api/products/changes/V2.0_PlanChanges";
 import { V2_1_PlanChanges } from "@api/products/changes/V2.1_PlanChanges";
@@ -45,7 +46,9 @@ import { ApiVersion } from "../ApiVersion";
 import type { VersionChangeConstructor } from "./VersionChange";
 import { VersionChangeRegistryClass } from "./VersionChangeRegistryClass";
 
-export const V2_3_CHANGES: VersionChangeConstructor[] = [];
+export const V2_3_CHANGES: VersionChangeConstructor[] = [
+	V2_2_PlanInheritedBillingControls, // Strips plan-inherited billing controls + source tags for <= V2.2
+];
 
 export const V2_2_CHANGES: VersionChangeConstructor[] = [
 	V2_1_PlanChanges, // Transforms Plan TO V2.1 format from V2.2 format

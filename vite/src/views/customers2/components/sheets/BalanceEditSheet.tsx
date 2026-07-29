@@ -1,6 +1,7 @@
 import {
 	computeGrantedBalanceInput,
 	customerEntitlementToBillingCycleEnd,
+	EntInterval,
 	type Entity,
 	type FullCusProduct,
 	type FullCustomerEntitlement,
@@ -9,19 +10,21 @@ import {
 	isUnlimitedCusEnt,
 	numberWithCommas,
 } from "@autumn/shared";
+import {
+	Button,
+	CopyButton,
+	DateInputUnix,
+	GroupedTabButton,
+	InfoRow,
+	LabelInput,
+	Switch,
+} from "@autumn/ui";
 import { ClockCountdownIcon } from "@phosphor-icons/react";
-
 import { useStore } from "@tanstack/react-form";
 import { useState } from "react";
 import { toast } from "sonner";
 import { ConfigRow } from "@/components/forms/shared/ConfigRow";
-import { DateInputUnix } from "@/components/general/DateInputUnix";
-import { Switch } from "@/components/ui/switch";
-import { Button } from "@/components/v2/buttons/Button";
-import { CopyButton } from "@/components/v2/buttons/CopyButton";
-import { GroupedTabButton } from "@/components/v2/buttons/GroupedTabButton";
-import { InfoRow } from "@/components/v2/InfoRow";
-import { LabelInput } from "@/components/v2/inputs/LabelInput";
+import { OpenInStripeButton } from "@/components/v2/buttons/OpenInStripeButton";
 import { SheetHeader, SheetSection } from "@/components/v2/sheets/InlineSheet";
 import { useCustomerBalanceSheetStore } from "@/hooks/stores/useCustomerBalanceSheetStore";
 import { useSheetStore } from "@/hooks/stores/useSheetStore";
@@ -32,6 +35,7 @@ import { useCusQuery } from "@/views/customers/customer/hooks/useCusQuery";
 import { useCustomerContext } from "../../customer/CustomerContext";
 import { BalanceEditPreviews } from "./BalanceEditPreviews";
 import { GrantedBalancePopover } from "./GrantedBalancePopover";
+import { PooledBalanceContributions } from "./PooledBalanceContributions";
 import {
 	type BalanceEditFormInstance,
 	useBalanceEditForm,
@@ -153,6 +157,9 @@ function UnlimitedBalanceInfo({
 				/>
 			</SheetSection>
 			<RolloversSection selectedCusEnt={selectedCusEnt} />
+			<PooledBalanceContributions
+				pooledBalance={selectedCusEnt.pooled_balance}
+			/>
 		</div>
 	);
 }
@@ -211,6 +218,10 @@ function BalanceEditForm({
 				entityId={entityId}
 				selectedCusEnt={selectedCusEnt}
 				cusPrice={cusPrice}
+			/>
+
+			<PooledBalanceContributions
+				pooledBalance={selectedCusEnt.pooled_balance}
 			/>
 		</div>
 	);
@@ -313,6 +324,27 @@ function EntitlementInfoRows({
 					</span>
 				}
 			/>
+			{selectedCusEnt.pooled_balance?.stripe_subscription_id && (
+				<InfoRow
+					label="Stripe ID"
+					className="flex-1 min-w-0"
+					value={
+						<div className="flex items-center gap-2 min-w-0 w-full">
+							<CopyButton
+								text={selectedCusEnt.pooled_balance.stripe_subscription_id}
+								size="mini"
+								className="text-tertiary-foreground min-w-0 shrink"
+								innerClassName="text-tiny-id truncate !font-normal min-w-0"
+							/>
+							<OpenInStripeButton
+								subscriptionId={
+									selectedCusEnt.pooled_balance.stripe_subscription_id
+								}
+							/>
+						</div>
+					}
+				/>
+			)}
 			{isUnlimited && (
 				<InfoRow
 					label="Balance"
@@ -413,6 +445,18 @@ function SetBalanceFields({
 	const balance = useStore(form.store, (s) => s.values.balance);
 	const gpb = useStore(form.store, (s) => s.values.grantedAndPurchasedBalance);
 
+	// Mirror the backend guard (updateExpiresAt): only paid recurring balances
+	// can't expire (their lifetime follows the billing cycle). Free grants —
+	// recurring or one-off — and one-off prepaid top-ups are all fine.
+	const interval = selectedCusEnt.entitlement.interval;
+	const isRecurringBalance =
+		notNullish(interval) && interval !== EntInterval.Lifetime;
+	const isPaidBalance = !!cusPrice;
+	const expiresAtDisabled = isRecurringBalance && isPaidBalance;
+	// Setting a brand-new expiry is a rare, API-only flow — only surface the
+	// field in the dashboard when the balance already has one (to view/edit/clear).
+	const showExpiresAt = notNullish(selectedCusEnt.expires_at);
+
 	return (
 		<div className="flex flex-col gap-3">
 			<div className="flex items-end gap-2 w-full">
@@ -476,12 +520,37 @@ function SetBalanceFields({
 				</form.Field>
 			</div>
 
+			{/* Reset-related notes (e.g. "Lifetime balances have no reset date")
+			    pertain to Next Reset, so they sit directly under it. */}
 			<BalanceEditPreviews
 				cusPrice={cusPrice}
 				interval={selectedCusEnt.entitlement.interval}
 				featureUsageType={feature.config?.usage_type}
 				currentBalance={balance}
 			/>
+
+			{showExpiresAt && (
+				<div className="flex flex-col shrink-0 w-full">
+					<div className="text-form-label block mb-1">Expires At</div>
+					<form.Field name="expiresAt">
+						{(field) => (
+							<DateInputUnix
+								disabled={expiresAtDisabled}
+								unixDate={field.state.value}
+								setUnixDate={(v) => field.handleChange(v)}
+								withTime
+								use24Hour
+							/>
+						)}
+					</form.Field>
+					{expiresAtDisabled && (
+						<div className="text-subtle text-xs mt-1">
+							Paid recurring balances follow the billing cycle and can't be set
+							to expire.
+						</div>
+					)}
+				</div>
+			)}
 		</div>
 	);
 }
@@ -606,6 +675,7 @@ function SubmitButton({
 							customer_entitlement_id: selectedCusEnt.id,
 							entity_id: entityId ?? undefined,
 							next_reset_at: values.nextResetAt ?? undefined,
+							expires_at: values.expiresAt ?? undefined,
 						}),
 					);
 				} else {
@@ -674,6 +744,7 @@ function hasBalanceChanges({
 	return (
 		meta.balance?.isDirty ||
 		meta.nextResetAt?.isDirty ||
+		meta.expiresAt?.isDirty ||
 		meta.grantedAndPurchasedBalance?.isDirty ||
 		false
 	);

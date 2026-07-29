@@ -1,14 +1,14 @@
-import { useEffect, useState } from "react";
-import { Button } from "@/components/v2/buttons/Button";
 import {
+	Button,
 	Dialog,
 	DialogContent,
 	DialogDescription,
 	DialogFooter,
 	DialogHeader,
 	DialogTitle,
-} from "@/components/v2/dialogs/Dialog";
-import { Input } from "@/components/v2/inputs/Input";
+	Input,
+} from "@autumn/ui";
+import { useEffect, useState } from "react";
 
 export const RolloutCreateDialog = ({
 	open,
@@ -62,7 +62,10 @@ export const RolloutCreateDialog = ({
 
 				<div className="flex flex-col gap-4">
 					<div className="flex flex-col gap-2">
-						<label className="text-xs font-medium text-muted-foreground" htmlFor="rollout-id">
+						<label
+							className="text-xs font-medium text-muted-foreground"
+							htmlFor="rollout-id"
+						>
 							Rollout ID
 						</label>
 						<Input

@@ -3,11 +3,6 @@ import type {
 	MessageContext,
 	MessageParams,
 } from "../../agent/runMessage/types.js";
-import type {
-	PreviewApproval,
-	PreviewCapture,
-} from "../../agent/tools/toolPolicy.js";
-import { createPreviewCapture } from "../../agent/tools/toolPolicy.js";
 import type { AgentOutput } from "../../types.js";
 import { runHarnessTurnWithBraintrust } from "./braintrust.js";
 import { containsInternalToolCall, redactAgentOutput } from "./output.js";
@@ -21,7 +16,6 @@ export const runEngineLoop = async ({
 	interrupt,
 	newSession,
 	params,
-	previewCapture: providedPreviewCapture,
 	runTurn,
 	sessionId,
 }: {
@@ -35,13 +29,10 @@ export const runEngineLoop = async ({
 	interrupt: () => Promise<void> | void;
 	newSession: boolean;
 	params: MessageParams;
-	/** Shared capture when the engine wires it into host tools; else the loop owns one. */
-	previewCapture?: PreviewCapture;
-	/** Run a single turn to completion, wiring the shared pump + cancel + preview capture. */
+	/** Run a single turn to completion, wiring the shared pump + cancel. */
 	runTurn: (input: {
 		isCancelled: () => boolean;
 		onTurnEnd: (turn: SessionTurnOutcome) => Promise<"continue" | "stop">;
-		previewCapture: PreviewCapture;
 		span?: Span;
 	}) => Promise<SessionTurnOutcome>;
 	sessionId: string;
@@ -68,7 +59,6 @@ export const runEngineLoop = async ({
 		},
 	});
 
-	const previewCapture = providedPreviewCapture ?? createPreviewCapture();
 	let timedOut = false;
 	const isCancelled = () => timedOut || Boolean(run?.stop);
 	const assertPostableText = (text: string) => {
@@ -88,7 +78,6 @@ export const runEngineLoop = async ({
 	const onTurnEnd = async (turn: SessionTurnOutcome) => {
 		if (!isCancelled() && run && run.pendingTurns > 0) {
 			run.pendingTurns -= 1;
-			previewCapture.reset();
 			const rawTurnText = turn.textParts.join("\n\n");
 			assertPostableText(rawTurnText);
 			const turnText = redactAgentOutput({
@@ -103,7 +92,7 @@ export const runEngineLoop = async ({
 	};
 
 	const drive = ({ span }: { span?: Span }) =>
-		runTurn({ isCancelled, onTurnEnd, previewCapture, span });
+		runTurn({ isCancelled, onTurnEnd, span });
 
 	const deadlineDelayMs = deadlineAt ? deadlineAt - Date.now() : 0;
 	const deadlineWatchdog =
@@ -169,11 +158,11 @@ export const runEngineLoop = async ({
 		env,
 		finishReason,
 		stopReason: stopped ? (timedOut ? "timeout" : "user") : undefined,
-		previewApproval: previewCapture.captured as PreviewApproval | undefined,
 		runId: sessionId,
-		suspendPayload: suspended
+		suspension: suspended
 			? {
-					args: suspended.args,
+					preview: suspended.preview,
+					toolArgs: suspended.args,
 					toolCallId: suspended.toolCallId,
 					toolName: suspended.toolName,
 				}

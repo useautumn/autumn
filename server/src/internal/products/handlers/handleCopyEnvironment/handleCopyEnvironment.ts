@@ -21,7 +21,7 @@ export const handleCopyEnvironment = createRoute({
 		const toEnv = AppEnv.Live;
 
 		// 1. Get all sandbox products and features
-		const [sandboxFeatures, liveFeatures] = await Promise.all([
+		const [fromFeatures, toFeatures] = await Promise.all([
 			FeatureService.list({
 				db,
 				orgId: org.id,
@@ -38,13 +38,17 @@ export const handleCopyEnvironment = createRoute({
 		// 2. Copy features first
 		await handleCopyFeatures({
 			ctx,
-			sandboxFeatures,
-			liveFeatures,
+			fromFeatures,
+			toOrg: org,
+			toEnv,
+			toFeatures,
 		});
 
 		await handleCopyProducts({
 			ctx,
+			fromOrg: org,
 			fromEnv,
+			toOrg: org,
 			toEnv,
 		});
 

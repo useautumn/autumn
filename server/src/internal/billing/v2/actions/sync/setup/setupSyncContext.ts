@@ -1,47 +1,31 @@
 import {
-	type Entity,
-	EntityNotFoundError,
-	ErrCode,
-	type FullCusProduct,
-	type FullCustomer,
-	RecaseError,
-	type SyncBillingContext,
-	type SyncParamsV1,
-	type SyncPhaseContext,
-	type SyncPlanInstance,
-	type SyncProductContext,
+    cp,
+    type Entity,
+    EntityNotFoundError,
+    ErrCode,
+    type FullCusProduct,
+    type FullCustomer,
+    RecaseError,
+    type SyncBillingContext,
+    type SyncParamsV1,
+    type SyncPhaseContext,
+    type SyncPlanInstance,
+    type SyncProductContext,
 } from "@autumn/shared";
-import type Stripe from "stripe";
 import { createStripeCli } from "@/external/connect/createStripeCli";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { setupAttachProductContext } from "@/internal/billing/v2/actions/attach/setup/setupAttachProductContext";
 import { setupAttachTransitionContext } from "@/internal/billing/v2/actions/attach/setup/setupAttachTransitionContext";
+import {
+    fetchStripeSyncSchedule,
+    fetchStripeSyncSubscription,
+} from "@/internal/billing/v2/providers/stripe/utils/sync/fetchStripeSyncObjects";
+import { resolveStripeSyncCurrency } from "@/internal/billing/v2/providers/stripe/utils/sync/stripeItemSnapshot/resolveStripeSyncCurrency";
+import { setupCustomerLicenseQuantityContext } from "@/internal/billing/v2/setup/setupCustomerLicenseQuantityContext";
 import { setupFeatureQuantitiesContext } from "@/internal/billing/v2/setup/setupFeatureQuantitiesContext";
 import { setupFullCustomerContext } from "@/internal/billing/v2/setup/setupFullCustomerContext";
-
-const fetchStripeSubscription = async ({
-	ctx,
-	stripeSubscriptionId,
-}: {
-	ctx: AutumnContext;
-	stripeSubscriptionId?: string;
-}): Promise<Stripe.Subscription | null> => {
-	if (!stripeSubscriptionId) return null;
-	const stripeCli = createStripeCli({ org: ctx.org, env: ctx.env });
-	return stripeCli.subscriptions.retrieve(stripeSubscriptionId);
-};
-
-const fetchStripeSchedule = async ({
-	ctx,
-	stripeScheduleId,
-}: {
-	ctx: AutumnContext;
-	stripeScheduleId?: string;
-}): Promise<Stripe.SubscriptionSchedule | null> => {
-	if (!stripeScheduleId) return null;
-	const stripeCli = createStripeCli({ org: ctx.org, env: ctx.env });
-	return stripeCli.subscriptionSchedules.retrieve(stripeScheduleId);
-};
+import { resolveCarryOverUsagesParam } from "@/internal/billing/v2/utils/handleCarryOvers/resolveCarryOverUsagesParam";
+import { prepareSyncedCustomBasePrice } from "./prepareSyncedCustomBasePrice";
 
 const resolvePlanEntity = ({
 	plan,
@@ -60,24 +44,51 @@ const resolvePlanEntity = ({
 	return entity;
 };
 
+const findLinkedAddOnCustomerProduct = ({
+	fullCustomer,
+	fullProduct,
+	stripeSubscriptionId,
+	internalEntityId,
+}: {
+	fullCustomer: FullCustomer;
+	fullProduct: SyncProductContext["fullProduct"];
+	stripeSubscriptionId: string;
+	internalEntityId?: string;
+}): FullCusProduct | undefined =>
+	fullCustomer.customer_products.find((customerProduct) => {
+		if (customerProduct.product?.id !== fullProduct.id) return false;
+		if ((customerProduct.internal_entity_id ?? undefined) !== internalEntityId)
+			return false;
+		return cp(customerProduct)
+			.hasActiveStatus()
+			.onStripeSubscription({ stripeSubscriptionId }).valid;
+	});
+
 const buildProductContext = async ({
 	ctx,
 	fullCustomer,
 	plan,
 	shouldFindCurrentCustomerProduct,
 	accessStartsAt,
+	stripeSubscriptionId,
 }: {
 	ctx: AutumnContext;
 	fullCustomer: FullCustomer;
 	plan: SyncPlanInstance;
 	shouldFindCurrentCustomerProduct: boolean;
 	accessStartsAt?: number;
+	stripeSubscriptionId?: string;
 }): Promise<SyncProductContext> => {
 	const {
 		fullProduct,
 		customPrices = [],
 		customEnts: customEntitlements = [],
+		insertPlanLicenses,
 	} = await setupAttachProductContext({ ctx, params: plan });
+
+	const customerLicenseQuantities = setupCustomerLicenseQuantityContext({
+		params: plan,
+	});
 
 	const featureQuantities = setupFeatureQuantitiesContext({
 		ctx,
@@ -90,19 +101,45 @@ const buildProductContext = async ({
 
 	let currentCustomerProduct: FullCusProduct | undefined;
 	if (shouldFindCurrentCustomerProduct) {
-		const transition = setupAttachTransitionContext({
-			fullCustomer,
-			attachProduct: fullProduct,
-		});
-		currentCustomerProduct = transition.currentCustomerProduct;
+		if (fullProduct.is_add_on === true) {
+			// Add-ons have no group transition; a re-sync replaces the existing
+			// same-product instance linked to this Stripe subscription so
+			// quantity changes and webhook re-deliveries converge.
+			currentCustomerProduct = stripeSubscriptionId
+				? findLinkedAddOnCustomerProduct({
+						fullCustomer,
+						fullProduct,
+						stripeSubscriptionId,
+						internalEntityId: entity?.internal_id,
+					})
+				: undefined;
+		} else {
+			const transition = setupAttachTransitionContext({
+				fullCustomer,
+				attachProduct: fullProduct,
+				// Scope the "previous product to expire" lookup to the plan's entity
+				// so an entity-scoped sync replaces the existing product on that
+				// same entity rather than missing it (which would duplicate).
+				internalEntityId: entity?.internal_id,
+			});
+			currentCustomerProduct = transition.currentCustomerProduct;
+		}
 	}
+	const preparedCustomBase = prepareSyncedCustomBasePrice({
+		currentCustomerProduct,
+		fullProduct,
+		customPrices,
+		plan,
+	});
 
 	return {
 		plan,
-		fullProduct,
-		customPrices,
+		fullProduct: preparedCustomBase.fullProduct,
+		customPrices: preparedCustomBase.customPrices,
 		customEntitlements,
 		featureQuantities,
+		customerLicenseQuantities,
+		insertPlanLicenses,
 		entity,
 		currentCustomerProduct,
 		accessStartsAt,
@@ -143,16 +180,22 @@ export const setupSyncContext = async ({
 		params: { customer_id: params.customer_id },
 	});
 
+	const stripeCli = createStripeCli({ org: ctx.org, env: ctx.env });
 	const [stripeSubscription, stripeSchedule] = await Promise.all([
-		fetchStripeSubscription({
-			ctx,
-			stripeSubscriptionId: params.stripe_subscription_id,
+		fetchStripeSyncSubscription({
+			stripeCli,
+			subscriptionId: params.stripe_subscription_id,
 		}),
-		fetchStripeSchedule({
-			ctx,
-			stripeScheduleId: params.stripe_schedule_id,
+		fetchStripeSyncSchedule({
+			stripeCli,
+			scheduleId: params.stripe_schedule_id,
 		}),
 	]);
+	const currency = resolveStripeSyncCurrency({
+		subscription: stripeSubscription,
+		schedule: stripeSchedule,
+		customerCurrency: fullCustomer.currency,
+	});
 
 	const currentEpochMs = Date.now();
 	const inputPhases = params.phases ?? [];
@@ -172,20 +215,20 @@ export const setupSyncContext = async ({
 					})
 				: null;
 
-			const isImmediatePhase = phase.starts_at === "now";
-
 			const productContextsPerPlan = await Promise.all(
 				phase.plans.map((plan) =>
 					buildProductContext({
 						ctx,
 						fullCustomer,
 						plan,
-						shouldFindCurrentCustomerProduct:
-							plan.expire_previous === true &&
-							(isImmediatePhase || plan.enable_plan_immediately === true),
+						// Future phases also expire the current same-group product on
+						// expire_previous — computeSyncFuturePhases relies on it being
+						// set, not just the immediate/enable-now cases.
+						shouldFindCurrentCustomerProduct: plan.expire_previous === true,
 						accessStartsAt: plan.enable_plan_immediately
 							? currentEpochMs
 							: undefined,
+						stripeSubscriptionId: params.stripe_subscription_id,
 					}),
 				),
 			);
@@ -221,9 +264,15 @@ export const setupSyncContext = async ({
 		fullCustomer,
 		stripeSubscription,
 		stripeSchedule,
+		currency,
 		immediatePhase,
 		futurePhases,
 		currentEpochMs,
 		acknowledgedWarnings: params.acknowledge_warnings ?? [],
+		carryOverUsage: params.carry_over_usage ?? true,
+		carryOverUsages: await resolveCarryOverUsagesParam({
+			ctx,
+			carryOverUsages: undefined,
+		}),
 	};
 };

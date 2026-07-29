@@ -11,3 +11,4 @@ export {
 export { buildImports } from "./imports.js";
 export { buildPlanCode } from "./plan.js";
 export { buildPlanItemCode } from "./planItem.js";
+export { buildVariantCode } from "./variant.js";

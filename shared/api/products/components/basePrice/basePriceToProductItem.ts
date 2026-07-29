@@ -1,11 +1,13 @@
+import { RecaseError } from "@api/errors/base/RecaseError";
+import { ProductErrorCode } from "@api/errors/codes/productErrCodes";
 import type {
-	BasePrice,
-	BasePriceParams,
+    BasePrice,
+    BasePriceParams,
 } from "@api/products/components/basePrice/basePrice";
 import { BillingInterval } from "@models/productModels/intervals/billingInterval";
 import {
-	type ProductItem,
-	ProductItemType,
+    type ProductItem,
+    ProductItemType,
 } from "@models/productV2Models/productItemModels/productItemModels";
 import { getProductItemDisplay } from "@utils/productDisplayUtils";
 import { billingToItemInterval } from "@utils/productV2Utils/productItemUtils/itemIntervalUtils";
@@ -27,6 +29,37 @@ export const basePriceToProductItem = ({
 			: undefined;
 	const priceId =
 		"price_id" in basePrice ? (basePrice.price_id ?? undefined) : undefined;
+	const stripePriceId =
+		"stripe_price_id" in basePrice
+			? (basePrice.stripe_price_id ?? undefined)
+			: undefined;
+
+	const additionalCurrencies =
+		"additional_currencies" in basePrice
+			? basePrice.additional_currencies
+			: undefined;
+	const explicitBaseCurrency =
+		"base_currency" in basePrice
+			? basePrice.base_currency?.toLowerCase()
+			: undefined;
+
+	const baseCurrency =
+		explicitBaseCurrency ??
+		(additionalCurrencies?.length
+			? (ctx.org.default_currency || "usd").toLowerCase()
+			: undefined);
+
+	if (baseCurrency) {
+		for (const { currency } of additionalCurrencies ?? []) {
+			if (currency.toLowerCase() === baseCurrency) {
+				throw new RecaseError({
+					message: `Base price additional_currencies cannot include the base currency '${baseCurrency}'`,
+					code: ProductErrorCode.InvalidProductItem,
+					statusCode: 400,
+				});
+			}
+		}
+	}
 
 	const item = {
 		type: ProductItemType.Price,
@@ -38,8 +71,16 @@ export const basePriceToProductItem = ({
 		interval_count: basePrice.interval_count ?? 1,
 		price: basePrice.amount ?? 0,
 
+		...(baseCurrency
+			? {
+					additional_currencies: additionalCurrencies,
+					base_currency: baseCurrency,
+				}
+			: {}),
+
 		entitlement_id: entitlementId,
 		price_id: priceId,
+		stripe_price_id: stripePriceId,
 	} satisfies ProductItem;
 
 	const display = basePriceDisplay

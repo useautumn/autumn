@@ -14,9 +14,11 @@ const BILLING_CONTEXT_STATUSES = [
 export const setupFullCustomerContext = async ({
 	ctx,
 	params,
+	withEntities = true,
 }: {
 	ctx: AutumnContext;
 	params: { customer_id: string; entity_id?: string };
+	withEntities?: boolean;
 }) => {
 	const { customer_id: customerId } = params;
 
@@ -24,7 +26,7 @@ export const setupFullCustomerContext = async ({
 		ctx,
 		idOrInternalId: customerId,
 		inStatuses: BILLING_CONTEXT_STATUSES,
-		withEntities: true,
+		withEntities,
 		withSubs: true,
 		entityId: params.entity_id ?? undefined,
 	});

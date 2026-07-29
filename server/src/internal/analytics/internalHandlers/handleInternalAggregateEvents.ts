@@ -17,14 +17,8 @@ import { getEntityNames } from "@/internal/analytics/actions/getEntityNames.js";
 import { CusService } from "@/internal/customers/CusService.js";
 import { ProductService } from "@/internal/products/ProductService.js";
 import { eventActions } from "../actions/eventActions.js";
+import { STANDARD_INTERVAL_DAYS } from "../analyticsUtils.js";
 import { collapsePlanIdGroups } from "./utils/collapsePlanIdGroups.js";
-
-const STANDARD_INTERVAL_DAYS: Record<string, number> = {
-	"24h": 1,
-	"7d": 7,
-	"30d": 30,
-	"90d": 90,
-};
 
 const InternalAggregateEventsSchema = z.object({
 	interval: z.string().nullish(),

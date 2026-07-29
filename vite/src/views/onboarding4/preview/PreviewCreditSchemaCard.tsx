@@ -1,11 +1,6 @@
 import type { AgentFeature } from "@autumn/shared";
+import { Card, CardContent, CardHeader, CardTitle } from "@autumn/ui";
 import { Coins } from "lucide-react";
-import {
-	Card,
-	CardContent,
-	CardHeader,
-	CardTitle,
-} from "@/components/v2/cards/Card";
 import { cn } from "@/lib/utils";
 
 interface PreviewCreditSchemaCardProps {

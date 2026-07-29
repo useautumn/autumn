@@ -1,11 +1,10 @@
+import { billingParamsV0ToCustomizeV1 } from "@api/billing/common/mappers/billingParamsV0ToCustomizeV1";
 import { billingParamsV0ToInvoiceModeParams } from "@api/billing/common/mappers/billingParamsV0ToInvoiceModeParams";
-import { freeTrialParamsV0ToV1 } from "@api/common/freeTrial/mappers/freeTrialParamsV0ToV1";
 import { ApiVersion } from "@api/versionUtils/ApiVersion";
 import {
 	AffectedResource,
 	defineVersionChange,
 } from "@api/versionUtils/versionChangeUtils/VersionChange";
-import { productItemsToCustomizePlanV1 } from "@utils/productV2Utils/productItemUtils/convertProductItem/productItemsToCustomizePlanV1";
 import type { z } from "zod/v4";
 import type { SharedContext } from "../../../../types/sharedContext";
 import { UpdateSubscriptionV0ParamsSchema } from "../updateSubscriptionV0Params";
@@ -18,6 +17,7 @@ export const V1_2_UpdateSubscriptionParamsChange = defineVersionChange({
 	description: [
 		"Maps free_trial {length,duration} to {duration_length,duration_type}",
 		"Maps top-level items to customize.items",
+		"Maps top-level upsert_licenses to customize.upsert_licenses",
 	],
 	affectedResources: [AffectedResource.ApiSubscriptionUpdate],
 	newSchema: UpdateSubscriptionV1ParamsSchema,
@@ -31,24 +31,10 @@ export const V1_2_UpdateSubscriptionParamsChange = defineVersionChange({
 		ctx: SharedContext;
 		input: z.infer<typeof UpdateSubscriptionV0ParamsSchema>;
 	}): z.infer<typeof UpdateSubscriptionV1ParamsSchema> => {
-		const itemsCustomize = input.items
-			? productItemsToCustomizePlanV1({
-					ctx,
-					items: input.items,
-				})
-			: undefined;
-
-		const freeTrialV1 = freeTrialParamsV0ToV1({
-			freeTrialParamsV0: input.free_trial,
+		const customizeV1 = billingParamsV0ToCustomizeV1({
+			ctx,
+			billingParams: input,
 		});
-
-		const customizeV1 =
-			itemsCustomize || freeTrialV1 !== undefined
-				? {
-						...itemsCustomize,
-						free_trial: freeTrialV1,
-					}
-				: undefined;
 
 		const newPlanId = input.product_id ?? undefined;
 		const featureQuantities = input.options;

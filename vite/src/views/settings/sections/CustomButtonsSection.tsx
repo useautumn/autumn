@@ -1,8 +1,8 @@
 import type { CustomButton } from "@autumn/shared";
+import { Button } from "@autumn/ui";
 import { PlusIcon } from "@phosphor-icons/react";
 import { AnimatePresence } from "motion/react";
 import { useState } from "react";
-import { Button } from "@/components/v2/buttons/Button";
 import { SettingsSection } from "../SettingsSection";
 import { CustomButtonDialog } from "./components/CustomButtonDialog";
 import { CustomButtonRow } from "./components/CustomButtonRow";

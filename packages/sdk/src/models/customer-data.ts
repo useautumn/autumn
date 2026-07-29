@@ -5,6 +5,7 @@
 import * as z from "zod/v4-mini";
 import { remap as remap$ } from "../lib/primitives.js";
 import { ClosedEnum } from "../types/enums.js";
+import { smartUnion } from "../types/smart-union.js";
 
 /**
  * The time interval for the purchase limit window.
@@ -23,7 +24,7 @@ export type CustomerDataPurchaseLimitInterval = ClosedEnum<
 >;
 
 /**
- * Optional rate limit to cap how often auto top-ups occur.
+ * Optional rate limit to cap how often auto top-ups occur. Pass count to set the current window's consumed top-ups.
  */
 export type CustomerDataPurchaseLimit = {
   /**
@@ -38,6 +39,10 @@ export type CustomerDataPurchaseLimit = {
    * Maximum number of auto top-ups allowed within the interval.
    */
   limit: number;
+  /**
+   * Set the current window's consumed auto top-up count. Omit to leave runtime state unchanged.
+   */
+  count?: number | undefined;
 };
 
 export type CustomerDataAutoTopup = {
@@ -58,7 +63,7 @@ export type CustomerDataAutoTopup = {
    */
   quantity: number;
   /**
-   * Optional rate limit to cap how often auto top-ups occur.
+   * Optional rate limit to cap how often auto top-ups occur. Pass count to set the current window's consumed top-ups.
    */
   purchaseLimit?: CustomerDataPurchaseLimit | undefined;
   /**
@@ -66,6 +71,18 @@ export type CustomerDataAutoTopup = {
    */
   invoiceMode?: boolean | undefined;
 };
+
+/**
+ * How overage_limit is interpreted: an absolute overage cap (default) or a percentage of the main-plan allowance.
+ */
+export const CustomerDataLimitType = {
+  Absolute: "absolute",
+  UsagePercentage: "usage_percentage",
+} as const;
+/**
+ * How overage_limit is interpreted: an absolute overage cap (default) or a percentage of the main-plan allowance.
+ */
+export type CustomerDataLimitType = ClosedEnum<typeof CustomerDataLimitType>;
 
 export type CustomerDataSpendLimit = {
   /**
@@ -77,9 +94,17 @@ export type CustomerDataSpendLimit = {
    */
   enabled?: boolean | undefined;
   /**
-   * Maximum allowed overage spend for the target feature.
+   * How overage_limit is interpreted: an absolute overage cap (default) or a percentage of the main-plan allowance.
+   */
+  limitType?: CustomerDataLimitType | undefined;
+  /**
+   * Overage cap for the feature: absolute units, or a percent (e.g. 120) when limit_type is usage_percentage.
    */
   overageLimit?: number | undefined;
+  /**
+   * When true, overage for this feature is not posted to Stripe. Usage tracking and balance resets still behave normally.
+   */
+  skipOverageBilling?: boolean | undefined;
 };
 
 /**
@@ -98,11 +123,24 @@ export type CustomerDataUsageLimitInterval = ClosedEnum<
   typeof CustomerDataUsageLimitInterval
 >;
 
+export type Properties = string | number | boolean;
+
+/**
+ * When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature.
+ */
+export type CustomerDataFilter = {
+  properties: { [k: string]: string | number | boolean };
+};
+
 export type CustomerDataUsageLimit = {
   /**
    * The feature this usage limit applies to.
    */
   featureId: string;
+  /**
+   * Whether this usage limit is enabled.
+   */
+  enabled?: boolean | undefined;
   /**
    * Maximum units allowed per interval.
    */
@@ -111,6 +149,10 @@ export type CustomerDataUsageLimit = {
    * Interval for the cap, aligned to the customer's billing cycle.
    */
   interval: CustomerDataUsageLimitInterval;
+  /**
+   * When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature.
+   */
+  filter?: CustomerDataFilter | undefined;
 };
 
 /**
@@ -197,6 +239,10 @@ export type CustomerDataConfig = {
    * Whether to disable the shared customer-level pool for entities.
    */
   disablePooledBalance?: boolean | undefined;
+  /**
+   * Stops Autumn from posting usage-overage line items to Stripe for this customer. Check/track and balance resets still behave normally. When set, this overrides the organization-level disable_overage_billing setting.
+   */
+  disableOverageBilling?: boolean | undefined;
 };
 
 /**
@@ -236,6 +282,10 @@ export type CustomerData = {
    */
   sendEmailReceipts?: boolean | undefined;
   /**
+   * Currency to bill this customer in (e.g. usd, eur). Defaults to the organization's default currency.
+   */
+  currency?: string | null | undefined;
+  /**
    * Billing controls for the customer (auto top-ups, etc.)
    */
   billingControls?: CustomerDataBillingControls | undefined;
@@ -255,6 +305,7 @@ export type CustomerDataPurchaseLimit$Outbound = {
   interval: string;
   interval_count: number;
   limit: number;
+  count?: number | undefined;
 };
 
 /** @internal */
@@ -266,6 +317,7 @@ export const CustomerDataPurchaseLimit$outboundSchema: z.ZodMiniType<
     interval: CustomerDataPurchaseLimitInterval$outboundSchema,
     intervalCount: z._default(z.number(), 1),
     limit: z.number(),
+    count: z.optional(z.number()),
   }),
   z.transform((v) => {
     return remap$(v, {
@@ -325,10 +377,17 @@ export function customerDataAutoTopupToJSON(
 }
 
 /** @internal */
+export const CustomerDataLimitType$outboundSchema: z.ZodMiniEnum<
+  typeof CustomerDataLimitType
+> = z.enum(CustomerDataLimitType);
+
+/** @internal */
 export type CustomerDataSpendLimit$Outbound = {
   feature_id?: string | undefined;
   enabled: boolean;
+  limit_type?: string | undefined;
   overage_limit?: number | undefined;
+  skip_overage_billing?: boolean | undefined;
 };
 
 /** @internal */
@@ -339,12 +398,16 @@ export const CustomerDataSpendLimit$outboundSchema: z.ZodMiniType<
   z.object({
     featureId: z.optional(z.string()),
     enabled: z._default(z.boolean(), false),
+    limitType: z.optional(CustomerDataLimitType$outboundSchema),
     overageLimit: z.optional(z.number()),
+    skipOverageBilling: z.optional(z.boolean()),
   }),
   z.transform((v) => {
     return remap$(v, {
       featureId: "feature_id",
+      limitType: "limit_type",
       overageLimit: "overage_limit",
+      skipOverageBilling: "skip_overage_billing",
     });
   }),
 );
@@ -363,10 +426,49 @@ export const CustomerDataUsageLimitInterval$outboundSchema: z.ZodMiniEnum<
 > = z.enum(CustomerDataUsageLimitInterval);
 
 /** @internal */
+export type Properties$Outbound = string | number | boolean;
+
+/** @internal */
+export const Properties$outboundSchema: z.ZodMiniType<
+  Properties$Outbound,
+  Properties
+> = smartUnion([z.string(), z.number(), z.boolean()]);
+
+export function propertiesToJSON(properties: Properties): string {
+  return JSON.stringify(Properties$outboundSchema.parse(properties));
+}
+
+/** @internal */
+export type CustomerDataFilter$Outbound = {
+  properties: { [k: string]: string | number | boolean };
+};
+
+/** @internal */
+export const CustomerDataFilter$outboundSchema: z.ZodMiniType<
+  CustomerDataFilter$Outbound,
+  CustomerDataFilter
+> = z.object({
+  properties: z.record(
+    z.string(),
+    smartUnion([z.string(), z.number(), z.boolean()]),
+  ),
+});
+
+export function customerDataFilterToJSON(
+  customerDataFilter: CustomerDataFilter,
+): string {
+  return JSON.stringify(
+    CustomerDataFilter$outboundSchema.parse(customerDataFilter),
+  );
+}
+
+/** @internal */
 export type CustomerDataUsageLimit$Outbound = {
   feature_id: string;
+  enabled: boolean;
   limit: number;
   interval: string;
+  filter?: CustomerDataFilter$Outbound | undefined;
 };
 
 /** @internal */
@@ -376,8 +478,10 @@ export const CustomerDataUsageLimit$outboundSchema: z.ZodMiniType<
 > = z.pipe(
   z.object({
     featureId: z.string(),
+    enabled: z._default(z.boolean(), true),
     limit: z.number(),
     interval: CustomerDataUsageLimitInterval$outboundSchema,
+    filter: z.optional(z.lazy(() => CustomerDataFilter$outboundSchema)),
   }),
   z.transform((v) => {
     return remap$(v, {
@@ -521,6 +625,7 @@ export function customerDataBillingControlsToJSON(
 /** @internal */
 export type CustomerDataConfig$Outbound = {
   disable_pooled_balance?: boolean | undefined;
+  disable_overage_billing?: boolean | undefined;
 };
 
 /** @internal */
@@ -530,10 +635,12 @@ export const CustomerDataConfig$outboundSchema: z.ZodMiniType<
 > = z.pipe(
   z.object({
     disablePooledBalance: z.optional(z.boolean()),
+    disableOverageBilling: z.optional(z.boolean()),
   }),
   z.transform((v) => {
     return remap$(v, {
       disablePooledBalance: "disable_pooled_balance",
+      disableOverageBilling: "disable_overage_billing",
     });
   }),
 );
@@ -556,6 +663,7 @@ export type CustomerData$Outbound = {
   create_in_stripe?: boolean | undefined;
   auto_enable_plan_id?: string | undefined;
   send_email_receipts?: boolean | undefined;
+  currency?: string | null | undefined;
   billing_controls?: CustomerDataBillingControls$Outbound | undefined;
   config?: CustomerDataConfig$Outbound | undefined;
 };
@@ -574,6 +682,7 @@ export const CustomerData$outboundSchema: z.ZodMiniType<
     createInStripe: z.optional(z.boolean()),
     autoEnablePlanId: z.optional(z.string()),
     sendEmailReceipts: z.optional(z.boolean()),
+    currency: z.optional(z.nullable(z.string())),
     billingControls: z.optional(
       z.lazy(() => CustomerDataBillingControls$outboundSchema),
     ),

@@ -1,13 +1,13 @@
 import type { InvoiceTemplate } from "@autumn/shared";
-import { Button } from "@/components/v2/buttons/Button";
 import {
+	Button,
 	Dialog,
 	DialogContent,
 	DialogDescription,
 	DialogFooter,
 	DialogHeader,
 	DialogTitle,
-} from "@/components/v2/dialogs/Dialog";
+} from "@autumn/ui";
 
 export const DeleteInvoiceTemplateDialog = ({
 	template,

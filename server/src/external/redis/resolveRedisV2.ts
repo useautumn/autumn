@@ -14,6 +14,47 @@ import {
 let lastLoggedInstance: RedisV2InstanceName | null = null;
 let publicRouteWarned = false;
 
+export type ResolvedRedisV2InstanceName = RedisV2InstanceName | "ramp";
+
+export const getRedisV2ByInstanceName = (name: string): Redis | null => {
+	if (name === "dragonfly") return redisV2Primary;
+	if (name === "ramp") return getRampDestinationRedis();
+	if (name === "upstash" || name === "redis") {
+		return getAlternateRedisV2Instance(name);
+	}
+	return null;
+};
+
+const resolveRedisV2InstanceName = ({
+	activeInstance,
+	customerId,
+}: {
+	activeInstance: RedisV2InstanceName;
+	customerId?: string;
+}): ResolvedRedisV2InstanceName => {
+	if (activeInstance !== "dragonfly") {
+		return getAlternateRedisV2Instance(activeInstance)
+			? activeInstance
+			: "dragonfly";
+	}
+
+	if (
+		isCacheV2RampEnabled({ customerId }) &&
+		getRampDestinationRedis()
+	) {
+		return "ramp";
+	}
+	return "dragonfly";
+};
+
+export const getCurrentRedisV2InstanceName = (opts?: {
+	customerId?: string;
+}): ResolvedRedisV2InstanceName =>
+	resolveRedisV2InstanceName({
+		activeInstance: getActiveRedisV2Instance(),
+		customerId: opts?.customerId,
+	});
+
 /** Returns the V2 Redis instance for this request.
  *
  *  Routing order:
@@ -36,20 +77,20 @@ export const resolveRedisV2 = (opts?: { customerId?: string }): Redis => {
 		lastLoggedInstance = activeInstance;
 	}
 
-	if (activeInstance === "dragonfly") {
-		if (isCacheV2RampEnabled({ customerId: opts?.customerId })) {
-			const destination = getRampDestinationRedis();
-			if (destination) return destination;
-			if (!publicRouteWarned) {
-				publicRouteWarned = true;
-				logger.warn(
-					"[resolveRedisV2] cache V2 ramp enabled but destination is not configured (or decryption failed); falling back to primary",
-				);
-			}
-		}
-		return redisV2Primary;
+	const instanceName = resolveRedisV2InstanceName({
+		activeInstance,
+		customerId: opts?.customerId,
+	});
+	if (
+		activeInstance === "dragonfly" &&
+		instanceName === "dragonfly" &&
+		isCacheV2RampEnabled({ customerId: opts?.customerId }) &&
+		!publicRouteWarned
+	) {
+		publicRouteWarned = true;
+		logger.warn(
+			"[resolveRedisV2] cache V2 ramp enabled but destination is not configured (or decryption failed); falling back to primary",
+		);
 	}
-
-	const alternate = getAlternateRedisV2Instance(activeInstance);
-	return alternate ?? redisV2Primary;
+	return getRedisV2ByInstanceName(instanceName) ?? redisV2Primary;
 };

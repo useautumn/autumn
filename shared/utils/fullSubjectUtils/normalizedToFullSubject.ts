@@ -13,6 +13,8 @@ import type { FullCustomerEntitlement } from "../../models/cusProductModels/cusE
 import type { Replaceable } from "../../models/cusProductModels/cusEntModels/replaceableTable.js";
 import type { FullCustomerPrice } from "../../models/cusProductModels/cusPriceModels/cusPriceModels.js";
 import type { FullCusProduct } from "../../models/cusProductModels/cusProductModels.js";
+import type { FullCustomerLicense } from "../../models/licenseModels/fullCustomerLicense.js";
+import { inheritParentCustomerProductProperties } from "../cusProductUtils/customerLicenses/inheritParentCustomerProductProperties.js";
 
 const getArrayEntries = <T>({ value }: { value: unknown }): T[] =>
 	Array.isArray(value) ? (value as T[]) : [];
@@ -63,6 +65,10 @@ const subjectBalanceToFullCustomerEntitlement = ({
 		additional_balance: subjectBalance.additional_balance,
 		usage_allowed: subjectBalance.usage_allowed,
 		separate_interval: subjectBalance.separate_interval,
+		is_pooled_balance: subjectBalance.is_pooled_balance,
+		pooled_balance_id: subjectBalance.pooled_balance_id,
+		pooled_contribution_id: subjectBalance.pooled_contribution_id,
+		pooled_balance: subjectBalance.pooled_balance,
 		reset_cycle_anchor: subjectBalance.reset_cycle_anchor,
 		next_reset_at: subjectBalance.next_reset_at,
 		adjustment: subjectBalance.adjustment,
@@ -92,6 +98,11 @@ const subjectFlagToFullCustomerEntitlement = ({
 	internalCustomerId: string;
 	internalEntityId: string | null;
 }): FullCustomerEntitlement => {
+	const isPooledBalance =
+		fullEntitlement.pooled === true &&
+		fullEntitlement.internal_product_id === null &&
+		subjectFlag.customerProductId === null;
+
 	return {
 		id: subjectFlag.customerEntitlementId,
 		internal_customer_id: internalCustomerId,
@@ -106,6 +117,7 @@ const subjectFlagToFullCustomerEntitlement = ({
 		additional_balance: 0,
 		usage_allowed: null,
 		separate_interval: false,
+		is_pooled_balance: isPooledBalance,
 		reset_cycle_anchor: null,
 		next_reset_at: null,
 		adjustment: 0,
@@ -233,6 +245,7 @@ export const normalizedToFullSubject = ({
 		FullCustomerEntitlement[]
 	>();
 	const extraMeteredCes: FullCustomerEntitlement[] = [];
+	const pooledMeteredCes: FullCustomerEntitlement[] = [];
 
 	for (const customerEntitlement of customerEntitlements) {
 		const fullCustomerEntitlement = subjectBalanceToFullCustomerEntitlement({
@@ -240,7 +253,11 @@ export const normalizedToFullSubject = ({
 		});
 
 		if (!customerEntitlement.customer_product_id) {
-			extraMeteredCes.push(fullCustomerEntitlement);
+			if (fullCustomerEntitlement.is_pooled_balance === true) {
+				pooledMeteredCes.push(fullCustomerEntitlement);
+			} else {
+				extraMeteredCes.push(fullCustomerEntitlement);
+			}
 		} else {
 			const existing =
 				meteredCesByCustomerProductId.get(
@@ -260,11 +277,27 @@ export const normalizedToFullSubject = ({
 		),
 	);
 
+	const customerLicensesByParentId = new Map<string, FullCustomerLicense[]>();
+	for (const customerLicense of getArrayEntries<FullCustomerLicense>({
+		value: normalized.customer_licenses,
+	})) {
+		const existing =
+			customerLicensesByParentId.get(
+				customerLicense.parent_customer_product_id,
+			) ?? [];
+		existing.push(customerLicense);
+		customerLicensesByParentId.set(
+			customerLicense.parent_customer_product_id,
+			existing,
+		);
+	}
+
 	const booleanCesByCustomerProductId = new Map<
 		string,
 		FullCustomerEntitlement[]
 	>();
 	const extraBooleanCes: FullCustomerEntitlement[] = [];
+	const pooledBooleanCes: FullCustomerEntitlement[] = [];
 
 	for (const flag of Object.values(flags)) {
 		const entitlement = entitlementsById.get(flag.entitlementId);
@@ -282,7 +315,11 @@ export const normalizedToFullSubject = ({
 		});
 
 		if (!flag.customerProductId) {
-			extraBooleanCes.push(fullCustomerEntitlement);
+			if (fullCustomerEntitlement.is_pooled_balance) {
+				pooledBooleanCes.push(fullCustomerEntitlement);
+			} else {
+				extraBooleanCes.push(fullCustomerEntitlement);
+			}
 		} else {
 			const existing =
 				booleanCesByCustomerProductId.get(flag.customerProductId) ?? [];
@@ -312,8 +349,14 @@ export const normalizedToFullSubject = ({
 			customer_prices:
 				customerPricesByCustomerProductId.get(customerProduct.id) ?? [],
 			customer_entitlements: [...meteredCes, ...booleanCes],
+			customer_licenses:
+				customerLicensesByParentId.get(customerProduct.id) ?? [],
 		} as FullCusProduct);
 	}
+
+	// Seats mirror their parent's lifecycle (resolved via the pool row) so
+	// every downstream status/date gate reads the effective values.
+	inheritParentCustomerProductProperties({ customerProducts });
 
 	const extraCustomerEntitlements = [...extraMeteredCes, ...extraBooleanCes];
 
@@ -390,6 +433,7 @@ export const normalizedToFullSubject = ({
 		customer: normalized.customer,
 		customer_products: customerProducts,
 		extra_customer_entitlements: extraCustomerEntitlements,
+		pooled_customer_entitlements: [...pooledMeteredCes, ...pooledBooleanCes],
 		// Normalized carries ALL scopes (the balance-hash field must stay
 		// complete); the subject view narrows to the rows that can gate it --
 		// an entity sees its own rows plus the inheritable customer-scope ones.

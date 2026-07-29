@@ -121,7 +121,9 @@ export function RevenueProductShareChart({
 			<div className="border rounded-lg overflow-hidden bg-interactive-secondary p-4 flex items-center justify-center min-h-[260px] flex-1">
 				{loading && <div className="h-[220px] w-full shimmer rounded" />}
 
-				{isEmpty && <p className="text-sm text-tertiary-foreground">No data available</p>}
+				{isEmpty && (
+					<p className="text-sm text-tertiary-foreground">No data available</p>
+				)}
 
 				{!loading && slices.length > 0 && (
 					<div className="flex items-center gap-4 w-full">
@@ -162,7 +164,9 @@ export function RevenueProductShareChart({
 											backgroundColor: CHART_COLORS[i % CHART_COLORS.length],
 										}}
 									/>
-									<span className="text-muted-foreground truncate">{slice.product_name}</span>
+									<span className="text-muted-foreground truncate">
+										{slice.product_name}
+									</span>
 									<span className="text-tertiary-foreground ml-auto whitespace-nowrap tabular-nums">
 										{formatCurrency({ value: slice.volume, currency })} (
 										{slice.percent.toFixed(1)}%)

@@ -1,9 +1,5 @@
+import { Tooltip, TooltipContent, TooltipTrigger } from "@autumn/ui";
 import { InfoIcon } from "@phosphor-icons/react";
-import {
-	Tooltip,
-	TooltipContent,
-	TooltipTrigger,
-} from "@/components/v2/tooltips/Tooltip";
 
 export function FirstTimeTransactionTooltip() {
 	return (

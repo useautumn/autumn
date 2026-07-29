@@ -2,6 +2,7 @@ import { sql } from "drizzle-orm";
 import {
 	boolean,
 	foreignKey,
+	index,
 	jsonb,
 	numeric,
 	pgTable,
@@ -10,12 +11,20 @@ import {
 } from "drizzle-orm/pg-core";
 import { collatePgColumn } from "../../db/utils";
 import { organizations } from "../orgModels/orgTable";
-import type { CreditSystemConfig, ModelMarkups } from "./featureConfig/creditConfig";
+import type {
+	CreditSystemConfig,
+	ModelMarkups,
+} from "./featureConfig/creditConfig";
 import type { MeteredConfig } from "./featureConfig/meteredConfig";
 
 type FeatureDisplay = {
 	singular: string;
 	plural: string;
+};
+
+export type FeatureStripeMeter = {
+	id: string;
+	event_name: string;
 };
 
 export const features = pgTable(
@@ -34,6 +43,7 @@ export const features = pgTable(
 		archived: boolean("archived").notNull().default(false),
 		event_names: text("event_names").array().default([]),
 		model_markups: jsonb().$type<ModelMarkups>().default(sql`null`),
+		stripe_meter: jsonb().$type<FeatureStripeMeter>().default(sql`null`),
 	},
 	(table) => [
 		foreignKey({
@@ -42,6 +52,7 @@ export const features = pgTable(
 			name: "features_org_id_fkey",
 		}).onDelete("cascade"),
 		unique("feature_id_constraint").on(table.org_id, table.id, table.env),
+		index("idx_features_composite").on(table.org_id, table.env).concurrently(),
 	],
 );
 

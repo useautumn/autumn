@@ -4,11 +4,15 @@ import type {
 	Entitlement,
 	EntitlementWithFeature,
 } from "../../models/productModels/entModels/entModels.js";
+import type { FixedPriceConfig } from "../../models/productModels/priceModels/priceConfig/fixedPriceConfig.js";
 import type { Price } from "../../models/productModels/priceModels/priceModels.js";
 import type {
 	FullProduct,
+	FullProductWithoutLicenses,
 	Product,
 } from "../../models/productModels/productModels.js";
+import type { EntitlementPrice } from "./entitlementPriceUtils/entitlementPriceTypes.js";
+import { isFixedPrice } from "./priceUtils/classifyPriceUtils.js";
 
 export const entToPrice = ({
 	ent,
@@ -22,6 +26,21 @@ export const entToPrice = ({
 			price.entitlement_id === ent.id &&
 			price.internal_product_id === ent.internal_product_id,
 	);
+};
+
+export const productToEntitlementPrices = ({
+	product,
+}: {
+	product: FullProductWithoutLicenses;
+}): EntitlementPrice[] => {
+	const entitlementPrices: EntitlementPrice[] = [];
+	for (const entitlement of product.entitlements) {
+		entitlementPrices.push({
+			entitlement,
+			price: entToPrice({ ent: entitlement, prices: product.prices }),
+		});
+	}
+	return entitlementPrices;
 };
 
 export function priceToEnt(params: {
@@ -77,6 +96,25 @@ export const productToStripeId = ({
 }: {
 	product: Product | FullProduct;
 }): string | null => product.processor?.id ?? null;
+
+/** Primary + alias Stripe product ids (legacy products mapped to this plan). */
+export const productToStripeIds = ({
+	product,
+}: {
+	product: Product | FullProduct;
+}): string[] => {
+	const processor = product.processor;
+	if (!processor?.id) return [];
+	return [processor.id, ...(processor.additional_ids ?? [])];
+};
+
+/** The plan's fixed base price, or null when it has none (e.g. free plans). */
+export const productToBasePrice = ({
+	product,
+}: {
+	product: FullProduct;
+}): (Price & { config: FixedPriceConfig }) | null =>
+	product.prices.find(isFixedPrice) ?? null;
 
 export const productToEnt = ({
 	product,

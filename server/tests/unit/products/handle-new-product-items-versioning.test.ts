@@ -123,6 +123,7 @@ const newProduct: Product = {
 	base_variant_id: null,
 	archived: false,
 	config: { ignore_past_due: false },
+	metadata: {},
 };
 
 const baseItem: ProductItem = {
@@ -166,6 +167,7 @@ describe("handleNewProductItems versioning carries forward Stripe IDs", () => {
 			isCustom: false,
 			newVersion: true,
 			saveToDb: false,
+			multiCurrencyEnabled: true,
 		});
 
 		const fixedNew = result.prices.find(
@@ -205,6 +207,7 @@ describe("handleNewProductItems versioning carries forward Stripe IDs", () => {
 			isCustom: false,
 			newVersion: true,
 			saveToDb: false,
+			multiCurrencyEnabled: true,
 		});
 
 		const usageNew = result.prices.find(

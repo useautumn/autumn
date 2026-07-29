@@ -8,7 +8,7 @@ import {
 	DropdownMenuContent,
 	DropdownMenuItem,
 	DropdownMenuTrigger,
-} from "./dropdowns/DropdownMenu";
+} from "@autumn/ui";
 
 interface FeatureSelectorProps {
 	features: Feature[];
