@@ -1,6 +1,5 @@
 import {
 	type Feature,
-	type FullCustomer,
 	isFreeProductV2,
 	isOneOffProductV2,
 } from "@autumn/shared";
@@ -30,10 +29,8 @@ import {
 	ConfigRow,
 } from "@/components/forms/shared/advanced-section";
 import { cn } from "@/lib/utils";
-import { useCusQuery } from "@/views/customers/customer/hooks/useCusQuery";
 import type { FormCustomLineItem } from "../attachFormSchema";
 import { useAttachFormContext } from "../context/AttachFormProvider";
-import { useAttachBillingOptionsState } from "../hooks/useAttachBillingOptionsState";
 import { getAttachScheduledStartDate } from "../utils/buildAttachPreviewTotals";
 import { addDiscount } from "../utils/discountUtils";
 import { AttachDiscountRow } from "./AttachDiscountRow";
@@ -111,8 +108,16 @@ function FeatureSelectDropdown({
 }
 
 export function AttachAdvancedSection() {
-	const { form, formValues, features, product, previewQuery, additionalPlans } =
-		useAttachFormContext();
+	const {
+		form,
+		customer,
+		formValues,
+		features,
+		product,
+		previewQuery,
+		additionalPlans,
+		billingOptions,
+	} = useAttachFormContext();
 	const isMultiPlan = additionalPlans.isMultiPlan;
 	const {
 		discounts,
@@ -128,20 +133,17 @@ export function AttachAdvancedSection() {
 		startDate,
 		endDate,
 	} = formValues;
-	const { customer } = useCusQuery();
-	const fullCustomer = customer as FullCustomer | null;
-
 	const hasCustomerEntitlements = useMemo(() => {
-		if (!fullCustomer) return false;
+		if (!customer) return false;
 
-		const hasProductEntitlements = fullCustomer.customer_products?.some(
+		const hasProductEntitlements = customer.customer_products?.some(
 			(customerProduct) => customerProduct.customer_entitlements?.length > 0,
 		);
 		const hasExtraEntitlements =
-			fullCustomer.extra_customer_entitlements?.length > 0;
+			customer.extra_customer_entitlements?.length > 0;
 
 		return hasProductEntitlements || hasExtraEntitlements;
-	}, [fullCustomer]);
+	}, [customer]);
 
 	const [overrideLineItemsEnabled, setOverrideLineItemsEnabled] = useState(
 		customLineItems.length > 0,
@@ -161,7 +163,7 @@ export function AttachAdvancedSection() {
 		handleScheduleChange,
 		handleBillingCycleChange,
 		handleProrationBehaviorChange,
-	} = useAttachBillingOptionsState();
+	} = billingOptions;
 
 	const isPaidRecurringProduct =
 		!!product &&

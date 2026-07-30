@@ -3,6 +3,7 @@ import type {
 	Feature,
 	ProductV2,
 } from "@autumn/shared";
+import { useCallback, useMemo } from "react";
 import { applyCreateScheduleStageParams } from "@/components/forms/shared/utils/applyCreateScheduleStageParams";
 import type { BillingStageParams } from "@/components/forms/shared/utils/billingStageParams";
 import { buildCreateSchedulePlan } from "@/components/forms/shared/utils/buildPlanCustomize";
@@ -33,7 +34,7 @@ export type BuildAttachScheduleRequestBodyParams = Pick<
 	products: ProductV2[];
 	features: Feature[];
 	additionalPlans: AttachAdditionalPlan[];
-	valid?: boolean;
+	hasInvalidPlanScopes?: boolean;
 };
 
 function buildPlanParams({
@@ -93,9 +94,9 @@ export function buildAttachScheduleRequestBody({
 	redirectMode,
 	discounts,
 	currency,
-	valid = true,
+	hasInvalidPlanScopes = false,
 }: BuildAttachScheduleRequestBodyParams): CreateScheduleParamsV0 | null {
-	if (!valid || !customerId || !product) return null;
+	if (hasInvalidPlanScopes || !customerId || !product) return null;
 
 	const selectedAdditionalPlans = additionalPlans.filter(
 		(plan) => plan.productId,
@@ -159,11 +160,74 @@ export function buildAttachScheduleRequestBody({
 export function useAttachScheduleRequestBody(
 	params: BuildAttachScheduleRequestBodyParams,
 ) {
-	const requestBody = buildAttachScheduleRequestBody(params);
-
-	return {
-		requestBody,
-		buildRequestBody: (stageParams: BillingStageParams = {}) =>
+	const {
+		customerId,
+		entityId,
+		product,
+		products,
+		features,
+		additionalPlans,
+		prepaidOptions,
+		items,
+		grantFree,
+		version,
+		trialLength,
+		trialDuration,
+		trialEnabled,
+		trialCardRequired,
+		redirectMode,
+		discounts,
+		currency,
+		hasInvalidPlanScopes,
+	} = params;
+	const requestBody = useMemo(
+		() =>
+			buildAttachScheduleRequestBody({
+				customerId,
+				entityId,
+				product,
+				products,
+				features,
+				additionalPlans,
+				prepaidOptions,
+				items,
+				grantFree,
+				version,
+				trialLength,
+				trialDuration,
+				trialEnabled,
+				trialCardRequired,
+				redirectMode,
+				discounts,
+				currency,
+				hasInvalidPlanScopes,
+			}),
+		[
+			customerId,
+			entityId,
+			product,
+			products,
+			features,
+			additionalPlans,
+			prepaidOptions,
+			items,
+			grantFree,
+			version,
+			trialLength,
+			trialDuration,
+			trialEnabled,
+			trialCardRequired,
+			redirectMode,
+			discounts,
+			currency,
+			hasInvalidPlanScopes,
+		],
+	);
+	const buildRequestBody = useCallback(
+		(stageParams: BillingStageParams = {}) =>
 			applyCreateScheduleStageParams({ ...stageParams, requestBody }),
-	};
+		[requestBody],
+	);
+
+	return { requestBody, buildRequestBody };
 }

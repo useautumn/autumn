@@ -17,6 +17,7 @@ import {
 import { useMemo, useState } from "react";
 import type Stripe from "stripe";
 import { ConfigRow } from "@/components/forms/shared/ConfigRow";
+import { resolvePlanEntityId } from "@/components/forms/shared";
 import { buildCustomize } from "@/components/forms/shared/utils/buildPlanCustomize";
 import {
 	getProductWithSupportedPlanFormValues,
@@ -427,12 +428,12 @@ export function SubscriptionEditorView({
 					entity_id: planEntityId,
 					...rest
 				}) => {
-					const entityId =
-						planEntityId === null ? undefined : (planEntityId ?? scopeEntityId);
-
 					return {
 						...rest,
-						entity_id: entityId,
+						entity_id: resolvePlanEntityId({
+							planEntityId,
+							defaultEntityId: scopeEntityId,
+						}),
 						expire_previous: expirePrevious,
 						enable_plan_immediately:
 							isNotStartedSchedule &&

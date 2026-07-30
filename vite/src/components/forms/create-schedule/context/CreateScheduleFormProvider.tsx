@@ -135,9 +135,7 @@ export function CreateScheduleFormProvider({
 	const { customer } = useCusQuery();
 	const fullCustomer = customer as FullCustomer | null;
 
-	// Mirrors the attach flow: a brand-new Stripe subscription is created when the
-	// (scoped) customer has no active/trialing subscription. Only then can the
-	// immediate phase be backdated (the server enforces the same rule).
+	// Only a new scoped subscription can backdate its immediate phase.
 	const hasActiveSubscription = useMemo(() => {
 		const cusProducts = (fullCustomer?.customer_products ??
 			[]) as FullCusProduct[];
@@ -249,9 +247,7 @@ export function CreateScheduleFormProvider({
 		allowFirstPhaseBackdate,
 	});
 
-	// When backdating is no longer allowed (e.g. plan changed to free, or scope
-	// switched to one with an active subscription), drop a stale past start so it
-	// can't leak into the request — the first phase falls back to "now".
+	// Clear stale backdates when the selected scope can no longer use them.
 	useEffect(() => {
 		if (allowFirstPhaseBackdate || isExistingSchedule) return;
 		if (form.store.state.values.phases[0]?.startsAt != null) {

@@ -4,7 +4,6 @@ import {
 	getAttachProductOptionState,
 	hasInvalidAttachPlanScopes,
 } from "@/components/forms/attach-v2/hooks/useAttachAdditionalPlans";
-import { getUsedProductGroupKeys } from "@/components/forms/shared/utils/planGroupUtils";
 
 const product = ({ id, name }: { id: string; name: string }) =>
 	({
@@ -18,10 +17,7 @@ const product = ({ id, name }: { id: string; name: string }) =>
 const growth = product({ id: "growth", name: "Growth" });
 const pro = product({ id: "pro", name: "Pro" });
 const products = [growth, pro];
-const usedGroupKeys = getUsedProductGroupKeys({
-	productIds: [growth.id],
-	products,
-});
+const selectedPlans = [{ productId: growth.id, entityId: undefined }];
 
 test("same-group plans remain selectable when another scope is available", () => {
 	expect(
@@ -29,7 +25,7 @@ test("same-group plans remain selectable when another scope is available", () =>
 			product: pro,
 			products,
 			customer: null,
-			usedGroupKeys,
+			selectedPlans,
 			allowScopeSelection: true,
 		}),
 	).toMatchObject({
@@ -45,11 +41,26 @@ test("same-group plans remain blocked without another scope", () => {
 			product: pro,
 			products,
 			customer: null,
-			usedGroupKeys,
+			selectedPlans,
 		}),
 	).toMatchObject({
 		disabledValue: "Plan group selected",
 		requiresDifferentScope: true,
+	});
+});
+
+test("same-group plans do not conflict across scopes", () => {
+	expect(
+		getAttachProductOptionState({
+			product: pro,
+			products,
+			customer: null,
+			entityId: "entity-b",
+			selectedPlans: [{ productId: growth.id, entityId: "entity-a" }],
+		}),
+	).toMatchObject({
+		disabledValue: undefined,
+		requiresDifferentScope: false,
 	});
 });
 

@@ -31,6 +31,7 @@ import {
 	useState,
 } from "react";
 import type { SchedulePlan } from "@/components/forms/create-schedule/createScheduleFormSchema";
+import { BILLING_OPERATIONS } from "@/components/forms/shared/utils/billingOperations";
 import { getProductWithSupportedPlanFormValues } from "@/components/forms/shared/utils/planCustomizationUtils";
 import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
 import { useProductsQuery } from "@/hooks/queries/useProductsQuery";
@@ -47,6 +48,10 @@ import {
 	type UseAttachCurrencyReturn,
 	useAttachCurrency,
 } from "../hooks/useAttachCurrency";
+import {
+	type UseAttachBillingOptionsStateReturn,
+	useAttachBillingOptionsState,
+} from "../hooks/useAttachBillingOptionsState";
 import { type UseAttachForm, useAttachForm } from "../hooks/useAttachForm";
 import { useAttachMutation } from "../hooks/useAttachMutation";
 import { useAttachPlanEditor } from "../hooks/useAttachPlanEditor";
@@ -63,6 +68,7 @@ import {
 
 interface AttachFormContextValue {
 	customerId: string | undefined;
+	customer: FullCustomer | null;
 	form: UseAttachForm;
 	formValues: AttachForm;
 	features: Feature[];
@@ -83,6 +89,7 @@ interface AttachFormContextValue {
 	isFreeToPaidTransition: boolean;
 	hasActiveSubscription: boolean;
 	isAutoSelectingImmediateSchedule: boolean;
+	billingOptions: UseAttachBillingOptionsStateReturn;
 
 	additionalPlans: UseAttachAdditionalPlansReturn;
 
@@ -226,9 +233,7 @@ export function AttachFormProvider({
 				: product;
 		if (!resolved) return resolved;
 
-		// The API mirrors `price_interval` onto priced items; drop it when it just
-		// echoes `interval` so the interval control edits `interval` (price + reset
-		// together) instead of silently splitting into price-only.
+		// Normalize mirrored intervals so editing does not split price and reset.
 		return {
 			...resolved,
 			items: (resolved.items as ProductItem[]).map(normalizeResetInterval),
@@ -500,19 +505,25 @@ export function AttachFormProvider({
 		redirectMode,
 		discounts,
 		currency: attachCurrency.requestCurrency,
-		valid: !additionalPlans.hasInvalidPlanScopes,
+		hasInvalidPlanScopes: additionalPlans.hasInvalidPlanScopes,
 	});
 	const billingOperation = isMultiPlan
 		? {
+				...BILLING_OPERATIONS.createSchedule,
 				isMultiPlan: true,
 				requestBody: scheduleRequestBody,
 				buildRequestBody: buildScheduleRequestBody,
 			}
-		: { isMultiPlan: false, requestBody, buildRequestBody };
+		: {
+				...BILLING_OPERATIONS.attach,
+				isMultiPlan: false,
+				requestBody,
+				buildRequestBody,
+			};
 
 	const previewQuery = useAttachPreview({
+		path: billingOperation.previewPath,
 		requestBody: billingOperation.requestBody,
-		isMultiPlan: billingOperation.isMultiPlan,
 		enabled: disablePreview ? false : undefined,
 	});
 	const isAutoSelectingImmediateSchedule =
@@ -527,6 +538,16 @@ export function AttachFormProvider({
 		if (!isAutoSelectingImmediateSchedule) return;
 		form.setFieldValue("planSchedule", "immediate");
 	}, [form, isAutoSelectingImmediateSchedule]);
+
+	const billingOptions = useAttachBillingOptionsState({
+		form,
+		formValues,
+		previewQuery,
+		customerProducts: fullCustomer?.customer_products ?? [],
+		isFreeToPaidTransition,
+		hasActiveSubscription,
+		isMultiPlan,
+	});
 
 	const previewPrepaidOptions = useMemo(() => {
 		const incoming = previewQuery.data?.incoming;
@@ -547,7 +568,7 @@ export function AttachFormProvider({
 		items,
 		version,
 		incomingItems: originalItems,
-		additionalPlans: additionalPlanValues,
+		enabled: !isMultiPlan,
 	});
 
 	const {
@@ -558,7 +579,8 @@ export function AttachFormProvider({
 	} = useAttachMutation({
 		customerId,
 		buildRequestBody: billingOperation.buildRequestBody,
-		isMultiPlan: billingOperation.isMultiPlan,
+		path: billingOperation.path,
+		invalidatesSchedule: billingOperation.invalidatesSchedule,
 		onCheckoutRedirect,
 		onSuccess,
 	});
@@ -567,6 +589,7 @@ export function AttachFormProvider({
 		() => ({
 			form,
 			customerId,
+			customer: fullCustomer,
 			formValues,
 			features,
 			entityId,
@@ -583,6 +606,7 @@ export function AttachFormProvider({
 			isFreeToPaidTransition,
 			hasActiveSubscription,
 			isAutoSelectingImmediateSchedule,
+			billingOptions,
 			additionalPlans,
 			attachCurrency,
 			previewQuery,
@@ -600,6 +624,7 @@ export function AttachFormProvider({
 		}),
 		[
 			customerId,
+			fullCustomer,
 			form,
 			formValues,
 			features,
@@ -617,6 +642,7 @@ export function AttachFormProvider({
 			isFreeToPaidTransition,
 			hasActiveSubscription,
 			isAutoSelectingImmediateSchedule,
+			billingOptions,
 			additionalPlans,
 			attachCurrency,
 			previewQuery,

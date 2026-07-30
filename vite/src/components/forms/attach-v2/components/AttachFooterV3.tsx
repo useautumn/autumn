@@ -1,44 +1,10 @@
-import { Button, Tooltip, TooltipContent, TooltipTrigger } from "@autumn/ui";
-import { addHours, isAfter } from "date-fns";
+import { Button } from "@autumn/ui";
+import { DisabledTooltipButton } from "@/components/forms/shared";
 import { SheetFooter } from "@/components/v2/sheets/SharedSheetComponents";
 import { useSheetStore } from "@/hooks/stores/useSheetStore";
-import { cn } from "@/lib/utils";
 import { useAttachFormContext } from "../context/AttachFormProvider";
-import { useAttachBillingOptionsState } from "../hooks/useAttachBillingOptionsState";
 import { isFutureStartDate } from "../utils/buildAttachPreviewTotals";
-
-export function getConfirmLabel({
-	previewData,
-	startDate,
-	now,
-}: {
-	previewData:
-		| {
-				redirect_to_checkout: boolean;
-				total: number;
-				outgoing?: { effective_at: number | null }[];
-		  }
-		| null
-		| undefined;
-	startDate: number | null;
-	now?: number;
-}): string {
-	if (!previewData) return "Attach Plan";
-	if (isFutureStartDate(startDate, now)) return "Preview Schedule";
-	if (previewData.redirect_to_checkout) return "Generate Checkout URL";
-
-	const sixHoursFromNow = addHours(now ?? Date.now(), 6);
-	const isScheduled = previewData.outgoing?.some(
-		(change) =>
-			change.effective_at !== null &&
-			isAfter(change.effective_at, sixHoursFromNow),
-	);
-	if (isScheduled) return "Schedule Change";
-
-	if (previewData.total <= 0) return "Attach Plan";
-
-	return "Charge Customer";
-}
+import { getAttachConfirmLabel } from "../utils/getAttachConfirmLabel";
 
 export function AttachFooterV3() {
 	const {
@@ -48,19 +14,19 @@ export function AttachFooterV3() {
 		handleInvoiceAttach,
 		formValues,
 		additionalPlans,
+		billingOptions,
 	} = useAttachFormContext();
 	const { setSheet } = useSheetStore();
 	const itemId = useSheetStore((s) => s.itemId);
 
-	const { isEndOfCycleSelected, createsRecurringSubscription } =
-		useAttachBillingOptionsState();
+	const { isEndOfCycleSelected, createsRecurringSubscription } = billingOptions;
 
 	const previewData = previewQuery.data;
 	const previewFailed = !!previewQuery.error;
 	const isMultiPlan = additionalPlans.isMultiPlan;
 	const startDate = isMultiPlan ? null : formValues.startDate;
 	const hasFutureStartDate = isFutureStartDate(startDate);
-	const confirmLabel = getConfirmLabel({
+	const confirmLabel = getAttachConfirmLabel({
 		previewData,
 		startDate,
 	});
@@ -111,36 +77,17 @@ export function AttachFooterV3() {
 	return (
 		<SheetFooter className="flex flex-col grid-cols-1 mt-0">
 			<div className="flex flex-col gap-2 w-full">
-				<Tooltip>
-					<TooltipTrigger asChild>
-						<span
-							className={cn(
-								"flex w-full",
-								invoiceDisabledReason && "cursor-not-allowed",
-							)}
-						>
-							<Button
-								variant="secondary"
-								className={cn(
-									"w-full",
-									invoiceDisabledReason && "pointer-events-none opacity-50",
-								)}
-								disabled={
-									previewFailed || (!invoiceDisabledReason && isPending)
-								}
-								isLoading={isInvoiceOnlyStart && isPending}
-								onClick={handleInvoiceButtonClick}
-							>
-								{invoiceButtonLabel}
-							</Button>
-						</span>
-					</TooltipTrigger>
-					{invoiceDisabledReason && (
-						<TooltipContent side="top" className="max-w-(--anchor-width)">
-							{invoiceDisabledReason}
-						</TooltipContent>
-					)}
-				</Tooltip>
+				<DisabledTooltipButton
+					variant="secondary"
+					className="w-full"
+					disabled={previewFailed || isPending}
+					disabledReason={invoiceDisabledReason}
+					tooltipClassName="max-w-(--anchor-width)"
+					isLoading={isInvoiceOnlyStart && isPending}
+					onClick={handleInvoiceButtonClick}
+				>
+					{invoiceButtonLabel}
+				</DisabledTooltipButton>
 				<Button
 					variant="primary"
 					className="w-full"

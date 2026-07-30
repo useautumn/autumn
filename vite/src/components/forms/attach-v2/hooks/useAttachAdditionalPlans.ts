@@ -4,10 +4,8 @@ import {
 	isProductCurrentlyAttached,
 } from "@autumn/shared";
 import { useCallback } from "react";
-import {
-	getProductGroupKey,
-	getUsedProductGroupKeys,
-} from "@/components/forms/shared/utils/planGroupUtils";
+import { getProductGroupKey } from "@/components/forms/shared/utils/planGroupUtils";
+import { resolvePlanEntityId } from "@/components/forms/shared/utils/resolvePlanEntityId";
 import { type AttachForm, EMPTY_ADDITIONAL_PLAN } from "../attachFormSchema";
 import type { UseAttachForm } from "./useAttachForm";
 
@@ -15,25 +13,53 @@ export interface UseAttachAdditionalPlansReturn {
 	isMultiPlan: boolean;
 	hasInvalidPlanScopes: boolean;
 	selectedProductIds: string[];
-	usedGroupKeys: Set<string>;
-	additionalPlanGroupKeys: Set<string>;
 	canSelectMultipleScopes: boolean;
 	canAddPlan: boolean;
+	getProductOptionState: (params: {
+		product: ProductV2;
+		planId?: string;
+		entityId?: string;
+	}) => AttachProductOptionState;
 	handleAddPlan: () => void;
 	handleRemovePlan: (params: { id: string }) => void;
 	handleChangePlanProduct: (params: { id: string; productId: string }) => void;
 }
 
-const resolvePlanEntityId = ({
-	planEntityId,
-	requestEntityId,
-}: {
-	planEntityId?: string | null;
-	requestEntityId?: string;
-}) => {
-	if (planEntityId === null) return undefined;
-	return planEntityId ?? requestEntityId;
+type AttachPlanSelection = {
+	id?: string;
+	productId: string;
+	entityId?: string;
 };
+
+type AttachProductOptionState = {
+	disabledValue: string | undefined;
+	badgeValue: string | undefined;
+	requiresDifferentScope: boolean;
+};
+
+const getAttachPlanSelections = ({
+	productId,
+	additionalPlans,
+	entityId,
+}: Pick<AttachForm, "productId" | "additionalPlans"> & {
+	entityId?: string;
+}): AttachPlanSelection[] => [
+	...(productId ? [{ productId, entityId }] : []),
+	...additionalPlans.flatMap((plan) =>
+		plan.productId
+			? [
+					{
+						id: plan._id,
+						productId: plan.productId,
+						entityId: resolvePlanEntityId({
+							planEntityId: plan.entityId,
+							defaultEntityId: entityId,
+						}),
+					},
+				]
+			: [],
+	),
+];
 
 export function hasInvalidAttachPlanScopes({
 	productId,
@@ -46,37 +72,24 @@ export function hasInvalidAttachPlanScopes({
 	customer: FullCustomer | null;
 	entityId?: string;
 }) {
-	const selectedPlans = productId ? [{ productId, entityId }] : [];
-	for (const plan of additionalPlans) {
-		if (!plan.productId) continue;
-		selectedPlans.push({
-			productId: plan.productId,
-			entityId: resolvePlanEntityId({
-				planEntityId: plan.entityId,
-				requestEntityId: entityId,
-			}),
+	const selectedPlans = getAttachPlanSelections({
+		productId,
+		additionalPlans,
+		entityId,
+	});
+	const productsById = new Map(products.map((product) => [product.id, product]));
+
+	for (const [index, plan] of selectedPlans.entries()) {
+		const product = productsById.get(plan.productId);
+		if (!product) return true;
+		const optionState = getAttachProductOptionState({
+			product,
+			products,
+			customer,
+			entityId: plan.entityId,
+			selectedPlans: selectedPlans.slice(0, index),
 		});
-	}
-	const scopeGroupKeys = new Set<string>();
-
-	for (const plan of selectedPlans) {
-		const scopeGroupKey = JSON.stringify([
-			plan.entityId ?? null,
-			getProductGroupKey({ productId: plan.productId, products }),
-		]);
-		if (scopeGroupKeys.has(scopeGroupKey)) return true;
-		scopeGroupKeys.add(scopeGroupKey);
-
-		if (
-			customer &&
-			isProductAlreadyEnabled({
-				productId: plan.productId,
-				customer,
-				entityId: plan.entityId,
-			})
-		) {
-			return true;
-		}
+		if (optionState.disabledValue) return true;
 	}
 
 	return false;
@@ -87,18 +100,25 @@ export function getAttachProductOptionState({
 	products,
 	customer,
 	entityId,
-	usedGroupKeys,
+	selectedPlans,
 	allowScopeSelection = false,
 }: {
 	product: ProductV2;
 	products: ProductV2[];
 	customer: FullCustomer | null;
 	entityId?: string;
-	usedGroupKeys: Set<string>;
+	selectedPlans: AttachPlanSelection[];
 	allowScopeSelection?: boolean;
-}) {
-	const groupSelected = usedGroupKeys.has(
-		getProductGroupKey({ productId: product.id, products }),
+}): AttachProductOptionState {
+	const productGroupKey = getProductGroupKey({
+		productId: product.id,
+		products,
+	});
+	const groupSelected = selectedPlans.some(
+		(plan) =>
+			plan.entityId === entityId &&
+			getProductGroupKey({ productId: plan.productId, products }) ===
+				productGroupKey,
 	);
 	const alreadyEnabled = customer
 		? isProductAlreadyEnabled({
@@ -126,9 +146,7 @@ export function getAttachProductOptionState({
 	}
 
 	const badgeValue =
-		!allowScopeSelection && currentlyAttached
-			? "Already Enabled"
-			: undefined;
+		!allowScopeSelection && currentlyAttached ? "Already Enabled" : undefined;
 
 	return {
 		disabledValue,
@@ -160,16 +178,32 @@ export function useAttachAdditionalPlans({
 	const selectedProductIds = productId
 		? [productId, ...additionalProductIds]
 		: additionalProductIds;
-	const usedGroupKeys = getUsedProductGroupKeys({
-		productIds: selectedProductIds,
-		products,
-	});
-	const additionalPlanGroupKeys = getUsedProductGroupKeys({
-		productIds: additionalProductIds,
-		products,
-	});
 	const canSelectMultipleScopes =
 		enabled && Boolean(customer?.entities?.length);
+	const selectedPlans = getAttachPlanSelections({
+		productId,
+		additionalPlans,
+		entityId,
+	});
+	const getProductOptionState = ({
+		product,
+		planId,
+		entityId: planEntityId,
+	}: {
+		product: ProductV2;
+		planId?: string;
+		entityId?: string;
+	}) =>
+		getAttachProductOptionState({
+			product,
+			products,
+			customer,
+			entityId: planEntityId,
+			selectedPlans: selectedPlans.filter((plan) =>
+				planId === undefined ? plan.id !== undefined : plan.id !== planId,
+			),
+			allowScopeSelection: canSelectMultipleScopes,
+		});
 
 	const activeProducts = products.filter((product) => !product.archived);
 	const hasPendingEmptyPlan = additionalPlans.some((plan) => !plan.productId);
@@ -188,15 +222,7 @@ export function useAttachAdditionalPlans({
 		!!productId &&
 		!hasPendingEmptyPlan &&
 		activeProducts.some(
-			(product) =>
-				!getAttachProductOptionState({
-					product,
-					products,
-					customer,
-					entityId,
-					usedGroupKeys,
-					allowScopeSelection: canSelectMultipleScopes,
-				}).disabledValue,
+			(product) => !getProductOptionState({ product, entityId }).disabledValue,
 		);
 
 	const handleAddPlan = useCallback(() => {
@@ -234,23 +260,17 @@ export function useAttachAdditionalPlans({
 			);
 			if (!enabled || !nextProduct) return;
 
-			const currentProductId = form.store.state.values.productId;
-			const selectedIds = [
-				...(currentProductId ? [currentProductId] : []),
-				...form.store.state.values.additionalPlans.flatMap((plan) =>
-					plan._id !== id && plan.productId ? [plan.productId] : [],
-				),
-			];
-			const selectedGroupKeys = getUsedProductGroupKeys({
-				productIds: selectedIds,
-				products,
-			});
+			const currentValues = form.store.state.values;
 			const optionState = getAttachProductOptionState({
 				product: nextProduct,
 				products,
 				customer,
 				entityId,
-				usedGroupKeys: selectedGroupKeys,
+				selectedPlans: getAttachPlanSelections({
+					productId: currentValues.productId,
+					additionalPlans: currentValues.additionalPlans,
+					entityId,
+				}).filter((plan) => plan.id !== id),
 				allowScopeSelection: canSelectMultipleScopes,
 			});
 			if (optionState.disabledValue) return;
@@ -276,10 +296,9 @@ export function useAttachAdditionalPlans({
 		isMultiPlan,
 		hasInvalidPlanScopes,
 		selectedProductIds,
-		usedGroupKeys,
-		additionalPlanGroupKeys,
 		canSelectMultipleScopes,
 		canAddPlan,
+		getProductOptionState,
 		handleAddPlan,
 		handleRemovePlan,
 		handleChangePlanProduct,

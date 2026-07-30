@@ -1,23 +1,19 @@
-import type {
-	AttachParamsV0,
-	CreateScheduleParamsV0,
-} from "@autumn/shared";
+import type { AttachParamsV0, CreateScheduleParamsV0 } from "@autumn/shared";
 import { useBillingPreview } from "@/components/forms/shared/hooks/useBillingPreview";
-import { getAttachBillingPath } from "../utils/attachBillingPath";
 
 interface UseAttachPreviewParams {
+	path: string;
 	requestBody: AttachParamsV0 | CreateScheduleParamsV0 | null;
-	isMultiPlan?: boolean;
 	enabled?: boolean;
 }
 
 export function useAttachPreview({
+	path,
 	requestBody,
-	isMultiPlan = false,
 	enabled,
 }: UseAttachPreviewParams) {
 	return useBillingPreview({
-		path: getAttachBillingPath({ isMultiPlan, preview: true }),
+		path,
 		queryKeyPrefix: "attach-preview-v2",
 		requestBody,
 		enabled,

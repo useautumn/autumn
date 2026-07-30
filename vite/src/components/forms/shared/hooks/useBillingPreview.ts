@@ -1,8 +1,9 @@
 import type { AttachPreviewResponse } from "@autumn/shared";
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import type { AxiosError } from "axios";
-import { useEffect, useMemo, useState } from "react";
+import { useMemo } from "react";
 import { useQueryKeyFactory } from "@/hooks/common/useQueryKeyFactory";
+import { useDebounce } from "@/hooks/useDebounce";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
 
 const BILLING_PREVIEW_EXPAND = [
@@ -31,12 +32,7 @@ export function useBillingPreview<TRequestBody extends object>({
 		}),
 		[path, requestBody],
 	);
-	const [debouncedRequest, setDebouncedRequest] = useState(request);
-
-	useEffect(() => {
-		const timer = setTimeout(() => setDebouncedRequest(request), 300);
-		return () => clearTimeout(timer);
-	}, [request]);
+	const debouncedRequest = useDebounce({ value: request, delayMs: 300 });
 
 	const shouldEnable = enabled ?? !!requestBody;
 	const isDebouncing =
@@ -60,8 +56,7 @@ export function useBillingPreview<TRequestBody extends object>({
 			);
 			return response.data;
 		},
-		enabled:
-			shouldEnable && debouncedRequest.body !== null && !isDebouncing,
+		enabled: shouldEnable && debouncedRequest.body !== null && !isDebouncing,
 		staleTime: 0,
 		refetchOnWindowFocus: false,
 		placeholderData: keepPreviousData,

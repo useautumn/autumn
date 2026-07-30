@@ -1,15 +1,15 @@
 import {
 	type BillingBehavior,
 	BillingInterval,
-	type CusProduct,
 	CusProductStatus,
 	type FullCusProduct,
 	hasActivePaidSubscription,
 	type PlanTiming,
 } from "@autumn/shared";
-import { useCallback, useEffect, useMemo } from "react";
-import { useCusQuery } from "@/views/customers/customer/hooks/useCusQuery";
-import { useAttachFormContext } from "../context/AttachFormProvider";
+import { useCallback, useEffect } from "react";
+import type { AttachForm } from "../attachFormSchema";
+import type { UseAttachForm } from "./useAttachForm";
+import type { UseAttachPreviewReturn } from "./useAttachPreview";
 import {
 	getNoChargesDisabledReason,
 	isNoChargesAllowedForAttach,
@@ -17,41 +17,37 @@ import {
 } from "../utils/attachProrationBehaviorRules";
 
 /** Encapsulates planSchedule + prorationBehavior derived state and mutations. */
-export function useAttachBillingOptionsState() {
-	const {
-		form,
-		formValues,
-		previewQuery,
-		isFreeToPaidTransition,
-		hasActiveSubscription,
-		additionalPlans,
-	} = useAttachFormContext();
-	const isMultiPlan = additionalPlans.isMultiPlan;
+export function useAttachBillingOptionsState({
+	form,
+	formValues,
+	previewQuery,
+	customerProducts,
+	isFreeToPaidTransition,
+	hasActiveSubscription,
+	isMultiPlan,
+}: {
+	form: UseAttachForm;
+	formValues: AttachForm;
+	previewQuery: UseAttachPreviewReturn;
+	customerProducts: FullCusProduct[];
+	isFreeToPaidTransition: boolean;
+	hasActiveSubscription: boolean;
+	isMultiPlan: boolean;
+}) {
 	const { planSchedule, prorationBehavior, newBillingSubscription, startDate } =
 		formValues;
 	const previewData = previewQuery.data;
-	const { customer } = useCusQuery();
 
-	const hasActiveProductWithTrial = useMemo(
-		() =>
-			((customer?.customer_products ?? []) as CusProduct[]).some(
-				(cp) =>
-					cp.status === CusProductStatus.Trialing &&
-					cp.subscription_ids &&
-					cp.subscription_ids.length > 0 &&
-					!!cp.free_trial_id,
-			),
-		[customer?.customer_products],
+	const hasActiveProductWithTrial = customerProducts.some(
+		(customerProduct) =>
+			customerProduct.status === CusProductStatus.Trialing &&
+			(customerProduct.subscription_ids?.length ?? 0) > 0 &&
+			!!customerProduct.free_trial_id,
 	);
 
-	const hasPaidRecurringSubscription = useMemo(
-		() =>
-			hasActivePaidSubscription({
-				customerProducts: (customer?.customer_products ??
-					[]) as FullCusProduct[],
-			}),
-		[customer?.customer_products],
-	);
+	const hasPaidRecurringSubscription = hasActivePaidSubscription({
+		customerProducts,
+	});
 
 	const hasOutgoing = (previewData?.outgoing.length ?? 0) > 0;
 	const incomingPlans = previewData?.incoming ?? [];
@@ -251,3 +247,7 @@ export function useAttachBillingOptionsState() {
 		handleProrationBehaviorChange,
 	};
 }
+
+export type UseAttachBillingOptionsStateReturn = ReturnType<
+	typeof useAttachBillingOptionsState
+>;

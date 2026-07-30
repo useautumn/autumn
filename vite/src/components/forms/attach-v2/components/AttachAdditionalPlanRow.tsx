@@ -1,25 +1,21 @@
-import type { FullCustomer } from "@autumn/shared";
 import { IconButton, SearchableSelect } from "@autumn/ui";
 import { XIcon } from "@phosphor-icons/react";
 import { useState } from "react";
 import {
 	PlanEntityScopeSelector,
+	resolvePlanEntityId,
 	ScopedPlanRow,
 	SelectedPlanRow,
 } from "@/components/forms/shared";
-import { useCusQuery } from "@/views/customers/customer/hooks/useCusQuery";
 import { useScopeEntitySearch } from "@/views/customers2/customer/hooks/useScopeEntitySearch";
 import type { AttachAdditionalPlan } from "../attachFormSchema";
 import { useAttachFormContext } from "../context/AttachFormProvider";
-import { getAttachProductOptionState } from "../hooks/useAttachAdditionalPlans";
-import { stripPricesFromItems } from "../utils/grantFreeUtils";
+import { getAttachDisplayItems } from "../utils/grantFreeUtils";
 
 export function AttachAdditionalPlanRow({
 	plan,
-	readOnly,
 }: {
 	plan: AttachAdditionalPlan;
-	readOnly?: boolean;
 }) {
 	const {
 		form,
@@ -29,21 +25,16 @@ export function AttachAdditionalPlanRow({
 		additionalPlans,
 		handleEditPlan,
 	} = useAttachFormContext();
-	const {
-		usedGroupKeys,
-		canSelectMultipleScopes,
-		handleRemovePlan,
-		handleChangePlanProduct,
-	} = additionalPlans;
-	const { customer } = useCusQuery();
-	const fullCustomer = customer as FullCustomer | null;
+	const { getProductOptionState, handleRemovePlan, handleChangePlanProduct } =
+		additionalPlans;
 	const [scopeOpen, setScopeOpen] = useState(plan.entityId !== undefined);
-	const effectiveEntityId =
-		plan.entityId === undefined ? entityId : (plan.entityId ?? undefined);
+	const effectiveEntityId = resolvePlanEntityId({
+		planEntityId: plan.entityId,
+		defaultEntityId: entityId,
+	});
 	const {
 		hasEntities,
 		entities,
-		selectedEntity,
 		isLoading: isEntitiesLoading,
 		setSearch: setEntitySearch,
 	} = useScopeEntitySearch({ selectedEntityId: effectiveEntityId });
@@ -51,11 +42,11 @@ export function AttachAdditionalPlanRow({
 	const selectedProduct = products.find(
 		(product) => product.id === plan.productId,
 	);
-	const displayedItems = formValues.grantFree
-		? stripPricesFromItems({
-				items: plan.items ?? selectedProduct?.items ?? [],
-			})
-		: plan.items;
+	const displayedItems = getAttachDisplayItems({
+		items: plan.items,
+		productItems: selectedProduct?.items,
+		grantFree: formValues.grantFree,
+	});
 
 	if (!plan.productId) {
 		const productOptions = products.flatMap((product) =>
@@ -64,13 +55,10 @@ export function AttachAdditionalPlanRow({
 				: [
 						{
 							product,
-							...getAttachProductOptionState({
+							...getProductOptionState({
 								product,
-								products,
-								customer: fullCustomer,
+								planId: plan._id,
 								entityId: effectiveEntityId,
-								usedGroupKeys,
-								allowScopeSelection: canSelectMultipleScopes,
 							}),
 						},
 					],
@@ -126,7 +114,7 @@ export function AttachAdditionalPlanRow({
 		(candidate) => candidate._id === plan._id,
 	);
 	const scopeSelector =
-		!readOnly && hasEntities && planIndex !== -1 ? (
+		hasEntities && planIndex !== -1 ? (
 			<PlanEntityScopeSelector
 				entities={entities}
 				value={plan.entityId}
@@ -158,19 +146,12 @@ export function AttachAdditionalPlanRow({
 				product={selectedProduct}
 				customItems={displayedItems}
 				isCustom={plan.isCustom || formValues.grantFree}
-				scope={
-					readOnly
-						? selectedEntity?.name || effectiveEntityId || "Customer-level"
-						: undefined
-				}
 				onEdit={
-					readOnly || formValues.grantFree
+					formValues.grantFree
 						? undefined
 						: () => handleEditPlan({ additionalPlanId: plan._id })
 				}
-				onRemove={
-					readOnly ? undefined : () => handleRemovePlan({ id: plan._id })
-				}
+				onRemove={() => handleRemovePlan({ id: plan._id })}
 			/>
 		</ScopedPlanRow>
 	);

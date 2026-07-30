@@ -1,5 +1,6 @@
 import type { CreateScheduleParamsV0Input } from "@autumn/shared";
 import { useBillingPreview } from "@/components/forms/shared/hooks/useBillingPreview";
+import { BILLING_OPERATIONS } from "@/components/forms/shared/utils/billingOperations";
 
 export function useCreateSchedulePreview({
 	requestBody,
@@ -7,7 +8,7 @@ export function useCreateSchedulePreview({
 	requestBody: CreateScheduleParamsV0Input | null;
 }) {
 	return useBillingPreview({
-		path: "/v1/billing.preview_create_schedule",
+		path: BILLING_OPERATIONS.createSchedule.previewPath,
 		queryKeyPrefix: "create-schedule-preview",
 		requestBody,
 	});

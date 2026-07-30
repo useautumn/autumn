@@ -1,5 +1,5 @@
 import type { Entity, FullCustomer } from "@autumn/shared";
-import { useEffect, useState } from "react";
+import { useRef, useState } from "react";
 import { useDebounce } from "@/hooks/useDebounce";
 import { useCusQuery } from "@/views/customers/customer/hooks/useCusQuery";
 import { useEntitiesQuery } from "./useEntitiesQuery";
@@ -23,6 +23,7 @@ export const useScopeEntitySearch = ({
 	const customerEntities = (customer as FullCustomer | null)?.entities ?? [];
 
 	const [search, setSearch] = useState("");
+	const entityCache = useRef(new Map<string, Entity>());
 	const debouncedSearch = useDebounce({ value: search, delayMs: 300 });
 	const {
 		entities: allEntities,
@@ -34,7 +35,6 @@ export const useScopeEntitySearch = ({
 			search: debouncedSearch,
 			enabled: !!debouncedSearch,
 		});
-	const [searchedSelection, setSearchedSelection] = useState<Entity>();
 	const allKnownEntities = [
 		...new Map(
 			[...allEntities, ...customerEntities].map((entity) => [
@@ -46,19 +46,13 @@ export const useScopeEntitySearch = ({
 	const hasEntities = allKnownEntities.length > 0 || totalCount > 0;
 	const visibleEntities = debouncedSearch ? searchedEntities : allKnownEntities;
 
-	const currentSelection = [...searchedEntities, ...allKnownEntities].find(
-		(e) => e.id === selectedEntityId || e.internal_id === selectedEntityId,
-	);
-	useEffect(() => {
-		if (currentSelection) setSearchedSelection(currentSelection);
-	}, [currentSelection]);
-	const selectedEntity =
-		currentSelection ??
-		(searchedSelection &&
-		(searchedSelection.id === selectedEntityId ||
-			searchedSelection.internal_id === selectedEntityId)
-			? searchedSelection
-			: undefined);
+	for (const entity of [...searchedEntities, ...allKnownEntities]) {
+		if (entity.id) entityCache.current.set(entity.id, entity);
+		if (entity.internal_id) entityCache.current.set(entity.internal_id, entity);
+	}
+	const selectedEntity = selectedEntityId
+		? entityCache.current.get(selectedEntityId)
+		: undefined;
 
 	const entities =
 		selectedEntity &&

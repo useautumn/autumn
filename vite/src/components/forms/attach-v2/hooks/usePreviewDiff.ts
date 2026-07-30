@@ -1,7 +1,6 @@
 import type { ProductItem } from "@autumn/shared";
 import { useEffect, useMemo, useState } from "react";
 import type { VersionedPlanLicense } from "@/hooks/queries/usePlanLicensesQuery";
-import type { AttachAdditionalPlan } from "../attachFormSchema";
 import {
 	outgoingToPlanLicenses,
 	outgoingToProductItems,
@@ -21,18 +20,18 @@ export function usePreviewDiff({
 	items,
 	version,
 	incomingItems,
-	additionalPlans,
+	enabled = true,
 }: {
 	previewQuery: UseAttachPreviewReturn;
 	productId: string;
 	items: ProductItem[] | null;
 	version: number | undefined;
 	incomingItems: ProductItem[] | undefined;
-	additionalPlans: AttachAdditionalPlan[];
+	enabled?: boolean;
 }) {
 	const planConfigKey = useMemo(
-		() => JSON.stringify({ productId, items, version, additionalPlans }),
-		[productId, items, version, additionalPlans],
+		() => JSON.stringify({ productId, items, version }),
+		[productId, items, version],
 	);
 
 	const [diffState, setDiffState] = useState<{
@@ -46,7 +45,7 @@ export function usePreviewDiff({
 	const isLoading = previewQuery.isLoading;
 
 	useEffect(() => {
-		if (!isLoading) {
+		if (enabled && !isLoading) {
 			setDiffState({
 				key: planConfigKey,
 				items: outgoing
@@ -56,7 +55,16 @@ export function usePreviewDiff({
 				hasOutgoing: (outgoing?.length ?? 0) > 0,
 			});
 		}
-	}, [isLoading, outgoing, planConfigKey, incomingItems]);
+	}, [enabled, isLoading, outgoing, planConfigKey, incomingItems]);
+
+	if (!enabled) {
+		return {
+			outgoingItems: [],
+			outgoingLicenses: [],
+			hasOutgoingPlans: false,
+			isDiffLoading: false,
+		};
+	}
 
 	return {
 		outgoingItems: diffState.items,

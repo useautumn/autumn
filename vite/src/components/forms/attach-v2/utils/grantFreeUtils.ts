@@ -29,3 +29,17 @@ export function stripPricesFromItems({
 		];
 	});
 }
+
+export function getAttachDisplayItems({
+	items,
+	productItems,
+	grantFree,
+}: {
+	items: ProductItem[] | null;
+	productItems?: ProductItem[];
+	grantFree: boolean;
+}) {
+	return grantFree
+		? stripPricesFromItems({ items: items ?? productItems ?? [] })
+		: items;
+}

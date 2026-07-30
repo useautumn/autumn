@@ -1,4 +1,3 @@
-import type { FullCustomer } from "@autumn/shared";
 import { InlineAction } from "@autumn/ui";
 import { PlusIcon } from "@phosphor-icons/react";
 import {
@@ -6,10 +5,8 @@ import {
 	ScopedPlanRow,
 	SelectedPlanRow,
 } from "@/components/forms/shared";
-import { useCusQuery } from "@/views/customers/customer/hooks/useCusQuery";
 import { useAttachFormContext } from "../context/AttachFormProvider";
-import { getAttachProductOptionState } from "../hooks/useAttachAdditionalPlans";
-import { stripPricesFromItems } from "../utils/grantFreeUtils";
+import { getAttachDisplayItems } from "../utils/grantFreeUtils";
 import { AttachAdditionalPlanRow } from "./AttachAdditionalPlanRow";
 
 export function AttachProductSelection({
@@ -27,23 +24,15 @@ export function AttachProductSelection({
 		additionalPlans,
 		handleEditPlan,
 	} = useAttachFormContext();
-	const { customer } = useCusQuery();
-
 	const { productId, additionalPlans: additionalPlanValues } = formValues;
-	const {
-		isMultiPlan,
-		additionalPlanGroupKeys,
-		canSelectMultipleScopes,
-		canAddPlan,
-		handleAddPlan,
-	} = additionalPlans;
+	const { isMultiPlan, canAddPlan, getProductOptionState, handleAddPlan } =
+		additionalPlans;
 	const availableProducts = products.filter((product) => !product.archived);
-	const fullCustomer = customer as FullCustomer | null;
-	const displayedPrimaryItems = formValues.grantFree
-		? stripPricesFromItems({
-				items: formValues.items ?? product?.items ?? [],
-			})
-		: formValues.items;
+	const displayedPrimaryItems = getAttachDisplayItems({
+		items: formValues.items,
+		productItems: product?.items,
+		grantFree: formValues.grantFree,
+	});
 
 	return (
 		<div className="space-y-2">
@@ -65,13 +54,9 @@ export function AttachProductSelection({
 							searchable
 							defaultOpen={!productId}
 							options={availableProducts.map((product) => {
-								const optionState = getAttachProductOptionState({
+								const optionState = getProductOptionState({
 									product,
-									products,
-									customer: fullCustomer,
 									entityId,
-									usedGroupKeys: additionalPlanGroupKeys,
-									allowScopeSelection: canSelectMultipleScopes,
 								});
 
 								return {

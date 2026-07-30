@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import { addDays } from "date-fns";
-import { getConfirmLabel } from "@/components/forms/attach-v2/components/AttachFooterV3";
+import { getAttachConfirmLabel } from "@/components/forms/attach-v2/utils/getAttachConfirmLabel";
 
 const NOW = new Date("2026-04-30T10:00:00Z").getTime();
 
@@ -10,10 +10,10 @@ const previewData = {
 	outgoing: [],
 };
 
-describe("getConfirmLabel", () => {
+describe("getAttachConfirmLabel", () => {
 	test("future startDate schedules instead of charging", () => {
 		expect(
-			getConfirmLabel({
+			getAttachConfirmLabel({
 				previewData,
 				startDate: addDays(NOW, 1).getTime(),
 				now: NOW,
@@ -23,7 +23,7 @@ describe("getConfirmLabel", () => {
 
 	test("future startDate takes precedence over checkout redirect", () => {
 		expect(
-			getConfirmLabel({
+			getAttachConfirmLabel({
 				previewData: {
 					...previewData,
 					redirect_to_checkout: true,
@@ -36,7 +36,7 @@ describe("getConfirmLabel", () => {
 
 	test("immediate paid attach charges customer", () => {
 		expect(
-			getConfirmLabel({
+			getAttachConfirmLabel({
 				previewData,
 				startDate: null,
 				now: NOW,
@@ -46,7 +46,7 @@ describe("getConfirmLabel", () => {
 
 	test("backdated startDate with a card charges the customer", () => {
 		expect(
-			getConfirmLabel({
+			getAttachConfirmLabel({
 				previewData,
 				startDate: addDays(NOW, -30).getTime(),
 				now: NOW,
@@ -56,7 +56,7 @@ describe("getConfirmLabel", () => {
 
 	test("backdated startDate without a card generates a checkout URL", () => {
 		expect(
-			getConfirmLabel({
+			getAttachConfirmLabel({
 				previewData: {
 					...previewData,
 					redirect_to_checkout: true,

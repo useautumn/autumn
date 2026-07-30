@@ -1,24 +1,26 @@
-import { SelectedPlanRow } from "@/components/forms/shared";
+import {
+	resolvePlanEntityId,
+	SelectedPlanRow,
+} from "@/components/forms/shared";
 import { SheetSection } from "@/components/v2/sheets/SharedSheetComponents";
 import { useScopeEntitySearch } from "@/views/customers2/customer/hooks/useScopeEntitySearch";
 import { useAttachFormContext } from "../context/AttachFormProvider";
-import { stripPricesFromItems } from "../utils/grantFreeUtils";
-import { AttachAdditionalPlanRow } from "./AttachAdditionalPlanRow";
+import { getAttachDisplayItems } from "../utils/grantFreeUtils";
 
 export function AttachMultiPlanSection() {
-	const { formValues, product, hasCustomizations, entityId } =
+	const { formValues, product, products, hasCustomizations, entityId } =
 		useAttachFormContext();
-	const { selectedEntity } = useScopeEntitySearch({
+	const { entities, selectedEntity } = useScopeEntitySearch({
 		selectedEntityId: entityId ?? undefined,
 	});
 	const selectedPlans = formValues.additionalPlans.filter(
 		(plan) => plan.productId,
 	);
-	const primaryItems = formValues.grantFree
-		? stripPricesFromItems({
-				items: formValues.items ?? product?.items ?? [],
-			})
-		: formValues.items;
+	const primaryItems = getAttachDisplayItems({
+		items: formValues.items,
+		productItems: product?.items,
+		grantFree: formValues.grantFree,
+	});
 
 	if (selectedPlans.length === 0) return null;
 
@@ -32,9 +34,34 @@ export function AttachMultiPlanSection() {
 					isCustom={hasCustomizations || formValues.grantFree}
 					scope={selectedEntity?.name || entityId || "Customer-level"}
 				/>
-				{selectedPlans.map((plan) => (
-					<AttachAdditionalPlanRow key={plan._id} plan={plan} readOnly />
-				))}
+				{selectedPlans.map((plan) => {
+					const selectedProduct = products.find(
+						(candidate) => candidate.id === plan.productId,
+					);
+					const planEntityId = resolvePlanEntityId({
+						planEntityId: plan.entityId,
+						defaultEntityId: entityId,
+					});
+					const planEntity = entities.find(
+						(entity) =>
+							entity.id === planEntityId || entity.internal_id === planEntityId,
+					);
+
+					return (
+						<SelectedPlanRow
+							key={plan._id}
+							productId={plan.productId}
+							product={selectedProduct}
+							customItems={getAttachDisplayItems({
+								items: plan.items,
+								productItems: selectedProduct?.items,
+								grantFree: formValues.grantFree,
+							})}
+							isCustom={plan.isCustom || formValues.grantFree}
+							scope={planEntity?.name || planEntityId || "Customer-level"}
+						/>
+					);
+				})}
 			</div>
 		</SheetSection>
 	);

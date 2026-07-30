@@ -85,7 +85,7 @@ test("returns null when no additional plan is selected", () => {
 
 test("returns null while selected plan scopes conflict", () => {
 	expect(
-		buildAttachScheduleRequestBody(baseParams({ valid: false })),
+		buildAttachScheduleRequestBody(baseParams({ hasInvalidPlanScopes: true })),
 	).toBeNull();
 });
 

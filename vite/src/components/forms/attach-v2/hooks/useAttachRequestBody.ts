@@ -361,10 +361,7 @@ export function useAttachRequestBody(params: BuildAttachRequestBodyParams) {
 					body.net_terms_days = netTermsDays;
 				}
 
-				// `enable_product_immediately` applies to both invoice mode and the
-				// stripe_checkout "enable plan immediately" flow. Keep it independent
-				// of `useInvoice` so the dashboard can attach the cusProduct when
-				// copying a checkout URL too.
+				// Checkout activation is independent of invoice mode.
 				if (enableProductImmediately !== undefined) {
 					body.enable_product_immediately = enableProductImmediately;
 				}

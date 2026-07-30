@@ -1,20 +1,16 @@
-import {
-	Button,
-	InlineAction,
-	Tooltip,
-	TooltipContent,
-	TooltipTrigger,
-} from "@autumn/ui";
+import { Button, InlineAction } from "@autumn/ui";
 import { PlusIcon } from "@phosphor-icons/react";
 import { useStore } from "@tanstack/react-form";
-import { PlanEntityScopeSelector } from "@/components/forms/shared";
+import {
+	DisabledTooltipButton,
+	PlanEntityScopeSelector,
+} from "@/components/forms/shared";
 import {
 	SheetFooter,
 	SheetHeader,
 	SheetSection,
 } from "@/components/v2/sheets/SharedSheetComponents";
 import { useSheetStore } from "@/hooks/stores/useSheetStore";
-import { cn } from "@/lib/utils";
 import { useScopeEntitySearch } from "@/views/customers2/customer/hooks/useScopeEntitySearch";
 import { useCreateScheduleFormContext } from "../context/CreateScheduleFormProvider";
 import { useHasSchedule } from "../hooks/useHasSchedule";
@@ -90,21 +86,15 @@ export function CreateScheduleSheetContent() {
 				<Button variant="secondary" onClick={closeSheet} className="w-full">
 					Cancel
 				</Button>
-				<Tooltip>
-					<TooltipTrigger asChild>
-						<span className="w-full">
-							<Button
-								variant="primary"
-								onClick={() => setSheet({ type: "create-schedule-review" })}
-								disabled={isDisabled}
-								className="w-full"
-							>
-								Preview Changes
-							</Button>
-						</span>
-					</TooltipTrigger>
-					{disabledReason && <TooltipContent>{disabledReason}</TooltipContent>}
-				</Tooltip>
+				<DisabledTooltipButton
+					variant="primary"
+					onClick={() => setSheet({ type: "create-schedule-review" })}
+					disabled={isDisabled}
+					disabledReason={disabledReason}
+					className="w-full"
+				>
+					Preview Changes
+				</DisabledTooltipButton>
 			</SheetFooter>
 		</div>
 	);
@@ -150,9 +140,7 @@ export function CreateScheduleReviewContent() {
 		? "Cannot send an invoice for $0 amounts. Please confirm the change instead."
 		: null;
 
-	// Usage-only plans create a real recurring sub that bills at cycle end even
-	// though nothing is due now; a subtotal means a $0 invoice is still generated,
-	// so keep the invoice sheet for those and only start directly when nothing bills now.
+	// A subtotal still creates a $0 invoice; usage-only plans do not.
 	const willCreateZeroDollarInvoice = (preview?.subtotal ?? 0) > 0;
 
 	const isInvoiceOnlyStart =
@@ -202,34 +190,17 @@ export function CreateScheduleReviewContent() {
 
 			<SheetFooter className="flex flex-col grid-cols-1 mt-0">
 				<div className="flex flex-col gap-2 w-full">
-					<Tooltip>
-						<TooltipTrigger asChild>
-							<span
-								className={cn(
-									"flex w-full",
-									invoiceDisabledReason && "cursor-not-allowed",
-								)}
-							>
-								<Button
-									variant="secondary"
-									className={cn(
-										"w-full",
-										invoiceDisabledReason && "pointer-events-none opacity-50",
-									)}
-									disabled={!invoiceDisabledReason && (isPending || isDisabled)}
-									isLoading={isInvoiceOnlyStart && isPending}
-									onClick={handleInvoiceButtonClick}
-								>
-									{invoiceButtonLabel}
-								</Button>
-							</span>
-						</TooltipTrigger>
-						{invoiceDisabledReason && (
-							<TooltipContent side="top" className="max-w-(--anchor-width)">
-								{invoiceDisabledReason}
-							</TooltipContent>
-						)}
-					</Tooltip>
+					<DisabledTooltipButton
+						variant="secondary"
+						className="w-full"
+						disabled={isPending || isDisabled}
+						disabledReason={invoiceDisabledReason}
+						tooltipClassName="max-w-(--anchor-width)"
+						isLoading={isInvoiceOnlyStart && isPending}
+						onClick={handleInvoiceButtonClick}
+					>
+						{invoiceButtonLabel}
+					</DisabledTooltipButton>
 					<Button
 						variant="primary"
 						className="w-full"
