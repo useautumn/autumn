@@ -59,3 +59,7 @@ export const isSyncCoalesceEnabled = (): boolean => store.get().syncCoalesce;
 /** Global gate: serve subject lookups from Postgres instead of the cache. */
 export const isSubjectLookupDbOnlyEnabled = (): boolean =>
 	store.get().subjectLookupDbOnly;
+
+/** Global gate: fall back to Postgres on Redis outage instead of shedding. */
+export const isRedisFallbackToDbEnabled = (): boolean =>
+	store.get().redisFallbackToDb;
