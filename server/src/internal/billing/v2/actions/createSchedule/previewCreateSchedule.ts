@@ -11,6 +11,7 @@ import { computeAttachPreviewBillingPlan } from "@/internal/billing/v2/utils/bil
 import { computeCreateSchedulePlan } from "./compute/computeCreateSchedulePlan";
 import {
 	handleCreateScheduleBillingPlanErrors,
+	handleCreateScheduleComputeErrors,
 	handleCreateScheduleErrors,
 } from "./errors/handleCreateScheduleErrors";
 import { setupCreateScheduleBillingContext } from "./setup/setupCreateScheduleBillingContext";
@@ -35,7 +36,6 @@ export const previewCreateScheduleWithContext = async ({
 	});
 
 	await handleCreateScheduleErrors({
-		db: ctx.db,
 		billingContext,
 		preview: true,
 	});
@@ -44,6 +44,7 @@ export const previewCreateScheduleWithContext = async ({
 		ctx,
 		billingContext,
 	});
+	handleCreateScheduleComputeErrors({ billingContext, autumnBillingPlan });
 	const stripeBillingPlan = await evaluateStripeBillingPlan({
 		ctx,
 		billingContext,

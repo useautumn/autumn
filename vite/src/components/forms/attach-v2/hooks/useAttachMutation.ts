@@ -1,106 +1,41 @@
-import type { AttachParamsV0, BillingResponse } from "@autumn/shared";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
-import type { AxiosError } from "axios";
-import { toast } from "sonner";
-import { invalidateCustomerBillingQueries } from "@/components/forms/shared/utils/invalidateCustomerBillingQueries";
-import { useAxiosInstance } from "@/services/useAxiosInstance";
+import type {
+	AttachParamsV0,
+	BillingResponse,
+	CreateScheduleParamsV0,
+	CreateScheduleResponse,
+} from "@autumn/shared";
+import { useBillingMutation } from "@/components/forms/shared/hooks/useBillingMutation";
+import type { BillingStageParams } from "@/components/forms/shared/utils/billingStageParams";
 
 export function useAttachMutation({
 	customerId,
 	buildRequestBody,
+	path,
+	invalidatesSchedule,
 	onCheckoutRedirect,
 	onSuccess,
 }: {
 	customerId: string | undefined;
-	buildRequestBody: (params?: {
-		useInvoice?: boolean;
-		enableProductImmediately?: boolean;
-		finalizeInvoice?: boolean;
-		invoiceTemplateId?: string;
-		netTermsDays?: number;
-		longLivedCheckout?: boolean;
-	}) => AttachParamsV0 | null;
+	buildRequestBody: (
+		params?: BillingStageParams,
+	) => AttachParamsV0 | CreateScheduleParamsV0 | null;
+	path: string;
+	invalidatesSchedule: boolean;
 	onCheckoutRedirect?: (checkoutUrl: string) => void;
 	onSuccess?: () => void;
 }) {
-	const axiosInstance = useAxiosInstance();
-	const queryClient = useQueryClient();
-
-	const mutation = useMutation({
-		mutationFn: async ({
-			useInvoice,
-			enableProductImmediately,
-			finalizeInvoice,
-			invoiceTemplateId,
-			netTermsDays,
-			longLivedCheckout,
-			skipDefaultSuccess,
-		}: {
-			useInvoice?: boolean;
-			enableProductImmediately?: boolean;
-			finalizeInvoice?: boolean;
-			invoiceTemplateId?: string;
-			netTermsDays?: number;
-			longLivedCheckout?: boolean;
-			skipDefaultSuccess?: boolean;
-		}) => {
-			if (!customerId) {
-				throw new Error("Customer ID is required");
-			}
-
-			const requestBody = buildRequestBody({
-				useInvoice,
-				enableProductImmediately,
-				finalizeInvoice,
-				invoiceTemplateId,
-				netTermsDays,
-				longLivedCheckout,
-			});
-
-			if (!requestBody) {
-				throw new Error("Failed to build request body");
-			}
-
-			const response = await axiosInstance.post<BillingResponse>(
-				"/v1/billing.attach",
-				requestBody,
-			);
-
-			return { data: response.data, useInvoice, skipDefaultSuccess };
-		},
-		onSuccess: ({ data, useInvoice, skipDefaultSuccess }) => {
-			if (skipDefaultSuccess) {
-				invalidateCustomerBillingQueries({ queryClient, customerId });
-				return;
-			}
-
-			if (useInvoice) {
-				if (data?.invoice) {
-					toast.success("Invoice created successfully");
-				} else {
-					// Invoice-mode subscription with no immediate invoice (usage-in-arrears):
-					// nothing to send now, so confirm and close instead of dead-ending.
-					toast.success("Subscription started");
-					onSuccess?.();
-				}
-			} else if (data?.payment_url) {
-				onCheckoutRedirect?.(data.payment_url);
-			} else {
-				toast.success("Product attached successfully");
-			}
-
-			if (!useInvoice) {
-				onSuccess?.();
-			}
-
-			invalidateCustomerBillingQueries({ queryClient, customerId });
-		},
-		onError: (error) => {
-			toast.error(
-				(error as AxiosError<{ message: string }>)?.response?.data?.message ??
-					"Failed to attach product",
-			);
-		},
+	const mutation = useBillingMutation<
+		AttachParamsV0 | CreateScheduleParamsV0,
+		BillingResponse | CreateScheduleResponse
+	>({
+		customerId,
+		path,
+		buildRequestBody,
+		invalidatesSchedule,
+		successMessage: "Product attached successfully",
+		errorMessage: "Failed to attach product",
+		onCheckoutRedirect,
+		onSuccess,
 	});
 
 	const handleConfirm = ({
@@ -108,27 +43,16 @@ export function useAttachMutation({
 	}: {
 		enableProductImmediately?: boolean;
 	} = {}) => {
-		mutation.mutate({ useInvoice: false, enableProductImmediately });
+		mutation.mutate({ enableProductImmediately });
 	};
 
-	const handleInvoiceAttach = async ({
-		enableProductImmediately,
-		finalizeInvoice,
-		invoiceTemplateId,
-		netTermsDays,
-	}: {
-		enableProductImmediately: boolean;
-		finalizeInvoice: boolean;
-		invoiceTemplateId?: string;
-		netTermsDays?: number;
-	}) => {
-		const result = await mutation.mutateAsync({
-			useInvoice: true,
-			enableProductImmediately,
-			finalizeInvoice,
-			invoiceTemplateId,
-			netTermsDays,
-		});
+	const handleInvoiceAttach = async (
+		params: BillingStageParams & {
+			enableProductImmediately: boolean;
+			finalizeInvoice?: boolean;
+		},
+	) => {
+		const result = await mutation.mutateAsync({ ...params, useInvoice: true });
 		return {
 			stripeId: result.data?.invoice?.stripe_id,
 			hostedInvoiceUrl: result.data?.invoice?.hosted_invoice_url,
@@ -141,7 +65,6 @@ export function useAttachMutation({
 		longLivedCheckout?: boolean;
 	} = {}) => {
 		const result = await mutation.mutateAsync({
-			useInvoice: false,
 			longLivedCheckout,
 			skipDefaultSuccess: true,
 		});

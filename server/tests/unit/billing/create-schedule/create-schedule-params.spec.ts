@@ -120,6 +120,59 @@ describe(chalk.yellowBright("CreateScheduleParamsV0Schema"), () => {
 		expect(plan?.subscription_id).toBe("sub_123");
 	});
 
+	test("preserves immediate multi-plan options", () => {
+		const parsed = CreateScheduleParamsV0Schema.parse({
+			customer_id: "cus_123",
+			entity_id: "entity-default",
+			free_trial: {
+				duration_length: 14,
+				duration_type: "day",
+			},
+			currency: "usd",
+			preserve_add_ons: true,
+			phases: [
+				{
+					starts_at: "now",
+					plans: [{ plan_id: "pro", entity_id: null }],
+				},
+			],
+		});
+
+		expect(parsed).toMatchObject({
+			entity_id: "entity-default",
+			free_trial: {
+				duration_length: 14,
+				duration_type: "day",
+			},
+			currency: "usd",
+			preserve_add_ons: true,
+			phases: [{ starts_at: "now", plans: [{ entity_id: null }] }],
+		});
+	});
+
+	test("rejects per-plan scopes outside a single immediate phase", () => {
+		expect(() =>
+			CreateScheduleParamsV0Schema.parse({
+				customer_id: "cus_123",
+				phases: [
+					{
+						starts_at: "now",
+						plans: [{ plan_id: "pro", entity_id: "entity-1" }],
+					},
+					{
+						starting_after: {
+							duration_type: StartingAfterDuration.Month,
+							duration_count: 1,
+						},
+						plans: [{ plan_id: "premium" }],
+					},
+				],
+			}),
+		).toThrow(
+			"Per-plan entity scopes require a single phase with starts_at: 'now'",
+		);
+	});
+
 	test("accepts now and relative phase timing", () => {
 		const parsed = CreateScheduleParamsV0Schema.parse({
 			customer_id: "cus_123",
@@ -198,7 +251,9 @@ describe(chalk.yellowBright("CreateScheduleParamsV0Schema"), () => {
 					},
 				],
 			}),
-		).toThrow("Each phase must include exactly one of starts_at or starting_after");
+		).toThrow(
+			"Each phase must include exactly one of starts_at or starting_after",
+		);
 	});
 
 	test("rejects phases with neither starts_at nor starting_after", () => {
@@ -211,7 +266,9 @@ describe(chalk.yellowBright("CreateScheduleParamsV0Schema"), () => {
 					},
 				],
 			}),
-		).toThrow("Each phase must include exactly one of starts_at or starting_after");
+		).toThrow(
+			"Each phase must include exactly one of starts_at or starting_after",
+		);
 	});
 
 	test("rejects unsupported starting_after duration values", () => {

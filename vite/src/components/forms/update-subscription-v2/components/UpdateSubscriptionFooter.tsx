@@ -1,9 +1,9 @@
-import { Button, Tooltip, TooltipContent, TooltipTrigger } from "@autumn/ui";
+import { Button } from "@autumn/ui";
 import { motion } from "motion/react";
 import { useEffect, useState } from "react";
+import { DisabledTooltipButton } from "@/components/forms/shared";
 import { SheetFooter } from "@/components/v2/sheets/SharedSheetComponents";
 import { useSheetStore } from "@/hooks/stores/useSheetStore";
-import { cn } from "@/lib/utils";
 import { useUpdateSubscriptionFormContext } from "../context/UpdateSubscriptionFormProvider";
 
 const FOOTER_DELAY_MS = 350;
@@ -45,38 +45,21 @@ export function UpdateSubscriptionFooter() {
 				transition={{ duration: 0.2 }}
 				className="flex flex-col gap-2 w-full"
 			>
-				<Tooltip>
-					<TooltipTrigger asChild>
-						<span
-							className={cn(
-								"flex w-full",
-								invoiceDisabledReason && "cursor-not-allowed",
-							)}
-						>
-							<Button
-								variant="secondary"
-								className={cn(
-									"w-full",
-									invoiceDisabledReason && "pointer-events-none opacity-50",
-								)}
-								disabled={!invoiceDisabledReason && isPending}
-								onClick={() =>
-									setSheet({
-										type: "subscription-update-send-invoice",
-										itemId,
-									})
-								}
-							>
-								Send an Invoice
-							</Button>
-						</span>
-					</TooltipTrigger>
-					{invoiceDisabledReason && (
-						<TooltipContent side="top" className="max-w-(--anchor-width)">
-							{invoiceDisabledReason}
-						</TooltipContent>
-					)}
-				</Tooltip>
+				<DisabledTooltipButton
+					variant="secondary"
+					className="w-full"
+					disabled={isPending}
+					disabledReason={invoiceDisabledReason}
+					tooltipClassName="max-w-(--anchor-width)"
+					onClick={() =>
+						setSheet({
+							type: "subscription-update-send-invoice",
+							itemId,
+						})
+					}
+				>
+					Send an Invoice
+				</DisabledTooltipButton>
 				<Button
 					variant="primary"
 					className="w-full"

@@ -11,7 +11,6 @@ import { AnimatePresence, motion } from "motion/react";
 import { SheetFooter } from "@/components/v2/sheets/SharedSheetComponents";
 import { cn } from "@/lib/utils";
 import { useAttachFormContext } from "../context/AttachFormProvider";
-import { useAttachBillingOptionsState } from "../hooks/useAttachBillingOptionsState";
 import { AttachFooterSkeleton } from "./AttachPreviewSkeleton";
 
 export function AttachFooter() {
@@ -21,9 +20,10 @@ export function AttachFooter() {
 		handleConfirm,
 		handleInvoiceAttach,
 		formValues,
+		billingOptions,
 	} = useAttachFormContext();
 
-	const { isEndOfCycleSelected } = useAttachBillingOptionsState();
+	const { isEndOfCycleSelected } = billingOptions;
 
 	const invoiceDisabledReason = isEndOfCycleSelected
 		? "Invoices are not available for end of cycle changes as there is no immediate charge to invoice"

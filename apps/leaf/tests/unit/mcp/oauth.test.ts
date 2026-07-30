@@ -1,9 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import { DEFAULT_OAUTH_RESOURCE_SCOPES } from "@autumn/shared";
-import {
-	getProtectedResourceMetadata,
-	type OAuthHttpError,
-} from "../../../src/mcp/auth/protectedResourceMetadata.js";
+import { getProtectedResourceMetadata } from "@autumn/auth/oauth";
+import type { OAuthHttpError } from "../../../src/mcp/auth/protectedResourceMetadata.js";
 import {
 	buildAuthForRequest,
 	type MCPOAuthFlags,
@@ -25,7 +23,11 @@ const internalResourceUrl = "http://localhost:2718/internal/mcp";
 describe("MCP OAuth auth resolution", () => {
 	test("advertises the Leaf OAuth scope allowlist", () => {
 		expect(
-			getProtectedResourceMetadata({ resourceUrl }).scopes_supported,
+			getProtectedResourceMetadata({
+				issuerBaseUrl: flags["server-url"],
+				resourceName: "Autumn MCP",
+				resourceUrl,
+			}).scopes_supported,
 		).toEqual([...DEFAULT_OAUTH_RESOURCE_SCOPES, "offline_access"]);
 	});
 
@@ -138,8 +140,9 @@ describe("MCP OAuth auth resolution", () => {
 		expect(auth.resource).toBe("http://localhost:2718/internal/mcp");
 		expect(
 			getProtectedResourceMetadata({
+				issuerBaseUrl: flags["server-url"],
+				resourceName: "Autumn MCP",
 				resourceUrl: internalResourceUrl,
-				serverURL: flags["server-url"],
 			}).resource,
 		).toBe("http://localhost:2718/internal/mcp");
 	});

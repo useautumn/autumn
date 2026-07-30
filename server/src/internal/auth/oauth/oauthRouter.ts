@@ -1,3 +1,4 @@
+import { getProtectedResourceMetadata } from "@autumn/auth/oauth";
 import {
 	oauthProviderAuthServerMetadata,
 	oauthProviderOpenIdConfigMetadata,
@@ -5,7 +6,7 @@ import {
 import { type Context, Hono } from "hono";
 import { rateLimiter } from "hono-rate-limiter";
 import type { HonoEnv } from "@/honoUtils/HonoEnv.js";
-import { auth } from "@/utils/auth.js";
+import { auth, authBaseUrl } from "@/utils/auth.js";
 import { handleGetOAuthClient } from "./handleGetOAuthClient.js";
 import { handleMcpOAuthRegistration } from "./handleMcpOAuthRegistration.js";
 import { handleOAuthConsentWithEnv } from "./handleOAuthConsentWithEnv.js";
@@ -41,6 +42,17 @@ oauthRouter.get("/api/auth/.well-known/oauth-authorization-server", (c) => {
 
 oauthRouter.get("/.well-known/oauth-authorization-server/api/auth", (c) => {
 	return oauthProviderAuthServerMetadata(auth)(c.req.raw);
+});
+
+oauthRouter.get("/.well-known/oauth-protected-resource", (c) => {
+	const baseUrl = authBaseUrl ?? new URL(c.req.url).origin;
+	return c.json(
+		getProtectedResourceMetadata({
+			issuerBaseUrl: baseUrl,
+			resourceName: "Autumn API",
+			resourceUrl: baseUrl,
+		}),
+	);
 });
 
 oauthRouter.post("/api/auth/oauth2/consent", handleOAuthConsentWithEnv);

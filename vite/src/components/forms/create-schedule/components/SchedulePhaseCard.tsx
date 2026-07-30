@@ -7,6 +7,7 @@ import {
 } from "@autumn/ui";
 import { InfoIcon, PlusIcon, TrashIcon } from "@phosphor-icons/react";
 import { CalendarIcon } from "lucide-react";
+import { getProductGroupKey } from "@/components/forms/shared/utils/planGroupUtils";
 import { cn } from "@/lib/utils";
 import { useCreateScheduleFormContext } from "../context/CreateScheduleFormProvider";
 import {
@@ -57,7 +58,7 @@ export function SchedulePhaseCard({
 	const activeProducts = products.filter((p) => !p.archived);
 	const usedKeys = getUsedGroupKeys({ plans: phase.plans, products });
 	const allPlansAdded = activeProducts.every((p) =>
-		usedKeys.has(p.group ?? p.id),
+		usedKeys.has(getProductGroupKey({ productId: p.id, products })),
 	);
 	const phaseTimingError = getPhaseTimingError({
 		phases: formValues.phases,
