@@ -144,6 +144,9 @@ const replicaPoolMax = poolMaxFromEnv({
 	fallback: PROD_POOL_MAX.replica,
 });
 
+/** Also the prewarm target — `min` alone never opens connections. */
+export const CRITICAL_POOL_MIN = Math.min(10, criticalPoolMax);
+
 const budgetedFleetConnections =
 	BUDGETED_FLEET_PROCESSES *
 		(criticalPoolMax + generalPoolMax + replicaPoolMax) +
@@ -169,7 +172,7 @@ export const { db: dbCritical, client: clientCritical } = initDrizzle({
 		// Postgres cancels and frees the backend before the client abandons it.
 		query_timeout: isProd ? 2_005 : 30_000,
 		// Keep warm conns to avoid TLS-handshake stampedes on bursty traffic.
-		min: Math.min(10, criticalPoolMax),
+		min: CRITICAL_POOL_MIN,
 	},
 });
 
