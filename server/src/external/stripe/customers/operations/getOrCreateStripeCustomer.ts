@@ -4,6 +4,7 @@ import {
 	ProcessorType,
 } from "@autumn/shared";
 import { createStripeCli } from "@/external/connect/createStripeCli";
+import { autumnStripeRequestOptions } from "@/external/stripe/common/autumnStripeIdempotency";
 import { createStripeCustomer } from "@/external/stripe/customers/operations/createStripeCustomer";
 import {
 	type ExpandedStripeCustomer,
@@ -43,9 +44,11 @@ export const getOrCreateStripeCustomer = async ({
 			!orgDisableStripeWrites({ ctx })
 		) {
 			const stripeCli = createStripeCli({ org: ctx.org, env: ctx.env });
-			await stripeCli.customers.update(currentStripeCustomer.id, {
-				email: customer.email,
-			});
+			await stripeCli.customers.update(
+				currentStripeCustomer.id,
+				{ email: customer.email },
+				autumnStripeRequestOptions({ source: "customer.update" }),
+			);
 			return { ...currentStripeCustomer, email: customer.email };
 		}
 
