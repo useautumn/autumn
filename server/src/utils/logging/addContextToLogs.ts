@@ -1,5 +1,6 @@
 import type { Logger } from "@/external/logtail/logtailUtils.js";
 import type {
+	InternalLogRequestContext,
 	LogAppContext,
 	LogRedisData,
 	LogRequestContext,
@@ -14,7 +15,7 @@ export const addRequestToLogs = ({
 	requestContext,
 }: {
 	logger: Logger;
-	requestContext: LogRequestContext;
+	requestContext: LogRequestContext | InternalLogRequestContext;
 }): Logger => {
 	return logger.child({ context: { req: requestContext } });
 };

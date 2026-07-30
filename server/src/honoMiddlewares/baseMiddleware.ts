@@ -12,7 +12,8 @@ import { logger } from "@/external/logtail/logtailUtils.js";
 import { resolveRedisV2 } from "@/external/redis/resolveRedisV2.js";
 import type { HonoEnv } from "@/honoUtils/HonoEnv.js";
 import { generateId } from "@/utils/genUtils.js";
-import { addRequestToLogs } from "@/utils/logging/addContextToLogs";
+import { addRequestToLogs } from "@/utils/logging/addContextToLogs.js";
+import { buildRequestLogContexts } from "@/utils/logging/requestLogContext.js";
 import { resolveCustomerId } from "./utils/resolveCustomerId.js";
 import { resolveEntityId } from "./utils/resolveEntityId.js";
 
@@ -84,23 +85,26 @@ export const baseMiddleware = async (c: Context<HonoEnv>, next: Next) => {
 		query: c.req.query(),
 	});
 
+	const requestLogContext = {
+		id,
+		method: c.req.method,
+		url: c.req.url,
+		timestamp,
+		customer_id: customerId,
+		entity_id: entityId,
+		user_agent: c.req.header("user-agent"),
+		ip_address: c.req.header("x-forwarded-for"),
+		region: process.env.AWS_REGION,
+		query: c.req.query(),
+		body: redactSensitiveRequestBody({ body }),
+		name: `${c.req.method} ${c.req.path}`,
+	};
+	const requestLogContexts = buildRequestLogContexts({
+		requestContext: requestLogContext,
+	});
 	const childLogger = addRequestToLogs({
 		logger,
-		requestContext: {
-			id,
-			method: c.req.method,
-			url: c.req.url,
-			timestamp,
-			customer_id: customerId,
-			entity_id: entityId,
-			user_agent: c.req.header("user-agent"),
-			ip_address: c.req.header("x-forwarded-for"),
-			region: process.env.AWS_REGION,
-			query: c.req.query(),
-			body: redactSensitiveRequestBody({ body }),
-
-			name: `${c.req.method} ${c.req.path}`,
-		},
+		requestContext: requestLogContexts.internal,
 	});
 
 	// Set up the request context
@@ -125,6 +129,7 @@ export const baseMiddleware = async (c: Context<HonoEnv>, next: Next) => {
 		customerId,
 		entityId,
 		requestBody: body,
+		requestLogContext: requestLogContexts.terminal,
 		authType: AuthType.Unknown,
 		env: AppEnv.Sandbox, // maybe use app_env headers
 		scopes: [],

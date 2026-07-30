@@ -85,9 +85,9 @@ export function StoryPanel({ story }: { story: CustomerStory }) {
 			{href && (
 				<Link
 					href={href}
-					className="group mt-7 inline-flex w-fit items-center gap-2 bg-[color:var(--fg)] px-3.5 py-2 font-mono text-[12px] font-medium tracking-[-2%] uppercase text-[#0A0A0A] hover:opacity-90 transition-opacity duration-300"
+					className="group mt-7 inline-flex w-fit max-w-full items-center gap-2 bg-[color:var(--fg)] px-3.5 py-2 font-mono text-[12px] font-medium tracking-[-2%] uppercase text-[#0A0A0A] hover:opacity-90 transition-opacity duration-300"
 				>
-					View full story
+					{story.linkLabel ?? "View full story"}
 					<IconArrowRightSmall className="text-current" />
 				</Link>
 			)}

@@ -11,6 +11,7 @@ import type { Redis } from "ioredis";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 import type { Logger } from "@/external/logtail/logtailUtils.js";
 import type { OidcClaims } from "@/external/vercel/misc/vercelAuth.js";
+import type { LogRequestContext } from "@/utils/logging/loggerTypes.js";
 
 export type RolloutSnapshot = {
 	rolloutId: string | null;
@@ -32,6 +33,7 @@ export type RequestContext = {
 	customerId?: string;
 	entityId?: string;
 	requestBody?: unknown;
+	requestLogContext?: LogRequestContext;
 
 	// Objects
 	db: DrizzleCli;
