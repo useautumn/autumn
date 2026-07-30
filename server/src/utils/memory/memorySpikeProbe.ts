@@ -4,8 +4,16 @@ import {
 	listInFlightRequests,
 } from "./inFlightRequests.js";
 
-export type MemorySpikeReport = {
+/** arrayBuffers separates transport/buffer growth from ordinary object churn. */
+export type MemorySnapshotMB = {
 	rssMB: number;
+	heapUsedMB: number;
+	heapTotalMB: number;
+	externalMB: number;
+	arrayBuffersMB: number;
+};
+
+export type MemorySpikeReport = MemorySnapshotMB & {
 	inFlightCount: number;
 	requests: InFlightRequestSummary[];
 };
@@ -16,8 +24,11 @@ const DEFAULT_INTERVAL_MS = 2000;
 const DEFAULT_MAX_REPORTS = 3;
 const MAX_REQUESTS_LOGGED = 20;
 
+const toMB = (bytes: number): number =>
+	Math.round((bytes / 1024 / 1024) * 10) / 10;
+
 export const createMemorySpikeProbe = ({
-	readRssMB,
+	readMemoryMB,
 	listInFlightRequests: readInFlight,
 	report,
 	thresholdMB,
@@ -25,7 +36,7 @@ export const createMemorySpikeProbe = ({
 	maxReports,
 	maxRequestsLogged,
 }: {
-	readRssMB: () => number;
+	readMemoryMB: () => MemorySnapshotMB;
 	listInFlightRequests: () => InFlightRequestSummary[];
 	report: (payload: MemorySpikeReport) => void;
 	thresholdMB: number;
@@ -37,13 +48,14 @@ export const createMemorySpikeProbe = ({
 	let reportsSent = 0;
 
 	const sample = () => {
-		const rssMB = readRssMB();
+		const memory = readMemoryMB();
 
-		if (rssMB < rearmMB) {
+		if (memory.rssMB < rearmMB) {
 			armed = true;
 		}
 
-		if (!armed || rssMB < thresholdMB || reportsSent >= maxReports) return;
+		if (!armed || memory.rssMB < thresholdMB || reportsSent >= maxReports)
+			return;
 
 		armed = false;
 		reportsSent += 1;
@@ -54,7 +66,7 @@ export const createMemorySpikeProbe = ({
 			.slice(0, maxRequestsLogged);
 
 		report({
-			rssMB,
+			...memory,
 			inFlightCount: requests.length,
 			requests: longestRunning,
 		});
@@ -96,17 +108,26 @@ export const startMemorySpikeProbe = ({ label }: { label: string }) => {
 	if (thresholdMB <= 0) return;
 
 	const probe = createMemorySpikeProbe({
-		readRssMB: () => process.memoryUsage().rss / 1024 / 1024,
+		readMemoryMB: () => {
+			const memory = process.memoryUsage();
+			return {
+				rssMB: toMB(memory.rss),
+				heapUsedMB: toMB(memory.heapUsed),
+				heapTotalMB: toMB(memory.heapTotal),
+				externalMB: toMB(memory.external),
+				arrayBuffersMB: toMB(memory.arrayBuffers),
+			};
+		},
 		listInFlightRequests: () => listInFlightRequests({ now: Date.now() }),
-		report: ({ rssMB, inFlightCount, requests }) => {
+		report: ({ inFlightCount, requests, ...memory }) => {
 			logger.warn(
-				`memory_spike_inflight, rss: ${Math.round(rssMB)}MB, inFlight: ${inFlightCount}`,
+				`memory_spike_inflight, rss: ${memory.rssMB}MB, heapUsed: ${memory.heapUsedMB}MB, inFlight: ${inFlightCount}`,
 				{
 					type: "memory_spike_inflight",
 					data: {
 						label,
 						pid: process.pid,
-						rssMB: Math.round(rssMB),
+						...memory,
 						inFlightCount,
 						requests,
 					},
