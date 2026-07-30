@@ -7,7 +7,7 @@ import {
 import { useCallback, useLayoutEffect, useRef, useState } from "react";
 
 const GAP = 12;
-const SNAP_SPRING = { type: "spring", stiffness: 320, damping: 38 } as const;
+const SNAP_SPRING = { type: "spring", duration: 0.42, bounce: 0.16 } as const;
 const FLICK_VELOCITY = 320;
 
 type MobileCarousel = {
@@ -24,6 +24,9 @@ const wrap = (index: number, count: number) =>
 
 export function useMobileCarousel(count: number): MobileCarousel {
 	const containerRef = useRef<HTMLDivElement | null>(null);
+	// Track renders three copies of the cards; `slot` indexes the middle copy so
+	// there is always a real card to slide onto in either direction.
+	const slotRef = useRef(count);
 	const x = useMotionValue(0);
 	const [activeIndex, setActiveIndex] = useState(0);
 	const [stepWidth, setStepWidth] = useState(0);
@@ -33,32 +36,49 @@ export function useMobileCarousel(count: number): MobileCarousel {
 		const measure = () => {
 			const card = containerRef.current
 				?.firstElementChild as HTMLElement | null;
-			setStepWidth(card ? card.offsetWidth + GAP : 0);
+			const step = card ? card.offsetWidth + GAP : 0;
+			setStepWidth(step);
+			slotRef.current = count + wrap(slotRef.current, count);
+			x.set(-slotRef.current * step);
 		};
 		measure();
 		window.addEventListener("resize", measure);
 		return () => window.removeEventListener("resize", measure);
-	}, []);
+	}, [count, x]);
 
-	// Animate toward a (possibly out-of-range) slot, then jump to the wrapped
-	// equivalent so the track stays in range and the loop feels seamless.
+	// Animate to the target slot, then silently recentre onto the equivalent
+	// card in the middle copy so the track never runs out of cards.
 	const settle = useCallback(
 		(slot: number) => {
 			const wrapped = wrap(slot, count);
+			slotRef.current = slot;
 			setActiveIndex(wrapped);
+
+			const recentre = () => {
+				const centred = count + wrapped;
+				slotRef.current = centred;
+				x.set(-centred * stepWidth);
+			};
+
 			if (reduceMotion) {
-				x.set(-wrapped * stepWidth);
+				recentre();
 				return;
 			}
-			animate(x, -slot * stepWidth, SNAP_SPRING).then(() => {
-				if (slot !== wrapped) x.set(-wrapped * stepWidth);
-			});
+			animate(x, -slot * stepWidth, SNAP_SPRING).then(recentre);
 		},
 		[count, reduceMotion, stepWidth, x],
 	);
 
 	const goTo = useCallback(
-		(index: number) => settle(wrap(index, count)),
+		(index: number) => {
+			const target = wrap(index, count);
+			const current = wrap(slotRef.current, count);
+			let delta = target - current;
+			// Take the shorter way round rather than scrolling back through the middle.
+			if (delta > count / 2) delta -= count;
+			if (delta < -count / 2) delta += count;
+			settle(slotRef.current + delta);
+		},
 		[count, settle],
 	);
 
@@ -69,10 +89,11 @@ export function useMobileCarousel(count: number): MobileCarousel {
 			let slot = Math.round(projected);
 			if (info.velocity.x < -FLICK_VELOCITY) slot = Math.ceil(projected);
 			else if (info.velocity.x > FLICK_VELOCITY) slot = Math.floor(projected);
-			slot = Math.max(activeIndex - 1, Math.min(activeIndex + 1, slot));
+			const from = slotRef.current;
+			slot = Math.max(from - 1, Math.min(from + 1, slot));
 			settle(slot);
 		},
-		[activeIndex, settle, stepWidth, x],
+		[settle, stepWidth, x],
 	);
 
 	return { containerRef, x, activeIndex, stepWidth, goTo, onDragEnd };

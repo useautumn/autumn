@@ -16,20 +16,24 @@ export function MobileCarousel() {
 				className="flex gap-3 px-4 cursor-grab active:cursor-grabbing"
 				style={{ x }}
 				drag="x"
-				dragElastic={0.18}
+				dragElastic={0.12}
+				dragMomentum={false}
 				onDragEnd={onDragEnd}
 			>
-				{featuredCustomerStories.map((story) => (
-					<div
-						key={story.slug}
-						className="relative shrink-0 w-[86vw] h-[440px] overflow-hidden"
-					>
-						<div className="absolute inset-0 p-6 flex flex-col">
-							<StoryPanel story={story} />
+				{["before", "main", "after"].map((copy) =>
+					featuredCustomerStories.map((story) => (
+						<div
+							aria-hidden={copy === "main" ? undefined : true}
+							key={`${copy}-${story.slug}`}
+							className="relative shrink-0 w-[86vw] h-[440px] overflow-hidden"
+						>
+							<div className="absolute inset-0 p-6 flex flex-col">
+								<StoryPanel story={story} />
+							</div>
+							<BracketCorners />
 						</div>
-						<BracketCorners />
-					</div>
-				))}
+					)),
+				)}
 			</motion.div>
 
 			<div className="flex justify-center gap-2 mt-5">
