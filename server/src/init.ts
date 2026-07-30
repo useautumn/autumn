@@ -55,7 +55,10 @@ import { createHonoApp } from "./initHono.js";
 import { otelSdk } from "./instrumentation.js";
 import { shutdownPrimarySqsSendBatcher } from "./queue/queueUtils.js";
 import { checkEnvVars } from "./utils/initUtils.js";
-import { startMemorySpikeProbe } from "./utils/memory/memorySpikeProbe.js";
+import {
+	startMemorySpikeProbe,
+	stopMemorySpikeProbe,
+} from "./utils/memory/memorySpikeProbe.js";
 import { startMemoryMonitor } from "./utils/memoryMonitor.js";
 
 checkEnvVars();
@@ -185,6 +188,7 @@ async function gracefulShutdown() {
 		stopPgPoolMonitor();
 		stopRedisMonitor();
 		stopRedisV2Monitor();
+		stopMemorySpikeProbe();
 		stopAllEdgeConfigPolling();
 		await Promise.all([
 			client.end(),

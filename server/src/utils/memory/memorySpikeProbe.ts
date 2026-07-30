@@ -76,6 +76,15 @@ const readEnvNumber = ({
 	return Number.isFinite(parsed) ? parsed : fallback;
 };
 
+/** A non-positive interval would clamp to a ~1ms sampling loop. */
+const readIntervalMs = (): number => {
+	const parsed = readEnvNumber({
+		name: "MEMORY_SPIKE_PROBE_INTERVAL_MS",
+		fallback: DEFAULT_INTERVAL_MS,
+	});
+	return parsed > 0 ? parsed : DEFAULT_INTERVAL_MS;
+};
+
 let intervalHandle: ReturnType<typeof setInterval> | null = null;
 
 /** Set MEMORY_SPIKE_PROBE_MB to 0 to disable. */
@@ -116,15 +125,9 @@ export const startMemorySpikeProbe = ({ label }: { label: string }) => {
 		maxRequestsLogged: MAX_REQUESTS_LOGGED,
 	});
 
-	intervalHandle = setInterval(
-		() => {
-			probe.sample();
-		},
-		readEnvNumber({
-			name: "MEMORY_SPIKE_PROBE_INTERVAL_MS",
-			fallback: DEFAULT_INTERVAL_MS,
-		}),
-	);
+	intervalHandle = setInterval(() => {
+		probe.sample();
+	}, readIntervalMs());
 
 	if (intervalHandle.unref) {
 		intervalHandle.unref();
