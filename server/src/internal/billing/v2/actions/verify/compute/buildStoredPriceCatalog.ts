@@ -1,9 +1,25 @@
-import type { FullCusProduct, Price, Product } from "@autumn/shared";
+import {
+	cusPriceToCusEntWithCusProduct,
+	type EntitlementWithFeature,
+	type FullCusEntWithFullCusProduct,
+	type FullCusProduct,
+	isPrepaidPrice,
+	type Price,
+	type Product,
+} from "@autumn/shared";
 import { getStripePriceIdsForAutumnPrice } from "@/internal/billing/v2/providers/stripe/utils/sync/matchUtils/getStripePriceIdsForAutumnPrice";
 
 export type StoredPriceCatalog = Map<
 	string,
-	{ price: Price; product: Product; cusPriceIds: Set<string> }
+	{
+		price: Price;
+		product: Product;
+		cusPriceIds: Set<string>;
+		/** Present for prepaid prices — shape matching needs the allowance. */
+		entitlement?: EntitlementWithFeature;
+		/** Present for prepaid prices — totals matching needs the tier math. */
+		cusEnt?: FullCusEntWithFullCusProduct;
+	}
 >;
 
 /** Maps a customer_price id to its originating Autumn price + product. Covers
@@ -28,6 +44,13 @@ export const buildStoredPriceCatalog = ({
 
 	for (const cusProduct of cusProducts) {
 		for (const cusPrice of cusProduct.customer_prices) {
+			const cusEnt = isPrepaidPrice(cusPrice.price)
+				? cusPriceToCusEntWithCusProduct({
+						cusProduct,
+						cusPrice,
+						cusEnts: cusProduct.customer_entitlements,
+					})
+				: undefined;
 			for (const stripePriceId of getStripePriceIdsForAutumnPrice({
 				price: cusPrice.price,
 			})) {
@@ -40,6 +63,8 @@ export const buildStoredPriceCatalog = ({
 					price: cusPrice.price,
 					product: cusProduct.product,
 					cusPriceIds: new Set([cusPrice.id]),
+					entitlement: cusEnt?.entitlement,
+					cusEnt: cusEnt ?? undefined,
 				});
 			}
 		}

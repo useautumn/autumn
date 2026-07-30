@@ -6,14 +6,17 @@ import {
 	isConsumablePrice,
 	isFixedPrice,
 	isPrepaidPrice,
+	type Organization,
 	type PrepaidQuantityMismatch,
 	type Price,
 	type Product,
 	type StripeInlinePrice,
 	type SubscriptionMismatch,
+	stripeToAtmnAmount,
 } from "@autumn/shared";
 import { priceToStripeRecurringParams } from "@utils/productUtils/priceUtils/convertPrice/priceToStripeRecurringParams";
 import type Stripe from "stripe";
+import { stripePriceToAmount } from "@/external/stripe/prices/utils/convertStripePriceUtils";
 import { stripeInlinePriceMatchesStripePrice } from "@/internal/billing/v2/providers/stripe/utils/matchUtils/matchStripeInlinePrice";
 import { findPhaseItemForAutumnPrice } from "@/internal/billing/v2/providers/stripe/utils/sync/autumnToStripe/findPhaseItemForAutumnPrice";
 import { findSubscriptionItemForAutumnPrice } from "@/internal/billing/v2/providers/stripe/utils/sync/autumnToStripe/findSubscriptionItemForAutumnPrice";
@@ -22,6 +25,13 @@ import type {
 	StoredPriceCatalog,
 } from "../compute/buildStoredPriceCatalog";
 import type { NormalizedItem } from "../compute/types";
+import {
+	findFixedShapeSiblingIndexes,
+	findInlineTotalsIndex,
+	findPrepaidTotalsIndex,
+	findShapeFallbackIndex,
+} from "./matchItemByShape";
+import { findIdentitySiblingIndexes } from "./matchItemIdentity";
 
 type ExpectedPhaseItem = Stripe.SubscriptionScheduleUpdateParams.Phase.Item;
 
@@ -93,6 +103,7 @@ export const normalizeExpectedPhaseItem = ({
 		quantity: (item.quantity as number) ?? 0,
 		isInline: hasInlinePrice,
 		unitAmountDecimal,
+		inlineMode: metadata?.inline_mode === "true",
 	};
 };
 
@@ -103,6 +114,7 @@ type ActualCandidate = {
 	autumnPriceId?: string;
 	priceId: string;
 	price?: Stripe.Price;
+	quantity?: number;
 };
 
 const buildActualCandidates = ({
@@ -119,6 +131,7 @@ const buildActualCandidates = ({
 			autumnPriceId: item.metadata?.autumn_price_id,
 			priceId: item.price.id,
 			price: item.price,
+			quantity: item.quantity,
 		}));
 	}
 
@@ -134,6 +147,7 @@ const buildActualCandidates = ({
 			autumnPriceId: metadata?.autumn_price_id,
 			priceId: typeof item.price === "string" ? item.price : item.price.id,
 			price: priceObj,
+			quantity: item.quantity,
 		};
 	});
 };
@@ -154,6 +168,10 @@ const buildActualCandidates = ({
  * - Stored: every known Stripe price id for the Autumn price
  *   (`findSubscriptionItemForAutumnPrice`/`findPhaseItemForAutumnPrice`, via
  *   `getStripePriceIdsForAutumnPrice`) — covers a V1/V2 companion id swap.
+ *
+ * Tier 3 (stored fixed/prepaid, non-strict only): same-shape licensed item
+ * under one of the plan's Stripe product ids (`findShapeFallbackIndex`) —
+ * covers imported subs billing their own historical price ids.
  */
 const findActualIndex = ({
 	expected,
@@ -163,6 +181,7 @@ const findActualIndex = ({
 	claimed,
 	actualSubscriptionItems,
 	actualPhaseItems,
+	shapeFallback,
 }: {
 	expected: ExpectedPhaseItem;
 	storedPriceCatalog: StoredPriceCatalog;
@@ -171,7 +190,12 @@ const findActualIndex = ({
 	claimed: Set<number>;
 	actualSubscriptionItems?: Stripe.SubscriptionItem[];
 	actualPhaseItems?: Stripe.SubscriptionSchedule.Phase.Item[];
-}): number | undefined => {
+	shapeFallback: {
+		enabled: boolean;
+		org: Organization;
+		cusPriceCatalog: CusPriceCatalog;
+	};
+}): { index: number; viaTotals?: boolean } | undefined => {
 	const isInline = "price_data" in expected;
 	const metadata = expected.metadata as Record<string, string> | undefined;
 	const available = candidates.filter(
@@ -192,7 +216,7 @@ const findActualIndex = ({
 			candidate.autumnCustomerPriceId &&
 			identityCusPriceIds.has(candidate.autumnCustomerPriceId),
 	);
-	if (exact) return exact.index;
+	if (exact) return { index: exact.index };
 
 	if (isInline) {
 		const inlinePrice = (expected as { price_data: StripeInlinePrice })
@@ -214,8 +238,25 @@ const findActualIndex = ({
 				stripePrice: candidate.price,
 			});
 		});
+		const inlineExact = fallbackMatches[0]?.index;
+		if (fallbackMatches.length === 1 && inlineExact !== undefined) {
+			return { index: inlineExact };
+		}
 
-		return fallbackMatches.length === 1 ? fallbackMatches[0]?.index : undefined;
+		// Inline-mode rendered items additionally match untagged /
+		// stale-tagged items on economic totals.
+		const isInlineMode = metadata?.inline_mode === "true";
+		if (!isInlineMode || !shapeFallback.enabled) return undefined;
+		const totalsIndex = findInlineTotalsIndex({
+			inlinePrice,
+			expectedQuantity: (expected.quantity as number) ?? 1,
+			candidates: available,
+			isKnownPriceId: (id) => storedPriceCatalog.has(id),
+			isValidCusPriceId: (id) => shapeFallback.cusPriceCatalog.has(id),
+		});
+		return totalsIndex !== undefined
+			? { index: totalsIndex, viaTotals: true }
+			: undefined;
 	}
 
 	// Stored fallback: broaden by every known Stripe price id for the Autumn price.
@@ -236,7 +277,7 @@ const findActualIndex = ({
 					stripeSubscriptionItems: availableItems,
 				})
 			: availableItems.find((item) => item.price.id === priceId);
-		return matched ? actualSubscriptionItems.indexOf(matched) : undefined;
+		if (matched) return { index: actualSubscriptionItems.indexOf(matched) };
 	}
 
 	if (actualPhaseItems) {
@@ -254,10 +295,34 @@ const findActualIndex = ({
 						(typeof item.price === "string" ? item.price : item.price.id) ===
 						priceId,
 				);
-		return matched ? actualPhaseItems.indexOf(matched) : undefined;
+		if (matched) return { index: actualPhaseItems.indexOf(matched) };
 	}
 
-	return undefined;
+	if (!shapeFallback.enabled || !catalogEntry) return undefined;
+	const shapeIndex = findShapeFallbackIndex({
+		price: catalogEntry.price,
+		product: catalogEntry.product,
+		entitlement: catalogEntry.entitlement,
+		org: shapeFallback.org,
+		candidates: available,
+		isKnownPriceId: (id) => storedPriceCatalog.has(id),
+		isValidCusPriceId: (id) => shapeFallback.cusPriceCatalog.has(id),
+	});
+	if (shapeIndex !== undefined) return { index: shapeIndex };
+
+	// Prepaid: the Stripe price's structure is an implementation detail —
+	// match the expected total per interval as a last resort.
+	if (!catalogEntry.cusEnt) return undefined;
+	const totalsIndex = findPrepaidTotalsIndex({
+		cusEnt: catalogEntry.cusEnt,
+		org: shapeFallback.org,
+		candidates: available,
+		isKnownPriceId: (id) => storedPriceCatalog.has(id),
+		isValidCusPriceId: (id) => shapeFallback.cusPriceCatalog.has(id),
+	});
+	return totalsIndex !== undefined
+		? { index: totalsIndex, viaTotals: true }
+		: undefined;
 };
 
 type CatalogEntry = { price: Price; product: Product };
@@ -280,6 +345,25 @@ const resolvePriceForItem = ({
 			: undefined;
 	}
 	return item.priceId ? storedPriceCatalog.get(item.priceId) : undefined;
+};
+
+/** Items billing nothing as they stand ($0 unit price, quantity 0, or tiers
+ * resolving to $0) — non-strict treats them as inert leftovers. */
+const isZeroBillingItem = ({
+	price,
+	quantity,
+}: {
+	price?: Stripe.Price;
+	quantity?: number;
+}): boolean => {
+	if (price?.recurring?.usage_type !== "licensed") return false;
+	const amount = stripePriceToAmount({
+		stripePrice: price,
+		quantity: quantity ?? 0,
+	});
+	// Unexpanded tiers make the amount unknowable — quantity 0 bills nothing.
+	if (amount === null) return quantity === 0;
+	return amount <= 0.5;
 };
 
 const priceTypeOf = (price?: Price): ItemMismatch["price_type"] => {
@@ -315,16 +399,53 @@ const missingUsageItemCovered = ({
 	);
 };
 
+/** Major-unit display context read off an actual Stripe item's price. */
+const displayFromStripePrice = (
+	stripePrice?: Stripe.Price,
+): Pick<
+	ItemMismatch,
+	"price_amount" | "price_interval" | "price_interval_count"
+> => {
+	if (stripePrice?.unit_amount == null) return {};
+	return {
+		price_amount: stripeToAtmnAmount({
+			amount: stripePrice.unit_amount,
+			currency: stripePrice.currency,
+		}),
+		price_interval: stripePrice.recurring?.interval,
+		price_interval_count: stripePrice.recurring?.interval_count,
+	};
+};
+
+/** Plan + major-unit price display context for a fixed catalog price. */
+const displayFromFixedPrice = (
+	catalogEntry?: CatalogEntry,
+): Pick<
+	ItemMismatch,
+	"plan_name" | "price_amount" | "price_interval" | "price_interval_count"
+> => {
+	const price = catalogEntry?.price;
+	if (!price || !isFixedPrice(price)) return {};
+	return {
+		plan_name: catalogEntry.product.name ?? undefined,
+		price_amount: price.config.amount ?? undefined,
+		price_interval: price.config.interval ?? undefined,
+		price_interval_count: price.config.interval_count ?? undefined,
+	};
+};
+
 /** Classifies a missing/unexpected expected item into its typed mismatch. */
 const buildMissingOrUnexpectedMismatch = ({
 	expected,
 	actual,
+	actualStripePrice,
 	catalogEntry,
 	reason,
 	phaseStartsAt,
 }: {
 	expected?: NormalizedItem;
 	actual?: NormalizedItem;
+	actualStripePrice?: Stripe.Price;
 	catalogEntry: CatalogEntry | undefined;
 	reason: "missing" | "unexpected";
 	phaseStartsAt?: number;
@@ -339,6 +460,11 @@ const buildMissingOrUnexpectedMismatch = ({
 			actual_price_id: actual?.priceId,
 			expected_amount: expected?.unitAmountDecimal,
 			actual_amount: actual?.unitAmountDecimal,
+			plan_name: catalogEntry?.product.name ?? undefined,
+			price_amount: price.config.amount ?? undefined,
+			price_interval: price.config.interval ?? undefined,
+			price_interval_count: price.config.interval_count ?? undefined,
+			expected_quantity: expected?.quantity,
 			phase_starts_at: phaseStartsAt,
 		} satisfies BasePriceMismatch;
 	}
@@ -362,6 +488,7 @@ const buildMissingOrUnexpectedMismatch = ({
 		feature_id: price?.config.feature_id ?? undefined,
 		expected_quantity: expected?.quantity,
 		actual_quantity: actual?.quantity,
+		...displayFromStripePrice(actualStripePrice),
 		phase_starts_at: phaseStartsAt,
 	} satisfies ItemMismatch;
 };
@@ -377,6 +504,7 @@ export const evaluateItems = ({
 	actualPhaseItems,
 	storedPriceCatalog,
 	cusPriceCatalog,
+	org,
 	phaseStartsAt,
 	strict = false,
 }: {
@@ -385,6 +513,7 @@ export const evaluateItems = ({
 	actualPhaseItems?: Stripe.SubscriptionSchedule.Phase.Item[];
 	storedPriceCatalog: StoredPriceCatalog;
 	cusPriceCatalog: CusPriceCatalog;
+	org: Organization;
 	phaseStartsAt?: number;
 	strict?: boolean;
 }): SubscriptionMismatch[] => {
@@ -411,9 +540,11 @@ export const evaluateItems = ({
 
 	const claimed = new Set<number>();
 	const matchedActualIndex = new Map<number, number>();
+	const totalsMatched = new Set<number>();
+	const shapeFallback = { enabled: !strict, org, cusPriceCatalog };
 
 	for (const [i, rawExpected] of expectedRawItems.entries()) {
-		const matchIndex = findActualIndex({
+		const match = findActualIndex({
 			expected: rawExpected,
 			storedPriceCatalog,
 			validInlineCusPriceIds,
@@ -421,11 +552,13 @@ export const evaluateItems = ({
 			claimed,
 			actualSubscriptionItems,
 			actualPhaseItems,
+			shapeFallback,
 		});
 
-		if (matchIndex === undefined) continue;
-		claimed.add(matchIndex);
-		matchedActualIndex.set(i, matchIndex);
+		if (match === undefined) continue;
+		claimed.add(match.index);
+		matchedActualIndex.set(i, match.index);
+		if (match.viaTotals) totalsMatched.add(i);
 	}
 
 	for (let i = 0; i < expectedItems.length; i++) {
@@ -440,7 +573,60 @@ export const evaluateItems = ({
 			cusPriceCatalog,
 		});
 
+		// A consolidated expected item can be billed across several Stripe
+		// items — claim its siblings and compare the aggregate quantity.
+		let siblingQuantity = 0;
+		const claimSiblings = (indexes: number[]) => {
+			for (const index of indexes) {
+				claimed.add(index);
+				siblingQuantity += candidates[index]?.quantity ?? 0;
+			}
+		};
+		const unclaimedCandidates = () =>
+			candidates.filter((candidate) => !claimed.has(candidate.index));
+
+		if (!expected.isInline && catalogEntry) {
+			// Identity siblings (metadata / price id) hold in strict mode too.
+			claimSiblings(
+				findIdentitySiblingIndexes({
+					expectedPriceId: expected.priceId,
+					identityCusPriceIds: expected.priceId
+						? (storedPriceCatalog.get(expected.priceId)?.cusPriceIds ??
+							new Set<string>())
+						: new Set<string>(),
+					candidates: unclaimedCandidates(),
+				}),
+			);
+
+			if (!strict && isFixedPrice(catalogEntry.price)) {
+				claimSiblings(
+					findFixedShapeSiblingIndexes({
+						price: catalogEntry.price,
+						product: catalogEntry.product,
+						candidates: unclaimedCandidates(),
+						isKnownPriceId: (id) => storedPriceCatalog.has(id),
+						isValidCusPriceId: (id) => cusPriceCatalog.has(id),
+					}),
+				);
+			}
+		}
+
 		if (!actual) {
+			if (siblingQuantity > 0) {
+				if (siblingQuantity !== expected.quantity) {
+					mismatches.push({
+						type: "item_mismatch",
+						reason: "quantity_mismatch",
+						price_type: priceTypeOf(catalogEntry?.price),
+						feature_id: catalogEntry?.price.config.feature_id ?? undefined,
+						expected_quantity: expected.quantity,
+						actual_quantity: siblingQuantity,
+						...displayFromFixedPrice(catalogEntry),
+						phase_starts_at: phaseStartsAt,
+					});
+				}
+				continue;
+			}
 			if (
 				!strict &&
 				missingUsageItemCovered({ price: catalogEntry?.price, candidates })
@@ -458,14 +644,57 @@ export const evaluateItems = ({
 			continue;
 		}
 
-		if (actual.quantity !== expected.quantity) {
+		// A totals match already proved economic equality.
+		if (totalsMatched.has(i)) continue;
+
+		// Inline-mode items carry their own quantity model (qty 1 × total) —
+		// compare economic totals instead of per-field qty/amount.
+		if (expected.inlineMode) {
+			const candidatePrice =
+				actualIndex !== undefined ? candidates[actualIndex]?.price : undefined;
+			const actualUnit =
+				actual.unitAmountDecimal ??
+				candidatePrice?.unit_amount_decimal ??
+				candidatePrice?.unit_amount?.toString();
+			const expectedTotal =
+				expected.quantity * Number(expected.unitAmountDecimal);
+			const actualTotal = actual.quantity * Number(actualUnit);
+			if (
+				Number.isFinite(expectedTotal) &&
+				Number.isFinite(actualTotal) &&
+				Math.abs(expectedTotal - actualTotal) > 0.5
+			) {
+				const price = catalogEntry?.price;
+				if (price && isPrepaidPrice(price)) {
+					mismatches.push({
+						type: "prepaid_price_mismatch",
+						feature_id: price.config.feature_id ?? "unknown",
+						expected_unit_amount: String(expectedTotal),
+						actual_unit_amount: String(actualTotal),
+						phase_starts_at: phaseStartsAt,
+					});
+				} else {
+					mismatches.push({
+						type: "base_price_mismatch",
+						reason: "amount_mismatch",
+						expected_amount: String(expectedTotal),
+						actual_amount: String(actualTotal),
+						phase_starts_at: phaseStartsAt,
+					});
+				}
+			}
+			continue;
+		}
+
+		const effectiveQuantity = actual.quantity + siblingQuantity;
+		if (effectiveQuantity !== expected.quantity) {
 			const price = catalogEntry?.price;
 			if (price && isPrepaidPrice(price)) {
 				mismatches.push({
 					type: "prepaid_quantity_mismatch",
 					feature_id: price.config.feature_id ?? "unknown",
 					expected_quantity: expected.quantity,
-					actual_quantity: actual.quantity,
+					actual_quantity: effectiveQuantity,
 					phase_starts_at: phaseStartsAt,
 				});
 			} else {
@@ -475,7 +704,8 @@ export const evaluateItems = ({
 					price_type: priceTypeOf(price),
 					feature_id: price?.config.feature_id ?? undefined,
 					expected_quantity: expected.quantity,
-					actual_quantity: actual.quantity,
+					actual_quantity: effectiveQuantity,
+					...displayFromFixedPrice(catalogEntry),
 					phase_starts_at: phaseStartsAt,
 				});
 			}
@@ -523,6 +753,15 @@ export const evaluateItems = ({
 		) {
 			continue;
 		}
+		if (
+			!strict &&
+			isZeroBillingItem({
+				price: candidates[actualIndex]?.price,
+				quantity: candidates[actualIndex]?.quantity,
+			})
+		) {
+			continue;
+		}
 		const actual = actualItems[actualIndex];
 		const catalogEntry = resolvePriceForItem({
 			item: actual,
@@ -532,6 +771,7 @@ export const evaluateItems = ({
 		mismatches.push(
 			buildMissingOrUnexpectedMismatch({
 				actual,
+				actualStripePrice: candidates[actualIndex]?.price,
 				catalogEntry,
 				reason: "unexpected",
 				phaseStartsAt,

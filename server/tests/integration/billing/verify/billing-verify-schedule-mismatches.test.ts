@@ -216,3 +216,80 @@ testSequentially(
 		}
 	},
 );
+
+testSequentially(
+	`${chalk.yellowBright("billing-verify schedule-mismatches 3: Stripe schedule Autumn doesn't expect -> unexpected_schedule with phase dates")}`,
+	async () => {
+		const customerId = "verify-schedule-unexpected";
+
+		const pro = products.pro({
+			id: "pro",
+			items: [items.consumableMessages({ includedUsage: 200 })],
+		});
+
+		const { ctx } = await initScenario({
+			customerId,
+			setup: [
+				s.customer({ paymentMethod: "success" }),
+				s.products({ list: [pro] }),
+			],
+			actions: [s.billing.attach({ productId: pro.id })],
+		});
+
+		const stripeCustomerId = await stripeCustomerIdFor({ ctx, customerId });
+		const [sub] = await listActiveStripeSubscriptions({
+			ctx,
+			stripeCustomerId,
+		});
+
+		// A Stripe-side schedule Autumn knows nothing about: the current phase
+		// plus a future custom-renewal phase.
+		const schedule = await ctx.stripeCli.subscriptionSchedules.create({
+			from_subscription: sub.id,
+		});
+		const currentPhase = schedule.phases[0];
+		const futurePrice = await ctx.stripeCli.prices.create({
+			product: sub.items.data[0].price.product as string,
+			currency: sub.items.data[0].price.currency,
+			unit_amount: 910000,
+			recurring: { interval: "year", interval_count: 1 },
+			nickname: "custom-renewal",
+		});
+		await ctx.stripeCli.subscriptionSchedules.update(schedule.id, {
+			phases: [
+				{
+					start_date: currentPhase.start_date,
+					end_date: currentPhase.end_date,
+					items: sub.items.data.map((item) => ({
+						price: item.price.id,
+						...(item.price.recurring?.usage_type === "licensed"
+							? { quantity: item.quantity ?? 1 }
+							: {}),
+					})),
+				},
+				{
+					items: [{ price: futurePrice.id, quantity: 1 }],
+					end_date: currentPhase.end_date + 365 * 24 * 3600,
+				},
+			],
+		});
+
+		const result = await verify({ ctx, params: { customer_id: customerId } });
+
+		// ── Contract: schedule finding with phase dates, not a cancel misread ─
+		expect(result.subscriptions[0].status).toBe("mismatched");
+		const scheduleMismatch = result.subscriptions[0].mismatches.find(
+			(mismatch) => mismatch.type === "schedule_mismatch",
+		);
+		expect(scheduleMismatch).toMatchObject({
+			reason: "unexpected_schedule",
+			actual_phase_starts_at: [currentPhase.end_date],
+		});
+		expect(scheduleMismatch?.message).toContain("not in Autumn");
+		expect(
+			result.subscriptions[0].mismatches.some(
+				(mismatch) => mismatch.type === "cancel_state_mismatch",
+			),
+		).toBe(false);
+	},
+);

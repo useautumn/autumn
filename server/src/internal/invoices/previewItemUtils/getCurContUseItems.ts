@@ -11,8 +11,8 @@ import {
 	type UsagePriceConfig,
 } from "@autumn/shared";
 import type Stripe from "stripe";
-import { getSubItemAmount } from "@/external/stripe/stripeSubUtils/getSubItemAmount.js";
 import { findPriceInStripeItems } from "@/external/stripe/stripeSubUtils/stripeSubItemUtils.js";
+import { stripeSubscriptionItemToAmount } from "@/external/stripe/subscriptions/subscriptionItems/utils/convertStripeSubscriptionItemUtils.js";
 import { attachParamsToCurCusProduct } from "@/internal/customers/attach/attachUtils/convertAttachParams.js";
 import type { AttachParams } from "@/internal/customers/cusProducts/AttachParams.js";
 import { getExistingUsageFromCusProducts } from "@/internal/customers/cusProducts/cusEnts/cusEntUtils.js";
@@ -53,7 +53,8 @@ export const getCurContUseItems = async ({
 		if (!price) continue;
 
 		const periodEnd = item.current_period_end * 1000;
-		const totalAmountCents = getSubItemAmount({ subItem: item });
+		const totalAmountCents =
+			stripeSubscriptionItemToAmount({ stripeSubscriptionItem: item }) ?? 0;
 
 		const atmnTotalAmount = stripeToAtmnAmount({
 			amount: totalAmountCents,

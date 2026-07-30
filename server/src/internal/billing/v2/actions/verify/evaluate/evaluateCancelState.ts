@@ -1,21 +1,28 @@
-import type { CancelStateMismatch } from "@autumn/shared";
+import type { SubscriptionMismatch } from "@autumn/shared";
 import type Stripe from "stripe";
 import { isStripeSubscriptionCanceling } from "@/external/stripe/subscriptions/utils/classifyStripeSubscriptionUtils";
 import type { PhaseScenario } from "../compute/classifyPhaseScenario";
 
 /**
- * Checks whether the subscription has an active schedule with future phase transitions.
- * After a schedule completes/releases, Stripe keeps the ID on the subscription
- * but the schedule status is "released" or "completed" — not active.
+ * Checks whether the subscription has an active schedule with future phase
+ * transitions, and returns those phases' start times. After a schedule
+ * completes/releases, Stripe keeps the ID on the subscription but the
+ * schedule status is "released" or "completed" — not active.
  */
-const hasActiveScheduleWithFuturePhases = async ({
+const getActiveScheduleState = async ({
 	stripeCli,
 	sub,
 }: {
 	stripeCli: Stripe;
 	sub: Stripe.Subscription;
-}): Promise<boolean> => {
-	if (!sub.schedule) return false;
+}): Promise<{
+	scheduleActive: boolean;
+	upcomingPhaseStarts: number[];
+	endBehavior?: Stripe.SubscriptionSchedule.EndBehavior;
+	endsAtSeconds?: number;
+}> => {
+	const inactive = { scheduleActive: false, upcomingPhaseStarts: [] };
+	if (!sub.schedule) return inactive;
 
 	const scheduleId =
 		typeof sub.schedule === "string" ? sub.schedule : sub.schedule.id;
@@ -26,18 +33,26 @@ const hasActiveScheduleWithFuturePhases = async ({
 		schedule.status === "completed" ||
 		schedule.status === "canceled"
 	) {
-		return false;
+		return inactive;
 	}
 
 	if (schedule.end_behavior === "release" && schedule.phases.length > 0) {
 		const lastPhase = schedule.phases[schedule.phases.length - 1];
 		const currentPhase = schedule.current_phase;
 		if (currentPhase && currentPhase.start_date === lastPhase.start_date) {
-			return false;
+			return inactive;
 		}
 	}
 
-	return true;
+	const nowSeconds = Math.floor(Date.now() / 1000);
+	return {
+		scheduleActive: true,
+		upcomingPhaseStarts: schedule.phases
+			.map((phase) => phase.start_date)
+			.filter((startDate) => startDate > nowSeconds),
+		endBehavior: schedule.end_behavior,
+		endsAtSeconds: schedule.phases[schedule.phases.length - 1]?.end_date,
+	};
 };
 
 /** Evaluates cancel/schedule state on a subscription against the classified scenario. */
@@ -51,7 +66,7 @@ export const evaluateCancelState = async ({
 	sub: Stripe.Subscription;
 	scenario: PhaseScenario;
 	cancelAtSeconds?: number;
-}): Promise<CancelStateMismatch | undefined> => {
+}): Promise<SubscriptionMismatch | undefined> => {
 	const actualCanceling = isStripeSubscriptionCanceling(sub);
 
 	switch (scenario) {
@@ -59,11 +74,17 @@ export const evaluateCancelState = async ({
 			return undefined;
 
 		case "single_indefinite": {
-			const hasActiveSchedule = await hasActiveScheduleWithFuturePhases({
-				stripeCli,
-				sub,
-			});
-			if (sub.cancel_at !== null || hasActiveSchedule) {
+			const { scheduleActive, upcomingPhaseStarts } =
+				await getActiveScheduleState({ stripeCli, sub });
+			// An active schedule here is a phase problem, not a cancel problem.
+			if (scheduleActive) {
+				return {
+					type: "schedule_mismatch",
+					reason: "unexpected_schedule",
+					actual_phase_starts_at: upcomingPhaseStarts,
+				};
+			}
+			if (sub.cancel_at !== null) {
 				return {
 					type: "cancel_state_mismatch",
 					expected_canceling: false,
@@ -74,11 +95,34 @@ export const evaluateCancelState = async ({
 		}
 
 		case "simple_cancel": {
-			const hasActiveSchedule = await hasActiveScheduleWithFuturePhases({
-				stripeCli,
-				sub,
-			});
-			if (sub.cancel_at === null || hasActiveSchedule) {
+			const scheduleState = await getActiveScheduleState({ stripeCli, sub });
+
+			// A schedule that itself cancels at the expected time IS the cancel.
+			const scheduleImplementsCancel =
+				scheduleState.scheduleActive &&
+				scheduleState.endBehavior === "cancel" &&
+				scheduleState.upcomingPhaseStarts.length === 0 &&
+				(cancelAtSeconds === undefined ||
+					(scheduleState.endsAtSeconds !== undefined &&
+						Math.abs(scheduleState.endsAtSeconds - cancelAtSeconds) <= 1));
+			if (scheduleImplementsCancel) return undefined;
+
+			if (scheduleState.scheduleActive) {
+				if (scheduleState.upcomingPhaseStarts.length > 0) {
+					return {
+						type: "schedule_mismatch",
+						reason: "unexpected_schedule",
+						actual_phase_starts_at: scheduleState.upcomingPhaseStarts,
+					};
+				}
+				return {
+					type: "cancel_state_mismatch",
+					expected_canceling: true,
+					actual_canceling: actualCanceling,
+				};
+			}
+
+			if (sub.cancel_at === null) {
 				return {
 					type: "cancel_state_mismatch",
 					expected_canceling: true,
