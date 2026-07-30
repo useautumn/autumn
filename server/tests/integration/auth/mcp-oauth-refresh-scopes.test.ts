@@ -21,7 +21,7 @@ const baseUrl =
 	process.env.AUTUMN_TEST_BASE_URL?.replace(/\/$/, "") ??
 	`http://localhost:${process.env.SERVER_PORT ?? "8080"}`;
 
-test("MCP OAuth refresh accepts Arctic's advertised scope set after consent narrowing", async () => {
+test("MCP OAuth refresh narrows scopes and replays consumed-token retries", async () => {
 	const session = await createDashboardSession(defaultCtx);
 	const clientId = generateId("oauth_client");
 	const consentId = generateId("oauth_consent");
@@ -69,17 +69,61 @@ test("MCP OAuth refresh accepts Arctic's advertised scope set after consent narr
 			scopes: grantedScopes,
 		});
 
-		const tokens = await new OAuth2Client(
-			clientId,
-			null,
-			null,
-		).refreshAccessToken(`${baseUrl}/api/auth/oauth2/token`, refreshToken, [
+		const arctic = new OAuth2Client(clientId, null, null);
+		const advertisedScopes = [
 			...DEFAULT_OAUTH_RESOURCE_SCOPES,
 			"offline_access",
+		];
+		const [tokens, concurrentRetry] = await Promise.all([
+			arctic.refreshAccessToken(
+				`${baseUrl}/api/auth/oauth2/token`,
+				refreshToken,
+				advertisedScopes,
+			),
+			arctic.refreshAccessToken(
+				`${baseUrl}/api/auth/oauth2/token`,
+				refreshToken,
+				advertisedScopes,
+			),
 		]);
 
 		expect(tokens.accessToken()).toStartWith("am_oauth_");
 		expect(tokens.scopes()).toEqual(grantedScopes);
+		expect(concurrentRetry.accessToken()).toBe(tokens.accessToken());
+		expect(concurrentRetry.refreshToken()).toBe(tokens.refreshToken());
+
+		const retryResponse = await fetch(`${baseUrl}/api/auth/oauth2/token`, {
+			method: "POST",
+			headers: { "Content-Type": "application/x-www-form-urlencoded" },
+			body: new URLSearchParams({
+				scope: advertisedScopes.join(" "),
+				client_id: clientId,
+				refresh_token: refreshToken,
+				grant_type: "refresh_token",
+			}),
+		});
+		const retry = (await retryResponse.json()) as Record<string, unknown>;
+		expect(retry.access_token).toBe(tokens.accessToken());
+		expect(retry.refresh_token).toBe(tokens.refreshToken());
+
+		const replacement = tokens.refreshToken();
+		if (!replacement) throw new Error("Missing replacement refresh token");
+		await arctic.refreshAccessToken(
+			`${baseUrl}/api/auth/oauth2/token`,
+			replacement,
+			advertisedScopes,
+		);
+
+		const mismatchedRetry = await fetch(`${baseUrl}/api/auth/oauth2/token`, {
+			method: "POST",
+			headers: { "Content-Type": "application/x-www-form-urlencoded" },
+			body: new URLSearchParams({
+				grant_type: "refresh_token",
+				refresh_token: refreshToken,
+				client_id: generateId("oauth_client"),
+			}),
+		});
+		expect(mismatchedRetry.status).toBe(400);
 
 		const organization = await fetch(`${baseUrl}/v1/organization`, {
 			headers: {
