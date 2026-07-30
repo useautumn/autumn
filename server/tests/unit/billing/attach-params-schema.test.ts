@@ -1,6 +1,8 @@
 import { describe, expect, test } from "bun:test";
 import { AttachParamsV0Schema } from "@api/billing/attachV2/attachParamsV0";
 import { AttachParamsV1Schema } from "@api/billing/attachV2/attachParamsV1";
+import { BillingCycleAnchorSchema } from "@api/billing/common/billingCycleAnchor";
+import { z } from "zod/v4";
 
 const schemas = [
 	["V0", AttachParamsV0Schema, { customer_id: "cus", product_id: "pro" }],
@@ -47,4 +49,14 @@ describe("attach params currency", () => {
 		expect(result.success).toBe(true);
 		expect(result.data).toMatchObject({ currency: "eur" });
 	});
+});
+
+test("billing cycle anchor emits an enum for SDK generation", () => {
+	const jsonSchema = z.toJSONSchema(BillingCycleAnchorSchema);
+
+	expect(jsonSchema).toMatchObject({
+		type: "string",
+		enum: ["now"],
+	});
+	expect(jsonSchema).not.toHaveProperty("const");
 });
