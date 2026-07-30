@@ -37,6 +37,53 @@ export const sumAllRows = ({
 	rows: AggregateGroupablePipeRow[];
 }): number => rows.reduce((sum, row) => sum + row.total_value, 0);
 
+// Event counts can't cancel the way signed values can, but older deployments of
+// the pipe don't return them, so every count check stays opt-in.
+const countRowsByEventName = ({
+	rows,
+}: {
+	rows: AggregateGroupablePipeRow[];
+}): Record<string, number> | null => {
+	const counts: Record<string, number> = {};
+	for (const row of rows) {
+		if (row.event_count === undefined) return null;
+		counts[row.event_name] = (counts[row.event_name] ?? 0) + row.event_count;
+	}
+	return counts;
+};
+
+const totalEventCount = ({
+	rows,
+}: {
+	rows: AggregateGroupablePipeRow[];
+}): number | null => {
+	let total = 0;
+	for (const row of rows) {
+		if (row.event_count === undefined) return null;
+		total += row.event_count;
+	}
+	return total;
+};
+
+/**
+ * Whether the retry recovered anything. Prefers event counts, since a recovered
+ * group whose values cancel to zero moves the count but not the sum.
+ */
+export const reportsMoreThan = ({
+	candidate,
+	current,
+}: {
+	candidate: AggregateGroupablePipeRow[];
+	current: AggregateGroupablePipeRow[];
+}): boolean => {
+	const candidateCount = totalEventCount({ rows: candidate });
+	const currentCount = totalEventCount({ rows: current });
+	if (candidateCount !== null && currentCount !== null) {
+		if (candidateCount !== currentCount) return candidateCount > currentCount;
+	}
+	return sumAllRows({ rows: candidate }) > sumAllRows({ rows: current });
+};
+
 /**
  * Whether the gated property rollup under-reports against the ungated totals.
  * A key with both gate-surviving and gate-dropped values comes back non-empty
@@ -50,13 +97,20 @@ export const groupedResultIsIncomplete = ({
 	totals: EventTotals;
 }): boolean => {
 	const groupedSums = sumGroupedRowsByEventName({ rows });
+	const groupedCounts = countRowsByEventName({ rows });
 
-	return Object.entries(totals).some(
-		([eventName, total]) =>
-			total.count > 0 &&
-			isMateriallyLessThan({
-				value: groupedSums[eventName] ?? 0,
-				reference: total.sum,
-			}),
-	);
+	return Object.entries(totals).some(([eventName, total]) => {
+		if (total.count <= 0) return false;
+
+		// Signed values can cancel, so a matching sum does not prove the groups are
+		// all present; the count catches what the sum hides.
+		if (groupedCounts && (groupedCounts[eventName] ?? 0) < total.count) {
+			return true;
+		}
+
+		return isMateriallyLessThan({
+			value: groupedSums[eventName] ?? 0,
+			reference: total.sum,
+		});
+	});
 };

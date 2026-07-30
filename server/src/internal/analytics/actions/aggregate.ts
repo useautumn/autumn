@@ -28,7 +28,7 @@ import { getBillingCycleStartDate } from "../analyticsUtils.js";
 import { getCountAndSum } from "./getCountAndSum.js";
 import {
 	groupedResultIsIncomplete,
-	sumAllRows,
+	reportsMoreThan,
 } from "./propertyRollupCompleteness.js";
 
 /** Flattens filter_by into indexed filter_key_N / filter_value_N params for Tinybird pipes */
@@ -490,7 +490,7 @@ export const aggregate = async ({
 				// A shortfall means gate loss OR events without the property; only the
 				// first is recoverable, and only the retry can tell them apart.
 				if (
-					sumAllRows({ rows: ungated.data }) > sumAllRows({ rows: result.data })
+					reportsMoreThan({ candidate: ungated.data, current: result.data })
 				) {
 					result = ungated;
 				}

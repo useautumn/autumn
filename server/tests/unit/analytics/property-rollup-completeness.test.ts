@@ -4,6 +4,7 @@ import type { AggregateGroupablePipeRow } from "@/external/tinybird/pipes/aggreg
 import {
 	type EventTotals,
 	groupedResultIsIncomplete,
+	reportsMoreThan,
 	sumAllRows,
 	sumGroupedRowsByEventName,
 } from "@/internal/analytics/actions/propertyRollupCompleteness.js";
@@ -12,15 +13,18 @@ const row = ({
 	eventName = "action_calls",
 	groupValue,
 	totalValue,
+	eventCount,
 }: {
 	eventName?: string;
 	groupValue: string;
 	totalValue: number;
+	eventCount?: number;
 }): AggregateGroupablePipeRow => ({
 	period: "2026-07-29 00:00:00",
 	event_name: eventName,
 	group_value: groupValue,
 	total_value: totalValue,
+	...(eventCount === undefined ? {} : { event_count: eventCount }),
 });
 
 const totals = ({
@@ -187,6 +191,79 @@ test(`${chalk.yellowBright(
 	expect(sumAllRows({ rows: ungatedWithAbsentProperty })).toBe(
 		sumAllRows({ rows: gated }),
 	);
+});
+
+test(`${chalk.yellowBright(
+	"property rollup: gate-dropped groups whose values cancel are still detected",
+)}`, () => {
+	// Negative values are mainstream (117 orgs in a 7d prod sample), so dropped
+	// groups can net to zero and leave the sum comparison blind. The count can't
+	// cancel, so it catches them.
+	const rows = [
+		row({ groupValue: "qa-71607", totalValue: 500, eventCount: 5 }),
+	];
+
+	expect(
+		groupedResultIsIncomplete({
+			rows,
+			totals: { action_calls: { count: 9, sum: 500 } },
+		}),
+	).toBe(true);
+});
+
+test(`${chalk.yellowBright(
+	"property rollup: counts matching the totals are complete",
+)}`, () => {
+	const rows = [
+		row({ groupValue: "qa-71607", totalValue: 500, eventCount: 5 }),
+		row({ groupValue: "joe-test-94143", totalValue: -500, eventCount: 4 }),
+	];
+
+	expect(
+		groupedResultIsIncomplete({
+			rows,
+			totals: { action_calls: { count: 9, sum: 0 } },
+		}),
+	).toBe(false);
+});
+
+test(`${chalk.yellowBright(
+	"property rollup: falls back to sum-only when the pipe omits counts",
+)}`, () => {
+	// A deployment predating the count column must not report every result as
+	// incomplete just because the field is missing.
+	const rows = [row({ groupValue: "qa-71607", totalValue: 500 })];
+
+	expect(
+		groupedResultIsIncomplete({
+			rows,
+			totals: { action_calls: { count: 9, sum: 500 } },
+		}),
+	).toBe(false);
+});
+
+test(`${chalk.yellowBright(
+	"property rollup: the retry wins on recovered events even when sums tie",
+)}`, () => {
+	const gated = [
+		row({ groupValue: "qa-71607", totalValue: 500, eventCount: 5 }),
+	];
+	const ungated = [
+		row({ groupValue: "qa-71607", totalValue: 500, eventCount: 5 }),
+		row({
+			groupValue: "4uSlnf8w0kUb5WV6gEmBz07JVvgxfxTR",
+			totalValue: 60,
+			eventCount: 2,
+		}),
+		row({
+			groupValue: "stackone-integrations-testing---eu-66912",
+			totalValue: -60,
+			eventCount: 2,
+		}),
+	];
+
+	expect(reportsMoreThan({ candidate: ungated, current: gated })).toBe(true);
+	expect(reportsMoreThan({ candidate: gated, current: ungated })).toBe(false);
 });
 
 test(`${chalk.yellowBright(
