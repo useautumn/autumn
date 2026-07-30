@@ -95,4 +95,52 @@ describe("edge config registry", () => {
 		expect(refresh).toHaveBeenCalledTimes(2);
 		expect(writeTimestamp).toHaveBeenCalledTimes(1);
 	});
+
+	// Every process runs this loop, so an unbounded create-on-null retries the
+	// write on each poll across the whole fleet while the key stays missing.
+	test("creates the timestamp once while it stays missing", async () => {
+		const writeTimestamp = jest.fn(async () => "created");
+		const { refresh, registry } = createRegistry({
+			timestamps: [null],
+			writeTimestamp,
+		});
+		await registry.start();
+
+		await registry.checkForChanges();
+		await registry.checkForChanges();
+
+		expect(writeTimestamp).toHaveBeenCalledTimes(1);
+		expect(refresh).toHaveBeenCalledTimes(3);
+	});
+
+	test("stops retrying a failing timestamp write but keeps refreshing", async () => {
+		const writeTimestamp = jest.fn(async () => {
+			throw new Error("AccessDenied");
+		});
+		const { refresh, registry } = createRegistry({
+			timestamps: [null],
+			writeTimestamp,
+		});
+		await registry.start();
+
+		await registry.checkForChanges();
+		await registry.checkForChanges();
+
+		expect(writeTimestamp).toHaveBeenCalledTimes(1);
+		expect(refresh).toHaveBeenCalledTimes(3);
+	});
+
+	test("recreates the timestamp again after it reappears and is deleted", async () => {
+		const writeTimestamp = jest.fn(async () => "recreated");
+		const { registry } = createRegistry({
+			timestamps: [null, "v1", null],
+			writeTimestamp,
+		});
+		await registry.start();
+
+		await registry.checkForChanges();
+		await registry.checkForChanges();
+
+		expect(writeTimestamp).toHaveBeenCalledTimes(2);
+	});
 });

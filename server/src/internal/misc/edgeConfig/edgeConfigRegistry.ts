@@ -23,6 +23,7 @@ export const createEdgeConfigRegistry = ({
 	const stores: EdgeConfigLifecycle[] = [];
 	let lastTimestamp: string | null | undefined;
 	let lastTimestampError: string | undefined;
+	let timestampWriteAttempted = false;
 	let pollTimer: ReturnType<typeof setInterval> | null = null;
 	let pollPromise: Promise<void> | null = null;
 
@@ -48,14 +49,23 @@ export const createEdgeConfigRegistry = ({
 		lastTimestampError = message;
 	};
 
+	/** One create attempt per missing-key stretch: every process polls, so
+	 *  retrying each tick would hammer S3 fleet-wide while the key stays absent. */
+	const ensureTimestamp = async (): Promise<string | null> => {
+		if (timestampWriteAttempted) return null;
+		timestampWriteAttempted = true;
+		return await writeTimestamp();
+	};
+
 	const checkForChanges = async ({ logger }: { logger?: Logger } = {}) => {
 		try {
 			const timestamp = await readTimestamp();
 			lastTimestampError = undefined;
+			if (timestamp !== null) timestampWriteAttempted = false;
 			if (timestamp === lastTimestamp && timestamp !== null) return;
 
 			await refreshAll({ logger });
-			lastTimestamp = timestamp ?? (await writeTimestamp());
+			lastTimestamp = timestamp ?? (await ensureTimestamp());
 		} catch (error) {
 			warnTimestampError({ error, logger });
 			await refreshAll({ logger });
@@ -69,7 +79,9 @@ export const createEdgeConfigRegistry = ({
 		}
 
 		try {
-			lastTimestamp = (await readTimestamp()) ?? (await writeTimestamp());
+			const timestamp = await readTimestamp();
+			if (timestamp !== null) timestampWriteAttempted = false;
+			lastTimestamp = timestamp ?? (await ensureTimestamp());
 			lastTimestampError = undefined;
 		} catch (error) {
 			warnTimestampError({ error, logger });
