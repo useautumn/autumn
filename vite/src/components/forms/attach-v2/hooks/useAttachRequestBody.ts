@@ -11,6 +11,7 @@ import type {
 	TrialOnEnd,
 } from "@autumn/shared";
 import { useMemo } from "react";
+import type { BillingStageParams } from "@/components/forms/shared/utils/billingStageParams";
 import { normalizeBillingRequestItems } from "@/components/forms/shared/utils/normalizeBillingRequestItems";
 import { getFreeTrial } from "@/components/forms/update-subscription-v2/utils/getFreeTrial";
 import { convertLicenseQuantitiesToParams } from "@/utils/billing/licenseQuantityUtils";
@@ -21,6 +22,7 @@ import {
 	type FormDiscount,
 	filterValidDiscounts,
 } from "../utils/discountUtils";
+import { stripPricesFromItems } from "../utils/grantFreeUtils";
 
 export interface BuildAttachRequestBodyParams {
 	customerId: string | undefined;
@@ -124,16 +126,21 @@ export function buildAttachRequestBody({
 		body.license_quantities = licenseQuantityParams;
 	}
 
-	if (items !== null) {
-		const normalizedItems = normalizeBillingRequestItems({ items });
+	const requestItems = grantFree
+		? stripPricesFromItems({
+				items: items ?? (product.items as ProductItem[]),
+			})
+		: items;
+	if (requestItems !== null) {
+		const normalizedItems = normalizeBillingRequestItems({
+			items: requestItems,
+		});
 		if (normalizedItems) {
 			body.items = normalizedItems.map((item) => ({
 				...item,
 				interval: (item.interval ?? null) as ProductItemInterval | null,
 			}));
 		} else if (grantFree) {
-			// Send explicit `[]` so the backend overrides the product's default
-			// (paid) items; omitting `items` falls back to them. See useGrantFree.
 			body.items = [];
 		}
 	}
@@ -342,14 +349,7 @@ export function useAttachRequestBody(params: BuildAttachRequestBodyParams) {
 				invoiceTemplateId,
 				netTermsDays,
 				longLivedCheckout,
-			}: {
-				useInvoice?: boolean;
-				enableProductImmediately?: boolean;
-				finalizeInvoice?: boolean;
-				invoiceTemplateId?: string;
-				netTermsDays?: number;
-				longLivedCheckout?: boolean;
-			} = {}): AttachParamsV0 | null => {
+			}: BillingStageParams = {}): AttachParamsV0 | null => {
 				if (!requestBody) return null;
 
 				const body = { ...requestBody };

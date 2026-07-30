@@ -217,9 +217,14 @@ function ScheduleEditFooter({
 	const { formValues, hasCustomizations } = useAttachFormContext();
 
 	const handleSaveToSchedule = () => {
+		const prepaidOptions = Object.fromEntries(
+			Object.entries(formValues.prepaidOptions).filter(
+				(entry): entry is [string, number] => entry[1] !== undefined,
+			),
+		);
 		onSave({
 			productId: formValues.productId,
-			prepaidOptions: formValues.prepaidOptions,
+			prepaidOptions,
 			items: formValues.items,
 			isCustom: formValues.isCustom || hasCustomizations,
 			version: formValues.version,
@@ -343,7 +348,7 @@ function ScheduleSendInvoiceContent() {
 			previewQuery={previewQuery}
 			isPending={isPending}
 			onSubmit={handleInvoiceSubmit}
-			stripeAccount={stripeAccount}
+			stripeAccount={stripeAccount ?? undefined}
 			env={env}
 			onBack={() => setSheet({ type: "create-schedule-review" })}
 		/>

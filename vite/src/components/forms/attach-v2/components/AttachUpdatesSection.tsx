@@ -40,7 +40,7 @@ function OutgoingPlans({
 	outgoing,
 	isPausing,
 }: {
-	outgoing: { plan: { id: string; name: string } }[];
+	outgoing: { planId: string; name: string }[];
 	isPausing: boolean;
 }) {
 	const verb = isPausing ? "pausing" : "removing";
@@ -52,11 +52,11 @@ function OutgoingPlans({
 			{outgoing.map((change, index) => {
 				const isLast = index === outgoing.length - 1;
 				return (
-					<span key={change.plan.id}>
+					<span key={change.planId}>
 						{index > 0 && !isLast && ", "}
 						{isLast && index > 0 && " and "}
 						<OutgoingIcon isPausing={isPausing} />
-						<PlanName name={change.plan.name} />
+						<PlanName name={change.name} />
 					</span>
 				);
 			})}
@@ -65,12 +65,24 @@ function OutgoingPlans({
 }
 
 export function AttachUpdatesSection() {
-	const { previewQuery, formValues, product, hasActiveSubscription } =
-		useAttachFormContext();
+	const {
+		previewQuery,
+		formValues,
+		product,
+		products,
+		hasActiveSubscription,
+		additionalPlans,
+	} = useAttachFormContext();
 
 	const hasProductSelected = !!formValues.productId;
 	const { data: previewData, isPending } = previewQuery;
-	const outgoing = previewData?.outgoing ?? [];
+	const outgoing = (previewData?.outgoing ?? []).map((change) => ({
+		planId: change.plan_id,
+		name:
+			change.plan?.name ??
+			products.find((candidate) => candidate.id === change.plan_id)?.name ??
+			change.plan_id,
+	}));
 	const creditAmount = getPreviewCreditAmount({ previewData });
 	const hasCreditIndicator = creditAmount > 0;
 	const formattedCreditAmount = hasCreditIndicator
@@ -89,7 +101,10 @@ export function AttachUpdatesSection() {
 	if (isPending) return <AttachUpdatesSkeleton />;
 	if (!product) return null;
 
-	const isPausing = formValues.trialOnEnd === "revert" && hasActiveSubscription;
+	const isPausing =
+		!additionalPlans.isMultiPlan &&
+		formValues.trialOnEnd === "revert" &&
+		hasActiveSubscription;
 
 	return (
 		<SheetSection withSeparator={false} className="pb-0">

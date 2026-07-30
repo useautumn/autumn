@@ -7,6 +7,11 @@ import {
 import {
 	Button,
 	DateInputUnix,
+	DropdownMenu,
+	DropdownMenuCheckboxItem,
+	DropdownMenuContent,
+	DropdownMenuSeparator,
+	DropdownMenuTrigger,
 	IconButton,
 	IconCheckbox,
 	Input,
@@ -24,13 +29,6 @@ import {
 	AdvancedToggleRow,
 	ConfigRow,
 } from "@/components/forms/shared/advanced-section";
-import {
-	DropdownMenu,
-	DropdownMenuCheckboxItem,
-	DropdownMenuContent,
-	DropdownMenuSeparator,
-	DropdownMenuTrigger,
-} from "@autumn/ui";
 import { cn } from "@/lib/utils";
 import { useCusQuery } from "@/views/customers/customer/hooks/useCusQuery";
 import type { FormCustomLineItem } from "../attachFormSchema";
@@ -113,8 +111,9 @@ function FeatureSelectDropdown({
 }
 
 export function AttachAdvancedSection() {
-	const { form, formValues, features, product, previewQuery } =
+	const { form, formValues, features, product, previewQuery, additionalPlans } =
 		useAttachFormContext();
+	const isMultiPlan = additionalPlans.isMultiPlan;
 	const {
 		discounts,
 		newBillingSubscription,
@@ -220,7 +219,7 @@ export function AttachAdvancedSection() {
 		form.setFieldValue("customLineItems", updated);
 	};
 
-	const moreOptions = (
+	const moreOptions = isMultiPlan ? null : (
 		<>
 			{showStartDate && (
 				<ConfigRow
@@ -503,7 +502,7 @@ export function AttachAdvancedSection() {
 				)}
 			</ConfigRow>
 
-			{showProrationRow && (
+			{showProrationRow && !isMultiPlan && (
 				<ConfigRow
 					title="Prorate Changes"
 					description="Prorate price differences when changing plans mid-cycle"
@@ -525,7 +524,7 @@ export function AttachAdvancedSection() {
 			)}
 
 			{/* Plan Schedule — only when customer has an active Stripe subscription */}
-			{hasActiveSubscription && (
+			{hasActiveSubscription && !isMultiPlan && (
 				<AdvancedToggleRow
 					label="Plan Schedule"
 					description="When the new plan should take effect"

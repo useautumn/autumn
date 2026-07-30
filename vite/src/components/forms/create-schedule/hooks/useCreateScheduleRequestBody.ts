@@ -1,112 +1,18 @@
 import type {
-	ApiPlanItemV1,
 	BillingBehavior,
 	CreateScheduleParamsV0,
 	Feature,
-	ProductItem,
 	ProductV2,
 } from "@autumn/shared";
-import { productItemsToPlanItemsV1 } from "@autumn/shared";
 import { useMemo } from "react";
-import { convertPrepaidOptionsToFeatureOptions } from "@/utils/billing/prepaidQuantityUtils";
-
-type CreatePlanItemParams = Omit<
-	ApiPlanItemV1,
-	"reset" | "price" | "rollover"
-> & {
-	reset?: ApiPlanItemV1["reset"];
-	price?: ApiPlanItemV1["price"];
-	rollover?: ApiPlanItemV1["rollover"];
-};
-
+import { applyCreateScheduleStageParams } from "@/components/forms/shared/utils/applyCreateScheduleStageParams";
+import type { BillingStageParams } from "@/components/forms/shared/utils/billingStageParams";
+import { buildCreateSchedulePlan } from "@/components/forms/shared/utils/buildPlanCustomize";
 import {
 	getCreateSchedulePhaseTimingError,
 	hasPersistedCreateSchedule,
 	type SchedulePhase,
 } from "../createScheduleFormSchema";
-
-function sanitizeForCreateParams({
-	reset,
-	price,
-	rollover,
-	...rest
-}: ApiPlanItemV1): CreatePlanItemParams {
-	const sanitizedPrice = price
-		? (() => {
-				const { max_purchase, ...priceRest } = price;
-				return {
-					...priceRest,
-					...(max_purchase != null ? { max_purchase } : {}),
-				};
-			})()
-		: undefined;
-
-	const sanitizedRollover = rollover
-		? {
-				max: rollover.max ?? undefined,
-				max_percentage: rollover.max_percentage ?? undefined,
-				expiry_duration_type: rollover.expiry_duration_type,
-				expiry_duration_length: rollover.expiry_duration_length ?? undefined,
-			}
-		: undefined;
-
-	return {
-		...rest,
-		...(reset ? { reset } : {}),
-		...(sanitizedPrice ? { price: sanitizedPrice } : {}),
-		...(sanitizedRollover ? { rollover: sanitizedRollover } : {}),
-	};
-}
-
-export function buildCustomizeItems({
-	items,
-	features,
-}: {
-	items: ProductItem[];
-	features: Feature[];
-}) {
-	const featureItems = items.filter((item) => item.feature_id);
-	if (featureItems.length === 0) return undefined;
-	return productItemsToPlanItemsV1({ items: featureItems, features }).map(
-		sanitizeForCreateParams,
-	);
-}
-
-export function buildCustomizeBasePrice({ items }: { items: ProductItem[] }) {
-	const priceItem = items.find(
-		(item) => item.price != null && !item.feature_id,
-	);
-	if (!priceItem || priceItem.price === 0) return null;
-	if (!priceItem.interval) return undefined;
-	return {
-		amount: priceItem.price,
-		interval: priceItem.interval,
-		...(priceItem.interval_count != null
-			? { interval_count: priceItem.interval_count }
-			: {}),
-		...(priceItem.entitlement_id
-			? { entitlement_id: priceItem.entitlement_id }
-			: {}),
-		...(priceItem.price_id ? { price_id: priceItem.price_id } : {}),
-	};
-}
-
-export function buildCustomize({
-	items,
-	features,
-}: {
-	items: ProductItem[] | null;
-	features: Feature[];
-}) {
-	if (!items) return undefined;
-	const planItems = buildCustomizeItems({ items, features });
-	const basePrice = buildCustomizeBasePrice({ items });
-	if (!planItems && basePrice === undefined) return undefined;
-	return {
-		...(planItems ? { items: planItems } : {}),
-		...(basePrice !== undefined ? { price: basePrice } : {}),
-	};
-}
 
 export function buildCreateScheduleRequestBody({
 	customerId,
@@ -135,35 +41,27 @@ export function buildCreateScheduleRequestBody({
 	const hasPersistedSchedule = hasPersistedCreateSchedule({ phases });
 
 	const apiPhases = phases.map((phase, index) => {
-		const startsAt =
-			index === 0
-				? allowFirstPhaseBackdate
-					? (phase.startsAt ?? now)
-					: (phase.persistedStartsAt ?? now)
-				: phase.startsAt;
+		let startsAt = phase.startsAt;
+		if (index === 0) {
+			startsAt = allowFirstPhaseBackdate
+				? (phase.startsAt ?? now)
+				: (phase.persistedStartsAt ?? now);
+		}
 		if (startsAt === null) return null;
 
 		const plans = phase.plans
 			.filter((plan) => plan.productId)
-			.map((plan) => {
-				const product = products.find((p) => p.id === plan.productId);
-				const featureQuantities = convertPrepaidOptionsToFeatureOptions({
+			.map((plan) =>
+				buildCreateSchedulePlan({
+					productId: plan.productId,
 					prepaidOptions: plan.prepaidOptions,
-					product,
-				});
-				const customize = plan.isCustom
-					? buildCustomize({ items: plan.items, features })
-					: undefined;
-
-				return {
-					plan_id: plan.productId,
-					...(featureQuantities
-						? { feature_quantities: featureQuantities }
-						: {}),
-					...(plan.version !== undefined ? { version: plan.version } : {}),
-					...(customize ? { customize } : {}),
-				};
-			});
+					items: plan.items,
+					version: plan.version,
+					isCustom: plan.isCustom,
+					product: products.find((product) => product.id === plan.productId),
+					features,
+				}),
+			);
 
 		if (plans.length === 0) return null;
 		return {
@@ -278,19 +176,7 @@ export function useBuildCreateScheduleRequestBody({
 }) {
 	return useMemo(
 		() =>
-			({
-				useInvoice,
-				enableProductImmediately,
-				finalizeInvoice,
-				invoiceTemplateId,
-				netTermsDays,
-			}: {
-				useInvoice?: boolean;
-				enableProductImmediately?: boolean;
-				finalizeInvoice?: boolean;
-				invoiceTemplateId?: string;
-				netTermsDays?: number;
-			} = {}): CreateScheduleParamsV0 | null => {
+			(stageParams: BillingStageParams = {}): CreateScheduleParamsV0 | null => {
 				const requestBody = buildCreateScheduleRequestBody({
 					customerId,
 					entityId,
@@ -305,35 +191,13 @@ export function useBuildCreateScheduleRequestBody({
 
 				if (!requestBody) return null;
 
-				if (useInvoice) {
-					return {
-						...requestBody,
-						invoice_mode: {
-							enabled: true,
-							enable_plan_immediately: enableProductImmediately ?? true,
-							finalize: finalizeInvoice ?? true,
-							...(invoiceTemplateId !== undefined
-								? { invoice_template_id: invoiceTemplateId }
-								: {}),
-							...(netTermsDays !== undefined
-								? { net_terms_days: netTermsDays }
-								: {}),
-						},
-					};
-				}
-
-				// `enable_plan_immediately` also applies to the stripe_checkout flow:
-				// when the form toggle is on, cusProducts (immediate Active + scheduled
-				// Scheduled) are inserted at request time and the schedule rows
-				// materialize on checkout.session.completed.
-				if (getEnablePlanImmediately?.()) {
-					return {
-						...requestBody,
-						enable_plan_immediately: true,
-					};
-				}
-
-				return requestBody;
+				return applyCreateScheduleStageParams({
+					...stageParams,
+					requestBody,
+					enableProductImmediately:
+						stageParams.enableProductImmediately ??
+						(getEnablePlanImmediately?.() || undefined),
+				});
 			},
 		[
 			customerId,

@@ -38,16 +38,13 @@ export function useAttachCurrency({
 		const chargingItems = items.filter(itemCharges);
 		if (chargingItems.length === 0) return [];
 
-		let codes: Set<string> | null = null;
-		for (const item of chargingItems) {
-			const itemCodes = new Set(itemCurrencyCodes(item));
-			codes =
-				codes === null
-					? itemCodes
-					: new Set([...codes].filter((code) => itemCodes.has(code)));
-		}
-		codes?.delete(orgDefaultCurrency.toLowerCase());
-		return [...(codes ?? [])];
+		const [firstCodes, ...remainingCodes] =
+			chargingItems.map(itemCurrencyCodes);
+		return firstCodes.filter(
+			(code) =>
+				code !== orgDefaultCurrency.toLowerCase() &&
+				remainingCodes.every((codes) => codes.includes(code)),
+		);
 	}, [items, orgDefaultCurrency]);
 
 	const showCurrencySelector =

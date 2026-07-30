@@ -1,14 +1,13 @@
-import type { FullCustomer } from "@autumn/shared";
 import {
 	Button,
 	InlineAction,
-	SearchableSelect,
 	Tooltip,
 	TooltipContent,
 	TooltipTrigger,
 } from "@autumn/ui";
 import { PlusIcon } from "@phosphor-icons/react";
 import { useStore } from "@tanstack/react-form";
+import { PlanEntityScopeSelector } from "@/components/forms/shared";
 import {
 	SheetFooter,
 	SheetHeader,
@@ -16,22 +15,24 @@ import {
 } from "@/components/v2/sheets/SharedSheetComponents";
 import { useSheetStore } from "@/hooks/stores/useSheetStore";
 import { cn } from "@/lib/utils";
-import { useCusQuery } from "@/views/customers/customer/hooks/useCusQuery";
+import { useScopeEntitySearch } from "@/views/customers2/customer/hooks/useScopeEntitySearch";
 import { useCreateScheduleFormContext } from "../context/CreateScheduleFormProvider";
 import { useHasSchedule } from "../hooks/useHasSchedule";
 import { CreateScheduleAdvancedSection } from "./CreateScheduleAdvancedSection";
 import { SchedulePhaseCard } from "./SchedulePhaseCard";
 import { SchedulePreview } from "./SchedulePreview";
 
-const CUSTOMER_LEVEL_VALUE = "__customer__";
-
 export function CreateScheduleSheetContent() {
-	const { form, formValues, entityId, handleAddPhase, error, onScopeChange } =
+	const { form, formValues, entityId, handleAddPhase, onScopeChange } =
 		useCreateScheduleFormContext();
 	const { closeSheet, setSheet } = useSheetStore();
 	const hasSchedule = useHasSchedule({ entityId });
-	const { customer } = useCusQuery();
-	const entities = (customer as FullCustomer | null)?.entities ?? [];
+	const {
+		hasEntities,
+		entities,
+		isLoading: isEntitiesLoading,
+		setSearch: setEntitySearch,
+	} = useScopeEntitySearch({ selectedEntityId: entityId });
 
 	const canSubmit = useStore(form.store, (state) => state.canSubmit);
 	const isDisabled = !canSubmit;
@@ -47,28 +48,19 @@ export function CreateScheduleSheetContent() {
 			/>
 
 			<div className="flex-1 overflow-y-auto">
-				{entities.length > 0 && (
+				{hasEntities && (
 					<SheetSection title="Scope" withSeparator>
-						<SearchableSelect
-							value={entityId ?? CUSTOMER_LEVEL_VALUE}
-							onValueChange={(value) => {
-								const newEntityId =
-									value === CUSTOMER_LEVEL_VALUE ? undefined : value;
-								if (newEntityId === entityId) return;
-								onScopeChange?.(newEntityId);
+						<PlanEntityScopeSelector
+							entities={entities}
+							value={entityId}
+							onChange={(nextEntityId) => {
+								const scopeEntityId = nextEntityId ?? undefined;
+								if (scopeEntityId !== entityId) onScopeChange?.(scopeEntityId);
 							}}
-							options={[
-								{ id: CUSTOMER_LEVEL_VALUE, name: "Customer" },
-								...entities,
-							]}
-							getOptionValue={(option: { id: string }) => option.id}
-							getOptionLabel={(option: { id: string; name?: string | null }) =>
-								option.name || option.id
-							}
-							placeholder="Select scope"
-							searchable={entities.length > 5}
-							searchPlaceholder="Search entities..."
-							emptyText="No entities found"
+							showLabel={false}
+							wrapInSection={false}
+							onSearchChange={setEntitySearch}
+							isLoading={isEntitiesLoading}
 						/>
 					</SheetSection>
 				)}

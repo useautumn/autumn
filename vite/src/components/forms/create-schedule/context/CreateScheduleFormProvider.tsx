@@ -1,5 +1,5 @@
 import type {
-	BillingPreviewResponse,
+	AttachPreviewResponse,
 	Feature,
 	FullCusProduct,
 	FullCustomer,
@@ -87,8 +87,8 @@ interface CreateScheduleFormContextValue {
 		stripeId: string | undefined;
 		hostedInvoiceUrl: string | null | undefined;
 	}>;
-	preview: BillingPreviewResponse | null | undefined;
-	previewQuery: { data: BillingPreviewResponse | null | undefined };
+	preview: AttachPreviewResponse | null | undefined;
+	previewQuery: { data: AttachPreviewResponse | null | undefined };
 	isPreviewLoading: boolean;
 	error: Error | null;
 	onScopeChange?: (entityId: string | undefined) => void;

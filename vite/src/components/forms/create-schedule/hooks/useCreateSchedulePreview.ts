@@ -1,5 +1,5 @@
 import type {
-	BillingPreviewResponse,
+	AttachPreviewResponse,
 	CreateScheduleParamsV0Input,
 } from "@autumn/shared";
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
@@ -43,7 +43,7 @@ export function useCreateSchedulePreview({
 		queryFn: async () => {
 			if (!requestBody) return null;
 
-			const response = await axiosInstance.post<BillingPreviewResponse>(
+			const response = await axiosInstance.post<AttachPreviewResponse>(
 				"/v1/billing.preview_create_schedule",
 				{
 					...requestBody,

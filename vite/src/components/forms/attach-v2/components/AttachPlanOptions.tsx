@@ -23,14 +23,16 @@ export function AttachPlanOptions() {
 		handleGrantFreeToggle,
 		hasActiveSubscription,
 		attachCurrency,
+		additionalPlans,
 	} = useAttachFormContext();
 	const { trialEnabled, trialCardRequired, trialOnEnd, grantFree } = formValues;
 	const [versionOpen, setVersionOpen] = useState(false);
 
-	const showVersionSelector = numVersions > 1;
-	const handleTrialOnEndChange = hasActiveSubscription
-		? (value: "bill" | "revert") => form.setFieldValue("trialOnEnd", value)
-		: undefined;
+	const showVersionSelector = numVersions > 1 && !additionalPlans.isMultiPlan;
+	const handleTrialOnEndChange =
+		hasActiveSubscription && !additionalPlans.isMultiPlan
+			? (value: "bill" | "revert") => form.setFieldValue("trialOnEnd", value)
+			: undefined;
 
 	return (
 		<div className="flex flex-col gap-4">
@@ -68,7 +70,13 @@ export function AttachPlanOptions() {
 											).map((version) => (
 												<DropdownMenuItem
 													key={version}
-													onClick={() => field.handleChange(version)}
+													onClick={() => {
+														if (selectedVersion === version) return;
+														field.handleChange(version);
+														form.setFieldValue("items", null);
+														form.setFieldValue("addLicenses", null);
+														form.setFieldValue("licenseQuantities", {});
+													}}
 													className="flex gap-3"
 												>
 													<CheckIcon
@@ -95,6 +103,11 @@ export function AttachPlanOptions() {
 
 			<FreeTrialConfigRow
 				form={form}
+				description={
+					additionalPlans.isMultiPlan
+						? "Let the customer try every selected plan before being charged"
+						: undefined
+				}
 				expanded={!!trialEnabled}
 				checked={!!trialEnabled}
 				trialCardRequired={!!trialCardRequired}
@@ -123,7 +136,11 @@ export function AttachPlanOptions() {
 
 			<ConfigRow
 				title="Grant for Free"
-				description="Remove all prices on this plan for this customer"
+				description={
+					additionalPlans.isMultiPlan
+						? "Remove all prices on every selected plan for this customer"
+						: "Remove all prices on this plan for this customer"
+				}
 				action={
 					<Switch
 						checked={!!grantFree}

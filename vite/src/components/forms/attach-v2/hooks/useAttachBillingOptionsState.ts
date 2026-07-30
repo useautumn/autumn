@@ -24,7 +24,9 @@ export function useAttachBillingOptionsState() {
 		previewQuery,
 		isFreeToPaidTransition,
 		hasActiveSubscription,
+		additionalPlans,
 	} = useAttachFormContext();
+	const isMultiPlan = additionalPlans.isMultiPlan;
 	const { planSchedule, prorationBehavior, newBillingSubscription, startDate } =
 		formValues;
 	const previewData = previewQuery.data;
@@ -52,12 +54,16 @@ export function useAttachBillingOptionsState() {
 	);
 
 	const hasOutgoing = (previewData?.outgoing.length ?? 0) > 0;
-	const incomingPlan = previewData?.incoming[0]?.plan;
+	const incomingPlans = previewData?.incoming ?? [];
 	const outgoingPlan = previewData?.outgoing[0]?.plan;
 
-	const isPaidRecurringAttach =
-		(incomingPlan?.price?.amount ?? 0) > 0 &&
-		incomingPlan?.price?.interval !== BillingInterval.OneOff;
+	// Multi-plan attaches produce several incoming changes, so these ask "does
+	// any incoming plan…" rather than inspecting only the first.
+	const isPaidRecurringAttach = incomingPlans.some(
+		(change) =>
+			(change.plan?.price?.amount ?? 0) > 0 &&
+			change.plan?.price?.interval !== BillingInterval.OneOff,
+	);
 
 	const isOutgoingPaidRecurring =
 		(outgoingPlan?.price?.amount ?? 0) > 0 &&
@@ -68,14 +74,16 @@ export function useAttachBillingOptionsState() {
 
 	// Usage-only plans have a null base price (billing lives on items), so a
 	// recurring sub can be created even when the base price and immediate total are $0.
-	const incomingPlanHasRecurringPrice =
-		(incomingPlan?.price != null &&
-			incomingPlan.price.interval !== BillingInterval.OneOff) ||
-		(incomingPlan?.items?.some(
-			(item) =>
-				item.price != null && item.price.interval !== BillingInterval.OneOff,
-		) ??
-			false);
+	const incomingPlanHasRecurringPrice = incomingPlans.some(
+		(change) =>
+			(change.plan?.price != null &&
+				change.plan.price.interval !== BillingInterval.OneOff) ||
+			(change.plan?.items?.some(
+				(item: { price?: { interval?: BillingInterval | null } | null }) =>
+					item.price != null && item.price.interval !== BillingInterval.OneOff,
+			) ??
+				false),
+	);
 
 	const createsRecurringSubscription =
 		incomingPlanHasRecurringPrice && createsNewStripeSubscription;
@@ -141,6 +149,7 @@ export function useAttachBillingOptionsState() {
 	}, [form, startDate]);
 
 	useEffect(() => {
+		if (isMultiPlan) return;
 		if (canChooseBillingCycle) return;
 		if (!newBillingSubscription) return;
 		form.setFieldValue("newBillingSubscription", false);
@@ -150,26 +159,36 @@ export function useAttachBillingOptionsState() {
 		form,
 		movePastStartDateToNow,
 		newBillingSubscription,
+		isMultiPlan,
 	]);
 
 	useEffect(() => {
+		if (isMultiPlan) return;
 		if (showProrationBehavior) return;
 		if (prorationBehavior === null) return;
 		form.setFieldValue("prorationBehavior", null);
-	}, [showProrationBehavior, prorationBehavior, form]);
+	}, [showProrationBehavior, prorationBehavior, form, isMultiPlan]);
 
 	useEffect(() => {
+		if (isMultiPlan) return;
 		if (!showProrationBehavior) return;
 		if (prorationBehavior !== null) return;
 		if (!isNoChargesAllowed) return;
 		form.setFieldValue("prorationBehavior", "none");
-	}, [showProrationBehavior, prorationBehavior, isNoChargesAllowed, form]);
+	}, [
+		showProrationBehavior,
+		prorationBehavior,
+		isNoChargesAllowed,
+		form,
+		isMultiPlan,
+	]);
 
 	useEffect(() => {
+		if (isMultiPlan) return;
 		if (prorationBehavior !== "none") return;
 		if (isNoChargesAllowed) return;
 		form.setFieldValue("prorationBehavior", null);
-	}, [prorationBehavior, form, isNoChargesAllowed]);
+	}, [prorationBehavior, form, isNoChargesAllowed, isMultiPlan]);
 
 	const handleScheduleChange = (value: PlanTiming) => {
 		form.setFieldValue("planSchedule", value);

@@ -16,8 +16,8 @@ import {
 } from "@phosphor-icons/react";
 import { useMemo, useState } from "react";
 import type Stripe from "stripe";
-import { buildCustomize } from "@/components/forms/create-schedule/hooks/useCreateScheduleRequestBody";
 import { ConfigRow } from "@/components/forms/shared/ConfigRow";
+import { buildCustomize } from "@/components/forms/shared/utils/buildPlanCustomize";
 import {
 	getProductWithSupportedPlanFormValues,
 	getSupportedPlanFormPatchFromDraftProduct,

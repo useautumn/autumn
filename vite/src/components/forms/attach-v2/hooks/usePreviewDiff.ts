@@ -1,6 +1,7 @@
 import type { ProductItem } from "@autumn/shared";
 import { useEffect, useMemo, useState } from "react";
 import type { VersionedPlanLicense } from "@/hooks/queries/usePlanLicensesQuery";
+import type { AttachAdditionalPlan } from "../attachFormSchema";
 import {
 	outgoingToPlanLicenses,
 	outgoingToProductItems,
@@ -20,16 +21,18 @@ export function usePreviewDiff({
 	items,
 	version,
 	incomingItems,
+	additionalPlans,
 }: {
 	previewQuery: UseAttachPreviewReturn;
 	productId: string;
 	items: ProductItem[] | null;
 	version: number | undefined;
 	incomingItems: ProductItem[] | undefined;
+	additionalPlans: AttachAdditionalPlan[];
 }) {
 	const planConfigKey = useMemo(
-		() => JSON.stringify({ productId, items, version }),
-		[productId, items, version],
+		() => JSON.stringify({ productId, items, version, additionalPlans }),
+		[productId, items, version, additionalPlans],
 	);
 
 	const [diffState, setDiffState] = useState<{

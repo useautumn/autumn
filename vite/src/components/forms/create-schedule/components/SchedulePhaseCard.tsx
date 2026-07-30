@@ -57,7 +57,7 @@ export function SchedulePhaseCard({
 	const activeProducts = products.filter((p) => !p.archived);
 	const usedKeys = getUsedGroupKeys({ plans: phase.plans, products });
 	const allPlansAdded = activeProducts.every((p) =>
-		usedKeys.has(p.group ?? p.id),
+		usedKeys.has(p.group || p.id),
 	);
 	const phaseTimingError = getPhaseTimingError({
 		phases: formValues.phases,

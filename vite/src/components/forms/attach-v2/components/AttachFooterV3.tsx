@@ -47,6 +47,7 @@ export function AttachFooterV3() {
 		handleConfirm,
 		handleInvoiceAttach,
 		formValues,
+		additionalPlans,
 	} = useAttachFormContext();
 	const { setSheet } = useSheetStore();
 	const itemId = useSheetStore((s) => s.itemId);
@@ -56,22 +57,28 @@ export function AttachFooterV3() {
 
 	const previewData = previewQuery.data;
 	const previewFailed = !!previewQuery.error;
-	const hasFutureStartDate = isFutureStartDate(formValues.startDate);
+	const isMultiPlan = additionalPlans.isMultiPlan;
+	const startDate = isMultiPlan ? null : formValues.startDate;
+	const hasFutureStartDate = isFutureStartDate(startDate);
 	const confirmLabel = getConfirmLabel({
 		previewData,
-		startDate: formValues.startDate,
+		startDate,
 	});
 
 	const hasNothingToInvoice =
 		!!previewData && previewData.total <= 0 && !createsRecurringSubscription;
 
-	const invoiceDisabledReason = isEndOfCycleSelected
-		? "Invoices are not available for end of cycle changes as there is no immediate charge to invoice"
-		: hasFutureStartDate
-			? "Invoices are not available for future start dates. Schedule the plan instead."
-			: hasNothingToInvoice
-				? "Cannot send an invoice for $0 amounts. Please confirm the change instead."
-				: null;
+	let invoiceDisabledReason: string | null = null;
+	if (!isMultiPlan && isEndOfCycleSelected) {
+		invoiceDisabledReason =
+			"Invoices are not available for end of cycle changes as there is no immediate charge to invoice";
+	} else if (hasFutureStartDate) {
+		invoiceDisabledReason =
+			"Invoices are not available for future start dates. Schedule the plan instead.";
+	} else if (hasNothingToInvoice) {
+		invoiceDisabledReason =
+			"Cannot send an invoice for $0 amounts. Please confirm the change instead.";
+	}
 
 	// Trials and credit-covered charges still create a $0 invoice, so keep the
 	// invoice sheet for those; only bypass it when no invoice is created at all.
