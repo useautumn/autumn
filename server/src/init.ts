@@ -12,7 +12,7 @@ import {
 } from "./db/pgHealthMonitor.js";
 import { startPgPoolMonitor, stopPgPoolMonitor } from "./db/pgPoolMonitor.js";
 import { getRedactedDatabaseUrls } from "./db/redactDatabaseUrl.js";
-import { logger } from "./external/logtail/logtailUtils.js";
+import { flushLogs, logger } from "./external/logtail/logtailUtils.js";
 import {
 	startAllEdgeConfigPolling,
 	stopAllEdgeConfigPolling,
@@ -183,6 +183,7 @@ async function gracefulShutdown() {
 			clientReplica?.end(),
 			closeStripeSyncEngine(),
 		]);
+		await flushLogs();
 		console.log("Shutdown complete. Exiting process.");
 		process.exit(0);
 	} catch (err) {

@@ -165,65 +165,87 @@ export type InitLoggerOptions = {
 	mode?: "default" | "dual";
 };
 
+export type LogSink =
+	| "formatted"
+	| "console-json"
+	| "stdout"
+	| "axiom-transport";
+
+/** `LOG_TRANSPORT=stdout` hands shipping to the FireLens sidecar instead of a
+ *  per-process transport thread. Env, not edge config: the logger is built at
+ *  module load, before edge config polling starts. */
+export const selectLogTransports = ({
+	isDevOrTest,
+	axiomToken,
+	mode = "default",
+	logTransport = process.env.LOG_TRANSPORT,
+}: {
+	isDevOrTest: boolean;
+	axiomToken?: string;
+	mode?: "default" | "dual";
+	logTransport?: string;
+}): LogSink[] => {
+	const shipsViaStdout = logTransport === "stdout" || logTransport === "both";
+	const keepsTransport = logTransport !== "stdout" && Boolean(axiomToken);
+
+	if (mode === "dual") {
+		const sinks: LogSink[] = [isDevOrTest ? "formatted" : "console-json"];
+		if (keepsTransport) sinks.push("axiom-transport");
+		return sinks;
+	}
+
+	const sinks: LogSink[] = [];
+	if (isDevOrTest) sinks.push("formatted");
+	if (shipsViaStdout) sinks.push("stdout");
+	if (keepsTransport) sinks.push("axiom-transport");
+
+	return sinks.length > 0 ? sinks : ["formatted"];
+};
+
 export const initLogger = (options: InitLoggerOptions = {}) => {
 	const { mode = "default" } = options;
 
-	const streams: pino.StreamEntry[] = [];
 	const isDev = process.env.NODE_ENV === "development";
 	const isTest = process.env.NODE_ENV === "test";
 	const isDevOrTest = isDev || isTest;
 
-	if (mode === "dual") {
-		streams.push({
-			level: isDevOrTest ? "debug" : "info",
-			stream: isDevOrTest
-				? createDevLogStream({
-						trailingNewline: false,
-						useConsoleLog: true,
-					})
-				: createConsoleJsonStream(),
-		});
-		if (process.env.AXIOM_TOKEN) {
-			streams.push({
-				level: "info",
-				stream: pino.transport({
-					target: "@axiomhq/pino",
-					options: {
-						dataset: "express",
-						token: process.env.AXIOM_TOKEN,
-					},
-				}),
-			});
+	const buildStream = (sink: LogSink): pino.StreamEntry => {
+		switch (sink) {
+			case "formatted":
+				return {
+					level: isDevOrTest ? "debug" : "info",
+					stream:
+						mode === "dual"
+							? createDevLogStream({
+									trailingNewline: false,
+									useConsoleLog: true,
+								})
+							: createDevLogStream(),
+				};
+			case "console-json":
+				return { level: "info", stream: createConsoleJsonStream() };
+			// FireLens tails stdout; `sync: false` batches writes off the hot path.
+			case "stdout":
+				return {
+					level: "info",
+					stream: pino.destination({ dest: 1, sync: false }),
+				};
+			case "axiom-transport":
+				return {
+					level: "info",
+					stream: pino.transport({
+						target: "@axiomhq/pino",
+						options: { dataset: "express", token: process.env.AXIOM_TOKEN },
+					}),
+				};
 		}
-	} else {
-		// DEFAULT FLOW — exact prior behavior. DO NOT MODIFY.
-		if (isDev || isTest) {
-			streams.push({
-				level: "debug",
-				stream: createDevLogStream(),
-			});
-		}
+	};
 
-		if (process.env.AXIOM_TOKEN) {
-			streams.push({
-				level: "info",
-				stream: pino.transport({
-					target: "@axiomhq/pino",
-					options: {
-						dataset: "express",
-						token: process.env.AXIOM_TOKEN,
-					},
-				}),
-			});
-		}
-
-		if (streams.length === 0) {
-			streams.push({
-				level: "info",
-				stream: createDevLogStream(),
-			});
-		}
-	}
+	const streams: pino.StreamEntry[] = selectLogTransports({
+		isDevOrTest,
+		axiomToken: process.env.AXIOM_TOKEN,
+		mode,
+	}).map(buildStream);
 
 	const logger = pino(
 		{

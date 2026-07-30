@@ -108,6 +108,29 @@ export const createDualLogger = () => {
 };
 
 export const logger = createLogger();
+
+/** Async stdout writes buffer, so a task stop drops whatever is pending unless
+ *  this runs first. Bounded so a stuck sink cannot hold up shutdown. */
+export const flushLogs = async ({
+	timeoutMs = 2000,
+}: { timeoutMs?: number } = {}): Promise<void> => {
+	const flushOne = (target: pino.Logger) =>
+		new Promise<void>((resolve) => {
+			try {
+				target.flush(() => resolve());
+			} catch {
+				resolve();
+			}
+		});
+
+	await Promise.race([
+		Promise.all(
+			[pinoLogger, dualPinoLogger].filter(Boolean).map((l) => flushOne(l!)),
+		),
+		new Promise<void>((resolve) => setTimeout(resolve, timeoutMs)),
+	]);
+};
+
 export type Logger = {
 	debug: (...args: any[]) => void;
 	info: (...args: any[]) => void;
