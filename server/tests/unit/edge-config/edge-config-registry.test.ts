@@ -130,6 +130,25 @@ describe("edge config registry", () => {
 		expect(refresh).toHaveBeenCalledTimes(3);
 	});
 
+	// The timestamp is the only propagation signal, so a write that never lands
+	// would otherwise leave every process serving stale config indefinitely.
+	test("refreshes on the backstop interval even when the timestamp is unchanged", async () => {
+		const refresh = jest.fn(async () => {});
+		const registry = createEdgeConfigRegistry({
+			readTimestamp: async () => "v1",
+			writeTimestamp: async () => "v1",
+			pollIntervalMs: 60_000,
+			backstopIntervalMs: 20,
+		});
+		registry.register({ store: { refresh } });
+		registries.push(registry);
+		await registry.start();
+
+		await new Promise((resolve) => setTimeout(resolve, 70));
+
+		expect(refresh.mock.calls.length).toBeGreaterThan(1);
+	});
+
 	test("recreates the timestamp again after it reappears and is deleted", async () => {
 		const writeTimestamp = jest.fn(async () => "recreated");
 		const { registry } = createRegistry({

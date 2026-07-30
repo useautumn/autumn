@@ -50,4 +50,32 @@ describe("edge config timestamp", () => {
 		expect(command.input.Key).toBe(ADMIN_EDGE_CONFIG_TIMESTAMP_KEY);
 		expect(timestamp).toBe(`${body.updatedAt}:${body.changeId}`);
 	});
+
+	// A config PUT that lands while the timestamp PUT fails leaves the new config
+	// in S3 with nothing signalling it, so every process keeps serving the old one.
+	test("retries a transient timestamp write failure", async () => {
+		let attempts = 0;
+		const send = jest.fn(async (_command: unknown) => {
+			attempts++;
+			if (attempts < 3) throw new Error("InternalError");
+			return {};
+		});
+		const s3Client = { send } as unknown as S3Client;
+
+		const timestamp = await writeEdgeConfigTimestamp({ s3Client });
+
+		expect(attempts).toBe(3);
+		expect(timestamp).toContain(":");
+	});
+
+	test("surfaces the error once retries are exhausted", async () => {
+		const send = jest.fn(async (_command: unknown) => {
+			throw new Error("AccessDenied");
+		});
+		const s3Client = { send } as unknown as S3Client;
+
+		await expect(writeEdgeConfigTimestamp({ s3Client })).rejects.toThrow(
+			"AccessDenied",
+		);
+	});
 });

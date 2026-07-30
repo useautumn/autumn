@@ -47,6 +47,11 @@ export const readEdgeConfigTimestamp = async ({
 	}
 };
 
+const WRITE_ATTEMPTS = 3;
+const WRITE_RETRY_DELAY_MS = 50;
+
+/** Retries because the config object is already written by the time this runs:
+ *  a lost timestamp leaves that config in S3 with nothing signalling it. */
 export const writeEdgeConfigTimestamp = async ({
 	s3Client,
 }: {
@@ -55,15 +60,29 @@ export const writeEdgeConfigTimestamp = async ({
 	const { bucket } = getAdminS3Config();
 	const updatedAt = new Date().toISOString();
 	const changeId = randomUUID();
+	const client = getClient(s3Client);
 
-	await getClient(s3Client).send(
-		new PutObjectCommand({
-			Bucket: bucket,
-			Key: ADMIN_EDGE_CONFIG_TIMESTAMP_KEY,
-			Body: JSON.stringify({ updatedAt, changeId }),
-			ContentType: "application/json",
-		}),
-	);
+	let lastError: unknown;
+	for (let attempt = 1; attempt <= WRITE_ATTEMPTS; attempt++) {
+		try {
+			await client.send(
+				new PutObjectCommand({
+					Bucket: bucket,
+					Key: ADMIN_EDGE_CONFIG_TIMESTAMP_KEY,
+					Body: JSON.stringify({ updatedAt, changeId }),
+					ContentType: "application/json",
+				}),
+			);
+			return `${updatedAt}:${changeId}`;
+		} catch (error) {
+			lastError = error;
+			if (attempt < WRITE_ATTEMPTS) {
+				await new Promise((resolve) =>
+					setTimeout(resolve, WRITE_RETRY_DELAY_MS * attempt),
+				);
+			}
+		}
+	}
 
-	return `${updatedAt}:${changeId}`;
+	throw lastError;
 };

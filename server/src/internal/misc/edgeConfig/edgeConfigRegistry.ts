@@ -15,10 +15,12 @@ export const createEdgeConfigRegistry = ({
 	pollIntervalMs = process.env.NODE_ENV === "development"
 		? ms.seconds(1)
 		: ms.seconds(10),
+	backstopIntervalMs = ms.minutes(10),
 }: {
 	readTimestamp?: () => Promise<string | null>;
 	writeTimestamp?: () => Promise<string>;
 	pollIntervalMs?: number;
+	backstopIntervalMs?: number;
 } = {}) => {
 	const stores: EdgeConfigLifecycle[] = [];
 	let lastTimestamp: string | null | undefined;
@@ -26,6 +28,8 @@ export const createEdgeConfigRegistry = ({
 	let timestampWriteAttempted = false;
 	let pollTimer: ReturnType<typeof setInterval> | null = null;
 	let pollPromise: Promise<void> | null = null;
+	let backstopTimer: ReturnType<typeof setInterval> | null = null;
+	let backstopPromise: Promise<void> | null = null;
 
 	const register = ({ store }: { store: EdgeConfigLifecycle }) => {
 		stores.push(store);
@@ -94,11 +98,22 @@ export const createEdgeConfigRegistry = ({
 				pollPromise = null;
 			});
 		}, pollIntervalMs);
+
+		// Self-heals a config whose timestamp never advanced (write lost after the
+		// config landed), which the timestamp poll alone cannot detect.
+		backstopTimer = setInterval(() => {
+			if (backstopPromise) return;
+			backstopPromise = refreshAll({ logger }).finally(() => {
+				backstopPromise = null;
+			});
+		}, backstopIntervalMs);
 	};
 
 	const stop = () => {
 		if (pollTimer) clearInterval(pollTimer);
+		if (backstopTimer) clearInterval(backstopTimer);
 		pollTimer = null;
+		backstopTimer = null;
 	};
 
 	return { register, start, stop, checkForChanges };
