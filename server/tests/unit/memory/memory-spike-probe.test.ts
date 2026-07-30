@@ -8,16 +8,14 @@ import {
 const buildRequest = ({
 	path,
 	elapsedMs,
-	orgSlug,
 }: {
 	path: string;
 	elapsedMs: number;
-	orgSlug?: string;
 }): InFlightRequestSummary => ({
 	method: "POST",
 	path,
 	elapsedMs,
-	orgSlug,
+	orgSlug: undefined,
 	customerId: undefined,
 });
 
@@ -26,21 +24,33 @@ const buildProbe = ({
 	requests = [],
 	maxReports = 3,
 	maxRequestsLogged = 20,
+	baselineSamples = 30,
 }: {
 	rssSamples: number[];
 	requests?: InFlightRequestSummary[];
 	maxReports?: number;
 	maxRequestsLogged?: number;
+	baselineSamples?: number;
 }) => {
 	const reports: MemorySpikeReport[] = [];
 	let index = 0;
 
 	const probe = createMemorySpikeProbe({
-		readRssMB: () => rssSamples[Math.min(index, rssSamples.length - 1)],
+		readMemoryMB: () => {
+			const rssMB = rssSamples[Math.min(index, rssSamples.length - 1)];
+			return {
+				rssMB,
+				heapUsedMB: rssMB / 3,
+				heapTotalMB: rssMB / 2,
+				externalMB: rssMB / 10,
+				arrayBuffersMB: 20,
+			};
+		},
 		listInFlightRequests: () => requests,
 		report: (payload) => reports.push(payload),
-		thresholdMB: 4500,
-		rearmMB: 3500,
+		ceilingMB: 4500,
+		riseMB: 1500,
+		baselineSamples,
 		maxReports,
 		maxRequestsLogged,
 	});
@@ -55,9 +65,9 @@ const buildProbe = ({
 };
 
 describe("memorySpikeProbe", () => {
-	test("stays silent while rss is below the threshold", () => {
+	test("stays silent while memory drifts gently below the ceiling", () => {
 		const { reports, sampleAll } = buildProbe({
-			rssSamples: [3000, 3200, 4499],
+			rssSamples: [2000, 2200, 2400, 2600, 2900, 3200],
 		});
 
 		sampleAll();
@@ -65,35 +75,66 @@ describe("memorySpikeProbe", () => {
 		expect(reports).toHaveLength(0);
 	});
 
-	test("reports once when rss crosses the threshold", () => {
+	test("stays silent for a process that is steadily fat", () => {
 		const { reports, sampleAll } = buildProbe({
-			rssSamples: [3000, 4600, 5200, 6000],
-			requests: [
-				buildRequest({ path: "/v1/entities.list", elapsedMs: 12_000 }),
-			],
+			rssSamples: [4000, 4050, 3990, 4100, 4020],
+		});
+
+		sampleAll();
+
+		expect(reports).toHaveLength(0);
+	});
+
+	test("fires on a rapid rise even below the ceiling", () => {
+		const { reports, sampleAll } = buildProbe({
+			rssSamples: [2000, 2100, 4000],
+			requests: [buildRequest({ path: "/v1/customers.list", elapsedMs: 9000 })],
 		});
 
 		sampleAll();
 
 		expect(reports).toHaveLength(1);
-		expect(reports[0].rssMB).toBe(4600);
-		expect(reports[0].inFlightCount).toBe(1);
-		expect(reports[0].requests[0].path).toBe("/v1/entities.list");
+		expect(reports[0].rssMB).toBe(4000);
+		expect(reports[0].arrayBuffersMB).toBe(20);
+		expect(reports[0].heapUsedMB).toBeCloseTo(4000 / 3);
+		expect(reports[0].requests[0].path).toBe("/v1/customers.list");
 	});
 
-	test("re-arms only after rss falls back below the rearm level", () => {
+	test("fires on the absolute ceiling with no preceding rise", () => {
 		const { reports, sampleAll } = buildProbe({
-			rssSamples: [4600, 4000, 4700, 3000, 4800],
+			rssSamples: [4600, 4650],
 		});
 
 		sampleAll();
 
-		expect(reports.map((r) => r.rssMB)).toEqual([4600, 4800]);
+		expect(reports.map((r) => r.rssMB)).toEqual([4600]);
+	});
+
+	test("reports once per event, not once per sample", () => {
+		const { reports, sampleAll } = buildProbe({
+			rssSamples: [2000, 2000, 4200, 4400, 4300, 4250],
+		});
+
+		sampleAll();
+
+		expect(reports).toHaveLength(1);
+	});
+
+	test("re-arms for a second event once memory settles", () => {
+		const { reports, sampleAll } = buildProbe({
+			rssSamples: [2000, 4000, 2000, 2000, 3800],
+			baselineSamples: 2,
+		});
+
+		sampleAll();
+
+		expect(reports.map((r) => r.rssMB)).toEqual([4000, 3800]);
 	});
 
 	test("stops reporting once the per-process cap is reached", () => {
 		const { reports, sampleAll } = buildProbe({
-			rssSamples: [4600, 3000, 4600, 3000, 4600, 3000, 4600],
+			rssSamples: [2000, 4000, 2000, 4000, 2000, 4000, 2000, 4000],
+			baselineSamples: 2,
 			maxReports: 2,
 		});
 

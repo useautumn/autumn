@@ -18,8 +18,9 @@ export type MemorySpikeReport = MemorySnapshotMB & {
 	requests: InFlightRequestSummary[];
 };
 
-const DEFAULT_THRESHOLD_MB = 4500;
-const DEFAULT_REARM_MB = 3500;
+const DEFAULT_CEILING_MB = 4500;
+const DEFAULT_RISE_MB = 1500;
+const DEFAULT_BASELINE_SAMPLES = 30;
 const DEFAULT_INTERVAL_MS = 2000;
 const DEFAULT_MAX_REPORTS = 3;
 const MAX_REQUESTS_LOGGED = 20;
@@ -27,35 +28,46 @@ const MAX_REQUESTS_LOGGED = 20;
 const toMB = (bytes: number): number =>
 	Math.round((bytes / 1024 / 1024) * 10) / 10;
 
+/**
+ * Fires on a rapid RISE above the recent baseline, not just an absolute size —
+ * a process going 2GB to 4.4GB is the event; a steadily fat one is not.
+ */
 export const createMemorySpikeProbe = ({
 	readMemoryMB,
 	listInFlightRequests: readInFlight,
 	report,
-	thresholdMB,
-	rearmMB,
+	ceilingMB,
+	riseMB,
+	baselineSamples,
 	maxReports,
 	maxRequestsLogged,
 }: {
 	readMemoryMB: () => MemorySnapshotMB;
 	listInFlightRequests: () => InFlightRequestSummary[];
 	report: (payload: MemorySpikeReport) => void;
-	thresholdMB: number;
-	rearmMB: number;
+	ceilingMB: number;
+	riseMB: number;
+	baselineSamples: number;
 	maxReports: number;
 	maxRequestsLogged: number;
 }) => {
 	let armed = true;
 	let reportsSent = 0;
+	const history: number[] = [];
 
 	const sample = () => {
 		const memory = readMemoryMB();
+		const baselineMB = history.length ? Math.min(...history) : memory.rssMB;
 
-		if (memory.rssMB < rearmMB) {
-			armed = true;
-		}
+		history.push(memory.rssMB);
+		if (history.length > baselineSamples) history.shift();
 
-		if (!armed || memory.rssMB < thresholdMB || reportsSent >= maxReports)
-			return;
+		const spiking =
+			memory.rssMB - baselineMB >= riseMB || memory.rssMB >= ceilingMB;
+
+		// Re-arm as soon as the condition clears, so one event yields one report.
+		if (!spiking) armed = true;
+		if (!(spiking && armed) || reportsSent >= maxReports) return;
 
 		armed = false;
 		reportsSent += 1;
@@ -101,11 +113,11 @@ let intervalHandle: ReturnType<typeof setInterval> | null = null;
 
 /** Set MEMORY_SPIKE_PROBE_MB to 0 to disable. */
 export const startMemorySpikeProbe = ({ label }: { label: string }) => {
-	const thresholdMB = readEnvNumber({
+	const ceilingMB = readEnvNumber({
 		name: "MEMORY_SPIKE_PROBE_MB",
-		fallback: DEFAULT_THRESHOLD_MB,
+		fallback: DEFAULT_CEILING_MB,
 	});
-	if (thresholdMB <= 0) return;
+	if (ceilingMB <= 0) return;
 
 	const probe = createMemorySpikeProbe({
 		readMemoryMB: () => {
@@ -134,10 +146,14 @@ export const startMemorySpikeProbe = ({ label }: { label: string }) => {
 				},
 			);
 		},
-		thresholdMB,
-		rearmMB: readEnvNumber({
-			name: "MEMORY_SPIKE_PROBE_REARM_MB",
-			fallback: DEFAULT_REARM_MB,
+		ceilingMB,
+		riseMB: readEnvNumber({
+			name: "MEMORY_SPIKE_PROBE_RISE_MB",
+			fallback: DEFAULT_RISE_MB,
+		}),
+		baselineSamples: readEnvNumber({
+			name: "MEMORY_SPIKE_PROBE_BASELINE_SAMPLES",
+			fallback: DEFAULT_BASELINE_SAMPLES,
 		}),
 		maxReports: readEnvNumber({
 			name: "MEMORY_SPIKE_PROBE_MAX_REPORTS",
