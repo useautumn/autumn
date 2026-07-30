@@ -11,6 +11,7 @@ import { vercelTestApiRouter } from "./external/vercel/vercelTestApiRouter.js";
 import { vercelWebhookRouter } from "./external/vercel/vercelWebhookRouter.js";
 import { baseMiddleware } from "./honoMiddlewares/baseMiddleware.js";
 import { errorMiddleware } from "./honoMiddlewares/errorMiddleware.js";
+import { inFlightTrackingMiddleware } from "./honoMiddlewares/inFlightTrackingMiddleware.js";
 import { replicaDbMiddleware } from "./honoMiddlewares/replicaDbMiddleware.js";
 import type { HonoEnv } from "./honoUtils/HonoEnv.js";
 import { handleHealthCheck } from "./honoUtils/handleHealthCheck.js";
@@ -132,6 +133,7 @@ export const createHonoApp = () => {
 			serviceVersion: "1.0.0",
 		}),
 	);
+	app.use("*", inFlightTrackingMiddleware);
 	app.use("*", baseMiddleware);
 	app.use("*", replicaDbMiddleware);
 

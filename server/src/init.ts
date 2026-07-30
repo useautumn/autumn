@@ -55,6 +55,7 @@ import { createHonoApp } from "./initHono.js";
 import { otelSdk } from "./instrumentation.js";
 import { shutdownPrimarySqsSendBatcher } from "./queue/queueUtils.js";
 import { checkEnvVars } from "./utils/initUtils.js";
+import { startMemorySpikeProbe } from "./utils/memory/memorySpikeProbe.js";
 import { startMemoryMonitor } from "./utils/memoryMonitor.js";
 
 checkEnvVars();
@@ -98,6 +99,7 @@ const init = async ({ startupStartedAt }: { startupStartedAt: number }) => {
 				`Server running on port ${PORT} (${startupDurationMs}ms startup)`,
 			);
 			startMemoryMonitor("server", 60_000);
+			startMemorySpikeProbe({ label: "server" });
 			resolve();
 		});
 	});
