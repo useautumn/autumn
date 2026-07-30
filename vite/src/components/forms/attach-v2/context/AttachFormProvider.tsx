@@ -36,8 +36,6 @@ import { getProductWithSupportedPlanFormValues } from "@/components/forms/shared
 import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
 import { useProductsQuery } from "@/hooks/queries/useProductsQuery";
 import { useProductVersionQuery } from "@/hooks/queries/useProductVersionQuery";
-import type { PrepaidItemWithFeature } from "@/hooks/stores/useProductStore";
-import { usePrepaidItems } from "@/hooks/stores/useProductStore";
 import { useCusQuery } from "@/views/customers/customer/hooks/useCusQuery";
 import type { AttachForm } from "../attachFormSchema";
 import {
@@ -78,7 +76,6 @@ interface AttachFormContextValue {
 
 	product: ProductV2 | undefined;
 	products: ProductV2[];
-	prepaidItems: PrepaidItemWithFeature[];
 	originalItems: ProductItem[] | undefined;
 	productWithFormItems: FrontendProduct | undefined;
 	hasCustomizations: boolean;
@@ -86,7 +83,6 @@ interface AttachFormContextValue {
 	initialPrepaidOptions: Record<string, number>;
 	previewPrepaidOptions: Record<string, number>;
 
-	isFreeToPaidTransition: boolean;
 	hasActiveSubscription: boolean;
 	isAutoSelectingImmediateSchedule: boolean;
 	billingOptions: UseAttachBillingOptionsStateReturn;
@@ -106,8 +102,6 @@ interface AttachFormContextValue {
 		addLicenses?: CustomizePlanLicense[],
 	) => void;
 	handlePlanEditorCancel: () => void;
-
-	handleGrantFreeToggle: (params: { enabled: boolean }) => void;
 
 	isPending: boolean;
 	handleConfirm: (params?: { enableProductImmediately?: boolean }) => void;
@@ -307,8 +301,6 @@ export function AttachFormProvider({
 	});
 	const { isMultiPlan } = additionalPlans;
 
-	const { prepaidItems } = usePrepaidItems({ product: effectiveProduct });
-
 	// The currency must be offered by every plan being attached, so feed the
 	// hook all selected plans' items — it intersects across charging items.
 	const currencyItems = useMemo(() => {
@@ -339,13 +331,6 @@ export function AttachFormProvider({
 		customerCurrency: fullCustomer?.currency,
 		selectedCurrency: currency,
 	});
-
-	const handleGrantFreeToggle = useCallback(
-		({ enabled }: { enabled: boolean }) => {
-			form.setFieldValue("grantFree", enabled);
-		},
-		[form],
-	);
 
 	// Track product changes and initialize prepaid options
 	const previousProductIdRef = useRef<string | undefined>(undefined);
@@ -508,26 +493,20 @@ export function AttachFormProvider({
 		hasInvalidPlanScopes: additionalPlans.hasInvalidPlanScopes,
 	});
 	const billingOperation = isMultiPlan
-		? {
-				...BILLING_OPERATIONS.createSchedule,
-				isMultiPlan: true,
-				requestBody: scheduleRequestBody,
-				buildRequestBody: buildScheduleRequestBody,
-			}
-		: {
-				...BILLING_OPERATIONS.attach,
-				isMultiPlan: false,
-				requestBody,
-				buildRequestBody,
-			};
+		? BILLING_OPERATIONS.createSchedule
+		: BILLING_OPERATIONS.attach;
+	const operationRequestBody = isMultiPlan ? scheduleRequestBody : requestBody;
+	const buildOperationRequestBody = isMultiPlan
+		? buildScheduleRequestBody
+		: buildRequestBody;
 
 	const previewQuery = useAttachPreview({
 		path: billingOperation.previewPath,
-		requestBody: billingOperation.requestBody,
+		requestBody: operationRequestBody,
 		enabled: disablePreview ? false : undefined,
 	});
 	const isAutoSelectingImmediateSchedule =
-		!billingOperation.isMultiPlan &&
+		!isMultiPlan &&
 		hasActiveSubscription &&
 		planSchedule === null &&
 		(previewQuery.data?.outgoing.length ?? 0) === 0 &&
@@ -578,7 +557,7 @@ export function AttachFormProvider({
 		isPending,
 	} = useAttachMutation({
 		customerId,
-		buildRequestBody: billingOperation.buildRequestBody,
+		buildRequestBody: buildOperationRequestBody,
 		path: billingOperation.path,
 		invalidatesSchedule: billingOperation.invalidatesSchedule,
 		onCheckoutRedirect,
@@ -596,14 +575,12 @@ export function AttachFormProvider({
 			onScopeChange,
 			product: effectiveProduct,
 			products,
-			prepaidItems,
 			originalItems,
 			productWithFormItems,
 			hasCustomizations,
 			numVersions,
 			initialPrepaidOptions,
 			previewPrepaidOptions,
-			isFreeToPaidTransition,
 			hasActiveSubscription,
 			isAutoSelectingImmediateSchedule,
 			billingOptions,
@@ -616,30 +593,27 @@ export function AttachFormProvider({
 			handleEditPlan,
 			handlePlanEditorSave,
 			handlePlanEditorCancel,
-			handleGrantFreeToggle,
 			isPending,
 			handleConfirm,
 			handleInvoiceAttach,
 			handleCheckoutAttach,
 		}),
 		[
+			form,
 			customerId,
 			fullCustomer,
-			form,
 			formValues,
 			features,
 			entityId,
 			onScopeChange,
 			effectiveProduct,
 			products,
-			prepaidItems,
 			originalItems,
 			productWithFormItems,
 			hasCustomizations,
 			numVersions,
 			initialPrepaidOptions,
 			previewPrepaidOptions,
-			isFreeToPaidTransition,
 			hasActiveSubscription,
 			isAutoSelectingImmediateSchedule,
 			billingOptions,
@@ -652,7 +626,6 @@ export function AttachFormProvider({
 			handleEditPlan,
 			handlePlanEditorSave,
 			handlePlanEditorCancel,
-			handleGrantFreeToggle,
 			isPending,
 			handleConfirm,
 			handleInvoiceAttach,

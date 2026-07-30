@@ -22,7 +22,7 @@ import {
 import { CaretDownIcon, PlusIcon, XIcon } from "@phosphor-icons/react";
 import { addDays } from "date-fns";
 import { AnimatePresence, motion } from "motion/react";
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import {
 	AdvancedSection,
 	AdvancedToggleRow,
@@ -133,17 +133,10 @@ export function AttachAdvancedSection() {
 		startDate,
 		endDate,
 	} = formValues;
-	const hasCustomerEntitlements = useMemo(() => {
-		if (!customer) return false;
-
-		const hasProductEntitlements = customer.customer_products?.some(
+	const hasCustomerEntitlements =
+		customer?.customer_products?.some(
 			(customerProduct) => customerProduct.customer_entitlements?.length > 0,
-		);
-		const hasExtraEntitlements =
-			customer.extra_customer_entitlements?.length > 0;
-
-		return hasProductEntitlements || hasExtraEntitlements;
-	}, [customer]);
+		) || (customer?.extra_customer_entitlements?.length ?? 0) > 0;
 
 	const [overrideLineItemsEnabled, setOverrideLineItemsEnabled] = useState(
 		customLineItems.length > 0,
@@ -174,7 +167,7 @@ export function AttachAdvancedSection() {
 		isPaidRecurringProduct &&
 		!trialEnabled &&
 		effectivePlanSchedule !== "end_of_cycle";
-	const allowBackdatedStartDate = showStartDate && createsNewStripeSubscription;
+	const allowBackdatedStartDate = createsNewStripeSubscription;
 	const showEndDate = !!product && !isFreeProductV2({ items: product.items });
 	const attachStartsAt =
 		effectivePlanSchedule === "end_of_cycle"
@@ -469,7 +462,6 @@ export function AttachAdvancedSection() {
 
 	return (
 		<AdvancedSection moreOptions={moreOptions}>
-			{/* Discounts */}
 			<ConfigRow
 				title="Discounts"
 				description="Apply percentage or fixed-amount discounts to this plan"
@@ -504,7 +496,7 @@ export function AttachAdvancedSection() {
 				)}
 			</ConfigRow>
 
-			{showProrationRow && !isMultiPlan && (
+			{showProrationRow && (
 				<ConfigRow
 					title="Prorate Changes"
 					description="Prorate price differences when changing plans mid-cycle"
@@ -525,7 +517,6 @@ export function AttachAdvancedSection() {
 				/>
 			)}
 
-			{/* Plan Schedule — only when customer has an active Stripe subscription */}
 			{hasActiveSubscription && !isMultiPlan && (
 				<AdvancedToggleRow
 					label="Plan Schedule"

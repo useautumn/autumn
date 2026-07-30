@@ -86,7 +86,7 @@ export function useBillingMutation<
 				toast.success(successMessage);
 			}
 
-			if (!useInvoice) onSuccess?.();
+			if (!useInvoice || !data.invoice) onSuccess?.();
 			invalidateBillingQueries();
 		},
 		onError: (error) => {

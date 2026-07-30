@@ -20,17 +20,16 @@ export function AttachPlanOptions() {
 		formValues,
 		numVersions,
 		product,
-		handleGrantFreeToggle,
 		hasActiveSubscription,
 		attachCurrency,
-		additionalPlans,
+		additionalPlans: { isMultiPlan },
 	} = useAttachFormContext();
 	const { trialEnabled, trialCardRequired, trialOnEnd, grantFree } = formValues;
 	const [versionOpen, setVersionOpen] = useState(false);
 
-	const showVersionSelector = numVersions > 1 && !additionalPlans.isMultiPlan;
+	const showVersionSelector = numVersions > 1 && !isMultiPlan;
 	const handleTrialOnEndChange =
-		hasActiveSubscription && !additionalPlans.isMultiPlan
+		hasActiveSubscription && !isMultiPlan
 			? (value: "bill" | "revert") => form.setFieldValue("trialOnEnd", value)
 			: undefined;
 
@@ -104,7 +103,7 @@ export function AttachPlanOptions() {
 			<FreeTrialConfigRow
 				form={form}
 				description={
-					additionalPlans.isMultiPlan
+					isMultiPlan
 						? "Let the customer try every selected plan before being charged"
 						: undefined
 				}
@@ -137,14 +136,16 @@ export function AttachPlanOptions() {
 			<ConfigRow
 				title="Grant for Free"
 				description={
-					additionalPlans.isMultiPlan
+					isMultiPlan
 						? "Remove all prices on every selected plan for this customer"
 						: "Remove all prices on this plan for this customer"
 				}
 				action={
 					<Switch
 						checked={!!grantFree}
-						onCheckedChange={(enabled) => handleGrantFreeToggle({ enabled })}
+						onCheckedChange={(enabled) =>
+							form.setFieldValue("grantFree", enabled)
+						}
 					/>
 				}
 			/>

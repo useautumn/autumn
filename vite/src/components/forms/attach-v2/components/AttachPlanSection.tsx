@@ -59,13 +59,10 @@ export function AttachPlanSection({
 		[product, formValues.grantFree, currency, orgDefaultCurrency],
 	);
 
-	const originalItemsForDiff = useMemo(
-		() =>
-			showDiff && previewDiff.outgoingItems.length > 0
-				? previewDiff.outgoingItems
-				: productTemplateItems,
-		[showDiff, previewDiff.outgoingItems, productTemplateItems],
-	);
+	const originalItemsForDiff =
+		showDiff && previewDiff.outgoingItems.length > 0
+			? previewDiff.outgoingItems
+			: productTemplateItems;
 
 	const displayOriginalItems = useMemo(
 		() =>

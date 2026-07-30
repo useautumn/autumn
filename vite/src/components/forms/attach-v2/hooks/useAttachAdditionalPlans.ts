@@ -12,8 +12,7 @@ import type { UseAttachForm } from "./useAttachForm";
 export interface UseAttachAdditionalPlansReturn {
 	isMultiPlan: boolean;
 	hasInvalidPlanScopes: boolean;
-	selectedProductIds: string[];
-	canSelectMultipleScopes: boolean;
+	selectedPlanCount: number;
 	canAddPlan: boolean;
 	getProductOptionState: (params: {
 		product: ProductV2;
@@ -172,12 +171,6 @@ export function useAttachAdditionalPlans({
 }): UseAttachAdditionalPlansReturn {
 	const { productId, additionalPlans } = formValues;
 
-	const additionalProductIds = additionalPlans.flatMap((plan) =>
-		plan.productId ? [plan.productId] : [],
-	);
-	const selectedProductIds = productId
-		? [productId, ...additionalProductIds]
-		: additionalProductIds;
 	const canSelectMultipleScopes =
 		enabled && Boolean(customer?.entities?.length);
 	const selectedPlans = getAttachPlanSelections({
@@ -295,8 +288,7 @@ export function useAttachAdditionalPlans({
 	return {
 		isMultiPlan,
 		hasInvalidPlanScopes,
-		selectedProductIds,
-		canSelectMultipleScopes,
+		selectedPlanCount: selectedPlans.length,
 		canAddPlan,
 		getProductOptionState,
 		handleAddPlan,

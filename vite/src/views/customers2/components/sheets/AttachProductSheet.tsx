@@ -378,7 +378,7 @@ function ReviewContent() {
 	let description = "Review configuration before confirming";
 	if (product) description = `Attaching ${product.name} to this customer`;
 	if (additionalPlans.isMultiPlan) {
-		description = `Attaching ${additionalPlans.selectedProductIds.length} plans to this customer`;
+		description = `Attaching ${additionalPlans.selectedPlanCount} plans to this customer`;
 	}
 
 	let planReview = <AttachPlanSection readOnly showDiff />;

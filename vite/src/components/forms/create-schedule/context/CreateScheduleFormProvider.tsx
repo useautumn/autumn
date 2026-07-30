@@ -178,13 +178,10 @@ export function CreateScheduleFormProvider({
 	const createsRecurringSubscription =
 		!hasActiveSubscription && immediatePlansPaidRecurring;
 
-	const editingPlanValue = useMemo(() => {
-		if (!editingPlan) return null;
-		return (
-			formValues.phases[editingPlan.phaseIndex]?.plans[editingPlan.planIndex] ??
-			null
-		);
-	}, [editingPlan, formValues.phases]);
+	const editingPlanValue = editingPlan
+		? (formValues.phases[editingPlan.phaseIndex]?.plans[editingPlan.planIndex] ??
+			null)
+		: null;
 
 	const {
 		isPhaseLocked,

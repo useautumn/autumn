@@ -101,7 +101,7 @@ export function useAttachBillingOptionsState({
 
 	const hasSubscriptionToProrate =
 		hasActiveSubscription && !hasActiveProductWithTrial;
-	const showProrationRow = hasSubscriptionToProrate;
+	const showProrationRow = !isMultiPlan && hasSubscriptionToProrate;
 
 	const freeToPaidWithNoExistingSubscription =
 		isFreeToPaidTransition && !hasActiveSubscription;

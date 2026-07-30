@@ -43,7 +43,7 @@ export function useAttachMutation({
 	}: {
 		enableProductImmediately?: boolean;
 	} = {}) => {
-		mutation.mutate({ useInvoice: false, enableProductImmediately });
+		mutation.mutate({ enableProductImmediately });
 	};
 
 	const handleInvoiceAttach = async (
@@ -65,7 +65,6 @@ export function useAttachMutation({
 		longLivedCheckout?: boolean;
 	} = {}) => {
 		const result = await mutation.mutateAsync({
-			useInvoice: false,
 			longLivedCheckout,
 			skipDefaultSuccess: true,
 		});
