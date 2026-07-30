@@ -1,25 +1,22 @@
 /**
- * Red test for the OAuth discovery route fallthrough that broke the Devin MCP
+ * Regression coverage for the OAuth discovery gap that broke the Devin MCP
  * client (observed 2026-07-30 14:10:08 UTC).
  *
- * The client resolved the issuer from the MCP protected-resource metadata, then
- * ran RFC 9728 protected-resource discovery against that issuer instead of RFC
- * 8414 authorization-server discovery. Those paths match no public OAuth route,
- * so they fall through to the internal router, which session-authenticates
- * every unmatched path.
+ * The client fetched the MCP protected-resource metadata, took the issuer from
+ * it, then looked for protected-resource metadata on the API host too. Neither
+ * path it tried was registered, so both fell through to the internal router,
+ * which session-authenticates every unmatched path.
  *
- * Red-failure mode (current behavior):
- *  - GET /.well-known/oauth-protected-resource/api/auth -> 401 {"code":"no_auth_header"}
+ * Pre-fix behavior:
  *  - GET /.well-known/oauth-protected-resource          -> 401 {"code":"no_auth_header"}
- *  - both leak {"env":"sandbox"} to unauthenticated callers
+ *  - GET /.well-known/oauth-protected-resource/api/auth -> 401 {"code":"no_auth_header"}
+ *  - both leaked {"env":"sandbox"} to unauthenticated callers
  *
- * Green-success criteria (after fix):
- *  - neither path returns a session-authentication error
- *  - neither response body leaks the environment
- *
- * Deliberately does NOT pin whether these paths 404 or serve protected-resource
- * metadata — that is a separate decision. This test only pins that session auth
- * must not apply to public discovery paths, which holds either way.
+ * Post-fix behavior:
+ *  - the bare path serves real metadata: the Autumn API accepts OAuth bearer
+ *    tokens, so it is a protected resource and must advertise its issuer
+ *  - the /api/auth path describes the authorization server, which is not a
+ *    resource, so it 404s rather than returning a session error
  */
 
 import { expect, test } from "bun:test";
@@ -28,12 +25,6 @@ import chalk from "chalk";
 const baseUrl =
 	process.env.AUTUMN_TEST_BASE_URL?.replace(/\/$/, "") ??
 	`http://localhost:${process.env.SERVER_PORT ?? "8080"}`;
-
-/** The exact paths the Devin client requested, in order, 129ms apart. */
-const DEVIN_DISCOVERY_PATHS = [
-	"/.well-known/oauth-protected-resource/api/auth",
-	"/.well-known/oauth-protected-resource",
-] as const;
 
 const SESSION_AUTH_ERROR_CODE = "no_auth_header";
 
@@ -49,22 +40,37 @@ const getDiscovery = async (path: string) => {
 	return { status: response.status, body, text };
 };
 
-for (const path of DEVIN_DISCOVERY_PATHS) {
-	test.concurrent(
-		`${chalk.yellowBright(`oauth discovery: ${path} is not session-gated`)}`,
-		async () => {
-			const { status, body } = await getDiscovery(path);
+test.concurrent(
+	`${chalk.yellowBright("oauth discovery: the API advertises its own protected-resource metadata")}`,
+	async () => {
+		const { status, body } = await getDiscovery(
+			"/.well-known/oauth-protected-resource",
+		);
 
-			expect(body?.code).not.toBe(SESSION_AUTH_ERROR_CODE);
-			expect(status).not.toBe(401);
-			expect(body?.env).toBeUndefined();
-		},
-	);
-}
+		expect(status).toBe(200);
+		expect(typeof body?.resource).toBe("string");
+		expect(Array.isArray(body?.authorization_servers)).toBe(true);
+		expect((body?.authorization_servers as string[])[0]).toMatch(/\/api\/auth$/);
+		expect(Array.isArray(body?.scopes_supported)).toBe(true);
+	},
+);
+
+test.concurrent(
+	`${chalk.yellowBright("oauth discovery: an unregistered .well-known path is not session-gated")}`,
+	async () => {
+		const { status, body } = await getDiscovery(
+			"/.well-known/oauth-protected-resource/api/auth",
+		);
+
+		expect(body?.code).not.toBe(SESSION_AUTH_ERROR_CODE);
+		expect(status).not.toBe(401);
+		expect(body?.env).toBeUndefined();
+	},
+);
 
 /**
- * Positive control: the discovery family the client *should* have used already
- * resolves. Proves a red above is a routing defect, not an unreachable server.
+ * Positive control: the discovery family the client *should* have used still
+ * resolves, so a failure above is a routing defect and not an unreachable host.
  */
 test.concurrent(
 	`${chalk.yellowBright("oauth discovery: RFC 8414 authorization-server metadata resolves")}`,
