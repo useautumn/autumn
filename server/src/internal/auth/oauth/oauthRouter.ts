@@ -44,8 +44,6 @@ oauthRouter.get("/.well-known/oauth-authorization-server/api/auth", (c) => {
 	return oauthProviderAuthServerMetadata(auth)(c.req.raw);
 });
 
-// The Autumn API accepts OAuth bearer tokens, so it is a protected resource in
-// its own right and must advertise which authorization server protects it.
 oauthRouter.get("/.well-known/oauth-protected-resource", (c) => {
 	const baseUrl = authBaseUrl ?? new URL(c.req.url).origin;
 	return c.json(
