@@ -139,6 +139,7 @@ describe("SpanIngestCompactor", () => {
 		expect(compacted.duration).toBe(source.duration);
 		expect(compacted.resource).toBe(source.resource);
 		expect(compacted.spanContext()).toEqual(source.spanContext());
+		expect(compacted.spanContext).toBe(compacted.spanContext);
 	});
 
 	test("retains SQL on repeated slow spans for Axiom slow-query investigations", () => {

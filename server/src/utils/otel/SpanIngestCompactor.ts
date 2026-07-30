@@ -17,15 +17,25 @@ const withAttributes = ({
 }: {
 	span: ReadableSpan;
 	attributes: Attributes;
-}): ReadableSpan =>
-	new Proxy(span, {
-		get(target, property) {
-			if (property === "attributes") return attributes;
-
-			const value = Reflect.get(target, property, target);
-			return typeof value === "function" ? value.bind(target) : value;
-		},
-	});
+}): ReadableSpan => ({
+	name: span.name,
+	kind: span.kind,
+	spanContext: () => span.spanContext(),
+	parentSpanContext: span.parentSpanContext,
+	startTime: span.startTime,
+	endTime: span.endTime,
+	status: span.status,
+	attributes,
+	links: span.links,
+	events: span.events,
+	duration: span.duration,
+	ended: span.ended,
+	resource: span.resource,
+	instrumentationScope: span.instrumentationScope,
+	droppedAttributesCount: span.droppedAttributesCount,
+	droppedEventsCount: span.droppedEventsCount,
+	droppedLinksCount: span.droppedLinksCount,
+});
 
 export class SpanIngestCompactor {
 	private readonly seenQueryIds = new Set<string>();

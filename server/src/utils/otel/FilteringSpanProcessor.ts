@@ -1,4 +1,4 @@
-import { type Context, SpanStatusCode } from "@opentelemetry/api";
+import { type Context, diag, SpanStatusCode } from "@opentelemetry/api";
 import type {
 	ReadableSpan,
 	Span,
@@ -54,10 +54,24 @@ export class FilteringSpanProcessor implements SpanProcessor {
 	}
 
 	onEnd(span: ReadableSpan): void {
-		recordSpanDurationMetric(span);
+		let spanToExport = span;
 
-		if (shouldDropSuccessfulRedisSpan(span)) return;
-		this.delegate.onEnd(this.spanIngestCompactor.compact({ span }));
+		try {
+			recordSpanDurationMetric(span);
+			if (shouldDropSuccessfulRedisSpan(span)) return;
+			spanToExport = this.spanIngestCompactor.compact({ span });
+		} catch (error) {
+			try {
+				diag.error(
+					"Failed to process span before export; exporting the original span",
+					error,
+				);
+			} catch {
+				// Diagnostic reporting must not block fail-open span export.
+			}
+		}
+
+		this.delegate.onEnd(spanToExport);
 	}
 
 	forceFlush(): Promise<void> {
