@@ -116,17 +116,16 @@ const jsonTokenResponse = ({
 		headers: tokenResponseHeaders(response),
 	});
 
-const getRefreshTokenConsentId = async (request: Request) => {
+const getRefreshTokenRecord = async (request: Request) => {
 	const refreshToken = await getRefreshTokenForConsentLookup(request);
 	if (!refreshToken) return null;
 
 	const hashedToken = await hashOAuthToken(refreshToken);
 	const tokenValues = [...new Set([hashedToken, refreshToken])];
-	const tokenRecord = await oauthRefreshTokenRepo.getByTokenValues({
+	return oauthRefreshTokenRepo.getByTokenValues({
 		db,
 		tokenValues,
 	});
-	return tokenRecord?.oauthConsentId ?? null;
 };
 
 const getUniqueOAuthConsentId = async ({
@@ -171,12 +170,27 @@ const allowsScopeLessOAuthToken = async ({
 	return isUnrestrictedChatOAuthConsentMetadata(metadata);
 };
 
-// better-auth issues a stateless JWT access token whenever a `resource`
-// (audience) is present, which never lands in oauth_access_token and so can't
-// be validated by handleOAuthMiddleware or linked to a consent. Drop `resource`
-// before better-auth sees it to force an opaque, persisted token; we keep the
-// original `resource` (read above) for our own MCP/audience handling.
-const stripResourceParam = async (request: Request): Promise<Request> => {
+// Resource tokens are JWTs this handler cannot link to consent.
+// MCP refreshes may only re-request scopes from the original grant.
+const constrainScope = ({
+	scope,
+	grantedScopes,
+}: {
+	scope: string;
+	grantedScopes: string[];
+}) => {
+	const granted = new Set(grantedScopes);
+	const constrained = scope.split(/\s+/).filter((value) => granted.has(value));
+	return constrained.length > 0 ? constrained.join(" ") : scope;
+};
+
+const normalizeTokenRequest = async ({
+	request,
+	grantedScopes,
+}: {
+	request: Request;
+	grantedScopes?: string[];
+}): Promise<Request> => {
 	const contentType = request.headers.get("content-type") ?? "";
 	const rawBody = await request.text();
 	if (!rawBody) return request;
@@ -185,6 +199,9 @@ const stripResourceParam = async (request: Request): Promise<Request> => {
 		try {
 			const body = JSON.parse(rawBody) as Record<string, unknown>;
 			delete body.resource;
+			if (grantedScopes && typeof body.scope === "string") {
+				body.scope = constrainScope({ scope: body.scope, grantedScopes });
+			}
 			return new Request(request, { body: JSON.stringify(body) });
 		} catch {
 			return new Request(request, { body: rawBody });
@@ -193,16 +210,30 @@ const stripResourceParam = async (request: Request): Promise<Request> => {
 
 	const params = new URLSearchParams(rawBody);
 	params.delete("resource");
+	const scope = params.get("scope");
+	if (grantedScopes && scope) {
+		params.set("scope", constrainScope({ scope, grantedScopes }));
+	}
 	return new Request(request, { body: params });
 };
 
 export const handleOAuthTokenWithApiKey = async (c: Context) => {
 	const resource = await getResourceFromOAuthTokenRequest(c.req.raw.clone());
-	const refreshTokenConsentId = await getRefreshTokenConsentId(
-		c.req.raw.clone(),
-	);
+	const refreshTokenRecord = await getRefreshTokenRecord(c.req.raw.clone());
+	const refreshScopes =
+		refreshTokenRecord &&
+		(await isMcpOAuthClient({
+			clientId: refreshTokenRecord.clientId,
+			db,
+			resource: resource ?? undefined,
+		}))
+			? refreshTokenRecord.scopes
+			: undefined;
 	const response = await auth.handler(
-		await stripResourceParam(c.req.raw.clone()),
+		await normalizeTokenRequest({
+			request: c.req.raw.clone(),
+			grantedScopes: refreshScopes,
+		}),
 	);
 	if (!response.ok) return response;
 
@@ -231,7 +262,7 @@ export const handleOAuthTokenWithApiKey = async (c: Context) => {
 		});
 		const oauthConsentId =
 			tokenRecord.oauthConsentId ??
-			refreshTokenConsentId ??
+			refreshTokenRecord?.oauthConsentId ??
 			(await getUniqueOAuthConsentId({
 				clientId: tokenRecord.clientId,
 				referenceId: tokenRecord.referenceId,
