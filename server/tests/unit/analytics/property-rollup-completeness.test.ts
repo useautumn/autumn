@@ -149,6 +149,25 @@ test(`${chalk.yellowBright(
 });
 
 test(`${chalk.yellowBright(
+	"property rollup: per-bin top-N truncation is not a shortfall",
+)}`, () => {
+	// The pipe relabels groups beyond max_groups to AUTUMN_RESERVED rather than
+	// dropping them, so a truncated result still carries the full mass. If a pipe
+	// change ever drops them instead, every truncated query would retry ungated.
+	const rows = [
+		row({ groupValue: "qa-71607", totalValue: 722 }),
+		row({ groupValue: "AUTUMN_RESERVED", totalValue: 29_880 }),
+	];
+
+	expect(
+		groupedResultIsIncomplete({
+			rows,
+			totals: totals({ count: 2533, sum: 30_602 }),
+		}),
+	).toBe(false);
+});
+
+test(`${chalk.yellowBright(
 	"property rollup: the ungated retry only wins when it reports more",
 )}`, () => {
 	// The retry probes whether the shortfall was gate loss or an absent property;
