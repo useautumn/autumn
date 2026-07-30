@@ -15,9 +15,9 @@ const trackAsyncQueueUrl =
 
 import { runAsyncTrack } from "@/internal/balances/track/runAsyncTrack.js";
 
-const buildCtx = () =>
+const buildCtx = ({ requestId = "req_async_1" }: { requestId?: string } = {}) =>
 	({
-		id: "req_async_1",
+		id: requestId,
 		org: { id: "org_123" },
 		env: AppEnv.Sandbox,
 		apiVersion: new ApiVersionClass(ApiVersion.V2_1),
@@ -53,7 +53,11 @@ describe("runAsyncTrack", () => {
 				throw new Error("SQS unavailable");
 			}
 
-			return {};
+			const entries =
+				(command.input.Entries as Array<{ Id?: string }> | undefined) ?? [];
+			return {
+				Successful: entries.map((entry) => ({ Id: entry.Id })),
+			};
 		}) as typeof sqsClient.send;
 	});
 
@@ -75,14 +79,16 @@ describe("runAsyncTrack", () => {
 		expect(ctx.extraLogs.trackQueuedForReplay).toBeUndefined();
 		expect(mockState.queueCommands[0]).toMatchObject({
 			QueueUrl: trackAsyncQueueUrl,
-			MessageDeduplicationId: "req_async_1",
 		});
-		expect(mockState.queueCommands[0]?.MessageGroupId).toMatch(
+		const entries = mockState.queueCommands[0]?.Entries as Array<
+			Record<string, unknown>
+		>;
+		expect(entries).toHaveLength(1);
+		expect(entries[0]?.MessageDeduplicationId).toBe("req_async_1");
+		expect(entries[0]?.MessageGroupId).toMatch(
 			/^org_123:sandbox:cus_123:none:shard-[0-7]$/,
 		);
-		expect(
-			JSON.parse(mockState.queueCommands[0]?.MessageBody as string),
-		).toMatchObject({
+		expect(JSON.parse(entries[0]?.MessageBody as string)).toMatchObject({
 			name: "track",
 			data: {
 				customerId: "cus_123",
@@ -99,8 +105,37 @@ describe("runAsyncTrack", () => {
 		await runAsyncTrack({ ctx: secondCtx, body });
 
 		expect(mockState.queueCommands).toHaveLength(2);
-		expect(mockState.queueCommands[0]?.MessageGroupId).toBe(
-			mockState.queueCommands[1]?.MessageGroupId,
+		const firstEntries = mockState.queueCommands[0]?.Entries as Array<
+			Record<string, unknown>
+		>;
+		const secondEntries = mockState.queueCommands[1]?.Entries as Array<
+			Record<string, unknown>
+		>;
+		expect(firstEntries[0]?.MessageGroupId).toBe(
+			secondEntries[0]?.MessageGroupId,
+		);
+	});
+
+	test("shares one SQS batch call across 10 concurrent async tracks", async () => {
+		await Promise.all(
+			Array.from({ length: 10 }, (_, index) =>
+				runAsyncTrack({
+					ctx: buildCtx({ requestId: `req_async_${index}` }),
+					body: {
+						...body,
+						customer_id: `cus_${index}`,
+					},
+				}),
+			),
+		);
+
+		expect(mockState.queueCommands).toHaveLength(1);
+		const entries = mockState.queueCommands[0]?.Entries as Array<
+			Record<string, unknown>
+		>;
+		expect(entries).toHaveLength(10);
+		expect(entries.map((entry) => entry.MessageDeduplicationId)).toEqual(
+			Array.from({ length: 10 }, (_, index) => `req_async_${index}`),
 		);
 	});
 
@@ -118,7 +153,7 @@ describe("runAsyncTrack", () => {
 		expect(ctx.logger.error).toHaveBeenCalled();
 	});
 
-	test("throws 503 RecaseError when queueTrack returns null", async () => {
+	test("throws 503 RecaseError when the batched SQS send fails", async () => {
 		mockState.queueFailureIndex = 0;
 		const ctx = buildCtx();
 
