@@ -1,11 +1,24 @@
 import { describe, expect, test } from "bun:test";
-import type { CreateScheduleBillingContext, FullProduct } from "@autumn/shared";
-import { addInterval, BillingInterval, ms } from "@autumn/shared";
+import type {
+	AutumnBillingPlan,
+	CreateScheduleBillingContext,
+	FullCusProduct,
+	FullProduct,
+} from "@autumn/shared";
+import {
+	addInterval,
+	BillingInterval,
+	CusProductStatus,
+	ms,
+} from "@autumn/shared";
 import { prices } from "@tests/utils/fixtures/db/prices";
 import { products } from "@tests/utils/fixtures/db/products";
 import chalk from "chalk";
 import type Stripe from "stripe";
-import { handleCreateScheduleErrors } from "@/internal/billing/v2/actions/createSchedule/errors/handleCreateScheduleErrors";
+import {
+	handleCreateScheduleComputeErrors,
+	handleCreateScheduleErrors,
+} from "@/internal/billing/v2/actions/createSchedule/errors/handleCreateScheduleErrors";
 import { STRIPE_BACKDATE_INVOICE_LINE_ITEM_LIMIT } from "@/internal/billing/v2/utils/backdate/countBackdatedPeriods";
 
 const buildContext = ({
@@ -180,5 +193,33 @@ describe(chalk.yellowBright("handleCreateScheduleErrors"), () => {
 				}),
 			}),
 		).resolves.toBeUndefined();
+	});
+
+	test("rejects license-backed products expired by the computed plan", () => {
+		const customerProduct = {
+			id: "cus_product",
+			customer_licenses: [{ id: "license" }],
+		} as unknown as FullCusProduct;
+		const autumnBillingPlan = {
+			insertCustomerProducts: [],
+			updateCustomerProducts: [
+				{
+					customerProduct,
+					updates: { status: CusProductStatus.Expired },
+				},
+			],
+		} as unknown as AutumnBillingPlan;
+
+		expect(() =>
+			handleCreateScheduleComputeErrors({
+				billingContext: buildContext({
+					immediateStartsAt: Date.now(),
+					currentEpochMs: Date.now(),
+				}),
+				autumnBillingPlan,
+			}),
+		).toThrow(
+			"billing.create_schedule does not support license-backed plans yet",
+		);
 	});
 });

@@ -23,6 +23,11 @@ test.concurrent(
 			id: "create-schedule-update-history-current-addon",
 			items: [items.monthlyWords({ includedUsage: 25 })],
 		});
+		const currentConflict = products.base({
+			id: "create-schedule-update-history-current-conflict",
+			items: [items.monthlyWords({ includedUsage: 50 })],
+			group: "current-base",
+		});
 		const futureBase = products.base({
 			id: "create-schedule-update-history-future-base",
 			items: [items.monthlyMessages({ includedUsage: 500 })],
@@ -35,7 +40,13 @@ test.concurrent(
 				setup: [
 					s.customer({ paymentMethod: "success" }),
 					s.products({
-						list: [originalPastBase, currentBase, currentAddon, futureBase],
+						list: [
+							originalPastBase,
+							currentBase,
+							currentAddon,
+							currentConflict,
+							futureBase,
+						],
 					}),
 				],
 				actions: [],
@@ -91,6 +102,31 @@ test.concurrent(
 				}),
 			errMessage:
 				"Past first phase starts_at is only supported for paid recurring plans.",
+		});
+
+		await expectAutumnError({
+			func: async () =>
+				autumnV1.billing.createSchedule({
+					customer_id: customerId,
+					phases: [
+						{
+							starts_at: now,
+							plans: [{ plan_id: originalPastBase.id }],
+						},
+						{
+							starts_at: now + ms.days(15),
+							plans: [
+								{ plan_id: currentBase.id },
+								{ plan_id: currentConflict.id },
+							],
+						},
+						{
+							starts_at: now + ms.days(30),
+							plans: [{ plan_id: futureBase.id }],
+						},
+					],
+				}),
+			errMessage: "at most one plan per group and scope",
 		});
 	},
 );

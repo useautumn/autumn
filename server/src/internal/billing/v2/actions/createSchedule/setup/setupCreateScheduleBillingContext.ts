@@ -290,12 +290,7 @@ export const setupCreateScheduleBillingContext = async ({
 		billingContext: scheduleBillingContext,
 	});
 
-	// setupImmediateMultiProductBillingContext does not forward
-	// `billing_cycle_anchor`, so billingCycleAnchorMs still reflects the existing
-	// Stripe anchor. When the caller asks to reset the cycle we must recompute
-	// the anchor (and the reset-cycle anchor) so downstream proration math runs
-	// against the new `[now, now + interval]` period. Mirrors the attach /
-	// updateSubscription setups.
+	// Immediate setup omits the requested anchor, so recompute it before proration.
 	if (params.billing_cycle_anchor !== undefined) {
 		const firstProduct = billingContext.fullProducts[0];
 		if (firstProduct) {
@@ -319,9 +314,7 @@ export const setupCreateScheduleBillingContext = async ({
 		}
 	}
 
-	// Keep forward-looking charges (e.g. prepaid renewals) when the caller asks
-	// to reset the cycle with proration off; without this, finalizeLineItems
-	// drops every line item and total due now collapses to 0.
+	// Preserve renewal charges when resetting the cycle without proration.
 	scheduleBillingContext.anchorResetRefund = setupAnchorResetRefund({
 		billingCycleAnchor: params.billing_cycle_anchor,
 		prorationBehavior: params.billing_behavior,
