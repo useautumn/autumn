@@ -33,6 +33,7 @@ import {
 import { getSqsClient, QUEUE_URL, recreateSqsClient } from "./initSqs.js";
 import { JobName } from "./JobName.js";
 import { processMessage, type SqsJob } from "./processMessage.js";
+import { shutdownPrimarySqsSendBatcher } from "./queueUtils.js";
 import {
 	createWorkerActivityTracker,
 	type WorkerActivityTracker,
@@ -614,6 +615,7 @@ export const initWorkers = async ({
 		for (const controller of abortControllers) {
 			controller.abort();
 		}
+		await shutdownPrimarySqsSendBatcher();
 
 		const isProd = process.env.NODE_ENV === "production";
 		if (isProd) {
