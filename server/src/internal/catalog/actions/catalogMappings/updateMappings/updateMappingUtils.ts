@@ -20,6 +20,21 @@ export type PriceTargets = Map<string, PriceTarget>;
 export const normalizeStripeProductId = (stripeProductId: string | null) =>
 	stripeProductId?.trim() ? stripeProductId.trim() : null;
 
+/** Aliases are a set, and the primary id is never also an alias. */
+export const normalizeAdditionalStripeProductIds = ({
+	additionalStripeProductIds,
+	stripeProductId,
+}: {
+	additionalStripeProductIds: string[];
+	stripeProductId: string | null;
+}) => [
+	...new Set(
+		additionalStripeProductIds
+			.map((id) => normalizeStripeProductId(id))
+			.filter((id): id is string => Boolean(id) && id !== stripeProductId),
+	),
+];
+
 export const getCatalogMappingPlanIds = (
 	params: CatalogUpdateMappingsParams,
 ) => [...new Set(params.plan_mappings.map((mapping) => mapping.plan_id))];
@@ -34,6 +49,10 @@ export const assertUniquePlanMappings = ({
 	for (const mapping of params.plan_mappings) {
 		const signature = JSON.stringify({
 			stripe_product_id: normalizeStripeProductId(mapping.stripe_product_id),
+			additional_stripe_product_ids: normalizeAdditionalStripeProductIds({
+				additionalStripeProductIds: mapping.additional_stripe_product_ids,
+				stripeProductId: normalizeStripeProductId(mapping.stripe_product_id),
+			}).sort(),
 			scope: mapping.scope,
 			item_mappings: mapping.item_mappings.map((itemMapping) => ({
 				filter: itemMapping.filter,

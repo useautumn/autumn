@@ -1,8 +1,12 @@
 import {
+	type FullCustomer,
 	InternalError,
 	type StripeBillingPlan,
 	type StripeSubscriptionAction,
 	type StripeSubscriptionScheduleAction,
+	filterCustomerProductsByActiveStatuses,
+	filterCustomerProductsByStripeSubscriptionId,
+	isCustomerProductScheduled,
 } from "@autumn/shared";
 
 const ALLOWED_SUB_ACTION_TYPES = new Set<StripeSubscriptionAction["type"]>([
@@ -20,13 +24,45 @@ const ALLOWED_SCHEDULE_ACTION_TYPES = new Set<
  * to fix. Anything other than no-op / update for the subscription, or no-op /
  * update / create for the schedule, throws.
  */
+/**
+ * An open-ended active plan alongside a scheduled successor would reshape Stripe
+ * as if it never transitions, silently dropping the future phase.
+ */
+const assertActivePlansEndBeforeSuccessors = ({
+	fullCustomer,
+	stripeSubscriptionId,
+}: {
+	fullCustomer: FullCustomer;
+	stripeSubscriptionId: string;
+}) => {
+	const customerProducts = filterCustomerProductsByStripeSubscriptionId({
+		customerProducts: fullCustomer.customer_products,
+		stripeSubscriptionId,
+	});
+	if (!customerProducts.some(isCustomerProductScheduled)) return;
+
+	const openEnded = filterCustomerProductsByActiveStatuses({
+		customerProducts,
+	}).find((customerProduct) => !customerProduct.ended_at);
+	if (!openEnded) return;
+
+	throw new InternalError({
+		message: `[Restore] Customer product ${openEnded.id} on subscription ${stripeSubscriptionId} is active with a scheduled successor but has no ended_at. Set its ended_at to the next phase's start before restoring.`,
+		code: "restore_active_plan_missing_ended_at",
+	});
+};
+
 export const handleRestoreErrors = ({
 	stripeBillingPlan,
 	stripeSubscriptionId,
+	fullCustomer,
 }: {
 	stripeBillingPlan: StripeBillingPlan;
 	stripeSubscriptionId: string;
+	fullCustomer: FullCustomer;
 }) => {
+	assertActivePlansEndBeforeSuccessors({ fullCustomer, stripeSubscriptionId });
+
 	const {
 		subscriptionAction,
 		subscriptionScheduleAction,

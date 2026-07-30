@@ -17,6 +17,7 @@ import { handleDecreaseAndTransfer } from "./handleTransferProduct/handleDecreas
 import {
 	findExistingTransferTargetProduct,
 	findTransferCustomerProduct,
+	getTransferCustomerProducts,
 	transferRelatedCustomerProducts,
 } from "./handleTransferProduct/transferRelatedCustomerProducts.js";
 
@@ -122,6 +123,12 @@ export const handleTransferProductV2 = createRoute({
 			fullCustomer: customer,
 			toEntity,
 			product,
+			transferringCustomerProducts: getTransferCustomerProducts({
+				fullCustomer: customer,
+				fromEntity,
+				product,
+				customerProductId: customer_product_id,
+			}),
 		});
 
 		if (toCusProduct) {

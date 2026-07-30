@@ -60,7 +60,11 @@ export const previewRestore = async ({
 			autumnBillingPlan,
 		});
 
-		handleRestoreErrors({ stripeBillingPlan, stripeSubscriptionId });
+		handleRestoreErrors({
+			stripeBillingPlan,
+			stripeSubscriptionId,
+			fullCustomer,
+		});
 
 		previews.push({
 			stripe_subscription_id: stripeSubscriptionId,

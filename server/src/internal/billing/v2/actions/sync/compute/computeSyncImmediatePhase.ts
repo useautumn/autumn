@@ -10,6 +10,7 @@ import {
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { computeCustomerLicenseQuantityChanges } from "@/internal/billing/v2/compute/computeCustomerLicenseQuantityChanges";
+import { applyScheduleTimingToCustomerProductPlan } from "@/internal/billing/v2/utils/billingPlan/customerProductPlanMutations";
 import { resolveSyncExistingUsagesConfig } from "@/internal/billing/v2/utils/handleCarryOvers/resolveSyncExistingUsagesConfig";
 import { initImmediateSyncCustomerProduct } from "./initImmediateSyncCustomerProduct";
 
@@ -114,6 +115,15 @@ export const computeSyncImmediatePhase = ({
 			currentEpochMs,
 			existingUsagesConfig,
 		});
+
+		// A following phase ends this one — same shape createSchedule produces.
+		// Skipped when there is none, so a canceling sub keeps its Stripe end date.
+		if (immediatePhase.endsAt !== null) {
+			applyScheduleTimingToCustomerProductPlan({
+				result: { insertCustomerProduct: insertedCustomerProduct },
+				endedAt: immediatePhase.endsAt,
+			});
+		}
 
 		insertCustomerProducts.push(insertedCustomerProduct);
 		customPrices.push(...productContext.customPrices);
