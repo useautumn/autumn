@@ -1,6 +1,7 @@
 const DEFAULT_BATCH_WINDOW_MS = 10;
 const DEFAULT_MAX_BATCH_ENTRIES = 10;
 const DEFAULT_MAX_BATCH_BODY_BYTES = 1024 * 1024;
+const DEFAULT_MAX_IN_FLIGHT_SENDS = 10;
 
 export type SqsBatchAccumulatorEntry = {
 	queueUrl: string;
@@ -34,6 +35,7 @@ export class SqsBatchAccumulator<TEntry extends SqsBatchAccumulatorEntry> {
 	private readonly batchWindowMs: number;
 	private readonly maxBatchEntries: number;
 	private readonly maxBatchBodyBytes: number;
+	private readonly maxInFlightSends: number;
 	private readonly sendBatch: SendSqsAccumulatorBatch<TEntry>;
 	private acceptingEntries = true;
 
@@ -41,16 +43,19 @@ export class SqsBatchAccumulator<TEntry extends SqsBatchAccumulatorEntry> {
 		batchWindowMs = DEFAULT_BATCH_WINDOW_MS,
 		maxBatchEntries = DEFAULT_MAX_BATCH_ENTRIES,
 		maxBatchBodyBytes = DEFAULT_MAX_BATCH_BODY_BYTES,
+		maxInFlightSends = DEFAULT_MAX_IN_FLIGHT_SENDS,
 		sendBatch,
 	}: {
 		batchWindowMs?: number;
 		maxBatchEntries?: number;
 		maxBatchBodyBytes?: number;
+		maxInFlightSends?: number;
 		sendBatch: SendSqsAccumulatorBatch<TEntry>;
 	}) {
 		this.batchWindowMs = batchWindowMs;
 		this.maxBatchEntries = maxBatchEntries;
 		this.maxBatchBodyBytes = maxBatchBodyBytes;
+		this.maxInFlightSends = maxInFlightSends;
 		this.sendBatch = sendBatch;
 	}
 
@@ -116,18 +121,32 @@ export class SqsBatchAccumulator<TEntry extends SqsBatchAccumulatorEntry> {
 			this.flushTimer = null;
 		}
 
-		const sendPromise = this.sendEntries({ pendingEntries });
+		if (this.inFlightSends.size >= this.maxInFlightSends) {
+			const saturationError = new Error("SQS batch accumulator is saturated");
+			for (const pendingEntry of pendingEntries) {
+				pendingEntry.reject(saturationError);
+			}
+			return Promise.resolve();
+		}
+
+		let sendPromise: Promise<void> | undefined;
+		let sendSettled = false;
+		const releaseSendSlot = () => {
+			sendSettled = true;
+			if (sendPromise) this.inFlightSends.delete(sendPromise);
+		};
+		sendPromise = this.sendEntries({ pendingEntries, releaseSendSlot });
 		this.inFlightSends.add(sendPromise);
-		void sendPromise.then(() => {
-			this.inFlightSends.delete(sendPromise);
-		});
+		if (sendSettled) this.inFlightSends.delete(sendPromise);
 		return sendPromise;
 	}
 
 	private async sendEntries({
 		pendingEntries,
+		releaseSendSlot,
 	}: {
 		pendingEntries: PendingEntry<TEntry>[];
+		releaseSendSlot: () => void;
 	}): Promise<void> {
 		let failures: Array<{ index: number; reason: string }>;
 		try {
@@ -139,12 +158,14 @@ export class SqsBatchAccumulator<TEntry extends SqsBatchAccumulatorEntry> {
 		} catch (error) {
 			const sendError =
 				error instanceof Error ? error : new Error("Unknown SQS batch error");
+			releaseSendSlot();
 			for (const pendingEntry of pendingEntries) {
 				pendingEntry.reject(sendError);
 			}
 			return;
 		}
 
+		releaseSendSlot();
 		const failureReasons = new Map(
 			failures.map(({ index, reason }) => [index, reason]),
 		);

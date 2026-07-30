@@ -6,6 +6,8 @@
  *   - the tenth entry flushes immediately and a short window flushes partial batches
  *   - each caller resolves or rejects from its own SQS entry result
  *   - transport failures reject every caller in the affected batch
+ *   - at most 10 batch requests are in flight at once
+ *   - saturated batches reject immediately and capacity returns after sends settle
  *   - shutdown rejects new entries and drains pending plus in-flight sends
  *   - each entry preserves its job body, FIFO identifiers, and delay
  *   - the combined message bodies in one batch never exceed SQS's 1 MiB limit
@@ -40,8 +42,10 @@ const createEntry = ({ index }: { index: number }) => ({
 type TestEntry = ReturnType<typeof createEntry>;
 
 const createBatcher = ({
+	maxBatchEntries,
 	sendBatch,
 }: {
+	maxBatchEntries?: number;
 	sendBatch?: (args: SendSqsAccumulatorBatchArgs<TestEntry>) => Promise<{
 		failures: Array<{ index: number; reason: string }>;
 	}>;
@@ -49,12 +53,11 @@ const createBatcher = ({
 	const calls: SendSqsAccumulatorBatchArgs<TestEntry>[] = [];
 	const batcher = new SqsBatchAccumulator<TestEntry>({
 		batchWindowMs: BATCH_WINDOW_MS,
-		sendBatch:
-			sendBatch ??
-			(async (args) => {
-				calls.push(args);
-				return { failures: [] };
-			}),
+		maxBatchEntries,
+		sendBatch: async (args) => {
+			calls.push(args);
+			return sendBatch ? sendBatch(args) : { failures: [] };
+		},
 	});
 
 	return { batcher, calls };
@@ -158,6 +161,65 @@ describe("SqsBatchAccumulator", () => {
 				reason: expect.objectContaining({ message: "SQS unavailable" }),
 			});
 		}
+	});
+
+	test("rejects batches above the in-flight send limit", async () => {
+		const sendResolvers: Array<
+			(result: { failures: Array<{ index: number; reason: string }> }) => void
+		> = [];
+		const { batcher, calls } = createBatcher({
+			maxBatchEntries: 1,
+			sendBatch: () =>
+				new Promise((resolve) => {
+					sendResolvers.push(resolve);
+				}),
+		});
+
+		const accepted = Array.from({ length: 10 }, (_, index) =>
+			batcher.enqueue(createEntry({ index })),
+		);
+		const saturated = batcher.enqueue(createEntry({ index: 10 }));
+
+		expect(calls).toHaveLength(10);
+		await expect(saturated).rejects.toThrow(
+			"SQS batch accumulator is saturated",
+		);
+
+		for (const resolveSend of sendResolvers) {
+			resolveSend({ failures: [] });
+		}
+		await Promise.all(accepted);
+	});
+
+	test("accepts another batch after an in-flight send settles", async () => {
+		const sendResolvers: Array<
+			(result: { failures: Array<{ index: number; reason: string }> }) => void
+		> = [];
+		const { batcher, calls } = createBatcher({
+			maxBatchEntries: 1,
+			sendBatch: () =>
+				new Promise((resolve) => {
+					sendResolvers.push(resolve);
+				}),
+		});
+
+		const accepted = Array.from({ length: 10 }, (_, index) =>
+			batcher.enqueue(createEntry({ index })),
+		);
+		await expect(batcher.enqueue(createEntry({ index: 10 }))).rejects.toThrow(
+			"SQS batch accumulator is saturated",
+		);
+
+		sendResolvers[0]?.({ failures: [] });
+		await accepted[0];
+
+		const afterRecovery = batcher.enqueue(createEntry({ index: 11 }));
+		expect(calls).toHaveLength(11);
+
+		for (const resolveSend of sendResolvers.slice(1)) {
+			resolveSend({ failures: [] });
+		}
+		await Promise.all([...accepted.slice(1), afterRecovery]);
 	});
 
 	test("shutdown drains pending and in-flight sends before resolving", async () => {
