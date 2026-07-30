@@ -7,6 +7,9 @@ export const aggregateGroupablePipeResponseSchema = z.object({
 	event_name: z.string(),
 	group_value: z.string(),
 	total_value: z.number(),
+	// Optional: deployments predating the count column omit it, and the
+	// completeness check degrades to a sum-only comparison when absent.
+	event_count: z.number().optional(),
 	_truncated: z
 		.union([z.boolean(), z.number()])
 		.transform((v) => Boolean(v))
