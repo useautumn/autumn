@@ -109,9 +109,20 @@ const poolMaxFromEnv = ({
 	return Number.isInteger(parsed) && parsed > 0 ? parsed : fallback;
 };
 
-const PGBOUNCER_MAX_CLIENT_CONN = 7_600;
-const BUDGETED_FLEET_PROCESSES = 150;
-const BUDGETED_NON_SERVER_CONNECTIONS = 80;
+/** Frontend ceiling the app's pools actually compete for: PgBouncer
+ *  max_client_conn (2,000) x 6 pods. */
+const PGBOUNCER_MAX_CLIENT_CONN = 12_000;
+
+/** Bouncer->Postgres slots. NOT a client limit — transaction pooling multiplexes
+ *  many clients onto far fewer of these. Kept for sizing, not for this guard. */
+const POSTGRES_MAX_SERVER_CONNECTIONS = 7_600;
+
+/** Request-serving processes: 30 tasks x 3 cluster workers. Primaries hold pool
+ *  objects but never query, and `min` doesn't pre-create, so they contribute 0. */
+const BUDGETED_FLEET_PROCESSES = 90;
+
+/** Dedicated worker/cron pools that exist outside the three exported ones. */
+const BUDGETED_NON_SERVER_CONNECTIONS = 362;
 const POOL_BUDGET_HEADROOM = 0.85;
 
 const PROD_POOL_MAX = {
@@ -143,7 +154,7 @@ if (
 	PGBOUNCER_MAX_CLIENT_CONN * POOL_BUDGET_HEADROOM
 ) {
 	logger.warn(
-		`[initDrizzle] pool budget (${budgetedFleetConnections}) exceeds ${POOL_BUDGET_HEADROOM} of max_client_conn (${PGBOUNCER_MAX_CLIENT_CONN}) — lower the pool maxes or raise the ceiling`,
+		`[initDrizzle] pool budget (${budgetedFleetConnections}) exceeds ${POOL_BUDGET_HEADROOM} of PgBouncer max_client_conn (${PGBOUNCER_MAX_CLIENT_CONN}) — lower the pool maxes or raise the ceiling. Postgres server slots (${POSTGRES_MAX_SERVER_CONNECTIONS}) are a separate, larger budget and are not the constraint here.`,
 	);
 }
 
