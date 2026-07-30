@@ -83,6 +83,12 @@ test("returns null when no additional plan is selected", () => {
 	).toBeNull();
 });
 
+test("returns null while selected plan scopes conflict", () => {
+	expect(
+		buildAttachScheduleRequestBody(baseParams({ valid: false })),
+	).toBeNull();
+});
+
 test("returns null without a customer or primary product", () => {
 	expect(
 		buildAttachScheduleRequestBody(baseParams({ customerId: undefined })),
@@ -162,7 +168,12 @@ test("forwards per-plan version and prepaid quantities", () => {
 		baseParams({
 			version: 3,
 			prepaidOptions: { seats: 5 },
-			additionalPlans: [additionalPlan({ version: 2 })],
+			additionalPlans: [
+				additionalPlan({
+					version: 2,
+					prepaidOptions: { messages: 10 },
+				}),
+			],
 		}),
 	);
 
@@ -172,6 +183,9 @@ test("forwards per-plan version and prepaid quantities", () => {
 		{ feature_id: "seats", quantity: 5 },
 	]);
 	expect(extra?.version).toBe(2);
+	expect(extra?.feature_quantities).toEqual([
+		{ feature_id: "messages", quantity: 10 },
+	]);
 });
 
 test("grant-free removes prices from every plan", () => {

@@ -58,19 +58,23 @@ export function AttachAdditionalPlanRow({
 		: plan.items;
 
 	if (!plan.productId) {
-		const productOptions = products
-			.filter((product) => !product.archived)
-			.map((product) => ({
-				product,
-				...getAttachProductOptionState({
-					product,
-					products,
-					customer: fullCustomer,
-					entityId: effectiveEntityId,
-					usedGroupKeys,
-					allowScopeSelection: canSelectMultipleScopes,
-				}),
-			}));
+		const productOptions = products.flatMap((product) =>
+			product.archived
+				? []
+				: [
+						{
+							product,
+							...getAttachProductOptionState({
+								product,
+								products,
+								customer: fullCustomer,
+								entityId: effectiveEntityId,
+								usedGroupKeys,
+								allowScopeSelection: canSelectMultipleScopes,
+							}),
+						},
+					],
+		);
 
 		return (
 			<div className="flex items-center gap-2">

@@ -12,9 +12,9 @@ export function getUsedGroupKeys({
 	excludePlanIndex?: number;
 }): Set<string> {
 	return getUsedProductGroupKeys({
-		productIds: plans
-			.filter((_, index) => index !== excludePlanIndex)
-			.map(({ productId }) => productId),
+		productIds: plans.flatMap(({ productId }, index) =>
+			index === excludePlanIndex ? [] : [productId],
+		),
 		products,
 	});
 }

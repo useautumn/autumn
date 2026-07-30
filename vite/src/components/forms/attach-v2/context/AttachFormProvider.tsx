@@ -500,6 +500,7 @@ export function AttachFormProvider({
 		redirectMode,
 		discounts,
 		currency: attachCurrency.requestCurrency,
+		valid: !additionalPlans.hasInvalidPlanScopes,
 	});
 	const billingOperation = isMultiPlan
 		? {
@@ -515,6 +516,7 @@ export function AttachFormProvider({
 		enabled: disablePreview ? false : undefined,
 	});
 	const isAutoSelectingImmediateSchedule =
+		!billingOperation.isMultiPlan &&
 		hasActiveSubscription &&
 		planSchedule === null &&
 		(previewQuery.data?.outgoing.length ?? 0) === 0 &&

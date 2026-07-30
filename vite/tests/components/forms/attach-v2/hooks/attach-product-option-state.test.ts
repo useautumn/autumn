@@ -1,6 +1,9 @@
 import { expect, test } from "bun:test";
 import type { ProductV2 } from "@autumn/shared";
-import { getAttachProductOptionState } from "@/components/forms/attach-v2/hooks/useAttachAdditionalPlans";
+import {
+	getAttachProductOptionState,
+	hasInvalidAttachPlanScopes,
+} from "@/components/forms/attach-v2/hooks/useAttachAdditionalPlans";
 import { getUsedProductGroupKeys } from "@/components/forms/shared/utils/planGroupUtils";
 
 const product = ({ id, name }: { id: string; name: string }) =>
@@ -48,4 +51,31 @@ test("same-group plans remain blocked without another scope", () => {
 		disabledValue: "Plan group selected",
 		requiresDifferentScope: true,
 	});
+});
+
+test("same-group plans require different resolved scopes", () => {
+	const additionalPlan = {
+		_id: "additional",
+		productId: pro.id,
+		prepaidOptions: {},
+		items: null,
+		isCustom: false,
+	};
+
+	expect(
+		hasInvalidAttachPlanScopes({
+			productId: growth.id,
+			additionalPlans: [additionalPlan],
+			products,
+			customer: null,
+		}),
+	).toBe(true);
+	expect(
+		hasInvalidAttachPlanScopes({
+			productId: growth.id,
+			additionalPlans: [{ ...additionalPlan, entityId: "entity-a" }],
+			products,
+			customer: null,
+		}),
+	).toBe(false);
 });

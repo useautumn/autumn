@@ -237,6 +237,8 @@ function SelectContent() {
 	const hasPendingPlan = formValues.additionalPlans.some(
 		(plan) => !plan.productId,
 	);
+	const cannotPreview =
+		hasPendingPlan || additionalPlans.hasInvalidPlanScopes;
 
 	const {
 		hasEntities,
@@ -348,7 +350,7 @@ function SelectContent() {
 							<Button
 								variant="primary"
 								onClick={() => setSheet({ type: "attach-review", itemId })}
-								disabled={hasPendingPlan}
+								disabled={cannotPreview}
 								className="w-full"
 							>
 								Preview Changes

@@ -13,6 +13,7 @@ import type { UseAttachForm } from "./useAttachForm";
 
 export interface UseAttachAdditionalPlansReturn {
 	isMultiPlan: boolean;
+	hasInvalidPlanScopes: boolean;
 	selectedProductIds: string[];
 	usedGroupKeys: Set<string>;
 	additionalPlanGroupKeys: Set<string>;
@@ -21,6 +22,64 @@ export interface UseAttachAdditionalPlansReturn {
 	handleAddPlan: () => void;
 	handleRemovePlan: (params: { id: string }) => void;
 	handleChangePlanProduct: (params: { id: string; productId: string }) => void;
+}
+
+const resolvePlanEntityId = ({
+	planEntityId,
+	requestEntityId,
+}: {
+	planEntityId?: string | null;
+	requestEntityId?: string;
+}) => {
+	if (planEntityId === null) return undefined;
+	return planEntityId ?? requestEntityId;
+};
+
+export function hasInvalidAttachPlanScopes({
+	productId,
+	additionalPlans,
+	products,
+	customer,
+	entityId,
+}: Pick<AttachForm, "productId" | "additionalPlans"> & {
+	products: ProductV2[];
+	customer: FullCustomer | null;
+	entityId?: string;
+}) {
+	const selectedPlans = productId ? [{ productId, entityId }] : [];
+	for (const plan of additionalPlans) {
+		if (!plan.productId) continue;
+		selectedPlans.push({
+			productId: plan.productId,
+			entityId: resolvePlanEntityId({
+				planEntityId: plan.entityId,
+				requestEntityId: entityId,
+			}),
+		});
+	}
+	const scopeGroupKeys = new Set<string>();
+
+	for (const plan of selectedPlans) {
+		const scopeGroupKey = JSON.stringify([
+			plan.entityId ?? null,
+			getProductGroupKey({ productId: plan.productId, products }),
+		]);
+		if (scopeGroupKeys.has(scopeGroupKey)) return true;
+		scopeGroupKeys.add(scopeGroupKey);
+
+		if (
+			customer &&
+			isProductAlreadyEnabled({
+				productId: plan.productId,
+				customer,
+				entityId: plan.entityId,
+			})
+		) {
+			return true;
+		}
+	}
+
+	return false;
 }
 
 export function getAttachProductOptionState({
@@ -115,6 +174,15 @@ export function useAttachAdditionalPlans({
 	const activeProducts = products.filter((product) => !product.archived);
 	const hasPendingEmptyPlan = additionalPlans.some((plan) => !plan.productId);
 	const isMultiPlan = enabled && additionalPlans.some((plan) => plan.productId);
+	const hasInvalidPlanScopes =
+		isMultiPlan &&
+		hasInvalidAttachPlanScopes({
+			productId,
+			additionalPlans,
+			products,
+			customer,
+			entityId,
+		});
 	const canAddPlan =
 		enabled &&
 		!!productId &&
@@ -206,6 +274,7 @@ export function useAttachAdditionalPlans({
 
 	return {
 		isMultiPlan,
+		hasInvalidPlanScopes,
 		selectedProductIds,
 		usedGroupKeys,
 		additionalPlanGroupKeys,

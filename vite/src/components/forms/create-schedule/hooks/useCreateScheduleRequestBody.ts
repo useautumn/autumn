@@ -49,19 +49,23 @@ export function buildCreateScheduleRequestBody({
 		}
 		if (startsAt === null) return null;
 
-		const plans = phase.plans
-			.filter((plan) => plan.productId)
-			.map((plan) =>
-				buildCreateSchedulePlan({
-					productId: plan.productId,
-					prepaidOptions: plan.prepaidOptions,
-					items: plan.items,
-					version: plan.version,
-					isCustom: plan.isCustom,
-					product: products.find((product) => product.id === plan.productId),
-					features,
-				}),
-			);
+		const plans = phase.plans.flatMap((plan) =>
+			plan.productId
+				? [
+						buildCreateSchedulePlan({
+							productId: plan.productId,
+							prepaidOptions: plan.prepaidOptions,
+							items: plan.items,
+							version: plan.version,
+							isCustom: plan.isCustom,
+							product: products.find(
+								(product) => product.id === plan.productId,
+							),
+							features,
+						}),
+					]
+				: [],
+		);
 
 		if (plans.length === 0) return null;
 		return {

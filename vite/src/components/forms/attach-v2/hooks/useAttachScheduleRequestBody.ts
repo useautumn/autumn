@@ -33,6 +33,7 @@ export type BuildAttachScheduleRequestBodyParams = Pick<
 	products: ProductV2[];
 	features: Feature[];
 	additionalPlans: AttachAdditionalPlan[];
+	valid?: boolean;
 };
 
 function buildPlanParams({
@@ -92,8 +93,9 @@ export function buildAttachScheduleRequestBody({
 	redirectMode,
 	discounts,
 	currency,
+	valid = true,
 }: BuildAttachScheduleRequestBodyParams): CreateScheduleParamsV0 | null {
-	if (!customerId || !product) return null;
+	if (!valid || !customerId || !product) return null;
 
 	const selectedAdditionalPlans = additionalPlans.filter(
 		(plan) => plan.productId,
