@@ -1,8 +1,4 @@
-import {
-	Button,
-	type ButtonProps,
-	ConditionalTooltip,
-} from "@autumn/ui";
+import { Button, type ButtonProps, ConditionalTooltip } from "@autumn/ui";
 import type { ReactNode } from "react";
 import { cn } from "@/lib/utils";
 
@@ -26,13 +22,12 @@ export function DisabledTooltipButton({
 			content={disabledReason}
 			contentClassName={tooltipClassName}
 		>
-			<span className="flex w-full cursor-not-allowed">
-				<Button
-					{...props}
-					disabled
-					className={cn("pointer-events-none", className)}
-				/>
-			</span>
+			<Button
+				{...props}
+				aria-disabled
+				onClick={(event) => event.preventDefault()}
+				className={cn("cursor-not-allowed opacity-50", className)}
+			/>
 		</ConditionalTooltip>
 	);
 }
