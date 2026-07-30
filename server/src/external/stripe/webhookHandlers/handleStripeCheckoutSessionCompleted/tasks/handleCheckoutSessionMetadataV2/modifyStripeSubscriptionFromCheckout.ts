@@ -1,4 +1,5 @@
 import type { DeferredAutumnBillingPlanData } from "@autumn/shared";
+import { autumnStripeRequestOptions } from "@/external/stripe/common/autumnStripeIdempotency";
 import type { CheckoutSessionCompletedContext } from "@/external/stripe/webhookHandlers/handleStripeCheckoutSessionCompleted/setupCheckoutSessionCompletedContext";
 import type { StripeWebhookContext } from "@/external/stripe/webhookMiddlewares/stripeWebhookContext";
 import { evaluateStripeBillingPlan } from "@/internal/billing/v2/providers/stripe/actionBuilders/evaluateStripeBillingPlan";
@@ -30,12 +31,16 @@ export const modifyStripeSubscriptionFromCheckout = async ({
 
 	if (!updateAction) return;
 
-	await stripeCli.subscriptions.update(updateAction.stripeSubscriptionId, {
-		...updateAction.params,
-		discounts: undefined,
-		payment_behavior: "error_if_incomplete",
-		expand: ["latest_invoice"],
-	});
+	await stripeCli.subscriptions.update(
+		updateAction.stripeSubscriptionId,
+		{
+			...updateAction.params,
+			discounts: undefined,
+			payment_behavior: "error_if_incomplete",
+			expand: ["latest_invoice"],
+		},
+		autumnStripeRequestOptions({ source: "checkout.completed" }),
+	);
 
 	logStripeBillingPlan({
 		ctx,
