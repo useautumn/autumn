@@ -1,74 +1,83 @@
 const DEFAULT_BATCH_WINDOW_MS = 10;
-const SQS_SEND_MESSAGE_BATCH_LIMIT = 10;
-const SQS_SEND_MESSAGE_BATCH_MAX_BODY_BYTES = 1024 * 1024;
+const DEFAULT_MAX_BATCH_ENTRIES = 10;
+const DEFAULT_MAX_BATCH_BODY_BYTES = 1024 * 1024;
 
-export type PrimarySqsQueueEntry = {
+export type SqsBatchAccumulatorEntry = {
 	queueUrl: string;
-	jobName: string;
 	messageBody: string;
-	messageGroupId?: string;
-	messageDeduplicationId?: string;
-	delaySeconds?: number;
 };
 
-export type SendPrimarySqsBatchArgs = {
+export type SendSqsAccumulatorBatchArgs<
+	TEntry extends SqsBatchAccumulatorEntry,
+> = {
 	queueUrl: string;
-	entries: PrimarySqsQueueEntry[];
+	entries: TEntry[];
 };
 
-type SendPrimarySqsBatch = (args: SendPrimarySqsBatchArgs) => Promise<{
+type SendSqsAccumulatorBatch<TEntry extends SqsBatchAccumulatorEntry> = (
+	args: SendSqsAccumulatorBatchArgs<TEntry>,
+) => Promise<{
 	failures: Array<{ index: number; reason: string }>;
 }>;
 
-type PendingEntry = PrimarySqsQueueEntry & {
+type PendingEntry<TEntry extends SqsBatchAccumulatorEntry> = {
+	entry: TEntry;
 	resolve: () => void;
 	reject: (error: Error) => void;
 };
 
-export class PrimarySqsSendBatcher {
-	private pendingEntries: PendingEntry[] = [];
+export class SqsBatchAccumulator<TEntry extends SqsBatchAccumulatorEntry> {
+	private pendingEntries: PendingEntry<TEntry>[] = [];
 	private pendingMessageBodyBytes = 0;
 	private flushTimer: NodeJS.Timeout | null = null;
 	private readonly inFlightSends = new Set<Promise<void>>();
 	private readonly batchWindowMs: number;
-	private readonly sendBatch: SendPrimarySqsBatch;
+	private readonly maxBatchEntries: number;
+	private readonly maxBatchBodyBytes: number;
+	private readonly sendBatch: SendSqsAccumulatorBatch<TEntry>;
 	private acceptingEntries = true;
 
 	constructor({
 		batchWindowMs = DEFAULT_BATCH_WINDOW_MS,
+		maxBatchEntries = DEFAULT_MAX_BATCH_ENTRIES,
+		maxBatchBodyBytes = DEFAULT_MAX_BATCH_BODY_BYTES,
 		sendBatch,
 	}: {
 		batchWindowMs?: number;
-		sendBatch: SendPrimarySqsBatch;
+		maxBatchEntries?: number;
+		maxBatchBodyBytes?: number;
+		sendBatch: SendSqsAccumulatorBatch<TEntry>;
 	}) {
 		this.batchWindowMs = batchWindowMs;
+		this.maxBatchEntries = maxBatchEntries;
+		this.maxBatchBodyBytes = maxBatchBodyBytes;
 		this.sendBatch = sendBatch;
 	}
 
-	enqueue(entry: PrimarySqsQueueEntry): Promise<void> {
+	enqueue(entry: TEntry): Promise<void> {
 		if (!this.acceptingEntries) {
 			return Promise.reject(
-				new Error("Primary SQS send batcher is shutting down"),
+				new Error("SQS batch accumulator is shutting down"),
 			);
 		}
 
 		const messageBodyBytes = Buffer.byteLength(entry.messageBody, "utf8");
-		const pendingQueueUrl = this.pendingEntries[0]?.queueUrl;
+		const pendingQueueUrl = this.pendingEntries[0]?.entry.queueUrl;
 		const mustStartNewBatch =
 			this.pendingEntries.length > 0 &&
 			(pendingQueueUrl !== entry.queueUrl ||
 				this.pendingMessageBodyBytes + messageBodyBytes >
-					SQS_SEND_MESSAGE_BATCH_MAX_BODY_BYTES);
+					this.maxBatchBodyBytes);
 
 		if (mustStartNewBatch) {
 			void this.startSend();
 		}
 
 		return new Promise<void>((resolve, reject) => {
-			this.pendingEntries.push({ ...entry, resolve, reject });
+			this.pendingEntries.push({ entry, resolve, reject });
 			this.pendingMessageBodyBytes += messageBodyBytes;
 
-			if (this.pendingEntries.length >= SQS_SEND_MESSAGE_BATCH_LIMIT) {
+			if (this.pendingEntries.length >= this.maxBatchEntries) {
 				void this.startSend();
 			} else {
 				this.scheduleSend();
@@ -118,36 +127,18 @@ export class PrimarySqsSendBatcher {
 	private async sendEntries({
 		pendingEntries,
 	}: {
-		pendingEntries: PendingEntry[];
+		pendingEntries: PendingEntry<TEntry>[];
 	}): Promise<void> {
 		let failures: Array<{ index: number; reason: string }>;
 		try {
 			const result = await this.sendBatch({
-				queueUrl: pendingEntries[0].queueUrl,
-				entries: pendingEntries.map(
-					({
-						queueUrl,
-						jobName,
-						messageBody,
-						messageGroupId,
-						messageDeduplicationId,
-						delaySeconds,
-					}) => ({
-						queueUrl,
-						jobName,
-						messageBody,
-						messageGroupId,
-						messageDeduplicationId,
-						delaySeconds,
-					}),
-				),
+				queueUrl: pendingEntries[0].entry.queueUrl,
+				entries: pendingEntries.map(({ entry }) => entry),
 			});
 			failures = result.failures;
 		} catch (error) {
 			const sendError =
-				error instanceof Error
-					? error
-					: new Error("Unknown primary SQS batch error");
+				error instanceof Error ? error : new Error("Unknown SQS batch error");
 			for (const pendingEntry of pendingEntries) {
 				pendingEntry.reject(sendError);
 			}

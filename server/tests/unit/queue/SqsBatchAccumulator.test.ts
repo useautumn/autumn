@@ -1,5 +1,5 @@
 /**
- * TDD contract for batching primary SQS queue sends.
+ * Contract for accumulating independent SQS sends into bounded batches.
  *
  * Contract under test:
  *   - up to 10 independent queue entries share one send-batch call
@@ -10,15 +10,15 @@
  *   - each entry preserves its job body, FIFO identifiers, and delay
  *   - the combined message bodies in one batch never exceed SQS's 1 MiB limit
  *
- * Pre-implementation red: PrimarySqsSendBatcher does not exist.
- * Post-implementation green: all batching and delivery assertions pass.
+ * The generic accumulator owns timing, bounds, per-entry results, and shutdown;
+ * queue-specific code supplies the entry shape and batch sender.
  */
 
 import { describe, expect, test } from "bun:test";
 import {
-	PrimarySqsSendBatcher,
-	type SendPrimarySqsBatchArgs,
-} from "@/queue/PrimarySqsSendBatcher.js";
+	type SendSqsAccumulatorBatchArgs,
+	SqsBatchAccumulator,
+} from "@/queue/SqsBatchAccumulator.js";
 
 const QUEUE_URL =
 	"https://sqs.us-east-2.amazonaws.com/123456789012/autumn-prod.fifo";
@@ -37,15 +37,17 @@ const createEntry = ({ index }: { index: number }) => ({
 	delaySeconds: index === 0 ? 2 : undefined,
 });
 
+type TestEntry = ReturnType<typeof createEntry>;
+
 const createBatcher = ({
 	sendBatch,
 }: {
-	sendBatch?: (args: SendPrimarySqsBatchArgs) => Promise<{
+	sendBatch?: (args: SendSqsAccumulatorBatchArgs<TestEntry>) => Promise<{
 		failures: Array<{ index: number; reason: string }>;
 	}>;
 } = {}) => {
-	const calls: SendPrimarySqsBatchArgs[] = [];
-	const batcher = new PrimarySqsSendBatcher({
+	const calls: SendSqsAccumulatorBatchArgs<TestEntry>[] = [];
+	const batcher = new SqsBatchAccumulator<TestEntry>({
 		batchWindowMs: BATCH_WINDOW_MS,
 		sendBatch:
 			sendBatch ??
@@ -58,7 +60,7 @@ const createBatcher = ({
 	return { batcher, calls };
 };
 
-describe("PrimarySqsSendBatcher", () => {
+describe("SqsBatchAccumulator", () => {
 	test("flushes 10 independent entries in one batch call", async () => {
 		const { batcher, calls } = createBatcher();
 

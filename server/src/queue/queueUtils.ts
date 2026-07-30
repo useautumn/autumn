@@ -21,7 +21,7 @@ import type { ClearCreditSystemCachePayload } from "@/internal/features/featureA
 import type { GenerateFeatureDisplayPayload } from "@/internal/features/workflows/generateFeatureDisplay.js";
 import { getSqsClient } from "./initSqs.js";
 import { JobName } from "./JobName.js";
-import { PrimarySqsSendBatcher } from "./PrimarySqsSendBatcher.js";
+import { SqsBatchAccumulator } from "./SqsBatchAccumulator.js";
 import type {
 	BatchResetCusEntsPayload,
 	SendProductsUpdatedPayload,
@@ -135,6 +135,10 @@ type SqsBatchMessage = {
 	messageGroupId?: string;
 	messageDeduplicationId?: string;
 	delaySeconds?: number;
+};
+
+type PrimarySqsQueueEntry = SqsBatchMessage & {
+	queueUrl: string;
 };
 
 const sendSqsMessagesBatch = async ({
@@ -254,9 +258,10 @@ const sendSqsMessagesBatch = async ({
 	return { successCount, failures };
 };
 
-const globalPrimarySqsSendBatcher = new PrimarySqsSendBatcher({
-	sendBatch: sendSqsMessagesBatch,
-});
+const globalPrimarySqsSendBatcher =
+	new SqsBatchAccumulator<PrimarySqsQueueEntry>({
+		sendBatch: sendSqsMessagesBatch,
+	});
 
 export const flushPrimarySqsSendBatcher = (): Promise<void> =>
 	globalPrimarySqsSendBatcher.flush();
