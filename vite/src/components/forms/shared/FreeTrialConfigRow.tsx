@@ -15,6 +15,7 @@ export function FreeTrialConfigRow({
 	trialOnEnd,
 	onTrialOnEndChange,
 	onToggle,
+	description = "Let the customer try the plan before being charged",
 }: {
 	form: UseAttachForm | UseUpdateSubscriptionForm;
 	expanded: boolean;
@@ -23,13 +24,14 @@ export function FreeTrialConfigRow({
 	trialOnEnd?: TrialOnEnd;
 	onTrialOnEndChange?: (value: TrialOnEnd) => void;
 	onToggle: (enabled: boolean) => void;
+	description?: string;
 }) {
 	const showRevert = !!onTrialOnEndChange;
 
 	return (
 		<ConfigRow
 			title="Free Trial"
-			description="Let the customer try the plan before being charged"
+			description={description}
 			expanded={expanded}
 			action={<Switch checked={checked} onCheckedChange={onToggle} />}
 		>

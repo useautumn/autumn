@@ -16,8 +16,9 @@ import {
 } from "@phosphor-icons/react";
 import { useMemo, useState } from "react";
 import type Stripe from "stripe";
-import { buildCustomize } from "@/components/forms/create-schedule/hooks/useCreateScheduleRequestBody";
 import { ConfigRow } from "@/components/forms/shared/ConfigRow";
+import { resolvePlanEntityId } from "@/components/forms/shared";
+import { buildCustomize } from "@/components/forms/shared/utils/buildPlanCustomize";
 import {
 	getProductWithSupportedPlanFormValues,
 	getSupportedPlanFormPatchFromDraftProduct,
@@ -287,15 +288,6 @@ export function SubscriptionEditorView({
 	const [scopeEntityId, setScopeEntityId] = useState<string | undefined>(() =>
 		seedScopeEntityId({ proposal, entities, contextEntityId: entityId }),
 	);
-	const selectableEntityIds = useMemo(
-		() =>
-			new Set(
-				entities.flatMap((entity) =>
-					[entity.id, entity.internal_id].filter(Boolean),
-				),
-			),
-		[entities],
-	);
 	const [expirePrevious, setExpirePrevious] = useState<boolean>(true);
 	const [carryOverUsage, setCarryOverUsage] = useState<boolean>(true);
 	const [enablePlanImmediately, setEnablePlanImmediately] =
@@ -425,36 +417,36 @@ export function SubscriptionEditorView({
 	};
 
 	const handleSubmit = () => {
-		const phases: SyncPhase[] = phaseSections
-			.map((section, phaseIndex) => {
-				const validPlans = (draftPlansByPhase[phaseIndex] ?? []).filter((p) =>
-					Boolean(p.plan_id),
-				);
-				const planInstances: SyncPlanInstance[] = validPlans.map(
-					({ _key: _ignore, enable_plan_immediately: _ignored, ...rest }) => {
-						// The entities list is capped, so a detected entity missing from
-						// it can't be picked — keep it instead of silently unscoping.
-						const undisplayableEntityId =
-							rest.entity_id && !selectableEntityIds.has(rest.entity_id)
-								? rest.entity_id
-								: undefined;
-
-						return {
-							...rest,
-							entity_id: scopeEntityId ?? undisplayableEntityId,
-							expire_previous: expirePrevious,
-							enable_plan_immediately:
-								isNotStartedSchedule &&
-								enablePlanImmediately &&
-								phaseIndex === firstFuturePhaseIndex
-									? true
-									: undefined,
-						};
-					},
-				);
-				return { starts_at: section.phase.starts_at, plans: planInstances };
-			})
-			.filter((phase) => phase.plans.length > 0);
+		const phases: SyncPhase[] = phaseSections.flatMap((section, phaseIndex) => {
+			const validPlans = (draftPlansByPhase[phaseIndex] ?? []).filter((p) =>
+				Boolean(p.plan_id),
+			);
+			const planInstances: SyncPlanInstance[] = validPlans.map(
+				({
+					_key: _ignore,
+					enable_plan_immediately: _ignored,
+					entity_id: planEntityId,
+					...rest
+				}) => {
+					return {
+						...rest,
+						entity_id: resolvePlanEntityId({
+							planEntityId,
+							defaultEntityId: scopeEntityId,
+						}),
+						expire_previous: expirePrevious,
+						enable_plan_immediately:
+							isNotStartedSchedule &&
+							enablePlanImmediately &&
+							phaseIndex === firstFuturePhaseIndex
+								? true
+								: undefined,
+					};
+				},
+			);
+			if (planInstances.length === 0) return [];
+			return [{ starts_at: section.phase.starts_at, plans: planInstances }];
+		});
 
 		if (phases.length === 0) return;
 
@@ -566,6 +558,7 @@ export function SubscriptionEditorView({
 										key={plan._key}
 										plan={plan}
 										products={products ?? []}
+										defaultEntityId={scopeEntityId}
 										onChange={(next) =>
 											handlePlanChange(phaseIndex, planIndex, next)
 										}

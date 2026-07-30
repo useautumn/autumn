@@ -378,6 +378,7 @@ test.concurrent(
 
 		const response = await autumnV1.billing.createSchedule({
 			customer_id: customerId,
+			redirect_mode: "always",
 			invoice_mode: {
 				enabled: true,
 				finalize: true,
@@ -394,6 +395,7 @@ test.concurrent(
 		expect(response.status).toBe("pending_payment");
 		expect(response.invoice?.status).toBe("open");
 		expect(response.payment_url).toBeDefined();
+		expect(isAutumnCheckoutUrl(response.payment_url!)).toBe(false);
 		expect(response.schedule_id).toBeNull();
 		expect(response.phases).toEqual([]);
 

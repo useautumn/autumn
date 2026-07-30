@@ -1,12 +1,16 @@
 import {
 	type Feature,
-	type FullCustomer,
 	isFreeProductV2,
 	isOneOffProductV2,
 } from "@autumn/shared";
 import {
 	Button,
 	DateInputUnix,
+	DropdownMenu,
+	DropdownMenuCheckboxItem,
+	DropdownMenuContent,
+	DropdownMenuSeparator,
+	DropdownMenuTrigger,
 	IconButton,
 	IconCheckbox,
 	Input,
@@ -18,24 +22,15 @@ import {
 import { CaretDownIcon, PlusIcon, XIcon } from "@phosphor-icons/react";
 import { addDays } from "date-fns";
 import { AnimatePresence, motion } from "motion/react";
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import {
 	AdvancedSection,
 	AdvancedToggleRow,
 	ConfigRow,
 } from "@/components/forms/shared/advanced-section";
-import {
-	DropdownMenu,
-	DropdownMenuCheckboxItem,
-	DropdownMenuContent,
-	DropdownMenuSeparator,
-	DropdownMenuTrigger,
-} from "@autumn/ui";
 import { cn } from "@/lib/utils";
-import { useCusQuery } from "@/views/customers/customer/hooks/useCusQuery";
 import type { FormCustomLineItem } from "../attachFormSchema";
 import { useAttachFormContext } from "../context/AttachFormProvider";
-import { useAttachBillingOptionsState } from "../hooks/useAttachBillingOptionsState";
 import { getAttachScheduledStartDate } from "../utils/buildAttachPreviewTotals";
 import { addDiscount } from "../utils/discountUtils";
 import { AttachDiscountRow } from "./AttachDiscountRow";
@@ -113,8 +108,17 @@ function FeatureSelectDropdown({
 }
 
 export function AttachAdvancedSection() {
-	const { form, formValues, features, product, previewQuery } =
-		useAttachFormContext();
+	const {
+		form,
+		customer,
+		formValues,
+		features,
+		product,
+		previewQuery,
+		additionalPlans,
+		billingOptions,
+	} = useAttachFormContext();
+	const isMultiPlan = additionalPlans.isMultiPlan;
 	const {
 		discounts,
 		newBillingSubscription,
@@ -129,20 +133,10 @@ export function AttachAdvancedSection() {
 		startDate,
 		endDate,
 	} = formValues;
-	const { customer } = useCusQuery();
-	const fullCustomer = customer as FullCustomer | null;
-
-	const hasCustomerEntitlements = useMemo(() => {
-		if (!fullCustomer) return false;
-
-		const hasProductEntitlements = fullCustomer.customer_products?.some(
+	const hasCustomerEntitlements =
+		customer?.customer_products?.some(
 			(customerProduct) => customerProduct.customer_entitlements?.length > 0,
-		);
-		const hasExtraEntitlements =
-			fullCustomer.extra_customer_entitlements?.length > 0;
-
-		return hasProductEntitlements || hasExtraEntitlements;
-	}, [fullCustomer]);
+		) || (customer?.extra_customer_entitlements?.length ?? 0) > 0;
 
 	const [overrideLineItemsEnabled, setOverrideLineItemsEnabled] = useState(
 		customLineItems.length > 0,
@@ -162,7 +156,7 @@ export function AttachAdvancedSection() {
 		handleScheduleChange,
 		handleBillingCycleChange,
 		handleProrationBehaviorChange,
-	} = useAttachBillingOptionsState();
+	} = billingOptions;
 
 	const isPaidRecurringProduct =
 		!!product &&
@@ -173,7 +167,7 @@ export function AttachAdvancedSection() {
 		isPaidRecurringProduct &&
 		!trialEnabled &&
 		effectivePlanSchedule !== "end_of_cycle";
-	const allowBackdatedStartDate = showStartDate && createsNewStripeSubscription;
+	const allowBackdatedStartDate = createsNewStripeSubscription;
 	const showEndDate = !!product && !isFreeProductV2({ items: product.items });
 	const attachStartsAt =
 		effectivePlanSchedule === "end_of_cycle"
@@ -220,7 +214,7 @@ export function AttachAdvancedSection() {
 		form.setFieldValue("customLineItems", updated);
 	};
 
-	const moreOptions = (
+	const moreOptions = isMultiPlan ? null : (
 		<>
 			{showStartDate && (
 				<ConfigRow
@@ -468,7 +462,6 @@ export function AttachAdvancedSection() {
 
 	return (
 		<AdvancedSection moreOptions={moreOptions}>
-			{/* Discounts */}
 			<ConfigRow
 				title="Discounts"
 				description="Apply percentage or fixed-amount discounts to this plan"
@@ -524,8 +517,7 @@ export function AttachAdvancedSection() {
 				/>
 			)}
 
-			{/* Plan Schedule — only when customer has an active Stripe subscription */}
-			{hasActiveSubscription && (
+			{hasActiveSubscription && !isMultiPlan && (
 				<AdvancedToggleRow
 					label="Plan Schedule"
 					description="When the new plan should take effect"

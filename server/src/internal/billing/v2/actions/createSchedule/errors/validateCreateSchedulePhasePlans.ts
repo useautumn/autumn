@@ -1,22 +1,23 @@
 import { type FullProduct, isOneOffProduct, RecaseError } from "@autumn/shared";
 
-/** Reject conflicting main recurring plans within a single create_schedule phase. */
+/** Reject conflicting main recurring plans within the same phase scope. */
 export const validateCreateSchedulePhasePlans = ({
-	fullProducts,
+	plans,
 }: {
-	fullProducts: FullProduct[];
+	plans: { fullProduct: FullProduct; scopeId?: string }[];
 }) => {
 	const groupedProducts = new Map<string, FullProduct[]>();
 
-	for (const fullProduct of fullProducts) {
+	for (const { fullProduct, scopeId } of plans) {
 		if (fullProduct.is_add_on || isOneOffProduct({ product: fullProduct })) {
 			continue;
 		}
 
 		const group = fullProduct.group ?? "";
-		const productsInGroup = groupedProducts.get(group) ?? [];
+		const key = JSON.stringify([scopeId ?? null, group]);
+		const productsInGroup = groupedProducts.get(key) ?? [];
 		productsInGroup.push(fullProduct);
-		groupedProducts.set(group, productsInGroup);
+		groupedProducts.set(key, productsInGroup);
 	}
 
 	const conflictingProducts = [...groupedProducts.values()].flatMap(
@@ -30,7 +31,7 @@ export const validateCreateSchedulePhasePlans = ({
 		.join(", ");
 
 	throw new RecaseError({
-		message: `Create schedule supports at most one plan per group in each phase, but plans ${planIds} conflict with another requested plan in their group.`,
+		message: `Create schedule supports at most one plan per group and scope in each phase, but plans ${planIds} conflict.`,
 		statusCode: 400,
 	});
 };

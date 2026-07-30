@@ -1,6 +1,8 @@
 import { FeatureQuantityParamsV0Schema } from "@api/billing/common/featureQuantity/featureQuantityParamsV0";
 import { InvoiceModeParamsSchema } from "@api/billing/common/invoiceModeParams";
 import { RedirectModeSchema } from "@api/billing/common/redirectMode";
+import { FreeTrialParamsV1Schema } from "@api/common/freeTrial/freeTrialParamsV1";
+import { CurrencyCodeSchema } from "@api/products/components/additionalCurrencies";
 import { z } from "zod/v4";
 import { AttachDiscountSchema } from "../attachV2/attachDiscount";
 import { BillingBehaviorSchema } from "../common/billingBehavior";
@@ -35,6 +37,10 @@ export const PhaseBillingCycleAnchorSchema = z.enum(["phase_start"]);
 export const CreateSchedulePlanSchema = z.object({
 	plan_id: z.string().meta({
 		description: "The ID of the plan to schedule in this phase.",
+	}),
+	entity_id: z.string().nullable().optional().meta({
+		description:
+			"The immediate plan scope. Omit to inherit the request entity, pass null for customer-level, or pass an entity ID.",
 	}),
 	feature_quantities: z.array(FeatureQuantityParamsV0Schema).optional().meta({
 		description: "Optional prepaid feature quantities for this phase's plan.",
@@ -106,6 +112,13 @@ export const CreateScheduleParamsV0Schema = z
 		entity_id: z.string().optional().meta({
 			description: "Optional entity ID for an entity-scoped schedule.",
 		}),
+		free_trial: FreeTrialParamsV1Schema.nullable().optional().meta({
+			description:
+				"Free trial configuration applied to every plan in the immediate phase.",
+		}),
+		currency: CurrencyCodeSchema.optional().meta({
+			description: "Currency used to bill the immediate phase.",
+		}),
 		invoice_mode: InvoiceModeParamsSchema.optional().meta({
 			description:
 				"Invoice mode creates and sends an invoice instead of charging the customer's payment method immediately for the first phase.",
@@ -136,6 +149,10 @@ export const CreateScheduleParamsV0Schema = z
 		enable_plan_immediately: z.boolean().optional().meta({
 			description:
 				"If true, the immediate-phase cusProducts are activated immediately (and scheduled-phase cusProducts pre-inserted) even when payment is pending via Stripe checkout. The Autumn schedule rows are persisted on checkout.session.completed.",
+		}),
+		preserve_add_ons: z.boolean().optional().meta({
+			description:
+				"If true, active recurring add-ons in scopes represented by the phase plans are retained.",
 		}),
 		phases: z
 			.tuple([CreateSchedulePhaseSchema])
@@ -171,6 +188,24 @@ export const CreateScheduleParamsV0Schema = z
 					input: ctx.value,
 				});
 			}
+		}
+
+		const hasPlanScopes = ctx.value.phases.some((phase) =>
+			phase.plans.some((plan) => plan.entity_id !== undefined),
+		);
+		if (
+			hasPlanScopes &&
+			(ctx.value.phases.length !== 1 ||
+				ctx.value.phases[0]?.starts_at !== "now")
+		) {
+			ctx.issues.push({
+				code: "custom",
+				message:
+					"Per-plan entity scopes require a single phase with starts_at: 'now'",
+				path: ["phases"],
+				input: ctx.value,
+			});
+			return;
 		}
 
 		if (hasRelativeTiming) return;
