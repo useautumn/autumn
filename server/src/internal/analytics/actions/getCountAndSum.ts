@@ -86,14 +86,19 @@ const calculateDateRange = async ({
 export const getCountAndSum = async ({
 	ctx,
 	params,
+	dateRange,
 }: {
 	ctx: AutumnContext;
 	params: TotalEventsParams;
+	// Callers comparing these totals against another query's result must pass that
+	// query's window; resolving it here independently drifts by up to one bin.
+	dateRange?: DateRangeResult;
 }) => {
 	const ch = getClickhouseClient();
 	const { org, env } = ctx;
 
-	const { startDate, endDate } = await calculateDateRange({ ctx, params });
+	const { startDate, endDate } =
+		dateRange ?? (await calculateDateRange({ ctx, params }));
 
 	// Build dynamic filter_by clauses using native JSON sub-column access
 	let filterBySql = "";
