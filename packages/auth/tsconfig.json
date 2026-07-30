@@ -27,7 +27,12 @@
 		"strict": true,
 		"target": "es2022",
 		"types": ["bun", "node"],
-		"useUnknownInCatchVariables": true
+		"useUnknownInCatchVariables": true,
+		"paths": {
+			"@api/*": ["../../shared/api/*"],
+			"@models/*": ["../../shared/models/*"],
+			"@utils/*": ["../../shared/utils/*"]
+		}
 	},
 	"exclude": ["node_modules"],
 	"include": ["src/**/*.ts"]
