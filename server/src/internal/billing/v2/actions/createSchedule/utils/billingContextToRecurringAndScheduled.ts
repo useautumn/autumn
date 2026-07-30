@@ -20,10 +20,14 @@ export const billingContextToRecurringAndScheduled = ({
 	const customerProductsById = new Map<string, FullCusProduct>();
 
 	for (const productContext of billingContext.productContexts) {
-		const internalEntityId = productContext.entity?.internal_id;
-		for (const customerProduct of productContext.scopeCustomerProducts) {
+		const { entity, customer_products: customerProducts } =
+			productContext.fullCustomer;
+		for (const customerProduct of customerProducts) {
 			if (
-				isCusProductOnEntity({ cusProduct: customerProduct, internalEntityId })
+				isCusProductOnEntity({
+					cusProduct: customerProduct,
+					internalEntityId: entity?.internal_id,
+				})
 			) {
 				customerProductsById.set(customerProduct.id, customerProduct);
 			}

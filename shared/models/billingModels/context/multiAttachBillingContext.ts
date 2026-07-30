@@ -1,8 +1,8 @@
 import type {
 	Entitlement,
-	Entity,
 	FeatureOptions,
 	FullCusProduct,
+	FullCustomer,
 	Price,
 } from "@autumn/shared";
 import type { FullProduct } from "../../productModels/productModels";
@@ -14,8 +14,7 @@ export interface MultiAttachProductContext {
 	customPrices: Price[];
 	customEnts: Entitlement[];
 	featureQuantities: FeatureOptions[];
-	entity?: Entity;
-	scopeCustomerProducts: FullCusProduct[];
+	fullCustomer: FullCustomer;
 	/** The existing active product in the same group and scope. */
 	currentCustomerProduct?: FullCusProduct;
 	/** A previously scheduled product in the same group to delete. */

@@ -1,42 +1,27 @@
 import {
+	type AutumnBillingPlan,
 	type BillingPlan,
 	type CreateScheduleBillingContext,
 	ErrCode,
-	isFreeProduct,
-	isProductPaidAndRecurring,
 	RecaseError,
 } from "@autumn/shared";
 import { StatusCodes } from "http-status-codes";
-import type { DrizzleCli } from "@/db/initDrizzle";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { handleUnsupportedLicenseActionErrors } from "@/internal/billing/v2/common/errors/handleUnsupportedLicenseActionErrors";
 import { handleStripeBillingPlanErrors } from "@/internal/billing/v2/providers/stripe/errors/handleStripeBillingPlanErrors";
+import {
+	getDeleteCustomerProducts,
+	getExpiredUpdatedCustomerProducts,
+} from "@/internal/billing/v2/utils/billingPlan/customerProductPlanMutations";
 import { handleFirstPhaseStartDateErrors } from "./handleFirstPhaseStartDateErrors";
 
 export const handleCreateScheduleErrors = async ({
-	db,
 	billingContext,
 	preview = false,
 }: {
-	db: DrizzleCli;
 	billingContext: CreateScheduleBillingContext;
 	preview?: boolean;
 }) => {
-	handleUnsupportedLicenseActionErrors({
-		actionLabel: "billing.create_schedule",
-		fullProducts: [
-			...billingContext.fullProducts,
-			...billingContext.scheduledPhaseContexts.flatMap((phase) =>
-				phase.productContexts.map(
-					(scheduledProductContext) => scheduledProductContext.fullProduct,
-				),
-			),
-		],
-		customerProducts: billingContext.productContexts.map(
-			(productContext) => productContext.currentCustomerProduct,
-		),
-	});
-
 	if (
 		billingContext.checkoutMode === "stripe_checkout" &&
 		billingContext.enablePlanImmediately &&
@@ -59,43 +44,29 @@ export const handleCreateScheduleErrors = async ({
 			statusCode: StatusCodes.BAD_REQUEST,
 		});
 	}
+};
 
-	const allImmediateProductsFree = billingContext.fullProducts.every(
-		(product) => isFreeProduct({ product }),
-	);
-
-	if (allImmediateProductsFree && billingContext.stripeSubscription) {
-		const subId = billingContext.stripeSubscription.id;
-
-		const productsOnSub = billingContext.fullCustomer.customer_products.filter(
-			(cp) => cp.subscription_ids?.includes(subId),
-		);
-
-		const transitioningOutIds = new Set(
-			billingContext.productContexts
-				.map((ctx) => ctx.currentCustomerProduct?.id)
-				.filter(Boolean),
-		);
-
-		const subscriptionWillBeCanceled =
-			productsOnSub.length > 0 &&
-			productsOnSub.every((cp) => transitioningOutIds.has(cp.id));
-		const hasFuturePaidRecurringPhase =
-			billingContext.scheduledPhaseContexts.some((phase) =>
-				phase.productContexts.some((ctx) =>
-					isProductPaidAndRecurring(ctx.fullProduct),
-				),
-			);
-
-		if (subscriptionWillBeCanceled && !hasFuturePaidRecurringPhase) {
-			throw new RecaseError({
-				message:
-					"Cannot create a schedule with a free first phase while the customer has an active subscription. Please cancel the existing subscription first.",
-				code: ErrCode.InvalidRequest,
-				statusCode: 400,
-			});
-		}
-	}
+export const handleCreateScheduleComputeErrors = ({
+	billingContext,
+	autumnBillingPlan,
+}: {
+	billingContext: CreateScheduleBillingContext;
+	autumnBillingPlan: AutumnBillingPlan;
+}) => {
+	const outgoingCustomerProducts = [
+		...getExpiredUpdatedCustomerProducts({ autumnBillingPlan }),
+		...getDeleteCustomerProducts({ autumnBillingPlan }),
+	];
+	handleUnsupportedLicenseActionErrors({
+		actionLabel: "billing.create_schedule",
+		fullProducts: [
+			...billingContext.fullProducts,
+			...billingContext.scheduledPhaseContexts.flatMap((phase) =>
+				phase.productContexts.map(({ fullProduct }) => fullProduct),
+			),
+		],
+		customerProducts: outgoingCustomerProducts,
+	});
 };
 
 export const handleCreateScheduleBillingPlanErrors = ({

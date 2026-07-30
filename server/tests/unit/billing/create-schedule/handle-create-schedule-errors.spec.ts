@@ -5,11 +5,8 @@ import { prices } from "@tests/utils/fixtures/db/prices";
 import { products } from "@tests/utils/fixtures/db/products";
 import chalk from "chalk";
 import type Stripe from "stripe";
-import type { DrizzleCli } from "@/db/initDrizzle";
 import { handleCreateScheduleErrors } from "@/internal/billing/v2/actions/createSchedule/errors/handleCreateScheduleErrors";
 import { STRIPE_BACKDATE_INVOICE_LINE_ITEM_LIMIT } from "@/internal/billing/v2/utils/backdate/countBackdatedPeriods";
-
-const db = undefined as unknown as DrizzleCli;
 
 const buildContext = ({
 	immediateStartsAt,
@@ -47,7 +44,6 @@ describe(chalk.yellowBright("handleCreateScheduleErrors"), () => {
 
 		await expect(
 			handleCreateScheduleErrors({
-				db,
 				billingContext: buildContext({
 					immediateStartsAt: now,
 					currentEpochMs: now,
@@ -61,7 +57,6 @@ describe(chalk.yellowBright("handleCreateScheduleErrors"), () => {
 
 		await expect(
 			handleCreateScheduleErrors({
-				db,
 				billingContext: buildContext({
 					immediateStartsAt: now - ms.hours(1),
 					currentEpochMs: now,
@@ -81,7 +76,6 @@ describe(chalk.yellowBright("handleCreateScheduleErrors"), () => {
 
 		await expect(
 			handleCreateScheduleErrors({
-				db,
 				billingContext: buildContext({
 					immediateStartsAt: now - ms.hours(1),
 					currentEpochMs: now,
@@ -105,7 +99,6 @@ describe(chalk.yellowBright("handleCreateScheduleErrors"), () => {
 
 		await expect(
 			handleCreateScheduleErrors({
-				db,
 				billingContext: buildContext({
 					immediateStartsAt: startsAt,
 					currentEpochMs: now,
@@ -124,7 +117,6 @@ describe(chalk.yellowBright("handleCreateScheduleErrors"), () => {
 
 		await expect(
 			handleCreateScheduleErrors({
-				db,
 				billingContext: buildContext({
 					immediateStartsAt: now - ms.hours(1),
 					currentEpochMs: now,
@@ -146,7 +138,6 @@ describe(chalk.yellowBright("handleCreateScheduleErrors"), () => {
 
 		await expect(
 			handleCreateScheduleErrors({
-				db,
 				preview: true,
 				billingContext: buildContext({
 					immediateStartsAt: now - ms.hours(1),
@@ -163,7 +154,6 @@ describe(chalk.yellowBright("handleCreateScheduleErrors"), () => {
 
 		await expect(
 			handleCreateScheduleErrors({
-				db,
 				billingContext: buildContext({
 					immediateStartsAt: now + ms.hours(1),
 					currentEpochMs: now,
@@ -181,7 +171,6 @@ describe(chalk.yellowBright("handleCreateScheduleErrors"), () => {
 
 		await expect(
 			handleCreateScheduleErrors({
-				db,
 				billingContext: buildContext({
 					immediateStartsAt: now - ms.days(30),
 					currentEpochMs: now,

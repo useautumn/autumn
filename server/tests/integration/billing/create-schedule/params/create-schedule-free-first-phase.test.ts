@@ -3,6 +3,7 @@
 
 import { expect, test } from "bun:test";
 import {
+	type ApiCustomerV3,
 	type AttachPreviewResponse,
 	BillingInterval,
 	type CreateScheduleParamsV0Input,
@@ -10,6 +11,8 @@ import {
 	customerProducts,
 	ms,
 } from "@autumn/shared";
+import { expectCustomerProducts } from "@tests/integration/billing/utils/expectCustomerProductCorrect";
+import { expectNoStripeSubscription } from "@tests/integration/billing/utils/expectNoStripeSubscription";
 import { items } from "@tests/utils/fixtures/items";
 import { products } from "@tests/utils/fixtures/products";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
@@ -162,6 +165,61 @@ test.concurrent(
 		const paidPrice = expandedStripePrice(paidStripePhase?.items[0]?.price);
 		expect(paidPrice?.recurring?.interval).toBe("month");
 		expect(paidPrice?.recurring?.interval_count).toBe(3);
+	},
+);
+
+test.concurrent(
+	`${chalk.yellowBright("create-schedule free first phase: replaces paid state and cancels its subscription")}`,
+	async () => {
+		const paid = products.pro({
+			id: "paid-state",
+			items: [items.monthlyMessages()],
+		});
+		const freePrimary = products.base({
+			id: "free-primary",
+			items: [items.monthlyMessages()],
+		});
+		const freeSecondary = products.base({
+			id: "free-secondary",
+			group: "secondary",
+			items: [items.monthlyWords()],
+		});
+		const { customerId, autumnV1, ctx } = await initScenario({
+			customerId: "create-schedule-free-state",
+			setup: [
+				s.customer({ paymentMethod: "success" }),
+				s.products({ list: [paid, freePrimary, freeSecondary] }),
+			],
+			actions: [s.billing.attach({ productId: paid.id })],
+		});
+
+		await autumnV1.billing.createSchedule({
+			customer_id: customerId,
+			billing_behavior: "none",
+			preserve_add_ons: true,
+			phases: [
+				{
+					starts_at: "now",
+					plans: [
+						{ plan_id: freePrimary.id },
+						{ plan_id: freeSecondary.id },
+					],
+				},
+			],
+		});
+
+		const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
+		await expectCustomerProducts({
+			customer,
+			active: [freePrimary.id, freeSecondary.id],
+			notPresent: [paid.id],
+		});
+		await expectNoStripeSubscription({
+			db: ctx.db,
+			customerId,
+			org: ctx.org,
+			env: ctx.env,
+		});
 	},
 );
 

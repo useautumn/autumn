@@ -155,7 +155,6 @@ export const setupImmediateMultiProductBillingContext = async ({
 		const pending = setupFullCustomerContext({
 			ctx,
 			params: { customer_id: params.customer_id, entity_id: entityId },
-			withEntities: false,
 		});
 		scopedFullCustomers.set(entityId, pending);
 		return pending;
@@ -164,7 +163,6 @@ export const setupImmediateMultiProductBillingContext = async ({
 	const productContexts: MultiAttachProductContext[] = await Promise.all(
 		params.plans.map(async (plan) => {
 			const scopedFullCustomer = await getScopedFullCustomer(plan.entity_id);
-			const entity = scopedFullCustomer.entity;
 
 			const { fullProduct, customPrices, customEnts } =
 				await setupAttachProductContext({
@@ -199,8 +197,7 @@ export const setupImmediateMultiProductBillingContext = async ({
 				customPrices: customPrices ?? [],
 				customEnts: customEnts ?? [],
 				featureQuantities,
-				entity,
-				scopeCustomerProducts: scopedFullCustomer.customer_products,
+				fullCustomer: scopedFullCustomer,
 				currentCustomerProduct,
 				scheduledCustomerProduct,
 				externalId: plan.subscription_id,

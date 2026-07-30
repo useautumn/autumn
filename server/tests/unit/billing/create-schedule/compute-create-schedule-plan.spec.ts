@@ -3,6 +3,9 @@ import {
 	BillingVersion,
 	type CreateScheduleBillingContext,
 	CusProductStatus,
+	type Entity,
+	type FullCusProduct,
+	type MultiAttachProductContext,
 	ms,
 } from "@autumn/shared";
 import { contexts } from "@tests/utils/fixtures/db/contexts";
@@ -18,7 +21,14 @@ const createBillingContext = ({
 	futurePhases = [],
 	scheduledPhaseContexts = [],
 	currentEpochMs = Date.now(),
-}: Pick<CreateScheduleBillingContext, "productContexts" | "immediatePhase"> & {
+}: {
+	productContexts: Array<
+		Omit<MultiAttachProductContext, "fullCustomer"> & {
+			entity?: Entity;
+			scopeCustomerProducts: FullCusProduct[];
+		}
+	>;
+	immediatePhase: CreateScheduleBillingContext["immediatePhase"];
 	futurePhases?: CreateScheduleBillingContext["futurePhases"];
 	scheduledPhaseContexts?: CreateScheduleBillingContext["scheduledPhaseContexts"];
 	currentEpochMs?: number;
@@ -35,14 +45,27 @@ const createBillingContext = ({
 			: []),
 	]);
 
-	return {
-		...contexts.createBilling({
-			customerProducts: currentCustomerProducts,
-			fullProducts,
-			currentEpochMs,
-			billingVersion: BillingVersion.V2,
+	const billingContext = contexts.createBilling({
+		customerProducts: currentCustomerProducts,
+		fullProducts,
+		currentEpochMs,
+		billingVersion: BillingVersion.V2,
+	});
+	const scopedProductContexts = productContexts.map(
+		({ entity, scopeCustomerProducts, ...productContext }) => ({
+			...productContext,
+			fullCustomer: {
+				...billingContext.fullCustomer,
+				entity,
+				customer_products: scopeCustomerProducts,
+			},
 		}),
-		productContexts,
+	);
+
+	return {
+		...billingContext,
+		productContexts: scopedProductContexts,
+		preserveAddOns: false,
 		featureQuantities: [],
 		checkoutMode: null,
 		customPrices: [],

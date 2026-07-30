@@ -45,6 +45,9 @@ const setupCreateScheduleCheckoutMode = ({
 	if (redirectMode === "never") {
 		return null;
 	}
+	if (billingContext.invoiceMode) {
+		return null;
+	}
 
 	const hasPaymentMethod = !!billingContext.paymentMethod;
 	const hasExistingSubscription = !!billingContext.stripeSubscription;
@@ -57,11 +60,7 @@ const setupCreateScheduleCheckoutMode = ({
 	const shouldUseStripeCheckout =
 		hasOneOffProduct || (!hasExistingSubscription && hasPaidRecurringProduct);
 
-	if (
-		!billingContext.invoiceMode &&
-		!hasPaymentMethod &&
-		shouldUseStripeCheckout
-	) {
+	if (!hasPaymentMethod && shouldUseStripeCheckout) {
 		const noCardRequiredTrial =
 			billingContext.trialContext?.trialEndsAt &&
 			billingContext.trialContext.cardRequired === false;
@@ -203,13 +202,6 @@ export const setupCreateScheduleBillingContext = async ({
 		includeScheduledProductsForScheduleLookup: true,
 	});
 
-	validateCreateSchedulePhasePlans({
-		plans: billingContext.productContexts.map((productContext) => ({
-			fullProduct: productContext.fullProduct,
-			scopeId: productContext.entity?.internal_id,
-		})),
-	});
-
 	const cycleBoundaryMs =
 		params.billing_cycle_anchor === undefined
 			? setupAttachEndOfCycleMs({
@@ -234,6 +226,13 @@ export const setupCreateScheduleBillingContext = async ({
 	});
 	billingContext = immediatePhaseContext.billingContext;
 	const { immediatePhase, futurePhases } = immediatePhaseContext;
+
+	validateCreateSchedulePhasePlans({
+		plans: billingContext.productContexts.map((productContext) => ({
+			fullProduct: productContext.fullProduct,
+			scopeId: productContext.fullCustomer.entity?.internal_id,
+		})),
+	});
 
 	const scheduledPhaseContexts = await setupScheduledProductsContext({
 		ctx,

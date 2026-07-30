@@ -48,7 +48,7 @@ const insertImmediateCustomerProducts = ({
 				customerProduct.product.id === productContext.fullProduct.id &&
 				isCusProductOnEntity({
 					cusProduct: customerProduct,
-					internalEntityId: productContext.entity?.internal_id,
+					internalEntityId: productContext.fullCustomer.entity?.internal_id,
 				}),
 		);
 

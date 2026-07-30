@@ -24,7 +24,7 @@ export interface ScheduledPhaseContext {
 
 export interface CreateScheduleBillingContext
 	extends MultiAttachBillingContext {
-	preserveAddOns?: boolean;
+	preserveAddOns: boolean;
 	immediatePhase: ResolvedCreateSchedulePhaseV0;
 	futurePhases: ResolvedCreateSchedulePhaseV0[];
 	scheduledPhaseContexts: ScheduledPhaseContext[];
