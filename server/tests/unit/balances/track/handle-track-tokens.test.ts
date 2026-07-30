@@ -165,7 +165,11 @@ describe("handleTrackTokens", () => {
 		mockState.originalSend = sqsClient.send.bind(sqsClient);
 		sqsClient.send = (async (command: { input: Record<string, unknown> }) => {
 			mockState.queueCommands.push(command.input);
-			return {};
+			const entries =
+				(command.input.Entries as Array<{ Id?: string }> | undefined) ?? [];
+			return {
+				Successful: entries.map((entry) => ({ Id: entry.Id })),
+			};
 		}) as typeof sqsClient.send;
 
 		const ctx = createCtx();
@@ -190,14 +194,16 @@ describe("handleTrackTokens", () => {
 		expect(mockState.queueCommands).toHaveLength(1);
 		expect(mockState.queueCommands[0]).toMatchObject({
 			QueueUrl: trackAsyncQueueUrl,
-			MessageDeduplicationId: "req_track_tokens_1",
 		});
-		expect(mockState.queueCommands[0]?.MessageGroupId).toMatch(
+		const entries = mockState.queueCommands[0]?.Entries as Array<
+			Record<string, unknown>
+		>;
+		expect(entries).toHaveLength(1);
+		expect(entries[0]?.MessageDeduplicationId).toBe("req_track_tokens_1");
+		expect(entries[0]?.MessageGroupId).toMatch(
 			/^org_123:sandbox:cus_123:ent_123:shard-[0-7]$/,
 		);
-		expect(
-			JSON.parse(mockState.queueCommands[0]?.MessageBody as string),
-		).toMatchObject({
+		expect(JSON.parse(entries[0]?.MessageBody as string)).toMatchObject({
 			name: "track",
 			data: {
 				customerId: "cus_123",

@@ -13,6 +13,7 @@ import {
 import { startPgPoolMonitor, stopPgPoolMonitor } from "./db/pgPoolMonitor.js";
 import { getRedactedDatabaseUrls } from "./db/redactDatabaseUrl.js";
 import { logger } from "./external/logtail/logtailUtils.js";
+import { globalAsyncTrackSqsBatcher } from "./internal/balances/track/AsyncTrackSqsBatcher.js";
 import {
 	startAllEdgeConfigPolling,
 	stopAllEdgeConfigPolling,
@@ -169,7 +170,10 @@ async function gracefulShutdown() {
 	shuttingDown = true;
 	console.log("Shutting down worker, flushing telemetry and closing DB...");
 	try {
-		await shutdownPrimarySqsSendBatcher();
+		await Promise.all([
+			globalAsyncTrackSqsBatcher.shutdown(),
+			shutdownPrimarySqsSendBatcher(),
+		]);
 
 		// Flush any buffered OTel spans before shutting down
 		if (otelSdk) {
