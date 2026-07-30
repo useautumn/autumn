@@ -21,10 +21,7 @@ import type { ClearCreditSystemCachePayload } from "@/internal/features/featureA
 import type { GenerateFeatureDisplayPayload } from "@/internal/features/workflows/generateFeatureDisplay.js";
 import { getSqsClient } from "./initSqs.js";
 import { JobName } from "./JobName.js";
-import {
-	PrimarySqsSendBatcher,
-	type SendPrimarySqsBatchArgs,
-} from "./PrimarySqsSendBatcher.js";
+import { PrimarySqsSendBatcher } from "./PrimarySqsSendBatcher.js";
 import type {
 	BatchResetCusEntsPayload,
 	SendProductsUpdatedPayload,
@@ -132,95 +129,133 @@ const sendBatchFailuresCounter = meter.createCounter(
 const getQueueName = ({ queueUrl }: { queueUrl: string }) =>
 	queueUrl.split("/").pop() ?? "unknown";
 
-const sendPrimarySqsBatch = async ({
+type SqsBatchMessage = {
+	jobName: string;
+	messageBody: string;
+	messageGroupId?: string;
+	messageDeduplicationId?: string;
+	delaySeconds?: number;
+};
+
+const sendSqsMessagesBatch = async ({
 	queueUrl,
 	entries,
-}: SendPrimarySqsBatchArgs): Promise<{
+}: {
+	queueUrl: string;
+	entries: SqsBatchMessage[];
+}): Promise<{
+	successCount: number;
 	failures: Array<{ index: number; reason: string }>;
 }> => {
 	const sqsClient = getSqsClient({ queueUrl });
 	const queueName = getQueueName({ queueUrl });
-	sendBatchCallsCounter.add(1, {
-		queue_name: queueName,
-		batch_size: entries.length,
-	});
-
-	const entryCountByJobName = new Map<string, number>();
-	for (const entry of entries) {
-		entryCountByJobName.set(
-			entry.jobName,
-			(entryCountByJobName.get(entry.jobName) ?? 0) + 1,
-		);
-	}
-	for (const [jobName, entryCount] of entryCountByJobName) {
-		sendBatchEntriesCounter.add(entryCount, {
-			queue_name: queueName,
-			job_name: jobName,
-		});
-	}
-
-	let response: SendMessageBatchCommandOutput;
-	try {
-		response = (await sqsClient.send(
-			new SendMessageBatchCommand({
-				QueueUrl: queueUrl,
-				Entries: entries.map((entry, index) => ({
-					Id: index.toString(),
-					MessageBody: entry.messageBody,
-					...(entry.delaySeconds !== undefined && {
-						DelaySeconds: entry.delaySeconds,
-					}),
-					...(entry.messageGroupId !== undefined && {
-						MessageGroupId: entry.messageGroupId,
-					}),
-					...(entry.messageDeduplicationId !== undefined && {
-						MessageDeduplicationId: entry.messageDeduplicationId,
-					}),
-				})),
-			}),
-		)) as SendMessageBatchCommandOutput;
-	} catch (error) {
-		sendBatchFailuresCounter.add(entries.length, {
-			queue_name: queueName,
-			failure_type: "transport",
-		});
-		throw error;
-	}
-
-	const successfulIds = new Set(
-		(response.Successful ?? []).map(({ Id }) => Id),
-	);
-	const failureReasonById = new Map(
-		(response.Failed ?? []).map(({ Id, Message, Code }) => [
-			Id,
-			Message ?? Code ?? "Unknown SQS batch failure",
-		]),
-	);
 	const failures: Array<{ index: number; reason: string }> = [];
-	for (const [index] of entries.entries()) {
-		const id = index.toString();
-		const failureReason = failureReasonById.get(id);
-		if (failureReason !== undefined) {
-			failures.push({ index, reason: failureReason });
-		} else if (!successfulIds.has(id)) {
-			failures.push({
-				index,
-				reason: "SQS batch response omitted the entry result",
+	let successCount = 0;
+
+	for (
+		let chunkStartIndex = 0;
+		chunkStartIndex < entries.length;
+		chunkStartIndex += SQS_SEND_MESSAGE_BATCH_LIMIT
+	) {
+		const chunk = entries.slice(
+			chunkStartIndex,
+			chunkStartIndex + SQS_SEND_MESSAGE_BATCH_LIMIT,
+		);
+		sendBatchCallsCounter.add(1, {
+			queue_name: queueName,
+			batch_size: chunk.length,
+		});
+
+		const entryCountByJobName = new Map<string, number>();
+		for (const entry of chunk) {
+			entryCountByJobName.set(
+				entry.jobName,
+				(entryCountByJobName.get(entry.jobName) ?? 0) + 1,
+			);
+		}
+		for (const [jobName, entryCount] of entryCountByJobName) {
+			sendBatchEntriesCounter.add(entryCount, {
+				queue_name: queueName,
+				job_name: jobName,
+			});
+		}
+
+		let response: SendMessageBatchCommandOutput;
+		try {
+			response = (await sqsClient.send(
+				new SendMessageBatchCommand({
+					QueueUrl: queueUrl,
+					Entries: chunk.map((entry, index) => ({
+						Id: index.toString(),
+						MessageBody: entry.messageBody,
+						...(entry.delaySeconds !== undefined && {
+							DelaySeconds: entry.delaySeconds,
+						}),
+						...(entry.messageGroupId !== undefined && {
+							MessageGroupId: entry.messageGroupId,
+						}),
+						...(entry.messageDeduplicationId !== undefined && {
+							MessageDeduplicationId: entry.messageDeduplicationId,
+						}),
+					})),
+				}),
+			)) as SendMessageBatchCommandOutput;
+		} catch (error) {
+			const reason =
+				error instanceof Error ? error.message : "Unknown SQS send error";
+			for (const [index] of chunk.entries()) {
+				failures.push({ index: chunkStartIndex + index, reason });
+			}
+			sendBatchFailuresCounter.add(chunk.length, {
+				queue_name: queueName,
+				failure_type: "transport",
+			});
+			continue;
+		}
+
+		const successfulIds = new Set(
+			(response.Successful ?? []).map(({ Id }) => Id),
+		);
+		const failureReasonById = new Map(
+			(response.Failed ?? []).map(({ Id, Message, Code }) => [
+				Id,
+				Message ?? Code ?? "Unknown SQS batch failure",
+			]),
+		);
+		successCount += successfulIds.size;
+
+		let chunkFailureCount = 0;
+		for (const [index] of chunk.entries()) {
+			const id = index.toString();
+			const failureReason = failureReasonById.get(id);
+			if (failureReason !== undefined) {
+				failures.push({
+					index: chunkStartIndex + index,
+					reason: failureReason,
+				});
+				chunkFailureCount += 1;
+			} else if (!successfulIds.has(id)) {
+				failures.push({
+					index: chunkStartIndex + index,
+					reason: "SQS batch response omitted the entry result",
+				});
+				chunkFailureCount += 1;
+			}
+		}
+
+		if (chunkFailureCount > 0) {
+			sendBatchFailuresCounter.add(chunkFailureCount, {
+				queue_name: queueName,
+				failure_type: "entry",
 			});
 		}
 	}
 
-	if (failures.length > 0) {
-		sendBatchFailuresCounter.add(failures.length, {
-			queue_name: queueName,
-			failure_type: "entry",
-		});
-	}
-	return { failures };
+	return { successCount, failures };
 };
 
 const globalPrimarySqsSendBatcher = new PrimarySqsSendBatcher({
-	sendBatch: sendPrimarySqsBatch,
+	sendBatch: sendSqsMessagesBatch,
 });
 
 export const flushPrimarySqsSendBatcher = (): Promise<void> =>
@@ -319,77 +354,18 @@ export const addTasksToQueueBatch = async <T extends keyof Payloads>({
 }): Promise<{
 	successCount: number;
 	failures: Array<{ index: number; reason: string }>;
-}> => {
-	const sqsClient = getSqsClient({ queueUrl });
-	const failures: Array<{ index: number; reason: string }> = [];
-	let successCount = 0;
-
-	for (
-		let chunkStartIndex = 0;
-		chunkStartIndex < entries.length;
-		chunkStartIndex += SQS_SEND_MESSAGE_BATCH_LIMIT
-	) {
-		const chunk = entries
-			.slice(chunkStartIndex, chunkStartIndex + SQS_SEND_MESSAGE_BATCH_LIMIT)
-			.map((entry, index) => {
-				const originalIndex = chunkStartIndex + index;
-
-				return {
-					originalIndex,
-					sqsEntry: {
-						Id: index.toString(),
-						MessageBody: JSON.stringify({
-							name: jobName as string,
-							data: entry.payload,
-						}),
-						MessageGroupId: entry.messageGroupId,
-						MessageDeduplicationId: entry.messageDeduplicationId,
-					},
-				};
-			});
-		const originalIndexById = new Map(
-			chunk.map((entry) => [entry.sqsEntry.Id, entry.originalIndex]),
-		);
-
-		const resolveOriginalIndex = (id: string | undefined) => {
-			if (id !== undefined) {
-				const mapped = originalIndexById.get(id);
-				if (mapped !== undefined) return mapped;
-				const parsed = Number.parseInt(id, 10);
-				if (Number.isFinite(parsed)) return chunkStartIndex + parsed;
-			}
-			return chunkStartIndex;
-		};
-
-		let response: SendMessageBatchCommandOutput;
-		try {
-			response = (await sqsClient.send(
-				new SendMessageBatchCommand({
-					QueueUrl: queueUrl,
-					Entries: chunk.map((entry) => entry.sqsEntry),
+}> =>
+	sendSqsMessagesBatch({
+		queueUrl,
+		entries: entries.map(
+			({ payload, messageGroupId, messageDeduplicationId }) => ({
+				jobName: jobName as string,
+				messageBody: JSON.stringify({
+					name: jobName as string,
+					data: payload,
 				}),
-			)) as SendMessageBatchCommandOutput;
-		} catch (error) {
-			const reason =
-				error instanceof Error ? error.message : "Unknown SQS send error";
-			for (const entry of chunk) {
-				failures.push({ index: entry.originalIndex, reason });
-			}
-			continue;
-		}
-
-		successCount += response.Successful?.length ?? 0;
-
-		for (const failedEntry of response.Failed ?? []) {
-			failures.push({
-				index: resolveOriginalIndex(failedEntry.Id),
-				reason:
-					failedEntry.Message ??
-					failedEntry.Code ??
-					"Unknown SQS batch failure",
-			});
-		}
-	}
-
-	return { successCount, failures };
-};
+				messageGroupId,
+				messageDeduplicationId,
+			}),
+		),
+	});
