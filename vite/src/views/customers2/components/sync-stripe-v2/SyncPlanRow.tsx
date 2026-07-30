@@ -3,7 +3,7 @@ import { Input, SearchableSelect } from "@autumn/ui";
 import { useState } from "react";
 import {
 	PlanEntityScopeSelector,
-	PlanScopeToggleButton,
+	ScopedPlanRow,
 	SelectedPlanRow,
 } from "@/components/forms/shared";
 import { useCustomerDisplayCurrency } from "@/hooks/common/useCustomerDisplayCurrency";
@@ -12,17 +12,22 @@ import { cn } from "@/lib/utils";
 import { useScopeEntitySearch } from "@/views/customers2/customer/hooks/useScopeEntitySearch";
 import { applyCustomizeToProduct, getBasePriceLabel } from "./syncPlanRowUtils";
 
-export type DraftPlan = SyncPlanInstance & { _key: string };
+export type DraftPlan = Omit<SyncPlanInstance, "entity_id"> & {
+	_key: string;
+	entity_id?: string | null;
+};
 
 export function SyncPlanRow({
 	plan,
 	products,
+	defaultEntityId,
 	onChange,
 	onRemove,
 	onCustomize,
 }: {
 	plan: DraftPlan;
 	products: ProductV2[];
+	defaultEntityId?: string;
 	onChange: (plan: DraftPlan) => void;
 	onRemove: () => void;
 	onCustomize: () => void;
@@ -33,7 +38,7 @@ export function SyncPlanRow({
 	const availableProducts = products.filter((p) => !p.archived);
 	const selectedProduct = products.find((p) => p.id === plan.plan_id);
 	const hasCustomize = Boolean(plan.customize);
-	const hasEntityScope = Boolean(plan.entity_id);
+	const hasEntityScope = plan.entity_id !== undefined;
 
 	const [scopeOpen, setScopeOpen] = useState<boolean>(hasEntityScope);
 	const {
@@ -41,7 +46,7 @@ export function SyncPlanRow({
 		entities,
 		isLoading: isEntitiesLoading,
 		setSearch: setEntitySearch,
-	} = useScopeEntitySearch({ selectedEntityId: plan.entity_id });
+	} = useScopeEntitySearch({ selectedEntityId: plan.entity_id ?? undefined });
 
 	if (!plan.plan_id) {
 		return (
@@ -89,71 +94,66 @@ export function SyncPlanRow({
 		originalPriceLabel !== null &&
 		currentPriceLabel !== null &&
 		originalPriceLabel !== currentPriceLabel;
+	const scopeSelector = hasEntities ? (
+		<PlanEntityScopeSelector
+			entities={entities}
+			value={plan.entity_id}
+			onChange={(entityId) => onChange({ ...plan, entity_id: entityId })}
+			inheritLabel={defaultEntityId ? "Default entity scope" : undefined}
+			showLabel={false}
+			wrapInSection={false}
+			onSearchChange={setEntitySearch}
+			isLoading={isEntitiesLoading}
+		/>
+	) : null;
+	const rowScope = scopeSelector
+		? {
+				open: scopeOpen,
+				onToggle: () => setScopeOpen((open) => !open),
+				selector: scopeSelector,
+			}
+		: undefined;
 
 	return (
-		<div className="space-y-1.5">
-			<div className="flex items-center gap-2">
-				<SelectedPlanRow
-					productId={plan.plan_id}
-					product={customizedProduct ?? selectedProduct}
-					isCustom={hasCustomize}
-					accessory={
-						isAddOn ? (
-							<Input
-								type="number"
-								min={1}
-								value={plan.quantity ?? 1}
-								onChange={(e) => {
-									const next = Number.parseInt(e.target.value, 10);
-									onChange({
-										...plan,
-										quantity: Number.isFinite(next) && next >= 1 ? next : 1,
-									});
-								}}
-								className="w-14 h-7 text-center text-xs"
-							/>
-						) : undefined
-					}
-					price={
-						currentPriceLabel ? (
-							<span
-								className={cn(
-									"text-xs tabular-nums",
-									isPriceCustom
-										? "text-emerald-500 font-medium"
-										: "text-tertiary-foreground",
-								)}
-							>
-								{currentPriceLabel}
-							</span>
-						) : undefined
-					}
-					onEdit={onCustomize}
-					onRemove={onRemove}
-				/>
-				{hasEntities && (
-					<PlanScopeToggleButton
-						open={scopeOpen}
-						onClick={() => setScopeOpen((open) => !open)}
-					/>
-				)}
-			</div>
-
-			{hasEntities && scopeOpen && (
-				<div className="ml-4 border-l border-border/40 pl-3">
-					<PlanEntityScopeSelector
-						entities={entities}
-						value={plan.entity_id}
-						onChange={(entityId) =>
-							onChange({ ...plan, entity_id: entityId ?? undefined })
-						}
-						showLabel={false}
-						wrapInSection={false}
-						onSearchChange={setEntitySearch}
-						isLoading={isEntitiesLoading}
-					/>
-				</div>
-			)}
-		</div>
+		<ScopedPlanRow scope={rowScope}>
+			<SelectedPlanRow
+				productId={plan.plan_id}
+				product={customizedProduct ?? selectedProduct}
+				isCustom={hasCustomize}
+				accessory={
+					isAddOn ? (
+						<Input
+							type="number"
+							min={1}
+							value={plan.quantity ?? 1}
+							onChange={(e) => {
+								const next = Number.parseInt(e.target.value, 10);
+								onChange({
+									...plan,
+									quantity: Number.isFinite(next) && next >= 1 ? next : 1,
+								});
+							}}
+							className="w-14 h-7 text-center text-xs"
+						/>
+					) : undefined
+				}
+				price={
+					currentPriceLabel ? (
+						<span
+							className={cn(
+								"text-xs tabular-nums",
+								isPriceCustom
+									? "text-emerald-500 font-medium"
+									: "text-tertiary-foreground",
+							)}
+						>
+							{currentPriceLabel}
+						</span>
+					) : undefined
+				}
+				onEdit={onCustomize}
+				onRemove={onRemove}
+			/>
+		</ScopedPlanRow>
 	);
 }

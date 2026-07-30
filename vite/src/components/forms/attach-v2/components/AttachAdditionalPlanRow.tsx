@@ -4,7 +4,7 @@ import { XIcon } from "@phosphor-icons/react";
 import { useState } from "react";
 import {
 	PlanEntityScopeSelector,
-	PlanScopeToggleButton,
+	ScopedPlanRow,
 	SelectedPlanRow,
 } from "@/components/forms/shared";
 import { useCusQuery } from "@/views/customers/customer/hooks/useCusQuery";
@@ -125,56 +125,53 @@ export function AttachAdditionalPlanRow({
 	const planIndex = formValues.additionalPlans.findIndex(
 		(candidate) => candidate._id === plan._id,
 	);
+	const scopeSelector =
+		!readOnly && hasEntities && planIndex !== -1 ? (
+			<PlanEntityScopeSelector
+				entities={entities}
+				value={plan.entityId}
+				onChange={(nextEntityId) =>
+					form.setFieldValue(`additionalPlans[${planIndex}]`, {
+						...plan,
+						entityId: nextEntityId,
+					})
+				}
+				inheritLabel={entityId ? "Default entity scope" : undefined}
+				showLabel={false}
+				wrapInSection={false}
+				onSearchChange={setEntitySearch}
+				isLoading={isEntitiesLoading}
+			/>
+		) : null;
+	const rowScope = scopeSelector
+		? {
+				open: scopeOpen,
+				onToggle: () => setScopeOpen((open) => !open),
+				selector: scopeSelector,
+			}
+		: undefined;
 
 	return (
-		<div className="space-y-1.5">
-			<div className="flex items-center gap-2">
-				<SelectedPlanRow
-					productId={plan.productId}
-					product={selectedProduct}
-					customItems={displayedItems}
-					isCustom={plan.isCustom || formValues.grantFree}
-					scope={
-						readOnly
-							? selectedEntity?.name || effectiveEntityId || "Customer-level"
-							: undefined
-					}
-					onEdit={
-						readOnly || formValues.grantFree
-							? undefined
-							: () => handleEditPlan({ additionalPlanId: plan._id })
-					}
-					onRemove={
-						readOnly ? undefined : () => handleRemovePlan({ id: plan._id })
-					}
-				/>
-				{!readOnly && hasEntities && (
-					<PlanScopeToggleButton
-						open={scopeOpen}
-						onClick={() => setScopeOpen((open) => !open)}
-					/>
-				)}
-			</div>
-			{!readOnly && scopeOpen && planIndex !== -1 && (
-				<div className="ml-4 border-l border-border/40 pl-3">
-					<PlanEntityScopeSelector
-						entities={entities}
-						value={plan.entityId}
-						onChange={(nextEntityId) =>
-							form.setFieldValue(`additionalPlans[${planIndex}]`, {
-								...plan,
-								entityId: nextEntityId,
-							})
-						}
-						inheritLabel={entityId ? "Default entity scope" : undefined}
-						showLabel={false}
-						withSeparator={false}
-						wrapInSection={false}
-						onSearchChange={setEntitySearch}
-						isLoading={isEntitiesLoading}
-					/>
-				</div>
-			)}
-		</div>
+		<ScopedPlanRow scope={rowScope}>
+			<SelectedPlanRow
+				productId={plan.productId}
+				product={selectedProduct}
+				customItems={displayedItems}
+				isCustom={plan.isCustom || formValues.grantFree}
+				scope={
+					readOnly
+						? selectedEntity?.name || effectiveEntityId || "Customer-level"
+						: undefined
+				}
+				onEdit={
+					readOnly || formValues.grantFree
+						? undefined
+						: () => handleEditPlan({ additionalPlanId: plan._id })
+				}
+				onRemove={
+					readOnly ? undefined : () => handleRemovePlan({ id: plan._id })
+				}
+			/>
+		</ScopedPlanRow>
 	);
 }

@@ -7,4 +7,5 @@ export * from "./PlanEntityScopeSelector";
 export * from "./PlanItemsSection";
 export * from "./PlanScopeToggleButton";
 export * from "./PlanSectionTitle";
+export * from "./ScopedPlanRow";
 export * from "./SelectedPlanRow";

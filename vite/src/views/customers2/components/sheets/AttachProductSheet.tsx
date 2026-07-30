@@ -318,7 +318,7 @@ function SelectContent() {
 								? {
 										selector: scopeSelector,
 										open: rootScopeOpen,
-										toggle: () => setRootScopeOpen((open) => !open),
+										onToggle: () => setRootScopeOpen((open) => !open),
 									}
 								: undefined
 						}

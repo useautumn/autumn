@@ -1,9 +1,9 @@
 import type { FullCustomer } from "@autumn/shared";
 import { InlineAction } from "@autumn/ui";
 import { PlusIcon } from "@phosphor-icons/react";
-import type { ReactNode } from "react";
 import {
-	PlanScopeToggleButton,
+	type PlanRowScope,
+	ScopedPlanRow,
 	SelectedPlanRow,
 } from "@/components/forms/shared";
 import { useCusQuery } from "@/views/customers/customer/hooks/useCusQuery";
@@ -15,11 +15,7 @@ import { AttachAdditionalPlanRow } from "./AttachAdditionalPlanRow";
 export function AttachProductSelection({
 	scope,
 }: {
-	scope?: {
-		selector: ReactNode;
-		open: boolean;
-		toggle: () => void;
-	};
+	scope?: PlanRowScope;
 } = {}) {
 	const {
 		form,
@@ -52,7 +48,7 @@ export function AttachProductSelection({
 	return (
 		<div className="space-y-2">
 			{isMultiPlan && productId ? (
-				<div className="flex items-center gap-2">
+				<ScopedPlanRow scope={scope}>
 					<SelectedPlanRow
 						productId={productId}
 						product={product}
@@ -60,10 +56,7 @@ export function AttachProductSelection({
 						isCustom={hasCustomizations || formValues.grantFree}
 						onEdit={formValues.grantFree ? undefined : () => handleEditPlan()}
 					/>
-					{scope && (
-						<PlanScopeToggleButton open={scope.open} onClick={scope.toggle} />
-					)}
-				</div>
+				</ScopedPlanRow>
 			) : (
 				<form.AppField name="productId">
 					{(field) => (
@@ -101,12 +94,6 @@ export function AttachProductSelection({
 						/>
 					)}
 				</form.AppField>
-			)}
-
-			{isMultiPlan && scope?.open && (
-				<div className="ml-4 border-l border-border/40 pl-3">
-					{scope.selector}
-				</div>
 			)}
 
 			{additionalPlanValues.map((plan) => (
