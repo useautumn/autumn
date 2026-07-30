@@ -165,7 +165,6 @@ export const createHonoApp = () => {
 
 	// API Middleware
 	app.route("/v1", apiRouter);
-
 	app.route("", internalRouter);
 
 	app.onError(errorMiddleware);
