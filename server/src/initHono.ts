@@ -165,6 +165,11 @@ export const createHonoApp = () => {
 
 	// API Middleware
 	app.route("/v1", apiRouter);
+
+	// Discovery paths are public by contract, so an unmatched one must 404 rather
+	// than reach internalRouter's session check, which 401s with a misleading code.
+	app.all("/.well-known/*", (c) => c.json({ error: "not_found" }, 404));
+
 	app.route("", internalRouter);
 
 	app.onError(errorMiddleware);
