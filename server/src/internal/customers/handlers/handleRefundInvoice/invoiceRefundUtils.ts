@@ -8,6 +8,7 @@ import {
 import { eq, sql } from "drizzle-orm";
 import type Stripe from "stripe";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
+import { autumnStripeRequestOptions } from "@/external/stripe/common/autumnStripeIdempotency.js";
 
 /** Resolve the Stripe charge from an invoice's payments list */
 export const resolveChargeFromInvoice = async ({
@@ -147,10 +148,13 @@ export const createRefundAndUpdateInvoice = async ({
 	stripeInvoiceId: string;
 	amountInCents: number;
 }): Promise<Stripe.Refund> => {
-	const stripeRefund = await stripeCli.refunds.create({
-		charge: chargeId,
-		amount: amountInCents,
-	});
+	const stripeRefund = await stripeCli.refunds.create(
+		{
+			charge: chargeId,
+			amount: amountInCents,
+		},
+		autumnStripeRequestOptions({ source: "refund" }),
+	);
 
 	const refundedAmount = stripeToAtmnAmount({
 		amount: stripeRefund.amount,

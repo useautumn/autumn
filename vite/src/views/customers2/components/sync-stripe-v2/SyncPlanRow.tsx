@@ -1,22 +1,17 @@
-import type { Entity, ProductV2, SyncPlanInstance } from "@autumn/shared";
+import type { ProductV2, SyncPlanInstance } from "@autumn/shared";
 import { Badge, Button, Input, SearchableSelect } from "@autumn/ui";
 import {
-	BuildingsIcon,
 	PackageIcon,
 	PencilSimpleIcon,
 	PuzzlePieceIcon,
 	XIcon,
 } from "@phosphor-icons/react";
-import { CheckIcon } from "lucide-react";
-import { useState } from "react";
 import { useCustomerDisplayCurrency } from "@/hooks/common/useCustomerDisplayCurrency";
 import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
 import { cn } from "@/lib/utils";
 import { applyCustomizeToProduct, getBasePriceLabel } from "./syncPlanRowUtils";
 
 export type DraftPlan = SyncPlanInstance & { _key: string };
-
-const CUSTOMER_LEVEL_VALUE = "";
 
 const PriceLabel = ({
 	label,
@@ -35,91 +30,15 @@ const PriceLabel = ({
 	</span>
 );
 
-type EntityOption = Entity | null;
-
-const EntityScopeSubRow = ({
-	entities,
-	scopeEntityId,
-	onChange,
-}: {
-	entities: Entity[];
-	scopeEntityId: string | undefined;
-	onChange: (entityId: string | undefined) => void;
-}) => {
-	const entityOptions: EntityOption[] = [null, ...entities];
-	return (
-		<div className="ml-4 pl-3 border-l border-border/40">
-			<SearchableSelect<EntityOption>
-				value={scopeEntityId ?? CUSTOMER_LEVEL_VALUE}
-				onValueChange={(value) =>
-					onChange(value === CUSTOMER_LEVEL_VALUE ? undefined : value)
-				}
-				options={entityOptions}
-				getOptionValue={(option) =>
-					option === null
-						? CUSTOMER_LEVEL_VALUE
-						: option.id || option.internal_id
-				}
-				getOptionLabel={(option) =>
-					option === null
-						? "Customer-level"
-						: option.name || option.id || "PENDING"
-				}
-				triggerClassName="w-full h-input"
-				placeholder="Select entity"
-				searchable
-				searchPlaceholder="Search entities..."
-				emptyText="No entities found"
-				renderValue={(option) =>
-					option === null || option === undefined ? (
-						<span className="text-muted-foreground text-xs">
-							Customer-level
-						</span>
-					) : (
-						<span className="text-muted-foreground text-xs truncate">
-							{option.name || option.id || "PENDING"}
-						</span>
-					)
-				}
-				renderOption={(option, isSelected) => {
-					if (option === null) {
-						return (
-							<>
-								<span className="text-sm">Customer-level</span>
-								{isSelected && <CheckIcon className="size-4 shrink-0" />}
-							</>
-						);
-					}
-					return (
-						<>
-							<div className="flex gap-2 items-center min-w-0 flex-1">
-								{option.name && (
-									<span className="text-sm shrink-0">{option.name}</span>
-								)}
-								<span className="truncate text-tertiary-foreground font-mono text-xs min-w-0">
-									{option.id || "PENDING"}
-								</span>
-							</div>
-							{isSelected && <CheckIcon className="size-4 shrink-0" />}
-						</>
-					);
-				}}
-			/>
-		</div>
-	);
-};
-
 export function SyncPlanRow({
 	plan,
 	products,
-	entities,
 	onChange,
 	onRemove,
 	onCustomize,
 }: {
 	plan: DraftPlan;
 	products: ProductV2[];
-	entities: Entity[];
 	onChange: (plan: DraftPlan) => void;
 	onRemove: () => void;
 	onCustomize: () => void;
@@ -130,9 +49,6 @@ export function SyncPlanRow({
 	const availableProducts = products.filter((p) => !p.archived);
 	const selectedProduct = products.find((p) => p.id === plan.plan_id);
 	const hasCustomize = Boolean(plan.customize);
-	const hasEntityScope = Boolean(plan.entity_id);
-
-	const [scopeOpen, setScopeOpen] = useState<boolean>(hasEntityScope);
 
 	if (!plan.plan_id) {
 		return (
@@ -236,22 +152,6 @@ export function SyncPlanRow({
 							"opacity-0 group-hover:opacity-100",
 						)}
 					>
-						{entities.length > 0 && (
-							<Button
-								variant="ghost"
-								size="icon"
-								className={cn(
-									"h-6 w-6",
-									scopeOpen || hasEntityScope
-										? "text-primary"
-										: "text-tertiary-foreground hover:text-foreground",
-								)}
-								onClick={() => setScopeOpen((v) => !v)}
-								aria-label="Set entity scope"
-							>
-								<BuildingsIcon size={13} />
-							</Button>
-						)}
 						<Button
 							variant="ghost"
 							size="icon"
@@ -270,14 +170,6 @@ export function SyncPlanRow({
 					</div>
 				</div>
 			</div>
-
-			{entities.length > 0 && scopeOpen && (
-				<EntityScopeSubRow
-					entities={entities}
-					scopeEntityId={plan.entity_id}
-					onChange={(entityId) => onChange({ ...plan, entity_id: entityId })}
-				/>
-			)}
 		</div>
 	);
 }

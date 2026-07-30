@@ -1,5 +1,6 @@
 import type { CatalogGetMappingsResponse, ProductV2 } from "@autumn/shared";
-import { Sheet, SheetContent, ShortcutButton } from "@autumn/ui";
+import { Button, Sheet, SheetContent, ShortcutButton } from "@autumn/ui";
+import { PlusIcon } from "@phosphor-icons/react";
 import { useStore } from "@tanstack/react-form";
 import { AnimatePresence, motion } from "motion/react";
 import { useState } from "react";
@@ -86,6 +87,14 @@ const PlanMappingDetailForm = ({
 		form.store,
 		(state) => state.values.item_mappings,
 	);
+	const additionalStripeProductIds = useStore(
+		form.store,
+		(state) => state.values.additional_stripe_product_ids,
+	);
+
+	const setAdditionalStripeProductIds = (
+		next: Array<{ stripe_product_id: string | null }>,
+	) => form.setFieldValue("additional_stripe_product_ids", next);
 	const affectedPriceIds = getAffectedCatalogPriceIds({
 		base,
 		products: productVersions,
@@ -188,6 +197,68 @@ const PlanMappingDetailForm = ({
 							)}
 						</AnimatePresence>
 					)}
+
+					{additionalStripeProductIds.map((entry, index) => {
+						const additionalResolved = resolveMapping({
+							stripeProductId: entry.stripe_product_id,
+							backendStatus: planMapping.additional_mappings[index]?.status,
+							stripeConnected: mappings.stripe_connected,
+							stripeProductsById: knownStripeProductsById,
+							isResolving,
+						});
+
+						return (
+							<MappingField
+								isSearching={isSearching}
+								// biome-ignore lint/suspicious/noArrayIndexKey: rows are positional, ids may be null
+								key={`additional-${index}`}
+								knownProducts={knownStripeProducts}
+								label={
+									<span className="text-tertiary-foreground">
+										Additional Stripe product
+									</span>
+								}
+								onRemove={() =>
+									setAdditionalStripeProductIds(
+										additionalStripeProductIds.filter(
+											(_, position) => position !== index,
+										),
+									)
+								}
+								onSearchChange={setSearch}
+								onStripeProductChange={(value) =>
+									setAdditionalStripeProductIds(
+										additionalStripeProductIds.map((current, position) =>
+											position === index
+												? { stripe_product_id: value }
+												: current,
+										),
+									)
+								}
+								removeTooltip="Remove additional ID"
+								status={additionalResolved.status}
+								statusPending={additionalResolved.pending}
+								stripeProductId={entry.stripe_product_id}
+								stripeProducts={selectStripeProducts}
+							/>
+						);
+					})}
+
+					<Button
+						className="w-fit text-tertiary-foreground"
+						onClick={() =>
+							setAdditionalStripeProductIds([
+								...additionalStripeProductIds,
+								{ stripe_product_id: null },
+							])
+						}
+						size="sm"
+						type="button"
+						variant="muted"
+					>
+						<PlusIcon size={12} />
+						Add additional ID
+					</Button>
 				</div>
 
 				{planMapping.item_mappings.length > 0 && (

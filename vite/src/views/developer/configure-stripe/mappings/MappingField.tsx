@@ -3,7 +3,7 @@ import type {
 	CatalogStripeProduct,
 } from "@autumn/shared";
 import { IconTooltipButton, Skeleton } from "@autumn/ui";
-import { CaretRightIcon } from "@phosphor-icons/react";
+import { CaretRightIcon, TrashIcon } from "@phosphor-icons/react";
 import type { ReactNode } from "react";
 import { StripeIcon } from "@/components/v2/icons/AutumnIcons";
 import { cn } from "@/lib/utils";
@@ -25,6 +25,8 @@ export const MappingField = ({
 	disabled,
 	expanded,
 	onToggleExpanded,
+	onRemove,
+	removeTooltip = "Remove",
 }: {
 	label: ReactNode;
 	sublabel?: ReactNode;
@@ -39,6 +41,8 @@ export const MappingField = ({
 	disabled?: boolean;
 	expanded?: boolean;
 	onToggleExpanded?: () => void;
+	onRemove?: () => void;
+	removeTooltip?: string;
 }) => {
 	const getStripeProductHref = useStripeProductLink();
 
@@ -98,6 +102,13 @@ export const MappingField = ({
 							)
 						}
 						tooltip="Open in Stripe"
+					/>
+				)}
+				{onRemove && (
+					<IconTooltipButton
+						icon={<TrashIcon size={14} />}
+						onClick={onRemove}
+						tooltip={removeTooltip}
 					/>
 				)}
 			</div>

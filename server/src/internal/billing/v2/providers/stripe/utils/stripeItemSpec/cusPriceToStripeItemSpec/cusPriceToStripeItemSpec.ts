@@ -11,6 +11,7 @@ import {
 	isPrepaidPrice,
 	orgToCurrency,
 	type StripeItemSpec,
+	type StripeItemSpecMode,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { allocatedToStripeItemSpec } from "./allocatedToStripeItemSpec";
@@ -42,20 +43,21 @@ export const cusPriceToStripeItemSpec = ({
 		? billingContextToCurrency({ org: ctx.org, billingContext })
 		: orgDefault;
 
-	let spec: StripeItemSpec | null = null;
+	const buildSpec = (mode?: StripeItemSpecMode): StripeItemSpec | null => {
+		// 1. Fixed / one-off price (no entitlement needed)
+		if (isFixedPrice(price)) {
+			const config = price.config as FixedPriceConfig;
+			if ((config.amount ?? 0) <= 0) return null;
 
-	// 1. Fixed / one-off price (no entitlement needed)
-	if (isFixedPrice(price)) {
-		const config = price.config as FixedPriceConfig;
-		if ((config.amount ?? 0) <= 0) return null;
+			return fixedPriceToStripeItemSpec({
+				cusPrice,
+				cusProduct,
+				currency,
+				orgDefault,
+				options: { mode },
+			});
+		}
 
-		spec = fixedPriceToStripeItemSpec({
-			cusPrice,
-			cusProduct,
-			currency,
-			orgDefault,
-		});
-	} else {
 		// Resolve cusEntWithCusProduct for usage-based prices
 		const cusEntWithCusProduct = cusPriceToCusEntWithCusProduct({
 			cusProduct,
@@ -69,7 +71,7 @@ export const cusPriceToStripeItemSpec = ({
 
 		// 2. Prepaid (usage-in-advance)
 		if (isPrepaidPrice(price)) {
-			spec = prepaidToStripeItemSpec({
+			return prepaidToStripeItemSpec({
 				ctx,
 				cusEntWithCusProduct,
 				currency,
@@ -77,13 +79,14 @@ export const cusPriceToStripeItemSpec = ({
 				options: {
 					...options,
 					billingVersion: billingContext?.billingVersion,
+					mode,
 				},
 			});
 		}
 
 		// 3. Consumable (usage-in-arrear)
 		if (isConsumablePrice(price)) {
-			spec = consumableToStripeItemSpec({
+			return consumableToStripeItemSpec({
 				cusEntWithCusProduct,
 				currency,
 				orgDefault,
@@ -92,12 +95,27 @@ export const cusPriceToStripeItemSpec = ({
 
 		// 4. Allocated (in-arrear prorated)
 		if (isAllocatedPrice(price)) {
-			spec = allocatedToStripeItemSpec({
+			return allocatedToStripeItemSpec({
 				cusEntWithCusProduct,
 				currency,
 				orgDefault,
 			});
 		}
+
+		return null;
+	};
+
+	let spec: StripeItemSpec | null;
+	try {
+		spec = buildSpec();
+	} catch (error) {
+		// Read-only rendering (verify): a fixed/prepaid price that can't render
+		// its stored Stripe id is re-rendered in inline mode instead of failing.
+		const canRetryInline =
+			billingContext?.actionSource === "verify" &&
+			(isFixedPrice(price) || isPrepaidPrice(price));
+		if (!canRetryInline) throw error;
+		spec = buildSpec("inline");
 	}
 
 	if (!spec) {

@@ -29,10 +29,17 @@ const message = z.string().optional().meta({
 	description: "Human-readable one-line description of the mismatch.",
 });
 
+/** Stamped onto every mismatch by the verify action. */
+const severity = z.enum(["error", "warning"]).optional().meta({
+	description:
+		"How serious the mismatch is — warnings (e.g. a Stripe-only subscription) can be deliberate.",
+});
+
 /** A mismatch on a plain (non-prepaid, non-base) subscription item. */
 export const ItemMismatchSchema = z.object({
 	type: z.literal("item_mismatch"),
 	message,
+	severity,
 	reason: ItemMismatchReasonSchema,
 	expected_price_id: z.string().optional(),
 	actual_price_id: z.string().optional(),
@@ -40,6 +47,11 @@ export const ItemMismatchSchema = z.object({
 	feature_id: z.string().optional(),
 	expected_quantity: z.number().optional(),
 	actual_quantity: z.number().optional(),
+	/** Display context: plan name + major-unit price, when resolvable. */
+	plan_name: z.string().optional(),
+	price_amount: z.number().optional(),
+	price_interval: z.string().optional(),
+	price_interval_count: z.number().optional(),
 	phase_starts_at: z.number().optional().meta({
 		description:
 			"Present when the mismatch is inside a future scheduled phase rather than the current subscription.",
@@ -51,11 +63,18 @@ export type ItemMismatch = z.infer<typeof ItemMismatchSchema>;
 export const BasePriceMismatchSchema = z.object({
 	type: z.literal("base_price_mismatch"),
 	message,
+	severity,
 	reason: z.enum(["missing", "unexpected", "amount_mismatch"]),
 	expected_price_id: z.string().optional(),
 	actual_price_id: z.string().optional(),
 	expected_amount: z.string().optional(),
 	actual_amount: z.string().optional(),
+	/** Display context: plan name + major-unit price (e.g. Pro at 300/mo). */
+	plan_name: z.string().optional(),
+	price_amount: z.number().optional(),
+	price_interval: z.string().optional(),
+	price_interval_count: z.number().optional(),
+	expected_quantity: z.number().optional(),
 	phase_starts_at: z.number().optional(),
 });
 export type BasePriceMismatch = z.infer<typeof BasePriceMismatchSchema>;
@@ -64,6 +83,7 @@ export type BasePriceMismatch = z.infer<typeof BasePriceMismatchSchema>;
 export const PrepaidQuantityMismatchSchema = z.object({
 	type: z.literal("prepaid_quantity_mismatch"),
 	message,
+	severity,
 	feature_id: z.string(),
 	expected_quantity: z.number(),
 	actual_quantity: z.number(),
@@ -77,6 +97,7 @@ export type PrepaidQuantityMismatch = z.infer<
 export const PrepaidPriceMismatchSchema = z.object({
 	type: z.literal("prepaid_price_mismatch"),
 	message,
+	severity,
 	feature_id: z.string(),
 	expected_unit_amount: z.string(),
 	actual_unit_amount: z.string(),
@@ -87,6 +108,7 @@ export type PrepaidPriceMismatch = z.infer<typeof PrepaidPriceMismatchSchema>;
 export const ScheduleMismatchSchema = z.object({
 	type: z.literal("schedule_mismatch"),
 	message,
+	severity,
 	reason: z.enum([
 		"missing_schedule",
 		"unexpected_schedule",
@@ -96,6 +118,8 @@ export const ScheduleMismatchSchema = z.object({
 	]),
 	expected_phase_count: z.number().optional(),
 	actual_phase_count: z.number().optional(),
+	/** Upcoming phase start times (unix seconds) on the unexpected schedule. */
+	actual_phase_starts_at: z.array(z.number()).optional(),
 	phase_starts_at: z.number().optional(),
 });
 export type ScheduleMismatch = z.infer<typeof ScheduleMismatchSchema>;
@@ -103,6 +127,7 @@ export type ScheduleMismatch = z.infer<typeof ScheduleMismatchSchema>;
 export const CancelStateMismatchSchema = z.object({
 	type: z.literal("cancel_state_mismatch"),
 	message,
+	severity,
 	expected_canceling: z.boolean(),
 	actual_canceling: z.boolean(),
 });
@@ -111,24 +136,27 @@ export type CancelStateMismatch = z.infer<typeof CancelStateMismatchSchema>;
 export const RewardMismatchSchema = z.object({
 	type: z.literal("reward_mismatch"),
 	message,
+	severity,
 	missing_reward_ids: z.array(z.string()),
 	unexpected_reward_ids: z.array(z.string()),
 });
 export type RewardMismatch = z.infer<typeof RewardMismatchSchema>;
 
 /** An active Stripe subscription with no Autumn customer products linked to it. */
-export const SubscriptionNotLinkedMismatchSchema = z.object({
-	type: z.literal("subscription_not_linked"),
+export const StripeSubNotInAutumnMismatchSchema = z.object({
+	type: z.literal("stripe_sub_not_in_autumn"),
 	message,
+	severity,
 });
-export type SubscriptionNotLinkedMismatch = z.infer<
-	typeof SubscriptionNotLinkedMismatchSchema
+export type StripeSubNotInAutumnMismatch = z.infer<
+	typeof StripeSubNotInAutumnMismatchSchema
 >;
 
 /** Autumn products link to a Stripe subscription outside the customer's active set. */
 export const StaleSubscriptionLinkMismatchSchema = z.object({
 	type: z.literal("stale_subscription_link"),
 	message,
+	severity,
 });
 export type StaleSubscriptionLinkMismatch = z.infer<
 	typeof StaleSubscriptionLinkMismatchSchema
@@ -139,6 +167,7 @@ export type StaleSubscriptionLinkMismatch = z.infer<
 export const ExpectedStateErrorMismatchSchema = z.object({
 	type: z.literal("expected_state_error"),
 	message,
+	severity,
 	error: z.string(),
 });
 export type ExpectedStateErrorMismatch = z.infer<
@@ -153,7 +182,7 @@ export const SubscriptionMismatchSchema = z.discriminatedUnion("type", [
 	ScheduleMismatchSchema,
 	CancelStateMismatchSchema,
 	RewardMismatchSchema,
-	SubscriptionNotLinkedMismatchSchema,
+	StripeSubNotInAutumnMismatchSchema,
 	StaleSubscriptionLinkMismatchSchema,
 	ExpectedStateErrorMismatchSchema,
 ]);

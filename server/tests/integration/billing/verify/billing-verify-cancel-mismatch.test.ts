@@ -78,3 +78,63 @@ test.concurrent(
 		]);
 	},
 );
+
+test.concurrent(
+	`${chalk.yellowBright("billing-verify cancel-mismatch 2: cancel implemented via end_behavior=cancel schedule -> correct")}`,
+	async () => {
+		const customerId = "verify-cancel-via-schedule";
+
+		const pro = products.pro({ id: "pro", items: [] });
+
+		const { ctx } = await initScenario({
+			customerId,
+			setup: [
+				s.customer({ paymentMethod: "success" }),
+				s.products({ list: [pro] }),
+			],
+			actions: [
+				s.attach({ productId: pro.id }),
+				s.cancel({ productId: pro.id }),
+			],
+		});
+
+		const stripeCustomerId = await stripeCustomerIdFor({ ctx, customerId });
+		const [sub] = await listActiveStripeSubscriptions({
+			ctx,
+			stripeCustomerId,
+		});
+		expect(sub.cancel_at).not.toBeNull();
+
+		// Same cancel, implemented as a schedule instead of a bare cancel_at —
+		// one phase ending at the cancel time, then the schedule cancels.
+		await ctx.stripeCli.subscriptions.update(sub.id, {
+			cancel_at_period_end: false,
+		});
+		const schedule = await ctx.stripeCli.subscriptionSchedules.create({
+			from_subscription: sub.id,
+		});
+		await ctx.stripeCli.subscriptionSchedules.update(schedule.id, {
+			end_behavior: "cancel",
+			phases: [
+				{
+					start_date: schedule.phases[0].start_date,
+					end_date: sub.cancel_at as number,
+					items: sub.items.data.map((item) => ({
+						price: item.price.id,
+						...(item.price.recurring?.usage_type === "licensed"
+							? { quantity: item.quantity ?? 1 }
+							: {}),
+					})),
+				},
+			],
+		});
+
+		const result = await verify({ ctx, params: { customer_id: customerId } });
+
+		// ── Contract: a schedule that cancels at the expected time IS the
+		// expected cancel — no mismatch. ──────────────────────────────────
+		expect(result.subscriptions.length).toBe(1);
+		expect(result.subscriptions[0].mismatches).toEqual([]);
+		expect(result.subscriptions[0].status).toBe("correct");
+	},
+);
