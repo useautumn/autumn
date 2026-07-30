@@ -114,6 +114,31 @@ describe("FilteringSpanProcessor", () => {
 		expect(delegate.ended).toEqual([source]);
 	});
 
+	test("exports the original span when custom processing fails", () => {
+		const delegate = new CapturingSpanProcessor();
+		const processor = new FilteringSpanProcessor(delegate);
+		const source = createSpan({
+			name: "drizzle.select",
+			attributes: { "db.statement": "select 1" },
+		});
+
+		Object.assign(
+			processor as unknown as {
+				spanIngestCompactor: { compact: () => ReadableSpan };
+			},
+			{
+				spanIngestCompactor: {
+					compact: () => {
+						throw new Error("compaction failed");
+					},
+				},
+			},
+		);
+
+		expect(() => processor.onEnd(source)).not.toThrow();
+		expect(delegate.ended).toEqual([source]);
+	});
+
 	test("keeps SQL on repeated slow Drizzle spans at export", () => {
 		const delegate = new CapturingSpanProcessor();
 		const processor = new FilteringSpanProcessor(delegate);
