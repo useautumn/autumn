@@ -58,12 +58,14 @@ export const writeEdgeConfigTimestamp = async ({
 	s3Client?: S3Client;
 } = {}): Promise<string> => {
 	const { bucket } = getAdminS3Config();
-	const updatedAt = new Date().toISOString();
-	const changeId = randomUUID();
 	const client = getClient(s3Client);
 
 	let lastError: unknown;
 	for (let attempt = 1; attempt <= WRITE_ATTEMPTS; attempt++) {
+		// Fresh marker per attempt: a retry reusing the first marker can overwrite a
+		// concurrent writer's signal with a value pollers already observed.
+		const updatedAt = new Date().toISOString();
+		const changeId = randomUUID();
 		try {
 			await client.send(
 				new PutObjectCommand({

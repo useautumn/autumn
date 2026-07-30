@@ -278,6 +278,34 @@ describe("createEdgeConfigStore", () => {
 	});
 
 	describe("writeToSource", () => {
+		// The config object is already durable at this point; only the propagation
+		// signal failed, and the registry backstop still picks it up.
+		test("keeps the written config locally when the timestamp write fails", async () => {
+			const send = jest.fn(async (command: unknown) => {
+				const input = (command as { input?: { Key?: string; Body?: string } })
+					.input;
+				const name = command?.constructor?.name;
+				if (name === "GetObjectCommand") return makeBody(defaultConfig());
+				if (input?.Key === ADMIN_EDGE_CONFIG_TIMESTAMP_KEY) {
+					throw new Error("AccessDenied");
+				}
+				return {};
+			});
+
+			store = createEdgeConfigStore<TestConfig>({
+				s3Key: "admin/test-config.json",
+				schema: TestConfigSchema,
+				defaultValue: defaultConfig,
+				s3Client: { send } as unknown as S3Client,
+			});
+
+			await store.writeToSource({
+				config: { enabled: true, message: "written" },
+			});
+
+			expect(store.get()).toEqual({ enabled: true, message: "written" });
+		});
+
 		test("updates local cache immediately after write", async () => {
 			const mockClient = createMockS3Client({
 				getResponse: () => makeBody(defaultConfig()),

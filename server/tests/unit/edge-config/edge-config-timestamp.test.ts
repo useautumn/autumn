@@ -68,6 +68,27 @@ describe("edge config timestamp", () => {
 		expect(timestamp).toContain(":");
 	});
 
+	// A retry that reuses the first attempt's marker can overwrite a concurrent
+	// writer's signal with a value pollers have already observed and skipped.
+	test("uses a distinct marker on each retry attempt", async () => {
+		const bodies: string[] = [];
+		let attempts = 0;
+		const send = jest.fn(async (command: unknown) => {
+			attempts++;
+			const input = (command as { input: { Body: string } }).input;
+			bodies.push(input.Body);
+			if (attempts < 2) throw new Error("InternalError");
+			return {};
+		});
+		const s3Client = { send } as unknown as S3Client;
+
+		const timestamp = await writeEdgeConfigTimestamp({ s3Client });
+		const changeIds = bodies.map((b) => JSON.parse(b).changeId);
+
+		expect(new Set(changeIds).size).toBe(2);
+		expect(timestamp).toContain(changeIds[1]);
+	});
+
 	test("surfaces the error once retries are exhausted", async () => {
 		const send = jest.fn(async (_command: unknown) => {
 			throw new Error("AccessDenied");

@@ -144,7 +144,13 @@ export const createEdgeConfigStore = <T>({
 		}
 	};
 
-	const writeToSource = async ({ config }: { config: T }) => {
+	const writeToSource = async ({
+		config,
+		logger,
+	}: {
+		config: T;
+		logger?: Logger;
+	}) => {
 		// Override mode: update the in-memory config only (no S3 creds available).
 		if (override) {
 			runtimeConfig = config;
@@ -176,7 +182,15 @@ export const createEdgeConfigStore = <T>({
 				ContentType: "application/json",
 			}),
 		);
-		await writeEdgeConfigTimestamp({ s3Client: client });
+		// The config object is durable by now, so a lost signal must not fail the
+		// write or strand this process on the old value; the backstop still catches it.
+		try {
+			await writeEdgeConfigTimestamp({ s3Client: client });
+		} catch (error) {
+			logger?.error(
+				`Edge config "${s3Key}" written but timestamp signal failed; propagation waits for the backstop refresh: ${error}`,
+			);
+		}
 
 		runtimeConfig = config;
 		runtimeStatus = {
