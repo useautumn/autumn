@@ -3,7 +3,7 @@ import type {
 	CreateScheduleBillingContext,
 	FullCusProduct,
 } from "@autumn/shared";
-import { CusProductStatus } from "@autumn/shared";
+import { CusProductStatus, isCusProductOnEntity } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { computeAttachNewCustomerProduct } from "@/internal/billing/v2/actions/attach/compute/computeAttachNewCustomerProduct";
 import { productContextToAttachBillingContext } from "@/internal/billing/v2/utils/billingContext/productContextToAttachBillingContext";
@@ -45,7 +45,11 @@ const insertImmediateCustomerProducts = ({
 	billingContext.productContexts.map((productContext) => {
 		const expiredSameProduct = expiredCustomerProducts.find(
 			(customerProduct) =>
-				customerProduct.product.id === productContext.fullProduct.id,
+				customerProduct.product.id === productContext.fullProduct.id &&
+				isCusProductOnEntity({
+					cusProduct: customerProduct,
+					internalEntityId: productContext.entity?.internal_id,
+				}),
 		);
 
 		const attachBillingContext = productContextToAttachBillingContext({

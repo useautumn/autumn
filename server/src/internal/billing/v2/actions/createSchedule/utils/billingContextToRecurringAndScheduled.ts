@@ -3,13 +3,12 @@ import type {
 	FullCusProduct,
 } from "@autumn/shared";
 import {
-	CusProductStatus,
-	customerProductHasActiveStatus,
+	customerProductsToRecurringActiveAndScheduled,
 	isCusProductOnEntity,
-	isCustomerProductOneOff,
+	isCustomerProductAddOn,
 } from "@autumn/shared";
 
-/** Split the billing context's customer products into recurring-active and recurring-scheduled, scoped to the schedule's entity level. */
+/** Split recurring products across scopes represented by the immediate plans. */
 export const billingContextToRecurringAndScheduled = ({
 	billingContext,
 }: {
@@ -18,23 +17,47 @@ export const billingContextToRecurringAndScheduled = ({
 	recurringActive: FullCusProduct[];
 	recurringScheduled: FullCusProduct[];
 } => {
-	const internalEntityId = billingContext.fullCustomer.entity?.internal_id;
-	const recurringActive: FullCusProduct[] = [];
-	const recurringScheduled: FullCusProduct[] = [];
+	const customerProductsById = new Map<string, FullCusProduct>();
 
-	for (const customerProduct of billingContext.fullCustomer.customer_products) {
-		if (isCustomerProductOneOff(customerProduct)) continue;
-		if (
-			!isCusProductOnEntity({ cusProduct: customerProduct, internalEntityId })
-		)
-			continue;
-
-		if (customerProductHasActiveStatus(customerProduct)) {
-			recurringActive.push(customerProduct);
-		} else if (customerProduct.status === CusProductStatus.Scheduled) {
-			recurringScheduled.push(customerProduct);
+	for (const productContext of billingContext.productContexts) {
+		const internalEntityId = productContext.entity?.internal_id;
+		for (const customerProduct of productContext.scopeCustomerProducts) {
+			if (
+				isCusProductOnEntity({ cusProduct: customerProduct, internalEntityId })
+			) {
+				customerProductsById.set(customerProduct.id, customerProduct);
+			}
 		}
 	}
 
-	return { recurringActive, recurringScheduled };
+	return customerProductsToRecurringActiveAndScheduled({
+		customerProducts: [...customerProductsById.values()],
+	});
+};
+
+/** Keep persisted phases complete; preserved add-ons are absent from the insert plan. */
+export const addPreservedAddOnsToSchedulePhases = ({
+	billingContext,
+	phases,
+}: {
+	billingContext: CreateScheduleBillingContext;
+	phases: { startsAt: number; customerProductIds: string[] }[];
+}) => {
+	if (!billingContext.preserveAddOns) return phases;
+
+	const { recurringActive } = billingContextToRecurringAndScheduled({
+		billingContext,
+	});
+	const preservedAddOnIds = [
+		...new Set(
+			recurringActive.filter(isCustomerProductAddOn).map(({ id }) => id),
+		),
+	];
+
+	return phases.map((phase) => ({
+		...phase,
+		customerProductIds: [
+			...new Set([...phase.customerProductIds, ...preservedAddOnIds]),
+		],
+	}));
 };

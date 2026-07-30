@@ -6,6 +6,7 @@ import {
 	isProductPaidAndRecurring,
 	RecaseError,
 } from "@autumn/shared";
+import { StatusCodes } from "http-status-codes";
 import type { DrizzleCli } from "@/db/initDrizzle";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { handleUnsupportedLicenseActionErrors } from "@/internal/billing/v2/common/errors/handleUnsupportedLicenseActionErrors";
@@ -50,6 +51,14 @@ export const handleCreateScheduleErrors = async ({
 	}
 
 	handleFirstPhaseStartDateErrors({ billingContext, preview });
+
+	if (billingContext.trialContext?.onEnd === "revert") {
+		throw new RecaseError({
+			code: ErrCode.InvalidRequest,
+			message: "Cannot use on_end: 'revert' with create_schedule.",
+			statusCode: StatusCodes.BAD_REQUEST,
+		});
+	}
 
 	const allImmediateProductsFree = billingContext.fullProducts.every(
 		(product) => isFreeProduct({ product }),

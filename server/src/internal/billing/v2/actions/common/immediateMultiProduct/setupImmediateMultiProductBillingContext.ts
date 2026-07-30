@@ -28,6 +28,14 @@ import {
 	handleFreeTrialParam,
 } from "@/internal/billing/v2/setup/trialContext";
 
+export type ImmediateMultiProductParams = Omit<MultiAttachParamsV0, "plans"> & {
+	plans: Array<
+		MultiAttachParamsV0["plans"][number] & {
+			entity_id?: string | null;
+		}
+	>;
+};
+
 /** Resolve checkout mode for immediate multi-product billing. */
 const setupImmediateMultiProductCheckoutMode = ({
 	paymentMethod,
@@ -122,7 +130,7 @@ export const setupImmediateMultiProductBillingContext = async ({
 	includeScheduledProductsForScheduleLookup,
 }: {
 	ctx: AutumnContext;
-	params: MultiAttachParamsV0;
+	params: ImmediateMultiProductParams;
 	preview?: boolean;
 	billingStartsAt?: number;
 	billingStartsAtToleranceMs?: number;
@@ -132,9 +140,32 @@ export const setupImmediateMultiProductBillingContext = async ({
 		ctx,
 		params,
 	});
+	const scopedFullCustomers = new Map<
+		string | undefined,
+		Promise<typeof fullCustomer>
+	>([[params.entity_id, Promise.resolve(fullCustomer)]]);
+	const getScopedFullCustomer = (planEntityId?: string | null) => {
+		let entityId = planEntityId;
+		if (entityId === undefined) entityId = params.entity_id;
+		if (entityId === null) entityId = undefined;
+
+		const cached = scopedFullCustomers.get(entityId);
+		if (cached) return cached;
+
+		const pending = setupFullCustomerContext({
+			ctx,
+			params: { customer_id: params.customer_id, entity_id: entityId },
+			withEntities: false,
+		});
+		scopedFullCustomers.set(entityId, pending);
+		return pending;
+	};
 
 	const productContexts: MultiAttachProductContext[] = await Promise.all(
 		params.plans.map(async (plan) => {
+			const scopedFullCustomer = await getScopedFullCustomer(plan.entity_id);
+			const entity = scopedFullCustomer.entity;
+
 			const { fullProduct, customPrices, customEnts } =
 				await setupAttachProductContext({
 					ctx,
@@ -144,12 +175,12 @@ export const setupImmediateMultiProductBillingContext = async ({
 						customize: plan.customize,
 						version: plan.version,
 					},
-					fullCustomer,
+					fullCustomer: scopedFullCustomer,
 				});
 
 			const { currentCustomerProduct, scheduledCustomerProduct } =
 				setupAttachTransitionContext({
-					fullCustomer,
+					fullCustomer: scopedFullCustomer,
 					attachProduct: fullProduct,
 				});
 
@@ -168,6 +199,8 @@ export const setupImmediateMultiProductBillingContext = async ({
 				customPrices: customPrices ?? [],
 				customEnts: customEnts ?? [],
 				featureQuantities,
+				entity,
+				scopeCustomerProducts: scopedFullCustomer.customer_products,
 				currentCustomerProduct,
 				scheduledCustomerProduct,
 				externalId: plan.subscription_id,

@@ -6,14 +6,16 @@ import {
 	isPastStartDate,
 	isProductPaidAndRecurring,
 	type MultiAttachBillingContext,
-	type MultiAttachParamsV0,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { setupAttachEndOfCycleMs } from "@/internal/billing/v2/actions/attach/setup/setupAttachEndOfCycleMs";
 import { setupAnchorResetRefund } from "@/internal/billing/v2/setup/setupAnchorResetRefund";
 import { setupBillingCycleAnchor } from "@/internal/billing/v2/setup/setupBillingCycleAnchor";
 import { setupResetCycleAnchor } from "@/internal/billing/v2/setup/setupResetCycleAnchor";
-import { setupImmediateMultiProductBillingContext } from "../../common/immediateMultiProduct/setupImmediateMultiProductBillingContext";
+import {
+	type ImmediateMultiProductParams,
+	setupImmediateMultiProductBillingContext,
+} from "../../common/immediateMultiProduct/setupImmediateMultiProductBillingContext";
 import { FIRST_PHASE_TOLERANCE_MS } from "../errors/handleFirstPhaseStartDateErrors";
 import {
 	getInitialCreateSchedulePhase,
@@ -80,17 +82,20 @@ const phaseToImmediateParams = ({
 }: {
 	params: CreateScheduleParamsV0;
 	phase: CreateScheduleParamsV0["phases"][number];
-}): MultiAttachParamsV0 => ({
+}): ImmediateMultiProductParams => ({
 	customer_id: params.customer_id,
 	entity_id: params.entity_id,
 	plans: phase.plans.map((plan) => ({
 		plan_id: plan.plan_id,
+		entity_id: plan.entity_id,
 		customize: plan.customize,
 		feature_quantities: plan.feature_quantities,
 		version: plan.version,
 		subscription_id: plan.subscription_id,
 	})),
 	invoice_mode: params.invoice_mode,
+	free_trial: params.free_trial,
+	currency: params.currency,
 	discounts: params.discounts,
 	success_url: params.success_url,
 	checkout_session_params: params.checkout_session_params,
@@ -199,7 +204,10 @@ export const setupCreateScheduleBillingContext = async ({
 	});
 
 	validateCreateSchedulePhasePlans({
-		fullProducts: billingContext.fullProducts,
+		plans: billingContext.productContexts.map((productContext) => ({
+			fullProduct: productContext.fullProduct,
+			scopeId: productContext.entity?.internal_id,
+		})),
 	});
 
 	const cycleBoundaryMs =
@@ -247,6 +255,7 @@ export const setupCreateScheduleBillingContext = async ({
 
 	const scheduleBillingContext: CreateScheduleBillingContext = {
 		...billingContext,
+		preserveAddOns: params.preserve_add_ons ?? false,
 		checkoutMode: setupCreateScheduleCheckoutMode({
 			billingContext,
 			redirectMode: params.redirect_mode,

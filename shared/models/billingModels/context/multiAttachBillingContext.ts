@@ -1,5 +1,6 @@
 import type {
 	Entitlement,
+	Entity,
 	FeatureOptions,
 	FullCusProduct,
 	Price,
@@ -13,7 +14,9 @@ export interface MultiAttachProductContext {
 	customPrices: Price[];
 	customEnts: Entitlement[];
 	featureQuantities: FeatureOptions[];
-	/** The existing active product in the same group being transitioned from (at most one across all plans). */
+	entity?: Entity;
+	scopeCustomerProducts: FullCusProduct[];
+	/** The existing active product in the same group and scope. */
 	currentCustomerProduct?: FullCusProduct;
 	/** A previously scheduled product in the same group to delete. */
 	scheduledCustomerProduct?: FullCusProduct;

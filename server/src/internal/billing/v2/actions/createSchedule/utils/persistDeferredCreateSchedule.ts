@@ -4,6 +4,7 @@ import type {
 	CreateScheduleBillingContext,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
+import { addPreservedAddOnsToSchedulePhases } from "./billingContextToRecurringAndScheduled";
 import { persistCreateSchedule } from "./persistCreateSchedule";
 
 const isCreateScheduleBillingContext = (
@@ -53,7 +54,10 @@ const buildDeferredSchedulePhases = ({
 		);
 	}
 
-	return phases;
+	return addPreservedAddOnsToSchedulePhases({
+		billingContext,
+		phases,
+	});
 };
 
 export const persistDeferredCreateSchedule = async ({
