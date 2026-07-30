@@ -1,5 +1,5 @@
 import type { FullCustomer } from "@autumn/shared";
-import { Button, Skeleton } from "@autumn/ui";
+import { Button, ConditionalTooltip, Skeleton } from "@autumn/ui";
 import { PlusIcon } from "@phosphor-icons/react";
 import { useStore } from "@tanstack/react-form";
 import type { AxiosError } from "axios";
@@ -45,6 +45,7 @@ import {
 import { useOrgStripeQuery } from "@/hooks/queries/useOrgStripeQuery";
 import { useSheetStore } from "@/hooks/stores/useSheetStore";
 import { useSheetScopeEntityId } from "@/hooks/useSheetScopeEntityId";
+import { cn } from "@/lib/utils";
 import { useEnv } from "@/utils/envUtils";
 import { getBackendErr } from "@/utils/genUtils";
 import { useCusQuery } from "@/views/customers/customer/hooks/useCusQuery";
@@ -237,8 +238,13 @@ function SelectContent() {
 	const hasPendingPlan = formValues.additionalPlans.some(
 		(plan) => !plan.productId,
 	);
-	const cannotPreview =
-		hasPendingPlan || additionalPlans.hasInvalidPlanScopes;
+	let previewDisabledReason: string | null = null;
+	if (hasPendingPlan) {
+		previewDisabledReason = "Select a product for each row before previewing.";
+	} else if (additionalPlans.hasInvalidPlanScopes) {
+		previewDisabledReason =
+			"Choose different scopes for plans in the same group or already active at this scope.";
+	}
 
 	const {
 		hasEntities,
@@ -347,14 +353,32 @@ function SelectContent() {
 							>
 								Cancel
 							</Button>
-							<Button
-								variant="primary"
-								onClick={() => setSheet({ type: "attach-review", itemId })}
-								disabled={cannotPreview}
-								className="w-full"
+							<ConditionalTooltip
+								enabled={!!previewDisabledReason}
+								content={previewDisabledReason}
+								contentClassName="max-w-72"
 							>
-								Preview Changes
-							</Button>
+								<span
+									className={cn(
+										"flex w-full",
+										previewDisabledReason && "cursor-not-allowed",
+									)}
+								>
+									<Button
+										variant="primary"
+										onClick={() =>
+											setSheet({ type: "attach-review", itemId })
+										}
+										disabled={!!previewDisabledReason}
+										className={cn(
+											"w-full",
+											previewDisabledReason && "pointer-events-none",
+										)}
+									>
+										Preview Changes
+									</Button>
+								</span>
+							</ConditionalTooltip>
 						</SheetFooter>
 					</motion.div>
 				</motion.div>
