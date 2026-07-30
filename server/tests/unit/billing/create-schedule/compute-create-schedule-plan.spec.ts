@@ -76,12 +76,14 @@ describe(chalk.yellowBright("computeCreateSchedulePlan"), () => {
 					customPrices: [],
 					customEnts: [],
 					featureQuantities: [],
+					scopeCustomerProducts: [],
 				},
 				{
 					fullProduct: addonProduct,
 					customPrices: [],
 					customEnts: [],
 					featureQuantities: [],
+					scopeCustomerProducts: [],
 				},
 			],
 			immediatePhase: {
@@ -127,6 +129,7 @@ describe(chalk.yellowBright("computeCreateSchedulePlan"), () => {
 					customPrices: [],
 					customEnts: [],
 					featureQuantities: [],
+					scopeCustomerProducts: [],
 				},
 			],
 			immediatePhase: {
@@ -190,6 +193,10 @@ describe(chalk.yellowBright("computeCreateSchedulePlan"), () => {
 					customPrices: [],
 					customEnts: [],
 					featureQuantities: [],
+					scopeCustomerProducts: [
+						currentCustomerProduct,
+						scheduledCustomerProduct,
+					],
 					currentCustomerProduct,
 					scheduledCustomerProduct,
 				},
@@ -261,6 +268,7 @@ describe(chalk.yellowBright("computeCreateSchedulePlan"), () => {
 					customPrices: [],
 					customEnts: [],
 					featureQuantities: [],
+					scopeCustomerProducts: [currentCustomerProduct],
 					currentCustomerProduct,
 				},
 			],

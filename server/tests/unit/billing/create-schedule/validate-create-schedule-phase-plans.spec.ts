@@ -4,41 +4,60 @@ import { products } from "@tests/utils/fixtures/db/products";
 import chalk from "chalk";
 import { validateCreateSchedulePhasePlans } from "@/internal/billing/v2/actions/createSchedule/errors/validateCreateSchedulePhasePlans";
 
+const recurringProduct = ({
+	id,
+	group = "",
+}: {
+	id: string;
+	group?: string;
+}) => ({
+	...products.createFull({
+		id,
+		prices: [prices.createFixed({ id: `price_${id}` })],
+	}),
+	group,
+});
+
 describe(chalk.yellowBright("validateCreateSchedulePhasePlans"), () => {
 	test("allows plans in different groups even when each would replace a current plan", () => {
-		const productA = products.createFull({
-			id: "replacement-a",
-			prices: [prices.createFixed({ id: "price_replacement_a" })],
-		});
-		const productB = {
-			...products.createFull({
-				id: "replacement-b",
-				prices: [prices.createFixed({ id: "price_replacement_b" })],
-			}),
+		const productA = recurringProduct({ id: "replacement-a" });
+		const productB = recurringProduct({
+			id: "replacement-b",
 			group: "group-b",
-		};
+		});
 
 		expect(() =>
 			validateCreateSchedulePhasePlans({
-				fullProducts: [productA, productB],
+				plans: [{ fullProduct: productA }, { fullProduct: productB }],
+			}),
+		).not.toThrow();
+	});
+
+	test("allows plans in the same group on different scopes", () => {
+		const productA = recurringProduct({ id: "entity-a-plan" });
+		const productB = recurringProduct({ id: "entity-b-plan" });
+
+		expect(() =>
+			validateCreateSchedulePhasePlans({
+				plans: [
+					{ fullProduct: productA, scopeId: "entity-a" },
+					{ fullProduct: productB, scopeId: "entity-b" },
+				],
 			}),
 		).not.toThrow();
 	});
 
 	test("rejects multiple main recurring plans in the same group", () => {
-		const productA = products.createFull({
-			id: "replacement-a",
-			prices: [prices.createFixed({ id: "price_same_group_a" })],
-		});
-		const productB = products.createFull({
-			id: "replacement-b",
-			prices: [prices.createFixed({ id: "price_same_group_b" })],
-		});
+		const productA = recurringProduct({ id: "replacement-a" });
+		const productB = recurringProduct({ id: "replacement-b" });
 
 		expect(() =>
 			validateCreateSchedulePhasePlans({
-				fullProducts: [productA, productB],
+				plans: [
+					{ fullProduct: productA, scopeId: "entity-a" },
+					{ fullProduct: productB, scopeId: "entity-a" },
+				],
 			}),
-		).toThrow("at most one plan per group");
+		).toThrow("at most one plan per group and scope");
 	});
 });

@@ -319,18 +319,40 @@ describe("buildAttachRequestBody — grant free", () => {
 	});
 
 	test("sends explicit empty items when granting free strips all items", () => {
-		// Granting free on a purely priced product leaves an empty items array.
-		// It must be sent as `items: []` so the backend overrides the product's
-		// default (paid) items instead of falling back to them ($50 leak).
 		const result = buildAttachRequestBody({
 			...baseParams,
 			product,
 			prepaidOptions: {},
-			items: [],
 			grantFree: true,
 		});
 
 		expect(result?.items).toEqual([]);
+	});
+
+	test("removes pricing while retaining included features", () => {
+		const includedFeature = {
+			feature_id: "seats",
+			included_usage: 5,
+			price: 10,
+			interval: ProductItemInterval.Month,
+			usage_model: UsageModel.PayPerUse,
+		} as ProductItem;
+		const result = buildAttachRequestBody({
+			...baseParams,
+			product: makeProduct({
+				items: [includedFeature, ...product.items],
+			}),
+			prepaidOptions: {},
+			grantFree: true,
+		});
+
+		expect(result?.items).toEqual([
+			expect.objectContaining({
+				feature_id: "seats",
+				included_usage: 5,
+				price: null,
+			}),
+		]);
 	});
 
 	test("omits items for an empty array when not granting free", () => {

@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import { AppEnv, type ProductItem, type ProductV2 } from "@autumn/shared";
-import { getSchedulePlanPriceProduct } from "@/components/forms/create-schedule/components/SchedulePlanRow";
+import { getSelectedPlanPriceProduct } from "@/components/forms/shared/selectedPlanRowUtils";
 import { getProductPriceDisplay } from "@/components/forms/update-subscription-v2/components/PriceDisplay";
 
 function makeProduct({
@@ -64,7 +64,7 @@ const freeFeatureItem: ProductItem = {
 	interval: null,
 } as ProductItem;
 
-describe("getSchedulePlanPriceProduct + getProductPriceDisplay", () => {
+describe("getSelectedPlanPriceProduct + getProductPriceDisplay", () => {
 	const getPlanPriceLabel = ({
 		product,
 		customItems,
@@ -72,7 +72,7 @@ describe("getSchedulePlanPriceProduct + getProductPriceDisplay", () => {
 		product: ProductV2;
 		customItems?: ProductItem[] | null;
 	}) => {
-		const priceProduct = getSchedulePlanPriceProduct({ product, customItems });
+		const priceProduct = getSelectedPlanPriceProduct({ product, customItems });
 		const priceDisplay = getProductPriceDisplay({
 			product: priceProduct,
 			currency: "USD",
@@ -128,6 +128,8 @@ describe("getSchedulePlanPriceProduct + getProductPriceDisplay", () => {
 
 	test("returns Free when customItems only has priced features", () => {
 		const product = makeProduct({ items: [basePriceItem] });
-		expect(getPlanPriceLabel({ product, customItems: [featurePriceViaPrice] })).toBe("Free");
+		expect(
+			getPlanPriceLabel({ product, customItems: [featurePriceViaPrice] }),
+		).toBe("Free");
 	});
 });
