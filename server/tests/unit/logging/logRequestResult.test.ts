@@ -187,6 +187,96 @@ describe("logRequestResult", () => {
 		});
 	});
 
+	test("drops the response body on the legacy events list route", async () => {
+		const captured: CapturedLog[] = [];
+		let cloneCount = 0;
+		const ctx = {
+			timestamp: 123,
+			logger: createCapturingLogger({ captured }),
+			extraLogs: {},
+			org: { slug: "test-org" },
+		} as unknown as AutumnContext;
+		const c = {
+			req: { path: "/v1/events/list" },
+			res: {
+				status: 200,
+				headers: new Headers({ "content-type": "application/json" }),
+				clone: () => {
+					cloneCount++;
+					return { json: async () => ({ events: [{ id: "evt_1" }] }) };
+				},
+			},
+		} as unknown as Context<HonoEnv>;
+
+		await logRequestResult({ ctx, c, durationMs: 40 });
+
+		expect(cloneCount).toBe(0);
+		expect(captured).toHaveLength(1);
+		expect(captured[0]?.args[1]).toEqual({
+			statusCode: 200,
+			durationMs: 40,
+			res: null,
+		});
+	});
+
+	test("drops an explicitly supplied response body on the rpc events list route", async () => {
+		const captured: CapturedLog[] = [];
+		const ctx = {
+			timestamp: 123,
+			logger: createCapturingLogger({ captured }),
+			extraLogs: {},
+			org: { slug: "test-org" },
+		} as unknown as AutumnContext;
+		const c = {
+			req: { path: "/v1/events.list" },
+			res: {
+				status: 200,
+				headers: new Headers({ "content-type": "application/json" }),
+			},
+		} as Context<HonoEnv>;
+
+		await logRequestResult({
+			ctx,
+			c,
+			durationMs: 40,
+			responseBody: { events: [{ id: "evt_1" }] },
+		});
+
+		expect(captured).toHaveLength(1);
+		expect(captured[0]?.args[1]).toEqual({
+			statusCode: 200,
+			durationMs: 40,
+			res: null,
+		});
+	});
+
+	test("keeps the response body on failed events list requests", async () => {
+		const captured: CapturedLog[] = [];
+		const responseBody = { code: "internal_error", message: "boom" };
+		const ctx = {
+			timestamp: 123,
+			logger: createCapturingLogger({ captured }),
+			extraLogs: {},
+			org: { slug: "test-org" },
+		} as unknown as AutumnContext;
+		const c = {
+			req: { path: "/v1/events/list" },
+			res: {
+				status: 500,
+				headers: new Headers({ "content-type": "application/json" }),
+			},
+		} as Context<HonoEnv>;
+
+		await logRequestResult({ ctx, c, durationMs: 40, responseBody });
+
+		expect(captured).toHaveLength(1);
+		expect(captured[0]?.args[1]).toEqual({
+			statusCode: 500,
+			durationMs: 40,
+			res: responseBody,
+		});
+	});
+
 	test("does not mutate logger context or emit for explicitly skipped routes", async () => {
 		const captured: CapturedLog[] = [];
 		const logger = createCapturingLogger({ captured });
