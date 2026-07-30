@@ -34,7 +34,7 @@ export const EMPTY_ADDITIONAL_PLAN: Omit<AttachAdditionalPlan, "_id"> = {
 	items: null,
 	version: undefined,
 	isCustom: false,
-	entityId: undefined,
+	entityId: null,
 };
 
 export const AttachFormSchema = z.object({

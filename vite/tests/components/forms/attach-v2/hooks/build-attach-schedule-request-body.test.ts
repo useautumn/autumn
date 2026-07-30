@@ -5,7 +5,10 @@ import {
 	type ProductItem,
 	type ProductV2,
 } from "@autumn/shared";
-import type { AttachAdditionalPlan } from "@/components/forms/attach-v2/attachFormSchema";
+import {
+	type AttachAdditionalPlan,
+	EMPTY_ADDITIONAL_PLAN,
+} from "@/components/forms/attach-v2/attachFormSchema";
 import {
 	type BuildAttachScheduleRequestBodyParams,
 	buildAttachScheduleRequestBody,
@@ -28,12 +31,9 @@ const features: Feature[] = [];
 const additionalPlan = (
 	overrides: Partial<AttachAdditionalPlan> = {},
 ): AttachAdditionalPlan => ({
+	...EMPTY_ADDITIONAL_PLAN,
 	_id: "extra-1",
 	productId: planB.id,
-	prepaidOptions: {},
-	items: null,
-	version: undefined,
-	isCustom: false,
 	...overrides,
 });
 
@@ -142,9 +142,20 @@ test("passes entity and currency through", () => {
 	expect(body?.currency).toBe("eur");
 });
 
-test("preserves per-plan entity inheritance and overrides", () => {
-	const inherited = buildAttachScheduleRequestBody(
+test("keeps additional plans customer-level when the primary scope changes", () => {
+	const body = buildAttachScheduleRequestBody(
 		baseParams({ entityId: "ent_default" }),
+	);
+
+	expect(body?.phases[0].plans[1]?.entity_id).toBeNull();
+});
+
+test("preserves explicit per-plan entity inheritance and overrides", () => {
+	const inherited = buildAttachScheduleRequestBody(
+		baseParams({
+			entityId: "ent_default",
+			additionalPlans: [additionalPlan({ entityId: undefined })],
+		}),
 	);
 	const customerLevel = buildAttachScheduleRequestBody(
 		baseParams({
