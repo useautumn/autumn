@@ -15,6 +15,7 @@ let lastLoggedInstance: RedisV2InstanceName | null = null;
 let publicRouteWarned = false;
 
 export type ResolvedRedisV2InstanceName = RedisV2InstanceName | "ramp";
+export type RedisV2RoutingTarget = ResolvedRedisV2InstanceName | "org";
 
 export const getRedisV2ByInstanceName = (name: string): Redis | null => {
 	if (name === "dragonfly") return redisV2Primary;
@@ -23,6 +24,16 @@ export const getRedisV2ByInstanceName = (name: string): Redis | null => {
 		return getAlternateRedisV2Instance(name);
 	}
 	return null;
+};
+
+export const getRedisV2RoutingTarget = (redis: Redis): RedisV2RoutingTarget => {
+	const globalTargets = ["dragonfly", "upstash", "redis", "ramp"] as const;
+	for (const target of globalTargets) {
+		if (getRedisV2ByInstanceName(target) === redis) {
+			return target;
+		}
+	}
+	return "org";
 };
 
 const resolveRedisV2InstanceName = ({
@@ -38,10 +49,7 @@ const resolveRedisV2InstanceName = ({
 			: "dragonfly";
 	}
 
-	if (
-		isCacheV2RampEnabled({ customerId }) &&
-		getRampDestinationRedis()
-	) {
+	if (isCacheV2RampEnabled({ customerId }) && getRampDestinationRedis()) {
 		return "ramp";
 	}
 	return "dragonfly";
