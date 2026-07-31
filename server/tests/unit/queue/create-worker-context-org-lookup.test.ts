@@ -11,6 +11,7 @@ const mockState: {
 
 mock.module("@/internal/orgs/orgUtils/cacheOrgWithFeatures.js", () => ({
 	getOrgWithFeaturesCached: () => mockState.getOrgWithFeaturesCached(),
+	clearOrgWithFeaturesCache: async () => {},
 }));
 
 const { createWorkerContext } = await import("@/queue/createWorkerContext.js");
