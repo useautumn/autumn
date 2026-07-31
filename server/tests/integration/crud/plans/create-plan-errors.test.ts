@@ -77,6 +77,21 @@ const expectRpcError = async ({
 	});
 };
 
+/**
+ * TDD test for unsafe large finite allowances.
+ *
+ * Red-failure mode: a plan with more than 10 trillion included units is accepted.
+ * Green-success criteria: plan creation rejects it and recommends unlimited usage.
+ */
+test.concurrent(`${chalk.yellowBright("included usage: REJECT more than 10 trillion")}`, async () => {
+	await expectRestError({
+		productId: `err_included_usage_${getSuffix()}`,
+		items: [{ feature_id: TestFeature.Messages, included: 10_000_000_000_001 }],
+		errMessage:
+			"Included usage cannot exceed 10 trillion; use unlimited usage instead",
+	});
+});
+
 // ═══════════════════════════════════════════════════════════════════════════════
 // PRICE: amount OR tiers (not neither, not both)
 // ═══════════════════════════════════════════════════════════════════════════════
