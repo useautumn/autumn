@@ -8,7 +8,7 @@ import {
 	customerExports,
 	type DbCustomerExport,
 } from "@autumn/shared";
-import { and, desc, eq, inArray } from "drizzle-orm";
+import { and, desc, eq, inArray, isNull } from "drizzle-orm";
 import { isUniqueConstraintError } from "@/db/dbUtils.js";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 import { generateId } from "@/utils/genUtils.js";
@@ -186,15 +186,20 @@ export const CustomerExportService = {
 			.where(eq(customerExports.id, id));
 	},
 
-	/** Fails the export only if it is still queued/running; returns whether it did. */
+	/**
+	 * Compare-and-swap reclaim: fails the export only while it still matches the
+	 * observed lifecycle state, so a run that just progressed is left alone.
+	 */
 	failIfStillActive: async ({
 		db,
 		id,
 		errorMessage,
+		observed,
 	}: {
 		db: DrizzleCli;
 		id: string;
 		errorMessage: string;
+		observed: { status: CustomerExportStatus; startedAt: number | null };
 	}): Promise<boolean> => {
 		const updated = await db
 			.update(customerExports)
@@ -206,7 +211,10 @@ export const CustomerExportService = {
 			.where(
 				and(
 					eq(customerExports.id, id),
-					inArray(customerExports.status, [...ACTIVE_CUSTOMER_EXPORT_STATUSES]),
+					eq(customerExports.status, observed.status),
+					observed.startedAt === null
+						? isNull(customerExports.started_at)
+						: eq(customerExports.started_at, observed.startedAt),
 				),
 			)
 			.returning({ id: customerExports.id });
