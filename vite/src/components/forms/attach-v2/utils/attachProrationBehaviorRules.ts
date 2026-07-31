@@ -1,4 +1,4 @@
-import type { BillingBehavior } from "@autumn/shared";
+import type { BillingBehavior, PlanTiming } from "@autumn/shared";
 
 const NO_CHARGES_NEW_CYCLE_DISABLED_REASON =
 	"No Charges is unavailable when Create New Cycle is selected.";
@@ -13,6 +13,23 @@ export function isNoChargesAllowedForAttach({
 	disableProration?: boolean;
 }) {
 	return !newBillingSubscription && !disableProration;
+}
+
+export function getAttachProrationVisibility({
+	hasSubscriptionToProrate,
+	isMultiPlan,
+	planSchedule,
+}: {
+	hasSubscriptionToProrate: boolean;
+	isMultiPlan: boolean;
+	planSchedule: PlanTiming;
+}) {
+	const showProrationRow = hasSubscriptionToProrate;
+	return {
+		showProrationRow,
+		showProrationBehavior:
+			showProrationRow && (isMultiPlan || planSchedule === "immediate"),
+	};
 }
 
 export function normalizeAttachProrationBehavior({
