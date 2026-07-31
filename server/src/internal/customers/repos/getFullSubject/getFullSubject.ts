@@ -18,6 +18,7 @@ import {
     resultToFullSubject,
     subjectQueryRowToNormalized,
 } from "./subjectQueryRowToNormalized.js";
+import { unpackSubjectEnvelope } from "./unpackSubjectEnvelope.js";
 
 /** Fetch full subject from DB and return as FullSubject. Runs lazy reset. */
 export async function getFullSubject({
@@ -55,10 +56,11 @@ export async function getFullSubject({
 			}),
 	});
 
-	if (!result?.length) return undefined;
+	const subjectRows = unpackSubjectEnvelope({ rows: result ?? [] });
+	if (!subjectRows.length) return undefined;
 
 	const fullSubject = resultToFullSubject({
-		row: result[0] as unknown as SubjectQueryRow,
+		row: subjectRows[0],
 		entityIdRequested: !!entityId,
 		allowMissingEntity,
 	});
@@ -114,10 +116,11 @@ export async function getFullSubjectNormalized({
 			}),
 	});
 
-	if (!result?.length) return undefined;
+	const subjectRows = unpackSubjectEnvelope({ rows: result ?? [] });
+	if (!subjectRows.length) return undefined;
 
 	const normalized = subjectQueryRowToNormalized({
-		row: result[0] as unknown as SubjectQueryRow,
+		row: subjectRows[0],
 		entityIdRequested: !!entityId,
 		allowMissingEntity,
 	});

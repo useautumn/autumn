@@ -74,3 +74,17 @@ export type SubjectQueryRow = {
 	entity?: Entity;
 	migration_item_runs?: MigrationItemRunData[];
 };
+
+/** Catalog is org-level, so the query returns it once beside the subject array
+ *  rather than repeating it on every subject. */
+export type SubjectCatalog = {
+	products: DbProduct[];
+	entitlements: EntitlementWithFeatureRow[];
+	prices: DbPrice[];
+	free_trials: DbFreeTrial[];
+};
+
+/** The single row getFullSubjectRowsQuery returns. */
+export type SubjectQueryEnvelope = SubjectCatalog & {
+	subjects: Omit<SubjectQueryRow, keyof SubjectCatalog>[];
+};
