@@ -179,3 +179,6 @@ tmp/
 .neon
 scripts/ops/.duckdb_export.sql
 scripts/ops/.backfill_neon_done
+
+# Experiment outputs (plans, benchmark JSON) — regenerated on demand
+server/experiments/*/out/
