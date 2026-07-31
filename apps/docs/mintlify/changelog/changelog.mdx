@@ -4,6 +4,53 @@ mode: "center"
 description: "Some new things we've shipped at Autumn HQ"
 ---
 
+<Update label="July 31st 2026">
+  ## Pooled balances
+
+  A single balance can now be shared across every entity on a customer. Toggle **Pooled balance** on any finite metered plan item and per-entity grants flow into one shared pool that every entity draws down from. Pools reset on the parent subscription's `invoice.created`, on lazy schedules, or never — matching the entitlement lifecycle you already picked — and rollovers carry over cleanly across plan changes and trials. Pooled entitlements show up under `pooled_customer_entitlements` in [`customers.get`](/api-reference/customers/getCustomer), and you can list every contributing entity through the new `pooled_balances.list_contributions` endpoint.
+
+  ## Scoped multi-plan attach
+
+  [`billing.multi_attach`](/api-reference/billing/multiAttach) and [`billing.multi_attach.preview`](/api-reference/billing/previewMultiAttach) now support explicit scopes on each plan you send. Choose `inherited`, `customer`, or `per_entity` per plan to control who a plan attaches to across an entity tree, and Autumn plans the schedule so parent and entity-level plans stay consistent through a single billing action.
+
+  ## Product-scoped license discounts
+
+  Coupons and discounts can now target specific licensed products, and Autumn keeps them applied through every subsequent update. Percent and fixed discounts stack in the same order as your preview, refunds and upgrades pull credits from the stored discounted invoice rows instead of recomputing them, and Stripe subscription updates preserve the original `percent_off` so your dashboard and invoices stay in sync.
+
+  ## Reliable Stripe webhook processing
+
+  Load-bearing Stripe webhooks — `checkout.session.completed`, cycle `invoice.created`, `invoice.paid`, `customer.updated`, and non-Autumn subscription events — now acknowledge Stripe only after processing succeeds, so a failed webhook is automatically retried instead of being silently dropped. Any early-acked failures are also replayed through a durable queue, and Autumn-originated Stripe calls carry an idempotency key so we never process our own writes as inbound events.
+
+  ## Fixed duplicate checkout subscriptions
+
+  A rare race where an attach could produce two active Stripe subscriptions is now closed. Checkout reservations live for the full session lifetime (matching Stripe's `expires_at`), same-parameter [`billing.attach`](/api-reference/billing/attach) retries return the pending Checkout URL instead of creating a new session, and `checkout.session.completed` now serializes with in-flight attaches under a shared billing lock. Repeated attaches with different parameters expire any unpaid session first, then proceed.
+
+  <AccordionGroup>
+    <Accordion title="Improvements">
+      - License seat assignment is now idempotent — retrying a batch that already contains assigned entities returns success without consuming pool capacity — [#2414](https://github.com/useautumn/autumn/pull/2414)
+      - Negative balances now carry over into the new plan when `carry_over_balances` is enabled, so any prior overage reduces the new allowance instead of being dropped — [#2431](https://github.com/useautumn/autumn/pull/2431)
+      - Track events are now batched into a single SQS send per batch, cutting per-event overhead and improving throughput under bursty usage — [#2489](https://github.com/useautumn/autumn/pull/2489)
+      - Async Track processing can be enabled per organization from the admin dashboard, replacing the previous hardcoded allowlist — [#2375](https://github.com/useautumn/autumn/pull/2375)
+      - Auto top-up jobs now retry when they hit a billing lock instead of dropping the run — [#2416](https://github.com/useautumn/autumn/pull/2416)
+      - Stripe imports now recognize product aliases in your catalog mappings, so linked products keep their references across renames — [#2500](https://github.com/useautumn/autumn/pull/2500)
+      - Tiered price hydration is now consistent across attach, update, and preview flows — [#2500](https://github.com/useautumn/autumn/pull/2500)
+      - New `.well-known/oauth-protected-resource` endpoint improves OAuth discovery for MCP clients — [#2500](https://github.com/useautumn/autumn/pull/2500)
+      - Billing verification now separates identity, shape, and totals mismatches into `warn` vs `error` severities so real drift is easier to spot — [#2500](https://github.com/useautumn/autumn/pull/2500)
+      - Dashboard Edge Config admin now shows live per-config status (paused queues, ramp percentages, blocked orgs) at a glance — [#2406](https://github.com/useautumn/autumn/pull/2406)
+    </Accordion>
+    <Accordion title="Fixes">
+      - Entity usage is no longer double-counted when a customer has overlapping add-ons — entities already covered by an active product are excluded from add-on aggregation — [#2496](https://github.com/useautumn/autumn/pull/2496)
+      - MCP OAuth refresh now stays within the originally granted scopes and no longer forwards a `resource` parameter that some issuers reject — [#2501](https://github.com/useautumn/autumn/pull/2501)
+      - Unknown `.well-known/*` requests return `404` instead of the 401 session-auth error — [#2499](https://github.com/useautumn/autumn/pull/2499)
+      - Property-rollup completeness now checks event counts (not net sums), so gate-dropped groups are detected correctly — [#2491](https://github.com/useautumn/autumn/pull/2491)
+      - Stranded checkout reservations after out-of-order `invoice.paid` and `checkout.session.completed` webhooks are now released, ending sporadic 423 lock errors on the next attach — [#2433](https://github.com/useautumn/autumn/pull/2433)
+      - Partial SQS batch-delete failures now retry only the failed entries with bounded backoff, so successful jobs are no longer redelivered — [#2415](https://github.com/useautumn/autumn/pull/2415)
+      - Stripe writes now carry idempotency keys so transient retries can't accidentally create duplicate sessions or transfers — [#2500](https://github.com/useautumn/autumn/pull/2500)
+      - Batch balance resets warn at 30 minutes and give up at 45 to avoid indefinite stalls behind a wedged message — [#2416](https://github.com/useautumn/autumn/pull/2416)
+    </Accordion>
+  </AccordionGroup>
+</Update>
+
 <Update label="July 24th 2026">
   ## License plan customization & propagation
 
