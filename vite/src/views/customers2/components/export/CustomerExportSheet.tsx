@@ -3,7 +3,7 @@ import {
 	CustomerExportFieldSchema,
 } from "@autumn/shared";
 import { Sheet, SheetContent, ShortcutButton } from "@autumn/ui";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { z } from "zod/v4";
 import {
@@ -68,6 +68,12 @@ export function CustomerExportSheet({
 
 	const [restrictToCurrentFilters, setRestrictToCurrentFilters] =
 		useState(true);
+
+	// The sheet stays mounted while closed; a stale "export everyone" choice must
+	// not survive into a later session with different filters.
+	useEffect(() => {
+		if (open) setRestrictToCurrentFilters(true);
+	}, [open]);
 
 	const trimmedSearch = queryStates.q.trim();
 	const hasActiveFilters = hasActiveCustomerFilters(queryStates);
