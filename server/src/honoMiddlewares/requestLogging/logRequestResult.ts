@@ -1,10 +1,7 @@
 import chalk from "chalk";
 import type { Context } from "hono";
 import type { AutumnContext, HonoEnv } from "@/honoUtils/HonoEnv.js";
-import {
-	addExtrasToLogs,
-	addRequestToLogs,
-} from "@/utils/logging/addContextToLogs.js";
+import { addExtrasToLogs } from "@/utils/logging/addContextToLogs.js";
 import { maskExtraLogs } from "@/utils/logging/maskExtraLogs.js";
 
 const HIGH_VOLUME_SUCCESS_ROUTES = new Set<string>([
@@ -58,17 +55,11 @@ export const logRequestResult = async ({
 			return;
 		}
 
-		if (ctx.requestLogContext) {
-			ctx.logger = addRequestToLogs({
-				logger: ctx.logger,
-				requestContext: ctx.requestLogContext,
-			});
-		}
-
 		ctx.logger = addExtrasToLogs({
 			logger: ctx.logger,
 			extras: ctx.extraLogs,
 		});
+		const requestBody = ctx.requestLogContext?.body;
 
 		const skipResponseBody =
 			isSuccess && RESPONSE_BODY_EXCLUDED_ROUTES.has(c.req.path);
@@ -93,6 +84,7 @@ export const logRequestResult = async ({
 			{
 				statusCode,
 				durationMs,
+				...(requestBody === undefined ? {} : { request_body: requestBody }),
 				res: finalResponseBody ?? null,
 			},
 		);

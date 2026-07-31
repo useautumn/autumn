@@ -8,29 +8,37 @@ import type { LogRequestContext } from "@/utils/logging/loggerTypes.js";
 type CapturedLog = {
 	level: "debug" | "info" | "warn" | "error";
 	bindings: Record<string, unknown>;
+	bindingLayers: Record<string, unknown>[];
 	args: unknown[];
 };
 
 const createCapturingLogger = ({
 	bindings = {},
+	bindingLayers = [bindings],
 	captured,
 }: {
 	bindings?: Record<string, unknown>;
+	bindingLayers?: Record<string, unknown>[];
 	captured: CapturedLog[];
 }): Logger => ({
-	debug: (...args) => captured.push({ level: "debug", bindings, args }),
-	info: (...args) => captured.push({ level: "info", bindings, args }),
-	warn: (...args) => captured.push({ level: "warn", bindings, args }),
-	error: (...args) => captured.push({ level: "error", bindings, args }),
+	debug: (...args) =>
+		captured.push({ level: "debug", bindings, bindingLayers, args }),
+	info: (...args) =>
+		captured.push({ level: "info", bindings, bindingLayers, args }),
+	warn: (...args) =>
+		captured.push({ level: "warn", bindings, bindingLayers, args }),
+	error: (...args) =>
+		captured.push({ level: "error", bindings, bindingLayers, args }),
 	child: ({ context }) =>
 		createCapturingLogger({
 			bindings: { ...bindings, ...context },
+			bindingLayers: [...bindingLayers, context],
 			captured,
 		}),
 });
 
 describe("logRequestResult", () => {
-	test("restores the full request body on the terminal request record", async () => {
+	test("logs the request body without rebinding request metadata", async () => {
 		const captured: CapturedLog[] = [];
 		const requestLogContext: LogRequestContext = {
 			id: "req_123",
@@ -78,11 +86,15 @@ describe("logRequestResult", () => {
 
 		expect(captured).toHaveLength(1);
 		expect(captured[0]?.level).toBe("info");
-		expect(captured[0]?.bindings.req).toEqual(requestLogContext);
+		expect(
+			captured[0]?.bindingLayers.filter((bindings) => "req" in bindings),
+		).toHaveLength(1);
+		expect(captured[0]?.bindings.req).toEqual(internalRequestContext);
 		expect(captured[0]?.bindings.extras).toEqual({});
 		expect(captured[0]?.args[1]).toEqual({
 			statusCode: 200,
 			durationMs: 20,
+			request_body: requestLogContext.body,
 			res: { allowed: true },
 		});
 	});
@@ -142,11 +154,19 @@ describe("logRequestResult", () => {
 
 		expect(captured).toHaveLength(1);
 		expect(captured[0]?.level).toBe("warn");
-		expect(captured[0]?.bindings.req).toEqual(requestLogContext);
+		expect(captured[0]?.bindings.req).toEqual({
+			id: requestLogContext.id,
+			method: requestLogContext.method,
+			url: requestLogContext.url,
+			timestamp: requestLogContext.timestamp,
+			query: requestLogContext.query,
+			name: requestLogContext.name,
+		});
 		expect(captured[0]?.bindings.extras).toEqual({ operation: "track" });
 		expect(captured[0]?.args[1]).toEqual({
 			statusCode: 500,
 			durationMs: 30,
+			request_body: requestLogContext.body,
 			res: responseBody,
 		});
 	});

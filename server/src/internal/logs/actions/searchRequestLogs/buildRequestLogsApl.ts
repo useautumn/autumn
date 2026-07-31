@@ -32,7 +32,11 @@ const REQUEST_LOG_PROJECTION: ProjectionField[] = [
 		alias: "request_path",
 		expression: "request_path",
 	},
-	{ alias: "request_body", expression: "['req.body']" },
+	{
+		alias: "request_body",
+		expression:
+			"coalesce(column_ifexists(\"request_body\", ['req.body']), ['req.body'])",
+	},
 	{ alias: "response_body", expression: "res" },
 	{ alias: "org_id", expression: "['context.org_id']" },
 	{ alias: "customer_id", expression: "['context.customer_id']" },
