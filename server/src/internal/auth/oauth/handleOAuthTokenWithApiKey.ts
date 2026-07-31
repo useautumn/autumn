@@ -12,7 +12,7 @@ import { db } from "@/db/initDrizzle.js";
 import { getPrimaryRedis } from "@/external/redis/initRedis.js";
 import { auth } from "@/utils/auth.js";
 import { decryptData, encryptData } from "@/utils/encryptUtils.js";
-import { timeout } from "@/utils/genUtils.js";
+import { generateId, timeout } from "@/utils/genUtils.js";
 import { hashOAuthToken } from "@/utils/oauthUtils.js";
 import {
 	oauthAccessTokenRepo,
@@ -120,55 +120,97 @@ const jsonTokenResponse = ({
 	});
 
 const REFRESH_REPLAY_TTL_SECONDS = 30;
-const REFRESH_REPLAY_PENDING = "pending";
+const REFRESH_REPLAY_PENDING = "pending:";
+const REFRESH_REPLAY_RENEW_MS = 10_000;
+
+const UPDATE_REFRESH_REPLAY_SCRIPT = `
+if redis.call("GET", KEYS[1]) ~= ARGV[1] then return 0 end
+if ARGV[2] == "" then return redis.call("DEL", KEYS[1]) end
+redis.call("SET", KEYS[1], ARGV[2], "EX", ARGV[3])
+return 1
+`;
+
+const pendingRefreshReplay = (owner: string) =>
+	`${REFRESH_REPLAY_PENDING}${owner}`;
+
+const updateRefreshReplay = async ({
+	key,
+	owner,
+	value,
+}: {
+	key: string;
+	owner: string;
+	value?: string;
+}) => {
+	try {
+		await getPrimaryRedis().eval(
+			UPDATE_REFRESH_REPLAY_SCRIPT,
+			1,
+			key,
+			pendingRefreshReplay(owner),
+			value ?? "",
+			REFRESH_REPLAY_TTL_SECONDS,
+		);
+	} catch {
+		return;
+	}
+};
+
+const maintainRefreshReplay = ({
+	key,
+	owner,
+}: {
+	key: string;
+	owner: string;
+}) => {
+	let finished = false;
+	const interval = setInterval(
+		() =>
+			void updateRefreshReplay({
+				key,
+				owner,
+				value: pendingRefreshReplay(owner),
+			}),
+		REFRESH_REPLAY_RENEW_MS,
+	);
+	interval.unref();
+	return async (body?: Record<string, unknown>) => {
+		if (finished) return;
+		finished = true;
+		clearInterval(interval);
+		await updateRefreshReplay({
+			key,
+			owner,
+			value: body ? encryptData(JSON.stringify(body)) : undefined,
+		});
+	};
+};
 
 const claimRefreshReplay = async (key: string) => {
 	try {
 		const redis = getPrimaryRedis();
 		if (redis.status !== "ready") return null;
+		const owner = generateId("oauth_refresh_replay");
+		const pending = pendingRefreshReplay(owner);
 		for (let attempt = 0; attempt < 200; attempt++) {
 			const value = await redis.get(key);
-			if (value && value !== REFRESH_REPLAY_PENDING) {
+			if (value && !value.startsWith(REFRESH_REPLAY_PENDING)) {
 				return {
 					body: JSON.parse(decryptData(value)) as Record<string, unknown>,
+					owner: null,
 				};
 			}
 			if (
 				!value &&
-				(await redis.set(
-					key,
-					REFRESH_REPLAY_PENDING,
-					"EX",
-					REFRESH_REPLAY_TTL_SECONDS,
-					"NX",
-				))
+				(await redis.set(key, pending, "EX", REFRESH_REPLAY_TTL_SECONDS, "NX"))
 			) {
-				return { body: null };
+				return { body: null, owner };
 			}
 			await timeout(25);
 		}
 		return null;
 	} catch {
 		return null;
-	}
-};
-
-const storeRefreshReplay = async ({
-	body,
-	key,
-}: {
-	body: Record<string, unknown>;
-	key: string;
-}) => {
-	try {
-		await getPrimaryRedis().set(
-			key,
-			encryptData(JSON.stringify(body)),
-			"EX",
-			REFRESH_REPLAY_TTL_SECONDS,
-		);
-	} catch {
-		return;
 	}
 };
 
@@ -297,6 +339,7 @@ export const handleOAuthTokenWithApiKey = async (c: Context) => {
 				`${resource ?? ""}\n${normalizedRequest.headers.get("authorization") ?? ""}\n${await normalizedRequest.clone().text()}`,
 			)}`
 		: null;
+	let finishRefreshReplay = async (_body?: Record<string, unknown>) => {};
 	if (refreshReplayKey) {
 		const replay = await claimRefreshReplay(refreshReplayKey);
 		if (!replay) {
@@ -314,21 +357,38 @@ export const handleOAuthTokenWithApiKey = async (c: Context) => {
 				status: 200,
 			});
 		}
+		finishRefreshReplay = maintainRefreshReplay({
+			key: refreshReplayKey,
+			owner: replay.owner,
+		});
 	}
 
-	const response = await auth.handler(normalizedRequest);
-	if (!response.ok) return response;
+	let response: Response;
+	try {
+		response = await auth.handler(normalizedRequest);
+	} catch (error) {
+		await finishRefreshReplay();
+		throw error;
+	}
+	if (!response.ok) {
+		await finishRefreshReplay();
+		return response;
+	}
 
 	let body: Record<string, unknown>;
 	try {
 		body = (await response.clone().json()) as Record<string, unknown>;
 	} catch {
+		await finishRefreshReplay();
 		return response;
 	}
 
 	const tokenPayload = getTokenPayload(body);
 	const accessToken = getString(tokenPayload.access_token);
-	if (!accessToken) return response;
+	if (!accessToken) {
+		await finishRefreshReplay();
+		return response;
+	}
 
 	const parsedRequestedScopes = scopesFromOAuthScopeString(tokenPayload.scope);
 	const requestedScopes = parsedRequestedScopes
@@ -422,12 +482,7 @@ export const handleOAuthTokenWithApiKey = async (c: Context) => {
 				body,
 				scopes: tokenRecord.scopes,
 			});
-			if (refreshReplayKey) {
-				await storeRefreshReplay({
-					body: responseBody,
-					key: refreshReplayKey,
-				});
-			}
+			await finishRefreshReplay(responseBody);
 			return jsonTokenResponse({
 				body: responseBody,
 				response,
@@ -440,6 +495,7 @@ export const handleOAuthTokenWithApiKey = async (c: Context) => {
 			requestedScopes,
 		});
 	} catch (error) {
+		await finishRefreshReplay();
 		if (error instanceof RecaseError) {
 			return jsonTokenResponse({
 				body: {
@@ -451,8 +507,12 @@ export const handleOAuthTokenWithApiKey = async (c: Context) => {
 		}
 		throw error;
 	}
-	if (!apiKeyResult) return response;
+	if (!apiKeyResult) {
+		await finishRefreshReplay();
+		return response;
+	}
 
+	await finishRefreshReplay();
 	return jsonTokenResponse({
 		body: rewriteTokenBody({
 			apiKey: apiKeyResult.apiKey,

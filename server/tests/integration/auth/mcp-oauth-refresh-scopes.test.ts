@@ -114,16 +114,24 @@ test("MCP OAuth refresh narrows scopes and replays consumed-token retries", asyn
 			advertisedScopes,
 		);
 
-		const mismatchedRetry = await fetch(`${baseUrl}/api/auth/oauth2/token`, {
-			method: "POST",
-			headers: { "Content-Type": "application/x-www-form-urlencoded" },
-			body: new URLSearchParams({
-				grant_type: "refresh_token",
-				refresh_token: refreshToken,
-				client_id: generateId("oauth_client"),
-			}),
-		});
+		const mismatchedClientId = generateId("oauth_client");
+		const mismatchedRefresh = () =>
+			fetch(`${baseUrl}/api/auth/oauth2/token`, {
+				method: "POST",
+				headers: { "Content-Type": "application/x-www-form-urlencoded" },
+				body: new URLSearchParams({
+					grant_type: "refresh_token",
+					refresh_token: refreshToken,
+					client_id: mismatchedClientId,
+				}),
+			});
+		const mismatchedResponse = await mismatchedRefresh();
+		const mismatchedRetry = await mismatchedRefresh();
+		expect(mismatchedResponse.status).toBe(400);
 		expect(mismatchedRetry.status).toBe(400);
+		expect(await mismatchedRetry.json()).toEqual(
+			await mismatchedResponse.json(),
+		);
 
 		const organization = await fetch(`${baseUrl}/v1/organization`, {
 			headers: {
