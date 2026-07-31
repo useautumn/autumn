@@ -2,7 +2,9 @@
 
 import { test } from "bun:test";
 import type { ApiCustomerV3 } from "@autumn/shared";
+import { findCustomerEntitlement } from "@tests/balances/utils/findCustomerEntitlement";
 import { expectCustomerFeatureCorrect } from "@tests/integration/billing/utils/expectCustomerFeatureCorrect";
+import { waitForPostgresBalance } from "@tests/integration/cron/batch-reset-v2/batchResetV2TestUtils";
 import { TestFeature } from "@tests/setup/v2Features";
 import { items } from "@tests/utils/fixtures/items";
 import { products } from "@tests/utils/fixtures/products";
@@ -31,7 +33,7 @@ test.concurrent(
 			items: [premiumMessages],
 		});
 
-		const { autumnV1, autumnV2_1 } = await initScenario({
+		const { autumnV1, autumnV2_1, ctx } = await initScenario({
 			customerId,
 			setup: [
 				s.customer({ paymentMethod: "success" }),
@@ -51,7 +53,16 @@ test.concurrent(
 			feature_id: TestFeature.Messages,
 			value: 50,
 		});
-		await new Promise((resolve) => setTimeout(resolve, 2000));
+		const customerEntitlement = await findCustomerEntitlement({
+			ctx,
+			customerId,
+			featureId: TestFeature.Messages,
+		});
+		await waitForPostgresBalance({
+			db: ctx.db,
+			customerEntitlementId: customerEntitlement!.id,
+			expectedBalance: 150,
+		});
 
 		// multiAttach swap to premium.
 		await autumnV1.billing.multiAttach({
