@@ -1,6 +1,6 @@
 import type {
-	AttachBillingContext,
 	AutumnBillingPlan,
+	FullCusProduct,
 	MultiAttachBillingContext,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
@@ -8,8 +8,9 @@ import { computeAttachNewCustomerProduct } from "@/internal/billing/v2/actions/a
 import { computeAttachTransitionUpdates } from "@/internal/billing/v2/actions/attach/compute/computeAttachTransitionUpdates";
 import { buildAutumnLineItems } from "@/internal/billing/v2/compute/computeAutumnUtils/buildAutumnLineItems";
 import { finalizeLineItems } from "@/internal/billing/v2/compute/finalize/finalizeLineItems";
+import { computePooledBalanceTransitionPlan } from "@/internal/billing/v2/pooledBalances/compute/computePooledBalanceTransitionPlan";
 import { productContextToAttachBillingContext } from "@/internal/billing/v2/utils/billingContext/productContextToAttachBillingContext";
-import { cusProductToOneOffPrepaidCarryOvers } from "@/internal/billing/v2/utils/handleOneOffPrepaidCarryOvers/cusProductToOneOffPrepaidCarryOvers";
+import { cusProductsToOneOffPrepaidCarryOvers } from "@/internal/billing/v2/utils/handleOneOffPrepaidCarryOvers/cusProductToOneOffPrepaidCarryOvers";
 
 /** Compute the billing plan for immediate multi-product billing. */
 export const computeImmediateMultiProductPlan = ({
@@ -19,60 +20,79 @@ export const computeImmediateMultiProductPlan = ({
 	ctx: AutumnContext;
 	billingContext: MultiAttachBillingContext;
 }): AutumnBillingPlan => {
-	const transitioningProductContext = billingContext.productContexts.find(
-		(productContext) => productContext.currentCustomerProduct !== undefined,
-	);
-	const deletedCustomerProduct =
-		transitioningProductContext?.currentCustomerProduct;
-	const scheduledCustomerProduct =
-		transitioningProductContext?.scheduledCustomerProduct;
-
-	let transitionContext: AttachBillingContext | undefined;
-	const insertCustomerProducts = billingContext.productContexts.map(
+	const productChanges = billingContext.productContexts.map(
 		(productContext) => {
 			const attachBillingContext = productContextToAttachBillingContext({
 				billingContext,
 				productContext,
 			});
 
-			if (productContext.currentCustomerProduct) {
-				transitionContext = attachBillingContext;
-			}
-
-			return computeAttachNewCustomerProduct({
-				ctx,
+			return {
 				attachBillingContext,
-			});
+				incomingCustomerProduct: computeAttachNewCustomerProduct({
+					ctx,
+					attachBillingContext,
+				}),
+				outgoingCustomerProduct: productContext.currentCustomerProduct,
+				scheduledCustomerProduct: productContext.scheduledCustomerProduct,
+			};
 		},
 	);
+	const insertCustomerProducts = productChanges.map(
+		({ incomingCustomerProduct }) => incomingCustomerProduct,
+	);
+	const outgoingCustomerProducts: FullCusProduct[] = [];
+	const updateCustomerProducts: NonNullable<
+		AutumnBillingPlan["updateCustomerProducts"]
+	> = [];
+	const scheduledCustomerProducts = new Map<string, FullCusProduct>();
 
-	const updateCustomerProduct = transitionContext
-		? computeAttachTransitionUpdates({
-				attachBillingContext: transitionContext,
-			})
-		: undefined;
+	for (const productChange of productChanges) {
+		if (productChange.outgoingCustomerProduct) {
+			outgoingCustomerProducts.push(productChange.outgoingCustomerProduct);
+			const updateCustomerProduct = computeAttachTransitionUpdates({
+				attachBillingContext: productChange.attachBillingContext,
+			});
+			if (updateCustomerProduct) {
+				updateCustomerProducts.push(updateCustomerProduct);
+			}
+		}
+
+		if (productChange.scheduledCustomerProduct) {
+			scheduledCustomerProducts.set(
+				productChange.scheduledCustomerProduct.id,
+				productChange.scheduledCustomerProduct,
+			);
+		}
+	}
+
+	const { pooledBalancePlan } = computePooledBalanceTransitionPlan({
+		ctx,
+		fullCustomer: billingContext.fullCustomer,
+		outgoingCustomerProducts,
+		incomingCustomerProducts: insertCustomerProducts,
+		stripeSubscriptionId: billingContext.stripeSubscription?.id,
+		now: billingContext.currentEpochMs,
+	});
 
 	const { allLineItems, updateCustomerEntitlements } = buildAutumnLineItems({
 		ctx,
 		newCustomerProducts: insertCustomerProducts,
-		deletedCustomerProduct,
+		deletedCustomerProducts: outgoingCustomerProducts,
 		billingContext,
-		includeArrearLineItems: deletedCustomerProduct !== undefined,
+		includeArrearLineItems: outgoingCustomerProducts.length > 0,
 	});
 
-	const oneOffPrepaidCarryOvers = deletedCustomerProduct
-		? cusProductToOneOffPrepaidCarryOvers({
-				currentCustomerProduct: deletedCustomerProduct,
-				fullCustomer: billingContext.fullCustomer,
-			})
-		: { entitlements: [], customerEntitlements: [] };
-
+	const oneOffPrepaidCarryOvers = cusProductsToOneOffPrepaidCarryOvers({
+		currentCustomerProducts: outgoingCustomerProducts,
+		fullCustomer: billingContext.fullCustomer,
+	});
 	const billingPlan: AutumnBillingPlan = {
 		customerId:
 			billingContext.fullCustomer.id ?? billingContext.fullCustomer.internal_id,
 		insertCustomerProducts,
-		updateCustomerProduct,
-		deleteCustomerProduct: scheduledCustomerProduct,
+		updateCustomerProducts,
+		deleteCustomerProducts: [...scheduledCustomerProducts.values()],
 		customPrices: billingContext.customPrices,
 		customEntitlements: [
 			...(billingContext.customEnts ?? []),
@@ -82,6 +102,7 @@ export const computeImmediateMultiProductPlan = ({
 		lineItems: allLineItems,
 		updateCustomerEntitlements,
 		insertCustomerEntitlements: oneOffPrepaidCarryOvers.customerEntitlements,
+		pooledBalancePlan,
 	};
 
 	billingPlan.lineItems = finalizeLineItems({

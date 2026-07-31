@@ -1,6 +1,8 @@
 import type { BillingPlan, MultiAttachBillingContext } from "@autumn/shared";
 import type { DrizzleCli } from "@/db/initDrizzle";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
+import { handleRevertTrialErrors } from "@/internal/billing/v2/actions/attach/errors/handleRevertTrialErrors";
+import { handleProrationBehaviorErrors } from "@/internal/billing/v2/common/errors/handleBillingBehaviorErrors";
 import { handleSubscriptionIdErrors } from "@/internal/billing/v2/common/errors/handleSubscriptionIdErrors";
 import { handleStripeBillingPlanErrors } from "@/internal/billing/v2/providers/stripe/errors/handleStripeBillingPlanErrors";
 import { handleMultiAttachCurrentProductErrors } from "./handleMultiAttachCurrentProductErrors";
@@ -25,6 +27,8 @@ export const handleMultiAttachErrors = async ({
 		stripeSubscription: billingContext.stripeSubscription,
 	});
 
+	handleRevertTrialErrors({ billingContext });
+
 	// Subscription ID uniqueness
 	await handleSubscriptionIdErrors({
 		db,
@@ -42,5 +46,6 @@ export const handleMultiAttachBillingPlanErrors = ({
 	billingContext: MultiAttachBillingContext;
 	billingPlan: BillingPlan;
 }) => {
+	handleProrationBehaviorErrors({ billingContext, billingPlan });
 	handleStripeBillingPlanErrors({ ctx, billingContext, billingPlan });
 };
