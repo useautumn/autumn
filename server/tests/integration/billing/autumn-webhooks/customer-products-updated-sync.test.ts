@@ -3,7 +3,7 @@
 
 import { afterAll, beforeAll, expect, test } from "bun:test";
 import type { ApiCustomerV3, ApiProduct, SyncParamsV1 } from "@autumn/shared";
-import { getSubscriptionId } from "@tests/integration/billing/utils/stripe/getSubscriptionId.js";
+import { createStripeSubscriptionFromProduct } from "@tests/integration/billing/sync/utils/syncTestUtils.js";
 import {
 	getTestSvixAppId,
 	setupWebhookTest,
@@ -50,21 +50,22 @@ test(`${chalk.yellowBright("customer.products.updated: sync emits webhook for at
 			s.customer({ paymentMethod: "success", skipWebhooks: true }),
 			s.products({ list: [pro] }),
 		],
-		actions: [s.attach({ productId: pro.id })],
+		actions: [],
 	});
-	const subscriptionId = await getSubscriptionId({
+	const subscription = await createStripeSubscriptionFromProduct({
 		ctx,
 		customerId,
 		productId: pro.id,
+		metadata: { autumn_managed_at: String(Date.now()) },
 	});
 
 	await autumnV1.post("/billing.sync_v2", {
 		customer_id: customerId,
-		stripe_subscription_id: subscriptionId,
+		stripe_subscription_id: subscription.id,
 		phases: [
 			{
 				starts_at: "now",
-				plans: [{ plan_id: pro.id, expire_previous: true }],
+				plans: [{ plan_id: pro.id }],
 			},
 		],
 	} satisfies SyncParamsV1);
@@ -74,7 +75,7 @@ test(`${chalk.yellowBright("customer.products.updated: sync emits webhook for at
 		predicate: (payload) =>
 			payload.type === "customer.products.updated" &&
 			payload.data?.customer?.id === customerId &&
-			payload.data?.scenario === "cancel",
+			payload.data?.scenario === "new",
 		timeoutMs: 15000,
 	});
 
@@ -85,4 +86,6 @@ test(`${chalk.yellowBright("customer.products.updated: sync emits webhook for at
 			(product) => product.id === pro.id,
 		)?.status,
 	).toBe("active");
+
+	await ctx.stripeCli.subscriptions.cancel(subscription.id);
 });
