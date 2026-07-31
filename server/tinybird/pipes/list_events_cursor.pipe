@@ -11,6 +11,7 @@ SQL >
     %
     {% set use_customer_source = defined(customer_id) and String(customer_id, '') != '' %}
 
+    WITH coalesce(toString(properties), '') AS serialized_properties
     SELECT
         id,
         org_id,
@@ -19,7 +20,7 @@ SQL >
         event_name,
         timestamp,
         value,
-        toString(properties) as properties,
+        serialized_properties as properties,
         idempotency_key,
         coalesce(entity_id, '') as entity_id,
         toString(deductions) as deductions
@@ -48,19 +49,19 @@ SQL >
         AND entity_id = {{ String(entity_id) }}
         {% end %}
         {% if defined(filter_key_0) and String(filter_key_0, '') != '' %}
-        AND positionCaseInsensitive(coalesce(toString(properties), ''), concat('"', {{ String(filter_key_0, '') }}, '":"', {{ String(filter_value_0, '') }}, '"')) > 0
+        AND positionCaseInsensitive(serialized_properties, concat('"', {{ String(filter_key_0, '') }}, '":"', {{ String(filter_value_0, '') }}, '"')) > 0
         {% end %}
         {% if defined(filter_key_1) and String(filter_key_1, '') != '' %}
-        AND positionCaseInsensitive(coalesce(toString(properties), ''), concat('"', {{ String(filter_key_1, '') }}, '":"', {{ String(filter_value_1, '') }}, '"')) > 0
+        AND positionCaseInsensitive(serialized_properties, concat('"', {{ String(filter_key_1, '') }}, '":"', {{ String(filter_value_1, '') }}, '"')) > 0
         {% end %}
         {% if defined(filter_key_2) and String(filter_key_2, '') != '' %}
-        AND positionCaseInsensitive(coalesce(toString(properties), ''), concat('"', {{ String(filter_key_2, '') }}, '":"', {{ String(filter_value_2, '') }}, '"')) > 0
+        AND positionCaseInsensitive(serialized_properties, concat('"', {{ String(filter_key_2, '') }}, '":"', {{ String(filter_value_2, '') }}, '"')) > 0
         {% end %}
         {% if defined(filter_key_3) and String(filter_key_3, '') != '' %}
-        AND positionCaseInsensitive(coalesce(toString(properties), ''), concat('"', {{ String(filter_key_3, '') }}, '":"', {{ String(filter_value_3, '') }}, '"')) > 0
+        AND positionCaseInsensitive(serialized_properties, concat('"', {{ String(filter_key_3, '') }}, '":"', {{ String(filter_value_3, '') }}, '"')) > 0
         {% end %}
         {% if defined(filter_key_4) and String(filter_key_4, '') != '' %}
-        AND positionCaseInsensitive(coalesce(toString(properties), ''), concat('"', {{ String(filter_key_4, '') }}, '":"', {{ String(filter_value_4, '') }}, '"')) > 0
+        AND positionCaseInsensitive(serialized_properties, concat('"', {{ String(filter_key_4, '') }}, '":"', {{ String(filter_value_4, '') }}, '"')) > 0
         {% end %}
         {% if defined(cursor_timestamp) and String(cursor_timestamp, '') != '' and defined(cursor_id) and String(cursor_id, '') != '' %}
         AND (timestamp, id) < (toDateTime64({{ String(cursor_timestamp) }}, 6), {{ String(cursor_id) }})
