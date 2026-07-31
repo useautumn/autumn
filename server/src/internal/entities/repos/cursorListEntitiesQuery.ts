@@ -6,6 +6,7 @@ import type {
 } from "@autumn/shared";
 import { type SQL, sql } from "drizzle-orm";
 import { getFullSubjectRowsQuery } from "@/internal/customers/repos/getFullSubject/getFullSubjectRowsQuery.js";
+import { buildPlanScopeCte, planScopeJoinSql } from "./planFilterScope.js";
 
 const getEntityListFilterSql = ({
 	orgId,
@@ -28,41 +29,10 @@ const getEntityListFilterSql = ({
 		filters.push(sql`AND c.id = ${trimmedCustomerId}`);
 	}
 
-	if (plans && plans.length > 0) {
-		const planConditions = plans.map((plan) => {
-			if (plan.versions && plan.versions.length > 0) {
-				return sql`(p_filter.id = ${plan.id} AND p_filter.version IN (${sql.join(
-					plan.versions.map((version) => sql`${version}`),
-					sql`, `,
-				)}))`;
-			}
-			return sql`p_filter.id = ${plan.id}`;
-		});
-
-		// products.id is the plan slug, not a key — without org/env this matches
-		// every org's plan of that name, so the planner can't use
-		// idx_products_org_env_id_version and the EXISTS degrades to a per-entity
-		// probe across the table.
-		const planScope = sql`p_filter.org_id = ${orgId} AND p_filter.env = ${env}`;
-
-		filters.push(sql`AND EXISTS (
-			SELECT 1
-			FROM customer_products cp_filter
-			JOIN products p_filter
-				ON p_filter.internal_id = cp_filter.internal_product_id
-			WHERE cp_filter.internal_customer_id = e.internal_customer_id
-				AND (
-					cp_filter.internal_entity_id IS NULL
-					OR cp_filter.internal_entity_id = e.internal_id
-				)
-				AND cp_filter.status = ANY(ARRAY[${sql.join(
-					inStatuses.map((status) => sql`${status}`),
-					sql`, `,
-				)}])
-				AND ${planScope}
-				AND (${sql.join(planConditions, sql` OR `)})
-		)`);
-	}
+	// Plans are NOT a filter here. As a correlated EXISTS this probed
+	// customer_products per candidate entity: 26.7s / 63.2M buffer reads to return
+	// 21 rows on mintlify, because only ~0.5% of entities match a rare plan so the
+	// scan walks a long way before the LIMIT fills. Joined via plan_scopes instead.
 
 	const trimmedSearch = search?.trim();
 	if (trimmedSearch) {
@@ -133,12 +103,19 @@ export const getCursorPaginatedEntitySubjectsQuery = ({
 		? sql`AND (e.created_at, e.id) < (${cursor.t}, ${cursor.id})`
 		: sql``;
 
+	const planScopeCte = plans?.length
+		? buildPlanScopeCte({ orgId, env, plans, inStatuses })
+		: sql``;
+	const planJoinSql = plans?.length ? planScopeJoinSql : sql``;
+
 	const leadingCtes = sql`
-		WITH entity_records AS (
+		WITH ${planScopeCte}
+		entity_records AS (
 			SELECT e.*
 			FROM entities e
 			JOIN customers c
 				ON c.internal_id = e.internal_customer_id
+			${planJoinSql}
 			WHERE e.org_id = ${orgId}
 				AND e.env = ${env}
 				AND c.org_id = ${orgId}
