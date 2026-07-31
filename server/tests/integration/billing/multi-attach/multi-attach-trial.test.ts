@@ -11,7 +11,13 @@ import type { MultiAttachParamsV0Input } from "@shared/api/billing/attachV2/mult
  */
 
 import { expect, test } from "bun:test";
-import { type ApiCustomerV3, FreeTrialDuration, ms } from "@autumn/shared";
+import {
+	ALL_STATUSES,
+	type ApiCustomerV3,
+	CusProductStatus,
+	FreeTrialDuration,
+	ms,
+} from "@autumn/shared";
 import {
 	expectCustomerFeatureCorrect,
 	expectCustomerFeatureExists,
@@ -29,6 +35,7 @@ import { items } from "@tests/utils/fixtures/items";
 import { products } from "@tests/utils/fixtures/products";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
+import { CusService } from "@/internal/customers/CusService";
 
 // ═══════════════════════════════════════════════════════════════════
 // Test 1: Recurring product with free trial + add-on → trial inherited
@@ -44,7 +51,7 @@ import chalk from "chalk";
 // - Preview total = $10 (only one-off addon charged, recurring deferred)
 // - Invoice total = $10 ($0 for trial sub + $10 for one-off addon)
 // ═══════════════════════════════════════════════════════════════════
-// Red: Stripe's $0 trial line has no product and displays as "Custom Item".
+// Stripe's $0 trial line has no product and displays as "Custom Item".
 // Green: The trial line retains the Pro product ID and groups under "Pro".
 test.concurrent(`${chalk.yellowBright("multi-attach trial 1: trial inherited from recurring product")}`, async () => {
 	const messagesItem = items.monthlyMessages({ includedUsage: 500 });
@@ -127,6 +134,92 @@ test.concurrent(`${chalk.yellowBright("multi-attach trial 1: trial inherited fro
 	expect(trialLineItems).toHaveLength(1);
 	expect(trialLineItems[0].product_id).toBe(proTrial.id);
 });
+
+test.concurrent(
+	`${chalk.yellowBright("multi-attach trial 4: revert trial pauses and links multiple replaced plans")}`,
+	async () => {
+		const existingA = products.base({
+			id: "revert-existing-a",
+			items: [items.monthlyPrice({ price: 10 })],
+		});
+		const existingB = products.base({
+			id: "revert-existing-b",
+			items: [items.monthlyPrice({ price: 20 })],
+			group: "revert-group-b",
+		});
+		const replacementA = products.base({
+			id: "revert-replacement-a",
+			items: [items.monthlyPrice({ price: 30 })],
+		});
+		const replacementB = products.base({
+			id: "revert-replacement-b",
+			items: [items.monthlyPrice({ price: 40 })],
+			group: "revert-group-b",
+		});
+		const { autumnV1, autumnV2_2, customerId, ctx, advancedTo } =
+			await initScenario({
+				customerId: "ma-trial-revert-multiple",
+				setup: [
+					s.customer({ paymentMethod: "success" }),
+					s.products({
+						list: [existingA, existingB, replacementA, replacementB],
+					}),
+				],
+				actions: [
+					s.billing.attach({ productId: existingA.id }),
+					s.billing.attach({ productId: existingB.id }),
+				],
+			});
+
+		await autumnV2_2.billing.multiAttach({
+			customer_id: customerId,
+			plans: [{ plan_id: replacementA.id }, { plan_id: replacementB.id }],
+			free_trial: {
+				duration_length: 14,
+				duration_type: FreeTrialDuration.Day,
+				card_required: false,
+				on_end: "revert",
+			},
+		});
+
+		const fullCustomer = await CusService.getFull({
+			ctx,
+			idOrInternalId: customerId,
+			inStatuses: ALL_STATUSES,
+		});
+		const byProductId = new Map(
+			fullCustomer.customer_products.map((customerProduct) => [
+				customerProduct.product_id,
+				customerProduct,
+			]),
+		);
+
+		for (const [existing, replacement] of [
+			[existingA, replacementA],
+			[existingB, replacementB],
+		] as const) {
+			const paused = byProductId.get(existing.id);
+			const trial = byProductId.get(replacement.id);
+
+			expect(paused?.status).toBe(CusProductStatus.Paused);
+			expect(paused?.canceled).toBe(false);
+			expect(paused?.ended_at).toBeNull();
+			expect(trial?.previous_customer_product_id).toBe(paused?.id);
+			expect(trial?.on_trial_end).toBe("revert");
+			expect(trial?.trial_ends_at).toBeWithin(
+				advancedTo + ms.days(14) - ms.hours(1),
+				advancedTo + ms.days(14) + ms.hours(1),
+			);
+		}
+
+		const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
+		await expectCustomerInvoiceCorrect({
+			customer,
+			count: 2,
+			latestTotal: 20,
+		});
+	},
+);
 
 // ═══════════════════════════════════════════════════════════════════
 // Test 2: Recurring with trial + add-on, free_trial: null → no trial

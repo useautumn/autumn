@@ -1,4 +1,3 @@
-import type { ApiDiscount } from "@autumn/shared";
 import {
 	billingControlsFromColumns,
 	CusProductStatus,
@@ -46,17 +45,9 @@ import {
 	SubscriptionDetailLicenses,
 } from "./SubscriptionDetailLicenses";
 import { SubscriptionLicenseRow } from "./SubscriptionLicenseRow";
+import { formatDiscountLabel } from "./subscriptionDetailUtils";
 
 const ID_CHIP_INNER_CLASS = "max-w-40 text-tiny-id truncate !font-normal";
-
-function formatDiscountLabel({ discount }: { discount: ApiDiscount }): string {
-	const value =
-		discount.type === "percentage_discount"
-			? `${discount.discount_value}% off`
-			: `${discount.discount_value / 100} ${discount.currency?.toUpperCase() ?? ""} off`;
-
-	return discount.name ? `${discount.name} (${value})` : value;
-}
 
 export function SubscriptionDetailSheet() {
 	const { customer, features = [], testClockFrozenTimeMs } = useCusQuery();

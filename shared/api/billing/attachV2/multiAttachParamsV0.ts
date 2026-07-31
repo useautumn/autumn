@@ -6,6 +6,7 @@ import { CreatePlanItemParamsV1Schema } from "@api/products/items/crud/createPla
 import { z } from "zod/v4";
 import { CustomerDataSchema } from "../../common/customerData";
 import { EntityDataSchema } from "../../common/entityData";
+import { BillingBehaviorSchema } from "../common/billingBehavior";
 import { InvoiceModeParamsSchema } from "../common/invoiceModeParams";
 import { RedirectModeSchema } from "../common/redirectMode";
 import { AttachDiscountSchema } from "./attachDiscount";
@@ -30,7 +31,7 @@ export const MultiAttachPlanSchema = z.object({
 	}),
 	customize: MultiAttachCustomizePlanSchema.meta({
 		description:
-			"Customize the plan to attach. Can override the price, items, or licenses.",
+			"Customize the plan to attach. Can override its price or items.",
 	}),
 	feature_quantities: z.array(FeatureQuantityParamsV0Schema).optional().meta({
 		description:
@@ -42,6 +43,10 @@ export const MultiAttachPlanSchema = z.object({
 	subscription_id: z.string().optional().meta({
 		description:
 			"A unique ID to identify this subscription. Useful when attaching the same plan multiple times.",
+	}),
+	entity_id: z.string().nullable().optional().meta({
+		description:
+			"The entity scope for this plan. Omit to inherit the request scope, or pass null for customer-level.",
 	}),
 });
 
@@ -79,6 +84,7 @@ export const MultiAttachParamsV0Schema = z.object({
 		description:
 			"List of discounts to apply. Each discount can be an Autumn reward ID, Stripe coupon ID, or Stripe promotion code.",
 	}),
+	billing_behavior: BillingBehaviorSchema.optional(),
 
 	success_url: z.string().optional().meta({
 		description: "URL to redirect to after successful checkout.",

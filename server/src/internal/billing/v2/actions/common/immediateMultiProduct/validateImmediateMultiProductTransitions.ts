@@ -1,4 +1,5 @@
 import { type MultiAttachProductContext, RecaseError } from "@autumn/shared";
+import { validateProductGroupsByScope } from "../validateProductGroupsByScope";
 
 /** Reject unsupported immediate multi-product transition combinations. */
 export const validateImmediateMultiProductTransitions = ({
@@ -6,6 +7,14 @@ export const validateImmediateMultiProductTransitions = ({
 }: {
 	productContexts: MultiAttachProductContext[];
 }) => {
+	validateProductGroupsByScope({
+		plans: productContexts.map((productContext) => ({
+			fullProduct: productContext.fullProduct,
+			scopeId: productContext.fullCustomer.entity?.internal_id,
+		})),
+		operation: "Multi-attach",
+	});
+
 	for (const productContext of productContexts) {
 		const { fullProduct, currentCustomerProduct } = productContext;
 
@@ -17,20 +26,5 @@ export const validateImmediateMultiProductTransitions = ({
 				statusCode: 400,
 			});
 		}
-	}
-
-	const transitioningProducts = productContexts.filter(
-		(productContext) => productContext.currentCustomerProduct !== undefined,
-	);
-
-	if (transitioningProducts.length > 1) {
-		const planIds = transitioningProducts
-			.map((productContext) => `"${productContext.fullProduct.id}"`)
-			.join(", ");
-
-		throw new RecaseError({
-			message: `Multi-attach supports at most one plan transition, but plans ${planIds} each replace an existing product in their group.`,
-			statusCode: 400,
-		});
 	}
 };

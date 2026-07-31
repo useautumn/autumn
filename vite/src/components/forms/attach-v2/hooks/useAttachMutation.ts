@@ -1,8 +1,7 @@
 import type {
 	AttachParamsV0,
 	BillingResponse,
-	CreateScheduleParamsV0,
-	CreateScheduleResponse,
+	MultiAttachParamsV0,
 } from "@autumn/shared";
 import { useBillingMutation } from "@/components/forms/shared/hooks/useBillingMutation";
 import type { BillingStageParams } from "@/components/forms/shared/utils/billingStageParams";
@@ -18,15 +17,15 @@ export function useAttachMutation({
 	customerId: string | undefined;
 	buildRequestBody: (
 		params?: BillingStageParams,
-	) => AttachParamsV0 | CreateScheduleParamsV0 | null;
+	) => AttachParamsV0 | MultiAttachParamsV0 | null;
 	path: string;
 	invalidatesSchedule: boolean;
 	onCheckoutRedirect?: (checkoutUrl: string) => void;
 	onSuccess?: () => void;
 }) {
 	const mutation = useBillingMutation<
-		AttachParamsV0 | CreateScheduleParamsV0,
-		BillingResponse | CreateScheduleResponse
+		AttachParamsV0 | MultiAttachParamsV0,
+		BillingResponse
 	>({
 		customerId,
 		path,

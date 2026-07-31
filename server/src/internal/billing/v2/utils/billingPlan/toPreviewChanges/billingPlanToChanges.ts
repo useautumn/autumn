@@ -14,7 +14,10 @@ import {
 } from "@autumn/shared";
 import { Decimal } from "decimal.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
-import { billingPlanToUpdatedCustomerProduct } from "@/internal/billing/v2/utils/billingPlan/billingPlanToUpdatedCustomerProduct";
+import {
+	applyCustomerProductUpdate,
+	getUpdateCustomerProducts,
+} from "@/internal/billing/v2/utils/billingPlan/customerProductPlanMutations";
 import { cusProductToBalances } from "@/internal/customers/cusUtils/apiCusUtils/getApiBalance/cusProductToBalances.js";
 import { getApiSubscription } from "@/internal/customers/cusUtils/apiCusUtils/getApiSubscription/getApiSubscription.js";
 import { billingPlanToOutgoingEffectiveAt } from "./billingPlanToEffectiveAt";
@@ -182,11 +185,14 @@ export const billingPlanToChanges = async ({
 		prefix: "outgoing",
 	});
 
-	if (autumn.updateCustomerProduct) {
-		const updatedCustomerProduct = billingPlanToUpdatedCustomerProduct({
-			autumnBillingPlan: billingPlan.autumn,
+	for (const update of getUpdateCustomerProducts({
+		autumnBillingPlan: autumn,
+	})) {
+		const updatedCustomerProduct = applyCustomerProductUpdate({
+			customerProduct: update.customerProduct,
+			updates: update.updates,
 		});
-		const { updates } = autumn.updateCustomerProduct;
+		const { updates } = update;
 
 		const isOutgoing = getIsOutgoing({
 			billingContext,
@@ -198,7 +204,7 @@ export const billingPlanToChanges = async ({
 			incoming,
 		});
 
-		if (shouldIncludeIncoming && updatedCustomerProduct) {
+		if (shouldIncludeIncoming) {
 			const { data: subscription } = await getApiSubscription({
 				ctx: incomingCtx,
 				cusProduct: updatedCustomerProduct,
@@ -220,10 +226,9 @@ export const billingPlanToChanges = async ({
 			});
 		}
 
-		const outgoingCustomerProduct =
-			autumn.updateCustomerProduct.customerProduct;
+		const outgoingCustomerProduct = update.customerProduct;
 
-		if (isOutgoing && outgoingCustomerProduct) {
+		if (isOutgoing) {
 			const { data: subscription } = await getApiSubscription({
 				ctx: outgoingCtx,
 				cusProduct: outgoingCustomerProduct,
