@@ -1,13 +1,5 @@
-import type {
-	AttachParamsV1,
-	BillingContext,
-	BillingPlan,
-} from "@autumn/shared";
-import {
-	ErrCode,
-	RecaseError,
-	type UpdateSubscriptionV1Params,
-} from "@autumn/shared";
+import type { BillingContext, BillingPlan } from "@autumn/shared";
+import { ErrCode, RecaseError } from "@autumn/shared";
 import { getTrialStateTransition } from "@/internal/billing/v2/utils/billingContext/getTrialStateTransition";
 import {
 	billingPlanWillCharge,
@@ -23,11 +15,9 @@ import {
 export const handleProrationBehaviorErrors = ({
 	billingContext,
 	billingPlan,
-	params,
 }: {
 	billingContext: BillingContext;
 	billingPlan: BillingPlan;
-	params: UpdateSubscriptionV1Params | AttachParamsV1;
 }) => {
 	if (billingContext.requestedProrationBehavior !== "none") return;
 

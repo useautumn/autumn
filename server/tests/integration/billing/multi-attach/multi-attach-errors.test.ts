@@ -1,4 +1,6 @@
 import { test } from "bun:test";
+import type { ApiCustomerV3, ApiEntityV0 } from "@autumn/shared";
+import { expectCustomerProducts } from "@tests/integration/billing/utils/expectCustomerProductCorrect";
 import { expectSubCount } from "@tests/merged/mergeUtils/expectSubCorrect";
 import { TestFeature } from "@tests/setup/v2Features";
 import { expectAutumnError } from "@tests/utils/expectUtils/expectErrUtils";
@@ -47,54 +49,30 @@ test.concurrent(`${chalk.yellowBright("multi-attach error: cannot re-attach same
 });
 
 // ═══════════════════════════════════════════════════════════════════
-// Test 2: Cannot multi-attach with more than one plan transition
+// Test 2: Cannot multi-attach two main plans in one group and scope
 // ═══════════════════════════════════════════════════════════════════
-test.concurrent(`${chalk.yellowBright("multi-attach error: multiple transitions in one batch")}`, async () => {
-	const messagesItem = items.monthlyMessages({ includedUsage: 100 });
-	const usersItem = items.monthlyUsers({ includedUsage: 5 });
-
-	// Customer has products in two groups
-	const existingA = products.base({
-		id: "existing-a",
-		items: [messagesItem, items.monthlyPrice({ price: 5 })],
+test.concurrent(`${chalk.yellowBright("multi-attach error: conflicting plans in one scope")}`, async () => {
+	const planA = products.base({
+		id: "plan-a",
+		items: [items.monthlyMessages({ includedUsage: 100 })],
 	});
-	const existingB = products.base({
-		id: "existing-b",
-		items: [usersItem, items.monthlyPrice({ price: 5 })],
-		group: "group-b",
+	const planB = products.base({
+		id: "plan-b",
+		items: [items.monthlyUsers({ includedUsage: 5 })],
 	});
 
-	// Multi-attach tries to replace both groups
-	const replacementA = products.pro({
-		id: "replacement-a",
-		items: [messagesItem],
-	});
-	const replacementB = products.base({
-		id: "replacement-b",
-		items: [usersItem, items.monthlyPrice({ price: 20 })],
-		group: "group-b",
-	});
-
-	const { customerId, autumnV1 } = await initScenario({
-		customerId: "ma-err-multi-transition",
-		setup: [
-			s.customer({ paymentMethod: "success" }),
-			s.products({
-				list: [existingA, existingB, replacementA, replacementB],
-			}),
-		],
-		actions: [
-			s.billing.attach({ productId: existingA.id }),
-			s.billing.attach({ productId: existingB.id }),
-		],
+	const { customerId, autumnV2_2 } = await initScenario({
+		customerId: "ma-err-same-group-scope",
+		setup: [s.customer({ testClock: false }), s.products({ list: [planA, planB] })],
+		actions: [],
 	});
 
 	await expectAutumnError({
-		errMessage: "at most one plan transition",
+		errMessage: "at most one plan per group and scope",
 		func: async () => {
-			await autumnV1.billing.multiAttach({
+			await autumnV2_2.billing.multiAttach({
 				customer_id: customerId,
-				plans: [{ plan_id: replacementA.id }, { plan_id: replacementB.id }],
+				plans: [{ plan_id: planA.id }, { plan_id: planB.id }],
 			});
 		},
 	});
@@ -141,6 +119,155 @@ test.concurrent(`${chalk.yellowBright("multi-attach error: redirect always with 
 		},
 	});
 });
+
+test.concurrent(
+	chalk.yellowBright("multi-attach error: cannot replace products across subscriptions"),
+	async () => {
+		const existingA = products.base({
+			id: "existing-a",
+			items: [items.monthlyPrice({ price: 5 })],
+		});
+		const existingB = products.base({
+			id: "existing-b",
+			items: [items.monthlyPrice({ price: 10 })],
+			group: "group-b",
+		});
+		const replacementA = products.base({
+			id: "replacement-a",
+			items: [items.monthlyPrice({ price: 15 })],
+		});
+		const replacementB = products.base({
+			id: "replacement-b",
+			items: [items.monthlyPrice({ price: 20 })],
+			group: "group-b",
+		});
+
+		const { customerId, autumnV2_2 } = await initScenario({
+			customerId: "ma-err-multiple-subscriptions",
+			setup: [
+				s.customer({ paymentMethod: "success" }),
+				s.products({
+					list: [existingA, existingB, replacementA, replacementB],
+				}),
+			],
+			actions: [
+				s.billing.attach({ productId: existingA.id }),
+				s.billing.attach({
+					productId: existingB.id,
+					newBillingSubscription: true,
+				}),
+			],
+		});
+
+		await expectAutumnError({
+			errMessage: "multiple existing subscriptions",
+			func: () =>
+				autumnV2_2.billing.multiAttach({
+					customer_id: customerId,
+					plans: [
+						{ plan_id: replacementA.id },
+						{ plan_id: replacementB.id },
+					],
+				}),
+		});
+
+		const customer = await autumnV2_2.customers.get<ApiCustomerV3>(customerId);
+		await expectCustomerProducts({
+			customer,
+			active: [existingA.id, existingB.id],
+			notPresent: [replacementA.id, replacementB.id],
+		});
+		await expectSubCount({ ctx, customerId, count: 2 });
+	},
+);
+
+test.concurrent(
+	chalk.yellowBright(
+		"multi-attach error: scoped add-ons cannot span existing subscriptions",
+	),
+	async () => {
+		const base = products.base({
+			id: "scoped-base",
+			items: [items.monthlyPrice({ price: 10 })],
+		});
+		const addOn = products.recurringAddOn({
+			id: "scoped-add-on",
+			items: [items.monthlyWords({ includedUsage: 100 })],
+		});
+		const { autumnV1, autumnV2_2, customerId, entities } =
+			await initScenario({
+				customerId: "ma-err-scoped-add-ons-multiple-subscriptions",
+				setup: [
+					s.customer({ paymentMethod: "success" }),
+					s.products({ list: [base, addOn] }),
+					s.entities({ count: 2, featureId: TestFeature.Users }),
+				],
+				actions: [
+					s.billing.attach({ productId: base.id, entityIndex: 0 }),
+					s.billing.attach({
+						productId: base.id,
+						entityIndex: 1,
+						newBillingSubscription: true,
+					}),
+				],
+			});
+
+		await expectAutumnError({
+			errMessage: "multiple existing subscriptions",
+			func: () =>
+				autumnV2_2.billing.multiAttach({
+					customer_id: customerId,
+					plans: entities.map((entity) => ({
+						plan_id: addOn.id,
+						entity_id: entity.id,
+					})),
+				}),
+		});
+
+		const scopedEntities = await Promise.all(
+			entities.map((entity) =>
+				autumnV1.entities.get<ApiEntityV0>(customerId, entity.id),
+			),
+		);
+		for (const entity of scopedEntities) {
+			await expectCustomerProducts({
+				customer: entity,
+				active: [base.id],
+				notPresent: [addOn.id],
+			});
+		}
+		await expectSubCount({ ctx, customerId, count: 2 });
+	},
+);
+
+test.concurrent(
+	chalk.yellowBright("multi-attach error: revert trial requires an existing subscription"),
+	async () => {
+		const plan = products.base({
+			id: "revert-plan",
+			items: [items.monthlyPrice({ price: 10 })],
+		});
+		const { customerId, autumnV2_2 } = await initScenario({
+			customerId: "ma-err-revert-without-subscription",
+			setup: [s.customer(), s.products({ list: [plan] })],
+			actions: [],
+		});
+
+		await expectAutumnError({
+			errMessage: "without an existing paid subscription",
+			func: () =>
+				autumnV2_2.billing.multiAttach({
+					customer_id: customerId,
+					plans: [{ plan_id: plan.id }],
+					free_trial: {
+						duration_length: 14,
+						duration_type: "day",
+						on_end: "revert",
+					},
+				}),
+		});
+	},
+);
 
 // ═══════════════════════════════════════════════════════════════════
 // Test 4: redirect_mode "always" on entity without new_billing_sub → error

@@ -10,10 +10,10 @@ import {
 	EMPTY_ADDITIONAL_PLAN,
 } from "@/components/forms/attach-v2/attachFormSchema";
 import {
-	type BuildAttachScheduleRequestBodyParams,
-	buildAttachScheduleRequestBody,
-} from "@/components/forms/attach-v2/hooks/useAttachScheduleRequestBody";
-import { applyCreateScheduleStageParams } from "@/components/forms/shared/utils/applyCreateScheduleStageParams";
+	type BuildAttachMultiRequestBodyParams,
+	buildAttachMultiRequestBody,
+} from "@/components/forms/attach-v2/hooks/useAttachMultiRequestBody";
+import { applyMultiPlanStageParams } from "@/components/forms/shared/utils/applyMultiPlanStageParams";
 
 const planA = {
 	id: "plan-a",
@@ -38,8 +38,8 @@ const additionalPlan = (
 });
 
 const baseParams = (
-	overrides: Partial<BuildAttachScheduleRequestBodyParams> = {},
-): BuildAttachScheduleRequestBodyParams => ({
+	overrides: Partial<BuildAttachMultiRequestBodyParams> = {},
+): BuildAttachMultiRequestBodyParams => ({
 	customerId: "cus_1",
 	entityId: undefined,
 	product: planA,
@@ -54,30 +54,29 @@ const baseParams = (
 	trialDuration: FreeTrialDuration.Day,
 	trialEnabled: false,
 	trialCardRequired: true,
+	trialOnEnd: "bill",
+	prorationBehavior: null,
 	redirectMode: "if_required",
 	discounts: [],
 	currency: null,
 	...overrides,
 });
 
-test("builds one immediate schedule phase containing every selected plan", () => {
-	const body = buildAttachScheduleRequestBody(baseParams());
+test("builds one multi-attach request containing every selected plan", () => {
+	const body = buildAttachMultiRequestBody(baseParams());
 
-	expect(body?.phases).toMatchObject([
-		{
-			starts_at: "now",
-			plans: [{ plan_id: "plan-a" }, { plan_id: "plan-b" }],
-		},
+	expect(body?.plans).toMatchObject([
+		{ plan_id: "plan-a" },
+		{ plan_id: "plan-b" },
 	]);
-	expect(body?.preserve_add_ons).toBe(true);
 });
 
 test("returns null when no additional plan is selected", () => {
 	expect(
-		buildAttachScheduleRequestBody(baseParams({ additionalPlans: [] })),
+		buildAttachMultiRequestBody(baseParams({ additionalPlans: [] })),
 	).toBeNull();
 	expect(
-		buildAttachScheduleRequestBody(
+		buildAttachMultiRequestBody(
 			baseParams({ additionalPlans: [additionalPlan({ productId: "" })] }),
 		),
 	).toBeNull();
@@ -85,21 +84,21 @@ test("returns null when no additional plan is selected", () => {
 
 test("returns null while selected plan scopes conflict", () => {
 	expect(
-		buildAttachScheduleRequestBody(baseParams({ hasInvalidPlanScopes: true })),
+		buildAttachMultiRequestBody(baseParams({ hasInvalidPlanScopes: true })),
 	).toBeNull();
 });
 
 test("returns null without a customer or primary product", () => {
 	expect(
-		buildAttachScheduleRequestBody(baseParams({ customerId: undefined })),
+		buildAttachMultiRequestBody(baseParams({ customerId: undefined })),
 	).toBeNull();
 	expect(
-		buildAttachScheduleRequestBody(baseParams({ product: undefined })),
+		buildAttachMultiRequestBody(baseParams({ product: undefined })),
 	).toBeNull();
 });
 
 test("maps the form trial onto FreeTrialParamsV1 field names", () => {
-	const body = buildAttachScheduleRequestBody(
+	const body = buildAttachMultiRequestBody(
 		baseParams({
 			trialEnabled: true,
 			trialLength: 14,
@@ -116,22 +115,31 @@ test("maps the form trial onto FreeTrialParamsV1 field names", () => {
 });
 
 test("sends free_trial null when the trial is off", () => {
-	expect(buildAttachScheduleRequestBody(baseParams())?.free_trial).toBeNull();
+	expect(buildAttachMultiRequestBody(baseParams())?.free_trial).toBeNull();
 });
 
-test("omits unsupported trial end behavior", () => {
-	const body = buildAttachScheduleRequestBody(
+test("forwards request-wide trial end behavior", () => {
+	const body = buildAttachMultiRequestBody(
 		baseParams({
 			trialEnabled: true,
 			trialLength: 14,
+			trialOnEnd: "revert",
 		}),
 	);
 
-	expect(body?.free_trial?.on_end).toBeUndefined();
+	expect(body?.free_trial?.on_end).toBe("revert");
+});
+
+test("forwards request-wide proration behavior", () => {
+	const body = buildAttachMultiRequestBody(
+		baseParams({ prorationBehavior: "none" }),
+	);
+
+	expect(body?.billing_behavior).toBe("none");
 });
 
 test("passes entity and currency through", () => {
-	const body = buildAttachScheduleRequestBody(
+	const body = buildAttachMultiRequestBody(
 		baseParams({
 			entityId: "ent_1",
 			currency: "EUR",
@@ -143,39 +151,39 @@ test("passes entity and currency through", () => {
 });
 
 test("keeps additional plans customer-level when the primary scope changes", () => {
-	const body = buildAttachScheduleRequestBody(
+	const body = buildAttachMultiRequestBody(
 		baseParams({ entityId: "ent_default" }),
 	);
 
-	expect(body?.phases[0].plans[1]?.entity_id).toBeNull();
+	expect(body?.plans[1]?.entity_id).toBeNull();
 });
 
 test("preserves explicit per-plan entity inheritance and overrides", () => {
-	const inherited = buildAttachScheduleRequestBody(
+	const inherited = buildAttachMultiRequestBody(
 		baseParams({
 			entityId: "ent_default",
 			additionalPlans: [additionalPlan({ entityId: undefined })],
 		}),
 	);
-	const customerLevel = buildAttachScheduleRequestBody(
+	const customerLevel = buildAttachMultiRequestBody(
 		baseParams({
 			entityId: "ent_default",
 			additionalPlans: [additionalPlan({ entityId: null })],
 		}),
 	);
-	const entityLevel = buildAttachScheduleRequestBody(
+	const entityLevel = buildAttachMultiRequestBody(
 		baseParams({
 			additionalPlans: [additionalPlan({ entityId: "ent_other" })],
 		}),
 	);
 
-	expect(inherited?.phases[0].plans[1]?.entity_id).toBeUndefined();
-	expect(customerLevel?.phases[0].plans[1]?.entity_id).toBeNull();
-	expect(entityLevel?.phases[0].plans[1]?.entity_id).toBe("ent_other");
+	expect(inherited?.plans[1]?.entity_id).toBeUndefined();
+	expect(customerLevel?.plans[1]?.entity_id).toBeNull();
+	expect(entityLevel?.plans[1]?.entity_id).toBe("ent_other");
 });
 
 test("forwards per-plan version and prepaid quantities", () => {
-	const body = buildAttachScheduleRequestBody(
+	const body = buildAttachMultiRequestBody(
 		baseParams({
 			version: 3,
 			prepaidOptions: { seats: 5 },
@@ -188,7 +196,7 @@ test("forwards per-plan version and prepaid quantities", () => {
 		}),
 	);
 
-	const [primary, extra] = body?.phases[0].plans ?? [];
+	const [primary, extra] = body?.plans ?? [];
 	expect(primary?.version).toBe(3);
 	expect(primary?.feature_quantities).toEqual([
 		{ feature_id: "seats", quantity: 5 },
@@ -207,7 +215,7 @@ test("grant-free removes prices from every plan", () => {
 	} as ProductItem;
 	const paidPlanA = { ...planA, items: [paidItem] };
 	const paidPlanB = { ...planB, items: [paidItem] };
-	const body = buildAttachScheduleRequestBody(
+	const body = buildAttachMultiRequestBody(
 		baseParams({
 			product: paidPlanA,
 			products: [paidPlanA, paidPlanB],
@@ -215,20 +223,20 @@ test("grant-free removes prices from every plan", () => {
 		}),
 	);
 
-	expect(body?.phases[0].plans.map((plan) => plan.customize)).toEqual([
+	expect(body?.plans.map((plan) => plan.customize)).toEqual([
 		{ price: null, items: [] },
 		{ price: null, items: [] },
 	]);
 });
 
 test("empty item drafts do not create a customization", () => {
-	const body = buildAttachScheduleRequestBody(baseParams({ items: [] }));
+	const body = buildAttachMultiRequestBody(baseParams({ items: [] }));
 
-	expect(body?.phases[0].plans[0]?.customize).toBeUndefined();
+	expect(body?.plans[0]?.customize).toBeUndefined();
 });
 
 test("omits discounts that are not fully filled in", () => {
-	const body = buildAttachScheduleRequestBody(
+	const body = buildAttachMultiRequestBody(
 		baseParams({
 			discounts: [{ _id: "d1", reward_id: "" }],
 		}),
@@ -238,8 +246,8 @@ test("omits discounts that are not fully filled in", () => {
 });
 
 test("invoice mode nests the flags under invoice_mode", () => {
-	const requestBody = buildAttachScheduleRequestBody(baseParams());
-	const withInvoice = applyCreateScheduleStageParams({
+	const requestBody = buildAttachMultiRequestBody(baseParams());
+	const withInvoice = applyMultiPlanStageParams({
 		requestBody,
 		useInvoice: true,
 		enableProductImmediately: true,
@@ -256,8 +264,8 @@ test("invoice mode nests the flags under invoice_mode", () => {
 });
 
 test("checkout mode sets enable_plan_immediately without invoice_mode", () => {
-	const requestBody = buildAttachScheduleRequestBody(baseParams());
-	const withCheckout = applyCreateScheduleStageParams({
+	const requestBody = buildAttachMultiRequestBody(baseParams());
+	const withCheckout = applyMultiPlanStageParams({
 		requestBody,
 		enableProductImmediately: true,
 	});
@@ -268,6 +276,6 @@ test("checkout mode sets enable_plan_immediately without invoice_mode", () => {
 
 test("stage params on a null body stay null", () => {
 	expect(
-		applyCreateScheduleStageParams({ requestBody: null, useInvoice: true }),
+		applyMultiPlanStageParams({ requestBody: null, useInvoice: true }),
 	).toBeNull();
 });
