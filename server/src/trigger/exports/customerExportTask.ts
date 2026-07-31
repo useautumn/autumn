@@ -1,6 +1,9 @@
 import {
+	type AppEnv,
+	CUSTOMER_EXPORT_PROCESSED_ROWS_KEY,
 	CUSTOMER_EXPORT_TOTAL_ROWS_KEY,
 	CustomerExportStatus,
+	type DbCustomerExport,
 } from "@autumn/shared";
 import { metadata, task } from "@trigger.dev/sdk/v3";
 import {
@@ -12,39 +15,39 @@ import {
 	abortS3MultipartUpload,
 	completeS3MultipartUpload,
 	createS3MultipartUpload,
-	type S3UploadedPart,
 	uploadS3Part,
 } from "@/external/aws/s3/s3MultipartUtils.js";
+import { headS3Object } from "@/external/aws/s3/s3ObjectUtils.js";
 import type { Logger } from "@/external/logtail/logtailUtils.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
+import { CusSearchService } from "@/internal/customers/CusSearchService.js";
 import { CustomerExportService } from "@/internal/customers/exports/CustomerExportService.js";
-import { serializeCustomerExportRows } from "@/internal/customers/exports/csv/serializeCustomerExportRows.js";
+import { createCsvUploadBuffer } from "@/internal/customers/exports/csv/csvUploadBuffer.js";
 import {
-	getCustomerExportPartitions,
-	resolveRowsPerWorker,
-} from "@/internal/customers/exports/queries/getCustomerExportPartitions.js";
+	type CustomerExportRow,
+	serializeCustomerExportRows,
+} from "@/internal/customers/exports/csv/serializeCustomerExportRows.js";
+import {
+	emptyPlanColumns,
+	getCustomerExportPlanColumns,
+} from "@/internal/customers/exports/queries/getCustomerExportPlanColumns.js";
+import {
+	CUSTOMER_EXPORT_PAGE_SIZE,
+	getCustomerExportScalars,
+} from "@/internal/customers/exports/queries/getCustomerExportScalars.js";
+import { createOneOffProductLookup } from "@/internal/customers/exports/queries/getOneOffProductLookup.js";
 import {
 	CUSTOMER_EXPORT_MAX_DURATION_SECONDS,
 	CUSTOMER_EXPORT_PARENT_RETRY,
 	customerExportParentQueue,
 } from "@/trigger/exports/customerExportQueue.js";
 import {
-	type CustomerExportWorkerResult,
 	type RunCustomerExportPayload,
 	RunCustomerExportPayloadSchema,
-	type RunCustomerExportWorkerPayload,
 } from "@/trigger/exports/customerExportTaskPayload.js";
-import {
-	customerExportWorkerTask,
-	executeCustomerExportWorker,
-} from "@/trigger/exports/customerExportWorkerTask.js";
 import { createTriggerContext } from "@/trigger/utils/createTriggerContext.js";
 
 const MAX_STORED_ERROR_LENGTH = 500;
-
-export type CustomerExportWorkerRunner = (
-	payloads: RunCustomerExportWorkerPayload[],
-) => Promise<CustomerExportWorkerResult[]>;
 
 /** Job rows are user-visible, so only a short message survives — never a stack. */
 const sanitizeExportError = ({ error }: { error: unknown }) => {
@@ -67,17 +70,22 @@ const markCompletedWithRetry = async ({
 	ctx: AutumnContext;
 	logger: Logger;
 	exportId: string;
-	rowCount: number;
-	byteCount: number;
+	rowCount: number | null;
+	byteCount: number | null;
 }) => {
 	for (let attempt = 1; ; attempt++) {
 		try {
-			await CustomerExportService.markCompleted({
+			const completed = await CustomerExportService.markCompleted({
 				db: ctx.db,
 				id: exportId,
 				rowCount,
 				byteCount,
 			});
+			if (!completed) {
+				logger.warn("customer-export: row left its active state mid-run", {
+					data: { exportId },
+				});
+			}
 			return;
 		} catch (error) {
 			if (attempt >= MARK_COMPLETED_ATTEMPTS) throw error;
@@ -91,32 +99,161 @@ const markCompletedWithRetry = async ({
 	}
 };
 
-const runWorkersInline = async ({
+const abortUploadBestEffort = async ({
+	logger,
+	exportId,
+	bucket,
+	region,
+	key,
+	uploadId,
+}: {
+	logger: Logger;
+	exportId: string;
+	bucket: string;
+	region: string;
+	key: string;
+	uploadId: string;
+}) => {
+	await abortS3MultipartUpload({ bucket, region, key, uploadId }).catch(
+		(error) => {
+			logger.error("customer-export: failed to abort multipart upload", {
+				data: { exportId, error: sanitizeExportError({ error }) },
+			});
+		},
+	);
+};
+
+/** A retry that finds the published object only needs to record completion. */
+const reconcileUploadedExport = async ({
 	ctx,
 	logger,
-	payloads,
+	customerExport,
+	bucket,
+	region,
 }: {
 	ctx: AutumnContext;
 	logger: Logger;
-	payloads: RunCustomerExportWorkerPayload[];
+	customerExport: DbCustomerExport;
+	bucket: string;
+	region: string;
+}): Promise<boolean> => {
+	if (!customerExport.s3_key) return false;
+
+	const head = await headS3Object({
+		bucket,
+		region,
+		key: customerExport.s3_key,
+	});
+	if (!head.exists) return false;
+
+	await markCompletedWithRetry({
+		ctx,
+		logger,
+		exportId: customerExport.id,
+		rowCount: null,
+		byteCount: head.contentLength,
+	});
+	logger.warn(
+		"customer-export: reconciled export published before its status write",
+		{
+			data: { exportId: customerExport.id },
+		},
+	);
+	return true;
+};
+
+const streamCustomerExportCsv = async ({
+	ctx,
+	customerExport,
+	orgId,
+	env,
+	bucket,
+	region,
+	key,
+	uploadId,
+}: {
+	ctx: AutumnContext;
+	customerExport: DbCustomerExport;
+	orgId: string;
+	env: AppEnv;
+	bucket: string;
+	region: string;
+	key: string;
+	uploadId: string;
 }) => {
-	const results: CustomerExportWorkerResult[] = [];
-	for (const payload of payloads) {
-		results.push(await executeCustomerExportWorker({ ctx, logger, payload }));
+	const { fields } = customerExport;
+	const snapshot = {
+		search: customerExport.snapshot?.search ?? "",
+		filters: customerExport.snapshot?.filters ?? {},
+	};
+	const oneOffProductLookup = createOneOffProductLookup({ db: ctx.db });
+	const buffer = createCsvUploadBuffer({
+		uploadPart: ({ partNumber, body }) =>
+			uploadS3Part({ bucket, region, key, uploadId, partNumber, body }),
+	});
+
+	await buffer.append(
+		serializeCustomerExportRows({ rows: [], fields, includeHeader: true }),
+	);
+
+	let rowCount = 0;
+	let afterInternalId: string | null = null;
+
+	for (;;) {
+		const scalars = await getCustomerExportScalars({
+			db: ctx.db,
+			orgId,
+			env,
+			snapshot,
+			afterInternalId,
+		});
+		if (scalars.length === 0) break;
+
+		const planColumnsByCustomer = await getCustomerExportPlanColumns({
+			db: ctx.db,
+			internalCustomerIds: scalars.map((scalar) => scalar.internal_id),
+			oneOffProductLookup,
+		});
+
+		const rows: CustomerExportRow[] = scalars.map((scalar) => {
+			const planColumns =
+				planColumnsByCustomer.get(scalar.internal_id) ?? emptyPlanColumns();
+
+			return {
+				name: scalar.name,
+				email: scalar.email,
+				customer_id: scalar.id,
+				subscriptions: planColumns.subscriptions,
+				purchases: planColumns.purchases,
+				licenses: planColumns.licenses,
+			};
+		});
+
+		await buffer.append(serializeCustomerExportRows({ rows, fields }));
+		rowCount += scalars.length;
+		afterInternalId = scalars[scalars.length - 1].internal_id;
+		await metadata.increment(
+			CUSTOMER_EXPORT_PROCESSED_ROWS_KEY,
+			scalars.length,
+		);
+
+		if (scalars.length < CUSTOMER_EXPORT_PAGE_SIZE) break;
 	}
-	return results;
+
+	const { parts, byteCount } = await buffer.finalize();
+	return { rowCount, parts, byteCount };
 };
 
 export const executeCustomerExport = async ({
 	ctx,
 	logger,
 	payload,
-	runWorkers,
+	isFinalAttempt = true,
 }: {
 	ctx: AutumnContext;
 	logger: Logger;
 	payload: RunCustomerExportPayload;
-	runWorkers?: CustomerExportWorkerRunner;
+	isFinalAttempt?: boolean;
 }) => {
 	const { exportId, orgId, env } = payload;
 
@@ -130,14 +267,38 @@ export const executeCustomerExport = async ({
 	if (!customerExport) {
 		throw new Error(`Customer export ${exportId} not found`);
 	}
-	if (customerExport.status !== CustomerExportStatus.Queued) {
-		logger.warn("customer-export: skipping non-queued export", {
+
+	const { bucket, region } = getCustomerExportsS3Config();
+
+	if (customerExport.status === CustomerExportStatus.Running) {
+		// Creates are idempotency-keyed, so only a retry of this export's own run
+		// sees Running: reconcile a finished upload, otherwise start over.
+		const reconciled = await reconcileUploadedExport({
+			ctx,
+			logger,
+			customerExport,
+			bucket,
+			region,
+		});
+		if (reconciled) return;
+
+		if (customerExport.s3_key && customerExport.s3_upload_id) {
+			await abortUploadBestEffort({
+				logger,
+				exportId,
+				bucket,
+				region,
+				key: customerExport.s3_key,
+				uploadId: customerExport.s3_upload_id,
+			});
+		}
+	} else if (customerExport.status !== CustomerExportStatus.Queued) {
+		logger.warn("customer-export: skipping non-active export", {
 			data: { exportId, status: customerExport.status },
 		});
 		return;
 	}
 
-	const { bucket, region } = getCustomerExportsS3Config();
 	const key = getCustomerExportKey({ orgId, env, exportId });
 	// Only set once the upload exists — nothing to abort before that point.
 	let uploadId: string | undefined;
@@ -146,15 +307,12 @@ export const executeCustomerExport = async ({
 	let uploadCompleted = false;
 
 	try {
-		const rowsPerWorker = resolveRowsPerWorker({
-			fieldCount: customerExport.fields.length,
-		});
-		const { partitions, totalRows } = await getCustomerExportPartitions({
+		const { totalCount } = await CusSearchService.count({
 			db: ctx.db,
 			orgId,
 			env,
-			snapshot: customerExport.snapshot,
-			rowsPerWorker,
+			search: customerExport.snapshot?.search ?? "",
+			filters: customerExport.snapshot?.filters ?? {},
 		});
 
 		uploadId = (
@@ -171,165 +329,75 @@ export const executeCustomerExport = async ({
 			id: exportId,
 			s3Key: key,
 			s3UploadId: uploadId,
-			partitionPlan: { rowsPerWorker, partitions },
 		});
 
-		logger.info("customer-export: partitioned", {
-			data: { exportId, totalRows, partitionCount: partitions.length },
+		logger.info("customer-export: started", {
+			data: { exportId, totalCount },
 		});
 
-		// Safe no-op outside a trigger run (inline dev mode).
-		metadata.set(CUSTOMER_EXPORT_TOTAL_ROWS_KEY, totalRows);
+		// Safe no-ops outside a trigger run (inline dev mode). A restarted attempt
+		// re-walks from the top, so the processed counter starts over too.
+		metadata.set(CUSTOMER_EXPORT_TOTAL_ROWS_KEY, totalCount);
+		metadata.set(CUSTOMER_EXPORT_PROCESSED_ROWS_KEY, 0);
 
-		const parts = await uploadCustomerExportParts({
+		const { rowCount, parts, byteCount } = await streamCustomerExportCsv({
 			ctx,
-			logger,
-			customerExportFields: customerExport.fields,
-			payload,
-			partitions,
+			customerExport,
+			orgId,
+			env,
 			bucket,
 			region,
 			key,
 			uploadId,
-			snapshot: customerExport.snapshot,
-			runWorkers,
 		});
 
-		await completeS3MultipartUpload({
-			bucket,
-			region,
-			key,
-			uploadId,
-			parts: parts.map(({ partNumber, eTag }) => ({ partNumber, eTag })),
-		});
+		await completeS3MultipartUpload({ bucket, region, key, uploadId, parts });
 		uploadCompleted = true;
 
 		await markCompletedWithRetry({
 			ctx,
 			logger,
 			exportId,
-			rowCount: parts.reduce((total, part) => total + part.rowCount, 0),
-			byteCount: parts.reduce((total, part) => total + part.byteCount, 0),
+			rowCount,
+			byteCount,
 		});
 
 		logger.info("customer-export: completed", {
-			data: { exportId, fileName: CUSTOMER_EXPORT_FILE_NAME },
+			data: {
+				exportId,
+				rowCount,
+				byteCount,
+				partCount: parts.length,
+				fileName: CUSTOMER_EXPORT_FILE_NAME,
+			},
 		});
 	} catch (error) {
-		// The CSV already exists; leave the row active so status can be reconciled
-		// instead of failing a downloadable export.
+		// The CSV is already published: keep the row active so a retry can
+		// reconcile it instead of failing a downloadable export.
 		if (uploadCompleted) throw error;
 
 		if (uploadId) {
-			await abortS3MultipartUpload({ bucket, region, key, uploadId }).catch(
-				(abortError) => {
-					logger.error("customer-export: failed to abort multipart upload", {
-						data: {
-							exportId,
-							error: sanitizeExportError({ error: abortError }),
-						},
-					});
-				},
-			);
+			await abortUploadBestEffort({
+				logger,
+				exportId,
+				bucket,
+				region,
+				key,
+				uploadId,
+			});
 		}
 
-		await CustomerExportService.markFailed({
-			db: ctx.db,
-			id: exportId,
-			errorMessage: sanitizeExportError({ error }),
-		});
+		// Earlier attempts leave the row running; the retry restarts from scratch.
+		if (isFinalAttempt) {
+			await CustomerExportService.markFailed({
+				db: ctx.db,
+				id: exportId,
+				errorMessage: sanitizeExportError({ error }),
+			});
+		}
 
 		throw error;
 	}
-};
-
-const uploadCustomerExportParts = async ({
-	ctx,
-	logger,
-	customerExportFields,
-	payload,
-	partitions,
-	bucket,
-	region,
-	key,
-	uploadId,
-	snapshot,
-	runWorkers,
-}: {
-	ctx: AutumnContext;
-	logger: Logger;
-	customerExportFields: RunCustomerExportWorkerPayload["fields"];
-	payload: RunCustomerExportPayload;
-	partitions: Array<{
-		partNumber: number;
-		upperInternalId: string | null;
-		lowerInternalId: string | null;
-	}>;
-	bucket: string;
-	region: string;
-	key: string;
-	uploadId: string;
-	snapshot: RunCustomerExportWorkerPayload["snapshot"];
-	runWorkers?: CustomerExportWorkerRunner;
-}): Promise<CustomerExportWorkerResult[]> => {
-	// No matching customers: the parent writes the header-only object itself.
-	if (partitions.length === 0) {
-		const body = new TextEncoder().encode(
-			serializeCustomerExportRows({
-				rows: [],
-				fields: customerExportFields,
-				includeHeader: true,
-			}),
-		);
-		const part: S3UploadedPart = await uploadS3Part({
-			bucket,
-			region,
-			key,
-			uploadId,
-			partNumber: 1,
-			body,
-		});
-
-		return [{ ...part, rowCount: 0, byteCount: body.byteLength }];
-	}
-
-	const workerPayloads: RunCustomerExportWorkerPayload[] = partitions.map(
-		(partition) => ({
-			exportId: payload.exportId,
-			orgId: payload.orgId,
-			env: payload.env,
-			range: partition,
-			fields: customerExportFields,
-			snapshot,
-			s3Key: key,
-			s3UploadId: uploadId,
-		}),
-	);
-
-	if (runWorkers) return await runWorkers(workerPayloads);
-
-	return await runWorkersInline({ ctx, logger, payloads: workerPayloads });
-};
-
-const runWorkersViaTrigger: CustomerExportWorkerRunner = async (payloads) => {
-	const batch = await customerExportWorkerTask.batchTriggerAndWait(
-		payloads.map((workerPayload) => ({
-			payload: workerPayload,
-			options: {
-				idempotencyKey: `customer-export-part:${workerPayload.exportId}:${workerPayload.range.partNumber}`,
-				idempotencyKeyTTL: "7d",
-			},
-		})),
-	);
-
-	return batch.runs.map((run, index) => {
-		if (!run.ok) {
-			throw new Error(
-				`Customer export part ${payloads[index].range.partNumber} failed: ${run.error instanceof Error ? run.error.message : String(run.error)}`,
-			);
-		}
-		return run.output as CustomerExportWorkerResult;
-	});
 };
 
 export const customerExportTask = task({
@@ -351,7 +419,8 @@ export const customerExportTask = task({
 			ctx,
 			logger,
 			payload,
-			runWorkers: runWorkersViaTrigger,
+			isFinalAttempt:
+				triggerCtx.attempt.number >= CUSTOMER_EXPORT_PARENT_RETRY.maxAttempts,
 		});
 	},
 });

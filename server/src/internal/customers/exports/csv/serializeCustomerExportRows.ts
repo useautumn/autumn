@@ -20,15 +20,13 @@ export type CustomerExportRow = {
 	licenses: string[];
 };
 
-const FORMULA_TRIGGER_CHARACTERS = ["=", "+", "-", "@", "\t", "\r"];
+const FORMULA_TRIGGER_PATTERN = /^[=+\-@\t\r]/;
 
 const NEEDS_QUOTING = /[",\r\n]/;
 
 /** Spreadsheets evaluate cells starting with these; a leading quote neutralises it. */
 const guardAgainstFormulaInjection = (value: string) =>
-	FORMULA_TRIGGER_CHARACTERS.some((character) => value.startsWith(character))
-		? `'${value}`
-		: value;
+	FORMULA_TRIGGER_PATTERN.test(value) ? `'${value}` : value;
 
 export const escapeCsvCell = (value: string) => {
 	const guarded = guardAgainstFormulaInjection(value);
@@ -83,6 +81,17 @@ export const buildCustomerExportHeaderLine = ({
 		.map((field) => escapeCsvCell(CUSTOMER_EXPORT_FIELD_HEADERS[field]))
 		.join(",");
 
+const serializeRowWithOrderedFields = ({
+	row,
+	orderedFields,
+}: {
+	row: CustomerExportRow;
+	orderedFields: CustomerExportField[];
+}) =>
+	orderedFields
+		.map((field) => escapeCsvCell(rowFieldToString({ row, field })))
+		.join(",");
+
 export const serializeCustomerExportRow = ({
 	row,
 	fields,
@@ -90,11 +99,12 @@ export const serializeCustomerExportRow = ({
 	row: CustomerExportRow;
 	fields: CustomerExportField[];
 }) =>
-	orderCustomerExportFields({ fields })
-		.map((field) => escapeCsvCell(rowFieldToString({ row, field })))
-		.join(",");
+	serializeRowWithOrderedFields({
+		row,
+		orderedFields: orderCustomerExportFields({ fields }),
+	});
 
-/** `includeHeader` is true only for the worker owning part 1, which also owns the BOM. */
+/** `includeHeader` is true only for the first chunk, which also owns the BOM. */
 export const serializeCustomerExportRows = ({
 	rows,
 	fields,
@@ -104,7 +114,10 @@ export const serializeCustomerExportRows = ({
 	fields: CustomerExportField[];
 	includeHeader?: boolean;
 }) => {
-	const lines = rows.map((row) => serializeCustomerExportRow({ row, fields }));
+	const orderedFields = orderCustomerExportFields({ fields });
+	const lines = rows.map((row) =>
+		serializeRowWithOrderedFields({ row, orderedFields }),
+	);
 
 	if (includeHeader) {
 		lines.unshift(buildCustomerExportHeaderLine({ fields }));

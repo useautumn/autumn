@@ -11,7 +11,6 @@ import {
 import { organizations } from "../orgModels/orgTable.js";
 import type {
 	CustomerExportField,
-	CustomerExportPartitionPlan,
 	CustomerExportSnapshot,
 	CustomerExportStatus,
 } from "./cusExportModels.js";
@@ -29,8 +28,8 @@ export const customerExports = pgTable(
 		trigger_run_id: text("trigger_run_id"),
 		s3_key: text("s3_key"),
 		s3_upload_id: text("s3_upload_id"),
-		partition_plan:
-			jsonb("partition_plan").$type<CustomerExportPartitionPlan>(),
+		// Legacy column from the partitioned fan-out design; no longer written.
+		partition_plan: jsonb("partition_plan"),
 		row_count: numeric({ mode: "number" }),
 		byte_count: numeric({ mode: "number" }),
 		error_message: text("error_message"),

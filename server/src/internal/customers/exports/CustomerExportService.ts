@@ -2,7 +2,6 @@ import {
 	ACTIVE_CUSTOMER_EXPORT_STATUSES,
 	type AppEnv,
 	type CustomerExportField,
-	type CustomerExportPartitionPlan,
 	type CustomerExportSnapshot,
 	CustomerExportStatus,
 	customerExports,
@@ -144,13 +143,11 @@ export const CustomerExportService = {
 		id,
 		s3Key,
 		s3UploadId,
-		partitionPlan,
 	}: {
 		db: DrizzleCli;
 		id: string;
 		s3Key: string;
 		s3UploadId: string;
-		partitionPlan: CustomerExportPartitionPlan;
 	}) => {
 		await db
 			.update(customerExports)
@@ -158,12 +155,15 @@ export const CustomerExportService = {
 				status: CustomerExportStatus.Running,
 				s3_key: s3Key,
 				s3_upload_id: s3UploadId,
-				partition_plan: partitionPlan,
 				started_at: Date.now(),
 			})
 			.where(eq(customerExports.id, id));
 	},
 
+	/**
+	 * Guarded to active rows so a reclaimed (failed) export is never resurrected;
+	 * returns whether the row was actually completed.
+	 */
 	markCompleted: async ({
 		db,
 		id,
@@ -172,10 +172,10 @@ export const CustomerExportService = {
 	}: {
 		db: DrizzleCli;
 		id: string;
-		rowCount: number;
-		byteCount: number;
-	}) => {
-		await db
+		rowCount: number | null;
+		byteCount: number | null;
+	}): Promise<boolean> => {
+		const updated = await db
 			.update(customerExports)
 			.set({
 				status: CustomerExportStatus.Completed,
@@ -183,7 +183,15 @@ export const CustomerExportService = {
 				byte_count: byteCount,
 				completed_at: Date.now(),
 			})
-			.where(eq(customerExports.id, id));
+			.where(
+				and(
+					eq(customerExports.id, id),
+					inArray(customerExports.status, [...ACTIVE_CUSTOMER_EXPORT_STATUSES]),
+				),
+			)
+			.returning({ id: customerExports.id });
+
+		return updated.length > 0;
 	},
 
 	/**

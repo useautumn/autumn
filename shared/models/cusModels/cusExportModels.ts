@@ -79,17 +79,3 @@ export type CustomerExportSnapshot = {
 	search: string;
 	filters: CustomerListFilters;
 };
-
-/** One [upper, lower) descending internal_id range owned by a single worker. */
-export type CustomerExportPartition = {
-	partNumber: number;
-	/** Inclusive upper bound; the first partition's bound freezes the export set. */
-	upperInternalId: string | null;
-	/** Exclusive lower bound; null on the last partition (unbounded). */
-	lowerInternalId: string | null;
-};
-
-export type CustomerExportPartitionPlan = {
-	rowsPerWorker: number;
-	partitions: CustomerExportPartition[];
-};

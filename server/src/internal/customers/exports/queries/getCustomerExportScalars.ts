@@ -3,14 +3,11 @@ import {
 	type CustomerExportSnapshot,
 	customers,
 } from "@autumn/shared";
-import { type SQL, sql } from "drizzle-orm";
+import { sql } from "drizzle-orm";
 import { planetScaleTag } from "@/db/dbUtils.js";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 import { buildSearchPredicates } from "../../CusSearchService.js";
-import {
-	buildInternalIdRangeClause,
-	buildMatchedCustomersSelect,
-} from "./customerExportMatchSql.js";
+import { buildMatchedCustomersSelect } from "./customerExportMatchSql.js";
 
 export const CUSTOMER_EXPORT_PAGE_SIZE = 2000;
 
@@ -21,14 +18,15 @@ export type CustomerExportScalarRow = {
 	email: string | null;
 };
 
-/** Keyset page of scalar columns inside one worker's descending id range. */
+/**
+ * Keyset page of scalar columns in descending internal_id order. Ids are
+ * time-ordered, so customers created after the walk starts are never revisited.
+ */
 export const getCustomerExportScalars = async ({
 	db,
 	orgId,
 	env,
 	snapshot,
-	upperInternalId,
-	lowerInternalId,
 	afterInternalId,
 	limit = CUSTOMER_EXPORT_PAGE_SIZE,
 }: {
@@ -36,8 +34,6 @@ export const getCustomerExportScalars = async ({
 	orgId: string;
 	env: AppEnv;
 	snapshot: CustomerExportSnapshot;
-	upperInternalId: string | null;
-	lowerInternalId: string | null;
 	/** Last id emitted by the previous page; the next page starts strictly below it. */
 	afterInternalId: string | null;
 	limit?: number;
@@ -49,23 +45,12 @@ export const getCustomerExportScalars = async ({
 		filters: snapshot.filters,
 	});
 
-	const rangeClause = buildInternalIdRangeClause({
-		upperInternalId,
-		lowerInternalId,
-	});
-	const cursorClause = afterInternalId
-		? sql`${customers.internal_id} < ${afterInternalId}`
-		: undefined;
-
-	const extraClauses = [rangeClause, cursorClause].filter(
-		(clause): clause is SQL => clause !== undefined,
-	);
-
 	const matched = buildMatchedCustomersSelect({
 		predicates,
 		columns: sql`${customers.internal_id} AS internal_id, ${customers.id} AS id, ${customers.name} AS name, ${customers.email} AS email`,
-		extraWhere:
-			extraClauses.length > 0 ? sql.join(extraClauses, sql` AND `) : undefined,
+		extraWhere: afterInternalId
+			? sql`${customers.internal_id} < ${afterInternalId}`
+			: undefined,
 	});
 
 	return (await db.execute(sql`

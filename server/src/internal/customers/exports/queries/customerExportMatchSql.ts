@@ -39,24 +39,3 @@ export const buildMatchedCustomersSelect = ({
 		WHERE ${where}
 	`;
 };
-
-/** Descending [upper, lower) window over `customers.internal_id`. */
-export const buildInternalIdRangeClause = ({
-	upperInternalId,
-	lowerInternalId,
-}: {
-	upperInternalId: string | null;
-	lowerInternalId: string | null;
-}): SQL | undefined => {
-	const clauses: SQL[] = [];
-
-	if (upperInternalId !== null) {
-		clauses.push(sql`${customers.internal_id} <= ${upperInternalId}`);
-	}
-	if (lowerInternalId !== null) {
-		clauses.push(sql`${customers.internal_id} > ${lowerInternalId}`);
-	}
-
-	if (clauses.length === 0) return undefined;
-	return sql`(${sql.join(clauses, sql` AND `)})`;
-};

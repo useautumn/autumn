@@ -9,7 +9,7 @@ import ctx from "@tests/utils/testInitUtils/createTestContext.js";
 import { and, eq, inArray } from "drizzle-orm";
 import { CusSearchService } from "@/internal/customers/CusSearchService.js";
 import { CustomerExportService } from "@/internal/customers/exports/CustomerExportService.js";
-import { getCustomerExportPartitions } from "@/internal/customers/exports/queries/getCustomerExportPartitions.js";
+import { getCustomerExportScalars } from "@/internal/customers/exports/queries/getCustomerExportScalars.js";
 import { generateId } from "@/utils/genUtils.js";
 
 // Mirrors the other integration suites: skip entirely without a seeded org.
@@ -232,7 +232,7 @@ describeDb("customer export jobs", () => {
 		expect(completed?.s3_key).toBe("key");
 	});
 
-	test("partition membership matches the dashboard search", async () => {
+	test("export walk membership matches the dashboard search", async () => {
 		const snapshot = { search: SEARCH_TERM, filters: {} };
 
 		const { totalCount } = await CusSearchService.count({
@@ -243,21 +243,28 @@ describeDb("customer export jobs", () => {
 			filters: snapshot.filters,
 		});
 
-		const { partitions, totalRows } = await getCustomerExportPartitions({
-			db: ctx.db,
-			orgId: ctx.org.id,
-			env: ctx.env,
-			snapshot,
-			// One boundary per matching customer makes the membership set explicit.
-			rowsPerWorker: 1,
-		});
+		// A page size of 2 forces the keyset cursor to advance across pages.
+		const pageSize = 2;
+		const walkedInternalIds: string[] = [];
+		let afterInternalId: string | null = null;
+		for (;;) {
+			const page = await getCustomerExportScalars({
+				db: ctx.db,
+				orgId: ctx.org.id,
+				env: ctx.env,
+				snapshot,
+				afterInternalId,
+				limit: pageSize,
+			});
+			if (page.length === 0) break;
+			walkedInternalIds.push(...page.map((row) => row.internal_id));
+			afterInternalId = page[page.length - 1].internal_id;
+			if (page.length < pageSize) break;
+		}
 
-		expect(totalRows).toBe(totalCount);
-		expect(partitions).toHaveLength(totalCount);
+		expect(walkedInternalIds.length).toBe(totalCount);
+		expect(new Set(walkedInternalIds).size).toBe(walkedInternalIds.length);
 
-		const boundaryIds = partitions.map(
-			(partition) => partition.upperInternalId,
-		);
 		const expectedRows = await ctx.db
 			.select({ internal_id: customers.internal_id })
 			.from(customers)
@@ -270,7 +277,7 @@ describeDb("customer export jobs", () => {
 			);
 
 		for (const row of expectedRows) {
-			expect(boundaryIds).toContain(row.internal_id);
+			expect(walkedInternalIds).toContain(row.internal_id);
 		}
 	});
 });
