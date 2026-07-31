@@ -49,6 +49,7 @@ export function CustomerExportSheet({
 	const hasFilters =
 		hasActiveCustomerFilters(queryStates) || Boolean(trimmedSearch);
 	const activeExport = (customerExports ?? []).find(isCustomerExportActive);
+	const hasNoMatchingCustomers = totalCount === 0;
 
 	const form = useAppForm({
 		defaultValues: { fields: [...CUSTOMER_EXPORT_FIELD_ORDER] },
@@ -112,6 +113,13 @@ export function CustomerExportSheet({
 								</p>
 							) : null}
 
+							{hasNoMatchingCustomers ? (
+								<p className="mt-3 rounded-lg bg-amber-500/10 px-3 py-2 text-amber-600 text-tiny dark:text-amber-500">
+									No customers match your current search and filters, so there
+									is nothing to export.
+								</p>
+							) : null}
+
 							<form.Subscribe selector={(state) => state.canSubmit}>
 								{(canSubmit) => (
 									<Button
@@ -119,7 +127,11 @@ export function CustomerExportSheet({
 										variant="primary"
 										className="mt-4 w-full"
 										isLoading={createExport.isPending}
-										disabled={!canSubmit || Boolean(activeExport)}
+										disabled={
+											!canSubmit ||
+											Boolean(activeExport) ||
+											hasNoMatchingCustomers
+										}
 									>
 										Start export
 									</Button>
