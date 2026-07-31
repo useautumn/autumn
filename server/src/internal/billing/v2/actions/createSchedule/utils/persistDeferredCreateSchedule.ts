@@ -10,7 +10,7 @@ import {
 	resolveCreateScheduleRecurringProducts,
 } from "./resolveCreateScheduleRecurringProducts";
 
-const isCreateScheduleBillingContext = (
+export const isCreateScheduleBillingContext = (
 	billingContext: BillingContext,
 ): billingContext is CreateScheduleBillingContext =>
 	"immediatePhase" in billingContext &&
