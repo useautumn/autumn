@@ -91,6 +91,7 @@ export function useAttachBillingOptionsState({
 		hasOutgoing && isPaidRecurringAttach && isOutgoingPaidRecurring;
 
 	const canChooseBillingCycle =
+		!isMultiPlan &&
 		isPaidRecurringAttach &&
 		hasPaidRecurringSubscription &&
 		!isDirectPaidTransition;
@@ -151,12 +152,6 @@ export function useAttachBillingOptionsState({
 	}, [form, startDate]);
 
 	useEffect(() => {
-		if (isMultiPlan) {
-			if (!newBillingSubscription) return;
-			form.setFieldValue("newBillingSubscription", false);
-			movePastStartDateToNow();
-			return;
-		}
 		if (canChooseBillingCycle) return;
 		if (!newBillingSubscription) return;
 		form.setFieldValue("newBillingSubscription", false);
@@ -166,7 +161,6 @@ export function useAttachBillingOptionsState({
 		form,
 		movePastStartDateToNow,
 		newBillingSubscription,
-		isMultiPlan,
 	]);
 
 	useEffect(() => {

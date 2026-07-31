@@ -58,7 +58,10 @@ test.concurrent(
 			autumnV1.entities.get<ApiEntityV0>(customerId, entities[1].id),
 		]);
 
-		await expectCustomerProducts({ customer, active: [customerPlan.id] });
+		await expectCustomerProducts({
+			customer,
+			active: [customerPlan.id, inheritedPlan.id, explicitPlan.id],
+		});
 		await expectCustomerInvoiceCorrect({
 			customer,
 			count: 1,
@@ -66,12 +69,12 @@ test.concurrent(
 		});
 		await expectCustomerProducts({
 			customer: inheritedEntity,
-			active: [inheritedPlan.id],
+			active: [customerPlan.id, inheritedPlan.id],
 			notPresent: [explicitPlan.id],
 		});
 		await expectCustomerProducts({
 			customer: explicitEntity,
-			active: [explicitPlan.id],
+			active: [customerPlan.id, explicitPlan.id],
 			notPresent: [inheritedPlan.id],
 		});
 	},
