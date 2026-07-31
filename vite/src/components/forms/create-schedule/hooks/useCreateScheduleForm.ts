@@ -21,6 +21,7 @@ export function useCreateScheduleForm({
 		billingBehavior: null,
 		resetBillingCycle: false,
 		enablePlanImmediately: false,
+		longLivedCheckout: false,
 	};
 
 	const initialValuesRef = useRef<CreateScheduleForm>(defaultValues);

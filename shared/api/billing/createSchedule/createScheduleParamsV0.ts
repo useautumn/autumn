@@ -134,6 +134,10 @@ export const CreateScheduleParamsV0Schema = z
 			description:
 				"Additional parameters to pass into the creation of the Stripe checkout session.",
 		}),
+		long_lived_checkout: z.boolean().optional().meta({
+			description:
+				"If true, returns an Autumn-hosted checkout link that can create fresh Stripe checkout sessions when opened.",
+		}),
 		redirect_mode: RedirectModeSchema.default("if_required").meta({
 			description:
 				"Controls when to return a checkout URL for the immediate phase. 'always' forces a confirmation or checkout flow, 'if_required' only redirects when needed, and 'never' disables redirects.",

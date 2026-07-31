@@ -10,6 +10,7 @@ import {
 	mapToProductItems,
 } from "@autumn/shared";
 import { Button } from "@autumn/ui";
+import { useStore } from "@tanstack/react-form";
 import { motion } from "motion/react";
 import { useMemo } from "react";
 import { toast } from "sonner";
@@ -32,6 +33,7 @@ import {
 	type CreateScheduleForm,
 	EMPTY_SCHEDULE_PLAN,
 } from "@/components/forms/create-schedule/createScheduleFormSchema";
+import { GenerateCheckoutStageWithPreview } from "@/components/forms/shared/GenerateCheckoutStage";
 import { SendInvoiceStageWithPreview } from "@/components/forms/shared/SendInvoiceStage";
 import {
 	STAGGER_CONTAINER,
@@ -179,6 +181,7 @@ export function buildInitialValues({
 				nowMs,
 			}),
 			enablePlanImmediately: false,
+			longLivedCheckout: false,
 		};
 	}
 
@@ -204,6 +207,7 @@ export function buildInitialValues({
 		billingBehavior: null,
 		resetBillingCycle: false,
 		enablePlanImmediately: false,
+		longLivedCheckout: false,
 	};
 }
 
@@ -355,6 +359,37 @@ function ScheduleSendInvoiceContent() {
 	);
 }
 
+function ScheduleCheckoutContent() {
+	const { form, previewQuery, isPending, handleCheckoutSubmit } =
+		useCreateScheduleFormContext();
+	const { setSheet } = useSheetStore();
+	const enablePlanImmediately = useStore(
+		form.store,
+		(state) => state.values.enablePlanImmediately,
+	);
+	const longLivedCheckout = useStore(
+		form.store,
+		(state) => state.values.longLivedCheckout,
+	);
+
+	return (
+		<GenerateCheckoutStageWithPreview
+			previewQuery={previewQuery}
+			isPending={isPending}
+			onSubmit={handleCheckoutSubmit}
+			onBack={() => setSheet({ type: "create-schedule-review" })}
+			enablePlanImmediately={enablePlanImmediately}
+			onEnablePlanImmediatelyChange={(value) =>
+				form.setFieldValue("enablePlanImmediately", value)
+			}
+			longLivedCheckout={longLivedCheckout}
+			onLongLivedCheckoutChange={(value) =>
+				form.setFieldValue("longLivedCheckout", value)
+			}
+		/>
+	);
+}
+
 function CreateScheduleSheetBody() {
 	const { editingPlan, editingPlanValue, handlePlanEditSave, setEditingPlan } =
 		useCreateScheduleFormContext();
@@ -375,6 +410,10 @@ function CreateScheduleSheetBody() {
 
 	if (sheetType === "create-schedule-send-invoice") {
 		return <ScheduleSendInvoiceContent />;
+	}
+
+	if (sheetType === "create-schedule-checkout-session") {
+		return <ScheduleCheckoutContent />;
 	}
 
 	if (sheetType === "create-schedule-review") {

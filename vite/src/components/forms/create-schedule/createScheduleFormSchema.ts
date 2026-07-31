@@ -196,6 +196,7 @@ export const CreateScheduleFormSchema = z
 		billingBehavior: BillingBehaviorSchema.nullable(),
 		resetBillingCycle: z.boolean(),
 		enablePlanImmediately: z.boolean(),
+		longLivedCheckout: z.boolean(),
 	})
 	.refine(
 		(data) =>

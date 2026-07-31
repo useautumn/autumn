@@ -1,11 +1,12 @@
-import type { AttachPreviewResponse } from "@autumn/shared";
+import type {
+	AttachPreviewResponse,
+	BillingPreviewResponse,
+} from "@autumn/shared";
 import { Button, Switch } from "@autumn/ui";
 import { ArrowLeft, CalendarCheckIcon, LinkIcon } from "@phosphor-icons/react";
-import { useStore } from "@tanstack/react-form";
 import type { ReactNode } from "react";
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
-import { useAttachFormContext } from "@/components/forms/attach-v2/context/AttachFormProvider";
 import {
 	buildAttachPreviewTotals,
 	getAttachPreviewLineItems,
@@ -22,9 +23,20 @@ import { ConfigRow } from "./ConfigRow";
 import { PlanActivationSection } from "./SendInvoiceStage";
 import { UrlSuccessView } from "./UrlSuccessView";
 
-type PreviewData = AttachPreviewResponse | null | undefined;
+type PreviewData =
+	| AttachPreviewResponse
+	| BillingPreviewResponse
+	| null
+	| undefined;
 type GenerateCheckoutSubmitParams = {
 	longLivedCheckout?: boolean;
+};
+type ActivationControls = {
+	enablePlanImmediately: boolean;
+	onEnablePlanImmediatelyChange: (value: boolean) => void;
+	longLivedCheckout?: boolean;
+	onLongLivedCheckoutChange?: (value: boolean) => void;
+	showLongLivedCheckout?: boolean;
 };
 
 function usePreviewTotals({
@@ -53,6 +65,10 @@ function ActivationPreviewStage({
 	buttonIcon,
 	scheduledStartDate,
 	showLongLivedCheckout = false,
+	enablePlanImmediately,
+	onEnablePlanImmediatelyChange,
+	longLivedCheckout,
+	onLongLivedCheckoutChange,
 }: {
 	title: string;
 	description: string;
@@ -71,16 +87,7 @@ function ActivationPreviewStage({
 	buttonIcon: ReactNode;
 	scheduledStartDate?: number | null;
 	showLongLivedCheckout?: boolean;
-}) {
-	const { form } = useAttachFormContext();
-	const enablePlanImmediately = useStore(
-		form.store,
-		(state) => state.values.enablePlanImmediately,
-	);
-	const longLivedCheckout = useStore(
-		form.store,
-		(state) => state.values.longLivedCheckout,
-	);
+} & ActivationControls) {
 	const [isSubmitting, setIsSubmitting] = useState(false);
 
 	const handleSubmit = async () => {
@@ -111,9 +118,7 @@ function ActivationPreviewStage({
 
 			<PlanActivationSection
 				enableImmediately={enablePlanImmediately}
-				setEnableImmediately={(value) =>
-					form.setFieldValue("enablePlanImmediately", value)
-				}
+				setEnableImmediately={onEnablePlanImmediatelyChange}
 				scheduledStartDate={scheduledStartDate}
 			/>
 
@@ -126,7 +131,7 @@ function ActivationPreviewStage({
 							<Switch
 								checked={!!longLivedCheckout}
 								onCheckedChange={(enabled) =>
-									form.setFieldValue("longLivedCheckout", !!enabled)
+									onLongLivedCheckoutChange?.(!!enabled)
 								}
 							/>
 						}
@@ -167,6 +172,10 @@ export function GenerateCheckoutStage({
 	currency,
 	totals,
 	showLongLivedCheckout = true,
+	enablePlanImmediately,
+	onEnablePlanImmediatelyChange,
+	longLivedCheckout,
+	onLongLivedCheckoutChange,
 }: {
 	productName?: string;
 	isPending: boolean;
@@ -182,8 +191,7 @@ export function GenerateCheckoutStage({
 		variant?: "primary" | "secondary";
 		badge?: string;
 	}[];
-	showLongLivedCheckout?: boolean;
-}) {
+} & ActivationControls) {
 	const [completedCheckoutUrl, setCompletedCheckoutUrl] = useState<
 		string | null
 	>(null);
@@ -232,6 +240,10 @@ export function GenerateCheckoutStage({
 			buttonLabel="Generate Checkout URL"
 			buttonIcon={<LinkIcon size={16} weight="bold" />}
 			showLongLivedCheckout={showLongLivedCheckout}
+			enablePlanImmediately={enablePlanImmediately}
+			onEnablePlanImmediatelyChange={onEnablePlanImmediatelyChange}
+			longLivedCheckout={longLivedCheckout}
+			onLongLivedCheckoutChange={onLongLivedCheckoutChange}
 		/>
 	);
 }
@@ -242,7 +254,7 @@ export function GenerateCheckoutStageWithPreview({
 	isPending,
 	onSubmit,
 	onBack,
-	showLongLivedCheckout,
+	...activationControls
 }: {
 	productName?: string;
 	previewQuery: {
@@ -253,8 +265,7 @@ export function GenerateCheckoutStageWithPreview({
 		paymentUrl: string | null | undefined;
 	}>;
 	onBack: () => void;
-	showLongLivedCheckout?: boolean;
-}) {
+} & ActivationControls) {
 	const previewData = previewQuery.data;
 	const totals = usePreviewTotals({ previewData });
 
@@ -267,7 +278,7 @@ export function GenerateCheckoutStageWithPreview({
 			lineItems={previewData?.line_items}
 			currency={previewData?.currency}
 			totals={totals}
-			showLongLivedCheckout={showLongLivedCheckout}
+			{...activationControls}
 		/>
 	);
 }
@@ -279,6 +290,8 @@ export function SchedulePlanStageWithPreview({
 	isPending,
 	onSubmit,
 	onBack,
+	enablePlanImmediately,
+	onEnablePlanImmediatelyChange,
 }: {
 	productName?: string;
 	startDate: number | null;
@@ -288,6 +301,8 @@ export function SchedulePlanStageWithPreview({
 	isPending: boolean;
 	onSubmit: () => void | Promise<void>;
 	onBack: () => void;
+	enablePlanImmediately: boolean;
+	onEnablePlanImmediatelyChange: (value: boolean) => void;
 }) {
 	const previewData = previewQuery.data;
 	const scheduledStartDate = getAttachScheduledStartDate({
@@ -320,6 +335,8 @@ export function SchedulePlanStageWithPreview({
 			buttonLabel="Schedule Plan"
 			buttonIcon={<CalendarCheckIcon size={16} weight="bold" />}
 			scheduledStartDate={scheduledStartDate}
+			enablePlanImmediately={enablePlanImmediately}
+			onEnablePlanImmediatelyChange={onEnablePlanImmediatelyChange}
 		/>
 	);
 }

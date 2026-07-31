@@ -112,6 +112,7 @@ export interface BillingContext {
 	// session is required. Mirrors invoice-mode enable_plan_immediately for the
 	// stripe_checkout flow.
 	enablePlanImmediately?: boolean;
+	longLivedCheckoutId?: string;
 	// When set, Autumn access starts at this time while billing may start later.
 	accessStartsAt?: number;
 	/** Identifies the Autumn action driving this billing context. Stamped onto Stripe

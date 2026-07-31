@@ -87,6 +87,9 @@ interface CreateScheduleFormContextValue {
 		stripeId: string | undefined;
 		hostedInvoiceUrl: string | null | undefined;
 	}>;
+	handleCheckoutSubmit: (params?: { longLivedCheckout?: boolean }) => Promise<{
+		paymentUrl: string | null | undefined;
+	}>;
 	preview: AttachPreviewResponse | null | undefined;
 	previewQuery: { data: AttachPreviewResponse | null | undefined };
 	isPreviewLoading: boolean;
@@ -179,8 +182,9 @@ export function CreateScheduleFormProvider({
 		!hasActiveSubscription && immediatePlansPaidRecurring;
 
 	const editingPlanValue = editingPlan
-		? (formValues.phases[editingPlan.phaseIndex]?.plans[editingPlan.planIndex] ??
-			null)
+		? (formValues.phases[editingPlan.phaseIndex]?.plans[
+				editingPlan.planIndex
+			] ?? null)
 		: null;
 
 	const {
@@ -267,7 +271,7 @@ export function CreateScheduleFormProvider({
 		error: previewError,
 	} = useCreateSchedulePreview({ requestBody: previewRequestBody });
 
-	const { handleSubmit, handleInvoiceSubmit, isPending } =
+	const { handleSubmit, handleInvoiceSubmit, handleCheckoutSubmit, isPending } =
 		useCreateScheduleMutation({
 			customerId,
 			buildRequestBody,
@@ -303,6 +307,7 @@ export function CreateScheduleFormProvider({
 			isPending,
 			handleSubmit,
 			handleInvoiceSubmit,
+			handleCheckoutSubmit,
 			preview,
 			previewQuery,
 			isPreviewLoading,
@@ -334,6 +339,7 @@ export function CreateScheduleFormProvider({
 			isPending,
 			handleSubmit,
 			handleInvoiceSubmit,
+			handleCheckoutSubmit,
 			preview,
 			previewQuery,
 			isPreviewLoading,
