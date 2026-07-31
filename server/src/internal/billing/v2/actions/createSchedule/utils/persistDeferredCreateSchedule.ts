@@ -4,8 +4,11 @@ import type {
 	CreateScheduleBillingContext,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
-import { addPreservedAddOnsToSchedulePhases } from "./billingContextToRecurringAndScheduled";
 import { persistCreateSchedule } from "./persistCreateSchedule";
+import {
+	addCustomerProductIdsToSchedulePhases,
+	resolveCreateScheduleRecurringProducts,
+} from "./resolveCreateScheduleRecurringProducts";
 
 const isCreateScheduleBillingContext = (
 	billingContext: BillingContext,
@@ -54,9 +57,12 @@ const buildDeferredSchedulePhases = ({
 		);
 	}
 
-	return addPreservedAddOnsToSchedulePhases({
-		billingContext,
+	const { preservedCustomerProductIdsByPhase } =
+		resolveCreateScheduleRecurringProducts({ billingContext });
+
+	return addCustomerProductIdsToSchedulePhases({
 		phases,
+		customerProductIdsByPhase: preservedCustomerProductIdsByPhase,
 	});
 };
 

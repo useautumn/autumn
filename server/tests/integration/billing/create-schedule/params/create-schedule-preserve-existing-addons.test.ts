@@ -5,6 +5,7 @@ import {
 	CusProductStatus,
 	customerProducts,
 	ms,
+	StartingAfterDuration,
 } from "@autumn/shared";
 import { expectCustomerProducts } from "@tests/integration/billing/utils/expectCustomerProductCorrect";
 import { expectStripeSubscriptionCorrect } from "@tests/integration/billing/utils/expectStripeSubCorrect";
@@ -218,6 +219,63 @@ test.concurrent(
 			customer,
 			active: [oldAddon.id, newAddon.id, preservedAddon.id],
 		});
+		await expectStripeSubscriptionCorrect({ ctx, customerId });
+	},
+);
+
+// Regression: a preserved base must not coexist with its future replacement.
+test.concurrent(
+	`${chalk.yellowBright("create-schedule preserve add-ons: replaces the preserved base in a future phase")}`,
+	async () => {
+		const customerId = "create-schedule-future-base-replacement";
+		const currentBase = products.pro({
+			id: "future-replacement-current",
+			items: [items.monthlyMessages()],
+		});
+		const futureBase = products.premium({
+			id: "future-replacement-next",
+			items: [items.monthlyMessages()],
+		});
+		const addon = products.recurringAddOn({
+			id: "future-replacement-addon",
+			items: [items.monthlyWords()],
+		});
+		const { autumnV1, ctx } = await initScenario({
+			customerId,
+			setup: [
+				s.customer({ paymentMethod: "success" }),
+				s.products({ list: [currentBase, futureBase, addon] }),
+			],
+			actions: [s.billing.attach({ productId: currentBase.id })],
+		});
+		const currentBaseCustomerProduct = await getCustomerProduct({
+			ctx,
+			customerId,
+			productId: currentBase.id,
+			status: CusProductStatus.Active,
+		});
+
+		const response = await autumnV1.billing.createSchedule({
+			customer_id: customerId,
+			preserve_add_ons: true,
+			phases: [
+				{ starts_at: "now", plans: [{ plan_id: addon.id }] },
+				{
+					starting_after: {
+						duration_type: StartingAfterDuration.Month,
+						duration_count: 1,
+					},
+					plans: [{ plan_id: futureBase.id }],
+				},
+			],
+		});
+
+		expect(response.phases[0]?.customer_product_ids).toContain(
+			currentBaseCustomerProduct?.id,
+		);
+		expect(response.phases[1]?.customer_product_ids).not.toContain(
+			currentBaseCustomerProduct?.id,
+		);
 		await expectStripeSubscriptionCorrect({ ctx, customerId });
 	},
 );
