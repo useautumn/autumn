@@ -1,4 +1,4 @@
-import { task } from "@trigger.dev/sdk/v3";
+import { metadata, task } from "@trigger.dev/sdk/v3";
 import { getCustomerExportsS3Config } from "@/external/aws/s3/customerExportsS3Config.js";
 import { uploadS3Part } from "@/external/aws/s3/s3MultipartUtils.js";
 import type { Logger } from "@/external/logtail/logtailUtils.js";
@@ -7,6 +7,7 @@ import {
 	type CustomerExportRow,
 	serializeCustomerExportRows,
 } from "@/internal/customers/exports/csv/serializeCustomerExportRows.js";
+import { CUSTOMER_EXPORT_PROCESSED_ROWS_KEY } from "@/internal/customers/exports/customerExportProgress.js";
 import {
 	emptyPlanColumns,
 	getCustomerExportPlanColumns,
@@ -86,6 +87,8 @@ export const executeCustomerExportWorker = async ({
 		includeHeader = false;
 		rowCount += scalars.length;
 		afterInternalId = scalars[scalars.length - 1].internal_id;
+		// The parent run owns the counter; safe no-op outside a trigger run.
+		metadata.root.increment(CUSTOMER_EXPORT_PROCESSED_ROWS_KEY, scalars.length);
 
 		if (scalars.length < CUSTOMER_EXPORT_PAGE_SIZE) break;
 	}

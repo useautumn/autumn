@@ -36,6 +36,16 @@ export type ListCustomerExportsQuery = z.infer<
 	typeof ListCustomerExportsQuerySchema
 >;
 
+/** Live rows-processed counter read from the trigger run's metadata. */
+export const CustomerExportProgressSchema = z.object({
+	processed_rows: z.number(),
+	total_rows: z.number(),
+});
+
+export type CustomerExportProgress = z.infer<
+	typeof CustomerExportProgressSchema
+>;
+
 export const CustomerExportResponseSchema = z.object({
 	id: z.string(),
 	status: CustomerExportStatusSchema,
@@ -48,6 +58,7 @@ export const CustomerExportResponseSchema = z.object({
 	created_at: z.number(),
 	started_at: z.number().nullable(),
 	completed_at: z.number().nullable(),
+	progress: CustomerExportProgressSchema.nullable(),
 });
 
 export type CustomerExportResponse = z.infer<

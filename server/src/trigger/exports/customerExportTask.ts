@@ -1,5 +1,5 @@
 import { CustomerExportStatus } from "@autumn/shared";
-import { task } from "@trigger.dev/sdk/v3";
+import { metadata, task } from "@trigger.dev/sdk/v3";
 import {
 	CUSTOMER_EXPORT_FILE_NAME,
 	getCustomerExportKey,
@@ -16,6 +16,7 @@ import type { Logger } from "@/external/logtail/logtailUtils.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { CustomerExportService } from "@/internal/customers/exports/CustomerExportService.js";
 import { serializeCustomerExportRows } from "@/internal/customers/exports/csv/serializeCustomerExportRows.js";
+import { CUSTOMER_EXPORT_TOTAL_ROWS_KEY } from "@/internal/customers/exports/customerExportProgress.js";
 import {
 	getCustomerExportPartitions,
 	resolveRowsPerWorker,
@@ -174,6 +175,9 @@ export const executeCustomerExport = async ({
 		logger.info("customer-export: partitioned", {
 			data: { exportId, totalRows, partitionCount: partitions.length },
 		});
+
+		// Safe no-op outside a trigger run (inline dev mode).
+		metadata.set(CUSTOMER_EXPORT_TOTAL_ROWS_KEY, totalRows);
 
 		const parts = await uploadCustomerExportParts({
 			ctx,
