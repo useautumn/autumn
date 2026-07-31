@@ -1,4 +1,5 @@
 import type { AppEnv } from "@autumn/shared";
+import { getOrgRedis } from "@/external/redis/orgRedisPool.js";
 import { getRedisV2ByInstanceName } from "@/external/redis/resolveRedisV2.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { claimSyncDirty, clearSyncClaim } from "./dirtyState/claimSyncDirty.js";
@@ -45,9 +46,12 @@ export const syncItemV5 = async ({
 		env: payload.env,
 		customerId: payload.customerId,
 	};
-	const redis = payload.redisInstance
-		? (getRedisV2ByInstanceName(payload.redisInstance) ?? ctx.redisV2)
-		: ctx.redisV2;
+	const redis =
+		payload.redisInstance === "org"
+			? getOrgRedis({ org: ctx.org })
+			: payload.redisInstance
+				? (getRedisV2ByInstanceName(payload.redisInstance) ?? ctx.redisV2)
+				: ctx.redisV2;
 
 	// Coalescing window: FIFO queues don't support per-message DelaySeconds,
 	// so the window is enforced here — writes landing between the signal and
