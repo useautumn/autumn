@@ -20,49 +20,32 @@ export const computeImmediateMultiProductPlan = ({
 	ctx: AutumnContext;
 	billingContext: MultiAttachBillingContext;
 }): AutumnBillingPlan => {
-	const productChanges = billingContext.productContexts.map(
-		(productContext) => {
-			const attachBillingContext = productContextToAttachBillingContext({
-				billingContext,
-				productContext,
-			});
-
-			return {
-				attachBillingContext,
-				incomingCustomerProduct: computeAttachNewCustomerProduct({
-					ctx,
-					attachBillingContext,
-				}),
-				outgoingCustomerProduct: productContext.currentCustomerProduct,
-				scheduledCustomerProduct: productContext.scheduledCustomerProduct,
-			};
-		},
-	);
-	const insertCustomerProducts = productChanges.map(
-		({ incomingCustomerProduct }) => incomingCustomerProduct,
-	);
+	const insertCustomerProducts: FullCusProduct[] = [];
 	const outgoingCustomerProducts: FullCusProduct[] = [];
 	const updateCustomerProducts: NonNullable<
 		AutumnBillingPlan["updateCustomerProducts"]
 	> = [];
-	const scheduledCustomerProducts = new Map<string, FullCusProduct>();
+	const deleteCustomerProducts: FullCusProduct[] = [];
 
-	for (const productChange of productChanges) {
-		if (productChange.outgoingCustomerProduct) {
-			outgoingCustomerProducts.push(productChange.outgoingCustomerProduct);
-			const updateCustomerProduct = computeAttachTransitionUpdates({
-				attachBillingContext: productChange.attachBillingContext,
-			});
-			if (updateCustomerProduct) {
-				updateCustomerProducts.push(updateCustomerProduct);
-			}
+	for (const productContext of billingContext.productContexts) {
+		const attachBillingContext = productContextToAttachBillingContext({
+			billingContext,
+			productContext,
+		});
+		insertCustomerProducts.push(
+			computeAttachNewCustomerProduct({ ctx, attachBillingContext }),
+		);
+
+		const updateCustomerProduct = computeAttachTransitionUpdates({
+			attachBillingContext,
+		});
+		if (updateCustomerProduct) {
+			updateCustomerProducts.push(updateCustomerProduct);
+			outgoingCustomerProducts.push(updateCustomerProduct.customerProduct);
 		}
 
-		if (productChange.scheduledCustomerProduct) {
-			scheduledCustomerProducts.set(
-				productChange.scheduledCustomerProduct.id,
-				productChange.scheduledCustomerProduct,
-			);
+		if (productContext.scheduledCustomerProduct) {
+			deleteCustomerProducts.push(productContext.scheduledCustomerProduct);
 		}
 	}
 
@@ -92,7 +75,7 @@ export const computeImmediateMultiProductPlan = ({
 			billingContext.fullCustomer.id ?? billingContext.fullCustomer.internal_id,
 		insertCustomerProducts,
 		updateCustomerProducts,
-		deleteCustomerProducts: [...scheduledCustomerProducts.values()],
+		deleteCustomerProducts,
 		customPrices: billingContext.customPrices,
 		customEntitlements: [
 			...(billingContext.customEnts ?? []),
