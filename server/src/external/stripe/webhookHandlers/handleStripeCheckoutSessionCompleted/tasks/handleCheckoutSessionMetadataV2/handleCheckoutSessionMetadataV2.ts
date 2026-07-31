@@ -11,7 +11,10 @@ import { syncSubscriptionItemMetadataFromCheckout } from "@/external/stripe/webh
 import { updateBillingPlanFromCheckout } from "@/external/stripe/webhookHandlers/handleStripeCheckoutSessionCompleted/tasks/handleCheckoutSessionMetadataV2/updateBillingPlanFromCheckout";
 import { withClaimedCheckoutSessionMetadata } from "@/external/stripe/webhookHandlers/handleStripeCheckoutSessionCompleted/tasks/handleCheckoutSessionMetadataV2/withClaimedCheckoutSessionMetadata";
 import type { StripeWebhookContext } from "@/external/stripe/webhookMiddlewares/stripeWebhookContext";
-import { persistDeferredCreateSchedule } from "@/internal/billing/v2/actions/createSchedule/utils/persistDeferredCreateSchedule";
+import {
+	isCreateScheduleBillingContext,
+	persistDeferredCreateSchedule,
+} from "@/internal/billing/v2/actions/createSchedule/utils/persistDeferredCreateSchedule";
 import { addStripeSubscriptionScheduleIdToBillingPlan } from "@/internal/billing/v2/execute/addStripeSubscriptionScheduleIdToBillingPlan";
 import { executeAutumnBillingPlan } from "@/internal/billing/v2/execute/executeAutumnBillingPlan";
 import { buildBillingLockKey } from "@/internal/billing/v2/utils/billingLock/buildBillingLockKey";
@@ -80,24 +83,52 @@ const executeCheckoutSessionMetadataV2 = async ({
 		checkoutContext,
 	});
 
+	// 1b. Fold in Stripe Checkout "optional items" the caller didn't request via
+	// plan_id but the customer selected and paid for. Skipped for create-schedule
+	// checkouts: the deferred phase bookkeeping only knows about the products it
+	// was told about ahead of time, and can't place an unplanned product into a
+	// phase after the fact.
+	let dataWithOptionalItems = deferredData;
+	if (!isCreateScheduleBillingContext(deferredData.billingContext)) {
+		const optionalItemMatch = await matchOptionalInvoiceItemsToProducts({
+			ctx,
+			checkoutContext,
+			autumnBillingPlan: deferredData.billingPlan.autumn,
+			fullCustomer: deferredData.billingContext.fullCustomer,
+		});
+
+		if (optionalItemMatch.customerProducts.length > 0) {
+			dataWithOptionalItems = {
+				...deferredData,
+				billingContext: {
+					...deferredData.billingContext,
+					fullProducts: [
+						...deferredData.billingContext.fullProducts,
+						...optionalItemMatch.fullProducts,
+					],
+				},
+				billingPlan: {
+					...deferredData.billingPlan,
+					autumn: {
+						...deferredData.billingPlan.autumn,
+						insertCustomerProducts: [
+							...deferredData.billingPlan.autumn.insertCustomerProducts,
+							...optionalItemMatch.customerProducts,
+						],
+					},
+				},
+			};
+		}
+	}
+
 	// 2. Update billing plan with checkout data (upsertSubscription, upsertInvoice)
+	// Runs after 1b so the invoice's product_ids/items include any matched
+	// optional-item add-on, not just what plan_id originally requested.
 	const updatedDeferredData = await updateBillingPlanFromCheckout({
 		ctx,
 		checkoutContext,
-		deferredData,
+		deferredData: dataWithOptionalItems,
 	});
-
-	// 2b. Fold in Stripe Checkout "optional items" the caller didn't request via
-	// plan_id but the customer selected and paid for.
-	const optionalItemProducts = await matchOptionalInvoiceItemsToProducts({
-		ctx,
-		checkoutContext,
-		autumnBillingPlan: updatedDeferredData.billingPlan.autumn,
-		fullCustomer: updatedDeferredData.billingContext.fullCustomer,
-	});
-	updatedDeferredData.billingPlan.autumn.insertCustomerProducts.push(
-		...optionalItemProducts,
-	);
 
 	// 3. Modify Stripe subscription to include other interval prices / 0 quantity prices
 	await modifyStripeSubscriptionFromCheckout({

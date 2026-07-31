@@ -14,13 +14,17 @@
  *     - Originally requested plan is still provisioned (no regression).
  *     - New customer_product exists for the matched add-on (status active).
  *     - Customer entitlement for the add-on's feature exists.
+ *     - The persisted invoice reflects both products, not just plan_id's —
+ *       invoice construction must see the matched add-on too, not only the
+ *       customer_product insert.
  *
  * Pre-impl red: the add-on assertions fail because `checkout.session.completed`
  * only provisions what `plan_id` requested — it never inspects the invoice's
  * one-time line items for unrequested-but-matching optional items.
  * Post-impl green: all assertions pass once the checkout handler matches
- * leftover one-time invoice line items against the org's add-on prices and
- * folds any match into the billing plan before executing it.
+ * leftover one-time invoice line items against the org's add-on prices,
+ * folds the match in before invoice construction runs, and folds the
+ * resulting customer product into the billing plan before executing it.
  */
 
 import { expect, test } from "bun:test";
@@ -106,5 +110,9 @@ test.concurrent(
 		// ── Contract: the add-on's entitlement exists on the customer ──
 		const dashboardFeature = customer.features?.[TestFeature.Dashboard];
 		expect(dashboardFeature).toBeDefined();
+
+		// ── Contract: the invoice reflects both products, not just plan_id's ──
+		const latestInvoice = customer.invoices?.[0];
+		expect(latestInvoice?.product_ids?.length).toBe(2);
 	},
 );

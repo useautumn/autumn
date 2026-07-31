@@ -6,7 +6,7 @@ import type {
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { persistCreateSchedule } from "./persistCreateSchedule";
 
-const isCreateScheduleBillingContext = (
+export const isCreateScheduleBillingContext = (
 	billingContext: BillingContext,
 ): billingContext is CreateScheduleBillingContext =>
 	"immediatePhase" in billingContext &&
