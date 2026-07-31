@@ -31,6 +31,7 @@ describe("parseCachedOrgWithFeatures", () => {
 			'"org_1"',
 			'{"org":null,"features":[]}',
 			'{"org":{},"features":[]}',
+			'{"org":{"id":""},"features":[]}',
 			'{"org":{"id":"org_1"},"features":"nope"}',
 			'{"features":[]}',
 		]) {

@@ -1,12 +1,14 @@
-import { beforeEach, describe, expect, it, mock } from "bun:test";
+import { afterAll, beforeEach, describe, expect, it, mock } from "bun:test";
 import type { AppEnv } from "@autumn/shared";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 import type { Logger } from "@/external/logtail/logtailUtils.js";
 
+const orgLookupMiss = async () => null;
+
 const mockState: {
 	getOrgWithFeaturesCached: () => Promise<unknown>;
 } = {
-	getOrgWithFeaturesCached: async () => null,
+	getOrgWithFeaturesCached: orgLookupMiss,
 };
 
 const actualCacheOrgWithFeatures = await import(
@@ -39,10 +41,16 @@ const callParams = {
 describe("createWorkerContext org lookup", () => {
 	beforeEach(() => {
 		warnings.length = 0;
+		mockState.getOrgWithFeaturesCached = orgLookupMiss;
+	});
+
+	// mock.module is process-global, so a throwing lookup must not outlive this file.
+	afterAll(() => {
+		mockState.getOrgWithFeaturesCached = orgLookupMiss;
 	});
 
 	it("skips the job only when the org genuinely does not exist", async () => {
-		mockState.getOrgWithFeaturesCached = async () => null;
+		mockState.getOrgWithFeaturesCached = orgLookupMiss;
 
 		const ctx = await createWorkerContext(callParams);
 
