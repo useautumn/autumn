@@ -8,6 +8,7 @@ import {
 	RecaseError,
 	Scopes,
 } from "@autumn/shared";
+import { runs } from "@trigger.dev/sdk/v3";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 import type { Logger } from "@/external/logtail/logtailUtils.js";
 import { createRoute } from "@/honoMiddlewares/routeHandler";
@@ -24,7 +25,8 @@ import { CustomerExportService } from "../exports/CustomerExportService.js";
 import { customerExportToResponse } from "../exports/customerExportToResponse.js";
 
 const HOUR_MS = 60 * 60 * 1000;
-// A run past maxDuration is dead; the margin covers queue wait before it starts.
+// Age is only a precondition for reclaim: when a trigger run id exists, the run
+// state decides, so a run stuck behind queue backlog is never discarded.
 const STALE_ACTIVE_EXPORT_AFTER_MS =
 	CUSTOMER_EXPORT_MAX_DURATION_SECONDS * 1000 + HOUR_MS;
 
@@ -37,7 +39,39 @@ const isStaleActiveExport = ({
 	return Date.now() - lastProgressAt > STALE_ACTIVE_EXPORT_AFTER_MS;
 };
 
-/** A crashed run must not block the org forever, so a stale active export is failed and retried once. */
+const isNotFoundApiError = (error: unknown) =>
+	typeof error === "object" &&
+	error !== null &&
+	"status" in error &&
+	(error as { status: unknown }).status === 404;
+
+/** Unreachable run state means "maybe alive", so reclaim is skipped. */
+const isTriggerRunDead = async ({
+	triggerRunId,
+	logger,
+}: {
+	triggerRunId: string;
+	logger: Logger;
+}): Promise<boolean> => {
+	try {
+		const run = await runs.retrieve(triggerRunId);
+		return run.isCompleted;
+	} catch (error) {
+		if (isNotFoundApiError(error)) return true;
+		logger.warn(
+			"customer-export: could not check trigger run state; skipping reclaim",
+			{
+				data: {
+					triggerRunId,
+					error: error instanceof Error ? error.message : String(error),
+				},
+			},
+		);
+		return false;
+	}
+};
+
+/** A dead run must not block the org forever, so a stale active export is failed and retried once. */
 const createExportReclaimingStale = async ({
 	db,
 	logger,
@@ -66,17 +100,32 @@ const createExportReclaimingStale = async ({
 
 	const first = await CustomerExportService.create(createParams);
 	if (first.created || !first.activeExport) return first;
-	if (!isStaleActiveExport({ activeExport: first.activeExport })) return first;
+
+	const { activeExport } = first;
+	if (!isStaleActiveExport({ activeExport })) return first;
+
+	// No run id means the run was inline or never persisted — age is all we have.
+	const runIsDead = activeExport.trigger_run_id
+		? await isTriggerRunDead({
+				triggerRunId: activeExport.trigger_run_id,
+				logger,
+			})
+		: true;
+	if (!runIsDead) return first;
 
 	const reclaimed = await CustomerExportService.failIfStillActive({
 		db,
-		id: first.activeExport.id,
+		id: activeExport.id,
 		errorMessage: "Export timed out",
+		observed: {
+			status: activeExport.status,
+			startedAt: activeExport.started_at,
+		},
 	});
 	if (!reclaimed) return first;
 
 	logger.warn("customer-export: reclaimed stale active export", {
-		data: { staleExportId: first.activeExport.id },
+		data: { staleExportId: activeExport.id },
 	});
 	return await CustomerExportService.create(createParams);
 };
