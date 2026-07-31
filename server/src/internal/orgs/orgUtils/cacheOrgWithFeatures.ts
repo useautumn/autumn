@@ -24,6 +24,18 @@ export const buildOrgWithFeaturesCacheKey = ({
 	env: AppEnv;
 }) => `org_with_features:${orgId}:${env}`;
 
+const isOrgWithFeaturesEnvelope = (value: unknown): value is OrgWithFeatures => {
+	if (typeof value !== "object" || value === null || Array.isArray(value)) {
+		return false;
+	}
+	const candidate = value as { org?: unknown; features?: unknown };
+	return (
+		typeof candidate.org === "object" &&
+		candidate.org !== null &&
+		Array.isArray(candidate.features)
+	);
+};
+
 /** A corrupt cache entry must read as a miss, not an error that lasts the TTL. */
 export const parseCachedOrgWithFeatures = ({
 	cached,
@@ -33,7 +45,8 @@ export const parseCachedOrgWithFeatures = ({
 	if (!cached) return null;
 
 	try {
-		return JSON.parse(cached) as OrgWithFeatures;
+		const parsed: unknown = JSON.parse(cached);
+		return isOrgWithFeaturesEnvelope(parsed) ? parsed : null;
 	} catch {
 		return null;
 	}
