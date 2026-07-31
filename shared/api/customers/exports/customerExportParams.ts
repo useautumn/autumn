@@ -8,6 +8,10 @@ import { CustomerListFiltersSchema } from "../customerListFilters.js";
 
 export const MAX_CUSTOMER_EXPORTS_PAGE_SIZE = 20;
 
+// The snapshot is persisted and replayed in every export query, so its inputs
+// are bounded at creation time.
+export const MAX_CUSTOMER_EXPORT_SEARCH_LENGTH = 500;
+
 export const CustomerExportSnapshotSchema = z.object({
 	search: z.string().default(""),
 	filters: CustomerListFiltersSchema.default({}),
@@ -15,7 +19,11 @@ export const CustomerExportSnapshotSchema = z.object({
 
 export const CreateCustomerExportParamsSchema = z.object({
 	fields: CustomerExportFieldsSchema,
-	search: z.string().optional().default(""),
+	search: z
+		.string()
+		.max(MAX_CUSTOMER_EXPORT_SEARCH_LENGTH)
+		.optional()
+		.default(""),
 	filters: CustomerListFiltersSchema.optional().default({}),
 });
 
@@ -52,7 +60,7 @@ export type CustomerExportProgress = z.infer<
 export const CUSTOMER_EXPORT_TOTAL_ROWS_KEY = "total_rows";
 export const CUSTOMER_EXPORT_PROCESSED_ROWS_KEY = "processed_rows";
 
-/** Retried workers re-count their range, so processed is capped at the total. */
+/** A retried run resets and re-counts, so processed is capped at the total. */
 export const runMetadataToCustomerExportProgress = ({
 	metadata,
 }: {
@@ -117,8 +125,3 @@ export const DownloadCustomerExportResponseSchema = z.object({
 export type DownloadCustomerExportResponse = z.infer<
 	typeof DownloadCustomerExportResponseSchema
 >;
-
-/** Error body returned with 409 when another export is already active. */
-export type CustomerExportInProgressData = {
-	active_export_id: string;
-};
