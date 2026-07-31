@@ -38,7 +38,7 @@ export function PlanPrepaidQuantityFields({
 				const step = item.billing_units ?? 1;
 				return (
 					<div key={featureId} className="flex items-center gap-2">
-						<div className="min-w-0 flex-1 overflow-hidden">
+						<div className="flex min-w-0 flex-1 items-center gap-2 overflow-hidden">
 							<PlanItemLabel currency={currency} item={item} />
 						</div>
 						<PrepaidQuantityControl
