@@ -1,10 +1,15 @@
-import { isOneOffProduct, type Price, prices } from "@autumn/shared";
+import { isOneOffProduct, products } from "@autumn/shared";
 import { inArray } from "drizzle-orm";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
+import {
+	composeFullProductQuery,
+	normalizeFullProductLicenses,
+	type ProductWithLicenseRelations,
+} from "@/internal/products/repos/utils/composeFullProductQuery.js";
 
 /**
  * Caches one-off classification per internal product id for the lifetime of a
- * worker, so repeated pages never re-read the same catalog prices.
+ * worker, so repeated pages never re-read the same catalog products.
  */
 export const createOneOffProductLookup = ({ db }: { db: DrizzleCli }) => {
 	const isOneOffByInternalProductId = new Map<string, boolean>();
@@ -19,28 +24,25 @@ export const createOneOffProductLookup = ({ db }: { db: DrizzleCli }) => {
 		);
 		if (missing.length === 0) return;
 
-		const priceRows = await db
-			.select({
-				internal_product_id: prices.internal_product_id,
-				config: prices.config,
-			})
-			.from(prices)
-			.where(inArray(prices.internal_product_id, missing));
+		// Full products (catalog prices + license products) so classification
+		// matches isOneOffProduct({ product }) everywhere else.
+		const rows = (await db.query.products.findMany({
+			where: inArray(products.internal_id, missing),
+			with: composeFullProductQuery({ excludeEnts: true }),
+		})) as ProductWithLicenseRelations[];
 
-		const pricesByProduct = new Map<string, Price[]>();
-		for (const priceRow of priceRows) {
-			const existing = pricesByProduct.get(priceRow.internal_product_id) ?? [];
-			existing.push(priceRow as unknown as Price);
-			pricesByProduct.set(priceRow.internal_product_id, existing);
+		for (const row of rows) {
+			const product = normalizeFullProductLicenses({ product: row });
+			isOneOffByInternalProductId.set(
+				row.internal_id,
+				isOneOffProduct({ product }),
+			);
 		}
 
 		for (const internalProductId of missing) {
-			isOneOffByInternalProductId.set(
-				internalProductId,
-				isOneOffProduct({
-					prices: pricesByProduct.get(internalProductId) ?? [],
-				}),
-			);
+			if (!isOneOffByInternalProductId.has(internalProductId)) {
+				isOneOffByInternalProductId.set(internalProductId, false);
+			}
 		}
 	};
 

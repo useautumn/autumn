@@ -37,10 +37,12 @@ describeDb("customer export jobs", () => {
 		status,
 		env = ctx.env,
 		orgId = ctx.org.id,
+		createdAt = Date.now(),
 	}: {
 		status: CustomerExportStatus;
 		env?: string;
 		orgId?: string;
+		createdAt?: number;
 	}) => {
 		const id = generateId("cusexp");
 		await ctx.db.insert(customerExports).values({
@@ -50,7 +52,7 @@ describeDb("customer export jobs", () => {
 			status,
 			fields: ALL_FIELDS,
 			snapshot: emptySnapshot,
-			created_at: Date.now(),
+			created_at: createdAt,
 		});
 		seededExportIds.push(id);
 		return id;
@@ -169,14 +171,28 @@ describeDb("customer export jobs", () => {
 	});
 
 	test("lists newest first and respects the limit", async () => {
+		const now = Date.now();
+		const olderId = await insertExport({
+			status: CustomerExportStatus.Completed,
+			createdAt: now - 2000,
+		});
+		const newerId = await insertExport({
+			status: CustomerExportStatus.Completed,
+			createdAt: now - 1000,
+		});
+
 		const listed = await CustomerExportService.list({
 			db: ctx.db,
 			orgId: ctx.org.id,
 			env: ctx.env,
 			limit: 20,
 		});
+		const listedIds = listed.map((row) => row.id);
 
 		expect(listed.length).toBeLessThanOrEqual(20);
+		expect(listedIds).toContain(newerId);
+		expect(listedIds).toContain(olderId);
+		expect(listedIds.indexOf(newerId)).toBeLessThan(listedIds.indexOf(olderId));
 		for (const [index, row] of listed.entries()) {
 			const next = listed[index + 1];
 			if (next) expect(row.created_at).toBeGreaterThanOrEqual(next.created_at);
