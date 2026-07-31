@@ -1,10 +1,10 @@
 import {
 	type AppEnv,
 	CusProductStatus,
-	RELEVANT_STATUSES,
 	customerProducts,
 	customers,
 	products,
+	RELEVANT_STATUSES,
 } from "@autumn/shared";
 
 import {
@@ -785,6 +785,7 @@ export class CusSearchService {
 		return { data: finalResults, count: totalCount };
 	}
 
+	/** node-postgres returns int8 counts as strings, so every return coerces. */
 	static async count({
 		db,
 		orgId,
@@ -805,7 +806,7 @@ export class CusSearchService {
 				.select({ count: sql<number>`count(*)`.as("count") })
 				.from(customers)
 				.where(predicates.where);
-			return { totalCount: rows[0]?.count ?? 0 };
+			return { totalCount: Number(rows[0]?.count ?? 0) };
 		}
 
 		if (predicates.kind === "productMode") {
@@ -825,14 +826,14 @@ export class CusSearchService {
 					eq(customerProducts.internal_product_id, products.internal_id),
 				)
 				.where(predicates.where);
-			return { totalCount: rows[0]?.count ?? 0 };
+			return { totalCount: Number(rows[0]?.count ?? 0) };
 		}
 
 		const rows = await db
 			.select({ count: sql<number>`count(*)`.as("count") })
 			.from(customers)
 			.where(predicates.where);
-		return { totalCount: rows[0]?.count ?? 0 };
+		return { totalCount: Number(rows[0]?.count ?? 0) };
 	}
 
 	static async resolveInternalIdsByCursor({

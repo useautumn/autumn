@@ -8,9 +8,9 @@ export const CUSTOMER_EXPORT_WORKER_CONCURRENCY = 10;
 
 /** A retried worker redoes its whole range; re-uploading a part overwrites it. */
 export const CUSTOMER_EXPORT_WORKER_RETRY = { maxAttempts: 3 } as const;
-// The parent aborts the upload and marks the job failed, so a retry would only
-// re-run against an already-terminal export row.
-export const CUSTOMER_EXPORT_PARENT_RETRY = { maxAttempts: 1 } as const;
+// Retries recover failures that leave the row queued (e.g. the initial DB
+// read); any later failure lands the row in a non-queued state the rerun skips.
+export const CUSTOMER_EXPORT_PARENT_RETRY = { maxAttempts: 3 } as const;
 
 export const CUSTOMER_EXPORT_MAX_DURATION_SECONDS = 86_400;
 
