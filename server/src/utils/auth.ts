@@ -1,5 +1,13 @@
 import "dotenv/config";
-import { ALL_SCOPES, ac, invitation, roles, schemas } from "@autumn/shared";
+import {
+	ALL_SCOPES,
+	MODERN_SCOPES,
+	OPENID_SCOPES,
+	ac,
+	invitation,
+	roles,
+	schemas,
+} from "@autumn/shared";
 import { getScopesForUserInOrg } from "@autumn/shared/utils/auth/getScopesForUserInOrg";
 import { oauthProvider } from "@better-auth/oauth-provider";
 import { passkey } from "@better-auth/passkey";
@@ -280,6 +288,12 @@ const options = {
 			// Resource-based scopes with R/W actions (plus legacy CRUDL +
 			// meta scopes — see shared/utils/scopeDefinitions.ts).
 			scopes: [...ALL_SCOPES],
+			// Internal roles and legacy aliases remain accepted for existing
+			// clients, but must not be advertised to clients that request every
+			// scope from discovery (notably Devin).
+			advertisedMetadata: {
+				scopes_supported: [...OPENID_SCOPES, ...MODERN_SCOPES],
+			},
 			validAudiences: [authBaseUrl, ...mcpResourceUrls].filter(
 				Boolean,
 			) as string[],

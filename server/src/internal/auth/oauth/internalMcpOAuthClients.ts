@@ -1,4 +1,5 @@
 import { MCP_CLIENT_KIND } from "@autumn/auth/oauth";
+import { META_SCOPES } from "@autumn/shared";
 import type { Context } from "hono";
 import { type DrizzleCli, db } from "@/db/initDrizzle.js";
 import { auth } from "@/utils/auth.js";
@@ -11,6 +12,7 @@ const INTERNAL_MCP_CLIENT_NAME = "Autumn internal-mcp";
 const INTERNAL_MCP_CLIENT_NAME_NORMALIZED =
 	INTERNAL_MCP_CLIENT_NAME.toLowerCase();
 const INTERNAL_MCP_KIND = "internal_mcp";
+const META_SCOPE_SET = new Set<string>(META_SCOPES);
 
 type InternalMcpMetadata = {
 	kind?: string;
@@ -107,6 +109,14 @@ export const handleInternalMcpOAuthAuthorize = async (c: Context) => {
 
 	if (!clientId || !(await isInternalMcpOAuthClientId({ db, clientId }))) {
 		return auth.handler(c.req.raw);
+	}
+
+	const scopes = url.searchParams.get("scope")?.split(" ").filter(Boolean);
+	if (scopes) {
+		url.searchParams.set(
+			"scope",
+			scopes.filter((scope) => !META_SCOPE_SET.has(scope)).join(" "),
+		);
 	}
 
 	const prompts = new Set(url.searchParams.get("prompt")?.split(" ") ?? []);
