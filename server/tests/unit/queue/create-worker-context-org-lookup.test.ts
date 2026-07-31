@@ -9,7 +9,14 @@ const mockState: {
 	getOrgWithFeaturesCached: async () => null,
 };
 
+const actualCacheOrgWithFeatures = await import(
+	"@/internal/orgs/orgUtils/cacheOrgWithFeatures.js"
+);
+
+// Bun module mocks are process-global; spread the real module so later test
+// files importing the other exports (e.g. clearOrgWithFeaturesCache) still load.
 mock.module("@/internal/orgs/orgUtils/cacheOrgWithFeatures.js", () => ({
+	...actualCacheOrgWithFeatures,
 	getOrgWithFeaturesCached: () => mockState.getOrgWithFeaturesCached(),
 }));
 
