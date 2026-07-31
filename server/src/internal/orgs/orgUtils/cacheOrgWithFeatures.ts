@@ -24,6 +24,21 @@ export const buildOrgWithFeaturesCacheKey = ({
 	env: AppEnv;
 }) => `org_with_features:${orgId}:${env}`;
 
+/** A corrupt cache entry must read as a miss, not an error that lasts the TTL. */
+export const parseCachedOrgWithFeatures = ({
+	cached,
+}: {
+	cached: string | null;
+}): OrgWithFeatures | null => {
+	if (!cached) return null;
+
+	try {
+		return JSON.parse(cached) as OrgWithFeatures;
+	} catch {
+		return null;
+	}
+};
+
 export const getCachedOrgWithFeatures = async ({
 	orgId,
 	env,
@@ -38,9 +53,7 @@ export const getCachedOrgWithFeatures = async ({
 		source: "org-features-cache:get",
 	});
 
-	if (!cached) return null;
-
-	return JSON.parse(cached) as OrgWithFeatures;
+	return parseCachedOrgWithFeatures({ cached: cached ?? null });
 };
 
 export const setCachedOrgWithFeatures = async ({
@@ -103,11 +116,11 @@ export const clearOrgWithFeaturesCache = async ({
  * second against Postgres — 3.08M lookups in 45 minutes, 8.4% of database time —
  * for a row that barely changes.
  *
- * Redis is strictly an accelerator: every op goes through `tryRedisOp`, which
- * swallows failures, so an outage reads as a cache miss and falls through to
- * Postgres. That must hold — if a Redis error escaped here,
- * `createWorkerContext` would catch it, treat the org as missing, and silently
- * acknowledge queued jobs without recording usage.
+ * Redis is strictly an accelerator: reads go through `tryRedisOp` (which
+ * swallows failures) and a parse guard, so outages and corrupt entries read as
+ * cache misses and fall through to Postgres. Only Postgres errors escape, and
+ * `createWorkerContext` propagates those so queued jobs retry — `null` strictly
+ * means the org does not exist.
  */
 export const getOrgWithFeaturesCached = async ({
 	db,

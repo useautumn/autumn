@@ -39,9 +39,11 @@ export const createTriggerContext = async ({
 		logger,
 	});
 
+	// createWorkerContext propagates DB errors, so an empty result strictly
+	// means the org was deleted after the run was queued.
 	if (!ctx)
 		throw new Error(
-			`createTriggerContext: failed to build context for org=${orgId} env=${env}`,
+			`createTriggerContext: org ${orgId} (${env}) does not exist`,
 		);
 
 	ctx.insideTriggerTask = true;
