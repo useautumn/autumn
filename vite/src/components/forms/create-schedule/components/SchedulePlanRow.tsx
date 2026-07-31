@@ -1,6 +1,10 @@
 import { SearchableSelect } from "@autumn/ui";
-import { SelectedPlanRow } from "@/components/forms/shared";
+import {
+	PlanPrepaidQuantityFields,
+	SelectedPlanRow,
+} from "@/components/forms/shared";
 import { getProductGroupKey } from "@/components/forms/shared/utils/planGroupUtils";
+import { useCustomerDisplayCurrency } from "@/hooks/common/useCustomerDisplayCurrency";
 import { cn } from "@/lib/utils";
 import { useCreateScheduleFormContext } from "../context/CreateScheduleFormProvider";
 import { CopyFromPreviousPhaseButton } from "./CopyFromPreviousPhaseButton";
@@ -22,6 +26,7 @@ export function SchedulePlanRow({
 		isPhaseLocked,
 		setEditingPlan,
 	} = useCreateScheduleFormContext();
+	const { displayCurrency } = useCustomerDisplayCurrency();
 
 	const plan = formValues.phases[phaseIndex]?.plans[planIndex];
 	if (!plan) return null;
@@ -98,14 +103,36 @@ export function SchedulePlanRow({
 	}
 
 	return (
-		<SelectedPlanRow
-			productId={plan.productId}
-			product={selectedProduct}
-			customItems={plan.items}
-			isCustom={plan.isCustom}
-			disabled={isLocked}
-			onEdit={() => setEditingPlan({ phaseIndex, planIndex })}
-			onRemove={() => handleRemovePlan({ phaseIndex, planIndex })}
-		/>
+		<div className="space-y-1.5">
+			<SelectedPlanRow
+				productId={plan.productId}
+				product={selectedProduct}
+				customItems={plan.items}
+				isCustom={plan.isCustom}
+				disabled={isLocked}
+				onEdit={() => setEditingPlan({ phaseIndex, planIndex })}
+				onRemove={() => handleRemovePlan({ phaseIndex, planIndex })}
+			/>
+			<PlanPrepaidQuantityFields
+				items={plan.items ?? selectedProduct?.items}
+				quantities={plan.prepaidOptions}
+				currency={displayCurrency}
+				renderField={({ featureId, step }) => (
+					<form.AppField
+						name={`phases[${phaseIndex}].plans[${planIndex}].prepaidOptions.${featureId}`}
+					>
+						{(field) => (
+							<field.QuantityField
+								label=""
+								min={0}
+								step={step}
+								compact
+								hideFieldInfo
+							/>
+						)}
+					</form.AppField>
+				)}
+			/>
+		</div>
 	);
 }

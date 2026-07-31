@@ -11,6 +11,7 @@ import { useScopeEntitySearch } from "@/views/customers2/customer/hooks/useScope
 import type { AttachAdditionalPlan } from "../attachFormSchema";
 import { useAttachFormContext } from "../context/AttachFormProvider";
 import { getAttachDisplayItems } from "../utils/grantFreeUtils";
+import { AttachPlanPrepaidQuantityFields } from "./AttachPlanPrepaidQuantityFields";
 
 export function AttachAdditionalPlanRow({
 	plan,
@@ -113,24 +114,25 @@ export function AttachAdditionalPlanRow({
 	const planIndex = formValues.additionalPlans.findIndex(
 		(candidate) => candidate._id === plan._id,
 	);
-	const scopeSelector =
-		hasEntities && planIndex !== -1 ? (
-			<PlanEntityScopeSelector
-				entities={entities}
-				value={plan.entityId}
-				onChange={(nextEntityId) =>
-					form.setFieldValue(`additionalPlans[${planIndex}]`, {
-						...plan,
-						entityId: nextEntityId,
-					})
-				}
-				inheritLabel={entityId ? "Default entity scope" : undefined}
-				showLabel={false}
-				wrapInSection={false}
-				onSearchChange={setEntitySearch}
-				isLoading={isEntitiesLoading}
-			/>
-		) : null;
+	if (planIndex === -1) return null;
+
+	const scopeSelector = hasEntities ? (
+		<PlanEntityScopeSelector
+			entities={entities}
+			value={plan.entityId}
+			onChange={(nextEntityId) =>
+				form.setFieldValue(`additionalPlans[${planIndex}]`, {
+					...plan,
+					entityId: nextEntityId,
+				})
+			}
+			inheritLabel={entityId ? "Default entity scope" : undefined}
+			showLabel={false}
+			wrapInSection={false}
+			onSearchChange={setEntitySearch}
+			isLoading={isEntitiesLoading}
+		/>
+	) : null;
 	const rowScope = scopeSelector
 		? {
 				open: scopeOpen,
@@ -140,19 +142,26 @@ export function AttachAdditionalPlanRow({
 		: undefined;
 
 	return (
-		<ScopedPlanRow scope={rowScope}>
-			<SelectedPlanRow
-				productId={plan.productId}
-				product={selectedProduct}
-				customItems={displayedItems}
-				isCustom={plan.isCustom || formValues.grantFree}
-				onEdit={
-					formValues.grantFree
-						? undefined
-						: () => handleEditPlan({ additionalPlanId: plan._id })
-				}
-				onRemove={() => handleRemovePlan({ id: plan._id })}
+		<div className="space-y-1.5">
+			<ScopedPlanRow scope={rowScope}>
+				<SelectedPlanRow
+					productId={plan.productId}
+					product={selectedProduct}
+					customItems={displayedItems}
+					isCustom={plan.isCustom || formValues.grantFree}
+					onEdit={
+						formValues.grantFree
+							? undefined
+							: () => handleEditPlan({ additionalPlanId: plan._id })
+					}
+					onRemove={() => handleRemovePlan({ id: plan._id })}
+				/>
+			</ScopedPlanRow>
+			<AttachPlanPrepaidQuantityFields
+				items={displayedItems}
+				quantities={plan.prepaidOptions}
+				additionalPlanIndex={planIndex}
 			/>
-		</ScopedPlanRow>
+		</div>
 	);
 }
