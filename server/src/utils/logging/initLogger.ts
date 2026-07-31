@@ -163,15 +163,24 @@ const createConsoleJsonStream = () =>
  */
 export type InitLoggerOptions = {
 	mode?: "default" | "dual";
+	transport?: "direct" | "firelens";
 };
 
 export const initLogger = (options: InitLoggerOptions = {}) => {
-	const { mode = "default" } = options;
+	const { mode = "default", transport } = options;
 
 	const streams: pino.StreamEntry[] = [];
 	const isDev = process.env.NODE_ENV === "development";
 	const isTest = process.env.NODE_ENV === "test";
 	const isDevOrTest = isDev || isTest;
+	// FireLens is the default: the sidecar already ships stdout, so no per-process
+	// Axiom transport thread. `AXIOM_LOG_TRANSPORT=direct` reverts without a rebuild.
+	const configuredTransport =
+		transport ??
+		(process.env.AXIOM_LOG_TRANSPORT === "direct" ? "direct" : "firelens");
+	const isRunningInEcs = Boolean(process.env.ECS_CONTAINER_METADATA_URI_V4);
+	const shouldUseFirelens =
+		configuredTransport === "firelens" && !isDevOrTest && isRunningInEcs;
 
 	if (mode === "dual") {
 		streams.push({
@@ -181,9 +190,11 @@ export const initLogger = (options: InitLoggerOptions = {}) => {
 						trailingNewline: false,
 						useConsoleLog: true,
 					})
-				: createConsoleJsonStream(),
+				: shouldUseFirelens
+					? process.stdout
+					: createConsoleJsonStream(),
 		});
-		if (process.env.AXIOM_TOKEN) {
+		if (!shouldUseFirelens && process.env.AXIOM_TOKEN) {
 			streams.push({
 				level: "info",
 				stream: pino.transport({
@@ -204,7 +215,12 @@ export const initLogger = (options: InitLoggerOptions = {}) => {
 			});
 		}
 
-		if (process.env.AXIOM_TOKEN) {
+		if (shouldUseFirelens) {
+			streams.push({
+				level: "info",
+				stream: process.stdout,
+			});
+		} else if (process.env.AXIOM_TOKEN) {
 			streams.push({
 				level: "info",
 				stream: pino.transport({

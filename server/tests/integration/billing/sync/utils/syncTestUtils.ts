@@ -15,15 +15,18 @@ export const createStripeSubscriptionFromProduct = async ({
 	ctx,
 	customerId,
 	productId,
+	metadata,
 }: {
 	ctx: TestContext;
 	customerId: string;
 	productId: string;
+	metadata?: Stripe.MetadataParam;
 }): Promise<Stripe.Subscription> => {
 	return createStripeSubscriptionFromProducts({
 		ctx,
 		customerId,
 		productIds: [productId],
+		metadata,
 	});
 };
 
@@ -36,10 +39,12 @@ export const createStripeSubscriptionFromProducts = async ({
 	ctx,
 	customerId,
 	productIds,
+	metadata,
 }: {
 	ctx: TestContext;
 	customerId: string;
 	productIds: string[];
+	metadata?: Stripe.MetadataParam;
 }): Promise<Stripe.Subscription> => {
 	const fullCustomer = await CusService.getFull({
 		ctx,
@@ -74,6 +79,7 @@ export const createStripeSubscriptionFromProducts = async ({
 	return ctx.stripeCli.subscriptions.create({
 		customer: stripeCustomerId,
 		items: stripePriceIds.map((priceId) => ({ price: priceId })),
+		metadata,
 	});
 };
 

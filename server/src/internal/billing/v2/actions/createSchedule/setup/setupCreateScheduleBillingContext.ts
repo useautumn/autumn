@@ -6,14 +6,16 @@ import {
 	isPastStartDate,
 	isProductPaidAndRecurring,
 	type MultiAttachBillingContext,
-	type MultiAttachParamsV0,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { setupAttachEndOfCycleMs } from "@/internal/billing/v2/actions/attach/setup/setupAttachEndOfCycleMs";
 import { setupAnchorResetRefund } from "@/internal/billing/v2/setup/setupAnchorResetRefund";
 import { setupBillingCycleAnchor } from "@/internal/billing/v2/setup/setupBillingCycleAnchor";
 import { setupResetCycleAnchor } from "@/internal/billing/v2/setup/setupResetCycleAnchor";
-import { setupImmediateMultiProductBillingContext } from "../../common/immediateMultiProduct/setupImmediateMultiProductBillingContext";
+import {
+	type ImmediateMultiProductParams,
+	setupImmediateMultiProductBillingContext,
+} from "../../common/immediateMultiProduct/setupImmediateMultiProductBillingContext";
 import { FIRST_PHASE_TOLERANCE_MS } from "../errors/handleFirstPhaseStartDateErrors";
 import {
 	getInitialCreateSchedulePhase,
@@ -21,7 +23,7 @@ import {
 	phaseHasNumericStart,
 } from "../errors/normalizeCreateSchedulePhases";
 import { validateCreateSchedulePhasePlans } from "../errors/validateCreateSchedulePhasePlans";
-import { billingContextToRecurringAndScheduled } from "../utils/billingContextToRecurringAndScheduled";
+import { resolveCreateScheduleRecurringProducts } from "../utils/resolveCreateScheduleRecurringProducts";
 import { setupScheduledProductsContext } from "./setupScheduledProductsContext";
 
 type CreateScheduleCheckoutModeContext = Pick<
@@ -43,6 +45,9 @@ const setupCreateScheduleCheckoutMode = ({
 	if (redirectMode === "never") {
 		return null;
 	}
+	if (billingContext.invoiceMode) {
+		return null;
+	}
 
 	const hasPaymentMethod = !!billingContext.paymentMethod;
 	const hasExistingSubscription = !!billingContext.stripeSubscription;
@@ -55,11 +60,7 @@ const setupCreateScheduleCheckoutMode = ({
 	const shouldUseStripeCheckout =
 		hasOneOffProduct || (!hasExistingSubscription && hasPaidRecurringProduct);
 
-	if (
-		!billingContext.invoiceMode &&
-		!hasPaymentMethod &&
-		shouldUseStripeCheckout
-	) {
+	if (!hasPaymentMethod && shouldUseStripeCheckout) {
 		const noCardRequiredTrial =
 			billingContext.trialContext?.trialEndsAt &&
 			billingContext.trialContext.cardRequired === false;
@@ -80,17 +81,20 @@ const phaseToImmediateParams = ({
 }: {
 	params: CreateScheduleParamsV0;
 	phase: CreateScheduleParamsV0["phases"][number];
-}): MultiAttachParamsV0 => ({
+}): ImmediateMultiProductParams => ({
 	customer_id: params.customer_id,
 	entity_id: params.entity_id,
 	plans: phase.plans.map((plan) => ({
 		plan_id: plan.plan_id,
+		entity_id: plan.entity_id,
 		customize: plan.customize,
 		feature_quantities: plan.feature_quantities,
 		version: plan.version,
 		subscription_id: plan.subscription_id,
 	})),
 	invoice_mode: params.invoice_mode,
+	free_trial: params.free_trial,
+	currency: params.currency,
 	discounts: params.discounts,
 	success_url: params.success_url,
 	checkout_session_params: params.checkout_session_params,
@@ -198,10 +202,6 @@ export const setupCreateScheduleBillingContext = async ({
 		includeScheduledProductsForScheduleLookup: true,
 	});
 
-	validateCreateSchedulePhasePlans({
-		fullProducts: billingContext.fullProducts,
-	});
-
 	const cycleBoundaryMs =
 		params.billing_cycle_anchor === undefined
 			? setupAttachEndOfCycleMs({
@@ -227,6 +227,13 @@ export const setupCreateScheduleBillingContext = async ({
 	billingContext = immediatePhaseContext.billingContext;
 	const { immediatePhase, futurePhases } = immediatePhaseContext;
 
+	validateCreateSchedulePhasePlans({
+		plans: billingContext.productContexts.map((productContext) => ({
+			fullProduct: productContext.fullProduct,
+			scopeId: productContext.fullCustomer.entity?.internal_id,
+		})),
+	});
+
 	const scheduledPhaseContexts = await setupScheduledProductsContext({
 		ctx,
 		phases: futurePhases,
@@ -247,6 +254,7 @@ export const setupCreateScheduleBillingContext = async ({
 
 	const scheduleBillingContext: CreateScheduleBillingContext = {
 		...billingContext,
+		preserveAddOns: params.preserve_add_ons ?? false,
 		checkoutMode: setupCreateScheduleCheckoutMode({
 			billingContext,
 			redirectMode: params.redirect_mode,
@@ -278,16 +286,11 @@ export const setupCreateScheduleBillingContext = async ({
 		scheduledPhaseContexts,
 	};
 
-	const { recurringActive } = billingContextToRecurringAndScheduled({
+	const { recurringActive } = resolveCreateScheduleRecurringProducts({
 		billingContext: scheduleBillingContext,
 	});
 
-	// setupImmediateMultiProductBillingContext does not forward
-	// `billing_cycle_anchor`, so billingCycleAnchorMs still reflects the existing
-	// Stripe anchor. When the caller asks to reset the cycle we must recompute
-	// the anchor (and the reset-cycle anchor) so downstream proration math runs
-	// against the new `[now, now + interval]` period. Mirrors the attach /
-	// updateSubscription setups.
+	// Immediate setup omits the requested anchor, so recompute it before proration.
 	if (params.billing_cycle_anchor !== undefined) {
 		const firstProduct = billingContext.fullProducts[0];
 		if (firstProduct) {
@@ -311,9 +314,7 @@ export const setupCreateScheduleBillingContext = async ({
 		}
 	}
 
-	// Keep forward-looking charges (e.g. prepaid renewals) when the caller asks
-	// to reset the cycle with proration off; without this, finalizeLineItems
-	// drops every line item and total due now collapses to 0.
+	// Preserve renewal charges when resetting the cycle without proration.
 	scheduleBillingContext.anchorResetRefund = setupAnchorResetRefund({
 		billingCycleAnchor: params.billing_cycle_anchor,
 		prorationBehavior: params.billing_behavior,

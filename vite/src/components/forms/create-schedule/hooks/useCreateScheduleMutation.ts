@@ -2,10 +2,9 @@ import type {
 	CreateScheduleParamsV0,
 	CreateScheduleResponse,
 } from "@autumn/shared";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
-import type { AxiosError } from "axios";
-import { toast } from "sonner";
-import { useAxiosInstance } from "@/services/useAxiosInstance";
+import { useBillingMutation } from "@/components/forms/shared/hooks/useBillingMutation";
+import { BILLING_OPERATIONS } from "@/components/forms/shared/utils/billingOperations";
+import type { BillingStageParams } from "@/components/forms/shared/utils/billingStageParams";
 
 export function useCreateScheduleMutation({
 	customerId,
@@ -14,84 +13,24 @@ export function useCreateScheduleMutation({
 	onSuccess,
 }: {
 	customerId: string | undefined;
-	buildRequestBody: (params?: {
-		useInvoice?: boolean;
-		enableProductImmediately?: boolean;
-		finalizeInvoice?: boolean;
-		invoiceTemplateId?: string;
-		netTermsDays?: number;
-	}) => CreateScheduleParamsV0 | null;
+	buildRequestBody: (
+		params?: BillingStageParams,
+	) => CreateScheduleParamsV0 | null;
 	onCheckoutRedirect?: (checkoutUrl: string) => void;
 	onSuccess?: () => void;
 }) {
-	const axiosInstance = useAxiosInstance();
-	const queryClient = useQueryClient();
-
-	const mutation = useMutation({
-		mutationFn: async ({
-			useInvoice,
-			enableProductImmediately,
-			finalizeInvoice,
-			invoiceTemplateId,
-			netTermsDays,
-		}: {
-			useInvoice?: boolean;
-			enableProductImmediately?: boolean;
-			finalizeInvoice?: boolean;
-			invoiceTemplateId?: string;
-			netTermsDays?: number;
-		}) => {
-			if (!customerId) throw new Error("Customer ID is required");
-
-			const requestBody = buildRequestBody({
-				useInvoice,
-				enableProductImmediately,
-				finalizeInvoice,
-				invoiceTemplateId,
-				netTermsDays,
-			});
-			if (!requestBody) throw new Error("Failed to build request body");
-
-			const response = await axiosInstance.post<CreateScheduleResponse>(
-				"/v1/billing.create_schedule",
-				requestBody,
-			);
-
-			return { data: response.data, useInvoice };
-		},
-		onSuccess: ({ data, useInvoice }) => {
-			if (useInvoice) {
-				if (data?.invoice) {
-					toast.success("Invoice created successfully");
-				} else {
-					// Invoice-mode subscription with no immediate invoice (usage-in-arrears):
-					// nothing to send now, so confirm and close instead of dead-ending.
-					toast.success("Subscription started");
-					onSuccess?.();
-				}
-			} else if (data?.payment_url) {
-				onCheckoutRedirect?.(data.payment_url);
-			} else {
-				toast.success("Schedule created successfully");
-			}
-
-			if (!useInvoice) {
-				onSuccess?.();
-			}
-
-			if (customerId) {
-				queryClient.invalidateQueries({ queryKey: ["customer", customerId] });
-				queryClient.invalidateQueries({
-					queryKey: ["customer-schedule", customerId],
-				});
-			}
-		},
-		onError: (error) => {
-			toast.error(
-				(error as AxiosError<{ message: string }>)?.response?.data?.message ??
-					"Failed to create schedule",
-			);
-		},
+	const mutation = useBillingMutation<
+		CreateScheduleParamsV0,
+		CreateScheduleResponse
+	>({
+		customerId,
+		path: BILLING_OPERATIONS.createSchedule.path,
+		buildRequestBody,
+		invalidatesSchedule: BILLING_OPERATIONS.createSchedule.invalidatesSchedule,
+		successMessage: "Schedule created successfully",
+		errorMessage: "Failed to create schedule",
+		onCheckoutRedirect,
+		onSuccess,
 	});
 
 	const handleSubmit = () => {

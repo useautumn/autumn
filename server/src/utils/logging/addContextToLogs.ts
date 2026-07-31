@@ -17,7 +17,22 @@ export const addRequestToLogs = ({
 	logger: Logger;
 	requestContext: LogRequestContext | InternalLogRequestContext;
 }): Logger => {
-	return logger.child({ context: { req: requestContext } });
+	const withRequestContext =
+		(log: Logger["info"]): Logger["info"] =>
+		(...args) =>
+			log({ req: requestContext }, ...args);
+
+	return {
+		debug: withRequestContext(logger.debug),
+		info: withRequestContext(logger.info),
+		warn: withRequestContext(logger.warn),
+		error: withRequestContext(logger.error),
+		child: ({ context, onlyProd }) =>
+			addRequestToLogs({
+				logger: logger.child({ context, onlyProd }),
+				requestContext,
+			}),
+	};
 };
 
 export const addAppContextToLogs = ({

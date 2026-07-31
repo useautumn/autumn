@@ -6,6 +6,7 @@ import { usePlanLicenseRows } from "@/components/forms/shared/plan-items/PlanLic
 import { SheetSection } from "@/components/v2/sheets/SharedSheetComponents";
 import { productItemsForCurrency } from "@/views/products/plan/utils/currencyUtils";
 import { useAttachFormContext } from "../context/AttachFormProvider";
+import { stripPricesFromItems } from "../utils/grantFreeUtils";
 import { AttachSectionTitle } from "./AttachSectionTitle";
 
 export function AttachPlanSection({
@@ -48,21 +49,20 @@ export function AttachPlanSection({
 			product && {
 				...product,
 				items: productItemsForCurrency({
-					items: product.items,
+					items: formValues.grantFree
+						? stripPricesFromItems({ items: product.items })
+						: product.items,
 					currency,
 					orgDefaultCurrency,
 				}),
 			},
-		[product, currency, orgDefaultCurrency],
+		[product, formValues.grantFree, currency, orgDefaultCurrency],
 	);
 
-	const originalItemsForDiff = useMemo(
-		() =>
-			showDiff && previewDiff.outgoingItems.length > 0
-				? previewDiff.outgoingItems
-				: productTemplateItems,
-		[showDiff, previewDiff.outgoingItems, productTemplateItems],
-	);
+	const originalItemsForDiff =
+		showDiff && previewDiff.outgoingItems.length > 0
+			? previewDiff.outgoingItems
+			: productTemplateItems;
 
 	const displayOriginalItems = useMemo(
 		() =>

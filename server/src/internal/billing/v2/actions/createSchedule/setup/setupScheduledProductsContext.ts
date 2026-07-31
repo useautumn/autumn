@@ -57,9 +57,9 @@ export const setupScheduledProductsContext = async ({
 			);
 
 			validateCreateSchedulePhasePlans({
-				fullProducts: productContexts.map(
-					(productContext) => productContext.fullProduct,
-				),
+				plans: productContexts.map((productContext) => ({
+					fullProduct: productContext.fullProduct,
+				})),
 			});
 
 			return {

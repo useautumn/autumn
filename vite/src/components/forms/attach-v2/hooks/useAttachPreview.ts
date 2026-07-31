@@ -1,78 +1,23 @@
-import type { AttachParamsV0, AttachPreviewResponse } from "@autumn/shared";
-import { keepPreviousData, useQuery } from "@tanstack/react-query";
-import type { AxiosError } from "axios";
-import { useEffect, useMemo, useState } from "react";
-import { useQueryKeyFactory } from "@/hooks/common/useQueryKeyFactory";
-import { useAxiosInstance } from "@/services/useAxiosInstance";
-
-const ATTACH_PREVIEW_EXPAND = [
-	"incoming.plan.items.feature",
-	"outgoing.plan.items.feature",
-] as const;
+import type { AttachParamsV0, CreateScheduleParamsV0 } from "@autumn/shared";
+import { useBillingPreview } from "@/components/forms/shared/hooks/useBillingPreview";
 
 interface UseAttachPreviewParams {
-	requestBody: AttachParamsV0 | null;
+	path: string;
+	requestBody: AttachParamsV0 | CreateScheduleParamsV0 | null;
 	enabled?: boolean;
 }
 
 export function useAttachPreview({
+	path,
 	requestBody,
 	enabled,
 }: UseAttachPreviewParams) {
-	const axiosInstance = useAxiosInstance();
-	const buildKey = useQueryKeyFactory();
-
-	const shouldEnable = enabled !== undefined ? enabled : !!requestBody;
-
-	const queryKeyDeps = useMemo(
-		() => JSON.stringify(requestBody),
-		[requestBody],
-	);
-
-	const [debouncedQueryKey, setDebouncedQueryKey] = useState(queryKeyDeps);
-
-	useEffect(() => {
-		const timer = setTimeout(() => {
-			setDebouncedQueryKey(queryKeyDeps);
-		}, 300);
-		return () => clearTimeout(timer);
-	}, [queryKeyDeps]);
-
-	const isDebouncing = queryKeyDeps !== debouncedQueryKey;
-
-	const query = useQuery({
-		queryKey: buildKey(["attach-preview-v2", debouncedQueryKey]),
-		queryFn: async () => {
-			if (!requestBody) {
-				return null;
-			}
-
-			const response = await axiosInstance.post<AttachPreviewResponse>(
-				"/v1/billing.preview_attach",
-				{
-					...requestBody,
-					expand: ATTACH_PREVIEW_EXPAND,
-				},
-			);
-
-			return response.data;
-		},
-		enabled: shouldEnable,
-		staleTime: 0,
-		refetchOnWindowFocus: false,
-		placeholderData: keepPreviousData,
-		retry: (failureCount, error) => {
-			const status = (error as AxiosError)?.response?.status;
-			if (status && status >= 400 && status < 500) return false;
-			return failureCount < 3;
-		},
+	return useBillingPreview({
+		path,
+		queryKeyPrefix: "attach-preview-v2",
+		requestBody,
+		enabled,
 	});
-
-	return {
-		...query,
-		isLoading:
-			shouldEnable && (query.isLoading || query.isFetching || isDebouncing),
-	};
 }
 
 export type UseAttachPreviewReturn = ReturnType<typeof useAttachPreview>;

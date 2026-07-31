@@ -5,8 +5,12 @@ import type {
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { persistCreateSchedule } from "./persistCreateSchedule";
+import {
+	addCustomerProductIdsToSchedulePhases,
+	resolveCreateScheduleRecurringProducts,
+} from "./resolveCreateScheduleRecurringProducts";
 
-const isCreateScheduleBillingContext = (
+export const isCreateScheduleBillingContext = (
 	billingContext: BillingContext,
 ): billingContext is CreateScheduleBillingContext =>
 	"immediatePhase" in billingContext &&
@@ -53,7 +57,13 @@ const buildDeferredSchedulePhases = ({
 		);
 	}
 
-	return phases;
+	const { preservedCustomerProductIdsByPhase } =
+		resolveCreateScheduleRecurringProducts({ billingContext });
+
+	return addCustomerProductIdsToSchedulePhases({
+		phases,
+		customerProductIdsByPhase: preservedCustomerProductIdsByPhase,
+	});
 };
 
 export const persistDeferredCreateSchedule = async ({

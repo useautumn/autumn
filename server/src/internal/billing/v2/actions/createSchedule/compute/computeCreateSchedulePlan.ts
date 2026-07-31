@@ -1,13 +1,17 @@
-import type {
-	AutumnBillingPlan,
-	CreateScheduleBillingContext,
+import {
+	type AutumnBillingPlan,
+	type CreateScheduleBillingContext,
+	isFreeProduct,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { buildAutumnLineItems } from "@/internal/billing/v2/compute/computeAutumnUtils/buildAutumnLineItems";
 import { finalizeLineItems } from "@/internal/billing/v2/compute/finalize/finalizeLineItems";
 import { computePooledBalanceTransitionPlan } from "@/internal/billing/v2/pooledBalances/compute/computePooledBalanceTransitionPlan";
 import { cusProductsToOneOffPrepaidCarryOvers } from "@/internal/billing/v2/utils/handleOneOffPrepaidCarryOvers/cusProductToOneOffPrepaidCarryOvers";
-import { billingContextToRecurringAndScheduled } from "../utils/billingContextToRecurringAndScheduled";
+import {
+	addCustomerProductIdsToSchedulePhases,
+	resolveCreateScheduleRecurringProducts,
+} from "../utils/resolveCreateScheduleRecurringProducts";
 import { computeImmediatePhaseCustomerProducts } from "./computeImmediatePhaseCustomerProducts";
 import { computeScheduledCustomerProducts } from "./computeScheduledCustomerProducts";
 
@@ -31,14 +35,15 @@ export const computeCreateSchedulePlan = ({
 }): CreateSchedulePlanResult => {
 	const nextPhaseStartsAt = billingContext.futurePhases[0]?.starts_at;
 	const {
-		recurringActive: currentRecurringCustomerProducts,
+		recurringOutgoing: outgoingCustomerProducts,
+		preservedCustomerProductIdsByPhase,
 		recurringScheduled: existingScheduledCustomerProducts,
-	} = billingContextToRecurringAndScheduled({ billingContext });
+	} = resolveCreateScheduleRecurringProducts({ billingContext });
 
 	const immediate = computeImmediatePhaseCustomerProducts({
 		ctx,
 		billingContext,
-		currentRecurringCustomerProducts,
+		currentRecurringCustomerProducts: outgoingCustomerProducts,
 		nextPhaseStartsAt,
 	});
 
@@ -50,7 +55,7 @@ export const computeCreateSchedulePlan = ({
 	const { pooledBalancePlan } = computePooledBalanceTransitionPlan({
 		ctx,
 		fullCustomer: billingContext.fullCustomer,
-		outgoingCustomerProducts: currentRecurringCustomerProducts,
+		outgoingCustomerProducts,
 		incomingCustomerProducts: immediate.insertCustomerProducts,
 		stripeSubscriptionId: billingContext.stripeSubscription?.id,
 		now: billingContext.currentEpochMs,
@@ -65,15 +70,27 @@ export const computeCreateSchedulePlan = ({
 	const { allLineItems, updateCustomerEntitlements } = buildAutumnLineItems({
 		ctx,
 		newCustomerProducts: immediateCustomerProducts,
-		deletedCustomerProducts: currentRecurringCustomerProducts,
+		deletedCustomerProducts: outgoingCustomerProducts,
 		billingContext,
-		includeArrearLineItems: currentRecurringCustomerProducts.length > 0,
+		includeArrearLineItems: outgoingCustomerProducts.length > 0,
 	});
 
 	const oneOffPrepaidCarryOvers = cusProductsToOneOffPrepaidCarryOvers({
-		currentCustomerProducts: currentRecurringCustomerProducts,
+		currentCustomerProducts: outgoingCustomerProducts,
 		fullCustomer: billingContext.fullCustomer,
 	});
+	const allProductsFree = billingContext.fullProducts.every((product) =>
+		isFreeProduct({ product }),
+	);
+	const lockCustomerCurrency =
+		billingContext.currency &&
+		!billingContext.fullCustomer.currency &&
+		!allProductsFree
+			? {
+					internalCustomerId: billingContext.fullCustomer.internal_id,
+					currency: billingContext.currency,
+				}
+			: undefined;
 
 	const autumnBillingPlan: AutumnBillingPlan = {
 		customerId:
@@ -91,6 +108,7 @@ export const computeCreateSchedulePlan = ({
 		updateCustomerEntitlements,
 		insertCustomerEntitlements: oneOffPrepaidCarryOvers.customerEntitlements,
 		pooledBalancePlan,
+		lockCustomerCurrency,
 	};
 
 	autumnBillingPlan.lineItems = finalizeLineItems({
@@ -109,6 +127,9 @@ export const computeCreateSchedulePlan = ({
 
 	return {
 		autumnBillingPlan,
-		phases: [immediatePhase, ...scheduled.scheduledPhases],
+		phases: addCustomerProductIdsToSchedulePhases({
+			phases: [immediatePhase, ...scheduled.scheduledPhases],
+			customerProductIdsByPhase: preservedCustomerProductIdsByPhase,
+		}),
 	};
 };
