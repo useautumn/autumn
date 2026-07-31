@@ -7,6 +7,7 @@ import { type SQL, sql } from "drizzle-orm";
 import { planetScaleTag } from "@/db/dbUtils.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { getFullSubjectRowsQuery } from "@/internal/customers/repos/getFullSubject/getFullSubjectRowsQuery.js";
+import { buildPlanScopeCte, planScopeJoinSql } from "./planFilterScope.js";
 
 type EntityListFilters = Pick<
 	ListEntitiesParams,
@@ -30,16 +31,11 @@ export const hasEntityListFilters = ({
 };
 
 const getEntityListFilterSql = ({
-	orgId,
-	env,
-	plans,
 	processors,
 	search,
 	customerId,
 	inStatuses,
-}: EntityListFilters & {
-	orgId: string;
-	env: AppEnv;
+}: Omit<EntityListFilters, "plans"> & {
 	inStatuses: CusProductStatus[];
 }) => {
 	const filters: SQL[] = [];
@@ -49,42 +45,10 @@ const getEntityListFilterSql = ({
 		filters.push(sql`AND c.id = ${trimmedCustomerId}`);
 	}
 
-	if (plans && plans.length > 0) {
-		const planConditions = plans.map((plan) => {
-			if (plan.versions && plan.versions.length > 0) {
-				return sql`(p_filter.id = ${plan.id} AND p_filter.version IN (${sql.join(
-					plan.versions.map((version) => sql`${version}`),
-					sql`, `,
-				)}))`;
-			}
-
-			return sql`p_filter.id = ${plan.id}`;
-		});
-
-		// products.id is the plan slug, not a key — without org/env this matches
-		// every org's plan of that name, so the planner can't use
-		// idx_products_org_env_id_version and the EXISTS degrades to a per-entity
-		// probe across the table.
-		const planScope = sql`p_filter.org_id = ${orgId} AND p_filter.env = ${env}`;
-
-		filters.push(sql`AND EXISTS (
-			SELECT 1
-			FROM customer_products cp_filter
-			JOIN products p_filter
-				ON p_filter.internal_id = cp_filter.internal_product_id
-			WHERE cp_filter.internal_customer_id = e.internal_customer_id
-				AND (
-					cp_filter.internal_entity_id IS NULL
-					OR cp_filter.internal_entity_id = e.internal_id
-				)
-				AND cp_filter.status = ANY(ARRAY[${sql.join(
-					inStatuses.map((status) => sql`${status}`),
-					sql`, `,
-				)}])
-				AND ${planScope}
-				AND (${sql.join(planConditions, sql` OR `)})
-		)`);
-	}
+	// Plans are NOT a filter here. As a correlated EXISTS this re-probed
+	// customer_products for every entity in the org — 197M buffer reads and 176s
+	// to return 20 rows on mintlify, because the LIMIT can't push through a
+	// per-row subquery. Callers join plan_scopes instead (see buildPlanScopeCte).
 
 	const trimmedSearch = search?.trim();
 	if (trimmedSearch) {
@@ -124,14 +88,17 @@ const getEntityListBaseSql = ({
 	orgId,
 	env,
 	filterSql,
+	planJoinSql = sql``,
 }: {
 	orgId: string;
 	env: AppEnv;
 	filterSql: SQL;
+	planJoinSql?: SQL;
 }) => sql`
 	FROM entities e
 	JOIN customers c
 		ON c.internal_id = e.internal_customer_id
+	${planJoinSql}
 	WHERE e.org_id = ${orgId}
 		AND e.env = ${env}
 		AND c.org_id = ${orgId}
@@ -151,22 +118,26 @@ export const getPaginatedEntitySubjectsQuery = ({
 	inStatuses: CusProductStatus[];
 }) => {
 	const filterSql = getEntityListFilterSql({
-		orgId,
-		env,
-		plans: query.plans,
 		processors: query.processors,
 		search: query.search,
 		customerId: query.customer_id,
 		inStatuses,
 	});
 
+	const plans = query.plans;
+	const planScopeCte = plans?.length
+		? buildPlanScopeCte({ orgId, env, plans, inStatuses })
+		: sql``;
+
 	const leadingCtes = sql`
-		WITH entity_records AS (
+		WITH ${planScopeCte}
+		entity_records AS (
 			SELECT e.*
 			${getEntityListBaseSql({
 				orgId,
 				env,
 				filterSql,
+				planJoinSql: plans?.length ? planScopeJoinSql : sql``,
 			})}
 			ORDER BY e.internal_id DESC
 			LIMIT ${query.limit}
@@ -303,8 +274,6 @@ export const countFilteredEntitiesByOrgIdAndEnv = async ({
 	// Plans are applied by countEntitiesMatchingPlans' driving CTE, not as an
 	// EXISTS, so they're deliberately left out of this filter.
 	const nonPlanFilterSql = getEntityListFilterSql({
-		orgId: ctx.org.id,
-		env: ctx.env,
 		processors: query.processors,
 		search: query.search,
 		customerId: query.customerId,

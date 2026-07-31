@@ -17,6 +17,11 @@ infisical run --env=prod --recursive -- bun run server/experiments/listObjects/<
 |---|---|
 | `verifyCustomerCrawl.ts` | `customers.list` — walks N pages with OFFSET and with the keyset memo, asserting the same customers in the same order, plus the Redis memo round-trip and filter-key isolation |
 | `verifyPlanFilterCount.ts` | `countFilteredEntitiesByOrgIdAndEnv` across filter combinations |
+| `benchPlanFilterPage.ts` | the plan-filtered `entities.list` page query — 176s / 197.6M buffers before the `plan_scopes` join, 0.43s / 473k after |
+
+Correctness of the plan filter is covered by
+`server/tests/integration/crud/entities/list-entities-plan-filter.test.ts`;
+these scripts only measure cost against production-scale data.
 
 Env: `ORG_ID`, `ENV`, `LIMIT`, `PAGES`, `OFFSET`, `SEARCH`, `PLAN`, `CUSTOMER_ID`.
 `out/` is gitignored.
