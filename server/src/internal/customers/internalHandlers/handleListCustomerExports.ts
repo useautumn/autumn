@@ -1,7 +1,18 @@
-import { ListCustomerExportsQuerySchema, Scopes } from "@autumn/shared";
+import {
+	CustomerExportStatus,
+	type DbCustomerExport,
+	ListCustomerExportsQuerySchema,
+	Scopes,
+} from "@autumn/shared";
 import { createRoute } from "@/honoMiddlewares/routeHandler";
 import { CustomerExportService } from "../exports/CustomerExportService.js";
+import { getCustomerExportProgress } from "../exports/customerExportProgress.js";
 import { customerExportToResponse } from "../exports/customerExportToResponse.js";
+
+/** At most one export is running per org, so this costs one API call per poll. */
+const hasLiveProgress = (customerExport: DbCustomerExport) =>
+	customerExport.status === CustomerExportStatus.Running &&
+	customerExport.trigger_run_id !== null;
 
 export const handleListCustomerExports = createRoute({
 	scopes: [Scopes.Customers.Read],
@@ -17,10 +28,20 @@ export const handleListCustomerExports = createRoute({
 			limit,
 		});
 
-		return c.json({
-			exports: customerExports.map((customerExport) =>
-				customerExportToResponse({ customerExport }),
-			),
-		});
+		const exports = await Promise.all(
+			customerExports.map(async (customerExport) => {
+				const progress =
+					hasLiveProgress(customerExport) && customerExport.trigger_run_id
+						? await getCustomerExportProgress({
+								triggerRunId: customerExport.trigger_run_id,
+								logger: ctx.logger,
+							})
+						: null;
+
+				return customerExportToResponse({ customerExport, progress });
+			}),
+		);
+
+		return c.json({ exports });
 	},
 });

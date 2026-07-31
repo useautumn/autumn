@@ -1,10 +1,16 @@
-import type { CustomerExportResponse, DbCustomerExport } from "@autumn/shared";
+import type {
+	CustomerExportProgress,
+	CustomerExportResponse,
+	DbCustomerExport,
+} from "@autumn/shared";
 
 /** The S3 key and upload id stay server-side; downloads go through a presigned URL. */
 export const customerExportToResponse = ({
 	customerExport,
+	progress = null,
 }: {
 	customerExport: DbCustomerExport;
+	progress?: CustomerExportProgress | null;
 }): CustomerExportResponse => ({
 	id: customerExport.id,
 	status: customerExport.status,
@@ -20,4 +26,5 @@ export const customerExportToResponse = ({
 	created_at: customerExport.created_at,
 	started_at: customerExport.started_at,
 	completed_at: customerExport.completed_at,
+	progress,
 });

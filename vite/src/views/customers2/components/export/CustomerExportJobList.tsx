@@ -1,9 +1,10 @@
 import {
 	CUSTOMER_EXPORT_FIELD_HEADERS,
+	type CustomerExportProgress,
 	type CustomerExportResponse,
 	type Membership,
 } from "@autumn/shared";
-import { Badge, Button, Skeleton } from "@autumn/ui";
+import { Badge, Button, Progress, Skeleton } from "@autumn/ui";
 import {
 	CheckCircleIcon,
 	ClockClockwiseIcon,
@@ -59,6 +60,35 @@ function CustomerExportStatusBadge({
 			<StatusIcon size={11} weight="fill" className={config.iconClassName} />
 			{config.label}
 		</Badge>
+	);
+}
+
+const PERCENT_MAX = 100;
+
+const progressToPercent = (progress: CustomerExportProgress) =>
+	progress.total_rows === 0
+		? PERCENT_MAX
+		: Math.min(
+				PERCENT_MAX,
+				Math.round(
+					(progress.processed_rows / progress.total_rows) * PERCENT_MAX,
+				),
+			);
+
+function CustomerExportProgressRow({
+	progress,
+}: {
+	progress: CustomerExportProgress;
+}) {
+	const percent = progressToPercent(progress);
+
+	return (
+		<div className="flex items-center gap-2">
+			<Progress className="flex-1" value={percent} />
+			<span className="shrink-0 text-tertiary-foreground text-xs tabular-nums">
+				{percent}%
+			</span>
+		</div>
 	);
 }
 
@@ -149,6 +179,10 @@ export function CustomerExportJobList({
 							</Button>
 						) : null}
 					</div>
+
+					{customerExport.status === "running" && customerExport.progress ? (
+						<CustomerExportProgressRow progress={customerExport.progress} />
+					) : null}
 
 					<CustomerExportCardField label="Requested by">
 						<span className="block wrap-break-word text-foreground text-sm">
