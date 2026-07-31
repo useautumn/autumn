@@ -30,7 +30,7 @@ export function CustomerExportFieldSelector({
 
 	return (
 		<div className="flex flex-col">
-			<div className="mb-2 flex h-6 items-center justify-between gap-2">
+			<div className="mb-3 flex h-6 items-center justify-between gap-2">
 				<h3 className="text-sub">Columns</h3>
 				<div className="flex items-center gap-1">
 					<Button
@@ -52,14 +52,14 @@ export function CustomerExportFieldSelector({
 				</div>
 			</div>
 
-			<div className="flex flex-col gap-0.5">
+			<div className="flex flex-col gap-1">
 				{CUSTOMER_EXPORT_FIELD_ORDER.map((field) => {
 					const checkboxId = `customer-export-field-${field}`;
 					return (
 						<label
 							key={field}
 							htmlFor={checkboxId}
-							className="flex cursor-pointer items-center gap-2 rounded-lg px-2 py-1.5 transition-colors hover:bg-interactive-secondary/50"
+							className="flex cursor-pointer items-center gap-2.5 rounded-lg px-2 py-2 transition-colors hover:bg-interactive-secondary/50"
 						>
 							<Checkbox
 								id={checkboxId}
@@ -77,7 +77,7 @@ export function CustomerExportFieldSelector({
 			</div>
 
 			{errorMessage ? (
-				<p className="mt-2 pl-2 text-destructive text-tiny">{errorMessage}</p>
+				<p className="mt-3 pl-2 text-destructive text-xs">{errorMessage}</p>
 			) : null}
 		</div>
 	);

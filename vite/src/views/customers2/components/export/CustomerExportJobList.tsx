@@ -62,6 +62,23 @@ function CustomerExportStatusBadge({
 	);
 }
 
+function CustomerExportCardField({
+	label,
+	children,
+}: {
+	label: string;
+	children: React.ReactNode;
+}) {
+	return (
+		<div className="space-y-1.5">
+			<span className="block font-medium text-tertiary-foreground text-xs">
+				{label}
+			</span>
+			{children}
+		</div>
+	);
+}
+
 const useRequesterLabel = () => {
 	const { memberships } = useMemberships();
 
@@ -86,69 +103,83 @@ export function CustomerExportJobList({
 
 	if (isLoading && customerExports.length === 0) {
 		return (
-			<div className="flex flex-col gap-2">
-				<Skeleton className="h-14 w-full rounded-lg" />
-				<Skeleton className="h-14 w-full rounded-lg" />
+			<div className="space-y-3">
+				<Skeleton className="h-32 w-full rounded-lg" />
+				<Skeleton className="h-32 w-full rounded-lg" />
 			</div>
 		);
 	}
 
 	if (customerExports.length === 0) {
 		return (
-			<div className="py-1 text-tertiary-foreground text-sm">
+			<div className="rounded-lg border border-border border-dashed px-4 py-6 text-center text-sm text-tertiary-foreground">
 				No exports yet.
 			</div>
 		);
 	}
 
 	return (
-		<ul className="flex flex-col gap-0.5">
+		<ul className="space-y-3">
 			{customerExports.map((customerExport) => (
 				<li
 					key={customerExport.id}
-					className="flex items-start justify-between gap-3 rounded-lg px-3 py-2.5 transition-colors hover:bg-interactive-secondary/50"
+					className="space-y-3 rounded-lg border border-border bg-card p-4"
 				>
-					<div className="flex min-w-0 flex-col gap-1">
-						<div className="flex items-center gap-2">
+					<div className="flex items-start justify-between gap-3">
+						<div className="flex min-w-0 items-center gap-2">
 							<CustomerExportStatusBadge status={customerExport.status} />
-							<span className="text-body text-foreground">
+							<span className="truncate text-foreground text-sm">
 								{formatUnixToDateTimeString(customerExport.created_at)}
 							</span>
 						</div>
-						<span className="truncate text-tertiary-foreground text-tiny">
-							{requesterLabel({ userId: customerExport.requested_by_user_id })}
-						</span>
-						<span className="truncate text-tertiary-foreground text-tiny">
-							{customerExport.fields
-								.map((field) => CUSTOMER_EXPORT_FIELD_HEADERS[field])
-								.join(", ")}
-						</span>
-						{customerExport.row_count !== null ? (
-							<span className="text-tertiary-foreground text-tiny">
-								{customerExport.row_count.toLocaleString()} rows
-							</span>
-						) : null}
-						{customerExport.error_message ? (
-							<span className="text-destructive text-tiny">
-								{customerExport.error_message}
-							</span>
+
+						{customerExport.status === "completed" ? (
+							<Button
+								variant="secondary"
+								size="sm"
+								type="button"
+								className="shrink-0"
+								isLoading={
+									download.isPending &&
+									download.variables?.exportId === customerExport.id
+								}
+								onClick={() => download.mutate({ exportId: customerExport.id })}
+							>
+								Download
+							</Button>
 						) : null}
 					</div>
 
-					{customerExport.status === "completed" ? (
-						<Button
-							variant="secondary"
-							size="sm"
-							type="button"
-							className="shrink-0"
-							isLoading={
-								download.isPending &&
-								download.variables?.exportId === customerExport.id
-							}
-							onClick={() => download.mutate({ exportId: customerExport.id })}
-						>
-							Download
-						</Button>
+					<CustomerExportCardField label="Requested by">
+						<span className="block wrap-break-word text-foreground text-sm">
+							{requesterLabel({ userId: customerExport.requested_by_user_id })}
+						</span>
+					</CustomerExportCardField>
+
+					<CustomerExportCardField
+						label={`Columns (${customerExport.fields.length})`}
+					>
+						<div className="flex flex-wrap gap-1">
+							{customerExport.fields.map((field) => (
+								<Badge key={field} variant="muted" size="sm">
+									{CUSTOMER_EXPORT_FIELD_HEADERS[field]}
+								</Badge>
+							))}
+						</div>
+					</CustomerExportCardField>
+
+					{customerExport.row_count !== null ? (
+						<CustomerExportCardField label="Rows">
+							<span className="block text-foreground text-sm">
+								{customerExport.row_count.toLocaleString()}
+							</span>
+						</CustomerExportCardField>
+					) : null}
+
+					{customerExport.error_message ? (
+						<div className="rounded-md bg-destructive/10 px-3 py-2 text-destructive text-xs">
+							{customerExport.error_message}
+						</div>
 					) : null}
 				</li>
 			))}
