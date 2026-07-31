@@ -698,6 +698,7 @@ export const getPaginatedFullCusQuery = ({
 	withSubs,
 	limit = 10,
 	offset = 0,
+	cursor,
 	withEvents = false,
 	entityId: _entityId,
 	internalCustomerIds,
@@ -715,6 +716,9 @@ export const getPaginatedFullCusQuery = ({
 	withSubs: boolean;
 	limit: number;
 	offset: number;
+	/** Seek straight to this position instead of counting past `offset` rows.
+	 *  Same page, but O(limit) rather than O(offset). */
+	cursor?: { t: number; id: string };
 	withEvents?: boolean;
 	entityId?: string;
 	internalCustomerIds?: string[];
@@ -796,6 +800,17 @@ export const getPaginatedFullCusQuery = ({
 		GROUP BY cr.internal_id
 	)`;
 
+	// `c.id DESC` is a tiebreaker, not cosmetic: created_at is far from unique
+	// (818,922 distinct values across firecrawl's 1.6M customers, groups up to
+	// 72), so without it the ordering isn't total and offset pages silently skip
+	// and duplicate rows across a crawl. It also matches idx_customers_cursor.
+	const paginationSql = cursor
+		? sql`AND (c.created_at, c.id) < (${cursor.t}, ${cursor.id})
+      ORDER BY c.created_at DESC, c.id DESC
+      LIMIT ${limit}`
+		: sql`ORDER BY c.created_at DESC, c.id DESC
+      LIMIT ${limit} OFFSET ${offset}`;
+
 	return sql`
     WITH customer_records AS (
       SELECT c.*
@@ -803,8 +818,7 @@ export const getPaginatedFullCusQuery = ({
       WHERE c.org_id = ${orgId}
         AND c.env = ${env}
 	      ${customerListFilterSql}
-      ORDER BY c.created_at DESC
-      LIMIT ${limit} OFFSET ${offset}
+      ${paginationSql}
     ),
     
     customer_products_with_prices AS (
@@ -1002,7 +1016,7 @@ export const getPaginatedFullCusQuery = ({
     ${withEvents ? sql`LEFT JOIN customer_events cev ON cev.internal_customer_id = cr.internal_id` : sql``}
     LEFT JOIN extra_customer_entitlements ece ON ece.internal_customer_id = cr.internal_id
 	LEFT JOIN pooled_customer_entitlements pce ON pce.internal_customer_id = cr.internal_id
-    ORDER BY cr.created_at DESC
+    ORDER BY cr.created_at DESC, cr.id DESC
   `;
 };
 

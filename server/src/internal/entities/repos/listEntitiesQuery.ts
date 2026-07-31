@@ -30,12 +30,16 @@ export const hasEntityListFilters = ({
 };
 
 const getEntityListFilterSql = ({
+	orgId,
+	env,
 	plans,
 	processors,
 	search,
 	customerId,
 	inStatuses,
 }: EntityListFilters & {
+	orgId: string;
+	env: AppEnv;
 	inStatuses: CusProductStatus[];
 }) => {
 	const filters: SQL[] = [];
@@ -57,6 +61,12 @@ const getEntityListFilterSql = ({
 			return sql`p_filter.id = ${plan.id}`;
 		});
 
+		// products.id is the plan slug, not a key — without org/env this matches
+		// every org's plan of that name, so the planner can't use
+		// idx_products_org_env_id_version and the EXISTS degrades to a per-entity
+		// probe across the table.
+		const planScope = sql`p_filter.org_id = ${orgId} AND p_filter.env = ${env}`;
+
 		filters.push(sql`AND EXISTS (
 			SELECT 1
 			FROM customer_products cp_filter
@@ -71,6 +81,7 @@ const getEntityListFilterSql = ({
 					inStatuses.map((status) => sql`${status}`),
 					sql`, `,
 				)}])
+				AND ${planScope}
 				AND (${sql.join(planConditions, sql` OR `)})
 		)`);
 	}
@@ -140,6 +151,8 @@ export const getPaginatedEntitySubjectsQuery = ({
 	inStatuses: CusProductStatus[];
 }) => {
 	const filterSql = getEntityListFilterSql({
+		orgId,
+		env,
 		plans: query.plans,
 		processors: query.processors,
 		search: query.search,
@@ -178,6 +191,70 @@ export const getPaginatedEntitySubjectsQuery = ({
 		entityScopedOnly: true,
 		queryTag: "getPaginatedEntitySubjects",
 	});
+};
+
+/**
+ * Counting with a plan filter can't reuse the page query's EXISTS: a COUNT has
+ * no LIMIT to stop it, so the subquery re-probes customer_products for every
+ * entity in the org — 197M buffer reads / 150s on mintlify. Resolving the
+ * matching (customer, entity-scope) pairs once from the plan side instead is
+ * 0.33s / 458k buffers for the same answer.
+ */
+const countEntitiesMatchingPlans = async ({
+	ctx,
+	plans,
+	inStatuses,
+	filterSql,
+}: {
+	ctx: AutumnContext;
+	plans: NonNullable<EntityListFilters["plans"]>;
+	inStatuses: CusProductStatus[];
+	filterSql: SQL;
+}) => {
+	const planConditions = plans.map((plan) =>
+		plan.versions && plan.versions.length > 0
+			? sql`(p.id = ${plan.id} AND p.version IN (${sql.join(
+					plan.versions.map((version) => sql`${version}`),
+					sql`, `,
+				)}))`
+			: sql`p.id = ${plan.id}`,
+	);
+
+	const rows = await ctx.db.execute(sql`
+		WITH matching_scopes AS (
+			SELECT DISTINCT cp.internal_customer_id, cp.internal_entity_id
+			FROM customer_products cp
+			JOIN products p
+				ON p.internal_id = cp.internal_product_id
+			WHERE p.org_id = ${ctx.org.id}
+				AND p.env = ${ctx.env}
+				AND cp.status = ANY(ARRAY[${sql.join(
+					inStatuses.map((status) => sql`${status}`),
+					sql`, `,
+				)}])
+				AND (${sql.join(planConditions, sql` OR `)})
+		)
+		SELECT COUNT(DISTINCT e.internal_id) AS total_count
+		FROM matching_scopes ms
+		JOIN entities e
+			ON e.internal_customer_id = ms.internal_customer_id
+			AND (
+				ms.internal_entity_id IS NULL
+				OR ms.internal_entity_id = e.internal_id
+			)
+		JOIN customers c
+			ON c.internal_id = e.internal_customer_id
+		WHERE e.org_id = ${ctx.org.id}
+			AND e.env = ${ctx.env}
+			AND c.org_id = ${ctx.org.id}
+			AND c.env = ${ctx.env}
+			${filterSql}
+		${planetScaleTag({ query: "countEntitiesMatchingPlans" })}
+	`);
+
+	const rawCount = (rows[0] as { total_count?: string | number } | undefined)
+		?.total_count;
+	return Number(rawCount ?? 0);
 };
 
 const countEntities = async ({
@@ -223,14 +300,25 @@ export const countFilteredEntitiesByOrgIdAndEnv = async ({
 		return countEntitiesByOrgIdAndEnv({ ctx });
 	}
 
-	return countEntities({
-		ctx,
-		filterSql: getEntityListFilterSql({
-			plans: query.plans,
-			processors: query.processors,
-			search: query.search,
-			customerId: query.customerId,
-			inStatuses,
-		}),
+	// Plans are applied by countEntitiesMatchingPlans' driving CTE, not as an
+	// EXISTS, so they're deliberately left out of this filter.
+	const nonPlanFilterSql = getEntityListFilterSql({
+		orgId: ctx.org.id,
+		env: ctx.env,
+		processors: query.processors,
+		search: query.search,
+		customerId: query.customerId,
+		inStatuses,
 	});
+
+	if (query.plans && query.plans.length > 0) {
+		return countEntitiesMatchingPlans({
+			ctx,
+			plans: query.plans,
+			inStatuses,
+			filterSql: nonPlanFilterSql,
+		});
+	}
+
+	return countEntities({ ctx, filterSql: nonPlanFilterSql });
 };

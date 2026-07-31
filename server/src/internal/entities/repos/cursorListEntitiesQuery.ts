@@ -8,12 +8,16 @@ import { type SQL, sql } from "drizzle-orm";
 import { getFullSubjectRowsQuery } from "@/internal/customers/repos/getFullSubject/getFullSubjectRowsQuery.js";
 
 const getEntityListFilterSql = ({
+	orgId,
+	env,
 	plans,
 	processors,
 	search,
 	customerId,
 	inStatuses,
 }: Pick<ListEntitiesParams, "plans" | "processors" | "search"> & {
+	orgId: string;
+	env: AppEnv;
 	customerId?: string;
 	inStatuses: CusProductStatus[];
 }) => {
@@ -35,6 +39,12 @@ const getEntityListFilterSql = ({
 			return sql`p_filter.id = ${plan.id}`;
 		});
 
+		// products.id is the plan slug, not a key — without org/env this matches
+		// every org's plan of that name, so the planner can't use
+		// idx_products_org_env_id_version and the EXISTS degrades to a per-entity
+		// probe across the table.
+		const planScope = sql`p_filter.org_id = ${orgId} AND p_filter.env = ${env}`;
+
 		filters.push(sql`AND EXISTS (
 			SELECT 1
 			FROM customer_products cp_filter
@@ -49,6 +59,7 @@ const getEntityListFilterSql = ({
 					inStatuses.map((status) => sql`${status}`),
 					sql`, `,
 				)}])
+				AND ${planScope}
 				AND (${sql.join(planConditions, sql` OR `)})
 		)`);
 	}
@@ -109,6 +120,8 @@ export const getCursorPaginatedEntitySubjectsQuery = ({
 	customerId?: string;
 }) => {
 	const filterSql = getEntityListFilterSql({
+		orgId,
+		env,
 		plans,
 		processors,
 		search,

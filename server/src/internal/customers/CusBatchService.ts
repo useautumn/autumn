@@ -21,6 +21,10 @@ import {
 import { triggerBatchResetCustomerEntitlements } from "./actions/resetCustomerEntitlements/triggerBatchResetCustomerEntitlements.js";
 import { CusSearchService } from "./CusSearchService.js";
 import { getCursorPaginatedFullCusQuery } from "./cursorPaginatedFullCusQuery.js";
+import {
+	getMemoizedOffsetCursor,
+	setMemoizedOffsetCursor,
+} from "./offsetCursorMemo.js";
 import type { CustomerListFilters } from "./customerListFilters.js";
 import { getApiCustomerBase } from "./cusUtils/apiCusUtils/getApiCustomerBase.js";
 import {
@@ -99,6 +103,13 @@ export class CusBatchService {
 			orgId: ctx.org.id,
 			orgSlug: ctx.org.slug,
 		});
+
+		const memoizedCursor = await getMemoizedOffsetCursor({
+			ctx,
+			query,
+			offset,
+		});
+
 		const sqlQuery = getPaginatedFullCusQuery({
 			orgId: ctx.org.id,
 			env: ctx.env,
@@ -111,6 +122,7 @@ export class CusBatchService {
 			withSubs: true,
 			limit,
 			offset,
+			cursor: memoizedCursor ?? undefined,
 			search,
 			plans,
 			processors,
@@ -160,8 +172,22 @@ export class CusBatchService {
 			rows: results.length,
 		};
 		ctx.logger.info(
-			`[CusBatchService.getPage] limit=${limit} offset=${offset} rows=${results.length} sql=${timings.sqlMs.toFixed(0)}ms hydrate=${timings.hydrateMs.toFixed(0)}ms total=${timings.totalMs.toFixed(0)}ms`,
+			`[CusBatchService.getPage] limit=${limit} offset=${offset} memo=${memoizedCursor ? "hit" : "miss"} rows=${results.length} sql=${timings.sqlMs.toFixed(0)}ms hydrate=${timings.hydrateMs.toFixed(0)}ms total=${timings.totalMs.toFixed(0)}ms`,
 		);
+
+		// Record where this page ended so the next sequential offset can seek.
+		// Fire-and-forget: a failed write only costs the next page a memo miss.
+		const lastRow = results[results.length - 1] as
+			| { created_at?: number; id?: string }
+			| undefined;
+		if (lastRow?.created_at != null && typeof lastRow.id === "string") {
+			void setMemoizedOffsetCursor({
+				ctx,
+				query,
+				nextOffset: offset + results.length,
+				lastRow: { t: Number(lastRow.created_at), id: lastRow.id },
+			});
+		}
 
 		// Fire-and-forget: queue SQS job for any stale entitlement resets
 		triggerBatchResetCustomerEntitlements({
