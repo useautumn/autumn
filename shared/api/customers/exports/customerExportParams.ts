@@ -47,6 +47,29 @@ export type CustomerExportProgress = z.infer<
 	typeof CustomerExportProgressSchema
 >;
 
+// Written by the export tasks into trigger run metadata; never stored in the DB.
+// The dashboard reads the same keys over Trigger Realtime.
+export const CUSTOMER_EXPORT_TOTAL_ROWS_KEY = "total_rows";
+export const CUSTOMER_EXPORT_PROCESSED_ROWS_KEY = "processed_rows";
+
+/** Retried workers re-count their range, so processed is capped at the total. */
+export const runMetadataToCustomerExportProgress = ({
+	metadata,
+}: {
+	metadata: Record<string, unknown> | undefined;
+}): CustomerExportProgress | null => {
+	const totalRows = metadata?.[CUSTOMER_EXPORT_TOTAL_ROWS_KEY];
+	if (typeof totalRows !== "number" || totalRows < 0) return null;
+
+	const processedRaw = metadata?.[CUSTOMER_EXPORT_PROCESSED_ROWS_KEY];
+	const processedRows = typeof processedRaw === "number" ? processedRaw : 0;
+
+	return {
+		processed_rows: Math.min(Math.max(processedRows, 0), totalRows),
+		total_rows: totalRows,
+	};
+};
+
 export const CustomerExportResponseSchema = z.object({
 	id: z.string(),
 	status: CustomerExportStatusSchema,
@@ -60,6 +83,9 @@ export const CustomerExportResponseSchema = z.object({
 	started_at: z.number().nullable(),
 	completed_at: z.number().nullable(),
 	progress: CustomerExportProgressSchema.nullable(),
+	trigger_run_id: z.string().nullable(),
+	/** Run-scoped realtime token, minted only while the export is still active. */
+	public_access_token: z.string().nullable(),
 });
 
 export type CustomerExportResponse = z.infer<

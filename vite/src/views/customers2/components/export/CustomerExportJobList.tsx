@@ -15,7 +15,10 @@ import {
 import { cn } from "@/lib/utils";
 import { formatUnixToDateTimeString } from "@/utils/formatUtils/formatDateUtils";
 import { useMemberships } from "@/views/main-sidebar/org-dropdown/hooks/useMemberships";
-import { useDownloadCustomerExport } from "../../hooks/useCustomerExports";
+import {
+	isCustomerExportActive,
+	useDownloadCustomerExport,
+} from "../../hooks/useCustomerExports";
 
 const STATUS_CONFIG = {
 	queued: {
@@ -180,7 +183,7 @@ export function CustomerExportJobList({
 						) : null}
 					</div>
 
-					{customerExport.status === "running" && customerExport.progress ? (
+					{isCustomerExportActive(customerExport) && customerExport.progress ? (
 						<CustomerExportProgressRow progress={customerExport.progress} />
 					) : null}
 

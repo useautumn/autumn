@@ -3,7 +3,7 @@ import {
 	CUSTOMER_EXPORT_PROCESSED_ROWS_KEY,
 	CUSTOMER_EXPORT_TOTAL_ROWS_KEY,
 	runMetadataToCustomerExportProgress,
-} from "@/internal/customers/exports/customerExportProgress.js";
+} from "@autumn/shared";
 
 describe("runMetadataToCustomerExportProgress", () => {
 	it("returns null when the run has no metadata yet", () => {

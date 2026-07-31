@@ -1,3 +1,4 @@
+import { CUSTOMER_EXPORT_PROCESSED_ROWS_KEY } from "@autumn/shared";
 import { metadata, task } from "@trigger.dev/sdk/v3";
 import { getCustomerExportsS3Config } from "@/external/aws/s3/customerExportsS3Config.js";
 import { uploadS3Part } from "@/external/aws/s3/s3MultipartUtils.js";
@@ -7,7 +8,6 @@ import {
 	type CustomerExportRow,
 	serializeCustomerExportRows,
 } from "@/internal/customers/exports/csv/serializeCustomerExportRows.js";
-import { CUSTOMER_EXPORT_PROCESSED_ROWS_KEY } from "@/internal/customers/exports/customerExportProgress.js";
 import {
 	emptyPlanColumns,
 	getCustomerExportPlanColumns,

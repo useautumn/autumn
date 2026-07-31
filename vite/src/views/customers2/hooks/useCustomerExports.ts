@@ -14,6 +14,8 @@ export const CUSTOMER_EXPORTS_QUERY_KEY = "customer-exports";
 const UNFILTERED_CUSTOMER_COUNT_QUERY_KEY = "customers-count-unfiltered";
 const CUSTOMER_EXPORTS_PAGE_SIZE = 20;
 const ACTIVE_EXPORT_POLL_INTERVAL_MS = 5000;
+/** Realtime carries progress; this only catches a dropped subscription. */
+const REALTIME_SAFETY_NET_POLL_INTERVAL_MS = 60_000;
 
 /** Total customers ignoring the customers page search and filters. */
 export const useUnfilteredCustomerCountQuery = ({
@@ -41,6 +43,21 @@ export const isCustomerExportActive = (
 	customerExport: CustomerExportResponse,
 ) => customerExport.status === "queued" || customerExport.status === "running";
 
+const isSubscribableToRealtime = (customerExport: CustomerExportResponse) =>
+	Boolean(customerExport.trigger_run_id && customerExport.public_access_token);
+
+const resolveExportsPollInterval = ({
+	customerExports,
+}: {
+	customerExports: CustomerExportResponse[];
+}) => {
+	const activeExports = customerExports.filter(isCustomerExportActive);
+	if (activeExports.length === 0) return false;
+	return activeExports.every(isSubscribableToRealtime)
+		? REALTIME_SAFETY_NET_POLL_INTERVAL_MS
+		: ACTIVE_EXPORT_POLL_INTERVAL_MS;
+};
+
 /** Polls only while the sheet is open AND something is still queued or running. */
 export const useCustomerExportsQuery = ({ enabled }: { enabled: boolean }) => {
 	const axiosInstance = useAxiosInstance();
@@ -58,28 +75,33 @@ export const useCustomerExportsQuery = ({ enabled }: { enabled: boolean }) => {
 		refetchInterval: (query) => {
 			const customerExports = query.state.data;
 			if (!enabled || !customerExports) return false;
-			return customerExports.some(isCustomerExportActive)
-				? ACTIVE_EXPORT_POLL_INTERVAL_MS
-				: false;
+			return resolveExportsPollInterval({ customerExports });
 		},
 	});
 };
 
-export const useCreateCustomerExport = () => {
-	const axiosInstance = useAxiosInstance();
+/** The DB, not the trigger run, decides when an export is downloadable. */
+export const useInvalidateCustomerExports = () => {
 	const queryClient = useQueryClient();
 	const buildKey = useQueryKeyFactory();
+
+	return () => {
+		queryClient.invalidateQueries({
+			queryKey: buildKey([CUSTOMER_EXPORTS_QUERY_KEY]),
+		});
+	};
+};
+
+export const useCreateCustomerExport = () => {
+	const axiosInstance = useAxiosInstance();
+	const invalidateExports = useInvalidateCustomerExports();
 
 	return useMutation({
 		mutationFn: async (params: CreateCustomerExportParams) => {
 			const { data } = await axiosInstance.post("/customers/exports", params);
 			return data.export as CustomerExportResponse;
 		},
-		onSuccess: () => {
-			queryClient.invalidateQueries({
-				queryKey: buildKey([CUSTOMER_EXPORTS_QUERY_KEY]),
-			});
-		},
+		onSuccess: invalidateExports,
 	});
 };
 

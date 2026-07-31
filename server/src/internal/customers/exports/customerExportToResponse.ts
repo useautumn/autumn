@@ -8,9 +8,13 @@ import type {
 export const customerExportToResponse = ({
 	customerExport,
 	progress = null,
+	triggerRunId = customerExport.trigger_run_id,
+	publicAccessToken = null,
 }: {
 	customerExport: DbCustomerExport;
 	progress?: CustomerExportProgress | null;
+	triggerRunId?: string | null;
+	publicAccessToken?: string | null;
 }): CustomerExportResponse => ({
 	id: customerExport.id,
 	status: customerExport.status,
@@ -27,4 +31,6 @@ export const customerExportToResponse = ({
 	started_at: customerExport.started_at,
 	completed_at: customerExport.completed_at,
 	progress,
+	trigger_run_id: triggerRunId,
+	public_access_token: publicAccessToken,
 });
