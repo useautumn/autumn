@@ -1,4 +1,7 @@
-import { CustomerExportStatus } from "@autumn/shared";
+import {
+	CUSTOMER_EXPORT_TOTAL_ROWS_KEY,
+	CustomerExportStatus,
+} from "@autumn/shared";
 import { metadata, task } from "@trigger.dev/sdk/v3";
 import {
 	CUSTOMER_EXPORT_FILE_NAME,
@@ -16,7 +19,6 @@ import type { Logger } from "@/external/logtail/logtailUtils.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { CustomerExportService } from "@/internal/customers/exports/CustomerExportService.js";
 import { serializeCustomerExportRows } from "@/internal/customers/exports/csv/serializeCustomerExportRows.js";
-import { CUSTOMER_EXPORT_TOTAL_ROWS_KEY } from "@/internal/customers/exports/customerExportProgress.js";
 import {
 	getCustomerExportPartitions,
 	resolveRowsPerWorker,

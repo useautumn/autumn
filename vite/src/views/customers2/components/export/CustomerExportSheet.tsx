@@ -24,11 +24,12 @@ import {
 	isCustomerExportActive,
 	useCreateCustomerExport,
 	useCustomerExportsQuery,
+	useInvalidateCustomerExports,
 	useUnfilteredCustomerCountQuery,
 } from "../../hooks/useCustomerExports";
 import { CustomerExportFieldSelector } from "./CustomerExportFieldSelector";
 import { CustomerExportFilterScope } from "./CustomerExportFilterScope";
-import { CustomerExportJobList } from "./CustomerExportJobList";
+import { LiveCustomerExportJobList } from "./LiveCustomerExportJobList";
 
 const CustomerExportFormSchema = z.object({
 	fields: CustomerExportFieldsSchema,
@@ -103,6 +104,7 @@ export function CustomerExportSheet({
 	});
 	const isFilteredExport = hasFilters && restrictToCurrentFilters;
 	const activeExport = (customerExports ?? []).find(isCustomerExportActive);
+	const invalidateExports = useInvalidateCustomerExports();
 
 	const { data: unfilteredTotalCount } = useUnfilteredCustomerCountQuery({
 		enabled: open && hasFilters,
@@ -174,9 +176,12 @@ export function CustomerExportSheet({
 							</SheetSection>
 
 							<SheetSection title="Recent exports" withSeparator={false}>
-								<CustomerExportJobList
+								<LiveCustomerExportJobList
+									key={activeExport?.trigger_run_id ?? "no-realtime-run"}
 									customerExports={customerExports ?? []}
+									activeExport={activeExport}
 									isLoading={isLoading}
+									onExportComplete={invalidateExports}
 								/>
 							</SheetSection>
 						</div>

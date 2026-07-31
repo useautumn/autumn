@@ -22,6 +22,7 @@ import {
 } from "@/trigger/exports/customerExportTask.js";
 import { shouldRunTriggerTasksInline } from "@/trigger/utils/shouldRunTriggerTasksInline.js";
 import { CustomerExportService } from "../exports/CustomerExportService.js";
+import { createCustomerExportRealtimeToken } from "../exports/customerExportRealtimeToken.js";
 import { customerExportToResponse } from "../exports/customerExportToResponse.js";
 
 const HOUR_MS = 60 * 60 * 1000;
@@ -163,6 +164,8 @@ export const handleCreateCustomerExport = createRoute({
 			orgId: ctx.org.id,
 			env: ctx.env,
 		};
+		// Inline runs have no trigger run to subscribe to; the client stays on polling.
+		let triggerRunId: string | null = null;
 
 		if (shouldRunTriggerTasksInline()) {
 			ctx.logger.warn(
@@ -202,6 +205,8 @@ export const handleCreateCustomerExport = createRoute({
 				throw error;
 			}
 
+			triggerRunId = handle.id;
+
 			// Best-effort: the job is already enqueued, so this must never fail the export.
 			try {
 				await CustomerExportService.setTriggerRunId({
@@ -220,6 +225,19 @@ export const handleCreateCustomerExport = createRoute({
 			}
 		}
 
-		return c.json({ export: customerExportToResponse({ customerExport }) });
+		const publicAccessToken = triggerRunId
+			? await createCustomerExportRealtimeToken({
+					triggerRunId,
+					logger: ctx.logger,
+				})
+			: null;
+
+		return c.json({
+			export: customerExportToResponse({
+				customerExport,
+				triggerRunId,
+				publicAccessToken,
+			}),
+		});
 	},
 });
