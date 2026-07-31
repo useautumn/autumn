@@ -5,6 +5,7 @@ import {
 	type CusProductStatus,
 	CustomerExpand,
 	type CustomerLegacyData,
+	type CustomerListFilters,
 	type FullCustomer,
 	type ListCustomersV2_3Params,
 	type ListCustomersV2Params,
@@ -21,7 +22,6 @@ import {
 import { triggerBatchResetCustomerEntitlements } from "./actions/resetCustomerEntitlements/triggerBatchResetCustomerEntitlements.js";
 import { CusSearchService } from "./CusSearchService.js";
 import { getCursorPaginatedFullCusQuery } from "./cursorPaginatedFullCusQuery.js";
-import type { CustomerListFilters } from "./customerListFilters.js";
 import { getApiCustomerBase } from "./cusUtils/apiCusUtils/getApiCustomerBase.js";
 import {
 	getPaginatedFullCusQuery,
