@@ -1,4 +1,4 @@
-import type { Pool } from "pg";
+import type { Pool, PoolClient } from "pg";
 import { logger } from "@/external/logtail/logtailUtils.js";
 
 type RegisteredPool = {
@@ -7,8 +7,94 @@ type RegisteredPool = {
 	max: number;
 };
 
+type AcquireStats = {
+	count: number;
+	timeouts: number;
+	errors: number;
+	samples: number[];
+};
+
+/** Caps per-interval percentile memory; `count` keeps counting past it. */
+const MAX_ACQUIRE_SAMPLES = 5_000;
+
 const registry = new Map<string, RegisteredPool>();
+const acquireStats = new Map<string, AcquireStats>();
 let snapshotInterval: ReturnType<typeof setInterval> | null = null;
+
+const emptyAcquireStats = (): AcquireStats => ({
+	count: 0,
+	timeouts: 0,
+	errors: 0,
+	samples: [],
+});
+
+const recordAcquire = ({
+	name,
+	durationMs,
+	error,
+}: {
+	name: string;
+	durationMs: number;
+	error?: Error | null;
+}): void => {
+	const stats = acquireStats.get(name);
+	if (!stats) return;
+	stats.count++;
+	if (error) {
+		if (error.message?.includes("timeout exceeded when trying to connect")) {
+			stats.timeouts++;
+		} else {
+			stats.errors++;
+		}
+		return;
+	}
+	if (stats.samples.length < MAX_ACQUIRE_SAMPLES) {
+		stats.samples.push(durationMs);
+	}
+};
+
+type ConnectCallback = (
+	err: Error | undefined,
+	client: PoolClient | undefined,
+	done: (release?: unknown) => void,
+) => void;
+
+/** Times every checkout (queue wait included) — pg-pool exposes no acquire hook. */
+const timeAcquires = ({ pool, name }: { pool: Pool; name: string }): void => {
+	const original = pool.connect.bind(pool);
+	const timed = (callback?: ConnectCallback) => {
+		const startedAt = performance.now();
+		if (callback) {
+			return original((err, client, done) => {
+				recordAcquire({
+					name,
+					durationMs: performance.now() - startedAt,
+					error: err,
+				});
+				callback(err, client, done);
+			});
+		}
+		return original().then(
+			(client) => {
+				recordAcquire({ name, durationMs: performance.now() - startedAt });
+				return client;
+			},
+			(error: Error) => {
+				recordAcquire({
+					name,
+					durationMs: performance.now() - startedAt,
+					error,
+				});
+				throw error;
+			},
+		);
+	};
+	pool.connect = timed as Pool["connect"];
+};
+
+const percentileOf = (sorted: number[], p: number): number =>
+	sorted[Math.min(sorted.length - 1, Math.floor((p / 100) * sorted.length))] ??
+	0;
 
 const getRole = (): string => {
 	if (process.env.WORKER === "true") return "worker";
@@ -26,6 +112,8 @@ export const registerPool = ({
 	max: number;
 }): void => {
 	registry.set(name, { pool, name, max });
+	acquireStats.set(name, emptyAcquireStats());
+	timeAcquires({ pool, name });
 };
 
 export const attachPoolErrorHandlers = ({
@@ -54,6 +142,8 @@ const emitSnapshot = (): void => {
 		const totalCount = pool.totalCount;
 		const idleCount = pool.idleCount;
 		const waitingCount = pool.waitingCount;
+		const stats = acquireStats.get(name);
+		const sorted = stats ? [...stats.samples].sort((a, b) => a - b) : [];
 		// info, not debug: prod runs above debug level, and waitingCount is the
 		// only direct signal of pool-checkout starvation.
 		logger.info("pg_pool_stats", {
@@ -66,7 +156,19 @@ const emitSnapshot = (): void => {
 			waitingCount,
 			max,
 			utilization: max > 0 ? totalCount / max : 0,
+			acquireCount: stats?.count ?? 0,
+			acquireTimeouts: stats?.timeouts ?? 0,
+			acquireErrors: stats?.errors ?? 0,
+			...(sorted.length > 0 && {
+				acquireP50Ms: Math.round(percentileOf(sorted, 50)),
+				acquireP95Ms: Math.round(percentileOf(sorted, 95)),
+				acquireP99Ms: Math.round(percentileOf(sorted, 99)),
+				acquireMaxMs: Math.round(sorted[sorted.length - 1] ?? 0),
+			}),
 		});
+		if (stats) {
+			acquireStats.set(name, emptyAcquireStats());
+		}
 	}
 };
 

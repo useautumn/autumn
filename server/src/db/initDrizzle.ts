@@ -164,13 +164,15 @@ if (
 export const { db: dbCritical, client: clientCritical } = initDrizzle({
 	name: "critical",
 	maxConnections: criticalPoolMax,
-	connectTimeout: isProd ? 2 : 30,
+	// connectionTimeoutMillis also bounds checkout waits on a full pool — sized
+	// to ride out PgBouncer backend build-out bursts instead of shedding.
+	connectTimeout: isProd ? 15 : 30,
 	databaseUrl: process.env.DATABASE_CRITICAL_URL,
 	poolConfig: {
 		application_name: "autumn-critical",
-		// 5ms above the critical role's server-side statement_timeout (2s) so
-		// Postgres cancels and frees the backend before the client abandons it.
-		query_timeout: isProd ? 2_005 : 30_000,
+		// Budgets bouncer queue wait, not execution: the role's server-side 2s
+		// statement_timeout still kills runaway queries once they start running.
+		query_timeout: isProd ? 15_000 : 30_000,
 		// Keep warm conns to avoid TLS-handshake stampedes on bursty traffic.
 		min: CRITICAL_POOL_MIN,
 	},

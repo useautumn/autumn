@@ -93,7 +93,9 @@ export const logRequestResult = async ({
 				...(ctx.requestLogContext === undefined
 					? {}
 					: { req: ctx.requestLogContext }),
-				res: finalResponseBody ?? null,
+				// Serialized: response payloads carry arbitrary keys (feature IDs
+				// etc.), each of which minted an Axiom field until events dropped.
+				res: finalResponseBody ? JSON.stringify(finalResponseBody) : null,
 			},
 		);
 

@@ -6,6 +6,10 @@ import type { AutumnContext, HonoEnv } from "@/honoUtils/HonoEnv.js";
 import { addRequestToLogs } from "@/utils/logging/addContextToLogs.js";
 import type { LogRequestContext } from "@/utils/logging/loggerTypes.js";
 
+// Rate 1 makes the high-volume success sampler deterministic (Math.random() < 1
+// always holds); the module reads this lazily on first use, so set it up front.
+process.env.AXIOM_SUCCESS_REQUEST_LOG_SAMPLE_RATE = "1";
+
 type CapturedLog = {
 	level: "debug" | "info" | "warn" | "error";
 	bindings: Record<string, unknown>;
@@ -56,8 +60,8 @@ describe("logRequestResult", () => {
 			url: "https://api.useautumn.com/v1/check",
 			timestamp: 123,
 			customer_id: "cus_123",
-			query: {},
-			body: { feature_id: "messages" },
+			query: JSON.stringify({}),
+			body: JSON.stringify({ feature_id: "messages" }),
 			name: "POST /v1/check",
 		};
 		const internalRequestContext = {
@@ -105,7 +109,7 @@ describe("logRequestResult", () => {
 			req: requestLogContext,
 			statusCode: 200,
 			durationMs: 20,
-			res: { allowed: true },
+			res: JSON.stringify({ allowed: true }),
 		});
 	});
 
@@ -117,11 +121,11 @@ describe("logRequestResult", () => {
 			url: "https://api.useautumn.com/v1/track",
 			timestamp: 123,
 			customer_id: "cus_123",
-			query: {},
-			body: {
+			query: JSON.stringify({}),
+			body: JSON.stringify({
 				feature_id: "messages",
 				value: 10,
-			},
+			}),
 			name: "POST /v1/track",
 		};
 		const ctx = {
@@ -160,15 +164,17 @@ describe("logRequestResult", () => {
 			responseBody,
 		});
 
-		expect(captured).toHaveLength(1);
-		expect(captured[0]?.level).toBe("warn");
-		expect(captured[0]?.bindings.req).toBeUndefined();
-		expect(captured[0]?.bindings.extras).toEqual({ operation: "track" });
-		expect(mergeLoggedObjects(captured[0]?.args ?? [])).toEqual({
+		// NODE_ENV=development (run.sh) adds an EXTRA LOGS debug line — ignore it.
+		const emitted = captured.filter((log) => log.level !== "debug");
+		expect(emitted).toHaveLength(1);
+		expect(emitted[0]?.level).toBe("warn");
+		expect(emitted[0]?.bindings.req).toBeUndefined();
+		expect(emitted[0]?.bindings.extras).toEqual({ operation: "track" });
+		expect(mergeLoggedObjects(emitted[0]?.args ?? [])).toEqual({
 			req: requestLogContext,
 			statusCode: 500,
 			durationMs: 30,
-			res: responseBody,
+			res: JSON.stringify(responseBody),
 		});
 	});
 
@@ -204,7 +210,7 @@ describe("logRequestResult", () => {
 		expect(captured[0]?.args[1]).toEqual({
 			statusCode: 200,
 			durationMs: 10,
-			res: responseBody,
+			res: JSON.stringify(responseBody),
 		});
 	});
 
@@ -294,7 +300,7 @@ describe("logRequestResult", () => {
 		expect(captured[0]?.args[1]).toEqual({
 			statusCode: 500,
 			durationMs: 40,
-			res: responseBody,
+			res: JSON.stringify(responseBody),
 		});
 	});
 
