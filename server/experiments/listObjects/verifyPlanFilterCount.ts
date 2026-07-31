@@ -15,10 +15,20 @@ import { createWorkerContext } from "../../src/queue/createWorkerContext.js";
  * Run with:
  *   infisical run --env=prod --recursive -- bun run server/experiments/listObjects/verifyPlanFilterCount.ts
  */
-const ORG_ID = process.env.ORG_ID || "GG6tnmO7cHb40PNhwYBTZtxQdeL74NHF";
-const ENV = (process.env.ENV as AppEnv) || AppEnv.Live;
+const requireEnv = ({ name }: { name: string }) => {
+	const value = process.env[name];
+	if (!value) {
+		throw new Error(
+			`${name} is required. These scripts read production-scale data, so they refuse to default to a real org.`,
+		);
+	}
+	return value;
+};
+
+const ORG_ID = requireEnv({ name: "ORG_ID" });
+const ENV = requireEnv({ name: "ENV" }) as AppEnv;
 const PLAN_ID = process.env.PLAN_ID || "enterprise";
-const CUSTOMER_ID = process.env.CUSTOMER_ID || "698fb72e4c5fa12c1cd11ddc";
+const CUSTOMER_ID = requireEnv({ name: "CUSTOMER_ID" });
 
 const inStatuses = RELEVANT_STATUSES as CusProductStatus[];
 

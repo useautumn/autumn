@@ -1,47 +1,32 @@
-# listObjects — regression gates for the list queries
+# listObjects — cost checks for the entity list queries
 
-Two read-only scripts that verify the changes in this PR against production data.
-They exist because both touch shared query paths and the integration suite can't
-currently run (every test fails with `password authentication failed for user
-'neondb_owner'`, reproducible on a clean tree).
+Read-only scripts that measure the plan-filtered `entities.list` queries against
+production-scale data. Correctness is covered by the integration tests
+(`server/tests/integration/crud/entities/list-entities-plan-filter.test.ts` and
+`…-cursor-plan-filter.test.ts`); these only measure cost.
 
-Both build queries directly rather than calling `CusBatchService.getPage()` or
-`getFullSubject()`, which would fire lazy resets, migration checks and
-batch-reset enqueues.
+They build queries directly rather than calling the handlers, which would fire
+lazy resets, migration checks and batch-reset enqueues.
 
 ```sh
-infisical run --env=prod --recursive -- bun run server/experiments/listObjects/<script>.ts
+ORG_ID=<org> ENV=<live|sandbox> \
+  infisical run --env=prod --recursive -- bun run server/experiments/listObjects/<script>.ts
 ```
 
-| script | what it gates |
+`ORG_ID` and `ENV` are required — the scripts refuse to run without them rather
+than defaulting to a real production org.
+
+| script | measures |
 |---|---|
-| `verifyCustomerCrawl.ts` | `customers.list` — walks N pages with OFFSET and with the keyset memo, asserting the same customers in the same order, plus the Redis memo round-trip and filter-key isolation |
-| `verifyPlanFilterCount.ts` | `countFilteredEntitiesByOrgIdAndEnv` across filter combinations |
-| `benchPlanFilterPage.ts` | the plan-filtered `entities.list` page query — 176s / 197.6M buffers before the `plan_scopes` join, 0.43s / 473k after |
+| `benchPlanFilterPage.ts` | offset page query — 176s / 197.6M buffers before the `plan_scopes` join, 0.43s / 473k after |
+| `benchPlanFilterCursor.ts` | cursor page query — 26.7s / 63.2M buffers before, 0.40s / 473k after |
+| `verifyPlanFilterCount.ts` | `countFilteredEntitiesByOrgIdAndEnv` across filter combinations — 150s → 0.33s |
 
-Correctness of the plan filter is covered by
-`server/tests/integration/crud/entities/list-entities-plan-filter.test.ts`;
-these scripts only measure cost against production-scale data.
+## Why the EXISTS was slow
 
-Env: `ORG_ID`, `ENV`, `LIMIT`, `PAGES`, `OFFSET`, `SEARCH`, `PLAN`, `CUSTOMER_ID`.
-`out/` is gitignored.
-
-## Two traps these encode
-
-**Compare on a snapshot.** Busy orgs mutate continuously, and under
-`ORDER BY created_at DESC` new rows sort first and shift every offset. A crawl
-taking 35s will diff against itself for no reason. Both sides run inside one
-`repeatable read, read only` transaction.
-
-**Compare on `internal_id`, not `id`.** `customers.id` is nullable (375 rows in
-prod). Collapsing nulls into a `Set` reports them as duplicates and can hide a
-real skip behind that number.
-
-## Worth knowing when picking this up
-
-`customers.list` on API 2.2.0 is the only path that writes memos; 2.3.0 orgs go
-through `getCursorPage` and never touch it. The keyset predicate excludes rows
-with a null `id`, but only when a page boundary lands inside their exact
-`created_at` tie group — same semantics as the existing 2.3.0 cursor path. A
-full crawl of `athenahq` (the org with the most null ids, 47) returns all 4,876
-customers with no skips.
+The plan filter was a correlated `EXISTS`, so Postgres probed
+`customer_products` once per candidate entity. On the count there is no `LIMIT`
+to stop it at all; on the page queries the `LIMIT` can't push through a per-row
+subquery, and with a rare plan (~0.5% of entities match `enterprise`) the scan
+walks a long way before it fills. `buildPlanScopeCte` resolves the matching
+`(customer, entity-scope)` pairs once from the plan side instead.
