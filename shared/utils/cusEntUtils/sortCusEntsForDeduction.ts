@@ -115,6 +115,10 @@ export const sortCusEntsForDeduction = ({
 			}
 		}
 
+		if (a.expires_at !== b.expires_at) {
+			return (a.expires_at ?? Infinity) - (b.expires_at ?? Infinity);
+		}
+
 		// 0a. If both are entity products (attached to entities), sort by entity_id for consistent ordering
 		const aIsProductEntity = !!a.customer_product?.internal_entity_id;
 		const bIsProductEntity = !!b.customer_product?.internal_entity_id;
