@@ -66,6 +66,14 @@ export const CustomerExportFieldSchema = z.enum([
 	CustomerExportField.Licenses,
 ]);
 
+export const CustomerExportFieldsSchema = z
+	.array(CustomerExportFieldSchema)
+	.min(1)
+	.max(CUSTOMER_EXPORT_FIELD_ORDER.length)
+	.refine((fields) => new Set(fields).size === fields.length, {
+		message: "Export fields must be unique",
+	});
+
 /** The dashboard filter state frozen at export-creation time. */
 export type CustomerExportSnapshot = {
 	search: string;

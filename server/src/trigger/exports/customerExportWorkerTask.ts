@@ -41,12 +41,12 @@ export const executeCustomerExportWorker = async ({
 }): Promise<CustomerExportWorkerResult> => {
 	const { exportId, orgId, env, range, fields, snapshot } = payload;
 	const partNumber = range.partNumber;
+	const isFirstPart = partNumber === 1;
 	const oneOffProductLookup = createOneOffProductLookup({ db: ctx.db });
 
 	const csvChunks: string[] = [];
 	let rowCount = 0;
 	let afterInternalId: string | null = null;
-	let includeHeader = payload.includeHeader;
 
 	for (;;) {
 		const scalars = await getCustomerExportScalars({
@@ -82,19 +82,23 @@ export const executeCustomerExportWorker = async ({
 		});
 
 		csvChunks.push(
-			serializeCustomerExportRows({ rows, fields, includeHeader }),
+			serializeCustomerExportRows({
+				rows,
+				fields,
+				includeHeader: isFirstPart && rowCount === 0,
+			}),
 		);
-		includeHeader = false;
 		rowCount += scalars.length;
 		afterInternalId = scalars[scalars.length - 1].internal_id;
-		// The parent run owns the counter; safe no-op outside a trigger run.
-		metadata.root.increment(CUSTOMER_EXPORT_PROCESSED_ROWS_KEY, scalars.length);
+		await metadata.root.increment(
+			CUSTOMER_EXPORT_PROCESSED_ROWS_KEY,
+			scalars.length,
+		);
 
 		if (scalars.length < CUSTOMER_EXPORT_PAGE_SIZE) break;
 	}
 
-	// The header owner still emits BOM + header when its range turned up empty.
-	if (payload.includeHeader && rowCount === 0) {
+	if (isFirstPart && rowCount === 0) {
 		csvChunks.push(
 			serializeCustomerExportRows({ rows: [], fields, includeHeader: true }),
 		);

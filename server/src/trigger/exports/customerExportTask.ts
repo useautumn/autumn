@@ -297,7 +297,6 @@ const uploadCustomerExportParts = async ({
 			orgId: payload.orgId,
 			env: payload.env,
 			range: partition,
-			includeHeader: partition.partNumber === 1,
 			fields: customerExportFields,
 			snapshot,
 			s3Key: key,

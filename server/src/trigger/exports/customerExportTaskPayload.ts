@@ -1,6 +1,6 @@
 import {
 	AppEnv,
-	CustomerExportFieldSchema,
+	CustomerExportFieldsSchema,
 	CustomerExportSnapshotSchema,
 } from "@autumn/shared";
 import { z } from "zod/v4";
@@ -26,8 +26,7 @@ export const RunCustomerExportWorkerPayloadSchema = z.object({
 	orgId: z.string(),
 	env: z.enum(AppEnv),
 	range: CustomerExportPartitionSchema,
-	includeHeader: z.boolean(),
-	fields: z.array(CustomerExportFieldSchema).min(1),
+	fields: CustomerExportFieldsSchema,
 	snapshot: CustomerExportSnapshotSchema,
 	s3Key: z.string(),
 	s3UploadId: z.string(),

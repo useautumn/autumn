@@ -1,9 +1,9 @@
 import {
 	CUSTOMER_EXPORT_FIELD_ORDER,
-	CustomerExportFieldSchema,
+	CustomerExportFieldsSchema,
 } from "@autumn/shared";
 import { Sheet, SheetContent, ShortcutButton } from "@autumn/ui";
-import { useEffect, useState } from "react";
+import { useStore } from "@tanstack/react-form";
 import { toast } from "sonner";
 import { z } from "zod/v4";
 import {
@@ -31,9 +31,8 @@ import { CustomerExportFilterScope } from "./CustomerExportFilterScope";
 import { CustomerExportJobList } from "./CustomerExportJobList";
 
 const CustomerExportFormSchema = z.object({
-	fields: z
-		.array(CustomerExportFieldSchema)
-		.min(1, "Select at least one column."),
+	fields: CustomerExportFieldsSchema,
+	restrictToCurrentFilters: z.boolean(),
 });
 
 function buildExportDescription({
@@ -42,10 +41,13 @@ function buildExportDescription({
 	exportTotalCount,
 }: {
 	isFilteredExport: boolean;
-	filteredCount: number;
+	filteredCount: number | undefined;
 	exportTotalCount: number | undefined;
 }) {
 	if (isFilteredExport) {
+		if (filteredCount === undefined) {
+			return "Exports customers matching your current search and filters.";
+		}
 		return `Exports the ${filteredCount.toLocaleString()} customers matching your current search and filters.`;
 	}
 	if (exportTotalCount === undefined) return "Exports all customers.";
@@ -62,46 +64,22 @@ export function CustomerExportSheet({
 	const { queryStates } = useCustomerFilters();
 	const { totalCount, isLoading: isFilteredCountLoading } = useCusSearchQuery();
 	const createExport = useCreateCustomerExport();
-	const { data: customerExports, isLoading } = useCustomerExportsQuery({
-		enabled: open,
-	});
-
-	const [restrictToCurrentFilters, setRestrictToCurrentFilters] =
-		useState(true);
-
-	// The sheet stays mounted while closed; a stale "export everyone" choice must
-	// not survive into a later session with different filters.
-	useEffect(() => {
-		if (open) setRestrictToCurrentFilters(true);
-	}, [open]);
-
 	const trimmedSearch = queryStates.q.trim();
 	const hasActiveFilters = hasActiveCustomerFilters(queryStates);
 	const hasFilters = hasActiveFilters || Boolean(trimmedSearch);
-	const isFilteredExport = hasFilters && restrictToCurrentFilters;
-	const activeExport = (customerExports ?? []).find(isCustomerExportActive);
-
-	const { data: unfilteredTotalCount } = useUnfilteredCustomerCountQuery({
-		enabled: open && hasFilters,
-	});
-
-	const ignoresActiveFilters = hasFilters && !restrictToCurrentFilters;
-	const exportTotalCount = ignoresActiveFilters
-		? unfilteredTotalCount
-		: totalCount;
-	// An unresolved count must not read as "no customers to export".
-	const exportCountReady = ignoresActiveFilters
-		? unfilteredTotalCount !== undefined
-		: !isFilteredCountLoading;
-	const hasNothingToExport = exportCountReady && exportTotalCount === 0;
 
 	const form = useAppForm({
-		defaultValues: { fields: [...CUSTOMER_EXPORT_FIELD_ORDER] },
+		defaultValues: {
+			fields: [...CUSTOMER_EXPORT_FIELD_ORDER],
+			restrictToCurrentFilters: true,
+		},
 		validators: {
 			onChange: CustomerExportFormSchema,
 			onSubmit: CustomerExportFormSchema,
 		},
 		onSubmit: async ({ value }) => {
+			const isFilteredExport = hasFilters && value.restrictToCurrentFilters;
+
 			try {
 				await createExport.mutateAsync({
 					fields: value.fields,
@@ -116,9 +94,38 @@ export function CustomerExportSheet({
 			}
 		},
 	});
+	const restrictToCurrentFilters = useStore(
+		form.store,
+		(state) => state.values.restrictToCurrentFilters,
+	);
+	const { data: customerExports, isLoading } = useCustomerExportsQuery({
+		enabled: open,
+	});
+	const isFilteredExport = hasFilters && restrictToCurrentFilters;
+	const activeExport = (customerExports ?? []).find(isCustomerExportActive);
+
+	const { data: unfilteredTotalCount } = useUnfilteredCustomerCountQuery({
+		enabled: open && hasFilters,
+	});
+
+	const ignoresActiveFilters = hasFilters && !restrictToCurrentFilters;
+	const exportTotalCount = ignoresActiveFilters
+		? unfilteredTotalCount
+		: totalCount;
+	const exportCountReady = ignoresActiveFilters
+		? unfilteredTotalCount !== undefined
+		: !isFilteredCountLoading;
+	const hasNothingToExport = exportCountReady && exportTotalCount === 0;
+
+	const handleOpenChange = (nextOpen: boolean) => {
+		if (!nextOpen) {
+			form.setFieldValue("restrictToCurrentFilters", true);
+		}
+		onOpenChange(nextOpen);
+	};
 
 	return (
-		<Sheet open={open} onOpenChange={onOpenChange}>
+		<Sheet open={open} onOpenChange={handleOpenChange}>
 			<SheetContent className="flex flex-col overflow-hidden">
 				<LayoutGroup>
 					<div className="flex h-full flex-col overflow-hidden">
@@ -127,21 +134,25 @@ export function CustomerExportSheet({
 								title="Export customers"
 								description={buildExportDescription({
 									isFilteredExport,
-									filteredCount: totalCount,
+									filteredCount: isFilteredCountLoading
+										? undefined
+										: totalCount,
 									exportTotalCount,
 								})}
 							/>
 
 							{hasFilters ? (
 								<SheetSection>
-									<CustomerExportFilterScope
-										searchText={trimmedSearch}
-										hasActiveFilters={hasActiveFilters}
-										restrictToCurrentFilters={restrictToCurrentFilters}
-										onRestrictToCurrentFiltersChange={
-											setRestrictToCurrentFilters
-										}
-									/>
+									<form.Field name="restrictToCurrentFilters">
+										{(field) => (
+											<CustomerExportFilterScope
+												searchText={trimmedSearch}
+												hasActiveFilters={hasActiveFilters}
+												restrictToCurrentFilters={field.state.value}
+												onRestrictToCurrentFiltersChange={field.handleChange}
+											/>
+										)}
+									</form.Field>
 								</SheetSection>
 							) : null}
 
@@ -189,7 +200,7 @@ export function CustomerExportSheet({
 							<ShortcutButton
 								variant="secondary"
 								className="w-full"
-								onClick={() => onOpenChange(false)}
+								onClick={() => handleOpenChange(false)}
 								singleShortcut="escape"
 							>
 								Cancel
@@ -202,7 +213,11 @@ export function CustomerExportSheet({
 										onClick={() => form.handleSubmit()}
 										isLoading={createExport.isPending}
 										disabled={
-											!canSubmit || Boolean(activeExport) || hasNothingToExport
+											!canSubmit ||
+											Boolean(activeExport) ||
+											hasNothingToExport ||
+											!exportCountReady ||
+											isLoading
 										}
 										metaShortcut="enter"
 									>

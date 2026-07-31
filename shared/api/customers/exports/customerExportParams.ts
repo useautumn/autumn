@@ -1,6 +1,7 @@
 import { z } from "zod/v4";
 import {
 	CustomerExportFieldSchema,
+	CustomerExportFieldsSchema,
 	CustomerExportStatusSchema,
 } from "../../../models/cusModels/cusExportModels.js";
 import { CustomerListFiltersSchema } from "../customerListFilters.js";
@@ -13,7 +14,7 @@ export const CustomerExportSnapshotSchema = z.object({
 });
 
 export const CreateCustomerExportParamsSchema = z.object({
-	fields: z.array(CustomerExportFieldSchema).min(1),
+	fields: CustomerExportFieldsSchema,
 	search: z.string().optional().default(""),
 	filters: CustomerListFiltersSchema.optional().default({}),
 });
