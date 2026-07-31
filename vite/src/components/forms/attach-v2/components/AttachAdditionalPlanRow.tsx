@@ -158,7 +158,7 @@ export function AttachAdditionalPlanRow({
 				/>
 			</ScopedPlanRow>
 			<AttachPlanPrepaidQuantityFields
-				items={displayedItems}
+				items={displayedItems ?? selectedProduct?.items}
 				quantities={plan.prepaidOptions}
 				additionalPlanIndex={planIndex}
 			/>

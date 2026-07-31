@@ -37,7 +37,7 @@ export function AttachMultiPlanSection() {
 						scope={selectedEntity?.name || entityId || "Customer-level"}
 					/>
 					<AttachPlanPrepaidQuantityFields
-						items={primaryItems}
+						items={primaryItems ?? product?.items}
 						quantities={formValues.prepaidOptions}
 					/>
 				</div>
@@ -69,7 +69,7 @@ export function AttachMultiPlanSection() {
 								scope={planEntity?.name || planEntityId || "Customer-level"}
 							/>
 							<AttachPlanPrepaidQuantityFields
-								items={planItems}
+								items={planItems ?? selectedProduct?.items}
 								quantities={plan.prepaidOptions}
 								additionalPlanIndex={planIndex}
 							/>

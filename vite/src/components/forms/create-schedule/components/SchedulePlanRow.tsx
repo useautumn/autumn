@@ -117,6 +117,7 @@ export function SchedulePlanRow({
 				items={plan.items ?? selectedProduct?.items}
 				quantities={plan.prepaidOptions}
 				currency={displayCurrency}
+				readOnly={isLocked}
 				renderField={({ featureId, step }) => (
 					<form.AppField
 						name={`phases[${phaseIndex}].plans[${planIndex}].prepaidOptions.${featureId}`}

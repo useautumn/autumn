@@ -7,18 +7,29 @@ export function PlanPrepaidQuantityFields({
 	items,
 	quantities,
 	currency,
+	readOnly = false,
 	renderField,
 }: {
 	items?: ProductItem[] | null;
 	quantities: Record<string, number | undefined>;
 	currency?: string;
+	readOnly?: boolean;
 	renderField: (params: { featureId: string; step: number }) => ReactNode;
 }) {
-	const prepaidItems = (items ?? []).flatMap((item) =>
-		item.usage_model === UsageModel.Prepaid && item.feature_id
-			? [{ featureId: item.feature_id, item }]
-			: [],
-	);
+	const featureIds = new Set<string>();
+	const prepaidItems = (items ?? []).flatMap((item) => {
+		const featureId = item.feature_id;
+		if (
+			item.usage_model !== UsageModel.Prepaid ||
+			!featureId ||
+			featureIds.has(featureId)
+		) {
+			return [];
+		}
+
+		featureIds.add(featureId);
+		return [{ featureId, item }];
+	});
 	if (prepaidItems.length === 0) return null;
 
 	return (
@@ -33,6 +44,7 @@ export function PlanPrepaidQuantityFields({
 						<PrepaidQuantityControl
 							quantity={quantities[featureId]}
 							billingUnits={step}
+							readOnly={readOnly}
 						>
 							{renderField({ featureId, step })}
 						</PrepaidQuantityControl>

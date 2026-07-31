@@ -49,7 +49,7 @@ export function AttachProductSelection({
 						/>
 					</ScopedPlanRow>
 					<AttachPlanPrepaidQuantityFields
-						items={displayedPrimaryItems}
+						items={displayedPrimaryItems ?? product?.items}
 						quantities={formValues.prepaidOptions}
 					/>
 				</div>
