@@ -34,13 +34,27 @@ test.concurrent(
 		expect(config.indexOf("mode partial_message")).toBeLessThan(
 			config.indexOf("Parser json"),
 		);
-		expect(config).not.toMatch(
-			/mode partial_message[\s\S]*?multiline\.parser/,
-		);
+		expect(config).not.toMatch(/mode partial_message[\s\S]*?multiline\.parser/);
 
 		expect(config).toContain("URI /v1/ingest/express");
 		expect(config).toContain("URI /v1/ingest/ecs");
 		expect(config.match(/retry_limit 5/g)).toHaveLength(2);
 		expect(config).not.toMatch(/\[OUTPUT\]\s+Name http\s+Match \*(?:\s|$)/);
+	},
+);
+
+test.concurrent(
+	"FireLens preserves Pino type while adding source metadata",
+	async () => {
+		const configPath = path.resolve(
+			import.meta.dir,
+			"../../../../firelens.conf",
+		);
+		const config = await Bun.file(configPath).text();
+
+		for (const sourceType of ["server", "workers", "cron", "leaf"]) {
+			expect(config).toContain(`Add source_type ${sourceType}`);
+		}
+		expect(config).not.toMatch(/^\s*Add type (?:server|workers|cron|leaf)$/m);
 	},
 );
