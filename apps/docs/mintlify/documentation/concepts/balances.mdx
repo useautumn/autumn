@@ -155,6 +155,8 @@ When usage is tracked, Autumn deducts from balances in a specific order based on
 
 The order is: `hour` (shortest) > `day` > `week` > `month` > `quarter` > `semi_annual` > `year` > `one_off` (lifetime - never resets).
 
+Balances with the same interval are deducted by `expires_at`, soonest first. Balances without an expiry are deducted last.
+
 This ensures that expiring balances are used before permanent ones.
 
 <Note>
