@@ -173,9 +173,11 @@ export const initLogger = (options: InitLoggerOptions = {}) => {
 	const isDev = process.env.NODE_ENV === "development";
 	const isTest = process.env.NODE_ENV === "test";
 	const isDevOrTest = isDev || isTest;
+	// FireLens is the default: the sidecar already ships stdout, so no per-process
+	// Axiom transport thread. `AXIOM_LOG_TRANSPORT=direct` reverts without a rebuild.
 	const configuredTransport =
 		transport ??
-		(process.env.AXIOM_LOG_TRANSPORT === "firelens" ? "firelens" : "direct");
+		(process.env.AXIOM_LOG_TRANSPORT === "direct" ? "direct" : "firelens");
 	const isRunningInEcs = Boolean(process.env.ECS_CONTAINER_METADATA_URI_V4);
 	const shouldUseFirelens =
 		configuredTransport === "firelens" && !isDevOrTest && isRunningInEcs;

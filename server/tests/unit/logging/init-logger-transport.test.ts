@@ -119,6 +119,60 @@ test("logger selects FireLens without changing structured records", () => {
 	}
 });
 
+// FireLens is the default, so an unset variable must not fall back to spawning
+// a transport thread — that would silently keep the old path in production.
+test("logger defaults to FireLens in ECS when the variable is unset", () => {
+	const previousNodeEnv = process.env.NODE_ENV;
+	const previousAxiomToken = process.env.AXIOM_TOKEN;
+	const previousLogTransport = process.env.AXIOM_LOG_TRANSPORT;
+	const previousEcsMetadataUri = process.env.ECS_CONTAINER_METADATA_URI_V4;
+	const stdoutChunks: string[] = [];
+	const stdoutSpy = spyOn(process.stdout, "write").mockImplementation(
+		(chunk: string | Uint8Array) => {
+			stdoutChunks.push(chunk.toString());
+			return true;
+		},
+	);
+	const transportSpy = spyOn(pino, "transport").mockReturnValue(
+		new Writable({
+			write(_chunk, _encoding, callback) {
+				callback();
+			},
+		}) as ReturnType<typeof pino.transport>,
+	);
+
+	try {
+		process.env.NODE_ENV = "production";
+		process.env.AXIOM_TOKEN = "test-token";
+		process.env.ECS_CONTAINER_METADATA_URI_V4 = "http://169.254.170.2/v4/test";
+		delete process.env.AXIOM_LOG_TRANSPORT;
+
+		initLogger().info({ req: { id: "request_default" } }, "Default request");
+
+		expect(transportSpy).not.toHaveBeenCalled();
+		expect(stdoutChunks.join("")).toContain("request_default");
+	} finally {
+		stdoutSpy.mockRestore();
+		transportSpy.mockRestore();
+		restoreEnvironmentVariable({
+			name: "NODE_ENV",
+			previousValue: previousNodeEnv,
+		});
+		restoreEnvironmentVariable({
+			name: "AXIOM_TOKEN",
+			previousValue: previousAxiomToken,
+		});
+		restoreEnvironmentVariable({
+			name: "AXIOM_LOG_TRANSPORT",
+			previousValue: previousLogTransport,
+		});
+		restoreEnvironmentVariable({
+			name: "ECS_CONTAINER_METADATA_URI_V4",
+			previousValue: previousEcsMetadataUri,
+		});
+	}
+});
+
 const restoreEnvironmentVariable = ({
 	name,
 	previousValue,
