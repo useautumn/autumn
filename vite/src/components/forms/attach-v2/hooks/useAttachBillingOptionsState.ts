@@ -8,13 +8,14 @@ import {
 } from "@autumn/shared";
 import { useCallback, useEffect } from "react";
 import type { AttachForm } from "../attachFormSchema";
-import type { UseAttachForm } from "./useAttachForm";
-import type { UseAttachPreviewReturn } from "./useAttachPreview";
 import {
+	getAttachProrationVisibility,
 	getNoChargesDisabledReason,
 	isNoChargesAllowedForAttach,
 	normalizeAttachProrationBehavior,
 } from "../utils/attachProrationBehaviorRules";
+import type { UseAttachForm } from "./useAttachForm";
+import type { UseAttachPreviewReturn } from "./useAttachPreview";
 
 /** Encapsulates planSchedule + prorationBehavior derived state and mutations. */
 export function useAttachBillingOptionsState({
@@ -37,6 +38,8 @@ export function useAttachBillingOptionsState({
 	const { planSchedule, prorationBehavior, newBillingSubscription, startDate } =
 		formValues;
 	const previewData = previewQuery.data;
+	const effectiveNewBillingSubscription =
+		!isMultiPlan && newBillingSubscription;
 
 	const hasActiveProductWithTrial = customerProducts.some(
 		(customerProduct) =>
@@ -66,7 +69,7 @@ export function useAttachBillingOptionsState({
 		outgoingPlan?.price?.interval !== BillingInterval.OneOff;
 
 	const createsNewStripeSubscription =
-		!hasActiveSubscription || newBillingSubscription;
+		!hasActiveSubscription || effectiveNewBillingSubscription;
 
 	// Usage-only plans have a null base price (billing lives on items), so a
 	// recurring sub can be created even when the base price and immediate total are $0.
@@ -101,27 +104,30 @@ export function useAttachBillingOptionsState({
 
 	const hasSubscriptionToProrate =
 		hasActiveSubscription && !hasActiveProductWithTrial;
-	const showProrationRow = !isMultiPlan && hasSubscriptionToProrate;
 
 	const freeToPaidWithNoExistingSubscription =
 		isFreeToPaidTransition && !hasActiveSubscription;
 
-	const showProrationBehavior =
-		showProrationRow && effectivePlanSchedule === "immediate";
+	const { showProrationRow, showProrationBehavior } =
+		getAttachProrationVisibility({
+			hasSubscriptionToProrate,
+			isMultiPlan,
+			planSchedule: effectivePlanSchedule,
+		});
 	const isNoChargesAllowed = isNoChargesAllowedForAttach({
-		newBillingSubscription,
+		newBillingSubscription: effectiveNewBillingSubscription,
 		disableProration: freeToPaidWithNoExistingSubscription,
 	});
 	const normalizedProrationBehavior = normalizeAttachProrationBehavior({
 		prorationBehavior,
-		newBillingSubscription,
+		newBillingSubscription: effectiveNewBillingSubscription,
 		disableProration: freeToPaidWithNoExistingSubscription,
 	});
 	const effectiveProrationBehavior =
 		normalizedProrationBehavior ??
 		(isNoChargesAllowed ? "none" : "prorate_immediately");
 	const noChargesDisabledReason = getNoChargesDisabledReason({
-		newBillingSubscription,
+		newBillingSubscription: effectiveNewBillingSubscription,
 		disableProration: freeToPaidWithNoExistingSubscription,
 	});
 
@@ -145,7 +151,12 @@ export function useAttachBillingOptionsState({
 	}, [form, startDate]);
 
 	useEffect(() => {
-		if (isMultiPlan) return;
+		if (isMultiPlan) {
+			if (!newBillingSubscription) return;
+			form.setFieldValue("newBillingSubscription", false);
+			movePastStartDateToNow();
+			return;
+		}
 		if (canChooseBillingCycle) return;
 		if (!newBillingSubscription) return;
 		form.setFieldValue("newBillingSubscription", false);
@@ -159,32 +170,23 @@ export function useAttachBillingOptionsState({
 	]);
 
 	useEffect(() => {
-		if (isMultiPlan) return;
 		if (showProrationBehavior) return;
 		if (prorationBehavior === null) return;
 		form.setFieldValue("prorationBehavior", null);
-	}, [showProrationBehavior, prorationBehavior, form, isMultiPlan]);
+	}, [showProrationBehavior, prorationBehavior, form]);
 
 	useEffect(() => {
-		if (isMultiPlan) return;
 		if (!showProrationBehavior) return;
 		if (prorationBehavior !== null) return;
 		if (!isNoChargesAllowed) return;
 		form.setFieldValue("prorationBehavior", "none");
-	}, [
-		showProrationBehavior,
-		prorationBehavior,
-		isNoChargesAllowed,
-		form,
-		isMultiPlan,
-	]);
+	}, [showProrationBehavior, prorationBehavior, isNoChargesAllowed, form]);
 
 	useEffect(() => {
-		if (isMultiPlan) return;
 		if (prorationBehavior !== "none") return;
 		if (isNoChargesAllowed) return;
 		form.setFieldValue("prorationBehavior", null);
-	}, [prorationBehavior, form, isNoChargesAllowed, isMultiPlan]);
+	}, [prorationBehavior, form, isNoChargesAllowed]);
 
 	const handleScheduleChange = (value: PlanTiming) => {
 		form.setFieldValue("planSchedule", value);

@@ -23,7 +23,6 @@ import { useStore } from "@tanstack/react-form";
 import {
 	createContext,
 	type ReactNode,
-	useCallback,
 	useContext,
 	useEffect,
 	useMemo,
@@ -43,14 +42,15 @@ import {
 	useAttachAdditionalPlans,
 } from "../hooks/useAttachAdditionalPlans";
 import {
-	type UseAttachCurrencyReturn,
-	useAttachCurrency,
-} from "../hooks/useAttachCurrency";
-import {
 	type UseAttachBillingOptionsStateReturn,
 	useAttachBillingOptionsState,
 } from "../hooks/useAttachBillingOptionsState";
+import {
+	type UseAttachCurrencyReturn,
+	useAttachCurrency,
+} from "../hooks/useAttachCurrency";
 import { type UseAttachForm, useAttachForm } from "../hooks/useAttachForm";
+import { useAttachMultiRequestBody } from "../hooks/useAttachMultiRequestBody";
 import { useAttachMutation } from "../hooks/useAttachMutation";
 import { useAttachPlanEditor } from "../hooks/useAttachPlanEditor";
 import {
@@ -58,7 +58,6 @@ import {
 	useAttachPreview,
 } from "../hooks/useAttachPreview";
 import { useAttachRequestBody } from "../hooks/useAttachRequestBody";
-import { useAttachScheduleRequestBody } from "../hooks/useAttachScheduleRequestBody";
 import {
 	type UsePreviewDiffReturn,
 	usePreviewDiff,
@@ -470,9 +469,9 @@ export function AttachFormProvider({
 		currency: attachCurrency.requestCurrency,
 	});
 	const {
-		requestBody: scheduleRequestBody,
-		buildRequestBody: buildScheduleRequestBody,
-	} = useAttachScheduleRequestBody({
+		requestBody: multiRequestBody,
+		buildRequestBody: buildMultiRequestBody,
+	} = useAttachMultiRequestBody({
 		customerId,
 		entityId,
 		product: effectiveProduct,
@@ -487,17 +486,19 @@ export function AttachFormProvider({
 		trialDuration,
 		trialEnabled,
 		trialCardRequired,
+		trialOnEnd,
+		prorationBehavior,
 		redirectMode,
 		discounts,
 		currency: attachCurrency.requestCurrency,
 		hasInvalidPlanScopes: additionalPlans.hasInvalidPlanScopes,
 	});
 	const billingOperation = isMultiPlan
-		? BILLING_OPERATIONS.createSchedule
+		? BILLING_OPERATIONS.multiAttach
 		: BILLING_OPERATIONS.attach;
-	const operationRequestBody = isMultiPlan ? scheduleRequestBody : requestBody;
+	const operationRequestBody = isMultiPlan ? multiRequestBody : requestBody;
 	const buildOperationRequestBody = isMultiPlan
-		? buildScheduleRequestBody
+		? buildMultiRequestBody
 		: buildRequestBody;
 
 	const previewQuery = useAttachPreview({

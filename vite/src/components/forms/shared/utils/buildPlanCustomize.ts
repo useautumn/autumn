@@ -1,8 +1,8 @@
 import type {
 	ApiPlanItemV1,
 	CreatePlanItemParamsV1,
-	CreateScheduleParamsV0,
 	Feature,
+	MultiAttachParamsV0,
 	ProductItem,
 	ProductV2,
 } from "@autumn/shared";
@@ -110,7 +110,7 @@ export function buildCustomize({
 	};
 }
 
-export function buildCreateSchedulePlan({
+export function buildBillingPlan({
 	productId,
 	prepaidOptions,
 	items,
@@ -130,7 +130,7 @@ export function buildCreateSchedulePlan({
 	product?: ProductV2;
 	features: Feature[];
 	includeEmptyItems?: boolean;
-}): CreateScheduleParamsV0["phases"][number]["plans"][number] {
+}): MultiAttachParamsV0["plans"][number] {
 	const featureQuantities = convertPrepaidOptionsToFeatureOptions({
 		prepaidOptions,
 		product,
