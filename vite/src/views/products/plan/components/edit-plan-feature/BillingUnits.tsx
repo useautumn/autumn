@@ -39,7 +39,7 @@ export function BillingUnits() {
 	});
 
 	return (
-		<div className="flex shrink w-fit max-w-32">
+		<div className="flex w-fit shrink-0">
 			<Popover open={open} onOpenChange={setOpen}>
 				<PopoverTrigger asChild>
 					<Button
@@ -47,7 +47,7 @@ export function BillingUnits() {
 						className={cn(
 							item.tiers?.length && item.tiers.length > 1
 								? "max-w-20 text-tertiary-foreground"
-								: "w-full text-tertiary-foreground",
+								: "text-tertiary-foreground",
 						)}
 					>
 						<span className={cn("truncate text-xs")}>
