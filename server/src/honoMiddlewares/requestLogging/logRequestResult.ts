@@ -59,7 +59,6 @@ export const logRequestResult = async ({
 			logger: ctx.logger,
 			extras: ctx.extraLogs,
 		});
-		const requestBody = ctx.requestLogContext?.body;
 
 		const skipResponseBody =
 			isSuccess && RESPONSE_BODY_EXCLUDED_ROUTES.has(c.req.path);
@@ -84,7 +83,9 @@ export const logRequestResult = async ({
 			{
 				statusCode,
 				durationMs,
-				...(requestBody === undefined ? {} : { request_body: requestBody }),
+				...(ctx.requestLogContext === undefined
+					? {}
+					: { req: ctx.requestLogContext }),
 				res: finalResponseBody ?? null,
 			},
 		);

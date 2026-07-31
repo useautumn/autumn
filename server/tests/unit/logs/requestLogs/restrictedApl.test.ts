@@ -378,9 +378,7 @@ describe("restricted request-log APL", () => {
 		expect(apl).toContain(
 			"| project timestamp = _time, source = source, status_code = statusCode",
 		);
-		expect(apl).toContain(
-			"request_body = coalesce(column_ifexists(\"request_body\", ['req.body']), ['req.body'])",
-		);
+		expect(apl).toContain("request_body = ['req.body']");
 		expect(apl).toContain("stripe_event_id = ['stripe_event.id']");
 		expect(apl).toContain(
 			"| where dynamic_to_json(response_body) contains 'checkout'",

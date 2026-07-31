@@ -3,6 +3,7 @@ import type { Context } from "hono";
 import type { Logger } from "@/external/logtail/logtailUtils.js";
 import { logRequestResult } from "@/honoMiddlewares/requestLogging/logRequestResult.js";
 import type { AutumnContext, HonoEnv } from "@/honoUtils/HonoEnv.js";
+import { addRequestToLogs } from "@/utils/logging/addContextToLogs.js";
 import type { LogRequestContext } from "@/utils/logging/loggerTypes.js";
 
 type CapturedLog = {
@@ -37,6 +38,15 @@ const createCapturingLogger = ({
 		}),
 });
 
+const mergeLoggedObjects = (args: unknown[]) =>
+	Object.assign(
+		{},
+		...args.filter(
+			(argument): argument is Record<string, unknown> =>
+				typeof argument === "object" && argument !== null,
+		),
+	);
+
 describe("logRequestResult", () => {
 	test("logs the request body without rebinding request metadata", async () => {
 		const captured: CapturedLog[] = [];
@@ -61,9 +71,9 @@ describe("logRequestResult", () => {
 		};
 		const ctx = {
 			timestamp: 123,
-			logger: createCapturingLogger({
-				bindings: { req: internalRequestContext },
-				captured,
+			logger: addRequestToLogs({
+				logger: createCapturingLogger({ captured }),
+				requestContext: internalRequestContext,
 			}),
 			requestLogContext,
 			extraLogs: {},
@@ -88,13 +98,13 @@ describe("logRequestResult", () => {
 		expect(captured[0]?.level).toBe("info");
 		expect(
 			captured[0]?.bindingLayers.filter((bindings) => "req" in bindings),
-		).toHaveLength(1);
-		expect(captured[0]?.bindings.req).toEqual(internalRequestContext);
+		).toHaveLength(0);
+		expect(captured[0]?.bindings.req).toBeUndefined();
 		expect(captured[0]?.bindings.extras).toEqual({});
-		expect(captured[0]?.args[1]).toEqual({
+		expect(mergeLoggedObjects(captured[0]?.args ?? [])).toEqual({
+			req: requestLogContext,
 			statusCode: 200,
 			durationMs: 20,
-			request_body: requestLogContext.body,
 			res: { allowed: true },
 		});
 	});
@@ -116,18 +126,16 @@ describe("logRequestResult", () => {
 		};
 		const ctx = {
 			timestamp: 123,
-			logger: createCapturingLogger({
-				bindings: {
-					req: {
-						id: requestLogContext.id,
-						method: requestLogContext.method,
-						url: requestLogContext.url,
-						timestamp: requestLogContext.timestamp,
-						query: requestLogContext.query,
-						name: requestLogContext.name,
-					},
+			logger: addRequestToLogs({
+				logger: createCapturingLogger({ captured }),
+				requestContext: {
+					id: requestLogContext.id,
+					method: requestLogContext.method,
+					url: requestLogContext.url,
+					timestamp: requestLogContext.timestamp,
+					query: requestLogContext.query,
+					name: requestLogContext.name,
 				},
-				captured,
 			}),
 			requestLogContext,
 			extraLogs: { operation: "track" },
@@ -154,19 +162,12 @@ describe("logRequestResult", () => {
 
 		expect(captured).toHaveLength(1);
 		expect(captured[0]?.level).toBe("warn");
-		expect(captured[0]?.bindings.req).toEqual({
-			id: requestLogContext.id,
-			method: requestLogContext.method,
-			url: requestLogContext.url,
-			timestamp: requestLogContext.timestamp,
-			query: requestLogContext.query,
-			name: requestLogContext.name,
-		});
+		expect(captured[0]?.bindings.req).toBeUndefined();
 		expect(captured[0]?.bindings.extras).toEqual({ operation: "track" });
-		expect(captured[0]?.args[1]).toEqual({
+		expect(mergeLoggedObjects(captured[0]?.args ?? [])).toEqual({
+			req: requestLogContext,
 			statusCode: 500,
 			durationMs: 30,
-			request_body: requestLogContext.body,
 			res: responseBody,
 		});
 	});
