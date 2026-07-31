@@ -12,6 +12,7 @@ import { checkoutsRelations } from "../models/checkouts/checkoutRelations.js";
 import { checkouts } from "../models/checkouts/checkoutTable.js";
 import { autoTopupLimitStates } from "../models/cusModels/billingControls/autoTopupLimitTable.js";
 // Customer Relations
+import { customerExports } from "../models/cusModels/cusExportTable.js";
 import { customersRelations } from "../models/cusModels/cusRelations.js";
 // Customer Tables
 import { customers } from "../models/cusModels/cusTable.js";
@@ -154,6 +155,7 @@ export {
 	leafSchema,
 	customerEntitlements,
 	customerEntitlementsRelations,
+	customerExports,
 	customerPrices,
 	customerPricesRelations,
 	customerProducts,
