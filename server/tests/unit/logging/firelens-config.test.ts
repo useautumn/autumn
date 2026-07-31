@@ -27,6 +27,17 @@ test.concurrent(
 		expect(config).toMatch(
 			/\[FILTER\]\s+Name modify\s+Match axiom_express\s+Remove time\s+Remove region\s+Remove container_id\s+Remove container_name/,
 		);
+		// Ordering is the contract: a split line reaching the parser first would be
+		// unparseable JSON, lose its `level`, and fall through to `ecs` as text.
+		expect(config).toContain("mode partial_message");
+		expect(config).toContain("multiline.key_content log");
+		expect(config.indexOf("mode partial_message")).toBeLessThan(
+			config.indexOf("Parser json"),
+		);
+		expect(config).not.toMatch(
+			/mode partial_message[\s\S]*?multiline\.parser/,
+		);
+
 		expect(config).toContain("URI /v1/ingest/express");
 		expect(config).toContain("URI /v1/ingest/ecs");
 		expect(config.match(/retry_limit 5/g)).toHaveLength(2);

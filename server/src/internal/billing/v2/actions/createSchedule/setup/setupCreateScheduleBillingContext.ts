@@ -23,7 +23,7 @@ import {
 	phaseHasNumericStart,
 } from "../errors/normalizeCreateSchedulePhases";
 import { validateCreateSchedulePhasePlans } from "../errors/validateCreateSchedulePhasePlans";
-import { billingContextToRecurringAndScheduled } from "../utils/billingContextToRecurringAndScheduled";
+import { resolveCreateScheduleRecurringProducts } from "../utils/resolveCreateScheduleRecurringProducts";
 import { setupScheduledProductsContext } from "./setupScheduledProductsContext";
 
 type CreateScheduleCheckoutModeContext = Pick<
@@ -286,7 +286,7 @@ export const setupCreateScheduleBillingContext = async ({
 		scheduledPhaseContexts,
 	};
 
-	const { recurringActive } = billingContextToRecurringAndScheduled({
+	const { recurringActive } = resolveCreateScheduleRecurringProducts({
 		billingContext: scheduleBillingContext,
 	});
 

@@ -34,6 +34,11 @@ const BILLING_TOGGLES = [
 		description: "Stop posting usage overage line items to Stripe",
 	},
 	{
+		key: "persist_free_overage",
+		label: "Pay down overages",
+		description: "Resets and top ups pay down unbilled overages",
+	},
+	{
 		key: "entity_product",
 		label: "Entity products",
 		description: "Enable entity-level product assignments",

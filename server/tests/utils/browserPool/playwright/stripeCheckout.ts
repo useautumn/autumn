@@ -28,17 +28,28 @@ export const stripeCheckout = async ({
 	overrideQuantity,
 	promoCode,
 	billingAddress,
+	addOptionalItem,
 }: {
 	page: Page;
 	url: string;
 	overrideQuantity?: number;
 	promoCode?: string;
 	billingAddress?: StripeCheckoutBillingAddress;
+	/** Click "Add" on the first Stripe Checkout optional item (session's `optional_items`). */
+	addOptionalItem?: boolean;
 }) => {
 	await page.goto(url, { waitUntil: "domcontentloaded", timeout: 60000 });
 	console.log("[stripeCheckout] Page loaded");
 
 	await page.waitForTimeout(3000);
+
+	if (addOptionalItem) {
+		const addBtn = page.getByRole("button", { name: /^add$/i }).first();
+		await addBtn.waitFor({ timeout: 15000 });
+		await addBtn.evaluate((el) => (el as HTMLElement).click());
+		console.log("[stripeCheckout] Optional item added");
+		await page.waitForTimeout(1000);
+	}
 
 	// Select Card. The radio is hidden by an AccordionButton overlay; click
 	// the data-testid button via JS, fall back to the radio.
