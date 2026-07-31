@@ -1,6 +1,10 @@
 import {
 	BillingVersion,
+	customerProductHasSubscription,
+	customerProductsToStripeSubscriptionIds,
 	type FullProduct,
+	filterCustomerProductsByStripeSubscriptionId,
+	getTargetSubscriptionCusProduct,
 	type InvoiceMode,
 	isFreeProduct,
 	isOneOffProduct,
@@ -8,7 +12,9 @@ import {
 	type MultiAttachBillingContext,
 	type MultiAttachParamsV0,
 	type MultiAttachProductContext,
+	notNullish,
 	orgToReturnUrl,
+	RecaseError,
 	resolveCustomerCurrency,
 } from "@autumn/shared";
 import type { FreeTrialParamsV1 } from "@shared/api/common/freeTrial/freeTrialParamsV1";
@@ -28,12 +34,28 @@ import {
 	handleFreeTrialParam,
 } from "@/internal/billing/v2/setup/trialContext";
 
-export type ImmediateMultiProductParams = Omit<MultiAttachParamsV0, "plans"> & {
-	plans: Array<
-		MultiAttachParamsV0["plans"][number] & {
-			entity_id?: string | null;
-		}
-	>;
+const getSubscriptionTarget = ({
+	productContext,
+}: {
+	productContext: MultiAttachProductContext;
+}) => {
+	const { currentCustomerProduct, scheduledCustomerProduct, fullProduct } =
+		productContext;
+
+	if (customerProductHasSubscription(currentCustomerProduct)) {
+		return currentCustomerProduct;
+	}
+	if (customerProductHasSubscription(scheduledCustomerProduct)) {
+		return scheduledCustomerProduct;
+	}
+	if (!isProductPaidAndRecurring(fullProduct)) return undefined;
+
+	return getTargetSubscriptionCusProduct({
+		fullCus: productContext.fullCustomer,
+		productId: fullProduct.id,
+		productGroup: fullProduct.group ?? "",
+		cusProductId: currentCustomerProduct?.id ?? scheduledCustomerProduct?.id,
+	});
 };
 
 /** Resolve checkout mode for immediate multi-product billing. */
@@ -130,7 +152,7 @@ export const setupImmediateMultiProductBillingContext = async ({
 	includeScheduledProductsForScheduleLookup,
 }: {
 	ctx: AutumnContext;
-	params: ImmediateMultiProductParams;
+	params: MultiAttachParamsV0;
 	preview?: boolean;
 	billingStartsAt?: number;
 	billingStartsAtToleranceMs?: number;
@@ -214,6 +236,35 @@ export const setupImmediateMultiProductBillingContext = async ({
 		throw new Error("setupImmediateMultiProductBillingContext requires plans");
 	}
 
+	const hasSubscriptionTransition = productContexts.some(
+		({ currentCustomerProduct, scheduledCustomerProduct }) =>
+			customerProductHasSubscription(currentCustomerProduct) ||
+			customerProductHasSubscription(scheduledCustomerProduct),
+	);
+	const forceNewSubscription =
+		params.new_billing_subscription === true && !hasSubscriptionTransition;
+	const targetCustomerProducts = forceNewSubscription
+		? []
+		: productContexts
+				.map((productContext) => getSubscriptionTarget({ productContext }))
+				.filter(notNullish);
+	const subscriptionIds = customerProductsToStripeSubscriptionIds({
+		customerProducts: targetCustomerProducts,
+	});
+
+	if (subscriptionIds.length > 1) {
+		throw new RecaseError({
+			message: "Cannot update products across multiple existing subscriptions.",
+			statusCode: 400,
+		});
+	}
+
+	const [subscriptionId] = subscriptionIds;
+	const [targetCustomerProduct] = filterCustomerProductsByStripeSubscriptionId({
+		customerProducts: targetCustomerProducts,
+		stripeSubscriptionId: subscriptionId,
+	});
+
 	const {
 		stripeSubscription,
 		stripeSubscriptionSchedule,
@@ -225,12 +276,12 @@ export const setupImmediateMultiProductBillingContext = async ({
 	} = await setupStripeBillingContext({
 		ctx,
 		fullCustomer,
-		targetCustomerProduct: undefined,
+		targetCustomerProduct,
 		params,
 		skipSubscriptionFetching: fullProducts.every((product) =>
 			isOneOffProduct({ product }),
 		),
-		newBillingSubscription: params.new_billing_subscription || undefined,
+		newBillingSubscription: forceNewSubscription || undefined,
 		includeScheduledProductsForScheduleLookup,
 		createStripeCustomerIfMissing: !preview,
 	});
@@ -310,6 +361,7 @@ export const setupImmediateMultiProductBillingContext = async ({
 		currentEpochMs,
 		billingCycleAnchorMs,
 		resetCycleAnchorMs,
+		requestedProrationBehavior: params.billing_behavior,
 		stripeCustomer,
 		stripeSubscription,
 		stripeSubscriptionSchedule,
@@ -319,6 +371,7 @@ export const setupImmediateMultiProductBillingContext = async ({
 		customPrices,
 		customEnts,
 		trialContext,
+		skipBillingChanges: trialContext?.onEnd === "revert",
 		isCustom: customPrices.length > 0 || customEnts.length > 0,
 		checkoutMode: setupImmediateMultiProductCheckoutMode({
 			paymentMethod,

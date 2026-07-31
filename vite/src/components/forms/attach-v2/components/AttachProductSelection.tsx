@@ -8,6 +8,7 @@ import {
 import { useAttachFormContext } from "../context/AttachFormProvider";
 import { getAttachDisplayItems } from "../utils/grantFreeUtils";
 import { AttachAdditionalPlanRow } from "./AttachAdditionalPlanRow";
+import { AttachPlanPrepaidQuantityFields } from "./AttachPlanPrepaidQuantityFields";
 
 export function AttachProductSelection({
 	scope,
@@ -37,15 +38,21 @@ export function AttachProductSelection({
 	return (
 		<div className="space-y-2">
 			{isMultiPlan && productId ? (
-				<ScopedPlanRow scope={scope}>
-					<SelectedPlanRow
-						productId={productId}
-						product={product}
-						customItems={displayedPrimaryItems}
-						isCustom={hasCustomizations || formValues.grantFree}
-						onEdit={formValues.grantFree ? undefined : () => handleEditPlan()}
+				<div className="space-y-1.5">
+					<ScopedPlanRow scope={scope}>
+						<SelectedPlanRow
+							productId={productId}
+							product={product}
+							customItems={displayedPrimaryItems}
+							isCustom={hasCustomizations || formValues.grantFree}
+							onEdit={formValues.grantFree ? undefined : () => handleEditPlan()}
+						/>
+					</ScopedPlanRow>
+					<AttachPlanPrepaidQuantityFields
+						items={displayedPrimaryItems ?? product?.items}
+						quantities={formValues.prepaidOptions}
 					/>
-				</ScopedPlanRow>
+				</div>
 			) : (
 				<form.AppField name="productId">
 					{(field) => (
