@@ -162,7 +162,6 @@ export function CustomerListTable({
 							Docs
 						</IconButton>
 						<CustomerListCreateButton />
-						<CustomerListExportMenu />
 					</div>
 				}
 			/>

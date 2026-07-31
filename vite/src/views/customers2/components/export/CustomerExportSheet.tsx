@@ -60,7 +60,7 @@ export function CustomerExportSheet({
 	onOpenChange: (open: boolean) => void;
 }) {
 	const { queryStates } = useCustomerFilters();
-	const { totalCount } = useCusSearchQuery();
+	const { totalCount, isLoading: isFilteredCountLoading } = useCusSearchQuery();
 	const createExport = useCreateCustomerExport();
 	const { data: customerExports, isLoading } = useCustomerExportsQuery({
 		enabled: open,
@@ -83,7 +83,11 @@ export function CustomerExportSheet({
 	const exportTotalCount = ignoresActiveFilters
 		? unfilteredTotalCount
 		: totalCount;
-	const hasNothingToExport = exportTotalCount === 0;
+	// An unresolved count must not read as "no customers to export".
+	const exportCountReady = ignoresActiveFilters
+		? unfilteredTotalCount !== undefined
+		: !isFilteredCountLoading;
+	const hasNothingToExport = exportCountReady && exportTotalCount === 0;
 
 	const form = useAppForm({
 		defaultValues: { fields: [...CUSTOMER_EXPORT_FIELD_ORDER] },

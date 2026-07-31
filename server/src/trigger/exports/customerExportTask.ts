@@ -18,7 +18,7 @@ import { CustomerExportService } from "@/internal/customers/exports/CustomerExpo
 import { serializeCustomerExportRows } from "@/internal/customers/exports/csv/serializeCustomerExportRows.js";
 import {
 	getCustomerExportPartitions,
-	ROWS_PER_WORKER,
+	resolveRowsPerWorker,
 } from "@/internal/customers/exports/queries/getCustomerExportPartitions.js";
 import {
 	CUSTOMER_EXPORT_MAX_DURATION_SECONDS,
@@ -48,6 +48,44 @@ const sanitizeExportError = ({ error }: { error: unknown }) => {
 	const message =
 		error instanceof Error ? error.message : "Customer export failed";
 	return message.slice(0, MAX_STORED_ERROR_LENGTH);
+};
+
+const MARK_COMPLETED_ATTEMPTS = 3;
+const MARK_COMPLETED_RETRY_DELAY_MS = 2000;
+
+/** The CSV is already published here, so a transient DB blip must not fail the export. */
+const markCompletedWithRetry = async ({
+	ctx,
+	logger,
+	exportId,
+	rowCount,
+	byteCount,
+}: {
+	ctx: AutumnContext;
+	logger: Logger;
+	exportId: string;
+	rowCount: number;
+	byteCount: number;
+}) => {
+	for (let attempt = 1; ; attempt++) {
+		try {
+			await CustomerExportService.markCompleted({
+				db: ctx.db,
+				id: exportId,
+				rowCount,
+				byteCount,
+			});
+			return;
+		} catch (error) {
+			if (attempt >= MARK_COMPLETED_ATTEMPTS) throw error;
+			logger.warn("customer-export: retrying markCompleted", {
+				data: { exportId, attempt, error: sanitizeExportError({ error }) },
+			});
+			await new Promise((resolve) =>
+				setTimeout(resolve, MARK_COMPLETED_RETRY_DELAY_MS),
+			);
+		}
+	}
 };
 
 const runWorkersInline = async ({
@@ -100,13 +138,20 @@ export const executeCustomerExport = async ({
 	const key = getCustomerExportKey({ orgId, env, exportId });
 	// Only set once the upload exists — nothing to abort before that point.
 	let uploadId: string | undefined;
+	// Once the multipart upload is completed the CSV is published: aborting or
+	// failing the export past this point would orphan a perfectly good file.
+	let uploadCompleted = false;
 
 	try {
+		const rowsPerWorker = resolveRowsPerWorker({
+			fieldCount: customerExport.fields.length,
+		});
 		const { partitions, totalRows } = await getCustomerExportPartitions({
 			db: ctx.db,
 			orgId,
 			env,
 			snapshot: customerExport.snapshot,
+			rowsPerWorker,
 		});
 
 		uploadId = (
@@ -123,7 +168,7 @@ export const executeCustomerExport = async ({
 			id: exportId,
 			s3Key: key,
 			s3UploadId: uploadId,
-			partitionPlan: { rowsPerWorker: ROWS_PER_WORKER, partitions },
+			partitionPlan: { rowsPerWorker, partitions },
 		});
 
 		logger.info("customer-export: partitioned", {
@@ -151,10 +196,12 @@ export const executeCustomerExport = async ({
 			uploadId,
 			parts: parts.map(({ partNumber, eTag }) => ({ partNumber, eTag })),
 		});
+		uploadCompleted = true;
 
-		await CustomerExportService.markCompleted({
-			db: ctx.db,
-			id: exportId,
+		await markCompletedWithRetry({
+			ctx,
+			logger,
+			exportId,
 			rowCount: parts.reduce((total, part) => total + part.rowCount, 0),
 			byteCount: parts.reduce((total, part) => total + part.byteCount, 0),
 		});
@@ -163,6 +210,10 @@ export const executeCustomerExport = async ({
 			data: { exportId, fileName: CUSTOMER_EXPORT_FILE_NAME },
 		});
 	} catch (error) {
+		// The CSV already exists; leave the row active so status can be reconciled
+		// instead of failing a downloadable export.
+		if (uploadCompleted) throw error;
+
 		if (uploadId) {
 			await abortS3MultipartUpload({ bucket, region, key, uploadId }).catch(
 				(abortError) => {
@@ -242,7 +293,6 @@ const uploadCustomerExportParts = async ({
 			orgId: payload.orgId,
 			env: payload.env,
 			range: partition,
-			partNumber: partition.partNumber,
 			includeHeader: partition.partNumber === 1,
 			fields: customerExportFields,
 			snapshot,
@@ -261,7 +311,7 @@ const runWorkersViaTrigger: CustomerExportWorkerRunner = async (payloads) => {
 		payloads.map((workerPayload) => ({
 			payload: workerPayload,
 			options: {
-				idempotencyKey: `customer-export-part:${workerPayload.exportId}:${workerPayload.partNumber}`,
+				idempotencyKey: `customer-export-part:${workerPayload.exportId}:${workerPayload.range.partNumber}`,
 				idempotencyKeyTTL: "7d",
 			},
 		})),
@@ -270,7 +320,7 @@ const runWorkersViaTrigger: CustomerExportWorkerRunner = async (payloads) => {
 	return batch.runs.map((run, index) => {
 		if (!run.ok) {
 			throw new Error(
-				`Customer export part ${payloads[index].partNumber} failed: ${run.error instanceof Error ? run.error.message : String(run.error)}`,
+				`Customer export part ${payloads[index].range.partNumber} failed: ${run.error instanceof Error ? run.error.message : String(run.error)}`,
 			);
 		}
 		return run.output as CustomerExportWorkerResult;

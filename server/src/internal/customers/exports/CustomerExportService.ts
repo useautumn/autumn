@@ -49,8 +49,8 @@ export const CustomerExportService = {
 		};
 
 		try {
-			await db.insert(customerExports).values(row);
-			return { created: true, customerExport: row as DbCustomerExport };
+			const inserted = await db.insert(customerExports).values(row).returning();
+			return { created: true, customerExport: inserted[0] };
 		} catch (error) {
 			if (!isUniqueConstraintError(error)) throw error;
 
@@ -184,6 +184,34 @@ export const CustomerExportService = {
 				completed_at: Date.now(),
 			})
 			.where(eq(customerExports.id, id));
+	},
+
+	/** Fails the export only if it is still queued/running; returns whether it did. */
+	failIfStillActive: async ({
+		db,
+		id,
+		errorMessage,
+	}: {
+		db: DrizzleCli;
+		id: string;
+		errorMessage: string;
+	}): Promise<boolean> => {
+		const updated = await db
+			.update(customerExports)
+			.set({
+				status: CustomerExportStatus.Failed,
+				error_message: errorMessage,
+				completed_at: Date.now(),
+			})
+			.where(
+				and(
+					eq(customerExports.id, id),
+					inArray(customerExports.status, [...ACTIVE_CUSTOMER_EXPORT_STATUSES]),
+				),
+			)
+			.returning({ id: customerExports.id });
+
+		return updated.length > 0;
 	},
 
 	markFailed: async ({

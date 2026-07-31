@@ -1,5 +1,27 @@
 import { describe, expect, it } from "bun:test";
-import { buildPartitionsFromBoundaries } from "@/internal/customers/exports/queries/getCustomerExportPartitions.js";
+import {
+	buildPartitionsFromBoundaries,
+	ROWS_PER_WORKER,
+	resolveRowsPerWorker,
+} from "@/internal/customers/exports/queries/getCustomerExportPartitions.js";
+
+const S3_MIN_PART_BYTES = 5 * 1024 * 1024;
+
+describe("resolveRowsPerWorker", () => {
+	it("keeps the default when wide rows already clear the S3 part minimum", () => {
+		expect(resolveRowsPerWorker({ fieldCount: 20 })).toBe(ROWS_PER_WORKER);
+	});
+
+	it("grows the partition so worst-case empty rows still make a 5 MiB part", () => {
+		for (const fieldCount of [1, 2, 6]) {
+			const rowsPerWorker = resolveRowsPerWorker({ fieldCount });
+			const worstCaseRowBytes = fieldCount + 1;
+			expect(rowsPerWorker * worstCaseRowBytes).toBeGreaterThanOrEqual(
+				S3_MIN_PART_BYTES,
+			);
+		}
+	});
+});
 
 describe("buildPartitionsFromBoundaries", () => {
 	it("returns no partitions when nothing matched", () => {

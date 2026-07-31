@@ -10,8 +10,27 @@ import type { DrizzleCli } from "@/db/initDrizzle.js";
 import { buildSearchPredicates } from "../../CusSearchService.js";
 import { buildMatchedCustomersSelect } from "./customerExportMatchSql.js";
 
-/** One worker owns this many customers; also the S3 part-size guarantee. */
 export const ROWS_PER_WORKER = 500_000;
+
+// Margin above S3's 5 MiB minimum so rows that vanish mid-export can't shrink
+// a non-final part below it.
+const TARGET_MIN_PART_BYTES = 8 * 1024 * 1024;
+
+/**
+ * Every non-final part must serialize to at least 5 MiB or S3 rejects the
+ * completion. The worst-case row is all-empty cells: (fields - 1) commas + CRLF.
+ */
+export const resolveRowsPerWorker = ({
+	fieldCount,
+}: {
+	fieldCount: number;
+}) => {
+	const worstCaseRowBytes = Math.max(fieldCount, 1) + 1;
+	return Math.max(
+		ROWS_PER_WORKER,
+		Math.ceil(TARGET_MIN_PART_BYTES / worstCaseRowBytes),
+	);
+};
 
 export const buildPartitionsFromBoundaries = ({
 	boundaryInternalIds,

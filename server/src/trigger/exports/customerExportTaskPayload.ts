@@ -26,7 +26,6 @@ export const RunCustomerExportWorkerPayloadSchema = z.object({
 	orgId: z.string(),
 	env: z.enum(AppEnv),
 	range: CustomerExportPartitionSchema,
-	partNumber: z.number().int().min(1),
 	includeHeader: z.boolean(),
 	fields: z.array(CustomerExportFieldSchema).min(1),
 	snapshot: CustomerExportSnapshotSchema,

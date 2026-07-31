@@ -4,8 +4,10 @@ import type {
 	DownloadCustomerExportResponse,
 } from "@autumn/shared";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { toast } from "sonner";
 import { useQueryKeyFactory } from "@/hooks/common/useQueryKeyFactory";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
+import { getBackendErr } from "@/utils/genUtils";
 
 export const CUSTOMER_EXPORTS_QUERY_KEY = "customer-exports";
 
@@ -93,6 +95,9 @@ export const useDownloadCustomerExport = () => {
 		},
 		onSuccess: (data) => {
 			window.location.assign(data.url);
+		},
+		onError: (error) => {
+			toast.error(getBackendErr(error, "Failed to download export"));
 		},
 	});
 };

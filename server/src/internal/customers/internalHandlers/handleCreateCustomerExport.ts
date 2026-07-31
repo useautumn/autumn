@@ -1,12 +1,20 @@
 import {
+	type AppEnv,
 	CreateCustomerExportParamsSchema,
+	type CustomerExportField,
+	type CustomerExportSnapshot,
 	type DbCustomerExport,
 	ErrCode,
 	RecaseError,
 	Scopes,
 } from "@autumn/shared";
+import type { DrizzleCli } from "@/db/initDrizzle.js";
+import type { Logger } from "@/external/logtail/logtailUtils.js";
 import { createRoute } from "@/honoMiddlewares/routeHandler";
-import { getCustomerExportTriggerOptions } from "@/trigger/exports/customerExportQueue.js";
+import {
+	CUSTOMER_EXPORT_MAX_DURATION_SECONDS,
+	getCustomerExportTriggerOptions,
+} from "@/trigger/exports/customerExportQueue.js";
 import {
 	customerExportTask,
 	executeCustomerExport,
@@ -15,6 +23,64 @@ import { shouldRunTriggerTasksInline } from "@/trigger/utils/shouldRunTriggerTas
 import { CustomerExportService } from "../exports/CustomerExportService.js";
 import { customerExportToResponse } from "../exports/customerExportToResponse.js";
 
+const HOUR_MS = 60 * 60 * 1000;
+// A run past maxDuration is dead; the margin covers queue wait before it starts.
+const STALE_ACTIVE_EXPORT_AFTER_MS =
+	CUSTOMER_EXPORT_MAX_DURATION_SECONDS * 1000 + HOUR_MS;
+
+const isStaleActiveExport = ({
+	activeExport,
+}: {
+	activeExport: DbCustomerExport;
+}) => {
+	const lastProgressAt = activeExport.started_at ?? activeExport.created_at;
+	return Date.now() - lastProgressAt > STALE_ACTIVE_EXPORT_AFTER_MS;
+};
+
+/** A crashed run must not block the org forever, so a stale active export is failed and retried once. */
+const createExportReclaimingStale = async ({
+	db,
+	logger,
+	orgId,
+	env,
+	fields,
+	snapshot,
+	requestedByUserId,
+}: {
+	db: DrizzleCli;
+	logger: Logger;
+	orgId: string;
+	env: AppEnv;
+	fields: CustomerExportField[];
+	snapshot: CustomerExportSnapshot;
+	requestedByUserId?: string;
+}) => {
+	const createParams = {
+		db,
+		orgId,
+		env,
+		fields,
+		snapshot,
+		requestedByUserId,
+	};
+
+	const first = await CustomerExportService.create(createParams);
+	if (first.created || !first.activeExport) return first;
+	if (!isStaleActiveExport({ activeExport: first.activeExport })) return first;
+
+	const reclaimed = await CustomerExportService.failIfStillActive({
+		db,
+		id: first.activeExport.id,
+		errorMessage: "Export timed out",
+	});
+	if (!reclaimed) return first;
+
+	logger.warn("customer-export: reclaimed stale active export", {
+		data: { staleExportId: first.activeExport.id },
+	});
+	return await CustomerExportService.create(createParams);
+};
+
 export const handleCreateCustomerExport = createRoute({
 	scopes: [Scopes.Customers.Read],
 	body: CreateCustomerExportParamsSchema,
@@ -22,8 +88,9 @@ export const handleCreateCustomerExport = createRoute({
 		const ctx = c.get("ctx");
 		const { fields, search, filters } = c.req.valid("json");
 
-		const result = await CustomerExportService.create({
+		const result = await createExportReclaimingStale({
 			db: ctx.db,
+			logger: ctx.logger,
 			orgId: ctx.org.id,
 			env: ctx.env,
 			fields,
@@ -67,18 +134,14 @@ export const handleCreateCustomerExport = createRoute({
 				});
 			});
 		} else {
+			let handle: Awaited<ReturnType<typeof customerExportTask.trigger>>;
 			try {
-				const handle = await customerExportTask.trigger(payload, {
+				handle = await customerExportTask.trigger(payload, {
 					idempotencyKey: `customer-export:${customerExport.id}`,
 					idempotencyKeyTTL: "7d",
 					...getCustomerExportTriggerOptions({
 						isDev: process.env.NODE_ENV === "development",
 					}),
-				});
-				await CustomerExportService.setTriggerRunId({
-					db: ctx.db,
-					id: customerExport.id,
-					triggerRunId: handle.id,
 				});
 			} catch (error) {
 				// A queued row nobody will ever pick up would block the org forever.
@@ -88,6 +151,23 @@ export const handleCreateCustomerExport = createRoute({
 					errorMessage: "Failed to enqueue the export job",
 				});
 				throw error;
+			}
+
+			// Best-effort: the job is already enqueued, so this must never fail the export.
+			try {
+				await CustomerExportService.setTriggerRunId({
+					db: ctx.db,
+					id: customerExport.id,
+					triggerRunId: handle.id,
+				});
+			} catch (error) {
+				ctx.logger.error("customer-export: failed to persist trigger run id", {
+					data: {
+						exportId: customerExport.id,
+						triggerRunId: handle.id,
+						error: error instanceof Error ? error.message : String(error),
+					},
+				});
 			}
 		}
 

@@ -38,7 +38,8 @@ export const executeCustomerExportWorker = async ({
 	logger: Logger;
 	payload: RunCustomerExportWorkerPayload;
 }): Promise<CustomerExportWorkerResult> => {
-	const { exportId, orgId, env, range, partNumber, fields, snapshot } = payload;
+	const { exportId, orgId, env, range, fields, snapshot } = payload;
+	const partNumber = range.partNumber;
 	const oneOffProductLookup = createOneOffProductLookup({ db: ctx.db });
 
 	const csvChunks: string[] = [];
