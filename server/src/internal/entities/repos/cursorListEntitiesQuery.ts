@@ -9,18 +9,11 @@ import { getFullSubjectRowsQuery } from "@/internal/customers/repos/getFullSubje
 import { buildPlanScopeCte, planScopeJoinSql } from "./planFilterScope.js";
 
 const getEntityListFilterSql = ({
-	orgId,
-	env,
-	plans,
 	processors,
 	search,
 	customerId,
-	inStatuses,
-}: Pick<ListEntitiesParams, "plans" | "processors" | "search"> & {
-	orgId: string;
-	env: AppEnv;
+}: Pick<ListEntitiesParams, "processors" | "search"> & {
 	customerId?: string;
-	inStatuses: CusProductStatus[];
 }) => {
 	const filters: SQL[] = [];
 
@@ -90,13 +83,9 @@ export const getCursorPaginatedEntitySubjectsQuery = ({
 	customerId?: string;
 }) => {
 	const filterSql = getEntityListFilterSql({
-		orgId,
-		env,
-		plans,
 		processors,
 		search,
 		customerId,
-		inStatuses,
 	});
 
 	const cursorPredicate = cursor

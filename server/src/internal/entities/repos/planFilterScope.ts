@@ -1,4 +1,8 @@
-import type { AppEnv, CusProductStatus, ListEntitiesParams } from "@autumn/shared";
+import type {
+	AppEnv,
+	CusProductStatus,
+	ListEntitiesParams,
+} from "@autumn/shared";
 import { type SQL, sql } from "drizzle-orm";
 
 /**

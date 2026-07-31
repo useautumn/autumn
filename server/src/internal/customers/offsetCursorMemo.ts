@@ -15,8 +15,15 @@ import type { RequestContext } from "@/honoUtils/HonoEnv.js";
  */
 export type OffsetCursor = { t: number; id: string };
 
-/** Long enough to carry a crawl, short enough to bound how stale a position gets. */
-const MEMO_TTL_SECONDS = 15 * 60;
+/**
+ * The key is (org, env, filters, offset) — it carries no notion of which crawl
+ * stored it. A different caller asking for the same offset later would reuse the
+ * boundary, and by then inserts have shifted what that offset means, so it would
+ * skip or repeat rows. The TTL is the only bound on that drift, so keep it just
+ * above a sequential crawler's inter-page gap (firecrawl pages roughly once a
+ * minute) rather than long enough to span an idle period.
+ */
+const MEMO_TTL_SECONDS = 2 * 60;
 
 /**
  * The position of "offset N" is only meaningful for one filter combination, so
@@ -68,8 +75,7 @@ export const getMemoizedOffsetCursor = async ({
 	if (offset <= 0) return null;
 
 	const raw = await tryRedisOp({
-		operation: () =>
-			getPrimaryRedis().get(getMemoKey({ ctx, query, offset })),
+		operation: () => getPrimaryRedis().get(getMemoKey({ ctx, query, offset })),
 		source: "cus-offset-memo:get",
 		redisInstance: getPrimaryRedis(),
 	});

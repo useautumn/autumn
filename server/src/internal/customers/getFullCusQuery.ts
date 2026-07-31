@@ -804,6 +804,12 @@ export const getPaginatedFullCusQuery = ({
 	// (818,922 distinct values across firecrawl's 1.6M customers, groups up to
 	// 72), so without it the ordering isn't total and offset pages silently skip
 	// and duplicate rows across a crawl. It also matches idx_customers_cursor.
+	// The keyset predicate below depends on DESC's default NULLS FIRST: c.id is
+	// nullable, and (created_at, NULL) < (created_at, id) evaluates to NULL, so a
+	// null-id row in the boundary's own created_at group would be dropped. That is
+	// safe only because NULLS FIRST puts those rows *before* the boundary, so they
+	// have already been returned. Moving either ORDER BY to NULLS LAST would
+	// silently start skipping them.
 	const paginationSql = cursor
 		? sql`AND (c.created_at, c.id) < (${cursor.t}, ${cursor.id})
       ORDER BY c.created_at DESC, c.id DESC

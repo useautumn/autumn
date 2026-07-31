@@ -34,10 +34,7 @@ const getEntityListFilterSql = ({
 	processors,
 	search,
 	customerId,
-	inStatuses,
-}: Omit<EntityListFilters, "plans"> & {
-	inStatuses: CusProductStatus[];
-}) => {
+}: Omit<EntityListFilters, "plans">) => {
 	const filters: SQL[] = [];
 
 	const trimmedCustomerId = customerId?.trim();
@@ -121,7 +118,6 @@ export const getPaginatedEntitySubjectsQuery = ({
 		processors: query.processors,
 		search: query.search,
 		customerId: query.customer_id,
-		inStatuses,
 	});
 
 	const plans = query.plans;
@@ -277,7 +273,6 @@ export const countFilteredEntitiesByOrgIdAndEnv = async ({
 		processors: query.processors,
 		search: query.search,
 		customerId: query.customerId,
-		inStatuses,
 	});
 
 	if (query.plans && query.plans.length > 0) {
