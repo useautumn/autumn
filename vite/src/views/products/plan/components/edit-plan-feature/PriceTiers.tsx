@@ -91,6 +91,7 @@ export function PriceTiers({
 			<div className="space-y-2">
 				<div className="flex gap-2 w-full items-center">
 					<CurrencyAmountInput
+						className="min-w-0 flex-1"
 						currencyCode={currency}
 						displayValue={amountDisplayValue(firstTier.amount)}
 						onRawChange={(raw) =>
