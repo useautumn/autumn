@@ -1,0 +1,197 @@
+import type {
+	AppEnv,
+	CustomerExportField,
+	CustomerExportSnapshot,
+	DbCustomerExport,
+} from "@autumn/shared";
+import { runs } from "@trigger.dev/sdk/v3";
+import type { DrizzleCli } from "@/db/initDrizzle.js";
+import { getCustomerExportsS3Config } from "@/external/aws/s3/customerExportsS3Config.js";
+import { abortS3MultipartUpload } from "@/external/aws/s3/s3MultipartUtils.js";
+import { headS3Object } from "@/external/aws/s3/s3ObjectUtils.js";
+import type { Logger } from "@/external/logtail/logtailUtils.js";
+import { CUSTOMER_EXPORT_MAX_DURATION_SECONDS } from "@/trigger/exports/customerExportQueue.js";
+import {
+	type CreateCustomerExportResult,
+	CustomerExportService,
+} from "./CustomerExportService.js";
+
+const HOUR_MS = 60 * 60 * 1000;
+// Fallback for rows without a trigger run id (inline dev runs): past every
+// possible runtime plus margin, the run cannot still be alive.
+const STALE_ACTIVE_EXPORT_AFTER_MS =
+	CUSTOMER_EXPORT_MAX_DURATION_SECONDS * 1000 + HOUR_MS;
+
+const isStaleActiveExport = ({
+	activeExport,
+}: {
+	activeExport: DbCustomerExport;
+}) => {
+	const lastProgressAt = activeExport.started_at ?? activeExport.created_at;
+	return Date.now() - lastProgressAt > STALE_ACTIVE_EXPORT_AFTER_MS;
+};
+
+const isNotFoundApiError = (error: unknown) =>
+	typeof error === "object" &&
+	error !== null &&
+	"status" in error &&
+	(error as { status: unknown }).status === 404;
+
+/** Unreachable run state means "maybe alive", so reclaim is skipped. */
+const isTriggerRunDead = async ({
+	triggerRunId,
+	logger,
+}: {
+	triggerRunId: string;
+	logger: Logger;
+}): Promise<boolean> => {
+	try {
+		const run = await runs.retrieve(triggerRunId);
+		return run.isCompleted;
+	} catch (error) {
+		if (isNotFoundApiError(error)) return true;
+		logger.warn(
+			"customer-export: could not check trigger run state; skipping reclaim",
+			{
+				data: {
+					triggerRunId,
+					error: error instanceof Error ? error.message : String(error),
+				},
+			},
+		);
+		return false;
+	}
+};
+
+/** A run id makes the run state authoritative; age only decides for runless rows. */
+const isAbandonedExport = async ({
+	activeExport,
+	logger,
+}: {
+	activeExport: DbCustomerExport;
+	logger: Logger;
+}): Promise<boolean> => {
+	if (activeExport.trigger_run_id) {
+		return await isTriggerRunDead({
+			triggerRunId: activeExport.trigger_run_id,
+			logger,
+		});
+	}
+	return isStaleActiveExport({ activeExport });
+};
+
+/**
+ * Promotes an export whose CSV was published but never recorded; otherwise
+ * aborts its leaked multipart upload and fails the row. Returns whether the
+ * active slot was freed.
+ */
+const resolveAbandonedExport = async ({
+	db,
+	logger,
+	activeExport,
+}: {
+	db: DrizzleCli;
+	logger: Logger;
+	activeExport: DbCustomerExport;
+}): Promise<boolean> => {
+	const { bucket, region } = getCustomerExportsS3Config();
+
+	if (activeExport.s3_key) {
+		let head: Awaited<ReturnType<typeof headS3Object>>;
+		try {
+			head = await headS3Object({ bucket, region, key: activeExport.s3_key });
+		} catch (error) {
+			// Unknown S3 state: failing the row now could discard a finished file.
+			logger.warn(
+				"customer-export: could not check export object; skipping reclaim",
+				{
+					data: {
+						exportId: activeExport.id,
+						error: error instanceof Error ? error.message : String(error),
+					},
+				},
+			);
+			return false;
+		}
+
+		if (head.exists) {
+			const promoted = await CustomerExportService.markCompleted({
+				db,
+				id: activeExport.id,
+				rowCount: null,
+				byteCount: head.contentLength,
+			});
+			if (promoted) {
+				logger.warn(
+					"customer-export: promoted abandoned export with a published file",
+					{ data: { exportId: activeExport.id } },
+				);
+			}
+			return promoted;
+		}
+
+		if (activeExport.s3_upload_id) {
+			await abortS3MultipartUpload({
+				bucket,
+				region,
+				key: activeExport.s3_key,
+				uploadId: activeExport.s3_upload_id,
+			}).catch((error) => {
+				logger.warn(
+					"customer-export: failed to abort abandoned multipart upload",
+					{
+						data: {
+							exportId: activeExport.id,
+							error: error instanceof Error ? error.message : String(error),
+						},
+					},
+				);
+			});
+		}
+	}
+
+	return await CustomerExportService.failIfStillActive({
+		db,
+		id: activeExport.id,
+		errorMessage: "Export was interrupted",
+		observed: {
+			status: activeExport.status,
+			startedAt: activeExport.started_at,
+		},
+	});
+};
+
+/** A dead run must not block the org forever: resolve it, then create again. */
+export const createExportReclaimingStale = async ({
+	db,
+	logger,
+	orgId,
+	env,
+	fields,
+	snapshot,
+	requestedByUserId,
+}: {
+	db: DrizzleCli;
+	logger: Logger;
+	orgId: string;
+	env: AppEnv;
+	fields: CustomerExportField[];
+	snapshot: CustomerExportSnapshot;
+	requestedByUserId?: string;
+}): Promise<CreateCustomerExportResult> => {
+	const createParams = { db, orgId, env, fields, snapshot, requestedByUserId };
+
+	const first = await CustomerExportService.create(createParams);
+	if (first.created || !first.activeExport) return first;
+
+	const { activeExport } = first;
+	if (!(await isAbandonedExport({ activeExport, logger }))) return first;
+
+	const resolved = await resolveAbandonedExport({ db, logger, activeExport });
+	if (!resolved) return first;
+
+	logger.warn("customer-export: reclaimed abandoned active export", {
+		data: { staleExportId: activeExport.id },
+	});
+	return await CustomerExportService.create(createParams);
+};
