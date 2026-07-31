@@ -8,8 +8,7 @@ import {
 import { tryRedisOp } from "@/external/redis/utils/runRedisOp.js";
 import { OrgService } from "../OrgService.js";
 
-/** Short by design: org config changes are also pushed through clearOrgCache, so
- *  this only has to bound the staleness window for anything that misses that. */
+/** Bounds staleness when proactive cache invalidation misses. */
 export const ORG_WITH_FEATURES_CACHE_TTL_SECONDS = 60;
 
 type OrgWithFeatures = NonNullable<
@@ -24,15 +23,18 @@ export const buildOrgWithFeaturesCacheKey = ({
 	env: AppEnv;
 }) => `org_with_features:${orgId}:${env}`;
 
-const isOrgWithFeaturesEnvelope = (value: unknown): value is OrgWithFeatures => {
-	if (typeof value !== "object" || value === null || Array.isArray(value)) {
-		return false;
-	}
-	const candidate = value as { org?: unknown; features?: unknown };
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+	typeof value === "object" && value !== null && !Array.isArray(value);
+
+const isOrgWithFeaturesEnvelope = (
+	value: unknown,
+): value is OrgWithFeatures => {
+	if (!isRecord(value) || !isRecord(value.org)) return false;
+
 	return (
-		typeof candidate.org === "object" &&
-		candidate.org !== null &&
-		Array.isArray(candidate.features)
+		typeof value.org.id === "string" &&
+		value.org.id.length > 0 &&
+		Array.isArray(value.features)
 	);
 };
 
@@ -121,20 +123,7 @@ export const clearOrgWithFeaturesCache = async ({
 	);
 };
 
-/**
- * Read-through cache around `OrgService.getWithFeatures`.
- *
- * Queue workers call this once per message and async `balances.track` enqueues
- * one message per API request, so the uncached path was running ~1,140 times a
- * second against Postgres — 3.08M lookups in 45 minutes, 8.4% of database time —
- * for a row that barely changes.
- *
- * Redis is strictly an accelerator: reads go through `tryRedisOp` (which
- * swallows failures) and a parse guard, so outages and corrupt entries read as
- * cache misses and fall through to Postgres. Only Postgres errors escape, and
- * `createWorkerContext` propagates those so queued jobs retry — `null` strictly
- * means the org does not exist.
- */
+/** Read-through cache; Redis failures and corrupt entries fall back to Postgres. */
 export const getOrgWithFeaturesCached = async ({
 	db,
 	orgId,
@@ -151,7 +140,12 @@ export const getOrgWithFeaturesCached = async ({
 		if (cached) return cached;
 	}
 
-	const fresh = await OrgService.getWithFeatures({ db, orgId, env });
+	const fresh = await OrgService.getWithFeatures({
+		db,
+		orgId,
+		env,
+		allowNotFound: true,
+	});
 	if (!fresh) return null;
 
 	await setCachedOrgWithFeatures({ orgId, env, data: fresh });
