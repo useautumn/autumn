@@ -62,7 +62,11 @@ export const useCusSearchQuery = () => {
 		placeholderData: keepPreviousData,
 	});
 
-	const { data: totalCount, isLoading: isCountLoading } = useQuery({
+	const {
+		data: totalCount,
+		isLoading: isCountLoading,
+		isError: isCountError,
+	} = useQuery({
 		queryKey: buildKey([
 			"customers-count",
 			queryStates.status,
@@ -86,6 +90,8 @@ export const useCusSearchQuery = () => {
 		nextCursor: data?.next_cursor ?? null,
 		totalCount: totalCount ?? 0,
 		isLoading: isLoading || isCountLoading,
+		// `totalCount` coalesces to 0, so callers need this to tell empty from failed.
+		isCountError,
 		error,
 		refetch,
 		isRefetching,

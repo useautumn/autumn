@@ -4,6 +4,7 @@ import type {
 	DownloadCustomerExportResponse,
 } from "@autumn/shared";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useCallback, useRef } from "react";
 import { toast } from "sonner";
 import { useQueryKeyFactory } from "@/hooks/common/useQueryKeyFactory";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
@@ -48,18 +49,29 @@ const isSubscribableToRealtime = (customerExport: CustomerExportResponse) =>
 
 const resolveExportsPollInterval = ({
 	customerExports,
+	isRealtimeDegraded,
 }: {
 	customerExports: CustomerExportResponse[];
+	isRealtimeDegraded: boolean;
 }) => {
 	const activeExports = customerExports.filter(isCustomerExportActive);
 	if (activeExports.length === 0) return false;
-	return activeExports.every(isSubscribableToRealtime)
+
+	const canRelyOnRealtime =
+		!isRealtimeDegraded && activeExports.every(isSubscribableToRealtime);
+	return canRelyOnRealtime
 		? REALTIME_SAFETY_NET_POLL_INTERVAL_MS
 		: ACTIVE_EXPORT_POLL_INTERVAL_MS;
 };
 
 /** Polls only while the sheet is open AND something is still queued or running. */
-export const useCustomerExportsQuery = ({ enabled }: { enabled: boolean }) => {
+export const useCustomerExportsQuery = ({
+	enabled,
+	isRealtimeDegraded = false,
+}: {
+	enabled: boolean;
+	isRealtimeDegraded?: boolean;
+}) => {
 	const axiosInstance = useAxiosInstance();
 	const buildKey = useQueryKeyFactory();
 
@@ -74,8 +86,11 @@ export const useCustomerExportsQuery = ({ enabled }: { enabled: boolean }) => {
 		},
 		refetchInterval: (query) => {
 			const customerExports = query.state.data;
-			if (!enabled || !customerExports) return false;
-			return resolveExportsPollInterval({ customerExports });
+			if (!customerExports) return false;
+			return resolveExportsPollInterval({
+				customerExports,
+				isRealtimeDegraded,
+			});
 		},
 	});
 };
@@ -84,12 +99,14 @@ export const useCustomerExportsQuery = ({ enabled }: { enabled: boolean }) => {
 export const useInvalidateCustomerExports = () => {
 	const queryClient = useQueryClient();
 	const buildKey = useQueryKeyFactory();
+	// The key factory rebuilds its array every render, so read it through a ref to
+	// keep the returned callback stable for effect dependencies.
+	const queryKeyRef = useRef(buildKey([CUSTOMER_EXPORTS_QUERY_KEY]));
+	queryKeyRef.current = buildKey([CUSTOMER_EXPORTS_QUERY_KEY]);
 
-	return () => {
-		queryClient.invalidateQueries({
-			queryKey: buildKey([CUSTOMER_EXPORTS_QUERY_KEY]),
-		});
-	};
+	return useCallback(() => {
+		queryClient.invalidateQueries({ queryKey: queryKeyRef.current });
+	}, [queryClient]);
 };
 
 export const useCreateCustomerExport = () => {

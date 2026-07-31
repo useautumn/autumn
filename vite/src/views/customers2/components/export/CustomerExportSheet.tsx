@@ -4,6 +4,7 @@ import {
 } from "@autumn/shared";
 import { Sheet, SheetContent, ShortcutButton } from "@autumn/ui";
 import { useStore } from "@tanstack/react-form";
+import { type ReactNode, useEffect, useState } from "react";
 import { toast } from "sonner";
 import { z } from "zod/v4";
 import {
@@ -38,21 +39,28 @@ const CustomerExportFormSchema = z.object({
 
 function buildExportDescription({
 	isFilteredExport,
-	filteredCount,
 	exportTotalCount,
 }: {
 	isFilteredExport: boolean;
-	filteredCount: number | undefined;
 	exportTotalCount: number | undefined;
 }) {
 	if (isFilteredExport) {
-		if (filteredCount === undefined) {
+		if (exportTotalCount === undefined) {
 			return "Exports customers matching your current search and filters.";
 		}
-		return `Exports the ${filteredCount.toLocaleString()} customers matching your current search and filters.`;
+		return `Exports the ${exportTotalCount.toLocaleString()} customers matching your current search and filters.`;
 	}
 	if (exportTotalCount === undefined) return "Exports all customers.";
 	return `Exports all ${exportTotalCount.toLocaleString()} customers.`;
+}
+
+/** `output` carries an implicit status role, so late-appearing notices are announced. */
+function SheetNotice({ children }: { children: ReactNode }) {
+	return (
+		<output className="mx-4 mt-2 block rounded-lg bg-amber-500/10 px-3 py-2 text-amber-600 text-xs dark:text-amber-500">
+			{children}
+		</output>
+	);
 }
 
 export function CustomerExportSheet({
@@ -63,8 +71,13 @@ export function CustomerExportSheet({
 	onOpenChange: (open: boolean) => void;
 }) {
 	const { queryStates } = useCustomerFilters();
-	const { totalCount, isLoading: isFilteredCountLoading } = useCusSearchQuery();
+	const {
+		totalCount,
+		isLoading: isFilteredCountLoading,
+		isCountError: isFilteredCountError,
+	} = useCusSearchQuery();
 	const createExport = useCreateCustomerExport();
+	const invalidateExports = useInvalidateCustomerExports();
 	const trimmedSearch = queryStates.q.trim();
 	const hasActiveFilters = hasActiveCustomerFilters(queryStates);
 	const hasFilters = hasActiveFilters || Boolean(trimmedSearch);
@@ -91,6 +104,8 @@ export function CustomerExportSheet({
 				});
 				toast.success("Export started");
 			} catch (error) {
+				// A 409 means the server found a genuinely active export the list has not caught up with.
+				invalidateExports();
 				toast.error(getBackendErr(error, "Failed to start export"));
 			}
 		},
@@ -99,35 +114,43 @@ export function CustomerExportSheet({
 		form.store,
 		(state) => state.values.restrictToCurrentFilters,
 	);
+	const [isRealtimeDegraded, setIsRealtimeDegraded] = useState(false);
 	const { data: customerExports, isLoading } = useCustomerExportsQuery({
 		enabled: open,
+		isRealtimeDegraded,
 	});
 	const isFilteredExport = hasFilters && restrictToCurrentFilters;
 	const activeExport = (customerExports ?? []).find(isCustomerExportActive);
-	const invalidateExports = useInvalidateCustomerExports();
 
-	const { data: unfilteredTotalCount } = useUnfilteredCustomerCountQuery({
+	const {
+		data: unfilteredTotalCount,
+		isLoading: isUnfilteredCountLoading,
+		isError: isUnfilteredCountError,
+	} = useUnfilteredCustomerCountQuery({
 		enabled: open && hasFilters,
 	});
 
 	const ignoresActiveFilters = hasFilters && !restrictToCurrentFilters;
-	const exportTotalCount = ignoresActiveFilters
+	const isExportCountLoading = ignoresActiveFilters
+		? isUnfilteredCountLoading
+		: isFilteredCountLoading;
+	const isExportCountErrored = ignoresActiveFilters
+		? isUnfilteredCountError
+		: isFilteredCountError;
+	const hasExportCount = !(isExportCountLoading || isExportCountErrored);
+	const scopedTotalCount = ignoresActiveFilters
 		? unfilteredTotalCount
 		: totalCount;
-	const exportCountReady = ignoresActiveFilters
-		? unfilteredTotalCount !== undefined
-		: !isFilteredCountLoading;
-	const hasNothingToExport = exportCountReady && exportTotalCount === 0;
+	// A failed count must not read as an empty one, so it stays undefined.
+	const exportTotalCount = hasExportCount ? scopedTotalCount : undefined;
+	const hasNothingToExport = exportTotalCount === 0;
 
-	const handleOpenChange = (nextOpen: boolean) => {
-		if (!nextOpen) {
-			form.setFieldValue("restrictToCurrentFilters", true);
-		}
-		onOpenChange(nextOpen);
-	};
+	useEffect(() => {
+		form.reset();
+	}, [open, form]);
 
 	return (
-		<Sheet open={open} onOpenChange={handleOpenChange}>
+		<Sheet open={open} onOpenChange={onOpenChange}>
 			<SheetContent className="flex flex-col overflow-hidden">
 				<LayoutGroup>
 					<div className="flex h-full flex-col overflow-hidden">
@@ -136,9 +159,6 @@ export function CustomerExportSheet({
 								title="Export customers"
 								description={buildExportDescription({
 									isFilteredExport,
-									filteredCount: isFilteredCountLoading
-										? undefined
-										: totalCount,
 									exportTotalCount,
 								})}
 							/>
@@ -177,35 +197,42 @@ export function CustomerExportSheet({
 
 							<SheetSection title="Recent exports" withSeparator={false}>
 								<LiveCustomerExportJobList
-									key={activeExport?.trigger_run_id ?? "no-realtime-run"}
 									customerExports={customerExports ?? []}
 									activeExport={activeExport}
 									isLoading={isLoading}
 									onExportComplete={invalidateExports}
+									onRealtimeDegradedChange={setIsRealtimeDegraded}
 								/>
 							</SheetSection>
 						</div>
 
 						{activeExport ? (
-							<p className="mx-4 mt-2 rounded-lg bg-amber-500/10 px-3 py-2 text-amber-600 text-xs dark:text-amber-500">
-								An export is already {activeExport.status}. Wait for it to
-								finish before starting another.
-							</p>
+							<SheetNotice>
+								An export is already {activeExport.status}. Starting another one
+								will be rejected until it finishes.
+							</SheetNotice>
+						) : null}
+
+						{isExportCountErrored ? (
+							<SheetNotice>
+								Couldn&apos;t load customer counts. You can still start the
+								export.
+							</SheetNotice>
 						) : null}
 
 						{hasNothingToExport ? (
-							<p className="mx-4 mt-2 rounded-lg bg-amber-500/10 px-3 py-2 text-amber-600 text-xs dark:text-amber-500">
+							<SheetNotice>
 								{isFilteredExport
 									? "No customers match your current search and filters. Untick the option above to export everyone."
 									: "There are no customers to export."}
-							</p>
+							</SheetNotice>
 						) : null}
 
 						<SheetFooter>
 							<ShortcutButton
 								variant="secondary"
 								className="w-full"
-								onClick={() => handleOpenChange(false)}
+								onClick={() => onOpenChange(false)}
 								singleShortcut="escape"
 							>
 								Cancel
@@ -219,9 +246,8 @@ export function CustomerExportSheet({
 										isLoading={createExport.isPending}
 										disabled={
 											!canSubmit ||
-											Boolean(activeExport) ||
 											hasNothingToExport ||
-											!exportCountReady ||
+											isExportCountLoading ||
 											isLoading
 										}
 										metaShortcut="enter"

@@ -15,7 +15,7 @@ export function useCustomerExportRealtime({
 }: {
 	customerExport: CustomerExportResponse | undefined;
 	onComplete: () => void;
-}): CustomerExportProgress | null {
+}): { progress: CustomerExportProgress | null; isErrored: boolean } {
 	const triggerRunId = customerExport?.trigger_run_id ?? undefined;
 	const publicAccessToken = customerExport?.public_access_token ?? undefined;
 	// Without a token the underlying api client throws, so it must stay disabled.
@@ -28,8 +28,11 @@ export function useCustomerExportRealtime({
 		onComplete,
 	});
 
-	// A dropped subscription falls back to the polled snapshot.
-	if (error) return null;
+	// The hook never recovers on its own; callers remount this to resubscribe.
+	if (error) return { progress: null, isErrored: true };
 
-	return runMetadataToCustomerExportProgress({ metadata: run?.metadata });
+	return {
+		progress: runMetadataToCustomerExportProgress({ metadata: run?.metadata }),
+		isErrored: false,
+	};
 }

@@ -4,6 +4,7 @@ import {
 	type CustomerExportField,
 } from "@autumn/shared";
 import { Button, Checkbox } from "@autumn/ui";
+import { useId } from "react";
 
 export function CustomerExportFieldSelector({
 	selectedFields,
@@ -14,6 +15,8 @@ export function CustomerExportFieldSelector({
 	onChange: (fields: CustomerExportField[]) => void;
 	errorMessage?: string;
 }) {
+	const fieldIdPrefix = useId();
+
 	const toggleField = ({
 		field,
 		checked,
@@ -21,9 +24,13 @@ export function CustomerExportFieldSelector({
 		field: CustomerExportField;
 		checked: boolean;
 	}) => {
+		// Selection order is what the CSV and the job list badges render in.
 		onChange(
 			checked
-				? [...selectedFields, field]
+				? CUSTOMER_EXPORT_FIELD_ORDER.filter(
+						(candidate) =>
+							candidate === field || selectedFields.includes(candidate),
+					)
 				: selectedFields.filter((selected) => selected !== field),
 		);
 	};
@@ -54,7 +61,7 @@ export function CustomerExportFieldSelector({
 
 			<div className="flex flex-col gap-1">
 				{CUSTOMER_EXPORT_FIELD_ORDER.map((field) => {
-					const checkboxId = `customer-export-field-${field}`;
+					const checkboxId = `${fieldIdPrefix}-${field}`;
 					return (
 						<label
 							key={field}

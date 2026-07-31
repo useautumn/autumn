@@ -220,12 +220,7 @@ export function CustomerListTable({
 				{!hasRows && hasActiveFiltersOrSearch && !isFetchingUncached ? (
 					<EmptyState
 						type="no-customers-found"
-						actionButton={
-							<div className="flex items-center gap-2">
-								<CustomerListCreateButton />
-								<CustomerListExportMenu />
-							</div>
-						}
+						actionButton={<CustomerListCreateButton />}
 					/>
 				) : (
 					<Table.Container>
