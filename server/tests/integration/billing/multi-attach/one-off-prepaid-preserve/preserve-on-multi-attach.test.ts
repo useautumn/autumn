@@ -1,17 +1,4 @@
-/**
- * TDD test for auto-preservation of one-off prepaid balances on multiAttach
- * transitions.
- *
- * Contract under test:
- *   When billing.multiAttach replaces an existing main customer product that
- *   holds a one-off prepaid customer_entitlement with balance > 0, the
- *   remaining units are auto-preserved as a lifetime cusEnt on the new product.
- *
- * Pre-impl red: balance after multiAttach reflects only the new plan's
- *   contributions (preserved units dropped when the outgoing cusProduct expires).
- * Post-impl green: cusProductToOneOffPrepaidCarryOvers is invoked from the
- *   common immediateMultiProduct compute path, mirroring the attach pipeline.
- */
+/** Multi-attach preserves prepaid balances from every replaced plan. */
 
 import { test } from "bun:test";
 import type { ApiCustomerV3 } from "@autumn/shared";
@@ -79,6 +66,80 @@ test.concurrent(
 			customer,
 			featureId: TestFeature.Messages,
 			balance: 650,
+			usage: 0,
+		});
+	},
+);
+
+test.concurrent(
+	`${chalk.yellowBright("one-off-preserve multiAttach 2: plural replacements preserve every outgoing prepaid balance")}`,
+	async () => {
+		const customerId = "one-off-preserve-multi-attach-plural";
+		const existingMessages = products.pro({
+			id: "existing-messages-ma",
+			items: [items.oneOffMessages()],
+		});
+		const existingWords = products.base({
+			id: "existing-words-ma",
+			group: "words-group-ma",
+			items: [items.monthlyPrice({ price: 15 }), items.oneOffWords()],
+		});
+		const replacementMessages = products.premium({
+			id: "replacement-messages-ma",
+			items: [items.monthlyMessages({ includedUsage: 500 })],
+		});
+		const replacementWords = products.base({
+			id: "replacement-words-ma",
+			group: "words-group-ma",
+			items: [
+				items.monthlyPrice({ price: 30 }),
+				items.monthlyWords({ includedUsage: 600 }),
+			],
+		});
+		const { autumnV1, autumnV2_2 } = await initScenario({
+			customerId,
+			setup: [
+				s.customer({ paymentMethod: "success" }),
+				s.products({
+					list: [
+						existingMessages,
+						existingWords,
+						replacementMessages,
+						replacementWords,
+					],
+				}),
+			],
+			actions: [
+				s.attach({
+					productId: existingMessages.id,
+					options: [{ feature_id: TestFeature.Messages, quantity: 200 }],
+				}),
+				s.attach({
+					productId: existingWords.id,
+					options: [{ feature_id: TestFeature.Words, quantity: 300 }],
+				}),
+			],
+		});
+
+		await autumnV2_2.billing.multiAttach({
+			customer_id: customerId,
+			plans: [
+				{ plan_id: replacementMessages.id },
+				{ plan_id: replacementWords.id },
+			],
+		});
+
+		const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
+		expectCustomerFeatureCorrect({
+			customer,
+			featureId: TestFeature.Messages,
+			balance: 700,
+			usage: 0,
+		});
+		expectCustomerFeatureCorrect({
+			customer,
+			featureId: TestFeature.Words,
+			balance: 900,
 			usage: 0,
 		});
 	},

@@ -10,6 +10,7 @@ import { expectNoStripeSubscription } from "@tests/integration/billing/utils/exp
 import { expectStripeSubscriptionCorrect } from "@tests/integration/billing/utils/expectStripeSubCorrect";
 import { expectSubCount } from "@tests/merged/mergeUtils/expectSubCorrect";
 import { TestFeature } from "@tests/setup/v2Features";
+import { expectAutumnError } from "@tests/utils/expectUtils/expectErrUtils";
 import { items } from "@tests/utils/fixtures/items";
 import { products } from "@tests/utils/fixtures/products";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
@@ -287,5 +288,62 @@ test.concurrent(
 			});
 		}
 		await expectStripeSubscriptionCorrect({ ctx, customerId });
+	},
+);
+
+test.concurrent(
+	`${chalk.yellowBright("create-schedule immediate multi-plan: rejects scopes on separate subscriptions")}`,
+	async () => {
+		const base = products.base({
+			id: "separate-sub-base",
+			items: [items.monthlyPrice({ price: 10 })],
+		});
+		const addOn = products.recurringAddOn({
+			id: "separate-sub-addon",
+			items: [items.monthlyWords()],
+		});
+		const { customerId, autumnV1, entities, ctx } = await initScenario({
+			customerId: "cs-immediate-separate-sub-scopes",
+			setup: [
+				s.customer({ paymentMethod: "success" }),
+				s.products({ list: [base, addOn] }),
+				s.entities({ count: 2, featureId: TestFeature.Users }),
+			],
+			actions: [
+				s.billing.attach({ productId: base.id, entityIndex: 0 }),
+				s.billing.attach({
+					productId: base.id,
+					entityIndex: 1,
+					newBillingSubscription: true,
+				}),
+			],
+		});
+
+		await expectAutumnError({
+			errMessage: "multiple existing subscriptions",
+			func: () =>
+				autumnV1.billing.createSchedule(
+					immediateSchedule({
+						customerId,
+						plans: entities.map((entity) => ({
+							plan_id: addOn.id,
+							entity_id: entity.id,
+						})),
+					}),
+				),
+		});
+
+		for (const entity of entities) {
+			const scopedCustomer = await autumnV1.entities.get<ApiEntityV0>(
+				customerId,
+				entity.id,
+			);
+			await expectCustomerProducts({
+				customer: scopedCustomer,
+				active: [base.id],
+				notPresent: [addOn.id],
+			});
+		}
+		await expectSubCount({ ctx, customerId, count: 2 });
 	},
 );
