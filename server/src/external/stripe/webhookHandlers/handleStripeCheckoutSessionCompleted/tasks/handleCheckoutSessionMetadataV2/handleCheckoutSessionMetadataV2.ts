@@ -5,6 +5,7 @@ import {
 } from "@autumn/shared";
 import type { CheckoutSessionCompletedContext } from "@/external/stripe/webhookHandlers/handleStripeCheckoutSessionCompleted/setupCheckoutSessionCompletedContext";
 import { createStripeScheduleFromCheckout } from "@/external/stripe/webhookHandlers/handleStripeCheckoutSessionCompleted/tasks/handleCheckoutSessionEnabledImmediately/createStripeScheduleFromCheckout";
+import { matchOptionalInvoiceItemsToProducts } from "@/external/stripe/webhookHandlers/handleStripeCheckoutSessionCompleted/tasks/handleCheckoutSessionMetadataV2/matchOptionalInvoiceItemsToProducts";
 import { modifyStripeSubscriptionFromCheckout } from "@/external/stripe/webhookHandlers/handleStripeCheckoutSessionCompleted/tasks/handleCheckoutSessionMetadataV2/modifyStripeSubscriptionFromCheckout";
 import { syncSubscriptionItemMetadataFromCheckout } from "@/external/stripe/webhookHandlers/handleStripeCheckoutSessionCompleted/tasks/handleCheckoutSessionMetadataV2/syncSubscriptionItemMetadataFromCheckout";
 import { updateBillingPlanFromCheckout } from "@/external/stripe/webhookHandlers/handleStripeCheckoutSessionCompleted/tasks/handleCheckoutSessionMetadataV2/updateBillingPlanFromCheckout";
@@ -85,6 +86,18 @@ const executeCheckoutSessionMetadataV2 = async ({
 		checkoutContext,
 		deferredData,
 	});
+
+	// 2b. Fold in Stripe Checkout "optional items" the caller didn't request via
+	// plan_id but the customer selected and paid for.
+	const optionalItemProducts = await matchOptionalInvoiceItemsToProducts({
+		ctx,
+		checkoutContext,
+		autumnBillingPlan: updatedDeferredData.billingPlan.autumn,
+		fullCustomer: updatedDeferredData.billingContext.fullCustomer,
+	});
+	updatedDeferredData.billingPlan.autumn.insertCustomerProducts.push(
+		...optionalItemProducts,
+	);
 
 	// 3. Modify Stripe subscription to include other interval prices / 0 quantity prices
 	await modifyStripeSubscriptionFromCheckout({
