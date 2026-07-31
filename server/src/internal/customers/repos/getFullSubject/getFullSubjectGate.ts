@@ -10,6 +10,11 @@ const GATE_LOG_WAIT_MS_THRESHOLD = 50;
 const LIMITER_CACHE_MAX = 5000;
 const LIMITER_CACHE_TTL_MS = 30 * 60 * 1000;
 
+// Seed keeps cold processes from over-rejecting before real samples arrive.
+const SERVICE_TIME_EWMA_SEED_MS = 100;
+const SERVICE_TIME_EWMA_ALPHA = 0.2;
+let ewmaServiceMs = SERVICE_TIME_EWMA_SEED_MS;
+
 const perCustomerLimiters = new LRUCache<string, LimitFunction>({
 	max: LIMITER_CACHE_MAX,
 	ttl: LIMITER_CACHE_TTL_MS,
@@ -54,6 +59,9 @@ const getCustomerLimiter = ({
 		`${orgId}:${env}:${customerId}`,
 		limit,
 	);
+
+const predictedWaitMs = (limiter: LimitFunction): number =>
+	(limiter.pendingCount / Math.max(1, limiter.concurrency)) * ewmaServiceMs;
 
 const getOrgLimiter = ({
 	orgId,
@@ -103,6 +111,7 @@ const GATE_REJECTION_REASONS = [
 	"per_customer_queue_full",
 	"per_org_queue_full",
 	"wait_timeout",
+	"predicted_wait_timeout",
 ] as const;
 type GateRejectionReason = (typeof GATE_REJECTION_REASONS)[number];
 const gateRejectionReasonSet: ReadonlySet<string> = new Set(
@@ -201,6 +210,15 @@ export const runWithFullSubjectGate = async <T>({
 		rejectOverloaded({ reason: "per_org_queue_full", labels });
 	}
 
+	// Fast-shed: a queue predicted (via EWMA service time) not to drain within
+	// max_wait_ms would only hold the request until the dequeue-time 429.
+	const enqueuePredictedWaitMs = customerLimiter
+		? Math.max(predictedWaitMs(customerLimiter), predictedWaitMs(orgLimiter))
+		: predictedWaitMs(orgLimiter);
+	if (enqueuePredictedWaitMs >= max_wait_ms) {
+		rejectOverloaded({ reason: "predicted_wait_timeout", labels });
+	}
+
 	startedCounter.add(1, labels);
 
 	const execute = async (): Promise<T> => {
@@ -215,12 +233,17 @@ export const runWithFullSubjectGate = async <T>({
 			);
 		}
 		activeCounter.add(1, labels);
+		const serviceStartedAt = Date.now();
 		try {
 			return await queryFn();
 		} catch (error) {
 			failedCounter.add(1, labels);
 			throw error;
 		} finally {
+			const serviceMs = Date.now() - serviceStartedAt;
+			ewmaServiceMs =
+				SERVICE_TIME_EWMA_ALPHA * serviceMs +
+				(1 - SERVICE_TIME_EWMA_ALPHA) * ewmaServiceMs;
 			activeCounter.add(-1, labels);
 			completedCounter.add(1, labels);
 		}
@@ -236,3 +259,9 @@ export const runWithFullSubjectGate = async <T>({
 	}
 	return orgLimiter(execute);
 };
+
+export const _setFullSubjectGateEwmaForTesting = (valueMs: number): void => {
+	ewmaServiceMs = valueMs;
+};
+
+export const _getFullSubjectGateEwmaForTesting = (): number => ewmaServiceMs;

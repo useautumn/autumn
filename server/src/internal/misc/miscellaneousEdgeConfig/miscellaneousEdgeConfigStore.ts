@@ -63,3 +63,7 @@ export const isSubjectLookupDbOnlyEnabled = (): boolean =>
 /** Global gate: fall back to Postgres on Redis outage instead of shedding. */
 export const isRedisFallbackToDbEnabled = (): boolean =>
 	store.get().redisFallbackToDb;
+
+/** In-process L1 TTL for pure-GET subject reads; 0 = kill switch. */
+export const getSubjectReadL1TtlMs = (): number =>
+	store.get().subjectReadL1TtlMs;

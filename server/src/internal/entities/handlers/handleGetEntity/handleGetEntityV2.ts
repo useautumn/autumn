@@ -7,6 +7,7 @@ import {
 import { shed503OnTransientError } from "@/db/shed503OnTransientError.js";
 import { createRoute } from "@/honoMiddlewares/routeHandler.js";
 import { applySubjectLookupDbOnly } from "@/internal/misc/miscellaneousEdgeConfig/applySubjectLookupDbOnly.js";
+import { getSubjectReadL1TtlMs } from "@/internal/misc/miscellaneousEdgeConfig/miscellaneousEdgeConfigStore.js";
 import { findCustomerForEntity } from "../../actions/findCustomer.js";
 import { getApiEntityByRollout } from "../../actions/getApiEntityByRollout.js";
 
@@ -43,6 +44,7 @@ export const handleGetEntityV2 = createRoute({
 			customerId: customerId,
 			entityId: entityId,
 			source: "handleGetEntityV2",
+			l1TtlMs: getSubjectReadL1TtlMs(),
 		});
 
 		return c.json(apiEntity);

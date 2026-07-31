@@ -8,6 +8,7 @@ import {
 } from "@autumn/shared";
 import { createRoute } from "@/honoMiddlewares/routeHandler.js";
 import { applySubjectLookupDbOnly } from "@/internal/misc/miscellaneousEdgeConfig/applySubjectLookupDbOnly.js";
+import { getSubjectReadL1TtlMs } from "@/internal/misc/miscellaneousEdgeConfig/miscellaneousEdgeConfigStore.js";
 import { getApiCustomerByRollout } from "../actions/getApiCustomerByRollout.js";
 
 export const handleGetCustomerV3 = createRoute({
@@ -36,6 +37,7 @@ export const handleGetCustomerV3 = createRoute({
 			customerId,
 			source: "handleGetCustomerV3",
 			withAutumnId: with_autumn_id,
+			l1TtlMs: getSubjectReadL1TtlMs(),
 		});
 
 		const duration = Date.now() - start;

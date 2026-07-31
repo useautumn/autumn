@@ -55,10 +55,13 @@ export const logRequestResult = async ({
 		}
 
 		const isSuccess = statusCode >= 200 && statusCode < 300;
-		const isHighVolumeSuccess =
-			isSuccess && HIGH_VOLUME_SUCCESS_ROUTES.has(c.req.path);
+		// 429 floods on hot routes out-cost the successes they throttle, so they
+		// share the success sample rate; 5xx and other statuses stay fully logged.
+		const isSampledStatus = isSuccess || statusCode === 429;
+		const isHighVolumeSampled =
+			isSampledStatus && HIGH_VOLUME_SUCCESS_ROUTES.has(c.req.path);
 
-		if (isHighVolumeSuccess && !shouldSampleSuccessLog()) {
+		if (isHighVolumeSampled && !shouldSampleSuccessLog()) {
 			return;
 		}
 

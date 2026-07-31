@@ -1,4 +1,4 @@
-import { describe, expect, test } from "bun:test";
+import { describe, expect, spyOn, test } from "bun:test";
 import type { Context } from "hono";
 import type { Logger } from "@/external/logtail/logtailUtils.js";
 import { logRequestResult } from "@/honoMiddlewares/requestLogging/logRequestResult.js";
@@ -300,6 +300,105 @@ describe("logRequestResult", () => {
 		expect(captured[0]?.args[1]).toEqual({
 			statusCode: 500,
 			durationMs: 40,
+			res: JSON.stringify(responseBody),
+		});
+	});
+
+	test("skips a 429 on a high volume route when the sampler says no", async () => {
+		const captured: CapturedLog[] = [];
+		let cloneCount = 0;
+		const ctx = {
+			timestamp: 123,
+			logger: createCapturingLogger({ captured }),
+			extraLogs: {},
+			org: { slug: "test-org" },
+		} as unknown as AutumnContext;
+		const c = {
+			req: { path: "/v1/check" },
+			res: {
+				status: 429,
+				headers: new Headers({ "content-type": "application/json" }),
+				clone: () => {
+					cloneCount++;
+					return { json: async () => ({ code: "rate_limited" }) };
+				},
+			},
+		} as unknown as Context<HonoEnv>;
+
+		// Rate is memoized at 1, so force sample-out via Math.random() = 1 (1 < 1 fails).
+		const randomSpy = spyOn(Math, "random").mockReturnValue(1);
+		try {
+			await logRequestResult({ ctx, c, durationMs: 5 });
+		} finally {
+			randomSpy.mockRestore();
+		}
+
+		expect(captured).toHaveLength(0);
+		expect(cloneCount).toBe(0);
+	});
+
+	test("always logs a 429 on a non high volume route", async () => {
+		const captured: CapturedLog[] = [];
+		const responseBody = { code: "rate_limited", message: "Too many requests" };
+		const ctx = {
+			timestamp: 123,
+			logger: createCapturingLogger({ captured }),
+			extraLogs: {},
+			org: { slug: "test-org" },
+		} as unknown as AutumnContext;
+		const c = {
+			req: { path: "/v1/attach" },
+			res: {
+				status: 429,
+				headers: new Headers({ "content-type": "application/json" }),
+			},
+		} as Context<HonoEnv>;
+
+		const randomSpy = spyOn(Math, "random").mockReturnValue(1);
+		try {
+			await logRequestResult({ ctx, c, durationMs: 5, responseBody });
+		} finally {
+			randomSpy.mockRestore();
+		}
+
+		expect(captured).toHaveLength(1);
+		expect(captured[0]?.level).toBe("warn");
+		expect(captured[0]?.args[1]).toEqual({
+			statusCode: 429,
+			durationMs: 5,
+			res: JSON.stringify(responseBody),
+		});
+	});
+
+	test("always logs a 500 on a high volume route", async () => {
+		const captured: CapturedLog[] = [];
+		const responseBody = { code: "internal_error", message: "boom" };
+		const ctx = {
+			timestamp: 123,
+			logger: createCapturingLogger({ captured }),
+			extraLogs: {},
+			org: { slug: "test-org" },
+		} as unknown as AutumnContext;
+		const c = {
+			req: { path: "/v1/check" },
+			res: {
+				status: 500,
+				headers: new Headers({ "content-type": "application/json" }),
+			},
+		} as Context<HonoEnv>;
+
+		const randomSpy = spyOn(Math, "random").mockReturnValue(1);
+		try {
+			await logRequestResult({ ctx, c, durationMs: 5, responseBody });
+		} finally {
+			randomSpy.mockRestore();
+		}
+
+		expect(captured).toHaveLength(1);
+		expect(captured[0]?.level).toBe("warn");
+		expect(captured[0]?.args[1]).toEqual({
+			statusCode: 500,
+			durationMs: 5,
 			res: JSON.stringify(responseBody),
 		});
 	});

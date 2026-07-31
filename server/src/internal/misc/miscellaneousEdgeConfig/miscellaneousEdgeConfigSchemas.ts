@@ -12,6 +12,9 @@ export const MiscellaneousEdgeConfigSchema = z.object({
 	 *  Postgres instead of shedding a 503. Dark by default — turning this on
 	 *  converts a cache outage into full primary read load. */
 	redisFallbackToDb: z.boolean().default(false),
+	/** In-process L1 TTL (ms) for pure-GET subject reads; 0 disables the L1
+	 *  and its singleflight coalescing entirely. */
+	subjectReadL1TtlMs: z.number().default(1000),
 });
 
 export type MiscellaneousEdgeConfig = z.infer<
