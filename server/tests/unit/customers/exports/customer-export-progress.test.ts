@@ -26,6 +26,29 @@ describe("runMetadataToCustomerExportProgress", () => {
 		).toBe(null);
 	});
 
+	it("returns null when the total is not finite", () => {
+		for (const total of [Number.NaN, Number.POSITIVE_INFINITY]) {
+			expect(
+				runMetadataToCustomerExportProgress({
+					metadata: { [CUSTOMER_EXPORT_TOTAL_ROWS_KEY]: total },
+				}),
+			).toBe(null);
+		}
+	});
+
+	it("treats a non-finite processed counter as zero", () => {
+		for (const processed of [Number.NaN, Number.POSITIVE_INFINITY]) {
+			expect(
+				runMetadataToCustomerExportProgress({
+					metadata: {
+						[CUSTOMER_EXPORT_TOTAL_ROWS_KEY]: 1000,
+						[CUSTOMER_EXPORT_PROCESSED_ROWS_KEY]: processed,
+					},
+				}),
+			).toEqual({ processed_rows: 0, total_rows: 1000 });
+		}
+	});
+
 	it("defaults processed to zero before any worker reports", () => {
 		expect(
 			runMetadataToCustomerExportProgress({

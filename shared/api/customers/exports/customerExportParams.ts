@@ -59,10 +59,18 @@ export const runMetadataToCustomerExportProgress = ({
 	metadata: Record<string, unknown> | undefined;
 }): CustomerExportProgress | null => {
 	const totalRows = metadata?.[CUSTOMER_EXPORT_TOTAL_ROWS_KEY];
-	if (typeof totalRows !== "number" || totalRows < 0) return null;
+	if (
+		typeof totalRows !== "number" ||
+		!Number.isFinite(totalRows) ||
+		totalRows < 0
+	)
+		return null;
 
 	const processedRaw = metadata?.[CUSTOMER_EXPORT_PROCESSED_ROWS_KEY];
-	const processedRows = typeof processedRaw === "number" ? processedRaw : 0;
+	const processedRows =
+		typeof processedRaw === "number" && Number.isFinite(processedRaw)
+			? processedRaw
+			: 0;
 
 	return {
 		processed_rows: Math.min(Math.max(processedRows, 0), totalRows),
