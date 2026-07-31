@@ -2,16 +2,13 @@ import {
 	CUSTOMER_EXPORT_FIELD_ORDER,
 	CustomerExportFieldSchema,
 } from "@autumn/shared";
-import {
-	Button,
-	Sheet,
-	SheetContent,
-	SheetDescription,
-	SheetHeader,
-	SheetTitle,
-} from "@autumn/ui";
+import { Button, Sheet, SheetContent } from "@autumn/ui";
 import { toast } from "sonner";
 import { z } from "zod/v4";
+import {
+	SheetHeader,
+	SheetSection,
+} from "@/components/v2/sheets/SharedSheetComponents";
 import { useAppForm } from "@/hooks/form/form";
 import { getBackendErr } from "@/utils/genUtils";
 import { useCusSearchQuery } from "@/views/customers/hooks/useCusSearchQuery";
@@ -75,67 +72,68 @@ export function CustomerExportSheet({
 
 	return (
 		<Sheet open={open} onOpenChange={onOpenChange}>
-			<SheetContent className="flex flex-col overflow-hidden bg-background sm:max-w-lg">
-				<SheetHeader>
-					<SheetTitle>Export customers</SheetTitle>
-					<SheetDescription>
-						{hasFilters
+			<SheetContent className="flex flex-col overflow-hidden">
+				<SheetHeader
+					title="Export customers"
+					description={
+						hasFilters
 							? `Exports the ${totalCount.toLocaleString()} customers matching your current search and filters.`
-							: `Exports all ${totalCount.toLocaleString()} customers.`}
-					</SheetDescription>
-				</SheetHeader>
+							: `Exports all ${totalCount.toLocaleString()} customers.`
+					}
+				/>
 
-				<div className="flex flex-1 flex-col gap-6 overflow-y-auto px-4 pb-4">
+				<div className="flex flex-1 flex-col overflow-y-auto">
 					<form
-						className="flex flex-col gap-4"
 						onSubmit={(event) => {
 							event.preventDefault();
 							form.handleSubmit();
 						}}
 					>
-						<form.Field name="fields">
-							{(field) => (
-								<CustomerExportFieldSelector
-									selectedFields={field.state.value}
-									onChange={(fields) => field.handleChange(fields)}
-									errorMessage={
-										field.state.meta.errors.length > 0
-											? (field.state.meta.errors[0]?.message ??
-												"Select at least one column.")
-											: undefined
-									}
-								/>
-							)}
-						</form.Field>
+						<SheetSection>
+							<form.Field name="fields">
+								{(field) => (
+									<CustomerExportFieldSelector
+										selectedFields={field.state.value}
+										onChange={(fields) => field.handleChange(fields)}
+										errorMessage={
+											field.state.meta.errors.length > 0
+												? (field.state.meta.errors[0]?.message ??
+													"Select at least one column.")
+												: undefined
+										}
+									/>
+								)}
+							</form.Field>
 
-						{activeExport ? (
-							<p className="text-muted-foreground text-xs">
-								An export is already {activeExport.status}. Wait for it to
-								finish before starting another.
-							</p>
-						) : null}
+							{activeExport ? (
+								<p className="mt-3 rounded-lg bg-amber-500/10 px-3 py-2 text-amber-600 text-tiny dark:text-amber-500">
+									An export is already {activeExport.status}. Wait for it to
+									finish before starting another.
+								</p>
+							) : null}
 
-						<form.Subscribe selector={(state) => state.canSubmit}>
-							{(canSubmit) => (
-								<Button
-									type="submit"
-									variant="primary"
-									isLoading={createExport.isPending}
-									disabled={!canSubmit || Boolean(activeExport)}
-								>
-									Start export
-								</Button>
-							)}
-						</form.Subscribe>
+							<form.Subscribe selector={(state) => state.canSubmit}>
+								{(canSubmit) => (
+									<Button
+										type="submit"
+										variant="primary"
+										className="mt-4 w-full"
+										isLoading={createExport.isPending}
+										disabled={!canSubmit || Boolean(activeExport)}
+									>
+										Start export
+									</Button>
+								)}
+							</form.Subscribe>
+						</SheetSection>
 					</form>
 
-					<div className="flex flex-col gap-2">
-						<span className="font-medium text-sm">Recent exports</span>
+					<SheetSection title="Recent exports" withSeparator={false}>
 						<CustomerExportJobList
 							customerExports={customerExports ?? []}
 							isLoading={isLoading}
 						/>
-					</div>
+					</SheetSection>
 				</div>
 			</SheetContent>
 		</Sheet>
