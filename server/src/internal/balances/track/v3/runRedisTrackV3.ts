@@ -5,6 +5,7 @@ import type {
 	TrackResponseV3,
 } from "@autumn/shared";
 import { tryCatch } from "@autumn/shared";
+import { getCustomerRedisSyncTarget } from "@/external/redis/customerRedisRouting.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { globalEventBatchingManager } from "@/internal/balances/events/EventBatchingManager.js";
 import {
@@ -62,6 +63,10 @@ const queueSyncItem = ({
 		usageWindowUpdates,
 		coalesce: ctx.testOptions?.syncCoalesce ?? isSyncCoalesceEnabled(),
 		coalesceRedis: ctx.redisV2,
+		redisInstance: getCustomerRedisSyncTarget({
+			org: ctx.org,
+			customerId: body.customer_id,
+		}),
 	});
 };
 

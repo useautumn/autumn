@@ -1,3 +1,4 @@
+import { getCustomerRedisSyncTarget } from "@/external/redis/customerRedisRouting.js";
 import { currentRegion } from "@/external/redis/initRedis.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { executeRedisDeductionV2 } from "@/internal/balances/utils/deductionV2/executeRedisDeductionV2.js";
@@ -69,6 +70,10 @@ export const runRedisFinalizeLockV2 = async ({
 			coalesce: ctx.testOptions?.syncCoalesce ?? isSyncCoalesceEnabled(),
 			// The drain resolves via worker ctx, so the mark must use the same routing.
 			coalesceRedis: ctx.redisV2,
+			redisInstance: getCustomerRedisSyncTarget({
+				org: ctx.org,
+				customerId: receipt.customer_id,
+			}),
 		});
 	}
 

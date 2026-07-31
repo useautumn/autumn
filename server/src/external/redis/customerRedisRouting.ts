@@ -7,7 +7,11 @@ import {
 import { getActiveRedisV2Instance } from "@/internal/misc/redisV2Cache/redisV2CacheStore.js";
 import { redisV2 as redisV2Primary } from "./initRedisV2.js";
 import { getOrgRedis, type OrgWithRedisConfig } from "./orgRedisPool.js";
-import { resolveRedisV2 } from "./resolveRedisV2.js";
+import {
+	getCurrentRedisV2InstanceName,
+	type ResolvedRedisV2InstanceName,
+	resolveRedisV2,
+} from "./resolveRedisV2.js";
 
 export {
 	type CustomerRedisRoutingInfo,
@@ -21,6 +25,12 @@ import {
 	getCustomerRedisRoutingInfoForOrg,
 } from "./customerRedisRoutingInfo.js";
 
+export const ORG_REDIS_SYNC_TARGET = "org" as const;
+
+export type CustomerRedisSyncTarget =
+	| ResolvedRedisV2InstanceName
+	| typeof ORG_REDIS_SYNC_TARGET;
+
 export const getCustomerRedisRoutingInfo = ({
 	org,
 	customerId,
@@ -32,6 +42,19 @@ export const getCustomerRedisRoutingInfo = ({
 		org,
 		customerId,
 	});
+};
+
+export const getCustomerRedisSyncTarget = ({
+	org,
+	customerId,
+}: {
+	org: OrgWithRedisConfig;
+	customerId: string;
+}): CustomerRedisSyncTarget => {
+	const routingInfo = getCustomerRedisRoutingInfo({ org, customerId });
+	if (routingInfo.usesDedicatedRedis) return ORG_REDIS_SYNC_TARGET;
+
+	return getCurrentRedisV2InstanceName({ customerId });
 };
 
 export const resolveCustomerRedisRouting = ({

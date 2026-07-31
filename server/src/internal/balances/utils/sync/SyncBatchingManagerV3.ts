@@ -1,13 +1,13 @@
 import type { AppEnv } from "@autumn/shared";
 import type { Redis } from "ioredis";
 import { logger } from "@/external/logtail/logtailUtils.js";
+import type { CustomerRedisSyncTarget } from "@/external/redis/customerRedisRouting.js";
 import { currentRegion } from "@/external/redis/initRedis.js";
-import { getCurrentRedisV2InstanceName } from "@/external/redis/resolveRedisV2.js";
 import { JobName } from "@/queue/JobName.js";
 import { addTaskToQueue } from "@/queue/queueUtils.js";
+import type { UsageWindowUpdate } from "../types/usageWindowUpdate.js";
 import { markSyncDirty } from "./dirtyState/markSyncDirty.js";
 import { buildSyncDirtyKeys } from "./dirtyState/syncDirtyKeys.js";
-import type { UsageWindowUpdate } from "../types/usageWindowUpdate.js";
 
 /** Signal marker TTL: an enqueue that silently fails re-signals after this. */
 const SIGNAL_TTL_SECONDS = 60;
@@ -31,7 +31,7 @@ interface CustomerBatchContext {
 	/** Coalescing flushes into Redis dirty state instead of enqueueing a full payload. */
 	coalesce: boolean;
 	coalesceRedis?: Redis;
-	redisInstance?: string;
+	redisInstance?: CustomerRedisSyncTarget;
 }
 
 interface CustomerBatch {
@@ -100,6 +100,7 @@ export class SyncBatchingManagerV3 {
 		usageWindowUpdates,
 		coalesce,
 		coalesceRedis,
+		redisInstance,
 	}: {
 		customerId: string;
 		orgId: string;
@@ -114,6 +115,8 @@ export class SyncBatchingManagerV3 {
 		coalesce?: boolean;
 		/** The Redis instance the deduction ran on (dirty state must co-locate) */
 		coalesceRedis?: Redis;
+		/** Stable target name for the worker that drains the dirty state. */
+		redisInstance: CustomerRedisSyncTarget;
 	}): void {
 		const batchKey = this.buildBatchKey({ orgId, env, customerId });
 		let batch = this.customerBatches.get(batchKey);
@@ -132,9 +135,7 @@ export class SyncBatchingManagerV3 {
 		if (coalesce && coalesceRedis) {
 			batch.context.coalesce = true;
 			batch.context.coalesceRedis = coalesceRedis;
-			batch.context.redisInstance = getCurrentRedisV2InstanceName({
-				customerId,
-			});
+			batch.context.redisInstance = redisInstance;
 		}
 
 		for (const [featureId, ids] of Object.entries(
