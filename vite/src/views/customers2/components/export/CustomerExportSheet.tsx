@@ -3,6 +3,7 @@ import {
 	CustomerExportFieldSchema,
 } from "@autumn/shared";
 import { Sheet, SheetContent, ShortcutButton } from "@autumn/ui";
+import { useState } from "react";
 import { toast } from "sonner";
 import { z } from "zod/v4";
 import {
@@ -23,8 +24,10 @@ import {
 	isCustomerExportActive,
 	useCreateCustomerExport,
 	useCustomerExportsQuery,
+	useUnfilteredCustomerCountQuery,
 } from "../../hooks/useCustomerExports";
 import { CustomerExportFieldSelector } from "./CustomerExportFieldSelector";
+import { CustomerExportFilterScope } from "./CustomerExportFilterScope";
 import { CustomerExportJobList } from "./CustomerExportJobList";
 
 const CustomerExportFormSchema = z.object({
@@ -32,6 +35,22 @@ const CustomerExportFormSchema = z.object({
 		.array(CustomerExportFieldSchema)
 		.min(1, "Select at least one column."),
 });
+
+function buildExportDescription({
+	isFilteredExport,
+	filteredCount,
+	exportTotalCount,
+}: {
+	isFilteredExport: boolean;
+	filteredCount: number;
+	exportTotalCount: number | undefined;
+}) {
+	if (isFilteredExport) {
+		return `Exports the ${filteredCount.toLocaleString()} customers matching your current search and filters.`;
+	}
+	if (exportTotalCount === undefined) return "Exports all customers.";
+	return `Exports all ${exportTotalCount.toLocaleString()} customers.`;
+}
 
 export function CustomerExportSheet({
 	open,
@@ -47,11 +66,24 @@ export function CustomerExportSheet({
 		enabled: open,
 	});
 
+	const [restrictToCurrentFilters, setRestrictToCurrentFilters] =
+		useState(true);
+
 	const trimmedSearch = queryStates.q.trim();
-	const hasFilters =
-		hasActiveCustomerFilters(queryStates) || Boolean(trimmedSearch);
+	const hasActiveFilters = hasActiveCustomerFilters(queryStates);
+	const hasFilters = hasActiveFilters || Boolean(trimmedSearch);
+	const isFilteredExport = hasFilters && restrictToCurrentFilters;
 	const activeExport = (customerExports ?? []).find(isCustomerExportActive);
-	const hasNoMatchingCustomers = totalCount === 0;
+
+	const { data: unfilteredTotalCount } = useUnfilteredCustomerCountQuery({
+		enabled: open && hasFilters,
+	});
+
+	const ignoresActiveFilters = hasFilters && !restrictToCurrentFilters;
+	const exportTotalCount = ignoresActiveFilters
+		? unfilteredTotalCount
+		: totalCount;
+	const hasNothingToExport = exportTotalCount === 0;
 
 	const form = useAppForm({
 		defaultValues: { fields: [...CUSTOMER_EXPORT_FIELD_ORDER] },
@@ -63,8 +95,10 @@ export function CustomerExportSheet({
 			try {
 				await createExport.mutateAsync({
 					fields: value.fields,
-					search: trimmedSearch,
-					filters: buildCustomerFilterPayload(queryStates),
+					search: isFilteredExport ? trimmedSearch : "",
+					filters: isFilteredExport
+						? buildCustomerFilterPayload(queryStates)
+						: {},
 				});
 				toast.success("Export started");
 			} catch (error) {
@@ -81,12 +115,25 @@ export function CustomerExportSheet({
 						<div className="flex flex-1 flex-col overflow-y-auto">
 							<SheetHeader
 								title="Export customers"
-								description={
-									hasFilters
-										? `Exports the ${totalCount.toLocaleString()} customers matching your current search and filters.`
-										: `Exports all ${totalCount.toLocaleString()} customers.`
-								}
+								description={buildExportDescription({
+									isFilteredExport,
+									filteredCount: totalCount,
+									exportTotalCount,
+								})}
 							/>
+
+							{hasFilters ? (
+								<SheetSection>
+									<CustomerExportFilterScope
+										searchText={trimmedSearch}
+										hasActiveFilters={hasActiveFilters}
+										restrictToCurrentFilters={restrictToCurrentFilters}
+										onRestrictToCurrentFiltersChange={
+											setRestrictToCurrentFilters
+										}
+									/>
+								</SheetSection>
+							) : null}
 
 							<SheetSection>
 								<form.Field name="fields">
@@ -120,10 +167,11 @@ export function CustomerExportSheet({
 							</p>
 						) : null}
 
-						{hasNoMatchingCustomers ? (
+						{hasNothingToExport ? (
 							<p className="mx-4 mt-2 rounded-lg bg-amber-500/10 px-3 py-2 text-amber-600 text-xs dark:text-amber-500">
-								No customers match your current search and filters, so there is
-								nothing to export.
+								{isFilteredExport
+									? "No customers match your current search and filters. Untick the option above to export everyone."
+									: "There are no customers to export."}
 							</p>
 						) : null}
 
@@ -144,9 +192,7 @@ export function CustomerExportSheet({
 										onClick={() => form.handleSubmit()}
 										isLoading={createExport.isPending}
 										disabled={
-											!canSubmit ||
-											Boolean(activeExport) ||
-											hasNoMatchingCustomers
+											!canSubmit || Boolean(activeExport) || hasNothingToExport
 										}
 										metaShortcut="enter"
 									>
