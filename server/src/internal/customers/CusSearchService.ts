@@ -1,6 +1,7 @@
 import {
 	type AppEnv,
 	CusProductStatus,
+	type CustomerListFilters,
 	customerProducts,
 	customers,
 	products,
@@ -25,7 +26,6 @@ import { alias } from "drizzle-orm/pg-core";
 import { planetScaleTag } from "@/db/dbUtils.js";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 import { getOrgCusProductLimit } from "../misc/edgeConfig/orgLimitsStore.js";
-import type { CustomerListFilters } from "./customerListFilters.js";
 import {
 	type DashboardIntervalFilter,
 	type DashboardProductVersionFilter,
