@@ -29,12 +29,12 @@ export function CustomerExportFieldSelector({
 	};
 
 	return (
-		<div className="flex flex-col gap-3">
-			<div className="flex items-center justify-between">
-				<span className="font-medium text-sm">Columns</span>
+		<div className="flex flex-col">
+			<div className="mb-2 flex h-6 items-center justify-between gap-2">
+				<h3 className="text-sub">Columns</h3>
 				<div className="flex items-center gap-1">
 					<Button
-						variant="ghost"
+						variant="skeleton"
 						size="sm"
 						type="button"
 						onClick={() => onChange([...CUSTOMER_EXPORT_FIELD_ORDER])}
@@ -42,7 +42,7 @@ export function CustomerExportFieldSelector({
 						Select all
 					</Button>
 					<Button
-						variant="ghost"
+						variant="skeleton"
 						size="sm"
 						type="button"
 						onClick={() => onChange([])}
@@ -52,11 +52,15 @@ export function CustomerExportFieldSelector({
 				</div>
 			</div>
 
-			<div className="flex flex-col gap-2">
+			<div className="flex flex-col gap-0.5">
 				{CUSTOMER_EXPORT_FIELD_ORDER.map((field) => {
 					const checkboxId = `customer-export-field-${field}`;
 					return (
-						<div key={field} className="flex items-center gap-2">
+						<label
+							key={field}
+							htmlFor={checkboxId}
+							className="flex cursor-pointer items-center gap-2 rounded-lg px-2 py-1.5 transition-colors hover:bg-interactive-secondary/50"
+						>
 							<Checkbox
 								id={checkboxId}
 								checked={selectedFields.includes(field)}
@@ -64,16 +68,16 @@ export function CustomerExportFieldSelector({
 									toggleField({ field, checked: checked === true })
 								}
 							/>
-							<label className="text-sm" htmlFor={checkboxId}>
+							<span className="text-checkbox-label">
 								{CUSTOMER_EXPORT_FIELD_HEADERS[field]}
-							</label>
-						</div>
+							</span>
+						</label>
 					);
 				})}
 			</div>
 
 			{errorMessage ? (
-				<p className="text-destructive text-xs">{errorMessage}</p>
+				<p className="mt-2 pl-2 text-destructive text-tiny">{errorMessage}</p>
 			) : null}
 		</div>
 	);
