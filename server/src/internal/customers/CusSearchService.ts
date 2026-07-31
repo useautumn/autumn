@@ -905,7 +905,7 @@ export class CusSearchService {
 	}
 }
 
-type Predicates =
+export type CustomerSearchPredicates =
 	| {
 			kind: "noneMode";
 			where: ReturnType<typeof and>;
@@ -923,7 +923,8 @@ type Predicates =
 			whereRaw: ReturnType<typeof sql>;
 	  };
 
-const buildSearchPredicates = ({
+/** Shared by the dashboard list and the CSV export walk — keep them identical. */
+export const buildSearchPredicates = ({
 	orgId,
 	env,
 	search,
@@ -933,7 +934,7 @@ const buildSearchPredicates = ({
 	env: AppEnv;
 	search: string;
 	filters?: SearchFilters;
-}): Predicates => {
+}): CustomerSearchPredicates => {
 	const cusBaseClauses = [
 		eq(customers.org_id, orgId),
 		eq(customers.env, env),
