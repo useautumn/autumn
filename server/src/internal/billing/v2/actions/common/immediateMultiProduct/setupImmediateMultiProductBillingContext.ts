@@ -34,8 +34,6 @@ import {
 	handleFreeTrialParam,
 } from "@/internal/billing/v2/setup/trialContext";
 
-export type ImmediateMultiProductParams = MultiAttachParamsV0;
-
 const getSubscriptionTarget = ({
 	productContext,
 }: {
@@ -154,7 +152,7 @@ export const setupImmediateMultiProductBillingContext = async ({
 	includeScheduledProductsForScheduleLookup,
 }: {
 	ctx: AutumnContext;
-	params: ImmediateMultiProductParams;
+	params: MultiAttachParamsV0;
 	preview?: boolean;
 	billingStartsAt?: number;
 	billingStartsAtToleranceMs?: number;
