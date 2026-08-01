@@ -1,33 +1,16 @@
 import { Button } from "@autumn/ui";
-import { type ReactNode, useEffect, useState } from "react";
+import {
+	BillingFooter,
+	BillingFooterButton,
+} from "@/components/forms/shared/BillingFooter";
 import { useUpdateSubscriptionFormContext } from "@/components/forms/update-subscription-v2";
-import { SheetFooter } from "@/components/v2/sheets/SharedSheetComponents";
-
-const FOOTER_DELAY_MS = 350;
-
-function FooterButton({ children }: { children: ReactNode }) {
-	return <div className="animate-in fade-in duration-200">{children}</div>;
-}
 
 export function UncancelFooter() {
 	const { isPending, previewQuery, handleConfirm, form, formValues } =
 		useUpdateSubscriptionFormContext();
 
 	const isCancelMode = formValues.cancelAction === "cancel_immediately";
-
-	const isLoading = previewQuery.isLoading;
-	const hasError = !!previewQuery.error;
-	const isReady = !isLoading && !hasError;
-
-	const [showFooter, setShowFooter] = useState(false);
-
-	useEffect(() => {
-		if (isReady) {
-			const timer = setTimeout(() => setShowFooter(true), FOOTER_DELAY_MS);
-			return () => clearTimeout(timer);
-		}
-		setShowFooter(false);
-	}, [isReady]);
+	const isReady = !previewQuery.isLoading && !previewQuery.error;
 
 	const handleCancelImmediatelyClick = () => {
 		form.setFieldValue("cancelAction", "cancel_immediately");
@@ -42,57 +25,28 @@ export function UncancelFooter() {
 		form.setFieldValue("noBillingChanges", false);
 	};
 
-	if (!showFooter) return null;
-
-	if (isCancelMode) {
-		return (
-			<SheetFooter className="grid-cols-2">
-				<FooterButton>
-					<Button
-						variant="secondary"
-						className="w-full"
-						onClick={handleGoBack}
-						disabled={isPending}
-					>
-						Go Back
-					</Button>
-				</FooterButton>
-				<FooterButton>
-					<Button
-						variant="destructive"
-						className="w-full"
-						onClick={handleConfirm}
-						isLoading={isPending}
-					>
-						Confirm Cancellation
-					</Button>
-				</FooterButton>
-			</SheetFooter>
-		);
-	}
-
 	return (
-		<SheetFooter className="grid-cols-2">
-			<FooterButton>
+		<BillingFooter layout="split" isReady={isReady} reveal>
+			<BillingFooterButton>
 				<Button
-					variant="destructive"
+					variant={isCancelMode ? "secondary" : "destructive"}
 					className="w-full"
-					onClick={handleCancelImmediatelyClick}
+					onClick={isCancelMode ? handleGoBack : handleCancelImmediatelyClick}
 					disabled={isPending}
 				>
-					Cancel Immediately
+					{isCancelMode ? "Go Back" : "Cancel Immediately"}
 				</Button>
-			</FooterButton>
-			<FooterButton>
+			</BillingFooterButton>
+			<BillingFooterButton>
 				<Button
-					variant="primary"
+					variant={isCancelMode ? "destructive" : "primary"}
 					className="w-full"
 					onClick={handleConfirm}
 					isLoading={isPending}
 				>
-					Uncancel Subscription
+					{isCancelMode ? "Confirm Cancellation" : "Uncancel Subscription"}
 				</Button>
-			</FooterButton>
-		</SheetFooter>
+			</BillingFooterButton>
+		</BillingFooter>
 	);
 }

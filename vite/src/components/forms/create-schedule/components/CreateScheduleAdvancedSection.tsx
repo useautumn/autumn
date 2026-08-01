@@ -4,11 +4,11 @@ import {
 	AdvancedSection,
 	ConfigRow,
 } from "@/components/forms/shared/advanced-section";
+import { useCreateScheduleFormContext } from "../context/CreateScheduleFormProvider";
 import {
 	canResetScheduleBillingCycle,
 	hasMultipleImmediateSchedulePlans,
 } from "../createScheduleFormSchema";
-import { useCreateScheduleFormContext } from "../context/CreateScheduleFormProvider";
 
 export function CreateScheduleAdvancedSection() {
 	const { form, formValues, preview } = useCreateScheduleFormContext();
@@ -26,7 +26,9 @@ export function CreateScheduleAdvancedSection() {
 	}, [isCheckoutRedirect, enablePlanImmediately, form]);
 
 	const isProrate = billingBehavior !== "none";
-	const hasMultipleImmediatePlans = hasMultipleImmediateSchedulePlans({ phases });
+	const hasMultipleImmediatePlans = hasMultipleImmediateSchedulePlans({
+		phases,
+	});
 	const prorateDisabledReason = hasMultipleImmediatePlans
 		? "Not yet supported for multi attach"
 		: null;

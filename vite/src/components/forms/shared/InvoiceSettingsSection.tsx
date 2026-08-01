@@ -53,7 +53,8 @@ export function InvoiceSettingsSection({
 									const template = templates.find((t) => t.id === templateId);
 									onChange({
 										templateId,
-										netTermsDays: template?.net_terms_days ?? value.netTermsDays,
+										netTermsDays:
+											template?.net_terms_days ?? value.netTermsDays,
 									});
 								}}
 								options={options}

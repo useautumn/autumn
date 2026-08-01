@@ -1,4 +1,5 @@
 export * from "./advanced-section";
+export * from "./BillingFooter";
 export * from "./DisabledTooltipButton";
 export * from "./PlanEntityScopeSelector";
 export * from "./PlanItemsSection";

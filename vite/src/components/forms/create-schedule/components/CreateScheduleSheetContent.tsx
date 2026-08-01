@@ -5,6 +5,8 @@ import {
 	DisabledTooltipButton,
 	PlanEntityScopeSelector,
 } from "@/components/forms/shared";
+import { BillingFooter } from "@/components/forms/shared/BillingFooter";
+import { getInvoiceButtonState } from "@/components/forms/shared/utils/invoiceButtonState";
 import {
 	SheetFooter,
 	SheetHeader,
@@ -133,25 +135,11 @@ export function CreateScheduleReviewContent() {
 
 	const confirmLabel = getConfirmLabel({ preview });
 
-	const hasNothingToInvoice =
-		!!preview && preview.total <= 0 && !createsRecurringSubscription;
-
-	const invoiceDisabledReason = hasNothingToInvoice
-		? "Cannot send an invoice for $0 amounts. Please confirm the change instead."
-		: null;
-
-	// A subtotal still creates a $0 invoice; usage-only plans do not.
-	const willCreateZeroDollarInvoice = (preview?.subtotal ?? 0) > 0;
-
-	const isInvoiceOnlyStart =
-		!!preview &&
-		preview.total <= 0 &&
-		createsRecurringSubscription &&
-		!willCreateZeroDollarInvoice;
-
-	const invoiceButtonLabel = isInvoiceOnlyStart
-		? "Start subscription in invoice mode"
-		: "Send an Invoice";
+	const {
+		isInvoiceOnlyStart,
+		label: invoiceButtonLabel,
+		zeroAmountReason: invoiceDisabledReason,
+	} = getInvoiceButtonState({ preview, createsRecurringSubscription });
 
 	const handleInvoiceButtonClick = () => {
 		if (isInvoiceOnlyStart) {
@@ -188,30 +176,28 @@ export function CreateScheduleReviewContent() {
 				<SchedulePreview />
 			</div>
 
-			<SheetFooter className="flex flex-col grid-cols-1 mt-0">
-				<div className="flex flex-col gap-2 w-full">
-					<DisabledTooltipButton
-						variant="secondary"
-						className="w-full"
-						disabled={isPending || isDisabled}
-						disabledReason={invoiceDisabledReason}
-						tooltipClassName="max-w-(--anchor-width)"
-						isLoading={isInvoiceOnlyStart && isPending}
-						onClick={handleInvoiceButtonClick}
-					>
-						{invoiceButtonLabel}
-					</DisabledTooltipButton>
-					<Button
-						variant="primary"
-						className="w-full"
-						onClick={() => handleSubmit()}
-						isLoading={isPending}
-						disabled={isDisabled}
-					>
-						{confirmLabel}
-					</Button>
-				</div>
-			</SheetFooter>
+			<BillingFooter layout="stacked">
+				<DisabledTooltipButton
+					variant="secondary"
+					className="w-full"
+					disabled={isPending || isDisabled}
+					disabledReason={invoiceDisabledReason}
+					tooltipClassName="max-w-(--anchor-width)"
+					isLoading={isInvoiceOnlyStart && isPending}
+					onClick={handleInvoiceButtonClick}
+				>
+					{invoiceButtonLabel}
+				</DisabledTooltipButton>
+				<Button
+					variant="primary"
+					className="w-full"
+					onClick={() => handleSubmit()}
+					isLoading={isPending}
+					disabled={isDisabled}
+				>
+					{confirmLabel}
+				</Button>
+			</BillingFooter>
 		</div>
 	);
 }

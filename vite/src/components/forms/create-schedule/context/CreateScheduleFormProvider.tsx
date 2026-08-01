@@ -179,8 +179,9 @@ export function CreateScheduleFormProvider({
 		!hasActiveSubscription && immediatePlansPaidRecurring;
 
 	const editingPlanValue = editingPlan
-		? (formValues.phases[editingPlan.phaseIndex]?.plans[editingPlan.planIndex] ??
-			null)
+		? (formValues.phases[editingPlan.phaseIndex]?.plans[
+				editingPlan.planIndex
+			] ?? null)
 		: null;
 
 	const {

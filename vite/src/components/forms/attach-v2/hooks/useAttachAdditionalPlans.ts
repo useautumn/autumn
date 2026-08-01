@@ -76,7 +76,9 @@ export function hasInvalidAttachPlanScopes({
 		additionalPlans,
 		entityId,
 	});
-	const productsById = new Map(products.map((product) => [product.id, product]));
+	const productsById = new Map(
+		products.map((product) => [product.id, product]),
+	);
 
 	for (const [index, plan] of selectedPlans.entries()) {
 		const product = productsById.get(plan.productId);
