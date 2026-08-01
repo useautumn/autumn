@@ -1,8 +1,10 @@
-import { useMutation, useQueryClient } from "@tanstack/react-query";
-import type { AxiosError } from "axios";
-import { toast } from "sonner";
-import { invalidateCustomerBillingQueries } from "@/components/forms/shared/utils/invalidateCustomerBillingQueries";
-import { useAxiosInstance } from "@/services/useAxiosInstance";
+import type {
+	BillingResponse,
+	UpdateSubscriptionV0Params,
+} from "@autumn/shared";
+import { useBillingMutation } from "@/components/forms/shared/hooks/useBillingMutation";
+import { BILLING_OPERATIONS } from "@/components/forms/shared/utils/billingOperations";
+import type { BillingStageParams } from "@/components/forms/shared/utils/billingStageParams";
 import type { UpdateSubscriptionFormContext } from "../context/UpdateSubscriptionFormProvider";
 
 export function useUpdateSubscriptionMutation({
@@ -12,75 +14,27 @@ export function useUpdateSubscriptionMutation({
 	onSuccess,
 }: {
 	updateSubscriptionFormContext: UpdateSubscriptionFormContext;
-	buildRequestBody: () => Record<string, unknown>;
+	buildRequestBody: (
+		params?: BillingStageParams,
+	) => UpdateSubscriptionV0Params | null;
 	onCheckoutRedirect?: (checkoutUrl: string) => void;
 	onSuccess?: () => void;
 }) {
 	const { customerId } = updateSubscriptionFormContext;
-	const axiosInstance = useAxiosInstance();
-	const queryClient = useQueryClient();
 
-	const mutation = useMutation({
-		mutationFn: async ({
-			useInvoice,
-			enableProductImmediately,
-			finalizeInvoice,
-			invoiceTemplateId,
-			netTermsDays,
-		}: {
-			useInvoice?: boolean;
-			enableProductImmediately?: boolean;
-			finalizeInvoice?: boolean;
-			invoiceTemplateId?: string;
-			netTermsDays?: number;
-		}) => {
-			if (!customerId) {
-				throw new Error("Customer ID is required");
-			}
-
-			const requestBody = buildRequestBody();
-
-			if (useInvoice) {
-				requestBody.invoice = true;
-				requestBody.enable_product_immediately = enableProductImmediately;
-				requestBody.finalize_invoice = finalizeInvoice ?? false;
-				requestBody.invoice_template_id = invoiceTemplateId;
-				requestBody.net_terms_days = netTermsDays;
-				if (enableProductImmediately === false) {
-					requestBody.force_checkout = true;
-				}
-			}
-
-			const response = await axiosInstance.post(
-				"/v1/billing.update",
-				requestBody,
-			);
-			return { data: response.data, useInvoice };
-		},
-		onSuccess: ({ data, useInvoice }) => {
-			if (useInvoice) {
-				if (data?.invoice) {
-					toast.success("Invoice created successfully");
-				}
-			} else if (data?.payment_url) {
-				onCheckoutRedirect?.(data.payment_url);
-				toast.success("Redirecting to complete payment...");
-			} else {
-				toast.success("Subscription updated successfully");
-			}
-
-			if (!useInvoice) {
-				onSuccess?.();
-			}
-
-			invalidateCustomerBillingQueries({ queryClient, customerId });
-		},
-		onError: (error) => {
-			toast.error(
-				(error as AxiosError<{ message: string }>)?.response?.data?.message ??
-					"Failed to update subscription",
-			);
-		},
+	const mutation = useBillingMutation<
+		UpdateSubscriptionV0Params,
+		BillingResponse
+	>({
+		customerId,
+		path: BILLING_OPERATIONS.updateSubscription.path,
+		buildRequestBody,
+		invalidatesSchedule:
+			BILLING_OPERATIONS.updateSubscription.invalidatesSchedule,
+		successMessage: "Subscription updated successfully",
+		errorMessage: "Failed to update subscription",
+		onCheckoutRedirect,
+		onSuccess,
 	});
 
 	const handleConfirm = () => {
