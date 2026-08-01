@@ -29,13 +29,17 @@ import {
 	ConfigRow,
 } from "@/components/forms/shared/advanced-section";
 import { BillingOptionToggle } from "@/components/forms/shared/BillingOptionToggle";
+import { DiscountsConfigRow } from "@/components/forms/shared/discount-row/DiscountsConfigRow";
 import { getBillingOptionRules } from "@/components/forms/shared/utils/billingOptionRules";
 import { cn } from "@/lib/utils";
 import type { FormCustomLineItem } from "../attachFormSchema";
 import { useAttachFormContext } from "../context/AttachFormProvider";
 import { getAttachScheduledStartDate } from "../utils/buildAttachPreviewTotals";
-import { addDiscount } from "../utils/discountUtils";
-import { AttachDiscountRow } from "./AttachDiscountRow";
+import {
+	addDiscount,
+	removeDiscount,
+	updateDiscount,
+} from "../utils/discountUtils";
 
 let customLineItemCounter = 0;
 const BACKDATE_START_YEAR_LOOKBACK = 25;
@@ -477,39 +481,21 @@ export function AttachAdvancedSection() {
 
 	return (
 		<AdvancedSection moreOptions={moreOptions}>
-			<ConfigRow
-				title="Discounts"
+			<DiscountsConfigRow
+				discounts={discounts}
 				description="Apply percentage or fixed-amount discounts to this plan"
-				action={
-					<IconButton
-						variant="muted"
-						size="sm"
-						onClick={handleAddDiscount}
-						icon={<PlusIcon size={12} />}
-						className="text-tertiary-foreground"
-					>
-						Add
-					</IconButton>
+				productId={product?.id}
+				onAdd={handleAddDiscount}
+				onUpdate={({ index, rewardId }) =>
+					form.setFieldValue(
+						"discounts",
+						updateDiscount(discounts, index, { reward_id: rewardId }),
+					)
 				}
-			>
-				{discounts.length > 0 && (
-					<div className="space-y-2">
-						<AnimatePresence initial={false} mode="popLayout">
-							{discounts.map((discount, index) => (
-								<motion.div
-									key={discount._id}
-									initial={{ opacity: 0, scale: 0.95 }}
-									animate={{ opacity: 1, scale: 1 }}
-									exit={{ opacity: 0, scale: 0.95 }}
-									transition={{ duration: 0.15 }}
-								>
-									<AttachDiscountRow index={index} />
-								</motion.div>
-							))}
-						</AnimatePresence>
-					</div>
-				)}
-			</ConfigRow>
+				onRemove={({ index }) =>
+					form.setFieldValue("discounts", removeDiscount(discounts, index))
+				}
+			/>
 
 			{rules.proration.visible && (
 				<ConfigRow
