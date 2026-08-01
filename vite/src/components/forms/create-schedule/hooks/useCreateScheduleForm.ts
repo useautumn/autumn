@@ -1,4 +1,3 @@
-import { useRef } from "react";
 import { useAppForm } from "@/hooks/form/form";
 import {
 	type CreateScheduleForm,
@@ -6,6 +5,10 @@ import {
 	EMPTY_SCHEDULE_PLAN,
 } from "../createScheduleFormSchema";
 
+/**
+ * Values are passed through live, not frozen: each scope owns a separate
+ * schedule, and the form re-seeds itself while the user hasn't touched it.
+ */
 export function useCreateScheduleForm({
 	initialValues,
 }: {
@@ -23,10 +26,8 @@ export function useCreateScheduleForm({
 		enablePlanImmediately: false,
 	};
 
-	const initialValuesRef = useRef<CreateScheduleForm>(defaultValues);
-
 	return useAppForm({
-		defaultValues: initialValuesRef.current,
+		defaultValues,
 		validators: {
 			onChange: CreateScheduleFormSchema,
 			onSubmit: CreateScheduleFormSchema,

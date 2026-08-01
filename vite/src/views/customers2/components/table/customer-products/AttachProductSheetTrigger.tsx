@@ -1,3 +1,4 @@
+import type { FullCustomer } from "@autumn/shared";
 import {
 	Button,
 	DropdownMenu,
@@ -16,13 +17,20 @@ import {
 	useSheetStore,
 } from "@/hooks/stores/useSheetStore";
 import { useEntity } from "@/hooks/stores/useSubscriptionStore";
+import { getInitialScopeEntityId } from "@/hooks/useSheetScopeEntityId";
 import { cn } from "@/lib/utils";
+import { useCusQuery } from "@/views/customers/customer/hooks/useCusQuery";
 
 export function AttachProductSheetTrigger() {
 	const { setSheet } = useSheetStore();
 	const isAttachingProduct = useIsAttachingProduct();
 	const { entityId } = useEntity();
-	const hasSchedule = useHasSchedule({ entityId });
+	const { customer } = useCusQuery();
+
+	// Label must reflect the scope the sheet will open in, not the page selection.
+	const scopeEntityId =
+		entityId ?? getInitialScopeEntityId(customer as FullCustomer | undefined);
+	const hasSchedule = useHasSchedule({ entityId: scopeEntityId });
 
 	const handleAttachClick = () => {
 		setSheet({ type: "attach-product" });

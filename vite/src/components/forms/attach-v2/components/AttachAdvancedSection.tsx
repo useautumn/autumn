@@ -28,6 +28,8 @@ import {
 	AdvancedToggleRow,
 	ConfigRow,
 } from "@/components/forms/shared/advanced-section";
+import { BillingOptionToggle } from "@/components/forms/shared/BillingOptionToggle";
+import { getBillingOptionRules } from "@/components/forms/shared/utils/billingOptionRules";
 import { cn } from "@/lib/utils";
 import type { FormCustomLineItem } from "../attachFormSchema";
 import { useAttachFormContext } from "../context/AttachFormProvider";
@@ -163,12 +165,25 @@ export function AttachAdvancedSection() {
 		!isFreeProductV2({ items: product.items }) &&
 		!isOneOffProductV2({ items: product.items });
 
-	const showStartDate =
-		isPaidRecurringProduct &&
-		!trialEnabled &&
-		effectivePlanSchedule !== "end_of_cycle";
 	const allowBackdatedStartDate = createsNewStripeSubscription;
-	const showEndDate = !!product && !isFreeProductV2({ items: product.items });
+
+	const rules = getBillingOptionRules({
+		flow: "attach",
+		state: {
+			hasActiveSubscription,
+			isMultiPlan,
+			showProrationRow,
+			showProrationBehavior,
+			isNoChargesAllowed,
+			hasCustomerEntitlements,
+			canChooseBillingCycle,
+			showStartDate:
+				isPaidRecurringProduct &&
+				!trialEnabled &&
+				effectivePlanSchedule !== "end_of_cycle",
+			showEndDate: !!product && !isFreeProductV2({ items: product.items }),
+		},
+	});
 	const attachStartsAt =
 		effectivePlanSchedule === "end_of_cycle"
 			? getAttachScheduledStartDate({ previewData: previewQuery.data })
@@ -216,7 +231,7 @@ export function AttachAdvancedSection() {
 
 	const moreOptions = isMultiPlan ? null : (
 		<>
-			{showStartDate && (
+			{rules.startDate.visible && (
 				<ConfigRow
 					title="Start Date"
 					description={
@@ -252,7 +267,7 @@ export function AttachAdvancedSection() {
 				</ConfigRow>
 			)}
 
-			{showEndDate && (
+			{rules.endDate.visible && (
 				<ConfigRow
 					title="End Date"
 					description="End the plan on a future date"
@@ -279,7 +294,7 @@ export function AttachAdvancedSection() {
 				</ConfigRow>
 			)}
 
-			{hasCustomerEntitlements && (
+			{rules.carryOverBalances.visible && (
 				<ConfigRow
 					title="Carry Over Balances"
 					description="Preserve existing feature balances when switching plans"
@@ -305,7 +320,7 @@ export function AttachAdvancedSection() {
 				</ConfigRow>
 			)}
 
-			{hasCustomerEntitlements && (
+			{rules.carryOverUsages.visible && (
 				<ConfigRow
 					title="Carry Over Usages"
 					description="Preserve existing usage counts when switching plans"
@@ -410,7 +425,7 @@ export function AttachAdvancedSection() {
 				</div>
 			</ConfigRow>
 
-			{canChooseBillingCycle && (
+			{rules.newBillingSubscription.visible && (
 				<ConfigRow
 					title="New Billing Subscription"
 					description="Create a separate billing cycle instead of merging with existing"
@@ -427,7 +442,7 @@ export function AttachAdvancedSection() {
 				/>
 			)}
 
-			{hasActiveSubscription && (
+			{rules.resetBillingCycle.visible && (
 				<ConfigRow
 					title="Reset Billing Cycle"
 					description="Restart the billing cycle from today"
@@ -496,17 +511,17 @@ export function AttachAdvancedSection() {
 				)}
 			</ConfigRow>
 
-			{showProrationRow && (
+			{rules.proration.visible && (
 				<ConfigRow
 					title="Prorate Changes"
 					description="Prorate price differences when changing plans mid-cycle"
 					action={
-						<Switch
+						<BillingOptionToggle
+							rule={rules.proration}
 							checked={
 								showProrationBehavior &&
 								effectiveProrationBehavior === "prorate_immediately"
 							}
-							disabled={!showProrationBehavior || !isNoChargesAllowed}
 							onCheckedChange={(checked) =>
 								handleProrationBehaviorChange(
 									checked ? "prorate_immediately" : "none",
@@ -517,7 +532,7 @@ export function AttachAdvancedSection() {
 				/>
 			)}
 
-			{hasActiveSubscription && !isMultiPlan && (
+			{rules.planSchedule.visible && (
 				<AdvancedToggleRow
 					label="Plan Schedule"
 					description="When the new plan should take effect"

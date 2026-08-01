@@ -1,9 +1,11 @@
-import { Switch, Tooltip, TooltipContent, TooltipTrigger } from "@autumn/ui";
-import { type ReactNode, useEffect } from "react";
+import { Switch } from "@autumn/ui";
+import { useEffect } from "react";
 import {
 	AdvancedSection,
 	ConfigRow,
 } from "@/components/forms/shared/advanced-section";
+import { BillingOptionToggle } from "@/components/forms/shared/BillingOptionToggle";
+import { getBillingOptionRules } from "@/components/forms/shared/utils/billingOptionRules";
 import { useCreateScheduleFormContext } from "../context/CreateScheduleFormProvider";
 import {
 	canResetScheduleBillingCycle,
@@ -25,64 +27,48 @@ export function CreateScheduleAdvancedSection() {
 		}
 	}, [isCheckoutRedirect, enablePlanImmediately, form]);
 
-	const isProrate = billingBehavior !== "none";
-	const hasMultipleImmediatePlans = hasMultipleImmediateSchedulePlans({
-		phases,
+	const rules = getBillingOptionRules({
+		flow: "schedule",
+		state: {
+			hasMultipleImmediatePlans: hasMultipleImmediateSchedulePlans({ phases }),
+			canResetScheduleBillingCycle: canResetScheduleBillingCycle({ phases }),
+			isCheckoutRedirect,
+		},
 	});
-	const prorateDisabledReason = hasMultipleImmediatePlans
-		? "Not yet supported for multi attach"
-		: null;
-	const resetDisabledReason =
-		hasMultipleImmediatePlans && !canResetScheduleBillingCycle({ phases })
-			? "Not yet supported for multi attach"
-			: null;
-
-	const renderToggle = ({
-		checked,
-		onCheckedChange,
-		disabledReason,
-	}: {
-		checked: boolean;
-		onCheckedChange: (checked: boolean) => void;
-		disabledReason: string | null;
-	}): ReactNode => (
-		<Tooltip>
-			<TooltipTrigger asChild>
-				<span className="inline-flex">
-					<Switch
-						checked={checked}
-						disabled={!!disabledReason}
-						onCheckedChange={onCheckedChange}
-					/>
-				</span>
-			</TooltipTrigger>
-			{disabledReason && <TooltipContent>{disabledReason}</TooltipContent>}
-		</Tooltip>
-	);
 
 	return (
 		<AdvancedSection>
-			<ConfigRow
-				title="Prorate Changes"
-				description="Prorate price differences when changing plans mid-cycle"
-				action={renderToggle({
-					checked: isProrate,
-					onCheckedChange: (checked) =>
-						form.setFieldValue("billingBehavior", checked ? null : "none"),
-					disabledReason: prorateDisabledReason,
-				})}
-			/>
-			<ConfigRow
-				title="Reset Billing Cycle"
-				description="Align Stripe anchors to avoid off-cycle charges"
-				action={renderToggle({
-					checked: resetBillingCycle,
-					onCheckedChange: (checked) =>
-						form.setFieldValue("resetBillingCycle", !!checked),
-					disabledReason: resetDisabledReason,
-				})}
-			/>
-			{isCheckoutRedirect && (
+			{rules.proration.visible && (
+				<ConfigRow
+					title="Prorate Changes"
+					description="Prorate price differences when changing plans mid-cycle"
+					action={
+						<BillingOptionToggle
+							rule={rules.proration}
+							checked={billingBehavior !== "none"}
+							onCheckedChange={(checked) =>
+								form.setFieldValue("billingBehavior", checked ? null : "none")
+							}
+						/>
+					}
+				/>
+			)}
+			{rules.resetBillingCycle.visible && (
+				<ConfigRow
+					title="Reset Billing Cycle"
+					description="Align Stripe anchors to avoid off-cycle charges"
+					action={
+						<BillingOptionToggle
+							rule={rules.resetBillingCycle}
+							checked={resetBillingCycle}
+							onCheckedChange={(checked) =>
+								form.setFieldValue("resetBillingCycle", !!checked)
+							}
+						/>
+					}
+				/>
+			)}
+			{rules.enablePlanImmediately.visible && (
 				<ConfigRow
 					title="Enable Plan Immediately"
 					description="Activate the plan as soon as the checkout URL is generated, before the customer pays."

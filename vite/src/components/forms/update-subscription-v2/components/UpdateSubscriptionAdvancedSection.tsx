@@ -10,7 +10,9 @@ import {
 	AdvancedSection,
 	ConfigRow,
 } from "@/components/forms/shared/advanced-section";
+import { BillingOptionToggle } from "@/components/forms/shared/BillingOptionToggle";
 import { DiscountRow } from "@/components/forms/shared/discount-row/DiscountRow";
+import { getBillingOptionRules } from "@/components/forms/shared/utils/billingOptionRules";
 import { useUpdateSubscriptionFormContext } from "../context/UpdateSubscriptionFormProvider";
 
 export function UpdateSubscriptionAdvancedSection() {
@@ -24,8 +26,13 @@ export function UpdateSubscriptionAdvancedSection() {
 	} = formValues;
 	const { customerProduct, product } = formContext;
 
-	const hasActiveSubscription =
-		(customerProduct.subscription_ids?.length ?? 0) > 0;
+	const rules = getBillingOptionRules({
+		flow: "update",
+		state: {
+			hasActiveSubscription:
+				(customerProduct.subscription_ids?.length ?? 0) > 0,
+		},
+	});
 	const isProrate = billingBehavior !== "none";
 
 	const handleAddDiscount = () => {
@@ -86,13 +93,14 @@ export function UpdateSubscriptionAdvancedSection() {
 				)}
 			</ConfigRow>
 
-			{hasActiveSubscription && (
+			{rules.proration.visible && (
 				<>
 					<ConfigRow
 						title="Prorate Changes"
 						description="Prorate price differences when changing plans mid-cycle"
 						action={
-							<Switch
+							<BillingOptionToggle
+								rule={rules.proration}
 								checked={isProrate}
 								onCheckedChange={(checked) =>
 									form.setFieldValue("billingBehavior", checked ? null : "none")
