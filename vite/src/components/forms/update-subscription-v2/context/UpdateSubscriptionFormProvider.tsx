@@ -28,7 +28,7 @@ import { applyDefinedFormPatchFields } from "@/components/forms/shared/utils/for
 import {
 	type UseUpdateSubscriptionPreviewReturn,
 	useUpdateSubscriptionPreview,
-} from "@/components/forms/update-subscription/use-update-subscription-preview";
+} from "../hooks/useUpdateSubscriptionPreview";
 import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
 import { useProductVersionQuery } from "@/hooks/queries/useProductVersionQuery";
 import type { PrepaidItemWithFeature } from "@/hooks/stores/useProductStore";
@@ -341,7 +341,7 @@ export function UpdateSubscriptionFormProvider({
 	);
 
 	const previewQuery = useUpdateSubscriptionPreview({
-		body: previewBody,
+		requestBody: previewBody,
 		enabled: !!(formContext.customerId && formContext.product),
 	});
 
