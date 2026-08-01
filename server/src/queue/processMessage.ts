@@ -65,12 +65,19 @@ const isClaimContestedError = ({ error }: { error: unknown }): boolean => {
 	);
 };
 
+// A contended customer lock resolves in seconds; anything past that is a
+// redelivery loop on one hot customer, and the next deduction below the
+// threshold re-enqueues the top-up anyway.
+const AUTO_TOP_UP_LOCK_MAX_RECEIVES = 3;
+
 export const shouldRetrySqsJobError = ({
 	jobName,
 	error,
+	receiveCount,
 }: {
 	jobName: string;
 	error: unknown;
+	receiveCount?: number;
 }) => {
 	switch (jobName) {
 		case JobName.CustomerCreationRecovery:
@@ -93,10 +100,16 @@ export const shouldRetrySqsJobError = ({
 				isClaimContestedError({ error })
 			);
 		// Top-up shares the customer billing lock — retry instead of dropping the job
-		// when it collides with an attach or checkout materialization.
+		// when it collides with an attach or checkout materialization, but only for a
+		// bounded number of deliveries so one locked customer cannot flood the queue.
 		case JobName.AutoTopUp:
 			return (
-				error instanceof RecaseError && error.code === ErrCode.LockAlreadyExists
+				error instanceof RecaseError &&
+				error.code === ErrCode.LockAlreadyExists &&
+				!(
+					Number.isFinite(receiveCount) &&
+					(receiveCount as number) >= AUTO_TOP_UP_LOCK_MAX_RECEIVES
+				)
 			);
 		case JobName.StripeWebhookReplay:
 			return (
@@ -471,7 +484,7 @@ export const processMessage = async ({
 		// Sync jobs: re-throw infrastructure errors so the message stays in SQS.
 		// Application errors (RecaseError, InternalError) are swallowed — they
 		// won't fix on retry. DB errors (connection, timeout) will.
-		if (shouldRetrySqsJobError({ jobName: job.name, error })) {
+		if (shouldRetrySqsJobError({ jobName: job.name, error, receiveCount })) {
 			Sentry.captureException(error);
 			errorLogger.error(`[${job.name}] Retryable error, keeping in SQS`, {
 				jobName: job.name,

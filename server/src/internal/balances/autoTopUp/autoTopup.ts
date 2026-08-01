@@ -1,4 +1,4 @@
-import { AppEnv } from "@autumn/shared";
+import { AppEnv, ErrCode, RecaseError } from "@autumn/shared";
 import { withLock } from "@/external/redis/redisUtils.js";
 import { voidStripeInvoiceIfOpen } from "@/external/stripe/invoices/operations/voidStripeInvoiceIfOpen.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
@@ -21,6 +21,9 @@ import {
 } from "./webhooks/sendAutoTopupFailedWebhook.js";
 import { sendAutoTopupSucceededWebhook } from "./webhooks/sendAutoTopupSucceededWebhook.js";
 
+const isAutoTopupLockConflict = ({ error }: { error: unknown }) =>
+	error instanceof RecaseError && error.code === ErrCode.LockAlreadyExists;
+
 /** Workflow handler for auto top-ups. */
 export const autoTopup = async ({
 	ctx,
@@ -32,6 +35,7 @@ export const autoTopup = async ({
 	const { org, env, logger } = ctx;
 	const { customerId, featureId } = payload;
 	let failureWebhookSent = false;
+	let lockConflict = false;
 	let lastAutoTopupContext: AutoTopupContext | undefined;
 
 	const sendFailureWebhook = async ({
@@ -190,6 +194,11 @@ export const autoTopup = async ({
 			fn: executeAutoTopup,
 		});
 	} catch (error) {
+		// The pending key is this customer+feature's enqueue throttle. Clearing it
+		// after losing the lock lets the next deduction enqueue immediately, so a
+		// busy customer turns lock contention into a queue-wide flood.
+		if (isAutoTopupLockConflict({ error })) lockConflict = true;
+
 		if (!failureWebhookSent) {
 			const failure = classifyAutoTopupError({ error });
 			await sendFailureWebhook({
@@ -200,6 +209,8 @@ export const autoTopup = async ({
 		}
 		throw error;
 	} finally {
-		await clearAutoTopupPendingKey({ ctx, customerId, featureId });
+		if (!lockConflict) {
+			await clearAutoTopupPendingKey({ ctx, customerId, featureId });
+		}
 	}
 };

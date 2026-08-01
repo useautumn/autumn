@@ -1,4 +1,5 @@
 import { describe, expect, test } from "bun:test";
+import { ErrCode, RecaseError } from "@autumn/shared";
 import { RedisUnavailableError } from "@/external/redis/utils/errors.js";
 import { JobName } from "@/queue/JobName.js";
 import { shouldRetrySqsJobError } from "@/queue/processMessage.js";
@@ -53,6 +54,45 @@ describe("shouldRetrySqsJobError", () => {
 			shouldRetrySqsJobError({
 				jobName: JobName.Track,
 				error: new Error("insufficient balance"),
+			}),
+		).toBe(false);
+	});
+});
+
+describe("shouldRetrySqsJobError - auto top-up lock contention", () => {
+	const lockError = new RecaseError({
+		message:
+			"Another billing operation is already in progress for customer cus_1",
+		code: ErrCode.LockAlreadyExists,
+		statusCode: 423,
+	});
+
+	test("retries the first deliveries so a brief attach collision resolves", () => {
+		expect(
+			shouldRetrySqsJobError({
+				jobName: JobName.AutoTopUp,
+				error: lockError,
+				receiveCount: 1,
+			}),
+		).toBe(true);
+	});
+
+	test("stops retrying once the delivery cap is reached", () => {
+		expect(
+			shouldRetrySqsJobError({
+				jobName: JobName.AutoTopUp,
+				error: lockError,
+				receiveCount: 3,
+			}),
+		).toBe(false);
+	});
+
+	test("does not retry non-lock auto top-up failures", () => {
+		expect(
+			shouldRetrySqsJobError({
+				jobName: JobName.AutoTopUp,
+				error: new Error("card declined"),
+				receiveCount: 1,
 			}),
 		).toBe(false);
 	});
