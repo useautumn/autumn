@@ -24,6 +24,8 @@ import {
 } from "./webhooks/sendAutoTopupFailedWebhook.js";
 import { sendAutoTopupSucceededWebhook } from "./webhooks/sendAutoTopupSucceededWebhook.js";
 
+// Must outlive the queue's full retry chain (maxReceiveCount 10 × 30s visibility = 5m),
+// else the gate reopens while copies still cycle and track traffic reseeds the storm.
 const AUTO_TOPUP_RETRY_SUPPRESSION_MS = ms.minutes(10);
 
 /** Workflow handler for auto top-ups. */
