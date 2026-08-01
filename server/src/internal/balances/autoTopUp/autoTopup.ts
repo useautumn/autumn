@@ -1,4 +1,4 @@
-import { AppEnv } from "@autumn/shared";
+import { AppEnv, ms } from "@autumn/shared";
 import { withLock } from "@/external/redis/redisUtils.js";
 import { voidStripeInvoiceIfOpen } from "@/external/stripe/invoices/operations/voidStripeInvoiceIfOpen.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
@@ -11,7 +11,10 @@ import type { AutoTopUpPayload } from "@/queue/workflows.js";
 import type { AutoTopupContext } from "./autoTopupContext.js";
 import { computeAutoTopupPlan } from "./compute/computeAutoTopupPlan.js";
 import { buildAutoTopUpLockKey } from "./helpers/autoTopUpUtils.js";
-import { clearAutoTopupPendingKey } from "./helpers/enqueueAutoTopupWithBurstSuppression.js";
+import {
+	clearAutoTopupPendingKey,
+	keepAutoTopupPendingKey,
+} from "./helpers/enqueueAutoTopupWithBurstSuppression.js";
 import { recordAutoTopupAttempt } from "./helpers/limits/index.js";
 import { logAutoTopupContext } from "./logs/logAutoTopupContext.js";
 import { setupAutoTopupContext } from "./setup/setupAutoTopupContext.js";
@@ -20,6 +23,8 @@ import {
 	sendAutoTopupFailedWebhook,
 } from "./webhooks/sendAutoTopupFailedWebhook.js";
 import { sendAutoTopupSucceededWebhook } from "./webhooks/sendAutoTopupSucceededWebhook.js";
+
+const AUTO_TOPUP_RETRY_SUPPRESSION_MS = ms.minutes(10);
 
 /** Workflow handler for auto top-ups. */
 export const autoTopup = async ({
@@ -33,6 +38,7 @@ export const autoTopup = async ({
 	const { customerId, featureId } = payload;
 	let failureWebhookSent = false;
 	let lastAutoTopupContext: AutoTopupContext | undefined;
+	let pendingTtlMs: number | undefined;
 
 	const sendFailureWebhook = async ({
 		autoTopupContext,
@@ -69,6 +75,12 @@ export const autoTopup = async ({
 
 		if (!setupResult.ok) {
 			if (setupResult.failure) {
+				if (setupResult.failure.suppressionTtlMs) {
+					pendingTtlMs = Math.min(
+						setupResult.failure.suppressionTtlMs,
+						AUTO_TOPUP_RETRY_SUPPRESSION_MS,
+					);
+				}
 				await sendFailureWebhook(setupResult.failure);
 			}
 			return;
@@ -190,8 +202,10 @@ export const autoTopup = async ({
 			fn: executeAutoTopup,
 		});
 	} catch (error) {
-		if (!failureWebhookSent) {
-			const failure = classifyAutoTopupError({ error });
+		const failure = classifyAutoTopupError({ error });
+		if (failure.reason === "lock_contention") {
+			pendingTtlMs = AUTO_TOPUP_RETRY_SUPPRESSION_MS;
+		} else if (!failureWebhookSent) {
 			await sendFailureWebhook({
 				...failure,
 				error,
@@ -200,6 +214,15 @@ export const autoTopup = async ({
 		}
 		throw error;
 	} finally {
-		await clearAutoTopupPendingKey({ ctx, customerId, featureId });
+		if (pendingTtlMs) {
+			await keepAutoTopupPendingKey({
+				ctx,
+				customerId,
+				featureId,
+				ttlMs: pendingTtlMs,
+			});
+		} else {
+			await clearAutoTopupPendingKey({ ctx, customerId, featureId });
+		}
 	}
 };
