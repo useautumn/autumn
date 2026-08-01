@@ -1,22 +1,16 @@
 import { formatAmount } from "@autumn/shared";
-import type { AxiosError } from "axios";
-import { format } from "date-fns";
+import { PreviewSection } from "@/components/forms/shared/PreviewSection";
 import { getPreviewCreditAmount } from "@/components/forms/shared/previewCreditUtils";
-import { LineItemsPreview } from "@/components/v2/LineItemsPreview";
+import { buildPreviewTotals } from "@/components/forms/shared/utils/buildPreviewTotals";
 import { PreviewTotalsBlock } from "@/components/v2/preview-totals/PreviewTotalsBlock";
 import { SheetSection } from "@/components/v2/sheets/SharedSheetComponents";
-import { getBackendErr } from "@/utils/genUtils";
 import { InfoBox } from "@/views/onboarding2/integrate/components/InfoBox";
 import { useUpdateSubscriptionFormContext } from "../context/UpdateSubscriptionFormProvider";
-import { PreviewErrorDisplay } from "./PreviewErrorDisplay";
 
 export function UpdateSubscriptionPreviewSection() {
 	const { previewQuery, hasChanges } = useUpdateSubscriptionFormContext();
 
-	const { isLoading, data: previewData, error: queryError } = previewQuery;
-	const error = queryError
-		? getBackendErr(queryError as AxiosError, "Failed to load preview")
-		: undefined;
+	const { isLoading, data: previewData } = previewQuery;
 	const creditAmount = getPreviewCreditAmount({ previewData });
 	const hasCreditIndicator = creditAmount > 0;
 	const formattedCreditAmount = hasCreditIndicator
@@ -31,54 +25,36 @@ export function UpdateSubscriptionPreviewSection() {
 			})
 		: null;
 
-	const secondaryTotals = [];
-	if (previewData?.next_cycle) {
-		secondaryTotals.push({
-			label: "Next Cycle",
-			amount: previewData.next_cycle.total,
-			variant: "secondary" as const,
-			badge: previewData.next_cycle.starts_at
-				? format(new Date(previewData.next_cycle.starts_at), "MMM d, yyyy")
-				: undefined,
-		});
-	}
-
-	if (!hasChanges) return null;
-
-	if (error) {
-		return (
-			<SheetSection title="Pricing Preview" withSeparator>
-				<PreviewErrorDisplay error={error} />
-			</SheetSection>
-		);
-	}
-
 	return (
-		<>
-			{previewData && hasCreditIndicator && !isLoading && (
-				<SheetSection withSeparator={false} className="pb-0">
-					<InfoBox variant="note">
-						This update includes{" "}
-						<span className="text-foreground font-medium">
-							{formattedCreditAmount}
-						</span>{" "}
-						in invoice credits.
-					</InfoBox>
-				</SheetSection>
-			)}
-			<LineItemsPreview
-				title="Pricing Preview"
-				isLoading={isLoading}
-				lineItems={previewData?.line_items}
-				currency={previewData?.currency}
-				totals={secondaryTotals}
-				filterZeroAmounts
-			/>
-			{previewData && (
-				<SheetSection withSeparator={false}>
-					<PreviewTotalsBlock previewData={previewData} />
-				</SheetSection>
-			)}
-		</>
+		<PreviewSection
+			previewQuery={previewQuery}
+			hidden={!hasChanges}
+			totals={buildPreviewTotals({
+				previewData,
+				includeTotalDue: false,
+			})}
+			above={
+				previewData &&
+				hasCreditIndicator &&
+				!isLoading && (
+					<SheetSection withSeparator={false} className="pb-0">
+						<InfoBox variant="note">
+							This update includes{" "}
+							<span className="text-foreground font-medium">
+								{formattedCreditAmount}
+							</span>{" "}
+							in invoice credits.
+						</InfoBox>
+					</SheetSection>
+				)
+			}
+			below={
+				previewData && (
+					<SheetSection withSeparator={false}>
+						<PreviewTotalsBlock previewData={previewData} />
+					</SheetSection>
+				)
+			}
+		/>
 	);
 }

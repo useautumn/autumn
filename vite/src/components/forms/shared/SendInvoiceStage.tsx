@@ -4,7 +4,7 @@ import { ArrowLeft, HourglassIcon, LightningIcon } from "@phosphor-icons/react";
 import { format } from "date-fns";
 import { useCallback, useMemo, useState } from "react";
 import { toast } from "sonner";
-import { buildAttachPreviewTotals } from "@/components/forms/attach-v2/utils/buildAttachPreviewTotals";
+import { buildPreviewTotals } from "@/components/forms/shared/utils/buildPreviewTotals";
 import type { BillingLineItem } from "@/components/v2/LineItemsPreview";
 import { LineItemsPreview } from "@/components/v2/LineItemsPreview";
 import {
@@ -384,7 +384,7 @@ export function SendInvoiceStageWithPreview({
 	const effectiveScheduledStartDate = scheduledStartDate ?? null;
 
 	const totals = useMemo(
-		() => buildAttachPreviewTotals({ previewData, startDate: null }),
+		() => buildPreviewTotals({ previewData, startDate: null }),
 		[previewData],
 	);
 

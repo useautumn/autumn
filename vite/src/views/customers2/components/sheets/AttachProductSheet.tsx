@@ -19,17 +19,17 @@ import {
 } from "@/components/forms/attach-v2";
 import { AttachFooterV3 } from "@/components/forms/attach-v2/components/AttachFooterV3";
 import {
-	buildAttachPreviewTotals,
 	getAttachPreviewLineItems,
 	isFutureStartDate,
 } from "@/components/forms/attach-v2/utils/buildAttachPreviewTotals";
+import { DisabledTooltipButton } from "@/components/forms/shared";
 import {
 	GenerateCheckoutStageWithPreview,
 	SchedulePlanStageWithPreview,
 } from "@/components/forms/shared/GenerateCheckoutStage";
-import { DisabledTooltipButton } from "@/components/forms/shared";
+import { PreviewErrorDisplay } from "@/components/forms/shared/PreviewErrorDisplay";
 import { SendInvoiceStageWithPreview } from "@/components/forms/shared/SendInvoiceStage";
-import { PreviewErrorDisplay } from "@/components/forms/update-subscription-v2/components/PreviewErrorDisplay";
+import { buildPreviewTotals } from "@/components/forms/shared/utils/buildPreviewTotals";
 import {
 	STAGGER_CONTAINER,
 	STAGGER_ITEM,
@@ -144,7 +144,7 @@ function ReviewPreviewBlock() {
 		? getBackendErr(queryError as AxiosError, "Failed to load preview")
 		: undefined;
 
-	const previewTotals = buildAttachPreviewTotals({
+	const previewTotals = buildPreviewTotals({
 		previewData,
 		startDate,
 	});

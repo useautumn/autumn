@@ -1,6 +1,6 @@
 import { AxiosError } from "axios";
 import { format } from "date-fns";
-import { PreviewErrorDisplay } from "@/components/forms/update-subscription-v2/components/PreviewErrorDisplay";
+import { PreviewErrorDisplay } from "@/components/forms/shared/PreviewErrorDisplay";
 import { LineItemsPreview } from "@/components/v2/LineItemsPreview";
 import { SheetSection } from "@/components/v2/sheets/SharedSheetComponents";
 import { getBackendErr } from "@/utils/genUtils";

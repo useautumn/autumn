@@ -7,10 +7,10 @@ import { useMemo, useState } from "react";
 import { toast } from "sonner";
 import { useAttachFormContext } from "@/components/forms/attach-v2/context/AttachFormProvider";
 import {
-	buildAttachPreviewTotals,
 	getAttachPreviewLineItems,
 	getAttachScheduledStartDate,
 } from "@/components/forms/attach-v2/utils/buildAttachPreviewTotals";
+import { buildPreviewTotals } from "@/components/forms/shared/utils/buildPreviewTotals";
 import type { BillingLineItem } from "@/components/v2/LineItemsPreview";
 import { LineItemsPreview } from "@/components/v2/LineItemsPreview";
 import {
@@ -35,7 +35,7 @@ function usePreviewTotals({
 	startDate?: number | null;
 }) {
 	return useMemo(
-		() => buildAttachPreviewTotals({ previewData, startDate }),
+		() => buildPreviewTotals({ previewData, startDate }),
 		[previewData, startDate],
 	);
 }
