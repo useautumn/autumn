@@ -1,5 +1,5 @@
 import type { Entity } from "@autumn/shared";
-import type { ReactNode } from "react";
+import type { SearchableSelectFooter } from "@autumn/ui";
 import { PlanEntityScopeSelector } from "@/components/forms/shared";
 
 export function EntityScopeSelector({
@@ -16,7 +16,7 @@ export function EntityScopeSelector({
 	entities: Entity[];
 	scopeEntityId: string | undefined;
 	onScopeChange: (entityId: string | undefined) => void;
-	footer?: ReactNode;
+	footer?: SearchableSelectFooter;
 	withSeparator?: boolean;
 	wrapInSection?: boolean;
 	showLabel?: boolean;

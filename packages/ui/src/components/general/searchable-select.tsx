@@ -18,6 +18,10 @@ import { AnimatePresence, motion } from "motion/react";
 import type { ReactNode } from "react";
 import { useEffect, useState } from "react";
 
+export type SearchableSelectFooter =
+	| ReactNode
+	| ((props: { close: () => void }) => ReactNode);
+
 export type SearchableSelectProps<T> = {
 	value: string | null;
 	onValueChange: (value: string) => void;
@@ -36,7 +40,7 @@ export type SearchableSelectProps<T> = {
 	contentClassName?: string;
 	defaultOpen?: boolean;
 	header?: ReactNode;
-	footer?: ReactNode;
+	footer?: SearchableSelectFooter;
 	onSearchChange?: (search: string) => void;
 	isLoading?: boolean;
 };
@@ -204,7 +208,9 @@ export function SearchableSelect<T>({
 									</CommandGroup>
 								</CommandList>
 							</Command>
-							{footer}
+							{typeof footer === "function"
+								? footer({ close: () => setOpen(false) })
+								: footer}
 						</motion.div>
 					</PopoverContent>
 				)}

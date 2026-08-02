@@ -266,12 +266,15 @@ function SelectContent() {
 				isLoading={isEntitiesLoading}
 				wrapInSection={false}
 				showLabel={!additionalPlans.isMultiPlan}
-				footer={
+				footer={({ close }) => (
 					<div className="border-t py-1.5 px-2">
 						<Button
 							variant="muted"
 							className="w-full"
-							onClick={() => setCreateEntityOpen(true)}
+							onClick={() => {
+								close();
+								setCreateEntityOpen(true);
+							}}
 						>
 							<PlusIcon
 								className="size-[14px] text-muted-foreground"
@@ -280,7 +283,7 @@ function SelectContent() {
 							Create new entity
 						</Button>
 					</div>
-				}
+				)}
 			/>
 
 			{!additionalPlans.isMultiPlan &&

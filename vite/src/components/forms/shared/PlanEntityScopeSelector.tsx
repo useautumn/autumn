@@ -1,7 +1,7 @@
 import type { Entity } from "@autumn/shared";
+import type { SearchableSelectFooter } from "@autumn/ui";
 import { SearchableSelect } from "@autumn/ui";
 import { CheckIcon } from "lucide-react";
-import type { ReactNode } from "react";
 import { SheetSection } from "@/components/v2/sheets/SharedSheetComponents";
 
 const CUSTOMER_LEVEL_VALUE = "";
@@ -30,7 +30,7 @@ export function PlanEntityScopeSelector({
 	value: string | null | undefined;
 	onChange: (entityId: string | null | undefined) => void;
 	inheritLabel?: string;
-	footer?: ReactNode;
+	footer?: SearchableSelectFooter;
 	withSeparator?: boolean;
 	wrapInSection?: boolean;
 	showLabel?: boolean;
