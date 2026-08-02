@@ -4,42 +4,12 @@ import {
 	schedulePhases,
 	schedules,
 } from "@autumn/shared";
-import { and, asc, eq, inArray, isNull } from "drizzle-orm";
+import { asc, eq, inArray } from "drizzle-orm";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
+import { resolveScheduleScopes } from "../schedules/resolveScheduleScope.js";
 
-export const getFullCustomerSchedule = async ({
-	ctx,
-	internalCustomerId,
-}: {
-	ctx: AutumnContext;
-	internalCustomerId: string;
-}): Promise<FullCustomerSchedule | undefined> => {
-	const [schedule] = await ctx.db
-		.select()
-		.from(schedules)
-		.where(
-			and(
-				eq(schedules.internal_customer_id, internalCustomerId),
-				isNull(schedules.internal_entity_id),
-			),
-		)
-		.limit(1);
-
-	if (!schedule) return undefined;
-
-	const phases = await ctx.db
-		.select()
-		.from(schedulePhases)
-		.where(eq(schedulePhases.schedule_id, schedule.id))
-		.orderBy(asc(schedulePhases.starts_at));
-
-	// Treat a schedule with no future phases as non-existent.
-	if (!phases.some((phase) => phase.starts_at > Date.now())) return undefined;
-
-	return { ...schedule, phases };
-};
-
-export const getAllCustomerSchedules = async ({
+/** Schedules with at least one future phase — a fully past schedule is spent. */
+const loadLiveSchedules = async ({
 	ctx,
 	internalCustomerId,
 }: {
@@ -74,6 +44,55 @@ export const getAllCustomerSchedules = async ({
 		);
 };
 
+/**
+ * Buckets a customer's schedules by scope, derived from the customer products
+ * each one owns rather than the schedules row's own entity column.
+ */
+export const getCustomerSchedulesByScope = async ({
+	ctx,
+	internalCustomerId,
+}: {
+	ctx: AutumnContext;
+	internalCustomerId: string;
+}): Promise<{
+	customerSchedule: FullCustomerSchedule | undefined;
+	entitySchedules: Record<string, FullCustomerSchedule>;
+}> => {
+	const liveSchedules = await loadLiveSchedules({ ctx, internalCustomerId });
+	const scopes = await resolveScheduleScopes({
+		ctx,
+		schedules: liveSchedules,
+	});
+
+	let customerSchedule: FullCustomerSchedule | undefined;
+	const entitySchedules: Record<string, FullCustomerSchedule> = {};
+
+	for (const schedule of liveSchedules) {
+		const internalEntityId = scopes.get(schedule.id);
+		if (internalEntityId) {
+			entitySchedules[internalEntityId] = schedule;
+		} else {
+			customerSchedule ??= schedule;
+		}
+	}
+
+	return { customerSchedule, entitySchedules };
+};
+
+export const getFullCustomerSchedule = async ({
+	ctx,
+	internalCustomerId,
+}: {
+	ctx: AutumnContext;
+	internalCustomerId: string;
+}): Promise<FullCustomerSchedule | undefined> => {
+	const { customerSchedule } = await getCustomerSchedulesByScope({
+		ctx,
+		internalCustomerId,
+	});
+	return customerSchedule;
+};
+
 export const hydrateFullCustomerSchedule = async ({
 	ctx,
 	fullCustomer,
@@ -96,20 +115,18 @@ export const hydrateCustomerWithSchedules = async ({
 	ctx: AutumnContext;
 	fullCustomer: FullCustomer;
 }) => {
-	const allSchedules = await getAllCustomerSchedules({
-		ctx,
-		internalCustomerId: fullCustomer.internal_id,
-	});
+	const { customerSchedule, entitySchedules } =
+		await getCustomerSchedulesByScope({
+			ctx,
+			internalCustomerId: fullCustomer.internal_id,
+		});
 
 	return {
 		...fullCustomer,
-		schedule: allSchedules.find((schedule) => !schedule.internal_entity_id),
+		schedule: customerSchedule,
 		entities: fullCustomer.entities?.map((entity) => ({
 			...entity,
-			schedule:
-				allSchedules.find(
-					(schedule) => schedule.internal_entity_id === entity.internal_id,
-				) ?? undefined,
+			schedule: entitySchedules[entity.internal_id] ?? undefined,
 		})),
 	};
 };

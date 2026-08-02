@@ -6,11 +6,19 @@ import {
 	schedulePhases,
 	schedules,
 } from "@autumn/shared";
-import { and, eq, inArray, isNull } from "drizzle-orm";
+import { and, eq, inArray } from "drizzle-orm";
 import type { DrizzleCli } from "@/db/initDrizzle";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
+import {
+	resolveCustomerProductsScope,
+	resolveScheduleScopes,
+} from "@/internal/customers/schedules/resolveScheduleScope";
 import { generateId } from "@/utils/genUtils";
 
+/**
+ * Finds the schedule occupying the target scope. Scope comes from the opening
+ * phase's customer products, so rows with a stale entity column still match.
+ */
 const getExistingScheduleState = async ({
 	ctx,
 	internalCustomerId,
@@ -18,39 +26,54 @@ const getExistingScheduleState = async ({
 }: {
 	ctx: AutumnContext;
 	internalCustomerId: string;
-	internalEntityId?: string;
+	internalEntityId: string | null;
 }) => {
-	const existingSchedules = await ctx.db
-		.select({ id: schedules.id })
+	const empty = { scheduleIds: [], existingCustomerProductIds: [] };
+
+	const customerSchedules = await ctx.db
+		.select({
+			id: schedules.id,
+			internal_entity_id: schedules.internal_entity_id,
+		})
 		.from(schedules)
+		.where(eq(schedules.internal_customer_id, internalCustomerId));
+
+	if (customerSchedules.length === 0) return empty;
+
+	const existingPhases = await ctx.db
+		.select({
+			schedule_id: schedulePhases.schedule_id,
+			starts_at: schedulePhases.starts_at,
+			customer_product_ids: schedulePhases.customer_product_ids,
+		})
+		.from(schedulePhases)
 		.where(
-			and(
-				eq(schedules.internal_customer_id, internalCustomerId),
-				internalEntityId
-					? eq(schedules.internal_entity_id, internalEntityId)
-					: isNull(schedules.internal_entity_id),
+			inArray(
+				schedulePhases.schedule_id,
+				customerSchedules.map((schedule) => schedule.id),
 			),
 		);
 
-	if (existingSchedules.length === 0) {
-		return {
-			scheduleIds: [],
-			existingCustomerProductIds: [],
-		};
-	}
+	const schedulesWithPhases = customerSchedules.map((schedule) => ({
+		...schedule,
+		phases: existingPhases.filter((phase) => phase.schedule_id === schedule.id),
+	}));
 
-	const scheduleIds = existingSchedules.map((schedule) => schedule.id);
-	const existingPhases = await ctx.db
-		.select({ customer_product_ids: schedulePhases.customer_product_ids })
-		.from(schedulePhases)
-		.where(inArray(schedulePhases.schedule_id, scheduleIds));
-	const existingCustomerProductIds = existingPhases.flatMap(
-		(phase) => phase.customer_product_ids,
+	const scopes = await resolveScheduleScopes({
+		ctx,
+		schedules: schedulesWithPhases,
+	});
+	const inScope = schedulesWithPhases.filter(
+		(schedule) => (scopes.get(schedule.id) ?? null) === internalEntityId,
 	);
 
+	if (inScope.length === 0) return empty;
+
 	return {
-		scheduleIds,
-		existingCustomerProductIds,
+		scheduleIds: inScope.map((schedule) => schedule.id),
+		existingCustomerProductIds: inScope.flatMap((schedule) =>
+			schedule.phases.flatMap((phase) => phase.customer_product_ids),
+		),
 	};
 };
 
@@ -98,10 +121,16 @@ export const persistCreateSchedule = async ({
 		const txDb = tx as unknown as DrizzleCli;
 		const txCtx = { ...ctx, db: txDb };
 
+		const openingPhase = [...phases].sort((a, b) => a.startsAt - b.startsAt)[0];
+		const scope = await resolveCustomerProductsScope({
+			ctx: txCtx,
+			customerProductIds: openingPhase?.customerProductIds ?? [],
+		});
+
 		const existingScheduleState = await getExistingScheduleState({
 			ctx: txCtx,
 			internalCustomerId: fullCustomer.internal_id,
-			internalEntityId: fullCustomer.entity?.internal_id ?? undefined,
+			internalEntityId: scope.internalEntityId,
 		});
 
 		await deleteExistingSchedules({
@@ -116,8 +145,8 @@ export const persistCreateSchedule = async ({
 			env: ctx.env,
 			internal_customer_id: fullCustomer.internal_id,
 			customer_id: customerId,
-			internal_entity_id: fullCustomer.entity?.internal_id ?? null,
-			entity_id: fullCustomer.entity?.id ?? null,
+			internal_entity_id: scope.internalEntityId,
+			entity_id: scope.entityId,
 			created_at: currentEpochMs,
 		});
 
