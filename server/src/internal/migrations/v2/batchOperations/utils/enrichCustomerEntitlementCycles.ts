@@ -1,16 +1,24 @@
 import {
+	type CusProductStatus,
 	EntInterval,
 	type EntitlementWithFeature,
 	getCycleEnd,
 } from "@autumn/shared";
 
 /** One candidate customer product with its possible anchor sources, as
- * selected by the page's candidate query. */
+ * selected by the page's candidate query. Lifecycle fields feed the webhook
+ * plan-change snapshot without a re-read. */
 export type CycleEnrichmentCandidate = {
 	customerProductId: string;
 	internalCustomerId: string;
 	customerId: string | null;
+	/** Public id of the owning entity when the customer product is entity-level. */
+	entityId: string | null;
+	status: CusProductStatus;
 	startsAt: number | null;
+	canceledAt: number | null;
+	endedAt: number | null;
+	trialEndsAt: number | null;
 	/** ≥1 recurring customer price on THIS cusProduct (per-customer truth). */
 	isPaidRecurring: boolean;
 	/** customer_products.billing_cycle_anchor (recent attaches). */

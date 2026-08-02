@@ -1,3 +1,4 @@
+import type { Feature, FullProduct } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { ProductService } from "@/internal/products/ProductService.js";
 import { computeBatchMigration } from "../batchOperations/compute/index.js";
@@ -6,7 +7,10 @@ import type {
 	BatchMigrationRejection,
 } from "../batchOperations/types/index.js";
 import type { MigrationRunControls } from "../cloudAdapter/types.js";
-import type { MigrationRuntimeWithEventId } from "../types/migrationDefinition.js";
+import type {
+	MigrationRuntime,
+	MigrationRuntimeWithEventId,
+} from "../types/migrationDefinition.js";
 
 export type BatchLaneDecision =
 	| { shouldRun: true; plan: BatchMigrationPlan }
@@ -19,6 +23,30 @@ export type BatchLaneDecision =
 				| "no_batch_patches";
 			rejections?: BatchMigrationRejection[];
 	  };
+
+/**
+ * Catalog-only prediction of the lane a plain run would take — for surfaces
+ * (dashboard run panel) that need it BEFORE prepare has run, so
+ * missing_prepared_state rejections count as eligible: prepare runs at run
+ * start and only materializes what compute already accepted.
+ */
+export const isBatchEligibleMigrationDefinition = ({
+	migration,
+	products,
+	features,
+}: {
+	migration: MigrationRuntime;
+	products: FullProduct[];
+	features: Feature[];
+}): boolean => {
+	if (!migration.operations) return false;
+
+	const computed = computeBatchMigration({ migration, products, features });
+	if (computed.computable) return computed.plan.patches.length > 0;
+	return computed.rejections.every(
+		(rejection) => rejection.code === "missing_prepared_state",
+	);
+};
 
 /**
  * A run is batch-eligible only in its plain form — anything that scopes,
@@ -34,11 +62,11 @@ const isBatchEligibleRun = ({
 	controls?: MigrationRunControls;
 	hasCustomHooks: boolean;
 }): boolean =>
+	// `only` / `retryItemStatuses` are claim-time controls, not lane
+	// selectors — the batch claim applies them itself.
 	!dryRun &&
 	!hasCustomHooks &&
-	!controls?.only?.length &&
 	controls?.limit == null &&
-	!controls?.retryItemStatuses?.length &&
 	controls?.checkpoint !== false;
 
 /**

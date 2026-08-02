@@ -1,7 +1,5 @@
-import type {
-	FullProduct,
-	FullProductWithoutLicenses,
-} from "@autumn/shared";
+import type { FullProduct, FullProductWithoutLicenses } from "@autumn/shared";
+import type { OperationScope } from "../scope/operationScope.js";
 import type { BatchMigrationOperations } from "./batchMigrationOperations.js";
 
 export type BatchMigrationRejectionCode =
@@ -47,6 +45,8 @@ export type BatchMigrationRejection = {
 export type BatchMigrationPatch = {
 	opIndex: number;
 	planId: string;
+	/** The plan filter's lowered row-level residue this patch executes against. */
+	scope: OperationScope;
 	fromProduct: FullProduct;
 	toProduct: FullProductWithoutLicenses;
 	operations: BatchMigrationOperations;

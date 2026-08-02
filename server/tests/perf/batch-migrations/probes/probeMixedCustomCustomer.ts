@@ -10,7 +10,7 @@ import { CusProductStatus, EntInterval } from "@autumn/shared";
 import { TestFeature } from "@tests/setup/v2Features.js";
 import { sql } from "drizzle-orm";
 import { selectAddCandidateRows } from "@/internal/migrations/v2/batchOperations/actions/addCustomerEntitlementsForPage/selectAddCandidateRows.js";
-import { listCustomersOnPlanFilterMatchedProducts } from "@/internal/migrations/v2/batchOperations/repos/listCustomersOnPlanFilterMatchedProducts.js";
+import { buildOperationScope } from "@/internal/migrations/v2/batchOperations/scope/operationScope.js";
 import { getBenchContext } from "../utils/benchContext.js";
 
 const CUSTOMER = "cus_bench_2300001"; // free-bare shape: single non-custom cp
@@ -45,19 +45,15 @@ const main = async () => {
 			ON CONFLICT DO NOTHING
 		`);
 
-		const matched = await listCustomersOnPlanFilterMatchedProducts({
-			db,
-			internalCustomerIds: [CUSTOMER],
-			planFilterMatchedProductIds: [benchProducts.freeBare.internalId],
-		});
-		console.log(
-			`partition: matched=${matched.has(CUSTOMER)} (expected true — has one eligible row)`,
-		);
-
+		// custom: false scope — the probe verifies customized rows never leak
+		// into a plain-scoped candidate set.
 		const candidates = await selectAddCandidateRows({
 			db,
 			internalCustomerIds: [CUSTOMER],
-			fromInternalProductId: benchProducts.freeBare.internalId,
+			scope: buildOperationScope({
+				internalProductId: benchProducts.freeBare.internalId,
+				isCustom: false,
+			}),
 			entitlement: wordsEntitlement,
 			includeAnchorSources: true,
 		});
@@ -70,9 +66,7 @@ const main = async () => {
 				: "FAIL — custom row leaked into candidates!",
 		);
 	} finally {
-		await db.execute(
-			sql`DELETE FROM customer_products WHERE id = ${MIXED_CP}`,
-		);
+		await db.execute(sql`DELETE FROM customer_products WHERE id = ${MIXED_CP}`);
 		console.log("cleaned up temp cp row");
 	}
 	process.exit(0);

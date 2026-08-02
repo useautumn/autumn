@@ -8,8 +8,10 @@ import type { BatchMigrationExecutionPlan } from "@/internal/migrations/v2/batch
 import { clearOrgCache } from "@/internal/orgs/orgUtils/clearOrgCache.js";
 import { generateId } from "@/utils/genUtils.js";
 import { withMigrationRunTracking } from "../actions/migrationRun/index.js";
+import type { MigrationWebhookControls } from "../cloudAdapter/types.js";
 import type { MigrationRuntimeWithEventId } from "../types/migrationDefinition.js";
 import { shouldRunBatchLane } from "../utils/shouldRunBatchLane.js";
+import { resolveMigrationWebhookControls } from "../webhookDelivery/utils/resolveMigrationWebhookControls.js";
 import { iterateBatchMigrationChunks } from "./chunks/iterateBatchMigrationChunks.js";
 import {
 	iterateMigrationChunks,
@@ -46,12 +48,16 @@ const runBatchMigrationLane = async ({
 	migrationRunId,
 	migrationSnapshot,
 	plan,
+	webhooks,
+	controls,
 	runBatchChunk,
 }: {
 	ctx: AutumnContext;
 	migrationRunId: string;
 	migrationSnapshot: RunBatchMigrationChunkPayload["migration"];
 	plan: BatchMigrationExecutionPlan;
+	webhooks: MigrationWebhookControls;
+	controls: RunMigrationPayload["controls"];
 	runBatchChunk?: RunBatchMigrationChunkRunner;
 }): Promise<MigrationChunkRunResult> => {
 	const executeBatchChunk: RunBatchMigrationChunkRunner =
@@ -64,6 +70,8 @@ const runBatchMigrationLane = async ({
 				plan: payload.plan,
 				afterInternalId: payload.cursor,
 				maxPages: BATCH_MIGRATION_PAGES_PER_CHUNK,
+				webhooks: payload.webhooks,
+				controls: payload.controls,
 			}));
 
 	const result = await iterateBatchMigrationChunks({
@@ -76,6 +84,8 @@ const runBatchMigrationLane = async ({
 					plan,
 					chunkIndex,
 					cursor,
+					webhooks,
+					controls,
 				}),
 			),
 	});
@@ -154,7 +164,15 @@ export const runMigrationInChunks = async ({
 						ctx,
 						migrationRunId: eventMigrationRunId,
 						migrationSnapshot,
+						controls,
 						plan: batchMigrationPlanToExecutionPlan({ plan: batchLane.plan }),
+						webhooks: await resolveMigrationWebhookControls({
+							ctx,
+							filter: migration.filter,
+							params: controls?.webhooks,
+							lazyRun,
+							dryRun,
+						}),
 						runBatchChunk,
 					});
 				}

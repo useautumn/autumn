@@ -55,51 +55,54 @@ afterAll(async () => {
 	await webhook?.cleanup();
 });
 
-test.concurrent(`${chalk.yellowBright("billing.updated: U1 update items → updated")}`, async () => {
-	const customerId = "billing-updated-u1-update-items";
-	const messagesItem = items.monthlyMessages({ includedUsage: 100 });
-	const priceItem = items.monthlyPrice({ price: 20 });
-	const pro = products.base({
-		id: "pro",
-		items: [messagesItem, priceItem],
-	});
+test.concurrent(
+	`${chalk.yellowBright("billing.updated: U1 update items → updated")}`,
+	async () => {
+		const customerId = "billing-updated-u1-update-items";
+		const messagesItem = items.monthlyMessages({ includedUsage: 100 });
+		const priceItem = items.monthlyPrice({ price: 20 });
+		const pro = products.base({
+			id: "pro",
+			items: [messagesItem, priceItem],
+		});
 
-	const { autumnV1 } = await initScenario({
-		customerId,
-		setup: [
-			s.customer({ paymentMethod: "success", skipWebhooks: true }),
-			s.products({ list: [pro] }),
-		],
-		actions: [s.attach({ productId: pro.id })],
-	});
+		const { autumnV1 } = await initScenario({
+			customerId,
+			setup: [
+				s.customer({ paymentMethod: "success", skipWebhooks: true }),
+				s.products({ list: [pro] }),
+			],
+			actions: [s.attach({ productId: pro.id })],
+		});
 
-	const newMessagesItem = items.monthlyMessages({ includedUsage: 200 });
+		const newMessagesItem = items.monthlyMessages({ includedUsage: 200 });
 
-	await autumnV1.subscriptions.update({
-		customer_id: customerId,
-		product_id: pro.id,
-		items: [newMessagesItem, priceItem],
-	});
+		await autumnV1.subscriptions.update({
+			customer_id: customerId,
+			product_id: pro.id,
+			items: [newMessagesItem, priceItem],
+		});
 
-	const result = await waitForWebhook<BillingUpdatedPayload>({
-		token: playToken,
-		predicate: (payload) =>
-			payload.type === "billing.updated" &&
-			payload.data?.customer_id === customerId &&
-			findChange(payload.data.plan_changes, {
-				action: "updated",
-				planId: pro.id,
-			}) !== undefined,
-		timeoutMs: 15000,
-	});
+		const result = await waitForWebhook<BillingUpdatedPayload>({
+			token: playToken,
+			predicate: (payload) =>
+				payload.type === "billing.updated" &&
+				payload.data?.customer_id === customerId &&
+				findChange(payload.data.plan_changes, {
+					action: "updated",
+					planId: pro.id,
+				}) !== undefined,
+			timeoutMs: 15000,
+		});
 
-	expect(result).not.toBeNull();
-	const { data } = result!.payload;
+		expect(result).not.toBeNull();
+		const { data } = result!.payload;
 
-	const updated = findChange(data.plan_changes, {
-		action: "updated",
-		planId: pro.id,
-	});
-	expect(updated).toBeDefined();
-	expect(updated?.subscription?.plan_id).toBe(pro.id);
-});
+		const updated = findChange(data.plan_changes, {
+			action: "updated",
+			planId: pro.id,
+		});
+		expect(updated).toBeDefined();
+		expect(updated?.subscription?.plan_id).toBe(pro.id);
+	},
+);

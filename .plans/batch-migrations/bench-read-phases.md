@@ -70,6 +70,17 @@ index-shaped regime on every query, bounds the txn/crash blast radius, and
 the per-page read overhead (~250–350ms total) is already small relative to
 expected write costs. Revisit only with prod-scale EXPLAINs in hand.
 
+## Finalize cache invalidation (implemented + benched)
+
+finalizeBatchMigrationPage now calls batchInvalidateCachedFullSubjects for
+succeeded customers (covers fullCustomer + FullSubject subject/shared-balance/
+epoch keys). Bench (probeFinalizeCacheBench, worst-case all-features
+fallback): 5k customers in ~240–290ms (~50µs/customer) → ~10% of page cost.
+Integration contract: batch-finalize-cache.test.ts primes caches BEFORE the
+migration (without priming a broken finalize is undetectable), then asserts
+the same reads serve post-migration flags/balances. Remaining finalize TODOs:
+Tinybird item events, webhook parity decision.
+
 ## Hot-path collision probe (probeHotPathConcurrency)
 
 3 full-tilt getFullSubject readers + 2 syncItemV4-style balance writers on
@@ -111,3 +122,71 @@ scope re-join + ON CONFLICT + cusEnt index maintenance ×~17 indexes).
 Everything else matches the read probes. Projection: 600k ≈ 120 pages ×
 ~2.7s ≈ 5–6 min end-to-end at current shape. Next dig: EXPLAIN the insert —
 how much is index maintenance (irreducible) vs re-join/conflict probing.
+
+## OperationScope constraint variants (B2)
+
+Scope constraints (custom / paid / recurring / base-price) now render into
+BOTH the candidate select and the insert re-assertion (`operationScopeSql`).
+Probed via probePartitionCandidates scope scenarios + probePhaseIndexAudit.
+
+Candidate select @5k warm (unconstrained baseline ~380–425ms):
+
+| scope | ms warm | notes |
+|---|---|---|
+| custom:false (mixed-custom page) | ~225 | 503/5,000 matched, sibling anchors intact |
+| paid:true (bench-paid) | ~445 | EXISTS cusPrice per row |
+| recurring:true | ~415 | EXISTS + prices join |
+| base price:true | ~435 | entitlement_id IS NULL probe |
+| stacked (all four) | ~450 | constraints ≈ free — probes share the cpr index |
+| paid:false (bench-free) | ~380 | NOT EXISTS over full page |
+
+Index audit: every unbounded-table access stays a per-row index probe
+(cpr→idx_cpr_customer_product_id_c, subs→stripe_id_key, prices→pkey).
+Real SEQ flags are only 0-loop alternative subplans on catalog tables, plus
+one *executed* per-row Seq Scan on `prices` in the stacked candidate plan —
+cost-based choice while `prices` is tiny; expected to flip to index at prod
+size, but worth re-checking with prod-scale EXPLAIN.
+
+Insert with scope re-assertion (EXPLAIN ANALYZE, rolled back, 5k rows):
+unconstrained 319ms → stacked 339ms (+6%); both all-index plans.
+
+End-to-end (benchRunMigration --filter), steady-state pages:
+bench-paid stacked ≈ 4.7s/page (insert 1.6s, claim_upsert 1.5s); bench-free
+custom:false ≈ 6.2s/page. Scope constraints do NOT change page cost shape.
+
+## Claim select with derived filters (probeShapeMatrix S8–S11, C3)
+
+| key | before | after fix | notes |
+|---|---|---|---|
+| S8 paid:true | 363ms (894k customers-index merge scan) | **121ms** | = plain claim S1 |
+| S9 recurring:true | 293ms | **128ms** | |
+| S10 price:{$ne:null} | 286ms | **131ms** | |
+| S11 custom:false+paid:false | 157ms | **115ms** | |
+| C3 count + recurring:true | **6.2s (EXPLAIN 16s)**, seq-scanned ALL 4M customers, cp set computed twice | **2.1s** | O(matched), no customers table |
+
+**Fix (shipped with this branch):** `chooseCustomerAccessPath` now consumes
+`paid` / `recurring` / `price` as plan-source extras (rendered per-cp-row in
+`buildCustomerProductWhereSql`, SQL shared with the registry leaves — see
+`PLAN_*_SQL` in customerRegistry). Consumed quantifiers keep counts on the
+cp fast path and drop the walk's customers join. Verified: compiler unit
+tests (planner + compose-page), probeCountParity + probeFilterParity all
+green (600k/2.4M-row membership diffs, zero missing/extra).
+
+Prices-table scale check (user Q: index on `config->>'interval'`? GIN on
+config?): with 100k seeded catalog prices, every plan flips its prices
+access to `prices_id_key` probes — prices is ALWAYS reached by
+`pr.id = cpr.price_id`, never searched by config/entitlement_id, so those
+predicates are fetched-row filters. **No new index needed; GIN would be
+unused** (serves `@>` containment, not `->>` + pkey correlation). Optional
+micro-win only: a covering `(customer_product_id, price_id)` cpr index
+would make the recurring EXISTS index-only on the cpr side.
+
+## Finalize sub-phases (B3 — instrumented in finalizeBatchMigrationPage)
+
+Per 5k page: finalize_caches ~275–300ms, finalize_events ~80–95ms (JS
+response build; Tinybird ingest skipped locally — unmeasured HTTP cost,
+fire-with-wait:false), finalize_webhook_build ~66ms (records for 5k
+customers), finalize_webhook_queue ~0ms with delivery no-oped
+(`--webhooks build`: eventTypes []). Finalize total ~380–420ms ≈ 6–8% of
+page cost. Real webhook delivery + Tinybird ingest remain unmeasured by
+design (network-bound, out of bench scope).

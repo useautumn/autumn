@@ -1,4 +1,8 @@
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
+import type {
+	MigrationRunControls,
+	MigrationWebhookControls,
+} from "@/internal/migrations/v2/cloudAdapter/types.js";
 import { isMigrationCancelRequested } from "@/internal/migrations/v2/run/utils/migrationCancelToken.js";
 import {
 	getMigrationEventInternalId,
@@ -30,6 +34,8 @@ export const runBatchMigrationChunk = async ({
 	plan,
 	afterInternalId,
 	maxPages,
+	webhooks,
+	controls,
 }: {
 	ctx: AutumnContext;
 	migration: MigrationRuntimeWithEventId;
@@ -37,6 +43,8 @@ export const runBatchMigrationChunk = async ({
 	plan: BatchMigrationExecutionPlan;
 	afterInternalId?: string;
 	maxPages?: number;
+	webhooks?: MigrationWebhookControls;
+	controls?: MigrationRunControls;
 }): Promise<BatchMigrationChunkResult> => {
 	const migrationInternalId = getMigrationEventInternalId(migration);
 	const chunkPhases: BatchMigrationPagePhases = {};
@@ -91,6 +99,7 @@ export const runBatchMigrationChunk = async ({
 			migrationRunId,
 			afterInternalId: cursor ?? undefined,
 			limit: BATCH_MIGRATION_PAGE_SIZE,
+			controls,
 			phases: pagePhases,
 		});
 		if (page.selectedCount === 0) return finish("exhausted");
@@ -112,7 +121,10 @@ export const runBatchMigrationChunk = async ({
 					ctx,
 					migrationInternalId,
 					migrationRunId,
+					plan,
 					pageResult,
+					webhooks,
+					phases: pagePhases,
 				}),
 		});
 		summary.pages += 1;

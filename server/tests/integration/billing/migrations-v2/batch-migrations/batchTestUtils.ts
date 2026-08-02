@@ -1,12 +1,13 @@
 import { expect } from "bun:test";
 import {
+	CusProductStatus,
 	customerEntitlements,
 	customerProducts,
 	customers,
 	type MigrationItemRunStatus,
 } from "@autumn/shared";
 import type { initScenario } from "@tests/utils/testInitUtils/initScenario";
-import { and, eq } from "drizzle-orm";
+import { and, eq, inArray } from "drizzle-orm";
 import { CusService } from "@/internal/customers/CusService.js";
 import { migrationItemRunRepo } from "@/internal/migrations/v2/repos/index.js";
 
@@ -51,6 +52,53 @@ export const expectMigrationItemRunStatus = async ({
 		migrationRunId,
 	});
 	expect(itemRun).toMatchObject({ status });
+};
+
+/** cusEnt rows for one feature on the customer's live products for a plan.
+ * A duplicated add shows up here as a second row even when the API response
+ * still reads like one balance. */
+export const expectCustomerEntitlementRowCount = async ({
+	ctx,
+	customerId,
+	planId,
+	featureId,
+	count,
+}: {
+	ctx: ScenarioCtx;
+	customerId: string;
+	planId: string;
+	featureId: string;
+	count: number;
+}) => {
+	const rows = await ctx.db
+		.select({ id: customerEntitlements.id })
+		.from(customerEntitlements)
+		.innerJoin(
+			customerProducts,
+			eq(customerEntitlements.customer_product_id, customerProducts.id),
+		)
+		.innerJoin(
+			customers,
+			eq(customerProducts.internal_customer_id, customers.internal_id),
+		)
+		.where(
+			and(
+				eq(customers.org_id, ctx.org.id),
+				eq(customers.env, ctx.env),
+				eq(customers.id, customerId),
+				eq(customerProducts.product_id, planId),
+				inArray(customerProducts.status, [
+					CusProductStatus.Active,
+					CusProductStatus.PastDue,
+				]),
+				eq(customerEntitlements.feature_id, featureId),
+			),
+		);
+
+	expect(
+		rows,
+		`Expected ${count} ${featureId} cusEnt row(s) for ${customerId} on ${planId}`,
+	).toHaveLength(count);
 };
 
 /** The new cusEnt's cycle fields plus its cusProduct's anchor sources — the

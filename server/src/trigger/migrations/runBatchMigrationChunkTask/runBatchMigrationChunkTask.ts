@@ -45,6 +45,8 @@ export const runBatchMigrationChunkTask = task({
 			plan: payload.plan,
 			afterInternalId: payload.cursor,
 			maxPages: BATCH_MIGRATION_PAGES_PER_CHUNK,
+			webhooks: payload.webhooks,
+			controls: payload.controls,
 		});
 	},
 });

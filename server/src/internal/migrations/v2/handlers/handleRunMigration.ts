@@ -10,6 +10,7 @@ import type { RunMigrationPayload } from "@/internal/migrations/v2/run/types/mig
 import { MIGRATION_RUN_CUSTOMER_CONCURRENCY } from "@/internal/migrations/v2/run/utils/migrationRunConstants.js";
 import { RETRYABLE_MIGRATION_ITEM_RUN_STATUSES } from "@/internal/migrations/v2/run/utils/retryItemStatuses.js";
 import { shouldRunMigrationInline } from "@/internal/migrations/v2/utils/shouldRunMigrationInline.js";
+import { MAX_MIGRATION_WEBHOOK_CONCURRENCY } from "@/internal/migrations/v2/webhookDelivery/webhookDeliveryConstants.js";
 import { getMigrationTriggerOptions } from "@/trigger/migrations/migrationTaskQueue.js";
 import { runMigrationTask } from "@/trigger/migrations/runMigrationTask/runMigrationTask.js";
 
@@ -34,6 +35,14 @@ const RunMigrationBody = z.object({
 	/** Lazy runs share one run row with the sweeper and enqueue request-path customer work.
 	 * Targeted `only` is incompatible because lazy matching happens on customer reads. */
 	lazy_run: z.boolean().default(false),
+	/** Omitted → resolved from scope size (bulk runs default off). */
+	send_webhooks: z.boolean().optional(),
+	webhook_concurrency: z
+		.number()
+		.int()
+		.min(1)
+		.max(MAX_MIGRATION_WEBHOOK_CONCURRENCY)
+		.optional(),
 });
 
 export const handleRunMigration = createRoute({
@@ -48,6 +57,8 @@ export const handleRunMigration = createRoute({
 			only,
 			retry_item_statuses: retryItemStatuses,
 			lazy_run: lazyRun,
+			send_webhooks: sendWebhooks,
+			webhook_concurrency: webhookConcurrency,
 		} = c.req.valid("json");
 
 		const migration = await migrationRepo.find({ ctx, id });
@@ -93,6 +104,7 @@ export const handleRunMigration = createRoute({
 						limit,
 						only,
 						retryItemStatuses,
+						webhooks: { sendWebhooks, webhookConcurrency },
 					},
 				};
 				if (runInline) {

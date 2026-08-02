@@ -2,15 +2,15 @@
 
 import { afterAll, beforeAll, expect, test } from "bun:test";
 import type {
+	AttachParamsV1Input,
 	BillingChangeResponse,
 	CustomerPlanChange,
-	AttachParamsV1Input,
 	PlanChangeAction,
 	UpdateSubscriptionV1ParamsInput,
 } from "@autumn/shared";
-import { expectStripeSubscriptionCorrect } from "@tests/integration/billing/utils/expectStripeSubCorrect/expectStripeSubscriptionCorrect";
 import { createExternalStripeSubscription } from "@tests/integration/billing/stripe-webhooks/utils/sharedStripeProductAutoSyncUtils";
 import { getBaseStripePriceId } from "@tests/integration/billing/sync/utils/syncProductHelpers";
+import { expectStripeSubscriptionCorrect } from "@tests/integration/billing/utils/expectStripeSubCorrect/expectStripeSubscriptionCorrect";
 import {
 	getTestSvixAppId,
 	setupWebhookTest,

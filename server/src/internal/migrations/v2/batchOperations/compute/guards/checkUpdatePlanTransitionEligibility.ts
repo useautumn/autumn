@@ -46,9 +46,12 @@ export const checkUpdatePlanTransitionEligibility = ({
 			details: {
 				featureIds: [
 					...transitions.map(
-						(transition) => transition.fromEntitlementPrice.entitlement.feature.id,
+						(transition) =>
+							transition.fromEntitlementPrice.entitlement.feature.id,
 					),
-					...deleted.map((entitlementPrice) => entitlementPrice.entitlement.feature.id),
+					...deleted.map(
+						(entitlementPrice) => entitlementPrice.entitlement.feature.id,
+					),
 				],
 			},
 		});

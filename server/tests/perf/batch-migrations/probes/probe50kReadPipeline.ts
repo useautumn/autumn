@@ -10,7 +10,7 @@ import { EntInterval, MigrationItemRunStatus } from "@autumn/shared";
 import { TestFeature } from "@tests/setup/v2Features.js";
 import { type SQL, sql } from "drizzle-orm";
 import { buildAddCandidateRowsQuery } from "@/internal/migrations/v2/batchOperations/actions/addCustomerEntitlementsForPage/selectAddCandidateRows.js";
-import { buildPlanFilterMatchedProductsQuery } from "@/internal/migrations/v2/batchOperations/repos/listCustomersOnPlanFilterMatchedProducts.js";
+import { buildOperationScope } from "@/internal/migrations/v2/batchOperations/scope/operationScope.js";
 import { buildCustomerSelect } from "@/internal/migrations/v2/filters/customers/buildCustomerSelect.js";
 import {
 	BENCH_FREE_PRODUCT_ID,
@@ -82,7 +82,9 @@ const main = async () => {
 			productInternalId: benchProducts.free.internalId,
 		},
 	]) {
-		console.log(`\n═══ ${scenario.key} — page size ${PAGE_SIZE.toLocaleString()} ═══`);
+		console.log(
+			`\n═══ ${scenario.key} — page size ${PAGE_SIZE.toLocaleString()} ═══`,
+		);
 
 		// 1. claim select
 		const claimQuery = () =>
@@ -112,23 +114,12 @@ const main = async () => {
 		);
 		const ids = claimed.map((row) => row.internal_id);
 
-		// 2. partition
-		const partitionQuery = buildPlanFilterMatchedProductsQuery({
-			internalCustomerIds: ids,
-			planFilterMatchedProductIds: [scenario.productInternalId],
-		});
-		const partitionStarted = Date.now();
-		const matched = (await db.execute(partitionQuery)) as unknown[];
-		console.log(
-			`2. partition: ${matched.length.toLocaleString()} matched in ${Date.now() - partitionStarted}ms`,
-		);
-		for (const scan of await explainScans(partitionQuery))
-			console.log(`   ${scan}`);
-
 		// 3. candidate select
 		const candidateQuery = buildAddCandidateRowsQuery({
 			internalCustomerIds: ids,
-			fromInternalProductId: scenario.productInternalId,
+			scope: buildOperationScope({
+				internalProductId: scenario.productInternalId,
+			}),
 			entitlement: wordsEntitlement,
 			includeAnchorSources: true,
 		});

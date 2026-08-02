@@ -1,5 +1,9 @@
-import { EntitlementWithFeatureSchema } from "@autumn/shared";
+import {
+	EntitlementWithFeatureSchema,
+	FullProductWithoutLicensesSchema,
+} from "@autumn/shared";
 import { z } from "zod/v4";
+import { OperationScopeSchema } from "../scope/operationScope.js";
 
 export const BatchMigrationInitialStateSchema = z.object({
 	granted: z.number(),
@@ -12,12 +16,14 @@ export const BatchMigrationExecutionAddSchema = z.object({
 	initialState: BatchMigrationInitialStateSchema,
 });
 
-/** One op × one plan-filter-matched product: the scope every operation
- * executes against. One field per operation category (batchTransition style). */
+/** One op × one plan-filter-matched product. One field per operation
+ * category (batchTransition style). `fromProduct` is authoritative for
+ * catalog facts; `scope` is the plan filter's lowered row-level residue —
+ * which customer product rows the patch may touch. */
 export const BatchMigrationExecutionPatchSchema = z.object({
 	opIndex: z.number().int(),
-	planId: z.string(),
-	fromInternalProductId: z.string(),
+	scope: OperationScopeSchema,
+	fromProduct: FullProductWithoutLicensesSchema,
 	addEntitlementOps: z.array(BatchMigrationExecutionAddSchema),
 });
 

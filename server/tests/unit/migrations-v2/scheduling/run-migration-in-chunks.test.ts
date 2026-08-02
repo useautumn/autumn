@@ -5,8 +5,8 @@
 
 import { describe, expect, test } from "bun:test";
 import { AppEnv } from "@autumn/shared";
-import { RunMigrationChunkPayloadSchema } from "@/internal/migrations/v2/run/types/migrationRunPayloads.js";
 import { iterateMigrationChunks } from "@/internal/migrations/v2/run/chunks/iterateMigrationChunks.js";
+import { RunMigrationChunkPayloadSchema } from "@/internal/migrations/v2/run/types/migrationRunPayloads.js";
 
 describe("runMigrationInChunks", () => {
 	test("requires a frozen prepared migration snapshot for every chunk", () => {

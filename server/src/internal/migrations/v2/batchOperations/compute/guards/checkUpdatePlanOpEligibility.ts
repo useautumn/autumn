@@ -2,18 +2,11 @@ import type { PlanFilter } from "@autumn/shared/api/migrations/filters/planFilte
 import type { UpdatePlanOp } from "@autumn/shared/api/migrations/operations/customer/updatePlan/index.js";
 import type { BatchMigrationRejection } from "../../types/index.js";
 
-/**
- * planFilterMatchesProduct (the JS matcher used to resolve op targets)
- * throws on nested price/item filters — surface that as a rejection before
- * matching instead of an exception.
- */
-const planFilterHasUnsupportedFields = (filter: PlanFilter): boolean => {
-	if (filter.price !== undefined || filter.item !== undefined) return true;
-	return (
-		filter.$or?.some((subFilter) =>
-			planFilterHasUnsupportedFields(subFilter),
-		) ?? false
-	);
+/** `item` navigation has no batch lowering at any depth; top-level `price`
+ * lowers into the scope, but the catalog matcher throws on it inside $or. */
+const planFilterHasItem = (filter: PlanFilter): boolean => {
+	if (filter.item !== undefined) return true;
+	return filter.$or?.some((subFilter) => planFilterHasItem(subFilter)) ?? false;
 };
 
 /**
@@ -97,12 +90,11 @@ export const checkUpdatePlanOpEligibility = ({
 		}
 	});
 
-	if (planFilterHasUnsupportedFields(op.plan_filter)) {
+	if (planFilterHasItem(op.plan_filter)) {
 		rejections.push({
 			code: "unsupported_plan_filter",
 			opIndex,
-			message:
-				"plan_filter.price / plan_filter.item are not supported by the catalog product matcher yet.",
+			message: "plan_filter.item is not batch-lowered.",
 		});
 	}
 

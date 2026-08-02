@@ -1,5 +1,6 @@
 import {
 	BillingInterval,
+	CusProductStatus,
 	EntInterval,
 	type EntitlementWithFeature,
 	isBooleanEntitlement,
@@ -7,7 +8,11 @@ import {
 import { sql } from "drizzle-orm";
 import { z } from "zod/v4";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
-import { customerProductsScopeFilter } from "@/internal/migrations/v2/batchOperations/execute/sql/customerProductsScopeFilter.js";
+import { sqlList } from "@/internal/billing/v2/actions/batchTransition/execute/sql/batchTransitionSqlUtils.js";
+import {
+	type OperationScope,
+	operationScopeSql,
+} from "@/internal/migrations/v2/batchOperations/scope/operationScope.js";
 import type { CycleEnrichmentCandidate } from "@/internal/migrations/v2/batchOperations/utils/enrichCustomerEntitlementCycles.js";
 
 const nullableNumeric = z.preprocess(
@@ -19,7 +24,12 @@ const CandidateRowSchema = z.object({
 	customer_product_id: z.string(),
 	internal_customer_id: z.string(),
 	customer_id: z.string().nullable(),
+	entity_id: z.string().nullable(),
+	status: z.enum(CusProductStatus),
 	starts_at: nullableNumeric,
+	canceled_at: nullableNumeric,
+	ended_at: nullableNumeric,
+	trial_ends_at: nullableNumeric,
 	is_paid_recurring: z.boolean(),
 	billing_cycle_anchor: nullableNumeric,
 	subscription_cycle_anchor: nullableNumeric,
@@ -34,12 +44,12 @@ const CandidateRowSchema = z.object({
  */
 export const buildAddCandidateRowsQuery = ({
 	internalCustomerIds,
-	fromInternalProductId,
+	scope,
 	entitlement,
 	includeAnchorSources,
 }: {
 	internalCustomerIds: string[];
-	fromInternalProductId: string;
+	scope: OperationScope;
 	entitlement: EntitlementWithFeature;
 	includeAnchorSources: boolean;
 }) => {
@@ -104,7 +114,12 @@ export const buildAddCandidateRowsQuery = ({
 			cp.id AS customer_product_id,
 			cp.internal_customer_id,
 			customer.id AS customer_id,
+			entity.id AS entity_id,
+			cp.status,
 			cp.starts_at,
+			cp.canceled_at,
+			cp.ended_at,
+			cp.trial_ends_at,
 			${paidRecurringColumn} AS is_paid_recurring,
 			cp.billing_cycle_anchor,
 			${subscriptionAnchorColumn} AS subscription_cycle_anchor,
@@ -112,9 +127,12 @@ export const buildAddCandidateRowsQuery = ({
 		FROM customer_products AS cp
 		INNER JOIN customers AS customer
 			ON customer.internal_id = cp.internal_customer_id
+		LEFT JOIN entities AS entity
+			ON entity.internal_id = cp.internal_entity_id
 		${siblingJoin}
 		${subscriptionAnchorJoin}
-		WHERE ${customerProductsScopeFilter({ internalCustomerIds, fromInternalProductId })}
+		WHERE cp.internal_customer_id IN (${sqlList({ values: internalCustomerIds })})
+			AND ${operationScopeSql({ scope })}
 			AND NOT EXISTS (
 				SELECT 1
 				FROM customer_entitlements AS existing
@@ -131,20 +149,20 @@ export const buildAddCandidateRowsQuery = ({
 export const selectAddCandidateRows = async ({
 	db,
 	internalCustomerIds,
-	fromInternalProductId,
+	scope,
 	entitlement,
 	includeAnchorSources,
 }: {
 	db: DrizzleCli;
 	internalCustomerIds: string[];
-	fromInternalProductId: string;
+	scope: OperationScope;
 	entitlement: EntitlementWithFeature;
 	includeAnchorSources: boolean;
 }): Promise<CycleEnrichmentCandidate[]> => {
 	const rows = await db.execute(
 		buildAddCandidateRowsQuery({
 			internalCustomerIds,
-			fromInternalProductId,
+			scope,
 			entitlement,
 			includeAnchorSources,
 		}),
@@ -156,7 +174,12 @@ export const selectAddCandidateRows = async ({
 			customerProductId: parsed.customer_product_id,
 			internalCustomerId: parsed.internal_customer_id,
 			customerId: parsed.customer_id,
+			entityId: parsed.entity_id,
+			status: parsed.status,
 			startsAt: parsed.starts_at,
+			canceledAt: parsed.canceled_at,
+			endedAt: parsed.ended_at,
+			trialEndsAt: parsed.trial_ends_at,
 			isPaidRecurring: parsed.is_paid_recurring,
 			billingCycleAnchor: parsed.billing_cycle_anchor,
 			subscriptionCycleAnchor: parsed.subscription_cycle_anchor,

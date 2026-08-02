@@ -4,19 +4,23 @@ import type {
 } from "../types/index.js";
 
 /** Lowers the computed plan to the serializable form chunk tasks execute —
- * rich products stay compute-side; execution gets ids and add rows only. */
+ * the from-product rides along (licenses stripped) so execution and finalize
+ * derive ids and price facts with the shared product utils. */
 export const batchMigrationPlanToExecutionPlan = ({
 	plan,
 }: {
 	plan: BatchMigrationPlan;
 }): BatchMigrationExecutionPlan => ({
-	patches: plan.patches.map((patch) => ({
-		opIndex: patch.opIndex,
-		planId: patch.planId,
-		fromInternalProductId: patch.fromProduct.internal_id,
-		addEntitlementOps: patch.operations.entitlements.map((operation) => ({
-			entitlement: operation.entitlementPrice.entitlement,
-			initialState: operation.initialState,
-		})),
-	})),
+	patches: plan.patches.map((patch) => {
+		const { licenses: _licenses, ...fromProduct } = patch.fromProduct;
+		return {
+			opIndex: patch.opIndex,
+			scope: patch.scope,
+			fromProduct,
+			addEntitlementOps: patch.operations.entitlements.map((operation) => ({
+				entitlement: operation.entitlementPrice.entitlement,
+				initialState: operation.initialState,
+			})),
+		};
+	}),
 });

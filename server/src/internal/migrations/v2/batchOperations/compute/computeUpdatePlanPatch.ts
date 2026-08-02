@@ -1,7 +1,9 @@
 import type { Feature, FullProduct } from "@autumn/shared";
+import type { PlanFilter } from "@autumn/shared/api/migrations/filters/planFilter.js";
 import type { UpdatePlanOp } from "@autumn/shared/api/migrations/operations/customer/updatePlan/index.js";
 import { computePatchProductTransitions } from "@/internal/billing/v2/actions/batchTransition/compute/transitions/computePatchProductTransitions.js";
 import type { MigrationRuntime } from "@/internal/migrations/v2/types/migrationDefinition.js";
+import { resolveOperationScope } from "../scope/resolveOperationScope.js";
 import type {
 	BatchMigrationPatch,
 	BatchMigrationRejection,
@@ -17,12 +19,15 @@ export const computeUpdatePlanPatch = ({
 	op,
 	opIndex,
 	fromProduct,
+	planFilters,
 	features,
 }: {
 	migration: MigrationRuntime;
 	op: UpdatePlanOp;
 	opIndex: number;
 	fromProduct: FullProduct;
+	/** The matched disjunct's $or-free conjunct filters. */
+	planFilters: PlanFilter[];
 	features: Feature[];
 }): { patch?: BatchMigrationPatch; rejections: BatchMigrationRejection[] } => {
 	if (!op.customize) return { rejections: [] };
@@ -57,10 +62,30 @@ export const computeUpdatePlanPatch = ({
 	if (rejections.length > 0) return { rejections };
 	if (operations.length === 0) return { rejections: [] };
 
+	// Adds are additive, so customization is not an implicit exclusion — the
+	// scope narrows only when the filter says so.
+	const resolvedScope = resolveOperationScope({
+		migration,
+		planFilters,
+		internalProductId: fromProduct.internal_id,
+	});
+	if (resolvedScope.unsupportedField !== undefined) {
+		return {
+			rejections: [
+				{
+					code: "unsupported_plan_filter",
+					opIndex,
+					message: `plan_filter ${resolvedScope.unsupportedField} cannot be batch-lowered: unprovable matcher form, $or placement, or conflicting filter levels.`,
+				},
+			],
+		};
+	}
+
 	return {
 		rejections: [],
 		patch: {
 			opIndex,
+			scope: resolvedScope.scope,
 			planId: fromProduct.id,
 			fromProduct,
 			toProduct: productTransitions.toProduct,

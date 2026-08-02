@@ -6,6 +6,18 @@ import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { BatchMigrationExecutionPlanSchema } from "@/internal/migrations/v2/batchOperations/types/batchMigrationExecutionPlan.js";
 import { PreparedStateSchema } from "@/internal/migrations/v2/prepare/types/index.js";
 import { RETRYABLE_MIGRATION_ITEM_RUN_STATUSES } from "@/internal/migrations/v2/run/utils/retryItemStatuses.js";
+import { MAX_MIGRATION_WEBHOOK_CONCURRENCY } from "@/internal/migrations/v2/webhookDelivery/webhookDeliveryConstants.js";
+
+/** Operator's request; the run resolves it into MigrationWebhookControls. */
+export const WebhookRunParamsSchema = z.object({
+	sendWebhooks: z.boolean().optional(),
+	webhookConcurrency: z
+		.number()
+		.int()
+		.min(1)
+		.max(MAX_MIGRATION_WEBHOOK_CONCURRENCY)
+		.optional(),
+});
 
 const ControlsSchema = z
 	.object({
@@ -14,6 +26,7 @@ const ControlsSchema = z
 		retryItemStatuses: z
 			.array(z.enum(RETRYABLE_MIGRATION_ITEM_RUN_STATUSES))
 			.optional(),
+		webhooks: WebhookRunParamsSchema.optional(),
 	})
 	.optional();
 
@@ -55,6 +68,14 @@ export type RunMigrationChunkPayload = z.infer<
 	typeof RunMigrationChunkPayloadSchema
 >;
 
+/** Resolved once at run start, then carried per chunk so every task delivers
+ * exactly what the run resolved. */
+export const WebhookControlsSchema = z.object({
+	sendWebhooks: z.boolean(),
+	webhookConcurrency: z.number().int().min(0),
+	eventTypes: z.array(z.string()),
+});
+
 export const RunBatchMigrationChunkPayloadSchema = z.object({
 	orgId: z.string(),
 	env: z.enum(AppEnv),
@@ -63,6 +84,9 @@ export const RunBatchMigrationChunkPayloadSchema = z.object({
 	cursor: z.string().optional(),
 	migration: PreparedMigrationSnapshotSchema,
 	plan: BatchMigrationExecutionPlanSchema,
+	webhooks: WebhookControlsSchema.optional(),
+	/** Claim-time controls (only / retryItemStatuses) — never lane selectors. */
+	controls: ControlsSchema,
 });
 
 export type RunBatchMigrationChunkPayload = z.infer<
@@ -76,6 +100,8 @@ export const buildRunBatchMigrationChunkPayload = ({
 	plan,
 	chunkIndex,
 	cursor,
+	webhooks,
+	controls,
 }: {
 	ctx: AutumnContext;
 	migrationRunId: string;
@@ -83,6 +109,8 @@ export const buildRunBatchMigrationChunkPayload = ({
 	plan: RunBatchMigrationChunkPayload["plan"];
 	chunkIndex: number;
 	cursor: string | undefined;
+	webhooks?: RunBatchMigrationChunkPayload["webhooks"];
+	controls?: RunBatchMigrationChunkPayload["controls"];
 }): RunBatchMigrationChunkPayload => ({
 	orgId: ctx.org.id,
 	env: ctx.env,
@@ -91,6 +119,8 @@ export const buildRunBatchMigrationChunkPayload = ({
 	cursor,
 	migration,
 	plan,
+	webhooks,
+	controls,
 });
 
 /** Assembles one chunk payload; the iterator's remaining `limit` overrides

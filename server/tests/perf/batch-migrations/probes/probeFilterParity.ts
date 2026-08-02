@@ -73,6 +73,20 @@ const main = async () => {
 			filter: { plan: { plan_id: BENCH_FREE_PRODUCT_ID, paid: true } },
 		},
 		{
+			key: "derived-recurring-true",
+			filter: { plan: { plan_id: BENCH_PAID_PRODUCT_ID, recurring: true } },
+		},
+		{
+			key: "derived-base-price",
+			filter: {
+				plan: { plan_id: BENCH_PAID_PRODUCT_ID, price: { $ne: null } },
+			},
+		},
+		{
+			key: "derived-no-base-price",
+			filter: { plan: { plan_id: BENCH_FREE_PRODUCT_ID, price: null } },
+		},
+		{
 			key: "residual-item",
 			filter: {
 				plan: {
@@ -159,7 +173,9 @@ const main = async () => {
 		total += rows.length;
 		if (previousLast !== undefined && rows[0].internal_id >= previousLast) {
 			integrityOk = false;
-			console.log(`FAIL page ${pages}: first id not below previous page's last`);
+			console.log(
+				`FAIL page ${pages}: first id not below previous page's last`,
+			);
 		}
 		if (rows.length < PAGE_SIZE) {
 			console.log(`final page ${pages}: ${rows.length} rows`);
@@ -179,7 +195,9 @@ const main = async () => {
 		`${totalOk && integrityOk ? "OK  " : "FAIL"} iterated ${pages} pages, ${total.toLocaleString()} customers (expected ${expectedTotal.toLocaleString()})`,
 	);
 
-	console.log(failures === 0 ? "\nALL PARITY CHECKS PASSED" : `\n${failures} FAILURES`);
+	console.log(
+		failures === 0 ? "\nALL PARITY CHECKS PASSED" : `\n${failures} FAILURES`,
+	);
 	process.exit(failures === 0 ? 0 : 1);
 };
 

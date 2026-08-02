@@ -11,14 +11,27 @@ const toSvixTag = (key: string, value: string): string =>
 		SVIX_TAG_MAX_LENGTH,
 	);
 
+/** Svix message tags from ids alone — for senders that never load the
+ * customer (set-based migrations). `fullCustomerToTags` delegates here so
+ * the scrubbing rules stay in one place. */
+export const customerToSvixTags = ({
+	customerId,
+	entityId,
+}: {
+	customerId: string;
+	entityId?: string | null;
+}): string[] => {
+	const tags = [toSvixTag("customer_id", customerId)];
+	if (entityId) tags.push(toSvixTag("entity_id", entityId));
+	return tags;
+};
+
 export const fullCustomerToTags = ({
 	fullCustomer,
 }: {
 	fullCustomer: FullCustomer;
-}): string[] => {
-	const customerId = fullCustomer.id ?? fullCustomer.internal_id;
-	const tags = [toSvixTag("customer_id", customerId)];
-	const entityId = fullCustomer.entity?.id;
-	if (entityId) tags.push(toSvixTag("entity_id", entityId));
-	return tags;
-};
+}): string[] =>
+	customerToSvixTags({
+		customerId: fullCustomer.id ?? fullCustomer.internal_id,
+		entityId: fullCustomer.entity?.id,
+	});

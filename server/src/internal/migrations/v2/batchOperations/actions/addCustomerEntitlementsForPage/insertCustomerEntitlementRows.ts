@@ -1,7 +1,11 @@
 import type { EntitlementWithFeature } from "@autumn/shared";
 import { sql } from "drizzle-orm";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
-import { customerProductsScopeFilter } from "@/internal/migrations/v2/batchOperations/execute/sql/customerProductsScopeFilter.js";
+import { sqlList } from "@/internal/billing/v2/actions/batchTransition/execute/sql/batchTransitionSqlUtils.js";
+import {
+	type OperationScope,
+	operationScopeSql,
+} from "@/internal/migrations/v2/batchOperations/scope/operationScope.js";
 import type { CustomerEntitlementInitialState } from "@/internal/migrations/v2/batchOperations/types/index.js";
 import type { EnrichedCycleCandidate } from "@/internal/migrations/v2/batchOperations/utils/enrichCustomerEntitlementCycles.js";
 
@@ -11,23 +15,19 @@ export type InsertableCustomerEntitlementRow = EnrichedCycleCandidate & {
 
 /** One set-based insert from the enriched rows (jsonb_to_recordset — no
  * param-limit blowup). Replay-idempotent via the caller's dedup select. */
-export const insertCustomerEntitlementRows = async ({
-	db,
-	fromInternalProductId,
+export const buildInsertCustomerEntitlementRowsQuery = ({
+	scope,
 	entitlement,
 	initialState,
 	rows,
 	now,
 }: {
-	db: DrizzleCli;
-	fromInternalProductId: string;
+	scope: OperationScope;
 	entitlement: EntitlementWithFeature;
 	initialState: CustomerEntitlementInitialState;
 	rows: InsertableCustomerEntitlementRow[];
 	now: number;
-}): Promise<number> => {
-	if (rows.length === 0) return 0;
-
+}) => {
 	const internalCustomerIds = [
 		...new Set(rows.map((row) => row.internalCustomerId)),
 	];
@@ -43,7 +43,7 @@ export const insertCustomerEntitlementRows = async ({
 		})),
 	);
 
-	const [result] = await db.execute<{ affected: number }>(sql`
+	return sql`
 		WITH new_rows AS (
 			SELECT *
 			FROM JSONB_TO_RECORDSET(${serializedRows}::jsonb) AS r(
@@ -106,12 +106,43 @@ export const insertCustomerEntitlementRows = async ({
 			-- changed since the select (canceled, customized) drop out.
 			INNER JOIN customer_products AS cp
 				ON cp.id = new_row.customer_product_id
-				AND ${customerProductsScopeFilter({ internalCustomerIds, fromInternalProductId })}
+				AND cp.internal_customer_id IN (${sqlList({ values: internalCustomerIds })})
+				AND ${operationScopeSql({ scope })}
 			ON CONFLICT (id) DO NOTHING
-			RETURNING 1
+			RETURNING id
 		)
-		SELECT COUNT(*)::int AS affected FROM inserted
-	`);
+		SELECT id FROM inserted
+	`;
+};
 
-	return result?.affected ?? 0;
+export const insertCustomerEntitlementRows = async ({
+	db,
+	scope,
+	entitlement,
+	initialState,
+	rows,
+	now,
+}: {
+	db: DrizzleCli;
+	scope: OperationScope;
+	entitlement: EntitlementWithFeature;
+	initialState: CustomerEntitlementInitialState;
+	rows: InsertableCustomerEntitlementRow[];
+	now: number;
+	/** Ids of the rows that actually landed — the insert-time scope
+	 * re-assertion can drop rows the select had accepted. */
+}): Promise<string[]> => {
+	if (rows.length === 0) return [];
+
+	const inserted = await db.execute<{ id: string }>(
+		buildInsertCustomerEntitlementRowsQuery({
+			scope,
+			entitlement,
+			initialState,
+			rows,
+			now,
+		}),
+	);
+
+	return inserted.map((row) => row.id);
 };

@@ -162,8 +162,9 @@ function selectionToFilter({ planId, version }: PlanSelection): PlanFilter {
  * `{ plan_id, version }` branches (each compiles to a single bound EXISTS).
  */
 export function planKeysToFilter(keys: string[]): PlanFilter {
-	const selections = [...new Set(keys.map((key) => key.trim()).filter(Boolean))]
-		.map(parsePlanKey);
+	const selections = [
+		...new Set(keys.map((key) => key.trim()).filter(Boolean)),
+	].map(parsePlanKey);
 	if (selections.length === 0) return {};
 	if (selections.every((s) => s.version === undefined)) {
 		const ids = selections.map((s) => s.planId);

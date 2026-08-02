@@ -1,8 +1,4 @@
-import {
-	type Migration,
-	migrationItemRuns,
-	migrations,
-} from "@autumn/shared";
+import { type Migration, migrationItemRuns, migrations } from "@autumn/shared";
 import type { MigrationFilter } from "@autumn/shared/api/migrations/filters/migrationFilter.js";
 import type { Operations } from "@autumn/shared/api/migrations/operations/operations.js";
 import { and, eq } from "drizzle-orm";
@@ -68,6 +64,7 @@ export const runChunkedMigration = async ({
 	waitFor,
 	timeoutMs = 60_000,
 	pollIntervalMs = 1_000,
+	controls,
 }: {
 	ctx: AutumnContext;
 	migrationClient: MigrationClient;
@@ -79,6 +76,12 @@ export const runChunkedMigration = async ({
 	waitFor?: () => Promise<unknown>;
 	timeoutMs?: number;
 	pollIntervalMs?: number;
+	/** Direct mode only. `only` forces the per-customer lane (batch-ineligible);
+	 * `webhooks` are the run's delivery params. */
+	controls?: {
+		only?: string[];
+		webhooks?: { sendWebhooks?: boolean; webhookConcurrency?: number };
+	};
 }): Promise<{
 	migration: Migration;
 	migrationRunId: string;
@@ -110,6 +113,7 @@ export const runChunkedMigration = async ({
 		migration,
 		migrationRunId,
 		dryRun: false,
+		controls,
 	});
 	return { migration, migrationRunId, result };
 };

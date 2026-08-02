@@ -9,9 +9,11 @@
 import type { EntitlementWithFeature } from "@autumn/shared";
 import { EntInterval } from "@autumn/shared";
 import { TestFeature } from "@tests/setup/v2Features.js";
-import { sql } from "drizzle-orm";
-import { listCustomersOnPlanFilterMatchedProducts } from "@/internal/migrations/v2/batchOperations/repos/listCustomersOnPlanFilterMatchedProducts.js";
 import { selectAddCandidateRows } from "@/internal/migrations/v2/batchOperations/actions/addCustomerEntitlementsForPage/selectAddCandidateRows.js";
+import {
+	buildOperationScope,
+	type OperationScope,
+} from "@/internal/migrations/v2/batchOperations/scope/operationScope.js";
 import { buildCustomerSelect } from "@/internal/migrations/v2/filters/customers/buildCustomerSelect.js";
 import {
 	BENCH_FREE_BARE_PRODUCT_ID,
@@ -80,6 +82,9 @@ const main = async () => {
 		cursor?: string;
 		entitlement: EntitlementWithFeature;
 		includeAnchorSources: boolean;
+		/** Scope constraint overrides — exercises the operationScopeSql EXISTS
+		 * probes on top of the same pages the unconstrained scenarios use. */
+		scope?: Partial<Omit<OperationScope, "internalProductId">>;
 	}[] = [
 		{
 			key: "paid-now rung (words)",
@@ -140,6 +145,60 @@ const main = async () => {
 			entitlement: monthlyEntitlement(messagesFeature),
 			includeAnchorSources: true,
 		},
+		{
+			key: "scope custom:false (bench-free mixed-custom page)",
+			planId: BENCH_FREE_PRODUCT_ID,
+			productInternalId: benchProducts.free.internalId,
+			cursor: "cus_bench_4000001",
+			entitlement: monthlyEntitlement(wordsFeature),
+			includeAnchorSources: true,
+			scope: { isCustom: false },
+		},
+		{
+			key: "scope paid:true (bench-paid, EXISTS cusPrice)",
+			planId: BENCH_PAID_PRODUCT_ID,
+			productInternalId: benchProducts.paid.internalId,
+			entitlement: monthlyEntitlement(wordsFeature),
+			includeAnchorSources: true,
+			scope: { isPaid: true },
+		},
+		{
+			key: "scope recurring:true (bench-paid, EXISTS + prices join)",
+			planId: BENCH_PAID_PRODUCT_ID,
+			productInternalId: benchProducts.paid.internalId,
+			entitlement: monthlyEntitlement(wordsFeature),
+			includeAnchorSources: true,
+			scope: { isRecurring: true },
+		},
+		{
+			key: "scope base price:true (bench-paid, entitlement_id IS NULL)",
+			planId: BENCH_PAID_PRODUCT_ID,
+			productInternalId: benchProducts.paid.internalId,
+			entitlement: monthlyEntitlement(wordsFeature),
+			includeAnchorSources: true,
+			scope: { hasBasePrice: true },
+		},
+		{
+			key: "scope stacked (bench-paid custom:false+paid+recurring+base)",
+			planId: BENCH_PAID_PRODUCT_ID,
+			productInternalId: benchProducts.paid.internalId,
+			entitlement: monthlyEntitlement(wordsFeature),
+			includeAnchorSources: true,
+			scope: {
+				isCustom: false,
+				isPaid: true,
+				isRecurring: true,
+				hasBasePrice: true,
+			},
+		},
+		{
+			key: "scope paid:false (bench-free, NOT EXISTS over full page)",
+			planId: BENCH_FREE_PRODUCT_ID,
+			productInternalId: benchProducts.free.internalId,
+			entitlement: monthlyEntitlement(wordsFeature),
+			includeAnchorSources: true,
+			scope: { isPaid: false },
+		},
 	];
 
 	for (const scenario of scenarios) {
@@ -153,23 +212,14 @@ const main = async () => {
 		if (ids.length === 0) continue;
 
 		for (let run = 1; run <= 2; run++) {
-			const partitionStarted = Date.now();
-			const matched = await listCustomersOnPlanFilterMatchedProducts({
-				db,
-				internalCustomerIds: ids,
-				planFilterMatchedProductIds: [scenario.productInternalId],
-			});
-			console.log(
-				`  partition ${run}: ${matched.size.toLocaleString()} matched in ${Date.now() - partitionStarted}ms`,
-			);
-		}
-
-		for (let run = 1; run <= 2; run++) {
 			const candidateStarted = Date.now();
 			const candidates = await selectAddCandidateRows({
 				db,
 				internalCustomerIds: ids,
-				fromInternalProductId: scenario.productInternalId,
+				scope: buildOperationScope({
+					internalProductId: scenario.productInternalId,
+					...scenario.scope,
+				}),
 				entitlement: scenario.entitlement,
 				includeAnchorSources: scenario.includeAnchorSources,
 			});

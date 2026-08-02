@@ -1,7 +1,10 @@
 import type { Feature, FullProduct } from "@autumn/shared";
+import type { PlanFilter } from "@autumn/shared/api/migrations/filters/planFilter.js";
 import type { UpdatePlanOp } from "@autumn/shared/api/migrations/operations/customer/updatePlan/index.js";
 import { planFilterMatchesProduct } from "@autumn/shared/api/products/utils/match/index.js";
 import type { MigrationRuntime } from "@/internal/migrations/v2/types/migrationDefinition.js";
+import { toCatalogPlanFilter } from "../scope/operationScope.js";
+import { expandPlanFilterDisjuncts } from "../scope/utils/expandPlanFilterDisjuncts.js";
 import type {
 	BatchMigrationComputeResult,
 	BatchMigrationPatch,
@@ -13,12 +16,13 @@ import {
 	checkUpdatePlanOpEligibility,
 } from "./guards/index.js";
 
-/** One unit of batch work to compute: an op applied to one catalog product
- * its plan_filter matched. */
+/** One unit of batch work to compute: an op applied to one catalog product a
+ * plan_filter disjunct matched, carrying that disjunct's conjunct filters. */
 type UpdatePlanTarget = {
 	op: UpdatePlanOp;
 	opIndex: number;
 	fromProduct: FullProduct;
+	planFilters: PlanFilter[];
 };
 
 /**
@@ -58,10 +62,23 @@ export const computeBatchMigration = ({
 			continue;
 		}
 
-		const matchedProducts = products.filter((product) =>
-			planFilterMatchesProduct({ filter: op.plan_filter, product }),
+		// $or expands into disjuncts; a product matches a disjunct when EVERY
+		// conjunct's catalog part matches it.
+		const opTargets: UpdatePlanTarget[] = expandPlanFilterDisjuncts(
+			op.plan_filter,
+		).flatMap((planFilters) =>
+			products
+				.filter((product) =>
+					planFilters.every((planFilter) =>
+						planFilterMatchesProduct({
+							filter: toCatalogPlanFilter(planFilter),
+							product,
+						}),
+					),
+				)
+				.map((fromProduct) => ({ op, opIndex, fromProduct, planFilters })),
 		);
-		if (matchedProducts.length === 0) {
+		if (opTargets.length === 0) {
 			rejections.push({
 				code: "no_matched_products",
 				opIndex,
@@ -71,9 +88,7 @@ export const computeBatchMigration = ({
 			continue;
 		}
 
-		targets.push(
-			...matchedProducts.map((fromProduct) => ({ op, opIndex, fromProduct })),
-		);
+		targets.push(...opTargets);
 	}
 
 	// 3. Compute one patch per target.

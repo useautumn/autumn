@@ -1,5 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import {
+	CusProductStatus,
 	EntInterval,
 	type EntitlementWithFeature,
 	FeatureType,
@@ -33,7 +34,12 @@ const candidate = (
 	customerProductId: "cp_1",
 	internalCustomerId: "cus_internal_1",
 	customerId: "cus_1",
+	entityId: null,
+	status: CusProductStatus.Active,
 	startsAt: Date.UTC(2026, 4, 10),
+	canceledAt: null,
+	endedAt: null,
+	trialEndsAt: null,
 	isPaidRecurring: false,
 	billingCycleAnchor: null,
 	subscriptionCycleAnchor: null,

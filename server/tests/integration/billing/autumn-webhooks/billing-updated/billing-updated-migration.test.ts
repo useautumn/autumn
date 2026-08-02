@@ -9,13 +9,13 @@ import type {
 	CustomerPlanChange,
 	PlanChangeAction,
 } from "@autumn/shared";
+import { runUpdatePlanMigration } from "@tests/integration/billing/migrations-v2/utils/runUpdatePlanMigration.js";
 import {
 	getTestSvixAppId,
 	setupWebhookTest,
 	type WebhookTestSetup,
 	waitForWebhook,
 } from "@tests/integration/utils/svixWebhookTestUtils.js";
-import { runUpdatePlanMigration } from "@tests/integration/billing/migrations-v2/utils/runUpdatePlanMigration.js";
 import { TestFeature } from "@tests/setup/v2Features.js";
 import { items } from "@tests/utils/fixtures/items.js";
 import { itemsV2 } from "@tests/utils/fixtures/itemsV2.js";

@@ -9,6 +9,14 @@
  *
  * --cleanup removes previously bench-added entitlement rows + bench item runs
  * so a rerun measures fresh inserts instead of dedup no-ops.
+ *
+ * --filter "custom=false,recurring=true,base_price=true" puts scope
+ * constraints on BOTH the migration filter and the op plan_filter, so the
+ * claim select AND the lowered OperationScope carry them (keys: custom, paid,
+ * recurring as booleans; base_price=true|false → price: {$ne: null} | null).
+ *
+ * --webhooks build times finalize's webhook record build + queue chunking with
+ * delivery no-oped (eventTypes: [] — every event type reads as unsubscribed).
  */
 
 import { type Migration, migrations } from "@autumn/shared";
@@ -40,16 +48,54 @@ const parseArgs = () => {
 		item: get("--item") ?? "words",
 		pages: pagesArg === "all" ? Number.POSITIVE_INFINITY : Number(pagesArg),
 		cleanup: args.includes("--cleanup"),
+		filter: get("--filter"),
+		webhooks: get("--webhooks"),
 	};
 };
 
+/** "custom=false,recurring=true,base_price=true" → PlanFilter scope fields. */
+const parseScopeFilterFields = (
+	raw: string | undefined,
+): Record<string, unknown> => {
+	if (!raw) return {};
+	const fields: Record<string, unknown> = {};
+	for (const pair of raw.split(",")) {
+		const [key, value] = pair.split("=").map((part) => part.trim());
+		if (value !== "true" && value !== "false")
+			throw new Error(`bench: --filter ${key} must be true|false`);
+		const enabled = value === "true";
+		if (key === "base_price") {
+			fields.price = enabled ? { $ne: null } : null;
+		} else if (key === "custom" || key === "paid" || key === "recurring") {
+			fields[key] = enabled;
+		} else {
+			throw new Error(`bench: unknown --filter key "${key}"`);
+		}
+	}
+	return fields;
+};
+
 const main = async () => {
-	const { plan, item, pages, cleanup } = parseArgs();
+	const { plan, item, pages, cleanup, filter, webhooks } = parseArgs();
 	const { ctx, org } = await getBenchContext();
 	const { db } = ctx;
 
 	const itemParams = BENCH_ITEMS[item];
 	if (!itemParams) throw new Error(`bench: unknown item "${item}"`);
+
+	const scopeFilterFields = parseScopeFilterFields(filter);
+	if (webhooks !== undefined && webhooks !== "build")
+		throw new Error(`bench: --webhooks only supports "build"`);
+	if (webhooks === "build" && process.env.TRIGGER_SECRET_KEY)
+		throw new Error(
+			"bench: --webhooks build with TRIGGER_SECRET_KEY set would queue real tasks — unset it",
+		);
+	const webhookControls =
+		webhooks === "build"
+			? // eventTypes: [] → inline sender treats every type as unsubscribed,
+				// so records are built + chunked but nothing is delivered.
+				{ sendWebhooks: true, webhookConcurrency: 0, eventTypes: [] }
+			: undefined;
 
 	// Every run starts from a clean slate: remove prior bench-added rows so
 	// the run measures fresh inserts, never dedup no-ops.
@@ -64,12 +110,15 @@ const main = async () => {
 		DELETE FROM migration_item_runs
 		WHERE item_id LIKE ${`${BENCH_INTERNAL_CUSTOMER_PREFIX}%`}
 	`);
-	console.log(`bench: pre-run cleanup done in ${Date.now() - cleanupStarted}ms`);
+	console.log(
+		`bench: pre-run cleanup done in ${Date.now() - cleanupStarted}ms`,
+	);
 	if (cleanup) process.exit(0);
 
 	// Fresh migration row per run: a new internal_id means claims start clean,
 	// while the feature-level dedup still suppresses already-added rows.
-	const migrationId = `bench-mig-${plan}-${item}`;
+	// Scoped runs get their own id so the dashboard-seeded defs stay untouched.
+	const migrationId = `bench-mig-${plan}-${item}${filter ? "-scoped" : ""}`;
 	await db.execute(
 		sql`DELETE FROM migrations WHERE org_id = ${org.id} AND env = ${ctx.env} AND id = ${migrationId}`,
 	);
@@ -81,13 +130,13 @@ const main = async () => {
 			org_id: org.id,
 			env: ctx.env,
 			filter: MigrationFilterSchema.parse({
-				customer: { plan: { plan_id: plan } },
+				customer: { plan: { plan_id: plan, ...scopeFilterFields } },
 			}),
 			operations: OperationsSchema.parse({
 				customer: [
 					{
 						type: "update_plan",
-						plan_filter: { plan_id: plan },
+						plan_filter: { plan_id: plan, ...scopeFilterFields },
 						customize: { add_items: [itemParams] },
 					},
 				],
@@ -101,7 +150,7 @@ const main = async () => {
 
 	const migrationRunId = generateId("bench_run");
 	console.log(
-		`bench: plan=${plan} item=${item} pages=${pages === Number.POSITIVE_INFINITY ? "all" : pages} run=${migrationRunId}`,
+		`bench: plan=${plan} item=${item} pages=${pages === Number.POSITIVE_INFINITY ? "all" : pages}${filter ? ` filter=${filter}` : ""}${webhooks ? ` webhooks=${webhooks}` : ""} run=${migrationRunId}`,
 	);
 
 	const prepareStarted = Date.now();
@@ -149,6 +198,7 @@ const main = async () => {
 			plan: executionPlan,
 			afterInternalId: cursor,
 			maxPages: 1,
+			webhooks: webhookControls,
 		});
 		const pageMs = Date.now() - pageStarted;
 
@@ -158,7 +208,8 @@ const main = async () => {
 			totalProcessed += result.processed;
 			totalSucceeded += result.summary.succeeded;
 			totalSkipped += result.summary.skipped;
-			const perCustomerMs = result.processed > 0 ? pageMs / result.processed : 0;
+			const perCustomerMs =
+				result.processed > 0 ? pageMs / result.processed : 0;
 			console.log(
 				`bench: page ${page} — ${result.processed.toLocaleString()} customers in ${pageMs}ms (${perCustomerMs.toFixed(3)}ms/customer)`,
 			);
@@ -184,7 +235,9 @@ const main = async () => {
 	);
 	console.log(
 		`bench: ${pageTimings.length} pages in ${totalMs}ms — avg ${avgPageMs}ms/page, ${
-			totalMs > 0 ? Math.round((totalProcessed / totalMs) * 1000).toLocaleString() : 0
+			totalMs > 0
+				? Math.round((totalProcessed / totalMs) * 1000).toLocaleString()
+				: 0
 		} customers/s`,
 	);
 	process.exit(0);
