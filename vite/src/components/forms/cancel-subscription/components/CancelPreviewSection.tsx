@@ -1,5 +1,4 @@
 import { PreviewSection } from "@/components/forms/shared/PreviewSection";
-import { buildPreviewTotals } from "@/components/forms/shared/utils/buildPreviewTotals";
 import { useUpdateSubscriptionFormContext } from "@/components/forms/update-subscription-v2";
 
 export function CancelPreviewSection() {
@@ -17,13 +16,13 @@ export function CancelPreviewSection() {
 	return (
 		<PreviewSection
 			previewQuery={previewQuery}
+			// A negative total here is a refund, not credit on file.
+			totalDue="row"
+			showCreditNote={false}
+			refundBehavior={refundBehavior ?? "none"}
+			includeNextCycle={cancelAction === "cancel_end_of_cycle"}
 			lineItems={isFullRefund ? [] : undefined}
 			filterZeroAmounts={!isFullRefund}
-			totals={buildPreviewTotals({
-				previewData: previewQuery.data,
-				refundBehavior: refundBehavior ?? "none",
-				includeNextCycle: cancelAction === "cancel_end_of_cycle",
-			})}
 		/>
 	);
 }
