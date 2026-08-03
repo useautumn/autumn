@@ -102,7 +102,8 @@ const GrantExpirySchema = z
 			description: "The unit of time the grant lasts.",
 		}),
 		length: z.number().int().positive().meta({
-			description: "The positive number of periods before the grant expires.",
+			description:
+				"The positive integer count of periods before the grant expires.",
 		}),
 	})
 	.strict()

@@ -238,7 +238,7 @@ class ListRewardsExpiryTypedDict(TypedDict):
     type: ListRewardsExpiryType
     r"""The unit of time the grant lasts."""
     length: int
-    r"""The positive number of periods before the grant expires."""
+    r"""The positive integer count of periods before the grant expires."""
 
 
 class ListRewardsExpiry(BaseModel):
@@ -246,7 +246,7 @@ class ListRewardsExpiry(BaseModel):
     r"""The unit of time the grant lasts."""
 
     length: int
-    r"""The positive number of periods before the grant expires."""
+    r"""The positive integer count of periods before the grant expires."""
 
 
 class ListRewardsGrantTypedDict(TypedDict):

@@ -36,7 +36,7 @@ export type ExpiryRequest = {
    */
   type: CreateRewardParamsType;
   /**
-   * The positive number of periods before the grant expires.
+   * The positive integer count of periods before the grant expires.
    */
   length: number;
 };
@@ -227,7 +227,7 @@ export type CreateRewardExpiryResponse = {
    */
   type: CreateRewardExpiryTypeResponse;
   /**
-   * The positive number of periods before the grant expires.
+   * The positive integer count of periods before the grant expires.
    */
   length: number;
 };

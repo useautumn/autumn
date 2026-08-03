@@ -127,7 +127,7 @@ export type ListRewardsExpiry = {
    */
   type: ListRewardsExpiryType;
   /**
-   * The positive number of periods before the grant expires.
+   * The positive integer count of periods before the grant expires.
    */
   length: number;
 };

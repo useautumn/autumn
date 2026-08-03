@@ -15071,7 +15071,7 @@ paths:
         @example
         ```typescript
         // Schedule a transition from a trial plan to a paid plan
-        const response = await client.billing.createSchedule({ customerId: "cus_123", phases: [{"startsAt":1785776972374,"plans":[{"planId":"trial_plan"}]},{"startsAt":1786986572374,"plans":[{"planId":"pro_plan"}]}] });
+        const response = await client.billing.createSchedule({ customerId: "cus_123", phases: [{"startsAt":1785777177984,"plans":[{"planId":"trial_plan"}]},{"startsAt":1786986777984,"plans":[{"planId":"pro_plan"}]}] });
         ```
 
         @param customerId - The ID of the customer to create the schedule for.
@@ -31707,7 +31707,7 @@ paths:
                                         minimum: -9.007199254740991e+15
                                         maximum: 9.007199254740991e+15
                                         exclusiveMinimum: 0
-                                        description: The positive number of periods before the grant expires.
+                                        description: The positive integer count of periods before the grant expires.
                                     required:
                                       - type
                                       - length
@@ -31901,7 +31901,7 @@ paths:
                                           minimum: -9.007199254740991e+15
                                           maximum: 9.007199254740991e+15
                                           exclusiveMinimum: 0
-                                          description: The positive number of periods before the grant expires.
+                                          description: The positive integer count of periods before the grant expires.
                                       required:
                                         - type
                                         - length
@@ -32109,7 +32109,7 @@ paths:
                                         minimum: -9.007199254740991e+15
                                         maximum: 9.007199254740991e+15
                                         exclusiveMinimum: 0
-                                        description: The positive number of periods before the grant expires.
+                                        description: The positive integer count of periods before the grant expires.
                                     required:
                                       - type
                                       - length

@@ -35236,7 +35236,7 @@ paths:
                                         minimum: -9007199254740991
                                         maximum: 9007199254740991
                                         exclusiveMinimum: 0
-                                        description: The positive number of periods before the grant expires.
+                                        description: The positive integer count of periods before the grant expires.
                                     required:
                                       - type
                                       - length
@@ -35438,7 +35438,7 @@ paths:
                                           minimum: -9007199254740991
                                           maximum: 9007199254740991
                                           exclusiveMinimum: 0
-                                          description: The positive number of periods before the grant expires.
+                                          description: The positive integer count of periods before the grant expires.
                                       required:
                                         - type
                                         - length
@@ -35709,7 +35709,7 @@ paths:
                                         minimum: -9007199254740991
                                         maximum: 9007199254740991
                                         exclusiveMinimum: 0
-                                        description: The positive number of periods before the grant expires.
+                                        description: The positive integer count of periods before the grant expires.
                                     required:
                                       - type
                                       - length

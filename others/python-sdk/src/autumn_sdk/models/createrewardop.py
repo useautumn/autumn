@@ -58,7 +58,7 @@ class ExpiryRequestTypedDict(TypedDict):
     type: CreateRewardParamsType
     r"""The unit of time the grant lasts."""
     length: int
-    r"""The positive number of periods before the grant expires."""
+    r"""The positive integer count of periods before the grant expires."""
 
 
 class ExpiryRequest(BaseModel):
@@ -66,7 +66,7 @@ class ExpiryRequest(BaseModel):
     r"""The unit of time the grant lasts."""
 
     length: int
-    r"""The positive number of periods before the grant expires."""
+    r"""The positive integer count of periods before the grant expires."""
 
 
 class CreateRewardGrantTypedDict(TypedDict):
@@ -529,7 +529,7 @@ class CreateRewardExpiryResponseTypedDict(TypedDict):
     type: CreateRewardExpiryTypeResponse
     r"""The unit of time the grant lasts."""
     length: int
-    r"""The positive number of periods before the grant expires."""
+    r"""The positive integer count of periods before the grant expires."""
 
 
 class CreateRewardExpiryResponse(BaseModel):
@@ -537,7 +537,7 @@ class CreateRewardExpiryResponse(BaseModel):
     r"""The unit of time the grant lasts."""
 
     length: int
-    r"""The positive number of periods before the grant expires."""
+    r"""The positive integer count of periods before the grant expires."""
 
 
 class CreateRewardGrantResponseTypedDict(TypedDict):
