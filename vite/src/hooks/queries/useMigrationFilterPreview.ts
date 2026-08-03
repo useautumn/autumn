@@ -7,6 +7,7 @@ import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { useMemo } from "react";
 import { useQueryKeyFactory } from "@/hooks/common/useQueryKeyFactory";
 import { ACTIVE_POLL_MS } from "@/hooks/queries/useMigrationRunsQuery";
+import { useDebounce } from "@/hooks/useDebounce";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
 import { DEFAULT_CUSTOMER_LIST_PAGE_SIZE } from "@/utils/constants/customerListPagination";
 import type { ExecutionStatus } from "@/views/migrations/migration/live/ExecutionStatusSubMenu";
@@ -31,6 +32,9 @@ type CustomerListFilters = {
 	none?: boolean;
 	processor?: string[];
 };
+
+const COUNT_DEBOUNCE_MS = 400;
+const COUNT_STALE_MS = 60_000;
 
 export const useMigrationFilterPreview = ({
 	filter,
@@ -107,15 +111,45 @@ export const useMigrationFilterPreview = ({
 		refetchInterval: isActive ? ACTIVE_POLL_MS : false,
 	});
 
+	// Counts are expensive server-side aggregates (seconds on large filtered
+	// scopes) and don't change per keystroke: debounce the inputs and drop
+	// empty search/list filters so every consumer of the same filter shares
+	// ONE request + cache entry, kept fresh for a minute.
+	const debouncedFilterKey = useDebounce({
+		value: filterKey,
+		delayMs: COUNT_DEBOUNCE_MS,
+	});
+	const debouncedSearch = useDebounce({
+		value: search,
+		delayMs: COUNT_DEBOUNCE_MS,
+	});
+	const countFilter = useMemo(
+		() => JSON.parse(debouncedFilterKey) as CustomerFilter,
+		[debouncedFilterKey],
+	);
+	const countSearch =
+		debouncedSearch.trim() === "" ? undefined : debouncedSearch;
+	const countCustomerFilters =
+		customerFiltersKey === "{}" ? undefined : customerFilters;
+
 	const countQuery = useQuery<number | null>({
-		queryKey: buildKey(["migration-filter-preview-count", ...baseKey]),
+		queryKey: buildKey([
+			"migration-filter-preview-count",
+			debouncedFilterKey,
+			countSearch ?? "",
+			customerFiltersKey,
+			migrationId,
+			executionKey,
+			migrationRunId,
+			migrationRunDryRun,
+		]),
 		queryFn: async ({ signal }) => {
 			const { data } = await axiosInstance.post<FilterPreviewResponse>(
 				"/migrations.filter.preview",
 				{
-					filter,
-					search,
-					customerFilters,
+					filter: countFilter,
+					search: countSearch,
+					customerFilters: countCustomerFilters,
 					pageSize: 1,
 					migrationId,
 					executionStatuses,
@@ -127,7 +161,7 @@ export const useMigrationFilterPreview = ({
 			);
 			return data.count;
 		},
-		staleTime: 500,
+		staleTime: COUNT_STALE_MS,
 		placeholderData: keepPreviousData,
 		refetchInterval: isActive ? ACTIVE_POLL_MS : false,
 	});

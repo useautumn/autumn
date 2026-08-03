@@ -41,17 +41,23 @@ const CandidateRowSchema = z.object({
  * (same feature — feature-only for booleans, same reset interval otherwise;
  * this also makes replay idempotent). `includeAnchorSources` adds the cycle
  * anchor columns resetting (consumable/credit) adds need for enrichment.
+ * `afterCustomerProductId` + `limit` keyset-paginate by cp.id so row-heavy
+ * pages read in bounded batches.
  */
 export const buildAddCandidateRowsQuery = ({
 	internalCustomerIds,
 	scope,
 	entitlement,
 	includeAnchorSources,
+	afterCustomerProductId,
+	limit,
 }: {
 	internalCustomerIds: string[];
 	scope: OperationScope;
 	entitlement: EntitlementWithFeature;
 	includeAnchorSources: boolean;
+	afterCustomerProductId?: string;
+	limit?: number;
 }) => {
 	const targetInterval = String(entitlement.interval ?? EntInterval.Lifetime);
 	const targetIntervalCount = entitlement.interval_count ?? 1;
@@ -133,6 +139,7 @@ export const buildAddCandidateRowsQuery = ({
 		${subscriptionAnchorJoin}
 		WHERE cp.internal_customer_id IN (${sqlList({ values: internalCustomerIds })})
 			AND ${operationScopeSql({ scope })}
+			${afterCustomerProductId ? sql`AND cp.id > ${afterCustomerProductId}` : sql``}
 			AND NOT EXISTS (
 				SELECT 1
 				FROM customer_entitlements AS existing
@@ -143,7 +150,31 @@ export const buildAddCandidateRowsQuery = ({
 					${dedupIntervalCondition}
 			)
 		ORDER BY cp.id
+		${limit !== undefined ? sql`LIMIT ${limit}` : sql``}
 	`;
+};
+
+/** Advisory pre-count of the page's add candidates (no anchor laterals). */
+export const countAddCandidateRows = async ({
+	db,
+	internalCustomerIds,
+	scope,
+	entitlement,
+}: {
+	db: DrizzleCli;
+	internalCustomerIds: string[];
+	scope: OperationScope;
+	entitlement: EntitlementWithFeature;
+}): Promise<number> => {
+	const [row] = await db.execute<{ count: string }>(sql`
+		SELECT COUNT(*)::bigint AS count FROM (${buildAddCandidateRowsQuery({
+			internalCustomerIds,
+			scope,
+			entitlement,
+			includeAnchorSources: false,
+		})}) AS candidates
+	`);
+	return Number(row?.count ?? 0);
 };
 
 export const selectAddCandidateRows = async ({
@@ -152,12 +183,16 @@ export const selectAddCandidateRows = async ({
 	scope,
 	entitlement,
 	includeAnchorSources,
+	afterCustomerProductId,
+	limit,
 }: {
 	db: DrizzleCli;
 	internalCustomerIds: string[];
 	scope: OperationScope;
 	entitlement: EntitlementWithFeature;
 	includeAnchorSources: boolean;
+	afterCustomerProductId?: string;
+	limit?: number;
 }): Promise<CycleEnrichmentCandidate[]> => {
 	const rows = await db.execute(
 		buildAddCandidateRowsQuery({
@@ -165,6 +200,8 @@ export const selectAddCandidateRows = async ({
 			scope,
 			entitlement,
 			includeAnchorSources,
+			afterCustomerProductId,
+			limit,
 		}),
 	);
 

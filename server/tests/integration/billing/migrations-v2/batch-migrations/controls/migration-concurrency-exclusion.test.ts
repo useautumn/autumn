@@ -295,9 +295,11 @@ test.concurrent(
 			],
 		});
 
-		// The org-level run claim normally serializes these; driving the chunk
-		// runner directly simulates that guard failing.
-		await Promise.all(
+		// The org-level run queue normally serializes these; driving the chunk
+		// runner directly simulates that guard failing. If the runs genuinely
+		// overlap, the loser fails loudly on the exclusivity index — the only
+		// acceptable rejection.
+		const outcomes = await Promise.allSettled(
 			["a", "b"].map((tag) =>
 				runChunkedMigration({
 					ctx,
@@ -308,6 +310,15 @@ test.concurrent(
 				}),
 			),
 		);
+		const rejections = outcomes.filter(
+			(outcome) => outcome.status === "rejected",
+		);
+		expect(rejections.length).toBeLessThanOrEqual(1);
+		for (const rejection of rejections) {
+			expect(String(rejection.reason)).toContain(
+				"migration_item_runs_live_item_exclusive",
+			);
+		}
 
 		// The invariant: no customer is double-applied, whichever run won them.
 		for (const customerId of customerIds) {
