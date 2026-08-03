@@ -16,7 +16,7 @@ import { cn } from "@autumn/ui/lib/utils";
 import { CheckIcon, ChevronDownIcon } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
 import type { ReactNode } from "react";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 
 export type SearchableSelectFooter =
 	| ReactNode
@@ -39,6 +39,10 @@ export type SearchableSelectProps<T> = {
 	triggerClassName?: string;
 	contentClassName?: string;
 	defaultOpen?: boolean;
+	/** Replaces the default value-and-chevron button, e.g. with an icon button. */
+	trigger?: ReactNode;
+	open?: boolean;
+	onOpenChange?: (open: boolean) => void;
 	header?: ReactNode;
 	footer?: SearchableSelectFooter;
 	onSearchChange?: (search: string) => void;
@@ -62,18 +66,29 @@ export function SearchableSelect<T>({
 	triggerClassName,
 	contentClassName,
 	defaultOpen = false,
+	trigger,
+	open: controlledOpen,
+	onOpenChange,
 	header,
 	footer,
 	onSearchChange,
 	isLoading = false,
 }: SearchableSelectProps<T>) {
-	const [open, setOpen] = useState(false);
+	const [uncontrolledOpen, setUncontrolledOpen] = useState(false);
+	const open = controlledOpen ?? uncontrolledOpen;
+	const setOpen = useCallback(
+		(next: boolean) => {
+			setUncontrolledOpen(next);
+			onOpenChange?.(next);
+		},
+		[onOpenChange],
+	);
 
 	useEffect(() => {
 		if (!defaultOpen) return;
 		const timer = setTimeout(() => setOpen(true), 200);
 		return () => clearTimeout(timer);
-	}, [defaultOpen]);
+	}, [defaultOpen, setOpen]);
 
 	const selectedOption = options.find((opt) => getOptionValue(opt) === value);
 
@@ -104,26 +119,28 @@ export function SearchableSelect<T>({
 	return (
 		<Popover open={open} onOpenChange={setOpen}>
 			<PopoverTrigger asChild disabled={disabled}>
-				<button
-					type="button"
-					aria-expanded={open}
-					aria-haspopup="listbox"
-					disabled={disabled}
-					className={cn(
-						"flex items-center justify-between gap-2 w-full min-w-0 text-sm outline-none disabled:cursor-not-allowed disabled:opacity-50 rounded-lg",
-						"input-base input-shadow-default input-state-open transition-all duration-150",
-						triggerClassName,
-					)}
-				>
-					<div className="flex items-center gap-2 min-w-0 flex-1">
-						<span className="truncate min-w-0">
-							{renderValue
-								? renderValue(selectedOption)
-								: defaultRenderValue(selectedOption)}
-						</span>
-					</div>
-					<ChevronDownIcon className="size-4 shrink-0 opacity-50" />
-				</button>
+				{trigger ?? (
+					<button
+						type="button"
+						aria-expanded={open}
+						aria-haspopup="listbox"
+						disabled={disabled}
+						className={cn(
+							"flex items-center justify-between gap-2 w-full min-w-0 text-sm outline-none disabled:cursor-not-allowed disabled:opacity-50 rounded-lg",
+							"input-base input-shadow-default input-state-open transition-all duration-150",
+							triggerClassName,
+						)}
+					>
+						<div className="flex items-center gap-2 min-w-0 flex-1">
+							<span className="truncate min-w-0">
+								{renderValue
+									? renderValue(selectedOption)
+									: defaultRenderValue(selectedOption)}
+							</span>
+						</div>
+						<ChevronDownIcon className="size-4 shrink-0 opacity-50" />
+					</button>
+				)}
 			</PopoverTrigger>
 			<AnimatePresence>
 				{open && (
