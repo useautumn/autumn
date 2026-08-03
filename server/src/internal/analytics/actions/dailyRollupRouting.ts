@@ -151,12 +151,14 @@ export const buildCountAndSumQuery = ({
 		SELECT
 			event_name,
 			sum(event_count_value) as count,
-			sum(total_value_value) as sum
+			sum(total_value_value) as sum,
+			sum(daily_rollup_rows) as daily_rollup_rows
 		FROM (
 			SELECT
 				event_name,
 				sumMerge(event_count) as event_count_value,
-				sumMerge(total_value) as total_value_value
+				sumMerge(total_value) as total_value_value,
+				count() as daily_rollup_rows
 			FROM events_customer_daily_mv
 			WHERE org_id = {org_id:String} AND env = {env:String}
 				${customerFilter}
@@ -171,7 +173,8 @@ export const buildCountAndSumQuery = ({
 			SELECT
 				event_name,
 				sum(event_count) as event_count_value,
-				sum(total_value) as total_value_value
+				sum(total_value) as total_value_value,
+				0 as daily_rollup_rows
 			FROM events_customer_hourly_mv
 			WHERE org_id = {org_id:String} AND env = {env:String}
 				${customerFilter}

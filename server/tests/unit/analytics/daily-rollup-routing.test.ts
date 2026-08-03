@@ -132,6 +132,7 @@ test("daily totals: combine merged full days with hourly range edges", () => {
 
 	expect(query).toContain("events_customer_daily_mv");
 	expect(query).toContain("sumMerge(event_count)");
+	expect(query).toContain("sum(daily_rollup_rows)");
 	expect(query).toContain("events_customer_hourly_mv");
 	expect(query).toContain("hour <");
 	expect(query).toContain("hour >= toStartOfDay");
