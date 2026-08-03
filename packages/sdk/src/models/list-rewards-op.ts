@@ -72,7 +72,7 @@ export type ListRewardsCouponPromoCode = {
   firstTimeTransaction?: boolean | null | undefined;
 };
 
-export type ListRewardsCoupon = {
+export type Coupon = {
   /**
    * The unique identifier for the coupon.
    */
@@ -158,7 +158,7 @@ export type ListRewardsFeatureGrantPromoCode = {
   maxUses: number | null;
 };
 
-export type ListRewardsFeatureGrant = {
+export type FeatureGrant = {
   /**
    * The unique identifier for the feature grant.
    */
@@ -188,11 +188,11 @@ export type ListRewardsResponse = {
   /**
    * The list of coupons configured for the organization.
    */
-  coupons: Array<ListRewardsCoupon>;
+  coupons: Array<Coupon>;
   /**
    * The list of feature grants configured for the organization.
    */
-  featureGrants: Array<ListRewardsFeatureGrant>;
+  featureGrants: Array<FeatureGrant>;
 };
 
 /** @internal */
@@ -272,10 +272,7 @@ export function listRewardsCouponPromoCodeFromJSON(
 }
 
 /** @internal */
-export const ListRewardsCoupon$inboundSchema: z.ZodMiniType<
-  ListRewardsCoupon,
-  unknown
-> = z.pipe(
+export const Coupon$inboundSchema: z.ZodMiniType<Coupon, unknown> = z.pipe(
   z.object({
     id: types.string(),
     name: z.optional(z.nullable(types.string())),
@@ -297,13 +294,13 @@ export const ListRewardsCoupon$inboundSchema: z.ZodMiniType<
   }),
 );
 
-export function listRewardsCouponFromJSON(
+export function couponFromJSON(
   jsonString: string,
-): SafeParseResult<ListRewardsCoupon, SDKValidationError> {
+): SafeParseResult<Coupon, SDKValidationError> {
   return safeParse(
     jsonString,
-    (x) => ListRewardsCoupon$inboundSchema.parse(JSON.parse(x)),
-    `Failed to parse 'ListRewardsCoupon' from JSON`,
+    (x) => Coupon$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'Coupon' from JSON`,
   );
 }
 
@@ -386,34 +383,32 @@ export function listRewardsFeatureGrantPromoCodeFromJSON(
 }
 
 /** @internal */
-export const ListRewardsFeatureGrant$inboundSchema: z.ZodMiniType<
-  ListRewardsFeatureGrant,
-  unknown
-> = z.pipe(
-  z.object({
-    id: types.string(),
-    name: z.optional(z.nullable(types.string())),
-    grants: z.array(z.lazy(() => ListRewardsGrant$inboundSchema)),
-    promo_codes: z.array(
-      z.lazy(() => ListRewardsFeatureGrantPromoCode$inboundSchema),
-    ),
-    created_at: types.number(),
-  }),
-  z.transform((v) => {
-    return remap$(v, {
-      "promo_codes": "promoCodes",
-      "created_at": "createdAt",
-    });
-  }),
-);
+export const FeatureGrant$inboundSchema: z.ZodMiniType<FeatureGrant, unknown> =
+  z.pipe(
+    z.object({
+      id: types.string(),
+      name: z.optional(z.nullable(types.string())),
+      grants: z.array(z.lazy(() => ListRewardsGrant$inboundSchema)),
+      promo_codes: z.array(
+        z.lazy(() => ListRewardsFeatureGrantPromoCode$inboundSchema),
+      ),
+      created_at: types.number(),
+    }),
+    z.transform((v) => {
+      return remap$(v, {
+        "promo_codes": "promoCodes",
+        "created_at": "createdAt",
+      });
+    }),
+  );
 
-export function listRewardsFeatureGrantFromJSON(
+export function featureGrantFromJSON(
   jsonString: string,
-): SafeParseResult<ListRewardsFeatureGrant, SDKValidationError> {
+): SafeParseResult<FeatureGrant, SDKValidationError> {
   return safeParse(
     jsonString,
-    (x) => ListRewardsFeatureGrant$inboundSchema.parse(JSON.parse(x)),
-    `Failed to parse 'ListRewardsFeatureGrant' from JSON`,
+    (x) => FeatureGrant$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'FeatureGrant' from JSON`,
   );
 }
 
@@ -423,10 +418,8 @@ export const ListRewardsResponse$inboundSchema: z.ZodMiniType<
   unknown
 > = z.pipe(
   z.object({
-    coupons: z.array(z.lazy(() => ListRewardsCoupon$inboundSchema)),
-    feature_grants: z.array(
-      z.lazy(() => ListRewardsFeatureGrant$inboundSchema),
-    ),
+    coupons: z.array(z.lazy(() => Coupon$inboundSchema)),
+    feature_grants: z.array(z.lazy(() => FeatureGrant$inboundSchema)),
   }),
   z.transform((v) => {
     return remap$(v, {

@@ -51,29 +51,36 @@ CreateRewardParamsType = Literal[
     "month",
     "year",
 ]
+r"""The unit of time the grant lasts."""
 
 
 class ExpiryRequestTypedDict(TypedDict):
     type: CreateRewardParamsType
+    r"""The unit of time the grant lasts."""
     length: int
+    r"""The positive number of periods before the grant expires."""
 
 
 class ExpiryRequest(BaseModel):
     type: CreateRewardParamsType
+    r"""The unit of time the grant lasts."""
 
     length: int
+    r"""The positive number of periods before the grant expires."""
 
 
-class GrantRequestTypedDict(TypedDict):
+class CreateRewardGrantTypedDict(TypedDict):
     feature_id: str
     included: Nullable[float]
+    r"""A positive amount to grant, or null for boolean features."""
     expiry: Nullable[ExpiryRequestTypedDict]
 
 
-class GrantRequest(BaseModel):
+class CreateRewardGrant(BaseModel):
     feature_id: str
 
     included: Nullable[float]
+    r"""A positive amount to grant, or null for boolean features."""
 
     expiry: Nullable[ExpiryRequest]
 
@@ -92,15 +99,17 @@ class GrantRequest(BaseModel):
         return m
 
 
-class FeatureGrantPromoCodeRequestTypedDict(TypedDict):
+class CreateRewardFeatureGrantPromoCodeTypedDict(TypedDict):
     code: str
     max_uses: Nullable[int]
+    r"""A positive redemption limit, or null for unlimited uses."""
 
 
-class FeatureGrantPromoCodeRequest(BaseModel):
+class CreateRewardFeatureGrantPromoCode(BaseModel):
     code: str
 
     max_uses: Nullable[int]
+    r"""A positive redemption limit, or null for unlimited uses."""
 
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
@@ -117,41 +126,47 @@ class FeatureGrantPromoCodeRequest(BaseModel):
         return m
 
 
-class FeatureGrantRequestTypedDict(TypedDict):
+class CreateRewardFeatureGrantRequestTypedDict(TypedDict):
+    r"""Provide exactly one of coupon or feature_grant, not both."""
+
     id: str
     name: str
-    grants: List[GrantRequestTypedDict]
+    grants: List[CreateRewardGrantTypedDict]
     r"""Feature IDs must be unique."""
-    promo_codes: List[FeatureGrantPromoCodeRequestTypedDict]
+    promo_codes: List[CreateRewardFeatureGrantPromoCodeTypedDict]
     r"""Promo code values must be unique."""
 
 
-class FeatureGrantRequest(BaseModel):
+class CreateRewardFeatureGrantRequest(BaseModel):
+    r"""Provide exactly one of coupon or feature_grant, not both."""
+
     id: str
 
     name: str
 
-    grants: List[GrantRequest]
+    grants: List[CreateRewardGrant]
     r"""Feature IDs must be unique."""
 
-    promo_codes: List[FeatureGrantPromoCodeRequest]
+    promo_codes: List[CreateRewardFeatureGrantPromoCode]
     r"""Promo code values must be unique."""
 
 
 class CreateRewardParams2TypedDict(TypedDict):
-    feature_grant: FeatureGrantRequestTypedDict
+    feature_grant: CreateRewardFeatureGrantRequestTypedDict
+    r"""Provide exactly one of coupon or feature_grant, not both."""
 
 
 class CreateRewardParams2(BaseModel):
-    feature_grant: FeatureGrantRequest
+    feature_grant: CreateRewardFeatureGrantRequest
+    r"""Provide exactly one of coupon or feature_grant, not both."""
 
 
-class CreateRewardParamsDuration6TypedDict(TypedDict):
+class CreateRewardDuration6TypedDict(TypedDict):
     type: Literal["forever"]
     length: Literal[None]
 
 
-class CreateRewardParamsDuration6(BaseModel):
+class CreateRewardDuration6(BaseModel):
     type: Annotated[
         Annotated[Literal["forever"], AfterValidator(validate_const("forever"))],
         pydantic.Field(alias="type"),
@@ -163,12 +178,12 @@ class CreateRewardParamsDuration6(BaseModel):
     ] = None
 
 
-class CreateRewardParamsDuration5TypedDict(TypedDict):
+class CreateRewardDuration5TypedDict(TypedDict):
     length: int
     type: Literal["months"]
 
 
-class CreateRewardParamsDuration5(BaseModel):
+class CreateRewardDuration5(BaseModel):
     length: int
 
     type: Annotated[
@@ -177,12 +192,12 @@ class CreateRewardParamsDuration5(BaseModel):
     ] = "months"
 
 
-class CreateRewardParamsDuration4TypedDict(TypedDict):
+class CreateRewardDuration4TypedDict(TypedDict):
     type: Literal["one_off"]
     length: Literal[None]
 
 
-class CreateRewardParamsDuration4(BaseModel):
+class CreateRewardDuration4(BaseModel):
     type: Annotated[
         Annotated[Literal["one_off"], AfterValidator(validate_const("one_off"))],
         pydantic.Field(alias="type"),
@@ -197,32 +212,28 @@ class CreateRewardParamsDuration4(BaseModel):
 DurationUnion2TypedDict = TypeAliasType(
     "DurationUnion2TypedDict",
     Union[
-        CreateRewardParamsDuration4TypedDict,
-        CreateRewardParamsDuration5TypedDict,
-        CreateRewardParamsDuration6TypedDict,
+        CreateRewardDuration4TypedDict,
+        CreateRewardDuration5TypedDict,
+        CreateRewardDuration6TypedDict,
     ],
 )
 r"""Use a positive integer length for months, and null for one_off or forever."""
 
 
 DurationUnion2 = Annotated[
-    Union[
-        CreateRewardParamsDuration4,
-        CreateRewardParamsDuration5,
-        CreateRewardParamsDuration6,
-    ],
+    Union[CreateRewardDuration4, CreateRewardDuration5, CreateRewardDuration6],
     Field(discriminator="type"),
 ]
 r"""Use a positive integer length for months, and null for one_off or forever."""
 
 
-class CouponPromoCodeRequest2TypedDict(TypedDict):
+class CreateRewardCouponRequestPromoCode2TypedDict(TypedDict):
     code: str
     global_max_redemption: NotRequired[Nullable[int]]
     first_time_transaction: NotRequired[Nullable[bool]]
 
 
-class CouponPromoCodeRequest2(BaseModel):
+class CreateRewardCouponRequestPromoCode2(BaseModel):
     code: str
 
     global_max_redemption: OptionalNullable[int] = UNSET
@@ -255,21 +266,21 @@ class CouponPromoCodeRequest2(BaseModel):
         return m
 
 
-class CouponRequest2TypedDict(TypedDict):
+class CreateRewardCouponRequest2TypedDict(TypedDict):
     id: str
     name: str
     duration: DurationUnion2TypedDict
     r"""Use a positive integer length for months, and null for one_off or forever."""
     plan_ids: Nullable[List[str]]
     r"""Plan IDs must be unique."""
-    promo_codes: List[CouponPromoCodeRequest2TypedDict]
+    promo_codes: List[CreateRewardCouponRequestPromoCode2TypedDict]
     r"""Promo code values must be unique."""
     value: float
     r"""Percentage discounts must be at most 100; fixed discounts must be positive."""
     type: Literal["fixed_discount"]
 
 
-class CouponRequest2(BaseModel):
+class CreateRewardCouponRequest2(BaseModel):
     id: str
 
     name: str
@@ -280,7 +291,7 @@ class CouponRequest2(BaseModel):
     plan_ids: Nullable[List[str]]
     r"""Plan IDs must be unique."""
 
-    promo_codes: List[CouponPromoCodeRequest2]
+    promo_codes: List[CreateRewardCouponRequestPromoCode2]
     r"""Promo code values must be unique."""
 
     value: float
@@ -308,12 +319,12 @@ class CouponRequest2(BaseModel):
         return m
 
 
-class CreateRewardParamsDuration3TypedDict(TypedDict):
+class CreateRewardDuration3TypedDict(TypedDict):
     type: Literal["forever"]
     length: Literal[None]
 
 
-class CreateRewardParamsDuration3(BaseModel):
+class CreateRewardDuration3(BaseModel):
     type: Annotated[
         Annotated[Literal["forever"], AfterValidator(validate_const("forever"))],
         pydantic.Field(alias="type"),
@@ -325,12 +336,12 @@ class CreateRewardParamsDuration3(BaseModel):
     ] = None
 
 
-class CreateRewardParamsDuration2TypedDict(TypedDict):
+class CreateRewardDuration2TypedDict(TypedDict):
     length: int
     type: Literal["months"]
 
 
-class CreateRewardParamsDuration2(BaseModel):
+class CreateRewardDuration2(BaseModel):
     length: int
 
     type: Annotated[
@@ -339,12 +350,12 @@ class CreateRewardParamsDuration2(BaseModel):
     ] = "months"
 
 
-class CreateRewardParamsDuration1TypedDict(TypedDict):
+class CreateRewardDuration1TypedDict(TypedDict):
     type: Literal["one_off"]
     length: Literal[None]
 
 
-class CreateRewardParamsDuration1(BaseModel):
+class CreateRewardDuration1(BaseModel):
     type: Annotated[
         Annotated[Literal["one_off"], AfterValidator(validate_const("one_off"))],
         pydantic.Field(alias="type"),
@@ -359,32 +370,28 @@ class CreateRewardParamsDuration1(BaseModel):
 DurationUnion1TypedDict = TypeAliasType(
     "DurationUnion1TypedDict",
     Union[
-        CreateRewardParamsDuration1TypedDict,
-        CreateRewardParamsDuration2TypedDict,
-        CreateRewardParamsDuration3TypedDict,
+        CreateRewardDuration1TypedDict,
+        CreateRewardDuration2TypedDict,
+        CreateRewardDuration3TypedDict,
     ],
 )
 r"""Use a positive integer length for months, and null for one_off or forever."""
 
 
 DurationUnion1 = Annotated[
-    Union[
-        CreateRewardParamsDuration1,
-        CreateRewardParamsDuration2,
-        CreateRewardParamsDuration3,
-    ],
+    Union[CreateRewardDuration1, CreateRewardDuration2, CreateRewardDuration3],
     Field(discriminator="type"),
 ]
 r"""Use a positive integer length for months, and null for one_off or forever."""
 
 
-class CouponPromoCodeRequest1TypedDict(TypedDict):
+class CreateRewardCouponRequestPromoCode1TypedDict(TypedDict):
     code: str
     global_max_redemption: NotRequired[Nullable[int]]
     first_time_transaction: NotRequired[Nullable[bool]]
 
 
-class CouponPromoCodeRequest1(BaseModel):
+class CreateRewardCouponRequestPromoCode1(BaseModel):
     code: str
 
     global_max_redemption: OptionalNullable[int] = UNSET
@@ -417,21 +424,21 @@ class CouponPromoCodeRequest1(BaseModel):
         return m
 
 
-class CouponRequest1TypedDict(TypedDict):
+class CreateRewardCouponRequest1TypedDict(TypedDict):
     id: str
     name: str
     duration: DurationUnion1TypedDict
     r"""Use a positive integer length for months, and null for one_off or forever."""
     plan_ids: Nullable[List[str]]
     r"""Plan IDs must be unique."""
-    promo_codes: List[CouponPromoCodeRequest1TypedDict]
+    promo_codes: List[CreateRewardCouponRequestPromoCode1TypedDict]
     r"""Promo code values must be unique."""
     value: float
     r"""Percentage discounts must be at most 100; fixed discounts must be positive."""
     type: Literal["percentage_discount"]
 
 
-class CouponRequest1(BaseModel):
+class CreateRewardCouponRequest1(BaseModel):
     id: str
 
     name: str
@@ -442,7 +449,7 @@ class CouponRequest1(BaseModel):
     plan_ids: Nullable[List[str]]
     r"""Plan IDs must be unique."""
 
-    promo_codes: List[CouponPromoCodeRequest1]
+    promo_codes: List[CreateRewardCouponRequestPromoCode1]
     r"""Promo code values must be unique."""
 
     value: float
@@ -471,20 +478,28 @@ class CouponRequest1(BaseModel):
         return m
 
 
-CouponTypedDict = TypeAliasType(
-    "CouponTypedDict", Union[CouponRequest1TypedDict, CouponRequest2TypedDict]
+CreateRewardCouponRequestUnionTypedDict = TypeAliasType(
+    "CreateRewardCouponRequestUnionTypedDict",
+    Union[CreateRewardCouponRequest1TypedDict, CreateRewardCouponRequest2TypedDict],
 )
+r"""Provide exactly one of coupon or feature_grant, not both."""
 
 
-Coupon = Annotated[Union[CouponRequest1, CouponRequest2], Field(discriminator="type")]
+CreateRewardCouponRequestUnion = Annotated[
+    Union[CreateRewardCouponRequest1, CreateRewardCouponRequest2],
+    Field(discriminator="type"),
+]
+r"""Provide exactly one of coupon or feature_grant, not both."""
 
 
 class CreateRewardParams1TypedDict(TypedDict):
-    coupon: CouponTypedDict
+    coupon: CreateRewardCouponRequestUnionTypedDict
+    r"""Provide exactly one of coupon or feature_grant, not both."""
 
 
 class CreateRewardParams1(BaseModel):
-    coupon: Coupon
+    coupon: CreateRewardCouponRequestUnion
+    r"""Provide exactly one of coupon or feature_grant, not both."""
 
 
 CreateRewardParamsUnionTypedDict = TypeAliasType(
@@ -592,9 +607,7 @@ class CreateRewardFeatureGrantResponseTypedDict(TypedDict):
     id: str
     r"""The unique identifier for the feature grant."""
     grants: List[CreateRewardGrantResponseTypedDict]
-    r"""The feature grants awarded when the grant is redeemed."""
     promo_codes: List[CreateRewardFeatureGrantPromoCodeResponseTypedDict]
-    r"""The promo codes customers can use to redeem the feature grant."""
     created_at: float
     r"""The Unix timestamp (in milliseconds) when the feature grant was created."""
     name: NotRequired[Nullable[str]]
@@ -606,10 +619,8 @@ class CreateRewardFeatureGrantResponse(BaseModel):
     r"""The unique identifier for the feature grant."""
 
     grants: List[CreateRewardGrantResponse]
-    r"""The feature grants awarded when the grant is redeemed."""
 
     promo_codes: List[CreateRewardFeatureGrantPromoCodeResponse]
-    r"""The promo codes customers can use to redeem the feature grant."""
 
     created_at: float
     r"""The Unix timestamp (in milliseconds) when the feature grant was created."""
@@ -763,7 +774,6 @@ class CreateRewardCouponResponseTypedDict(TypedDict):
     plan_ids: Nullable[List[str]]
     r"""The plan IDs the coupon applies to, or null when it applies to all plans."""
     promo_codes: List[CreateRewardCouponPromoCodeResponseTypedDict]
-    r"""The promo codes customers can use to redeem the coupon."""
     created_at: float
     r"""The Unix timestamp (in milliseconds) when the coupon was created."""
     name: NotRequired[Nullable[str]]
@@ -787,7 +797,6 @@ class CreateRewardCouponResponse(BaseModel):
     r"""The plan IDs the coupon applies to, or null when it applies to all plans."""
 
     promo_codes: List[CreateRewardCouponPromoCodeResponse]
-    r"""The promo codes customers can use to redeem the coupon."""
 
     created_at: float
     r"""The Unix timestamp (in milliseconds) when the coupon was created."""
@@ -843,34 +852,34 @@ r"""OK"""
 
 
 try:
-    CreateRewardParamsDuration6.model_rebuild()
+    CreateRewardDuration6.model_rebuild()
 except NameError:
     pass
 try:
-    CreateRewardParamsDuration5.model_rebuild()
+    CreateRewardDuration5.model_rebuild()
 except NameError:
     pass
 try:
-    CreateRewardParamsDuration4.model_rebuild()
+    CreateRewardDuration4.model_rebuild()
 except NameError:
     pass
 try:
-    CouponRequest2.model_rebuild()
+    CreateRewardCouponRequest2.model_rebuild()
 except NameError:
     pass
 try:
-    CreateRewardParamsDuration3.model_rebuild()
+    CreateRewardDuration3.model_rebuild()
 except NameError:
     pass
 try:
-    CreateRewardParamsDuration2.model_rebuild()
+    CreateRewardDuration2.model_rebuild()
 except NameError:
     pass
 try:
-    CreateRewardParamsDuration1.model_rebuild()
+    CreateRewardDuration1.model_rebuild()
 except NameError:
     pass
 try:
-    CouponRequest1.model_rebuild()
+    CreateRewardCouponRequest1.model_rebuild()
 except NameError:
     pass

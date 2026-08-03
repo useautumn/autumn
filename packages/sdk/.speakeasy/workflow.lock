@@ -2,8 +2,8 @@ speakeasyVersion: 1.762.0
 sources:
     Autumn API:
         sourceNamespace: autumn-api
-        sourceRevisionDigest: sha256:dd68f063f9da8d58097e08ab82e80ae8a2005c452a6c81001c43c400785c92ab
-        sourceBlobDigest: sha256:1d54485569e871bfdbf90d150705cd40ba297f51c0657c608260f78bc9dca070
+        sourceRevisionDigest: sha256:76df8c86df03444bd3fa5e0acda6f72b6e7f7599f2b91161eb3e6a65025110bf
+        sourceBlobDigest: sha256:f5c35848b79b9f491ab57c5473cf38b6d87c473e3fdfce462d90b8ae8377fe3d
         tags:
             - latest
             - 2.3.0
@@ -18,10 +18,10 @@ targets:
     autumn:
         source: Autumn API
         sourceNamespace: autumn-api
-        sourceRevisionDigest: sha256:dd68f063f9da8d58097e08ab82e80ae8a2005c452a6c81001c43c400785c92ab
-        sourceBlobDigest: sha256:1d54485569e871bfdbf90d150705cd40ba297f51c0657c608260f78bc9dca070
+        sourceRevisionDigest: sha256:76df8c86df03444bd3fa5e0acda6f72b6e7f7599f2b91161eb3e6a65025110bf
+        sourceBlobDigest: sha256:f5c35848b79b9f491ab57c5473cf38b6d87c473e3fdfce462d90b8ae8377fe3d
         codeSamplesNamespace: autumn-api-typescript-code-samples
-        codeSamplesRevisionDigest: sha256:33e206709170a5839937937e797382c6c100a5b78805f931a08f65b07f2840b1
+        codeSamplesRevisionDigest: sha256:a6c2a9920521af6d9777dfa60976940c68894b3df5bfdc40a5a4af01fd5e5a92
     autumn-python:
         source: Autumn API Stripped
         sourceNamespace: autumn-api-stripped

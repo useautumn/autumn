@@ -5,33 +5,33 @@ export const createRewardGlobalsSchema = z.object({
 	xApiVersion: z.union([z.string(), z.undefined()]).optional(),
 });
 
-export const featureGrantPromoCodeRequestSchema = z.object({
+export const createRewardFeatureGrantPromoCodeSchema = z.object({
 	code: z.string(),
 	maxUses: z.number().nullable(),
 });
 
-export const createRewardParamsDuration6Schema = z.object({
+export const createRewardDuration6Schema = z.object({
 	type: z.literal("forever"),
 	length: z.null(),
 });
 
-export const createRewardParamsDuration5Schema = z.object({
+export const createRewardDuration5Schema = z.object({
 	type: z.literal("months"),
 	length: z.number(),
 });
 
-export const createRewardParamsDuration4Schema = z.object({
+export const createRewardDuration4Schema = z.object({
 	type: z.literal("one_off"),
 	length: z.null(),
 });
 
 export const durationUnion2Schema = z.union([
-	createRewardParamsDuration4Schema,
-	createRewardParamsDuration5Schema,
-	createRewardParamsDuration6Schema,
+	createRewardDuration4Schema,
+	createRewardDuration5Schema,
+	createRewardDuration6Schema,
 ]);
 
-export const couponPromoCodeRequest2Schema = z.object({
+export const createRewardCouponRequestPromoCode2Schema = z.object({
 	code: z.string(),
 	globalMaxRedemption: z
 		.union([z.number(), z.undefined()])
@@ -43,42 +43,42 @@ export const couponPromoCodeRequest2Schema = z.object({
 		.nullable(),
 });
 
-export const couponRequest2Schema = z.object({
+export const createRewardCouponRequest2Schema = z.object({
 	id: z.string(),
 	name: z.string(),
 	duration: z.union([
-		createRewardParamsDuration4Schema,
-		createRewardParamsDuration5Schema,
-		createRewardParamsDuration6Schema,
+		createRewardDuration4Schema,
+		createRewardDuration5Schema,
+		createRewardDuration6Schema,
 	]),
 	planIds: z.array(z.string()).nullable(),
-	promoCodes: z.array(couponPromoCodeRequest2Schema),
+	promoCodes: z.array(createRewardCouponRequestPromoCode2Schema),
 	type: z.literal("fixed_discount"),
 	value: z.number(),
 });
 
-export const createRewardParamsDuration3Schema = z.object({
+export const createRewardDuration3Schema = z.object({
 	type: z.literal("forever"),
 	length: z.null(),
 });
 
-export const createRewardParamsDuration2Schema = z.object({
+export const createRewardDuration2Schema = z.object({
 	type: z.literal("months"),
 	length: z.number(),
 });
 
-export const createRewardParamsDuration1Schema = z.object({
+export const createRewardDuration1Schema = z.object({
 	type: z.literal("one_off"),
 	length: z.null(),
 });
 
 export const durationUnion1Schema = z.union([
-	createRewardParamsDuration1Schema,
-	createRewardParamsDuration2Schema,
-	createRewardParamsDuration3Schema,
+	createRewardDuration1Schema,
+	createRewardDuration2Schema,
+	createRewardDuration3Schema,
 ]);
 
-export const couponPromoCodeRequest1Schema = z.object({
+export const createRewardCouponRequestPromoCode1Schema = z.object({
 	code: z.string(),
 	globalMaxRedemption: z
 		.union([z.number(), z.undefined()])
@@ -90,27 +90,30 @@ export const couponPromoCodeRequest1Schema = z.object({
 		.nullable(),
 });
 
-export const couponRequest1Schema = z.object({
+export const createRewardCouponRequest1Schema = z.object({
 	id: z.string(),
 	name: z.string(),
 	duration: z.union([
-		createRewardParamsDuration1Schema,
-		createRewardParamsDuration2Schema,
-		createRewardParamsDuration3Schema,
+		createRewardDuration1Schema,
+		createRewardDuration2Schema,
+		createRewardDuration3Schema,
 	]),
 	planIds: z.array(z.string()).nullable(),
-	promoCodes: z.array(couponPromoCodeRequest1Schema),
+	promoCodes: z.array(createRewardCouponRequestPromoCode1Schema),
 	type: z.literal("percentage_discount"),
 	value: z.number(),
 });
 
-export const couponSchema = z.union([
-	couponRequest1Schema,
-	couponRequest2Schema,
+export const createRewardCouponRequestUnionSchema = z.union([
+	createRewardCouponRequest1Schema,
+	createRewardCouponRequest2Schema,
 ]);
 
 export const createRewardParams1Schema = z.object({
-	coupon: z.union([couponRequest1Schema, couponRequest2Schema]),
+	coupon: z.union([
+		createRewardCouponRequest1Schema,
+		createRewardCouponRequest2Schema,
+	]),
 });
 
 export const createRewardFeatureGrantPromoCodeResponseSchema = z.object({
@@ -135,50 +138,50 @@ export const expiryRequestOutboundSchema = z.object({
 	length: z.number(),
 });
 
-export const grantRequestOutboundSchema = z.object({
+export const createRewardGrantOutboundSchema = z.object({
 	feature_id: z.string(),
 	included: z.number().nullable(),
 	expiry: expiryRequestOutboundSchema.nullable(),
 });
 
-export const featureGrantPromoCodeRequestOutboundSchema = z.object({
+export const createRewardFeatureGrantPromoCodeOutboundSchema = z.object({
 	code: z.string(),
 	max_uses: z.number().nullable(),
 });
 
-export const featureGrantRequestOutboundSchema = z.object({
+export const createRewardFeatureGrantRequestOutboundSchema = z.object({
 	id: z.string(),
 	name: z.string(),
-	grants: z.array(grantRequestOutboundSchema),
-	promo_codes: z.array(featureGrantPromoCodeRequestOutboundSchema),
+	grants: z.array(createRewardGrantOutboundSchema),
+	promo_codes: z.array(createRewardFeatureGrantPromoCodeOutboundSchema),
 });
 
 export const createRewardParams2OutboundSchema = z.object({
-	feature_grant: featureGrantRequestOutboundSchema,
+	feature_grant: createRewardFeatureGrantRequestOutboundSchema,
 });
 
-export const createRewardParamsDuration6OutboundSchema = z.object({
+export const createRewardDuration6OutboundSchema = z.object({
 	type: z.literal("forever"),
 	length: z.null(),
 });
 
-export const createRewardParamsDuration5OutboundSchema = z.object({
+export const createRewardDuration5OutboundSchema = z.object({
 	type: z.literal("months"),
 	length: z.number(),
 });
 
-export const createRewardParamsDuration4OutboundSchema = z.object({
+export const createRewardDuration4OutboundSchema = z.object({
 	type: z.literal("one_off"),
 	length: z.null(),
 });
 
 export const durationUnion2OutboundSchema = z.union([
-	createRewardParamsDuration4OutboundSchema,
-	createRewardParamsDuration5OutboundSchema,
-	createRewardParamsDuration6OutboundSchema,
+	createRewardDuration4OutboundSchema,
+	createRewardDuration5OutboundSchema,
+	createRewardDuration6OutboundSchema,
 ]);
 
-export const couponPromoCodeRequest2OutboundSchema = z.object({
+export const createRewardCouponRequestPromoCode2OutboundSchema = z.object({
 	code: z.string(),
 	global_max_redemption: z
 		.union([z.number(), z.undefined()])
@@ -190,42 +193,42 @@ export const couponPromoCodeRequest2OutboundSchema = z.object({
 		.nullable(),
 });
 
-export const couponRequest2OutboundSchema = z.object({
+export const createRewardCouponRequest2OutboundSchema = z.object({
 	id: z.string(),
 	name: z.string(),
 	duration: z.union([
-		createRewardParamsDuration4OutboundSchema,
-		createRewardParamsDuration5OutboundSchema,
-		createRewardParamsDuration6OutboundSchema,
+		createRewardDuration4OutboundSchema,
+		createRewardDuration5OutboundSchema,
+		createRewardDuration6OutboundSchema,
 	]),
 	plan_ids: z.array(z.string()).nullable(),
-	promo_codes: z.array(couponPromoCodeRequest2OutboundSchema),
+	promo_codes: z.array(createRewardCouponRequestPromoCode2OutboundSchema),
 	type: z.literal("fixed_discount"),
 	value: z.number(),
 });
 
-export const createRewardParamsDuration3OutboundSchema = z.object({
+export const createRewardDuration3OutboundSchema = z.object({
 	type: z.literal("forever"),
 	length: z.null(),
 });
 
-export const createRewardParamsDuration2OutboundSchema = z.object({
+export const createRewardDuration2OutboundSchema = z.object({
 	type: z.literal("months"),
 	length: z.number(),
 });
 
-export const createRewardParamsDuration1OutboundSchema = z.object({
+export const createRewardDuration1OutboundSchema = z.object({
 	type: z.literal("one_off"),
 	length: z.null(),
 });
 
 export const durationUnion1OutboundSchema = z.union([
-	createRewardParamsDuration1OutboundSchema,
-	createRewardParamsDuration2OutboundSchema,
-	createRewardParamsDuration3OutboundSchema,
+	createRewardDuration1OutboundSchema,
+	createRewardDuration2OutboundSchema,
+	createRewardDuration3OutboundSchema,
 ]);
 
-export const couponPromoCodeRequest1OutboundSchema = z.object({
+export const createRewardCouponRequestPromoCode1OutboundSchema = z.object({
 	code: z.string(),
 	global_max_redemption: z
 		.union([z.number(), z.undefined()])
@@ -237,27 +240,30 @@ export const couponPromoCodeRequest1OutboundSchema = z.object({
 		.nullable(),
 });
 
-export const couponRequest1OutboundSchema = z.object({
+export const createRewardCouponRequest1OutboundSchema = z.object({
 	id: z.string(),
 	name: z.string(),
 	duration: z.union([
-		createRewardParamsDuration1OutboundSchema,
-		createRewardParamsDuration2OutboundSchema,
-		createRewardParamsDuration3OutboundSchema,
+		createRewardDuration1OutboundSchema,
+		createRewardDuration2OutboundSchema,
+		createRewardDuration3OutboundSchema,
 	]),
 	plan_ids: z.array(z.string()).nullable(),
-	promo_codes: z.array(couponPromoCodeRequest1OutboundSchema),
+	promo_codes: z.array(createRewardCouponRequestPromoCode1OutboundSchema),
 	type: z.literal("percentage_discount"),
 	value: z.number(),
 });
 
-export const couponOutboundSchema = z.union([
-	couponRequest1OutboundSchema,
-	couponRequest2OutboundSchema,
+export const createRewardCouponRequestUnionOutboundSchema = z.union([
+	createRewardCouponRequest1OutboundSchema,
+	createRewardCouponRequest2OutboundSchema,
 ]);
 
 export const createRewardParams1OutboundSchema = z.object({
-	coupon: z.union([couponRequest1OutboundSchema, couponRequest2OutboundSchema]),
+	coupon: z.union([
+		createRewardCouponRequest1OutboundSchema,
+		createRewardCouponRequest2OutboundSchema,
+	]),
 });
 
 export const createRewardParamsUnionOutboundSchema = z.union([
@@ -276,21 +282,21 @@ export const expiryRequestSchema = z.object({
 	length: z.number(),
 });
 
-export const grantRequestSchema = z.object({
+export const createRewardGrantSchema = z.object({
 	featureId: z.string(),
 	included: z.number().nullable(),
 	expiry: expiryRequestSchema.nullable(),
 });
 
-export const featureGrantRequestSchema = z.object({
+export const createRewardFeatureGrantRequestSchema = z.object({
 	id: z.string(),
 	name: z.string(),
-	grants: z.array(grantRequestSchema),
-	promoCodes: z.array(featureGrantPromoCodeRequestSchema),
+	grants: z.array(createRewardGrantSchema),
+	promoCodes: z.array(createRewardFeatureGrantPromoCodeSchema),
 });
 
 export const createRewardParams2Schema = z.object({
-	featureGrant: featureGrantRequestSchema,
+	featureGrant: createRewardFeatureGrantRequestSchema,
 });
 
 export const createRewardParamsUnionSchema = z.union([

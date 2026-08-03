@@ -1,6 +1,9 @@
 import { execAsyncQuiet } from "./exec.js";
 import { patchPySdkHooks } from "./patchPySdkHooks.js";
-import { patchPythonSdkGlobalDefaults } from "./patchPythonSdk.js";
+import {
+	patchPythonSdkGlobalDefaults,
+	patchPythonSdkRewardAliases,
+} from "./patchPythonSdk.js";
 import { patchTsSdkHooks } from "./patchTsSdkHooks.js";
 
 /**
@@ -46,6 +49,7 @@ async function generatePythonSdkQuiet({
 	});
 
 	patchPythonSdkGlobalDefaults({ pythonSdkDir });
+	patchPythonSdkRewardAliases({ pythonSdkDir });
 	patchPySdkHooks({ pythonSdkDir });
 }
 

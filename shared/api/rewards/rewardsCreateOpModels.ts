@@ -4,6 +4,9 @@ import {
 	RewardType,
 } from "@models/rewardModels/rewardModels/rewardEnums.js";
 import { z } from "zod/v4";
+import { ApiCouponPromoCodeV0Schema } from "./components/apiCouponPromoCodeV0.js";
+import { ApiFeatureGrantPromoCodeV0Schema } from "./components/apiFeatureGrantPromoCodeV0.js";
+import { ApiGrantV0Schema } from "./components/apiGrantV0.js";
 import { ApiCouponV0Schema } from "./coupons/apiCouponV0.js";
 import { ApiFeatureGrantV0Schema } from "./featureGrants/apiFeatureGrantV0.js";
 
@@ -95,8 +98,12 @@ const CreateCouponSchema = z
 
 const GrantExpirySchema = z
 	.object({
-		type: z.enum(EntitlementDuration),
-		length: z.number().int().positive(),
+		type: z.enum(EntitlementDuration).meta({
+			description: "The unit of time the grant lasts.",
+		}),
+		length: z.number().int().positive().meta({
+			description: "The positive number of periods before the grant expires.",
+		}),
 	})
 	.strict()
 	.nullable();
@@ -112,7 +119,10 @@ const CreateFeatureGrantSchema = ApiFeatureGrantV0Schema.omit({
 				z
 					.object({
 						feature_id: z.string().min(1),
-						included: z.number().positive().nullable(),
+						included: z.number().positive().nullable().meta({
+							description:
+								"A positive amount to grant, or null for boolean features.",
+						}),
 						expiry: GrantExpirySchema,
 					})
 					.strict(),
@@ -124,7 +134,10 @@ const CreateFeatureGrantSchema = ApiFeatureGrantV0Schema.omit({
 				z
 					.object({
 						code: z.string().min(1),
-						max_uses: z.number().int().positive().nullable(),
+						max_uses: z.number().int().positive().nullable().meta({
+							description:
+								"A positive redemption limit, or null for unlimited uses.",
+						}),
 					})
 					.strict(),
 			)
@@ -148,13 +161,55 @@ const CreateFeatureGrantSchema = ApiFeatureGrantV0Schema.omit({
 	});
 
 export const CreateRewardParamsSchema = z.union([
-	z.object({ coupon: CreateCouponSchema }).strict(),
-	z.object({ feature_grant: CreateFeatureGrantSchema }).strict(),
+	z
+		.object({
+			coupon: CreateCouponSchema.meta({
+				title: "CreateRewardCouponRequest",
+				description:
+					"Provide exactly one of coupon or feature_grant, not both.",
+			}),
+		})
+		.strict(),
+	z
+		.object({
+			feature_grant: CreateFeatureGrantSchema.meta({
+				title: "CreateRewardFeatureGrantRequest",
+				description:
+					"Provide exactly one of coupon or feature_grant, not both.",
+			}),
+		})
+		.strict(),
 ]);
 
+const CreateRewardCouponResponseSchema = ApiCouponV0Schema.extend({
+	duration: ApiCouponV0Schema.shape.duration.meta({
+		title: "CreateRewardDurationResponse",
+	}),
+	promo_codes: z.array(
+		ApiCouponPromoCodeV0Schema.meta({
+			title: "CreateRewardCouponPromoCodeResponse",
+		}),
+	),
+}).meta({ title: "CreateRewardCouponResponse" });
+
+const CreateRewardGrantResponseSchema = ApiGrantV0Schema.extend({
+	expiry: ApiGrantV0Schema.shape.expiry.meta({
+		title: "CreateRewardExpiryResponse",
+	}),
+}).meta({ title: "CreateRewardGrantResponse" });
+
+const CreateRewardFeatureGrantResponseSchema = ApiFeatureGrantV0Schema.extend({
+	grants: z.array(CreateRewardGrantResponseSchema),
+	promo_codes: z.array(
+		ApiFeatureGrantPromoCodeV0Schema.meta({
+			title: "CreateRewardFeatureGrantPromoCodeResponse",
+		}),
+	),
+}).meta({ title: "CreateRewardFeatureGrantResponse" });
+
 export const CreateRewardResponseSchema = z.union([
-	z.object({ coupon: ApiCouponV0Schema }).strict(),
-	z.object({ feature_grant: ApiFeatureGrantV0Schema }).strict(),
+	z.object({ coupon: CreateRewardCouponResponseSchema }).strict(),
+	z.object({ feature_grant: CreateRewardFeatureGrantResponseSchema }).strict(),
 ]);
 
 export type CreateRewardParams = z.infer<typeof CreateRewardParamsSchema>;

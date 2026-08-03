@@ -10,6 +10,7 @@ import { DynamicResponseExample } from "/snippets/dynamic-response-example.jsx";
 ### Body Parameters
 
 <DynamicParamField body="coupon" type="object">
+  Provide exactly one of coupon or feature_grant, not both.
   <Expandable title="properties">
     <DynamicParamField body="id" type="string" required />
 
@@ -51,6 +52,7 @@ import { DynamicResponseExample } from "/snippets/dynamic-response-example.jsx";
 </DynamicParamField>
 
 <DynamicParamField body="feature_grant" type="object">
+  Provide exactly one of coupon or feature_grant, not both.
   <Expandable title="properties">
     <DynamicParamField body="id" type="string" required />
 
@@ -61,13 +63,19 @@ import { DynamicResponseExample } from "/snippets/dynamic-response-example.jsx";
       <Expandable title="properties">
         <DynamicParamField body="feature_id" type="string" required />
 
-        <DynamicParamField body="included" type="number | null" required />
+        <DynamicParamField body="included" type="number | null" required>
+          A positive amount to grant, or null for boolean features.
+        </DynamicParamField>
 
         <DynamicParamField body="expiry" type="object | null" required>
           <Expandable title="properties">
-            <DynamicParamField body="type" type="'day' | 'week' | 'month' | 'year'" required />
+            <DynamicParamField body="type" type="'day' | 'week' | 'month' | 'year'" required>
+              The unit of time the grant lasts.
+            </DynamicParamField>
 
-            <DynamicParamField body="length" type="integer" required />
+            <DynamicParamField body="length" type="integer" required>
+              The positive number of periods before the grant expires.
+            </DynamicParamField>
 
           </Expandable>
         </DynamicParamField>
@@ -80,7 +88,9 @@ import { DynamicResponseExample } from "/snippets/dynamic-response-example.jsx";
       <Expandable title="properties">
         <DynamicParamField body="code" type="string" required />
 
-        <DynamicParamField body="max_uses" type="integer | null" required />
+        <DynamicParamField body="max_uses" type="integer | null" required>
+          A positive redemption limit, or null for unlimited uses.
+        </DynamicParamField>
 
       </Expandable>
     </DynamicParamField>
@@ -128,7 +138,6 @@ import { DynamicResponseExample } from "/snippets/dynamic-response-example.jsx";
     </DynamicResponseField>
 
     <DynamicResponseField name="promo_codes" type="object[]">
-      The promo codes customers can use to redeem the coupon.
       <Expandable title="properties">
         <DynamicResponseField name="code" type="string">
           The promo code customers enter to redeem the coupon.
@@ -163,7 +172,6 @@ import { DynamicResponseExample } from "/snippets/dynamic-response-example.jsx";
     </DynamicResponseField>
 
     <DynamicResponseField name="grants" type="object[]">
-      The feature grants awarded when the grant is redeemed.
       <Expandable title="properties">
         <DynamicResponseField name="feature_id" type="string">
           The feature ID this grant applies to.
@@ -191,7 +199,6 @@ import { DynamicResponseExample } from "/snippets/dynamic-response-example.jsx";
     </DynamicResponseField>
 
     <DynamicResponseField name="promo_codes" type="object[]">
-      The promo codes customers can use to redeem the feature grant.
       <Expandable title="properties">
         <DynamicResponseField name="code" type="string">
           The promo code customers enter to redeem the feature grant.

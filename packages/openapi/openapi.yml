@@ -16542,7 +16542,7 @@ paths:
         @example
         ```typescript
         // Schedule a transition from a trial plan to a paid plan
-        const response = await client.billing.createSchedule({ customerId: "cus_123", phases: [{"startsAt":1785775617233,"plans":[{"planId":"trial_plan"}]},{"startsAt":1786985217233,"plans":[{"planId":"pro_plan"}]}] });
+        const response = await client.billing.createSchedule({ customerId: "cus_123", phases: [{"startsAt":1785776972374,"plans":[{"planId":"trial_plan"}]},{"startsAt":1786986572374,"plans":[{"planId":"pro_plan"}]}] });
         ```
 
         @param customerId - The ID of the customer to create the schedule for.
@@ -16613,6 +16613,8 @@ paths:
                     phase.
                 currency:
                   type: string
+                  minLength: 3
+                  maxLength: 3
                   description: Three-letter Stripe-supported currency code used to bill the
                     immediate phase (for example, 'usd').
                 invoice_mode:
@@ -34884,6 +34886,8 @@ paths:
                             - type
                             - value
                           additionalProperties: false
+                      title: CreateRewardCouponRequest
+                      description: Provide exactly one of coupon or feature_grant, not both.
                   required:
                     - coupon
                   additionalProperties: false
@@ -34912,6 +34916,7 @@ paths:
                                   - type: number
                                     exclusiveMinimum: 0
                                   - type: "null"
+                                description: A positive amount to grant, or null for boolean features.
                               expiry:
                                 anyOf:
                                   - type: object
@@ -34923,11 +34928,13 @@ paths:
                                           - month
                                           - year
                                         type: string
+                                        description: The unit of time the grant lasts.
                                       length:
                                         type: integer
                                         minimum: -9007199254740991
                                         maximum: 9007199254740991
                                         exclusiveMinimum: 0
+                                        description: The positive number of periods before the grant expires.
                                     required:
                                       - type
                                       - length
@@ -34955,6 +34962,7 @@ paths:
                                     maximum: 9007199254740991
                                     exclusiveMinimum: 0
                                   - type: "null"
+                                description: A positive redemption limit, or null for unlimited uses.
                             required:
                               - code
                               - max_uses
@@ -34966,6 +34974,8 @@ paths:
                         - grants
                         - promo_codes
                       additionalProperties: false
+                      title: CreateRewardFeatureGrantRequest
+                      description: Provide exactly one of coupon or feature_grant, not both.
                   required:
                     - feature_grant
                   additionalProperties: false
@@ -35033,6 +35043,7 @@ paths:
                             required:
                               - type
                               - length
+                            title: CreateRewardDurationResponse
                             description: How long the coupon applies once redeemed.
                           plan_ids:
                             anyOf:
@@ -35064,7 +35075,7 @@ paths:
                                     transaction.
                               required:
                                 - code
-                            description: The promo codes customers can use to redeem the coupon.
+                              title: CreateRewardCouponPromoCodeResponse
                           created_at:
                             type: number
                             description: The Unix timestamp (in milliseconds) when the coupon was created.
@@ -35076,22 +35087,7 @@ paths:
                           - plan_ids
                           - promo_codes
                           - created_at
-                        examples:
-                          - id: summer_sale
-                            name: Summer Sale
-                            type: percentage_discount
-                            value: 20
-                            duration:
-                              type: months
-                              length: 3
-                            plan_ids:
-                              - pro
-                              - starter
-                            promo_codes:
-                              - code: SUMMER20
-                                global_max_redemption: 100
-                                first_time_transaction: false
-                            created_at: 1718000000000
+                        title: CreateRewardCouponResponse
                     required:
                       - coupon
                     additionalProperties: false
@@ -35143,13 +35139,14 @@ paths:
                                         - type
                                         - length
                                     - type: "null"
+                                  title: CreateRewardExpiryResponse
                                   description: How long the granted amount lasts before expiring, or null for a
                                     permanent grant.
                               required:
                                 - feature_id
                                 - included
                                 - expiry
-                            description: The feature grants awarded when the grant is redeemed.
+                              title: CreateRewardGrantResponse
                           promo_codes:
                             type: array
                             items:
@@ -35167,7 +35164,7 @@ paths:
                               required:
                                 - code
                                 - max_uses
-                            description: The promo codes customers can use to redeem the feature grant.
+                              title: CreateRewardFeatureGrantPromoCodeResponse
                           created_at:
                             type: number
                             description: The Unix timestamp (in milliseconds) when the feature grant was
@@ -35177,19 +35174,7 @@ paths:
                           - grants
                           - promo_codes
                           - created_at
-                        examples:
-                          - id: beta_credits_grant
-                            name: Beta Tester Credits
-                            promo_codes:
-                              - code: BETA2024
-                                max_uses: 500
-                            grants:
-                              - feature_id: credits
-                                included: 1000
-                                expiry:
-                                  type: month
-                                  length: 1
-                            created_at: 1718000000000
+                        title: CreateRewardFeatureGrantResponse
                     required:
                       - feature_grant
                     additionalProperties: false

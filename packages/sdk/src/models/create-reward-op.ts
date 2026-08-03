@@ -16,58 +16,82 @@ export type CreateRewardGlobals = {
   xApiVersion?: string | undefined;
 };
 
+/**
+ * The unit of time the grant lasts.
+ */
 export const CreateRewardParamsType = {
   Day: "day",
   Week: "week",
   Month: "month",
   Year: "year",
 } as const;
+/**
+ * The unit of time the grant lasts.
+ */
 export type CreateRewardParamsType = ClosedEnum<typeof CreateRewardParamsType>;
 
 export type ExpiryRequest = {
+  /**
+   * The unit of time the grant lasts.
+   */
   type: CreateRewardParamsType;
+  /**
+   * The positive number of periods before the grant expires.
+   */
   length: number;
 };
 
-export type GrantRequest = {
+export type CreateRewardGrant = {
   featureId: string;
+  /**
+   * A positive amount to grant, or null for boolean features.
+   */
   included: number | null;
   expiry: ExpiryRequest | null;
 };
 
-export type FeatureGrantPromoCodeRequest = {
+export type CreateRewardFeatureGrantPromoCode = {
   code: string;
+  /**
+   * A positive redemption limit, or null for unlimited uses.
+   */
   maxUses: number | null;
 };
 
-export type FeatureGrantRequest = {
+/**
+ * Provide exactly one of coupon or feature_grant, not both.
+ */
+export type CreateRewardFeatureGrantRequest = {
   id: string;
   name: string;
   /**
    * Feature IDs must be unique.
    */
-  grants: Array<GrantRequest>;
+  grants: Array<CreateRewardGrant>;
   /**
    * Promo code values must be unique.
    */
-  promoCodes: Array<FeatureGrantPromoCodeRequest>;
+  promoCodes: Array<CreateRewardFeatureGrantPromoCode>;
 };
 
 export type CreateRewardParams2 = {
-  featureGrant: FeatureGrantRequest;
+  /**
+   * Provide exactly one of coupon or feature_grant, not both.
+   */
+  featureGrant: CreateRewardFeatureGrantRequest;
 };
 
-export type CreateRewardParamsDuration6 = {
+export type CreateRewardDuration6 = {
   type: "forever";
   length: null;
 };
 
-export type CreateRewardParamsDuration5 = {
+export type CreateRewardDuration5 = {
   type: "months";
   length: number;
 };
 
-export type CreateRewardParamsDuration4 = {
+export type CreateRewardDuration4 = {
   type: "one_off";
   length: null;
 };
@@ -76,26 +100,26 @@ export type CreateRewardParamsDuration4 = {
  * Use a positive integer length for months, and null for one_off or forever.
  */
 export type DurationUnion2 =
-  | CreateRewardParamsDuration4
-  | CreateRewardParamsDuration5
-  | CreateRewardParamsDuration6;
+  | CreateRewardDuration4
+  | CreateRewardDuration5
+  | CreateRewardDuration6;
 
-export type CouponPromoCodeRequest2 = {
+export type CreateRewardCouponRequestPromoCode2 = {
   code: string;
   globalMaxRedemption?: number | null | undefined;
   firstTimeTransaction?: boolean | null | undefined;
 };
 
-export type CouponRequest2 = {
+export type CreateRewardCouponRequest2 = {
   id: string;
   name: string;
   /**
    * Use a positive integer length for months, and null for one_off or forever.
    */
   duration:
-    | CreateRewardParamsDuration4
-    | CreateRewardParamsDuration5
-    | CreateRewardParamsDuration6;
+    | CreateRewardDuration4
+    | CreateRewardDuration5
+    | CreateRewardDuration6;
   /**
    * Plan IDs must be unique.
    */
@@ -103,7 +127,7 @@ export type CouponRequest2 = {
   /**
    * Promo code values must be unique.
    */
-  promoCodes: Array<CouponPromoCodeRequest2>;
+  promoCodes: Array<CreateRewardCouponRequestPromoCode2>;
   type: "fixed_discount";
   /**
    * Percentage discounts must be at most 100; fixed discounts must be positive.
@@ -111,17 +135,17 @@ export type CouponRequest2 = {
   value: number;
 };
 
-export type CreateRewardParamsDuration3 = {
+export type CreateRewardDuration3 = {
   type: "forever";
   length: null;
 };
 
-export type CreateRewardParamsDuration2 = {
+export type CreateRewardDuration2 = {
   type: "months";
   length: number;
 };
 
-export type CreateRewardParamsDuration1 = {
+export type CreateRewardDuration1 = {
   type: "one_off";
   length: null;
 };
@@ -130,26 +154,26 @@ export type CreateRewardParamsDuration1 = {
  * Use a positive integer length for months, and null for one_off or forever.
  */
 export type DurationUnion1 =
-  | CreateRewardParamsDuration1
-  | CreateRewardParamsDuration2
-  | CreateRewardParamsDuration3;
+  | CreateRewardDuration1
+  | CreateRewardDuration2
+  | CreateRewardDuration3;
 
-export type CouponPromoCodeRequest1 = {
+export type CreateRewardCouponRequestPromoCode1 = {
   code: string;
   globalMaxRedemption?: number | null | undefined;
   firstTimeTransaction?: boolean | null | undefined;
 };
 
-export type CouponRequest1 = {
+export type CreateRewardCouponRequest1 = {
   id: string;
   name: string;
   /**
    * Use a positive integer length for months, and null for one_off or forever.
    */
   duration:
-    | CreateRewardParamsDuration1
-    | CreateRewardParamsDuration2
-    | CreateRewardParamsDuration3;
+    | CreateRewardDuration1
+    | CreateRewardDuration2
+    | CreateRewardDuration3;
   /**
    * Plan IDs must be unique.
    */
@@ -157,7 +181,7 @@ export type CouponRequest1 = {
   /**
    * Promo code values must be unique.
    */
-  promoCodes: Array<CouponPromoCodeRequest1>;
+  promoCodes: Array<CreateRewardCouponRequestPromoCode1>;
   type: "percentage_discount";
   /**
    * Percentage discounts must be at most 100; fixed discounts must be positive.
@@ -165,10 +189,18 @@ export type CouponRequest1 = {
   value: number;
 };
 
-export type Coupon = CouponRequest1 | CouponRequest2;
+/**
+ * Provide exactly one of coupon or feature_grant, not both.
+ */
+export type CreateRewardCouponRequestUnion =
+  | CreateRewardCouponRequest1
+  | CreateRewardCouponRequest2;
 
 export type CreateRewardParams1 = {
-  coupon: CouponRequest1 | CouponRequest2;
+  /**
+   * Provide exactly one of coupon or feature_grant, not both.
+   */
+  coupon: CreateRewardCouponRequest1 | CreateRewardCouponRequest2;
 };
 
 export type CreateRewardParamsUnion = CreateRewardParams1 | CreateRewardParams2;
@@ -235,13 +267,7 @@ export type CreateRewardFeatureGrantResponse = {
    * A human-readable name for the feature grant.
    */
   name?: string | null | undefined;
-  /**
-   * The feature grants awarded when the grant is redeemed.
-   */
   grants: Array<CreateRewardGrantResponse>;
-  /**
-   * The promo codes customers can use to redeem the feature grant.
-   */
   promoCodes: Array<CreateRewardFeatureGrantPromoCodeResponse>;
   /**
    * The Unix timestamp (in milliseconds) when the feature grant was created.
@@ -335,9 +361,6 @@ export type CreateRewardCouponResponse = {
    * The plan IDs the coupon applies to, or null when it applies to all plans.
    */
   planIds: Array<string> | null;
-  /**
-   * The promo codes customers can use to redeem the coupon.
-   */
   promoCodes: Array<CreateRewardCouponPromoCodeResponse>;
   /**
    * The Unix timestamp (in milliseconds) when the coupon was created.
@@ -379,16 +402,16 @@ export function expiryRequestToJSON(expiryRequest: ExpiryRequest): string {
 }
 
 /** @internal */
-export type GrantRequest$Outbound = {
+export type CreateRewardGrant$Outbound = {
   feature_id: string;
   included: number | null;
   expiry: ExpiryRequest$Outbound | null;
 };
 
 /** @internal */
-export const GrantRequest$outboundSchema: z.ZodMiniType<
-  GrantRequest$Outbound,
-  GrantRequest
+export const CreateRewardGrant$outboundSchema: z.ZodMiniType<
+  CreateRewardGrant$Outbound,
+  CreateRewardGrant
 > = z.pipe(
   z.object({
     featureId: z.string(),
@@ -402,20 +425,24 @@ export const GrantRequest$outboundSchema: z.ZodMiniType<
   }),
 );
 
-export function grantRequestToJSON(grantRequest: GrantRequest): string {
-  return JSON.stringify(GrantRequest$outboundSchema.parse(grantRequest));
+export function createRewardGrantToJSON(
+  createRewardGrant: CreateRewardGrant,
+): string {
+  return JSON.stringify(
+    CreateRewardGrant$outboundSchema.parse(createRewardGrant),
+  );
 }
 
 /** @internal */
-export type FeatureGrantPromoCodeRequest$Outbound = {
+export type CreateRewardFeatureGrantPromoCode$Outbound = {
   code: string;
   max_uses: number | null;
 };
 
 /** @internal */
-export const FeatureGrantPromoCodeRequest$outboundSchema: z.ZodMiniType<
-  FeatureGrantPromoCodeRequest$Outbound,
-  FeatureGrantPromoCodeRequest
+export const CreateRewardFeatureGrantPromoCode$outboundSchema: z.ZodMiniType<
+  CreateRewardFeatureGrantPromoCode$Outbound,
+  CreateRewardFeatureGrantPromoCode
 > = z.pipe(
   z.object({
     code: z.string(),
@@ -428,35 +455,35 @@ export const FeatureGrantPromoCodeRequest$outboundSchema: z.ZodMiniType<
   }),
 );
 
-export function featureGrantPromoCodeRequestToJSON(
-  featureGrantPromoCodeRequest: FeatureGrantPromoCodeRequest,
+export function createRewardFeatureGrantPromoCodeToJSON(
+  createRewardFeatureGrantPromoCode: CreateRewardFeatureGrantPromoCode,
 ): string {
   return JSON.stringify(
-    FeatureGrantPromoCodeRequest$outboundSchema.parse(
-      featureGrantPromoCodeRequest,
+    CreateRewardFeatureGrantPromoCode$outboundSchema.parse(
+      createRewardFeatureGrantPromoCode,
     ),
   );
 }
 
 /** @internal */
-export type FeatureGrantRequest$Outbound = {
+export type CreateRewardFeatureGrantRequest$Outbound = {
   id: string;
   name: string;
-  grants: Array<GrantRequest$Outbound>;
-  promo_codes: Array<FeatureGrantPromoCodeRequest$Outbound>;
+  grants: Array<CreateRewardGrant$Outbound>;
+  promo_codes: Array<CreateRewardFeatureGrantPromoCode$Outbound>;
 };
 
 /** @internal */
-export const FeatureGrantRequest$outboundSchema: z.ZodMiniType<
-  FeatureGrantRequest$Outbound,
-  FeatureGrantRequest
+export const CreateRewardFeatureGrantRequest$outboundSchema: z.ZodMiniType<
+  CreateRewardFeatureGrantRequest$Outbound,
+  CreateRewardFeatureGrantRequest
 > = z.pipe(
   z.object({
     id: z.string(),
     name: z.string(),
-    grants: z.array(z.lazy(() => GrantRequest$outboundSchema)),
+    grants: z.array(z.lazy(() => CreateRewardGrant$outboundSchema)),
     promoCodes: z.array(
-      z.lazy(() => FeatureGrantPromoCodeRequest$outboundSchema),
+      z.lazy(() => CreateRewardFeatureGrantPromoCode$outboundSchema),
     ),
   }),
   z.transform((v) => {
@@ -466,17 +493,19 @@ export const FeatureGrantRequest$outboundSchema: z.ZodMiniType<
   }),
 );
 
-export function featureGrantRequestToJSON(
-  featureGrantRequest: FeatureGrantRequest,
+export function createRewardFeatureGrantRequestToJSON(
+  createRewardFeatureGrantRequest: CreateRewardFeatureGrantRequest,
 ): string {
   return JSON.stringify(
-    FeatureGrantRequest$outboundSchema.parse(featureGrantRequest),
+    CreateRewardFeatureGrantRequest$outboundSchema.parse(
+      createRewardFeatureGrantRequest,
+    ),
   );
 }
 
 /** @internal */
 export type CreateRewardParams2$Outbound = {
-  feature_grant: FeatureGrantRequest$Outbound;
+  feature_grant: CreateRewardFeatureGrantRequest$Outbound;
 };
 
 /** @internal */
@@ -485,7 +514,7 @@ export const CreateRewardParams2$outboundSchema: z.ZodMiniType<
   CreateRewardParams2
 > = z.pipe(
   z.object({
-    featureGrant: z.lazy(() => FeatureGrantRequest$outboundSchema),
+    featureGrant: z.lazy(() => CreateRewardFeatureGrantRequest$outboundSchema),
   }),
   z.transform((v) => {
     return remap$(v, {
@@ -503,94 +532,88 @@ export function createRewardParams2ToJSON(
 }
 
 /** @internal */
-export type CreateRewardParamsDuration6$Outbound = {
+export type CreateRewardDuration6$Outbound = {
   type: "forever";
   length: null;
 };
 
 /** @internal */
-export const CreateRewardParamsDuration6$outboundSchema: z.ZodMiniType<
-  CreateRewardParamsDuration6$Outbound,
-  CreateRewardParamsDuration6
+export const CreateRewardDuration6$outboundSchema: z.ZodMiniType<
+  CreateRewardDuration6$Outbound,
+  CreateRewardDuration6
 > = z.object({
   type: z.literal("forever"),
   length: z.literal(null),
 });
 
-export function createRewardParamsDuration6ToJSON(
-  createRewardParamsDuration6: CreateRewardParamsDuration6,
+export function createRewardDuration6ToJSON(
+  createRewardDuration6: CreateRewardDuration6,
 ): string {
   return JSON.stringify(
-    CreateRewardParamsDuration6$outboundSchema.parse(
-      createRewardParamsDuration6,
-    ),
+    CreateRewardDuration6$outboundSchema.parse(createRewardDuration6),
   );
 }
 
 /** @internal */
-export type CreateRewardParamsDuration5$Outbound = {
+export type CreateRewardDuration5$Outbound = {
   type: "months";
   length: number;
 };
 
 /** @internal */
-export const CreateRewardParamsDuration5$outboundSchema: z.ZodMiniType<
-  CreateRewardParamsDuration5$Outbound,
-  CreateRewardParamsDuration5
+export const CreateRewardDuration5$outboundSchema: z.ZodMiniType<
+  CreateRewardDuration5$Outbound,
+  CreateRewardDuration5
 > = z.object({
   type: z.literal("months"),
   length: z.int(),
 });
 
-export function createRewardParamsDuration5ToJSON(
-  createRewardParamsDuration5: CreateRewardParamsDuration5,
+export function createRewardDuration5ToJSON(
+  createRewardDuration5: CreateRewardDuration5,
 ): string {
   return JSON.stringify(
-    CreateRewardParamsDuration5$outboundSchema.parse(
-      createRewardParamsDuration5,
-    ),
+    CreateRewardDuration5$outboundSchema.parse(createRewardDuration5),
   );
 }
 
 /** @internal */
-export type CreateRewardParamsDuration4$Outbound = {
+export type CreateRewardDuration4$Outbound = {
   type: "one_off";
   length: null;
 };
 
 /** @internal */
-export const CreateRewardParamsDuration4$outboundSchema: z.ZodMiniType<
-  CreateRewardParamsDuration4$Outbound,
-  CreateRewardParamsDuration4
+export const CreateRewardDuration4$outboundSchema: z.ZodMiniType<
+  CreateRewardDuration4$Outbound,
+  CreateRewardDuration4
 > = z.object({
   type: z.literal("one_off"),
   length: z.literal(null),
 });
 
-export function createRewardParamsDuration4ToJSON(
-  createRewardParamsDuration4: CreateRewardParamsDuration4,
+export function createRewardDuration4ToJSON(
+  createRewardDuration4: CreateRewardDuration4,
 ): string {
   return JSON.stringify(
-    CreateRewardParamsDuration4$outboundSchema.parse(
-      createRewardParamsDuration4,
-    ),
+    CreateRewardDuration4$outboundSchema.parse(createRewardDuration4),
   );
 }
 
 /** @internal */
 export type DurationUnion2$Outbound =
-  | CreateRewardParamsDuration4$Outbound
-  | CreateRewardParamsDuration5$Outbound
-  | CreateRewardParamsDuration6$Outbound;
+  | CreateRewardDuration4$Outbound
+  | CreateRewardDuration5$Outbound
+  | CreateRewardDuration6$Outbound;
 
 /** @internal */
 export const DurationUnion2$outboundSchema: z.ZodMiniType<
   DurationUnion2$Outbound,
   DurationUnion2
 > = z.union([
-  z.lazy(() => CreateRewardParamsDuration4$outboundSchema),
-  z.lazy(() => CreateRewardParamsDuration5$outboundSchema),
-  z.lazy(() => CreateRewardParamsDuration6$outboundSchema),
+  z.lazy(() => CreateRewardDuration4$outboundSchema),
+  z.lazy(() => CreateRewardDuration5$outboundSchema),
+  z.lazy(() => CreateRewardDuration6$outboundSchema),
 ]);
 
 export function durationUnion2ToJSON(durationUnion2: DurationUnion2): string {
@@ -598,16 +621,16 @@ export function durationUnion2ToJSON(durationUnion2: DurationUnion2): string {
 }
 
 /** @internal */
-export type CouponPromoCodeRequest2$Outbound = {
+export type CreateRewardCouponRequestPromoCode2$Outbound = {
   code: string;
   global_max_redemption?: number | null | undefined;
   first_time_transaction?: boolean | null | undefined;
 };
 
 /** @internal */
-export const CouponPromoCodeRequest2$outboundSchema: z.ZodMiniType<
-  CouponPromoCodeRequest2$Outbound,
-  CouponPromoCodeRequest2
+export const CreateRewardCouponRequestPromoCode2$outboundSchema: z.ZodMiniType<
+  CreateRewardCouponRequestPromoCode2$Outbound,
+  CreateRewardCouponRequestPromoCode2
 > = z.pipe(
   z.object({
     code: z.string(),
@@ -622,43 +645,47 @@ export const CouponPromoCodeRequest2$outboundSchema: z.ZodMiniType<
   }),
 );
 
-export function couponPromoCodeRequest2ToJSON(
-  couponPromoCodeRequest2: CouponPromoCodeRequest2,
+export function createRewardCouponRequestPromoCode2ToJSON(
+  createRewardCouponRequestPromoCode2: CreateRewardCouponRequestPromoCode2,
 ): string {
   return JSON.stringify(
-    CouponPromoCodeRequest2$outboundSchema.parse(couponPromoCodeRequest2),
+    CreateRewardCouponRequestPromoCode2$outboundSchema.parse(
+      createRewardCouponRequestPromoCode2,
+    ),
   );
 }
 
 /** @internal */
-export type CouponRequest2$Outbound = {
+export type CreateRewardCouponRequest2$Outbound = {
   id: string;
   name: string;
   duration:
-    | CreateRewardParamsDuration4$Outbound
-    | CreateRewardParamsDuration5$Outbound
-    | CreateRewardParamsDuration6$Outbound;
+    | CreateRewardDuration4$Outbound
+    | CreateRewardDuration5$Outbound
+    | CreateRewardDuration6$Outbound;
   plan_ids: Array<string> | null;
-  promo_codes: Array<CouponPromoCodeRequest2$Outbound>;
+  promo_codes: Array<CreateRewardCouponRequestPromoCode2$Outbound>;
   type: "fixed_discount";
   value: number;
 };
 
 /** @internal */
-export const CouponRequest2$outboundSchema: z.ZodMiniType<
-  CouponRequest2$Outbound,
-  CouponRequest2
+export const CreateRewardCouponRequest2$outboundSchema: z.ZodMiniType<
+  CreateRewardCouponRequest2$Outbound,
+  CreateRewardCouponRequest2
 > = z.pipe(
   z.object({
     id: z.string(),
     name: z.string(),
     duration: z.union([
-      z.lazy(() => CreateRewardParamsDuration4$outboundSchema),
-      z.lazy(() => CreateRewardParamsDuration5$outboundSchema),
-      z.lazy(() => CreateRewardParamsDuration6$outboundSchema),
+      z.lazy(() => CreateRewardDuration4$outboundSchema),
+      z.lazy(() => CreateRewardDuration5$outboundSchema),
+      z.lazy(() => CreateRewardDuration6$outboundSchema),
     ]),
     planIds: z.nullable(z.array(z.string())),
-    promoCodes: z.array(z.lazy(() => CouponPromoCodeRequest2$outboundSchema)),
+    promoCodes: z.array(
+      z.lazy(() => CreateRewardCouponRequestPromoCode2$outboundSchema),
+    ),
     type: z.literal("fixed_discount"),
     value: z.number(),
   }),
@@ -670,99 +697,97 @@ export const CouponRequest2$outboundSchema: z.ZodMiniType<
   }),
 );
 
-export function couponRequest2ToJSON(couponRequest2: CouponRequest2): string {
-  return JSON.stringify(CouponRequest2$outboundSchema.parse(couponRequest2));
+export function createRewardCouponRequest2ToJSON(
+  createRewardCouponRequest2: CreateRewardCouponRequest2,
+): string {
+  return JSON.stringify(
+    CreateRewardCouponRequest2$outboundSchema.parse(createRewardCouponRequest2),
+  );
 }
 
 /** @internal */
-export type CreateRewardParamsDuration3$Outbound = {
+export type CreateRewardDuration3$Outbound = {
   type: "forever";
   length: null;
 };
 
 /** @internal */
-export const CreateRewardParamsDuration3$outboundSchema: z.ZodMiniType<
-  CreateRewardParamsDuration3$Outbound,
-  CreateRewardParamsDuration3
+export const CreateRewardDuration3$outboundSchema: z.ZodMiniType<
+  CreateRewardDuration3$Outbound,
+  CreateRewardDuration3
 > = z.object({
   type: z.literal("forever"),
   length: z.literal(null),
 });
 
-export function createRewardParamsDuration3ToJSON(
-  createRewardParamsDuration3: CreateRewardParamsDuration3,
+export function createRewardDuration3ToJSON(
+  createRewardDuration3: CreateRewardDuration3,
 ): string {
   return JSON.stringify(
-    CreateRewardParamsDuration3$outboundSchema.parse(
-      createRewardParamsDuration3,
-    ),
+    CreateRewardDuration3$outboundSchema.parse(createRewardDuration3),
   );
 }
 
 /** @internal */
-export type CreateRewardParamsDuration2$Outbound = {
+export type CreateRewardDuration2$Outbound = {
   type: "months";
   length: number;
 };
 
 /** @internal */
-export const CreateRewardParamsDuration2$outboundSchema: z.ZodMiniType<
-  CreateRewardParamsDuration2$Outbound,
-  CreateRewardParamsDuration2
+export const CreateRewardDuration2$outboundSchema: z.ZodMiniType<
+  CreateRewardDuration2$Outbound,
+  CreateRewardDuration2
 > = z.object({
   type: z.literal("months"),
   length: z.int(),
 });
 
-export function createRewardParamsDuration2ToJSON(
-  createRewardParamsDuration2: CreateRewardParamsDuration2,
+export function createRewardDuration2ToJSON(
+  createRewardDuration2: CreateRewardDuration2,
 ): string {
   return JSON.stringify(
-    CreateRewardParamsDuration2$outboundSchema.parse(
-      createRewardParamsDuration2,
-    ),
+    CreateRewardDuration2$outboundSchema.parse(createRewardDuration2),
   );
 }
 
 /** @internal */
-export type CreateRewardParamsDuration1$Outbound = {
+export type CreateRewardDuration1$Outbound = {
   type: "one_off";
   length: null;
 };
 
 /** @internal */
-export const CreateRewardParamsDuration1$outboundSchema: z.ZodMiniType<
-  CreateRewardParamsDuration1$Outbound,
-  CreateRewardParamsDuration1
+export const CreateRewardDuration1$outboundSchema: z.ZodMiniType<
+  CreateRewardDuration1$Outbound,
+  CreateRewardDuration1
 > = z.object({
   type: z.literal("one_off"),
   length: z.literal(null),
 });
 
-export function createRewardParamsDuration1ToJSON(
-  createRewardParamsDuration1: CreateRewardParamsDuration1,
+export function createRewardDuration1ToJSON(
+  createRewardDuration1: CreateRewardDuration1,
 ): string {
   return JSON.stringify(
-    CreateRewardParamsDuration1$outboundSchema.parse(
-      createRewardParamsDuration1,
-    ),
+    CreateRewardDuration1$outboundSchema.parse(createRewardDuration1),
   );
 }
 
 /** @internal */
 export type DurationUnion1$Outbound =
-  | CreateRewardParamsDuration1$Outbound
-  | CreateRewardParamsDuration2$Outbound
-  | CreateRewardParamsDuration3$Outbound;
+  | CreateRewardDuration1$Outbound
+  | CreateRewardDuration2$Outbound
+  | CreateRewardDuration3$Outbound;
 
 /** @internal */
 export const DurationUnion1$outboundSchema: z.ZodMiniType<
   DurationUnion1$Outbound,
   DurationUnion1
 > = z.union([
-  z.lazy(() => CreateRewardParamsDuration1$outboundSchema),
-  z.lazy(() => CreateRewardParamsDuration2$outboundSchema),
-  z.lazy(() => CreateRewardParamsDuration3$outboundSchema),
+  z.lazy(() => CreateRewardDuration1$outboundSchema),
+  z.lazy(() => CreateRewardDuration2$outboundSchema),
+  z.lazy(() => CreateRewardDuration3$outboundSchema),
 ]);
 
 export function durationUnion1ToJSON(durationUnion1: DurationUnion1): string {
@@ -770,16 +795,16 @@ export function durationUnion1ToJSON(durationUnion1: DurationUnion1): string {
 }
 
 /** @internal */
-export type CouponPromoCodeRequest1$Outbound = {
+export type CreateRewardCouponRequestPromoCode1$Outbound = {
   code: string;
   global_max_redemption?: number | null | undefined;
   first_time_transaction?: boolean | null | undefined;
 };
 
 /** @internal */
-export const CouponPromoCodeRequest1$outboundSchema: z.ZodMiniType<
-  CouponPromoCodeRequest1$Outbound,
-  CouponPromoCodeRequest1
+export const CreateRewardCouponRequestPromoCode1$outboundSchema: z.ZodMiniType<
+  CreateRewardCouponRequestPromoCode1$Outbound,
+  CreateRewardCouponRequestPromoCode1
 > = z.pipe(
   z.object({
     code: z.string(),
@@ -794,43 +819,47 @@ export const CouponPromoCodeRequest1$outboundSchema: z.ZodMiniType<
   }),
 );
 
-export function couponPromoCodeRequest1ToJSON(
-  couponPromoCodeRequest1: CouponPromoCodeRequest1,
+export function createRewardCouponRequestPromoCode1ToJSON(
+  createRewardCouponRequestPromoCode1: CreateRewardCouponRequestPromoCode1,
 ): string {
   return JSON.stringify(
-    CouponPromoCodeRequest1$outboundSchema.parse(couponPromoCodeRequest1),
+    CreateRewardCouponRequestPromoCode1$outboundSchema.parse(
+      createRewardCouponRequestPromoCode1,
+    ),
   );
 }
 
 /** @internal */
-export type CouponRequest1$Outbound = {
+export type CreateRewardCouponRequest1$Outbound = {
   id: string;
   name: string;
   duration:
-    | CreateRewardParamsDuration1$Outbound
-    | CreateRewardParamsDuration2$Outbound
-    | CreateRewardParamsDuration3$Outbound;
+    | CreateRewardDuration1$Outbound
+    | CreateRewardDuration2$Outbound
+    | CreateRewardDuration3$Outbound;
   plan_ids: Array<string> | null;
-  promo_codes: Array<CouponPromoCodeRequest1$Outbound>;
+  promo_codes: Array<CreateRewardCouponRequestPromoCode1$Outbound>;
   type: "percentage_discount";
   value: number;
 };
 
 /** @internal */
-export const CouponRequest1$outboundSchema: z.ZodMiniType<
-  CouponRequest1$Outbound,
-  CouponRequest1
+export const CreateRewardCouponRequest1$outboundSchema: z.ZodMiniType<
+  CreateRewardCouponRequest1$Outbound,
+  CreateRewardCouponRequest1
 > = z.pipe(
   z.object({
     id: z.string(),
     name: z.string(),
     duration: z.union([
-      z.lazy(() => CreateRewardParamsDuration1$outboundSchema),
-      z.lazy(() => CreateRewardParamsDuration2$outboundSchema),
-      z.lazy(() => CreateRewardParamsDuration3$outboundSchema),
+      z.lazy(() => CreateRewardDuration1$outboundSchema),
+      z.lazy(() => CreateRewardDuration2$outboundSchema),
+      z.lazy(() => CreateRewardDuration3$outboundSchema),
     ]),
     planIds: z.nullable(z.array(z.string())),
-    promoCodes: z.array(z.lazy(() => CouponPromoCodeRequest1$outboundSchema)),
+    promoCodes: z.array(
+      z.lazy(() => CreateRewardCouponRequestPromoCode1$outboundSchema),
+    ),
     type: z.literal("percentage_discount"),
     value: z.number(),
   }),
@@ -842,27 +871,43 @@ export const CouponRequest1$outboundSchema: z.ZodMiniType<
   }),
 );
 
-export function couponRequest1ToJSON(couponRequest1: CouponRequest1): string {
-  return JSON.stringify(CouponRequest1$outboundSchema.parse(couponRequest1));
+export function createRewardCouponRequest1ToJSON(
+  createRewardCouponRequest1: CreateRewardCouponRequest1,
+): string {
+  return JSON.stringify(
+    CreateRewardCouponRequest1$outboundSchema.parse(createRewardCouponRequest1),
+  );
 }
 
 /** @internal */
-export type Coupon$Outbound = CouponRequest1$Outbound | CouponRequest2$Outbound;
+export type CreateRewardCouponRequestUnion$Outbound =
+  | CreateRewardCouponRequest1$Outbound
+  | CreateRewardCouponRequest2$Outbound;
 
 /** @internal */
-export const Coupon$outboundSchema: z.ZodMiniType<Coupon$Outbound, Coupon> = z
-  .union([
-    z.lazy(() => CouponRequest1$outboundSchema),
-    z.lazy(() => CouponRequest2$outboundSchema),
-  ]);
+export const CreateRewardCouponRequestUnion$outboundSchema: z.ZodMiniType<
+  CreateRewardCouponRequestUnion$Outbound,
+  CreateRewardCouponRequestUnion
+> = z.union([
+  z.lazy(() => CreateRewardCouponRequest1$outboundSchema),
+  z.lazy(() => CreateRewardCouponRequest2$outboundSchema),
+]);
 
-export function couponToJSON(coupon: Coupon): string {
-  return JSON.stringify(Coupon$outboundSchema.parse(coupon));
+export function createRewardCouponRequestUnionToJSON(
+  createRewardCouponRequestUnion: CreateRewardCouponRequestUnion,
+): string {
+  return JSON.stringify(
+    CreateRewardCouponRequestUnion$outboundSchema.parse(
+      createRewardCouponRequestUnion,
+    ),
+  );
 }
 
 /** @internal */
 export type CreateRewardParams1$Outbound = {
-  coupon: CouponRequest1$Outbound | CouponRequest2$Outbound;
+  coupon:
+    | CreateRewardCouponRequest1$Outbound
+    | CreateRewardCouponRequest2$Outbound;
 };
 
 /** @internal */
@@ -871,8 +916,8 @@ export const CreateRewardParams1$outboundSchema: z.ZodMiniType<
   CreateRewardParams1
 > = z.object({
   coupon: z.union([
-    z.lazy(() => CouponRequest1$outboundSchema),
-    z.lazy(() => CouponRequest2$outboundSchema),
+    z.lazy(() => CreateRewardCouponRequest1$outboundSchema),
+    z.lazy(() => CreateRewardCouponRequest2$outboundSchema),
   ]),
 });
 

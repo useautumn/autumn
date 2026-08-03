@@ -152,7 +152,7 @@ class ListRewardsCouponPromoCode(BaseModel):
         return m
 
 
-class ListRewardsCouponTypedDict(TypedDict):
+class CouponTypedDict(TypedDict):
     id: str
     r"""The unique identifier for the coupon."""
     type: ListRewardsCouponType
@@ -171,7 +171,7 @@ class ListRewardsCouponTypedDict(TypedDict):
     r"""A human-readable name for the coupon."""
 
 
-class ListRewardsCoupon(BaseModel):
+class Coupon(BaseModel):
     id: str
     r"""The unique identifier for the coupon."""
 
@@ -312,7 +312,7 @@ class ListRewardsFeatureGrantPromoCode(BaseModel):
         return m
 
 
-class ListRewardsFeatureGrantTypedDict(TypedDict):
+class FeatureGrantTypedDict(TypedDict):
     id: str
     r"""The unique identifier for the feature grant."""
     grants: List[ListRewardsGrantTypedDict]
@@ -325,7 +325,7 @@ class ListRewardsFeatureGrantTypedDict(TypedDict):
     r"""A human-readable name for the feature grant."""
 
 
-class ListRewardsFeatureGrant(BaseModel):
+class FeatureGrant(BaseModel):
     id: str
     r"""The unique identifier for the feature grant."""
 
@@ -370,17 +370,17 @@ class ListRewardsFeatureGrant(BaseModel):
 class ListRewardsResponseTypedDict(TypedDict):
     r"""OK"""
 
-    coupons: List[ListRewardsCouponTypedDict]
+    coupons: List[CouponTypedDict]
     r"""The list of coupons configured for the organization."""
-    feature_grants: List[ListRewardsFeatureGrantTypedDict]
+    feature_grants: List[FeatureGrantTypedDict]
     r"""The list of feature grants configured for the organization."""
 
 
 class ListRewardsResponse(BaseModel):
     r"""OK"""
 
-    coupons: List[ListRewardsCoupon]
+    coupons: List[Coupon]
     r"""The list of coupons configured for the organization."""
 
-    feature_grants: List[ListRewardsFeatureGrant]
+    feature_grants: List[FeatureGrant]
     r"""The list of feature grants configured for the organization."""
