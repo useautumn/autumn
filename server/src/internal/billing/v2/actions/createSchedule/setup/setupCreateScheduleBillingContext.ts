@@ -13,6 +13,7 @@ import { setupAttachEndOfCycleMs } from "@/internal/billing/v2/actions/attach/se
 import { setupAnchorResetRefund } from "@/internal/billing/v2/setup/setupAnchorResetRefund";
 import { setupBillingCycleAnchor } from "@/internal/billing/v2/setup/setupBillingCycleAnchor";
 import { setupResetCycleAnchor } from "@/internal/billing/v2/setup/setupResetCycleAnchor";
+import { resolveReplacedScheduleCustomerProductIds } from "@/internal/customers/schedules/resolveScheduleScope";
 import { setupImmediateMultiProductBillingContext } from "../../common/immediateMultiProduct/setupImmediateMultiProductBillingContext";
 import { FIRST_PHASE_TOLERANCE_MS } from "../errors/handleFirstPhaseStartDateErrors";
 import {
@@ -21,7 +22,9 @@ import {
 	phaseHasNumericStart,
 } from "../errors/normalizeCreateSchedulePhases";
 import { validateCreateSchedulePhasePlans } from "../errors/validateCreateSchedulePhasePlans";
+import { validateUnscheduledPlanScopes } from "../errors/validateUnscheduledPlanScopes";
 import { resolveCreateScheduleRecurringProducts } from "../utils/resolveCreateScheduleRecurringProducts";
+import { buildOpeningPhaseScopes } from "../utils/resolvePhaseScopeInheritance";
 import { setupScheduledProductsContext } from "./setupScheduledProductsContext";
 
 type CreateScheduleCheckoutModeContext = Pick<
@@ -82,7 +85,9 @@ const phaseToImmediateParams = ({
 }): MultiAttachParamsV0 => ({
 	customer_id: params.customer_id,
 	entity_id: params.entity_id,
-	plans: phase.plans.map((plan) => ({
+	// Unscheduled plans bill with the immediate phase, so they attach alongside
+	// it — always last, which is how the contexts are told apart afterwards.
+	plans: [...phase.plans, ...(params.unscheduled_plans ?? [])].map((plan) => ({
 		plan_id: plan.plan_id,
 		entity_id: plan.entity_id,
 		customize: plan.customize,
@@ -232,11 +237,30 @@ export const setupCreateScheduleBillingContext = async ({
 		})),
 	});
 
+	const unscheduledPlanCount = params.unscheduled_plans?.length ?? 0;
+	const phaseProductContexts = billingContext.productContexts.slice(
+		0,
+		billingContext.productContexts.length - unscheduledPlanCount,
+	);
+	const unscheduledProductContexts = billingContext.productContexts.slice(
+		phaseProductContexts.length,
+	);
+
+	// Unscheduled scopes stay out of the inheritance map so a later phase in the
+	// same group can't silently adopt an unscheduled plan's entity.
 	const scheduledPhaseContexts = await setupScheduledProductsContext({
 		ctx,
 		phases: futurePhases,
 		fullCustomer: billingContext.fullCustomer,
 		currentEpochMs: billingContext.currentEpochMs,
+		openingPhaseScopes: buildOpeningPhaseScopes({
+			productContexts: phaseProductContexts,
+		}),
+	});
+
+	validateUnscheduledPlanScopes({
+		unscheduledProductContexts,
+		scheduledPhaseContexts,
 	});
 
 	const scheduledCustomPrices = scheduledPhaseContexts.flatMap((phase) =>
@@ -250,9 +274,23 @@ export const setupCreateScheduleBillingContext = async ({
 		),
 	);
 
+	const replacedScheduleCustomerProductIds =
+		await resolveReplacedScheduleCustomerProductIds({
+			ctx,
+			internalCustomerId: billingContext.fullCustomer.internal_id,
+			requestScopes: [
+				...new Set(
+					billingContext.productContexts.map(
+						({ fullCustomer }) => fullCustomer.entity?.internal_id ?? null,
+					),
+				),
+			],
+		});
+
 	const scheduleBillingContext: CreateScheduleBillingContext = {
 		...billingContext,
-		preserveAddOns: params.preserve_add_ons ?? false,
+		unscheduledProductContexts,
+		replacedScheduleCustomerProductIds,
 		checkoutMode: setupCreateScheduleCheckoutMode({
 			billingContext,
 			redirectMode: params.redirect_mode,

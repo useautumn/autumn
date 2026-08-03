@@ -13,6 +13,20 @@ type CustomerProductUpdate = NonNullable<
 	AutumnBillingPlan["updateCustomerProducts"]
 >[number];
 
+const isUnscheduledProductContext = ({
+	billingContext,
+	index,
+}: {
+	billingContext: CreateScheduleBillingContext;
+	index: number;
+}) => {
+	const productContext = billingContext.productContexts[index];
+	return (
+		!!productContext &&
+		billingContext.unscheduledProductContexts.includes(productContext)
+	);
+};
+
 const expireCurrentRecurringCustomerProducts = ({
 	customerProducts,
 	currentEpochMs,
@@ -42,7 +56,11 @@ const insertImmediateCustomerProducts = ({
 	expiredCustomerProducts: FullCusProduct[];
 	nextPhaseStartsAt: number | undefined;
 }): FullCusProduct[] =>
-	billingContext.productContexts.map((productContext) => {
+	billingContext.productContexts.map((productContext, index) => {
+		const isUnscheduled = isUnscheduledProductContext({
+			billingContext,
+			index,
+		});
 		const expiredSameProduct = expiredCustomerProducts.find(
 			(customerProduct) =>
 				customerProduct.product.id === productContext.fullProduct.id &&
@@ -69,7 +87,9 @@ const insertImmediateCustomerProducts = ({
 
 		applyScheduleTimingToCustomerProductPlan({
 			result: { insertCustomerProduct: newCustomerProduct },
-			endedAt: nextPhaseStartsAt ?? null,
+			// An unscheduled plan outlives the schedule, so it never takes the phase
+			// boundary as its end date.
+			endedAt: isUnscheduled ? null : (nextPhaseStartsAt ?? null),
 		});
 
 		return newCustomerProduct;
@@ -99,5 +119,17 @@ export const computeImmediatePhaseCustomerProducts = ({
 		nextPhaseStartsAt,
 	});
 
-	return { insertCustomerProducts, updateCustomerProducts };
+	const unscheduledCustomerProductIds = new Set(
+		insertCustomerProducts.flatMap((customerProduct, index) =>
+			isUnscheduledProductContext({ billingContext, index })
+				? [customerProduct.id]
+				: [],
+		),
+	);
+
+	return {
+		insertCustomerProducts,
+		updateCustomerProducts,
+		unscheduledCustomerProductIds,
+	};
 };

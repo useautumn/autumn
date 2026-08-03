@@ -1,4 +1,5 @@
 import type {
+	Entity,
 	FullCustomer,
 	ResolvedCreateSchedulePhaseV0,
 	ScheduledPhaseContext,
@@ -7,6 +8,7 @@ import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { setupFeatureQuantitiesContext } from "@/internal/billing/v2/setup/setupFeatureQuantitiesContext";
 import { setupAttachProductContext } from "../../attach/setup/setupAttachProductContext";
 import { validateCreateSchedulePhasePlans } from "../errors/validateCreateSchedulePhasePlans";
+import { resolveInheritedScope } from "../utils/resolvePhaseScopeInheritance";
 
 /** Resolve product + feature quantity context for each plan in each scheduled phase. */
 export const setupScheduledProductsContext = async ({
@@ -14,11 +16,13 @@ export const setupScheduledProductsContext = async ({
 	phases,
 	fullCustomer,
 	currentEpochMs,
+	openingPhaseScopes,
 }: {
 	ctx: AutumnContext;
 	phases: ResolvedCreateSchedulePhaseV0[];
 	fullCustomer: FullCustomer;
 	currentEpochMs: number;
+	openingPhaseScopes: Map<string, Entity | undefined>;
 }): Promise<ScheduledPhaseContext[]> =>
 	Promise.all(
 		phases.map(async (phase, index) => {
@@ -52,6 +56,11 @@ export const setupScheduledProductsContext = async ({
 						customEntitlements,
 						featureQuantities,
 						externalId: plan.subscription_id,
+						entity: resolveInheritedScope({
+							fullProduct,
+							openingPhaseScopes,
+							fallbackEntity: fullCustomer.entity,
+						}),
 					};
 				}),
 			);
@@ -59,6 +68,7 @@ export const setupScheduledProductsContext = async ({
 			validateCreateSchedulePhasePlans({
 				plans: productContexts.map((productContext) => ({
 					fullProduct: productContext.fullProduct,
+					scopeId: productContext.entity?.internal_id,
 				})),
 			});
 

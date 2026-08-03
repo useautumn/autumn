@@ -5,28 +5,45 @@ import type {
 import {
 	customerProductsToRecurringActiveAndScheduled,
 	isCusProductOnEntity,
-	isCustomerProductMain,
 } from "@autumn/shared";
 
 type ProductScope = {
-	isAddOn: boolean;
+	/** Add-ons stack rather than replace, so they key on their own id. */
+	replacementKey: string;
 	internalEntityId?: string;
 };
 
-const isReplacedInPhase = ({
+const replacementKey = ({
+	product,
+}: {
+	product: { id: string; group: string | null; is_add_on: boolean };
+}) => (product.is_add_on ? product.id : (product.group ?? ""));
+
+const toProductScope = ({
+	fullProduct,
+	internalEntityId,
+}: {
+	fullProduct: { id: string; group: string | null; is_add_on: boolean };
+	internalEntityId?: string;
+}): ProductScope => ({
+	replacementKey: replacementKey({ product: fullProduct }),
+	internalEntityId,
+});
+
+/** A plan is superseded only by an incoming plan for the same slot in the same scope. */
+const isSupersededInPhase = ({
 	productScopes,
 	customerProduct,
 }: {
 	productScopes: ProductScope[];
 	customerProduct: FullCusProduct;
 }) =>
-	isCustomerProductMain(customerProduct) &&
 	productScopes.some(
-		({ isAddOn, internalEntityId }) =>
-			!isAddOn &&
+		(scope) =>
+			scope.replacementKey === replacementKey(customerProduct) &&
 			isCusProductOnEntity({
 				cusProduct: customerProduct,
-				internalEntityId,
+				internalEntityId: scope.internalEntityId,
 			}),
 	);
 
@@ -52,68 +69,65 @@ export const resolveCreateScheduleRecurringProducts = ({
 		}
 	}
 
+	// Products the replaced schedule put in place, so one the new phases drop is
+	// expired instead of left behind.
+	const replacedCustomerProductIds = new Set(
+		billingContext.replacedScheduleCustomerProductIds,
+	);
+	for (const customerProduct of billingContext.fullCustomer.customer_products) {
+		if (replacedCustomerProductIds.has(customerProduct.id)) {
+			customerProductsById.set(customerProduct.id, customerProduct);
+		}
+	}
+
 	const { recurringActive, recurringScheduled } =
 		customerProductsToRecurringActiveAndScheduled({
 			customerProducts: [...customerProductsById.values()],
 		});
-	const recurringOutgoing: FullCusProduct[] = [];
-	const recurringPreserved: FullCusProduct[] = [];
-	// Multi-phase schedules use the request scope; per-plan scopes are immediate-only.
-	const scheduledInternalEntityId =
-		billingContext.fullCustomer.entity?.internal_id;
-	const phaseProductScopes: ProductScope[][] = [
-		billingContext.productContexts.map(({ fullCustomer, fullProduct }) => ({
-			isAddOn: fullProduct.is_add_on,
-			internalEntityId: fullCustomer.entity?.internal_id,
-		})),
-		...billingContext.scheduledPhaseContexts.map(({ productContexts }) =>
-			productContexts.map(({ fullProduct }) => ({
-				isAddOn: fullProduct.is_add_on,
-				internalEntityId: scheduledInternalEntityId,
-			})),
-		),
-	];
+	const openingPhaseScopes = billingContext.productContexts.map(
+		({ fullCustomer, fullProduct }) =>
+			toProductScope({
+				fullProduct,
+				internalEntityId: fullCustomer.entity?.internal_id,
+			}),
+	);
 
-	for (const customerProduct of recurringActive) {
-		const isOutgoing =
-			!billingContext.preserveAddOns ||
-			isReplacedInPhase({
-				productScopes: phaseProductScopes[0] ?? [],
+	// Anything this schedule never placed and isn't taking over stays untouched.
+	const recurringOutgoing = recurringActive.filter(
+		(customerProduct) =>
+			replacedCustomerProductIds.has(customerProduct.id) ||
+			isSupersededInPhase({
+				productScopes: openingPhaseScopes,
 				customerProduct,
-			});
-		if (isOutgoing) recurringOutgoing.push(customerProduct);
-		else recurringPreserved.push(customerProduct);
-	}
+			}),
+	);
+
+	// A survivor whose slot a later phase claims ends when that phase starts,
+	// rather than running alongside its own replacement.
+	const recurringEndingAtPhase = recurringActive.flatMap((customerProduct) => {
+		if (recurringOutgoing.includes(customerProduct)) return [];
+
+		const supersedingPhase = billingContext.scheduledPhaseContexts.find(
+			({ productContexts }) =>
+				isSupersededInPhase({
+					productScopes: productContexts.map(({ fullProduct, entity }) =>
+						toProductScope({
+							fullProduct,
+							internalEntityId: entity?.internal_id,
+						}),
+					),
+					customerProduct,
+				}),
+		);
+		if (!supersedingPhase) return [];
+
+		return [{ customerProduct, endsAt: supersedingPhase.startsAt }];
+	});
 
 	return {
 		recurringActive,
 		recurringScheduled,
 		recurringOutgoing,
-		preservedCustomerProductIdsByPhase: phaseProductScopes.map(
-			(productScopes) =>
-				recurringPreserved
-					.filter(
-						(customerProduct) =>
-							!isReplacedInPhase({ productScopes, customerProduct }),
-					)
-					.map(({ id }) => id),
-		),
+		recurringEndingAtPhase,
 	};
 };
-
-export const addCustomerProductIdsToSchedulePhases = ({
-	phases,
-	customerProductIdsByPhase,
-}: {
-	phases: { startsAt: number; customerProductIds: string[] }[];
-	customerProductIdsByPhase: string[][];
-}) =>
-	phases.map((phase, index) => ({
-		...phase,
-		customerProductIds: [
-			...new Set([
-				...phase.customerProductIds,
-				...(customerProductIdsByPhase[index] ?? []),
-			]),
-		],
-	}));
