@@ -118,7 +118,6 @@ export const getCustomerExportScalars = async ({
 	snapshot: CustomerExportSnapshot;
 	upperBoundInternalId: string | null;
 	createdAtCutoff: number;
-	/** Last id emitted by the previous page; the next page starts strictly below it. */
 	afterInternalId: string | null;
 	limit?: number;
 }): Promise<CustomerExportScalarRow[]> => {

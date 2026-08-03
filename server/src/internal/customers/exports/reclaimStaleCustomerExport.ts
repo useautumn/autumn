@@ -18,8 +18,8 @@ import {
 } from "./CustomerExportService.js";
 import { getCustomerExportErrorMessage } from "./customerExportErrorMessage.js";
 
-// Fallback for rows without a trigger run id (inline dev runs): past every
-// possible runtime plus margin, the run cannot still be alive.
+// Runless inline exports are considered abandoned after the configured task
+// duration plus a one-hour margin.
 const STALE_ACTIVE_EXPORT_AFTER_MS =
 	ms.seconds(CUSTOMER_EXPORT_MAX_DURATION_SECONDS) + ms.hours(1);
 
@@ -78,11 +78,7 @@ const isAbandonedExport = async ({
 	return isStaleActiveExport({ activeExport });
 };
 
-/**
- * Promotes an export whose CSV was published but never recorded; otherwise
- * aborts its leaked multipart upload and fails the row. Returns whether the
- * active slot was freed.
- */
+/** Records a published CSV as complete; otherwise fails the abandoned row. */
 const resolveAbandonedExport = async ({
 	db,
 	logger,

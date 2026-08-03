@@ -26,7 +26,6 @@ type CustomerExportProgressReporter = {
 	incrementProcessedRows: (rowCount: number) => Promise<void> | void;
 };
 
-/** Job rows retain a user-safe message, never a stack trace. */
 const sanitizeExportError = ({ error }: { error: unknown }) => {
 	const message = getCustomerExportErrorMessage({
 		error,

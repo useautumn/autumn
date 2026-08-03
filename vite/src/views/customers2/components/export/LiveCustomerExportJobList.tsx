@@ -29,7 +29,6 @@ const withRealtimeProgress = ({
 	);
 };
 
-/** Owns one Trigger Realtime subscription; keyed remounts resubscribe it. */
 function SubscribedCustomerExportJobList({
 	customerExports,
 	activeExport,

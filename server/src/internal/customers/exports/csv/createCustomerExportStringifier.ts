@@ -28,7 +28,7 @@ export const createCustomerExportStringifier = ({
 	fields: CustomerExportField[];
 }) =>
 	stringify({
-		// Excel only detects UTF-8 when the file opens with a byte order mark.
+		// Include a BOM so Excel reliably detects UTF-8.
 		bom: true,
 		header: true,
 		columns: toOrderedColumns({ fields }),

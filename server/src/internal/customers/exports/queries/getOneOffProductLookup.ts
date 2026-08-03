@@ -8,8 +8,8 @@ import {
 } from "@/internal/products/repos/utils/composeFullProductQuery.js";
 
 /**
- * Caches one-off classification per internal product id for the lifetime of a
- * worker, so repeated pages never re-read the same catalog products.
+ * Caches one-off classification for the lifetime of an export so repeated
+ * pages do not re-read the same catalog products.
  */
 export const createOneOffProductLookup = ({ db }: { db: DrizzleCli }) => {
 	const isOneOffByInternalProductId = new Map<string, boolean>();

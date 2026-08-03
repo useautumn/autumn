@@ -4,8 +4,8 @@ import type { Logger } from "@/external/logtail/logtailUtils.js";
 import { getCustomerExportErrorMessage } from "./customerExportErrorMessage.js";
 
 const CUSTOMER_EXPORT_REALTIME_TOKEN_TTL = "1hr";
-// Reused until close to expiry so 5s polls don't mint a trigger.dev token (and
-// remount the client's realtime subscription) on every request.
+// Reuse tokens below their one-hour TTL so list refetches do not rotate the
+// token and remount the realtime subscription.
 const TOKEN_REUSE_WINDOW_MS = ms.minutes(50);
 
 type CachedToken = { token: string; mintedAt: number };
@@ -31,7 +31,6 @@ export const cacheCustomerExportRealtimeToken = ({
 	cachedTokensByRunId.set(triggerRunId, { token, mintedAt: Date.now() });
 };
 
-/** Scoped to one run so the dashboard never sees more than its own export. */
 export const createCustomerExportRealtimeToken = async ({
 	triggerRunId,
 	logger,

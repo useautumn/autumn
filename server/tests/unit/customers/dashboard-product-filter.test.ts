@@ -61,7 +61,6 @@ describe("dashboard product filters", () => {
 		expect(params).toEqual(["active", "past_due", "pro", 2, "pro"]);
 	});
 
-	/** Product filters must stay EXISTS semi-joins driven from customers, with the product lookup scoped to the requesting org and environment. */
 	test("numbered plan cursor lookup drives from customers and scopes the product lookup", async () => {
 		let capturedQuery: ReturnType<PgDialect["sqlToQuery"]> | undefined;
 		const db = {

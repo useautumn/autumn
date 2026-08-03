@@ -4,7 +4,7 @@ import type {
 	DbCustomerExport,
 } from "@autumn/shared";
 
-/** The S3 key and upload id stay server-side; downloads go through a presigned URL. */
+/** Keeps the S3 key out of API responses; downloads use a presigned URL. */
 export const customerExportToResponse = ({
 	customerExport,
 	progress = null,
