@@ -90,7 +90,6 @@ export const completeS3MultipartUpload = async ({
 }) => {
 	const client = getS3Client({ region });
 
-	// S3 rejects a completion whose parts are not in ascending part order.
 	const orderedParts = [...parts].sort((a, b) => a.partNumber - b.partNumber);
 
 	await client.send(

@@ -1,16 +1,5 @@
-import { HeadObjectCommand } from "@aws-sdk/client-s3";
+import { HeadObjectCommand, NotFound } from "@aws-sdk/client-s3";
 import { getS3Client } from "./initS3.js";
-
-const isNotFoundError = (error: unknown) => {
-	if (typeof error !== "object" || error === null) return false;
-	const candidate = error as {
-		name?: unknown;
-		$metadata?: { httpStatusCode?: number };
-	};
-	return (
-		candidate.name === "NotFound" || candidate.$metadata?.httpStatusCode === 404
-	);
-};
 
 export const headS3Object = async ({
 	bucket,
@@ -29,7 +18,9 @@ export const headS3Object = async ({
 		);
 		return { exists: true, contentLength: response.ContentLength ?? null };
 	} catch (error) {
-		if (isNotFoundError(error)) return { exists: false, contentLength: null };
+		if (error instanceof NotFound) {
+			return { exists: false, contentLength: null };
+		}
 		throw error;
 	}
 };

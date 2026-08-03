@@ -4,8 +4,6 @@ const CUSTOMER_EXPORTS_PREFIX = "customer-exports";
 
 export const CUSTOMER_EXPORT_FILE_NAME = "customers.csv";
 
-// Exports hold private customer data, so they live in the same public-access-
-// blocked bucket as the admin configs unless explicitly overridden.
 export const getCustomerExportsS3Config = () => {
 	const admin = getAdminS3Config();
 
