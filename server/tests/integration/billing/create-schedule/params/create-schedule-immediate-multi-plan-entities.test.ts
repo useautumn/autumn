@@ -276,7 +276,8 @@ test.concurrent(
 		expect(preview.total).toBe(0);
 
 		const response = await autumnV1.billing.createSchedule(params);
-		expect(response.phases[0]?.customer_product_ids).toHaveLength(4);
+		// Only the two attached add-ons; the untouched base plans join no phase.
+		expect(response.phases[0]?.customer_product_ids).toHaveLength(2);
 		for (const entity of entities) {
 			const entityCustomer = await autumnV1.entities.get<ApiEntityV0>(
 				customerId,

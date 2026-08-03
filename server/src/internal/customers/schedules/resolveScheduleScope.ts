@@ -1,5 +1,5 @@
-import { customerProducts } from "@autumn/shared";
-import { inArray } from "drizzle-orm";
+import { customerProducts, schedulePhases, schedules } from "@autumn/shared";
+import { eq, inArray } from "drizzle-orm";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 
 type ScheduleWithPhases = {
@@ -77,6 +77,63 @@ export const resolveCustomerProductsScope = async ({
 		internalEntityId: owner.internal_entity_id,
 		entityId: owner.entity_id,
 	};
+};
+
+/**
+ * Customer products the schedules this request replaces put in place. Only
+ * these may be expired when the new phases drop them — anything the schedule
+ * never touched is none of its business.
+ */
+export const resolveReplacedScheduleCustomerProductIds = async ({
+	ctx,
+	internalCustomerId,
+	requestScopes,
+}: {
+	ctx: AutumnContext;
+	internalCustomerId: string;
+	requestScopes: (string | null)[];
+}): Promise<string[]> => {
+	const customerSchedules = await ctx.db
+		.select({
+			id: schedules.id,
+			internal_entity_id: schedules.internal_entity_id,
+		})
+		.from(schedules)
+		.where(eq(schedules.internal_customer_id, internalCustomerId));
+
+	if (customerSchedules.length === 0) return [];
+
+	const phases = await ctx.db
+		.select({
+			schedule_id: schedulePhases.schedule_id,
+			starts_at: schedulePhases.starts_at,
+			customer_product_ids: schedulePhases.customer_product_ids,
+		})
+		.from(schedulePhases)
+		.where(
+			inArray(
+				schedulePhases.schedule_id,
+				customerSchedules.map((schedule) => schedule.id),
+			),
+		);
+
+	const schedulesWithPhases = customerSchedules.map((schedule) => ({
+		...schedule,
+		phases: phases.filter((phase) => phase.schedule_id === schedule.id),
+	}));
+	const scopes = await resolveScheduleScopes({
+		ctx,
+		schedules: schedulesWithPhases,
+	});
+
+	const requested = new Set(requestScopes);
+	const replacedProductIds = schedulesWithPhases
+		.filter((schedule) => requested.has(scopes.get(schedule.id) ?? null))
+		.flatMap((schedule) =>
+			schedule.phases.flatMap((phase) => phase.customer_product_ids),
+		);
+
+	return [...new Set(replacedProductIds)];
 };
 
 /**
