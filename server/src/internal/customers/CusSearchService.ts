@@ -6,7 +6,7 @@ import {
 	customers,
 } from "@autumn/shared";
 
-import { type SQL, sql } from "drizzle-orm";
+import { and, desc, type SQL, sql } from "drizzle-orm";
 import { planetScaleTag } from "@/db/dbUtils.js";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 import {
@@ -70,12 +70,14 @@ export class CusSearchService {
 	}): Promise<{ totalCount: number }> {
 		const predicates = buildSearchPredicates({ orgId, env, search, filters });
 
-		const rows = await db.execute<{ count: number | string }>(sql`
-			SELECT count(*) AS count
-			FROM ${customers}
-			WHERE ${predicates.whereRaw}
-			${planetScaleTag({ query: "countCustomersForSearch" })}
-		`);
+		const matched = db
+			.select({ count: sql<string>`count(*)`.as("count") })
+			.from(customers)
+			.where(predicates.whereRaw);
+
+		const rows = await db.execute<{ count: number | string }>(
+			sql`${matched} ${planetScaleTag({ query: "countCustomersForSearch" })}`,
+		);
 		return { totalCount: Number(rows[0]?.count ?? 0) };
 	}
 
@@ -101,30 +103,38 @@ export class CusSearchService {
 	}> {
 		const predicates = buildSearchPredicates({ orgId, env, search, filters });
 		const fetchLimit = limit + 1;
-		const cursorClause = cursor
-			? sql`AND (${customers.created_at}, ${customers.id}) < (${cursor.t}, ${cursor.id})`
-			: sql``;
 
-		const rows = (await db.execute(sql`
-			SELECT ${customers.internal_id} AS internal_id,
-			       ${customers.created_at} AS created_at,
-			       ${customers.id} AS id
-			FROM ${customers}
-			WHERE ${predicates.whereRaw}
-			${cursorClause}
-			ORDER BY ${customers.created_at} DESC, ${customers.id} DESC
-			LIMIT ${fetchLimit}
-			${planetScaleTag({
+		const matched = db
+			.select({
+				internal_id: customers.internal_id,
+				created_at: customers.created_at,
+				id: customers.id,
+			})
+			.from(customers)
+			.where(
+				and(
+					predicates.whereRaw,
+					// Drizzle has no native row-tuple comparison for keyset pagination.
+					cursor
+						? sql`(${customers.created_at}, ${customers.id}) < (${cursor.t}, ${cursor.id})`
+						: undefined,
+				),
+			)
+			.orderBy(desc(customers.created_at), desc(customers.id))
+			.limit(fetchLimit);
+
+		const rows = await db.execute<{
+			internal_id: string;
+			created_at: number;
+			id: string;
+		}>(
+			sql`${matched} ${planetScaleTag({
 				query:
 					predicates.kind === "productMode"
 						? "searchCustomersByProductMode"
 						: "searchCustomersByProduct",
-			})}
-		`)) as unknown as Array<{
-			internal_id: string;
-			created_at: number;
-			id: string;
-		}>;
+			})}`,
+		);
 		return splitWithPeek(rows, limit);
 	}
 }

@@ -1,7 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import { AppEnv } from "@autumn/shared";
 import { type SQL, sql } from "drizzle-orm";
-import { PgDialect } from "drizzle-orm/pg-core";
+import { PgDialect, QueryBuilder } from "drizzle-orm/pg-core";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 import { CusSearchService } from "@/internal/customers/CusSearchService.js";
 import {
@@ -63,7 +63,9 @@ describe("dashboard product filters", () => {
 
 	test("numbered plan cursor lookup drives from customers and scopes the product lookup", async () => {
 		let capturedQuery: ReturnType<PgDialect["sqlToQuery"]> | undefined;
+		const queryBuilder = new QueryBuilder();
 		const db = {
+			select: queryBuilder.select.bind(queryBuilder),
 			execute: async (query: SQL) => {
 				capturedQuery = dialect.sqlToQuery(query);
 				return [];
@@ -79,8 +81,8 @@ describe("dashboard product filters", () => {
 			limit: 50,
 		});
 
-		const query = normalize(capturedQuery!.sql);
-		expect(query).toContain('FROM "customers"');
+		const query = normalize(capturedQuery?.sql ?? "");
+		expect(query).toContain('from "customers"');
 		expect(query).toContain('EXISTS ( SELECT 1 FROM "customer_products"');
 		expect(query).toContain("p_lookup.org_id =");
 		expect(query).toContain("p_lookup.env =");

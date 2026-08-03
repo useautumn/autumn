@@ -16,6 +16,8 @@ export function CustomerExportFieldSelector({
 	errorMessage?: string;
 }) {
 	const fieldIdPrefix = useId();
+	const errorId = `${fieldIdPrefix}-error`;
+	const headingId = `${fieldIdPrefix}-heading`;
 
 	const toggleField = ({
 		field,
@@ -37,7 +39,9 @@ export function CustomerExportFieldSelector({
 	return (
 		<div className="flex flex-col">
 			<div className="mb-3 flex h-6 items-center justify-between gap-2">
-				<h3 className="text-sub">Columns</h3>
+				<h3 className="text-sub" id={headingId}>
+					Columns
+				</h3>
 				<div className="flex items-center gap-1">
 					<Button
 						variant="skeleton"
@@ -58,7 +62,12 @@ export function CustomerExportFieldSelector({
 				</div>
 			</div>
 
-			<div className="flex flex-col gap-1">
+			<fieldset
+				aria-labelledby={headingId}
+				aria-invalid={errorMessage ? true : undefined}
+				aria-describedby={errorMessage ? errorId : undefined}
+				className="flex min-w-0 flex-col gap-1"
+			>
 				{CUSTOMER_EXPORT_FIELD_ORDER.map((field) => {
 					const checkboxId = `${fieldIdPrefix}-${field}`;
 					return (
@@ -80,10 +89,16 @@ export function CustomerExportFieldSelector({
 						</label>
 					);
 				})}
-			</div>
+			</fieldset>
 
 			{errorMessage ? (
-				<p className="mt-3 pl-2 text-destructive text-xs">{errorMessage}</p>
+				<p
+					id={errorId}
+					role="alert"
+					className="mt-3 pl-2 text-destructive text-xs"
+				>
+					{errorMessage}
+				</p>
 			) : null}
 		</div>
 	);

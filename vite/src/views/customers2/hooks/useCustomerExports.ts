@@ -5,6 +5,7 @@ import {
 	type DownloadCustomerExportResponse,
 	type ListCustomerExportsResponse,
 	MAX_CUSTOMER_EXPORTS_PAGE_SIZE,
+	ms,
 } from "@autumn/shared";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useCallback } from "react";
@@ -15,9 +16,9 @@ import { getBackendErr } from "@/utils/genUtils";
 
 export const CUSTOMER_EXPORTS_QUERY_KEY = "customer-exports";
 
-const ACTIVE_EXPORT_POLL_INTERVAL_MS = 5000;
+const ACTIVE_EXPORT_POLL_INTERVAL_MS = ms.seconds(5);
 /** Realtime carries progress; this poll only catches a dropped subscription. */
-const REALTIME_SAFETY_NET_POLL_INTERVAL_MS = 60_000;
+const REALTIME_SAFETY_NET_POLL_INTERVAL_MS = ms.minutes(1);
 
 export const isCustomerExportActive = (
 	customerExport: CustomerExportResponse,

@@ -1,4 +1,8 @@
-import { CustomerExportStatus, type DbCustomerExport } from "@autumn/shared";
+import {
+	CustomerExportStatus,
+	type DbCustomerExport,
+	ms,
+} from "@autumn/shared";
 import {
 	CUSTOMER_EXPORT_FILE_NAME,
 	getCustomerExportKey,
@@ -18,7 +22,7 @@ import { streamCustomerExportCsv } from "./streamCustomerExportCsv.js";
 
 const MAX_STORED_ERROR_LENGTH = 500;
 const MARK_COMPLETED_ATTEMPTS = 3;
-const MARK_COMPLETED_RETRY_DELAY_MS = 2000;
+const MARK_COMPLETED_RETRY_DELAY_MS = ms.seconds(2);
 
 type CustomerExportProgressReporter = {
 	setTotalRows: (rowCount: number) => Promise<void> | void;

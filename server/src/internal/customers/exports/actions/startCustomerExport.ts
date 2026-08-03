@@ -2,20 +2,63 @@ import {
 	type CreateCustomerExportParams,
 	type CustomerExportResponse,
 	ErrCode,
+	ms,
 	RecaseError,
 } from "@autumn/shared";
+import type { Logger } from "@/external/logtail/logtailUtils.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { getCustomerExportTriggerOptions } from "@/trigger/exports/customerExportQueue.js";
 import {
 	customerExportTask,
 	executeCustomerExport,
 } from "@/trigger/exports/customerExportTask.js";
+import type { RunCustomerExportPayload } from "@/trigger/exports/customerExportTaskPayload.js";
 import { shouldRunTriggerTasksInline } from "@/trigger/utils/shouldRunTriggerTasksInline.js";
 import { CustomerExportService } from "../CustomerExportService.js";
 import { getCustomerExportErrorMessage } from "../customerExportErrorMessage.js";
 import { cacheCustomerExportRealtimeToken } from "../customerExportRealtimeToken.js";
 import { customerExportToResponse } from "../customerExportToResponse.js";
 import { createExportReclaimingStale } from "../reclaimStaleCustomerExport.js";
+
+const TRIGGER_ENQUEUE_ATTEMPTS = 3;
+const TRIGGER_ENQUEUE_RETRY_DELAY_MS = ms.seconds(1);
+
+const delay = (durationMs: number) =>
+	new Promise((resolve) => setTimeout(resolve, durationMs));
+
+// A lost response does not mean the enqueue failed; the stable idempotency key
+// makes a retry return the already-created run instead of duplicating it.
+const triggerCustomerExportWithRetry = async ({
+	logger,
+	exportId,
+	payload,
+}: {
+	logger: Logger;
+	exportId: string;
+	payload: RunCustomerExportPayload;
+}) => {
+	for (let attempt = 1; ; attempt++) {
+		try {
+			return await customerExportTask.trigger(payload, {
+				idempotencyKey: `customer-export:${exportId}`,
+				idempotencyKeyTTL: "7d",
+				...getCustomerExportTriggerOptions({
+					isDev: process.env.NODE_ENV === "development",
+				}),
+			});
+		} catch (error) {
+			if (attempt >= TRIGGER_ENQUEUE_ATTEMPTS) throw error;
+			logger.warn("customer-export: retrying trigger enqueue", {
+				data: {
+					exportId,
+					attempt,
+					error: getCustomerExportErrorMessage({ error }),
+				},
+			});
+			await delay(TRIGGER_ENQUEUE_RETRY_DELAY_MS);
+		}
+	}
+};
 
 export const startCustomerExport = async ({
 	ctx,
@@ -76,12 +119,10 @@ export const startCustomerExport = async ({
 	} else {
 		let handle: Awaited<ReturnType<typeof customerExportTask.trigger>>;
 		try {
-			handle = await customerExportTask.trigger(payload, {
-				idempotencyKey: `customer-export:${customerExport.id}`,
-				idempotencyKeyTTL: "7d",
-				...getCustomerExportTriggerOptions({
-					isDev: process.env.NODE_ENV === "development",
-				}),
+			handle = await triggerCustomerExportWithRetry({
+				logger: ctx.logger,
+				exportId: customerExport.id,
+				payload,
 			});
 		} catch (error) {
 			// A queued row without a job would block later exports for the org.

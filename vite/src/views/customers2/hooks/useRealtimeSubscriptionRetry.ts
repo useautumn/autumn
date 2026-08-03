@@ -1,7 +1,8 @@
+import { ms } from "@autumn/shared";
 import { useCallback, useEffect, useRef, useState } from "react";
 
 const MAX_REALTIME_RETRY_ATTEMPTS = 3;
-const REALTIME_RETRY_DELAY_MS = 10_000;
+const REALTIME_RETRY_DELAY_MS = ms.seconds(10);
 
 export function useRealtimeSubscriptionRetry({
 	subscriptionTarget,

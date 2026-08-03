@@ -27,7 +27,7 @@ export function CustomerExportFilterScope({
 					onRestrictToCurrentFiltersChange(checked === true)
 				}
 			/>
-			<div className="min-w-0 space-y-1.5">
+			<div className="flex min-w-0 flex-col gap-1.5">
 				<span className="block text-checkbox-label">
 					Only export customers matching your search and filters
 				</span>

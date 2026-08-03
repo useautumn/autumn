@@ -2,7 +2,6 @@ import type {
 	CustomerExportProgress,
 	CustomerExportResponse,
 } from "@autumn/shared";
-import { useEffect } from "react";
 import { useCustomerExportRealtime } from "../../hooks/useCustomerExportRealtime";
 import { CustomerExportJobList } from "./CustomerExportJobList";
 
@@ -48,14 +47,11 @@ export function SubscribedCustomerExportJobList({
 }: CustomerExportJobListSubscriptionProps & {
 	onRealtimeErroredChange: (isErrored: boolean) => void;
 }) {
-	const { progress, isErrored } = useCustomerExportRealtime({
+	const { progress } = useCustomerExportRealtime({
 		customerExport: activeExport,
 		onComplete: onExportComplete,
+		onErroredChange: onRealtimeErroredChange,
 	});
-
-	useEffect(() => {
-		onRealtimeErroredChange(isErrored);
-	}, [isErrored, onRealtimeErroredChange]);
 
 	return (
 		<CustomerExportJobList
