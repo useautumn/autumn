@@ -3,8 +3,6 @@ import { useCallback, useEffect, useRef, useState } from "react";
 const MAX_REALTIME_RETRY_ATTEMPTS = 3;
 const REALTIME_RETRY_DELAY_MS = 10_000;
 
-// Realtime subscriptions never recover in place; retrying means remounting the
-// subscriber, so recovery is driven by changing the returned subscriptionKey.
 export function useRealtimeSubscriptionRetry({
 	subscriptionTarget,
 	onDegradedChange,

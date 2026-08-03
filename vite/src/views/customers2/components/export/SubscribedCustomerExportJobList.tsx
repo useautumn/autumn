@@ -53,8 +53,6 @@ export function SubscribedCustomerExportJobList({
 		onComplete: onExportComplete,
 	});
 
-	// useRealtimeRun surfaces subscription errors only as returned state (its
-	// sole callback is onComplete), so an effect is the only way to relay it up.
 	useEffect(() => {
 		onRealtimeErroredChange(isErrored);
 	}, [isErrored, onRealtimeErroredChange]);
