@@ -12,33 +12,10 @@ import { getBackendErr } from "@/utils/genUtils";
 
 export const CUSTOMER_EXPORTS_QUERY_KEY = "customer-exports";
 
-const UNFILTERED_CUSTOMER_COUNT_QUERY_KEY = "customers-count-unfiltered";
 const CUSTOMER_EXPORTS_PAGE_SIZE = 20;
 const ACTIVE_EXPORT_POLL_INTERVAL_MS = 5000;
 /** Realtime carries progress; this only catches a dropped subscription. */
 const REALTIME_SAFETY_NET_POLL_INTERVAL_MS = 60_000;
-
-/** Total customers ignoring the customers page search and filters. */
-export const useUnfilteredCustomerCountQuery = ({
-	enabled,
-}: {
-	enabled: boolean;
-}) => {
-	const axiosInstance = useAxiosInstance();
-	const buildKey = useQueryKeyFactory();
-
-	return useQuery({
-		queryKey: buildKey([UNFILTERED_CUSTOMER_COUNT_QUERY_KEY]),
-		enabled,
-		queryFn: async () => {
-			const { data } = await axiosInstance.post("/customers/all/count", {
-				search: "",
-				filters: {},
-			});
-			return data.totalCount as number;
-		},
-	});
-};
 
 export const isCustomerExportActive = (
 	customerExport: CustomerExportResponse,

@@ -15,7 +15,7 @@ import {
 } from "@/components/v2/sheets/SharedSheetComponents";
 import { useAppForm } from "@/hooks/form/form";
 import { getBackendErr } from "@/utils/genUtils";
-import { useCusSearchQuery } from "@/views/customers/hooks/useCusSearchQuery";
+import { useCustomerCountQuery } from "@/views/customers/hooks/useCustomerCountQuery";
 import {
 	buildCustomerFilterPayload,
 	hasActiveCustomerFilters,
@@ -26,7 +26,6 @@ import {
 	useCreateCustomerExport,
 	useCustomerExportsQuery,
 	useInvalidateCustomerExports,
-	useUnfilteredCustomerCountQuery,
 } from "../../hooks/useCustomerExports";
 import { CustomerExportFieldSelector } from "./CustomerExportFieldSelector";
 import { CustomerExportFilterScope } from "./CustomerExportFilterScope";
@@ -71,11 +70,6 @@ export function CustomerExportSheet({
 	onOpenChange: (open: boolean) => void;
 }) {
 	const { queryStates } = useCustomerFilters();
-	const {
-		totalCount,
-		isLoading: isFilteredCountLoading,
-		isCountError: isFilteredCountError,
-	} = useCusSearchQuery();
 	const createExport = useCreateCustomerExport();
 	const invalidateExports = useInvalidateCustomerExports();
 	const trimmedSearch = queryStates.q.trim();
@@ -123,10 +117,21 @@ export function CustomerExportSheet({
 	const activeExport = (customerExports ?? []).find(isCustomerExportActive);
 
 	const {
+		data: filteredTotalCount,
+		isLoading: isFilteredCountLoading,
+		isError: isFilteredCountError,
+	} = useCustomerCountQuery({
+		search: trimmedSearch,
+		filters: buildCustomerFilterPayload(queryStates),
+		enabled: open,
+	});
+	const {
 		data: unfilteredTotalCount,
 		isLoading: isUnfilteredCountLoading,
 		isError: isUnfilteredCountError,
-	} = useUnfilteredCustomerCountQuery({
+	} = useCustomerCountQuery({
+		search: "",
+		filters: {},
 		enabled: open && hasFilters,
 	});
 
@@ -140,7 +145,7 @@ export function CustomerExportSheet({
 	const hasExportCount = !(isExportCountLoading || isExportCountErrored);
 	const scopedTotalCount = ignoresActiveFilters
 		? unfilteredTotalCount
-		: totalCount;
+		: filteredTotalCount;
 	// A failed count must not read as an empty one, so it stays undefined.
 	const exportTotalCount = hasExportCount ? scopedTotalCount : undefined;
 	const hasNothingToExport = exportTotalCount === 0;
