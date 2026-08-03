@@ -32,33 +32,42 @@ export const _subjectReadInFlightSizeForTesting = () => inFlight.size;
 export const coalescedSubjectRead = async ({
 	key,
 	l1TtlMs,
+	singleflight,
 	fetch,
 }: {
 	key: string;
 	l1TtlMs: number;
+	singleflight: boolean;
 	fetch: () => Promise<FullSubject>;
 }): Promise<FullSubject> => {
-	// 0 disables everything: no L1, no singleflight — byte-identical passthrough.
-	if (l1TtlMs <= 0) return fetch();
+	const cacheEnabled = l1TtlMs > 0;
+	// Both controls off — byte-identical passthrough.
+	if (!(singleflight || cacheEnabled)) return fetch();
 
-	const cached = subjectReadL1.get(key);
-	if (cached) return cached;
+	if (cacheEnabled) {
+		const cached = subjectReadL1.get(key);
+		if (cached) return cached;
+	}
 
-	const existing = inFlight.get(key);
-	if (existing) return existing;
+	if (singleflight) {
+		const existing = inFlight.get(key);
+		if (existing) return existing;
+	}
 
 	const flight = (async () => {
 		const fullSubject = await fetch();
-		if (isCacheableSize(fullSubject)) {
+		if (cacheEnabled && isCacheableSize(fullSubject)) {
 			subjectReadL1.set(key, fullSubject, { ttl: l1TtlMs });
 		}
 		return fullSubject;
 	})();
 
-	inFlight.set(key, flight);
-	// Cleanup attaches after set() so a synchronously-rejecting fetch can't
-	// delete first and leave a permanently poisoned in-flight entry.
-	const cleanup = () => inFlight.delete(key);
-	void flight.then(cleanup, cleanup);
+	if (singleflight) {
+		inFlight.set(key, flight);
+		// Cleanup attaches after set() so a synchronously-rejecting fetch can't
+		// delete first and leave a permanently poisoned in-flight entry.
+		const cleanup = () => inFlight.delete(key);
+		void flight.then(cleanup, cleanup);
+	}
 	return flight;
 };

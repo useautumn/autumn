@@ -64,6 +64,10 @@ export const isSubjectLookupDbOnlyEnabled = (): boolean =>
 export const isRedisFallbackToDbEnabled = (): boolean =>
 	store.get().redisFallbackToDb;
 
-/** In-process L1 TTL for pure-GET subject reads; 0 = kill switch. */
+/** In-process L1 TTL for pure-GET subject reads; 0 disables the cache only. */
 export const getSubjectReadL1TtlMs = (): number =>
 	store.get().subjectReadL1TtlMs;
+
+/** Global gate: share one in-flight fetch across concurrent subject reads. */
+export const isSubjectReadSingleflightEnabled = (): boolean =>
+	store.get().subjectReadSingleflight;

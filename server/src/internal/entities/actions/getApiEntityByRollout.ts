@@ -17,6 +17,7 @@ export const getApiEntityByRollout = async ({
 	source,
 	withAutumnId = false,
 	l1TtlMs = 0,
+	singleflight = false,
 }: {
 	ctx: AutumnContext;
 	customerId: string;
@@ -24,6 +25,7 @@ export const getApiEntityByRollout = async ({
 	source?: string;
 	withAutumnId?: boolean;
 	l1TtlMs?: number;
+	singleflight?: boolean;
 }): Promise<ApiEntityV2> => {
 	if (isFullSubjectRolloutEnabled({ ctx })) {
 	}
@@ -37,7 +39,7 @@ export const getApiEntityByRollout = async ({
 				source,
 			});
 
-		if (l1TtlMs <= 0) return fetch();
+		if (!singleflight && l1TtlMs <= 0) return fetch();
 
 		// The L1 stays on even under skipCache — it exists for Redis outages.
 		return coalescedSubjectRead({
@@ -48,6 +50,7 @@ export const getApiEntityByRollout = async ({
 				entityId,
 			}),
 			l1TtlMs,
+			singleflight,
 			fetch,
 		});
 	};
