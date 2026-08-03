@@ -27,7 +27,7 @@ export const getApiCustomerByRollout = async ({
 	if (isFullSubjectRolloutEnabled({ ctx })) {
 	}
 
-	const lookup = ({ skipCache }: { skipCache: boolean }) => {
+	const lookup = async ({ skipCache }: { skipCache: boolean }) => {
 		const fetch = () =>
 			getOrSetCachedFullSubject({
 				ctx: skipCache ? { ...ctx, skipCache: true } : ctx,
@@ -38,7 +38,8 @@ export const getApiCustomerByRollout = async ({
 
 		if (!singleflight) return fetch();
 
-		return coalescedSubjectRead({
+		let servedByFetch = false;
+		const fullSubject = await coalescedSubjectRead({
 			key: buildFullSubjectKey({
 				orgId: ctx.org.id,
 				env: ctx.env,
@@ -46,8 +47,16 @@ export const getApiCustomerByRollout = async ({
 				entityId,
 			}),
 			singleflight,
-			fetch,
+			fetch: () => {
+				servedByFetch = true;
+				return fetch();
+			},
 		});
+		// Joined singleflights never enter fetch — the shared flight serves them.
+		if (!servedByFetch && ctx.subjectReadTrace) {
+			ctx.subjectReadTrace.source = "cache";
+		}
+		return fullSubject;
 	};
 
 	const fullSubject = await shed503OnTransientError({

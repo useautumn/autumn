@@ -52,6 +52,7 @@ export const getOrCreateCachedFullSubject = async ({
 
 		if (fullSubject) {
 			logger.debug(`[getOrCreateCachedFullSubject] Cache hit: ${customerId}`);
+			if (ctx.subjectReadTrace) ctx.subjectReadTrace.source = "cache";
 			setCache = false;
 		}
 	}
@@ -68,6 +69,8 @@ export const getOrCreateCachedFullSubject = async ({
 			customerId,
 			entityId,
 			allowMissingEntity: true,
+			readFrom: "replica-ok",
+			routeSource: source,
 		});
 		if (normalizedResult) {
 			fullSubject = normalizedResult.fullSubject;
