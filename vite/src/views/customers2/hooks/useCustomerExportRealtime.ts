@@ -5,10 +5,6 @@ import {
 } from "@autumn/shared";
 import { useRealtimeRun } from "@trigger.dev/react-hooks";
 
-/**
- * Subscribes to the export's PARENT run — workers report into `metadata.root`,
- * so the parent is the only run carrying whole-export progress.
- */
 export function useCustomerExportRealtime({
 	customerExport,
 	onComplete,

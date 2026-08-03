@@ -1,10 +1,13 @@
-import type {
-	CreateCustomerExportParams,
-	CustomerExportResponse,
-	DownloadCustomerExportResponse,
+import {
+	ACTIVE_CUSTOMER_EXPORT_STATUSES,
+	type CreateCustomerExportParams,
+	type CustomerExportResponse,
+	type DownloadCustomerExportResponse,
+	type ListCustomerExportsResponse,
+	MAX_CUSTOMER_EXPORTS_PAGE_SIZE,
 } from "@autumn/shared";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useCallback, useRef } from "react";
+import { useCallback } from "react";
 import { toast } from "sonner";
 import { useQueryKeyFactory } from "@/hooks/common/useQueryKeyFactory";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
@@ -12,14 +15,16 @@ import { getBackendErr } from "@/utils/genUtils";
 
 export const CUSTOMER_EXPORTS_QUERY_KEY = "customer-exports";
 
-const CUSTOMER_EXPORTS_PAGE_SIZE = 20;
 const ACTIVE_EXPORT_POLL_INTERVAL_MS = 5000;
-/** Realtime carries progress; this only catches a dropped subscription. */
+/** Realtime carries progress; this poll only catches a dropped subscription. */
 const REALTIME_SAFETY_NET_POLL_INTERVAL_MS = 60_000;
 
 export const isCustomerExportActive = (
 	customerExport: CustomerExportResponse,
-) => customerExport.status === "queued" || customerExport.status === "running";
+) =>
+	ACTIVE_CUSTOMER_EXPORT_STATUSES.some(
+		(status) => status === customerExport.status,
+	);
 
 const isSubscribableToRealtime = (customerExport: CustomerExportResponse) =>
 	Boolean(customerExport.trigger_run_id && customerExport.public_access_token);
@@ -41,7 +46,7 @@ const resolveExportsPollInterval = ({
 		: ACTIVE_EXPORT_POLL_INTERVAL_MS;
 };
 
-/** Polls only while the sheet is open AND something is still queued or running. */
+/** Polls only while the sheet is open and an export remains active. */
 export const useCustomerExportsQuery = ({
 	enabled,
 	isRealtimeDegraded = false,
@@ -56,10 +61,11 @@ export const useCustomerExportsQuery = ({
 		queryKey: buildKey([CUSTOMER_EXPORTS_QUERY_KEY]),
 		enabled,
 		queryFn: async () => {
-			const { data } = await axiosInstance.get("/customers/exports", {
-				params: { limit: CUSTOMER_EXPORTS_PAGE_SIZE },
-			});
-			return data.exports as CustomerExportResponse[];
+			const { data } = await axiosInstance.get<ListCustomerExportsResponse>(
+				"/customers/exports",
+				{ params: { limit: MAX_CUSTOMER_EXPORTS_PAGE_SIZE } },
+			);
+			return data.exports;
 		},
 		refetchInterval: (query) => {
 			const customerExports = query.state.data;
@@ -72,18 +78,16 @@ export const useCustomerExportsQuery = ({
 	});
 };
 
-/** The DB, not the trigger run, decides when an export is downloadable. */
+/** Database status, not the Trigger run, decides when an export is downloadable. */
 export const useInvalidateCustomerExports = () => {
 	const queryClient = useQueryClient();
 	const buildKey = useQueryKeyFactory();
-	// The key factory rebuilds its array every render, so read it through a ref to
-	// keep the returned callback stable for effect dependencies.
-	const queryKeyRef = useRef(buildKey([CUSTOMER_EXPORTS_QUERY_KEY]));
-	queryKeyRef.current = buildKey([CUSTOMER_EXPORTS_QUERY_KEY]);
 
 	return useCallback(() => {
-		queryClient.invalidateQueries({ queryKey: queryKeyRef.current });
-	}, [queryClient]);
+		queryClient.invalidateQueries({
+			queryKey: buildKey([CUSTOMER_EXPORTS_QUERY_KEY]),
+		});
+	}, [buildKey, queryClient]);
 };
 
 export const useCreateCustomerExport = () => {
@@ -92,8 +96,10 @@ export const useCreateCustomerExport = () => {
 
 	return useMutation({
 		mutationFn: async (params: CreateCustomerExportParams) => {
-			const { data } = await axiosInstance.post("/customers/exports", params);
-			return data.export as CustomerExportResponse;
+			const { data } = await axiosInstance.post<{
+				export: CustomerExportResponse;
+			}>("/customers/exports", params);
+			return data.export;
 		},
 		onSuccess: invalidateExports,
 	});
@@ -104,10 +110,10 @@ export const useDownloadCustomerExport = () => {
 
 	return useMutation({
 		mutationFn: async ({ exportId }: { exportId: string }) => {
-			const { data } = await axiosInstance.post(
+			const { data } = await axiosInstance.post<DownloadCustomerExportResponse>(
 				`/customers/exports/${exportId}/download`,
 			);
-			return data as DownloadCustomerExportResponse;
+			return data;
 		},
 		onSuccess: (data) => {
 			window.location.assign(data.url);

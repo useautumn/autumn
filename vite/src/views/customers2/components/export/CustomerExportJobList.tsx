@@ -69,7 +69,7 @@ function CustomerExportStatusBadge({
 
 const PERCENT_MAX = 100;
 
-// runMetadataToCustomerExportProgress caps processed at total, so this never exceeds 100.
+// Shared metadata parsing caps processed rows at total rows.
 const progressToPercent = ({
 	processed_rows,
 	total_rows,
@@ -117,11 +117,11 @@ function CustomerExportCardField({
 }
 
 const useRequesterLabelsByUserId = () => {
-	const { memberships } = useMemberships();
+	const memberships: Membership[] = useMemberships().memberships;
 
 	return useMemo(() => {
 		const labels = new Map<string, string>();
-		for (const { user } of memberships as Membership[]) {
+		for (const { user } of memberships) {
 			if (!user?.id) continue;
 			labels.set(user.id, user.email ?? user.name ?? user.id);
 		}
@@ -134,9 +134,15 @@ const NO_REQUESTER_LABEL = "—";
 export function CustomerExportJobList({
 	customerExports,
 	isLoading,
+	isInitialError,
+	isRetrying,
+	onRetry,
 }: {
 	customerExports: CustomerExportResponse[];
 	isLoading: boolean;
+	isInitialError: boolean;
+	isRetrying: boolean;
+	onRetry: () => void;
 }) {
 	const download = useDownloadCustomerExport();
 	const requesterLabels = useRequesterLabelsByUserId();
@@ -146,6 +152,25 @@ export function CustomerExportJobList({
 			<div className="space-y-3">
 				<Skeleton className="h-32 w-full rounded-lg" />
 				<Skeleton className="h-32 w-full rounded-lg" />
+			</div>
+		);
+	}
+
+	if (isInitialError && customerExports.length === 0) {
+		return (
+			<div className="flex flex-col items-center gap-3 rounded-lg border border-border border-dashed px-4 py-6 text-center">
+				<p className="text-sm text-tertiary-foreground">
+					Couldn&apos;t load recent exports.
+				</p>
+				<Button
+					variant="secondary"
+					size="sm"
+					type="button"
+					isLoading={isRetrying}
+					onClick={() => onRetry()}
+				>
+					Try again
+				</Button>
 			</div>
 		);
 	}

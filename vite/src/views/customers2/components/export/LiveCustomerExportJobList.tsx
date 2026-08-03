@@ -9,23 +9,8 @@ import { CustomerExportJobList } from "./CustomerExportJobList";
 const MAX_REALTIME_RETRY_ATTEMPTS = 3;
 const REALTIME_RETRY_DELAY_MS = 10_000;
 
-/** Progress only moves forward, so a stalled stream must not undo the polled snapshot. */
-const mergeProgress = ({
-	polled,
-	realtime,
-}: {
-	polled: CustomerExportProgress | null;
-	realtime: CustomerExportProgress | null;
-}): CustomerExportProgress | null => {
-	if (!realtime) return polled;
-	if (!polled) return realtime;
-
-	return {
-		processed_rows: Math.max(polled.processed_rows, realtime.processed_rows),
-		total_rows: Math.max(polled.total_rows, realtime.total_rows),
-	};
-};
-
+// Realtime replaces the polled value outright: a retried run resets progress
+// to 0, and any max-merge would keep showing the stale polled percentage.
 const withRealtimeProgress = ({
 	customerExports,
 	activeExportId,
@@ -39,29 +24,29 @@ const withRealtimeProgress = ({
 
 	return customerExports.map((customerExport) =>
 		customerExport.id === activeExportId
-			? {
-					...customerExport,
-					progress: mergeProgress({
-						polled: customerExport.progress,
-						realtime: progress,
-					}),
-				}
+			? { ...customerExport, progress }
 			: customerExport,
 	);
 };
 
-/** Owns exactly one Trigger Realtime subscription — remounting is what resubscribes. */
+/** Owns one Trigger Realtime subscription; keyed remounts resubscribe it. */
 function SubscribedCustomerExportJobList({
 	customerExports,
 	activeExport,
 	isLoading,
+	isInitialError,
+	isRetrying,
 	onExportComplete,
+	onRetry,
 	onRealtimeErroredChange,
 }: {
 	customerExports: CustomerExportResponse[];
 	activeExport: CustomerExportResponse | undefined;
 	isLoading: boolean;
+	isInitialError: boolean;
+	isRetrying: boolean;
 	onExportComplete: () => void;
+	onRetry: () => void;
 	onRealtimeErroredChange: (isErrored: boolean) => void;
 }) {
 	const { progress, isErrored } = useCustomerExportRealtime({
@@ -81,6 +66,9 @@ function SubscribedCustomerExportJobList({
 				progress,
 			})}
 			isLoading={isLoading}
+			isInitialError={isInitialError}
+			isRetrying={isRetrying}
+			onRetry={onRetry}
 		/>
 	);
 }
@@ -89,16 +77,22 @@ export function LiveCustomerExportJobList({
 	customerExports,
 	activeExport,
 	isLoading,
+	isInitialError,
+	isRetrying,
 	onExportComplete,
+	onRetry,
 	onRealtimeDegradedChange,
 }: {
 	customerExports: CustomerExportResponse[];
 	activeExport: CustomerExportResponse | undefined;
 	isLoading: boolean;
+	isInitialError: boolean;
+	isRetrying: boolean;
 	onExportComplete: () => void;
+	onRetry: () => void;
 	onRealtimeDegradedChange: (isDegraded: boolean) => void;
 }) {
-	// The subscription binds run id + token on mount, so a rotated token needs a remount.
+	// The subscription binds run id and token on mount, so rotation remounts it.
 	const subscriptionTarget = `${activeExport?.trigger_run_id ?? "no-run"}:${
 		activeExport?.public_access_token ?? "no-token"
 	}`;
@@ -141,7 +135,10 @@ export function LiveCustomerExportJobList({
 			customerExports={customerExports}
 			activeExport={activeExport}
 			isLoading={isLoading}
+			isInitialError={isInitialError}
+			isRetrying={isRetrying}
 			onExportComplete={onExportComplete}
+			onRetry={onRetry}
 			onRealtimeErroredChange={handleRealtimeErroredChange}
 		/>
 	);

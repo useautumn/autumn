@@ -24,7 +24,6 @@ export function CustomerExportFieldSelector({
 		field: CustomerExportField;
 		checked: boolean;
 	}) => {
-		// Selection order is what the CSV and the job list badges render in.
 		onChange(
 			checked
 				? CUSTOMER_EXPORT_FIELD_ORDER.filter(
