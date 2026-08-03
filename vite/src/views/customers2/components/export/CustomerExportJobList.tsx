@@ -69,15 +69,14 @@ function CustomerExportStatusBadge({
 
 const PERCENT_MAX = 100;
 
-const progressToPercent = (progress: CustomerExportProgress) =>
-	progress.total_rows === 0
-		? PERCENT_MAX
-		: Math.min(
-				PERCENT_MAX,
-				Math.round(
-					(progress.processed_rows / progress.total_rows) * PERCENT_MAX,
-				),
-			);
+// runMetadataToCustomerExportProgress caps processed at total, so this never exceeds 100.
+const progressToPercent = ({
+	processed_rows,
+	total_rows,
+}: CustomerExportProgress) => {
+	if (total_rows === 0) return PERCENT_MAX;
+	return Math.round((processed_rows / total_rows) * PERCENT_MAX);
+};
 
 function CustomerExportProgressRow({
 	progress,
