@@ -33,17 +33,22 @@ export const validateRewardUniqueness = async ({
 
 	for (const existingReward of existingRewards) {
 		if (existingReward.internal_id === excludeInternalId) continue;
-		if (existingReward.id === reward.id) {
+		const existingIdentifiers = new Set([
+			existingReward.id,
+			existingReward.internal_id,
+			...existingReward.promo_codes.map(({ code }) => code),
+		]);
+		if (existingIdentifiers.has(reward.id)) {
 			throw new RecaseError({
-				message: `Reward with id ${reward.id} already exists`,
+				message: `Reward id ${reward.id} is already in use`,
 				code: ErrCode.DuplicateRewardId,
 				statusCode: 400,
 			});
 		}
-		for (const promoCode of existingReward.promo_codes) {
-			if (!codes.includes(promoCode.code)) continue;
+		const takenCode = codes.find((code) => existingIdentifiers.has(code));
+		if (takenCode) {
 			throw new RecaseError({
-				message: `Promo code ${promoCode.code} is already in use by another reward`,
+				message: `Promo code ${takenCode} is already in use by another reward`,
 				code: ErrCode.DuplicatePromoCode,
 				statusCode: 400,
 			});
