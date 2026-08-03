@@ -4,4 +4,9 @@ export const getCustomerExportErrorMessage = ({
 }: {
 	error: unknown;
 	fallback?: string;
-}) => (error instanceof Error ? error.message : (fallback ?? String(error)));
+}) => {
+	if (error instanceof Error) return error.message;
+	if (fallback) return fallback;
+	// String(null) would surface a literal "null" to customers.
+	return error == null ? "Unknown error" : String(error);
+};

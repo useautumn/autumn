@@ -31,7 +31,8 @@ export const startCustomerExport = async ({
 		orgId: ctx.org.id,
 		env: ctx.env,
 		fields,
-		snapshot: { search, filters },
+		// The dashboard trims client-side; trimming here keeps direct API callers consistent.
+		snapshot: { search: search.trim(), filters },
 		requestedByUserId: ctx.userId ?? ctx.user?.id,
 	});
 
