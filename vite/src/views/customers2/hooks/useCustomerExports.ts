@@ -46,7 +46,6 @@ const resolveExportsPollInterval = ({
 		: ACTIVE_EXPORT_POLL_INTERVAL_MS;
 };
 
-/** Polls only while the sheet is open and an export remains active. */
 export const useCustomerExportsQuery = ({
 	enabled,
 	isRealtimeDegraded = false,
@@ -78,7 +77,6 @@ export const useCustomerExportsQuery = ({
 	});
 };
 
-/** Database status, not the Trigger run, decides when an export is downloadable. */
 export const useInvalidateCustomerExports = () => {
 	const queryClient = useQueryClient();
 	const buildKey = useQueryKeyFactory();

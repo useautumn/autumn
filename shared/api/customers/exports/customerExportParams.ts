@@ -8,7 +8,6 @@ import { CustomerListFiltersSchema } from "../customerListFilters.js";
 
 export const MAX_CUSTOMER_EXPORTS_PAGE_SIZE = 20;
 
-/** Maximum search length persisted and replayed by an export snapshot. */
 export const MAX_CUSTOMER_EXPORT_SEARCH_LENGTH = 500;
 
 export { CustomerExportSnapshotSchema };
@@ -41,7 +40,6 @@ export type ListCustomerExportsQuery = z.infer<
 	typeof ListCustomerExportsQuerySchema
 >;
 
-/** Live rows-processed counter read from the trigger run's metadata. */
 export const CustomerExportProgressSchema = z.object({
 	processed_rows: z.number(),
 	total_rows: z.number(),
@@ -51,10 +49,8 @@ export type CustomerExportProgress = z.infer<
 	typeof CustomerExportProgressSchema
 >;
 
-/** Export total-row count key stored in run metadata, not the database. */
 export const CUSTOMER_EXPORT_TOTAL_ROWS_KEY = "total_rows";
 
-/** Live processed-row count key stored in run metadata, not the database. */
 export const CUSTOMER_EXPORT_PROCESSED_ROWS_KEY = "processed_rows";
 
 /** A retried run resets and re-counts, so processed is capped at the total. */

@@ -62,7 +62,6 @@ export const CustomerExportFieldsSchema = z
 		message: "Export fields must be unique",
 	});
 
-/** The dashboard filter state frozen at export-creation time. */
 export const CustomerExportSnapshotSchema = z.object({
 	search: z.string().default(""),
 	filters: CustomerListFiltersSchema.default({}),

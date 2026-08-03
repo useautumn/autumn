@@ -69,7 +69,6 @@ function CustomerExportStatusBadge({
 
 const PERCENT_MAX = 100;
 
-// Shared metadata parsing caps processed rows at total rows.
 const progressToPercent = ({
 	processed_rows,
 	total_rows,

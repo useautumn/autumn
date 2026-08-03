@@ -92,7 +92,6 @@ export function LiveCustomerExportJobList({
 	onRetry: () => void;
 	onRealtimeDegradedChange: (isDegraded: boolean) => void;
 }) {
-	// The subscription binds run id and token on mount, so rotation remounts it.
 	const subscriptionTarget = `${activeExport?.trigger_run_id ?? "no-run"}:${
 		activeExport?.public_access_token ?? "no-token"
 	}`;

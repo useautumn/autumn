@@ -15,7 +15,6 @@ export type CustomerExportRow = {
 	licenses: string[];
 };
 
-/** Selection order never reaches the file — columns always follow the canonical order. */
 const toOrderedColumns = ({ fields }: { fields: CustomerExportField[] }) => {
 	const selected = new Set(fields);
 	return CUSTOMER_EXPORT_FIELD_ORDER.filter((field) => selected.has(field)).map(
@@ -23,7 +22,6 @@ const toOrderedColumns = ({ fields }: { fields: CustomerExportField[] }) => {
 	);
 };
 
-/** One stringifier owns the whole file: BOM, header row, quoting, and CRLF rows. */
 export const createCustomerExportStringifier = ({
 	fields,
 }: {
