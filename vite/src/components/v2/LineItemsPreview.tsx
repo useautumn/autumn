@@ -124,12 +124,12 @@ export function LineItemsPreview<T extends BillingLineItem>({
 												{filteredItems.map((item) => (
 													<div
 														key={item.description}
-														className="flex items-center justify-between"
+														className="flex items-center gap-3"
 													>
-														<span className="text-sm truncate max-w-75 text-tertiary-foreground">
+														<span className="min-w-0 flex-1 truncate text-sm text-tertiary-foreground">
 															{item.description}
 														</span>
-														<div className="flex w-24 justify-end gap-1.5">
+														<div className="flex shrink-0 items-center justify-end gap-1.5">
 															{item.subtotal !== item.total && (
 																<span className="text-sm text-tertiary-foreground line-through">
 																	{formatAmount({

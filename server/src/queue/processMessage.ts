@@ -92,8 +92,8 @@ export const shouldRetrySqsJobError = ({
 				isTransientRedisError({ error }) ||
 				isClaimContestedError({ error })
 			);
-		// Top-up shares the customer billing lock — retry instead of dropping the job
-		// when it collides with an attach or checkout materialization.
+		// Top-up shares the customer billing lock — retry on collision with attach or
+		// checkout, safe only while AUTO_TOPUP_RETRY_SUPPRESSION_MS outlasts the chain.
 		case JobName.AutoTopUp:
 			return (
 				error instanceof RecaseError && error.code === ErrCode.LockAlreadyExists

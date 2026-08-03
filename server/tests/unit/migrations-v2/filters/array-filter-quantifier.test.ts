@@ -1,5 +1,5 @@
-import { CustomerFilterSchema } from "@autumn/shared/api/migrations/filters/customerFilter.js";
 import { describe, expect, it } from "bun:test";
+import { CustomerFilterSchema } from "@autumn/shared/api/migrations/filters/customerFilter.js";
 
 // Regression: the quantifier wrapper must win over the permissive element in
 // arrayFilter's union, otherwise PlanFilterSchema strips `$none`/`$some`/

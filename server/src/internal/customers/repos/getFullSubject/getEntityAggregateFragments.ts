@@ -61,7 +61,7 @@ export const getEntityAggregateFragments = ({
 			entitlementRefsUnion: sql``,
 			priceRefsUnion: sql``,
 			freeTrialRefsUnion: sql``,
-			selectColumns: sql``,
+			selectKeyValue: sql``,
 		};
 	}
 
@@ -279,9 +279,9 @@ export const getEntityAggregateFragments = ({
 		WHERE ecp.free_trial_id IS NOT NULL
 	`;
 
-	const selectColumns = sql`,
+	const selectKeyValue = sql`,
 
-		json_build_object(
+		'entity_aggregations', json_build_object(
 			'aggregated_customer_products', COALESCE(
 				(
 					SELECT json_agg(row_to_json(ecp))
@@ -298,7 +298,7 @@ export const getEntityAggregateFragments = ({
 				),
 				'[]'::json
 			)
-		) AS entity_aggregations
+		)
 	`;
 
 	return {
@@ -307,6 +307,6 @@ export const getEntityAggregateFragments = ({
 		entitlementRefsUnion,
 		priceRefsUnion,
 		freeTrialRefsUnion,
-		selectColumns,
+		selectKeyValue,
 	};
 };

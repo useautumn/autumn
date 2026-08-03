@@ -1,1 +1,0 @@
-ALTER TABLE "customer_exports" DROP COLUMN "s3_upload_id";

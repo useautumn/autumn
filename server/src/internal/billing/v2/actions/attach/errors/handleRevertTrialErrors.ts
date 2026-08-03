@@ -1,21 +1,16 @@
 import {
-	type AttachBillingContext,
+	type BillingContext,
 	ErrCode,
 	hasActivePaidSubscription,
 	RecaseError,
 } from "@autumn/shared";
 import { StatusCodes } from "http-status-codes";
 
-/**
- * Validates attach request when on_end is "revert".
- *
- * Throws if the customer has no active paid subscription anywhere
- * (across all entities).
- */
+/** Reject revert trials without an active paid subscription. */
 export const handleRevertTrialErrors = ({
 	billingContext,
 }: {
-	billingContext: AttachBillingContext;
+	billingContext: Pick<BillingContext, "trialContext" | "fullCustomer">;
 }) => {
 	const { trialContext, fullCustomer } = billingContext;
 	if (trialContext?.onEnd !== "revert") return;

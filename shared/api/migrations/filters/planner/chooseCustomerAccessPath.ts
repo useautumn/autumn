@@ -89,11 +89,21 @@ const toSourceExtra = (leaf: IRLeaf): PlanSourceExtra | undefined => {
 		return undefined;
 	}
 	if (
-		(leaf.field === "addon" || leaf.field === "custom") &&
+		(leaf.field === "addon" ||
+			leaf.field === "custom" ||
+			leaf.field === "paid" ||
+			leaf.field === "recurring") &&
 		leaf.op === "eq" &&
 		typeof leaf.value === "boolean"
 	) {
 		return { field: leaf.field, op: "eq", value: leaf.value };
+	}
+	if (
+		leaf.field === "price" &&
+		leaf.op === "exists" &&
+		typeof leaf.value === "boolean"
+	) {
+		return { field: "price", op: "exists", value: leaf.value };
 	}
 	return undefined;
 };

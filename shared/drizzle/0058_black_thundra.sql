@@ -1,0 +1,1 @@
+CREATE UNIQUE INDEX CONCURRENTLY "migration_item_runs_live_item_exclusive" ON "migration_item_runs" USING btree ("item_kind","item_id" COLLATE "C") WHERE "migration_item_runs"."status" = 'running' AND "migration_item_runs"."dry_run" = false;

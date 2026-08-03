@@ -1,9 +1,9 @@
-import type { AttachParamsV0, CreateScheduleParamsV0 } from "@autumn/shared";
+import type { AttachParamsV0, MultiAttachParamsV0 } from "@autumn/shared";
 import { useBillingPreview } from "@/components/forms/shared/hooks/useBillingPreview";
 
 interface UseAttachPreviewParams {
 	path: string;
-	requestBody: AttachParamsV0 | CreateScheduleParamsV0 | null;
+	requestBody: AttachParamsV0 | MultiAttachParamsV0 | null;
 	enabled?: boolean;
 }
 

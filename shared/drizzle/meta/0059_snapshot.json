@@ -1,6 +1,6 @@
 {
-  "id": "ed1d13e3-6741-44aa-90b2-ed0cd5ccaff1",
-  "prevId": "0d57fa38-b5e5-4c39-b2a8-fc450383f911",
+  "id": "c12c4b23-9592-4fe8-befa-2cdbee3a74ee",
+  "prevId": "bd665ee9-449f-4070-95f2-ff1176231a48",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -6199,6 +6199,28 @@
           ],
           "isUnique": false,
           "where": "\"migration_item_runs\".\"dry_run\" = false",
+          "concurrently": true,
+          "method": "btree",
+          "with": {}
+        },
+        "migration_item_runs_live_item_exclusive": {
+          "name": "migration_item_runs_live_item_exclusive",
+          "columns": [
+            {
+              "expression": "item_kind",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "\"item_id\" COLLATE \"C\"",
+              "asc": true,
+              "isExpression": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "where": "\"migration_item_runs\".\"status\" = 'running' AND \"migration_item_runs\".\"dry_run\" = false",
           "concurrently": true,
           "method": "btree",
           "with": {}

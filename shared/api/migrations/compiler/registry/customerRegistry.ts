@@ -2,6 +2,34 @@ import { RELEVANT_STATUSES } from "../../../../utils/cusProductUtils/cusProductC
 import type { NavScope, RootScope } from "./registryTypes.js";
 
 /**
+ * Per-cp-row SQL for the derived plan filters, shared with the plan_id
+ * access path so consumed extras render byte-identically to registry leaves.
+ * All three correlate on `cp.id` — valid in any scope aliasing
+ * `customer_products cp`.
+ *
+ * `price` is a scalar subquery evaluating to NULL when the cusproduct has no
+ * base customer_price (the `exists` op compiles it via IS [NOT] NULL);
+ * `paid`/`recurring` are boolean EXISTS expressions, so `paid: true`
+ * compiles to `EXISTS(...) = true`. See SKILL.md "Derived boolean filters".
+ */
+export const PLAN_BASE_PRICE_SQL = [
+	"(SELECT base_cpr.id FROM customer_prices base_cpr",
+	"JOIN prices base_pr ON base_pr.id = base_cpr.price_id",
+	"WHERE base_cpr.customer_product_id = cp.id",
+	"AND base_pr.entitlement_id IS NULL LIMIT 1)",
+].join(" ");
+
+export const PLAN_PAID_EXISTS_SQL =
+	"EXISTS (SELECT 1 FROM customer_prices cpr WHERE cpr.customer_product_id = cp.id)";
+
+export const PLAN_RECURRING_EXISTS_SQL = [
+	"EXISTS (SELECT 1 FROM customer_prices cpr",
+	"JOIN prices pr ON pr.id = cpr.price_id",
+	"WHERE cpr.customer_product_id = cp.id",
+	"AND pr.config->>'interval' <> 'one_off')",
+].join(" ");
+
+/**
  * Phase 1 field registry, rooted at the `customers` table.
  *
  * Supported paths:
@@ -89,39 +117,9 @@ const planScope: NavScope = {
 		version: { kind: "leaf", sql: "p.version" },
 		addon: { kind: "leaf", sql: "p.is_add_on" },
 		custom: { kind: "leaf", sql: "cp.is_custom" },
-		// Base price existence: a leaf whose SQL is a scalar subquery that
-		// evaluates to NULL when the customer has no base customer_price on
-		// this cusproduct, non-NULL otherwise. The `exists` op (compiled
-		// via `IS NULL` / `IS NOT NULL`) works against this exactly the
-		// same way it works against `cpr.id` inside `itemScope` — the leaf
-		// abstraction unifies "existence-of-related-row" semantics across
-		// any scope that needs them.
-		price: {
-			kind: "leaf",
-			sql: [
-				"(SELECT base_cpr.id FROM customer_prices base_cpr",
-				"JOIN prices base_pr ON base_pr.id = base_cpr.price_id",
-				"WHERE base_cpr.customer_product_id = cp.id",
-				"AND base_pr.entitlement_id IS NULL LIMIT 1)",
-			].join(" "),
-		},
-		// Derived boolean filters: SQL is a boolean EXISTS expression so
-		// `paid: true` compiles to `EXISTS(...) = true` (Postgres treats
-		// this as the same as `EXISTS(...)`). See SKILL.md "Derived
-		// boolean filters" for the pattern.
-		paid: {
-			kind: "leaf",
-			sql: "EXISTS (SELECT 1 FROM customer_prices cpr WHERE cpr.customer_product_id = cp.id)",
-		},
-		recurring: {
-			kind: "leaf",
-			sql: [
-				"EXISTS (SELECT 1 FROM customer_prices cpr",
-				"JOIN prices pr ON pr.id = cpr.price_id",
-				"WHERE cpr.customer_product_id = cp.id",
-				"AND pr.config->>'interval' <> 'one_off')",
-			].join(" "),
-		},
+		price: { kind: "leaf", sql: PLAN_BASE_PRICE_SQL },
+		paid: { kind: "leaf", sql: PLAN_PAID_EXISTS_SQL },
+		recurring: { kind: "leaf", sql: PLAN_RECURRING_EXISTS_SQL },
 		item: { kind: "nav", scope: itemScope },
 		item_paid: { kind: "nav", scope: itemPaidScope },
 	},

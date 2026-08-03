@@ -2,6 +2,7 @@ export * from "./advanced-section";
 export * from "./DisabledTooltipButton";
 export * from "./PlanEntityScopeSelector";
 export * from "./PlanItemsSection";
+export * from "./PlanPrepaidQuantityFields";
 export * from "./PlanScopeToggleButton";
 export * from "./PlanSectionTitle";
 export * from "./ScopedPlanRow";

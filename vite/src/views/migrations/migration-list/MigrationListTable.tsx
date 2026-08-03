@@ -1,5 +1,6 @@
 import { BetaBadge } from "@autumn/ui";
 import { ArrowsClockwiseIcon } from "@phosphor-icons/react";
+import { getPaginationRowModel } from "@tanstack/react-table";
 import { useMemo } from "react";
 import { Table } from "@/components/general/table";
 import { EmptyState } from "@/components/v2/empty-states/EmptyState";
@@ -7,7 +8,9 @@ import {
 	type MigrationWithRunInfo,
 	useMigrationsQuery,
 } from "@/hooks/queries/useMigrationsQuery";
+import { MIGRATION_LIST_PAGE_SIZE_OPTIONS } from "@/utils/constants/migrationListPagination";
 import { pushPage } from "@/utils/genUtils";
+import { useMigrationListPagination } from "@/views/migrations/hooks/useMigrationListPagination";
 import { useMigrationsQueryState } from "@/views/migrations/hooks/useMigrationsQueryState";
 import { InfoBox } from "@/views/onboarding2/integrate/components/InfoBox";
 import { useProductTable } from "@/views/products/hooks/useProductTable";
@@ -29,17 +32,37 @@ export function MigrationListTable() {
 
 	const columns = useMemo(() => createMigrationListColumns(), []);
 
+	const {
+		pagination,
+		onPaginationChange,
+		currentPage,
+		totalPages,
+		pageSize,
+		canGoPrev,
+		canGoNext,
+		goToPrevPage,
+		goToNextPage,
+		changePageSize,
+	} = useMigrationListPagination({ rowCount: filteredMigrations.length });
+
 	const table = useProductTable({
 		data: filteredMigrations,
 		columns,
 		options: {
 			globalFilterFn: "includesString",
 			enableGlobalFilter: true,
+			getPaginationRowModel: getPaginationRowModel(),
+			state: { pagination },
+			onPaginationChange,
 		},
 	});
 
 	const getRowHref = (row: MigrationWithRunInfo) =>
 		pushPage({ path: `/migrations/${row.id}` });
+
+	// Stay out of the way until there is more than one page's worth to page through.
+	const showPagination =
+		filteredMigrations.length > MIGRATION_LIST_PAGE_SIZE_OPTIONS[0];
 
 	if (!isLoading && migrations.length === 0) {
 		return (
@@ -92,6 +115,21 @@ export function MigrationListTable() {
 					<Table.Header />
 					<Table.Body />
 				</Table.Content>
+				{showPagination && (
+					<Table.PaginationFooter
+						currentPage={currentPage}
+						totalPages={totalPages}
+						totalCount={filteredMigrations.length}
+						canGoPrev={canGoPrev}
+						canGoNext={canGoNext}
+						onPrev={goToPrevPage}
+						onNext={goToNextPage}
+						pageSize={pageSize}
+						pageSizeOptions={MIGRATION_LIST_PAGE_SIZE_OPTIONS}
+						onPageSizeChange={changePageSize}
+						enableHotkeys
+					/>
+				)}
 			</Table.Container>
 		</Table.Provider>
 	);

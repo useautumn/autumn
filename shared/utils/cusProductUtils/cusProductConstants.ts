@@ -18,6 +18,14 @@ export const VERSIONABLE_CUSTOMER_STATUSES = [
 	CusProductStatus.Paused,
 ];
 
+/** Customer products migrations may mutate — everything except expired. */
+export const MIGRATABLE_STATUSES = [
+	CusProductStatus.Active,
+	CusProductStatus.PastDue,
+	CusProductStatus.Scheduled,
+	CusProductStatus.Paused,
+];
+
 export const ALL_STATUSES = [
 	CusProductStatus.Scheduled,
 	CusProductStatus.Active,

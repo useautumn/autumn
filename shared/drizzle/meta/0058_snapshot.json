@@ -1,5 +1,5 @@
 {
-  "id": "0d57fa38-b5e5-4c39-b2a8-fc450383f911",
+  "id": "bd665ee9-449f-4070-95f2-ff1176231a48",
   "prevId": "10e2ad74-d05e-4984-91a8-99528cc599ee",
   "version": "7",
   "dialect": "postgresql",
@@ -2002,179 +2002,6 @@
           ],
           "onDelete": "cascade",
           "onUpdate": "cascade"
-        }
-      },
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
-      "policies": {},
-      "checkConstraints": {},
-      "isRLSEnabled": false
-    },
-    "public.customer_exports": {
-      "name": "customer_exports",
-      "schema": "",
-      "columns": {
-        "id": {
-          "name": "id",
-          "type": "text",
-          "primaryKey": true,
-          "notNull": true
-        },
-        "org_id": {
-          "name": "org_id",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "env": {
-          "name": "env",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "status": {
-          "name": "status",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "fields": {
-          "name": "fields",
-          "type": "jsonb",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "snapshot": {
-          "name": "snapshot",
-          "type": "jsonb",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "requested_by_user_id": {
-          "name": "requested_by_user_id",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "trigger_run_id": {
-          "name": "trigger_run_id",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "s3_key": {
-          "name": "s3_key",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "s3_upload_id": {
-          "name": "s3_upload_id",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "row_count": {
-          "name": "row_count",
-          "type": "numeric",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "byte_count": {
-          "name": "byte_count",
-          "type": "numeric",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "error_message": {
-          "name": "error_message",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "created_at": {
-          "name": "created_at",
-          "type": "numeric",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "started_at": {
-          "name": "started_at",
-          "type": "numeric",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "completed_at": {
-          "name": "completed_at",
-          "type": "numeric",
-          "primaryKey": false,
-          "notNull": false
-        }
-      },
-      "indexes": {
-        "idx_customer_exports_org_env_created_at": {
-          "name": "idx_customer_exports_org_env_created_at",
-          "columns": [
-            {
-              "expression": "org_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            },
-            {
-              "expression": "env",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            },
-            {
-              "expression": "\"created_at\" DESC",
-              "asc": true,
-              "isExpression": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": true,
-          "method": "btree",
-          "with": {}
-        },
-        "customer_exports_active_per_org_env_unique": {
-          "name": "customer_exports_active_per_org_env_unique",
-          "columns": [
-            {
-              "expression": "org_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            },
-            {
-              "expression": "env",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": true,
-          "where": "\"customer_exports\".\"status\" IN ('queued', 'running')",
-          "concurrently": true,
-          "method": "btree",
-          "with": {}
-        }
-      },
-      "foreignKeys": {
-        "customer_exports_org_id_fkey": {
-          "name": "customer_exports_org_id_fkey",
-          "tableFrom": "customer_exports",
-          "tableTo": "organizations",
-          "columnsFrom": [
-            "org_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
         }
       },
       "compositePrimaryKeys": {},
@@ -6205,6 +6032,28 @@
           ],
           "isUnique": false,
           "where": "\"migration_item_runs\".\"dry_run\" = false",
+          "concurrently": true,
+          "method": "btree",
+          "with": {}
+        },
+        "migration_item_runs_live_item_exclusive": {
+          "name": "migration_item_runs_live_item_exclusive",
+          "columns": [
+            {
+              "expression": "item_kind",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "\"item_id\" COLLATE \"C\"",
+              "asc": true,
+              "isExpression": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "where": "\"migration_item_runs\".\"status\" = 'running' AND \"migration_item_runs\".\"dry_run\" = false",
           "concurrently": true,
           "method": "btree",
           "with": {}

@@ -15,12 +15,17 @@ import {
 } from "@models/productV2Models/productItemModels/productItemEnums";
 import { z } from "zod/v4";
 
+export const IncludedUsageParamsSchema = z.number().max(10_000_000_000_000, {
+	error:
+		"Included usage cannot exceed 10 trillion; use unlimited usage instead",
+});
+
 export const CreatePlanItemParamsV1Schema = z
 	.object({
 		feature_id: z.string().meta({
 			description: "The ID of the feature to configure.",
 		}),
-		included: z.number().optional().meta({
+		included: IncludedUsageParamsSchema.optional().meta({
 			description:
 				"Number of free units included. Balance resets to this each interval for consumable features.",
 		}),

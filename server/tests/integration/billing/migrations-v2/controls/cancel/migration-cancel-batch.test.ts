@@ -13,17 +13,24 @@ import { waitForMigrationResult } from "../../utils/runUpdatePlanMigration.js";
 const CUSTOMER_COUNT = 10;
 
 test.concurrent(
-	`${chalk.yellowBright("migration cancel (batch): in-flight item finishes, remaining items skipped, run canceled")}`,
+	`${chalk.yellowBright("migration cancel (batch): in-flight page finishes, run settles canceled")}`,
 	async () => {
 		/**
 		 * Contract under test:
 		 *   New behaviors:
-		 *     - Cancelling a running batch migration lets the in-flight item
-		 *       finish (>=1 succeeded) but skips the rest (no claim, no row, none
-		 *       cut off mid-migration), so total processed < CUSTOMER_COUNT.
-		 *     - The run settles to `canceled` (not `succeeded`).
+		 *     - Cancelling a running batch migration is honored at a PAGE
+		 *       boundary: the in-flight page finishes in full, then the loop
+		 *       exits through the cancel gate instead of running to exhaustion.
+		 *     - The run settles to `canceled` (not `succeeded`), with
+		 *       "Canceled by user".
 		 *   Side effects:
-		 *     - No migration_item_runs row ends up `failed`.
+		 *     - No item is left mid-flight (`running`) or `failed` — nothing is
+		 *       cut off part-way through its migration.
+		 *
+		 * CUSTOMER_COUNT is deliberately below BATCH_MIGRATION_PAGE_SIZE, so the
+		 * whole scope is one page and the claim upsert marks every customer
+		 * `running` in a single statement. A partial `total` is therefore not
+		 * reachable here; page-granular cancellation is what's asserted instead.
 		 */
 		const suffix = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 		const customerIds = Array.from(
@@ -74,8 +81,8 @@ test.concurrent(
 			concurrency: 1,
 		});
 
-		// Wait until the batch has started (>=1 claimed item), then cancel ASAP so
-		// the remaining items hit the gate before they are claimed.
+		// Wait until the page is claimed, then cancel while it executes so the
+		// loop's next cancel check — after the page commits — sees the request.
 		await waitForMigrationResult({
 			timeoutMs: 30_000,
 			pollIntervalMs: 150,
@@ -90,7 +97,9 @@ test.concurrent(
 			},
 		});
 
-		const cancel = await autumnV2_2.migrationsV2.cancelRun({ id: migration.id });
+		const cancel = await autumnV2_2.migrationsV2.cancelRun({
+			id: migration.id,
+		});
 		expect(cancel.canceled).toBe(true);
 
 		await waitForMigrationResult({
@@ -121,10 +130,12 @@ test.concurrent(
 			migrationRunId: runResponse.run_id,
 		});
 
-		// In-flight item(s) finished, the rest were skipped before claiming.
-		expect(counts.succeeded).toBeGreaterThanOrEqual(1);
-		expect(counts.total).toBeLessThan(CUSTOMER_COUNT);
+		// The in-flight page finished in full — the run stopped at the boundary
+		// after it, not part-way through it.
+		expect(counts.total).toBe(CUSTOMER_COUNT);
+		expect(counts.succeeded).toBe(CUSTOMER_COUNT);
 		// Nothing cut off mid-migration.
+		expect(counts.running).toBe(0);
 		expect(counts.failed).toBe(0);
 	},
 );
