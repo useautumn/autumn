@@ -27,29 +27,31 @@ type CountAndSumRow = {
 	sum: string;
 	daily_rollup_days?: string | number;
 	expected_daily_days?: string | number;
+	is_daily_rollup_coverage?: string | number;
 };
 
-const hasCompleteDailyCoverage = ({
+const inspectDailyCoverage = ({
 	rows,
-	eventNames,
 }: {
 	rows: CountAndSumRow[];
-	eventNames: string[];
-}): boolean => {
-	const rowsByEventName = new Map(rows.map((row) => [row.event_name, row]));
-	return [...new Set(eventNames)].every((eventName) => {
-		const row = rowsByEventName.get(eventName);
-		if (!row) return false;
+}): { dataRows: CountAndSumRow[]; isComplete: boolean } => {
+	const coverageRow = rows.find(
+		(row) => Number(row.is_daily_rollup_coverage) === 1,
+	);
+	const dataRows = rows.filter(
+		(row) => Number(row.is_daily_rollup_coverage) !== 1,
+	);
+	const dailyRollupDays = Number(coverageRow?.daily_rollup_days);
+	const expectedDailyDays = Number(coverageRow?.expected_daily_days);
 
-		const dailyRollupDays = Number(row.daily_rollup_days);
-		const expectedDailyDays = Number(row.expected_daily_days);
-		return (
+	return {
+		dataRows,
+		isComplete:
 			Number.isFinite(dailyRollupDays) &&
 			Number.isFinite(expectedDailyDays) &&
 			expectedDailyDays > 0 &&
-			dailyRollupDays === expectedDailyDays
-		);
-	});
+			dailyRollupDays === expectedDailyDays,
+	};
 };
 
 const intervalTypeToDaysMap = (gap = 0): Record<string, number> => ({
@@ -211,11 +213,11 @@ export const getCountAndSum = async ({
 
 	let rows = await executeQuery({ query });
 
-	if (
-		source === "customer_daily" &&
-		!hasCompleteDailyCoverage({ rows, eventNames: params.event_names })
-	) {
-		rows = await executeHourlyFallback();
+	if (source === "customer_daily") {
+		const coverage = inspectDailyCoverage({ rows });
+		rows = coverage.isComplete
+			? coverage.dataRows
+			: await executeHourlyFallback();
 	}
 
 	const summary = rows.reduce(

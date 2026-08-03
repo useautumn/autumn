@@ -131,6 +131,7 @@ test("daily totals: combine merged full days with hourly range edges", () => {
 	const query = buildCountAndSumQuery({ source: "customer_daily" });
 
 	expect(query).toContain("events_customer_daily_mv");
+	expect(query).toContain("events_customer_daily_coverage_mv");
 	expect(query).toContain("sumMerge(event_count)");
 	expect(query).toContain("uniqExact(day)");
 	expect(query).toContain("expected_daily_days");

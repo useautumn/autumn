@@ -4,68 +4,76 @@ import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 
 const state = {
 	dailyMode: "no_rows" as
+		| "empty_complete"
 		| "error"
 		| "missing_event"
 		| "mixed_events"
 		| "no_rows"
 		| "partial_coverage"
-		| "populated",
+		| "populated"
+		| "sparse_event",
 	queries: [] as string[],
 };
 
 const dailyRowsByMode = {
+	empty_complete: [],
 	missing_event: [
 		{
 			count: "12",
-			daily_rollup_days: "2",
 			event_name: "emails.sent",
-			expected_daily_days: "2",
 			sum: "12",
 		},
 	],
 	mixed_events: [
 		{
 			count: "12",
-			daily_rollup_days: "2",
 			event_name: "emails.sent",
-			expected_daily_days: "2",
 			sum: "12",
 		},
 		{
 			count: "2",
-			daily_rollup_days: "0",
 			event_name: "emails.delivered",
-			expected_daily_days: "2",
 			sum: "2",
 		},
 	],
 	no_rows: [
 		{
 			count: "2",
-			daily_rollup_days: "0",
 			event_name: "emails.sent",
-			expected_daily_days: "2",
 			sum: "2",
 		},
 	],
 	partial_coverage: [
 		{
 			count: "8",
-			daily_rollup_days: "1",
 			event_name: "emails.sent",
-			expected_daily_days: "2",
 			sum: "8",
 		},
 	],
 	populated: [
 		{
 			count: "12",
-			daily_rollup_days: "2",
 			event_name: "emails.sent",
-			expected_daily_days: "2",
 			sum: "12",
 		},
 	],
+	sparse_event: [
+		{
+			count: "7",
+			event_name: "emails.sent",
+			sum: "7",
+		},
+	],
+};
+
+const dailyCoverageDaysByMode = {
+	empty_complete: 2,
+	missing_event: 2,
+	mixed_events: 1,
+	no_rows: 0,
+	partial_coverage: 1,
+	populated: 2,
+	sparse_event: 2,
 };
 
 mock.module("@/external/tinybird/initClickhouse.js", () => ({
@@ -84,7 +92,21 @@ mock.module("@/external/tinybird/initClickhouse.js", () => ({
 			}
 
 			const data = isDailyQuery
-				? dailyRowsByMode[state.dailyMode as keyof typeof dailyRowsByMode]
+				? [
+						...dailyRowsByMode[state.dailyMode as keyof typeof dailyRowsByMode],
+						{
+							count: "0",
+							daily_rollup_days: String(
+								dailyCoverageDaysByMode[
+									state.dailyMode as keyof typeof dailyCoverageDaysByMode
+								],
+							),
+							event_name: "",
+							expected_daily_days: "2",
+							is_daily_rollup_coverage: "1",
+							sum: "0",
+						},
+					]
 				: (queryParams?.event_names ?? []).map((eventName) => ({
 						count: eventName === "emails.sent" ? "42" : "17",
 						event_name: eventName,
@@ -162,7 +184,27 @@ test("daily totals: keep populated daily reads on the fast path", async () => {
 	expect(warnings).toHaveLength(0);
 });
 
-test("daily totals: retry hourly when one event lacks daily coverage", async () => {
+test("daily totals: keep sparse events on the daily fast path", async () => {
+	const { summary, warnings } = await runDailyTotalsQuery({
+		dailyMode: "sparse_event",
+	});
+
+	expect(summary).toEqual({ "emails.sent": { count: 7, sum: 7 } });
+	expect(state.queries).toHaveLength(1);
+	expect(warnings).toHaveLength(0);
+});
+
+test("daily totals: return zero without fallback when a covered window has no events", async () => {
+	const { summary, warnings } = await runDailyTotalsQuery({
+		dailyMode: "empty_complete",
+	});
+
+	expect(summary).toEqual({});
+	expect(state.queries).toHaveLength(1);
+	expect(warnings).toHaveLength(0);
+});
+
+test("daily totals: retry hourly when datasource coverage is incomplete", async () => {
 	const { summary } = await runDailyTotalsQuery({
 		dailyMode: "mixed_events",
 		eventNames: ["emails.sent", "emails.delivered"],
@@ -175,17 +217,16 @@ test("daily totals: retry hourly when one event lacks daily coverage", async () 
 	expect(state.queries).toHaveLength(2);
 });
 
-test("daily totals: retry hourly when a requested event is absent", async () => {
+test("daily totals: treat absent events as zero when datasource coverage is complete", async () => {
 	const { summary } = await runDailyTotalsQuery({
 		dailyMode: "missing_event",
 		eventNames: ["emails.sent", "emails.delivered"],
 	});
 
 	expect(summary).toEqual({
-		"emails.delivered": { count: 17, sum: 17 },
-		"emails.sent": { count: 42, sum: 42 },
+		"emails.sent": { count: 12, sum: 12 },
 	});
-	expect(state.queries).toHaveLength(2);
+	expect(state.queries).toHaveLength(1);
 });
 
 test("daily totals: retry hourly when the requested day window is partial", async () => {

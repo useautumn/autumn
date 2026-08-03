@@ -1,0 +1,11 @@
+DESCRIPTION >
+    UTC days populated in the customer daily rollup. This datasource is a small global readiness
+    marker used to distinguish an inactive event from an incomplete daily materialization.
+
+SCHEMA >
+    `day` DateTime,
+    `source_rows` AggregateFunction(sum, UInt64)
+
+ENGINE "AggregatingMergeTree"
+ENGINE_PARTITION_KEY "toYYYYMM(day)"
+ENGINE_SORTING_KEY "day"

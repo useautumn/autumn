@@ -153,14 +153,16 @@ export const buildCountAndSumQuery = ({
 			sum(event_count_value) as count,
 			sum(total_value_value) as sum,
 			max(daily_rollup_days) as daily_rollup_days,
-			max(expected_daily_days) as expected_daily_days
+			max(expected_daily_days) as expected_daily_days,
+			max(is_daily_rollup_coverage) as is_daily_rollup_coverage
 		FROM (
 			SELECT
 				event_name,
 				sumMerge(event_count) as event_count_value,
 				sumMerge(total_value) as total_value_value,
-				uniqExact(day) as daily_rollup_days,
-				dateDiff('day', ${fullDayStartSql}, toStartOfDay({end_date:DateTime})) as expected_daily_days
+				0 as daily_rollup_days,
+				0 as expected_daily_days,
+				0 as is_daily_rollup_coverage
 			FROM events_customer_daily_mv
 			WHERE org_id = {org_id:String} AND env = {env:String}
 				${customerFilter}
@@ -177,7 +179,8 @@ export const buildCountAndSumQuery = ({
 				sum(event_count) as event_count_value,
 				sum(total_value) as total_value_value,
 				0 as daily_rollup_days,
-				dateDiff('day', ${fullDayStartSql}, toStartOfDay({end_date:DateTime})) as expected_daily_days
+				0 as expected_daily_days,
+				0 as is_daily_rollup_coverage
 			FROM events_customer_hourly_mv
 			WHERE org_id = {org_id:String} AND env = {env:String}
 				${customerFilter}
@@ -186,6 +189,21 @@ export const buildCountAndSumQuery = ({
 				AND (hour < ${fullDayStartSql} OR hour >= toStartOfDay({end_date:DateTime}))
 				AND event_name IN {event_names:Array(String)}
 			GROUP BY event_name
+
+			UNION ALL
+
+			SELECT
+				'' as event_name,
+				0 as event_count_value,
+				0 as total_value_value,
+				(
+					SELECT uniqExact(day)
+					FROM events_customer_daily_coverage_mv
+					WHERE day >= ${fullDayStartSql}
+						AND day < toStartOfDay({end_date:DateTime})
+				) as daily_rollup_days,
+				dateDiff('day', ${fullDayStartSql}, toStartOfDay({end_date:DateTime})) as expected_daily_days,
+				1 as is_daily_rollup_coverage
 		)
 		GROUP BY event_name
 	`;
