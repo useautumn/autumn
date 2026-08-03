@@ -1,9 +1,13 @@
-import { Readable } from "node:stream";
+import { Readable, Transform } from "node:stream";
+import { pipeline } from "node:stream/promises";
 import type { AppEnv, DbCustomerExport } from "@autumn/shared";
 import { Upload } from "@aws-sdk/lib-storage";
 import { getS3Client } from "@/external/aws/s3/initS3.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
-import { serializeCustomerExportRows } from "../csv/serializeCustomerExportRows.js";
+import {
+	type CustomerExportRow,
+	createCustomerExportStringifier,
+} from "../csv/createCustomerExportStringifier.js";
 import {
 	emptyPlanColumns,
 	getCustomerExportPlanColumns,
@@ -43,15 +47,8 @@ export const streamCustomerExportCsv = async ({
 	const oneOffProductLookup = createOneOffProductLookup({ db: ctx.db });
 	let rowCount = 0;
 	let byteCount = 0;
-	const encoder = new TextEncoder();
 
-	const csvChunks = async function* () {
-		const header = encoder.encode(
-			serializeCustomerExportRows({ rows: [], fields, includeHeader: true }),
-		);
-		byteCount += header.byteLength;
-		yield header;
-
+	const exportRows = async function* (): AsyncGenerator<CustomerExportRow> {
 		let afterInternalId: string | null = null;
 		for (;;) {
 			const scalars = await getCustomerExportScalars({
@@ -71,36 +68,42 @@ export const streamCustomerExportCsv = async ({
 				oneOffProductLookup,
 			});
 
-			let lastInternalId: string | null = null;
 			for (const scalar of scalars) {
 				const planColumns =
 					planColumnsByCustomer.get(scalar.internal_id) ?? emptyPlanColumns();
-				const csvRow = serializeCustomerExportRows({
-					fields,
-					rows: [
-						{
-							name: scalar.name,
-							email: scalar.email,
-							customer_id: scalar.id,
-							subscriptions: planColumns.subscriptions,
-							purchases: planColumns.purchases,
-							licenses: planColumns.licenses,
-						},
-					],
-				});
-				const chunk = encoder.encode(csvRow);
-				byteCount += chunk.byteLength;
-				yield chunk;
-				lastInternalId = scalar.internal_id;
+				yield {
+					name: scalar.name,
+					email: scalar.email,
+					customer_id: scalar.id,
+					subscriptions: planColumns.subscriptions,
+					purchases: planColumns.purchases,
+					licenses: planColumns.licenses,
+				};
 			}
 
 			rowCount += scalars.length;
 			await onRowsProcessed?.(scalars.length);
 
-			if (!lastInternalId || scalars.length < CUSTOMER_EXPORT_PAGE_SIZE) break;
-			afterInternalId = lastInternalId;
+			const lastScalar = scalars[scalars.length - 1];
+			if (!lastScalar || scalars.length < CUSTOMER_EXPORT_PAGE_SIZE) break;
+			afterInternalId = lastScalar.internal_id;
 		}
 	};
+
+	// A paused-mode Transform counts bytes; a "data" listener would starve Upload.
+	const countedCsvBytes = new Transform({
+		transform(chunk, _encoding, callback) {
+			const bytes = Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk);
+			byteCount += bytes.byteLength;
+			callback(null, bytes);
+		},
+	});
+
+	const csvPipeline = pipeline(
+		Readable.from(exportRows(), { objectMode: true }),
+		createCustomerExportStringifier({ fields }),
+		countedCsvBytes,
+	);
 
 	// Upload owns multipart chunking, retries, completion, and abort-on-error.
 	const upload = new Upload({
@@ -108,13 +111,23 @@ export const streamCustomerExportCsv = async ({
 		params: {
 			Bucket: bucket,
 			Key: key,
-			Body: Readable.from(csvChunks(), { objectMode: false }),
+			Body: countedCsvBytes,
 			ContentType: "text/csv; charset=utf-8",
 		},
 		partSize: CSV_UPLOAD_PART_SIZE_BYTES,
 		queueSize: 1,
 	});
 
-	await upload.done();
+	await Promise.all([
+		csvPipeline,
+		upload.done().catch((error: unknown) => {
+			// Tear the pipeline down so a dead upload can't leave it awaiting drain.
+			countedCsvBytes.destroy(
+				error instanceof Error ? error : new Error(String(error)),
+			);
+			throw error;
+		}),
+	]);
+
 	return { rowCount, byteCount };
 };
