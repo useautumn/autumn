@@ -8,4 +8,5 @@ export * from "./PlanScopeToggleButton";
 export * from "./PlanSectionTitle";
 export * from "./ScopedPlanRow";
 export * from "./SelectedPlanRow";
+export * from "./usePlanScopeField";
 export * from "./utils/resolvePlanEntityId";

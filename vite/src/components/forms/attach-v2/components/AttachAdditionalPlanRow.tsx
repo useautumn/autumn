@@ -1,13 +1,10 @@
 import { IconButton, SearchableSelect } from "@autumn/ui";
 import { XIcon } from "@phosphor-icons/react";
-import { useState } from "react";
 import {
-	PlanEntityScopeSelector,
-	resolvePlanEntityId,
 	ScopedPlanRow,
 	SelectedPlanRow,
+	usePlanScopeField,
 } from "@/components/forms/shared";
-import { useScopeEntitySearch } from "@/views/customers2/customer/hooks/useScopeEntitySearch";
 import type { AttachAdditionalPlan } from "../attachFormSchema";
 import { useAttachFormContext } from "../context/AttachFormProvider";
 import { getAttachDisplayItems } from "../utils/grantFreeUtils";
@@ -28,17 +25,20 @@ export function AttachAdditionalPlanRow({
 	} = useAttachFormContext();
 	const { getProductOptionState, handleRemovePlan, handleChangePlanProduct } =
 		additionalPlans;
-	const [scopeOpen, setScopeOpen] = useState(plan.entityId !== undefined);
-	const effectiveEntityId = resolvePlanEntityId({
+	const planIndex = formValues.additionalPlans.findIndex(
+		(candidate) => candidate._id === plan._id,
+	);
+	const { effectiveEntityId, scope, openScope } = usePlanScopeField({
 		planEntityId: plan.entityId,
 		defaultEntityId: entityId,
+		onChange: (nextEntityId) => {
+			if (planIndex === -1) return;
+			form.setFieldValue(`additionalPlans[${planIndex}]`, {
+				...plan,
+				entityId: nextEntityId,
+			});
+		},
 	});
-	const {
-		hasEntities,
-		entities,
-		isLoading: isEntitiesLoading,
-		setSearch: setEntitySearch,
-	} = useScopeEntitySearch({ selectedEntityId: effectiveEntityId });
 
 	const selectedProduct = products.find(
 		(product) => product.id === plan.productId,
@@ -74,7 +74,7 @@ export function AttachAdditionalPlanRow({
 							({ product }) => product.id === productId,
 						);
 						handleChangePlanProduct({ id: plan._id, productId });
-						if (option?.requiresDifferentScope) setScopeOpen(true);
+						if (option?.requiresDifferentScope) openScope();
 					}}
 					options={productOptions}
 					getOptionValue={({ product }) => product.id}
@@ -111,39 +111,11 @@ export function AttachAdditionalPlanRow({
 		);
 	}
 
-	const planIndex = formValues.additionalPlans.findIndex(
-		(candidate) => candidate._id === plan._id,
-	);
 	if (planIndex === -1) return null;
-
-	const scopeSelector = hasEntities ? (
-		<PlanEntityScopeSelector
-			entities={entities}
-			value={plan.entityId}
-			onChange={(nextEntityId) =>
-				form.setFieldValue(`additionalPlans[${planIndex}]`, {
-					...plan,
-					entityId: nextEntityId,
-				})
-			}
-			inheritLabel={entityId ? "Default entity scope" : undefined}
-			showLabel={false}
-			wrapInSection={false}
-			onSearchChange={setEntitySearch}
-			isLoading={isEntitiesLoading}
-		/>
-	) : null;
-	const rowScope = scopeSelector
-		? {
-				open: scopeOpen,
-				onToggle: () => setScopeOpen((open) => !open),
-				selector: scopeSelector,
-			}
-		: undefined;
 
 	return (
 		<div className="space-y-1.5">
-			<ScopedPlanRow scope={rowScope}>
+			<ScopedPlanRow scope={scope}>
 				<SelectedPlanRow
 					productId={plan.productId}
 					product={selectedProduct}

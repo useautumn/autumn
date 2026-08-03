@@ -1,22 +1,23 @@
-import { SearchableSelect } from "@autumn/ui";
 import {
 	PlanPrepaidQuantityFields,
+	ScopedPlanRow,
 	SelectedPlanRow,
+	usePlanScopeField,
 } from "@/components/forms/shared";
-import { getProductGroupKey } from "@/components/forms/shared/utils/planGroupUtils";
 import { useCustomerDisplayCurrency } from "@/hooks/common/useCustomerDisplayCurrency";
 import { cn } from "@/lib/utils";
 import { useCreateScheduleFormContext } from "../context/CreateScheduleFormProvider";
+import { getUsedGroupKeys, resolveInheritedPlanScope } from "../scheduleUtils";
+import { CopyExistingPlansButton } from "./CopyExistingPlansButton";
 import { CopyFromPreviousPhaseButton } from "./CopyFromPreviousPhaseButton";
+import { SchedulePlanPicker } from "./SchedulePlanPicker";
 
 export function SchedulePlanRow({
 	phaseIndex,
 	planIndex,
-	usedKeys,
 }: {
 	phaseIndex: number;
 	planIndex: number;
-	usedKeys: Set<string>;
 }) {
 	const {
 		form,
@@ -29,11 +30,41 @@ export function SchedulePlanRow({
 	const { displayCurrency } = useCustomerDisplayCurrency();
 
 	const plan = formValues.phases[phaseIndex]?.plans[planIndex];
-	if (!plan) return null;
+	const openingPhasePlans = formValues.phases[0]?.plans ?? [];
+	const isOpeningPhase = phaseIndex === 0;
 	const isLocked = isPhaseLocked({ phaseIndex });
+	// A schedule can't change scope mid-flight: later phases display what they
+	// inherit from the opening phase's plan in the same group, read-only.
+	const { scope } = usePlanScopeField({
+		planEntityId: isOpeningPhase ? plan?.entityId : undefined,
+		defaultEntityId: isOpeningPhase
+			? undefined
+			: resolveInheritedPlanScope({
+					productId: plan?.productId ?? "",
+					openingPhasePlans,
+					products,
+				}),
+		disabled: !isOpeningPhase || isLocked,
+		disabledReason: isLocked
+			? "this phase has started"
+			: "set on the first phase",
+		onChange: (nextEntityId) =>
+			form.setFieldValue(
+				`phases[${phaseIndex}].plans[${planIndex}].entityId`,
+				nextEntityId ?? null,
+			),
+	});
+
+	if (!plan) return null;
 
 	const availableProducts = products.filter((p) => !p.archived);
 	const selectedProduct = products.find((p) => p.id === plan.productId);
+	const usedKeys = getUsedGroupKeys({
+		plans: formValues.phases[phaseIndex]?.plans ?? [],
+		products,
+		excludePlanIndex: planIndex,
+		entityId: plan.entityId ?? null,
+	});
 
 	const selectedProductIdsInPhase = new Set(
 		formValues.phases[phaseIndex]?.plans
@@ -61,42 +92,19 @@ export function SchedulePlanRow({
 	if (!plan.productId) {
 		return (
 			<div className={cn("group relative", isLocked && "opacity-60")}>
-				<SearchableSelect
-					value={plan.productId || null}
-					onValueChange={handleProductChange}
-					options={availableProducts}
-					getOptionValue={(product) => product.id}
-					getOptionLabel={(product) => product.name}
-					getOptionDisabled={(product) =>
-						usedKeys.has(
-							getProductGroupKey({ productId: product.id, products }),
+				<SchedulePlanPicker
+					products={availableProducts}
+					usedKeys={usedKeys}
+					siblingProductIds={selectedProductIdsInPhase}
+					header={
+						isOpeningPhase ? (
+							<CopyExistingPlansButton phaseIndex={phaseIndex} />
+						) : (
+							<CopyFromPreviousPhaseButton phaseIndex={phaseIndex} />
 						)
 					}
-					renderOption={(product) => (
-						<>
-							<span className="flex-1 truncate min-w-0">{product.name}</span>
-							{selectedProductIdsInPhase.has(product.id) && (
-								<span className="text-xs text-subtle shrink-0">
-									Already selected
-								</span>
-							)}
-							{!selectedProductIdsInPhase.has(product.id) &&
-								usedKeys.has(
-									getProductGroupKey({ productId: product.id, products }),
-								) && (
-									<span className="text-xs text-subtle shrink-0">
-										Group conflict
-									</span>
-								)}
-						</>
-					)}
-					header={<CopyFromPreviousPhaseButton phaseIndex={phaseIndex} />}
-					placeholder="Select product..."
-					searchable
-					searchPlaceholder="Search products..."
-					emptyText="No products found"
-					defaultOpen
 					disabled={isLocked}
+					onSelect={handleProductChange}
 				/>
 			</div>
 		);
@@ -104,31 +112,36 @@ export function SchedulePlanRow({
 
 	return (
 		<div className="space-y-1.5">
-			<SelectedPlanRow
-				productId={plan.productId}
-				product={selectedProduct}
-				customItems={plan.items}
-				isCustom={plan.isCustom}
-				disabled={isLocked}
-				onEdit={() => setEditingPlan({ phaseIndex, planIndex })}
-				onRemove={() => handleRemovePlan({ phaseIndex, planIndex })}
-			/>
+			<ScopedPlanRow scope={scope}>
+				<SelectedPlanRow
+					productId={plan.productId}
+					product={selectedProduct}
+					customItems={plan.items}
+					isCustom={plan.isCustom}
+					disabled={isLocked}
+					onEdit={() =>
+						setEditingPlan({ location: "phase", phaseIndex, planIndex })
+					}
+					onRemove={() => handleRemovePlan({ phaseIndex, planIndex })}
+				/>
+			</ScopedPlanRow>
 			<PlanPrepaidQuantityFields
 				items={plan.items ?? selectedProduct?.items}
 				quantities={plan.prepaidOptions}
 				currency={displayCurrency}
 				readOnly={isLocked}
-				renderField={({ featureId, step }) => (
+				renderField={({ featureId, step, stops }) => (
 					<form.AppField
 						name={`phases[${phaseIndex}].plans[${planIndex}].prepaidOptions.${featureId}`}
 					>
 						{(field) => (
 							<field.QuantityField
+								fullWidth
+								hideFieldInfo
 								label=""
 								min={0}
 								step={step}
-								compact
-								hideFieldInfo
+								stops={stops}
 							/>
 						)}
 					</form.AppField>
