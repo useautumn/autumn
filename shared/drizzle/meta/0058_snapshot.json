@@ -2074,12 +2074,6 @@
           "primaryKey": false,
           "notNull": false
         },
-        "partition_plan": {
-          "name": "partition_plan",
-          "type": "jsonb",
-          "primaryKey": false,
-          "notNull": false
-        },
         "row_count": {
           "name": "row_count",
           "type": "numeric",

@@ -9,7 +9,6 @@ CREATE TABLE "customer_exports" (
 	"trigger_run_id" text,
 	"s3_key" text,
 	"s3_upload_id" text,
-	"partition_plan" jsonb,
 	"row_count" numeric,
 	"byte_count" numeric,
 	"error_message" text,
