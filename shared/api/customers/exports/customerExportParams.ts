@@ -4,7 +4,10 @@ import {
 	CustomerExportFieldsSchema,
 	CustomerExportStatusSchema,
 } from "../../../models/cusModels/cusExportModels.js";
-import { CustomerListFiltersSchema } from "../customerListFilters.js";
+import {
+	BoundedCustomerListFiltersSchema,
+	CustomerListFiltersSchema,
+} from "../customerListFilters.js";
 
 export const MAX_CUSTOMER_EXPORTS_PAGE_SIZE = 20;
 
@@ -24,7 +27,7 @@ export const CreateCustomerExportParamsSchema = z.object({
 		.max(MAX_CUSTOMER_EXPORT_SEARCH_LENGTH)
 		.optional()
 		.default(""),
-	filters: CustomerListFiltersSchema.optional().default({}),
+	filters: BoundedCustomerListFiltersSchema.optional().default({}),
 });
 
 export type CreateCustomerExportParams = z.infer<
