@@ -71,6 +71,10 @@ import { useCustomerFilters } from "@/views/customers/hooks/useCustomerFilters";
 import { createCustomerListColumns } from "@/views/customers2/components/table/customer-list/CustomerListColumns";
 import { CustomerListFilterButton } from "@/views/customers2/components/table/customer-list/CustomerListFilterButton";
 import { useProductTable } from "@/views/products/hooks/useProductTable";
+import {
+	useMigrationRunControls,
+	webhooksDefaultOn,
+} from "../hooks/useMigrationRunControls";
 import { useRealtimeSubscriptions } from "../hooks/useRealtimeSubscriptions";
 import { ItemEventStatusBadge } from "../runs/RunStatusBadge";
 import { type StepId, StepIndicator } from "../StepIndicator";
@@ -84,6 +88,7 @@ import {
 	ExecutionStatusSubMenu,
 	hasActiveExecutionFilters,
 } from "./ExecutionStatusSubMenu";
+import { MigrationRunControls } from "./MigrationRunControls";
 import {
 	type ActiveRunStatus,
 	buildEventsByCustomer,
@@ -92,26 +97,11 @@ import {
 import { RealtimeRunWatcher } from "./RealtimeRunWatcher";
 import { useMigrationSheetStore } from "./useMigrationSheetStore";
 
-type MigrationRunControlsState = {
-	retryErrored: boolean;
-	retrySkipped: boolean;
-};
-
 type CustomerRow = MigrationPreviewCustomer & {
 	_event?: MigrationItemEvent;
 	_activeStatus?: ActiveRunStatus;
 	_activeRunId?: string;
 };
-
-function buildRetryItemStatuses({
-	retryErrored,
-	retrySkipped,
-}: Pick<MigrationRunControlsState, "retryErrored" | "retrySkipped">) {
-	const statuses: RetryableMigrationItemRunStatus[] = [];
-	if (retryErrored) statuses.push("failed");
-	if (retrySkipped) statuses.push("skipped");
-	return statuses.length > 0 ? statuses : undefined;
-}
 
 const statusColumn: ColumnDef<CustomerRow, unknown> = {
 	id: "migration_status",
@@ -256,10 +246,11 @@ export function MigrationLiveView({
 		parseAsBoolean.withDefault(false),
 	);
 	const [isCancelDialogOpen, setIsCancelDialogOpen] = useState(false);
-	const [runControls, setRunControls] = useState<MigrationRunControlsState>({
-		retryErrored: false,
-		retrySkipped: false,
-	});
+	const {
+		value: runControls,
+		setValue: setRunControls,
+		runParams: resolvedRunControls,
+	} = useMigrationRunControls();
 	const [sample, setSample] = useState({
 		open: false,
 		mode: "limit" as "limit" | "select",
@@ -267,11 +258,10 @@ export function MigrationLiveView({
 		customerIds: [] as string[],
 		running: null as "dry" | "live" | null,
 	});
-	const { cancelRun, isCanceling } = useMigrationsQuery();
-
-	const resolvedRunControls = {
-		retryItemStatuses: buildRetryItemStatuses(runControls),
-	};
+	const { cancelRun, isCanceling, migrations } = useMigrationsQuery();
+	const batchEligible =
+		migrations.find((candidate) => candidate.id === migrationId)
+			?.batch_eligible ?? false;
 
 	const handleExecutionStatusesChange = useCallback(
 		(statuses: ExecutionStatus[]) => {
@@ -561,8 +551,10 @@ export function MigrationLiveView({
 						<MigrationRunControls
 							value={runControls}
 							onChange={setRunControls}
+							webhooksOnByDefault={webhooksDefaultOn({ count })}
 							hasFailedItems={(progressCounts?.failed ?? 0) > 0}
 							hasSkippedItems={(progressCounts?.skipped ?? 0) > 0}
+							batchEligible={batchEligible}
 						/>
 						<DialogFooter>
 							<ShortcutButton
@@ -672,6 +664,8 @@ export function MigrationLiveView({
 								onChange={setRunControls}
 								hasFailedItems={(progressCounts?.failed ?? 0) > 0}
 								hasSkippedItems={(progressCounts?.skipped ?? 0) > 0}
+								webhooksOnByDefault={webhooksDefaultOn({ count })}
+								batchEligible={batchEligible}
 							/>
 						</div>
 						<DialogFooter className="sm:flex-col gap-2">
@@ -825,62 +819,6 @@ function ExecutionProgressBadge({
 			{completed.toLocaleString()} run
 			{running > 0 && `, ${running.toLocaleString()} running`}
 		</span>
-	);
-}
-
-function MigrationRunControls({
-	value,
-	onChange,
-	hasFailedItems = false,
-	hasSkippedItems = false,
-}: {
-	value: MigrationRunControlsState;
-	onChange: (value: MigrationRunControlsState) => void;
-	hasFailedItems?: boolean;
-	hasSkippedItems?: boolean;
-}) {
-	if (!hasFailedItems && !hasSkippedItems) return null;
-
-	return (
-		<div className="flex flex-col gap-3">
-			<Separator />
-			{hasFailedItems && (
-				<div className="flex items-center justify-between gap-4">
-					<div className="flex flex-col gap-0.5">
-						<span className="text-sm font-medium text-foreground">
-							Retry failed
-						</span>
-						<span className="text-xs text-tertiary-foreground">
-							Re-run customers that previously errored.
-						</span>
-					</div>
-					<Switch
-						checked={value.retryErrored}
-						onCheckedChange={(checked) =>
-							onChange({ ...value, retryErrored: checked === true })
-						}
-					/>
-				</div>
-			)}
-			{hasSkippedItems && (
-				<div className="flex items-center justify-between gap-4">
-					<div className="flex flex-col gap-0.5">
-						<span className="text-sm font-medium text-foreground">
-							Retry skipped
-						</span>
-						<span className="text-xs text-tertiary-foreground">
-							Re-run customers that were skipped.
-						</span>
-					</div>
-					<Switch
-						checked={value.retrySkipped}
-						onCheckedChange={(checked) =>
-							onChange({ ...value, retrySkipped: checked === true })
-						}
-					/>
-				</div>
-			)}
-		</div>
 	);
 }
 

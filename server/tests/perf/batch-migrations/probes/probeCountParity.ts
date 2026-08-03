@@ -64,6 +64,24 @@ const main = async () => {
 			filter: { plan: { plan_id: BENCH_FREE_PRODUCT_ID, paid: false } },
 		},
 		{
+			key: "derived-paid-true",
+			filter: { plan: { plan_id: BENCH_PAID_PRODUCT_ID, paid: true } },
+		},
+		{
+			key: "derived-recurring-true",
+			filter: { plan: { plan_id: BENCH_PAID_PRODUCT_ID, recurring: true } },
+		},
+		{
+			key: "derived-base-price",
+			filter: {
+				plan: { plan_id: BENCH_PAID_PRODUCT_ID, price: { $ne: null } },
+			},
+		},
+		{
+			key: "derived-no-base-price",
+			filter: { plan: { plan_id: BENCH_FREE_PRODUCT_ID, price: null } },
+		},
+		{
 			key: "checkpoint-midrun",
 			filter: { plan: { plan_id: BENCH_PAID_PRODUCT_ID } },
 			checkpoint: midCheckpoint,
@@ -99,7 +117,9 @@ const main = async () => {
 		);
 	}
 
-	console.log(failures === 0 ? "\nALL COUNT CHECKS PASSED" : `\n${failures} FAILURES`);
+	console.log(
+		failures === 0 ? "\nALL COUNT CHECKS PASSED" : `\n${failures} FAILURES`,
+	);
 	process.exit(failures === 0 ? 0 : 1);
 };
 

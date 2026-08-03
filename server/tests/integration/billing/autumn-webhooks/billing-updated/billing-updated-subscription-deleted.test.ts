@@ -57,110 +57,104 @@ afterAll(async () => {
 	await webhook?.cleanup();
 });
 
-test(
-	`${chalk.yellowBright("billing.updated: stripe subscription.deleted → expired change")}`,
-	async () => {
-		const customerId = "billing-updated-sub-deleted";
-		const messagesItem = items.monthlyMessages({ includedUsage: 100 });
-		const pro = products.pro({ id: "pro", items: [messagesItem] });
+test(`${chalk.yellowBright("billing.updated: stripe subscription.deleted → expired change")}`, async () => {
+	const customerId = "billing-updated-sub-deleted";
+	const messagesItem = items.monthlyMessages({ includedUsage: 100 });
+	const pro = products.pro({ id: "pro", items: [messagesItem] });
 
-		const { ctx: scenarioCtx } = await initScenario({
-			customerId,
-			setup: [
-				s.customer({ paymentMethod: "success", skipWebhooks: true }),
-				s.products({ list: [pro] }),
-			],
-			actions: [s.attach({ productId: pro.id })],
-		});
+	const { ctx: scenarioCtx } = await initScenario({
+		customerId,
+		setup: [
+			s.customer({ paymentMethod: "success", skipWebhooks: true }),
+			s.products({ list: [pro] }),
+		],
+		actions: [s.attach({ productId: pro.id })],
+	});
 
-		const subscriptionId = await getSubscriptionId({
-			ctx: scenarioCtx,
-			customerId,
-			productId: pro.id,
-		});
+	const subscriptionId = await getSubscriptionId({
+		ctx: scenarioCtx,
+		customerId,
+		productId: pro.id,
+	});
 
-		await scenarioCtx.stripeCli.subscriptions.cancel(subscriptionId);
+	await scenarioCtx.stripeCli.subscriptions.cancel(subscriptionId);
 
-		const result = await waitForWebhook<BillingUpdatedPayload>({
-			token: playToken,
-			predicate: (payload) =>
-				payload.type === "billing.updated" &&
-				payload.data?.customer_id === customerId &&
-				findChange(payload.data?.plan_changes, {
-					action: "expired",
-					planId: pro.id,
-				}) !== undefined,
-			timeoutMs: 30000,
-		});
+	const result = await waitForWebhook<BillingUpdatedPayload>({
+		token: playToken,
+		predicate: (payload) =>
+			payload.type === "billing.updated" &&
+			payload.data?.customer_id === customerId &&
+			findChange(payload.data?.plan_changes, {
+				action: "expired",
+				planId: pro.id,
+			}) !== undefined,
+		timeoutMs: 30000,
+	});
 
-		expect(result).not.toBeNull();
-		const expired = findChange(result!.payload.data.plan_changes, {
-			action: "expired",
-			planId: pro.id,
-		});
-		expect(expired).toBeDefined();
-	},
-);
+	expect(result).not.toBeNull();
+	const expired = findChange(result!.payload.data.plan_changes, {
+		action: "expired",
+		planId: pro.id,
+	});
+	expect(expired).toBeDefined();
+});
 
 // When a customer "cancels to free" (downgrades a paid plan to a free
 // default), Autumn schedules pro for expiry at period_end and free to start
 // at the same moment. At period_end, Stripe cancels pro's subscription →
 // `handleStripeSubscriptionDeleted` activates free and emits the webhook
 // with pro expired + free activated.
-test(
-	`${chalk.yellowBright("billing.updated: pro → free at period end → expired pro + activated free (via subscription.deleted)")}`,
-	async () => {
-		const customerId = "billing-updated-cancel-to-free";
-		const messagesItem = items.monthlyMessages({ includedUsage: 100 });
-		const free = products.base({
-			id: "free",
-			items: [messagesItem],
-			isDefault: true,
-		});
-		const pro = products.pro({ id: "pro", items: [messagesItem] });
+test(`${chalk.yellowBright("billing.updated: pro → free at period end → expired pro + activated free (via subscription.deleted)")}`, async () => {
+	const customerId = "billing-updated-cancel-to-free";
+	const messagesItem = items.monthlyMessages({ includedUsage: 100 });
+	const free = products.base({
+		id: "free",
+		items: [messagesItem],
+		isDefault: true,
+	});
+	const pro = products.pro({ id: "pro", items: [messagesItem] });
 
-		await initScenario({
-			customerId,
-			setup: [
-				s.customer({ paymentMethod: "success", skipWebhooks: true }),
-				s.products({ list: [free, pro] }),
-			],
-			actions: [
-				s.attach({ productId: pro.id }),
-				s.attach({ productId: free.id }), // schedules cancel to free
-				s.advanceTestClock({ toNextInvoice: true }),
-			],
-		});
+	await initScenario({
+		customerId,
+		setup: [
+			s.customer({ paymentMethod: "success", skipWebhooks: true }),
+			s.products({ list: [free, pro] }),
+		],
+		actions: [
+			s.attach({ productId: pro.id }),
+			s.attach({ productId: free.id }), // schedules cancel to free
+			s.advanceTestClock({ toNextInvoice: true }),
+		],
+	});
 
-		const result = await waitForWebhook<BillingUpdatedPayload>({
-			token: playToken,
-			predicate: (payload) =>
-				payload.type === "billing.updated" &&
-				payload.data?.customer_id === customerId &&
-				findChange(payload.data?.plan_changes, {
-					action: "expired",
-					planId: pro.id,
-				}) !== undefined &&
-				findChange(payload.data?.plan_changes, {
-					action: "activated",
-					planId: free.id,
-				}) !== undefined,
-			timeoutMs: 30000,
-		});
+	const result = await waitForWebhook<BillingUpdatedPayload>({
+		token: playToken,
+		predicate: (payload) =>
+			payload.type === "billing.updated" &&
+			payload.data?.customer_id === customerId &&
+			findChange(payload.data?.plan_changes, {
+				action: "expired",
+				planId: pro.id,
+			}) !== undefined &&
+			findChange(payload.data?.plan_changes, {
+				action: "activated",
+				planId: free.id,
+			}) !== undefined,
+		timeoutMs: 30000,
+	});
 
-		expect(result).not.toBeNull();
-		const { data } = result!.payload;
+	expect(result).not.toBeNull();
+	const { data } = result!.payload;
 
-		const expired = findChange(data.plan_changes, {
-			action: "expired",
-			planId: pro.id,
-		});
-		expect(expired?.subscription?.status).toBe("expired");
+	const expired = findChange(data.plan_changes, {
+		action: "expired",
+		planId: pro.id,
+	});
+	expect(expired?.subscription?.status).toBe("expired");
 
-		const activated = findChange(data.plan_changes, {
-			action: "activated",
-			planId: free.id,
-		});
-		expect(activated?.subscription?.status).toBe("active");
-	},
-);
+	const activated = findChange(data.plan_changes, {
+		action: "activated",
+		planId: free.id,
+	});
+	expect(activated?.subscription?.status).toBe("active");
+});

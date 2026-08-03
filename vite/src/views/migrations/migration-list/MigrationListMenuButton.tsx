@@ -1,12 +1,12 @@
-import { IconButton } from "@autumn/ui";
-import { EllipsisVertical } from "lucide-react";
-import { useState } from "react";
 import {
 	DropdownMenu,
 	DropdownMenuContent,
 	DropdownMenuItem,
 	DropdownMenuTrigger,
+	IconButton,
 } from "@autumn/ui";
+import { EllipsisVertical } from "lucide-react";
+import { useState } from "react";
 import { useMigrationsQueryState } from "@/views/migrations/hooks/useMigrationsQueryState";
 
 export function MigrationListMenuButton() {
@@ -29,8 +29,8 @@ export function MigrationListMenuButton() {
 					className="flex items-center cursor-pointer"
 					onClick={() => {
 						setQueryStates({
-							...queryStates,
 							showArchived: !queryStates.showArchived,
+							page: 1,
 						});
 						setDropdownOpen(false);
 					}}

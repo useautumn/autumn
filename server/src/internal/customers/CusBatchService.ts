@@ -44,27 +44,40 @@ export class CusBatchService {
 	}: {
 		ctx: AutumnContext;
 		internalCustomerIds: string[];
-	}) {
-		const { org, env, db } = ctx;
-		const cusProductLimit = getOrgCusProductLimit({
-			orgId: ctx.org.id,
-			orgSlug: ctx.org.slug,
-		});
+	}): Promise<FullCustomer[]> {
+		if (internalCustomerIds.length === 0) return [];
 
-		const query = getPaginatedFullCusQuery({
+		const query = getCursorPaginatedFullCusQuery({
 			orgId: ctx.org.id,
 			env: ctx.env,
-			includeInvoices: true,
-			withEntities: true,
-			withTrialsUsed: false,
 			withSubs: true,
-			limit: internalCustomerIds.length || 100,
-			offset: 0,
+			withEntities: true,
+			entitiesLimit: getOrgEntitiesLimit({
+				orgId: ctx.org.id,
+				orgSlug: ctx.org.slug,
+			}),
+			limit: internalCustomerIds.length,
 			internalCustomerIds,
-			cusProductLimit,
+			cusProductLimit: getOrgCusProductLimit({
+				orgId: ctx.org.id,
+				orgSlug: ctx.org.slug,
+			}),
 		});
-		const results = await db.execute(query);
-		const fullCustomers = results as unknown as FullCustomer[];
+		const results = await ctx.db.execute(query);
+		const flat = (results[0] ?? {
+			customers: [],
+			customer_products: [],
+			customer_entitlements: [],
+			extra_customer_entitlements: [],
+			pooled_customer_entitlements: [],
+			customer_prices: [],
+			entitlements: [],
+			rollovers: [],
+			replaceables: [],
+			free_trials: [],
+			subscriptions: [],
+		}) as unknown as FlattenedCustomerRow;
+		const fullCustomers = reassembleFlattenedCustomer(flat);
 
 		// Fire-and-forget: queue SQS job for any stale entitlement resets
 		triggerBatchResetCustomerEntitlements({

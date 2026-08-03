@@ -1,12 +1,13 @@
 import type { FullCustomer, MigrationItemRunData } from "@autumn/shared";
 import { customerFilterMatchesFullCustomer } from "@autumn/shared/api/customers/utils/match/index.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
+import { LAZY_MIGRATION_RUNS_DISABLED } from "@/internal/migrations/v2/run/utils/migrationRunConstants.js";
 import { shouldRunMigrationInline } from "@/internal/migrations/v2/utils/shouldRunMigrationInline.js";
 import { MIGRATION_LAZY_TASK_PRIORITY_SECONDS } from "@/trigger/migrations/migrationTaskQueue.js";
 import {
 	executeRunMigrationCustomer,
 	runMigrationCustomerTask,
-} from "@/trigger/migrations/runMigrationCustomerTask.js";
+} from "@/trigger/migrations/runMigrationCustomerTask/runMigrationCustomerTask.js";
 
 /**
  * For each pending lazy migration on `ctx.org`, decide whether this customer
@@ -29,6 +30,8 @@ export const checkPendingMigrationsForCustomer = async ({
 		"id" | "internal_id" | "customer_products" | "migration_item_runs"
 	>;
 }): Promise<void> => {
+	if (LAZY_MIGRATION_RUNS_DISABLED) return;
+
 	// Short-circuit when we're already inside a Trigger.dev task. A migration
 	// worker loading the customer via `CusService.getFull` would otherwise
 	// re-enter this helper and enqueue another task. Flag is set by

@@ -11,7 +11,7 @@ import { initScenario, s } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";
 import { migrateCustomer } from "@/internal/migrations/v2/run/migrateCustomer/index.js";
 import { prepareMigration } from "@/internal/migrations/v2/run/runMigration.js";
-import { PreparedMigrationSnapshotSchema } from "@/trigger/migrations/migrationTaskPayload.js";
+import { PreparedMigrationSnapshotSchema } from "@/internal/migrations/v2/run/types/migrationRunPayloads.js";
 
 test.concurrent(
 	`${chalk.yellowBright("migrations prepare runtime: schema defaults preserve prepared artifact identity")}`,

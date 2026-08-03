@@ -60,9 +60,9 @@ export const migrationRuns = pgTable(
 			foreignColumns: [organizations.id],
 			name: "migration_runs_org_id_fkey",
 		}).onDelete("cascade"),
-		// One queued/running run per migration definition. Different migrations
-		// can be active concurrently — correctness lives at the per-customer
-		// `migration_item_runs_live_unique` claim.
+		// One queued/running run per migration definition. Org-level ordering
+		// (one live run per org) is trigger.dev's job: the run task queues on
+		// migrationRunQueue with a per-(org, env) concurrencyKey.
 		uniqueIndex("migration_runs_active_per_migration_unique")
 			.on(table.migration_internal_id)
 			.where(sql`${table.status} IN ('queued', 'running')`),

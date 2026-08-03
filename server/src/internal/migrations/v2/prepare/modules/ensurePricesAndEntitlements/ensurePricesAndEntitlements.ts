@@ -13,6 +13,7 @@ import { enrichEntitlementsWithFeatures } from "@autumn/shared/utils/productUtil
 import { itemToPriceAndEnt } from "@autumn/shared/utils/productV2Utils/productItemUtils/mappers/itemToPriceAndEnt.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { initStripeResourcesForProducts } from "@/internal/billing/v2/providers/stripe/utils/common/initStripeResourcesForProducts.js";
+import { toCatalogPlanFilter } from "@/internal/migrations/v2/batchOperations/scope/operationScope.js";
 import { EntitlementService } from "@/internal/products/entitlements/EntitlementService.js";
 import { ProductService } from "@/internal/products/ProductService.js";
 import { PriceService } from "@/internal/products/prices/PriceService.js";
@@ -128,9 +129,12 @@ const getMatchedProducts = async ({
 		returnAll: true,
 	});
 
+	// Row-decidable fields (custom/paid/recurring/price) are stripped: prepare
+	// must cover every product the batch lane's catalog matching can target,
+	// and row constraints never change which PRODUCTS need prepared rows.
 	return products.filter((product) =>
 		planFilterMatchesProduct({
-			filter: op.plan_filter,
+			filter: toCatalogPlanFilter(op.plan_filter),
 			product,
 		}),
 	);

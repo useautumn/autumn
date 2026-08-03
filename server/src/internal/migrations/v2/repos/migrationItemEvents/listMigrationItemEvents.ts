@@ -30,8 +30,12 @@ export const normalizeMigrationItemEventJson = (
 	event: TinybirdMigrationItemEvent,
 ): TinybirdMigrationItemEvent => ({
 	...event,
-	item_preview: parseJsonish(event.item_preview) as TinybirdMigrationItemEvent["item_preview"],
-	response: parseJsonish(event.response) as TinybirdMigrationItemEvent["response"],
+	item_preview: parseJsonish(
+		event.item_preview,
+	) as TinybirdMigrationItemEvent["item_preview"],
+	response: parseJsonish(
+		event.response,
+	) as TinybirdMigrationItemEvent["response"],
 });
 
 export const listMigrationItemEvents = async ({
@@ -76,9 +80,7 @@ export const listMigrationItemEvents = async ({
 		`listMigrationItemEvents: querying org=${queryParams.org_id} env=${queryParams.env} migration=${queryParams.migration_internal_id}`,
 	);
 	const result = await migrationTinybird.listItemEvents.query(queryParams);
-	ctx.logger.info(
-		`listMigrationItemEvents: got ${result.data.length} results`,
-	);
+	ctx.logger.info(`listMigrationItemEvents: got ${result.data.length} results`);
 
 	return (result.data as TinybirdMigrationItemEvent[]).map(
 		normalizeMigrationItemEventJson,
@@ -109,9 +111,7 @@ const listMigrationItemEventsBySql = async ({
 	];
 
 	if (migrationRunId) {
-		conditions.push(
-			`migration_run_id = '${escapeString(migrationRunId)}'`,
-		);
+		conditions.push(`migration_run_id = '${escapeString(migrationRunId)}'`);
 	}
 
 	const idList = itemIds.map((id) => `'${escapeString(id)}'`).join(",");
@@ -144,9 +144,7 @@ const listMigrationItemEventsBySql = async ({
 	const result = await migrationTinybird!.sql<TinybirdMigrationItemEvent>(sql);
 	const rows = result.data ?? [];
 
-	ctx.logger.info(
-		`listMigrationItemEventsBySql: got ${rows.length} results`,
-	);
+	ctx.logger.info(`listMigrationItemEventsBySql: got ${rows.length} results`);
 
 	return rows.map(normalizeMigrationItemEventJson);
 };
