@@ -3,21 +3,23 @@ import {
 	isFixedPrice,
 	type Price,
 	type Product,
+	productToStripeIds,
 	type UsagePriceConfig,
 } from "@autumn/shared";
 import type { NormalizedStripeSyncCandidate } from "../normalizeStripeObject.js";
 
-const getStripeProductIdForAutumnPrice = ({
+/** A fixed price is keyed to its plan's Stripe products (primary + aliases). */
+const getStripeProductIdsForAutumnPrice = ({
 	price,
 	product,
 }: {
 	price: Price;
 	product: Product;
-}): string | null => {
-	if (isFixedPrice(price)) return product.processor?.id ?? null;
+}): string[] => {
+	if (isFixedPrice(price)) return productToStripeIds({ product });
 
 	const config = price.config as FixedPriceConfig | UsagePriceConfig;
-	return config.stripe_product_id ?? null;
+	return config.stripe_product_id ? [config.stripe_product_id] : [];
 };
 
 export const stripeProductIdMatchesAutumnPrice = ({
@@ -31,10 +33,7 @@ export const stripeProductIdMatchesAutumnPrice = ({
 }): boolean => {
 	if (!candidate.stripeProductId) return false;
 
-	return (
-		getStripeProductIdForAutumnPrice({
-			price,
-			product,
-		}) === candidate.stripeProductId
+	return getStripeProductIdsForAutumnPrice({ price, product }).includes(
+		candidate.stripeProductId,
 	);
 };

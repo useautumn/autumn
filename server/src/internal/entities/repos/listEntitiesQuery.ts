@@ -7,6 +7,7 @@ import { type SQL, sql } from "drizzle-orm";
 import { planetScaleTag } from "@/db/dbUtils.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { getFullSubjectRowsQuery } from "@/internal/customers/repos/getFullSubject/getFullSubjectRowsQuery.js";
+import { buildPlanScopeCte, planScopeJoinSql } from "./planFilterScope.js";
 
 type EntityListFilters = Pick<
 	ListEntitiesParams,
@@ -30,14 +31,10 @@ export const hasEntityListFilters = ({
 };
 
 const getEntityListFilterSql = ({
-	plans,
 	processors,
 	search,
 	customerId,
-	inStatuses,
-}: EntityListFilters & {
-	inStatuses: CusProductStatus[];
-}) => {
+}: Omit<EntityListFilters, "plans">) => {
 	const filters: SQL[] = [];
 
 	const trimmedCustomerId = customerId?.trim();
@@ -45,35 +42,10 @@ const getEntityListFilterSql = ({
 		filters.push(sql`AND c.id = ${trimmedCustomerId}`);
 	}
 
-	if (plans && plans.length > 0) {
-		const planConditions = plans.map((plan) => {
-			if (plan.versions && plan.versions.length > 0) {
-				return sql`(p_filter.id = ${plan.id} AND p_filter.version IN (${sql.join(
-					plan.versions.map((version) => sql`${version}`),
-					sql`, `,
-				)}))`;
-			}
-
-			return sql`p_filter.id = ${plan.id}`;
-		});
-
-		filters.push(sql`AND EXISTS (
-			SELECT 1
-			FROM customer_products cp_filter
-			JOIN products p_filter
-				ON p_filter.internal_id = cp_filter.internal_product_id
-			WHERE cp_filter.internal_customer_id = e.internal_customer_id
-				AND (
-					cp_filter.internal_entity_id IS NULL
-					OR cp_filter.internal_entity_id = e.internal_id
-				)
-				AND cp_filter.status = ANY(ARRAY[${sql.join(
-					inStatuses.map((status) => sql`${status}`),
-					sql`, `,
-				)}])
-				AND (${sql.join(planConditions, sql` OR `)})
-		)`);
-	}
+	// Plans are NOT a filter here. As a correlated EXISTS this re-probed
+	// customer_products for every entity in the org — 197M buffer reads and 176s
+	// to return 20 rows on mintlify, because the LIMIT can't push through a
+	// per-row subquery. Callers join plan_scopes instead (see buildPlanScopeCte).
 
 	const trimmedSearch = search?.trim();
 	if (trimmedSearch) {
@@ -113,14 +85,17 @@ const getEntityListBaseSql = ({
 	orgId,
 	env,
 	filterSql,
+	planJoinSql = sql``,
 }: {
 	orgId: string;
 	env: AppEnv;
 	filterSql: SQL;
+	planJoinSql?: SQL;
 }) => sql`
 	FROM entities e
 	JOIN customers c
 		ON c.internal_id = e.internal_customer_id
+	${planJoinSql}
 	WHERE e.org_id = ${orgId}
 		AND e.env = ${env}
 		AND c.org_id = ${orgId}
@@ -140,20 +115,25 @@ export const getPaginatedEntitySubjectsQuery = ({
 	inStatuses: CusProductStatus[];
 }) => {
 	const filterSql = getEntityListFilterSql({
-		plans: query.plans,
 		processors: query.processors,
 		search: query.search,
 		customerId: query.customer_id,
-		inStatuses,
 	});
 
+	const plans = query.plans;
+	const planScopeCte = plans?.length
+		? buildPlanScopeCte({ orgId, env, plans, inStatuses })
+		: sql``;
+
 	const leadingCtes = sql`
-		WITH entity_records AS (
+		WITH ${planScopeCte}
+		entity_records AS (
 			SELECT e.*
 			${getEntityListBaseSql({
 				orgId,
 				env,
 				filterSql,
+				planJoinSql: plans?.length ? planScopeJoinSql : sql``,
 			})}
 			ORDER BY e.internal_id DESC
 			LIMIT ${query.limit}
@@ -178,6 +158,70 @@ export const getPaginatedEntitySubjectsQuery = ({
 		entityScopedOnly: true,
 		queryTag: "getPaginatedEntitySubjects",
 	});
+};
+
+/**
+ * Counting with a plan filter can't reuse the page query's EXISTS: a COUNT has
+ * no LIMIT to stop it, so the subquery re-probes customer_products for every
+ * entity in the org — 197M buffer reads / 150s on mintlify. Resolving the
+ * matching (customer, entity-scope) pairs once from the plan side instead is
+ * 0.33s / 458k buffers for the same answer.
+ */
+const countEntitiesMatchingPlans = async ({
+	ctx,
+	plans,
+	inStatuses,
+	filterSql,
+}: {
+	ctx: AutumnContext;
+	plans: NonNullable<EntityListFilters["plans"]>;
+	inStatuses: CusProductStatus[];
+	filterSql: SQL;
+}) => {
+	const planConditions = plans.map((plan) =>
+		plan.versions && plan.versions.length > 0
+			? sql`(p.id = ${plan.id} AND p.version IN (${sql.join(
+					plan.versions.map((version) => sql`${version}`),
+					sql`, `,
+				)}))`
+			: sql`p.id = ${plan.id}`,
+	);
+
+	const rows = await ctx.db.execute(sql`
+		WITH matching_scopes AS (
+			SELECT DISTINCT cp.internal_customer_id, cp.internal_entity_id
+			FROM customer_products cp
+			JOIN products p
+				ON p.internal_id = cp.internal_product_id
+			WHERE p.org_id = ${ctx.org.id}
+				AND p.env = ${ctx.env}
+				AND cp.status = ANY(ARRAY[${sql.join(
+					inStatuses.map((status) => sql`${status}`),
+					sql`, `,
+				)}])
+				AND (${sql.join(planConditions, sql` OR `)})
+		)
+		SELECT COUNT(DISTINCT e.internal_id) AS total_count
+		FROM matching_scopes ms
+		JOIN entities e
+			ON e.internal_customer_id = ms.internal_customer_id
+			AND (
+				ms.internal_entity_id IS NULL
+				OR ms.internal_entity_id = e.internal_id
+			)
+		JOIN customers c
+			ON c.internal_id = e.internal_customer_id
+		WHERE e.org_id = ${ctx.org.id}
+			AND e.env = ${ctx.env}
+			AND c.org_id = ${ctx.org.id}
+			AND c.env = ${ctx.env}
+			${filterSql}
+		${planetScaleTag({ query: "countEntitiesMatchingPlans" })}
+	`);
+
+	const rawCount = (rows[0] as { total_count?: string | number } | undefined)
+		?.total_count;
+	return Number(rawCount ?? 0);
 };
 
 const countEntities = async ({
@@ -223,14 +267,22 @@ export const countFilteredEntitiesByOrgIdAndEnv = async ({
 		return countEntitiesByOrgIdAndEnv({ ctx });
 	}
 
-	return countEntities({
-		ctx,
-		filterSql: getEntityListFilterSql({
-			plans: query.plans,
-			processors: query.processors,
-			search: query.search,
-			customerId: query.customerId,
-			inStatuses,
-		}),
+	// Plans are applied by countEntitiesMatchingPlans' driving CTE, not as an
+	// EXISTS, so they're deliberately left out of this filter.
+	const nonPlanFilterSql = getEntityListFilterSql({
+		processors: query.processors,
+		search: query.search,
+		customerId: query.customerId,
 	});
+
+	if (query.plans && query.plans.length > 0) {
+		return countEntitiesMatchingPlans({
+			ctx,
+			plans: query.plans,
+			inStatuses,
+			filterSql: nonPlanFilterSql,
+		});
+	}
+
+	return countEntities({ ctx, filterSql: nonPlanFilterSql });
 };

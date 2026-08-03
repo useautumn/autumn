@@ -1,64 +1,102 @@
+import { InlineAction } from "@autumn/ui";
+import { PlusIcon } from "@phosphor-icons/react";
 import {
-	isProductAlreadyEnabled,
-	isProductCurrentlyAttached,
-} from "@autumn/shared";
-import { useProductsQuery } from "@/hooks/queries/useProductsQuery";
-import { useCusQuery } from "@/views/customers/customer/hooks/useCusQuery";
+	type PlanRowScope,
+	ScopedPlanRow,
+	SelectedPlanRow,
+} from "@/components/forms/shared";
 import { useAttachFormContext } from "../context/AttachFormProvider";
+import { getAttachDisplayItems } from "../utils/grantFreeUtils";
+import { AttachAdditionalPlanRow } from "./AttachAdditionalPlanRow";
+import { AttachPlanPrepaidQuantityFields } from "./AttachPlanPrepaidQuantityFields";
 
-export function AttachProductSelection() {
-	const { form, hasCustomizations, entityId } = useAttachFormContext();
-
-	const { products } = useProductsQuery();
-	const availableProducts = products.filter((p) => !p.archived);
-	const { customer } = useCusQuery();
-
-	const productId = form.state.values.productId;
+export function AttachProductSelection({
+	scope,
+}: {
+	scope?: PlanRowScope;
+} = {}) {
+	const {
+		form,
+		formValues,
+		hasCustomizations,
+		entityId,
+		product,
+		products,
+		additionalPlans,
+		handleEditPlan,
+	} = useAttachFormContext();
+	const { productId, additionalPlans: additionalPlanValues } = formValues;
+	const { isMultiPlan, canAddPlan, getProductOptionState, handleAddPlan } =
+		additionalPlans;
+	const availableProducts = products.filter((product) => !product.archived);
+	const displayedPrimaryItems = getAttachDisplayItems({
+		items: formValues.items,
+		productItems: product?.items,
+		grantFree: formValues.grantFree,
+	});
 
 	return (
-		<div className="space-y-4">
-			<form.AppField name="productId">
-				{(field) => (
-					<field.SelectField
-						label=""
-						searchable
-						defaultOpen={!productId}
-						options={availableProducts.map((p) => {
-							const entityIdVal = entityId ?? undefined;
-							const alreadyEnabled = isProductAlreadyEnabled({
-								productId: p.id,
-								customer,
-								entityId: entityIdVal,
-							});
-							const currentlyAttached =
-								!alreadyEnabled &&
-								isProductCurrentlyAttached({
-									productId: p.id,
-									customer,
-									entityId: entityIdVal,
+		<div className="space-y-2">
+			{isMultiPlan && productId ? (
+				<div className="space-y-1.5">
+					<ScopedPlanRow scope={scope}>
+						<SelectedPlanRow
+							productId={productId}
+							product={product}
+							customItems={displayedPrimaryItems}
+							isCustom={hasCustomizations || formValues.grantFree}
+							onEdit={formValues.grantFree ? undefined : () => handleEditPlan()}
+						/>
+					</ScopedPlanRow>
+					<AttachPlanPrepaidQuantityFields
+						items={displayedPrimaryItems ?? product?.items}
+						quantities={formValues.prepaidOptions}
+					/>
+				</div>
+			) : (
+				<form.AppField name="productId">
+					{(field) => (
+						<field.SelectField
+							label=""
+							searchable
+							defaultOpen={!productId}
+							options={availableProducts.map((product) => {
+								const optionState = getProductOptionState({
+									product,
+									entityId,
 								});
 
-							return {
-								label: p.name,
-								value: p.id,
-								disabledValue: alreadyEnabled ? "Already Enabled" : undefined,
-								badgeValue: currentlyAttached ? "Already Enabled" : undefined,
-							};
-						})}
-						placeholder="Select Product"
-						searchPlaceholder="Search plans..."
-						emptyText="No products found"
-						hideFieldInfo
-						selectValueAfter={
-							hasCustomizations && productId ? (
-								<span className="text-xs bg-green-500/10 text-green-500 px-1 py-0 rounded-md">
-									Custom
-								</span>
-							) : undefined
-						}
-					/>
-				)}
-			</form.AppField>
+								return {
+									label: product.name,
+									value: product.id,
+									...optionState,
+								};
+							})}
+							placeholder="Select Product"
+							searchPlaceholder="Search plans..."
+							emptyText="No products found"
+							hideFieldInfo
+							selectValueAfter={
+								hasCustomizations && productId ? (
+									<span className="rounded-md bg-green-500/10 px-1 py-0 text-xs text-green-500">
+										Custom
+									</span>
+								) : undefined
+							}
+						/>
+					)}
+				</form.AppField>
+			)}
+
+			{additionalPlanValues.map((plan) => (
+				<AttachAdditionalPlanRow key={plan._id} plan={plan} />
+			))}
+
+			{canAddPlan && (
+				<InlineAction icon={<PlusIcon size={11} />} onClick={handleAddPlan}>
+					Add another product
+				</InlineAction>
+			)}
 		</div>
 	);
 }

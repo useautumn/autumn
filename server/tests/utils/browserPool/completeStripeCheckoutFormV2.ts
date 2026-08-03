@@ -20,11 +20,14 @@ export const completeStripeCheckoutFormV2 = async ({
 	overrideQuantity,
 	promoCode,
 	billingAddress,
+	addOptionalItem,
 }: {
 	url: string;
 	overrideQuantity?: number;
 	promoCode?: string;
 	billingAddress?: StripeCheckoutBillingAddress;
+	/** Click "Add" on the first Stripe Checkout optional item. */
+	addOptionalItem?: boolean;
 }): Promise<void> => {
 	const concurrency = Number(process.env.TEST_FILE_CONCURRENCY || "0");
 	const timeout = concurrency > 1 ? 10000 : 0;
@@ -36,7 +39,7 @@ export const completeStripeCheckoutFormV2 = async ({
 		await kernelExecute({
 			sessionId,
 			fn: stripeCheckout,
-			args: { url, overrideQuantity, promoCode, billingAddress },
+			args: { url, overrideQuantity, promoCode, billingAddress, addOptionalItem },
 		});
 		console.log("[completeStripeCheckoutFormV2] Done");
 
@@ -49,7 +52,7 @@ export const completeStripeCheckoutFormV2 = async ({
 	console.log("[completeStripeCheckoutFormV2] Using local Playwright...");
 	await playwrightPool.runInPage({
 		fn: stripeCheckout,
-		args: { url, overrideQuantity, promoCode, billingAddress },
+		args: { url, overrideQuantity, promoCode, billingAddress, addOptionalItem },
 	});
 
 	if (timeout > 0) {

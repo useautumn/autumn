@@ -1,7 +1,7 @@
 import chalk from "chalk";
 import type { Context } from "hono";
 import type { AutumnContext, HonoEnv } from "@/honoUtils/HonoEnv.js";
-import { addExtrasToLogs } from "@/utils/logging/addContextToLogs";
+import { addExtrasToLogs } from "@/utils/logging/addContextToLogs.js";
 import { maskExtraLogs } from "@/utils/logging/maskExtraLogs.js";
 
 const HIGH_VOLUME_SUCCESS_ROUTES = new Set<string>([
@@ -11,6 +11,12 @@ const HIGH_VOLUME_SUCCESS_ROUTES = new Set<string>([
 	// "/v1/track",
 	// "/v1/customers.get_or_create",
 	// "/v1/entities.get",
+]);
+
+// Event pages run to megabytes each, dwarfing every other route's ingest.
+const RESPONSE_BODY_EXCLUDED_ROUTES = new Set<string>([
+	"/v1/events/list",
+	"/v1/events.list",
 ]);
 
 const SUCCESS_REQUEST_LOG_SAMPLE_RATE = Number.parseFloat(
@@ -54,7 +60,10 @@ export const logRequestResult = async ({
 			extras: ctx.extraLogs,
 		});
 
-		let finalResponseBody = responseBody;
+		const skipResponseBody =
+			isSuccess && RESPONSE_BODY_EXCLUDED_ROUTES.has(c.req.path);
+
+		let finalResponseBody = skipResponseBody ? null : responseBody;
 		if (finalResponseBody === undefined && c.req.path.includes("/v1")) {
 			const contentType = c.res.headers.get("content-type");
 			if (contentType?.includes("application/json")) {
@@ -74,6 +83,9 @@ export const logRequestResult = async ({
 			{
 				statusCode,
 				durationMs,
+				...(ctx.requestLogContext === undefined
+					? {}
+					: { req: ctx.requestLogContext }),
 				res: finalResponseBody ?? null,
 			},
 		);

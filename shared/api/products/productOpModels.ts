@@ -1,15 +1,19 @@
 import { CustomerBillingControlsParamsSchema } from "@models/cusModels/billingControls/customerBillingControls.js";
 import { CreateFreeTrialSchema } from "@models/productModels/freeTrialModels/freeTrialModels.js";
 import { ProductConfigParamsSchema } from "@models/productModels/productConfig/productConfig.js";
+import { Infinite } from "@models/productModels/productEnums.js";
 import { ProductMetadataSchema } from "@models/productModels/productMetadata.js";
 import { ProductItemSchema } from "@models/productV2Models/productItemModels/productItemModels.js";
 import { idRegex } from "@utils/utils.js";
 import { z } from "zod/v4";
 import { AppEnv } from "../../models/genModels/genEnums.js";
 import { PlanLicenseParamsSchema } from "./crud/licenses/planLicenseParams.js";
+import { IncludedUsageParamsSchema } from "./items/crud/createPlanItemParamsV1.js";
 
 // Use the full ProductItemSchema but mark backend fields as internal
-export const CreateProductItemParamsSchema = ProductItemSchema;
+export const CreateProductItemParamsSchema = ProductItemSchema.extend({
+	included_usage: IncludedUsageParamsSchema.or(z.literal(Infinite)).nullish(),
+});
 
 // Base product params
 

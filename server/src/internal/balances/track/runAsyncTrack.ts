@@ -1,7 +1,7 @@
 import { ErrCode, RecaseError, type TrackParams } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
+import { globalAsyncTrackSqsBatcher } from "./AsyncTrackSqsBatcher.js";
 import { getAsyncTrackMessageGroupId } from "./utils/getAsyncTrackMessageGroupId.js";
-import { queueTrack } from "./utils/queueTrack.js";
 
 const ASYNC_TRACK_UNAVAILABLE_MESSAGE =
 	"Async track is not available right now";
@@ -26,22 +26,32 @@ export const runAsyncTrack = async ({
 	}
 	const messageDeduplicationId = ctx.id;
 
-	const queued = await queueTrack({
-		ctx,
-		body,
-		queueUrl,
-		messageGroupId: getAsyncTrackMessageGroupId({
-			orgId: ctx.org.id,
-			env: ctx.env,
-			customerId: body.customer_id,
-			entityId: body.entity_id,
+	try {
+		await globalAsyncTrackSqsBatcher.enqueue({
+			queueUrl,
+			payload: {
+				orgId: ctx.org.id,
+				env: ctx.env,
+				customerId: body.customer_id,
+				entityId: body.entity_id,
+				requestId: ctx.id,
+				apiVersion: ctx.apiVersion.value,
+				body,
+			},
+			messageGroupId: getAsyncTrackMessageGroupId({
+				orgId: ctx.org.id,
+				env: ctx.env,
+				customerId: body.customer_id,
+				entityId: body.entity_id,
+				messageDeduplicationId,
+			}),
 			messageDeduplicationId,
-		}),
-		messageDeduplicationId,
-		logFallback: false,
-		markQueuedForReplay: false,
-	});
-	if (!queued) {
+		});
+	} catch (error) {
+		ctx.logger.warn("[track] Queue fallback failed (SQS)", {
+			type: "track_queue_fallback_failed",
+			error,
+		});
 		throw new RecaseError({
 			message: ASYNC_TRACK_UNAVAILABLE_MESSAGE,
 			code: ErrCode.InternalError,

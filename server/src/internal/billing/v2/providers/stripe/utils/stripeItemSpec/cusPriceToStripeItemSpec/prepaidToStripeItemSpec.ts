@@ -8,6 +8,7 @@ import {
 	isPrepaidPrice,
 	priceUtils,
 	type StripeItemSpec,
+	type StripeItemSpecMode,
 	type UsagePriceConfig,
 } from "@autumn/shared";
 import { notNullish } from "@server/utils/genUtils";
@@ -30,7 +31,11 @@ export const prepaidToStripeItemSpec = ({
 	cusEntWithCusProduct: FullCusEntWithFullCusProduct;
 	currency: string;
 	orgDefault: string;
-	options?: { isDuplicateProductId?: boolean; billingVersion?: BillingVersion };
+	options?: {
+		isDuplicateProductId?: boolean;
+		billingVersion?: BillingVersion;
+		mode?: StripeItemSpecMode;
+	};
 }): StripeItemSpec | null => {
 	const billing = cusEntToBillingObjects({ cusEnt: cusEntWithCusProduct });
 	if (!billing) return null;
@@ -74,7 +79,14 @@ export const prepaidToStripeItemSpec = ({
 		};
 	}
 
-	if (isEntityScoped || isTieredOneOff || options?.isDuplicateProductId) {
+	const inlineMode = options?.mode === "inline";
+
+	if (
+		isEntityScoped ||
+		isTieredOneOff ||
+		options?.isDuplicateProductId ||
+		inlineMode
+	) {
 		const inlinePrice = cusEntToInlineStripePrice({
 			cusEnt: cusEntWithCusProduct,
 			org: ctx.org,
@@ -90,6 +102,7 @@ export const prepaidToStripeItemSpec = ({
 			autumnCusEnt: cusEntWithCusProduct,
 			metadata: {
 				inline_price: "true",
+				...(inlineMode && { inline_mode: "true" }),
 			},
 		};
 	}

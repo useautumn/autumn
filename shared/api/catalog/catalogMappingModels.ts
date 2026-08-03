@@ -43,6 +43,8 @@ export const CatalogItemMappingSchema = z.object({
 export const CatalogPlanMappingSchema = z.object({
 	plan_id: z.string(),
 	mapping: CatalogStripeMappingSchema,
+	/** Extra Stripe products that also resolve to this plan when syncing from Stripe. */
+	additional_mappings: z.array(CatalogStripeMappingSchema).default([]),
 	item_mappings: z.array(CatalogItemMappingSchema),
 });
 
@@ -60,6 +62,7 @@ export const CatalogUpdateMappingsParamsSchema = z.object({
 			z.object({
 				plan_id: z.string(),
 				stripe_product_id: z.string().nullable(),
+				additional_stripe_product_ids: z.array(z.string()).default([]),
 				scope: CatalogPlanMappingPriceScopeSchema.default("base_price"),
 				item_mappings: z
 					.array(

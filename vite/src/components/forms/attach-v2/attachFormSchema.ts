@@ -15,8 +15,31 @@ export interface FormCustomLineItem {
 	description: string;
 }
 
+/** An extra plan included with the primary in the immediate schedule phase. */
+const AttachAdditionalPlanSchema = z.object({
+	_id: z.string(),
+	productId: z.string(),
+	prepaidOptions: z.record(z.string(), z.number().nonnegative().optional()),
+	items: z.custom<ProductItem[]>().nullable(),
+	version: z.number().positive().optional(),
+	isCustom: z.boolean(),
+	entityId: z.string().nullable().optional(),
+});
+
+export type AttachAdditionalPlan = z.infer<typeof AttachAdditionalPlanSchema>;
+
+export const EMPTY_ADDITIONAL_PLAN: Omit<AttachAdditionalPlan, "_id"> = {
+	productId: "",
+	prepaidOptions: {},
+	items: null,
+	version: undefined,
+	isCustom: false,
+	entityId: null,
+};
+
 export const AttachFormSchema = z.object({
 	productId: z.string(),
+	additionalPlans: z.array(AttachAdditionalPlanSchema),
 	prepaidOptions: z.record(z.string(), z.number().nonnegative().optional()),
 	licenseQuantities: z.record(z.string(), z.number().nonnegative().optional()),
 	items: z.custom<ProductItem[]>().nullable(),

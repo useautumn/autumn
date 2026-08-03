@@ -10,6 +10,7 @@ import {
 	AttachAdvancedSection,
 	AttachFormProvider,
 	AttachLicenseLossWarning,
+	AttachMultiPlanSection,
 	AttachPlanOptions,
 	AttachPlanSection,
 	AttachProductSelection,
@@ -26,6 +27,7 @@ import {
 	GenerateCheckoutStageWithPreview,
 	SchedulePlanStageWithPreview,
 } from "@/components/forms/shared/GenerateCheckoutStage";
+import { DisabledTooltipButton } from "@/components/forms/shared";
 import { SendInvoiceStageWithPreview } from "@/components/forms/shared/SendInvoiceStage";
 import { PreviewErrorDisplay } from "@/components/forms/update-subscription-v2/components/PreviewErrorDisplay";
 import {
@@ -104,8 +106,10 @@ function ReviewPreviewSkeleton() {
 }
 
 function ReviewPreviewBlock() {
-	const { previewQuery, formValues, customerId } = useAttachFormContext();
+	const { previewQuery, formValues, customerId, additionalPlans } =
+		useAttachFormContext();
 	const hasProductSelected = !!formValues.productId;
+	const startDate = additionalPlans.isMultiPlan ? null : formValues.startDate;
 	const {
 		data: previewData,
 		error: queryError,
@@ -142,11 +146,11 @@ function ReviewPreviewBlock() {
 
 	const previewTotals = buildAttachPreviewTotals({
 		previewData,
-		startDate: formValues.startDate,
+		startDate,
 	});
 	const previewLineItems = getAttachPreviewLineItems({
 		previewData,
-		startDate: formValues.startDate,
+		startDate,
 	});
 	const lineItemTotals = previewData
 		? previewTotals.filter((total) => total.variant !== "primary")
@@ -172,7 +176,7 @@ function ReviewPreviewBlock() {
 					transition={{ duration: 0.3, ease: [0.25, 0.1, 0.25, 1] }}
 				>
 					<AttachUpdatesSection />
-					<AttachLicenseLossWarning />
+					{!additionalPlans.isMultiPlan && <AttachLicenseLossWarning />}
 					{error ? (
 						<SheetSection title="Pricing Preview" withSeparator>
 							<PreviewErrorDisplay error={error} />
@@ -226,10 +230,21 @@ function PlanDiffSkeleton() {
 }
 
 function SelectContent() {
-	const { formValues, entityId, onScopeChange } = useAttachFormContext();
+	const { formValues, entityId, onScopeChange, additionalPlans } =
+		useAttachFormContext();
 	const { closeSheet, setSheet } = useSheetStore();
 	const itemId = useSheetStore((s) => s.itemId);
 	const hasProductSelected = !!formValues.productId;
+	const hasPendingPlan = formValues.additionalPlans.some(
+		(plan) => !plan.productId,
+	);
+	let previewDisabledReason: string | null = null;
+	if (hasPendingPlan) {
+		previewDisabledReason = "Select a product for each row before previewing.";
+	} else if (additionalPlans.hasInvalidPlanScopes) {
+		previewDisabledReason =
+			"Choose different scopes for plans in the same group or already active at this scope.";
+	}
 
 	const {
 		hasEntities,
@@ -240,6 +255,53 @@ function SelectContent() {
 	} = useScopeEntitySearch({ selectedEntityId: entityId ?? undefined });
 
 	const [createEntityOpen, setCreateEntityOpen] = useState(false);
+	const [rootScopeOpen, setRootScopeOpen] = useState(false);
+	const scopeSelector = hasEntities ? (
+		<>
+			<EntityScopeSelector
+				entities={entities}
+				scopeEntityId={entityId ?? undefined}
+				onScopeChange={(value) => onScopeChange?.(value)}
+				onSearchChange={setEntitySearch}
+				isLoading={isEntitiesLoading}
+				wrapInSection={false}
+				showLabel={!additionalPlans.isMultiPlan}
+				footer={
+					<div className="border-t py-1.5 px-2">
+						<Button
+							variant="muted"
+							className="w-full"
+							onClick={() => setCreateEntityOpen(true)}
+						>
+							<PlusIcon
+								className="size-[14px] text-muted-foreground"
+								weight="regular"
+							/>
+							Create new entity
+						</Button>
+					</div>
+				}
+			/>
+
+			{!additionalPlans.isMultiPlan &&
+				(entityId ? (
+					<div className="pt-2">
+						<InfoBox variant="note">
+							Attaching plan to entity{" "}
+							<span className="font-semibold">
+								{fullEntity?.name || fullEntity?.id}
+							</span>
+						</InfoBox>
+					</div>
+				) : (
+					<div className="pt-2">
+						<InfoBox variant="note">
+							Attaching plan to customer - all entities will get access
+						</InfoBox>
+					</div>
+				))}
+		</>
+	) : null;
 
 	return (
 		<>
@@ -250,50 +312,18 @@ function SelectContent() {
 
 			<SheetSection withSeparator={false} className="pb-0">
 				<div className="space-y-2">
-					<AttachProductSelection />
-
-					{hasEntities && (
-						<EntityScopeSelector
-							entities={entities}
-							scopeEntityId={entityId ?? undefined}
-							onScopeChange={(value) => onScopeChange?.(value)}
-							onSearchChange={setEntitySearch}
-							isLoading={isEntitiesLoading}
-							wrapInSection={false}
-							footer={
-								<div className="border-t py-1.5 px-2">
-									<Button
-										variant="muted"
-										className="w-full"
-										onClick={() => setCreateEntityOpen(true)}
-									>
-										<PlusIcon
-											className="size-[14px] text-muted-foreground"
-											weight="regular"
-										/>
-										Create new entity
-									</Button>
-								</div>
-							}
-						/>
-					)}
-
-					{entityId ? (
-						<div className="pt-2">
-							<InfoBox variant="note">
-								Attaching plan to entity{" "}
-								<span className="font-semibold">
-									{fullEntity?.name || fullEntity?.id}
-								</span>
-							</InfoBox>
-						</div>
-					) : hasEntities ? (
-						<div className="pt-2">
-							<InfoBox variant="note">
-								Attaching plan to customer - all entities will get access
-							</InfoBox>
-						</div>
-					) : null}
+					<AttachProductSelection
+						scope={
+							additionalPlans.isMultiPlan && hasEntities
+								? {
+										selector: scopeSelector,
+										open: rootScopeOpen,
+										onToggle: () => setRootScopeOpen((open) => !open),
+									}
+								: undefined
+						}
+					/>
+					{!additionalPlans.isMultiPlan && scopeSelector}
 				</div>
 			</SheetSection>
 
@@ -304,9 +334,11 @@ function SelectContent() {
 					variants={STAGGER_CONTAINER}
 					className="flex flex-col"
 				>
-					<motion.div variants={STAGGER_ITEM}>
-						<AttachPlanSection />
-					</motion.div>
+					{!additionalPlans.isMultiPlan && (
+						<motion.div variants={STAGGER_ITEM}>
+							<AttachPlanSection />
+						</motion.div>
+					)}
 					<motion.div variants={STAGGER_ITEM}>
 						<SheetSection withSeparator>
 							<AttachPlanOptions />
@@ -321,13 +353,15 @@ function SelectContent() {
 							>
 								Cancel
 							</Button>
-							<Button
+							<DisabledTooltipButton
 								variant="primary"
 								onClick={() => setSheet({ type: "attach-review", itemId })}
+								disabledReason={previewDisabledReason}
+								tooltipClassName="max-w-72"
 								className="w-full"
 							>
 								Preview Changes
-							</Button>
+							</DisabledTooltipButton>
 						</SheetFooter>
 					</motion.div>
 				</motion.div>
@@ -339,27 +373,28 @@ function SelectContent() {
 }
 
 function ReviewContent() {
-	const { product, previewDiff } = useAttachFormContext();
+	const { product, previewDiff, additionalPlans } = useAttachFormContext();
 	const itemId = useSheetStore((s) => s.itemId);
+	let description = "Review configuration before confirming";
+	if (product) description = `Attaching ${product.name} to this customer`;
+	if (additionalPlans.isMultiPlan) {
+		description = `Attaching ${additionalPlans.selectedPlanCount} plans to this customer`;
+	}
+
+	let planReview = <AttachPlanSection readOnly showDiff />;
+	if (previewDiff.isDiffLoading) planReview = <PlanDiffSkeleton />;
+	if (additionalPlans.isMultiPlan) planReview = <AttachMultiPlanSection />;
 
 	return (
 		<>
 			<SheetHeader
 				title="Review Changes"
-				description={
-					product
-						? `Attaching ${product.name} to this customer`
-						: "Review configuration before confirming"
-				}
+				description={description}
 				breadcrumbs={[{ name: "Attach Product", sheet: "attach-product" }]}
 				itemId={itemId}
 			/>
 
-			{previewDiff.isDiffLoading ? (
-				<PlanDiffSkeleton />
-			) : (
-				<AttachPlanSection readOnly showDiff />
-			)}
+			{planReview}
 			<AttachAdvancedSection />
 			<ReviewPreviewBlock />
 		</>
@@ -367,14 +402,23 @@ function ReviewContent() {
 }
 
 function SendInvoiceContent() {
-	const { form, product, previewQuery, isPending, handleInvoiceAttach } =
-		useAttachFormContext();
+	const {
+		form,
+		product,
+		previewQuery,
+		isPending,
+		handleInvoiceAttach,
+		additionalPlans,
+	} = useAttachFormContext();
 	const { stripeAccount } = useOrgStripeQuery();
 	const env = useEnv();
 	const { setSheet } = useSheetStore();
 	const itemId = useSheetStore((s) => s.itemId);
 	const startDate = useStore(form.store, (state) => state.values.startDate);
-	const scheduledStartDate = isFutureStartDate(startDate) ? startDate : null;
+	const scheduledStartDate =
+		!additionalPlans.isMultiPlan && isFutureStartDate(startDate)
+			? startDate
+			: null;
 
 	return (
 		<SendInvoiceStageWithPreview
@@ -382,7 +426,7 @@ function SendInvoiceContent() {
 			previewQuery={previewQuery}
 			isPending={isPending}
 			onSubmit={handleInvoiceAttach}
-			stripeAccount={stripeAccount}
+			stripeAccount={stripeAccount ?? undefined}
 			env={env}
 			onBack={() => setSheet({ type: "attach-review", itemId })}
 			scheduledStartDate={scheduledStartDate}
@@ -391,8 +435,13 @@ function SendInvoiceContent() {
 }
 
 function CheckoutSessionContent() {
-	const { product, previewQuery, isPending, handleCheckoutAttach } =
-		useAttachFormContext();
+	const {
+		product,
+		previewQuery,
+		isPending,
+		handleCheckoutAttach,
+		additionalPlans,
+	} = useAttachFormContext();
 	const { setSheet } = useSheetStore();
 	const itemId = useSheetStore((s) => s.itemId);
 
@@ -403,6 +452,7 @@ function CheckoutSessionContent() {
 			isPending={isPending}
 			onSubmit={handleCheckoutAttach}
 			onBack={() => setSheet({ type: "attach-review", itemId })}
+			showLongLivedCheckout={!additionalPlans.isMultiPlan}
 		/>
 	);
 }
@@ -428,37 +478,40 @@ function SchedulePlanContent() {
 function SheetContent() {
 	const sheetType = useSheetStore((s) => s.type);
 	const {
-		productWithFormItems,
+		planEditorProduct,
 		showPlanEditor,
 		handlePlanEditorSave,
 		handlePlanEditorCancel,
 		formValues,
+		additionalPlans,
 	} = useAttachFormContext();
 
-	const StageContent =
-		sheetType === "attach-send-invoice"
-			? SendInvoiceContent
-			: sheetType === "attach-checkout-session"
-				? CheckoutSessionContent
-				: sheetType === "attach-schedule-plan"
-					? SchedulePlanContent
-					: sheetType === "attach-review"
-						? ReviewContent
-						: SelectContent;
+	let StageContent = SelectContent;
+	if (sheetType === "attach-send-invoice") {
+		StageContent = SendInvoiceContent;
+	} else if (sheetType === "attach-checkout-session") {
+		StageContent = CheckoutSessionContent;
+	} else if (sheetType === "attach-schedule-plan") {
+		StageContent = SchedulePlanContent;
+	} else if (sheetType === "attach-review") {
+		StageContent = ReviewContent;
+	}
 
 	return (
 		<LayoutGroup>
 			<div className="flex flex-col h-full overflow-y-auto">
 				<StageContent />
 
-				{productWithFormItems && (
+				{planEditorProduct && (
 					<InlinePlanEditor
-						product={productWithFormItems}
+						product={planEditorProduct}
 						onSave={handlePlanEditorSave}
 						onCancel={handlePlanEditorCancel}
 						isOpen={showPlanEditor}
-						enableLicenseEditing
-						initialAddLicenses={formValues.addLicenses}
+						enableLicenseEditing={!additionalPlans.isMultiPlan}
+						initialAddLicenses={
+							additionalPlans.isMultiPlan ? null : formValues.addLicenses
+						}
 					/>
 				)}
 			</div>
@@ -488,6 +541,7 @@ export function AttachProductSheet() {
 			}}
 			onSuccess={closeSheet}
 			onScopeChange={setScopeEntityId}
+			allowMultiplePlans
 		>
 			<SheetContent />
 		</AttachFormProvider>

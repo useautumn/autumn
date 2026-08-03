@@ -1,5 +1,5 @@
 import type { Entity, FullCustomer } from "@autumn/shared";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { useDebounce } from "@/hooks/useDebounce";
 import { useCusQuery } from "@/views/customers/customer/hooks/useCusQuery";
 import { useEntitiesQuery } from "./useEntitiesQuery";
@@ -21,24 +21,50 @@ export const useScopeEntitySearch = ({
 }): UseScopeEntitySearchResult => {
 	const { customer } = useCusQuery();
 	const customerEntities = (customer as FullCustomer | null)?.entities ?? [];
-	const hasEntities = customerEntities.length > 0;
 
 	const [search, setSearch] = useState("");
+	const entityCache = useRef(new Map<string, Entity>());
 	const debouncedSearch = useDebounce({ value: search, delayMs: 300 });
-	const { entities: searchedEntities, isLoading } = useEntitiesQuery({
-		search: debouncedSearch || undefined,
-		enabled: hasEntities,
-	});
+	const {
+		entities: allEntities,
+		totalCount,
+		isLoading: isLoadingAll,
+	} = useEntitiesQuery();
+	const { entities: searchedEntities, isLoading: isLoadingSearch } =
+		useEntitiesQuery({
+			search: debouncedSearch,
+			enabled: !!debouncedSearch,
+		});
+	const allKnownEntities = [
+		...new Map(
+			[...allEntities, ...customerEntities].map((entity) => [
+				entityKey(entity),
+				entity,
+			]),
+		).values(),
+	];
+	const hasEntities = allKnownEntities.length > 0 || totalCount > 0;
+	const visibleEntities = debouncedSearch ? searchedEntities : allKnownEntities;
 
-	const selectedEntity = customerEntities.find(
-		(e) => e.id === selectedEntityId || e.internal_id === selectedEntityId,
-	);
+	for (const entity of [...searchedEntities, ...allKnownEntities]) {
+		if (entity.id) entityCache.current.set(entity.id, entity);
+		if (entity.internal_id) entityCache.current.set(entity.internal_id, entity);
+	}
+	const selectedEntity = selectedEntityId
+		? entityCache.current.get(selectedEntityId)
+		: undefined;
 
 	const entities =
 		selectedEntity &&
-		!searchedEntities.some((e) => entityKey(e) === entityKey(selectedEntity))
-			? [selectedEntity, ...searchedEntities]
-			: searchedEntities;
+		!visibleEntities.some((e) => entityKey(e) === entityKey(selectedEntity))
+			? [selectedEntity, ...visibleEntities]
+			: visibleEntities;
 
-	return { hasEntities, entities, selectedEntity, isLoading, setSearch };
+	return {
+		hasEntities,
+		entities,
+		selectedEntity,
+		isLoading: isLoadingAll || (!!debouncedSearch && isLoadingSearch),
+		setSearch,
+	};
 };

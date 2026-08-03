@@ -1,9 +1,13 @@
-import type { ScheduleMismatch, SubscriptionMismatch } from "@autumn/shared";
+import type {
+	Organization,
+	ScheduleMismatch,
+	SubscriptionMismatch,
+} from "@autumn/shared";
 import type Stripe from "stripe";
 import { similarUnix } from "@/internal/customers/attach/mergeUtils/phaseUtils/phaseUtils";
 import type {
-    CusPriceCatalog,
-    StoredPriceCatalog,
+	CusPriceCatalog,
+	StoredPriceCatalog,
 } from "../compute/buildStoredPriceCatalog";
 import { evaluateItems } from "./evaluateItems";
 
@@ -14,6 +18,7 @@ export const evaluateSchedulePhases = async ({
 	scheduledPhases,
 	storedPriceCatalog,
 	cusPriceCatalog,
+	org,
 	strict,
 }: {
 	stripeCli: Stripe;
@@ -21,6 +26,7 @@ export const evaluateSchedulePhases = async ({
 	scheduledPhases: Stripe.SubscriptionScheduleUpdateParams.Phase[];
 	storedPriceCatalog: StoredPriceCatalog;
 	cusPriceCatalog: CusPriceCatalog;
+	org: Organization;
 	strict?: boolean;
 }): Promise<SubscriptionMismatch[]> => {
 	if (!sub.schedule) {
@@ -98,6 +104,7 @@ export const evaluateSchedulePhases = async ({
 				actualPhaseItems: actualPhase.items,
 				storedPriceCatalog,
 				cusPriceCatalog,
+				org,
 				phaseStartsAt: expectedStartSeconds,
 				strict,
 			}),

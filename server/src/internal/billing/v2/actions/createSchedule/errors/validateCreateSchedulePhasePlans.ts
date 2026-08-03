@@ -1,36 +1,14 @@
-import { type FullProduct, isOneOffProduct, RecaseError } from "@autumn/shared";
+import type { FullProduct } from "@autumn/shared";
+import { validateProductGroupsByScope } from "../../common/validateProductGroupsByScope";
 
-/** Reject conflicting main recurring plans within a single create_schedule phase. */
+/** Reject conflicting main recurring plans within the same phase scope. */
 export const validateCreateSchedulePhasePlans = ({
-	fullProducts,
+	plans,
 }: {
-	fullProducts: FullProduct[];
+	plans: { fullProduct: FullProduct; scopeId?: string }[];
 }) => {
-	const groupedProducts = new Map<string, FullProduct[]>();
-
-	for (const fullProduct of fullProducts) {
-		if (fullProduct.is_add_on || isOneOffProduct({ product: fullProduct })) {
-			continue;
-		}
-
-		const group = fullProduct.group ?? "";
-		const productsInGroup = groupedProducts.get(group) ?? [];
-		productsInGroup.push(fullProduct);
-		groupedProducts.set(group, productsInGroup);
-	}
-
-	const conflictingProducts = [...groupedProducts.values()].flatMap(
-		(products) => (products.length > 1 ? products : []),
-	);
-
-	if (conflictingProducts.length === 0) return;
-
-	const planIds = conflictingProducts
-		.map((product) => `"${product.id}"`)
-		.join(", ");
-
-	throw new RecaseError({
-		message: `Create schedule supports at most one plan per group in each phase, but plans ${planIds} conflict with another requested plan in their group.`,
-		statusCode: 400,
+	validateProductGroupsByScope({
+		plans,
+		operation: "Create schedule",
 	});
 };

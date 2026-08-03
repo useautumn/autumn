@@ -15,7 +15,11 @@ export const corruptStripeSubscription = async ({
 	mutations: {
 		removeAllItems?: boolean;
 		removeItemPriceIds?: string[];
-		addItems?: Array<{ price: string; quantity?: number }>;
+		addItems?: Array<{
+			price: string;
+			quantity?: number;
+			metadata?: Record<string, string>;
+		}>;
 		setItemQuantities?: Array<{ priceId: string; quantity: number }>;
 		/** Replaces an inline item's price amount in place, preserving item-level metadata
 		 * (e.g. `autumn_customer_price_id`) so the item's identity is unchanged. */
@@ -59,7 +63,11 @@ export const corruptStripeSubscription = async ({
 
 	if (mutations.addItems?.length) {
 		for (const add of mutations.addItems) {
-			updateItems.push({ price: add.price, quantity: add.quantity ?? 1 });
+			updateItems.push({
+				price: add.price,
+				quantity: add.quantity ?? 1,
+				...(add.metadata && { metadata: add.metadata }),
+			});
 		}
 	}
 

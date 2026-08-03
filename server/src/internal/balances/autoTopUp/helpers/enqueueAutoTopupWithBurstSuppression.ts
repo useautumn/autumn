@@ -31,6 +31,21 @@ export const clearAutoTopupPendingKey = async ({
 	await tryRedisWrite(() => redis.del(pendingKey));
 };
 
+export const keepAutoTopupPendingKey = async ({
+	ctx,
+	customerId,
+	featureId,
+	ttlMs,
+}: {
+	ctx: AutumnContext;
+	customerId: string;
+	featureId: string;
+	ttlMs: number;
+}) => {
+	const pendingKey = buildAutoTopupPendingKey({ ctx, customerId, featureId });
+	await tryRedisWrite(() => redis.set(pendingKey, "1", "PX", ttlMs));
+};
+
 export const enqueueAutoTopupWithBurstSuppression = async ({
 	ctx,
 	customerId,

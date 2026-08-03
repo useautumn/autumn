@@ -4,6 +4,7 @@ import { ProductService } from "@/internal/products/ProductService.js";
 import type { ContextsByPlanId } from "./loadMappingContexts.js";
 import {
 	type PriceTargets,
+	normalizeAdditionalStripeProductIds,
 	normalizeStripeProductId,
 	setPriceTarget,
 } from "./updateMappingUtils.js";
@@ -23,6 +24,10 @@ export const applyPlanMappings = async ({
 
 	for (const mapping of params.plan_mappings) {
 		const stripeProductId = normalizeStripeProductId(mapping.stripe_product_id);
+		const additionalIds = normalizeAdditionalStripeProductIds({
+			additionalStripeProductIds: mapping.additional_stripe_product_ids,
+			stripeProductId,
+		});
 		const contexts = contextsByPlanId.get(mapping.plan_id) ?? [];
 
 		for (const context of contexts) {
@@ -37,7 +42,13 @@ export const applyPlanMappings = async ({
 				internalId: context.product.internal_id,
 				update: {
 					processor: stripeProductId
-						? { id: stripeProductId, type: ProcessorType.Stripe }
+						? {
+								id: stripeProductId,
+								type: ProcessorType.Stripe,
+								...(additionalIds.length > 0
+									? { additional_ids: additionalIds }
+									: {}),
+							}
 						: null,
 				},
 			});

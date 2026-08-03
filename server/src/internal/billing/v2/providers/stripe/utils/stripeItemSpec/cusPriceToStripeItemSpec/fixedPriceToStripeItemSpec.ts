@@ -6,7 +6,9 @@ import {
 	getPriceCurrencyStripeId,
 	InternalError,
 	type StripeItemSpec,
+	type StripeItemSpecMode,
 } from "@autumn/shared";
+import { fixedPriceToInlineStripePrice } from "./fixedPriceToInlineStripePrice";
 
 /** Converts a fixed-cycle or one-off price to a StripeItemSpec. */
 export const fixedPriceToStripeItemSpec = ({
@@ -14,15 +16,31 @@ export const fixedPriceToStripeItemSpec = ({
 	cusProduct,
 	currency,
 	orgDefault,
+	options,
 }: {
 	cusPrice: FullCustomerPrice;
 	cusProduct: FullCusProduct;
 	currency: string;
 	orgDefault: string;
+	options?: { mode?: StripeItemSpecMode };
 }): StripeItemSpec => {
 	const price = cusPrice.price;
 	const product = cusProductToProduct({ cusProduct });
 	const config = price.config as FixedPriceConfig;
+
+	if (options?.mode === "inline") {
+		return {
+			stripeInlinePrice: fixedPriceToInlineStripePrice({
+				cusPrice,
+				cusProduct,
+				currency,
+			}),
+			quantity: 1,
+			autumnPrice: price,
+			autumnProduct: product,
+			metadata: { inline_price: "true", inline_mode: "true" },
+		};
+	}
 
 	const stripePriceId = getPriceCurrencyStripeId({
 		config,

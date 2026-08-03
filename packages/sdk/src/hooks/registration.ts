@@ -12,6 +12,6 @@ export function initHooks(hooks: Hooks) {
 	const failOpenHook = new FailOpenHook();
 	const timeoutFixHook = new TimeoutFixHook();
 	hooks.registerSDKInitHook(failOpenHook);
-	hooks.registerBeforeRequestHook(timeoutFixHook);
+	hooks.registerBeforeCreateRequestHook(timeoutFixHook);
 	hooks.registerAfterErrorHook(failOpenHook);
 }

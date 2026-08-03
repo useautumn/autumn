@@ -5,7 +5,7 @@ import { useStore } from "@tanstack/react-form";
 import type { ReactNode } from "react";
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
-import { useAttachFormContext } from "@/components/forms/attach-v2";
+import { useAttachFormContext } from "@/components/forms/attach-v2/context/AttachFormProvider";
 import {
 	buildAttachPreviewTotals,
 	getAttachPreviewLineItems,
@@ -166,6 +166,7 @@ export function GenerateCheckoutStage({
 	lineItems,
 	currency,
 	totals,
+	showLongLivedCheckout = true,
 }: {
 	productName?: string;
 	isPending: boolean;
@@ -181,6 +182,7 @@ export function GenerateCheckoutStage({
 		variant?: "primary" | "secondary";
 		badge?: string;
 	}[];
+	showLongLivedCheckout?: boolean;
 }) {
 	const [completedCheckoutUrl, setCompletedCheckoutUrl] = useState<
 		string | null
@@ -229,7 +231,7 @@ export function GenerateCheckoutStage({
 			totals={totals}
 			buttonLabel="Generate Checkout URL"
 			buttonIcon={<LinkIcon size={16} weight="bold" />}
-			showLongLivedCheckout
+			showLongLivedCheckout={showLongLivedCheckout}
 		/>
 	);
 }
@@ -240,6 +242,7 @@ export function GenerateCheckoutStageWithPreview({
 	isPending,
 	onSubmit,
 	onBack,
+	showLongLivedCheckout,
 }: {
 	productName?: string;
 	previewQuery: {
@@ -250,6 +253,7 @@ export function GenerateCheckoutStageWithPreview({
 		paymentUrl: string | null | undefined;
 	}>;
 	onBack: () => void;
+	showLongLivedCheckout?: boolean;
 }) {
 	const previewData = previewQuery.data;
 	const totals = usePreviewTotals({ previewData });
@@ -263,6 +267,7 @@ export function GenerateCheckoutStageWithPreview({
 			lineItems={previewData?.line_items}
 			currency={previewData?.currency}
 			totals={totals}
+			showLongLivedCheckout={showLongLivedCheckout}
 		/>
 	);
 }

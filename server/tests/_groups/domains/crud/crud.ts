@@ -1,4 +1,4 @@
-import type { TestGroup } from "../types";
+import type { TestGroup } from "../../types";
 
 export const crud: TestGroup = {
 	name: "crud",

@@ -47,6 +47,35 @@ const isRelevantForSubscription = ({
 		.hasRelevantStatus()
 		.onStripeSubscription({ stripeSubscriptionId }).valid;
 
+/** Sub items never include price `tiers` — fetch them once per tiered price
+ * so evaluation can reason about what a tiered item actually bills. */
+const hydrateTieredPriceTiers = async ({
+	stripeCli,
+	targets,
+}: {
+	stripeCli: Stripe;
+	targets: VerifySubscriptionTarget[];
+}) => {
+	const tiersByPriceId = new Map<string, Stripe.Price.Tier[] | undefined>();
+	for (const target of targets) {
+		for (const item of target.stripeSubscription.items.data) {
+			if (item.price.billing_scheme !== "tiered" || item.price.tiers) continue;
+			if (!tiersByPriceId.has(item.price.id)) {
+				try {
+					const fullPrice = await stripeCli.prices.retrieve(item.price.id, {
+						expand: ["tiers"],
+					});
+					tiersByPriceId.set(item.price.id, fullPrice.tiers);
+				} catch {
+					tiersByPriceId.set(item.price.id, undefined);
+				}
+			}
+			const tiers = tiersByPriceId.get(item.price.id);
+			if (tiers) item.price.tiers = tiers;
+		}
+	}
+};
+
 const listActiveSubscriptions = async ({
 	stripeCli,
 	stripeCustomerId,
@@ -135,6 +164,8 @@ export const setupVerifyContext = async ({
 			relatedCusProducts,
 		});
 	}
+
+	await hydrateTieredPriceTiers({ stripeCli, targets });
 
 	const linkedIdSet = new Set(linkedSubscriptionIds);
 	const unlinkedSubscriptions = (activeSubscriptions ?? []).filter(

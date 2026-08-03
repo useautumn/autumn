@@ -3,6 +3,7 @@ import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { persistCreateSchedule } from "@/internal/billing/v2/actions/createSchedule/utils/persistCreateSchedule";
 import { executeAutumnBillingPlan } from "@/internal/billing/v2/execute/executeAutumnBillingPlan";
 import { sendBillingUpdatedWebhook } from "@/internal/billing/v2/workflows/sendBillingUpdatedWebhook/sendBillingUpdatedWebhook";
+import { billingPlanToSendProductsUpdated } from "@/internal/billing/v2/workflows/sendProductsUpdated/billingPlanToSendProductsUpdated";
 import { reconcileLicenseStateForCustomer } from "@/internal/licenses/actions/reconcile/reconcileLicenseState";
 import { computeSyncPlan } from "./compute/computeSyncPlan";
 import { handleSyncErrors } from "./errors/handleSyncErrors";
@@ -73,6 +74,12 @@ export const syncV2 = async ({
 		scheduleId = persisted.scheduleId;
 		scheduledPhases = persisted.insertedPhases;
 	}
+
+	await billingPlanToSendProductsUpdated({
+		ctx,
+		autumnBillingPlan,
+		billingContext: syncContext,
+	});
 
 	void sendBillingUpdatedWebhook({
 		ctx,

@@ -1,9 +1,10 @@
-import { type Context, SpanStatusCode } from "@opentelemetry/api";
+import { type Context, diag, SpanStatusCode } from "@opentelemetry/api";
 import type {
 	ReadableSpan,
 	Span,
 	SpanProcessor,
 } from "@opentelemetry/sdk-trace-base";
+import { SpanIngestCompactor } from "./SpanIngestCompactor.js";
 import { recordSpanDurationMetric } from "./spanMetrics.js";
 
 const REDIS_SUCCESS_SAMPLE_RATE = Number.parseFloat(
@@ -44,6 +45,8 @@ const shouldDropSuccessfulRedisSpan = (span: ReadableSpan): boolean => {
 };
 
 export class FilteringSpanProcessor implements SpanProcessor {
+	private readonly spanIngestCompactor = new SpanIngestCompactor();
+
 	constructor(private readonly delegate: SpanProcessor) {}
 
 	onStart(span: Span, parentContext: Context): void {
@@ -51,10 +54,24 @@ export class FilteringSpanProcessor implements SpanProcessor {
 	}
 
 	onEnd(span: ReadableSpan): void {
-		recordSpanDurationMetric(span);
+		let spanToExport = span;
 
-		if (shouldDropSuccessfulRedisSpan(span)) return;
-		this.delegate.onEnd(span);
+		try {
+			recordSpanDurationMetric(span);
+			if (shouldDropSuccessfulRedisSpan(span)) return;
+			spanToExport = this.spanIngestCompactor.compact({ span });
+		} catch (error) {
+			try {
+				diag.error(
+					"Failed to process span before export; exporting the original span",
+					error,
+				);
+			} catch {
+				// Diagnostic reporting must not block fail-open span export.
+			}
+		}
+
+		this.delegate.onEnd(spanToExport);
 	}
 
 	forceFlush(): Promise<void> {

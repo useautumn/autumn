@@ -135,6 +135,9 @@ export const collectPlanStripeProductIds = (
 	if (!planMapping) return [];
 	return [
 		planMapping.mapping.stripe_product_id,
+		...planMapping.additional_mappings.map(
+			(mapping) => mapping.stripe_product_id,
+		),
 		...planMapping.item_mappings.map((item) => item.mapping.stripe_product_id),
 	].filter((id): id is string => Boolean(id));
 };
@@ -155,15 +158,18 @@ export const rollupPlanStatus = ({
 		return { status: "unmapped", stripeProduct: null, pending: false };
 	}
 
-	const resolved = [planMapping.mapping, ...planMapping.item_mappings].map(
-		(mapping) =>
-			resolveMapping({
-				stripeProductId: mapping.stripe_product_id,
-				backendStatus: mapping.status,
-				stripeConnected,
-				stripeProductsById,
-				isResolving,
-			}),
+	const resolved = [
+		planMapping.mapping,
+		...planMapping.additional_mappings,
+		...planMapping.item_mappings.map((item) => item.mapping),
+	].map((mapping) =>
+		resolveMapping({
+			stripeProductId: mapping.stripe_product_id,
+			backendStatus: mapping.status,
+			stripeConnected,
+			stripeProductsById,
+			isResolving,
+		}),
 	);
 
 	if (resolved.some((entry) => entry.pending)) {
@@ -179,6 +185,7 @@ export const rollupPlanStatus = ({
 
 export type PlanDetailFormValues = {
 	stripe_product_id: string | null;
+	additional_stripe_product_ids: Array<{ stripe_product_id: string | null }>;
 	item_mappings: Array<{ stripe_product_id: string | null }>;
 };
 
@@ -189,6 +196,9 @@ export const buildPlanDetailFormValues = (
 	planMapping: CatalogPlanMapping,
 ): PlanDetailFormValues => ({
 	stripe_product_id: planMapping.mapping.stripe_product_id,
+	additional_stripe_product_ids: planMapping.additional_mappings.map(
+		(mapping) => ({ stripe_product_id: mapping.stripe_product_id }),
+	),
 	item_mappings: planMapping.item_mappings.map((item) => ({
 		stripe_product_id: item.mapping.stripe_product_id,
 	})),
@@ -206,6 +216,9 @@ export const buildUpdatePlanMappingParams = ({
 		{
 			plan_id: planMapping.plan_id,
 			stripe_product_id: normalizeFormStripeProductId(values.stripe_product_id),
+			additional_stripe_product_ids: values.additional_stripe_product_ids
+				.map((entry) => normalizeFormStripeProductId(entry.stripe_product_id))
+				.filter((id): id is string => Boolean(id)),
 			scope: "base_price",
 			item_mappings: planMapping.item_mappings.map((item, index) => ({
 				filter: item.filter,
@@ -250,7 +263,8 @@ export const getAffectedCatalogPriceIds = ({
 	base: ProductV2;
 	products: ProductV2[];
 	planMapping: CatalogPlanMapping;
-	values: PlanDetailFormValues;
+	// Aliases never touch Stripe price resources, so they can't affect prices.
+	values: Pick<PlanDetailFormValues, "stripe_product_id" | "item_mappings">;
 }) => {
 	const affectedPriceIds = new Set<string>();
 	const familyProducts = getPlanFamilyProductVersions({ base, products });

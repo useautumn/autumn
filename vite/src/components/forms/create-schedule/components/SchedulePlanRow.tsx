@@ -1,29 +1,13 @@
-import type { ProductItem, ProductV2 } from "@autumn/shared";
-import { Badge, Button, SearchableSelect } from "@autumn/ui";
+import { SearchableSelect } from "@autumn/ui";
 import {
-	PackageIcon,
-	PencilSimpleIcon,
-	PuzzlePieceIcon,
-	XIcon,
-} from "@phosphor-icons/react";
-import { PriceDisplay } from "@/components/forms/update-subscription-v2/components/PriceDisplay";
+	PlanPrepaidQuantityFields,
+	SelectedPlanRow,
+} from "@/components/forms/shared";
+import { getProductGroupKey } from "@/components/forms/shared/utils/planGroupUtils";
 import { useCustomerDisplayCurrency } from "@/hooks/common/useCustomerDisplayCurrency";
 import { cn } from "@/lib/utils";
 import { useCreateScheduleFormContext } from "../context/CreateScheduleFormProvider";
 import { CopyFromPreviousPhaseButton } from "./CopyFromPreviousPhaseButton";
-
-export function getSchedulePlanPriceProduct({
-	product,
-	customItems,
-}: {
-	product: ProductV2;
-	customItems?: ProductItem[] | null;
-}): ProductV2 {
-	return {
-		...product,
-		items: customItems ?? product.items,
-	};
-}
 
 export function SchedulePlanRow({
 	phaseIndex,
@@ -42,7 +26,7 @@ export function SchedulePlanRow({
 		isPhaseLocked,
 		setEditingPlan,
 	} = useCreateScheduleFormContext();
-	const { displayCurrency, productForDisplay } = useCustomerDisplayCurrency();
+	const { displayCurrency } = useCustomerDisplayCurrency();
 
 	const plan = formValues.phases[phaseIndex]?.plans[planIndex];
 	if (!plan) return null;
@@ -50,14 +34,6 @@ export function SchedulePlanRow({
 
 	const availableProducts = products.filter((p) => !p.archived);
 	const selectedProduct = products.find((p) => p.id === plan.productId);
-	const hasCustomizations = plan.isCustom;
-	const basePriceProduct = selectedProduct
-		? getSchedulePlanPriceProduct({
-				product: selectedProduct,
-				customItems: plan.items,
-			})
-		: null;
-	const priceProduct = basePriceProduct && productForDisplay(basePriceProduct);
 
 	const selectedProductIdsInPhase = new Set(
 		formValues.phases[phaseIndex]?.plans
@@ -82,10 +58,6 @@ export function SchedulePlanRow({
 		);
 	};
 
-	const handleEditClick = () => {
-		setEditingPlan({ phaseIndex, planIndex });
-	};
-
 	if (!plan.productId) {
 		return (
 			<div className={cn("group relative", isLocked && "opacity-60")}>
@@ -96,7 +68,9 @@ export function SchedulePlanRow({
 					getOptionValue={(product) => product.id}
 					getOptionLabel={(product) => product.name}
 					getOptionDisabled={(product) =>
-						usedKeys.has(product.group ?? product.id)
+						usedKeys.has(
+							getProductGroupKey({ productId: product.id, products }),
+						)
 					}
 					renderOption={(product) => (
 						<>
@@ -107,7 +81,9 @@ export function SchedulePlanRow({
 								</span>
 							)}
 							{!selectedProductIdsInPhase.has(product.id) &&
-								usedKeys.has(product.group ?? product.id) && (
+								usedKeys.has(
+									getProductGroupKey({ productId: product.id, products }),
+								) && (
 									<span className="text-xs text-subtle shrink-0">
 										Group conflict
 									</span>
@@ -126,66 +102,38 @@ export function SchedulePlanRow({
 		);
 	}
 
-	const row = (
-		<div
-			className={cn(
-				"group flex h-input min-w-0 w-full items-center gap-2 rounded-lg input-base input-shadow-default px-3 text-sm text-foreground",
-				isLocked && "opacity-60",
-			)}
-		>
-			{selectedProduct?.is_add_on ? (
-				<PuzzlePieceIcon className="size-3.5 shrink-0 text-tertiary-foreground" />
-			) : (
-				<PackageIcon className="size-3.5 shrink-0 text-tertiary-foreground" />
-			)}
-			<span className="flex-1 truncate min-w-0">
-				{selectedProduct?.name ?? plan.productId}
-			</span>
-			<div className="relative flex shrink-0 items-center gap-1.5 min-w-[60px] justify-end">
-				<div
-					className={cn(
-						"flex items-center gap-1.5 transition-opacity duration-150",
-						!isLocked && "group-hover:opacity-0",
-					)}
-				>
-					{hasCustomizations && (
-						<Badge variant="green" size="sm">
-							Custom
-						</Badge>
-					)}
-					{priceProduct && (
-						<span className="text-xs text-tertiary-foreground tabular-nums">
-							<PriceDisplay product={priceProduct} currency={displayCurrency} />
-						</span>
-					)}
-				</div>
-				<div
-					className={cn(
-						"absolute right-0 flex items-center gap-1 transition-opacity duration-150",
-						isLocked ? "opacity-100" : "opacity-0 group-hover:opacity-100",
-					)}
-				>
-					<Button
-						variant="ghost"
-						size="icon"
-						className="h-6 w-6 text-tertiary-foreground hover:text-foreground"
-						onClick={handleEditClick}
-						disabled={isLocked}
+	return (
+		<div className="space-y-1.5">
+			<SelectedPlanRow
+				productId={plan.productId}
+				product={selectedProduct}
+				customItems={plan.items}
+				isCustom={plan.isCustom}
+				disabled={isLocked}
+				onEdit={() => setEditingPlan({ phaseIndex, planIndex })}
+				onRemove={() => handleRemovePlan({ phaseIndex, planIndex })}
+			/>
+			<PlanPrepaidQuantityFields
+				items={plan.items ?? selectedProduct?.items}
+				quantities={plan.prepaidOptions}
+				currency={displayCurrency}
+				readOnly={isLocked}
+				renderField={({ featureId, step }) => (
+					<form.AppField
+						name={`phases[${phaseIndex}].plans[${planIndex}].prepaidOptions.${featureId}`}
 					>
-						<PencilSimpleIcon size={13} />
-					</Button>
-					<button
-						type="button"
-						className="p-1 text-subtle hover:text-destructive transition-colors disabled:pointer-events-none disabled:opacity-50"
-						onClick={() => handleRemovePlan({ phaseIndex, planIndex })}
-						disabled={isLocked}
-					>
-						<XIcon size={13} />
-					</button>
-				</div>
-			</div>
+						{(field) => (
+							<field.QuantityField
+								label=""
+								min={0}
+								step={step}
+								compact
+								hideFieldInfo
+							/>
+						)}
+					</form.AppField>
+				)}
+			/>
 		</div>
 	);
-
-	return row;
 }

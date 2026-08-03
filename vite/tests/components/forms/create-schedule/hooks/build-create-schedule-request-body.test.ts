@@ -2,16 +2,16 @@ import { describe, expect, test } from "bun:test";
 import type { Feature, ProductItem, ProductV2 } from "@autumn/shared";
 import { AppEnv, UsageModel } from "@autumn/shared";
 import {
-	buildCustomize,
-	buildCustomizeBasePrice,
-	buildCustomizeItems,
-	buildCreateScheduleRequestBody,
-} from "@/components/forms/create-schedule/hooks/useCreateScheduleRequestBody";
-import {
 	canResetScheduleBillingCycle,
 	EMPTY_SCHEDULE_PLAN,
 	type SchedulePhase,
 } from "@/components/forms/create-schedule/createScheduleFormSchema";
+import { buildCreateScheduleRequestBody } from "@/components/forms/create-schedule/hooks/useCreateScheduleRequestBody";
+import {
+	buildCustomize,
+	buildCustomizeBasePrice,
+	buildCustomizeItems,
+} from "@/components/forms/shared/utils/buildPlanCustomize";
 
 // ---------------------------------------------------------------------------
 // Fixtures
@@ -75,9 +75,24 @@ const freeFeatureItem: ProductItem = {
 } as ProductItem;
 
 const features: Feature[] = [
-	{ id: "api_calls", name: "API Calls", internal_id: "int_api", type: "usage" } as Feature,
-	{ id: "storage", name: "Storage", internal_id: "int_storage", type: "usage" } as Feature,
-	{ id: "support", name: "Support", internal_id: "int_support", type: "boolean" } as Feature,
+	{
+		id: "api_calls",
+		name: "API Calls",
+		internal_id: "int_api",
+		type: "usage",
+	} as Feature,
+	{
+		id: "storage",
+		name: "Storage",
+		internal_id: "int_storage",
+		type: "usage",
+	} as Feature,
+	{
+		id: "support",
+		name: "Support",
+		internal_id: "int_support",
+		type: "boolean",
+	} as Feature,
 ];
 
 const schedulePlan = (productId: string) => ({
@@ -105,7 +120,9 @@ const schedulePhase = ({
 
 describe("buildCustomizeBasePrice", () => {
 	test("extracts base price from items", () => {
-		const result = buildCustomizeBasePrice({ items: [basePriceItem, featurePriceItem] });
+		const result = buildCustomizeBasePrice({
+			items: [basePriceItem, featurePriceItem],
+		});
 
 		expect(result).toBeDefined();
 		expect(result!.amount).toBe(2000);
@@ -126,21 +143,30 @@ describe("buildCustomizeBasePrice", () => {
 	});
 
 	test("returns undefined when price item has no interval", () => {
-		const noIntervalItem = { ...basePriceItem, interval: null } as unknown as ProductItem;
+		const noIntervalItem = {
+			...basePriceItem,
+			interval: null,
+		} as unknown as ProductItem;
 		const result = buildCustomizeBasePrice({ items: [noIntervalItem] });
 
 		expect(result).toBeUndefined();
 	});
 
 	test("includes interval_count when present", () => {
-		const quarterlyItem = { ...basePriceItem, interval_count: 3 } as ProductItem;
+		const quarterlyItem = {
+			...basePriceItem,
+			interval_count: 3,
+		} as ProductItem;
 		const result = buildCustomizeBasePrice({ items: [quarterlyItem] });
 
 		expect(result!.interval_count).toBe(3);
 	});
 
 	test("omits interval_count when null", () => {
-		const item = { ...basePriceItem, interval_count: null } as unknown as ProductItem;
+		const item = {
+			...basePriceItem,
+			interval_count: null,
+		} as unknown as ProductItem;
 		const result = buildCustomizeBasePrice({ items: [item] });
 
 		expect(result).toBeDefined();
@@ -274,6 +300,16 @@ describe("buildCustomize", () => {
 		expect(result!.price).toBeDefined();
 		expect(result!.items).toBeDefined();
 	});
+
+	test("can preserve an explicit empty items override", () => {
+		const result = buildCustomize({
+			items: [],
+			features,
+			includeEmptyItems: true,
+		});
+
+		expect(result).toEqual({ items: [], price: null });
+	});
 });
 
 // ---------------------------------------------------------------------------
@@ -325,7 +361,13 @@ describe("buildCreateScheduleRequestBody", () => {
 		const result = buildCreateScheduleRequestBody({
 			customerId: undefined,
 			entityId: undefined,
-			phases: [{ startsAt: Date.now(), persistedStartsAt: undefined, plans: [{ ...EMPTY_SCHEDULE_PLAN, productId: "prod_1" }] }],
+			phases: [
+				{
+					startsAt: Date.now(),
+					persistedStartsAt: undefined,
+					plans: [{ ...EMPTY_SCHEDULE_PLAN, productId: "prod_1" }],
+				},
+			],
 			products: defaultProducts,
 			features,
 		});
@@ -377,12 +419,14 @@ describe("buildCreateScheduleRequestBody", () => {
 				{
 					startsAt: now,
 					persistedStartsAt: now,
-					plans: [{
-						...EMPTY_SCHEDULE_PLAN,
-						productId: "prod_1",
-						items: [basePriceItem, featurePriceItem],
-						isCustom: true,
-					}],
+					plans: [
+						{
+							...EMPTY_SCHEDULE_PLAN,
+							productId: "prod_1",
+							items: [basePriceItem, featurePriceItem],
+							isCustom: true,
+						},
+					],
 				},
 			],
 			products: defaultProducts,
@@ -405,12 +449,14 @@ describe("buildCreateScheduleRequestBody", () => {
 				{
 					startsAt: now,
 					persistedStartsAt: now,
-					plans: [{
-						...EMPTY_SCHEDULE_PLAN,
-						productId: "prod_1",
-						items: [basePriceItem, featurePriceItem],
-						isCustom: false,
-					}],
+					plans: [
+						{
+							...EMPTY_SCHEDULE_PLAN,
+							productId: "prod_1",
+							items: [basePriceItem, featurePriceItem],
+							isCustom: false,
+						},
+					],
 				},
 			],
 			products: defaultProducts,

@@ -1,6 +1,12 @@
 import { describe, expect, test } from "bun:test";
-import type { Entity, FullCusProduct, FullCustomer } from "@autumn/shared";
 import {
+	CusProductStatus,
+	type Entity,
+	type FullCusProduct,
+	type FullCustomer,
+} from "@autumn/shared";
+import {
+	findExistingTransferTargetProduct,
 	findTransferCustomerProduct,
 	getTransferCustomerProducts,
 } from "@/internal/customers/handlers/handleTransferProduct/transferRelatedCustomerProducts.js";
@@ -20,15 +26,18 @@ const createCustomerProduct = ({
 	id,
 	productId = product.id,
 	internalEntityId = sourceEntity.internal_id,
+	status = CusProductStatus.Active,
 }: {
 	id: string;
 	productId?: string;
 	internalEntityId?: string | null;
+	status?: CusProductStatus;
 }) =>
 	({
 		id,
 		internal_entity_id: internalEntityId,
 		product_id: productId,
+		status,
 		product: {
 			id: productId,
 			group: product.group,
@@ -83,5 +92,67 @@ describe("transfer customer product selection", () => {
 			"cus_prod_target",
 			"cus_prod_related",
 		]);
+	});
+});
+
+describe("transfer target collision", () => {
+	const targetEntity = {
+		id: "entity_public_2",
+		internal_id: "entity_internal_2",
+	} as Entity;
+
+	const scheduledSource = createCustomerProduct({
+		id: "cus_prod_scheduled",
+		status: CusProductStatus.Scheduled,
+	});
+	const activeAtTarget = createCustomerProduct({
+		id: "cus_prod_target_active",
+		internalEntityId: targetEntity.internal_id,
+	});
+	const scheduledAtTarget = createCustomerProduct({
+		id: "cus_prod_target_scheduled",
+		internalEntityId: targetEntity.internal_id,
+		status: CusProductStatus.Scheduled,
+	});
+
+	test("a scheduled transfer is not blocked by an active product at the target", () => {
+		const result = findExistingTransferTargetProduct({
+			fullCustomer: {
+				customer_products: [scheduledSource, activeAtTarget],
+			} as FullCustomer,
+			toEntity: targetEntity,
+			product,
+			transferringCustomerProducts: [scheduledSource],
+		});
+
+		expect(result).toBeUndefined();
+	});
+
+	test("a scheduled transfer still collides with a scheduled product at the target", () => {
+		const result = findExistingTransferTargetProduct({
+			fullCustomer: {
+				customer_products: [scheduledSource, activeAtTarget, scheduledAtTarget],
+			} as FullCustomer,
+			toEntity: targetEntity,
+			product,
+			transferringCustomerProducts: [scheduledSource],
+		});
+
+		expect(result?.id).toBe("cus_prod_target_scheduled");
+	});
+
+	test("an active transfer still collides with an active product at the target", () => {
+		const activeSource = createCustomerProduct({ id: "cus_prod_active" });
+
+		const result = findExistingTransferTargetProduct({
+			fullCustomer: {
+				customer_products: [activeSource, scheduledAtTarget, activeAtTarget],
+			} as FullCustomer,
+			toEntity: targetEntity,
+			product,
+			transferringCustomerProducts: [activeSource],
+		});
+
+		expect(result?.id).toBe("cus_prod_target_active");
 	});
 });

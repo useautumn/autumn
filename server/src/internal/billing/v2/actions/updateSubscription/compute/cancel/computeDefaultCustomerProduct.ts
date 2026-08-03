@@ -1,11 +1,45 @@
 import {
 	CusProductStatus,
+	cp,
 	enrichFullCustomerWithEntity,
 	type FullCusProduct,
+	hasCustomerProductEnded,
+	isFutureStartDate,
 	type UpdateSubscriptionBillingContext,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { initFullCustomerProduct } from "@/internal/billing/v2/utils/initFullCustomerProduct/initFullCustomerProduct";
+
+const hasOtherEffectivePaidMainProduct = ({
+	billingContext,
+	effectiveAt,
+}: {
+	billingContext: UpdateSubscriptionBillingContext;
+	effectiveAt: number;
+}) => {
+	const { customerProduct, fullCustomer } = billingContext;
+	const internalEntityId = customerProduct.internal_entity_id ?? undefined;
+
+	return fullCustomer.customer_products.some((candidate) => {
+		if (candidate.id === customerProduct.id) return false;
+
+		const inScope = cp(candidate)
+			.hasRelevantStatus()
+			.paidRecurring()
+			.main()
+			.hasProductGroup({ productGroup: customerProduct.product.group })
+			.onEntity({ internalEntityId }).valid;
+
+		return (
+			inScope &&
+			!isFutureStartDate(candidate.starts_at, effectiveAt, 0) &&
+			!hasCustomerProductEnded(candidate, {
+				nowMs: effectiveAt,
+				toleranceMs: 0,
+			})
+		);
+	});
+};
 
 /**
  * Creates the default customer product to insert when canceling.
@@ -44,6 +78,15 @@ export const computeDefaultCustomerProduct = ({
 		cancelAction === "cancel_immediately"
 			? CusProductStatus.Active
 			: CusProductStatus.Scheduled;
+
+	if (
+		hasOtherEffectivePaidMainProduct({
+			billingContext,
+			effectiveAt: startsAt,
+		})
+	) {
+		return undefined;
+	}
 
 	const newDefaultProduct = initFullCustomerProduct({
 		ctx,

@@ -1,81 +1,88 @@
 import {
 	type BillingBehavior,
 	BillingInterval,
-	type CusProduct,
 	CusProductStatus,
 	type FullCusProduct,
 	hasActivePaidSubscription,
 	type PlanTiming,
 } from "@autumn/shared";
-import { useCallback, useEffect, useMemo } from "react";
-import { useCusQuery } from "@/views/customers/customer/hooks/useCusQuery";
-import { useAttachFormContext } from "../context/AttachFormProvider";
+import { useCallback, useEffect } from "react";
+import type { AttachForm } from "../attachFormSchema";
 import {
+	getAttachProrationVisibility,
 	getNoChargesDisabledReason,
 	isNoChargesAllowedForAttach,
 	normalizeAttachProrationBehavior,
 } from "../utils/attachProrationBehaviorRules";
+import type { UseAttachForm } from "./useAttachForm";
+import type { UseAttachPreviewReturn } from "./useAttachPreview";
 
 /** Encapsulates planSchedule + prorationBehavior derived state and mutations. */
-export function useAttachBillingOptionsState() {
-	const {
-		form,
-		formValues,
-		previewQuery,
-		isFreeToPaidTransition,
-		hasActiveSubscription,
-	} = useAttachFormContext();
+export function useAttachBillingOptionsState({
+	form,
+	formValues,
+	previewQuery,
+	customerProducts,
+	isFreeToPaidTransition,
+	hasActiveSubscription,
+	isMultiPlan,
+}: {
+	form: UseAttachForm;
+	formValues: AttachForm;
+	previewQuery: UseAttachPreviewReturn;
+	customerProducts: FullCusProduct[];
+	isFreeToPaidTransition: boolean;
+	hasActiveSubscription: boolean;
+	isMultiPlan: boolean;
+}) {
 	const { planSchedule, prorationBehavior, newBillingSubscription, startDate } =
 		formValues;
 	const previewData = previewQuery.data;
-	const { customer } = useCusQuery();
+	const effectiveNewBillingSubscription =
+		!isMultiPlan && newBillingSubscription;
 
-	const hasActiveProductWithTrial = useMemo(
-		() =>
-			((customer?.customer_products ?? []) as CusProduct[]).some(
-				(cp) =>
-					cp.status === CusProductStatus.Trialing &&
-					cp.subscription_ids &&
-					cp.subscription_ids.length > 0 &&
-					!!cp.free_trial_id,
-			),
-		[customer?.customer_products],
+	const hasActiveProductWithTrial = customerProducts.some(
+		(customerProduct) =>
+			customerProduct.status === CusProductStatus.Trialing &&
+			(customerProduct.subscription_ids?.length ?? 0) > 0 &&
+			!!customerProduct.free_trial_id,
 	);
 
-	const hasPaidRecurringSubscription = useMemo(
-		() =>
-			hasActivePaidSubscription({
-				customerProducts: (customer?.customer_products ??
-					[]) as FullCusProduct[],
-			}),
-		[customer?.customer_products],
-	);
+	const hasPaidRecurringSubscription = hasActivePaidSubscription({
+		customerProducts,
+	});
 
 	const hasOutgoing = (previewData?.outgoing.length ?? 0) > 0;
-	const incomingPlan = previewData?.incoming[0]?.plan;
+	const incomingPlans = previewData?.incoming ?? [];
 	const outgoingPlan = previewData?.outgoing[0]?.plan;
 
-	const isPaidRecurringAttach =
-		(incomingPlan?.price?.amount ?? 0) > 0 &&
-		incomingPlan?.price?.interval !== BillingInterval.OneOff;
+	// Multi-plan attaches produce several incoming changes, so these ask "does
+	// any incoming plan…" rather than inspecting only the first.
+	const isPaidRecurringAttach = incomingPlans.some(
+		(change) =>
+			(change.plan?.price?.amount ?? 0) > 0 &&
+			change.plan?.price?.interval !== BillingInterval.OneOff,
+	);
 
 	const isOutgoingPaidRecurring =
 		(outgoingPlan?.price?.amount ?? 0) > 0 &&
 		outgoingPlan?.price?.interval !== BillingInterval.OneOff;
 
 	const createsNewStripeSubscription =
-		!hasActiveSubscription || newBillingSubscription;
+		!hasActiveSubscription || effectiveNewBillingSubscription;
 
 	// Usage-only plans have a null base price (billing lives on items), so a
 	// recurring sub can be created even when the base price and immediate total are $0.
-	const incomingPlanHasRecurringPrice =
-		(incomingPlan?.price != null &&
-			incomingPlan.price.interval !== BillingInterval.OneOff) ||
-		(incomingPlan?.items?.some(
-			(item) =>
-				item.price != null && item.price.interval !== BillingInterval.OneOff,
-		) ??
-			false);
+	const incomingPlanHasRecurringPrice = incomingPlans.some(
+		(change) =>
+			(change.plan?.price != null &&
+				change.plan.price.interval !== BillingInterval.OneOff) ||
+			(change.plan?.items?.some(
+				(item: { price?: { interval?: BillingInterval | null } | null }) =>
+					item.price != null && item.price.interval !== BillingInterval.OneOff,
+			) ??
+				false),
+	);
 
 	const createsRecurringSubscription =
 		incomingPlanHasRecurringPrice && createsNewStripeSubscription;
@@ -84,6 +91,7 @@ export function useAttachBillingOptionsState() {
 		hasOutgoing && isPaidRecurringAttach && isOutgoingPaidRecurring;
 
 	const canChooseBillingCycle =
+		!isMultiPlan &&
 		isPaidRecurringAttach &&
 		hasPaidRecurringSubscription &&
 		!isDirectPaidTransition;
@@ -97,27 +105,30 @@ export function useAttachBillingOptionsState() {
 
 	const hasSubscriptionToProrate =
 		hasActiveSubscription && !hasActiveProductWithTrial;
-	const showProrationRow = hasSubscriptionToProrate;
 
 	const freeToPaidWithNoExistingSubscription =
 		isFreeToPaidTransition && !hasActiveSubscription;
 
-	const showProrationBehavior =
-		showProrationRow && effectivePlanSchedule === "immediate";
+	const { showProrationRow, showProrationBehavior } =
+		getAttachProrationVisibility({
+			hasSubscriptionToProrate,
+			isMultiPlan,
+			planSchedule: effectivePlanSchedule,
+		});
 	const isNoChargesAllowed = isNoChargesAllowedForAttach({
-		newBillingSubscription,
+		newBillingSubscription: effectiveNewBillingSubscription,
 		disableProration: freeToPaidWithNoExistingSubscription,
 	});
 	const normalizedProrationBehavior = normalizeAttachProrationBehavior({
 		prorationBehavior,
-		newBillingSubscription,
+		newBillingSubscription: effectiveNewBillingSubscription,
 		disableProration: freeToPaidWithNoExistingSubscription,
 	});
 	const effectiveProrationBehavior =
 		normalizedProrationBehavior ??
 		(isNoChargesAllowed ? "none" : "prorate_immediately");
 	const noChargesDisabledReason = getNoChargesDisabledReason({
-		newBillingSubscription,
+		newBillingSubscription: effectiveNewBillingSubscription,
 		disableProration: freeToPaidWithNoExistingSubscription,
 	});
 
@@ -232,3 +243,7 @@ export function useAttachBillingOptionsState() {
 		handleProrationBehaviorChange,
 	};
 }
+
+export type UseAttachBillingOptionsStateReturn = ReturnType<
+	typeof useAttachBillingOptionsState
+>;

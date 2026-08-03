@@ -97,7 +97,6 @@ export const handleAttachV2Errors = async ({
 	handleProrationBehaviorErrors({
 		billingContext,
 		billingPlan,
-		params,
 	});
 
 	// 11. Subscription ID uniqueness

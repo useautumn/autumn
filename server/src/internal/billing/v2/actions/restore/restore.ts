@@ -51,7 +51,11 @@ export const restore = async ({
 			autumnBillingPlan,
 		});
 
-		handleRestoreErrors({ stripeBillingPlan, stripeSubscriptionId });
+		handleRestoreErrors({
+			stripeBillingPlan,
+			stripeSubscriptionId,
+			fullCustomer,
+		});
 
 		await executeStripeBillingPlan({
 			ctx,

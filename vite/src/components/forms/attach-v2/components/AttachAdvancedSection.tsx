@@ -1,12 +1,16 @@
 import {
 	type Feature,
-	type FullCustomer,
 	isFreeProductV2,
 	isOneOffProductV2,
 } from "@autumn/shared";
 import {
 	Button,
 	DateInputUnix,
+	DropdownMenu,
+	DropdownMenuCheckboxItem,
+	DropdownMenuContent,
+	DropdownMenuSeparator,
+	DropdownMenuTrigger,
 	IconButton,
 	IconCheckbox,
 	Input,
@@ -18,24 +22,15 @@ import {
 import { CaretDownIcon, PlusIcon, XIcon } from "@phosphor-icons/react";
 import { addDays } from "date-fns";
 import { AnimatePresence, motion } from "motion/react";
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import {
 	AdvancedSection,
 	AdvancedToggleRow,
 	ConfigRow,
 } from "@/components/forms/shared/advanced-section";
-import {
-	DropdownMenu,
-	DropdownMenuCheckboxItem,
-	DropdownMenuContent,
-	DropdownMenuSeparator,
-	DropdownMenuTrigger,
-} from "@autumn/ui";
 import { cn } from "@/lib/utils";
-import { useCusQuery } from "@/views/customers/customer/hooks/useCusQuery";
 import type { FormCustomLineItem } from "../attachFormSchema";
 import { useAttachFormContext } from "../context/AttachFormProvider";
-import { useAttachBillingOptionsState } from "../hooks/useAttachBillingOptionsState";
 import { getAttachScheduledStartDate } from "../utils/buildAttachPreviewTotals";
 import { addDiscount } from "../utils/discountUtils";
 import { AttachDiscountRow } from "./AttachDiscountRow";
@@ -113,8 +108,17 @@ function FeatureSelectDropdown({
 }
 
 export function AttachAdvancedSection() {
-	const { form, formValues, features, product, previewQuery } =
-		useAttachFormContext();
+	const {
+		form,
+		customer,
+		formValues,
+		features,
+		product,
+		previewQuery,
+		additionalPlans,
+		billingOptions,
+	} = useAttachFormContext();
+	const isMultiPlan = additionalPlans.isMultiPlan;
 	const {
 		discounts,
 		newBillingSubscription,
@@ -129,20 +133,10 @@ export function AttachAdvancedSection() {
 		startDate,
 		endDate,
 	} = formValues;
-	const { customer } = useCusQuery();
-	const fullCustomer = customer as FullCustomer | null;
-
-	const hasCustomerEntitlements = useMemo(() => {
-		if (!fullCustomer) return false;
-
-		const hasProductEntitlements = fullCustomer.customer_products?.some(
+	const hasCustomerEntitlements =
+		customer?.customer_products?.some(
 			(customerProduct) => customerProduct.customer_entitlements?.length > 0,
-		);
-		const hasExtraEntitlements =
-			fullCustomer.extra_customer_entitlements?.length > 0;
-
-		return hasProductEntitlements || hasExtraEntitlements;
-	}, [fullCustomer]);
+		) || (customer?.extra_customer_entitlements?.length ?? 0) > 0;
 
 	const [overrideLineItemsEnabled, setOverrideLineItemsEnabled] = useState(
 		customLineItems.length > 0,
@@ -162,7 +156,7 @@ export function AttachAdvancedSection() {
 		handleScheduleChange,
 		handleBillingCycleChange,
 		handleProrationBehaviorChange,
-	} = useAttachBillingOptionsState();
+	} = billingOptions;
 
 	const isPaidRecurringProduct =
 		!!product &&
@@ -172,8 +166,17 @@ export function AttachAdvancedSection() {
 	const showStartDate =
 		isPaidRecurringProduct &&
 		!trialEnabled &&
-		effectivePlanSchedule !== "end_of_cycle";
-	const allowBackdatedStartDate = showStartDate && createsNewStripeSubscription;
+		effectivePlanSchedule !== "end_of_cycle" &&
+		(!isMultiPlan || createsNewStripeSubscription);
+	const allowBackdatedStartDate = createsNewStripeSubscription;
+	let startDateDescription = "Schedule the plan to start on a future date";
+	if (allowBackdatedStartDate) {
+		startDateDescription =
+			"Start the new subscription on a past or future date";
+	}
+	if (isMultiPlan) {
+		startDateDescription = "Backdate every plan to the same start date";
+	}
 	const showEndDate = !!product && !isFreeProductV2({ items: product.items });
 	const attachStartsAt =
 		effectivePlanSchedule === "end_of_cycle"
@@ -225,11 +228,7 @@ export function AttachAdvancedSection() {
 			{showStartDate && (
 				<ConfigRow
 					title="Start Date"
-					description={
-						allowBackdatedStartDate
-							? "Start the new subscription on a past or future date"
-							: "Schedule the plan to start on a future date"
-					}
+					description={startDateDescription}
 					expanded={startDate !== null}
 					action={
 						<Switch
@@ -237,7 +236,9 @@ export function AttachAdvancedSection() {
 							onCheckedChange={(checked) =>
 								form.setFieldValue(
 									"startDate",
-									checked ? addDays(Date.now(), 1).getTime() : null,
+									checked
+										? addDays(Date.now(), isMultiPlan ? -1 : 1).getTime()
+										: null,
 								)
 							}
 						/>
@@ -247,7 +248,9 @@ export function AttachAdvancedSection() {
 						unixDate={startDate}
 						setUnixDate={(value) => form.setFieldValue("startDate", value)}
 						disablePastDates={!allowBackdatedStartDate}
+						disableFutureDates={isMultiPlan}
 						minUnixDate={allowBackdatedStartDate ? undefined : Date.now()}
+						maxUnixDate={isMultiPlan ? Date.now() : undefined}
 						fromYear={
 							allowBackdatedStartDate
 								? new Date().getFullYear() - BACKDATE_START_YEAR_LOOKBACK
@@ -258,7 +261,7 @@ export function AttachAdvancedSection() {
 				</ConfigRow>
 			)}
 
-			{showEndDate && (
+			{!isMultiPlan && showEndDate && (
 				<ConfigRow
 					title="End Date"
 					description="End the plan on a future date"
@@ -433,7 +436,7 @@ export function AttachAdvancedSection() {
 				/>
 			)}
 
-			{hasActiveSubscription && (
+			{!isMultiPlan && hasActiveSubscription && (
 				<ConfigRow
 					title="Reset Billing Cycle"
 					description="Restart the billing cycle from today"
@@ -451,24 +454,27 @@ export function AttachAdvancedSection() {
 				/>
 			)}
 
-			<ConfigRow
-				title="Skip Billing"
-				description="Attach the plan without making changes in Stripe"
-				action={
-					<Switch
-						checked={noBillingChanges}
-						onCheckedChange={(checked) =>
-							form.setFieldValue("noBillingChanges", !!checked)
-						}
-					/>
-				}
-			/>
+			{!isMultiPlan && (
+				<ConfigRow
+					title="Skip Billing"
+					description="Attach the plan without making changes in Stripe"
+					action={
+						<Switch
+							checked={noBillingChanges}
+							onCheckedChange={(checked) =>
+								form.setFieldValue("noBillingChanges", !!checked)
+							}
+						/>
+					}
+				/>
+			)}
 		</>
 	);
 
 	return (
-		<AdvancedSection moreOptions={moreOptions}>
-			{/* Discounts */}
+		<AdvancedSection
+			moreOptions={isMultiPlan && !showStartDate ? undefined : moreOptions}
+		>
 			<ConfigRow
 				title="Discounts"
 				description="Apply percentage or fixed-amount discounts to this plan"
@@ -524,8 +530,7 @@ export function AttachAdvancedSection() {
 				/>
 			)}
 
-			{/* Plan Schedule — only when customer has an active Stripe subscription */}
-			{hasActiveSubscription && (
+			{hasActiveSubscription && !isMultiPlan && (
 				<AdvancedToggleRow
 					label="Plan Schedule"
 					description="When the new plan should take effect"

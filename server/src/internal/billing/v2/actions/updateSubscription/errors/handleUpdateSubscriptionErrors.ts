@@ -82,7 +82,6 @@ export const handleUpdateSubscriptionErrors = async ({
 	handleProrationBehaviorErrors({
 		billingContext,
 		billingPlan,
-		params,
 	});
 
 	// 10. Billing cycle anchor errors

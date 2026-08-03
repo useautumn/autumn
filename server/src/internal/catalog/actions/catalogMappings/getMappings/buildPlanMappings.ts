@@ -98,17 +98,28 @@ export const buildPlanMappings = ({
 			itemMappingsByFilter.set(key, current);
 		}
 
+		const stripeProcessor =
+			product.processor?.type === ProcessorType.Stripe
+				? product.processor
+				: null;
+
 		return {
 			plan_id: product.id,
 			mapping: buildStripeMapping({
-				stripeProductId:
-					product.processor?.type === ProcessorType.Stripe
-						? product.processor.id
-						: null,
+				stripeProductId: stripeProcessor?.id ?? null,
 				stripeProductsById,
 				stripeConnected,
 				deferred,
 			}),
+			additional_mappings: (stripeProcessor?.additional_ids ?? []).map(
+				(stripeProductId) =>
+					buildStripeMapping({
+						stripeProductId,
+						stripeProductsById,
+						stripeConnected,
+						deferred,
+					}),
+			),
 			item_mappings: Array.from(itemMappingsByFilter.values()).map(
 				(itemMapping) => {
 					const stripeProductIds = Array.from(itemMapping.stripeProductIds);

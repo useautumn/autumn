@@ -70,7 +70,7 @@ const emulateGoogleUrl =
 // state cookie must be SameSite=None+Secure to survive the round trip.
 const isProductionAuth = process.env.NODE_ENV === "production";
 const configuredAuthBaseUrl = process.env.BETTER_AUTH_URL?.trim() || undefined;
-const authBaseUrl =
+export const authBaseUrl =
 	configuredAuthBaseUrl ??
 	(isProductionAuth ? undefined : "http://localhost:8080");
 const isHttpsBaseUrl = authBaseUrl?.startsWith("https://");

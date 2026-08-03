@@ -16,6 +16,10 @@ export type StripeInlinePrice = {
 	unit_amount_decimal: string;
 };
 
+/** How a spec renders its price: a stored Stripe price id, or an inline
+ * price built from the Autumn config. */
+export type StripeItemSpecMode = "stored" | "inline";
+
 /**
  * Intermediate type bridging Autumn price model to Stripe line items.
  * Either `stripePriceId` (stored price) or `stripeInlinePrice` (entity-scoped inline) must be set.

@@ -1,4 +1,9 @@
-import type { Entity, FullCusProduct, FullCustomer } from "@autumn/shared";
+import {
+	type Entity,
+	type FullCusProduct,
+	type FullCustomer,
+	isCustomerProductScheduled,
+} from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { nullish } from "@/utils/genUtils.js";
 import { CusProductService } from "../../cusProducts/CusProductService.js";
@@ -55,22 +60,39 @@ export const findTransferCustomerProduct = ({
 			cusProduct.product.id === productId,
 	);
 
+/**
+ * Only like-for-like collides: an entity may hold an active and a scheduled
+ * product in the same group at once, so a scheduled transfer is not blocked by
+ * the target's active product (or vice versa).
+ */
 export const findExistingTransferTargetProduct = ({
 	fullCustomer,
 	toEntity,
 	product,
+	transferringCustomerProducts,
 }: {
 	fullCustomer: FullCustomer;
 	toEntity: Entity | null;
 	product: TransferProduct;
-}) =>
-	fullCustomer.customer_products.find(
+	transferringCustomerProducts: FullCusProduct[];
+}) => {
+	const transferringScheduledStates = new Set(
+		transferringCustomerProducts.map((cusProduct) =>
+			isCustomerProductScheduled(cusProduct),
+		),
+	);
+
+	return fullCustomer.customer_products.find(
 		(cusProduct) =>
 			matchesTransferProduct({ cusProduct, product }) &&
+			transferringScheduledStates.has(
+				isCustomerProductScheduled(cusProduct),
+			) &&
 			(toEntity
 				? cusProduct.internal_entity_id === toEntity.internal_id
 				: nullish(cusProduct.internal_entity_id)),
 	);
+};
 
 export const getTransferCustomerProducts = ({
 	fullCustomer,

@@ -44,7 +44,8 @@ SQL >
         {% else %}
         {{ column('properties.' + String(property_key, '')) }}::String as group_value,
         {% end %}
-        sum(total_value) as total_value
+        sum(total_value) as total_value,
+        sum(event_count) as event_count
     FROM
         {% if use_no_props %}
         events_customer_hourly_mv
@@ -111,6 +112,7 @@ SQL >
         event_name,
         if(rn <= {{ Int32(max_groups, 9) }}, group_value, 'AUTUMN_RESERVED') as group_value,
         sum(total_value) as total_value,
+        sum(event_count) as event_count,
         max(rn) > {{ Int32(max_groups, 9) }} as _truncated
     FROM ranked
     GROUP BY period, event_name, group_value

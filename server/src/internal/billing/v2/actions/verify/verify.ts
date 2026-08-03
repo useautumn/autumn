@@ -1,7 +1,7 @@
 import type {
-    SubscriptionMismatch,
-    VerifyParamsV1,
-    VerifyResponse,
+	SubscriptionMismatch,
+	VerifyParamsV1,
+	VerifyResponse,
 } from "@autumn/shared";
 import { createStripeCli } from "@/external/connect/createStripeCli";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
@@ -12,9 +12,15 @@ import { evaluateItems } from "./evaluate/evaluateItems";
 import { evaluateSchedulePhases } from "./evaluate/evaluateSchedulePhases";
 import { verifyMismatchToMessage } from "./format/verifyMismatchToMessage";
 import {
-    setupVerifyContext,
-    type VerifyPrefetched,
+	setupVerifyContext,
+	type VerifyPrefetched,
 } from "./setup/setupVerifyContext";
+
+/** Warnings can be deliberate (e.g. an extra Stripe-only sub); everything
+ * else defaults to error. */
+const WARNING_MISMATCH_TYPES = new Set<SubscriptionMismatch["type"]>([
+	"stripe_sub_not_in_autumn",
+]);
 
 const stampMessages = (
 	mismatches: SubscriptionMismatch[],
@@ -22,6 +28,9 @@ const stampMessages = (
 	mismatches.map((mismatch) => ({
 		...mismatch,
 		message: mismatch.message ?? verifyMismatchToMessage(mismatch),
+		severity:
+			mismatch.severity ??
+			(WARNING_MISMATCH_TYPES.has(mismatch.type) ? "warning" : "error"),
 	}));
 
 /**
@@ -69,15 +78,13 @@ export const verify = async ({
 		subscriptions.push({
 			stripe_subscription_id: unlinkedSubscription.id,
 			status: "mismatched",
-			mismatches: stampMessages([{ type: "subscription_not_linked" }]),
+			mismatches: stampMessages([{ type: "stripe_sub_not_in_autumn" }]),
 		});
 	}
 
 	for (const target of targets) {
 		const { stripeSubscriptionId, stripeSubscription, relatedCusProducts } =
 			target;
-
-
 
 		const mismatches: SubscriptionMismatch[] = [];
 
@@ -111,6 +118,7 @@ export const verify = async ({
 						actualSubscriptionItems: stripeSubscription.items.data,
 						storedPriceCatalog,
 						cusPriceCatalog,
+						org: ctx.org,
 						strict,
 					}),
 				);
@@ -132,6 +140,7 @@ export const verify = async ({
 						scheduledPhases,
 						storedPriceCatalog,
 						cusPriceCatalog,
+						org: ctx.org,
 						strict,
 					})),
 				);

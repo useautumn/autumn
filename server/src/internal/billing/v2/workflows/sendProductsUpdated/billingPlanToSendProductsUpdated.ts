@@ -7,7 +7,7 @@
  * - Filters out scheduled products from insert webhooks
  */
 
-import type { AutumnBillingPlan, BillingContext } from "@autumn/shared";
+import type { AutumnBillingPlan, FullCustomer } from "@autumn/shared";
 import {
 	AttachScenario,
 	CusProductStatus,
@@ -128,7 +128,7 @@ export const billingPlanToSendProductsUpdated = async ({
 }: {
 	ctx: AutumnContext;
 	autumnBillingPlan: AutumnBillingPlan;
-	billingContext: BillingContext | CreateCustomerContext;
+	billingContext: { fullCustomer: FullCustomer };
 }) => {
 	if (ctx.testOptions?.skipWebhooks) return;
 

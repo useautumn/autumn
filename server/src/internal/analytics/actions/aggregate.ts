@@ -26,6 +26,10 @@ import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { validatePropertyPathForJSON } from "@/internal/analytics/actions/eventValidationUtils.js";
 import { getBillingCycleStartDate } from "../analyticsUtils.js";
 import { getCountAndSum } from "./getCountAndSum.js";
+import {
+	groupedResultIsIncomplete,
+	reportsMoreThan,
+} from "./propertyRollupCompleteness.js";
 
 /** Flattens filter_by into indexed filter_key_N / filter_value_N params for Tinybird pipes */
 const buildFilterParams = ({
@@ -394,29 +398,6 @@ const formatGroupableResults = ({
 	return { meta, rows: data.length, data };
 };
 
-/**
- * Ducttape fallback for the property-rollup cardinality gate.
- *
- * Unfiltered property group-bys read events_property_mv, whose insert-time gate
- * drops high-entropy values (UUIDs, long hex, opaque strings) to keep the rollup
- * bounded. A group-by over such a key therefore returns an EMPTY grouped result
- * even though the events exist — the gate can't tell a genuinely explosive key
- * (per-request trace ids) from a low-cardinality-but-UUID-shaped one (a customer
- * with 21 project ids).
- *
- * When the grouped result is empty BUT the authoritative totals (getCountAndSum,
- * read from the ungated rollups) show real events, we know the gate ate the
- * values, so we retry the same query against the ungated events_hourly_mv. When
- * the totals are also empty, the customer simply has no events — no retry.
- *
- * This does NOT cover the partial case (a key with a mix of gate-surviving and
- * gate-dropped values), which needs cardinality-aware routing (topKWeighted).
- */
-const totalsHaveEvents = (
-	totals: Record<string, { count: number; sum: number }>,
-): boolean =>
-	Object.values(totals).some((t) => t.count > 0 && t.sum > 0);
-
 /** Aggregates events into time-bucketed timeseries data */
 export const aggregate = async ({
 	ctx,
@@ -489,22 +470,30 @@ export const aggregate = async ({
 
 		let result = await pipes.aggregateGroupable(pipeParams);
 
-		// The gated property rollup only serves unfiltered property group-bys. If it
-		// returns nothing, check whether real events exist (ungated totals); if so,
-		// the value-shape gate dropped the group values — retry against the ungated
-		// events_hourly_mv. See totalsHaveEvents for the full rationale.
-		const usedGatedRollup =
-			groupColumn === "property" &&
-			Object.keys(filterParams).length === 0 &&
-			result.data.length === 0;
+		// Only this query shape reads the gated property rollup.
+		const readsGatedRollup =
+			groupColumn === "property" && Object.keys(filterParams).length === 0;
 
-		if (usedGatedRollup) {
-			const totals = await getCountAndSum({ ctx, params });
-			if (totalsHaveEvents(totals)) {
-				result = await pipes.aggregateGroupable({
+		if (readsGatedRollup) {
+			const totals = await getCountAndSum({
+				ctx,
+				params,
+				dateRange: { startDate, endDate },
+			});
+
+			if (groupedResultIsIncomplete({ rows: result.data, totals })) {
+				const ungated = await pipes.aggregateGroupable({
 					...pipeParams,
 					skip_property_rollup: "1",
 				});
+
+				// A shortfall means gate loss OR events without the property; only the
+				// first is recoverable, and only the retry can tell them apart.
+				if (
+					reportsMoreThan({ candidate: ungated.data, current: result.data })
+				) {
+					result = ungated;
+				}
 			}
 		}
 

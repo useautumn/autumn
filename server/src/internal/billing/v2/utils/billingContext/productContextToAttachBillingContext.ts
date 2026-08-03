@@ -15,6 +15,7 @@ export const productContextToAttachBillingContext = ({
 	currentCustomerProductOverride?: AttachBillingContext["currentCustomerProduct"];
 }): AttachBillingContext => ({
 	...billingContext,
+	fullCustomer: productContext.fullCustomer,
 	attachProduct: productContext.fullProduct,
 	fullProducts: [productContext.fullProduct],
 	featureQuantities: productContext.featureQuantities,

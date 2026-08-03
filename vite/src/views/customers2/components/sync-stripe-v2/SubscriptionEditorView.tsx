@@ -1,4 +1,5 @@
 import {
+	type Entity,
 	FreeTrialDuration,
 	type FrontendProduct,
 	productV2ToFrontendProduct,
@@ -15,8 +16,9 @@ import {
 } from "@phosphor-icons/react";
 import { useMemo, useState } from "react";
 import type Stripe from "stripe";
-import { buildCustomize } from "@/components/forms/create-schedule/hooks/useCreateScheduleRequestBody";
 import { ConfigRow } from "@/components/forms/shared/ConfigRow";
+import { resolvePlanEntityId } from "@/components/forms/shared";
+import { buildCustomize } from "@/components/forms/shared/utils/buildPlanCustomize";
 import {
 	getProductWithSupportedPlanFormValues,
 	getSupportedPlanFormPatchFromDraftProduct,
@@ -35,6 +37,7 @@ import { useAdmin } from "@/views/admin/hooks/useAdmin";
 import { useMasterStripeAccount } from "@/views/admin/hooks/useMasterStripeAccount";
 import { useCusQuery } from "@/views/customers/customer/hooks/useCusQuery";
 import { useCustomerContext } from "@/views/customers2/customer/CustomerContext";
+import { EntityScopeSelector } from "../sheets/EntityScopeSelector";
 import { type DraftPlan, SyncPlanRow } from "./SyncPlanRow";
 import { applyCustomizeToProduct } from "./syncPlanRowUtils";
 
@@ -184,6 +187,33 @@ const seedDraftPlansByPhase = ({
 		phase.plans.map((plan) => ({ ...plan, _key: generateKey() })),
 	);
 
+/**
+ * Detection stamps the entity of any customer product already linked to this
+ * subscription, using the internal id — resolve it to the id the selector uses.
+ */
+const seedScopeEntityId = ({
+	proposal,
+	entities,
+	contextEntityId,
+}: {
+	proposal: SyncProposalV2;
+	entities: Entity[];
+	contextEntityId: string | null;
+}): string | undefined => {
+	const detectedEntityId = proposal.phases
+		.flatMap((phase) => phase.plans)
+		.find((plan) => plan.entity_id)?.entity_id;
+
+	const entityId = detectedEntityId ?? contextEntityId;
+	if (!entityId) return undefined;
+
+	const entity = entities.find(
+		(candidate) =>
+			candidate.id === entityId || candidate.internal_id === entityId,
+	);
+	return entity ? entity.id || entity.internal_id : undefined;
+};
+
 export function SubscriptionEditorView({
 	proposal,
 	customerId,
@@ -206,7 +236,7 @@ export function SubscriptionEditorView({
 	const { stripeAccount } = useOrgStripeQuery();
 	const { isAdmin } = useAdmin();
 	const { masterStripeAccount } = useMasterStripeAccount();
-	const { setIsInlineEditorOpen } = useCustomerContext();
+	const { setIsInlineEditorOpen, entityId } = useCustomerContext();
 
 	const handleOpenStripe = () => {
 		const subId = proposal.stripe_subscription_id;
@@ -254,6 +284,9 @@ export function SubscriptionEditorView({
 
 	const [draftPlansByPhase, setDraftPlansByPhase] = useState<DraftPlan[][]>(
 		() => seedDraftPlansByPhase({ proposal }),
+	);
+	const [scopeEntityId, setScopeEntityId] = useState<string | undefined>(() =>
+		seedScopeEntityId({ proposal, entities, contextEntityId: entityId }),
 	);
 	const [expirePrevious, setExpirePrevious] = useState<boolean>(true);
 	const [carryOverUsage, setCarryOverUsage] = useState<boolean>(true);
@@ -384,14 +417,23 @@ export function SubscriptionEditorView({
 	};
 
 	const handleSubmit = () => {
-		const phases: SyncPhase[] = phaseSections
-			.map((section, phaseIndex) => {
-				const validPlans = (draftPlansByPhase[phaseIndex] ?? []).filter((p) =>
-					Boolean(p.plan_id),
-				);
-				const planInstances: SyncPlanInstance[] = validPlans.map(
-					({ _key: _ignore, enable_plan_immediately: _ignored, ...rest }) => ({
+		const phases: SyncPhase[] = phaseSections.flatMap((section, phaseIndex) => {
+			const validPlans = (draftPlansByPhase[phaseIndex] ?? []).filter((p) =>
+				Boolean(p.plan_id),
+			);
+			const planInstances: SyncPlanInstance[] = validPlans.map(
+				({
+					_key: _ignore,
+					enable_plan_immediately: _ignored,
+					entity_id: planEntityId,
+					...rest
+				}) => {
+					return {
 						...rest,
+						entity_id: resolvePlanEntityId({
+							planEntityId,
+							defaultEntityId: scopeEntityId,
+						}),
 						expire_previous: expirePrevious,
 						enable_plan_immediately:
 							isNotStartedSchedule &&
@@ -399,11 +441,12 @@ export function SubscriptionEditorView({
 							phaseIndex === firstFuturePhaseIndex
 								? true
 								: undefined,
-					}),
-				);
-				return { starts_at: section.phase.starts_at, plans: planInstances };
-			})
-			.filter((phase) => phase.plans.length > 0);
+					};
+				},
+			);
+			if (planInstances.length === 0) return [];
+			return [{ starts_at: section.phase.starts_at, plans: planInstances }];
+		});
 
 		if (phases.length === 0) return;
 
@@ -457,6 +500,15 @@ export function SubscriptionEditorView({
 					</div>
 				</div>
 
+				{entities.length > 0 && (
+					<EntityScopeSelector
+						entities={entities}
+						scopeEntityId={scopeEntityId}
+						onScopeChange={setScopeEntityId}
+						wrapInSection={false}
+					/>
+				)}
+
 				{phaseSections.map((section, phaseIndex) => {
 					const phasePlans = draftPlansByPhase[phaseIndex] ?? [];
 
@@ -506,7 +558,7 @@ export function SubscriptionEditorView({
 										key={plan._key}
 										plan={plan}
 										products={products ?? []}
-										entities={entities}
+										defaultEntityId={scopeEntityId}
 										onChange={(next) =>
 											handlePlanChange(phaseIndex, planIndex, next)
 										}

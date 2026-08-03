@@ -1,7 +1,6 @@
 import type { AutumnBillingPlan } from "@autumn/shared";
 import { cp, PooledBalanceResetMode } from "@autumn/shared";
 import { getPatchedCustomerProductUpdates } from "@/internal/billing/v2/utils/billingPlan/customerProductPlanMutations.js";
-import { getChangedPooledBalances } from "@/internal/billing/v2/utils/billingPlan/pooledBalancePlan.js";
 import { customerProductHasPaidLicenses } from "@/internal/billing/v2/utils/customerProductHasPaidLicenses.js";
 
 /**
@@ -32,9 +31,11 @@ export const addStripeSubscriptionIdToBillingPlan = ({
 		update.updates.subscription_ids = [stripeSubscriptionId];
 	}
 
-	for (const pooledCustomerEntitlement of getChangedPooledBalances({
-		autumnBillingPlan,
-	})) {
+	// Inserts only: a pool matched by identity already carries the subscription
+	// it belongs to, and restamping an outgoing pool moves it onto an identity
+	// another live pool holds.
+	for (const pooledCustomerEntitlement of autumnBillingPlan.pooledBalancePlan
+		?.insertPoolBalances ?? []) {
 		const pooledBalance = pooledCustomerEntitlement.pooled_balance;
 		if (pooledBalance?.reset_mode === PooledBalanceResetMode.Subscription) {
 			pooledBalance.stripe_subscription_id = stripeSubscriptionId;
