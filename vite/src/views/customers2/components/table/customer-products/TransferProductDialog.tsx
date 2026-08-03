@@ -12,8 +12,10 @@ import {
 	SelectTrigger,
 	SelectValue,
 } from "@autumn/ui";
+import { useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
+import { invalidateCustomerBillingQueries } from "@/components/forms/shared/utils/invalidateCustomerBillingQueries";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
 import { getBackendErr } from "@/utils/genUtils";
 import { useCusQuery } from "@/views/customers/customer/hooks/useCusQuery";
@@ -29,7 +31,8 @@ export const TransferProductDialog = ({
 	open: boolean;
 	setOpen: (open: boolean) => void;
 }) => {
-	const { customer, refetch } = useCusQuery();
+	const { customer } = useCusQuery();
+	const queryClient = useQueryClient();
 	const axiosInstance = useAxiosInstance();
 	const [loading, setLoading] = useState(false);
 	const [selectedValue, setSelectedValue] = useState<string>("");
@@ -81,7 +84,7 @@ export const TransferProductDialog = ({
 				},
 			);
 
-			await refetch();
+			invalidateCustomerBillingQueries({ queryClient });
 			toast.success("Plan transferred successfully");
 			setOpen(false);
 		} catch (error) {

@@ -140,7 +140,7 @@ export function SubscriptionCancelSheet() {
 	}
 
 	return (
-		<ScheduledPlanGuard entityId={cusProduct.entity_id ?? undefined}>
+		<ScheduledPlanGuard customerProductId={cusProduct.id}>
 			<UpdateSubscriptionFormProvider
 				formContext={formContext}
 				originalItems={undefined}

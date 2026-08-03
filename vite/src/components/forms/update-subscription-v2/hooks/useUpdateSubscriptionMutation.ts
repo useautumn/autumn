@@ -29,8 +29,6 @@ export function useUpdateSubscriptionMutation({
 		customerId,
 		path: BILLING_OPERATIONS.updateSubscription.path,
 		buildRequestBody,
-		invalidatesSchedule:
-			BILLING_OPERATIONS.updateSubscription.invalidatesSchedule,
 		successMessage: "Subscription updated successfully",
 		errorMessage: "Failed to update subscription",
 		onCheckoutRedirect,
