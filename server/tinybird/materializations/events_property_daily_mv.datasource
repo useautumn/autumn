@@ -17,5 +17,3 @@ SCHEMA >
 ENGINE "AggregatingMergeTree"
 ENGINE_PARTITION_KEY "toYYYYMM(day)"
 ENGINE_SORTING_KEY "org_id, env, property_key, customer_id, entity_id, event_name, day, property_value"
-
-BACKFILL skip
