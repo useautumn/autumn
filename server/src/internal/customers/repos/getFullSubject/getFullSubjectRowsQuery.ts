@@ -30,7 +30,7 @@ export const EXTRA_CUSTOMER_ENTITLEMENT_LIMIT = 200;
  * predicate pushdown does not apply, and the single-subject getFullSubject path
  * measured neutral — 585ms vs 570ms, byte-identical output.
  */
-/** Aggregate CTE → SubjectQueryRow column. Each CTE must expose (subject_key, items). */
+/** Per-subject aggregate CTE → key in the subject object. Each exposes (subject_key, items). */
 const SUBJECT_AGGREGATES = [
 	{ cte: "cus_products_agg", column: "customer_products" },
 	{ cte: "cus_entitlements_agg", column: "customer_entitlements" },
@@ -40,27 +40,42 @@ const SUBJECT_AGGREGATES = [
 	{ cte: "replaceables_agg", column: "replaceables" },
 	{ cte: "rollovers_agg", column: "rollovers" },
 	{ cte: "usage_windows_agg", column: "usage_windows" },
+	{ cte: "subscriptions_agg", column: "subscriptions" },
+] as const;
+
+/** Org catalog. Identical for every subject, so these are built once per page
+ *  and returned once alongside the subject array, never per subject. */
+const CATALOG_AGGREGATES = [
 	{ cte: "products_agg", column: "products" },
 	{ cte: "entitlements_agg", column: "entitlements" },
 	{ cte: "prices_agg", column: "prices" },
 	{ cte: "free_trials_agg", column: "free_trials" },
-	{ cte: "subscriptions_agg", column: "subscriptions" },
 ] as const;
 
-const aggregateSelects = sql.join(
+const subjectAggregateKeyValues = sql.join(
 	SUBJECT_AGGREGATES.map(({ cte, column }) =>
-		sql.raw(`COALESCE(${cte}.items, '[]'::json) AS ${column}`),
+		sql.raw(`'${column}', COALESCE(${cte}.items, '[]'::json)`),
 	),
 	sql`,
-			`,
+				`,
 );
 
-const aggregateJoins = sql.join(
+const subjectAggregateJoins = sql.join(
 	SUBJECT_AGGREGATES.map(({ cte }) =>
 		sql.raw(`LEFT JOIN ${cte} ON ${cte}.subject_key = sr.subject_key`),
 	),
 	sql`
 		`,
+);
+
+const catalogKeyValues = sql.join(
+	CATALOG_AGGREGATES.map(({ cte, column }) =>
+		sql.raw(
+			`'${column}', COALESCE((SELECT items FROM ${cte}), '[]'::json)`,
+		),
+	),
+	sql`,
+			`,
 );
 
 const emptyEntityFragments = {
@@ -69,7 +84,7 @@ const emptyEntityFragments = {
 	entitlementRefsUnion: sql``,
 	priceRefsUnion: sql``,
 	freeTrialRefsUnion: sql``,
-	selectColumns: sql``,
+	selectKeyValue: sql``,
 };
 
 export const getFullSubjectRowsQuery = ({
@@ -164,10 +179,10 @@ export const getFullSubjectRowsQuery = ({
 		)`
 		: sql``;
 
-	const invoicesSelect = includeInvoices
+	const invoicesKeyValue = includeInvoices
 		? sql`,
 
-			COALESCE(
+			'invoices', COALESCE(
 				(
 					SELECT json_agg(row_to_json(ci) ORDER BY ci.created_at DESC, ci.id DESC)
 						FILTER (WHERE ci.id IS NOT NULL)
@@ -175,7 +190,7 @@ export const getFullSubjectRowsQuery = ({
 					WHERE ci.internal_customer_id = sr.internal_customer_id
 				),
 				'[]'::json
-			) AS invoices`
+			)`
 		: sql``;
 
 	return sql`
@@ -375,9 +390,7 @@ export const getFullSubjectRowsQuery = ({
 		,
 
 		distinct_products AS MATERIALIZED (
-			SELECT DISTINCT ON (src.subject_key, p.internal_id)
-				src.subject_key,
-				src.internal_customer_id,
+			SELECT DISTINCT ON (p.internal_id)
 				p.*
 			FROM products p
 			JOIN (
@@ -388,34 +401,35 @@ export const getFullSubjectRowsQuery = ({
 				FROM cus_products cp
 				${entityFragments.productRefsUnion}
 			) src ON p.internal_id = src.internal_product_id
-			ORDER BY src.subject_key, p.internal_id
+			ORDER BY p.internal_id
 		),
 
 		relevant_entitlement_records AS MATERIALIZED (
-			SELECT DISTINCT
-				ce.subject_key,
-				ce.internal_customer_id,
-				ce.entitlement_id
-			FROM cus_entitlements ce
-			UNION
-			SELECT DISTINCT
-				ece.subject_key,
-				ece.internal_customer_id,
-				ece.entitlement_id
-			FROM extra_cus_entitlements ece
-			UNION
-			SELECT DISTINCT
-				pce.subject_key,
-				pce.internal_customer_id,
-				pce.entitlement_id
-			FROM pooled_customer_entitlements pce
-			${entityFragments.entitlementRefsUnion}
+			SELECT DISTINCT rer_src.entitlement_id
+			FROM (
+				SELECT DISTINCT
+					ce.subject_key,
+					ce.internal_customer_id,
+					ce.entitlement_id
+				FROM cus_entitlements ce
+				UNION
+				SELECT DISTINCT
+					ece.subject_key,
+					ece.internal_customer_id,
+					ece.entitlement_id
+				FROM extra_cus_entitlements ece
+				UNION
+				SELECT DISTINCT
+					pce.subject_key,
+					pce.internal_customer_id,
+					pce.entitlement_id
+				FROM pooled_customer_entitlements pce
+				${entityFragments.entitlementRefsUnion}
+			) rer_src
 		),
 
 		distinct_entitlements AS MATERIALIZED (
 			SELECT
-				rer.subject_key,
-				rer.internal_customer_id,
 				e.*,
 				row_to_json(f) AS feature
 			FROM relevant_entitlement_records rer
@@ -426,9 +440,7 @@ export const getFullSubjectRowsQuery = ({
 		),
 
 		distinct_prices AS MATERIALIZED (
-			SELECT DISTINCT ON (src.subject_key, p.id)
-				src.subject_key,
-				src.internal_customer_id,
+			SELECT DISTINCT ON (p.id)
 				p.*
 			FROM prices p
 			JOIN (
@@ -441,13 +453,11 @@ export const getFullSubjectRowsQuery = ({
 					AND cp.subject_key = cpr.subject_key
 				${entityFragments.priceRefsUnion}
 			) src ON p.id = src.price_id
-			ORDER BY src.subject_key, p.id
+			ORDER BY p.id
 		),
 
 		distinct_free_trials AS MATERIALIZED (
-			SELECT DISTINCT ON (src.subject_key, ft.id)
-				src.subject_key,
-				src.internal_customer_id,
+			SELECT DISTINCT ON (ft.id)
 				ft.*
 			FROM free_trials ft
 			JOIN (
@@ -459,7 +469,7 @@ export const getFullSubjectRowsQuery = ({
 				WHERE cp.free_trial_id IS NOT NULL
 				${entityFragments.freeTrialRefsUnion}
 			) src ON ft.id = src.free_trial_id
-			ORDER BY src.subject_key, ft.id
+			ORDER BY ft.id
 		),
 
 		cus_products_agg AS MATERIALIZED (
@@ -563,44 +573,23 @@ export const getFullSubjectRowsQuery = ({
 		),
 
 		products_agg AS MATERIALIZED (
-			SELECT
-				p.subject_key,
-				json_agg(
-					(row_to_json(p)::jsonb - 'internal_customer_id' - 'subject_key')::json
-					ORDER BY p.internal_id
-				) AS items
+			SELECT json_agg(row_to_json(p) ORDER BY p.internal_id) AS items
 			FROM distinct_products p
-			GROUP BY p.subject_key
 		),
 
 		entitlements_agg AS MATERIALIZED (
-			SELECT
-				ent.subject_key,
-				json_agg((row_to_json(ent)::jsonb - 'internal_customer_id' - 'subject_key')::json) AS items
+			SELECT json_agg(row_to_json(ent) ORDER BY ent.id) AS items
 			FROM distinct_entitlements ent
-			GROUP BY ent.subject_key
 		),
 
 		prices_agg AS MATERIALIZED (
-			SELECT
-				pr.subject_key,
-				json_agg(
-					(row_to_json(pr)::jsonb - 'internal_customer_id' - 'subject_key')::json
-					ORDER BY pr.id
-				) AS items
+			SELECT json_agg(row_to_json(pr) ORDER BY pr.id) AS items
 			FROM distinct_prices pr
-			GROUP BY pr.subject_key
 		),
 
 		free_trials_agg AS MATERIALIZED (
-			SELECT
-				ft.subject_key,
-				json_agg(
-					(row_to_json(ft)::jsonb - 'internal_customer_id' - 'subject_key')::json
-					ORDER BY ft.id
-				) AS items
+			SELECT json_agg(row_to_json(ft) ORDER BY ft.id) AS items
 			FROM distinct_free_trials ft
-			GROUP BY ft.subject_key
 		),
 
 		subscriptions_agg AS MATERIALIZED (
@@ -618,27 +607,40 @@ export const getFullSubjectRowsQuery = ({
 					ON s.stripe_id = cp_sub.stripe_id
 			) cs
 			GROUP BY cs.subject_key
+		),
+
+		subject_rows AS (
+			SELECT
+				sr.subject_order,
+				json_build_object(
+					'customer', row_to_json(scr),
+					${subjectAggregateKeyValues}
+					${invoicesKeyValue},
+
+					'entity', CASE
+						WHEN er.internal_id IS NULL THEN NULL
+						ELSE row_to_json(er)
+					END
+					${entityFragments.selectKeyValue}
+				) AS subject
+			FROM subject_records sr
+			JOIN subject_customer_records scr
+				ON scr.internal_id = sr.internal_customer_id
+			${subjectAggregateJoins}
+			LEFT JOIN entities er
+				ON er.internal_id = sr.internal_entity_id
 		)
 
-		SELECT
-			row_to_json(scr) AS customer,
-			${aggregateSelects}
-
-			${invoicesSelect},
-
-			CASE
-				WHEN er.internal_id IS NULL THEN NULL
-				ELSE row_to_json(er)
-			END AS entity
-			${entityFragments.selectColumns}
-
-		FROM subject_records sr
-		JOIN subject_customer_records scr
-			ON scr.internal_id = sr.internal_customer_id
-		${aggregateJoins}
-		LEFT JOIN entities er
-			ON er.internal_id = sr.internal_entity_id
-		ORDER BY sr.subject_order
+		SELECT json_build_object(
+			'subjects', COALESCE(
+				(
+					SELECT json_agg(s.subject ORDER BY s.subject_order)
+					FROM subject_rows s
+				),
+				'[]'::json
+			),
+			${catalogKeyValues}
+		) AS result
 		${planetScaleTag({ query: queryTag })}
 	`;
 };
