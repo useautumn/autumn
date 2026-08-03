@@ -5,25 +5,33 @@ import {
 	type TrackParams,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
+import { getTrackBodyIdempotencyKey } from "@/internal/balances/idempotency/trackBodyIdempotencyKey.js";
+import { withIdempotencyKey } from "@/internal/misc/idempotency/withIdempotencyKey.js";
 import { getTrackFeatureDeductionsForBody } from "./utils/getFeatureDeductions.js";
-import { withTrackBodyIdempotency } from "./utils/withTrackBodyIdempotency.js";
 import { runTrackV3 } from "./v3/runTrackV3.js";
 
 export const runQueuedTrack = async ({
 	ctx,
 	body,
 	apiVersion,
+	validateTrackBodyIdempotencyKey = true,
 }: {
 	ctx: AutumnContext;
 	body: TrackParams;
 	apiVersion?: ApiVersion;
+	/** Sync-originated replays already claimed the body key at accept time
+	 *  (queueTrack marks them false); async/batch messages have no accept-time
+	 *  claim, so the worker's claim is their only body-key dedup. */
+	validateTrackBodyIdempotencyKey?: boolean;
 }) => {
 	const featureDeductions = getTrackFeatureDeductionsForBody({ ctx, body });
 
 	try {
-		await withTrackBodyIdempotency({
+		await withIdempotencyKey({
 			ctx,
-			body,
+			idempotencyKey: validateTrackBodyIdempotencyKey
+				? getTrackBodyIdempotencyKey({ body })
+				: null,
 			run: () =>
 				runTrackV3({
 					ctx,

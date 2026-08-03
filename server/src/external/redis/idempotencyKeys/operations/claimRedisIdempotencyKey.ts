@@ -2,7 +2,7 @@ import { redis } from "@/external/redis/initRedis.js";
 import {
 	IDEMPOTENCY_TTL_MS,
 	type IdempotencyClaimResult,
-} from "./idempotencyKeyUtils.js";
+} from "@/internal/misc/idempotency/idempotencyKeyUtils.js";
 
 export const claimRedisIdempotencyKey = async ({
 	storageKey,
@@ -23,19 +23,5 @@ export const claimRedisIdempotencyKey = async ({
 		return wasSet ? "claimed" : "duplicate";
 	} catch {
 		return "unavailable";
-	}
-};
-
-export const releaseRedisIdempotencyKey = async ({
-	storageKey,
-}: {
-	storageKey: string;
-}): Promise<void> => {
-	if (redis.status !== "ready") return;
-
-	try {
-		await redis.del(storageKey);
-	} catch {
-		return;
 	}
 };

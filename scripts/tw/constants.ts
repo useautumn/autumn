@@ -183,4 +183,7 @@ export const CACHE_V2_DRAGONFLY_URL = REDIS_URL;
 export const ELASTICMQ_BASE_URL = `http://localhost:${ELASTICMQ_PORT}/000000000000`;
 export const SQS_QUEUE_URL_V2 = `${ELASTICMQ_BASE_URL}/autumn.fifo`;
 export const TRACK_SQS_QUEUE_URL = `${ELASTICMQ_BASE_URL}/autumn-track.fifo`;
+/** Aliased to the same queue as TRACK_SQS_QUEUE_URL (mirrors dw) — prod
+ *  points this at a dedicated queue; unset it would 503 every async track. */
+export const TRACK_ASYNC_SQS_QUEUE_URL = TRACK_SQS_QUEUE_URL;
 export const DYNAMODB_ENDPOINT = `http://localhost:${DYNAMODB_PORT}`;

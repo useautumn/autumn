@@ -1,13 +1,9 @@
 import { ErrCode, RecaseError } from "@autumn/shared";
 import { claimDynamoIdempotencyKey } from "@/external/aws/dynamodb/idempotencyKeys/operations/claimDynamoIdempotencyKey.js";
-import { releaseDynamoIdempotencyKey } from "@/external/aws/dynamodb/idempotencyKeys/operations/releaseDynamoIdempotencyKey.js";
 import type { Logger } from "@/external/logtail/logtailUtils";
+import { claimRedisIdempotencyKey } from "@/external/redis/idempotencyKeys/operations/claimRedisIdempotencyKey.js";
 import { isIdempotencyDynamoReadEnabled } from "@/internal/misc/miscellaneousEdgeConfig/miscellaneousEdgeConfigStore.js";
-import { buildIdempotencyStorageKey } from "./idempotencyKeyUtils.js";
-import {
-	claimRedisIdempotencyKey,
-	releaseRedisIdempotencyKey,
-} from "./redisIdempotencyStore.js";
+import { buildIdempotencyStorageKey } from "../idempotencyKeyUtils.js";
 
 /**
  * Keys are always dual-written to Redis and DynamoDB. The
@@ -65,29 +61,4 @@ export const checkIdempotencyKey = async ({
 	if (redisResult === "duplicate") {
 		throwDuplicateIdempotencyKey(idempotencyKey);
 	}
-};
-
-export const releaseIdempotencyKey = async ({
-	orgId,
-	env,
-	idempotencyKey,
-}: {
-	orgId: string;
-	env: string;
-	idempotencyKey: string;
-}): Promise<void> => {
-	const { storageKey } = buildIdempotencyStorageKey({
-		orgId,
-		env,
-		idempotencyKey,
-	});
-
-	if (isIdempotencyDynamoReadEnabled()) {
-		void releaseRedisIdempotencyKey({ storageKey });
-		await releaseDynamoIdempotencyKey({ storageKey });
-		return;
-	}
-
-	void releaseDynamoIdempotencyKey({ storageKey });
-	await releaseRedisIdempotencyKey({ storageKey });
 };

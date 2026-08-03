@@ -139,18 +139,28 @@ describe("runAsyncTrack", () => {
 		);
 	});
 
-	test("throws 503 RecaseError when TRACK_ASYNC_SQS_QUEUE_URL is unset", async () => {
-		process.env.TRACK_ASYNC_SQS_QUEUE_URL = undefined;
+	test("throws 503 RecaseError when no track queue URL is set", async () => {
+		const originalTrackUrl = process.env.TRACK_SQS_QUEUE_URL;
+		delete process.env.TRACK_ASYNC_SQS_QUEUE_URL;
+		delete process.env.TRACK_SQS_QUEUE_URL;
 		const ctx = buildCtx();
 
-		await expect(runAsyncTrack({ ctx, body })).rejects.toMatchObject({
-			code: ErrCode.InternalError,
-			statusCode: 503,
-			message: "Async track is not available right now",
-		});
+		try {
+			await expect(runAsyncTrack({ ctx, body })).rejects.toMatchObject({
+				code: ErrCode.InternalError,
+				statusCode: 503,
+				message: "Async track is not available right now",
+			});
 
-		expect(mockState.queueCommands).toHaveLength(0);
-		expect(ctx.logger.error).toHaveBeenCalled();
+			expect(mockState.queueCommands).toHaveLength(0);
+			expect(ctx.logger.warn).toHaveBeenCalled();
+		} finally {
+			if (originalTrackUrl === undefined) {
+				delete process.env.TRACK_SQS_QUEUE_URL;
+			} else {
+				process.env.TRACK_SQS_QUEUE_URL = originalTrackUrl;
+			}
+		}
 	});
 
 	test("throws 503 RecaseError when the batched SQS send fails", async () => {

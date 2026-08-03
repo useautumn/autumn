@@ -43,11 +43,16 @@ const mockState = {
 // Real implementations for the passthrough delegation. Snapshot the FUNCTION
 // references before mocking — a module namespace has live bindings, so after
 // mock.module it would resolve to the mock and passthrough would recurse.
-const realRedisStore = await import(
-	"@/internal/misc/idempotency/redisIdempotencyStore.js"
-);
-const realClaimRedis = realRedisStore.claimRedisIdempotencyKey;
-const realReleaseRedis = realRedisStore.releaseRedisIdempotencyKey;
+const realClaimRedis = (
+	await import(
+		"@/external/redis/idempotencyKeys/operations/claimRedisIdempotencyKey.js"
+	)
+).claimRedisIdempotencyKey;
+const realReleaseRedis = (
+	await import(
+		"@/external/redis/idempotencyKeys/operations/releaseRedisIdempotencyKey.js"
+	)
+).releaseRedisIdempotencyKey;
 const realClaimDynamo = (
 	await import(
 		"@/external/aws/dynamodb/idempotencyKeys/operations/claimDynamoIdempotencyKey.js"
@@ -59,21 +64,30 @@ const realReleaseDynamo = (
 	)
 ).releaseDynamoIdempotencyKey;
 
-mock.module("@/internal/misc/idempotency/redisIdempotencyStore.js", () => ({
-	claimRedisIdempotencyKey: async (args: { storageKey: string }) => {
-		if (mockState.passthrough) {
-			return realClaimRedis(args);
-		}
-		mockState.redisClaims.push(args.storageKey);
-		return mockState.redisClaimResult;
-	},
-	releaseRedisIdempotencyKey: async (args: { storageKey: string }) => {
-		if (mockState.passthrough) {
-			return realReleaseRedis(args);
-		}
-		mockState.redisReleases.push(args.storageKey);
-	},
-}));
+mock.module(
+	"@/external/redis/idempotencyKeys/operations/claimRedisIdempotencyKey.js",
+	() => ({
+		claimRedisIdempotencyKey: async (args: { storageKey: string }) => {
+			if (mockState.passthrough) {
+				return realClaimRedis(args);
+			}
+			mockState.redisClaims.push(args.storageKey);
+			return mockState.redisClaimResult;
+		},
+	}),
+);
+
+mock.module(
+	"@/external/redis/idempotencyKeys/operations/releaseRedisIdempotencyKey.js",
+	() => ({
+		releaseRedisIdempotencyKey: async (args: { storageKey: string }) => {
+			if (mockState.passthrough) {
+				return realReleaseRedis(args);
+			}
+			mockState.redisReleases.push(args.storageKey);
+		},
+	}),
+);
 
 mock.module(
 	"@/external/aws/dynamodb/idempotencyKeys/operations/claimDynamoIdempotencyKey.js",
@@ -100,10 +114,8 @@ mock.module(
 	}),
 );
 
-import {
-	checkIdempotencyKey,
-	releaseIdempotencyKey,
-} from "@/internal/misc/idempotency/checkIdempotencyKey.js";
+import { checkIdempotencyKey } from "@/internal/misc/idempotency/actions/checkIdempotencyKey.js";
+import { releaseIdempotencyKey } from "@/internal/misc/idempotency/actions/releaseIdempotencyKey.js";
 
 const defaultConfig = MiscellaneousEdgeConfigSchema.parse({});
 

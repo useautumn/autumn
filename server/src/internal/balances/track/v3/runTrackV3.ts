@@ -10,11 +10,11 @@ import {
 	type TrackResponseV3,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
+import { getTrackQueueIdempotencyKey } from "@/internal/balances/idempotency/trackQueueIdempotency.js";
 import { getOrCreateCachedFullSubject } from "@/internal/customers/cache/fullSubject/actions/getOrCreateCachedFullSubject.js";
 import { getOrSetCachedFullSubject } from "@/internal/customers/cache/fullSubject/actions/getOrSetCachedFullSubject.js";
 import type { FeatureDeduction } from "../../utils/types/featureDeduction.js";
 import { runRedisTrackV3 } from "./runRedisTrackV3.js";
-import { getTrackIdempotencyKey } from "./trackIdempotencyKey.js";
 
 const getTrackFullSubject = async ({
 	ctx,
@@ -64,7 +64,7 @@ export const runTrackV3 = async ({
 		body,
 	});
 
-	const redisIdempotencyKey = getTrackIdempotencyKey({ ctx });
+	const redisIdempotencyKey = getTrackQueueIdempotencyKey({ ctx });
 
 	const response: TrackResponseV3 = await runRedisTrackV3({
 		ctx,
