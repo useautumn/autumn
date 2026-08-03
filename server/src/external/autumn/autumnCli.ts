@@ -379,6 +379,7 @@ export class AutumnInt {
 			from_entity_id?: string;
 			to_entity_id?: string;
 			product_id: string;
+			customer_product_id?: string;
 		},
 	) {
 		const data = await this.post(`/customers/${customerId}/transfer`, params);
