@@ -313,13 +313,13 @@ Use this endpoint to schedule future plan changes (e.g. switch from a trial plan
 @example
 ```typescript
 // Schedule a transition from a trial plan to a paid plan
-const response = await client.billing.createSchedule({ customerId: "cus_123", phases: [{"startsAt":1785770329020,"plans":[{"planId":"trial_plan"}]},{"startsAt":1786979929020,"plans":[{"planId":"pro_plan"}]}] });
+const response = await client.billing.createSchedule({ customerId: "cus_123", phases: [{"startsAt":1785774477308,"plans":[{"planId":"trial_plan"}]},{"startsAt":1786984077308,"plans":[{"planId":"pro_plan"}]}] });
 ```
 
 @param customerId - The ID of the customer to create the schedule for.
 @param entityId - Optional entity ID for an entity-scoped schedule. (optional)
 @param freeTrial - Free trial configuration applied to every plan in the immediate phase. (optional)
-@param currency - Currency used to bill the immediate phase. (optional)
+@param currency - Three-letter Stripe-supported currency code used to bill the immediate phase (for example, 'usd'). (optional)
 @param invoiceMode - Invoice mode creates and sends an invoice instead of charging the customer's payment method immediately for the first phase. (optional)
 @param discounts - List of discounts to apply to the immediate phase. Each discount can be an Autumn reward ID, Stripe coupon ID, or Stripe promotion code. (optional)
 @param successUrl - URL to redirect to after successful checkout. (optional)
@@ -922,13 +922,13 @@ Use this endpoint to schedule future plan changes (e.g. switch from a trial plan
 @example
 ```typescript
 // Schedule a transition from a trial plan to a paid plan
-const response = await client.billing.createSchedule({ customerId: "cus_123", phases: [{"startsAt":1785770329020,"plans":[{"planId":"trial_plan"}]},{"startsAt":1786979929020,"plans":[{"planId":"pro_plan"}]}] });
+const response = await client.billing.createSchedule({ customerId: "cus_123", phases: [{"startsAt":1785774477308,"plans":[{"planId":"trial_plan"}]},{"startsAt":1786984077308,"plans":[{"planId":"pro_plan"}]}] });
 ```
 
 @param customerId - The ID of the customer to create the schedule for.
 @param entityId - Optional entity ID for an entity-scoped schedule. (optional)
 @param freeTrial - Free trial configuration applied to every plan in the immediate phase. (optional)
-@param currency - Currency used to bill the immediate phase. (optional)
+@param currency - Three-letter Stripe-supported currency code used to bill the immediate phase (for example, 'usd'). (optional)
 @param invoiceMode - Invoice mode creates and sends an invoice instead of charging the customer's payment method immediately for the first phase. (optional)
 @param discounts - List of discounts to apply to the immediate phase. Each discount can be an Autumn reward ID, Stripe coupon ID, or Stripe promotion code. (optional)
 @param successUrl - URL to redirect to after successful checkout. (optional)

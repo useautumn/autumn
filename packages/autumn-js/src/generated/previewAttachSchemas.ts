@@ -319,6 +319,7 @@ export const previewAttachItemPlanItemOutboundSchema = z.object({
 	feature_id: z.string(),
 	included: z.union([z.number(), z.undefined()]).optional(),
 	unlimited: z.union([z.boolean(), z.undefined()]).optional(),
+	pooled: z.boolean(),
 	reset: z
 		.union([previewAttachItemResetOutboundSchema, z.undefined()])
 		.optional(),
@@ -402,6 +403,7 @@ export const previewAttachAddItemPlanItemOutboundSchema = z.object({
 	feature_id: z.string(),
 	included: z.union([z.number(), z.undefined()]).optional(),
 	unlimited: z.union([z.boolean(), z.undefined()]).optional(),
+	pooled: z.boolean(),
 	reset: z
 		.union([previewAttachAddItemResetOutboundSchema, z.undefined()])
 		.optional(),
@@ -591,6 +593,7 @@ export const previewAttachUpsertLicensePlanItemOutboundSchema = z.object({
 	feature_id: z.string(),
 	included: z.union([z.number(), z.undefined()]).optional(),
 	unlimited: z.union([z.boolean(), z.undefined()]).optional(),
+	pooled: z.boolean(),
 	reset: z
 		.union([previewAttachUpsertLicenseResetOutboundSchema, z.undefined()])
 		.optional(),
@@ -831,6 +834,7 @@ export const previewAttachItemPlanItemSchema = z.object({
 	featureId: z.string(),
 	included: z.union([z.number(), z.undefined()]).optional(),
 	unlimited: z.union([z.boolean(), z.undefined()]).optional(),
+	pooled: z.union([z.boolean(), z.undefined()]).optional(),
 	reset: z.union([previewAttachItemResetSchema, z.undefined()]).optional(),
 	price: z.union([previewAttachItemPriceSchema, z.undefined()]).optional(),
 	proration: z
@@ -897,6 +901,7 @@ export const previewAttachAddItemPlanItemSchema = z.object({
 	featureId: z.string(),
 	included: z.union([z.number(), z.undefined()]).optional(),
 	unlimited: z.union([z.boolean(), z.undefined()]).optional(),
+	pooled: z.union([z.boolean(), z.undefined()]).optional(),
 	reset: z.union([previewAttachAddItemResetSchema, z.undefined()]).optional(),
 	price: z.union([previewAttachAddItemPriceSchema, z.undefined()]).optional(),
 	proration: z
@@ -1087,6 +1092,7 @@ export const previewAttachUpsertLicensePlanItemSchema = z.object({
 	featureId: z.string(),
 	included: z.union([z.number(), z.undefined()]).optional(),
 	unlimited: z.union([z.boolean(), z.undefined()]).optional(),
+	pooled: z.union([z.boolean(), z.undefined()]).optional(),
 	reset: z
 		.union([previewAttachUpsertLicenseResetSchema, z.undefined()])
 		.optional(),

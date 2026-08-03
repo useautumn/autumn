@@ -303,17 +303,17 @@ function parseSchema({
 		return [];
 	}
 
-	// Handle anyOf/oneOf (common for nullable types)
+	// Handle anyOf/oneOf
 	if (schema.anyOf || schema.oneOf) {
 		const variants = (schema.anyOf ?? schema.oneOf) as Record<
 			string,
 			unknown
 		>[];
-		// Find the non-null variant
-		const nonNullVariant = variants.find(
+		const nonNullVariants = variants.filter(
 			(v) => v.type !== "null" && !v.$ref?.toString().includes("null"),
 		);
-		if (nonNullVariant) {
+		const nonNullVariant = nonNullVariants[0];
+		if (nonNullVariants.length === 1 && nonNullVariant) {
 			return parseSchema({
 				schema: nonNullVariant,
 				schemas,
@@ -321,7 +321,17 @@ function parseSchema({
 				visited,
 			});
 		}
-		return [];
+
+		return mergeSchemaFields(
+			nonNullVariants.flatMap((variant) =>
+				parseSchema({
+					schema: variant,
+					schemas,
+					requiredFields,
+					visited: new Set(visited),
+				}),
+			),
+		);
 	}
 
 	// Handle object type
@@ -416,16 +426,17 @@ function parseField({
 		}
 	}
 
-	// Handle anyOf/oneOf (nullable types)
+	// Handle anyOf/oneOf
 	if (schema.anyOf || schema.oneOf) {
 		const variants = (schema.anyOf ?? schema.oneOf) as Record<
 			string,
 			unknown
 		>[];
 		const hasNull = variants.some((v) => v.type === "null");
-		const nonNullVariant = variants.find((v) => v.type !== "null");
+		const nonNullVariants = variants.filter((v) => v.type !== "null");
+		const nonNullVariant = nonNullVariants[0];
 
-		if (nonNullVariant) {
+		if (nonNullVariants.length === 1 && nonNullVariant) {
 			const innerField = parseField({
 				name,
 				schema: nonNullVariant,
@@ -447,6 +458,26 @@ function parseField({
 			}
 		}
 
+		if (nonNullVariants.length > 1) {
+			const merged = mergeSchemaFields(
+				nonNullVariants.flatMap((variant) => {
+					const field = parseField({
+						name,
+						schema: variant,
+						schemas,
+						required,
+						visited: new Set(visited),
+					});
+					return field ? [field] : [];
+				}),
+			)[0];
+			if (merged) {
+				merged.description ??= description;
+				if (hasNull) merged.type = `${merged.type} | null`;
+			}
+			return merged ?? null;
+		}
+
 		return {
 			name,
 			type: hasNull ? "any | null" : "any",
@@ -458,6 +489,8 @@ function parseField({
 	// Handle enum
 	if (schema.enum) {
 		enumValues = schema.enum as string[];
+	} else if ("const" in schema && schema.const !== null) {
+		enumValues = [String(schema.const)];
 	}
 
 	// Handle nested object
@@ -727,6 +760,35 @@ function mergeFieldTypes({
 	return [...typeSet].join(" | ");
 }
 
+function mergeSchemaFields(fields: SchemaField[]): SchemaField[] {
+	const merged = new Map<string, SchemaField>();
+	for (const field of fields) {
+		const existing = merged.get(field.name);
+		if (!existing) {
+			merged.set(field.name, field);
+			continue;
+		}
+
+		merged.set(field.name, {
+			...existing,
+			type: mergeFieldTypes({ left: existing.type, right: field.type }),
+			description: existing.description ?? field.description,
+			children: mergeSchemaFields([
+				...(existing.children ?? []),
+				...(field.children ?? []),
+			]),
+			enumValues: [
+				...new Set([
+					...(existing.enumValues ?? []),
+					...(field.enumValues ?? []),
+				]),
+			],
+			required: existing.required && field.required,
+		});
+	}
+	return [...merged.values()];
+}
+
 /**
  * Resolve the type string for a schema.
  */
@@ -734,6 +796,10 @@ function resolveType(
 	schema: Record<string, unknown>,
 	schemas: Record<string, unknown>,
 ): string {
+	if ("const" in schema) {
+		return schema.const === null ? "null" : typeof schema.const;
+	}
+
 	if (schema.$ref) {
 		const refPath = schema.$ref as string;
 		const refName = refPath.replace("#/components/schemas/", "");

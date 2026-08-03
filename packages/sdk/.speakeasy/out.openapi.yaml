@@ -15071,13 +15071,13 @@ paths:
         @example
         ```typescript
         // Schedule a transition from a trial plan to a paid plan
-        const response = await client.billing.createSchedule({ customerId: "cus_123", phases: [{"startsAt":1785770329020,"plans":[{"planId":"trial_plan"}]},{"startsAt":1786979929020,"plans":[{"planId":"pro_plan"}]}] });
+        const response = await client.billing.createSchedule({ customerId: "cus_123", phases: [{"startsAt":1785774477308,"plans":[{"planId":"trial_plan"}]},{"startsAt":1786984077308,"plans":[{"planId":"pro_plan"}]}] });
         ```
 
         @param customerId - The ID of the customer to create the schedule for.
         @param entityId - Optional entity ID for an entity-scoped schedule. (optional)
         @param freeTrial - Free trial configuration applied to every plan in the immediate phase. (optional)
-        @param currency - Currency used to bill the immediate phase. (optional)
+        @param currency - Three-letter Stripe-supported currency code used to bill the immediate phase (for example, 'usd'). (optional)
         @param invoiceMode - Invoice mode creates and sends an invoice instead of charging the customer's payment method immediately for the first phase. (optional)
         @param discounts - List of discounts to apply to the immediate phase. Each discount can be an Autumn reward ID, Stripe coupon ID, or Stripe promotion code. (optional)
         @param successUrl - URL to redirect to after successful checkout. (optional)
@@ -15138,7 +15138,7 @@ paths:
                   description: Free trial configuration applied to every plan in the immediate phase.
                 currency:
                   type: string
-                  description: Currency used to bill the immediate phase.
+                  description: Three-letter Stripe-supported currency code used to bill the immediate phase (for example, 'usd').
                 invoice_mode:
                   type: object
                   properties:
@@ -31479,93 +31479,184 @@ paths:
                 - type: object
                   properties:
                     coupon:
-                      type: object
-                      properties:
-                        id:
-                          type: string
-                          minLength: 1
-                        name:
-                          type: string
-                          minLength: 1
-                        type:
-                          enum:
-                            - percentage_discount
-                            - fixed_discount
-                          type: string
-                        value:
-                          type: number
-                          exclusiveMinimum: 0
-                        duration:
-                          anyOf:
-                            - type: object
-                              properties:
-                                type:
-                                  const: one_off
-                                length:
-                                  type: "null"
-                              required:
-                                - type
-                                - length
-                            - type: object
-                              properties:
-                                type:
-                                  const: months
-                                length:
-                                  type: integer
-                                  minimum: -9.007199254740991e+15
-                                  maximum: 9.007199254740991e+15
-                                  exclusiveMinimum: 0
-                              required:
-                                - type
-                                - length
-                            - type: object
-                              properties:
-                                type:
-                                  const: forever
-                                length:
-                                  type: "null"
-                              required:
-                                - type
-                                - length
-                        plan_ids:
-                          anyOf:
-                            - type: array
-                              minItems: 1
+                      anyOf:
+                        - type: object
+                          properties:
+                            id:
+                              type: string
+                              minLength: 1
+                            name:
+                              type: string
+                              minLength: 1
+                            duration:
+                              anyOf:
+                                - type: object
+                                  properties:
+                                    type:
+                                      const: one_off
+                                    length:
+                                      const: null
+                                  required:
+                                    - type
+                                    - length
+                                - type: object
+                                  properties:
+                                    type:
+                                      const: months
+                                    length:
+                                      type: integer
+                                      minimum: -9.007199254740991e+15
+                                      maximum: 9.007199254740991e+15
+                                      exclusiveMinimum: 0
+                                  required:
+                                    - type
+                                    - length
+                                - type: object
+                                  properties:
+                                    type:
+                                      const: forever
+                                    length:
+                                      const: null
+                                  required:
+                                    - type
+                                    - length
+                              description: Use a positive integer length for months, and null for one_off or forever.
+                            plan_ids:
+                              anyOf:
+                                - type: array
+                                  minItems: 1
+                                  items:
+                                    type: string
+                                    minLength: 1
+                                - type: "null"
+                              description: Plan IDs must be unique.
+                            promo_codes:
+                              type: array
                               items:
-                                type: string
-                                minLength: 1
-                            - type: "null"
-                        promo_codes:
-                          type: array
-                          items:
-                            type: object
-                            properties:
-                              code:
-                                type: string
-                                minLength: 1
-                              global_max_redemption:
-                                anyOf:
-                                  - type: integer
-                                    minimum: -9.007199254740991e+15
-                                    maximum: 9.007199254740991e+15
-                                    exclusiveMinimum: 0
-                                  - type: "null"
-                              first_time_transaction:
-                                anyOf:
-                                  - type: boolean
-                                  - type: "null"
-                            required:
-                              - code
-                            additionalProperties: false
-                      required:
-                        - id
-                        - name
-                        - type
-                        - value
-                        - duration
-                        - plan_ids
-                        - promo_codes
-                      additionalProperties: false
+                                type: object
+                                properties:
+                                  code:
+                                    type: string
+                                    minLength: 1
+                                  global_max_redemption:
+                                    anyOf:
+                                      - type: integer
+                                        minimum: -9.007199254740991e+15
+                                        maximum: 9.007199254740991e+15
+                                        exclusiveMinimum: 0
+                                      - type: "null"
+                                  first_time_transaction:
+                                    anyOf:
+                                      - type: boolean
+                                      - type: "null"
+                                required:
+                                  - code
+                                additionalProperties: false
+                              description: Promo code values must be unique.
+                            type:
+                              const: percentage_discount
+                            value:
+                              type: number
+                              maximum: 100
+                              exclusiveMinimum: 0
+                              description: Percentage discounts must be at most 100; fixed discounts must be positive.
+                          required:
+                            - id
+                            - name
+                            - duration
+                            - plan_ids
+                            - promo_codes
+                            - type
+                            - value
+                          additionalProperties: false
+                        - type: object
+                          properties:
+                            id:
+                              type: string
+                              minLength: 1
+                            name:
+                              type: string
+                              minLength: 1
+                            duration:
+                              anyOf:
+                                - type: object
+                                  properties:
+                                    type:
+                                      const: one_off
+                                    length:
+                                      const: null
+                                  required:
+                                    - type
+                                    - length
+                                - type: object
+                                  properties:
+                                    type:
+                                      const: months
+                                    length:
+                                      type: integer
+                                      minimum: -9.007199254740991e+15
+                                      maximum: 9.007199254740991e+15
+                                      exclusiveMinimum: 0
+                                  required:
+                                    - type
+                                    - length
+                                - type: object
+                                  properties:
+                                    type:
+                                      const: forever
+                                    length:
+                                      const: null
+                                  required:
+                                    - type
+                                    - length
+                              description: Use a positive integer length for months, and null for one_off or forever.
+                            plan_ids:
+                              anyOf:
+                                - type: array
+                                  minItems: 1
+                                  items:
+                                    type: string
+                                    minLength: 1
+                                - type: "null"
+                              description: Plan IDs must be unique.
+                            promo_codes:
+                              type: array
+                              items:
+                                type: object
+                                properties:
+                                  code:
+                                    type: string
+                                    minLength: 1
+                                  global_max_redemption:
+                                    anyOf:
+                                      - type: integer
+                                        minimum: -9.007199254740991e+15
+                                        maximum: 9.007199254740991e+15
+                                        exclusiveMinimum: 0
+                                      - type: "null"
+                                  first_time_transaction:
+                                    anyOf:
+                                      - type: boolean
+                                      - type: "null"
+                                required:
+                                  - code
+                                additionalProperties: false
+                              description: Promo code values must be unique.
+                            type:
+                              const: fixed_discount
+                            value:
+                              type: number
+                              exclusiveMinimum: 0
+                              description: Percentage discounts must be at most 100; fixed discounts must be positive.
+                          required:
+                            - id
+                            - name
+                            - duration
+                            - plan_ids
+                            - promo_codes
+                            - type
+                            - value
+                          additionalProperties: false
                   required:
                     - coupon
                   additionalProperties: false
@@ -31620,6 +31711,7 @@ paths:
                               - included
                               - expiry
                             additionalProperties: false
+                          description: Feature IDs must be unique.
                         promo_codes:
                           type: array
                           minItems: 1
@@ -31640,6 +31732,7 @@ paths:
                               - code
                               - max_uses
                             additionalProperties: false
+                          description: Promo code values must be unique.
                       required:
                         - id
                         - name
@@ -31806,12 +31899,11 @@ paths:
                                             - month
                                             - year
                                           type: string
-                                          description: The unit of time the duration is measured in.
                                         length:
-                                          anyOf:
-                                            - type: number
-                                            - type: "null"
-                                          description: The number of `type` periods the duration lasts, or null when the type has no length (e.g. one_off, forever).
+                                          type: integer
+                                          minimum: -9.007199254740991e+15
+                                          maximum: 9.007199254740991e+15
+                                          exclusiveMinimum: 0
                                       required:
                                         - type
                                         - length
@@ -32024,12 +32116,11 @@ paths:
                                           - month
                                           - year
                                         type: string
-                                        description: The unit of time the duration is measured in.
                                       length:
-                                        anyOf:
-                                          - type: number
-                                          - type: "null"
-                                        description: The number of `type` periods the duration lasts, or null when the type has no length (e.g. one_off, forever).
+                                        type: integer
+                                        minimum: -9.007199254740991e+15
+                                        maximum: 9.007199254740991e+15
+                                        exclusiveMinimum: 0
                                     required:
                                       - type
                                       - length

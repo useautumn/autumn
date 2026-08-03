@@ -72,7 +72,7 @@ const { allowed } = await autumn.check({
       A unique identifier for this lock. Used to finalize the lock later via balances.finalize.
     </DynamicParamField>
 
-    <DynamicParamField body="enabled" type="any" required>
+    <DynamicParamField body="enabled" type="'true'" required>
       Must be true to enable locking.
     </DynamicParamField>
 
@@ -257,7 +257,7 @@ const { allowed } = await autumn.check({
         <DynamicResponseField name="reset" type="object | null">
           Reset configuration for this balance, or null if no reset.
           <Expandable title="properties">
-            <DynamicResponseField name="interval" type="'one_off' | 'minute' | 'hour' | 'day' | 'week' | 'month' | 'quarter' | 'semi_annual' | 'year'">
+            <DynamicResponseField name="interval" type="'one_off' | 'minute' | 'hour' | 'day' | 'week' | 'month' | 'quarter' | 'semi_annual' | 'year' | 'multiple'">
               The reset interval (hour, day, week, month, etc.) or 'multiple' if combined from different intervals.
             </DynamicResponseField>
 
@@ -282,7 +282,7 @@ const { allowed } = await autumn.check({
             <DynamicResponseField name="tiers" type="object[]">
               Tiered pricing configuration if applicable.
               <Expandable title="properties">
-                <DynamicResponseField name="to" type="number" />
+                <DynamicResponseField name="to" type="'inf'" />
 
                 <DynamicResponseField name="amount" type="number" />
 
@@ -485,7 +485,7 @@ const { allowed } = await autumn.check({
         <DynamicResponseField name="reset" type="object | null">
           Reset configuration for this balance, or null if no reset.
           <Expandable title="properties">
-            <DynamicResponseField name="interval" type="'one_off' | 'minute' | 'hour' | 'day' | 'week' | 'month' | 'quarter' | 'semi_annual' | 'year'">
+            <DynamicResponseField name="interval" type="'one_off' | 'minute' | 'hour' | 'day' | 'week' | 'month' | 'quarter' | 'semi_annual' | 'year' | 'multiple'">
               The reset interval (hour, day, week, month, etc.) or 'multiple' if combined from different intervals.
             </DynamicResponseField>
 
@@ -510,7 +510,7 @@ const { allowed } = await autumn.check({
             <DynamicResponseField name="tiers" type="object[]">
               Tiered pricing configuration if applicable.
               <Expandable title="properties">
-                <DynamicResponseField name="to" type="number" />
+                <DynamicResponseField name="to" type="'inf'" />
 
                 <DynamicResponseField name="amount" type="number" />
 
@@ -743,7 +743,7 @@ const { allowed } = await autumn.check({
               Single use features are used once and then depleted, like API calls or credits. Continuous use features are those being used on an ongoing-basis, like storage or seats.
             </DynamicResponseField>
 
-            <DynamicResponseField name="included_usage" type="number | null">
+            <DynamicResponseField name="included_usage" type="'inf'">
               The amount of usage included for this feature.
             </DynamicResponseField>
 

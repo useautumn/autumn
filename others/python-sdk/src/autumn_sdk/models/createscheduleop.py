@@ -45,6 +45,66 @@ class CreateScheduleGlobals(BaseModel):
         return m
 
 
+CreateScheduleFreeTrialDurationType = Literal[
+    "day",
+    "month",
+    "year",
+]
+r"""Unit of time for the trial ('day', 'month', 'year')."""
+
+
+CreateScheduleOnEnd = Literal[
+    "bill",
+    "revert",
+]
+r"""Behavior when the trial ends. 'bill' charges the customer (default). 'revert' expires the trial and restores the customer's previous plan."""
+
+
+class CreateScheduleFreeTrialParamsTypedDict(TypedDict):
+    r"""Free trial configuration for a plan."""
+
+    duration_length: float
+    r"""Number of duration_type periods the trial lasts."""
+    duration_type: NotRequired[CreateScheduleFreeTrialDurationType]
+    r"""Unit of time for the trial ('day', 'month', 'year')."""
+    card_required: NotRequired[bool]
+    r"""If true, payment method required to start trial. Customer is charged after trial ends."""
+    on_end: NotRequired[CreateScheduleOnEnd]
+    r"""Behavior when the trial ends. 'bill' charges the customer (default). 'revert' expires the trial and restores the customer's previous plan."""
+
+
+class CreateScheduleFreeTrialParams(BaseModel):
+    r"""Free trial configuration for a plan."""
+
+    duration_length: float
+    r"""Number of duration_type periods the trial lasts."""
+
+    duration_type: Optional[CreateScheduleFreeTrialDurationType] = "month"
+    r"""Unit of time for the trial ('day', 'month', 'year')."""
+
+    card_required: Optional[bool] = True
+    r"""If true, payment method required to start trial. Customer is charged after trial ends."""
+
+    on_end: Optional[CreateScheduleOnEnd] = None
+    r"""Behavior when the trial ends. 'bill' charges the customer (default). 'revert' expires the trial and restores the customer's previous plan."""
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        optional_fields = set(["duration_type", "card_required", "on_end"])
+        serialized = handler(self)
+        m = {}
+
+        for n, f in type(self).model_fields.items():
+            k = f.alias or n
+            val = serialized.get(k, serialized.get(n))
+
+            if val != UNSET_SENTINEL:
+                if val is not None or k not in optional_fields:
+                    m[k] = val
+
+        return m
+
+
 class CreateScheduleInvoiceModeTypedDict(TypedDict):
     r"""Invoice mode creates and sends an invoice instead of charging the customer's payment method immediately for the first phase."""
 
@@ -160,7 +220,7 @@ StartsAt2 = TypeAliasType("StartsAt2", Union[float, str])
 r"""When this phase should start, in epoch milliseconds, or 'now' for the immediate phase."""
 
 
-CreateScheduleDurationType2 = Literal[
+PhaseStartDurationType = Literal[
     "month",
     "year",
 ]
@@ -170,7 +230,7 @@ r"""The duration unit to offset this phase from the prior phase."""
 class StartingAfter2TypedDict(TypedDict):
     r"""Relative start offset from the previous resolved schedule phase."""
 
-    duration_type: CreateScheduleDurationType2
+    duration_type: PhaseStartDurationType
     r"""The duration unit to offset this phase from the prior phase."""
     duration_count: int
     r"""How many duration_type periods after the prior phase to start."""
@@ -179,7 +239,7 @@ class StartingAfter2TypedDict(TypedDict):
 class StartingAfter2(BaseModel):
     r"""Relative start offset from the previous resolved schedule phase."""
 
-    duration_type: CreateScheduleDurationType2
+    duration_type: PhaseStartDurationType
     r"""The duration unit to offset this phase from the prior phase."""
 
     duration_count: int
@@ -618,6 +678,8 @@ class CreateScheduleItemPlanItem2TypedDict(TypedDict):
     r"""Number of free units included. Balance resets to this each interval for consumable features."""
     unlimited: NotRequired[bool]
     r"""If true, customer has unlimited access to this feature."""
+    pooled: NotRequired[bool]
+    r"""Whether entity-level grants contribute to a shared customer balance."""
     reset: NotRequired[CreateScheduleItemReset2TypedDict]
     r"""Reset configuration for consumable features. Omit for non-consumable features like seats."""
     price: NotRequired[CreateScheduleItemPrice2TypedDict]
@@ -640,6 +702,9 @@ class CreateScheduleItemPlanItem2(BaseModel):
     unlimited: Optional[bool] = None
     r"""If true, customer has unlimited access to this feature."""
 
+    pooled: Optional[bool] = False
+    r"""Whether entity-level grants contribute to a shared customer balance."""
+
     reset: Optional[CreateScheduleItemReset2] = None
     r"""Reset configuration for consumable features. Omit for non-consumable features like seats."""
 
@@ -655,7 +720,15 @@ class CreateScheduleItemPlanItem2(BaseModel):
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
         optional_fields = set(
-            ["included", "unlimited", "reset", "price", "proration", "rollover"]
+            [
+                "included",
+                "unlimited",
+                "pooled",
+                "reset",
+                "price",
+                "proration",
+                "rollover",
+            ]
         )
         serialized = handler(self)
         m = {}
@@ -994,6 +1067,8 @@ class CreateScheduleAddItemPlanItem2TypedDict(TypedDict):
     r"""Number of free units included. Balance resets to this each interval for consumable features."""
     unlimited: NotRequired[bool]
     r"""If true, customer has unlimited access to this feature."""
+    pooled: NotRequired[bool]
+    r"""Whether entity-level grants contribute to a shared customer balance."""
     reset: NotRequired[CreateScheduleAddItemReset2TypedDict]
     r"""Reset configuration for consumable features. Omit for non-consumable features like seats."""
     price: NotRequired[CreateScheduleAddItemPrice2TypedDict]
@@ -1016,6 +1091,9 @@ class CreateScheduleAddItemPlanItem2(BaseModel):
     unlimited: Optional[bool] = None
     r"""If true, customer has unlimited access to this feature."""
 
+    pooled: Optional[bool] = False
+    r"""Whether entity-level grants contribute to a shared customer balance."""
+
     reset: Optional[CreateScheduleAddItemReset2] = None
     r"""Reset configuration for consumable features. Omit for non-consumable features like seats."""
 
@@ -1031,7 +1109,15 @@ class CreateScheduleAddItemPlanItem2(BaseModel):
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
         optional_fields = set(
-            ["included", "unlimited", "reset", "price", "proration", "rollover"]
+            [
+                "included",
+                "unlimited",
+                "pooled",
+                "reset",
+                "price",
+                "proration",
+                "rollover",
+            ]
         )
         serialized = handler(self)
         m = {}
@@ -1581,6 +1667,8 @@ class CreateScheduleCustomize2(BaseModel):
 class CreateSchedulePlan2TypedDict(TypedDict):
     plan_id: str
     r"""The ID of the plan to schedule in this phase."""
+    entity_id: NotRequired[Nullable[str]]
+    r"""The immediate plan scope. Omit to inherit the request entity, pass null for customer-level, or pass an entity ID."""
     feature_quantities: NotRequired[List[CreateScheduleFeatureQuantity2TypedDict]]
     r"""Optional prepaid feature quantities for this phase's plan."""
     version: NotRequired[float]
@@ -1594,6 +1682,9 @@ class CreateSchedulePlan2TypedDict(TypedDict):
 class CreateSchedulePlan2(BaseModel):
     plan_id: str
     r"""The ID of the plan to schedule in this phase."""
+
+    entity_id: OptionalNullable[str] = UNSET
+    r"""The immediate plan scope. Omit to inherit the request entity, pass null for customer-level, or pass an entity ID."""
 
     feature_quantities: Optional[List[CreateScheduleFeatureQuantity2]] = None
     r"""Optional prepaid feature quantities for this phase's plan."""
@@ -1610,17 +1701,32 @@ class CreateSchedulePlan2(BaseModel):
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
         optional_fields = set(
-            ["feature_quantities", "version", "customize", "subscription_id"]
+            [
+                "entity_id",
+                "feature_quantities",
+                "version",
+                "customize",
+                "subscription_id",
+            ]
         )
+        nullable_fields = set(["entity_id"])
         serialized = handler(self)
         m = {}
 
         for n, f in type(self).model_fields.items():
             k = f.alias or n
             val = serialized.get(k, serialized.get(n))
+            is_nullable_and_explicitly_set = (
+                k in nullable_fields
+                and (self.__pydantic_fields_set__.intersection({n}))  # pylint: disable=no-member
+            )
 
             if val != UNSET_SENTINEL:
-                if val is not None or k not in optional_fields:
+                if (
+                    val is not None
+                    or k not in optional_fields
+                    or is_nullable_and_explicitly_set
+                ):
                     m[k] = val
 
         return m
@@ -1684,6 +1790,10 @@ class CreateScheduleParamsTypedDict(TypedDict):
     r"""Ordered phase definitions for the schedule."""
     entity_id: NotRequired[str]
     r"""Optional entity ID for an entity-scoped schedule."""
+    free_trial: NotRequired[Nullable[CreateScheduleFreeTrialParamsTypedDict]]
+    r"""Free trial configuration applied to every plan in the immediate phase."""
+    currency: NotRequired[str]
+    r"""Three-letter Stripe-supported currency code used to bill the immediate phase (for example, 'usd')."""
     invoice_mode: NotRequired[CreateScheduleInvoiceModeTypedDict]
     r"""Invoice mode creates and sends an invoice instead of charging the customer's payment method immediately for the first phase."""
     discounts: NotRequired[List[CreateScheduleAttachDiscountTypedDict]]
@@ -1700,6 +1810,8 @@ class CreateScheduleParamsTypedDict(TypedDict):
     r"""Pass 'now' to reset the billing cycle anchor of the immediate phase to the current time."""
     enable_plan_immediately: NotRequired[bool]
     r"""If true, the immediate-phase cusProducts are activated immediately (and scheduled-phase cusProducts pre-inserted) even when payment is pending via Stripe checkout. The Autumn schedule rows are persisted on checkout.session.completed."""
+    preserve_add_ons: NotRequired[bool]
+    r"""If true, active recurring add-ons in scopes represented by the phase plans are retained."""
 
 
 class CreateScheduleParams(BaseModel):
@@ -1711,6 +1823,12 @@ class CreateScheduleParams(BaseModel):
 
     entity_id: Optional[str] = None
     r"""Optional entity ID for an entity-scoped schedule."""
+
+    free_trial: OptionalNullable[CreateScheduleFreeTrialParams] = UNSET
+    r"""Free trial configuration applied to every plan in the immediate phase."""
+
+    currency: Optional[str] = None
+    r"""Three-letter Stripe-supported currency code used to bill the immediate phase (for example, 'usd')."""
 
     invoice_mode: Optional[CreateScheduleInvoiceMode] = None
     r"""Invoice mode creates and sends an invoice instead of charging the customer's payment method immediately for the first phase."""
@@ -1739,11 +1857,16 @@ class CreateScheduleParams(BaseModel):
     enable_plan_immediately: Optional[bool] = None
     r"""If true, the immediate-phase cusProducts are activated immediately (and scheduled-phase cusProducts pre-inserted) even when payment is pending via Stripe checkout. The Autumn schedule rows are persisted on checkout.session.completed."""
 
+    preserve_add_ons: Optional[bool] = None
+    r"""If true, active recurring add-ons in scopes represented by the phase plans are retained."""
+
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
         optional_fields = set(
             [
                 "entity_id",
+                "free_trial",
+                "currency",
                 "invoice_mode",
                 "discounts",
                 "success_url",
@@ -1752,17 +1875,27 @@ class CreateScheduleParams(BaseModel):
                 "billing_behavior",
                 "billing_cycle_anchor",
                 "enable_plan_immediately",
+                "preserve_add_ons",
             ]
         )
+        nullable_fields = set(["free_trial"])
         serialized = handler(self)
         m = {}
 
         for n, f in type(self).model_fields.items():
             k = f.alias or n
             val = serialized.get(k, serialized.get(n))
+            is_nullable_and_explicitly_set = (
+                k in nullable_fields
+                and (self.__pydantic_fields_set__.intersection({n}))  # pylint: disable=no-member
+            )
 
             if val != UNSET_SENTINEL:
-                if val is not None or k not in optional_fields:
+                if (
+                    val is not None
+                    or k not in optional_fields
+                    or is_nullable_and_explicitly_set
+                ):
                     m[k] = val
 
         return m

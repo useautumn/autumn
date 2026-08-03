@@ -34,11 +34,13 @@ import { Result } from "../types/fp.js";
  * @example
  * ```typescript
  * // Schedule a transition from a trial plan to a paid plan
- * const response = await client.billing.createSchedule({ customerId: "cus_123", phases: [{"startsAt":1784744849888,"plans":[{"planId":"trial_plan"}]},{"startsAt":1785954449888,"plans":[{"planId":"pro_plan"}]}] });
+ * const response = await client.billing.createSchedule({ customerId: "cus_123", phases: [{"startsAt":1785774477308,"plans":[{"planId":"trial_plan"}]},{"startsAt":1786984077308,"plans":[{"planId":"pro_plan"}]}] });
  * ```
  *
  * @param customerId - The ID of the customer to create the schedule for.
  * @param entityId - Optional entity ID for an entity-scoped schedule. (optional)
+ * @param freeTrial - Free trial configuration applied to every plan in the immediate phase. (optional)
+ * @param currency - Three-letter Stripe-supported currency code used to bill the immediate phase (for example, 'usd'). (optional)
  * @param invoiceMode - Invoice mode creates and sends an invoice instead of charging the customer's payment method immediately for the first phase. (optional)
  * @param discounts - List of discounts to apply to the immediate phase. Each discount can be an Autumn reward ID, Stripe coupon ID, or Stripe promotion code. (optional)
  * @param successUrl - URL to redirect to after successful checkout. (optional)
@@ -47,6 +49,7 @@ import { Result } from "../types/fp.js";
  * @param billingBehavior - Whether to prorate the immediate phase. 'none' skips proration charges and credits. (optional)
  * @param billingCycleAnchor - Pass 'now' to reset the billing cycle anchor of the immediate phase to the current time. (optional)
  * @param enablePlanImmediately - If true, the immediate-phase cusProducts are activated immediately (and scheduled-phase cusProducts pre-inserted) even when payment is pending via Stripe checkout. The Autumn schedule rows are persisted on checkout.session.completed. (optional)
+ * @param preserveAddOns - If true, active recurring add-ons in scopes represented by the phase plans are retained. (optional)
  * @param phases - Ordered phase definitions for the schedule.
  *
  * @returns A create-schedule response with the schedule ID, persisted phases, and any required payment or checkout URL.

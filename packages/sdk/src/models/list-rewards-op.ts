@@ -20,7 +20,7 @@ export type RewardsListParams = {};
 /**
  * The type of discount: percentage_discount, fixed_discount, or invoice_credits.
  */
-export const CouponType = {
+export const ListRewardsCouponType = {
   PercentageDiscount: "percentage_discount",
   FixedDiscount: "fixed_discount",
   InvoiceCredits: "invoice_credits",
@@ -28,12 +28,12 @@ export const CouponType = {
 /**
  * The type of discount: percentage_discount, fixed_discount, or invoice_credits.
  */
-export type CouponType = OpenEnum<typeof CouponType>;
+export type ListRewardsCouponType = OpenEnum<typeof ListRewardsCouponType>;
 
 /**
  * The unit of time the duration is measured in.
  */
-export const DurationType = {
+export const ListRewardsDurationType = {
   OneOff: "one_off",
   Months: "months",
   Forever: "forever",
@@ -41,7 +41,7 @@ export const DurationType = {
 /**
  * The unit of time the duration is measured in.
  */
-export type DurationType = OpenEnum<typeof DurationType>;
+export type ListRewardsDurationType = OpenEnum<typeof ListRewardsDurationType>;
 
 /**
  * How long the coupon applies once redeemed.
@@ -50,14 +50,14 @@ export type ListRewardsDuration = {
   /**
    * The unit of time the duration is measured in.
    */
-  type: DurationType;
+  type: ListRewardsDurationType;
   /**
    * The number of `type` periods the duration lasts, or null when the type has no length (e.g. one_off, forever).
    */
   length: number | null;
 };
 
-export type CouponPromoCode = {
+export type ListRewardsCouponPromoCode = {
   /**
    * The promo code customers enter to redeem the coupon.
    */
@@ -72,7 +72,7 @@ export type CouponPromoCode = {
   firstTimeTransaction?: boolean | null | undefined;
 };
 
-export type Coupon = {
+export type ListRewardsCoupon = {
   /**
    * The unique identifier for the coupon.
    */
@@ -84,7 +84,7 @@ export type Coupon = {
   /**
    * The type of discount: percentage_discount, fixed_discount, or invoice_credits.
    */
-  type: CouponType;
+  type: ListRewardsCouponType;
   /**
    * The discount value. A percentage for percentage_discount, or an amount for fixed_discount / invoice_credits.
    */
@@ -100,39 +100,27 @@ export type Coupon = {
   /**
    * The promo codes customers can use to redeem the coupon.
    */
-  promoCodes: Array<CouponPromoCode>;
+  promoCodes: Array<ListRewardsCouponPromoCode>;
   /**
    * The Unix timestamp (in milliseconds) when the coupon was created.
    */
   createdAt: number;
 };
 
-/**
- * The unit of time the duration is measured in.
- */
-export const ExpiryType = {
+export const ListRewardsExpiryType = {
   Day: "day",
   Week: "week",
   Month: "month",
   Year: "year",
 } as const;
-/**
- * The unit of time the duration is measured in.
- */
-export type ExpiryType = OpenEnum<typeof ExpiryType>;
+export type ListRewardsExpiryType = OpenEnum<typeof ListRewardsExpiryType>;
 
-export type Expiry = {
-  /**
-   * The unit of time the duration is measured in.
-   */
-  type: ExpiryType;
-  /**
-   * The number of `type` periods the duration lasts, or null when the type has no length (e.g. one_off, forever).
-   */
-  length: number | null;
+export type ListRewardsExpiry = {
+  type: ListRewardsExpiryType;
+  length: number;
 };
 
-export type Grant = {
+export type ListRewardsGrant = {
   /**
    * The feature ID this grant applies to.
    */
@@ -144,10 +132,10 @@ export type Grant = {
   /**
    * How long the granted amount lasts before expiring, or null for a permanent grant.
    */
-  expiry: Expiry | null;
+  expiry: ListRewardsExpiry | null;
 };
 
-export type FeatureGrantPromoCode = {
+export type ListRewardsFeatureGrantPromoCode = {
   /**
    * The promo code customers enter to redeem the feature grant.
    */
@@ -158,7 +146,7 @@ export type FeatureGrantPromoCode = {
   maxUses: number | null;
 };
 
-export type FeatureGrant = {
+export type ListRewardsFeatureGrant = {
   /**
    * The unique identifier for the feature grant.
    */
@@ -170,11 +158,11 @@ export type FeatureGrant = {
   /**
    * The feature grants awarded when the grant is redeemed.
    */
-  grants: Array<Grant>;
+  grants: Array<ListRewardsGrant>;
   /**
    * The promo codes customers can use to redeem the feature grant.
    */
-  promoCodes: Array<FeatureGrantPromoCode>;
+  promoCodes: Array<ListRewardsFeatureGrantPromoCode>;
   /**
    * The Unix timestamp (in milliseconds) when the feature grant was created.
    */
@@ -188,11 +176,11 @@ export type ListRewardsResponse = {
   /**
    * The list of coupons configured for the organization.
    */
-  coupons: Array<Coupon>;
+  coupons: Array<ListRewardsCoupon>;
   /**
    * The list of feature grants configured for the organization.
    */
-  featureGrants: Array<FeatureGrant>;
+  featureGrants: Array<ListRewardsFeatureGrant>;
 };
 
 /** @internal */
@@ -213,19 +201,23 @@ export function rewardsListParamsToJSON(
 }
 
 /** @internal */
-export const CouponType$inboundSchema: z.ZodMiniType<CouponType, unknown> =
-  openEnums.inboundSchema(CouponType);
+export const ListRewardsCouponType$inboundSchema: z.ZodMiniType<
+  ListRewardsCouponType,
+  unknown
+> = openEnums.inboundSchema(ListRewardsCouponType);
 
 /** @internal */
-export const DurationType$inboundSchema: z.ZodMiniType<DurationType, unknown> =
-  openEnums.inboundSchema(DurationType);
+export const ListRewardsDurationType$inboundSchema: z.ZodMiniType<
+  ListRewardsDurationType,
+  unknown
+> = openEnums.inboundSchema(ListRewardsDurationType);
 
 /** @internal */
 export const ListRewardsDuration$inboundSchema: z.ZodMiniType<
   ListRewardsDuration,
   unknown
 > = z.object({
-  type: DurationType$inboundSchema,
+  type: ListRewardsDurationType$inboundSchema,
   length: types.nullable(types.number()),
 });
 
@@ -240,8 +232,8 @@ export function listRewardsDurationFromJSON(
 }
 
 /** @internal */
-export const CouponPromoCode$inboundSchema: z.ZodMiniType<
-  CouponPromoCode,
+export const ListRewardsCouponPromoCode$inboundSchema: z.ZodMiniType<
+  ListRewardsCouponPromoCode,
   unknown
 > = z.pipe(
   z.object({
@@ -257,26 +249,31 @@ export const CouponPromoCode$inboundSchema: z.ZodMiniType<
   }),
 );
 
-export function couponPromoCodeFromJSON(
+export function listRewardsCouponPromoCodeFromJSON(
   jsonString: string,
-): SafeParseResult<CouponPromoCode, SDKValidationError> {
+): SafeParseResult<ListRewardsCouponPromoCode, SDKValidationError> {
   return safeParse(
     jsonString,
-    (x) => CouponPromoCode$inboundSchema.parse(JSON.parse(x)),
-    `Failed to parse 'CouponPromoCode' from JSON`,
+    (x) => ListRewardsCouponPromoCode$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'ListRewardsCouponPromoCode' from JSON`,
   );
 }
 
 /** @internal */
-export const Coupon$inboundSchema: z.ZodMiniType<Coupon, unknown> = z.pipe(
+export const ListRewardsCoupon$inboundSchema: z.ZodMiniType<
+  ListRewardsCoupon,
+  unknown
+> = z.pipe(
   z.object({
     id: types.string(),
     name: z.optional(z.nullable(types.string())),
-    type: CouponType$inboundSchema,
+    type: ListRewardsCouponType$inboundSchema,
     value: types.number(),
     duration: z.lazy(() => ListRewardsDuration$inboundSchema),
     plan_ids: types.nullable(z.array(types.string())),
-    promo_codes: z.array(z.lazy(() => CouponPromoCode$inboundSchema)),
+    promo_codes: z.array(
+      z.lazy(() => ListRewardsCouponPromoCode$inboundSchema),
+    ),
     created_at: types.number(),
   }),
   z.transform((v) => {
@@ -288,42 +285,50 @@ export const Coupon$inboundSchema: z.ZodMiniType<Coupon, unknown> = z.pipe(
   }),
 );
 
-export function couponFromJSON(
+export function listRewardsCouponFromJSON(
   jsonString: string,
-): SafeParseResult<Coupon, SDKValidationError> {
+): SafeParseResult<ListRewardsCoupon, SDKValidationError> {
   return safeParse(
     jsonString,
-    (x) => Coupon$inboundSchema.parse(JSON.parse(x)),
-    `Failed to parse 'Coupon' from JSON`,
+    (x) => ListRewardsCoupon$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'ListRewardsCoupon' from JSON`,
   );
 }
 
 /** @internal */
-export const ExpiryType$inboundSchema: z.ZodMiniType<ExpiryType, unknown> =
-  openEnums.inboundSchema(ExpiryType);
+export const ListRewardsExpiryType$inboundSchema: z.ZodMiniType<
+  ListRewardsExpiryType,
+  unknown
+> = openEnums.inboundSchema(ListRewardsExpiryType);
 
 /** @internal */
-export const Expiry$inboundSchema: z.ZodMiniType<Expiry, unknown> = z.object({
-  type: ExpiryType$inboundSchema,
-  length: types.nullable(types.number()),
+export const ListRewardsExpiry$inboundSchema: z.ZodMiniType<
+  ListRewardsExpiry,
+  unknown
+> = z.object({
+  type: ListRewardsExpiryType$inboundSchema,
+  length: types.number(),
 });
 
-export function expiryFromJSON(
+export function listRewardsExpiryFromJSON(
   jsonString: string,
-): SafeParseResult<Expiry, SDKValidationError> {
+): SafeParseResult<ListRewardsExpiry, SDKValidationError> {
   return safeParse(
     jsonString,
-    (x) => Expiry$inboundSchema.parse(JSON.parse(x)),
-    `Failed to parse 'Expiry' from JSON`,
+    (x) => ListRewardsExpiry$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'ListRewardsExpiry' from JSON`,
   );
 }
 
 /** @internal */
-export const Grant$inboundSchema: z.ZodMiniType<Grant, unknown> = z.pipe(
+export const ListRewardsGrant$inboundSchema: z.ZodMiniType<
+  ListRewardsGrant,
+  unknown
+> = z.pipe(
   z.object({
     feature_id: types.string(),
     included: types.nullable(types.number()),
-    expiry: types.nullable(z.lazy(() => Expiry$inboundSchema)),
+    expiry: types.nullable(z.lazy(() => ListRewardsExpiry$inboundSchema)),
   }),
   z.transform((v) => {
     return remap$(v, {
@@ -332,19 +337,19 @@ export const Grant$inboundSchema: z.ZodMiniType<Grant, unknown> = z.pipe(
   }),
 );
 
-export function grantFromJSON(
+export function listRewardsGrantFromJSON(
   jsonString: string,
-): SafeParseResult<Grant, SDKValidationError> {
+): SafeParseResult<ListRewardsGrant, SDKValidationError> {
   return safeParse(
     jsonString,
-    (x) => Grant$inboundSchema.parse(JSON.parse(x)),
-    `Failed to parse 'Grant' from JSON`,
+    (x) => ListRewardsGrant$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'ListRewardsGrant' from JSON`,
   );
 }
 
 /** @internal */
-export const FeatureGrantPromoCode$inboundSchema: z.ZodMiniType<
-  FeatureGrantPromoCode,
+export const ListRewardsFeatureGrantPromoCode$inboundSchema: z.ZodMiniType<
+  ListRewardsFeatureGrantPromoCode,
   unknown
 > = z.pipe(
   z.object({
@@ -358,41 +363,45 @@ export const FeatureGrantPromoCode$inboundSchema: z.ZodMiniType<
   }),
 );
 
-export function featureGrantPromoCodeFromJSON(
+export function listRewardsFeatureGrantPromoCodeFromJSON(
   jsonString: string,
-): SafeParseResult<FeatureGrantPromoCode, SDKValidationError> {
+): SafeParseResult<ListRewardsFeatureGrantPromoCode, SDKValidationError> {
   return safeParse(
     jsonString,
-    (x) => FeatureGrantPromoCode$inboundSchema.parse(JSON.parse(x)),
-    `Failed to parse 'FeatureGrantPromoCode' from JSON`,
+    (x) => ListRewardsFeatureGrantPromoCode$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'ListRewardsFeatureGrantPromoCode' from JSON`,
   );
 }
 
 /** @internal */
-export const FeatureGrant$inboundSchema: z.ZodMiniType<FeatureGrant, unknown> =
-  z.pipe(
-    z.object({
-      id: types.string(),
-      name: z.optional(z.nullable(types.string())),
-      grants: z.array(z.lazy(() => Grant$inboundSchema)),
-      promo_codes: z.array(z.lazy(() => FeatureGrantPromoCode$inboundSchema)),
-      created_at: types.number(),
-    }),
-    z.transform((v) => {
-      return remap$(v, {
-        "promo_codes": "promoCodes",
-        "created_at": "createdAt",
-      });
-    }),
-  );
+export const ListRewardsFeatureGrant$inboundSchema: z.ZodMiniType<
+  ListRewardsFeatureGrant,
+  unknown
+> = z.pipe(
+  z.object({
+    id: types.string(),
+    name: z.optional(z.nullable(types.string())),
+    grants: z.array(z.lazy(() => ListRewardsGrant$inboundSchema)),
+    promo_codes: z.array(
+      z.lazy(() => ListRewardsFeatureGrantPromoCode$inboundSchema),
+    ),
+    created_at: types.number(),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      "promo_codes": "promoCodes",
+      "created_at": "createdAt",
+    });
+  }),
+);
 
-export function featureGrantFromJSON(
+export function listRewardsFeatureGrantFromJSON(
   jsonString: string,
-): SafeParseResult<FeatureGrant, SDKValidationError> {
+): SafeParseResult<ListRewardsFeatureGrant, SDKValidationError> {
   return safeParse(
     jsonString,
-    (x) => FeatureGrant$inboundSchema.parse(JSON.parse(x)),
-    `Failed to parse 'FeatureGrant' from JSON`,
+    (x) => ListRewardsFeatureGrant$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'ListRewardsFeatureGrant' from JSON`,
   );
 }
 
@@ -402,8 +411,10 @@ export const ListRewardsResponse$inboundSchema: z.ZodMiniType<
   unknown
 > = z.pipe(
   z.object({
-    coupons: z.array(z.lazy(() => Coupon$inboundSchema)),
-    feature_grants: z.array(z.lazy(() => FeatureGrant$inboundSchema)),
+    coupons: z.array(z.lazy(() => ListRewardsCoupon$inboundSchema)),
+    feature_grants: z.array(
+      z.lazy(() => ListRewardsFeatureGrant$inboundSchema),
+    ),
   }),
   z.transform((v) => {
     return remap$(v, {

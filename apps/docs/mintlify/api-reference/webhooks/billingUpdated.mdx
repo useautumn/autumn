@@ -5,7 +5,7 @@ openapi: "api/openapi.yml webhook billing.updated"
 
 ### Payload Fields
 
-<ParamField body="object" type="string" required />
+<ParamField body="object" type="'billing.updated'" required />
 
 <ParamField body="customer_id" type="string" required>
   The ID of the customer whose plans changed.
@@ -162,6 +162,10 @@ openapi: "api/openapi.yml webhook billing.updated"
               Whether the customer has unlimited access to this feature.
             </ParamField>
 
+            <ParamField body="pooled" type="boolean">
+              Whether entity-level grants contribute to a shared customer balance.
+            </ParamField>
+
             <ParamField body="reset" type="object | null" required>
               Reset configuration for consumable features. Null for non-consumable features like seats where usage persists across billing cycles.
               <Expandable title="properties">
@@ -200,7 +204,7 @@ openapi: "api/openapi.yml webhook billing.updated"
                 <ParamField body="tiers" type="object[]">
                   Tiered pricing configuration. Each tier's 'to' INCLUDES the included amount. Either 'tiers' or 'amount' is required.
                   <Expandable title="properties">
-                    <ParamField body="to" type="number" required />
+                    <ParamField body="to" type="'inf'" required />
 
                     <ParamField body="amount" type="number" required />
 

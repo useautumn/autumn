@@ -17,7 +17,7 @@ import {
 } from "@/external/stripe/stripeCouponUtils/stripeCouponUtils.js";
 import { createRoute } from "@/honoMiddlewares/routeHandler.js";
 import { ProductService } from "@/internal/products/ProductService.js";
-import { PriceService } from "@/internal/products/prices/PriceService.js";
+import { getRewardPrices } from "@/internal/rewards/actions/getRewardPrices.js";
 import { validateRewardUniqueness } from "@/internal/rewards/actions/validateRewardUniqueness.js";
 import { rewardRepo } from "@/internal/rewards/repos/index.js";
 import { rewardMutationLock } from "@/internal/rewards/rewardLock.js";
@@ -84,10 +84,7 @@ export const handleUpdateCoupon = createRoute({
 				reward.discount_config?.price_ids ??
 				[];
 
-			prices = await PriceService.getInIds({
-				db,
-				ids: priceIds,
-			});
+			prices = await getRewardPrices({ ctx, priceIds });
 		} else if (rewardCat === RewardCategory.FreeProduct) {
 			const freeProductId =
 				rewardBody.free_product_id ?? reward.free_product_id;

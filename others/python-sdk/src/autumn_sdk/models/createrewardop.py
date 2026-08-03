@@ -13,7 +13,7 @@ from autumn_sdk.utils import FieldMetadata, HeaderMetadata, validate_const
 import pydantic
 from pydantic import Field, model_serializer
 from pydantic.functional_validators import AfterValidator
-from typing import Any, List, Literal, Optional, Union
+from typing import List, Literal, Optional, Union
 from typing_extensions import Annotated, NotRequired, TypeAliasType, TypedDict
 
 
@@ -45,7 +45,7 @@ class CreateRewardGlobals(BaseModel):
         return m
 
 
-CreateRewardParamsExpiryType = Literal[
+CreateRewardParamsType = Literal[
     "day",
     "week",
     "month",
@@ -54,12 +54,12 @@ CreateRewardParamsExpiryType = Literal[
 
 
 class ExpiryRequestTypedDict(TypedDict):
-    type: CreateRewardParamsExpiryType
+    type: CreateRewardParamsType
     length: int
 
 
 class ExpiryRequest(BaseModel):
-    type: CreateRewardParamsExpiryType
+    type: CreateRewardParamsType
 
     length: int
 
@@ -121,7 +121,9 @@ class FeatureGrantRequestTypedDict(TypedDict):
     id: str
     name: str
     grants: List[GrantRequestTypedDict]
+    r"""Feature IDs must be unique."""
     promo_codes: List[FeatureGrantPromoCodeRequestTypedDict]
+    r"""Promo code values must be unique."""
 
 
 class FeatureGrantRequest(BaseModel):
@@ -130,8 +132,10 @@ class FeatureGrantRequest(BaseModel):
     name: str
 
     grants: List[GrantRequest]
+    r"""Feature IDs must be unique."""
 
     promo_codes: List[FeatureGrantPromoCodeRequest]
+    r"""Promo code values must be unique."""
 
 
 class CreateRewardParams2TypedDict(TypedDict):
@@ -142,46 +146,29 @@ class CreateRewardParams2(BaseModel):
     feature_grant: FeatureGrantRequest
 
 
-CreateRewardParamsCouponType = Literal[
-    "percentage_discount",
-    "fixed_discount",
-]
-
-
-class CreateRewardParamsDuration3TypedDict(TypedDict):
-    length: Nullable[Any]
+class CreateRewardParamsDuration6TypedDict(TypedDict):
     type: Literal["forever"]
+    length: Literal[None]
 
 
-class CreateRewardParamsDuration3(BaseModel):
-    length: Nullable[Any]
-
+class CreateRewardParamsDuration6(BaseModel):
     type: Annotated[
         Annotated[Literal["forever"], AfterValidator(validate_const("forever"))],
         pydantic.Field(alias="type"),
     ] = "forever"
 
-    @model_serializer(mode="wrap")
-    def serialize_model(self, handler):
-        serialized = handler(self)
-        m = {}
-
-        for n, f in type(self).model_fields.items():
-            k = f.alias or n
-            val = serialized.get(k, serialized.get(n))
-
-            if val != UNSET_SENTINEL:
-                m[k] = val
-
-        return m
+    length: Annotated[
+        Annotated[Literal[None], AfterValidator(validate_const(None))],
+        pydantic.Field(alias="length"),
+    ] = None
 
 
-class CreateRewardParamsDuration2TypedDict(TypedDict):
+class CreateRewardParamsDuration5TypedDict(TypedDict):
     length: int
     type: Literal["months"]
 
 
-class CreateRewardParamsDuration2(BaseModel):
+class CreateRewardParamsDuration5(BaseModel):
     length: int
 
     type: Annotated[
@@ -190,61 +177,52 @@ class CreateRewardParamsDuration2(BaseModel):
     ] = "months"
 
 
-class CreateRewardParamsDuration1TypedDict(TypedDict):
-    length: Nullable[Any]
+class CreateRewardParamsDuration4TypedDict(TypedDict):
     type: Literal["one_off"]
+    length: Literal[None]
 
 
-class CreateRewardParamsDuration1(BaseModel):
-    length: Nullable[Any]
-
+class CreateRewardParamsDuration4(BaseModel):
     type: Annotated[
         Annotated[Literal["one_off"], AfterValidator(validate_const("one_off"))],
         pydantic.Field(alias="type"),
     ] = "one_off"
 
-    @model_serializer(mode="wrap")
-    def serialize_model(self, handler):
-        serialized = handler(self)
-        m = {}
-
-        for n, f in type(self).model_fields.items():
-            k = f.alias or n
-            val = serialized.get(k, serialized.get(n))
-
-            if val != UNSET_SENTINEL:
-                m[k] = val
-
-        return m
+    length: Annotated[
+        Annotated[Literal[None], AfterValidator(validate_const(None))],
+        pydantic.Field(alias="length"),
+    ] = None
 
 
-DurationTypedDict = TypeAliasType(
-    "DurationTypedDict",
+DurationUnion2TypedDict = TypeAliasType(
+    "DurationUnion2TypedDict",
     Union[
-        CreateRewardParamsDuration1TypedDict,
-        CreateRewardParamsDuration2TypedDict,
-        CreateRewardParamsDuration3TypedDict,
+        CreateRewardParamsDuration4TypedDict,
+        CreateRewardParamsDuration5TypedDict,
+        CreateRewardParamsDuration6TypedDict,
     ],
 )
+r"""Use a positive integer length for months, and null for one_off or forever."""
 
 
-Duration = Annotated[
+DurationUnion2 = Annotated[
     Union[
-        CreateRewardParamsDuration1,
-        CreateRewardParamsDuration2,
-        CreateRewardParamsDuration3,
+        CreateRewardParamsDuration4,
+        CreateRewardParamsDuration5,
+        CreateRewardParamsDuration6,
     ],
     Field(discriminator="type"),
 ]
+r"""Use a positive integer length for months, and null for one_off or forever."""
 
 
-class CouponPromoCodeRequestTypedDict(TypedDict):
+class CouponPromoCodeRequest2TypedDict(TypedDict):
     code: str
     global_max_redemption: NotRequired[Nullable[int]]
     first_time_transaction: NotRequired[Nullable[bool]]
 
 
-class CouponPromoCodeRequest(BaseModel):
+class CouponPromoCodeRequest2(BaseModel):
     code: str
 
     global_max_redemption: OptionalNullable[int] = UNSET
@@ -277,30 +255,43 @@ class CouponPromoCodeRequest(BaseModel):
         return m
 
 
-class CouponRequestTypedDict(TypedDict):
+class CouponRequest2TypedDict(TypedDict):
     id: str
     name: str
-    type: CreateRewardParamsCouponType
-    value: float
-    duration: DurationTypedDict
+    duration: DurationUnion2TypedDict
+    r"""Use a positive integer length for months, and null for one_off or forever."""
     plan_ids: Nullable[List[str]]
-    promo_codes: List[CouponPromoCodeRequestTypedDict]
+    r"""Plan IDs must be unique."""
+    promo_codes: List[CouponPromoCodeRequest2TypedDict]
+    r"""Promo code values must be unique."""
+    value: float
+    r"""Percentage discounts must be at most 100; fixed discounts must be positive."""
+    type: Literal["fixed_discount"]
 
 
-class CouponRequest(BaseModel):
+class CouponRequest2(BaseModel):
     id: str
 
     name: str
 
-    type: CreateRewardParamsCouponType
-
-    value: float
-
-    duration: Duration
+    duration: DurationUnion2
+    r"""Use a positive integer length for months, and null for one_off or forever."""
 
     plan_ids: Nullable[List[str]]
+    r"""Plan IDs must be unique."""
 
-    promo_codes: List[CouponPromoCodeRequest]
+    promo_codes: List[CouponPromoCodeRequest2]
+    r"""Promo code values must be unique."""
+
+    value: float
+    r"""Percentage discounts must be at most 100; fixed discounts must be positive."""
+
+    type: Annotated[
+        Annotated[
+            Literal["fixed_discount"], AfterValidator(validate_const("fixed_discount"))
+        ],
+        pydantic.Field(alias="type"),
+    ] = "fixed_discount"
 
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
@@ -317,12 +308,183 @@ class CouponRequest(BaseModel):
         return m
 
 
+class CreateRewardParamsDuration3TypedDict(TypedDict):
+    type: Literal["forever"]
+    length: Literal[None]
+
+
+class CreateRewardParamsDuration3(BaseModel):
+    type: Annotated[
+        Annotated[Literal["forever"], AfterValidator(validate_const("forever"))],
+        pydantic.Field(alias="type"),
+    ] = "forever"
+
+    length: Annotated[
+        Annotated[Literal[None], AfterValidator(validate_const(None))],
+        pydantic.Field(alias="length"),
+    ] = None
+
+
+class CreateRewardParamsDuration2TypedDict(TypedDict):
+    length: int
+    type: Literal["months"]
+
+
+class CreateRewardParamsDuration2(BaseModel):
+    length: int
+
+    type: Annotated[
+        Annotated[Literal["months"], AfterValidator(validate_const("months"))],
+        pydantic.Field(alias="type"),
+    ] = "months"
+
+
+class CreateRewardParamsDuration1TypedDict(TypedDict):
+    type: Literal["one_off"]
+    length: Literal[None]
+
+
+class CreateRewardParamsDuration1(BaseModel):
+    type: Annotated[
+        Annotated[Literal["one_off"], AfterValidator(validate_const("one_off"))],
+        pydantic.Field(alias="type"),
+    ] = "one_off"
+
+    length: Annotated[
+        Annotated[Literal[None], AfterValidator(validate_const(None))],
+        pydantic.Field(alias="length"),
+    ] = None
+
+
+DurationUnion1TypedDict = TypeAliasType(
+    "DurationUnion1TypedDict",
+    Union[
+        CreateRewardParamsDuration1TypedDict,
+        CreateRewardParamsDuration2TypedDict,
+        CreateRewardParamsDuration3TypedDict,
+    ],
+)
+r"""Use a positive integer length for months, and null for one_off or forever."""
+
+
+DurationUnion1 = Annotated[
+    Union[
+        CreateRewardParamsDuration1,
+        CreateRewardParamsDuration2,
+        CreateRewardParamsDuration3,
+    ],
+    Field(discriminator="type"),
+]
+r"""Use a positive integer length for months, and null for one_off or forever."""
+
+
+class CouponPromoCodeRequest1TypedDict(TypedDict):
+    code: str
+    global_max_redemption: NotRequired[Nullable[int]]
+    first_time_transaction: NotRequired[Nullable[bool]]
+
+
+class CouponPromoCodeRequest1(BaseModel):
+    code: str
+
+    global_max_redemption: OptionalNullable[int] = UNSET
+
+    first_time_transaction: OptionalNullable[bool] = UNSET
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        optional_fields = set(["global_max_redemption", "first_time_transaction"])
+        nullable_fields = set(["global_max_redemption", "first_time_transaction"])
+        serialized = handler(self)
+        m = {}
+
+        for n, f in type(self).model_fields.items():
+            k = f.alias or n
+            val = serialized.get(k, serialized.get(n))
+            is_nullable_and_explicitly_set = (
+                k in nullable_fields
+                and (self.__pydantic_fields_set__.intersection({n}))  # pylint: disable=no-member
+            )
+
+            if val != UNSET_SENTINEL:
+                if (
+                    val is not None
+                    or k not in optional_fields
+                    or is_nullable_and_explicitly_set
+                ):
+                    m[k] = val
+
+        return m
+
+
+class CouponRequest1TypedDict(TypedDict):
+    id: str
+    name: str
+    duration: DurationUnion1TypedDict
+    r"""Use a positive integer length for months, and null for one_off or forever."""
+    plan_ids: Nullable[List[str]]
+    r"""Plan IDs must be unique."""
+    promo_codes: List[CouponPromoCodeRequest1TypedDict]
+    r"""Promo code values must be unique."""
+    value: float
+    r"""Percentage discounts must be at most 100; fixed discounts must be positive."""
+    type: Literal["percentage_discount"]
+
+
+class CouponRequest1(BaseModel):
+    id: str
+
+    name: str
+
+    duration: DurationUnion1
+    r"""Use a positive integer length for months, and null for one_off or forever."""
+
+    plan_ids: Nullable[List[str]]
+    r"""Plan IDs must be unique."""
+
+    promo_codes: List[CouponPromoCodeRequest1]
+    r"""Promo code values must be unique."""
+
+    value: float
+    r"""Percentage discounts must be at most 100; fixed discounts must be positive."""
+
+    type: Annotated[
+        Annotated[
+            Literal["percentage_discount"],
+            AfterValidator(validate_const("percentage_discount")),
+        ],
+        pydantic.Field(alias="type"),
+    ] = "percentage_discount"
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        serialized = handler(self)
+        m = {}
+
+        for n, f in type(self).model_fields.items():
+            k = f.alias or n
+            val = serialized.get(k, serialized.get(n))
+
+            if val != UNSET_SENTINEL:
+                m[k] = val
+
+        return m
+
+
+CouponTypedDict = TypeAliasType(
+    "CouponTypedDict", Union[CouponRequest1TypedDict, CouponRequest2TypedDict]
+)
+
+
+Coupon = Annotated[Union[CouponRequest1, CouponRequest2], Field(discriminator="type")]
+
+
 class CreateRewardParams1TypedDict(TypedDict):
-    coupon: CouponRequestTypedDict
+    coupon: CouponTypedDict
 
 
 class CreateRewardParams1(BaseModel):
-    coupon: CouponRequest
+    coupon: Coupon
 
 
 CreateRewardParamsUnionTypedDict = TypeAliasType(
@@ -345,36 +507,17 @@ CreateRewardExpiryTypeResponse = Union[
     ],
     UnrecognizedStr,
 ]
-r"""The unit of time the duration is measured in."""
 
 
 class CreateRewardExpiryResponseTypedDict(TypedDict):
     type: CreateRewardExpiryTypeResponse
-    r"""The unit of time the duration is measured in."""
-    length: Nullable[float]
-    r"""The number of `type` periods the duration lasts, or null when the type has no length (e.g. one_off, forever)."""
+    length: int
 
 
 class CreateRewardExpiryResponse(BaseModel):
     type: CreateRewardExpiryTypeResponse
-    r"""The unit of time the duration is measured in."""
 
-    length: Nullable[float]
-    r"""The number of `type` periods the duration lasts, or null when the type has no length (e.g. one_off, forever)."""
-
-    @model_serializer(mode="wrap")
-    def serialize_model(self, handler):
-        serialized = handler(self)
-        m = {}
-
-        for n, f in type(self).model_fields.items():
-            k = f.alias or n
-            val = serialized.get(k, serialized.get(n))
-
-            if val != UNSET_SENTINEL:
-                m[k] = val
-
-        return m
+    length: int
 
 
 class CreateRewardGrantResponseTypedDict(TypedDict):
@@ -503,7 +646,7 @@ class ResponseBody2(BaseModel):
     feature_grant: CreateRewardFeatureGrantResponse
 
 
-CreateRewardCouponTypeResponse = Union[
+CreateRewardCouponType = Union[
     Literal[
         "percentage_discount",
         "fixed_discount",
@@ -606,7 +749,7 @@ class CreateRewardCouponPromoCodeResponse(BaseModel):
 class CreateRewardCouponResponseTypedDict(TypedDict):
     id: str
     r"""The unique identifier for the coupon."""
-    type: CreateRewardCouponTypeResponse
+    type: CreateRewardCouponType
     r"""The type of discount: percentage_discount, fixed_discount, or invoice_credits."""
     value: float
     r"""The discount value. A percentage for percentage_discount, or an amount for fixed_discount / invoice_credits."""
@@ -626,7 +769,7 @@ class CreateRewardCouponResponse(BaseModel):
     id: str
     r"""The unique identifier for the coupon."""
 
-    type: CreateRewardCouponTypeResponse
+    type: CreateRewardCouponType
     r"""The type of discount: percentage_discount, fixed_discount, or invoice_credits."""
 
     value: float
@@ -695,6 +838,22 @@ r"""OK"""
 
 
 try:
+    CreateRewardParamsDuration6.model_rebuild()
+except NameError:
+    pass
+try:
+    CreateRewardParamsDuration5.model_rebuild()
+except NameError:
+    pass
+try:
+    CreateRewardParamsDuration4.model_rebuild()
+except NameError:
+    pass
+try:
+    CouponRequest2.model_rebuild()
+except NameError:
+    pass
+try:
     CreateRewardParamsDuration3.model_rebuild()
 except NameError:
     pass
@@ -704,5 +863,9 @@ except NameError:
     pass
 try:
     CreateRewardParamsDuration1.model_rebuild()
+except NameError:
+    pass
+try:
+    CouponRequest1.model_rebuild()
 except NameError:
     pass

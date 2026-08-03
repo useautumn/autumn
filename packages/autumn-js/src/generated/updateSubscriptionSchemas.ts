@@ -228,6 +228,7 @@ export const billingUpdateItemPlanItemOutboundSchema = z.object({
 	feature_id: z.string(),
 	included: z.union([z.number(), z.undefined()]).optional(),
 	unlimited: z.union([z.boolean(), z.undefined()]).optional(),
+	pooled: z.boolean(),
 	reset: z
 		.union([billingUpdateItemResetOutboundSchema, z.undefined()])
 		.optional(),
@@ -311,6 +312,7 @@ export const billingUpdateAddItemPlanItemOutboundSchema = z.object({
 	feature_id: z.string(),
 	included: z.union([z.number(), z.undefined()]).optional(),
 	unlimited: z.union([z.boolean(), z.undefined()]).optional(),
+	pooled: z.boolean(),
 	reset: z
 		.union([billingUpdateAddItemResetOutboundSchema, z.undefined()])
 		.optional(),
@@ -500,6 +502,7 @@ export const billingUpdateUpsertLicensePlanItemOutboundSchema = z.object({
 	feature_id: z.string(),
 	included: z.union([z.number(), z.undefined()]).optional(),
 	unlimited: z.union([z.boolean(), z.undefined()]).optional(),
+	pooled: z.boolean(),
 	reset: z
 		.union([billingUpdateUpsertLicenseResetOutboundSchema, z.undefined()])
 		.optional(),
@@ -712,6 +715,7 @@ export const billingUpdateItemPlanItemSchema = z.object({
 	featureId: z.string(),
 	included: z.union([z.number(), z.undefined()]).optional(),
 	unlimited: z.union([z.boolean(), z.undefined()]).optional(),
+	pooled: z.union([z.boolean(), z.undefined()]).optional(),
 	reset: z.union([billingUpdateItemResetSchema, z.undefined()]).optional(),
 	price: z.union([billingUpdateItemPriceSchema, z.undefined()]).optional(),
 	proration: z
@@ -778,6 +782,7 @@ export const billingUpdateAddItemPlanItemSchema = z.object({
 	featureId: z.string(),
 	included: z.union([z.number(), z.undefined()]).optional(),
 	unlimited: z.union([z.boolean(), z.undefined()]).optional(),
+	pooled: z.union([z.boolean(), z.undefined()]).optional(),
 	reset: z.union([billingUpdateAddItemResetSchema, z.undefined()]).optional(),
 	price: z.union([billingUpdateAddItemPriceSchema, z.undefined()]).optional(),
 	proration: z
@@ -968,6 +973,7 @@ export const billingUpdateUpsertLicensePlanItemSchema = z.object({
 	featureId: z.string(),
 	included: z.union([z.number(), z.undefined()]).optional(),
 	unlimited: z.union([z.boolean(), z.undefined()]).optional(),
+	pooled: z.union([z.boolean(), z.undefined()]).optional(),
 	reset: z
 		.union([billingUpdateUpsertLicenseResetSchema, z.undefined()])
 		.optional(),

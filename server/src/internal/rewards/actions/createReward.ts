@@ -6,7 +6,6 @@ import {
 import { createStripeCoupon } from "@/external/stripe/stripeCouponUtils/stripeCouponUtils.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { ProductService } from "@/internal/products/ProductService.js";
-import { PriceService } from "@/internal/products/prices/PriceService.js";
 import { pricesOnlyOneOff } from "@/internal/products/prices/priceUtils.js";
 import { isFreeProduct } from "@/internal/products/productUtils.js";
 import { rewardRepo } from "@/internal/rewards/repos/index.js";
@@ -15,6 +14,7 @@ import {
 	getRewardCat,
 	initRewardStripePrices,
 } from "@/internal/rewards/rewardUtils.js";
+import { getRewardPrices } from "./getRewardPrices.js";
 import { validateRewardUniqueness } from "./validateRewardUniqueness.js";
 
 type CreateRewardParams = {
@@ -43,9 +43,9 @@ export const createReward = async ({
 	});
 
 	if (getRewardCat(reward) === RewardCategory.Discount) {
-		const prices = await PriceService.getInIds({
-			db,
-			ids: reward.discount_config?.price_ids ?? [],
+		const prices = await getRewardPrices({
+			ctx,
+			priceIds: reward.discount_config?.price_ids ?? [],
 		});
 		await initRewardStripePrices({ ctx, prices });
 		await createStripeCoupon({

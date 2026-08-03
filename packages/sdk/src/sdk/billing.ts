@@ -93,11 +93,13 @@ export class Billing extends ClientSDK {
    * @example
    * ```typescript
    * // Schedule a transition from a trial plan to a paid plan
-   * const response = await client.billing.createSchedule({ customerId: "cus_123", phases: [{"startsAt":1784744849888,"plans":[{"planId":"trial_plan"}]},{"startsAt":1785954449888,"plans":[{"planId":"pro_plan"}]}] });
+   * const response = await client.billing.createSchedule({ customerId: "cus_123", phases: [{"startsAt":1785774477308,"plans":[{"planId":"trial_plan"}]},{"startsAt":1786984077308,"plans":[{"planId":"pro_plan"}]}] });
    * ```
    *
    * @param customerId - The ID of the customer to create the schedule for.
    * @param entityId - Optional entity ID for an entity-scoped schedule. (optional)
+   * @param freeTrial - Free trial configuration applied to every plan in the immediate phase. (optional)
+   * @param currency - Three-letter Stripe-supported currency code used to bill the immediate phase (for example, 'usd'). (optional)
    * @param invoiceMode - Invoice mode creates and sends an invoice instead of charging the customer's payment method immediately for the first phase. (optional)
    * @param discounts - List of discounts to apply to the immediate phase. Each discount can be an Autumn reward ID, Stripe coupon ID, or Stripe promotion code. (optional)
    * @param successUrl - URL to redirect to after successful checkout. (optional)
@@ -106,6 +108,7 @@ export class Billing extends ClientSDK {
    * @param billingBehavior - Whether to prorate the immediate phase. 'none' skips proration charges and credits. (optional)
    * @param billingCycleAnchor - Pass 'now' to reset the billing cycle anchor of the immediate phase to the current time. (optional)
    * @param enablePlanImmediately - If true, the immediate-phase cusProducts are activated immediately (and scheduled-phase cusProducts pre-inserted) even when payment is pending via Stripe checkout. The Autumn schedule rows are persisted on checkout.session.completed. (optional)
+   * @param preserveAddOns - If true, active recurring add-ons in scopes represented by the phase plans are retained. (optional)
    * @param phases - Ordered phase definitions for the schedule.
    *
    * @returns A create-schedule response with the schedule ID, persisted phases, and any required payment or checkout URL.
@@ -148,9 +151,11 @@ export class Billing extends ClientSDK {
    * @param entityId - The ID of the entity to attach the plans to. (optional)
    * @param plans - The list of plans to attach to the customer.
    * @param freeTrial - Free trial configuration applied to all plans. Pass an object to set a custom trial, or null to remove any trial. (optional)
+   * @param startsAt - Unix timestamp in milliseconds for backdating every plan in this multi-attach. (optional)
    * @param currency - Currency to bill this multi-attach in (e.g. usd, eur). Must match the customer's currency if they are already locked to one, and every plan must offer a paid price in it. Defaults to the customer's currency, then the org default. (optional)
    * @param invoiceMode - Invoice mode creates a draft or open invoice and sends it to the customer, instead of charging their card immediately. (optional)
    * @param discounts - List of discounts to apply. Each discount can be an Autumn reward ID, Stripe coupon ID, or Stripe promotion code. (optional)
+   * @param billingBehavior - How to handle billing. 'prorate_immediately' charges/credits prorated amounts now, 'none' does not charge/credit anything. (optional)
    * @param successUrl - URL to redirect to after successful checkout. (optional)
    * @param checkoutSessionParams - Additional parameters to pass into the creation of the Stripe checkout session. (optional)
    * @param redirectMode - Controls when to return a checkout URL. 'always' returns a URL even if payment succeeds, 'if_required' only when payment action is needed, 'never' disables redirects. (optional)
@@ -239,9 +244,11 @@ export class Billing extends ClientSDK {
    * @param entityId - The ID of the entity to attach the plans to. (optional)
    * @param plans - The list of plans to attach to the customer.
    * @param freeTrial - Free trial configuration applied to all plans. Pass an object to set a custom trial, or null to remove any trial. (optional)
+   * @param startsAt - Unix timestamp in milliseconds for backdating every plan in this multi-attach. (optional)
    * @param currency - Currency to bill this multi-attach in (e.g. usd, eur). Must match the customer's currency if they are already locked to one, and every plan must offer a paid price in it. Defaults to the customer's currency, then the org default. (optional)
    * @param invoiceMode - Invoice mode creates a draft or open invoice and sends it to the customer, instead of charging their card immediately. (optional)
    * @param discounts - List of discounts to apply. Each discount can be an Autumn reward ID, Stripe coupon ID, or Stripe promotion code. (optional)
+   * @param billingBehavior - How to handle billing. 'prorate_immediately' charges/credits prorated amounts now, 'none' does not charge/credit anything. (optional)
    * @param successUrl - URL to redirect to after successful checkout. (optional)
    * @param checkoutSessionParams - Additional parameters to pass into the creation of the Stripe checkout session. (optional)
    * @param redirectMode - Controls when to return a checkout URL. 'always' returns a URL even if payment succeeds, 'if_required' only when payment action is needed, 'never' disables redirects. (optional)

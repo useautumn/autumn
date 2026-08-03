@@ -1149,8 +1149,6 @@ actions:
                     "coupon": {
                         "id": "summer_sale",
                         "name": "Summer Sale",
-                        "type": "percentage_discount",
-                        "value": 20,
                         "duration": {
                             "type": "months",
                             "length": 3,
@@ -1161,6 +1159,8 @@ actions:
                                 "code": "SUMMER20",
                             },
                         ],
+                        "type": "percentage_discount",
+                        "value": 20,
                     },
                 })
 

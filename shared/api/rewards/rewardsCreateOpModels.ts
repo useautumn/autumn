@@ -7,43 +7,72 @@ import { z } from "zod/v4";
 import { ApiCouponV0Schema } from "./coupons/apiCouponV0.js";
 import { ApiFeatureGrantV0Schema } from "./featureGrants/apiFeatureGrantV0.js";
 
-const CouponDurationSchema = z.union([
-	z.object({ type: z.literal(CouponDurationType.OneOff), length: z.null() }),
-	z.object({
-		type: z.literal(CouponDurationType.Months),
-		length: z.number().int().positive(),
-	}),
-	z.object({ type: z.literal(CouponDurationType.Forever), length: z.null() }),
-]);
+const CouponDurationSchema = z
+	.union([
+		z.object({
+			type: z.literal(CouponDurationType.OneOff),
+			length: z.literal(null),
+		}),
+		z.object({
+			type: z.literal(CouponDurationType.Months),
+			length: z.number().int().positive(),
+		}),
+		z.object({
+			type: z.literal(CouponDurationType.Forever),
+			length: z.literal(null),
+		}),
+	])
+	.meta({
+		description:
+			"Use a positive integer length for months, and null for one_off or forever.",
+	});
 
-const CreateCouponSchema = ApiCouponV0Schema.omit({ created_at: true })
+const CreateCouponBaseSchema = ApiCouponV0Schema.omit({
+	created_at: true,
+	type: true,
+	value: true,
+})
 	.extend({
 		id: z.string().min(1),
 		name: z.string().min(1),
-		type: z.enum([RewardType.PercentageDiscount, RewardType.FixedDiscount]),
-		value: z.number().positive(),
 		duration: CouponDurationSchema,
-		plan_ids: z.array(z.string().min(1)).min(1).nullable(),
-		promo_codes: z.array(
-			z
-				.object({
-					code: z.string().min(1),
-					global_max_redemption: z.number().int().positive().nullish(),
-					first_time_transaction: z.boolean().nullish(),
-				})
-				.strict(),
-		),
+		plan_ids: z
+			.array(z.string().min(1))
+			.min(1)
+			.nullable()
+			.meta({ description: "Plan IDs must be unique." }),
+		promo_codes: z
+			.array(
+				z
+					.object({
+						code: z.string().min(1),
+						global_max_redemption: z.number().int().positive().nullish(),
+						first_time_transaction: z.boolean().nullish(),
+					})
+					.strict(),
+			)
+			.meta({ description: "Promo code values must be unique." }),
 	})
-	.strict()
-	.superRefine((coupon, ctx) => {
-		if (coupon.type === RewardType.PercentageDiscount && coupon.value > 100) {
-			ctx.addIssue({
-				code: "custom",
-				message: "Percentage discounts cannot exceed 100",
-				path: ["value"],
-			});
-		}
+	.strict();
 
+const CreateCouponSchema = z
+	.discriminatedUnion("type", [
+		CreateCouponBaseSchema.extend({
+			type: z.literal(RewardType.PercentageDiscount),
+			value: z.number().positive().max(100).meta({
+				description:
+					"Percentage discounts must be at most 100; fixed discounts must be positive.",
+			}),
+		}),
+		CreateCouponBaseSchema.extend({
+			type: z.literal(RewardType.FixedDiscount),
+			value: z.number().positive().meta({
+				description:
+					"Percentage discounts must be at most 100; fixed discounts must be positive.",
+			}),
+		}),
+	])
+	.superRefine((coupon, ctx) => {
 		const codes = coupon.promo_codes.map(({ code }) => code);
 		if (new Set(codes).size !== codes.length) {
 			ctx.addIssue({
@@ -88,7 +117,8 @@ const CreateFeatureGrantSchema = ApiFeatureGrantV0Schema.omit({
 					})
 					.strict(),
 			)
-			.min(1),
+			.min(1)
+			.meta({ description: "Feature IDs must be unique." }),
 		promo_codes: z
 			.array(
 				z
@@ -98,7 +128,8 @@ const CreateFeatureGrantSchema = ApiFeatureGrantV0Schema.omit({
 					})
 					.strict(),
 			)
-			.min(1),
+			.min(1)
+			.meta({ description: "Promo code values must be unique." }),
 	})
 	.strict()
 	.superRefine((featureGrant, ctx) => {
