@@ -10,6 +10,7 @@ import { drizzle } from "drizzle-orm/node-postgres";
 import pg, { type PoolConfig } from "pg";
 import { logger } from "../external/logtail/logtailUtils.js";
 import { otelConfig } from "../utils/otel/otelConfig.js";
+import { applyConnectRefusedRetry } from "./connectRetry.js";
 import { attachPoolErrorHandlers, registerPool } from "./pgPoolMonitor.js";
 
 type AutumnDb = Omit<ReturnType<typeof drizzle<typeof schema>>, "execute"> & {
@@ -77,6 +78,8 @@ export const initDrizzle = ({
 		attachPoolErrorHandlers({ pool: client, name });
 		registerPool({ pool: client, name, max: maxConnections });
 	}
+	// After registerPool so a retry passes through timeAcquires as its own acquire attempt.
+	applyConnectRefusedRetry({ pool: client, name: name ?? "unnamed" });
 
 	const drizzleDb = drizzle(client, { schema });
 	const transaction = drizzleDb.transaction.bind(drizzleDb);
@@ -232,6 +235,9 @@ const replicaResult = process.env.DATABASE_REPLICA_URL
 				application_name: "autumn-replica",
 				// Bounds replica-bouncer queue wait as well as execution.
 				query_timeout: 5_000,
+				// pg-pool's min doesn't precreate, it only exempts from idle reaping — the
+				// floor preserves traffic-built warmth (e.g. a 1x warm-up) for the Redis-outage moment.
+				min: Math.min(4, replicaPoolMax),
 			},
 		})
 	: null;
