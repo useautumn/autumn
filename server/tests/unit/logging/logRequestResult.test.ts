@@ -6,7 +6,7 @@ import type { AutumnContext, HonoEnv } from "@/honoUtils/HonoEnv.js";
 import { addRequestToLogs } from "@/utils/logging/addContextToLogs.js";
 import type { LogRequestContext } from "@/utils/logging/loggerTypes.js";
 
-// Rate 1 makes the high-volume success sampler deterministic (Math.random() < 1
+// Rate 1 makes the high-volume 429 sampler deterministic (Math.random() < 1
 // always holds); the module reads this lazily on first use, so set it up front.
 process.env.AXIOM_SUCCESS_REQUEST_LOG_SAMPLE_RATE = "1";
 
@@ -300,6 +300,40 @@ describe("logRequestResult", () => {
 		expect(captured[0]?.args[1]).toEqual({
 			statusCode: 500,
 			durationMs: 40,
+			res: JSON.stringify(responseBody),
+		});
+	});
+
+	test("always logs a success on a high volume route even when the sampler says no", async () => {
+		const captured: CapturedLog[] = [];
+		const responseBody = { allowed: true };
+		const ctx = {
+			timestamp: 123,
+			logger: createCapturingLogger({ captured }),
+			extraLogs: {},
+			org: { slug: "test-org" },
+		} as unknown as AutumnContext;
+		const c = {
+			req: { path: "/v1/check" },
+			res: {
+				status: 200,
+				headers: new Headers({ "content-type": "application/json" }),
+			},
+		} as Context<HonoEnv>;
+
+		// Math.random() = 1 would sample out (1 < 1 fails) — successes must ignore it.
+		const randomSpy = spyOn(Math, "random").mockReturnValue(1);
+		try {
+			await logRequestResult({ ctx, c, durationMs: 5, responseBody });
+		} finally {
+			randomSpy.mockRestore();
+		}
+
+		expect(captured).toHaveLength(1);
+		expect(captured[0]?.level).toBe("info");
+		expect(captured[0]?.args[1]).toEqual({
+			statusCode: 200,
+			durationMs: 5,
 			res: JSON.stringify(responseBody),
 		});
 	});

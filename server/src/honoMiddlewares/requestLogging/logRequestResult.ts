@@ -4,7 +4,7 @@ import type { AutumnContext, HonoEnv } from "@/honoUtils/HonoEnv.js";
 import { addExtrasToLogs } from "@/utils/logging/addContextToLogs.js";
 import { maskExtraLogs } from "@/utils/logging/maskExtraLogs.js";
 
-const HIGH_VOLUME_SUCCESS_ROUTES = new Set<string>([
+const HIGH_VOLUME_ROUTES = new Set<string>([
 	"/v1/balances.track",
 	"/v1/balances.check",
 	"/v1/check",
@@ -21,16 +21,16 @@ const RESPONSE_BODY_EXCLUDED_ROUTES = new Set<string>([
 
 // Read lazily: Infisical populates process.env in-process at runtime, so a
 // module-scope read can land before the secret exists and silently pin this to 0.
-let successLogSampleRate: number | undefined;
-const getSuccessLogSampleRate = () => {
-	successLogSampleRate ??= Number.parseFloat(
+let rejectionLogSampleRate: number | undefined;
+const getRejectionLogSampleRate = () => {
+	rejectionLogSampleRate ??= Number.parseFloat(
 		process.env.AXIOM_SUCCESS_REQUEST_LOG_SAMPLE_RATE ?? "0",
 	);
-	return Number.isNaN(successLogSampleRate) ? 0 : successLogSampleRate;
+	return Number.isNaN(rejectionLogSampleRate) ? 0 : rejectionLogSampleRate;
 };
 
-const shouldSampleSuccessLog = () => {
-	const rate = getSuccessLogSampleRate();
+const shouldSampleRejectionLog = () => {
+	const rate = getRejectionLogSampleRate();
 	return rate > 0 && Math.random() < Math.min(rate, 1);
 };
 
@@ -55,13 +55,12 @@ export const logRequestResult = async ({
 		}
 
 		const isSuccess = statusCode >= 200 && statusCode < 300;
-		// 429 floods on hot routes out-cost the successes they throttle, so they
-		// share the success sample rate; 5xx and other statuses stay fully logged.
-		const isSampledStatus = isSuccess || statusCode === 429;
-		const isHighVolumeSampled =
-			isSampledStatus && HIGH_VOLUME_SUCCESS_ROUTES.has(c.req.path);
+		// 429 floods on hot routes out-cost the requests they throttle, so they're
+		// sampled under overload; every other status stays fully logged.
+		const isSampledRejection =
+			statusCode === 429 && HIGH_VOLUME_ROUTES.has(c.req.path);
 
-		if (isHighVolumeSampled && !shouldSampleSuccessLog()) {
+		if (isSampledRejection && !shouldSampleRejectionLog()) {
 			return;
 		}
 

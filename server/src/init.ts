@@ -5,19 +5,12 @@ import cluster from "node:cluster";
 import http from "node:http";
 import os from "node:os";
 import { getRequestListener } from "@hono/node-server";
-import {
-	CRITICAL_POOL_MIN,
-	client,
-	clientCritical,
-	clientReplica,
-	db,
-} from "./db/initDrizzle.js";
+import { client, clientCritical, clientReplica, db } from "./db/initDrizzle.js";
 import {
 	initPgHealthMonitor,
 	shutdownPgHealthMonitor,
 } from "./db/pgHealthMonitor.js";
 import { startPgPoolMonitor, stopPgPoolMonitor } from "./db/pgPoolMonitor.js";
-import { prewarmPool } from "./db/prewarmPool.js";
 import { getRedactedDatabaseUrls } from "./db/redactDatabaseUrl.js";
 import { logger } from "./external/logtail/logtailUtils.js";
 import { globalAsyncTrackSqsBatcher } from "./internal/balances/track/AsyncTrackSqsBatcher.js";
@@ -79,14 +72,6 @@ const init = async ({ startupStartedAt }: { startupStartedAt: number }) => {
 
 	initPgHealthMonitor({ client: clientCritical });
 	startPgPoolMonitor();
-
-	void prewarmPool({
-		pool: clientCritical,
-		name: "critical",
-		target: CRITICAL_POOL_MIN,
-	}).catch((error) => {
-		logger.warn("[PrewarmPool] Critical warmup failed", { error });
-	});
 
 	void warmupRegionalRedis().catch((error) => {
 		logger.warn("[Redis] Warmup failed", { error });
