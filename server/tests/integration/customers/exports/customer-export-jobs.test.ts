@@ -1,9 +1,12 @@
 import { afterAll, beforeAll, describe, expect, test } from "bun:test";
 import {
+	CusProductStatus,
 	CustomerExportField,
 	CustomerExportStatus,
 	customerExports,
+	customerProducts,
 	customers,
+	products,
 } from "@autumn/shared";
 import ctx from "@tests/utils/testInitUtils/createTestContext.js";
 import { and, eq, inArray } from "drizzle-orm";
@@ -31,6 +34,8 @@ const emptySnapshot = { search: "", filters: {} };
 describeDb("customer export jobs", () => {
 	const seededCustomerInternalIds: string[] = [];
 	const seededExportIds: string[] = [];
+	const seededCustomerProductIds: string[] = [];
+	const seededProductInternalIds: string[] = [];
 	const otherEnv = ctx.env === "sandbox" ? "live" : "sandbox";
 
 	const insertExport = async ({
@@ -80,10 +85,20 @@ describeDb("customer export jobs", () => {
 				.delete(customerExports)
 				.where(inArray(customerExports.id, seededExportIds));
 		}
+		if (seededCustomerProductIds.length > 0) {
+			await ctx.db
+				.delete(customerProducts)
+				.where(inArray(customerProducts.id, seededCustomerProductIds));
+		}
 		if (seededCustomerInternalIds.length > 0) {
 			await ctx.db
 				.delete(customers)
 				.where(inArray(customers.internal_id, seededCustomerInternalIds));
+		}
+		if (seededProductInternalIds.length > 0) {
+			await ctx.db
+				.delete(products)
+				.where(inArray(products.internal_id, seededProductInternalIds));
 		}
 	});
 
@@ -279,5 +294,81 @@ describeDb("customer export jobs", () => {
 		for (const row of expectedRows) {
 			expect(walkedInternalIds).toContain(row.internal_id);
 		}
+	});
+
+	test("filtered export walk matches the dashboard count for plan and status filters", async () => {
+		const planId = `${TEST_PREFIX}-plan`;
+		const internalProductId = generateId("prod");
+		await ctx.db.insert(products).values({
+			internal_id: internalProductId,
+			id: planId,
+			org_id: ctx.org.id,
+			env: ctx.env,
+		});
+		seededProductInternalIds.push(internalProductId);
+
+		const attachPlan = async ({
+			customerIndex,
+			status,
+		}: {
+			customerIndex: number;
+			status: CusProductStatus;
+		}) => {
+			const id = generateId("cusprod");
+			await ctx.db.insert(customerProducts).values({
+				id,
+				internal_customer_id: seededCustomerInternalIds[customerIndex],
+				internal_product_id: internalProductId,
+				product_id: planId,
+				status,
+				created_at: Date.now(),
+			});
+			seededCustomerProductIds.push(id);
+		};
+		await attachPlan({ customerIndex: 0, status: CusProductStatus.Active });
+		await attachPlan({ customerIndex: 1, status: CusProductStatus.Active });
+		await attachPlan({ customerIndex: 2, status: CusProductStatus.Expired });
+
+		const snapshot = {
+			search: SEARCH_TERM,
+			filters: { status: ["active"], version: [`${planId}:1`] },
+		};
+
+		const { totalCount } = await CusSearchService.count({
+			db: ctx.db,
+			orgId: ctx.org.id,
+			env: ctx.env,
+			search: snapshot.search,
+			filters: snapshot.filters,
+		});
+
+		// A page size of 1 forces the keyset cursor through the filtered walk.
+		const pageSize = 1;
+		const walkedInternalIds: string[] = [];
+		let afterInternalId: string | null = null;
+		for (;;) {
+			const page = await getCustomerExportScalars({
+				db: ctx.db,
+				orgId: ctx.org.id,
+				env: ctx.env,
+				snapshot,
+				afterInternalId,
+				limit: pageSize,
+			});
+			if (page.length === 0) break;
+			walkedInternalIds.push(...page.map((row) => row.internal_id));
+			afterInternalId = page[page.length - 1].internal_id;
+			if (page.length < pageSize) break;
+		}
+
+		const expectedInternalIds = [
+			seededCustomerInternalIds[0],
+			seededCustomerInternalIds[1],
+		];
+		expect(walkedInternalIds.length).toBe(totalCount);
+		expect([...walkedInternalIds].sort()).toEqual(
+			[...expectedInternalIds].sort(),
+		);
+		expect(walkedInternalIds).not.toContain(seededCustomerInternalIds[2]);
 	});
 });

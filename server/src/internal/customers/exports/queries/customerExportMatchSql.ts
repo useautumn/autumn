@@ -1,4 +1,4 @@
-import { customerProducts, customers, products } from "@autumn/shared";
+import { customers } from "@autumn/shared";
 import { type SQL, sql } from "drizzle-orm";
 import type { CustomerSearchPredicates } from "../../CusSearchService.js";
 
@@ -18,20 +18,6 @@ export const buildMatchedCustomersSelect = ({
 	const where = extraWhere
 		? sql`${predicates.whereRaw} AND ${extraWhere}`
 		: predicates.whereRaw;
-
-	if (predicates.kind === "productMode") {
-		const productJoin = predicates.useInnerJoin
-			? sql`INNER JOIN ${products} ON ${customerProducts.internal_product_id} = ${products.internal_id}`
-			: sql`LEFT JOIN ${products} ON ${customerProducts.internal_product_id} = ${products.internal_id}`;
-
-		return sql`
-			SELECT DISTINCT ${columns}
-			FROM ${customerProducts}
-			${productJoin}
-			LEFT JOIN ${customers} ON ${customerProducts.internal_customer_id} = ${customers.internal_id}
-			WHERE ${where}
-		`;
-	}
 
 	return sql`
 		SELECT ${columns}

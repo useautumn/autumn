@@ -61,8 +61,8 @@ describe("dashboard product filters", () => {
 		expect(params).toEqual(["active", "past_due", "pro", 2, "pro"]);
 	});
 
-	/** Red: numbered plan search joined globally; green: products are scoped to the requesting org and environment. */
-	test("numbered plan cursor lookup scopes the product join", async () => {
+	/** Product filters must stay EXISTS semi-joins driven from customers, with the product lookup scoped to the requesting org and environment. */
+	test("numbered plan cursor lookup drives from customers and scopes the product lookup", async () => {
 		let capturedQuery: ReturnType<PgDialect["sqlToQuery"]> | undefined;
 		const db = {
 			execute: async (query: SQL) => {
@@ -81,7 +81,10 @@ describe("dashboard product filters", () => {
 		});
 
 		const query = normalize(capturedQuery!.sql);
-		expect(query).toContain('"products"."org_id" =');
-		expect(query).toContain('"products"."env" =');
+		expect(query).toContain('FROM "customers"');
+		expect(query).toContain('EXISTS ( SELECT 1 FROM "customer_products"');
+		expect(query).toContain("p_lookup.org_id =");
+		expect(query).toContain("p_lookup.env =");
+		expect(query).not.toContain("DISTINCT");
 	});
 });
