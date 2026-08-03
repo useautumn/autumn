@@ -1,15 +1,15 @@
 import { describe, expect, test } from "bun:test";
 import type { Feature } from "@autumn/shared";
+import type { CustomerFilter } from "@autumn/shared/api/migrations/filters/customerFilter.js";
 import {
+	type CustomerPagePredicate,
 	composeCustomerCount,
 	composeCustomerPage,
-	type CustomerPagePredicate,
 } from "@autumn/shared/api/migrations/filters/planner/composeCustomerPage.js";
 import {
 	composeCustomerPreviewCount,
 	composeCustomerPreviewPage,
 } from "@autumn/shared/api/migrations/filters/planner/composeCustomerPreview.js";
-import type { CustomerFilter } from "@autumn/shared/api/migrations/filters/customerFilter.js";
 import { contexts } from "@tests/utils/fixtures/db/contexts";
 
 const features: Feature[] = [
@@ -101,20 +101,57 @@ describe("composeCustomerPage", () => {
 
 	test("non-consumable residual joins customers inside the walk and filters pre-limit", () => {
 		const page = compose({
-			filter: { plan: { plan_id: "enterprise", paid: true } },
+			filter: {
+				plan: { plan_id: "enterprise", item: { feature_id: "credits" } },
+			},
 		});
 		const walk = walkSection(page.sql);
 
 		expect(walk).toContain(
 			"JOIN customers c ON c.internal_id = cp.internal_customer_id",
 		);
-		// The full quantifier re-proof (EXISTS over customer_prices) sits inside
-		// the walk, BEFORE its ORDER BY/LIMIT — pages stay exact.
-		expect(walk).toContain("customer_prices cpr");
+		// The full quantifier re-proof (EXISTS over the entitlement spine) sits
+		// inside the walk, BEFORE its ORDER BY/LIMIT — pages stay exact.
+		expect(walk).toContain("customer_entitlements ce");
 		const limitIndex = walk.indexOf("LIMIT ?");
-		const residualIndex = walk.indexOf("customer_prices cpr");
+		const residualIndex = walk.indexOf("customer_entitlements ce");
 		expect(residualIndex).toBeGreaterThan(-1);
 		expect(residualIndex).toBeLessThan(limitIndex);
+	});
+
+	test("consumed derived extras (paid/recurring/price) filter inside the walk without a customers join", () => {
+		const page = compose({
+			filter: {
+				plan: {
+					plan_id: "enterprise",
+					paid: true,
+					recurring: true,
+					price: { $ne: null },
+				},
+			},
+		});
+		const walk = walkSection(page.sql);
+
+		expect(walk).not.toContain("JOIN customers c");
+		expect(walk).toContain(
+			"EXISTS (SELECT 1 FROM customer_prices cpr WHERE cpr.customer_product_id = cp.id) = ?",
+		);
+		expect(walk).toContain("pr.config->>'interval' <> 'one_off') = ?");
+		expect(walk).toContain(
+			"AND base_pr.entitlement_id IS NULL LIMIT 1) IS NOT NULL",
+		);
+	});
+
+	test("consumed price: null renders IS NULL inside the walk", () => {
+		const page = compose({
+			filter: { plan: { plan_id: "enterprise", price: null } },
+		});
+		const walk = walkSection(page.sql);
+
+		expect(walk).not.toContain("JOIN customers c");
+		expect(walk).toContain(
+			"AND base_pr.entitlement_id IS NULL LIMIT 1) IS NULL",
+		);
 	});
 
 	test("customer-level residual filters inside the walk", () => {
@@ -184,16 +221,33 @@ describe("composeCustomerPage", () => {
 		expect(normalized).not.toContain("FROM customers");
 	});
 
+	test("count: derived plan filters count off customer_products alone", () => {
+		const count = composeCustomerCount({
+			filter: { plan: { plan_id: "enterprise", recurring: true } },
+			ctx: { features: ctx.features },
+			ambient,
+		});
+
+		const normalized = normalize(count.sql);
+		expect(normalized).toContain("FROM customer_products cp");
+		expect(normalized).toContain("pr.config->>'interval' <> 'one_off') = ?");
+		expect(normalized).toContain("GROUP BY cp.internal_customer_id");
+		expect(normalized).not.toContain("JOIN customers");
+		expect(normalized).not.toContain("FROM customers");
+	});
+
 	test("count: residuals and customer-row predicates take the batch-hash path", () => {
 		const withResidual = composeCustomerCount({
-			filter: { plan: { plan_id: "enterprise", paid: true } },
+			filter: {
+				plan: { plan_id: "enterprise", item: { feature_id: "credits" } },
+			},
 			ctx: { features: ctx.features },
 			ambient,
 		});
 		expect(normalize(withResidual.sql)).toContain(
 			"WITH plan_products AS MATERIALIZED",
 		);
-		expect(normalize(withResidual.sql)).toContain("customer_prices cpr");
+		expect(normalize(withResidual.sql)).toContain("customer_entitlements ce");
 
 		const withCustomerPredicate = composeCustomerCount({
 			filter: { plan: { plan_id: "enterprise" } },

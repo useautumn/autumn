@@ -194,11 +194,14 @@ export const billingCreateScheduleJsDoc = createJSDocDescription({
 				customerId: "cus_123",
 				phases: [
 					{
-						startsAt: Date.now(),
+						startsAt: "now",
 						plans: [{ planId: "trial_plan" }],
 					},
 					{
-						startsAt: Date.now() + 14 * 24 * 60 * 60 * 1000,
+						startingAfter: {
+							durationType: "month",
+							durationCount: 1,
+						},
 						plans: [{ planId: "pro_plan" }],
 					},
 				],

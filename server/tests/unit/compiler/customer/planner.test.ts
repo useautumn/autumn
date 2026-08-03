@@ -1,8 +1,8 @@
 import { describe, expect, test } from "bun:test";
 import type { Feature } from "@autumn/shared";
 import { compileFilter } from "@autumn/shared/api/migrations/compiler/compileFilter.js";
-import { buildCustomerCandidateQuery } from "@autumn/shared/api/migrations/filters/planner/buildCustomerCandidateQuery.js";
 import type { CustomerFilter } from "@autumn/shared/api/migrations/filters/customerFilter.js";
+import { buildCustomerCandidateQuery } from "@autumn/shared/api/migrations/filters/planner/buildCustomerCandidateQuery.js";
 import { contexts } from "@tests/utils/fixtures/db/contexts";
 
 const features: Feature[] = [
@@ -225,11 +225,13 @@ describe("customer filter planner", () => {
 			consumed: false,
 		});
 		expect(normalize(candidate.source.sql)).toContain("p.id = ?");
-		expect(normalize(candidate.where.sql)).toContain("e.internal_feature_id = ?");
+		expect(normalize(candidate.where.sql)).toContain(
+			"e.internal_feature_id = ?",
+		);
 	});
 
-	test("plan_id + price keeps base-price existence as a residual predicate", () => {
-		const candidate = expectFallbackWhereParity({
+	test("plan_id + price consumes base-price existence into the source", () => {
+		const candidate = buildCandidate({
 			plan: {
 				plan_id: "enterprise",
 				price: { $ne: null },
@@ -239,15 +241,15 @@ describe("customer filter planner", () => {
 		expect(candidate.accessPath).toEqual({
 			kind: "planned",
 			id: "plan.plan_id",
-			consumed: false,
+			consumed: true,
 		});
-		expect(normalize(candidate.source.sql)).not.toContain("base_cpr.id");
-		expect(normalize(candidate.where.sql)).toContain("base_cpr.id");
-		expect(normalize(candidate.where.sql)).toContain("IS NOT NULL");
+		expect(normalize(candidate.source.sql)).toContain("base_cpr.id");
+		expect(normalize(candidate.source.sql)).toContain("IS NOT NULL");
+		expect(normalize(candidate.where.sql)).toBe(AMBIENT_ONLY_WHERE);
 	});
 
-	test("plan_id + paid/recurring derived filters remain residual predicates", () => {
-		const candidate = expectFallbackWhereParity({
+	test("plan_id + paid/recurring derived filters consume into the source", () => {
+		const candidate = buildCandidate({
 			plan: {
 				plan_id: "enterprise",
 				paid: true,
@@ -258,13 +260,15 @@ describe("customer filter planner", () => {
 		expect(candidate.accessPath).toEqual({
 			kind: "planned",
 			id: "plan.plan_id",
-			consumed: false,
+			consumed: true,
 		});
-		expect(normalize(candidate.source.sql)).not.toContain("customer_prices");
-		expect(normalize(candidate.where.sql)).toContain("customer_prices cpr");
-		expect(normalize(candidate.where.sql)).toContain(
+		expect(normalize(candidate.source.sql)).toContain("customer_prices cpr");
+		expect(normalize(candidate.source.sql)).toContain(
 			"pr.config->>'interval' <> 'one_off'",
 		);
+		// Booleans render `= ?` with the matcher value, mirroring leaf output.
+		expect(candidate.source.params).toContain(true);
+		expect(normalize(candidate.where.sql)).toBe(AMBIENT_ONLY_WHERE);
 	});
 
 	test("plan_id + item rollover keeps entitlement rollover as a residual predicate", () => {

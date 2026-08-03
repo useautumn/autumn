@@ -15,17 +15,19 @@ export class EventService {
 		logger?: Logger;
 	}) {
 		try {
+			// Delivery is at-least-once, so a replayed id must skip its own row
+			// rather than abort the statement and drop the batch's other events.
 			const results = await db
 				.insert(events)
 				.values(event as any)
+				.onConflictDoNothing()
 				.returning();
 
 			return results?.[0];
 		} catch (error: any) {
 			if (error.code === "23505") {
 				throw new RecaseError({
-					message:
-						"Event (event_name, customer_id, idempotency_key) already exists.",
+					message: "Event already exists.",
 					code: ErrCode.DuplicateEvent,
 					statusCode: StatusCodes.CONFLICT,
 				});

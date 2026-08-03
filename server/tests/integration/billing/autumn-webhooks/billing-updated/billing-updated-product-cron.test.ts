@@ -66,90 +66,85 @@ afterAll(async () => {
 	await webhook?.cleanup();
 });
 
-test(
-	`${chalk.yellowBright("billing.updated: productCron revert-trial expiry → trial_ended tag")}`,
-	async () => {
-		const customerId = "billing-updated-product-cron-revert";
+test(`${chalk.yellowBright("billing.updated: productCron revert-trial expiry → trial_ended tag")}`, async () => {
+	const customerId = "billing-updated-product-cron-revert";
 
-		const messagesItem = items.monthlyMessages({ includedUsage: 100 });
-		const priceItem = items.monthlyPrice({ price: 20 });
-		const pro = products.base({
-			id: "pro-cron",
-			items: [messagesItem, priceItem],
-		});
-		const enterprise = products.base({
-			id: "enterprise-cron",
-			items: [
-				items.monthlyMessages({ includedUsage: 1000 }),
-				items.monthlyPrice({ price: 50 }),
-			],
-		});
+	const messagesItem = items.monthlyMessages({ includedUsage: 100 });
+	const priceItem = items.monthlyPrice({ price: 20 });
+	const pro = products.base({
+		id: "pro-cron",
+		items: [messagesItem, priceItem],
+	});
+	const enterprise = products.base({
+		id: "enterprise-cron",
+		items: [
+			items.monthlyMessages({ includedUsage: 1000 }),
+			items.monthlyPrice({ price: 50 }),
+		],
+	});
 
-		const { autumnV2, ctx: scenarioCtx } = await initScenario({
-			customerId,
-			setup: [
-				s.customer({ paymentMethod: "success", skipWebhooks: true }),
-				s.products({ list: [pro, enterprise] }),
-			],
-			actions: [s.billing.attach({ productId: pro.id })],
-		});
+	const { autumnV2, ctx: scenarioCtx } = await initScenario({
+		customerId,
+		setup: [
+			s.customer({ paymentMethod: "success", skipWebhooks: true }),
+			s.products({ list: [pro, enterprise] }),
+		],
+		actions: [s.billing.attach({ productId: pro.id })],
+	});
 
-		// Attach enterprise with a revert trial — pro gets paused, enterprise
-		// is now trialing with on_trial_end="revert".
-		const params: AttachParamsV1Input = {
-			customer_id: customerId,
-			plan_id: enterprise.id,
-			redirect_mode: "if_required",
-			customize: {
-				free_trial: {
-					duration_length: 14,
-					duration_type: FreeTrialDuration.Day,
-					card_required: false,
-					on_end: "revert",
-				},
+	// Attach enterprise with a revert trial — pro gets paused, enterprise
+	// is now trialing with on_trial_end="revert".
+	const params: AttachParamsV1Input = {
+		customer_id: customerId,
+		plan_id: enterprise.id,
+		redirect_mode: "if_required",
+		customize: {
+			free_trial: {
+				duration_length: 14,
+				duration_type: FreeTrialDuration.Day,
+				card_required: false,
+				on_end: "revert",
 			},
-		};
-		await autumnV2.billing.attach<AttachParamsV1Input>(params);
+		},
+	};
+	await autumnV2.billing.attach<AttachParamsV1Input>(params);
 
-		// Backdate trial_ends_at so the cron picks the enterprise row up.
-		const fullCustomer = await CusService.getFull({
-			ctx: scenarioCtx,
-			idOrInternalId: customerId,
-		});
-		const pastTrialEnd = Date.now() - 60_000;
-		await scenarioCtx.db
-			.update(customerProducts)
-			.set({ trial_ends_at: pastTrialEnd })
-			.where(
-				eq(customerProducts.internal_customer_id, fullCustomer.internal_id),
-			);
+	// Backdate trial_ends_at so the cron picks the enterprise row up.
+	const fullCustomer = await CusService.getFull({
+		ctx: scenarioCtx,
+		idOrInternalId: customerId,
+	});
+	const pastTrialEnd = Date.now() - 60_000;
+	await scenarioCtx.db
+		.update(customerProducts)
+		.set({ trial_ends_at: pastTrialEnd })
+		.where(eq(customerProducts.internal_customer_id, fullCustomer.internal_id));
 
-		await runProductCron({ ctx: { db: scenarioCtx.db, logger } });
+	await runProductCron({ ctx: { db: scenarioCtx.db, logger } });
 
-		const result = await waitForWebhook<BillingUpdatedPayload>({
-			token: playToken,
-			predicate: (payload) =>
-				payload.type === "billing.updated" &&
-				payload.data?.customer_id === customerId &&
-				(payload.data?.tags ?? []).includes("trial_ended"),
-			timeoutMs: 15000,
-		});
+	const result = await waitForWebhook<BillingUpdatedPayload>({
+		token: playToken,
+		predicate: (payload) =>
+			payload.type === "billing.updated" &&
+			payload.data?.customer_id === customerId &&
+			(payload.data?.tags ?? []).includes("trial_ended"),
+		timeoutMs: 15000,
+	});
 
-		expect(result).not.toBeNull();
-		const { data } = result!.payload;
-		expect(data.tags).toContain("trial_ended");
+	expect(result).not.toBeNull();
+	const { data } = result!.payload;
+	expect(data.tags).toContain("trial_ended");
 
-		// Enterprise (the trial) expires; pro (was paused) goes back to active.
-		const expired = findChange(data.plan_changes, {
-			action: "expired",
-			planId: enterprise.id,
-		});
-		expect(expired).toBeDefined();
+	// Enterprise (the trial) expires; pro (was paused) goes back to active.
+	const expired = findChange(data.plan_changes, {
+		action: "expired",
+		planId: enterprise.id,
+	});
+	expect(expired).toBeDefined();
 
-		const restored = findChange(data.plan_changes, {
-			action: "activated",
-			planId: pro.id,
-		});
-		expect(restored).toBeDefined();
-	},
-);
+	const restored = findChange(data.plan_changes, {
+		action: "activated",
+		planId: pro.id,
+	});
+	expect(restored).toBeDefined();
+});

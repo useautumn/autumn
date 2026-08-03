@@ -19,6 +19,8 @@ import {
 	cusProductToProduct,
 	type EntityLegacyData,
 	enrichFullCustomerWithEntity,
+	type FullCusProduct,
+	type FullCustomer,
 	fullCustomerToTags,
 	type PlanLegacyData,
 } from "@autumn/shared";
@@ -34,9 +36,16 @@ import type { SendProductsUpdatedPayload } from "@/queue/workflows.js";
 export const sendProductsUpdated = async ({
 	ctx,
 	payload,
+	preloaded,
 }: {
 	ctx: AutumnContext;
 	payload: SendProductsUpdatedPayload;
+	/** Skips the per-call fetches when the caller already batch-read the data
+	 * (set-based migrations); omitted fields fall back to the direct fetches. */
+	preloaded?: {
+		fullCustomer?: FullCustomer;
+		customerProduct?: FullCusProduct;
+	};
 }) => {
 	const { features, logger } = ctx;
 	const { customerProductId, scenario, customerId } = payload;
@@ -47,14 +56,16 @@ export const sendProductsUpdated = async ({
 	// subsequent create_schedule) between enqueue and worker pickup would be
 	// dropped before findCustomerProductById sees it.
 	const [fullCustomer, customerProduct] = await Promise.all([
-		CusService.getFull({
-			ctx,
-			idOrInternalId: customerId ?? "",
-			withEntities: true,
-			withSubs: true,
-			allowNotFound: true,
-		}),
-		CusProductService.getFull({ db: ctx.db, id: customerProductId }),
+		preloaded?.fullCustomer ??
+			CusService.getFull({
+				ctx,
+				idOrInternalId: customerId ?? "",
+				withEntities: true,
+				withSubs: true,
+				allowNotFound: true,
+			}),
+		preloaded?.customerProduct ??
+			CusProductService.getFull({ db: ctx.db, id: customerProductId }),
 	]);
 
 	if (!fullCustomer) {

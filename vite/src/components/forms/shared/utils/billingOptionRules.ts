@@ -65,8 +65,10 @@ const showDisabledSilently = (
 	disabled: boolean,
 ): BillingOptionRule => ({ visible, disabled, disabledReason: null });
 
+// A multi-plan attach hides the options that only make sense per-plan; the rest
+// ride along with the start date it exposes for backdating.
 function attachRules(state: BillingOptionState): BillingOptionRules {
-	const inMoreOptions = !state.isMultiPlan;
+	const singlePlanOnly = !state.isMultiPlan;
 	return {
 		discounts: show(true),
 		proration: showDisabledSilently(
@@ -74,16 +76,14 @@ function attachRules(state: BillingOptionState): BillingOptionRules {
 			!state.showProrationBehavior || !state.isNoChargesAllowed,
 		),
 		planSchedule: show(!!state.hasActiveSubscription && !state.isMultiPlan),
-		startDate: show(inMoreOptions && !!state.showStartDate),
-		endDate: show(inMoreOptions && !!state.showEndDate),
-		carryOverBalances: show(inMoreOptions && !!state.hasCustomerEntitlements),
-		carryOverUsages: show(inMoreOptions && !!state.hasCustomerEntitlements),
-		overrideLineItems: show(inMoreOptions),
-		newBillingSubscription: show(
-			inMoreOptions && !!state.canChooseBillingCycle,
-		),
-		resetBillingCycle: show(inMoreOptions && !!state.hasActiveSubscription),
-		skipBilling: show(inMoreOptions),
+		startDate: show(!!state.showStartDate),
+		endDate: show(singlePlanOnly && !!state.showEndDate),
+		carryOverBalances: show(!!state.hasCustomerEntitlements),
+		carryOverUsages: show(!!state.hasCustomerEntitlements),
+		overrideLineItems: show(true),
+		newBillingSubscription: show(!!state.canChooseBillingCycle),
+		resetBillingCycle: show(singlePlanOnly && !!state.hasActiveSubscription),
+		skipBilling: show(singlePlanOnly),
 		resetUsage: HIDDEN,
 		enablePlanImmediately: HIDDEN,
 	};

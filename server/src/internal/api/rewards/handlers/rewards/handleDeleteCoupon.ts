@@ -3,6 +3,7 @@ import { z } from "zod/v4";
 import { createStripeCli } from "@/external/connect/createStripeCli.js";
 import { createRoute } from "@/honoMiddlewares/routeHandler.js";
 import { rewardRepo } from "@/internal/rewards/repos/index.js";
+import { rewardMutationLock } from "@/internal/rewards/rewardLock.js";
 
 const DeleteCouponParamsSchema = z.object({
 	id: z.string(),
@@ -11,6 +12,7 @@ const DeleteCouponParamsSchema = z.object({
 export const handleDeleteCoupon = createRoute({
 	scopes: [Scopes.Rewards.Write],
 	params: DeleteCouponParamsSchema,
+	lock: rewardMutationLock,
 	handler: async (c) => {
 		const ctx = c.get("ctx");
 		const { org, env, db, logger } = ctx;
@@ -71,7 +73,12 @@ export const handleDeleteCoupon = createRoute({
 					} catch (error) {
 						logger.warn(
 							`Failed to deactivate promo code ${promoCode.code} (${promo.id}) in stripe after deleting reward ${reward.id}`,
-							{ rewardId: reward.id, code: promoCode.code, promoId: promo.id, error },
+							{
+								rewardId: reward.id,
+								code: promoCode.code,
+								promoId: promo.id,
+								error,
+							},
 						);
 					}
 				}

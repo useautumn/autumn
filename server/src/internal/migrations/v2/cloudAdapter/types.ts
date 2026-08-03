@@ -2,6 +2,22 @@ import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import type { RunScopeItem } from "../run/types/runScope.js";
 import type { RetryableMigrationItemRunStatus } from "../run/utils/retryItemStatuses.js";
 
+/** What the operator asked for on /migrations.run — resolved into
+ * MigrationWebhookControls once the run starts. */
+export type MigrationWebhookRunParams = {
+	sendWebhooks?: boolean;
+	webhookConcurrency?: number;
+};
+
+/** How a run delivers webhooks, resolved at run start from the params, the
+ * scope size, and the org's Svix subscriptions. */
+export type MigrationWebhookControls = {
+	sendWebhooks: boolean;
+	webhookConcurrency: number;
+	/** Only the events the org actually subscribes to. */
+	eventTypes: string[];
+};
+
 export type MigrationRunControls = {
 	concurrency?: number;
 	limit?: number | null;
@@ -9,6 +25,7 @@ export type MigrationRunControls = {
 	checkpoint?: boolean;
 	checkpointDryRun?: boolean;
 	retryItemStatuses?: RetryableMigrationItemRunStatus[];
+	webhooks?: MigrationWebhookRunParams;
 };
 
 export type MigrationBatchResult<Row extends Record<string, unknown>> = {

@@ -10,12 +10,13 @@ import { migrationRunRepo } from "../../repos/index.js";
 
 /** Two-phase claim for a migration run.
  *
- *  1. Insert with `status='queued'` — locks the partial unique index
- *     `(org_id, env) WHERE status IN ('queued','running')` so nothing
- *     else can claim while the work is happening.
+ *  1. Insert with `status='queued'` — the partial unique index (one live run
+ *     per migration) blocks concurrent claims of the same migration.
  *  2. Run `claimed` (e.g. `prepare`, or trigger.dev dispatch).
- *  3. On success, flip to `status='running'` with `started_at=now`.
- *     On failure, flip to `failed` so the constraint releases.
+ *  3. On success, flip to `status='running'` with `started_at=now` (note:
+ *     dispatch ≠ execution — the per-org run queue may hold the trigger task
+ *     behind another migration's run first). On failure, flip to `failed` so
+ *     the constraint releases.
  *  4. `claimed` may return `{ triggerRunId }` to persist a handle. */
 export const withMigrationRunClaim = async ({
 	ctx,

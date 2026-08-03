@@ -25,6 +25,7 @@ import {
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { validatePropertyPathForJSON } from "@/internal/analytics/actions/eventValidationUtils.js";
 import { getBillingCycleStartDate } from "../analyticsUtils.js";
+import { shouldUsePropertyDailyRollup } from "./dailyRollupRouting.js";
 import { getCountAndSum } from "./getCountAndSum.js";
 import {
 	groupedResultIsIncomplete,
@@ -451,6 +452,15 @@ export const aggregate = async ({
 		}
 
 		const filterParams = buildFilterParams({ filter_by: params.filter_by });
+		const useDailyRollup = shouldUsePropertyDailyRollup({
+			binSize,
+			endDate,
+			groupColumn,
+			hasPropertyFilters: Object.keys(filterParams).length > 0,
+			skipPropertyRollup: false,
+			startDate,
+			timezone,
+		});
 
 		const pipeParams = {
 			org_id: org.id,
@@ -466,6 +476,7 @@ export const aggregate = async ({
 			property_key: propertyKey,
 			...filterParams,
 			max_groups: params.max_groups,
+			use_daily_rollup: useDailyRollup ? ("1" as const) : undefined,
 		};
 
 		let result = await pipes.aggregateGroupable(pipeParams);

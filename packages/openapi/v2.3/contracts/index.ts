@@ -78,6 +78,7 @@ import {
 import {
 	referralsCreateCodeContract,
 	referralsRedeemCodeContract,
+	rewardsCreateContract,
 	rewardsListContract,
 	rewardsRedeemCodeContract,
 } from "./referralsContract.js";
@@ -154,6 +155,7 @@ export const v2_3ContractRouter = oc.router({
 	// Rewards & Referrals
 	referralsCreateCode: referralsCreateCodeContract,
 	referralsRedeemCode: referralsRedeemCodeContract,
+	rewardsCreate: rewardsCreateContract,
 	rewardsList: rewardsListContract,
 	rewardsRedeemCode: rewardsRedeemCodeContract,
 

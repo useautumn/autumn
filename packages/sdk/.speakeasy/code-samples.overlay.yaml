@@ -1403,6 +1403,43 @@ actions:
             }
 
             run();
+  - target: $["paths"]["/v1/rewards.create"]["post"]
+    update:
+      x-codeSamples:
+        - lang: typescript
+          label: Typescript (SDK)
+          source: |-
+            import { Autumn } from "@useautumn/sdk";
+
+            const autumn = new Autumn({
+              xApiVersion: "2.3.0",
+              secretKey: process.env["AUTUMN_SECRET_KEY"] ?? "",
+            });
+
+            async function run() {
+              const result = await autumn.rewards.create({
+                coupon: {
+                  id: "summer_sale",
+                  name: "Summer Sale",
+                  duration: {
+                    type: "months",
+                    length: 3,
+                  },
+                  planIds: null,
+                  promoCodes: [
+                    {
+                      code: "SUMMER20",
+                    },
+                  ],
+                  type: "percentage_discount",
+                  value: 20,
+                },
+              });
+
+              console.log(result);
+            }
+
+            run();
   - target: $["paths"]["/v1/rewards.list"]["post"]
     update:
       x-codeSamples:

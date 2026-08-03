@@ -23,7 +23,8 @@
   "scripts": {
     "lint": "eslint --cache --max-warnings=0 src",
     "build": "tshy",
-    "prepublishOnly": "npm run build"
+    "prepublishOnly": "npm run build",
+    "test": "bun test"
   },
   "peerDependencies": {},
   "devDependencies": {

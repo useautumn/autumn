@@ -3,13 +3,9 @@ import { ms } from "@autumn/shared/unixUtils";
 import { addMilliseconds, isPast } from "date-fns";
 import { Redis } from "ioredis";
 import type { AutumnMcpAuth } from "../server/auth/auth.js";
+import type { ConfirmedWriteToolName } from "../tools/utils/types.js";
 
-export type BillingToolName =
-	| "attach"
-	| "updateSubscription"
-	| "createPlan"
-	| "createSchedule"
-	| "createBalance";
+export type BillingToolName = ConfirmedWriteToolName;
 
 export type PendingBillingAction = {
 	token: string;

@@ -329,6 +329,10 @@ export type AttachItemPlanItem = {
    */
   unlimited?: boolean | undefined;
   /**
+   * Whether entity-level grants contribute to a shared customer balance.
+   */
+  pooled?: boolean | undefined;
+  /**
    * Reset configuration for consumable features. Omit for non-consumable features like seats.
    */
   reset?: AttachItemReset | undefined;
@@ -597,6 +601,10 @@ export type AttachAddItemPlanItem = {
    * If true, customer has unlimited access to this feature.
    */
   unlimited?: boolean | undefined;
+  /**
+   * Whether entity-level grants contribute to a shared customer balance.
+   */
+  pooled?: boolean | undefined;
   /**
    * Reset configuration for consumable features. Omit for non-consumable features like seats.
    */
@@ -1246,6 +1254,10 @@ export type AttachUpsertLicensePlanItem = {
    * If true, customer has unlimited access to this feature.
    */
   unlimited?: boolean | undefined;
+  /**
+   * Whether entity-level grants contribute to a shared customer balance.
+   */
+  pooled?: boolean | undefined;
   /**
    * Reset configuration for consumable features. Omit for non-consumable features like seats.
    */
@@ -2101,6 +2113,7 @@ export type AttachItemPlanItem$Outbound = {
   feature_id: string;
   included?: number | undefined;
   unlimited?: boolean | undefined;
+  pooled: boolean;
   reset?: AttachItemReset$Outbound | undefined;
   price?: AttachItemPrice$Outbound | undefined;
   proration?: AttachItemProration$Outbound | undefined;
@@ -2116,6 +2129,7 @@ export const AttachItemPlanItem$outboundSchema: z.ZodMiniType<
     featureId: z.string(),
     included: z.optional(z.number()),
     unlimited: z.optional(z.boolean()),
+    pooled: z._default(z.boolean(), false),
     reset: z.optional(z.lazy(() => AttachItemReset$outboundSchema)),
     price: z.optional(z.lazy(() => AttachItemPrice$outboundSchema)),
     proration: z.optional(z.lazy(() => AttachItemProration$outboundSchema)),
@@ -2439,6 +2453,7 @@ export type AttachAddItemPlanItem$Outbound = {
   feature_id: string;
   included?: number | undefined;
   unlimited?: boolean | undefined;
+  pooled: boolean;
   reset?: AttachAddItemReset$Outbound | undefined;
   price?: AttachAddItemPrice$Outbound | undefined;
   proration?: AttachAddItemProration$Outbound | undefined;
@@ -2454,6 +2469,7 @@ export const AttachAddItemPlanItem$outboundSchema: z.ZodMiniType<
     featureId: z.string(),
     included: z.optional(z.number()),
     unlimited: z.optional(z.boolean()),
+    pooled: z._default(z.boolean(), false),
     reset: z.optional(z.lazy(() => AttachAddItemReset$outboundSchema)),
     price: z.optional(z.lazy(() => AttachAddItemPrice$outboundSchema)),
     proration: z.optional(z.lazy(() => AttachAddItemProration$outboundSchema)),
@@ -3252,6 +3268,7 @@ export type AttachUpsertLicensePlanItem$Outbound = {
   feature_id: string;
   included?: number | undefined;
   unlimited?: boolean | undefined;
+  pooled: boolean;
   reset?: AttachUpsertLicenseReset$Outbound | undefined;
   price?: AttachUpsertLicensePrice$Outbound | undefined;
   proration?: AttachUpsertLicenseProration$Outbound | undefined;
@@ -3267,6 +3284,7 @@ export const AttachUpsertLicensePlanItem$outboundSchema: z.ZodMiniType<
     featureId: z.string(),
     included: z.optional(z.number()),
     unlimited: z.optional(z.boolean()),
+    pooled: z._default(z.boolean(), false),
     reset: z.optional(z.lazy(() => AttachUpsertLicenseReset$outboundSchema)),
     price: z.optional(z.lazy(() => AttachUpsertLicensePrice$outboundSchema)),
     proration: z.optional(

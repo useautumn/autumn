@@ -181,6 +181,7 @@ export const listPlansItemSchema = z.object({
 	feature: z.union([listPlansFeatureSchema, z.undefined()]).optional(),
 	included: z.number(),
 	unlimited: z.boolean(),
+	pooled: z.boolean(),
 	reset: listPlansItemResetSchema.nullable(),
 	price: listPlansItemPriceSchema.nullable(),
 	display: z.union([listPlansItemDisplaySchema, z.undefined()]).optional(),
@@ -267,6 +268,7 @@ export const listPlansPlanItemSchema = z.object({
 	featureId: z.string(),
 	included: z.union([z.number(), z.undefined()]).optional(),
 	unlimited: z.union([z.boolean(), z.undefined()]).optional(),
+	pooled: z.boolean(),
 	reset: z
 		.union([listPlansVariantDetailsResetSchema, z.undefined()])
 		.optional(),

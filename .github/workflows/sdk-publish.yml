@@ -7,6 +7,7 @@ on:
     paths:
       - "packages/autumn-js/**"
       - "packages/openapi/**"
+      - "packages/sdk/**"
 
   workflow_dispatch:
     inputs:
@@ -44,11 +45,12 @@ jobs:
       contents: write
     with:
       package-dir: packages/autumn-js
-      commit-paths: packages/autumn-js packages/openapi
+      commit-paths: packages/autumn-js packages/openapi packages/sdk
       install-speakeasy: true
       pre-build-command: bun api
       build-command: bun js:build
       typecheck-command: bun js:ts
+      test-command: cd packages/sdk && bun test
       version-bump: ${{ github.event_name == 'workflow_dispatch' && inputs.version-bump || '' }}
       dry-run: ${{ github.event_name == 'workflow_dispatch' && inputs.dry-run || 'false' }}
       publish-name-override: ${{ github.event_name == 'workflow_dispatch' && inputs.test-package == 'true' && '@useautumn/js-test' || '' }}

@@ -29,6 +29,7 @@ export * from "./api/keys/keysModels";
 // Migrations v2 (operations + entity schemas)
 export * from "./api/migrations/filters/index";
 export * from "./api/migrations/operations/index";
+export * from "./api/migrations/webhooks/migrationWebhookEvents";
 // API MODELS
 export * from "./api/models";
 // API VERSIONING SYSTEM

@@ -17,6 +17,55 @@ export type CreateScheduleGlobals = {
 };
 
 /**
+ * Unit of time for the trial ('day', 'month', 'year').
+ */
+export const CreateScheduleFreeTrialDurationType = {
+  Day: "day",
+  Month: "month",
+  Year: "year",
+} as const;
+/**
+ * Unit of time for the trial ('day', 'month', 'year').
+ */
+export type CreateScheduleFreeTrialDurationType = ClosedEnum<
+  typeof CreateScheduleFreeTrialDurationType
+>;
+
+/**
+ * Behavior when the trial ends. 'bill' charges the customer (default). 'revert' expires the trial and restores the customer's previous plan.
+ */
+export const CreateScheduleOnEnd = {
+  Bill: "bill",
+  Revert: "revert",
+} as const;
+/**
+ * Behavior when the trial ends. 'bill' charges the customer (default). 'revert' expires the trial and restores the customer's previous plan.
+ */
+export type CreateScheduleOnEnd = ClosedEnum<typeof CreateScheduleOnEnd>;
+
+/**
+ * Free trial configuration for a plan.
+ */
+export type CreateScheduleFreeTrialParams = {
+  /**
+   * Number of duration_type periods the trial lasts.
+   */
+  durationLength: number;
+  /**
+   * Unit of time for the trial ('day', 'month', 'year').
+   */
+  durationType?: CreateScheduleFreeTrialDurationType | undefined;
+  /**
+   * If true, payment method required to start trial. Customer is charged after trial ends.
+   */
+  cardRequired?: boolean | undefined;
+  /**
+   * Behavior when the trial ends. 'bill' charges the customer (default). 'revert' expires the trial and restores the customer's previous plan.
+   */
+  onEnd?: CreateScheduleOnEnd | undefined;
+};
+
+/**
  * Invoice mode creates and sends an invoice instead of charging the customer's payment method immediately for the first phase.
  */
 export type CreateScheduleInvoiceMode = {
@@ -93,16 +142,14 @@ export type StartsAt2 = number | string;
 /**
  * The duration unit to offset this phase from the prior phase.
  */
-export const CreateScheduleDurationType2 = {
+export const PhaseStartDurationType = {
   Month: "month",
   Year: "year",
 } as const;
 /**
  * The duration unit to offset this phase from the prior phase.
  */
-export type CreateScheduleDurationType2 = ClosedEnum<
-  typeof CreateScheduleDurationType2
->;
+export type PhaseStartDurationType = ClosedEnum<typeof PhaseStartDurationType>;
 
 /**
  * Relative start offset from the previous resolved schedule phase.
@@ -111,7 +158,7 @@ export type StartingAfter2 = {
   /**
    * The duration unit to offset this phase from the prior phase.
    */
-  durationType: CreateScheduleDurationType2;
+  durationType: PhaseStartDurationType;
   /**
    * How many duration_type periods after the prior phase to start.
    */
@@ -415,6 +462,10 @@ export type CreateScheduleItemPlanItem2 = {
    */
   unlimited?: boolean | undefined;
   /**
+   * Whether entity-level grants contribute to a shared customer balance.
+   */
+  pooled?: boolean | undefined;
+  /**
    * Reset configuration for consumable features. Omit for non-consumable features like seats.
    */
   reset?: CreateScheduleItemReset2 | undefined;
@@ -659,6 +710,10 @@ export type CreateScheduleAddItemPlanItem2 = {
    * If true, customer has unlimited access to this feature.
    */
   unlimited?: boolean | undefined;
+  /**
+   * Whether entity-level grants contribute to a shared customer balance.
+   */
+  pooled?: boolean | undefined;
   /**
    * Reset configuration for consumable features. Omit for non-consumable features like seats.
    */
@@ -1006,6 +1061,10 @@ export type CreateSchedulePlan2 = {
    */
   planId: string;
   /**
+   * The immediate plan scope. Omit to inherit the request entity, pass null for customer-level, or pass an entity ID.
+   */
+  entityId?: string | null | undefined;
+  /**
    * Optional prepaid feature quantities for this phase's plan.
    */
   featureQuantities?: Array<CreateScheduleFeatureQuantity2> | undefined;
@@ -1065,6 +1124,14 @@ export type CreateScheduleParams = {
    */
   entityId?: string | undefined;
   /**
+   * Free trial configuration applied to every plan in the immediate phase.
+   */
+  freeTrial?: CreateScheduleFreeTrialParams | null | undefined;
+  /**
+   * Three-letter Stripe-supported currency code used to bill the immediate phase (for example, 'usd').
+   */
+  currency?: string | undefined;
+  /**
    * Invoice mode creates and sends an invoice instead of charging the customer's payment method immediately for the first phase.
    */
   invoiceMode?: CreateScheduleInvoiceMode | undefined;
@@ -1096,6 +1163,10 @@ export type CreateScheduleParams = {
    * If true, the immediate-phase cusProducts are activated immediately (and scheduled-phase cusProducts pre-inserted) even when payment is pending via Stripe checkout. The Autumn schedule rows are persisted on checkout.session.completed.
    */
   enablePlanImmediately?: boolean | undefined;
+  /**
+   * If true, active recurring add-ons in scopes represented by the phase plans are retained.
+   */
+  preserveAddOns?: boolean | undefined;
   /**
    * Ordered phase definitions for the schedule.
    */
@@ -1216,6 +1287,58 @@ export type CreateScheduleResponse = {
 };
 
 /** @internal */
+export const CreateScheduleFreeTrialDurationType$outboundSchema: z.ZodMiniEnum<
+  typeof CreateScheduleFreeTrialDurationType
+> = z.enum(CreateScheduleFreeTrialDurationType);
+
+/** @internal */
+export const CreateScheduleOnEnd$outboundSchema: z.ZodMiniEnum<
+  typeof CreateScheduleOnEnd
+> = z.enum(CreateScheduleOnEnd);
+
+/** @internal */
+export type CreateScheduleFreeTrialParams$Outbound = {
+  duration_length: number;
+  duration_type: string;
+  card_required: boolean;
+  on_end?: string | undefined;
+};
+
+/** @internal */
+export const CreateScheduleFreeTrialParams$outboundSchema: z.ZodMiniType<
+  CreateScheduleFreeTrialParams$Outbound,
+  CreateScheduleFreeTrialParams
+> = z.pipe(
+  z.object({
+    durationLength: z.number(),
+    durationType: z._default(
+      CreateScheduleFreeTrialDurationType$outboundSchema,
+      "month",
+    ),
+    cardRequired: z._default(z.boolean(), true),
+    onEnd: z.optional(CreateScheduleOnEnd$outboundSchema),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      durationLength: "duration_length",
+      durationType: "duration_type",
+      cardRequired: "card_required",
+      onEnd: "on_end",
+    });
+  }),
+);
+
+export function createScheduleFreeTrialParamsToJSON(
+  createScheduleFreeTrialParams: CreateScheduleFreeTrialParams,
+): string {
+  return JSON.stringify(
+    CreateScheduleFreeTrialParams$outboundSchema.parse(
+      createScheduleFreeTrialParams,
+    ),
+  );
+}
+
+/** @internal */
 export type CreateScheduleInvoiceMode$Outbound = {
   enabled: boolean;
   enable_plan_immediately: boolean;
@@ -1310,9 +1433,9 @@ export function startsAt2ToJSON(startsAt2: StartsAt2): string {
 }
 
 /** @internal */
-export const CreateScheduleDurationType2$outboundSchema: z.ZodMiniEnum<
-  typeof CreateScheduleDurationType2
-> = z.enum(CreateScheduleDurationType2);
+export const PhaseStartDurationType$outboundSchema: z.ZodMiniEnum<
+  typeof PhaseStartDurationType
+> = z.enum(PhaseStartDurationType);
 
 /** @internal */
 export type StartingAfter2$Outbound = {
@@ -1326,7 +1449,7 @@ export const StartingAfter2$outboundSchema: z.ZodMiniType<
   StartingAfter2
 > = z.pipe(
   z.object({
-    durationType: CreateScheduleDurationType2$outboundSchema,
+    durationType: PhaseStartDurationType$outboundSchema,
     durationCount: z.int(),
   }),
   z.transform((v) => {
@@ -1704,6 +1827,7 @@ export type CreateScheduleItemPlanItem2$Outbound = {
   feature_id: string;
   included?: number | undefined;
   unlimited?: boolean | undefined;
+  pooled: boolean;
   reset?: CreateScheduleItemReset2$Outbound | undefined;
   price?: CreateScheduleItemPrice2$Outbound | undefined;
   proration?: CreateScheduleItemProration2$Outbound | undefined;
@@ -1719,6 +1843,7 @@ export const CreateScheduleItemPlanItem2$outboundSchema: z.ZodMiniType<
     featureId: z.string(),
     included: z.optional(z.number()),
     unlimited: z.optional(z.boolean()),
+    pooled: z._default(z.boolean(), false),
     reset: z.optional(z.lazy(() => CreateScheduleItemReset2$outboundSchema)),
     price: z.optional(z.lazy(() => CreateScheduleItemPrice2$outboundSchema)),
     proration: z.optional(
@@ -2008,6 +2133,7 @@ export type CreateScheduleAddItemPlanItem2$Outbound = {
   feature_id: string;
   included?: number | undefined;
   unlimited?: boolean | undefined;
+  pooled: boolean;
   reset?: CreateScheduleAddItemReset2$Outbound | undefined;
   price?: CreateScheduleAddItemPrice2$Outbound | undefined;
   proration?: CreateScheduleAddItemProration2$Outbound | undefined;
@@ -2023,6 +2149,7 @@ export const CreateScheduleAddItemPlanItem2$outboundSchema: z.ZodMiniType<
     featureId: z.string(),
     included: z.optional(z.number()),
     unlimited: z.optional(z.boolean()),
+    pooled: z._default(z.boolean(), false),
     reset: z.optional(z.lazy(() => CreateScheduleAddItemReset2$outboundSchema)),
     price: z.optional(z.lazy(() => CreateScheduleAddItemPrice2$outboundSchema)),
     proration: z.optional(
@@ -2500,6 +2627,7 @@ export function createScheduleCustomize2ToJSON(
 /** @internal */
 export type CreateSchedulePlan2$Outbound = {
   plan_id: string;
+  entity_id?: string | null | undefined;
   feature_quantities?:
     | Array<CreateScheduleFeatureQuantity2$Outbound>
     | undefined;
@@ -2515,6 +2643,7 @@ export const CreateSchedulePlan2$outboundSchema: z.ZodMiniType<
 > = z.pipe(
   z.object({
     planId: z.string(),
+    entityId: z.optional(z.nullable(z.string())),
     featureQuantities: z.optional(
       z.array(z.lazy(() => CreateScheduleFeatureQuantity2$outboundSchema)),
     ),
@@ -2527,6 +2656,7 @@ export const CreateSchedulePlan2$outboundSchema: z.ZodMiniType<
   z.transform((v) => {
     return remap$(v, {
       planId: "plan_id",
+      entityId: "entity_id",
       featureQuantities: "feature_quantities",
       subscriptionId: "subscription_id",
     });
@@ -2597,6 +2727,8 @@ export function phaseStartUnionToJSON(
 export type CreateScheduleParams$Outbound = {
   customer_id: string;
   entity_id?: string | undefined;
+  free_trial?: CreateScheduleFreeTrialParams$Outbound | null | undefined;
+  currency?: string | undefined;
   invoice_mode?: CreateScheduleInvoiceMode$Outbound | undefined;
   discounts?: Array<CreateScheduleAttachDiscount$Outbound> | undefined;
   success_url?: string | undefined;
@@ -2605,6 +2737,7 @@ export type CreateScheduleParams$Outbound = {
   billing_behavior?: string | undefined;
   billing_cycle_anchor?: "now" | undefined;
   enable_plan_immediately?: boolean | undefined;
+  preserve_add_ons?: boolean | undefined;
   phases: Array<PhaseStart$Outbound>;
 };
 
@@ -2616,6 +2749,10 @@ export const CreateScheduleParams$outboundSchema: z.ZodMiniType<
   z.object({
     customerId: z.string(),
     entityId: z.optional(z.string()),
+    freeTrial: z.optional(
+      z.nullable(z.lazy(() => CreateScheduleFreeTrialParams$outboundSchema)),
+    ),
+    currency: z.optional(z.string()),
     invoiceMode: z.optional(
       z.lazy(() => CreateScheduleInvoiceMode$outboundSchema),
     ),
@@ -2631,12 +2768,14 @@ export const CreateScheduleParams$outboundSchema: z.ZodMiniType<
     billingBehavior: z.optional(CreateScheduleBillingBehavior$outboundSchema),
     billingCycleAnchor: z.optional(z.literal("now")),
     enablePlanImmediately: z.optional(z.boolean()),
+    preserveAddOns: z.optional(z.boolean()),
     phases: z.array(z.lazy(() => PhaseStart$outboundSchema)),
   }),
   z.transform((v) => {
     return remap$(v, {
       customerId: "customer_id",
       entityId: "entity_id",
+      freeTrial: "free_trial",
       invoiceMode: "invoice_mode",
       successUrl: "success_url",
       checkoutSessionParams: "checkout_session_params",
@@ -2644,6 +2783,7 @@ export const CreateScheduleParams$outboundSchema: z.ZodMiniType<
       billingBehavior: "billing_behavior",
       billingCycleAnchor: "billing_cycle_anchor",
       enablePlanImmediately: "enable_plan_immediately",
+      preserveAddOns: "preserve_add_ons",
     });
   }),
 );

@@ -474,6 +474,8 @@ class PreviewMultiAttachPlanItemTypedDict(TypedDict):
     r"""Number of free units included. Balance resets to this each interval for consumable features."""
     unlimited: NotRequired[bool]
     r"""If true, customer has unlimited access to this feature."""
+    pooled: NotRequired[bool]
+    r"""Whether entity-level grants contribute to a shared customer balance."""
     reset: NotRequired[PreviewMultiAttachResetTypedDict]
     r"""Reset configuration for consumable features. Omit for non-consumable features like seats."""
     price: NotRequired[PreviewMultiAttachPriceTypedDict]
@@ -496,6 +498,9 @@ class PreviewMultiAttachPlanItem(BaseModel):
     unlimited: Optional[bool] = None
     r"""If true, customer has unlimited access to this feature."""
 
+    pooled: Optional[bool] = False
+    r"""Whether entity-level grants contribute to a shared customer balance."""
+
     reset: Optional[PreviewMultiAttachReset] = None
     r"""Reset configuration for consumable features. Omit for non-consumable features like seats."""
 
@@ -511,7 +516,15 @@ class PreviewMultiAttachPlanItem(BaseModel):
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
         optional_fields = set(
-            ["included", "unlimited", "reset", "price", "proration", "rollover"]
+            [
+                "included",
+                "unlimited",
+                "pooled",
+                "reset",
+                "price",
+                "proration",
+                "rollover",
+            ]
         )
         serialized = handler(self)
         m = {}
@@ -528,7 +541,7 @@ class PreviewMultiAttachPlanItem(BaseModel):
 
 
 class PreviewMultiAttachCustomizeTypedDict(TypedDict):
-    r"""Customize the plan to attach. Can override the price, items, or licenses."""
+    r"""Customize the plan to attach. Can override its price or items."""
 
     price: NotRequired[Nullable[PreviewMultiAttachBasePriceTypedDict]]
     r"""Override the base price of the plan. Pass null to remove the base price."""
@@ -537,7 +550,7 @@ class PreviewMultiAttachCustomizeTypedDict(TypedDict):
 
 
 class PreviewMultiAttachCustomize(BaseModel):
-    r"""Customize the plan to attach. Can override the price, items, or licenses."""
+    r"""Customize the plan to attach. Can override its price or items."""
 
     price: OptionalNullable[PreviewMultiAttachBasePrice] = UNSET
     r"""Override the base price of the plan. Pass null to remove the base price."""
@@ -615,7 +628,7 @@ class PreviewMultiAttachPlanTypedDict(TypedDict):
     plan_id: str
     r"""The ID of the plan to attach."""
     customize: NotRequired[PreviewMultiAttachCustomizeTypedDict]
-    r"""Customize the plan to attach. Can override the price, items, or licenses."""
+    r"""Customize the plan to attach. Can override its price or items."""
     feature_quantities: NotRequired[
         List[PreviewMultiAttachPlanFeatureQuantityTypedDict]
     ]
@@ -624,6 +637,8 @@ class PreviewMultiAttachPlanTypedDict(TypedDict):
     r"""The version of the plan to attach."""
     subscription_id: NotRequired[str]
     r"""A unique ID to identify this subscription. Useful when attaching the same plan multiple times."""
+    entity_id: NotRequired[Nullable[str]]
+    r"""The entity scope for this plan. Omit to inherit the request scope, or pass null for customer-level."""
 
 
 class PreviewMultiAttachPlan(BaseModel):
@@ -631,7 +646,7 @@ class PreviewMultiAttachPlan(BaseModel):
     r"""The ID of the plan to attach."""
 
     customize: Optional[PreviewMultiAttachCustomize] = None
-    r"""Customize the plan to attach. Can override the price, items, or licenses."""
+    r"""Customize the plan to attach. Can override its price or items."""
 
     feature_quantities: Optional[List[PreviewMultiAttachPlanFeatureQuantity]] = None
     r"""If this plan contains prepaid features, use this field to specify the quantity of each prepaid feature."""
@@ -642,20 +657,38 @@ class PreviewMultiAttachPlan(BaseModel):
     subscription_id: Optional[str] = None
     r"""A unique ID to identify this subscription. Useful when attaching the same plan multiple times."""
 
+    entity_id: OptionalNullable[str] = UNSET
+    r"""The entity scope for this plan. Omit to inherit the request scope, or pass null for customer-level."""
+
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
         optional_fields = set(
-            ["customize", "feature_quantities", "version", "subscription_id"]
+            [
+                "customize",
+                "feature_quantities",
+                "version",
+                "subscription_id",
+                "entity_id",
+            ]
         )
+        nullable_fields = set(["entity_id"])
         serialized = handler(self)
         m = {}
 
         for n, f in type(self).model_fields.items():
             k = f.alias or n
             val = serialized.get(k, serialized.get(n))
+            is_nullable_and_explicitly_set = (
+                k in nullable_fields
+                and (self.__pydantic_fields_set__.intersection({n}))  # pylint: disable=no-member
+            )
 
             if val != UNSET_SENTINEL:
-                if val is not None or k not in optional_fields:
+                if (
+                    val is not None
+                    or k not in optional_fields
+                    or is_nullable_and_explicitly_set
+                ):
                     m[k] = val
 
         return m
@@ -811,6 +844,13 @@ class PreviewMultiAttachAttachDiscount(BaseModel):
                     m[k] = val
 
         return m
+
+
+PreviewMultiAttachBillingBehavior = Literal[
+    "prorate_immediately",
+    "none",
+]
+r"""How to handle billing. 'prorate_immediately' charges/credits prorated amounts now, 'none' does not charge/credit anything."""
 
 
 PreviewMultiAttachRedirectMode = Literal[
@@ -1139,12 +1179,16 @@ class PreviewMultiAttachParamsTypedDict(TypedDict):
     r"""The ID of the entity to attach the plans to."""
     free_trial: NotRequired[Nullable[PreviewMultiAttachFreeTrialParamsTypedDict]]
     r"""Free trial configuration applied to all plans. Pass an object to set a custom trial, or null to remove any trial."""
+    starts_at: NotRequired[int]
+    r"""Unix timestamp in milliseconds for backdating every plan in this multi-attach."""
     currency: NotRequired[str]
     r"""Currency to bill this multi-attach in (e.g. usd, eur). Must match the customer's currency if they are already locked to one, and every plan must offer a paid price in it. Defaults to the customer's currency, then the org default."""
     invoice_mode: NotRequired[PreviewMultiAttachInvoiceModeTypedDict]
     r"""Invoice mode creates a draft or open invoice and sends it to the customer, instead of charging their card immediately."""
     discounts: NotRequired[List[PreviewMultiAttachAttachDiscountTypedDict]]
     r"""List of discounts to apply. Each discount can be an Autumn reward ID, Stripe coupon ID, or Stripe promotion code."""
+    billing_behavior: NotRequired[PreviewMultiAttachBillingBehavior]
+    r"""How to handle billing. 'prorate_immediately' charges/credits prorated amounts now, 'none' does not charge/credit anything."""
     success_url: NotRequired[str]
     r"""URL to redirect to after successful checkout."""
     checkout_session_params: NotRequired[Dict[str, Any]]
@@ -1173,6 +1217,9 @@ class PreviewMultiAttachParams(BaseModel):
     free_trial: OptionalNullable[PreviewMultiAttachFreeTrialParams] = UNSET
     r"""Free trial configuration applied to all plans. Pass an object to set a custom trial, or null to remove any trial."""
 
+    starts_at: Optional[int] = None
+    r"""Unix timestamp in milliseconds for backdating every plan in this multi-attach."""
+
     currency: Optional[str] = None
     r"""Currency to bill this multi-attach in (e.g. usd, eur). Must match the customer's currency if they are already locked to one, and every plan must offer a paid price in it. Defaults to the customer's currency, then the org default."""
 
@@ -1181,6 +1228,9 @@ class PreviewMultiAttachParams(BaseModel):
 
     discounts: Optional[List[PreviewMultiAttachAttachDiscount]] = None
     r"""List of discounts to apply. Each discount can be an Autumn reward ID, Stripe coupon ID, or Stripe promotion code."""
+
+    billing_behavior: Optional[PreviewMultiAttachBillingBehavior] = None
+    r"""How to handle billing. 'prorate_immediately' charges/credits prorated amounts now, 'none' does not charge/credit anything."""
 
     success_url: Optional[str] = None
     r"""URL to redirect to after successful checkout."""
@@ -1208,9 +1258,11 @@ class PreviewMultiAttachParams(BaseModel):
             [
                 "entity_id",
                 "free_trial",
+                "starts_at",
                 "currency",
                 "invoice_mode",
                 "discounts",
+                "billing_behavior",
                 "success_url",
                 "checkout_session_params",
                 "redirect_mode",

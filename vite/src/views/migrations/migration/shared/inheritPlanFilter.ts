@@ -48,7 +48,9 @@ function mergePlanFilters({
 	};
 }
 
-export function getInheritedPlanFilter(filter: MigrationFilter): PlanFilter | null {
+export function getInheritedPlanFilter(
+	filter: MigrationFilter,
+): PlanFilter | null {
 	return extractPlanFilter(filter.customer?.plan);
 }
 

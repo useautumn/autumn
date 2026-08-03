@@ -52,65 +52,65 @@ afterAll(async () => {
 	await webhook?.cleanup();
 });
 
-test(
-	`${chalk.yellowBright("billing.updated: multi-attach two plans → activated for each")}`,
-	async () => {
-		const customerId = "billing-updated-multi-attach";
-		const planA = products.pro({
-			id: "plan-a",
-			items: [items.monthlyMessages({ includedUsage: 100 })],
-		});
-		const planB = products.base({
-			id: "plan-b",
-			items: [items.monthlyUsers({ includedUsage: 10 }), items.monthlyPrice({ price: 30 })],
-			group: "group-b",
-		});
+test(`${chalk.yellowBright("billing.updated: multi-attach two plans → activated for each")}`, async () => {
+	const customerId = "billing-updated-multi-attach";
+	const planA = products.pro({
+		id: "plan-a",
+		items: [items.monthlyMessages({ includedUsage: 100 })],
+	});
+	const planB = products.base({
+		id: "plan-b",
+		items: [
+			items.monthlyUsers({ includedUsage: 10 }),
+			items.monthlyPrice({ price: 30 }),
+		],
+		group: "group-b",
+	});
 
-		const { autumnV1 } = await initScenario({
-			customerId,
-			setup: [
-				s.customer({ paymentMethod: "success", skipWebhooks: true }),
-				s.products({ list: [planA, planB] }),
-			],
-			actions: [],
-		});
+	const { autumnV1 } = await initScenario({
+		customerId,
+		setup: [
+			s.customer({ paymentMethod: "success", skipWebhooks: true }),
+			s.products({ list: [planA, planB] }),
+		],
+		actions: [],
+	});
 
-		await autumnV1.billing.multiAttach({
-			customer_id: customerId,
-			plans: [{ plan_id: planA.id }, { plan_id: planB.id }],
-		});
+	await autumnV1.billing.multiAttach({
+		customer_id: customerId,
+		plans: [{ plan_id: planA.id }, { plan_id: planB.id }],
+	});
 
-		const result = await waitForWebhook<BillingUpdatedPayload>({
-			token: playToken,
-			predicate: (payload) =>
-				payload.type === "billing.updated" &&
-				payload.data?.customer_id === customerId &&
-				findChange(payload.data.plan_changes, {
-					action: "activated",
-					planId: planA.id,
-				}) !== undefined &&
-				findChange(payload.data.plan_changes, {
-					action: "activated",
-					planId: planB.id,
-				}) !== undefined,
-			timeoutMs: 15000,
-		});
+	const result = await waitForWebhook<BillingUpdatedPayload>({
+		token: playToken,
+		predicate: (payload) =>
+			payload.type === "billing.updated" &&
+			payload.data?.customer_id === customerId &&
+			findChange(payload.data.plan_changes, {
+				action: "activated",
+				planId: planA.id,
+			}) !== undefined &&
+			findChange(payload.data.plan_changes, {
+				action: "activated",
+				planId: planB.id,
+			}) !== undefined,
+		timeoutMs: 15000,
+	});
 
-		expect(result).not.toBeNull();
-		const { data } = result!.payload;
+	expect(result).not.toBeNull();
+	const { data } = result!.payload;
 
-		const activatedA = findChange(data.plan_changes, {
-			action: "activated",
-			planId: planA.id,
-		});
-		expect(activatedA?.previous_attributes).toBeNull();
-		expect(activatedA?.subscription?.status).toBe("active");
+	const activatedA = findChange(data.plan_changes, {
+		action: "activated",
+		planId: planA.id,
+	});
+	expect(activatedA?.previous_attributes).toBeNull();
+	expect(activatedA?.subscription?.status).toBe("active");
 
-		const activatedB = findChange(data.plan_changes, {
-			action: "activated",
-			planId: planB.id,
-		});
-		expect(activatedB?.previous_attributes).toBeNull();
-		expect(activatedB?.subscription?.status).toBe("active");
-	},
-);
+	const activatedB = findChange(data.plan_changes, {
+		action: "activated",
+		planId: planB.id,
+	});
+	expect(activatedB?.previous_attributes).toBeNull();
+	expect(activatedB?.subscription?.status).toBe("active");
+});
