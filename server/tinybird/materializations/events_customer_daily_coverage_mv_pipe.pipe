@@ -1,14 +1,19 @@
 DESCRIPTION >
-    Records each UTC day present in the customer daily target so daily reads can verify target
-    population without treating event inactivity as missing data.
+    Records expected scoped UTC-day counts from the customer hourly source. Daily queries compare
+    these counts directly with the daily target rows returned for the same request scope.
 
 NODE materialize
 SQL >
     SELECT
-        day,
-        sumState(toUInt64(1)) as source_rows
-    FROM events_customer_daily_mv
-    GROUP BY day
+        org_id,
+        env,
+        customer_id,
+        entity_id,
+        event_name,
+        toStartOfDay(hour) as day,
+        sumState(event_count) as expected_event_count
+    FROM events_customer_hourly_mv
+    GROUP BY org_id, env, customer_id, entity_id, event_name, day
 
 TYPE materialized
 DATASOURCE events_customer_daily_coverage_mv

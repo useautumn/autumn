@@ -1,11 +1,16 @@
 DESCRIPTION >
-    UTC days populated in the customer daily rollup. This datasource is a small global readiness
-    marker used to distinguish an inactive event from an incomplete daily materialization.
+    Scoped expected event counts for customer daily rollup population. Daily reads compare these
+    counts with the target rows they return, distinguishing inactivity from missing materialization.
 
 SCHEMA >
+    `org_id` String,
+    `env` String,
+    `customer_id` String,
+    `entity_id` String DEFAULT '',
+    `event_name` String,
     `day` DateTime,
-    `source_rows` AggregateFunction(sum, UInt64)
+    `expected_event_count` AggregateFunction(sum, UInt64)
 
 ENGINE "AggregatingMergeTree"
 ENGINE_PARTITION_KEY "toYYYYMM(day)"
-ENGINE_SORTING_KEY "day"
+ENGINE_SORTING_KEY "org_id, env, customer_id, entity_id, event_name, day"

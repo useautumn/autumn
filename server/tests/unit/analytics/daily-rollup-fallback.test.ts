@@ -6,6 +6,7 @@ const state = {
 	dailyMode: "no_rows" as
 		| "empty_complete"
 		| "error"
+		| "inactive_event"
 		| "missing_event"
 		| "mixed_events"
 		| "no_rows"
@@ -17,63 +18,83 @@ const state = {
 
 const dailyRowsByMode = {
 	empty_complete: [],
-	missing_event: [
+	inactive_event: [
 		{
+			actual_daily_event_count: "12",
 			count: "12",
 			event_name: "emails.sent",
+			expected_daily_event_count: "12",
 			sum: "12",
+		},
+	],
+	missing_event: [
+		{
+			actual_daily_event_count: "12",
+			count: "12",
+			event_name: "emails.sent",
+			expected_daily_event_count: "12",
+			sum: "12",
+		},
+		{
+			actual_daily_event_count: "0",
+			count: "0",
+			event_name: "emails.delivered",
+			expected_daily_event_count: "17",
+			sum: "0",
 		},
 	],
 	mixed_events: [
 		{
+			actual_daily_event_count: "10",
 			count: "12",
 			event_name: "emails.sent",
+			expected_daily_event_count: "10",
 			sum: "12",
 		},
 		{
+			actual_daily_event_count: "0",
 			count: "2",
 			event_name: "emails.delivered",
+			expected_daily_event_count: "17",
 			sum: "2",
 		},
 	],
 	no_rows: [
 		{
+			actual_daily_event_count: "0",
 			count: "2",
 			event_name: "emails.sent",
+			expected_daily_event_count: "42",
 			sum: "2",
 		},
 	],
 	partial_coverage: [
 		{
+			actual_daily_event_count: "8",
 			count: "8",
 			event_name: "emails.sent",
+			expected_daily_event_count: "42",
 			sum: "8",
 		},
 	],
 	populated: [
 		{
+			actual_daily_event_count: "12",
 			count: "12",
 			event_name: "emails.sent",
+			expected_daily_event_count: "12",
 			sum: "12",
 		},
 	],
 	sparse_event: [
 		{
+			actual_daily_event_count: "7",
 			count: "7",
 			event_name: "emails.sent",
+			expected_daily_event_count: "7",
 			sum: "7",
 		},
 	],
-};
-
-const dailyCoverageDaysByMode = {
-	empty_complete: 2,
-	missing_event: 2,
-	mixed_events: 1,
-	no_rows: 0,
-	partial_coverage: 1,
-	populated: 2,
-	sparse_event: 2,
 };
 
 mock.module("@/external/tinybird/initClickhouse.js", () => ({
@@ -92,21 +113,7 @@ mock.module("@/external/tinybird/initClickhouse.js", () => ({
 			}
 
 			const data = isDailyQuery
-				? [
-						...dailyRowsByMode[state.dailyMode as keyof typeof dailyRowsByMode],
-						{
-							count: "0",
-							daily_rollup_days: String(
-								dailyCoverageDaysByMode[
-									state.dailyMode as keyof typeof dailyCoverageDaysByMode
-								],
-							),
-							event_name: "",
-							expected_daily_days: "2",
-							is_daily_rollup_coverage: "1",
-							sum: "0",
-						},
-					]
+				? dailyRowsByMode[state.dailyMode as keyof typeof dailyRowsByMode]
 				: (queryParams?.event_names ?? []).map((eventName) => ({
 						count: eventName === "emails.sent" ? "42" : "17",
 						event_name: eventName,
@@ -217,9 +224,22 @@ test("daily totals: retry hourly when datasource coverage is incomplete", async 
 	expect(state.queries).toHaveLength(2);
 });
 
-test("daily totals: treat absent events as zero when datasource coverage is complete", async () => {
+test("daily totals: retry hourly when a requested event is missing from daily coverage", async () => {
 	const { summary } = await runDailyTotalsQuery({
 		dailyMode: "missing_event",
+		eventNames: ["emails.sent", "emails.delivered"],
+	});
+
+	expect(summary).toEqual({
+		"emails.delivered": { count: 17, sum: 17 },
+		"emails.sent": { count: 42, sum: 42 },
+	});
+	expect(state.queries).toHaveLength(2);
+});
+
+test("daily totals: treat an event absent from both rollups as zero", async () => {
+	const { summary } = await runDailyTotalsQuery({
+		dailyMode: "inactive_event",
 		eventNames: ["emails.sent", "emails.delivered"],
 	});
 

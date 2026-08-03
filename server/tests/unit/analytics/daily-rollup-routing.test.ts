@@ -133,8 +133,9 @@ test("daily totals: combine merged full days with hourly range edges", () => {
 	expect(query).toContain("events_customer_daily_mv");
 	expect(query).toContain("events_customer_daily_coverage_mv");
 	expect(query).toContain("sumMerge(event_count)");
-	expect(query).toContain("uniqExact(day)");
-	expect(query).toContain("expected_daily_days");
+	expect(query).toContain("sumMerge(expected_event_count)");
+	expect(query).toContain("actual_daily_event_count");
+	expect(query).toContain("expected_daily_event_count");
 	expect(query).toContain("events_customer_hourly_mv");
 	expect(query).toContain("hour <");
 	expect(query).toContain("hour >= toStartOfDay");
@@ -157,14 +158,20 @@ test("daily totals: preserve raw filtered and org-hourly query paths", () => {
 	expect(orgQuery).not.toContain("customer_id =");
 });
 
-test("daily totals: derive coverage from the populated daily target", async () => {
+test("daily totals: compare scoped hourly expectations with returned daily counts", async () => {
 	const coveragePipe = await Bun.file(
 		new URL(
 			"../../../tinybird/materializations/events_customer_daily_coverage_mv_pipe.pipe",
 			import.meta.url,
 		),
 	).text();
+	const actualCoveragePipe = Bun.file(
+		new URL(
+			"../../../tinybird/materializations/events_customer_daily_coverage_actual_mv_pipe.pipe",
+			import.meta.url,
+		),
+	);
 
-	expect(coveragePipe).toContain("FROM events_customer_daily_mv");
-	expect(coveragePipe).not.toContain("FROM events_customer_hourly_mv");
+	expect(coveragePipe).toContain("FROM events_customer_hourly_mv");
+	expect(await actualCoveragePipe.exists()).toBe(false);
 });
