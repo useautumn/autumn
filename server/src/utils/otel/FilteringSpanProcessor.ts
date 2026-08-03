@@ -30,7 +30,7 @@ const hashStringToUnitInterval = (value: string): number => {
 const isSuccessfulNonSlowRedisSpan = (span: ReadableSpan) =>
 	span.name.startsWith("redis.") &&
 	span.status.code === SpanStatusCode.OK &&
-	span.attributes["db.redis.slow"] !== true;
+	span.attributes["db.redis.severe"] !== true;
 
 const shouldDropSuccessfulRedisSpan = (span: ReadableSpan): boolean => {
 	if (!isSuccessfulNonSlowRedisSpan(span)) return false;
