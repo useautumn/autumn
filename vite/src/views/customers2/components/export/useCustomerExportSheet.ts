@@ -66,7 +66,7 @@ export function useCustomerExportSheet({
 	open,
 	onOpenChange,
 }: CustomerExportSheetProps) {
-	const { queryStates } = useCustomerFilters();
+	const { queryStates, isInitialized } = useCustomerFilters();
 	const createExport = useCreateCustomerExport();
 	const invalidateExports = useInvalidateCustomerExports();
 	const [isRealtimeDegraded, setIsRealtimeDegraded] = useState(false);
@@ -116,18 +116,20 @@ export function useCustomerExportSheet({
 	const filteredCountQuery = useCustomerCountQuery({
 		search: trimmedSearch,
 		filters,
-		enabled: open,
+		enabled: open && isInitialized,
 	});
 	const unfilteredCountQuery = useCustomerCountQuery({
 		search: "",
 		filters: {},
-		enabled: open && hasFilters,
+		enabled: open && isInitialized && hasFilters,
 	});
 	const ignoresActiveFilters = hasFilters && !restrictToCurrentFilters;
 	const countQuery = ignoresActiveFilters
 		? unfilteredCountQuery
 		: filteredCountQuery;
+	// Submitting before persisted filters restore would export the wrong scope.
 	const isExportCountLoading =
+		!isInitialized ||
 		countQuery.isPending ||
 		countQuery.isFetching ||
 		countQuery.isPlaceholderData;
