@@ -12,7 +12,6 @@ import { Decimal } from "decimal.js";
 import { getClickhouseClient } from "@/external/tinybird/initClickhouse.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { validatePropertyPathForJSON } from "@/internal/analytics/actions/eventValidationUtils.js";
-import { isTinybirdDailyRollupsEnabled } from "@/internal/misc/miscellaneousEdgeConfig/miscellaneousEdgeConfigStore.js";
 import { getBillingCycleStartDate } from "../analyticsUtils.js";
 import {
 	buildCountAndSumQuery,
@@ -123,7 +122,6 @@ export const getCountAndSum = async ({
 
 	const source = selectCountAndSumSource({
 		containsCompleteUtcDay: hasCompleteUtcDay({ startDate, endDate }),
-		dailyRollupsEnabled: isTinybirdDailyRollupsEnabled(),
 		hasCustomerId: Boolean(params.customer_id),
 		hasEntityId: Boolean(params.entity_id),
 		hasPropertyFilters: hasFilters,

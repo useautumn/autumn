@@ -67,8 +67,6 @@ export const MiscellaneousEdgeConfigForm = ({
 				syncCoalesce: parsed.syncCoalesce ?? prev.syncCoalesce,
 				subjectLookupDbOnly:
 					parsed.subjectLookupDbOnly ?? prev.subjectLookupDbOnly,
-				tinybirdDailyRollups:
-					parsed.tinybirdDailyRollups ?? prev.tinybirdDailyRollups,
 			}));
 			setJsonError(null);
 		} catch {
@@ -199,17 +197,6 @@ export const MiscellaneousEdgeConfigForm = ({
 						onCheckedChange={(subjectLookupDbOnly) => {
 							setSyncSource("form");
 							setConfig((prev) => ({ ...prev, subjectLookupDbOnly }));
-						}}
-					/>
-
-					<MiscellaneousEdgeConfigSwitch
-						title="Tinybird daily event rollups"
-						description="Routes UTC day, week, and month property aggregates and scoped totals to the daily MVs. Enable only after both backfills complete."
-						ariaLabel="Enable Tinybird daily event rollups"
-						checked={config.tinybirdDailyRollups}
-						onCheckedChange={(tinybirdDailyRollups) => {
-							setSyncSource("form");
-							setConfig((prev) => ({ ...prev, tinybirdDailyRollups }));
 						}}
 					/>
 

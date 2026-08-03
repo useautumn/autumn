@@ -15,7 +15,6 @@ test("daily property rollup: routes eligible UTC day, week, and month groups", (
 		expect(
 			shouldUsePropertyDailyRollup({
 				binSize,
-				dailyRollupsEnabled: true,
 				endDate: "2026-08-03 16:00:00",
 				groupColumn: "property",
 				hasPropertyFilters: false,
@@ -30,7 +29,6 @@ test("daily property rollup: routes eligible UTC day, week, and month groups", (
 test("daily property rollup: keeps unsupported query shapes hourly", () => {
 	const base = {
 		binSize: "day",
-		dailyRollupsEnabled: true,
 		endDate: "2026-08-03 16:00:00",
 		groupColumn: "property" as const,
 		hasPropertyFilters: false,
@@ -42,12 +40,6 @@ test("daily property rollup: keeps unsupported query shapes hourly", () => {
 	expect(shouldUsePropertyDailyRollup({ ...base, binSize: "hour" })).toBe(
 		false,
 	);
-	expect(
-		shouldUsePropertyDailyRollup({
-			...base,
-			dailyRollupsEnabled: false,
-		}),
-	).toBe(false);
 	expect(
 		shouldUsePropertyDailyRollup({
 			...base,
@@ -96,7 +88,6 @@ test("daily totals: select the narrowest exact source", () => {
 	expect(
 		selectCountAndSumSource({
 			containsCompleteUtcDay: true,
-			dailyRollupsEnabled: true,
 			hasCustomerId: true,
 			hasEntityId: false,
 			hasPropertyFilters: false,
@@ -105,7 +96,6 @@ test("daily totals: select the narrowest exact source", () => {
 	expect(
 		selectCountAndSumSource({
 			containsCompleteUtcDay: true,
-			dailyRollupsEnabled: true,
 			hasCustomerId: true,
 			hasEntityId: true,
 			hasPropertyFilters: false,
@@ -114,7 +104,6 @@ test("daily totals: select the narrowest exact source", () => {
 	expect(
 		selectCountAndSumSource({
 			containsCompleteUtcDay: true,
-			dailyRollupsEnabled: true,
 			hasCustomerId: false,
 			hasEntityId: false,
 			hasPropertyFilters: false,
@@ -123,7 +112,6 @@ test("daily totals: select the narrowest exact source", () => {
 	expect(
 		selectCountAndSumSource({
 			containsCompleteUtcDay: true,
-			dailyRollupsEnabled: true,
 			hasCustomerId: true,
 			hasEntityId: false,
 			hasPropertyFilters: true,
@@ -131,17 +119,7 @@ test("daily totals: select the narrowest exact source", () => {
 	).toBe("raw_events");
 	expect(
 		selectCountAndSumSource({
-			containsCompleteUtcDay: true,
-			dailyRollupsEnabled: false,
-			hasCustomerId: true,
-			hasEntityId: false,
-			hasPropertyFilters: false,
-		}),
-	).toBe("customer_hourly");
-	expect(
-		selectCountAndSumSource({
 			containsCompleteUtcDay: false,
-			dailyRollupsEnabled: true,
 			hasCustomerId: true,
 			hasEntityId: false,
 			hasPropertyFilters: false,

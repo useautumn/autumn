@@ -43,7 +43,6 @@ export const hasCompleteUtcDay = ({
 
 export const shouldUsePropertyDailyRollup = ({
 	binSize,
-	dailyRollupsEnabled,
 	endDate,
 	groupColumn,
 	hasPropertyFilters,
@@ -52,7 +51,6 @@ export const shouldUsePropertyDailyRollup = ({
 	timezone,
 }: {
 	binSize: string;
-	dailyRollupsEnabled: boolean;
 	endDate: string;
 	groupColumn: GroupableColumn;
 	hasPropertyFilters: boolean;
@@ -60,7 +58,6 @@ export const shouldUsePropertyDailyRollup = ({
 	startDate: string;
 	timezone: string;
 }): boolean =>
-	dailyRollupsEnabled &&
 	groupColumn === "property" &&
 	!hasPropertyFilters &&
 	!skipPropertyRollup &&
@@ -72,20 +69,16 @@ export const selectCountAndSumSource = ({
 	hasCustomerId,
 	hasEntityId,
 	hasPropertyFilters,
-	dailyRollupsEnabled,
 	containsCompleteUtcDay,
 }: {
 	hasCustomerId: boolean;
 	hasEntityId: boolean;
 	hasPropertyFilters: boolean;
-	dailyRollupsEnabled: boolean;
 	containsCompleteUtcDay: boolean;
 }): CountAndSumSource => {
 	if (hasPropertyFilters) return "raw_events";
 	if (!hasCustomerId && !hasEntityId) return "org_hourly";
-	return dailyRollupsEnabled && containsCompleteUtcDay
-		? "customer_daily"
-		: "customer_hourly";
+	return containsCompleteUtcDay ? "customer_daily" : "customer_hourly";
 };
 
 const customerFilterSql = ({

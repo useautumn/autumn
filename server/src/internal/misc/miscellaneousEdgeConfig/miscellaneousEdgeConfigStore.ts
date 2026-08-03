@@ -59,6 +59,3 @@ export const isSyncCoalesceEnabled = (): boolean => store.get().syncCoalesce;
 /** Global gate: serve subject lookups from Postgres instead of the cache. */
 export const isSubjectLookupDbOnlyEnabled = (): boolean =>
 	store.get().subjectLookupDbOnly;
-
-export const isTinybirdDailyRollupsEnabled = (): boolean =>
-	store.get().tinybirdDailyRollups;

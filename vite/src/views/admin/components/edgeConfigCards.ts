@@ -357,9 +357,6 @@ export const EDGE_CONFIG_SECTIONS: EdgeConfigSectionDef[] = [
 					const parts: string[] = [];
 
 					if (config.syncCoalesce === true) parts.push("Sync coalesce on");
-					if (config.tinybirdDailyRollups === true) {
-						parts.push("Tinybird daily rollups on");
-					}
 					if (allowlistCount > 0) {
 						parts.push(
 							`${pluralize({ count: allowlistCount, noun: "flat-model customer" })}`,

@@ -2,7 +2,6 @@ export type MiscellaneousEdgeConfig = {
 	newFlatCusModel: string[];
 	syncCoalesce: boolean;
 	subjectLookupDbOnly: boolean;
-	tinybirdDailyRollups: boolean;
 	configHealthy: boolean;
 	configConfigured: boolean;
 	lastSuccessAt: string | null;
@@ -13,7 +12,6 @@ export const MISCELLANEOUS_DEFAULT_CONFIG: MiscellaneousEdgeConfig = {
 	newFlatCusModel: [],
 	syncCoalesce: false,
 	subjectLookupDbOnly: false,
-	tinybirdDailyRollups: false,
 	configHealthy: false,
 	configConfigured: false,
 	lastSuccessAt: null,

@@ -8,7 +8,6 @@ export const MiscellaneousEdgeConfigSchema = z.object({
 	/** Global switch: customer get_or_create and entity get read the subject
 	 *  straight from Postgres, bypassing the FullSubject cache entirely. */
 	subjectLookupDbOnly: z.boolean().default(false),
-	tinybirdDailyRollups: z.boolean().default(false),
 });
 
 export type MiscellaneousEdgeConfig = z.infer<
