@@ -152,13 +152,15 @@ export const buildCountAndSumQuery = ({
 			event_name,
 			sum(event_count_value) as count,
 			sum(total_value_value) as sum,
-			sum(daily_rollup_rows) as daily_rollup_rows
+			max(daily_rollup_days) as daily_rollup_days,
+			max(expected_daily_days) as expected_daily_days
 		FROM (
 			SELECT
 				event_name,
 				sumMerge(event_count) as event_count_value,
 				sumMerge(total_value) as total_value_value,
-				count() as daily_rollup_rows
+				uniqExact(day) as daily_rollup_days,
+				dateDiff('day', ${fullDayStartSql}, toStartOfDay({end_date:DateTime})) as expected_daily_days
 			FROM events_customer_daily_mv
 			WHERE org_id = {org_id:String} AND env = {env:String}
 				${customerFilter}
@@ -174,7 +176,8 @@ export const buildCountAndSumQuery = ({
 				event_name,
 				sum(event_count) as event_count_value,
 				sum(total_value) as total_value_value,
-				0 as daily_rollup_rows
+				0 as daily_rollup_days,
+				dateDiff('day', ${fullDayStartSql}, toStartOfDay({end_date:DateTime})) as expected_daily_days
 			FROM events_customer_hourly_mv
 			WHERE org_id = {org_id:String} AND env = {env:String}
 				${customerFilter}

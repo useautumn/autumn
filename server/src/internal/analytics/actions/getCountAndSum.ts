@@ -25,7 +25,31 @@ type CountAndSumRow = {
 	event_name: string;
 	count: string;
 	sum: string;
-	daily_rollup_rows?: string | number;
+	daily_rollup_days?: string | number;
+	expected_daily_days?: string | number;
+};
+
+const hasCompleteDailyCoverage = ({
+	rows,
+	eventNames,
+}: {
+	rows: CountAndSumRow[];
+	eventNames: string[];
+}): boolean => {
+	const rowsByEventName = new Map(rows.map((row) => [row.event_name, row]));
+	return [...new Set(eventNames)].every((eventName) => {
+		const row = rowsByEventName.get(eventName);
+		if (!row) return false;
+
+		const dailyRollupDays = Number(row.daily_rollup_days);
+		const expectedDailyDays = Number(row.expected_daily_days);
+		return (
+			Number.isFinite(dailyRollupDays) &&
+			Number.isFinite(expectedDailyDays) &&
+			expectedDailyDays > 0 &&
+			dailyRollupDays === expectedDailyDays
+		);
+	});
 };
 
 const intervalTypeToDaysMap = (gap = 0): Record<string, number> => ({
@@ -172,7 +196,7 @@ export const getCountAndSum = async ({
 	const executeHourlyFallback = async () => {
 		ctx.logger.warn("Daily analytics totals unavailable; using hourly rollup", {
 			type: "daily_rollup_fallback",
-			reason: "no_daily_rows",
+			reason: "incomplete_daily_coverage",
 			orgId: org.id,
 			customerId: params.customer_id,
 		});
@@ -187,10 +211,9 @@ export const getCountAndSum = async ({
 
 	let rows = await executeQuery({ query });
 
-	// Boundary-hour rows can make an unpopulated daily query look non-empty.
 	if (
 		source === "customer_daily" &&
-		rows.every((row) => Number(row.daily_rollup_rows ?? 0) === 0)
+		!hasCompleteDailyCoverage({ rows, eventNames: params.event_names })
 	) {
 		rows = await executeHourlyFallback();
 	}

@@ -3,13 +3,80 @@ import type { TotalEventsParams } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 
 const state = {
-	dailyMode: "no_rows" as "error" | "no_rows" | "populated",
+	dailyMode: "no_rows" as
+		| "error"
+		| "missing_event"
+		| "mixed_events"
+		| "no_rows"
+		| "partial_coverage"
+		| "populated",
 	queries: [] as string[],
+};
+
+const dailyRowsByMode = {
+	missing_event: [
+		{
+			count: "12",
+			daily_rollup_days: "2",
+			event_name: "emails.sent",
+			expected_daily_days: "2",
+			sum: "12",
+		},
+	],
+	mixed_events: [
+		{
+			count: "12",
+			daily_rollup_days: "2",
+			event_name: "emails.sent",
+			expected_daily_days: "2",
+			sum: "12",
+		},
+		{
+			count: "2",
+			daily_rollup_days: "0",
+			event_name: "emails.delivered",
+			expected_daily_days: "2",
+			sum: "2",
+		},
+	],
+	no_rows: [
+		{
+			count: "2",
+			daily_rollup_days: "0",
+			event_name: "emails.sent",
+			expected_daily_days: "2",
+			sum: "2",
+		},
+	],
+	partial_coverage: [
+		{
+			count: "8",
+			daily_rollup_days: "1",
+			event_name: "emails.sent",
+			expected_daily_days: "2",
+			sum: "8",
+		},
+	],
+	populated: [
+		{
+			count: "12",
+			daily_rollup_days: "2",
+			event_name: "emails.sent",
+			expected_daily_days: "2",
+			sum: "12",
+		},
+	],
 };
 
 mock.module("@/external/tinybird/initClickhouse.js", () => ({
 	getClickhouseClient: () => ({
-		query: async ({ query }: { query: string }) => {
+		query: async ({
+			query,
+			query_params: queryParams,
+		}: {
+			query: string;
+			query_params?: { event_names?: string[] };
+		}) => {
 			state.queries.push(query);
 			const isDailyQuery = query.includes("events_customer_daily_mv");
 			if (isDailyQuery && state.dailyMode === "error") {
@@ -17,24 +84,12 @@ mock.module("@/external/tinybird/initClickhouse.js", () => ({
 			}
 
 			const data = isDailyQuery
-				? state.dailyMode === "populated"
-					? [
-							{
-								count: "12",
-								daily_rollup_rows: "3",
-								event_name: "emails.sent",
-								sum: "12",
-							},
-						]
-					: [
-							{
-								count: "2",
-								daily_rollup_rows: "0",
-								event_name: "emails.sent",
-								sum: "2",
-							},
-						]
-				: [{ count: "42", event_name: "emails.sent", sum: "42" }];
+				? dailyRowsByMode[state.dailyMode as keyof typeof dailyRowsByMode]
+				: (queryParams?.event_names ?? []).map((eventName) => ({
+						count: eventName === "emails.sent" ? "42" : "17",
+						event_name: eventName,
+						sum: eventName === "emails.sent" ? "42" : "17",
+					}));
 
 			return { json: async () => ({ data }) };
 		},
@@ -47,8 +102,10 @@ const { getCountAndSum } = await import(
 
 const runDailyTotalsQuery = async ({
 	dailyMode,
+	eventNames = ["emails.sent"],
 }: {
 	dailyMode: typeof state.dailyMode;
+	eventNames?: string[];
 }) => {
 	state.dailyMode = dailyMode;
 	state.queries = [];
@@ -66,7 +123,7 @@ const runDailyTotalsQuery = async ({
 	const params = {
 		bin_size: "day",
 		customer_id: "customer_test",
-		event_names: ["emails.sent"],
+		event_names: eventNames,
 	} satisfies TotalEventsParams;
 
 	const summary = await getCountAndSum({
@@ -103,6 +160,41 @@ test("daily totals: keep populated daily reads on the fast path", async () => {
 	expect(state.queries).toHaveLength(1);
 	expect(state.queries[0]).toContain("events_customer_daily_mv");
 	expect(warnings).toHaveLength(0);
+});
+
+test("daily totals: retry hourly when one event lacks daily coverage", async () => {
+	const { summary } = await runDailyTotalsQuery({
+		dailyMode: "mixed_events",
+		eventNames: ["emails.sent", "emails.delivered"],
+	});
+
+	expect(summary).toEqual({
+		"emails.delivered": { count: 17, sum: 17 },
+		"emails.sent": { count: 42, sum: 42 },
+	});
+	expect(state.queries).toHaveLength(2);
+});
+
+test("daily totals: retry hourly when a requested event is absent", async () => {
+	const { summary } = await runDailyTotalsQuery({
+		dailyMode: "missing_event",
+		eventNames: ["emails.sent", "emails.delivered"],
+	});
+
+	expect(summary).toEqual({
+		"emails.delivered": { count: 17, sum: 17 },
+		"emails.sent": { count: 42, sum: 42 },
+	});
+	expect(state.queries).toHaveLength(2);
+});
+
+test("daily totals: retry hourly when the requested day window is partial", async () => {
+	const { summary } = await runDailyTotalsQuery({
+		dailyMode: "partial_coverage",
+	});
+
+	expect(summary).toEqual({ "emails.sent": { count: 42, sum: 42 } });
+	expect(state.queries).toHaveLength(2);
 });
 
 test("daily totals: do not amplify Tinybird errors with an hourly retry", async () => {
