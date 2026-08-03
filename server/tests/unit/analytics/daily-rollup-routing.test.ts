@@ -156,3 +156,15 @@ test("daily totals: preserve raw filtered and org-hourly query paths", () => {
 	expect(orgQuery).toContain("FROM events_org_hourly_mv");
 	expect(orgQuery).not.toContain("customer_id =");
 });
+
+test("daily totals: derive coverage from the populated daily target", async () => {
+	const coveragePipe = await Bun.file(
+		new URL(
+			"../../../tinybird/materializations/events_customer_daily_coverage_mv_pipe.pipe",
+			import.meta.url,
+		),
+	).text();
+
+	expect(coveragePipe).toContain("FROM events_customer_daily_mv");
+	expect(coveragePipe).not.toContain("FROM events_customer_hourly_mv");
+});

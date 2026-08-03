@@ -1,13 +1,13 @@
 DESCRIPTION >
-    Records each UTC day seen by the customer hourly rollup so daily reads can verify datasource
+    Records each UTC day present in the customer daily target so daily reads can verify target
     population without treating event inactivity as missing data.
 
 NODE materialize
 SQL >
     SELECT
-        toStartOfDay(hour) as day,
+        day,
         sumState(toUInt64(1)) as source_rows
-    FROM events_customer_hourly_mv
+    FROM events_customer_daily_mv
     GROUP BY day
 
 TYPE materialized
