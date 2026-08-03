@@ -9,6 +9,7 @@ import { EntityDataSchema } from "../../common/entityData";
 import { BillingBehaviorSchema } from "../common/billingBehavior";
 import { InvoiceModeParamsSchema } from "../common/invoiceModeParams";
 import { RedirectModeSchema } from "../common/redirectMode";
+import { UnixMsTimestampSchema } from "../common/unixMsTimestamp";
 import { AttachDiscountSchema } from "./attachDiscount";
 
 /** Per-plan customize without free_trial */
@@ -68,6 +69,11 @@ export const MultiAttachParamsV0Schema = z.object({
 	free_trial: FreeTrialParamsV1Schema.nullable().optional().meta({
 		description:
 			"Free trial configuration applied to all plans. Pass an object to set a custom trial, or null to remove any trial.",
+	}),
+
+	starts_at: UnixMsTimestampSchema.optional().meta({
+		description:
+			"Unix timestamp in milliseconds for backdating every plan in this multi-attach.",
 	}),
 
 	currency: CurrencyCodeSchema.optional().meta({
