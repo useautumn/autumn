@@ -173,18 +173,30 @@ export type CreateRewardParams1 = {
 
 export type CreateRewardParamsUnion = CreateRewardParams1 | CreateRewardParams2;
 
+/**
+ * The unit of time the grant lasts.
+ */
 export const CreateRewardExpiryTypeResponse = {
   Day: "day",
   Week: "week",
   Month: "month",
   Year: "year",
 } as const;
+/**
+ * The unit of time the grant lasts.
+ */
 export type CreateRewardExpiryTypeResponse = OpenEnum<
   typeof CreateRewardExpiryTypeResponse
 >;
 
 export type CreateRewardExpiryResponse = {
+  /**
+   * The unit of time the grant lasts.
+   */
   type: CreateRewardExpiryTypeResponse;
+  /**
+   * The positive number of periods before the grant expires.
+   */
   length: number;
 };
 

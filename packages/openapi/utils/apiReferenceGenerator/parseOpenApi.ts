@@ -105,6 +105,7 @@ export function parseOpenApi({
 						schema,
 						schemas,
 						requiredFields: (schema.required as string[]) ?? [],
+						mergeVariants: operationId === "createReward",
 					});
 				}
 			}
@@ -135,6 +136,7 @@ export function parseOpenApi({
 							schema,
 							schemas,
 							requiredFields: (schema.required as string[]) ?? [],
+							mergeVariants: operationId === "createReward",
 						});
 						// Store raw schema for sample JSON generation
 						parsed.responseSchemas[statusCode] = schema;
@@ -274,11 +276,13 @@ function parseSchema({
 	schemas,
 	requiredFields,
 	visited = new Set<string>(),
+	mergeVariants = false,
 }: {
 	schema: Record<string, unknown>;
 	schemas: Record<string, unknown>;
 	requiredFields: string[];
 	visited?: Set<string>;
+	mergeVariants?: boolean;
 }): SchemaField[] {
 	// Handle $ref
 	if (schema.$ref) {
@@ -298,6 +302,7 @@ function parseSchema({
 				schemas,
 				requiredFields: (refSchema.required as string[]) ?? [],
 				visited,
+				mergeVariants,
 			});
 		}
 		return [];
@@ -319,8 +324,11 @@ function parseSchema({
 				schemas,
 				requiredFields,
 				visited,
+				mergeVariants,
 			});
 		}
+
+		if (!mergeVariants || !shouldMergeVariants(nonNullVariants)) return [];
 
 		return mergeSchemaFields(
 			nonNullVariants.flatMap((variant) =>
@@ -329,6 +337,7 @@ function parseSchema({
 					schemas,
 					requiredFields,
 					visited: new Set(visited),
+					mergeVariants,
 				}),
 			),
 		);
@@ -341,6 +350,7 @@ function parseSchema({
 			schemas,
 			requiredFields,
 			visited,
+			mergeVariants,
 		});
 	}
 
@@ -352,6 +362,7 @@ function parseSchema({
 			schemas,
 			requiredFields: (items.required as string[]) ?? [],
 			visited,
+			mergeVariants,
 		});
 
 		// Return array items as children of a virtual "items" field
@@ -380,12 +391,14 @@ function parseField({
 	schemas,
 	required,
 	visited,
+	mergeVariants = false,
 }: {
 	name: string;
 	schema: Record<string, unknown>;
 	schemas: Record<string, unknown>;
 	required: boolean;
 	visited: Set<string>;
+	mergeVariants?: boolean;
 }): SchemaField | null {
 	let resolvedName = name;
 	let type = resolveType(schema, schemas);
@@ -421,6 +434,7 @@ function parseField({
 					schemas,
 					requiredFields: (refSchema.required as string[]) ?? [],
 					visited,
+					mergeVariants,
 				});
 			}
 		}
@@ -443,6 +457,7 @@ function parseField({
 				schemas,
 				required,
 				visited,
+				mergeVariants,
 			});
 
 			if (innerField) {
@@ -458,7 +473,11 @@ function parseField({
 			}
 		}
 
-		if (nonNullVariants.length > 1) {
+		if (
+			mergeVariants &&
+			nonNullVariants.length > 1 &&
+			shouldMergeVariants(nonNullVariants)
+		) {
 			const merged = mergeSchemaFields(
 				nonNullVariants.flatMap((variant) => {
 					const field = parseField({
@@ -467,6 +486,7 @@ function parseField({
 						schemas,
 						required,
 						visited: new Set(visited),
+						mergeVariants,
 					});
 					return field ? [field] : [];
 				}),
@@ -500,6 +520,7 @@ function parseField({
 			schemas,
 			requiredFields: (schema.required as string[]) ?? [],
 			visited,
+			mergeVariants,
 		});
 
 		// Flatten pure record objects from:
@@ -550,6 +571,7 @@ function parseField({
 					schemas,
 					requiredFields: (refSchema.required as string[]) ?? [],
 					visited: new Set(visited),
+					mergeVariants,
 				});
 			}
 		}
@@ -558,6 +580,7 @@ function parseField({
 			items,
 			schemas,
 			visited,
+			mergeVariants,
 		});
 	}
 
@@ -576,11 +599,13 @@ function parseObjectFields({
 	schemas,
 	requiredFields,
 	visited,
+	mergeVariants = false,
 }: {
 	schema: Record<string, unknown>;
 	schemas: Record<string, unknown>;
 	requiredFields: string[];
 	visited: Set<string>;
+	mergeVariants?: boolean;
 }): SchemaField[] {
 	const fields: SchemaField[] = [];
 	const properties = schema.properties as Record<string, unknown> | undefined;
@@ -594,6 +619,7 @@ function parseObjectFields({
 				schemas,
 				required: requiredFields.includes(propName),
 				visited: new Set(visited),
+				mergeVariants,
 			});
 			if (field) {
 				fields.push(field);
@@ -612,6 +638,7 @@ function parseObjectFields({
 			schemas,
 			required: false,
 			visited: new Set(visited),
+			mergeVariants,
 		});
 		if (keyField) {
 			fields.push(keyField);
@@ -646,10 +673,12 @@ function getArrayItemChildren({
 	items,
 	schemas,
 	visited,
+	mergeVariants = false,
 }: {
 	items: Record<string, unknown>;
 	schemas: Record<string, unknown>;
 	visited: Set<string>;
+	mergeVariants?: boolean;
 }): SchemaField[] | undefined {
 	// Direct object items
 	if (items.type === "object") {
@@ -658,6 +687,7 @@ function getArrayItemChildren({
 			schemas,
 			requiredFields: (items.required as string[]) ?? [],
 			visited: new Set(visited),
+			mergeVariants,
 		});
 		if (objectChildren.length > 0) {
 			return objectChildren;
@@ -675,6 +705,7 @@ function getArrayItemChildren({
 				schemas,
 				requiredFields: (refSchema.required as string[]) ?? [],
 				visited: new Set(visited),
+				mergeVariants,
 			});
 			if (objectChildren.length > 0) {
 				return objectChildren;
@@ -702,6 +733,7 @@ function getArrayItemChildren({
 				schemas,
 				requiredFields: (variantSchema.required as string[]) ?? [],
 				visited: new Set(visited),
+				mergeVariants,
 			});
 
 			for (const variantField of variantFields) {
@@ -787,6 +819,25 @@ function mergeSchemaFields(fields: SchemaField[]): SchemaField[] {
 		});
 	}
 	return [...merged.values()];
+}
+
+function shouldMergeVariants(variants: Record<string, unknown>[]): boolean {
+	const properties = variants.map(
+		(variant) =>
+			variant.properties as Record<string, Record<string, unknown>> | undefined,
+	);
+	if (properties.some((value) => !value)) return false;
+
+	const keys = properties.map((value) => Object.keys(value ?? {}));
+	const hasDiscriminator = keys[0]?.some((key) =>
+		properties.every((value) => value?.[key] && "const" in value[key]),
+	);
+	const areDisjoint = keys.every((left, index) =>
+		keys
+			.slice(index + 1)
+			.every((right) => left.every((key) => !right.includes(key))),
+	);
+	return Boolean(hasDiscriminator || areDisjoint);
 }
 
 /**

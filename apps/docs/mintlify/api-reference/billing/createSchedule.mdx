@@ -17,32 +17,6 @@ import { DynamicResponseExample } from "/snippets/dynamic-response-example.jsx";
   Optional entity ID for an entity-scoped schedule.
 </DynamicParamField>
 
-<DynamicParamField body="free_trial" type="object | null">
-  Free trial configuration for a plan.
-  <Expandable title="properties">
-    <DynamicParamField body="duration_length" type="number" required>
-      Number of duration_type periods the trial lasts.
-    </DynamicParamField>
-
-    <DynamicParamField body="duration_type" type="'day' | 'month' | 'year'">
-      Unit of time for the trial ('day', 'month', 'year').
-    </DynamicParamField>
-
-    <DynamicParamField body="card_required" type="boolean">
-      If true, payment method required to start trial. Customer is charged after trial ends.
-    </DynamicParamField>
-
-    <DynamicParamField body="on_end" type="'bill' | 'revert'">
-      Behavior when the trial ends. 'bill' charges the customer (default). 'revert' expires the trial and restores the customer's previous plan.
-    </DynamicParamField>
-
-  </Expandable>
-</DynamicParamField>
-
-<DynamicParamField body="currency" type="string">
-  Three-letter Stripe-supported currency code used to bill the immediate phase (for example, 'usd').
-</DynamicParamField>
-
 <DynamicParamField body="invoice_mode" type="object">
   Invoice mode creates and sends an invoice instead of charging the customer's payment method immediately for the first phase.
   <Expandable title="properties">
@@ -99,7 +73,7 @@ import { DynamicResponseExample } from "/snippets/dynamic-response-example.jsx";
   Whether to prorate the immediate phase. 'none' skips proration charges and credits.
 </DynamicParamField>
 
-<DynamicParamField body="billing_cycle_anchor" type="'now'">
+<DynamicParamField body="billing_cycle_anchor" type="any">
   Pass 'now' to reset the billing cycle anchor of the immediate phase to the current time.
 </DynamicParamField>
 
@@ -107,14 +81,10 @@ import { DynamicResponseExample } from "/snippets/dynamic-response-example.jsx";
   If true, the immediate-phase cusProducts are activated immediately (and scheduled-phase cusProducts pre-inserted) even when payment is pending via Stripe checkout. The Autumn schedule rows are persisted on checkout.session.completed.
 </DynamicParamField>
 
-<DynamicParamField body="preserve_add_ons" type="boolean">
-  If true, active recurring add-ons in scopes represented by the phase plans are retained.
-</DynamicParamField>
-
 <DynamicParamField body="phases" type="object[]" required>
   Ordered phase definitions for the schedule.
   <Expandable title="properties">
-    <DynamicParamField body="starts_at" type="'now'">
+    <DynamicParamField body="starts_at" type="number">
       When this phase should start, in epoch milliseconds, or 'now' for the immediate phase.
     </DynamicParamField>
 
@@ -137,10 +107,6 @@ import { DynamicResponseExample } from "/snippets/dynamic-response-example.jsx";
       <Expandable title="properties">
         <DynamicParamField body="plan_id" type="string" required>
           The ID of the plan to schedule in this phase.
-        </DynamicParamField>
-
-        <DynamicParamField body="entity_id" type="string | null">
-          The immediate plan scope. Omit to inherit the request entity, pass null for customer-level, or pass an entity ID.
         </DynamicParamField>
 
         <DynamicParamField body="feature_quantities" type="object[]">
@@ -213,10 +179,6 @@ import { DynamicResponseExample } from "/snippets/dynamic-response-example.jsx";
 
                 <DynamicParamField body="unlimited" type="boolean">
                   If true, customer has unlimited access to this feature.
-                </DynamicParamField>
-
-                <DynamicParamField body="pooled" type="boolean">
-                  Whether entity-level grants contribute to a shared customer balance.
                 </DynamicParamField>
 
                 <DynamicParamField body="reset" type="object">
@@ -343,10 +305,6 @@ import { DynamicResponseExample } from "/snippets/dynamic-response-example.jsx";
                   If true, customer has unlimited access to this feature.
                 </DynamicParamField>
 
-                <DynamicParamField body="pooled" type="boolean">
-                  Whether entity-level grants contribute to a shared customer balance.
-                </DynamicParamField>
-
                 <DynamicParamField body="reset" type="object">
                   Reset configuration for consumable features. Omit for non-consumable features like seats.
                   <Expandable title="properties">
@@ -467,7 +425,7 @@ import { DynamicResponseExample } from "/snippets/dynamic-response-example.jsx";
                   Match items with this billing method (prepaid or usage_based).
                 </DynamicParamField>
 
-                <DynamicParamField body="interval" type="'one_off' | 'week' | 'month' | 'quarter' | 'semi_annual' | 'year' | 'minute' | 'hour' | 'day'">
+                <DynamicParamField body="interval" type="'one_off' | 'week' | 'month' | 'quarter' | 'semi_annual' | 'year'">
                   Match items with this interval. Accepts either a BillingInterval (price-side) or a ResetInterval (reset-side, includes day/hour/minute) so price-less items keyed by reset.interval can be disambiguated.
                 </DynamicParamField>
 

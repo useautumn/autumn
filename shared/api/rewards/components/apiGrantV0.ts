@@ -2,8 +2,12 @@ import { EntitlementDuration } from "@models/productModels/entModels/entModels.j
 import { z } from "zod/v4";
 
 const GrantExpirySchema = z.object({
-	type: z.enum(EntitlementDuration),
-	length: z.number().int().positive(),
+	type: z.enum(EntitlementDuration).meta({
+		description: "The unit of time the grant lasts.",
+	}),
+	length: z.number().int().positive().meta({
+		description: "The positive number of periods before the grant expires.",
+	}),
 });
 
 export const ApiGrantV0Schema = z.object({

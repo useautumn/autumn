@@ -215,10 +215,6 @@ await autumn.plans.create({
       If true, customer has unlimited access to this feature.
     </DynamicParamField>
 
-    <DynamicParamField body="pooled" type="boolean">
-      Whether entity-level grants contribute to a shared customer balance.
-    </DynamicParamField>
-
     <DynamicParamField body="reset" type="object">
       Reset configuration for consumable features. Omit for non-consumable features like seats.
       <Expandable title="properties">
@@ -257,7 +253,7 @@ await autumn.plans.create({
         <DynamicParamField body="tiers" type="object[]">
           Tiered pricing. Either 'amount' or 'tiers' is required.
           <Expandable title="properties">
-            <DynamicParamField body="to" type="'inf'" required />
+            <DynamicParamField body="to" type="number" required />
 
             <DynamicParamField body="amount" type="number" />
 
@@ -405,10 +401,6 @@ await autumn.plans.create({
               If true, customer has unlimited access to this feature.
             </DynamicParamField>
 
-            <DynamicParamField body="pooled" type="boolean">
-              Whether entity-level grants contribute to a shared customer balance.
-            </DynamicParamField>
-
             <DynamicParamField body="reset" type="object">
               Reset configuration for consumable features. Omit for non-consumable features like seats.
               <Expandable title="properties">
@@ -447,7 +439,7 @@ await autumn.plans.create({
                 <DynamicParamField body="tiers" type="object[]">
                   Tiered pricing. Either 'amount' or 'tiers' is required.
                   <Expandable title="properties">
-                    <DynamicParamField body="to" type="'inf'" required />
+                    <DynamicParamField body="to" type="number" required />
 
                     <DynamicParamField body="amount" type="number" />
 
@@ -542,7 +534,7 @@ await autumn.plans.create({
               Match items with this billing method (prepaid or usage_based).
             </DynamicParamField>
 
-            <DynamicParamField body="interval" type="'one_off' | 'week' | 'month' | 'quarter' | 'semi_annual' | 'year' | 'minute' | 'hour' | 'day'">
+            <DynamicParamField body="interval" type="'one_off' | 'week' | 'month' | 'quarter' | 'semi_annual' | 'year'">
               Match items with this interval. Accepts either a BillingInterval (price-side) or a ResetInterval (reset-side, includes day/hour/minute) so price-less items keyed by reset.interval can be disambiguated.
             </DynamicParamField>
 
@@ -692,7 +684,7 @@ await autumn.plans.create({
         <DynamicParamField body="filter" type="object">
           When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature.
           <Expandable title="properties">
-            <DynamicParamField body="properties.{key}" type="string | number | boolean" required />
+            <DynamicParamField body="properties.{key}" type="string" required />
 
           </Expandable>
         </DynamicParamField>
@@ -891,10 +883,6 @@ await autumn.plans.create({
       Whether the customer has unlimited access to this feature.
     </DynamicResponseField>
 
-    <DynamicResponseField name="pooled" type="boolean">
-      Whether entity-level grants contribute to a shared customer balance.
-    </DynamicResponseField>
-
     <DynamicResponseField name="reset" type="object | null">
       Reset configuration for consumable features. Null for non-consumable features like seats where usage persists across billing cycles.
       <Expandable title="properties">
@@ -933,7 +921,7 @@ await autumn.plans.create({
         <DynamicResponseField name="tiers" type="object[]">
           Tiered pricing configuration. Each tier's 'to' INCLUDES the included amount. Either 'tiers' or 'amount' is required.
           <Expandable title="properties">
-            <DynamicResponseField name="to" type="'inf'" />
+            <DynamicResponseField name="to" type="number" />
 
             <DynamicResponseField name="amount" type="number" />
 
@@ -1118,10 +1106,6 @@ await autumn.plans.create({
               If true, customer has unlimited access to this feature.
             </DynamicResponseField>
 
-            <DynamicResponseField name="pooled" type="boolean">
-              Whether entity-level grants contribute to a shared customer balance.
-            </DynamicResponseField>
-
             <DynamicResponseField name="reset" type="object">
               Reset configuration for consumable features. Omit for non-consumable features like seats.
               <Expandable title="properties">
@@ -1160,7 +1144,7 @@ await autumn.plans.create({
                 <DynamicResponseField name="tiers" type="object[]">
                   Tiered pricing. Either 'amount' or 'tiers' is required.
                   <Expandable title="properties">
-                    <DynamicResponseField name="to" type="'inf'" />
+                    <DynamicResponseField name="to" type="number" />
 
                     <DynamicResponseField name="amount" type="number" />
 
@@ -1261,7 +1245,7 @@ await autumn.plans.create({
               Match items with this billing method (prepaid or usage_based).
             </DynamicResponseField>
 
-            <DynamicResponseField name="interval" type="'one_off' | 'week' | 'month' | 'quarter' | 'semi_annual' | 'year' | 'minute' | 'hour' | 'day'">
+            <DynamicResponseField name="interval" type="'one_off' | 'week' | 'month' | 'quarter' | 'semi_annual' | 'year'">
               Match items with this interval. Accepts either a BillingInterval (price-side) or a ResetInterval (reset-side, includes day/hour/minute) so price-less items keyed by reset.interval can be disambiguated.
             </DynamicResponseField>
 

@@ -97,9 +97,13 @@ import { DynamicResponseExample } from "/snippets/dynamic-response-example.jsx";
         <DynamicResponseField name="expiry" type="object | null">
           How long the granted amount lasts before expiring, or null for a permanent grant.
           <Expandable title="properties">
-            <DynamicResponseField name="type" type="'day' | 'week' | 'month' | 'year'" />
+            <DynamicResponseField name="type" type="'day' | 'week' | 'month' | 'year'">
+              The unit of time the grant lasts.
+            </DynamicResponseField>
 
-            <DynamicResponseField name="length" type="integer" />
+            <DynamicResponseField name="length" type="integer">
+              The positive number of periods before the grant expires.
+            </DynamicResponseField>
 
           </Expandable>
         </DynamicResponseField>

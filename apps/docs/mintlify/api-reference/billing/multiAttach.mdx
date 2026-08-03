@@ -25,7 +25,7 @@ import { DynamicResponseExample } from "/snippets/dynamic-response-example.jsx";
     </DynamicParamField>
 
     <DynamicParamField body="customize" type="object">
-      Customize the plan to attach. Can override its price or items.
+      Customize the plan to attach. Can override the price, items, or licenses.
       <Expandable title="properties">
         <DynamicParamField body="price" type="object | null">
           Base price configuration for a plan.
@@ -74,10 +74,6 @@ import { DynamicResponseExample } from "/snippets/dynamic-response-example.jsx";
               If true, customer has unlimited access to this feature.
             </DynamicParamField>
 
-            <DynamicParamField body="pooled" type="boolean">
-              Whether entity-level grants contribute to a shared customer balance.
-            </DynamicParamField>
-
             <DynamicParamField body="reset" type="object">
               Reset configuration for consumable features. Omit for non-consumable features like seats.
               <Expandable title="properties">
@@ -116,7 +112,7 @@ import { DynamicResponseExample } from "/snippets/dynamic-response-example.jsx";
                 <DynamicParamField body="tiers" type="object[]">
                   Tiered pricing. Either 'amount' or 'tiers' is required.
                   <Expandable title="properties">
-                    <DynamicParamField body="to" type="'inf'" required />
+                    <DynamicParamField body="to" type="number" required />
 
                     <DynamicParamField body="amount" type="number" />
 
@@ -230,10 +226,6 @@ import { DynamicResponseExample } from "/snippets/dynamic-response-example.jsx";
       A unique ID to identify this subscription. Useful when attaching the same plan multiple times.
     </DynamicParamField>
 
-    <DynamicParamField body="entity_id" type="string | null">
-      The entity scope for this plan. Omit to inherit the request scope, or pass null for customer-level.
-    </DynamicParamField>
-
   </Expandable>
 </DynamicParamField>
 
@@ -257,10 +249,6 @@ import { DynamicResponseExample } from "/snippets/dynamic-response-example.jsx";
     </DynamicParamField>
 
   </Expandable>
-</DynamicParamField>
-
-<DynamicParamField body="starts_at" type="integer">
-  Unix timestamp in milliseconds for backdating every plan in this multi-attach.
 </DynamicParamField>
 
 <DynamicParamField body="currency" type="string">
@@ -305,10 +293,6 @@ import { DynamicResponseExample } from "/snippets/dynamic-response-example.jsx";
     </DynamicParamField>
 
   </Expandable>
-</DynamicParamField>
-
-<DynamicParamField body="billing_behavior" type="'prorate_immediately' | 'none'">
-  How to handle billing. 'prorate_immediately' charges/credits prorated amounts now, 'none' does not charge/credit anything.
 </DynamicParamField>
 
 <DynamicParamField body="success_url" type="string">
@@ -469,7 +453,7 @@ import { DynamicResponseExample } from "/snippets/dynamic-response-example.jsx";
             <DynamicParamField body="filter" type="object">
               When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature.
               <Expandable title="properties">
-                <DynamicParamField body="properties.{key}" type="string | number | boolean" required />
+                <DynamicParamField body="properties.{key}" type="string" required />
 
               </Expandable>
             </DynamicParamField>
@@ -598,7 +582,7 @@ import { DynamicResponseExample } from "/snippets/dynamic-response-example.jsx";
             <DynamicParamField body="filter" type="object">
               When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature.
               <Expandable title="properties">
-                <DynamicParamField body="properties.{key}" type="string | number | boolean" required />
+                <DynamicParamField body="properties.{key}" type="string" required />
 
               </Expandable>
             </DynamicParamField>

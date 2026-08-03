@@ -107,16 +107,28 @@ export type ListRewardsCoupon = {
   createdAt: number;
 };
 
+/**
+ * The unit of time the grant lasts.
+ */
 export const ListRewardsExpiryType = {
   Day: "day",
   Week: "week",
   Month: "month",
   Year: "year",
 } as const;
+/**
+ * The unit of time the grant lasts.
+ */
 export type ListRewardsExpiryType = OpenEnum<typeof ListRewardsExpiryType>;
 
 export type ListRewardsExpiry = {
+  /**
+   * The unit of time the grant lasts.
+   */
   type: ListRewardsExpiryType;
+  /**
+   * The positive number of periods before the grant expires.
+   */
   length: number;
 };
 

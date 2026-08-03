@@ -34006,11 +34006,13 @@ paths:
                                             - month
                                             - year
                                           type: string
+                                          description: The unit of time the grant lasts.
                                         length:
                                           type: integer
                                           minimum: -9007199254740991
                                           maximum: 9007199254740991
                                           exclusiveMinimum: 0
+                                          description: The positive number of periods before the grant expires.
                                       required:
                                         - type
                                         - length
@@ -34233,11 +34235,13 @@ paths:
                                           - month
                                           - year
                                         type: string
+                                        description: The unit of time the grant lasts.
                                       length:
                                         type: integer
                                         minimum: -9007199254740991
                                         maximum: 9007199254740991
                                         exclusiveMinimum: 0
+                                        description: The positive number of periods before the grant expires.
                                     required:
                                       - type
                                       - length

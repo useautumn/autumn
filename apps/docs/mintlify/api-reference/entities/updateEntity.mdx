@@ -68,7 +68,7 @@ import { DynamicResponseExample } from "/snippets/dynamic-response-example.jsx";
         <DynamicParamField body="filter" type="object">
           When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature.
           <Expandable title="properties">
-            <DynamicParamField body="properties.{key}" type="string | number | boolean" required />
+            <DynamicParamField body="properties.{key}" type="string" required />
 
           </Expandable>
         </DynamicParamField>
@@ -294,10 +294,6 @@ import { DynamicResponseExample } from "/snippets/dynamic-response-example.jsx";
               Whether the customer has unlimited access to this feature.
             </DynamicResponseField>
 
-            <DynamicResponseField name="pooled" type="boolean">
-              Whether entity-level grants contribute to a shared customer balance.
-            </DynamicResponseField>
-
             <DynamicResponseField name="reset" type="object | null">
               Reset configuration for consumable features. Null for non-consumable features like seats where usage persists across billing cycles.
               <Expandable title="properties">
@@ -336,7 +332,7 @@ import { DynamicResponseExample } from "/snippets/dynamic-response-example.jsx";
                 <DynamicResponseField name="tiers" type="object[]">
                   Tiered pricing configuration. Each tier's 'to' INCLUDES the included amount. Either 'tiers' or 'amount' is required.
                   <Expandable title="properties">
-                    <DynamicResponseField name="to" type="'inf'" />
+                    <DynamicResponseField name="to" type="number" />
 
                     <DynamicResponseField name="amount" type="number" />
 
@@ -521,10 +517,6 @@ import { DynamicResponseExample } from "/snippets/dynamic-response-example.jsx";
                       If true, customer has unlimited access to this feature.
                     </DynamicResponseField>
 
-                    <DynamicResponseField name="pooled" type="boolean">
-                      Whether entity-level grants contribute to a shared customer balance.
-                    </DynamicResponseField>
-
                     <DynamicResponseField name="reset" type="object">
                       Reset configuration for consumable features. Omit for non-consumable features like seats.
                       <Expandable title="properties">
@@ -563,7 +555,7 @@ import { DynamicResponseExample } from "/snippets/dynamic-response-example.jsx";
                         <DynamicResponseField name="tiers" type="object[]">
                           Tiered pricing. Either 'amount' or 'tiers' is required.
                           <Expandable title="properties">
-                            <DynamicResponseField name="to" type="'inf'" />
+                            <DynamicResponseField name="to" type="number" />
 
                             <DynamicResponseField name="amount" type="number" />
 
@@ -664,7 +656,7 @@ import { DynamicResponseExample } from "/snippets/dynamic-response-example.jsx";
                       Match items with this billing method (prepaid or usage_based).
                     </DynamicResponseField>
 
-                    <DynamicResponseField name="interval" type="'one_off' | 'week' | 'month' | 'quarter' | 'semi_annual' | 'year' | 'minute' | 'hour' | 'day'">
+                    <DynamicResponseField name="interval" type="'one_off' | 'week' | 'month' | 'quarter' | 'semi_annual' | 'year'">
                       Match items with this interval. Accepts either a BillingInterval (price-side) or a ResetInterval (reset-side, includes day/hour/minute) so price-less items keyed by reset.interval can be disambiguated.
                     </DynamicResponseField>
 
@@ -1240,10 +1232,6 @@ import { DynamicResponseExample } from "/snippets/dynamic-response-example.jsx";
               Whether the customer has unlimited access to this feature.
             </DynamicResponseField>
 
-            <DynamicResponseField name="pooled" type="boolean">
-              Whether entity-level grants contribute to a shared customer balance.
-            </DynamicResponseField>
-
             <DynamicResponseField name="reset" type="object | null">
               Reset configuration for consumable features. Null for non-consumable features like seats where usage persists across billing cycles.
               <Expandable title="properties">
@@ -1282,7 +1270,7 @@ import { DynamicResponseExample } from "/snippets/dynamic-response-example.jsx";
                 <DynamicResponseField name="tiers" type="object[]">
                   Tiered pricing configuration. Each tier's 'to' INCLUDES the included amount. Either 'tiers' or 'amount' is required.
                   <Expandable title="properties">
-                    <DynamicResponseField name="to" type="'inf'" />
+                    <DynamicResponseField name="to" type="number" />
 
                     <DynamicResponseField name="amount" type="number" />
 
@@ -1467,10 +1455,6 @@ import { DynamicResponseExample } from "/snippets/dynamic-response-example.jsx";
                       If true, customer has unlimited access to this feature.
                     </DynamicResponseField>
 
-                    <DynamicResponseField name="pooled" type="boolean">
-                      Whether entity-level grants contribute to a shared customer balance.
-                    </DynamicResponseField>
-
                     <DynamicResponseField name="reset" type="object">
                       Reset configuration for consumable features. Omit for non-consumable features like seats.
                       <Expandable title="properties">
@@ -1509,7 +1493,7 @@ import { DynamicResponseExample } from "/snippets/dynamic-response-example.jsx";
                         <DynamicResponseField name="tiers" type="object[]">
                           Tiered pricing. Either 'amount' or 'tiers' is required.
                           <Expandable title="properties">
-                            <DynamicResponseField name="to" type="'inf'" />
+                            <DynamicResponseField name="to" type="number" />
 
                             <DynamicResponseField name="amount" type="number" />
 
@@ -1610,7 +1594,7 @@ import { DynamicResponseExample } from "/snippets/dynamic-response-example.jsx";
                       Match items with this billing method (prepaid or usage_based).
                     </DynamicResponseField>
 
-                    <DynamicResponseField name="interval" type="'one_off' | 'week' | 'month' | 'quarter' | 'semi_annual' | 'year' | 'minute' | 'hour' | 'day'">
+                    <DynamicResponseField name="interval" type="'one_off' | 'week' | 'month' | 'quarter' | 'semi_annual' | 'year'">
                       Match items with this interval. Accepts either a BillingInterval (price-side) or a ResetInterval (reset-side, includes day/hour/minute) so price-less items keyed by reset.interval can be disambiguated.
                     </DynamicResponseField>
 
@@ -2160,7 +2144,7 @@ import { DynamicResponseExample } from "/snippets/dynamic-response-example.jsx";
         <DynamicResponseField name="reset" type="object | null">
           Reset configuration for this balance, or null if no reset.
           <Expandable title="properties">
-            <DynamicResponseField name="interval" type="'one_off' | 'minute' | 'hour' | 'day' | 'week' | 'month' | 'quarter' | 'semi_annual' | 'year' | 'multiple'">
+            <DynamicResponseField name="interval" type="'one_off' | 'minute' | 'hour' | 'day' | 'week' | 'month' | 'quarter' | 'semi_annual' | 'year'">
               The reset interval (hour, day, week, month, etc.) or 'multiple' if combined from different intervals.
             </DynamicResponseField>
 
@@ -2185,7 +2169,7 @@ import { DynamicResponseExample } from "/snippets/dynamic-response-example.jsx";
             <DynamicResponseField name="tiers" type="object[]">
               Tiered pricing configuration if applicable.
               <Expandable title="properties">
-                <DynamicResponseField name="to" type="'inf'" />
+                <DynamicResponseField name="to" type="number" />
 
                 <DynamicResponseField name="amount" type="number" />
 

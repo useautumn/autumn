@@ -507,17 +507,22 @@ CreateRewardExpiryTypeResponse = Union[
     ],
     UnrecognizedStr,
 ]
+r"""The unit of time the grant lasts."""
 
 
 class CreateRewardExpiryResponseTypedDict(TypedDict):
     type: CreateRewardExpiryTypeResponse
+    r"""The unit of time the grant lasts."""
     length: int
+    r"""The positive number of periods before the grant expires."""
 
 
 class CreateRewardExpiryResponse(BaseModel):
     type: CreateRewardExpiryTypeResponse
+    r"""The unit of time the grant lasts."""
 
     length: int
+    r"""The positive number of periods before the grant expires."""
 
 
 class CreateRewardGrantResponseTypedDict(TypedDict):
