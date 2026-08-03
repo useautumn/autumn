@@ -9,7 +9,6 @@ import { NotFoundError, runs } from "@trigger.dev/sdk/v3";
 import { isBefore, subMilliseconds } from "date-fns";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 import { getCustomerExportsS3Config } from "@/external/aws/s3/customerExportsS3Config.js";
-import { abortS3MultipartUpload } from "@/external/aws/s3/s3MultipartUtils.js";
 import { headS3Object } from "@/external/aws/s3/s3ObjectUtils.js";
 import type { Logger } from "@/external/logtail/logtailUtils.js";
 import { CUSTOMER_EXPORT_MAX_DURATION_SECONDS } from "@/trigger/exports/customerExportQueue.js";
@@ -127,25 +126,6 @@ const resolveAbandonedExport = async ({
 				);
 			}
 			return promoted;
-		}
-
-		if (activeExport.s3_upload_id) {
-			await abortS3MultipartUpload({
-				bucket,
-				region,
-				key: activeExport.s3_key,
-				uploadId: activeExport.s3_upload_id,
-			}).catch((error) => {
-				logger.warn(
-					"customer-export: failed to abort abandoned multipart upload",
-					{
-						data: {
-							exportId: activeExport.id,
-							error: getCustomerExportErrorMessage({ error }),
-						},
-					},
-				);
-			});
 		}
 	}
 

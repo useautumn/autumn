@@ -4,7 +4,6 @@ import {
 	getCustomerExportKey,
 	getCustomerExportsS3Config,
 } from "@/external/aws/s3/customerExportsS3Config.js";
-import { abortS3MultipartUpload } from "@/external/aws/s3/s3MultipartUtils.js";
 import { headS3Object } from "@/external/aws/s3/s3ObjectUtils.js";
 import type { Logger } from "@/external/logtail/logtailUtils.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
@@ -74,30 +73,6 @@ const markCompletedWithRetry = async ({
 			);
 		}
 	}
-};
-
-const abortUploadBestEffort = async ({
-	logger,
-	exportId,
-	bucket,
-	region,
-	key,
-	uploadId,
-}: {
-	logger: Logger;
-	exportId: string;
-	bucket: string;
-	region: string;
-	key: string;
-	uploadId: string;
-}) => {
-	await abortS3MultipartUpload({ bucket, region, key, uploadId }).catch(
-		(error) => {
-			logger.error("customer-export: failed to abort multipart upload", {
-				data: { exportId, error: sanitizeExportError({ error }) },
-			});
-		},
-	);
 };
 
 /** A retry can reconcile an object published before its completion write. */
@@ -173,17 +148,6 @@ export const executeCustomerExport = async ({
 			region,
 		});
 		if (reconciled) return;
-
-		if (customerExport.s3_key && customerExport.s3_upload_id) {
-			await abortUploadBestEffort({
-				logger,
-				exportId,
-				bucket,
-				region,
-				key: customerExport.s3_key,
-				uploadId: customerExport.s3_upload_id,
-			});
-		}
 	} else if (customerExport.status !== CustomerExportStatus.Queued) {
 		logger.warn("customer-export: skipping non-active export", {
 			data: { exportId, status: customerExport.status },
