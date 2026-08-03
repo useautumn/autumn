@@ -19,4 +19,5 @@ export const setupMultiAttachBillingContext = async ({
 		ctx,
 		params,
 		preview,
+		billingStartsAt: params.starts_at,
 	});
