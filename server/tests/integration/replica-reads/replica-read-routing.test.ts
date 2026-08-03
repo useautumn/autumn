@@ -56,11 +56,13 @@ import {
 	_setReplicaRoutingProbeForTesting,
 } from "@/db/replicaRoutingState.js";
 import {
+	_setLedgerDbOverrideForTesting,
 	_setReplicaDbOverrideForTesting,
 	resolveSubjectReadDb,
 } from "@/db/resolveSubjectReadDb.js";
 import { setCachedFullSubject } from "@/internal/customers/cache/fullSubject/actions/setCachedFullSubject/setCachedFullSubject.js";
 import { isReplicaSourced } from "@/internal/customers/cache/fullSubject/subjectProvenance.js";
+import { _resetRecentlyUpdatedNegativeCacheForTesting } from "@/internal/customers/customerLsns/isCustomerRecentlyUpdated.js";
 import { getFullSubjectNormalized } from "@/internal/customers/repos/getFullSubject/index.js";
 
 const envBase = process.env.AUTUMN_TEST_BASE_URL;
@@ -337,16 +339,26 @@ test(`${chalk.yellowBright("replica-reads (f): resolveSubjectReadDb fail-safes a
 		});
 		expect(cachePathCtx.source).toBe("primary");
 
-		// (f2) ledger check throws -> primary (fail-safe).
+		// The sanity check cached this key's negative; clear it so the throwing
+		// ledger db below is actually reached instead of short-circuited.
+		_resetRecentlyUpdatedNegativeCacheForTesting();
+
+		// (f2) ledger check throws -> primary (fail-safe). The ledger runs on the
+		// module-level dbCritical pool, so the fake is injected via the seam.
 		const throwingLedgerDb = {
 			execute: () => Promise.reject(new Error("ledger unavailable")),
 		} as unknown as DrizzleCli;
-		const ledgerError = await resolveSubjectReadDb({
-			ctx: { ...skipCacheCtx, dbGeneral: throwingLedgerDb },
-			readFrom: "replica-ok",
-			...baseArgs,
-		});
-		expect(ledgerError.source).toBe("primary");
+		_setLedgerDbOverrideForTesting(throwingLedgerDb);
+		try {
+			const ledgerError = await resolveSubjectReadDb({
+				ctx: skipCacheCtx,
+				readFrom: "replica-ok",
+				...baseArgs,
+			});
+			expect(ledgerError.source).toBe("primary");
+		} finally {
+			_setLedgerDbOverrideForTesting(null);
+		}
 
 		// (f3) replica execute throws -> exactly one primary retry returns data.
 		const brokenReplicaDb = {

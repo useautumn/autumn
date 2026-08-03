@@ -1,7 +1,7 @@
 import { logger } from "@/external/logtail/logtailUtils.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { isCustomerRecentlyUpdated } from "@/internal/customers/customerLsns/isCustomerRecentlyUpdated.js";
-import { type DrizzleCli, dbReplica } from "./initDrizzle.js";
+import { type DrizzleCli, dbCritical, dbReplica } from "./initDrizzle.js";
 import { getReplicaRoutingState } from "./replicaRoutingState.js";
 
 export type SubjectReadFrom = "primary" | "replica-ok";
@@ -16,6 +16,11 @@ export const _setReplicaDbOverrideForTesting = (
 	db: DrizzleCli | null,
 ): void => {
 	replicaDbOverride = db;
+};
+
+let ledgerDbOverride: DrizzleCli | null = null;
+export const _setLedgerDbOverrideForTesting = (db: DrizzleCli | null): void => {
+	ledgerDbOverride = db;
 };
 
 /** Picks the pool for a subject hydration. Replica requires EVERY gate to
@@ -42,8 +47,10 @@ export const resolveSubjectReadDb = async ({
 	if (!getReplicaRoutingState().eligible) return primary;
 
 	try {
+		// Critical pool: warm and sized for the per-read ledger volume on hot
+		// routes; the cold general pool starves under it and trips the fail-safe.
 		const recentlyUpdated = await isCustomerRecentlyUpdated({
-			db: ctx.dbGeneral,
+			db: ledgerDbOverride ?? dbCritical,
 			orgId,
 			env,
 			customerId,

@@ -6,6 +6,8 @@ import { logger } from "@/external/logtail/logtailUtils.js";
 // span the caller's transaction, so marks always run autocommit on a pool db.
 const resolveAutocommitDb = async (db: DrizzleCli): Promise<DrizzleCli> => {
 	if ((db as { $client?: unknown }).$client) return db;
+	// Deliberately dbGeneral, not the dbCritical pool ledger reads use: marks
+	// are low-volume post-commit writes, not per-read traffic.
 	return (await import("@/db/initDrizzle.js")).dbGeneral;
 };
 
