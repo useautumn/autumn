@@ -135,9 +135,8 @@ export type CustomerSearchPredicates = {
 };
 
 /**
- * Shared by the dashboard list, count, and the CSV export walk. Every mode
- * drives from customers so the keyset index orders the scan; product-level
- * filters become EXISTS semi-joins probed per customer.
+ * Every mode drives from customers so the keyset index orders the scan;
+ * product-level filters become EXISTS semi-joins probed per customer.
  */
 export const buildSearchPredicates = ({
 	orgId,

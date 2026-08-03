@@ -78,7 +78,6 @@ const isAbandonedExport = async ({
 	return isStaleActiveExport({ activeExport });
 };
 
-/** Records a published CSV as complete; otherwise fails the abandoned row. */
 const resolveAbandonedExport = async ({
 	db,
 	logger,

@@ -105,7 +105,6 @@ export const streamCustomerExportCsv = async ({
 		countedCsvBytes,
 	);
 
-	// Upload owns multipart chunking, retries, completion, and abort-on-error.
 	const upload = new Upload({
 		client: getS3Client({ region }),
 		params: {
