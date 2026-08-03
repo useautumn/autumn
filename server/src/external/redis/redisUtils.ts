@@ -64,32 +64,26 @@ interface LockData {
 const DEFAULT_ERROR_MESSAGE =
 	"Operation already in progress, try again in a few seconds";
 
-const throwLockUnavailable = (): never => {
-	throw new RecaseError({
-		message: "Operation temporarily unavailable, try again in a few seconds",
-		code: ErrCode.InternalError,
-		statusCode: 503,
-	});
-};
-
-/** Acquires a Redis lock, failing open on Redis errors unless configured otherwise. */
+/**
+ * Acquire a distributed lock using Redis.
+ * If Redis is not ready or errors, returns true to allow the operation to proceed.
+ * @returns true if lock was acquired (or Redis unavailable), throws if lock already exists
+ */
 export const acquireLock = async ({
 	lockKey,
 	ttlMs = 10000,
 	errorMessage = DEFAULT_ERROR_MESSAGE,
 	token,
-	failOpen = true,
 }: {
 	lockKey: string;
 	ttlMs?: number;
 	errorMessage?: string;
 	token?: string;
-	failOpen?: boolean;
 }): Promise<boolean> => {
 	const redis = getPrimaryRedis();
 
+	// If Redis not ready, allow operation to proceed
 	if (redis.status !== "ready") {
-		if (!failOpen) throwLockUnavailable();
 		return true;
 	}
 
@@ -137,7 +131,7 @@ export const acquireLock = async ({
 			});
 		}
 
-		if (!failOpen) throwLockUnavailable();
+		// Redis error - allow operation to proceed
 		return true;
 	}
 };

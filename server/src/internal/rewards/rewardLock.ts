@@ -5,8 +5,6 @@ export const rewardMutationLock =
 	process.env.NODE_ENV !== "development"
 		? {
 				ttlMs: 120_000,
-				refreshIntervalMs: 30_000,
-				failOpen: false,
 				errorMessage:
 					"Another reward operation is already in progress for this organization, try again in a few seconds",
 				getKey: (c: Context<HonoEnv>) => {

@@ -10,11 +10,7 @@ import type { Context, Env, Next } from "hono";
 import type { H } from "hono/types";
 import type { ZodType, z } from "zod/v4";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
-import {
-	acquireLock,
-	clearLock,
-	refreshLockLease,
-} from "@/external/redis/redisUtils.js";
+import { acquireLock, clearLock } from "@/external/redis/redisUtils.js";
 import type { HonoEnv } from "@/honoUtils/HonoEnv.js";
 import { expandMiddleware } from "./expandMiddleware.js";
 import { validator } from "./validatorMiddleware.js";
@@ -149,10 +145,6 @@ export function createRoute<
 		) => string | null;
 		/** Lock TTL in milliseconds (default: 10000) */
 		ttlMs?: number;
-		/** Refresh interval for long-running handlers. */
-		refreshIntervalMs?: number;
-		/** Continue without a lock when Redis is unavailable. */
-		failOpen?: boolean;
 		/** Error message to show when lock is already held */
 		errorMessage?: string;
 	};
@@ -301,31 +293,16 @@ export function createRoute<
 		// Acquire lock if lock config provided
 		let lockKey: string | null = null;
 		let lockToken: string | null = null;
-		let lockRefreshTimer: ReturnType<typeof setInterval> | undefined;
 		if (opts.lock) {
 			lockKey = opts.lock.getKey(c);
 			if (lockKey) {
 				lockToken = crypto.randomUUID();
-				const acquiredLockKey = lockKey;
-				const acquiredLockToken = lockToken;
 				await acquireLock({
-					lockKey: acquiredLockKey,
+					lockKey,
 					ttlMs: opts.lock.ttlMs,
 					errorMessage: opts.lock.errorMessage,
-					token: acquiredLockToken,
-					failOpen: opts.lock.failOpen,
+					token: lockToken,
 				});
-				if (opts.lock.refreshIntervalMs) {
-					lockRefreshTimer = setInterval(
-						() =>
-							void refreshLockLease({
-								lockKey: acquiredLockKey,
-								token: acquiredLockToken,
-								ttlMs: opts.lock?.ttlMs ?? 10000,
-							}),
-						opts.lock.refreshIntervalMs,
-					);
-				}
 			}
 		}
 
@@ -344,7 +321,6 @@ export function createRoute<
 				return await handler(c);
 			}
 		} finally {
-			if (lockRefreshTimer) clearInterval(lockRefreshTimer);
 			// Always release lock (only if this request still owns it)
 			if (lockKey && lockToken) {
 				await clearLock({ lockKey, token: lockToken });
