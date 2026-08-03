@@ -4,13 +4,13 @@ import type { AutumnContext, HonoEnv } from "@/honoUtils/HonoEnv.js";
 import { addExtrasToLogs } from "@/utils/logging/addContextToLogs.js";
 import { maskExtraLogs } from "@/utils/logging/maskExtraLogs.js";
 
-const HIGH_VOLUME_SUCCESS_ROUTES = new Set<string>([
-	// "/v1/balances.track",
-	// "/v1/balances.check",
-	// "/v1/check",
-	// "/v1/track",
-	// "/v1/customers.get_or_create",
-	// "/v1/entities.get",
+const HIGH_VOLUME_ROUTES = new Set<string>([
+	"/v1/balances.track",
+	"/v1/balances.check",
+	"/v1/check",
+	"/v1/track",
+	"/v1/customers.get_or_create",
+	"/v1/entities.get",
 ]);
 
 // Event pages run to megabytes each, dwarfing every other route's ingest.
@@ -19,13 +19,20 @@ const RESPONSE_BODY_EXCLUDED_ROUTES = new Set<string>([
 	"/v1/events.list",
 ]);
 
-const SUCCESS_REQUEST_LOG_SAMPLE_RATE = Number.parseFloat(
-	process.env.AXIOM_SUCCESS_REQUEST_LOG_SAMPLE_RATE ?? "0",
-);
+// Read lazily: Infisical populates process.env in-process at runtime, so a
+// module-scope read can land before the secret exists and silently pin this to 0.
+let rejectionLogSampleRate: number | undefined;
+const getRejectionLogSampleRate = () => {
+	rejectionLogSampleRate ??= Number.parseFloat(
+		process.env.AXIOM_SUCCESS_REQUEST_LOG_SAMPLE_RATE ?? "0",
+	);
+	return Number.isNaN(rejectionLogSampleRate) ? 0 : rejectionLogSampleRate;
+};
 
-const shouldSampleSuccessLog = () =>
-	SUCCESS_REQUEST_LOG_SAMPLE_RATE > 0 &&
-	Math.random() < Math.min(SUCCESS_REQUEST_LOG_SAMPLE_RATE, 1);
+const shouldSampleRejectionLog = () => {
+	const rate = getRejectionLogSampleRate();
+	return rate > 0 && Math.random() < Math.min(rate, 1);
+};
 
 export const logRequestResult = async ({
 	ctx,
@@ -48,10 +55,12 @@ export const logRequestResult = async ({
 		}
 
 		const isSuccess = statusCode >= 200 && statusCode < 300;
-		const isHighVolumeSuccess =
-			isSuccess && HIGH_VOLUME_SUCCESS_ROUTES.has(c.req.path);
+		// 429 floods on hot routes out-cost the requests they throttle, so they're
+		// sampled under overload; every other status stays fully logged.
+		const isSampledRejection =
+			statusCode === 429 && HIGH_VOLUME_ROUTES.has(c.req.path);
 
-		if (isHighVolumeSuccess && !shouldSampleSuccessLog()) {
+		if (isSampledRejection && !shouldSampleRejectionLog()) {
 			return;
 		}
 
@@ -86,7 +95,9 @@ export const logRequestResult = async ({
 				...(ctx.requestLogContext === undefined
 					? {}
 					: { req: ctx.requestLogContext }),
-				res: finalResponseBody ?? null,
+				// Serialized: response payloads carry arbitrary keys (feature IDs
+				// etc.), each of which minted an Axiom field until events dropped.
+				res: finalResponseBody ? JSON.stringify(finalResponseBody) : null,
 			},
 		);
 
