@@ -1,10 +1,12 @@
-import type {
-	AppEnv,
-	CustomerExportField,
-	CustomerExportSnapshot,
-	DbCustomerExport,
+import {
+	type AppEnv,
+	type CustomerExportField,
+	type CustomerExportSnapshot,
+	type DbCustomerExport,
+	ms,
 } from "@autumn/shared";
-import { runs } from "@trigger.dev/sdk/v3";
+import { NotFoundError, runs } from "@trigger.dev/sdk/v3";
+import { isBefore, subMilliseconds } from "date-fns";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 import { getCustomerExportsS3Config } from "@/external/aws/s3/customerExportsS3Config.js";
 import { abortS3MultipartUpload } from "@/external/aws/s3/s3MultipartUtils.js";
@@ -15,12 +17,12 @@ import {
 	type CreateCustomerExportResult,
 	CustomerExportService,
 } from "./CustomerExportService.js";
+import { getCustomerExportErrorMessage } from "./customerExportErrorMessage.js";
 
-const HOUR_MS = 60 * 60 * 1000;
 // Fallback for rows without a trigger run id (inline dev runs): past every
 // possible runtime plus margin, the run cannot still be alive.
 const STALE_ACTIVE_EXPORT_AFTER_MS =
-	CUSTOMER_EXPORT_MAX_DURATION_SECONDS * 1000 + HOUR_MS;
+	ms.seconds(CUSTOMER_EXPORT_MAX_DURATION_SECONDS) + ms.hours(1);
 
 const isStaleActiveExport = ({
 	activeExport,
@@ -28,14 +30,11 @@ const isStaleActiveExport = ({
 	activeExport: DbCustomerExport;
 }) => {
 	const lastProgressAt = activeExport.started_at ?? activeExport.created_at;
-	return Date.now() - lastProgressAt > STALE_ACTIVE_EXPORT_AFTER_MS;
+	return isBefore(
+		lastProgressAt,
+		subMilliseconds(Date.now(), STALE_ACTIVE_EXPORT_AFTER_MS),
+	);
 };
-
-const isNotFoundApiError = (error: unknown) =>
-	typeof error === "object" &&
-	error !== null &&
-	"status" in error &&
-	(error as { status: unknown }).status === 404;
 
 /** Unreachable run state means "maybe alive", so reclaim is skipped. */
 const isTriggerRunDead = async ({
@@ -49,13 +48,13 @@ const isTriggerRunDead = async ({
 		const run = await runs.retrieve(triggerRunId);
 		return run.isCompleted;
 	} catch (error) {
-		if (isNotFoundApiError(error)) return true;
+		if (error instanceof NotFoundError) return true;
 		logger.warn(
 			"customer-export: could not check trigger run state; skipping reclaim",
 			{
 				data: {
 					triggerRunId,
-					error: error instanceof Error ? error.message : String(error),
+					error: getCustomerExportErrorMessage({ error }),
 				},
 			},
 		);
@@ -107,7 +106,7 @@ const resolveAbandonedExport = async ({
 				{
 					data: {
 						exportId: activeExport.id,
-						error: error instanceof Error ? error.message : String(error),
+						error: getCustomerExportErrorMessage({ error }),
 					},
 				},
 			);
@@ -142,7 +141,7 @@ const resolveAbandonedExport = async ({
 					{
 						data: {
 							exportId: activeExport.id,
-							error: error instanceof Error ? error.message : String(error),
+							error: getCustomerExportErrorMessage({ error }),
 						},
 					},
 				);
@@ -161,7 +160,6 @@ const resolveAbandonedExport = async ({
 	});
 };
 
-/** A dead run must not block the org forever: resolve it, then create again. */
 export const createExportReclaimingStale = async ({
 	db,
 	logger,

@@ -142,19 +142,17 @@ export const CustomerExportService = {
 		db,
 		id,
 		s3Key,
-		s3UploadId,
 	}: {
 		db: DrizzleCli;
 		id: string;
 		s3Key: string;
-		s3UploadId: string;
 	}) => {
 		await db
 			.update(customerExports)
 			.set({
 				status: CustomerExportStatus.Running,
 				s3_key: s3Key,
-				s3_upload_id: s3UploadId,
+				s3_upload_id: null,
 				started_at: Date.now(),
 			})
 			.where(eq(customerExports.id, id));

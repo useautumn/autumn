@@ -12,10 +12,12 @@ import ctx from "@tests/utils/testInitUtils/createTestContext.js";
 import { and, eq, inArray } from "drizzle-orm";
 import { CusSearchService } from "@/internal/customers/CusSearchService.js";
 import { CustomerExportService } from "@/internal/customers/exports/CustomerExportService.js";
-import { getCustomerExportScalars } from "@/internal/customers/exports/queries/getCustomerExportScalars.js";
+import {
+	getCustomerExportScalars,
+	getCustomerExportUpperBound,
+} from "@/internal/customers/exports/queries/getCustomerExportScalars.js";
 import { generateId } from "@/utils/genUtils.js";
 
-// Mirrors the other integration suites: skip entirely without a seeded org.
 const describeDb = process.env.TESTS_ORG ? describe : describe.skip;
 
 const TEST_PREFIX = "customer-export-jobs";
@@ -128,7 +130,6 @@ describeDb("customer export jobs", () => {
 			);
 		}
 
-		// A completed export frees the slot again.
 		if (first.created) {
 			await CustomerExportService.markCompleted({
 				db: ctx.db,
@@ -260,6 +261,25 @@ describeDb("customer export jobs", () => {
 
 		// A page size of 2 forces the keyset cursor to advance across pages.
 		const pageSize = 2;
+		const createdAtCutoff = Date.now();
+		const upperBoundInternalId = await getCustomerExportUpperBound({
+			db: ctx.db,
+			orgId: ctx.org.id,
+			env: ctx.env,
+			snapshot,
+			createdAtCutoff,
+		});
+		const postSnapshotInternalId = `0000-${generateId("cus")}`;
+		seededCustomerInternalIds.push(postSnapshotInternalId);
+		await ctx.db.insert(customers).values({
+			internal_id: postSnapshotInternalId,
+			org_id: ctx.org.id,
+			env: ctx.env,
+			created_at: createdAtCutoff + 1,
+			id: `${SEARCH_TERM}-post-snapshot`,
+			name: `${SEARCH_TERM}-post-snapshot`,
+			email: `${SEARCH_TERM}-post-snapshot@example.com`,
+		});
 		const walkedInternalIds: string[] = [];
 		let afterInternalId: string | null = null;
 		for (;;) {
@@ -268,6 +288,8 @@ describeDb("customer export jobs", () => {
 				orgId: ctx.org.id,
 				env: ctx.env,
 				snapshot,
+				upperBoundInternalId,
+				createdAtCutoff,
 				afterInternalId,
 				limit: pageSize,
 			});
@@ -279,6 +301,7 @@ describeDb("customer export jobs", () => {
 
 		expect(walkedInternalIds.length).toBe(totalCount);
 		expect(new Set(walkedInternalIds).size).toBe(walkedInternalIds.length);
+		expect(walkedInternalIds).not.toContain(postSnapshotInternalId);
 
 		const expectedRows = await ctx.db
 			.select({ internal_id: customers.internal_id })
@@ -292,6 +315,7 @@ describeDb("customer export jobs", () => {
 			);
 
 		for (const row of expectedRows) {
+			if (row.internal_id === postSnapshotInternalId) continue;
 			expect(walkedInternalIds).toContain(row.internal_id);
 		}
 	});
@@ -344,6 +368,14 @@ describeDb("customer export jobs", () => {
 
 		// A page size of 1 forces the keyset cursor through the filtered walk.
 		const pageSize = 1;
+		const createdAtCutoff = Date.now();
+		const upperBoundInternalId = await getCustomerExportUpperBound({
+			db: ctx.db,
+			orgId: ctx.org.id,
+			env: ctx.env,
+			snapshot,
+			createdAtCutoff,
+		});
 		const walkedInternalIds: string[] = [];
 		let afterInternalId: string | null = null;
 		for (;;) {
@@ -352,6 +384,8 @@ describeDb("customer export jobs", () => {
 				orgId: ctx.org.id,
 				env: ctx.env,
 				snapshot,
+				upperBoundInternalId,
+				createdAtCutoff,
 				afterInternalId,
 				limit: pageSize,
 			});

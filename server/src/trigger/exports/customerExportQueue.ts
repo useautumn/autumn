@@ -4,8 +4,7 @@ export const CUSTOMER_EXPORT_PARENT_QUEUE_NAME = "customer-export-parent";
 
 export const CUSTOMER_EXPORT_PARENT_CONCURRENCY = 2;
 
-// A retried attempt restarts the export from scratch (or reconciles a finished
-// upload); only the final attempt marks the row failed.
+/** Retries restart or reconcile the upload; only the final attempt marks failure. */
 export const CUSTOMER_EXPORT_PARENT_RETRY = { maxAttempts: 3 } as const;
 
 export const CUSTOMER_EXPORT_MAX_DURATION_SECONDS = 86_400;

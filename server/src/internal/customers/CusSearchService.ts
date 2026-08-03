@@ -70,12 +70,12 @@ export class CusSearchService {
 	}): Promise<{ totalCount: number }> {
 		const predicates = buildSearchPredicates({ orgId, env, search, filters });
 
-		const rows = (await db.execute(sql`
+		const rows = await db.execute<{ count: number | string }>(sql`
 			SELECT count(*) AS count
 			FROM ${customers}
 			WHERE ${predicates.whereRaw}
 			${planetScaleTag({ query: "countCustomersForSearch" })}
-		`)) as unknown as Array<{ count: number | string }>;
+		`);
 		return { totalCount: Number(rows[0]?.count ?? 0) };
 	}
 
@@ -263,8 +263,6 @@ export const buildSearchPredicates = ({
 		intervalRaw,
 	].filter((c): c is NonNullable<typeof c> => c !== null);
 
-	// Semi-join instead of a join from customer_products: one row per customer
-	// without DISTINCT, and the same shape the dashboard list already uses.
 	return {
 		kind: "productMode",
 		whereRaw: sql`${baseRaw} AND EXISTS (

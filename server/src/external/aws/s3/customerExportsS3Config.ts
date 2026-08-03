@@ -1,6 +1,6 @@
 import { getAdminS3Config } from "./adminS3Config.js";
 
-const CUSTOMER_EXPORTS_PREFIX = "customer-exports";
+export const CUSTOMER_EXPORTS_PREFIX = "customer-exports";
 
 export const CUSTOMER_EXPORT_FILE_NAME = "customers.csv";
 

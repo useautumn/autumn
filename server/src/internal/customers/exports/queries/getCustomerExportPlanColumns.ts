@@ -4,7 +4,8 @@ import {
 	customerProducts,
 	products,
 } from "@autumn/shared";
-import { sql } from "drizzle-orm";
+import { and, eq, inArray, isNull, sql } from "drizzle-orm";
+import { alias, unionAll } from "drizzle-orm/pg-core";
 import { planetScaleTag } from "@/db/dbUtils.js";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 import type { OneOffProductLookup } from "./getOneOffProductLookup.js";
@@ -83,39 +84,58 @@ export const getCustomerExportPlanRows = async ({
 }): Promise<CustomerExportPlanRow[]> => {
 	if (internalCustomerIds.length === 0) return [];
 
-	const idList = sql.join(
-		internalCustomerIds.map((id) => sql`${id}`),
-		sql`, `,
-	);
-	const liveStatusList = sql.join(
-		[sql`${CusProductStatus.Active}`, sql`${CusProductStatus.PastDue}`],
-		sql`, `,
-	);
+	const liveStatuses = [CusProductStatus.Active, CusProductStatus.PastDue];
+	const parentProducts = alias(customerProducts, "parent_product");
+	const licenseProducts = alias(products, "license_product");
+	const productRows = db
+		.select({
+			internal_customer_id: customerProducts.internal_customer_id,
+			product_id: products.id,
+			internal_product_id: customerProducts.internal_product_id,
+			is_license: sql<boolean>`false`.as("is_license"),
+		})
+		.from(customerProducts)
+		.innerJoin(
+			products,
+			eq(products.internal_id, customerProducts.internal_product_id),
+		)
+		.where(
+			and(
+				inArray(customerProducts.internal_customer_id, internalCustomerIds),
+				inArray(customerProducts.status, liveStatuses),
+				isNull(customerProducts.internal_entity_id),
+				isNull(customerProducts.customer_license_link_id),
+			),
+		);
+	const licenseRows = db
+		.select({
+			internal_customer_id: customerLicenses.internal_customer_id,
+			product_id: licenseProducts.id,
+			internal_product_id: customerLicenses.license_internal_product_id,
+			is_license: sql<boolean>`true`.as("is_license"),
+		})
+		.from(customerLicenses)
+		.innerJoin(
+			parentProducts,
+			eq(parentProducts.id, customerLicenses.parent_customer_product_id),
+		)
+		.innerJoin(
+			licenseProducts,
+			eq(
+				licenseProducts.internal_id,
+				customerLicenses.license_internal_product_id,
+			),
+		)
+		.where(
+			and(
+				inArray(customerLicenses.internal_customer_id, internalCustomerIds),
+				inArray(parentProducts.status, liveStatuses),
+				isNull(parentProducts.internal_entity_id),
+				sql`true ${planetScaleTag({ query: "getCustomerExportPlanRows" })}`,
+			),
+		);
 
-	return (await db.execute(sql`
-		SELECT ${customerProducts.internal_customer_id} AS internal_customer_id,
-		       ${products.id} AS product_id,
-		       ${customerProducts.internal_product_id} AS internal_product_id,
-		       false AS is_license
-		FROM ${customerProducts}
-		JOIN ${products} ON ${products.internal_id} = ${customerProducts.internal_product_id}
-		WHERE ${customerProducts.internal_customer_id} IN (${idList})
-		  AND ${customerProducts.status} IN (${liveStatusList})
-		  AND ${customerProducts.internal_entity_id} IS NULL
-		  AND ${customerProducts.customer_license_link_id} IS NULL
-		UNION ALL
-		SELECT ${customerLicenses.internal_customer_id} AS internal_customer_id,
-		       license_product.id AS product_id,
-		       ${customerLicenses.license_internal_product_id} AS internal_product_id,
-		       true AS is_license
-		FROM ${customerLicenses}
-		JOIN ${customerProducts} parent_product ON parent_product.id = ${customerLicenses.parent_customer_product_id}
-		JOIN ${products} license_product ON license_product.internal_id = ${customerLicenses.license_internal_product_id}
-		WHERE ${customerLicenses.internal_customer_id} IN (${idList})
-		  AND parent_product.status IN (${liveStatusList})
-		  AND parent_product.internal_entity_id IS NULL
-		${planetScaleTag({ query: "getCustomerExportPlanRows" })}
-	`)) as unknown as CustomerExportPlanRow[];
+	return await unionAll(productRows, licenseRows);
 };
 
 export const getCustomerExportPlanColumns = async ({

@@ -1,10 +1,12 @@
+import { ms } from "@autumn/shared";
 import { auth } from "@trigger.dev/sdk/v3";
 import type { Logger } from "@/external/logtail/logtailUtils.js";
+import { getCustomerExportErrorMessage } from "./customerExportErrorMessage.js";
 
 const CUSTOMER_EXPORT_REALTIME_TOKEN_TTL = "1hr";
 // Reused until close to expiry so 5s polls don't mint a trigger.dev token (and
 // remount the client's realtime subscription) on every request.
-const TOKEN_REUSE_WINDOW_MS = 50 * 60 * 1000;
+const TOKEN_REUSE_WINDOW_MS = ms.minutes(50);
 
 type CachedToken = { token: string; mintedAt: number };
 const cachedTokensByRunId = new Map<string, CachedToken>();
@@ -42,7 +44,7 @@ export const createCustomerExportRealtimeToken = async ({
 		logger.warn("customer-export: failed to create realtime access token", {
 			data: {
 				triggerRunId,
-				error: error instanceof Error ? error.message : String(error),
+				error: getCustomerExportErrorMessage({ error }),
 			},
 		});
 		return null;
