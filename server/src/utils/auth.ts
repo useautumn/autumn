@@ -1,10 +1,10 @@
 import "dotenv/config";
 import {
 	ALL_SCOPES,
-	MODERN_SCOPES,
-	OPENID_SCOPES,
 	ac,
 	invitation,
+	MODERN_SCOPES,
+	OPENID_SCOPES,
 	roles,
 	schemas,
 } from "@autumn/shared";
