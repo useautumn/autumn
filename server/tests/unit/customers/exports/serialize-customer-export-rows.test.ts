@@ -82,7 +82,7 @@ describe("serializeCustomerExportRows", () => {
 
 		expect(output.startsWith(UTF8_BOM)).toBe(true);
 		expect(output.split(CSV_ROW_SEPARATOR)[0]).toBe(
-			`${UTF8_BOM}Name,Email,Customer ID,Subscriptions,Purchases,Licenses`,
+			`${UTF8_BOM}Name,Email,Customer ID,Plans,Purchases,Licenses`,
 		);
 	});
 

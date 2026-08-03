@@ -45,7 +45,7 @@ export const CUSTOMER_EXPORT_FIELD_HEADERS: Record<
 	[CustomerExportField.Name]: "Name",
 	[CustomerExportField.Email]: "Email",
 	[CustomerExportField.CustomerId]: "Customer ID",
-	[CustomerExportField.Subscriptions]: "Subscriptions",
+	[CustomerExportField.Subscriptions]: "Plans",
 	[CustomerExportField.Purchases]: "Purchases",
 	[CustomerExportField.Licenses]: "Licenses",
 };
