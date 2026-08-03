@@ -105,7 +105,6 @@ export function parseOpenApi({
 						schema,
 						schemas,
 						requiredFields: (schema.required as string[]) ?? [],
-						mergeVariants: operationId === "createReward",
 					});
 				}
 			}
@@ -136,7 +135,6 @@ export function parseOpenApi({
 							schema,
 							schemas,
 							requiredFields: (schema.required as string[]) ?? [],
-							mergeVariants: operationId === "createReward",
 						});
 						// Store raw schema for sample JSON generation
 						parsed.responseSchemas[statusCode] = schema;
@@ -276,13 +274,11 @@ function parseSchema({
 	schemas,
 	requiredFields,
 	visited = new Set<string>(),
-	mergeVariants = false,
 }: {
 	schema: Record<string, unknown>;
 	schemas: Record<string, unknown>;
 	requiredFields: string[];
 	visited?: Set<string>;
-	mergeVariants?: boolean;
 }): SchemaField[] {
 	// Handle $ref
 	if (schema.$ref) {
@@ -302,45 +298,30 @@ function parseSchema({
 				schemas,
 				requiredFields: (refSchema.required as string[]) ?? [],
 				visited,
-				mergeVariants,
 			});
 		}
 		return [];
 	}
 
-	// Handle anyOf/oneOf
+	// Handle anyOf/oneOf (common for nullable types)
 	if (schema.anyOf || schema.oneOf) {
 		const variants = (schema.anyOf ?? schema.oneOf) as Record<
 			string,
 			unknown
 		>[];
-		const nonNullVariants = variants.filter(
+		// Find the non-null variant
+		const nonNullVariant = variants.find(
 			(v) => v.type !== "null" && !v.$ref?.toString().includes("null"),
 		);
-		const nonNullVariant = nonNullVariants[0];
-		if (nonNullVariants.length === 1 && nonNullVariant) {
+		if (nonNullVariant) {
 			return parseSchema({
 				schema: nonNullVariant,
 				schemas,
 				requiredFields,
 				visited,
-				mergeVariants,
 			});
 		}
-
-		if (!mergeVariants || !shouldMergeVariants(nonNullVariants)) return [];
-
-		return mergeSchemaFields(
-			nonNullVariants.flatMap((variant) =>
-				parseSchema({
-					schema: variant,
-					schemas,
-					requiredFields,
-					visited: new Set(visited),
-					mergeVariants,
-				}),
-			),
-		);
+		return [];
 	}
 
 	// Handle object type
@@ -350,7 +331,6 @@ function parseSchema({
 			schemas,
 			requiredFields,
 			visited,
-			mergeVariants,
 		});
 	}
 
@@ -362,7 +342,6 @@ function parseSchema({
 			schemas,
 			requiredFields: (items.required as string[]) ?? [],
 			visited,
-			mergeVariants,
 		});
 
 		// Return array items as children of a virtual "items" field
@@ -391,14 +370,12 @@ function parseField({
 	schemas,
 	required,
 	visited,
-	mergeVariants = false,
 }: {
 	name: string;
 	schema: Record<string, unknown>;
 	schemas: Record<string, unknown>;
 	required: boolean;
 	visited: Set<string>;
-	mergeVariants?: boolean;
 }): SchemaField | null {
 	let resolvedName = name;
 	let type = resolveType(schema, schemas);
@@ -434,30 +411,27 @@ function parseField({
 					schemas,
 					requiredFields: (refSchema.required as string[]) ?? [],
 					visited,
-					mergeVariants,
 				});
 			}
 		}
 	}
 
-	// Handle anyOf/oneOf
+	// Handle anyOf/oneOf (nullable types)
 	if (schema.anyOf || schema.oneOf) {
 		const variants = (schema.anyOf ?? schema.oneOf) as Record<
 			string,
 			unknown
 		>[];
 		const hasNull = variants.some((v) => v.type === "null");
-		const nonNullVariants = variants.filter((v) => v.type !== "null");
-		const nonNullVariant = nonNullVariants[0];
+		const nonNullVariant = variants.find((v) => v.type !== "null");
 
-		if (nonNullVariants.length === 1 && nonNullVariant) {
+		if (nonNullVariant) {
 			const innerField = parseField({
 				name,
 				schema: nonNullVariant,
 				schemas,
 				required,
 				visited,
-				mergeVariants,
 			});
 
 			if (innerField) {
@@ -473,31 +447,6 @@ function parseField({
 			}
 		}
 
-		if (
-			mergeVariants &&
-			nonNullVariants.length > 1 &&
-			shouldMergeVariants(nonNullVariants)
-		) {
-			const merged = mergeSchemaFields(
-				nonNullVariants.flatMap((variant) => {
-					const field = parseField({
-						name,
-						schema: variant,
-						schemas,
-						required,
-						visited: new Set(visited),
-						mergeVariants,
-					});
-					return field ? [field] : [];
-				}),
-			)[0];
-			if (merged) {
-				merged.description ??= description;
-				if (hasNull) merged.type = `${merged.type} | null`;
-			}
-			return merged ?? null;
-		}
-
 		return {
 			name,
 			type: hasNull ? "any | null" : "any",
@@ -509,8 +458,6 @@ function parseField({
 	// Handle enum
 	if (schema.enum) {
 		enumValues = schema.enum as string[];
-	} else if ("const" in schema && schema.const !== null) {
-		enumValues = [String(schema.const)];
 	}
 
 	// Handle nested object
@@ -520,7 +467,6 @@ function parseField({
 			schemas,
 			requiredFields: (schema.required as string[]) ?? [],
 			visited,
-			mergeVariants,
 		});
 
 		// Flatten pure record objects from:
@@ -571,7 +517,6 @@ function parseField({
 					schemas,
 					requiredFields: (refSchema.required as string[]) ?? [],
 					visited: new Set(visited),
-					mergeVariants,
 				});
 			}
 		}
@@ -580,7 +525,6 @@ function parseField({
 			items,
 			schemas,
 			visited,
-			mergeVariants,
 		});
 	}
 
@@ -599,13 +543,11 @@ function parseObjectFields({
 	schemas,
 	requiredFields,
 	visited,
-	mergeVariants = false,
 }: {
 	schema: Record<string, unknown>;
 	schemas: Record<string, unknown>;
 	requiredFields: string[];
 	visited: Set<string>;
-	mergeVariants?: boolean;
 }): SchemaField[] {
 	const fields: SchemaField[] = [];
 	const properties = schema.properties as Record<string, unknown> | undefined;
@@ -619,7 +561,6 @@ function parseObjectFields({
 				schemas,
 				required: requiredFields.includes(propName),
 				visited: new Set(visited),
-				mergeVariants,
 			});
 			if (field) {
 				fields.push(field);
@@ -638,7 +579,6 @@ function parseObjectFields({
 			schemas,
 			required: false,
 			visited: new Set(visited),
-			mergeVariants,
 		});
 		if (keyField) {
 			fields.push(keyField);
@@ -673,12 +613,10 @@ function getArrayItemChildren({
 	items,
 	schemas,
 	visited,
-	mergeVariants = false,
 }: {
 	items: Record<string, unknown>;
 	schemas: Record<string, unknown>;
 	visited: Set<string>;
-	mergeVariants?: boolean;
 }): SchemaField[] | undefined {
 	// Direct object items
 	if (items.type === "object") {
@@ -687,7 +625,6 @@ function getArrayItemChildren({
 			schemas,
 			requiredFields: (items.required as string[]) ?? [],
 			visited: new Set(visited),
-			mergeVariants,
 		});
 		if (objectChildren.length > 0) {
 			return objectChildren;
@@ -705,7 +642,6 @@ function getArrayItemChildren({
 				schemas,
 				requiredFields: (refSchema.required as string[]) ?? [],
 				visited: new Set(visited),
-				mergeVariants,
 			});
 			if (objectChildren.length > 0) {
 				return objectChildren;
@@ -733,7 +669,6 @@ function getArrayItemChildren({
 				schemas,
 				requiredFields: (variantSchema.required as string[]) ?? [],
 				visited: new Set(visited),
-				mergeVariants,
 			});
 
 			for (const variantField of variantFields) {
@@ -792,54 +727,6 @@ function mergeFieldTypes({
 	return [...typeSet].join(" | ");
 }
 
-function mergeSchemaFields(fields: SchemaField[]): SchemaField[] {
-	const merged = new Map<string, SchemaField>();
-	for (const field of fields) {
-		const existing = merged.get(field.name);
-		if (!existing) {
-			merged.set(field.name, field);
-			continue;
-		}
-
-		merged.set(field.name, {
-			...existing,
-			type: mergeFieldTypes({ left: existing.type, right: field.type }),
-			description: existing.description ?? field.description,
-			children: mergeSchemaFields([
-				...(existing.children ?? []),
-				...(field.children ?? []),
-			]),
-			enumValues: [
-				...new Set([
-					...(existing.enumValues ?? []),
-					...(field.enumValues ?? []),
-				]),
-			],
-			required: existing.required && field.required,
-		});
-	}
-	return [...merged.values()];
-}
-
-function shouldMergeVariants(variants: Record<string, unknown>[]): boolean {
-	const properties = variants.map(
-		(variant) =>
-			variant.properties as Record<string, Record<string, unknown>> | undefined,
-	);
-	if (properties.some((value) => !value)) return false;
-
-	const keys = properties.map((value) => Object.keys(value ?? {}));
-	const hasDiscriminator = keys[0]?.some((key) =>
-		properties.every((value) => value?.[key] && "const" in value[key]),
-	);
-	const areDisjoint = keys.every((left, index) =>
-		keys
-			.slice(index + 1)
-			.every((right) => left.every((key) => !right.includes(key))),
-	);
-	return Boolean(hasDiscriminator || areDisjoint);
-}
-
 /**
  * Resolve the type string for a schema.
  */
@@ -847,10 +734,6 @@ function resolveType(
 	schema: Record<string, unknown>,
 	schemas: Record<string, unknown>,
 ): string {
-	if ("const" in schema) {
-		return schema.const === null ? "null" : typeof schema.const;
-	}
-
 	if (schema.$ref) {
 		const refPath = schema.$ref as string;
 		const refName = refPath.replace("#/components/schemas/", "");

@@ -62,7 +62,7 @@ test.concurrent(
 		);
 
 		const created = CreateRewardResponseSchema.parse(fulfilled[0]?.value);
-		if (!("coupon" in created)) throw new Error("Expected coupon response");
+		if (!created.coupon) throw new Error("Expected coupon response");
 		expect(created).toMatchObject({
 			coupon: {
 				...params.coupon,
@@ -112,7 +112,7 @@ test.concurrent(
 		const created = CreateRewardResponseSchema.parse(
 			await autumnV2_2.post("/rewards.create", params),
 		);
-		if (!("feature_grant" in created)) {
+		if (!created.feature_grant) {
 			throw new Error("Expected feature grant response");
 		}
 		expect(created).toMatchObject({ feature_grant: params.feature_grant });

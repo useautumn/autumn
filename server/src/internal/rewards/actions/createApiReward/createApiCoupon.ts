@@ -10,7 +10,7 @@ import { ProductService } from "@/internal/products/ProductService.js";
 import { getApiCoupon } from "../../apiRewards/getApiCoupon.js";
 import { createReward } from "../createReward.js";
 
-type CouponParams = Extract<CreateRewardParams, { coupon: unknown }>["coupon"];
+type CouponParams = NonNullable<CreateRewardParams["coupon"]>;
 
 const listCouponPlans = async ({
 	ctx,

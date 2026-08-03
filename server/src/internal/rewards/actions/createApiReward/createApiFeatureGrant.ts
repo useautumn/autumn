@@ -13,10 +13,7 @@ import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { getApiFeatureGrant } from "../../apiRewards/getApiFeatureGrant.js";
 import { createReward } from "../createReward.js";
 
-type FeatureGrantParams = Extract<
-	CreateRewardParams,
-	{ feature_grant: unknown }
->["feature_grant"];
+type FeatureGrantParams = NonNullable<CreateRewardParams["feature_grant"]>;
 
 const featureGrantToRewardData = ({
 	ctx,

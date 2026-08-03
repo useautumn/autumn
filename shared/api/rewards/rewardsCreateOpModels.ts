@@ -14,20 +14,20 @@ import {
 } from "./featureGrants/apiFeatureGrantV0.js";
 
 const CouponDurationSchema = z
-	.union([
-		z.object({
-			type: z.literal(CouponDurationType.OneOff),
-			length: z.literal(null),
-		}),
-		z.object({
-			type: z.literal(CouponDurationType.Months),
-			length: z.number().int().positive(),
-		}),
-		z.object({
-			type: z.literal(CouponDurationType.Forever),
-			length: z.literal(null),
-		}),
-	])
+	.object({
+		type: z.enum(CouponDurationType),
+		length: z.number().int().positive().nullable(),
+	})
+	.strict()
+	.superRefine(({ type, length }, ctx) => {
+		if ((type === CouponDurationType.Months) !== (length !== null)) {
+			ctx.addIssue({
+				code: "custom",
+				message: "Length is required for months and must otherwise be null",
+				path: ["length"],
+			});
+		}
+	})
 	.meta({
 		description:
 			"Use a positive integer length for months, and null for one_off or forever.",
@@ -61,43 +61,39 @@ const CreateCouponBaseSchema = ApiCouponV0Schema.omit({
 	})
 	.strict();
 
-const CreateCouponSchema = z
-	.discriminatedUnion("type", [
-		CreateCouponBaseSchema.extend({
-			type: z.literal(RewardType.PercentageDiscount),
-			value: z.number().positive().max(100).meta({
-				description:
-					"Percentage discounts must be at most 100; fixed discounts must be positive.",
-			}),
-		}),
-		CreateCouponBaseSchema.extend({
-			type: z.literal(RewardType.FixedDiscount),
-			value: z.number().positive().meta({
-				description:
-					"Percentage discounts must be at most 100; fixed discounts must be positive.",
-			}),
-		}),
-	])
-	.superRefine((coupon, ctx) => {
-		const codes = coupon.promo_codes.map(({ code }) => code);
-		if (new Set(codes).size !== codes.length) {
-			ctx.addIssue({
-				code: "custom",
-				message: "Promo codes must be unique",
-				path: ["promo_codes"],
-			});
-		}
-		if (
-			coupon.plan_ids &&
-			new Set(coupon.plan_ids).size !== coupon.plan_ids.length
-		) {
-			ctx.addIssue({
-				code: "custom",
-				message: "Plan IDs must be unique",
-				path: ["plan_ids"],
-			});
-		}
-	});
+const CreateCouponSchema = CreateCouponBaseSchema.extend({
+	type: z.enum([RewardType.PercentageDiscount, RewardType.FixedDiscount]),
+	value: z.number().positive().meta({
+		description:
+			"Percentage discounts must be at most 100; fixed discounts must be positive.",
+	}),
+}).superRefine((coupon, ctx) => {
+	if (coupon.type === RewardType.PercentageDiscount && coupon.value > 100) {
+		ctx.addIssue({
+			code: "custom",
+			message: "Percentage discounts must be at most 100",
+			path: ["value"],
+		});
+	}
+	const codes = coupon.promo_codes.map(({ code }) => code);
+	if (new Set(codes).size !== codes.length) {
+		ctx.addIssue({
+			code: "custom",
+			message: "Promo codes must be unique",
+			path: ["promo_codes"],
+		});
+	}
+	if (
+		coupon.plan_ids &&
+		new Set(coupon.plan_ids).size !== coupon.plan_ids.length
+	) {
+		ctx.addIssue({
+			code: "custom",
+			message: "Plan IDs must be unique",
+			path: ["plan_ids"],
+		});
+	}
+});
 
 const GrantExpirySchema = z
 	.object({
@@ -164,26 +160,30 @@ const CreateFeatureGrantSchema = ApiFeatureGrantV0Schema.omit({
 		}
 	});
 
-export const CreateRewardParamsSchema = z.union([
-	z
-		.object({
-			coupon: CreateCouponSchema.meta({
-				title: "CreateRewardCouponRequest",
-				description:
-					"Provide exactly one of coupon or feature_grant, not both.",
-			}),
-		})
-		.strict(),
-	z
-		.object({
-			feature_grant: CreateFeatureGrantSchema.meta({
-				title: "CreateRewardFeatureGrantRequest",
-				description:
-					"Provide exactly one of coupon or feature_grant, not both.",
-			}),
-		})
-		.strict(),
-]);
+const CreateRewardCouponRequestSchema = CreateCouponSchema.meta({
+	title: "CreateRewardCouponRequest",
+	description: "Provide exactly one of coupon or feature_grant, not both.",
+});
+
+const CreateRewardFeatureGrantRequestSchema = CreateFeatureGrantSchema.meta({
+	title: "CreateRewardFeatureGrantRequest",
+	description: "Provide exactly one of coupon or feature_grant, not both.",
+});
+
+export const CreateRewardParamsSchema = z
+	.object({
+		coupon: CreateRewardCouponRequestSchema.optional(),
+		feature_grant: CreateRewardFeatureGrantRequestSchema.optional(),
+	})
+	.strict()
+	.superRefine(({ coupon, feature_grant }, ctx) => {
+		if (Boolean(coupon) === Boolean(feature_grant)) {
+			ctx.addIssue({
+				code: "custom",
+				message: "Provide exactly one of coupon or feature_grant",
+			});
+		}
+	});
 
 const CreateRewardCouponResponseSchema = ApiCouponV0Schema.extend({
 	duration: ApiCouponV0Schema.shape.duration.meta({
@@ -217,10 +217,20 @@ const CreateRewardFeatureGrantResponseSchema = ApiFeatureGrantV0Schema.extend({
 	examples: [FEATURE_GRANT_V0_EXAMPLE],
 });
 
-export const CreateRewardResponseSchema = z.union([
-	z.object({ coupon: CreateRewardCouponResponseSchema }).strict(),
-	z.object({ feature_grant: CreateRewardFeatureGrantResponseSchema }).strict(),
-]);
+export const CreateRewardResponseSchema = z
+	.object({
+		coupon: CreateRewardCouponResponseSchema.optional(),
+		feature_grant: CreateRewardFeatureGrantResponseSchema.optional(),
+	})
+	.strict()
+	.superRefine(({ coupon, feature_grant }, ctx) => {
+		if (Boolean(coupon) === Boolean(feature_grant)) {
+			ctx.addIssue({
+				code: "custom",
+				message: "Expected exactly one of coupon or feature_grant",
+			});
+		}
+	});
 
 export type CreateRewardParams = z.infer<typeof CreateRewardParamsSchema>;
 export type CreateRewardResponse = z.infer<typeof CreateRewardResponseSchema>;

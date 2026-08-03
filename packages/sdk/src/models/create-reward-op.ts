@@ -9,17 +9,70 @@ import * as openEnums from "../types/enums.js";
 import { ClosedEnum, OpenEnum } from "../types/enums.js";
 import { Result as SafeParseResult } from "../types/fp.js";
 import * as types from "../types/primitives.js";
-import { smartUnion } from "../types/smart-union.js";
 import { SDKValidationError } from "./sdk-validation-error.js";
 
 export type CreateRewardGlobals = {
   xApiVersion?: string | undefined;
 };
 
+export const DurationTypeRequestBody = {
+  OneOff: "one_off",
+  Months: "months",
+  Forever: "forever",
+} as const;
+export type DurationTypeRequestBody = ClosedEnum<
+  typeof DurationTypeRequestBody
+>;
+
+/**
+ * Use a positive integer length for months, and null for one_off or forever.
+ */
+export type CreateRewardDuration = {
+  type: DurationTypeRequestBody;
+  length: number | null;
+};
+
+export type CreateRewardCouponPromoCode = {
+  code: string;
+  globalMaxRedemption?: number | null | undefined;
+  firstTimeTransaction?: boolean | null | undefined;
+};
+
+export const CouponTypeRequestBody = {
+  PercentageDiscount: "percentage_discount",
+  FixedDiscount: "fixed_discount",
+} as const;
+export type CouponTypeRequestBody = ClosedEnum<typeof CouponTypeRequestBody>;
+
+/**
+ * Provide exactly one of coupon or feature_grant, not both.
+ */
+export type CreateRewardCouponRequest = {
+  id: string;
+  name: string;
+  /**
+   * Use a positive integer length for months, and null for one_off or forever.
+   */
+  duration: CreateRewardDuration;
+  /**
+   * Plan IDs must be unique.
+   */
+  planIds: Array<string> | null;
+  /**
+   * Promo code values must be unique.
+   */
+  promoCodes: Array<CreateRewardCouponPromoCode>;
+  type: CouponTypeRequestBody;
+  /**
+   * Percentage discounts must be at most 100; fixed discounts must be positive.
+   */
+  value: number;
+};
+
 /**
  * The unit of time the grant lasts.
  */
-export const CreateRewardParamsType = {
+export const ExpiryTypeRequestBody = {
   Day: "day",
   Week: "week",
   Month: "month",
@@ -28,13 +81,13 @@ export const CreateRewardParamsType = {
 /**
  * The unit of time the grant lasts.
  */
-export type CreateRewardParamsType = ClosedEnum<typeof CreateRewardParamsType>;
+export type ExpiryTypeRequestBody = ClosedEnum<typeof ExpiryTypeRequestBody>;
 
 export type ExpiryRequest = {
   /**
    * The unit of time the grant lasts.
    */
-  type: CreateRewardParamsType;
+  type: ExpiryTypeRequestBody;
   /**
    * The positive integer count of periods before the grant expires.
    */
@@ -74,136 +127,107 @@ export type CreateRewardFeatureGrantRequest = {
   promoCodes: Array<CreateRewardFeatureGrantPromoCode>;
 };
 
-export type CreateRewardParams2 = {
+export type CreateRewardParams = {
   /**
    * Provide exactly one of coupon or feature_grant, not both.
    */
-  featureGrant: CreateRewardFeatureGrantRequest;
-};
-
-export type CreateRewardDuration6 = {
-  type: "forever";
-  length: null;
-};
-
-export type CreateRewardDuration5 = {
-  type: "months";
-  length: number;
-};
-
-export type CreateRewardDuration4 = {
-  type: "one_off";
-  length: null;
-};
-
-/**
- * Use a positive integer length for months, and null for one_off or forever.
- */
-export type DurationUnion2 =
-  | CreateRewardDuration4
-  | CreateRewardDuration5
-  | CreateRewardDuration6;
-
-export type CreateRewardCouponRequestPromoCode2 = {
-  code: string;
-  globalMaxRedemption?: number | null | undefined;
-  firstTimeTransaction?: boolean | null | undefined;
-};
-
-export type CreateRewardCouponRequest2 = {
-  id: string;
-  name: string;
-  /**
-   * Use a positive integer length for months, and null for one_off or forever.
-   */
-  duration:
-    | CreateRewardDuration4
-    | CreateRewardDuration5
-    | CreateRewardDuration6;
-  /**
-   * Plan IDs must be unique.
-   */
-  planIds: Array<string> | null;
-  /**
-   * Promo code values must be unique.
-   */
-  promoCodes: Array<CreateRewardCouponRequestPromoCode2>;
-  type: "fixed_discount";
-  /**
-   * Percentage discounts must be at most 100; fixed discounts must be positive.
-   */
-  value: number;
-};
-
-export type CreateRewardDuration3 = {
-  type: "forever";
-  length: null;
-};
-
-export type CreateRewardDuration2 = {
-  type: "months";
-  length: number;
-};
-
-export type CreateRewardDuration1 = {
-  type: "one_off";
-  length: null;
-};
-
-/**
- * Use a positive integer length for months, and null for one_off or forever.
- */
-export type DurationUnion1 =
-  | CreateRewardDuration1
-  | CreateRewardDuration2
-  | CreateRewardDuration3;
-
-export type CreateRewardCouponRequestPromoCode1 = {
-  code: string;
-  globalMaxRedemption?: number | null | undefined;
-  firstTimeTransaction?: boolean | null | undefined;
-};
-
-export type CreateRewardCouponRequest1 = {
-  id: string;
-  name: string;
-  /**
-   * Use a positive integer length for months, and null for one_off or forever.
-   */
-  duration:
-    | CreateRewardDuration1
-    | CreateRewardDuration2
-    | CreateRewardDuration3;
-  /**
-   * Plan IDs must be unique.
-   */
-  planIds: Array<string> | null;
-  /**
-   * Promo code values must be unique.
-   */
-  promoCodes: Array<CreateRewardCouponRequestPromoCode1>;
-  type: "percentage_discount";
-  /**
-   * Percentage discounts must be at most 100; fixed discounts must be positive.
-   */
-  value: number;
-};
-
-/**
- * Provide exactly one of coupon or feature_grant, not both.
- */
-export type CreateRewardCouponRequestUnion =
-  | CreateRewardCouponRequest1
-  | CreateRewardCouponRequest2;
-
-export type CreateRewardParams1 = {
+  coupon?: CreateRewardCouponRequest | undefined;
   /**
    * Provide exactly one of coupon or feature_grant, not both.
    */
-  coupon: CreateRewardCouponRequest1 | CreateRewardCouponRequest2;
+  featureGrant?: CreateRewardFeatureGrantRequest | undefined;
 };
 
-export type CreateRewardParamsUnion = CreateRewardParams1 | CreateRewardParams2;
+/**
+ * The type of discount: percentage_discount, fixed_discount, or invoice_credits.
+ */
+export const CreateRewardCouponTypeResponse = {
+  PercentageDiscount: "percentage_discount",
+  FixedDiscount: "fixed_discount",
+  InvoiceCredits: "invoice_credits",
+} as const;
+/**
+ * The type of discount: percentage_discount, fixed_discount, or invoice_credits.
+ */
+export type CreateRewardCouponTypeResponse = OpenEnum<
+  typeof CreateRewardCouponTypeResponse
+>;
+
+/**
+ * The unit of time the duration is measured in.
+ */
+export const CreateRewardDurationTypeResponse = {
+  OneOff: "one_off",
+  Months: "months",
+  Forever: "forever",
+} as const;
+/**
+ * The unit of time the duration is measured in.
+ */
+export type CreateRewardDurationTypeResponse = OpenEnum<
+  typeof CreateRewardDurationTypeResponse
+>;
+
+/**
+ * How long the coupon applies once redeemed.
+ */
+export type CreateRewardDurationResponse = {
+  /**
+   * The unit of time the duration is measured in.
+   */
+  type: CreateRewardDurationTypeResponse;
+  /**
+   * The number of `type` periods the duration lasts, or null when the type has no length (e.g. one_off, forever).
+   */
+  length: number | null;
+};
+
+export type CreateRewardCouponPromoCodeResponse = {
+  /**
+   * The promo code customers enter to redeem the coupon.
+   */
+  code: string;
+  /**
+   * Maximum number of times this promo code can be redeemed across all customers, or null for unlimited.
+   */
+  globalMaxRedemption?: number | null | undefined;
+  /**
+   * Whether this promo code can only be applied to a customer's first transaction.
+   */
+  firstTimeTransaction?: boolean | null | undefined;
+};
+
+export type CreateRewardCouponResponse = {
+  /**
+   * The unique identifier for the coupon.
+   */
+  id: string;
+  /**
+   * A human-readable name for the coupon.
+   */
+  name?: string | null | undefined;
+  /**
+   * The type of discount: percentage_discount, fixed_discount, or invoice_credits.
+   */
+  type: CreateRewardCouponTypeResponse;
+  /**
+   * The discount value. A percentage for percentage_discount, or an amount for fixed_discount / invoice_credits.
+   */
+  value: number;
+  /**
+   * How long the coupon applies once redeemed.
+   */
+  duration: CreateRewardDurationResponse;
+  /**
+   * The plan IDs the coupon applies to, or null when it applies to all plans.
+   */
+  planIds: Array<string> | null;
+  promoCodes: Array<CreateRewardCouponPromoCodeResponse>;
+  /**
+   * The Unix timestamp (in milliseconds) when the coupon was created.
+   */
+  createdAt: number;
+};
 
 /**
  * The unit of time the grant lasts.
@@ -275,112 +299,129 @@ export type CreateRewardFeatureGrantResponse = {
   createdAt: number;
 };
 
-export type ResponseBody2 = {
-  featureGrant: CreateRewardFeatureGrantResponse;
-};
-
-/**
- * The type of discount: percentage_discount, fixed_discount, or invoice_credits.
- */
-export const CreateRewardCouponType = {
-  PercentageDiscount: "percentage_discount",
-  FixedDiscount: "fixed_discount",
-  InvoiceCredits: "invoice_credits",
-} as const;
-/**
- * The type of discount: percentage_discount, fixed_discount, or invoice_credits.
- */
-export type CreateRewardCouponType = OpenEnum<typeof CreateRewardCouponType>;
-
-/**
- * The unit of time the duration is measured in.
- */
-export const CreateRewardDurationType = {
-  OneOff: "one_off",
-  Months: "months",
-  Forever: "forever",
-} as const;
-/**
- * The unit of time the duration is measured in.
- */
-export type CreateRewardDurationType = OpenEnum<
-  typeof CreateRewardDurationType
->;
-
-/**
- * How long the coupon applies once redeemed.
- */
-export type CreateRewardDurationResponse = {
-  /**
-   * The unit of time the duration is measured in.
-   */
-  type: CreateRewardDurationType;
-  /**
-   * The number of `type` periods the duration lasts, or null when the type has no length (e.g. one_off, forever).
-   */
-  length: number | null;
-};
-
-export type CreateRewardCouponPromoCodeResponse = {
-  /**
-   * The promo code customers enter to redeem the coupon.
-   */
-  code: string;
-  /**
-   * Maximum number of times this promo code can be redeemed across all customers, or null for unlimited.
-   */
-  globalMaxRedemption?: number | null | undefined;
-  /**
-   * Whether this promo code can only be applied to a customer's first transaction.
-   */
-  firstTimeTransaction?: boolean | null | undefined;
-};
-
-export type CreateRewardCouponResponse = {
-  /**
-   * The unique identifier for the coupon.
-   */
-  id: string;
-  /**
-   * A human-readable name for the coupon.
-   */
-  name?: string | null | undefined;
-  /**
-   * The type of discount: percentage_discount, fixed_discount, or invoice_credits.
-   */
-  type: CreateRewardCouponType;
-  /**
-   * The discount value. A percentage for percentage_discount, or an amount for fixed_discount / invoice_credits.
-   */
-  value: number;
-  /**
-   * How long the coupon applies once redeemed.
-   */
-  duration: CreateRewardDurationResponse;
-  /**
-   * The plan IDs the coupon applies to, or null when it applies to all plans.
-   */
-  planIds: Array<string> | null;
-  promoCodes: Array<CreateRewardCouponPromoCodeResponse>;
-  /**
-   * The Unix timestamp (in milliseconds) when the coupon was created.
-   */
-  createdAt: number;
-};
-
-export type ResponseBody1 = {
-  coupon: CreateRewardCouponResponse;
-};
-
 /**
  * OK
  */
-export type CreateRewardResponse = ResponseBody1 | ResponseBody2;
+export type CreateRewardResponse = {
+  coupon?: CreateRewardCouponResponse | undefined;
+  featureGrant?: CreateRewardFeatureGrantResponse | undefined;
+};
 
 /** @internal */
-export const CreateRewardParamsType$outboundSchema: z.ZodMiniEnum<
-  typeof CreateRewardParamsType
-> = z.enum(CreateRewardParamsType);
+export const DurationTypeRequestBody$outboundSchema: z.ZodMiniEnum<
+  typeof DurationTypeRequestBody
+> = z.enum(DurationTypeRequestBody);
+
+/** @internal */
+export type CreateRewardDuration$Outbound = {
+  type: string;
+  length: number | null;
+};
+
+/** @internal */
+export const CreateRewardDuration$outboundSchema: z.ZodMiniType<
+  CreateRewardDuration$Outbound,
+  CreateRewardDuration
+> = z.object({
+  type: DurationTypeRequestBody$outboundSchema,
+  length: z.nullable(z.int()),
+});
+
+export function createRewardDurationToJSON(
+  createRewardDuration: CreateRewardDuration,
+): string {
+  return JSON.stringify(
+    CreateRewardDuration$outboundSchema.parse(createRewardDuration),
+  );
+}
+
+/** @internal */
+export type CreateRewardCouponPromoCode$Outbound = {
+  code: string;
+  global_max_redemption?: number | null | undefined;
+  first_time_transaction?: boolean | null | undefined;
+};
+
+/** @internal */
+export const CreateRewardCouponPromoCode$outboundSchema: z.ZodMiniType<
+  CreateRewardCouponPromoCode$Outbound,
+  CreateRewardCouponPromoCode
+> = z.pipe(
+  z.object({
+    code: z.string(),
+    globalMaxRedemption: z.optional(z.nullable(z.int())),
+    firstTimeTransaction: z.optional(z.nullable(z.boolean())),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      globalMaxRedemption: "global_max_redemption",
+      firstTimeTransaction: "first_time_transaction",
+    });
+  }),
+);
+
+export function createRewardCouponPromoCodeToJSON(
+  createRewardCouponPromoCode: CreateRewardCouponPromoCode,
+): string {
+  return JSON.stringify(
+    CreateRewardCouponPromoCode$outboundSchema.parse(
+      createRewardCouponPromoCode,
+    ),
+  );
+}
+
+/** @internal */
+export const CouponTypeRequestBody$outboundSchema: z.ZodMiniEnum<
+  typeof CouponTypeRequestBody
+> = z.enum(CouponTypeRequestBody);
+
+/** @internal */
+export type CreateRewardCouponRequest$Outbound = {
+  id: string;
+  name: string;
+  duration: CreateRewardDuration$Outbound;
+  plan_ids: Array<string> | null;
+  promo_codes: Array<CreateRewardCouponPromoCode$Outbound>;
+  type: string;
+  value: number;
+};
+
+/** @internal */
+export const CreateRewardCouponRequest$outboundSchema: z.ZodMiniType<
+  CreateRewardCouponRequest$Outbound,
+  CreateRewardCouponRequest
+> = z.pipe(
+  z.object({
+    id: z.string(),
+    name: z.string(),
+    duration: z.lazy(() => CreateRewardDuration$outboundSchema),
+    planIds: z.nullable(z.array(z.string())),
+    promoCodes: z.array(
+      z.lazy(() => CreateRewardCouponPromoCode$outboundSchema),
+    ),
+    type: CouponTypeRequestBody$outboundSchema,
+    value: z.number(),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      planIds: "plan_ids",
+      promoCodes: "promo_codes",
+    });
+  }),
+);
+
+export function createRewardCouponRequestToJSON(
+  createRewardCouponRequest: CreateRewardCouponRequest,
+): string {
+  return JSON.stringify(
+    CreateRewardCouponRequest$outboundSchema.parse(createRewardCouponRequest),
+  );
+}
+
+/** @internal */
+export const ExpiryTypeRequestBody$outboundSchema: z.ZodMiniEnum<
+  typeof ExpiryTypeRequestBody
+> = z.enum(ExpiryTypeRequestBody);
 
 /** @internal */
 export type ExpiryRequest$Outbound = {
@@ -393,7 +434,7 @@ export const ExpiryRequest$outboundSchema: z.ZodMiniType<
   ExpiryRequest$Outbound,
   ExpiryRequest
 > = z.object({
-  type: CreateRewardParamsType$outboundSchema,
+  type: ExpiryTypeRequestBody$outboundSchema,
   length: z.int(),
 });
 
@@ -504,17 +545,21 @@ export function createRewardFeatureGrantRequestToJSON(
 }
 
 /** @internal */
-export type CreateRewardParams2$Outbound = {
-  feature_grant: CreateRewardFeatureGrantRequest$Outbound;
+export type CreateRewardParams$Outbound = {
+  coupon?: CreateRewardCouponRequest$Outbound | undefined;
+  feature_grant?: CreateRewardFeatureGrantRequest$Outbound | undefined;
 };
 
 /** @internal */
-export const CreateRewardParams2$outboundSchema: z.ZodMiniType<
-  CreateRewardParams2$Outbound,
-  CreateRewardParams2
+export const CreateRewardParams$outboundSchema: z.ZodMiniType<
+  CreateRewardParams$Outbound,
+  CreateRewardParams
 > = z.pipe(
   z.object({
-    featureGrant: z.lazy(() => CreateRewardFeatureGrantRequest$outboundSchema),
+    coupon: z.optional(z.lazy(() => CreateRewardCouponRequest$outboundSchema)),
+    featureGrant: z.optional(
+      z.lazy(() => CreateRewardFeatureGrantRequest$outboundSchema),
+    ),
   }),
   z.transform((v) => {
     return remap$(v, {
@@ -523,431 +568,107 @@ export const CreateRewardParams2$outboundSchema: z.ZodMiniType<
   }),
 );
 
-export function createRewardParams2ToJSON(
-  createRewardParams2: CreateRewardParams2,
+export function createRewardParamsToJSON(
+  createRewardParams: CreateRewardParams,
 ): string {
   return JSON.stringify(
-    CreateRewardParams2$outboundSchema.parse(createRewardParams2),
+    CreateRewardParams$outboundSchema.parse(createRewardParams),
   );
 }
 
 /** @internal */
-export type CreateRewardDuration6$Outbound = {
-  type: "forever";
-  length: null;
-};
+export const CreateRewardCouponTypeResponse$inboundSchema: z.ZodMiniType<
+  CreateRewardCouponTypeResponse,
+  unknown
+> = openEnums.inboundSchema(CreateRewardCouponTypeResponse);
 
 /** @internal */
-export const CreateRewardDuration6$outboundSchema: z.ZodMiniType<
-  CreateRewardDuration6$Outbound,
-  CreateRewardDuration6
+export const CreateRewardDurationTypeResponse$inboundSchema: z.ZodMiniType<
+  CreateRewardDurationTypeResponse,
+  unknown
+> = openEnums.inboundSchema(CreateRewardDurationTypeResponse);
+
+/** @internal */
+export const CreateRewardDurationResponse$inboundSchema: z.ZodMiniType<
+  CreateRewardDurationResponse,
+  unknown
 > = z.object({
-  type: z.literal("forever"),
-  length: z.literal(null),
+  type: CreateRewardDurationTypeResponse$inboundSchema,
+  length: types.nullable(types.number()),
 });
 
-export function createRewardDuration6ToJSON(
-  createRewardDuration6: CreateRewardDuration6,
-): string {
-  return JSON.stringify(
-    CreateRewardDuration6$outboundSchema.parse(createRewardDuration6),
+export function createRewardDurationResponseFromJSON(
+  jsonString: string,
+): SafeParseResult<CreateRewardDurationResponse, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => CreateRewardDurationResponse$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'CreateRewardDurationResponse' from JSON`,
   );
 }
 
 /** @internal */
-export type CreateRewardDuration5$Outbound = {
-  type: "months";
-  length: number;
-};
-
-/** @internal */
-export const CreateRewardDuration5$outboundSchema: z.ZodMiniType<
-  CreateRewardDuration5$Outbound,
-  CreateRewardDuration5
-> = z.object({
-  type: z.literal("months"),
-  length: z.int(),
-});
-
-export function createRewardDuration5ToJSON(
-  createRewardDuration5: CreateRewardDuration5,
-): string {
-  return JSON.stringify(
-    CreateRewardDuration5$outboundSchema.parse(createRewardDuration5),
-  );
-}
-
-/** @internal */
-export type CreateRewardDuration4$Outbound = {
-  type: "one_off";
-  length: null;
-};
-
-/** @internal */
-export const CreateRewardDuration4$outboundSchema: z.ZodMiniType<
-  CreateRewardDuration4$Outbound,
-  CreateRewardDuration4
-> = z.object({
-  type: z.literal("one_off"),
-  length: z.literal(null),
-});
-
-export function createRewardDuration4ToJSON(
-  createRewardDuration4: CreateRewardDuration4,
-): string {
-  return JSON.stringify(
-    CreateRewardDuration4$outboundSchema.parse(createRewardDuration4),
-  );
-}
-
-/** @internal */
-export type DurationUnion2$Outbound =
-  | CreateRewardDuration4$Outbound
-  | CreateRewardDuration5$Outbound
-  | CreateRewardDuration6$Outbound;
-
-/** @internal */
-export const DurationUnion2$outboundSchema: z.ZodMiniType<
-  DurationUnion2$Outbound,
-  DurationUnion2
-> = z.union([
-  z.lazy(() => CreateRewardDuration4$outboundSchema),
-  z.lazy(() => CreateRewardDuration5$outboundSchema),
-  z.lazy(() => CreateRewardDuration6$outboundSchema),
-]);
-
-export function durationUnion2ToJSON(durationUnion2: DurationUnion2): string {
-  return JSON.stringify(DurationUnion2$outboundSchema.parse(durationUnion2));
-}
-
-/** @internal */
-export type CreateRewardCouponRequestPromoCode2$Outbound = {
-  code: string;
-  global_max_redemption?: number | null | undefined;
-  first_time_transaction?: boolean | null | undefined;
-};
-
-/** @internal */
-export const CreateRewardCouponRequestPromoCode2$outboundSchema: z.ZodMiniType<
-  CreateRewardCouponRequestPromoCode2$Outbound,
-  CreateRewardCouponRequestPromoCode2
+export const CreateRewardCouponPromoCodeResponse$inboundSchema: z.ZodMiniType<
+  CreateRewardCouponPromoCodeResponse,
+  unknown
 > = z.pipe(
   z.object({
-    code: z.string(),
-    globalMaxRedemption: z.optional(z.nullable(z.int())),
-    firstTimeTransaction: z.optional(z.nullable(z.boolean())),
+    code: types.string(),
+    global_max_redemption: z.optional(z.nullable(types.number())),
+    first_time_transaction: z.optional(z.nullable(types.boolean())),
   }),
   z.transform((v) => {
     return remap$(v, {
-      globalMaxRedemption: "global_max_redemption",
-      firstTimeTransaction: "first_time_transaction",
+      "global_max_redemption": "globalMaxRedemption",
+      "first_time_transaction": "firstTimeTransaction",
     });
   }),
 );
 
-export function createRewardCouponRequestPromoCode2ToJSON(
-  createRewardCouponRequestPromoCode2: CreateRewardCouponRequestPromoCode2,
-): string {
-  return JSON.stringify(
-    CreateRewardCouponRequestPromoCode2$outboundSchema.parse(
-      createRewardCouponRequestPromoCode2,
-    ),
+export function createRewardCouponPromoCodeResponseFromJSON(
+  jsonString: string,
+): SafeParseResult<CreateRewardCouponPromoCodeResponse, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) =>
+      CreateRewardCouponPromoCodeResponse$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'CreateRewardCouponPromoCodeResponse' from JSON`,
   );
 }
 
 /** @internal */
-export type CreateRewardCouponRequest2$Outbound = {
-  id: string;
-  name: string;
-  duration:
-    | CreateRewardDuration4$Outbound
-    | CreateRewardDuration5$Outbound
-    | CreateRewardDuration6$Outbound;
-  plan_ids: Array<string> | null;
-  promo_codes: Array<CreateRewardCouponRequestPromoCode2$Outbound>;
-  type: "fixed_discount";
-  value: number;
-};
-
-/** @internal */
-export const CreateRewardCouponRequest2$outboundSchema: z.ZodMiniType<
-  CreateRewardCouponRequest2$Outbound,
-  CreateRewardCouponRequest2
+export const CreateRewardCouponResponse$inboundSchema: z.ZodMiniType<
+  CreateRewardCouponResponse,
+  unknown
 > = z.pipe(
   z.object({
-    id: z.string(),
-    name: z.string(),
-    duration: z.union([
-      z.lazy(() => CreateRewardDuration4$outboundSchema),
-      z.lazy(() => CreateRewardDuration5$outboundSchema),
-      z.lazy(() => CreateRewardDuration6$outboundSchema),
-    ]),
-    planIds: z.nullable(z.array(z.string())),
-    promoCodes: z.array(
-      z.lazy(() => CreateRewardCouponRequestPromoCode2$outboundSchema),
+    id: types.string(),
+    name: z.optional(z.nullable(types.string())),
+    type: CreateRewardCouponTypeResponse$inboundSchema,
+    value: types.number(),
+    duration: z.lazy(() => CreateRewardDurationResponse$inboundSchema),
+    plan_ids: types.nullable(z.array(types.string())),
+    promo_codes: z.array(
+      z.lazy(() => CreateRewardCouponPromoCodeResponse$inboundSchema),
     ),
-    type: z.literal("fixed_discount"),
-    value: z.number(),
+    created_at: types.number(),
   }),
   z.transform((v) => {
     return remap$(v, {
-      planIds: "plan_ids",
-      promoCodes: "promo_codes",
+      "plan_ids": "planIds",
+      "promo_codes": "promoCodes",
+      "created_at": "createdAt",
     });
   }),
 );
 
-export function createRewardCouponRequest2ToJSON(
-  createRewardCouponRequest2: CreateRewardCouponRequest2,
-): string {
-  return JSON.stringify(
-    CreateRewardCouponRequest2$outboundSchema.parse(createRewardCouponRequest2),
-  );
-}
-
-/** @internal */
-export type CreateRewardDuration3$Outbound = {
-  type: "forever";
-  length: null;
-};
-
-/** @internal */
-export const CreateRewardDuration3$outboundSchema: z.ZodMiniType<
-  CreateRewardDuration3$Outbound,
-  CreateRewardDuration3
-> = z.object({
-  type: z.literal("forever"),
-  length: z.literal(null),
-});
-
-export function createRewardDuration3ToJSON(
-  createRewardDuration3: CreateRewardDuration3,
-): string {
-  return JSON.stringify(
-    CreateRewardDuration3$outboundSchema.parse(createRewardDuration3),
-  );
-}
-
-/** @internal */
-export type CreateRewardDuration2$Outbound = {
-  type: "months";
-  length: number;
-};
-
-/** @internal */
-export const CreateRewardDuration2$outboundSchema: z.ZodMiniType<
-  CreateRewardDuration2$Outbound,
-  CreateRewardDuration2
-> = z.object({
-  type: z.literal("months"),
-  length: z.int(),
-});
-
-export function createRewardDuration2ToJSON(
-  createRewardDuration2: CreateRewardDuration2,
-): string {
-  return JSON.stringify(
-    CreateRewardDuration2$outboundSchema.parse(createRewardDuration2),
-  );
-}
-
-/** @internal */
-export type CreateRewardDuration1$Outbound = {
-  type: "one_off";
-  length: null;
-};
-
-/** @internal */
-export const CreateRewardDuration1$outboundSchema: z.ZodMiniType<
-  CreateRewardDuration1$Outbound,
-  CreateRewardDuration1
-> = z.object({
-  type: z.literal("one_off"),
-  length: z.literal(null),
-});
-
-export function createRewardDuration1ToJSON(
-  createRewardDuration1: CreateRewardDuration1,
-): string {
-  return JSON.stringify(
-    CreateRewardDuration1$outboundSchema.parse(createRewardDuration1),
-  );
-}
-
-/** @internal */
-export type DurationUnion1$Outbound =
-  | CreateRewardDuration1$Outbound
-  | CreateRewardDuration2$Outbound
-  | CreateRewardDuration3$Outbound;
-
-/** @internal */
-export const DurationUnion1$outboundSchema: z.ZodMiniType<
-  DurationUnion1$Outbound,
-  DurationUnion1
-> = z.union([
-  z.lazy(() => CreateRewardDuration1$outboundSchema),
-  z.lazy(() => CreateRewardDuration2$outboundSchema),
-  z.lazy(() => CreateRewardDuration3$outboundSchema),
-]);
-
-export function durationUnion1ToJSON(durationUnion1: DurationUnion1): string {
-  return JSON.stringify(DurationUnion1$outboundSchema.parse(durationUnion1));
-}
-
-/** @internal */
-export type CreateRewardCouponRequestPromoCode1$Outbound = {
-  code: string;
-  global_max_redemption?: number | null | undefined;
-  first_time_transaction?: boolean | null | undefined;
-};
-
-/** @internal */
-export const CreateRewardCouponRequestPromoCode1$outboundSchema: z.ZodMiniType<
-  CreateRewardCouponRequestPromoCode1$Outbound,
-  CreateRewardCouponRequestPromoCode1
-> = z.pipe(
-  z.object({
-    code: z.string(),
-    globalMaxRedemption: z.optional(z.nullable(z.int())),
-    firstTimeTransaction: z.optional(z.nullable(z.boolean())),
-  }),
-  z.transform((v) => {
-    return remap$(v, {
-      globalMaxRedemption: "global_max_redemption",
-      firstTimeTransaction: "first_time_transaction",
-    });
-  }),
-);
-
-export function createRewardCouponRequestPromoCode1ToJSON(
-  createRewardCouponRequestPromoCode1: CreateRewardCouponRequestPromoCode1,
-): string {
-  return JSON.stringify(
-    CreateRewardCouponRequestPromoCode1$outboundSchema.parse(
-      createRewardCouponRequestPromoCode1,
-    ),
-  );
-}
-
-/** @internal */
-export type CreateRewardCouponRequest1$Outbound = {
-  id: string;
-  name: string;
-  duration:
-    | CreateRewardDuration1$Outbound
-    | CreateRewardDuration2$Outbound
-    | CreateRewardDuration3$Outbound;
-  plan_ids: Array<string> | null;
-  promo_codes: Array<CreateRewardCouponRequestPromoCode1$Outbound>;
-  type: "percentage_discount";
-  value: number;
-};
-
-/** @internal */
-export const CreateRewardCouponRequest1$outboundSchema: z.ZodMiniType<
-  CreateRewardCouponRequest1$Outbound,
-  CreateRewardCouponRequest1
-> = z.pipe(
-  z.object({
-    id: z.string(),
-    name: z.string(),
-    duration: z.union([
-      z.lazy(() => CreateRewardDuration1$outboundSchema),
-      z.lazy(() => CreateRewardDuration2$outboundSchema),
-      z.lazy(() => CreateRewardDuration3$outboundSchema),
-    ]),
-    planIds: z.nullable(z.array(z.string())),
-    promoCodes: z.array(
-      z.lazy(() => CreateRewardCouponRequestPromoCode1$outboundSchema),
-    ),
-    type: z.literal("percentage_discount"),
-    value: z.number(),
-  }),
-  z.transform((v) => {
-    return remap$(v, {
-      planIds: "plan_ids",
-      promoCodes: "promo_codes",
-    });
-  }),
-);
-
-export function createRewardCouponRequest1ToJSON(
-  createRewardCouponRequest1: CreateRewardCouponRequest1,
-): string {
-  return JSON.stringify(
-    CreateRewardCouponRequest1$outboundSchema.parse(createRewardCouponRequest1),
-  );
-}
-
-/** @internal */
-export type CreateRewardCouponRequestUnion$Outbound =
-  | CreateRewardCouponRequest1$Outbound
-  | CreateRewardCouponRequest2$Outbound;
-
-/** @internal */
-export const CreateRewardCouponRequestUnion$outboundSchema: z.ZodMiniType<
-  CreateRewardCouponRequestUnion$Outbound,
-  CreateRewardCouponRequestUnion
-> = z.union([
-  z.lazy(() => CreateRewardCouponRequest1$outboundSchema),
-  z.lazy(() => CreateRewardCouponRequest2$outboundSchema),
-]);
-
-export function createRewardCouponRequestUnionToJSON(
-  createRewardCouponRequestUnion: CreateRewardCouponRequestUnion,
-): string {
-  return JSON.stringify(
-    CreateRewardCouponRequestUnion$outboundSchema.parse(
-      createRewardCouponRequestUnion,
-    ),
-  );
-}
-
-/** @internal */
-export type CreateRewardParams1$Outbound = {
-  coupon:
-    | CreateRewardCouponRequest1$Outbound
-    | CreateRewardCouponRequest2$Outbound;
-};
-
-/** @internal */
-export const CreateRewardParams1$outboundSchema: z.ZodMiniType<
-  CreateRewardParams1$Outbound,
-  CreateRewardParams1
-> = z.object({
-  coupon: z.union([
-    z.lazy(() => CreateRewardCouponRequest1$outboundSchema),
-    z.lazy(() => CreateRewardCouponRequest2$outboundSchema),
-  ]),
-});
-
-export function createRewardParams1ToJSON(
-  createRewardParams1: CreateRewardParams1,
-): string {
-  return JSON.stringify(
-    CreateRewardParams1$outboundSchema.parse(createRewardParams1),
-  );
-}
-
-/** @internal */
-export type CreateRewardParamsUnion$Outbound =
-  | CreateRewardParams1$Outbound
-  | CreateRewardParams2$Outbound;
-
-/** @internal */
-export const CreateRewardParamsUnion$outboundSchema: z.ZodMiniType<
-  CreateRewardParamsUnion$Outbound,
-  CreateRewardParamsUnion
-> = smartUnion([
-  z.lazy(() => CreateRewardParams1$outboundSchema),
-  z.lazy(() => CreateRewardParams2$outboundSchema),
-]);
-
-export function createRewardParamsUnionToJSON(
-  createRewardParamsUnion: CreateRewardParamsUnion,
-): string {
-  return JSON.stringify(
-    CreateRewardParamsUnion$outboundSchema.parse(createRewardParamsUnion),
+export function createRewardCouponResponseFromJSON(
+  jsonString: string,
+): SafeParseResult<CreateRewardCouponResponse, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => CreateRewardCouponResponse$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'CreateRewardCouponResponse' from JSON`,
   );
 }
 
@@ -1068,12 +789,17 @@ export function createRewardFeatureGrantResponseFromJSON(
 }
 
 /** @internal */
-export const ResponseBody2$inboundSchema: z.ZodMiniType<
-  ResponseBody2,
+export const CreateRewardResponse$inboundSchema: z.ZodMiniType<
+  CreateRewardResponse,
   unknown
 > = z.pipe(
   z.object({
-    feature_grant: z.lazy(() => CreateRewardFeatureGrantResponse$inboundSchema),
+    coupon: types.optional(
+      z.lazy(() => CreateRewardCouponResponse$inboundSchema),
+    ),
+    feature_grant: types.optional(
+      z.lazy(() => CreateRewardFeatureGrantResponse$inboundSchema),
+    ),
   }),
   z.transform((v) => {
     return remap$(v, {
@@ -1081,139 +807,6 @@ export const ResponseBody2$inboundSchema: z.ZodMiniType<
     });
   }),
 );
-
-export function responseBody2FromJSON(
-  jsonString: string,
-): SafeParseResult<ResponseBody2, SDKValidationError> {
-  return safeParse(
-    jsonString,
-    (x) => ResponseBody2$inboundSchema.parse(JSON.parse(x)),
-    `Failed to parse 'ResponseBody2' from JSON`,
-  );
-}
-
-/** @internal */
-export const CreateRewardCouponType$inboundSchema: z.ZodMiniType<
-  CreateRewardCouponType,
-  unknown
-> = openEnums.inboundSchema(CreateRewardCouponType);
-
-/** @internal */
-export const CreateRewardDurationType$inboundSchema: z.ZodMiniType<
-  CreateRewardDurationType,
-  unknown
-> = openEnums.inboundSchema(CreateRewardDurationType);
-
-/** @internal */
-export const CreateRewardDurationResponse$inboundSchema: z.ZodMiniType<
-  CreateRewardDurationResponse,
-  unknown
-> = z.object({
-  type: CreateRewardDurationType$inboundSchema,
-  length: types.nullable(types.number()),
-});
-
-export function createRewardDurationResponseFromJSON(
-  jsonString: string,
-): SafeParseResult<CreateRewardDurationResponse, SDKValidationError> {
-  return safeParse(
-    jsonString,
-    (x) => CreateRewardDurationResponse$inboundSchema.parse(JSON.parse(x)),
-    `Failed to parse 'CreateRewardDurationResponse' from JSON`,
-  );
-}
-
-/** @internal */
-export const CreateRewardCouponPromoCodeResponse$inboundSchema: z.ZodMiniType<
-  CreateRewardCouponPromoCodeResponse,
-  unknown
-> = z.pipe(
-  z.object({
-    code: types.string(),
-    global_max_redemption: z.optional(z.nullable(types.number())),
-    first_time_transaction: z.optional(z.nullable(types.boolean())),
-  }),
-  z.transform((v) => {
-    return remap$(v, {
-      "global_max_redemption": "globalMaxRedemption",
-      "first_time_transaction": "firstTimeTransaction",
-    });
-  }),
-);
-
-export function createRewardCouponPromoCodeResponseFromJSON(
-  jsonString: string,
-): SafeParseResult<CreateRewardCouponPromoCodeResponse, SDKValidationError> {
-  return safeParse(
-    jsonString,
-    (x) =>
-      CreateRewardCouponPromoCodeResponse$inboundSchema.parse(JSON.parse(x)),
-    `Failed to parse 'CreateRewardCouponPromoCodeResponse' from JSON`,
-  );
-}
-
-/** @internal */
-export const CreateRewardCouponResponse$inboundSchema: z.ZodMiniType<
-  CreateRewardCouponResponse,
-  unknown
-> = z.pipe(
-  z.object({
-    id: types.string(),
-    name: z.optional(z.nullable(types.string())),
-    type: CreateRewardCouponType$inboundSchema,
-    value: types.number(),
-    duration: z.lazy(() => CreateRewardDurationResponse$inboundSchema),
-    plan_ids: types.nullable(z.array(types.string())),
-    promo_codes: z.array(
-      z.lazy(() => CreateRewardCouponPromoCodeResponse$inboundSchema),
-    ),
-    created_at: types.number(),
-  }),
-  z.transform((v) => {
-    return remap$(v, {
-      "plan_ids": "planIds",
-      "promo_codes": "promoCodes",
-      "created_at": "createdAt",
-    });
-  }),
-);
-
-export function createRewardCouponResponseFromJSON(
-  jsonString: string,
-): SafeParseResult<CreateRewardCouponResponse, SDKValidationError> {
-  return safeParse(
-    jsonString,
-    (x) => CreateRewardCouponResponse$inboundSchema.parse(JSON.parse(x)),
-    `Failed to parse 'CreateRewardCouponResponse' from JSON`,
-  );
-}
-
-/** @internal */
-export const ResponseBody1$inboundSchema: z.ZodMiniType<
-  ResponseBody1,
-  unknown
-> = z.object({
-  coupon: z.lazy(() => CreateRewardCouponResponse$inboundSchema),
-});
-
-export function responseBody1FromJSON(
-  jsonString: string,
-): SafeParseResult<ResponseBody1, SDKValidationError> {
-  return safeParse(
-    jsonString,
-    (x) => ResponseBody1$inboundSchema.parse(JSON.parse(x)),
-    `Failed to parse 'ResponseBody1' from JSON`,
-  );
-}
-
-/** @internal */
-export const CreateRewardResponse$inboundSchema: z.ZodMiniType<
-  CreateRewardResponse,
-  unknown
-> = smartUnion([
-  z.lazy(() => ResponseBody1$inboundSchema),
-  z.lazy(() => ResponseBody2$inboundSchema),
-]);
 
 export function createRewardResponseFromJSON(
   jsonString: string,

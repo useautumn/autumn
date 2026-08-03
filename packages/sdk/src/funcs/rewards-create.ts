@@ -31,7 +31,7 @@ import { Result } from "../types/fp.js";
  */
 export function rewardsCreate(
   client: AutumnCore,
-  request: models.CreateRewardParamsUnion,
+  request: models.CreateRewardParams,
   options?: RequestOptions,
 ): APIPromise<
   Result<
@@ -55,7 +55,7 @@ export function rewardsCreate(
 
 async function $do(
   client: AutumnCore,
-  request: models.CreateRewardParamsUnion,
+  request: models.CreateRewardParams,
   options?: RequestOptions,
 ): Promise<
   [
@@ -75,7 +75,7 @@ async function $do(
 > {
   const parsed = safeParse(
     request,
-    (value) => z.parse(models.CreateRewardParamsUnion$outboundSchema, value),
+    (value) => z.parse(models.CreateRewardParams$outboundSchema, value),
     "Input validation failed",
   );
   if (!parsed.ok) {

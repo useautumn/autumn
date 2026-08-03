@@ -14,7 +14,7 @@ export class Rewards extends ClientSDK {
    * Create a coupon or feature grant.
    */
   async create(
-    request: models.CreateRewardParamsUnion,
+    request: models.CreateRewardParams,
     options?: RequestOptions,
   ): Promise<models.CreateRewardResponse> {
     return unwrapAsync(rewardsCreate(

@@ -1145,23 +1145,21 @@ actions:
                 secret_key="<YOUR_BEARER_TOKEN_HERE>",
             ) as autumn:
 
-                res = autumn.rewards.create(request={
-                    "coupon": {
-                        "id": "summer_sale",
-                        "name": "Summer Sale",
-                        "duration": {
-                            "type": "months",
-                            "length": 3,
-                        },
-                        "plan_ids": None,
-                        "promo_codes": [
-                            {
-                                "code": "SUMMER20",
-                            },
-                        ],
-                        "type": "percentage_discount",
-                        "value": 20,
+                res = autumn.rewards.create(coupon={
+                    "id": "summer_sale",
+                    "name": "Summer Sale",
+                    "duration": {
+                        "type": "months",
+                        "length": 3,
                     },
+                    "plan_ids": None,
+                    "promo_codes": [
+                        {
+                            "code": "SUMMER20",
+                        },
+                    ],
+                    "type": "percentage_discount",
+                    "value": 20,
                 })
 
                 # Handle response

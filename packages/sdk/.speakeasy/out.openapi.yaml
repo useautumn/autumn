@@ -31477,281 +31477,174 @@ paths:
         content:
           application/json:
             schema:
-              anyOf:
-                - type: object
+              type: object
+              properties:
+                coupon:
+                  type: object
                   properties:
-                    coupon:
-                      anyOf:
-                        - type: object
-                          properties:
-                            id:
-                              type: string
-                              minLength: 1
-                            name:
-                              type: string
-                              minLength: 1
-                            duration:
-                              anyOf:
-                                - type: object
-                                  properties:
-                                    type:
-                                      const: one_off
-                                    length:
-                                      const: null
-                                  required:
-                                    - type
-                                    - length
-                                - type: object
-                                  properties:
-                                    type:
-                                      const: months
-                                    length:
-                                      type: integer
-                                      minimum: -9.007199254740991e+15
-                                      maximum: 9.007199254740991e+15
-                                      exclusiveMinimum: 0
-                                  required:
-                                    - type
-                                    - length
-                                - type: object
-                                  properties:
-                                    type:
-                                      const: forever
-                                    length:
-                                      const: null
-                                  required:
-                                    - type
-                                    - length
-                              description: Use a positive integer length for months, and null for one_off or forever.
-                            plan_ids:
-                              anyOf:
-                                - type: array
-                                  minItems: 1
-                                  items:
-                                    type: string
-                                    minLength: 1
-                                - type: "null"
-                              description: Plan IDs must be unique.
-                            promo_codes:
-                              type: array
-                              items:
-                                type: object
-                                properties:
-                                  code:
-                                    type: string
-                                    minLength: 1
-                                  global_max_redemption:
-                                    anyOf:
-                                      - type: integer
-                                        minimum: -9.007199254740991e+15
-                                        maximum: 9.007199254740991e+15
-                                        exclusiveMinimum: 0
-                                      - type: "null"
-                                  first_time_transaction:
-                                    anyOf:
-                                      - type: boolean
-                                      - type: "null"
-                                required:
-                                  - code
-                                additionalProperties: false
-                              description: Promo code values must be unique.
-                            type:
-                              const: percentage_discount
-                            value:
-                              type: number
-                              maximum: 100
-                              exclusiveMinimum: 0
-                              description: Percentage discounts must be at most 100; fixed discounts must be positive.
-                          required:
-                            - id
-                            - name
-                            - duration
-                            - plan_ids
-                            - promo_codes
-                            - type
-                            - value
-                          additionalProperties: false
-                        - type: object
-                          properties:
-                            id:
-                              type: string
-                              minLength: 1
-                            name:
-                              type: string
-                              minLength: 1
-                            duration:
-                              anyOf:
-                                - type: object
-                                  properties:
-                                    type:
-                                      const: one_off
-                                    length:
-                                      const: null
-                                  required:
-                                    - type
-                                    - length
-                                - type: object
-                                  properties:
-                                    type:
-                                      const: months
-                                    length:
-                                      type: integer
-                                      minimum: -9.007199254740991e+15
-                                      maximum: 9.007199254740991e+15
-                                      exclusiveMinimum: 0
-                                  required:
-                                    - type
-                                    - length
-                                - type: object
-                                  properties:
-                                    type:
-                                      const: forever
-                                    length:
-                                      const: null
-                                  required:
-                                    - type
-                                    - length
-                              description: Use a positive integer length for months, and null for one_off or forever.
-                            plan_ids:
-                              anyOf:
-                                - type: array
-                                  minItems: 1
-                                  items:
-                                    type: string
-                                    minLength: 1
-                                - type: "null"
-                              description: Plan IDs must be unique.
-                            promo_codes:
-                              type: array
-                              items:
-                                type: object
-                                properties:
-                                  code:
-                                    type: string
-                                    minLength: 1
-                                  global_max_redemption:
-                                    anyOf:
-                                      - type: integer
-                                        minimum: -9.007199254740991e+15
-                                        maximum: 9.007199254740991e+15
-                                        exclusiveMinimum: 0
-                                      - type: "null"
-                                  first_time_transaction:
-                                    anyOf:
-                                      - type: boolean
-                                      - type: "null"
-                                required:
-                                  - code
-                                additionalProperties: false
-                              description: Promo code values must be unique.
-                            type:
-                              const: fixed_discount
-                            value:
-                              type: number
-                              exclusiveMinimum: 0
-                              description: Percentage discounts must be at most 100; fixed discounts must be positive.
-                          required:
-                            - id
-                            - name
-                            - duration
-                            - plan_ids
-                            - promo_codes
-                            - type
-                            - value
-                          additionalProperties: false
-                      title: CreateRewardCouponRequest
-                      description: Provide exactly one of coupon or feature_grant, not both.
-                  required:
-                    - coupon
-                  additionalProperties: false
-                - type: object
-                  properties:
-                    feature_grant:
+                    id:
+                      type: string
+                      minLength: 1
+                    name:
+                      type: string
+                      minLength: 1
+                    duration:
                       type: object
                       properties:
-                        id:
+                        type:
+                          enum:
+                            - one_off
+                            - months
+                            - forever
                           type: string
-                          minLength: 1
-                        name:
-                          type: string
-                          minLength: 1
-                        grants:
-                          type: array
+                        length:
+                          anyOf:
+                            - type: integer
+                              minimum: -9.007199254740991e+15
+                              maximum: 9.007199254740991e+15
+                              exclusiveMinimum: 0
+                            - type: "null"
+                      required:
+                        - type
+                        - length
+                      additionalProperties: false
+                      description: Use a positive integer length for months, and null for one_off or forever.
+                    plan_ids:
+                      anyOf:
+                        - type: array
                           minItems: 1
                           items:
-                            type: object
-                            properties:
-                              feature_id:
-                                type: string
-                                minLength: 1
-                              included:
-                                anyOf:
-                                  - type: number
-                                    exclusiveMinimum: 0
-                                  - type: "null"
-                                description: A positive amount to grant, or null for boolean features.
-                              expiry:
-                                anyOf:
-                                  - type: object
-                                    properties:
-                                      type:
-                                        enum:
-                                          - day
-                                          - week
-                                          - month
-                                          - year
-                                        type: string
-                                        description: The unit of time the grant lasts.
-                                      length:
-                                        type: integer
-                                        minimum: -9.007199254740991e+15
-                                        maximum: 9.007199254740991e+15
-                                        exclusiveMinimum: 0
-                                        description: The positive integer count of periods before the grant expires.
-                                    required:
-                                      - type
-                                      - length
-                                    additionalProperties: false
-                                  - type: "null"
-                            required:
-                              - feature_id
-                              - included
-                              - expiry
-                            additionalProperties: false
-                          description: Feature IDs must be unique.
-                        promo_codes:
-                          type: array
-                          minItems: 1
-                          items:
-                            type: object
-                            properties:
-                              code:
-                                type: string
-                                minLength: 1
-                              max_uses:
-                                anyOf:
-                                  - type: integer
+                            type: string
+                            minLength: 1
+                        - type: "null"
+                      description: Plan IDs must be unique.
+                    promo_codes:
+                      type: array
+                      items:
+                        type: object
+                        properties:
+                          code:
+                            type: string
+                            minLength: 1
+                          global_max_redemption:
+                            anyOf:
+                              - type: integer
+                                minimum: -9.007199254740991e+15
+                                maximum: 9.007199254740991e+15
+                                exclusiveMinimum: 0
+                              - type: "null"
+                          first_time_transaction:
+                            anyOf:
+                              - type: boolean
+                              - type: "null"
+                        required:
+                          - code
+                        additionalProperties: false
+                      description: Promo code values must be unique.
+                    type:
+                      enum:
+                        - percentage_discount
+                        - fixed_discount
+                      type: string
+                    value:
+                      type: number
+                      exclusiveMinimum: 0
+                      description: Percentage discounts must be at most 100; fixed discounts must be positive.
+                  required:
+                    - id
+                    - name
+                    - duration
+                    - plan_ids
+                    - promo_codes
+                    - type
+                    - value
+                  additionalProperties: false
+                  title: CreateRewardCouponRequest
+                  description: Provide exactly one of coupon or feature_grant, not both.
+                feature_grant:
+                  type: object
+                  properties:
+                    id:
+                      type: string
+                      minLength: 1
+                    name:
+                      type: string
+                      minLength: 1
+                    grants:
+                      type: array
+                      minItems: 1
+                      items:
+                        type: object
+                        properties:
+                          feature_id:
+                            type: string
+                            minLength: 1
+                          included:
+                            anyOf:
+                              - type: number
+                                exclusiveMinimum: 0
+                              - type: "null"
+                            description: A positive amount to grant, or null for boolean features.
+                          expiry:
+                            anyOf:
+                              - type: object
+                                properties:
+                                  type:
+                                    enum:
+                                      - day
+                                      - week
+                                      - month
+                                      - year
+                                    type: string
+                                    description: The unit of time the grant lasts.
+                                  length:
+                                    type: integer
                                     minimum: -9.007199254740991e+15
                                     maximum: 9.007199254740991e+15
                                     exclusiveMinimum: 0
-                                  - type: "null"
-                                description: A positive redemption limit, or null for unlimited uses.
-                            required:
-                              - code
-                              - max_uses
-                            additionalProperties: false
-                          description: Promo code values must be unique.
-                      required:
-                        - id
-                        - name
-                        - grants
-                        - promo_codes
-                      additionalProperties: false
-                      title: CreateRewardFeatureGrantRequest
-                      description: Provide exactly one of coupon or feature_grant, not both.
+                                    description: The positive integer count of periods before the grant expires.
+                                required:
+                                  - type
+                                  - length
+                                additionalProperties: false
+                              - type: "null"
+                        required:
+                          - feature_id
+                          - included
+                          - expiry
+                        additionalProperties: false
+                      description: Feature IDs must be unique.
+                    promo_codes:
+                      type: array
+                      minItems: 1
+                      items:
+                        type: object
+                        properties:
+                          code:
+                            type: string
+                            minLength: 1
+                          max_uses:
+                            anyOf:
+                              - type: integer
+                                minimum: -9.007199254740991e+15
+                                maximum: 9.007199254740991e+15
+                                exclusiveMinimum: 0
+                              - type: "null"
+                            description: A positive redemption limit, or null for unlimited uses.
+                        required:
+                          - code
+                          - max_uses
+                        additionalProperties: false
+                      description: Promo code values must be unique.
                   required:
-                    - feature_grant
+                    - id
+                    - name
+                    - grants
+                    - promo_codes
                   additionalProperties: false
+                  title: CreateRewardFeatureGrantRequest
+                  description: Provide exactly one of coupon or feature_grant, not both.
+              additionalProperties: false
               title: CreateRewardParams
               examples:
                 - coupon:
@@ -31771,206 +31664,198 @@ paths:
           content:
             application/json:
               schema:
-                anyOf:
-                  - type: object
+                type: object
+                properties:
+                  coupon:
+                    type: object
                     properties:
-                      coupon:
+                      id:
+                        type: string
+                        description: The unique identifier for the coupon.
+                      name:
+                        anyOf:
+                          - type: string
+                          - type: "null"
+                        description: A human-readable name for the coupon.
+                      type:
+                        enum:
+                          - percentage_discount
+                          - fixed_discount
+                          - invoice_credits
+                        type: string
+                        description: "The type of discount: percentage_discount, fixed_discount, or invoice_credits."
+                      value:
+                        type: number
+                        description: The discount value. A percentage for percentage_discount, or an amount for fixed_discount / invoice_credits.
+                      duration:
                         type: object
                         properties:
-                          id:
-                            type: string
-                            description: The unique identifier for the coupon.
-                          name:
-                            anyOf:
-                              - type: string
-                              - type: "null"
-                            description: A human-readable name for the coupon.
                           type:
                             enum:
-                              - percentage_discount
-                              - fixed_discount
-                              - invoice_credits
+                              - one_off
+                              - months
+                              - forever
                             type: string
-                            description: "The type of discount: percentage_discount, fixed_discount, or invoice_credits."
-                          value:
-                            type: number
-                            description: The discount value. A percentage for percentage_discount, or an amount for fixed_discount / invoice_credits.
-                          duration:
-                            type: object
-                            properties:
-                              type:
-                                enum:
-                                  - one_off
-                                  - months
-                                  - forever
-                                type: string
-                                description: The unit of time the duration is measured in.
-                              length:
-                                anyOf:
-                                  - type: number
-                                  - type: "null"
-                                description: The number of `type` periods the duration lasts, or null when the type has no length (e.g. one_off, forever).
-                            required:
-                              - type
-                              - length
-                            title: CreateRewardDurationResponse
-                            description: How long the coupon applies once redeemed.
-                          plan_ids:
+                            description: The unit of time the duration is measured in.
+                          length:
                             anyOf:
-                              - type: array
-                                items:
-                                  type: string
+                              - type: number
                               - type: "null"
-                            description: The plan IDs the coupon applies to, or null when it applies to all plans.
-                          promo_codes:
-                            type: array
-                            items:
-                              type: object
-                              properties:
-                                code:
-                                  type: string
-                                  description: The promo code customers enter to redeem the coupon.
-                                global_max_redemption:
-                                  anyOf:
-                                    - type: number
-                                    - type: "null"
-                                  description: Maximum number of times this promo code can be redeemed across all customers, or null for unlimited.
-                                first_time_transaction:
-                                  anyOf:
-                                    - type: boolean
-                                    - type: "null"
-                                  description: Whether this promo code can only be applied to a customer's first transaction.
-                              required:
-                                - code
-                              title: CreateRewardCouponPromoCodeResponse
-                          created_at:
-                            type: number
-                            description: The Unix timestamp (in milliseconds) when the coupon was created.
+                            description: The number of `type` periods the duration lasts, or null when the type has no length (e.g. one_off, forever).
                         required:
-                          - id
                           - type
-                          - value
-                          - duration
-                          - plan_ids
-                          - promo_codes
-                          - created_at
-                        title: CreateRewardCouponResponse
-                        examples:
-                          - id: summer_sale
-                            name: Summer Sale
-                            type: percentage_discount
-                            value: 20
-                            duration:
-                              type: months
-                              length: 3
-                            plan_ids:
-                              - pro
-                              - starter
-                            promo_codes:
-                              - code: SUMMER20
-                                global_max_redemption: 100
-                                first_time_transaction: false
-                            created_at: 1718000000000
+                          - length
+                        title: CreateRewardDurationResponse
+                        description: How long the coupon applies once redeemed.
+                      plan_ids:
+                        anyOf:
+                          - type: array
+                            items:
+                              type: string
+                          - type: "null"
+                        description: The plan IDs the coupon applies to, or null when it applies to all plans.
+                      promo_codes:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            code:
+                              type: string
+                              description: The promo code customers enter to redeem the coupon.
+                            global_max_redemption:
+                              anyOf:
+                                - type: number
+                                - type: "null"
+                              description: Maximum number of times this promo code can be redeemed across all customers, or null for unlimited.
+                            first_time_transaction:
+                              anyOf:
+                                - type: boolean
+                                - type: "null"
+                              description: Whether this promo code can only be applied to a customer's first transaction.
+                          required:
+                            - code
+                          title: CreateRewardCouponPromoCodeResponse
+                      created_at:
+                        type: number
+                        description: The Unix timestamp (in milliseconds) when the coupon was created.
                     required:
-                      - coupon
-                    additionalProperties: false
-                  - type: object
+                      - id
+                      - type
+                      - value
+                      - duration
+                      - plan_ids
+                      - promo_codes
+                      - created_at
+                    title: CreateRewardCouponResponse
+                    examples:
+                      - id: summer_sale
+                        name: Summer Sale
+                        type: percentage_discount
+                        value: 20
+                        duration:
+                          type: months
+                          length: 3
+                        plan_ids:
+                          - pro
+                          - starter
+                        promo_codes:
+                          - code: SUMMER20
+                            global_max_redemption: 100
+                            first_time_transaction: false
+                        created_at: 1718000000000
+                  feature_grant:
+                    type: object
                     properties:
-                      feature_grant:
-                        type: object
-                        properties:
-                          id:
-                            type: string
-                            description: The unique identifier for the feature grant.
-                          name:
-                            anyOf:
-                              - type: string
-                              - type: "null"
-                            description: A human-readable name for the feature grant.
-                          grants:
-                            type: array
-                            items:
-                              type: object
-                              properties:
-                                feature_id:
-                                  type: string
-                                  description: The feature ID this grant applies to.
-                                included:
-                                  anyOf:
-                                    - type: number
-                                    - type: "null"
-                                  description: The amount of the feature granted, or null for boolean features.
-                                expiry:
-                                  anyOf:
-                                    - type: object
-                                      properties:
-                                        type:
-                                          enum:
-                                            - day
-                                            - week
-                                            - month
-                                            - year
-                                          type: string
-                                          description: The unit of time the grant lasts.
-                                        length:
-                                          type: integer
-                                          minimum: -9.007199254740991e+15
-                                          maximum: 9.007199254740991e+15
-                                          exclusiveMinimum: 0
-                                          description: The positive integer count of periods before the grant expires.
-                                      required:
-                                        - type
-                                        - length
-                                    - type: "null"
-                                  title: CreateRewardExpiryResponse
-                                  description: How long the granted amount lasts before expiring, or null for a permanent grant.
-                              required:
-                                - feature_id
-                                - included
-                                - expiry
-                              title: CreateRewardGrantResponse
-                          promo_codes:
-                            type: array
-                            items:
-                              type: object
-                              properties:
-                                code:
-                                  type: string
-                                  description: The promo code customers enter to redeem the feature grant.
-                                max_uses:
-                                  anyOf:
-                                    - type: number
-                                    - type: "null"
-                                  description: Maximum number of times this promo code can be redeemed, or null for unlimited.
-                              required:
-                                - code
-                                - max_uses
-                              title: CreateRewardFeatureGrantPromoCodeResponse
-                          created_at:
-                            type: number
-                            description: The Unix timestamp (in milliseconds) when the feature grant was created.
-                        required:
-                          - id
-                          - grants
-                          - promo_codes
-                          - created_at
-                        title: CreateRewardFeatureGrantResponse
-                        examples:
-                          - id: beta_credits_grant
-                            name: Beta Tester Credits
-                            promo_codes:
-                              - code: BETA2024
-                                max_uses: 500
-                            grants:
-                              - feature_id: credits
-                                included: 1000
-                                expiry:
-                                  type: month
-                                  length: 1
-                            created_at: 1718000000000
+                      id:
+                        type: string
+                        description: The unique identifier for the feature grant.
+                      name:
+                        anyOf:
+                          - type: string
+                          - type: "null"
+                        description: A human-readable name for the feature grant.
+                      grants:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            feature_id:
+                              type: string
+                              description: The feature ID this grant applies to.
+                            included:
+                              anyOf:
+                                - type: number
+                                - type: "null"
+                              description: The amount of the feature granted, or null for boolean features.
+                            expiry:
+                              anyOf:
+                                - type: object
+                                  properties:
+                                    type:
+                                      enum:
+                                        - day
+                                        - week
+                                        - month
+                                        - year
+                                      type: string
+                                      description: The unit of time the grant lasts.
+                                    length:
+                                      type: integer
+                                      minimum: -9.007199254740991e+15
+                                      maximum: 9.007199254740991e+15
+                                      exclusiveMinimum: 0
+                                      description: The positive integer count of periods before the grant expires.
+                                  required:
+                                    - type
+                                    - length
+                                - type: "null"
+                              title: CreateRewardExpiryResponse
+                              description: How long the granted amount lasts before expiring, or null for a permanent grant.
+                          required:
+                            - feature_id
+                            - included
+                            - expiry
+                          title: CreateRewardGrantResponse
+                      promo_codes:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            code:
+                              type: string
+                              description: The promo code customers enter to redeem the feature grant.
+                            max_uses:
+                              anyOf:
+                                - type: number
+                                - type: "null"
+                              description: Maximum number of times this promo code can be redeemed, or null for unlimited.
+                          required:
+                            - code
+                            - max_uses
+                          title: CreateRewardFeatureGrantPromoCodeResponse
+                      created_at:
+                        type: number
+                        description: The Unix timestamp (in milliseconds) when the feature grant was created.
                     required:
-                      - feature_grant
-                    additionalProperties: false
+                      - id
+                      - grants
+                      - promo_codes
+                      - created_at
+                    title: CreateRewardFeatureGrantResponse
+                    examples:
+                      - id: beta_credits_grant
+                        name: Beta Tester Credits
+                        promo_codes:
+                          - code: BETA2024
+                            max_uses: 500
+                        grants:
+                          - feature_id: credits
+                            included: 1000
+                            expiry:
+                              type: month
+                              length: 1
+                        created_at: 1718000000000
+                additionalProperties: false
       x-speakeasy-name-override: create
       parameters:
         - *a1

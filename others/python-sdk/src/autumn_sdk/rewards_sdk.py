@@ -12,9 +12,18 @@ class RewardsSDK(BaseSDK):
     def create(
         self,
         *,
-        request: Union[
-            models.CreateRewardParamsUnion, models.CreateRewardParamsUnionTypedDict
-        ],
+        coupon: Optional[
+            Union[
+                models.CreateRewardCouponRequest,
+                models.CreateRewardCouponRequestTypedDict,
+            ]
+        ] = None,
+        feature_grant: Optional[
+            Union[
+                models.CreateRewardFeatureGrantRequest,
+                models.CreateRewardFeatureGrantRequestTypedDict,
+            ]
+        ] = None,
         retries: OptionalNullable[utils.RetryConfig] = UNSET,
         server_url: Optional[str] = None,
         timeout_ms: Optional[int] = None,
@@ -22,7 +31,8 @@ class RewardsSDK(BaseSDK):
     ) -> models.CreateRewardResponse:
         r"""Create a coupon or feature grant.
 
-        :param request: The request object to send.
+        :param coupon: Provide exactly one of coupon or feature_grant, not both.
+        :param feature_grant: Provide exactly one of coupon or feature_grant, not both.
         :param retries: Override the default retry configuration for this method
         :param server_url: Override the default server URL for this method
         :param timeout_ms: Override the default request timeout configuration for this method in milliseconds
@@ -38,9 +48,14 @@ class RewardsSDK(BaseSDK):
         else:
             base_url = self._get_url(base_url, url_variables)
 
-        if not isinstance(request, BaseModel):
-            request = utils.unmarshal(request, models.CreateRewardParamsUnion)
-        request = cast(models.CreateRewardParamsUnion, request)
+        request = models.CreateRewardParams(
+            coupon=utils.get_pydantic_model(
+                coupon, Optional[models.CreateRewardCouponRequest]
+            ),
+            feature_grant=utils.get_pydantic_model(
+                feature_grant, Optional[models.CreateRewardFeatureGrantRequest]
+            ),
+        )
 
         req = self._build_request(
             method="POST",
@@ -59,7 +74,7 @@ class RewardsSDK(BaseSDK):
             ),
             security=self.sdk_configuration.security,
             get_serialized_body=lambda: utils.serialize_request_body(
-                request, False, False, "json", models.CreateRewardParamsUnion
+                request, False, False, "json", models.CreateRewardParams
             ),
             allow_empty_value=None,
             timeout_ms=timeout_ms,
@@ -104,9 +119,18 @@ class RewardsSDK(BaseSDK):
     async def create_async(
         self,
         *,
-        request: Union[
-            models.CreateRewardParamsUnion, models.CreateRewardParamsUnionTypedDict
-        ],
+        coupon: Optional[
+            Union[
+                models.CreateRewardCouponRequest,
+                models.CreateRewardCouponRequestTypedDict,
+            ]
+        ] = None,
+        feature_grant: Optional[
+            Union[
+                models.CreateRewardFeatureGrantRequest,
+                models.CreateRewardFeatureGrantRequestTypedDict,
+            ]
+        ] = None,
         retries: OptionalNullable[utils.RetryConfig] = UNSET,
         server_url: Optional[str] = None,
         timeout_ms: Optional[int] = None,
@@ -114,7 +138,8 @@ class RewardsSDK(BaseSDK):
     ) -> models.CreateRewardResponse:
         r"""Create a coupon or feature grant.
 
-        :param request: The request object to send.
+        :param coupon: Provide exactly one of coupon or feature_grant, not both.
+        :param feature_grant: Provide exactly one of coupon or feature_grant, not both.
         :param retries: Override the default retry configuration for this method
         :param server_url: Override the default server URL for this method
         :param timeout_ms: Override the default request timeout configuration for this method in milliseconds
@@ -130,9 +155,14 @@ class RewardsSDK(BaseSDK):
         else:
             base_url = self._get_url(base_url, url_variables)
 
-        if not isinstance(request, BaseModel):
-            request = utils.unmarshal(request, models.CreateRewardParamsUnion)
-        request = cast(models.CreateRewardParamsUnion, request)
+        request = models.CreateRewardParams(
+            coupon=utils.get_pydantic_model(
+                coupon, Optional[models.CreateRewardCouponRequest]
+            ),
+            feature_grant=utils.get_pydantic_model(
+                feature_grant, Optional[models.CreateRewardFeatureGrantRequest]
+            ),
+        )
 
         req = self._build_request_async(
             method="POST",
@@ -151,7 +181,7 @@ class RewardsSDK(BaseSDK):
             ),
             security=self.sdk_configuration.security,
             get_serialized_body=lambda: utils.serialize_request_body(
-                request, False, False, "json", models.CreateRewardParamsUnion
+                request, False, False, "json", models.CreateRewardParams
             ),
             allow_empty_value=None,
             timeout_ms=timeout_ms,

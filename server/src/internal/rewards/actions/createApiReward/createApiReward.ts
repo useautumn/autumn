@@ -10,6 +10,6 @@ export const createApiReward = async ({
 	ctx: AutumnContext;
 	params: CreateRewardParams;
 }): Promise<CreateRewardResponse> =>
-	"feature_grant" in params
+	params.feature_grant
 		? createApiFeatureGrant({ ctx, featureGrant: params.feature_grant })
-		: createApiCoupon({ ctx, coupon: params.coupon });
+		: createApiCoupon({ ctx, coupon: params.coupon! });
