@@ -17,6 +17,16 @@ const normalizedRedisSuccessSampleRate = Number.isFinite(
 	? Math.min(Math.max(REDIS_SUCCESS_SAMPLE_RATE, 0), 1)
 	: 0.01;
 
+const DYNAMO_SUCCESS_SAMPLE_RATE = Number.parseFloat(
+	process.env.OTEL_DYNAMO_SUCCESS_SAMPLE_RATE ?? "0.01",
+);
+
+const normalizedDynamoSuccessSampleRate = Number.isFinite(
+	DYNAMO_SUCCESS_SAMPLE_RATE,
+)
+	? Math.min(Math.max(DYNAMO_SUCCESS_SAMPLE_RATE, 0), 1)
+	: 0.01;
+
 const hashStringToUnitInterval = (value: string): number => {
 	let hash = 2166136261;
 	for (let i = 0; i < value.length; i++) {
@@ -25,6 +35,26 @@ const hashStringToUnitInterval = (value: string): number => {
 	}
 
 	return (hash >>> 0) / 0xffffffff;
+};
+
+// Happy-path only — duplicates/unavailability always export; metrics recorded before drop.
+const DYNAMO_SAMPLED_OUTCOMES = new Set(["claimed", "released"]);
+
+const isSuccessfulDynamoSpan = (span: ReadableSpan) =>
+	span.name.startsWith("dynamodb.") &&
+	span.status.code !== SpanStatusCode.ERROR &&
+	DYNAMO_SAMPLED_OUTCOMES.has(String(span.attributes["dynamodb.outcome"]));
+
+const shouldDropSuccessfulDynamoSpan = (span: ReadableSpan): boolean => {
+	if (!isSuccessfulDynamoSpan(span)) return false;
+	if (normalizedDynamoSuccessSampleRate >= 1) return false;
+	if (normalizedDynamoSuccessSampleRate <= 0) return true;
+
+	const spanContext = span.spanContext();
+	const sampleKey = `${spanContext.traceId}:${spanContext.spanId}:${span.name}`;
+	return (
+		hashStringToUnitInterval(sampleKey) >= normalizedDynamoSuccessSampleRate
+	);
 };
 
 const isSuccessfulNonSevereRedisSpan = (span: ReadableSpan) =>
@@ -67,6 +97,7 @@ export class FilteringSpanProcessor implements SpanProcessor {
 		try {
 			recordSpanDurationMetric(span);
 			if (shouldDropSuccessfulRedisSpan(span, this.sampleRate)) return;
+			if (shouldDropSuccessfulDynamoSpan(span)) return;
 			spanToExport = this.spanIngestCompactor.compact({ span });
 		} catch (error) {
 			try {
