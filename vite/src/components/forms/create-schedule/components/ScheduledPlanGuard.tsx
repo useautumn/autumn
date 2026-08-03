@@ -3,19 +3,21 @@ import { CalendarBlankIcon } from "@phosphor-icons/react";
 import { motion } from "motion/react";
 import type { ReactNode } from "react";
 import { useSheetStore } from "@/hooks/stores/useSheetStore";
-import { useHasSchedule } from "../hooks/useHasSchedule";
+import { useScheduledCustomerProductIds } from "../hooks/useCustomerSchedules";
 
 export function ScheduledPlanGuard({
 	children,
-	entityId,
+	customerProductId,
 }: {
 	children: ReactNode;
-	entityId?: string | null;
+	customerProductId?: string;
 }) {
-	const hasSchedule = useHasSchedule({ entityId });
+	const scheduledProductIds = useScheduledCustomerProductIds();
 	const { setSheet } = useSheetStore();
 
-	if (!hasSchedule) return <>{children}</>;
+	const isScheduled =
+		!!customerProductId && scheduledProductIds.has(customerProductId);
+	if (!isScheduled) return <>{children}</>;
 
 	return (
 		<motion.div

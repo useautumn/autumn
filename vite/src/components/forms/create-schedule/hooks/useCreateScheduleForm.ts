@@ -21,6 +21,7 @@ export function useCreateScheduleForm({
 				plans: [{ ...EMPTY_SCHEDULE_PLAN }],
 			},
 		],
+		unscheduledPlans: [],
 		billingBehavior: null,
 		resetBillingCycle: false,
 		enablePlanImmediately: false,

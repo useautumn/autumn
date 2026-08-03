@@ -12,8 +12,7 @@ export type BillingOptionId =
 	| "carryOverBalances"
 	| "carryOverUsages"
 	| "overrideLineItems"
-	| "newBillingSubscription"
-	| "enablePlanImmediately";
+	| "newBillingSubscription";
 
 export type BillingOptionRule = {
 	visible: boolean;
@@ -39,7 +38,6 @@ export type BillingOptionState = {
 	// schedule
 	hasMultipleImmediatePlans?: boolean;
 	canResetScheduleBillingCycle?: boolean;
-	isCheckoutRedirect?: boolean;
 };
 
 const MULTI_ATTACH_UNSUPPORTED = "Not yet supported for multi attach";
@@ -85,7 +83,6 @@ function attachRules(state: BillingOptionState): BillingOptionRules {
 		resetBillingCycle: show(singlePlanOnly && !!state.hasActiveSubscription),
 		skipBilling: show(singlePlanOnly),
 		resetUsage: HIDDEN,
-		enablePlanImmediately: HIDDEN,
 	};
 }
 
@@ -104,21 +101,19 @@ function updateRules(state: BillingOptionState): BillingOptionRules {
 		carryOverUsages: HIDDEN,
 		overrideLineItems: HIDDEN,
 		newBillingSubscription: HIDDEN,
-		enablePlanImmediately: HIDDEN,
 	};
 }
 
 function scheduleRules(state: BillingOptionState): BillingOptionRules {
 	const multiPlanBlocked = !!state.hasMultipleImmediatePlans;
 	return {
-		proration: show(true, multiPlanBlocked ? MULTI_ATTACH_UNSUPPORTED : null),
+		proration: show(true),
 		resetBillingCycle: show(
 			true,
 			multiPlanBlocked && !state.canResetScheduleBillingCycle
 				? MULTI_ATTACH_UNSUPPORTED
 				: null,
 		),
-		enablePlanImmediately: show(!!state.isCheckoutRedirect),
 		discounts: HIDDEN,
 		planSchedule: HIDDEN,
 		resetUsage: HIDDEN,
