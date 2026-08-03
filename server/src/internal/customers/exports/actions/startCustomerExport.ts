@@ -13,7 +13,7 @@ import {
 import { shouldRunTriggerTasksInline } from "@/trigger/utils/shouldRunTriggerTasksInline.js";
 import { CustomerExportService } from "../CustomerExportService.js";
 import { getCustomerExportErrorMessage } from "../customerExportErrorMessage.js";
-import { createCustomerExportRealtimeToken } from "../customerExportRealtimeToken.js";
+import { cacheCustomerExportRealtimeToken } from "../customerExportRealtimeToken.js";
 import { customerExportToResponse } from "../customerExportToResponse.js";
 import { createExportReclaimingStale } from "../reclaimStaleCustomerExport.js";
 
@@ -52,6 +52,7 @@ export const startCustomerExport = async ({
 	};
 	// Inline runs have no Trigger run to subscribe to, so clients keep polling.
 	let triggerRunId: string | null = null;
+	let publicAccessToken: string | null = null;
 
 	if (shouldRunTriggerTasksInline()) {
 		ctx.logger.warn(
@@ -92,6 +93,11 @@ export const startCustomerExport = async ({
 		}
 
 		triggerRunId = handle.id;
+		publicAccessToken = handle.publicAccessToken;
+		cacheCustomerExportRealtimeToken({
+			triggerRunId: handle.id,
+			token: handle.publicAccessToken,
+		});
 
 		// The job is already enqueued, so persistence failure cannot fail the export.
 		try {
@@ -110,13 +116,6 @@ export const startCustomerExport = async ({
 			});
 		}
 	}
-
-	const publicAccessToken = triggerRunId
-		? await createCustomerExportRealtimeToken({
-				triggerRunId,
-				logger: ctx.logger,
-			})
-		: null;
 
 	return {
 		export: customerExportToResponse({

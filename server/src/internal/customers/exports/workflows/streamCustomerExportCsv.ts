@@ -3,11 +3,7 @@ import type { AppEnv, DbCustomerExport } from "@autumn/shared";
 import { Upload } from "@aws-sdk/lib-storage";
 import { getS3Client } from "@/external/aws/s3/initS3.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
-import {
-	CSV_ROW_SEPARATOR,
-	serializeCustomerExportRow,
-	serializeCustomerExportRows,
-} from "../csv/serializeCustomerExportRows.js";
+import { serializeCustomerExportRows } from "../csv/serializeCustomerExportRows.js";
 import {
 	emptyPlanColumns,
 	getCustomerExportPlanColumns,
@@ -79,18 +75,20 @@ export const streamCustomerExportCsv = async ({
 			for (const scalar of scalars) {
 				const planColumns =
 					planColumnsByCustomer.get(scalar.internal_id) ?? emptyPlanColumns();
-				const csvRow = serializeCustomerExportRow({
+				const csvRow = serializeCustomerExportRows({
 					fields,
-					row: {
-						name: scalar.name,
-						email: scalar.email,
-						customer_id: scalar.id,
-						subscriptions: planColumns.subscriptions,
-						purchases: planColumns.purchases,
-						licenses: planColumns.licenses,
-					},
+					rows: [
+						{
+							name: scalar.name,
+							email: scalar.email,
+							customer_id: scalar.id,
+							subscriptions: planColumns.subscriptions,
+							purchases: planColumns.purchases,
+							licenses: planColumns.licenses,
+						},
+					],
 				});
-				const chunk = encoder.encode(`${csvRow}${CSV_ROW_SEPARATOR}`);
+				const chunk = encoder.encode(csvRow);
 				byteCount += chunk.byteLength;
 				yield chunk;
 				lastInternalId = scalar.internal_id;

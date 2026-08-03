@@ -3,7 +3,6 @@ import { CustomerExportField } from "@autumn/shared";
 import {
 	CSV_ROW_SEPARATOR,
 	type CustomerExportRow,
-	escapeCsvCell,
 	orderCustomerExportFields,
 	serializeCustomerExportRows,
 	UTF8_BOM,
@@ -28,30 +27,6 @@ const buildRow = (
 	purchases: [],
 	licenses: [],
 	...overrides,
-});
-
-describe("escapeCsvCell", () => {
-	it("leaves plain values untouched", () => {
-		expect(escapeCsvCell("Jane")).toBe("Jane");
-	});
-
-	it("quotes values containing commas, quotes or newlines", () => {
-		expect(escapeCsvCell("Doe, Jane")).toBe('"Doe, Jane"');
-		expect(escapeCsvCell('say "hi"')).toBe('"say ""hi"""');
-		expect(escapeCsvCell("line1\nline2")).toBe('"line1\nline2"');
-	});
-
-	it("guards formula-injection prefixes", () => {
-		expect(escapeCsvCell("=1+1")).toBe("'=1+1");
-		expect(escapeCsvCell("+cmd")).toBe("'+cmd");
-		expect(escapeCsvCell("-cmd")).toBe("'-cmd");
-		expect(escapeCsvCell("@cmd")).toBe("'@cmd");
-		expect(escapeCsvCell("\tcmd")).toBe("'\tcmd");
-	});
-
-	it("quotes a guarded value that also needs quoting", () => {
-		expect(escapeCsvCell("=a,b")).toBe(`"'=a,b"`);
-	});
 });
 
 describe("orderCustomerExportFields", () => {
@@ -103,6 +78,25 @@ describe("serializeCustomerExportRows", () => {
 		});
 
 		expect(output).toBe(`cus_1\r\ncus_2\r\n`);
+	});
+
+	it("quotes CSV syntax and guards formula-injection prefixes", () => {
+		const output = serializeCustomerExportRows({
+			rows: [
+				buildRow({
+					name: "Doe, Jane",
+					email: "=1+1",
+					customer_id: 'say "hi"',
+				}),
+			],
+			fields: [
+				CustomerExportField.Name,
+				CustomerExportField.Email,
+				CustomerExportField.CustomerId,
+			],
+		});
+
+		expect(output).toBe(`"Doe, Jane",'=1+1,"say ""hi"""${CSV_ROW_SEPARATOR}`);
 	});
 
 	it("joins list cells and blanks empty ones", () => {

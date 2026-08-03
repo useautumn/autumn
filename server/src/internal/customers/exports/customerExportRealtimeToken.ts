@@ -20,6 +20,17 @@ const pruneExpiredTokens = () => {
 	}
 };
 
+export const cacheCustomerExportRealtimeToken = ({
+	triggerRunId,
+	token,
+}: {
+	triggerRunId: string;
+	token: string;
+}) => {
+	pruneExpiredTokens();
+	cachedTokensByRunId.set(triggerRunId, { token, mintedAt: Date.now() });
+};
+
 /** Scoped to one run so the dashboard never sees more than its own export. */
 export const createCustomerExportRealtimeToken = async ({
 	triggerRunId,
