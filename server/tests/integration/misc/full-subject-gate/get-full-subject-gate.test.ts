@@ -1,6 +1,8 @@
 import { beforeAll, describe, expect, test } from "bun:test";
 import { AppEnv } from "@autumn/shared";
 import {
+	_getFullSubjectGateEwmaForTesting,
+	_setFullSubjectGateEwmaForTesting,
 	runWithFullSubjectGate,
 	toPerProcessLimit,
 } from "@/internal/customers/repos/getFullSubject/getFullSubjectGate.js";
@@ -455,5 +457,178 @@ describe("runWithFullSubjectGate cluster-wide caps", () => {
 		expect(counter.current).toBe(0);
 
 		_setFullSubjectGateConfigForTesting({ config: {} });
+	});
+});
+
+describe("runWithFullSubjectGate enqueue-time admission control", () => {
+	test("rejects immediately at enqueue when EWMA predicts the queue cannot drain within max_wait_ms", async () => {
+		_setFullSubjectGateConfigForTesting({
+			config: {
+				per_customer_limit: 1,
+				per_org_limit: 100,
+				max_wait_ms: 500,
+				per_customer_pending_max: 1000,
+				per_org_pending_max: 1000,
+			},
+		});
+		_setFullSubjectGateEwmaForTesting(10_000);
+
+		const hold = () => new Promise((resolve) => setTimeout(resolve, 200));
+		const running = runWithFullSubjectGate({
+			customerId: "cus-predicted-reject",
+			orgId: "org-predicted-reject",
+			env: AppEnv.Live,
+			queryFn: hold,
+		});
+		// Let the first request occupy the single slot so the next one queues.
+		await new Promise((resolve) => setTimeout(resolve, 10));
+		const queued = runWithFullSubjectGate({
+			customerId: "cus-predicted-reject",
+			orgId: "org-predicted-reject",
+			env: AppEnv.Live,
+			queryFn: hold,
+		});
+
+		const start = Date.now();
+		const [result] = await Promise.allSettled([
+			runWithFullSubjectGate({
+				customerId: "cus-predicted-reject",
+				orgId: "org-predicted-reject",
+				env: AppEnv.Live,
+				queryFn: hold,
+			}),
+		]);
+		const elapsedMs = Date.now() - start;
+
+		expect(result?.status).toBe("rejected");
+		const rejection = (result as PromiseRejectedResult).reason;
+		expect(rejection.statusCode).toBe(429);
+		expect(rejection.code).toBe("rate_limit_exceeded");
+		expect(rejection.data?.reason).toBe("predicted_wait_timeout");
+		// Shed at enqueue — did not sit the queue behind the slow requests.
+		expect(elapsedMs).toBeLessThan(50);
+
+		await Promise.allSettled([running, queued]);
+		_setFullSubjectGateConfigForTesting({
+			config: {
+				per_customer_limit: 2,
+				per_org_limit: 4,
+				max_wait_ms: 60_000,
+				per_customer_pending_max: 1000,
+				per_org_pending_max: 1000,
+			},
+		});
+		_setFullSubjectGateEwmaForTesting(100);
+	});
+
+	test("admits into an empty queue regardless of a high EWMA", async () => {
+		_setFullSubjectGateConfigForTesting({
+			config: {
+				per_customer_limit: 1,
+				per_org_limit: 100,
+				max_wait_ms: 500,
+				per_customer_pending_max: 1000,
+				per_org_pending_max: 1000,
+			},
+		});
+		_setFullSubjectGateEwmaForTesting(60_000);
+
+		const result = await runWithFullSubjectGate({
+			customerId: "cus-empty-queue",
+			orgId: "org-empty-queue",
+			env: AppEnv.Live,
+			queryFn: async () => "ok",
+		});
+		expect(result).toBe("ok");
+
+		_setFullSubjectGateConfigForTesting({
+			config: {
+				per_customer_limit: 2,
+				per_org_limit: 4,
+				max_wait_ms: 60_000,
+				per_customer_pending_max: 1000,
+				per_org_pending_max: 1000,
+			},
+		});
+		_setFullSubjectGateEwmaForTesting(100);
+	});
+
+	test("EWMA moves toward observed service times as executions complete", async () => {
+		_setFullSubjectGateConfigForTesting({
+			config: {
+				per_customer_limit: 2,
+				per_org_limit: 4,
+				max_wait_ms: 60_000,
+				per_customer_pending_max: 1000,
+				per_org_pending_max: 1000,
+			},
+		});
+		_setFullSubjectGateEwmaForTesting(100);
+
+		await runWithFullSubjectGate({
+			customerId: "cus-ewma-update",
+			orgId: "org-ewma-update",
+			env: AppEnv.Live,
+			queryFn: () => new Promise((resolve) => setTimeout(resolve, 300)),
+		});
+		const afterSlow = _getFullSubjectGateEwmaForTesting();
+		expect(afterSlow).toBeGreaterThan(100);
+		expect(afterSlow).toBeLessThan(300);
+
+		await runWithFullSubjectGate({
+			customerId: "cus-ewma-update",
+			orgId: "org-ewma-update",
+			env: AppEnv.Live,
+			queryFn: async () => "fast",
+		});
+		expect(_getFullSubjectGateEwmaForTesting()).toBeLessThan(afterSlow);
+
+		_setFullSubjectGateEwmaForTesting(100);
+	});
+
+	test("dequeue-time wait_timeout backstop still fires when the EWMA under-predicts", async () => {
+		_setFullSubjectGateConfigForTesting({
+			config: {
+				per_customer_limit: 1,
+				per_org_limit: 100,
+				max_wait_ms: 100,
+				per_customer_pending_max: 1000,
+				per_org_pending_max: 1000,
+			},
+		});
+		// Low EWMA admits everything at enqueue; real service time is slower.
+		_setFullSubjectGateEwmaForTesting(1);
+
+		const slow = () => new Promise((resolve) => setTimeout(resolve, 120));
+		const results = await Promise.allSettled(
+			Array.from({ length: 4 }, () =>
+				runWithFullSubjectGate({
+					customerId: "cus-backstop",
+					orgId: "org-backstop",
+					env: AppEnv.Live,
+					queryFn: slow,
+				}),
+			),
+		);
+
+		expect(results[0]?.status).toBe("fulfilled");
+		const rejectedReasons = results
+			.filter((r) => r.status === "rejected")
+			.map((r) => (r as PromiseRejectedResult).reason.data?.reason);
+		expect(rejectedReasons.length).toBeGreaterThan(0);
+		expect(rejectedReasons.every((reason) => reason === "wait_timeout")).toBe(
+			true,
+		);
+
+		_setFullSubjectGateConfigForTesting({
+			config: {
+				per_customer_limit: 2,
+				per_org_limit: 4,
+				max_wait_ms: 60_000,
+				per_customer_pending_max: 1000,
+				per_org_pending_max: 1000,
+			},
+		});
+		_setFullSubjectGateEwmaForTesting(100);
 	});
 });

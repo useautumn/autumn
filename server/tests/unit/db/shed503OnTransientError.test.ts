@@ -1,5 +1,6 @@
 import { describe, expect, mock, test } from "bun:test";
 import { shed503OnTransientError } from "@/db/shed503OnTransientError.js";
+import { RedisUnavailableError } from "@/external/redis/utils/errors.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 
 const buildContext = () =>
@@ -12,6 +13,11 @@ const buildContext = () =>
 
 const transientError = Object.assign(new Error("connect timeout"), {
 	code: "CONNECT_TIMEOUT",
+});
+
+const redisError = new RedisUnavailableError({
+	source: "test",
+	reason: "not_ready",
 });
 
 describe("shed503OnTransientError", () => {
@@ -75,5 +81,85 @@ describe("shed503OnTransientError", () => {
 		).rejects.toBe(applicationError);
 
 		expect(onTransientError).not.toHaveBeenCalled();
+	});
+
+	test("sheds redis failures when no fallback is supplied", async () => {
+		const ctx = buildContext();
+
+		await expect(
+			shed503OnTransientError({
+				ctx,
+				source: "find_customer",
+				run: () => {
+					throw redisError;
+				},
+			}),
+		).rejects.toMatchObject({
+			statusCode: 503,
+			data: { reason: "cache_unavailable" },
+		});
+	});
+
+	test("serves the postgres fallback when only redis failed", async () => {
+		const ctx = buildContext();
+		const onTransientError = mock(async () => {});
+
+		const result = await shed503OnTransientError({
+			ctx,
+			source: "get_customer",
+			run: () => {
+				throw redisError;
+			},
+			fallbackOnRedisUnavailable: () => "from-postgres",
+			onTransientError,
+		});
+
+		expect(result).toBe("from-postgres");
+		expect(onTransientError).not.toHaveBeenCalled();
+	});
+
+	test("never falls back when postgres is implicated", async () => {
+		const ctx = buildContext();
+		const fallback = mock(() => "from-postgres");
+
+		await expect(
+			shed503OnTransientError({
+				ctx,
+				source: "get_customer",
+				run: () => {
+					throw transientError;
+				},
+				fallbackOnRedisUnavailable: fallback,
+			}),
+		).rejects.toMatchObject({
+			statusCode: 503,
+			data: { reason: "critical_db_saturated" },
+		});
+
+		expect(fallback).not.toHaveBeenCalled();
+	});
+
+	test("sheds and still captures recovery when the fallback itself fails", async () => {
+		const ctx = buildContext();
+		const onTransientError = mock(async () => {});
+
+		await expect(
+			shed503OnTransientError({
+				ctx,
+				source: "get_or_create",
+				run: () => {
+					throw redisError;
+				},
+				fallbackOnRedisUnavailable: () => {
+					throw new Error("postgres also down");
+				},
+				onTransientError,
+			}),
+		).rejects.toMatchObject({
+			statusCode: 503,
+			data: { reason: "cache_unavailable" },
+		});
+
+		expect(onTransientError).toHaveBeenCalledWith(redisError);
 	});
 });

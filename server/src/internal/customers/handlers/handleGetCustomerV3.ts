@@ -7,6 +7,11 @@ import {
 	V0_2_InvoicesAlwaysExpanded,
 } from "@autumn/shared";
 import { createRoute } from "@/honoMiddlewares/routeHandler.js";
+import { applySubjectLookupDbOnly } from "@/internal/misc/miscellaneousEdgeConfig/applySubjectLookupDbOnly.js";
+import {
+	getSubjectReadL1TtlMs,
+	isSubjectReadSingleflightEnabled,
+} from "@/internal/misc/miscellaneousEdgeConfig/miscellaneousEdgeConfigStore.js";
 import { getApiCustomerByRollout } from "../actions/getApiCustomerByRollout.js";
 
 export const handleGetCustomerV3 = createRoute({
@@ -15,6 +20,7 @@ export const handleGetCustomerV3 = createRoute({
 	resource: AffectedResource.Customer,
 	handler: async (c) => {
 		const ctx = c.get("ctx");
+		applySubjectLookupDbOnly({ ctx });
 		const { customer_id: customerId, with_autumn_id = false } =
 			c.req.valid("json");
 
@@ -34,6 +40,8 @@ export const handleGetCustomerV3 = createRoute({
 			customerId,
 			source: "handleGetCustomerV3",
 			withAutumnId: with_autumn_id,
+			l1TtlMs: getSubjectReadL1TtlMs(),
+			singleflight: isSubjectReadSingleflightEnabled(),
 		});
 
 		const duration = Date.now() - start;

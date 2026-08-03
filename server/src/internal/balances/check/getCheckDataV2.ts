@@ -14,9 +14,13 @@ import {
 } from "@/internal/customers/cache/fullSubject/index.js";
 import { getApiSubject } from "@/internal/customers/cusUtils/getApiCustomerV2/getApiSubject.js";
 import { getCreditSystemsFromFeature } from "@/internal/features/creditSystemUtils.js";
+import { withTimeout } from "@/utils/withTimeout.js";
 import { triggerAutoTopUp } from "../autoTopUp/triggerAutoTopUp.js";
 import { buildEvaluationSubject } from "./buildEvaluationSubject.js";
 import type { CheckDataV2 } from "./checkTypes/CheckDataV2.js";
+
+/** Deadline for check's cache-miss DB hydration — check's ~50ms latency SLO can't wait out the 15s pool clocks. */
+export const CHECK_DB_HYDRATION_BUDGET_MS = 2_000;
 
 const getFeatureAndCreditSystems = ({
 	features,
@@ -61,20 +65,28 @@ export const getCheckDataV2 = async ({
 		]),
 	);
 
-	const fullSubject = ctx.apiVersion.gte(ApiVersion.V2_1)
-		? await getOrSetCachedPartialFullSubject({
-				ctx,
-				customerId: customer_id,
-				entityId: entity_id,
-				featureIds,
-				source: "getCheckDataV2",
-			})
-		: await getOrCreateCachedPartialFullSubject({
-				ctx,
-				params: body,
-				featureIds,
-				source: "getCheckDataV2",
-			});
+	// "Query read timeout" is in TRANSIENT_DB_ERROR_MESSAGES, so isTransientDbError
+	// classifies the expiry as transient and check's withRedisFailOpen fallback engages.
+	const fullSubject = await withTimeout({
+		timeoutMs: CHECK_DB_HYDRATION_BUDGET_MS,
+		timeoutMessage: "Query read timeout",
+		// The abandoned hydration keeps running and may still warm the cache.
+		fn: () =>
+			ctx.apiVersion.gte(ApiVersion.V2_1)
+				? getOrSetCachedPartialFullSubject({
+						ctx,
+						customerId: customer_id,
+						entityId: entity_id,
+						featureIds,
+						source: "getCheckDataV2",
+					})
+				: getOrCreateCachedPartialFullSubject({
+						ctx,
+						params: body,
+						featureIds,
+						source: "getCheckDataV2",
+					}),
+	});
 
 	const apiSubject = await getApiSubject({
 		ctx,

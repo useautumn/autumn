@@ -1,6 +1,7 @@
 import { AppEnv } from "@autumn/shared";
 import type { DrizzleCli } from "@server/db/initDrizzle.js";
 import { miscRedis } from "@/external/redis/initRedis.js";
+import { REDIS_OP_TIMEOUT_MS } from "@/external/redis/utils/redisOpTimeouts.js";
 import { tryRedisOp } from "@/external/redis/utils/runRedisOp.js";
 import { OrgService } from "../OrgService.js";
 
@@ -33,6 +34,7 @@ export const getCachedOrgWithFeatures = async ({
 		operation: () => miscRedis.get(cacheKey),
 		source: "org-features-cache:get",
 		redisInstance: miscRedis,
+		timeoutMs: REDIS_OP_TIMEOUT_MS.orgFeaturesGet,
 	});
 
 	if (!cached) return null;
