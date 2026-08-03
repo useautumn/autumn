@@ -13,14 +13,12 @@ import type { Logger } from "@/external/logtail/logtailUtils.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import type { RunCustomerExportPayload } from "@/trigger/exports/customerExportTaskPayload.js";
 import { CustomerExportService } from "../CustomerExportService.js";
-import { getCustomerExportErrorMessage } from "../customerExportErrorMessage.js";
 import {
 	countCustomerExportRows,
 	getCustomerExportUpperBound,
 } from "../queries/getCustomerExportScalars.js";
 import { streamCustomerExportCsv } from "./streamCustomerExportCsv.js";
 
-const MAX_STORED_ERROR_LENGTH = 500;
 const MARK_COMPLETED_ATTEMPTS = 3;
 const MARK_COMPLETED_RETRY_DELAY_MS = ms.seconds(2);
 
@@ -28,14 +26,6 @@ type CustomerExportProgressReporter = {
 	setTotalRows: (rowCount: number) => Promise<void> | void;
 	resetProcessedRows: () => Promise<void> | void;
 	incrementProcessedRows: (rowCount: number) => Promise<void> | void;
-};
-
-const sanitizeExportError = ({ error }: { error: unknown }) => {
-	const message = getCustomerExportErrorMessage({
-		error,
-		fallback: "Customer export failed",
-	});
-	return message.slice(0, MAX_STORED_ERROR_LENGTH);
 };
 
 /** The object is already published, so transient status writes are retried. */
@@ -69,7 +59,11 @@ const markCompletedWithRetry = async ({
 		} catch (error) {
 			if (attempt >= MARK_COMPLETED_ATTEMPTS) throw error;
 			logger.warn("customer-export: retrying markCompleted", {
-				data: { exportId, attempt, error: sanitizeExportError({ error }) },
+				data: {
+					exportId,
+					attempt,
+					error: error instanceof Error ? error.message : String(error),
+				},
 			});
 			await new Promise((resolve) =>
 				setTimeout(resolve, MARK_COMPLETED_RETRY_DELAY_MS),
@@ -233,7 +227,7 @@ export const executeCustomerExport = async ({
 			await CustomerExportService.markFailed({
 				db: ctx.db,
 				id: exportId,
-				errorMessage: sanitizeExportError({ error }),
+				errorMessage: error instanceof Error ? error.message : String(error),
 			});
 		}
 

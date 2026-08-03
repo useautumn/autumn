@@ -15,7 +15,6 @@ import {
 import type { RunCustomerExportPayload } from "@/trigger/exports/customerExportTaskPayload.js";
 import { shouldRunTriggerTasksInline } from "@/trigger/utils/shouldRunTriggerTasksInline.js";
 import { CustomerExportService } from "../CustomerExportService.js";
-import { getCustomerExportErrorMessage } from "../customerExportErrorMessage.js";
 import { cacheCustomerExportRealtimeToken } from "../customerExportRealtimeToken.js";
 import { customerExportToResponse } from "../customerExportToResponse.js";
 import { createExportReclaimingStale } from "../reclaimStaleCustomerExport.js";
@@ -52,7 +51,7 @@ const triggerCustomerExportWithRetry = async ({
 				data: {
 					exportId,
 					attempt,
-					error: getCustomerExportErrorMessage({ error }),
+					error: error instanceof Error ? error.message : String(error),
 				},
 			});
 			await delay(TRIGGER_ENQUEUE_RETRY_DELAY_MS);
@@ -112,7 +111,7 @@ export const startCustomerExport = async ({
 			ctx.logger.error("customer-export: inline execution failed", {
 				data: {
 					exportId: customerExport.id,
-					error: getCustomerExportErrorMessage({ error }),
+					error: error instanceof Error ? error.message : String(error),
 				},
 			});
 		});
@@ -153,7 +152,7 @@ export const startCustomerExport = async ({
 				data: {
 					exportId: customerExport.id,
 					triggerRunId: handle.id,
-					error: getCustomerExportErrorMessage({ error }),
+					error: error instanceof Error ? error.message : String(error),
 				},
 			});
 		}

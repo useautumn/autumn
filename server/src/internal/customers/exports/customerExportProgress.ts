@@ -4,7 +4,6 @@ import {
 } from "@autumn/shared";
 import { runs } from "@trigger.dev/sdk/v3";
 import type { Logger } from "@/external/logtail/logtailUtils.js";
-import { getCustomerExportErrorMessage } from "./customerExportErrorMessage.js";
 
 /** Failure to read optional progress must not fail export listing. */
 export const getCustomerExportProgress = async ({
@@ -21,7 +20,7 @@ export const getCustomerExportProgress = async ({
 		logger.warn("customer-export: failed to read run progress", {
 			data: {
 				triggerRunId,
-				error: getCustomerExportErrorMessage({ error }),
+				error: error instanceof Error ? error.message : String(error),
 			},
 		});
 		return null;

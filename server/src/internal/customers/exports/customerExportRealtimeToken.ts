@@ -2,7 +2,6 @@ import { ms } from "@autumn/shared";
 import { auth } from "@trigger.dev/sdk/v3";
 import { addMilliseconds, isPast } from "date-fns";
 import type { Logger } from "@/external/logtail/logtailUtils.js";
-import { getCustomerExportErrorMessage } from "./customerExportErrorMessage.js";
 
 const CUSTOMER_EXPORT_REALTIME_TOKEN_TTL = "1hr";
 // Reuse tokens below their one-hour TTL so list refetches do not rotate the
@@ -61,7 +60,7 @@ export const createCustomerExportRealtimeToken = async ({
 		logger.warn("customer-export: failed to create realtime access token", {
 			data: {
 				triggerRunId,
-				error: getCustomerExportErrorMessage({ error }),
+				error: error instanceof Error ? error.message : String(error),
 			},
 		});
 		return null;

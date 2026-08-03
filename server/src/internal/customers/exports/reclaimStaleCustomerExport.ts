@@ -16,7 +16,6 @@ import {
 	type CreateCustomerExportResult,
 	CustomerExportService,
 } from "./CustomerExportService.js";
-import { getCustomerExportErrorMessage } from "./customerExportErrorMessage.js";
 
 // Runless inline exports are considered abandoned after the configured task
 // duration plus a one-hour margin.
@@ -53,7 +52,7 @@ const isTriggerRunDead = async ({
 			{
 				data: {
 					triggerRunId,
-					error: getCustomerExportErrorMessage({ error }),
+					error: error instanceof Error ? error.message : String(error),
 				},
 			},
 		);
@@ -100,7 +99,7 @@ const resolveAbandonedExport = async ({
 				{
 					data: {
 						exportId: activeExport.id,
-						error: getCustomerExportErrorMessage({ error }),
+						error: error instanceof Error ? error.message : String(error),
 					},
 				},
 			);
