@@ -41,11 +41,16 @@ export function useRealtimeSubscriptions({
 		limit,
 		only,
 		retryItemStatuses,
+		sendWebhooks,
+		webhookConcurrency,
 	}: {
 		dryRun: boolean;
 		limit?: number;
 		only?: string[];
 		retryItemStatuses?: RetryableMigrationItemRunStatus[];
+		/** Omitted → the server decides from the scope size. */
+		sendWebhooks?: boolean;
+		webhookConcurrency?: number;
 	}) => {
 		try {
 			const result = await runMigration(
@@ -55,6 +60,8 @@ export function useRealtimeSubscriptions({
 					limit,
 					only,
 					retryItemStatuses,
+					sendWebhooks,
+					webhookConcurrency,
 				}),
 			);
 			if (result.trigger_run_id && result.public_access_token) {
