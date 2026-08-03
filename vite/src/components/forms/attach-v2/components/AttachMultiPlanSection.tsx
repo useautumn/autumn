@@ -6,6 +6,7 @@ import { SheetSection } from "@/components/v2/sheets/SharedSheetComponents";
 import { useScopeEntitySearch } from "@/views/customers2/customer/hooks/useScopeEntitySearch";
 import { useAttachFormContext } from "../context/AttachFormProvider";
 import { getAttachDisplayItems } from "../utils/grantFreeUtils";
+import { AttachPlanPrepaidQuantityFields } from "./AttachPlanPrepaidQuantityFields";
 
 export function AttachMultiPlanSection() {
 	const { formValues, product, products, hasCustomizations, entityId } =
@@ -13,8 +14,8 @@ export function AttachMultiPlanSection() {
 	const { entities, selectedEntity } = useScopeEntitySearch({
 		selectedEntityId: entityId ?? undefined,
 	});
-	const selectedPlans = formValues.additionalPlans.filter(
-		(plan) => plan.productId,
+	const selectedPlans = formValues.additionalPlans.flatMap((plan, planIndex) =>
+		plan.productId ? [{ plan, planIndex }] : [],
 	);
 	const primaryItems = getAttachDisplayItems({
 		items: formValues.items,
@@ -27,17 +28,28 @@ export function AttachMultiPlanSection() {
 	return (
 		<SheetSection title="Plans" withSeparator>
 			<div className="space-y-1.5">
-				<SelectedPlanRow
-					productId={formValues.productId}
-					product={product}
-					customItems={primaryItems}
-					isCustom={hasCustomizations || formValues.grantFree}
-					scope={selectedEntity?.name || entityId || "Customer-level"}
-				/>
-				{selectedPlans.map((plan) => {
+				<div className="space-y-1.5">
+					<SelectedPlanRow
+						productId={formValues.productId}
+						product={product}
+						customItems={primaryItems}
+						isCustom={hasCustomizations || formValues.grantFree}
+						scope={selectedEntity?.name || entityId || "Customer-level"}
+					/>
+					<AttachPlanPrepaidQuantityFields
+						items={primaryItems ?? product?.items}
+						quantities={formValues.prepaidOptions}
+					/>
+				</div>
+				{selectedPlans.map(({ plan, planIndex }) => {
 					const selectedProduct = products.find(
 						(candidate) => candidate.id === plan.productId,
 					);
+					const planItems = getAttachDisplayItems({
+						items: plan.items,
+						productItems: selectedProduct?.items,
+						grantFree: formValues.grantFree,
+					});
 					const planEntityId = resolvePlanEntityId({
 						planEntityId: plan.entityId,
 						defaultEntityId: entityId,
@@ -48,18 +60,20 @@ export function AttachMultiPlanSection() {
 					);
 
 					return (
-						<SelectedPlanRow
-							key={plan._id}
-							productId={plan.productId}
-							product={selectedProduct}
-							customItems={getAttachDisplayItems({
-								items: plan.items,
-								productItems: selectedProduct?.items,
-								grantFree: formValues.grantFree,
-							})}
-							isCustom={plan.isCustom || formValues.grantFree}
-							scope={planEntity?.name || planEntityId || "Customer-level"}
-						/>
+						<div key={plan._id} className="space-y-1.5">
+							<SelectedPlanRow
+								productId={plan.productId}
+								product={selectedProduct}
+								customItems={planItems}
+								isCustom={plan.isCustom || formValues.grantFree}
+								scope={planEntity?.name || planEntityId || "Customer-level"}
+							/>
+							<AttachPlanPrepaidQuantityFields
+								items={planItems ?? selectedProduct?.items}
+								quantities={plan.prepaidOptions}
+								additionalPlanIndex={planIndex}
+							/>
+						</div>
 					);
 				})}
 			</div>

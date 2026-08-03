@@ -21,6 +21,7 @@
   },
   "sideEffects": false,
   "scripts": {
+    "test": "bun test",
     "lint": "eslint --cache --max-warnings=0 src",
     "build": "tshy",
     "prepublishOnly": "npm run build"

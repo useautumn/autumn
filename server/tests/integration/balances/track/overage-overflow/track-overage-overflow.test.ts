@@ -410,7 +410,8 @@ test.concurrent(
 			],
 			actions: [
 				s.billing.attach({ productId: customerProduct.id }),
-				s.track({ featureId: TestFeature.Messages, value: 40, timeout: 2000 }),
+				// The reset reads Postgres, so the track has to have flushed first.
+				s.track({ featureId: TestFeature.Messages, value: 40, timeout: 4000 }),
 				// Cron-path reset: unused 60 rolls over, fresh 100 -> remaining 160.
 				s.resetFeature({
 					featureId: TestFeature.Messages,

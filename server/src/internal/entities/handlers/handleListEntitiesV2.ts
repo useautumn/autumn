@@ -27,6 +27,7 @@ import {
 	RELEVANT_STATUSES,
 } from "@/internal/customers/cusProducts/CusProductService.js";
 import { resultToFullSubject } from "@/internal/customers/repos/getFullSubject/index.js";
+import { unpackSubjectEnvelope } from "@/internal/customers/repos/getFullSubject/unpackSubjectEnvelope.js";
 import { getOrgPaginationMaxLimit } from "../../misc/edgeConfig/orgLimitsStore.js";
 import { getApiEntityBaseV2 } from "../entityUtils/getApiEntityV2/getApiEntityBaseV2.js";
 import { getCursorPaginatedEntitySubjectsQuery } from "../repos/cursorListEntitiesQuery.js";
@@ -125,7 +126,7 @@ const runOffsetListEntities = async ({
 		customerId: body.customer_id,
 	});
 
-	const [subjectRows, totalCount] = await Promise.all([
+	const [subjectEnvelopeRows, totalCount] = await Promise.all([
 		ctx.db.execute(
 			getPaginatedEntitySubjectsQuery({
 				orgId: ctx.org.id,
@@ -136,6 +137,7 @@ const runOffsetListEntities = async ({
 		),
 		countEntitiesByOrgIdAndEnv({ ctx }),
 	]);
+	const subjectRows = unpackSubjectEnvelope({ rows: subjectEnvelopeRows });
 
 	const totalFilteredCount = hasFilteredQuery
 		? await countFilteredEntitiesByOrgIdAndEnv({
@@ -203,19 +205,21 @@ export const handleListEntitiesV2 = createRoute({
 				subscriptionStatus: body.subscription_status,
 			});
 
-			const rows = await ctx.db.execute(
-				getCursorPaginatedEntitySubjectsQuery({
-					orgId: ctx.org.id,
-					env: ctx.env,
-					limit: body.limit,
-					cursor,
-					inStatuses,
-					plans: body.plans,
-					processors: body.processors,
-					search: body.search,
-					customerId: body.customer_id,
-				}),
-			);
+			const rows = unpackSubjectEnvelope({
+				rows: await ctx.db.execute(
+					getCursorPaginatedEntitySubjectsQuery({
+						orgId: ctx.org.id,
+						env: ctx.env,
+						limit: body.limit,
+						cursor,
+						inStatuses,
+						plans: body.plans,
+						processors: body.processors,
+						search: body.search,
+						customerId: body.customer_id,
+					}),
+				),
+			});
 
 			const hasMore = rows.length > body.limit;
 			const pageRows = hasMore ? rows.slice(0, body.limit) : rows;

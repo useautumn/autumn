@@ -8,6 +8,7 @@ import { CoinsIcon } from "@phosphor-icons/react";
 import { IncludedUsageIcon } from "@/components/v2/icons/AutumnIcons";
 import { useProduct } from "@/components/v2/inline-custom-plan-editor/PlanEditorContext";
 import { SheetSection } from "@/components/v2/sheets/InlineSheet";
+import { selectPaidPlanType } from "@/views/products/plan/utils/selectPaidPlanType";
 
 export const PlanTypeSection = () => {
 	const { product, setProduct } = useProduct();
@@ -48,17 +49,7 @@ export const PlanTypeSection = () => {
 					<div className="flex w-full items-center gap-4">
 						<PanelButton
 							isSelected={planType === "paid"}
-							onClick={async () => {
-								setProduct({
-									...product,
-									planType: "paid",
-									basePriceType: "usage",
-									is_default: false,
-									items: product.items.filter(
-										(item: ProductItem) => !isPriceItem(item),
-									),
-								});
-							}}
+							onClick={() => setProduct(selectPaidPlanType({ product }))}
 							icon={<CoinsIcon size={16} color="currentColor" />}
 						/>
 						<div className="flex-1">

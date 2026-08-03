@@ -5,11 +5,15 @@ import type {
 	MultiAttachParamsV0,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
+import { checkCheckoutSessionLock } from "@/internal/billing/v2/actions/locks/checkoutSessionLock/checkCheckoutSessionLock";
+import { checkoutSessionLock } from "@/internal/billing/v2/actions/locks/checkoutSessionLock/checkoutSessionLock";
 import { executeBillingPlan } from "@/internal/billing/v2/execute/executeBillingPlan";
 import { evaluateStripeBillingPlan } from "@/internal/billing/v2/providers/stripe/actionBuilders/evaluateStripeBillingPlan";
 import { logStripeBillingPlan } from "@/internal/billing/v2/providers/stripe/logs/logStripeBillingPlan";
 import { logStripeBillingResult } from "@/internal/billing/v2/providers/stripe/logs/logStripeBillingResult";
+import { computeAttachPreviewBillingPlan } from "@/internal/billing/v2/utils/billingPlan/preview/computeAttachPreviewBillingPlan";
 import { logAutumnBillingPlan } from "@/internal/billing/v2/utils/logs/logAutumnBillingPlan";
+import { hashJson } from "@/utils/hash/hashJson";
 import { computeMultiAttachPlan } from "./compute/computeMultiAttachPlan";
 import { handleMultiAttachCurrencyErrors } from "./errors/handleMultiAttachCurrencyErrors";
 import {
@@ -34,6 +38,10 @@ export async function multiAttach({
 	params: MultiAttachParamsV0;
 	preview?: boolean;
 }): Promise<MultiAttachResult> {
+	const checkoutReservation = !preview
+		? await checkoutSessionLock.get({ ctx, customerId: params.customer_id })
+		: undefined;
+
 	// 1. Setup
 	const billingContext = await setupMultiAttachBillingContext({
 		ctx,
@@ -46,6 +54,7 @@ export async function multiAttach({
 		db: ctx.db,
 		billingContext,
 		redirectMode: params.redirect_mode,
+		params,
 	});
 
 	handleMultiAttachCurrencyErrors({ ctx, billingContext, params });
@@ -79,17 +88,32 @@ export async function multiAttach({
 	handleMultiAttachBillingPlanErrors({ ctx, billingContext, billingPlan });
 
 	if (preview) {
+		const previewBillingPlan = await computeAttachPreviewBillingPlan({
+			ctx,
+			billingContext,
+			autumnBillingPlan,
+		});
 		return {
 			billingContext,
-			billingPlan,
+			billingPlan: { ...billingPlan, preview: previewBillingPlan },
 		};
 	}
+
+	const cachedResult = await checkCheckoutSessionLock({
+		ctx,
+		params,
+		billingContext,
+		billingPlan,
+		existingLock: checkoutReservation,
+	});
+	if (cachedResult) return cachedResult;
 
 	// 5. Execute billing plan
 	const billingResult = await executeBillingPlan({
 		ctx,
 		billingContext,
 		billingPlan,
+		checkoutLockParamsHash: hashJson({ value: params }),
 	});
 
 	logStripeBillingResult({ ctx, result: billingResult.stripe });

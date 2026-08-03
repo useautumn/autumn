@@ -1,7 +1,12 @@
-import type { CreateScheduleParamsV0 } from "@autumn/shared";
+import type {
+	CreateScheduleParamsV0,
+	MultiAttachParamsV0,
+} from "@autumn/shared";
 import type { BillingStageParams } from "./billingStageParams";
 
-export function applyCreateScheduleStageParams({
+type MultiPlanParams = CreateScheduleParamsV0 | MultiAttachParamsV0;
+
+export function applyMultiPlanStageParams<T extends MultiPlanParams>({
 	requestBody,
 	useInvoice,
 	enableProductImmediately,
@@ -9,8 +14,8 @@ export function applyCreateScheduleStageParams({
 	invoiceTemplateId,
 	netTermsDays,
 }: BillingStageParams & {
-	requestBody: CreateScheduleParamsV0 | null;
-}): CreateScheduleParamsV0 | null {
+	requestBody: T | null;
+}): T | null {
 	if (!requestBody) return null;
 
 	if (useInvoice) {

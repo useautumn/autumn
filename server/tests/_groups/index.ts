@@ -24,7 +24,9 @@ import { billingV1 } from "./domains/billing/billingV1";
 import { billingV2 } from "./domains/billing/billingV2";
 import { billingV2Misc } from "./domains/billing/billingV2Misc";
 import { sync } from "./domains/billing/sync";
-import { crud } from "./domains/crud";
+import { crud } from "./domains/crud/crud";
+import { customers } from "./domains/crud/customers";
+import { entities } from "./domains/crud/entities";
 import { licenses } from "./domains/licenses";
 import { misc } from "./domains/misc";
 import { webhooks } from "./domains/webhooks";
@@ -62,6 +64,8 @@ const allGroups: TestGroup[] = [
 	sync,
 	temp,
 	crud,
+	customers,
+	entities,
 	licenses,
 	webhooks,
 	advanced,

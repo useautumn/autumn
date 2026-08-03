@@ -6,7 +6,7 @@
 #   workers -> bun src/workers.ts   (cwd /app/server)
 #   cron    -> bun src/cron.ts      (cwd /app/server)
 #   leaf    -> bun leaf             (cwd /app/server; serves chat + MCP routes)
-FROM oven/bun:1.3.10 AS deps
+FROM oven/bun:1.3.14 AS deps
 WORKDIR /app
 
 # Copy the committed lockfile + every workspace manifest. Installing against the
@@ -51,7 +51,7 @@ RUN mkdir -p scripts && touch scripts/preload-env.ts
 RUN --mount=type=cache,target=/root/.bun/install/cache \
 	bun install --ignore-scripts --frozen-lockfile
 
-FROM oven/bun:1.3.10
+FROM oven/bun:1.3.14
 WORKDIR /app
 ENV NODE_ENV=production
 

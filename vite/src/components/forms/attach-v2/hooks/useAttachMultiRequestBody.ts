@@ -1,12 +1,8 @@
-import type {
-	CreateScheduleParamsV0,
-	Feature,
-	ProductV2,
-} from "@autumn/shared";
+import type { Feature, MultiAttachParamsV0, ProductV2 } from "@autumn/shared";
 import { useCallback, useMemo } from "react";
-import { applyCreateScheduleStageParams } from "@/components/forms/shared/utils/applyCreateScheduleStageParams";
+import { applyMultiPlanStageParams } from "@/components/forms/shared/utils/applyMultiPlanStageParams";
 import type { BillingStageParams } from "@/components/forms/shared/utils/billingStageParams";
-import { buildCreateSchedulePlan } from "@/components/forms/shared/utils/buildPlanCustomize";
+import { buildBillingPlan } from "@/components/forms/shared/utils/buildPlanCustomize";
 import { normalizeBillingRequestItems } from "@/components/forms/shared/utils/normalizeBillingRequestItems";
 import { getFreeTrial } from "@/components/forms/update-subscription-v2/utils/getFreeTrial";
 import type { AttachAdditionalPlan } from "../attachFormSchema";
@@ -14,7 +10,7 @@ import { filterValidDiscounts } from "../utils/discountUtils";
 import { stripPricesFromItems } from "../utils/grantFreeUtils";
 import type { BuildAttachRequestBodyParams } from "./useAttachRequestBody";
 
-export type BuildAttachScheduleRequestBodyParams = Pick<
+export type BuildAttachMultiRequestBodyParams = Pick<
 	BuildAttachRequestBodyParams,
 	| "customerId"
 	| "entityId"
@@ -27,9 +23,12 @@ export type BuildAttachScheduleRequestBodyParams = Pick<
 	| "trialDuration"
 	| "trialEnabled"
 	| "trialCardRequired"
+	| "trialOnEnd"
+	| "prorationBehavior"
 	| "redirectMode"
 	| "discounts"
 	| "currency"
+	| "startDate"
 > & {
 	products: ProductV2[];
 	features: Feature[];
@@ -63,7 +62,7 @@ function buildPlanParams({
 		? stripPricesFromItems({ items: normalizedItems ?? product?.items ?? [] })
 		: normalizedItems;
 
-	return buildCreateSchedulePlan({
+	return buildBillingPlan({
 		productId: planId,
 		prepaidOptions,
 		items: customizedItems,
@@ -76,7 +75,7 @@ function buildPlanParams({
 	});
 }
 
-export function buildAttachScheduleRequestBody({
+export function buildAttachMultiRequestBody({
 	customerId,
 	entityId,
 	product,
@@ -91,11 +90,14 @@ export function buildAttachScheduleRequestBody({
 	trialDuration,
 	trialEnabled,
 	trialCardRequired,
+	trialOnEnd,
+	prorationBehavior,
 	redirectMode,
 	discounts,
 	currency,
+	startDate,
 	hasInvalidPlanScopes = false,
-}: BuildAttachScheduleRequestBodyParams): CreateScheduleParamsV0 | null {
+}: BuildAttachMultiRequestBodyParams): MultiAttachParamsV0 | null {
 	if (hasInvalidPlanScopes || !customerId || !product) return null;
 
 	const selectedAdditionalPlans = additionalPlans.filter(
@@ -136,29 +138,32 @@ export function buildAttachScheduleRequestBody({
 		trialDuration,
 		trialEnabled,
 		trialCardRequired,
+		trialOnEnd,
 	});
 	const validDiscounts = filterValidDiscounts(discounts);
 
 	return {
 		customer_id: customerId,
-		phases: [{ starts_at: "now", plans }],
-		preserve_add_ons: true,
+		plans,
 		redirect_mode: redirectMode,
 		free_trial: freeTrial
 			? {
 					duration_length: freeTrial.length,
 					duration_type: freeTrial.duration,
 					card_required: freeTrial.card_required,
+					...(freeTrial.on_end ? { on_end: freeTrial.on_end } : {}),
 				}
 			: null,
+		...(prorationBehavior ? { billing_behavior: prorationBehavior } : {}),
 		...(entityId ? { entity_id: entityId } : {}),
 		...(currency ? { currency: currency.toLowerCase() } : {}),
 		...(validDiscounts.length > 0 ? { discounts: validDiscounts } : {}),
+		...(startDate ? { starts_at: startDate } : {}),
 	};
 }
 
-export function useAttachScheduleRequestBody(
-	params: BuildAttachScheduleRequestBodyParams,
+export function useAttachMultiRequestBody(
+	params: BuildAttachMultiRequestBodyParams,
 ) {
 	const {
 		customerId,
@@ -175,14 +180,17 @@ export function useAttachScheduleRequestBody(
 		trialDuration,
 		trialEnabled,
 		trialCardRequired,
+		trialOnEnd,
+		prorationBehavior,
 		redirectMode,
 		discounts,
 		currency,
+		startDate,
 		hasInvalidPlanScopes,
 	} = params;
 	const requestBody = useMemo(
 		() =>
-			buildAttachScheduleRequestBody({
+			buildAttachMultiRequestBody({
 				customerId,
 				entityId,
 				product,
@@ -197,9 +205,12 @@ export function useAttachScheduleRequestBody(
 				trialDuration,
 				trialEnabled,
 				trialCardRequired,
+				trialOnEnd,
+				prorationBehavior,
 				redirectMode,
 				discounts,
 				currency,
+				startDate,
 				hasInvalidPlanScopes,
 			}),
 		[
@@ -217,15 +228,18 @@ export function useAttachScheduleRequestBody(
 			trialDuration,
 			trialEnabled,
 			trialCardRequired,
+			trialOnEnd,
+			prorationBehavior,
 			redirectMode,
 			discounts,
 			currency,
+			startDate,
 			hasInvalidPlanScopes,
 		],
 	);
 	const buildRequestBody = useCallback(
 		(stageParams: BillingStageParams = {}) =>
-			applyCreateScheduleStageParams({ ...stageParams, requestBody }),
+			applyMultiPlanStageParams({ ...stageParams, requestBody }),
 		[requestBody],
 	);
 
