@@ -15,8 +15,8 @@ const orgEnvKey = ({ orgId, env }: { orgId: string; env: string }) =>
 	`${orgId}:${env}`;
 
 /**
- * Builds one worker context per unique org+env in the batch (each context loads
- * the org + features once). Orgs that are deleted or fail to load are skipped.
+ * Builds one worker context per unique org+env in the batch (each context
+ * loads the org + features once). Orgs deleted since queueing are skipped.
  */
 const fetchUniqueOrgContexts = async ({
 	db,
@@ -38,25 +38,16 @@ const fetchUniqueOrgContexts = async ({
 
 	const contexts = new Map<string, AutumnContext>();
 	for (const [key, { orgId, env }] of uniqueOrgEnvs) {
-		// A transient lookup failure for one org must not abort the whole batch —
-		// the message is ACKed regardless, and the reset scan rediscovers its rows.
-		try {
-			const ctx = await createWorkerContext({
-				db,
-				payload: { orgId, env },
-				logger,
-			});
-			if (!ctx) {
-				logger.warn(`[batchReset] org ${orgId} (${env}) not found, skipping`);
-				continue;
-			}
-			contexts.set(key, ctx);
-		} catch (error) {
-			logger.warn(
-				`[batchReset] failed to load context for org ${orgId} (${env}), skipping`,
-				{ error },
-			);
+		const ctx = await createWorkerContext({
+			db,
+			payload: { orgId, env },
+			logger,
+		});
+		if (!ctx) {
+			logger.warn(`[batchReset] org ${orgId} (${env}) not found, skipping`);
+			continue;
 		}
+		contexts.set(key, ctx);
 	}
 
 	return contexts;

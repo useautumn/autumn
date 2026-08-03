@@ -8,7 +8,8 @@ import {
 import { tryRedisOp } from "@/external/redis/utils/runRedisOp.js";
 import { OrgService } from "../OrgService.js";
 
-/** Bounds staleness when proactive cache invalidation misses. */
+/** Short by design: org config changes are also pushed through clearOrgCache, so
+ *  this only has to bound the staleness window for anything that misses that. */
 export const ORG_WITH_FEATURES_CACHE_TTL_SECONDS = 60;
 
 type OrgWithFeatures = NonNullable<
@@ -22,37 +23,6 @@ export const buildOrgWithFeaturesCacheKey = ({
 	orgId: string;
 	env: AppEnv;
 }) => `org_with_features:${orgId}:${env}`;
-
-const isRecord = (value: unknown): value is Record<string, unknown> =>
-	typeof value === "object" && value !== null && !Array.isArray(value);
-
-const isOrgWithFeaturesEnvelope = (
-	value: unknown,
-): value is OrgWithFeatures => {
-	if (!isRecord(value) || !isRecord(value.org)) return false;
-
-	return (
-		typeof value.org.id === "string" &&
-		value.org.id.length > 0 &&
-		Array.isArray(value.features)
-	);
-};
-
-/** A corrupt cache entry must read as a miss, not an error that lasts the TTL. */
-export const parseCachedOrgWithFeatures = ({
-	cached,
-}: {
-	cached: string | null;
-}): OrgWithFeatures | null => {
-	if (!cached) return null;
-
-	try {
-		const parsed: unknown = JSON.parse(cached);
-		return isOrgWithFeaturesEnvelope(parsed) ? parsed : null;
-	} catch {
-		return null;
-	}
-};
 
 export const getCachedOrgWithFeatures = async ({
 	orgId,
@@ -68,7 +38,9 @@ export const getCachedOrgWithFeatures = async ({
 		source: "org-features-cache:get",
 	});
 
-	return parseCachedOrgWithFeatures({ cached: cached ?? null });
+	if (!cached) return null;
+
+	return JSON.parse(cached) as OrgWithFeatures;
 };
 
 export const setCachedOrgWithFeatures = async ({
@@ -123,7 +95,20 @@ export const clearOrgWithFeaturesCache = async ({
 	);
 };
 
-/** Read-through cache; Redis failures and corrupt entries fall back to Postgres. */
+/**
+ * Read-through cache around `OrgService.getWithFeatures`.
+ *
+ * Queue workers call this once per message and async `balances.track` enqueues
+ * one message per API request, so the uncached path was running ~1,140 times a
+ * second against Postgres — 3.08M lookups in 45 minutes, 8.4% of database time —
+ * for a row that barely changes.
+ *
+ * Redis is strictly an accelerator: every op goes through `tryRedisOp`, which
+ * swallows failures, so an outage reads as a cache miss and falls through to
+ * Postgres. That must hold — if a Redis error escaped here,
+ * `createWorkerContext` would catch it, treat the org as missing, and silently
+ * acknowledge queued jobs without recording usage.
+ */
 export const getOrgWithFeaturesCached = async ({
 	db,
 	orgId,
@@ -140,12 +125,7 @@ export const getOrgWithFeaturesCached = async ({
 		if (cached) return cached;
 	}
 
-	const fresh = await OrgService.getWithFeatures({
-		db,
-		orgId,
-		env,
-		allowNotFound: true,
-	});
+	const fresh = await OrgService.getWithFeatures({ db, orgId, env });
 	if (!fresh) return null;
 
 	await setCachedOrgWithFeatures({ orgId, env, data: fresh });
