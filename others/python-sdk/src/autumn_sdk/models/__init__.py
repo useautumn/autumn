@@ -10244,41 +10244,9 @@ _dynamic_imports: dict[str, str] = {
 _sub_packages = ["internal"]
 
 
-if TYPE_CHECKING:
-    from .listrewardsop import (
-        ListRewardsCouponPromoCode as CouponPromoCode,
-        ListRewardsCouponPromoCodeTypedDict as CouponPromoCodeTypedDict,
-        ListRewardsCouponType as CouponType,
-        ListRewardsDurationType as DurationType,
-        ListRewardsExpiry as Expiry,
-        ListRewardsExpiryType as ExpiryType,
-        ListRewardsExpiryTypedDict as ExpiryTypedDict,
-        ListRewardsFeatureGrantPromoCode as FeatureGrantPromoCode,
-        ListRewardsFeatureGrantPromoCodeTypedDict as FeatureGrantPromoCodeTypedDict,
-        ListRewardsGrant as Grant,
-        ListRewardsGrantTypedDict as GrantTypedDict,
-    )
-
-
-_COMPAT_MODEL_ALIASES = {
-    "CouponPromoCode": "ListRewardsCouponPromoCode",
-    "CouponPromoCodeTypedDict": "ListRewardsCouponPromoCodeTypedDict",
-    "CouponType": "ListRewardsCouponType",
-    "DurationType": "ListRewardsDurationType",
-    "Expiry": "ListRewardsExpiry",
-    "ExpiryType": "ListRewardsExpiryType",
-    "ExpiryTypedDict": "ListRewardsExpiryTypedDict",
-    "FeatureGrantPromoCode": "ListRewardsFeatureGrantPromoCode",
-    "FeatureGrantPromoCodeTypedDict": "ListRewardsFeatureGrantPromoCodeTypedDict",
-    "Grant": "ListRewardsGrant",
-    "GrantTypedDict": "ListRewardsGrantTypedDict",
-}
-__all__ += _COMPAT_MODEL_ALIASES
-
-
 def __getattr__(attr_name: str) -> Any:
     return lazy_getattr(
-        _COMPAT_MODEL_ALIASES.get(attr_name, attr_name),
+        attr_name,
         package=__package__,
         dynamic_imports=_dynamic_imports,
         sub_packages=_sub_packages,
