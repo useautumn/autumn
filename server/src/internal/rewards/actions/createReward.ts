@@ -5,6 +5,7 @@ import {
 	RecaseError,
 	RewardCategory,
 } from "@autumn/shared";
+import { withLock } from "@/external/redis/redisUtils.js";
 import { createStripeCoupon } from "@/external/stripe/stripeCouponUtils/stripeCouponUtils.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { ProductService } from "@/internal/products/ProductService.js";
@@ -18,15 +19,17 @@ import {
 	initRewardStripePrices,
 } from "@/internal/rewards/rewardUtils.js";
 
-export const createReward = async ({
-	ctx,
-	rewardData,
-	legacyStripe,
-}: {
+type CreateRewardParams = {
 	ctx: AutumnContext;
 	rewardData: CreateReward;
 	legacyStripe?: boolean;
-}) => {
+};
+
+const createRewardWithoutLock = async ({
+	ctx,
+	rewardData,
+	legacyStripe,
+}: CreateRewardParams) => {
 	const { db, org, env, logger } = ctx;
 	const reward = constructReward({
 		reward: rewardData,
@@ -115,3 +118,12 @@ export const createReward = async ({
 
 	return rewardRepo.insert({ db, data: reward });
 };
+
+export const createReward = (params: CreateRewardParams) =>
+	withLock({
+		lockKey: `create-reward:${params.ctx.org.id}:${params.ctx.env}`,
+		ttlMs: 120_000,
+		errorMessage:
+			"Reward creation already in progress for this organization, try again in a few seconds",
+		fn: () => createRewardWithoutLock(params),
+	});

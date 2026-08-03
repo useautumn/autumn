@@ -48,9 +48,20 @@ test.concurrent(
 			},
 		};
 
-		const created = CreateRewardResponseSchema.parse(
-			await autumnV2_2.post("/rewards.create", params),
+		const results = await Promise.allSettled([
+			autumnV2_2.post("/rewards.create", params),
+			autumnV2_2.post("/rewards.create", params),
+		]);
+		const fulfilled = results.filter(
+			(result): result is PromiseFulfilledResult<unknown> =>
+				result.status === "fulfilled",
 		);
+		expect(fulfilled).toHaveLength(1);
+		expect(results.filter(({ status }) => status === "rejected")).toHaveLength(
+			1,
+		);
+
+		const created = CreateRewardResponseSchema.parse(fulfilled[0]?.value);
 		if (!("coupon" in created)) throw new Error("Expected coupon response");
 		expect(created).toMatchObject({
 			coupon: {
