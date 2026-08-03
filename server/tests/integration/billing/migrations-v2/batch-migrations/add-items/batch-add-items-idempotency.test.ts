@@ -7,8 +7,8 @@
  *       item-run checkpoint cannot short-circuit it) inserts nothing: one
  *       cusEnt row per feature, granted amount unchanged, usage accrued
  *       between the runs preserved.
- *     - A customer whose add landed already is marked succeeded on the replay,
- *       not skipped — a no-op add is a success.
+ *     - A customer whose add landed already is marked skipped on the replay —
+ *       nothing changed for them (batch semantics: succeeded = mutated).
  *     - Adding a feature the plan already grants never duplicates the balance,
  *       whether the customer product is plain or customized. A customer who
  *       attached with messages customized 50 -> 100 keeps exactly one messages
@@ -17,10 +17,10 @@
  *     - customer_entitlements: exactly one live row per (customer, plan,
  *       feature) throughout.
  *
- * The customized customer is asserted succeeded, not skipped, so the guard
- * under test is unambiguous: the row is in scope and processed, and it is
- * `selectAddCandidateRows`' (feature, reset interval) dedup — not an is_custom
- * scope exclusion — that keeps it at one balance.
+ * The dedup under test is `selectAddCandidateRows`' (feature, reset interval)
+ * guard: the customized row is in scope, and the dedup — not an is_custom
+ * scope exclusion — is what keeps it at one balance (marked skipped, since
+ * nothing was inserted for it).
  */
 
 import { expect, test } from "bun:test";
@@ -184,13 +184,13 @@ test.concurrent(
 		// ── The invariant: still exactly one row per feature ─────────────
 		for (const customerId of [trackedId, untouchedId]) {
 			await expectSingleRows({ customerId });
-			// A no-op add is a success, not a skip.
+			// Nothing changed on the replay → skipped.
 			await expectMigrationItemRunStatus({
 				ctx,
 				migrationInternalId: replayRun.migration.internal_id,
 				migrationRunId: replayRun.migrationRunId,
 				customerId,
-				status: MigrationItemRunStatus.Succeeded,
+				status: MigrationItemRunStatus.Skipped,
 			});
 		}
 	},
@@ -270,14 +270,15 @@ test.concurrent(
 				featureId: TestFeature.Messages,
 				count: 1,
 			});
-			// Both rows are genuinely in scope and processed, so the dedup — not an
-			// is_custom exclusion — is what keeps the customized row at one balance.
+			// Both rows are genuinely in scope, so it is the dedup — not an
+			// is_custom exclusion — that keeps each at one balance; with nothing
+			// inserted, both are skipped.
 			await expectMigrationItemRunStatus({
 				ctx,
 				migrationInternalId: migration.internal_id,
 				migrationRunId,
 				customerId,
-				status: MigrationItemRunStatus.Succeeded,
+				status: MigrationItemRunStatus.Skipped,
 			});
 		}
 	},

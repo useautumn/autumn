@@ -76,10 +76,12 @@ export const runChunkedMigration = async ({
 	waitFor?: () => Promise<unknown>;
 	timeoutMs?: number;
 	pollIntervalMs?: number;
-	/** Direct mode only. `only` forces the per-customer lane (batch-ineligible);
+	/** Direct mode only. `only` narrows the run's scope in either lane;
+	 * `limit` keeps the run on the per-customer lane (batch-ineligible);
 	 * `webhooks` are the run's delivery params. */
 	controls?: {
 		only?: string[];
+		limit?: number;
 		webhooks?: { sendWebhooks?: boolean; webhookConcurrency?: number };
 	};
 }): Promise<{

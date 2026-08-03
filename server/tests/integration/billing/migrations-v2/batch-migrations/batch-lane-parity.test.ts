@@ -115,7 +115,8 @@ test.concurrent(
 		});
 		expect(batchRun.result?.lane).toBe("batch");
 
-		// Lane B: per-customer (`controls.only` makes the run batch-ineligible).
+		// Lane B: per-customer (`controls.limit` makes the run batch-ineligible;
+		// `only` narrows scope without selecting the lane).
 		const perCustomerRun = await runChunkedMigration({
 			ctx,
 			migrationClient: autumnV2_2,
@@ -131,7 +132,7 @@ test.concurrent(
 				],
 			},
 			noBillingChanges: true,
-			controls: { only: [perCustomerId] },
+			controls: { only: [perCustomerId], limit: 1 },
 		});
 		expect(perCustomerRun.result?.lane).toBe("per_customer");
 

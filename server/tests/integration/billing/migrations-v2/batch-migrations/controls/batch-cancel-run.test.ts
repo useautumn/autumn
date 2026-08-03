@@ -75,8 +75,9 @@ test.concurrent(
 			],
 		});
 
+		// Unique per execution: item-run history blocks re-deleting a fixed id.
 		const migration = await autumnV2_2.migrationsV2.deleteAndCreate({
-			id: "batch-cancel-mig",
+			id: `batch-cancel-mig-${Date.now().toString(36)}`,
 			filter: { customer: { plan: { plan_id: plan.id } } },
 			operations: addWordsOperation({ planFilter: { plan_id: plan.id } }),
 			no_billing_changes: true,

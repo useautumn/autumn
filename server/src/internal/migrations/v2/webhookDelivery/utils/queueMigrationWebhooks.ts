@@ -1,4 +1,5 @@
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
+import { isTriggerConfigured } from "@/trigger/configureTrigger.js";
 import { sendMigrationWebhooksTask } from "@/trigger/migrations/sendMigrationWebhooksTask/sendMigrationWebhooksTask.js";
 import type { MigrationWebhookControls } from "../../cloudAdapter/types.js";
 import { sendMigrationWebhooks } from "../sendMigrationWebhooks.js";
@@ -52,7 +53,7 @@ export const queueMigrationWebhooks = async ({
 
 		// No trigger.dev configured (local/tests): deliver inline so behaviour
 		// stays observable instead of silently dropping.
-		if (!process.env.TRIGGER_SECRET_KEY) {
+		if (!isTriggerConfigured()) {
 			await sendMigrationWebhooks({ ctx, payload });
 			continue;
 		}

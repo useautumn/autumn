@@ -16,3 +16,8 @@ import { configure } from "@trigger.dev/sdk/v3";
 if (process.env.TRIGGER_SERVER_SECRET_KEY) {
 	configure({ secretKey: process.env.TRIGGER_SERVER_SECRET_KEY });
 }
+
+/** Whether autumn's trigger.dev key is configured — check THIS, never
+ * `TRIGGER_SECRET_KEY` (that name belongs to autumn-cloud). */
+export const isTriggerConfigured = (): boolean =>
+	Boolean(process.env.TRIGGER_SERVER_SECRET_KEY);

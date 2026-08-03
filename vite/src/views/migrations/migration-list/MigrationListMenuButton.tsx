@@ -29,8 +29,8 @@ export function MigrationListMenuButton() {
 					className="flex items-center cursor-pointer"
 					onClick={() => {
 						setQueryStates({
-							...queryStates,
 							showArchived: !queryStates.showArchived,
+							page: 1,
 						});
 						setDropdownOpen(false);
 					}}

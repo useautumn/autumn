@@ -5,6 +5,7 @@ import {
 	clearMigrationCancelRequested,
 	isMigrationCancelRequested,
 } from "../../run/utils/migrationCancelToken.js";
+import { settleLeftoverClaims } from "./settleLeftoverClaims.js";
 
 /** Owns the run lifecycle: status transitions AND their logs. `logData` adds
  * caller context; an object-shaped run result is spread into the final log. */
@@ -54,6 +55,7 @@ export const withMigrationRunTracking = async <T>({
 						finished_at: Date.now(),
 					},
 		});
+		await settleLeftoverClaims({ ctx, migrationRunId });
 		if (cancelRequested) {
 			await clearMigrationCancelRequested({ migrationRunId });
 		}
@@ -80,6 +82,7 @@ export const withMigrationRunTracking = async <T>({
 				finished_at: Date.now(),
 			},
 		});
+		await settleLeftoverClaims({ ctx, migrationRunId });
 
 		ctx.logger.error("migration-run: failed", {
 			data: {

@@ -3,13 +3,17 @@ import { warmupRegionalRedis } from "@/external/redis/initUtils/redisWarmup.js";
 import { migrationRepo } from "@/internal/migrations/v2/repos/index.js";
 import { runMigrationInChunks } from "@/internal/migrations/v2/run/runMigrationInChunks.js";
 import { RunMigrationPayloadSchema } from "@/internal/migrations/v2/run/types/migrationRunPayloads.js";
-import { MIGRATION_TASK_RETRY } from "@/trigger/migrations/migrationTaskQueue.js";
+import {
+	MIGRATION_TASK_RETRY,
+	migrationRunQueue,
+} from "@/trigger/migrations/migrationTaskQueue.js";
 import { runBatchMigrationChunkTask } from "@/trigger/migrations/runBatchMigrationChunkTask/runBatchMigrationChunkTask.js";
 import { runMigrationChunkTask } from "@/trigger/migrations/runMigrationChunkTask/runMigrationChunkTask.js";
 import { createTriggerContext } from "@/trigger/utils/createTriggerContext.js";
 
 export const runMigrationTask = task({
 	id: "run-migration",
+	queue: migrationRunQueue,
 	retry: MIGRATION_TASK_RETRY,
 	machine: "medium-1x",
 	// Trigger.dev has no true "disable" — set very high to effectively remove the timeout.

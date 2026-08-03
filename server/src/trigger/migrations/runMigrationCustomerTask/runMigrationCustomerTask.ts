@@ -7,6 +7,7 @@ import { withMigrationItemTracking } from "@/internal/migrations/v2/actions/migr
 import { migrationRepo } from "@/internal/migrations/v2/repos/index.js";
 import { migrateCustomer } from "@/internal/migrations/v2/run/migrateCustomer/index.js";
 import { isMigrationCancelRequested } from "@/internal/migrations/v2/run/utils/migrationCancelToken.js";
+import { LAZY_MIGRATION_RUNS_DISABLED } from "@/internal/migrations/v2/run/utils/migrationRunConstants.js";
 import { migrationTaskQueue } from "@/trigger/migrations/migrationTaskQueue.js";
 import { createTriggerContext } from "@/trigger/utils/createTriggerContext.js";
 import {
@@ -34,6 +35,14 @@ export const executeRunMigrationCustomer = async ({
 		customerInternalId,
 		customerId,
 	} = payload;
+
+	// Backstop for tasks queued before the kill-switch: never migrate.
+	if (LAZY_MIGRATION_RUNS_DISABLED) {
+		logger.info("run-migration-customer: skipping, lazy runs disabled", {
+			data: { migrationInternalId, migrationRunId, customerInternalId },
+		});
+		return;
+	}
 
 	await warmupRegionalRedis().catch((error) => {
 		logger.warn("run-migration-customer: redis warmup failed (continuing)", {

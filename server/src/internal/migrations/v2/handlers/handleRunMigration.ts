@@ -7,11 +7,17 @@ import { prepare } from "@/internal/migrations/v2/prepare/index.js";
 import { migrationRepo } from "@/internal/migrations/v2/repos/index.js";
 import { runMigrationInChunks } from "@/internal/migrations/v2/run/runMigrationInChunks.js";
 import type { RunMigrationPayload } from "@/internal/migrations/v2/run/types/migrationRunPayloads.js";
-import { MIGRATION_RUN_CUSTOMER_CONCURRENCY } from "@/internal/migrations/v2/run/utils/migrationRunConstants.js";
+import {
+	LAZY_MIGRATION_RUNS_DISABLED,
+	MIGRATION_RUN_CUSTOMER_CONCURRENCY,
+} from "@/internal/migrations/v2/run/utils/migrationRunConstants.js";
 import { RETRYABLE_MIGRATION_ITEM_RUN_STATUSES } from "@/internal/migrations/v2/run/utils/retryItemStatuses.js";
 import { shouldRunMigrationInline } from "@/internal/migrations/v2/utils/shouldRunMigrationInline.js";
 import { MAX_MIGRATION_WEBHOOK_CONCURRENCY } from "@/internal/migrations/v2/webhookDelivery/webhookDeliveryConstants.js";
-import { getMigrationTriggerOptions } from "@/trigger/migrations/migrationTaskQueue.js";
+import {
+	getMigrationTriggerOptions,
+	migrationRunConcurrencyKey,
+} from "@/trigger/migrations/migrationTaskQueue.js";
 import { runMigrationTask } from "@/trigger/migrations/runMigrationTask/runMigrationTask.js";
 
 const LEGACY_MAX_REQUESTED_CONCURRENCY = 100;
@@ -70,6 +76,14 @@ export const handleRunMigration = createRoute({
 				statusCode: 400,
 			});
 
+		if (lazyRun && LAZY_MIGRATION_RUNS_DISABLED) {
+			throw new RecaseError({
+				message: "Lazy migration runs are disabled.",
+				code: ErrCode.InvalidRequest,
+				statusCode: 400,
+			});
+		}
+
 		if (lazyRun && only && only.length > 0) {
 			throw new RecaseError({
 				message:
@@ -111,10 +125,16 @@ export const handleRunMigration = createRoute({
 					inlinePayload = payload;
 					return {};
 				}
-				const handle = await runMigrationTask.trigger(
-					payload,
-					getMigrationTriggerOptions({ isDev }),
-				);
+				const handle = await runMigrationTask.trigger(payload, {
+					...getMigrationTriggerOptions({ isDev }),
+					// One live run per key: a second migration in the same org
+					// queues behind the first instead of racing it.
+					concurrencyKey: migrationRunConcurrencyKey({
+						orgId: ctx.org.id,
+						env: ctx.env,
+						dryRun,
+					}),
+				});
 				return { triggerRunId: handle.id };
 			},
 		});
