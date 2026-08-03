@@ -1,4 +1,6 @@
 import {
+	CusProductStatus,
+	customerProducts,
 	type FullCustomer,
 	type FullCustomerSchedule,
 	schedulePhases,
@@ -8,7 +10,32 @@ import { asc, eq, inArray } from "drizzle-orm";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { resolveScheduleScopes } from "../schedules/resolveScheduleScope.js";
 
-/** Schedules with at least one future phase — a fully past schedule is spent. */
+/** A product is dead once expired or deleted, but phases keep pointing at it either way. */
+const selectLiveProductIds = async ({
+	ctx,
+	customerProductIds,
+}: {
+	ctx: AutumnContext;
+	customerProductIds: string[];
+}): Promise<Set<string>> => {
+	if (customerProductIds.length === 0) return new Set();
+
+	const products = await ctx.db
+		.select({ id: customerProducts.id, status: customerProducts.status })
+		.from(customerProducts)
+		.where(inArray(customerProducts.id, customerProductIds));
+
+	return new Set(
+		products
+			.filter((product) => product.status !== CusProductStatus.Expired)
+			.map((product) => product.id),
+	);
+};
+
+/**
+ * Schedules with a future phase that still points at a live product. Schedules
+ * carry no status of their own, so dates alone don't prove one is pending.
+ */
 const loadLiveSchedules = async ({
 	ctx,
 	internalCustomerId,
@@ -34,10 +61,28 @@ const loadLiveSchedules = async ({
 		)
 		.orderBy(asc(schedulePhases.starts_at));
 
+	const liveProductIds = await selectLiveProductIds({
+		ctx,
+		customerProductIds: [
+			...new Set(allPhases.flatMap((phase) => phase.customer_product_ids)),
+		],
+	});
+
+	// Dead ids stay in the phase row forever, so prune them here — consumers
+	// resolve each id against the customer and can't tell a dead one from a gap.
+	const livePhases = allPhases
+		.map((phase) => ({
+			...phase,
+			customer_product_ids: phase.customer_product_ids.filter((productId) =>
+				liveProductIds.has(productId),
+			),
+		}))
+		.filter((phase) => phase.customer_product_ids.length > 0);
+
 	return allSchedules
 		.map((schedule) => ({
 			...schedule,
-			phases: allPhases.filter((phase) => phase.schedule_id === schedule.id),
+			phases: livePhases.filter((phase) => phase.schedule_id === schedule.id),
 		}))
 		.filter((schedule) =>
 			schedule.phases.some((phase) => phase.starts_at > Date.now()),
