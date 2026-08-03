@@ -166,7 +166,8 @@ describe("FilteringSpanProcessor", () => {
 
 	test("always exports successful severe Redis spans", () => {
 		const delegate = new CapturingSpanProcessor();
-		const processor = new FilteringSpanProcessor(delegate);
+		// rate 0 would drop any non-severe span, so surviving proves the bypass.
+		const processor = new FilteringSpanProcessor(delegate, 0);
 		const source = createSpan({
 			name: "redis.get",
 			attributes: {
@@ -184,7 +185,9 @@ describe("FilteringSpanProcessor", () => {
 	// no longer bypasses sampling — only `db.redis.severe` does.
 	test("samples successful slow-but-not-severe Redis spans", () => {
 		const delegate = new CapturingSpanProcessor();
-		const processor = new FilteringSpanProcessor(delegate);
+		// rate 0 => every non-severe success is dropped, so the assertion tests the
+		// severe-vs-slow rule rather than where one span's hash lands.
+		const processor = new FilteringSpanProcessor(delegate, 0);
 		const source = createSpan({
 			name: "redis.get",
 			attributes: {
