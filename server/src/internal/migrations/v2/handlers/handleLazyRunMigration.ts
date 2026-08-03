@@ -4,6 +4,7 @@ import { createRoute } from "@/honoMiddlewares/routeHandler";
 import { withMigrationRunClaim } from "@/internal/migrations/v2/actions/migrationRun/index.js";
 import { prepare } from "@/internal/migrations/v2/prepare/index.js";
 import { migrationRepo } from "@/internal/migrations/v2/repos/index.js";
+import { LAZY_MIGRATION_RUNS_DISABLED } from "@/internal/migrations/v2/run/utils/migrationRunConstants.js";
 
 const LazyRunMigrationBody = z.object({
 	id: z.string(),
@@ -18,6 +19,14 @@ export const handleLazyRunMigration = createRoute({
 	handler: async (c) => {
 		const ctx = c.get("ctx");
 		const { id } = c.req.valid("json");
+
+		if (LAZY_MIGRATION_RUNS_DISABLED) {
+			throw new RecaseError({
+				message: "Lazy migration runs are disabled.",
+				code: ErrCode.InvalidRequest,
+				statusCode: 400,
+			});
+		}
 
 		const migration = await migrationRepo.find({ ctx, id });
 

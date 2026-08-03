@@ -4,8 +4,9 @@ import {
 	isCustomerProductPaid,
 	isCustomerProductPaidRecurring,
 } from "../../../../utils/cusProductUtils/classifyCustomerProduct/classifyCustomerProduct.js";
-import { numberMatcherMatches } from "../../../migrations/filters/match/numberMatcherMatches.js";
+import { cusProductToPrices } from "../../../../utils/cusProductUtils/convertCusProduct.js";
 import { stringMatcherMatches } from "../../../migrations/filters/match/index.js";
+import { numberMatcherMatches } from "../../../migrations/filters/match/numberMatcherMatches.js";
 import type { PlanFilter } from "../../../migrations/filters/planFilter.js";
 
 /**
@@ -78,12 +79,34 @@ export const planFilterMatchesCustomerProduct = ({
 		return false;
 	}
 
-	const unsupported = ["price", "item"] as const;
-	for (const key of unsupported) {
-		if ((filter as Record<string, unknown>)[key] !== undefined)
+	// Null-existence forms only: `price` asks whether a BASE customer price
+	// (price with entitlement_id null) exists — mirrors the compiler's SQL.
+	if (filter.price !== undefined) {
+		const hasBasePrice = cusProductToPrices({ cusProduct }).some(
+			(price) => price.entitlement_id == null,
+		);
+		if (filter.price === null) {
+			if (hasBasePrice) return false;
+		} else if (isPriceNullExistenceMatcher(filter.price)) {
+			if ("$ne" in filter.price && filter.price.$ne === null && !hasBasePrice)
+				return false;
+			if ("$eq" in filter.price && filter.price.$eq === null && hasBasePrice)
+				return false;
+		} else {
 			throw new Error(
-				`planFilterMatchesCustomerProduct: filter.${key} not supported in JS matcher yet`,
+				"planFilterMatchesCustomerProduct: nested price filters not supported in JS matcher yet",
 			);
+		}
 	}
+
+	if (filter.item !== undefined)
+		throw new Error(
+			"planFilterMatchesCustomerProduct: filter.item not supported in JS matcher yet",
+		);
 	return true;
 };
+
+const isPriceNullExistenceMatcher = (
+	price: NonNullable<PlanFilter["price"]>,
+): price is { $eq?: null; $ne?: null } =>
+	typeof price === "object" && ("$eq" in price || "$ne" in price);

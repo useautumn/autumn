@@ -3,7 +3,11 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useQueryKeyFactory } from "@/hooks/common/useQueryKeyFactory";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
 
-export type MigrationWithRunInfo = Migration & { has_live_runs: boolean };
+export type MigrationWithRunInfo = Migration & {
+	has_live_runs: boolean;
+	/** Whether a plain run of this migration takes the batch lane. */
+	batch_eligible: boolean;
+};
 export type RetryableMigrationItemRunStatus = "failed" | "skipped";
 
 interface PrepareModuleResult {

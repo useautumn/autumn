@@ -1,4 +1,8 @@
-import type { BillingPlan, MultiAttachBillingContext } from "@autumn/shared";
+import type {
+	BillingPlan,
+	MultiAttachBillingContext,
+	MultiAttachParamsV0,
+} from "@autumn/shared";
 import type { DrizzleCli } from "@/db/initDrizzle";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { handleRevertTrialErrors } from "@/internal/billing/v2/actions/attach/errors/handleRevertTrialErrors";
@@ -7,17 +11,22 @@ import { handleSubscriptionIdErrors } from "@/internal/billing/v2/common/errors/
 import { handleStripeBillingPlanErrors } from "@/internal/billing/v2/providers/stripe/errors/handleStripeBillingPlanErrors";
 import { handleMultiAttachCurrentProductErrors } from "./handleMultiAttachCurrentProductErrors";
 import { handleMultiAttachRedirectErrors } from "./handleMultiAttachRedirectErrors";
+import { handleMultiAttachStartDateErrors } from "./handleMultiAttachStartDateErrors";
 
 /** Runs all multi-attach validation checks. */
 export const handleMultiAttachErrors = async ({
 	db,
 	billingContext,
 	redirectMode,
+	params,
 }: {
 	db: DrizzleCli;
 	billingContext: MultiAttachBillingContext;
 	redirectMode: string;
+	params: MultiAttachParamsV0;
 }) => {
+	handleMultiAttachStartDateErrors({ billingContext, params });
+
 	handleMultiAttachCurrentProductErrors({
 		productContexts: billingContext.productContexts,
 	});

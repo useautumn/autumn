@@ -171,11 +171,7 @@ export const initRewardStripePrices = async ({
 	ctx: AutumnContext;
 	prices: (Price & { product: Product })[];
 }) => {
-	const pricesToInit = prices.map((p: Price) =>
-		nullish(p.config.stripe_price_id),
-	);
-
-	if (pricesToInit.length === 0) {
+	if (prices.every((price) => !nullish(price.config.stripe_price_id))) {
 		return;
 	}
 

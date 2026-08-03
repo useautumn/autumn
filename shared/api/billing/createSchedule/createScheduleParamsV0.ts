@@ -116,8 +116,9 @@ export const CreateScheduleParamsV0Schema = z
 			description:
 				"Free trial configuration applied to every plan in the immediate phase.",
 		}),
-		currency: CurrencyCodeSchema.optional().meta({
-			description: "Currency used to bill the immediate phase.",
+		currency: CurrencyCodeSchema.length(3).optional().meta({
+			description:
+				"Three-letter Stripe-supported currency code used to bill the immediate phase (for example, 'usd').",
 		}),
 		invoice_mode: InvoiceModeParamsSchema.optional().meta({
 			description:

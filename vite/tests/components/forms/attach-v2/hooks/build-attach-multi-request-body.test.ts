@@ -59,6 +59,7 @@ const baseParams = (
 	redirectMode: "if_required",
 	discounts: [],
 	currency: null,
+	startDate: null,
 	...overrides,
 });
 
@@ -148,6 +149,14 @@ test("passes entity and currency through", () => {
 
 	expect(body?.entity_id).toBe("ent_1");
 	expect(body?.currency).toBe("eur");
+});
+
+test("forwards one shared start date", () => {
+	const startDate = Date.now() - 86_400_000;
+
+	expect(
+		buildAttachMultiRequestBody(baseParams({ startDate }))?.starts_at,
+	).toBe(startDate);
 });
 
 test("keeps additional plans customer-level when the primary scope changes", () => {

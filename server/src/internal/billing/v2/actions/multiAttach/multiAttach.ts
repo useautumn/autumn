@@ -54,6 +54,7 @@ export async function multiAttach({
 		db: ctx.db,
 		billingContext,
 		redirectMode: params.redirect_mode,
+		params,
 	});
 
 	handleMultiAttachCurrencyErrors({ ctx, billingContext, params });

@@ -378,6 +378,10 @@ export type ListPlansItem = {
    */
   unlimited: boolean;
   /**
+   * Whether entity-level grants contribute to a shared customer balance.
+   */
+  pooled: boolean;
+  /**
    * Reset configuration for consumable features. Null for non-consumable features like seats where usage persists across billing cycles.
    */
   reset: ListPlansItemReset | null;
@@ -728,6 +732,10 @@ export type ListPlansPlanItem = {
    * If true, customer has unlimited access to this feature.
    */
   unlimited?: boolean | undefined;
+  /**
+   * Whether entity-level grants contribute to a shared customer balance.
+   */
+  pooled: boolean;
   /**
    * Reset configuration for consumable features. Omit for non-consumable features like seats.
    */
@@ -1957,6 +1965,7 @@ export const ListPlansItem$inboundSchema: z.ZodMiniType<
     feature: types.optional(z.lazy(() => ListPlansFeature$inboundSchema)),
     included: types.number(),
     unlimited: types.boolean(),
+    pooled: z._default(types.boolean(), false),
     reset: types.nullable(z.lazy(() => ListPlansItemReset$inboundSchema)),
     price: types.nullable(z.lazy(() => ListPlansItemPrice$inboundSchema)),
     display: types.optional(z.lazy(() => ListPlansItemDisplay$inboundSchema)),
@@ -2313,6 +2322,7 @@ export const ListPlansPlanItem$inboundSchema: z.ZodMiniType<
     feature_id: types.string(),
     included: types.optional(types.number()),
     unlimited: types.optional(types.boolean()),
+    pooled: z._default(types.boolean(), false),
     reset: types.optional(
       z.lazy(() => ListPlansVariantDetailsReset$inboundSchema),
     ),

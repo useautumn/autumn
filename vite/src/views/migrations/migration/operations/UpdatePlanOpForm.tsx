@@ -6,6 +6,10 @@ import type {
 } from "@autumn/shared";
 import { productV2ToBasePrice } from "@autumn/shared";
 import {
+	DropdownMenu,
+	DropdownMenuContent,
+	DropdownMenuItem,
+	DropdownMenuTrigger,
 	Select,
 	SelectContent,
 	SelectItem,
@@ -18,12 +22,6 @@ import {
 	PlusIcon,
 } from "@phosphor-icons/react";
 import { useMemo, useState } from "react";
-import {
-	DropdownMenu,
-	DropdownMenuContent,
-	DropdownMenuItem,
-	DropdownMenuTrigger,
-} from "@autumn/ui";
 import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
 import { useProductsQuery } from "@/hooks/queries/useProductsQuery";
 import { DASHED_BUTTON_CLASS } from "../shared/AddButton";

@@ -1,5 +1,5 @@
-import { Checkbox } from "@autumn/ui";
 import {
+	Checkbox,
 	DropdownMenuItem,
 	DropdownMenuSub,
 	DropdownMenuSubContent,

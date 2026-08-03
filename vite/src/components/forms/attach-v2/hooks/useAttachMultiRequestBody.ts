@@ -28,6 +28,7 @@ export type BuildAttachMultiRequestBodyParams = Pick<
 	| "redirectMode"
 	| "discounts"
 	| "currency"
+	| "startDate"
 > & {
 	products: ProductV2[];
 	features: Feature[];
@@ -94,6 +95,7 @@ export function buildAttachMultiRequestBody({
 	redirectMode,
 	discounts,
 	currency,
+	startDate,
 	hasInvalidPlanScopes = false,
 }: BuildAttachMultiRequestBodyParams): MultiAttachParamsV0 | null {
 	if (hasInvalidPlanScopes || !customerId || !product) return null;
@@ -156,6 +158,7 @@ export function buildAttachMultiRequestBody({
 		...(entityId ? { entity_id: entityId } : {}),
 		...(currency ? { currency: currency.toLowerCase() } : {}),
 		...(validDiscounts.length > 0 ? { discounts: validDiscounts } : {}),
+		...(startDate ? { starts_at: startDate } : {}),
 	};
 }
 
@@ -182,6 +185,7 @@ export function useAttachMultiRequestBody(
 		redirectMode,
 		discounts,
 		currency,
+		startDate,
 		hasInvalidPlanScopes,
 	} = params;
 	const requestBody = useMemo(
@@ -206,6 +210,7 @@ export function useAttachMultiRequestBody(
 				redirectMode,
 				discounts,
 				currency,
+				startDate,
 				hasInvalidPlanScopes,
 			}),
 		[
@@ -228,6 +233,7 @@ export function useAttachMultiRequestBody(
 			redirectMode,
 			discounts,
 			currency,
+			startDate,
 			hasInvalidPlanScopes,
 		],
 	);

@@ -7,6 +7,7 @@ import { entities } from "./entities.js";
 import { features } from "./features.js";
 import { logs } from "./logs.js";
 import { plans } from "./plans.js";
+import { rewards } from "./rewards.js";
 import type { ToolDomain } from "./utils/types.js";
 
 /**
@@ -20,6 +21,7 @@ export const domainModules = {
 	entities,
 	features,
 	plans,
+	rewards,
 	catalog,
 	billing,
 	balances,

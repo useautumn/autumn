@@ -157,7 +157,7 @@ const getCustomerCheckpointExclusion = ({
 	};
 };
 
-const narrowCustomerFilter = ({
+export const narrowCustomerFilter = ({
 	filter,
 	controls,
 }: {

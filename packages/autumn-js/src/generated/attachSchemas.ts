@@ -218,6 +218,7 @@ export const attachItemPlanItemOutboundSchema = z.object({
 	feature_id: z.string(),
 	included: z.union([z.number(), z.undefined()]).optional(),
 	unlimited: z.union([z.boolean(), z.undefined()]).optional(),
+	pooled: z.boolean(),
 	reset: z.union([attachItemResetOutboundSchema, z.undefined()]).optional(),
 	price: z.union([attachItemPriceOutboundSchema, z.undefined()]).optional(),
 	proration: z
@@ -293,6 +294,7 @@ export const attachAddItemPlanItemOutboundSchema = z.object({
 	feature_id: z.string(),
 	included: z.union([z.number(), z.undefined()]).optional(),
 	unlimited: z.union([z.boolean(), z.undefined()]).optional(),
+	pooled: z.boolean(),
 	reset: z.union([attachAddItemResetOutboundSchema, z.undefined()]).optional(),
 	price: z.union([attachAddItemPriceOutboundSchema, z.undefined()]).optional(),
 	proration: z
@@ -470,6 +472,7 @@ export const attachUpsertLicensePlanItemOutboundSchema = z.object({
 	feature_id: z.string(),
 	included: z.union([z.number(), z.undefined()]).optional(),
 	unlimited: z.union([z.boolean(), z.undefined()]).optional(),
+	pooled: z.boolean(),
 	reset: z
 		.union([attachUpsertLicenseResetOutboundSchema, z.undefined()])
 		.optional(),
@@ -698,6 +701,7 @@ export const attachItemPlanItemSchema = z.object({
 	featureId: z.string(),
 	included: z.union([z.number(), z.undefined()]).optional(),
 	unlimited: z.union([z.boolean(), z.undefined()]).optional(),
+	pooled: z.union([z.boolean(), z.undefined()]).optional(),
 	reset: z.union([attachItemResetSchema, z.undefined()]).optional(),
 	price: z.union([attachItemPriceSchema, z.undefined()]).optional(),
 	proration: z.union([attachItemProrationSchema, z.undefined()]).optional(),
@@ -755,6 +759,7 @@ export const attachAddItemPlanItemSchema = z.object({
 	featureId: z.string(),
 	included: z.union([z.number(), z.undefined()]).optional(),
 	unlimited: z.union([z.boolean(), z.undefined()]).optional(),
+	pooled: z.union([z.boolean(), z.undefined()]).optional(),
 	reset: z.union([attachAddItemResetSchema, z.undefined()]).optional(),
 	price: z.union([attachAddItemPriceSchema, z.undefined()]).optional(),
 	proration: z.union([attachAddItemProrationSchema, z.undefined()]).optional(),
@@ -934,6 +939,7 @@ export const attachUpsertLicensePlanItemSchema = z.object({
 	featureId: z.string(),
 	included: z.union([z.number(), z.undefined()]).optional(),
 	unlimited: z.union([z.boolean(), z.undefined()]).optional(),
+	pooled: z.union([z.boolean(), z.undefined()]).optional(),
 	reset: z.union([attachUpsertLicenseResetSchema, z.undefined()]).optional(),
 	price: z.union([attachUpsertLicensePriceSchema, z.undefined()]).optional(),
 	proration: z

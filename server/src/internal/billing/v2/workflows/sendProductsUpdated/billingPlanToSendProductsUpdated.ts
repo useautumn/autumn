@@ -22,6 +22,7 @@ import {
 	getExpiredUpdatedCustomerProducts,
 	getUpdateCustomerProducts,
 } from "@/internal/billing/v2/utils/billingPlan/customerProductPlanMutations";
+import type { CreateCustomerContext } from "@/internal/customers/actions/createWithDefaults/createCustomerContext";
 import { workflows } from "@/queue/workflows.js";
 
 // ============================================================================

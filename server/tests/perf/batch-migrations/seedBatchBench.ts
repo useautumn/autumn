@@ -13,9 +13,11 @@
  *   custom     5  bench-free        is_custom → skipped partition path
  *
  * Pure server-side generate_series inserts — no API/Stripe calls. Reruns are
- * resumable (ON CONFLICT DO NOTHING).
+ * resumable (ON CONFLICT DO NOTHING). Also refreshes the dashboard-runnable
+ * bench migrations (see utils/benchMigrationDefs.ts).
  *
  *   bun tests/perf/batch-migrations/seedBatchBench.ts --customers 4000000
+ *   bun tests/perf/batch-migrations/seedBatchBench.ts --migrations-only
  *   bun tests/perf/batch-migrations/seedBatchBench.ts --reset
  *
  * For a full reset at 4M scale, prefer re-branching the Neon bench branch —
@@ -40,6 +42,7 @@ import {
 	type BenchContext,
 	getBenchContext,
 } from "./utils/benchContext.js";
+import { seedBenchMigrationRows } from "./utils/seedBenchMigrationRows.js";
 
 const DAY_MS = 86_400_000;
 const APPROX_MONTH_MS = 30 * DAY_MS;
@@ -112,6 +115,7 @@ const parseArgs = () => {
 		customers: Number(get("--customers") ?? 4_000_000),
 		chunk: Number(get("--chunk") ?? 200_000),
 		reset: args.includes("--reset"),
+		migrationsOnly: args.includes("--migrations-only"),
 	};
 };
 
@@ -160,7 +164,7 @@ const seedShapeChunk = async ({
 		INSERT INTO customer_products (
 			id, internal_customer_id, internal_product_id, created_at, status,
 			starts_at, is_custom, product_id, customer_id, billing_cycle_anchor,
-			subscription_ids
+			subscription_ids, options
 		)
 		SELECT
 			${BENCH_CUSTOMER_PRODUCT_PREFIX} || i,
@@ -173,7 +177,8 @@ const seedShapeChunk = async ({
 			${shape.productId},
 			${BENCH_CUSTOMER_ID_PREFIX} || i,
 			${cpAnchorColumn},
-			${subscriptionIdsColumn}
+			${subscriptionIdsColumn},
+			'{}'::jsonb[]
 		FROM ${series}
 		ON CONFLICT DO NOTHING
 	`);
@@ -252,10 +257,15 @@ const seedShapeChunk = async ({
 };
 
 const main = async () => {
-	const { customers, chunk, reset } = parseArgs();
+	const { customers, chunk, reset, migrationsOnly } = parseArgs();
 	const bench = await getBenchContext();
 	const { ctx, org } = bench;
 	const { db } = ctx;
+
+	if (migrationsOnly) {
+		await seedBenchMigrationRows({ bench });
+		process.exit(0);
+	}
 
 	if (reset) {
 		console.log(
@@ -305,6 +315,8 @@ const main = async () => {
 		}
 		rangeStart = rangeEnd + 1;
 	}
+
+	await seedBenchMigrationRows({ bench });
 
 	console.log("bench: running ANALYZE");
 	await db.execute(

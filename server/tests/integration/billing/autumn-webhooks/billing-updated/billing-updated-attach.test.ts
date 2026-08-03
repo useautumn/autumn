@@ -78,347 +78,365 @@ afterAll(async () => {
 // A1: NEW PAID PLAN ATTACH
 // ═══════════════════════════════════════════════════════════════════════════════
 
-test.concurrent(`${chalk.yellowBright("billing.updated: A1 new paid plan attach → activated")}`, async () => {
-	const customerId = "billing-updated-a1-new";
-	const messagesItem = items.monthlyMessages({ includedUsage: 100 });
-	const pro = products.pro({ id: "pro", items: [messagesItem] });
+test.concurrent(
+	`${chalk.yellowBright("billing.updated: A1 new paid plan attach → activated")}`,
+	async () => {
+		const customerId = "billing-updated-a1-new";
+		const messagesItem = items.monthlyMessages({ includedUsage: 100 });
+		const pro = products.pro({ id: "pro", items: [messagesItem] });
 
-	const { autumnV1 } = await initScenario({
-		customerId,
-		setup: [
-			s.customer({ paymentMethod: "success", skipWebhooks: true }),
-			s.products({ list: [pro] }),
-		],
-		actions: [],
-	});
+		const { autumnV1 } = await initScenario({
+			customerId,
+			setup: [
+				s.customer({ paymentMethod: "success", skipWebhooks: true }),
+				s.products({ list: [pro] }),
+			],
+			actions: [],
+		});
 
-	await autumnV1.billing.attach({
-		customer_id: customerId,
-		product_id: pro.id,
-	});
+		await autumnV1.billing.attach({
+			customer_id: customerId,
+			product_id: pro.id,
+		});
 
-	const result = await waitForWebhook<BillingUpdatedPayload>({
-		token: playToken,
-		predicate: (payload) =>
-			payload.type === "billing.updated" &&
-			payload.data?.customer_id === customerId &&
-			findChange(payload.data.plan_changes, {
-				action: "activated",
-				planId: pro.id,
-			}) !== undefined,
-		timeoutMs: 15000,
-	});
+		const result = await waitForWebhook<BillingUpdatedPayload>({
+			token: playToken,
+			predicate: (payload) =>
+				payload.type === "billing.updated" &&
+				payload.data?.customer_id === customerId &&
+				findChange(payload.data.plan_changes, {
+					action: "activated",
+					planId: pro.id,
+				}) !== undefined,
+			timeoutMs: 15000,
+		});
 
-	expect(result).not.toBeNull();
-	const { data } = result!.payload;
-	expect(data.customer_id).toBe(customerId);
+		expect(result).not.toBeNull();
+		const { data } = result!.payload;
+		expect(data.customer_id).toBe(customerId);
 
-	const activated = findChange(data.plan_changes, {
-		action: "activated",
-		planId: pro.id,
-	});
-	expect(activated).toBeDefined();
-	expect(activated?.previous_attributes).toBeNull();
-	expect(activated?.subscription?.plan_id).toBe(pro.id);
-	expect(activated?.subscription?.status).toBe("active");
-});
+		const activated = findChange(data.plan_changes, {
+			action: "activated",
+			planId: pro.id,
+		});
+		expect(activated).toBeDefined();
+		expect(activated?.previous_attributes).toBeNull();
+		expect(activated?.subscription?.plan_id).toBe(pro.id);
+		expect(activated?.subscription?.status).toBe("active");
+	},
+);
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // A2: IMMEDIATE UPGRADE PRO → PREMIUM
 // ═══════════════════════════════════════════════════════════════════════════════
 
-test.concurrent(`${chalk.yellowBright("billing.updated: A2 immediate upgrade → activated + expired")}`, async () => {
-	const customerId = "billing-updated-a2-upgrade";
-	const messagesItem = items.monthlyMessages({ includedUsage: 100 });
-	const pro = products.pro({ id: "pro", items: [messagesItem] });
-	const premium = products.premium({ id: "premium", items: [messagesItem] });
+test.concurrent(
+	`${chalk.yellowBright("billing.updated: A2 immediate upgrade → activated + expired")}`,
+	async () => {
+		const customerId = "billing-updated-a2-upgrade";
+		const messagesItem = items.monthlyMessages({ includedUsage: 100 });
+		const pro = products.pro({ id: "pro", items: [messagesItem] });
+		const premium = products.premium({ id: "premium", items: [messagesItem] });
 
-	const { autumnV1 } = await initScenario({
-		customerId,
-		setup: [
-			s.customer({ paymentMethod: "success", skipWebhooks: true }),
-			s.products({ list: [pro, premium] }),
-		],
-		actions: [s.attach({ productId: pro.id })],
-	});
+		const { autumnV1 } = await initScenario({
+			customerId,
+			setup: [
+				s.customer({ paymentMethod: "success", skipWebhooks: true }),
+				s.products({ list: [pro, premium] }),
+			],
+			actions: [s.attach({ productId: pro.id })],
+		});
 
-	await autumnV1.billing.attach({
-		customer_id: customerId,
-		product_id: premium.id,
-	});
+		await autumnV1.billing.attach({
+			customer_id: customerId,
+			product_id: premium.id,
+		});
 
-	const result = await waitForWebhook<BillingUpdatedPayload>({
-		token: playToken,
-		predicate: (payload) =>
-			payload.type === "billing.updated" &&
-			payload.data?.customer_id === customerId &&
-			findChange(payload.data.plan_changes, {
-				action: "activated",
-				planId: premium.id,
-			}) !== undefined &&
-			findChange(payload.data.plan_changes, {
-				action: "expired",
-				planId: pro.id,
-			}) !== undefined,
-		timeoutMs: 15000,
-	});
+		const result = await waitForWebhook<BillingUpdatedPayload>({
+			token: playToken,
+			predicate: (payload) =>
+				payload.type === "billing.updated" &&
+				payload.data?.customer_id === customerId &&
+				findChange(payload.data.plan_changes, {
+					action: "activated",
+					planId: premium.id,
+				}) !== undefined &&
+				findChange(payload.data.plan_changes, {
+					action: "expired",
+					planId: pro.id,
+				}) !== undefined,
+			timeoutMs: 15000,
+		});
 
-	expect(result).not.toBeNull();
-	const { data } = result!.payload;
+		expect(result).not.toBeNull();
+		const { data } = result!.payload;
 
-	const activated = findChange(data.plan_changes, {
-		action: "activated",
-		planId: premium.id,
-	});
-	expect(activated).toBeDefined();
-	expect(activated?.previous_attributes).toBeNull();
+		const activated = findChange(data.plan_changes, {
+			action: "activated",
+			planId: premium.id,
+		});
+		expect(activated).toBeDefined();
+		expect(activated?.previous_attributes).toBeNull();
 
-	const expired = findChange(data.plan_changes, {
-		action: "expired",
-		planId: pro.id,
-	});
-	expect(expired).toBeDefined();
-	expect(expired?.previous_attributes).toMatchObject({ status: "active" });
-});
+		const expired = findChange(data.plan_changes, {
+			action: "expired",
+			planId: pro.id,
+		});
+		expect(expired).toBeDefined();
+		expect(expired?.previous_attributes).toMatchObject({ status: "active" });
+	},
+);
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // A3: SCHEDULED DOWNGRADE PREMIUM → PRO
 // ═══════════════════════════════════════════════════════════════════════════════
 
-test.concurrent(`${chalk.yellowBright("billing.updated: A3 scheduled downgrade → updated + scheduled")}`, async () => {
-	const customerId = "billing-updated-a3-downgrade";
-	const messagesItem = items.monthlyMessages({ includedUsage: 100 });
-	const pro = products.pro({ id: "pro", items: [messagesItem] });
-	const premium = products.premium({ id: "premium", items: [messagesItem] });
+test.concurrent(
+	`${chalk.yellowBright("billing.updated: A3 scheduled downgrade → updated + scheduled")}`,
+	async () => {
+		const customerId = "billing-updated-a3-downgrade";
+		const messagesItem = items.monthlyMessages({ includedUsage: 100 });
+		const pro = products.pro({ id: "pro", items: [messagesItem] });
+		const premium = products.premium({ id: "premium", items: [messagesItem] });
 
-	const { autumnV1 } = await initScenario({
-		customerId,
-		setup: [
-			s.customer({ paymentMethod: "success", skipWebhooks: true }),
-			s.products({ list: [pro, premium] }),
-		],
-		actions: [s.attach({ productId: premium.id })],
-	});
+		const { autumnV1 } = await initScenario({
+			customerId,
+			setup: [
+				s.customer({ paymentMethod: "success", skipWebhooks: true }),
+				s.products({ list: [pro, premium] }),
+			],
+			actions: [s.attach({ productId: premium.id })],
+		});
 
-	await autumnV1.billing.attach({
-		customer_id: customerId,
-		product_id: pro.id,
-	});
+		await autumnV1.billing.attach({
+			customer_id: customerId,
+			product_id: pro.id,
+		});
 
-	const result = await waitForWebhook<BillingUpdatedPayload>({
-		token: playToken,
-		predicate: (payload) =>
-			payload.type === "billing.updated" &&
-			payload.data?.customer_id === customerId &&
-			findChange(payload.data.plan_changes, {
-				action: "updated",
-				planId: premium.id,
-			}) !== undefined &&
-			findChange(payload.data.plan_changes, {
-				action: "scheduled",
-				planId: pro.id,
-			}) !== undefined,
-		timeoutMs: 15000,
-	});
+		const result = await waitForWebhook<BillingUpdatedPayload>({
+			token: playToken,
+			predicate: (payload) =>
+				payload.type === "billing.updated" &&
+				payload.data?.customer_id === customerId &&
+				findChange(payload.data.plan_changes, {
+					action: "updated",
+					planId: premium.id,
+				}) !== undefined &&
+				findChange(payload.data.plan_changes, {
+					action: "scheduled",
+					planId: pro.id,
+				}) !== undefined,
+			timeoutMs: 15000,
+		});
 
-	expect(result).not.toBeNull();
-	const { data } = result!.payload;
+		expect(result).not.toBeNull();
+		const { data } = result!.payload;
 
-	const updated = findChange(data.plan_changes, {
-		action: "updated",
-		planId: premium.id,
-	});
-	expect(updated).toBeDefined();
-	expect(updated?.previous_attributes).toMatchObject({
-		canceled_at: null,
-		expires_at: null,
-	});
+		const updated = findChange(data.plan_changes, {
+			action: "updated",
+			planId: premium.id,
+		});
+		expect(updated).toBeDefined();
+		expect(updated?.previous_attributes).toMatchObject({
+			canceled_at: null,
+			expires_at: null,
+		});
 
-	const scheduled = findChange(data.plan_changes, {
-		action: "scheduled",
-		planId: pro.id,
-	});
-	expect(scheduled).toBeDefined();
-	expect(scheduled?.subscription?.status).toBe("scheduled");
-});
+		const scheduled = findChange(data.plan_changes, {
+			action: "scheduled",
+			planId: pro.id,
+		});
+		expect(scheduled).toBeDefined();
+		expect(scheduled?.subscription?.status).toBe("scheduled");
+	},
+);
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // A4: CANCEL TO FREE PREMIUM → FREE
 // ═══════════════════════════════════════════════════════════════════════════════
 
-test.concurrent(`${chalk.yellowBright("billing.updated: A4 cancel to free → updated + scheduled")}`, async () => {
-	const customerId = "billing-updated-a4-cancel";
-	const messagesItem = items.monthlyMessages({ includedUsage: 100 });
-	const free = products.base({
-		id: "free",
-		items: [messagesItem],
-		isDefault: true,
-	});
-	const premium = products.premium({ id: "premium", items: [messagesItem] });
+test.concurrent(
+	`${chalk.yellowBright("billing.updated: A4 cancel to free → updated + scheduled")}`,
+	async () => {
+		const customerId = "billing-updated-a4-cancel";
+		const messagesItem = items.monthlyMessages({ includedUsage: 100 });
+		const free = products.base({
+			id: "free",
+			items: [messagesItem],
+			isDefault: true,
+		});
+		const premium = products.premium({ id: "premium", items: [messagesItem] });
 
-	const { autumnV1 } = await initScenario({
-		customerId,
-		setup: [
-			s.customer({ paymentMethod: "success", skipWebhooks: true }),
-			s.products({ list: [free, premium] }),
-		],
-		actions: [s.attach({ productId: premium.id })],
-	});
+		const { autumnV1 } = await initScenario({
+			customerId,
+			setup: [
+				s.customer({ paymentMethod: "success", skipWebhooks: true }),
+				s.products({ list: [free, premium] }),
+			],
+			actions: [s.attach({ productId: premium.id })],
+		});
 
-	await autumnV1.billing.attach({
-		customer_id: customerId,
-		product_id: free.id,
-	});
+		await autumnV1.billing.attach({
+			customer_id: customerId,
+			product_id: free.id,
+		});
 
-	const result = await waitForWebhook<BillingUpdatedPayload>({
-		token: playToken,
-		predicate: (payload) =>
-			payload.type === "billing.updated" &&
-			payload.data?.customer_id === customerId &&
-			findChange(payload.data.plan_changes, {
-				action: "updated",
-				planId: premium.id,
-			}) !== undefined &&
-			findChange(payload.data.plan_changes, {
-				action: "scheduled",
-				planId: free.id,
-			}) !== undefined,
-		timeoutMs: 15000,
-	});
+		const result = await waitForWebhook<BillingUpdatedPayload>({
+			token: playToken,
+			predicate: (payload) =>
+				payload.type === "billing.updated" &&
+				payload.data?.customer_id === customerId &&
+				findChange(payload.data.plan_changes, {
+					action: "updated",
+					planId: premium.id,
+				}) !== undefined &&
+				findChange(payload.data.plan_changes, {
+					action: "scheduled",
+					planId: free.id,
+				}) !== undefined,
+			timeoutMs: 15000,
+		});
 
-	expect(result).not.toBeNull();
-	const { data } = result!.payload;
+		expect(result).not.toBeNull();
+		const { data } = result!.payload;
 
-	const updated = findChange(data.plan_changes, {
-		action: "updated",
-		planId: premium.id,
-	});
-	expect(updated).toBeDefined();
-	expect(updated?.previous_attributes).toMatchObject({
-		canceled_at: null,
-		expires_at: null,
-	});
+		const updated = findChange(data.plan_changes, {
+			action: "updated",
+			planId: premium.id,
+		});
+		expect(updated).toBeDefined();
+		expect(updated?.previous_attributes).toMatchObject({
+			canceled_at: null,
+			expires_at: null,
+		});
 
-	const scheduled = findChange(data.plan_changes, {
-		action: "scheduled",
-		planId: free.id,
-	});
-	expect(scheduled).toBeDefined();
-});
+		const scheduled = findChange(data.plan_changes, {
+			action: "scheduled",
+			planId: free.id,
+		});
+		expect(scheduled).toBeDefined();
+	},
+);
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // E1: ENTITY-LEVEL NEW ATTACH
 // ═══════════════════════════════════════════════════════════════════════════════
 
-test.concurrent(`${chalk.yellowBright("billing.updated: E1 entity new attach → entity_id + activated")}`, async () => {
-	const customerId = "billing-updated-e1-entity-new";
-	const messagesItem = items.monthlyMessages({ includedUsage: 100 });
-	const pro = products.pro({ id: "pro", items: [messagesItem] });
+test.concurrent(
+	`${chalk.yellowBright("billing.updated: E1 entity new attach → entity_id + activated")}`,
+	async () => {
+		const customerId = "billing-updated-e1-entity-new";
+		const messagesItem = items.monthlyMessages({ includedUsage: 100 });
+		const pro = products.pro({ id: "pro", items: [messagesItem] });
 
-	const { autumnV1, entities } = await initScenario({
-		customerId,
-		setup: [
-			s.customer({ paymentMethod: "success", skipWebhooks: true }),
-			s.products({ list: [pro] }),
-			s.entities({ count: 1, featureId: TestFeature.Users }),
-		],
-		actions: [],
-	});
+		const { autumnV1, entities } = await initScenario({
+			customerId,
+			setup: [
+				s.customer({ paymentMethod: "success", skipWebhooks: true }),
+				s.products({ list: [pro] }),
+				s.entities({ count: 1, featureId: TestFeature.Users }),
+			],
+			actions: [],
+		});
 
-	const entityId = entities[0].id;
+		const entityId = entities[0].id;
 
-	await autumnV1.billing.attach({
-		customer_id: customerId,
-		product_id: pro.id,
-		entity_id: entityId,
-	});
+		await autumnV1.billing.attach({
+			customer_id: customerId,
+			product_id: pro.id,
+			entity_id: entityId,
+		});
 
-	const result = await waitForWebhook<BillingUpdatedPayload>({
-		token: playToken,
-		predicate: (payload) =>
-			payload.type === "billing.updated" &&
-			payload.data?.customer_id === customerId &&
-			payload.data?.entity_id === entityId &&
-			findChange(payload.data.plan_changes, {
-				action: "activated",
-				planId: pro.id,
-			}) !== undefined,
-		timeoutMs: 15000,
-	});
+		const result = await waitForWebhook<BillingUpdatedPayload>({
+			token: playToken,
+			predicate: (payload) =>
+				payload.type === "billing.updated" &&
+				payload.data?.customer_id === customerId &&
+				payload.data?.entity_id === entityId &&
+				findChange(payload.data.plan_changes, {
+					action: "activated",
+					planId: pro.id,
+				}) !== undefined,
+			timeoutMs: 15000,
+		});
 
-	expect(result).not.toBeNull();
-	const { data } = result!.payload;
-	expect(data.entity_id).toBe(entityId);
+		expect(result).not.toBeNull();
+		const { data } = result!.payload;
+		expect(data.entity_id).toBe(entityId);
 
-	const activated = findChange(data.plan_changes, {
-		action: "activated",
-		planId: pro.id,
-	});
-	expect(activated).toBeDefined();
-});
+		const activated = findChange(data.plan_changes, {
+			action: "activated",
+			planId: pro.id,
+		});
+		expect(activated).toBeDefined();
+	},
+);
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // E2: ENTITY-LEVEL UPGRADE
 // ═══════════════════════════════════════════════════════════════════════════════
 
-test.concurrent(`${chalk.yellowBright("billing.updated: E2 entity upgrade → entity_id + activated + expired")}`, async () => {
-	const customerId = "billing-updated-e2-entity-upgrade";
-	const messagesItem = items.monthlyMessages({ includedUsage: 100 });
-	const pro = products.pro({ id: "pro", items: [messagesItem] });
-	const premium = products.premium({ id: "premium", items: [messagesItem] });
+test.concurrent(
+	`${chalk.yellowBright("billing.updated: E2 entity upgrade → entity_id + activated + expired")}`,
+	async () => {
+		const customerId = "billing-updated-e2-entity-upgrade";
+		const messagesItem = items.monthlyMessages({ includedUsage: 100 });
+		const pro = products.pro({ id: "pro", items: [messagesItem] });
+		const premium = products.premium({ id: "premium", items: [messagesItem] });
 
-	const { autumnV1, entities } = await initScenario({
-		customerId,
-		setup: [
-			s.customer({ paymentMethod: "success", skipWebhooks: true }),
-			s.products({ list: [pro, premium] }),
-			s.entities({ count: 1, featureId: TestFeature.Users }),
-		],
-		actions: [s.attach({ productId: pro.id, entityIndex: 0 })],
-	});
+		const { autumnV1, entities } = await initScenario({
+			customerId,
+			setup: [
+				s.customer({ paymentMethod: "success", skipWebhooks: true }),
+				s.products({ list: [pro, premium] }),
+				s.entities({ count: 1, featureId: TestFeature.Users }),
+			],
+			actions: [s.attach({ productId: pro.id, entityIndex: 0 })],
+		});
 
-	const entityId = entities[0].id;
+		const entityId = entities[0].id;
 
-	await autumnV1.billing.attach({
-		customer_id: customerId,
-		product_id: premium.id,
-		entity_id: entityId,
-	});
+		await autumnV1.billing.attach({
+			customer_id: customerId,
+			product_id: premium.id,
+			entity_id: entityId,
+		});
 
-	const result = await waitForWebhook<BillingUpdatedPayload>({
-		token: playToken,
-		predicate: (payload) =>
-			payload.type === "billing.updated" &&
-			payload.data?.customer_id === customerId &&
-			payload.data?.entity_id === entityId &&
-			findChange(payload.data.plan_changes, {
-				action: "activated",
-				planId: premium.id,
-			}) !== undefined &&
-			findChange(payload.data.plan_changes, {
-				action: "expired",
-				planId: pro.id,
-			}) !== undefined,
-		timeoutMs: 15000,
-	});
+		const result = await waitForWebhook<BillingUpdatedPayload>({
+			token: playToken,
+			predicate: (payload) =>
+				payload.type === "billing.updated" &&
+				payload.data?.customer_id === customerId &&
+				payload.data?.entity_id === entityId &&
+				findChange(payload.data.plan_changes, {
+					action: "activated",
+					planId: premium.id,
+				}) !== undefined &&
+				findChange(payload.data.plan_changes, {
+					action: "expired",
+					planId: pro.id,
+				}) !== undefined,
+			timeoutMs: 15000,
+		});
 
-	expect(result).not.toBeNull();
-	const { data } = result!.payload;
-	expect(data.entity_id).toBe(entityId);
+		expect(result).not.toBeNull();
+		const { data } = result!.payload;
+		expect(data.entity_id).toBe(entityId);
 
-	const activated = findChange(data.plan_changes, {
-		action: "activated",
-		planId: premium.id,
-	});
-	expect(activated).toBeDefined();
+		const activated = findChange(data.plan_changes, {
+			action: "activated",
+			planId: premium.id,
+		});
+		expect(activated).toBeDefined();
 
-	const expired = findChange(data.plan_changes, {
-		action: "expired",
-		planId: pro.id,
-	});
-	expect(expired).toBeDefined();
-	expect(expired?.previous_attributes).toMatchObject({ status: "active" });
-});
+		const expired = findChange(data.plan_changes, {
+			action: "expired",
+			planId: pro.id,
+		});
+		expect(expired).toBeDefined();
+		expect(expired?.previous_attributes).toMatchObject({ status: "active" });
+	},
+);
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // CHECKOUT: ATTACH VIA STRIPE CHECKOUT (no payment method on file)

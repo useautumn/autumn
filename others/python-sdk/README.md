@@ -335,6 +335,7 @@ Use this to permanently remove a feature. Note: features that are used in produc
 
 ### [Rewards](docs/sdks/rewardssdk/README.md)
 
+* [create](docs/sdks/rewardssdk/README.md#create) - Create a coupon or feature grant.
 * [list](docs/sdks/rewardssdk/README.md#list) - List the coupons and feature grants configured for the org.
 * [redeem_code](docs/sdks/rewardssdk/README.md#redeem_code) - Redeem a reward promo code for a customer.
 

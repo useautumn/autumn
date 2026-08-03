@@ -322,6 +322,10 @@ export type PreviewMultiAttachPlanItem = {
    */
   unlimited?: boolean | undefined;
   /**
+   * Whether entity-level grants contribute to a shared customer balance.
+   */
+  pooled?: boolean | undefined;
+  /**
    * Reset configuration for consumable features. Omit for non-consumable features like seats.
    */
   reset?: PreviewMultiAttachReset | undefined;
@@ -340,7 +344,7 @@ export type PreviewMultiAttachPlanItem = {
 };
 
 /**
- * Customize the plan to attach. Can override the price, items, or licenses.
+ * Customize the plan to attach. Can override its price or items.
  */
 export type PreviewMultiAttachCustomize = {
   /**
@@ -377,7 +381,7 @@ export type PreviewMultiAttachPlan = {
    */
   planId: string;
   /**
-   * Customize the plan to attach. Can override the price, items, or licenses.
+   * Customize the plan to attach. Can override its price or items.
    */
   customize?: PreviewMultiAttachCustomize | undefined;
   /**
@@ -392,6 +396,10 @@ export type PreviewMultiAttachPlan = {
    * A unique ID to identify this subscription. Useful when attaching the same plan multiple times.
    */
   subscriptionId?: string | undefined;
+  /**
+   * The entity scope for this plan. Omit to inherit the request scope, or pass null for customer-level.
+   */
+  entityId?: string | null | undefined;
 };
 
 /**
@@ -484,6 +492,20 @@ export type PreviewMultiAttachAttachDiscount = {
    */
   promotionCode?: string | undefined;
 };
+
+/**
+ * How to handle billing. 'prorate_immediately' charges/credits prorated amounts now, 'none' does not charge/credit anything.
+ */
+export const PreviewMultiAttachBillingBehavior = {
+  ProrateImmediately: "prorate_immediately",
+  None: "none",
+} as const;
+/**
+ * How to handle billing. 'prorate_immediately' charges/credits prorated amounts now, 'none' does not charge/credit anything.
+ */
+export type PreviewMultiAttachBillingBehavior = ClosedEnum<
+  typeof PreviewMultiAttachBillingBehavior
+>;
 
 /**
  * Controls when to return a checkout URL. 'always' returns a URL even if payment succeeds, 'if_required' only when payment action is needed, 'never' disables redirects.
@@ -690,6 +712,10 @@ export type PreviewMultiAttachParams = {
    */
   freeTrial?: PreviewMultiAttachFreeTrialParams | null | undefined;
   /**
+   * Unix timestamp in milliseconds for backdating every plan in this multi-attach.
+   */
+  startsAt?: number | undefined;
+  /**
    * Currency to bill this multi-attach in (e.g. usd, eur). Must match the customer's currency if they are already locked to one, and every plan must offer a paid price in it. Defaults to the customer's currency, then the org default.
    */
   currency?: string | undefined;
@@ -701,6 +727,10 @@ export type PreviewMultiAttachParams = {
    * List of discounts to apply. Each discount can be an Autumn reward ID, Stripe coupon ID, or Stripe promotion code.
    */
   discounts?: Array<PreviewMultiAttachAttachDiscount> | undefined;
+  /**
+   * How to handle billing. 'prorate_immediately' charges/credits prorated amounts now, 'none' does not charge/credit anything.
+   */
+  billingBehavior?: PreviewMultiAttachBillingBehavior | undefined;
   /**
    * URL to redirect to after successful checkout.
    */
@@ -1480,6 +1510,7 @@ export type PreviewMultiAttachPlanItem$Outbound = {
   feature_id: string;
   included?: number | undefined;
   unlimited?: boolean | undefined;
+  pooled: boolean;
   reset?: PreviewMultiAttachReset$Outbound | undefined;
   price?: PreviewMultiAttachPrice$Outbound | undefined;
   proration?: PreviewMultiAttachProration$Outbound | undefined;
@@ -1495,6 +1526,7 @@ export const PreviewMultiAttachPlanItem$outboundSchema: z.ZodMiniType<
     featureId: z.string(),
     included: z.optional(z.number()),
     unlimited: z.optional(z.boolean()),
+    pooled: z._default(z.boolean(), false),
     reset: z.optional(z.lazy(() => PreviewMultiAttachReset$outboundSchema)),
     price: z.optional(z.lazy(() => PreviewMultiAttachPrice$outboundSchema)),
     proration: z.optional(
@@ -1592,6 +1624,7 @@ export type PreviewMultiAttachPlan$Outbound = {
     | undefined;
   version?: number | undefined;
   subscription_id?: string | undefined;
+  entity_id?: string | null | undefined;
 };
 
 /** @internal */
@@ -1611,12 +1644,14 @@ export const PreviewMultiAttachPlan$outboundSchema: z.ZodMiniType<
     ),
     version: z.optional(z.number()),
     subscriptionId: z.optional(z.string()),
+    entityId: z.optional(z.nullable(z.string())),
   }),
   z.transform((v) => {
     return remap$(v, {
       planId: "plan_id",
       featureQuantities: "feature_quantities",
       subscriptionId: "subscription_id",
+      entityId: "entity_id",
     });
   }),
 );
@@ -1753,6 +1788,11 @@ export function previewMultiAttachAttachDiscountToJSON(
     ),
   );
 }
+
+/** @internal */
+export const PreviewMultiAttachBillingBehavior$outboundSchema: z.ZodMiniEnum<
+  typeof PreviewMultiAttachBillingBehavior
+> = z.enum(PreviewMultiAttachBillingBehavior);
 
 /** @internal */
 export const PreviewMultiAttachRedirectMode$outboundSchema: z.ZodMiniEnum<
@@ -2059,9 +2099,11 @@ export type PreviewMultiAttachParams$Outbound = {
   entity_id?: string | undefined;
   plans: Array<PreviewMultiAttachPlan$Outbound>;
   free_trial?: PreviewMultiAttachFreeTrialParams$Outbound | null | undefined;
+  starts_at?: number | undefined;
   currency?: string | undefined;
   invoice_mode?: PreviewMultiAttachInvoiceMode$Outbound | undefined;
   discounts?: Array<PreviewMultiAttachAttachDiscount$Outbound> | undefined;
+  billing_behavior?: string | undefined;
   success_url?: string | undefined;
   checkout_session_params?: { [k: string]: any } | undefined;
   redirect_mode: string;
@@ -2085,12 +2127,16 @@ export const PreviewMultiAttachParams$outboundSchema: z.ZodMiniType<
         z.lazy(() => PreviewMultiAttachFreeTrialParams$outboundSchema),
       ),
     ),
+    startsAt: z.optional(z.int()),
     currency: z.optional(z.string()),
     invoiceMode: z.optional(
       z.lazy(() => PreviewMultiAttachInvoiceMode$outboundSchema),
     ),
     discounts: z.optional(
       z.array(z.lazy(() => PreviewMultiAttachAttachDiscount$outboundSchema)),
+    ),
+    billingBehavior: z.optional(
+      PreviewMultiAttachBillingBehavior$outboundSchema,
     ),
     successUrl: z.optional(z.string()),
     checkoutSessionParams: z.optional(z.record(z.string(), z.any())),
@@ -2110,7 +2156,9 @@ export const PreviewMultiAttachParams$outboundSchema: z.ZodMiniType<
       customerId: "customer_id",
       entityId: "entity_id",
       freeTrial: "free_trial",
+      startsAt: "starts_at",
       invoiceMode: "invoice_mode",
+      billingBehavior: "billing_behavior",
       successUrl: "success_url",
       checkoutSessionParams: "checkout_session_params",
       redirectMode: "redirect_mode",
