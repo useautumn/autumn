@@ -12,8 +12,9 @@ export const MIGRATION_WEBHOOK_DELIVERY_QUEUE_NAME =
 	"migration-webhook-delivery";
 export const MIGRATION_WEBHOOK_DELIVERY_QUEUE_CONCURRENCY = 1;
 export const MIGRATION_WEBHOOK_DELIVERY_MAX_DURATION_SECONDS = 15 * 60;
-/** Deliveries are at-least-once by design; a retry re-sends the batch. */
-export const MIGRATION_WEBHOOK_DELIVERY_RETRY = { maxAttempts: 1 } as const;
+/** Deliveries are at-least-once by design; a retry re-sends the batch, so a
+ * transient failure doesn't permanently drop its records. */
+export const MIGRATION_WEBHOOK_DELIVERY_RETRY = { maxAttempts: 2 } as const;
 
 /** Records per queue message — keeps payloads small while still batching. */
 export const MIGRATION_WEBHOOK_RECORDS_PER_MESSAGE = 500;
