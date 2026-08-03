@@ -85,6 +85,12 @@ export const baseMiddleware = async (c: Context<HonoEnv>, next: Next) => {
 		query: c.req.query(),
 	});
 
+	const subjectReadTrace =
+		process.env.NODE_ENV !== "production" &&
+		c.req.header("x-debug-subject-source") === "true"
+			? ({} as NonNullable<HonoEnv["Variables"]["ctx"]["subjectReadTrace"]>)
+			: undefined;
+
 	const requestLogContext = {
 		id,
 		method: c.req.method,
@@ -140,6 +146,8 @@ export const baseMiddleware = async (c: Context<HonoEnv>, next: Next) => {
 			c.req.header("x-skip-cache") === "true" ||
 			c.req.query("skip_cache") === "true",
 
+		subjectReadTrace,
+
 		// Test params:
 		extraLogs: {},
 
@@ -179,4 +187,8 @@ export const baseMiddleware = async (c: Context<HonoEnv>, next: Next) => {
 	// childLogger.info(`${method} ${path}`);
 
 	await next();
+
+	if (subjectReadTrace?.source) {
+		c.res.headers.set("x-subject-source", subjectReadTrace.source);
+	}
 };

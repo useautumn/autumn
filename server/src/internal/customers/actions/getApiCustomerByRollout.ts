@@ -29,7 +29,7 @@ export const getApiCustomerByRollout = async ({
 	if (isFullSubjectRolloutEnabled({ ctx })) {
 	}
 
-	const lookup = ({ skipCache }: { skipCache: boolean }) => {
+	const lookup = async ({ skipCache }: { skipCache: boolean }) => {
 		const fetch = () =>
 			getOrSetCachedFullSubject({
 				ctx: skipCache ? { ...ctx, skipCache: true } : ctx,
@@ -40,8 +40,9 @@ export const getApiCustomerByRollout = async ({
 
 		if (!singleflight && l1TtlMs <= 0) return fetch();
 
+		let servedByFetch = false;
 		// The L1 stays on even under skipCache — it exists for Redis outages.
-		return coalescedSubjectRead({
+		const fullSubject = await coalescedSubjectRead({
 			key: buildFullSubjectKey({
 				orgId: ctx.org.id,
 				env: ctx.env,
@@ -50,8 +51,16 @@ export const getApiCustomerByRollout = async ({
 			}),
 			l1TtlMs,
 			singleflight,
-			fetch,
+			fetch: () => {
+				servedByFetch = true;
+				return fetch();
+			},
 		});
+		// L1 hits and joined singleflights never enter fetch — still cache-served.
+		if (!servedByFetch && ctx.subjectReadTrace) {
+			ctx.subjectReadTrace.source = "cache";
+		}
+		return fullSubject;
 	};
 
 	const fullSubject = await shed503OnTransientError({

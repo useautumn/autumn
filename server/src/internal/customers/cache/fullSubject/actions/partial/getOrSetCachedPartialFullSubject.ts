@@ -45,6 +45,7 @@ export const getOrSetCachedPartialFullSubject = async ({
 			logger.debug(
 				`[getOrSetCachedPartialFullSubject] Subject hit for ${customerId}${entityId ? `:${entityId}` : ""}, source: ${source}`,
 			);
+			if (ctx.subjectReadTrace) ctx.subjectReadTrace.source = "cache";
 			return cached;
 		}
 	}
@@ -57,6 +58,8 @@ export const getOrSetCachedPartialFullSubject = async ({
 		ctx,
 		customerId,
 		entityId,
+		readFrom: "replica-ok",
+		routeSource: source,
 	});
 
 	if (!result) {
