@@ -34,6 +34,7 @@ const hasCompleteDailyCoverage = ({
 }: {
 	rows: CountAndSumRow[];
 }): boolean =>
+	rows.length > 0 &&
 	rows.every((row) => {
 		const actualDailyEventCount = Number(row.actual_daily_event_count);
 		const expectedDailyEventCount = Number(row.expected_daily_event_count);

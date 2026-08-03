@@ -4,7 +4,7 @@ import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 
 const state = {
 	dailyMode: "no_rows" as
-		| "empty_complete"
+		| "empty"
 		| "error"
 		| "inactive_event"
 		| "missing_event"
@@ -17,7 +17,7 @@ const state = {
 };
 
 const dailyRowsByMode = {
-	empty_complete: [],
+	empty: [],
 	inactive_event: [
 		{
 			actual_daily_event_count: "12",
@@ -201,14 +201,15 @@ test("daily totals: keep sparse events on the daily fast path", async () => {
 	expect(warnings).toHaveLength(0);
 });
 
-test("daily totals: return zero without fallback when a covered window has no events", async () => {
+test("daily totals: retry hourly when the coverage query returns no evidence", async () => {
 	const { summary, warnings } = await runDailyTotalsQuery({
-		dailyMode: "empty_complete",
+		dailyMode: "empty",
 	});
 
-	expect(summary).toEqual({});
-	expect(state.queries).toHaveLength(1);
-	expect(warnings).toHaveLength(0);
+	expect(summary).toEqual({ "emails.sent": { count: 42, sum: 42 } });
+	expect(state.queries).toHaveLength(2);
+	expect(state.queries[1]).toContain("events_customer_hourly_mv");
+	expect(warnings).toHaveLength(1);
 });
 
 test("daily totals: retry hourly when datasource coverage is incomplete", async () => {
