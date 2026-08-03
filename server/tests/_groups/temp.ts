@@ -1,6 +1,6 @@
 import type { TestGroup } from "./types";
 
-// Empty: everything from `bun tw --max=300` (run ms0mtl7z-xv6q4d) is resolved.
+// Empty: `bun tw` run ms9cvy9y-lmwa4f is triaged.
 // Add paths here while triaging a run, then clear them again.
 const activeTempPaths: string[] = [];
 

@@ -1,6 +1,7 @@
 import type { CusProductStatus, SubjectQueryRow } from "@autumn/shared";
 import type { RequestContext } from "@/honoUtils/HonoEnv.js";
 import { mergeEntityAndCustomerSubjectRows } from "@/internal/customers/repos/getFullSubject/mergeEntityAndCustomerSubjectRows.js";
+import { unpackSubjectEnvelope } from "@/internal/customers/repos/getFullSubject/unpackSubjectEnvelope.js";
 import { getCustomerLevelSubjectRowsQuery } from "./customerLevelSubjectsQuery.js";
 
 /** Fetches customer-level data once per distinct customer on the page and merges it into each entityScopedOnly row. */
@@ -19,14 +20,16 @@ export const hydrateEntityRowsWithCustomerData = async ({
 		...new Set(entityRows.map((row) => row.customer.internal_id)),
 	];
 
-	const customerRows = (await ctx.db.execute(
-		getCustomerLevelSubjectRowsQuery({
-			orgId: ctx.org.id,
-			env: ctx.env,
-			internalCustomerIds,
-			inStatuses,
-		}),
-	)) as unknown as SubjectQueryRow[];
+	const customerRows = unpackSubjectEnvelope({
+		rows: await ctx.db.execute(
+			getCustomerLevelSubjectRowsQuery({
+				orgId: ctx.org.id,
+				env: ctx.env,
+				internalCustomerIds,
+				inStatuses,
+			}),
+		),
+	});
 
 	const customerRowsByInternalId = new Map(
 		customerRows.map((row) => [row.customer.internal_id, row]),

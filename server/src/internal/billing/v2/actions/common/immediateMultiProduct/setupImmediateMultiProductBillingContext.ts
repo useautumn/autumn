@@ -8,6 +8,7 @@ import {
 	type InvoiceMode,
 	isFreeProduct,
 	isOneOffProduct,
+	isPastStartDate,
 	isProductPaidAndRecurring,
 	type MultiAttachBillingContext,
 	type MultiAttachParamsV0,
@@ -311,6 +312,12 @@ export const setupImmediateMultiProductBillingContext = async ({
 		billingCycleAnchorMs = trialContext.trialEndsAt;
 	}
 
+	const subscriptionBackdateStartMs =
+		billingStartsAt !== undefined &&
+		isPastStartDate(billingStartsAt, currentEpochMs, billingStartsAtToleranceMs)
+			? billingStartsAt
+			: undefined;
+
 	// Reset anchor derives from billingCycleAnchorMs, which setupBillingCycleAnchor
 	// already aligns to a backdated start.
 	const resetCycleAnchorMs = setupResetCycleAnchor({
@@ -361,6 +368,8 @@ export const setupImmediateMultiProductBillingContext = async ({
 		currentEpochMs,
 		billingCycleAnchorMs,
 		resetCycleAnchorMs,
+		billingStartsAt,
+		subscriptionBackdateStartMs,
 		requestedProrationBehavior: params.billing_behavior,
 		stripeCustomer,
 		stripeSubscription,

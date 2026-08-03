@@ -63,9 +63,14 @@ test.concurrent(`${chalk.yellowBright("get-entity: entity inheriting customer-le
 	ApiEntityV0Schema.parse(ent0V1);
 	expect(ent0V1.products).toBeDefined();
 	expect(ent0V1.products!.length).toBeGreaterThan(0);
-	const ent0V1Prod = ent0V1.products![0];
-	expect(ent0V1Prod.current_period_start).toBeNumber();
-	expect(ent0V1Prod.current_period_end).toBeNumber();
+	// Periods come from the subscription, and an entity's own plans sort ahead of
+	// inherited ones -- so assert on the paid customer-level plan, not index 0.
+	const ent0V1Prod = ent0V1.products!.find(
+		(product) => product.id === cusLevelProd.id,
+	);
+	expect(ent0V1Prod).toBeDefined();
+	expect(ent0V1Prod?.current_period_start).toBeNumber();
+	expect(ent0V1Prod?.current_period_end).toBeNumber();
 	expect(ent0V1.features).toBeDefined();
 	expect(ent0V1.features?.[TestFeature.Credits]).toMatchObject({
 		id: TestFeature.Credits,
@@ -85,9 +90,12 @@ test.concurrent(`${chalk.yellowBright("get-entity: entity inheriting customer-le
 	);
 	ApiEntityV2Schema.parse(ent0V2_1);
 	expect(ent0V2_1.subscriptions.length).toBeGreaterThan(0);
-	const ent0V2_1Sub = ent0V2_1.subscriptions[0];
-	expect(ent0V2_1Sub.current_period_start).toBeNumber();
-	expect(ent0V2_1Sub.current_period_end).toBeNumber();
+	const ent0V2_1Sub = ent0V2_1.subscriptions.find(
+		(subscription) => subscription.plan_id === cusLevelProd.id,
+	);
+	expect(ent0V2_1Sub).toBeDefined();
+	expect(ent0V2_1Sub?.current_period_start).toBeNumber();
+	expect(ent0V2_1Sub?.current_period_end).toBeNumber();
 	expect(ent0V2_1.balances[TestFeature.Credits]).toMatchObject({
 		remaining: 175,
 		usage: 25,
@@ -107,9 +115,12 @@ test.concurrent(`${chalk.yellowBright("get-entity: entity inheriting customer-le
 	);
 	ApiEntityV2Schema.parse(ent0V2_2);
 	expect(ent0V2_2.subscriptions.length).toBeGreaterThan(0);
-	const ent0V2_2Sub = ent0V2_2.subscriptions[0];
-	expect(ent0V2_2Sub.current_period_start).toBeNumber();
-	expect(ent0V2_2Sub.current_period_end).toBeNumber();
+	const ent0V2_2Sub = ent0V2_2.subscriptions.find(
+		(subscription) => subscription.plan_id === cusLevelProd.id,
+	);
+	expect(ent0V2_2Sub).toBeDefined();
+	expect(ent0V2_2Sub?.current_period_start).toBeNumber();
+	expect(ent0V2_2Sub?.current_period_end).toBeNumber();
 	expect(ent0V2_2.balances[TestFeature.Credits]).toMatchObject({
 		remaining: 175,
 		usage: 25,
@@ -138,19 +149,6 @@ test.concurrent(`${chalk.yellowBright("get-entity: entity inheriting customer-le
 		expires_at: null,
 	});
 
-	const refDir = `${import.meta.dir}/../../../references`;
-	await Bun.write(
-		`${refDir}/getEntityV1Response.json`,
-		JSON.stringify(ent0V1, null, 2),
-	);
-	await Bun.write(
-		`${refDir}/getEntityV2_1Response.json`,
-		JSON.stringify(ent0V2_1, null, 2),
-	);
-	await Bun.write(
-		`${refDir}/getEntityV2_2Response.json`,
-		JSON.stringify(ent0V2_2, null, 2),
-	);
 });
 
 test.concurrent(`${chalk.yellowBright("get-entity: v2.1 returns boolean features in flags")}`, async () => {
