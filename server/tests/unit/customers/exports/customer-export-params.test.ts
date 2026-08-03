@@ -7,9 +7,12 @@ import {
 } from "@autumn/shared";
 
 describe("CreateCustomerExportParamsSchema", () => {
-	it("rejects duplicate export fields", () => {
+	it.each([
+		{ fields: [] },
+		{ fields: [CustomerExportField.Name, CustomerExportField.Name] },
+	])("rejects invalid export fields: %j", ({ fields }) => {
 		const result = CreateCustomerExportParamsSchema.safeParse({
-			fields: [CustomerExportField.Name, CustomerExportField.Name],
+			fields,
 		});
 
 		expect(result.success).toBe(false);
@@ -32,6 +35,20 @@ const runningExportResponse = {
 };
 
 describe("CustomerExportResponseSchema", () => {
+	it.each([
+		{ fields: [] },
+		{ fields: [CustomerExportField.Name, CustomerExportField.Name] },
+	])("rejects invalid export fields: %j", ({ fields }) => {
+		const result = CustomerExportResponseSchema.safeParse({
+			...runningExportResponse,
+			fields,
+			trigger_run_id: "run_123",
+			public_access_token: null,
+		});
+
+		expect(result.success).toBe(false);
+	});
+
 	it("requires the realtime subscription fields the dashboard gates on", () => {
 		expect(
 			CustomerExportResponseSchema.safeParse(runningExportResponse).success,

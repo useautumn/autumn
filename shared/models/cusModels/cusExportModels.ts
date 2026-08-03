@@ -1,5 +1,5 @@
 import { z } from "zod/v4";
-import type { CustomerListFilters } from "../../api/customers/customerListFilters.js";
+import { CustomerListFiltersSchema } from "../../api/customers/customerListFilters.js";
 
 export const CustomerExportStatus = {
 	Queued: "queued",
@@ -50,21 +50,9 @@ export const CUSTOMER_EXPORT_FIELD_HEADERS: Record<
 	[CustomerExportField.Licenses]: "Licenses",
 };
 
-export const CustomerExportStatusSchema = z.enum([
-	CustomerExportStatus.Queued,
-	CustomerExportStatus.Running,
-	CustomerExportStatus.Completed,
-	CustomerExportStatus.Failed,
-]);
+export const CustomerExportStatusSchema = z.enum(CustomerExportStatus);
 
-export const CustomerExportFieldSchema = z.enum([
-	CustomerExportField.Name,
-	CustomerExportField.Email,
-	CustomerExportField.CustomerId,
-	CustomerExportField.Subscriptions,
-	CustomerExportField.Purchases,
-	CustomerExportField.Licenses,
-]);
+export const CustomerExportFieldSchema = z.enum(CustomerExportField);
 
 export const CustomerExportFieldsSchema = z
 	.array(CustomerExportFieldSchema)
@@ -75,7 +63,11 @@ export const CustomerExportFieldsSchema = z
 	});
 
 /** The dashboard filter state frozen at export-creation time. */
-export type CustomerExportSnapshot = {
-	search: string;
-	filters: CustomerListFilters;
-};
+export const CustomerExportSnapshotSchema = z.object({
+	search: z.string().default(""),
+	filters: CustomerListFiltersSchema.default({}),
+});
+
+export type CustomerExportSnapshot = z.infer<
+	typeof CustomerExportSnapshotSchema
+>;

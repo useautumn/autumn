@@ -1,24 +1,17 @@
 import { z } from "zod/v4";
 import {
-	CustomerExportFieldSchema,
 	CustomerExportFieldsSchema,
+	CustomerExportSnapshotSchema,
 	CustomerExportStatusSchema,
 } from "../../../models/cusModels/cusExportModels.js";
-import {
-	BoundedCustomerListFiltersSchema,
-	CustomerListFiltersSchema,
-} from "../customerListFilters.js";
+import { BoundedCustomerListFiltersSchema } from "../customerListFilters.js";
 
 export const MAX_CUSTOMER_EXPORTS_PAGE_SIZE = 20;
 
-// The snapshot is persisted and replayed in every export query, so its inputs
-// are bounded at creation time.
+/** Maximum search length persisted and replayed by an export snapshot. */
 export const MAX_CUSTOMER_EXPORT_SEARCH_LENGTH = 500;
 
-export const CustomerExportSnapshotSchema = z.object({
-	search: z.string().default(""),
-	filters: CustomerListFiltersSchema.default({}),
-});
+export { CustomerExportSnapshotSchema };
 
 export const CreateCustomerExportParamsSchema = z.object({
 	fields: CustomerExportFieldsSchema,
@@ -58,9 +51,10 @@ export type CustomerExportProgress = z.infer<
 	typeof CustomerExportProgressSchema
 >;
 
-// Written by the export tasks into trigger run metadata; never stored in the DB.
-// The dashboard reads the same keys over Trigger Realtime.
+/** Export total-row count key stored in run metadata, not the database. */
 export const CUSTOMER_EXPORT_TOTAL_ROWS_KEY = "total_rows";
+
+/** Live processed-row count key stored in run metadata, not the database. */
 export const CUSTOMER_EXPORT_PROCESSED_ROWS_KEY = "processed_rows";
 
 /** A retried run resets and re-counts, so processed is capped at the total. */
@@ -92,7 +86,7 @@ export const runMetadataToCustomerExportProgress = ({
 export const CustomerExportResponseSchema = z.object({
 	id: z.string(),
 	status: CustomerExportStatusSchema,
-	fields: z.array(CustomerExportFieldSchema),
+	fields: CustomerExportFieldsSchema,
 	snapshot: CustomerExportSnapshotSchema,
 	requested_by_user_id: z.string().nullable(),
 	row_count: z.number().nullable(),
