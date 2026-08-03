@@ -31855,6 +31855,22 @@ paths:
                           - promo_codes
                           - created_at
                         title: CreateRewardCouponResponse
+                        examples:
+                          - id: summer_sale
+                            name: Summer Sale
+                            type: percentage_discount
+                            value: 20
+                            duration:
+                              type: months
+                              length: 3
+                            plan_ids:
+                              - pro
+                              - starter
+                            promo_codes:
+                              - code: SUMMER20
+                                global_max_redemption: 100
+                                first_time_transaction: false
+                            created_at: 1718000000000
                     required:
                       - coupon
                     additionalProperties: false
@@ -31939,6 +31955,19 @@ paths:
                           - promo_codes
                           - created_at
                         title: CreateRewardFeatureGrantResponse
+                        examples:
+                          - id: beta_credits_grant
+                            name: Beta Tester Credits
+                            promo_codes:
+                              - code: BETA2024
+                                max_uses: 500
+                            grants:
+                              - feature_id: credits
+                                included: 1000
+                                expiry:
+                                  type: month
+                                  length: 1
+                            created_at: 1718000000000
                     required:
                       - feature_grant
                     additionalProperties: false

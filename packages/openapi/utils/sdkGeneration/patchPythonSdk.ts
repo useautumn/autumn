@@ -51,6 +51,10 @@ export function patchPythonSdkRewardAliases({
 	const content = readFileSync(modelsPath, "utf-8");
 	const base = content
 		.replace(
+			/\nif TYPE_CHECKING:\n    from \.listrewardsop import \(\n(?:        ListRewards.* as .*,\n)+    \)\n/g,
+			"",
+		)
+		.replace(
 			/_COMPAT_MODEL_ALIASES = \{[\s\S]*?\n__all__ \+= _COMPAT_MODEL_ALIASES\n*/g,
 			"",
 		)
@@ -76,10 +80,13 @@ ${Object.entries(aliases)
 	.map(([name, target]) => `    "${name}": "${target}",`)
 	.join("\n")}
 }`;
+	const typeCheckingAliases = Object.entries(aliases)
+		.map(([name, target]) => `        ${target} as ${name},`)
+		.join("\n");
 	const patched = base
 		.replace(
 			"\ndef __getattr__(attr_name: str) -> Any:",
-			`\n_COMPAT_MODEL_ALIASES = ${pythonAliases}\n__all__ += _COMPAT_MODEL_ALIASES\n\n\ndef __getattr__(attr_name: str) -> Any:`,
+			`\nif TYPE_CHECKING:\n    from .listrewardsop import (\n${typeCheckingAliases}\n    )\n\n\n_COMPAT_MODEL_ALIASES = ${pythonAliases}\n__all__ += _COMPAT_MODEL_ALIASES\n\n\ndef __getattr__(attr_name: str) -> Any:`,
 		)
 		.replace(
 			"        attr_name,\n        package=__package__,",

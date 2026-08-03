@@ -7,8 +7,11 @@ import { z } from "zod/v4";
 import { ApiCouponPromoCodeV0Schema } from "./components/apiCouponPromoCodeV0.js";
 import { ApiFeatureGrantPromoCodeV0Schema } from "./components/apiFeatureGrantPromoCodeV0.js";
 import { ApiGrantV0Schema } from "./components/apiGrantV0.js";
-import { ApiCouponV0Schema } from "./coupons/apiCouponV0.js";
-import { ApiFeatureGrantV0Schema } from "./featureGrants/apiFeatureGrantV0.js";
+import { ApiCouponV0Schema, COUPON_V0_EXAMPLE } from "./coupons/apiCouponV0.js";
+import {
+	ApiFeatureGrantV0Schema,
+	FEATURE_GRANT_V0_EXAMPLE,
+} from "./featureGrants/apiFeatureGrantV0.js";
 
 const CouponDurationSchema = z
 	.union([
@@ -191,7 +194,10 @@ const CreateRewardCouponResponseSchema = ApiCouponV0Schema.extend({
 			title: "CreateRewardCouponPromoCodeResponse",
 		}),
 	),
-}).meta({ title: "CreateRewardCouponResponse" });
+}).meta({
+	title: "CreateRewardCouponResponse",
+	examples: [COUPON_V0_EXAMPLE],
+});
 
 const CreateRewardGrantResponseSchema = ApiGrantV0Schema.extend({
 	expiry: ApiGrantV0Schema.shape.expiry.meta({
@@ -206,7 +212,10 @@ const CreateRewardFeatureGrantResponseSchema = ApiFeatureGrantV0Schema.extend({
 			title: "CreateRewardFeatureGrantPromoCodeResponse",
 		}),
 	),
-}).meta({ title: "CreateRewardFeatureGrantResponse" });
+}).meta({
+	title: "CreateRewardFeatureGrantResponse",
+	examples: [FEATURE_GRANT_V0_EXAMPLE],
+});
 
 export const CreateRewardResponseSchema = z.union([
 	z.object({ coupon: CreateRewardCouponResponseSchema }).strict(),

@@ -10322,6 +10322,22 @@ _dynamic_imports: dict[str, str] = {
 _sub_packages = ["internal"]
 
 
+if TYPE_CHECKING:
+    from .listrewardsop import (
+        ListRewardsCouponPromoCode as CouponPromoCode,
+        ListRewardsCouponPromoCodeTypedDict as CouponPromoCodeTypedDict,
+        ListRewardsCouponType as CouponType,
+        ListRewardsDurationType as DurationType,
+        ListRewardsExpiry as Expiry,
+        ListRewardsExpiryType as ExpiryType,
+        ListRewardsExpiryTypedDict as ExpiryTypedDict,
+        ListRewardsFeatureGrantPromoCode as FeatureGrantPromoCode,
+        ListRewardsFeatureGrantPromoCodeTypedDict as FeatureGrantPromoCodeTypedDict,
+        ListRewardsGrant as Grant,
+        ListRewardsGrantTypedDict as GrantTypedDict,
+    )
+
+
 _COMPAT_MODEL_ALIASES = {
     "CouponPromoCode": "ListRewardsCouponPromoCode",
     "CouponPromoCodeTypedDict": "ListRewardsCouponPromoCodeTypedDict",
