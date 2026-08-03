@@ -1,6 +1,12 @@
 import { z } from "zod/v4";
 
-const FilterValuesSchema = z.array(z.string());
+// Bounds cap SQL clause fan-out; far above any legitimate dashboard selection.
+const MAX_FILTER_VALUES = 1000;
+const MAX_FILTER_VALUE_LENGTH = 200;
+
+const FilterValuesSchema = z
+	.array(z.string().max(MAX_FILTER_VALUE_LENGTH))
+	.max(MAX_FILTER_VALUES);
 
 export const CustomerListFiltersSchema = z.object({
 	status: FilterValuesSchema.optional(),
@@ -11,20 +17,3 @@ export const CustomerListFiltersSchema = z.object({
 });
 
 export type CustomerListFilters = z.infer<typeof CustomerListFiltersSchema>;
-
-// Export snapshots persist and replay these filters, so only that path bounds
-// them; the live list endpoints bind values into parameterized SQL and stay uncapped.
-const MAX_SNAPSHOT_FILTER_VALUES = 1000;
-const MAX_SNAPSHOT_FILTER_VALUE_LENGTH = 200;
-
-const BoundedFilterValuesSchema = z
-	.array(z.string().max(MAX_SNAPSHOT_FILTER_VALUE_LENGTH))
-	.max(MAX_SNAPSHOT_FILTER_VALUES);
-
-export const BoundedCustomerListFiltersSchema =
-	CustomerListFiltersSchema.extend({
-		status: BoundedFilterValuesSchema.optional(),
-		version: BoundedFilterValuesSchema.optional(),
-		processor: BoundedFilterValuesSchema.optional(),
-		interval: BoundedFilterValuesSchema.optional(),
-	});
