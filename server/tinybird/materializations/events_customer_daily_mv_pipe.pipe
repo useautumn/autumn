@@ -1,0 +1,20 @@
+DESCRIPTION >
+    Collapses the customer-leading hourly total rollup into mergeable UTC daily states, dropping
+    product granularity that reconciliation does not filter on.
+
+NODE materialize
+SQL >
+    SELECT
+        org_id,
+        env,
+        customer_id,
+        entity_id,
+        event_name,
+        toStartOfDay(hour) as day,
+        sumState(total_value) as total_value,
+        sumState(event_count) as event_count
+    FROM events_customer_hourly_mv
+    GROUP BY org_id, env, customer_id, entity_id, event_name, day
+
+TYPE materialized
+DATASOURCE events_customer_daily_mv

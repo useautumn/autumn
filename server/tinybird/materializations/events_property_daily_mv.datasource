@@ -1,0 +1,21 @@
+DESCRIPTION >
+    Daily aggregate states for unfiltered property group-bys. It preserves customer and entity
+    dimensions for scoped queries while collapsing the hourly property rollup into UTC days.
+
+SCHEMA >
+    `org_id` String,
+    `env` String,
+    `customer_id` String,
+    `entity_id` String DEFAULT '',
+    `event_name` String,
+    `property_key` String,
+    `property_value` String,
+    `day` DateTime,
+    `total_value` AggregateFunction(sum, Float64),
+    `event_count` AggregateFunction(sum, UInt64)
+
+ENGINE "AggregatingMergeTree"
+ENGINE_PARTITION_KEY "toYYYYMM(day)"
+ENGINE_SORTING_KEY "org_id, env, property_key, customer_id, entity_id, event_name, day, property_value"
+
+BACKFILL skip

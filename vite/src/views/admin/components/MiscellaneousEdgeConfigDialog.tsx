@@ -36,6 +36,7 @@ export function MiscellaneousEdgeConfigDialog({
 				newFlatCusModel: data.newFlatCusModel ?? [],
 				syncCoalesce: data.syncCoalesce ?? false,
 				subjectLookupDbOnly: data.subjectLookupDbOnly ?? false,
+				tinybirdDailyRollups: data.tinybirdDailyRollups ?? false,
 			};
 		},
 		enabled: open,

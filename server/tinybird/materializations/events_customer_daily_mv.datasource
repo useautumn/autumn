@@ -1,0 +1,19 @@
+DESCRIPTION >
+    Customer and entity scoped UTC daily total states. This serves exact long-range reconciliation
+    when combined with hourly rows for the two partial boundary days.
+
+SCHEMA >
+    `org_id` String,
+    `env` String,
+    `customer_id` String,
+    `entity_id` String DEFAULT '',
+    `event_name` String,
+    `day` DateTime,
+    `total_value` AggregateFunction(sum, Float64),
+    `event_count` AggregateFunction(sum, UInt64)
+
+ENGINE "AggregatingMergeTree"
+ENGINE_PARTITION_KEY "toYYYYMM(day)"
+ENGINE_SORTING_KEY "org_id, env, customer_id, entity_id, event_name, day"
+
+BACKFILL skip
