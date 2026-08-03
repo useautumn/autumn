@@ -22,7 +22,7 @@ export function PrepaidQuantityControl({
 }) {
 	const [isEditing, setIsEditing] = useState(false);
 	const { features } = useFeaturesQuery();
-	const step = billingUnits > 0 ? billingUnits : 1;
+	const step = billingUnits && billingUnits > 0 ? billingUnits : 1;
 	const roundedQuantity = roundUsageToNearestBillingUnit({
 		usage: quantity ?? 0,
 		billingUnits: step,
