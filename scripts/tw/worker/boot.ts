@@ -42,6 +42,7 @@ import { type Subprocess, spawn } from "bun";
 import chalk from "chalk";
 import {
 	DRAGONFLY_PORT,
+	DYNAMODB_PORT,
 	ELASTICMQ_PORT,
 	PG_PORT,
 	SERVER_PORT,
@@ -316,6 +317,11 @@ const main = async (): Promise<void> => {
 		waitForTcpPort("PostgreSQL", PG_PORT, SERVICE_HEALTH_TIMEOUT_MS),
 		waitForTcpPort("Dragonfly", DRAGONFLY_PORT, SERVICE_HEALTH_TIMEOUT_MS),
 		waitForTcpPort("goaws (SQS)", ELASTICMQ_PORT, SERVICE_HEALTH_TIMEOUT_MS),
+		waitForTcpPort(
+			"dynoxide (DynamoDB)",
+			DYNAMODB_PORT,
+			SERVICE_HEALTH_TIMEOUT_MS,
+		),
 	]);
 
 	// 3. Bind the orchestrator-created Svix app (only when flagged). It only

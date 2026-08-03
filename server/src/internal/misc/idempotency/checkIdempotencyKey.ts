@@ -1,29 +1,28 @@
-import { ErrCode, ms, RecaseError } from "@autumn/shared";
+import { ErrCode, RecaseError } from "@autumn/shared";
+import { claimDynamoIdempotencyKey } from "@/external/aws/dynamodb/idempotencyKeys/operations/claimDynamoIdempotencyKey.js";
+import { releaseDynamoIdempotencyKey } from "@/external/aws/dynamodb/idempotencyKeys/operations/releaseDynamoIdempotencyKey.js";
 import type { Logger } from "@/external/logtail/logtailUtils";
-import { redis } from "@/external/redis/initRedis.js";
+import { isIdempotencyDynamoReadEnabled } from "@/internal/misc/miscellaneousEdgeConfig/miscellaneousEdgeConfigStore.js";
+import { buildIdempotencyStorageKey } from "./idempotencyKeyUtils.js";
+import {
+	claimRedisIdempotencyKey,
+	releaseRedisIdempotencyKey,
+} from "./redisIdempotencyStore.js";
 
-const IDEMPOTENCY_TTL_MS = ms.hours(24);
-
-const hashIdempotencyKey = (key: string): string => {
-	const hasher = new Bun.CryptoHasher("sha256");
-	hasher.update(key);
-	return hasher.digest("base64url");
-};
-
-const buildRedisIdempotencyKey = ({
-	orgId,
-	env,
-	idempotencyKey,
-}: {
-	orgId: string;
-	env: string;
-	idempotencyKey: string;
-}) => {
-	const hashedKey = hashIdempotencyKey(idempotencyKey);
-	return {
-		hashedKey,
-		redisKey: `${orgId}:${env}:idempotency:${hashedKey}`,
-	};
+/**
+ * Keys are always dual-written to Redis and DynamoDB. The
+ * `idempotencyDynamoRead` miscellaneous-edge-config switch picks which store
+ * is the conflict authority (awaited; a duplicate 409s; unavailable fails
+ * open). The other store is a fire-and-forget mirror whose result never
+ * affects the outcome — so the authority can be flipped either way losslessly
+ * once both stores have seen a full TTL (24h) of writes.
+ */
+const throwDuplicateIdempotencyKey = (idempotencyKey: string): never => {
+	throw new RecaseError({
+		message: `Another request with idempotency key ${idempotencyKey} has already been received`,
+		code: ErrCode.DuplicateIdempotencyKey,
+		statusCode: 409,
+	});
 };
 
 export const checkIdempotencyKey = async ({
@@ -37,45 +36,34 @@ export const checkIdempotencyKey = async ({
 	idempotencyKey: string;
 	logger: Logger;
 }): Promise<void> => {
-	// Fail-open: if Redis is not ready, allow the request
-	if (redis.status !== "ready") {
-		return;
-	}
-
-	const { hashedKey, redisKey } = buildRedisIdempotencyKey({
+	const { hashedKey, storageKey } = buildIdempotencyStorageKey({
 		orgId,
 		env,
 		idempotencyKey,
 	});
 
-	try {
-		// Use SET NX (set if not exists) for atomic check-and-set to prevent race conditions
-		logger.info(
-			`[checkIdempotencyKey] setting idempotency key ${idempotencyKey}, hash: ${hashedKey}`,
-		);
+	logger.info(
+		`[checkIdempotencyKey] claiming idempotency key ${idempotencyKey}, hash: ${hashedKey}`,
+	);
 
-		const wasSet = await redis.set(
-			redisKey,
-			"1",
-			"PX",
-			IDEMPOTENCY_TTL_MS,
-			"NX",
-		);
+	if (isIdempotencyDynamoReadEnabled()) {
+		const dynamoResult = await claimDynamoIdempotencyKey({
+			storageKey,
+			logger,
+		});
 
-		if (!wasSet) {
-			throw new RecaseError({
-				message: `Another request with idempotency key ${idempotencyKey} has already been received`,
-				code: ErrCode.DuplicateIdempotencyKey,
-				statusCode: 409,
-			});
+		void claimRedisIdempotencyKey({ storageKey });
+		if (dynamoResult === "duplicate") {
+			throwDuplicateIdempotencyKey(idempotencyKey);
 		}
-	} catch (error) {
-		// Re-throw RecaseError (duplicate key)
-		if (error instanceof RecaseError) {
-			throw error;
-		}
-		// For other Redis errors, fail-open (allow request)
 		return;
+	}
+
+	const redisResult = await claimRedisIdempotencyKey({ storageKey });
+
+	void claimDynamoIdempotencyKey({ storageKey, logger });
+	if (redisResult === "duplicate") {
+		throwDuplicateIdempotencyKey(idempotencyKey);
 	}
 };
 
@@ -88,19 +76,18 @@ export const releaseIdempotencyKey = async ({
 	env: string;
 	idempotencyKey: string;
 }): Promise<void> => {
-	if (redis.status !== "ready") {
-		return;
-	}
-
-	const { redisKey } = buildRedisIdempotencyKey({
+	const { storageKey } = buildIdempotencyStorageKey({
 		orgId,
 		env,
 		idempotencyKey,
 	});
 
-	try {
-		await redis.del(redisKey);
-	} catch {
+	if (isIdempotencyDynamoReadEnabled()) {
+		void releaseRedisIdempotencyKey({ storageKey });
+		await releaseDynamoIdempotencyKey({ storageKey });
 		return;
 	}
+
+	void releaseDynamoIdempotencyKey({ storageKey });
+	await releaseRedisIdempotencyKey({ storageKey });
 };

@@ -14,6 +14,12 @@ export function elasticMqPortFor(worktreeNum: number): number {
 	return 9324 + (worktreeNum - 1) * 100;
 }
 
+// DynamoDB Local's default port. Base 8000 never collides with the server's
+// 8080 base: 8000 + k*100 and 8080 + k*100 stay 80 apart for every worktree.
+export function dynamoDbPortFor(worktreeNum: number): number {
+	return 8000 + (worktreeNum - 1) * 100;
+}
+
 export function serverPortFor(worktreeNum: number): number {
 	return 8080 + (worktreeNum - 1) * 100;
 }

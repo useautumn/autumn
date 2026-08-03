@@ -150,6 +150,9 @@ export const PG_PORT = 5432;
 export const DRAGONFLY_PORT = 6379;
 export const ELASTICMQ_PORT = 9324;
 export const CLICKHOUSE_PORT = 8123;
+/** dynoxide (native DynamoDB emulator — no JVM in the µVM; the Docker flows
+ *  use amazon/dynamodb-local instead). Backs the idempotency-key store. */
+export const DYNAMODB_PORT = 8000;
 
 /**
  * Build-time localhost service URLs for a worker (plan §5a / §11a). All point at
@@ -180,3 +183,4 @@ export const CACHE_V2_DRAGONFLY_URL = REDIS_URL;
 export const ELASTICMQ_BASE_URL = `http://localhost:${ELASTICMQ_PORT}/000000000000`;
 export const SQS_QUEUE_URL_V2 = `${ELASTICMQ_BASE_URL}/autumn.fifo`;
 export const TRACK_SQS_QUEUE_URL = `${ELASTICMQ_BASE_URL}/autumn-track.fifo`;
+export const DYNAMODB_ENDPOINT = `http://localhost:${DYNAMODB_PORT}`;

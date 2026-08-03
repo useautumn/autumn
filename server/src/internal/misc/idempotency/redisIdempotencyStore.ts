@@ -1,0 +1,41 @@
+import { redis } from "@/external/redis/initRedis.js";
+import {
+	IDEMPOTENCY_TTL_MS,
+	type IdempotencyClaimResult,
+} from "./idempotencyKeyUtils.js";
+
+export const claimRedisIdempotencyKey = async ({
+	storageKey,
+}: {
+	storageKey: string;
+}): Promise<IdempotencyClaimResult> => {
+	if (redis.status !== "ready") return "unavailable";
+
+	try {
+		// SET NX (set if not exists) for an atomic check-and-set.
+		const wasSet = await redis.set(
+			storageKey,
+			"1",
+			"PX",
+			IDEMPOTENCY_TTL_MS,
+			"NX",
+		);
+		return wasSet ? "claimed" : "duplicate";
+	} catch {
+		return "unavailable";
+	}
+};
+
+export const releaseRedisIdempotencyKey = async ({
+	storageKey,
+}: {
+	storageKey: string;
+}): Promise<void> => {
+	if (redis.status !== "ready") return;
+
+	try {
+		await redis.del(storageKey);
+	} catch {
+		return;
+	}
+};

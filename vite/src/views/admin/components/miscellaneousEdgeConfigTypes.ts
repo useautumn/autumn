@@ -2,6 +2,7 @@ export type MiscellaneousEdgeConfig = {
 	newFlatCusModel: string[];
 	syncCoalesce: boolean;
 	subjectLookupDbOnly: boolean;
+	idempotencyDynamoRead: boolean;
 	configHealthy: boolean;
 	configConfigured: boolean;
 	lastSuccessAt: string | null;
@@ -12,6 +13,7 @@ export const MISCELLANEOUS_DEFAULT_CONFIG: MiscellaneousEdgeConfig = {
 	newFlatCusModel: [],
 	syncCoalesce: false,
 	subjectLookupDbOnly: false,
+	idempotencyDynamoRead: false,
 	configHealthy: false,
 	configConfigured: false,
 	lastSuccessAt: null,
