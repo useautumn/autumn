@@ -1,11 +1,8 @@
 import {
 	type CreateReward,
-	ErrCode,
 	isFixedPrice,
-	RecaseError,
 	RewardCategory,
 } from "@autumn/shared";
-import { withLock } from "@/external/redis/redisUtils.js";
 import { createStripeCoupon } from "@/external/stripe/stripeCouponUtils/stripeCouponUtils.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { ProductService } from "@/internal/products/ProductService.js";
@@ -18,6 +15,7 @@ import {
 	getRewardCat,
 	initRewardStripePrices,
 } from "@/internal/rewards/rewardUtils.js";
+import { validateRewardUniqueness } from "./validateRewardUniqueness.js";
 
 type CreateRewardParams = {
 	ctx: AutumnContext;
@@ -25,7 +23,7 @@ type CreateRewardParams = {
 	legacyStripe?: boolean;
 };
 
-const createRewardWithoutLock = async ({
+export const createReward = async ({
 	ctx,
 	rewardData,
 	legacyStripe,
@@ -37,43 +35,12 @@ const createRewardWithoutLock = async ({
 		env,
 		features: ctx.features,
 	});
-	const codes = reward.promo_codes.map(({ code }) => code);
-
-	if (new Set(codes).size !== codes.length) {
-		throw new RecaseError({
-			message: "Promo codes must be unique within a reward",
-			code: ErrCode.DuplicatePromoCode,
-			statusCode: 400,
-		});
-	}
-
-	const existingRewards = await rewardRepo.getByIdOrCode({
+	await validateRewardUniqueness({
 		db,
-		codes: [reward.id, ...codes],
+		reward,
 		orgId: org.id,
 		env,
 	});
-
-	if (existingRewards.some(({ id }) => id === reward.id)) {
-		throw new RecaseError({
-			message: `Reward with id ${reward.id} already exists`,
-			code: ErrCode.DuplicateRewardId,
-			statusCode: 400,
-		});
-	}
-
-	const takenCode = codes.find((code) =>
-		existingRewards.some((existingReward) =>
-			existingReward.promo_codes.some((promo) => promo.code === code),
-		),
-	);
-	if (takenCode) {
-		throw new RecaseError({
-			message: `Promo code ${takenCode} is already in use by another reward`,
-			code: ErrCode.DuplicatePromoCode,
-			statusCode: 400,
-		});
-	}
 
 	if (getRewardCat(reward) === RewardCategory.Discount) {
 		const prices = await PriceService.getInIds({
@@ -118,12 +85,3 @@ const createRewardWithoutLock = async ({
 
 	return rewardRepo.insert({ db, data: reward });
 };
-
-export const createReward = (params: CreateRewardParams) =>
-	withLock({
-		lockKey: `create-reward:${params.ctx.org.id}:${params.ctx.env}`,
-		ttlMs: 120_000,
-		errorMessage:
-			"Reward creation already in progress for this organization, try again in a few seconds",
-		fn: () => createRewardWithoutLock(params),
-	});

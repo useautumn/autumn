@@ -15,10 +15,12 @@ import { ProductService } from "@/internal/products/ProductService.js";
 import { createReward } from "@/internal/rewards/actions/createReward.js";
 import { getApiCoupon } from "@/internal/rewards/apiRewards/getApiCoupon.js";
 import { getApiFeatureGrant } from "@/internal/rewards/apiRewards/getApiFeatureGrant.js";
+import { rewardMutationLock } from "@/internal/rewards/rewardLock.js";
 
 export const handleCreateReward = createRoute({
 	scopes: [Scopes.Rewards.Write],
 	body: CreateRewardParamsSchema,
+	lock: rewardMutationLock,
 	handler: async (c) => {
 		const ctx = c.get("ctx");
 		const params = c.req.valid("json");
