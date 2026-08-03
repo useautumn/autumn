@@ -1,6 +1,15 @@
-import { makeDurationSchema } from "@api/common/duration/durationSchema.js";
 import { EntitlementDuration } from "@models/productModels/entModels/entModels.js";
 import { z } from "zod/v4";
+
+const GrantExpirySchema = z.object({
+	type: z.enum(EntitlementDuration).meta({
+		description: "The unit of time the grant lasts.",
+	}),
+	length: z.number().int().positive().meta({
+		description:
+			"The positive integer count of periods before the grant expires.",
+	}),
+});
 
 export const ApiGrantV0Schema = z.object({
 	feature_id: z.string().meta({
@@ -10,7 +19,7 @@ export const ApiGrantV0Schema = z.object({
 		description:
 			"The amount of the feature granted, or null for boolean features.",
 	}),
-	expiry: makeDurationSchema(EntitlementDuration).nullable().meta({
+	expiry: GrantExpirySchema.nullable().meta({
 		description:
 			"How long the granted amount lasts before expiring, or null for a permanent grant.",
 	}),

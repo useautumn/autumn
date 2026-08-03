@@ -368,6 +368,10 @@ export type GetPlanItem = {
    */
   unlimited: boolean;
   /**
+   * Whether entity-level grants contribute to a shared customer balance.
+   */
+  pooled: boolean;
+  /**
    * Reset configuration for consumable features. Null for non-consumable features like seats where usage persists across billing cycles.
    */
   reset: GetPlanItemReset | null;
@@ -737,6 +741,10 @@ export type GetPlanPlanItem = {
    * If true, customer has unlimited access to this feature.
    */
   unlimited?: boolean | undefined;
+  /**
+   * Whether entity-level grants contribute to a shared customer balance.
+   */
+  pooled: boolean;
   /**
    * Reset configuration for consumable features. Omit for non-consumable features like seats.
    */
@@ -1944,6 +1952,7 @@ export const GetPlanItem$inboundSchema: z.ZodMiniType<GetPlanItem, unknown> = z
       feature: types.optional(z.lazy(() => GetPlanFeature$inboundSchema)),
       included: types.number(),
       unlimited: types.boolean(),
+      pooled: z._default(types.boolean(), false),
       reset: types.nullable(z.lazy(() => GetPlanItemReset$inboundSchema)),
       price: types.nullable(z.lazy(() => GetPlanItemPrice$inboundSchema)),
       display: types.optional(z.lazy(() => GetPlanItemDisplay$inboundSchema)),
@@ -2345,6 +2354,7 @@ export const GetPlanPlanItem$inboundSchema: z.ZodMiniType<
     feature_id: types.string(),
     included: types.optional(types.number()),
     unlimited: types.optional(types.boolean()),
+    pooled: z._default(types.boolean(), false),
     reset: types.optional(
       z.lazy(() => GetPlanVariantDetailsReset$inboundSchema),
     ),

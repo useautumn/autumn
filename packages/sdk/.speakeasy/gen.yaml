@@ -38,7 +38,9 @@ typescript:
   acceptHeaderEnum: false
   additionalDependencies:
     dependencies: {}
-    devDependencies: {}
+    devDependencies:
+      eslint: ^10.7.0
+      typescript-eslint: ^8.65.0
     peerDependencies: {}
   additionalPackageJSON:
     exports:
@@ -66,7 +68,8 @@ typescript:
     main: ./dist/commonjs/index.js
     module: ./dist/esm/index.js
     types: ./dist/esm/index.d.ts
-  additionalScripts: {}
+  additionalScripts:
+    test: bun test
   alwaysIncludeInboundAndOutbound: false
   author: Speakeasy
   baseErrorName: AutumnError

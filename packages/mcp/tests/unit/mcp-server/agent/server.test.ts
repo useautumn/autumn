@@ -115,6 +115,8 @@ describe("Autumn MCP server", () => {
 			"getPlan",
 			"hasCustomers",
 			"updatePlan",
+			"listRewards",
+			"createReward",
 			"previewUpdateCatalog",
 			"updateCatalog",
 			"createBalance",
@@ -159,6 +161,7 @@ describe("Autumn MCP server", () => {
 		expect(resourceUris).toEqual([
 			"autumn://docs/concepts",
 			"autumn://docs/plan-management",
+			"autumn://docs/rewards",
 		]);
 		expect(resources.resources.map((resource) => resource.uri)).toEqual(
 			expect.arrayContaining([
@@ -203,6 +206,11 @@ describe("Autumn MCP server", () => {
 		expect(planManagementText).toContain("Building pricing is iterative");
 		expect(planManagementText).toContain("never assume behavior");
 		expect(planManagementText).toContain("usage-based or prepaid");
+
+		const rewards = await server.readResource("autumn://docs/rewards");
+		const rewardsText = String(rewards.contents[0]?.text ?? "");
+		expect(rewardsText).toContain("# Rewards");
+		expect(rewardsText).toContain("exactly one top-level field");
 
 		const catalog = await server.readResource("autumn://docs/catalog");
 		const catalogText = String(catalog.contents[0]?.text ?? "");
