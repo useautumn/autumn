@@ -50,7 +50,9 @@ export const streamCustomerExportCsv = async ({
 
 	const exportRows = async function* (): AsyncGenerator<CustomerExportRow> {
 		let afterInternalId: string | null = null;
-		for (;;) {
+		let hasMorePages = true;
+
+		while (hasMorePages) {
 			const scalars = await getCustomerExportScalars({
 				db: ctx.db,
 				orgId,
@@ -60,7 +62,8 @@ export const streamCustomerExportCsv = async ({
 				createdAtCutoff,
 				afterInternalId,
 			});
-			if (scalars.length === 0) break;
+			const lastScalar = scalars[scalars.length - 1];
+			if (!lastScalar) break;
 
 			const planColumnsByCustomer = await getCustomerExportPlanColumns({
 				db: ctx.db,
@@ -84,9 +87,8 @@ export const streamCustomerExportCsv = async ({
 			rowCount += scalars.length;
 			await onRowsProcessed?.(scalars.length);
 
-			const lastScalar = scalars[scalars.length - 1];
-			if (!lastScalar || scalars.length < CUSTOMER_EXPORT_PAGE_SIZE) break;
 			afterInternalId = lastScalar.internal_id;
+			hasMorePages = scalars.length === CUSTOMER_EXPORT_PAGE_SIZE;
 		}
 	};
 
