@@ -55,95 +55,92 @@ afterAll(async () => {
 	await webhook?.cleanup();
 });
 
-test(
-	`${chalk.yellowBright("billing.updated: create-schedule with multi-plan phases → activated × 2 + scheduled × 2")}`,
-	async () => {
-		const customerId = "billing-updated-create-schedule";
-		const pro = products.pro({
-			id: "pro",
-			items: [items.monthlyMessages({ includedUsage: 100 })],
-		});
-		const addonNow = products.recurringAddOn({
-			id: "addon-now",
-			items: [items.monthlyWords({ includedUsage: 25 })],
-		});
-		const premium = products.premium({
-			id: "premium",
-			items: [items.monthlyMessages({ includedUsage: 200 })],
-		});
-		const addonLater = products.recurringAddOn({
-			id: "addon-later",
-			items: [items.monthlyWords({ includedUsage: 50 })],
-		});
+test(`${chalk.yellowBright("billing.updated: create-schedule with multi-plan phases → activated × 2 + scheduled × 2")}`, async () => {
+	const customerId = "billing-updated-create-schedule";
+	const pro = products.pro({
+		id: "pro",
+		items: [items.monthlyMessages({ includedUsage: 100 })],
+	});
+	const addonNow = products.recurringAddOn({
+		id: "addon-now",
+		items: [items.monthlyWords({ includedUsage: 25 })],
+	});
+	const premium = products.premium({
+		id: "premium",
+		items: [items.monthlyMessages({ includedUsage: 200 })],
+	});
+	const addonLater = products.recurringAddOn({
+		id: "addon-later",
+		items: [items.monthlyWords({ includedUsage: 50 })],
+	});
 
-		const { autumnV1 } = await initScenario({
-			customerId,
-			setup: [
-				s.customer({ paymentMethod: "success", skipWebhooks: true }),
-				s.products({ list: [pro, addonNow, premium, addonLater] }),
-			],
-			actions: [],
-		});
+	const { autumnV1 } = await initScenario({
+		customerId,
+		setup: [
+			s.customer({ paymentMethod: "success", skipWebhooks: true }),
+			s.products({ list: [pro, addonNow, premium, addonLater] }),
+		],
+		actions: [],
+	});
 
-		const now = Date.now();
-		const params: CreateScheduleParamsV0Input = {
-			customer_id: customerId,
-			phases: [
-				{
-					starts_at: now,
-					plans: [{ plan_id: pro.id }, { plan_id: addonNow.id }],
-				},
-				{
-					starts_at: now + ms.days(30),
-					plans: [{ plan_id: premium.id }, { plan_id: addonLater.id }],
-				},
-			],
-		};
-		await autumnV1.billing.createSchedule(params);
+	const now = Date.now();
+	const params: CreateScheduleParamsV0Input = {
+		customer_id: customerId,
+		phases: [
+			{
+				starts_at: now,
+				plans: [{ plan_id: pro.id }, { plan_id: addonNow.id }],
+			},
+			{
+				starts_at: now + ms.days(30),
+				plans: [{ plan_id: premium.id }, { plan_id: addonLater.id }],
+			},
+		],
+	};
+	await autumnV1.billing.createSchedule(params);
 
-		const result = await waitForWebhook<BillingUpdatedPayload>({
-			token: playToken,
-			predicate: (payload) =>
-				payload.type === "billing.updated" &&
-				payload.data?.customer_id === customerId &&
-				findChange(payload.data.plan_changes, {
-					action: "activated",
-					planId: pro.id,
-				}) !== undefined &&
-				findChange(payload.data.plan_changes, {
-					action: "activated",
-					planId: addonNow.id,
-				}) !== undefined &&
-				findChange(payload.data.plan_changes, {
-					action: "scheduled",
-					planId: premium.id,
-				}) !== undefined &&
-				findChange(payload.data.plan_changes, {
-					action: "scheduled",
-					planId: addonLater.id,
-				}) !== undefined,
-			timeoutMs: 15000,
-		});
-
-		expect(result).not.toBeNull();
-		const { data } = result!.payload;
-
-		// Immediate phase (now): both plans activated
-		for (const planId of [pro.id, addonNow.id]) {
-			const change = findChange(data.plan_changes, {
+	const result = await waitForWebhook<BillingUpdatedPayload>({
+		token: playToken,
+		predicate: (payload) =>
+			payload.type === "billing.updated" &&
+			payload.data?.customer_id === customerId &&
+			findChange(payload.data.plan_changes, {
 				action: "activated",
-				planId,
-			});
-			expect(change?.subscription?.status).toBe("active");
-		}
-
-		// Future phase (+30 days): both plans scheduled
-		for (const planId of [premium.id, addonLater.id]) {
-			const change = findChange(data.plan_changes, {
+				planId: pro.id,
+			}) !== undefined &&
+			findChange(payload.data.plan_changes, {
+				action: "activated",
+				planId: addonNow.id,
+			}) !== undefined &&
+			findChange(payload.data.plan_changes, {
 				action: "scheduled",
-				planId,
-			});
-			expect(change?.subscription?.status).toBe("scheduled");
-		}
-	},
-);
+				planId: premium.id,
+			}) !== undefined &&
+			findChange(payload.data.plan_changes, {
+				action: "scheduled",
+				planId: addonLater.id,
+			}) !== undefined,
+		timeoutMs: 15000,
+	});
+
+	expect(result).not.toBeNull();
+	const { data } = result!.payload;
+
+	// Immediate phase (now): both plans activated
+	for (const planId of [pro.id, addonNow.id]) {
+		const change = findChange(data.plan_changes, {
+			action: "activated",
+			planId,
+		});
+		expect(change?.subscription?.status).toBe("active");
+	}
+
+	// Future phase (+30 days): both plans scheduled
+	for (const planId of [premium.id, addonLater.id]) {
+		const change = findChange(data.plan_changes, {
+			action: "scheduled",
+			planId,
+		});
+		expect(change?.subscription?.status).toBe("scheduled");
+	}
+});

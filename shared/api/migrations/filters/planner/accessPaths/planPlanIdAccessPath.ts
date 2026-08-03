@@ -1,12 +1,22 @@
 import { RELEVANT_STATUSES } from "../../../../../utils/cusProductUtils/cusProductConstants.js";
 import type { IRLeaf } from "../../../compiler/ir/irTypes.js";
 import type { CompiledSql } from "../../../compiler/irToSql/irToSql.js";
+import {
+	PLAN_BASE_PRICE_SQL,
+	PLAN_PAID_EXISTS_SQL,
+	PLAN_RECURRING_EXISTS_SQL,
+} from "../../../compiler/registry/customerRegistry.js";
 import type { CustomerAccessPath } from "../types.js";
 
 /** Sibling plan-quantifier predicate the source can prove itself. */
 export type PlanSourceExtra =
 	| { field: "version"; op: "eq" | "in"; value: number | readonly number[] }
-	| { field: "addon" | "custom"; op: "eq"; value: boolean };
+	| {
+			field: "addon" | "custom" | "paid" | "recurring";
+			op: "eq";
+			value: boolean;
+	  }
+	| { field: "price"; op: "exists"; value: boolean };
 
 export type PlanIdConstraint = Pick<IRLeaf, "op" | "value"> & {
 	field: "plan_id";
@@ -15,21 +25,32 @@ export type PlanIdConstraint = Pick<IRLeaf, "op" | "value"> & {
 	extras?: PlanSourceExtra[];
 };
 
-const EXTRA_COLUMNS: Record<PlanSourceExtra["field"], string> = {
-	version: "p.version",
-	addon: "p.is_add_on",
-	custom: "cp.is_custom",
+/** Each extra renders in the products SELECT (`p`) or the cp WHERE (`cp`) —
+ * derived-filter SQL is shared with the registry leaves for parity. */
+const EXTRA_DEFS: Record<
+	PlanSourceExtra["field"],
+	{ context: "product" | "customerProduct"; sql: string }
+> = {
+	version: { context: "product", sql: "p.version" },
+	addon: { context: "product", sql: "p.is_add_on" },
+	custom: { context: "customerProduct", sql: "cp.is_custom" },
+	paid: { context: "customerProduct", sql: PLAN_PAID_EXISTS_SQL },
+	recurring: { context: "customerProduct", sql: PLAN_RECURRING_EXISTS_SQL },
+	price: { context: "customerProduct", sql: PLAN_BASE_PRICE_SQL },
 };
 
 const renderExtra = (extra: PlanSourceExtra, params: unknown[]): string => {
-	const column = EXTRA_COLUMNS[extra.field];
+	const expression = EXTRA_DEFS[extra.field].sql;
+	if (extra.op === "exists") {
+		return `AND ${expression} IS ${extra.value === true ? "NOT NULL" : "NULL"}`;
+	}
 	if (extra.op === "eq") {
 		params.push(extra.value);
-		return `AND ${column} = ?`;
+		return `AND ${expression} = ?`;
 	}
 	const values = extra.value as readonly number[];
 	params.push(...values);
-	return `AND ${column} IN (${values.map(() => "?").join(", ")})`;
+	return `AND ${expression} IN (${values.map(() => "?").join(", ")})`;
 };
 
 /** SELECT of matching plan product internal ids (org/env + plan predicate +
@@ -52,7 +73,7 @@ export const buildPlanProductsSql = ({
 			? buildEqPredicate(constraint.value, params)
 			: buildInPredicate(constraint.value, params);
 	const productExtras = (constraint.extras ?? []).filter(
-		(extra) => extra.field !== "custom",
+		(extra) => EXTRA_DEFS[extra.field].context === "product",
 	);
 	const extraSql = productExtras.map((extra) => renderExtra(extra, params));
 
@@ -74,7 +95,7 @@ export const buildCustomerProductWhereSql = (
 	const params: unknown[] = [...RELEVANT_STATUSES];
 	const statusPlaceholders = RELEVANT_STATUSES.map(() => "?").join(", ");
 	const customerProductExtras = (constraint.extras ?? []).filter(
-		(extra) => extra.field === "custom",
+		(extra) => EXTRA_DEFS[extra.field].context === "customerProduct",
 	);
 	const extraSql = customerProductExtras.map((extra) =>
 		renderExtra(extra, params),
@@ -112,14 +133,20 @@ export const planPlanIdAccessPath: CustomerAccessPath<PlanIdConstraint> = {
 	},
 };
 
-const buildEqPredicate = (value: PlanIdConstraint["value"], params: unknown[]) => {
+const buildEqPredicate = (
+	value: PlanIdConstraint["value"],
+	params: unknown[],
+) => {
 	if (typeof value !== "string")
 		throw new Error("plan.plan_id eq access path requires a string value");
 	params.push(value);
 	return "p.id = ?";
 };
 
-const buildInPredicate = (value: PlanIdConstraint["value"], params: unknown[]) => {
+const buildInPredicate = (
+	value: PlanIdConstraint["value"],
+	params: unknown[],
+) => {
 	if (!Array.isArray(value) || value.some((v) => typeof v !== "string"))
 		throw new Error("plan.plan_id in access path requires string values");
 	if (value.length === 0) return "FALSE";

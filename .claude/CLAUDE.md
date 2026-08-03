@@ -1,14 +1,13 @@
-# Ultracite Code Standards
+# Code Standards (Biome)
 
-This project uses **Ultracite**, a zero-config Biome preset that enforces strict code quality standards through automated formatting and linting.
+This project uses the repo-pinned **Biome** for formatting and linting.
 
 ## Quick Reference
 
-- **Format code**: `npx ultracite fix`
-- **Check for issues**: `npx ultracite check`
-- **Diagnose setup**: `npx ultracite doctor`
+- **Format/fix**: `<repo-root>/node_modules/.bin/biome check --write --no-errors-on-unmatched <files>`
+- **Check only**: `<repo-root>/node_modules/.bin/biome check --no-errors-on-unmatched <files>`
 
-Biome (the underlying engine) provides extremely fast Rust-based linting and formatting. Most issues are automatically fixable.
+NEVER run the formatter repo-wide (no bare `./` target, no `bunx ultracite fix`) — the repo carries unformatted drift and a repo-wide pass reformats ~1000+ unrelated files. Always pass the explicit files you touched.
 
 ---
 
@@ -129,7 +128,7 @@ Biome's linter will catch most issues automatically. Focus your attention on:
 
 ---
 
-Most formatting and common issues are automatically fixed by Biome. Run `npx ultracite fix` before committing to ensure compliance.
+Most formatting and common issues are automatically fixed by Biome. Before committing, run the pinned Biome on the files you touched (never repo-wide): `<repo-root>/node_modules/.bin/biome check --write --no-errors-on-unmatched <files>`.
 
 ---
 
