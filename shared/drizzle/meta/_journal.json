@@ -407,6 +407,13 @@
       "when": 1785337088338,
       "tag": "0057_demonic_lionheart",
       "breakpoints": true
+    },
+    {
+      "idx": 58,
+      "version": "7",
+      "when": 1785774553370,
+      "tag": "0058_nosy_tyrannus",
+      "breakpoints": true
     }
   ]
 }

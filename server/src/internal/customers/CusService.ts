@@ -39,6 +39,7 @@ import type { DrizzleCli } from "@/db/initDrizzle.js";
 import { executeWithHealthTracking } from "@/db/pgHealthMonitor.js";
 import type { RepoContext } from "@/db/repoContext.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
+import { markCustomerUpdatedAt } from "@/internal/customers/customerLsns/markCustomerUpdatedAt.js";
 import { hydrateFullCustomerLicenses } from "@/internal/licenses/actions/hydrateFullCustomerLicenses.js";
 import { checkPendingMigrationsForCustomer } from "@/internal/migrations/v2/lazy/checkPendingMigrationsForCustomer.js";
 import { withSpan } from "../analytics/tracer/spanUtils.js";
@@ -479,7 +480,17 @@ export class CusService {
 
 		// If insert succeeded, return the new customer
 		if (results && results.length > 0) {
-			return results[0] as Customer;
+			const customer = results[0] as Customer;
+			if (customer.id) {
+				await markCustomerUpdatedAt({
+					db,
+					orgId: customer.org_id,
+					env: customer.env,
+					customerId: customer.id,
+					internalCustomerId: customer.internal_id,
+				});
+			}
+			return customer;
 		}
 
 		// If no results, conflict occurred - fetch and return existing customer
@@ -726,6 +737,15 @@ export class CusService {
 			const { xmax, was_claim, ...customer } = results[0];
 			// wasUpdate if: claimed existing row OR xmax indicates update (conflict happened)
 			const wasUpdate = was_claim || xmax !== "0";
+			if (customer.id) {
+				await markCustomerUpdatedAt({
+					db,
+					orgId: customer.org_id,
+					env: customer.env,
+					customerId: customer.id,
+					internalCustomerId: customer.internal_id,
+				});
+			}
 			return { customer: customer as Customer, wasUpdate };
 		}
 
@@ -763,7 +783,15 @@ export class CusService {
 
 			if (results && results.length > 0) {
 				const customer = results[0] as Customer;
-
+				if (customer.id) {
+					await markCustomerUpdatedAt({
+						db,
+						orgId: org.id,
+						env,
+						customerId: customer.id,
+						internalCustomerId: customer.internal_id,
+					});
+				}
 				return customer;
 			} else {
 				return null;
@@ -820,6 +848,18 @@ export class CusService {
 				),
 			)
 			.returning();
+
+		// Deleted customers still mark: primary-routed reads see the 404 fresh.
+		const deleted = results[0] as Customer | undefined;
+		if (deleted?.id) {
+			await markCustomerUpdatedAt({
+				db,
+				orgId,
+				env,
+				customerId: deleted.id,
+				internalCustomerId: deleted.internal_id,
+			});
+		}
 
 		return results;
 	}
