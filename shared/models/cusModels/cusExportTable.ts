@@ -27,7 +27,6 @@ export const customerExports = pgTable(
 		requested_by_user_id: text("requested_by_user_id"),
 		trigger_run_id: text("trigger_run_id"),
 		s3_key: text("s3_key"),
-		s3_upload_id: text("s3_upload_id"),
 		row_count: numeric({ mode: "number" }),
 		byte_count: numeric({ mode: "number" }),
 		error_message: text("error_message"),

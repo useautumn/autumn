@@ -414,6 +414,13 @@
       "when": 1785753708142,
       "tag": "0058_round_vulture",
       "breakpoints": true
+    },
+    {
+      "idx": 59,
+      "version": "7",
+      "when": 1785758300468,
+      "tag": "0059_regular_freak",
+      "breakpoints": true
     }
   ]
 }
