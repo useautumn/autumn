@@ -461,6 +461,8 @@ class MultiAttachPlanItemTypedDict(TypedDict):
     r"""Number of free units included. Balance resets to this each interval for consumable features."""
     unlimited: NotRequired[bool]
     r"""If true, customer has unlimited access to this feature."""
+    pooled: NotRequired[bool]
+    r"""Whether entity-level grants contribute to a shared customer balance."""
     reset: NotRequired[MultiAttachResetTypedDict]
     r"""Reset configuration for consumable features. Omit for non-consumable features like seats."""
     price: NotRequired[MultiAttachPriceTypedDict]
@@ -483,6 +485,9 @@ class MultiAttachPlanItem(BaseModel):
     unlimited: Optional[bool] = None
     r"""If true, customer has unlimited access to this feature."""
 
+    pooled: Optional[bool] = False
+    r"""Whether entity-level grants contribute to a shared customer balance."""
+
     reset: Optional[MultiAttachReset] = None
     r"""Reset configuration for consumable features. Omit for non-consumable features like seats."""
 
@@ -498,7 +503,15 @@ class MultiAttachPlanItem(BaseModel):
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
         optional_fields = set(
-            ["included", "unlimited", "reset", "price", "proration", "rollover"]
+            [
+                "included",
+                "unlimited",
+                "pooled",
+                "reset",
+                "price",
+                "proration",
+                "rollover",
+            ]
         )
         serialized = handler(self)
         m = {}
@@ -515,7 +528,7 @@ class MultiAttachPlanItem(BaseModel):
 
 
 class MultiAttachCustomizeTypedDict(TypedDict):
-    r"""Customize the plan to attach. Can override the price, items, or licenses."""
+    r"""Customize the plan to attach. Can override its price or items."""
 
     price: NotRequired[Nullable[MultiAttachBasePriceTypedDict]]
     r"""Override the base price of the plan. Pass null to remove the base price."""
@@ -524,7 +537,7 @@ class MultiAttachCustomizeTypedDict(TypedDict):
 
 
 class MultiAttachCustomize(BaseModel):
-    r"""Customize the plan to attach. Can override the price, items, or licenses."""
+    r"""Customize the plan to attach. Can override its price or items."""
 
     price: OptionalNullable[MultiAttachBasePrice] = UNSET
     r"""Override the base price of the plan. Pass null to remove the base price."""
@@ -602,13 +615,15 @@ class MultiAttachPlanTypedDict(TypedDict):
     plan_id: str
     r"""The ID of the plan to attach."""
     customize: NotRequired[MultiAttachCustomizeTypedDict]
-    r"""Customize the plan to attach. Can override the price, items, or licenses."""
+    r"""Customize the plan to attach. Can override its price or items."""
     feature_quantities: NotRequired[List[MultiAttachFeatureQuantityTypedDict]]
     r"""If this plan contains prepaid features, use this field to specify the quantity of each prepaid feature."""
     version: NotRequired[float]
     r"""The version of the plan to attach."""
     subscription_id: NotRequired[str]
     r"""A unique ID to identify this subscription. Useful when attaching the same plan multiple times."""
+    entity_id: NotRequired[Nullable[str]]
+    r"""The entity scope for this plan. Omit to inherit the request scope, or pass null for customer-level."""
 
 
 class MultiAttachPlan(BaseModel):
@@ -616,7 +631,7 @@ class MultiAttachPlan(BaseModel):
     r"""The ID of the plan to attach."""
 
     customize: Optional[MultiAttachCustomize] = None
-    r"""Customize the plan to attach. Can override the price, items, or licenses."""
+    r"""Customize the plan to attach. Can override its price or items."""
 
     feature_quantities: Optional[List[MultiAttachFeatureQuantity]] = None
     r"""If this plan contains prepaid features, use this field to specify the quantity of each prepaid feature."""
@@ -627,20 +642,38 @@ class MultiAttachPlan(BaseModel):
     subscription_id: Optional[str] = None
     r"""A unique ID to identify this subscription. Useful when attaching the same plan multiple times."""
 
+    entity_id: OptionalNullable[str] = UNSET
+    r"""The entity scope for this plan. Omit to inherit the request scope, or pass null for customer-level."""
+
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
         optional_fields = set(
-            ["customize", "feature_quantities", "version", "subscription_id"]
+            [
+                "customize",
+                "feature_quantities",
+                "version",
+                "subscription_id",
+                "entity_id",
+            ]
         )
+        nullable_fields = set(["entity_id"])
         serialized = handler(self)
         m = {}
 
         for n, f in type(self).model_fields.items():
             k = f.alias or n
             val = serialized.get(k, serialized.get(n))
+            is_nullable_and_explicitly_set = (
+                k in nullable_fields
+                and (self.__pydantic_fields_set__.intersection({n}))  # pylint: disable=no-member
+            )
 
             if val != UNSET_SENTINEL:
-                if val is not None or k not in optional_fields:
+                if (
+                    val is not None
+                    or k not in optional_fields
+                    or is_nullable_and_explicitly_set
+                ):
                     m[k] = val
 
         return m
@@ -796,6 +829,13 @@ class MultiAttachAttachDiscount(BaseModel):
                     m[k] = val
 
         return m
+
+
+MultiAttachBillingBehavior = Literal[
+    "prorate_immediately",
+    "none",
+]
+r"""How to handle billing. 'prorate_immediately' charges/credits prorated amounts now, 'none' does not charge/credit anything."""
 
 
 MultiAttachRedirectMode = Literal[
@@ -1122,12 +1162,16 @@ class MultiAttachParamsTypedDict(TypedDict):
     r"""The ID of the entity to attach the plans to."""
     free_trial: NotRequired[Nullable[MultiAttachFreeTrialParamsTypedDict]]
     r"""Free trial configuration applied to all plans. Pass an object to set a custom trial, or null to remove any trial."""
+    starts_at: NotRequired[int]
+    r"""Unix timestamp in milliseconds for backdating every plan in this multi-attach."""
     currency: NotRequired[str]
     r"""Currency to bill this multi-attach in (e.g. usd, eur). Must match the customer's currency if they are already locked to one, and every plan must offer a paid price in it. Defaults to the customer's currency, then the org default."""
     invoice_mode: NotRequired[MultiAttachInvoiceModeTypedDict]
     r"""Invoice mode creates a draft or open invoice and sends it to the customer, instead of charging their card immediately."""
     discounts: NotRequired[List[MultiAttachAttachDiscountTypedDict]]
     r"""List of discounts to apply. Each discount can be an Autumn reward ID, Stripe coupon ID, or Stripe promotion code."""
+    billing_behavior: NotRequired[MultiAttachBillingBehavior]
+    r"""How to handle billing. 'prorate_immediately' charges/credits prorated amounts now, 'none' does not charge/credit anything."""
     success_url: NotRequired[str]
     r"""URL to redirect to after successful checkout."""
     checkout_session_params: NotRequired[Dict[str, Any]]
@@ -1156,6 +1200,9 @@ class MultiAttachParams(BaseModel):
     free_trial: OptionalNullable[MultiAttachFreeTrialParams] = UNSET
     r"""Free trial configuration applied to all plans. Pass an object to set a custom trial, or null to remove any trial."""
 
+    starts_at: Optional[int] = None
+    r"""Unix timestamp in milliseconds for backdating every plan in this multi-attach."""
+
     currency: Optional[str] = None
     r"""Currency to bill this multi-attach in (e.g. usd, eur). Must match the customer's currency if they are already locked to one, and every plan must offer a paid price in it. Defaults to the customer's currency, then the org default."""
 
@@ -1164,6 +1211,9 @@ class MultiAttachParams(BaseModel):
 
     discounts: Optional[List[MultiAttachAttachDiscount]] = None
     r"""List of discounts to apply. Each discount can be an Autumn reward ID, Stripe coupon ID, or Stripe promotion code."""
+
+    billing_behavior: Optional[MultiAttachBillingBehavior] = None
+    r"""How to handle billing. 'prorate_immediately' charges/credits prorated amounts now, 'none' does not charge/credit anything."""
 
     success_url: Optional[str] = None
     r"""URL to redirect to after successful checkout."""
@@ -1191,9 +1241,11 @@ class MultiAttachParams(BaseModel):
             [
                 "entity_id",
                 "free_trial",
+                "starts_at",
                 "currency",
                 "invoice_mode",
                 "discounts",
+                "billing_behavior",
                 "success_url",
                 "checkout_session_params",
                 "redirect_mode",

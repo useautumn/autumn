@@ -1413,6 +1413,11 @@ components:
               unlimited:
                 type: boolean
                 description: Whether the customer has unlimited access to this feature.
+              pooled:
+                type: boolean
+                default: false
+                description: Whether entity-level grants contribute to a shared customer
+                  balance.
               reset:
                 anyOf:
                   - type: object
@@ -1714,11 +1719,17 @@ components:
                         description: The ID of the feature to configure.
                       included:
                         type: number
+                        maximum: 10000000000000
                         description: Number of free units included. Balance resets to this each interval
                           for consumable features.
                       unlimited:
                         type: boolean
                         description: If true, customer has unlimited access to this feature.
+                      pooled:
+                        type: boolean
+                        default: false
+                        description: Whether entity-level grants contribute to a shared customer
+                          balance.
                       reset:
                         type: object
                         properties:
@@ -6202,11 +6213,17 @@ paths:
                         description: The ID of the feature to configure.
                       included:
                         type: number
+                        maximum: 10000000000000
                         description: Number of free units included. Balance resets to this each interval
                           for consumable features.
                       unlimited:
                         type: boolean
                         description: If true, customer has unlimited access to this feature.
+                      pooled:
+                        type: boolean
+                        default: false
+                        description: Whether entity-level grants contribute to a shared customer
+                          balance.
                       reset:
                         type: object
                         properties:
@@ -6458,11 +6475,17 @@ paths:
                                       description: The ID of the feature to configure.
                                     included:
                                       type: number
+                                      maximum: 10000000000000
                                       description: Number of free units included. Balance resets to this each interval
                                         for consumable features.
                                     unlimited:
                                       type: boolean
                                       description: If true, customer has unlimited access to this feature.
+                                    pooled:
+                                      type: boolean
+                                      default: false
+                                      description: Whether entity-level grants contribute to a shared customer
+                                        balance.
                                     reset:
                                       type: object
                                       properties:
@@ -7159,6 +7182,11 @@ paths:
                         unlimited:
                           type: boolean
                           description: Whether the customer has unlimited access to this feature.
+                        pooled:
+                          type: boolean
+                          default: false
+                          description: Whether entity-level grants contribute to a shared customer
+                            balance.
                         reset:
                           anyOf:
                             - type: object
@@ -7463,11 +7491,17 @@ paths:
                                   description: The ID of the feature to configure.
                                 included:
                                   type: number
+                                  maximum: 10000000000000
                                   description: Number of free units included. Balance resets to this each interval
                                     for consumable features.
                                 unlimited:
                                   type: boolean
                                   description: If true, customer has unlimited access to this feature.
+                                pooled:
+                                  type: boolean
+                                  default: false
+                                  description: Whether entity-level grants contribute to a shared customer
+                                    balance.
                                 reset:
                                   type: object
                                   properties:
@@ -8448,6 +8482,11 @@ paths:
                         unlimited:
                           type: boolean
                           description: Whether the customer has unlimited access to this feature.
+                        pooled:
+                          type: boolean
+                          default: false
+                          description: Whether entity-level grants contribute to a shared customer
+                            balance.
                         reset:
                           anyOf:
                             - type: object
@@ -8752,11 +8791,17 @@ paths:
                                   description: The ID of the feature to configure.
                                 included:
                                   type: number
+                                  maximum: 10000000000000
                                   description: Number of free units included. Balance resets to this each interval
                                     for consumable features.
                                 unlimited:
                                   type: boolean
                                   description: If true, customer has unlimited access to this feature.
+                                pooled:
+                                  type: boolean
+                                  default: false
+                                  description: Whether entity-level grants contribute to a shared customer
+                                    balance.
                                 reset:
                                   type: object
                                   properties:
@@ -9745,6 +9790,11 @@ paths:
                               unlimited:
                                 type: boolean
                                 description: Whether the customer has unlimited access to this feature.
+                              pooled:
+                                type: boolean
+                                default: false
+                                description: Whether entity-level grants contribute to a shared customer
+                                  balance.
                               reset:
                                 anyOf:
                                   - type: object
@@ -10054,11 +10104,17 @@ paths:
                                         description: The ID of the feature to configure.
                                       included:
                                         type: number
+                                        maximum: 10000000000000
                                         description: Number of free units included. Balance resets to this each interval
                                           for consumable features.
                                       unlimited:
                                         type: boolean
                                         description: If true, customer has unlimited access to this feature.
+                                      pooled:
+                                        type: boolean
+                                        default: false
+                                        description: Whether entity-level grants contribute to a shared customer
+                                          balance.
                                       reset:
                                         type: object
                                         properties:
@@ -10925,11 +10981,17 @@ paths:
                         description: The ID of the feature to configure.
                       included:
                         type: number
+                        maximum: 10000000000000
                         description: Number of free units included. Balance resets to this each interval
                           for consumable features.
                       unlimited:
                         type: boolean
                         description: If true, customer has unlimited access to this feature.
+                      pooled:
+                        type: boolean
+                        default: false
+                        description: Whether entity-level grants contribute to a shared customer
+                          balance.
                       reset:
                         type: object
                         properties:
@@ -11181,11 +11243,17 @@ paths:
                                       description: The ID of the feature to configure.
                                     included:
                                       type: number
+                                      maximum: 10000000000000
                                       description: Number of free units included. Balance resets to this each interval
                                         for consumable features.
                                     unlimited:
                                       type: boolean
                                       description: If true, customer has unlimited access to this feature.
+                                    pooled:
+                                      type: boolean
+                                      default: false
+                                      description: Whether entity-level grants contribute to a shared customer
+                                        balance.
                                     reset:
                                       type: object
                                       properties:
@@ -11804,11 +11872,17 @@ paths:
                                   description: The ID of the feature to configure.
                                 included:
                                   type: number
+                                  maximum: 10000000000000
                                   description: Number of free units included. Balance resets to this each interval
                                     for consumable features.
                                 unlimited:
                                   type: boolean
                                   description: If true, customer has unlimited access to this feature.
+                                pooled:
+                                  type: boolean
+                                  default: false
+                                  description: Whether entity-level grants contribute to a shared customer
+                                    balance.
                                 reset:
                                   type: object
                                   properties:
@@ -12484,6 +12558,11 @@ paths:
                         unlimited:
                           type: boolean
                           description: Whether the customer has unlimited access to this feature.
+                        pooled:
+                          type: boolean
+                          default: false
+                          description: Whether entity-level grants contribute to a shared customer
+                            balance.
                         reset:
                           anyOf:
                             - type: object
@@ -12788,11 +12867,17 @@ paths:
                                   description: The ID of the feature to configure.
                                 included:
                                   type: number
+                                  maximum: 10000000000000
                                   description: Number of free units included. Balance resets to this each interval
                                     for consumable features.
                                 unlimited:
                                   type: boolean
                                   description: If true, customer has unlimited access to this feature.
+                                pooled:
+                                  type: boolean
+                                  default: false
+                                  description: Whether entity-level grants contribute to a shared customer
+                                    balance.
                                 reset:
                                   type: object
                                   properties:
@@ -14627,11 +14712,17 @@ paths:
                             description: The ID of the feature to configure.
                           included:
                             type: number
+                            maximum: 10000000000000
                             description: Number of free units included. Balance resets to this each interval
                               for consumable features.
                           unlimited:
                             type: boolean
                             description: If true, customer has unlimited access to this feature.
+                          pooled:
+                            type: boolean
+                            default: false
+                            description: Whether entity-level grants contribute to a shared customer
+                              balance.
                           reset:
                             type: object
                             properties:
@@ -14824,11 +14915,17 @@ paths:
                             description: The ID of the feature to configure.
                           included:
                             type: number
+                            maximum: 10000000000000
                             description: Number of free units included. Balance resets to this each interval
                               for consumable features.
                           unlimited:
                             type: boolean
                             description: If true, customer has unlimited access to this feature.
+                          pooled:
+                            type: boolean
+                            default: false
+                            description: Whether entity-level grants contribute to a shared customer
+                              balance.
                           reset:
                             type: object
                             properties:
@@ -15363,11 +15460,17 @@ paths:
                                           description: The ID of the feature to configure.
                                         included:
                                           type: number
+                                          maximum: 10000000000000
                                           description: Number of free units included. Balance resets to this each interval
                                             for consumable features.
                                         unlimited:
                                           type: boolean
                                           description: If true, customer has unlimited access to this feature.
+                                        pooled:
+                                          type: boolean
+                                          default: false
+                                          description: Whether entity-level grants contribute to a shared customer
+                                            balance.
                                         reset:
                                           type: object
                                           properties:
@@ -15935,6 +16038,47 @@ paths:
                 entity_id:
                   type: string
                   description: Optional entity ID for an entity-scoped schedule.
+                free_trial:
+                  anyOf:
+                    - type: object
+                      properties:
+                        duration_length:
+                          type: number
+                          description: Number of duration_type periods the trial lasts.
+                        duration_type:
+                          enum:
+                            - day
+                            - month
+                            - year
+                          type: string
+                          default: month
+                          description: Unit of time for the trial ('day', 'month', 'year').
+                        card_required:
+                          type: boolean
+                          default: true
+                          description: If true, payment method required to start trial. Customer is
+                            charged after trial ends.
+                        on_end:
+                          enum:
+                            - bill
+                            - revert
+                          type: string
+                          description: Behavior when the trial ends. 'bill' charges the customer
+                            (default). 'revert' expires the trial and restores
+                            the customer's previous plan.
+                      required:
+                        - duration_length
+                      title: FreeTrialParams
+                      description: Free trial configuration for a plan.
+                    - type: "null"
+                  description: Free trial configuration applied to every plan in the immediate
+                    phase.
+                currency:
+                  type: string
+                  minLength: 3
+                  maxLength: 3
+                  description: Three-letter Stripe-supported currency code used to bill the
+                    immediate phase (for example, 'usd').
                 invoice_mode:
                   type: object
                   properties:
@@ -16022,6 +16166,10 @@ paths:
                     (and scheduled-phase cusProducts pre-inserted) even when
                     payment is pending via Stripe checkout. The Autumn schedule
                     rows are persisted on checkout.session.completed.
+                preserve_add_ons:
+                  type: boolean
+                  description: If true, active recurring add-ons in scopes represented by the
+                    phase plans are retained.
                 phases:
                   type: array
                   prefixItems:
@@ -16061,6 +16209,12 @@ paths:
                               plan_id:
                                 type: string
                                 description: The ID of the plan to schedule in this phase.
+                              entity_id:
+                                anyOf:
+                                  - type: string
+                                  - type: "null"
+                                description: The immediate plan scope. Omit to inherit the request entity, pass
+                                  null for customer-level, or pass an entity ID.
                               feature_quantities:
                                 type: array
                                 items:
@@ -16143,11 +16297,17 @@ paths:
                                           description: The ID of the feature to configure.
                                         included:
                                           type: number
+                                          maximum: 10000000000000
                                           description: Number of free units included. Balance resets to this each interval
                                             for consumable features.
                                         unlimited:
                                           type: boolean
                                           description: If true, customer has unlimited access to this feature.
+                                        pooled:
+                                          type: boolean
+                                          default: false
+                                          description: Whether entity-level grants contribute to a shared customer
+                                            balance.
                                         reset:
                                           type: object
                                           properties:
@@ -16311,11 +16471,17 @@ paths:
                                           description: The ID of the feature to configure.
                                         included:
                                           type: number
+                                          maximum: 10000000000000
                                           description: Number of free units included. Balance resets to this each interval
                                             for consumable features.
                                         unlimited:
                                           type: boolean
                                           description: If true, customer has unlimited access to this feature.
+                                        pooled:
+                                          type: boolean
+                                          default: false
+                                          description: Whether entity-level grants contribute to a shared customer
+                                            balance.
                                         reset:
                                           type: object
                                           properties:
@@ -16769,6 +16935,12 @@ paths:
                             plan_id:
                               type: string
                               description: The ID of the plan to schedule in this phase.
+                            entity_id:
+                              anyOf:
+                                - type: string
+                                - type: "null"
+                              description: The immediate plan scope. Omit to inherit the request entity, pass
+                                null for customer-level, or pass an entity ID.
                             feature_quantities:
                               type: array
                               items:
@@ -16851,11 +17023,17 @@ paths:
                                         description: The ID of the feature to configure.
                                       included:
                                         type: number
+                                        maximum: 10000000000000
                                         description: Number of free units included. Balance resets to this each interval
                                           for consumable features.
                                       unlimited:
                                         type: boolean
                                         description: If true, customer has unlimited access to this feature.
+                                      pooled:
+                                        type: boolean
+                                        default: false
+                                        description: Whether entity-level grants contribute to a shared customer
+                                          balance.
                                       reset:
                                         type: object
                                         properties:
@@ -17019,11 +17197,17 @@ paths:
                                         description: The ID of the feature to configure.
                                       included:
                                         type: number
+                                        maximum: 10000000000000
                                         description: Number of free units included. Balance resets to this each interval
                                           for consumable features.
                                       unlimited:
                                         type: boolean
                                         description: If true, customer has unlimited access to this feature.
+                                      pooled:
+                                        type: boolean
+                                        default: false
+                                        description: Whether entity-level grants contribute to a shared customer
+                                          balance.
                                       reset:
                                         type: object
                                         properties:
@@ -17681,11 +17865,17 @@ paths:
                                   description: The ID of the feature to configure.
                                 included:
                                   type: number
+                                  maximum: 10000000000000
                                   description: Number of free units included. Balance resets to this each interval
                                     for consumable features.
                                 unlimited:
                                   type: boolean
                                   description: If true, customer has unlimited access to this feature.
+                                pooled:
+                                  type: boolean
+                                  default: false
+                                  description: Whether entity-level grants contribute to a shared customer
+                                    balance.
                                 reset:
                                   type: object
                                   properties:
@@ -17860,8 +18050,7 @@ paths:
                               description: Configuration for a feature item in a plan, including usage limits,
                                 pricing, and rollover settings.
                             description: Override the items in the plan.
-                        description: Customize the plan to attach. Can override the price, items, or
-                          licenses.
+                        description: Customize the plan to attach. Can override its price or items.
                       feature_quantities:
                         type: array
                         items:
@@ -17890,6 +18079,12 @@ paths:
                         type: string
                         description: A unique ID to identify this subscription. Useful when attaching
                           the same plan multiple times.
+                      entity_id:
+                        anyOf:
+                          - type: string
+                          - type: "null"
+                        description: The entity scope for this plan. Omit to inherit the request scope,
+                          or pass null for customer-level.
                     required:
                       - plan_id
                   description: The list of plans to attach to the customer.
@@ -17928,6 +18123,12 @@ paths:
                     - type: "null"
                   description: Free trial configuration applied to all plans. Pass an object to
                     set a custom trial, or null to remove any trial.
+                starts_at:
+                  type: integer
+                  minimum: 0
+                  maximum: 9007199254740991
+                  description: Unix timestamp in milliseconds for backdating every plan in this
+                    multi-attach.
                 currency:
                   type: string
                   description: Currency to bill this multi-attach in (e.g. usd, eur). Must match
@@ -17982,6 +18183,15 @@ paths:
                     description: A discount to apply. Can be either a reward ID or a promotion code.
                   description: List of discounts to apply. Each discount can be an Autumn reward
                     ID, Stripe coupon ID, or Stripe promotion code.
+                billing_behavior:
+                  enum:
+                    - prorate_immediately
+                    - none
+                  type: string
+                  title: BillingBehavior
+                  description: How to handle billing. 'prorate_immediately' charges/credits
+                    prorated amounts now, 'none' does not charge/credit
+                    anything.
                 success_url:
                   type: string
                   description: URL to redirect to after successful checkout.
@@ -18377,11 +18587,17 @@ paths:
                             description: The ID of the feature to configure.
                           included:
                             type: number
+                            maximum: 10000000000000
                             description: Number of free units included. Balance resets to this each interval
                               for consumable features.
                           unlimited:
                             type: boolean
                             description: If true, customer has unlimited access to this feature.
+                          pooled:
+                            type: boolean
+                            default: false
+                            description: Whether entity-level grants contribute to a shared customer
+                              balance.
                           reset:
                             type: object
                             properties:
@@ -18574,11 +18790,17 @@ paths:
                             description: The ID of the feature to configure.
                           included:
                             type: number
+                            maximum: 10000000000000
                             description: Number of free units included. Balance resets to this each interval
                               for consumable features.
                           unlimited:
                             type: boolean
                             description: If true, customer has unlimited access to this feature.
+                          pooled:
+                            type: boolean
+                            default: false
+                            description: Whether entity-level grants contribute to a shared customer
+                              balance.
                           reset:
                             type: object
                             properties:
@@ -19113,11 +19335,17 @@ paths:
                                           description: The ID of the feature to configure.
                                         included:
                                           type: number
+                                          maximum: 10000000000000
                                           description: Number of free units included. Balance resets to this each interval
                                             for consumable features.
                                         unlimited:
                                           type: boolean
                                           description: If true, customer has unlimited access to this feature.
+                                        pooled:
+                                          type: boolean
+                                          default: false
+                                          description: Whether entity-level grants contribute to a shared customer
+                                            balance.
                                         reset:
                                           type: object
                                           properties:
@@ -20079,11 +20307,17 @@ paths:
                                   description: The ID of the feature to configure.
                                 included:
                                   type: number
+                                  maximum: 10000000000000
                                   description: Number of free units included. Balance resets to this each interval
                                     for consumable features.
                                 unlimited:
                                   type: boolean
                                   description: If true, customer has unlimited access to this feature.
+                                pooled:
+                                  type: boolean
+                                  default: false
+                                  description: Whether entity-level grants contribute to a shared customer
+                                    balance.
                                 reset:
                                   type: object
                                   properties:
@@ -20258,8 +20492,7 @@ paths:
                               description: Configuration for a feature item in a plan, including usage limits,
                                 pricing, and rollover settings.
                             description: Override the items in the plan.
-                        description: Customize the plan to attach. Can override the price, items, or
-                          licenses.
+                        description: Customize the plan to attach. Can override its price or items.
                       feature_quantities:
                         type: array
                         items:
@@ -20288,6 +20521,12 @@ paths:
                         type: string
                         description: A unique ID to identify this subscription. Useful when attaching
                           the same plan multiple times.
+                      entity_id:
+                        anyOf:
+                          - type: string
+                          - type: "null"
+                        description: The entity scope for this plan. Omit to inherit the request scope,
+                          or pass null for customer-level.
                     required:
                       - plan_id
                   description: The list of plans to attach to the customer.
@@ -20326,6 +20565,12 @@ paths:
                     - type: "null"
                   description: Free trial configuration applied to all plans. Pass an object to
                     set a custom trial, or null to remove any trial.
+                starts_at:
+                  type: integer
+                  minimum: 0
+                  maximum: 9007199254740991
+                  description: Unix timestamp in milliseconds for backdating every plan in this
+                    multi-attach.
                 currency:
                   type: string
                   description: Currency to bill this multi-attach in (e.g. usd, eur). Must match
@@ -20380,6 +20625,15 @@ paths:
                     description: A discount to apply. Can be either a reward ID or a promotion code.
                   description: List of discounts to apply. Each discount can be an Autumn reward
                     ID, Stripe coupon ID, or Stripe promotion code.
+                billing_behavior:
+                  enum:
+                    - prorate_immediately
+                    - none
+                  type: string
+                  title: BillingBehavior
+                  description: How to handle billing. 'prorate_immediately' charges/credits
+                    prorated amounts now, 'none' does not charge/credit
+                    anything.
                 success_url:
                   type: string
                   description: URL to redirect to after successful checkout.
@@ -21099,11 +21353,17 @@ paths:
                             description: The ID of the feature to configure.
                           included:
                             type: number
+                            maximum: 10000000000000
                             description: Number of free units included. Balance resets to this each interval
                               for consumable features.
                           unlimited:
                             type: boolean
                             description: If true, customer has unlimited access to this feature.
+                          pooled:
+                            type: boolean
+                            default: false
+                            description: Whether entity-level grants contribute to a shared customer
+                              balance.
                           reset:
                             type: object
                             properties:
@@ -21296,11 +21556,17 @@ paths:
                             description: The ID of the feature to configure.
                           included:
                             type: number
+                            maximum: 10000000000000
                             description: Number of free units included. Balance resets to this each interval
                               for consumable features.
                           unlimited:
                             type: boolean
                             description: If true, customer has unlimited access to this feature.
+                          pooled:
+                            type: boolean
+                            default: false
+                            description: Whether entity-level grants contribute to a shared customer
+                              balance.
                           reset:
                             type: object
                             properties:
@@ -21835,11 +22101,17 @@ paths:
                                           description: The ID of the feature to configure.
                                         included:
                                           type: number
+                                          maximum: 10000000000000
                                           description: Number of free units included. Balance resets to this each interval
                                             for consumable features.
                                         unlimited:
                                           type: boolean
                                           description: If true, customer has unlimited access to this feature.
+                                        pooled:
+                                          type: boolean
+                                          default: false
+                                          description: Whether entity-level grants contribute to a shared customer
+                                            balance.
                                         reset:
                                           type: object
                                           properties:
@@ -22430,11 +22702,17 @@ paths:
                             description: The ID of the feature to configure.
                           included:
                             type: number
+                            maximum: 10000000000000
                             description: Number of free units included. Balance resets to this each interval
                               for consumable features.
                           unlimited:
                             type: boolean
                             description: If true, customer has unlimited access to this feature.
+                          pooled:
+                            type: boolean
+                            default: false
+                            description: Whether entity-level grants contribute to a shared customer
+                              balance.
                           reset:
                             type: object
                             properties:
@@ -22627,11 +22905,17 @@ paths:
                             description: The ID of the feature to configure.
                           included:
                             type: number
+                            maximum: 10000000000000
                             description: Number of free units included. Balance resets to this each interval
                               for consumable features.
                           unlimited:
                             type: boolean
                             description: If true, customer has unlimited access to this feature.
+                          pooled:
+                            type: boolean
+                            default: false
+                            description: Whether entity-level grants contribute to a shared customer
+                              balance.
                           reset:
                             type: object
                             properties:
@@ -23166,11 +23450,17 @@ paths:
                                           description: The ID of the feature to configure.
                                         included:
                                           type: number
+                                          maximum: 10000000000000
                                           description: Number of free units included. Balance resets to this each interval
                                             for consumable features.
                                         unlimited:
                                           type: boolean
                                           description: If true, customer has unlimited access to this feature.
+                                        pooled:
+                                          type: boolean
+                                          default: false
+                                          description: Whether entity-level grants contribute to a shared customer
+                                            balance.
                                         reset:
                                           type: object
                                           properties:
@@ -24778,11 +25068,17 @@ paths:
                             description: The ID of the feature to configure.
                           included:
                             type: number
+                            maximum: 10000000000000
                             description: Number of free units included. Balance resets to this each interval
                               for consumable features.
                           unlimited:
                             type: boolean
                             description: If true, customer has unlimited access to this feature.
+                          pooled:
+                            type: boolean
+                            default: false
+                            description: Whether entity-level grants contribute to a shared customer
+                              balance.
                           reset:
                             type: object
                             properties:
@@ -24975,11 +25271,17 @@ paths:
                             description: The ID of the feature to configure.
                           included:
                             type: number
+                            maximum: 10000000000000
                             description: Number of free units included. Balance resets to this each interval
                               for consumable features.
                           unlimited:
                             type: boolean
                             description: If true, customer has unlimited access to this feature.
+                          pooled:
+                            type: boolean
+                            default: false
+                            description: Whether entity-level grants contribute to a shared customer
+                              balance.
                           reset:
                             type: object
                             properties:
@@ -25514,11 +25816,17 @@ paths:
                                           description: The ID of the feature to configure.
                                         included:
                                           type: number
+                                          maximum: 10000000000000
                                           description: Number of free units included. Balance resets to this each interval
                                             for consumable features.
                                         unlimited:
                                           type: boolean
                                           description: If true, customer has unlimited access to this feature.
+                                        pooled:
+                                          type: boolean
+                                          default: false
+                                          description: Whether entity-level grants contribute to a shared customer
+                                            balance.
                                         reset:
                                           type: object
                                           properties:
@@ -33253,6 +33561,412 @@ paths:
       x-speakeasy-name-override: redeemCode
       parameters:
         - *a5
+  /v1/rewards.create:
+    post:
+      operationId: createReward
+      description: Create a coupon or feature grant.
+      tags:
+        - rewards
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                coupon:
+                  type: object
+                  properties:
+                    id:
+                      type: string
+                      minLength: 1
+                    name:
+                      type: string
+                      minLength: 1
+                    duration:
+                      type: object
+                      properties:
+                        type:
+                          enum:
+                            - one_off
+                            - months
+                            - forever
+                          type: string
+                        length:
+                          anyOf:
+                            - type: integer
+                              minimum: -9007199254740991
+                              maximum: 9007199254740991
+                              exclusiveMinimum: 0
+                            - type: "null"
+                      required:
+                        - type
+                        - length
+                      additionalProperties: false
+                      description: Use a positive integer length for months, and null for one_off or
+                        forever.
+                    plan_ids:
+                      anyOf:
+                        - type: array
+                          minItems: 1
+                          items:
+                            type: string
+                            minLength: 1
+                        - type: "null"
+                      description: Plan IDs must be unique.
+                    promo_codes:
+                      type: array
+                      items:
+                        type: object
+                        properties:
+                          code:
+                            type: string
+                            minLength: 1
+                          global_max_redemption:
+                            anyOf:
+                              - type: integer
+                                minimum: -9007199254740991
+                                maximum: 9007199254740991
+                                exclusiveMinimum: 0
+                              - type: "null"
+                          first_time_transaction:
+                            anyOf:
+                              - type: boolean
+                              - type: "null"
+                        required:
+                          - code
+                        additionalProperties: false
+                      description: Promo code values must be unique.
+                    type:
+                      enum:
+                        - percentage_discount
+                        - fixed_discount
+                      type: string
+                    value:
+                      type: number
+                      exclusiveMinimum: 0
+                      description: Percentage discounts must be at most 100; fixed discounts must be
+                        positive.
+                  required:
+                    - id
+                    - name
+                    - duration
+                    - plan_ids
+                    - promo_codes
+                    - type
+                    - value
+                  additionalProperties: false
+                  title: CreateRewardCouponRequest
+                  description: Provide exactly one of coupon or feature_grant, not both.
+                feature_grant:
+                  type: object
+                  properties:
+                    id:
+                      type: string
+                      minLength: 1
+                    name:
+                      type: string
+                      minLength: 1
+                    grants:
+                      type: array
+                      minItems: 1
+                      items:
+                        type: object
+                        properties:
+                          feature_id:
+                            type: string
+                            minLength: 1
+                          included:
+                            anyOf:
+                              - type: number
+                                exclusiveMinimum: 0
+                              - type: "null"
+                            description: A positive amount to grant, or null for boolean features.
+                          expiry:
+                            anyOf:
+                              - type: object
+                                properties:
+                                  type:
+                                    enum:
+                                      - day
+                                      - week
+                                      - month
+                                      - year
+                                    type: string
+                                    description: The unit of time the grant lasts.
+                                  length:
+                                    type: integer
+                                    minimum: -9007199254740991
+                                    maximum: 9007199254740991
+                                    exclusiveMinimum: 0
+                                    description: The positive integer count of periods before the grant expires.
+                                required:
+                                  - type
+                                  - length
+                                additionalProperties: false
+                              - type: "null"
+                        required:
+                          - feature_id
+                          - included
+                          - expiry
+                        additionalProperties: false
+                      description: Feature IDs must be unique.
+                    promo_codes:
+                      type: array
+                      minItems: 1
+                      items:
+                        type: object
+                        properties:
+                          code:
+                            type: string
+                            minLength: 1
+                          max_uses:
+                            anyOf:
+                              - type: integer
+                                minimum: -9007199254740991
+                                maximum: 9007199254740991
+                                exclusiveMinimum: 0
+                              - type: "null"
+                            description: A positive redemption limit, or null for unlimited uses.
+                        required:
+                          - code
+                          - max_uses
+                        additionalProperties: false
+                      description: Promo code values must be unique.
+                  required:
+                    - id
+                    - name
+                    - grants
+                    - promo_codes
+                  additionalProperties: false
+                  title: CreateRewardFeatureGrantRequest
+                  description: Provide exactly one of coupon or feature_grant, not both.
+              additionalProperties: false
+              title: CreateRewardParams
+              examples:
+                - &a96
+                  coupon:
+                    id: summer_sale
+                    name: Summer Sale
+                    type: percentage_discount
+                    value: 20
+                    duration:
+                      type: months
+                      length: 3
+                    plan_ids: null
+                    promo_codes:
+                      - code: SUMMER20
+            example: *a96
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  coupon:
+                    type: object
+                    properties:
+                      id:
+                        type: string
+                        description: The unique identifier for the coupon.
+                      name:
+                        anyOf:
+                          - type: string
+                          - type: "null"
+                        description: A human-readable name for the coupon.
+                      type:
+                        enum:
+                          - percentage_discount
+                          - fixed_discount
+                          - invoice_credits
+                        type: string
+                        description: "The type of discount: percentage_discount, fixed_discount, or
+                          invoice_credits."
+                      value:
+                        type: number
+                        description: The discount value. A percentage for percentage_discount, or an
+                          amount for fixed_discount / invoice_credits.
+                      duration:
+                        type: object
+                        properties:
+                          type:
+                            enum:
+                              - one_off
+                              - months
+                              - forever
+                            type: string
+                            description: The unit of time the duration is measured in.
+                          length:
+                            anyOf:
+                              - type: number
+                              - type: "null"
+                            description: The number of `type` periods the duration lasts, or null when the
+                              type has no length (e.g. one_off, forever).
+                        required:
+                          - type
+                          - length
+                        title: CreateRewardDurationResponse
+                        description: How long the coupon applies once redeemed.
+                      plan_ids:
+                        anyOf:
+                          - type: array
+                            items:
+                              type: string
+                          - type: "null"
+                        description: The plan IDs the coupon applies to, or null when it applies to all
+                          plans.
+                      promo_codes:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            code:
+                              type: string
+                              description: The promo code customers enter to redeem the coupon.
+                            global_max_redemption:
+                              anyOf:
+                                - type: number
+                                - type: "null"
+                              description: Maximum number of times this promo code can be redeemed across all
+                                customers, or null for unlimited.
+                            first_time_transaction:
+                              anyOf:
+                                - type: boolean
+                                - type: "null"
+                              description: Whether this promo code can only be applied to a customer's first
+                                transaction.
+                          required:
+                            - code
+                          title: CreateRewardCouponPromoCodeResponse
+                      created_at:
+                        type: number
+                        description: The Unix timestamp (in milliseconds) when the coupon was created.
+                    required:
+                      - id
+                      - type
+                      - value
+                      - duration
+                      - plan_ids
+                      - promo_codes
+                      - created_at
+                    title: CreateRewardCouponResponse
+                    examples:
+                      - id: summer_sale
+                        name: Summer Sale
+                        type: percentage_discount
+                        value: 20
+                        duration:
+                          type: months
+                          length: 3
+                        plan_ids:
+                          - pro
+                          - starter
+                        promo_codes:
+                          - code: SUMMER20
+                            global_max_redemption: 100
+                            first_time_transaction: false
+                        created_at: 1718000000000
+                  feature_grant:
+                    type: object
+                    properties:
+                      id:
+                        type: string
+                        description: The unique identifier for the feature grant.
+                      name:
+                        anyOf:
+                          - type: string
+                          - type: "null"
+                        description: A human-readable name for the feature grant.
+                      grants:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            feature_id:
+                              type: string
+                              description: The feature ID this grant applies to.
+                            included:
+                              anyOf:
+                                - type: number
+                                - type: "null"
+                              description: The amount of the feature granted, or null for boolean features.
+                            expiry:
+                              anyOf:
+                                - type: object
+                                  properties:
+                                    type:
+                                      enum:
+                                        - day
+                                        - week
+                                        - month
+                                        - year
+                                      type: string
+                                      description: The unit of time the grant lasts.
+                                    length:
+                                      type: integer
+                                      minimum: -9007199254740991
+                                      maximum: 9007199254740991
+                                      exclusiveMinimum: 0
+                                      description: The positive integer count of periods before the grant expires.
+                                  required:
+                                    - type
+                                    - length
+                                - type: "null"
+                              title: CreateRewardExpiryResponse
+                              description: How long the granted amount lasts before expiring, or null for a
+                                permanent grant.
+                          required:
+                            - feature_id
+                            - included
+                            - expiry
+                          title: CreateRewardGrantResponse
+                      promo_codes:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            code:
+                              type: string
+                              description: The promo code customers enter to redeem the feature grant.
+                            max_uses:
+                              anyOf:
+                                - type: number
+                                - type: "null"
+                              description: Maximum number of times this promo code can be redeemed, or null
+                                for unlimited.
+                          required:
+                            - code
+                            - max_uses
+                          title: CreateRewardFeatureGrantPromoCodeResponse
+                      created_at:
+                        type: number
+                        description: The Unix timestamp (in milliseconds) when the feature grant was
+                          created.
+                    required:
+                      - id
+                      - grants
+                      - promo_codes
+                      - created_at
+                    title: CreateRewardFeatureGrantResponse
+                    examples:
+                      - id: beta_credits_grant
+                        name: Beta Tester Credits
+                        promo_codes:
+                          - code: BETA2024
+                            max_uses: 500
+                        grants:
+                          - feature_id: credits
+                            included: 1000
+                            expiry:
+                              type: month
+                              length: 1
+                        created_at: 1718000000000
+                additionalProperties: false
+      x-speakeasy-name-override: create
+      parameters:
+        - *a5
   /v1/rewards.list:
     post:
       operationId: listRewards
@@ -33267,8 +33981,8 @@ paths:
               type: object
               title: RewardsListParams
               examples:
-                - &a96 {}
-            example: *a96
+                - &a97 {}
+            example: *a97
       responses:
         "200":
           description: OK
@@ -33418,14 +34132,13 @@ paths:
                                           - month
                                           - year
                                         type: string
-                                        description: The unit of time the duration is measured in.
+                                        description: The unit of time the grant lasts.
                                       length:
-                                        anyOf:
-                                          - type: number
-                                          - type: "null"
-                                        description: The number of `type` periods the duration lasts, or null when the
-                                          type has no length (e.g. one_off,
-                                          forever).
+                                        type: integer
+                                        minimum: -9007199254740991
+                                        maximum: 9007199254740991
+                                        exclusiveMinimum: 0
+                                        description: The positive integer count of periods before the grant expires.
                                     required:
                                       - type
                                       - length
@@ -33482,10 +34195,10 @@ paths:
                   - coupons
                   - feature_grants
                 examples:
-                  - &a97
+                  - &a98
                     coupons: []
                     feature_grants: []
-              example: *a97
+              example: *a98
       x-speakeasy-name-override: list
       parameters:
         - *a5
@@ -33513,10 +34226,10 @@ paths:
                 - customer_id
               title: RedeemRewardCodeParams
               examples:
-                - &a98
+                - &a99
                   code: REWARD10
                   customer_id: cus_456
-            example: *a98
+            example: *a99
       responses:
         "200":
           description: OK
@@ -33547,12 +34260,12 @@ paths:
                   - reward_id
                   - entitlements_granted
                 examples:
-                  - &a99
+                  - &a100
                     reward_id: reward_789
                     entitlements_granted:
                       - feature_id: messages
                         balance: 100
-              example: *a99
+              example: *a100
       x-speakeasy-name-override: redeemCode
       parameters:
         - *a5
@@ -33591,12 +34304,12 @@ paths:
                 - redirect_url
               title: LinkRevenueCatParams
               examples:
-                - &a100
+                - &a101
                   organization_slug: acme
                   env: test
                   project_name: acme-mobile
                   redirect_url: https://dashboard.useautumn.com/dev?tab=revenuecat
-            example: *a100
+            example: *a101
       responses:
         "200":
           description: OK
@@ -33611,9 +34324,9 @@ paths:
                   - oauth_url
                 title: LinkRevenueCatResponse
                 examples:
-                  - &a101
+                  - &a102
                     oauth_url: https://api.revenuecat.com/oauth2/authorize?client_id=...&redirect_uri=...&response_type=code&scope=project.read+project.write
-              example: *a101
+              example: *a102
       x-speakeasy-name-override: linkRevenueCat
       parameters:
         - *a5
@@ -33653,13 +34366,13 @@ paths:
                 - env
               title: SyncRevenueCatParams
               examples:
-                - &a102
+                - &a103
                   organization_slug: acme
                   env: test
                   product_ids:
                     - pro
                     - premium
-            example: *a102
+            example: *a103
       responses:
         "200":
           description: OK
@@ -33725,7 +34438,7 @@ paths:
                   - results
                 title: SyncRevenueCatResponse
                 examples:
-                  - &a103
+                  - &a104
                     results:
                       - plan_id: pro
                         status: synced
@@ -33736,7 +34449,7 @@ paths:
                             product: created
                             store_push: skipped
                             price: set
-              example: *a103
+              example: *a104
       x-speakeasy-name-override: syncRevenueCat
       parameters:
         - *a5
@@ -33770,10 +34483,10 @@ paths:
                 - env
               title: GetRevenueCatKeysParams
               examples:
-                - &a104
+                - &a105
                   organization_slug: acme
                   env: test
-            example: *a104
+            example: *a105
       responses:
         "200":
           description: OK
@@ -33836,7 +34549,7 @@ paths:
                   - oauth_access_token
                 title: GetRevenueCatKeysResponse
                 examples:
-                  - &a105
+                  - &a106
                     apps:
                       - app_id: app1a2b3c4d
                         app_type: test_store
@@ -33847,7 +34560,7 @@ paths:
                             environment: production
                             app_id: app1a2b3c4
                     oauth_access_token: atk_aBcDeFgHiJkLmNoPqRsTuVwXyZ
-              example: *a105
+              example: *a106
       x-speakeasy-name-override: getRevenueCatKeys
       parameters:
         - *a5
@@ -33879,9 +34592,9 @@ paths:
                 - customer_id
               title: MintKeyParams
               examples:
-                - &a106
+                - &a107
                   customer_id: cus_123
-            example: *a106
+            example: *a107
       responses:
         "200":
           description: OK
@@ -33910,12 +34623,12 @@ paths:
                   - access_token
                   - expires_at
                 examples:
-                  - &a107
+                  - &a108
                     access_token: am_jwt_eyJhbGciOiJIUzI1NiJ9...
                     refresh_token: am_jwt_eyJhbGciOiJIUzI1NiJ9...
                     expires_at: 1781113864000
                     refresh_expires_at: 1781196664000
-              example: *a107
+              example: *a108
       x-speakeasy-name-override: mint
       parameters:
         - *a5
@@ -33939,8 +34652,8 @@ paths:
               description: No body. The refresh token is supplied as the Bearer credential;
                 the response is a freshly rotated access + refresh pair.
               examples:
-                - &a108 {}
-            example: *a108
+                - &a109 {}
+            example: *a109
       responses:
         "200":
           description: OK
@@ -33969,12 +34682,12 @@ paths:
                   - access_token
                   - expires_at
                 examples:
-                  - &a109
+                  - &a110
                     access_token: am_jwt_eyJhbGciOiJIUzI1NiJ9...
                     refresh_token: am_jwt_eyJhbGciOiJIUzI1NiJ9...
                     expires_at: 1781113864000
                     refresh_expires_at: 1781196664000
-              example: *a109
+              example: *a110
       x-speakeasy-name-override: refresh
       parameters:
         - *a5
@@ -34001,9 +34714,9 @@ paths:
                 - customer_id
               title: RevokeKeyParams
               examples:
-                - &a110
+                - &a111
                   customer_id: cus_123
-            example: *a110
+            example: *a111
       responses:
         "200":
           description: OK
@@ -34017,9 +34730,9 @@ paths:
                 required:
                   - revoked
                 examples:
-                  - &a111
+                  - &a112
                     revoked: true
-              example: *a111
+              example: *a112
       x-speakeasy-name-override: revoke
       parameters:
         - *a5
@@ -34231,6 +34944,7 @@ webhooks:
                         - purchase_limit_reached
                         - attempt_limit_reached
                         - failed_attempt_limit_reached
+                        - suspended_after_failures
                         - customer_unavailable
                         - configuration_unavailable
                         - missing_payment_method
@@ -34709,6 +35423,11 @@ webhooks:
                                       type: number
                                     unlimited:
                                       description: Whether the customer has unlimited access to this feature.
+                                      type: boolean
+                                    pooled:
+                                      description: Whether entity-level grants contribute to a shared customer
+                                        balance.
+                                      default: false
                                       type: boolean
                                     reset:
                                       description: Reset configuration for consumable features. Null for

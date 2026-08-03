@@ -9,6 +9,7 @@ export const CONFIRMED_WRITE_TOOL_NAMES = [
 	"attach",
 	"updateSubscription",
 	"createPlan",
+	"createReward",
 	"createSchedule",
 	"createBalance",
 ] as const;

@@ -2,6 +2,8 @@ import {
 	ApiRewardsListV0Schema,
 	CreateReferralCodeParamsSchema,
 	CreateReferralCodeResponseSchema,
+	CreateRewardParamsSchema,
+	CreateRewardResponseSchema,
 	RedeemReferralCodeParamsSchema,
 	RedeemReferralCodeResponseSchema,
 	RewardsListParamsSchema,
@@ -142,6 +144,38 @@ export const rewardsListContract = oc
 			],
 		}),
 	);
+
+export const rewardsCreateContract = oc
+	.route({
+		method: "POST",
+		path: "/v1/rewards.create",
+		operationId: "createReward",
+		tags: ["rewards"],
+		description: "Create a coupon or feature grant.",
+		spec: (spec) => ({
+			...spec,
+			"x-speakeasy-name-override": "create",
+		}),
+	})
+	.input(
+		CreateRewardParamsSchema.meta({
+			title: "CreateRewardParams",
+			examples: [
+				{
+					coupon: {
+						id: "summer_sale",
+						name: "Summer Sale",
+						type: "percentage_discount",
+						value: 20,
+						duration: { type: "months", length: 3 },
+						plan_ids: null,
+						promo_codes: [{ code: "SUMMER20" }],
+					},
+				},
+			],
+		}),
+	)
+	.output(CreateRewardResponseSchema);
 
 export const rewardsRedeemCodeContract = oc
 	.route({

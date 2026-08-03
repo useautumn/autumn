@@ -325,6 +325,10 @@ export type CreatePlanItemPlanItem = {
    */
   unlimited?: boolean | undefined;
   /**
+   * Whether entity-level grants contribute to a shared customer balance.
+   */
+  pooled?: boolean | undefined;
+  /**
    * Reset configuration for consumable features. Omit for non-consumable features like seats.
    */
   reset?: CreatePlanItemResetRequestBody | undefined;
@@ -639,6 +643,10 @@ export type CreatePlanLicensePlanItem = {
    * If true, customer has unlimited access to this feature.
    */
   unlimited?: boolean | undefined;
+  /**
+   * Whether entity-level grants contribute to a shared customer balance.
+   */
+  pooled?: boolean | undefined;
   /**
    * Reset configuration for consumable features. Omit for non-consumable features like seats.
    */
@@ -1436,6 +1444,10 @@ export type CreatePlanItem = {
    */
   unlimited: boolean;
   /**
+   * Whether entity-level grants contribute to a shared customer balance.
+   */
+  pooled: boolean;
+  /**
    * Reset configuration for consumable features. Null for non-consumable features like seats where usage persists across billing cycles.
    */
   reset: CreatePlanItemResetResponse | null;
@@ -1813,6 +1825,10 @@ export type CreatePlanPlanItemResponse = {
    * If true, customer has unlimited access to this feature.
    */
   unlimited?: boolean | undefined;
+  /**
+   * Whether entity-level grants contribute to a shared customer balance.
+   */
+  pooled: boolean;
   /**
    * Reset configuration for consumable features. Omit for non-consumable features like seats.
    */
@@ -2978,6 +2994,7 @@ export type CreatePlanItemPlanItem$Outbound = {
   feature_id: string;
   included?: number | undefined;
   unlimited?: boolean | undefined;
+  pooled: boolean;
   reset?: CreatePlanItemResetRequestBody$Outbound | undefined;
   price?: CreatePlanItemPriceRequestBody$Outbound | undefined;
   proration?: CreatePlanItemProration$Outbound | undefined;
@@ -2993,6 +3010,7 @@ export const CreatePlanItemPlanItem$outboundSchema: z.ZodMiniType<
     featureId: z.string(),
     included: z.optional(z.number()),
     unlimited: z.optional(z.boolean()),
+    pooled: z._default(z.boolean(), false),
     reset: z.optional(
       z.lazy(() => CreatePlanItemResetRequestBody$outboundSchema),
     ),
@@ -3401,6 +3419,7 @@ export type CreatePlanLicensePlanItem$Outbound = {
   feature_id: string;
   included?: number | undefined;
   unlimited?: boolean | undefined;
+  pooled: boolean;
   reset?: CreatePlanLicenseReset$Outbound | undefined;
   price?: CreatePlanLicensePrice$Outbound | undefined;
   proration?: CreatePlanLicenseProration$Outbound | undefined;
@@ -3416,6 +3435,7 @@ export const CreatePlanLicensePlanItem$outboundSchema: z.ZodMiniType<
     featureId: z.string(),
     included: z.optional(z.number()),
     unlimited: z.optional(z.boolean()),
+    pooled: z._default(z.boolean(), false),
     reset: z.optional(z.lazy(() => CreatePlanLicenseReset$outboundSchema)),
     price: z.optional(z.lazy(() => CreatePlanLicensePrice$outboundSchema)),
     proration: z.optional(
@@ -4528,6 +4548,7 @@ export const CreatePlanItem$inboundSchema: z.ZodMiniType<
     feature: types.optional(z.lazy(() => CreatePlanFeature$inboundSchema)),
     included: types.number(),
     unlimited: types.boolean(),
+    pooled: z._default(types.boolean(), false),
     reset: types.nullable(
       z.lazy(() => CreatePlanItemResetResponse$inboundSchema),
     ),
@@ -4946,6 +4967,7 @@ export const CreatePlanPlanItemResponse$inboundSchema: z.ZodMiniType<
     feature_id: types.string(),
     included: types.optional(types.number()),
     unlimited: types.optional(types.boolean()),
+    pooled: z._default(types.boolean(), false),
     reset: types.optional(
       z.lazy(() => CreatePlanVariantDetailsReset$inboundSchema),
     ),

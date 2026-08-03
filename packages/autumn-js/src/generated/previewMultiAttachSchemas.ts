@@ -250,6 +250,7 @@ export const previewMultiAttachPlanItemOutboundSchema = z.object({
 	feature_id: z.string(),
 	included: z.union([z.number(), z.undefined()]).optional(),
 	unlimited: z.union([z.boolean(), z.undefined()]).optional(),
+	pooled: z.boolean(),
 	reset: z
 		.union([previewMultiAttachResetOutboundSchema, z.undefined()])
 		.optional(),
@@ -293,6 +294,7 @@ export const previewMultiAttachPlanOutboundSchema = z.object({
 		.optional(),
 	version: z.union([z.number(), z.undefined()]).optional(),
 	subscription_id: z.union([z.string(), z.undefined()]).optional(),
+	entity_id: z.union([z.string(), z.undefined()]).optional().nullable(),
 });
 
 export const previewMultiAttachFreeTrialParamsOutboundSchema = z.object({
@@ -462,6 +464,7 @@ export const previewMultiAttachPlanItemSchema = z.object({
 	featureId: z.string(),
 	included: z.union([z.number(), z.undefined()]).optional(),
 	unlimited: z.union([z.boolean(), z.undefined()]).optional(),
+	pooled: z.union([z.boolean(), z.undefined()]).optional(),
 	reset: z.union([previewMultiAttachResetSchema, z.undefined()]).optional(),
 	price: z.union([previewMultiAttachPriceSchema, z.undefined()]).optional(),
 	proration: z
@@ -495,6 +498,7 @@ export const previewMultiAttachPlanSchema = z.object({
 		.optional(),
 	version: z.union([z.number(), z.undefined()]).optional(),
 	subscriptionId: z.union([z.string(), z.undefined()]).optional(),
+	entityId: z.union([z.string(), z.undefined()]).optional().nullable(),
 });
 
 export const previewMultiAttachDurationTypeSchema = closedEnumSchema;
@@ -509,6 +513,8 @@ export const previewMultiAttachFreeTrialParamsSchema = z.object({
 	cardRequired: z.union([z.boolean(), z.undefined()]).optional(),
 	onEnd: z.union([previewMultiAttachOnEndSchema, z.undefined()]).optional(),
 });
+
+export const previewMultiAttachBillingBehaviorSchema = closedEnumSchema;
 
 export const previewMultiAttachRedirectModeSchema = closedEnumSchema;
 
@@ -575,12 +581,16 @@ export const previewMultiAttachParamsSchema = z.object({
 		.union([previewMultiAttachFreeTrialParamsSchema, z.undefined()])
 		.optional()
 		.nullable(),
+	startsAt: z.union([z.number(), z.undefined()]).optional(),
 	currency: z.union([z.string(), z.undefined()]).optional(),
 	invoiceMode: z
 		.union([previewMultiAttachInvoiceModeSchema, z.undefined()])
 		.optional(),
 	discounts: z
 		.union([z.array(previewMultiAttachAttachDiscountSchema), z.undefined()])
+		.optional(),
+	billingBehavior: z
+		.union([previewMultiAttachBillingBehaviorSchema, z.undefined()])
 		.optional(),
 	successUrl: z.union([z.string(), z.undefined()]).optional(),
 	checkoutSessionParams: z
@@ -655,6 +665,7 @@ export const previewMultiAttachParamsOutboundSchema = z.object({
 		.union([previewMultiAttachFreeTrialParamsOutboundSchema, z.undefined()])
 		.optional()
 		.nullable(),
+	starts_at: z.union([z.number(), z.undefined()]).optional(),
 	currency: z.union([z.string(), z.undefined()]).optional(),
 	invoice_mode: z
 		.union([previewMultiAttachInvoiceModeOutboundSchema, z.undefined()])
@@ -665,6 +676,7 @@ export const previewMultiAttachParamsOutboundSchema = z.object({
 			z.undefined(),
 		])
 		.optional(),
+	billing_behavior: z.union([z.string(), z.undefined()]).optional(),
 	success_url: z.union([z.string(), z.undefined()]).optional(),
 	checkout_session_params: z
 		.union([z.record(z.string(), z.any()), z.undefined()])

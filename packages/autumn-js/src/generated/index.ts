@@ -4,6 +4,7 @@
 export * from "./aggregateEventsSchemas";
 export * from "./attachSchemas";
 export * from "./createReferralCodeSchemas";
+export * from "./createRewardSchemas";
 export * from "./getOrCreateCustomerSchemas";
 export * from "./listEventsSchemas";
 export * from "./listPlansSchemas";

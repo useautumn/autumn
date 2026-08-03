@@ -5,6 +5,7 @@ import {
 	PriceType,
 	type Product,
 	RecaseError,
+	type Reward,
 	RewardCategory,
 	Scopes,
 } from "@autumn/shared";
@@ -16,8 +17,10 @@ import {
 } from "@/external/stripe/stripeCouponUtils/stripeCouponUtils.js";
 import { createRoute } from "@/honoMiddlewares/routeHandler.js";
 import { ProductService } from "@/internal/products/ProductService.js";
-import { PriceService } from "@/internal/products/prices/PriceService.js";
+import { getRewardPrices } from "@/internal/rewards/actions/getRewardPrices.js";
+import { validateRewardUniqueness } from "@/internal/rewards/actions/validateRewardUniqueness.js";
 import { rewardRepo } from "@/internal/rewards/repos/index.js";
+import { rewardMutationLock } from "@/internal/rewards/rewardLock.js";
 import { getRewardCat } from "@/internal/rewards/rewardUtils.js";
 
 const UpdateCouponParamsSchema = z.object({
@@ -32,6 +35,7 @@ export const handleUpdateCoupon = createRoute({
 	scopes: [Scopes.Rewards.Write],
 	params: UpdateCouponParamsSchema,
 	query: UpdateCouponQuerySchema,
+	lock: rewardMutationLock,
 	handler: async (c) => {
 		const ctx = c.get("ctx");
 		const { org, env, db, logger } = ctx;
@@ -62,8 +66,16 @@ export const handleUpdateCoupon = createRoute({
 		rewardBody.promo_codes = normalizePromoCodes(
 			rewardBody.promo_codes ?? reward.promo_codes ?? [],
 		);
+		const updatedReward: Reward = { ...reward, ...rewardBody };
+		await validateRewardUniqueness({
+			db,
+			reward: updatedReward,
+			orgId: org.id,
+			env,
+			excludeInternalId: reward.internal_id,
+		});
 
-		const rewardCat = getRewardCat(rewardBody);
+		const rewardCat = getRewardCat(updatedReward);
 
 		let prices: (Price & { product: Product })[] = [];
 		if (rewardCat === RewardCategory.Discount) {
@@ -72,10 +84,7 @@ export const handleUpdateCoupon = createRoute({
 				reward.discount_config?.price_ids ??
 				[];
 
-			prices = await PriceService.getInIds({
-				db,
-				ids: priceIds,
-			});
+			prices = await getRewardPrices({ ctx, priceIds });
 		} else if (rewardCat === RewardCategory.FreeProduct) {
 			const freeProductId =
 				rewardBody.free_product_id ?? reward.free_product_id;
@@ -102,7 +111,7 @@ export const handleUpdateCoupon = createRoute({
 		// Preflight before deleting the old Stripe coupon, so a plan missing
 		// in Stripe fails the update while the existing coupon is still intact.
 		if (willRecreateStripeCoupon) {
-			resolveCouponStripeProductIds({ reward: rewardBody, prices });
+			resolveCouponStripeProductIds({ reward: updatedReward, prices });
 		}
 
 		// Delete old prices from stripe
@@ -113,7 +122,7 @@ export const handleUpdateCoupon = createRoute({
 
 		if (willRecreateStripeCoupon) {
 			await createStripeCoupon({
-				reward: rewardBody,
+				reward: updatedReward,
 				org,
 				env,
 				prices,

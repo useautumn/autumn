@@ -25,6 +25,7 @@ const conceptResource = {
 const resourceOrder = [
 	"autumn://docs/concepts",
 	"autumn://docs/plan-management",
+	"autumn://docs/rewards",
 ] as const;
 
 const planManagementResource = {
@@ -32,6 +33,11 @@ const planManagementResource = {
 	parts: [
 		{ marker: "<!-- Modeling -->", file: "./plan-management/modeling.md" },
 	],
+} as const;
+
+const rewardsResource = {
+	file: "./rewards/rewards.md",
+	parts: [],
 } as const;
 
 const readResourceFile = ({
@@ -126,8 +132,13 @@ const compileResources = ({
 		file: planManagementResource.file,
 		parts: planManagementResource.parts,
 	});
+	const rewards = compileMarkdownResourceWithParts({
+		baseUrl,
+		file: rewardsResource.file,
+		parts: rewardsResource.parts,
+	});
 
-	return orderResources([concepts, planManagement]);
+	return orderResources([concepts, planManagement, rewards]);
 };
 
 export const createAutumnMcpResources = ({
