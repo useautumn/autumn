@@ -21,13 +21,15 @@ import { defaultDiscountConfig } from "../../utils/defaultRewardModels";
 interface SelectRewardTypeProps {
 	reward: FrontendReward;
 	setReward: (reward: FrontendReward) => void;
+	/** Set when editing a reward that is already a free product, so it stays reselectable */
+	showFreeProduct?: boolean;
 }
 
-export function SelectRewardType({ reward, setReward }: SelectRewardTypeProps) {
-	// Free product rewards are legacy — only shown when editing one that already exists
-	const showFreeProduct =
-		reward.rewardCategory === FrontendRewardCategory.FreeProduct;
-
+export function SelectRewardType({
+	reward,
+	setReward,
+	showFreeProduct = false,
+}: SelectRewardTypeProps) {
 	return (
 		<SheetSection title="Reward Type">
 			<div className="space-y-4">
