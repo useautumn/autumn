@@ -1,16 +1,21 @@
-import { getAdminS3Config } from "./adminS3Config.js";
+import { InternalError } from "@autumn/shared";
 
 export const CUSTOMER_EXPORTS_PREFIX = "customer-exports";
 
 export const CUSTOMER_EXPORT_FILE_NAME = "customers.csv";
 
 export const getCustomerExportsS3Config = () => {
-	const admin = getAdminS3Config();
+	const bucket = process.env.S3_CUSTOMER_EXPORTS_BUCKET;
+	const region = process.env.S3_CUSTOMER_EXPORTS_REGION;
 
-	return {
-		bucket: process.env.S3_CUSTOMER_EXPORTS_BUCKET || admin.bucket,
-		region: process.env.S3_CUSTOMER_EXPORTS_REGION || admin.region,
-	};
+	if (!bucket || !region) {
+		throw new InternalError({
+			message:
+				"S3_CUSTOMER_EXPORTS_BUCKET and S3_CUSTOMER_EXPORTS_REGION env variables are not set",
+		});
+	}
+
+	return { bucket, region };
 };
 
 export const getCustomerExportKey = ({

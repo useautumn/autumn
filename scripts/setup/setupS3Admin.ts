@@ -260,22 +260,31 @@ const main = async () => {
 		bucket,
 	});
 
-	const customerExports = getCustomerExportsS3Config();
-	const customerExportsClient =
-		customerExports.region === region
-			? s3Client
-			: createS3Client({ region: customerExports.region });
-	if (customerExports.bucket !== bucket) {
-		await ensureBucketExists({
+	if (
+		process.env.S3_CUSTOMER_EXPORTS_BUCKET &&
+		process.env.S3_CUSTOMER_EXPORTS_REGION
+	) {
+		const customerExports = getCustomerExportsS3Config();
+		const customerExportsClient =
+			customerExports.region === region
+				? s3Client
+				: createS3Client({ region: customerExports.region });
+		if (customerExports.bucket !== bucket) {
+			await ensureBucketExists({
+				s3Client: customerExportsClient,
+				bucket: customerExports.bucket,
+				region: customerExports.region,
+			});
+		}
+		await ensureIncompleteExportUploadCleanup({
 			s3Client: customerExportsClient,
 			bucket: customerExports.bucket,
-			region: customerExports.region,
 		});
+	} else {
+		console.log(
+			"Skipping customer exports bucket setup (S3_CUSTOMER_EXPORTS_BUCKET/REGION not set).",
+		);
 	}
-	await ensureIncompleteExportUploadCleanup({
-		s3Client: customerExportsClient,
-		bucket: customerExports.bucket,
-	});
 
 	console.log("S3 admin initialization complete.");
 };
