@@ -2,7 +2,7 @@ import { sql } from "drizzle-orm";
 import { pgTable, primaryKey, text, timestamp } from "drizzle-orm/pg-core";
 
 // Freshness ledger for replica-read routing: structural writes stamp the DB
-// clock here; created with fillfactor 70 (migration-only) for HOT updates.
+// clock here; fillfactor 70 for HOT updates is set by a custom migration.
 export const customerLsns = pgTable(
 	"customer_lsns",
 	{
