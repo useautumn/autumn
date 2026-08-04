@@ -16,13 +16,14 @@ export const IdempotencyConfigEntrySchema = z.object({
 
 export const IdempotencyConfigSchema = z
 	.array(IdempotencyConfigEntrySchema)
-	.superRefine((entries, refinementCtx) => {
+	.check((ctx) => {
 		const seenRouteGroups = new Set<RouteGroup>();
-		for (const entry of entries) {
+		for (const entry of ctx.value) {
 			if (seenRouteGroups.has(entry.routeGroup)) {
-				refinementCtx.addIssue({
+				ctx.issues.push({
 					code: "custom",
 					message: `Duplicate route group: ${entry.routeGroup}`,
+					input: ctx.value,
 				});
 			}
 			seenRouteGroups.add(entry.routeGroup);
