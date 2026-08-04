@@ -10,17 +10,15 @@ import { getCustomerExportsS3Config } from "@/external/aws/s3/customerExportsS3C
 import type { Logger } from "@/external/logtail/logtailUtils.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { getCustomerExportTriggerOptions } from "@/trigger/exports/customerExportQueue.js";
-import {
-	customerExportTask,
-	executeCustomerExport,
-} from "@/trigger/exports/customerExportTask.js";
+import { customerExportTask } from "@/trigger/exports/customerExportTask.js";
 import type { RunCustomerExportPayload } from "@/trigger/exports/customerExportTaskPayload.js";
 import { shouldRunTriggerTasksInline } from "@/trigger/utils/shouldRunTriggerTasksInline.js";
-import { timeout } from "@/utils/genUtils.js";
+import { retryAsync } from "@/utils/retryAsync.js";
 import { CustomerExportService } from "../CustomerExportService.js";
 import { cacheCustomerExportRealtimeToken } from "../customerExportRealtimeToken.js";
 import { customerExportToResponse } from "../customerExportToResponse.js";
 import { createExportReclaimingStale } from "../reclaimStaleCustomerExport.js";
+import { executeCustomerExport } from "../workflows/executeCustomerExport.js";
 
 const TRIGGER_ENQUEUE_ATTEMPTS = 3;
 const TRIGGER_ENQUEUE_RETRY_DELAY_MS = ms.seconds(1);
@@ -35,29 +33,27 @@ const triggerCustomerExportWithRetry = async ({
 	logger: Logger;
 	exportId: string;
 	payload: RunCustomerExportPayload;
-}) => {
-	for (let attempt = 1; ; attempt++) {
-		try {
-			return await customerExportTask.trigger(payload, {
-				idempotencyKey: `customer-export:${exportId}`,
-				idempotencyKeyTTL: "7d",
-				...getCustomerExportTriggerOptions({
-					isDev: process.env.NODE_ENV === "development",
-				}),
-			});
-		} catch (error) {
-			if (attempt >= TRIGGER_ENQUEUE_ATTEMPTS) throw error;
+}) =>
+	retryAsync({
+		attempts: TRIGGER_ENQUEUE_ATTEMPTS,
+		delayMs: TRIGGER_ENQUEUE_RETRY_DELAY_MS,
+		onRetry: ({ attempt, error }) =>
 			logger.warn("customer-export: retrying trigger enqueue", {
 				data: {
 					exportId,
 					attempt,
 					error: error instanceof Error ? error.message : String(error),
 				},
-			});
-			await timeout(TRIGGER_ENQUEUE_RETRY_DELAY_MS);
-		}
-	}
-};
+			}),
+		run: () =>
+			customerExportTask.trigger(payload, {
+				idempotencyKey: `customer-export:${exportId}`,
+				idempotencyKeyTTL: "7d",
+				...getCustomerExportTriggerOptions({
+					isDev: process.env.NODE_ENV === "development",
+				}),
+			}),
+	});
 
 /** Inline runs have no Trigger run to subscribe to, so clients keep polling. */
 const runExportInline = ({

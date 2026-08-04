@@ -1,4 +1,9 @@
 import {
+	CustomerExportStatus,
+	type DbCustomerExport,
+	ms,
+} from "@autumn/shared";
+import {
 	CUSTOMER_EXPORT_FILE_NAME,
 	getCustomerExportKey,
 	getCustomerExportsS3Config,
@@ -7,12 +12,7 @@ import { headS3Object } from "@/external/aws/s3/s3ObjectUtils.js";
 import type { Logger } from "@/external/logtail/logtailUtils.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import type { RunCustomerExportPayload } from "@/trigger/exports/customerExportTaskPayload.js";
-import { timeout } from "@/utils/genUtils.js";
-import {
-	CustomerExportStatus,
-	type DbCustomerExport,
-	ms,
-} from "@autumn/shared";
+import { retryAsync } from "@/utils/retryAsync.js";
 import { CustomerExportService } from "../CustomerExportService.js";
 import {
 	countCustomerExportRows,
@@ -42,9 +42,19 @@ const markCompletedWithRetry = async ({
 	exportId: string;
 	rowCount: number | null;
 	byteCount: number | null;
-}) => {
-	for (let attempt = 1; ; attempt++) {
-		try {
+}) =>
+	retryAsync({
+		attempts: MARK_COMPLETED_ATTEMPTS,
+		delayMs: MARK_COMPLETED_RETRY_DELAY_MS,
+		onRetry: ({ attempt, error }) =>
+			logger.warn("customer-export: retrying markCompleted", {
+				data: {
+					exportId,
+					attempt,
+					error: error instanceof Error ? error.message : String(error),
+				},
+			}),
+		run: async () => {
 			const completed = await CustomerExportService.markCompleted({
 				db: ctx.db,
 				id: exportId,
@@ -56,20 +66,8 @@ const markCompletedWithRetry = async ({
 					data: { exportId },
 				});
 			}
-			return;
-		} catch (error) {
-			if (attempt >= MARK_COMPLETED_ATTEMPTS) throw error;
-			logger.warn("customer-export: retrying markCompleted", {
-				data: {
-					exportId,
-					attempt,
-					error: error instanceof Error ? error.message : String(error),
-				},
-			});
-			await timeout(MARK_COMPLETED_RETRY_DELAY_MS);
-		}
-	}
-};
+		},
+	});
 
 /** A retry can reconcile an object published before its completion write. */
 const reconcileUploadedExport = async ({

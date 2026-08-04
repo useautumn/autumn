@@ -12,8 +12,6 @@ import {
 import { RunCustomerExportPayloadSchema } from "@/trigger/exports/customerExportTaskPayload.js";
 import { createTriggerContext } from "@/trigger/utils/createTriggerContext.js";
 
-export { executeCustomerExport };
-
 export const customerExportTask = task({
 	id: "customer-export",
 	queue: customerExportParentQueue,
