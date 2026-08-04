@@ -19,12 +19,8 @@ import { expect, test } from "bun:test";
 import { type ApiCustomerV3, type AttachParamsV0, ms } from "@autumn/shared";
 import { expectCustomerFeatureCorrect } from "@tests/integration/billing/utils/expectCustomerFeatureCorrect";
 import { expectCustomerInvoiceCorrect } from "@tests/integration/billing/utils/expectCustomerInvoiceCorrect";
-import {
-	expectCustomerProducts,
-	expectProductActive,
-} from "@tests/integration/billing/utils/expectCustomerProductCorrect";
+import { expectCustomerProducts } from "@tests/integration/billing/utils/expectCustomerProductCorrect";
 import { expectProductTrialing } from "@tests/integration/billing/utils/expectCustomerProductTrialing";
-import { waitForCustomerInvoiceStatus } from "@tests/integration/billing/utils/waitForCustomerInvoiceStatus";
 import { TestFeature } from "@tests/setup/v2Features";
 import { completeInvoiceCheckoutV2 as completeInvoiceCheckout } from "@tests/utils/browserPool/completeInvoiceCheckoutV2";
 import { items } from "@tests/utils/fixtures/items";
@@ -126,19 +122,16 @@ test.concurrent(
 			url: finalizedInvoice.hosted_invoice_url!,
 		});
 
-		const customerAfter = await waitForCustomerInvoiceStatus({
+		// After payment - product should be active
+		await expectCustomerProducts({
 			autumn: autumnV1,
 			customerId,
-			status: "paid",
-		});
-
-		// After payment - product should be active
-		await expectProductActive({
-			customer: customerAfter,
-			productId: pro.id,
+			active: [pro.id],
 		});
 
 		// Verify balance is correct
+		const customerAfter =
+			await autumnV1.customers.get<ApiCustomerV3>(customerId);
 		expectCustomerFeatureCorrect({
 			customer: customerAfter,
 			featureId: TestFeature.Messages,
@@ -149,7 +142,8 @@ test.concurrent(
 
 		// Verify invoice is now paid
 		await expectCustomerInvoiceCorrect({
-			customer: customerAfter,
+			autumn: autumnV1,
+			customerId,
 			count: 1,
 			latestTotal: preview.total,
 			latestStatus: "paid",
@@ -261,20 +255,17 @@ test.concurrent(
 		);
 		expect(paidInvoice.status).toBe("paid");
 
-		const customerAfter = await waitForCustomerInvoiceStatus({
-			autumn: autumnV1,
-			customerId,
-			status: "paid",
-		});
-
 		// After payment - premium active, pro removed
 		await expectCustomerProducts({
-			customer: customerAfter,
+			autumn: autumnV1,
+			customerId,
 			active: [premium.id],
 			notPresent: [proTrial.id],
 		});
 
 		// Verify balance is premium's balance
+		const customerAfter =
+			await autumnV1.customers.get<ApiCustomerV3>(customerId);
 		expectCustomerFeatureCorrect({
 			customer: customerAfter,
 			featureId: TestFeature.Messages,
@@ -284,7 +275,8 @@ test.concurrent(
 		});
 
 		await expectCustomerInvoiceCorrect({
-			customer: customerAfter,
+			autumn: autumnV1,
+			customerId,
 			count: 3,
 			latestTotal: preview.total,
 			latestStatus: "paid",
@@ -387,19 +379,16 @@ test.concurrent(
 			url: finalizedInvoice.hosted_invoice_url!,
 		});
 
-		const customerAfter = await waitForCustomerInvoiceStatus({
+		// After payment - product should be active
+		await expectCustomerProducts({
 			autumn: autumnV1,
 			customerId,
-			status: "paid",
-		});
-
-		// After payment - product should be active
-		await expectProductActive({
-			customer: customerAfter,
-			productId: pro.id,
+			active: [pro.id],
 		});
 
 		// Verify balance is correct
+		const customerAfter =
+			await autumnV1.customers.get<ApiCustomerV3>(customerId);
 		expectCustomerFeatureCorrect({
 			customer: customerAfter,
 			featureId: TestFeature.Messages,
@@ -410,7 +399,8 @@ test.concurrent(
 
 		// Verify invoice is now paid
 		await expectCustomerInvoiceCorrect({
-			customer: customerAfter,
+			autumn: autumnV1,
+			customerId,
 			count: 1,
 			latestTotal: preview.total,
 			latestStatus: "paid",
@@ -501,18 +491,15 @@ test.concurrent(
 			url: finalizedInvoice.hosted_invoice_url!,
 		});
 
-		const customerAfter = await waitForCustomerInvoiceStatus({
+		// After payment - product active and credits granted
+		await expectCustomerProducts({
 			autumn: autumnV1,
 			customerId,
-			status: "paid",
+			active: [oneOff.id],
 		});
 
-		// After payment - product active and credits granted
-		await expectProductActive({
-			customer: customerAfter,
-			productId: oneOff.id,
-		});
-
+		const customerAfter =
+			await autumnV1.customers.get<ApiCustomerV3>(customerId);
 		expectCustomerFeatureCorrect({
 			customer: customerAfter,
 			featureId: TestFeature.Messages,
@@ -522,7 +509,8 @@ test.concurrent(
 
 		// Verify invoice is paid
 		await expectCustomerInvoiceCorrect({
-			customer: customerAfter,
+			autumn: autumnV1,
+			customerId,
 			count: 1,
 			latestTotal: preview.total,
 			latestStatus: "paid",

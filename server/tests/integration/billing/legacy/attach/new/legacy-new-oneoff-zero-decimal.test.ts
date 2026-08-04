@@ -59,10 +59,13 @@ test(`${chalk.yellowBright("legacy one-off rwf: prepaid one-off charges major un
 		options: [{ feature_id: TestFeature.Messages, quantity: 1 }],
 	});
 
+	// Sub-org customer, so the shared polling helpers (which use the default org
+	// key) can't fetch it — poll here instead of asserting on a snapshot.
 	const customer = await waitForCustomerInvoiceStatus({
 		autumn: autumnV1,
 		customerId,
 		status: "paid",
+		timeoutMs: 120_000,
 	});
 
 	// 23,188 RWF prepaid item + 10 RWF product base price
@@ -72,4 +75,4 @@ test(`${chalk.yellowBright("legacy one-off rwf: prepaid one-off charges major un
 		latestTotal: 23_198,
 		latestStatus: "paid",
 	});
-}, 120_000);
+}, 180_000);

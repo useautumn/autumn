@@ -7,7 +7,7 @@ import {
 } from "@tests/integration/billing/sync/utils/syncTestUtils";
 import { expectCustomerFeatureCorrect } from "@tests/integration/billing/utils/expectCustomerFeatureCorrect";
 import {
-	expectProductActive,
+	expectCustomerProducts,
 	expectProductNotPresent,
 } from "@tests/integration/billing/utils/expectCustomerProductCorrect";
 import { TestFeature } from "@tests/setup/v2Features";
@@ -49,10 +49,13 @@ test(`${chalk.yellowBright("customer.subscription.created auto-sync: sync extern
 	expect(stripeSubscription.id).toBeDefined();
 	expect(stripeSubscription.status).toBe("active");
 
-	await timeout(10000);
+	await expectCustomerProducts({
+		autumn: autumnV1,
+		customerId,
+		active: [pro.id],
+	});
 
 	const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
-	await expectProductActive({ customer, productId: pro.id });
 	expectCustomerFeatureCorrect({
 		customer,
 		featureId: TestFeature.Messages,
@@ -200,10 +203,12 @@ test(`${chalk.yellowBright("customer.subscription.created auto-sync: links produ
 
 	await completeStripeCheckoutFormV2({ url: checkoutSession.url! });
 
+	// Stripe attaches the subscription once the hosted page finishes processing,
+	// which lags well behind the browser submit on a contended runner.
 	const completedSession = await pollUntil({
 		fetch: () => ctx.stripeCli.checkout.sessions.retrieve(checkoutSession.id),
 		until: (session) => Boolean(session.subscription),
-		timeoutMs: 30_000,
+		timeoutMs: 120_000,
 		intervalMs: 1_000,
 	});
 	const subscriptionId =
@@ -216,17 +221,15 @@ test(`${chalk.yellowBright("customer.subscription.created auto-sync: links produ
 	const stripeSubscription =
 		await ctx.stripeCli.subscriptions.retrieve(subscriptionId);
 
-	const customer = await pollUntil({
-		fetch: () =>
-			autumnV1.customers.get<ApiCustomerV3>(customerId, {
-				skip_cache: "true",
-			}),
-		until: (candidate) =>
-			candidate.features[TestFeature.Messages] !== undefined,
-		timeoutMs: 30_000,
-		intervalMs: 500,
+	await expectCustomerProducts({
+		autumn: autumnV1,
+		customerId,
+		active: [pro.id],
 	});
-	await expectProductActive({ customer, productId: pro.id });
+
+	const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId, {
+		skip_cache: "true",
+	});
 	expectCustomerFeatureCorrect({
 		customer,
 		featureId: TestFeature.Messages,

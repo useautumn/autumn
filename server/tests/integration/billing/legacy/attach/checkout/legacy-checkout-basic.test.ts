@@ -21,15 +21,11 @@ import type {
 import { AutumnCli } from "@tests/cli/AutumnCli";
 import { expectCustomerFeatureCorrect } from "@tests/integration/billing/utils/expectCustomerFeatureCorrect";
 import { expectCustomerInvoiceCorrect } from "@tests/integration/billing/utils/expectCustomerInvoiceCorrect";
-import {
-	expectCustomerProducts,
-	expectProductActive,
-} from "@tests/integration/billing/utils/expectCustomerProductCorrect";
+import { expectCustomerProducts } from "@tests/integration/billing/utils/expectCustomerProductCorrect";
 import { TestFeature } from "@tests/setup/v2Features";
 import { completeStripeCheckoutFormV2 } from "@tests/utils/browserPool/completeStripeCheckoutFormV2";
 import { items } from "@tests/utils/fixtures/items";
 import { products } from "@tests/utils/fixtures/products";
-import { timeout } from "@tests/utils/genUtils";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
 
@@ -71,17 +67,16 @@ test.concurrent(`${chalk.yellowBright("legacy-checkout 1: basic stripe checkout"
 	});
 
 	await completeStripeCheckoutFormV2({ url: checkout_url });
-	await timeout(12000);
 
-	const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
-
-	await expectProductActive({
-		customer,
-		productId: pro.id,
+	await expectCustomerProducts({
+		autumn: autumnV1,
+		customerId,
+		active: [pro.id],
 	});
 
 	await expectCustomerInvoiceCorrect({
-		customer,
+		autumn: autumnV1,
+		customerId,
 		count: 1,
 		latestTotal: 20,
 	});
@@ -244,21 +239,22 @@ test.concurrent(`${chalk.yellowBright("legacy-checkout 3: multi-product checkout
 	});
 
 	await completeStripeCheckoutFormV2({ url: res.checkout_url });
-	await timeout(10000);
-
-	const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
 
 	await expectCustomerProducts({
-		customer,
+		autumn: autumnV1,
+		customerId,
 		active: [pro.id, oneOff.id],
 	});
 
 	await expectCustomerInvoiceCorrect({
-		customer,
+		autumn: autumnV1,
+		customerId,
 		count: 1,
 		latestTotal: 30, // Pro $20 + one-off $10
 		latestInvoiceProductIds: [pro.id, oneOff.id],
 	});
+
+	const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
 
 	expectCustomerFeatureCorrect({
 		customer,

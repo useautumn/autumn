@@ -482,6 +482,15 @@ test.concurrent(`${chalk.yellowBright("legacy-trial 5: paid to trial upgrade")}`
 		product_id: premiumWithTrial.id,
 	});
 
+	// Stripe issues the $0 trial invoice via webhook, so poll for the settled set:
+	// Pro paid ($20) + pro refund (-$20) + Premium trial ($0).
+	await expectCustomerInvoiceCorrect({
+		autumn: autumnV1,
+		customerId,
+		count: 3,
+		latestTotal: 0, // Premium trial - $0
+	});
+
 	const customerAfterPremium =
 		await autumnV1.customers.get<ApiCustomerV3>(customerId);
 
@@ -496,13 +505,6 @@ test.concurrent(`${chalk.yellowBright("legacy-trial 5: paid to trial upgrade")}`
 		includedUsage: 100,
 		balance: 100,
 		usage: 0,
-	});
-
-	// 2 invoices: Pro paid ($20) + Premium trial ($0)
-	await expectCustomerInvoiceCorrect({
-		customer: customerAfterPremium,
-		count: 3,
-		latestTotal: 0, // Premium trial - $0
 	});
 
 	expect(customerAfterPremium.invoices?.[1].total).toBe(-20); // refund for pro

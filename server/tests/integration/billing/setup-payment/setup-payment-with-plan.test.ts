@@ -18,14 +18,13 @@ import { expect, test } from "bun:test";
 import type { ApiCustomerV3 } from "@autumn/shared";
 import { expectCustomerFeatureCorrect } from "@tests/integration/billing/utils/expectCustomerFeatureCorrect";
 import { expectCustomerInvoiceCorrect } from "@tests/integration/billing/utils/expectCustomerInvoiceCorrect";
-import { expectProductActive } from "@tests/integration/billing/utils/expectCustomerProductCorrect";
+import { expectCustomerProducts } from "@tests/integration/billing/utils/expectCustomerProductCorrect";
 import { expectNoStripeSubscription } from "@tests/integration/billing/utils/expectNoStripeSubscription";
 import { expectSubToBeCorrect } from "@tests/merged/mergeUtils/expectSubCorrect";
 import { TestFeature } from "@tests/setup/v2Features";
 import { completeSetupPaymentFormV2 as completeSetupPaymentForm } from "@tests/utils/browserPool/completeSetupPaymentFormV2";
 import { items } from "@tests/utils/fixtures/items";
 import { products } from "@tests/utils/fixtures/products";
-import { timeout } from "@tests/utils/genUtils";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
 
@@ -69,13 +68,15 @@ test.concurrent(`${chalk.yellowBright("setup-payment: attach paid plan after set
 
 	// 2. Complete the setup form
 	await completeSetupPaymentForm({ url: res.url });
-	await timeout(4000);
 
 	// 3. Verify plan was attached by the webhook
+	await expectCustomerProducts({
+		autumn: autumnV1,
+		customerId,
+		active: [pro.id],
+	});
+
 	const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
-
-	await expectProductActive({ customer, productId: pro.id });
-
 	expectCustomerFeatureCorrect({
 		customer,
 		featureId: TestFeature.Messages,
@@ -134,12 +135,15 @@ test.concurrent(`${chalk.yellowBright("setup-payment: attach free plan after set
 
 	// 2. Complete the setup form
 	await completeSetupPaymentForm({ url: res.url });
-	await timeout(4000);
 
 	// 3. Verify free plan was attached
-	const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
+	await expectCustomerProducts({
+		autumn: autumnV1,
+		customerId,
+		active: [free.id],
+	});
 
-	await expectProductActive({ customer, productId: free.id });
+	const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
 
 	expectCustomerFeatureCorrect({
 		customer,
@@ -205,12 +209,15 @@ test.concurrent(`${chalk.yellowBright("setup-payment: attach plan with feature_q
 
 	// 2. Complete the setup form
 	await completeSetupPaymentForm({ url: res.url });
-	await timeout(4000);
 
 	// 3. Verify plan attached with correct prepaid balance
-	const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
+	await expectCustomerProducts({
+		autumn: autumnV1,
+		customerId,
+		active: [pro.id],
+	});
 
-	await expectProductActive({ customer, productId: pro.id });
+	const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
 
 	expectCustomerFeatureCorrect({
 		customer,

@@ -93,10 +93,22 @@ const { runTrackWithRollout } = await import(
 const { ParsedCheckParamsSchema } = await import("@autumn/shared");
 
 const originalTrackQueueUrl = process.env.TRACK_SQS_QUEUE_URL;
-process.env.TRACK_SQS_QUEUE_URL = "https://sqs.test/queue";
+const originalAsyncQueueUrl = process.env.TRACK_ASYNC_SQS_QUEUE_URL;
+// Canonical shared track queue; unset the deprecated URL so resolution is deterministic.
+process.env.TRACK_ASYNC_SQS_QUEUE_URL = "https://sqs.test/queue";
+delete process.env.TRACK_SQS_QUEUE_URL;
 
 afterAll(() => {
-	process.env.TRACK_SQS_QUEUE_URL = originalTrackQueueUrl;
+	if (originalTrackQueueUrl === undefined) {
+		delete process.env.TRACK_SQS_QUEUE_URL;
+	} else {
+		process.env.TRACK_SQS_QUEUE_URL = originalTrackQueueUrl;
+	}
+	if (originalAsyncQueueUrl === undefined) {
+		delete process.env.TRACK_ASYNC_SQS_QUEUE_URL;
+	} else {
+		process.env.TRACK_ASYNC_SQS_QUEUE_URL = originalAsyncQueueUrl;
+	}
 	mock.module(
 		"@/external/redis/initUtils/redisV2Availability.js",
 		() => realRedisV2Availability,

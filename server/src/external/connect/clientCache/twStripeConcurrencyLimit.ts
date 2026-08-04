@@ -52,7 +52,9 @@ const MAX_REQUESTS_PER_SECOND = readBudget({
 	envVar: "TW_STRIPE_MAX_RPS",
 	fallback: 6,
 });
-const MAX_RETRIES = 3;
+/** 5 gives ~7s of jittered retrying — enough to ride out a burst from the other
+ * processes on the key, still far under any test's budget. */
+const MAX_RETRIES = 5;
 const BASE_BACKOFF_MS = 250;
 
 const PATCHED = new WeakSet<object>();
@@ -195,7 +197,11 @@ export const applyTwStripeConcurrencyLimit = ({
 			if (!shouldRetry) return response;
 
 			// Stripe sends no Retry-After here, so back off on our own schedule.
-			await sleep(BASE_BACKOFF_MS * 2 ** attempt);
+			// Equal jitter: one key is shared by ~8 processes (2 workers × server,
+			// queue workers, cron, test), which without it retry in lockstep and
+			// collide again on the same second.
+			const backoffMs = BASE_BACKOFF_MS * 2 ** attempt;
+			await sleep(backoffMs / 2 + Math.random() * (backoffMs / 2));
 		}
 	};
 

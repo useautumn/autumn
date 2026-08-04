@@ -440,7 +440,13 @@ test.concurrent(`${chalk.yellowBright("legacy-upgrade-usage 3: arrear prorated s
 		{ id: "ent-3", name: "Entity 3", feature_id: TestFeature.Users },
 	]);
 
-	await new Promise((r) => setTimeout(r, 3000));
+	// The prorated seat invoice for the new entity is written asynchronously.
+	await expectCustomerInvoiceCorrect({
+		autumn: autumnV1,
+		customerId,
+		count: 2,
+		latestTotal: 10,
+	});
 
 	// Verify state before Premium upgrade - now 3 users
 	const customerBefore =
@@ -452,12 +458,6 @@ test.concurrent(`${chalk.yellowBright("legacy-upgrade-usage 3: arrear prorated s
 		includedUsage: 0,
 		usage: 3,
 		balance: -3, // 0 included - 3 usage = -3
-	});
-
-	await expectCustomerInvoiceCorrect({
-		customer: customerBefore,
-		count: 2,
-		latestTotal: 10,
 	});
 
 	// Upgrade to Premium

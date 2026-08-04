@@ -6,14 +6,18 @@ import type {
 	ApiEntityV2,
 } from "@autumn/shared";
 import { ApiVersion, formatMs } from "@autumn/shared";
+import {
+	type PollableExpectParams,
+	pollableCustomerExpect,
+} from "@tests/utils/pollableCustomerExpect.js";
 import { AutumnInt } from "@/external/autumn/autumnCli";
 import {
-	expectSubscriptionCorrect,
 	expectSubscriptionActive,
 	expectSubscriptionCanceling,
-	expectSubscriptionScheduled,
-	expectSubscriptionPastDue,
+	expectSubscriptionCorrect,
 	expectSubscriptionNotPresent,
+	expectSubscriptionPastDue,
+	expectSubscriptionScheduled,
 	expectSubscriptions,
 } from "./expect-customer-products/expectSubscriptionState";
 
@@ -47,21 +51,18 @@ const toV5State = (
  * Verify a customer/entity has the expected product in the expected state.
  * Routes to V5 subscription checks when the customer has `subscriptions`.
  */
-export const expectCustomerProductCorrect = async ({
-	customerId,
-	customer: providedCustomer,
-	productId,
-	state,
-}: {
-	customerId?: string;
-	customer?: CustomerOrEntity;
+type ProductExpectParams = PollableExpectParams<CustomerOrEntity> & {
 	productId: string;
 	state: ProductState;
-}) => {
-	const customer = providedCustomer
-		? providedCustomer
-		: await defaultAutumn.customers.get(customerId!);
+};
 
+const assertCustomerProductCorrect = ({
+	customer,
+	productId,
+	state,
+}: ProductExpectParams & {
+	customer: CustomerOrEntity;
+}): void | Promise<void> => {
 	// Route to V5 functions
 	if (isV5Customer(customer)) {
 		return expectSubscriptionCorrect({
@@ -113,6 +114,13 @@ export const expectCustomerProductCorrect = async ({
 	}
 };
 
+/** Pass `customerId` to poll until the product reaches the expected state. */
+export const expectCustomerProductCorrect = pollableCustomerExpect({
+	fetchCustomer: ({ customerId, autumn }: ProductExpectParams) =>
+		(autumn ?? defaultAutumn).customers.get<CustomerOrEntity>(customerId!),
+	assert: assertCustomerProductCorrect,
+});
+
 /** Shorthand for checking product is active. Prefer {@link expectCustomerProducts} for batch checks. */
 export const expectProductActive = async (params: {
 	customerId?: string;
@@ -150,23 +158,20 @@ export const expectProductCanceling = async (params: {
  * Shorthand for checking product is scheduled. Prefer {@link expectCustomerProducts} for batch checks.
  * Optionally verify the `started_at` timestamp is within a tolerance of the expected value.
  */
-export const expectProductScheduled = async ({
-	customerId,
-	customer: providedCustomer,
-	productId,
-	startsAt,
-	toleranceMs = 2 * 60 * 1000,
-}: {
-	customerId?: string;
-	customer?: CustomerOrEntity;
+type ScheduledExpectParams = PollableExpectParams<CustomerOrEntity> & {
 	productId: string;
 	startsAt?: number;
 	toleranceMs?: number;
-}) => {
-	const customer = providedCustomer
-		? providedCustomer
-		: await defaultAutumn.customers.get(customerId!);
+};
 
+const assertProductScheduled = ({
+	customer,
+	productId,
+	startsAt,
+	toleranceMs = 2 * 60 * 1000,
+}: ScheduledExpectParams & {
+	customer: CustomerOrEntity;
+}): void | Promise<void> => {
 	// Route to V5
 	if (isV5Customer(customer)) {
 		return expectSubscriptionScheduled({
@@ -177,11 +182,7 @@ export const expectProductScheduled = async ({
 		});
 	}
 
-	await expectCustomerProductCorrect({
-		customer,
-		productId,
-		state: "scheduled",
-	});
+	assertCustomerProductCorrect({ customer, productId, state: "scheduled" });
 
 	if (startsAt !== undefined) {
 		const products = customer.products ?? [];
@@ -200,6 +201,13 @@ export const expectProductScheduled = async ({
 		).toBe(true);
 	}
 };
+
+/** Pass `customerId` to poll until the product is scheduled. */
+export const expectProductScheduled = pollableCustomerExpect({
+	fetchCustomer: ({ customerId, autumn }: ScheduledExpectParams) =>
+		(autumn ?? defaultAutumn).customers.get<CustomerOrEntity>(customerId!),
+	assert: assertProductScheduled,
+});
 
 /** Shorthand for checking product is past_due. Prefer {@link expectCustomerProducts} for batch checks. */
 export const expectProductPastDue = async (params: {
@@ -235,27 +243,24 @@ export const expectProductNotPresent = async (params: {
  * Verify multiple product states in a single call.
  * Each array contains product IDs that should be in that state.
  */
-export const expectCustomerProducts = async ({
-	customerId,
-	customer: providedCustomer,
-	active = [],
-	canceling = [],
-	scheduled = [],
-	pastDue = [],
-	notPresent = [],
-}: {
-	customerId?: string;
-	customer?: CustomerOrEntity;
+type ProductsExpectParams = PollableExpectParams<CustomerOrEntity> & {
 	active?: string[];
 	canceling?: string[];
 	scheduled?: string[];
 	pastDue?: string[];
 	notPresent?: string[];
-}) => {
-	const customer = providedCustomer
-		? providedCustomer
-		: await defaultAutumn.customers.get(customerId!);
+};
 
+const assertCustomerProducts = ({
+	customer,
+	active = [],
+	canceling = [],
+	scheduled = [],
+	pastDue = [],
+	notPresent = [],
+}: ProductsExpectParams & {
+	customer: CustomerOrEntity;
+}): void | Promise<void> => {
 	// Route to V5
 	if (isV5Customer(customer)) {
 		return expectSubscriptions({
@@ -269,42 +274,29 @@ export const expectCustomerProducts = async ({
 	}
 
 	for (const productId of active) {
-		await expectCustomerProductCorrect({
-			customer,
-			productId,
-			state: "active",
-		});
+		assertCustomerProductCorrect({ customer, productId, state: "active" });
 	}
 
 	for (const productId of canceling) {
-		await expectCustomerProductCorrect({
-			customer,
-			productId,
-			state: "canceled",
-		});
+		assertCustomerProductCorrect({ customer, productId, state: "canceled" });
 	}
 
 	for (const productId of scheduled) {
-		await expectCustomerProductCorrect({
-			customer,
-			productId,
-			state: "scheduled",
-		});
+		assertCustomerProductCorrect({ customer, productId, state: "scheduled" });
 	}
 
 	for (const productId of pastDue) {
-		await expectCustomerProductCorrect({
-			customer,
-			productId,
-			state: "past_due",
-		});
+		assertCustomerProductCorrect({ customer, productId, state: "past_due" });
 	}
 
 	for (const productId of notPresent) {
-		await expectCustomerProductCorrect({
-			customer,
-			productId,
-			state: "undefined",
-		});
+		assertCustomerProductCorrect({ customer, productId, state: "undefined" });
 	}
 };
+
+/** Pass `customerId` to poll until every listed product settles. */
+export const expectCustomerProducts = pollableCustomerExpect({
+	fetchCustomer: ({ customerId, autumn }: ProductsExpectParams) =>
+		(autumn ?? defaultAutumn).customers.get<CustomerOrEntity>(customerId!),
+	assert: assertCustomerProducts,
+});
