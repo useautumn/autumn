@@ -9,13 +9,13 @@ import { NotFoundError, runs } from "@trigger.dev/sdk/v3";
 import { isBefore, subMilliseconds } from "date-fns";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 import { getCustomerExportsS3Config } from "@/external/aws/s3/customerExportsS3Config.js";
-import { headS3Object } from "@/external/aws/s3/s3ObjectUtils.js";
 import type { Logger } from "@/external/logtail/logtailUtils.js";
 import { CUSTOMER_EXPORT_MAX_DURATION_SECONDS } from "@/trigger/exports/customerExportQueue.js";
 import {
 	type CreateCustomerExportResult,
 	CustomerExportService,
 } from "./CustomerExportService.js";
+import { findPublishedExportObject } from "./findPublishedExportObject.js";
 
 // Runless inline exports are considered abandoned after the configured task
 // duration plus a one-hour margin.
@@ -87,40 +87,30 @@ const resolveAbandonedExport = async ({
 	activeExport: DbCustomerExport;
 }): Promise<boolean> => {
 	const { bucket, region } = getCustomerExportsS3Config();
+	const published = await findPublishedExportObject({
+		logger,
+		customerExport: activeExport,
+		bucket,
+		region,
+	});
 
-	if (activeExport.s3_key) {
-		let head: Awaited<ReturnType<typeof headS3Object>>;
-		try {
-			head = await headS3Object({ bucket, region, key: activeExport.s3_key });
-		} catch (error) {
-			// Unknown S3 state: failing the row now could discard a finished file.
+	// Unknown S3 state: failing the row now could discard a finished file.
+	if (published.status === "unknown") return false;
+
+	if (published.status === "published") {
+		const promoted = await CustomerExportService.markCompleted({
+			db,
+			id: activeExport.id,
+			rowCount: null,
+			byteCount: published.byteCount,
+		});
+		if (promoted) {
 			logger.warn(
-				"customer-export: could not check export object; skipping reclaim",
-				{
-					data: {
-						exportId: activeExport.id,
-						error: error instanceof Error ? error.message : String(error),
-					},
-				},
+				"customer-export: promoted abandoned export with a published file",
+				{ data: { exportId: activeExport.id } },
 			);
-			return false;
 		}
-
-		if (head.exists) {
-			const promoted = await CustomerExportService.markCompleted({
-				db,
-				id: activeExport.id,
-				rowCount: null,
-				byteCount: head.contentLength,
-			});
-			if (promoted) {
-				logger.warn(
-					"customer-export: promoted abandoned export with a published file",
-					{ data: { exportId: activeExport.id } },
-				);
-			}
-			return promoted;
-		}
+		return promoted;
 	}
 
 	return await CustomerExportService.failIfStillActive({

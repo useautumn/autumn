@@ -8,12 +8,12 @@ import {
 	getCustomerExportKey,
 	getCustomerExportsS3Config,
 } from "@/external/aws/s3/customerExportsS3Config.js";
-import { headS3Object } from "@/external/aws/s3/s3ObjectUtils.js";
 import type { Logger } from "@/external/logtail/logtailUtils.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import type { RunCustomerExportPayload } from "@/trigger/exports/customerExportTaskPayload.js";
 import { retryAsync } from "@/utils/retryAsync.js";
 import { CustomerExportService } from "../CustomerExportService.js";
+import { findPublishedExportObject } from "../findPublishedExportObject.js";
 import {
 	countCustomerExportRows,
 	getCustomerExportUpperBound,
@@ -83,21 +83,20 @@ const reconcileUploadedExport = async ({
 	bucket: string;
 	region: string;
 }): Promise<boolean> => {
-	if (!customerExport.s3_key) return false;
-
-	const head = await headS3Object({
+	const published = await findPublishedExportObject({
+		logger,
+		customerExport,
 		bucket,
 		region,
-		key: customerExport.s3_key,
 	});
-	if (!head.exists) return false;
+	if (published.status !== "published") return false;
 
 	await markCompletedWithRetry({
 		ctx,
 		logger,
 		exportId: customerExport.id,
 		rowCount: null,
-		byteCount: head.contentLength,
+		byteCount: published.byteCount,
 	});
 	logger.warn(
 		"customer-export: reconciled export published before its status write",
