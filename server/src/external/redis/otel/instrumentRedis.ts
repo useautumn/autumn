@@ -76,6 +76,11 @@ const finalizeSpan = ({
 		);
 
 		if (durationMs > thresholds.severeMs) {
+			// Severity, not `db.redis.slow`, gates the export-sampling bypass.
+			// At a 15ms slow bar nearly every command qualified, so ~all redis
+			// spans bypassed sampling and were exported; the span pipeline
+			// leaks native memory in proportion to spans exported.
+			span.setAttribute("db.redis.severe", true);
 			emitRedisSlowLog({
 				operation,
 				durationMs,

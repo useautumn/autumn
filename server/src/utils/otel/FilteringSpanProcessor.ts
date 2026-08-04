@@ -27,27 +27,35 @@ const hashStringToUnitInterval = (value: string): number => {
 	return (hash >>> 0) / 0xffffffff;
 };
 
-const isSuccessfulNonSlowRedisSpan = (span: ReadableSpan) =>
+const isSuccessfulNonSevereRedisSpan = (span: ReadableSpan) =>
 	span.name.startsWith("redis.") &&
 	span.status.code === SpanStatusCode.OK &&
-	span.attributes["db.redis.slow"] !== true;
+	span.attributes["db.redis.severe"] !== true;
 
-const shouldDropSuccessfulRedisSpan = (span: ReadableSpan): boolean => {
-	if (!isSuccessfulNonSlowRedisSpan(span)) return false;
-	if (normalizedRedisSuccessSampleRate >= 1) return false;
-	if (normalizedRedisSuccessSampleRate <= 0) return true;
+const shouldDropSuccessfulRedisSpan = (
+	span: ReadableSpan,
+	sampleRate: number = normalizedRedisSuccessSampleRate,
+): boolean => {
+	if (!isSuccessfulNonSevereRedisSpan(span)) return false;
+	if (sampleRate >= 1) return false;
+	if (sampleRate <= 0) return true;
 
 	const spanContext = span.spanContext();
 	const sampleKey = `${spanContext.traceId}:${spanContext.spanId}:${span.name}`;
 	return (
-		hashStringToUnitInterval(sampleKey) >= normalizedRedisSuccessSampleRate
+		hashStringToUnitInterval(sampleKey) >= sampleRate
 	);
 };
 
 export class FilteringSpanProcessor implements SpanProcessor {
 	private readonly spanIngestCompactor = new SpanIngestCompactor();
 
-	constructor(private readonly delegate: SpanProcessor) {}
+	constructor(
+		private readonly delegate: SpanProcessor,
+		// Overridable so tests pin the rate instead of depending on the ambient
+		// OTEL_REDIS_SUCCESS_SAMPLE_RATE and on where a span's hash happens to land.
+		private readonly sampleRate: number = normalizedRedisSuccessSampleRate,
+	) {}
 
 	onStart(span: Span, parentContext: Context): void {
 		this.delegate.onStart(span, parentContext);
@@ -58,7 +66,7 @@ export class FilteringSpanProcessor implements SpanProcessor {
 
 		try {
 			recordSpanDurationMetric(span);
-			if (shouldDropSuccessfulRedisSpan(span)) return;
+			if (shouldDropSuccessfulRedisSpan(span, this.sampleRate)) return;
 			spanToExport = this.spanIngestCompactor.compact({ span });
 		} catch (error) {
 			try {
