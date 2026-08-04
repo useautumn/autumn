@@ -12,7 +12,6 @@ import { getCustomerExportProgress } from "../customerExportProgress.js";
 import { createCustomerExportRealtimeToken } from "../customerExportRealtimeToken.js";
 import { customerExportToResponse } from "../customerExportToResponse.js";
 
-/** The active-export constraint limits each response to one progress read and token mint. */
 const toExportResponse = async ({
 	customerExport,
 	logger,

@@ -200,7 +200,7 @@ const main = async () => {
 		}
 	} else {
 		console.log(
-			"Skipping customer exports bucket setup (S3_CUSTOMER_EXPORTS_BUCKET/REGION not set).",
+			"Skipping customer exports bucket setup (S3_CUSTOMER_EXPORTS_BUCKET not set).",
 		);
 	}
 

@@ -10,7 +10,6 @@ export type CustomerExportDestination = {
 	key: string;
 };
 
-/** Answers "did anyone try to configure this?" — getCustomerExportsS3Config throws on partial config. */
 export const isCustomerExportsS3Configured = () =>
 	Boolean(process.env.S3_CUSTOMER_EXPORTS_BUCKET);
 

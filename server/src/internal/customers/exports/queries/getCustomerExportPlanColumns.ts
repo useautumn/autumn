@@ -33,10 +33,6 @@ export const emptyPlanColumns = (): CustomerExportPlanColumns => ({
 const sortedUnique = (values: string[]) =>
 	deduplicateArray(values).sort((a, b) => a.localeCompare(b));
 
-/**
- * Recurring and free plans are subscriptions; one-off plans are purchases.
- * License rows are already scoped to live customer-level parents by the query.
- */
 export const bucketCustomerExportPlanRows = ({
 	rows,
 	oneOffInternalProductIds,
