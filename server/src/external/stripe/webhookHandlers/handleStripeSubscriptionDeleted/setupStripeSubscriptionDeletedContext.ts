@@ -5,6 +5,7 @@ import {
 	isCustomerProductOnStripeSubscription,
 } from "@autumn/shared";
 import type Stripe from "stripe";
+import { getStripeSubscriptionLock } from "@/external/redis/actions/stripeSubscriptionLock/stripeSubscriptionLock.js";
 import {
 	type ExpandedStripeCustomer,
 	getExpandedStripeCustomer,
@@ -15,7 +16,6 @@ import {
 	getExpandedStripeSubscription,
 } from "@/external/stripe/subscriptions/operations/getExpandedStripeSubscription";
 import { stripeSubscriptionToNowMs } from "@/external/stripe/subscriptions/utils/convertStripeSubscription";
-import { getStripeSubscriptionLock } from "@/external/stripe/subscriptions/utils/lockStripeSubscriptionUtils";
 import type { StripeWebhookContext } from "../../webhookMiddlewares/stripeWebhookContext";
 
 export interface StripeSubscriptionDeletedContext {

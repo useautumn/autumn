@@ -11,7 +11,7 @@ const calls = {
 };
 const state = { lockContention: true, preflightBlocked: false };
 
-mock.module("@/external/redis/redisUtils.js", () => ({
+mock.module("@/external/redis/utils/lockUtils/withLock.js", () => ({
 	withLock: async ({ fn }: { fn: () => Promise<void> }) => {
 		if (state.lockContention) throw { code: ErrCode.LockAlreadyExists };
 		return fn();

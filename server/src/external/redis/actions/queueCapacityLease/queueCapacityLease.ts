@@ -1,41 +1,8 @@
 import type { Redis } from "ioredis";
 import { getMiscRedis } from "@/external/redis/initRedis.js";
 import { runRedisOp } from "@/external/redis/utils/runRedisOp.js";
+import { getQueueConcurrencyPolicy } from "@/queue/concurrency/getQueueConcurrencyPolicy.js";
 import { generateId } from "@/utils/genUtils.js";
-import { getQueueConcurrencyPolicy } from "./getQueueConcurrencyPolicy.js";
-
-const ACQUIRE_PERMITS_SCRIPT = `
-local now = tonumber(ARGV[1])
-local expiresAt = tonumber(ARGV[2])
-local concurrencyLimit = tonumber(ARGV[3])
-local requested = tonumber(ARGV[4])
-
-redis.call("ZREMRANGEBYSCORE", KEYS[1], "-inf", now)
-
-local active = redis.call("ZCARD", KEYS[1])
-local available = math.max(0, concurrencyLimit - active)
-local acquired = math.min(requested, available)
-
-for index = 1, acquired do
-	redis.call("ZADD", KEYS[1], expiresAt, ARGV[4 + index])
-end
-
-if acquired > 0 then
-	redis.call("PEXPIRE", KEYS[1], math.max(1, expiresAt - now) * 2)
-end
-
-return acquired
-`;
-
-const RELEASE_PERMIT_SCRIPT = `
-local removed = redis.call("ZREM", KEYS[1], ARGV[1])
-
-if redis.call("ZCARD", KEYS[1]) == 0 then
-	redis.call("DEL", KEYS[1])
-end
-
-return removed
-`;
 
 type QueueConcurrencyPermit = {
 	release: () => Promise<void>;
@@ -79,8 +46,7 @@ const createPermit = ({
 				await runRedisOp({
 					source: "queue-concurrency:release",
 					redisInstance: redis,
-					operation: () =>
-						redis.eval(RELEASE_PERMIT_SCRIPT, 1, redisKey, token),
+					operation: () => redis.releaseQueuePermit(redisKey, token),
 				});
 			} catch {
 				// The permit lease expires automatically if Redis cannot release it.
@@ -146,9 +112,7 @@ export const reserveQueueCapacity = async ({
 			source: "queue-concurrency:acquire",
 			redisInstance: redis,
 			operation: () =>
-				redis.eval(
-					ACQUIRE_PERMITS_SCRIPT,
-					1,
+				redis.acquireQueuePermits(
 					policy.redisKey,
 					acquiredAt,
 					acquiredAt + policy.leaseMs,

@@ -8,7 +8,7 @@ import {
 	CusProductStatus,
 } from "@autumn/shared";
 import chalk from "chalk";
-import { setStripeSubscriptionLock } from "@/external/stripe/subscriptions/utils/lockStripeSubscriptionUtils";
+import { setStripeSubscriptionLock } from "@/external/redis/actions/stripeSubscriptionLock/stripeSubscriptionLock.js";
 import type { AutumnContext } from "../../../../honoUtils/HonoEnv.js";
 import { handleCreateCheckout } from "../../add-product/handleCreateCheckout.js";
 import { handleCreateInvoiceCheckout } from "../../add-product/handleCreateInvoiceCheckout.js";

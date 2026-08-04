@@ -1,12 +1,12 @@
 import type { BillingContext, BillingPlan } from "@autumn/shared";
 import { ErrCode, RecaseError } from "@autumn/shared";
-import type { AutumnContext } from "@/honoUtils/HonoEnv";
-import type { CreateAutumnCheckoutResult } from "@/internal/billing/v2/common/createAutumnCheckout";
-import { hashJson } from "@/utils/hash/hashJson";
 import {
 	type CheckoutSessionLockData,
 	checkoutSessionLock,
-} from "./checkoutSessionLock";
+} from "@/external/redis/actions/checkoutSessionLock/checkoutSessionLock.js";
+import type { AutumnContext } from "@/honoUtils/HonoEnv";
+import type { CreateAutumnCheckoutResult } from "@/internal/billing/v2/common/createAutumnCheckout";
+import { hashJson } from "@/utils/hash/hashJson";
 
 /** Same params → reuse the pending session. Different params → expire it via Stripe
  * and proceed, or 423 when the session already won the race (paid/completing). */
