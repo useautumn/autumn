@@ -42,16 +42,22 @@ export const pollableCustomerExpect =
 		 * awaited by callers that already await this helper. */
 		assert: (params: P & { customer: C }) => void | Promise<void>;
 	}) =>
-	(params: P): void | Promise<void> => {
+	(params: P): C | Promise<C> => {
 		if (params.customer) {
-			return assert(params as P & { customer: C });
+			// Sync assertions must stay sync — un-awaited call sites rely on it.
+			const asserted = assert(params as P & { customer: C });
+			return asserted instanceof Promise
+				? asserted.then(() => params.customer as C)
+				: (params.customer as C);
 		}
 		if (!params.customerId) {
 			throw new Error("Pass either `customer` or `customerId`");
 		}
+		// Returns the settled customer so a caller can assert further on the same
+		// state instead of re-fetching (and racing) for each extra check.
 		return pollUntilAsserted({
 			fetch: () => fetchCustomer(params),
 			assert: (customer) => assert({ ...params, customer }),
 			timeoutMs: params.settleTimeoutMs ?? DEFAULT_SETTLE_TIMEOUT_MS,
-		}).then(() => undefined);
+		});
 	};

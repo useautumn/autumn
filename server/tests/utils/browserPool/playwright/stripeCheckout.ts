@@ -212,7 +212,12 @@ export const stripeCheckout = async ({
 	await submitBtn.evaluate((el) => (el as HTMLElement).click());
 	console.log("[stripeCheckout] Submit clicked");
 
-	// Wait for checkout processing + webhook delivery.
-	await page.waitForTimeout(20000);
+	// Stripe redirects off checkout.stripe.com once the session completes, so
+	// wait for THAT rather than a fixed sleep: a slow/contended box would other-
+	// wise carry on mid-payment and fail later as a confusing "product not
+	// found". Throwing here names the real failure.
+	await page.waitForURL((url) => !url.host.includes("checkout.stripe.com"), {
+		timeout: 120_000,
+	});
 	console.log("[stripeCheckout] Checkout complete");
 };
