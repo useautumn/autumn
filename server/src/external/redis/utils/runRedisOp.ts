@@ -1,6 +1,7 @@
 import type { Redis } from "ioredis";
 import { logger } from "@/external/logtail/logtailUtils.js";
 import { redis } from "@/external/redis/initRedis.js";
+import { getReadyRedisClient } from "../initUtils/redisClientPair.js";
 import { RedisUnavailableError } from "./errors.js";
 
 const REDIS_WARNING_INTERVAL_MS = 30_000;
@@ -70,25 +71,54 @@ export const runRedisOp = async <T>({
 	source,
 	redisInstance,
 	queueIfNotReady = false,
+	idempotent = false,
 }: {
-	operation: () => Promise<T>;
+	operation: (activeRedis: Redis) => Promise<T>;
 	source: string;
 	redisInstance?: Redis;
 	queueIfNotReady?: boolean;
+	idempotent?: boolean;
 }): Promise<T> => {
 	const targetRedis = redisInstance ?? redis;
+	const readyRedis = getReadyRedisClient({ redisInstance: targetRedis });
 
-	if (!queueIfNotReady && targetRedis.status !== "ready") {
+	if (!queueIfNotReady && !readyRedis) {
 		const reason: UnavailableReason = "not_ready";
 		warnRedisUnavailable({ source, reason });
 		throw new RedisUnavailableError({ source, reason });
 	}
+	const activeRedis = readyRedis ?? targetRedis;
 
 	try {
-		const value = await operation();
+		const value = await operation(activeRedis);
 		return value;
 	} catch (error) {
-		const classified = classifyErrorReason(targetRedis, error);
+		const classified = classifyErrorReason(activeRedis, error);
+		if (idempotent && classified) {
+			const retryRedis = getReadyRedisClient({
+				redisInstance: targetRedis,
+				exclude: activeRedis,
+			});
+			if (retryRedis) {
+				try {
+					return await operation(retryRedis);
+				} catch (retryError) {
+					const retryReason =
+						classifyErrorReason(retryRedis, retryError) ?? "other";
+					warnRedisUnavailable({
+						source,
+						reason: retryReason,
+						error: retryError,
+					});
+					throw new RedisUnavailableError({
+						source,
+						reason: retryReason,
+						cause: retryError,
+					});
+				}
+			}
+		}
+
 		const reason: UnavailableReason = classified ?? "other";
 		warnRedisUnavailable({ source, reason, error });
 		throw new RedisUnavailableError({ source, reason, cause: error });
@@ -115,7 +145,7 @@ export const tryRedisOp = async <T>({
 }): Promise<T | undefined> => {
 	try {
 		return await runRedisOp({
-			operation,
+			operation: () => operation(),
 			source,
 			redisInstance,
 			queueIfNotReady,

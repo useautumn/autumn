@@ -4,6 +4,7 @@ export {
 	createDisabledRedis,
 	createRedisClient,
 	createRedisConnection,
+	createRedisConnectionPair,
 } from "./initUtils/createRedisClient.js";
 export {
 	getRedisAvailability,

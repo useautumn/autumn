@@ -19,10 +19,11 @@ export const getOrInitFullSubjectViewEpoch = async ({
 
 	// GETEX reads the epoch and refreshes its TTL in one round trip.
 	const currentEpoch = await runRedisOp({
-		operation: () =>
-			redisV2.getex(epochKey, "EX", FULL_SUBJECT_EPOCH_TTL_SECONDS),
+		operation: (activeRedis) =>
+			activeRedis.getex(epochKey, "EX", FULL_SUBJECT_EPOCH_TTL_SECONDS),
 		source: "getOrInitFullSubjectViewEpoch:getex",
 		redisInstance: redisV2,
+		idempotent: true,
 	});
 	if (currentEpoch !== null && currentEpoch !== undefined) {
 		const parsedEpoch = Number.parseInt(currentEpoch, 10);
@@ -30,8 +31,8 @@ export const getOrInitFullSubjectViewEpoch = async ({
 	}
 
 	await runRedisOp({
-		operation: () =>
-			redisV2.set(epochKey, "0", "EX", FULL_SUBJECT_EPOCH_TTL_SECONDS),
+		operation: (activeRedis) =>
+			activeRedis.set(epochKey, "0", "EX", FULL_SUBJECT_EPOCH_TTL_SECONDS),
 		source: "getOrInitFullSubjectViewEpoch:init",
 		redisInstance: redisV2,
 	});

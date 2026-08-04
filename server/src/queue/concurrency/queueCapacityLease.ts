@@ -79,8 +79,8 @@ const createPermit = ({
 				await runRedisOp({
 					source: "queue-concurrency:release",
 					redisInstance: redis,
-					operation: () =>
-						redis.eval(RELEASE_PERMIT_SCRIPT, 1, redisKey, token),
+					operation: (activeRedis) =>
+						activeRedis.eval(RELEASE_PERMIT_SCRIPT, 1, redisKey, token),
 				});
 			} catch {
 				// The permit lease expires automatically if Redis cannot release it.
@@ -145,8 +145,8 @@ export const reserveQueueCapacity = async ({
 		const result = await runRedisOp({
 			source: "queue-concurrency:acquire",
 			redisInstance: redis,
-			operation: () =>
-				redis.eval(
+			operation: (activeRedis) =>
+				activeRedis.eval(
 					ACQUIRE_PERMITS_SCRIPT,
 					1,
 					policy.redisKey,

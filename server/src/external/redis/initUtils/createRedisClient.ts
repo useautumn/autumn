@@ -1,5 +1,6 @@
 import { Redis } from "ioredis";
 import { instrumentRedis } from "../otel/instrumentRedis.js";
+import { createRedisClientPair } from "./redisClientPair.js";
 import { redisDnsLookup } from "./redisDnsLookup.js";
 import { registerRedisCommands } from "./registerRedisCommands.js";
 
@@ -65,6 +66,18 @@ export const createRedisClient = ({
 };
 
 export const createRedisConnection = createRedisClient;
+
+export const createRedisConnectionPair = (
+	options: Parameters<typeof createRedisClient>[0],
+): Redis =>
+	createRedisClientPair({
+		createClient: ({ role }) =>
+			createRedisClient({
+				...options,
+				region:
+					role === "primary" ? options.region : `${options.region}:standby`,
+			}),
+	});
 
 export const createDisabledRedis = (): Redis =>
 	new Proxy(
