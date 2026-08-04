@@ -86,7 +86,7 @@ export function SelectRewardType({ reward, setReward }: SelectRewardTypeProps) {
 									</TooltipTrigger>
 									<TooltipContent>
 										Free products are deprecated. We recommend using feature
-										grants instead.
+										grants instead
 									</TooltipContent>
 								</Tooltip>
 							</div>
