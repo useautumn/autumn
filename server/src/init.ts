@@ -13,7 +13,6 @@ import {
 import { startPgPoolMonitor, stopPgPoolMonitor } from "./db/pgPoolMonitor.js";
 import { getRedactedDatabaseUrls } from "./db/redactDatabaseUrl.js";
 import { logger } from "./external/logtail/logtailUtils.js";
-import { globalAsyncTrackSqsBatcher } from "./internal/balances/track/AsyncTrackSqsBatcher.js";
 import {
 	startAllEdgeConfigPolling,
 	stopAllEdgeConfigPolling,
@@ -53,7 +52,7 @@ import {
 import { preWarmOrgRedisConnections } from "./external/redis/orgRedisPool.js";
 import { createHonoApp } from "./initHono.js";
 import { otelSdk } from "./instrumentation.js";
-import { shutdownPrimarySqsSendBatcher } from "./queue/queueUtils.js";
+import { shutdownSqsSendBatchers } from "./queue/queueUtils.js";
 import { checkEnvVars } from "./utils/initUtils.js";
 import {
 	startMemorySpikeProbe,
@@ -175,10 +174,7 @@ async function gracefulShutdown() {
 	shuttingDown = true;
 	console.log("Shutting down worker, flushing telemetry and closing DB...");
 	try {
-		await Promise.all([
-			globalAsyncTrackSqsBatcher.shutdown(),
-			shutdownPrimarySqsSendBatcher(),
-		]);
+		await shutdownSqsSendBatchers();
 
 		// Flush any buffered OTel spans before shutting down
 		if (otelSdk) {

@@ -1,8 +1,8 @@
-import { getPrimaryRedis } from "../../external/redis/initRedis.js";
+import { getMiscRedis } from "../../external/redis/initRedis.js";
 
 export class CacheManager {
 	public static async getJson<T>(key: string): Promise<T | null> {
-		const redis = getPrimaryRedis();
+		const redis = getMiscRedis();
 		if (redis.status !== "ready") {
 			console.warn("Cache client is not in ready state");
 			return null;
@@ -22,7 +22,7 @@ export class CacheManager {
 		value: unknown,
 		ttl: number | string = 3600,
 	) {
-		const redis = getPrimaryRedis();
+		const redis = getMiscRedis();
 		if (redis.status !== "ready") {
 			console.warn("Cache client is not in ready state");
 			return;
@@ -36,7 +36,7 @@ export class CacheManager {
 	}
 
 	public static async del(key: string) {
-		const redis = getPrimaryRedis();
+		const redis = getMiscRedis();
 		if (redis.status !== "ready") {
 			console.warn("Cache client is not in ready state");
 			return;
@@ -52,7 +52,7 @@ export class CacheManager {
 		action: string;
 		value: string;
 	}) {
-		const redis = getPrimaryRedis();
+		const redis = getMiscRedis();
 		if (redis.status !== "ready") {
 			console.warn("Cache client is not in ready state");
 			return;
@@ -62,7 +62,7 @@ export class CacheManager {
 	}
 
 	static async disconnect() {
-		const redis = getPrimaryRedis();
+		const redis = getMiscRedis();
 		if (redis.status !== "ready") {
 			console.warn("Cache client is not in ready state");
 			return;

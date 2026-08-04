@@ -1,6 +1,6 @@
 import { ErrCode, InternalError, RecaseError } from "@autumn/shared";
 import type { Redis } from "ioredis";
-import { currentRegion, redis } from "@/external/redis/initRedis.js";
+import { currentRegion, miscRedis } from "@/external/redis/initRedis.js";
 import type { MutationLogItem } from "@/internal/balances/utils/types/mutationLogItem.js";
 import { tryRedisWrite } from "@/utils/cacheUtils/cacheUtils.js";
 
@@ -28,7 +28,7 @@ export const saveLockReceipt = async ({
 	overrideLockValue?: number;
 	redisInstance?: Redis;
 }) => {
-	const targetRedis = redisInstance ?? redis;
+	const targetRedis = redisInstance ?? miscRedis;
 
 	const existing = await targetRedis.call("EXISTS", lock.redis_receipt_key);
 	if (existing === 1) {

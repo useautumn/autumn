@@ -3,10 +3,11 @@
  *
  * New behavior:
  *   - overdue lazy pools reset through customer reads to pooled_balances.granted;
- *   - subscription pools reset only from their matching subscription invoice;
+ *   - subscription pools also reset lazily once overdue; their subscription
+ *     invoice remains a redundant boundary-aligned reset (CAS-guarded);
  *   - lifetime pools and pooled source entitlements never reset lazily or by cron;
  *   - rollover max_percentage is based on the complete pool grant;
- *   - the cron loader selects and hydrates only overdue lazy synthetic pools.
+ *   - the cron loader selects and hydrates overdue non-lifetime synthetic pools.
  *
  * Side effects:
  *   - reset writes the synthetic customer entitlement balance/next_reset_at;
@@ -259,7 +260,7 @@ test.concurrent(
 );
 
 test.concurrent(
-	`${chalk.yellowBright("pooled reset: subscription pool waits for and resets on its invoice")}`,
+	`${chalk.yellowBright("pooled reset: subscription pool resets on its invoice when due at the boundary")}`,
 	async () => {
 		const customerId = "pooled-reset-subscription";
 		const grant = 500;
@@ -286,12 +287,9 @@ test.concurrent(
 				}),
 			],
 		});
-		await expirePooledBalanceForReset({
-			ctx,
-			customerId,
-			resetMode: PooledBalanceResetMode.Subscription,
-		});
 
+		// Not yet due (real time hasn't moved), so a read must not reset —
+		// the boundary reset below is proven to come from invoice.created.
 		const beforeInvoice = await autumnV2_2.customers.get<ApiCustomerV5>(
 			customerId,
 			{ skip_cache: "true" },
@@ -383,10 +381,12 @@ test.concurrent(
 			testClockId,
 			currentEpochMs,
 		});
-		const afterFirstInvoice =
-			await autumnV2_2.customers.get<ApiCustomerV5>(customerId, {
+		const afterFirstInvoice = await autumnV2_2.customers.get<ApiCustomerV5>(
+			customerId,
+			{
 				skip_cache: "true",
-			});
+			},
+		);
 		expectBalanceCorrect({
 			customer: afterFirstInvoice,
 			featureId: TestFeature.Messages,
@@ -455,7 +455,7 @@ test.concurrent(
 );
 
 test.concurrent(
-	`${chalk.yellowBright("pooled reset: cron selects and resets only a lazy synthetic pool")}`,
+	`${chalk.yellowBright("pooled reset: cron selects and resets an overdue synthetic pool and skips lifetime")}`,
 	async () => {
 		const customerId = "pooled-reset-cron";
 		const grant = 250;

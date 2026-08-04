@@ -1,118 +1,32 @@
-import {
-	getConfiguredRegions,
-	getRegionalRedis,
-	redis,
-} from "@/external/redis/initRedis.js";
 import { invalidateCachedFullSubject } from "@/internal/customers/cache/fullSubject/index.js";
-import { buildPathIndexKey } from "@/internal/customers/cache/pathIndex/pathIndexConfig.js";
 import type { AutumnContext } from "../../../../honoUtils/HonoEnv.js";
-import {
-	buildFullCustomerCacheGuardKey,
-	buildFullCustomerCacheKey,
-	FULL_CUSTOMER_CACHE_GUARD_TTL_SECONDS,
-} from "./fullCustomerCacheConfig.js";
-import { buildTestFullCustomerCacheGuardKey } from "./testFullCustomerCacheGuard.js";
 
 /**
- * Delete the deprecated FullCustomer cache across all regions and invalidate
- * FullSubject for legacy callers.
- *
- * @deprecated New code must use the FullSubject cache APIs under
- * `internal/customers/cache/fullSubject` directly. The FullCustomer cache is no
- * longer part of the active customer-read path.
- * @param skipGuard - If true, skips setting the guard key. Default false (guard is set). Use skipGuard: true when deleting cache before a fresh Postgres read.
+ * @deprecated Thin wrapper over `invalidateCachedFullSubject` kept for legacy
+ * callers (incl. the cloud superset repo). New code should call it directly.
  */
 export const deleteCachedFullCustomer = async ({
 	ctx,
 	customerId,
 	entityId,
 	source,
-	skipGuard = false,
 	flushBalances = false,
 }: {
 	ctx: AutumnContext;
 	customerId: string;
 	entityId?: string;
 	source?: string;
+	/** No-op since the legacy FullCustomer cache was removed. */
 	skipGuard?: boolean;
 	flushBalances?: boolean;
 }): Promise<void> => {
-	const { org, env, logger } = ctx;
-
 	if (!customerId) return;
 
-	const cacheKey = buildFullCustomerCacheKey({
-		orgId: org.id,
-		env,
+	await invalidateCachedFullSubject({
+		ctx,
 		customerId,
+		entityId,
+		source,
+		flushBalances,
 	});
-	const regions = getConfiguredRegions();
-	const guardTimestamp = Date.now().toString();
-	const customerLabel = entityId ? `${customerId}:${entityId}` : customerId;
-
-	const invalidationPromises: Promise<void>[] = [
-		invalidateCachedFullSubject({
-			ctx,
-			customerId,
-			entityId,
-			source,
-			flushBalances,
-		}),
-	];
-
-	if (redis.status !== "ready") {
-		logger.warn(
-			`[deleteCachedFullCustomer] primary redis not_ready, skipping fullCustomer invalidation for ${customerLabel}`,
-		);
-		await Promise.all(invalidationPromises);
-		return;
-	}
-
-	// Delete from all regions in parallel
-	const deletePromises = regions.map(async (region) => {
-		try {
-			const regionalRedis = getRegionalRedis(region);
-
-			if (regionalRedis.status !== "ready") {
-				logger.warn(`[deleteCachedFullCustomer] ${region}: not_ready`);
-				return;
-			}
-
-			const testGuardKey = buildTestFullCustomerCacheGuardKey({
-				orgId: org.id,
-				env,
-				customerId,
-			});
-			const guardKey = buildFullCustomerCacheGuardKey({
-				orgId: org.id,
-				env,
-				customerId,
-			});
-			const pathIndexKey = buildPathIndexKey({
-				orgId: org.id,
-				env,
-				customerId,
-			});
-
-			const result = await regionalRedis.deleteFullCustomerCache(
-				cacheKey,
-				testGuardKey,
-				guardKey,
-				pathIndexKey,
-				guardTimestamp,
-				FULL_CUSTOMER_CACHE_GUARD_TTL_SECONDS.toString(),
-				skipGuard.toString(),
-			);
-
-			logger.info(
-				`[deleteCachedFullCustomer] ${region}: ${result}, customer: ${customerLabel}, source: ${source}`,
-			);
-		} catch (error) {
-			logger.error(
-				`[deleteCachedFullCustomer] ${region}: error, customer: ${customerLabel}, source: ${source}, error: ${error}`,
-			);
-		}
-	});
-
-	await Promise.all([...deletePromises, ...invalidationPromises]);
 };

@@ -1,6 +1,6 @@
 import type { Redis } from "ioredis";
 import { logger } from "@/external/logtail/logtailUtils.js";
-import { redis } from "@/external/redis/initRedis.js";
+import { miscRedis } from "@/external/redis/initRedis.js";
 import { RedisUnavailableError } from "@/external/redis/utils/errors.js";
 import type { UnavailableReason } from "@/external/redis/utils/runRedisOp.js";
 
@@ -75,7 +75,7 @@ export const tryRedisNx = async <TUnavailable, TSuccess, TExists>({
 	onSuccess: () => TSuccess | Promise<TSuccess>;
 	onKeyAlreadyExists: () => TExists | Promise<TExists>;
 }): Promise<TUnavailable | TSuccess | TExists> => {
-	const targetRedis = redisInstance ?? redis;
+	const targetRedis = redisInstance ?? miscRedis;
 
 	try {
 		if (targetRedis.status !== "ready") {
@@ -113,7 +113,7 @@ export const tryRedisWrite = async <T>(
 	operation: () => Promise<T>,
 	redisInstance?: Redis,
 ): Promise<T extends void ? true : T | null> => {
-	const targetRedis = redisInstance ?? redis;
+	const targetRedis = redisInstance ?? miscRedis;
 
 	try {
 		if (targetRedis.status !== "ready") {
@@ -152,7 +152,7 @@ export const tryRedisRead = async <T>(
 	operation: () => Promise<T>,
 	redisInstance?: Redis,
 ): Promise<T | null> => {
-	const targetRedis = redisInstance ?? redis;
+	const targetRedis = redisInstance ?? miscRedis;
 
 	try {
 		if (targetRedis.status !== "ready") {

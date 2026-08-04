@@ -1,6 +1,6 @@
 import { afterAll } from "bun:test";
 import { type Browser, chromium } from "playwright-core";
-import { CHROMIUM_PATH, HEADLESS } from "./browserConfig.js";
+import { getChromiumPath, HEADLESS } from "./browserConfig.js";
 
 /**
  * Singleton Playwright browser pool for local development.
@@ -24,7 +24,7 @@ class PlaywrightPool {
 			console.log("[PlaywrightPool] Launching local Chromium...");
 			const browser = await chromium.launch({
 				headless: HEADLESS,
-				executablePath: CHROMIUM_PATH,
+				executablePath: getChromiumPath(),
 				args: [
 					"--no-sandbox",
 					"--disable-setuid-sandbox",

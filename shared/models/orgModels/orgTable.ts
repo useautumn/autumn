@@ -12,6 +12,7 @@ import {
 	unique,
 } from "drizzle-orm/pg-core";
 import type { CustomButton } from "./customButton.js";
+import type { IdempotencyConfig } from "./idempotencyConfig.js";
 import type { OrgConfig } from "./orgConfig.js";
 
 export type SvixConfig = {
@@ -103,6 +104,9 @@ export const organizations = pgTable(
 
 		created_at: numeric({ mode: "number" }),
 		config: jsonb().default({}).notNull().$type<OrgConfig>(),
+		idempotency_config: jsonb(
+			"idempotency_config",
+		).$type<IdempotencyConfig | null>(),
 		custom_buttons: jsonb("custom_buttons")
 			.default(sql`'[]'::jsonb`)
 			.notNull()

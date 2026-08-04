@@ -1,9 +1,14 @@
-import { RecalculateBalanceParamsV0Schema, Scopes } from "@autumn/shared";
+import {
+	RecalculateBalanceParamsV0Schema,
+	RouteGroup,
+	Scopes,
+} from "@autumn/shared";
 import { createRoute } from "@/honoMiddlewares/routeHandler";
 import { recalculateBalancePreview } from "../recalculateBalance/recalculateBalancePreview";
 
 export const handleRecalculateBalancePreview = createRoute({
 	scopes: [Scopes.Balances.Read],
+	routeGroup: RouteGroup.Balances,
 	body: RecalculateBalanceParamsV0Schema,
 	handler: async (c) => {
 		const ctx = c.get("ctx");

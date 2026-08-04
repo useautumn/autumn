@@ -1,6 +1,6 @@
 import { afterAll } from "bun:test";
 import puppeteer, { type Browser, type Page } from "puppeteer-core";
-import { CHROMIUM_PATH, HEADLESS } from "./browserConfig.js";
+import { getChromiumPath, HEADLESS } from "./browserConfig.js";
 import {
 	createKernelBrowser,
 	createKernelSession,
@@ -61,7 +61,7 @@ const createBrowser = async (): Promise<{
 	console.log("[BrowserPool] Launching local Chromium...");
 	const browser = await puppeteer.launch({
 		headless: HEADLESS,
-		executablePath: CHROMIUM_PATH,
+		executablePath: getChromiumPath(),
 		args: [
 			"--no-sandbox",
 			"--disable-setuid-sandbox",

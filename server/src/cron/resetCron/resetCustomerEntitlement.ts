@@ -12,6 +12,8 @@ import { format } from "date-fns";
 import type { RepoContext } from "@/db/repoContext";
 import { resolveCustomerRedisRouting } from "@/external/redis/customerRedisRouting.js";
 import type { OrgWithRedisConfig } from "@/external/redis/orgRedisPool.js";
+import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
+import { promoteDuePooledContributions } from "@/internal/billing/v2/pooledBalances/execute/promoteDuePooledContributions.js";
 import { invalidateCustomerEntitlementBalance } from "@/internal/customers/cache/fullSubject/actions/invalidate/invalidateCustomerEntitlementBalance.js";
 import { CusEntService } from "@/internal/customers/cusProducts/cusEnts/CusEntitlementService";
 import { getRelatedCusPrice } from "@/internal/customers/cusProducts/cusEnts/cusEntUtils.js";
@@ -58,9 +60,16 @@ const resetCustomerEntitlementInDb = async ({
 		const ent = cusEnt.entitlement;
 		if (
 			cusEnt.pooled_balance &&
-			cusEnt.pooled_balance.reset_mode !== PooledBalanceResetMode.Lazy
+			cusEnt.pooled_balance.reset_mode === PooledBalanceResetMode.Lifetime
 		) {
 			return;
+		}
+		if (cusEnt.pooled_balance) {
+			await promoteDuePooledContributions({
+				ctx: repoContext as AutumnContext,
+				customerEntitlement: cusEnt,
+				now: Date.now(),
+			});
 		}
 		const shortDurationInterval = ent.interval;
 

@@ -1,5 +1,5 @@
 import type { Redis } from "ioredis";
-import { getPrimaryRedis } from "@/external/redis/initRedis.js";
+import { getMiscRedis } from "@/external/redis/initRedis.js";
 import { runRedisOp } from "@/external/redis/utils/runRedisOp.js";
 import { generateId } from "@/utils/genUtils.js";
 import { getQueueConcurrencyPolicy } from "./getQueueConcurrencyPolicy.js";
@@ -141,7 +141,7 @@ export const reserveQueueCapacity = async ({
 	);
 
 	try {
-		const redis = getPrimaryRedis();
+		const redis = getMiscRedis();
 		const result = await runRedisOp({
 			source: "queue-concurrency:acquire",
 			redisInstance: redis,

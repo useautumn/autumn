@@ -3,6 +3,7 @@ import {
 	customerProducts,
 	entitlements,
 	features,
+	RouteGroup,
 	Scopes,
 } from "@autumn/shared";
 import { CustomerNotFoundError } from "@shared/index";
@@ -17,6 +18,7 @@ const ListBalancesSchema = z.object({
 
 export const handleListBalances = createRoute({
 	scopes: [Scopes.Balances.Read],
+	routeGroup: RouteGroup.Balances,
 	query: ListBalancesSchema,
 	handler: async (c) => {
 		const ctx = c.get("ctx");

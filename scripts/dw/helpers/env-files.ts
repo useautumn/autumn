@@ -17,6 +17,7 @@ import { isProvisioned } from "./entry.ts";
 import {
 	aliasesFor,
 	dragonflyPortFor,
+	dynamoDbPortFor,
 	elasticMqPortFor,
 	portlessHttpsUrl,
 	serverPortFor,
@@ -89,6 +90,7 @@ export function provisionedInfraEnv(
 		REDIS_URL: redisUrl,
 		CACHE_URL: redisUrl,
 		CACHE_V2_DRAGONFLY_URL: redisUrl,
+		DYNAMODB_ENDPOINT: `http://localhost:${dynamoDbPortFor(worktreeNum)}`,
 		SQS_QUEUE_URL: queueUrl("autumn.fifo"),
 		SQS_QUEUE_URL_V2: queueUrl("autumn.fifo"),
 		TRACK_SQS_QUEUE_URL: queueUrl("autumn-track.fifo"),

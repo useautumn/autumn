@@ -188,7 +188,10 @@ let ingressImagePromise: Promise<Image> | undefined;
 const getIngressImage = (): Promise<Image> => {
 	ingressImagePromise ??= (async () => {
 		const app = await getApp();
-		const done = stage("building ingress image (debian + bun; cached after)", 15_000);
+		const done = stage(
+			"building ingress image (debian + bun; cached after)",
+			15_000,
+		);
 		try {
 			return await buildIngressImage(modal, app);
 		} finally {
@@ -426,8 +429,11 @@ const fastForwardCheckout = async (
 ): Promise<void> => {
 	const script = [
 		`cd ${MODAL_REPO_ROOT}`,
+		// Prune first in the fallback: stale remote-tracking refs (e.g. a
+		// deleted branch reborn as a directory of branches) hard-fail
+		// `fetch --all` with "cannot lock ref".
 		`(git fetch --quiet origin ${rev} && git checkout --quiet --force FETCH_HEAD) || ` +
-			`(git fetch --quiet --all && git checkout --quiet --force ${rev})`,
+			`(git remote prune origin; git fetch --quiet --all --prune && git checkout --quiet --force ${rev})`,
 	].join(" && ");
 	const proc = await withExecRetry(label, () =>
 		sandbox.exec(["bash", "-lc", script], {
