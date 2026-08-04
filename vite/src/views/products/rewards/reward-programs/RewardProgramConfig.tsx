@@ -77,7 +77,11 @@ export const RewardProgramConfig = ({
 						</SelectTrigger>
 						<SelectContent className="w-[var(--anchor-width)]">
 							{selectableRewards.map((reward: Reward) => (
-								<SelectItem key={reward.name} value={reward.internal_id}>
+								<SelectItem
+									className="min-w-0 [&>div]:min-w-0"
+									key={reward.name}
+									value={reward.internal_id}
+								>
 									<span className="truncate">{reward.name}</span>
 								</SelectItem>
 							))}
