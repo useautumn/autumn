@@ -11,9 +11,9 @@ export function LiveCustomerExportJobList({
 	onRealtimeDegradedChange: (isDegraded: boolean) => void;
 }) {
 	const { activeExport } = jobListProps;
-	const subscriptionTarget = `${activeExport?.trigger_run_id ?? "no-run"}:${
-		activeExport?.public_access_token ?? "no-token"
-	}`;
+	// Keyed on the run alone: any server instance mints its own token, so a
+	// rotated token must not remount the subscription.
+	const subscriptionTarget = activeExport?.trigger_run_id ?? "no-run";
 
 	const { subscriptionKey, handleRealtimeErroredChange } =
 		useRealtimeSubscriptionRetry({

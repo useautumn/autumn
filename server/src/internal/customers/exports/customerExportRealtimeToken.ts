@@ -4,8 +4,8 @@ import { addMilliseconds, isPast } from "date-fns";
 import type { Logger } from "@/external/logtail/logtailUtils.js";
 
 const CUSTOMER_EXPORT_REALTIME_TOKEN_TTL = "1hr";
-// Reuse tokens below their one-hour TTL so list refetches do not rotate the
-// token and remount the realtime subscription.
+// Per-process reuse below the one-hour TTL saves a mint per list poll. It is
+// only an optimisation: another instance mints its own, so clients key on the run.
 const TOKEN_REUSE_WINDOW_MS = ms.minutes(50);
 
 type CachedToken = { token: string; expiresAt: Date };
