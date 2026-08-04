@@ -737,6 +737,12 @@ const buildWorkerEnv = ({
 	) {
 		env.TINYBIRD_US_EAST_API_URL = process.env.TINYBIRD_US_EAST_API_URL;
 		env.TINYBIRD_US_EAST_TOKEN = process.env.TINYBIRD_US_EAST_TOKEN;
+		// Raw ClickHouse endpoint — the pipes API can't serve single-event reads,
+		// so analytics tests that assert an exact event need this too.
+		if (process.env.TINYBIRD_US_EAST_CLICKHOUSE_URL) {
+			env.TINYBIRD_US_EAST_CLICKHOUSE_URL =
+				process.env.TINYBIRD_US_EAST_CLICKHOUSE_URL;
+		}
 	}
 
 	// Browser tests (Stripe checkout / setup-payment) use the LOCAL Playwright
