@@ -18,4 +18,4 @@ export const getCustomerExportTriggerOptions = ({
 	isDev,
 }: {
 	isDev: boolean;
-}) => (isDev ? { region: "eu-central-1" as const } : {});
+}) => (isDev && process.env.S3_REGION ? { region: process.env.S3_REGION } : {});
