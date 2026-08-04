@@ -6,12 +6,13 @@ import { isIdempotencyDynamoReadEnabled } from "@/internal/misc/miscellaneousEdg
 import { buildIdempotencyStorageKey } from "../idempotencyKeyUtils.js";
 
 /**
- * Keys are always dual-written to Redis and DynamoDB. The
- * `idempotencyDynamoRead` miscellaneous-edge-config switch picks which store
- * is the conflict authority (awaited; a duplicate 409s; unavailable fails
- * open). The other store is a fire-and-forget mirror whose result never
- * affects the outcome — so the authority can be flipped either way losslessly
- * once both stores have seen a full TTL (24h) of writes.
+ * Keys are dual-written to Redis and DynamoDB. The `idempotencyDynamoRead`
+ * miscellaneous-edge-config switch picks which store is the conflict
+ * authority (awaited; a duplicate 409s; unavailable fails open). The other
+ * store gets a fire-and-forget mirror write whose result never affects the
+ * outcome — so the authority can be flipped either way losslessly once both
+ * stores have seen a full TTL (24h) of writes. On a duplicate the mirror is
+ * skipped so a lagging mirror can't backfill the key with a fresh TTL.
  */
 const throwDuplicateIdempotencyKey = (idempotencyKey: string): never => {
 	throw new RecaseError({
@@ -49,17 +50,17 @@ export const checkIdempotencyKey = async ({
 			logger,
 		});
 
-		void claimRedisIdempotencyKey({ storageKey, ttlMs });
 		if (dynamoResult === "duplicate") {
 			throwDuplicateIdempotencyKey(idempotencyKey);
 		}
+		void claimRedisIdempotencyKey({ storageKey, ttlMs });
 		return;
 	}
 
 	const redisResult = await claimRedisIdempotencyKey({ storageKey, ttlMs });
 
-	void claimDynamoIdempotencyKey({ storageKey, ttlMs, logger });
 	if (redisResult === "duplicate") {
 		throwDuplicateIdempotencyKey(idempotencyKey);
 	}
+	void claimDynamoIdempotencyKey({ storageKey, ttlMs, logger });
 };
