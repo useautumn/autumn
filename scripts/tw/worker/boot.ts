@@ -327,6 +327,23 @@ const main = async (): Promise<void> => {
 		),
 	]);
 
+	// 2a. Self-heal dependency drift: a stale warm fork can lag the
+	//     fast-forwarded lockfile (missing newly-added packages). Frozen
+	//     install is a no-op in seconds when node_modules is current.
+	log("reconciling node_modules (bun install --frozen-lockfile)");
+	const installProc = spawn(["bun", "install", "--frozen-lockfile"], {
+		cwd: repoRoot,
+		stdout: "inherit",
+		stderr: "inherit",
+		env: process.env as Record<string, string>,
+	});
+	const installExit = await installProc.exited;
+	if (installExit !== 0) {
+		throw new Error(
+			`[tw-boot] bun install exited with code ${installExit} — dependency self-heal failed`,
+		);
+	}
+
 	// 2b. Self-heal schema drift: the warm snapshot bakes a migrated DB at
 	//     warm build time, but a stale warm parent (failed refresh) can lag
 	//     the fast-forwarded code's schema (e.g. a new org column crashes the
