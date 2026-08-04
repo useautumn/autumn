@@ -100,7 +100,7 @@ export const countCustomerExportRows = async ({
 	return Number(rows[0]?.total_count ?? 0);
 };
 
-/** Re-derivable after the fact: both bounds are frozen by the export's cutoff. */
+/** Bounds are frozen by the export's cutoff, but the count reflects rows still present. */
 export const resolveCustomerExportPopulation = async ({
 	db,
 	orgId,

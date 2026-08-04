@@ -30,7 +30,8 @@ export const reconcileUploadedExport = async ({
 	});
 	if (published.status !== "published") return false;
 
-	// The frozen population bounds make the uploaded row count re-derivable.
+	// The exact count died with the failed completion write; recounting the frozen
+	// bounds can drift below the file's rows if customers were deleted since.
 	const { totalCount } = await resolveCustomerExportPopulation({
 		db: ctx.db,
 		orgId: payload.orgId,
