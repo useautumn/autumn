@@ -65,14 +65,16 @@ export const executeCustomerExport = async ({
 	}
 
 	// 3. The file is published, so completion failures propagate for a retry to reconcile
-	await markCompletedWithRetry({
+	const completed = await markCompletedWithRetry({
 		ctx,
 		logger,
 		exportId,
 		rowCount: totals.rowCount,
 		byteCount: totals.byteCount,
 	});
-	logger.info("customer-export: completed", {
-		data: { exportId, ...totals, fileName: CUSTOMER_EXPORT_FILE_NAME },
-	});
+	if (completed) {
+		logger.info("customer-export: completed", {
+			data: { exportId, ...totals, fileName: CUSTOMER_EXPORT_FILE_NAME },
+		});
+	}
 };

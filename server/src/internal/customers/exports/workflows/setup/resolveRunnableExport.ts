@@ -37,6 +37,7 @@ export const resolveRunnableExport = async ({
 			ctx,
 			logger,
 			customerExport,
+			payload,
 			bucket,
 			region,
 		});

@@ -100,6 +100,39 @@ export const countCustomerExportRows = async ({
 	return Number(rows[0]?.total_count ?? 0);
 };
 
+/** Re-derivable after the fact: both bounds are frozen by the export's cutoff. */
+export const resolveCustomerExportPopulation = async ({
+	db,
+	orgId,
+	env,
+	snapshot,
+	createdAtCutoff,
+}: {
+	db: DrizzleCli;
+	orgId: string;
+	env: AppEnv;
+	snapshot: CustomerExportSnapshot;
+	createdAtCutoff: number;
+}): Promise<{ population: CustomerExportPopulation; totalCount: number }> => {
+	const upperBoundInternalId = await getCustomerExportUpperBound({
+		db,
+		orgId,
+		env,
+		snapshot,
+		createdAtCutoff,
+	});
+	const totalCount = await countCustomerExportRows({
+		db,
+		orgId,
+		env,
+		snapshot,
+		upperBoundInternalId,
+		createdAtCutoff,
+	});
+
+	return { population: { upperBoundInternalId, createdAtCutoff }, totalCount };
+};
+
 /** Both snapshot bounds must remain unchanged for the entire keyset walk. */
 export const getCustomerExportScalars = async ({
 	db,

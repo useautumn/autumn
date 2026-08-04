@@ -3,10 +3,7 @@ import type { Logger } from "@/external/logtail/logtailUtils.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import type { RunCustomerExportPayload } from "@/trigger/exports/customerExportTaskPayload.js";
 import { CustomerExportService } from "../../CustomerExportService.js";
-import {
-	countCustomerExportRows,
-	getCustomerExportUpperBound,
-} from "../../queries/getCustomerExportScalars.js";
+import { resolveCustomerExportPopulation } from "../../queries/getCustomerExportScalars.js";
 import type { CustomerExportProgressReporter } from "../customerExportProgressReporter.js";
 import { streamCustomerExportCsv } from "./streamCustomerExportCsv.js";
 
@@ -30,23 +27,13 @@ export const uploadCustomerExportCsv = async ({
 	progress?: CustomerExportProgressReporter;
 }): Promise<{ rowCount: number; byteCount: number }> => {
 	const { exportId, orgId, env } = payload;
-	const { snapshot } = customerExport;
-	const createdAtCutoff = customerExport.created_at;
 
-	const upperBoundInternalId = await getCustomerExportUpperBound({
+	const { population, totalCount } = await resolveCustomerExportPopulation({
 		db: ctx.db,
 		orgId,
 		env,
-		snapshot,
-		createdAtCutoff,
-	});
-	const totalCount = await countCustomerExportRows({
-		db: ctx.db,
-		orgId,
-		env,
-		snapshot,
-		upperBoundInternalId,
-		createdAtCutoff,
+		snapshot: customerExport.snapshot,
+		createdAtCutoff: customerExport.created_at,
 	});
 
 	await CustomerExportService.markRunning({
@@ -65,7 +52,7 @@ export const uploadCustomerExportCsv = async ({
 	return await streamCustomerExportCsv({
 		ctx,
 		customerExport,
-		population: { upperBoundInternalId, createdAtCutoff },
+		population,
 		destination: { bucket, region, key },
 		onRowsProcessed: (processedRows) =>
 			progress?.incrementProcessedRows(processedRows),
