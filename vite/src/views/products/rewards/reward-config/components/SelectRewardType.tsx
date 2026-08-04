@@ -85,8 +85,8 @@ export function SelectRewardType({ reward, setReward }: SelectRewardTypeProps) {
 										<InfoIcon className="size-3.5 cursor-help text-tertiary-foreground" />
 									</TooltipTrigger>
 									<TooltipContent>
-										Deprecated. Use a feature grant to reward customers with a
-										feature balance instead.
+										Free products are deprecated. We recommend using feature
+										grants instead.
 									</TooltipContent>
 								</Tooltip>
 							</div>
