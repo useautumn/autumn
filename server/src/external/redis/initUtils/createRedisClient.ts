@@ -3,6 +3,7 @@ import {
 	instrumentRedis,
 	type RedisClientType,
 } from "../otel/instrumentRedis.js";
+import { createStandbyRedisRouter } from "./createStandbyRedisRouter.js";
 import { redisDnsLookup } from "./redisDnsLookup.js";
 import { registerRedisCommands } from "./registerRedisCommands.js";
 
@@ -68,3 +69,18 @@ export const createRedisClient = ({
 };
 
 export const createRedisConnection = createRedisClient;
+
+export const createStandbyRedisConnection = ({
+	region,
+	...options
+}: Parameters<typeof createRedisClient>[0]): Redis =>
+	createStandbyRedisRouter({
+		primary: createRedisClient({
+			...options,
+			region: `${region}:primary`,
+		}),
+		standby: createRedisClient({
+			...options,
+			region: `${region}:standby`,
+		}),
+	});

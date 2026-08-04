@@ -9,6 +9,8 @@ import { runRedisOp } from "@/external/redis/utils/runRedisOp.js";
 type FakeRedis = {
 	status: string;
 	calls: string[];
+	disconnect: () => void;
+	quit: () => Promise<"OK">;
 	get: (key: string) => Promise<string>;
 	set: (key: string, value: string) => Promise<"OK">;
 	pipeline: () => {
@@ -34,6 +36,13 @@ const createFakeRedis = ({
 	return {
 		status,
 		calls,
+		disconnect() {
+			calls.push("disconnect");
+		},
+		async quit() {
+			calls.push("quit");
+			return "OK";
+		},
 		async get(key) {
 			calls.push(`get:${key}`);
 			if (getError) throw getError;
@@ -112,6 +121,23 @@ describe("standby Redis routing", () => {
 		);
 		expect(primary.calls).toEqual(["set:customer:value"]);
 		expect(standby.calls).toEqual([]);
+	});
+
+	test("closes both underlying connections during pool teardown", async () => {
+		const primary = createFakeRedis({ name: "primary" });
+		const standby = createFakeRedis({ name: "standby" });
+		const redis = createStandbyRedisRouter({
+			primary: asRedis(primary),
+			standby: asRedis(standby),
+		});
+
+		redis.disconnect();
+		expect(primary.calls).toEqual(["disconnect"]);
+		expect(standby.calls).toEqual(["disconnect"]);
+
+		await redis.quit();
+		expect(primary.calls).toEqual(["disconnect", "quit"]);
+		expect(standby.calls).toEqual(["disconnect", "quit"]);
 	});
 
 	test("rebuilds and retries an idempotent pipeline on the standby", async () => {

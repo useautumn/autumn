@@ -65,6 +65,21 @@ export const createStandbyRedisRouter = ({
 					? "ready"
 					: primary.status;
 			}
+			if (property === "disconnect") {
+				return (...args: unknown[]) => {
+					Reflect.apply(primary.disconnect, primary, args);
+					Reflect.apply(standby.disconnect, standby, args);
+				};
+			}
+			if (property === "quit") {
+				return async (...args: unknown[]) => {
+					const [result] = await Promise.all([
+						Reflect.apply(primary.quit, primary, args),
+						Reflect.apply(standby.quit, standby, args),
+					]);
+					return result;
+				};
+			}
 
 			const [selected, alternate] = orderedConnections({ primary, standby });
 			const value = Reflect.get(selected, property, selected);

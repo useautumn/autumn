@@ -6,7 +6,7 @@ import { logger } from "@/external/logtail/logtailUtils.js";
 import { OrgService } from "@/internal/orgs/OrgService.js";
 import { decryptData } from "@/utils/encryptUtils.js";
 import { getReachableDragonflyUrl } from "./getReachableDragonflyUrl.js";
-import { createRedisConnection, currentRegion } from "./initRedis.js";
+import { createStandbyRedisConnection, currentRegion } from "./initRedis.js";
 import { REDIS_V2_COMMAND_TIMEOUT_MS } from "./initUtils/createRedisClient.js";
 import { resolveRedisV2 } from "./resolveRedisV2.js";
 
@@ -34,7 +34,7 @@ const createOrgRedisConnection = ({
 	orgId: string;
 	orgSlug: string;
 }): Redis => {
-	const instance = createRedisConnection({
+	const instance = createStandbyRedisConnection({
 		cacheUrl: connectionString,
 		region: `org:${orgSlug}:v2:dragonfly`,
 		redisType: `subject-dedicated:${orgSlug}`,
