@@ -317,10 +317,13 @@ const main = async (): Promise<void> => {
 		waitForTcpPort("PostgreSQL", PG_PORT, SERVICE_HEALTH_TIMEOUT_MS),
 		waitForTcpPort("Dragonfly", DRAGONFLY_PORT, SERVICE_HEALTH_TIMEOUT_MS),
 		waitForTcpPort("goaws (SQS)", ELASTICMQ_PORT, SERVICE_HEALTH_TIMEOUT_MS),
-		waitForTcpPort(
-			"dynoxide (DynamoDB)",
-			DYNAMODB_PORT,
-			SERVICE_HEALTH_TIMEOUT_MS,
+		// Non-fatal: start-services degrades without dynoxide on stale base
+		// images (the app fails open on an unreachable DynamoDB, and
+		// dynamo-gated tests skip). Short timeout keeps the degraded tail small.
+		waitForTcpPort("dynoxide (DynamoDB)", DYNAMODB_PORT, 15_000).catch(
+			(error) => {
+				log(`WARN: continuing without dynoxide — ${(error as Error).message}`);
+			},
 		),
 	]);
 
