@@ -1,6 +1,19 @@
 import { describe, expect, test } from "bun:test";
 import { AppEnv } from "@autumn/shared";
+import { buildCheckoutCacheKey } from "@/external/redis/actions/checkoutCache/checkoutCache.js";
 import { buildCustomerJwtAuthCacheKey } from "@/external/redis/actions/customerJwtAuthCache/customerJwtAuthCache.js";
+import { buildExpiredCustomerProductsCacheKey } from "@/external/redis/actions/expiredCustomerProductsCache/expiredCustomerProductsCache.js";
+import { buildMigrationCancelTokenKey } from "@/external/redis/actions/migrationCancelToken/migrationCancelToken.js";
+import {
+	MODEL_PRICING_CACHE_KEY,
+	MODEL_PRICING_STALE_CACHE_KEY,
+	MODEL_PRICING_STALE_TTL_SECONDS,
+	MODEL_PRICING_TTL_SECONDS,
+} from "@/external/redis/actions/modelPricingCache/modelPricingCache.js";
+import {
+	buildOAuthStateKey,
+	OAUTH_STATE_TTL_SECONDS,
+} from "@/external/redis/actions/oauthStateStore/oauthStateStore.js";
 import {
 	buildOrgWithFeaturesCacheKey,
 	ORG_WITH_FEATURES_CACHE_TTL_SECONDS,
@@ -11,9 +24,17 @@ import {
 	PRODUCTS_CACHE_TTL,
 } from "@/external/redis/actions/productsCache/productsCache.js";
 import {
+	buildSavedViewIdListKey,
+	buildSavedViewKey,
+} from "@/external/redis/actions/savedViewsStore/savedViewsStore.js";
+import {
 	buildSecretKeyCacheKey,
 	SECRET_KEY_CACHE_TTL_SECONDS,
 } from "@/external/redis/actions/secretKeyCache/secretKeyCache.js";
+import {
+	buildTrmnlDeviceKey,
+	buildTrmnlOrgKey,
+} from "@/external/redis/actions/trmnlDeviceStore/trmnlDeviceStore.js";
 import { buildStripeWebhookEventKey } from "@/external/stripe/webhookMiddlewares/stripeIdempotencyMiddleware.js";
 import {
 	buildIdempotencyStorageKey,
@@ -81,25 +102,57 @@ describe("misc redis key formats", () => {
 		).toBe("stripe:webhook:org_1:live:evt_1");
 	});
 
+	test("checkout", () => {
+		expect(buildCheckoutCacheKey("chk_1")).toBe("checkout:chk_1");
+	});
+
+	test("expired customer products", () => {
+		expect(buildExpiredCustomerProductsCacheKey("sub_1")).toBe(
+			"expired-cus-products:sub_1",
+		);
+	});
+
+	test("saved views", () => {
+		expect(
+			buildSavedViewKey({ orgId: "org_1", env: AppEnv.Live, viewId: "v1" }),
+		).toBe("saved_views:org_1:live:v1");
+		expect(buildSavedViewIdListKey({ orgId: "org_1", env: AppEnv.Live })).toBe(
+			"saved_views_list:org_1:live",
+		);
+	});
+
+	test("trmnl device store", () => {
+		expect(buildTrmnlDeviceKey("dev_1")).toBe("trmnl:device:dev_1");
+		expect(buildTrmnlOrgKey("org_1")).toBe("trmnl:org:org_1");
+	});
+
+	test("model pricing", () => {
+		expect(MODEL_PRICING_CACHE_KEY).toBe("models_dev_pricing");
+		expect(MODEL_PRICING_STALE_CACHE_KEY).toBe("models_dev_pricing_stale");
+		expect(MODEL_PRICING_TTL_SECONDS).toBe(60 * 60 * 3);
+		expect(MODEL_PRICING_STALE_TTL_SECONDS).toBe(60 * 60 * 24 * 3);
+	});
+
+	test("migration cancel token", () => {
+		expect(buildMigrationCancelTokenKey("run_1")).toBe(
+			"migration_run_cancel:run_1",
+		);
+	});
+
+	test("oauth state", () => {
+		expect(buildOAuthStateKey("state_1")).toBe("oauth_state:state_1");
+		expect(OAUTH_STATE_TTL_SECONDS).toBe(600);
+	});
+
 	// Inline key builders — pinned here as literals until their family unit
 	// extracts an exported builder into external/redis/actions/:
 	test("families still built inline (formats documented, not yet importable)", () => {
 		const inlineFormats = {
-			checkout: "checkout:<checkoutId>",
-			expiredCusProducts: "expired-cus-products:<stripeSubscriptionId>",
-			savedViews: "saved_views:<orgId>:<env>:<viewId>",
-			savedViewsList: "saved_views_list:<orgId>:<env>",
-			trmnlDevice: "trmnl:device:<deviceId>",
-			trmnlOrg: "trmnl:org:<orgId>",
-			modelPricing: "models_dev_pricing",
-			modelPricingStale: "models_dev_pricing_stale",
-			migrationCancel: "migration_run_cancel:<migrationRunId>",
-			oauthState: "oauth_state:<stateKey>",
 			autoTopupPending:
 				"auto_topup:pending:<orgId>:<env>:<customerId>:<featureId>",
 			autoTopupFailedWebhook:
 				"auto_topup_failed_webhook:<orgId>:<env>:<customerId>:<featureId>:<reason>:<window>",
 		};
-		expect(Object.keys(inlineFormats).length).toBe(12);
+		expect(Object.keys(inlineFormats).length).toBe(2);
 	});
 });

@@ -1,10 +1,10 @@
 import { MigrationRunStatus } from "@autumn/shared";
-import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
-import { migrationRunRepo } from "../../repos/index.js";
 import {
 	clearMigrationCancelRequested,
 	isMigrationCancelRequested,
-} from "../../run/utils/migrationCancelToken.js";
+} from "@/external/redis/actions/migrationCancelToken/migrationCancelToken.js";
+import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
+import { migrationRunRepo } from "../../repos/index.js";
 import { settleLeftoverClaims } from "./settleLeftoverClaims.js";
 
 /** Owns the run lifecycle: status transitions AND their logs. `logData` adds
