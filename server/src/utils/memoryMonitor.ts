@@ -20,8 +20,11 @@ export function getEventLoopLagMs(): number {
 }
 
 const DEFAULT_INTERVAL_MS = 60_000; // 1 minute
+const SWEEP_INTERVAL_TICKS = 10;
 
 let intervalHandle: ReturnType<typeof setInterval> | null = null;
+// Start eligible so the first idle tick sweeps.
+let ticksSinceSweep = SWEEP_INTERVAL_TICKS;
 
 function toMB(bytes: number): number {
 	return Math.round((bytes / 1024 / 1024) * 10) / 10;
@@ -33,9 +36,14 @@ function logMemoryUsage(label: string) {
 	}
 
 	// JSC defers GC until memory pressure, so unswept transients read as a leak.
-	// Sync GC blocks the event loop; only force it while no requests are in flight.
-	if (countInFlightRequests() === 0) {
+	// Sync GC blocks the event loop: sweep at most every 10 min, and only idle.
+	let swept = false;
+	if (ticksSinceSweep >= SWEEP_INTERVAL_TICKS && countInFlightRequests() === 0) {
 		Bun.gc(true);
+		ticksSinceSweep = 0;
+		swept = true;
+	} else {
+		ticksSinceSweep++;
 	}
 	const mem = process.memoryUsage();
 
@@ -50,6 +58,7 @@ function logMemoryUsage(label: string) {
 			type: "memory_log",
 			data: {
 				label,
+				swept,
 				pid: process.pid,
 				rssMB: toMB(mem.rss),
 				heapUsedMB: toMB(mem.heapUsed),
