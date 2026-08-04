@@ -188,7 +188,6 @@ const main = async () => {
 		bucket,
 	});
 
-	// The abort-incomplete-multipart lifecycle rule for exports is managed in Terraform.
 	if (isCustomerExportsS3Configured()) {
 		const customerExports = getCustomerExportsS3Config();
 		if (customerExports.bucket !== bucket) {
