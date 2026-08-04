@@ -27,7 +27,6 @@ const backendUrl = () =>
  */
 export const waitForStripeWebhook = async ({
 	stripeCli,
-	orgId,
 	env,
 	until,
 	types,
@@ -36,7 +35,6 @@ export const waitForStripeWebhook = async ({
 	replayAfterMs = DEFAULT_REPLAY_AFTER_MS,
 }: {
 	stripeCli: Stripe;
-	orgId: string;
 	env: AppEnv;
 	/** The observable effect of the webhook having been processed. */
 	until: () => Promise<boolean>;
@@ -70,7 +68,6 @@ export const waitForStripeWebhook = async ({
 		if (replayedCount === undefined && elapsed >= replayAfterMs) {
 			replayedCount = await replayStripeEvents({
 				stripeCli,
-				orgId,
 				env,
 				types,
 				createdGte,
@@ -83,13 +80,11 @@ export const waitForStripeWebhook = async ({
 
 const replayStripeEvents = async ({
 	stripeCli,
-	orgId,
 	env,
 	types,
 	createdGte,
 }: {
 	stripeCli: Stripe;
-	orgId: string;
 	env: AppEnv;
 	types: string[];
 	createdGte: number;
@@ -105,7 +100,10 @@ const replayStripeEvents = async ({
 
 	for (const event of events.data.reverse()) {
 		const response = await fetch(
-			`${backendUrl()}/webhooks/connect/${env}?org_id=${orgId}`,
+			// NO org_id: with it, getStripeWebhookSecret takes the DB path and tw
+			// deliberately stores no connect secret, so the request 500s before
+			// skip-verify is even consulted. The ingress omits it too.
+			`${backendUrl()}/webhooks/connect/${env}`,
 			{
 				method: "POST",
 				headers: { "content-type": "application/json" },

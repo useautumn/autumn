@@ -77,7 +77,6 @@ test.concurrent(
 		// hasn't appeared, so the test doesn't depend on delivery timing.
 		await waitForStripeWebhook({
 			stripeCli: ctx.stripeCli,
-			orgId: ctx.org.id,
 			env: ctx.env,
 			types: ["checkout.session.completed"],
 			until: async () => {
