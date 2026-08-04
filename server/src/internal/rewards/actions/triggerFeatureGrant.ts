@@ -61,48 +61,58 @@ export const triggerFeatureGrant = async ({
 
 	const balanceIdPrefix = `referral_${rewardProgram.id}`;
 
-	// Claim the redemption first — grants insert new balances, so a retry after a
-	// partial failure would double-grant whoever already succeeded
-	await redemptionRepo.update({
-		db,
-		id: redemption.id,
-		updates: {
-			triggered: true,
-			applied: grantToReferrer,
-			redeemer_applied: grantToRedeemer,
-		},
-	});
+	// Grants insert new balances, so each recipient is persisted as soon as it
+	// succeeds — a retry must not re-grant whoever already got their balance
+	let { applied: referrerApplied, redeemer_applied: redeemerApplied } =
+		redemption;
 
-	if (grantToReferrer) {
+	if (grantToReferrer && !referrerApplied) {
 		await grantRewardEntitlements({
 			ctx,
 			fullCustomer: fullReferrer,
 			reward,
 			balanceIdPrefix,
 		});
+		referrerApplied = true;
+		await redemptionRepo.update({
+			db,
+			id: redemption.id,
+			updates: { applied: true },
+		});
 		logger.info(`Granted feature reward to referrer ${fullReferrer.id}`);
 	}
 
-	if (grantToRedeemer) {
+	if (grantToRedeemer && !redeemerApplied) {
 		await grantRewardEntitlements({
 			ctx,
 			fullCustomer: fullRedeemer,
 			reward,
 			balanceIdPrefix,
 		});
+		redeemerApplied = true;
 		logger.info(`Granted feature reward to redeemer ${fullRedeemer.id}`);
 	}
 
+	await redemptionRepo.update({
+		db,
+		id: redemption.id,
+		updates: {
+			triggered: true,
+			applied: referrerApplied,
+			redeemer_applied: redeemerApplied,
+		},
+	});
+
 	return {
 		referrer: {
-			applied: grantToReferrer,
-			cause: grantToReferrer
+			applied: referrerApplied,
+			cause: referrerApplied
 				? ReferralResponseCodes.Success
 				: ReferralResponseCodes.NotConfigured,
 		},
 		redeemer: {
-			applied: grantToRedeemer,
-			cause: grantToRedeemer
+			applied: redeemerApplied,
+			cause: redeemerApplied
 				? ReferralResponseCodes.Success
 				: ReferralResponseCodes.NotConfigured,
 			meta: {
