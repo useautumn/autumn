@@ -14,9 +14,8 @@ export type LogRequestContext = {
 
 	region?: string;
 
-	// JSON strings, not maps: arbitrary keys (scanner probes, response payloads)
-	// each mint an Axiom field, and past the dataset field limit events are dropped.
-	query: string;
+	// New fields
+	query: Record<string, string>;
 	body: unknown;
 
 	name: string;

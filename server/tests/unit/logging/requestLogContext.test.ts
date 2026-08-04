@@ -14,11 +14,11 @@ describe("request log context", () => {
 			user_agent: "test-agent",
 			ip_address: "127.0.0.1",
 			region: "us-east-2",
-			query: JSON.stringify({ expand: "balances" }),
-			body: JSON.stringify({
+			query: { expand: "balances" },
+			body: {
 				customer_id: "cus_123",
 				feature_id: "messages",
-			}),
+			},
 			name: "POST /v1/balances.check",
 		};
 
@@ -35,22 +35,22 @@ describe("request log context", () => {
 			user_agent: "test-agent",
 			ip_address: "127.0.0.1",
 			region: "us-east-2",
-			query: JSON.stringify({ expand: "balances" }),
+			query: { expand: "balances" },
 			name: "POST /v1/balances.check",
 		});
 		expect("body" in contexts.internal).toBe(false);
 	});
 
 	test("keeps the terminal context and body by reference without copying payloads", () => {
-		const body = JSON.stringify({
+		const body = {
 			items: Array.from({ length: 100 }, (_, index) => ({ index })),
-		});
+		};
 		const requestContext: LogRequestContext = {
 			id: "req_large",
 			method: "POST",
 			url: "https://api.useautumn.com/v1/track",
 			timestamp: 123,
-			query: JSON.stringify({}),
+			query: {},
 			body,
 			name: "POST /v1/track",
 		};
