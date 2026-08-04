@@ -11,8 +11,8 @@ const RETRY_MIN_MS = 75;
 const RETRY_JITTER_MS = 50;
 
 const RELEASE_LOCK_SCRIPT = `
-if miscRedis.call("GET", KEYS[1]) == ARGV[1] then
-	return miscRedis.call("DEL", KEYS[1])
+if redis.call("GET", KEYS[1]) == ARGV[1] then
+	return redis.call("DEL", KEYS[1])
 end
 return 0
 `;
