@@ -49,22 +49,32 @@ export const waitForStripeWebhook = async ({
 }): Promise<void> => {
 	const startedAt = Date.now();
 	const createdGte = Math.floor((since ?? startedAt - 10 * 60 * 1000) / 1000);
-	let replayed = false;
+	let replayedCount: number | undefined;
 
 	while (true) {
 		if (await until()) return;
 
 		const elapsed = Date.now() - startedAt;
 		if (elapsed >= timeoutMs) {
+			// The count travels in the message because µVM stdout is not captured:
+			// "Stripe had 0" (event never created) and "posted 3, no effect"
+			// (handler ignored it) are completely different diagnoses.
 			throw new Error(
 				`Timed out after ${timeoutMs}ms waiting for ${types.join(", ")}` +
-					`${replayed ? " (replay attempted — see [waitForStripeWebhook] logs for how many events Stripe had)" : ""}`,
+					(replayedCount === undefined
+						? " (no replay attempted)"
+						: ` (replayed ${replayedCount} matching event(s) from Stripe, still no effect)`),
 			);
 		}
 
-		if (!replayed && elapsed >= replayAfterMs) {
-			replayed = true;
-			await replayStripeEvents({ stripeCli, orgId, env, types, createdGte });
+		if (replayedCount === undefined && elapsed >= replayAfterMs) {
+			replayedCount = await replayStripeEvents({
+				stripeCli,
+				orgId,
+				env,
+				types,
+				createdGte,
+			});
 		}
 
 		await timeout(POLL_INTERVAL_MS);
@@ -83,7 +93,7 @@ const replayStripeEvents = async ({
 	env: AppEnv;
 	types: string[];
 	createdGte: number;
-}): Promise<void> => {
+}): Promise<number> => {
 	const events = await stripeCli.events.list({
 		types,
 		created: { gte: createdGte },
@@ -106,4 +116,5 @@ const replayStripeEvents = async ({
 			`[waitForStripeWebhook] replayed ${event.type} (${event.id}) → ${response.status}`,
 		);
 	}
+	return events.data.length;
 };
