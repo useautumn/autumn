@@ -125,21 +125,60 @@ fi
 
 # 3b. dynoxide (native DynamoDB emulator, :8000) — backs the idempotency-key
 #     store. Like goaws, a bare GET means it's bound and serving.
+#
+# Self-heal: base/warm snapshots built BEFORE dynoxide shipped don't have the
+# binary, but a worker may still fast-forward the repo onto this script (e.g.
+# a stale warm parent whose refresh failed). The binary is a ~3MB static musl
+# download, so fetch it at boot instead of failing the whole worker.
+ensure_dynoxide() {
+  [ -x "$BIN_DIR/dynoxide" ] && return 0
+  DYNOXIDE_VERSION="${DYNOXIDE_VERSION:-v0.13.0}"
+  ARCH="$(uname -m)"
+  case "$ARCH" in
+    x86_64) DX_TARGET="x86_64-unknown-linux-musl" ;;
+    aarch64 | arm64) DX_TARGET="aarch64-unknown-linux-musl" ;;
+    *) log "WARN: unsupported arch for dynoxide: $ARCH"; return 1 ;;
+  esac
+  log "dynoxide missing from base image — fetching $DYNOXIDE_VERSION ($ARCH)"
+  TMP_DX="$(mktemp -d)"
+  if ! curl -fsSL -o "$TMP_DX/dynoxide.tar.gz" \
+    "https://github.com/nubo-db/dynoxide/releases/download/${DYNOXIDE_VERSION}/dynoxide-${DX_TARGET}.tar.gz"; then
+    rm -rf "$TMP_DX"
+    log "WARN: dynoxide download failed"
+    return 1
+  fi
+  tar -xzf "$TMP_DX/dynoxide.tar.gz" -C "$TMP_DX"
+  DX_EXTRACTED="$(find "$TMP_DX" -type f -name 'dynoxide*' ! -name '*.tar.gz' | head -n1)"
+  if [ -z "$DX_EXTRACTED" ]; then
+    rm -rf "$TMP_DX"
+    log "WARN: dynoxide binary not found in archive"
+    return 1
+  fi
+  install -m 0755 "$DX_EXTRACTED" "$BIN_DIR/dynoxide"
+  rm -rf "$TMP_DX"
+}
+
 dynoxide_ready_probe="curl -s -o /dev/null http://localhost:$DYNAMODB_PORT/"
 if eval "$dynoxide_ready_probe" >/dev/null 2>&1; then
   log "dynoxide already running"
-else
-  [ -x "$BIN_DIR/dynoxide" ] || die "dynoxide binary missing (run build-base.sh)"
+elif ensure_dynoxide; then
   log "Starting dynoxide (native DynamoDB) on :$DYNAMODB_PORT"
   nohup "$BIN_DIR/dynoxide" --port "$DYNAMODB_PORT" >"$LOG_DIR/dynoxide.log" 2>&1 &
   disown || true
+else
+  # Degrade rather than kill the worker: the app fails open on an
+  # unreachable DynamoDB, and dynamo-gated tests skip without the endpoint.
+  log "WARN: dynoxide unavailable — continuing without the DynamoDB emulator"
+  DYNOXIDE_DISABLED=1
 fi
 
 # Wait for all four (started above) concurrently — readiness overlaps.
 wait_for "PostgreSQL" "pg_isready -h localhost -p $PG_PORT" 60 "$LOG_DIR/pg.log"
 wait_for "Dragonfly" "redis-cli -p $DRAGONFLY_PORT PING" 60 "$LOG_DIR/dragonfly.log"
 wait_for "goaws" "$goaws_ready_probe" 120 "$LOG_DIR/goaws.log"
-wait_for "dynoxide" "$dynoxide_ready_probe" 60 "$LOG_DIR/dynoxide.log"
+if [ "${DYNOXIDE_DISABLED:-0}" != "1" ]; then
+  wait_for "dynoxide" "$dynoxide_ready_probe" 60 "$LOG_DIR/dynoxide.log"
+fi
 
 # ---------------------------------------------------------------------------
 # 4. ClickHouse (optional).
