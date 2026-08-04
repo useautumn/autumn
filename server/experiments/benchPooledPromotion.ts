@@ -34,17 +34,29 @@ const rearmDueRows = () =>
 		WHERE pooled_balance_id = ${POOL_ID}
 			AND id IN (SELECT 'benchpromo_pbc_' || g.n FROM generate_series(1, ${DUE}) AS g(n))`);
 
-// Promote due rows + recompute granted from ALL contributions (self-healing).
-// totals reads the pre-update snapshot, so due rows count at their promoted value.
+// Mirrors production promoteDuePooledContributions: guarded pool_update first
+// (updated_at latest vs snapshot), contribution promotion gated on it.
 const fullRecomputePromotion = () =>
 	db.execute(sql`
 		WITH totals AS (
 			SELECT
 				COALESCE(SUM(CASE WHEN effective_at IS NOT NULL AND effective_at <= ${NOW}::numeric
 					THEN next_cycle_contribution ELSE current_contribution END), 0) AS granted,
+				COUNT(*) AS total_count,
 				COUNT(*) FILTER (WHERE effective_at IS NOT NULL AND effective_at <= ${NOW}::numeric) AS due_count
 			FROM pooled_balance_contributions
 			WHERE pooled_balance_id = ${POOL_ID}
+		),
+		pool_update AS (
+			UPDATE pooled_balances
+			SET granted = totals.granted, updated_at = ${NOW}::numeric
+			FROM totals
+			WHERE pooled_balances.id = ${POOL_ID}
+				AND totals.total_count > 0
+				AND pooled_balances.updated_at = (
+					SELECT updated_at FROM pooled_balances WHERE id = ${POOL_ID}
+				)
+			RETURNING pooled_balances.granted, totals.due_count
 		),
 		promoted AS (
 			UPDATE pooled_balance_contributions
@@ -52,13 +64,11 @@ const fullRecomputePromotion = () =>
 				effective_at = NULL, updated_at = ${NOW}::numeric
 			WHERE pooled_balance_id = ${POOL_ID}
 				AND effective_at IS NOT NULL AND effective_at <= ${NOW}::numeric
+				AND EXISTS (SELECT 1 FROM pool_update)
 			RETURNING id
 		)
-		UPDATE pooled_balances pb
-		SET granted = totals.granted, updated_at = ${NOW}::numeric
-		FROM totals
-		WHERE pb.id = ${POOL_ID} AND totals.due_count > 0
-		RETURNING pb.granted`);
+		SELECT pool_update.granted::float8 AS granted, pool_update.due_count::int AS due_count
+		FROM pool_update`);
 
 // Promote due rows + apply only the delta (bounded by due rows).
 const deltaPromotion = () =>

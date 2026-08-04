@@ -31,6 +31,9 @@ export const promoteDuePooledContributions = async ({
 
 	// totals reads the pre-update snapshot: due rows count at their promoted
 	// value, so the recomputed granted matches the post-promotion state.
+	// The pool UPDATE guards on updated_at (latest row version vs statement
+	// snapshot): a transition committing mid-statement makes it 0 rows, and
+	// the contribution promotion is gated on it, so the whole statement no-ops.
 	const rows = await ctx.db.execute<{
 		granted: number | string;
 		due_count: number | string;
@@ -49,6 +52,18 @@ export const promoteDuePooledContributions = async ({
 			FROM pooled_balance_contributions
 			WHERE pooled_balance_id = ${pooledBalance.id}
 		),
+		pool_update AS (
+			UPDATE pooled_balances
+			SET granted = totals.granted, updated_at = ${now}::numeric
+			FROM totals
+			WHERE pooled_balances.id = ${pooledBalance.id}
+				AND totals.total_count > 0
+				AND pooled_balances.updated_at = (
+					SELECT updated_at FROM pooled_balances
+					WHERE id = ${pooledBalance.id}
+				)
+			RETURNING pooled_balances.granted, totals.due_count
+		),
 		promoted AS (
 			UPDATE pooled_balance_contributions
 			SET current_contribution = next_cycle_contribution,
@@ -57,15 +72,12 @@ export const promoteDuePooledContributions = async ({
 			WHERE pooled_balance_id = ${pooledBalance.id}
 				AND effective_at IS NOT NULL
 				AND effective_at <= ${now}::numeric
+				AND EXISTS (SELECT 1 FROM pool_update)
 			RETURNING id
 		)
-		UPDATE pooled_balances
-		SET granted = totals.granted, updated_at = ${now}::numeric
-		FROM totals
-		WHERE pooled_balances.id = ${pooledBalance.id}
-			AND totals.total_count > 0
-		RETURNING pooled_balances.granted::float8 AS granted,
-			totals.due_count::int AS due_count
+		SELECT pool_update.granted::float8 AS granted,
+			pool_update.due_count::int AS due_count
+		FROM pool_update
 		${planetScaleTag({ query: "promoteDuePooledContributions" })}
 	`);
 
