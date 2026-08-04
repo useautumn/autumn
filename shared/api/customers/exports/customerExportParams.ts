@@ -91,7 +91,6 @@ export const CustomerExportResponseSchema = z.object({
 	completed_at: z.number().nullable(),
 	progress: CustomerExportProgressSchema.nullable(),
 	trigger_run_id: z.string().nullable(),
-	/** Run-scoped realtime token, minted only while the export is still active. */
 	public_access_token: z.string().nullable(),
 });
 
