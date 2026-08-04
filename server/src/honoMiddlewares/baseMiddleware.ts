@@ -95,8 +95,8 @@ export const baseMiddleware = async (c: Context<HonoEnv>, next: Next) => {
 		user_agent: c.req.header("user-agent"),
 		ip_address: c.req.header("x-forwarded-for"),
 		region: process.env.AWS_REGION,
-		query: JSON.stringify(c.req.query()),
-		body: JSON.stringify(redactSensitiveRequestBody({ body })),
+		query: c.req.query(),
+		body: redactSensitiveRequestBody({ body }),
 		name: `${c.req.method} ${c.req.path}`,
 	};
 	const requestLogContexts = buildRequestLogContexts({
