@@ -9,6 +9,7 @@ import { and, eq, inArray, isNotNull, sql } from "drizzle-orm";
 import { isUniqueConstraintError } from "@/db/dbUtils";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
+import { markCustomersUpdatedAtByInternalIds } from "@/internal/customers/customerLsns/markCustomerUpdatedAt.js";
 import RecaseError from "@/utils/errorUtils.js";
 
 export class EntityService {
@@ -84,6 +85,11 @@ export class EntityService {
 
 		try {
 			const results = await db.insert(entities).values(data).returning();
+
+			await markCustomersUpdatedAtByInternalIds({
+				db,
+				internalCustomerIds: results.map((row) => row.internal_customer_id),
+			});
 
 			return results as Entity[];
 		} catch (error) {
@@ -202,7 +208,13 @@ export class EntityService {
 			});
 		}
 
-		return results[0] as Entity;
+		const entity = results[0] as Entity;
+		await markCustomersUpdatedAtByInternalIds({
+			db,
+			internalCustomerIds: [entity.internal_customer_id],
+		});
+
+		return entity;
 	}
 
 	static async deleteInInternalIds({
@@ -216,7 +228,7 @@ export class EntityService {
 		orgId: string;
 		env: string;
 	}) {
-		const _results = await db
+		const results = await db
 			.delete(entities)
 			.where(
 				and(
@@ -226,5 +238,10 @@ export class EntityService {
 				),
 			)
 			.returning();
+
+		await markCustomersUpdatedAtByInternalIds({
+			db,
+			internalCustomerIds: results.map((row) => row.internal_customer_id),
+		});
 	}
 }

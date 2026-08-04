@@ -1,5 +1,6 @@
 import type { AppEnv, Feature } from "@autumn/shared";
 import type { Redis } from "ioredis";
+import { markCustomersUpdatedAt } from "@/internal/customers/customerLsns/markCustomerUpdatedAt.js";
 import { tryRedisRead, tryRedisWrite } from "@/utils/cacheUtils/cacheUtils.js";
 import { buildFullSubjectKey } from "../../builders/buildFullSubjectKey.js";
 import { buildFullSubjectOrgEnvKey } from "../../builders/buildFullSubjectOrgEnvKey.js";
@@ -110,6 +111,9 @@ export const batchInvalidateCachedFullSubjects = async ({
 	}) => Redis[];
 }): Promise<number> => {
 	if (customers.length === 0) return 0;
+
+	// Chokepoint freshness marks — a pure DB write, never gated on Redis state.
+	await markCustomersUpdatedAt({ customers });
 
 	const customersByRedis = new Map<Redis, BatchInvalidateCustomer[]>();
 	for (const customer of customers) {
