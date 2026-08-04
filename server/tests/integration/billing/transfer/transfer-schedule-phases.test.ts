@@ -172,7 +172,8 @@ test.concurrent(
 		const entityScopedProduct = beforeTransfer.find(
 			(customerProduct) => customerProduct.product_id === addon.id,
 		);
-		expect(entityScopedProduct?.internal_entity_id).not.toBeNull();
+		expect(entityScopedProduct).toBeDefined();
+		expect(entityScopedProduct!.internal_entity_id).not.toBeNull();
 
 		await autumnV1.transfer(customerId, {
 			to_entity_id: destinationEntityId,
@@ -193,6 +194,7 @@ test.concurrent(
 			ctx,
 			customerProductIds: phaseCustomerProductIds,
 		});
+		expect(afterTransfer).toHaveLength(beforeTransfer.length);
 
 		for (const customerProduct of afterTransfer) {
 			if (customerProduct.product_id === addon.id) {
