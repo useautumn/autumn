@@ -33,6 +33,19 @@ export const DEFAULT_SETTLE_TIMEOUT_MS =
 	Number(process.env.TEST_FILE_CONCURRENCY || "0") > 1 ? 45_000 : 30_000;
 
 /**
+ * For assertions gated on a Stripe webhook (checkout completion, cancellation
+ * scheduling, invoice finalisation). Measured arriving past a minute in `bun
+ * tw`, where the hop is Stripe → one shared ingress sandbox → the µVM and
+ * Stripe retries a miss on its own backoff.
+ *
+ * Pass as `settleTimeoutMs` ONLY in tests with no per-test timeout of their own
+ * — otherwise one late assertion eats the whole test budget and the failure
+ * surfaces as an opaque timeout instead of the real mismatch.
+ */
+export const WEBHOOK_SETTLE_TIMEOUT_MS =
+	Number(process.env.TEST_FILE_CONCURRENCY || "0") > 1 ? 150_000 : 30_000;
+
+/**
  * THE one place polling lives.
  *
  * Wraps an expect helper so a caller may pass `customerId` instead of a

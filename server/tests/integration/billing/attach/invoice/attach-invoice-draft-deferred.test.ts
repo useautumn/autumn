@@ -21,6 +21,7 @@ import { expectCustomerFeatureCorrect } from "@tests/integration/billing/utils/e
 import { expectCustomerInvoiceCorrect } from "@tests/integration/billing/utils/expectCustomerInvoiceCorrect";
 import { expectCustomerProducts } from "@tests/integration/billing/utils/expectCustomerProductCorrect";
 import { expectProductTrialing } from "@tests/integration/billing/utils/expectCustomerProductTrialing";
+import { WEBHOOK_SETTLE_TIMEOUT_MS } from "@tests/utils/pollableCustomerExpect";
 import { TestFeature } from "@tests/setup/v2Features";
 import { completeInvoiceCheckoutV2 as completeInvoiceCheckout } from "@tests/utils/browserPool/completeInvoiceCheckoutV2";
 import { items } from "@tests/utils/fixtures/items";
@@ -126,6 +127,7 @@ test.concurrent(
 		await expectCustomerProducts({
 			autumn: autumnV1,
 			customerId,
+			settleTimeoutMs: WEBHOOK_SETTLE_TIMEOUT_MS,
 			active: [pro.id],
 		});
 
@@ -144,6 +146,7 @@ test.concurrent(
 		await expectCustomerInvoiceCorrect({
 			autumn: autumnV1,
 			customerId,
+			settleTimeoutMs: WEBHOOK_SETTLE_TIMEOUT_MS,
 			count: 1,
 			latestTotal: preview.total,
 			latestStatus: "paid",
@@ -259,6 +262,7 @@ test.concurrent(
 		await expectCustomerProducts({
 			autumn: autumnV1,
 			customerId,
+			settleTimeoutMs: WEBHOOK_SETTLE_TIMEOUT_MS,
 			active: [premium.id],
 			notPresent: [proTrial.id],
 		});
@@ -277,6 +281,7 @@ test.concurrent(
 		await expectCustomerInvoiceCorrect({
 			autumn: autumnV1,
 			customerId,
+			settleTimeoutMs: WEBHOOK_SETTLE_TIMEOUT_MS,
 			count: 3,
 			latestTotal: preview.total,
 			latestStatus: "paid",
@@ -383,6 +388,7 @@ test.concurrent(
 		await expectCustomerProducts({
 			autumn: autumnV1,
 			customerId,
+			settleTimeoutMs: WEBHOOK_SETTLE_TIMEOUT_MS,
 			active: [pro.id],
 		});
 
@@ -401,6 +407,7 @@ test.concurrent(
 		await expectCustomerInvoiceCorrect({
 			autumn: autumnV1,
 			customerId,
+			settleTimeoutMs: WEBHOOK_SETTLE_TIMEOUT_MS,
 			count: 1,
 			latestTotal: preview.total,
 			latestStatus: "paid",
@@ -495,6 +502,7 @@ test.concurrent(
 		await expectCustomerProducts({
 			autumn: autumnV1,
 			customerId,
+			settleTimeoutMs: WEBHOOK_SETTLE_TIMEOUT_MS,
 			active: [oneOff.id],
 		});
 
@@ -511,6 +519,7 @@ test.concurrent(
 		await expectCustomerInvoiceCorrect({
 			autumn: autumnV1,
 			customerId,
+			settleTimeoutMs: WEBHOOK_SETTLE_TIMEOUT_MS,
 			count: 1,
 			latestTotal: preview.total,
 			latestStatus: "paid",

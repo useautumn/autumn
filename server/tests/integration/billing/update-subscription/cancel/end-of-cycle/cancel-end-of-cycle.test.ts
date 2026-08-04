@@ -22,6 +22,7 @@ import {
 } from "@tests/integration/billing/utils/expectCustomerProductCorrect";
 import { expectNoStripeSubscription } from "@tests/integration/billing/utils/expectNoStripeSubscription";
 import { expectSubToBeCorrect } from "@tests/merged/mergeUtils/expectSubCorrect";
+import { WEBHOOK_SETTLE_TIMEOUT_MS } from "@tests/utils/pollableCustomerExpect";
 import { TestFeature } from "@tests/setup/v2Features";
 import { items } from "@tests/utils/fixtures/items";
 import { products } from "@tests/utils/fixtures/products";
@@ -90,6 +91,7 @@ test.concurrent(`${chalk.yellowBright("cancel end of cycle: with default free pr
 	await expectCustomerProducts({
 		autumn: autumnV1,
 		customerId,
+		settleTimeoutMs: WEBHOOK_SETTLE_TIMEOUT_MS,
 		canceling: [pro.id],
 		scheduled: [free.id],
 	});
@@ -121,6 +123,7 @@ test.concurrent(`${chalk.yellowBright("cancel end of cycle: with default free pr
 	await expectCustomerProducts({
 		autumn: autumnV1,
 		customerId,
+		settleTimeoutMs: WEBHOOK_SETTLE_TIMEOUT_MS,
 		active: [free.id],
 		notPresent: [pro.id],
 	});
@@ -318,6 +321,7 @@ test.concurrent(`${chalk.yellowBright("cancel end of cycle: downgrade then cance
 	await expectCustomerProducts({
 		autumn: autumnV1,
 		customerId,
+		settleTimeoutMs: WEBHOOK_SETTLE_TIMEOUT_MS,
 		canceling: [premium.id],
 		notPresent: [pro.id],
 		scheduled: [free.id],
@@ -339,6 +343,7 @@ test.concurrent(`${chalk.yellowBright("cancel end of cycle: downgrade then cance
 	await expectCustomerProducts({
 		autumn: autumnV1,
 		customerId,
+		settleTimeoutMs: WEBHOOK_SETTLE_TIMEOUT_MS,
 		active: [free.id],
 		notPresent: [premium.id],
 	});
@@ -587,6 +592,7 @@ test.concurrent(`${chalk.yellowBright("cancel end of cycle: then cancel immediat
 	await expectCustomerProducts({
 		autumn: autumnV1,
 		customerId,
+		settleTimeoutMs: WEBHOOK_SETTLE_TIMEOUT_MS,
 		canceling: [pro.id],
 		scheduled: [free.id],
 	});
@@ -611,6 +617,7 @@ test.concurrent(`${chalk.yellowBright("cancel end of cycle: then cancel immediat
 	await expectCustomerProducts({
 		autumn: autumnV1,
 		customerId,
+		settleTimeoutMs: WEBHOOK_SETTLE_TIMEOUT_MS,
 		notPresent: [pro.id],
 		active: [free.id],
 	});

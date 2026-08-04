@@ -22,6 +22,7 @@ import { AutumnCli } from "@tests/cli/AutumnCli";
 import { expectCustomerFeatureCorrect } from "@tests/integration/billing/utils/expectCustomerFeatureCorrect";
 import { expectCustomerInvoiceCorrect } from "@tests/integration/billing/utils/expectCustomerInvoiceCorrect";
 import { expectCustomerProducts } from "@tests/integration/billing/utils/expectCustomerProductCorrect";
+import { WEBHOOK_SETTLE_TIMEOUT_MS } from "@tests/utils/pollableCustomerExpect";
 import { TestFeature } from "@tests/setup/v2Features";
 import { completeStripeCheckoutFormV2 } from "@tests/utils/browserPool/completeStripeCheckoutFormV2";
 import { items } from "@tests/utils/fixtures/items";
@@ -71,6 +72,7 @@ test.concurrent(`${chalk.yellowBright("legacy-checkout 1: basic stripe checkout"
 	await expectCustomerProducts({
 		autumn: autumnV1,
 		customerId,
+		settleTimeoutMs: WEBHOOK_SETTLE_TIMEOUT_MS,
 		active: [pro.id],
 	});
 
@@ -243,6 +245,7 @@ test.concurrent(`${chalk.yellowBright("legacy-checkout 3: multi-product checkout
 	await expectCustomerProducts({
 		autumn: autumnV1,
 		customerId,
+		settleTimeoutMs: WEBHOOK_SETTLE_TIMEOUT_MS,
 		active: [pro.id, oneOff.id],
 	});
 
