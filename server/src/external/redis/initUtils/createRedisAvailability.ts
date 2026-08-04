@@ -7,7 +7,6 @@ import { waitForRedisReady } from "./redisWarmup.js";
 const REDIS_ERROR_LOG_INTERVAL_MS = 30_000;
 const REDIS_PROBE_INTERVAL_MS = 2_000;
 const REDIS_PROBE_TIMEOUT_MS = 1_000;
-const REDIS_STALE_RECONNECT_MS = 5_000;
 const REDIS_FAILURES_TO_DEGRADE = 5;
 const REDIS_SUCCESSES_TO_RECOVER = 3;
 const REDIS_LOOP_LAG_INCONCLUSIVE_MS = 500;
@@ -60,6 +59,7 @@ export const createRedisAvailability = ({
 	getEventLoopLagMs?: () => number;
 	maxConsecutiveInconclusive?: number;
 }) => {
+	let probeRedis: Redis | null = null;
 	let redisAvailabilityState: RedisAvailabilityState = "degraded";
 	let redisMonitorInterval: ReturnType<typeof setInterval> | null = null;
 	let redisTickInFlight = false;
@@ -68,12 +68,30 @@ export const createRedisAvailability = ({
 	let consecutiveFailures = 0;
 	let consecutiveSuccesses = 0;
 	let consecutiveInconclusive = 0;
-	let reconnectStartedAt: number | null = null;
 	let lastEventLoopLagMs = 0;
 
-	const loopLagSampler = ((): { begin: () => void; end: () => number } => {
+	const getOrCreateProbeRedis = (): Redis => {
+		if (!hasConfig) return redis;
+		if (probeRedis) return probeRedis;
+
+		probeRedis = redis.duplicate();
+		if (probeRedis !== redis) probeRedis.on("error", () => {});
+		return probeRedis;
+	};
+
+	const getProbeRedisStatus = () => probeRedis?.status ?? "not_initialized";
+
+	const loopLagSampler = ((): {
+		begin: () => void;
+		end: () => number;
+		stop: () => void;
+	} => {
 		if (getEventLoopLagMs) {
-			return { begin: () => {}, end: () => getEventLoopLagMs() };
+			return {
+				begin: () => {},
+				end: () => getEventLoopLagMs(),
+				stop: () => {},
+			};
 		}
 
 		let histogram: ReturnType<typeof monitorEventLoopDelay> | null = null;
@@ -89,7 +107,7 @@ export const createRedisAvailability = ({
 				`[${logPrefix}] Event-loop delay monitor unavailable; lag-aware degrade suppression disabled`,
 				{ type: logType },
 			);
-			return { begin: () => {}, end: () => 0 };
+			return { begin: () => {}, end: () => 0, stop: () => {} };
 		}
 
 		const activeHistogram = histogram;
@@ -99,6 +117,7 @@ export const createRedisAvailability = ({
 				const maxMs = histogramMaxToMs(activeHistogram.max);
 				return Number.isFinite(maxMs) && maxMs > 0 ? maxMs : 0;
 			},
+			stop: () => activeHistogram.disable(),
 		};
 	})();
 
@@ -123,6 +142,7 @@ export const createRedisAvailability = ({
 				previousState,
 				state,
 				redisStatus: redis.status,
+				probeRedisStatus: getProbeRedisStatus(),
 				consecutiveFailures,
 				consecutiveSuccesses,
 				eventLoopLagMs: lastEventLoopLagMs,
@@ -155,72 +175,48 @@ export const createRedisAvailability = ({
 		logger.warn(`[${logPrefix}] Probe inconclusive under event-loop lag`, {
 			type: logType,
 			redisStatus: redis.status,
+			probeRedisStatus: getProbeRedisStatus(),
 			consecutiveFailures,
 			eventLoopLagMs: lastEventLoopLagMs,
 			loopLagThresholdMs: REDIS_LOOP_LAG_INCONCLUSIVE_MS,
 		});
 	};
 
-	const pingRedisClient = async () => {
-		if (redis.status !== "ready") return false;
+	const pingRedisClient = async (activeProbeRedis: Redis) => {
+		if (activeProbeRedis.status !== "ready") return false;
 
 		const pong = await withTimeout({
 			timeoutMs: REDIS_PROBE_TIMEOUT_MS,
-			fn: () => redis.ping(),
+			fn: () => activeProbeRedis.ping(),
 		});
 
-		return redis.status === "ready" && pong === "PONG";
+		return activeProbeRedis.status === "ready" && pong === "PONG";
 	};
 
-	const reconnectRedis = async () => {
-		try {
-			redis.disconnect(false);
-			await withTimeout({
-				timeoutMs: REDIS_PROBE_TIMEOUT_MS,
-				fn: () => redis.connect(),
-			});
-			reconnectStartedAt = null;
-		} catch {
-			// Let the next probe decide whether we recovered.
-		}
-	};
-
-	const classifyPing = (pingOk: boolean): ProbeOutcome => {
+	const classifyPing = ({
+		pingOk,
+		activeProbeRedis,
+	}: {
+		pingOk: boolean;
+		activeProbeRedis: Redis;
+	}): ProbeOutcome => {
 		if (pingOk) return "available";
-		return redis.status === "ready"
+		return activeProbeRedis.status === "ready"
 			? "unresponsive_while_ready"
 			: "connection_down";
 	};
 
 	const probeRedisAvailability = async (): Promise<ProbeOutcome> => {
 		if (!hasConfig) return "connection_down";
+		const activeProbeRedis = getOrCreateProbeRedis();
 
 		let pingOk = false;
 		try {
-			pingOk = await pingRedisClient();
+			pingOk = await pingRedisClient(activeProbeRedis);
 		} catch {
 			pingOk = false;
 		}
-		if (pingOk) return "available";
-
-		const failedWhileReady = redis.status === "ready";
-		const shouldReconnectReadyClient =
-			failedWhileReady && consecutiveFailures + 1 >= REDIS_FAILURES_TO_DEGRADE;
-
-		if (shouldReconnectReadyClient) {
-			await reconnectRedis();
-		} else if (redis.status !== "ready") {
-			if (redis.status === "connecting" || redis.status === "reconnecting") {
-				reconnectStartedAt ??= Date.now();
-				if (Date.now() - reconnectStartedAt < REDIS_STALE_RECONNECT_MS) {
-					return "connection_down";
-				}
-			}
-
-			await reconnectRedis();
-		}
-
-		return classifyPing(await pingRedisClient().catch(() => false));
+		return classifyPing({ pingOk, activeProbeRedis });
 	};
 
 	const probeAndClassify = async (): Promise<ProbeClassification> => {
@@ -260,9 +256,26 @@ export const createRedisAvailability = ({
 	return {
 		prime: async () => {
 			if (!hasConfig) return;
+			const activeProbeRedis = getOrCreateProbeRedis();
+			const readinessPromises: Promise<void>[] = [];
+
 			if (redis.status === "connecting" || redis.status === "reconnecting") {
-				await waitForRedisReady(redis, logPrefix).catch(() => undefined);
+				readinessPromises.push(
+					waitForRedisReady(redis, logPrefix).catch(() => undefined),
+				);
 			}
+			if (
+				activeProbeRedis !== redis &&
+				(activeProbeRedis.status === "connecting" ||
+					activeProbeRedis.status === "reconnecting")
+			) {
+				readinessPromises.push(
+					waitForRedisReady(activeProbeRedis, `${logPrefix}Probe`).catch(
+						() => undefined,
+					),
+				);
+			}
+			await Promise.all(readinessPromises);
 
 			const classification = await probeAndClassify();
 			consecutiveInconclusive = 0;
@@ -289,11 +302,19 @@ export const createRedisAvailability = ({
 			}, REDIS_PROBE_INTERVAL_MS);
 		},
 		stopMonitor: () => {
-			if (!redisMonitorInterval) return;
-			clearInterval(redisMonitorInterval);
-			redisMonitorInterval = null;
+			if (redisMonitorInterval) {
+				clearInterval(redisMonitorInterval);
+				redisMonitorInterval = null;
+			}
+			loopLagSampler.stop();
+			if (probeRedis && probeRedis !== redis && probeRedis.status !== "end") {
+				probeRedis.disconnect();
+			}
 		},
-		shouldUseRedis: () => hasConfig && redisAvailabilityState === "healthy",
+		shouldUseRedis: () =>
+			hasConfig &&
+			redis.status === "ready" &&
+			redisAvailabilityState === "healthy",
 		getRedisAvailability: (): RedisAvailabilitySnapshot => ({
 			configured: hasConfig,
 			state: redisAvailabilityState,
