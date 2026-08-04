@@ -2,8 +2,6 @@ import {
 	CreateRewardProgram,
 	ErrCode,
 	RecaseError,
-	RewardTriggerEvent,
-	RewardType,
 	Scopes,
 } from "@autumn/shared";
 import { createRoute } from "@/honoMiddlewares/routeHandler.js";
@@ -12,7 +10,10 @@ import {
 	rewardRepo,
 } from "@/internal/rewards/repos/index.js";
 import { constructRewardProgram } from "@/internal/rewards/rewardUtils.js";
-import { nullish } from "@/utils/genUtils.js";
+import {
+	validateRewardIsFeatureGrant,
+	validateTriggerConfig,
+} from "./validateRewardProgram.js";
 
 export const handleCreateRewardProgram = createRoute({
 	scopes: [Scopes.Rewards.Write],
@@ -21,22 +22,6 @@ export const handleCreateRewardProgram = createRoute({
 		const ctx = c.get("ctx");
 		const { org, env, db } = ctx;
 		const body = c.req.valid("json");
-
-		if (!body.internal_reward_id) {
-			throw new RecaseError({
-				message: "Please select a reward to link this program to",
-				code: ErrCode.InvalidRequest,
-				statusCode: 400,
-			});
-		}
-
-		if (!body.id) {
-			throw new RecaseError({
-				message: "Please give this program an ID",
-				code: ErrCode.InvalidRequest,
-				statusCode: 400,
-			});
-		}
 
 		const existingProgram = await rewardProgramRepo.get({
 			db,
@@ -68,14 +53,7 @@ export const handleCreateRewardProgram = createRoute({
 			});
 		}
 
-		if (reward.type !== RewardType.FeatureGrant) {
-			throw new RecaseError({
-				message:
-					"Referral programs must be linked to a feature grant reward. Existing programs using other reward types continue to work, but new ones must use feature grants.",
-				code: ErrCode.InvalidRequest,
-				statusCode: 400,
-			});
-		}
+		validateRewardIsFeatureGrant(reward);
 
 		const rewardProgram = constructRewardProgram({
 			rewardProgramData: CreateRewardProgram.parse({
@@ -86,28 +64,11 @@ export const handleCreateRewardProgram = createRoute({
 			env,
 		});
 
-		if (rewardProgram.when === RewardTriggerEvent.Checkout) {
-			if (
-				nullish(rewardProgram.product_ids) ||
-				rewardProgram.product_ids!.length === 0
-			) {
-				throw new RecaseError({
-					message: "If redeem on checkout, must specify at least one product",
-					code: ErrCode.InvalidRequest,
-					statusCode: 400,
-				});
-			}
-
-			// Checkout grants are skipped when redemption count >= max, so 0 blocks every grant
-			if (!rewardProgram.max_redemptions) {
-				throw new RecaseError({
-					message:
-						"If redeem on checkout, max redemptions must be greater than 0",
-					code: ErrCode.InvalidRequest,
-					statusCode: 400,
-				});
-			}
-		}
+		validateTriggerConfig({
+			when: rewardProgram.when,
+			productIds: rewardProgram.product_ids,
+			maxRedemptions: rewardProgram.max_redemptions,
+		});
 
 		const createdRewardProgram = await rewardProgramRepo.insert({
 			db,
