@@ -65,3 +65,5 @@ export const listInFlightRequests = ({
 export const clearInFlightRequests = () => {
 	inFlightRequests.clear();
 };
+
+export const countInFlightRequests = () => inFlightRequests.size;

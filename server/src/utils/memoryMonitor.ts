@@ -7,6 +7,7 @@
 
 import { monitorEventLoopDelay } from "node:perf_hooks";
 import { logger } from "../external/logtail/logtailUtils.js";
+import { countInFlightRequests } from "./memory/inFlightRequests.js";
 
 // Event loop lag histogram — samples at 100ms resolution at the C++ level.
 // No JS callbacks involved, negligible overhead.
@@ -31,9 +32,11 @@ function logMemoryUsage(label: string) {
 		return;
 	}
 
-	// Sweep floating garbage first: JSC defers collection until memory pressure,
-	// so unswept transients otherwise read as a leak in rss/heapUsed.
-	Bun.gc(true);
+	// JSC defers GC until memory pressure, so unswept transients read as a leak.
+	// Sync GC blocks the event loop; only force it while no requests are in flight.
+	if (countInFlightRequests() === 0) {
+		Bun.gc(true);
+	}
 	const mem = process.memoryUsage();
 
 	const lagMeanMs = Math.round((lagHistogram.mean / 1e6) * 10) / 10;
