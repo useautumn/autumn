@@ -4,9 +4,15 @@ import {
 	type Entity,
 	findFeatureById,
 } from "@autumn/shared";
+import { shed503OnTransientError } from "@/db/shed503OnTransientError.js";
 import { withLock } from "@/external/redis/redisUtils.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { EntityService } from "@/internal/api/entities/EntityService";
+import {
+	getEntityCreationRecoveryStage,
+	setEntityCreationRecoveryStage,
+} from "@/internal/entities/recovery/entityCreationRecoveryStage.js";
+import { queueFailedEntityCreation } from "@/internal/entities/recovery/queueFailedEntityCreation.js";
 import { getApiEntity } from "../entityUtils/apiEntityUtils/getApiEntity";
 import { constructEntity } from "../entityUtils/entityUtils";
 import { createEntityForCusProduct } from "../handlers/handleCreateEntity/createEntityForCusProduct";
@@ -19,6 +25,8 @@ type BatchCreateEntitiesParams = {
 	customerId: string;
 	createEntityData: CreateEntityParams[] | CreateEntityParams;
 	withAutumnId?: boolean;
+	source?: string;
+	enqueueRecoveryOnTransientFailure?: boolean;
 };
 
 const createEntities = async ({
@@ -42,6 +50,8 @@ const createEntities = async ({
 		customerData,
 		createEntityData,
 	});
+
+	setEntityCreationRecoveryStage({ ctx, stage: "pre_commit" });
 
 	for (const cusProduct of cusProducts) {
 		await createEntityForCusProduct({
@@ -96,6 +106,8 @@ const createEntities = async ({
 
 	newEntities.push(...insertedEntities);
 
+	setEntityCreationRecoveryStage({ ctx, stage: "entities_committed" });
+
 	await attachDefaultProductsToEntities({
 		ctx,
 		fullCustomer: fullCus,
@@ -119,19 +131,55 @@ const createEntities = async ({
 		apiEntities.push(apiEntity);
 	}
 
+	setEntityCreationRecoveryStage({ ctx, stage: "completed" });
+
 	return apiEntities;
 };
 
 export const batchCreateEntities = async (
 	params: BatchCreateEntitiesParams,
 ) => {
-	const { ctx, customerId } = params;
+	const {
+		ctx,
+		customerId,
+		createEntityData,
+		customerData,
+		withAutumnId,
+		source,
+		enqueueRecoveryOnTransientFailure = true,
+	} = params;
 	const { org, env } = ctx;
 
-	return withLock({
-		lockKey: `lock:create-entity-request:${org.id}:${env}:${customerId}`,
-		errorMessage:
-			"Entity creation already in progress for this customer, try again in a few seconds",
-		fn: () => createEntities(params),
+	setEntityCreationRecoveryStage({ ctx, stage: "lookup" });
+
+	// No Postgres fallback for a cache-only failure: the lock this path takes
+	// lives in Redis, and creating entities without it double-charges seats.
+	return shed503OnTransientError({
+		ctx,
+		source: "entities.create",
+		run: () =>
+			withLock({
+				lockKey: `lock:create-entity-request:${org.id}:${env}:${customerId}`,
+				errorMessage:
+					"Entity creation already in progress for this customer, try again in a few seconds",
+				fn: () => createEntities(params),
+			}),
+		onTransientError: enqueueRecoveryOnTransientFailure
+			? async () => {
+					await queueFailedEntityCreation({
+						ctx,
+						params: {
+							customer_id: customerId,
+							create_entity_data: Array.isArray(createEntityData)
+								? createEntityData
+								: [createEntityData],
+							customer_data: customerData,
+						},
+						source,
+						withAutumnId,
+						failureStage: getEntityCreationRecoveryStage({ ctx }),
+					});
+				}
+			: undefined,
 	});
 };

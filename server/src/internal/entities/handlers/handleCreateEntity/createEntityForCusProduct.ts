@@ -18,6 +18,7 @@ import { getReps } from "@/internal/balances/utils/paidAllocatedFeature/createPa
 import { CusEntService } from "@/internal/customers/cusProducts/cusEnts/CusEntitlementService.js";
 import { findLinkedCusEnts } from "@/internal/customers/cusProducts/cusEnts/cusEntUtils/findCusEntUtils.js";
 import { deleteCachedFullCustomer } from "@/internal/customers/cusUtils/fullCustomerCacheUtils/deleteCachedFullCustomer";
+import { setEntityCreationRecoveryStage } from "@/internal/entities/recovery/entityCreationRecoveryStage.js";
 import RecaseError from "@/utils/errorUtils.js";
 import { notNullish } from "@/utils/genUtils.js";
 
@@ -138,6 +139,11 @@ export const createEntityForCusProduct = async ({
 				errorMessage:
 					"Entity creation already in progress for this customer, try again in a few seconds",
 			});
+
+			// Marked before the adjustment rather than after it: a proration can be
+			// invoiced and the decrement still fail, and that half-applied charge is
+			// exactly what recovery must not replay.
+			setEntityCreationRecoveryStage({ ctx, stage: "seat_charge" });
 
 			try {
 				const originalBalance = mainCusEntWithCusProduct.balance || 0;

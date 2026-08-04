@@ -28,7 +28,7 @@ import { sendProductsUpdated } from "@/internal/billing/v2/workflows/sendProduct
 import { storeDeferredInvoiceLineItems } from "@/internal/billing/v2/workflows/storeDeferredInvoiceLineItems/storeDeferredInvoiceLineItems.js";
 import { storeInvoiceLineItems } from "@/internal/billing/v2/workflows/storeInvoiceLineItems/storeInvoiceLineItems.js";
 import { batchResetCustomerEntitlements } from "@/internal/customers/actions/resetCustomerEntitlements/batchResetCustomerEntitlements.js";
-import { replayFailedCustomerCreation } from "@/internal/customers/recovery/replayFailedCustomerCreation.js";
+import { replayCreationRecovery } from "@/internal/customers/recovery/replayCreationRecovery.js";
 import { runClearCreditSystemCacheTask } from "@/internal/features/featureActions/runClearCreditSystemCacheTask.js";
 import { generateFeatureDisplay } from "@/internal/features/workflows/generateFeatureDisplay.js";
 import { runMigrationTask } from "@/internal/migrations/runMigrationTask.js";
@@ -209,7 +209,7 @@ export const processMessage = async ({
 			if (!ctx) {
 				throw new Error("No context found for customer creation recovery job");
 			}
-			await replayFailedCustomerCreation({
+			await replayCreationRecovery({
 				ctx,
 				payload: job.data,
 			});
