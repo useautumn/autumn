@@ -4,29 +4,20 @@ import {
 	BucketAlreadyOwnedByYou,
 	type BucketLocationConstraint,
 	CreateBucketCommand,
-	GetBucketLifecycleConfigurationCommand,
 	HeadBucketCommand,
 	HeadObjectCommand,
-	type LifecycleRule,
-	PutBucketLifecycleConfigurationCommand,
 	PutObjectCommand,
 	S3Client,
-	type TransitionDefaultMinimumObjectSize,
 } from "@aws-sdk/client-s3";
 import {
 	getAdminS3Config,
 	ADMIN_REQUEST_BLOCK_CONFIG_KEY as REQUEST_BLOCK_CONFIG_KEY,
 } from "@server/external/aws/s3/adminS3Config.js";
-import {
-	CUSTOMER_EXPORTS_PREFIX,
-	getCustomerExportsS3Config,
-} from "@server/external/aws/s3/customerExportsS3Config.js";
+import { getCustomerExportsS3Config } from "@server/external/aws/s3/customerExportsS3Config.js";
 
 const DEFAULT_REQUEST_BLOCK_CONFIG = {
 	orgs: {},
 };
-const INCOMPLETE_EXPORT_UPLOAD_RULE_ID = "abort-incomplete-customer-exports";
-const INCOMPLETE_EXPORT_UPLOAD_DAYS = 7;
 
 const createS3Client = ({ region }: { region: string }) => {
 	return new S3Client({ region });
@@ -175,72 +166,6 @@ const ensureRequestBlockConfigExists = async ({
 	console.log(`Created admin config: ${REQUEST_BLOCK_CONFIG_KEY}`);
 };
 
-const ensureIncompleteExportUploadCleanup = async ({
-	s3Client,
-	bucket,
-}: {
-	s3Client: S3Client;
-	bucket: string;
-}) => {
-	let rules: LifecycleRule[] = [];
-	let transitionDefaultMinimumObjectSize:
-		| TransitionDefaultMinimumObjectSize
-		| undefined;
-	try {
-		const lifecycle = await s3Client.send(
-			new GetBucketLifecycleConfigurationCommand({ Bucket: bucket }),
-		);
-		rules = lifecycle.Rules ?? [];
-		transitionDefaultMinimumObjectSize =
-			lifecycle.TransitionDefaultMinimumObjectSize;
-	} catch (error) {
-		if (
-			!(error instanceof Error && error.name === "NoSuchLifecycleConfiguration")
-		) {
-			throw error;
-		}
-	}
-
-	const prefix = `${CUSTOMER_EXPORTS_PREFIX}/`;
-	const existingRule = rules.find(
-		(rule) => rule.ID === INCOMPLETE_EXPORT_UPLOAD_RULE_ID,
-	);
-	if (
-		existingRule?.Status === "Enabled" &&
-		existingRule.Filter?.Prefix === prefix &&
-		existingRule.AbortIncompleteMultipartUpload?.DaysAfterInitiation ===
-			INCOMPLETE_EXPORT_UPLOAD_DAYS
-	) {
-		console.log(`Multipart upload cleanup already configured: ${bucket}`);
-		return;
-	}
-
-	const cleanupRule: LifecycleRule = {
-		ID: INCOMPLETE_EXPORT_UPLOAD_RULE_ID,
-		Status: "Enabled",
-		Filter: { Prefix: prefix },
-		AbortIncompleteMultipartUpload: {
-			DaysAfterInitiation: INCOMPLETE_EXPORT_UPLOAD_DAYS,
-		},
-	};
-	await s3Client.send(
-		new PutBucketLifecycleConfigurationCommand({
-			Bucket: bucket,
-			LifecycleConfiguration: {
-				Rules: [
-					...rules.filter(
-						(rule) => rule.ID !== INCOMPLETE_EXPORT_UPLOAD_RULE_ID,
-					),
-					cleanupRule,
-				],
-			},
-			TransitionDefaultMinimumObjectSize: transitionDefaultMinimumObjectSize,
-		}),
-	);
-
-	console.log(`Configured multipart upload cleanup: ${bucket}/${prefix}`);
-};
-
 const main = async () => {
 	const { bucket, region } = getAdminS3Config();
 	const s3Client = createS3Client({ region });
@@ -260,26 +185,19 @@ const main = async () => {
 		bucket,
 	});
 
+	// The abort-incomplete-multipart lifecycle rule for exports is managed in Terraform.
 	if (
-		process.env.S3_CUSTOMER_EXPORTS_BUCKET &&
+		process.env.S3_CUSTOMER_EXPORTS_BUCKET ||
 		process.env.S3_CUSTOMER_EXPORTS_REGION
 	) {
 		const customerExports = getCustomerExportsS3Config();
-		const customerExportsClient =
-			customerExports.region === region
-				? s3Client
-				: createS3Client({ region: customerExports.region });
 		if (customerExports.bucket !== bucket) {
 			await ensureBucketExists({
-				s3Client: customerExportsClient,
+				s3Client: createS3Client({ region: customerExports.region }),
 				bucket: customerExports.bucket,
 				region: customerExports.region,
 			});
 		}
-		await ensureIncompleteExportUploadCleanup({
-			s3Client: customerExportsClient,
-			bucket: customerExports.bucket,
-		});
 	} else {
 		console.log(
 			"Skipping customer exports bucket setup (S3_CUSTOMER_EXPORTS_BUCKET/REGION not set).",
