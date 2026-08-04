@@ -2,7 +2,7 @@ import { shed503OnTransientError } from "@/db/shed503OnTransientError.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { coalescedSubjectRead } from "@/internal/customers/cache/fullSubject/coalesceSubjectRead.js";
 import {
-	buildFullSubjectKey,
+	buildSubjectReadFlightKey,
 	getOrSetCachedFullSubject,
 } from "@/internal/customers/cache/fullSubject/index.js";
 import { isRedisFallbackToDbEnabled } from "@/internal/misc/miscellaneousEdgeConfig/miscellaneousEdgeConfigStore.js";
@@ -36,11 +36,14 @@ export const getApiCustomerByRollout = async ({
 	}
 
 	const lookup = async ({ skipCache }: { skipCache: boolean }) => {
+		const effectiveSkipCache = skipCache || ctx.skipCache;
+		const readFrom = disableReplicaRead ? "primary" : "replica-ok";
+
 		const fetch = () =>
 			getOrSetCachedFullSubject({
 				// Sole replica grant; writers opt out via disableReplicaRead.
-				readFrom: disableReplicaRead ? "primary" : "replica-ok",
-				ctx: skipCache ? { ...ctx, skipCache: true } : ctx,
+				readFrom,
+				ctx: effectiveSkipCache ? { ...ctx, skipCache: true } : ctx,
 				customerId,
 				entityId,
 				source,
@@ -50,11 +53,13 @@ export const getApiCustomerByRollout = async ({
 
 		let servedByFetch = false;
 		const fullSubject = await coalescedSubjectRead({
-			key: buildFullSubjectKey({
+			key: buildSubjectReadFlightKey({
 				orgId: ctx.org.id,
 				env: ctx.env,
 				customerId,
 				entityId,
+				skipCache: effectiveSkipCache,
+				readFrom,
 			}),
 			singleflight,
 			fetch: () => {

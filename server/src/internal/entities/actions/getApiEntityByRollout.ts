@@ -7,7 +7,7 @@ import {
 } from "@/internal/customers/actions/getApiCustomerByRollout.js";
 import { coalescedSubjectRead } from "@/internal/customers/cache/fullSubject/coalesceSubjectRead.js";
 import {
-	buildFullSubjectKey,
+	buildSubjectReadFlightKey,
 	getOrSetCachedFullSubject,
 } from "@/internal/customers/cache/fullSubject/index.js";
 import { isRedisFallbackToDbEnabled } from "@/internal/misc/miscellaneousEdgeConfig/miscellaneousEdgeConfigStore.js";
@@ -35,12 +35,15 @@ export const getApiEntityByRollout = async ({
 	if (isFullSubjectRolloutEnabled({ ctx })) {
 	}
 
-	const lookup = ({ skipCache }: { skipCache: boolean }) => {
+	const lookup = async ({ skipCache }: { skipCache: boolean }) => {
+		const effectiveSkipCache = skipCache || ctx.skipCache;
+		const readFrom = disableReplicaRead ? "primary" : "replica-ok";
+
 		const fetch = () =>
 			getOrSetCachedFullSubject({
 				// Sole replica grant; writers opt out via disableReplicaRead.
-				readFrom: disableReplicaRead ? "primary" : "replica-ok",
-				ctx: skipCache ? { ...ctx, skipCache: true } : ctx,
+				readFrom,
+				ctx: effectiveSkipCache ? { ...ctx, skipCache: true } : ctx,
 				customerId,
 				entityId,
 				source,
@@ -48,16 +51,27 @@ export const getApiEntityByRollout = async ({
 
 		if (!singleflight) return fetch();
 
-		return coalescedSubjectRead({
-			key: buildFullSubjectKey({
+		let servedByFetch = false;
+		const fullSubject = await coalescedSubjectRead({
+			key: buildSubjectReadFlightKey({
 				orgId: ctx.org.id,
 				env: ctx.env,
 				customerId,
 				entityId,
+				skipCache: effectiveSkipCache,
+				readFrom,
 			}),
 			singleflight,
-			fetch,
+			fetch: () => {
+				servedByFetch = true;
+				return fetch();
+			},
 		});
+		// Joined singleflights never enter fetch — the shared flight serves them.
+		if (!servedByFetch && ctx.subjectReadTrace) {
+			ctx.subjectReadTrace.source = "cache";
+		}
+		return fullSubject;
 	};
 
 	const fullSubject = await shed503OnTransientError({
