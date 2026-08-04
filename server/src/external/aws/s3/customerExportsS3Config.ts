@@ -10,14 +10,18 @@ export type CustomerExportDestination = {
 	key: string;
 };
 
+/** Answers "did anyone try to configure this?" — getCustomerExportsS3Config throws on partial config. */
+export const isCustomerExportsS3Configured = () =>
+	Boolean(process.env.S3_CUSTOMER_EXPORTS_BUCKET);
+
 export const getCustomerExportsS3Config = () => {
 	const bucket = process.env.S3_CUSTOMER_EXPORTS_BUCKET;
-	const region = process.env.S3_CUSTOMER_EXPORTS_REGION;
+	const region = process.env.S3_REGION;
 
 	if (!bucket || !region) {
 		throw new InternalError({
 			message:
-				"S3_CUSTOMER_EXPORTS_BUCKET and S3_CUSTOMER_EXPORTS_REGION env variables are not set",
+				"S3_CUSTOMER_EXPORTS_BUCKET and S3_REGION env variables are not set",
 		});
 	}
 

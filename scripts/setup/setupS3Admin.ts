@@ -13,7 +13,10 @@ import {
 	getAdminS3Config,
 	ADMIN_REQUEST_BLOCK_CONFIG_KEY as REQUEST_BLOCK_CONFIG_KEY,
 } from "@server/external/aws/s3/adminS3Config.js";
-import { getCustomerExportsS3Config } from "@server/external/aws/s3/customerExportsS3Config.js";
+import {
+	getCustomerExportsS3Config,
+	isCustomerExportsS3Configured,
+} from "@server/external/aws/s3/customerExportsS3Config.js";
 
 const DEFAULT_REQUEST_BLOCK_CONFIG = {
 	orgs: {},
@@ -186,10 +189,7 @@ const main = async () => {
 	});
 
 	// The abort-incomplete-multipart lifecycle rule for exports is managed in Terraform.
-	if (
-		process.env.S3_CUSTOMER_EXPORTS_BUCKET ||
-		process.env.S3_CUSTOMER_EXPORTS_REGION
-	) {
+	if (isCustomerExportsS3Configured()) {
 		const customerExports = getCustomerExportsS3Config();
 		if (customerExports.bucket !== bucket) {
 			await ensureBucketExists({
