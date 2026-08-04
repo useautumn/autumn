@@ -1,9 +1,4 @@
 import {
-	CustomerExportStatus,
-	type DbCustomerExport,
-	ms,
-} from "@autumn/shared";
-import {
 	CUSTOMER_EXPORT_FILE_NAME,
 	getCustomerExportKey,
 	getCustomerExportsS3Config,
@@ -12,6 +7,12 @@ import { headS3Object } from "@/external/aws/s3/s3ObjectUtils.js";
 import type { Logger } from "@/external/logtail/logtailUtils.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import type { RunCustomerExportPayload } from "@/trigger/exports/customerExportTaskPayload.js";
+import { timeout } from "@/utils/genUtils.js";
+import {
+	CustomerExportStatus,
+	type DbCustomerExport,
+	ms,
+} from "@autumn/shared";
 import { CustomerExportService } from "../CustomerExportService.js";
 import {
 	countCustomerExportRows,
@@ -65,9 +66,7 @@ const markCompletedWithRetry = async ({
 					error: error instanceof Error ? error.message : String(error),
 				},
 			});
-			await new Promise((resolve) =>
-				setTimeout(resolve, MARK_COMPLETED_RETRY_DELAY_MS),
-			);
+			await timeout(MARK_COMPLETED_RETRY_DELAY_MS);
 		}
 	}
 };
@@ -109,6 +108,121 @@ const reconcileUploadedExport = async ({
 	return true;
 };
 
+/** Null means this attempt has nothing to run: reconciled or already resolved. */
+const resolveRunnableExport = async ({
+	ctx,
+	logger,
+	payload,
+	bucket,
+	region,
+}: {
+	ctx: AutumnContext;
+	logger: Logger;
+	payload: RunCustomerExportPayload;
+	bucket: string;
+	region: string;
+}): Promise<DbCustomerExport | null> => {
+	const { exportId, orgId, env } = payload;
+	const customerExport = await CustomerExportService.get({
+		db: ctx.db,
+		id: exportId,
+		orgId,
+		env,
+	});
+
+	if (!customerExport) {
+		throw new Error(`Customer export ${exportId} not found`);
+	}
+
+	// Idempotency means only this export's retry sees Running: reconcile or restart.
+	if (customerExport.status === CustomerExportStatus.Running) {
+		const reconciled = await reconcileUploadedExport({
+			ctx,
+			logger,
+			customerExport,
+			bucket,
+			region,
+		});
+		return reconciled ? null : customerExport;
+	}
+
+	if (customerExport.status !== CustomerExportStatus.Queued) {
+		logger.warn("customer-export: skipping non-active export", {
+			data: { exportId, status: customerExport.status },
+		});
+		return null;
+	}
+
+	return customerExport;
+};
+
+const uploadCustomerExportCsv = async ({
+	ctx,
+	logger,
+	customerExport,
+	payload,
+	bucket,
+	region,
+	key,
+	progress,
+}: {
+	ctx: AutumnContext;
+	logger: Logger;
+	customerExport: DbCustomerExport;
+	payload: RunCustomerExportPayload;
+	bucket: string;
+	region: string;
+	key: string;
+	progress?: CustomerExportProgressReporter;
+}): Promise<{ rowCount: number; byteCount: number }> => {
+	const { exportId, orgId, env } = payload;
+	const { snapshot } = customerExport;
+	const createdAtCutoff = customerExport.created_at;
+
+	const upperBoundInternalId = await getCustomerExportUpperBound({
+		db: ctx.db,
+		orgId,
+		env,
+		snapshot,
+		createdAtCutoff,
+	});
+	const totalCount = await countCustomerExportRows({
+		db: ctx.db,
+		orgId,
+		env,
+		snapshot,
+		upperBoundInternalId,
+		createdAtCutoff,
+	});
+
+	await CustomerExportService.markRunning({
+		db: ctx.db,
+		id: exportId,
+		s3Key: key,
+	});
+	logger.info("customer-export: started", {
+		data: { exportId, totalCount },
+	});
+
+	// The reporter is absent for inline runs; retries reset before re-walking.
+	await progress?.setTotalRows(totalCount);
+	await progress?.resetProcessedRows();
+
+	return await streamCustomerExportCsv({
+		ctx,
+		customerExport,
+		orgId,
+		env,
+		upperBoundInternalId,
+		createdAtCutoff,
+		bucket,
+		region,
+		key,
+		onRowsProcessed: (processedRows) =>
+			progress?.incrementProcessedRows(processedRows),
+	});
+};
+
 export const executeCustomerExport = async ({
 	ctx,
 	logger,
@@ -123,105 +237,33 @@ export const executeCustomerExport = async ({
 	progress?: CustomerExportProgressReporter;
 }) => {
 	const { exportId, orgId, env } = payload;
-	const customerExport = await CustomerExportService.get({
-		db: ctx.db,
-		id: exportId,
-		orgId,
-		env,
-	});
-
-	if (!customerExport) {
-		throw new Error(`Customer export ${exportId} not found`);
-	}
-
 	const { bucket, region } = getCustomerExportsS3Config();
-	// Idempotency means only this export's retry sees Running: reconcile or restart.
-	if (customerExport.status === CustomerExportStatus.Running) {
-		const reconciled = await reconcileUploadedExport({
+
+	// 1. Resolve the row this attempt should act on
+	const customerExport = await resolveRunnableExport({
+		ctx,
+		logger,
+		payload,
+		bucket,
+		region,
+	});
+	if (!customerExport) return;
+
+	// 2. Count and stream; nothing is published if this throws
+	const key = getCustomerExportKey({ orgId, env, exportId });
+	let totals: { rowCount: number; byteCount: number };
+	try {
+		totals = await uploadCustomerExportCsv({
 			ctx,
 			logger,
 			customerExport,
-			bucket,
-			region,
-		});
-		if (reconciled) return;
-	} else if (customerExport.status !== CustomerExportStatus.Queued) {
-		logger.warn("customer-export: skipping non-active export", {
-			data: { exportId, status: customerExport.status },
-		});
-		return;
-	}
-
-	const key = getCustomerExportKey({ orgId, env, exportId });
-	// Once published, aborting or failing would orphan a valid downloadable file.
-	let uploadPublished = false;
-
-	try {
-		const { snapshot } = customerExport;
-		const createdAtCutoff = customerExport.created_at;
-		const upperBoundInternalId = await getCustomerExportUpperBound({
-			db: ctx.db,
-			orgId,
-			env,
-			snapshot,
-			createdAtCutoff,
-		});
-		const totalCount = await countCustomerExportRows({
-			db: ctx.db,
-			orgId,
-			env,
-			snapshot,
-			upperBoundInternalId,
-			createdAtCutoff,
-		});
-		await CustomerExportService.markRunning({
-			db: ctx.db,
-			id: exportId,
-			s3Key: key,
-		});
-
-		logger.info("customer-export: started", {
-			data: { exportId, totalCount },
-		});
-		// The reporter is absent for inline runs; retries reset before re-walking.
-		await progress?.setTotalRows(totalCount);
-		await progress?.resetProcessedRows();
-
-		const { rowCount, byteCount } = await streamCustomerExportCsv({
-			ctx,
-			customerExport,
-			orgId,
-			env,
-			upperBoundInternalId,
-			createdAtCutoff,
+			payload,
 			bucket,
 			region,
 			key,
-			onRowsProcessed: (processedRows) =>
-				progress?.incrementProcessedRows(processedRows),
-		});
-		uploadPublished = true;
-
-		await markCompletedWithRetry({
-			ctx,
-			logger,
-			exportId,
-			rowCount,
-			byteCount,
-		});
-
-		logger.info("customer-export: completed", {
-			data: {
-				exportId,
-				rowCount,
-				byteCount,
-				fileName: CUSTOMER_EXPORT_FILE_NAME,
-			},
+			progress,
 		});
 	} catch (error) {
-		// Keep published exports active so a retry can reconcile their status write.
-		if (uploadPublished) throw error;
-
 		// Earlier attempts stay active because the next attempt restarts the upload.
 		if (isFinalAttempt) {
 			await CustomerExportService.markFailed({
@@ -230,7 +272,18 @@ export const executeCustomerExport = async ({
 				errorMessage: error instanceof Error ? error.message : String(error),
 			});
 		}
-
 		throw error;
 	}
+
+	// 3. The file is published, so completion failures propagate for a retry to reconcile
+	await markCompletedWithRetry({
+		ctx,
+		logger,
+		exportId,
+		rowCount: totals.rowCount,
+		byteCount: totals.byteCount,
+	});
+	logger.info("customer-export: completed", {
+		data: { exportId, ...totals, fileName: CUSTOMER_EXPORT_FILE_NAME },
+	});
 };

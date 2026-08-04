@@ -1,10 +1,12 @@
 import {
 	type CreateCustomerExportParams,
 	type CustomerExportResponse,
+	type DbCustomerExport,
 	ErrCode,
 	ms,
 	RecaseError,
 } from "@autumn/shared";
+import { getCustomerExportsS3Config } from "@/external/aws/s3/customerExportsS3Config.js";
 import type { Logger } from "@/external/logtail/logtailUtils.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { getCustomerExportTriggerOptions } from "@/trigger/exports/customerExportQueue.js";
@@ -14,6 +16,7 @@ import {
 } from "@/trigger/exports/customerExportTask.js";
 import type { RunCustomerExportPayload } from "@/trigger/exports/customerExportTaskPayload.js";
 import { shouldRunTriggerTasksInline } from "@/trigger/utils/shouldRunTriggerTasksInline.js";
+import { timeout } from "@/utils/genUtils.js";
 import { CustomerExportService } from "../CustomerExportService.js";
 import { cacheCustomerExportRealtimeToken } from "../customerExportRealtimeToken.js";
 import { customerExportToResponse } from "../customerExportToResponse.js";
@@ -21,9 +24,6 @@ import { createExportReclaimingStale } from "../reclaimStaleCustomerExport.js";
 
 const TRIGGER_ENQUEUE_ATTEMPTS = 3;
 const TRIGGER_ENQUEUE_RETRY_DELAY_MS = ms.seconds(1);
-
-const delay = (durationMs: number) =>
-	new Promise((resolve) => setTimeout(resolve, durationMs));
 
 // A lost response does not mean the enqueue failed; the stable idempotency key
 // makes a retry return the already-created run instead of duplicating it.
@@ -54,9 +54,90 @@ const triggerCustomerExportWithRetry = async ({
 					error: error instanceof Error ? error.message : String(error),
 				},
 			});
-			await delay(TRIGGER_ENQUEUE_RETRY_DELAY_MS);
+			await timeout(TRIGGER_ENQUEUE_RETRY_DELAY_MS);
 		}
 	}
+};
+
+/** Inline runs have no Trigger run to subscribe to, so clients keep polling. */
+const runExportInline = ({
+	ctx,
+	payload,
+}: {
+	ctx: AutumnContext;
+	payload: RunCustomerExportPayload;
+}) => {
+	ctx.logger.warn(
+		"customer-export: trigger.dev not configured — running export inline",
+		{ data: { exportId: payload.exportId } },
+	);
+	const inlineCtx = { ...ctx, insideTriggerTask: true };
+	void executeCustomerExport({
+		ctx: inlineCtx,
+		logger: ctx.logger,
+		payload,
+	}).catch((error) => {
+		ctx.logger.error("customer-export: inline execution failed", {
+			data: {
+				exportId: payload.exportId,
+				error: error instanceof Error ? error.message : String(error),
+			},
+		});
+	});
+};
+
+const enqueueExportRun = async ({
+	ctx,
+	customerExport,
+	payload,
+}: {
+	ctx: AutumnContext;
+	customerExport: DbCustomerExport;
+	payload: RunCustomerExportPayload;
+}): Promise<{ triggerRunId: string; publicAccessToken: string }> => {
+	let handle: Awaited<ReturnType<typeof customerExportTask.trigger>>;
+	try {
+		handle = await triggerCustomerExportWithRetry({
+			logger: ctx.logger,
+			exportId: customerExport.id,
+			payload,
+		});
+	} catch (error) {
+		// A queued row without a job would block later exports for the org.
+		await CustomerExportService.markFailed({
+			db: ctx.db,
+			id: customerExport.id,
+			errorMessage: "Failed to enqueue the export job",
+		});
+		throw error;
+	}
+
+	cacheCustomerExportRealtimeToken({
+		triggerRunId: handle.id,
+		token: handle.publicAccessToken,
+	});
+
+	// The job is already enqueued, so persistence failure cannot fail the export.
+	try {
+		await CustomerExportService.setTriggerRunId({
+			db: ctx.db,
+			id: customerExport.id,
+			triggerRunId: handle.id,
+		});
+	} catch (error) {
+		ctx.logger.error("customer-export: failed to persist trigger run id", {
+			data: {
+				exportId: customerExport.id,
+				triggerRunId: handle.id,
+				error: error instanceof Error ? error.message : String(error),
+			},
+		});
+	}
+
+	return {
+		triggerRunId: handle.id,
+		publicAccessToken: handle.publicAccessToken,
+	};
 };
 
 export const startCustomerExport = async ({
@@ -67,6 +148,9 @@ export const startCustomerExport = async ({
 	params: CreateCustomerExportParams;
 }): Promise<{ export: CustomerExportResponse }> => {
 	const { fields, search, filters } = params;
+	// Fail before creating a row a worker without S3 config could never publish.
+	getCustomerExportsS3Config();
+
 	const result = await createExportReclaimingStale({
 		db: ctx.db,
 		logger: ctx.logger,
@@ -93,70 +177,23 @@ export const startCustomerExport = async ({
 		orgId: ctx.org.id,
 		env: ctx.env,
 	};
-	// Inline runs have no Trigger run to subscribe to, so clients keep polling.
-	let triggerRunId: string | null = null;
-	let publicAccessToken: string | null = null;
 
 	if (shouldRunTriggerTasksInline()) {
-		ctx.logger.warn(
-			"customer-export: trigger.dev not configured — running export inline",
-			{ data: { exportId: customerExport.id } },
-		);
-		const inlineCtx = { ...ctx, insideTriggerTask: true };
-		void executeCustomerExport({
-			ctx: inlineCtx,
-			logger: ctx.logger,
-			payload,
-		}).catch((error) => {
-			ctx.logger.error("customer-export: inline execution failed", {
-				data: {
-					exportId: customerExport.id,
-					error: error instanceof Error ? error.message : String(error),
-				},
-			});
-		});
-	} else {
-		let handle: Awaited<ReturnType<typeof customerExportTask.trigger>>;
-		try {
-			handle = await triggerCustomerExportWithRetry({
-				logger: ctx.logger,
-				exportId: customerExport.id,
-				payload,
-			});
-		} catch (error) {
-			// A queued row without a job would block later exports for the org.
-			await CustomerExportService.markFailed({
-				db: ctx.db,
-				id: customerExport.id,
-				errorMessage: "Failed to enqueue the export job",
-			});
-			throw error;
-		}
-
-		triggerRunId = handle.id;
-		publicAccessToken = handle.publicAccessToken;
-		cacheCustomerExportRealtimeToken({
-			triggerRunId: handle.id,
-			token: handle.publicAccessToken,
-		});
-
-		// The job is already enqueued, so persistence failure cannot fail the export.
-		try {
-			await CustomerExportService.setTriggerRunId({
-				db: ctx.db,
-				id: customerExport.id,
-				triggerRunId: handle.id,
-			});
-		} catch (error) {
-			ctx.logger.error("customer-export: failed to persist trigger run id", {
-				data: {
-					exportId: customerExport.id,
-					triggerRunId: handle.id,
-					error: error instanceof Error ? error.message : String(error),
-				},
-			});
-		}
+		runExportInline({ ctx, payload });
+		return {
+			export: customerExportToResponse({
+				customerExport,
+				triggerRunId: null,
+				publicAccessToken: null,
+			}),
+		};
 	}
+
+	const { triggerRunId, publicAccessToken } = await enqueueExportRun({
+		ctx,
+		customerExport,
+		payload,
+	});
 
 	return {
 		export: customerExportToResponse({
