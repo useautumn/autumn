@@ -1,5 +1,15 @@
-import { Badge, PanelButton } from "@autumn/ui";
-import { GiftIcon, LightningIcon, PercentIcon } from "@phosphor-icons/react";
+import {
+	PanelButton,
+	Tooltip,
+	TooltipContent,
+	TooltipTrigger,
+} from "@autumn/ui";
+import {
+	GiftIcon,
+	InfoIcon,
+	LightningIcon,
+	PercentIcon,
+} from "@phosphor-icons/react";
 import { SheetSection } from "@/components/v2/sheets/SharedSheetComponents";
 import {
 	FrontendDiscountType,
@@ -70,13 +80,18 @@ export function SelectRewardType({ reward, setReward }: SelectRewardTypeProps) {
 						<div className="flex-1">
 							<div className="mb-1 flex items-center gap-1.5">
 								<span className="text-body-highlight">Free Product</span>
-								<Badge className="border-amber-500/20! bg-amber-500/10! px-1.5 py-0 font-mono text-[10px]! text-amber-600! shadow-none! dark:text-amber-400!">
-									DEPRECATED
-								</Badge>
+								<Tooltip>
+									<TooltipTrigger asChild>
+										<InfoIcon className="size-3.5 cursor-help text-tertiary-foreground" />
+									</TooltipTrigger>
+									<TooltipContent>
+										Deprecated. Use a feature grant to reward customers with a
+										feature balance instead.
+									</TooltipContent>
+								</Tooltip>
 							</div>
 							<div className="text-body-secondary leading-tight">
-								Give away a plan. Use a feature grant instead for new referral
-								programs.
+								Give away a plan in a referral program
 							</div>
 						</div>
 					</div>
