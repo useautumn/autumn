@@ -180,7 +180,7 @@ describe("createRedisAvailability", () => {
 	test("creates the probe connection only when monitoring begins", async () => {
 		const redis = new BusyRequestRedis();
 		const availability = createRedisAvailability({
-			redis: redis as never,
+			getRedis: () => redis as never,
 			hasConfig: true,
 			logPrefix: "RedisV2",
 			logType: "redis_v2_availability_state_set",
@@ -254,7 +254,7 @@ describe("createRedisAvailability", () => {
 	test("isolates availability probes from the request connection", async () => {
 		const redis = new BusyRequestRedis();
 		const availability = createRedisAvailability({
-			redis: redis as never,
+			getRedis: () => redis as never,
 			hasConfig: true,
 			logPrefix: "RedisV2",
 			logType: "redis_v2_availability_state_set",
@@ -294,7 +294,7 @@ describe("createRedisAvailability", () => {
 		}) as Redis["disconnect"];
 
 		const availability = createRedisAvailability({
-			redis,
+			getRedis: () => redis,
 			hasConfig: true,
 			logPrefix: "RedisV2",
 			logType: "redis_v2_availability_state_set",
