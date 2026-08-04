@@ -32,8 +32,8 @@ export const getApiCustomerByRollout = async ({
 	const lookup = async ({ skipCache }: { skipCache: boolean }) => {
 		const fetch = () =>
 			getOrSetCachedFullSubject({
-				// Sole replica grant: this wrapper serves a read-only GET route.
-				readFrom: "replica-ok",
+				// Sole replica grant; writers opt out via disableReplicaRead.
+				readFrom: disableReplicaRead ? "primary" : "replica-ok",
 				ctx: skipCache ? { ...ctx, skipCache: true } : ctx,
 				customerId,
 				entityId,
