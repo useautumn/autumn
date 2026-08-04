@@ -12,12 +12,36 @@ import {
 import { createRoute } from "@/honoMiddlewares/routeHandler.js";
 import { runCheckWithRollout } from "@/internal/balances/check/index.js";
 import { parseCheckParamsForLock } from "@/internal/balances/utils/lock/parseCheckParamsForLock.js";
+import { getCheckFailOpenFallback } from "./checkUtils/getCheckFailOpenFallback.js";
 import { getCheckPreview } from "./getCheckPreview.js";
 import { handleProductCheck } from "./handlers/handleProductCheck.js";
 
 const DEFAULT_REQUIRED_BALANCE = 1;
+// check is the hottest-path route: past this budget we answer allowed rather
+// than make the caller wait, no matter what work (locks included) is in flight.
+const CHECK_FAIL_OPEN_TIMEOUT_MS = 3_000;
+
 export const handleCheck = createRoute({
 	scopes: [Scopes.Balances.Read],
+	failOpen: {
+		timeoutMs: CHECK_FAIL_OPEN_TIMEOUT_MS,
+		respond: (c) => {
+			const ctx = c.get("ctx");
+			const body = parseCheckParamsForLock({ params: c.req.valid("json") });
+			const response = getCheckFailOpenFallback({
+				ctx,
+				body,
+				requiredBalance:
+					body.required_balance ??
+					body.required_quantity ??
+					DEFAULT_REQUIRED_BALANCE,
+				error: new Error(
+					`check exceeded the ${CHECK_FAIL_OPEN_TIMEOUT_MS}ms blanket fail-open timeout`,
+				),
+			});
+			return c.json(response, 202);
+		},
+	},
 	routeGroup: RouteGroup.Balances,
 	versionedQuery: {
 		latest: CheckQuerySchema,
