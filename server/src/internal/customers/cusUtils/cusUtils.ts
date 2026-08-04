@@ -21,7 +21,6 @@ import RecaseError from "@/utils/errorUtils.js";
 import { notNullish, nullish } from "@/utils/genUtils.js";
 import type { AutumnContext } from "../../../honoUtils/HonoEnv.js";
 import { updateCachedCustomerData as updateCachedCustomerDataV2 } from "../cache/fullSubject/actions/updateCachedCustomerData.js";
-import { updateCachedCustomerData } from "./fullCustomerCacheUtils/updateCachedCustomerData.js";
 
 export const updateCustomerDetails = async ({
 	ctx,
@@ -71,18 +70,11 @@ export const updateCustomerDetails = async ({
 
 		fullCustomer = { ...fullCustomer, ...updates };
 
-		await Promise.all([
-			updateCachedCustomerData({
-				ctx,
-				customerId: idOrInternalId,
-				updates,
-			}),
-			updateCachedCustomerDataV2({
-				ctx,
-				customerId: idOrInternalId,
-				updates,
-			}),
-		]);
+		await updateCachedCustomerDataV2({
+			ctx,
+			customerId: idOrInternalId,
+			updates,
+		});
 
 		return true;
 	}

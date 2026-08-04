@@ -1,14 +1,14 @@
-import { redis } from "@/external/redis/initRedis.js";
+import { miscRedis } from "@/external/redis/initRedis.js";
 
 export const releaseRedisIdempotencyKey = async ({
 	storageKey,
 }: {
 	storageKey: string;
 }): Promise<void> => {
-	if (redis.status !== "ready") return;
+	if (miscRedis.status !== "ready") return;
 
 	try {
-		await redis.del(storageKey);
+		await miscRedis.del(storageKey);
 	} catch {
 		return;
 	}

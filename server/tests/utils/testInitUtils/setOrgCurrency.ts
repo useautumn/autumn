@@ -1,9 +1,5 @@
 import { db } from "@/db/initDrizzle.js";
-import {
-	getConfiguredRegions,
-	getRegionalRedis,
-	waitForRedisReady,
-} from "@/external/redis/initRedis.js";
+import { getMiscRedis, waitForRedisReady } from "@/external/redis/initRedis.js";
 import { OrgService } from "@/internal/orgs/OrgService.js";
 import { clearOrgCache } from "@/internal/orgs/orgUtils/clearOrgCache.js";
 
@@ -23,11 +19,7 @@ export const setOrgCurrency = async ({
 		orgId,
 		updates: { default_currency: currency },
 	});
-	// clearOrgCache silently skips Redis deletes until each regional client is ready
-	await Promise.all(
-		getConfiguredRegions().map((region) =>
-			waitForRedisReady(getRegionalRedis(region), region),
-		),
-	);
+	// clearOrgCache silently skips Redis deletes until the client is ready
+	await waitForRedisReady(getMiscRedis(), "main");
 	await clearOrgCache({ db, orgId });
 };

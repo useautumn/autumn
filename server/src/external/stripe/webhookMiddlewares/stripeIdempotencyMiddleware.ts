@@ -1,7 +1,7 @@
 import type { AppEnv } from "@autumn/shared";
 import { tryCatch } from "@autumn/shared";
 import type { Context, Next } from "hono";
-import { redis } from "@/external/redis/initRedis";
+import { miscRedis } from "@/external/redis/initRedis";
 import { classifyStripeWebhookAckMode } from "./classifyStripeWebhookAckMode.js";
 import type { StripeWebhookHonoEnv } from "./stripeWebhookContext.js";
 
@@ -32,15 +32,15 @@ export const claimStripeWebhookEvent = async ({
 }: {
 	eventKey: string;
 }): Promise<StripeWebhookClaimResult> => {
-	if (redis.status !== "ready") return "unavailable";
+	if (miscRedis.status !== "ready") return "unavailable";
 
 	const { data: result, error } = await tryCatch(
-		redis.set(eventKey, PROCESSING, "PX", PROCESSING_TTL_MS, "NX"),
+		miscRedis.set(eventKey, PROCESSING, "PX", PROCESSING_TTL_MS, "NX"),
 	);
 	if (error) return "unavailable";
 	if (result !== null) return "claimed";
 
-	const { data: existing } = await tryCatch(redis.get(eventKey));
+	const { data: existing } = await tryCatch(miscRedis.get(eventKey));
 	return existing === COMPLETED ? "duplicate_completed" : "in_flight";
 };
 
@@ -49,7 +49,7 @@ export const completeStripeWebhookEvent = async ({
 }: {
 	eventKey: string;
 }) => {
-	await tryCatch(redis.set(eventKey, COMPLETED, "PX", COMPLETED_TTL_MS));
+	await tryCatch(miscRedis.set(eventKey, COMPLETED, "PX", COMPLETED_TTL_MS));
 };
 
 export const releaseStripeWebhookEvent = async ({
@@ -57,7 +57,7 @@ export const releaseStripeWebhookEvent = async ({
 }: {
 	eventKey: string;
 }) => {
-	await tryCatch(redis.del(eventKey));
+	await tryCatch(miscRedis.del(eventKey));
 };
 
 /**

@@ -1,7 +1,7 @@
 import type { Redis } from "ioredis";
 import type { MainRedisInstanceName } from "@/internal/misc/mainRedisCache/mainRedisCacheSchemas.js";
 
-export const selectMainRedisClient = ({
+export const selectMiscRedisClient = ({
 	activeInstance,
 	primary,
 	fallback,
@@ -11,7 +11,12 @@ export const selectMainRedisClient = ({
 	fallback: Redis | null;
 }): Redis => (activeInstance === "fallback" && fallback ? fallback : primary());
 
-export const createMainRedisRouter = ({
+/**
+ * Proxy that re-resolves the underlying client on EVERY property access, so the
+ * module-level `miscRedis` singleton can be repointed (e.g. primary→fallback)
+ * mid-flight without call sites re-importing anything.
+ */
+export const createMiscRedisRouter = ({
 	resolve,
 }: {
 	resolve: () => Redis;

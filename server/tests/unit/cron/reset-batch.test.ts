@@ -13,7 +13,6 @@ const cusEnt = {
 const calls = {
 	fetchParams: null as unknown,
 	reset: 0,
-	cleared: [] as ResetCusEnt[],
 };
 const batchSize = 1_000;
 
@@ -50,11 +49,6 @@ mock.module("@/cron/resetCron/resetCustomerEntitlement", () => ({
 		updatedCusEnts.push(cusEnt);
 	},
 }));
-mock.module("@/cron/resetCron/clearCusEntsFromCache", () => ({
-	clearCusEntsFromCache: async ({ cusEnts }: { cusEnts: ResetCusEnt[] }) => {
-		calls.cleared = cusEnts;
-	},
-}));
 
 import { runResetBatch } from "@/cron/resetCron/runResetBatch.js";
 
@@ -72,7 +66,6 @@ describe("reset batch", () => {
 			limit: batchSize,
 		});
 		expect(calls.reset).toBe(1);
-		expect(calls.cleared).toEqual([cusEnt]);
 		expect(result.batchSize).toBe(batchSize);
 		expect(result.fetched).toBe(1);
 	});

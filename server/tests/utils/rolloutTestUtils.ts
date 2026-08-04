@@ -1,6 +1,4 @@
 import { timeout } from "@tests/utils/genUtils.js";
-import { redis } from "@/external/redis/initRedis.js";
-import { buildFullCustomerCacheKey } from "@/internal/customers/cusUtils/fullCustomerCacheUtils/fullCustomerCacheConfig.js";
 import { FULL_SUBJECT_ROLLOUT_ID } from "@/internal/misc/rollouts/fullSubjectRolloutUtils.js";
 import {
 	removeRolloutOrg,
@@ -40,23 +38,6 @@ export const setOrgRolloutPercent = async ({
 		percent,
 	});
 	await timeout(POLL_SETTLE_MS);
-};
-
-/**
- * Strips _cachedAt from the v1 FullCustomer cache entry to simulate
- * a legacy cache entry without a timestamp.
- */
-export const removeCachedAtField = async ({
-	orgId,
-	env,
-	customerId,
-}: {
-	orgId: string;
-	env: string;
-	customerId: string;
-}) => {
-	const cacheKey = buildFullCustomerCacheKey({ orgId, env, customerId });
-	await redis.call("JSON.DEL", cacheKey, "$._cachedAt");
 };
 
 /**

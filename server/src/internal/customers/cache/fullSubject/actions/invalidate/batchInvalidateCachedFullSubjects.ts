@@ -1,6 +1,5 @@
 import type { AppEnv, Feature } from "@autumn/shared";
 import type { Redis } from "ioredis";
-import { batchDeleteCachedFullCustomers } from "@/internal/customers/cusUtils/fullCustomerCacheUtils/batchDeleteCachedFullCustomers.js";
 import { tryRedisRead, tryRedisWrite } from "@/utils/cacheUtils/cacheUtils.js";
 import { buildFullSubjectKey } from "../../builders/buildFullSubjectKey.js";
 import { buildFullSubjectOrgEnvKey } from "../../builders/buildFullSubjectOrgEnvKey.js";
@@ -112,8 +111,6 @@ export const batchInvalidateCachedFullSubjects = async ({
 }): Promise<number> => {
 	if (customers.length === 0) return 0;
 
-	const deleted = await batchDeleteCachedFullCustomers({ customers });
-
 	const customersByRedis = new Map<Redis, BatchInvalidateCustomer[]>();
 	for (const customer of customers) {
 		for (const targetRedis of new Set(
@@ -135,5 +132,5 @@ export const batchInvalidateCachedFullSubjects = async ({
 		),
 	);
 
-	return deleted;
+	return customers.length;
 };

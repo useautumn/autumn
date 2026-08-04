@@ -12,7 +12,6 @@ import { CusEntService } from "@/internal/customers/cusProducts/cusEnts/CusEntit
 import { getResetJobConfig } from "@/internal/misc/resetJob/resetJobStore.js";
 import { OrgService } from "@/internal/orgs/OrgService.js";
 import type { CronContext } from "../utils/CronContext";
-import { clearCusEntsFromCache } from "./clearCusEntsFromCache";
 import { resetCustomerEntitlement } from "./resetCustomerEntitlement";
 
 const RESET_CONCURRENCY = 25;
@@ -85,7 +84,6 @@ export const runResetBatch = async ({ ctx }: { ctx: CronContext }) => {
 	if (toUpsert.length > 0) {
 		await CusEntService.upsert({ db, data: toUpsert });
 	}
-	await clearCusEntsFromCache({ cusEnts: updatedCusEnts });
 
 	const result = {
 		batchSize,

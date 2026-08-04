@@ -113,7 +113,6 @@ export const REDIS_THRESHOLDS: RedisThresholdConfig[] = [
 		slowMs: 75,
 		severeMs: 400,
 	}),
-	threshold({ operation: "claimLockReceipt", slowMs: 30, severeMs: 200 }),
 ];
 
 /**
