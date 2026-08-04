@@ -1,5 +1,5 @@
-import type { FullCustomerEntitlement } from "@autumn/shared";
-import { sql } from "drizzle-orm";
+import { type FullCustomerEntitlement, pooledBalances } from "@autumn/shared";
+import { eq, sql } from "drizzle-orm";
 import { planetScaleTag } from "@/db/dbUtils.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 
@@ -82,7 +82,17 @@ export const promoteDuePooledContributions = async ({
 	`);
 
 	const row = rows[0];
-	if (row === undefined) return null;
+	if (row === undefined) {
+		// Guard trip (or contribution-less pool): a concurrent writer owns the
+		// latest granted — refresh it so the caller can't refill from a stale
+		// in-memory value if it goes on to win the reset CAS.
+		const [freshPool] = await ctx.db
+			.select({ granted: pooledBalances.granted })
+			.from(pooledBalances)
+			.where(eq(pooledBalances.id, pooledBalance.id));
+		if (freshPool) pooledBalance.granted = freshPool.granted;
+		return null;
+	}
 
 	const promotedGranted = Number(row.granted);
 	if (!Number.isFinite(promotedGranted)) {

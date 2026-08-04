@@ -117,6 +117,12 @@ test(`${chalk.yellowBright("pooled promotion: concurrent pool-row write makes th
 	// ── Contract: guard trips → whole statement no-ops, helper returns null ──
 	expect(promotionResult).toBeNull();
 
+	// ── Contract: in-memory granted is refreshed to the winner's value, so a
+	// CAS-winning caller cannot refill the balance from its stale snapshot ──
+	expect(poolCustomerEntitlement.pooled_balance.granted).toBe(
+		TRANSITION_GRANTED,
+	);
+
 	const guardedState = await getPooledBalanceDbState({
 		db: ctx.db,
 		customerId,
