@@ -6,6 +6,7 @@ import {
 import type { SubjectReadFrom } from "@/db/resolveSubjectReadDb.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { getFullSubjectNormalized } from "@/internal/customers/repos/getFullSubject/index.js";
+import { isReplicaSourced } from "../subjectProvenance.js";
 import { getCachedFullSubject } from "./getCachedFullSubject.js";
 import { rehydrateWithLiveBalances } from "./rehydrateWithLiveBalances.js";
 import { setCachedFullSubject } from "./setCachedFullSubject/setCachedFullSubject.js";
@@ -75,12 +76,21 @@ export const getOrSetCachedFullSubject = async ({
 
 	const { normalized, fullSubject } = result;
 
-	if (useRedis) {
+	// Replica-sourced hydrations must never fill Redis — serve them as-is.
+	if (useRedis && !isReplicaSourced(normalized)) {
 		await setCachedFullSubject({
 			ctx,
 			normalized,
 			fetchedSubjectViewEpoch,
 		});
+		logger.info(
+			{
+				type: "subject_miss_fill",
+				customer_id: customerId,
+				org_id: ctx.org.id,
+			},
+			"FullSubject cache filled from primary hydration",
+		);
 
 		// We just wrote the subject blob ourselves, so no need to re-read it.
 		// But balance hashes use HSETNX, so any concurrent Lua deduction that

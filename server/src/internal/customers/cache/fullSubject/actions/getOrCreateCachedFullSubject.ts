@@ -11,6 +11,7 @@ import { customerActions } from "@/internal/customers/actions/index.js";
 import { updateCustomerData } from "@/internal/customers/actions/updateCustomerData.js";
 import { getFullSubjectNormalized } from "@/internal/customers/repos/getFullSubject/index.js";
 import { autoCreateEntity } from "@/internal/entities/handlers/handleCreateEntity/autoCreateEntity.js";
+import { isReplicaSourced } from "../subjectProvenance.js";
 import { getCachedFullSubject } from "./getCachedFullSubject.js";
 import { setCachedFullSubject } from "./setCachedFullSubject/setCachedFullSubject.js";
 
@@ -133,13 +134,16 @@ export const getOrCreateCachedFullSubject = async ({
 		}
 
 		if (normalizedResult) {
-			await setCachedFullSubject({
-				ctx,
-				normalized: normalizedResult.normalized,
-				fetchedSubjectViewEpoch,
-			}).catch((error) =>
-				logger.error(`Failed to set full subject cache: ${error}`),
-			);
+			// Replica-sourced hydrations must never fill Redis — serve them as-is.
+			if (!isReplicaSourced(normalizedResult.normalized)) {
+				await setCachedFullSubject({
+					ctx,
+					normalized: normalizedResult.normalized,
+					fetchedSubjectViewEpoch,
+				}).catch((error) =>
+					logger.error(`Failed to set full subject cache: ${error}`),
+				);
+			}
 			fullSubject = normalizedResult.fullSubject;
 		}
 	}

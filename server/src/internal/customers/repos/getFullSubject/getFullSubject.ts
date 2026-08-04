@@ -48,11 +48,18 @@ const runRoutedHydration = async ({
 }): Promise<{ rows: SubjectQueryRow[]; source: SubjectReadSource }> => {
 	const { org, env } = ctx;
 
-	const runHydration = (db: DrizzleCli) =>
+	const runHydration = ({
+		db,
+		lane,
+	}: {
+		db: DrizzleCli;
+		lane: SubjectReadSource;
+	}) =>
 		runWithFullSubjectGate({
 			customerId,
 			orgId: org.id,
 			env,
+			lane,
 			logger: ctx.logger,
 			queryFn: () =>
 				executePrepared({
@@ -80,7 +87,7 @@ const runRoutedHydration = async ({
 	let source: SubjectReadSource = resolved.source;
 	let result: Awaited<ReturnType<typeof runHydration>>;
 	try {
-		result = await runHydration(resolved.db);
+		result = await runHydration({ db: resolved.db, lane: resolved.source });
 	} catch (error) {
 		if (resolved.source !== "replica") throw error;
 		source = "primary";
@@ -95,7 +102,7 @@ const runRoutedHydration = async ({
 			},
 			"Replica hydration failed — retrying once on primary",
 		);
-		result = await runHydration(ctx.db);
+		result = await runHydration({ db: ctx.db, lane: "primary" });
 	}
 
 	if (source === "replica") {

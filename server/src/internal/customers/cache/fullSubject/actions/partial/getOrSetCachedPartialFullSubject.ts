@@ -7,6 +7,7 @@ import type { SubjectReadFrom } from "@/db/resolveSubjectReadDb.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { getFullSubjectNormalized } from "@/internal/customers/repos/getFullSubject/index.js";
 import { filterFullSubjectByFeatureIds } from "../../filterFullSubjectByFeatureIds.js";
+import { isReplicaSourced } from "../../subjectProvenance.js";
 import { rehydrateWithLiveBalances } from "../rehydrateWithLiveBalances.js";
 import { setCachedFullSubject } from "../setCachedFullSubject/setCachedFullSubject.js";
 import { getCachedPartialFullSubject } from "./getCachedPartialFullSubject.js";
@@ -72,7 +73,8 @@ export const getOrSetCachedPartialFullSubject = async ({
 
 	const { normalized, fullSubject } = result;
 
-	if (useRedis) {
+	// Replica-sourced hydrations must never fill Redis — serve them as-is.
+	if (useRedis && !isReplicaSourced(normalized)) {
 		await setCachedFullSubject({
 			ctx,
 			normalized,

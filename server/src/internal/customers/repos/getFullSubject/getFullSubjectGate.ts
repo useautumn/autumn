@@ -6,6 +6,8 @@ import pLimit, { type LimitFunction } from "p-limit";
 import type { Logger } from "@/external/logtail/logtailUtils.js";
 import { getRuntimeFullSubjectGateConfig } from "@/internal/misc/fullSubjectGateEdgeConfig/fullSubjectGateEdgeConfigStore.js";
 
+export type FullSubjectGateLane = "primary" | "replica";
+
 const GATE_LOG_WAIT_MS_THRESHOLD = 50;
 const LIMITER_CACHE_MAX = 5000;
 const LIMITER_CACHE_TTL_MS = 30 * 60 * 1000;
@@ -44,11 +46,13 @@ const getOrUpdateLimiter = (
 };
 
 const getCustomerLimiter = ({
+	lane,
 	orgId,
 	env,
 	customerId,
 	limit,
 }: {
+	lane: FullSubjectGateLane;
 	orgId: string;
 	env: AppEnv;
 	customerId: string;
@@ -56,7 +60,7 @@ const getCustomerLimiter = ({
 }): LimitFunction =>
 	getOrUpdateLimiter(
 		perCustomerLimiters,
-		`${orgId}:${env}:${customerId}`,
+		`${lane}:${orgId}:${env}:${customerId}`,
 		limit,
 	);
 
@@ -64,15 +68,17 @@ const predictedWaitMs = (limiter: LimitFunction): number =>
 	(limiter.pendingCount / Math.max(1, limiter.concurrency)) * ewmaServiceMs;
 
 const getOrgLimiter = ({
+	lane,
 	orgId,
 	env,
 	limit,
 }: {
+	lane: FullSubjectGateLane;
 	orgId: string;
 	env: AppEnv;
 	limit: number;
 }): LimitFunction =>
-	getOrUpdateLimiter(perOrgLimiters, `${orgId}:${env}`, limit);
+	getOrUpdateLimiter(perOrgLimiters, `${lane}:${orgId}:${env}`, limit);
 
 const meter = metrics.getMeter("autumn-server");
 const startedCounter = meter.createCounter("autumn.full_subject.gate.started", {
@@ -102,9 +108,18 @@ const rejectedCounter = meter.createCounter(
 	{ description: "FullSubject hydrations rejected (queue full or timed out)" },
 );
 
-const attrs = ({ orgId, env }: { orgId: string; env: AppEnv }) => ({
+const attrs = ({
+	orgId,
+	env,
+	lane,
+}: {
+	orgId: string;
+	env: AppEnv;
+	lane: FullSubjectGateLane;
+}) => ({
 	org_id: orgId,
 	env,
+	lane,
 });
 
 const GATE_REJECTION_REASONS = [
@@ -161,25 +176,27 @@ export const runWithFullSubjectGate = async <T>({
 	customerId,
 	orgId,
 	env,
+	lane = "primary",
 	logger,
 	queryFn,
 }: {
 	customerId: string | undefined;
 	orgId: string;
 	env: AppEnv;
+	lane?: FullSubjectGateLane;
 	logger?: Logger;
 	queryFn: () => Promise<T>;
 }): Promise<T> => {
+	const config = getRuntimeFullSubjectGateConfig();
+	const { max_wait_ms, fleet_process_count } = config;
 	const {
 		per_customer_limit,
 		per_org_limit,
-		max_wait_ms,
 		per_customer_pending_max,
 		per_org_pending_max,
-		fleet_process_count,
-	} = getRuntimeFullSubjectGateConfig();
+	} = lane === "replica" ? config.replica_lane : config;
 	const enqueuedAt = Date.now();
-	const labels = attrs({ orgId, env });
+	const labels = attrs({ orgId, env, lane });
 
 	const perProcessOrgLimit = toPerProcessLimit(
 		per_org_limit,
@@ -190,11 +207,17 @@ export const runWithFullSubjectGate = async <T>({
 		fleet_process_count,
 	);
 
-	const orgLimiter = getOrgLimiter({ orgId, env, limit: perProcessOrgLimit });
+	const orgLimiter = getOrgLimiter({
+		lane,
+		orgId,
+		env,
+		limit: perProcessOrgLimit,
+	});
 
 	let customerLimiter: LimitFunction | undefined;
 	if (customerId) {
 		customerLimiter = getCustomerLimiter({
+			lane,
 			orgId,
 			env,
 			customerId,
@@ -229,7 +252,7 @@ export const runWithFullSubjectGate = async <T>({
 		}
 		if (waitMs >= GATE_LOG_WAIT_MS_THRESHOLD) {
 			logger?.info(
-				`[full_subject_gate] queued ${waitMs}ms customer=${customerId ?? "unknown"} org=${orgId} env=${env}`,
+				`[full_subject_gate] queued ${waitMs}ms lane=${lane} customer=${customerId ?? "unknown"} org=${orgId} env=${env}`,
 			);
 		}
 		activeCounter.add(1, labels);

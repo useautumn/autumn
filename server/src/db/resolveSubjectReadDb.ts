@@ -1,6 +1,7 @@
 import { logger } from "@/external/logtail/logtailUtils.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { isCustomerRecentlyUpdated } from "@/internal/customers/customerLsns/isCustomerRecentlyUpdated.js";
+import { getRuntimeFullSubjectGateConfig } from "@/internal/misc/fullSubjectGateEdgeConfig/fullSubjectGateEdgeConfigStore.js";
 import { type DrizzleCli, dbCritical, dbReplica } from "./initDrizzle.js";
 import { getReplicaRoutingState } from "./replicaRoutingState.js";
 
@@ -41,8 +42,14 @@ export const resolveSubjectReadDb = async ({
 	const primary = { db: ctx.db, source: "primary" as const };
 	const replica = replicaDbOverride ?? dbReplica;
 
-	if (readFrom !== "replica-ok" || !ctx.skipCache || !replica || !customerId) {
+	if (readFrom !== "replica-ok" || !replica || !customerId) {
 		return primary;
+	}
+	// Outage/worker reads (skipCache) stay 100% replica-eligible; steady-state
+	// misses opt in via the configured share (0 = dark, exact status quo).
+	if (!ctx.skipCache) {
+		const { replica_share } = getRuntimeFullSubjectGateConfig().read_split;
+		if (Math.random() >= replica_share) return primary;
 	}
 	if (!getReplicaRoutingState().eligible) return primary;
 
