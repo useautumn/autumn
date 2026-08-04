@@ -25,7 +25,6 @@
  */
 
 import { afterEach, beforeEach, describe, expect, spyOn, test } from "bun:test";
-import { currentRegion, getRegionalRedis } from "@/external/redis/initRedis.js";
 import {
 	_resetSecretKeyL1ForTesting,
 	_secretKeyL1SizeForTesting,
@@ -36,7 +35,8 @@ import {
 	SECRET_KEY_L1_NEGATIVE_TTL_MS,
 	SECRET_KEY_L1_TTL_MS,
 	setCachedSecretKeyVerification,
-} from "@/internal/dev/apiKeys/cacheApiKeyUtils.js";
+} from "@/external/redis/actions/secretKeyCache/secretKeyCache.js";
+import { currentRegion, getRegionalRedis } from "@/external/redis/initRedis.js";
 import type { ApiKeyVerificationData } from "@/internal/dev/repos/getApiKeyVerificationData.js";
 
 const buildVerificationData = (orgId: string) =>
