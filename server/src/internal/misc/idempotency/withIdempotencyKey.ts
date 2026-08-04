@@ -1,7 +1,8 @@
-import { ErrCode } from "@autumn/shared";
+import { ErrCode, type RouteGroup } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { checkIdempotencyKey } from "./actions/checkIdempotencyKey.js";
 import { releaseIdempotencyKey } from "./actions/releaseIdempotencyKey.js";
+import { resolveIdempotencyTtlMs } from "./resolveIdempotencyTtl.js";
 
 export const shouldReleaseIdempotencyKeyForStatus = (status: number) =>
 	status >= 400 && status !== 409;
@@ -34,12 +35,15 @@ const shouldReleaseIdempotencyKeyForError = (error: unknown) => {
 export const withIdempotencyKey = async <T>({
 	ctx,
 	idempotencyKey,
+	routeGroup = null,
 	run,
 	releaseOnSuccess,
 }: {
 	ctx: AutumnContext;
 	/** The idempotency key to claim in it's raw form, not hashed. */
 	idempotencyKey: string | null | undefined;
+	/** Route group whose org-configured TTL applies; null → 24h default. */
+	routeGroup?: RouteGroup | null;
 	run: () => Promise<T>;
 	/** Release the key even though `run` resolved (e.g. the work was handed
 	 *  off for a replay, or the response status is a retryable failure). */
@@ -48,18 +52,12 @@ export const withIdempotencyKey = async <T>({
 	if (!idempotencyKey) return run();
 
 	await checkIdempotencyKey({
-		orgId: ctx.org.id,
-		env: ctx.env,
+		ctx,
 		idempotencyKey,
-		logger: ctx.logger,
+		ttlMs: resolveIdempotencyTtlMs({ ctx, routeGroup }),
 	});
 
-	const release = () =>
-		releaseIdempotencyKey({
-			orgId: ctx.org.id,
-			env: ctx.env,
-			idempotencyKey,
-		});
+	const release = () => releaseIdempotencyKey({ ctx, idempotencyKey });
 
 	try {
 		const result = await run();

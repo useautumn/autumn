@@ -414,6 +414,13 @@
       "when": 1785704393674,
       "tag": "0058_black_thundra",
       "breakpoints": true
+    },
+    {
+      "idx": 59,
+      "version": "7",
+      "when": 1785786538657,
+      "tag": "0059_square_captain_cross",
+      "breakpoints": true
     }
   ]
 }

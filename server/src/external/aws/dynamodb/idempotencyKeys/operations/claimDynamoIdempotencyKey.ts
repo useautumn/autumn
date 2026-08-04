@@ -16,9 +16,11 @@ import {
 
 export const claimDynamoIdempotencyKey = async ({
 	storageKey,
+	ttlMs = IDEMPOTENCY_TTL_MS,
 	logger,
 }: {
 	storageKey: string;
+	ttlMs?: number;
 	logger?: Logger;
 }): Promise<IdempotencyClaimResult> =>
 	withDynamoSpan({
@@ -26,8 +28,7 @@ export const claimDynamoIdempotencyKey = async ({
 		attributes: { "dynamodb.table": getIdempotencyTableName() },
 		fn: async (setAttribute) => {
 			const nowSeconds = Math.floor(Date.now() / 1000);
-			const expiresAtSeconds =
-				nowSeconds + Math.floor(IDEMPOTENCY_TTL_MS / 1000);
+			const expiresAtSeconds = nowSeconds + Math.floor(ttlMs / 1000);
 
 			try {
 				await ensureLocalDynamoTable({
