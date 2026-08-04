@@ -164,9 +164,30 @@ describe("FilteringSpanProcessor", () => {
 		).toBeUndefined();
 	});
 
-	test("always exports successful slow Redis spans", () => {
+	test("always exports successful severe Redis spans", () => {
 		const delegate = new CapturingSpanProcessor();
-		const processor = new FilteringSpanProcessor(delegate);
+		// rate 0 would drop any non-severe span, so surviving proves the bypass.
+		const processor = new FilteringSpanProcessor(delegate, 0);
+		const source = createSpan({
+			name: "redis.get",
+			attributes: {
+				"db.redis.severe": true,
+				"db.redis.org_id": "org_123",
+			},
+		});
+
+		processor.onEnd(source);
+
+		expect(delegate.ended).toEqual([source]);
+	});
+
+	// `db.redis.slow` trips at a 15ms bar that nearly every command clears, so it
+	// no longer bypasses sampling — only `db.redis.severe` does.
+	test("samples successful slow-but-not-severe Redis spans", () => {
+		const delegate = new CapturingSpanProcessor();
+		// rate 0 => every non-severe success is dropped, so the assertion tests the
+		// severe-vs-slow rule rather than where one span's hash lands.
+		const processor = new FilteringSpanProcessor(delegate, 0);
 		const source = createSpan({
 			name: "redis.get",
 			attributes: {
@@ -177,7 +198,7 @@ describe("FilteringSpanProcessor", () => {
 
 		processor.onEnd(source);
 
-		expect(delegate.ended).toEqual([source]);
+		expect(delegate.ended).toEqual([]);
 	});
 
 	test("always exports failed Redis spans even when they are not marked slow", () => {

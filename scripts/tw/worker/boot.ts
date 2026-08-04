@@ -42,6 +42,7 @@ import { type Subprocess, spawn } from "bun";
 import chalk from "chalk";
 import {
 	DRAGONFLY_PORT,
+	DYNAMODB_PORT,
 	ELASTICMQ_PORT,
 	PG_PORT,
 	SERVER_PORT,
@@ -316,7 +317,50 @@ const main = async (): Promise<void> => {
 		waitForTcpPort("PostgreSQL", PG_PORT, SERVICE_HEALTH_TIMEOUT_MS),
 		waitForTcpPort("Dragonfly", DRAGONFLY_PORT, SERVICE_HEALTH_TIMEOUT_MS),
 		waitForTcpPort("goaws (SQS)", ELASTICMQ_PORT, SERVICE_HEALTH_TIMEOUT_MS),
+		// Non-fatal: start-services degrades without dynoxide on stale base
+		// images (the app fails open on an unreachable DynamoDB, and
+		// dynamo-gated tests skip). Short timeout keeps the degraded tail small.
+		waitForTcpPort("dynoxide (DynamoDB)", DYNAMODB_PORT, 15_000).catch(
+			(error) => {
+				log(`WARN: continuing without dynoxide — ${(error as Error).message}`);
+			},
+		),
 	]);
+
+	// 2a. Self-heal dependency drift: a stale warm fork can lag the
+	//     fast-forwarded lockfile (missing newly-added packages). Frozen
+	//     install is a no-op in seconds when node_modules is current.
+	log("reconciling node_modules (bun install --frozen-lockfile)");
+	const installProc = spawn(["bun", "install", "--frozen-lockfile"], {
+		cwd: repoRoot,
+		stdout: "inherit",
+		stderr: "inherit",
+		env: process.env as Record<string, string>,
+	});
+	const installExit = await installProc.exited;
+	if (installExit !== 0) {
+		throw new Error(
+			`[tw-boot] bun install exited with code ${installExit} — dependency self-heal failed`,
+		);
+	}
+
+	// 2b. Self-heal schema drift: the warm snapshot bakes a migrated DB at
+	//     warm build time, but a stale warm parent (failed refresh) can lag
+	//     the fast-forwarded code's schema (e.g. a new org column crashes the
+	//     binds below). Pending migrations only — a no-op on current snapshots.
+	log("applying pending DB migrations (schema self-heal)");
+	const migrateProc = spawn(["bun", "scripts/db/index.ts", "migrate"], {
+		cwd: repoRoot,
+		stdout: "inherit",
+		stderr: "inherit",
+		env: process.env as Record<string, string>,
+	});
+	const migrateExit = await migrateProc.exited;
+	if (migrateExit !== 0) {
+		throw new Error(
+			`[tw-boot] db migrate exited with code ${migrateExit} — schema self-heal failed`,
+		);
+	}
 
 	// 3. Bind the orchestrator-created Svix app (only when flagged). It only
 	//    touches the DB, so it runs before the server starts to keep all DB-bind

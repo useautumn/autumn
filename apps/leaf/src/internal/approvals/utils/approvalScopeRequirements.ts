@@ -6,6 +6,7 @@ export const approvalScopeRequirements: Record<string, RouteScopeRequirement> =
 		attach: [Scopes.Billing.Write],
 		createBalance: [Scopes.Balances.Write],
 		createPlan: [Scopes.Plans.Write],
+		createReward: [Scopes.Rewards.Write],
 		createSchedule: [Scopes.Billing.Write],
 		updateCatalog: { ALL: [Scopes.Plans.Write, Scopes.Features.Write] },
 		updateCustomer: [Scopes.Customers.Write],

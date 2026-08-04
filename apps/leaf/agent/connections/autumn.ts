@@ -16,6 +16,7 @@ const approvalToolNames = new Set([
 	"createBalance",
 	"createEntity",
 	"createPlan",
+	"createReward",
 	"createSchedule",
 	"updateAgentRules",
 	"updateCatalog",

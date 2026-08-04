@@ -63,6 +63,9 @@ export interface Payloads {
 		requestId: string;
 		apiVersion: ApiVersion;
 		body: TrackParams;
+		/** False when the sync request path already claimed the body
+		 *  idempotency key at accept time — the worker must not re-claim. */
+		validateTrackBodyIdempotencyKey?: boolean;
 	};
 	[JobName.UpdateBalance]: {
 		orgId: string;
@@ -120,11 +123,36 @@ const globalPrimarySqsSendBatcher =
 		sendBatch: sendSqsMessagesBatch,
 	});
 
-export const flushPrimarySqsSendBatcher = (): Promise<void> =>
-	globalPrimarySqsSendBatcher.flush();
+// Separate accumulator for the async-track firehose so its bursts can't
+// head-of-line-block primary-queue jobs (and vice versa).
+const globalAsyncTrackSqsSendBatcher =
+	new SqsBatchAccumulator<PrimarySqsQueueEntry>({
+		sendBatch: sendSqsMessagesBatch,
+	});
 
-export const shutdownPrimarySqsSendBatcher = (): Promise<void> =>
-	globalPrimarySqsSendBatcher.shutdown();
+/** Batched queues: the primary job queue and the async-track queue. Other
+ *  queue URLs send one message per call. */
+const resolveSqsSendBatcher = (queueUrl: string) => {
+	if (queueUrl === process.env.SQS_QUEUE_URL_V2) {
+		return globalPrimarySqsSendBatcher;
+	}
+	if (queueUrl === process.env.TRACK_ASYNC_SQS_QUEUE_URL) {
+		return globalAsyncTrackSqsSendBatcher;
+	}
+	return null;
+};
+
+export const flushSqsSendBatchers = (): Promise<void> =>
+	Promise.all([
+		globalPrimarySqsSendBatcher.flush(),
+		globalAsyncTrackSqsSendBatcher.flush(),
+	]).then(() => undefined);
+
+export const shutdownSqsSendBatchers = (): Promise<void> =>
+	Promise.all([
+		globalPrimarySqsSendBatcher.shutdown(),
+		globalAsyncTrackSqsSendBatcher.shutdown(),
+	]).then(() => undefined);
 
 /**
  * Add a task to the queue (auto-detects SQS or BullMQ)
@@ -181,8 +209,9 @@ export const addTaskToQueue = async <T extends keyof Payloads>({
 			}),
 		};
 
-		if (resolvedQueueUrl === process.env.SQS_QUEUE_URL_V2) {
-			await globalPrimarySqsSendBatcher.enqueue({
+		const sendBatcher = resolveSqsSendBatcher(resolvedQueueUrl);
+		if (sendBatcher) {
+			await sendBatcher.enqueue({
 				queueUrl: resolvedQueueUrl,
 				jobName: jobName as string,
 				messageBody: messageInput.MessageBody,
@@ -200,31 +229,3 @@ export const addTaskToQueue = async <T extends keyof Payloads>({
 
 	throw new Error("No queue configured. Set SQS_QUEUE_URL_V2");
 };
-
-export const addTasksToQueueBatch = async <T extends keyof Payloads>({
-	jobName,
-	queueUrl,
-	entries,
-}: {
-	jobName: T;
-	queueUrl: string;
-	entries: Array<{
-		payload: Payloads[T];
-		messageGroupId: string;
-		messageDeduplicationId: string;
-	}>;
-}): Promise<SqsSendResult> =>
-	sendSqsMessagesBatch({
-		queueUrl,
-		entries: entries.map(
-			({ payload, messageGroupId, messageDeduplicationId }) => ({
-				jobName: jobName as string,
-				messageBody: JSON.stringify({
-					name: jobName as string,
-					data: payload,
-				}),
-				messageGroupId,
-				messageDeduplicationId,
-			}),
-		),
-	});

@@ -1,3 +1,4 @@
+import { createApiReward } from "./createApiReward/createApiReward.js";
 import { redeemPromoCode } from "./redeemPromoCode.js";
 import { runTriggerCheckoutReward } from "./triggerCheckoutReward.js";
 import { triggerDiscount } from "./triggerDiscount.js";
@@ -5,6 +6,7 @@ import { triggerFreePaidProduct } from "./triggerFreePaidProduct.js";
 import { triggerFreeProduct } from "./triggerFreeProduct.js";
 
 export const rewardActions = {
+	create: createApiReward,
 	/** Grant a free product to referrer/redeemer */
 	triggerFreeProduct,
 	/** Grant a paid product with 100% coupon to referrer/redeemer */

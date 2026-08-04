@@ -11,6 +11,7 @@
 	},
 	"dependencies": {
 		"@autumn/shared": "workspace:*",
+		"@aws-sdk/client-dynamodb": "^3.1095.0",
 		"@aws-sdk/client-s3": "^3.1017.0",
 		"@opentui/core": "^0.4.1",
 		"@opentui/react": "^0.4.1",

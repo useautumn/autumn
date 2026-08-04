@@ -1,4 +1,14 @@
+/**
+ * Regression coverage for Redis monitor connection ownership.
+ *
+ * Before, the monitor eagerly opened its probe, warmed connections serially,
+ * and could disconnect the request client. The monitor now creates an isolated
+ * probe only when started, warms both clients concurrently, and leaves request
+ * reconnects to ioredis.
+ */
 import { describe, expect, test } from "bun:test";
+import net from "node:net";
+import { Redis } from "ioredis";
 import {
 	classifyProbe,
 	createRedisAvailability,
@@ -9,6 +19,7 @@ class FakeRedis {
 	status = "ready";
 	connectCalls = 0;
 	disconnectCalls: Array<boolean | undefined> = [];
+	duplicateCalls = 0;
 	pingCalls = 0;
 
 	async ping() {
@@ -29,12 +40,35 @@ class FakeRedis {
 		this.connectCalls++;
 		this.status = "ready";
 	}
+
+	duplicate(): FakeRedis {
+		this.duplicateCalls++;
+		return this;
+	}
+
+	on() {
+		return this;
+	}
 }
 
 class HealthyFakeRedis extends FakeRedis {
 	override async ping() {
 		this.pingCalls++;
 		return "PONG";
+	}
+}
+
+class BusyRequestRedis extends FakeRedis {
+	readonly probeRedis = new HealthyFakeRedis();
+
+	override async ping() {
+		this.pingCalls++;
+		return "NOPE";
+	}
+
+	override duplicate() {
+		this.duplicateCalls++;
+		return this.probeRedis;
 	}
 }
 
@@ -51,6 +85,15 @@ class ConnectingFakeRedis extends HealthyFakeRedis {
 	}
 }
 
+class DualConnectingRedis extends ConnectingFakeRedis {
+	readonly probeRedis = new ConnectingFakeRedis();
+
+	override duplicate() {
+		this.duplicateCalls++;
+		return this.probeRedis;
+	}
+}
+
 const wait = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
 const waitUntil = async (check: () => boolean, timeoutMs: number) => {
@@ -63,11 +106,43 @@ const waitUntil = async (check: () => boolean, timeoutMs: number) => {
 	throw new Error(`Condition not met within ${timeoutMs}ms`);
 };
 
+const startPingRedisServer = async ({ port = 0 }: { port?: number } = {}) => {
+	const sockets = new Set<net.Socket>();
+	const server = net.createServer((socket) => {
+		sockets.add(socket);
+		socket.on("close", () => sockets.delete(socket));
+		socket.on("data", () => socket.write("+PONG\r\n"));
+	});
+
+	await new Promise<void>((resolve, reject) => {
+		server.once("error", reject);
+		server.listen(port, "127.0.0.1", () => {
+			server.off("error", reject);
+			resolve();
+		});
+	});
+
+	const address = server.address();
+	if (!address || typeof address === "string") {
+		throw new Error("Failed to bind Redis test server");
+	}
+
+	return {
+		port: address.port,
+		stop: async () => {
+			for (const socket of sockets) socket.destroy();
+			await new Promise<void>((resolve, reject) => {
+				server.close((error) => (error ? reject(error) : resolve()));
+			});
+		},
+	};
+};
+
 describe("createRedisAvailability", () => {
 	test("does not start monitoring when Redis is not configured", () => {
 		const originalSetInterval = globalThis.setInterval;
 		let intervalCalls = 0;
-		globalThis.setInterval = ((handler: TimerHandler) => {
+		globalThis.setInterval = ((_handler: TimerHandler) => {
 			intervalCalls++;
 			return 0 as unknown as ReturnType<typeof setInterval>;
 		}) as unknown as typeof setInterval;
@@ -100,6 +175,22 @@ describe("createRedisAvailability", () => {
 		});
 
 		expect(availability.shouldUseRedis()).toBe(false);
+	});
+
+	test("creates the probe connection only when monitoring begins", async () => {
+		const redis = new BusyRequestRedis();
+		const availability = createRedisAvailability({
+			redis: redis as never,
+			hasConfig: true,
+			logPrefix: "RedisV2",
+			logType: "redis_v2_availability_state_set",
+		});
+
+		expect(redis.duplicateCalls).toBe(0);
+
+		await availability.prime();
+
+		expect(redis.duplicateCalls).toBe(1);
 	});
 
 	test("primes healthy after a successful initial probe", async () => {
@@ -135,8 +226,8 @@ describe("createRedisAvailability", () => {
 		expect(availability.shouldUseRedis()).toBe(true);
 	});
 
-	test("reconnects after repeated probe failures while the client still reports ready", async () => {
-		const redis = new FakeRedis();
+	test("waits for the request and probe connections concurrently", async () => {
+		const redis = new DualConnectingRedis();
 		const availability = createRedisAvailability({
 			redis: redis as never,
 			hasConfig: true,
@@ -144,12 +235,95 @@ describe("createRedisAvailability", () => {
 			logType: "redis_v2_availability_state_set",
 		});
 
-		availability.startMonitor();
-		await waitUntil(() => redis.connectCalls > 0, 22_000);
-		availability.stopMonitor();
+		const primePromise = availability.prime();
+		await wait(0);
+		const requestWaitRegistered = redis.readyHandler !== undefined;
+		const probeWaitRegistered = redis.probeRedis.readyHandler !== undefined;
 
-		expect(redis.disconnectCalls).toContain(false);
-	}, 30_000);
+		redis.status = "ready";
+		redis.probeRedis.status = "ready";
+		redis.readyHandler?.();
+		redis.probeRedis.readyHandler?.();
+		await primePromise;
+
+		expect(requestWaitRegistered).toBe(true);
+		expect(probeWaitRegistered).toBe(true);
+		expect(availability.shouldUseRedis()).toBe(true);
+	});
+
+	test("isolates availability probes from the request connection", async () => {
+		const redis = new BusyRequestRedis();
+		const availability = createRedisAvailability({
+			redis: redis as never,
+			hasConfig: true,
+			logPrefix: "RedisV2",
+			logType: "redis_v2_availability_state_set",
+		});
+
+		await availability.prime();
+		for (let index = 0; index < 10; index++) {
+			await availability._runTickForTesting();
+		}
+
+		expect(availability.shouldUseRedis()).toBe(true);
+		expect(redis.pingCalls).toBe(0);
+		expect(redis.probeRedis.pingCalls).toBeGreaterThan(0);
+		expect(redis.disconnectCalls).toEqual([]);
+		expect(redis.connectCalls).toBe(0);
+	});
+
+	test("preserves ioredis reconnect ownership after the endpoint closes", async () => {
+		let endpoint = await startPingRedisServer();
+		const port = endpoint.port;
+		const redis = new Redis({
+			host: "127.0.0.1",
+			port,
+			connectTimeout: 250,
+			commandTimeout: 250,
+			disableClientInfo: true,
+			enableReadyCheck: false,
+			retryStrategy: () => 250,
+		});
+		redis.on("error", () => {});
+
+		const disconnectCalls: Array<boolean | undefined> = [];
+		const disconnect = redis.disconnect.bind(redis);
+		redis.disconnect = ((reconnect?: boolean) => {
+			disconnectCalls.push(reconnect);
+			disconnect(reconnect);
+		}) as Redis["disconnect"];
+
+		const availability = createRedisAvailability({
+			redis,
+			hasConfig: true,
+			logPrefix: "RedisV2",
+			logType: "redis_v2_availability_state_set",
+			getEventLoopLagMs: () => 0,
+		});
+
+		try {
+			await waitUntil(() => redis.status === "ready", 2_000);
+			await availability.prime();
+			expect(availability.shouldUseRedis()).toBe(true);
+
+			await endpoint.stop();
+			await waitUntil(() => redis.status === "reconnecting", 2_000);
+			await availability._runTickForTesting();
+
+			await wait(5_100);
+			await availability._runTickForTesting();
+
+			endpoint = await startPingRedisServer({ port });
+			await waitUntil(() => redis.status === "ready", 2_000);
+
+			expect(disconnectCalls).not.toContain(false);
+			expect(await redis.ping()).toBe("PONG");
+		} finally {
+			availability.stopMonitor();
+			redis.disconnect();
+			await endpoint.stop().catch(() => {});
+		}
+	}, 15_000);
 });
 
 class FlippableFakeRedis extends FakeRedis {

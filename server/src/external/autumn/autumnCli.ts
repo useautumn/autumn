@@ -181,41 +181,42 @@ export class AutumnInt {
 			body: JSON.stringify(body),
 		});
 
-		if (response.status !== 200) {
-			// Handle rate limit errors
-			if (response.status === 429) {
-				throw new AutumnError({
-					message: `request failed, rate limit exceeded`,
-					code: "rate_limit_exceeded",
-				});
-			}
-
-			// Read the raw body once. Some upstream failures (timeouts, 5xx from
-			// infra) return non-JSON or empty bodies — surface the snippet so the
-			// caller's log isn't a bare "Failed to parse JSON".
+		// Any 2xx is a success — async/queued endpoints respond 202/204.
+		if (response.ok) {
 			const rawBody = await response.text();
-			let parsed: any;
-			try {
-				parsed = rawBody ? JSON.parse(rawBody) : null;
-			} catch {
-				parsed = null;
-			}
+			return rawBody ? JSON.parse(rawBody) : null;
+		}
 
-			if (parsed && typeof parsed === "object") {
-				throw new AutumnError({
-					message:
-						parsed.message ?? `request failed (status ${response.status})`,
-					code: parsed.code ?? ErrCode.InternalError,
-				});
-			}
-
+		// Handle rate limit errors
+		if (response.status === 429) {
 			throw new AutumnError({
-				message: `request failed (status ${response.status}, ${path}): ${rawBody.slice(0, 200) || "<empty body>"}`,
-				code: ErrCode.InternalError,
+				message: `request failed, rate limit exceeded`,
+				code: "rate_limit_exceeded",
 			});
 		}
 
-		return response.json();
+		// Read the raw body once. Some upstream failures (timeouts, 5xx from
+		// infra) return non-JSON or empty bodies — surface the snippet so the
+		// caller's log isn't a bare "Failed to parse JSON".
+		const rawBody = await response.text();
+		let parsed: any;
+		try {
+			parsed = rawBody ? JSON.parse(rawBody) : null;
+		} catch {
+			parsed = null;
+		}
+
+		if (parsed && typeof parsed === "object") {
+			throw new AutumnError({
+				message: parsed.message ?? `request failed (status ${response.status})`,
+				code: parsed.code ?? ErrCode.InternalError,
+			});
+		}
+
+		throw new AutumnError({
+			message: `request failed (status ${response.status}, ${path}): ${rawBody.slice(0, 200) || "<empty body>"}`,
+			code: ErrCode.InternalError,
+		});
 	}
 	async patch(path: string, body: any) {
 		const response = await fetch(`${this.baseUrl}${path}`, {

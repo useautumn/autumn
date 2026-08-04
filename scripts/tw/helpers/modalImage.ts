@@ -77,6 +77,8 @@ const DRAGONFLY_URL =
 const CRANE_URL =
 	"https://github.com/google/go-containerregistry/releases/download/v0.20.2/go-containerregistry_Linux_x86_64.tar.gz";
 const GOAWS_IMAGE = "admiralpiett/goaws:latest";
+const DYNOXIDE_URL =
+	"https://github.com/nubo-db/dynoxide/releases/download/v0.13.0/dynoxide-x86_64-unknown-linux-musl.tar.gz";
 
 /** Fixed layout — must match build-base.sh / start-services.sh exactly. */
 const TW_PREFIX = "/opt/autumn-tw";
@@ -138,6 +140,15 @@ export const buildBaseImage = (
 				"BIN=$(tar -tf /tmp/g.tar | grep -iE '(^|/)goaws$' | head -1) && " +
 				`tar -xf /tmp/g.tar -C / "$BIN" && cp "/$BIN" ${TW_PREFIX}/bin/goaws && ` +
 				`chmod +x ${TW_PREFIX}/bin/goaws && rm /tmp/g.tar`,
+		])
+		// 4b. dynoxide (native Rust DynamoDB emulator) — backs the idempotency-key
+		//     store. Static musl binary; amazon/dynamodb-local is a JVM app, the
+		//     same class of problem that pushed elasticmq → goaws here.
+		.dockerfileCommands([
+			`RUN curl -fsSL -o /tmp/dx.tar.gz "${DYNOXIDE_URL}" && ` +
+				"tar -xzf /tmp/dx.tar.gz -C /tmp && " +
+				"install -m0755 \"$(find /tmp -type f -name 'dynoxide*' ! -name '*.tar.gz' | head -1)\" " +
+				`${TW_PREFIX}/bin/dynoxide && rm -f /tmp/dx.tar.gz`,
 		])
 		// 5. goaws config — port 9324 + AccountId "000000000000" + the two FIFO
 		//    queues, so the app's SQS_QUEUE_URL_V2 / TRACK_SQS_QUEUE_URL resolve

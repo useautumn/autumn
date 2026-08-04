@@ -418,8 +418,15 @@
     {
       "idx": 59,
       "version": "7",
-      "when": 1785768884497,
-      "tag": "0059_bizarre_sebastian_shaw",
+      "when": 1785786538657,
+      "tag": "0059_square_captain_cross",
+      "breakpoints": true
+    },
+    {
+      "idx": 60,
+      "version": "7",
+      "when": 1785845043876,
+      "tag": "0060_careless_prima",
       "breakpoints": true
     }
   ]

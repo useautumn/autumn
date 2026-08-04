@@ -224,6 +224,7 @@ export const setupPaymentItemPlanItemOutboundSchema = z.object({
 	feature_id: z.string(),
 	included: z.union([z.number(), z.undefined()]).optional(),
 	unlimited: z.union([z.boolean(), z.undefined()]).optional(),
+	pooled: z.boolean(),
 	reset: z
 		.union([setupPaymentItemResetOutboundSchema, z.undefined()])
 		.optional(),
@@ -308,6 +309,7 @@ export const setupPaymentAddItemPlanItemOutboundSchema = z.object({
 	feature_id: z.string(),
 	included: z.union([z.number(), z.undefined()]).optional(),
 	unlimited: z.union([z.boolean(), z.undefined()]).optional(),
+	pooled: z.boolean(),
 	reset: z
 		.union([setupPaymentAddItemResetOutboundSchema, z.undefined()])
 		.optional(),
@@ -493,6 +495,7 @@ export const setupPaymentUpsertLicensePlanItemOutboundSchema = z.object({
 	feature_id: z.string(),
 	included: z.union([z.number(), z.undefined()]).optional(),
 	unlimited: z.union([z.boolean(), z.undefined()]).optional(),
+	pooled: z.boolean(),
 	reset: z
 		.union([setupPaymentUpsertLicenseResetOutboundSchema, z.undefined()])
 		.optional(),
@@ -711,6 +714,7 @@ export const setupPaymentItemPlanItemSchema = z.object({
 	featureId: z.string(),
 	included: z.union([z.number(), z.undefined()]).optional(),
 	unlimited: z.union([z.boolean(), z.undefined()]).optional(),
+	pooled: z.union([z.boolean(), z.undefined()]).optional(),
 	reset: z.union([setupPaymentItemResetSchema, z.undefined()]).optional(),
 	price: z.union([setupPaymentItemPriceSchema, z.undefined()]).optional(),
 	proration: z
@@ -775,6 +779,7 @@ export const setupPaymentAddItemPlanItemSchema = z.object({
 	featureId: z.string(),
 	included: z.union([z.number(), z.undefined()]).optional(),
 	unlimited: z.union([z.boolean(), z.undefined()]).optional(),
+	pooled: z.union([z.boolean(), z.undefined()]).optional(),
 	reset: z.union([setupPaymentAddItemResetSchema, z.undefined()]).optional(),
 	price: z.union([setupPaymentAddItemPriceSchema, z.undefined()]).optional(),
 	proration: z
@@ -965,6 +970,7 @@ export const setupPaymentUpsertLicensePlanItemSchema = z.object({
 	featureId: z.string(),
 	included: z.union([z.number(), z.undefined()]).optional(),
 	unlimited: z.union([z.boolean(), z.undefined()]).optional(),
+	pooled: z.union([z.boolean(), z.undefined()]).optional(),
 	reset: z
 		.union([setupPaymentUpsertLicenseResetSchema, z.undefined()])
 		.optional(),

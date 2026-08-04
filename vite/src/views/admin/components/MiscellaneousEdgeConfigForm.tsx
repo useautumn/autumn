@@ -67,6 +67,8 @@ export const MiscellaneousEdgeConfigForm = ({
 				syncCoalesce: parsed.syncCoalesce ?? prev.syncCoalesce,
 				subjectLookupDbOnly:
 					parsed.subjectLookupDbOnly ?? prev.subjectLookupDbOnly,
+				idempotencyDynamoRead:
+					parsed.idempotencyDynamoRead ?? prev.idempotencyDynamoRead,
 			}));
 			setJsonError(null);
 		} catch {
@@ -178,27 +180,43 @@ export const MiscellaneousEdgeConfigForm = ({
 						</div>
 					</div>
 
-					<MiscellaneousEdgeConfigSwitch
-						title="Sync coalescing"
-						description="Batches balance syncs per customer instead of one per change. Affects every org at once."
-						ariaLabel="Enable sync coalescing"
-						checked={config.syncCoalesce}
-						onCheckedChange={(syncCoalesce) => {
-							setSyncSource("form");
-							setConfig((prev) => ({ ...prev, syncCoalesce }));
-						}}
-					/>
+					<div className="flex flex-col gap-1">
+						<div className="text-xs font-medium text-tertiary-foreground uppercase tracking-wide">
+							Global switches
+						</div>
+					</div>
+					<div className="rounded-lg border border-border divide-y divide-border">
+						<MiscellaneousEdgeConfigSwitch
+							title="Sync coalescing"
+							ariaLabel="Enable sync coalescing"
+							checked={config.syncCoalesce}
+							onCheckedChange={(syncCoalesce) => {
+								setSyncSource("form");
+								setConfig((prev) => ({ ...prev, syncCoalesce }));
+							}}
+						/>
 
-					<MiscellaneousEdgeConfigSwitch
-						title="Subject lookups bypass Redis"
-						description="customers.get_or_create and entities.get read the subject straight from Postgres and skip the cache write-back. Affects every org at once."
-						ariaLabel="Enable db-only subject lookups"
-						checked={config.subjectLookupDbOnly}
-						onCheckedChange={(subjectLookupDbOnly) => {
-							setSyncSource("form");
-							setConfig((prev) => ({ ...prev, subjectLookupDbOnly }));
-						}}
-					/>
+						<MiscellaneousEdgeConfigSwitch
+							title="Subject lookups bypass Redis"
+							ariaLabel="Enable db-only subject lookups"
+							checked={config.subjectLookupDbOnly}
+							onCheckedChange={(subjectLookupDbOnly) => {
+								setSyncSource("form");
+								setConfig((prev) => ({ ...prev, subjectLookupDbOnly }));
+							}}
+						/>
+
+						<MiscellaneousEdgeConfigSwitch
+							title="Idempotency: DynamoDB authority"
+							hint="Flip 24h+ after deploy"
+							ariaLabel="Enable idempotency DynamoDB reads"
+							checked={config.idempotencyDynamoRead}
+							onCheckedChange={(idempotencyDynamoRead) => {
+								setSyncSource("form");
+								setConfig((prev) => ({ ...prev, idempotencyDynamoRead }));
+							}}
+						/>
+					</div>
 
 					<div className="flex flex-col gap-3 text-xs text-tertiary-foreground">
 						<Separator />

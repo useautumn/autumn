@@ -127,6 +127,10 @@ const response = await autumn.billing.update({
           If true, customer has unlimited access to this feature.
         </DynamicParamField>
 
+        <DynamicParamField body="pooled" type="boolean">
+          Whether entity-level grants contribute to a shared customer balance.
+        </DynamicParamField>
+
         <DynamicParamField body="reset" type="object">
           Reset configuration for consumable features. Omit for non-consumable features like seats.
           <Expandable title="properties">
@@ -269,6 +273,10 @@ const response = await autumn.billing.update({
 
         <DynamicParamField body="unlimited" type="boolean">
           If true, customer has unlimited access to this feature.
+        </DynamicParamField>
+
+        <DynamicParamField body="pooled" type="boolean">
+          Whether entity-level grants contribute to a shared customer balance.
         </DynamicParamField>
 
         <DynamicParamField body="reset" type="object">
@@ -649,6 +657,10 @@ const response = await autumn.billing.update({
 
                 <DynamicParamField body="unlimited" type="boolean">
                   If true, customer has unlimited access to this feature.
+                </DynamicParamField>
+
+                <DynamicParamField body="pooled" type="boolean">
+                  Whether entity-level grants contribute to a shared customer balance.
                 </DynamicParamField>
 
                 <DynamicParamField body="reset" type="object">

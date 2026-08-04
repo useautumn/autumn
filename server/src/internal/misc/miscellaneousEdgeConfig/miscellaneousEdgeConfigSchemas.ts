@@ -8,6 +8,11 @@ export const MiscellaneousEdgeConfigSchema = z.object({
 	/** Global switch: customer get_or_create and entity get read the subject
 	 *  straight from Postgres, bypassing the FullSubject cache entirely. */
 	subjectLookupDbOnly: z.boolean().default(false),
+	/** Idempotency keys are always dual-written to Redis and DynamoDB; this
+	 *  picks DynamoDB as the authority for conflicts (the other store is a
+	 *  fire-and-forget mirror). Flip only after a full Redis TTL (24h) of
+	 *  dual-writing — i.e. 24h after deploy — or in-flight keys are lost. */
+	idempotencyDynamoRead: z.boolean().default(false),
 });
 
 export type MiscellaneousEdgeConfig = z.infer<

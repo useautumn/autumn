@@ -52,7 +52,7 @@ class RewardsListParams(BaseModel):
     pass
 
 
-CouponType = Union[
+ListRewardsCouponType = Union[
     Literal[
         "percentage_discount",
         "fixed_discount",
@@ -63,7 +63,7 @@ CouponType = Union[
 r"""The type of discount: percentage_discount, fixed_discount, or invoice_credits."""
 
 
-DurationType = Union[
+ListRewardsDurationType = Union[
     Literal[
         "one_off",
         "months",
@@ -77,7 +77,7 @@ r"""The unit of time the duration is measured in."""
 class ListRewardsDurationTypedDict(TypedDict):
     r"""How long the coupon applies once redeemed."""
 
-    type: DurationType
+    type: ListRewardsDurationType
     r"""The unit of time the duration is measured in."""
     length: Nullable[float]
     r"""The number of `type` periods the duration lasts, or null when the type has no length (e.g. one_off, forever)."""
@@ -86,7 +86,7 @@ class ListRewardsDurationTypedDict(TypedDict):
 class ListRewardsDuration(BaseModel):
     r"""How long the coupon applies once redeemed."""
 
-    type: DurationType
+    type: ListRewardsDurationType
     r"""The unit of time the duration is measured in."""
 
     length: Nullable[float]
@@ -107,7 +107,7 @@ class ListRewardsDuration(BaseModel):
         return m
 
 
-class CouponPromoCodeTypedDict(TypedDict):
+class ListRewardsCouponPromoCodeTypedDict(TypedDict):
     code: str
     r"""The promo code customers enter to redeem the coupon."""
     global_max_redemption: NotRequired[Nullable[float]]
@@ -116,7 +116,7 @@ class CouponPromoCodeTypedDict(TypedDict):
     r"""Whether this promo code can only be applied to a customer's first transaction."""
 
 
-class CouponPromoCode(BaseModel):
+class ListRewardsCouponPromoCode(BaseModel):
     code: str
     r"""The promo code customers enter to redeem the coupon."""
 
@@ -155,7 +155,7 @@ class CouponPromoCode(BaseModel):
 class CouponTypedDict(TypedDict):
     id: str
     r"""The unique identifier for the coupon."""
-    type: CouponType
+    type: ListRewardsCouponType
     r"""The type of discount: percentage_discount, fixed_discount, or invoice_credits."""
     value: float
     r"""The discount value. A percentage for percentage_discount, or an amount for fixed_discount / invoice_credits."""
@@ -163,7 +163,7 @@ class CouponTypedDict(TypedDict):
     r"""How long the coupon applies once redeemed."""
     plan_ids: Nullable[List[str]]
     r"""The plan IDs the coupon applies to, or null when it applies to all plans."""
-    promo_codes: List[CouponPromoCodeTypedDict]
+    promo_codes: List[ListRewardsCouponPromoCodeTypedDict]
     r"""The promo codes customers can use to redeem the coupon."""
     created_at: float
     r"""The Unix timestamp (in milliseconds) when the coupon was created."""
@@ -175,7 +175,7 @@ class Coupon(BaseModel):
     id: str
     r"""The unique identifier for the coupon."""
 
-    type: CouponType
+    type: ListRewardsCouponType
     r"""The type of discount: percentage_discount, fixed_discount, or invoice_credits."""
 
     value: float
@@ -187,7 +187,7 @@ class Coupon(BaseModel):
     plan_ids: Nullable[List[str]]
     r"""The plan IDs the coupon applies to, or null when it applies to all plans."""
 
-    promo_codes: List[CouponPromoCode]
+    promo_codes: List[ListRewardsCouponPromoCode]
     r"""The promo codes customers can use to redeem the coupon."""
 
     created_at: float
@@ -222,7 +222,7 @@ class Coupon(BaseModel):
         return m
 
 
-ExpiryType = Union[
+ListRewardsExpiryType = Union[
     Literal[
         "day",
         "week",
@@ -231,55 +231,41 @@ ExpiryType = Union[
     ],
     UnrecognizedStr,
 ]
-r"""The unit of time the duration is measured in."""
+r"""The unit of time the grant lasts."""
 
 
-class ExpiryTypedDict(TypedDict):
-    type: ExpiryType
-    r"""The unit of time the duration is measured in."""
-    length: Nullable[float]
-    r"""The number of `type` periods the duration lasts, or null when the type has no length (e.g. one_off, forever)."""
+class ListRewardsExpiryTypedDict(TypedDict):
+    type: ListRewardsExpiryType
+    r"""The unit of time the grant lasts."""
+    length: int
+    r"""The positive integer count of periods before the grant expires."""
 
 
-class Expiry(BaseModel):
-    type: ExpiryType
-    r"""The unit of time the duration is measured in."""
+class ListRewardsExpiry(BaseModel):
+    type: ListRewardsExpiryType
+    r"""The unit of time the grant lasts."""
 
-    length: Nullable[float]
-    r"""The number of `type` periods the duration lasts, or null when the type has no length (e.g. one_off, forever)."""
-
-    @model_serializer(mode="wrap")
-    def serialize_model(self, handler):
-        serialized = handler(self)
-        m = {}
-
-        for n, f in type(self).model_fields.items():
-            k = f.alias or n
-            val = serialized.get(k, serialized.get(n))
-
-            if val != UNSET_SENTINEL:
-                m[k] = val
-
-        return m
+    length: int
+    r"""The positive integer count of periods before the grant expires."""
 
 
-class GrantTypedDict(TypedDict):
+class ListRewardsGrantTypedDict(TypedDict):
     feature_id: str
     r"""The feature ID this grant applies to."""
     included: Nullable[float]
     r"""The amount of the feature granted, or null for boolean features."""
-    expiry: Nullable[ExpiryTypedDict]
+    expiry: Nullable[ListRewardsExpiryTypedDict]
     r"""How long the granted amount lasts before expiring, or null for a permanent grant."""
 
 
-class Grant(BaseModel):
+class ListRewardsGrant(BaseModel):
     feature_id: str
     r"""The feature ID this grant applies to."""
 
     included: Nullable[float]
     r"""The amount of the feature granted, or null for boolean features."""
 
-    expiry: Nullable[Expiry]
+    expiry: Nullable[ListRewardsExpiry]
     r"""How long the granted amount lasts before expiring, or null for a permanent grant."""
 
     @model_serializer(mode="wrap")
@@ -297,14 +283,14 @@ class Grant(BaseModel):
         return m
 
 
-class FeatureGrantPromoCodeTypedDict(TypedDict):
+class ListRewardsFeatureGrantPromoCodeTypedDict(TypedDict):
     code: str
     r"""The promo code customers enter to redeem the feature grant."""
     max_uses: Nullable[float]
     r"""Maximum number of times this promo code can be redeemed, or null for unlimited."""
 
 
-class FeatureGrantPromoCode(BaseModel):
+class ListRewardsFeatureGrantPromoCode(BaseModel):
     code: str
     r"""The promo code customers enter to redeem the feature grant."""
 
@@ -329,9 +315,9 @@ class FeatureGrantPromoCode(BaseModel):
 class FeatureGrantTypedDict(TypedDict):
     id: str
     r"""The unique identifier for the feature grant."""
-    grants: List[GrantTypedDict]
+    grants: List[ListRewardsGrantTypedDict]
     r"""The feature grants awarded when the grant is redeemed."""
-    promo_codes: List[FeatureGrantPromoCodeTypedDict]
+    promo_codes: List[ListRewardsFeatureGrantPromoCodeTypedDict]
     r"""The promo codes customers can use to redeem the feature grant."""
     created_at: float
     r"""The Unix timestamp (in milliseconds) when the feature grant was created."""
@@ -343,10 +329,10 @@ class FeatureGrant(BaseModel):
     id: str
     r"""The unique identifier for the feature grant."""
 
-    grants: List[Grant]
+    grants: List[ListRewardsGrant]
     r"""The feature grants awarded when the grant is redeemed."""
 
-    promo_codes: List[FeatureGrantPromoCode]
+    promo_codes: List[ListRewardsFeatureGrantPromoCode]
     r"""The promo codes customers can use to redeem the feature grant."""
 
     created_at: float

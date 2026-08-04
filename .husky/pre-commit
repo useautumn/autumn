@@ -1,5 +1,7 @@
 set -e
 
+bun infisical scan git-changes --staged --redact --verbose --silent --telemetry=false
+
 changed_files="$(git diff --cached --name-only)"
 
 bun knip

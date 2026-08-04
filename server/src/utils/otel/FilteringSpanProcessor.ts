@@ -17,6 +17,16 @@ const normalizedRedisSuccessSampleRate = Number.isFinite(
 	? Math.min(Math.max(REDIS_SUCCESS_SAMPLE_RATE, 0), 1)
 	: 0.01;
 
+const DYNAMO_SUCCESS_SAMPLE_RATE = Number.parseFloat(
+	process.env.OTEL_DYNAMO_SUCCESS_SAMPLE_RATE ?? "0.01",
+);
+
+const normalizedDynamoSuccessSampleRate = Number.isFinite(
+	DYNAMO_SUCCESS_SAMPLE_RATE,
+)
+	? Math.min(Math.max(DYNAMO_SUCCESS_SAMPLE_RATE, 0), 1)
+	: 0.01;
+
 const hashStringToUnitInterval = (value: string): number => {
 	let hash = 2166136261;
 	for (let i = 0; i < value.length; i++) {
@@ -27,27 +37,55 @@ const hashStringToUnitInterval = (value: string): number => {
 	return (hash >>> 0) / 0xffffffff;
 };
 
-const isSuccessfulNonSlowRedisSpan = (span: ReadableSpan) =>
-	span.name.startsWith("redis.") &&
-	span.status.code === SpanStatusCode.OK &&
-	span.attributes["db.redis.slow"] !== true;
+// Happy-path only — duplicates/unavailability always export; metrics recorded before drop.
+const DYNAMO_SAMPLED_OUTCOMES = new Set(["claimed", "released"]);
 
-const shouldDropSuccessfulRedisSpan = (span: ReadableSpan): boolean => {
-	if (!isSuccessfulNonSlowRedisSpan(span)) return false;
-	if (normalizedRedisSuccessSampleRate >= 1) return false;
-	if (normalizedRedisSuccessSampleRate <= 0) return true;
+const isSuccessfulDynamoSpan = (span: ReadableSpan) =>
+	span.name.startsWith("dynamodb.") &&
+	span.status.code !== SpanStatusCode.ERROR &&
+	DYNAMO_SAMPLED_OUTCOMES.has(String(span.attributes["dynamodb.outcome"]));
+
+const shouldDropSuccessfulDynamoSpan = (span: ReadableSpan): boolean => {
+	if (!isSuccessfulDynamoSpan(span)) return false;
+	if (normalizedDynamoSuccessSampleRate >= 1) return false;
+	if (normalizedDynamoSuccessSampleRate <= 0) return true;
 
 	const spanContext = span.spanContext();
 	const sampleKey = `${spanContext.traceId}:${spanContext.spanId}:${span.name}`;
 	return (
-		hashStringToUnitInterval(sampleKey) >= normalizedRedisSuccessSampleRate
+		hashStringToUnitInterval(sampleKey) >= normalizedDynamoSuccessSampleRate
+	);
+};
+
+const isSuccessfulNonSevereRedisSpan = (span: ReadableSpan) =>
+	span.name.startsWith("redis.") &&
+	span.status.code === SpanStatusCode.OK &&
+	span.attributes["db.redis.severe"] !== true;
+
+const shouldDropSuccessfulRedisSpan = (
+	span: ReadableSpan,
+	sampleRate: number = normalizedRedisSuccessSampleRate,
+): boolean => {
+	if (!isSuccessfulNonSevereRedisSpan(span)) return false;
+	if (sampleRate >= 1) return false;
+	if (sampleRate <= 0) return true;
+
+	const spanContext = span.spanContext();
+	const sampleKey = `${spanContext.traceId}:${spanContext.spanId}:${span.name}`;
+	return (
+		hashStringToUnitInterval(sampleKey) >= sampleRate
 	);
 };
 
 export class FilteringSpanProcessor implements SpanProcessor {
 	private readonly spanIngestCompactor = new SpanIngestCompactor();
 
-	constructor(private readonly delegate: SpanProcessor) {}
+	constructor(
+		private readonly delegate: SpanProcessor,
+		// Overridable so tests pin the rate instead of depending on the ambient
+		// OTEL_REDIS_SUCCESS_SAMPLE_RATE and on where a span's hash happens to land.
+		private readonly sampleRate: number = normalizedRedisSuccessSampleRate,
+	) {}
 
 	onStart(span: Span, parentContext: Context): void {
 		this.delegate.onStart(span, parentContext);
@@ -58,7 +96,8 @@ export class FilteringSpanProcessor implements SpanProcessor {
 
 		try {
 			recordSpanDurationMetric(span);
-			if (shouldDropSuccessfulRedisSpan(span)) return;
+			if (shouldDropSuccessfulRedisSpan(span, this.sampleRate)) return;
+			if (shouldDropSuccessfulDynamoSpan(span)) return;
 			spanToExport = this.spanIngestCompactor.compact({ span });
 		} catch (error) {
 			try {

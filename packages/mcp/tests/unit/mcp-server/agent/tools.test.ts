@@ -46,6 +46,8 @@ describe("Autumn operation tools", () => {
 		expect(tools.updateCustomer.description).toContain("Stripe");
 		expect(tools.createPlan.description).toContain("Plan Management");
 		expect(tools.createPlan.description).toContain("Concepts");
+		expect(tools.listRewards.description).toContain("Rewards resource");
+		expect(tools.createReward.description).toContain("Rewards resource");
 		expect(tools.createBalance.description).toContain("entity-scoped credits");
 		expect(tools.searchRequestLogs.description).toContain("request logs");
 		expect(tools.queryRequestLogs.description).toContain("aggregate");
@@ -71,6 +73,7 @@ describe("Autumn operation tools", () => {
 
 		for (const name of [
 			"createPlan",
+			"createReward",
 			"createBalance",
 			"attach",
 			"updateSubscription",
@@ -101,6 +104,27 @@ describe("Autumn operation tools", () => {
 		] as const) {
 			expect(tools[name].mcp?.annotations?.destructiveHint).toBe(false);
 		}
+	});
+
+	test("reward tools expose the create union", () => {
+		expect(endpointByTool.listRewards).toBe("/v1/rewards.list");
+		expect(endpointByTool.createReward).toBe("/v1/rewards.create");
+		expect(
+			schemaByTool.createReward.parse({
+				coupon: {
+					id: "launch",
+					name: "Launch",
+					type: "percentage_discount",
+					value: 20,
+					duration: { type: "one_off", length: null },
+					plan_ids: null,
+					promo_codes: [{ code: "LAUNCH20" }],
+				},
+			}),
+		).toBeDefined();
+		expect(() =>
+			schemaByTool.createReward.parse({ coupon: {}, feature_grant: {} }),
+		).toThrow();
 	});
 
 	test("listFeatures uses a strict empty request schema", () => {
@@ -377,6 +401,38 @@ describe("Autumn operation tools", () => {
 					} as never,
 				),
 			).resolves.toEqual({ id: "pro" });
+		} finally {
+			globalThis.fetch = originalFetch;
+		}
+	});
+
+	test("raw createReward calls the create reward endpoint", async () => {
+		const request = {
+			coupon: {
+				id: "launch",
+				name: "Launch",
+				type: "fixed_discount" as const,
+				value: 10,
+				duration: { type: "one_off" as const, length: null },
+				plan_ids: null,
+				promo_codes: [{ code: "LAUNCH10" }],
+			},
+		};
+		const originalFetch = globalThis.fetch;
+		globalThis.fetch = (async (url, init) => {
+			expect(String(url)).toBe("http://localhost:8080/v1/rewards.create");
+			expect(JSON.parse(init?.body as string)).toEqual(request);
+			return Response.json(request);
+		}) as typeof fetch;
+
+		try {
+			const tool = createRawAutumnOperationTools().createReward;
+			if (!tool.execute) throw new Error("createReward is not executable");
+			await expect(
+				tool.execute({ intent: "create a reward", request }, {
+					mcp: { extra: { authInfo: auth } },
+				} as never),
+			).resolves.toEqual(request);
 		} finally {
 			globalThis.fetch = originalFetch;
 		}
@@ -831,6 +887,34 @@ describe("Autumn operation tools", () => {
 		} finally {
 			globalThis.fetch = originalFetch;
 		}
+	});
+
+	test("agent createReward stores a pending write", async () => {
+		await clearPendingActions();
+		const request = {
+			feature_grant: {
+				id: "beta",
+				name: "Beta",
+				grants: [{ feature_id: "credits", included: 100, expiry: null }],
+				promo_codes: [{ code: "BETA100", max_uses: null }],
+			},
+		};
+		const tool = (
+			createAgentAutumnOperationTools() as unknown as {
+				createReward: ExecutableTool;
+			}
+		).createReward;
+		if (!tool.execute) throw new Error("createReward is not executable");
+
+		await expect(
+			tool.execute({ request }, {
+				mcp: { extra: { authInfo: auth } },
+			} as never),
+		).resolves.toMatchObject({ pending: true });
+		await expect(claimLatestPendingAction(auth)).resolves.toMatchObject({
+			toolName: "createReward",
+			request,
+		});
 	});
 
 	test("agent previewCreateSchedule stores a pending write after preview", async () => {

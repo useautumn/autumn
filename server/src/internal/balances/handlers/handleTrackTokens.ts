@@ -1,5 +1,6 @@
 import {
 	AffectedResource,
+	RouteGroup,
 	Scopes,
 	TrackTokensParamsSchema,
 } from "@autumn/shared";
@@ -11,6 +12,7 @@ import { getTokenTrackParams } from "@/internal/balances/track/utils/getTokenTra
 
 export const handleTrackTokens = createRoute({
 	scopes: [Scopes.Balances.Write],
+	routeGroup: RouteGroup.Balances,
 	body: TrackTokensParamsSchema,
 	resource: AffectedResource.Track,
 	handler: async (c) => {
