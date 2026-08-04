@@ -5,7 +5,7 @@ import type { CustomerExportField } from "@autumn/shared";
 import { Upload } from "@aws-sdk/lib-storage";
 import type { CustomerExportDestination } from "@/external/aws/s3/customerExportsS3Config.js";
 import { getS3Client } from "@/external/aws/s3/initS3.js";
-import { createCustomerExportStringifier } from "../csv/createCustomerExportStringifier.js";
+import { createCustomerExportStringifier } from "../../csv/createCustomerExportStringifier.js";
 
 const CSV_UPLOAD_PART_SIZE_BYTES = 8 * 1024 * 1024;
 

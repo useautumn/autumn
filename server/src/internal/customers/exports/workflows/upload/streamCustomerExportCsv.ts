@@ -1,7 +1,7 @@
 import type { DbCustomerExport } from "@autumn/shared";
 import type { CustomerExportDestination } from "@/external/aws/s3/customerExportsS3Config.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
-import type { CustomerExportPopulation } from "../queries/getCustomerExportScalars.js";
+import type { CustomerExportPopulation } from "../../queries/getCustomerExportScalars.js";
 import { createCustomerExportRowStream } from "./createCustomerExportRowStream.js";
 import { uploadCustomerExportCsvStream } from "./uploadCustomerExportCsvStream.js";
 
