@@ -17,6 +17,7 @@ export const getApiEntityByRollout = async ({
 	source,
 	withAutumnId = false,
 	singleflight = false,
+	disableReplicaRead = false,
 }: {
 	ctx: AutumnContext;
 	customerId: string;
@@ -24,6 +25,7 @@ export const getApiEntityByRollout = async ({
 	source?: string;
 	withAutumnId?: boolean;
 	singleflight?: boolean;
+	disableReplicaRead?: boolean;
 }): Promise<ApiEntityV2> => {
 	if (isFullSubjectRolloutEnabled({ ctx })) {
 	}

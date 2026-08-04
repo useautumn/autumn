@@ -16,6 +16,7 @@ export const getApiCustomerByRollout = async ({
 	source,
 	withAutumnId,
 	singleflight = false,
+	disableReplicaRead = false,
 }: {
 	ctx: AutumnContext;
 	customerId: string;
@@ -23,6 +24,7 @@ export const getApiCustomerByRollout = async ({
 	source?: string;
 	withAutumnId?: boolean;
 	singleflight?: boolean;
+	disableReplicaRead?: boolean;
 }) => {
 	if (isFullSubjectRolloutEnabled({ ctx })) {
 	}

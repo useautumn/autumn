@@ -18,6 +18,7 @@ export const getOrCreateApiCustomerByRollout = async ({
 	source,
 	withAutumnId,
 	enqueueRecoveryOnTransientFailure = true,
+	disableReplicaRead = false,
 }: {
 	ctx: AutumnContext;
 	params: Omit<TrackParams | CheckParams, "customer_id"> & {
@@ -26,6 +27,7 @@ export const getOrCreateApiCustomerByRollout = async ({
 	source?: string;
 	withAutumnId?: boolean;
 	enqueueRecoveryOnTransientFailure?: boolean;
+	disableReplicaRead?: boolean;
 }) => {
 	setCustomerCreationRecoveryStage({ ctx, stage: "lookup" });
 
@@ -34,8 +36,8 @@ export const getOrCreateApiCustomerByRollout = async ({
 
 	const lookup = ({ skipCache }: { skipCache: boolean }) =>
 		getOrCreateCachedFullSubject({
-			// Sole replica grant: this wrapper serves a read-only GET route.
-			readFrom: "replica-ok",
+			// Sole replica grant; writers opt out via disableReplicaRead.
+			readFrom: disableReplicaRead ? "primary" : "replica-ok",
 			ctx: skipCache ? { ...ctx, skipCache: true } : ctx,
 			params,
 			source,
