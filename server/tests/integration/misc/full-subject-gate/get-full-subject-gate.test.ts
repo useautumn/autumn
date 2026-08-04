@@ -2,7 +2,9 @@ import { beforeAll, describe, expect, test } from "bun:test";
 import { AppEnv } from "@autumn/shared";
 import {
 	_getFullSubjectGateEwmaForTesting,
+	_getFullSubjectGateOrgEwmaForTesting,
 	_setFullSubjectGateEwmaForTesting,
+	_setFullSubjectGateOrgEwmaForTesting,
 	runWithFullSubjectGate,
 	toPerProcessLimit,
 } from "@/internal/customers/repos/getFullSubject/getFullSubjectGate.js";
@@ -583,6 +585,112 @@ describe("runWithFullSubjectGate enqueue-time admission control", () => {
 		});
 		expect(_getFullSubjectGateEwmaForTesting()).toBeLessThan(afterSlow);
 
+		_setFullSubjectGateEwmaForTesting(100);
+	});
+
+	test("per-org EWMA warms from a slow org's samples without inflating a fast org's", async () => {
+		_setFullSubjectGateConfigForTesting({
+			config: {
+				per_customer_limit: 2,
+				per_org_limit: 4,
+				max_wait_ms: 60_000,
+				per_customer_pending_max: 1000,
+				per_org_pending_max: 1000,
+			},
+		});
+		_setFullSubjectGateEwmaForTesting(100);
+
+		await runWithFullSubjectGate({
+			customerId: "cus-ewma-slow-org",
+			orgId: "org-ewma-slow",
+			env: AppEnv.Live,
+			queryFn: () => new Promise((resolve) => setTimeout(resolve, 300)),
+		});
+		await runWithFullSubjectGate({
+			customerId: "cus-ewma-fast-org",
+			orgId: "org-ewma-fast",
+			env: AppEnv.Live,
+			queryFn: async () => "fast",
+		});
+
+		const slowOrgEwma = _getFullSubjectGateOrgEwmaForTesting({
+			orgId: "org-ewma-slow",
+			env: AppEnv.Live,
+		});
+		const fastOrgEwma = _getFullSubjectGateOrgEwmaForTesting({
+			orgId: "org-ewma-fast",
+			env: AppEnv.Live,
+		});
+		expect(slowOrgEwma).toBeGreaterThan(100);
+		expect(fastOrgEwma).toBeLessThan(slowOrgEwma ?? 0);
+
+		_setFullSubjectGateEwmaForTesting(100);
+	});
+
+	test("a slow org's EWMA does not shed a fast org's requests", async () => {
+		_setFullSubjectGateConfigForTesting({
+			config: {
+				per_customer_limit: 1,
+				per_org_limit: 100,
+				max_wait_ms: 500,
+				per_customer_pending_max: 1000,
+				per_org_pending_max: 1000,
+			},
+		});
+		_setFullSubjectGateEwmaForTesting(100);
+		_setFullSubjectGateOrgEwmaForTesting({
+			orgId: "org-slow-tenant",
+			env: AppEnv.Live,
+			valueMs: 10_000,
+		});
+
+		const hold = () => new Promise((resolve) => setTimeout(resolve, 100));
+		const orgIds = ["org-slow-tenant", "org-fast-tenant"];
+		const inFlight: Promise<unknown>[] = [];
+		// Occupy each org's single per-customer slot, then queue one more each.
+		for (const round of [0, 1]) {
+			for (const orgId of orgIds) {
+				inFlight.push(
+					runWithFullSubjectGate({
+						customerId: `cus-${orgId}`,
+						orgId,
+						env: AppEnv.Live,
+						queryFn: hold,
+					}),
+				);
+			}
+			if (round === 0) await new Promise((resolve) => setTimeout(resolve, 10));
+		}
+		await new Promise((resolve) => setTimeout(resolve, 10));
+
+		const [slowOrgResult, fastOrgResult] = await Promise.allSettled(
+			orgIds.map((orgId) =>
+				runWithFullSubjectGate({
+					customerId: `cus-${orgId}`,
+					orgId,
+					env: AppEnv.Live,
+					queryFn: hold,
+				}),
+			),
+		);
+
+		expect(slowOrgResult?.status).toBe("rejected");
+		const rejection = (slowOrgResult as PromiseRejectedResult).reason;
+		expect(rejection.statusCode).toBe(429);
+		expect(rejection.data?.reason).toBe("predicted_wait_timeout");
+		// Same queue depth, but the fast org's own EWMA predicts a short wait.
+		expect(fastOrgResult?.status).toBe("fulfilled");
+
+		await Promise.allSettled(inFlight);
+		_setFullSubjectGateConfigForTesting({
+			config: {
+				per_customer_limit: 2,
+				per_org_limit: 4,
+				max_wait_ms: 60_000,
+				per_customer_pending_max: 1000,
+				per_org_pending_max: 1000,
+			},
+		});
 		_setFullSubjectGateEwmaForTesting(100);
 	});
 

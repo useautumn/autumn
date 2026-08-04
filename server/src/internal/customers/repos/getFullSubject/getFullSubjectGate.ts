@@ -15,7 +15,24 @@ const LIMITER_CACHE_TTL_MS = 30 * 60 * 1000;
 // Seed keeps cold processes from over-rejecting before real samples arrive.
 const SERVICE_TIME_EWMA_SEED_MS = 100;
 const SERVICE_TIME_EWMA_ALPHA = 0.2;
-let ewmaServiceMs = SERVICE_TIME_EWMA_SEED_MS;
+let globalEwmaServiceMs = SERVICE_TIME_EWMA_SEED_MS;
+
+// Per-org-limiter EWMAs so one tenant's slow hydrations don't shed other tenants.
+const perOrgEwmaServiceMs = new LRUCache<string, { valueMs: number }>({
+	max: LIMITER_CACHE_MAX,
+	ttl: LIMITER_CACHE_TTL_MS,
+	updateAgeOnGet: true,
+});
+
+const buildOrgGateKey = ({
+	lane,
+	orgId,
+	env,
+}: {
+	lane: FullSubjectGateLane;
+	orgId: string;
+	env: AppEnv;
+}): string => `${lane}:${orgId}:${env}`;
 
 const perCustomerLimiters = new LRUCache<string, LimitFunction>({
 	max: LIMITER_CACHE_MAX,
@@ -64,8 +81,8 @@ const getCustomerLimiter = ({
 		limit,
 	);
 
-const predictedWaitMs = (limiter: LimitFunction): number =>
-	(limiter.pendingCount / Math.max(1, limiter.concurrency)) * ewmaServiceMs;
+const predictedWaitMs = (limiter: LimitFunction, serviceMs: number): number =>
+	(limiter.pendingCount / Math.max(1, limiter.concurrency)) * serviceMs;
 
 const getOrgLimiter = ({
 	lane,
@@ -78,7 +95,11 @@ const getOrgLimiter = ({
 	env: AppEnv;
 	limit: number;
 }): LimitFunction =>
-	getOrUpdateLimiter(perOrgLimiters, `${lane}:${orgId}:${env}`, limit);
+	getOrUpdateLimiter(
+		perOrgLimiters,
+		buildOrgGateKey({ lane, orgId, env }),
+		limit,
+	);
 
 const meter = metrics.getMeter("autumn-server");
 const startedCounter = meter.createCounter("autumn.full_subject.gate.started", {
@@ -235,9 +256,15 @@ export const runWithFullSubjectGate = async <T>({
 
 	// Fast-shed: a queue predicted (via EWMA service time) not to drain within
 	// max_wait_ms would only hold the request until the dequeue-time 429.
+	const orgGateKey = buildOrgGateKey({ lane, orgId, env });
+	const gateEwmaMs =
+		perOrgEwmaServiceMs.get(orgGateKey)?.valueMs ?? globalEwmaServiceMs;
 	const enqueuePredictedWaitMs = customerLimiter
-		? Math.max(predictedWaitMs(customerLimiter), predictedWaitMs(orgLimiter))
-		: predictedWaitMs(orgLimiter);
+		? Math.max(
+				predictedWaitMs(customerLimiter, gateEwmaMs),
+				predictedWaitMs(orgLimiter, gateEwmaMs),
+			)
+		: predictedWaitMs(orgLimiter, gateEwmaMs);
 	if (enqueuePredictedWaitMs >= max_wait_ms) {
 		rejectOverloaded({ reason: "predicted_wait_timeout", labels });
 	}
@@ -264,9 +291,17 @@ export const runWithFullSubjectGate = async <T>({
 			throw error;
 		} finally {
 			const serviceMs = Date.now() - serviceStartedAt;
-			ewmaServiceMs =
+			// Cold orgs seed from the global EWMA, then diverge on their own samples.
+			const orgEwma = perOrgEwmaServiceMs.get(orgGateKey) ?? {
+				valueMs: globalEwmaServiceMs,
+			};
+			orgEwma.valueMs =
 				SERVICE_TIME_EWMA_ALPHA * serviceMs +
-				(1 - SERVICE_TIME_EWMA_ALPHA) * ewmaServiceMs;
+				(1 - SERVICE_TIME_EWMA_ALPHA) * orgEwma.valueMs;
+			perOrgEwmaServiceMs.set(orgGateKey, orgEwma);
+			globalEwmaServiceMs =
+				SERVICE_TIME_EWMA_ALPHA * serviceMs +
+				(1 - SERVICE_TIME_EWMA_ALPHA) * globalEwmaServiceMs;
 			activeCounter.add(-1, labels);
 			completedCounter.add(1, labels);
 		}
@@ -284,7 +319,34 @@ export const runWithFullSubjectGate = async <T>({
 };
 
 export const _setFullSubjectGateEwmaForTesting = (valueMs: number): void => {
-	ewmaServiceMs = valueMs;
+	globalEwmaServiceMs = valueMs;
+	perOrgEwmaServiceMs.clear();
 };
 
-export const _getFullSubjectGateEwmaForTesting = (): number => ewmaServiceMs;
+export const _getFullSubjectGateEwmaForTesting = (): number =>
+	globalEwmaServiceMs;
+
+export const _setFullSubjectGateOrgEwmaForTesting = ({
+	lane = "primary",
+	orgId,
+	env,
+	valueMs,
+}: {
+	lane?: FullSubjectGateLane;
+	orgId: string;
+	env: AppEnv;
+	valueMs: number;
+}): void => {
+	perOrgEwmaServiceMs.set(buildOrgGateKey({ lane, orgId, env }), { valueMs });
+};
+
+export const _getFullSubjectGateOrgEwmaForTesting = ({
+	lane = "primary",
+	orgId,
+	env,
+}: {
+	lane?: FullSubjectGateLane;
+	orgId: string;
+	env: AppEnv;
+}): number | undefined =>
+	perOrgEwmaServiceMs.get(buildOrgGateKey({ lane, orgId, env }))?.valueMs;

@@ -1,6 +1,10 @@
 import type { ApiEntityV2 } from "@autumn/shared";
 import { shed503OnTransientError } from "@/db/shed503OnTransientError.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
+import {
+	FALLBACK_DB_HYDRATION_BUDGET_MS,
+	FALLBACK_DB_HYDRATION_TIMEOUT_MESSAGE,
+} from "@/internal/customers/actions/getApiCustomerByRollout.js";
 import { coalescedSubjectRead } from "@/internal/customers/cache/fullSubject/coalesceSubjectRead.js";
 import {
 	buildFullSubjectKey,
@@ -8,6 +12,7 @@ import {
 } from "@/internal/customers/cache/fullSubject/index.js";
 import { isRedisFallbackToDbEnabled } from "@/internal/misc/miscellaneousEdgeConfig/miscellaneousEdgeConfigStore.js";
 import { isFullSubjectRolloutEnabled } from "@/internal/misc/rollouts/fullSubjectRolloutUtils.js";
+import { withTimeout } from "@/utils/withTimeout.js";
 import { getApiEntityV2 } from "../entityUtils/getApiEntityV2/getApiEntityV2.js";
 
 export const getApiEntityByRollout = async ({
@@ -60,7 +65,12 @@ export const getApiEntityByRollout = async ({
 		source: "entities.get",
 		run: () => lookup({ skipCache: false }),
 		fallbackOnRedisUnavailable: isRedisFallbackToDbEnabled()
-			? () => lookup({ skipCache: true })
+			? () =>
+					withTimeout({
+						timeoutMs: FALLBACK_DB_HYDRATION_BUDGET_MS,
+						timeoutMessage: FALLBACK_DB_HYDRATION_TIMEOUT_MESSAGE,
+						fn: () => lookup({ skipCache: true }),
+					})
 			: undefined,
 	});
 

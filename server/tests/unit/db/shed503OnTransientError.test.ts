@@ -1,4 +1,5 @@
 import { describe, expect, mock, test } from "bun:test";
+import { RecaseError } from "@autumn/shared";
 import { shed503OnTransientError } from "@/db/shed503OnTransientError.js";
 import { RedisUnavailableError } from "@/external/redis/utils/errors.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
@@ -139,7 +140,7 @@ describe("shed503OnTransientError", () => {
 		expect(fallback).not.toHaveBeenCalled();
 	});
 
-	test("sheds and still captures recovery when the fallback itself fails", async () => {
+	test("sheds and still captures recovery when the fallback fails transiently", async () => {
 		const ctx = buildContext();
 		const onTransientError = mock(async () => {});
 
@@ -151,7 +152,7 @@ describe("shed503OnTransientError", () => {
 					throw redisError;
 				},
 				fallbackOnRedisUnavailable: () => {
-					throw new Error("postgres also down");
+					throw transientError;
 				},
 				onTransientError,
 			}),
@@ -161,5 +162,31 @@ describe("shed503OnTransientError", () => {
 		});
 
 		expect(onTransientError).toHaveBeenCalledWith(redisError);
+	});
+
+	test("rethrows a non-transient fallback error instead of re-classing it as a 503", async () => {
+		const ctx = buildContext();
+		const onTransientError = mock(async () => {});
+		const notFoundError = new RecaseError({
+			message: "Customer not found",
+			code: "customer_not_found",
+			statusCode: 404,
+		});
+
+		await expect(
+			shed503OnTransientError({
+				ctx,
+				source: "get_customer",
+				run: () => {
+					throw redisError;
+				},
+				fallbackOnRedisUnavailable: () => {
+					throw notFoundError;
+				},
+				onTransientError,
+			}),
+		).rejects.toBe(notFoundError);
+
+		expect(onTransientError).not.toHaveBeenCalled();
 	});
 });

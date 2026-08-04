@@ -14,7 +14,7 @@ export const REDIS_OP_TIMEOUT_MS = {
 	/** p99.9 297ms on shared V2; this site also serves the dedicated cluster. */
 	featureBalances: 400,
 	/** p99.9 643-938ms; latency scales with the customer's feature count. */
-	featureBalancesBatch: 600,
+	featureBalancesBatch: 1200,
 	/** p99.9 849ms across the pipe[get,get] pool. */
-	subjectPipeline: 600,
+	subjectPipeline: 1200,
 } as const;

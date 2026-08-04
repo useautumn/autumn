@@ -38,6 +38,11 @@ export const shed503OnTransientError = async <T>({
 				});
 				return await fallbackOnRedisUnavailable(error);
 			} catch (fallbackError) {
+				const fallbackFailedTransiently =
+					isTransientDbError({ error: fallbackError }) ||
+					isTransientRedisError({ error: fallbackError });
+				// A non-transient fallback failure (e.g. a 404) is the real answer, not an outage.
+				if (!fallbackFailedTransiently) throw fallbackError;
 				ctx.logger.error(`[${source}] postgres fallback failed, shedding`, {
 					type: `${source}_redis_fallback_failed`,
 					error: fallbackError,
