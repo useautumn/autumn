@@ -113,10 +113,9 @@ test.concurrent(`${chalk.yellowBright("sub.deleted invoice: customer consumable 
 	});
 
 	// Verify product is removed
-	const customerAfterCancel =
-		await autumnV1.customers.get<ApiCustomerV3>(customerId);
 	await expectProductNotPresent({
-		customer: customerAfterCancel,
+		autumn: autumnV1,
+		customerId,
 		productId: pro.id,
 	});
 
@@ -132,8 +131,9 @@ test.concurrent(`${chalk.yellowBright("sub.deleted invoice: customer consumable 
 	// No final arrear invoice because:
 	// 1. Customer-level consumables use metered prices (Stripe handles)
 	// 2. This was an immediate cancel (wasImmediateStripeCancellation = true)
-	expectCustomerInvoiceCorrect({
-		customer: customerAfterCancel,
+	await expectCustomerInvoiceCorrect({
+		autumn: autumnV1,
+		customerId,
 		count: 1,
 		latestTotal: 20,
 	});
@@ -245,8 +245,9 @@ test.concurrent(`${chalk.yellowBright("sub.deleted invoice: entity consumable â†
 		await autumnV1.customers.get<ApiCustomerV3>(customerId);
 
 	// Should have only 1 invoice (initial attach) - no final arrear invoice
-	expectCustomerInvoiceCorrect({
-		customer: customerAfterCancel,
+	await expectCustomerInvoiceCorrect({
+		autumn: autumnV1,
+		customerId,
 		count: 1,
 		latestTotal: 20, // Initial attach only
 	});
@@ -850,8 +851,9 @@ test.concurrent(`${chalk.yellowBright("sub.deleted invoice: entity consumable â†
 	// Should have 2 invoices:
 	// 1. Initial attach: $20
 	// 2. Final arrear invoice: $40 (400 overage Ã— $0.10)
-	expectCustomerInvoiceCorrect({
-		customer: customerAfterCancel,
+	await expectCustomerInvoiceCorrect({
+		autumn: autumnV1,
+		customerId,
 		count: 2,
 		latestTotal: 40, // Arrear invoice for overage
 	});

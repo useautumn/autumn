@@ -1,6 +1,7 @@
 import type { AppEnv } from "@autumn/shared";
 import { CusProductStatus } from "@autumn/shared";
 import { pollUntil } from "@tests/utils/genUtils";
+import { DEFAULT_SETTLE_TIMEOUT_MS } from "@tests/utils/pollableCustomerExpect.js";
 import type { DrizzleCli } from "@/db/initDrizzle";
 import { CusProductService } from "@/internal/customers/cusProducts/CusProductService";
 
@@ -13,7 +14,7 @@ export const waitForCustomerProductExpired = async ({
 	orgId,
 	env,
 	stripeSubscriptionId,
-	timeoutMs = 30_000,
+	timeoutMs = DEFAULT_SETTLE_TIMEOUT_MS,
 	intervalMs = 500,
 }: {
 	db: DrizzleCli;

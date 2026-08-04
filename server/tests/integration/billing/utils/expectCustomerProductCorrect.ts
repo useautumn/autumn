@@ -122,11 +122,11 @@ export const expectCustomerProductCorrect = pollableCustomerExpect({
 });
 
 /** Shorthand for checking product is active. Prefer {@link expectCustomerProducts} for batch checks. */
-export const expectProductActive = async (params: {
-	customerId?: string;
-	customer?: CustomerOrEntity;
-	productId: string;
-}) => {
+export const expectProductActive = async (
+	params: PollableExpectParams<CustomerOrEntity> & {
+		productId: string;
+	},
+) => {
 	if (params.customer && isV5Customer(params.customer)) {
 		return expectSubscriptionActive({
 			customer: params.customer,
@@ -140,11 +140,11 @@ export const expectProductActive = async (params: {
  * Shorthand for checking product is canceling (active but with canceled_at set).
  * Prefer {@link expectCustomerProducts} for batch checks.
  */
-export const expectProductCanceling = async (params: {
-	customerId?: string;
-	customer?: CustomerOrEntity;
-	productId: string;
-}) => {
+export const expectProductCanceling = async (
+	params: PollableExpectParams<CustomerOrEntity> & {
+		productId: string;
+	},
+) => {
 	if (params.customer && isV5Customer(params.customer)) {
 		return expectSubscriptionCanceling({
 			customer: params.customer,
@@ -210,11 +210,11 @@ export const expectProductScheduled = pollableCustomerExpect({
 });
 
 /** Shorthand for checking product is past_due. Prefer {@link expectCustomerProducts} for batch checks. */
-export const expectProductPastDue = async (params: {
-	customerId?: string;
-	customer?: CustomerOrEntity;
-	productId: string;
-}) => {
+export const expectProductPastDue = async (
+	params: PollableExpectParams<CustomerOrEntity> & {
+		productId: string;
+	},
+) => {
 	if (params.customer && isV5Customer(params.customer)) {
 		return expectSubscriptionPastDue({
 			customer: params.customer,
@@ -225,11 +225,11 @@ export const expectProductPastDue = async (params: {
 };
 
 /** Shorthand for checking product does not exist. Prefer {@link expectCustomerProducts} for batch checks. */
-export const expectProductNotPresent = async (params: {
-	customerId?: string;
-	customer?: CustomerOrEntity;
-	productId: string;
-}) => {
+export const expectProductNotPresent = async (
+	params: PollableExpectParams<CustomerOrEntity> & {
+		productId: string;
+	},
+) => {
 	if (params.customer && isV5Customer(params.customer)) {
 		return expectSubscriptionNotPresent({
 			customer: params.customer,

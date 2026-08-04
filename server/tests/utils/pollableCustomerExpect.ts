@@ -18,7 +18,16 @@ export type PollableExpectParams<C> = {
 	settleTimeoutMs?: number;
 };
 
-const DEFAULT_SETTLE_TIMEOUT_MS = 30_000;
+/**
+ * Webhook-driven state (checkout.session.completed, invoice.*) travels
+ * Stripe → one shared ingress sandbox → the µVM, and Stripe retries a missed
+ * delivery on its own backoff — measured arriving well past 30s in `bun tw`,
+ * after the test had already given up. Locally the same hop is seconds, so only
+ * the contended environment pays the longer ceiling. Polling exits as soon as
+ * the assertion holds, so this costs nothing on the happy path.
+ */
+export const DEFAULT_SETTLE_TIMEOUT_MS =
+	Number(process.env.TEST_FILE_CONCURRENCY || "0") > 1 ? 120_000 : 30_000;
 
 /**
  * THE one place polling lives.
