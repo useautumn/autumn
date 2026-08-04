@@ -30,7 +30,7 @@ const makeCtx = () =>
 	}) as never;
 
 const lastReadFrom = (): SubjectReadFrom | undefined =>
-	captured.at(-1)?.readFrom;
+	captured[captured.length - 1]?.readFrom;
 
 describe("wrapper replica grant", () => {
 	it("grants replica-ok by default on the read wrapper", async () => {
