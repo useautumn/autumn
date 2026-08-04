@@ -76,6 +76,7 @@ import {
 	platformSyncRevenueCatContract,
 } from "./platformContract.js";
 import {
+	referralProgramsCreateContract,
 	referralsCreateCodeContract,
 	referralsRedeemCodeContract,
 	rewardsCreateContract,
@@ -155,6 +156,7 @@ export const v2_3ContractRouter = oc.router({
 	// Rewards & Referrals
 	referralsCreateCode: referralsCreateCodeContract,
 	referralsRedeemCode: referralsRedeemCodeContract,
+	referralProgramsCreate: referralProgramsCreateContract,
 	rewardsCreate: rewardsCreateContract,
 	rewardsList: rewardsListContract,
 	rewardsRedeemCode: rewardsRedeemCodeContract,
