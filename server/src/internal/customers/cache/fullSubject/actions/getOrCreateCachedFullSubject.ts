@@ -5,6 +5,7 @@ import {
 	SubjectType,
 	type TrackParams,
 } from "@autumn/shared";
+import type { SubjectReadFrom } from "@/db/resolveSubjectReadDb.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { customerActions } from "@/internal/customers/actions/index.js";
 import { updateCustomerData } from "@/internal/customers/actions/updateCustomerData.js";
@@ -17,12 +18,14 @@ export const getOrCreateCachedFullSubject = async ({
 	ctx,
 	params,
 	source,
+	readFrom = "primary",
 }: {
 	ctx: AutumnContext;
 	params: Omit<TrackParams | CheckParams, "customer_id"> & {
 		customer_id: string | null;
 	};
 	source?: string;
+	readFrom?: SubjectReadFrom;
 }): Promise<FullSubject> => {
 	const { skipCache, logger } = ctx;
 	const useRedis = !skipCache;
@@ -69,7 +72,7 @@ export const getOrCreateCachedFullSubject = async ({
 			customerId,
 			entityId,
 			allowMissingEntity: true,
-			readFrom: "replica-ok",
+			readFrom,
 			routeSource: source,
 		});
 		if (normalizedResult) {

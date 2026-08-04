@@ -3,6 +3,7 @@ import {
 	EntityNotFoundError,
 	type FullSubject,
 } from "@autumn/shared";
+import type { SubjectReadFrom } from "@/db/resolveSubjectReadDb.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { getFullSubjectNormalized } from "@/internal/customers/repos/getFullSubject/index.js";
 import { filterFullSubjectByFeatureIds } from "../../filterFullSubjectByFeatureIds.js";
@@ -16,12 +17,14 @@ export const getOrSetCachedPartialFullSubject = async ({
 	entityId,
 	featureIds,
 	source,
+	readFrom = "primary",
 }: {
 	ctx: AutumnContext;
 	customerId: string;
 	entityId?: string;
 	featureIds: string[];
 	source?: string;
+	readFrom?: SubjectReadFrom;
 }): Promise<FullSubject> => {
 	const { skipCache, logger } = ctx;
 	const useRedis = !skipCache;
@@ -58,7 +61,7 @@ export const getOrSetCachedPartialFullSubject = async ({
 		ctx,
 		customerId,
 		entityId,
-		readFrom: "replica-ok",
+		readFrom,
 		routeSource: source,
 	});
 
