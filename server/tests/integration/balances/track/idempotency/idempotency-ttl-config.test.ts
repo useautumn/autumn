@@ -70,13 +70,26 @@ const expectStoredTtls = async ({
 	expect(redisPttl).toBeLessThanOrEqual(expectedTtlMs);
 
 	if (hasLocalDynamo) {
-		const item = await getDynamoDocumentClient().send(
-			new GetCommand({
-				TableName: getIdempotencyTableName(),
-				Key: { pk: storageKey },
-			}),
-		);
-		const expiresAtMs = Number(item.Item?.expiresAt) * 1000;
+		// The Dynamo mirror write is fire-and-forget (and first use lazily
+		// creates the emulator table), so poll for the item before asserting.
+		const readItem = async () =>
+			(
+				await getDynamoDocumentClient().send(
+					new GetCommand({
+						TableName: getIdempotencyTableName(),
+						Key: { pk: storageKey },
+					}),
+				)
+			).Item;
+
+		const deadline = Date.now() + 10_000;
+		let item = await readItem();
+		while (!item && Date.now() < deadline) {
+			await new Promise((resolve) => setTimeout(resolve, 250));
+			item = await readItem();
+		}
+
+		const expiresAtMs = Number(item?.expiresAt) * 1000;
 		expect(expiresAtMs).toBeGreaterThan(
 			Date.now() + expectedTtlMs - TOLERANCE_MS,
 		);
