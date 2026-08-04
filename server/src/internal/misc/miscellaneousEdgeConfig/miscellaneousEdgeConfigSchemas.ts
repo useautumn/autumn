@@ -19,7 +19,6 @@ export const MiscellaneousEdgeConfigSchema = z.object({
 	redisFallbackToDb: z.boolean().default(false),
 	/** In-process L1 TTL (ms) for pure-GET subject reads; 0 disables the L1
 	 *  cache only — singleflight is gated by subjectReadSingleflight. */
-	subjectReadL1TtlMs: z.number().default(1000),
 	/** Global switch: concurrent same-key pure-GET subject reads share one
 	 *  in-flight fetch. Independent of the L1 TTL. */
 	subjectReadSingleflight: z.boolean().default(true),

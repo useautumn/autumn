@@ -12,7 +12,6 @@ import {
 import { createRoute } from "@/honoMiddlewares/routeHandler.js";
 import { applySubjectLookupDbOnly } from "@/internal/misc/miscellaneousEdgeConfig/applySubjectLookupDbOnly.js";
 import {
-	getSubjectReadL1TtlMs,
 	isSubjectReadSingleflightEnabled,
 } from "@/internal/misc/miscellaneousEdgeConfig/miscellaneousEdgeConfigStore.js";
 import { getApiCustomerByRollout } from "../actions/getApiCustomerByRollout.js";
@@ -56,7 +55,6 @@ export const handleGetCustomerV2 = createRoute({
 			customerId,
 			source: "handleGetCustomerV2",
 			withAutumnId: with_autumn_id,
-			l1TtlMs: getSubjectReadL1TtlMs(),
 			singleflight: isSubjectReadSingleflightEnabled(),
 		});
 

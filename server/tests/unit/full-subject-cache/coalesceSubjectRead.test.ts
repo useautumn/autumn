@@ -1,9 +1,8 @@
 import { beforeEach, describe, expect, test } from "bun:test";
 import type { FullSubject } from "@autumn/shared";
 import {
-	_resetSubjectReadL1ForTesting,
+	_resetSubjectReadInFlightForTesting,
 	_subjectReadInFlightSizeForTesting,
-	_subjectReadL1SizeForTesting,
 	coalescedSubjectRead,
 } from "@/internal/customers/cache/fullSubject/coalesceSubjectRead.js";
 
@@ -31,7 +30,7 @@ const makeCountingFetch = (subject: FullSubject) => {
 
 describe("coalescedSubjectRead", () => {
 	beforeEach(() => {
-		_resetSubjectReadL1ForTesting();
+		_resetSubjectReadInFlightForTesting();
 	});
 
 	test("two concurrent calls for the same key share one fetch and one object", async () => {
@@ -43,18 +42,8 @@ describe("coalescedSubjectRead", () => {
 			return flight.promise;
 		};
 
-		const p1 = coalescedSubjectRead({
-			key: "k1",
-			l1TtlMs: 1000,
-			singleflight: true,
-			fetch,
-		});
-		const p2 = coalescedSubjectRead({
-			key: "k1",
-			l1TtlMs: 1000,
-			singleflight: true,
-			fetch,
-		});
+		const p1 = coalescedSubjectRead({ key: "k1", singleflight: true, fetch });
+		const p2 = coalescedSubjectRead({ key: "k1", singleflight: true, fetch });
 
 		expect(_subjectReadInFlightSizeForTesting()).toBe(1);
 
@@ -66,7 +55,7 @@ describe("coalescedSubjectRead", () => {
 		expect(r2).toBe(subject);
 	});
 
-	test("singleflight=false with l1TtlMs=0 is a pure passthrough", async () => {
+	test("singleflight=false is a pure passthrough", async () => {
 		const subject = makeSubject("cus_1");
 		const flight = deferred<FullSubject>();
 		let calls = 0;
@@ -75,18 +64,8 @@ describe("coalescedSubjectRead", () => {
 			return flight.promise;
 		};
 
-		const p1 = coalescedSubjectRead({
-			key: "k1",
-			l1TtlMs: 0,
-			singleflight: false,
-			fetch,
-		});
-		const p2 = coalescedSubjectRead({
-			key: "k1",
-			l1TtlMs: 0,
-			singleflight: false,
-			fetch,
-		});
+		const p1 = coalescedSubjectRead({ key: "k1", singleflight: false, fetch });
+		const p2 = coalescedSubjectRead({ key: "k1", singleflight: false, fetch });
 
 		expect(_subjectReadInFlightSizeForTesting()).toBe(0);
 
@@ -94,121 +73,28 @@ describe("coalescedSubjectRead", () => {
 		await Promise.all([p1, p2]);
 
 		expect(calls).toBe(2);
-		expect(_subjectReadL1SizeForTesting()).toBe(0);
 
-		await coalescedSubjectRead({
-			key: "k1",
-			l1TtlMs: 0,
-			singleflight: false,
-			fetch,
-		});
+		await coalescedSubjectRead({ key: "k1", singleflight: false, fetch });
 		expect(calls).toBe(3);
 	});
 
-	test("singleflight without cache: concurrent calls share one fetch, sequential calls refetch", async () => {
+	test("concurrent calls share one fetch, sequential calls always refetch", async () => {
 		const subject = makeSubject("cus_1");
 		const { state, fetch } = makeCountingFetch(subject);
 
 		const [a, b] = await Promise.all([
-			coalescedSubjectRead({
-				key: "k1",
-				l1TtlMs: 0,
-				singleflight: true,
-				fetch,
-			}),
-			coalescedSubjectRead({
-				key: "k1",
-				l1TtlMs: 0,
-				singleflight: true,
-				fetch,
-			}),
+			coalescedSubjectRead({ key: "k1", singleflight: true, fetch }),
+			coalescedSubjectRead({ key: "k1", singleflight: true, fetch }),
 		]);
 
 		expect(state.calls).toBe(1);
 		expect(a).toBe(b);
-		expect(_subjectReadL1SizeForTesting()).toBe(0);
 
-		await coalescedSubjectRead({
-			key: "k1",
-			l1TtlMs: 0,
-			singleflight: true,
-			fetch,
-		});
-		expect(state.calls).toBe(2);
-		expect(_subjectReadL1SizeForTesting()).toBe(0);
-	});
-
-	test("cache without singleflight: concurrent misses each fetch, later calls hit L1", async () => {
-		const subject = makeSubject("cus_1");
-		const flight = deferred<FullSubject>();
-		let calls = 0;
-		const fetch = () => {
-			calls++;
-			return flight.promise;
-		};
-
-		const p1 = coalescedSubjectRead({
-			key: "k1",
-			l1TtlMs: 1000,
-			singleflight: false,
-			fetch,
-		});
-		const p2 = coalescedSubjectRead({
-			key: "k1",
-			l1TtlMs: 1000,
-			singleflight: false,
-			fetch,
-		});
-
-		expect(calls).toBe(2);
-		expect(_subjectReadInFlightSizeForTesting()).toBe(0);
-
-		flight.resolve(subject);
-		await Promise.all([p1, p2]);
-
-		const third = await coalescedSubjectRead({
-			key: "k1",
-			l1TtlMs: 1000,
-			singleflight: false,
-			fetch,
-		});
-		expect(calls).toBe(2);
-		expect(third).toBe(subject);
-	});
-
-	test("L1 hit within TTL serves without fetching; expiry refetches", async () => {
-		const subject = makeSubject("cus_1");
-		const { state, fetch } = makeCountingFetch(subject);
-
-		const first = await coalescedSubjectRead({
-			key: "k1",
-			l1TtlMs: 50,
-			singleflight: true,
-			fetch,
-		});
-		expect(state.calls).toBe(1);
-
-		const second = await coalescedSubjectRead({
-			key: "k1",
-			l1TtlMs: 50,
-			singleflight: true,
-			fetch,
-		});
-		expect(state.calls).toBe(1);
-		expect(second).toBe(first);
-
-		await Bun.sleep(80);
-
-		await coalescedSubjectRead({
-			key: "k1",
-			l1TtlMs: 50,
-			singleflight: true,
-			fetch,
-		});
+		await coalescedSubjectRead({ key: "k1", singleflight: true, fetch });
 		expect(state.calls).toBe(2);
 	});
 
-	test("rejected fetch is not cached and the next call refetches", async () => {
+	test("rejected fetch is not retained and the next call refetches", async () => {
 		const subject = makeSubject("cus_1");
 		let calls = 0;
 		const fetch = () => {
@@ -218,21 +104,14 @@ describe("coalescedSubjectRead", () => {
 		};
 
 		await expect(
-			coalescedSubjectRead({
-				key: "k1",
-				l1TtlMs: 1000,
-				singleflight: true,
-				fetch,
-			}),
+			coalescedSubjectRead({ key: "k1", singleflight: true, fetch }),
 		).rejects.toThrow("db down");
 		await Bun.sleep(0);
 
-		expect(_subjectReadL1SizeForTesting()).toBe(0);
 		expect(_subjectReadInFlightSizeForTesting()).toBe(0);
 
 		const result = await coalescedSubjectRead({
 			key: "k1",
-			l1TtlMs: 1000,
 			singleflight: true,
 			fetch,
 		});
@@ -248,18 +127,8 @@ describe("coalescedSubjectRead", () => {
 			return flight.promise;
 		};
 
-		const p1 = coalescedSubjectRead({
-			key: "k1",
-			l1TtlMs: 1000,
-			singleflight: true,
-			fetch,
-		});
-		const p2 = coalescedSubjectRead({
-			key: "k1",
-			l1TtlMs: 1000,
-			singleflight: true,
-			fetch,
-		});
+		const p1 = coalescedSubjectRead({ key: "k1", singleflight: true, fetch });
+		const p2 = coalescedSubjectRead({ key: "k1", singleflight: true, fetch });
 
 		// allSettled attaches handlers before the reject, avoiding both the
 		// unhandled-rejection window and bun's expect().rejects pending-drain.
@@ -289,18 +158,8 @@ describe("coalescedSubjectRead", () => {
 			return flight.promise;
 		};
 
-		const p1 = coalescedSubjectRead({
-			key: "kA",
-			l1TtlMs: 1000,
-			singleflight: true,
-			fetch,
-		});
-		const p2 = coalescedSubjectRead({
-			key: "kB",
-			l1TtlMs: 1000,
-			singleflight: true,
-			fetch,
-		});
+		const p1 = coalescedSubjectRead({ key: "kA", singleflight: true, fetch });
+		const p2 = coalescedSubjectRead({ key: "kB", singleflight: true, fetch });
 
 		expect(calls).toBe(2);
 		expect(_subjectReadInFlightSizeForTesting()).toBe(2);
@@ -316,15 +175,9 @@ describe("coalescedSubjectRead", () => {
 		const subject = makeSubject("cus_1");
 		const { fetch } = makeCountingFetch(subject);
 
-		await coalescedSubjectRead({
-			key: "k1",
-			l1TtlMs: 1000,
-			singleflight: true,
-			fetch,
-		});
+		await coalescedSubjectRead({ key: "k1", singleflight: true, fetch });
 
 		expect(_subjectReadInFlightSizeForTesting()).toBe(0);
-		expect(_subjectReadL1SizeForTesting()).toBe(1);
 	});
 
 	test("a synchronously-throwing fetch does not poison the in-flight map", async () => {
@@ -337,12 +190,7 @@ describe("coalescedSubjectRead", () => {
 		};
 
 		await expect(
-			coalescedSubjectRead({
-				key: "k1",
-				l1TtlMs: 1000,
-				singleflight: true,
-				fetch,
-			}),
+			coalescedSubjectRead({ key: "k1", singleflight: true, fetch }),
 		).rejects.toThrow("sync boom");
 		await Bun.sleep(0);
 
@@ -350,46 +198,9 @@ describe("coalescedSubjectRead", () => {
 
 		const result = await coalescedSubjectRead({
 			key: "k1",
-			l1TtlMs: 1000,
 			singleflight: true,
 			fetch,
 		});
 		expect(result).toBe(subject);
-	});
-
-	test("oversized subjects get singleflight but are never cached", async () => {
-		const giant = {
-			customer: { id: "cus_giant" },
-			customer_products: new Array(10_001),
-			extra_customer_entitlements: [],
-		} as unknown as FullSubject;
-		const { state, fetch } = makeCountingFetch(giant);
-
-		const [a, b] = await Promise.all([
-			coalescedSubjectRead({
-				key: "giant",
-				l1TtlMs: 1000,
-				singleflight: true,
-				fetch,
-			}),
-			coalescedSubjectRead({
-				key: "giant",
-				l1TtlMs: 1000,
-				singleflight: true,
-				fetch,
-			}),
-		]);
-
-		expect(state.calls).toBe(1);
-		expect(a).toBe(b);
-		expect(_subjectReadL1SizeForTesting()).toBe(0);
-
-		await coalescedSubjectRead({
-			key: "giant",
-			l1TtlMs: 1000,
-			singleflight: true,
-			fetch,
-		});
-		expect(state.calls).toBe(2);
 	});
 });

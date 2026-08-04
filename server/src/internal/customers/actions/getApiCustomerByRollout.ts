@@ -15,7 +15,6 @@ export const getApiCustomerByRollout = async ({
 	entityId,
 	source,
 	withAutumnId,
-	l1TtlMs = 0,
 	singleflight = false,
 }: {
 	ctx: AutumnContext;
@@ -23,7 +22,6 @@ export const getApiCustomerByRollout = async ({
 	entityId?: string;
 	source?: string;
 	withAutumnId?: boolean;
-	l1TtlMs?: number;
 	singleflight?: boolean;
 }) => {
 	if (isFullSubjectRolloutEnabled({ ctx })) {
@@ -38,9 +36,8 @@ export const getApiCustomerByRollout = async ({
 				source,
 			});
 
-		if (!singleflight && l1TtlMs <= 0) return fetch();
+		if (!singleflight) return fetch();
 
-		// The L1 stays on even under skipCache — it exists for Redis outages.
 		return coalescedSubjectRead({
 			key: buildFullSubjectKey({
 				orgId: ctx.org.id,
@@ -48,7 +45,6 @@ export const getApiCustomerByRollout = async ({
 				customerId,
 				entityId,
 			}),
-			l1TtlMs,
 			singleflight,
 			fetch,
 		});
