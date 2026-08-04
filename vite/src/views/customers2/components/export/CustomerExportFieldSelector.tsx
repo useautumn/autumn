@@ -5,19 +5,26 @@ import {
 } from "@autumn/shared";
 import { Button, Checkbox } from "@autumn/ui";
 import { useId } from "react";
+import { toast } from "sonner";
+
+const REQUIRED_FIELDS_MESSAGE = "Select at least one column.";
 
 export function CustomerExportFieldSelector({
 	selectedFields,
 	onChange,
-	errorMessage,
 }: {
 	selectedFields: CustomerExportField[];
 	onChange: (fields: CustomerExportField[]) => void;
-	errorMessage?: string;
 }) {
 	const fieldIdPrefix = useId();
-	const errorId = `${fieldIdPrefix}-error`;
 	const headingId = `${fieldIdPrefix}-heading`;
+
+	const updateFields = (fields: CustomerExportField[]) => {
+		onChange(fields);
+		if (fields.length === 0) {
+			toast.error(REQUIRED_FIELDS_MESSAGE);
+		}
+	};
 
 	const toggleField = ({
 		field,
@@ -26,7 +33,7 @@ export function CustomerExportFieldSelector({
 		field: CustomerExportField;
 		checked: boolean;
 	}) => {
-		onChange(
+		updateFields(
 			checked
 				? CUSTOMER_EXPORT_FIELD_ORDER.filter(
 						(candidate) =>
@@ -47,7 +54,7 @@ export function CustomerExportFieldSelector({
 						variant="skeleton"
 						size="sm"
 						type="button"
-						onClick={() => onChange([...CUSTOMER_EXPORT_FIELD_ORDER])}
+						onClick={() => updateFields([...CUSTOMER_EXPORT_FIELD_ORDER])}
 					>
 						Select all
 					</Button>
@@ -55,7 +62,7 @@ export function CustomerExportFieldSelector({
 						variant="skeleton"
 						size="sm"
 						type="button"
-						onClick={() => onChange([])}
+						onClick={() => updateFields([])}
 					>
 						Clear
 					</Button>
@@ -64,8 +71,6 @@ export function CustomerExportFieldSelector({
 
 			<fieldset
 				aria-labelledby={headingId}
-				aria-invalid={errorMessage ? true : undefined}
-				aria-describedby={errorMessage ? errorId : undefined}
 				className="flex min-w-0 flex-col gap-1"
 			>
 				{CUSTOMER_EXPORT_FIELD_ORDER.map((field) => {
@@ -90,16 +95,6 @@ export function CustomerExportFieldSelector({
 					);
 				})}
 			</fieldset>
-
-			{errorMessage ? (
-				<p
-					id={errorId}
-					role="alert"
-					className="mt-3 pl-2 text-destructive text-xs"
-				>
-					{errorMessage}
-				</p>
-			) : null}
 		</div>
 	);
 }
