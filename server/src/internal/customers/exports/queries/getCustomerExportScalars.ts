@@ -17,23 +17,6 @@ export type CustomerExportScalarRow = {
 	email: string | null;
 };
 
-/** Mirrors the dashboard list predicate exactly, so an export always contains what the table showed. */
-const buildExportPredicates = ({
-	orgId,
-	env,
-	snapshot,
-}: {
-	orgId: string;
-	env: AppEnv;
-	snapshot: CustomerExportSnapshot;
-}) =>
-	buildSearchPredicates({
-		orgId,
-		env,
-		search: snapshot.search,
-		filters: snapshot.filters,
-	});
-
 export const getCustomerExportUpperBound = async ({
 	db,
 	orgId,
@@ -52,7 +35,12 @@ export const getCustomerExportUpperBound = async ({
 		.from(customers)
 		.where(
 			and(
-				buildExportPredicates({ orgId, env, snapshot }).whereRaw,
+				buildSearchPredicates({
+					orgId,
+					env,
+					search: snapshot.search,
+					filters: snapshot.filters,
+				}).whereRaw,
 				lte(customers.created_at, createdAtCutoff),
 			),
 		)
@@ -88,7 +76,12 @@ export const countCustomerExportRows = async ({
 		.from(customers)
 		.where(
 			and(
-				buildExportPredicates({ orgId, env, snapshot }).whereRaw,
+				buildSearchPredicates({
+					orgId,
+					env,
+					search: snapshot.search,
+					filters: snapshot.filters,
+				}).whereRaw,
 				lte(customers.created_at, createdAtCutoff),
 				lte(customers.internal_id, upperBoundInternalId),
 			),
@@ -133,7 +126,12 @@ export const getCustomerExportScalars = async ({
 		.from(customers)
 		.where(
 			and(
-				buildExportPredicates({ orgId, env, snapshot }).whereRaw,
+				buildSearchPredicates({
+					orgId,
+					env,
+					search: snapshot.search,
+					filters: snapshot.filters,
+				}).whereRaw,
 				lte(customers.created_at, createdAtCutoff),
 				lte(customers.internal_id, upperBoundInternalId),
 				afterInternalId
