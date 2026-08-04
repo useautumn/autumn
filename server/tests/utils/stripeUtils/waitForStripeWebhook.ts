@@ -58,7 +58,7 @@ export const waitForStripeWebhook = async ({
 		if (elapsed >= timeoutMs) {
 			throw new Error(
 				`Timed out after ${timeoutMs}ms waiting for ${types.join(", ")}` +
-					`${replayed ? " (events were replayed and still had no effect)" : ""}`,
+					`${replayed ? " (replay attempted — see [waitForStripeWebhook] logs for how many events Stripe had)" : ""}`,
 			);
 		}
 
@@ -89,6 +89,9 @@ const replayStripeEvents = async ({
 		created: { gte: createdGte },
 		limit: 25,
 	});
+	console.log(
+		`[waitForStripeWebhook] stripe had ${events.data.length} event(s) matching ${types.join(", ")}`,
+	);
 
 	for (const event of events.data.reverse()) {
 		const response = await fetch(

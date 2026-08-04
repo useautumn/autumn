@@ -219,5 +219,5 @@ export const stripeCheckout = async ({
 	await page.waitForURL((url) => !url.host.includes("checkout.stripe.com"), {
 		timeout: 120_000,
 	});
-	console.log("[stripeCheckout] Checkout complete");
+	console.log(`[stripeCheckout] Checkout complete — landed on ${page.url()}`);
 };
