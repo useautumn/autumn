@@ -1,6 +1,7 @@
 import {
 	AffectedResource,
 	BatchTrackParamsSchema,
+	RouteGroup,
 	Scopes,
 } from "@autumn/shared";
 import { createRoute } from "@/honoMiddlewares/routeHandler.js";
@@ -8,6 +9,7 @@ import { runBatchTrack } from "@/internal/balances/track/runBatchTrack.js";
 
 export const handleBatchTrack = createRoute({
 	scopes: [Scopes.Balances.Write],
+	routeGroup: RouteGroup.Balances,
 	body: BatchTrackParamsSchema,
 	resource: AffectedResource.Track,
 	handler: async (c) => {

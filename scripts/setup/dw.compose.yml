@@ -25,6 +25,18 @@ services:
     command: ["-Dconfig.file=/opt/elasticmq.conf"]
     restart: unless-stopped
 
+  # DynamoDB emulator (idempotency keys). Official multi-arch image; -inMemory
+  # because the data is ephemeral by design (24h TTL) and -sharedDb so all
+  # credential/region pairs see the same database file. The server auto-creates
+  # the table on first use (ensureLocalDynamoTable.ts), so no config volume.
+  dynamodb:
+    image: amazon/dynamodb-local:latest
+    container_name: ${COMPOSE_PROJECT_NAME}-dynamodb
+    ports:
+      - "${DYNAMODB_PORT}:8000"
+    command: ["-jar", "DynamoDBLocal.jar", "-inMemory", "-sharedDb"]
+    restart: unless-stopped
+
   # Public tunnel so Anthropic's cloud (Claude Managed Agents) + Slack can reach
   # this worktree's /mcp + /slack/*. Forwards to the host's server port, which
   # proxies to leaf. The container lives in the compose stack, so it outlives

@@ -21,7 +21,9 @@ mock.module("@/queue/initSqs.js", () => ({
 	getSqsClient: () => stubSqsClient,
 }));
 
-const { addTasksToQueueBatch } = await import("@/queue/queueUtils.js");
+const { sendSqsMessagesBatch } = await import(
+	"@/queue/utils/sendSqsMessages.js"
+);
 
 afterAll(() => {
 	mock.module("@/queue/initSqs.js", () => realInitSqs);
@@ -32,11 +34,11 @@ beforeEach(() => {
 });
 
 const sendThreeTasks = ({ queueUrl }: { queueUrl: string }) =>
-	addTasksToQueueBatch({
-		jobName: "test-job",
+	sendSqsMessagesBatch({
 		queueUrl,
 		entries: Array.from({ length: 3 }, (_, index) => ({
-			payload: { index },
+			jobName: "test-job",
+			messageBody: JSON.stringify({ name: "test-job", data: { index } }),
 			messageGroupId: `group-${index}`,
 			messageDeduplicationId: `dedup-${index}`,
 		})),

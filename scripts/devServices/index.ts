@@ -20,12 +20,14 @@ const localConfig = {
 	ngrokApiPort: 4040,
 	redisStackPort: 6379,
 	dragonflyPort: 6380,
+	dynamoDbPort: 8000,
 	apiServerPort: 8080,
 	mcpServerPort: 3099,
 	databaseUrl: "postgresql://postgres:postgres@localhost:5432/autumn",
 	chatStateDatabaseUrl: "postgresql://postgres:postgres@localhost:5432/chat",
 	cacheUrl: "redis://localhost:6379",
 	dragonflyUrl: "redis://localhost:6380",
+	dynamoDbEndpoint: "http://localhost:8000",
 };
 
 const command = process.argv[2] ?? "help";
@@ -279,6 +281,11 @@ const doctor = async () => {
 			fn: () =>
 				waitForTcp({ port: localConfig.dragonflyPort, label: "Dragonfly" }),
 		}),
+		check({
+			label: "DynamoDB :8000",
+			fn: () =>
+				waitForTcp({ port: localConfig.dynamoDbPort, label: "DynamoDB" }),
+		}),
 	]);
 
 	if (results.some((result) => !result)) process.exit(1);
@@ -375,6 +382,7 @@ const up = async ({ ngrokTarget }: { ngrokTarget: "api" | "mcp" }) => {
 		waitForTcp({ port: localConfig.postgresPort, label: "Postgres" }),
 		waitForTcp({ port: localConfig.redisStackPort, label: "Redis Stack" }),
 		waitForTcp({ port: localConfig.dragonflyPort, label: "Dragonfly" }),
+		waitForTcp({ port: localConfig.dynamoDbPort, label: "DynamoDB" }),
 		waitForTcp({ port: localConfig.ngrokApiPort, label: "ngrok" }),
 	]);
 
@@ -418,7 +426,7 @@ const help = () => {
 	console.log(`Usage: bun dev:services <command>
 
 Commands:
-  up                         Start local Postgres, Redis Stack, Dragonfly, and ngrok
+  up                         Start local Postgres, Redis Stack, Dragonfly, DynamoDB, and ngrok
   up --mcp                   Start services with ngrok pointed at localhost:3099
   up:mcp                     Alias for up --mcp
   down                       Stop local services and keep all data
@@ -435,6 +443,7 @@ Local service values:
   CACHE_URL=${localConfig.cacheUrl}
   CACHE_URL_US_EAST=${localConfig.cacheUrl}
   CACHE_V2_DRAGONFLY_URL=${localConfig.dragonflyUrl}
+  DYNAMODB_ENDPOINT=${localConfig.dynamoDbEndpoint}
 `);
 };
 

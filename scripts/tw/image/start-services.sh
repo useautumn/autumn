@@ -31,6 +31,7 @@ LOG_DIR="${TW_LOG_DIR:-$TW_PREFIX/logs}"
 PG_PORT="${PG_PORT:-5432}"
 DRAGONFLY_PORT="${DRAGONFLY_PORT:-6379}"
 ELASTICMQ_PORT="${ELASTICMQ_PORT:-9324}"
+DYNAMODB_PORT="${DYNAMODB_PORT:-8000}"
 CLICKHOUSE_PORT="${CLICKHOUSE_PORT:-8123}"
 START_CLICKHOUSE="${TW_START_CLICKHOUSE:-0}"
 
@@ -122,10 +123,23 @@ else
   disown || true
 fi
 
-# Wait for all three (started above) concurrently — readiness overlaps.
+# 3b. dynoxide (native DynamoDB emulator, :8000) — backs the idempotency-key
+#     store. Like goaws, a bare GET means it's bound and serving.
+dynoxide_ready_probe="curl -s -o /dev/null http://localhost:$DYNAMODB_PORT/"
+if eval "$dynoxide_ready_probe" >/dev/null 2>&1; then
+  log "dynoxide already running"
+else
+  [ -x "$BIN_DIR/dynoxide" ] || die "dynoxide binary missing (run build-base.sh)"
+  log "Starting dynoxide (native DynamoDB) on :$DYNAMODB_PORT"
+  nohup "$BIN_DIR/dynoxide" --port "$DYNAMODB_PORT" >"$LOG_DIR/dynoxide.log" 2>&1 &
+  disown || true
+fi
+
+# Wait for all four (started above) concurrently — readiness overlaps.
 wait_for "PostgreSQL" "pg_isready -h localhost -p $PG_PORT" 60 "$LOG_DIR/pg.log"
 wait_for "Dragonfly" "redis-cli -p $DRAGONFLY_PORT PING" 60 "$LOG_DIR/dragonfly.log"
 wait_for "goaws" "$goaws_ready_probe" 120 "$LOG_DIR/goaws.log"
+wait_for "dynoxide" "$dynoxide_ready_probe" 60 "$LOG_DIR/dynoxide.log"
 
 # ---------------------------------------------------------------------------
 # 4. ClickHouse (optional).
@@ -148,4 +162,4 @@ else
   log "Skipping ClickHouse (set TW_START_CLICKHOUSE=1 to start it)"
 fi
 
-log "All services ready (pg:$PG_PORT dragonfly:$DRAGONFLY_PORT goaws:$ELASTICMQ_PORT)"
+log "All services ready (pg:$PG_PORT dragonfly:$DRAGONFLY_PORT goaws:$ELASTICMQ_PORT dynoxide:$DYNAMODB_PORT)"

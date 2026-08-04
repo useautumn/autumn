@@ -29,6 +29,15 @@ services:
     volumes:
       - autumn-dev-dragonfly:/data
 
+  # DynamoDB emulator (idempotency keys). -inMemory because the data is
+  # ephemeral by design (24h TTL); -sharedDb so all credential/region pairs
+  # see the same database. The server auto-creates the table on first use.
+  dynamodb:
+    image: amazon/dynamodb-local:latest
+    ports:
+      - "8000:8000"
+    command: ["-jar", "DynamoDBLocal.jar", "-inMemory", "-sharedDb"]
+
   ngrok:
     image: ngrok/ngrok:latest
     profiles:

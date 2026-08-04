@@ -10,7 +10,7 @@
  *   New endpoint:
  *     - POST /v1/balances.batch_track
  *         request body:  BatchTrackParams = TrackParams[] where 1 <= len <= 1000
- *         response:      204, no body
+ *         response:      200, { success: true }
  *         auth:          requires Scopes.Balances.Write
  *         rate limit:    BatchTrack (10 req/sec per org)
  *
@@ -18,7 +18,8 @@
  *     - All items are validated synchronously up-front via
  *       getTrackFeatureDeductionsForBody. If ANY item fails validation,
  *       the handler throws and NOTHING is enqueued.
- *     - Items are enqueued via SQS SendMessageBatch (chunks of 10).
+ *     - Items are enqueued via queueTrack per item; the SQS send batcher
+ *       packs them into SendMessageBatch calls (chunks of 10).
  *     - On partial SQS failure (some entries fail, others succeed),
  *       the handler returns 204 success and logs the failed entries.
  *       Clients are NOT asked to retry, because retrying re-enqueues
@@ -36,8 +37,8 @@
  *   Side effects per successful request:
  *     - N SQS messages on TRACK_ASYNC_SQS_QUEUE_URL, one per item
  *     - For each message:
- *         MessageGroupId          = `${orgId}:${env}:${customerId}:${entityId ?? "none"}`
- *         MessageDeduplicationId  = `${ctx.id}-${index}`
+ *         MessageGroupId          = sharded per customer (getAsyncTrackMessageGroupId)
+ *         MessageDeduplicationId  = `${ctx.id}-${index}` (also the per-item requestId)
  *         body (parsed JSON)      = { name: JobName.Track, data: { orgId, env, customerId, entityId, requestId, apiVersion, body: item } }
  *
  *   Error cases (each must be explicitly covered):
@@ -95,19 +96,19 @@
  *   src/internal/balances/handlers/handleBatchTrack.ts   -- route handler
  *   src/internal/balances/track/runBatchTrack.ts         -- core orchestration
  *   src/internal/balances/balancesRouter.ts              -- route registration
- *   src/queue/queueUtils.ts                              -- addTasksToQueueBatch helper
+ *   src/internal/balances/track/utils/queueTrack.ts      -- per-item enqueue
  *   shared/api/balances/track/trackParams.ts             -- BatchTrackParamsSchema
  *   src/internal/misc/rateLimiter/rateLimitConfigs.ts    -- BatchTrack limiter config
  */
 
 import { beforeAll, describe, expect, test } from "bun:test";
 import { ApiVersion, type BatchTrackParams } from "@autumn/shared";
-import chalk from "chalk";
 import { TestFeature } from "@tests/setup/v2Features.js";
 import { items } from "@tests/utils/fixtures/items.js";
 import { products } from "@tests/utils/fixtures/products.js";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario.js";
-import { AutumnInt } from "@/external/autumn/autumnCli.js";
+import chalk from "chalk";
+import type { AutumnInt } from "@/external/autumn/autumnCli.js";
 
 const testCase = "batch-track-contract";
 const customerId = `test-${testCase}`;
@@ -158,13 +159,15 @@ const postBatchTrack = async ({
 	return { status: response.status, body: parsed };
 };
 
-const validItem = (overrides: Partial<{
-	customer_id: string;
-	feature_id: string;
-	event_name: string;
-	value: number;
-	entity_id: string;
-}> = {}) => ({
+const validItem = (
+	overrides: Partial<{
+		customer_id: string;
+		feature_id: string;
+		event_name: string;
+		value: number;
+		entity_id: string;
+	}> = {},
+) => ({
 	customer_id: customerId,
 	feature_id: TestFeature.Messages,
 	value: 1,
@@ -253,11 +256,13 @@ describe(chalk.yellowBright(testCase), () => {
 	// only accept the handler's own RecaseError — a 503 from infra (proxy,
 	// nginx, lambda) without that exact code would correctly fail this gate.
 	const isHandlerReached = (result: BatchTrackHttpResult): boolean => {
+		if (result.status === 200) {
+			const body = result.body as { success?: unknown } | null;
+			return body !== null && typeof body === "object" && body.success === true;
+		}
 		if (result.status === 204) return true;
 		if (result.status === 503) {
-			const body = result.body as
-				| { message?: unknown; code?: unknown }
-				| null;
+			const body = result.body as { message?: unknown; code?: unknown } | null;
 			return (
 				body !== null &&
 				typeof body === "object" &&

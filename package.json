@@ -159,6 +159,7 @@
 		"replicate": "bun scripts/db/replicate.ts",
 		"db:pull": "bun scripts/db/pull.ts",
 		"db": "bun scripts/db/index.ts",
+		"dynamo": "infisical run --env=dev --recursive -- bun scripts/aws/dynamo/index.ts",
 		"test:integration": "cd server && bun test:integration",
 		"exp": "sh -c 'infisical run --recursive --env=staging -- bun run server/experiments/$0'",
 		"q": "lsof -ti:8080 -ti:3000 | xargs kill -9",
