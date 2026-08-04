@@ -10,6 +10,12 @@ import { buildSearchPredicates } from "../../CusSearchService.js";
 
 export const CUSTOMER_EXPORT_PAGE_SIZE = 2000;
 
+/** Both bounds must stay fixed for an entire keyset walk, or the population shifts mid-export. */
+export type CustomerExportPopulation = {
+	upperBoundInternalId: string | null;
+	createdAtCutoff: number;
+};
+
 export type CustomerExportScalarRow = {
 	internal_id: string;
 	id: string | null;

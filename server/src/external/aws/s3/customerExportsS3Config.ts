@@ -4,6 +4,12 @@ export const CUSTOMER_EXPORTS_PREFIX = "customer-exports";
 
 export const CUSTOMER_EXPORT_FILE_NAME = "customers.csv";
 
+export type CustomerExportDestination = {
+	bucket: string;
+	region: string;
+	key: string;
+};
+
 export const getCustomerExportsS3Config = () => {
 	const bucket = process.env.S3_CUSTOMER_EXPORTS_BUCKET;
 	const region = process.env.S3_CUSTOMER_EXPORTS_REGION;

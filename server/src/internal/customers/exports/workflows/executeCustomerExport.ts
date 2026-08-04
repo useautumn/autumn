@@ -209,13 +209,8 @@ const uploadCustomerExportCsv = async ({
 	return await streamCustomerExportCsv({
 		ctx,
 		customerExport,
-		orgId,
-		env,
-		upperBoundInternalId,
-		createdAtCutoff,
-		bucket,
-		region,
-		key,
+		population: { upperBoundInternalId, createdAtCutoff },
+		destination: { bucket, region, key },
 		onRowsProcessed: (processedRows) =>
 			progress?.incrementProcessedRows(processedRows),
 	});
