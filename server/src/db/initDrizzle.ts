@@ -10,6 +10,7 @@ import { drizzle } from "drizzle-orm/node-postgres";
 import pg, { type PoolConfig } from "pg";
 import { logger } from "../external/logtail/logtailUtils.js";
 import { otelConfig } from "../utils/otel/otelConfig.js";
+import { applyConnectRefusedRetry } from "./connectRetry.js";
 import { attachPoolErrorHandlers, registerPool } from "./pgPoolMonitor.js";
 
 type AutumnDb = Omit<ReturnType<typeof drizzle<typeof schema>>, "execute"> & {
@@ -77,6 +78,8 @@ export const initDrizzle = ({
 		attachPoolErrorHandlers({ pool: client, name });
 		registerPool({ pool: client, name, max: maxConnections });
 	}
+	// After registerPool so a retry passes through timeAcquires as its own acquire attempt.
+	applyConnectRefusedRetry({ pool: client, name: name ?? "unnamed" });
 
 	const drizzleDb = drizzle(client, { schema });
 	const transaction = drizzleDb.transaction.bind(drizzleDb);
@@ -109,15 +112,31 @@ const poolMaxFromEnv = ({
 	return Number.isInteger(parsed) && parsed > 0 ? parsed : fallback;
 };
 
-const PGBOUNCER_MAX_CLIENT_CONN = 7_600;
-const BUDGETED_FLEET_PROCESSES = 150;
-const BUDGETED_NON_SERVER_CONNECTIONS = 80;
+/** Frontend ceiling the app's primary pools actually compete for: PgBouncer
+ *  max_client_conn (2,000) x 6 pods. */
+const PGBOUNCER_MAX_CLIENT_CONN = 12_000;
+
+/** The replica pool connects through its own dedicated bouncer (single
+ *  instance), so it has its own client-slot budget separate from the primary's. */
+const REPLICA_PGBOUNCER_MAX_CLIENT_CONN = 1_000;
+
+/** Bouncer->Postgres slots. NOT a client limit — transaction pooling multiplexes
+ *  many clients onto far fewer of these. Kept for sizing, not for this guard. */
+const POSTGRES_MAX_SERVER_CONNECTIONS = 7_600;
+
+/** Request-serving processes: 30 tasks x 3 cluster workers. Primaries hold pool
+ *  objects but never query, and `min` doesn't pre-create, so they contribute 0. */
+const BUDGETED_FLEET_PROCESSES = 90;
+
+/** Dedicated worker/cron pools that exist outside the three exported ones. */
+const BUDGETED_NON_SERVER_CONNECTIONS = 362;
 const POOL_BUDGET_HEADROOM = 0.85;
 
 const PROD_POOL_MAX = {
 	critical: 22,
 	general: 14,
-	replica: 6,
+	// 90 processes x 9 = 810 <= 0.85 x replica bouncer max_client_conn (1,000).
+	replica: 9,
 };
 
 const criticalPoolMax = poolMaxFromEnv({
@@ -133,28 +152,64 @@ const replicaPoolMax = poolMaxFromEnv({
 	fallback: PROD_POOL_MAX.replica,
 });
 
-const budgetedFleetConnections =
-	BUDGETED_FLEET_PROCESSES *
-		(criticalPoolMax + generalPoolMax + replicaPoolMax) +
-	BUDGETED_NON_SERVER_CONNECTIONS;
+/** Fleet budget guards. Primary pools count against the primary bouncer's
+ *  max_client_conn; the replica pool counts against the replica bouncer's. */
+export const computePoolBudgetWarnings = ({
+	criticalPoolMax: critical,
+	generalPoolMax: general,
+	replicaPoolMax: replica,
+}: {
+	criticalPoolMax: number;
+	generalPoolMax: number;
+	replicaPoolMax: number;
+}): string[] => {
+	const warnings: string[] = [];
 
-if (
-	budgetedFleetConnections >
-	PGBOUNCER_MAX_CLIENT_CONN * POOL_BUDGET_HEADROOM
-) {
-	logger.warn(
-		`[initDrizzle] pool budget (${budgetedFleetConnections}) exceeds ${POOL_BUDGET_HEADROOM} of max_client_conn (${PGBOUNCER_MAX_CLIENT_CONN}) — lower the pool maxes or raise the ceiling`,
-	);
+	const primaryFleetConnections =
+		BUDGETED_FLEET_PROCESSES * (critical + general) +
+		BUDGETED_NON_SERVER_CONNECTIONS;
+	if (
+		primaryFleetConnections >
+		PGBOUNCER_MAX_CLIENT_CONN * POOL_BUDGET_HEADROOM
+	) {
+		warnings.push(
+			`[initDrizzle] primary pool budget (${primaryFleetConnections}) exceeds ${POOL_BUDGET_HEADROOM} of primary PgBouncer max_client_conn (${PGBOUNCER_MAX_CLIENT_CONN}) — lower the pool maxes or raise the ceiling. Postgres server slots (${POSTGRES_MAX_SERVER_CONNECTIONS}) are a separate, larger budget and are not the constraint here.`,
+		);
+	}
+
+	const replicaFleetConnections = BUDGETED_FLEET_PROCESSES * replica;
+	if (
+		replicaFleetConnections >
+		REPLICA_PGBOUNCER_MAX_CLIENT_CONN * POOL_BUDGET_HEADROOM
+	) {
+		warnings.push(
+			`[initDrizzle] replica pool budget (${replicaFleetConnections}) exceeds ${POOL_BUDGET_HEADROOM} of replica PgBouncer max_client_conn (${REPLICA_PGBOUNCER_MAX_CLIENT_CONN}) — lower REPLICA_DB_POOL_MAX or raise the ceiling.`,
+		);
+	}
+
+	return warnings;
+};
+
+for (const warning of computePoolBudgetWarnings({
+	criticalPoolMax,
+	generalPoolMax,
+	replicaPoolMax,
+})) {
+	logger.warn(warning);
 }
 
 export const { db: dbCritical, client: clientCritical } = initDrizzle({
 	name: "critical",
 	maxConnections: criticalPoolMax,
-	connectTimeout: isProd ? 2 : 30,
+	// connectionTimeoutMillis also bounds checkout waits on a full pool — sized
+	// to ride out PgBouncer backend build-out bursts instead of shedding.
+	connectTimeout: isProd ? 15 : 30,
 	databaseUrl: process.env.DATABASE_CRITICAL_URL,
 	poolConfig: {
 		application_name: "autumn-critical",
-		query_timeout: isProd ? 2_000 : 30_000,
+		// Budgets bouncer queue wait, not execution: the role's server-side 2s
+		// statement_timeout still kills runaway queries once they start running.
+		query_timeout: isProd ? 15_000 : 30_000,
 		// Keep warm conns to avoid TLS-handshake stampedes on bursty traffic.
 		min: Math.min(10, criticalPoolMax),
 	},
@@ -174,7 +229,16 @@ const replicaResult = process.env.DATABASE_REPLICA_URL
 			name: "replica",
 			replica: true,
 			maxConnections: replicaPoolMax,
-			connectTimeout: null,
+			// Primary is always the fallback, so short beats patient here.
+			connectTimeout: 3,
+			poolConfig: {
+				application_name: "autumn-replica",
+				// Bounds replica-bouncer queue wait as well as execution.
+				query_timeout: 5_000,
+				// pg-pool's min doesn't precreate, it only exempts from idle reaping — the
+				// floor preserves traffic-built warmth (e.g. a 1x warm-up) for the Redis-outage moment.
+				min: Math.min(4, replicaPoolMax),
+			},
 		})
 	: null;
 export const dbReplica = replicaResult?.db ?? null;

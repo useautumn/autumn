@@ -2,12 +2,12 @@ import {
 	createRedisAvailability,
 	type RedisAvailabilitySnapshot,
 } from "./createRedisAvailability.js";
-import { redis } from "./redisClientRegistry.js";
-import { hasRedisConfig } from "./redisConfig.js";
+import { miscRedis } from "./redisClientRegistry.js";
+import { hasMiscRedisConfig } from "./redisConfig.js";
 
 const redisAvailability = createRedisAvailability({
-	redis,
-	hasConfig: hasRedisConfig,
+	redis: miscRedis,
+	hasConfig: hasMiscRedisConfig,
 	logPrefix: "Redis",
 	logType: "redis_availability_state_set",
 });

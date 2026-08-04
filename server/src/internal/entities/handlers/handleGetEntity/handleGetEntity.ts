@@ -6,6 +6,9 @@ import {
 } from "@autumn/shared";
 import { createRoute } from "@/honoMiddlewares/routeHandler.js";
 import { applySubjectLookupDbOnly } from "@/internal/misc/miscellaneousEdgeConfig/applySubjectLookupDbOnly.js";
+import {
+	isSubjectReadSingleflightEnabled,
+} from "@/internal/misc/miscellaneousEdgeConfig/miscellaneousEdgeConfigStore.js";
 import { getApiEntityByRollout } from "../../actions/getApiEntityByRollout.js";
 
 export const handleGetEntity = createRoute({
@@ -28,6 +31,7 @@ export const handleGetEntity = createRoute({
 			entityId: entity_id,
 			source: "handleGetEntity",
 			withAutumnId: with_autumn_id,
+			singleflight: isSubjectReadSingleflightEnabled(),
 		});
 
 		return c.json(apiEntity);

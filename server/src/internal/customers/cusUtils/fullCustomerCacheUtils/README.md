@@ -1,12 +1,14 @@
-# Deprecated: FullCustomer cache
+# Deprecated: FullCustomer cache (removed)
 
-This directory contains compatibility code for the old FullCustomer Redis
-cache. It is not part of the active customer-read path.
+The legacy FullCustomer Redis cache has been fully removed. The only file left
+is `deleteCachedFullCustomer` — a thin wrapper over `invalidateCachedFullSubject`
+kept because the cloud superset repo imports it from ~150 files.
 
-New cache reads, writes, invalidations, and Lua changes must use the FullSubject
-cache under:
+All cache reads, writes, invalidations, and Lua changes use the FullSubject
+cache under `server/src/internal/customers/cache/fullSubject` and
+`server/src/_luaScriptsV2/fullSubject`.
 
-- `server/src/internal/customers/cache/fullSubject`
-- `server/src/_luaScriptsV2/fullSubject`
-
-Do not add new FullCustomer-cache behavior here.
+Delete this shim once the cloud repo migrates to the FullSubject APIs. Cloud
+files importing the deleted `updateCachedCustomerData` /
+`batchDeleteCachedFullCustomers` need fixing there (see
+.plans/redis-cloud-migration/CLOUD-AUDIT.md).

@@ -49,6 +49,7 @@ import {
 } from "../constants.ts";
 import { READY_SENTINEL } from "../worker/boot.ts";
 import { narrate, sink } from "./logSink.ts";
+import { resolveBakedPlaywrightVersion } from "./playwrightVersion.ts";
 import type {
 	CreateSandboxOptions,
 	DetachedCommand,
@@ -829,7 +830,7 @@ export const freestyleProvider: ProviderImpl = {
 		// revision, so a version bump between commits misses and re-bakes.
 		const chromiumProbe = await execOnVm(
 			vm,
-			`cd ${REPO_ROOT} && CHROME=$(bun -p "require('playwright-core').chromium.executablePath()" 2>/dev/null) && [ -n "$CHROME" ] && [ -x "$CHROME" ]`,
+			`cd ${REPO_ROOT}/server && CHROME=$(bun -p "require('playwright-core').chromium.executablePath()" 2>/dev/null) && [ -n "$CHROME" ] && [ -x "$CHROME" ]`,
 			60_000,
 		);
 		if (chromiumProbe.exitCode === 0) {
@@ -842,8 +843,8 @@ export const freestyleProvider: ProviderImpl = {
 			);
 			const chromium = await execOnVm(
 				vm,
-				`cd ${REPO_ROOT} && PWV=$(bun -p "require('playwright-core/package.json').version" 2>/dev/null || echo 1.60.0) && ` +
-					"apt-get update -qq && bun x playwright@$PWV install --with-deps chromium",
+				`cd ${REPO_ROOT}/server && apt-get update -qq && ` +
+					`bun x playwright@${resolveBakedPlaywrightVersion()} install --with-deps chromium`,
 			);
 			chromiumDone();
 			if (chromium.exitCode !== 0) {

@@ -68,7 +68,7 @@ test.concurrent(`${chalk.yellowBright("track-event-name1: track with event_name 
 		balance: expectedBalance,
 		usage: deductValue,
 	});
-}, { timeout: 15_000 });
+});
 
 // ═══════════════════════════════════════════════════════════════════
 // TRACK-EVENT-NAME2: Track with event_name deducts from multiple features
@@ -152,7 +152,7 @@ test.concurrent(`${chalk.yellowBright("track-event-name2: track with event_name 
 		balance: expectedAction3Balance,
 		usage: deductValue,
 	});
-}, { timeout: 15_000 });
+});
 
 test.concurrent(`${chalk.yellowBright("track-event-name3: idempotency key prevents duplicate multi-feature track")}`, async () => {
 	const action1Item = items.free({
@@ -223,4 +223,4 @@ test.concurrent(`${chalk.yellowBright("track-event-name3: idempotency key preven
 		balance: expectedAction3Balance,
 		usage: deductValue,
 	});
-}, { timeout: 15_000 });
+});

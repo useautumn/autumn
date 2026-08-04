@@ -1,6 +1,5 @@
 import type { InsertCustomerProduct } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
-import { updateCachedCustomerProduct } from "@/internal/customers/cusProducts/actions/cache/updateCachedCustomerProduct.js";
 import { tryRedisWrite } from "@/utils/cacheUtils/cacheUtils.js";
 import { buildFullSubjectKey } from "../builders/buildFullSubjectKey.js";
 import { FULL_SUBJECT_CACHE_TTL_SECONDS } from "../config/fullSubjectCacheConfig.js";
@@ -24,20 +23,6 @@ export const updateCachedCustomerProductV2 = async ({
 	customerProductId: string;
 	updates: Partial<InsertCustomerProduct>;
 }): Promise<UpdateCachedSubjectCustomerProductResult | null> => {
-	try {
-		// Update v1 cache, to remove later on
-		await updateCachedCustomerProduct({
-			ctx,
-			customerId,
-			cusProductId: customerProductId,
-			updates,
-		});
-	} catch (error) {
-		ctx.logger.error(
-			`[updateCachedCustomerProductV2] error updating v1 cache for customer ${customerId}, cusProduct ${customerProductId}: ${error}`,
-		);
-	}
-
 	try {
 		if (!customerId) {
 			ctx.logger.warn(

@@ -14,6 +14,27 @@
  *   pattern: { url: "/customers/:customer_id", method: "GET" }
  * }) // Returns false
  */
+// Called dozens of times per request across middleware configs; patterns are
+// static, so compile each one once.
+const routeRegexCache = new Map<string, RegExp>();
+
+const getRouteRegex = (patternUrl: string): RegExp => {
+	const cached = routeRegexCache.get(patternUrl);
+	if (cached) {
+		return cached;
+	}
+
+	// Convert route pattern to regex
+	// "/customers/:customer_id" -> "^\/customers\/([^/]+)$"
+	const regexPattern = patternUrl
+		.replace(/:[^/]+/g, "([^/]+)") // Replace :param with capturing group
+		.replace(/\//g, "\\/"); // Escape forward slashes
+
+	const regex = new RegExp(`^${regexPattern}$`);
+	routeRegexCache.set(patternUrl, regex);
+	return regex;
+};
+
 export const matchRoute = ({
 	url,
 	method,
@@ -28,12 +49,5 @@ export const matchRoute = ({
 		return false;
 	}
 
-	// Convert route pattern to regex
-	// "/customers/:customer_id" -> "^\/customers\/([^/]+)$"
-	const regexPattern = pattern.url
-		.replace(/:[^/]+/g, "([^/]+)") // Replace :param with capturing group
-		.replace(/\//g, "\\/"); // Escape forward slashes
-
-	const regex = new RegExp(`^${regexPattern}$`);
-	return regex.test(url);
+	return getRouteRegex(pattern.url).test(url);
 };

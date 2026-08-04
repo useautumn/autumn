@@ -350,11 +350,18 @@ sudo dnf install -y --setopt=install_weak_deps=False --skip-broken \
   libXtst libXScrnSaver mesa-libgbm pango cairo alsa-lib gtk3 \
   >/dev/null 2>&1 || log "WARN: some Chromium libraries may be missing"
 
-PLAYWRIGHT_VERSION="$(cd "$REPO_ROOT/server" && node -p "require('playwright-core/package.json').version" 2>/dev/null || echo "1.58.2")"
+# Resolve from server/ — with bun's isolated linker playwright-core exists ONLY
+# there, and a wrong version bakes a revision executablePath() never finds.
+PLAYWRIGHT_VERSION="$(cd "$REPO_ROOT/server" && node -p "require('playwright-core/package.json').version" 2>/dev/null)" \
+  || die "cannot resolve server/node_modules/playwright-core version — chromium bake would mismatch"
+[ -n "$PLAYWRIGHT_VERSION" ] || die "empty playwright-core version — chromium bake would mismatch"
 log "Installing Playwright Chromium (playwright@$PLAYWRIGHT_VERSION) into ~/.cache/ms-playwright"
 ( cd "$REPO_ROOT/server" && bunx "playwright@$PLAYWRIGHT_VERSION" install chromium ) \
   || die "playwright chromium install failed"
-log "Chromium ready at $(cd "$REPO_ROOT/server" && bun -e 'import {chromium} from "playwright-core"; console.log(chromium.executablePath())' 2>/dev/null || echo "(path probe failed)")"
+CHROMIUM_PATH="$(cd "$REPO_ROOT/server" && bun -e 'import {chromium} from "playwright-core"; console.log(chromium.executablePath())' 2>/dev/null)"
+[ -x "$CHROMIUM_PATH" ] \
+  || die "chromium bake mismatch: playwright-core expects $CHROMIUM_PATH, which is not executable"
+log "Chromium ready at $CHROMIUM_PATH"
 
 log "BASE layer built. Paths: PGDATA=$PGDATA, BIN_DIR=$BIN_DIR, GOAWS_CONF=$GOAWS_CONF"
 log "Next: snapshot this filesystem -> base snapshot. Then warmup.sh per run."

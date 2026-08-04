@@ -8,6 +8,7 @@ import * as Sentry from "@sentry/bun";
 import { getDbHealth, PgHealth } from "@/db/pgHealthMonitor.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { resetCusEnts } from "@/internal/balances/utils/sql/client.js";
+import { markCustomerUpdatedAt } from "@/internal/customers/customerLsns/markCustomerUpdatedAt.js";
 import type { ProcessResetResult } from "../resetCustomerEntitlements/processReset.js";
 import { processReset } from "../resetCustomerEntitlements/processReset.js";
 import { processResetResultToResetCusEntParam } from "../resetCustomerEntitlements/processResetResultToResetCusEntParam.js";
@@ -126,6 +127,15 @@ export const lazyResetSubjectEntitlements = async ({
 				clearingMap,
 				customerEntitlementFeatureIds,
 				pooledGrantedByCusEntId,
+			});
+
+			// Reset wrote new balances — pin this customer to the primary for
+			// 60s so a replica can't serve the pre-reset state.
+			await markCustomerUpdatedAt({
+				db: ctx.db,
+				orgId: ctx.org.id,
+				env: ctx.env,
+				customerId,
 			});
 
 			logger.info(

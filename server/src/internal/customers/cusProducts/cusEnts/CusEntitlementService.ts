@@ -40,9 +40,7 @@ import { buildConflictUpdateColumns } from "@/db/dbUtils.js";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 import type { RepoContext } from "@/db/repoContext";
 import { withStatementTimeout } from "@/db/withStatementTimeout.js";
-import { redis } from "@/external/redis/initRedis.js";
-import { buildFullCustomerCacheKey } from "@/internal/customers/cusUtils/fullCustomerCacheUtils/fullCustomerCacheConfig.js";
-import { tryRedisWrite } from "@/utils/cacheUtils/cacheUtils.js";
+import { markCustomersUpdatedAtByInternalIds } from "@/internal/customers/customerLsns/markCustomerUpdatedAt.js";
 import RecaseError from "@/utils/errorUtils.js";
 
 export class CusEntService {
@@ -196,6 +194,12 @@ export class CusEntService {
 		})) satisfies InsertCustomerEntitlement[];
 
 		await db.insert(customerEntitlements).values(insertData);
+
+		// Grants are structural; balance paths (update/increment/upsert) never mark.
+		await markCustomersUpdatedAtByInternalIds({
+			db,
+			internalCustomerIds: insertData.map((row) => row.internal_customer_id),
+		});
 	}
 
 	static buildActiveResetPassedPage({
@@ -543,55 +547,6 @@ export class CusEntService {
 		return data;
 	}
 
-	static async syncUpdateToCache({
-		ctx,
-		cusEntId,
-		updates,
-	}: {
-		ctx: RepoContext;
-		cusEntId: string;
-		updates: Partial<InsertCustomerEntitlement>;
-	}) {
-		const { org, env, customerId } = ctx;
-
-		if (!customerId) {
-			ctx.logger.warn(
-				`skipping cusEnt sync update to cache, customerId not known`,
-			);
-			return;
-		}
-
-		const cacheKey = buildFullCustomerCacheKey({
-			orgId: org.id,
-			env,
-			customerId: customerId ?? "",
-		});
-
-		const cacheUpdates = [
-			{
-				cus_ent_id: cusEntId,
-				balance: updates.balance ?? null,
-				additional_balance: updates.additional_balance ?? null,
-				adjustment: updates.adjustment ?? null,
-				entities: updates.entities ?? null,
-				next_reset_at: updates.next_reset_at ?? null,
-				expected_next_reset_at: null,
-				rollover_insert: null,
-				rollover_overwrites: null,
-				rollover_delete_ids: null,
-				new_replaceables: null,
-				deleted_replaceable_ids: null,
-			},
-		];
-
-		await tryRedisWrite(() =>
-			redis.updateCustomerEntitlements(
-				cacheKey,
-				JSON.stringify({ updates: cacheUpdates }),
-			),
-		);
-	}
-
 	static async batchUpdate({
 		ctx,
 		data,
@@ -714,8 +669,16 @@ export class CusEntService {
 	}
 
 	static async delete({ db, id }: { db: DrizzleCli; id: string }) {
-		await db
+		const results = await db
 			.delete(customerEntitlements)
-			.where(eq(customerEntitlements.id, id));
+			.where(eq(customerEntitlements.id, id))
+			.returning({
+				internal_customer_id: customerEntitlements.internal_customer_id,
+			});
+
+		await markCustomersUpdatedAtByInternalIds({
+			db,
+			internalCustomerIds: results.map((row) => row.internal_customer_id),
+		});
 	}
 }

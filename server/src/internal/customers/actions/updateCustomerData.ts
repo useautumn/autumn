@@ -3,7 +3,6 @@ import { z } from "zod/v4";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { CusService } from "@/internal/customers/CusService.js";
 import { updateCachedCustomerData } from "@/internal/customers/cache/fullSubject/index.js";
-import { updateCachedCustomerData as updateCachedCustomerDataV1 } from "@/internal/customers/cusUtils/fullCustomerCacheUtils/updateCachedCustomerData.js";
 
 export const updateCustomerData = async ({
 	ctx,
@@ -24,9 +23,8 @@ export const updateCustomerData = async ({
 	}
 	if (!fullSubject.customer.email && customerData?.email) {
 		if (
-			z
-				.email({ pattern: z.regexes.unicodeEmail })
-				.safeParse(customerData.email).error
+			z.email({ pattern: z.regexes.unicodeEmail }).safeParse(customerData.email)
+				.error
 		) {
 			logger.info(`Invalid email ${customerData.email}, skipping update`);
 		} else {
@@ -55,18 +53,11 @@ export const updateCustomerData = async ({
 
 	Object.assign(fullSubject.customer, updates);
 
-	await Promise.all([
-		updateCachedCustomerData({
-			ctx,
-			customerId: idOrInternalId,
-			updates,
-		}),
-		updateCachedCustomerDataV1({
-			ctx,
-			customerId: idOrInternalId,
-			updates,
-		}),
-	]);
+	await updateCachedCustomerData({
+		ctx,
+		customerId: idOrInternalId,
+		updates,
+	});
 
 	return true;
 };

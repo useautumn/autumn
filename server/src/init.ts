@@ -12,6 +12,10 @@ import {
 } from "./db/pgHealthMonitor.js";
 import { startPgPoolMonitor, stopPgPoolMonitor } from "./db/pgPoolMonitor.js";
 import { getRedactedDatabaseUrls } from "./db/redactDatabaseUrl.js";
+import {
+	startReplicaRoutingProber,
+	stopReplicaRoutingProber,
+} from "./db/replicaRoutingState.js";
 import { logger } from "./external/logtail/logtailUtils.js";
 import {
 	startAllEdgeConfigPolling,
@@ -71,6 +75,8 @@ const init = async ({ startupStartedAt }: { startupStartedAt: number }) => {
 
 	initPgHealthMonitor({ client: clientCritical });
 	startPgPoolMonitor();
+	// `db` is the general pool — the probe must never occupy a critical-pool slot.
+	startReplicaRoutingProber({ db });
 
 	void warmupRegionalRedis().catch((error) => {
 		logger.warn("[Redis] Warmup failed", { error });
@@ -182,6 +188,7 @@ async function gracefulShutdown() {
 		}
 		shutdownPgHealthMonitor();
 		stopPgPoolMonitor();
+		stopReplicaRoutingProber();
 		stopRedisMonitor();
 		stopRedisV2Monitor();
 		stopMemorySpikeProbe();

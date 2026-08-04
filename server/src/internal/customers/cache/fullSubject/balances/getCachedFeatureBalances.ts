@@ -3,6 +3,7 @@ import type {
 	SubjectBalance,
 	UsageWindow,
 } from "@autumn/shared";
+import { REDIS_OP_TIMEOUT_MS } from "@/external/redis/utils/redisOpTimeouts.js";
 import { runRedisOp } from "@/external/redis/utils/runRedisOp.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { buildSharedFullSubjectBalanceKey } from "../builders/buildSharedFullSubjectBalanceKey.js";
@@ -105,6 +106,7 @@ export const getCachedFeatureBalance = async ({
 				: redisV2.hmget(balanceKey, ...customerEntitlementIds),
 		source: "getCachedFeatureBalance",
 		redisInstance: redisV2,
+		timeoutMs: REDIS_OP_TIMEOUT_MS.featureBalances,
 	});
 
 	if (!results) return { kind: "missing", reason: "single_pipeline_null" };
@@ -181,6 +183,7 @@ export const getCachedFeatureBalancesBatch = async ({
 		operation: () => pipeline.exec(),
 		source: "getCachedFeatureBalancesBatch",
 		redisInstance: redisV2,
+		timeoutMs: REDIS_OP_TIMEOUT_MS.featureBalancesBatch,
 	});
 
 	if (!results) return { kind: "missing", reason: "batch_pipeline_null" };

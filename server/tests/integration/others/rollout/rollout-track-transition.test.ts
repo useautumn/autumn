@@ -7,7 +7,6 @@ import { products } from "@tests/utils/fixtures/products.js";
 import { timeout } from "@tests/utils/genUtils.js";
 import {
 	cleanupOrgRollout,
-	removeCachedAtField,
 	setOrgRolloutPercent,
 } from "@tests/utils/rolloutTestUtils.js";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario.js";
@@ -145,13 +144,6 @@ test(
 			customer: customerAfterV1Track,
 			featureId: TestFeature.Messages,
 			remaining: 90,
-		});
-
-		// ── Strip _cachedAt to simulate legacy cache entry ────────────────
-		await removeCachedAtField({
-			orgId: ctx.org.id,
-			env: ctx.env,
-			customerId,
 		});
 
 		// ── Phase 2: roll to 100%, track on v2 ───────────────────────────

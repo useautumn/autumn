@@ -2,6 +2,8 @@ import {
 	ApiRewardsListV0Schema,
 	CreateReferralCodeParamsSchema,
 	CreateReferralCodeResponseSchema,
+	CreateReferralProgramParamsSchema,
+	CreateReferralProgramResponseSchema,
 	CreateRewardParamsSchema,
 	CreateRewardResponseSchema,
 	RedeemReferralCodeParamsSchema,
@@ -176,6 +178,25 @@ export const rewardsCreateContract = oc
 		}),
 	)
 	.output(CreateRewardResponseSchema);
+
+export const referralProgramsCreateContract = oc
+	.route({
+		method: "POST",
+		path: "/v1/referral_programs.create",
+		operationId: "createReferralProgram",
+		tags: ["referrals"],
+		description: "Create a referral program linked to an existing reward.",
+		spec: (spec) => ({
+			...spec,
+			"x-speakeasy-name-override": "createProgram",
+		}),
+	})
+	.input(
+		CreateReferralProgramParamsSchema.meta({
+			title: "CreateReferralProgramParams",
+		}),
+	)
+	.output(CreateReferralProgramResponseSchema);
 
 export const rewardsRedeemCodeContract = oc
 	.route({

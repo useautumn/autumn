@@ -111,6 +111,33 @@ type VersionedHandlerMap<
  * });
  * ```
  */
+/** Race `run` against a blanket fail-open timer. When the timer wins, the
+ *  losing execution keeps running detached — locks release when it settles. */
+export const raceFailOpen = async ({
+	run,
+	timeoutMs,
+	respond,
+}: {
+	run: () => Promise<Response>;
+	timeoutMs: number;
+	respond: () => Response | Promise<Response>;
+}): Promise<Response> => {
+	let timer: ReturnType<typeof setTimeout> | undefined;
+	const failOpen = new Promise<Response>((resolve) => {
+		// Promise.resolve().then(respond) turns a sync throw into a rejection of
+		// the race instead of an uncaught exception inside the timer callback.
+		timer = setTimeout(
+			() => resolve(Promise.resolve().then(respond)),
+			timeoutMs,
+		);
+	});
+	try {
+		return await Promise.race([run(), failOpen]);
+	} finally {
+		clearTimeout(timer);
+	}
+};
+
 export function createRoute<
 	Body extends ZodType | undefined = undefined,
 	Query extends ZodType | undefined = undefined,
@@ -160,6 +187,17 @@ export function createRoute<
 	/** Coarse route grouping (per-group org config, e.g. idempotency TTLs).
 	 *  Resolvable from middleware via getRouteGroup(c). */
 	routeGroup?: RouteGroup;
+	/** Blanket fail-open: if the handler exceeds timeoutMs, respond() is sent
+	 *  and the in-flight execution is abandoned (locks TTL out). */
+	failOpen?: {
+		timeoutMs: number;
+		/** Return true to run this request unraced — for requests where an
+		 *  abandoned execution has side effects the fallback can't represent. */
+		skip?: (c: ValidatedContext<HonoEnv, Body, Query, Params>) => boolean;
+		respond: (
+			c: ValidatedContext<HonoEnv, Body, Query, Params>,
+		) => Response | Promise<Response>;
+	};
 }): [H, ...H[]] {
 	const middlewares: H[] = [];
 
@@ -289,6 +327,18 @@ export function createRoute<
 	};
 
 	const wrappedHandler = async (
+		c: ValidatedContext<HonoEnv, Body, Query, Params>,
+	) => {
+		const { failOpen } = opts;
+		if (!failOpen || failOpen.skip?.(c)) return executeRoute(c);
+		return raceFailOpen({
+			run: () => executeRoute(c),
+			timeoutMs: failOpen.timeoutMs,
+			respond: () => failOpen.respond(c),
+		});
+	};
+
+	const executeRoute = async (
 		c: ValidatedContext<HonoEnv, Body, Query, Params>,
 	) => {
 		c.set("validated", true);

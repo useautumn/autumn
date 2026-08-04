@@ -137,6 +137,35 @@ const freeProduct = ({
 	free_product_id: freeProductId,
 });
 
+/**
+ * Feature grant reward — grants a loose balance on redemption
+ * @param id - Reward ID (default: "feature-grant")
+ * @param internalFeatureId - Internal ID of the feature to grant
+ * @param allowance - Balance granted per redemption (default: 100)
+ */
+const featureGrant = ({
+	id = "feature-grant",
+	internalFeatureId,
+	allowance = 100,
+	promoCode = "FEATUREGRANT",
+}: {
+	id?: string;
+	internalFeatureId: string;
+	allowance?: number;
+	promoCode?: string;
+}): CreateReward => ({
+	id,
+	name: "Feature Grant",
+	type: RewardType.FeatureGrant,
+	promo_codes: [{ code: promoCode }],
+	entitlements: [
+		{
+			internal_feature_id: internalFeatureId,
+			allowance,
+		},
+	],
+});
+
 export const rewards = {
 	monthOff,
 	halfOff,
@@ -144,4 +173,5 @@ export const rewards = {
 	percentageDiscount,
 	fixedDiscount,
 	freeProduct,
+	featureGrant,
 } as const;

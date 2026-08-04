@@ -30,8 +30,9 @@ const quantityLabel = (quantity: number) => `${quantity}x Base Price`;
 
 /** Quantity updates bill previous vs new picture as a refund/charge pair;
  * a pair that nets to zero is dropped entirely, and a zero-quantity side
- * emits no line at all. Lines read like feature-usage lines:
- * "[Unused ]<name> - <qty>x Base Price (from ... to ...)". */
+ * emits no line at all. Charges are synthesized from the catalog and read
+ * "<name> - <qty>x Base Price (from ... to ...)"; refunds mirror the stored
+ * invoice line they credit, so only their quantity is pinned. */
 export const expectQuantityLineItemPairCorrect = ({
 	preview,
 	proratedOldTotal,
@@ -69,9 +70,7 @@ export const expectQuantityLineItemPairCorrect = ({
 		).toBeDefined();
 		expect(refund?.description).toMatch(/^Unused /);
 		if (oldQuantity !== undefined) {
-			expect(refund?.description).toContain(
-				`- ${quantityLabel(oldQuantity)} (from`,
-			);
+			expect(refund?.quantity).toEqual(oldQuantity);
 		}
 	}
 
@@ -83,6 +82,7 @@ export const expectQuantityLineItemPairCorrect = ({
 		).toBeDefined();
 		expect(charge?.description).not.toMatch(/^Unused /);
 		if (newQuantity !== undefined) {
+			expect(charge?.quantity).toEqual(newQuantity);
 			expect(charge?.description).toContain(
 				`- ${quantityLabel(newQuantity)} (from`,
 			);

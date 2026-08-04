@@ -45,6 +45,7 @@ export const handleUpdateEntity = createRoute({
 		});
 
 		const apiEntity = await getApiEntityByRollout({
+			disableReplicaRead: true,
 			ctx,
 			customerId,
 			entityId: body.entity_id,

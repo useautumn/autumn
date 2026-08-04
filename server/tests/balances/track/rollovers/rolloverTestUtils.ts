@@ -1,6 +1,5 @@
 import type { Customer } from "@autumn/shared";
 import type { TestContext } from "@tests/utils/testInitUtils/createTestContext";
-import { clearCusEntsFromCache } from "@/cron/resetCron/clearCusEntsFromCache";
 import { resetCustomerEntitlement } from "@/cron/resetCron/resetCustomerEntitlement.js";
 import { getCtxWithCustomerRedis } from "@/external/redis/customerRedisRouting.js";
 import { waitForRedisReady } from "@/external/redis/initRedis.js";
@@ -63,10 +62,6 @@ export const resetAndGetCusEnt = async ({
 			ctx: routedCtx,
 			customerId: customer.id ?? "",
 			source: "resetAndGetCusEnt",
-		});
-
-		await clearCusEntsFromCache({
-			cusEnts: [resetCusEnt],
 		});
 	}
 

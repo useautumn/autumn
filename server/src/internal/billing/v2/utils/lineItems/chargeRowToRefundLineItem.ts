@@ -105,6 +105,8 @@ export const chargeRowToRefundLineItem = ({
 		context,
 		stripePriceId: chargeRow.stripe_price_id ?? undefined,
 		stripeProductId: chargeRow.stripe_product_id ?? undefined,
+		totalQuantity: chargeRow.total_quantity ?? undefined,
+		paidQuantity: chargeRow.paid_quantity ?? undefined,
 		chargeImmediately: chargeRow.invoice_id !== null,
 		prorated: true,
 		discounts:

@@ -1,15 +1,20 @@
 import {
 	ErrCode,
-	nullish,
 	RecaseError,
 	type RewardProgram,
-	RewardTriggerEvent,
-	UpdateRewardProgram,
 	Scopes,
+	UpdateRewardProgram,
 } from "@autumn/shared";
 import { z } from "zod/v4";
 import { createRoute } from "@/honoMiddlewares/routeHandler.js";
-import { rewardProgramRepo } from "@/internal/rewards/repos/index.js";
+import {
+	rewardProgramRepo,
+	rewardRepo,
+} from "@/internal/rewards/repos/index.js";
+import {
+	validateRewardTypeSupported,
+	validateRewardProgramTrigger,
+} from "./validateRewardProgram.js";
 
 const UpdateRewardProgramParamsSchema = z.object({
 	id: z.string(),
@@ -48,24 +53,48 @@ export const handleUpdateRewardProgram = createRoute({
 			});
 		}
 
-		if (
-			body.when === RewardTriggerEvent.Checkout &&
-			(nullish(body.product_ids) || body.product_ids.length === 0)
-		) {
-			throw new RecaseError({
-				message:
-					"When `Redeem On` is set to `Checkout`, must specify at least one product",
-				code: ErrCode.InvalidRequest,
-				statusCode: 400,
+		const isChangingReward =
+			body.internal_reward_id !== existingProgram.internal_reward_id;
+
+		let internalRewardId = body.internal_reward_id;
+
+		if (isChangingReward) {
+			const reward = await rewardRepo.get({
+				db,
+				idOrInternalId: body.internal_reward_id,
+				orgId: org.id,
+				env,
 			});
+
+			if (!reward) {
+				throw new RecaseError({
+					message: `Reward ${body.internal_reward_id} not found`,
+					code: ErrCode.InvalidRequest,
+					statusCode: 400,
+				});
+			}
+
+			validateRewardTypeSupported(reward);
+
+			// The lookup accepts id or internal_id, but the FK requires internal_id
+			internalRewardId = reward.internal_id;
 		}
+
+		validateRewardProgramTrigger({
+			when: body.when,
+			productIds: body.product_ids,
+			maxRedemptions: body.max_redemptions,
+		});
 
 		const updatedRewardProgram = await rewardProgramRepo.update({
 			db,
 			idOrInternalId: id,
 			orgId: org.id,
 			env,
-			data: body as RewardProgram,
+			data: {
+				...body,
+				internal_reward_id: internalRewardId,
+			} as RewardProgram,
 		});
 
 		return c.json(updatedRewardProgram);
