@@ -1,8 +1,8 @@
 import {
-	ACTIVE_CUSTOMER_EXPORT_STATUSES,
 	type CreateCustomerExportParams,
 	type CustomerExportResponse,
 	type DownloadCustomerExportResponse,
+	isCustomerExportActive,
 	type ListCustomerExportsResponse,
 	MAX_CUSTOMER_EXPORTS_PAGE_SIZE,
 	ms,
@@ -19,13 +19,6 @@ export const CUSTOMER_EXPORTS_QUERY_KEY = "customer-exports";
 const ACTIVE_EXPORT_POLL_INTERVAL_MS = ms.seconds(5);
 /** Realtime carries progress; this poll only catches a dropped subscription. */
 const REALTIME_SAFETY_NET_POLL_INTERVAL_MS = ms.minutes(1);
-
-export const isCustomerExportActive = (
-	customerExport: CustomerExportResponse,
-) =>
-	ACTIVE_CUSTOMER_EXPORT_STATUSES.some(
-		(status) => status === customerExport.status,
-	);
 
 const isSubscribableToRealtime = (customerExport: CustomerExportResponse) =>
 	Boolean(customerExport.trigger_run_id && customerExport.public_access_token);

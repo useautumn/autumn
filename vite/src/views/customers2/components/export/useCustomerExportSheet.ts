@@ -1,6 +1,7 @@
 import {
 	CUSTOMER_EXPORT_FIELD_ORDER,
 	CustomerExportFieldsSchema,
+	isCustomerExportActive,
 } from "@autumn/shared";
 import { useStore } from "@tanstack/react-form";
 import { useState } from "react";
@@ -15,7 +16,6 @@ import {
 	useCustomerFilters,
 } from "@/views/customers/hooks/useCustomerFilters";
 import {
-	isCustomerExportActive,
 	useCreateCustomerExport,
 	useCustomerExportsQuery,
 	useInvalidateCustomerExports,

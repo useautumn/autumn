@@ -1,15 +1,13 @@
 import {
 	CUSTOMER_EXPORT_FIELD_HEADERS,
 	type CustomerExportResponse,
+	isCustomerExportActive,
 	type Membership,
 } from "@autumn/shared";
 import { Badge, Button, Skeleton } from "@autumn/ui";
 import { formatUnixToDateTimeString } from "@/utils/formatUtils/formatDateUtils";
 import { useMemberships } from "@/views/main-sidebar/org-dropdown/hooks/useMemberships";
-import {
-	isCustomerExportActive,
-	useDownloadCustomerExport,
-} from "../../hooks/useCustomerExports";
+import { useDownloadCustomerExport } from "../../hooks/useCustomerExports";
 import { CustomerExportCardField } from "./CustomerExportCardField";
 import { CustomerExportProgressRow } from "./CustomerExportProgressRow";
 import { CustomerExportStatusBadge } from "./CustomerExportStatusBadge";

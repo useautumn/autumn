@@ -16,6 +16,13 @@ export const ACTIVE_CUSTOMER_EXPORT_STATUSES = [
 	CustomerExportStatus.Running,
 ] as const;
 
+export const isCustomerExportActive = (customerExport: {
+	status: CustomerExportStatus;
+}) =>
+	ACTIVE_CUSTOMER_EXPORT_STATUSES.some(
+		(status) => status === customerExport.status,
+	);
+
 export const CustomerExportField = {
 	Name: "name",
 	Email: "email",

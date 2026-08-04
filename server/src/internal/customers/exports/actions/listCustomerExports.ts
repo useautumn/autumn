@@ -1,7 +1,7 @@
 import {
-	ACTIVE_CUSTOMER_EXPORT_STATUSES,
 	CustomerExportStatus,
 	type DbCustomerExport,
+	isCustomerExportActive,
 	type ListCustomerExportsQuery,
 	type ListCustomerExportsResponse,
 } from "@autumn/shared";
@@ -21,10 +21,7 @@ const toExportResponse = async ({
 	logger: Logger;
 }) => {
 	const triggerRunId = customerExport.trigger_run_id;
-	const isActive = ACTIVE_CUSTOMER_EXPORT_STATUSES.some(
-		(status) => status === customerExport.status,
-	);
-	if (!(triggerRunId && isActive)) {
+	if (!(triggerRunId && isCustomerExportActive(customerExport))) {
 		return customerExportToResponse({ customerExport });
 	}
 
