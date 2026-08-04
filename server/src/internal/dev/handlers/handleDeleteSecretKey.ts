@@ -1,6 +1,6 @@
 import { Scopes } from "@autumn/shared";
+import { clearSecretKeyCache } from "@/external/redis/actions/secretKeyCache/secretKeyCache.js";
 import { createRoute } from "../../../honoMiddlewares/routeHandler";
-import { clearSecretKeyCache } from "../apiKeys/cacheApiKeyUtils";
 import { apiKeyRepo } from "../repos/index.js";
 
 export const handleDeleteSecretKey = createRoute({

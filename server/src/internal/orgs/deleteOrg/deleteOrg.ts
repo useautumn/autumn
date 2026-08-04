@@ -5,11 +5,11 @@ import {
 	RecaseError,
 } from "@autumn/shared";
 import { and, eq } from "drizzle-orm";
+import { clearOrgWithFeaturesCache } from "@/external/redis/actions/orgWithFeaturesCache/orgWithFeaturesCache.js";
 import type { DrizzleCli } from "../../../db/initDrizzle";
 import type { Logger } from "../../../external/logtail/logtailUtils";
 import { CusService } from "../../customers/CusService";
 import { OrgService } from "../OrgService";
-import { clearOrgWithFeaturesCache } from "../orgUtils/cacheOrgWithFeatures.js";
 import { deleteOrgStripeAccounts } from "./deleteOrgStripeAccounts";
 import { deleteOrgStripeWebhooks } from "./deleteOrgStripeWebhooks";
 import { deleteOrgSvixApps } from "./deleteOrgSvixApps";
@@ -51,6 +51,6 @@ export const deleteOrg = async ({
 		await OrgService.delete({ db, orgId: org.id });
 		// Workers resolve orgs through a 60s cache; without this a deleted org
 		// keeps resolving and teardown-time jobs run on stale config.
-		await clearOrgWithFeaturesCache({ orgId: org.id, logger });
+		await clearOrgWithFeaturesCache({ orgId: org.id });
 	}
 };
