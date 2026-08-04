@@ -4,7 +4,7 @@ import {
 	CheckoutErrorCode,
 	CheckoutStatus,
 } from "@autumn/shared";
-import { deleteCheckoutCache } from "@/external/redis/actions/checkoutCache/checkoutCache.js";
+import { deleteCheckoutCache } from "@/external/redis/actions/autumnCheckoutCache/autumnCheckoutCache.js";
 import { checkoutRepo } from "@/internal/checkouts/repos/checkoutRepo";
 
 const CHECKOUT_BASE_URL =

@@ -3,17 +3,10 @@ import {
 	type FullCusProduct,
 	isConsumablePrice,
 } from "@autumn/shared";
-import { CacheManager } from "@/utils/cacheUtils/CacheManager";
+import { setCachedExpiredCustomerProducts } from "@/external/redis/actions/expiredCustomerProductsCache/expiredCustomerProductsCache.js";
 
-const getExpiredCacheKey = (stripeSubscriptionId: string) =>
-	`expired-cus-products:${stripeSubscriptionId}`;
-
-/**
- * Caches expired customer products for a subscription.
- * This allows invoice.created to access products that were expired by subscription.deleted.
- *
- * TTL: 5 minutes (300 seconds) - enough time for invoice.created to process
- */
+/** Caches usage-based expired customer products so invoice.created can still
+ *  see products expired by subscription.deleted. */
 export const setExpiredCustomerProductsCache = async ({
 	stripeSubscriptionId,
 	customerProducts,
@@ -21,12 +14,13 @@ export const setExpiredCustomerProductsCache = async ({
 	stripeSubscriptionId: string;
 	customerProducts: FullCusProduct[];
 }): Promise<void> => {
-	// Filter customer products only for those with usage based prices
 	const usageBasedCustomerProducts = customerProducts.filter((cp) => {
 		const prices = cusProductToPrices({ cusProduct: cp });
 		return prices.some((p) => isConsumablePrice(p));
 	});
 
-	const key = getExpiredCacheKey(stripeSubscriptionId);
-	await CacheManager.setJson(key, usageBasedCustomerProducts, 300);
+	await setCachedExpiredCustomerProducts({
+		stripeSubscriptionId,
+		customerProducts: usageBasedCustomerProducts,
+	});
 };

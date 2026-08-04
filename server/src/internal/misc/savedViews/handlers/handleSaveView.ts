@@ -1,8 +1,12 @@
 import { RecaseError, Scopes } from "@autumn/shared";
 import { nanoid } from "nanoid";
 import { z } from "zod/v4";
+import {
+	getSavedViewIdList,
+	setSavedView,
+	setSavedViewIdList,
+} from "@/external/redis/actions/savedViewsStore/savedViewsStore.js";
 import { createRoute } from "@/honoMiddlewares/routeHandler.js";
-import { CacheManager } from "@/utils/cacheUtils/CacheManager.js";
 
 const SaveViewSchema = z.object({
 	name: z.string(),
@@ -40,15 +44,11 @@ export const handleSaveView = createRoute({
 			org_id: org.id,
 		};
 
-		// Save to Redis with key: saved_views:orgId:env:viewId (org+env scoped, no TTL)
-		const key = `saved_views:${org.id}:${env}:${viewId}`;
-		await CacheManager.setJson(key, view, "forever");
+		await setSavedView({ orgId: org.id, env, view });
 
-		// Also save to a list for easy retrieval
-		const listKey = `saved_views_list:${org.id}:${env}`;
-		const existingViews = (await CacheManager.getJson<string[]>(listKey)) || [];
+		const existingViews = await getSavedViewIdList({ orgId: org.id, env });
 		existingViews.push(viewId);
-		await CacheManager.setJson(listKey, existingViews, "forever");
+		await setSavedViewIdList({ orgId: org.id, env, viewIds: existingViews });
 
 		return c.json({
 			message: "View saved successfully",

@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import { AppEnv } from "@autumn/shared";
-import { buildCheckoutCacheKey } from "@/external/redis/actions/checkoutCache/checkoutCache.js";
+import { buildCheckoutCacheKey } from "@/external/redis/actions/autumnCheckoutCache/autumnCheckoutCache.js";
 import { buildCustomerJwtAuthCacheKey } from "@/external/redis/actions/customerJwtAuthCache/customerJwtAuthCache.js";
 import { buildExpiredCustomerProductsCacheKey } from "@/external/redis/actions/expiredCustomerProductsCache/expiredCustomerProductsCache.js";
 import { buildMigrationCancelTokenKey } from "@/external/redis/actions/migrationCancelToken/migrationCancelToken.js";

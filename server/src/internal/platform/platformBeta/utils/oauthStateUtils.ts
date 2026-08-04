@@ -1,9 +1,10 @@
 import { randomBytes } from "node:crypto";
-import { AppEnv, InternalError } from "@autumn/shared";
-import { CacheManager } from "../../../../utils/cacheUtils/CacheManager";
-
-const STATE_KEY_PREFIX = "oauth_state:";
-const STATE_EXPIRY_SECONDS = 10 * 60; // 10 minutes
+import { type AppEnv, InternalError } from "@autumn/shared";
+import {
+	deleteOAuthStateData,
+	getOAuthStateData,
+	setOAuthStateData,
+} from "@/external/redis/actions/oauthStateStore/oauthStateStore.js";
 
 type OAuthState = {
 	organization_slug: string;
@@ -45,7 +46,6 @@ export const generateOAuthState = async ({
 	for (let attempt = 1; attempt <= maxAttempts; attempt++) {
 		// Generate random state key
 		const stateKey = randomBytes(32).toString("hex");
-		const redisKey = `${STATE_KEY_PREFIX}${stateKey}`;
 
 		// Try to set the key
 		const stateData: OAuthState = {
@@ -62,10 +62,10 @@ export const generateOAuthState = async ({
 		};
 
 		// Check if key exists first
-		const existing = await CacheManager.getJson<OAuthState>(redisKey);
+		const existing = await getOAuthStateData<OAuthState>({ stateKey });
 		if (!existing) {
 			// Key doesn't exist, set it with expiry
-			await CacheManager.setJson(redisKey, stateData, STATE_EXPIRY_SECONDS);
+			await setOAuthStateData({ stateKey, data: stateData });
 			return stateKey;
 		}
 
@@ -91,17 +91,14 @@ export const consumeOAuthState = async ({
 }: {
 	stateKey: string;
 }): Promise<OAuthState | null> => {
-	const redisKey = `${STATE_KEY_PREFIX}${stateKey}`;
-
-	// Get the data
-	const stateData = await CacheManager.getJson<OAuthState>(redisKey);
+	const stateData = await getOAuthStateData<OAuthState>({ stateKey });
 
 	if (!stateData) {
 		return null;
 	}
 
 	// Delete the key
-	await CacheManager.del(redisKey);
+	await deleteOAuthStateData({ stateKey });
 
 	return stateData;
 };

@@ -1,6 +1,9 @@
-import { createRoute } from "@/honoMiddlewares/routeHandler.js";
 import { Scopes } from "@autumn/shared";
-import { CacheManager } from "@/utils/cacheUtils/CacheManager.js";
+import {
+	getSavedView,
+	getSavedViewIdList,
+} from "@/external/redis/actions/savedViewsStore/savedViewsStore.js";
+import { createRoute } from "@/honoMiddlewares/routeHandler.js";
 
 /**
  * Get all saved views for the organization
@@ -10,18 +13,11 @@ export const handleGetViews = createRoute({
 	handler: async (c) => {
 		const { org, env } = c.get("ctx");
 
-		const listKey = `saved_views_list:${org.id}:${env}`;
-		const viewIds = (await CacheManager.getJson<string[]>(listKey)) || [];
+		const viewIds = await getSavedViewIdList({ orgId: org.id, env });
 
 		const views = [];
 		for (const viewId of viewIds) {
-			const key = `saved_views:${org.id}:${env}:${viewId}`;
-			const view = await CacheManager.getJson<{
-				id: string;
-				name: string;
-				filters: any;
-				created_at: string;
-			}>(key);
+			const view = await getSavedView({ orgId: org.id, env, viewId });
 
 			if (view) {
 				views.push({

@@ -1,6 +1,10 @@
-import { createRoute } from "@/honoMiddlewares/routeHandler.js";
 import { Scopes } from "@autumn/shared";
-import { CacheManager } from "@/utils/cacheUtils/CacheManager.js";
+import {
+	deleteSavedView,
+	getSavedViewIdList,
+	setSavedViewIdList,
+} from "@/external/redis/actions/savedViewsStore/savedViewsStore.js";
+import { createRoute } from "@/honoMiddlewares/routeHandler.js";
 
 /**
  * Delete a saved view for the organization
@@ -11,18 +15,11 @@ export const handleDeleteView = createRoute({
 		const { org, env } = c.get("ctx");
 		const { viewId } = c.req.param();
 
-		// Delete from Redis
-		const key = `saved_views:${org.id}:${env}:${viewId}`;
-		await CacheManager.invalidate({
-			action: "",
-			value: key.replace(":", ""),
-		});
+		await deleteSavedView({ orgId: org.id, env, viewId });
 
-		// Remove from list
-		const listKey = `saved_views_list:${org.id}:${env}`;
-		const existingViews = (await CacheManager.getJson<string[]>(listKey)) || [];
-		const updatedViews = existingViews.filter((id: string) => id !== viewId);
-		await CacheManager.setJson(listKey, updatedViews, "forever");
+		const existingViews = await getSavedViewIdList({ orgId: org.id, env });
+		const updatedViews = existingViews.filter((id) => id !== viewId);
+		await setSavedViewIdList({ orgId: org.id, env, viewIds: updatedViews });
 
 		return c.json({ message: "View deleted successfully" });
 	},

@@ -1,6 +1,6 @@
-import { createRoute } from "@/honoMiddlewares/routeHandler.js";
 import { Scopes } from "@autumn/shared";
-import { CacheManager } from "@/utils/cacheUtils/CacheManager.js";
+import { getTrmnlOrgConfig } from "@/external/redis/actions/trmnlDeviceStore/trmnlDeviceStore.js";
+import { createRoute } from "@/honoMiddlewares/routeHandler.js";
 
 /**
  * Get TRMNL device configuration for the authenticated organization
@@ -10,10 +10,7 @@ export const handleGetTrmnlDeviceId = createRoute({
 	handler: async (c) => {
 		const { org } = c.get("ctx");
 
-		const trmnlConfig = await CacheManager.getJson<{
-			deviceId: string;
-			hideRevenue: boolean;
-		}>(`trmnl:org:${org.id}`);
+		const trmnlConfig = await getTrmnlOrgConfig({ orgId: org.id });
 
 		return c.json({ trmnlConfig });
 	},

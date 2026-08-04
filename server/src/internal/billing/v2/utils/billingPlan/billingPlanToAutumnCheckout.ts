@@ -5,15 +5,15 @@ import {
 	type Checkout,
 	type CheckoutAction,
 	CheckoutStatus,
-	checkoutToUrl,
 	type CreateScheduleBillingContext,
 	type CreateScheduleParamsV0,
+	checkoutToUrl,
 	type UpdateSubscriptionBillingContext,
 	type UpdateSubscriptionV1Params,
 } from "@autumn/shared";
 import { ms } from "@shared/utils/common/unixUtils";
+import { setCheckoutCache } from "@/external/redis/actions/autumnCheckoutCache/autumnCheckoutCache.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
-import { setCheckoutCache } from "@/internal/checkouts/actions/cache";
 import { checkoutRepo } from "@/internal/checkouts/repos/checkoutRepo";
 import { generateId } from "@/utils/genUtils";
 
