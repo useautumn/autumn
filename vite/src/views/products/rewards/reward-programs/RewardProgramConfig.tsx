@@ -74,7 +74,7 @@ export const RewardProgramConfig = ({
 						)}
 					>
 						<SelectTrigger className="w-full">
-							<SelectValue placeholder="Select a feature grant reward" />
+							<SelectValue placeholder="Select a reward" />
 						</SelectTrigger>
 						<SelectContent>
 							{selectableRewards.map((reward: Reward) => (
