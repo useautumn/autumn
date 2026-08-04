@@ -849,18 +849,6 @@ export class CusService {
 			)
 			.returning();
 
-		// Deleted customers still mark: primary-routed reads see the 404 fresh.
-		const deleted = results[0] as Customer | undefined;
-		if (deleted?.id) {
-			await markCustomerUpdatedAt({
-				db,
-				orgId,
-				env,
-				customerId: deleted.id,
-				internalCustomerId: deleted.internal_id,
-			});
-		}
-
 		return results;
 	}
 

@@ -495,11 +495,6 @@ export class CusProductService {
 				internal_customer_id: customerProducts.internal_customer_id,
 			});
 
-		await markCustomersUpdatedAtByInternalIds({
-			db,
-			internalCustomerIds: updated.map((row) => row.internal_customer_id),
-		});
-
 		return updated;
 		// const fullUpdated = (await db.query.customerProducts.findMany({
 		// 	where: inArray(
