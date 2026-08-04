@@ -1,6 +1,8 @@
 set -e
 
-bun infisical scan git-changes --staged --redact --verbose --silent --telemetry=false
+# The Infisical CLI is a system binary (brew), not a node_modules one — `bun
+# infisical` cannot resolve it and fails the whole hook.
+infisical scan git-changes --staged --redact --verbose --silent --telemetry=false
 
 changed_files="$(git diff --cached --name-only)"
 
