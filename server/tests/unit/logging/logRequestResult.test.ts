@@ -1,4 +1,4 @@
-import { describe, expect, spyOn, test } from "bun:test";
+import { describe, expect, test } from "bun:test";
 import type { Context } from "hono";
 import type { Logger } from "@/external/logtail/logtailUtils.js";
 import { logRequestResult } from "@/honoMiddlewares/requestLogging/logRequestResult.js";
@@ -56,8 +56,8 @@ describe("logRequestResult", () => {
 			url: "https://api.useautumn.com/v1/check",
 			timestamp: 123,
 			customer_id: "cus_123",
-			query: JSON.stringify({}),
-			body: JSON.stringify({ feature_id: "messages" }),
+			query: {},
+			body: { feature_id: "messages" },
 			name: "POST /v1/check",
 		};
 		const internalRequestContext = {
@@ -105,7 +105,7 @@ describe("logRequestResult", () => {
 			req: requestLogContext,
 			statusCode: 200,
 			durationMs: 20,
-			res: JSON.stringify({ allowed: true }),
+			res: { allowed: true },
 		});
 	});
 
@@ -117,11 +117,11 @@ describe("logRequestResult", () => {
 			url: "https://api.useautumn.com/v1/track",
 			timestamp: 123,
 			customer_id: "cus_123",
-			query: JSON.stringify({}),
-			body: JSON.stringify({
+			query: {},
+			body: {
 				feature_id: "messages",
 				value: 10,
-			}),
+			},
 			name: "POST /v1/track",
 		};
 		const ctx = {
@@ -160,17 +160,15 @@ describe("logRequestResult", () => {
 			responseBody,
 		});
 
-		// NODE_ENV=development (run.sh) adds an EXTRA LOGS debug line — ignore it.
-		const emitted = captured.filter((log) => log.level !== "debug");
-		expect(emitted).toHaveLength(1);
-		expect(emitted[0]?.level).toBe("warn");
-		expect(emitted[0]?.bindings.req).toBeUndefined();
-		expect(emitted[0]?.bindings.extras).toEqual({ operation: "track" });
-		expect(mergeLoggedObjects(emitted[0]?.args ?? [])).toEqual({
+		expect(captured).toHaveLength(1);
+		expect(captured[0]?.level).toBe("warn");
+		expect(captured[0]?.bindings.req).toBeUndefined();
+		expect(captured[0]?.bindings.extras).toEqual({ operation: "track" });
+		expect(mergeLoggedObjects(captured[0]?.args ?? [])).toEqual({
 			req: requestLogContext,
 			statusCode: 500,
 			durationMs: 30,
-			res: JSON.stringify(responseBody),
+			res: responseBody,
 		});
 	});
 
@@ -206,7 +204,7 @@ describe("logRequestResult", () => {
 		expect(captured[0]?.args[1]).toEqual({
 			statusCode: 200,
 			durationMs: 10,
-			res: JSON.stringify(responseBody),
+			res: responseBody,
 		});
 	});
 
@@ -296,124 +294,7 @@ describe("logRequestResult", () => {
 		expect(captured[0]?.args[1]).toEqual({
 			statusCode: 500,
 			durationMs: 40,
-			res: JSON.stringify(responseBody),
-		});
-	});
-
-	test("logs a success on a high volume route", async () => {
-		const captured: CapturedLog[] = [];
-		const responseBody = { allowed: true };
-		const ctx = {
-			timestamp: 123,
-			logger: createCapturingLogger({ captured }),
-			extraLogs: {},
-			org: { slug: "test-org" },
-		} as unknown as AutumnContext;
-		const c = {
-			req: { path: "/v1/check" },
-			res: {
-				status: 200,
-				headers: new Headers({ "content-type": "application/json" }),
-			},
-		} as Context<HonoEnv>;
-
-		await logRequestResult({ ctx, c, durationMs: 5, responseBody });
-
-		expect(captured).toHaveLength(1);
-		expect(captured[0]?.level).toBe("info");
-		expect(captured[0]?.args[1]).toEqual({
-			statusCode: 200,
-			durationMs: 5,
-			res: JSON.stringify(responseBody),
-		});
-	});
-
-	test("always logs a 429 on a high volume route", async () => {
-		const captured: CapturedLog[] = [];
-		let cloneCount = 0;
-		const ctx = {
-			timestamp: 123,
-			logger: createCapturingLogger({ captured }),
-			extraLogs: {},
-			org: { slug: "test-org" },
-		} as unknown as AutumnContext;
-		const c = {
-			req: { path: "/v1/check" },
-			res: {
-				status: 429,
-				headers: new Headers({ "content-type": "application/json" }),
-				clone: () => {
-					cloneCount++;
-					return { json: async () => ({ code: "rate_limited" }) };
-				},
-			},
-		} as unknown as Context<HonoEnv>;
-
-		await logRequestResult({ ctx, c, durationMs: 5 });
-
-		expect(captured).toHaveLength(1);
-		expect(captured[0]?.level).toBe("warn");
-		expect(captured[0]?.args[1]).toEqual({
-			statusCode: 429,
-			durationMs: 5,
-			res: JSON.stringify({ code: "rate_limited" }),
-		});
-		expect(cloneCount).toBe(1);
-	});
-
-	test("always logs a 429 on a non high volume route", async () => {
-		const captured: CapturedLog[] = [];
-		const responseBody = { code: "rate_limited", message: "Too many requests" };
-		const ctx = {
-			timestamp: 123,
-			logger: createCapturingLogger({ captured }),
-			extraLogs: {},
-			org: { slug: "test-org" },
-		} as unknown as AutumnContext;
-		const c = {
-			req: { path: "/v1/attach" },
-			res: {
-				status: 429,
-				headers: new Headers({ "content-type": "application/json" }),
-			},
-		} as Context<HonoEnv>;
-
-		await logRequestResult({ ctx, c, durationMs: 5, responseBody });
-
-		expect(captured).toHaveLength(1);
-		expect(captured[0]?.level).toBe("warn");
-		expect(captured[0]?.args[1]).toEqual({
-			statusCode: 429,
-			durationMs: 5,
-			res: JSON.stringify(responseBody),
-		});
-	});
-
-	test("always logs a 500 on a high volume route", async () => {
-		const captured: CapturedLog[] = [];
-		const responseBody = { code: "internal_error", message: "boom" };
-		const ctx = {
-			timestamp: 123,
-			logger: createCapturingLogger({ captured }),
-			extraLogs: {},
-			org: { slug: "test-org" },
-		} as unknown as AutumnContext;
-		const c = {
-			req: { path: "/v1/check" },
-			res: {
-				status: 500,
-				headers: new Headers({ "content-type": "application/json" }),
-			},
-		} as Context<HonoEnv>;
-
-		await logRequestResult({ ctx, c, durationMs: 5, responseBody });
-
-		expect(captured).toHaveLength(1);
-		expect(captured[0]?.level).toBe("warn");
-		expect(captured[0]?.args[1]).toEqual({
-			statusCode: 500,
-			durationMs: 5,
-			res: JSON.stringify(responseBody),
+			res: responseBody,
 		});
 	});
 

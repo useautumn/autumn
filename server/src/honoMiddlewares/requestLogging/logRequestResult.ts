@@ -4,11 +4,28 @@ import type { AutumnContext, HonoEnv } from "@/honoUtils/HonoEnv.js";
 import { addExtrasToLogs } from "@/utils/logging/addContextToLogs.js";
 import { maskExtraLogs } from "@/utils/logging/maskExtraLogs.js";
 
+const HIGH_VOLUME_SUCCESS_ROUTES = new Set<string>([
+	// "/v1/balances.track",
+	// "/v1/balances.check",
+	// "/v1/check",
+	// "/v1/track",
+	// "/v1/customers.get_or_create",
+	// "/v1/entities.get",
+]);
+
 // Event pages run to megabytes each, dwarfing every other route's ingest.
 const RESPONSE_BODY_EXCLUDED_ROUTES = new Set<string>([
 	"/v1/events/list",
 	"/v1/events.list",
 ]);
+
+const SUCCESS_REQUEST_LOG_SAMPLE_RATE = Number.parseFloat(
+	process.env.AXIOM_SUCCESS_REQUEST_LOG_SAMPLE_RATE ?? "0",
+);
+
+const shouldSampleSuccessLog = () =>
+	SUCCESS_REQUEST_LOG_SAMPLE_RATE > 0 &&
+	Math.random() < Math.min(SUCCESS_REQUEST_LOG_SAMPLE_RATE, 1);
 
 export const logRequestResult = async ({
 	ctx,
@@ -31,6 +48,13 @@ export const logRequestResult = async ({
 		}
 
 		const isSuccess = statusCode >= 200 && statusCode < 300;
+		const isHighVolumeSuccess =
+			isSuccess && HIGH_VOLUME_SUCCESS_ROUTES.has(c.req.path);
+
+		if (isHighVolumeSuccess && !shouldSampleSuccessLog()) {
+			return;
+		}
+
 		ctx.logger = addExtrasToLogs({
 			logger: ctx.logger,
 			extras: ctx.extraLogs,
@@ -62,9 +86,7 @@ export const logRequestResult = async ({
 				...(ctx.requestLogContext === undefined
 					? {}
 					: { req: ctx.requestLogContext }),
-				// Serialized: response payloads carry arbitrary keys (feature IDs
-				// etc.), each of which minted an Axiom field until events dropped.
-				res: finalResponseBody ? JSON.stringify(finalResponseBody) : null,
+				res: finalResponseBody ?? null,
 			},
 		);
 
