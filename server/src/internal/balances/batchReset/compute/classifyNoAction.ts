@@ -28,9 +28,7 @@ export const classifyNoAction = ({
 		};
 	}
 
-	if (
-		isPooledBalanceSourceCustomerEntitlement({ customerEntitlement })
-	) {
+	if (isPooledBalanceSourceCustomerEntitlement({ customerEntitlement })) {
 		return {
 			kind: "no_action",
 			customerEntitlementId: customerEntitlement.id,
@@ -38,9 +36,7 @@ export const classifyNoAction = ({
 		};
 	}
 
-	if (
-		isSyntheticPooledBalanceCustomerEntitlement({ customerEntitlement })
-	) {
+	if (isSyntheticPooledBalanceCustomerEntitlement({ customerEntitlement })) {
 		if (!customerEntitlement.pooled_balance) {
 			return {
 				kind: "no_action",
@@ -51,11 +47,12 @@ export const classifyNoAction = ({
 
 		if (
 			customerEntitlement.pooled_balance.reset_mode ===
-			PooledBalanceResetMode.Subscription
+			PooledBalanceResetMode.Lifetime
 		) {
 			return {
-				kind: "resets_via_invoice",
+				kind: "no_action",
 				customerEntitlementId: customerEntitlement.id,
+				reason: "pooled_balance_lifetime",
 			};
 		}
 	}

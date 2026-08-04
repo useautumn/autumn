@@ -5,6 +5,7 @@ import { getCanonicalWorktree } from "./git.ts";
 import {
 	composeProjectName,
 	dragonflyPortFor,
+	dynamoDbPortFor,
 	elasticMqPortFor,
 	ngrokApiPortFor,
 	serverPortFor,
@@ -42,6 +43,7 @@ export function ensureComposeStack(
 	const project = composeProjectName(worktreeNum);
 	const dragonflyPort = String(dragonflyPortFor(worktreeNum));
 	const elasticMqPort = String(elasticMqPortFor(worktreeNum));
+	const dynamoDbPort = String(dynamoDbPortFor(worktreeNum));
 	const serverPort = String(serverPortFor(worktreeNum));
 	const ngrokApiPort = String(ngrokApiPortFor(worktreeNum));
 	// No authtoken => no public tunnel for this worktree (CMA stays unreachable,
@@ -61,6 +63,7 @@ export function ensureComposeStack(
 		COMPOSE_PROJECT_NAME: project,
 		DRAGONFLY_PORT: dragonflyPort,
 		ELASTICMQ_PORT: elasticMqPort,
+		DYNAMODB_PORT: dynamoDbPort,
 		SERVER_PORT: serverPort,
 		NGROK_API_PORT: ngrokApiPort,
 		NGROK_URL_FLAG: ngrokUrlFlag,
@@ -73,7 +76,7 @@ export function ensureComposeStack(
 	const up = sh("docker", args, { env });
 	if (up.code === 0) {
 		log(
-			`compose stack ${project} up (dragonfly :${dragonflyPort}, elasticmq :${elasticMqPort}${
+			`compose stack ${project} up (dragonfly :${dragonflyPort}, elasticmq :${elasticMqPort}, dynamodb :${dynamoDbPort}${
 				ngrokEnabled
 					? `, ngrok -> :${serverPort} (api :${ngrokApiPort}${ngrokDomain ? `, domain ${ngrokDomain}` : ", random"})`
 					: ""

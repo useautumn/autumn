@@ -1,4 +1,4 @@
-const API_KEY = "am_sk_live_Z2syCRIHHqSI1yz5hiTPj0PjUBDxCQ0KKICgNi20Mb";
+const API_KEY = process.env.AUTUMN_SECRET_KEY;
 const BASE_URL = "https://api.useautumn.com";
 
 const PAGE_SIZE = 1000;

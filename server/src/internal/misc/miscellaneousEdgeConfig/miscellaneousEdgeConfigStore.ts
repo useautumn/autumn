@@ -59,3 +59,7 @@ export const isSyncCoalesceEnabled = (): boolean => store.get().syncCoalesce;
 /** Global gate: serve subject lookups from Postgres instead of the cache. */
 export const isSubjectLookupDbOnlyEnabled = (): boolean =>
 	store.get().subjectLookupDbOnly;
+
+/** Idempotency-key migration: DynamoDB is the conflict authority. */
+export const isIdempotencyDynamoReadEnabled = (): boolean =>
+	store.get().idempotencyDynamoRead;

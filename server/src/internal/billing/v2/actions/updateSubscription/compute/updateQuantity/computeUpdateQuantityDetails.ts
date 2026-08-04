@@ -1,3 +1,4 @@
+import type { DbPooledBalanceContribution } from "@autumn/shared";
 import {
 	addCusProductToCusEnt,
 	customerPriceToCustomerEntitlement,
@@ -19,6 +20,7 @@ import { getLineItemBillingPeriod } from "@/internal/billing/v2/utils/lineItems/
 import { calculateUpdateQuantityDifferences } from "./calculateUpdateQuantityDifferences";
 import { computeUpdateQuantityCustomerEntitlementChanges } from "./computeUpdateQuantityCustomerEntitlementChanges";
 import { computeUpdateQuantityLineItems } from "./computeUpdateQuantityLineItems";
+import { computeUpdateQuantityPooledContributionUpdate } from "./computeUpdateQuantityPooledContributionUpdate";
 
 /**
  * Computes all details needed for a feature quantity update operation.
@@ -46,6 +48,7 @@ export const computeUpdateQuantityDetails = ({
 	updateCustomerEntitlements: UpdateCustomerEntitlement[];
 	lineItems: LineItem[];
 	updatedOptions: FeatureOptions;
+	pooledContributionUpdate: DbPooledBalanceContribution | null;
 } => {
 	const { customerProduct, currentEpochMs, billingCycleAnchorMs } =
 		updateSubscriptionContext;
@@ -147,10 +150,20 @@ export const computeUpdateQuantityDetails = ({
 		currentEpochMs,
 	});
 
+	const pooledContributionUpdate =
+		computeUpdateQuantityPooledContributionUpdate({
+			customerEntitlement,
+			customerProduct,
+			updatedOptions,
+			effectiveAt: billingPeriod.end,
+			now: currentEpochMs,
+		});
+
 	return {
 		featureId,
 		updateCustomerEntitlements,
 		lineItems,
 		updatedOptions,
+		pooledContributionUpdate,
 	};
 };

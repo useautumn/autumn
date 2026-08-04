@@ -38,8 +38,8 @@ mock.module(
 	}),
 );
 
-mock.module("@/internal/balances/track/v3/trackIdempotencyKey.js", () => ({
-	getTrackIdempotencyKey: ({ ctx }: { ctx: { id: string } }) =>
+mock.module("@/internal/balances/idempotency/trackQueueIdempotency.js", () => ({
+	getTrackQueueIdempotencyKey: ({ ctx }: { ctx: { id: string } }) =>
 		`track:${ctx.id}`,
 }));
 

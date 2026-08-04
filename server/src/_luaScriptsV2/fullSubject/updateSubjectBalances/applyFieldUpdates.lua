@@ -223,3 +223,13 @@ local function apply_replaceable_updates(params)
     end
   end
 end
+
+local function apply_pooled_granted_update(params)
+  local subject_balance = params.subject_balance
+  local update = params.update
+
+  if is_absent(update.pooled_granted) then return end
+  if type(subject_balance.pooled_balance) ~= 'table' then return end
+
+  subject_balance.pooled_balance.granted = update.pooled_granted
+end

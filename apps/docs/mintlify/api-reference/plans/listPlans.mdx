@@ -201,6 +201,10 @@ const plans = await autumn.plans.list({
           Whether the customer has unlimited access to this feature.
         </DynamicResponseField>
 
+        <DynamicResponseField name="pooled" type="boolean">
+          Whether entity-level grants contribute to a shared customer balance.
+        </DynamicResponseField>
+
         <DynamicResponseField name="reset" type="object | null">
           Reset configuration for consumable features. Null for non-consumable features like seats where usage persists across billing cycles.
           <Expandable title="properties">
@@ -422,6 +426,10 @@ const plans = await autumn.plans.list({
 
                 <DynamicResponseField name="unlimited" type="boolean">
                   If true, customer has unlimited access to this feature.
+                </DynamicResponseField>
+
+                <DynamicResponseField name="pooled" type="boolean">
+                  Whether entity-level grants contribute to a shared customer balance.
                 </DynamicResponseField>
 
                 <DynamicResponseField name="reset" type="object">

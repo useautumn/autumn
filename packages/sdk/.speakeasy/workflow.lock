@@ -21,7 +21,7 @@ targets:
         sourceRevisionDigest: sha256:583495ed610cc359d904498112c750c9f58bf43a95b86149995381813d3c5eaa
         sourceBlobDigest: sha256:59d7efaa34d57ff73e26a7c72237e39263387aca544f51f4a8e0e5b531281950
         codeSamplesNamespace: autumn-api-typescript-code-samples
-        codeSamplesRevisionDigest: sha256:2fe59835ebf0d994a6b46d0db46803720855d904a91d71a2b4e8f08cfb844703
+        codeSamplesRevisionDigest: sha256:b837c112cb6d447aa1228d3c22001d6ef007840f5ea745e4b8ab3895b0c9e6d8
     autumn-python:
         source: Autumn API Stripped
         sourceNamespace: autumn-api-stripped

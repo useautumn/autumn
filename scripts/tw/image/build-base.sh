@@ -42,6 +42,10 @@ LOG_DIR="${TW_LOG_DIR:-$TW_PREFIX/logs}"
 GOAWS_IMAGE="${GOAWS_IMAGE:-docker.io/admiralpiett/goaws:latest}"
 CRANE_VERSION="${CRANE_VERSION:-v0.20.2}"
 DRAGONFLY_VERSION="${DRAGONFLY_VERSION:-latest}" # dw uses :latest (dw.compose.yml:10)
+# dynoxide (native Rust DynamoDB emulator) stands in for amazon/dynamodb-local,
+# which is a JVM app — the same class of problem that pushed elasticmq → goaws
+# here. Pinned (pre-1.0 project) so a release can't silently change behavior.
+DYNOXIDE_VERSION="${DYNOXIDE_VERSION:-v0.13.0}"
 INSTALL_CLICKHOUSE="${TW_INSTALL_CLICKHOUSE:-0}"
 
 PG_PORT="${PG_PORT:-5432}"
@@ -192,6 +196,30 @@ Local:
     - Name: autumn-track.fifo
 EOF
 log "Wrote goaws config to $GOAWS_CONF (autumn.fifo + autumn-track.fifo, dedup on)"
+
+# ---------------------------------------------------------------------------
+# 4b. dynoxide (native DynamoDB emulator) — backs the idempotency-key store.
+# Static musl binary from GitHub releases; the app's DYNAMODB_ENDPOINT points
+# at it and the server auto-creates the table on first use.
+# ---------------------------------------------------------------------------
+if [ ! -x "$BIN_DIR/dynoxide" ]; then
+  ARCH="$(uname -m)"
+  case "$ARCH" in
+    x86_64) DX_TARGET="x86_64-unknown-linux-musl" ;;
+    aarch64 | arm64) DX_TARGET="aarch64-unknown-linux-musl" ;;
+    *) die "unsupported arch for dynoxide: $ARCH" ;;
+  esac
+  log "Downloading dynoxide ($DYNOXIDE_VERSION, $ARCH)"
+  TMP_DX="$(mktemp -d)"
+  curl -fsSL -o "$TMP_DX/dynoxide.tar.gz" \
+    "https://github.com/nubo-db/dynoxide/releases/download/${DYNOXIDE_VERSION}/dynoxide-${DX_TARGET}.tar.gz"
+  tar -xzf "$TMP_DX/dynoxide.tar.gz" -C "$TMP_DX"
+  DX_EXTRACTED="$(find "$TMP_DX" -type f -name 'dynoxide*' ! -name '*.tar.gz' | head -n1)"
+  [ -n "$DX_EXTRACTED" ] || die "dynoxide binary not found in archive"
+  install -m 0755 "$DX_EXTRACTED" "$BIN_DIR/dynoxide"
+  rm -rf "$TMP_DX"
+fi
+log "dynoxide installed at $BIN_DIR/dynoxide"
 
 # ---------------------------------------------------------------------------
 # 5. ClickHouse (optional — only when analytics tests are in scope).

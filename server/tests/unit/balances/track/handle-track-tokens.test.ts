@@ -113,8 +113,10 @@ const createCtx = (): AutumnContext =>
 		scopes: [],
 		skipCache: false,
 		logger: {
+			info: mock(() => {}),
 			warn: mock(() => {}),
 			error: mock(() => {}),
+			debug: mock(() => {}),
 		},
 	}) as unknown as AutumnContext;
 

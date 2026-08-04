@@ -68,7 +68,9 @@ if (process.env.AXIOM_TOKEN) {
 		autoDetectResources: false,
 		resource,
 		spanProcessors: [new TenantAttrSpanProcessor(), filteredExportProcessor],
-		metricReader,
+		// Omitting this makes NodeSDK fall back to OTEL_METRICS_EXPORTER, which
+		// defaults to OTLP on localhost:4318 and floods logs with ECONNREFUSED.
+		metricReaders: metricReader ? [metricReader] : [],
 	});
 
 	sdk.start();

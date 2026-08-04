@@ -1,17 +1,23 @@
-import { CreateBalanceParamsV0Schema, fullSubjectToFullCustomer, Scopes } from "@autumn/shared";
+import {
+	CreateBalanceParamsV0Schema,
+	fullSubjectToFullCustomer,
+	RouteGroup,
+	Scopes,
+} from "@autumn/shared";
 import { FeatureNotFoundError } from "@shared/index";
 import { createRoute } from "@/honoMiddlewares/routeHandler";
 import { prepareNewBalanceForInsertion } from "@/internal/balances/createBalance/prepareNewBalanceForInsertion";
 import { validateCreateBalanceParams } from "@/internal/balances/createBalance/validateCreateBalance";
-import { getOrSetCachedFullSubject } from "@/internal/customers/cache/fullSubject/actions/getOrSetCachedFullSubject.js";
 import { CusService } from "@/internal/customers/CusService";
+import { getOrSetCachedFullSubject } from "@/internal/customers/cache/fullSubject/actions/getOrSetCachedFullSubject.js";
 import { CusEntService } from "@/internal/customers/cusProducts/cusEnts/CusEntitlementService";
 import { deleteCachedFullCustomer } from "@/internal/customers/cusUtils/fullCustomerCacheUtils/deleteCachedFullCustomer";
-import { EntitlementService } from "@/internal/products/entitlements/EntitlementService";
 import { isFullSubjectRolloutEnabled } from "@/internal/misc/rollouts/fullSubjectRolloutUtils.js";
+import { EntitlementService } from "@/internal/products/entitlements/EntitlementService";
 
 export const handleCreateBalance = createRoute({
 	scopes: [Scopes.Balances.Write],
+	routeGroup: RouteGroup.Balances,
 	body: CreateBalanceParamsV0Schema,
 	handler: async (c) => {
 		const ctx = c.get("ctx");
