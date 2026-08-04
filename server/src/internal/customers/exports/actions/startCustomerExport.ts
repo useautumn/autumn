@@ -15,7 +15,6 @@ import type { RunCustomerExportPayload } from "@/trigger/exports/customerExportT
 import { shouldRunTriggerTasksInline } from "@/trigger/utils/shouldRunTriggerTasksInline.js";
 import { retryAsync } from "@/utils/retryAsync.js";
 import { CustomerExportService } from "../CustomerExportService.js";
-import { cacheCustomerExportRealtimeToken } from "../customerExportRealtimeToken.js";
 import { customerExportToResponse } from "../customerExportToResponse.js";
 import { createExportReclaimingStale } from "../reclaimStaleCustomerExport.js";
 import { executeCustomerExport } from "../workflows/executeCustomerExport.js";
@@ -107,11 +106,6 @@ const enqueueExportRun = async ({
 		});
 		throw error;
 	}
-
-	cacheCustomerExportRealtimeToken({
-		triggerRunId: handle.id,
-		token: handle.publicAccessToken,
-	});
 
 	// The job is already enqueued, so persistence failure cannot fail the export.
 	try {
