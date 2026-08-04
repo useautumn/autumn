@@ -10,8 +10,6 @@ export const MAX_CUSTOMER_EXPORTS_PAGE_SIZE = 20;
 
 export const MAX_CUSTOMER_EXPORT_SEARCH_LENGTH = 500;
 
-export { CustomerExportSnapshotSchema };
-
 export const CreateCustomerExportParamsSchema = z.object({
 	fields: CustomerExportFieldsSchema,
 	search: z
