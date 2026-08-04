@@ -11,11 +11,12 @@ type AcquireStats = {
 	count: number;
 	timeouts: number;
 	errors: number;
+	observed: number;
 	samples: number[];
 };
 
 /** Caps per-interval percentile memory; `count` keeps counting past it. */
-const MAX_ACQUIRE_SAMPLES = 5_000;
+export const MAX_ACQUIRE_SAMPLES = 5_000;
 
 const registry = new Map<string, RegisteredPool>();
 const acquireStats = new Map<string, AcquireStats>();
@@ -25,8 +26,46 @@ const emptyAcquireStats = (): AcquireStats => ({
 	count: 0,
 	timeouts: 0,
 	errors: 0,
+	observed: 0,
 	samples: [],
 });
+
+/** Algorithm R reservoir insert: `samples` stays a uniform sample of all `observed` values. */
+export const reservoirInsert = ({
+	samples,
+	observed,
+	value,
+	capacity = MAX_ACQUIRE_SAMPLES,
+}: {
+	samples: number[];
+	observed: number;
+	value: number;
+	capacity?: number;
+}): void => {
+	if (samples.length < capacity) {
+		samples.push(value);
+		return;
+	}
+	const slot = Math.floor(Math.random() * observed);
+	if (slot < capacity) {
+		samples[slot] = value;
+	}
+};
+
+/** Busy fraction of the pool; idle clients don't count as utilized. */
+export const computeUtilization = ({
+	totalCount,
+	idleCount,
+	max,
+}: {
+	totalCount: number;
+	idleCount: number;
+	max: number;
+}): number => {
+	if (max <= 0) return 0;
+	const busyCount = totalCount - idleCount;
+	return Math.min(1, Math.max(0, busyCount / max));
+};
 
 const recordAcquire = ({
 	name,
@@ -48,9 +87,12 @@ const recordAcquire = ({
 		}
 		return;
 	}
-	if (stats.samples.length < MAX_ACQUIRE_SAMPLES) {
-		stats.samples.push(durationMs);
-	}
+	stats.observed++;
+	reservoirInsert({
+		samples: stats.samples,
+		observed: stats.observed,
+		value: durationMs,
+	});
 };
 
 type ConnectCallback = (
@@ -155,7 +197,7 @@ const emitSnapshot = (): void => {
 			idleCount,
 			waitingCount,
 			max,
-			utilization: max > 0 ? totalCount / max : 0,
+			utilization: computeUtilization({ totalCount, idleCount, max }),
 			acquireCount: stats?.count ?? 0,
 			acquireTimeouts: stats?.timeouts ?? 0,
 			acquireErrors: stats?.errors ?? 0,
