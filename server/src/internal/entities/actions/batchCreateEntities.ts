@@ -4,7 +4,7 @@ import {
 	type Entity,
 	findFeatureById,
 } from "@autumn/shared";
-import { withLock } from "@/external/redis/redisUtils.js";
+import { withLock } from "@/external/redis/utils/lockUtils/withLock.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { EntityService } from "@/internal/api/entities/EntityService";
 import { getApiEntity } from "../entityUtils/apiEntityUtils/getApiEntity";

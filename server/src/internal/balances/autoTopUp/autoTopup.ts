@@ -1,5 +1,5 @@
 import { AppEnv, ms } from "@autumn/shared";
-import { withLock } from "@/external/redis/redisUtils.js";
+import { withLock } from "@/external/redis/utils/lockUtils/withLock.js";
 import { voidStripeInvoiceIfOpen } from "@/external/stripe/invoices/operations/voidStripeInvoiceIfOpen.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { executeBillingPlan } from "@/internal/billing/v2/execute/executeBillingPlan.js";
