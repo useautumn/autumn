@@ -112,7 +112,11 @@ describe("updateBalanceV2 async routing", () => {
 		state.originalSend = sqsClient.send.bind(sqsClient);
 		sqsClient.send = (async (command: { input: Record<string, unknown> }) => {
 			state.queueCommands.push(command.input);
-			return {};
+			const entries =
+				(command.input.Entries as Array<{ Id?: string }> | undefined) ?? [];
+			return {
+				Successful: entries.map((entry) => ({ Id: entry.Id })),
+			};
 		}) as typeof sqsClient.send;
 	});
 
@@ -139,11 +143,18 @@ describe("updateBalanceV2 async routing", () => {
 		expect(state.queueCommands).toHaveLength(1);
 		expect(state.queueCommands[0]).toMatchObject({
 			QueueUrl: trackAsyncQueueUrl,
+		});
+		// The async-track queue sends through the SQS batcher (SendMessageBatch).
+		const batchEntries = state.queueCommands[0].Entries as Array<
+			Record<string, unknown>
+		>;
+		expect(batchEntries).toHaveLength(1);
+		expect(batchEntries[0]).toMatchObject({
 			MessageGroupId: "org_123:sandbox:cus_123:none",
 			MessageDeduplicationId: ctx.id,
 		});
 		const message = JSON.parse(
-			String(state.queueCommands[0].MessageBody),
+			String(batchEntries[0].MessageBody),
 		) as Record<string, unknown>;
 		expect(message).toMatchObject({
 			name: JobName.UpdateBalance,
