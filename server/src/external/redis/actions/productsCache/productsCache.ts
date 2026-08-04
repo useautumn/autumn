@@ -1,6 +1,11 @@
 import crypto from "node:crypto";
 import type { AppEnv } from "@autumn/shared";
-import { miscRedis } from "@/external/redis/initRedis";
+import { logger } from "@/external/logtail/logtailUtils.js";
+import {
+	forEachMiscRedisTarget,
+	resolveMiscRedis,
+} from "@/external/redis/miscCache/resolveMiscRedis.js";
+import { tryRedisOp } from "@/external/redis/utils/runRedisOp.js";
 
 const PRODUCTS_CACHE_PREFIX = "products_full";
 
@@ -64,10 +69,49 @@ export const buildAllVersionsProductsCacheKey = ({
 	return `${buildProductsCacheKeyPrefix({ orgId, env })}:all_versions`;
 };
 
+export const getCachedProducts = async <T>({
+	cacheKey,
+	requestId,
+}: {
+	cacheKey: string;
+	requestId?: string;
+}): Promise<T | null> => {
+	const miscRedis = resolveMiscRedis({ requestId });
+
+	const cached = await tryRedisOp({
+		operation: () => miscRedis.get(cacheKey),
+		source: "products-cache:get",
+		redisInstance: miscRedis,
+	});
+	if (!cached) return null;
+
+	return JSON.parse(cached) as T;
+};
+
+export const setCachedProducts = async ({
+	cacheKey,
+	value,
+	requestId,
+}: {
+	cacheKey: string;
+	value: unknown;
+	requestId?: string;
+}): Promise<void> => {
+	const miscRedis = resolveMiscRedis({ requestId });
+
+	await tryRedisOp({
+		operation: () =>
+			miscRedis.set(cacheKey, JSON.stringify(value), "EX", PRODUCTS_CACHE_TTL),
+		source: "products-cache:set",
+		redisInstance: miscRedis,
+	});
+};
+
 /** All possible archived query param values that can be cached */
 const ARCHIVED_VARIANTS = [undefined, false, true] as const;
 
-/** Invalidates all products cache entries for an org/env */
+/** Invalidates all products cache entries for an org/env — on every live
+ *  instance, so ramped readers never serve a stale catalog. */
 export const invalidateProductsCache = async ({
 	orgId,
 	env,
@@ -75,8 +119,6 @@ export const invalidateProductsCache = async ({
 	orgId: string;
 	env: AppEnv;
 }): Promise<void> => {
-	if (miscRedis.status !== "ready") return;
-
 	// Build all possible cache keys (deterministic based on archived param variants)
 	const keysToDelete = [
 		...ARCHIVED_VARIANTS.map((archived) =>
@@ -89,14 +131,17 @@ export const invalidateProductsCache = async ({
 		buildAllVersionsProductsCacheKey({ orgId, env }),
 	];
 
-	try {
-		const deleted = await miscRedis.del(...keysToDelete);
-		console.info(
-			`[invalidateProductsCache] deleted ${deleted} keys, org: ${orgId}, env: ${env}`,
-		);
-	} catch (error) {
-		console.error(
-			`[invalidateProductsCache] error, org: ${orgId}, env: ${env}, error: ${error}`,
-		);
-	}
+	await forEachMiscRedisTarget({
+		operation: ({ redis }) =>
+			tryRedisOp({
+				operation: () => redis.del(...keysToDelete),
+				source: "products-cache:invalidate",
+				redisInstance: redis,
+			}),
+		onError: ({ target }) => {
+			logger.warn(
+				`[productsCache] invalidate failed on "${target.instanceName}" (org: ${orgId}, env: ${env})`,
+			);
+		},
+	});
 };

@@ -1,24 +1,24 @@
 import { describe, expect, test } from "bun:test";
 import { AppEnv } from "@autumn/shared";
 import { buildCustomerJwtAuthCacheKey } from "@/external/redis/actions/customerJwtAuthCache/customerJwtAuthCache.js";
-import { buildStripeWebhookEventKey } from "@/external/stripe/webhookMiddlewares/stripeIdempotencyMiddleware.js";
-import {
-	buildSecretKeyCacheKey,
-	SECRET_KEY_CACHE_TTL_SECONDS,
-} from "@/internal/dev/apiKeys/cacheApiKeyUtils.js";
-import {
-	buildIdempotencyStorageKey,
-	IDEMPOTENCY_TTL_MS,
-} from "@/internal/misc/idempotency/idempotencyKeyUtils.js";
 import {
 	buildOrgWithFeaturesCacheKey,
 	ORG_WITH_FEATURES_CACHE_TTL_SECONDS,
-} from "@/internal/orgs/orgUtils/cacheOrgWithFeatures.js";
+} from "@/external/redis/actions/orgWithFeaturesCache/orgWithFeaturesCache.js";
 import {
 	buildAllVersionsProductsCacheKey,
 	buildProductsCacheKey,
 	PRODUCTS_CACHE_TTL,
-} from "@/internal/products/productCacheUtils.js";
+} from "@/external/redis/actions/productsCache/productsCache.js";
+import {
+	buildSecretKeyCacheKey,
+	SECRET_KEY_CACHE_TTL_SECONDS,
+} from "@/external/redis/actions/secretKeyCache/secretKeyCache.js";
+import { buildStripeWebhookEventKey } from "@/external/stripe/webhookMiddlewares/stripeIdempotencyMiddleware.js";
+import {
+	buildIdempotencyStorageKey,
+	IDEMPOTENCY_TTL_MS,
+} from "@/internal/misc/idempotency/idempotencyKeyUtils.js";
 
 /**
  * Pins the EXACT key format (and TTL, where exported) of every misc-cache key

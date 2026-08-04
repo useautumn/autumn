@@ -10,9 +10,9 @@ import type { User } from "better-auth";
 import { generateId } from "better-auth";
 import { eq } from "drizzle-orm";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
+import { clearOrgWithFeaturesCache } from "@/external/redis/actions/orgWithFeaturesCache/orgWithFeaturesCache.js";
 import { OrgService } from "@/internal/orgs/OrgService.js";
 import { provisionOrgResources } from "@/utils/authUtils/afterOrgCreated.js";
-import { clearOrgWithFeaturesCache } from "./cacheOrgWithFeatures.js";
 
 /**
  * Insert a sub-org row (created_by = master), optionally a membership, and run

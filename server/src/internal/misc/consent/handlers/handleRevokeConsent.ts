@@ -1,5 +1,6 @@
 import { ErrCode, RecaseError, Scopes } from "@autumn/shared";
 import { z } from "zod/v4";
+import { clearSecretKeyCache } from "@/external/redis/actions/secretKeyCache/secretKeyCache.js";
 import { createRoute } from "@/honoMiddlewares/routeHandler.js";
 import {
 	oauthAccessTokenRepo,
@@ -7,7 +8,6 @@ import {
 	oauthConsentRepo,
 	oauthRefreshTokenRepo,
 } from "@/internal/auth/repos/index.js";
-import { clearSecretKeyCache } from "../../../dev/apiKeys/cacheApiKeyUtils.js";
 
 /**
  * Revoke an OAuth consent and delete all linked resources:
