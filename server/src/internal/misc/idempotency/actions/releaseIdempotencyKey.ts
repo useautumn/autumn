@@ -1,5 +1,5 @@
 import { releaseDynamoIdempotencyKey } from "@/external/aws/dynamodb/idempotencyKeys/operations/releaseDynamoIdempotencyKey.js";
-import { releaseRedisIdempotencyKey } from "@/external/redis/idempotencyKeys/operations/releaseRedisIdempotencyKey.js";
+import { releaseRedisIdempotencyKey } from "@/external/redis/actions/idempotencyKeys/operations/releaseRedisIdempotencyKey.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { isIdempotencyDynamoReadEnabled } from "@/internal/misc/miscellaneousEdgeConfig/miscellaneousEdgeConfigStore.js";
 import { buildIdempotencyStorageKey } from "../idempotencyKeyUtils.js";

@@ -40,6 +40,27 @@ Cloud-repo compat contract (which exports MUST survive and why): see [CLOUD-AUDI
 
 ## Phase 3 — Reusable rolling-migration mechanism
 
+Design locked with John: key classification is read-through caches (rampable by requestId %) vs coordination keys AND cross-request state stores (`checkout:*`, `oauth_state:*`, auto-topup suppression, saved views, trmnl, `stripe:webhook:*` — pinned; written by one request, read by another, so % routing would break them). Dual invalidation + read-through means NO staleness machinery is needed for rollback; `previousPercent`/`changedAt` kept for observability only. Backup is edge-config only (NO CACHE_BACKUP_URL fallback in the new instance model). Instances store explicit private + public connection strings — `getReachableDragonflyUrl` (a hardcoded CACHE_V2_DRAGONFLY_URL→PUBLIC pair-swap keyed on `onAwsEcs()`) must NOT be reused for misc; replacement picks private/public per instance by `onAwsEcs()`.
+
+### PR 1 — edge config only (DONE 2026-08-04, uncommitted)
+
+- `internal/misc/miscRedisConfig/` replaces `mainRedisCache/`: `{ activeInstance: redisCloud|dragonfly|backup, ramp: {toInstance, percent, previousPercent, changedAt}|null, backup: {connectionString(encrypted private), publicConnectionString(encrypted, nullable), url}|null }` on the SAME S3 key (`admin/main-redis-cache-config.json`); legacy `primary`/`fallback` values parse via transform. Store ops: `setActiveMiscRedisInstance` (cutover clears ramp; refuses other switches mid-ramp), `setMiscRedisRamp` (start at 0% = invalidation fan-out begins BEFORE traffic moves — closes the start-of-ramp race), `updateMiscRedisRampPercent`, `clearMiscRedisRamp` (instant rollback), `upsertMiscRedisBackupConnection`/`remove` (refused while backup is live).
+- Registry unchanged structurally: still builds its two env clients; `getMiscRedis()` now reads the new config (`redisCloud`→primary client, `backup`→env fallback client, anything unroutable warns + uses redisCloud until instance clients land).
+- Admin: legacy `/main-redis-cache-config` GET/PUT kept UI-compatible (maps legacy names both ways; PUT refuses instances with no routable client); new `/misc-redis-config` GET + `/ramp` POST/DELETE + `/backup` PATCH/DELETE control plane (backup accepts plaintext private + optional public URIs, encrypts server-side).
+- Tests: `misc-redis-config.test.ts` (schema/legacy-compat), routing test reduced to the Proxy.
+
+### PR 2 — instance clients + resolver (todo)
+
+- `external/redis/miscCache/miscRedisInstances.ts`: redisCloud (CACHE_URL), dragonfly (CACHE_MISC_DRAGONFLY_URL + a PUBLIC counterpart env, chosen by `onAwsEcs()`), backup (edge-config encrypted private/public, hot-swappable à la cacheV2RampClient).
+- `resolveMiscRedis({requestId})`, `getPinnedMiscRedis()`, `getRequestBucket`, `getMiscRedisTargets()` (active + ramp target even at 0%), `forEachMiscRedisTarget({operation, onError})` — John's iteration utility for invalidators.
+- Warmup iterates ALL configured misc instances (no per-instance special cases). Admin gains `/misc-redis-config/instance` flip with readiness pings + per-instance status on GET.
+- (Reference: the deleted-from-PR-1 implementations of instances/resolver/tests live in this branch's reflog if useful.)
+
+### PR 3 — the sweep + ramp wiring (todo)
+
+ctx.miscRedis threading, Proxy deletion, runRedisOp `operation(redis)` API, pinned call sites; then ramp the 5 rampable cache modules onto `resolveMiscRedis`/`forEachMiscRedisTarget` + admin UI. Pre-flip checklist: verify `checkout:*` and `oauth_state:*` miss behavior (or flip at low traffic).
+
+
 | # | Unit | Scope |
 |---|------|-------|
 | 8 | Shared bucket utils | Consolidate duplicate `Number(BigInt(Bun.hash(x)) % 100n)` (`rolloutUtils.ts:6`, `customerRedisRoutingInfo.ts:18`) + duplicate staleness checks (`isSnapshotCacheStale` / `isRedisMigrationCacheStale`) into generic `getBucket` / `isBucketRoutingStale`. Add `getRequestBucket({ requestId })` (`ctx.id` from `baseMiddleware.ts:62` — rndr-id / X-Amzn-Trace-Id / `generateId("local_req")`). Test templates: `tests/unit/redis/migration-staleness.test.ts`, `cache-v2-ramp.test.ts`. |

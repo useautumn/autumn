@@ -1,59 +1,11 @@
 import { describe, expect, test } from "bun:test";
 import type { Redis } from "ioredis";
-import {
-	createMiscRedisRouter,
-	selectMiscRedisClient,
-} from "@/external/redis/miscRedisRouting.js";
-import { MainRedisCacheConfigSchema } from "@/internal/misc/mainRedisCache/mainRedisCacheSchemas.js";
+import { createMiscRedisRouter } from "@/external/redis/miscRedisRouting.js";
 
 const asRedis = (value: object) => value as Redis;
 
-describe("misc Redis routing", () => {
-	test("defaults edge config to primary", () => {
-		expect(MainRedisCacheConfigSchema.parse({})).toEqual({
-			activeInstance: "primary",
-		});
-	});
-
-	test("selects primary by default", () => {
-		const primary = asRedis({});
-		const fallback = asRedis({});
-
-		expect(
-			selectMiscRedisClient({
-				activeInstance: "primary",
-				primary: () => primary,
-				fallback,
-			}),
-		).toBe(primary);
-	});
-
-	test("selects fallback when configured", () => {
-		const primary = asRedis({});
-		const fallback = asRedis({});
-
-		expect(
-			selectMiscRedisClient({
-				activeInstance: "fallback",
-				primary: () => primary,
-				fallback,
-			}),
-		).toBe(fallback);
-	});
-
-	test("fails safely to primary when fallback is missing", () => {
-		const primary = asRedis({});
-
-		expect(
-			selectMiscRedisClient({
-				activeInstance: "fallback",
-				primary: () => primary,
-				fallback: null,
-			}),
-		).toBe(primary);
-	});
-
-	test("routes auth and idempotency commands to the current client", async () => {
+describe("createMiscRedisRouter", () => {
+	test("routes commands to whichever client resolve() returns at call time", async () => {
 		const primary = {
 			status: "ready",
 			name: "primary",

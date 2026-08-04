@@ -1,17 +1,24 @@
 import { Hono } from "hono";
 import type { HonoEnv } from "../../honoUtils/HonoEnv";
 import {
-    handleDeleteAdminCacheV2Ramp,
-    handleGetAdminCacheV2Ramp,
-    handleUpdateAdminCacheV2RampMigration,
-    handleUpsertAdminCacheV2Ramp,
+	handleDeleteAdminCacheV2Ramp,
+	handleGetAdminCacheV2Ramp,
+	handleUpdateAdminCacheV2RampMigration,
+	handleUpsertAdminCacheV2Ramp,
 } from "./handleAdminCacheV2Ramp";
 import {
-    handleDeleteAdminOrgRedisConfig,
-    handleGetAdminOrgRedisConfig,
-    handleUpdateAdminOrgRedisMigration,
-    handleUpdateAdminOrgRedisPublicUrl,
-    handleUpsertAdminOrgRedisConfig,
+	handleClearAdminMiscRedisRamp,
+	handleDeleteAdminMiscRedisBackup,
+	handleGetAdminMiscRedisConfig,
+	handleSetAdminMiscRedisRamp,
+	handleUpsertAdminMiscRedisBackup,
+} from "./handleAdminMiscRedisConfig";
+import {
+	handleDeleteAdminOrgRedisConfig,
+	handleGetAdminOrgRedisConfig,
+	handleUpdateAdminOrgRedisMigration,
+	handleUpdateAdminOrgRedisPublicUrl,
+	handleUpsertAdminOrgRedisConfig,
 } from "./handleAdminOrgRedisConfig";
 import { handleGetAdminAsyncBalanceUpdateConfig } from "./handleGetAdminAsyncBalanceUpdateConfig";
 import { handleGetAdminAsyncTrackConfig } from "./handleGetAdminAsyncTrackConfig";
@@ -41,10 +48,10 @@ import { handleListAdminOrgs } from "./handleListAdminOrgs";
 import { handleListAdminUsers } from "./handleListAdminUsers";
 import { handleListOAuthClients } from "./handleListOAuthClients";
 import {
-    handleCreateSlackAdminInstall,
-    handleDeleteSlackAdminInstall,
-    handleGetSlackAdminInstall,
-    handleUpdateSlackAdminTarget,
+	handleCreateSlackAdminInstall,
+	handleDeleteSlackAdminInstall,
+	handleGetSlackAdminInstall,
+	handleUpdateSlackAdminTarget,
 } from "./handleSlackAdminChat";
 import { handleSyncCustomerEntitlementAnchors } from "./handleSyncCustomerEntitlementAnchors";
 import { handleUpsertAdminAsyncBalanceUpdateConfig } from "./handleUpsertAdminAsyncBalanceUpdateConfig";
@@ -207,6 +214,20 @@ honoAdminRouter.get(
 honoAdminRouter.put(
 	"/main-redis-cache-config",
 	...handleUpsertAdminMainRedisCacheConfig,
+);
+honoAdminRouter.get("/misc-redis-config", ...handleGetAdminMiscRedisConfig);
+honoAdminRouter.post("/misc-redis-config/ramp", ...handleSetAdminMiscRedisRamp);
+honoAdminRouter.delete(
+	"/misc-redis-config/ramp",
+	...handleClearAdminMiscRedisRamp,
+);
+honoAdminRouter.patch(
+	"/misc-redis-config/backup",
+	...handleUpsertAdminMiscRedisBackup,
+);
+honoAdminRouter.delete(
+	"/misc-redis-config/backup",
+	...handleDeleteAdminMiscRedisBackup,
 );
 honoAdminRouter.get("/cache-v2-ramp", ...handleGetAdminCacheV2Ramp);
 honoAdminRouter.patch("/cache-v2-ramp", ...handleUpsertAdminCacheV2Ramp);
