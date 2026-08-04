@@ -29,6 +29,7 @@ import {
 	inArray,
 	isNull,
 	lt,
+	ne,
 	notExists,
 	or,
 	sql,
@@ -304,7 +305,7 @@ export class CusEntService {
 				eq(customerEntitlements.is_pooled_balance, false),
 				and(
 					eq(customerEntitlements.is_pooled_balance, true),
-					eq(pooledBalances.reset_mode, PooledBalanceResetMode.Lazy),
+					ne(pooledBalances.reset_mode, PooledBalanceResetMode.Lifetime),
 				),
 			);
 

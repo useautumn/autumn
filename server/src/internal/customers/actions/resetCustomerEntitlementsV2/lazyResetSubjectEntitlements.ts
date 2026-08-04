@@ -102,6 +102,7 @@ export const lazyResetSubjectEntitlements = async ({
 		if (Object.keys(applied).length > 0) {
 			const oldNextResetAts: Record<string, number> = {};
 			const customerEntitlementFeatureIds: Record<string, string> = {};
+			const pooledGrantedByCusEntId: Record<string, number> = {};
 
 			for (const customerEntitlement of customerEntitlementsNeedingReset) {
 				if (customerEntitlement.next_reset_at) {
@@ -111,6 +112,11 @@ export const lazyResetSubjectEntitlements = async ({
 				customerEntitlementFeatureIds[customerEntitlement.id] =
 					customerEntitlement.feature_id;
 			}
+			for (const { customerEntitlementId, result } of computed) {
+				if (result.pooledGranted !== undefined) {
+					pooledGrantedByCusEntId[customerEntitlementId] = result.pooledGranted;
+				}
+			}
 
 			await resetSubjectCache({
 				ctx,
@@ -119,6 +125,7 @@ export const lazyResetSubjectEntitlements = async ({
 				oldNextResetAts,
 				clearingMap,
 				customerEntitlementFeatureIds,
+				pooledGrantedByCusEntId,
 			});
 
 			logger.info(

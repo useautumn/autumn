@@ -1,4 +1,5 @@
-/** Regression: batch reset must use pooled grants and leave subscription pools to invoice.created. */
+/** Regression: batch reset must use pooled grants and reset pools of every
+ * non-lifetime mode — invoice.created is only a redundant fast path. */
 
 import { expect, test } from "bun:test";
 import {
@@ -157,7 +158,7 @@ test.concurrent(
 );
 
 test.concurrent(
-	`${chalk.yellowBright("batch-reset-v2 pooled: subscription pool remains owned by invoice.created")}`,
+	`${chalk.yellowBright("batch-reset-v2 pooled: subscription pool resets like a lazy pool")}`,
 	async () => {
 		const granted = 300;
 		await withPooledResetScenario({
@@ -171,10 +172,39 @@ test.concurrent(
 					customerEntitlementIds: [customerEntitlementId],
 				});
 
+				expect(result.resetMutations).toHaveLength(1);
+				const row = await fetchCustomerEntitlementRow({
+					db: ctx.db,
+					customerEntitlementId,
+				});
+				expect(row.balance).toBe(granted);
+				expect(row.next_reset_at).toBeGreaterThan(pastTime);
+				expect(row.reset_by_invoice).not.toBe(true);
+			},
+		});
+	},
+);
+
+test.concurrent(
+	`${chalk.yellowBright("batch-reset-v2 pooled: lifetime pool is never reset")}`,
+	async () => {
+		const granted = 200;
+		await withPooledResetScenario({
+			name: "batch-reset-v2-pooled-lifetime",
+			granted,
+			resetMode: PooledBalanceResetMode.Lifetime,
+			withRollover: false,
+			run: async ({ customerEntitlementId, pastTime }) => {
+				const result = await runBatchResetV2({
+					ctx,
+					customerEntitlementIds: [customerEntitlementId],
+				});
+
 				expect(result.resetMutations).toHaveLength(0);
 				expect(result.verdicts).toEqual([
 					expect.objectContaining({
-						kind: "resets_via_invoice",
+						kind: "no_action",
+						reason: "pooled_balance_lifetime",
 						customerEntitlementId,
 					}),
 				]);
@@ -185,7 +215,6 @@ test.concurrent(
 				});
 				expect(row.balance).toBe(granted);
 				expect(row.next_reset_at).toBe(pastTime);
-				expect(row.reset_by_invoice).toBe(true);
 			},
 		});
 	},
