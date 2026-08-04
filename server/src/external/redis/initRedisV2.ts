@@ -8,6 +8,7 @@ import {
 	waitForRedisReady,
 } from "./initRedis.js";
 import { REDIS_V2_COMMAND_TIMEOUT_MS } from "./initUtils/createRedisClient.js";
+import { createStandbyRedisRouter } from "./initUtils/createStandbyRedisRouter.js";
 
 const rawDragonflyUrl = process.env.CACHE_V2_DRAGONFLY_URL?.trim();
 const dragonflyUrl = rawDragonflyUrl
@@ -16,11 +17,23 @@ const dragonflyUrl = rawDragonflyUrl
 
 export const hasRedisV2Config = Boolean(dragonflyUrl);
 
-export const redisV2: Redis = createRedisConnection({
+const redisV2Primary = createRedisConnection({
 	cacheUrl: dragonflyUrl || "",
-	region: `${currentRegion}:v2`,
+	region: `${currentRegion}:v2:primary`,
 	redisType: "subject-primary",
 	commandTimeout: REDIS_V2_COMMAND_TIMEOUT_MS,
+});
+
+const redisV2Standby = createRedisConnection({
+	cacheUrl: dragonflyUrl || "",
+	region: `${currentRegion}:v2:standby`,
+	redisType: "subject-primary",
+	commandTimeout: REDIS_V2_COMMAND_TIMEOUT_MS,
+});
+
+export const redisV2: Redis = createStandbyRedisRouter({
+	primary: redisV2Primary,
+	standby: redisV2Standby,
 });
 
 const alternateInstanceUrls: Partial<Record<RedisV2InstanceName, string>> = {

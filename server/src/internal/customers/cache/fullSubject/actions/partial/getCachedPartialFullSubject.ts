@@ -69,9 +69,19 @@ export const getCachedPartialFullSubject = async ({
 	// Read-only GETs — epoch TTL is refreshed on writes (setCachedFullSubject
 	// Lua) and on invalidations, not on reads, to avoid write amplification.
 	const pipelineResults = await runRedisOp({
-		operation: () => redisV2.pipeline().get(subjectKey).get(epochKey).exec(),
+		operation: async (redis) => {
+			const results = await redis
+				.pipeline()
+				.get(subjectKey)
+				.get(epochKey)
+				.exec();
+			const commandError = results?.find(([error]) => error)?.[0];
+			if (commandError) throw commandError;
+			return results;
+		},
 		source: "getCachedPartialFullSubject:pipeline",
 		redisInstance: redisV2,
+		retryOnStandby: true,
 		timeoutMs: REDIS_OP_TIMEOUT_MS.subjectPipeline,
 	});
 
