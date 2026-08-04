@@ -78,7 +78,7 @@ export const RewardProgramConfig = ({
 						<SelectContent className="w-[var(--anchor-width)]">
 							{selectableRewards.map((reward: Reward) => (
 								<SelectItem
-									className="min-w-0 [&>div]:min-w-0"
+									className="min-w-0 pr-6 [&>div]:min-w-0"
 									key={reward.name}
 									value={reward.internal_id}
 								>
