@@ -206,6 +206,7 @@
 	"devDependencies": {
 		"@better-auth/cli": "^1.4.21",
 		"@biomejs/biome": "2.2.2",
+		"@infisical/cli": "0.43.116",
 		"@trigger.dev/build": "4.4.6",
 		"@types/node": "^24.9.1",
 		"ajv": "8.20.0",
@@ -217,5 +218,8 @@
 		"trigger.dev": "4.4.6",
 		"ts-to-zod": "^5.1.0",
 		"turbo": "^2.9.6"
-	}
+	},
+	"trustedDependencies": [
+		"@infisical/cli"
+	]
 }
