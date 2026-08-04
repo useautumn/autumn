@@ -31,11 +31,13 @@ mock.module("@/external/logtail/logtailUtils.js", () => ({
 const { EXPECTED_REPLICA_COUNT, REPLICA_LAG_MAX_MS } = await import(
 	"@/db/probes/replicaLagProbe.js"
 );
+const { queryReplicaLag } = await import("@/db/probes/replicaLagQuery.js");
 const {
 	getReplicaRoutingState,
 	startReplicaRoutingProber,
 	stopReplicaRoutingProber,
 	REPLICA_ROUTING_STALENESS_MS,
+	REPLICA_ROUTING_TICK_STUCK_MS,
 	_resetReplicaRoutingStateForTesting,
 	_runProbeTickForTesting,
 } = await import("@/db/replicaRoutingState.js");
@@ -66,6 +68,12 @@ const throwingDb = () =>
 		execute: async () => {
 			throw new Error("connection refused");
 		},
+		// biome-ignore lint/suspicious/noExplicitAny: minimal db stub
+	}) as any;
+
+const hangingDb = () =>
+	({
+		execute: () => new Promise(() => {}),
 		// biome-ignore lint/suspicious/noExplicitAny: minimal db stub
 	}) as any;
 
@@ -140,6 +148,22 @@ describe("getReplicaRoutingState", () => {
 		});
 	});
 
+	it("goes ineligible when a replica is attached but not streaming", async () => {
+		await _runProbeTickForTesting({ db: fakeDb(healthyRows()) });
+
+		const [first, ...rest] = healthyRows();
+		const catchingUp = [{ ...first, state: "catchup" }, ...rest];
+		await _runProbeTickForTesting({ db: fakeDb(catchingUp) });
+
+		const state = getReplicaRoutingState();
+		expect(state.eligible).toBe(false);
+		expect(state.replicaCount).toBe(EXPECTED_REPLICA_COUNT - 1);
+		expect(last(transitionCalls())).toMatchObject({
+			to: "ineligible",
+			reason: "count_mismatch",
+		});
+	});
+
 	it("goes ineligible with lag_exceeded when replay lag breaches the bound", async () => {
 		await _runProbeTickForTesting({ db: fakeDb(healthyRows()) });
 
@@ -206,6 +230,57 @@ describe("getReplicaRoutingState", () => {
 		expect(last(transitionCalls())).toMatchObject({
 			to: "ineligible",
 			reason: "stale_probe",
+		});
+	});
+});
+
+describe("probe tick self-heal", () => {
+	it("holds the guard for a tick still inside the stuck bound", async () => {
+		void _runProbeTickForTesting({ db: hangingDb() });
+
+		await _runProbeTickForTesting({ db: fakeDb(healthyRows()) });
+
+		expect(getReplicaRoutingState().updatedAt).toBe(0);
+	});
+
+	it("reclaims a wedged tick after the stuck bound, logging once per episode", async () => {
+		void _runProbeTickForTesting({ db: hangingDb() });
+
+		setSystemTime(new Date(Date.now() + REPLICA_ROUTING_TICK_STUCK_MS + 1));
+		void _runProbeTickForTesting({ db: hangingDb() });
+
+		setSystemTime(new Date(Date.now() + REPLICA_ROUTING_TICK_STUCK_MS + 1));
+		await _runProbeTickForTesting({ db: fakeDb(healthyRows()) });
+
+		expect(getReplicaRoutingState().eligible).toBe(true);
+		const stuckLogs = loggedFields.filter(
+			(fields) => fields?.type === "replica_routing_probe_stuck",
+		);
+		expect(stuckLogs).toHaveLength(1);
+	});
+});
+
+describe("queryReplicaLag timeout", () => {
+	it("rejects instead of hanging when the pool never answers", async () => {
+		await expect(
+			queryReplicaLag({ db: hangingDb(), timeoutMs: 20 }),
+		).rejects.toThrow("replica lag query timed out after 20ms");
+	});
+
+	it("surfaces the timeout as probe_error ineligibility", async () => {
+		await _runProbeTickForTesting({ db: fakeDb(healthyRows()) });
+
+		const timedOutDb = {
+			execute: () =>
+				Promise.reject(new Error("replica lag query timed out after 4000ms")),
+			// biome-ignore lint/suspicious/noExplicitAny: minimal db stub
+		} as any;
+		await _runProbeTickForTesting({ db: timedOutDb });
+
+		expect(getReplicaRoutingState().eligible).toBe(false);
+		expect(last(transitionCalls())).toMatchObject({
+			to: "ineligible",
+			reason: "probe_error",
 		});
 	});
 });

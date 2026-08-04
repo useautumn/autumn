@@ -19,7 +19,10 @@ import { lazyResetSubjectEntitlements } from "../../actions/resetCustomerEntitle
 import { lazyResetSubjectUsageWindows } from "../../actions/resetUsageWindows/lazyResetSubjectUsageWindows.js";
 import { markReplicaSourced } from "../../cache/fullSubject/subjectProvenance.js";
 import { RELEVANT_STATUSES } from "../../cusProducts/CusProductService.js";
-import { runWithFullSubjectGate } from "./getFullSubjectGate.js";
+import {
+	isFullSubjectGateRejection,
+	runWithFullSubjectGate,
+} from "./getFullSubjectGate.js";
 import { getFullSubjectQuery } from "./getFullSubjectQuery.js";
 import {
 	resultToFullSubject,
@@ -27,8 +30,8 @@ import {
 } from "./subjectQueryRowToNormalized.js";
 import { unpackSubjectEnvelope } from "./unpackSubjectEnvelope.js";
 
-/** Runs the hydration on the resolved pool; a failed replica attempt retries
- *  ONCE on primary through the same gate (normal admission, never a bypass). */
+/** Runs the hydration on the resolved pool. A replica DB failure retries ONCE
+ *  on primary via normal gate admission; a gate shed propagates untouched. */
 const runRoutedHydration = async ({
 	ctx,
 	customerId,
@@ -90,6 +93,8 @@ const runRoutedHydration = async ({
 		result = await runHydration({ db: resolved.db, lane: resolved.source });
 	} catch (error) {
 		if (resolved.source !== "replica") throw error;
+		// A gate shed is load protection — re-admitting it on primary defeats it.
+		if (isFullSubjectGateRejection(error)) throw error;
 		source = "primary";
 		ctx.logger.warn(
 			{

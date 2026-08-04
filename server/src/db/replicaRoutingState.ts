@@ -9,6 +9,11 @@ import { queryReplicaLag } from "./probes/replicaLagQuery.js";
 export const REPLICA_ROUTING_PROBE_INTERVAL_MS = 3_000;
 export const REPLICA_ROUTING_STALENESS_MS = 10_000;
 
+/** A tick in flight this long is presumed wedged; the guard self-heals so one
+ *  stuck query can't disable replica routing forever. */
+export const REPLICA_ROUTING_TICK_STUCK_MS =
+	REPLICA_ROUTING_PROBE_INTERVAL_MS * 5;
+
 export type ReplicaRoutingReason =
 	| "stale_probe"
 	| "count_mismatch"
@@ -44,6 +49,9 @@ let lastProbe: ProbeResult = neverProbed;
 let lastLoggedEligible = false;
 let probeInterval: ReturnType<typeof setInterval> | null = null;
 let tickInFlight = false;
+let tickStartedAt = 0;
+let tickGeneration = 0;
+let stuckTickLogged = false;
 
 const evaluate = (): { eligible: boolean; reason: ReplicaRoutingReason } => {
 	if (Date.now() - lastProbe.updatedAt >= REPLICA_ROUTING_STALENESS_MS) {
@@ -80,14 +88,35 @@ const logIfTransitioned = (): boolean => {
 	return eligible;
 };
 
-const probeTick = async ({ db }: { db: DrizzleCli }): Promise<void> => {
-	if (tickInFlight) return;
+const claimTick = (): boolean => {
+	if (tickInFlight) {
+		const inFlightMs = Date.now() - tickStartedAt;
+		if (inFlightMs < REPLICA_ROUTING_TICK_STUCK_MS) return false;
+		if (!stuckTickLogged) {
+			stuckTickLogged = true;
+			logger.warn(
+				{ type: "replica_routing_probe_stuck", in_flight_ms: inFlightMs },
+				"Replica routing probe tick wedged — reclaiming the in-flight guard",
+			);
+		}
+	} else {
+		stuckTickLogged = false;
+	}
 	tickInFlight = true;
+	tickStartedAt = Date.now();
+	tickGeneration += 1;
+	return true;
+};
+
+const probeTick = async ({ db }: { db: DrizzleCli }): Promise<void> => {
+	if (!claimTick()) return;
+	const generation = tickGeneration;
+	let result: ProbeResult;
 	try {
 		const { blind, replicaCount, maxReplayLagMs } = await queryReplicaLag({
 			db,
 		});
-		lastProbe = {
+		result = {
 			replicaCount,
 			maxReplayLagMs,
 			updatedAt: Date.now(),
@@ -95,16 +124,18 @@ const probeTick = async ({ db }: { db: DrizzleCli }): Promise<void> => {
 			errorMessage: blind ? "probe not reading a primary" : null,
 		};
 	} catch (error) {
-		lastProbe = {
+		result = {
 			replicaCount: 0,
 			maxReplayLagMs: 0,
 			updatedAt: Date.now(),
 			errored: true,
 			errorMessage: error instanceof Error ? error.message : String(error),
 		};
-	} finally {
-		tickInFlight = false;
 	}
+	// A reclaimed-over tick may still settle later; its snapshot is stale.
+	if (generation !== tickGeneration) return;
+	tickInFlight = false;
+	lastProbe = result;
 	logIfTransitioned();
 };
 
@@ -172,4 +203,8 @@ export const _resetReplicaRoutingStateForTesting = (): void => {
 	lastProbe = { ...neverProbed };
 	lastLoggedEligible = false;
 	tickInFlight = false;
+	tickStartedAt = 0;
+	// Invalidate any tick still in flight so it can't settle into fresh state.
+	tickGeneration += 1;
+	stuckTickLogged = false;
 };
