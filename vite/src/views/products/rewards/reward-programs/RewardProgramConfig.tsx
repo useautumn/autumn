@@ -4,9 +4,14 @@ import {
 	type RewardProgram,
 	RewardReceivedBy,
 	RewardTriggerEvent,
+	RewardType,
 } from "@autumn/shared";
 import {
 	Checkbox,
+	DropdownMenu,
+	DropdownMenuContent,
+	DropdownMenuItem,
+	DropdownMenuTrigger,
 	FieldLabel,
 	Input,
 	Select,
@@ -17,12 +22,6 @@ import {
 } from "@autumn/ui";
 import { PackageIcon, XIcon } from "@phosphor-icons/react";
 import { useId } from "react";
-import {
-	DropdownMenu,
-	DropdownMenuContent,
-	DropdownMenuItem,
-	DropdownMenuTrigger,
-} from "@autumn/ui";
 import { useProductsQuery } from "@/hooks/queries/useProductsQuery";
 import { useRewardsQuery } from "@/hooks/queries/useRewardsQuery";
 import { keyToTitle } from "@/utils/formatUtils/formatTextUtils";
@@ -38,6 +37,13 @@ export const RewardProgramConfig = ({
 }) => {
 	const { rewards } = useRewardsQuery();
 	const excludeTrialId = useId();
+
+	// Legacy programs may point at other reward types, so keep the current one selectable
+	const selectableRewards = rewards.filter(
+		(reward: Reward) =>
+			reward.type === RewardType.FeatureGrant ||
+			reward.internal_id === rewardProgram.internal_reward_id,
+	);
 
 	return (
 		<div className="flex flex-col gap-4">
@@ -61,17 +67,17 @@ export const RewardProgramConfig = ({
 							setRewardProgram({ ...rewardProgram, internal_reward_id: value })
 						}
 						items={Object.fromEntries(
-							rewards.map((reward: Reward) => [
+							selectableRewards.map((reward: Reward) => [
 								reward.internal_id,
 								reward.name,
 							]),
 						)}
 					>
 						<SelectTrigger className="w-full">
-							<SelectValue placeholder="Select a reward" />
+							<SelectValue placeholder="Select a feature grant reward" />
 						</SelectTrigger>
 						<SelectContent>
-							{rewards.map((reward: Reward) => (
+							{selectableRewards.map((reward: Reward) => (
 								<SelectItem key={reward.name} value={reward.internal_id}>
 									{reward.name}
 								</SelectItem>

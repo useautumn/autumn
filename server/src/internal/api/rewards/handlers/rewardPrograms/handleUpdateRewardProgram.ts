@@ -4,12 +4,16 @@ import {
 	RecaseError,
 	type RewardProgram,
 	RewardTriggerEvent,
-	UpdateRewardProgram,
+	RewardType,
 	Scopes,
+	UpdateRewardProgram,
 } from "@autumn/shared";
 import { z } from "zod/v4";
 import { createRoute } from "@/honoMiddlewares/routeHandler.js";
-import { rewardProgramRepo } from "@/internal/rewards/repos/index.js";
+import {
+	rewardProgramRepo,
+	rewardRepo,
+} from "@/internal/rewards/repos/index.js";
 
 const UpdateRewardProgramParamsSchema = z.object({
 	id: z.string(),
@@ -46,6 +50,35 @@ export const handleUpdateRewardProgram = createRoute({
 				code: ErrCode.InvalidRequest,
 				statusCode: 404,
 			});
+		}
+
+		const isChangingReward =
+			body.internal_reward_id !== existingProgram.internal_reward_id;
+
+		if (isChangingReward) {
+			const reward = await rewardRepo.get({
+				db,
+				idOrInternalId: body.internal_reward_id,
+				orgId: org.id,
+				env,
+			});
+
+			if (!reward) {
+				throw new RecaseError({
+					message: `Reward ${body.internal_reward_id} not found`,
+					code: ErrCode.InvalidRequest,
+					statusCode: 400,
+				});
+			}
+
+			if (reward.type !== RewardType.FeatureGrant) {
+				throw new RecaseError({
+					message:
+						"Referral programs must be linked to a feature grant reward. Existing programs using other reward types continue to work, but cannot be relinked to another non-feature-grant reward.",
+					code: ErrCode.InvalidRequest,
+					statusCode: 400,
+				});
+			}
 		}
 
 		if (

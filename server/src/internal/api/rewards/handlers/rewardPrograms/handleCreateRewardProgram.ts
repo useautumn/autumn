@@ -3,6 +3,7 @@ import {
 	ErrCode,
 	RecaseError,
 	RewardTriggerEvent,
+	RewardType,
 	Scopes,
 } from "@autumn/shared";
 import { createRoute } from "@/honoMiddlewares/routeHandler.js";
@@ -62,6 +63,15 @@ export const handleCreateRewardProgram = createRoute({
 		if (!reward) {
 			throw new RecaseError({
 				message: `Reward ${body.internal_reward_id} not found`,
+				code: ErrCode.InvalidRequest,
+				statusCode: 400,
+			});
+		}
+
+		if (reward.type !== RewardType.FeatureGrant) {
+			throw new RecaseError({
+				message:
+					"Referral programs must be linked to a feature grant reward. Existing programs using other reward types continue to work, but new ones must use feature grants.",
 				code: ErrCode.InvalidRequest,
 				statusCode: 400,
 			});

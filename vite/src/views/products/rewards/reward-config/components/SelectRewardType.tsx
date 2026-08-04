@@ -11,9 +11,19 @@ import { defaultDiscountConfig } from "../../utils/defaultRewardModels";
 interface SelectRewardTypeProps {
 	reward: FrontendReward;
 	setReward: (reward: FrontendReward) => void;
+	/** Free product rewards are legacy — only shown when editing one that already exists */
+	allowFreeProduct?: boolean;
 }
 
-export function SelectRewardType({ reward, setReward }: SelectRewardTypeProps) {
+export function SelectRewardType({
+	reward,
+	setReward,
+	allowFreeProduct = false,
+}: SelectRewardTypeProps) {
+	const showFreeProduct =
+		allowFreeProduct ||
+		reward.rewardCategory === FrontendRewardCategory.FreeProduct;
+
 	return (
 		<SheetSection title="Reward Type">
 			<div className="space-y-4">
@@ -44,31 +54,36 @@ export function SelectRewardType({ reward, setReward }: SelectRewardTypeProps) {
 					</div>
 				</div>
 
-				<div className="flex w-full items-center gap-4">
-					<PanelButton
-						isSelected={
-							reward.rewardCategory === FrontendRewardCategory.FreeProduct
-						}
-						onClick={() =>
-							setReward({
-								...reward,
-								rewardCategory: FrontendRewardCategory.FreeProduct,
-								discountType: null,
-								discount_config: null,
-								free_product_id: null,
-								free_product_config: null,
-								featureGrantEntitlements: [],
-							})
-						}
-						icon={<GiftIcon size={16} color="currentColor" />}
-					/>
-					<div className="flex-1">
-						<div className="text-body-highlight mb-1">Free Product</div>
-						<div className="text-body-secondary leading-tight">
-							Used to give away products in a referral program
+				{showFreeProduct && (
+					<div className="flex w-full items-center gap-4">
+						<PanelButton
+							isSelected={
+								reward.rewardCategory === FrontendRewardCategory.FreeProduct
+							}
+							onClick={() =>
+								setReward({
+									...reward,
+									rewardCategory: FrontendRewardCategory.FreeProduct,
+									discountType: null,
+									discount_config: null,
+									free_product_id: null,
+									free_product_config: null,
+									featureGrantEntitlements: [],
+								})
+							}
+							icon={<GiftIcon size={16} color="currentColor" />}
+						/>
+						<div className="flex-1">
+							<div className="text-body-highlight mb-1">
+								Free Product (legacy)
+							</div>
+							<div className="text-body-secondary leading-tight">
+								Give away a plan. Use a feature grant instead for new referral
+								programs.
+							</div>
 						</div>
 					</div>
-				</div>
+				)}
 
 				<div className="flex w-full items-center gap-4">
 					<PanelButton
