@@ -12,7 +12,7 @@ import {
 import { constructRewardProgram } from "@/internal/rewards/rewardUtils.js";
 import {
 	validateRewardIsFeatureGrant,
-	validateTriggerConfig,
+	validateRewardProgramTrigger,
 } from "./validateRewardProgram.js";
 
 export const handleCreateRewardProgram = createRoute({
@@ -64,7 +64,7 @@ export const handleCreateRewardProgram = createRoute({
 			env,
 		});
 
-		validateTriggerConfig({
+		validateRewardProgramTrigger({
 			when: rewardProgram.when,
 			productIds: rewardProgram.product_ids,
 			maxRedemptions: rewardProgram.max_redemptions,

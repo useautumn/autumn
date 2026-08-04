@@ -13,7 +13,7 @@ import {
 } from "@/internal/rewards/repos/index.js";
 import {
 	validateRewardIsFeatureGrant,
-	validateTriggerConfig,
+	validateRewardProgramTrigger,
 } from "./validateRewardProgram.js";
 
 const UpdateRewardProgramParamsSchema = z.object({
@@ -80,7 +80,7 @@ export const handleUpdateRewardProgram = createRoute({
 			internalRewardId = reward.internal_id;
 		}
 
-		validateTriggerConfig({
+		validateRewardProgramTrigger({
 			when: body.when,
 			productIds: body.product_ids,
 			maxRedemptions: body.max_redemptions,

@@ -19,7 +19,8 @@ export const validateRewardIsFeatureGrant = (reward: Reward) => {
 	}
 };
 
-export const validateTriggerConfig = ({
+/** Checkout-triggered programs need products to match and a usable redemption cap */
+export const validateRewardProgramTrigger = ({
 	when,
 	productIds,
 	maxRedemptions,
