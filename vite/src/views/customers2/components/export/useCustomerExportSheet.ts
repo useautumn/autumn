@@ -1,6 +1,7 @@
 import {
 	CUSTOMER_EXPORT_FIELD_ORDER,
 	CustomerExportFieldsSchema,
+	type CustomerExportResponse,
 	isCustomerExportActive,
 } from "@autumn/shared";
 import { useStore } from "@tanstack/react-form";
@@ -31,35 +32,31 @@ export type CustomerExportSheetProps = {
 	onOpenChange: (open: boolean) => void;
 };
 
-function buildExportDescription({
-	isFilteredExport,
-	exportTotalCount,
-}: {
-	isFilteredExport: boolean;
-	exportTotalCount: number | undefined;
-}) {
-	if (isFilteredExport) {
-		if (exportTotalCount === undefined) {
-			return "Exports customers matching your current search and filters.";
-		}
-		return `Exports the ${exportTotalCount.toLocaleString()} customers matching your current search and filters.`;
-	}
-	if (exportTotalCount === undefined) return "Exports all customers.";
-	return `Exports all ${exportTotalCount.toLocaleString()} customers.`;
-}
-
-function getEmptyMessage({
+/** Single source of truth for why submit is blocked — drives both the
+ * disabled state and the tooltip so they can never disagree. */
+function getSubmitBlockedReason({
+	activeExport,
 	hasNothingToExport,
 	isFilteredExport,
+	isCountErrored,
 }: {
+	activeExport: CustomerExportResponse | undefined;
 	hasNothingToExport: boolean;
 	isFilteredExport: boolean;
+	isCountErrored: boolean;
 }) {
-	if (!hasNothingToExport) return undefined;
-	if (isFilteredExport) {
-		return "No customers match your current search and filters. Untick the option above to export everyone.";
+	if (activeExport) {
+		return `An export is already ${activeExport.status}. Starting another one will be rejected until it finishes.`;
 	}
-	return "There are no customers to export.";
+	if (hasNothingToExport) {
+		return isFilteredExport
+			? "No customers match your current search and filters. Untick “Apply filters” to export everyone."
+			: "There are no customers to export.";
+	}
+	if (isCountErrored) {
+		return "Couldn’t load customer counts. Try reopening the sheet.";
+	}
+	return undefined;
 }
 
 export function useCustomerExportSheet({
@@ -149,22 +146,19 @@ export function useCustomerExportSheet({
 		activeExport,
 		createExport,
 		customerExports,
-		emptyMessage: getEmptyMessage({
-			hasNothingToExport,
-			isFilteredExport,
-		}),
-		exportDescription: buildExportDescription({
-			isFilteredExport,
-			exportTotalCount,
-		}),
+		exportTotalCount,
 		form,
 		handleOpenChange,
 		hasActiveFilters,
 		hasFilters,
-		hasNothingToExport,
 		invalidateExports,
-		isExportCountErrored: countQuery.isError,
 		isExportCountLoading,
+		submitBlockedReason: getSubmitBlockedReason({
+			activeExport,
+			hasNothingToExport,
+			isFilteredExport,
+			isCountErrored: countQuery.isError,
+		}),
 		isExportsInitialError:
 			exportsQuery.isError && exportsQuery.data === undefined,
 		isExportsLoading: exportsQuery.isLoading,

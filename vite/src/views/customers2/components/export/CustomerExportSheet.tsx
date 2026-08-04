@@ -1,25 +1,40 @@
-import { Sheet, SheetContent, ShortcutButton } from "@autumn/ui";
-import type { ReactNode } from "react";
+import {
+	ConditionalTooltip,
+	Sheet,
+	SheetContent,
+	ShortcutButton,
+} from "@autumn/ui";
+import {
+	ClockCounterClockwiseIcon,
+	FilePlusIcon,
+	type Icon,
+} from "@phosphor-icons/react";
 import {
 	LayoutGroup,
-	SheetFooter,
 	SheetHeader,
 	SheetSection,
 } from "@/components/v2/sheets/SharedSheetComponents";
 import { CustomerExportFieldSelector } from "./CustomerExportFieldSelector";
 import { CustomerExportFilterScope } from "./CustomerExportFilterScope";
+import { CustomerExportOverview } from "./CustomerExportOverview";
 import { LiveCustomerExportJobList } from "./LiveCustomerExportJobList";
 import {
 	type CustomerExportSheetProps,
 	useCustomerExportSheet,
 } from "./useCustomerExportSheet";
 
-/** `output` carries an implicit status role, so late notices are announced. */
-function SheetNotice({ children }: { children: ReactNode }) {
+function SectionTitle({
+	icon: TitleIcon,
+	label,
+}: {
+	icon: Icon;
+	label: string;
+}) {
 	return (
-		<output className="mx-4 mt-2 block rounded-lg bg-amber-500/10 px-3 py-2 text-amber-600 text-xs dark:text-amber-500">
-			{children}
-		</output>
+		<span className="flex items-center gap-2">
+			<TitleIcon size={16} weight="fill" className="text-subtle" />
+			{label}
+		</span>
 	);
 }
 
@@ -31,19 +46,18 @@ export function CustomerExportSheet({
 		activeExport,
 		createExport,
 		customerExports,
-		emptyMessage,
-		exportDescription,
+		exportTotalCount,
 		form,
 		handleOpenChange,
 		hasActiveFilters,
 		hasFilters,
-		hasNothingToExport,
 		invalidateExports,
-		isExportCountErrored,
 		isExportCountLoading,
 		isExportsInitialError,
 		isExportsLoading,
 		isExportsRetrying,
+		isFilteredExport,
+		submitBlockedReason,
 		refetchExports,
 		setIsRealtimeDegraded,
 		trimmedSearch,
@@ -51,42 +65,100 @@ export function CustomerExportSheet({
 
 	return (
 		<Sheet open={open} onOpenChange={handleOpenChange}>
-			<SheetContent className="flex flex-col overflow-hidden">
+			<SheetContent className="flex flex-col overflow-hidden md:max-w-[540px]">
 				<LayoutGroup>
 					<div className="flex h-full flex-col overflow-hidden">
-						<div className="flex flex-1 flex-col overflow-y-auto">
+						<div className="flex min-h-0 flex-1 flex-col">
 							<SheetHeader
 								title="Export customers"
-								description={exportDescription}
+								description="Download your customer list as a CSV file."
 							/>
 
-							{hasFilters ? (
-								<SheetSection>
-									<form.Field name="restrictToCurrentFilters">
+							<SheetSection
+								title={
+									<SectionTitle
+										icon={FilePlusIcon}
+										label="Generate new export"
+									/>
+								}
+							>
+								<div className="flex flex-col gap-3">
+									<form.Field name="fields">
 										{(field) => (
-											<CustomerExportFilterScope
-												searchText={trimmedSearch}
-												hasActiveFilters={hasActiveFilters}
-												restrictToCurrentFilters={field.state.value}
-												onRestrictToCurrentFiltersChange={field.handleChange}
+											<CustomerExportOverview
+												exportTotalCount={exportTotalCount}
+												isCountLoading={isExportCountLoading}
+												isFilteredExport={isFilteredExport}
+												columnsAction={
+													<CustomerExportFieldSelector
+														selectedFields={field.state.value}
+														onChange={(fields) => field.handleChange(fields)}
+													/>
+												}
+												scopeRow={
+													hasFilters ? (
+														<form.Field name="restrictToCurrentFilters">
+															{(scopeField) => (
+																<CustomerExportFilterScope
+																	searchText={trimmedSearch}
+																	hasActiveFilters={hasActiveFilters}
+																	restrictToCurrentFilters={
+																		scopeField.state.value
+																	}
+																	onRestrictToCurrentFiltersChange={
+																		scopeField.handleChange
+																	}
+																/>
+															)}
+														</form.Field>
+													) : null
+												}
 											/>
 										)}
 									</form.Field>
-								</SheetSection>
-							) : null}
 
-							<SheetSection>
-								<form.Field name="fields">
-									{(field) => (
-										<CustomerExportFieldSelector
-											selectedFields={field.state.value}
-											onChange={(fields) => field.handleChange(fields)}
-										/>
-									)}
-								</form.Field>
+									<div className="border-border/40 border-t pt-3">
+										<form.Subscribe selector={(state) => state.canSubmit}>
+											{(canSubmit) => (
+												<ConditionalTooltip
+													enabled={Boolean(submitBlockedReason)}
+													content={submitBlockedReason}
+												>
+													{/* Wrap in span so Radix can attach listeners even when the button is disabled. */}
+													<span className="inline-flex w-full">
+														<ShortcutButton
+															variant="primary"
+															className="w-full"
+															onClick={() => form.handleSubmit()}
+															isLoading={createExport.isPending}
+															disabled={
+																!canSubmit ||
+																Boolean(submitBlockedReason) ||
+																isExportCountLoading ||
+																isExportsLoading
+															}
+															metaShortcut="enter"
+														>
+															Start export
+														</ShortcutButton>
+													</span>
+												</ConditionalTooltip>
+											)}
+										</form.Subscribe>
+									</div>
+								</div>
 							</SheetSection>
 
-							<SheetSection title="Recent exports" withSeparator={false}>
+							<SheetSection
+								title={
+									<SectionTitle
+										icon={ClockCounterClockwiseIcon}
+										label="Recent exports"
+									/>
+								}
+								withSeparator={false}
+								className="flex min-h-0 flex-1 flex-col"
+							>
 								<LiveCustomerExportJobList
 									customerExports={customerExports}
 									activeExport={activeExport}
@@ -99,52 +171,6 @@ export function CustomerExportSheet({
 								/>
 							</SheetSection>
 						</div>
-
-						{activeExport ? (
-							<SheetNotice>
-								An export is already {activeExport.status}. Starting another one
-								will be rejected until it finishes.
-							</SheetNotice>
-						) : null}
-
-						{isExportCountErrored ? (
-							<SheetNotice>
-								Couldn&apos;t load customer counts. You can still start the
-								export.
-							</SheetNotice>
-						) : null}
-
-						{emptyMessage ? <SheetNotice>{emptyMessage}</SheetNotice> : null}
-
-						<SheetFooter>
-							<ShortcutButton
-								variant="secondary"
-								className="w-full"
-								onClick={() => handleOpenChange(false)}
-								singleShortcut="escape"
-							>
-								Cancel
-							</ShortcutButton>
-							<form.Subscribe selector={(state) => state.canSubmit}>
-								{(canSubmit) => (
-									<ShortcutButton
-										variant="primary"
-										className="w-full"
-										onClick={() => form.handleSubmit()}
-										isLoading={createExport.isPending}
-										disabled={
-											!canSubmit ||
-											hasNothingToExport ||
-											isExportCountLoading ||
-											isExportsLoading
-										}
-										metaShortcut="enter"
-									>
-										Start export
-									</ShortcutButton>
-								)}
-							</form.Subscribe>
-						</SheetFooter>
 					</div>
 				</LayoutGroup>
 			</SheetContent>
