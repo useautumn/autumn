@@ -26,8 +26,11 @@ export type PollableExpectParams<C> = {
  * the contended environment pays the longer ceiling. Polling exits as soon as
  * the assertion holds, so this costs nothing on the happy path.
  */
+/** Kept well under the per-test ceilings tests set for themselves (several use
+ * 120s), so one late assertion can't eat a whole test's budget and turn a clean
+ * failure into an opaque timeout. */
 export const DEFAULT_SETTLE_TIMEOUT_MS =
-	Number(process.env.TEST_FILE_CONCURRENCY || "0") > 1 ? 120_000 : 30_000;
+	Number(process.env.TEST_FILE_CONCURRENCY || "0") > 1 ? 45_000 : 30_000;
 
 /**
  * THE one place polling lives.
