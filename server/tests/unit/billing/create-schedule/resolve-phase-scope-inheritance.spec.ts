@@ -129,6 +129,29 @@ describe(chalk.yellowBright("create-schedule phase scope inheritance"), () => {
 		).toBe("ent_2");
 	});
 
+	test("ungrouped plans inherit their own scope rather than the first group match", () => {
+		const openingPhaseScopes = buildOpeningPhaseScopes({
+			productContexts: [
+				openingPlan({ id: "growth" }),
+				openingPlan({ id: "starter", scope: entity("ent_1") }),
+			],
+		});
+
+		expect(
+			resolveInheritedScope({
+				fullProduct: product({ id: "starter" }),
+				openingPhaseScopes,
+			})?.internal_id,
+		).toBe("ent_1");
+		expect(
+			resolveInheritedScope({
+				fullProduct: product({ id: "growth" }),
+				openingPhaseScopes,
+				fallbackEntity: entity("ent_1"),
+			}),
+		).toBeUndefined();
+	});
+
 	test("the first plan wins when one group spans several scopes", () => {
 		const openingPhaseScopes = buildOpeningPhaseScopes({
 			productContexts: [
