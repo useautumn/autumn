@@ -13,14 +13,15 @@ export {
 } from "./initUtils/redisAvailability.js";
 export {
 	getFallbackRedis,
+	getMiscRedis,
 	getPrimaryRedis,
 	getRegionalRedis,
+	miscRedis,
 	redis,
 } from "./initUtils/redisClientRegistry.js";
 export {
 	currentRegion,
-	getConfiguredRegions,
-	hasRedisConfig,
+	hasMiscRedisConfig,
 } from "./initUtils/redisConfig.js";
 export {
 	waitForRedisReady,

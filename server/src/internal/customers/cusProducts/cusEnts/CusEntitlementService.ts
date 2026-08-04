@@ -40,9 +40,6 @@ import { buildConflictUpdateColumns } from "@/db/dbUtils.js";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 import type { RepoContext } from "@/db/repoContext";
 import { withStatementTimeout } from "@/db/withStatementTimeout.js";
-import { redis } from "@/external/redis/initRedis.js";
-import { buildFullCustomerCacheKey } from "@/internal/customers/cusUtils/fullCustomerCacheUtils/fullCustomerCacheConfig.js";
-import { tryRedisWrite } from "@/utils/cacheUtils/cacheUtils.js";
 import RecaseError from "@/utils/errorUtils.js";
 
 export class CusEntService {
@@ -541,55 +538,6 @@ export class CusEntService {
 			.returning();
 
 		return data;
-	}
-
-	static async syncUpdateToCache({
-		ctx,
-		cusEntId,
-		updates,
-	}: {
-		ctx: RepoContext;
-		cusEntId: string;
-		updates: Partial<InsertCustomerEntitlement>;
-	}) {
-		const { org, env, customerId } = ctx;
-
-		if (!customerId) {
-			ctx.logger.warn(
-				`skipping cusEnt sync update to cache, customerId not known`,
-			);
-			return;
-		}
-
-		const cacheKey = buildFullCustomerCacheKey({
-			orgId: org.id,
-			env,
-			customerId: customerId ?? "",
-		});
-
-		const cacheUpdates = [
-			{
-				cus_ent_id: cusEntId,
-				balance: updates.balance ?? null,
-				additional_balance: updates.additional_balance ?? null,
-				adjustment: updates.adjustment ?? null,
-				entities: updates.entities ?? null,
-				next_reset_at: updates.next_reset_at ?? null,
-				expected_next_reset_at: null,
-				rollover_insert: null,
-				rollover_overwrites: null,
-				rollover_delete_ids: null,
-				new_replaceables: null,
-				deleted_replaceable_ids: null,
-			},
-		];
-
-		await tryRedisWrite(() =>
-			redis.updateCustomerEntitlements(
-				cacheKey,
-				JSON.stringify({ updates: cacheUpdates }),
-			),
-		);
 	}
 
 	static async batchUpdate({

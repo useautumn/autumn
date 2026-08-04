@@ -1,5 +1,6 @@
 import {
 	ACTIVE_STATUSES,
+	type EntityRolloverBalance,
 	type FullCustomer,
 	InternalError,
 } from "@autumn/shared";
@@ -20,14 +21,18 @@ import type { MutationLogItem } from "../../utils/types/mutationLogItem.js";
 import { createAllocatedInvoice } from "../allocatedInvoice/createAllocatedInvoice.js";
 import type { DeductionOptions } from "../types/deductionTypes.js";
 import { applyRolloverUpdatesToFullCustomer } from "./applyRolloverUpdatesToFullCustomer.js";
-import {
-	type RolloverOverwrite,
-	syncCustomerEntitlementUpdatesToCache,
-} from "./executeDeductionCache.js";
 import { logDeductionUpdates } from "./logDeductionUpdates.js";
 import { mutationLogsToFeatures } from "./mutationLogsToFeatures.js";
 import { prepareDeductionOptions } from "./prepareDeductionOptions.js";
 import { prepareFeatureDeduction } from "./prepareFeatureDeduction.js";
+
+interface RolloverOverwrite {
+	id: string;
+	cus_ent_id: string;
+	balance: number;
+	usage: number;
+	entities: Record<string, EntityRolloverBalance>;
+}
 
 export const executePostgresDeduction = async ({
 	ctx,
@@ -91,7 +96,6 @@ export const executePostgresDeduction = async ({
 		mutationLogs: MutationLogItem[];
 	}> => {
 		let allUpdates: Record<string, DeductionUpdate> = {};
-		let allRolloverOverwrites: RolloverOverwrite[] = [];
 		let allMutationLogs: MutationLogItem[] = [];
 
 		// Need to deduct from customer entitlement...
@@ -133,9 +137,9 @@ export const executePostgresDeduction = async ({
 				continue;
 			}
 
-		// Call the stored function to deduct from entitlements with credit costs
-		const result = await db.execute(
-			sql`SELECT * FROM deduct_from_cus_ents(
+			// Call the stored function to deduct from entitlements with credit costs
+			const result = await db.execute(
+				sql`SELECT * FROM deduct_from_cus_ents(
 			${JSON.stringify({
 				sorted_entitlements: customerEntitlementDeductions,
 				spend_limit_by_feature_id: spendLimitByFeatureId ?? null,
@@ -154,7 +158,7 @@ export const executePostgresDeduction = async ({
 				feature_id: feature.id,
 			})}::jsonb
 		) ${planetScaleTag({ query: "deductFromCusEnts" })}`,
-		);
+			);
 
 			// Parse the JSONB result
 			const resultJson = result[0]?.deduct_from_cus_ents as {
@@ -179,9 +183,6 @@ export const executePostgresDeduction = async ({
 			});
 			allUpdates = { ...allUpdates, ...updates };
 			allMutationLogs = [...allMutationLogs, ...(mutation_logs ?? [])];
-			if (rollover_updates?.length > 0) {
-				allRolloverOverwrites = [...allRolloverOverwrites, ...rollover_updates];
-			}
 
 			try {
 				applyRolloverUpdatesToFullCustomer({
@@ -267,18 +268,6 @@ export const executePostgresDeduction = async ({
 				});
 			}
 		}
-
-		// Atomically update the Redis cache with the deduction results.
-		// Uses the old fullCustomer's next_reset_at as an optimistic guard
-		// to prevent stale writes if a concurrent reset occurred.
-
-		await syncCustomerEntitlementUpdatesToCache({
-			ctx,
-			customerId,
-			fullCustomer: oldFullCus,
-			cusEntUpdates: allUpdates,
-			rolloverOverwrites: allRolloverOverwrites,
-		});
 
 		return {
 			updates: allUpdates,

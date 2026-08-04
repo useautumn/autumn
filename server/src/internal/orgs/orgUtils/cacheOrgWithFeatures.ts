@@ -1,10 +1,6 @@
 import { AppEnv } from "@autumn/shared";
 import type { DrizzleCli } from "@server/db/initDrizzle.js";
-import {
-	getConfiguredRegions,
-	getRegionalRedis,
-	redis,
-} from "@/external/redis/initRedis.js";
+import { miscRedis } from "@/external/redis/initRedis.js";
 import { tryRedisOp } from "@/external/redis/utils/runRedisOp.js";
 import { OrgService } from "../OrgService.js";
 
@@ -34,8 +30,9 @@ export const getCachedOrgWithFeatures = async ({
 	const cacheKey = buildOrgWithFeaturesCacheKey({ orgId, env });
 
 	const cached = await tryRedisOp({
-		operation: () => redis.get(cacheKey),
+		operation: () => miscRedis.get(cacheKey),
 		source: "org-features-cache:get",
+		redisInstance: miscRedis,
 	});
 
 	if (!cached) return null;
@@ -57,8 +54,9 @@ export const setCachedOrgWithFeatures = async ({
 	const cacheKey = buildOrgWithFeaturesCacheKey({ orgId, env });
 
 	await tryRedisOp({
-		operation: () => redis.set(cacheKey, JSON.stringify(data), "EX", ttl),
+		operation: () => miscRedis.set(cacheKey, JSON.stringify(data), "EX", ttl),
 		source: "org-features-cache:set",
+		redisInstance: miscRedis,
 	});
 };
 
@@ -75,21 +73,17 @@ export const clearOrgWithFeaturesCache = async ({
 	const envs = env ? [env] : [AppEnv.Live, AppEnv.Sandbox];
 
 	await Promise.all(
-		getConfiguredRegions().flatMap((region) =>
-			envs.map((targetEnv) => {
-				const regionalRedis = getRegionalRedis(region);
-
-				return tryRedisOp({
-					operation: () =>
-						regionalRedis.del(
-							buildOrgWithFeaturesCacheKey({ orgId, env: targetEnv }),
-						),
-					source: `org-features-cache:clear:${region}`,
-					redisInstance: regionalRedis,
-					onError: () => {
-						logger.warn(`[clearOrgWithFeaturesCache] ${region}: delete_failed`);
-					},
-				});
+		envs.map((targetEnv) =>
+			tryRedisOp({
+				operation: () =>
+					miscRedis.del(
+						buildOrgWithFeaturesCacheKey({ orgId, env: targetEnv }),
+					),
+				source: "org-features-cache:clear",
+				redisInstance: miscRedis,
+				onError: () => {
+					logger.warn("[clearOrgWithFeaturesCache] delete_failed");
+				},
 			}),
 		),
 	);

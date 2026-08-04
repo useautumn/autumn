@@ -1,6 +1,5 @@
 import type { Redis } from "ioredis";
 import { logger } from "@/external/logtail/logtailUtils.js";
-import { redis } from "@/external/redis/initRedis.js";
 import { RedisUnavailableError } from "./errors.js";
 
 const REDIS_WARNING_INTERVAL_MS = 30_000;
@@ -73,10 +72,10 @@ export const runRedisOp = async <T>({
 }: {
 	operation: () => Promise<T>;
 	source: string;
-	redisInstance?: Redis;
+	redisInstance: Redis;
 	queueIfNotReady?: boolean;
 }): Promise<T> => {
-	const targetRedis = redisInstance ?? redis;
+	const targetRedis = redisInstance;
 
 	if (!queueIfNotReady && targetRedis.status !== "ready") {
 		const reason: UnavailableReason = "not_ready";
@@ -109,7 +108,7 @@ export const tryRedisOp = async <T>({
 }: {
 	operation: () => Promise<T>;
 	source: string;
-	redisInstance?: Redis;
+	redisInstance: Redis;
 	queueIfNotReady?: boolean;
 	onError?: (error: unknown) => void;
 }): Promise<T | undefined> => {

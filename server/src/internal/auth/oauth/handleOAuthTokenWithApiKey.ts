@@ -9,7 +9,7 @@ import {
 import { ErrCode, RecaseError } from "@autumn/shared";
 import type { Context } from "hono";
 import { db } from "@/db/initDrizzle.js";
-import { getPrimaryRedis } from "@/external/redis/initRedis.js";
+import { getMiscRedis } from "@/external/redis/initRedis.js";
 import { auth } from "@/utils/auth.js";
 import { decryptData, encryptData } from "@/utils/encryptUtils.js";
 import { timeout } from "@/utils/genUtils.js";
@@ -124,7 +124,7 @@ const REFRESH_REPLAY_PENDING = "pending";
 
 const claimRefreshReplay = async (key: string) => {
 	try {
-		const redis = getPrimaryRedis();
+		const redis = getMiscRedis();
 		if (redis.status !== "ready") return null;
 		for (let attempt = 0; attempt < 200; attempt++) {
 			const value = await redis.get(key);
@@ -161,7 +161,7 @@ const storeRefreshReplay = async ({
 	key: string;
 }) => {
 	try {
-		await getPrimaryRedis().set(
+		await getMiscRedis().set(
 			key,
 			encryptData(JSON.stringify(body)),
 			"EX",

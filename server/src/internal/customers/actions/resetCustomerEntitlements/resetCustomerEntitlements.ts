@@ -4,7 +4,6 @@ import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { resetCusEnts } from "@/internal/balances/utils/sql/client.js";
 import { resetSubjectCache } from "../resetCustomerEntitlementsV2/resetSubjectCache.js";
 import { applyResetResults } from "./applyResetResults.js";
-import { executeResetCache } from "./executeResetCache.js";
 import { getCusEntsNeedingReset } from "./getCusEntsNeedingReset.js";
 import { type ProcessResetResult, processReset } from "./processReset.js";
 import { processResetResultToResetCusEntParam } from "./processResetResultToResetCusEntParam.js";
@@ -89,14 +88,6 @@ export const resetCustomerEntitlements = async ({
 				}
 				customerEntitlementFeatureIds[cusEnt.id] = cusEnt.feature_id;
 			}
-
-			await executeResetCache({
-				ctx,
-				customerId,
-				resets,
-				oldNextResetAts,
-				clearingMap,
-			});
 
 			await resetSubjectCache({
 				ctx,

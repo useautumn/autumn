@@ -1,5 +1,5 @@
 import { ErrCode, RecaseError } from "@autumn/shared";
-import { getPrimaryRedis } from "./initRedis.js";
+import { getMiscRedis } from "./initRedis.js";
 
 // Locks live on the primary Redis: regional instances are independent stores,
 // so a region-local lock would not exclude a webhook processed in another region.
@@ -24,7 +24,7 @@ export const clearLock = async ({
 	token?: string;
 }) => {
 	try {
-		const redis = getPrimaryRedis();
+		const redis = getMiscRedis();
 		if (redis.status !== "ready") return;
 
 		if (token) {
@@ -48,7 +48,7 @@ export const refreshLockLease = async ({
 	ttlMs: number;
 }) => {
 	try {
-		const redis = getPrimaryRedis();
+		const redis = getMiscRedis();
 		if (redis.status !== "ready") return;
 		await redis.eval(OWNED_REFRESH_SCRIPT, 1, lockKey, token, ttlMs.toString());
 	} catch {
@@ -80,7 +80,7 @@ export const acquireLock = async ({
 	errorMessage?: string;
 	token?: string;
 }): Promise<boolean> => {
-	const redis = getPrimaryRedis();
+	const redis = getMiscRedis();
 
 	// If Redis not ready, allow operation to proceed
 	if (redis.status !== "ready") {

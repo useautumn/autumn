@@ -1,10 +1,6 @@
 import crypto from "node:crypto";
 import type { AppEnv } from "@autumn/shared";
-import {
-	getConfiguredRegions,
-	getRegionalRedis,
-	redis,
-} from "@/external/redis/initRedis";
+import { miscRedis } from "@/external/redis/initRedis";
 
 const PRODUCTS_CACHE_PREFIX = "products_full";
 
@@ -71,7 +67,7 @@ export const buildAllVersionsProductsCacheKey = ({
 /** All possible archived query param values that can be cached */
 const ARCHIVED_VARIANTS = [undefined, false, true] as const;
 
-/** Invalidates all products cache entries for an org/env across ALL regions */
+/** Invalidates all products cache entries for an org/env */
 export const invalidateProductsCache = async ({
 	orgId,
 	env,
@@ -79,7 +75,7 @@ export const invalidateProductsCache = async ({
 	orgId: string;
 	env: AppEnv;
 }): Promise<void> => {
-	if (redis.status !== "ready") return;
+	if (miscRedis.status !== "ready") return;
 
 	// Build all possible cache keys (deterministic based on archived param variants)
 	const keysToDelete = [
@@ -93,32 +89,14 @@ export const invalidateProductsCache = async ({
 		buildAllVersionsProductsCacheKey({ orgId, env }),
 	];
 
-	const regions = getConfiguredRegions();
-
-	// Delete from all regions in parallel
-	const deletePromises = regions.map(async (region) => {
-		try {
-			const regionalRedis = getRegionalRedis(region);
-
-			if (regionalRedis.status !== "ready") {
-				console.warn(`[invalidateProductsCache] ${region}: not_ready`);
-				return { region, deleted: 0 };
-			}
-
-			const deleted = await regionalRedis.del(...keysToDelete);
-
-			console.info(
-				`[invalidateProductsCache] ${region}: deleted ${deleted} keys, org: ${orgId}, env: ${env}`,
-			);
-
-			return { region, deleted };
-		} catch (error) {
-			console.error(
-				`[invalidateProductsCache] ${region}: error, org: ${orgId}, env: ${env}, error: ${error}`,
-			);
-			return { region, deleted: 0 };
-		}
-	});
-
-	await Promise.all(deletePromises);
+	try {
+		const deleted = await miscRedis.del(...keysToDelete);
+		console.info(
+			`[invalidateProductsCache] deleted ${deleted} keys, org: ${orgId}, env: ${env}`,
+		);
+	} catch (error) {
+		console.error(
+			`[invalidateProductsCache] error, org: ${orgId}, env: ${env}, error: ${error}`,
+		);
+	}
 };

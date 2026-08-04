@@ -7,7 +7,7 @@ import { OrgService } from "@/internal/orgs/OrgService.js";
 import { decryptData } from "@/utils/encryptUtils.js";
 import { getReachableDragonflyUrl } from "./getReachableDragonflyUrl.js";
 import { createRedisConnection, currentRegion } from "./initRedis.js";
-import { REDIS_V2_COMMAND_TIMEOUT_MS } from "./initUtils/redisV2Config.js";
+import { REDIS_V2_COMMAND_TIMEOUT_MS } from "./initUtils/createRedisClient.js";
 import { resolveRedisV2 } from "./resolveRedisV2.js";
 
 export type OrgWithRedisConfig = {
@@ -32,7 +32,6 @@ const createOrgRedisConnection = ({
 	const instance = createRedisConnection({
 		cacheUrl: connectionString,
 		region: `org:${orgId}:v2:dragonfly`,
-		supportsUpstashShebang: false,
 		commandTimeout: REDIS_V2_COMMAND_TIMEOUT_MS,
 	});
 

@@ -1,14 +1,14 @@
 import { describe, expect, test } from "bun:test";
 import type { Redis } from "ioredis";
 import {
-	createMainRedisRouter,
-	selectMainRedisClient,
-} from "@/external/redis/mainRedisRouting.js";
+	createMiscRedisRouter,
+	selectMiscRedisClient,
+} from "@/external/redis/miscRedisRouting.js";
 import { MainRedisCacheConfigSchema } from "@/internal/misc/mainRedisCache/mainRedisCacheSchemas.js";
 
 const asRedis = (value: object) => value as Redis;
 
-describe("main Redis routing", () => {
+describe("misc Redis routing", () => {
 	test("defaults edge config to primary", () => {
 		expect(MainRedisCacheConfigSchema.parse({})).toEqual({
 			activeInstance: "primary",
@@ -20,7 +20,7 @@ describe("main Redis routing", () => {
 		const fallback = asRedis({});
 
 		expect(
-			selectMainRedisClient({
+			selectMiscRedisClient({
 				activeInstance: "primary",
 				primary: () => primary,
 				fallback,
@@ -33,7 +33,7 @@ describe("main Redis routing", () => {
 		const fallback = asRedis({});
 
 		expect(
-			selectMainRedisClient({
+			selectMiscRedisClient({
 				activeInstance: "fallback",
 				primary: () => primary,
 				fallback,
@@ -45,7 +45,7 @@ describe("main Redis routing", () => {
 		const primary = asRedis({});
 
 		expect(
-			selectMainRedisClient({
+			selectMiscRedisClient({
 				activeInstance: "fallback",
 				primary: () => primary,
 				fallback: null,
@@ -89,7 +89,7 @@ describe("main Redis routing", () => {
 			},
 		};
 		let active = primary;
-		const router = createMainRedisRouter({ resolve: () => asRedis(active) });
+		const router = createMiscRedisRouter({ resolve: () => asRedis(active) });
 
 		await router.get("secret_key:hash");
 		active = fallback;

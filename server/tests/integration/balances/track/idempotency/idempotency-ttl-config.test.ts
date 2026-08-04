@@ -23,7 +23,7 @@ import { GetCommand } from "@aws-sdk/lib-dynamodb";
 import ctx from "@tests/utils/testInitUtils/createTestContext.js";
 import { getIdempotencyTableName } from "@/external/aws/dynamodb/idempotencyKeys/idempotencyKeyTable.js";
 import { getDynamoDocumentClient } from "@/external/aws/dynamodb/initDynamoDb.js";
-import { redis } from "@/external/redis/initRedis.js";
+import { miscRedis } from "@/external/redis/initRedis.js";
 import { buildIdempotencyStorageKey } from "@/internal/misc/idempotency/idempotencyKeyUtils.js";
 import { withIdempotencyKey } from "@/internal/misc/idempotency/withIdempotencyKey.js";
 
@@ -65,7 +65,7 @@ const expectStoredTtls = async ({
 }) => {
 	const expectedTtlMs = ms.hours(ttlHours);
 
-	const redisPttl = await redis.pttl(storageKey);
+	const redisPttl = await miscRedis.pttl(storageKey);
 	expect(redisPttl).toBeGreaterThan(expectedTtlMs - TOLERANCE_MS);
 	expect(redisPttl).toBeLessThanOrEqual(expectedTtlMs);
 

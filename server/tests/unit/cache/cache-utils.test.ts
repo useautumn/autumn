@@ -30,7 +30,7 @@ mock.module("@/external/logtail/logtailUtils.js", () => ({
 }));
 
 mock.module("@/external/redis/initUtils/redisConfig.js", () => ({
-	hasRedisConfig: true,
+	hasMiscRedisConfig: true,
 }));
 mock.module("@/external/redis/initUtils/redisClientRegistry.js", () => ({
 	redis: defaultRedis,
