@@ -21,7 +21,7 @@ export type CreateCustomerExportResult =
 
 export const CustomerExportService = {
 	/** Returns `created: false` when the partial unique index rejects a second active export. */
-	create: async ({
+	createIfNoneActive: async ({
 		db,
 		orgId,
 		env,

@@ -153,7 +153,7 @@ export const createExportReclaimingStale = async ({
 }): Promise<CreateCustomerExportResult> => {
 	const createParams = { db, orgId, env, fields, snapshot, requestedByUserId };
 
-	const first = await CustomerExportService.create(createParams);
+	const first = await CustomerExportService.createIfNoneActive(createParams);
 	if (first.created || !first.activeExport) return first;
 
 	const { activeExport } = first;
@@ -165,5 +165,5 @@ export const createExportReclaimingStale = async ({
 	logger.warn("customer-export: reclaimed abandoned active export", {
 		data: { staleExportId: activeExport.id },
 	});
-	return await CustomerExportService.create(createParams);
+	return await CustomerExportService.createIfNoneActive(createParams);
 };

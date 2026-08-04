@@ -105,7 +105,7 @@ describeDb("customer export jobs", () => {
 	});
 
 	test("only one queued or running export exists per org and env", async () => {
-		const first = await CustomerExportService.create({
+		const first = await CustomerExportService.createIfNoneActive({
 			db: ctx.db,
 			orgId: ctx.org.id,
 			env: ctx.env,
@@ -115,7 +115,7 @@ describeDb("customer export jobs", () => {
 		expect(first.created).toBe(true);
 		if (first.created) seededExportIds.push(first.customerExport.id);
 
-		const second = await CustomerExportService.create({
+		const second = await CustomerExportService.createIfNoneActive({
 			db: ctx.db,
 			orgId: ctx.org.id,
 			env: ctx.env,
@@ -139,7 +139,7 @@ describeDb("customer export jobs", () => {
 			});
 		}
 
-		const third = await CustomerExportService.create({
+		const third = await CustomerExportService.createIfNoneActive({
 			db: ctx.db,
 			orgId: ctx.org.id,
 			env: ctx.env,
