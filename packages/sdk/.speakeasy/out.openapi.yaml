@@ -31466,6 +31466,139 @@ paths:
       x-speakeasy-name-override: redeemCode
       parameters:
         - *a1
+  /v1/referral_programs.create:
+    post:
+      operationId: createReferralProgram
+      description: Create a referral program linked to an existing reward.
+      tags:
+        - referrals
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                id:
+                  type: string
+                  minLength: 1
+                reward_id:
+                  type: string
+                  minLength: 1
+                redeem_on:
+                  enum:
+                    - customer_creation
+                    - checkout
+                  type: string
+                  description: "When the reward is granted: on redemption, or when the redeemer checks out."
+                received_by:
+                  enum:
+                    - referrer
+                    - all
+                  type: string
+                  description: "Who receives the reward: the referrer only, or both parties."
+                max_redemptions:
+                  anyOf:
+                    - type: integer
+                      minimum: -9.007199254740991e+15
+                      maximum: 9.007199254740991e+15
+                      exclusiveMinimum: 0
+                    - type: "null"
+                  description: A positive redemption limit, or null for unlimited redemptions.
+                plan_ids:
+                  anyOf:
+                    - type: array
+                      items:
+                        type: string
+                        minLength: 1
+                    - type: "null"
+                  description: Required when redeem_on is checkout. Plan IDs must be unique.
+                exclude_trial:
+                  anyOf:
+                    - type: boolean
+                    - type: "null"
+                  description: Whether checkouts that start a trial should skip granting the reward.
+              required:
+                - id
+                - reward_id
+                - redeem_on
+                - received_by
+              additionalProperties: false
+              title: CreateReferralProgramParams
+              examples:
+                - id: refer_a_friend
+                  reward_id: beta_credits_grant
+                  redeem_on: customer_creation
+                  received_by: referrer
+                  max_redemptions: 10
+                  plan_ids: null
+                  exclude_trial: false
+                  created_at: 1718000000000
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: string
+                    description: The unique identifier for the referral program.
+                  reward_id:
+                    type: string
+                    description: The ID of the reward granted when a code is redeemed.
+                  redeem_on:
+                    enum:
+                      - customer_creation
+                      - checkout
+                    type: string
+                    description: "When the reward is granted: on redemption, or when the redeemer checks out."
+                  received_by:
+                    enum:
+                      - referrer
+                      - all
+                    type: string
+                    description: "Who receives the reward: the referrer only, or both parties."
+                  max_redemptions:
+                    anyOf:
+                      - type: number
+                      - type: "null"
+                    description: The maximum number of times a referral code can be redeemed.
+                  plan_ids:
+                    anyOf:
+                      - type: array
+                        items:
+                          type: string
+                      - type: "null"
+                    description: The plans whose checkout triggers the reward. Only used when redeem_on is checkout.
+                  exclude_trial:
+                    anyOf:
+                      - type: boolean
+                      - type: "null"
+                    description: Whether checkouts that start a trial should skip granting the reward.
+                  created_at:
+                    type: number
+                    description: The Unix timestamp (in milliseconds) when the referral program was created.
+                required:
+                  - id
+                  - reward_id
+                  - redeem_on
+                  - received_by
+                  - created_at
+                title: CreateReferralProgramResponse
+                examples:
+                  - id: refer_a_friend
+                    reward_id: beta_credits_grant
+                    redeem_on: customer_creation
+                    received_by: referrer
+                    max_redemptions: 10
+                    plan_ids: null
+                    exclude_trial: false
+                    created_at: 1718000000000
+      x-speakeasy-name-override: createProgram
+      parameters:
+        - *a1
   /v1/rewards.create:
     post:
       operationId: createReward
