@@ -20,11 +20,14 @@ export function resolveInheritedPlanScope({
 }): string | undefined {
 	if (!productId) return undefined;
 	const groupKey = getProductGroupKey({ productId, products });
-	const openingPlan = openingPhasePlans.find(
-		(plan) =>
-			plan.productId &&
-			getProductGroupKey({ productId: plan.productId, products }) === groupKey,
-	);
+	// Ungrouped plans share a group key, so an exact plan match wins before it.
+	const openingPlan =
+		openingPhasePlans.find((plan) => plan.productId === productId) ??
+		openingPhasePlans.find(
+			(plan) =>
+				plan.productId &&
+				getProductGroupKey({ productId: plan.productId, products }) === groupKey,
+		);
 	return openingPlan?.entityId ?? undefined;
 }
 
