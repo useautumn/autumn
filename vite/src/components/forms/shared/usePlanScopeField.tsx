@@ -80,6 +80,7 @@ export function usePlanScopeField({
 	return {
 		effectiveEntityId,
 		hasEntities,
+		selectedLabel,
 		scope,
 		openScope: () => setIsOpen(true),
 	};

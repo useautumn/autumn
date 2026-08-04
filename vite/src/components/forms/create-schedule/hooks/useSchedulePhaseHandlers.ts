@@ -5,6 +5,7 @@ import {
 	isCreateSchedulePhaseLocked,
 	type SchedulePlan,
 } from "../createScheduleFormSchema";
+import { filterPlansByScope } from "../scheduleUtils";
 import type { UseCreateScheduleForm } from "./useCreateScheduleForm";
 
 const clonePlans = (plans: SchedulePlan[]): SchedulePlan[] =>
@@ -114,10 +115,31 @@ export function useSchedulePhaseHandlers({
 		[form, isPhaseLocked],
 	);
 
-	const handleCopyExistingPlans = useCallback(() => {
-		if (!existingPlans.length || isPhaseLocked({ phaseIndex: 0 })) return;
-		form.setFieldValue("phases[0].plans", clonePlans(existingPlans));
-	}, [form, existingPlans, isPhaseLocked]);
+	// Copies into the row that asked, so only that row's scope is pulled in.
+	const handleCopyExistingPlans = useCallback(
+		({
+			planIndex,
+			entityId,
+		}: {
+			planIndex: number;
+			entityId: string | null;
+		}) => {
+			if (isPhaseLocked({ phaseIndex: 0 })) return;
+			const scopedPlans = filterPlansByScope({
+				plans: existingPlans,
+				entityId,
+			});
+			if (!scopedPlans.length) return;
+
+			const plans = form.store.state.values.phases[0]?.plans ?? [];
+			form.setFieldValue("phases[0].plans", [
+				...clonePlans(plans.slice(0, planIndex)),
+				...clonePlans(scopedPlans),
+				...clonePlans(plans.slice(planIndex + 1)),
+			]);
+		},
+		[form, existingPlans, isPhaseLocked],
+	);
 
 	const handlePlanEditSave = useCallback(
 		({ plan }: { plan: SchedulePlan }) => {

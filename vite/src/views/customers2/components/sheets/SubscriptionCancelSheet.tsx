@@ -10,7 +10,6 @@ import { CancelFooter } from "@/components/forms/cancel-subscription/components/
 import { CancelModeSection } from "@/components/forms/cancel-subscription/components/CancelModeSection";
 import { CancelPreviewSection } from "@/components/forms/cancel-subscription/components/CancelPreviewSection";
 import { RefundBehaviorSection } from "@/components/forms/cancel-subscription/components/RefundBehaviorSection";
-import { ScheduledPlanGuard } from "@/components/forms/create-schedule/components/ScheduledPlanGuard";
 import {
 	type UpdateSubscriptionFormContext,
 	UpdateSubscriptionFormProvider,
@@ -140,15 +139,13 @@ export function SubscriptionCancelSheet() {
 	}
 
 	return (
-		<ScheduledPlanGuard customerProductId={cusProduct.id}>
-			<UpdateSubscriptionFormProvider
-				formContext={formContext}
-				originalItems={undefined}
-				defaultOverrides={{ cancelAction: defaultCancelAction }}
-				onSuccess={closeSheet}
-			>
-				<SheetContent />
-			</UpdateSubscriptionFormProvider>
-		</ScheduledPlanGuard>
+		<UpdateSubscriptionFormProvider
+			formContext={formContext}
+			originalItems={undefined}
+			defaultOverrides={{ cancelAction: defaultCancelAction }}
+			onSuccess={closeSheet}
+		>
+			<SheetContent />
+		</UpdateSubscriptionFormProvider>
 	);
 }

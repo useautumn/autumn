@@ -49,22 +49,26 @@ export function UnscheduledPlanRow({ planIndex }: { planIndex: number }) {
 	};
 
 	if (!plan.productId) {
+		// Group conflicts are per scope, so the scope has to be pickable before a
+		// plan is chosen — otherwise every group reads as taken at customer level.
 		return (
-			<div className="group relative">
-				<SchedulePlanPicker
-					products={availableProducts}
-					usedKeys={usedKeys}
-					siblingProductIds={
-						new Set(
-							formValues.unscheduledPlans
-								.filter((_, index) => index !== planIndex)
-								.map((p) => p.productId)
-								.filter(Boolean),
-						)
-					}
-					onSelect={handleProductChange}
-				/>
-			</div>
+			<ScopedPlanRow scope={scope}>
+				<div className="group relative min-w-0 flex-1">
+					<SchedulePlanPicker
+						products={availableProducts}
+						usedKeys={usedKeys}
+						siblingProductIds={
+							new Set(
+								formValues.unscheduledPlans
+									.filter((_, index) => index !== planIndex)
+									.map((p) => p.productId)
+									.filter(Boolean),
+							)
+						}
+						onSelect={handleProductChange}
+					/>
+				</div>
+			</ScopedPlanRow>
 		);
 	}
 

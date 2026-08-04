@@ -77,7 +77,13 @@ interface CreateScheduleFormContextValue {
 	handleAddUnscheduledPlan: () => void;
 	handleRemoveUnscheduledPlan: ({ planIndex }: { planIndex: number }) => void;
 	handleCopyFromPreviousPhase: ({ phaseIndex }: { phaseIndex: number }) => void;
-	handleCopyExistingPlans: () => void;
+	handleCopyExistingPlans: ({
+		planIndex,
+		entityId,
+	}: {
+		planIndex: number;
+		entityId: string | null;
+	}) => void;
 
 	editingPlan: EditingPlan | null;
 	editingPlanValue: SchedulePlan | null;

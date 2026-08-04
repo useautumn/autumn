@@ -33,9 +33,10 @@ export function SchedulePlanRow({
 	const openingPhasePlans = formValues.phases[0]?.plans ?? [];
 	const isOpeningPhase = phaseIndex === 0;
 	const isLocked = isPhaseLocked({ phaseIndex });
+	const isScopeEditable = isOpeningPhase && !isLocked;
 	// A schedule can't change scope mid-flight: later phases display what they
 	// inherit from the opening phase's plan in the same group, read-only.
-	const { scope } = usePlanScopeField({
+	const { scope, hasEntities, selectedLabel } = usePlanScopeField({
 		planEntityId: isOpeningPhase ? plan?.entityId : undefined,
 		defaultEntityId: isOpeningPhase
 			? undefined
@@ -44,7 +45,7 @@ export function SchedulePlanRow({
 					openingPhasePlans,
 					products,
 				}),
-		disabled: !isOpeningPhase || isLocked,
+		disabled: !isScopeEditable,
 		disabledReason: isLocked
 			? "this phase has started"
 			: "set on the first phase",
@@ -90,23 +91,37 @@ export function SchedulePlanRow({
 	};
 
 	if (!plan.productId) {
+		// Group conflicts are per scope, so the scope has to be pickable before a
+		// plan is chosen — otherwise every group reads as taken at customer level.
 		return (
-			<div className={cn("group relative", isLocked && "opacity-60")}>
-				<SchedulePlanPicker
-					products={availableProducts}
-					usedKeys={usedKeys}
-					siblingProductIds={selectedProductIdsInPhase}
-					header={
-						isOpeningPhase ? (
-							<CopyExistingPlansButton phaseIndex={phaseIndex} />
-						) : (
-							<CopyFromPreviousPhaseButton phaseIndex={phaseIndex} />
-						)
-					}
-					disabled={isLocked}
-					onSelect={handleProductChange}
-				/>
-			</div>
+			<ScopedPlanRow scope={isScopeEditable ? scope : undefined}>
+				<div
+					className={cn(
+						"group relative min-w-0 flex-1",
+						isLocked && "opacity-60",
+					)}
+				>
+					<SchedulePlanPicker
+						products={availableProducts}
+						usedKeys={usedKeys}
+						siblingProductIds={selectedProductIdsInPhase}
+						header={
+							isOpeningPhase ? (
+								<CopyExistingPlansButton
+									phaseIndex={phaseIndex}
+									planIndex={planIndex}
+									entityId={plan.entityId ?? null}
+									scopeLabel={hasEntities ? selectedLabel : undefined}
+								/>
+							) : (
+								<CopyFromPreviousPhaseButton phaseIndex={phaseIndex} />
+							)
+						}
+						disabled={isLocked}
+						onSelect={handleProductChange}
+					/>
+				</div>
+			</ScopedPlanRow>
 		);
 	}
 

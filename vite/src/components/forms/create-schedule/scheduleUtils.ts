@@ -28,6 +28,17 @@ export function resolveInheritedPlanScope({
 	return openingPlan?.entityId ?? undefined;
 }
 
+/** Plans sitting at exactly one scope — null is customer-level. */
+export function filterPlansByScope({
+	plans,
+	entityId,
+}: {
+	plans: SchedulePlan[];
+	entityId: string | null;
+}): SchedulePlan[] {
+	return plans.filter((plan) => (plan.entityId ?? null) === entityId);
+}
+
 /**
  * An unscheduled plan conflicts with any phase that claims its group and scope,
  * so every phase counts as used — later phases at the scope they inherit.
