@@ -31,6 +31,9 @@ function logMemoryUsage(label: string) {
 		return;
 	}
 
+	// Sweep floating garbage first: JSC defers collection until memory pressure,
+	// so unswept transients otherwise read as a leak in rss/heapUsed.
+	Bun.gc(true);
 	const mem = process.memoryUsage();
 
 	const lagMeanMs = Math.round((lagHistogram.mean / 1e6) * 10) / 10;
