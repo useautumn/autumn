@@ -1,15 +1,35 @@
 import type { TestGroup } from "./types";
 
-// Genuine bugs surfaced by `bun tw core` (run msexci3e-dlq27t, branch
-// fix/tw-flakiness). These are NOT settle/timing flakes — each was still
-// failing after 45-120s of assertion polling. Clear when fixed.
+// Failures from `bun tw core` (runs msexci3e-dlq27t / msextjqb-ur56y1, branch
+// fix/tw-flakiness) that are NOT settle/timing flakes — each still failed after
+// 45-150s of assertion polling. Two groups; clear entries as they're fixed.
+//
+// GROUP 2 — track-vs-billing-action race (one shared root cause).
+//   Symptom is always the same shape: the asserted balance comes back as the
+//   FULL, un-deducted total, and polling never recovers it.
+//   Mechanism: `track` deducts in Redis and queues a sync; a billing action
+//   (attach / update) then bumps cache_version; syncItemV4.ts:50-58 resolves the
+//   resulting CACHE_VERSION_MISMATCH by calling deleteCachedFullCustomer — so a
+//   deduction still living only in Redis is DISCARDED rather than replayed.
+//   Not just a test problem: in production a track racing an attach silently
+//   drops usage (unbilled revenue). Fix belongs in the sync conflict path.
+//
+// GROUP 3 — individually genuine bugs, unrelated to each other.
 const activeTempPaths: string[] = [
+	// ── GROUP 2: track-vs-billing-action race ───────────────────────────────
 	// ✗ "legacy-upgrade-usage 1: consumable upgrades Pro → Premium → Growth"
-	//   and "…2: monthly → annual interval change" — Expected: -100, Received: 100.
-	//   Track fired right after an attach is lost: the deduction never lands, so
-	//   this is a track-vs-billing-action race, not lateness (polling can't
-	//   recover a dropped deduction).
+	//   Expected: -200, Received: 100 (also "…2: monthly → annual interval
+	//   change", Expected: -100). Tracks 150/200/300 words around attaches.
 	"integration/billing/legacy/attach/upgrade/legacy-upgrade-usage.test.ts",
+	// ✗ "prepaid: add included usage" — Expected: 100, Received: 200.
+	//   Also "prepaid: change price and billing units".
+	"integration/billing/update-subscription/custom-plan/update-paid-prepaid.test.ts",
+	// ✗ "update-quantity-prepaid-overage: increase quantity with balance
+	//   recalculation" — Expected: 0, Received: 300. Also the "without balance
+	//   recalculation" variant.
+	"integration/billing/update-subscription/params/recalculate-balances/update-quantity-prepaid-overage.test.ts",
+
+	// ── GROUP 3: individual bugs ────────────────────────────────────────────
 	// ✗ "legacy one-off rwf: prepaid one-off charges major units, not x100"
 	//   Expected: "paid", Received: "draft". Already polls 120s via
 	//   waitForCustomerInvoiceStatus — the zero-decimal (RWF) invoice on a
