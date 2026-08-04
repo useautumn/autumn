@@ -2,6 +2,7 @@ import type { Redis } from "ioredis";
 import { resolveCustomerRedisRouting } from "@/external/redis/customerRedisRouting.js";
 import type { CustomerEntitlementBalanceInvalidation } from "@/internal/customers/cache/fullSubject/actions/invalidate/batchInvalidateCustomerEntitlementBalances.js";
 import { batchInvalidateCustomerEntitlementBalances } from "@/internal/customers/cache/fullSubject/actions/invalidate/batchInvalidateCustomerEntitlementBalances.js";
+import { markCustomersUpdatedAt } from "@/internal/customers/customerLsns/markCustomerUpdatedAt.js";
 import type { BatchResetGroup, ResetMutation } from "../types.js";
 
 /**
@@ -58,5 +59,13 @@ export const invalidateResetCaches = async ({
 				invalidations,
 			});
 		}
+
+		// Reset writes must pin these customers to the primary for 60s —
+		// a replica read here would serve pre-reset balances.
+		await markCustomersUpdatedAt({
+			customers: [...invalidationsByRedis.values()]
+				.flat()
+				.map(({ orgId, env, customerId }) => ({ orgId, env, customerId })),
+		});
 	}
 };
