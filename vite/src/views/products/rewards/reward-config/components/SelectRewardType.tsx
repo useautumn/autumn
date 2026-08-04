@@ -11,17 +11,11 @@ import { defaultDiscountConfig } from "../../utils/defaultRewardModels";
 interface SelectRewardTypeProps {
 	reward: FrontendReward;
 	setReward: (reward: FrontendReward) => void;
-	/** Free product rewards are legacy — only shown when editing one that already exists */
-	allowFreeProduct?: boolean;
 }
 
-export function SelectRewardType({
-	reward,
-	setReward,
-	allowFreeProduct = false,
-}: SelectRewardTypeProps) {
+export function SelectRewardType({ reward, setReward }: SelectRewardTypeProps) {
+	// Free product rewards are legacy — only shown when editing one that already exists
 	const showFreeProduct =
-		allowFreeProduct ||
 		reward.rewardCategory === FrontendRewardCategory.FreeProduct;
 
 	return (

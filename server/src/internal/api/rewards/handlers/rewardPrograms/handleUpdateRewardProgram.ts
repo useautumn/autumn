@@ -55,6 +55,8 @@ export const handleUpdateRewardProgram = createRoute({
 		const isChangingReward =
 			body.internal_reward_id !== existingProgram.internal_reward_id;
 
+		let internalRewardId = body.internal_reward_id;
+
 		if (isChangingReward) {
 			const reward = await rewardRepo.get({
 				db,
@@ -79,18 +81,30 @@ export const handleUpdateRewardProgram = createRoute({
 					statusCode: 400,
 				});
 			}
+
+			// The lookup accepts id or internal_id, but the FK requires internal_id
+			internalRewardId = reward.internal_id;
 		}
 
-		if (
-			body.when === RewardTriggerEvent.Checkout &&
-			(nullish(body.product_ids) || body.product_ids.length === 0)
-		) {
-			throw new RecaseError({
-				message:
-					"When `Redeem On` is set to `Checkout`, must specify at least one product",
-				code: ErrCode.InvalidRequest,
-				statusCode: 400,
-			});
+		if (body.when === RewardTriggerEvent.Checkout) {
+			if (nullish(body.product_ids) || body.product_ids.length === 0) {
+				throw new RecaseError({
+					message:
+						"When `Redeem On` is set to `Checkout`, must specify at least one product",
+					code: ErrCode.InvalidRequest,
+					statusCode: 400,
+				});
+			}
+
+			// Checkout grants are skipped when redemption count >= max, so 0 blocks every grant
+			if (!body.max_redemptions) {
+				throw new RecaseError({
+					message:
+						"When `Redeem On` is set to `Checkout`, max redemptions must be greater than 0",
+					code: ErrCode.InvalidRequest,
+					statusCode: 400,
+				});
+			}
 		}
 
 		const updatedRewardProgram = await rewardProgramRepo.update({
@@ -98,7 +112,10 @@ export const handleUpdateRewardProgram = createRoute({
 			idOrInternalId: id,
 			orgId: org.id,
 			env,
-			data: body as RewardProgram,
+			data: {
+				...body,
+				internal_reward_id: internalRewardId,
+			} as RewardProgram,
 		});
 
 		return c.json(updatedRewardProgram);

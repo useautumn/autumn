@@ -15,6 +15,7 @@ import { prepareNewBalanceForInsertion } from "@/internal/balances/createBalance
 import { CusEntService } from "@/internal/customers/cusProducts/cusEnts/CusEntitlementService.js";
 import { deleteCachedFullCustomer } from "@/internal/customers/cusUtils/fullCustomerCacheUtils/deleteCachedFullCustomer.js";
 import { EntitlementService } from "@/internal/products/entitlements/EntitlementService.js";
+import { generateId } from "@/utils/genUtils.js";
 
 type RewardEntitlement = NonNullable<Reward["entitlements"]>[number];
 
@@ -116,7 +117,7 @@ export const grantRewardEntitlements = async ({
 					feature_id: feature.id,
 					included_grant: isBoolean ? undefined : (allowance ?? undefined),
 					expires_at: resolveExpiresAt(rewardEnt),
-					balance_id: `${balanceIdPrefix}_${new Date().toISOString().slice(0, 10).replace(/-/g, "_")}`,
+					balance_id: `${balanceIdPrefix}_${feature.id}_${generateId("bal")}`,
 				},
 			});
 

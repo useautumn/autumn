@@ -61,6 +61,18 @@ export const triggerFeatureGrant = async ({
 
 	const balanceIdPrefix = `referral_${rewardProgram.id}`;
 
+	// Claim the redemption first — grants insert new balances, so a retry after a
+	// partial failure would double-grant whoever already succeeded
+	await redemptionRepo.update({
+		db,
+		id: redemption.id,
+		updates: {
+			triggered: true,
+			applied: grantToReferrer,
+			redeemer_applied: grantToRedeemer,
+		},
+	});
+
 	if (grantToReferrer) {
 		await grantRewardEntitlements({
 			ctx,
@@ -80,16 +92,6 @@ export const triggerFeatureGrant = async ({
 		});
 		logger.info(`Granted feature reward to redeemer ${fullRedeemer.id}`);
 	}
-
-	await redemptionRepo.update({
-		db,
-		id: redemption.id,
-		updates: {
-			triggered: true,
-			applied: grantToReferrer,
-			redeemer_applied: grantToRedeemer,
-		},
-	});
 
 	return {
 		referrer: {

@@ -86,16 +86,27 @@ export const handleCreateRewardProgram = createRoute({
 			env,
 		});
 
-		if (
-			rewardProgram.when === RewardTriggerEvent.Checkout &&
-			(nullish(rewardProgram.product_ids) ||
-				rewardProgram.product_ids!.length === 0)
-		) {
-			throw new RecaseError({
-				message: "If redeem on checkout, must specify at least one product",
-				code: ErrCode.InvalidRequest,
-				statusCode: 400,
-			});
+		if (rewardProgram.when === RewardTriggerEvent.Checkout) {
+			if (
+				nullish(rewardProgram.product_ids) ||
+				rewardProgram.product_ids!.length === 0
+			) {
+				throw new RecaseError({
+					message: "If redeem on checkout, must specify at least one product",
+					code: ErrCode.InvalidRequest,
+					statusCode: 400,
+				});
+			}
+
+			// Checkout grants are skipped when redemption count >= max, so 0 blocks every grant
+			if (!rewardProgram.max_redemptions) {
+				throw new RecaseError({
+					message:
+						"If redeem on checkout, max redemptions must be greater than 0",
+					code: ErrCode.InvalidRequest,
+					statusCode: 400,
+				});
+			}
 		}
 
 		const createdRewardProgram = await rewardProgramRepo.insert({
