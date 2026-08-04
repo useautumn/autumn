@@ -62,11 +62,21 @@ export function priceToEnt({
 	entitlements: EntitlementWithFeature[];
 	errorOnNotFound?: boolean;
 }): EntitlementWithFeature | undefined {
-	const entitlement = entitlements.find(
-		(ent) =>
-			ent.id === price.entitlement_id &&
-			ent.internal_product_id === price.internal_product_id,
+	// Prefer the entitlement that also shares the price's product — the original,
+	// strict match, so nothing changes for a well-formed product. Only fall back
+	// to id alone, because a customer product can carry entitlement rows owned by
+	// another product (grandfathered rows that survive a version bump) while a
+	// regenerated custom price is stamped with the customer product's own
+	// internal_product_id. Entitlement ids are globally unique, so the fallback
+	// cannot resolve to a different entitlement than the strict match would have.
+	// Mirrors the scoped sibling customerPriceToCustomerEntitlement.
+	const idMatches = entitlements.filter(
+		(ent) => ent.id === price.entitlement_id,
 	);
+	const entitlement =
+		idMatches.find(
+			(ent) => ent.internal_product_id === price.internal_product_id,
+		) ?? idMatches[0];
 
 	if (!entitlement && errorOnNotFound) {
 		throw new InternalError({
