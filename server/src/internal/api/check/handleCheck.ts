@@ -25,6 +25,12 @@ export const handleCheck = createRoute({
 	scopes: [Scopes.Balances.Read],
 	failOpen: {
 		timeoutMs: CHECK_FAIL_OPEN_TIMEOUT_MS,
+		// Lock checks must settle (the abandoned run would still create a lock
+		// receipt → leaked reservation); product checks return a non-feature shape.
+		skip: (c) => {
+			const body = c.req.valid("json");
+			return Boolean(body.lock?.enabled || body.product_id);
+		},
 		respond: (c) => {
 			const ctx = c.get("ctx");
 			const body = parseCheckParamsForLock({ params: c.req.valid("json") });

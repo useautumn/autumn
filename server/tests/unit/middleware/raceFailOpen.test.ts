@@ -1,5 +1,7 @@
 import { describe, expect, it } from "bun:test";
-import { raceFailOpen } from "@/honoMiddlewares/routeHandler.js";
+import { Scopes } from "@autumn/shared";
+import { Hono } from "hono";
+import { createRoute, raceFailOpen } from "@/honoMiddlewares/routeHandler.js";
 
 const response = (label: string) => new Response(label);
 
@@ -55,5 +57,75 @@ describe("raceFailOpen", () => {
 				respond: () => response("fail-open"),
 			}),
 		).rejects.toThrow("real error");
+	});
+
+	it("a synchronously throwing respond rejects the race instead of hanging", async () => {
+		await expect(
+			raceFailOpen({
+				run: async () => {
+					await Bun.sleep(100);
+					return response("handler");
+				},
+				timeoutMs: 10,
+				respond: () => {
+					throw new Error("respond blew up");
+				},
+			}),
+		).rejects.toThrow("respond blew up");
+	});
+
+	it("an async-rejecting respond also rejects the race", async () => {
+		await expect(
+			raceFailOpen({
+				run: async () => {
+					await Bun.sleep(100);
+					return response("handler");
+				},
+				timeoutMs: 10,
+				respond: async () => {
+					throw new Error("async respond failure");
+				},
+			}),
+		).rejects.toThrow("async respond failure");
+	});
+});
+
+describe("createRoute failOpen skip", () => {
+	// Mounted under /webhooks/ so the scope-check middleware self-bypasses and
+	// no request ctx is needed.
+	const buildApp = ({ skip }: { skip: () => boolean }) => {
+		const app = new Hono();
+		app.post(
+			"/webhooks/fail-open-test",
+			...createRoute({
+				scopes: [Scopes.Public],
+				failOpen: {
+					timeoutMs: 20,
+					skip,
+					respond: () => response("fail-open"),
+				},
+				handler: async () => {
+					await Bun.sleep(60);
+					return response("handler");
+				},
+			}),
+		);
+		return app;
+	};
+
+	it("skip=true runs the handler unraced even when it exceeds the timeout", async () => {
+		const app = buildApp({ skip: () => true });
+		const result = await app.request("/webhooks/fail-open-test", {
+			method: "POST",
+		});
+		expect(await result.text()).toBe("handler");
+	});
+
+	it("skip=false still races and fails open when the handler is slow", async () => {
+		const app = buildApp({ skip: () => false });
+		const result = await app.request("/webhooks/fail-open-test", {
+			method: "POST",
+		});
+		expect(await result.text()).toBe("fail-open");
 	});
 });

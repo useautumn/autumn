@@ -124,7 +124,12 @@ export const raceFailOpen = async ({
 }): Promise<Response> => {
 	let timer: ReturnType<typeof setTimeout> | undefined;
 	const failOpen = new Promise<Response>((resolve) => {
-		timer = setTimeout(() => resolve(Promise.resolve(respond())), timeoutMs);
+		// Promise.resolve().then(respond) turns a sync throw into a rejection of
+		// the race instead of an uncaught exception inside the timer callback.
+		timer = setTimeout(
+			() => resolve(Promise.resolve().then(respond)),
+			timeoutMs,
+		);
 	});
 	try {
 		return await Promise.race([run(), failOpen]);
@@ -186,6 +191,9 @@ export function createRoute<
 	 *  and the in-flight execution is abandoned (locks TTL out). */
 	failOpen?: {
 		timeoutMs: number;
+		/** Return true to run this request unraced — for requests where an
+		 *  abandoned execution has side effects the fallback can't represent. */
+		skip?: (c: ValidatedContext<HonoEnv, Body, Query, Params>) => boolean;
 		respond: (
 			c: ValidatedContext<HonoEnv, Body, Query, Params>,
 		) => Response | Promise<Response>;
@@ -322,7 +330,7 @@ export function createRoute<
 		c: ValidatedContext<HonoEnv, Body, Query, Params>,
 	) => {
 		const { failOpen } = opts;
-		if (!failOpen) return executeRoute(c);
+		if (!failOpen || failOpen.skip?.(c)) return executeRoute(c);
 		return raceFailOpen({
 			run: () => executeRoute(c),
 			timeoutMs: failOpen.timeoutMs,
