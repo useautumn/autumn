@@ -4,9 +4,13 @@ import {
 	type RewardProgram,
 	RewardReceivedBy,
 	RewardTriggerEvent,
+	RewardType,
 } from "@autumn/shared";
 import {
 	Checkbox,
+	DropdownMenu,
+	DropdownMenuContent,
+	DropdownMenuItem,
 	FieldLabel,
 	Input,
 	Select,
@@ -15,17 +19,11 @@ import {
 	SelectTrigger,
 	SelectValue,
 } from "@autumn/ui";
-import { PackageIcon, XIcon } from "@phosphor-icons/react";
 import { useId } from "react";
-import {
-	DropdownMenu,
-	DropdownMenuContent,
-	DropdownMenuItem,
-	DropdownMenuTrigger,
-} from "@autumn/ui";
 import { useProductsQuery } from "@/hooks/queries/useProductsQuery";
 import { useRewardsQuery } from "@/hooks/queries/useRewardsQuery";
 import { keyToTitle } from "@/utils/formatUtils/formatTextUtils";
+import { ChipSelectTrigger } from "../components/ChipSelectTrigger";
 
 export const RewardProgramConfig = ({
 	rewardProgram,
@@ -39,10 +37,17 @@ export const RewardProgramConfig = ({
 	const { rewards } = useRewardsQuery();
 	const excludeTrialId = useId();
 
+	// Legacy programs may point at other reward types, so keep the current one selectable
+	const selectableRewards = rewards.filter(
+		(reward: Reward) =>
+			reward.type === RewardType.FeatureGrant ||
+			reward.internal_id === rewardProgram.internal_reward_id,
+	);
+
 	return (
 		<div className="flex flex-col gap-4">
 			<div className="flex gap-2">
-				<div className="w-full">
+				<div className="min-w-0 flex-1">
 					<FieldLabel>Program ID</FieldLabel>
 					<Input
 						disabled={isUpdate}
@@ -53,7 +58,7 @@ export const RewardProgramConfig = ({
 						}
 					/>
 				</div>
-				<div className="w-full">
+				<div className="min-w-0 flex-1">
 					<FieldLabel>Reward</FieldLabel>
 					<Select
 						value={rewardProgram.internal_reward_id}
@@ -61,7 +66,7 @@ export const RewardProgramConfig = ({
 							setRewardProgram({ ...rewardProgram, internal_reward_id: value })
 						}
 						items={Object.fromEntries(
-							rewards.map((reward: Reward) => [
+							selectableRewards.map((reward: Reward) => [
 								reward.internal_id,
 								reward.name,
 							]),
@@ -70,10 +75,14 @@ export const RewardProgramConfig = ({
 						<SelectTrigger className="w-full">
 							<SelectValue placeholder="Select a reward" />
 						</SelectTrigger>
-						<SelectContent>
-							{rewards.map((reward: Reward) => (
-								<SelectItem key={reward.name} value={reward.internal_id}>
-									{reward.name}
+						<SelectContent className="w-[var(--anchor-width)]">
+							{selectableRewards.map((reward: Reward) => (
+								<SelectItem
+									className="min-w-0 pr-6 [&>div]:min-w-0"
+									key={reward.name}
+									value={reward.internal_id}
+								>
+									<span className="truncate">{reward.name}</span>
 								</SelectItem>
 							))}
 						</SelectContent>
@@ -81,7 +90,7 @@ export const RewardProgramConfig = ({
 				</div>
 			</div>
 			<div className="flex gap-2">
-				<div className="w-full">
+				<div className="min-w-0 flex-1">
 					<FieldLabel>Redeem On</FieldLabel>
 					<Select
 						defaultValue={RewardTriggerEvent.CustomerCreation}
@@ -121,7 +130,7 @@ export const RewardProgramConfig = ({
 						</SelectContent>
 					</Select>
 				</div>
-				<div className="w-full">
+				<div className="min-w-0 flex-1">
 					<FieldLabel>Max Redemptions</FieldLabel>
 					<Input
 						type="number"
@@ -201,8 +210,6 @@ export const RewardProgramConfig = ({
 	);
 };
 
-const MAX_VISIBLE_CHIPS = 3;
-
 const ProductSelector = ({
 	rewardProgram,
 	setRewardProgram,
@@ -234,45 +241,15 @@ const ProductSelector = ({
 	return (
 		<div className="min-w-0 w-full">
 			<DropdownMenu>
-				<DropdownMenuTrigger className="flex h-8 w-full min-w-0 cursor-pointer items-center gap-1.5 overflow-hidden rounded-xl px-3 input-base input-state-open-tiny text-sm">
-					{productIds.length === 0 ? (
-						<span className="text-tertiary-foreground">Select plans...</span>
-					) : (
-						<>
-							{productIds.slice(0, MAX_VISIBLE_CHIPS).map((productId) => (
-								<span
-									className="flex h-4.5 max-w-48 shrink-0 items-center gap-0.5 rounded border border-border bg-accent px-1 text-[10px] text-foreground"
-									key={productId}
-								>
-									<span className="shrink-0 [&_svg]:size-3">
-										<PackageIcon
-											className="text-tertiary-foreground"
-											size={12}
-											weight="duotone"
-										/>
-									</span>
-									<span className="truncate">{getProductName(productId)}</span>
-									<span
-										className="ml-0.5 cursor-pointer text-tertiary-foreground hover:text-destructive"
-										onClick={(e) => {
-											e.stopPropagation();
-											toggleProduct(productId);
-										}}
-										onPointerDown={(e) => e.stopPropagation()}
-									>
-										<XIcon size={10} />
-									</span>
-								</span>
-							))}
-							{productIds.length > MAX_VISIBLE_CHIPS && (
-								<span className="shrink-0 px-1 text-sm text-tertiary-foreground">
-									+{productIds.length - MAX_VISIBLE_CHIPS}
-								</span>
-							)}
-						</>
-					)}
-				</DropdownMenuTrigger>
-				<DropdownMenuContent align="start" className="w-64">
+				<ChipSelectTrigger
+					chips={productIds.map((productId) => ({
+						key: productId,
+						label: getProductName(productId),
+						onRemove: () => toggleProduct(productId),
+					}))}
+					placeholder="Select plans..."
+				/>
+				<DropdownMenuContent align="start" className="w-[var(--anchor-width)]">
 					<div className="max-h-72 overflow-y-auto">
 						{products.map((product: ProductV2) => (
 							<DropdownMenuItem
