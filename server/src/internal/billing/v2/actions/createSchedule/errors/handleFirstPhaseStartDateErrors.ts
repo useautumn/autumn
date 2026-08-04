@@ -5,6 +5,7 @@ import {
 	ms,
 	RecaseError,
 } from "@autumn/shared";
+import { isExistingScheduleUpdate } from "@/internal/billing/v2/actions/createSchedule/utils/isExistingScheduleUpdate";
 import { assertNoBackdateWithExistingSubscription } from "@/internal/billing/v2/utils/backdate/assertNoBackdateWithExistingSubscription";
 import { assertStripeBackdateInvoiceLineItemLimit } from "@/internal/billing/v2/utils/backdate/stripeBackdateInvoiceLimit";
 
@@ -36,7 +37,11 @@ export const handleFirstPhaseStartDateErrors = ({
 		});
 	}
 
-	if (!stripeSubscriptionSchedule && firstPhaseStartsInPast) {
+	// Re-saving an existing schedule replays the started phase's own start date,
+	// which is a past timestamp but never a request to bill from it.
+	const isUpdate = isExistingScheduleUpdate({ billingContext });
+
+	if (!isUpdate && firstPhaseStartsInPast) {
 		const allImmediateProductsPaidRecurring =
 			billingContext.fullProducts.length > 0 &&
 			billingContext.fullProducts.every(isProductPaidAndRecurring);

@@ -92,6 +92,9 @@ export const computeCreateSchedulePlan = ({
 	const autumnBillingPlan: AutumnBillingPlan = {
 		customerId:
 			billingContext.fullCustomer.id ?? billingContext.fullCustomer.internal_id,
+		// persistCreateSchedule replaces the schedule wholesale and reads the old
+		// phases to find it, so nothing may rewrite them mid-flight.
+		ownsSchedulePersistence: true,
 		insertCustomerProducts: allInsertCustomerProducts,
 		updateCustomerProducts: [
 			...immediate.updateCustomerProducts,

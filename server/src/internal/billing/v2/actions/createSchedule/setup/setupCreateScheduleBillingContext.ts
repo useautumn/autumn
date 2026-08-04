@@ -23,6 +23,7 @@ import {
 } from "../errors/normalizeCreateSchedulePhases";
 import { validateCreateSchedulePhasePlans } from "../errors/validateCreateSchedulePhasePlans";
 import { validateUnscheduledPlanScopes } from "../errors/validateUnscheduledPlanScopes";
+import { isExistingScheduleUpdate } from "../utils/isExistingScheduleUpdate";
 import { resolveCreateScheduleRecurringProducts } from "../utils/resolveCreateScheduleRecurringProducts";
 import { buildOpeningPhaseScopes } from "../utils/resolvePhaseScopeInheritance";
 import { setupScheduledProductsContext } from "./setupScheduledProductsContext";
@@ -125,15 +126,6 @@ const getCurrentPhaseIndex = ({
 	return currentPhaseIndex;
 };
 
-const hasScheduledCustomerProducts = ({
-	billingContext,
-}: {
-	billingContext: Pick<MultiAttachBillingContext, "fullCustomer">;
-}) =>
-	billingContext.fullCustomer.customer_products.some(
-		(customerProduct) => (customerProduct.scheduled_ids?.length ?? 0) > 0,
-	);
-
 const setupCreateScheduleImmediatePhase = async ({
 	ctx,
 	params,
@@ -147,10 +139,7 @@ const setupCreateScheduleImmediatePhase = async ({
 	billingContext: MultiAttachBillingContext;
 	normalizedPhases: ReturnType<typeof normalizeCreateSchedulePhases>;
 }) => {
-	const isExistingScheduleUpdate =
-		billingContext.stripeSubscriptionSchedule ||
-		hasScheduledCustomerProducts({ billingContext });
-	const immediatePhaseIndex = isExistingScheduleUpdate
+	const immediatePhaseIndex = isExistingScheduleUpdate({ billingContext })
 		? getCurrentPhaseIndex({
 				phases: normalizedPhases,
 				currentEpochMs: billingContext.currentEpochMs,

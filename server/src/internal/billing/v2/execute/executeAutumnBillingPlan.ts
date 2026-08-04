@@ -2,6 +2,7 @@ import type { AutumnBillingPlan, Invoice } from "@autumn/shared";
 import type Stripe from "stripe";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { EntityService } from "@/internal/api/entities/EntityService";
+import { computeSchedulePhaseReplacements } from "@/internal/billing/v2/compute/computeSchedulePhaseReplacements";
 import { executeAutoTopupRebalance } from "@/internal/billing/v2/execute/executeAutumnActions/executeAutoTopupRebalance";
 import { executeCustomerLicenseTransitions } from "@/internal/billing/v2/execute/executeAutumnActions/executeCustomerLicenseTransitions";
 import { executeCustomerLicenseUpdates } from "@/internal/billing/v2/execute/executeAutumnActions/executeCustomerLicenseUpdates";
@@ -124,9 +125,16 @@ export const executeAutumnBillingPlan = async ({
 		customerLicenseTransitions: autumnBillingPlan.customerLicenseTransitions,
 	});
 
+	// Derived here rather than per action: every flow that swaps a customer
+	// product funnels through this plan, and phases hold raw ids.
 	await replaceScheduledPhaseCustomerProductIds({
 		ctx,
-		replacements: autumnBillingPlan.schedulePhaseCustomerProductReplacements,
+		replacements: [
+			...(autumnBillingPlan.schedulePhaseCustomerProductReplacements ?? []),
+			...(autumnBillingPlan.ownsSchedulePersistence
+				? []
+				: computeSchedulePhaseReplacements({ autumnBillingPlan })),
+		],
 	});
 
 	// Lock the customer's currency on the first paid attach (conditional: no-op if
