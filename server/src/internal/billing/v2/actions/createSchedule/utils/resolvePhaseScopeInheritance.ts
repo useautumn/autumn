@@ -20,9 +20,15 @@ export const productScopeKey = ({
 	internalEntityId?: string;
 }) => JSON.stringify([groupKey({ fullProduct }), internalEntityId ?? null]);
 
+const productEntry = ({ fullProduct }: { fullProduct: FullProduct }) =>
+	JSON.stringify(["product", fullProduct.id]);
+
+const groupEntry = ({ fullProduct }: { fullProduct: FullProduct }) =>
+	JSON.stringify(["group", groupKey({ fullProduct })]);
+
 /**
- * Maps each product group in the opening phase to the scope its plan was
- * attached in. Later phases inherit these — a schedule can't change scope
+ * Maps each opening-phase plan to the scope it was attached in, by product and
+ * by group. Later phases inherit these — a schedule can't change scope
  * mid-flight, so they never declare their own.
  *
  * A present key with an undefined value means customer-level, which is why
@@ -36,10 +42,13 @@ export const buildOpeningPhaseScopes = ({
 	const scopes = new Map<string, Entity | undefined>();
 
 	for (const productContext of productContexts) {
-		const key = groupKey(productContext);
-		// First plan wins when one group spans several scopes.
-		if (!scopes.has(key)) {
-			scopes.set(key, productContext.fullCustomer.entity);
+		const entity = productContext.fullCustomer.entity;
+		// First plan wins when one product or group spans several scopes.
+		for (const key of [
+			productEntry(productContext),
+			groupEntry(productContext),
+		]) {
+			if (!scopes.has(key)) scopes.set(key, entity);
 		}
 	}
 
@@ -55,7 +64,10 @@ export const resolveInheritedScope = ({
 	openingPhaseScopes: Map<string, Entity | undefined>;
 	fallbackEntity?: Entity;
 }): Entity | undefined => {
-	const key = groupKey({ fullProduct });
-	if (!openingPhaseScopes.has(key)) return fallbackEntity;
+	// Ungrouped plans share a group key, so an exact plan match wins before it.
+	const key = [productEntry({ fullProduct }), groupEntry({ fullProduct })].find(
+		(candidate) => openingPhaseScopes.has(candidate),
+	);
+	if (key === undefined) return fallbackEntity;
 	return openingPhaseScopes.get(key);
 };
