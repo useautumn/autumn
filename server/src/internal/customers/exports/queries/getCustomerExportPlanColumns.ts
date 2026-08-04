@@ -2,6 +2,7 @@ import {
 	CusProductStatus,
 	customerLicenses,
 	customerProducts,
+	deduplicateArray,
 	products,
 } from "@autumn/shared";
 import { and, eq, inArray, isNull, sql } from "drizzle-orm";
@@ -30,7 +31,7 @@ export const emptyPlanColumns = (): CustomerExportPlanColumns => ({
 });
 
 const sortedUnique = (values: string[]) =>
-	[...new Set(values)].sort((a, b) => a.localeCompare(b));
+	deduplicateArray(values).sort((a, b) => a.localeCompare(b));
 
 /**
  * Recurring and free plans are subscriptions; one-off plans are purchases.
