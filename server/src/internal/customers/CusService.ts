@@ -39,7 +39,10 @@ import type { DrizzleCli } from "@/db/initDrizzle.js";
 import { executeWithHealthTracking } from "@/db/pgHealthMonitor.js";
 import type { RepoContext } from "@/db/repoContext.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
-import { markCustomerUpdatedAt } from "@/internal/customers/customerLsns/markCustomerUpdatedAt.js";
+import {
+	markCustomersUpdatedAtByInternalIds,
+	markCustomerUpdatedAt,
+} from "@/internal/customers/customerLsns/markCustomerUpdatedAt.js";
 import { hydrateFullCustomerLicenses } from "@/internal/licenses/actions/hydrateFullCustomerLicenses.js";
 import { checkPendingMigrationsForCustomer } from "@/internal/migrations/v2/lazy/checkPendingMigrationsForCustomer.js";
 import { withSpan } from "../analytics/tracer/spanUtils.js";
@@ -489,6 +492,12 @@ export class CusService {
 					customerId: customer.id,
 					internalCustomerId: customer.internal_id,
 				});
+			} else {
+				// Email-only rows have no external id yet; stamp whatever identity exists.
+				await markCustomersUpdatedAtByInternalIds({
+					db,
+					internalCustomerIds: [customer.internal_id],
+				});
 			}
 			return customer;
 		}
@@ -745,6 +754,12 @@ export class CusService {
 					customerId: customer.id,
 					internalCustomerId: customer.internal_id,
 				});
+			} else {
+				// Email-only rows have no external id yet; stamp whatever identity exists.
+				await markCustomersUpdatedAtByInternalIds({
+					db,
+					internalCustomerIds: [customer.internal_id],
+				});
 			}
 			return { customer: customer as Customer, wasUpdate };
 		}
@@ -789,6 +804,26 @@ export class CusService {
 						orgId: org.id,
 						env,
 						customerId: customer.id,
+						internalCustomerId: customer.internal_id,
+					});
+				} else {
+					// Rows without an external id still stamp whatever identity exists.
+					await markCustomersUpdatedAtByInternalIds({
+						db,
+						internalCustomerIds: [customer.internal_id],
+					});
+				}
+
+				// On rename, readers still keyed on the old external id must pin to primary.
+				const idChanged =
+					update.id !== undefined && update.id !== idOrInternalId;
+				const addressedByExternalId = idOrInternalId !== customer.internal_id;
+				if (idChanged && addressedByExternalId) {
+					await markCustomerUpdatedAt({
+						db,
+						orgId: org.id,
+						env,
+						customerId: idOrInternalId,
 						internalCustomerId: customer.internal_id,
 					});
 				}

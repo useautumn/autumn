@@ -465,6 +465,8 @@ export class CusProductService {
 		return results;
 	}
 
+	// Deliberately no freshness mark: the Stripe webhook refresh-cache middleware
+	// invalidation chokepoint already stamps every customer this touches.
 	static async updateByStripeSubId({
 		db,
 		stripeSubId,

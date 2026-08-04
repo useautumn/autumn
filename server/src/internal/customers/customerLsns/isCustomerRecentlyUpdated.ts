@@ -21,6 +21,30 @@ export const _resetRecentlyUpdatedNegativeCacheForTesting = (): void => {
 	negativeCache.clear();
 };
 
+const buildNegativeCacheKey = ({
+	orgId,
+	env,
+	customerId,
+}: {
+	orgId: string;
+	env: string;
+	customerId: string;
+}): string => `${orgId}:${env}:${customerId}`;
+
+/** Read-your-writes in-process: marks drop their cached negative so the next
+ *  check queries; other processes stay stale for at most NEGATIVE_TTL_MS. */
+export const invalidateRecentlyUpdatedNegativeCache = ({
+	orgId,
+	env,
+	customerId,
+}: {
+	orgId: string;
+	env: string;
+	customerId: string;
+}): void => {
+	negativeCache.delete(buildNegativeCacheKey({ orgId, env, customerId }));
+};
+
 export const _recentlyUpdatedNegativeCacheSizeForTesting = (): number =>
 	negativeCache.size;
 
@@ -37,7 +61,7 @@ export const isCustomerRecentlyUpdated = async ({
 	env: string;
 	customerId: string;
 }): Promise<boolean> => {
-	const cacheKey = `${orgId}:${env}:${customerId}`;
+	const cacheKey = buildNegativeCacheKey({ orgId, env, customerId });
 	if (negativeCache.get(cacheKey)) return false;
 
 	const rows = await db.execute(sql`

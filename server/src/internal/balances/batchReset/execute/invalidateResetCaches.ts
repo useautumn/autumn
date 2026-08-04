@@ -53,19 +53,24 @@ export const invalidateResetCaches = async ({
 			invalidationsByRedis.set(routing.redis, invalidations);
 		}
 
-		for (const [redisV2, invalidations] of invalidationsByRedis) {
-			await batchInvalidateCustomerEntitlementBalances({
-				redisV2,
-				invalidations,
-			});
-		}
+		const invalidateRedisCaches = async () => {
+			for (const [redisV2, invalidations] of invalidationsByRedis) {
+				await batchInvalidateCustomerEntitlementBalances({
+					redisV2,
+					invalidations,
+				});
+			}
+		};
 
-		// Reset writes must pin these customers to the primary for 60s —
-		// a replica read here would serve pre-reset balances.
-		await markCustomersUpdatedAt({
-			customers: [...invalidationsByRedis.values()]
-				.flat()
-				.map(({ orgId, env, customerId }) => ({ orgId, env, customerId })),
-		});
+		// Reset writes must pin these customers to primary for 60s (a replica read
+		// would serve pre-reset balances); concurrent so it never waits on Redis.
+		await Promise.all([
+			invalidateRedisCaches(),
+			markCustomersUpdatedAt({
+				customers: [...invalidationsByRedis.values()]
+					.flat()
+					.map(({ orgId, env, customerId }) => ({ orgId, env, customerId })),
+			}),
+		]);
 	}
 };
