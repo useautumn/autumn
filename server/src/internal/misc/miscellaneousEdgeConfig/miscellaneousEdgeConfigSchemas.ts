@@ -17,10 +17,8 @@ export const MiscellaneousEdgeConfigSchema = z.object({
 	 *  Postgres instead of shedding a 503. Dark by default — turning this on
 	 *  converts a cache outage into full primary read load. */
 	redisFallbackToDb: z.boolean().default(false),
-	/** In-process L1 TTL (ms) for pure-GET subject reads; 0 disables the L1
-	 *  cache only — singleflight is gated by subjectReadSingleflight. */
 	/** Global switch: concurrent same-key pure-GET subject reads share one
-	 *  in-flight fetch. Independent of the L1 TTL. */
+	 *  in-flight fetch. */
 	subjectReadSingleflight: z.boolean().default(true),
 });
 
