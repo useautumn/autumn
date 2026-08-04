@@ -327,6 +327,24 @@ const main = async (): Promise<void> => {
 		),
 	]);
 
+	// 2b. Self-heal schema drift: the warm snapshot bakes a migrated DB at
+	//     warm build time, but a stale warm parent (failed refresh) can lag
+	//     the fast-forwarded code's schema (e.g. a new org column crashes the
+	//     binds below). Pending migrations only — a no-op on current snapshots.
+	log("applying pending DB migrations (schema self-heal)");
+	const migrateProc = spawn(["bun", "scripts/db/index.ts", "migrate"], {
+		cwd: repoRoot,
+		stdout: "inherit",
+		stderr: "inherit",
+		env: process.env as Record<string, string>,
+	});
+	const migrateExit = await migrateProc.exited;
+	if (migrateExit !== 0) {
+		throw new Error(
+			`[tw-boot] db migrate exited with code ${migrateExit} — schema self-heal failed`,
+		);
+	}
+
 	// 3. Bind the orchestrator-created Svix app (only when flagged). It only
 	//    touches the DB, so it runs before the server starts to keep all DB-bind
 	//    steps together.
