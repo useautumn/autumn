@@ -3,7 +3,7 @@ import {
 	classifyProbe,
 	createRedisAvailability,
 	histogramMaxToMs,
-} from "@/external/redis/initUtils/createRedisAvailability.js";
+} from "@/external/redis/availabilityMonitor/createRedisAvailability.js";
 
 class FakeRedis {
 	status = "ready";
@@ -75,7 +75,7 @@ describe("createRedisAvailability", () => {
 		try {
 			const redis = new FakeRedis();
 			const availability = createRedisAvailability({
-				redis: redis as never,
+				getRedis: () => redis as never,
 				hasConfig: false,
 				logPrefix: "RedisV2",
 				logType: "redis_v2_availability_state_set",
@@ -93,7 +93,7 @@ describe("createRedisAvailability", () => {
 	test("starts degraded before the first probe runs", () => {
 		const redis = new FakeRedis();
 		const availability = createRedisAvailability({
-			redis: redis as never,
+			getRedis: () => redis as never,
 			hasConfig: true,
 			logPrefix: "RedisV2",
 			logType: "redis_v2_availability_state_set",
@@ -105,7 +105,7 @@ describe("createRedisAvailability", () => {
 	test("primes healthy after a successful initial probe", async () => {
 		const redis = new HealthyFakeRedis();
 		const availability = createRedisAvailability({
-			redis: redis as never,
+			getRedis: () => redis as never,
 			hasConfig: true,
 			logPrefix: "RedisV2",
 			logType: "redis_v2_availability_state_set",
@@ -119,7 +119,7 @@ describe("createRedisAvailability", () => {
 	test("waits for a connecting client before priming availability", async () => {
 		const redis = new ConnectingFakeRedis();
 		const availability = createRedisAvailability({
-			redis: redis as never,
+			getRedis: () => redis as never,
 			hasConfig: true,
 			logPrefix: "RedisV2",
 			logType: "redis_v2_availability_state_set",
@@ -138,7 +138,7 @@ describe("createRedisAvailability", () => {
 	test("reconnects after repeated probe failures while the client still reports ready", async () => {
 		const redis = new FakeRedis();
 		const availability = createRedisAvailability({
-			redis: redis as never,
+			getRedis: () => redis as never,
 			hasConfig: true,
 			logPrefix: "RedisV2",
 			logType: "redis_v2_availability_state_set",
@@ -243,7 +243,7 @@ describe("createRedisAvailability loop-lag awareness", () => {
 	test("sustained event-loop lag does NOT degrade a healthy monitor", async () => {
 		const redis = new FlippableFakeRedis();
 		const availability = createRedisAvailability({
-			redis: redis as never,
+			getRedis: () => redis as never,
 			hasConfig: true,
 			logPrefix: "RedisV2",
 			logType: "redis_v2_availability_state_set",
@@ -264,7 +264,7 @@ describe("createRedisAvailability loop-lag awareness", () => {
 	test("sustained ping failure with a healthy loop still degrades (real-failure detection preserved)", async () => {
 		const redis = new FlippableFakeRedis();
 		const availability = createRedisAvailability({
-			redis: redis as never,
+			getRedis: () => redis as never,
 			hasConfig: true,
 			logPrefix: "RedisV2",
 			logType: "redis_v2_availability_state_set",
@@ -285,7 +285,7 @@ describe("createRedisAvailability loop-lag awareness", () => {
 	test("degrades once consecutive inconclusive probes exceed the cap (bounded suppression)", async () => {
 		const redis = new FlippableFakeRedis();
 		const availability = createRedisAvailability({
-			redis: redis as never,
+			getRedis: () => redis as never,
 			hasConfig: true,
 			logPrefix: "RedisV2",
 			logType: "redis_v2_availability_state_set",
@@ -307,7 +307,7 @@ describe("createRedisAvailability loop-lag awareness", () => {
 	test("a successful ping resets the inconclusive budget so transient lag never trips the cap", async () => {
 		const redis = new FlippableFakeRedis();
 		const availability = createRedisAvailability({
-			redis: redis as never,
+			getRedis: () => redis as never,
 			hasConfig: true,
 			logPrefix: "RedisV2",
 			logType: "redis_v2_availability_state_set",
@@ -346,7 +346,7 @@ describe("createRedisAvailability prime() loop-lag awareness", () => {
 		const redis = new FlippableFakeRedis();
 		redis.pingOk = false;
 		const availability = createRedisAvailability({
-			redis: redis as never,
+			getRedis: () => redis as never,
 			hasConfig: true,
 			logPrefix: "RedisV2",
 			logType: "redis_v2_availability_state_set",
@@ -361,7 +361,7 @@ describe("createRedisAvailability prime() loop-lag awareness", () => {
 	test("still degrades at boot on a genuine connection failure regardless of lag", async () => {
 		const redis = new DownFakeRedis();
 		const availability = createRedisAvailability({
-			redis: redis as never,
+			getRedis: () => redis as never,
 			hasConfig: true,
 			logPrefix: "RedisV2",
 			logType: "redis_v2_availability_state_set",
@@ -379,7 +379,7 @@ describe("createRedisAvailability recovery-streak integrity", () => {
 		let lag = 0;
 		const redis = new FlippableFakeRedis();
 		const availability = createRedisAvailability({
-			redis: redis as never,
+			getRedis: () => redis as never,
 			hasConfig: true,
 			logPrefix: "RedisV2",
 			logType: "redis_v2_availability_state_set",
@@ -404,7 +404,7 @@ describe("createRedisAvailability real event-loop sampler", () => {
 	test("uses the real sampler when no override is injected and stays healthy on a quiet loop", async () => {
 		const redis = new HealthyFakeRedis();
 		const availability = createRedisAvailability({
-			redis: redis as never,
+			getRedis: () => redis as never,
 			hasConfig: true,
 			logPrefix: "RedisV2",
 			logType: "redis_v2_availability_state_set",
@@ -430,7 +430,7 @@ describe("createRedisAvailability real probe-timeout path", () => {
 	test("a real ping timeout under event-loop lag is inconclusive and does not degrade", async () => {
 		const redis = new FakeRedis();
 		const availability = createRedisAvailability({
-			redis: redis as never,
+			getRedis: () => redis as never,
 			hasConfig: true,
 			logPrefix: "RedisV2",
 			logType: "redis_v2_availability_state_set",

@@ -10,8 +10,8 @@ import { EdgeConfigDialog } from "./EdgeConfigDialog";
 import { EDGE_CONFIG_SECTIONS, type EdgeConfigCardId } from "./edgeConfigCards";
 import { FeatureFlagsDialog } from "./FeatureFlagsDialog";
 import { FullSubjectGateDialog } from "./FullSubjectGateDialog";
-import { MainRedisCacheDialog } from "./MainRedisCacheDialog";
 import { MiscellaneousEdgeConfigDialog } from "./MiscellaneousEdgeConfigDialog";
+import { MiscRedisDialog } from "./MiscRedisDialog";
 import { OrgLimitsDialog } from "./OrgLimitsDialog";
 import { RateLimitOverridesDialog } from "./RateLimitOverridesDialog";
 import { RateLimitRedisAllowlistDialog } from "./RateLimitRedisAllowlistDialog";
@@ -158,8 +158,8 @@ export function EdgeConfigTab() {
 				onOpenChange={closeDialog}
 			/>
 
-			<MainRedisCacheDialog
-				open={openConfig === "main-redis-cache"}
+			<MiscRedisDialog
+				open={openConfig === "misc-redis"}
 				onOpenChange={closeDialog}
 			/>
 

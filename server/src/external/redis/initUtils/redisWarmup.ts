@@ -1,6 +1,6 @@
 import type { Redis } from "ioredis";
-import { getFallbackRedis, getMiscRedis } from "./redisClientRegistry.js";
-import { hasMiscRedisConfig } from "./redisConfig.js";
+import { getMiscRedis } from "../miscCache/getMiscRedis.js";
+import { getMiscBackupRedis } from "../miscCache/miscRedisInstances.js";
 
 /** Wait for a Redis instance to be ready */
 export const waitForRedisReady = (
@@ -33,21 +33,17 @@ export const waitForRedisReady = (
 
 /** Pre-warm the main + fallback + V2 Redis connections. Call on startup before processing requests. */
 export const warmupRegionalRedis = async (): Promise<void> => {
-	const warmupPromises: Promise<void>[] = [];
+	const warmupPromises: Promise<void>[] = [
+		waitForRedisReady(getMiscRedis(), "misc").catch((error) => {
+			console.error("[Redis] misc: warmup failed -", error);
+		}),
+	];
 
-	if (hasMiscRedisConfig) {
+	const backup = getMiscBackupRedis();
+	if (backup) {
 		warmupPromises.push(
-			waitForRedisReady(getMiscRedis(), "misc").catch((error) => {
-				console.error("[Redis] misc: warmup failed -", error);
-			}),
-		);
-	}
-
-	const fallback = getFallbackRedis();
-	if (fallback) {
-		warmupPromises.push(
-			waitForRedisReady(fallback, "fallback").catch((error) => {
-				console.error("[Redis] fallback: warmup failed -", error);
+			waitForRedisReady(backup, "backup").catch((error) => {
+				console.error("[Redis] backup: warmup failed -", error);
 			}),
 		);
 	}

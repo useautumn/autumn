@@ -4,7 +4,7 @@ import { ApiVersionClass, LATEST_VERSION, RecaseError } from "@autumn/shared";
 // Capture real modules BEFORE mocking — mock.module leaks across test files
 // (mock.restore does not undo it), so afterAll re-mocks with the real exports.
 const realRedisV2Availability = {
-	...(await import("@/external/redis/initUtils/redisV2Availability.js")),
+	...(await import("@/external/redis/availabilityMonitor/redisV2Availability.js")),
 };
 const realRunCheckV2 = {
 	...(await import("@/internal/balances/check/runCheckV2.js")),
@@ -14,7 +14,7 @@ const realRunTrackV3 = {
 };
 const realQueueUtils = { ...(await import("@/queue/queueUtils.js")) };
 
-mock.module("@/external/redis/initUtils/redisV2Availability.js", () => ({
+mock.module("@/external/redis/availabilityMonitor/redisV2Availability.js", () => ({
 	shouldUseRedisV2: () => true,
 }));
 
@@ -98,7 +98,7 @@ process.env.TRACK_SQS_QUEUE_URL = "https://sqs.test/queue";
 afterAll(() => {
 	process.env.TRACK_SQS_QUEUE_URL = originalTrackQueueUrl;
 	mock.module(
-		"@/external/redis/initUtils/redisV2Availability.js",
+		"@/external/redis/availabilityMonitor/redisV2Availability.js",
 		() => realRedisV2Availability,
 	);
 	mock.module("@/internal/balances/check/runCheckV2.js", () => realRunCheckV2);

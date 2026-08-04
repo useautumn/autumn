@@ -5,7 +5,7 @@ import {
 } from "./createRedisAvailability.js";
 
 const redisV2Availability = createRedisAvailability({
-	redis: redisV2,
+	getRedis: () => redisV2,
 	hasConfig: true,
 	logPrefix: "RedisV2",
 	logType: "redis_v2_availability_state_set",

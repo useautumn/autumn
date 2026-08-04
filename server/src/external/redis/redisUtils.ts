@@ -3,14 +3,18 @@ import { getMiscRedis } from "./initRedis.js";
 
 // Locks live on the primary Redis: regional instances are independent stores,
 // so a region-local lock would not exclude a webhook processed in another region.
+// Locks store either the bare token or acquireLock's {errorMessage, token}
+// envelope — the owner check accepts both.
 const OWNED_DELETE_SCRIPT = `local value = redis.call("GET", KEYS[1])
 if not value then return 0 end
+if value == ARGV[1] then return redis.call("DEL", KEYS[1]) end
 local ok, lock = pcall(cjson.decode, value)
 if not ok or type(lock) ~= "table" or lock.token ~= ARGV[1] then return 0 end
 return redis.call("DEL", KEYS[1])`;
 
 const OWNED_REFRESH_SCRIPT = `local value = redis.call("GET", KEYS[1])
 if not value then return 0 end
+if value == ARGV[1] then return redis.call("PEXPIRE", KEYS[1], ARGV[2]) end
 local ok, lock = pcall(cjson.decode, value)
 if not ok or type(lock) ~= "table" or lock.token ~= ARGV[1] then return 0 end
 return redis.call("PEXPIRE", KEYS[1], ARGV[2])`;

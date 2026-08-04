@@ -1,6 +1,10 @@
 import { randomUUID } from "node:crypto";
 import { ErrCode, RecaseError } from "@autumn/shared";
-import { hasMiscRedisConfig, miscRedis } from "@/external/redis/initRedis.js";
+import {
+	getMiscRedis,
+	hasMiscRedisConfig,
+} from "@/external/redis/initRedis.js";
+import { clearLock } from "@/external/redis/redisUtils.js";
 import { runRedisOp } from "@/external/redis/utils/runRedisOp.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { timeout } from "@/utils/genUtils.js";
@@ -10,13 +14,6 @@ const DEFAULT_MAX_WAIT_MS = 10 * 60 * 1000;
 const RETRY_MIN_MS = 75;
 const RETRY_JITTER_MS = 50;
 
-const RELEASE_LOCK_SCRIPT = `
-if miscRedis.call("GET", KEYS[1]) == ARGV[1] then
-	return miscRedis.call("DEL", KEYS[1])
-end
-return 0
-`;
-
 const buildMigrationCustomerLockKey = ({
 	ctx,
 	customerId,
@@ -24,20 +21,6 @@ const buildMigrationCustomerLockKey = ({
 	ctx: AutumnContext;
 	customerId: string;
 }) => `lock:migration-customer:${ctx.org.id}:${ctx.env}:${customerId}`;
-
-const releaseMigrationCustomerLock = async ({
-	lockKey,
-	ownerToken,
-}: {
-	lockKey: string;
-	ownerToken: string;
-}) =>
-	runRedisOp({
-		source: "migration-customer-lock:release",
-		redisInstance: miscRedis,
-		operation: () =>
-			miscRedis.eval(RELEASE_LOCK_SCRIPT, 1, lockKey, ownerToken),
-	});
 
 export const withMigrationCustomerLock = async <T>({
 	ctx,
@@ -59,6 +42,7 @@ export const withMigrationCustomerLock = async <T>({
 	while (true) {
 		let result: "OK" | null;
 		try {
+			const miscRedis = getMiscRedis();
 			result = await runRedisOp({
 				source: "migration-customer-lock:acquire",
 				redisInstance: miscRedis,
@@ -66,9 +50,7 @@ export const withMigrationCustomerLock = async <T>({
 					miscRedis.set(lockKey, ownerToken, "PX", LOCK_TTL_MS, "NX"),
 			});
 		} catch (error) {
-			await releaseMigrationCustomerLock({ lockKey, ownerToken }).catch(
-				() => undefined,
-			);
+			await clearLock({ lockKey, token: ownerToken });
 			throw error;
 		}
 
@@ -87,15 +69,6 @@ export const withMigrationCustomerLock = async <T>({
 	try {
 		return await run();
 	} finally {
-		await releaseMigrationCustomerLock({ lockKey, ownerToken }).catch(
-			(error) => {
-				ctx.logger.warn("migration-customer-lock: release failed", {
-					data: {
-						customerId,
-						error: error instanceof Error ? error.message : String(error),
-					},
-				});
-			},
-		);
+		await clearLock({ lockKey, token: ownerToken });
 	}
 };

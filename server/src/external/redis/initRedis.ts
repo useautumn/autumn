@@ -1,24 +1,15 @@
 import "./initUtils/redisTypes.js";
 
 export {
-	createDisabledRedis,
-	createRedisClient,
-	createRedisConnection,
-} from "./initUtils/createRedisClient.js";
-export {
 	getRedisAvailability,
 	shouldUseRedis,
 	startRedisMonitor,
 	stopRedisMonitor,
-} from "./initUtils/redisAvailability.js";
+} from "./availabilityMonitor/redisAvailability.js";
 export {
-	getFallbackRedis,
-	getMiscRedis,
-	getPrimaryRedis,
-	getRegionalRedis,
-	miscRedis,
-	redis,
-} from "./initUtils/redisClientRegistry.js";
+	createRedisClient,
+	createRedisConnection,
+} from "./initUtils/createRedisClient.js";
 export {
 	currentRegion,
 	hasMiscRedisConfig,
@@ -27,3 +18,11 @@ export {
 	waitForRedisReady,
 	warmupRegionalRedis,
 } from "./initUtils/redisWarmup.js";
+export {
+	getMiscRedis,
+	getPrimaryRedis,
+	getRegionalRedis,
+	miscRedis,
+	redis,
+} from "./miscCache/getMiscRedis.js";
+export { getMiscBackupRedis } from "./miscCache/miscRedisInstances.js";

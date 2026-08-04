@@ -75,8 +75,8 @@ export const getAdminEdgeConfigSources = () => ({
 			key: ADMIN_REDIS_V2_CACHE_CONFIG_KEY,
 		},
 		{
-			id: "main-redis-cache",
-			label: "Main Redis Instance",
+			id: "misc-redis",
+			label: "Misc Redis",
 			key: ADMIN_MAIN_REDIS_CACHE_CONFIG_KEY,
 		},
 		{

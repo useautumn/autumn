@@ -2,7 +2,7 @@ import { monitorEventLoopDelay } from "node:perf_hooks";
 import type { Redis } from "ioredis";
 import { logger } from "@/external/logtail/logtailUtils.js";
 import { withTimeout } from "@/utils/withTimeout.js";
-import { waitForRedisReady } from "./redisWarmup.js";
+import { waitForRedisReady } from "../initUtils/redisWarmup.js";
 
 const REDIS_ERROR_LOG_INTERVAL_MS = 30_000;
 const REDIS_PROBE_INTERVAL_MS = 2_000;
@@ -46,14 +46,14 @@ export const histogramMaxToMs = (maxNanoseconds: number): number =>
 	maxNanoseconds / 1e6;
 
 export const createRedisAvailability = ({
-	redis,
+	getRedis,
 	hasConfig,
 	logPrefix,
 	logType,
 	getEventLoopLagMs,
 	maxConsecutiveInconclusive = REDIS_MAX_CONSECUTIVE_INCONCLUSIVE,
 }: {
-	redis: Redis;
+	getRedis: () => Redis;
 	hasConfig: boolean;
 	logPrefix: string;
 	logType: string;
@@ -122,7 +122,7 @@ export const createRedisAvailability = ({
 				type: logType,
 				previousState,
 				state,
-				redisStatus: redis.status,
+				redisStatus: getRedis().status,
 				consecutiveFailures,
 				consecutiveSuccesses,
 				eventLoopLagMs: lastEventLoopLagMs,
@@ -154,7 +154,7 @@ export const createRedisAvailability = ({
 		lastInconclusiveLogAt = now;
 		logger.warn(`[${logPrefix}] Probe inconclusive under event-loop lag`, {
 			type: logType,
-			redisStatus: redis.status,
+			redisStatus: getRedis().status,
 			consecutiveFailures,
 			eventLoopLagMs: lastEventLoopLagMs,
 			loopLagThresholdMs: REDIS_LOOP_LAG_INCONCLUSIVE_MS,
@@ -162,22 +162,22 @@ export const createRedisAvailability = ({
 	};
 
 	const pingRedisClient = async () => {
-		if (redis.status !== "ready") return false;
+		if (getRedis().status !== "ready") return false;
 
 		const pong = await withTimeout({
 			timeoutMs: REDIS_PROBE_TIMEOUT_MS,
-			fn: () => redis.ping(),
+			fn: () => getRedis().ping(),
 		});
 
-		return redis.status === "ready" && pong === "PONG";
+		return getRedis().status === "ready" && pong === "PONG";
 	};
 
 	const reconnectRedis = async () => {
 		try {
-			redis.disconnect(false);
+			getRedis().disconnect(false);
 			await withTimeout({
 				timeoutMs: REDIS_PROBE_TIMEOUT_MS,
-				fn: () => redis.connect(),
+				fn: () => getRedis().connect(),
 			});
 			reconnectStartedAt = null;
 		} catch {
@@ -187,7 +187,7 @@ export const createRedisAvailability = ({
 
 	const classifyPing = (pingOk: boolean): ProbeOutcome => {
 		if (pingOk) return "available";
-		return redis.status === "ready"
+		return getRedis().status === "ready"
 			? "unresponsive_while_ready"
 			: "connection_down";
 	};
@@ -203,14 +203,17 @@ export const createRedisAvailability = ({
 		}
 		if (pingOk) return "available";
 
-		const failedWhileReady = redis.status === "ready";
+		const failedWhileReady = getRedis().status === "ready";
 		const shouldReconnectReadyClient =
 			failedWhileReady && consecutiveFailures + 1 >= REDIS_FAILURES_TO_DEGRADE;
 
 		if (shouldReconnectReadyClient) {
 			await reconnectRedis();
-		} else if (redis.status !== "ready") {
-			if (redis.status === "connecting" || redis.status === "reconnecting") {
+		} else if (getRedis().status !== "ready") {
+			if (
+				getRedis().status === "connecting" ||
+				getRedis().status === "reconnecting"
+			) {
 				reconnectStartedAt ??= Date.now();
 				if (Date.now() - reconnectStartedAt < REDIS_STALE_RECONNECT_MS) {
 					return "connection_down";
@@ -260,8 +263,11 @@ export const createRedisAvailability = ({
 	return {
 		prime: async () => {
 			if (!hasConfig) return;
-			if (redis.status === "connecting" || redis.status === "reconnecting") {
-				await waitForRedisReady(redis, logPrefix).catch(() => undefined);
+			if (
+				getRedis().status === "connecting" ||
+				getRedis().status === "reconnecting"
+			) {
+				await waitForRedisReady(getRedis(), logPrefix).catch(() => undefined);
 			}
 
 			const classification = await probeAndClassify();
@@ -297,7 +303,7 @@ export const createRedisAvailability = ({
 		getRedisAvailability: (): RedisAvailabilitySnapshot => ({
 			configured: hasConfig,
 			state: redisAvailabilityState,
-			status: redis.status,
+			status: getRedis().status,
 		}),
 		_runTickForTesting: () => runTick(),
 	};
