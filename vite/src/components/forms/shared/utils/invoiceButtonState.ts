@@ -4,7 +4,6 @@ const ZERO_AMOUNT_REASON =
 type InvoicePreview = {
 	total: number;
 	subtotal?: number | null;
-	invoice_credits?: { balance?: number | null } | null;
 } | null;
 
 /**
@@ -23,12 +22,10 @@ export function getInvoiceButtonState({
 	const hasNothingToInvoice =
 		!!preview && preview.total <= 0 && !createsRecurringSubscription;
 
-	// Trials and credit-covered charges still create a $0 invoice, so keep the
-	// invoice sheet for those; only bypass it when no invoice is created at all.
+	// Trials and charges zeroed out by credits or discounts still create a $0
+	// invoice; only bypass the sheet when nothing was billed in the first place.
 	const willCreateZeroDollarInvoice =
-		(preview?.subtotal ?? 0) > 0 ||
-		(preview?.invoice_credits?.balance ?? 0) > 0 ||
-		trialEnabled;
+		(preview?.subtotal ?? 0) > 0 || trialEnabled;
 
 	const isInvoiceOnlyStart =
 		!!preview &&
