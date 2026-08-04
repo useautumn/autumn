@@ -6,10 +6,6 @@ import type { AutumnContext, HonoEnv } from "@/honoUtils/HonoEnv.js";
 import { addRequestToLogs } from "@/utils/logging/addContextToLogs.js";
 import type { LogRequestContext } from "@/utils/logging/loggerTypes.js";
 
-// Rate 1 makes the high-volume 429 sampler deterministic (Math.random() < 1
-// always holds); the module reads this lazily on first use, so set it up front.
-process.env.AXIOM_SUCCESS_REQUEST_LOG_SAMPLE_RATE = "1";
-
 type CapturedLog = {
 	level: "debug" | "info" | "warn" | "error";
 	bindings: Record<string, unknown>;
@@ -304,7 +300,7 @@ describe("logRequestResult", () => {
 		});
 	});
 
-	test("always logs a success on a high volume route even when the sampler says no", async () => {
+	test("logs a success on a high volume route", async () => {
 		const captured: CapturedLog[] = [];
 		const responseBody = { allowed: true };
 		const ctx = {
@@ -321,13 +317,7 @@ describe("logRequestResult", () => {
 			},
 		} as Context<HonoEnv>;
 
-		// Math.random() = 1 would sample out (1 < 1 fails) — successes must ignore it.
-		const randomSpy = spyOn(Math, "random").mockReturnValue(1);
-		try {
-			await logRequestResult({ ctx, c, durationMs: 5, responseBody });
-		} finally {
-			randomSpy.mockRestore();
-		}
+		await logRequestResult({ ctx, c, durationMs: 5, responseBody });
 
 		expect(captured).toHaveLength(1);
 		expect(captured[0]?.level).toBe("info");
@@ -338,7 +328,7 @@ describe("logRequestResult", () => {
 		});
 	});
 
-	test("skips a 429 on a high volume route when the sampler says no", async () => {
+	test("always logs a 429 on a high volume route", async () => {
 		const captured: CapturedLog[] = [];
 		let cloneCount = 0;
 		const ctx = {
@@ -359,16 +349,16 @@ describe("logRequestResult", () => {
 			},
 		} as unknown as Context<HonoEnv>;
 
-		// Rate is memoized at 1, so force sample-out via Math.random() = 1 (1 < 1 fails).
-		const randomSpy = spyOn(Math, "random").mockReturnValue(1);
-		try {
-			await logRequestResult({ ctx, c, durationMs: 5 });
-		} finally {
-			randomSpy.mockRestore();
-		}
+		await logRequestResult({ ctx, c, durationMs: 5 });
 
-		expect(captured).toHaveLength(0);
-		expect(cloneCount).toBe(0);
+		expect(captured).toHaveLength(1);
+		expect(captured[0]?.level).toBe("warn");
+		expect(captured[0]?.args[1]).toEqual({
+			statusCode: 429,
+			durationMs: 5,
+			res: JSON.stringify({ code: "rate_limited" }),
+		});
+		expect(cloneCount).toBe(1);
 	});
 
 	test("always logs a 429 on a non high volume route", async () => {
@@ -388,12 +378,7 @@ describe("logRequestResult", () => {
 			},
 		} as Context<HonoEnv>;
 
-		const randomSpy = spyOn(Math, "random").mockReturnValue(1);
-		try {
-			await logRequestResult({ ctx, c, durationMs: 5, responseBody });
-		} finally {
-			randomSpy.mockRestore();
-		}
+		await logRequestResult({ ctx, c, durationMs: 5, responseBody });
 
 		expect(captured).toHaveLength(1);
 		expect(captured[0]?.level).toBe("warn");
@@ -421,12 +406,7 @@ describe("logRequestResult", () => {
 			},
 		} as Context<HonoEnv>;
 
-		const randomSpy = spyOn(Math, "random").mockReturnValue(1);
-		try {
-			await logRequestResult({ ctx, c, durationMs: 5, responseBody });
-		} finally {
-			randomSpy.mockRestore();
-		}
+		await logRequestResult({ ctx, c, durationMs: 5, responseBody });
 
 		expect(captured).toHaveLength(1);
 		expect(captured[0]?.level).toBe("warn");
