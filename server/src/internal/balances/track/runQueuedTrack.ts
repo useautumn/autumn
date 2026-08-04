@@ -1,6 +1,7 @@
 import {
 	type ApiVersion,
 	ErrCode,
+	RouteGroup,
 	RecaseError,
 	type TrackParams,
 } from "@autumn/shared";
@@ -32,6 +33,7 @@ export const runQueuedTrack = async ({
 			idempotencyKey: validateTrackBodyIdempotencyKey
 				? getTrackBodyIdempotencyKey({ body })
 				: null,
+			routeGroup: RouteGroup.Balances,
 			run: () =>
 				runTrackV3({
 					ctx,

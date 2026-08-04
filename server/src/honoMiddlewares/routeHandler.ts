@@ -4,6 +4,7 @@ import {
 	checkScopes,
 	ErrCode,
 	RecaseError,
+	type RouteGroup,
 	type RouteScopeRequirement,
 } from "@autumn/shared";
 import type { Context, Env, Next } from "hono";
@@ -13,6 +14,7 @@ import type { DrizzleCli } from "@/db/initDrizzle.js";
 import { acquireLock, clearLock } from "@/external/redis/redisUtils.js";
 import type { HonoEnv } from "@/honoUtils/HonoEnv.js";
 import { expandMiddleware } from "./expandMiddleware.js";
+import { registerRouteGroup } from "./routeGroupRegistry.js";
 import { validator } from "./validatorMiddleware.js";
 import { versionedValidator } from "./versionedValidator.js";
 import {
@@ -155,6 +157,9 @@ export function createRoute<
 	 * endpoints, authed-but-ungated routes, etc).
 	 */
 	scopes: RouteScopeRequirement;
+	/** Coarse route grouping (per-group org config, e.g. idempotency TTLs).
+	 *  Resolvable from middleware via getRouteGroup(c). */
+	routeGroup?: RouteGroup;
 }): [H, ...H[]] {
 	const middlewares: H[] = [];
 
@@ -327,6 +332,13 @@ export function createRoute<
 			}
 		}
 	};
+
+	if (opts.routeGroup) {
+		registerRouteGroup({
+			handler: wrappedHandler,
+			routeGroup: opts.routeGroup,
+		});
+	}
 
 	return [...middlewares, wrappedHandler as H] as unknown as [H, ...H[]];
 }

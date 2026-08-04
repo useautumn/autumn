@@ -1,6 +1,7 @@
 import {
 	AffectedResource,
 	ApiVersion,
+	RouteGroup,
 	Scopes,
 	TrackParamsSchema,
 	TrackQuerySchema,
@@ -14,6 +15,7 @@ import { isAsyncTrackEnabled } from "@/internal/misc/asyncTrack/asyncTrackStore.
 
 export const handleTrack = createRoute({
 	scopes: [Scopes.Balances.Write],
+	routeGroup: RouteGroup.Balances,
 	query: TrackQuerySchema,
 	versionedBody: {
 		latest: TrackParamsSchema,

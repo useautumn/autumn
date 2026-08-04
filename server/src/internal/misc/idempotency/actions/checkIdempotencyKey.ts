@@ -1,7 +1,7 @@
 import { ErrCode, RecaseError } from "@autumn/shared";
 import { claimDynamoIdempotencyKey } from "@/external/aws/dynamodb/idempotencyKeys/operations/claimDynamoIdempotencyKey.js";
-import type { Logger } from "@/external/logtail/logtailUtils";
 import { claimRedisIdempotencyKey } from "@/external/redis/idempotencyKeys/operations/claimRedisIdempotencyKey.js";
+import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { isIdempotencyDynamoReadEnabled } from "@/internal/misc/miscellaneousEdgeConfig/miscellaneousEdgeConfigStore.js";
 import { buildIdempotencyStorageKey } from "../idempotencyKeyUtils.js";
 
@@ -22,19 +22,19 @@ const throwDuplicateIdempotencyKey = (idempotencyKey: string): never => {
 };
 
 export const checkIdempotencyKey = async ({
-	orgId,
-	env,
+	ctx,
 	idempotencyKey,
-	logger,
+	ttlMs,
 }: {
-	orgId: string;
-	env: string;
+	ctx: AutumnContext;
 	idempotencyKey: string;
-	logger: Logger;
+	/** Org-configurable per route group — defaults to 24h in the stores. */
+	ttlMs?: number;
 }): Promise<void> => {
+	const { logger } = ctx;
 	const { hashedKey, storageKey } = buildIdempotencyStorageKey({
-		orgId,
-		env,
+		orgId: ctx.org.id,
+		env: ctx.env,
 		idempotencyKey,
 	});
 
@@ -45,19 +45,20 @@ export const checkIdempotencyKey = async ({
 	if (isIdempotencyDynamoReadEnabled()) {
 		const dynamoResult = await claimDynamoIdempotencyKey({
 			storageKey,
+			ttlMs,
 			logger,
 		});
 
-		void claimRedisIdempotencyKey({ storageKey });
+		void claimRedisIdempotencyKey({ storageKey, ttlMs });
 		if (dynamoResult === "duplicate") {
 			throwDuplicateIdempotencyKey(idempotencyKey);
 		}
 		return;
 	}
 
-	const redisResult = await claimRedisIdempotencyKey({ storageKey });
+	const redisResult = await claimRedisIdempotencyKey({ storageKey, ttlMs });
 
-	void claimDynamoIdempotencyKey({ storageKey, logger });
+	void claimDynamoIdempotencyKey({ storageKey, ttlMs, logger });
 	if (redisResult === "duplicate") {
 		throwDuplicateIdempotencyKey(idempotencyKey);
 	}

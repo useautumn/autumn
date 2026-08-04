@@ -1,4 +1,9 @@
-import type { ApiVersion, TrackParams, TrackResponseV3 } from "@autumn/shared";
+import {
+	type ApiVersion,
+	RouteGroup,
+	type TrackParams,
+	type TrackResponseV3,
+} from "@autumn/shared";
 import { withRedisFailOpen } from "@/external/redis/utils/withRedisFailOpen.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { getTrackBodyIdempotencyKey } from "@/internal/balances/idempotency/trackBodyIdempotencyKey.js";
@@ -31,6 +36,7 @@ export const runTrackWithRollout = async ({
 	return withIdempotencyKey({
 		ctx,
 		idempotencyKey: getTrackBodyIdempotencyKey({ body }),
+		routeGroup: RouteGroup.Balances,
 		run: async () => {
 			if (ctx.orgRateLimitDegraded) {
 				const queuedResponse = await queueTrack({ ctx, body });

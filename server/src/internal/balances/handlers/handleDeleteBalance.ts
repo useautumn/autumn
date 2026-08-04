@@ -1,9 +1,14 @@
-import { DeleteBalanceParamsV0Schema, Scopes } from "@autumn/shared";
+import {
+	DeleteBalanceParamsV0Schema,
+	RouteGroup,
+	Scopes,
+} from "@autumn/shared";
 import { createRoute } from "@/honoMiddlewares/routeHandler";
 import { deleteBalance } from "../deleteBalance/deleteBalance";
 
 export const handleDeleteBalance = createRoute({
 	scopes: [Scopes.Balances.Write],
+	routeGroup: RouteGroup.Balances,
 	body: DeleteBalanceParamsV0Schema,
 	handler: async (c) => {
 		const ctx = c.get("ctx");

@@ -21,7 +21,7 @@ import {
 	test,
 } from "bun:test";
 import { ErrCode, RecaseError } from "@autumn/shared";
-import type { Logger } from "@/external/logtail/logtailUtils";
+import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import type { IdempotencyClaimResult } from "@/internal/misc/idempotency/idempotencyKeyUtils.js";
 import { MiscellaneousEdgeConfigSchema } from "@/internal/misc/miscellaneousEdgeConfig/miscellaneousEdgeConfigSchemas.js";
 import { _setMiscellaneousEdgeConfigForTesting } from "@/internal/misc/miscellaneousEdgeConfig/miscellaneousEdgeConfigStore.js";
@@ -36,6 +36,8 @@ const mockState = {
 	dynamoClaimResult: "claimed" as IdempotencyClaimResult,
 	redisClaims: [] as string[],
 	dynamoClaims: [] as string[],
+	redisClaimTtls: [] as Array<number | undefined>,
+	dynamoClaimTtls: [] as Array<number | undefined>,
 	redisReleases: [] as string[],
 	dynamoReleases: [] as string[],
 };
@@ -67,11 +69,15 @@ const realReleaseDynamo = (
 mock.module(
 	"@/external/redis/idempotencyKeys/operations/claimRedisIdempotencyKey.js",
 	() => ({
-		claimRedisIdempotencyKey: async (args: { storageKey: string }) => {
+		claimRedisIdempotencyKey: async (args: {
+			storageKey: string;
+			ttlMs?: number;
+		}) => {
 			if (mockState.passthrough) {
 				return realClaimRedis(args);
 			}
 			mockState.redisClaims.push(args.storageKey);
+			mockState.redisClaimTtls.push(args.ttlMs);
 			return mockState.redisClaimResult;
 		},
 	}),
@@ -92,11 +98,15 @@ mock.module(
 mock.module(
 	"@/external/aws/dynamodb/idempotencyKeys/operations/claimDynamoIdempotencyKey.js",
 	() => ({
-		claimDynamoIdempotencyKey: async (args: { storageKey: string }) => {
+		claimDynamoIdempotencyKey: async (args: {
+			storageKey: string;
+			ttlMs?: number;
+		}) => {
 			if (mockState.passthrough) {
 				return realClaimDynamo(args);
 			}
 			mockState.dynamoClaims.push(args.storageKey);
+			mockState.dynamoClaimTtls.push(args.ttlMs);
 			return mockState.dynamoClaimResult;
 		},
 	}),
@@ -125,25 +135,20 @@ const setDynamoRead = (idempotencyDynamoRead: boolean) => {
 	});
 };
 
-const testLogger = {
-	info: () => undefined,
-	warn: () => undefined,
-} as unknown as Logger;
+const testCtx = {
+	org: { id: "org_123" },
+	env: "sandbox",
+	logger: {
+		info: () => undefined,
+		warn: () => undefined,
+	},
+} as unknown as AutumnContext;
 
 const check = () =>
-	checkIdempotencyKey({
-		orgId: "org_123",
-		env: "sandbox",
-		idempotencyKey: "key-1",
-		logger: testLogger,
-	});
+	checkIdempotencyKey({ ctx: testCtx, idempotencyKey: "key-1" });
 
 const release = () =>
-	releaseIdempotencyKey({
-		orgId: "org_123",
-		env: "sandbox",
-		idempotencyKey: "key-1",
-	});
+	releaseIdempotencyKey({ ctx: testCtx, idempotencyKey: "key-1" });
 
 const expectDuplicateRejection = async (promise: Promise<void>) => {
 	await expect(promise).rejects.toThrow(RecaseError);
@@ -159,6 +164,8 @@ describe("checkIdempotencyKey authority routing", () => {
 		mockState.dynamoClaimResult = "claimed";
 		mockState.redisClaims = [];
 		mockState.dynamoClaims = [];
+		mockState.redisClaimTtls = [];
+		mockState.dynamoClaimTtls = [];
 		mockState.redisReleases = [];
 		mockState.dynamoReleases = [];
 	});
@@ -169,6 +176,19 @@ describe("checkIdempotencyKey authority routing", () => {
 
 	afterAll(() => {
 		mockState.passthrough = true;
+	});
+
+	describe("ttl threading", () => {
+		test("passes ttlMs through to both stores", async () => {
+			await checkIdempotencyKey({
+				ctx: testCtx,
+				idempotencyKey: "key-1",
+				ttlMs: 12_345,
+			});
+
+			expect(mockState.redisClaimTtls).toEqual([12_345]);
+			expect(mockState.dynamoClaimTtls).toEqual([12_345]);
+		});
 	});
 
 	describe("redis authority (flag off, the default)", () => {

@@ -1,4 +1,9 @@
-import { ErrCode, RecaseError, type TrackParams } from "@autumn/shared";
+import {
+	ErrCode,
+	RouteGroup,
+	RecaseError,
+	type TrackParams,
+} from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { getTrackBodyIdempotencyKey } from "@/internal/balances/idempotency/trackBodyIdempotencyKey.js";
 import { withIdempotencyKey } from "@/internal/misc/idempotency/withIdempotencyKey.js";
@@ -32,6 +37,7 @@ export const runAsyncTrack = async ({
 	await withIdempotencyKey({
 		ctx,
 		idempotencyKey: getTrackBodyIdempotencyKey({ body }),
+		routeGroup: RouteGroup.Balances,
 		run: async () => {
 			const queuedResponse = await queueTrack({
 				ctx,

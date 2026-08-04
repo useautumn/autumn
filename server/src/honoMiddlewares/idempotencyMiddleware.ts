@@ -4,6 +4,7 @@ import {
 	shouldReleaseIdempotencyKeyForStatus,
 	withIdempotencyKey,
 } from "@/internal/misc/idempotency/withIdempotencyKey.js";
+import { getRouteGroup } from "./routeGroupRegistry.js";
 
 export const idempotencyMiddleware = async (
 	c: Context<HonoEnv>,
@@ -17,6 +18,7 @@ export const idempotencyMiddleware = async (
 	await withIdempotencyKey({
 		ctx,
 		idempotencyKey,
+		routeGroup: getRouteGroup(c),
 		run: next,
 		// A 4xx/5xx response (except 409) is retryable — free the key.
 		releaseOnSuccess: () => shouldReleaseIdempotencyKeyForStatus(c.res.status),
