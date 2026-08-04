@@ -1,4 +1,5 @@
 import { S3Client } from "@aws-sdk/client-s3";
+import { FetchHttpHandler } from "@smithy/fetch-http-handler";
 import { DEFAULT_AWS_REGION } from "@/external/aws/awsRegionUtils.js";
 
 type S3Credentials = {
@@ -17,15 +18,18 @@ export const getS3Client = ({
 	region = DEFAULT_AWS_REGION,
 	credentials,
 	requestChecksumCalculation,
+	httpTransport = "node",
 }: {
 	region?: string;
 	credentials?: S3Credentials;
 	requestChecksumCalculation?: "WHEN_SUPPORTED" | "WHEN_REQUIRED";
+	httpTransport?: "node" | "fetch";
 }) => {
 	const cacheKey = [
 		region,
 		credentials?.accessKeyId ?? "",
 		requestChecksumCalculation ?? "",
+		httpTransport,
 	].join(":");
 
 	const existingClient = s3ClientsByCacheKey.get(cacheKey);
@@ -35,6 +39,9 @@ export const getS3Client = ({
 		region,
 		...(credentials ? { credentials } : {}),
 		...(requestChecksumCalculation ? { requestChecksumCalculation } : {}),
+		...(httpTransport === "fetch"
+			? { requestHandler: new FetchHttpHandler() }
+			: {}),
 	});
 	s3ClientsByCacheKey.set(cacheKey, s3Client);
 	return s3Client;

@@ -111,7 +111,8 @@ export const createEdgeConfigStore = <T>({
 	const resolveClient = () => {
 		if (injectedS3Client) return injectedS3Client;
 		const { region } = getConfigLocation();
-		return getS3Client({ region });
+		// Keep continuous poll traffic off Bun's node:http compatibility layer.
+		return getS3Client({ region, httpTransport: "fetch" });
 	};
 
 	const readFromSource = async (): Promise<T> => {
