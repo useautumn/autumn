@@ -10,6 +10,7 @@ import {
 } from "@autumn/shared";
 import { logger } from "better-auth";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
+import { promoteDuePooledContributions } from "@/internal/billing/v2/pooledBalances/execute/promoteDuePooledContributions.js";
 import { getRolloverUpdates } from "@/internal/customers/cusProducts/cusEnts/cusRollovers/rolloverUtils.js";
 import { getResetBalancesUpdate } from "@/internal/customers/cusProducts/cusEnts/groupByUtils.js";
 import { getResetAtUpdate } from "./getResetAtUpdate.js";
@@ -28,6 +29,10 @@ export type ProcessResetResult = {
 		rows: Rollover[];
 		fullCusEnt: FullCusEntWithProduct;
 	};
+	/** Authoritative pool granted after contribution promotion/drift-healing;
+	 * callers must propagate it to their caches after their own cache writes. */
+	pooledGranted?: number;
+	pooledContributionsPromoted?: boolean;
 };
 
 /** Processes a single cusEnt reset. Returns updates + optional rollover insert, or null if skipped. */
@@ -48,6 +53,22 @@ export const processReset = async ({
 		isLifetimeEntitlement({ entitlement: ent })
 	) {
 		return null;
+	}
+
+	// Due next-cycle contributions change the pool's granted, so promote
+	// before deriving the refill amount.
+	let pooledGranted: number | undefined;
+	let pooledContributionsPromoted: boolean | undefined;
+	if (cusEnt.pooled_balance) {
+		const promotion = await promoteDuePooledContributions({
+			ctx,
+			customerEntitlement: cusEnt,
+			now: Date.now(),
+		});
+		if (promotion !== null) {
+			pooledGranted = promotion.granted;
+			pooledContributionsPromoted = promotion.promotedCount > 0;
+		}
 	}
 
 	const resetBalance = cusEntToStartingBalance({ cusEnt });
@@ -119,5 +140,10 @@ export const processReset = async ({
 		};
 	}
 
-	return { updates, rolloverInsert };
+	return {
+		updates,
+		rolloverInsert,
+		pooledGranted,
+		pooledContributionsPromoted,
+	};
 };

@@ -33,6 +33,7 @@
         reset_cycle_anchor: number | null,
         next_reset_at: number | null,
         expected_next_reset_at: number | null,
+        pooled_granted: number | null,
         rollover_insert: { id, cus_ent_id, balance, usage, expires_at, entities } | null,
         rollover_overwrites: [{ id, balance, usage, entities }] | null,
         rollover_delete_ids: string[] | null,
@@ -109,6 +110,7 @@ for _, update in ipairs(updates) do
       apply_entities_update(helper_params)
       apply_reset_cycle_anchor_update(helper_params)
       apply_next_reset_at_update(helper_params)
+      apply_pooled_granted_update(helper_params)
       apply_rollover_updates(helper_params)
       apply_replaceable_updates(helper_params)
 
