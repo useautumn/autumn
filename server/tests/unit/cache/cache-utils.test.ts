@@ -37,6 +37,7 @@ mock.module("@/external/redis/initUtils/redisClientRegistry.js", () => ({
 }));
 mock.module("@/external/redis/initRedis.js", () => ({
 	redis: defaultRedis,
+	miscRedis: defaultRedis,
 }));
 
 import { RedisUnavailableError } from "@/external/redis/utils/errors.js";
@@ -140,9 +141,12 @@ describe("cache utils", () => {
 	});
 
 	test("Redis command errors do not mark Redis unavailable", async () => {
-		await tryRedisWrite(async () => {
-			throw new Error("ERR user_script:2: unexpected symbol near '#'");
-		});
+		await tryRedisWrite(
+			async () => {
+				throw new Error("ERR user_script:2: unexpected symbol near '#'");
+			},
+			{ status: "ready" } as never,
+		);
 
 		expect(mockState.warnings).toHaveLength(1);
 	});
