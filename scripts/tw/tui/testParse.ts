@@ -104,13 +104,27 @@ export const parseTestOutput = (
 			});
 			lastTestEndIndex = i;
 		} else if (failMatch) {
-			const errorLines = lines.slice(lastTestEndIndex + 1, i);
 			const test: ParsedTest = {
 				name: (failMatch[1] ?? "").trim(),
 				status: "failed",
 				duration: parseDuration(failMatch[2] ?? "0ms"),
 			};
-			parseErrorFromLines(test, errorLines, filePath);
+			parseErrorFromLines(test, lines.slice(lastTestEndIndex + 1, i), filePath);
+			// Concurrent tests print their error block AFTER the (fail) line, so a
+			// backwards-only slice reports a useless "Test failed". Retry forwards,
+			// up to the next test result, when nothing was found behind us.
+			if (test.error?.message === "Test failed") {
+				const nextResult = lines.findIndex(
+					(candidate, index) =>
+						index > i &&
+						(PASS_LINE.test(candidate) || FAIL_LINE.test(candidate)),
+				);
+				parseErrorFromLines(
+					test,
+					lines.slice(i + 1, nextResult === -1 ? lines.length : nextResult),
+					filePath,
+				);
+			}
 			tests.push(test);
 			lastTestEndIndex = i;
 		}
