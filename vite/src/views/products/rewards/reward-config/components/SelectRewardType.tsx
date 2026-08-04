@@ -1,4 +1,4 @@
-import { PanelButton } from "@autumn/ui";
+import { Badge, PanelButton } from "@autumn/ui";
 import { GiftIcon, LightningIcon, PercentIcon } from "@phosphor-icons/react";
 import { SheetSection } from "@/components/v2/sheets/SharedSheetComponents";
 import {
@@ -68,8 +68,11 @@ export function SelectRewardType({ reward, setReward }: SelectRewardTypeProps) {
 							icon={<GiftIcon size={16} color="currentColor" />}
 						/>
 						<div className="flex-1">
-							<div className="text-body-highlight mb-1">
-								Free Product (legacy)
+							<div className="mb-1 flex items-center gap-1.5">
+								<span className="text-body-highlight">Free Product</span>
+								<Badge className="border-amber-500/20! bg-amber-500/10! px-1.5 py-0 font-mono text-[10px]! text-amber-600! shadow-none! dark:text-amber-400!">
+									DEPRECATED
+								</Badge>
 							</div>
 							<div className="text-body-secondary leading-tight">
 								Give away a plan. Use a feature grant instead for new referral
