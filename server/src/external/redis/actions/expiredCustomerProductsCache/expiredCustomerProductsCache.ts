@@ -1,9 +1,9 @@
 import type { FullCusProduct } from "@autumn/shared";
-import { getMiscRedis } from "@/external/redis/initRedis.js";
-import { tryRedisOp } from "@/external/redis/utils/runRedisOp.js";
+import { getFromMiscRedisTargets } from "@/external/redis/miscCache/getFromMiscRedisTargets.js";
+import { setOnMiscRedisTargets } from "@/external/redis/miscCache/setOnMiscRedisTargets.js";
 
-/** Pinned: written by subscription.deleted and read by invoice.created — two
- *  different requests, so ramp routing would break the handoff. */
+/** Cross-request handoff (subscription.deleted writes, invoice.created reads),
+ *  so it dual-writes and reads from every live instance during a ramp. */
 const EXPIRED_CUSTOMER_PRODUCTS_TTL_SECONDS = 300;
 
 export const buildExpiredCustomerProductsCacheKey = (
@@ -15,13 +15,9 @@ export const getCachedExpiredCustomerProducts = async ({
 }: {
 	stripeSubscriptionId: string;
 }): Promise<FullCusProduct[] | null> => {
-	const miscRedis = getMiscRedis();
-	const cacheKey = buildExpiredCustomerProductsCacheKey(stripeSubscriptionId);
-
-	const cached = await tryRedisOp({
-		operation: () => miscRedis.get(cacheKey),
+	const cached = await getFromMiscRedisTargets({
+		key: buildExpiredCustomerProductsCacheKey(stripeSubscriptionId),
 		source: "expired-cus-products-cache:get",
-		redisInstance: miscRedis,
 	});
 	if (!cached) return null;
 
@@ -35,18 +31,10 @@ export const setCachedExpiredCustomerProducts = async ({
 	stripeSubscriptionId: string;
 	customerProducts: FullCusProduct[];
 }): Promise<void> => {
-	const miscRedis = getMiscRedis();
-	const cacheKey = buildExpiredCustomerProductsCacheKey(stripeSubscriptionId);
-
-	await tryRedisOp({
-		operation: () =>
-			miscRedis.set(
-				cacheKey,
-				JSON.stringify(customerProducts),
-				"EX",
-				EXPIRED_CUSTOMER_PRODUCTS_TTL_SECONDS,
-			),
+	await setOnMiscRedisTargets({
+		key: buildExpiredCustomerProductsCacheKey(stripeSubscriptionId),
+		value: JSON.stringify(customerProducts),
+		ttlMs: EXPIRED_CUSTOMER_PRODUCTS_TTL_SECONDS * 1000,
 		source: "expired-cus-products-cache:set",
-		redisInstance: miscRedis,
 	});
 };

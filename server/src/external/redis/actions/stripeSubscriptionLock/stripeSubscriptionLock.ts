@@ -1,5 +1,5 @@
-import { getMiscRedis } from "@/external/redis/initRedis";
-import { tryRedisOp } from "@/external/redis/utils/runRedisOp.js";
+import { getFromMiscRedisTargets } from "@/external/redis/miscCache/getFromMiscRedisTargets.js";
+import { setOnMiscRedisTargets } from "@/external/redis/miscCache/setOnMiscRedisTargets.js";
 
 const STRIPE_SUBSCRIPTION_LOCK_TTL_SECONDS =
 	process.env.NODE_ENV === "production" ? 60 : 3;
@@ -18,19 +18,13 @@ export const setStripeSubscriptionLock = async ({
 	stripeSubscriptionId: string;
 	lockedAtMs: number;
 }) => {
-	const miscRedis = getMiscRedis();
 	const lockKey = buildStripeSubscriptionLockKey(stripeSubscriptionId);
 
-	await tryRedisOp({
-		operation: () =>
-			miscRedis.set(
-				lockKey,
-				JSON.stringify({ lockedAtMs }),
-				"EX",
-				STRIPE_SUBSCRIPTION_LOCK_TTL_SECONDS,
-			),
+	await setOnMiscRedisTargets({
+		key: lockKey,
+		value: JSON.stringify({ lockedAtMs }),
+		ttlMs: STRIPE_SUBSCRIPTION_LOCK_TTL_SECONDS * 1000,
 		source: "stripe-subscription-lock:set",
-		redisInstance: miscRedis,
 	});
 };
 
@@ -39,13 +33,9 @@ export const getStripeSubscriptionLock = async ({
 }: {
 	stripeSubscriptionId: string;
 }): Promise<StripeSubscriptionLock | null> => {
-	const miscRedis = getMiscRedis();
-	const lockKey = buildStripeSubscriptionLockKey(stripeSubscriptionId);
-
-	const value = await tryRedisOp({
-		operation: () => miscRedis.get(lockKey),
+	const value = await getFromMiscRedisTargets({
+		key: buildStripeSubscriptionLockKey(stripeSubscriptionId),
 		source: "stripe-subscription-lock:get",
-		redisInstance: miscRedis,
 	});
 	if (!value) return null;
 

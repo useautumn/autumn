@@ -1,5 +1,6 @@
 import { ErrCode, RecaseError } from "@autumn/shared";
 import { getMiscRedis } from "@/external/redis/initRedis.js";
+import { mirrorSetOnMiscRedisRampTarget } from "@/external/redis/miscCache/setOnMiscRedisTargets.js";
 
 export interface LockData {
 	errorMessage: string;
@@ -55,9 +56,10 @@ export const acquireLock = async ({
 	let conflict = false;
 	try {
 		const lockData: LockData = { errorMessage, token };
+		const serializedLockData = JSON.stringify(lockData);
 		const result = await redis.set(
 			lockKey,
-			JSON.stringify(lockData),
+			serializedLockData,
 			"PX",
 			ttlMs,
 			"NX",
@@ -73,6 +75,13 @@ export const acquireLock = async ({
 
 			throw lockConflictError(parsed?.errorMessage || errorMessage);
 		}
+
+		void mirrorSetOnMiscRedisRampTarget({
+			key: lockKey,
+			value: serializedLockData,
+			ttlMs,
+			source: "lock:mirror",
+		});
 
 		return true;
 	} catch (error) {

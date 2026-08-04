@@ -58,7 +58,9 @@ Design locked with John: key classification is read-through caches (rampable by 
 
 ### PR 3 — the sweep + ramp wiring (todo)
 
-ctx.miscRedis threading, Proxy deletion, runRedisOp `operation(redis)` API, pinned call sites; then ramp the 5 rampable cache modules onto `resolveMiscRedis`/`forEachMiscRedisTarget` + admin UI. Pre-flip checklist: verify `checkout:*` and `oauth_state:*` miss behavior (or flip at low traffic).
+Proxy deletion + pinned call sites; then ramp the 5 rampable cache modules onto `resolveMiscRedis`/`forEachMiscRedisTarget` + admin UI. Pre-flip checklist: verify `checkout:*` and `oauth_state:*` miss behavior (or flip at low traffic).
+
+DESCOPED (John, 2026-08-04): no `ctx.miscRedis` threading — call sites call `getMiscRedis()` / `resolveMiscRedis({ requestId: ctx.id })` directly (ctx is already in scope where it matters). The `runRedisOp`/`tryRedisOp` `operation(redis)` callback API change is deferred — keep the current shape for now. John handles the cloud-repo fixes (incl. `initOrgUtils.ts` `redis` import) and runs integration tests himself.
 
 
 | # | Unit | Scope |
@@ -67,12 +69,13 @@ ctx.miscRedis threading, Proxy deletion, runRedisOp `operation(redis)` API, pinn
 | 9 | Misc-redis migration edge config | Extend `mainRedisCacheSchemas` with `cacheV2Ramp`-shaped destination: encrypted `connectionString`, `url`, `migrationPercent`/`previousMigrationPercent`/`migrationChangedAt`. Copy patterns from `cacheV2RampClient.ts` (lazy hot-swappable destination client, disconnect on change) and `cacheV2RampStore.ts` (refuse conn edits while percent > 0). Destination reads `CACHE_MISC_DRAGONFLY_URL` as the default/bootstrap URL. Admin routes + `EdgeConfigView.tsx` section; register S3 key in `adminS3Config.ts`. |
 | 10 | Per-request routing + dual invalidation | `ctx.miscRedis` threaded like `ctx.redisV2` (worker equivalents: `createWorkerContext.ts`, `createAutumnContext.ts`). Bucket by requestId decides old vs new instance for cache wrappers. `getMiscRedisTargets()` (analog of `getRedisTargetsForCustomer`, `customerRedisRouting.ts:104`) fans every DEL/invalidate out to both instances while ramp active. |
 | 11 | Coordination keys pinned | Locks (`redisUtils`, billing/checkout/entity/migration/stripe-sub locks), rate limiters, stripe webhook idempotency, OAuth replay guard, auto-topup suppression, queue capacity leases call `getMiscRedis()` directly — resolves from `activeInstance` only, ignores the bucket. |
+| 12 | Lock dual-write + read-both (DONE, branch `feat/redis-lock-dual-write`) | While a ramp exists, locks survive a flip/rollback: NX decision stays on the active instance, won locks mirror fire-and-forget to the ramp target (`void mirrorSetOnMiscRedisRampTarget` — never throws), release/refresh fan to all targets (`clearLock`/`refreshLockLease` via `forEachMiscRedisTarget`). Dual-written cross-request stores (`checkoutSessionLock`, `stripeSubscriptionLock`, `expiredCustomerProductsCache`) write through `setOnMiscRedisTargets` and read active-first-then-others via `getFromMiscRedisTargets` (covers values written before the ramp existed). Excluded (documented): `queueCapacityLease` (Lua semaphore — mirroring needs a force-add script; flip worst case = over-admission bounded by leaseMs), idempotency claim (Dynamo authoritative; Redis leg rollback-only), `oauthRefreshReplay` (30s TTL), `saveLockReceipt` (cross-request state class, not a lock). |
 
 ## Phase 4 — Cutover (ops)
 
-- Verify Dragonfly compat: `SCRIPT LOAD`/`EVALSHA` (hono-rate-limiter store), inline `eval` lock scripts, `JSON.SET` (`saveLockReceipt.ts:41` — last RedisJSON user after unit 2), `{orgId}` hash tags (`products_full:{orgId}`).
+- ~~Verify Dragonfly compat~~ VERIFIED 2026-08-04 (empirically, on both the local Dragonfly and the dev Dragonfly Cloud backup `u4477txx8.dragonflydb.cloud:6385`, both df-v1.38.1): SCRIPT LOAD/EVALSHA + NOSCRIPT retry surface (hono-rate-limiter scripts verbatim), owner-token lock scripts, queue-permit semaphore scripts, JSON.SET/JSON.GET (saveLockReceipt), `{orgId}` hash-tag SET/GET/SCAN/DEL — all pass. Script: scratchpad `dragonflyCompatCheck.ts` (rerunnable with `CACHE_V2_DRAGONFLY_URL=<url>`).
 - Ramp 1 → 10 → 50 → 100 over days (TTLs are short: org 60s, keys 1h, products 24h — new instance warms fast).
-- Flip `activeInstance` to the Dragonfly URL — coordination keys cut over here; lock TTLs ≤ 300s bound the drain window; brief idempotency/rate-limit amnesia is acceptable.
+- Flip `activeInstance` to the Dragonfly URL — coordination keys cut over here; with lock dual-write (unit 12) in-flight locks already exist on the target. `setActiveMiscRedisInstance` clears the ramp, which stops mirroring — so immediately `startMiscRedisRamp({ percent: 0 })` back toward the old instance as the rollback soak (keeps mirroring + invalidation fan-out); clear it once rollback is off the table.
 - Decommission Redis Cloud; remove `CACHE_URL` region naming; remove ramp state.
 - Dashboards: `create-redis-dashboard` skill has the canonical Axiom template.
 

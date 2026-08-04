@@ -1,6 +1,6 @@
-import { getMiscRedis } from "@/external/redis/initRedis";
+import { getFromMiscRedisTargets } from "@/external/redis/miscCache/getFromMiscRedisTargets.js";
+import { setOnMiscRedisTargets } from "@/external/redis/miscCache/setOnMiscRedisTargets.js";
 import { clearLock } from "@/external/redis/utils/lockUtils/clearLock.js";
-import { tryRedisOp } from "@/external/redis/utils/runRedisOp.js";
 import { expireStripeCheckoutSession } from "@/external/stripe/checkoutSessions/operations/expireStripeCheckoutSession.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 
@@ -30,13 +30,9 @@ const get = async ({
 	ctx: AutumnContext;
 	customerId: string;
 }): Promise<CheckoutSessionLockData | null> => {
-	const miscRedis = getMiscRedis();
-	const lockKey = buildCheckoutSessionLockKey({ ctx, customerId });
-
-	const value = await tryRedisOp({
-		operation: () => miscRedis.get(lockKey),
+	const value = await getFromMiscRedisTargets({
+		key: buildCheckoutSessionLockKey({ ctx, customerId }),
 		source: "checkout-session-lock:get",
-		redisInstance: miscRedis,
 	});
 	if (!value) return null;
 
@@ -52,22 +48,16 @@ const set = async ({
 	customerId: string;
 	data: CheckoutSessionLockData;
 }): Promise<void> => {
-	const miscRedis = getMiscRedis();
 	const lockKey = buildCheckoutSessionLockKey({ ctx, customerId });
 	const ttlSeconds = data.expiresAt
 		? Math.max(1, Math.ceil((data.expiresAt - Date.now()) / 1000))
 		: FALLBACK_CHECKOUT_LOCK_TTL_SECONDS;
 
-	await tryRedisOp({
-		operation: () =>
-			miscRedis.set(
-				lockKey,
-				JSON.stringify({ ...data, token: data.checkoutSessionId }),
-				"EX",
-				ttlSeconds,
-			),
+	await setOnMiscRedisTargets({
+		key: lockKey,
+		value: JSON.stringify({ ...data, token: data.checkoutSessionId }),
+		ttlMs: ttlSeconds * 1000,
 		source: "checkout-session-lock:set",
-		redisInstance: miscRedis,
 	});
 };
 
