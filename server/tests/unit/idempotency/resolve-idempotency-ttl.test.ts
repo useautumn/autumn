@@ -11,6 +11,7 @@ import { describe, expect, test } from "bun:test";
 import {
 	DEFAULT_IDEMPOTENCY_TTL_HOURS,
 	IdempotencyConfigEntrySchema,
+	IdempotencyConfigSchema,
 	ms,
 	RouteGroup,
 	Scopes,
@@ -88,6 +89,15 @@ describe("IdempotencyConfigEntrySchema bounds", () => {
 				routeGroup: RouteGroup.Balances,
 				idempotencyTtl: 0,
 			}).success,
+		).toBe(false);
+	});
+
+	test.concurrent("rejects duplicate route groups", () => {
+		expect(
+			IdempotencyConfigSchema.safeParse([
+				{ routeGroup: RouteGroup.Balances, idempotencyTtl: 24 },
+				{ routeGroup: RouteGroup.Balances, idempotencyTtl: 48 },
+			]).success,
 		).toBe(false);
 	});
 

@@ -43,47 +43,45 @@ export const handleUpdateOrgConfig = createRoute({
 			: null;
 		if (parsedIdempotency && !parsedIdempotency.success) {
 			throw new RecaseError({
-				message: "Idempotency key duration must be between 1 hour and 30 days",
+				message:
+					parsedIdempotency.error.issues[0]?.message ??
+					"Invalid idempotency config",
 				code: ErrCode.InvalidRequest,
 				statusCode: 400,
 			});
 		}
 
-		if (sentKeys.length > 0) {
-			// Validate sent values, then read back only the sent keys so the
-			// defaults `.partial()` fills for omitted keys are never merged.
-			const validated = OrgConfigSchema.partial().parse(raw) as Record<
-				string,
-				unknown
-			>;
-			const updates = Object.fromEntries(
-				sentKeys.map((k) => [k, validated[k]]),
-			) as Partial<OrgConfig>;
+		// Validate sent values, then read back only the sent keys so the
+		// defaults `.partial()` fills for omitted keys are never merged.
+		const validated = OrgConfigSchema.partial().parse(raw) as Record<
+			string,
+			unknown
+		>;
+		const updates = Object.fromEntries(
+			sentKeys.map((k) => [k, validated[k]]),
+		) as Partial<OrgConfig>;
 
-			await db.execute(
-				sql`UPDATE organizations
-					SET config = COALESCE(config, '{}'::jsonb) || ${JSON.stringify(updates)}::jsonb
-					WHERE id = ${org.id}`,
-			);
-		}
-
-		if (parsedIdempotency?.success) {
-			await db
-				.update(organizations)
-				.set({ idempotency_config: parsedIdempotency.data })
-				.where(eq(organizations.id, org.id));
-		}
-
-		await clearOrgCache({ db, orgId: org.id });
-
+		// One atomic UPDATE for both columns — a mixed request can never
+		// partially commit.
 		const [row] = await db
-			.select({
+			.update(organizations)
+			.set({
+				...(sentKeys.length > 0
+					? {
+							config: sql`COALESCE(config, '{}'::jsonb) || ${JSON.stringify(updates)}::jsonb`,
+						}
+					: {}),
+				...(parsedIdempotency?.success
+					? { idempotency_config: parsedIdempotency.data }
+					: {}),
+			})
+			.where(eq(organizations.id, org.id))
+			.returning({
 				config: organizations.config,
 				idempotency_config: organizations.idempotency_config,
-			})
-			.from(organizations)
-			.where(eq(organizations.id, org.id))
-			.limit(1);
+			});
+
+		await clearOrgCache({ db, orgId: org.id });
 
 		return c.json({
 			success: true,
