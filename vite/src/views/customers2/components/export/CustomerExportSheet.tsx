@@ -81,12 +81,6 @@ export function CustomerExportSheet({
 										<CustomerExportFieldSelector
 											selectedFields={field.state.value}
 											onChange={(fields) => field.handleChange(fields)}
-											errorMessage={
-												field.state.meta.errors.length > 0
-													? (field.state.meta.errors[0]?.message ??
-														"Select at least one column.")
-													: undefined
-											}
 										/>
 									)}
 								</form.Field>
