@@ -192,6 +192,10 @@ import { DynamicResponseExample } from "/snippets/dynamic-response-example.jsx";
               Whether the customer has unlimited access to this feature.
             </DynamicResponseField>
 
+            <DynamicResponseField name="pooled" type="boolean">
+              Whether entity-level grants contribute to a shared customer balance.
+            </DynamicResponseField>
+
             <DynamicResponseField name="reset" type="object | null">
               Reset configuration for consumable features. Null for non-consumable features like seats where usage persists across billing cycles.
               <Expandable title="properties">
@@ -413,6 +417,10 @@ import { DynamicResponseExample } from "/snippets/dynamic-response-example.jsx";
 
                     <DynamicResponseField name="unlimited" type="boolean">
                       If true, customer has unlimited access to this feature.
+                    </DynamicResponseField>
+
+                    <DynamicResponseField name="pooled" type="boolean">
+                      Whether entity-level grants contribute to a shared customer balance.
                     </DynamicResponseField>
 
                     <DynamicResponseField name="reset" type="object">
@@ -1130,6 +1138,10 @@ import { DynamicResponseExample } from "/snippets/dynamic-response-example.jsx";
               Whether the customer has unlimited access to this feature.
             </DynamicResponseField>
 
+            <DynamicResponseField name="pooled" type="boolean">
+              Whether entity-level grants contribute to a shared customer balance.
+            </DynamicResponseField>
+
             <DynamicResponseField name="reset" type="object | null">
               Reset configuration for consumable features. Null for non-consumable features like seats where usage persists across billing cycles.
               <Expandable title="properties">
@@ -1351,6 +1363,10 @@ import { DynamicResponseExample } from "/snippets/dynamic-response-example.jsx";
 
                     <DynamicResponseField name="unlimited" type="boolean">
                       If true, customer has unlimited access to this feature.
+                    </DynamicResponseField>
+
+                    <DynamicResponseField name="pooled" type="boolean">
+                      Whether entity-level grants contribute to a shared customer balance.
                     </DynamicResponseField>
 
                     <DynamicResponseField name="reset" type="object">

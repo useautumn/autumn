@@ -162,6 +162,10 @@ openapi: "api/openapi.yml webhook billing.updated"
               Whether the customer has unlimited access to this feature.
             </ParamField>
 
+            <ParamField body="pooled" type="boolean">
+              Whether entity-level grants contribute to a shared customer balance.
+            </ParamField>
+
             <ParamField body="reset" type="object | null" required>
               Reset configuration for consumable features. Null for non-consumable features like seats where usage persists across billing cycles.
               <Expandable title="properties">

@@ -93,6 +93,10 @@ import { DynamicResponseExample } from "/snippets/dynamic-response-example.jsx";
           If true, customer has unlimited access to this feature.
         </DynamicParamField>
 
+        <DynamicParamField body="pooled" type="boolean">
+          Whether entity-level grants contribute to a shared customer balance.
+        </DynamicParamField>
+
         <DynamicParamField body="reset" type="object">
           Reset configuration for consumable features. Omit for non-consumable features like seats.
           <Expandable title="properties">
@@ -235,6 +239,10 @@ import { DynamicResponseExample } from "/snippets/dynamic-response-example.jsx";
 
         <DynamicParamField body="unlimited" type="boolean">
           If true, customer has unlimited access to this feature.
+        </DynamicParamField>
+
+        <DynamicParamField body="pooled" type="boolean">
+          Whether entity-level grants contribute to a shared customer balance.
         </DynamicParamField>
 
         <DynamicParamField body="reset" type="object">
@@ -615,6 +623,10 @@ import { DynamicResponseExample } from "/snippets/dynamic-response-example.jsx";
 
                 <DynamicParamField body="unlimited" type="boolean">
                   If true, customer has unlimited access to this feature.
+                </DynamicParamField>
+
+                <DynamicParamField body="pooled" type="boolean">
+                  Whether entity-level grants contribute to a shared customer balance.
                 </DynamicParamField>
 
                 <DynamicParamField body="reset" type="object">
