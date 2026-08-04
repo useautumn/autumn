@@ -12,7 +12,7 @@ import {
 	rewardRepo,
 } from "@/internal/rewards/repos/index.js";
 import {
-	validateRewardIsFeatureGrant,
+	validateRewardTypeSupported,
 	validateRewardProgramTrigger,
 } from "./validateRewardProgram.js";
 
@@ -74,7 +74,7 @@ export const handleUpdateRewardProgram = createRoute({
 				});
 			}
 
-			validateRewardIsFeatureGrant(reward);
+			validateRewardTypeSupported(reward);
 
 			// The lookup accepts id or internal_id, but the FK requires internal_id
 			internalRewardId = reward.internal_id;

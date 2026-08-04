@@ -1,16 +1,16 @@
 lockVersion: 2.0.0
 id: 7b300647-cd76-49e9-bf77-7d1bf5446d66
 management:
-  docChecksum: 151986c4a81d6fb090fbe103f00ee5da
+  docChecksum: 3cff9e4b48b071e8808768c161d182fc
   docVersion: 2.3.0
   speakeasyVersion: 1.762.0
   generationVersion: 2.882.0
   releaseVersion: 0.10.18
   configChecksum: a05ee9fa7bf0a40d4f216cac1903f122
 persistentEdits:
-  generation_id: c46b89a3-552e-4b3e-a478-f7b19e70e773
-  pristine_commit_hash: cb83bb71d6aa44845aa6edb33d9c91c146e316ff
-  pristine_tree_hash: f8d8aa46b2ffac6a6d3d32b40b5b5e69b4ca3b20
+  generation_id: 6eb3c654-e617-44bf-9ced-b0810ee421e4
+  pristine_commit_hash: f7c2a9adb4740ad38a0ed05532d2ba4f48765ad0
+  pristine_tree_hash: e871d3068831349c599e186251ed4547218c48ec
 features:
   typescript:
     additionalDependencies: 0.1.0
@@ -2112,6 +2112,18 @@ trackedFiles:
     id: 8d8c5e4e1502
     last_write_checksum: sha1:94a43a0d34bb024010eb069d5d2e71b4d5f87d39
     pristine_git_object: 4971dcd50e07c557f14ab1fe6c87ff430903d288
+  docs/models/create-referral-program-globals.md:
+    id: 91836e9fd12e
+    last_write_checksum: sha1:ac15cac3a83e4eef641763721c6c4fedf6036410
+    pristine_git_object: 784a211d8d990aa563558c321ea08f3197135cf6
+  docs/models/create-referral-program-params.md:
+    id: e6318c11413b
+    last_write_checksum: sha1:51afb26c67921f65520c6aff0fd450fe29396440
+    pristine_git_object: 2e008915c2018c01713618cd4f9d0fe2262cf19d
+  docs/models/create-referral-program-response.md:
+    id: 1c1bf25b22bd
+    last_write_checksum: sha1:de941acb9b3e6177c9834e2de35420e0d56af0af
+    pristine_git_object: 174d77b27f444a6b4f441bbfeeb2b575807c626e
   docs/models/create-reward-coupon-promo-code-response.md:
     id: b7ba6508082b
     last_write_checksum: sha1:469a1f8e08f5873ee9046bb6234708fcb830d841
@@ -6360,6 +6372,22 @@ trackedFiles:
     id: 0cae0c76762e
     last_write_checksum: sha1:05ccea3be76092b640e73a465cdd61ca0b8f6606
     pristine_git_object: 9ba10cd8669d1f8b448ff7d940c5faea66f1cc66
+  docs/models/received-by-request.md:
+    id: dcc848816883
+    last_write_checksum: sha1:e42b8acd13916783cec586db3bdee51683fd92f8
+    pristine_git_object: b38753597131620c5db9f4a7778c94925b75c161
+  docs/models/received-by-response.md:
+    id: a60d38b63a00
+    last_write_checksum: sha1:3e1132dfdfd60d2897646c0b5a352bb57a98b6b7
+    pristine_git_object: 874864fbdf1ee05b218c2190299a05ccc13f7dd1
+  docs/models/redeem-on-request.md:
+    id: d2751f368c18
+    last_write_checksum: sha1:8a2b2734df746489288d17d7bb2174c2809ee5cb
+    pristine_git_object: 7dcbb474ea373eb45fac8e7e52bc25099cd69caf
+  docs/models/redeem-on-response.md:
+    id: 62cdc1984fad
+    last_write_checksum: sha1:3331f54bf578a86175567c0fa1251ec109508d3c
+    pristine_git_object: a129ce96d242f5caaee8f22c5673509af2ccac77
   docs/models/redeem-referral-code-globals.md:
     id: c2de2fdb9460
     last_write_checksum: sha1:beef21f752aec1fcc578f63914a2477783f5a059
@@ -8314,8 +8342,8 @@ trackedFiles:
     pristine_git_object: a699333506973bbe1cf50a094e48ed30d5a52d9a
   docs/sdks/referrals/README.md:
     id: 50b71f597f20
-    last_write_checksum: sha1:b10fdf64bd7d821c93d721f1ef481f045e046438
-    pristine_git_object: ae358ae6fbace6a9fffea13dac82023145fe5b17
+    last_write_checksum: sha1:af4d8f5918249e19102687465e70eecc40ac82c3
+    pristine_git_object: 2fc5ee0b6d0bfbd7d7214380177fb8efa1ffac2f
   docs/sdks/rewards/README.md:
     id: 48d8e259ad8b
     last_write_checksum: sha1:33399c487d20a7592b4b8c1a054fad197318825e
@@ -8556,6 +8584,10 @@ trackedFiles:
     id: f2088dbf847d
     last_write_checksum: sha1:2c980d8a56a6b8b7a15023cea02b9899454807be
     pristine_git_object: 710683af6857a80681203872e42d2baf92fb1c1a
+  src/funcs/referrals-create-program.ts:
+    id: 9a53c4773316
+    last_write_checksum: sha1:fb1ad1392eaeac0092dc350200ae4b67e9f3a8c0
+    pristine_git_object: a918bd8c1c7e8f6060c6df75e323f23b42130383
   src/funcs/referrals-redeem-code.ts:
     id: 0549de1f6073
     last_write_checksum: sha1:fc882d473e99c5b40e04d5cef0afc45c5a891533
@@ -8716,6 +8748,10 @@ trackedFiles:
     id: 745cd70e7a69
     last_write_checksum: sha1:01ce64d29c3bd84e0c9bf1e6a979e7e493f10d67
     pristine_git_object: d979198ac227f8e5731e5ca5e2e34b55d88da348
+  src/models/create-referral-program-op.ts:
+    id: 1512a3184698
+    last_write_checksum: sha1:ee900cf409c2873bb02dbc5f93a66ac81159e619
+    pristine_git_object: 96faf169c5352296a7bb70cc908fd28096339644
   src/models/create-reward-op.ts:
     id: 5dd3e30a365b
     last_write_checksum: sha1:f1b6f0406fdc08df929ca98e9845b7da3ba29630
@@ -8794,8 +8830,8 @@ trackedFiles:
     pristine_git_object: bd7047c94965f6154cbf8657c5a6a9ddabdf174d
   src/models/index.ts:
     id: f93644b0f37e
-    last_write_checksum: sha1:04ddf73ba318d6076e6b8d12aff0a06c8acba9f6
-    pristine_git_object: 3bda331cfae8857509f9a6fff04312b0c27fe065
+    last_write_checksum: sha1:3268f09814a0f4f91ece69a9f11f0aa526f2059a
+    pristine_git_object: dd1e3dd1beaaccfcd9e86d6f838777c9c1644838
   src/models/insert-invoices-op.ts:
     id: d5b32875066f
     last_write_checksum: sha1:414244eb6712967c72c16c4a656fe4688a759bc3
@@ -8986,8 +9022,8 @@ trackedFiles:
     pristine_git_object: 43d8c9737a11477ceff5f0951fb3e5d60670d55f
   src/sdk/referrals.ts:
     id: bf164167845c
-    last_write_checksum: sha1:b73c1db6a419f5c7f6643382d5bc399204e95150
-    pristine_git_object: 01839523f5433d6365b0f2704b81e5aa72288e66
+    last_write_checksum: sha1:f163ce391a14366afa4c347a0f377342e0e488e2
+    pristine_git_object: 31f60923b714a4d8c82b9de94fae43447fffdf99
   src/sdk/rewards.ts:
     id: "727538943e37"
     last_write_checksum: sha1:74c6fc235b457abe2a38699de4eb3390dacb56aa
@@ -10100,4 +10136,14 @@ examples:
       responses:
         "200":
           application/json: {"coupon": {"id": "summer_sale", "name": "Summer Sale", "type": "percentage_discount", "value": 20, "duration": {"type": "months", "length": 3}, "plan_ids": ["pro", "starter"], "promo_codes": [{"code": "SUMMER20", "global_max_redemption": 100, "first_time_transaction": false}], "created_at": 1718000000000}, "feature_grant": {"id": "beta_credits_grant", "name": "Beta Tester Credits", "grants": [{"feature_id": "credits", "included": 1000, "expiry": {"type": "month", "length": 1}}], "promo_codes": [{"code": "BETA2024", "max_uses": 500}], "created_at": 1718000000000}}
+  createReferralProgram:
+    speakeasy-default-create-referral-program:
+      parameters:
+        header:
+          x-api-version: "2.3.0"
+      requestBody:
+        application/json: {"id": "refer_a_friend", "reward_id": "beta_credits_grant", "redeem_on": "customer_creation", "received_by": "referrer", "max_redemptions": 10, "plan_ids": null, "exclude_trial": false}
+      responses:
+        "200":
+          application/json: {"id": "refer_a_friend", "reward_id": "beta_credits_grant", "redeem_on": "customer_creation", "received_by": "referrer", "max_redemptions": 10, "plan_ids": null, "exclude_trial": false, "created_at": 1718000000000}
 examplesVersion: 1.0.2
