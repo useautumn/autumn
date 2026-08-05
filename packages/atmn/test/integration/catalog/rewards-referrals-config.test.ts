@@ -16,6 +16,7 @@ test("atmn pushes, redeems, pulls, and re-pushes reward config", async () => {
 	}
 	const suffix = Date.now();
 	const featureId = `atmn_referral_credits_${suffix}`;
+	const couponId = `atmn_launch_discount_${suffix}`;
 	const rewardId = `atmn_referral_reward_${suffix}`;
 	const programId = `atmn_referral_program_${suffix}`;
 	const referrerId = `atmn_referrer_${suffix}`;
@@ -30,6 +31,11 @@ test("atmn pushes, redeems, pulls, and re-pushes reward config", async () => {
 		`import { feature, referralProgram, reward } from 'atmn';
 
 export const credits = feature({ id: '${featureId}', name: 'Referral credits', type: 'metered', consumable: true });
+export const launchDiscount = reward({
+	id: '${couponId}', name: 'Launch discount', type: 'percentage_discount', value: 20,
+	duration: { type: 'months', length: 3 },
+	promoCodes: [{ code: 'LAUNCH${suffix}', maxRedemptions: 100, firstTimeTransaction: true }],
+});
 export const referralReward = reward({
 	id: '${rewardId}', name: 'Referral reward', type: 'feature_grant',
 	grants: [{ featureId: credits.id, included: ${included} }],
@@ -80,7 +86,8 @@ export const referrals = referralProgram({
 		workspace,
 	});
 	const pulled = await readFile(workspace.configPath, "utf8");
-	expect(pulled).toContain("reward(");
+	expect(pulled).toContain(couponId);
+	expect(pulled).toContain(rewardId);
 	expect(pulled).toContain("referralProgram(");
 	await push();
 });

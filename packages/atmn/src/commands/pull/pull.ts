@@ -81,7 +81,10 @@ async function _pullImpl(options: PullOptions = {}): Promise<PullResult> {
 				const liveData = await pullFromEnvironment(liveKey, { allVersions });
 
 				// Merge sandbox and live
-				mergedData = mergeEnvironments(primaryData, liveData);
+				mergedData = mergeEnvironments({
+					sandbox: primaryData,
+					production: liveData,
+				});
 			} catch (error) {
 				console.warn("Failed to fetch live data, using sandbox only:", error);
 			}
@@ -95,7 +98,10 @@ async function _pullImpl(options: PullOptions = {}): Promise<PullResult> {
 				});
 
 				// Merge live and sandbox
-				mergedData = mergeEnvironments(sandboxData, primaryData);
+				mergedData = mergeEnvironments({
+					sandbox: sandboxData,
+					production: primaryData,
+				});
 			} catch (error) {
 				console.warn("Failed to fetch sandbox data, using live only:", error);
 			}

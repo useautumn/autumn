@@ -1,66 +1,53 @@
-import type { Feature } from "../../compose/models/index.js";
 import type { Plan } from "../../compose/models/variantModels.js";
 import type { EnvironmentData } from "./types.js";
 
 const planKey = (plan: Plan) =>
 	plan.version === undefined ? plan.id : `${plan.id}:${plan.version}`;
 
-/**
- * Merge sandbox and production data for SDK types generation
- * Deduplicates by ID, preferring sandbox definitions
- */
-export function mergeEnvironments(
-	sandbox: EnvironmentData,
-	production: EnvironmentData,
-): EnvironmentData {
-	// Merge features (dedupe by ID)
-	const featureMap = new Map<string, Feature>();
-
-	// Add sandbox features first
-	for (const feature of sandbox.features) {
-		featureMap.set(feature.id, feature);
+const mergeByKey = <T>({
+	sandbox,
+	production,
+	key,
+}: {
+	sandbox: T[];
+	production: T[];
+	key: (item: T) => string;
+}) => {
+	const merged = new Map<string, T>();
+	for (const item of [...sandbox, ...production]) {
+		const itemKey = key(item);
+		if (!merged.has(itemKey)) merged.set(itemKey, item);
 	}
+	return [...merged.values()];
+};
 
-	// Add production features that don't exist in sandbox
-	for (const feature of production.features) {
-		if (!featureMap.has(feature.id)) {
-			featureMap.set(feature.id, feature);
-		}
-	}
-
-	// Merge plans (dedupe by ID + version)
-	const planMap = new Map<string, Plan>();
-
-	// Add sandbox plans first
-	for (const plan of sandbox.plans) {
-		planMap.set(planKey(plan), plan);
-	}
-
-	// Add production plans that don't exist in sandbox
-	for (const plan of production.plans) {
-		const key = planKey(plan);
-		if (!planMap.has(key)) {
-			planMap.set(key, plan);
-		}
-	}
-
+export function mergeEnvironments({
+	sandbox,
+	production,
+}: {
+	sandbox: EnvironmentData;
+	production: EnvironmentData;
+}): EnvironmentData {
 	return {
-		features: Array.from(featureMap.values()),
-		plans: Array.from(planMap.values()),
-		rewards: Array.from(
-			new Map(
-				[...production.rewards, ...sandbox.rewards].map((reward) => [
-					reward.id,
-					reward,
-				]),
-			).values(),
-		),
-		referralPrograms: Array.from(
-			new Map(
-				[...production.referralPrograms, ...sandbox.referralPrograms].map(
-					(program) => [program.id, program],
-				),
-			).values(),
-		),
+		features: mergeByKey({
+			sandbox: sandbox.features,
+			production: production.features,
+			key: (feature) => feature.id,
+		}),
+		plans: mergeByKey({
+			sandbox: sandbox.plans,
+			production: production.plans,
+			key: planKey,
+		}),
+		rewards: mergeByKey({
+			sandbox: sandbox.rewards,
+			production: production.rewards,
+			key: (reward) => reward.id,
+		}),
+		referralPrograms: mergeByKey({
+			sandbox: sandbox.referralPrograms,
+			production: production.referralPrograms,
+			key: (program) => program.id,
+		}),
 	};
 }
