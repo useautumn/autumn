@@ -45,9 +45,9 @@ export type UpdateReferralProgramReceivedByRequest = ClosedEnum<
 
 export type UpdateReferralProgramParams = {
   /**
-   * The ID of the referral program to update.
+   * The ID of the referral program.
    */
-  id: string;
+  referralProgramId: string;
   /**
    * The ID of the reward granted when a code is redeemed.
    */
@@ -150,7 +150,7 @@ export const UpdateReferralProgramReceivedByRequest$outboundSchema:
 
 /** @internal */
 export type UpdateReferralProgramParams$Outbound = {
-  id: string;
+  referral_program_id: string;
   reward_id?: string | undefined;
   redeem_on?: string | undefined;
   received_by?: string | undefined;
@@ -165,7 +165,7 @@ export const UpdateReferralProgramParams$outboundSchema: z.ZodMiniType<
   UpdateReferralProgramParams
 > = z.pipe(
   z.object({
-    id: z.string(),
+    referralProgramId: z.string(),
     rewardId: z.optional(z.string()),
     redeemOn: z.optional(UpdateReferralProgramRedeemOnRequest$outboundSchema),
     receivedBy: z.optional(
@@ -177,6 +177,7 @@ export const UpdateReferralProgramParams$outboundSchema: z.ZodMiniType<
   }),
   z.transform((v) => {
     return remap$(v, {
+      referralProgramId: "referral_program_id",
       rewardId: "reward_id",
       redeemOn: "redeem_on",
       receivedBy: "received_by",

@@ -35303,12 +35303,12 @@ paths:
             schema:
               type: object
               properties:
-                id:
+                referral_program_id:
                   type: string
                   minLength: 1
-                  description: The ID of the referral program to fetch.
+                  description: The ID of the referral program.
               required:
-                - id
+                - referral_program_id
               additionalProperties: false
               title: GetReferralProgramParams
       responses:
@@ -35391,7 +35391,7 @@ paths:
             const autumn = new Autumn()
 
             const result = await autumn.referrals.getProgram({
-              id: "<id>",
+              referralProgramId: "<id>",
             });
         - lang: python
           label: Python (SDK)
@@ -35400,7 +35400,9 @@ paths:
 
             autumn = Autumn(secret_key="am_sk_test...")
 
-            res = autumn.referrals.get_program(id="<id>")
+            res = autumn.referrals.get_program(
+                referral_program_id="<id>",
+            )
   /v1/referral_programs.update:
     post:
       operationId: updateReferralProgram
@@ -35414,10 +35416,10 @@ paths:
             schema:
               type: object
               properties:
-                id:
+                referral_program_id:
                   type: string
                   minLength: 1
-                  description: The ID of the referral program to update.
+                  description: The ID of the referral program.
                 reward_id:
                   type: string
                   minLength: 1
@@ -35456,7 +35458,7 @@ paths:
                     - type: boolean
                     - type: "null"
               required:
-                - id
+                - referral_program_id
               additionalProperties: false
               title: UpdateReferralProgramParams
       responses:
@@ -35539,7 +35541,7 @@ paths:
             const autumn = new Autumn()
 
             const result = await autumn.referrals.updateProgram({
-              id: "<id>",
+              referralProgramId: "<id>",
             });
         - lang: python
           label: Python (SDK)
@@ -35548,7 +35550,9 @@ paths:
 
             autumn = Autumn(secret_key="am_sk_test...")
 
-            res = autumn.referrals.update_program(id="<id>")
+            res = autumn.referrals.update_program(
+                referral_program_id="<id>",
+            )
   /v1/referral_programs.delete:
     post:
       operationId: deleteReferralProgram
@@ -35562,12 +35566,12 @@ paths:
             schema:
               type: object
               properties:
-                id:
+                referral_program_id:
                   type: string
                   minLength: 1
-                  description: The ID of the referral program to delete.
+                  description: The ID of the referral program.
               required:
-                - id
+                - referral_program_id
               additionalProperties: false
               title: DeleteReferralProgramParams
       responses:
@@ -35578,18 +35582,14 @@ paths:
               schema:
                 type: object
                 properties:
-                  id:
-                    type: string
-                  deleted:
-                    const: true
+                  success:
+                    type: boolean
                 required:
-                  - id
-                  - deleted
+                  - success
                 title: DeleteReferralProgramResponse
                 examples:
                   - &a102
-                    id: refer_a_friend
-                    deleted: true
+                    success: true
               example: *a102
       x-speakeasy-name-override: deleteProgram
       parameters:
@@ -35603,7 +35603,7 @@ paths:
             const autumn = new Autumn()
 
             const result = await autumn.referrals.deleteProgram({
-              id: "<id>",
+              referralProgramId: "<id>",
             });
         - lang: python
           label: Python (SDK)
@@ -35612,7 +35612,9 @@ paths:
 
             autumn = Autumn(secret_key="am_sk_test...")
 
-            res = autumn.referrals.delete_program(id="<id>")
+            res = autumn.referrals.delete_program(
+                referral_program_id="<id>",
+            )
   /v1/rewards.create:
     post:
       operationId: createReward
@@ -36337,12 +36339,12 @@ paths:
             schema:
               type: object
               properties:
-                id:
+                reward_id:
                   type: string
                   minLength: 1
-                  description: The ID of the coupon or feature grant to fetch.
+                  description: The ID of the coupon or feature grant.
               required:
-                - id
+                - reward_id
               additionalProperties: false
               title: GetRewardParams
       responses:
@@ -36580,7 +36582,7 @@ paths:
             const autumn = new Autumn()
 
             const result = await autumn.rewards.get({
-              id: "<id>",
+              rewardId: "<id>",
             });
         - lang: python
           label: Python (SDK)
@@ -36589,7 +36591,7 @@ paths:
 
             autumn = Autumn(secret_key="am_sk_test...")
 
-            res = autumn.rewards.get(id="<id>")
+            res = autumn.rewards.get(reward_id="<id>")
   /v1/rewards.update:
     post:
       operationId: updateReward
@@ -36604,10 +36606,10 @@ paths:
             schema:
               type: object
               properties:
-                id:
+                reward_id:
                   type: string
                   minLength: 1
-                  description: The ID of the coupon or feature grant to update.
+                  description: The ID of the coupon or feature grant.
                 coupon:
                   type: object
                   properties:
@@ -36722,7 +36724,7 @@ paths:
                   additionalProperties: false
                   title: UpdateRewardFeatureGrantRequest
               required:
-                - id
+                - reward_id
               additionalProperties: false
               title: UpdateRewardParams
       responses:
@@ -36925,7 +36927,7 @@ paths:
             const autumn = new Autumn()
 
             const result = await autumn.rewards.update({
-              id: "<id>",
+              rewardId: "<id>",
             });
         - lang: python
           label: Python (SDK)
@@ -36934,7 +36936,7 @@ paths:
 
             autumn = Autumn(secret_key="am_sk_test...")
 
-            res = autumn.rewards.update(id="<id>")
+            res = autumn.rewards.update(reward_id="<id>")
   /v1/rewards.delete:
     post:
       operationId: deleteReward
@@ -36948,12 +36950,12 @@ paths:
             schema:
               type: object
               properties:
-                id:
+                reward_id:
                   type: string
                   minLength: 1
-                  description: The ID of the coupon or feature grant to delete.
+                  description: The ID of the coupon or feature grant.
               required:
-                - id
+                - reward_id
               additionalProperties: false
               title: DeleteRewardParams
       responses:
@@ -36964,18 +36966,14 @@ paths:
               schema:
                 type: object
                 properties:
-                  id:
-                    type: string
-                  deleted:
-                    const: true
+                  success:
+                    type: boolean
                 required:
-                  - id
-                  - deleted
+                  - success
                 title: DeleteRewardResponse
                 examples:
                   - &a108
-                    id: summer_sale
-                    deleted: true
+                    success: true
               example: *a108
       x-speakeasy-name-override: delete
       parameters:
@@ -36989,7 +36987,7 @@ paths:
             const autumn = new Autumn()
 
             const result = await autumn.rewards.delete({
-              id: "<id>",
+              rewardId: "<id>",
             });
         - lang: python
           label: Python (SDK)
@@ -36998,7 +36996,7 @@ paths:
 
             autumn = Autumn(secret_key="am_sk_test...")
 
-            res = autumn.rewards.delete(id="<id>")
+            res = autumn.rewards.delete(reward_id="<id>")
   /v1/rewards.redeem:
     post:
       operationId: redeemRewardCode

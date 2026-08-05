@@ -1,10 +1,20 @@
-import { RewardTriggerEvent } from "@models/rewardModels/rewardProgramModels/rewardProgramEnums.js";
 import { z } from "zod/v4";
-import { getListResponseSchema } from "../common/commonResponses.js";
+import {
+	getListResponseSchema,
+	SuccessResponseSchema,
+} from "../common/commonResponses.js";
 import {
 	ApiReferralProgramV0Schema,
 	REFERRAL_PROGRAM_V0_EXAMPLE,
 } from "./components/apiReferralProgramV0.js";
+
+const referralProgramId = z.string().min(1).meta({
+	description: "The ID of the referral program.",
+});
+
+const uniquePlanIds = z.array(z.string().min(1)).nullish().meta({
+	description: "Required when redeem_on is checkout. Plan IDs must be unique.",
+});
 
 export const ReferralProgramsListParamsSchema = z.object({}).optional();
 
@@ -16,20 +26,14 @@ export const ReferralProgramsListResponseSchema = getListResponseSchema({
 });
 
 export const GetReferralProgramParamsSchema = z
-	.object({
-		id: z.string().min(1).meta({
-			description: "The ID of the referral program to fetch.",
-		}),
-	})
+	.object({ referral_program_id: referralProgramId })
 	.strict()
 	.meta({ title: "GetReferralProgramParams" });
 
-/** Every field is optional: omitted fields keep their current value */
+/** Omitted fields keep their current value; checkout rules are re-checked on the merged program */
 export const UpdateReferralProgramParamsSchema = z
 	.object({
-		id: z.string().min(1).meta({
-			description: "The ID of the referral program to update.",
-		}),
+		referral_program_id: referralProgramId,
 		reward_id: z.string().min(1).optional().meta({
 			description: "The ID of the reward granted when a code is redeemed.",
 		}),
@@ -39,9 +43,7 @@ export const UpdateReferralProgramParamsSchema = z
 			description:
 				"A positive redemption limit, or null for unlimited redemptions.",
 		}),
-		plan_ids: z.array(z.string().min(1)).nullish().meta({
-			description: "Required when redeem_on is checkout. Plan IDs must be unique.",
-		}),
+		plan_ids: uniquePlanIds,
 		exclude_trial: z.boolean().nullish(),
 	})
 	.strict()
@@ -56,39 +58,18 @@ export const UpdateReferralProgramParamsSchema = z
 				path: ["plan_ids"],
 			});
 		}
-
-		// Checkout rules are re-validated server-side against the merged program,
-		// since an omitted field here keeps whatever the program already has.
-		if (program.redeem_on === RewardTriggerEvent.Checkout) {
-			if (program.plan_ids !== undefined && !program.plan_ids?.length) {
-				ctx.addIssue({
-					code: "custom",
-					message: "At least one plan is required when redeem_on is checkout",
-					path: ["plan_ids"],
-				});
-			}
-		}
 	})
 	.meta({ title: "UpdateReferralProgramParams" });
 
 export const DeleteReferralProgramParamsSchema = z
-	.object({
-		id: z.string().min(1).meta({
-			description: "The ID of the referral program to delete.",
-		}),
-	})
+	.object({ referral_program_id: referralProgramId })
 	.strict()
 	.meta({ title: "DeleteReferralProgramParams" });
 
-export const DeleteReferralProgramResponseSchema = z
-	.object({
-		id: z.string(),
-		deleted: z.literal(true),
-	})
-	.meta({
-		title: "DeleteReferralProgramResponse",
-		examples: [{ id: "refer_a_friend", deleted: true }],
-	});
+export const DeleteReferralProgramResponseSchema = SuccessResponseSchema.meta({
+	title: "DeleteReferralProgramResponse",
+	examples: [{ success: true }],
+});
 
 export type ReferralProgramsListParams = z.infer<
 	typeof ReferralProgramsListParamsSchema

@@ -15,38 +15,33 @@ import { getApiFeatureGrant } from "../apiRewards/getApiFeatureGrant.js";
 import { resolveCouponPlanIds } from "../apiRewards/resolveCouponPlanIds.js";
 import { rewardProgramRepo, rewardRepo } from "../repos/index.js";
 
-const COUPON_TYPES = new Set<RewardType>([
-	RewardType.PercentageDiscount,
-	RewardType.FixedDiscount,
-	RewardType.InvoiceCredits,
-]);
-
 export const requireApiReward = async ({
 	ctx,
-	id,
+	rewardId,
 }: {
 	ctx: AutumnContext;
-	id: string;
+	rewardId: string;
 }): Promise<Reward> => {
 	const { db, org, env } = ctx;
 	const reward = await rewardRepo.get({
 		db,
-		idOrInternalId: id,
+		idOrInternalId: rewardId,
 		orgId: org.id,
 		env,
 	});
 
 	if (!reward) {
 		throw new RecaseError({
-			message: `Reward ${id} not found`,
+			message: `Reward ${rewardId} not found`,
 			code: ErrCode.RewardNotFound,
 			statusCode: 404,
 		});
 	}
 
+	// Free product rewards are deprecated and never exposed on the API
 	if (reward.type === RewardType.FreeProduct) {
 		throw new RecaseError({
-			message: `Reward ${id} is a free product reward, which is not exposed on the API`,
+			message: `Reward ${rewardId} is a free product reward, which is not available on the API`,
 			code: ErrCode.InvalidRequest,
 			statusCode: 400,
 		});
@@ -87,7 +82,7 @@ export const getApiRewardById = async ({
 	ctx: AutumnContext;
 	params: GetRewardParams;
 }): Promise<GetRewardResponse> => {
-	const reward = await requireApiReward({ ctx, id: params.id });
+	const reward = await requireApiReward({ ctx, rewardId: params.reward_id });
 	return toApiRewardResponse({ ctx, reward });
 };
 
@@ -148,6 +143,30 @@ const deactivateStripePromoCodes = async ({
 	}
 };
 
+/** The reward_programs FK cascades, so refuse rather than silently dropping programs */
+const assertRewardIsUnlinked = async ({
+	ctx,
+	reward,
+}: {
+	ctx: AutumnContext;
+	reward: Reward;
+}) => {
+	const { db, org, env } = ctx;
+	const programs = await rewardProgramRepo.list({ db, orgId: org.id, env });
+	const linked = programs.filter(
+		(program) => program.internal_reward_id === reward.internal_id,
+	);
+
+	if (linked.length === 0) return;
+
+	const names = linked.map((program) => program.id).join(", ");
+	throw new RecaseError({
+		message: `Reward ${reward.id} is linked to referral programs: ${names}. Delete them first.`,
+		code: ErrCode.InvalidRequest,
+		statusCode: 400,
+	});
+};
+
 export const deleteApiReward = async ({
 	ctx,
 	params,
@@ -156,26 +175,12 @@ export const deleteApiReward = async ({
 	params: DeleteRewardParams;
 }): Promise<DeleteRewardResponse> => {
 	const { db, org, env } = ctx;
-	const reward = await requireApiReward({ ctx, id: params.id });
 
-	// The FK cascades, so refuse rather than silently dropping referral programs
-	const programs = await rewardProgramRepo.list({ db, orgId: org.id, env });
-	const linked = programs.filter(
-		(program) => program.internal_reward_id === reward.internal_id,
-	);
+	// 1. Load and guard
+	const reward = await requireApiReward({ ctx, rewardId: params.reward_id });
+	await assertRewardIsUnlinked({ ctx, reward });
 
-	if (linked.length > 0) {
-		throw new RecaseError({
-			message: `Reward ${reward.id} is linked to referral program${
-				linked.length > 1 ? "s" : ""
-			} ${linked.map((program) => program.id).join(", ")}. Delete ${
-				linked.length > 1 ? "them" : "it"
-			} first.`,
-			code: ErrCode.InvalidRequest,
-			statusCode: 400,
-		});
-	}
-
+	// 2. Stripe coupon, then the row, then any stale promo codes
 	await deleteRewardFromStripe({ ctx, reward });
 
 	await rewardRepo.delete({
@@ -187,5 +192,5 @@ export const deleteApiReward = async ({
 
 	await deactivateStripePromoCodes({ ctx, reward });
 
-	return { id: reward.id, deleted: true };
+	return { success: true };
 };

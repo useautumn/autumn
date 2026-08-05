@@ -17,9 +17,9 @@ export type GetRewardGlobals = {
 
 export type GetRewardParams = {
   /**
-   * The ID of the coupon or feature grant to fetch.
+   * The ID of the coupon or feature grant.
    */
-  id: string;
+  rewardId: string;
 };
 
 /**
@@ -196,16 +196,23 @@ export type GetRewardResponse = {
 
 /** @internal */
 export type GetRewardParams$Outbound = {
-  id: string;
+  reward_id: string;
 };
 
 /** @internal */
 export const GetRewardParams$outboundSchema: z.ZodMiniType<
   GetRewardParams$Outbound,
   GetRewardParams
-> = z.object({
-  id: z.string(),
-});
+> = z.pipe(
+  z.object({
+    rewardId: z.string(),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      rewardId: "reward_id",
+    });
+  }),
+);
 
 export function getRewardParamsToJSON(
   getRewardParams: GetRewardParams,

@@ -59,8 +59,8 @@ r"""Who receives the reward: the referrer only, or both parties."""
 
 
 class UpdateReferralProgramParamsTypedDict(TypedDict):
-    id: str
-    r"""The ID of the referral program to update."""
+    referral_program_id: str
+    r"""The ID of the referral program."""
     reward_id: NotRequired[str]
     r"""The ID of the reward granted when a code is redeemed."""
     redeem_on: NotRequired[UpdateReferralProgramRedeemOnRequest]
@@ -75,8 +75,8 @@ class UpdateReferralProgramParamsTypedDict(TypedDict):
 
 
 class UpdateReferralProgramParams(BaseModel):
-    id: str
-    r"""The ID of the referral program to update."""
+    referral_program_id: str
+    r"""The ID of the referral program."""
 
     reward_id: Optional[str] = None
     r"""The ID of the reward granted when a code is redeemed."""

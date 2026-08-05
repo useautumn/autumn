@@ -1,4 +1,5 @@
 import { z } from "zod/v4";
+import { SuccessResponseSchema } from "../common/commonResponses.js";
 import { ApiCouponPromoCodeV0Schema } from "./components/apiCouponPromoCodeV0.js";
 import { ApiFeatureGrantPromoCodeV0Schema } from "./components/apiFeatureGrantPromoCodeV0.js";
 import { ApiGrantV0Schema } from "./components/apiGrantV0.js";
@@ -8,12 +9,12 @@ import {
 	FEATURE_GRANT_V0_EXAMPLE,
 } from "./featureGrants/apiFeatureGrantV0.js";
 
+const rewardId = z.string().min(1).meta({
+	description: "The ID of the coupon or feature grant.",
+});
+
 export const GetRewardParamsSchema = z
-	.object({
-		id: z.string().min(1).meta({
-			description: "The ID of the coupon or feature grant to fetch.",
-		}),
-	})
+	.object({ reward_id: rewardId })
 	.strict()
 	.meta({ title: "GetRewardParams" });
 
@@ -33,7 +34,8 @@ const UpdateCouponSchema = z
 	.object({
 		name: z.string().min(1).optional(),
 		plan_ids: z.array(z.string().min(1)).min(1).nullish().meta({
-			description: "Plan IDs must be unique. Null applies the coupon to all plans.",
+			description:
+				"Plan IDs must be unique. Null applies the coupon to all plans.",
 		}),
 		promo_codes: z
 			.array(
@@ -46,7 +48,9 @@ const UpdateCouponSchema = z
 					.strict(),
 			)
 			.optional()
-			.meta({ description: "Replaces the existing promo codes when provided." }),
+			.meta({
+				description: "Replaces the existing promo codes when provided.",
+			}),
 	})
 	.strict()
 	.meta({ title: "UpdateRewardCouponRequest" });
@@ -78,7 +82,9 @@ const UpdateFeatureGrantSchema = z
 			)
 			.min(1)
 			.optional()
-			.meta({ description: "Replaces the existing promo codes when provided." }),
+			.meta({
+				description: "Replaces the existing promo codes when provided.",
+			}),
 	})
 	.strict()
 	.meta({ title: "UpdateRewardFeatureGrantRequest" });
@@ -86,9 +92,7 @@ const UpdateFeatureGrantSchema = z
 /** Omitted fields keep their current value; the body must match the reward's type */
 export const UpdateRewardParamsSchema = z
 	.object({
-		id: z.string().min(1).meta({
-			description: "The ID of the coupon or feature grant to update.",
-		}),
+		reward_id: rewardId,
 		coupon: UpdateCouponSchema.optional(),
 		feature_grant: UpdateFeatureGrantSchema.optional(),
 	})
@@ -120,23 +124,14 @@ export const UpdateRewardResponseSchema = z
 	});
 
 export const DeleteRewardParamsSchema = z
-	.object({
-		id: z.string().min(1).meta({
-			description: "The ID of the coupon or feature grant to delete.",
-		}),
-	})
+	.object({ reward_id: rewardId })
 	.strict()
 	.meta({ title: "DeleteRewardParams" });
 
-export const DeleteRewardResponseSchema = z
-	.object({
-		id: z.string(),
-		deleted: z.literal(true),
-	})
-	.meta({
-		title: "DeleteRewardResponse",
-		examples: [{ id: "summer_sale", deleted: true }],
-	});
+export const DeleteRewardResponseSchema = SuccessResponseSchema.meta({
+	title: "DeleteRewardResponse",
+	examples: [{ success: true }],
+});
 
 export type GetRewardParams = z.infer<typeof GetRewardParamsSchema>;
 export type GetRewardResponse = z.infer<typeof GetRewardResponseSchema>;

@@ -17,9 +17,9 @@ export type GetReferralProgramGlobals = {
 
 export type GetReferralProgramParams = {
   /**
-   * The ID of the referral program to fetch.
+   * The ID of the referral program.
    */
-  id: string;
+  referralProgramId: string;
 };
 
 /**
@@ -90,16 +90,23 @@ export type GetReferralProgramCreateReferralProgramResponse = {
 
 /** @internal */
 export type GetReferralProgramParams$Outbound = {
-  id: string;
+  referral_program_id: string;
 };
 
 /** @internal */
 export const GetReferralProgramParams$outboundSchema: z.ZodMiniType<
   GetReferralProgramParams$Outbound,
   GetReferralProgramParams
-> = z.object({
-  id: z.string(),
-});
+> = z.pipe(
+  z.object({
+    referralProgramId: z.string(),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      referralProgramId: "referral_program_id",
+    });
+  }),
+);
 
 export function getReferralProgramParamsToJSON(
   getReferralProgramParams: GetReferralProgramParams,

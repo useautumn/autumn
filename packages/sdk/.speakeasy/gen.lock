@@ -1,16 +1,16 @@
 lockVersion: 2.0.0
 id: 7b300647-cd76-49e9-bf77-7d1bf5446d66
 management:
-  docChecksum: fb21cbe998c257c25649185c4465222c
+  docChecksum: 2bfa7ecf84fbbe07e54d6a911366abad
   docVersion: 2.3.0
   speakeasyVersion: 1.762.0
   generationVersion: 2.882.0
   releaseVersion: 0.10.18
   configChecksum: a05ee9fa7bf0a40d4f216cac1903f122
 persistentEdits:
-  generation_id: 53e1e908-8898-403e-a5f3-fd59722ec12f
-  pristine_commit_hash: deded6330bfb767ef648e6cfd55d3d643319d61e
-  pristine_tree_hash: 27bea2944704c28897bc07add3d68c3f8e824dbe
+  generation_id: 1e0d9ca1-5116-4eae-97ef-6ff03066f3d3
+  pristine_commit_hash: bb05e8d2d6a6cd1e0cbc5243817b3398d8ac85bd
+  pristine_tree_hash: 597105eb05bccc1a172a0b5bc8fcf69a6caeaa5f
 features:
   typescript:
     additionalDependencies: 0.1.0
@@ -2734,24 +2734,24 @@ trackedFiles:
     pristine_git_object: 37eada84be5a029ec69bff3a30688c919e908263
   docs/models/delete-referral-program-params.md:
     id: 0c792435004d
-    last_write_checksum: sha1:0a2e639e829dcb60e2f5f24107c7361f5e318f9a
-    pristine_git_object: da6786c1580378274bf2fd40b5571f0c39b85ac3
+    last_write_checksum: sha1:dc73548430c5785e189c3760431eacb6d77f56d2
+    pristine_git_object: f1a5caecdda7092767d307a82c756f42a880cd71
   docs/models/delete-referral-program-response.md:
     id: 086b68d42b35
-    last_write_checksum: sha1:36cc0b7829ef977d06ec31cf5738b5caaba55e48
-    pristine_git_object: 530bc79f82b8d0fc75c00f6469ee171b6f1fb740
+    last_write_checksum: sha1:9bc4fc319df675f3b7d85c39a508c46e5abbcb2e
+    pristine_git_object: 23055c512d53097bd6861a14cb9526ab26a2fc64
   docs/models/delete-reward-globals.md:
     id: de9d2ab58e90
     last_write_checksum: sha1:5be13215f29f5b1f4f9b1476d6ce727636aae55b
     pristine_git_object: 06292c82ecb22c0703f272e2af4c98d5e7805691
   docs/models/delete-reward-params.md:
     id: 180e5284401d
-    last_write_checksum: sha1:244ed608c606ab48e99c1973f61408c63cd5e26b
-    pristine_git_object: 6e7d029e251760b400d81bf62389289df80562a3
+    last_write_checksum: sha1:28e84adcf89043bb98c05e494ebedc9436d2aace
+    pristine_git_object: bcfc1228260f554aad00633246fe3391e90ed6b7
   docs/models/delete-reward-response.md:
     id: 564a1d482379
-    last_write_checksum: sha1:6cbac17e739dc27916572a9888a53df3eb4e3a56
-    pristine_git_object: 96d64b7a39f96adb69fabd2a2eb75e4f6105f3af
+    last_write_checksum: sha1:3ab71ab794566bb4e6143c461508149d29a0f3fb
+    pristine_git_object: 0cd8f74b887bdeff03c0b500aa472b1a9f169931
   docs/models/dfu-flash-params.md:
     id: c002a39df56d
     last_write_checksum: sha1:d61ca85fe2180118debd962abdad3c3bdd8537e6
@@ -3654,8 +3654,8 @@ trackedFiles:
     pristine_git_object: ba08e72f47ffb0a95bcee082f5cc266056aab9bf
   docs/models/get-referral-program-params.md:
     id: decf5cec18d9
-    last_write_checksum: sha1:aa31a241f4269b8c5c63b73ebecfb4f30be2bb46
-    pristine_git_object: bc6d08be2b95bdd35eb81d7c771e6d3355f8ad96
+    last_write_checksum: sha1:b2cf1e4c59d8b153f9cc4678d715cb8995bb7536
+    pristine_git_object: 240f52898996594f7a659fd3549199150534f236
   docs/models/get-referral-program-received-by.md:
     id: 7842691640c9
     last_write_checksum: sha1:0f1fc44f93bc048779c2b5be314dba7025facfc0
@@ -3730,8 +3730,8 @@ trackedFiles:
     pristine_git_object: 7297d0d339a84d4e9fb0133b04d876227174ef43
   docs/models/get-reward-params.md:
     id: 9b9c70045448
-    last_write_checksum: sha1:e632c016648f6b8c70a68b5eefadb5780fd2b2ff
-    pristine_git_object: bf6e798101ef095b43ff2437d72c7b52bb5340f3
+    last_write_checksum: sha1:815fce339a52702dabb37a9947f18dbebb523201
+    pristine_git_object: 6c4c69a3bd4f2cf746b63f11c75904d32f42e930
   docs/models/get-reward-response.md:
     id: 943769a48bc7
     last_write_checksum: sha1:fef6e3aa1f697d42c77258785d071339d55a9ea5
@@ -8218,8 +8218,8 @@ trackedFiles:
     pristine_git_object: 753f3287b8bd64154d6eb5ec8f367773d8de9985
   docs/models/update-referral-program-params.md:
     id: eec86e49d64c
-    last_write_checksum: sha1:ecc7f049fb75a15bca8ec5ec3742fe1b1bda7e2d
-    pristine_git_object: 6fb87c5e7592653556af29b3eb0f2eed904a3edd
+    last_write_checksum: sha1:ff1d7ec4ffbc4a134c37f1bfd6de24dea6624f75
+    pristine_git_object: 331214e69528bf365e1ed6eb199899856d23893c
   docs/models/update-referral-program-received-by-request.md:
     id: 8b183248a8e2
     last_write_checksum: sha1:62277da04317af6341859b7db13938451f94b330
@@ -8306,8 +8306,8 @@ trackedFiles:
     pristine_git_object: 9c1c96617e98c82aecf509de10c557b684c213b6
   docs/models/update-reward-params.md:
     id: e9c87afa4aba
-    last_write_checksum: sha1:d48185230c9e05d9e4853b2597295f92fc2de052
-    pristine_git_object: f6ca095241229056adbd0af25c0831cf11b82918
+    last_write_checksum: sha1:a85284244f2c8c2ae45229c0ca86ccb8c23ae677
+    pristine_git_object: 56edc9b13788d1ef7c4eb516319fe80f97613647
   docs/models/update-reward-response.md:
     id: c7fb03357b1b
     last_write_checksum: sha1:6a70924174cd8cd3df49b8be6fbad3b17efe8a95
@@ -8570,12 +8570,12 @@ trackedFiles:
     pristine_git_object: a699333506973bbe1cf50a094e48ed30d5a52d9a
   docs/sdks/referrals/README.md:
     id: 50b71f597f20
-    last_write_checksum: sha1:748b03cb6ce8234d80f36b340a81f56b1851917c
-    pristine_git_object: 22f701a380b15e1b9592ad8ac5c9de751658de57
+    last_write_checksum: sha1:af7750efb6f3009ee4a00ccc7399b38ea8da79d5
+    pristine_git_object: 4fc340017b17a545dfde79299ae952dfd6e1c5ad
   docs/sdks/rewards/README.md:
     id: 48d8e259ad8b
-    last_write_checksum: sha1:164bc900011547faed11dd782f1d97dc4d766ad1
-    pristine_git_object: 756f3044cd317bb286cd774cdefaa2459009f81c
+    last_write_checksum: sha1:1cabb6a4dfbc02d481ce261ab0d5506970e433fa
+    pristine_git_object: 5d249490e30cfc8f845f3430889fe0586aa373a3
   eslint.config.mjs:
     id: 461c8d07f6da
     last_write_checksum: sha1:9398f326377fe47f67af2df6eb6370750c0790b4
@@ -9050,12 +9050,12 @@ trackedFiles:
     pristine_git_object: fe9f3ba6325264cd07c3735c675e401a5d91a78e
   src/models/delete-referral-program-op.ts:
     id: 7bfa8a821fae
-    last_write_checksum: sha1:baf9f2c8e0b96ed81ca5ce1327932908723c9dd3
-    pristine_git_object: fc82a4ace7d67a8d187c14374ace662318c05cc2
+    last_write_checksum: sha1:206e364c9d2fcb561682c87d4ebaa40ea26241de
+    pristine_git_object: 593f8e0e06b322ac9639f4b7e95b176c7b941a49
   src/models/delete-reward-op.ts:
     id: 0d773652e789
-    last_write_checksum: sha1:5c96697a663c59e6ddc34a46f707bc78504cbc12
-    pristine_git_object: f916050eb6fa156469ac11d65b66712dafdbf5d4
+    last_write_checksum: sha1:7867db6b0a624568ef379e595e9556c6f0eff989
+    pristine_git_object: 99deb10a54688246322e8cca8c6636c8c8dbc402
   src/models/finalize-lock-op.ts:
     id: 8b7c7048d1dd
     last_write_checksum: sha1:0cf743c389926a7ea378ca58f3fb5ebd70a27ee9
@@ -9082,16 +9082,16 @@ trackedFiles:
     pristine_git_object: 9ee78c8db6c35b2f92af4dce4e8a1190984abd78
   src/models/get-referral-program-op.ts:
     id: 3e1fdfc7bfee
-    last_write_checksum: sha1:19e8bbd79ab89f9cf56315031f0b5d5dc2e27db5
-    pristine_git_object: 60b15d8e0cdb0b37d2cfa8dc26a14e65ffdcf618
+    last_write_checksum: sha1:f68c0bb4f8dbe39d643a3678c7d63727421b0337
+    pristine_git_object: 2fbb69d42304bfc7de8461008c0da0452e4581e9
   src/models/get-revenue-cat-keys-op.ts:
     id: 2d8e9e87f071
     last_write_checksum: sha1:e1c1f2eaf75a3db81b4800c63cbe2ea6e5b1fa56
     pristine_git_object: e52b5aaf5f34339dcfa8913a8471efb4c2e3ff7e
   src/models/get-reward-op.ts:
     id: 429f1ac3ac85
-    last_write_checksum: sha1:b57513c7fc921b9da6e20c26d8ce143fffb14eb0
-    pristine_git_object: 09c107cf5522aa3c5b18c5521abfe42ecf9f89ff
+    last_write_checksum: sha1:c44c1fa5bed13dd9208be0421b85754a5c019cc7
+    pristine_git_object: e741f5ffd712e5190bb78f5de6d3ceccace9964d
   src/models/http-client-errors.ts:
     id: 5f17dcf0d62b
     last_write_checksum: sha1:994ced121c54fecd0af038ccfb7855fbfd3868ec
@@ -9250,12 +9250,12 @@ trackedFiles:
     pristine_git_object: ae5e0007589dfac9518f51e30737585bfcb468b0
   src/models/update-referral-program-op.ts:
     id: ee9167788dde
-    last_write_checksum: sha1:495d9f20a115f234a5007f46d9a728659cd592e3
-    pristine_git_object: 841307378623b247a45ace8899f4649d974dc2cb
+    last_write_checksum: sha1:06a21f3cc9f40758e922dd5a22a6d5d1252aefe1
+    pristine_git_object: cb3b5c891fe0f0314f60e63b09f71983b7112737
   src/models/update-reward-op.ts:
     id: 0de0da3aa655
-    last_write_checksum: sha1:521d51e083aa26340577ba05a1beeea33eabb2a4
-    pristine_git_object: 4d6a8cc4f7303941fb64f51f2bae96c354b3e795
+    last_write_checksum: sha1:d68c8f52354053802a59eca086c9a98368bc7a44
+    pristine_git_object: 0b4bf1e6b1256966d2ce65bf5c53a7ad904143b9
   src/sdk/balances.ts:
     id: 9ad229cb9d64
     last_write_checksum: sha1:3e195bbaeea3a9bc5afd4095d92949f3cad0956e
@@ -10446,7 +10446,7 @@ examples:
         header:
           x-api-version: "2.3.0"
       requestBody:
-        application/json: {"id": "<id>"}
+        application/json: {"referral_program_id": "<id>"}
       responses:
         "200":
           application/json: {"id": "refer_a_friend", "reward_id": "beta_credits_grant", "redeem_on": "customer_creation", "received_by": "referrer", "max_redemptions": 10, "plan_ids": null, "exclude_trial": false, "created_at": 1718000000000}
@@ -10456,7 +10456,7 @@ examples:
         header:
           x-api-version: "2.3.0"
       requestBody:
-        application/json: {"id": "<id>"}
+        application/json: {"referral_program_id": "<id>"}
       responses:
         "200":
           application/json: {"id": "refer_a_friend", "reward_id": "beta_credits_grant", "redeem_on": "customer_creation", "received_by": "referrer", "max_redemptions": 10, "plan_ids": null, "exclude_trial": false, "created_at": 1718000000000}
@@ -10466,17 +10466,17 @@ examples:
         header:
           x-api-version: "2.3.0"
       requestBody:
-        application/json: {"id": "<id>"}
+        application/json: {"referral_program_id": "<id>"}
       responses:
         "200":
-          application/json: {"id": "refer_a_friend", "deleted": true}
+          application/json: {"success": true}
   getReward:
     speakeasy-default-get-reward:
       parameters:
         header:
           x-api-version: "2.3.0"
       requestBody:
-        application/json: {"id": "<id>"}
+        application/json: {"reward_id": "<id>"}
       responses:
         "200":
           application/json: {"coupon": {"id": "summer_sale", "name": "Summer Sale", "type": "percentage_discount", "value": 20, "duration": {"type": "months", "length": 3}, "plan_ids": ["pro", "starter"], "promo_codes": [{"code": "SUMMER20", "global_max_redemption": 100, "first_time_transaction": false}], "created_at": 1718000000000}}
@@ -10486,7 +10486,7 @@ examples:
         header:
           x-api-version: "2.3.0"
       requestBody:
-        application/json: {"id": "<id>"}
+        application/json: {"reward_id": "<id>"}
       responses:
         "200":
           application/json: {"feature_grant": {"id": "beta_credits_grant", "name": "Beta Tester Credits", "grants": [{"feature_id": "credits", "included": 1000, "expiry": {"type": "month", "length": 1}}], "promo_codes": [{"code": "BETA2024", "max_uses": 500}], "created_at": 1718000000000}}
@@ -10496,8 +10496,8 @@ examples:
         header:
           x-api-version: "2.3.0"
       requestBody:
-        application/json: {"id": "<id>"}
+        application/json: {"reward_id": "<id>"}
       responses:
         "200":
-          application/json: {"id": "summer_sale", "deleted": true}
+          application/json: {"success": true}
 examplesVersion: 1.0.2

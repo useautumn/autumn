@@ -34942,12 +34942,12 @@ paths:
             schema:
               type: object
               properties:
-                id:
+                referral_program_id:
                   type: string
                   minLength: 1
-                  description: The ID of the referral program to fetch.
+                  description: The ID of the referral program.
               required:
-                - id
+                - referral_program_id
               additionalProperties: false
               title: GetReferralProgramParams
       responses:
@@ -35032,10 +35032,10 @@ paths:
             schema:
               type: object
               properties:
-                id:
+                referral_program_id:
                   type: string
                   minLength: 1
-                  description: The ID of the referral program to update.
+                  description: The ID of the referral program.
                 reward_id:
                   type: string
                   minLength: 1
@@ -35074,7 +35074,7 @@ paths:
                     - type: boolean
                     - type: "null"
               required:
-                - id
+                - referral_program_id
               additionalProperties: false
               title: UpdateReferralProgramParams
       responses:
@@ -35159,12 +35159,12 @@ paths:
             schema:
               type: object
               properties:
-                id:
+                referral_program_id:
                   type: string
                   minLength: 1
-                  description: The ID of the referral program to delete.
+                  description: The ID of the referral program.
               required:
-                - id
+                - referral_program_id
               additionalProperties: false
               title: DeleteReferralProgramParams
       responses:
@@ -35175,17 +35175,13 @@ paths:
               schema:
                 type: object
                 properties:
-                  id:
-                    type: string
-                  deleted:
-                    const: true
+                  success:
+                    type: boolean
                 required:
-                  - id
-                  - deleted
+                  - success
                 title: DeleteReferralProgramResponse
                 examples:
-                  - id: refer_a_friend
-                    deleted: true
+                  - success: true
       x-speakeasy-name-override: deleteProgram
       parameters:
         - *a1
@@ -35838,12 +35834,12 @@ paths:
             schema:
               type: object
               properties:
-                id:
+                reward_id:
                   type: string
                   minLength: 1
-                  description: The ID of the coupon or feature grant to fetch.
+                  description: The ID of the coupon or feature grant.
               required:
-                - id
+                - reward_id
               additionalProperties: false
               title: GetRewardParams
       responses:
@@ -36084,10 +36080,10 @@ paths:
             schema:
               type: object
               properties:
-                id:
+                reward_id:
                   type: string
                   minLength: 1
-                  description: The ID of the coupon or feature grant to update.
+                  description: The ID of the coupon or feature grant.
                 coupon:
                   type: object
                   properties:
@@ -36202,7 +36198,7 @@ paths:
                   additionalProperties: false
                   title: UpdateRewardFeatureGrantRequest
               required:
-                - id
+                - reward_id
               additionalProperties: false
               title: UpdateRewardParams
       responses:
@@ -36407,12 +36403,12 @@ paths:
             schema:
               type: object
               properties:
-                id:
+                reward_id:
                   type: string
                   minLength: 1
-                  description: The ID of the coupon or feature grant to delete.
+                  description: The ID of the coupon or feature grant.
               required:
-                - id
+                - reward_id
               additionalProperties: false
               title: DeleteRewardParams
       responses:
@@ -36423,17 +36419,13 @@ paths:
               schema:
                 type: object
                 properties:
-                  id:
-                    type: string
-                  deleted:
-                    const: true
+                  success:
+                    type: boolean
                 required:
-                  - id
-                  - deleted
+                  - success
                 title: DeleteRewardResponse
                 examples:
-                  - id: summer_sale
-                    deleted: true
+                  - success: true
       x-speakeasy-name-override: delete
       parameters:
         - *a1

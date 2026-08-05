@@ -1127,7 +1127,7 @@ actions:
                 secret_key="<YOUR_BEARER_TOKEN_HERE>",
             ) as autumn:
 
-                res = autumn.referrals.delete_program(id="<id>")
+                res = autumn.referrals.delete_program(referral_program_id="<id>")
 
                 # Handle response
                 print(res)
@@ -1145,7 +1145,7 @@ actions:
                 secret_key="<YOUR_BEARER_TOKEN_HERE>",
             ) as autumn:
 
-                res = autumn.referrals.get_program(id="<id>")
+                res = autumn.referrals.get_program(referral_program_id="<id>")
 
                 # Handle response
                 print(res)
@@ -1181,7 +1181,7 @@ actions:
                 secret_key="<YOUR_BEARER_TOKEN_HERE>",
             ) as autumn:
 
-                res = autumn.referrals.update_program(id="<id>")
+                res = autumn.referrals.update_program(referral_program_id="<id>")
 
                 # Handle response
                 print(res)
@@ -1268,7 +1268,7 @@ actions:
                 secret_key="<YOUR_BEARER_TOKEN_HERE>",
             ) as autumn:
 
-                res = autumn.rewards.delete(id="<id>")
+                res = autumn.rewards.delete(reward_id="<id>")
 
                 # Handle response
                 print(res)
@@ -1286,7 +1286,7 @@ actions:
                 secret_key="<YOUR_BEARER_TOKEN_HERE>",
             ) as autumn:
 
-                res = autumn.rewards.get(id="<id>")
+                res = autumn.rewards.get(reward_id="<id>")
 
                 # Handle response
                 print(res)
@@ -1340,7 +1340,7 @@ actions:
                 secret_key="<YOUR_BEARER_TOKEN_HERE>",
             ) as autumn:
 
-                res = autumn.rewards.update(id="<id>")
+                res = autumn.rewards.update(reward_id="<id>")
 
                 # Handle response
                 print(res)

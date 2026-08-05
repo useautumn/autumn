@@ -45,13 +45,13 @@ class GetRewardGlobals(BaseModel):
 
 
 class GetRewardParamsTypedDict(TypedDict):
-    id: str
-    r"""The ID of the coupon or feature grant to fetch."""
+    reward_id: str
+    r"""The ID of the coupon or feature grant."""
 
 
 class GetRewardParams(BaseModel):
-    id: str
-    r"""The ID of the coupon or feature grant to fetch."""
+    reward_id: str
+    r"""The ID of the coupon or feature grant."""
 
 
 GetRewardCouponType = Union[

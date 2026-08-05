@@ -18,9 +18,10 @@ import {
 	resolveCouponStripeProductIds,
 } from "@/external/stripe/stripeCouponUtils/stripeCouponUtils.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
-import { getRewardPrices } from "./getRewardPrices.js";
-import { requireApiReward, toApiRewardResponse } from "./apiRewards.js";
+import { ProductService } from "@/internal/products/ProductService.js";
 import { rewardRepo } from "../repos/index.js";
+import { requireApiReward, toApiRewardResponse } from "./apiRewards.js";
+import { getRewardPrices } from "./getRewardPrices.js";
 import { validateRewardUniqueness } from "./validateRewardUniqueness.js";
 
 type CouponUpdate = NonNullable<UpdateRewardParams["coupon"]>;
@@ -92,10 +93,6 @@ const planIdsToPriceIds = async ({
 	env: AutumnContext["env"];
 	planIds: string[];
 }) => {
-	const { ProductService } = await import(
-		"@/internal/products/ProductService.js"
-	);
-
 	const priceIds: string[] = [];
 	for (const planId of planIds) {
 		const fullProduct = await ProductService.getFull({
@@ -152,7 +149,10 @@ const buildFeatureGrantUpdate = ({
 				});
 			}
 
-			if ((feature.type === FeatureType.Boolean) !== (grant.included === null)) {
+			if (
+				(feature.type === FeatureType.Boolean) !==
+				(grant.included === null)
+			) {
 				throw new RecaseError({
 					message:
 						feature.type === FeatureType.Boolean
@@ -176,6 +176,55 @@ const buildFeatureGrantUpdate = ({
 	return update;
 };
 
+/** The body must describe the same kind of reward that is stored */
+const assertBodyMatchesRewardType = ({
+	reward,
+	params,
+}: {
+	reward: Reward;
+	params: UpdateRewardParams;
+}) => {
+	const isFeatureGrant = reward.type === RewardType.FeatureGrant;
+	const expected = isFeatureGrant ? "feature_grant" : "coupon";
+
+	if (isFeatureGrant ? !params.feature_grant : !params.coupon) {
+		throw new RecaseError({
+			message: `Reward ${params.reward_id} is a ${expected.replace("_", " ")} — provide ${expected}`,
+			code: ErrCode.InvalidRequest,
+			statusCode: 400,
+		});
+	}
+};
+
+/** Stripe cannot update coupons in place, so the discount is deleted and recreated */
+const recreateStripeCoupon = async ({
+	ctx,
+	previous,
+	updated,
+}: {
+	ctx: AutumnContext;
+	previous: Reward;
+	updated: Reward;
+}) => {
+	const { org, env, logger } = ctx;
+	const prices: (Price & { product: Product })[] = await getRewardPrices({
+		ctx,
+		priceIds: updated.discount_config?.price_ids ?? [],
+	});
+
+	// Preflight before deleting, so a plan missing in Stripe fails the update
+	// while the existing coupon is still intact.
+	resolveCouponStripeProductIds({ reward: updated, prices });
+
+	const stripeCli = createStripeCli({ org, env });
+	try {
+		await stripeCli.coupons.del(previous.id);
+		await stripeCli.coupons.del(previous.internal_id);
+	} catch (_) {}
+
+	await createStripeCoupon({ reward: updated, org, env, prices, logger });
+};
+
 export const updateApiReward = async ({
 	ctx,
 	params,
@@ -183,25 +232,15 @@ export const updateApiReward = async ({
 	ctx: AutumnContext;
 	params: UpdateRewardParams;
 }): Promise<UpdateRewardResponse> => {
-	const { db, org, env, features, logger } = ctx;
-	const reward = await requireApiReward({ ctx, id: params.id });
+	const { db, org, env, features } = ctx;
+
+	// 1. Load and validate the body against the stored reward
+	const reward = await requireApiReward({ ctx, rewardId: params.reward_id });
+	assertBodyMatchesRewardType({ reward, params });
 
 	const isFeatureGrant = reward.type === RewardType.FeatureGrant;
-	if (isFeatureGrant && !params.feature_grant) {
-		throw new RecaseError({
-			message: `Reward ${params.id} is a feature grant — provide feature_grant`,
-			code: ErrCode.InvalidRequest,
-			statusCode: 400,
-		});
-	}
-	if (!isFeatureGrant && !params.coupon) {
-		throw new RecaseError({
-			message: `Reward ${params.id} is a coupon — provide coupon`,
-			code: ErrCode.InvalidRequest,
-			statusCode: 400,
-		});
-	}
 
+	// 2. Build the patch
 	const update = isFeatureGrant
 		? buildFeatureGrantUpdate({ features, featureGrant: params.feature_grant! })
 		: await buildCouponUpdate({ ctx, reward, coupon: params.coupon! });
@@ -216,34 +255,16 @@ export const updateApiReward = async ({
 		excludeInternalId: reward.internal_id,
 	});
 
-	// Feature grants have no Stripe coupon; discounts must be recreated in place
+	// 3. Feature grants have no Stripe coupon; discounts must be recreated
 	if (!isFeatureGrant) {
-		const priceIds = updatedReward.discount_config?.price_ids ?? [];
-		const prices: (Price & { product: Product })[] = await getRewardPrices({
+		await recreateStripeCoupon({
 			ctx,
-			priceIds,
-		});
-
-		// Preflight before deleting, so a plan missing in Stripe fails the update
-		// while the existing coupon is still intact.
-		resolveCouponStripeProductIds({ reward: updatedReward, prices });
-
-		const stripeCli = createStripeCli({ org, env });
-		try {
-			await stripeCli.coupons.del(reward.id);
-			await stripeCli.coupons.del(reward.internal_id);
-		} catch (_) {}
-
-		await createStripeCoupon({
-			reward: updatedReward,
-			org,
-			env,
-			prices,
-			logger,
+			previous: reward,
+			updated: updatedReward,
 		});
 	}
 
-	// The repo always issues a SET, so keep at least one column in the payload
+	// 4. Persist. The repo always issues a SET, so keep at least one column.
 	await rewardRepo.update({
 		db,
 		internalId: reward.internal_id,
@@ -253,7 +274,7 @@ export const updateApiReward = async ({
 	});
 
 	// Re-read: the update only returns joined entitlements when it rewrote them
-	const saved = await requireApiReward({ ctx, id: reward.internal_id });
+	const saved = await requireApiReward({ ctx, rewardId: reward.internal_id });
 
 	return toApiRewardResponse({ ctx, reward: saved });
 };

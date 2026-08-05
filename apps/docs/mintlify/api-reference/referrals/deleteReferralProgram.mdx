@@ -9,23 +9,20 @@ import { DynamicResponseExample } from "/snippets/dynamic-response-example.jsx";
 
 ### Body Parameters
 
-<DynamicParamField body="id" type="string" required>
-  The ID of the referral program to delete.
+<DynamicParamField body="referral_program_id" type="string" required>
+  The ID of the referral program.
 </DynamicParamField>
 
 
 ### Response
 
-<DynamicResponseField name="id" type="string" />
-
-<DynamicResponseField name="deleted" type="any" />
+<DynamicResponseField name="success" type="boolean" />
 
 
 <ResponseExample>
 ```json 200
 {
-  "id": "refer_a_friend",
-  "deleted": true
+  "success": true
 }
 ```
 </ResponseExample>

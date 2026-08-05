@@ -2,11 +2,10 @@
 
 from __future__ import annotations
 from autumn_sdk.types import BaseModel, UNSET_SENTINEL
-from autumn_sdk.utils import FieldMetadata, HeaderMetadata, validate_const
+from autumn_sdk.utils import FieldMetadata, HeaderMetadata
 import pydantic
 from pydantic import model_serializer
-from pydantic.functional_validators import AfterValidator
-from typing import Literal, Optional
+from typing import Optional
 from typing_extensions import Annotated, NotRequired, TypedDict
 
 
@@ -39,34 +38,22 @@ class DeleteReferralProgramGlobals(BaseModel):
 
 
 class DeleteReferralProgramParamsTypedDict(TypedDict):
-    id: str
-    r"""The ID of the referral program to delete."""
+    referral_program_id: str
+    r"""The ID of the referral program."""
 
 
 class DeleteReferralProgramParams(BaseModel):
-    id: str
-    r"""The ID of the referral program to delete."""
+    referral_program_id: str
+    r"""The ID of the referral program."""
 
 
 class DeleteReferralProgramResponseTypedDict(TypedDict):
     r"""OK"""
 
-    id: str
-    deleted: Literal[True]
+    success: bool
 
 
 class DeleteReferralProgramResponse(BaseModel):
     r"""OK"""
 
-    id: str
-
-    deleted: Annotated[
-        Annotated[Literal[True], AfterValidator(validate_const(True))],
-        pydantic.Field(alias="deleted"),
-    ] = True
-
-
-try:
-    DeleteReferralProgramResponse.model_rebuild()
-except NameError:
-    pass
+    success: bool

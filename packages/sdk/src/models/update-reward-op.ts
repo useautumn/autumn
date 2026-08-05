@@ -88,9 +88,9 @@ export type UpdateRewardFeatureGrantRequest = {
 
 export type UpdateRewardParams = {
   /**
-   * The ID of the coupon or feature grant to update.
+   * The ID of the coupon or feature grant.
    */
-  id: string;
+  rewardId: string;
   coupon?: UpdateRewardCouponRequest | undefined;
   featureGrant?: UpdateRewardFeatureGrantRequest | undefined;
 };
@@ -468,7 +468,7 @@ export function updateRewardFeatureGrantRequestToJSON(
 
 /** @internal */
 export type UpdateRewardParams$Outbound = {
-  id: string;
+  reward_id: string;
   coupon?: UpdateRewardCouponRequest$Outbound | undefined;
   feature_grant?: UpdateRewardFeatureGrantRequest$Outbound | undefined;
 };
@@ -479,7 +479,7 @@ export const UpdateRewardParams$outboundSchema: z.ZodMiniType<
   UpdateRewardParams
 > = z.pipe(
   z.object({
-    id: z.string(),
+    rewardId: z.string(),
     coupon: z.optional(z.lazy(() => UpdateRewardCouponRequest$outboundSchema)),
     featureGrant: z.optional(
       z.lazy(() => UpdateRewardFeatureGrantRequest$outboundSchema),
@@ -487,6 +487,7 @@ export const UpdateRewardParams$outboundSchema: z.ZodMiniType<
   }),
   z.transform((v) => {
     return remap$(v, {
+      rewardId: "reward_id",
       featureGrant: "feature_grant",
     });
   }),

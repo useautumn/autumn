@@ -3,6 +3,7 @@
  */
 
 import * as z from "zod/v4-mini";
+import { remap as remap$ } from "../lib/primitives.js";
 import { safeParse } from "../lib/schemas.js";
 import { Result as SafeParseResult } from "../types/fp.js";
 import * as types from "../types/primitives.js";
@@ -14,31 +15,37 @@ export type DeleteReferralProgramGlobals = {
 
 export type DeleteReferralProgramParams = {
   /**
-   * The ID of the referral program to delete.
+   * The ID of the referral program.
    */
-  id: string;
+  referralProgramId: string;
 };
 
 /**
  * OK
  */
 export type DeleteReferralProgramResponse = {
-  id: string;
-  deleted: true;
+  success: boolean;
 };
 
 /** @internal */
 export type DeleteReferralProgramParams$Outbound = {
-  id: string;
+  referral_program_id: string;
 };
 
 /** @internal */
 export const DeleteReferralProgramParams$outboundSchema: z.ZodMiniType<
   DeleteReferralProgramParams$Outbound,
   DeleteReferralProgramParams
-> = z.object({
-  id: z.string(),
-});
+> = z.pipe(
+  z.object({
+    referralProgramId: z.string(),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      referralProgramId: "referral_program_id",
+    });
+  }),
+);
 
 export function deleteReferralProgramParamsToJSON(
   deleteReferralProgramParams: DeleteReferralProgramParams,
@@ -55,8 +62,7 @@ export const DeleteReferralProgramResponse$inboundSchema: z.ZodMiniType<
   DeleteReferralProgramResponse,
   unknown
 > = z.object({
-  id: types.string(),
-  deleted: types.literal(true),
+  success: types.boolean(),
 });
 
 export function deleteReferralProgramResponseFromJSON(

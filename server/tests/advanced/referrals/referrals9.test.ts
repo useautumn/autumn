@@ -64,14 +64,14 @@ test(`${chalk.yellowBright("referrals9: rewards + referral_programs CRUD")}`, as
 	});
 
 	// --- rewards.get ---
-	const fetched = await rpc.post("/rewards.get", { id: rewardId });
+	const fetched = await rpc.post("/rewards.get", { reward_id: rewardId });
 	expect(fetched.feature_grant?.id).toBe(rewardId);
 	expect(fetched.feature_grant?.grants[0].included).toBe(100);
 	expect(fetched.coupon).toBeUndefined();
 
 	// --- rewards.update (partial: name only, grants preserved) ---
 	const renamed = await rpc.post("/rewards.update", {
-		id: rewardId,
+		reward_id: rewardId,
 		feature_grant: { name: "Renamed Grant" },
 	});
 	expect(renamed.feature_grant?.name).toBe("Renamed Grant");
@@ -79,7 +79,7 @@ test(`${chalk.yellowBright("referrals9: rewards + referral_programs CRUD")}`, as
 
 	// --- rewards.update (grants replaced) ---
 	const regranted = await rpc.post("/rewards.update", {
-		id: rewardId,
+		reward_id: rewardId,
 		feature_grant: {
 			grants: [
 				{ feature_id: messagesFeature!.id, included: 250, expiry: null },
@@ -101,7 +101,7 @@ test(`${chalk.yellowBright("referrals9: rewards + referral_programs CRUD")}`, as
 
 	// --- referral_programs.get ---
 	const gotProgram = await rpc.post("/referral_programs.get", {
-		id: programId,
+		referral_program_id: programId,
 	});
 	expect(gotProgram.reward_id).toBe(rewardId);
 	expect(gotProgram.max_redemptions).toBe(5);
@@ -114,7 +114,7 @@ test(`${chalk.yellowBright("referrals9: rewards + referral_programs CRUD")}`, as
 
 	// --- referral_programs.update (partial) ---
 	const updatedProgram = await rpc.post("/referral_programs.update", {
-		id: programId,
+		referral_program_id: programId,
 		received_by: RewardReceivedBy.All,
 	});
 	expect(updatedProgram.received_by).toBe(RewardReceivedBy.All);
@@ -122,21 +122,27 @@ test(`${chalk.yellowBright("referrals9: rewards + referral_programs CRUD")}`, as
 	expect(updatedProgram.reward_id).toBe(rewardId);
 
 	// --- rewards.delete is blocked while a program links the reward ---
-	await expect(rpc.post("/rewards.delete", { id: rewardId })).rejects.toThrow();
+	await expect(
+		rpc.post("/rewards.delete", { reward_id: rewardId }),
+	).rejects.toThrow();
 
 	// --- referral_programs.delete ---
 	const deletedProgram = await rpc.post("/referral_programs.delete", {
-		id: programId,
+		referral_program_id: programId,
 	});
-	expect(deletedProgram).toEqual({ id: programId, deleted: true });
+	expect(deletedProgram).toEqual({ success: true });
 
 	await expect(
-		rpc.post("/referral_programs.get", { id: programId }),
+		rpc.post("/referral_programs.get", { referral_program_id: programId }),
 	).rejects.toThrow();
 
 	// --- rewards.delete now succeeds ---
-	const deletedReward = await rpc.post("/rewards.delete", { id: rewardId });
-	expect(deletedReward).toEqual({ id: rewardId, deleted: true });
+	const deletedReward = await rpc.post("/rewards.delete", {
+		reward_id: rewardId,
+	});
+	expect(deletedReward).toEqual({ success: true });
 
-	await expect(rpc.post("/rewards.get", { id: rewardId })).rejects.toThrow();
+	await expect(
+		rpc.post("/rewards.get", { reward_id: rewardId }),
+	).rejects.toThrow();
 });

@@ -240,15 +240,15 @@ class UpdateRewardFeatureGrantRequest(BaseModel):
 
 
 class UpdateRewardParamsTypedDict(TypedDict):
-    id: str
-    r"""The ID of the coupon or feature grant to update."""
+    reward_id: str
+    r"""The ID of the coupon or feature grant."""
     coupon: NotRequired[UpdateRewardCouponRequestTypedDict]
     feature_grant: NotRequired[UpdateRewardFeatureGrantRequestTypedDict]
 
 
 class UpdateRewardParams(BaseModel):
-    id: str
-    r"""The ID of the coupon or feature grant to update."""
+    reward_id: str
+    r"""The ID of the coupon or feature grant."""
 
     coupon: Optional[UpdateRewardCouponRequest] = None
 

@@ -3,6 +3,7 @@
  */
 
 import * as z from "zod/v4-mini";
+import { remap as remap$ } from "../lib/primitives.js";
 import { safeParse } from "../lib/schemas.js";
 import { Result as SafeParseResult } from "../types/fp.js";
 import * as types from "../types/primitives.js";
@@ -14,31 +15,37 @@ export type DeleteRewardGlobals = {
 
 export type DeleteRewardParams = {
   /**
-   * The ID of the coupon or feature grant to delete.
+   * The ID of the coupon or feature grant.
    */
-  id: string;
+  rewardId: string;
 };
 
 /**
  * OK
  */
 export type DeleteRewardResponse = {
-  id: string;
-  deleted: true;
+  success: boolean;
 };
 
 /** @internal */
 export type DeleteRewardParams$Outbound = {
-  id: string;
+  reward_id: string;
 };
 
 /** @internal */
 export const DeleteRewardParams$outboundSchema: z.ZodMiniType<
   DeleteRewardParams$Outbound,
   DeleteRewardParams
-> = z.object({
-  id: z.string(),
-});
+> = z.pipe(
+  z.object({
+    rewardId: z.string(),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      rewardId: "reward_id",
+    });
+  }),
+);
 
 export function deleteRewardParamsToJSON(
   deleteRewardParams: DeleteRewardParams,
@@ -53,8 +60,7 @@ export const DeleteRewardResponse$inboundSchema: z.ZodMiniType<
   DeleteRewardResponse,
   unknown
 > = z.object({
-  id: types.string(),
-  deleted: types.literal(true),
+  success: types.boolean(),
 });
 
 export function deleteRewardResponseFromJSON(

@@ -45,13 +45,13 @@ class GetReferralProgramGlobals(BaseModel):
 
 
 class GetReferralProgramParamsTypedDict(TypedDict):
-    id: str
-    r"""The ID of the referral program to fetch."""
+    referral_program_id: str
+    r"""The ID of the referral program."""
 
 
 class GetReferralProgramParams(BaseModel):
-    id: str
-    r"""The ID of the referral program to fetch."""
+    referral_program_id: str
+    r"""The ID of the referral program."""
 
 
 GetReferralProgramRedeemOn = Union[

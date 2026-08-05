@@ -410,7 +410,7 @@ class RewardsSDK(BaseSDK):
     def get(
         self,
         *,
-        id: str,
+        reward_id: str,
         retries: OptionalNullable[utils.RetryConfig] = UNSET,
         server_url: Optional[str] = None,
         timeout_ms: Optional[int] = None,
@@ -418,7 +418,7 @@ class RewardsSDK(BaseSDK):
     ) -> models.GetRewardResponse:
         r"""Fetch a coupon or feature grant by ID.
 
-        :param id: The ID of the coupon or feature grant to fetch.
+        :param reward_id: The ID of the coupon or feature grant.
         :param retries: Override the default retry configuration for this method
         :param server_url: Override the default server URL for this method
         :param timeout_ms: Override the default request timeout configuration for this method in milliseconds
@@ -435,7 +435,7 @@ class RewardsSDK(BaseSDK):
             base_url = self._get_url(base_url, url_variables)
 
         request = models.GetRewardParams(
-            id=id,
+            reward_id=reward_id,
         )
 
         req = self._build_request(
@@ -500,7 +500,7 @@ class RewardsSDK(BaseSDK):
     async def get_async(
         self,
         *,
-        id: str,
+        reward_id: str,
         retries: OptionalNullable[utils.RetryConfig] = UNSET,
         server_url: Optional[str] = None,
         timeout_ms: Optional[int] = None,
@@ -508,7 +508,7 @@ class RewardsSDK(BaseSDK):
     ) -> models.GetRewardResponse:
         r"""Fetch a coupon or feature grant by ID.
 
-        :param id: The ID of the coupon or feature grant to fetch.
+        :param reward_id: The ID of the coupon or feature grant.
         :param retries: Override the default retry configuration for this method
         :param server_url: Override the default server URL for this method
         :param timeout_ms: Override the default request timeout configuration for this method in milliseconds
@@ -525,7 +525,7 @@ class RewardsSDK(BaseSDK):
             base_url = self._get_url(base_url, url_variables)
 
         request = models.GetRewardParams(
-            id=id,
+            reward_id=reward_id,
         )
 
         req = self._build_request_async(
@@ -590,7 +590,7 @@ class RewardsSDK(BaseSDK):
     def update(
         self,
         *,
-        id: str,
+        reward_id: str,
         coupon: Optional[
             Union[
                 models.UpdateRewardCouponRequest,
@@ -610,7 +610,7 @@ class RewardsSDK(BaseSDK):
     ) -> models.UpdateRewardResponse:
         r"""Update a coupon or feature grant. Omitted fields keep their current value.
 
-        :param id: The ID of the coupon or feature grant to update.
+        :param reward_id: The ID of the coupon or feature grant.
         :param coupon:
         :param feature_grant:
         :param retries: Override the default retry configuration for this method
@@ -629,7 +629,7 @@ class RewardsSDK(BaseSDK):
             base_url = self._get_url(base_url, url_variables)
 
         request = models.UpdateRewardParams(
-            id=id,
+            reward_id=reward_id,
             coupon=utils.get_pydantic_model(
                 coupon, Optional[models.UpdateRewardCouponRequest]
             ),
@@ -700,7 +700,7 @@ class RewardsSDK(BaseSDK):
     async def update_async(
         self,
         *,
-        id: str,
+        reward_id: str,
         coupon: Optional[
             Union[
                 models.UpdateRewardCouponRequest,
@@ -720,7 +720,7 @@ class RewardsSDK(BaseSDK):
     ) -> models.UpdateRewardResponse:
         r"""Update a coupon or feature grant. Omitted fields keep their current value.
 
-        :param id: The ID of the coupon or feature grant to update.
+        :param reward_id: The ID of the coupon or feature grant.
         :param coupon:
         :param feature_grant:
         :param retries: Override the default retry configuration for this method
@@ -739,7 +739,7 @@ class RewardsSDK(BaseSDK):
             base_url = self._get_url(base_url, url_variables)
 
         request = models.UpdateRewardParams(
-            id=id,
+            reward_id=reward_id,
             coupon=utils.get_pydantic_model(
                 coupon, Optional[models.UpdateRewardCouponRequest]
             ),
@@ -810,7 +810,7 @@ class RewardsSDK(BaseSDK):
     def delete(
         self,
         *,
-        id: str,
+        reward_id: str,
         retries: OptionalNullable[utils.RetryConfig] = UNSET,
         server_url: Optional[str] = None,
         timeout_ms: Optional[int] = None,
@@ -818,7 +818,7 @@ class RewardsSDK(BaseSDK):
     ) -> models.DeleteRewardResponse:
         r"""Delete a coupon or feature grant.
 
-        :param id: The ID of the coupon or feature grant to delete.
+        :param reward_id: The ID of the coupon or feature grant.
         :param retries: Override the default retry configuration for this method
         :param server_url: Override the default server URL for this method
         :param timeout_ms: Override the default request timeout configuration for this method in milliseconds
@@ -835,7 +835,7 @@ class RewardsSDK(BaseSDK):
             base_url = self._get_url(base_url, url_variables)
 
         request = models.DeleteRewardParams(
-            id=id,
+            reward_id=reward_id,
         )
 
         req = self._build_request(
@@ -900,7 +900,7 @@ class RewardsSDK(BaseSDK):
     async def delete_async(
         self,
         *,
-        id: str,
+        reward_id: str,
         retries: OptionalNullable[utils.RetryConfig] = UNSET,
         server_url: Optional[str] = None,
         timeout_ms: Optional[int] = None,
@@ -908,7 +908,7 @@ class RewardsSDK(BaseSDK):
     ) -> models.DeleteRewardResponse:
         r"""Delete a coupon or feature grant.
 
-        :param id: The ID of the coupon or feature grant to delete.
+        :param reward_id: The ID of the coupon or feature grant.
         :param retries: Override the default retry configuration for this method
         :param server_url: Override the default server URL for this method
         :param timeout_ms: Override the default request timeout configuration for this method in milliseconds
@@ -925,7 +925,7 @@ class RewardsSDK(BaseSDK):
             base_url = self._get_url(base_url, url_variables)
 
         request = models.DeleteRewardParams(
-            id=id,
+            reward_id=reward_id,
         )
 
         req = self._build_request_async(

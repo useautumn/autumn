@@ -810,7 +810,7 @@ class Referrals(BaseSDK):
     def get_program(
         self,
         *,
-        id: str,
+        referral_program_id: str,
         retries: OptionalNullable[utils.RetryConfig] = UNSET,
         server_url: Optional[str] = None,
         timeout_ms: Optional[int] = None,
@@ -818,7 +818,7 @@ class Referrals(BaseSDK):
     ) -> models.GetReferralProgramCreateReferralProgramResponse:
         r"""Fetch a referral program by ID.
 
-        :param id: The ID of the referral program to fetch.
+        :param referral_program_id: The ID of the referral program.
         :param retries: Override the default retry configuration for this method
         :param server_url: Override the default server URL for this method
         :param timeout_ms: Override the default request timeout configuration for this method in milliseconds
@@ -835,7 +835,7 @@ class Referrals(BaseSDK):
             base_url = self._get_url(base_url, url_variables)
 
         request = models.GetReferralProgramParams(
-            id=id,
+            referral_program_id=referral_program_id,
         )
 
         req = self._build_request(
@@ -902,7 +902,7 @@ class Referrals(BaseSDK):
     async def get_program_async(
         self,
         *,
-        id: str,
+        referral_program_id: str,
         retries: OptionalNullable[utils.RetryConfig] = UNSET,
         server_url: Optional[str] = None,
         timeout_ms: Optional[int] = None,
@@ -910,7 +910,7 @@ class Referrals(BaseSDK):
     ) -> models.GetReferralProgramCreateReferralProgramResponse:
         r"""Fetch a referral program by ID.
 
-        :param id: The ID of the referral program to fetch.
+        :param referral_program_id: The ID of the referral program.
         :param retries: Override the default retry configuration for this method
         :param server_url: Override the default server URL for this method
         :param timeout_ms: Override the default request timeout configuration for this method in milliseconds
@@ -927,7 +927,7 @@ class Referrals(BaseSDK):
             base_url = self._get_url(base_url, url_variables)
 
         request = models.GetReferralProgramParams(
-            id=id,
+            referral_program_id=referral_program_id,
         )
 
         req = self._build_request_async(
@@ -994,7 +994,7 @@ class Referrals(BaseSDK):
     def update_program(
         self,
         *,
-        id: str,
+        referral_program_id: str,
         reward_id: Optional[str] = None,
         redeem_on: Optional[models.UpdateReferralProgramRedeemOnRequest] = None,
         received_by: Optional[models.UpdateReferralProgramReceivedByRequest] = None,
@@ -1008,7 +1008,7 @@ class Referrals(BaseSDK):
     ) -> models.UpdateReferralProgramCreateReferralProgramResponse:
         r"""Update a referral program. Omitted fields keep their current value.
 
-        :param id: The ID of the referral program to update.
+        :param referral_program_id: The ID of the referral program.
         :param reward_id: The ID of the reward granted when a code is redeemed.
         :param redeem_on: When the reward is granted: on redemption, or when the redeemer checks out.
         :param received_by: Who receives the reward: the referrer only, or both parties.
@@ -1031,7 +1031,7 @@ class Referrals(BaseSDK):
             base_url = self._get_url(base_url, url_variables)
 
         request = models.UpdateReferralProgramParams(
-            id=id,
+            referral_program_id=referral_program_id,
             reward_id=reward_id,
             redeem_on=redeem_on,
             received_by=received_by,
@@ -1104,7 +1104,7 @@ class Referrals(BaseSDK):
     async def update_program_async(
         self,
         *,
-        id: str,
+        referral_program_id: str,
         reward_id: Optional[str] = None,
         redeem_on: Optional[models.UpdateReferralProgramRedeemOnRequest] = None,
         received_by: Optional[models.UpdateReferralProgramReceivedByRequest] = None,
@@ -1118,7 +1118,7 @@ class Referrals(BaseSDK):
     ) -> models.UpdateReferralProgramCreateReferralProgramResponse:
         r"""Update a referral program. Omitted fields keep their current value.
 
-        :param id: The ID of the referral program to update.
+        :param referral_program_id: The ID of the referral program.
         :param reward_id: The ID of the reward granted when a code is redeemed.
         :param redeem_on: When the reward is granted: on redemption, or when the redeemer checks out.
         :param received_by: Who receives the reward: the referrer only, or both parties.
@@ -1141,7 +1141,7 @@ class Referrals(BaseSDK):
             base_url = self._get_url(base_url, url_variables)
 
         request = models.UpdateReferralProgramParams(
-            id=id,
+            referral_program_id=referral_program_id,
             reward_id=reward_id,
             redeem_on=redeem_on,
             received_by=received_by,
@@ -1214,7 +1214,7 @@ class Referrals(BaseSDK):
     def delete_program(
         self,
         *,
-        id: str,
+        referral_program_id: str,
         retries: OptionalNullable[utils.RetryConfig] = UNSET,
         server_url: Optional[str] = None,
         timeout_ms: Optional[int] = None,
@@ -1222,7 +1222,7 @@ class Referrals(BaseSDK):
     ) -> models.DeleteReferralProgramResponse:
         r"""Delete a referral program.
 
-        :param id: The ID of the referral program to delete.
+        :param referral_program_id: The ID of the referral program.
         :param retries: Override the default retry configuration for this method
         :param server_url: Override the default server URL for this method
         :param timeout_ms: Override the default request timeout configuration for this method in milliseconds
@@ -1239,7 +1239,7 @@ class Referrals(BaseSDK):
             base_url = self._get_url(base_url, url_variables)
 
         request = models.DeleteReferralProgramParams(
-            id=id,
+            referral_program_id=referral_program_id,
         )
 
         req = self._build_request(
@@ -1306,7 +1306,7 @@ class Referrals(BaseSDK):
     async def delete_program_async(
         self,
         *,
-        id: str,
+        referral_program_id: str,
         retries: OptionalNullable[utils.RetryConfig] = UNSET,
         server_url: Optional[str] = None,
         timeout_ms: Optional[int] = None,
@@ -1314,7 +1314,7 @@ class Referrals(BaseSDK):
     ) -> models.DeleteReferralProgramResponse:
         r"""Delete a referral program.
 
-        :param id: The ID of the referral program to delete.
+        :param referral_program_id: The ID of the referral program.
         :param retries: Override the default retry configuration for this method
         :param server_url: Override the default server URL for this method
         :param timeout_ms: Override the default request timeout configuration for this method in milliseconds
@@ -1331,7 +1331,7 @@ class Referrals(BaseSDK):
             base_url = self._get_url(base_url, url_variables)
 
         request = models.DeleteReferralProgramParams(
-            id=id,
+            referral_program_id=referral_program_id,
         )
 
         req = self._build_request_async(

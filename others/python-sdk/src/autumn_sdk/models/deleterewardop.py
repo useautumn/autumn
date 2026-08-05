@@ -2,11 +2,10 @@
 
 from __future__ import annotations
 from autumn_sdk.types import BaseModel, UNSET_SENTINEL
-from autumn_sdk.utils import FieldMetadata, HeaderMetadata, validate_const
+from autumn_sdk.utils import FieldMetadata, HeaderMetadata
 import pydantic
 from pydantic import model_serializer
-from pydantic.functional_validators import AfterValidator
-from typing import Literal, Optional
+from typing import Optional
 from typing_extensions import Annotated, NotRequired, TypedDict
 
 
@@ -39,34 +38,22 @@ class DeleteRewardGlobals(BaseModel):
 
 
 class DeleteRewardParamsTypedDict(TypedDict):
-    id: str
-    r"""The ID of the coupon or feature grant to delete."""
+    reward_id: str
+    r"""The ID of the coupon or feature grant."""
 
 
 class DeleteRewardParams(BaseModel):
-    id: str
-    r"""The ID of the coupon or feature grant to delete."""
+    reward_id: str
+    r"""The ID of the coupon or feature grant."""
 
 
 class DeleteRewardResponseTypedDict(TypedDict):
     r"""OK"""
 
-    id: str
-    deleted: Literal[True]
+    success: bool
 
 
 class DeleteRewardResponse(BaseModel):
     r"""OK"""
 
-    id: str
-
-    deleted: Annotated[
-        Annotated[Literal[True], AfterValidator(validate_const(True))],
-        pydantic.Field(alias="deleted"),
-    ] = True
-
-
-try:
-    DeleteRewardResponse.model_rebuild()
-except NameError:
-    pass
+    success: bool

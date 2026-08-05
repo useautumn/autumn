@@ -1400,7 +1400,7 @@ actions:
 
             async function run() {
               const result = await autumn.referrals.deleteProgram({
-                id: "<id>",
+                referralProgramId: "<id>",
               });
 
               console.log(result);
@@ -1422,7 +1422,7 @@ actions:
 
             async function run() {
               const result = await autumn.referrals.getProgram({
-                id: "<id>",
+                referralProgramId: "<id>",
               });
 
               console.log(result);
@@ -1464,7 +1464,7 @@ actions:
 
             async function run() {
               const result = await autumn.referrals.updateProgram({
-                id: "<id>",
+                referralProgramId: "<id>",
               });
 
               console.log(result);
@@ -1569,7 +1569,7 @@ actions:
 
             async function run() {
               const result = await autumn.rewards.delete({
-                id: "<id>",
+                rewardId: "<id>",
               });
 
               console.log(result);
@@ -1591,7 +1591,7 @@ actions:
 
             async function run() {
               const result = await autumn.rewards.get({
-                id: "<id>",
+                rewardId: "<id>",
               });
 
               console.log(result);
@@ -1656,7 +1656,7 @@ actions:
 
             async function run() {
               const result = await autumn.rewards.update({
-                id: "<id>",
+                rewardId: "<id>",
               });
 
               console.log(result);
