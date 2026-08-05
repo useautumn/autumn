@@ -8,7 +8,6 @@ import { addTaskToQueue } from "@/queue/queueUtils.js";
 import type { UsageWindowUpdate } from "../types/usageWindowUpdate.js";
 import { markSyncDirty } from "./dirtyState/markSyncDirty.js";
 import { buildSyncDirtyKeys } from "./dirtyState/syncDirtyKeys.js";
-import type { SyncEntry } from "./flushSubjectBalancesToDb.js";
 
 /** Signal marker TTL: an enqueue that silently fails re-signals after this. */
 const SIGNAL_TTL_SECONDS = 60;
@@ -29,10 +28,6 @@ interface CustomerBatchContext {
 		string,
 		{ ts: number; update: UsageWindowUpdate }
 	>;
-	// Post-deduction balance SNAPSHOTS keyed by cusEnt, same last-write-wins
-	// merge as the counter snapshots above: each entry is the complete
-	// post-deduction state of that cusEnt, not a delta.
-	balanceSnapshotsByCusEntId: Record<string, { ts: number; entry: SyncEntry }>;
 	/** Coalescing flushes into Redis dirty state instead of enqueueing a full payload. */
 	coalesce: boolean;
 	coalesceRedis?: Redis;
@@ -57,8 +52,6 @@ export type QueueSyncV4Payload = {
 		entityId?: string;
 		modifiedCusEntIdsByFeatureId: Record<string, string[]>;
 		usageWindowUpdates?: UsageWindowUpdate[];
-		/** Fallback used only when the consumer's balance-cache read misses. */
-		balanceSnapshots?: SyncEntry[];
 	};
 	messageGroupId?: string;
 	messageDeduplicationId: string;
@@ -105,7 +98,6 @@ export class SyncBatchingManagerV3 {
 		entityId,
 		modifiedCusEntIdsByFeatureId,
 		usageWindowUpdates,
-		balanceSnapshots,
 		coalesce,
 		coalesceRedis,
 	}: {
@@ -118,9 +110,6 @@ export class SyncBatchingManagerV3 {
 		entityId?: string;
 		modifiedCusEntIdsByFeatureId: Record<string, string[]>;
 		usageWindowUpdates?: UsageWindowUpdate[];
-		/** Complete post-deduction state per cusEnt, carried so the consumer can
-		 *  still write the deduction when an invalidation beat it to the cache. */
-		balanceSnapshots?: SyncEntry[];
 		/** Route this batch through the globally gated dirty state. */
 		coalesce?: boolean;
 		/** The Redis instance the deduction ran on (dirty state must co-locate) */
@@ -168,17 +157,6 @@ export class SyncBatchingManagerV3 {
 				batch.context.usageWindowUpdatesByFeatureId[
 					usageWindowUpdate.feature_id
 				] = timestampedUpdate;
-			}
-		}
-
-		for (const entry of balanceSnapshots ?? []) {
-			const timestampedEntry = { ts: Date.now(), entry };
-			const existing =
-				batch.context.balanceSnapshotsByCusEntId[entry.customer_entitlement_id];
-			if (!existing || timestampedEntry.ts >= existing.ts) {
-				batch.context.balanceSnapshotsByCusEntId[
-					entry.customer_entitlement_id
-				] = timestampedEntry;
 			}
 		}
 
@@ -247,7 +225,6 @@ export class SyncBatchingManagerV3 {
 				rolloverIds: new Set(),
 				modifiedCusEntIdsByFeatureId: {},
 				usageWindowUpdatesByFeatureId: {},
-				balanceSnapshotsByCusEntId: {},
 				coalesce: false,
 			},
 			timer: null,
@@ -424,13 +401,6 @@ export class SyncBatchingManagerV3 {
 		const usageWindowUpdates = Object.values(
 			context.usageWindowUpdatesByFeatureId,
 		).map(({ update }) => update);
-		// Deliberately NOT part of the dedup key: the consumer prefers its own
-		// cache read and only falls back to these, so collapsing a duplicate onto
-		// a slightly older snapshot is harmless — while keying on them would make
-		// every deduction a distinct message and defeat SQS dedup entirely.
-		const balanceSnapshots = Object.values(
-			context.balanceSnapshotsByCusEntId,
-		).map(({ entry }) => entry);
 		const messageDeduplicationId = this.buildDeduplicationId({
 			context,
 			cusEntIds,
@@ -452,7 +422,6 @@ export class SyncBatchingManagerV3 {
 					entityId: context.entityId,
 					modifiedCusEntIdsByFeatureId: context.modifiedCusEntIdsByFeatureId,
 					usageWindowUpdates,
-					balanceSnapshots,
 				},
 				// messageGroupId: `sync-v4:${context.orgId}:${context.env}:${context.customerId}`,
 				messageDeduplicationId,

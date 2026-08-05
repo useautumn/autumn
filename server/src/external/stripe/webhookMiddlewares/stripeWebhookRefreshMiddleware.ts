@@ -25,13 +25,6 @@ const updateInvoiceEvents = [
 	"invoice.finalized",
 ];
 
-// NOTE: deliberately a blind delete, never a balance flush. Un-synced track
-// deductions survive invalidation via the sync payload snapshots
-// (buildBalanceSnapshotEntries + syncItemV4 cache-miss fallback). A flush here
-// is actively dangerous: the deduction SQL never bumps cache_version, so
-// sync_balances_v2's guards cannot reject a stale cached balance flushed over
-// a Postgres-direct write that happened after the cache snapshot was taken.
-
 export const shouldSkipWebhookRefresh = ({
 	ctx,
 }: {
