@@ -46,9 +46,8 @@ jobs:
           fi
 
           summary="${summary%%"$end_marker"*}"
-          summary="$start_marker$summary"
           slack_summary=$(printf '%s' "$summary" | sed -E \
-            -e '1s/^## Summary by cubic$/*Summary by cubic*/' \
+            -e '1{/^$/d;}' \
             -e 's/\*\*([^*]+)\*\*/\*\1\*/g' \
             -e 's/&/\&amp;/g' \
             -e 's/</\&lt;/g' \
