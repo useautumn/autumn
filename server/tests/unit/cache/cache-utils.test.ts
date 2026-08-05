@@ -37,7 +37,6 @@ mock.module("@/external/redis/initUtils/redisClientRegistry.js", () => ({
 }));
 mock.module("@/external/redis/initRedis.js", () => ({
 	redis: defaultRedis,
-	miscRedis: defaultRedis,
 }));
 
 import { RedisUnavailableError } from "@/external/redis/utils/errors.js";
