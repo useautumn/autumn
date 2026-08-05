@@ -41,6 +41,7 @@ export const waitForStripeWebhook = async ({
 	types,
 	since,
 	objectId,
+	customerStripeId,
 	timeoutMs = WEBHOOK_SETTLE_TIMEOUT_MS,
 	replayAfterMs = DEFAULT_REPLAY_AFTER_MS,
 }: {
@@ -59,6 +60,9 @@ export const waitForStripeWebhook = async ({
 	 * inserts and corrupts state. Pass the object id (e.g. the checkout session).
 	 */
 	objectId?: string;
+	/** Same purpose as `objectId`, for events whose object hangs off a customer
+	 * (invoices) rather than being the thing the test holds an id for. */
+	customerStripeId?: string;
 	timeoutMs?: number;
 	replayAfterMs?: number;
 }): Promise<void> => {
@@ -89,6 +93,7 @@ export const waitForStripeWebhook = async ({
 				types,
 				createdGte,
 				objectId,
+				customerStripeId,
 			});
 		}
 
@@ -102,12 +107,14 @@ const replayStripeEvents = async ({
 	types,
 	createdGte,
 	objectId,
+	customerStripeId,
 }: {
 	stripeCli: Stripe;
 	env: AppEnv;
 	types: string[];
 	createdGte: number;
 	objectId?: string;
+	customerStripeId?: string;
 }): Promise<string> => {
 	const events = await stripeCli.events.list({
 		types,
@@ -118,12 +125,23 @@ const replayStripeEvents = async ({
 		`[waitForStripeWebhook] stripe had ${events.data.length} event(s) matching ${types.join(", ")}`,
 	);
 
-	const mine = objectId
-		? events.data.filter(
-				(event) =>
-					(event.data.object as { id?: string } | undefined)?.id === objectId,
-			)
-		: events.data;
+	const isMine = (event: Stripe.Event) => {
+		const object = event.data.object as {
+			id?: string;
+			customer?: string | { id?: string };
+		};
+		if (objectId) return object.id === objectId;
+		if (customerStripeId) {
+			const owner =
+				typeof object.customer === "string"
+					? object.customer
+					: object.customer?.id;
+			return owner === customerStripeId;
+		}
+		return true;
+	};
+
+	const mine = events.data.filter(isMine);
 
 	const statuses: string[] = [];
 	for (const event of mine.reverse()) {

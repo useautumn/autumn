@@ -30,6 +30,8 @@ import {
 } from "@tests/utils/expectUtils/expectProductAttached";
 import { items } from "@tests/utils/fixtures/items";
 import { products } from "@tests/utils/fixtures/products";
+import { stripeCustomerId } from "@tests/utils/stripeUtils/stripeCustomerId";
+import { waitForStripeWebhook } from "@tests/utils/stripeUtils/waitForStripeWebhook";
 import ctx from "@tests/utils/testInitUtils/createTestContext";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
@@ -80,11 +82,22 @@ test.concurrent(
 
 		await completeInvoiceCheckout({ url: res.checkout_url });
 
-		// Payment lands first; the attach it triggers arrives a beat later.
-		await waitForCustomerInvoiceStatus({
-			autumn: autumnV1,
-			customerId,
-			status: "paid",
+		// The attach rides on invoice.paid, so wait on the attach itself — the
+		// invoice reaching "paid" is set by a different event.
+		await waitForStripeWebhook({
+			stripeCli: ctx.stripeCli,
+			env: ctx.env,
+			types: ["invoice.paid"],
+			customerStripeId: await stripeCustomerId({ ctx, customerId }),
+			until: async () => {
+				const customer = await autumnV1.customers.get<ApiCustomerV3>(
+					customerId,
+					{ skip_cache: "true" },
+				);
+				return (customer.products ?? []).some(
+					(product: { id?: string }) => product.id === pro.id,
+				);
+			},
 		});
 
 		await expectCustomerProducts({
