@@ -1,4 +1,5 @@
 import type { DbCustomerExport } from "@autumn/shared";
+import { dbReplica } from "@/db/initDrizzle.js";
 import type { Logger } from "@/external/logtail/logtailUtils.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import type { RunCustomerExportPayload } from "@/trigger/exports/customerExportTaskPayload.js";
@@ -27,9 +28,10 @@ export const uploadCustomerExportCsv = async ({
 	progress?: CustomerExportProgressReporter;
 }): Promise<{ rowCount: number; byteCount: number }> => {
 	const { exportId, orgId, env } = payload;
+	const readDb = dbReplica ?? ctx.db;
 
 	const { population, totalCount } = await resolveCustomerExportPopulation({
-		db: ctx.db,
+		db: readDb,
 		orgId,
 		env,
 		snapshot: customerExport.snapshot,
@@ -42,7 +44,11 @@ export const uploadCustomerExportCsv = async ({
 		s3Key: key,
 	});
 	logger.info("customer-export: started", {
-		data: { exportId, totalCount },
+		data: {
+			exportId,
+			totalCount,
+			readSource: readDb === ctx.db ? "primary" : "replica",
+		},
 	});
 
 	// The reporter is absent for inline runs; retries reset before re-walking.
