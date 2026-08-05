@@ -14,32 +14,19 @@ import {
 	format,
 } from "date-fns";
 import type { Stripe } from "stripe";
+import type { AutumnInt } from "@/external/autumn/autumnCli.js";
 import { timeout } from "./genUtils.js";
+import {
+	type ClockSettleMode,
+	captureClockInvoiceBaseline,
+	LEGACY_WAIT_POLL_THRESHOLD_MS,
+	waitForClockInvoiceSettle,
+	waitForClockReady,
+} from "./testClockSettleUtils.js";
 
 const STRIPE_TEST_CLOCK_TIMING = 20000; // 30s
-const CLOCK_READY_TIMEOUT_MS = 180_000;
-const CLOCK_READY_POLL_MS = 3000;
 
-// Stripe rejects mutations while a clock is advancing; poll until status is "ready".
-export const waitForClockReady = async ({
-	stripeCli,
-	testClockId,
-}: {
-	stripeCli: Stripe;
-	testClockId: string;
-}) => {
-	const deadline = Date.now() + CLOCK_READY_TIMEOUT_MS;
-	while (Date.now() < deadline) {
-		const clock = await stripeCli.testHelpers.testClocks.retrieve(testClockId);
-		if (clock.status === "ready") {
-			return;
-		}
-		await timeout(CLOCK_READY_POLL_MS);
-	}
-	throw new Error(
-		`Test clock ${testClockId} not ready after ${CLOCK_READY_TIMEOUT_MS}ms`,
-	);
-};
+export { waitForClockReady };
 
 export const deleteAllStripeProducts = async ({
 	stripeCli,
@@ -167,6 +154,10 @@ export const advanceTestClock = async ({
 	numberOfMonths,
 	advanceTo,
 	waitForSeconds,
+	settleMode,
+	settleTimeoutMs,
+	autumn,
+	customerId,
 }: {
 	stripeCli: Stripe;
 	testClockId: string;
@@ -176,7 +167,22 @@ export const advanceTestClock = async ({
 	numberOfHours?: number;
 	numberOfMonths?: number;
 	advanceTo?: number;
+	/**
+	 * Legacy blind wait, kept for advances with no observable consequence to poll
+	 * for (a mid-cycle jump by N days, a trial expiry). Ignored when `settleMode`
+	 * is set — polling supersedes it.
+	 */
 	waitForSeconds?: number;
+	/**
+	 * Poll for the boundary's invoice instead of sleeping. Set it only when this
+	 * advance crosses a billing boundary; see ClockSettleMode.
+	 */
+	settleMode?: ClockSettleMode;
+	settleTimeoutMs?: number;
+	/** Pin the Autumn client/customer used for the settle signal. Falls back to
+	 * the clock's Stripe customer metadata (`autumn_id`) + a default client. */
+	autumn?: AutumnInt;
+	customerId?: string;
 }) => {
 	if (!startingFrom) {
 		startingFrom = new Date();
@@ -212,10 +218,42 @@ export const advanceTestClock = async ({
 
 	console.log("   - Advancing to: ", format(advanceTo, "dd MMM yyyy HH:mm:ss"));
 	await waitForClockReady({ stripeCli, testClockId });
+
+	// A long explicit wait was chosen to cover a cycle boundary, so poll for that
+	// boundary instead — and fall back to the wait if it never materialises.
+	const legacyWaitMs =
+		!settleMode &&
+		waitForSeconds &&
+		waitForSeconds * 1000 >= LEGACY_WAIT_POLL_THRESHOLD_MS
+			? waitForSeconds * 1000
+			: undefined;
+
+	// Snapshot before the advance so "new invoice" is unambiguous afterwards.
+	const baseline =
+		settleMode || legacyWaitMs
+			? await captureClockInvoiceBaseline({
+					stripeCli,
+					testClockId,
+					autumn,
+					customerId,
+				})
+			: null;
+
 	await stripeCli.testHelpers.testClocks.advance(testClockId, {
 		frozen_time: Math.floor(advanceTo / 1000),
 	});
 	await waitForClockReady({ stripeCli, testClockId });
+
+	if (baseline) {
+		await waitForClockInvoiceSettle({
+			stripeCli,
+			baseline,
+			mode: settleMode,
+			timeoutMs: settleTimeoutMs,
+			legacyWaitMs,
+		});
+		return advanceTo;
+	}
 
 	await timeout(
 		waitForSeconds ? waitForSeconds * 1000 : STRIPE_TEST_CLOCK_TIMING,

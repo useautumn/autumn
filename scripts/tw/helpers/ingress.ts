@@ -18,7 +18,12 @@
 import { randomUUID } from "node:crypto";
 import chalk from "chalk";
 import { resolveGitSource } from "../commands/run.ts";
-import { INGRESS_PORT, TW_ENV, WORKER_TIMEOUT_MS } from "../constants.ts";
+import {
+	INGRESS_PORT,
+	INGRESS_SCRIPT_RELATIVE,
+	TW_ENV,
+	WORKER_TIMEOUT_MS,
+} from "../constants.ts";
 import { sinkLine } from "./logSink.ts";
 import {
 	createIngressSandbox,
@@ -29,8 +34,12 @@ import {
 	sandboxRepoRoot,
 } from "./provider.ts";
 
-/** Path to the ingress http server, relative to the in-sandbox repo root. */
-const INGRESS_SCRIPT = "scripts/tw/ingress/server.mjs";
+/**
+ * Path to the ingress http server, relative to the in-sandbox repo root. Shared
+ * with the Modal provider, which UPLOADS exactly this one file instead of
+ * cloning the repo — so it must stay import-free (node builtins only).
+ */
+const INGRESS_SCRIPT = INGRESS_SCRIPT_RELATIVE;
 
 /** How long to wait for the ingress `/health` to come up after boot. */
 const INGRESS_HEALTH_TIMEOUT_MS = 90_000;

@@ -55,7 +55,9 @@ const activeTempPaths: string[] = [
 	"integration/billing/legacy/attach/new/legacy-new-oneoff-zero-decimal.test.ts",
 	// ✗ "create-schedule: now phase stays the exact active set across groups and
 	//   future phases" — expect(received).toEqual(expected). Shape mismatch.
-	"integration/billing/create-schedule/phases/create-schedule-phases.test.ts",
+	//   The assertion now polls and names every row it saw, so the next run says
+	//   which customer_products row is extra/missing.
+	"integration/billing/create-schedule/phases/create-schedule-phases-active-set.test.ts",
 	// ✗ "customer.subscription.created auto-sync: links product after external
 	//   Stripe checkout completion" — "Checkout session did not produce a
 	//   subscription"; the browser is left on checkout.stripe.com with the form

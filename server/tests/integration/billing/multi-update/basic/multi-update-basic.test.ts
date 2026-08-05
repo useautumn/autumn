@@ -21,7 +21,7 @@
  */
 
 import { test } from "bun:test";
-import type { ApiCustomerV5, MultiUpdateParamsV0Input } from "@autumn/shared";
+import type { MultiUpdateParamsV0Input } from "@autumn/shared";
 import { expectMultiUpdatePreviewCorrect } from "@tests/integration/billing/multi-update/utils/expectMultiUpdatePreviewCorrect";
 import { expectCustomerInvoiceCorrect } from "@tests/integration/billing/utils/expectCustomerInvoiceCorrect";
 import {
@@ -33,7 +33,7 @@ import { expectStripeSubscriptionCorrect } from "@tests/integration/billing/util
 import { TestFeature } from "@tests/setup/v2Features";
 import { items } from "@tests/utils/fixtures/items";
 import { products } from "@tests/utils/fixtures/products";
-import { timeout } from "@tests/utils/genUtils";
+import { WEBHOOK_SETTLE_TIMEOUT_MS } from "@tests/utils/pollableCustomerExpect";
 import { advanceToNextInvoice } from "@tests/utils/testAttachUtils/testAttachUtils";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
@@ -106,11 +106,11 @@ test.concurrent(
 			],
 		});
 
-		const customerAfterCancel =
-			await autumnV2_3.customers.get<ApiCustomerV5>(customerId);
-
+		// Cancellation state lands via the Stripe subscription update + its webhook,
+		// so poll rather than asserting the first snapshot.
 		await expectCustomerProducts({
-			customer: customerAfterCancel,
+			autumn: autumnV2_3,
+			customerId,
 			canceling: [proA.id, addon.id],
 			active: [proB.id],
 			scheduled: [freeA.id],
@@ -129,32 +129,23 @@ test.concurrent(
 			testClockId: testClockId!,
 		});
 
-		const customerAfterAdvance =
-			await autumnV2_3.customers.get<ApiCustomerV5>(customerId);
-
 		await expectCustomerProducts({
-			customer: customerAfterAdvance,
+			autumn: autumnV2_3,
+			customerId,
 			active: [freeA.id, proB.id],
 			notPresent: [proA.id, addon.id],
+			settleTimeoutMs: WEBHOOK_SETTLE_TIMEOUT_MS,
 		});
 
 		// Renewal invoice: Pro B $20 + 400 overage * $0.10 = $60, billed exactly once
 		// (3 attach invoices + 1 renewal). The overage lands via the async
 		// invoice.created worker — poll until it settles under concurrent load.
-		const overageDeadline = Date.now() + 60_000;
-		for (;;) {
-			try {
-				await expectCustomerInvoiceCorrect({
-					customerId,
-					count: 4,
-					latestTotal: 60,
-				});
-				break;
-			} catch (error) {
-				if (Date.now() > overageDeadline) throw error;
-				await timeout(5000);
-			}
-		}
+		await expectCustomerInvoiceCorrect({
+			customerId,
+			count: 4,
+			latestTotal: 60,
+			settleTimeoutMs: WEBHOOK_SETTLE_TIMEOUT_MS,
+		});
 	},
 );
 
@@ -224,11 +215,9 @@ test.concurrent(
 			multiUpdateParams,
 		);
 
-		const customerAfterCancel =
-			await autumnV2_3.customers.get<ApiCustomerV5>(customerId);
-
 		await expectCustomerProducts({
-			customer: customerAfterCancel,
+			autumn: autumnV2_3,
+			customerId,
 			notPresent: [proA.id, proB.id],
 		});
 
@@ -320,11 +309,9 @@ test.concurrent(
 			multiUpdateParams,
 		);
 
-		const customerAfterCancel =
-			await autumnV2_3.customers.get<ApiCustomerV5>(customerId);
-
 		await expectCustomerProducts({
-			customer: customerAfterCancel,
+			autumn: autumnV2_3,
+			customerId,
 			notPresent: [proA.id, proB.id],
 			active: [premiumC.id],
 		});
@@ -387,10 +374,9 @@ test.concurrent(
 		});
 
 		// Sanity: both plans active, 2 attach invoices
-		const customerBeforeCancel =
-			await autumnV2_3.customers.get<ApiCustomerV5>(customerId);
 		await expectProductActive({
-			customer: customerBeforeCancel,
+			autumn: autumnV2_3,
+			customerId,
 			productId: proA.id,
 		});
 		await expectCustomerInvoiceCorrect({ customerId, count: 2 });
@@ -411,11 +397,11 @@ test.concurrent(
 			],
 		});
 
-		const customerAfterCancel =
-			await autumnV2_3.customers.get<ApiCustomerV5>(customerId);
-
+		// Removal settles once Stripe confirms the cancel, so poll instead of
+		// asserting the first snapshot.
 		await expectCustomerProducts({
-			customer: customerAfterCancel,
+			autumn: autumnV2_3,
+			customerId,
 			notPresent: [proA.id, proB.id],
 		});
 

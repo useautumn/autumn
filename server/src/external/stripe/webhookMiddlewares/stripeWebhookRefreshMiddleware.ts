@@ -25,6 +25,28 @@ const updateInvoiceEvents = [
 	"invoice.finalized",
 ];
 
+/**
+ * Events whose handlers never write customer entitlement balances to Postgres,
+ * so the cached balances are still the source of truth when this middleware
+ * runs and must be flushed rather than dropped — otherwise a webhook landing
+ * shortly after a `/track` silently reverts that usage (the deduction lives
+ * only in Redis until its async sync runs).
+ *
+ * `invoice.created` and `customer.subscription.deleted` are deliberately absent:
+ * their handlers bill consumables and rewrite cusEnt balances directly, so
+ * Postgres — not the cache — is ahead by the time we get here.
+ */
+const balanceNeutralEvents = new Set([
+	"customer.subscription.created",
+	"customer.subscription.updated",
+	"subscription_schedule.canceled",
+	"subscription_schedule.updated",
+	"checkout.session.completed",
+	"invoice.paid",
+	"invoice.updated",
+	"invoice.finalized",
+]);
+
 export const shouldSkipWebhookRefresh = ({
 	ctx,
 }: {
@@ -103,6 +125,7 @@ export const stripeWebhookRefreshMiddleware = async (
 				customerId: customer.id!,
 				ctx,
 				source: `stripeWebhookRefreshMiddleware: ${eventType}`,
+				flushBalances: balanceNeutralEvents.has(eventType),
 			});
 		}
 	} catch (error) {

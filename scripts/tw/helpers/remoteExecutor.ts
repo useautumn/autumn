@@ -36,6 +36,7 @@ import {
 	setWorkerStatus,
 } from "../dashboard/hub.ts";
 import type { WorkerHandle } from "../types.ts";
+import { recordFileDuration } from "./fileDurations.ts";
 import type { WorkerPool } from "./pool.ts";
 import type { ProviderSandbox } from "./provider.ts";
 import { runStreaming } from "./provider.ts";
@@ -174,6 +175,10 @@ export class RemoteExecutor implements TestExecutor {
 		this.lastWorkerByFile.set(args.file, worker.name);
 		// Dashboard: record which worker runs this file (no-op unless enabled).
 		setFileWorker(args.file, worker.name);
+		// LPT input: time from "worker in hand" to a clean exit code, so the
+		// recorded cost is EXECUTION only (no queue wait). Persisted at run end and
+		// used to order the next run's dispatch longest-first.
+		const attemptStart = Date.now();
 
 		try {
 			const sandbox = this.resolveSandbox(worker);
@@ -202,6 +207,7 @@ export class RemoteExecutor implements TestExecutor {
 			});
 			// Clean completion (real exit code, even if non-zero) — the worker is
 			// healthy, hand it back to the pool for the next file.
+			recordFileDuration(args.file, Date.now() - attemptStart);
 			this.pool.release(worker);
 			return { exitCode, stderr };
 		} catch (error) {

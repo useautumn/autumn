@@ -44,6 +44,7 @@ import {
 } from "modal";
 import {
 	INGRESS_PORT,
+	INGRESS_SCRIPT_RELATIVE,
 	PROJECT_ROOT,
 	SERVER_PORT,
 	WARM_SANDBOX_PREFIX,
@@ -361,6 +362,56 @@ const withExecRetry = async <T>(
 			);
 			await sleep(delayMs);
 		}
+	}
+};
+
+/**
+ * Upload JUST the ingress http server into the ingress sandbox, instead of
+ * cloning the repo.
+ *
+ * `scripts/tw/ingress/server.mjs` is a self-contained, zero-dependency
+ * `node:http` server — it is the ONLY file the ingress sandbox ever executes.
+ * Cloning the whole monorepo to get it cost **128s on the critical path** of a
+ * measured run (the orchestrator blocks on `createIngress` before the Stripe
+ * pool claim and fan-out can start). base64 → one `exec`, sub-second.
+ *
+ * base64 rather than a heredoc so no byte of the script can be interpreted by
+ * the shell.
+ */
+const uploadIngressScript = async (sandbox: Sandbox): Promise<void> => {
+	const localPath = join(PROJECT_ROOT, INGRESS_SCRIPT_RELATIVE);
+	const encoded = readFileSync(localPath).toString("base64");
+	const remotePath = `${MODAL_REPO_ROOT}/${INGRESS_SCRIPT_RELATIVE}`;
+	const script = [
+		"set -e",
+		`mkdir -p "$(dirname "${remotePath}")"`,
+		`printf %s '${encoded}' | base64 -d > "${remotePath}"`,
+	].join("\n");
+	const done = stage("upload ingress server (no repo clone)");
+	try {
+		const proc = await withExecRetry("ingress-upload", () =>
+			sandbox.exec(["bash", "-lc", script], {
+				stdout: "pipe",
+				stderr: "pipe",
+				workdir: "/",
+			}),
+		);
+		let stderrText = "";
+		await Promise.all([
+			pumpStream(proc.stdout, (text) => sink(text)),
+			pumpStream(proc.stderr, (text) => {
+				stderrText += text;
+				sink(text);
+			}),
+		]);
+		const exitCode = await proc.wait();
+		if (exitCode !== 0) {
+			throw new Error(
+				`modal: ingress script upload failed (exit ${exitCode}): ${stderrText}`,
+			);
+		}
+	} finally {
+		done();
 	}
 };
 
@@ -687,9 +738,6 @@ const makeModalProvider = (v2: boolean): ProviderImpl => {
 		async createIngressSandbox(
 			opts: CreateSandboxOptions,
 		): Promise<ProviderSandbox> {
-			if (!opts.source) {
-				throw new Error("modal: createIngressSandbox requires a git source");
-			}
 			// Ingress runs only a built-ins-only http server — a tiny debian+bun
 			// image, NOT the full services base (which is slow and can fail on its
 			// own, taking the whole run down before fan-out).
@@ -707,7 +755,9 @@ const makeModalProvider = (v2: boolean): ProviderImpl => {
 				},
 				v2,
 			);
-			await cloneRepo(sandbox, opts.source);
+			// The ingress needs exactly ONE file, not the monorepo — uploading it
+			// takes under a second where the clone took ~128s of critical path.
+			await uploadIngressScript(sandbox);
 			return wrap(opts.name, sandbox);
 		},
 

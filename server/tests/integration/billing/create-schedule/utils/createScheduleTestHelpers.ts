@@ -1,9 +1,13 @@
+import { expect } from "bun:test";
 import {
+	CusProductStatus,
 	customerEntitlements,
 	customerPrices,
 	customerProducts,
 	prices,
 } from "@autumn/shared";
+import { pollUntilAsserted } from "@tests/utils/genUtils";
+import { DEFAULT_SETTLE_TIMEOUT_MS } from "@tests/utils/pollableCustomerExpect";
 import type { initScenario } from "@tests/utils/testInitUtils/initScenario";
 import { and, eq, inArray } from "drizzle-orm";
 
@@ -30,6 +34,64 @@ export const getCustomerProductRows = async ({
 				inArray(customerProducts.product_id, productIds),
 			),
 		);
+
+type CustomerProductRow = { productId: string | null; status: string | null };
+
+/** Stable, human-readable rendering so a mismatch names the offending rows. */
+const formatRows = (rows: CustomerProductRow[]) =>
+	rows
+		.map((row) => `${row.productId}:${row.status}`)
+		.sort()
+		.join(", ") || "(none)";
+
+const rowsWithStatus = (rows: CustomerProductRow[], status: CusProductStatus) =>
+	rows.filter((row) => row.status === status);
+
+const expectedRows = (productIds: string[], status: CusProductStatus) =>
+	formatRows(productIds.map((productId) => ({ productId, status })));
+
+/**
+ * Assert the exact set of active/scheduled `customer_products` rows for a
+ * customer, polling until it settles — a create_schedule / phase transition
+ * lands its rows through Stripe execution and its webhooks, so the first read
+ * can still show the pre-transition set. The failure message carries every row
+ * that was actually present, which a bare `toEqual` diff does not survive into
+ * the `bun tw` report.
+ */
+export const expectCustomerProductRows = async ({
+	ctx,
+	customerId,
+	productIds,
+	active = [],
+	scheduled = [],
+	settleTimeoutMs = DEFAULT_SETTLE_TIMEOUT_MS,
+}: {
+	ctx: Ctx;
+	customerId: string;
+	productIds: string[];
+	active?: string[];
+	scheduled?: string[];
+	settleTimeoutMs?: number;
+}) => {
+	const expectedActive = expectedRows(active, CusProductStatus.Active);
+	const expectedScheduled = expectedRows(scheduled, CusProductStatus.Scheduled);
+
+	await pollUntilAsserted({
+		fetch: () => getCustomerProductRows({ ctx, customerId, productIds }),
+		assert: (rows) => {
+			const allRows = formatRows(rows);
+			expect(
+				formatRows(rowsWithStatus(rows, CusProductStatus.Active)),
+				`Active customer_products for ${customerId} — all rows: [${allRows}]`,
+			).toBe(expectedActive);
+			expect(
+				formatRows(rowsWithStatus(rows, CusProductStatus.Scheduled)),
+				`Scheduled customer_products for ${customerId} — all rows: [${allRows}]`,
+			).toBe(expectedScheduled);
+		},
+		timeoutMs: settleTimeoutMs,
+	});
+};
 
 export const getCustomerProductPriceAmounts = async ({
 	ctx,

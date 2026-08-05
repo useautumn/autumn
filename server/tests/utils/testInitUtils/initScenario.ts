@@ -1554,7 +1554,9 @@ export async function initScenario({
 						addMonths(baseDate, 1),
 						hoursToFinalizeInvoice,
 					).getTime(),
-					waitForSeconds: 30,
+					settleMode: "invoice-finalized",
+					autumn: autumnV1,
+					customerId,
 				});
 			} else {
 				advancedTo = await advanceTestClockFn({
@@ -1651,17 +1653,23 @@ export async function initScenario({
 
 			const startingFrom = new Date(advancedTo);
 			if (action.withPause) {
+				// Leg 1 lands ON the boundary (draft period invoice + Autumn's
+				// invoice.created balance resets); leg 2 finalizes that draft.
 				advancedTo = await advanceTestClockFn({
 					stripeCli: ctx.stripeCli,
 					testClockId,
 					advanceTo: addMonths(startingFrom, 1).getTime(),
-					waitForSeconds: 15,
+					settleMode: "invoice-created",
+					autumn: autumnV1,
+					customerId,
 				});
 				await advanceTestClockFn({
 					stripeCli: ctx.stripeCli,
 					testClockId,
 					advanceTo: addHours(advancedTo, hoursToFinalizeInvoice).getTime(),
-					waitForSeconds: 15,
+					settleMode: "finalize-pending",
+					autumn: autumnV1,
+					customerId,
 				});
 			} else {
 				advancedTo = await advanceTestClockFn({
@@ -1671,7 +1679,9 @@ export async function initScenario({
 						addMonths(startingFrom, 1),
 						hoursToFinalizeInvoice,
 					).getTime(),
-					waitForSeconds: 30,
+					settleMode: "invoice-finalized",
+					autumn: autumnV1,
+					customerId,
 				});
 			}
 		} else if (action.type === "billingAttach") {

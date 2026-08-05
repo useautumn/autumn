@@ -21,8 +21,31 @@ export const REGISTRY_FILE = join(REGISTRY_DIR, "registry.json");
  */
 export const SANDBOX_NAME_PREFIX = "tw";
 
-/** Pool size `N` default (`--max`). Auto-capped to file count, so small runs stay small. */
-export const DEFAULT_WORKERS = 200;
+/**
+ * Pool size `N` default (`--max`). Auto-capped to file count, so small runs stay
+ * small — this number only bites on a full-suite run.
+ *
+ * Sized to give the `core` suite (~405 files) ONE FILE PER WORKER. At the old 200
+ * every worker ran 2–3 files concurrently on its single 2-vCPU µVM (one server +
+ * PG + Dragonfly + goaws between them) AND split one Stripe budget three ways.
+ * The math (152-key pool, budget divided by `ceil(workers / keys)` — see
+ * `stripeBudgetForRun`):
+ *
+ *   200 workers → 2 workers/key → 7 req/s each → 14 req/s per key,
+ *                 ÷3 concurrent files → ~2.3 req/s per FILE
+ *   405 workers → 3 workers/key → 4 req/s each → 12 req/s per key,
+ *                 ×1 file        → 4 req/s per FILE
+ *
+ * So going wider RAISES per-file Stripe throughput (~1.7×) while LOWERING the
+ * per-key load — Stripe is not the binding constraint, and cost is roughly
+ * `sandboxes × wall`, so more workers finishing sooner is close to cost-neutral
+ * (idle workers are culled within seconds anyway).
+ *
+ * The real cost of going wider is the persistent Stripe sub-account POOL: the
+ * first run at this width top-up-creates the shortfall under the global claim
+ * lock (one-time, ~1 min), after which claims reuse. Drop back with `--max=200`.
+ */
+export const DEFAULT_WORKERS = 450;
 
 /**
  * Per-worker file concurrency `K` default (`--per-worker`). Each worker hosts one
@@ -77,6 +100,14 @@ export const SERVER_PORT = 8080;
 export const INGRESS_PORT = SERVER_PORT;
 
 /**
+ * The ingress http server, relative to the repo root. It is a self-contained
+ * `node:http` script with ZERO imports beyond node builtins — which is why the
+ * Modal ingress sandbox uploads just this file instead of cloning the monorepo
+ * (see `uploadIngressScript` in helpers/modal.ts). Keep it dependency-free.
+ */
+export const INGRESS_SCRIPT_RELATIVE = "scripts/tw/ingress/server.mjs";
+
+/**
  * Vercel sandbox runtime. `node24` is the SDK default and what the swarm pins.
  * See plan §10 (`@vercel/sandbox` supports `node24`/`node22`/`node26`).
  */
@@ -95,11 +126,23 @@ export const VERCEL_REGION = "iad1";
 export const WORKER_VCPUS = 2;
 
 /**
- * Default per-worker sandbox lifetime. 10 minutes comfortably covers a swarm run
- * (the full suite is ~10min wall-clock) while bounding cost/leak if teardown is
- * skipped. Pro's max runtime is 24h, so this is well within limits (plan §10).
+ * Default sandbox lifetime (workers AND the ingress). This is a hard max-runtime:
+ * the provider TERMINATES the sandbox when it elapses, mid-test if need be, which
+ * surfaces as worker death (reschedule storm) or — worse, because nothing fails
+ * loudly — an ingress that silently stops forwarding Stripe webhooks.
+ *
+ * The old 10 minutes was sized against "the full suite is ~10min wall-clock",
+ * which is no longer true and was never the right budget anyway: the clock starts
+ * at CREATE, not at the first test. Measured on run msg4hbpw-jtlnwf: a worker
+ * lived fan-out(32s) + run(519s) = 551s — 49s of headroom on a 600s ceiling — and
+ * the INGRESS, created ~250s earlier (clone + webhook registration + pool claim +
+ * fan-out), needed ~770s. A slightly slower run silently crosses both lines.
+ *
+ * 20 minutes gives ~2× headroom on today's numbers. The cost of a bigger number is
+ * only how long a LEAKED sandbox lives before auto-expiry when teardown didn't run
+ * (the Modal V2 orphan backstop) — recover sooner with `bun tw kill`.
  */
-export const WORKER_TIMEOUT_MS = 10 * 60 * 1000;
+export const WORKER_TIMEOUT_MS = 20 * 60 * 1000;
 
 /**
  * Vercel Sandbox PRO pricing (USD), for the post-run cost estimate. Rates are

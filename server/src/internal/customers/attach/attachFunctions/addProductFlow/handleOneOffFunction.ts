@@ -11,11 +11,15 @@ import {
 } from "@autumn/shared";
 import { addMinutes } from "date-fns";
 import { Decimal } from "decimal.js";
-import { payForInvoice } from "@/external/stripe/stripeInvoiceUtils.js";
+import {
+	getStripeExpandedInvoice,
+	payForInvoice,
+} from "@/external/stripe/stripeInvoiceUtils.js";
 import { customerHasUsableTaxLocationForStripeTax } from "@/internal/billing/v2/providers/stripe/utils/tax/shouldEnableStripeAutomaticTax.js";
 import { createFullCusProduct } from "@/internal/customers/add-product/createFullCusProduct.js";
 import { handleCreateCheckout } from "@/internal/customers/add-product/handleCreateCheckout.js";
 import type { AttachParams } from "@/internal/customers/cusProducts/AttachParams.js";
+import { invoiceActions } from "@/internal/invoices/actions/index.js";
 import { newPriceToInvoiceDescription } from "@/internal/invoices/invoiceFormatUtils.js";
 import { buildInvoiceMemoFromEntitlements } from "@/internal/invoices/invoiceMemoUtils.js";
 import { insertInvoiceFromAttach } from "@/internal/invoices/invoiceUtils.js";
@@ -212,6 +216,22 @@ export const handleOneOffFunction = async ({
 
 		if (paidInvoice) {
 			stripeInvoice = paidInvoice;
+		}
+
+		if (paid) {
+			// The Autumn row above was written while the Stripe invoice was still a
+			// draft, and its status is only corrected by the invoice.paid webhook —
+			// so a dropped or slow delivery leaves the customer's invoice stuck at
+			// `draft`. Persist the post-payment state here instead; the webhook then
+			// writes the same values.
+			await invoiceActions.updateFromStripe({
+				ctx,
+				customerId: customer.id ?? "",
+				stripeInvoice: await getStripeExpandedInvoice({
+					stripeCli,
+					stripeInvoiceId: stripeInvoice.id!,
+				}),
+			});
 		}
 
 		if (!paid) {

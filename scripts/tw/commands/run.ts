@@ -71,6 +71,11 @@ import {
 	formatCost,
 	formatWall,
 } from "../helpers/cost.ts";
+import {
+	fileDurationsPath,
+	orderByLongestFirst,
+	persistFileDurations,
+} from "../helpers/fileDurations.ts";
 import { createIngress, pushWorkerMapping } from "../helpers/ingress.ts";
 import { withGlobalLock } from "../helpers/lock.ts";
 import {
@@ -205,6 +210,13 @@ const TEARDOWN_STRIPE_CONCURRENCY = 16;
 const TEARDOWN_SANDBOX_CONCURRENCY = 16;
 
 /**
+ * Bounded concurrency for the per-pool-key Connect webhook create/delete. One
+ * call per key (152 of them), each on a DIFFERENT platform key — so there is no
+ * shared rate-limit bucket and the only reason to cap is socket pressure.
+ */
+const WEBHOOK_REGISTER_CONCURRENCY = 16;
+
+/**
  * Demand-tracked culling. During the RUN phase, idle workers beyond a buffer are
  * terminated early so we stop paying for ~N idle sandboxes while a few stragglers
  * finish. The buffer is a FRACTION of the initial pool (default 30%) kept idle as
@@ -214,6 +226,13 @@ const TEARDOWN_SANDBOX_CONCURRENCY = 16;
 const CULL_IDLE_BUFFER_FRACTION = Number(
 	process.env.TW_CULL_BUFFER_FRACTION ?? 0.3,
 );
+/**
+ * Absolute ceiling on the idle buffer. The buffer only has to cover retries +
+ * worker-death reschedules in flight at once (a handful), but 30% of a big pool
+ * is dozens of µVMs held alive through the WHOLE straggler tail — pure cost
+ * (a 405-worker pool would park 122 idle sandboxes for minutes). Cap it.
+ */
+const CULL_IDLE_BUFFER_MAX = Number(process.env.TW_CULL_BUFFER_MAX ?? 40);
 const CULL_INTERVAL_MS = 2000;
 const CULL_DISABLED = process.env.TW_DISABLE_CULL === "1";
 
@@ -235,7 +254,10 @@ const startCulling = (
 	}
 	const bufferCount = Math.max(
 		1,
-		Math.ceil(pool.size * CULL_IDLE_BUFFER_FRACTION),
+		Math.min(
+			CULL_IDLE_BUFFER_MAX,
+			Math.ceil(pool.size * CULL_IDLE_BUFFER_FRACTION),
+		),
 	);
 	let culledTotal = 0;
 	const timer = setInterval(() => {
@@ -1280,15 +1302,23 @@ const teardown = async ({
 	// Delete recorded webhooks (the shared platform Connect webhook). Unlike a
 	// sub-account's account-scoped webhook, the platform Connect webhook is NOT
 	// cascade-deleted by sub-account deletion, so drop it explicitly (§9a).
-	for (const webhook of entry.webhooks) {
-		// The webhook lives on the pool key tagged in `accountId` ("platform::<idx>").
-		const webhookKey = stripeKeyByIndex(
-			keyIndexFromWebhookTag(webhook.accountId),
-		);
-		await timeBoxed(`delete connect webhook ${webhook.webhookId}`, () =>
-			deleteConnectWebhook(webhook.webhookId, webhookKey),
-		);
-	}
+	// CONCURRENTLY: one per pool key (152 at full fan-out) — serially this was the
+	// second teardown long-pole, ~50s of the terminal not returning.
+	const webhookDeleteLimit = pLimit(WEBHOOK_REGISTER_CONCURRENCY);
+	await Promise.all(
+		entry.webhooks.map((webhook) =>
+			webhookDeleteLimit(() => {
+				// The webhook lives on the pool key tagged in `accountId`
+				// ("platform::<idx>").
+				const webhookKey = stripeKeyByIndex(
+					keyIndexFromWebhookTag(webhook.accountId),
+				);
+				return timeBoxed(`delete connect webhook ${webhook.webhookId}`, () =>
+					deleteConnectWebhook(webhook.webhookId, webhookKey),
+				);
+			}),
+		),
+	);
 
 	if (entry.svixAppId) {
 		await timeBoxed(`delete svix app ${entry.svixAppId}`, () =>
@@ -1536,19 +1566,30 @@ export const run = async (args: TwRunArgs): Promise<void> => {
 		// delivers events for the accounts it owns). The ingress routes every event
 		// to the owning worker by `event.account` regardless of which key sent it.
 		const usedKeys = Math.min(stripeKeyPoolSize(), effectiveWorkers);
-		for (let keyIndex = 0; keyIndex < usedKeys; keyIndex++) {
-			const webhookId = await registerConnectIngressWebhook(
-				ingress.publicUrl,
-				stripeKeyByIndex(keyIndex),
-			);
-			await registry.addWebhook(runId, {
-				sandboxName: ingress.sandbox.name,
-				accountId: webhookKeyTag(keyIndex),
-				webhookId,
-			});
-		}
+		// CONCURRENTLY: one round-trip per pool key, and the pool is 152 keys —
+		// serially that was ~50s of pure orchestrator wall before fan-out could even
+		// start. Each create lands on a DIFFERENT platform key, so there is no shared
+		// rate-limit bucket to protect; the cap is just politeness/socket pressure.
+		// The registry write is the only shared state and it's awaited per task.
+		const webhookStart = Date.now();
+		const webhookLimit = pLimit(WEBHOOK_REGISTER_CONCURRENCY);
+		await Promise.all(
+			Array.from({ length: usedKeys }, (_, keyIndex) =>
+				webhookLimit(async () => {
+					const webhookId = await registerConnectIngressWebhook(
+						ingress.publicUrl,
+						stripeKeyByIndex(keyIndex),
+					);
+					await registry.addWebhook(runId, {
+						sandboxName: ingress.sandbox.name,
+						accountId: webhookKeyTag(keyIndex),
+						webhookId,
+					});
+				}),
+			),
+		);
 		log(
-			`ingress ready (${ingress.publicUrl}), ${usedKeys} platform Connect webhook(s) registered across the key pool`,
+			`ingress ready (${ingress.publicUrl}), ${usedKeys} platform Connect webhook(s) registered across the key pool in ${formatWall(Date.now() - webhookStart)}`,
 		);
 
 		// ----- FAN-OUT --------------------------------------------------------
@@ -1789,6 +1830,14 @@ export const run = async (args: TwRunArgs): Promise<void> => {
 		}
 
 		if (normalFiles.length > 0) {
+			// LONGEST-FIRST (LPT) dispatch. The runner admits files in ARRAY order and
+			// the pool grants workers FIFO, so whenever the window is narrower than the
+			// file count — `--max` below the suite size, or a pool shrunk by culling —
+			// a multi-minute file dispatched late strands the tail behind it. Order by
+			// the durations previous runs recorded, longest first, unknown files FIRST
+			// (never-seen ⇒ assume expensive). No cache → the previous alphabetical
+			// order, exactly as before.
+			const orderedNormalFiles = orderByLongestFirst(normalFiles);
 			log(`running ${normalFiles.length} normal file(s) on the pool`);
 			const normalHandles = provisioned
 				.filter(({ handle }) => !(svixShard && handle.isSvixShard))
@@ -1819,7 +1868,7 @@ export const run = async (args: TwRunArgs): Promise<void> => {
 			// the stragglers leave behind. Busy workers are never culled.
 			const stopCulling = startCulling(normalPool, resolveSandbox);
 			try {
-				await runFiles(normalFiles, normalExecutor, {
+				await runFiles(orderedNormalFiles, normalExecutor, {
 					maxParallel: normalParallel,
 				});
 			} finally {
@@ -1829,6 +1878,15 @@ export const run = async (args: TwRunArgs): Promise<void> => {
 		}
 
 		lastRunWallMs = Date.now() - runPhaseStart;
+
+		// Persist this run's per-file wall times so the NEXT run can dispatch
+		// longest-first. Best-effort — a write failure never fails the run.
+		const recorded = persistFileDurations();
+		if (recorded > 0) {
+			log(
+				`recorded ${recorded} file duration(s) → ${fileDurationsPath()} (next run dispatches longest-first)`,
+			);
+		}
 
 		// Worst verdict → process exit code, from the swarm store's per-file results.
 		const runResults = Array.from(getTuiState().files.values());

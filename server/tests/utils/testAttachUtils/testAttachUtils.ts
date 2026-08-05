@@ -7,8 +7,9 @@ import {
 import { addHours, addMonths } from "date-fns";
 import { Decimal } from "decimal.js";
 import type Stripe from "stripe";
-import { advanceTestClock } from "@/utils/scriptUtils/testClockUtils.js";
+import type { AutumnInt } from "@/external/autumn/autumnCli.js";
 import { hoursToFinalizeInvoice } from "../constants.js";
+import { advanceTestClock } from "../stripeUtils.js";
 
 export const getCurrentOptions = ({
 	preview,
@@ -141,15 +142,14 @@ export const getAttachTotal = ({
 	return dueTodayTotal.toDecimalPlaces(2).toNumber();
 };
 
-const isParallelRun = () => {
-	const concurrency = Number(process.env.TEST_FILE_CONCURRENCY || "0");
-	return concurrency > 1;
-};
-
 /**
  * Advances the test clock to the next invoice (1 month from current time).
- * Waits longer when running in parallel (TEST_FILE_CONCURRENCY > 1) to
- * account for increased Stripe webhook processing time.
+ *
+ * Returns as soon as the boundary's invoice is observable (Stripe finalized it
+ * AND Autumn has ingested it) rather than after a fixed sleep — see
+ * `waitForClockInvoiceSettle`. The clock's Stripe customer carries Autumn's
+ * customer id in metadata, so the Autumn-side signal works without a client;
+ * pass `autumn` + `customerId` to pin the client version explicitly.
  *
  * @param stripeCli - Stripe client
  * @param testClockId - Test clock ID
@@ -162,28 +162,38 @@ export const advanceToNextInvoice = async ({
 	testClockId,
 	currentEpochMs,
 	withPause = false,
+	autumn,
+	customerId,
 }: {
 	stripeCli: Stripe;
 	testClockId: string;
 	currentEpochMs?: number;
 	withPause?: boolean;
+	autumn?: AutumnInt;
+	customerId?: string;
 }): Promise<number> => {
 	const baseTime = currentEpochMs ? new Date(currentEpochMs) : new Date();
-	const parallel = isParallelRun();
 
 	if (withPause) {
+		// Leg 1 lands ON the boundary: Stripe creates the period invoice as a
+		// draft and Autumn runs the invoice.created balance resets.
 		const newUnix = await advanceTestClock({
 			stripeCli,
 			testClockId,
 			advanceTo: addMonths(baseTime, 1).getTime(),
-			waitForSeconds: parallel ? 80 : 50,
+			settleMode: "invoice-created",
+			autumn,
+			customerId,
 		});
 
+		// Leg 2 crosses hoursToFinalizeInvoice: that same draft finalizes.
 		await advanceTestClock({
 			stripeCli,
 			testClockId,
 			advanceTo: addHours(newUnix, hoursToFinalizeInvoice).getTime(),
-			waitForSeconds: 30,
+			settleMode: "finalize-pending",
+			autumn,
+			customerId,
 		});
 
 		return newUnix;
@@ -196,6 +206,8 @@ export const advanceToNextInvoice = async ({
 			addMonths(baseTime, 1),
 			hoursToFinalizeInvoice,
 		).getTime(),
-		waitForSeconds: 30,
+		settleMode: "invoice-finalized",
+		autumn,
+		customerId,
 	});
 };

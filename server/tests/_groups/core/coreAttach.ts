@@ -15,6 +15,8 @@ export const coreAttach: TestGroup = {
 		"billing/attach/immediate-switch/immediate-switch-consumable.test.ts",
 		"billing/attach/immediate-switch/immediate-switch-entities.test.ts",
 		"billing/attach/scheduled-switch/scheduled-switch-basic.test.ts",
+		"billing/attach/scheduled-switch/scheduled-switch-basic-replace.test.ts",
+		"billing/attach/scheduled-switch/scheduled-switch-basic-reset-usage.test.ts",
 		"billing/attach/scheduled-switch/scheduled-switch-consumable.test.ts",
 		"billing/attach/scheduled-switch/scheduled-switch-entities-basic.test.ts",
 		"billing/attach/checkout/stripe-checkout/stripe-checkout-basic.test.ts",

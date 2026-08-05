@@ -189,7 +189,17 @@ export const computeCancelPlan = ({
 	// Step 2: Build cancel updates for customer product
 	const cancelUpdates = computeCancelUpdates({ billingContext, endOfCycleMs });
 
-	// Step 3: Create default product (if applicable)
+	// Step 3: Find existing scheduled products to delete. Computed before the
+	// default so the default is not suppressed by coverage this cancel removes.
+	const productToDelete = computeCustomerProductToDelete({ billingContext });
+	const productsToDelete = computeScheduledAddOnsToDelete({ billingContext });
+	const deletedCustomerProductIds = new Set(
+		[productToDelete, ...productsToDelete]
+			.filter((customerProduct) => customerProduct !== undefined)
+			.map((customerProduct) => customerProduct.id),
+	);
+
+	// Step 4: Create default product (if applicable)
 	// Skip when cancelling a revert trial — the previous plan will be restored instead.
 	const isRevertTrialCancel =
 		billingContext.customerProduct.on_trial_end === "revert";
@@ -199,15 +209,12 @@ export const computeCancelPlan = ({
 				ctx,
 				billingContext,
 				endOfCycleMs,
+				excludedCustomerProductIds: deletedCustomerProductIds,
 			});
 
 	ctx.logger.debug(
 		`[computeCancelPlan] default customer product: ${defaultCustomerProduct?.product.name}`,
 	);
-
-	// Step 4: Find existing scheduled product to delete
-	const productToDelete = computeCustomerProductToDelete({ billingContext });
-	const productsToDelete = computeScheduledAddOnsToDelete({ billingContext });
 
 	// Step 5: Compute prorated refund line items for immediate cancellation
 	const cancelLineItems = computeCancelLineItems({ ctx, billingContext });

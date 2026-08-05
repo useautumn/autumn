@@ -14,6 +14,7 @@
 
 import { test } from "bun:test";
 import type { ApiCustomerV3 } from "@autumn/shared";
+import { waitForTrackedUsageInDb } from "@tests/integration/billing/legacy/utils/waitForTrackedUsageInDb";
 import { expectCustomerFeatureCorrect } from "@tests/integration/billing/utils/expectCustomerFeatureCorrect";
 import { expectCustomerInvoiceCorrect } from "@tests/integration/billing/utils/expectCustomerInvoiceCorrect";
 import { expectCustomerProducts } from "@tests/integration/billing/utils/expectCustomerProductCorrect";
@@ -41,158 +42,170 @@ import { constructProduct } from "@/utils/scriptUtils/createTestProducts";
 // - Usage resets after each upgrade
 // ═══════════════════════════════════════════════════════════════════════════════
 
-test.concurrent(`${chalk.yellowBright("legacy-upgrade-usage 1: consumable upgrades Pro → Premium → Growth")}`, async () => {
-	const customerId = "legacy-upgrade-usage-1";
+test.concurrent(
+	`${chalk.yellowBright("legacy-upgrade-usage 1: consumable upgrades Pro → Premium → Growth")}`,
+	async () => {
+		const customerId = "legacy-upgrade-usage-1";
 
-	// Consumable words: 100 included, $0.05/overage
-	const proWords = items.consumableWords({ includedUsage: 100 });
-	const premiumWords = items.consumableWords({ includedUsage: 100 });
-	const growthWords = items.consumableWords({ includedUsage: 100 });
+		// Consumable words: 100 included, $0.05/overage
+		const proWords = items.consumableWords({ includedUsage: 100 });
+		const premiumWords = items.consumableWords({ includedUsage: 100 });
+		const growthWords = items.consumableWords({ includedUsage: 100 });
 
-	const pro = products.pro({ id: "pro", items: [proWords] });
-	const premium = products.premium({ id: "premium", items: [premiumWords] });
-	const growth = products.growth({ id: "growth", items: [growthWords] });
+		const pro = products.pro({ id: "pro", items: [proWords] });
+		const premium = products.premium({ id: "premium", items: [premiumWords] });
+		const growth = products.growth({ id: "growth", items: [growthWords] });
 
-	// Setup: Create customer and products, attach Pro
-	const { autumnV1 } = await initScenario({
-		customerId,
-		setup: [
-			s.customer({ paymentMethod: "success", testClock: true }),
-			s.products({ list: [pro, premium, growth] }),
-		],
-		actions: [s.attach({ productId: pro.id })],
-	});
+		// Setup: Create customer and products, attach Pro
+		const { autumnV1 } = await initScenario({
+			customerId,
+			setup: [
+				s.customer({ paymentMethod: "success", testClock: true }),
+				s.products({ list: [pro, premium, growth] }),
+			],
+			actions: [s.attach({ productId: pro.id })],
+		});
 
-	// Verify initial state after Pro attach
-	const customerInitial =
-		await autumnV1.customers.get<ApiCustomerV3>(customerId);
+		// Verify initial state after Pro attach
+		const customerInitial =
+			await autumnV1.customers.get<ApiCustomerV3>(customerId);
 
-	await expectCustomerProducts({
-		customer: customerInitial,
-		active: [pro.id],
-	});
+		await expectCustomerProducts({
+			customer: customerInitial,
+			active: [pro.id],
+		});
 
-	await expectCustomerFeatureCorrect({
-		autumn: autumnV1,
-		customerId,
-		featureId: TestFeature.Words,
-		includedUsage: 100,
-		balance: 100,
-		usage: 0,
-	});
+		await expectCustomerFeatureCorrect({
+			autumn: autumnV1,
+			customerId,
+			featureId: TestFeature.Words,
+			includedUsage: 100,
+			balance: 100,
+			usage: 0,
+		});
 
-	await expectCustomerInvoiceCorrect({
-		customer: customerInitial,
-		count: 1,
-		latestTotal: 20, // Pro base price
-	});
+		await expectCustomerInvoiceCorrect({
+			customer: customerInitial,
+			count: 1,
+			latestTotal: 20, // Pro base price
+		});
 
-	// Track 200 words (100 overage at $0.05 = $5)
-	await autumnV1.track({
-		customer_id: customerId,
-		feature_id: TestFeature.Words,
-		value: 200,
-	});
+		// Track 200 words (100 overage at $0.05 = $5)
+		await autumnV1.track({
+			customer_id: customerId,
+			feature_id: TestFeature.Words,
+			value: 200,
+		});
 
-	await new Promise((r) => setTimeout(r, 2000));
+		// Gate on the deduction reaching Postgres: while it lives only in Redis, a
+		// late Stripe webhook from the Pro attach can invalidate the cache and drop
+		// it, and the balance silently reverts to 100.
+		await waitForTrackedUsageInDb({
+			autumn: autumnV1,
+			customerId,
+			featureId: TestFeature.Words,
+			balance: -100,
+			usage: 200,
+		});
 
-	// Verify state before upgrade (in overage)
-	const customerBeforePremium =
-		await autumnV1.customers.get<ApiCustomerV3>(customerId);
+		// Verify state before upgrade (in overage)
+		await expectCustomerFeatureCorrect({
+			autumn: autumnV1,
+			customerId,
+			featureId: TestFeature.Words,
+			includedUsage: 100,
+			balance: -100, // 100 - 200 = -100 (overage)
+			usage: 200,
+		});
 
-	await expectCustomerFeatureCorrect({
-		autumn: autumnV1,
-		customerId,
-		featureId: TestFeature.Words,
-		includedUsage: 100,
-		balance: -100, // 100 - 200 = -100 (overage)
-		usage: 200,
-	});
+		// Upgrade to Premium
+		// Expected: $50 - $20 = $30 price diff + $5 overage = $35
+		await autumnV1.attach({
+			customer_id: customerId,
+			product_id: premium.id,
+		});
 
-	// Upgrade to Premium
-	// Expected: $50 - $20 = $30 price diff + $5 overage = $35
-	await autumnV1.attach({
-		customer_id: customerId,
-		product_id: premium.id,
-	});
+		const customerAfterPremium =
+			await autumnV1.customers.get<ApiCustomerV3>(customerId);
 
-	const customerAfterPremium =
-		await autumnV1.customers.get<ApiCustomerV3>(customerId);
+		await expectCustomerProducts({
+			customer: customerAfterPremium,
+			active: [premium.id],
+		});
 
-	await expectCustomerProducts({
-		customer: customerAfterPremium,
-		active: [premium.id],
-	});
+		// Usage resets after upgrade
+		await expectCustomerFeatureCorrect({
+			autumn: autumnV1,
+			customerId,
+			featureId: TestFeature.Words,
+			includedUsage: 100,
+			balance: 100,
+			usage: 0,
+		});
 
-	// Usage resets after upgrade
-	await expectCustomerFeatureCorrect({
-		autumn: autumnV1,
-		customerId,
-		featureId: TestFeature.Words,
-		includedUsage: 100,
-		balance: 100,
-		usage: 0,
-	});
+		await expectCustomerInvoiceCorrect({
+			customer: customerAfterPremium,
+			count: 2,
+			latestTotal: 35, // $30 price diff + $5 overage
+		});
 
-	await expectCustomerInvoiceCorrect({
-		customer: customerAfterPremium,
-		count: 2,
-		latestTotal: 35, // $30 price diff + $5 overage
-	});
+		// Track 300 words (200 overage at $0.05 = $10)
+		await autumnV1.track({
+			customer_id: customerId,
+			feature_id: TestFeature.Words,
+			value: 300,
+		});
 
-	// Track 300 words (200 overage at $0.05 = $10)
-	await autumnV1.track({
-		customer_id: customerId,
-		feature_id: TestFeature.Words,
-		value: 300,
-	});
+		await waitForTrackedUsageInDb({
+			autumn: autumnV1,
+			customerId,
+			featureId: TestFeature.Words,
+			balance: -200,
+			usage: 300,
+		});
 
-	await new Promise((r) => setTimeout(r, 2000));
+		// Verify state before Growth upgrade (in overage)
+		await expectCustomerFeatureCorrect({
+			autumn: autumnV1,
+			customerId,
+			featureId: TestFeature.Words,
+			includedUsage: 100,
+			balance: -200, // 100 - 300 = -200 (overage)
+			usage: 300,
+		});
 
-	// Verify state before Growth upgrade (in overage)
-	const customerBeforeGrowth =
-		await autumnV1.customers.get<ApiCustomerV3>(customerId);
+		// Upgrade to Growth
+		// Expected: $100 - $50 = $50 price diff + $10 overage = $60
+		await autumnV1.attach({
+			customer_id: customerId,
+			product_id: growth.id,
+		});
 
-	await expectCustomerFeatureCorrect({
-		autumn: autumnV1,
-		customerId,
-		featureId: TestFeature.Words,
-		includedUsage: 100,
-		balance: -200, // 100 - 300 = -200 (overage)
-		usage: 300,
-	});
+		const customerAfterGrowth =
+			await autumnV1.customers.get<ApiCustomerV3>(customerId);
 
-	// Upgrade to Growth
-	// Expected: $100 - $50 = $50 price diff + $10 overage = $60
-	await autumnV1.attach({
-		customer_id: customerId,
-		product_id: growth.id,
-	});
+		await expectCustomerProducts({
+			customer: customerAfterGrowth,
+			active: [growth.id],
+		});
 
-	const customerAfterGrowth =
-		await autumnV1.customers.get<ApiCustomerV3>(customerId);
+		// Usage resets after upgrade
+		await expectCustomerFeatureCorrect({
+			autumn: autumnV1,
+			customerId,
+			featureId: TestFeature.Words,
+			includedUsage: 100,
+			balance: 100,
+			usage: 0,
+		});
 
-	await expectCustomerProducts({
-		customer: customerAfterGrowth,
-		active: [growth.id],
-	});
-
-	// Usage resets after upgrade
-	await expectCustomerFeatureCorrect({
-		autumn: autumnV1,
-		customerId,
-		featureId: TestFeature.Words,
-		includedUsage: 100,
-		balance: 100,
-		usage: 0,
-	});
-
-	await expectCustomerInvoiceCorrect({
-		customer: customerAfterGrowth,
-		count: 3,
-		latestTotal: 60, // $50 price diff + $10 overage
-	});
-});
+		await expectCustomerInvoiceCorrect({
+			customer: customerAfterGrowth,
+			count: 3,
+			latestTotal: 60, // $50 price diff + $10 overage
+		});
+	},
+);
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // TEST 2: Upgrade with interval change - Monthly → Annual
@@ -212,170 +225,181 @@ test.concurrent(`${chalk.yellowBright("legacy-upgrade-usage 1: consumable upgrad
 // - Invoice totals include prorated price diff + overage charges
 // ═══════════════════════════════════════════════════════════════════════════════
 
-test.concurrent(`${chalk.yellowBright("legacy-upgrade-usage 2: monthly → annual interval change")}`, async () => {
-	const customerId = "legacy-upgrade-usage-2";
+test.concurrent(
+	`${chalk.yellowBright("legacy-upgrade-usage 2: monthly → annual interval change")}`,
+	async () => {
+		const customerId = "legacy-upgrade-usage-2";
 
-	const proMonthlyWords = items.consumableWords({ includedUsage: 100 });
-	const proAnnualWords = items.consumableWords({ includedUsage: 100 });
-	const premiumAnnualWords = items.consumableWords({ includedUsage: 100 });
+		const proMonthlyWords = items.consumableWords({ includedUsage: 100 });
+		const proAnnualWords = items.consumableWords({ includedUsage: 100 });
+		const premiumAnnualWords = items.consumableWords({ includedUsage: 100 });
 
-	const proMonthly = products.pro({
-		id: "pro-monthly",
-		items: [proMonthlyWords],
-	});
-	const proAnnual = products.proAnnual({
-		id: "pro-annual",
-		items: [proAnnualWords],
-	});
-	const premiumAnnual = constructProduct({
-		id: "premium-annual",
-		items: [premiumAnnualWords],
-		type: "premium",
-		isAnnual: true,
-	});
+		const proMonthly = products.pro({
+			id: "pro-monthly",
+			items: [proMonthlyWords],
+		});
+		const proAnnual = products.proAnnual({
+			id: "pro-annual",
+			items: [proAnnualWords],
+		});
+		const premiumAnnual = constructProduct({
+			id: "premium-annual",
+			items: [premiumAnnualWords],
+			type: "premium",
+			isAnnual: true,
+		});
 
-	// Setup: Create customer and products, attach Pro monthly
-	const { autumnV1 } = await initScenario({
-		customerId,
-		setup: [
-			s.customer({ paymentMethod: "success", testClock: true }),
-			s.products({ list: [proMonthly, proAnnual, premiumAnnual] }),
-		],
-		actions: [s.attach({ productId: proMonthly.id })],
-	});
+		// Setup: Create customer and products, attach Pro monthly
+		const { autumnV1 } = await initScenario({
+			customerId,
+			setup: [
+				s.customer({ paymentMethod: "success", testClock: true }),
+				s.products({ list: [proMonthly, proAnnual, premiumAnnual] }),
+			],
+			actions: [s.attach({ productId: proMonthly.id })],
+		});
 
-	// Verify initial state after Pro monthly attach
-	const customerInitial =
-		await autumnV1.customers.get<ApiCustomerV3>(customerId);
+		// Verify initial state after Pro monthly attach
+		const customerInitial =
+			await autumnV1.customers.get<ApiCustomerV3>(customerId);
 
-	await expectCustomerProducts({
-		customer: customerInitial,
-		active: [proMonthly.id],
-	});
+		await expectCustomerProducts({
+			customer: customerInitial,
+			active: [proMonthly.id],
+		});
 
-	await expectCustomerFeatureCorrect({
-		autumn: autumnV1,
-		customerId,
-		featureId: TestFeature.Words,
-		includedUsage: 100,
-		balance: 100,
-		usage: 0,
-	});
+		await expectCustomerFeatureCorrect({
+			autumn: autumnV1,
+			customerId,
+			featureId: TestFeature.Words,
+			includedUsage: 100,
+			balance: 100,
+			usage: 0,
+		});
 
-	await expectCustomerInvoiceCorrect({
-		customer: customerInitial,
-		count: 1,
-		latestTotal: 20, // Pro monthly base price
-	});
+		await expectCustomerInvoiceCorrect({
+			customer: customerInitial,
+			count: 1,
+			latestTotal: 20, // Pro monthly base price
+		});
 
-	// Track 150 words (50 overage at $0.05 = $2.50)
-	await autumnV1.track({
-		customer_id: customerId,
-		feature_id: TestFeature.Words,
-		value: 150,
-	});
+		// Track 150 words (50 overage at $0.05 = $2.50)
+		await autumnV1.track({
+			customer_id: customerId,
+			feature_id: TestFeature.Words,
+			value: 150,
+		});
 
-	await new Promise((r) => setTimeout(r, 2000));
+		// See the note on waitForTrackedUsageInDb — the deduction must reach
+		// Postgres before anything else can invalidate the cached balance.
+		await waitForTrackedUsageInDb({
+			autumn: autumnV1,
+			customerId,
+			featureId: TestFeature.Words,
+			balance: -50,
+			usage: 150,
+		});
 
-	// Verify state before Pro Annual upgrade
-	const customerBeforeProAnnual =
-		await autumnV1.customers.get<ApiCustomerV3>(customerId);
+		// Verify state before Pro Annual upgrade
+		await expectCustomerFeatureCorrect({
+			autumn: autumnV1,
+			customerId,
+			featureId: TestFeature.Words,
+			includedUsage: 100,
+			balance: -50, // 100 - 150 = -50 (overage)
+			usage: 150,
+		});
 
-	await expectCustomerFeatureCorrect({
-		autumn: autumnV1,
-		customerId,
-		featureId: TestFeature.Words,
-		includedUsage: 100,
-		balance: -50, // 100 - 150 = -50 (overage)
-		usage: 150,
-	});
+		// Upgrade to Pro Annual
+		// Price diff: $200 - $20 = $180 (but prorated based on remaining cycle)
+		// Overage: 50 × $0.05 = $2.50
+		await autumnV1.attach({
+			customer_id: customerId,
+			product_id: proAnnual.id,
+		});
 
-	// Upgrade to Pro Annual
-	// Price diff: $200 - $20 = $180 (but prorated based on remaining cycle)
-	// Overage: 50 × $0.05 = $2.50
-	await autumnV1.attach({
-		customer_id: customerId,
-		product_id: proAnnual.id,
-	});
+		const customerAfterProAnnual =
+			await autumnV1.customers.get<ApiCustomerV3>(customerId);
 
-	const customerAfterProAnnual =
-		await autumnV1.customers.get<ApiCustomerV3>(customerId);
+		await expectCustomerProducts({
+			customer: customerAfterProAnnual,
+			active: [proAnnual.id],
+		});
 
-	await expectCustomerProducts({
-		customer: customerAfterProAnnual,
-		active: [proAnnual.id],
-	});
+		// Usage resets after upgrade
+		await expectCustomerFeatureCorrect({
+			autumn: autumnV1,
+			customerId,
+			featureId: TestFeature.Words,
+			includedUsage: 100,
+			balance: 100,
+			usage: 0,
+		});
 
-	// Usage resets after upgrade
-	await expectCustomerFeatureCorrect({
-		autumn: autumnV1,
-		customerId,
-		featureId: TestFeature.Words,
-		includedUsage: 100,
-		balance: 100,
-		usage: 0,
-	});
+		// Verify invoice count increased (exact total depends on proration)
+		await expectCustomerInvoiceCorrect({
+			customer: customerAfterProAnnual,
+			count: 2,
+		});
 
-	// Verify invoice count increased (exact total depends on proration)
-	await expectCustomerInvoiceCorrect({
-		customer: customerAfterProAnnual,
-		count: 2,
-	});
+		// Track 200 words (100 overage at $0.05 = $5)
+		await autumnV1.track({
+			customer_id: customerId,
+			feature_id: TestFeature.Words,
+			value: 200,
+		});
 
-	// Track 200 words (100 overage at $0.05 = $5)
-	await autumnV1.track({
-		customer_id: customerId,
-		feature_id: TestFeature.Words,
-		value: 200,
-	});
+		await waitForTrackedUsageInDb({
+			autumn: autumnV1,
+			customerId,
+			featureId: TestFeature.Words,
+			balance: -100,
+			usage: 200,
+		});
 
-	await new Promise((r) => setTimeout(r, 2000));
+		// Verify state before Premium Annual upgrade
+		await expectCustomerFeatureCorrect({
+			autumn: autumnV1,
+			customerId,
+			featureId: TestFeature.Words,
+			includedUsage: 100,
+			balance: -100, // 100 - 200 = -100 (overage)
+			usage: 200,
+		});
 
-	// Verify state before Premium Annual upgrade
-	const customerBeforePremiumAnnual =
-		await autumnV1.customers.get<ApiCustomerV3>(customerId);
+		// Upgrade to Premium Annual
+		// Price diff: $500 - $200 = $300 (but prorated)
+		// Overage: 100 × $0.05 = $5
+		await autumnV1.attach({
+			customer_id: customerId,
+			product_id: premiumAnnual.id,
+		});
 
-	await expectCustomerFeatureCorrect({
-		autumn: autumnV1,
-		customerId,
-		featureId: TestFeature.Words,
-		includedUsage: 100,
-		balance: -100, // 100 - 200 = -100 (overage)
-		usage: 200,
-	});
+		const customerAfterPremiumAnnual =
+			await autumnV1.customers.get<ApiCustomerV3>(customerId);
 
-	// Upgrade to Premium Annual
-	// Price diff: $500 - $200 = $300 (but prorated)
-	// Overage: 100 × $0.05 = $5
-	await autumnV1.attach({
-		customer_id: customerId,
-		product_id: premiumAnnual.id,
-	});
+		await expectCustomerProducts({
+			customer: customerAfterPremiumAnnual,
+			active: [premiumAnnual.id],
+		});
 
-	const customerAfterPremiumAnnual =
-		await autumnV1.customers.get<ApiCustomerV3>(customerId);
+		// Usage resets after upgrade
+		await expectCustomerFeatureCorrect({
+			autumn: autumnV1,
+			customerId,
+			featureId: TestFeature.Words,
+			includedUsage: 100,
+			balance: 100,
+			usage: 0,
+		});
 
-	await expectCustomerProducts({
-		customer: customerAfterPremiumAnnual,
-		active: [premiumAnnual.id],
-	});
-
-	// Usage resets after upgrade
-	await expectCustomerFeatureCorrect({
-		autumn: autumnV1,
-		customerId,
-		featureId: TestFeature.Words,
-		includedUsage: 100,
-		balance: 100,
-		usage: 0,
-	});
-
-	// Verify invoice count increased
-	await expectCustomerInvoiceCorrect({
-		customer: customerAfterPremiumAnnual,
-		count: 3,
-	});
-});
+		// Verify invoice count increased
+		await expectCustomerInvoiceCorrect({
+			customer: customerAfterPremiumAnnual,
+			count: 3,
+		});
+	},
+);
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // TEST 3: Upgrade with arrear prorated seats (entities)
@@ -395,143 +419,143 @@ test.concurrent(`${chalk.yellowBright("legacy-upgrade-usage 2: monthly → annua
 // - Invoice totals reflect seat charges
 // ═══════════════════════════════════════════════════════════════════════════════
 
-test.concurrent(`${chalk.yellowBright("legacy-upgrade-usage 3: arrear prorated seats with entities")}`, async () => {
-	const customerId = "legacy-upgrade-usage-3";
+test.concurrent(
+	`${chalk.yellowBright("legacy-upgrade-usage 3: arrear prorated seats with entities")}`,
+	async () => {
+		const customerId = "legacy-upgrade-usage-3";
 
-	// Allocated users: $10/user prorated, 0 included
-	const proUsers = items.allocatedUsers({ includedUsage: 0 });
-	const premiumUsers = items.allocatedUsers({ includedUsage: 0 });
-	const proAnnualUsers = items.allocatedUsers({ includedUsage: 0 });
+		// Allocated users: $10/user prorated, 0 included
+		const proUsers = items.allocatedUsers({ includedUsage: 0 });
+		const premiumUsers = items.allocatedUsers({ includedUsage: 0 });
+		const proAnnualUsers = items.allocatedUsers({ includedUsage: 0 });
 
-	const pro = products.pro({ id: "pro", items: [proUsers] });
-	const premium = products.premium({ id: "premium", items: [premiumUsers] });
-	const proAnnual = products.proAnnual({
-		id: "pro-annual",
-		items: [proAnnualUsers],
-	});
+		const pro = products.pro({ id: "pro", items: [proUsers] });
+		const premium = products.premium({ id: "premium", items: [premiumUsers] });
+		const proAnnual = products.proAnnual({
+			id: "pro-annual",
+			items: [proAnnualUsers],
+		});
 
-	// Setup: Create customer, products, and 2 entities, attach Pro
-	const { autumnV1 } = await initScenario({
-		customerId,
-		setup: [
-			s.customer({ paymentMethod: "success", testClock: true }),
-			s.products({ list: [pro, premium, proAnnual] }),
-			s.entities({ count: 2, featureId: TestFeature.Users }),
-		],
-		actions: [s.attach({ productId: pro.id })],
-	});
+		// Setup: Create customer, products, and 2 entities, attach Pro
+		const { autumnV1 } = await initScenario({
+			customerId,
+			setup: [
+				s.customer({ paymentMethod: "success", testClock: true }),
+				s.products({ list: [pro, premium, proAnnual] }),
+				s.entities({ count: 2, featureId: TestFeature.Users }),
+			],
+			actions: [s.attach({ productId: pro.id })],
+		});
 
-	// Verify initial state - Pro with 2 users
-	const customerInitial =
-		await autumnV1.customers.get<ApiCustomerV3>(customerId);
+		// Verify initial state - Pro with 2 users
+		const customerInitial =
+			await autumnV1.customers.get<ApiCustomerV3>(customerId);
 
-	await expectCustomerProducts({
-		customer: customerInitial,
-		active: [pro.id],
-	});
+		await expectCustomerProducts({
+			customer: customerInitial,
+			active: [pro.id],
+		});
 
-	await expectCustomerFeatureCorrect({
-		autumn: autumnV1,
-		customerId,
-		featureId: TestFeature.Users,
-		includedUsage: 0,
-		usage: 2,
-		balance: -2, // 0 included - 2 usage = -2
-	});
+		await expectCustomerFeatureCorrect({
+			autumn: autumnV1,
+			customerId,
+			featureId: TestFeature.Users,
+			includedUsage: 0,
+			usage: 2,
+			balance: -2, // 0 included - 2 usage = -2
+		});
 
-	// Invoice: Pro base ($20) + 2 users × $10 = $40
-	await expectCustomerInvoiceCorrect({
-		customer: customerInitial,
-		count: 1,
-		latestTotal: 40,
-	});
+		// Invoice: Pro base ($20) + 2 users × $10 = $40
+		await expectCustomerInvoiceCorrect({
+			customer: customerInitial,
+			count: 1,
+			latestTotal: 40,
+		});
 
-	// Create 3rd entity
-	await autumnV1.entities.create(customerId, [
-		{ id: "ent-3", name: "Entity 3", feature_id: TestFeature.Users },
-	]);
+		// Create 3rd entity
+		await autumnV1.entities.create(customerId, [
+			{ id: "ent-3", name: "Entity 3", feature_id: TestFeature.Users },
+		]);
 
-	// The prorated seat invoice for the new entity is written asynchronously.
-	await expectCustomerInvoiceCorrect({
-		autumn: autumnV1,
-		customerId,
-		count: 2,
-		latestTotal: 10,
-	});
+		// The prorated seat invoice for the new entity is written asynchronously.
+		await expectCustomerInvoiceCorrect({
+			autumn: autumnV1,
+			customerId,
+			count: 2,
+			latestTotal: 10,
+		});
 
-	// Verify state before Premium upgrade - now 3 users
-	const customerBefore =
-		await autumnV1.customers.get<ApiCustomerV3>(customerId);
+		// Verify state before Premium upgrade - now 3 users
+		await expectCustomerFeatureCorrect({
+			autumn: autumnV1,
+			customerId,
+			featureId: TestFeature.Users,
+			includedUsage: 0,
+			usage: 3,
+			balance: -3, // 0 included - 3 usage = -3
+		});
 
-	await expectCustomerFeatureCorrect({
-		autumn: autumnV1,
-		customerId,
-		featureId: TestFeature.Users,
-		includedUsage: 0,
-		usage: 3,
-		balance: -3, // 0 included - 3 usage = -3
-	});
+		// Upgrade to Premium
+		// Base price diff: $50 - $20 = $30
+		// Seat charge diff: 3 users × ($10 premium - $10 pro) = $0 (same rate)
+		// Plus prorated charge for the new seat
+		await autumnV1.attach({
+			customer_id: customerId,
+			product_id: premium.id,
+		});
 
-	// Upgrade to Premium
-	// Base price diff: $50 - $20 = $30
-	// Seat charge diff: 3 users × ($10 premium - $10 pro) = $0 (same rate)
-	// Plus prorated charge for the new seat
-	await autumnV1.attach({
-		customer_id: customerId,
-		product_id: premium.id,
-	});
+		const customerAfterPremium =
+			await autumnV1.customers.get<ApiCustomerV3>(customerId);
 
-	const customerAfterPremium =
-		await autumnV1.customers.get<ApiCustomerV3>(customerId);
+		await expectCustomerProducts({
+			customer: customerAfterPremium,
+			active: [premium.id],
+		});
 
-	await expectCustomerProducts({
-		customer: customerAfterPremium,
-		active: [premium.id],
-	});
+		await expectCustomerFeatureCorrect({
+			autumn: autumnV1,
+			customerId,
+			featureId: TestFeature.Users,
+			includedUsage: 0,
+			usage: 3,
+			balance: -3,
+		});
 
-	await expectCustomerFeatureCorrect({
-		autumn: autumnV1,
-		customerId,
-		featureId: TestFeature.Users,
-		includedUsage: 0,
-		usage: 3,
-		balance: -3,
-	});
+		// Verify invoice count increased
+		await expectCustomerInvoiceCorrect({
+			customer: customerAfterPremium,
+			count: 3,
+			latestTotal: 30,
+		});
 
-	// Verify invoice count increased
-	await expectCustomerInvoiceCorrect({
-		customer: customerAfterPremium,
-		count: 3,
-		latestTotal: 30,
-	});
+		// Upgrade to Pro Annual
+		await autumnV1.attach({
+			customer_id: customerId,
+			product_id: proAnnual.id,
+		});
 
-	// Upgrade to Pro Annual
-	await autumnV1.attach({
-		customer_id: customerId,
-		product_id: proAnnual.id,
-	});
+		const customerAfterProAnnual =
+			await autumnV1.customers.get<ApiCustomerV3>(customerId);
 
-	const customerAfterProAnnual =
-		await autumnV1.customers.get<ApiCustomerV3>(customerId);
+		await expectCustomerProducts({
+			customer: customerAfterProAnnual,
+			active: [proAnnual.id],
+		});
 
-	await expectCustomerProducts({
-		customer: customerAfterProAnnual,
-		active: [proAnnual.id],
-	});
+		await expectCustomerFeatureCorrect({
+			autumn: autumnV1,
+			customerId,
+			featureId: TestFeature.Users,
+			includedUsage: 0,
+			usage: 3,
+			balance: -3,
+		});
 
-	await expectCustomerFeatureCorrect({
-		autumn: autumnV1,
-		customerId,
-		featureId: TestFeature.Users,
-		includedUsage: 0,
-		usage: 3,
-		balance: -3,
-	});
-
-	// Verify invoice count increased
-	await expectCustomerInvoiceCorrect({
-		customer: customerAfterProAnnual,
-		count: 4,
-		latestTotal: 150,
-	});
-});
+		// Verify invoice count increased
+		await expectCustomerInvoiceCorrect({
+			customer: customerAfterProAnnual,
+			count: 4,
+			latestTotal: 150,
+		});
+	},
+);

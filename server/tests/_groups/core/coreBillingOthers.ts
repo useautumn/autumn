@@ -10,7 +10,9 @@ export const coreBillingOthers: TestGroup = {
 		"billing/multi-attach/checkout/multi-attach-customize.test.ts",
 		"billing/multi-attach/multi-attach-errors.test.ts",
 		"billing/multi-attach/multi-attach-trial.test.ts",
-		"billing/create-schedule/phases/create-schedule-phases.test.ts",
+		"billing/create-schedule/phases/create-schedule-phases-immediate.test.ts",
+		"billing/create-schedule/phases/create-schedule-phases-active-set.test.ts",
+		"billing/create-schedule/phases/create-schedule-phases-transitions.test.ts",
 
 		// Setup payment
 		"billing/setup-payment",

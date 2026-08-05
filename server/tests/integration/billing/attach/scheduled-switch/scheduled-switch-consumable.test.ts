@@ -24,8 +24,12 @@ import { expectSubToBeCorrect } from "@tests/merged/mergeUtils/expectSubCorrect"
 import { TestFeature } from "@tests/setup/v2Features";
 import { items } from "@tests/utils/fixtures/items";
 import { products } from "@tests/utils/fixtures/products";
+import { WEBHOOK_SETTLE_TIMEOUT_MS } from "@tests/utils/pollableCustomerExpect";
+import { advanceToNextInvoice } from "@tests/utils/testAttachUtils/testAttachUtils";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
+import { expectEventually } from "./utils/expectEventually";
+import { waitForUsageSyncedToDb } from "./utils/waitForUsageSyncedToDb";
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // TEST 1: Pro with consumable, usage under limit, to free
@@ -136,7 +140,12 @@ test.concurrent(
 			items: [freeMessages],
 		});
 
-		const { autumnV1: autumnV1After, ctx: ctxAfter } = await initScenario({
+		const {
+			autumnV1: autumnV1After,
+			ctx: ctxAfter,
+			testClockId,
+			advancedTo,
+		} = await initScenario({
 			customerId,
 			setup: [
 				s.customer({ paymentMethod: "success" }),
@@ -145,24 +154,47 @@ test.concurrent(
 			actions: [
 				s.billing.attach({ productId: pro.id }),
 				s.track({ featureId: TestFeature.Messages, value: 50 }),
-				s.billing.attach({ productId: free.id }), // Schedule downgrade
-				s.advanceToNextInvoice({ withPause: true }),
 			],
 		});
 
-		const customerAfterCycle =
-			await autumnV1After.customers.get<ApiCustomerV3>(customerId);
+		// The downgrade attach invalidates the balance cache, which can drop a
+		// deduction that has not reached Postgres yet — and cycle-end billing
+		// reads Postgres. Gate on durability before scheduling the downgrade.
+		await waitForUsageSyncedToDb({
+			autumn: autumnV1After,
+			customerId,
+			featureId: TestFeature.Messages,
+			usage: 50,
+		});
 
-		// After cycle: free active, pro removed
+		await autumnV1After.billing.attach({
+			customer_id: customerId,
+			product_id: free.id,
+		}); // Schedule downgrade
+
+		await advanceToNextInvoice({
+			stripeCli: ctxAfter.stripeCli,
+			testClockId: testClockId!,
+			currentEpochMs: advancedTo,
+			withPause: true,
+			autumn: autumnV1After,
+			customerId,
+		});
+
+		// After cycle: free active, pro removed. Webhook-driven, so poll.
 		await expectCustomerProducts({
-			customer: customerAfterCycle,
+			autumn: autumnV1After,
+			customerId,
+			settleTimeoutMs: WEBHOOK_SETTLE_TIMEOUT_MS,
 			active: [free.id],
 			notPresent: [pro.id],
 		});
 
 		// Features at free tier (50 included)
-		expectCustomerFeatureCorrect({
-			customer: customerAfterCycle,
+		await expectCustomerFeatureCorrect({
+			autumn: autumnV1After,
+			customerId,
+			settleTimeoutMs: WEBHOOK_SETTLE_TIMEOUT_MS,
 			featureId: TestFeature.Messages,
 			balance: 50,
 			usage: 0,
@@ -173,18 +205,21 @@ test.concurrent(
 		await expectCustomerInvoiceCorrect({
 			autumn: autumnV1After,
 			customerId,
+			settleTimeoutMs: WEBHOOK_SETTLE_TIMEOUT_MS,
 			count: 2,
 			latestTotal: 0,
 			latestInvoiceProductIds: [pro.id],
 		});
 
 		// After downgrading to free, there should be no Stripe subscription
-		await expectNoStripeSubscription({
-			db: ctxAfter.db,
-			customerId,
-			org: ctxAfter.org,
-			env: ctxAfter.env,
-		});
+		await expectEventually(() =>
+			expectNoStripeSubscription({
+				db: ctxAfter.db,
+				customerId,
+				org: ctxAfter.org,
+				env: ctxAfter.env,
+			}),
+		);
 	},
 );
 
@@ -222,7 +257,7 @@ test.concurrent(
 
 		const usageAmount = 150; // 50 overage
 
-		const { autumnV1, ctx } = await initScenario({
+		const { autumnV1, ctx, testClockId, advancedTo } = await initScenario({
 			customerId,
 			setup: [
 				s.customer({ paymentMethod: "success" }),
@@ -233,11 +268,31 @@ test.concurrent(
 				s.track({
 					featureId: TestFeature.Messages,
 					value: usageAmount,
-					timeout: 2000,
 				}),
-				s.billing.attach({ productId: free.id }), // Schedule downgrade
-				s.advanceToNextInvoice({ withPause: true }),
 			],
+		});
+
+		// Cycle-end overage is computed from Postgres, so the deduction must be
+		// durable before the downgrade attach invalidates the balance cache.
+		await waitForUsageSyncedToDb({
+			autumn: autumnV1,
+			customerId,
+			featureId: TestFeature.Messages,
+			usage: usageAmount,
+		});
+
+		await autumnV1.billing.attach({
+			customer_id: customerId,
+			product_id: free.id,
+		}); // Schedule downgrade
+
+		await advanceToNextInvoice({
+			stripeCli: ctx.stripeCli,
+			testClockId: testClockId!,
+			currentEpochMs: advancedTo,
+			withPause: true,
+			autumn: autumnV1,
+			customerId,
 		});
 
 		// Calculate expected overage: 50 units * $0.10 = $5.00
@@ -248,18 +303,20 @@ test.concurrent(
 		});
 		expect(expectedOverage).toBe(5);
 
-		const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
-
-		// After cycle: free active, pro removed
+		// After cycle: free active, pro removed. Webhook-driven, so poll.
 		await expectCustomerProducts({
-			customer,
+			autumn: autumnV1,
+			customerId,
+			settleTimeoutMs: WEBHOOK_SETTLE_TIMEOUT_MS,
 			active: [free.id],
 			notPresent: [pro.id],
 		});
 
 		// Features at free tier (50 included)
-		expectCustomerFeatureCorrect({
-			customer,
+		await expectCustomerFeatureCorrect({
+			autumn: autumnV1,
+			customerId,
+			settleTimeoutMs: WEBHOOK_SETTLE_TIMEOUT_MS,
 			featureId: TestFeature.Messages,
 			balance: 50,
 			usage: 0,
@@ -271,18 +328,21 @@ test.concurrent(
 		await expectCustomerInvoiceCorrect({
 			autumn: autumnV1,
 			customerId,
+			settleTimeoutMs: WEBHOOK_SETTLE_TIMEOUT_MS,
 			count: 2,
 			latestTotal: expectedOverage,
 			latestInvoiceProductIds: [pro.id],
 		});
 
 		// After downgrading to free, there should be no Stripe subscription
-		await expectNoStripeSubscription({
-			db: ctx.db,
-			customerId,
-			org: ctx.org,
-			env: ctx.env,
-		});
+		await expectEventually(() =>
+			expectNoStripeSubscription({
+				db: ctx.db,
+				customerId,
+				org: ctx.org,
+				env: ctx.env,
+			}),
+		);
 	},
 );
 
@@ -321,7 +381,7 @@ test.concurrent(
 
 		const usageAmount = 200; // 100 overage
 
-		const { autumnV1, ctx } = await initScenario({
+		const { autumnV1, ctx, testClockId, advancedTo } = await initScenario({
 			customerId,
 			setup: [
 				s.customer({ paymentMethod: "success" }),
@@ -332,20 +392,42 @@ test.concurrent(
 				s.track({
 					featureId: TestFeature.Messages,
 					value: usageAmount,
-					timeout: 2000,
 				}),
-				s.billing.attach({ productId: pro.id }), // Schedule downgrade
-				s.advanceToNextInvoice({ withPause: true }),
 			],
 		});
 
-		// Verify Stripe subscription after all operations
-		await expectSubToBeCorrect({
-			db: ctx.db,
+		// Cycle-end overage is computed from Postgres, so the deduction must be
+		// durable before the downgrade attach invalidates the balance cache.
+		await waitForUsageSyncedToDb({
+			autumn: autumnV1,
 			customerId,
-			org: ctx.org,
-			env: ctx.env,
+			featureId: TestFeature.Messages,
+			usage: usageAmount,
 		});
+
+		await autumnV1.billing.attach({
+			customer_id: customerId,
+			product_id: pro.id,
+		}); // Schedule downgrade
+
+		await advanceToNextInvoice({
+			stripeCli: ctx.stripeCli,
+			testClockId: testClockId!,
+			currentEpochMs: advancedTo,
+			withPause: true,
+			autumn: autumnV1,
+			customerId,
+		});
+
+		// Verify Stripe subscription after all operations
+		await expectEventually(() =>
+			expectSubToBeCorrect({
+				db: ctx.db,
+				customerId,
+				org: ctx.org,
+				env: ctx.env,
+			}),
+		);
 
 		// Calculate expected overage: 100 units * $0.10 = $10.00
 		const expectedOverage = calculateExpectedInvoiceAmount({
@@ -355,18 +437,20 @@ test.concurrent(
 		});
 		expect(expectedOverage).toBe(10);
 
-		const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
-
-		// After cycle: pro active, premium removed
+		// After cycle: pro active, premium removed. Webhook-driven, so poll.
 		await expectCustomerProducts({
-			customer,
+			autumn: autumnV1,
+			customerId,
+			settleTimeoutMs: WEBHOOK_SETTLE_TIMEOUT_MS,
 			active: [pro.id],
 			notPresent: [premium.id],
 		});
 
 		// Features at pro tier (50 included), balance reset
-		expectCustomerFeatureCorrect({
-			customer,
+		await expectCustomerFeatureCorrect({
+			autumn: autumnV1,
+			customerId,
+			settleTimeoutMs: WEBHOOK_SETTLE_TIMEOUT_MS,
 			featureId: TestFeature.Messages,
 			balance: 50,
 			usage: 0,
@@ -380,6 +464,7 @@ test.concurrent(
 		await expectCustomerInvoiceCorrect({
 			autumn: autumnV1,
 			customerId,
+			settleTimeoutMs: WEBHOOK_SETTLE_TIMEOUT_MS,
 			count: 2,
 			latestTotal: 20 + expectedOverage, // Pro renewal + premium overage
 			latestInvoiceProductIds: [pro.id, premium.id],
@@ -433,7 +518,7 @@ test.concurrent(
 
 		const usageAmount = 300; // 100 overage (300 - 200 included)
 
-		const { autumnV1, ctx } = await initScenario({
+		const { autumnV1, ctx, testClockId, advancedTo } = await initScenario({
 			customerId,
 			setup: [
 				s.customer({ paymentMethod: "success" }),
@@ -444,20 +529,43 @@ test.concurrent(
 				s.track({
 					featureId: TestFeature.Credits,
 					value: usageAmount,
-					timeout: 2000,
 				}),
-				s.billing.attach({ productId: pro.id }), // Schedule downgrade
-				s.advanceToNextInvoice({ withPause: true }),
 			],
 		});
 
-		// Verify Stripe subscription after all operations
-		await expectSubToBeCorrect({
-			db: ctx.db,
+		// Cycle-end overage is computed from Postgres, so the deduction must be
+		// durable before the downgrade attach invalidates the balance cache —
+		// otherwise the renewal invoice comes back short by exactly the overage.
+		await waitForUsageSyncedToDb({
+			autumn: autumnV1,
 			customerId,
-			org: ctx.org,
-			env: ctx.env,
+			featureId: TestFeature.Credits,
+			usage: usageAmount,
 		});
+
+		await autumnV1.billing.attach({
+			customer_id: customerId,
+			product_id: pro.id,
+		}); // Schedule downgrade
+
+		await advanceToNextInvoice({
+			stripeCli: ctx.stripeCli,
+			testClockId: testClockId!,
+			currentEpochMs: advancedTo,
+			withPause: true,
+			autumn: autumnV1,
+			customerId,
+		});
+
+		// Verify Stripe subscription after all operations
+		await expectEventually(() =>
+			expectSubToBeCorrect({
+				db: ctx.db,
+				customerId,
+				org: ctx.org,
+				env: ctx.env,
+			}),
+		);
 
 		// Calculate expected overage: 100 units * $0.10 = $10.00
 		const expectedOverage = calculateExpectedInvoiceAmount({
@@ -467,18 +575,20 @@ test.concurrent(
 		});
 		expect(expectedOverage).toBe(10);
 
-		const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
-
-		// After cycle: pro active, premium removed
+		// After cycle: pro active, premium removed. Webhook-driven, so poll.
 		await expectCustomerProducts({
-			customer,
+			autumn: autumnV1,
+			customerId,
+			settleTimeoutMs: WEBHOOK_SETTLE_TIMEOUT_MS,
 			active: [pro.id],
 			notPresent: [premium.id],
 		});
 
 		// Features at pro tier (100 included), usage reset to 0
-		expectCustomerFeatureCorrect({
-			customer,
+		await expectCustomerFeatureCorrect({
+			autumn: autumnV1,
+			customerId,
+			settleTimeoutMs: WEBHOOK_SETTLE_TIMEOUT_MS,
 			featureId: TestFeature.Credits,
 			balance: 100,
 			usage: 0,
@@ -491,6 +601,7 @@ test.concurrent(
 		await expectCustomerInvoiceCorrect({
 			autumn: autumnV1,
 			customerId,
+			settleTimeoutMs: WEBHOOK_SETTLE_TIMEOUT_MS,
 			count: 2,
 			latestTotal: 20 + expectedOverage,
 			latestInvoiceProductIds: [pro.id, premium.id],
@@ -539,7 +650,7 @@ test.concurrent(
 
 		const usageAmount = 350; // 150 overage (350 - 200 included)
 
-		const { autumnV1, ctx } = await initScenario({
+		const { autumnV1, ctx, testClockId, advancedTo } = await initScenario({
 			customerId,
 			setup: [
 				s.customer({ paymentMethod: "success" }),
@@ -550,11 +661,31 @@ test.concurrent(
 				s.track({
 					featureId: TestFeature.Credits,
 					value: usageAmount,
-					timeout: 2000,
 				}),
-				s.billing.attach({ productId: free.id }), // Schedule downgrade
-				s.advanceToNextInvoice({ withPause: true }),
 			],
+		});
+
+		// Cycle-end overage is computed from Postgres, so the deduction must be
+		// durable before the downgrade attach invalidates the balance cache.
+		await waitForUsageSyncedToDb({
+			autumn: autumnV1,
+			customerId,
+			featureId: TestFeature.Credits,
+			usage: usageAmount,
+		});
+
+		await autumnV1.billing.attach({
+			customer_id: customerId,
+			product_id: free.id,
+		}); // Schedule downgrade
+
+		await advanceToNextInvoice({
+			stripeCli: ctx.stripeCli,
+			testClockId: testClockId!,
+			currentEpochMs: advancedTo,
+			withPause: true,
+			autumn: autumnV1,
+			customerId,
 		});
 
 		// Calculate expected overage: 150 units * $0.10 = $15.00
@@ -565,18 +696,20 @@ test.concurrent(
 		});
 		expect(expectedOverage).toBe(15);
 
-		const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
-
-		// After cycle: free active, premium removed
+		// After cycle: free active, premium removed. Webhook-driven, so poll.
 		await expectCustomerProducts({
-			customer,
+			autumn: autumnV1,
+			customerId,
+			settleTimeoutMs: WEBHOOK_SETTLE_TIMEOUT_MS,
 			active: [free.id],
 			notPresent: [premium.id],
 		});
 
 		// Features at free tier (50 included), usage reset to 0
-		expectCustomerFeatureCorrect({
-			customer,
+		await expectCustomerFeatureCorrect({
+			autumn: autumnV1,
+			customerId,
+			settleTimeoutMs: WEBHOOK_SETTLE_TIMEOUT_MS,
 			featureId: TestFeature.Credits,
 			balance: 50,
 			usage: 0,
@@ -589,17 +722,20 @@ test.concurrent(
 		await expectCustomerInvoiceCorrect({
 			autumn: autumnV1,
 			customerId,
+			settleTimeoutMs: WEBHOOK_SETTLE_TIMEOUT_MS,
 			count: 2,
 			latestTotal: expectedOverage,
 			latestInvoiceProductIds: [premium.id],
 		});
 
 		// After downgrading to free, there should be no Stripe subscription
-		await expectNoStripeSubscription({
-			db: ctx.db,
-			customerId,
-			org: ctx.org,
-			env: ctx.env,
-		});
+		await expectEventually(() =>
+			expectNoStripeSubscription({
+				db: ctx.db,
+				customerId,
+				org: ctx.org,
+				env: ctx.env,
+			}),
+		);
 	},
 );
