@@ -108,7 +108,8 @@ export default function CustomerView2() {
 									<div className="flex flex-col sm:flex-row sm:items-center sm:justify-between w-full pt-2 gap-2">
 										<div className="flex items-center gap-2 min-w-0">
 											<h3
-												className={`text-md font-semibold truncate min-w-0 ${
+												title={customer.name || customer.email || customer.id}
+												className={`text-md font-semibold truncate min-w-0 max-w-full sm:max-w-sm ${
 													customer.name
 														? "text-foreground"
 														: customer.email
