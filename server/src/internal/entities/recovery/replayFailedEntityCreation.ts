@@ -3,6 +3,7 @@ import {
 	type CreateEntityParams,
 	type Customer,
 } from "@autumn/shared";
+import { isShedError } from "@/db/shed503OnTransientError.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { EntityService } from "@/internal/api/entities/EntityService.js";
 import { CusService } from "@/internal/customers/CusService.js";
@@ -124,15 +125,32 @@ export const replayFailedEntityCreation = async ({
 		return;
 	}
 
-	await batchCreateEntities({
-		ctx,
-		customerId,
-		createEntityData,
-		customerData: payload.params.customer_data,
-		withAutumnId: payload.withAutumnId,
-		source: "entityCreationRecovery",
-		enqueueRecoveryOnTransientFailure: false,
-	});
+	try {
+		await batchCreateEntities({
+			ctx,
+			customerId,
+			createEntityData,
+			customerData: payload.params.customer_data,
+			withAutumnId: payload.withAutumnId,
+			source: "entityCreationRecovery",
+			enqueueRecoveryOnTransientFailure: false,
+		});
+	} catch (error) {
+		// A shed stays in SQS, but anything else drops the message, so the reason
+		// the request could not be recreated has to be logged here.
+		if (!isShedError({ error })) {
+			ctx.extraLogs.entityCreationRecoveryReplay = {
+				outcome: "rejected",
+				...replayLog,
+			};
+			ctx.logger.error("[entityCreationRecovery] Replay rejected, dropping", {
+				...replayLog,
+				error,
+			});
+		}
+
+		throw error;
+	}
 
 	ctx.extraLogs.entityCreationRecoveryReplay = {
 		outcome: "created",

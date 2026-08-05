@@ -13,7 +13,12 @@
  */
 
 import { afterAll, beforeEach, describe, expect, mock, test } from "bun:test";
-import { ApiVersion, ApiVersionClass, AppEnv } from "@autumn/shared";
+import {
+	ApiVersion,
+	ApiVersionClass,
+	AppEnv,
+	RecaseError,
+} from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import type { EntityCreationRecoveryPayload } from "@/internal/entities/recovery/entityCreationRecoveryTypes.js";
 
@@ -21,6 +26,7 @@ const mockState = {
 	batchCreateCalls: [] as Record<string, unknown>[],
 	existingEntities: [] as Record<string, unknown>[],
 	customerFound: true,
+	createFailsWith: undefined as unknown,
 };
 
 // Real modules captured BEFORE mocking so afterAll can restore them — module
@@ -44,6 +50,7 @@ afterAll(() => {
 mock.module("@/internal/entities/actions/batchCreateEntities.js", () => ({
 	batchCreateEntities: async (args: Record<string, unknown>) => {
 		mockState.batchCreateCalls.push(args);
+		if (mockState.createFailsWith) throw mockState.createFailsWith;
 		return [];
 	},
 }));
@@ -128,6 +135,7 @@ describe("replayFailedEntityCreation", () => {
 		mockState.batchCreateCalls = [];
 		mockState.existingEntities = [];
 		mockState.customerFound = true;
+		mockState.createFailsWith = undefined;
 	});
 
 	test("replays a safe request with its original API semantics", async () => {
@@ -248,6 +256,41 @@ describe("replayFailedEntityCreation", () => {
 		});
 
 		expect(mockState.batchCreateCalls).toHaveLength(1);
+	});
+
+	test("logs what it could not recreate when the replay is rejected", async () => {
+		mockState.createFailsWith = new RecaseError({
+			message: "Entity with id entity_123 already exists",
+			statusCode: 409,
+		});
+		const ctx = buildContext();
+
+		await expect(
+			replayFailedEntityCreation({ ctx, payload: buildPayload() }),
+		).rejects.toMatchObject({ statusCode: 409 });
+
+		expect(ctx.extraLogs.entityCreationRecoveryReplay).toMatchObject({
+			outcome: "rejected",
+			sourceRequestId: "req_entity_123",
+			customerId: "customer_123",
+			entities: [{ id: "entity_123", feature_id: "seats" }],
+		});
+		expect(ctx.logger.error).toHaveBeenCalled();
+	});
+
+	test("leaves a shed replay to redelivery rather than calling it rejected", async () => {
+		mockState.createFailsWith = new RecaseError({
+			message: "Service is temporarily unavailable, please retry shortly.",
+			code: "service_unavailable",
+			statusCode: 503,
+		});
+		const ctx = buildContext();
+
+		await expect(
+			replayFailedEntityCreation({ ctx, payload: buildPayload() }),
+		).rejects.toMatchObject({ statusCode: 503 });
+
+		expect(ctx.extraLogs.entityCreationRecoveryReplay).toBeUndefined();
 	});
 
 	test.each([
