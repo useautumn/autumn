@@ -68,25 +68,25 @@ test(`${chalk.yellowBright("legacy one-off rwf: prepaid one-off charges major un
 		timeoutMs: 120_000,
 	});
 
-	if (customer.invoices?.[0]?.status !== "paid") {
+	// 23,188 RWF prepaid item + 10 RWF product base price
+	try {
+		await expectCustomerInvoiceCorrect({
+			customer,
+			count: 1,
+			latestTotal: 23_198,
+			latestStatus: "paid",
+		});
+	} catch (error) {
 		// Stripe records WHY a draft could not be finalised; the µVM's server logs
-		// never reach the orchestrator, so read it from the invoice itself.
-		const invoices = await ctx.stripeCli.invoices.list({ limit: 3 });
+		// never reach the orchestrator, so read it off the invoices themselves.
+		const invoices = await ctx.stripeCli.invoices.list({ limit: 5 });
 		const detail = invoices.data
 			.map(
 				(invoice) =>
-					`${invoice.id}:${invoice.status}:${invoice.currency}` +
+					`${invoice.id}:${invoice.status}:${invoice.currency}:${invoice.total}` +
 					`:${invoice.last_finalization_error?.message ?? "no-finalization-error"}`,
 			)
 			.join(" | ");
-		throw new Error(`RWF invoice never left draft — stripe: [${detail}]`);
+		throw new Error(`${error} — stripe invoices: [${detail}]`);
 	}
-
-	// 23,188 RWF prepaid item + 10 RWF product base price
-	await expectCustomerInvoiceCorrect({
-		customer,
-		count: 1,
-		latestTotal: 23_198,
-		latestStatus: "paid",
-	});
 });
