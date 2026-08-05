@@ -24,6 +24,8 @@ afterAll(() => {
 });
 
 import { type DrizzleCli, dbGeneral } from "@/db/initDrizzle.js";
+import { beforeEach, describe, expect, it, mock } from "bun:test";
+import type { DrizzleCli } from "@/db/initDrizzle.js";
 import {
 	_recentlyUpdatedNegativeCacheSizeForTesting,
 	_resetRecentlyUpdatedNegativeCacheForTesting,
@@ -89,7 +91,7 @@ describe("isCustomerRecentlyUpdated negative cache", () => {
 		const { db, execute } = makeFakeDb();
 
 		await isCustomerRecentlyUpdated({ db, ...params });
-		await advanceClock(NEGATIVE_TTL_MS + 100);
+		await new Promise((resolve) => setTimeout(resolve, NEGATIVE_TTL_MS + 100));
 		await isCustomerRecentlyUpdated({ db, ...params });
 
 		expect(execute).toHaveBeenCalledTimes(2);

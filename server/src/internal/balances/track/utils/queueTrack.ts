@@ -97,9 +97,11 @@ export const queueTrack = async ({
 			body,
 		});
 	} catch (error) {
+		// A raw Error logs as {} (message/stack are non-enumerable) — flatten it.
 		ctx.logger.warn("[track] Queue fallback failed (SQS)", {
 			type: "track_queue_fallback_failed",
-			error,
+			error: error instanceof Error ? error.message : String(error),
+			errorName: error instanceof Error ? error.name : undefined,
 		});
 
 		return null;
