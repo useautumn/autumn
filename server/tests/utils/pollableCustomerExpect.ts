@@ -26,9 +26,8 @@ export type PollableExpectParams<C> = {
  * the contended environment pays the longer ceiling. Polling exits as soon as
  * the assertion holds, so this costs nothing on the happy path.
  */
-/** Kept well under the per-test ceilings tests set for themselves (several use
- * 120s), so one late assertion can't eat a whole test's budget and turn a clean
- * failure into an opaque timeout. */
+/** Deliberately short: polling exits the moment the assertion holds, so this
+ * only bounds how long a genuine failure takes to surface. */
 export const DEFAULT_SETTLE_TIMEOUT_MS =
 	Number(process.env.TEST_FILE_CONCURRENCY || "0") > 1 ? 45_000 : 30_000;
 
@@ -37,10 +36,6 @@ export const DEFAULT_SETTLE_TIMEOUT_MS =
  * scheduling, invoice finalisation). Measured arriving past a minute in `bun
  * tw`, where the hop is Stripe → one shared ingress sandbox → the µVM and
  * Stripe retries a miss on its own backoff.
- *
- * Pass as `settleTimeoutMs` ONLY in tests with no per-test timeout of their own
- * — otherwise one late assertion eats the whole test budget and the failure
- * surfaces as an opaque timeout instead of the real mismatch.
  */
 export const WEBHOOK_SETTLE_TIMEOUT_MS =
 	Number(process.env.TEST_FILE_CONCURRENCY || "0") > 1 ? 150_000 : 30_000;
