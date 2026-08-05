@@ -143,6 +143,25 @@ const replayStripeEvents = async ({
 
 	const mine = events.data.filter(isMine);
 
+	if (mine.length === 0 && events.data.length > 0) {
+		// "none matched" is ambiguous — say what was there, so a scoping mistake
+		// is distinguishable from the event genuinely never firing.
+		const owners = events.data
+			.map((event) => {
+				const object = event.data.object as {
+					id?: string;
+					customer?: string | { id?: string };
+				};
+				const owner =
+					typeof object.customer === "string"
+						? object.customer
+						: object.customer?.id;
+				return `${object.id}/${owner ?? "no-customer"}`;
+			})
+			.slice(0, 6);
+		return `0/${events.data.length} — wanted ${objectId ?? customerStripeId}, saw [${owners.join(", ")}]`;
+	}
+
 	const statuses: string[] = [];
 	for (const event of mine.reverse()) {
 		const response = await fetch(
