@@ -5,6 +5,8 @@
  * - A transient failure is still returned as the existing overload 503.
  * - The normalized request is captured once with the execution stage at failure.
  * - A single entity payload is normalized to a list so replay has one shape.
+ * - A customer this request committed on its way through validation is recorded
+ *   too, even though the entity itself never got past lookup.
  * - Non-transient application errors surface untouched and are never captured.
  * - Recovery workers can explicitly disable capture to prevent recursive enqueue.
  */
@@ -17,6 +19,8 @@ import {
 	RecaseError,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
+import { setCustomerCreationRecoveryStage } from "@/internal/customers/recovery/customerCreationRecoveryStage.js";
+import type { CustomerCreationRecoveryStage } from "@/internal/customers/recovery/customerCreationRecoveryTypes.js";
 import { setEntityCreationRecoveryStage } from "@/internal/entities/recovery/entityCreationRecoveryStage.js";
 
 const transientError = Object.assign(new Error("connect timeout"), {
@@ -30,6 +34,9 @@ const mockState = {
 		| "entitlements_updating"
 		| "seat_charge"
 		| "entities_committed"
+		| undefined,
+	customerStageAtFailure: undefined as
+		| CustomerCreationRecoveryStage
 		| undefined,
 };
 
@@ -54,6 +61,14 @@ mock.module(
 	"@/internal/entities/handlers/handleCreateEntity/getInputEntities.js",
 	() => ({
 		validateAndGetInputEntities: async ({ ctx }: { ctx: AutumnContext }) => {
+			// Stands in for getOrCreateCustomer, which stamps the customer stage on
+			// this same ctx before entity work begins.
+			if (mockState.customerStageAtFailure) {
+				setCustomerCreationRecoveryStage({
+					ctx,
+					stage: mockState.customerStageAtFailure,
+				});
+			}
 			if (mockState.stageAtFailure) {
 				setEntityCreationRecoveryStage({
 					ctx,
@@ -103,6 +118,7 @@ describe("batchCreateEntities recovery capture", () => {
 		mockState.queueCalls = [];
 		mockState.failWith = transientError;
 		mockState.stageAtFailure = undefined;
+		mockState.customerStageAtFailure = undefined;
 	});
 
 	test("captures the normalized request while preserving overload response semantics", async () => {
@@ -171,6 +187,58 @@ describe("batchCreateEntities recovery capture", () => {
 			expect(mockState.queueCalls[0]).toMatchObject({ failureStage: stage });
 		},
 	);
+
+	test("records a customer this request committed while resolving it", async () => {
+		mockState.customerStageAtFailure = "autumn_committed";
+
+		await expect(
+			batchCreateEntities({
+				ctx: buildContext(),
+				customerId: "customer_123",
+				createEntityData,
+			}),
+		).rejects.toMatchObject({ statusCode: 503 });
+
+		expect(mockState.queueCalls[0]).toMatchObject({
+			failureStage: "customer_committed",
+		});
+	});
+
+	test.each(["pre_commit", "existing", "completed"] as const)(
+		"leaves the stage at lookup when customer creation reached %s",
+		async (customerStage) => {
+			mockState.customerStageAtFailure = customerStage;
+
+			await expect(
+				batchCreateEntities({
+					ctx: buildContext(),
+					customerId: "customer_123",
+					createEntityData,
+				}),
+			).rejects.toMatchObject({ statusCode: 503 });
+
+			expect(mockState.queueCalls[0]).toMatchObject({
+				failureStage: "lookup",
+			});
+		},
+	);
+
+	test("keeps a later entity stage over the customer stage", async () => {
+		mockState.customerStageAtFailure = "autumn_committed";
+		mockState.stageAtFailure = "seat_charge";
+
+		await expect(
+			batchCreateEntities({
+				ctx: buildContext(),
+				customerId: "customer_123",
+				createEntityData,
+			}),
+		).rejects.toMatchObject({ statusCode: 503 });
+
+		expect(mockState.queueCalls[0]).toMatchObject({
+			failureStage: "seat_charge",
+		});
+	});
 
 	test("leaves application errors untouched and uncaptured", async () => {
 		mockState.failWith = new RecaseError({

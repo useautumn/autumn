@@ -7,15 +7,18 @@ import type {
 
 export type EntityCreationRecoveryStage =
 	| "lookup"
+	| "customer_committed"
 	| "entitlements_updating"
 	| "seat_charge"
 	| "entities_committed"
 	| "completed";
 
 /** Stages where a write is already in flight or done. Entity creation is not
- *  idempotent the way get-or-create is, so anything past validation is manual. */
+ *  idempotent the way get-or-create is, so anything past validation is manual —
+ *  as is a customer this request committed on its way through validation. */
 export const ENTITY_CREATION_MANUAL_REVIEW_STAGES =
 	new Set<EntityCreationRecoveryStage>([
+		"customer_committed",
 		"entitlements_updating",
 		"seat_charge",
 		"entities_committed",

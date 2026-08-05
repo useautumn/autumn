@@ -251,6 +251,7 @@ describe("replayFailedEntityCreation", () => {
 	});
 
 	test.each([
+		"customer_committed",
 		"entitlements_updating",
 		"seat_charge",
 		"entities_committed",

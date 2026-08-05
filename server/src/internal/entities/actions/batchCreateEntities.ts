@@ -9,7 +9,7 @@ import { withLock } from "@/external/redis/redisUtils.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { EntityService } from "@/internal/api/entities/EntityService";
 import {
-	getEntityCreationRecoveryStage,
+	resolveEntityCreationFailureStage,
 	setEntityCreationRecoveryStage,
 } from "@/internal/entities/recovery/entityCreationRecoveryStage.js";
 import { queueFailedEntityCreation } from "@/internal/entities/recovery/queueFailedEntityCreation.js";
@@ -181,7 +181,7 @@ export const batchCreateEntities = async (
 						},
 						source,
 						withAutumnId,
-						failureStage: getEntityCreationRecoveryStage({ ctx }),
+						failureStage: resolveEntityCreationFailureStage({ ctx }),
 					});
 				}
 			: undefined,
