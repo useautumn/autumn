@@ -305,9 +305,9 @@ export const previewUpdateCatalog = async ({
 	const missingProducts = products.filter((product) =>
 		missingPlanIds.includes(product.id),
 	);
-	const missingPlanCustomerCounts = await Promise.all(
+	const missingPlanCustomerReferences = await Promise.all(
 		missingProducts.map((product) =>
-			CusProdReadService.existsForProduct({
+			CusProdReadService.existsForProductVersions({
 				db: ctx.db,
 				productId: product.id,
 				orgId: ctx.org.id,
@@ -317,7 +317,7 @@ export const previewUpdateCatalog = async ({
 	);
 	const missingPlanCustomers = new Set(
 		missingProducts
-			.filter((_, index) => missingPlanCustomerCounts[index])
+			.filter((_, index) => missingPlanCustomerReferences[index])
 			.map((product) => product.id),
 	);
 

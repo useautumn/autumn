@@ -358,7 +358,7 @@ const applyMissingPlanRemovals = async ({
 			continue;
 		}
 
-		const hasCustomers = await CusProdReadService.existsForProduct({
+		const hasCustomers = await CusProdReadService.existsForProductVersions({
 			db: ctx.db,
 			productId: planId,
 			orgId: ctx.org.id,

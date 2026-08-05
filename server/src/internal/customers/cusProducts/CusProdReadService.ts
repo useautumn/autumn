@@ -11,15 +11,11 @@ const activeStatuses = [CusProductStatus.Active, CusProductStatus.PastDue];
 export class CusProdReadService {
 	static async existsForProduct({
 		db,
-		env,
 		internalProductId,
-		orgId,
 		productId,
 	}: {
 		db: DrizzleCli;
-		env?: AppEnv;
 		internalProductId?: string;
-		orgId?: string;
 		productId?: string;
 	}) {
 		const result = await db
@@ -27,18 +23,42 @@ export class CusProdReadService {
 				id: customerProducts.id,
 			})
 			.from(customerProducts)
+			.where(
+				and(
+					productId ? eq(customerProducts.product_id, productId) : undefined,
+					internalProductId
+						? eq(customerProducts.internal_product_id, internalProductId)
+						: undefined,
+				),
+			)
+			.limit(1);
+
+		return result.length > 0;
+	}
+
+	static async existsForProductVersions({
+		db,
+		env,
+		orgId,
+		productId,
+	}: {
+		db: DrizzleCli;
+		env: AppEnv;
+		orgId: string;
+		productId: string;
+	}) {
+		const result = await db
+			.select({ id: customerProducts.id })
+			.from(customerProducts)
 			.innerJoin(
 				products,
 				eq(customerProducts.internal_product_id, products.internal_id),
 			)
 			.where(
 				and(
-					env ? eq(products.env, env) : undefined,
-					internalProductId
-						? eq(customerProducts.internal_product_id, internalProductId)
-						: undefined,
-					orgId ? eq(products.org_id, orgId) : undefined,
-					productId ? eq(products.id, productId) : undefined,
+					eq(products.env, env),
+					eq(products.id, productId),
+					eq(products.org_id, orgId),
 				),
 			)
 			.limit(1);
