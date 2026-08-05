@@ -189,6 +189,8 @@ export const invoiceCheckout = async ({
 	}
 
 	// Step 3: Fill card details
+	// Stripe listens for real key events; `.fill()` sets the value without
+	// keydown/up, so the form stays invalid and the Pay button does nothing.
 	const cardInput = paymentFrame
 		.locator(
 			'input[name="number"], input[data-elements-stable-field-name="cardNumber"], input[placeholder*="1234"], input[aria-label*="Card number"]',
@@ -196,7 +198,7 @@ export const invoiceCheckout = async ({
 		.first();
 	await cardInput.waitFor({ timeout: 15000 });
 	await cardInput.click();
-	await cardInput.fill("4242424242424242");
+	await cardInput.pressSequentially("4242424242424242");
 	console.log("[invoiceCheckout] Card number filled");
 
 	const expiryInput = paymentFrame
@@ -206,7 +208,7 @@ export const invoiceCheckout = async ({
 		.first();
 	await expiryInput.waitFor({ timeout: 10000 });
 	await expiryInput.click();
-	await expiryInput.fill("1228");
+	await expiryInput.pressSequentially("1228");
 	console.log("[invoiceCheckout] Expiry filled");
 
 	const cvcInput = paymentFrame
@@ -216,7 +218,7 @@ export const invoiceCheckout = async ({
 		.first();
 	await cvcInput.waitFor({ timeout: 10000 });
 	await cvcInput.click();
-	await cvcInput.fill("123");
+	await cvcInput.pressSequentially("123");
 	console.log("[invoiceCheckout] CVC filled");
 
 	// Select "United States" as country so we can use a known US zip code.
@@ -243,7 +245,7 @@ export const invoiceCheckout = async ({
 			.first();
 		await postalInput.waitFor({ timeout: 5000 });
 		await postalInput.click();
-		await postalInput.fill("10001");
+		await postalInput.pressSequentially("10001");
 		console.log("[invoiceCheckout] ZIP code filled: 10001");
 	} catch {
 		console.log("[invoiceCheckout] No postal code field, skipping");
