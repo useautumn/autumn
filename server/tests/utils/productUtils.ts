@@ -10,6 +10,11 @@ import { eq, inArray, or } from "drizzle-orm";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 import type { AutumnInt } from "@/external/autumn/autumnCli.js";
 import { ProductService } from "@/internal/products/ProductService.js";
+import {
+	rewardProgramRepo,
+	rewardRepo,
+} from "@/internal/rewards/repos/index.js";
+import { constructRewardProgram } from "@/internal/rewards/rewardUtils.js";
 
 export const createProduct = async ({
 	db,
@@ -241,6 +246,53 @@ export const createReferralProgram = async ({
 		) {
 			return;
 		}
+
+		// Free product rewards are rejected by the API, so seed legacy fixtures directly
+		if (error?.message?.includes("Free product rewards are deprecated")) {
+			await seedLegacyRewardProgram({ db, orgId, env, reward, rewardProgram });
+			return;
+		}
+
 		throw error;
 	}
+};
+
+/** Legacy reward types can no longer be created through the API, but must stay covered */
+const seedLegacyRewardProgram = async ({
+	db,
+	orgId,
+	env,
+	reward,
+	rewardProgram,
+}: {
+	db: DrizzleCli;
+	orgId: string;
+	env: AppEnv;
+	reward: CreateReward;
+	rewardProgram: CreateRewardProgram;
+}) => {
+	const existingReward = await rewardRepo.get({
+		db,
+		idOrInternalId: reward.id,
+		orgId,
+		env,
+	});
+
+	if (!existingReward) {
+		throw new Error(
+			`Reward ${reward.id} not found when seeding legacy program`,
+		);
+	}
+
+	await rewardProgramRepo.insert({
+		db,
+		data: constructRewardProgram({
+			rewardProgramData: {
+				...rewardProgram,
+				internal_reward_id: existingReward.internal_id,
+			},
+			orgId,
+			env,
+		}),
+	});
 };

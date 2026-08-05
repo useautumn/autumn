@@ -195,6 +195,7 @@ const ENV_REQUIRED = [
 const ENV_WARN = [
 	"TINYBIRD_US_EAST_API_URL",
 	"TINYBIRD_US_EAST_TOKEN",
+	"TINYBIRD_US_EAST_CLICKHOUSE_URL",
 ] as const;
 
 const printEnvSection = (): boolean => {

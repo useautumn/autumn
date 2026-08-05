@@ -32,7 +32,8 @@ export type ResetVerdict = {
 		| "product_not_active"
 		| "not_due"
 		| "pooled_balance_source"
-		| "pooled_balance_missing";
+		| "pooled_balance_missing"
+		| "pooled_balance_lifetime";
 	unlimited?: boolean;
 };
 

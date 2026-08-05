@@ -1,7 +1,6 @@
 import type { ProductItem, ProductV2 } from "@autumn/shared";
-import { Checkbox } from "@autumn/ui";
-import { PackageIcon, XIcon } from "@phosphor-icons/react";
 import {
+	Checkbox,
 	DropdownMenu,
 	DropdownMenuContent,
 	DropdownMenuItem,
@@ -9,7 +8,6 @@ import {
 	DropdownMenuSub,
 	DropdownMenuSubContent,
 	DropdownMenuSubTrigger,
-	DropdownMenuTrigger,
 } from "@autumn/ui";
 import { useOrg } from "@/hooks/common/useOrg";
 import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
@@ -17,9 +15,11 @@ import { useProductsByPriceIdsQuery } from "@/hooks/queries/useProductsByPriceId
 import { useProductsQuery } from "@/hooks/queries/useProductsQuery";
 import { isFeatureItem } from "@/utils/product/getItemType";
 import { formatProductItemText } from "@/utils/product/product-item/formatProductItem";
+import {
+	ChipSelectTrigger,
+	type SelectorChip,
+} from "../../components/ChipSelectTrigger";
 import type { FrontendReward } from "../../types/frontendReward";
-
-const MAX_VISIBLE_CHIPS = 3;
 
 interface ProductPriceSelectorProps {
 	reward: FrontendReward;
@@ -106,13 +106,11 @@ export function ProductPriceSelector({
 		return `${product.name} v${product.version} — ${priceText}`;
 	};
 
-	type Chip = { key: string; label: string; onRemove?: () => void };
-
 	// Collapse a product's prices into a single product chip when all are selected.
-	const buildChips = (): Chip[] => {
+	const buildChips = (): SelectorChip[] => {
 		if (applyToAll) return [{ key: "__all__", label: "All products" }];
 
-		const chips: Chip[] = [];
+		const chips: SelectorChip[] = [];
 		const seenProducts = new Set<string>();
 		for (const priceId of priceIds) {
 			const product = productVersionOf(priceId);
@@ -155,49 +153,11 @@ export function ProductPriceSelector({
 	return (
 		<div className="min-w-0 w-full">
 			<DropdownMenu>
-				<DropdownMenuTrigger className="flex h-8 w-full min-w-0 cursor-pointer items-center gap-1.5 overflow-hidden rounded-xl px-3 input-base input-state-open-tiny text-sm">
-					{chips.length === 0 ? (
-						<span className="text-tertiary-foreground">
-							Select plans or apply to all...
-						</span>
-					) : (
-						<>
-							{chips.slice(0, MAX_VISIBLE_CHIPS).map((chip) => (
-								<span
-									className="flex h-4.5 max-w-48 shrink-0 items-center gap-0.5 rounded border border-border bg-accent px-1 text-[10px] text-foreground"
-									key={chip.key}
-								>
-									<span className="shrink-0 [&_svg]:size-3">
-										<PackageIcon
-											className="text-tertiary-foreground"
-											size={12}
-											weight="duotone"
-										/>
-									</span>
-									<span className="truncate">{chip.label}</span>
-									{chip.onRemove && (
-										<span
-											className="ml-0.5 cursor-pointer text-tertiary-foreground hover:text-destructive"
-											onClick={(e) => {
-												e.stopPropagation();
-												chip.onRemove?.();
-											}}
-											onPointerDown={(e) => e.stopPropagation()}
-										>
-											<XIcon size={10} />
-										</span>
-									)}
-								</span>
-							))}
-							{chips.length > MAX_VISIBLE_CHIPS && (
-								<span className="shrink-0 px-1 text-sm text-tertiary-foreground">
-									+{chips.length - MAX_VISIBLE_CHIPS}
-								</span>
-							)}
-						</>
-					)}
-				</DropdownMenuTrigger>
-				<DropdownMenuContent align="start" className="w-64">
+				<ChipSelectTrigger
+					chips={chips}
+					placeholder="Select plans or apply to all..."
+				/>
+				<DropdownMenuContent align="start" className="w-[var(--anchor-width)]">
 					<DropdownMenuItem
 						className="flex cursor-pointer items-center gap-2 font-medium"
 						closeOnClick={false}

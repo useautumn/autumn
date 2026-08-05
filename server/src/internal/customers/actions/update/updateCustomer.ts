@@ -215,6 +215,7 @@ export const updateCustomer = async ({
 	const resolvedCustomerId = newCustomerId ?? customerId;
 
 	const apiCustomer = await getApiCustomerByRollout({
+		disableReplicaRead: true,
 		ctx,
 		customerId: resolvedCustomerId,
 		source: "updateCustomer",

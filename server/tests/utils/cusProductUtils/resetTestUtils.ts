@@ -2,17 +2,15 @@ import {
 	CusProductStatus,
 	cusProductsToCusEnts,
 	customerEntitlements,
-	type FullCustomer,
 } from "@autumn/shared";
 import { findCustomerEntitlement } from "@tests/balances/utils/findCustomerEntitlement.js";
 import type { TestContext } from "@tests/utils/testInitUtils/createTestContext.js";
 import { eq } from "drizzle-orm";
 import type { Redis } from "ioredis";
 import { getCtxWithCustomerRedis } from "@/external/redis/customerRedisRouting.js";
-import { redis, waitForRedisReady } from "@/external/redis/initRedis.js";
+import { waitForRedisReady } from "@/external/redis/initRedis.js";
 import { CusService } from "@/internal/customers/CusService.js";
 import { buildSharedFullSubjectBalanceKey } from "@/internal/customers/cache/fullSubject/builders/buildSharedFullSubjectBalanceKey.js";
-import { buildFullCustomerCacheKey } from "@/internal/customers/cusUtils/fullCustomerCacheUtils/fullCustomerCacheConfig.js";
 
 const getRoutedRedisForCustomer = async ({
 	ctx,
@@ -26,62 +24,6 @@ const getRoutedRedisForCustomer = async ({
 		() => undefined,
 	);
 	return routedCtx.redisV2;
-};
-
-/**
- * Update next_reset_at for a specific cusEnt in the Redis FullCustomer cache.
- * Reads the cached blob, finds the cusEnt by ID, then uses JSON.SET on the exact path.
- */
-export const setCachedCusEntField = async ({
-	orgId,
-	env,
-	customerId,
-	cusEntId,
-	field,
-	value,
-}: {
-	orgId: string;
-	env: string;
-	customerId: string;
-	cusEntId: string;
-	field: string;
-	value: number | string | null;
-}): Promise<void> => {
-	const cacheKey = buildFullCustomerCacheKey({ orgId, env, customerId });
-
-	const raw = (await redis.call("JSON.GET", cacheKey)) as string | null;
-	if (!raw) return;
-
-	const fullCustomer = JSON.parse(raw) as FullCustomer;
-	const serializedValue = value === null ? "null" : JSON.stringify(value);
-
-	for (let cpIdx = 0; cpIdx < fullCustomer.customer_products.length; cpIdx++) {
-		const cusEnts = fullCustomer.customer_products[cpIdx].customer_entitlements;
-		for (let ceIdx = 0; ceIdx < cusEnts.length; ceIdx++) {
-			if (cusEnts[ceIdx].id === cusEntId) {
-				await redis.call(
-					"JSON.SET",
-					cacheKey,
-					`$.customer_products[${cpIdx}].customer_entitlements[${ceIdx}].${field}`,
-					serializedValue,
-				);
-				return;
-			}
-		}
-	}
-
-	const extras = fullCustomer.extra_customer_entitlements || [];
-	for (let eIdx = 0; eIdx < extras.length; eIdx++) {
-		if (extras[eIdx].id === cusEntId) {
-			await redis.call(
-				"JSON.SET",
-				cacheKey,
-				`$.extra_customer_entitlements[${eIdx}].${field}`,
-				serializedValue,
-			);
-			return;
-		}
-	}
 };
 
 /** Patch next_reset_at on a SubjectBalance in the V2 shared balance hash. */
@@ -133,8 +75,7 @@ export const setCachedSubjectBalanceField = async ({
 };
 
 /**
- * Expire a cusEnt's next_reset_at in Postgres and both Redis caches
- * (legacy FullCustomer + V2 subject balance hash),
+ * Expire a cusEnt's next_reset_at in Postgres and the V2 subject balance hash,
  * so the next read triggers a lazy reset. Returns the cusEnt for assertions.
  */
 export const expireCusEntForReset = async ({
@@ -169,16 +110,6 @@ export const expireCusEntForReset = async ({
 		.set({ next_reset_at: pastTime })
 		.where(eq(customerEntitlements.id, cusEnt.id));
 
-	// Update legacy FullCustomer Redis cache
-	await setCachedCusEntField({
-		orgId: ctx.org.id,
-		env: ctx.env,
-		customerId,
-		cusEntId: cusEnt.id,
-		field: "next_reset_at",
-		value: pastTime,
-	});
-
 	// Update V2 subject balance hash
 	await setCachedSubjectBalanceField({
 		orgId: ctx.org.id,
@@ -195,7 +126,7 @@ export const expireCusEntForReset = async ({
 };
 
 /**
- * Expire ALL cusEnts for a given feature in Postgres and both Redis caches.
+ * Expire ALL cusEnts for a given feature in Postgres and the V2 balance hash.
  * Use this for entity-level features where multiple cusEnts share the same feature_id.
  */
 export const expireAllCusEntsForReset = async ({
@@ -236,15 +167,6 @@ export const expireAllCusEntsForReset = async ({
 			.update(customerEntitlements)
 			.set({ next_reset_at: pastTime })
 			.where(eq(customerEntitlements.id, cusEnt.id));
-
-		await setCachedCusEntField({
-			orgId: ctx.org.id,
-			env: ctx.env,
-			customerId,
-			cusEntId: cusEnt.id,
-			field: "next_reset_at",
-			value: pastTime,
-		});
 
 		await setCachedSubjectBalanceField({
 			orgId: ctx.org.id,

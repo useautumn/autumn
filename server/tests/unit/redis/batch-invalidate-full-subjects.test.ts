@@ -1,25 +1,6 @@
-import { afterAll, beforeEach, describe, expect, mock, test } from "bun:test";
+import { describe, expect, test } from "bun:test";
 import type { AppEnv } from "@autumn/shared";
 import type { Redis } from "ioredis";
-
-const mockState = {
-	deletedCount: 0,
-};
-
-mock.module(
-	"@/internal/customers/cusUtils/fullCustomerCacheUtils/batchDeleteCachedFullCustomers.js",
-	() => ({
-		batchDeleteCachedFullCustomers: async ({
-			customers,
-		}: {
-			customers: unknown[];
-		}) => {
-			mockState.deletedCount = customers.length;
-			return customers.length;
-		},
-	}),
-);
-
 import { batchInvalidateCachedFullSubjects } from "@/internal/customers/cache/fullSubject/actions/invalidate/batchInvalidateCachedFullSubjects.js";
 
 type RedisCalls = {
@@ -81,10 +62,6 @@ const createFakeRedis = (): { redis: Redis; calls: RedisCalls } => {
 };
 
 describe("batchInvalidateCachedFullSubjects", () => {
-	beforeEach(() => {
-		mockState.deletedCount = 0;
-	});
-
 	test("fans out invalidation to the Redis instance for each customer", async () => {
 		const primary = createFakeRedis();
 		const dedicated = createFakeRedis();
@@ -112,7 +89,6 @@ describe("batchInvalidateCachedFullSubjects", () => {
 		});
 
 		expect(deleted).toBe(2);
-		expect(mockState.deletedCount).toBe(2);
 
 		expect(primary.calls.readKeys).toHaveLength(1);
 		expect(primary.calls.readKeys[0]).toContain("cus_primary");
@@ -151,8 +127,4 @@ describe("batchInvalidateCachedFullSubjects", () => {
 			primary.calls.writeOps.some((op) => op.includes("cus_primary")),
 		).toBe(true);
 	});
-});
-
-afterAll(() => {
-	mock.restore();
 });

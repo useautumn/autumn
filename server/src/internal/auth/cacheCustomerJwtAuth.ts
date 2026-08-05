@@ -6,12 +6,8 @@ import {
 } from "@autumn/shared";
 import { eq } from "drizzle-orm";
 import { db } from "@/db/initDrizzle.js";
-import {
-	getConfiguredRegions,
-	getRegionalRedis,
-	redis,
-} from "@/external/redis/initRedis.js";
 import { logger } from "@/external/logtail/logtailUtils.js";
+import { miscRedis } from "@/external/redis/initRedis.js";
 import { OrgService } from "@/internal/orgs/OrgService.js";
 import { tryRedisRead, tryRedisWrite } from "@/utils/cacheUtils/cacheUtils.js";
 
@@ -44,7 +40,7 @@ export const getCustomerJwtAuth = async ({
 	const cacheKey = buildKey(internalCustomerId);
 
 	try {
-		const cached = await tryRedisRead(() => redis.get(cacheKey));
+		const cached = await tryRedisRead(() => miscRedis.get(cacheKey));
 		if (cached) {
 			return JSON.parse(cached) as JwtAuth;
 		}
@@ -80,7 +76,7 @@ export const getCustomerJwtAuth = async ({
 
 	try {
 		await tryRedisWrite(() =>
-			redis.set(cacheKey, JSON.stringify(value), "EX", CACHE_TTL_SECONDS),
+			miscRedis.set(cacheKey, JSON.stringify(value), "EX", CACHE_TTL_SECONDS),
 		);
 	} catch {
 		// Best-effort backfill.
@@ -89,23 +85,18 @@ export const getCustomerJwtAuth = async ({
 	return value;
 };
 
-/** Drop the cached entry across regions after any family write. */
+/** Drop the cached entry after any family write. */
 export const invalidateCustomerJwtAuth = async ({
 	internalCustomerId,
 }: {
 	internalCustomerId: string;
 }) => {
 	const cacheKey = buildKey(internalCustomerId);
-	await Promise.all(
-		getConfiguredRegions().map(async (region) => {
-			const regional = getRegionalRedis(region);
-			if (regional.status !== "ready") {
-				logger.warn(
-					`NOTICE: Could not delete expired epoch; Redis not ready (region=${region}, internalCustomerId=${internalCustomerId})`,
-				);
-				return;
-			}
-			await tryRedisWrite(() => regional.del(cacheKey), regional);
-		}),
-	);
+	if (miscRedis.status !== "ready") {
+		logger.warn(
+			`NOTICE: Could not delete expired epoch; Redis not ready (internalCustomerId=${internalCustomerId})`,
+		);
+		return;
+	}
+	await tryRedisWrite(() => miscRedis.del(cacheKey));
 };

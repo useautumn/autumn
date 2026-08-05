@@ -6,8 +6,8 @@
  *     mirror whose result never affects the outcome.
  *   - idempotencyDynamoRead on: exactly the mirror image — Dynamo is the
  *     authority, Redis is the silent mirror.
- *   - The mirror is written even when the authority rejects a duplicate, so
- *     the stores converge.
+ *   - On an authority duplicate the mirror is SKIPPED, so a lagging mirror
+ *     can never backfill the key with a fresh (extended) TTL.
  *   - Release always clears both stores.
  */
 
@@ -200,11 +200,11 @@ describe("checkIdempotencyKey authority routing", () => {
 			expect(mockState.dynamoClaims[0]).toBe(mockState.redisClaims[0]);
 		});
 
-		test("rejects on a Redis duplicate, still mirroring to Dynamo", async () => {
+		test("rejects on a Redis duplicate without mirroring to Dynamo", async () => {
 			mockState.redisClaimResult = "duplicate";
 
 			await expectDuplicateRejection(check());
-			expect(mockState.dynamoClaims).toHaveLength(1);
+			expect(mockState.dynamoClaims).toHaveLength(0);
 		});
 
 		test("ignores a Dynamo duplicate on the mirror write", async () => {
@@ -246,11 +246,11 @@ describe("checkIdempotencyKey authority routing", () => {
 			expect(mockState.redisClaims[0]).toBe(mockState.dynamoClaims[0]);
 		});
 
-		test("rejects on a Dynamo duplicate, still mirroring to Redis", async () => {
+		test("rejects on a Dynamo duplicate without mirroring to Redis", async () => {
 			mockState.dynamoClaimResult = "duplicate";
 
 			await expectDuplicateRejection(check());
-			expect(mockState.redisClaims).toHaveLength(1);
+			expect(mockState.redisClaims).toHaveLength(0);
 		});
 
 		test("ignores a Redis duplicate on the mirror write", async () => {

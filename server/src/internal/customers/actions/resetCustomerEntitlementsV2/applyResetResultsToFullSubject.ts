@@ -127,5 +127,8 @@ export const applyResetResultsToNormalized = ({
 		subjectBalance.adjustment = updates.adjustment;
 		if (updates.entities !== null) subjectBalance.entities = updates.entities;
 		subjectBalance.next_reset_at = updates.next_reset_at;
+		if (result.pooledGranted !== undefined && subjectBalance.pooled_balance) {
+			subjectBalance.pooled_balance.granted = result.pooledGranted;
+		}
 	}
 };

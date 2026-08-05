@@ -8,6 +8,7 @@ import {
 	FULL_SUBJECT_EPOCH_TTL_SECONDS,
 } from "../../config/fullSubjectCacheConfig.js";
 import { normalizedToCachedFullSubject } from "../../fullSubjectCacheModel.js";
+import { assertPrimarySourced } from "../../subjectProvenance.js";
 import type { SetCachedFullSubjectResult } from "./fullSubjectWriteTypes.js";
 import { buildSharedBalanceWrites } from "./setSharedFullSubjectBalances.js";
 
@@ -22,6 +23,7 @@ export const setCachedFullSubject = async ({
 	normalized: NormalizedFullSubject;
 	fetchedSubjectViewEpoch: number;
 }): Promise<SetCachedFullSubjectResult> => {
+	assertPrimarySourced(normalized, "setCachedFullSubject");
 	const { logger, org, env, redisV2 } = ctx;
 	const { customerId, entityId } = normalized;
 

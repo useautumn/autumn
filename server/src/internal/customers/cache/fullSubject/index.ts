@@ -23,6 +23,7 @@ export {
 export { buildFullSubjectBalanceKey } from "./builders/buildFullSubjectBalanceKey.js";
 export { buildFullSubjectKey } from "./builders/buildFullSubjectKey.js";
 export { buildFullSubjectOrgEnvKey } from "./builders/buildFullSubjectOrgEnvKey.js";
+export { buildSubjectReadFlightKey } from "./builders/buildSubjectReadFlightKey.js";
 export { buildFullSubjectViewEpochKey } from "./builders/buildFullSubjectViewEpochKey.js";
 export { buildSharedFullSubjectBalanceKey } from "./builders/buildSharedFullSubjectBalanceKey.js";
 export { FULL_SUBJECT_CACHE_TTL_SECONDS } from "./config/fullSubjectCacheConfig.js";

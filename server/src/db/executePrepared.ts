@@ -1,4 +1,5 @@
 import { createHash } from "node:crypto";
+import { SpanKind, SpanStatusCode, trace } from "@opentelemetry/api";
 import type { SQL } from "drizzle-orm";
 import { PgDialect } from "drizzle-orm/pg-core";
 import type { Pool } from "pg";
@@ -6,6 +7,38 @@ import { logger } from "@/external/logtail/logtailUtils.js";
 import type { DrizzleCli } from "./initDrizzle.js";
 
 const dialect = new PgDialect();
+
+/**
+ * DB spans in this service come only from `instrumentDrizzleClient` in
+ * initDrizzle — there is no @opentelemetry/instrumentation-pg. Because this
+ * helper goes straight to the pg Pool (see poolOf), Drizzle never sees the call
+ * and would emit nothing, so the span is raised by hand here.
+ *
+ * It deliberately impersonates @kubiks/otel-drizzle rather than taking its own
+ * identity. Three panels in the infra-health dashboard filter on
+ * `scope.name == '@kubiks/otel-drizzle'`, and spanMetrics.ts derives the
+ * `autumn.db.query.duration_ms` histogram's `operation` label from
+ * `span.name.slice("drizzle.".length)` — so a different tracer name makes these
+ * spans invisible, and a fixed span name silently forks the metric series.
+ */
+const tracer = trace.getTracer("@kubiks/otel-drizzle");
+
+/** Leading keyword, for db.operation. */
+const operationOf = (text: string) =>
+	text.trimStart().split(/\s+/, 1)[0]?.toUpperCase() ?? "UNKNOWN";
+
+/** Matches the library: `drizzle.${leading keyword, lowercased}`. getFullSubject
+ *  compiles to text starting with WITH, so these land as `drizzle.with`. */
+const spanNameFor = (operation: string) => `drizzle.${operation.toLowerCase()}`;
+
+/** The library capped db.statement at 1000 chars plus a literal "...". Same
+ *  shape here. Do NOT trim or normalise the text — the leading whitespace is
+ *  what distinguishes the three getFullSubjectQuery variants in the dashboards. */
+const MAX_STATEMENT_CHARS = 1000;
+const truncateStatement = (text: string) =>
+	text.length > MAX_STATEMENT_CHARS
+		? `${text.slice(0, MAX_STATEMENT_CHARS)}...`
+		: text;
 
 /** Kept under PgBouncer's `max_prepared_statements` (200) so the pooler tracks
  *  every statement we mint rather than silently dropping the overflow. */
@@ -82,10 +115,43 @@ export const executePrepared = async <TRow = Record<string, unknown>>({
 		throw new Error(`[executePrepared] name collision for "${name}"`);
 	}
 
-	// Untyped on purpose: pg constrains its generic to QueryResultRow, which is
-	// narrower than the row shapes callers of db.execute() use.
-	const result = await pool.query({ name, text, values: params });
-	return result.rows as TRow[];
+	const operation = operationOf(text);
+
+	return tracer.startActiveSpan(
+		spanNameFor(operation),
+		{ kind: SpanKind.CLIENT },
+		async (span) => {
+			span.setAttributes({
+				// These three reproduce the library's attribute set exactly.
+				"db.system": "postgresql",
+				"db.operation": operation,
+				"db.statement": truncateStatement(text),
+				// Additive — the library emitted no equivalent.
+				"db.prepared_statement_name": name,
+				"autumn.db.label": label,
+			});
+
+			try {
+				// Untyped on purpose: pg constrains its generic to QueryResultRow,
+				// which is narrower than the row shapes callers of db.execute() use.
+				const result = await pool.query({ name, text, values: params });
+				span.setAttribute("db.response.returned_rows", result.rowCount ?? 0);
+				// The library set OK explicitly; leaving it UNSET flips status.code
+				// from "OK" to null in the dataset.
+				span.setStatus({ code: SpanStatusCode.OK });
+				return result.rows as TRow[];
+			} catch (error) {
+				span.recordException(error as Error);
+				span.setStatus({
+					code: SpanStatusCode.ERROR,
+					message: error instanceof Error ? error.message : String(error),
+				});
+				throw error;
+			} finally {
+				span.end();
+			}
+		},
+	);
 };
 
 /** Statement names minted by this process — for diagnostics and tests. */

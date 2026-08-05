@@ -25,6 +25,9 @@ type TtlUnit = "hours" | "days";
 
 const MAX_TTL_HOURS = 24 * 30;
 
+// Hidden until the DynamoDB idempotency store is fully rolled out.
+const IDEMPOTENCY_TTL_CONFIG_ENABLED: boolean = false;
+
 const toHours = ({ value, unit }: { value: number; unit: TtlUnit }) =>
 	unit === "days" ? value * 24 : value;
 
@@ -211,49 +214,51 @@ export const BillingSettingsSection = () => {
 						/>
 					</div>
 				))}
-				<div className="flex items-center justify-between gap-4 py-3.5">
-					<div className="flex flex-col gap-0.5">
-						<span className="text-sm font-medium">
-							Idempotency key duration
-						</span>
-						<span className="text-xs text-muted-foreground">
-							How long duplicate requests to balances endpoints (track, check)
-							are rejected
-						</span>
+				{IDEMPOTENCY_TTL_CONFIG_ENABLED && (
+					<div className="flex items-center justify-between gap-4 py-3.5">
+						<div className="flex flex-col gap-0.5">
+							<span className="text-sm font-medium">
+								Idempotency key duration
+							</span>
+							<span className="text-xs text-muted-foreground">
+								How long duplicate requests to balances endpoints (track, check)
+								are rejected
+							</span>
+						</div>
+						<div className="flex items-center gap-2">
+							<Input
+								type="number"
+								aria-label="Idempotency key duration"
+								className="w-20"
+								min={1}
+								max={displayTtl.unit === "days" ? 30 : MAX_TTL_HOURS}
+								value={displayTtl.value}
+								onChange={(e) =>
+									setPendingTtl({
+										value: Number(e.target.value),
+										unit: displayTtl.unit,
+									})
+								}
+								disabled={isPending}
+							/>
+							<Select
+								value={displayTtl.unit}
+								onValueChange={(unit: TtlUnit) =>
+									setPendingTtl({ value: displayTtl.value, unit })
+								}
+								disabled={isPending}
+							>
+								<SelectTrigger className="w-24" aria-label="Duration unit">
+									<SelectValue />
+								</SelectTrigger>
+								<SelectContent>
+									<SelectItem value="hours">Hours</SelectItem>
+									<SelectItem value="days">Days</SelectItem>
+								</SelectContent>
+							</Select>
+						</div>
 					</div>
-					<div className="flex items-center gap-2">
-						<Input
-							type="number"
-							aria-label="Idempotency key duration"
-							className="w-20"
-							min={1}
-							max={displayTtl.unit === "days" ? 30 : MAX_TTL_HOURS}
-							value={displayTtl.value}
-							onChange={(e) =>
-								setPendingTtl({
-									value: Number(e.target.value),
-									unit: displayTtl.unit,
-								})
-							}
-							disabled={isPending}
-						/>
-						<Select
-							value={displayTtl.unit}
-							onValueChange={(unit: TtlUnit) =>
-								setPendingTtl({ value: displayTtl.value, unit })
-							}
-							disabled={isPending}
-						>
-							<SelectTrigger className="w-24" aria-label="Duration unit">
-								<SelectValue />
-							</SelectTrigger>
-							<SelectContent>
-								<SelectItem value="hours">Hours</SelectItem>
-								<SelectItem value="days">Days</SelectItem>
-							</SelectContent>
-						</Select>
-					</div>
-				</div>
+				)}
 			</div>
 			<div className="pb-8">
 				<Button

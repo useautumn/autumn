@@ -4,7 +4,6 @@ import {
 	type FullCustomerEntitlement,
 	isBooleanEntitlement,
 	type PooledBalanceIdentity,
-	PooledBalanceResetMode,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { generateId } from "@/utils/genUtils";
@@ -62,11 +61,6 @@ export const initPooledBalanceGraph = ({
 		unlimited: identity.unlimited,
 		rollover: contributionCustomerEntitlement.entitlement.rollover,
 	});
-	const resetsViaInvoice =
-		!isBoolean &&
-		!identity.unlimited &&
-		identity.resetMode === PooledBalanceResetMode.Subscription;
-
 	return {
 		...structuredClone(contributionCustomerEntitlement),
 		id: customerEntitlementId,
@@ -94,7 +88,9 @@ export const initPooledBalanceGraph = ({
 		next_reset_at: nextResetAt,
 		cache_version: 0,
 		external_id: null,
-		reset_by_invoice: resetsViaInvoice,
+		// Pools reset through the lazy/cron paths regardless of mode; the batch
+		// scan must keep seeing them, so never stamp reset_by_invoice.
+		reset_by_invoice: false,
 		is_pooled_balance: true,
 		pooled_balance_id: pooledBalanceId,
 		pooled_contribution_id: null,

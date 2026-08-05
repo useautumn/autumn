@@ -6,3 +6,4 @@ export * from "./cusExportModels.js";
 export * from "./cusExportTable.js";
 export * from "./cusModels.js";
 export * from "./cusTable.js";
+export * from "./customerLsnsTable.js";

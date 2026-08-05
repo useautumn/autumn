@@ -65,16 +65,28 @@ export type RemoteExecutorOptions = {
 };
 
 /**
- * Build the Bun test argv for one file, mirroring the local runner exactly
+ * The harness picks settle timeouts off `TEST_FILE_CONCURRENCY` (`autumnCli
+ * .attach`, `initScenario`, `testAttachUtils`): >1 means "contended, wait
+ * longer". A µVM runs ONE file but shares its CPU with postgres, dragonfly,
+ * goaws, the server, workers and cron, so the contended profile is the correct
+ * one — the serial profile is why settle-dependent assertions (invoice counts,
+ * post-attach balances) flake in tw but pass locally. Prefixed via coreutils
+ * `env` so it MERGES into the sandbox environment (DATABASE_URL, Stripe keys)
+ * instead of relying on provider-specific env-replacement semantics.
+ */
+const TEST_ENV_PREFIX = ["env", "TEST_FILE_CONCURRENCY=4"];
+
+/**
+ * Build the Bun test argv for one file, mirroring the local runner
  * (`runTestsV2.tsx`: `["bun","test","--timeout","0", (--test-name-pattern …),
- * file]`). When retrying specific failures, the names are OR-joined into a
- * single regex the way the local path does.
+ * file]`) behind {@link TEST_ENV_PREFIX}. When retrying specific failures, the
+ * names are OR-joined into a single regex the way the local path does.
  */
 export const buildTestArgv = (
 	file: string,
 	failedTestNames?: string[],
 ): string[] => {
-	const argv = ["bun", "test", "--timeout", "0"];
+	const argv = [...TEST_ENV_PREFIX, "bun", "test", "--timeout", "0"];
 	if (failedTestNames && failedTestNames.length > 0) {
 		argv.push("--test-name-pattern", joinTestNamePattern(failedTestNames));
 	}

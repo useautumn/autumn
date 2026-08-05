@@ -3,6 +3,7 @@
  */
 
 import { referralsCreateCode } from "../funcs/referrals-create-code.js";
+import { referralsCreateProgram } from "../funcs/referrals-create-program.js";
 import { referralsRedeemCode } from "../funcs/referrals-redeem-code.js";
 import { ClientSDK, RequestOptions } from "../lib/sdks.js";
 import * as models from "../models/index.js";
@@ -31,6 +32,20 @@ export class Referrals extends ClientSDK {
     options?: RequestOptions,
   ): Promise<models.RedeemReferralCodeResponse> {
     return unwrapAsync(referralsRedeemCode(
+      this,
+      request,
+      options,
+    ));
+  }
+
+  /**
+   * Create a referral program linked to an existing reward.
+   */
+  async createProgram(
+    request: models.CreateReferralProgramParams,
+    options?: RequestOptions,
+  ): Promise<models.CreateReferralProgramResponse> {
+    return unwrapAsync(referralsCreateProgram(
       this,
       request,
       options,

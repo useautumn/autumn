@@ -1,4 +1,4 @@
-import { FeatureType, type Reward } from "@autumn/shared";
+import { FeatureType, type Reward, RewardType } from "@autumn/shared";
 import {
 	Dialog,
 	DialogContent,
@@ -172,7 +172,11 @@ export function UpdateRewardSheet({
 
 					<div className="flex-1 overflow-y-auto">
 						<RewardDetails reward={reward} setReward={setReward} />
-						<SelectRewardType reward={reward} setReward={setReward} />
+						<SelectRewardType
+							reward={reward}
+							setReward={setReward}
+							showFreeProduct={selectedReward?.type === RewardType.FreeProduct}
+						/>
 
 						{reward.rewardCategory === "discount" && (
 							<DiscountRewardConfig reward={reward} setReward={setReward} />

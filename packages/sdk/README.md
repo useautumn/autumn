@@ -832,6 +832,7 @@ const response = await client.features.delete({ featureId: "old-feature" });
 
 * [createCode](docs/sdks/referrals/README.md#createcode) - Create or fetch a referral code for a customer in a referral program.
 * [redeemCode](docs/sdks/referrals/README.md#redeemcode) - Redeem a referral code for a customer.
+* [createProgram](docs/sdks/referrals/README.md#createprogram) - Create a referral program linked to an existing reward.
 
 ### [Rewards](docs/sdks/rewards/README.md)
 
@@ -1442,6 +1443,7 @@ const response = await client.features.update({ featureId: "deprecated-feature",
 - [`platformLinkRevenueCat`](docs/sdks/platform/README.md#linkrevenuecat) - Generate a RevenueCat OAuth URL for linking a project to an organization.
 - [`platformSyncRevenueCat`](docs/sdks/platform/README.md#syncrevenuecat) - Push an organization's plans into RevenueCat as products (creating or renaming them across the project's apps) and set test-store prices from each plan's price. Requires the org to have linked RevenueCat via OAuth.
 - [`referralsCreateCode`](docs/sdks/referrals/README.md#createcode) - Create or fetch a referral code for a customer in a referral program.
+- [`referralsCreateProgram`](docs/sdks/referrals/README.md#createprogram) - Create a referral program linked to an existing reward.
 - [`referralsRedeemCode`](docs/sdks/referrals/README.md#redeemcode) - Redeem a referral code for a customer.
 - [`rewardsCreate`](docs/sdks/rewards/README.md#create) - Create a coupon or feature grant.
 - [`rewardsList`](docs/sdks/rewards/README.md#list) - List the coupons and feature grants configured for the org.

@@ -1,9 +1,5 @@
 import {
-	addDuration,
-	type CustomerEntitlement,
-	type Entitlement,
 	ErrCode,
-	FeatureType,
 	findFeatureByInternalId,
 	getGlobalMaxRedemption,
 	RecaseError,
@@ -12,13 +8,10 @@ import {
 import { createStripeCli } from "@/external/connect/createStripeCli.js";
 import { assertFirstTimeStripeCustomer } from "@/external/stripe/customers/index.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
-import { prepareNewBalanceForInsertion } from "@/internal/balances/createBalance/prepareNewBalanceForInsertion.js";
 import { CusService } from "@/internal/customers/CusService.js";
-import { CusEntService } from "@/internal/customers/cusProducts/cusEnts/CusEntitlementService.js";
-import { deleteCachedFullCustomer } from "@/internal/customers/cusUtils/fullCustomerCacheUtils/deleteCachedFullCustomer.js";
-import { EntitlementService } from "@/internal/products/entitlements/EntitlementService.js";
 import { redemptionRepo, rewardRepo } from "@/internal/rewards/repos/index.js";
 import { generateId } from "@/utils/genUtils.js";
+import { grantRewardEntitlements } from "./grantRewardEntitlements.js";
 
 /** Redeem a promo code and grant loose entitlements to a customer */
 export const redeemPromoCode = async ({
@@ -32,7 +25,7 @@ export const redeemPromoCode = async ({
 	customerId: string;
 	rewardInternalId?: string;
 }) => {
-	const { db, org, env, logger } = ctx;
+	const { db, org, env } = ctx;
 
 	// 1. Find the reward matching this promo code
 	const reward = await rewardRepo.getByCode({
@@ -129,91 +122,14 @@ export const redeemPromoCode = async ({
 	}
 
 	// 5. Create entitlements for each reward entitlement config
-	const newEntitlements: Entitlement[] = [];
-	const newCustomerEntitlements: CustomerEntitlement[] = [];
-
-	for (const rewardEnt of reward.entitlements) {
-		const feature = findFeatureByInternalId({
-			features: ctx.features,
-			internalId: rewardEnt.internal_feature_id,
-		});
-
-		if (!feature) {
-			logger.warn(
-				`Feature with internal_id "${rewardEnt.internal_feature_id}" not found, skipping`,
-			);
-			continue;
-		}
-
-		const isBoolean = feature.type === FeatureType.Boolean;
-		const allowance = rewardEnt.allowance;
-		if (!isBoolean && (!allowance || allowance <= 0)) {
-			throw new RecaseError({
-				message: `Reward entitlement for feature "${feature.id}" must have a positive allowance`,
-				code: ErrCode.InvalidReward,
-				statusCode: 400,
-			});
-		}
-
-		const expiresAt =
-			rewardEnt.expiry_duration && rewardEnt.expiry_length != null
-				? addDuration({
-						now: Date.now(),
-						durationType: rewardEnt.expiry_duration,
-						durationLength: rewardEnt.expiry_length,
-					})
-				: undefined;
-
-		const { newEntitlement, newCustomerEntitlement } =
-			await prepareNewBalanceForInsertion({
-				ctx,
-				fullCustomer,
-				feature,
-				params: {
-					customer_id: customerId,
-					feature_id: feature.id,
-					included_grant: isBoolean ? undefined : (allowance ?? undefined),
-					expires_at: expiresAt,
-					balance_id: `reward_${code}_${new Date().toISOString().slice(0, 10).replace(/-/g, "_")}`,
-				},
-			});
-
-		newEntitlements.push(newEntitlement);
-		newCustomerEntitlements.push(newCustomerEntitlement);
-	}
-
-	if (!newEntitlements.length) {
-		throw new RecaseError({
-			message:
-				"No valid entitlements could be created from reward configuration",
-			code: ErrCode.InvalidReward,
-			statusCode: 400,
-		});
-	}
-
-	// 6. Insert entitlements and customer_entitlements
-	await EntitlementService.insert({
-		db,
-		data: newEntitlements,
-	});
-
-	await CusEntService.insert({
+	await grantRewardEntitlements({
 		ctx,
-		data: newCustomerEntitlements,
+		fullCustomer,
+		reward,
+		balanceIdPrefix: `reward_${code}`,
 	});
 
-	// 6.5. Clear cached customer so subsequent /check calls see the new entitlements
-	await deleteCachedFullCustomer({
-		customerId,
-		ctx,
-		source: "redeemPromoCode",
-	});
-
-	logger.info(
-		`Granted ${newEntitlements.length} entitlement(s) to customer "${customerId}" via promo code "${code}"`,
-	);
-
-	// 7. Record the redemption
+	// 6. Record the redemption
 	await redemptionRepo.insert({
 		db,
 		rewardRedemption: {

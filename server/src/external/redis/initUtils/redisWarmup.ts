@@ -1,14 +1,11 @@
 import type { Redis } from "ioredis";
-import {
-	getFallbackRedis,
-	getRegionalRedisForInstance,
-} from "./redisClientRegistry.js";
-import { getConfiguredRegions } from "./redisConfig.js";
+import { getFallbackRedis, getMiscRedis } from "./redisClientRegistry.js";
+import { hasMiscRedisConfig } from "./redisConfig.js";
 
 /** Wait for a Redis instance to be ready */
 export const waitForRedisReady = (
 	instance: Redis,
-	region: string,
+	label: string,
 	timeoutMs = 10000,
 ): Promise<void> => {
 	return new Promise((resolve, reject) => {
@@ -18,12 +15,12 @@ export const waitForRedisReady = (
 		}
 
 		const timeout = setTimeout(() => {
-			reject(new Error(`Redis connection timeout for region ${region}`));
+			reject(new Error(`Redis connection timeout for ${label}`));
 		}, timeoutMs);
 
 		instance.once("ready", () => {
 			clearTimeout(timeout);
-			console.log(`[Redis] ${region}: connected`);
+			console.log(`[Redis] ${label}: connected`);
 			resolve();
 		});
 
@@ -34,25 +31,17 @@ export const waitForRedisReady = (
 	});
 };
 
-/** Pre-warm all regional Redis connections. Call on startup before processing requests. */
+/** Pre-warm the main + fallback + V2 Redis connections. Call on startup before processing requests. */
 export const warmupRegionalRedis = async (): Promise<void> => {
-	const regions = getConfiguredRegions();
-	console.log(
-		`[Redis] Warming up connections for ${regions.length} regions...`,
-	);
+	const warmupPromises: Promise<void>[] = [];
 
-	const warmupPromises = regions.map(async (region) => {
-		try {
-			const instance = getRegionalRedisForInstance({
-				region,
-				instance: "primary",
-			});
-			await waitForRedisReady(instance, region);
-		} catch (error) {
-			console.error(`[Redis] ${region}: warmup failed -`, error);
-			// Don't throw - allow startup to continue even if one region fails
-		}
-	});
+	if (hasMiscRedisConfig) {
+		warmupPromises.push(
+			waitForRedisReady(getMiscRedis(), "misc").catch((error) => {
+				console.error("[Redis] misc: warmup failed -", error);
+			}),
+		);
+	}
 
 	const fallback = getFallbackRedis();
 	if (fallback) {

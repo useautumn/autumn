@@ -1,6 +1,7 @@
 import type { FullSubject } from "@autumn/shared";
 import { normalizedToFullSubject } from "@autumn/shared";
 import { isRedisMigrationCacheStale } from "@/external/redis/customerRedisRouting.js";
+import { REDIS_OP_TIMEOUT_MS } from "@/external/redis/utils/redisOpTimeouts.js";
 import { runRedisOp } from "@/external/redis/utils/runRedisOp.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { lazyResetSubjectEntitlements } from "@/internal/customers/actions/resetCustomerEntitlementsV2/lazyResetSubjectEntitlements.js";
@@ -71,6 +72,7 @@ export const getCachedPartialFullSubject = async ({
 		operation: () => redisV2.pipeline().get(subjectKey).get(epochKey).exec(),
 		source: "getCachedPartialFullSubject:pipeline",
 		redisInstance: redisV2,
+		timeoutMs: REDIS_OP_TIMEOUT_MS.subjectPipeline,
 	});
 
 	const subjectEntry = pipelineResults?.[0];

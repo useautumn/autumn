@@ -16,6 +16,7 @@ import { customerExports } from "../models/cusModels/cusExportTable.js";
 import { customersRelations } from "../models/cusModels/cusRelations.js";
 // Customer Tables
 import { customers } from "../models/cusModels/cusTable.js";
+import { customerLsns } from "../models/cusModels/customerLsnsTable.js";
 import { entitiesRelations } from "../models/cusModels/entityModels/entityRelations.js";
 import { entities } from "../models/cusModels/entityModels/entityTable.js";
 import { invoiceLineItems } from "../models/cusModels/invoiceModels/invoiceLineItemTable.js";
@@ -156,6 +157,7 @@ export {
 	customerEntitlements,
 	customerEntitlementsRelations,
 	customerExports,
+	customerLsns,
 	customerPrices,
 	customerPricesRelations,
 	customerProducts,

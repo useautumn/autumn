@@ -69,6 +69,7 @@ export const MiscellaneousEdgeConfigForm = ({
 					parsed.subjectLookupDbOnly ?? prev.subjectLookupDbOnly,
 				idempotencyDynamoRead:
 					parsed.idempotencyDynamoRead ?? prev.idempotencyDynamoRead,
+				redisFallbackToDb: parsed.redisFallbackToDb ?? prev.redisFallbackToDb,
 			}));
 			setJsonError(null);
 		} catch {
@@ -203,6 +204,17 @@ export const MiscellaneousEdgeConfigForm = ({
 							onCheckedChange={(subjectLookupDbOnly) => {
 								setSyncSource("form");
 								setConfig((prev) => ({ ...prev, subjectLookupDbOnly }));
+							}}
+						/>
+
+						<MiscellaneousEdgeConfigSwitch
+							title="Redis outage: fall back to Postgres"
+							hint="When Redis is unavailable, subject reads are served from Postgres (admission gate + replicas) instead of returning 503s. Arm only after the primary and replica bouncer pools are sized for outage load."
+							ariaLabel="Enable Redis-outage fallback to Postgres"
+							checked={config.redisFallbackToDb}
+							onCheckedChange={(redisFallbackToDb) => {
+								setSyncSource("form");
+								setConfig((prev) => ({ ...prev, redisFallbackToDb }));
 							}}
 						/>
 
