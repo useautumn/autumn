@@ -33885,7 +33885,7 @@ paths:
                   - redeem_on
                   - received_by
                   - created_at
-                title: CreateReferralProgramResponse
+                title: GetReferralProgramResponse
                 examples:
                   - &a100
                     id: refer_a_friend
@@ -34014,7 +34014,7 @@ paths:
                   - redeem_on
                   - received_by
                   - created_at
-                title: CreateReferralProgramResponse
+                title: UpdateReferralProgramResponse
                 examples:
                   - &a101
                     id: refer_a_friend

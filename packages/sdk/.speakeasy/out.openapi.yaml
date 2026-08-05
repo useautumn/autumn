@@ -31769,7 +31769,7 @@ paths:
                   - redeem_on
                   - received_by
                   - created_at
-                title: CreateReferralProgramResponse
+                title: GetReferralProgramResponse
                 examples:
                   - id: refer_a_friend
                     reward_id: beta_credits_grant
@@ -31891,7 +31891,7 @@ paths:
                   - redeem_on
                   - received_by
                   - created_at
-                title: CreateReferralProgramResponse
+                title: UpdateReferralProgramResponse
                 examples:
                   - id: refer_a_friend
                     reward_id: beta_credits_grant

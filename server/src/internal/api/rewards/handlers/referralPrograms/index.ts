@@ -12,6 +12,7 @@ import {
 	listApiReferralPrograms,
 	updateApiReferralProgram,
 } from "@/internal/rewards/actions/apiReferralPrograms.js";
+import { rewardMutationLock } from "@/internal/rewards/rewardLock.js";
 
 export { handleCreateReferralProgram } from "./handleCreateReferralProgram.js";
 
@@ -37,6 +38,7 @@ export const handleGetReferralProgram = createRoute({
 export const handleUpdateReferralProgram = createRoute({
 	scopes: [Scopes.Rewards.Write],
 	body: UpdateReferralProgramParamsSchema,
+	lock: rewardMutationLock,
 	handler: async (c) =>
 		c.json(
 			await updateApiReferralProgram({
@@ -49,6 +51,7 @@ export const handleUpdateReferralProgram = createRoute({
 export const handleDeleteReferralProgram = createRoute({
 	scopes: [Scopes.Rewards.Write],
 	body: DeleteReferralProgramParamsSchema,
+	lock: rewardMutationLock,
 	handler: async (c) =>
 		c.json(
 			await deleteApiReferralProgram({

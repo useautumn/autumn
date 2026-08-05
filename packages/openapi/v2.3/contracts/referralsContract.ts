@@ -11,16 +11,18 @@ import {
 	DeleteRewardParamsSchema,
 	DeleteRewardResponseSchema,
 	GetReferralProgramParamsSchema,
+	GetReferralProgramResponseSchema,
 	GetRewardParamsSchema,
 	GetRewardResponseSchema,
-	ReferralProgramsListParamsSchema,
-	ReferralProgramsListResponseSchema,
-	UpdateReferralProgramParamsSchema,
-	UpdateRewardParamsSchema,
-	UpdateRewardResponseSchema,
 	RedeemReferralCodeParamsSchema,
 	RedeemReferralCodeResponseSchema,
+	ReferralProgramsListParamsSchema,
+	ReferralProgramsListResponseSchema,
 	RewardsListParamsSchema,
+	UpdateReferralProgramParamsSchema,
+	UpdateReferralProgramResponseSchema,
+	UpdateRewardParamsSchema,
+	UpdateRewardResponseSchema,
 } from "@autumn/shared";
 import { oc } from "@orpc/contract";
 import { z } from "zod/v4";
@@ -243,7 +245,7 @@ export const referralProgramsGetContract = oc
 		}),
 	})
 	.input(GetReferralProgramParamsSchema)
-	.output(CreateReferralProgramResponseSchema);
+	.output(GetReferralProgramResponseSchema);
 
 export const referralProgramsUpdateContract = oc
 	.route({
@@ -259,7 +261,7 @@ export const referralProgramsUpdateContract = oc
 		}),
 	})
 	.input(UpdateReferralProgramParamsSchema)
-	.output(CreateReferralProgramResponseSchema);
+	.output(UpdateReferralProgramResponseSchema);
 
 export const referralProgramsDeleteContract = oc
 	.route({

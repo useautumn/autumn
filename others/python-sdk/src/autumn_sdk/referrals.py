@@ -395,7 +395,7 @@ class Referrals(BaseSDK):
         server_url: Optional[str] = None,
         timeout_ms: Optional[int] = None,
         http_headers: Optional[Mapping[str, str]] = None,
-    ) -> models.CreateReferralProgramCreateReferralProgramResponse:
+    ) -> models.CreateReferralProgramResponse:
         r"""Create a referral program linked to an existing reward.
 
         :param id:
@@ -476,7 +476,7 @@ class Referrals(BaseSDK):
 
         if utils.match_response(http_res, "200", "application/json"):
             return unmarshal_json_response(
-                models.CreateReferralProgramCreateReferralProgramResponse, http_res
+                models.CreateReferralProgramResponse, http_res
             )
         if utils.match_response(http_res, "4XX", "*"):
             http_res_text = utils.stream_to_text(http_res)
@@ -505,7 +505,7 @@ class Referrals(BaseSDK):
         server_url: Optional[str] = None,
         timeout_ms: Optional[int] = None,
         http_headers: Optional[Mapping[str, str]] = None,
-    ) -> models.CreateReferralProgramCreateReferralProgramResponse:
+    ) -> models.CreateReferralProgramResponse:
         r"""Create a referral program linked to an existing reward.
 
         :param id:
@@ -586,7 +586,7 @@ class Referrals(BaseSDK):
 
         if utils.match_response(http_res, "200", "application/json"):
             return unmarshal_json_response(
-                models.CreateReferralProgramCreateReferralProgramResponse, http_res
+                models.CreateReferralProgramResponse, http_res
             )
         if utils.match_response(http_res, "4XX", "*"):
             http_res_text = await utils.stream_to_text_async(http_res)
@@ -815,7 +815,7 @@ class Referrals(BaseSDK):
         server_url: Optional[str] = None,
         timeout_ms: Optional[int] = None,
         http_headers: Optional[Mapping[str, str]] = None,
-    ) -> models.GetReferralProgramCreateReferralProgramResponse:
+    ) -> models.GetReferralProgramResponse:
         r"""Fetch a referral program by ID.
 
         :param referral_program_id: The ID of the referral program.
@@ -883,9 +883,7 @@ class Referrals(BaseSDK):
         )
 
         if utils.match_response(http_res, "200", "application/json"):
-            return unmarshal_json_response(
-                models.GetReferralProgramCreateReferralProgramResponse, http_res
-            )
+            return unmarshal_json_response(models.GetReferralProgramResponse, http_res)
         if utils.match_response(http_res, "4XX", "*"):
             http_res_text = utils.stream_to_text(http_res)
             raise errors.AutumnDefaultError(
@@ -907,7 +905,7 @@ class Referrals(BaseSDK):
         server_url: Optional[str] = None,
         timeout_ms: Optional[int] = None,
         http_headers: Optional[Mapping[str, str]] = None,
-    ) -> models.GetReferralProgramCreateReferralProgramResponse:
+    ) -> models.GetReferralProgramResponse:
         r"""Fetch a referral program by ID.
 
         :param referral_program_id: The ID of the referral program.
@@ -975,9 +973,7 @@ class Referrals(BaseSDK):
         )
 
         if utils.match_response(http_res, "200", "application/json"):
-            return unmarshal_json_response(
-                models.GetReferralProgramCreateReferralProgramResponse, http_res
-            )
+            return unmarshal_json_response(models.GetReferralProgramResponse, http_res)
         if utils.match_response(http_res, "4XX", "*"):
             http_res_text = await utils.stream_to_text_async(http_res)
             raise errors.AutumnDefaultError(
@@ -1005,7 +1001,7 @@ class Referrals(BaseSDK):
         server_url: Optional[str] = None,
         timeout_ms: Optional[int] = None,
         http_headers: Optional[Mapping[str, str]] = None,
-    ) -> models.UpdateReferralProgramCreateReferralProgramResponse:
+    ) -> models.UpdateReferralProgramResponse:
         r"""Update a referral program. Omitted fields keep their current value.
 
         :param referral_program_id: The ID of the referral program.
@@ -1086,7 +1082,7 @@ class Referrals(BaseSDK):
 
         if utils.match_response(http_res, "200", "application/json"):
             return unmarshal_json_response(
-                models.UpdateReferralProgramCreateReferralProgramResponse, http_res
+                models.UpdateReferralProgramResponse, http_res
             )
         if utils.match_response(http_res, "4XX", "*"):
             http_res_text = utils.stream_to_text(http_res)
@@ -1115,7 +1111,7 @@ class Referrals(BaseSDK):
         server_url: Optional[str] = None,
         timeout_ms: Optional[int] = None,
         http_headers: Optional[Mapping[str, str]] = None,
-    ) -> models.UpdateReferralProgramCreateReferralProgramResponse:
+    ) -> models.UpdateReferralProgramResponse:
         r"""Update a referral program. Omitted fields keep their current value.
 
         :param referral_program_id: The ID of the referral program.
@@ -1196,7 +1192,7 @@ class Referrals(BaseSDK):
 
         if utils.match_response(http_res, "200", "application/json"):
             return unmarshal_json_response(
-                models.UpdateReferralProgramCreateReferralProgramResponse, http_res
+                models.UpdateReferralProgramResponse, http_res
             )
         if utils.match_response(http_res, "4XX", "*"):
             http_res_text = await utils.stream_to_text_async(http_res)

@@ -30,6 +30,13 @@ export const GetReferralProgramParamsSchema = z
 	.strict()
 	.meta({ title: "GetReferralProgramParams" });
 
+export const GetReferralProgramResponseSchema = ApiReferralProgramV0Schema.meta(
+	{
+		title: "GetReferralProgramResponse",
+		examples: [REFERRAL_PROGRAM_V0_EXAMPLE],
+	},
+);
+
 /** Omitted fields keep their current value; checkout rules are re-checked on the merged program */
 export const UpdateReferralProgramParamsSchema = z
 	.object({
@@ -61,6 +68,12 @@ export const UpdateReferralProgramParamsSchema = z
 	})
 	.meta({ title: "UpdateReferralProgramParams" });
 
+export const UpdateReferralProgramResponseSchema =
+	ApiReferralProgramV0Schema.meta({
+		title: "UpdateReferralProgramResponse",
+		examples: [REFERRAL_PROGRAM_V0_EXAMPLE],
+	});
+
 export const DeleteReferralProgramParamsSchema = z
 	.object({ referral_program_id: referralProgramId })
 	.strict()
@@ -71,9 +84,6 @@ export const DeleteReferralProgramResponseSchema = SuccessResponseSchema.meta({
 	examples: [{ success: true }],
 });
 
-export type ReferralProgramsListParams = z.infer<
-	typeof ReferralProgramsListParamsSchema
->;
 export type ReferralProgramsListResponse = z.infer<
 	typeof ReferralProgramsListResponseSchema
 >;

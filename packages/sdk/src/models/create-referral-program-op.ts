@@ -99,7 +99,7 @@ export type CreateReferralProgramReceivedByResponse = OpenEnum<
 /**
  * OK
  */
-export type CreateReferralProgramCreateReferralProgramResponse = {
+export type CreateReferralProgramResponse = {
   /**
    * The unique identifier for the referral program.
    */
@@ -204,44 +204,39 @@ export const CreateReferralProgramReceivedByResponse$inboundSchema:
     .inboundSchema(CreateReferralProgramReceivedByResponse);
 
 /** @internal */
-export const CreateReferralProgramCreateReferralProgramResponse$inboundSchema:
-  z.ZodMiniType<CreateReferralProgramCreateReferralProgramResponse, unknown> = z
-    .pipe(
-      z.object({
-        id: types.string(),
-        reward_id: types.string(),
-        redeem_on: CreateReferralProgramRedeemOnResponse$inboundSchema,
-        received_by: CreateReferralProgramReceivedByResponse$inboundSchema,
-        max_redemptions: z.optional(z.nullable(types.number())),
-        plan_ids: z.optional(z.nullable(z.array(types.string()))),
-        exclude_trial: z.optional(z.nullable(types.boolean())),
-        created_at: types.number(),
-      }),
-      z.transform((v) => {
-        return remap$(v, {
-          "reward_id": "rewardId",
-          "redeem_on": "redeemOn",
-          "received_by": "receivedBy",
-          "max_redemptions": "maxRedemptions",
-          "plan_ids": "planIds",
-          "exclude_trial": "excludeTrial",
-          "created_at": "createdAt",
-        });
-      }),
-    );
+export const CreateReferralProgramResponse$inboundSchema: z.ZodMiniType<
+  CreateReferralProgramResponse,
+  unknown
+> = z.pipe(
+  z.object({
+    id: types.string(),
+    reward_id: types.string(),
+    redeem_on: CreateReferralProgramRedeemOnResponse$inboundSchema,
+    received_by: CreateReferralProgramReceivedByResponse$inboundSchema,
+    max_redemptions: z.optional(z.nullable(types.number())),
+    plan_ids: z.optional(z.nullable(z.array(types.string()))),
+    exclude_trial: z.optional(z.nullable(types.boolean())),
+    created_at: types.number(),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      "reward_id": "rewardId",
+      "redeem_on": "redeemOn",
+      "received_by": "receivedBy",
+      "max_redemptions": "maxRedemptions",
+      "plan_ids": "planIds",
+      "exclude_trial": "excludeTrial",
+      "created_at": "createdAt",
+    });
+  }),
+);
 
-export function createReferralProgramCreateReferralProgramResponseFromJSON(
+export function createReferralProgramResponseFromJSON(
   jsonString: string,
-): SafeParseResult<
-  CreateReferralProgramCreateReferralProgramResponse,
-  SDKValidationError
-> {
+): SafeParseResult<CreateReferralProgramResponse, SDKValidationError> {
   return safeParse(
     jsonString,
-    (x) =>
-      CreateReferralProgramCreateReferralProgramResponse$inboundSchema.parse(
-        JSON.parse(x),
-      ),
-    `Failed to parse 'CreateReferralProgramCreateReferralProgramResponse' from JSON`,
+    (x) => CreateReferralProgramResponse$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'CreateReferralProgramResponse' from JSON`,
   );
 }

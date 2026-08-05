@@ -1,6 +1,7 @@
 import {
 	ErrCode,
 	type Feature,
+	FeatureNotFoundError,
 	FeatureType,
 	findFeatureById,
 	normalizePromoCodes,
@@ -8,6 +9,7 @@ import {
 	type Product,
 	RecaseError,
 	type Reward,
+	type RewardEntitlement,
 	RewardType,
 	type UpdateRewardParams,
 	type UpdateRewardResponse,
@@ -27,8 +29,10 @@ import { validateRewardUniqueness } from "./validateRewardUniqueness.js";
 type CouponUpdate = NonNullable<UpdateRewardParams["coupon"]>;
 type FeatureGrantUpdate = NonNullable<UpdateRewardParams["feature_grant"]>;
 
-/** Loosely typed: entitlements here use the reward-entitlement shape, not full Entitlement rows */
-type RewardUpdate = Record<string, unknown>;
+/** Entitlements here are reward-entitlement inputs, not full Entitlement rows */
+type RewardUpdate = Partial<Omit<Reward, "entitlements">> & {
+	entitlements?: RewardEntitlement[];
+};
 
 const buildCouponUpdate = async ({
 	ctx,
@@ -55,65 +59,46 @@ const buildCouponUpdate = async ({
 		);
 	}
 
+	// A null plan_ids means "apply to every plan", so it clears the price list
 	if (coupon.plan_ids !== undefined) {
-		const { db, org, env } = ctx;
-		if (coupon.plan_ids === null) {
-			update.discount_config = {
-				...reward.discount_config!,
-				apply_to_all: true,
-				price_ids: [],
-			};
-		} else {
-			const priceIds = await planIdsToPriceIds({
-				db,
-				orgId: org.id,
-				env,
-				planIds: coupon.plan_ids,
-			});
-
-			update.discount_config = {
-				...reward.discount_config!,
-				apply_to_all: false,
-				price_ids: priceIds,
-			};
-		}
+		update.discount_config = {
+			...reward.discount_config!,
+			apply_to_all: coupon.plan_ids === null,
+			price_ids:
+				coupon.plan_ids === null
+					? []
+					: await planIdsToPriceIds({ ctx, planIds: coupon.plan_ids }),
+		};
 	}
 
 	return update;
 };
 
 const planIdsToPriceIds = async ({
-	db,
-	orgId,
-	env,
+	ctx,
 	planIds,
 }: {
-	db: AutumnContext["db"];
-	orgId: string;
-	env: AutumnContext["env"];
+	ctx: AutumnContext;
 	planIds: string[];
 }) => {
-	const priceIds: string[] = [];
-	for (const planId of planIds) {
-		const fullProduct = await ProductService.getFull({
-			db,
-			idOrInternalId: planId,
-			orgId,
-			env,
+	const plans = await ProductService.listFull({
+		db: ctx.db,
+		orgId: ctx.org.id,
+		env: ctx.env,
+		inIds: planIds,
+	});
+
+	if (plans.length !== planIds.length) {
+		const found = new Set(plans.map((plan) => plan.id));
+		const missing = planIds.filter((planId) => !found.has(planId));
+		throw new RecaseError({
+			message: `Plans not found: ${missing.join(", ")}`,
+			code: ErrCode.InvalidRequest,
+			statusCode: 400,
 		});
-
-		if (!fullProduct) {
-			throw new RecaseError({
-				message: `Plan ${planId} not found`,
-				code: ErrCode.InvalidRequest,
-				statusCode: 400,
-			});
-		}
-
-		priceIds.push(...fullProduct.prices.map((price) => price.id));
 	}
 
-	return priceIds;
+	return plans.flatMap((plan) => plan.prices.map((price) => price.id));
 };
 
 const buildFeatureGrantUpdate = ({
@@ -142,11 +127,7 @@ const buildFeatureGrantUpdate = ({
 			});
 
 			if (!feature) {
-				throw new RecaseError({
-					message: `Feature ${grant.feature_id} not found`,
-					code: ErrCode.InvalidRequest,
-					statusCode: 400,
-				});
+				throw new FeatureNotFoundError({ featureId: grant.feature_id });
 			}
 
 			if (
@@ -245,7 +226,7 @@ export const updateApiReward = async ({
 		? buildFeatureGrantUpdate({ features, featureGrant: params.feature_grant! })
 		: await buildCouponUpdate({ ctx, reward, coupon: params.coupon! });
 
-	const updatedReward: Reward = { ...reward, ...update };
+	const updatedReward = { ...reward, ...update } as Reward;
 
 	await validateRewardUniqueness({
 		db,
@@ -264,13 +245,18 @@ export const updateApiReward = async ({
 		});
 	}
 
-	// 4. Persist. The repo always issues a SET, so keep at least one column.
+	// 4. Persist. The repo strips entitlements before its SET, so a grants-only
+	// patch would leave no columns to write — keep name in that case.
+	const { entitlements, ...rewardColumns } = update;
 	await rewardRepo.update({
 		db,
 		internalId: reward.internal_id,
 		env,
 		orgId: org.id,
-		update: { name: updatedReward.name, ...update },
+		update:
+			Object.keys(rewardColumns).length > 0
+				? update
+				: { ...update, name: reward.name },
 	});
 
 	// Re-read: the update only returns joined entitlements when it rewrote them

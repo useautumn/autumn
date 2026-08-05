@@ -43,17 +43,16 @@ export const createReferralProgramRedeemOnResponseSchema = openEnumSchema;
 
 export const createReferralProgramReceivedByResponseSchema = openEnumSchema;
 
-export const createReferralProgramCreateReferralProgramResponseSchema =
-	z.object({
-		id: z.string(),
-		rewardId: z.string(),
-		redeemOn: createReferralProgramRedeemOnResponseSchema,
-		receivedBy: createReferralProgramReceivedByResponseSchema,
-		maxRedemptions: z.union([z.number(), z.undefined()]).optional().nullable(),
-		planIds: z
-			.union([z.array(z.string()), z.undefined()])
-			.optional()
-			.nullable(),
-		excludeTrial: z.union([z.boolean(), z.undefined()]).optional().nullable(),
-		createdAt: z.number(),
-	});
+export const createReferralProgramResponseSchema = z.object({
+	id: z.string(),
+	rewardId: z.string(),
+	redeemOn: createReferralProgramRedeemOnResponseSchema,
+	receivedBy: createReferralProgramReceivedByResponseSchema,
+	maxRedemptions: z.union([z.number(), z.undefined()]).optional().nullable(),
+	planIds: z
+		.union([z.array(z.string()), z.undefined()])
+		.optional()
+		.nullable(),
+	excludeTrial: z.union([z.boolean(), z.undefined()]).optional().nullable(),
+	createdAt: z.number(),
+});

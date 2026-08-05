@@ -1,16 +1,16 @@
 lockVersion: 2.0.0
 id: 7b300647-cd76-49e9-bf77-7d1bf5446d66
 management:
-  docChecksum: 2bfa7ecf84fbbe07e54d6a911366abad
+  docChecksum: e82e3e0ba5d3689cbd3a58a0c953908e
   docVersion: 2.3.0
   speakeasyVersion: 1.762.0
   generationVersion: 2.882.0
   releaseVersion: 0.10.18
   configChecksum: a05ee9fa7bf0a40d4f216cac1903f122
 persistentEdits:
-  generation_id: 1e0d9ca1-5116-4eae-97ef-6ff03066f3d3
-  pristine_commit_hash: bb05e8d2d6a6cd1e0cbc5243817b3398d8ac85bd
-  pristine_tree_hash: 597105eb05bccc1a172a0b5bc8fcf69a6caeaa5f
+  generation_id: 196edd37-f48d-4dc4-87e8-9a9042319c49
+  pristine_commit_hash: 6e933d291a5a78ff41fcddc4867d1769a08063ac
+  pristine_tree_hash: 06977dd584f2bcc17e0a81c3f3ce3eda39389d97
 features:
   typescript:
     additionalDependencies: 0.1.0
@@ -2108,10 +2108,6 @@ trackedFiles:
     id: 8d8c5e4e1502
     last_write_checksum: sha1:94a43a0d34bb024010eb069d5d2e71b4d5f87d39
     pristine_git_object: 4971dcd50e07c557f14ab1fe6c87ff430903d288
-  docs/models/create-referral-program-create-referral-program-response.md:
-    id: 83949cbbeca0
-    last_write_checksum: sha1:92d62c72fbc9c94c7079fdacaf00bf22b6eb6b77
-    pristine_git_object: c1adb980bf8c959250534c1402f70be3fb0b991d
   docs/models/create-referral-program-globals.md:
     id: 91836e9fd12e
     last_write_checksum: sha1:ac15cac3a83e4eef641763721c6c4fedf6036410
@@ -2136,6 +2132,10 @@ trackedFiles:
     id: 17f5d16ff341
     last_write_checksum: sha1:fddddf6d97f1f2094027fdbc0585289fb710548a
     pristine_git_object: ee373612f4a73d2ba03b83c4bb013cc3bcdfe448
+  docs/models/create-referral-program-response.md:
+    id: 1c1bf25b22bd
+    last_write_checksum: sha1:5062e5a4dcf9a65030d7de2d8fe594ebfc944f81
+    pristine_git_object: 3f079ba431ae1766695b270db7ac55e218c8722c
   docs/models/create-reward-coupon-promo-code-response.md:
     id: b7ba6508082b
     last_write_checksum: sha1:469a1f8e08f5873ee9046bb6234708fcb830d841
@@ -3644,10 +3644,6 @@ trackedFiles:
     id: 0174dc71165b
     last_write_checksum: sha1:e4976f2efe8438bc68e19148880a190c2c6dc5d0
     pristine_git_object: 6a3d1ebfd921825adbb92869ac346415d96fa42a
-  docs/models/get-referral-program-create-referral-program-response.md:
-    id: ef8541daacfe
-    last_write_checksum: sha1:3facd5ba702b209ec9426921ac874d22490700c5
-    pristine_git_object: eec1c489cd7218baaec73fa0fa0b3c353d1d0e2e
   docs/models/get-referral-program-globals.md:
     id: 3175dc05d474
     last_write_checksum: sha1:491d7d6b38d69ed3f6c3da9e832d54d457828c94
@@ -3664,6 +3660,10 @@ trackedFiles:
     id: 5ed4164c1004
     last_write_checksum: sha1:83d74169553a2f5e2c0d7229a223d611102470d8
     pristine_git_object: 304f8959078c542f33c77c0ab4a9ce13a555c488
+  docs/models/get-referral-program-response.md:
+    id: 8c7493f63994
+    last_write_checksum: sha1:6d8ea5326583836f0e82eb60106262f78ae5bf81
+    pristine_git_object: db9643f760ff330bdc47cd88a2e4c5f440749512
   docs/models/get-revenue-cat-keys-app.md:
     id: 8ff879eb81c5
     last_write_checksum: sha1:23379e8e1717339e91ff62f63c9a5115c03a8645
@@ -8208,10 +8208,6 @@ trackedFiles:
     id: 0155afadb2c1
     last_write_checksum: sha1:68a00335b01430dab98c3522ea4274aa7792c3b0
     pristine_git_object: 1b6612aa54628316ce6b04864340a039b95aa992
-  docs/models/update-referral-program-create-referral-program-response.md:
-    id: 154abf7cb28e
-    last_write_checksum: sha1:77bab766cd2e4a2600d2a6873228167ea5e7dbe7
-    pristine_git_object: b42aa3afe59d1e3d7224acec5f5abcb395a4cba9
   docs/models/update-referral-program-globals.md:
     id: 80eadb95e70e
     last_write_checksum: sha1:702c60940a983b264fd401a6d1a6b494436113d1
@@ -8236,6 +8232,10 @@ trackedFiles:
     id: e249b7ebfccc
     last_write_checksum: sha1:4cffbe3f3bc50a4fd76228be0a0ae94adbabb311
     pristine_git_object: 801dc97795e6c42ac7ff29de0f4e89d5d9957e6b
+  docs/models/update-referral-program-response.md:
+    id: 5456692df2d2
+    last_write_checksum: sha1:7f62317a5af7f67616a28fbe469ce9665466f2e7
+    pristine_git_object: 7093e05e0afcde63f30dab5a70c2333d08a9b38f
   docs/models/update-reward-coupon-promo-code-request.md:
     id: c868c2a4ee0b
     last_write_checksum: sha1:84f1c8ab6766058101404e04311abcf0a736e192
@@ -8570,8 +8570,8 @@ trackedFiles:
     pristine_git_object: a699333506973bbe1cf50a094e48ed30d5a52d9a
   docs/sdks/referrals/README.md:
     id: 50b71f597f20
-    last_write_checksum: sha1:af7750efb6f3009ee4a00ccc7399b38ea8da79d5
-    pristine_git_object: 4fc340017b17a545dfde79299ae952dfd6e1c5ad
+    last_write_checksum: sha1:105f299d6f8a1618594fe00ef939a8ed082e2ece
+    pristine_git_object: e9de606d3dbefa9ae02c5a76969e963dc77212ac
   docs/sdks/rewards/README.md:
     id: 48d8e259ad8b
     last_write_checksum: sha1:1cabb6a4dfbc02d481ce261ab0d5506970e433fa
@@ -8814,16 +8814,16 @@ trackedFiles:
     pristine_git_object: 710683af6857a80681203872e42d2baf92fb1c1a
   src/funcs/referrals-create-program.ts:
     id: 9a53c4773316
-    last_write_checksum: sha1:94c3f200c0c0a121d990b167fda25b3982e475c4
-    pristine_git_object: 9e1cf0b90563f7de39bfed809b9f47b792c79e71
+    last_write_checksum: sha1:fb1ad1392eaeac0092dc350200ae4b67e9f3a8c0
+    pristine_git_object: a918bd8c1c7e8f6060c6df75e323f23b42130383
   src/funcs/referrals-delete-program.ts:
     id: 1735791f868e
     last_write_checksum: sha1:c07504a99a2d36b945796e8f74a1111aceb7579f
     pristine_git_object: 90489c860f1cccb697ebbb72277efd3e8dab408c
   src/funcs/referrals-get-program.ts:
     id: 5a039a72a1f9
-    last_write_checksum: sha1:ec86b96122af5149ecbebf7231229380492fbccd
-    pristine_git_object: 582dc0a2706a6abf723764e7f4f3f62a8953b6c1
+    last_write_checksum: sha1:e412cef8c913cb281db9786d811e786e33b4126b
+    pristine_git_object: bdf455d1ce17510f445bbc87b39b443f7bbb513a
   src/funcs/referrals-list-programs.ts:
     id: cddc6baae0be
     last_write_checksum: sha1:caeeb2e9046b0560dc4daa7aef88543f6dcc418d
@@ -8834,8 +8834,8 @@ trackedFiles:
     pristine_git_object: 685aace574907f4e0ac11910c92bb8ca4a4f4832
   src/funcs/referrals-update-program.ts:
     id: 3113e96b3744
-    last_write_checksum: sha1:836b9d0088000b444cdc3313a93b67ed011000dc
-    pristine_git_object: c63e7c98820cf4f70f27bef0bb82eb1f2b91ee70
+    last_write_checksum: sha1:9ce342290a4dcd4183c4358351fcd4dee03187e9
+    pristine_git_object: cebce5d524f91b40a0acce31e5d30ee94a0c5b75
   src/funcs/rewards-create.ts:
     id: 7c8fabcf115a
     last_write_checksum: sha1:69d1c8c7202b815d910bbcab39463f504065788f
@@ -9006,8 +9006,8 @@ trackedFiles:
     pristine_git_object: d979198ac227f8e5731e5ca5e2e34b55d88da348
   src/models/create-referral-program-op.ts:
     id: 1512a3184698
-    last_write_checksum: sha1:09848baf114e65b89655ae643117b415fd4aef7b
-    pristine_git_object: bd189b3a1287f55ab34070b6ad908fa28db1db53
+    last_write_checksum: sha1:8e3fe10136900ffe7f82c3932d783366105be74e
+    pristine_git_object: b6415fb13c0a3c2efb544d994656f5efc1c5e06c
   src/models/create-reward-op.ts:
     id: 5dd3e30a365b
     last_write_checksum: sha1:ada7b88be5f46cd740c5de792905134cb4d3ad31
@@ -9082,8 +9082,8 @@ trackedFiles:
     pristine_git_object: 9ee78c8db6c35b2f92af4dce4e8a1190984abd78
   src/models/get-referral-program-op.ts:
     id: 3e1fdfc7bfee
-    last_write_checksum: sha1:f68c0bb4f8dbe39d643a3678c7d63727421b0337
-    pristine_git_object: 2fbb69d42304bfc7de8461008c0da0452e4581e9
+    last_write_checksum: sha1:5be09e3902afd4b123721139573d9baf66c0cf4f
+    pristine_git_object: a95307e0f9b7e6fb4f0de7408e52dcc53b64a192
   src/models/get-revenue-cat-keys-op.ts:
     id: 2d8e9e87f071
     last_write_checksum: sha1:e1c1f2eaf75a3db81b4800c63cbe2ea6e5b1fa56
@@ -9250,8 +9250,8 @@ trackedFiles:
     pristine_git_object: ae5e0007589dfac9518f51e30737585bfcb468b0
   src/models/update-referral-program-op.ts:
     id: ee9167788dde
-    last_write_checksum: sha1:06a21f3cc9f40758e922dd5a22a6d5d1252aefe1
-    pristine_git_object: cb3b5c891fe0f0314f60e63b09f71983b7112737
+    last_write_checksum: sha1:656da58c44ce8522ebf1d7b826341dede49f1350
+    pristine_git_object: fd32bc0822e1313ee814cad2ffffa75c1ff5a838
   src/models/update-reward-op.ts:
     id: 0de0da3aa655
     last_write_checksum: sha1:d68c8f52354053802a59eca086c9a98368bc7a44
@@ -9306,8 +9306,8 @@ trackedFiles:
     pristine_git_object: 43d8c9737a11477ceff5f0951fb3e5d60670d55f
   src/sdk/referrals.ts:
     id: bf164167845c
-    last_write_checksum: sha1:68dccbdc557f56d3fd5bcf09fdcc1adc5c1a807f
-    pristine_git_object: 16c4653875969b6eaeaa0aaa3853a8eefd3b8691
+    last_write_checksum: sha1:08f3b953a1e8ad8905c45f54dff180b95ba3f2a9
+    pristine_git_object: beab7a8a7e6ba0633f599bb610e25b1223df8383
   src/sdk/rewards.ts:
     id: "727538943e37"
     last_write_checksum: sha1:4597e122b352400429730f483983109f89010829

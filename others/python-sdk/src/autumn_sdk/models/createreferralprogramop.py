@@ -139,7 +139,7 @@ CreateReferralProgramReceivedByResponse = Union[
 r"""Who receives the reward: the referrer only, or both parties."""
 
 
-class CreateReferralProgramCreateReferralProgramResponseTypedDict(TypedDict):
+class CreateReferralProgramResponseTypedDict(TypedDict):
     r"""OK"""
 
     id: str
@@ -160,7 +160,7 @@ class CreateReferralProgramCreateReferralProgramResponseTypedDict(TypedDict):
     r"""Whether checkouts that start a trial should skip granting the reward."""
 
 
-class CreateReferralProgramCreateReferralProgramResponse(BaseModel):
+class CreateReferralProgramResponse(BaseModel):
     r"""OK"""
 
     id: str

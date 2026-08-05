@@ -48,7 +48,7 @@ export class Referrals extends ClientSDK {
   async createProgram(
     request: models.CreateReferralProgramParams,
     options?: RequestOptions,
-  ): Promise<models.CreateReferralProgramCreateReferralProgramResponse> {
+  ): Promise<models.CreateReferralProgramResponse> {
     return unwrapAsync(referralsCreateProgram(
       this,
       request,
@@ -76,7 +76,7 @@ export class Referrals extends ClientSDK {
   async getProgram(
     request: models.GetReferralProgramParams,
     options?: RequestOptions,
-  ): Promise<models.GetReferralProgramCreateReferralProgramResponse> {
+  ): Promise<models.GetReferralProgramResponse> {
     return unwrapAsync(referralsGetProgram(
       this,
       request,
@@ -90,7 +90,7 @@ export class Referrals extends ClientSDK {
   async updateProgram(
     request: models.UpdateReferralProgramParams,
     options?: RequestOptions,
-  ): Promise<models.UpdateReferralProgramCreateReferralProgramResponse> {
+  ): Promise<models.UpdateReferralProgramResponse> {
     return unwrapAsync(referralsUpdateProgram(
       this,
       request,

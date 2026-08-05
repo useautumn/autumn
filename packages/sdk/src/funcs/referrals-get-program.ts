@@ -35,7 +35,7 @@ export function referralsGetProgram(
   options?: RequestOptions,
 ): APIPromise<
   Result<
-    models.GetReferralProgramCreateReferralProgramResponse,
+    models.GetReferralProgramResponse,
     | AutumnError
     | ResponseValidationError
     | ConnectionError
@@ -60,7 +60,7 @@ async function $do(
 ): Promise<
   [
     Result<
-      models.GetReferralProgramCreateReferralProgramResponse,
+      models.GetReferralProgramResponse,
       | AutumnError
       | ResponseValidationError
       | ConnectionError
@@ -143,7 +143,7 @@ async function $do(
   const response = doResult.value;
 
   const [result] = await M.match<
-    models.GetReferralProgramCreateReferralProgramResponse,
+    models.GetReferralProgramResponse,
     | AutumnError
     | ResponseValidationError
     | ConnectionError
@@ -153,10 +153,7 @@ async function $do(
     | UnexpectedClientError
     | SDKValidationError
   >(
-    M.json(
-      200,
-      models.GetReferralProgramCreateReferralProgramResponse$inboundSchema,
-    ),
+    M.json(200, models.GetReferralProgramResponse$inboundSchema),
     M.fail("4XX"),
     M.fail("5XX"),
   )(response, req);
