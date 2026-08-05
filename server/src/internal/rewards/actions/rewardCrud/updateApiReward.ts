@@ -1,5 +1,6 @@
 import {
 	ErrCode,
+	type CreateRewardParams,
 	type Feature,
 	FeatureNotFoundError,
 	FeatureType,
@@ -26,7 +27,13 @@ import { getRewardPrices } from "../getRewardPrices.js";
 import { validateRewardUniqueness } from "../validateRewardUniqueness.js";
 import { requireApiReward, toApiRewardResponse } from "./apiRewardUtils.js";
 
-type CouponUpdate = NonNullable<UpdateRewardParams["coupon"]>;
+type CouponUpdate = NonNullable<UpdateRewardParams["coupon"]> &
+	Partial<
+		Pick<
+			NonNullable<CreateRewardParams["coupon"]>,
+			"type" | "value" | "duration"
+		>
+	>;
 type FeatureGrantUpdate = NonNullable<UpdateRewardParams["feature_grant"]>;
 
 /** Entitlements here are reward-entitlement inputs, not full Entitlement rows */
@@ -46,6 +53,7 @@ const buildCouponUpdate = async ({
 	const update: RewardUpdate = {};
 
 	if (coupon.name !== undefined) update.name = coupon.name;
+	if (coupon.type !== undefined) update.type = coupon.type;
 
 	if (coupon.promo_codes !== undefined) {
 		update.promo_codes = normalizePromoCodes(
@@ -59,17 +67,28 @@ const buildCouponUpdate = async ({
 		);
 	}
 
-	// A null plan_ids means "apply to every plan", so it clears the price list
-	if (coupon.plan_ids !== undefined) {
-		update.discount_config = {
-			...reward.discount_config!,
-			apply_to_all: coupon.plan_ids === null,
-			price_ids:
-				coupon.plan_ids === null
-					? []
-					: await planIdsToPriceIds({ ctx, planIds: coupon.plan_ids }),
-		};
+	const discountConfig = { ...reward.discount_config! };
+	let discountConfigChanged = false;
+	if (coupon.value !== undefined) {
+		discountConfig.discount_value = coupon.value;
+		discountConfigChanged = true;
 	}
+	if (coupon.duration !== undefined) {
+		discountConfig.duration_type = coupon.duration.type;
+		discountConfig.duration_value = coupon.duration.length ?? 0;
+		discountConfigChanged = true;
+	}
+
+	if (coupon.plan_ids !== undefined) {
+		discountConfig.apply_to_all = coupon.plan_ids === null;
+		discountConfig.price_ids =
+			coupon.plan_ids === null
+				? []
+				: await planIdsToPriceIds({ ctx, planIds: coupon.plan_ids });
+		discountConfig.product_ids = coupon.plan_ids ?? undefined;
+		discountConfigChanged = true;
+	}
+	if (discountConfigChanged) update.discount_config = discountConfig;
 
 	return update;
 };

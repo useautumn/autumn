@@ -8,17 +8,11 @@ import {
 	type ApiPlanV1,
 	BillingInterval,
 	type CreatePlanParamsV2Input,
-	FeatureUsageType,
 	ResetInterval,
 } from "@autumn/shared";
 import chalk from "chalk";
 import createJiti from "jiti";
 import { AutumnRpcCli } from "../../../../../server/src/external/autumn/autumnRpcCli.js";
-import { FeatureService } from "../../../../../server/src/internal/features/FeatureService.js";
-import {
-	constructBooleanFeature,
-	constructMeteredFeature,
-} from "../../../../../server/src/internal/features/utils/constructFeatureUtils.js";
 import {
 	createCleanAtmnIntegrationContext,
 	prepareAtmnIntegrationWorkspace,
@@ -65,27 +59,21 @@ test(`${chalk.yellowBright("atmn pull variants: method exports, boolean items, c
 		version: ApiVersion.V2_1,
 	});
 
-	await FeatureService.insert({
-		db: ctx.db,
-		logger: console,
-		data: [
-			constructBooleanFeature({
-				env: ctx.env,
-				featureId: "engagement_tracking",
-				orgId: ctx.org.id,
-			}),
-			constructBooleanFeature({
-				env: ctx.env,
-				featureId: "inbound_routing",
-				orgId: ctx.org.id,
-			}),
-			constructMeteredFeature({
-				env: ctx.env,
-				featureId: "automation_runs",
-				orgId: ctx.org.id,
-				usageType: FeatureUsageType.Single,
-			}),
-		],
+	await rpc.post("/features.create", {
+		feature_id: "engagement_tracking",
+		name: "Engagement tracking",
+		type: "boolean",
+	});
+	await rpc.post("/features.create", {
+		feature_id: "inbound_routing",
+		name: "Inbound routing",
+		type: "boolean",
+	});
+	await rpc.post("/features.create", {
+		feature_id: "automation_runs",
+		name: "Automation runs",
+		type: "metered",
+		consumable: true,
 	});
 
 	await rpc.plans.create<ApiPlanV1, CreatePlanParamsV2Input>({
@@ -205,21 +193,15 @@ test(`${chalk.yellowBright("atmn pull variants: variable names handle collisions
 		version: ApiVersion.V2_1,
 	});
 
-	await FeatureService.insert({
-		db: ctx.db,
-		logger: console,
-		data: [
-			constructBooleanFeature({
-				env: ctx.env,
-				featureId: "pro_annual",
-				orgId: ctx.org.id,
-			}),
-			constructBooleanFeature({
-				env: ctx.env,
-				featureId: "2fa",
-				orgId: ctx.org.id,
-			}),
-		],
+	await rpc.post("/features.create", {
+		feature_id: "pro_annual",
+		name: "Pro annual",
+		type: "boolean",
+	});
+	await rpc.post("/features.create", {
+		feature_id: "2fa",
+		name: "2FA",
+		type: "boolean",
 	});
 
 	await rpc.plans.create<ApiPlanV1, CreatePlanParamsV2Input>({
@@ -250,17 +232,11 @@ test(`${chalk.yellowBright("atmn pull --all-versions: emits versioned base and v
 		version: ApiVersion.V2_1,
 	});
 
-	await FeatureService.insert({
-		db: ctx.db,
-		logger: console,
-		data: [
-			constructMeteredFeature({
-				env: ctx.env,
-				featureId: "av_messages",
-				orgId: ctx.org.id,
-				usageType: FeatureUsageType.Single,
-			}),
-		],
+	await rpc.post("/features.create", {
+		feature_id: "av_messages",
+		name: "AV messages",
+		type: "metered",
+		consumable: true,
 	});
 
 	await rpc.plans.create<ApiPlanV1, CreatePlanParamsV2Input>({
@@ -321,7 +297,7 @@ test(`${chalk.yellowBright("atmn pull --all-versions: emits versioned base and v
 	expect(baseV1.variants).toBeUndefined();
 	expect(baseV2.version).toBe(2);
 	expect(baseV2.variants?.map((variant) => variant.version)).toEqual([1, 2]);
-	expect(baseV2.variants?.every((variant) => variant.__atmnType === "variant")).toBe(
-		true,
-	);
+	expect(
+		baseV2.variants?.every((variant) => variant.__atmnType === "variant"),
+	).toBe(true);
 });

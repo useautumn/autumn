@@ -1,5 +1,6 @@
 import { existsSync, writeFileSync } from "node:fs";
 import prettier from "prettier";
+import type { ReferralProgram, Reward } from "../../compose/index.js";
 import type { Feature } from "../../compose/models/index.js";
 import type { Plan } from "../../compose/models/variantModels.js";
 import { resolveConfigPath } from "../../lib/env/index.js";
@@ -9,9 +10,14 @@ import {
 	updateConfigInPlace,
 } from "../../lib/transforms/inPlaceUpdate/index.js";
 
-export interface WriteConfigOptions {
+export interface WriteConfigParams {
+	features: Feature[];
+	plans: Plan[];
+	cwd?: string;
 	/** Force overwrite even if config exists (default: false, will use in-place update) */
 	forceOverwrite?: boolean;
+	rewards?: Reward[];
+	referralPrograms?: ReferralProgram[];
 }
 
 export interface WriteConfigResult {
@@ -22,41 +28,41 @@ export interface WriteConfigResult {
 	updateResult?: UpdateResult;
 }
 
-/**
- * Write autumn.config.ts file
- *
- * By default, if the config file already exists, it will be updated in-place
- * to preserve comments, order, and custom formatting.
- *
- * Use forceOverwrite: true to completely regenerate the file.
- */
-export async function writeConfig(
-	features: Feature[],
-	plans: Plan[],
-	cwd: string = process.cwd(),
-	options: WriteConfigOptions = {},
-): Promise<WriteConfigResult> {
+/** Writes the config, updating in place by default to preserve custom source. */
+export async function writeConfig({
+	features,
+	plans,
+	cwd = process.cwd(),
+	forceOverwrite = false,
+	rewards,
+	referralPrograms,
+}: WriteConfigParams): Promise<WriteConfigResult> {
 	const configPath = resolveConfigPath(cwd);
 	const configExists = existsSync(configPath);
-	const { forceOverwrite = false } = options;
 
 	// Use in-place update if config exists and not forcing overwrite
 	if (configExists && !forceOverwrite) {
-		try {
-			const updateResult = await updateConfigInPlace(features, plans, cwd);
-			return {
-				configPath,
-				inPlace: true,
-				updateResult,
-			};
-		} catch (error) {
-			// If in-place update fails, fall back to full regeneration
-			console.warn("In-place update failed, regenerating config:", error);
-		}
+		const updateResult = await updateConfigInPlace({
+			features,
+			plans,
+			cwd,
+			rewards,
+			referralPrograms,
+		});
+		return {
+			configPath,
+			inPlace: true,
+			updateResult,
+		};
 	}
 
 	// Generate new config file
-	const code = buildConfigFile(features, plans);
+	const code = buildConfigFile(
+		features,
+		plans,
+		rewards ?? [],
+		referralPrograms ?? [],
+	);
 
 	// Format with prettier
 	let formattedCode: string;
@@ -81,14 +87,12 @@ export async function writeConfig(
 	};
 }
 
-/**
- * Legacy function signature for backwards compatibility
- */
+/** Legacy positional signature. */
 export async function writeConfigLegacy(
 	features: Feature[],
 	plans: Plan[],
 	cwd: string = process.cwd(),
 ): Promise<string> {
-	const result = await writeConfig(features, plans, cwd);
+	const result = await writeConfig({ features, plans, cwd });
 	return result.configPath;
 }

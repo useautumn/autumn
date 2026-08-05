@@ -5,17 +5,25 @@
  */
 
 import { existsSync, writeFileSync } from "node:fs";
+import type { ReferralProgram, Reward } from "../../../compose/index.js";
 import type { Feature } from "../../../compose/models/index.js";
 import type { Plan } from "../../../compose/models/variantModels.js";
+import { DEFAULT_REWARD_EXPORT_ERROR } from "../../config/loadConfig.js";
 import { resolveConfigPath } from "../../env/index.js";
 import { buildFeatureCode } from "../sdkToCode/feature.js";
 import {
+	claimVarName,
+	featureIdToVarName,
+	idToVarName,
 	planIdToVarName,
-	resolveVarNames,
 	variantIdToVarName,
 } from "../sdkToCode/helpers.js";
 import { buildImports } from "../sdkToCode/imports.js";
 import { buildPlanCode } from "../sdkToCode/plan.js";
+import {
+	buildReferralProgramCode,
+	buildRewardCode,
+} from "../sdkToCode/reward.js";
 import { buildVariantCode } from "../sdkToCode/variant.js";
 import { parseExistingConfig } from "./parseConfig.js";
 
@@ -91,26 +99,29 @@ function generatePlanWithVariantsCode({
 	return [basePlanCode, ...variantCodes].join("\n\n");
 }
 
-const ensureBillingControlsImport = (importText: string) => {
-	if (/\bbillingControls\b/.test(importText)) return importText;
-	return importText.replace(/\{/, "{ billingControls,");
-};
+const ensureAtmnImports = (importText: string, imports: string[]) =>
+	imports.reduce(
+		(text, name) =>
+			new RegExp(`\\b${name}\\b`).test(text)
+				? text
+				: text.replace(/\{/, `{ ${name},`),
+		importText,
+	);
 
-/**
- * Update autumn.config.ts in place
- *
- * Strategy:
- * 1. Parse existing config into blocks (imports, comments, exports)
- * 2. For each entity in API data:
- *    - If exists locally: replace with new code (preserving var name)
- *    - If new: append to the appropriate section
- * 3. Entities that exist locally but not in API are DELETED
- */
-export async function updateConfigInPlace(
-	features: Feature[],
-	plans: Plan[],
-	cwd: string = process.cwd(),
-): Promise<UpdateResult> {
+/** Updates managed entities in place while preserving custom source. */
+export async function updateConfigInPlace({
+	features,
+	plans,
+	cwd = process.cwd(),
+	rewards,
+	referralPrograms,
+}: {
+	features: Feature[];
+	plans: Plan[];
+	cwd?: string;
+	rewards?: Reward[];
+	referralPrograms?: ReferralProgram[];
+}): Promise<UpdateResult> {
 	const configPath = resolveConfigPath(cwd);
 
 	if (!existsSync(configPath)) {
@@ -118,7 +129,15 @@ export async function updateConfigInPlace(
 	}
 
 	const parsed = parseExistingConfig(configPath);
-	const includeBillingControls = plans.some((plan) => plan.billingControls);
+	const hasDefaultResources =
+		/\bexport\s+default\b/.test(parsed.source) &&
+		/\b(?:rewards|referralPrograms)\b/.test(parsed.source);
+	if (hasDefaultResources) throw new Error(DEFAULT_REWARD_EXPORT_ERROR);
+	const requiredImports = [
+		...(plans.some((plan) => plan.billingControls) ? ["billingControls"] : []),
+		...(rewards?.length ? ["reward"] : []),
+		...(referralPrograms?.length ? ["referralProgram"] : []),
+	];
 	const result: UpdateResult = {
 		featuresUpdated: 0,
 		featuresAdded: 0,
@@ -131,6 +150,12 @@ export async function updateConfigInPlace(
 	// Build lookup maps
 	const apiFeatureMap = new Map(features.map((f) => [f.id, f]));
 	const apiPlanMap = new Map(plans.map((p) => [p.id, p]));
+	const apiRewardMap = new Map(
+		(rewards ?? []).map((reward) => [reward.id, reward]),
+	);
+	const apiReferralProgramMap = new Map(
+		(referralPrograms ?? []).map((program) => [program.id, program]),
+	);
 	const apiVariantMap = new Map(
 		plans.flatMap((plan) =>
 			(plan.variants ?? []).map((variant) => [variant.id, variant] as const),
@@ -152,7 +177,11 @@ export async function updateConfigInPlace(
 	// For new features/plans (not yet in the file), resolve var names with
 	// collision detection. Seed "used names" with all existing var names so
 	// newly generated names never clash with anything already in the file.
-	const existingVarNames = new Set(parsed.entities.map((e) => e.varName));
+	const existingVarNames = new Set(
+		[...parsed.source.matchAll(/export\s+const\s+([\w$]+)\s*=/g)].flatMap(
+			([, varName]) => (varName ? [varName] : []),
+		),
+	);
 
 	const newFeatureIds = features
 		.filter((f) => !featureVarMap.has(f.id))
@@ -161,14 +190,12 @@ export async function updateConfigInPlace(
 	// Resolve new feature var names first (they take the clean name on collision)
 	const newFeatureVarMap = new Map<string, string>();
 	for (const id of newFeatureIds) {
-		const { featureVarMap: resolved } = resolveVarNames([id], []);
-		let varName = resolved.get(id)!;
-		if (existingVarNames.has(varName)) {
-			// Shouldn't normally happen (IDs are unique), but guard anyway
-			varName = `${varName}Feature`;
-		}
+		const varName = claimVarName({
+			candidate: featureIdToVarName(id),
+			suffix: "Feature",
+			usedNames: existingVarNames,
+		});
 		newFeatureVarMap.set(id, varName);
-		existingVarNames.add(varName);
 		// Also add to featureVarMap so plan items can reference these new features
 		featureVarMap.set(id, varName);
 	}
@@ -184,12 +211,12 @@ export async function updateConfigInPlace(
 
 	const newPlanVarMap = new Map<string, string>();
 	for (const id of newPlanIds) {
-		let varName = planIdToVarName(id);
-		if (existingVarNames.has(varName)) {
-			varName = `${varName}Plan`;
-		}
+		const varName = claimVarName({
+			candidate: planIdToVarName(id),
+			suffix: "Plan",
+			usedNames: existingVarNames,
+		});
 		newPlanVarMap.set(id, varName);
-		existingVarNames.add(varName);
 	}
 
 	const variantVarMap = new Map<string, string>();
@@ -199,17 +226,55 @@ export async function updateConfigInPlace(
 			continue;
 		}
 
-		let varName = variantIdToVarName(id);
-		if (existingVarNames.has(varName)) {
-			varName = `${varName}Variant`;
-		}
+		const varName = claimVarName({
+			candidate: variantIdToVarName(id),
+			suffix: "Variant",
+			usedNames: existingVarNames,
+		});
 		variantVarMap.set(id, varName);
-		existingVarNames.add(varName);
+	}
+
+	const newRewardVarMap = new Map<string, string>();
+	for (const { id } of rewards ?? []) {
+		if (
+			parsed.entities.some(
+				(entity) => entity.type === "reward" && entity.id === id,
+			)
+		)
+			continue;
+		newRewardVarMap.set(
+			id,
+			claimVarName({
+				candidate: idToVarName(`reward-${id}`),
+				suffix: "Reward",
+				usedNames: existingVarNames,
+			}),
+		);
+	}
+
+	const newReferralProgramVarMap = new Map<string, string>();
+	for (const { id } of referralPrograms ?? []) {
+		if (
+			parsed.entities.some(
+				(entity) => entity.type === "referral_program" && entity.id === id,
+			)
+		)
+			continue;
+		newReferralProgramVarMap.set(
+			id,
+			claimVarName({
+				candidate: idToVarName(`referral-program-${id}`),
+				suffix: "ReferralProgram",
+				usedNames: existingVarNames,
+			}),
+		);
 	}
 
 	// Track which API entities have been matched
 	const matchedFeatureIds = new Set<string>();
 	const matchedPlanIds = new Set<string>();
+	const matchedRewardIds = new Set<string>();
+	const matchedReferralProgramIds = new Set<string>();
 
 	// Build new file content block by block
 	const outputBlocks: string[] = [];
@@ -246,11 +311,9 @@ export async function updateConfigInPlace(
 			// Check if this is the atmn import
 			if (/from\s+['"]atmn['"]/.test(importText)) {
 				hasAtmnImport = true;
-				if (includeBillingControls) {
-					outputBlocks.push(ensureBillingControlsImport(importText));
-					lastImportBlockIndex = outputBlocks.length - 1;
-					continue;
-				}
+				outputBlocks.push(ensureAtmnImports(importText, requiredImports));
+				lastImportBlockIndex = outputBlocks.length - 1;
+				continue;
 			}
 			outputBlocks.push(importText);
 			lastImportBlockIndex = outputBlocks.length - 1;
@@ -262,7 +325,7 @@ export async function updateConfigInPlace(
 			continue;
 		}
 
-		// Handle export blocks (features/plans)
+		// Handle managed config exports
 		if (block.type === "export" && block.entity) {
 			const entity = block.entity;
 
@@ -302,6 +365,26 @@ export async function updateConfigInPlace(
 				if (!apiVariantMap.has(entity.id)) {
 					result.plansDeleted++;
 				}
+			} else if (entity.type === "reward") {
+				if (rewards === undefined) {
+					outputBlocks.push(block.lines.join("\n"));
+					continue;
+				}
+				const reward = apiRewardMap.get(entity.id);
+				if (reward) {
+					outputBlocks.push(buildRewardCode(reward, entity.varName));
+					matchedRewardIds.add(entity.id);
+				}
+			} else if (entity.type === "referral_program") {
+				if (referralPrograms === undefined) {
+					outputBlocks.push(block.lines.join("\n"));
+					continue;
+				}
+				const program = apiReferralProgramMap.get(entity.id);
+				if (program) {
+					outputBlocks.push(buildReferralProgramCode(program, entity.varName));
+					matchedReferralProgramIds.add(entity.id);
+				}
 			}
 			continue;
 		}
@@ -312,7 +395,11 @@ export async function updateConfigInPlace(
 
 	// Add atmn import if missing
 	if (!hasAtmnImport) {
-		const atmnImport = buildImports({ includeBillingControls });
+		const atmnImport = buildImports({
+			includeBillingControls: requiredImports.includes("billingControls"),
+			includeRewards: Boolean(rewards?.length),
+			includeReferralPrograms: Boolean(referralPrograms?.length),
+		});
 		if (lastImportBlockIndex >= 0) {
 			// Insert after the last import
 			outputBlocks.splice(lastImportBlockIndex + 1, 0, atmnImport);
@@ -425,6 +512,35 @@ export async function updateConfigInPlace(
 			outputBlocks.push(`\n// Plans\n${newPlanCode}`);
 		}
 		result.plansAdded = newPlans.length;
+	}
+
+	const newRewards = (rewards ?? []).filter(
+		({ id }) => !matchedRewardIds.has(id),
+	);
+	if (newRewards.length > 0) {
+		outputBlocks.push(
+			`\n// Rewards\n${newRewards
+				.map((reward) =>
+					buildRewardCode(reward, newRewardVarMap.get(reward.id)),
+				)
+				.join("\n\n")}`,
+		);
+	}
+
+	const newReferralPrograms = (referralPrograms ?? []).filter(
+		({ id }) => !matchedReferralProgramIds.has(id),
+	);
+	if (newReferralPrograms.length > 0) {
+		outputBlocks.push(
+			`\n// Referral programs\n${newReferralPrograms
+				.map((program) =>
+					buildReferralProgramCode(
+						program,
+						newReferralProgramVarMap.get(program.id),
+					),
+				)
+				.join("\n\n")}`,
+		);
 	}
 
 	// Join blocks with proper spacing

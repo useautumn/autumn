@@ -9,32 +9,28 @@
 function idToTokens(id: string): string[] {
 	return id
 		.split(/[^a-zA-Z0-9]+/)
-		.map((part) => part.trim())
+		.map(part => part.trim())
 		.filter(Boolean);
 }
-
-const lowerFirst = (value: string): string =>
-	value.charAt(0).toLowerCase() + value.slice(1);
 
 const upperFirst = (value: string): string =>
 	value.charAt(0).toUpperCase() + value.slice(1);
 
 function toCamelCase(id: string): string {
-	const tokens = idToTokens(id).map((token) => token.toLowerCase());
-	if (tokens.length === 0) return "";
-	return [
-		tokens[0]!,
-		...tokens.slice(1).map((token) => upperFirst(token)),
-	].join("");
+	const tokens = idToTokens(id).map(token => token.toLowerCase());
+	if (tokens.length === 0) return '';
+	return [tokens[0]!, ...tokens.slice(1).map(token => upperFirst(token))].join(
+		'',
+	);
 }
 
 /**
  * Convert ID to valid variable name with context-specific prefix
  * Generic version - kept for backwards compatibility
  */
-export function idToVarName(id: string, prefix = "item_"): string {
+export function idToVarName(id: string, prefix = 'item_'): string {
 	const sanitized = toCamelCase(id);
-	const normalizedPrefix = prefix.replace(/_+$/, "");
+	const normalizedPrefix = prefix.replace(/_+$/, '');
 
 	// JavaScript identifiers can't start with a number
 	if (!sanitized || /^[0-9]/.test(sanitized)) {
@@ -49,7 +45,7 @@ export function idToVarName(id: string, prefix = "item_"): string {
  * Examples: "pro-plan" → "proPlan", "123" → "plan123"
  */
 export function planIdToVarName(id: string): string {
-	return idToVarName(id, "plan");
+	return idToVarName(id, 'plan');
 }
 
 /**
@@ -57,60 +53,108 @@ export function planIdToVarName(id: string): string {
  * Examples: "api-calls" → "apiCalls", "123" → "feature123"
  */
 export function featureIdToVarName(id: string): string {
-	return idToVarName(id, "feature");
+	return idToVarName(id, 'feature');
 }
 
 export function variantIdToVarName(id: string): string {
-	return idToVarName(id, "plan");
+	return idToVarName(id, 'plan');
 }
 
-/**
- * Resolve variable names for all features and plans, disambiguating any collisions.
- *
- * When a plan and feature share the same sanitized ID (e.g. both have id "free"),
- * the plan's variable name gets a "_plan" suffix to avoid "Cannot redeclare
- * block-scoped variable" errors.
- *
- * Features are declared first in the file so they keep the clean name.
- */
+export function claimVarName({
+	candidate,
+	suffix,
+	usedNames,
+}: {
+	candidate: string;
+	suffix: string;
+	usedNames: Set<string>;
+}): string {
+	let varName = candidate;
+	let index = 1;
+	while (usedNames.has(varName)) {
+		varName = `${candidate}${suffix}${index === 1 ? '' : index}`;
+		index++;
+	}
+	usedNames.add(varName);
+	return varName;
+}
+
+const allocateVarNames = ({
+	ids,
+	candidate,
+	suffix,
+	usedNames,
+}: {
+	ids: string[];
+	candidate: (id: string) => string;
+	suffix: string;
+	usedNames: Set<string>;
+}) =>
+	new Map(
+		ids.map(id => [
+			id,
+			claimVarName({candidate: candidate(id), suffix, usedNames}),
+		]),
+	);
+
+/** Allocates unique variable names in declaration order. */
 export function resolveVarNames(
 	featureIds: string[],
 	planIds: string[],
 	variantIds: string[] = [],
+	{
+		rewardIds = [],
+		referralProgramIds = [],
+	}: {
+		rewardIds?: string[];
+		referralProgramIds?: string[];
+	} = {},
 ): {
 	featureVarMap: Map<string, string>;
 	planVarMap: Map<string, string>;
 	variantVarMap: Map<string, string>;
+	rewardVarMap: Map<string, string>;
+	referralProgramVarMap: Map<string, string>;
 } {
-	const featureVarMap = new Map<string, string>();
-	const planVarMap = new Map<string, string>();
-	const variantVarMap = new Map<string, string>();
+	const usedNames = new Set<string>();
+	const featureVarMap = allocateVarNames({
+		ids: featureIds,
+		candidate: featureIdToVarName,
+		suffix: 'Feature',
+		usedNames,
+	});
+	const planVarMap = allocateVarNames({
+		ids: planIds,
+		candidate: planIdToVarName,
+		suffix: 'Plan',
+		usedNames,
+	});
+	const variantVarMap = allocateVarNames({
+		ids: variantIds,
+		candidate: variantIdToVarName,
+		suffix: 'Variant',
+		usedNames,
+	});
+	const rewardVarMap = allocateVarNames({
+		ids: rewardIds,
+		candidate: id => idToVarName(`reward-${id}`),
+		suffix: 'Reward',
+		usedNames,
+	});
+	const referralProgramVarMap = allocateVarNames({
+		ids: referralProgramIds,
+		candidate: id => idToVarName(`referral-program-${id}`),
+		suffix: 'ReferralProgram',
+		usedNames,
+	});
 
-	for (const id of featureIds) {
-		featureVarMap.set(id, featureIdToVarName(id));
-	}
-
-	const usedNames = new Set(featureVarMap.values());
-
-	for (const id of planIds) {
-		let varName = planIdToVarName(id);
-		if (usedNames.has(varName)) {
-			varName = `${varName}Plan`;
-		}
-		planVarMap.set(id, varName);
-		usedNames.add(varName);
-	}
-
-	for (const id of variantIds) {
-		let varName = variantIdToVarName(id);
-		if (usedNames.has(varName)) {
-			varName = `${varName}Variant`;
-		}
-		variantVarMap.set(id, varName);
-		usedNames.add(varName);
-	}
-
-	return { featureVarMap, planVarMap, variantVarMap };
+	return {
+		featureVarMap,
+		planVarMap,
+		variantVarMap,
+		rewardVarMap,
+		referralProgramVarMap,
+	};
 }
 
 /**
@@ -118,23 +162,23 @@ export function resolveVarNames(
  */
 export function escapeString(str: string): string {
 	return str
-		.replace(/\\/g, "\\\\")
+		.replace(/\\/g, '\\\\')
 		.replace(/'/g, "\\'")
 		.replace(/"/g, '\\"')
-		.replace(/\n/g, "\\n")
-		.replace(/\r/g, "\\r")
-		.replace(/\t/g, "\\t");
+		.replace(/\n/g, '\\n')
+		.replace(/\r/g, '\\r')
+		.replace(/\t/g, '\\t');
 }
 
 /**
  * Indent code by given number of tabs
  */
 export function indentCode(code: string, tabs: number): string {
-	const indent = "\t".repeat(tabs);
+	const indent = '\t'.repeat(tabs);
 	return code
-		.split("\n")
-		.map((line) => (line.trim() ? indent + line : line))
-		.join("\n");
+		.split('\n')
+		.map(line => (line.trim() ? indent + line : line))
+		.join('\n');
 }
 
 const formatObjectKey = (key: string): string =>
@@ -145,29 +189,56 @@ const formatObjectKey = (key: string): string =>
  */
 export function formatValue(value: unknown): string {
 	if (value === null) {
-		return "null";
+		return 'null';
 	}
 	if (value === undefined) {
-		return "undefined";
+		return 'undefined';
 	}
-	if (typeof value === "string") {
+	if (typeof value === 'string') {
 		return `'${escapeString(value)}'`;
 	}
-	if (typeof value === "number") {
+	if (typeof value === 'number') {
 		return String(value);
 	}
-	if (typeof value === "boolean") {
+	if (typeof value === 'boolean') {
 		return String(value);
 	}
 	if (Array.isArray(value)) {
-		return `[${value.map(formatValue).join(", ")}]`;
+		return `[${value.map(formatValue).join(', ')}]`;
 	}
-	if (typeof value === "object") {
+	if (typeof value === 'object') {
 		const entries = Object.entries(value)
 			.filter(([, v]) => v !== undefined)
 			.map(([k, v]) => `${formatObjectKey(k)}: ${formatValue(v)}`)
-			.join(", ");
+			.join(', ');
 		return `{ ${entries} }`;
 	}
 	return String(value);
 }
+
+const formatMultilineValue = ({
+	value,
+	depth,
+}: {
+	value: unknown;
+	depth: number;
+}): string => {
+	if (!Array.isArray(value) && (value === null || typeof value !== 'object'))
+		return formatValue(value);
+
+	const entries = Array.isArray(value)
+		? value.map(item => [null, item] as const)
+		: Object.entries(value).filter(([, item]) => item !== undefined);
+	if (!entries.length) return Array.isArray(value) ? '[]' : '{}';
+
+	const indent = '\t'.repeat(depth);
+	const childIndent = `${indent}\t`;
+	const lines = entries.map(([key, item]) => {
+		const prefix = key === null ? '' : `${formatObjectKey(key)}: `;
+		return `${childIndent}${prefix}${formatMultilineValue({value: item, depth: depth + 1})},`;
+	});
+	return `${Array.isArray(value) ? '[' : '{'}\n${lines.join('\n')}\n${indent}${Array.isArray(value) ? ']' : '}'}`;
+};
+
+export const formatValueMultiline = (value: unknown): string =>
+	formatMultilineValue({value, depth: 0});

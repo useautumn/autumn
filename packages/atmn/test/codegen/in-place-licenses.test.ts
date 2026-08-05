@@ -28,7 +28,9 @@ test.concurrent(
 				configPath,
 				`import { plan } from 'atmn';\n\n// keep me\n${declaration("pro")}\n\n${declaration("seats")}\n`,
 			);
-			expect((await writeConfig([], plans, cwd)).inPlace).toBe(true);
+			expect((await writeConfig({ features: [], plans, cwd })).inPlace).toBe(
+				true,
+			);
 			const config = readFileSync(configPath, "utf8");
 			expect(config).toContain("// keep me");
 			expect(config).toContain("licensePlanId: 'seats'");

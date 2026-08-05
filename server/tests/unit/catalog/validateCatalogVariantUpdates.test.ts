@@ -1,5 +1,6 @@
 import { expect, test } from "bun:test";
 import type { CatalogUpdateParams, FullProduct } from "@autumn/shared";
+import { UpdateVariantParamsSchema } from "@autumn/shared/api/products/crud/variants/updateVariantParams";
 import { validateCatalogVariantVersionTargets } from "@/internal/catalog/actions/validateCatalogVariantUpdates.js";
 
 const product = ({
@@ -65,4 +66,21 @@ test("catalog variant updates must target the latest base version", () => {
 			products,
 		}),
 	).not.toThrow();
+});
+
+/** Before: inherited variants failed schema validation; after: only an exact empty diff is accepted. */
+test("variant updates accept empty inherited customization", () => {
+	const variant = {
+		variant_plan_id: "pro_annual",
+		name: "Pro Annual",
+		customize: {},
+	};
+
+	expect(UpdateVariantParamsSchema.safeParse(variant).success).toBe(true);
+	expect(
+		UpdateVariantParamsSchema.safeParse({
+			...variant,
+			customize: { unknown: true },
+		}).success,
+	).toBe(false);
 });
