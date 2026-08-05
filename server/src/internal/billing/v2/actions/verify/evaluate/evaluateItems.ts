@@ -16,6 +16,7 @@ import {
 } from "@autumn/shared";
 import { priceToStripeRecurringParams } from "@utils/productUtils/priceUtils/convertPrice/priceToStripeRecurringParams";
 import type Stripe from "stripe";
+import { stripePriceCanBill } from "@/external/stripe/prices/utils/classifyStripePriceUtils";
 import { stripePriceToAmount } from "@/external/stripe/prices/utils/convertStripePriceUtils";
 import { stripeInlinePriceMatchesStripePrice } from "@/internal/billing/v2/providers/stripe/utils/matchUtils/matchStripeInlinePrice";
 import { findPhaseItemForAutumnPrice } from "@/internal/billing/v2/providers/stripe/utils/sync/autumnToStripe/findPhaseItemForAutumnPrice";
@@ -747,9 +748,12 @@ export const evaluateItems = ({
 
 	for (let actualIndex = 0; actualIndex < actualItems.length; actualIndex++) {
 		if (claimed.has(actualIndex)) continue;
+		// A metered item Autumn doesn't model is real drift — Stripe is billing
+		// something we don't know about. Only genuinely $0 meters are inert.
 		if (
 			!strict &&
-			candidates[actualIndex]?.price?.recurring?.usage_type === "metered"
+			candidates[actualIndex]?.price?.recurring?.usage_type === "metered" &&
+			!stripePriceCanBill({ stripePrice: candidates[actualIndex]?.price })
 		) {
 			continue;
 		}
