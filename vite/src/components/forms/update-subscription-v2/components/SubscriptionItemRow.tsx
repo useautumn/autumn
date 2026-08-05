@@ -4,6 +4,7 @@ import { PrepaidQuantityControl } from "@/components/forms/shared/plan-items/Pre
 import { ItemStatusDot } from "@/components/v2/ItemStatusDot";
 import { PlanItemLabel } from "@/components/v2/PlanItemLabel";
 import { cn } from "@/lib/utils";
+import { prepaidTierStops } from "@/utils/billing/prepaidQuantityUtils";
 import type { UseUpdateSubscriptionForm } from "../hooks/useUpdateSubscriptionForm";
 
 interface SubscriptionItemRowProps {
@@ -64,17 +65,20 @@ export function SubscriptionItemRow({
 
 			{!isDeleted && showPrepaidControl && form && featureId && (
 				<PrepaidQuantityControl
-					readOnly={readOnly}
-					quantity={prepaidQuantity ?? undefined}
 					billingUnits={item.billing_units}
+					featureId={featureId}
+					quantity={prepaidQuantity ?? undefined}
+					readOnly={readOnly}
 				>
 					<form.AppField name={`prepaidOptions.${featureId}`}>
 						{(field) => (
 							<field.QuantityField
+								fullWidth
+								hideFieldInfo
 								label=""
 								min={0}
 								step={item.billing_units ?? 1}
-								hideFieldInfo
+								stops={prepaidTierStops({ item })}
 							/>
 						)}
 					</form.AppField>

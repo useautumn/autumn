@@ -15,11 +15,14 @@ const mockState = {
 	warnCalls: [] as unknown[][],
 };
 
-mock.module("@/external/redis/availabilityMonitor/redisV2Availability.js", () => ({
-	shouldUseRedisV2: () => mockState.shouldUseRedis,
-}));
+await mockModuleWithRestore(
+	"@/external/redis/availabilityMonitor/redisV2Availability.js",
+	() => ({
+		shouldUseRedisV2: () => mockState.shouldUseRedis,
+	}),
+);
 
-mock.module("@/internal/balances/check/runCheckV2.js", () => ({
+await mockModuleWithRestore("@/internal/balances/check/runCheckV2.js", () => ({
 	runCheckV2: async (args: Record<string, unknown>) => {
 		mockState.v2Calls.push(args);
 		if (mockState.v2Error) throw mockState.v2Error;
@@ -31,8 +34,11 @@ mock.module("@/internal/balances/check/runCheckV2.js", () => ({
 	},
 }));
 
+import { ApiVersionClass, LATEST_VERSION } from "@autumn/shared";
 import { RedisUnavailableError } from "@/external/redis/utils/errors.js";
 import { runCheckWithRollout } from "@/internal/balances/check/runCheckWithRollout.js";
+
+import { mockModuleWithRestore } from "../../utils/mockModuleWithRestore.js";
 
 const resetMockState = () => {
 	mockState.shouldUseRedis = true;
@@ -45,7 +51,9 @@ beforeEach(resetMockState);
 afterEach(resetMockState);
 
 const rolloutCtx = {
-	apiVersion: { value: "2025-02-01" },
+	apiVersion: new ApiVersionClass(LATEST_VERSION),
+	org: { id: "org_test" },
+	env: "sandbox",
 	features: [],
 	logger: {
 		warn: (...args: unknown[]) => mockState.warnCalls.push(args),

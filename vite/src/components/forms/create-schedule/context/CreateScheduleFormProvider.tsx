@@ -43,20 +43,20 @@ import {
 } from "../hooks/useCreateScheduleRequestBody";
 import { useSchedulePhaseHandlers } from "../hooks/useSchedulePhaseHandlers";
 
-export interface EditingPlan {
-	phaseIndex: number;
-	planIndex: number;
-}
+export type EditingPlan =
+	| { location: "phase"; phaseIndex: number; planIndex: number }
+	| { location: "unscheduled"; planIndex: number };
 
 interface CreateScheduleFormContextValue {
 	form: UseCreateScheduleForm;
 	formValues: CreateScheduleForm;
 	customerId: string | undefined;
-	entityId: string | undefined;
 	nowMs: number;
 	products: ProductV2[];
 	features: Feature[];
 	isExistingSchedule: boolean;
+	/** The customer's active plans, offered as a starting point for phase one. */
+	existingPlans: SchedulePlan[];
 	/** First phase may start in the past — only when a new Stripe subscription will be created. */
 	allowFirstPhaseBackdate: boolean;
 	/** A new Stripe subscription with recurring/usage pricing is created by the immediate phase. */
@@ -74,7 +74,16 @@ interface CreateScheduleFormContextValue {
 		phaseIndex: number;
 		planIndex: number;
 	}) => void;
+	handleAddUnscheduledPlan: () => void;
+	handleRemoveUnscheduledPlan: ({ planIndex }: { planIndex: number }) => void;
 	handleCopyFromPreviousPhase: ({ phaseIndex }: { phaseIndex: number }) => void;
+	handleCopyExistingPlans: ({
+		planIndex,
+		entityId,
+	}: {
+		planIndex: number;
+		entityId: string | null;
+	}) => void;
 
 	editingPlan: EditingPlan | null;
 	editingPlanValue: SchedulePlan | null;
@@ -87,11 +96,13 @@ interface CreateScheduleFormContextValue {
 		stripeId: string | undefined;
 		hostedInvoiceUrl: string | null | undefined;
 	}>;
+	handleCheckoutSubmit: () => Promise<{
+		paymentUrl: string | null | undefined;
+	}>;
 	preview: AttachPreviewResponse | null | undefined;
 	previewQuery: { data: AttachPreviewResponse | null | undefined };
 	isPreviewLoading: boolean;
 	error: Error | null;
-	onScopeChange?: (entityId: string | undefined) => void;
 }
 
 const CreateScheduleFormReactContext =
@@ -99,23 +110,23 @@ const CreateScheduleFormReactContext =
 
 interface CreateScheduleFormProviderProps {
 	customerId: string | undefined;
-	entityId: string | undefined;
 	nowMs?: number;
 	initialValues?: CreateScheduleForm;
+	existingPlans?: SchedulePlan[];
 	onCheckoutRedirect?: (checkoutUrl: string) => void;
 	onSuccess?: () => void;
-	onScopeChange?: (entityId: string | undefined) => void;
 	children: ReactNode;
 }
 
+const NO_EXISTING_PLANS: SchedulePlan[] = [];
+
 export function CreateScheduleFormProvider({
 	customerId,
-	entityId,
 	nowMs: nowMsProp,
 	initialValues,
+	existingPlans = NO_EXISTING_PLANS,
 	onCheckoutRedirect,
 	onSuccess,
-	onScopeChange,
 	children,
 }: CreateScheduleFormProviderProps) {
 	const [nowMsFallback] = useState(Date.now);
@@ -135,8 +146,14 @@ export function CreateScheduleFormProvider({
 	const { customer } = useCusQuery();
 	const fullCustomer = customer as FullCustomer | null;
 
-	// Only a new scoped subscription can backdate its immediate phase.
+	// Only a new scoped subscription can backdate its immediate phase, so this
+	// asks whether any scope the opening phase targets is already subscribed.
 	const hasActiveSubscription = useMemo(() => {
+		const openingScopes = new Set(
+			(formValues.phases[0]?.plans ?? [])
+				.filter((plan) => plan.productId)
+				.map((plan) => plan.entityId ?? null),
+		);
 		const cusProducts = (fullCustomer?.customer_products ??
 			[]) as FullCusProduct[];
 		return cusProducts.some((cusProduct) => {
@@ -145,13 +162,13 @@ export function CreateScheduleFormProvider({
 				cusProduct.status === CusProductStatus.Trialing;
 			if (!activeOrTrialing) return false;
 			if (!cusProduct.subscription_ids?.length) return false;
-			const entityMatches = entityId
-				? cusProduct.entity_id === entityId ||
-					cusProduct.internal_entity_id === entityId
-				: !cusProduct.internal_entity_id;
-			return entityMatches;
+			if (!cusProduct.internal_entity_id) return openingScopes.has(null);
+			return (
+				openingScopes.has(cusProduct.entity_id ?? "") ||
+				openingScopes.has(cusProduct.internal_entity_id)
+			);
 		});
-	}, [fullCustomer?.customer_products, entityId]);
+	}, [fullCustomer?.customer_products, formValues.phases]);
 
 	const immediatePlansPaidRecurring = useMemo(() => {
 		const plans = (formValues.phases[0]?.plans ?? []).filter(
@@ -178,10 +195,16 @@ export function CreateScheduleFormProvider({
 	const createsRecurringSubscription =
 		!hasActiveSubscription && immediatePlansPaidRecurring;
 
-	const editingPlanValue = editingPlan
-		? (formValues.phases[editingPlan.phaseIndex]?.plans[editingPlan.planIndex] ??
-			null)
-		: null;
+	const editingPlanValue = useMemo(() => {
+		if (!editingPlan) return null;
+		if (editingPlan.location === "unscheduled") {
+			return formValues.unscheduledPlans[editingPlan.planIndex] ?? null;
+		}
+		return (
+			formValues.phases[editingPlan.phaseIndex]?.plans[editingPlan.planIndex] ??
+			null
+		);
+	}, [editingPlan, formValues.phases, formValues.unscheduledPlans]);
 
 	const {
 		isPhaseLocked,
@@ -190,12 +213,27 @@ export function CreateScheduleFormProvider({
 		handleRemovePhase,
 		handleAddPlan,
 		handleRemovePlan,
+		handleAddUnscheduledPlan,
+		handleRemoveUnscheduledPlan,
 		handleCopyFromPreviousPhase,
+		handleCopyExistingPlans,
 		handlePlanEditSave,
-	} = useSchedulePhaseHandlers({ form, nowMs, editingPlan, setEditingPlan });
+	} = useSchedulePhaseHandlers({
+		form,
+		nowMs,
+		products,
+		editingPlan,
+		setEditingPlan,
+		existingPlans,
+	});
 
 	const getPhases = useCallback(
 		() => form.store.state.values.phases,
+		[form.store],
+	);
+
+	const getUnscheduledPlans = useCallback(
+		() => form.store.state.values.unscheduledPlans ?? [],
 		[form.store],
 	);
 
@@ -221,11 +259,11 @@ export function CreateScheduleFormProvider({
 
 	const buildRequestBody = useBuildCreateScheduleRequestBody({
 		customerId,
-		entityId,
 		products,
 		features,
 		nowMs,
 		getPhases,
+		getUnscheduledPlans,
 		getBillingBehavior,
 		getResetBillingCycle,
 		getEnablePlanImmediately,
@@ -234,8 +272,8 @@ export function CreateScheduleFormProvider({
 
 	const previewRequestBody = useCreateScheduleRequestBody({
 		customerId,
-		entityId,
 		phases: isDirty ? formValues.phases : [],
+		unscheduledPlans: formValues.unscheduledPlans,
 		products,
 		features,
 		nowMs,
@@ -267,7 +305,16 @@ export function CreateScheduleFormProvider({
 		error: previewError,
 	} = useCreateSchedulePreview({ requestBody: previewRequestBody });
 
-	const { handleSubmit, handleInvoiceSubmit, isPending } =
+	// Only the checkout stage sets this, so drop it once the schedule no longer
+	// goes through checkout — otherwise a stale `true` reaches a direct submit.
+	useEffect(() => {
+		if (preview?.redirect_to_checkout) return;
+		if (form.store.state.values.enablePlanImmediately) {
+			form.setFieldValue("enablePlanImmediately", false);
+		}
+	}, [preview?.redirect_to_checkout, form]);
+
+	const { handleSubmit, handleInvoiceSubmit, handleCheckoutSubmit, isPending } =
 		useCreateScheduleMutation({
 			customerId,
 			buildRequestBody,
@@ -282,11 +329,11 @@ export function CreateScheduleFormProvider({
 			form,
 			formValues,
 			customerId,
-			entityId,
 			nowMs,
 			products,
 			features,
 			isExistingSchedule,
+			existingPlans,
 			allowFirstPhaseBackdate,
 			createsRecurringSubscription,
 			isPhaseLocked,
@@ -295,7 +342,10 @@ export function CreateScheduleFormProvider({
 			handleRemovePhase,
 			handleAddPlan,
 			handleRemovePlan,
+			handleAddUnscheduledPlan,
+			handleRemoveUnscheduledPlan,
 			handleCopyFromPreviousPhase,
+			handleCopyExistingPlans,
 			editingPlan,
 			editingPlanValue,
 			setEditingPlan,
@@ -303,21 +353,21 @@ export function CreateScheduleFormProvider({
 			isPending,
 			handleSubmit,
 			handleInvoiceSubmit,
+			handleCheckoutSubmit,
 			preview,
 			previewQuery,
 			isPreviewLoading,
 			error: phaseTimingError ? new Error(phaseTimingError) : previewError,
-			onScopeChange,
 		}),
 		[
 			form,
 			formValues,
 			customerId,
-			entityId,
 			nowMs,
 			products,
 			features,
 			isExistingSchedule,
+			existingPlans,
 			allowFirstPhaseBackdate,
 			createsRecurringSubscription,
 			isPhaseLocked,
@@ -326,7 +376,10 @@ export function CreateScheduleFormProvider({
 			handleRemovePhase,
 			handleAddPlan,
 			handleRemovePlan,
+			handleAddUnscheduledPlan,
+			handleRemoveUnscheduledPlan,
 			handleCopyFromPreviousPhase,
+			handleCopyExistingPlans,
 			editingPlan,
 			editingPlanValue,
 			setEditingPlan,
@@ -334,12 +387,12 @@ export function CreateScheduleFormProvider({
 			isPending,
 			handleSubmit,
 			handleInvoiceSubmit,
+			handleCheckoutSubmit,
 			preview,
 			previewQuery,
 			isPreviewLoading,
 			phaseTimingError,
 			previewError,
-			onScopeChange,
 		],
 	);
 

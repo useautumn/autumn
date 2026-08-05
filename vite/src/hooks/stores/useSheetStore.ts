@@ -44,6 +44,7 @@ export type SheetType =
 	| "create-schedule"
 	| "create-schedule-review"
 	| "create-schedule-send-invoice"
+	| "create-schedule-checkout"
 	| null;
 
 // Store state interface

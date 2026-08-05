@@ -52,7 +52,7 @@ class PlaywrightPool {
 		// biome-ignore lint/suspicious/noExplicitAny: must accept any self-contained playwright function
 		fn: (params: any) => Promise<any>;
 		args: Record<string, unknown>;
-	}): Promise<void> {
+	}): Promise<unknown> {
 		const browser = await this.getBrowser();
 		const context = await browser.newContext({
 			viewport: { width: 1280, height: 800 },
@@ -60,7 +60,7 @@ class PlaywrightPool {
 		const page = await context.newPage();
 
 		try {
-			await fn({ page, ...args });
+			return await fn({ page, ...args });
 		} finally {
 			await page.close();
 			await context.close();

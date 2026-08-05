@@ -3,7 +3,6 @@
 // Types
 export * from "./attachFormSchema";
 export * from "./components/AttachAdvancedSection";
-export * from "./components/AttachFooter";
 export * from "./components/AttachFooterV3";
 export * from "./components/AttachLicenseLossWarning";
 export * from "./components/AttachMultiPlanSection";

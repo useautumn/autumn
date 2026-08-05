@@ -24,7 +24,6 @@ export function useBillingMutation<
 	customerId,
 	path,
 	buildRequestBody,
-	invalidatesSchedule = false,
 	successMessage,
 	errorMessage,
 	onCheckoutRedirect,
@@ -33,7 +32,6 @@ export function useBillingMutation<
 	customerId: string | undefined;
 	path: string;
 	buildRequestBody: (params?: BillingStageParams) => TRequest | null;
-	invalidatesSchedule?: boolean;
 	successMessage: string;
 	errorMessage: string;
 	onCheckoutRedirect?: (checkoutUrl: string) => void;
@@ -41,14 +39,8 @@ export function useBillingMutation<
 }) {
 	const axiosInstance = useAxiosInstance();
 	const queryClient = useQueryClient();
-	const invalidateBillingQueries = () => {
-		invalidateCustomerBillingQueries({ queryClient, customerId });
-		if (invalidatesSchedule && customerId) {
-			queryClient.invalidateQueries({
-				queryKey: ["customer-schedule", customerId],
-			});
-		}
-	};
+	const invalidateBillingQueries = () =>
+		invalidateCustomerBillingQueries({ queryClient });
 
 	return useMutation({
 		mutationFn: async ({

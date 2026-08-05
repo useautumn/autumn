@@ -16,9 +16,12 @@ const svixModulePath = "@/external/svix/svixHelpers.js";
 const productsModulePath =
 	"@/internal/billing/v2/workflows/sendProductsUpdated/sendProductsUpdated.js";
 const cusBatchModulePath = "@/internal/customers/CusBatchService.js";
-const realSvix = await import(svixModulePath);
-const realProducts = await import(productsModulePath);
-const realCusBatch = await import(cusBatchModulePath);
+// Snapshot spreads, not live namespaces — after mock.module a namespace's
+// bindings retarget to the mock, which would make the afterAll restore
+// reinstall the mock instead of the real module.
+const realSvix = { ...(await import(svixModulePath)) };
+const realProducts = { ...(await import(productsModulePath)) };
+const realCusBatch = { ...(await import(cusBatchModulePath)) };
 
 let inFlight = 0;
 let peakInFlight = 0;

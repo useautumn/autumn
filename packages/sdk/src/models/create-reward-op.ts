@@ -72,7 +72,7 @@ export type CreateRewardCouponRequest = {
 /**
  * The unit of time the grant lasts.
  */
-export const ExpiryTypeRequestBody = {
+export const CreateRewardExpiryTypeRequestBody = {
   Day: "day",
   Week: "week",
   Month: "month",
@@ -81,13 +81,15 @@ export const ExpiryTypeRequestBody = {
 /**
  * The unit of time the grant lasts.
  */
-export type ExpiryTypeRequestBody = ClosedEnum<typeof ExpiryTypeRequestBody>;
+export type CreateRewardExpiryTypeRequestBody = ClosedEnum<
+  typeof CreateRewardExpiryTypeRequestBody
+>;
 
-export type ExpiryRequest = {
+export type CreateRewardExpiryRequest = {
   /**
    * The unit of time the grant lasts.
    */
-  type: ExpiryTypeRequestBody;
+  type: CreateRewardExpiryTypeRequestBody;
   /**
    * The positive integer count of periods before the grant expires.
    */
@@ -100,7 +102,7 @@ export type CreateRewardGrant = {
    * A positive amount to grant, or null for boolean features.
    */
   included: number | null;
-  expiry: ExpiryRequest | null;
+  expiry: CreateRewardExpiryRequest | null;
 };
 
 export type CreateRewardFeatureGrantPromoCode = {
@@ -419,34 +421,38 @@ export function createRewardCouponRequestToJSON(
 }
 
 /** @internal */
-export const ExpiryTypeRequestBody$outboundSchema: z.ZodMiniEnum<
-  typeof ExpiryTypeRequestBody
-> = z.enum(ExpiryTypeRequestBody);
+export const CreateRewardExpiryTypeRequestBody$outboundSchema: z.ZodMiniEnum<
+  typeof CreateRewardExpiryTypeRequestBody
+> = z.enum(CreateRewardExpiryTypeRequestBody);
 
 /** @internal */
-export type ExpiryRequest$Outbound = {
+export type CreateRewardExpiryRequest$Outbound = {
   type: string;
   length: number;
 };
 
 /** @internal */
-export const ExpiryRequest$outboundSchema: z.ZodMiniType<
-  ExpiryRequest$Outbound,
-  ExpiryRequest
+export const CreateRewardExpiryRequest$outboundSchema: z.ZodMiniType<
+  CreateRewardExpiryRequest$Outbound,
+  CreateRewardExpiryRequest
 > = z.object({
-  type: ExpiryTypeRequestBody$outboundSchema,
+  type: CreateRewardExpiryTypeRequestBody$outboundSchema,
   length: z.int(),
 });
 
-export function expiryRequestToJSON(expiryRequest: ExpiryRequest): string {
-  return JSON.stringify(ExpiryRequest$outboundSchema.parse(expiryRequest));
+export function createRewardExpiryRequestToJSON(
+  createRewardExpiryRequest: CreateRewardExpiryRequest,
+): string {
+  return JSON.stringify(
+    CreateRewardExpiryRequest$outboundSchema.parse(createRewardExpiryRequest),
+  );
 }
 
 /** @internal */
 export type CreateRewardGrant$Outbound = {
   feature_id: string;
   included: number | null;
-  expiry: ExpiryRequest$Outbound | null;
+  expiry: CreateRewardExpiryRequest$Outbound | null;
 };
 
 /** @internal */
@@ -457,7 +463,7 @@ export const CreateRewardGrant$outboundSchema: z.ZodMiniType<
   z.object({
     featureId: z.string(),
     included: z.nullable(z.number()),
-    expiry: z.nullable(z.lazy(() => ExpiryRequest$outboundSchema)),
+    expiry: z.nullable(z.lazy(() => CreateRewardExpiryRequest$outboundSchema)),
   }),
   z.transform((v) => {
     return remap$(v, {

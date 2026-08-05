@@ -85,15 +85,18 @@ export const findExistingTransferTargetProduct = ({
 	return fullCustomer.customer_products.find(
 		(cusProduct) =>
 			matchesTransferProduct({ cusProduct, product }) &&
-			transferringScheduledStates.has(
-				isCustomerProductScheduled(cusProduct),
-			) &&
+			transferringScheduledStates.has(isCustomerProductScheduled(cusProduct)) &&
 			(toEntity
 				? cusProduct.internal_entity_id === toEntity.internal_id
 				: nullish(cusProduct.internal_entity_id)),
 	);
 };
 
+/**
+ * A named customer product only disambiguates rows it is indistinguishable from
+ * — same plan, same scheduled state. A scheduled successor is distinguishable,
+ * so it still moves with the plan even when it repeats the same plan id.
+ */
 export const getTransferCustomerProducts = ({
 	fullCustomer,
 	fromEntity,
@@ -104,15 +107,25 @@ export const getTransferCustomerProducts = ({
 	fromEntity: Entity | null;
 	product: TransferProduct;
 	customerProductId?: string | null;
-}) =>
-	fullCustomer.customer_products.filter(
-		(cusProduct) =>
-			(customerProductId
-				? cusProduct.id === customerProductId &&
-					cusProduct.product.id === product.id
-				: matchesTransferProduct({ cusProduct, product })) &&
-			matchesTransferSource({ cusProduct, fromEntity }),
-	);
+}) => {
+	const namedCusProduct = customerProductId
+		? fullCustomer.customer_products.find(
+				(cusProduct) => cusProduct.id === customerProductId,
+			)
+		: undefined;
+
+	return fullCustomer.customer_products.filter((cusProduct) => {
+		if (!matchesTransferProduct({ cusProduct, product })) return false;
+		if (!matchesTransferSource({ cusProduct, fromEntity })) return false;
+		if (!namedCusProduct || cusProduct.id === namedCusProduct.id) return true;
+
+		return (
+			cusProduct.product.id !== namedCusProduct.product.id ||
+			isCustomerProductScheduled(cusProduct) !==
+				isCustomerProductScheduled(namedCusProduct)
+		);
+	});
+};
 
 export const transferRelatedCustomerProducts = async ({
 	ctx,

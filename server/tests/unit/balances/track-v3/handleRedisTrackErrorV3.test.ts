@@ -11,14 +11,19 @@ const mockState = {
 	postgresCalls: [] as Record<string, unknown>[],
 };
 
-mock.module("@/internal/balances/track/v3/runPostgresTrackV3.js", () => ({
-	runPostgresTrackV3: async (args: Record<string, unknown>) => {
-		mockState.postgresCalls.push(args);
-		return { customer_id: "cus_123", balance: 1 };
-	},
-}));
+await mockModuleWithRestore(
+	"@/internal/balances/track/v3/runPostgresTrackV3.js",
+	() => ({
+		runPostgresTrackV3: async (args: Record<string, unknown>) => {
+			mockState.postgresCalls.push(args);
+			return { customer_id: "cus_123", balance: 1 };
+		},
+	}),
+);
 
 import { handleRedisTrackErrorV3 } from "@/internal/balances/track/v3/handleRedisTrackErrorV3.js";
+
+import { mockModuleWithRestore } from "../../utils/mockModuleWithRestore.js";
 
 const ctx = {
 	org: { id: "org_123" },

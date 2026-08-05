@@ -62,8 +62,9 @@ test.concurrent(`${chalk.yellowBright("p2p: increase base price")}`, async () =>
 	const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
 
 	// Usage should stay the same
-	expectCustomerFeatureCorrect({
-		customer,
+	await expectCustomerFeatureCorrect({
+		autumn: autumnV1,
+		customerId,
 		featureId: TestFeature.Messages,
 		includedUsage: messagesItem.included_usage,
 		balance: messagesItem.included_usage - messagesUsage,
@@ -130,8 +131,9 @@ test.concurrent(`${chalk.yellowBright("p2p: decrease base price")}`, async () =>
 	const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
 
 	// Usage should stay the same
-	expectCustomerFeatureCorrect({
-		customer,
+	await expectCustomerFeatureCorrect({
+		autumn: autumnV1,
+		customerId,
 		featureId: TestFeature.Messages,
 		includedUsage: messagesItem.included_usage,
 		balance: messagesItem.included_usage - messagesUsage,
@@ -196,8 +198,9 @@ test.concurrent(`${chalk.yellowBright("p2p: remove base price (to free)")}`, asy
 	const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
 
 	// Usage should stay the same
-	expectCustomerFeatureCorrect({
-		customer,
+	await expectCustomerFeatureCorrect({
+		autumn: autumnV1,
+		customerId,
 		featureId: TestFeature.Messages,
 		includedUsage: messagesItem.included_usage,
 		balance: messagesItem.included_usage - messagesUsage,
@@ -268,8 +271,9 @@ test.concurrent(`${chalk.yellowBright("p2p: add boolean feature")}`, async () =>
 	const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
 
 	// Messages usage should stay the same
-	expectCustomerFeatureCorrect({
-		customer,
+	await expectCustomerFeatureCorrect({
+		autumn: autumnV1,
+		customerId,
 		featureId: TestFeature.Messages,
 		includedUsage: messagesItem.included_usage,
 		balance: messagesItem.included_usage - messagesUsage,
@@ -351,8 +355,9 @@ test.concurrent(`${chalk.yellowBright("p2p: remove boolean feature")}`, async ()
 	const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
 
 	// Messages usage should stay the same
-	expectCustomerFeatureCorrect({
-		customer,
+	await expectCustomerFeatureCorrect({
+		autumn: autumnV1,
+		customerId,
 		featureId: TestFeature.Messages,
 		includedUsage: messagesItem.included_usage,
 		balance: messagesItem.included_usage - messagesUsage,
@@ -423,8 +428,9 @@ test.concurrent(`${chalk.yellowBright("p2p: add second metered feature")}`, asyn
 	const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
 
 	// Messages usage should stay the same
-	expectCustomerFeatureCorrect({
-		customer,
+	await expectCustomerFeatureCorrect({
+		autumn: autumnV1,
+		customerId,
 		featureId: TestFeature.Messages,
 		includedUsage: messagesItem.included_usage,
 		balance: messagesItem.included_usage - messagesUsage,
@@ -432,8 +438,9 @@ test.concurrent(`${chalk.yellowBright("p2p: add second metered feature")}`, asyn
 	});
 
 	// Words should have full balance
-	expectCustomerFeatureCorrect({
-		customer,
+	await expectCustomerFeatureCorrect({
+		autumn: autumnV1,
+		customerId,
 		featureId: TestFeature.Words,
 		includedUsage: wordsItem.included_usage,
 		balance: wordsItem.included_usage,
@@ -512,8 +519,9 @@ test.concurrent(`${chalk.yellowBright("p2p: remove one metered feature")}`, asyn
 	const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
 
 	// Messages usage should stay the same
-	expectCustomerFeatureCorrect({
-		customer,
+	await expectCustomerFeatureCorrect({
+		autumn: autumnV1,
+		customerId,
 		featureId: TestFeature.Messages,
 		includedUsage: messagesItem.included_usage,
 		balance: messagesItem.included_usage - messagesUsage,
@@ -587,8 +595,9 @@ test.concurrent(`${chalk.yellowBright("p2p: increase included usage")}`, async (
 	const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
 
 	// Usage should stay, balance should increase
-	expectCustomerFeatureCorrect({
-		customer,
+	await expectCustomerFeatureCorrect({
+		autumn: autumnV1,
+		customerId,
 		featureId: TestFeature.Messages,
 		includedUsage: updatedMessagesItem.included_usage,
 		balance: updatedMessagesItem.included_usage - messagesUsage,
@@ -655,8 +664,9 @@ test.concurrent(`${chalk.yellowBright("p2p: decrease included usage")}`, async (
 	const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
 
 	// Usage should stay, balance should decrease
-	expectCustomerFeatureCorrect({
-		customer,
+	await expectCustomerFeatureCorrect({
+		autumn: autumnV1,
+		customerId,
 		featureId: TestFeature.Messages,
 		includedUsage: updatedMessagesItem.included_usage,
 		balance: updatedMessagesItem.included_usage - messagesUsage,
@@ -824,8 +834,9 @@ test.concurrent(`${chalk.yellowBright("p2p: mid-cycle price increase")}`, async 
 
 	const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
 
-	expectCustomerFeatureCorrect({
-		customer,
+	await expectCustomerFeatureCorrect({
+		autumn: autumnV1,
+		customerId,
 		featureId: TestFeature.Messages,
 		includedUsage: messagesItem.included_usage,
 		balance: messagesItem.included_usage - messagesUsage,
@@ -927,8 +938,9 @@ test.concurrent(`${chalk.yellowBright("p2p: mid-cycle price decrease")}`, async 
 
 	const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
 
-	expectCustomerFeatureCorrect({
-		customer,
+	await expectCustomerFeatureCorrect({
+		autumn: autumnV1,
+		customerId,
 		featureId: TestFeature.Messages,
 		includedUsage: messagesItem.included_usage,
 		balance: messagesItem.included_usage - messagesUsage,
@@ -1000,8 +1012,9 @@ test.concurrent(`${chalk.yellowBright("p2p: increase price + add feature")}`, as
 	const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
 
 	// Messages usage preserved
-	expectCustomerFeatureCorrect({
-		customer,
+	await expectCustomerFeatureCorrect({
+		autumn: autumnV1,
+		customerId,
 		featureId: TestFeature.Messages,
 		includedUsage: messagesItem.included_usage,
 		balance: messagesItem.included_usage - messagesUsage,
@@ -1075,8 +1088,9 @@ test.concurrent(`${chalk.yellowBright("p2p: decrease price + remove feature")}`,
 	const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
 
 	// Messages usage preserved
-	expectCustomerFeatureCorrect({
-		customer,
+	await expectCustomerFeatureCorrect({
+		autumn: autumnV1,
+		customerId,
 		featureId: TestFeature.Messages,
 		includedUsage: messagesItem.included_usage,
 		balance: messagesItem.included_usage - messagesUsage,

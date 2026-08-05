@@ -1,4 +1,6 @@
+import { expect } from "bun:test";
 import type { TestContext } from "@tests/utils/testInitUtils/createTestContext.js";
+import { pollUntilAsserted } from "@tests/utils/genUtils.js";
 import { sql } from "drizzle-orm";
 
 // biome-ignore lint/suspicious/noExplicitAny: raw SQL rows are untyped
@@ -86,3 +88,55 @@ export const fetchUsageWindowRows = async ({
 			ORDER BY window_start_at ASC
 		`),
 	);
+
+/**
+ * Asserts the (customer, feature) usage-window counter in Postgres, polling
+ * until it settles — counters are synced from the cache asynchronously, and a
+ * cache-invalidating plan change re-seeds them from Postgres.
+ *
+ * Pass `windowEndAt` to pick one window out of several; otherwise the newest
+ * row is used. `rowCount` defaults to 1, asserting no extra window was opened.
+ */
+export const expectUsageWindowSynced = ({
+	ctx,
+	customerId,
+	featureId,
+	usage,
+	windowEndAt,
+	anchorCustomerEntitlementId,
+	rowCount = 1,
+}: {
+	ctx: TestContext;
+	customerId: string;
+	featureId: string;
+	usage: number;
+	windowEndAt?: number;
+	anchorCustomerEntitlementId?: string;
+	/** Pass null to allow any number of windows. */
+	rowCount?: number | null;
+}) =>
+	pollUntilAsserted({
+		fetch: () => fetchUsageWindowRows({ ctx, customerId, featureId }),
+		assert: (rows) => {
+			if (rowCount !== null) {
+				expect(rows).toHaveLength(rowCount);
+			}
+
+			const row =
+				windowEndAt === undefined
+					? rows[rows.length - 1]
+					: rows.find(
+							(candidate) =>
+								Number(candidate.window_end_at) === Number(windowEndAt),
+						);
+
+			expect(row).toBeDefined();
+			expect(Number(row.usage)).toBe(usage);
+
+			if (anchorCustomerEntitlementId !== undefined) {
+				expect(row.anchor_customer_entitlement_id).toBe(
+					anchorCustomerEntitlementId,
+				);
+			}
+		},
+	});

@@ -77,5 +77,5 @@ describe("deleteSandboxForOrg end-to-end (real teardown + live guards)", () => {
 		await deleteSandboxForOrg({ db, masterOrg, sandboxId, logger });
 		expect(await orgExists(sandboxId)).toBe(false);
 		deleted = true;
-	}, 60_000);
+	});
 });

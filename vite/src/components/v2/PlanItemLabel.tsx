@@ -45,6 +45,8 @@ const NARROW_SYMBOL = { currencyDisplay: "narrowSymbol" } as const;
 const PRICE_CHIP_CLASS =
 	"bg-muted px-1.5 py-0.5 rounded-md text-muted-foreground";
 
+const TIER_TOOLTIP_DELAY_MS = 100;
+
 const isTieredPrice = (item: ProductItem): boolean =>
 	(item.tiers?.length ?? 0) > 1;
 
@@ -183,7 +185,7 @@ function TierBreakdownChip({
 	priceStr: string;
 }) {
 	return (
-		<Tooltip>
+		<Tooltip delayDuration={TIER_TOOLTIP_DELAY_MS}>
 			<TooltipTrigger asChild>
 				{/* pointer-events-auto: read-only rows disable pointer events, which
 				 * would otherwise swallow the hover that opens this tooltip. */}
@@ -311,6 +313,8 @@ interface PlanItemLabelProps {
 	feature?: Feature;
 	/** Overrides the left feature-type glyph in the icon cluster. */
 	featureIcon?: ReactNode;
+	/** Off on compact rows where the glyphs are noise. */
+	showFeatureIcons?: boolean;
 }
 
 /** Feature icon cluster + label text + rollover indicator. Shared by the plan
@@ -323,6 +327,7 @@ export function PlanItemLabel({
 	currency: currencyOverride,
 	feature: featureOverride,
 	featureIcon,
+	showFeatureIcons = true,
 }: PlanItemLabelProps) {
 	const { org } = useOrg();
 	const { features: queriedFeatures } = useFeaturesQuery();
@@ -342,7 +347,9 @@ export function PlanItemLabel({
 	const displayText = hasFeatureName ? display.primary_text : unnamedText;
 	const rollover = itemCanRollOver(item) ? item.config?.rollover : undefined;
 
-	const icons = <FeatureIconCluster item={item} leftIcon={featureIcon} />;
+	const icons = showFeatureIcons ? (
+		<FeatureIconCluster item={item} leftIcon={featureIcon} />
+	) : null;
 
 	return (
 		<>

@@ -6,6 +6,10 @@ import {
 	formatMs,
 	ms,
 } from "@autumn/shared";
+import {
+	type PollableExpectParams,
+	pollableCustomerExpect,
+} from "@tests/utils/pollableCustomerExpect.js";
 import { AutumnInt } from "@/external/autumn/autumnCli";
 
 const defaultAutumn = new AutumnInt({ version: ApiVersion.V1_2 });
@@ -30,30 +34,27 @@ export const expectCustomerFeatureExists = async ({
 
 const TEN_MINUTES_MS = 10 * 60 * 1000;
 
-export const expectCustomerFeatureCorrect = ({
-	customerId,
-	customer: providedCustomer,
-	featureId,
-	includedUsage,
-	balance,
-	usage,
-	resetsAt,
-	toleranceMs = TEN_MINUTES_MS + ms.hours(1),
-}: {
-	customerId?: string;
-	customer?: ApiCustomerV3 | ApiEntityV0;
+type FeatureExpectParams = PollableExpectParams<ApiCustomerV3 | ApiEntityV0> & {
 	featureId: string;
 	includedUsage?: number;
 	balance?: number;
 	usage?: number;
 	resetsAt?: number;
 	toleranceMs?: number;
-}) => {
-	if (!providedCustomer && !customerId) {
-		throw new Error("Either customer or customerId must be provided");
-	}
+};
 
-	const feature = providedCustomer?.features?.[featureId];
+const assertCustomerFeatureCorrect = ({
+	customer,
+	featureId,
+	includedUsage,
+	balance,
+	usage,
+	resetsAt,
+	toleranceMs = TEN_MINUTES_MS + ms.hours(1),
+}: FeatureExpectParams & {
+	customer: ApiCustomerV3 | ApiEntityV0;
+}) => {
+	const feature = customer?.features?.[featureId];
 	expect(feature, `Feature ${featureId} not found`).toBeDefined();
 
 	if (includedUsage !== undefined) {
@@ -80,3 +81,15 @@ export const expectCustomerFeatureCorrect = ({
 		).toBeLessThanOrEqual(toleranceMs);
 	}
 };
+
+/**
+ * Pass `customerId` (instead of a fetched `customer`) to poll until the feature
+ * settles — a tracked deduction reaches Postgres via Redis then the queue.
+ */
+export const expectCustomerFeatureCorrect = pollableCustomerExpect({
+	fetchCustomer: ({ customerId, autumn }: FeatureExpectParams) =>
+		(autumn ?? defaultAutumn).customers.get<ApiCustomerV3 | ApiEntityV0>(
+			customerId!,
+		),
+	assert: assertCustomerFeatureCorrect,
+});

@@ -25,9 +25,15 @@ export const computeScheduledCustomerProducts = ({
 		const phaseCustomerProductIds: string[] = [];
 
 		for (const productContext of phaseContext.productContexts) {
+			// Scope comes from the inherited entity, never the request entity, so a
+			// customer-level plan stays customer-level in later phases.
 			const customerProduct = initScheduledCustomerProduct({
 				ctx,
-				fullCustomer: billingContext.fullCustomer,
+				fullCustomer: {
+					...billingContext.fullCustomer,
+					entity: productContext.entity,
+				},
+				entity: productContext.entity,
 				fullProduct: productContext.fullProduct,
 				featureQuantities: productContext.featureQuantities,
 				startsAt: phaseContext.startsAt,

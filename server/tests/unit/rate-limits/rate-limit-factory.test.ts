@@ -7,7 +7,7 @@ const mockState = {
 	warnings: [] as string[],
 };
 
-mock.module("@/external/redis/initRedis", () => ({
+await mockModuleWithRestore("@/external/redis/initRedis", () => ({
 	redis: {},
 	shouldUseRedis: () => mockState.shouldUseRedis,
 }));
@@ -24,7 +24,7 @@ const mockLogger = {
 	child: () => mockLogger,
 };
 
-mock.module("@/external/logtail/logtailUtils.js", () => ({
+await mockModuleWithRestore("@/external/logtail/logtailUtils.js", () => ({
 	logger: mockLogger,
 }));
 
@@ -33,6 +33,8 @@ import {
 	RateLimitType,
 } from "@/internal/misc/rateLimiter/rateLimitConfigs.js";
 import { rateLimitFactory } from "@/internal/misc/rateLimiter/rateLimitFactory.js";
+
+import { mockModuleWithRestore } from "../utils/mockModuleWithRestore.js";
 
 describe("rateLimitFactory", () => {
 	beforeEach(() => {

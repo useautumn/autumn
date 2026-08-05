@@ -57,6 +57,13 @@ describe(`${chalk.yellowBright("track-async: async=true returns 202")}`, () => {
 		});
 
 		expect(response.status).toBe(202);
-		expect(await response.json()).toEqual({ success: true });
+		// A queued track echoes the versioned track response (no balance is
+		// resolved yet), not a bare ack.
+		expect(await response.json()).toEqual({
+			id: "placeholder",
+			code: "event_received",
+			customer_id: customerId,
+			feature_id: TestFeature.Messages,
+		});
 	});
 });

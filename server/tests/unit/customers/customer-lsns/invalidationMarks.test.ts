@@ -23,72 +23,76 @@ const fetchRows = async (): Promise<LedgerRow[]> =>
 	`);
 
 afterAll(async () => {
+	if (!process.env.DATABASE_URL) return;
 	await db.execute(sql`DELETE FROM customer_lsns WHERE org_id = ${orgId}`);
 	await client.end();
 });
 
-describe("invalidation chokepoint freshness marks (real DB)", () => {
-	it("bulk mark dedupes duplicate triples instead of erroring", async () => {
-		// Duplicate conflict targets in one multi-row upsert are a Postgres
-		// error ("cannot affect row a second time") — dedupe must prevent it.
-		await markCustomersUpdatedAt({
-			db,
-			customers: [
-				{ orgId, env, customerId: "cus_dup" },
-				{ orgId, env, customerId: "cus_dup" },
-				{ orgId, env, customerId: "cus_other" },
-			],
+describe.skipIf(!process.env.DATABASE_URL)(
+	"invalidation chokepoint freshness marks (real DB)",
+	() => {
+		it("bulk mark dedupes duplicate triples instead of erroring", async () => {
+			// Duplicate conflict targets in one multi-row upsert are a Postgres
+			// error ("cannot affect row a second time") — dedupe must prevent it.
+			await markCustomersUpdatedAt({
+				db,
+				customers: [
+					{ orgId, env, customerId: "cus_dup" },
+					{ orgId, env, customerId: "cus_dup" },
+					{ orgId, env, customerId: "cus_other" },
+				],
+			});
+
+			const rows = await fetchRows();
+			expect(rows.map((row) => row.customer_id)).toEqual([
+				"cus_dup",
+				"cus_other",
+			]);
 		});
 
-		const rows = await fetchRows();
-		expect(rows.map((row) => row.customer_id)).toEqual([
-			"cus_dup",
-			"cus_other",
-		]);
-	});
+		it("bulk mark moves updated_at forward on re-mark", async () => {
+			const [before] = await fetchRows();
 
-	it("bulk mark moves updated_at forward on re-mark", async () => {
-		const [before] = await fetchRows();
+			await new Promise((resolve) => setTimeout(resolve, 30));
+			await markCustomersUpdatedAt({
+				db,
+				customers: [{ orgId, env, customerId: "cus_dup" }],
+			});
 
-		await new Promise((resolve) => setTimeout(resolve, 30));
-		await markCustomersUpdatedAt({
-			db,
-			customers: [{ orgId, env, customerId: "cus_dup" }],
+			const [after] = await fetchRows();
+			expect(new Date(after.updated_at).getTime()).toBeGreaterThan(
+				new Date(before.updated_at).getTime(),
+			);
 		});
 
-		const [after] = await fetchRows();
-		expect(new Date(after.updated_at).getTime()).toBeGreaterThan(
-			new Date(before.updated_at).getTime(),
-		);
-	});
+		it("bulk mark skips blank customer ids", async () => {
+			await markCustomersUpdatedAt({
+				db,
+				customers: [{ orgId, env, customerId: "" }],
+			});
 
-	it("bulk mark skips blank customer ids", async () => {
-		await markCustomersUpdatedAt({
-			db,
-			customers: [{ orgId, env, customerId: "" }],
+			const rows = await fetchRows();
+			expect(rows.some((row) => row.customer_id === "")).toBe(false);
 		});
 
-		const rows = await fetchRows();
-		expect(rows.some((row) => row.customer_id === "")).toBe(false);
-	});
+		it("batchInvalidateCachedFullSubjects marks every customer even with zero redis targets", async () => {
+			// getRedisTargetsForCustomer returning [] models "no reachable Redis":
+			// the cache side is a no-op but the ledger stamp must still land.
+			const customers = [
+				{ orgId, env: env as AppEnv, customerId: "cus_batch_a" },
+				{ orgId, env: env as AppEnv, customerId: "cus_batch_b" },
+			];
 
-	it("batchInvalidateCachedFullSubjects marks every customer even with zero redis targets", async () => {
-		// getRedisTargetsForCustomer returning [] models "no reachable Redis":
-		// the cache side is a no-op but the ledger stamp must still land.
-		const customers = [
-			{ orgId, env: env as AppEnv, customerId: "cus_batch_a" },
-			{ orgId, env: env as AppEnv, customerId: "cus_batch_b" },
-		];
+			await batchInvalidateCachedFullSubjects({
+				customers,
+				featuresByOrgEnv: {},
+				getRedisTargetsForCustomer: () => [],
+			});
 
-		await batchInvalidateCachedFullSubjects({
-			customers,
-			featuresByOrgEnv: {},
-			getRedisTargetsForCustomer: () => [],
+			const rows = await fetchRows();
+			const ids = rows.map((row) => row.customer_id);
+			expect(ids).toContain("cus_batch_a");
+			expect(ids).toContain("cus_batch_b");
 		});
-
-		const rows = await fetchRows();
-		const ids = rows.map((row) => row.customer_id);
-		expect(ids).toContain("cus_batch_a");
-		expect(ids).toContain("cus_batch_b");
-	});
-});
+	},
+);

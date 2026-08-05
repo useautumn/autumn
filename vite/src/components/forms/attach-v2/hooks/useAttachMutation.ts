@@ -10,7 +10,6 @@ export function useAttachMutation({
 	customerId,
 	buildRequestBody,
 	path,
-	invalidatesSchedule,
 	onCheckoutRedirect,
 	onSuccess,
 }: {
@@ -19,7 +18,6 @@ export function useAttachMutation({
 		params?: BillingStageParams,
 	) => AttachParamsV0 | MultiAttachParamsV0 | null;
 	path: string;
-	invalidatesSchedule: boolean;
 	onCheckoutRedirect?: (checkoutUrl: string) => void;
 	onSuccess?: () => void;
 }) {
@@ -30,7 +28,6 @@ export function useAttachMutation({
 		customerId,
 		path,
 		buildRequestBody,
-		invalidatesSchedule,
 		successMessage: "Product attached successfully",
 		errorMessage: "Failed to attach product",
 		onCheckoutRedirect,

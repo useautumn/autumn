@@ -170,7 +170,7 @@ test.concurrent(`${chalk.yellowBright("auto-topup webhook: successful auto top-u
 		featureId: TestFeature.Messages,
 		remaining: new Decimal(100).sub(85).add(100).toNumber(),
 	});
-}, 60_000);
+});
 
 test.concurrent(`${chalk.yellowBright("auto-topup webhook: invoice mode fires with open invoice")}`, async () => {
 	const oneOffItem = items.oneOffMessages({
@@ -224,7 +224,7 @@ test.concurrent(`${chalk.yellowBright("auto-topup webhook: invoice mode fires wi
 	expect(data.invoice_mode).toBe(true);
 	expect(data.invoice.status).toBe("open");
 	expect(data.balance_after).toBe(new Decimal(100).sub(85).add(100).toNumber());
-}, 60_000);
+});
 
 test.concurrent(`${chalk.yellowBright("auto-topup webhook: no webhook when balance remains above threshold")}`, async () => {
 	const oneOffItem = items.oneOffMessages({
@@ -267,7 +267,7 @@ test.concurrent(`${chalk.yellowBright("auto-topup webhook: no webhook when balan
 	const result = await waitForAnyAutoTopupWebhook({ customerId });
 
 	expect(result).toBeNull();
-}, 60_000);
+});
 
 test.concurrent(`${chalk.yellowBright("auto-topup webhook: dry run emits no webhook")}`, async () => {
 	const oneOffItem = items.oneOffMessages({
@@ -319,7 +319,7 @@ test.concurrent(`${chalk.yellowBright("auto-topup webhook: dry run emits no webh
 
 	const result = await waitForAnyAutoTopupWebhook({ customerId });
 	expect(result).toBeNull();
-}, 60_000);
+});
 
 test.concurrent(`${chalk.yellowBright("auto-topup webhook: org disabled emits no webhook")}`, async () => {
 	const customerId = `auto-topup-webhook-org-disabled-${RUN_ID}`;
@@ -346,7 +346,7 @@ test.concurrent(`${chalk.yellowBright("auto-topup webhook: org disabled emits no
 
 	const result = await waitForAnyAutoTopupWebhook({ customerId });
 	expect(result).toBeNull();
-}, 60_000);
+});
 
 test.concurrent(`${chalk.yellowBright("auto-topup webhook: failed charge sends failure webhook")}`, async () => {
 	const oneOffItem = items.oneOffMessages({
@@ -416,7 +416,7 @@ test.concurrent(`${chalk.yellowBright("auto-topup webhook: failed charge sends f
 		featureId: TestFeature.Messages,
 		remaining: 15,
 	});
-}, 60_000);
+});
 
 test.concurrent(`${chalk.yellowBright("auto-topup webhook: limit block sends failure webhook")}`, async () => {
 	const oneOffItem = items.oneOffMessages({
@@ -517,4 +517,4 @@ test.concurrent(`${chalk.yellowBright("auto-topup webhook: limit block sends fai
 		featureId: TestFeature.Messages,
 		remaining: 39,
 	});
-}, 90_000);
+});

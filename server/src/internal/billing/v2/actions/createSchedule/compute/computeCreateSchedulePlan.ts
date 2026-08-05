@@ -8,10 +8,7 @@ import { buildAutumnLineItems } from "@/internal/billing/v2/compute/computeAutum
 import { finalizeLineItems } from "@/internal/billing/v2/compute/finalize/finalizeLineItems";
 import { computePooledBalanceTransitionPlan } from "@/internal/billing/v2/pooledBalances/compute/computePooledBalanceTransitionPlan";
 import { cusProductsToOneOffPrepaidCarryOvers } from "@/internal/billing/v2/utils/handleOneOffPrepaidCarryOvers/cusProductToOneOffPrepaidCarryOvers";
-import {
-	addCustomerProductIdsToSchedulePhases,
-	resolveCreateScheduleRecurringProducts,
-} from "../utils/resolveCreateScheduleRecurringProducts";
+import { resolveCreateScheduleRecurringProducts } from "../utils/resolveCreateScheduleRecurringProducts";
 import { computeImmediatePhaseCustomerProducts } from "./computeImmediatePhaseCustomerProducts";
 import { computeScheduledCustomerProducts } from "./computeScheduledCustomerProducts";
 
@@ -36,7 +33,7 @@ export const computeCreateSchedulePlan = ({
 	const nextPhaseStartsAt = billingContext.futurePhases[0]?.starts_at;
 	const {
 		recurringOutgoing: outgoingCustomerProducts,
-		preservedCustomerProductIdsByPhase,
+		recurringEndingAtPhase,
 		recurringScheduled: existingScheduledCustomerProducts,
 	} = resolveCreateScheduleRecurringProducts({ billingContext });
 
@@ -95,8 +92,17 @@ export const computeCreateSchedulePlan = ({
 	const autumnBillingPlan: AutumnBillingPlan = {
 		customerId:
 			billingContext.fullCustomer.id ?? billingContext.fullCustomer.internal_id,
+		// persistCreateSchedule replaces the schedule wholesale and reads the old
+		// phases to find it, so nothing may rewrite them mid-flight.
+		ownsSchedulePersistence: true,
 		insertCustomerProducts: allInsertCustomerProducts,
-		updateCustomerProducts: immediate.updateCustomerProducts,
+		updateCustomerProducts: [
+			...immediate.updateCustomerProducts,
+			...recurringEndingAtPhase.map(({ customerProduct, endsAt }) => ({
+				customerProduct,
+				updates: { ended_at: endsAt },
+			})),
+		],
 		deleteCustomerProducts: scheduled.deleteCustomerProducts,
 		customPrices: billingContext.customPrices,
 		customEntitlements: [
@@ -120,16 +126,11 @@ export const computeCreateSchedulePlan = ({
 
 	const immediatePhase: SchedulePhasePlan = {
 		startsAt: billingContext.immediatePhase.starts_at,
-		customerProductIds: immediateCustomerProducts.map(
-			(customerProduct) => customerProduct.id,
-		),
+		customerProductIds: immediate.phaseCustomerProductIds,
 	};
 
 	return {
 		autumnBillingPlan,
-		phases: addCustomerProductIdsToSchedulePhases({
-			phases: [immediatePhase, ...scheduled.scheduledPhases],
-			customerProductIdsByPhase: preservedCustomerProductIdsByPhase,
-		}),
+		phases: [immediatePhase, ...scheduled.scheduledPhases],
 	};
 };

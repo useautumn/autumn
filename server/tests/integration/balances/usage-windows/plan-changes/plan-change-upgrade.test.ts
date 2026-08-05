@@ -18,7 +18,6 @@ import { expectBalanceCorrect } from "@tests/integration/utils/expectBalanceCorr
 import { TestFeature } from "@tests/setup/v2Features.js";
 import { items } from "@tests/utils/fixtures/items.js";
 import { products } from "@tests/utils/fixtures/products.js";
-import { timeout } from "@tests/utils/genUtils.js";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";
 import { AutumnInt } from "@/external/autumn/autumnCli.js";
@@ -28,8 +27,8 @@ import {
 	setCustomerUsageLimit,
 } from "../../utils/usage-limit-utils/customerUsageLimitUtils.js";
 import {
+	expectUsageWindowSynced,
 	fetchActivePlanCusEnt,
-	fetchUsageWindowRows,
 } from "../../utils/usage-limit-utils/usageWindowDbTestUtils.js";
 
 // initScenario only exposes clients up to V2_2; build the latest-version client
@@ -79,6 +78,13 @@ test.concurrent(
 			limit: 5,
 		});
 
+		await expectUsageWindowSynced({
+			ctx,
+			customerId,
+			featureId: TestFeature.Messages,
+			usage: 3,
+		});
+
 		// Immediate upgrade: pro is expired, premium's cycle starts now.
 		await autumnV1.billing.attach({
 			customer_id: customerId,
@@ -118,7 +124,6 @@ test.concurrent(
 		});
 
 		// PG: the live counter row is anchored to the premium ent's cycle.
-		await timeout(4000);
 		const premiumEnt = await fetchActivePlanCusEnt({
 			ctx,
 			customerId,
@@ -126,17 +131,15 @@ test.concurrent(
 		});
 		expect(premiumEnt?.next_reset_at).toBeTruthy();
 
-		const windowRows = await fetchUsageWindowRows({
+		await expectUsageWindowSynced({
 			ctx,
 			customerId,
 			featureId: TestFeature.Messages,
+			usage: 5,
+			windowEndAt: Number(premiumEnt.next_reset_at),
+			anchorCustomerEntitlementId: premiumEnt.id,
+			rowCount: null,
 		});
-		const currentRow = windowRows.find(
-			(row) => Number(row.window_end_at) === Number(premiumEnt.next_reset_at),
-		);
-		expect(currentRow).toBeDefined();
-		expect(Number(currentRow.usage)).toBe(5);
-		expect(currentRow.anchor_customer_entitlement_id).toBe(premiumEnt.id);
 	},
 );
 
@@ -154,7 +157,7 @@ test.concurrent(
 		});
 
 		const customerId = "uw-upgrade-atcap-1";
-		const { autumnV1 } = await initScenario({
+		const { autumnV1, ctx } = await initScenario({
 			customerId,
 			setup: [
 				s.customer({ paymentMethod: "success", testClock: false }),
@@ -183,6 +186,13 @@ test.concurrent(
 		});
 		await expectCustomerBalance({
 			autumn: autumnV2_3,
+			customerId,
+			featureId: TestFeature.Messages,
+			usage: 5,
+		});
+
+		await expectUsageWindowSynced({
+			ctx,
 			customerId,
 			featureId: TestFeature.Messages,
 			usage: 5,
@@ -232,7 +242,7 @@ test.concurrent(
 		});
 
 		const customerId = "uw-upgrade-multibal-1";
-		const { autumnV1 } = await initScenario({
+		const { autumnV1, ctx } = await initScenario({
 			customerId,
 			setup: [
 				s.customer({ paymentMethod: "success", testClock: false }),
@@ -268,6 +278,13 @@ test.concurrent(
 			featureId: TestFeature.Credits,
 			usage: 5,
 			limit: 5,
+		});
+
+		await expectUsageWindowSynced({
+			ctx,
+			customerId,
+			featureId: TestFeature.Credits,
+			usage: 5,
 		});
 
 		await autumnV1.billing.attach({

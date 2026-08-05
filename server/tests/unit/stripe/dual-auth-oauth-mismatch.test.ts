@@ -10,8 +10,10 @@
  *     - secret key present + OAuth account matches -> updateStripeConnect called, success redirect
  */
 
-import { describe, expect, mock, test } from "bun:test";
+import { describe, expect, test } from "bun:test";
 import { Hono } from "hono";
+
+import { mockModuleWithRestore } from "../utils/mockModuleWithRestore.js";
 
 const state = {
 	secretKeyAccountId: "acct_secret",
@@ -19,9 +21,15 @@ const state = {
 	updateStripeConnectCalls: 0,
 };
 
-mock.module("@/db/initDrizzle.js", () => ({ initDrizzle: () => ({ db: {} }) }));
+// Spread the real module so every export stays defined — a partial factory
+// poisons later files in the same process with missing-export link errors.
+const realInitDrizzle = await import("@/db/initDrizzle.js");
+await mockModuleWithRestore("@/db/initDrizzle.js", () => ({
+	...realInitDrizzle,
+	initDrizzle: () => ({ db: {} }),
+}));
 
-mock.module(
+await mockModuleWithRestore(
 	"@/internal/platform/platformBeta/utils/oauthStateUtils.js",
 	() => ({
 		consumeOAuthState: async () => ({
@@ -33,7 +41,7 @@ mock.module(
 	}),
 );
 
-mock.module("@/external/connect/initStripeCli.js", () => ({
+await mockModuleWithRestore("@/external/connect/initStripeCli.js", () => ({
 	initMasterStripe: () => ({
 		oauth: {
 			token: async () => ({ stripe_user_id: state.oauthAccountId }),
@@ -41,13 +49,13 @@ mock.module("@/external/connect/initStripeCli.js", () => ({
 	}),
 }));
 
-mock.module("@/external/connect/createStripeCli.js", () => ({
+await mockModuleWithRestore("@/external/connect/createStripeCli.js", () => ({
 	createStripeCli: () => ({
 		accounts: { retrieve: async () => ({ id: state.secretKeyAccountId }) },
 	}),
 }));
 
-mock.module("@/internal/orgs/OrgService.js", () => ({
+await mockModuleWithRestore("@/internal/orgs/OrgService.js", () => ({
 	OrgService: {
 		getBySlug: async () => ({
 			id: "org_test",
@@ -63,7 +71,7 @@ mock.module("@/internal/orgs/OrgService.js", () => ({
 	},
 }));
 
-mock.module("@/internal/orgs/orgUtils.js", () => ({
+await mockModuleWithRestore("@/internal/orgs/orgUtils.js", () => ({
 	isStripeConnected: () => true,
 }));
 

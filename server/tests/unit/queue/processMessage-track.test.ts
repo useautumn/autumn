@@ -1,5 +1,5 @@
-import { beforeEach, describe, expect, mock, test } from "bun:test";
-import { AppEnv, ApiVersion } from "@autumn/shared";
+import { afterAll, beforeEach, describe, expect, mock, test } from "bun:test";
+import { ApiVersion, AppEnv } from "@autumn/shared";
 import type { Message } from "@aws-sdk/client-sqs";
 import { JobName } from "@/queue/JobName.js";
 
@@ -7,7 +7,18 @@ const mockState = {
 	createWorkerContextCalls: [] as Record<string, unknown>[],
 };
 
+// Snapshot (not the live namespace — its bindings retarget to the mock) so
+// afterAll can put the real module back for later files in this process.
+const realCreateWorkerContext = {
+	...(await import("@/queue/createWorkerContext.js")),
+};
+
+afterAll(() => {
+	mock.module("@/queue/createWorkerContext.js", () => realCreateWorkerContext);
+});
+
 mock.module("@/queue/createWorkerContext.js", () => ({
+	...realCreateWorkerContext,
 	createWorkerContext: async (args: Record<string, unknown>) => {
 		mockState.createWorkerContextCalls.push(args);
 		const logger = {

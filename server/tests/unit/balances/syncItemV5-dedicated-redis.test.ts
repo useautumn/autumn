@@ -1,15 +1,17 @@
-import { describe, expect, mock, test } from "bun:test";
+import { describe, expect, test } from "bun:test";
 import { AppEnv } from "@autumn/shared";
+
+import { mockModuleWithRestore } from "../utils/mockModuleWithRestore.js";
 
 const dedicatedRedis = {};
 const sharedRedis = {};
 let claimedRedis: unknown;
 
-mock.module("@/external/redis/orgRedisPool.js", () => ({
+await mockModuleWithRestore("@/external/redis/orgRedisPool.js", () => ({
 	getOrgRedis: () => dedicatedRedis,
 }));
 
-mock.module(
+await mockModuleWithRestore(
 	"@/internal/balances/utils/sync/dirtyState/claimSyncDirty.js",
 	() => ({
 		claimSyncDirty: ({ redis }: { redis: unknown }) => {
@@ -20,9 +22,12 @@ mock.module(
 	}),
 );
 
-mock.module("@/internal/balances/utils/sync/syncItemV4.js", () => ({
-	syncItemV4: () => {},
-}));
+await mockModuleWithRestore(
+	"@/internal/balances/utils/sync/syncItemV4.js",
+	() => ({
+		syncItemV4: () => {},
+	}),
+);
 
 const { syncItemV5 } = await import(
 	"@/internal/balances/utils/sync/syncItemV5.js"

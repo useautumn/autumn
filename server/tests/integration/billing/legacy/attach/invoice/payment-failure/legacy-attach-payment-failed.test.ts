@@ -17,7 +17,7 @@
 import { expect, test } from "bun:test";
 import { type ApiCustomerV3, OnIncrease, SuccessCode } from "@autumn/shared";
 import { expectCustomerFeatureCorrect } from "@tests/integration/billing/utils/expectCustomerFeatureCorrect";
-import { waitForCustomerInvoiceStatus } from "@tests/integration/billing/utils/waitForCustomerInvoiceStatus";
+import { expectCustomerProducts } from "@tests/integration/billing/utils/expectCustomerProductCorrect";
 import { expectSubToBeCorrect } from "@tests/merged/mergeUtils/expectSubCorrect";
 import { TestFeature } from "@tests/setup/v2Features";
 import { completeInvoiceCheckoutV2 as completeInvoiceCheckout } from "@tests/utils/browserPool/completeInvoiceCheckoutV2";
@@ -73,16 +73,14 @@ test.concurrent(
 
 		await completeInvoiceCheckout({
 			url: res.checkout_url,
+			ctx,
+			customerId,
 		});
 
-		const customerAfter = await waitForCustomerInvoiceStatus({
+		await expectCustomerProducts({
 			autumn: autumnV1,
 			customerId,
-			status: "paid",
-		});
-		expectProductAttached({
-			customer: customerAfter as any,
-			product: pro,
+			active: [pro.id],
 		});
 
 		await expectSubToBeCorrect({
@@ -338,16 +336,20 @@ test.concurrent(
 		expect(res.checkout_url).toContain("invoice.stripe.com");
 		expect(res.message).toBe("Payment action required");
 
-		await completeInvoiceCheckout({ url: res.checkout_url });
+		await completeInvoiceCheckout({
+			url: res.checkout_url,
+			ctx,
+			customerId,
+		});
 
 		// Product should be active after completing invoice checkout
-		const customer = await waitForCustomerInvoiceStatus({
+		await expectCustomerProducts({
 			autumn: autumnV1,
 			customerId,
-			status: "paid",
+			active: [pro.id],
 		});
-		expectProductAttached({ customer: customer as any, product: pro });
 
+		const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
 		expectCustomerFeatureCorrect({
 			customer,
 			featureId: TestFeature.Messages,
@@ -410,16 +412,21 @@ test.concurrent(
 			await autumnV1.customers.get<ApiCustomerV3>(customerId);
 		expect(customerBefore.features?.[TestFeature.Messages]).toBeUndefined();
 
-		await completeInvoiceCheckout({ url: res.checkout_url });
+		await completeInvoiceCheckout({
+			url: res.checkout_url,
+			ctx,
+			customerId,
+		});
 
 		// Product should be active after completing invoice checkout
-		const customerAfter = await waitForCustomerInvoiceStatus({
+		await expectCustomerProducts({
 			autumn: autumnV1,
 			customerId,
-			status: "paid",
+			active: [oneOff.id],
 		});
-		expectProductAttached({ customer: customerAfter as any, product: oneOff });
 
+		const customerAfter =
+			await autumnV1.customers.get<ApiCustomerV3>(customerId);
 		expectCustomerFeatureCorrect({
 			customer: customerAfter,
 			featureId: TestFeature.Messages,

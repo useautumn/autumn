@@ -24,7 +24,45 @@
  * Post-impl green: an LRUCache in cacheApiKeyUtils.ts fronts every Redis read.
  */
 
-import { afterEach, beforeEach, describe, expect, spyOn, test } from "bun:test";
+import {
+	afterAll,
+	afterEach,
+	beforeEach,
+	describe,
+	expect,
+	mock,
+	spyOn,
+	test,
+} from "bun:test";
+
+// CI has no CACHE_URL, and getMiscMainRedis throws without one. These tests
+// only need SET/GET/DEL semantics, so back the client with an in-memory map.
+const realInstances = {
+	...(await import("@/external/redis/miscCache/miscRedisInstances.js")),
+};
+const fakeStore = new Map<string, string>();
+const fakeMiscRedis = {
+	status: "ready",
+	get: async (key: string) => fakeStore.get(key) ?? null,
+	set: async (key: string, value: string) => {
+		fakeStore.set(key, String(value));
+		return "OK";
+	},
+	del: async (key: string) => (fakeStore.delete(key) ? 1 : 0),
+} as never;
+
+mock.module("@/external/redis/miscCache/miscRedisInstances.js", () => ({
+	getMiscMainRedis: () => fakeMiscRedis,
+	getMiscBackupRedis: () => null,
+}));
+
+afterAll(() => {
+	mock.module(
+		"@/external/redis/miscCache/miscRedisInstances.js",
+		() => realInstances,
+	);
+});
+
 import {
 	_resetSecretKeyL1ForTesting,
 	_secretKeyL1SizeForTesting,
@@ -54,6 +92,32 @@ const buildVerificationData = (orgId: string) =>
 /** Unique per test so concurrent runs never share a Redis key. */
 const uniqueKey = (label: string) =>
 	`l1-test-${label}-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+
+/**
+ * Runs `fn` with the monotonic clock advanced by `deltaMs`. lru-cache stamps
+ * TTLs with performance.now(), which neither fake timers nor setSystemTime
+ * can move — spying on it is the only way to cross a TTL boundary without
+ * real multi-second sleeps.
+ */
+const withAdvancedClock = async (deltaMs: number, fn: () => Promise<void>) => {
+	// Macrotask yields on both edges: lru-cache caches its clock reading
+	// (cachedNow) and clears it via a 1ms setTimeout. Without the first yield,
+	// staleness math ignores the spied clock; without the last, a cachedNow
+	// stamped inside the advanced window (a future timestamp) leaks into
+	// whatever runs next and makes fresh entries look expired.
+	const yieldMacrotask = () => new Promise((resolve) => setTimeout(resolve, 5));
+	await yieldMacrotask();
+	const realPerfNow = performance.now.bind(performance);
+	const clock = spyOn(performance, "now").mockImplementation(
+		() => realPerfNow() + deltaMs,
+	);
+	try {
+		await fn();
+	} finally {
+		clock.mockRestore();
+		await yieldMacrotask();
+	}
+};
 
 // The exported `redis` is a Proxy over an empty target, so spies must go on the
 // concrete client it resolves to or they are never read back.
@@ -198,23 +262,24 @@ describe("secret-key L1 cache: TTLs", () => {
 		});
 		await getCachedSecretKeyVerification({ hashedKey: negativeKey });
 
-		await Bun.sleep(SECRET_KEY_L1_NEGATIVE_TTL_MS + 400);
-		redisGet.mockClear();
+		await withAdvancedClock(SECRET_KEY_L1_NEGATIVE_TTL_MS + 400, async () => {
+			redisGet.mockClear();
 
-		// Negative entry is gone -> back to Redis.
-		expect(
-			await getCachedSecretKeyVerification({ hashedKey: negativeKey }),
-		).toBeNull();
-		expect(redisGet).toHaveBeenCalledTimes(1);
+			// Negative entry is gone -> back to Redis.
+			expect(
+				await getCachedSecretKeyVerification({ hashedKey: negativeKey }),
+			).toBeNull();
+			expect(redisGet).toHaveBeenCalledTimes(1);
 
-		redisGet.mockClear();
+			redisGet.mockClear();
 
-		// Positive entry of the same age is still live -> no Redis call.
-		const positive = await getCachedSecretKeyVerification({
-			hashedKey: positiveKey,
+			// Positive entry of the same age is still live -> no Redis call.
+			const positive = await getCachedSecretKeyVerification({
+				hashedKey: positiveKey,
+			});
+			expect(positive?.org.id).toBe("org_pos");
+			expect(redisGet).not.toHaveBeenCalled();
 		});
-		expect(positive?.org.id).toBe("org_pos");
-		expect(redisGet).not.toHaveBeenCalled();
 
 		await clearSecretKeyCache({ hashedKey: positiveKey });
 	});
@@ -228,13 +293,14 @@ describe("secret-key L1 cache: TTLs", () => {
 			data: buildVerificationData("org_ttl"),
 		});
 
-		await Bun.sleep(SECRET_KEY_L1_TTL_MS + 400);
-		redisGet.mockClear();
+		await withAdvancedClock(SECRET_KEY_L1_TTL_MS + 400, async () => {
+			redisGet.mockClear();
 
-		const result = await getCachedSecretKeyVerification({ hashedKey });
+			const result = await getCachedSecretKeyVerification({ hashedKey });
 
-		expect(redisGet).toHaveBeenCalledTimes(1); // went back to Redis
-		expect(result?.org.id).toBe("org_ttl"); // Redis still had it (3600s TTL)
+			expect(redisGet).toHaveBeenCalledTimes(1); // went back to Redis
+			expect(result?.org.id).toBe("org_ttl"); // Redis still had it (3600s TTL)
+		});
 
 		await clearSecretKeyCache({ hashedKey });
 	});

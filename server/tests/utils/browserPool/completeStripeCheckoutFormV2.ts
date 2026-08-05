@@ -2,12 +2,16 @@ import { USE_KERNEL } from "./browserConfig.js";
 import { browserPool } from "./browserPool.js";
 import { kernelExecute } from "./kernelExecute.js";
 import {
-	stripeCheckout,
 	type StripeCheckoutBillingAddress,
+	stripeCheckout,
 } from "./playwright/stripeCheckout.js";
 import { playwrightPool } from "./playwrightPool.js";
 
 export type { StripeCheckoutBillingAddress };
+
+/** Where the browser ended up. Undefined on the Kernel path, which discards
+ * the function's return value. */
+export type CheckoutPageState = { url: string; text: string };
 
 /**
  * Complete a Stripe Checkout session form (Kernel VM or local Playwright).
@@ -28,7 +32,7 @@ export const completeStripeCheckoutFormV2 = async ({
 	billingAddress?: StripeCheckoutBillingAddress;
 	/** Click "Add" on the first Stripe Checkout optional item. */
 	addOptionalItem?: boolean;
-}): Promise<void> => {
+}): Promise<CheckoutPageState | undefined> => {
 	const concurrency = Number(process.env.TEST_FILE_CONCURRENCY || "0");
 	const timeout = concurrency > 1 ? 10000 : 0;
 	if (USE_KERNEL) {
@@ -39,7 +43,13 @@ export const completeStripeCheckoutFormV2 = async ({
 		await kernelExecute({
 			sessionId,
 			fn: stripeCheckout,
-			args: { url, overrideQuantity, promoCode, billingAddress, addOptionalItem },
+			args: {
+				url,
+				overrideQuantity,
+				promoCode,
+				billingAddress,
+				addOptionalItem,
+			},
 		});
 		console.log("[completeStripeCheckoutFormV2] Done");
 
@@ -50,14 +60,15 @@ export const completeStripeCheckoutFormV2 = async ({
 	}
 
 	console.log("[completeStripeCheckoutFormV2] Using local Playwright...");
-	await playwrightPool.runInPage({
+	const pageState = (await playwrightPool.runInPage({
 		fn: stripeCheckout,
 		args: { url, overrideQuantity, promoCode, billingAddress, addOptionalItem },
-	});
+	})) as CheckoutPageState | undefined;
 
 	if (timeout > 0) {
 		await new Promise((resolve) => setTimeout(resolve, timeout));
 	}
 
 	console.log("[completeStripeCheckoutFormV2] Done");
+	return pageState;
 };
