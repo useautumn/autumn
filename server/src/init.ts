@@ -63,12 +63,17 @@ import {
 	stopMemorySpikeProbe,
 } from "./utils/memory/memorySpikeProbe.js";
 import { startMemoryMonitor } from "./utils/memoryMonitor.js";
-import { stopHttpServer } from "./utils/stopHttpServer.js";
+import {
+	createHttpRequestTracker,
+	stopHttpServer,
+} from "./utils/stopHttpServer.js";
 
 checkEnvVars();
 
 let shuttingDown = false;
 let httpServer: http.Server | undefined;
+let hasActiveHttpRequests: (() => boolean) | undefined;
+let waitForActiveHttpRequests: (() => Promise<void>) | undefined;
 
 const init = async ({ startupStartedAt }: { startupStartedAt: number }) => {
 	logger.info(getRedactedDatabaseUrls(), "DB URLs");
@@ -96,7 +101,12 @@ const init = async ({ startupStartedAt }: { startupStartedAt: number }) => {
 		? Number.parseInt(process.env.SERVER_PORT)
 		: 8080;
 
-	const requestListener = getRequestListener(app.fetch);
+	const requestTracker = createHttpRequestTracker({
+		requestHandler: app.fetch,
+	});
+	hasActiveHttpRequests = requestTracker.hasActiveRequests;
+	waitForActiveHttpRequests = requestTracker.waitForActiveRequests;
+	const requestListener = getRequestListener(requestTracker.requestHandler);
 	const server = http.createServer(requestListener);
 	httpServer = server;
 
@@ -186,7 +196,19 @@ async function gracefulShutdown() {
 	try {
 		const server = httpServer;
 		httpServer = undefined;
-		if (server) await stopHttpServer({ server });
+		if (server) {
+			const requestsDrained = await stopHttpServer({
+				server,
+				hasActiveRequests: hasActiveHttpRequests,
+				waitForActiveRequests: waitForActiveHttpRequests,
+			});
+			if (!requestsDrained) {
+				console.warn(
+					"HTTP shutdown deadline reached with an active handler; exiting without closing SQS producers",
+				);
+				process.exit(0);
+			}
+		}
 		await shutdownSqsProducers();
 
 		// Flush any buffered OTel spans before shutting down

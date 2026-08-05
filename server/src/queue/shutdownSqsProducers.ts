@@ -7,23 +7,33 @@ type DeferredSqsProducer = {
 	flush: () => Promise<void>;
 };
 
+const defaultProducers: DeferredSqsProducer[] = [
+	globalEventBatchingManager,
+	globalRefreshEntityAggregateBatchingManager,
+	globalSyncBatchingManagerV3,
+];
+
+export const flushSqsProducers = async ({
+	producers = defaultProducers,
+}: {
+	producers?: DeferredSqsProducer[];
+} = {}): Promise<void> => {
+	const results = await Promise.allSettled(
+		producers.map((producer) => producer.flush()),
+	);
+	const failure = results.find((result) => result.status === "rejected");
+	if (failure) throw failure.reason;
+};
+
 export const shutdownSqsProducers = async ({
-	producers = [
-		globalEventBatchingManager,
-		globalRefreshEntityAggregateBatchingManager,
-		globalSyncBatchingManagerV3,
-	],
+	producers = defaultProducers,
 	shutdownSqsSendBatchersFn = shutdownSqsSendBatchers,
 }: {
 	producers?: DeferredSqsProducer[];
 	shutdownSqsSendBatchersFn?: () => Promise<void>;
 } = {}): Promise<void> => {
 	try {
-		const results = await Promise.allSettled(
-			producers.map((producer) => producer.flush()),
-		);
-		const failure = results.find((result) => result.status === "rejected");
-		if (failure) throw failure.reason;
+		await flushSqsProducers({ producers });
 	} finally {
 		await shutdownSqsSendBatchersFn();
 	}

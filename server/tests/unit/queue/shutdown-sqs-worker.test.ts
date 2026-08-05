@@ -2,7 +2,7 @@ import { describe, expect, test } from "bun:test";
 import { shutdownSqsWorker } from "@/queue/shutdownSqsWorker.js";
 
 describe("SQS worker shutdown", () => {
-	test("arms the forced-exit deadline before waiting for polling loops", async () => {
+	test("flushes deferred producers before waiting for polling loops", async () => {
 		let releasePollingLoop: () => void = () => undefined;
 		const pollingLoop = new Promise<void>((resolve) => {
 			releasePollingLoop = resolve;
@@ -11,17 +11,25 @@ describe("SQS worker shutdown", () => {
 		const exitCode = new Promise<number>((resolve) => {
 			markExit = resolve;
 		});
-		let producerDrainStarted = false;
+		let producerFlushStarted = false;
+		let producerShutdownStarted = false;
 
 		const shutdown = shutdownSqsWorker({
 			pollingLoops: [pollingLoop],
+			flushSqsProducersFn: async () => {
+				producerFlushStarted = true;
+			},
 			shutdownSqsProducersFn: async () => {
-				producerDrainStarted = true;
+				producerShutdownStarted = true;
 			},
 			isProduction: true,
 			shutdownTimeoutMs: 5,
 			exitProcess: markExit,
 		});
+
+		await Bun.sleep(0);
+		expect(producerFlushStarted).toBeTrue();
+		expect(producerShutdownStarted).toBeFalse();
 
 		const exitBeforePollingSettled = await Promise.race([
 			exitCode,
@@ -29,12 +37,12 @@ describe("SQS worker shutdown", () => {
 		]);
 		try {
 			expect(exitBeforePollingSettled).toBe(0);
-			expect(producerDrainStarted).toBeFalse();
+			expect(producerShutdownStarted).toBeFalse();
 		} finally {
 			releasePollingLoop();
 			await shutdown;
 		}
-		expect(producerDrainStarted).toBeTrue();
+		expect(producerShutdownStarted).toBeTrue();
 	});
 
 	test("logs producer drain failures and continues to the exit path", async () => {
