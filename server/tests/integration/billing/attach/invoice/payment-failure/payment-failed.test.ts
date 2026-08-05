@@ -22,145 +22,159 @@ import { SubService } from "@/internal/subscriptions/SubService";
 // NEW PLAN - Payment Failed
 // ═══════════════════════════════════════════════════════════════════════════════
 
-test.concurrent(`${chalk.yellowBright("payment-failed 1: new plan")}`, async () => {
-	const customerId = "attach-fail-new-fail";
+test.concurrent(
+	`${chalk.yellowBright("payment-failed 1: new plan")}`,
+	async () => {
+		const customerId = "attach-fail-new-fail";
 
-	const messagesItem = items.monthlyMessages({ includedUsage: 100 });
-	const priceItem = items.monthlyPrice({ price: 20 });
-	const pro = products.base({
-		id: "pro",
-		items: [messagesItem, priceItem],
-	});
+		const messagesItem = items.monthlyMessages({ includedUsage: 100 });
+		const priceItem = items.monthlyPrice({ price: 20 });
+		const pro = products.base({
+			id: "pro",
+			items: [messagesItem, priceItem],
+		});
 
-	const { autumnV1, ctx } = await initScenario({
-		customerId,
-		setup: [s.customer({ paymentMethod: "fail" }), s.products({ list: [pro] })],
-		actions: [],
-	});
+		const { autumnV1, ctx } = await initScenario({
+			customerId,
+			setup: [
+				s.customer({ paymentMethod: "fail" }),
+				s.products({ list: [pro] }),
+			],
+			actions: [],
+		});
 
-	const result = await autumnV1.billing.attach({
-		customer_id: customerId,
-		product_id: pro.id,
-	});
+		const result = await autumnV1.billing.attach({
+			customer_id: customerId,
+			product_id: pro.id,
+		});
 
-	expect(result.required_action).toBeDefined();
-	expect(result.required_action?.code).toBe("payment_failed");
-	expect(result.payment_url).toBeDefined();
+		expect(result.required_action).toBeDefined();
+		expect(result.required_action?.code).toBe("payment_failed");
+		expect(result.payment_url).toBeDefined();
 
-	const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
-	expect(customer.features?.[TestFeature.Messages]).toBeUndefined();
+		const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
+		expect(customer.features?.[TestFeature.Messages]).toBeUndefined();
 
-	await completeInvoiceCheckoutV2({
-		url: result.payment_url!,
-	});
+		await completeInvoiceCheckoutV2({
+			url: result.payment_url!,
+			ctx,
+			customerId,
+		});
 
-	const { subscription: stripeSubscription } = await getStripeSubscription({
-		customerId,
-	});
+		const { subscription: stripeSubscription } = await getStripeSubscription({
+			customerId,
+		});
 
-	const dbSubscription = await SubService.getByStripeId({
-		db: ctx.db,
-		stripeId: stripeSubscription.id,
-	});
+		const dbSubscription = await SubService.getByStripeId({
+			db: ctx.db,
+			stripeId: stripeSubscription.id,
+		});
 
-	expect(dbSubscription).toBeDefined();
-});
+		expect(dbSubscription).toBeDefined();
+	},
+);
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // UPGRADE - Payment Failed
 // ═══════════════════════════════════════════════════════════════════════════════
 
-test.concurrent(`${chalk.yellowBright("payment-failed 2: upgrade")}`, async () => {
-	const customerId = "attach-fail-upgrade-fail";
+test.concurrent(
+	`${chalk.yellowBright("payment-failed 2: upgrade")}`,
+	async () => {
+		const customerId = "attach-fail-upgrade-fail";
 
-	const proMessagesItem = items.monthlyMessages({ includedUsage: 100 });
-	const pro = products.pro({
-		id: "pro",
-		items: [proMessagesItem],
-	});
+		const proMessagesItem = items.monthlyMessages({ includedUsage: 100 });
+		const pro = products.pro({
+			id: "pro",
+			items: [proMessagesItem],
+		});
 
-	const premiumMessagesItem = items.monthlyMessages({ includedUsage: 500 });
-	const premium = products.premium({
-		id: "premium",
-		items: [premiumMessagesItem],
-	});
+		const premiumMessagesItem = items.monthlyMessages({ includedUsage: 500 });
+		const premium = products.premium({
+			id: "premium",
+			items: [premiumMessagesItem],
+		});
 
-	const { autumnV1 } = await initScenario({
-		customerId,
-		setup: [
-			s.customer({ paymentMethod: "success" }),
-			s.products({ list: [pro, premium] }),
-		],
-		actions: [
-			s.billing.attach({ productId: "pro" }),
-			s.attachPaymentMethod({ type: "fail" }),
-		],
-	});
+		const { autumnV1 } = await initScenario({
+			customerId,
+			setup: [
+				s.customer({ paymentMethod: "success" }),
+				s.products({ list: [pro, premium] }),
+			],
+			actions: [
+				s.billing.attach({ productId: "pro" }),
+				s.attachPaymentMethod({ type: "fail" }),
+			],
+		});
 
-	const result = await autumnV1.billing.attach({
-		customer_id: customerId,
-		product_id: premium.id,
-	});
+		const result = await autumnV1.billing.attach({
+			customer_id: customerId,
+			product_id: premium.id,
+		});
 
-	expect(result.required_action).toBeDefined();
-	expect(result.required_action?.code).toBe("payment_failed");
-	expect(result.payment_url).toBeDefined();
+		expect(result.required_action).toBeDefined();
+		expect(result.required_action?.code).toBe("payment_failed");
+		expect(result.payment_url).toBeDefined();
 
-	const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
+		const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
 
-	await expectCustomerProductCorrect({
-		customer,
-		productId: pro.id,
-		state: "active",
-	});
+		await expectCustomerProductCorrect({
+			customer,
+			productId: pro.id,
+			state: "active",
+		});
 
-	// Should still have pro's balance (upgrade not applied)
-	expectCustomerFeatureCorrect({
-		customer,
-		featureId: TestFeature.Messages,
-		includedUsage: 100,
-		balance: 100,
-		usage: 0,
-	});
-});
+		// Should still have pro's balance (upgrade not applied)
+		expectCustomerFeatureCorrect({
+			customer,
+			featureId: TestFeature.Messages,
+			includedUsage: 100,
+			balance: 100,
+			usage: 0,
+		});
+	},
+);
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // ONE-OFF - Payment Failed
 // ═══════════════════════════════════════════════════════════════════════════════
 
-test.concurrent(`${chalk.yellowBright("payment-failed 3: one-off")}`, async () => {
-	const customerId = "attach-fail-oneoff-fail";
+test.concurrent(
+	`${chalk.yellowBright("payment-failed 3: one-off")}`,
+	async () => {
+		const customerId = "attach-fail-oneoff-fail";
 
-	const oneOffMessagesItem = items.oneOffMessages({
-		includedUsage: 0,
-		billingUnits: 100,
-		price: 10,
-	});
+		const oneOffMessagesItem = items.oneOffMessages({
+			includedUsage: 0,
+			billingUnits: 100,
+			price: 10,
+		});
 
-	const oneOff = products.oneOff({
-		id: "one-off-credits",
-		items: [oneOffMessagesItem],
-	});
+		const oneOff = products.oneOff({
+			id: "one-off-credits",
+			items: [oneOffMessagesItem],
+		});
 
-	const { autumnV1 } = await initScenario({
-		customerId,
-		setup: [
-			s.customer({ paymentMethod: "fail" }),
-			s.products({ list: [oneOff] }),
-		],
-		actions: [],
-	});
+		const { autumnV1 } = await initScenario({
+			customerId,
+			setup: [
+				s.customer({ paymentMethod: "fail" }),
+				s.products({ list: [oneOff] }),
+			],
+			actions: [],
+		});
 
-	const result = await autumnV1.billing.attach({
-		customer_id: customerId,
-		product_id: oneOff.id,
-		options: [{ feature_id: TestFeature.Messages, quantity: 100 }],
-	});
+		const result = await autumnV1.billing.attach({
+			customer_id: customerId,
+			product_id: oneOff.id,
+			options: [{ feature_id: TestFeature.Messages, quantity: 100 }],
+		});
 
-	expect(result.required_action).toBeDefined();
-	expect(result.required_action?.code).toBe("payment_failed");
-	expect(result.payment_url).toBeDefined();
+		expect(result.required_action).toBeDefined();
+		expect(result.required_action?.code).toBe("payment_failed");
+		expect(result.payment_url).toBeDefined();
 
-	const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
-	expect(customer.features?.[TestFeature.Messages]).toBeUndefined();
-});
+		const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
+		expect(customer.features?.[TestFeature.Messages]).toBeUndefined();
+	},
+);
