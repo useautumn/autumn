@@ -1,23 +1,22 @@
 /**
- * Legacy Upgrade Tests - Usage-based Billing
+ * Legacy Upgrade Tests - Usage-based Billing (slice 1 of 2)
  *
  * Migrated from:
  * - server/tests/attach/upgrade/upgrade1.test.ts (Pro → Premium → Growth with consumable Words)
  * - server/tests/attach/upgrade/upgrade2.test.ts (Pro monthly → Pro annual → Premium annual)
- * - server/tests/attach/upgrade/upgrade3.test.ts (Arrear prorated seats with entities)
  *
  * Tests V1 attach behavior for product upgrades with usage-based billing:
  * - Consumable (arrear) billing upgrades
  * - Monthly to annual interval changes
- * - Arrear prorated seat-based billing with entities
  */
 
 import { test } from "bun:test";
 import type { ApiCustomerV3 } from "@autumn/shared";
-import { waitForTrackedUsageInDb } from "@tests/integration/billing/legacy/utils/waitForTrackedUsageInDb";
 import { expectCustomerFeatureCorrect } from "@tests/integration/billing/utils/expectCustomerFeatureCorrect";
 import { expectCustomerInvoiceCorrect } from "@tests/integration/billing/utils/expectCustomerInvoiceCorrect";
 import { expectCustomerProducts } from "@tests/integration/billing/utils/expectCustomerProductCorrect";
+import { quiesceCustomerWebhooks } from "@tests/integration/billing/utils/quiesceCustomerWebhooks";
+import { waitForCustomerUsageInDb } from "@tests/integration/billing/utils/waitForUsageInDb";
 import { TestFeature } from "@tests/setup/v2Features";
 import { items } from "@tests/utils/fixtures/items";
 import { products } from "@tests/utils/fixtures/products";
@@ -57,7 +56,7 @@ test.concurrent(
 		const growth = products.growth({ id: "growth", items: [growthWords] });
 
 		// Setup: Create customer and products, attach Pro
-		const { autumnV1 } = await initScenario({
+		const { autumnV1, ctx } = await initScenario({
 			customerId,
 			setup: [
 				s.customer({ paymentMethod: "success", testClock: true }),
@@ -90,6 +89,15 @@ test.concurrent(
 			latestTotal: 20, // Pro base price
 		});
 
+		// Let the Pro attach's Stripe webhooks land BEFORE tracking: one arriving
+		// inside the track→sync window deletes the cached balance and the deduction
+		// is dropped, which reads back as the balance never having moved.
+		await quiesceCustomerWebhooks({
+			stripeCli: ctx.stripeCli,
+			autumn: autumnV1,
+			customerId,
+		});
+
 		// Track 200 words (100 overage at $0.05 = $5)
 		await autumnV1.track({
 			customer_id: customerId,
@@ -100,7 +108,7 @@ test.concurrent(
 		// Gate on the deduction reaching Postgres: while it lives only in Redis, a
 		// late Stripe webhook from the Pro attach can invalidate the cache and drop
 		// it, and the balance silently reverts to 100.
-		await waitForTrackedUsageInDb({
+		await waitForCustomerUsageInDb({
 			autumn: autumnV1,
 			customerId,
 			featureId: TestFeature.Words,
@@ -149,6 +157,13 @@ test.concurrent(
 			latestTotal: 35, // $30 price diff + $5 overage
 		});
 
+		// Same sequencing for the Premium upgrade's own webhooks.
+		await quiesceCustomerWebhooks({
+			stripeCli: ctx.stripeCli,
+			autumn: autumnV1,
+			customerId,
+		});
+
 		// Track 300 words (200 overage at $0.05 = $10)
 		await autumnV1.track({
 			customer_id: customerId,
@@ -156,7 +171,7 @@ test.concurrent(
 			value: 300,
 		});
 
-		await waitForTrackedUsageInDb({
+		await waitForCustomerUsageInDb({
 			autumn: autumnV1,
 			customerId,
 			featureId: TestFeature.Words,
@@ -250,7 +265,7 @@ test.concurrent(
 		});
 
 		// Setup: Create customer and products, attach Pro monthly
-		const { autumnV1 } = await initScenario({
+		const { autumnV1, ctx } = await initScenario({
 			customerId,
 			setup: [
 				s.customer({ paymentMethod: "success", testClock: true }),
@@ -283,6 +298,13 @@ test.concurrent(
 			latestTotal: 20, // Pro monthly base price
 		});
 
+		// Attach webhooks first, then track (see quiesceCustomerWebhooks).
+		await quiesceCustomerWebhooks({
+			stripeCli: ctx.stripeCli,
+			autumn: autumnV1,
+			customerId,
+		});
+
 		// Track 150 words (50 overage at $0.05 = $2.50)
 		await autumnV1.track({
 			customer_id: customerId,
@@ -290,9 +312,9 @@ test.concurrent(
 			value: 150,
 		});
 
-		// See the note on waitForTrackedUsageInDb — the deduction must reach
+		// See the note on waitForCustomerUsageInDb — the deduction must reach
 		// Postgres before anything else can invalidate the cached balance.
-		await waitForTrackedUsageInDb({
+		await waitForCustomerUsageInDb({
 			autumn: autumnV1,
 			customerId,
 			featureId: TestFeature.Words,
@@ -342,6 +364,13 @@ test.concurrent(
 			count: 2,
 		});
 
+		// Same sequencing for the Pro Annual upgrade's own webhooks.
+		await quiesceCustomerWebhooks({
+			stripeCli: ctx.stripeCli,
+			autumn: autumnV1,
+			customerId,
+		});
+
 		// Track 200 words (100 overage at $0.05 = $5)
 		await autumnV1.track({
 			customer_id: customerId,
@@ -349,7 +378,7 @@ test.concurrent(
 			value: 200,
 		});
 
-		await waitForTrackedUsageInDb({
+		await waitForCustomerUsageInDb({
 			autumn: autumnV1,
 			customerId,
 			featureId: TestFeature.Words,
@@ -397,165 +426,6 @@ test.concurrent(
 		await expectCustomerInvoiceCorrect({
 			customer: customerAfterPremiumAnnual,
 			count: 3,
-		});
-	},
-);
-
-// ═══════════════════════════════════════════════════════════════════════════════
-// TEST 3: Upgrade with arrear prorated seats (entities)
-// (from upgrade3)
-//
-// Scenario:
-// - Pro ($20/month) with allocated Users ($10/user prorated, 0 included)
-// - Premium ($50/month) with allocated Users ($10/user prorated, 0 included)
-// - Pro annual ($200/year) with allocated Users ($10/user prorated, 0 included)
-// - Create 2 entities, attach Pro (2 users × $10 = $20 seat charge)
-// - Advance 1 week, create 3rd entity, upgrade to Premium
-// - Upgrade to Pro Annual
-//
-// Expected:
-// - Customer has correct product and usage after each upgrade
-// - Entity count (usage) is tracked correctly
-// - Invoice totals reflect seat charges
-// ═══════════════════════════════════════════════════════════════════════════════
-
-test.concurrent(
-	`${chalk.yellowBright("legacy-upgrade-usage 3: arrear prorated seats with entities")}`,
-	async () => {
-		const customerId = "legacy-upgrade-usage-3";
-
-		// Allocated users: $10/user prorated, 0 included
-		const proUsers = items.allocatedUsers({ includedUsage: 0 });
-		const premiumUsers = items.allocatedUsers({ includedUsage: 0 });
-		const proAnnualUsers = items.allocatedUsers({ includedUsage: 0 });
-
-		const pro = products.pro({ id: "pro", items: [proUsers] });
-		const premium = products.premium({ id: "premium", items: [premiumUsers] });
-		const proAnnual = products.proAnnual({
-			id: "pro-annual",
-			items: [proAnnualUsers],
-		});
-
-		// Setup: Create customer, products, and 2 entities, attach Pro
-		const { autumnV1 } = await initScenario({
-			customerId,
-			setup: [
-				s.customer({ paymentMethod: "success", testClock: true }),
-				s.products({ list: [pro, premium, proAnnual] }),
-				s.entities({ count: 2, featureId: TestFeature.Users }),
-			],
-			actions: [s.attach({ productId: pro.id })],
-		});
-
-		// Verify initial state - Pro with 2 users
-		const customerInitial =
-			await autumnV1.customers.get<ApiCustomerV3>(customerId);
-
-		await expectCustomerProducts({
-			customer: customerInitial,
-			active: [pro.id],
-		});
-
-		await expectCustomerFeatureCorrect({
-			autumn: autumnV1,
-			customerId,
-			featureId: TestFeature.Users,
-			includedUsage: 0,
-			usage: 2,
-			balance: -2, // 0 included - 2 usage = -2
-		});
-
-		// Invoice: Pro base ($20) + 2 users × $10 = $40
-		await expectCustomerInvoiceCorrect({
-			customer: customerInitial,
-			count: 1,
-			latestTotal: 40,
-		});
-
-		// Create 3rd entity
-		await autumnV1.entities.create(customerId, [
-			{ id: "ent-3", name: "Entity 3", feature_id: TestFeature.Users },
-		]);
-
-		// The prorated seat invoice for the new entity is written asynchronously.
-		await expectCustomerInvoiceCorrect({
-			autumn: autumnV1,
-			customerId,
-			count: 2,
-			latestTotal: 10,
-		});
-
-		// Verify state before Premium upgrade - now 3 users
-		await expectCustomerFeatureCorrect({
-			autumn: autumnV1,
-			customerId,
-			featureId: TestFeature.Users,
-			includedUsage: 0,
-			usage: 3,
-			balance: -3, // 0 included - 3 usage = -3
-		});
-
-		// Upgrade to Premium
-		// Base price diff: $50 - $20 = $30
-		// Seat charge diff: 3 users × ($10 premium - $10 pro) = $0 (same rate)
-		// Plus prorated charge for the new seat
-		await autumnV1.attach({
-			customer_id: customerId,
-			product_id: premium.id,
-		});
-
-		const customerAfterPremium =
-			await autumnV1.customers.get<ApiCustomerV3>(customerId);
-
-		await expectCustomerProducts({
-			customer: customerAfterPremium,
-			active: [premium.id],
-		});
-
-		await expectCustomerFeatureCorrect({
-			autumn: autumnV1,
-			customerId,
-			featureId: TestFeature.Users,
-			includedUsage: 0,
-			usage: 3,
-			balance: -3,
-		});
-
-		// Verify invoice count increased
-		await expectCustomerInvoiceCorrect({
-			customer: customerAfterPremium,
-			count: 3,
-			latestTotal: 30,
-		});
-
-		// Upgrade to Pro Annual
-		await autumnV1.attach({
-			customer_id: customerId,
-			product_id: proAnnual.id,
-		});
-
-		const customerAfterProAnnual =
-			await autumnV1.customers.get<ApiCustomerV3>(customerId);
-
-		await expectCustomerProducts({
-			customer: customerAfterProAnnual,
-			active: [proAnnual.id],
-		});
-
-		await expectCustomerFeatureCorrect({
-			autumn: autumnV1,
-			customerId,
-			featureId: TestFeature.Users,
-			includedUsage: 0,
-			usage: 3,
-			balance: -3,
-		});
-
-		// Verify invoice count increased
-		await expectCustomerInvoiceCorrect({
-			customer: customerAfterProAnnual,
-			count: 4,
-			latestTotal: 150,
 		});
 	},
 );

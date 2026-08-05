@@ -63,7 +63,43 @@ export type RemoteExecutorOptions = {
 	 * worker-relative path).
 	 */
 	toWorkerPath?: (localFile: string) => string;
+	/**
+	 * The shared Connect-webhook ingress. Its URL + token are handed to the TEST
+	 * process so a test that mints a Stripe Connect account MID-RUN (any
+	 * `s.platform.create` sub-org) can register that account's route itself — see
+	 * {@link twIngressEnv}.
+	 */
+	ingress?: { url: string; token: string };
 };
+
+/**
+ * Env the TEST process needs to register a MID-RUN Connect account with the
+ * ingress (`server/tests/utils/twIngress.ts`).
+ *
+ * Why the test process and not the orchestrator: the account is minted inside the
+ * µVM by `POST /platform/organizations` → `provisionSubOrg` → `createConnectAccount`,
+ * which the orchestrator never sees. Only the test knows the new `acct_*`, and only
+ * at the moment it is created. The worker's own public URL is passed alongside so
+ * the test posts the SAME `{ accountId, workerUrl }` shape the orchestrator pushes
+ * at boot — no new routing semantics, purely an extra entry in the existing map.
+ *
+ * Absent (local `bun t`, or an ingress-less run) the test-side helper no-ops, and
+ * the ingress drop counter is the backstop that makes the gap visible.
+ */
+const twIngressEnv = ({
+	ingress,
+	workerUrl,
+}: {
+	ingress?: { url: string; token: string };
+	workerUrl: string;
+}): Record<string, string> =>
+	ingress
+		? {
+				TW_INGRESS_URL: ingress.url,
+				TW_INGRESS_TOKEN: ingress.token,
+				TW_WORKER_URL: workerUrl,
+			}
+		: {};
 
 /**
  * The harness picks settle timeouts off `TEST_FILE_CONCURRENCY` (`autumnCli
@@ -86,8 +122,16 @@ const TEST_ENV_PREFIX = ["env", "TEST_FILE_CONCURRENCY=4"];
 export const buildTestArgv = (
 	file: string,
 	failedTestNames?: string[],
+	extraEnv?: Record<string, string>,
 ): string[] => {
-	const argv = [...TEST_ENV_PREFIX, "bun", "test", "--timeout", "0"];
+	const argv = [
+		...TEST_ENV_PREFIX,
+		...Object.entries(extraEnv ?? {}).map(([key, value]) => `${key}=${value}`),
+		"bun",
+		"test",
+		"--timeout",
+		"0",
+	];
 	if (failedTestNames && failedTestNames.length > 0) {
 		argv.push("--test-name-pattern", joinTestNamePattern(failedTestNames));
 	}
@@ -120,6 +164,7 @@ export class RemoteExecutor implements TestExecutor {
 	private readonly pool: WorkerPool;
 	private readonly resolveSandbox: SandboxResolver;
 	private readonly toWorkerPath: (localFile: string) => string;
+	private readonly ingress?: { url: string; token: string };
 
 	/**
 	 * Which worker last ran a given file, so a retry / reschedule can land on a
@@ -132,6 +177,7 @@ export class RemoteExecutor implements TestExecutor {
 		this.pool = opts.pool;
 		this.resolveSandbox = opts.resolveSandbox;
 		this.toWorkerPath = opts.toWorkerPath ?? ((file) => file);
+		this.ingress = opts.ingress;
 	}
 
 	/**
@@ -194,6 +240,10 @@ export class RemoteExecutor implements TestExecutor {
 			const argv = buildTestArgv(
 				this.toWorkerPath(args.file),
 				args.failedTestNames,
+				twIngressEnv({
+					ingress: this.ingress,
+					workerUrl: worker.publicUrl,
+				}),
 			);
 
 			// Tee the raw test output to the dashboard's per-file buffer while still

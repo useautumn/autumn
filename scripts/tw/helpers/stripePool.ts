@@ -27,7 +27,33 @@ import {
 	stripeKeyForWorker,
 } from "./stripeKeyPool.js";
 
-const CLAIM_CONCURRENCY = 16;
+/**
+ * How many pool accounts are claimed (mark-dirty / create) at once.
+ *
+ * This is a whole-claim limit, but the work SHARDS BY PLATFORM KEY — each write
+ * goes to the key that owns that worker's account, so a wide pool spreads the
+ * load over as many independent Stripe buckets. 16 was sized for a pool of ~11
+ * keys; at 152 it leaves the claim serialising ~200+ metadata writes into a
+ * ~40-70s block that every worker waits behind, with barely one request in
+ * flight per key.
+ *
+ * Scale it with the pool (2 per key, capped) so a single-key setup keeps exactly
+ * today's behaviour and a wide pool gets the parallelism it already has budget
+ * for. Evaluated per call, not at import — the pool is only populated once the
+ * orchestrator's env is loaded and the preflight has dropped unusable keys.
+ */
+const MIN_CLAIM_CONCURRENCY = 16;
+const MAX_CLAIM_CONCURRENCY = 64;
+const CLAIM_CONCURRENCY_PER_KEY = 2;
+
+const claimConcurrency = (): number =>
+	Math.min(
+		MAX_CLAIM_CONCURRENCY,
+		Math.max(
+			MIN_CLAIM_CONCURRENCY,
+			allPoolKeys().length * CLAIM_CONCURRENCY_PER_KEY,
+		),
+	);
 const POOL_LIST_PAGE = 100;
 /** Stop paging a key once this many pages yield no clean pool accounts. */
 const MAX_POOL_LIST_PAGES = 10;
@@ -237,7 +263,7 @@ export const claimPoolAccounts = async ({
 	const byWorker: string[] = new Array(count);
 	let reused = 0;
 	let created = 0;
-	const limit = pLimit(CLAIM_CONCURRENCY);
+	const limit = pLimit(claimConcurrency());
 
 	await Promise.all(
 		[...idxByKey.entries()].map(async ([keyIndex, idxs]) => {

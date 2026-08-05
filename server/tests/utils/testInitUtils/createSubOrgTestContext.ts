@@ -13,6 +13,7 @@ import { FeatureService } from "@/internal/features/FeatureService.js";
 import { OrgService } from "@/internal/orgs/OrgService.js";
 import { logger } from "../../../src/external/logtail/logtailUtils.js";
 import { generateId } from "../../../src/utils/genUtils.js";
+import { registerTwIngressRoute } from "../twIngress.js";
 import type { TestContext } from "./createTestContext.js";
 
 export type TaxRegistrationCountry =
@@ -47,6 +48,20 @@ export const createSubOrgTestContext = async ({
 			`Sub-org with slug "${subOrgSlug}" not found. ` +
 				`Caller must create the sub-org via POST /platform/organizations first.`,
 		);
+	}
+
+	// 1b. Under `bun tw`, point the shared webhook ingress at this worker for the
+	// sub-org's freshly-minted Connect account. Registered BEFORE anything touches
+	// Stripe on its behalf, so no event can be dropped for want of a route. No-op
+	// outside tw (webhooks are delivered directly there).
+	const subAccountId =
+		subOrg.test_stripe_connect?.default_account_id ??
+		subOrg.test_stripe_connect?.account_id;
+	if (subAccountId) {
+		await registerTwIngressRoute({
+			accountId: subAccountId,
+			label: `sub-org ${subOrgSlug}`,
+		});
 	}
 
 	// 2. Apply config overrides. OrgService.update replaces the whole

@@ -77,7 +77,7 @@ const waitForPoolExpired = async ({
 	return state;
 };
 
-test(
+test.concurrent(
 	chalk.yellowBright(
 		"pooled expiry: cancel_end_of_cycle keeps the pool live until the cycle ends",
 	),
@@ -156,7 +156,7 @@ test(
 	},
 );
 
-test(
+test.concurrent(
 	chalk.yellowBright(
 		"pooled expiry: scheduled downgrade to a non-pooled plan expires the pool at the boundary",
 	),

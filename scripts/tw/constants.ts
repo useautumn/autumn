@@ -44,8 +44,23 @@ export const SANDBOX_NAME_PREFIX = "tw";
  * The real cost of going wider is the persistent Stripe sub-account POOL: the
  * first run at this width top-up-creates the shortfall under the global claim
  * lock (one-time, ~1 min), after which claims reuse. Drop back with `--max=200`.
+ *
+ * Headroom above the file count is deliberate. `core` is being SPLIT — the wall
+ * of a full run is `max(slowest file, total-file-seconds / workers)`, and since a
+ * file's cost is dominated by the Stripe work of ALL the tests in it, cutting the
+ * slow files into slices is the only way to move the first term. Every slice
+ * needs its own worker or the tail just re-forms: below `workers >= files` the
+ * leftovers queue and two ~80s slices cost the same 160s the unsplit file did.
+ *
+ * The trade at ~470 files is explicit: capped at 450 the budget is 4 req/s per
+ * worker (3 workers/key) but ~20 files queue behind a full slot; uncapped it is
+ * 3 req/s (4 workers/key) with no tail. The queued tail costs a whole extra file
+ * of wall time, while the lost req/s only slows the TEST process — the server,
+ * which issues the attach traffic that actually dominates a file, is pinned at
+ * `BACKGROUND_STRIPE_RPS` and is unaffected by worker count. Per-key load does
+ * rise (~39 → ~48 req/s) and the in-process limiter absorbs the shed.
  */
-export const DEFAULT_WORKERS = 450;
+export const DEFAULT_WORKERS = 600;
 
 /**
  * Per-worker file concurrency `K` default (`--per-worker`). Each worker hosts one

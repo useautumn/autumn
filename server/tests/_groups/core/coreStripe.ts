@@ -7,8 +7,12 @@ export const coreStripe: TestGroup = {
 	paths: [
 		"stripe-webhooks/subscription-updated",
 		"stripe-webhooks/subscription-deleted/subscription-deleted.test.ts",
+		"stripe-webhooks/subscription-deleted/subscription-deleted-2.test.ts",
 		"stripe-webhooks/subscription-deleted/subscription-deleted-invoice.test.ts",
+		"stripe-webhooks/subscription-deleted/subscription-deleted-invoice-3.test.ts",
+		"stripe-webhooks/subscription-deleted/subscription-deleted-invoice-2.test.ts",
 		"stripe-webhooks/invoice-created/invoice-created-consumable.test.ts",
 		"stripe-webhooks/invoice-created/invoice-created-entity-consumable.test.ts",
+		"stripe-webhooks/invoice-created/invoice-created-entity-consumable-2.test.ts",
 	],
 };

@@ -2,6 +2,8 @@
  * TDD coverage for update_plan migrations preserving in-flight subscription
  * states.
  *
+ * Slice 1 of 2 (see update-plan-op-states-2.test.ts for slice 2).
+ *
  * Contract under test:
  *   - Updating the active plan's base price does not clear a scheduled downgrade.
  *   - Updating a canceling plan's base price does not clear end-of-cycle cancel.
@@ -11,7 +13,6 @@
 import { expect, test } from "bun:test";
 import {
 	type ApiCustomerV3,
-	type ApiEntityV0,
 	CusProductStatus,
 	customerPrices,
 	customerProducts,
@@ -22,13 +23,11 @@ import {
 import {
 	expectCustomerProducts,
 	expectProductCanceling,
-	expectProductNotPresent,
 	expectProductScheduled,
 } from "@tests/integration/billing/utils/expectCustomerProductCorrect";
 import { expectCustomerProductStatuses } from "@tests/integration/billing/utils/expectCustomerProductStatuses";
 import { expectNoExpiredCustomerProducts } from "@tests/integration/billing/utils/expectNoExpiredCustomerProducts";
 import { expectStripeSubscriptionCorrect } from "@tests/integration/billing/utils/expectStripeSubCorrect";
-import { TestFeature } from "@tests/setup/v2Features";
 import { items } from "@tests/utils/fixtures/items";
 import { itemsV2 } from "@tests/utils/fixtures/itemsV2";
 import { products } from "@tests/utils/fixtures/products";
@@ -380,253 +379,6 @@ test.concurrent(
 			ctx,
 			customerId,
 			productId: pro.id,
-		});
-		await expectStripeSubscriptionCorrect({ ctx, customerId });
-	},
-);
-
-test.concurrent(
-	`${chalk.yellowBright("migrations update_plan states: entity scheduled and canceling states survive")}`,
-	async () => {
-		const customerId = "migration-update-state-entities";
-		const pro = products.pro({
-			items: [items.monthlyMessages({ includedUsage: 500 })],
-		});
-		const premium = products.premium({
-			items: [items.monthlyMessages({ includedUsage: 1000 })],
-		});
-
-		const { autumnV1, autumnV2_2, ctx, entities } = await initScenario({
-			customerId,
-			setup: [
-				s.customer({ paymentMethod: "success" }),
-				s.products({ list: [pro, premium] }),
-				s.entities({ count: 2, featureId: TestFeature.Users }),
-			],
-			actions: [
-				s.billing.attach({ productId: premium.id, entityIndex: 0 }),
-				s.billing.attach({ productId: premium.id, entityIndex: 1 }),
-				s.billing.attach({ productId: pro.id, entityIndex: 0 }),
-				s.updateSubscription({
-					productId: premium.id,
-					entityIndex: 1,
-					cancelAction: "cancel_end_of_cycle",
-				}),
-			],
-		});
-
-		const entity1Before = await autumnV1.entities.get<ApiEntityV0>(
-			customerId,
-			entities[0].id,
-		);
-		const entity2Before = await autumnV1.entities.get<ApiEntityV0>(
-			customerId,
-			entities[1].id,
-		);
-		await expectProductCanceling({
-			customer: entity1Before,
-			productId: premium.id,
-		});
-		await expectProductScheduled({
-			customer: entity1Before,
-			productId: pro.id,
-		});
-		await expectProductCanceling({
-			customer: entity2Before,
-			productId: premium.id,
-		});
-		await expectProductNotPresent({
-			customer: entity2Before,
-			productId: pro.id,
-		});
-		const scheduledIdsBefore = await getScheduledIds({
-			ctx,
-			customerId,
-			productId: pro.id,
-			entityId: entities[0].id,
-		});
-		expect(scheduledIdsBefore.length).toBeGreaterThan(0);
-
-		await runUpdatePlanMigration({
-			ctx,
-			migrationClient: autumnV2_2,
-			migrationId: `${customerId}-mig`,
-			customerId,
-			runOnServer: false,
-			filter: { customer: { plan: { plan_id: premium.id } } },
-			operations: {
-				customer: [
-					{
-						type: "update_plan",
-						plan_filter: { plan_id: premium.id },
-						customize: {
-							price: itemsV2.monthlyPrice({ amount: 100 }),
-						},
-					},
-				],
-			},
-		});
-
-		const entity1After = await autumnV1.entities.get<ApiEntityV0>(
-			customerId,
-			entities[0].id,
-		);
-		const entity2After = await autumnV1.entities.get<ApiEntityV0>(
-			customerId,
-			entities[1].id,
-		);
-		await expectProductCanceling({
-			customer: entity1After,
-			productId: premium.id,
-		});
-		await expectProductScheduled({ customer: entity1After, productId: pro.id });
-		await expectProductCanceling({
-			customer: entity2After,
-			productId: premium.id,
-		});
-		await expectProductNotPresent({
-			customer: entity2After,
-			productId: pro.id,
-		});
-		expect(
-			await getCustomerProductPriceAmounts({
-				ctx,
-				customerId,
-				productId: premium.id,
-				entityId: entities[0].id,
-			}),
-		).toEqual([100]);
-		expect(
-			await getCustomerProductPriceAmounts({
-				ctx,
-				customerId,
-				productId: premium.id,
-				entityId: entities[1].id,
-			}),
-		).toEqual([100]);
-		await expectScheduledIdsPreservedOrRewired({
-			ctx,
-			before: scheduledIdsBefore,
-			after: await getScheduledIds({
-				ctx,
-				customerId,
-				productId: pro.id,
-				entityId: entities[0].id,
-			}),
-		});
-		await expectStripeSubscriptionCorrect({ ctx, customerId });
-	},
-);
-
-test.concurrent(
-	`${chalk.yellowBright("migrations update_plan states: multi-product scheduled downgrade and canceling addon survive")}`,
-	async () => {
-		const customerId = "migration-update-state-products";
-		const pro = products.pro({
-			items: [items.monthlyMessages({ includedUsage: 500 })],
-		});
-		const premium = products.premium({
-			items: [items.monthlyMessages({ includedUsage: 1000 })],
-		});
-		const addon = products.recurringAddOn({
-			items: [items.monthlyWords({ includedUsage: 300 })],
-		});
-
-		const { autumnV1, autumnV2_2, ctx } = await initScenario({
-			customerId,
-			setup: [
-				s.customer({ paymentMethod: "success" }),
-				s.products({ list: [pro, premium, addon] }),
-			],
-			actions: [
-				s.billing.attach({ productId: premium.id }),
-				s.billing.attach({ productId: addon.id }),
-				s.billing.attach({ productId: pro.id }),
-				s.updateSubscription({
-					productId: addon.id,
-					cancelAction: "cancel_end_of_cycle",
-				}),
-			],
-		});
-
-		const before = await autumnV1.customers.get<ApiCustomerV3>(customerId);
-		await expectProductCanceling({ customer: before, productId: premium.id });
-		await expectProductScheduled({ customer: before, productId: pro.id });
-		await expectProductCanceling({ customer: before, productId: addon.id });
-		const scheduledIdsBefore = await getScheduledIds({
-			ctx,
-			customerId,
-			productId: pro.id,
-		});
-		expect(scheduledIdsBefore.length).toBeGreaterThan(0);
-
-		await runUpdatePlanMigration({
-			ctx,
-			migrationClient: autumnV2_2,
-			migrationId: `${customerId}-mig`,
-			customerId,
-			runOnServer: false,
-			filter: {
-				customer: {
-					plan: { $or: [{ plan_id: premium.id }, { plan_id: addon.id }] },
-				},
-			},
-			operations: {
-				customer: [
-					{
-						type: "update_plan",
-						plan_filter: { plan_id: premium.id },
-						customize: {
-							price: itemsV2.monthlyPrice({ amount: 100 }),
-						},
-					},
-					{
-						type: "update_plan",
-						plan_filter: { plan_id: addon.id },
-						customize: {
-							price: itemsV2.monthlyPrice({ amount: 40 }),
-						},
-					},
-				],
-			},
-		});
-
-		const after = await autumnV1.customers.get<ApiCustomerV3>(customerId);
-		await expectProductCanceling({ customer: after, productId: premium.id });
-		await expectProductScheduled({ customer: after, productId: pro.id });
-		await expectProductCanceling({ customer: after, productId: addon.id });
-		expect(
-			await getCustomerProductPriceAmounts({
-				ctx,
-				customerId,
-				productId: premium.id,
-			}),
-		).toEqual([100]);
-		expect(
-			await getCustomerProductPriceAmounts({
-				ctx,
-				customerId,
-				productId: addon.id,
-			}),
-		).toEqual([40]);
-		await expectScheduledIdsPreservedOrRewired({
-			ctx,
-			before: scheduledIdsBefore,
-			after: await getScheduledIds({
-				ctx,
-				customerId,
-				productId: pro.id,
-			}),
-		});
-		await expectNoExpiredCustomerProducts({
-			ctx,
-			customerId,
-			productId: premium.id,
-		});
-		await expectNoExpiredCustomerProducts({
-			ctx,
-			customerId,
-			productId: addon.id,
 		});
 		await expectStripeSubscriptionCorrect({ ctx, customerId });
 	},

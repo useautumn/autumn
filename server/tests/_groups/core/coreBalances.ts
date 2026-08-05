@@ -12,6 +12,7 @@ export const coreBalances: TestGroup = {
 		"balances/check/misc",
 		"integration/balances/check/spend-limit/check-entity-product-spend-limit.test.ts",
 		"integration/balances/check/spend-limit/check-customer-spend-limit.test.ts",
+		"integration/balances/check/spend-limit/check-customer-spend-limit-2.test.ts",
 		"integration/balances/check/pooled-balances",
 
 		// ── Track ──
@@ -26,6 +27,7 @@ export const coreBalances: TestGroup = {
 		"balances/track/paid-allocated",
 		"integration/balances/track/track-misc.test.ts",
 		"integration/balances/track/spend-limit/track-entity-product-spend-limit.test.ts",
+		"integration/balances/track/spend-limit/track-entity-product-spend-limit-2.test.ts",
 		"integration/balances/track/spend-limit/track-customer-spend-limit.test.ts",
 		"integration/balances/track/pooled-balances",
 		"integration/balances/track/spend-limit/pooled-balances",

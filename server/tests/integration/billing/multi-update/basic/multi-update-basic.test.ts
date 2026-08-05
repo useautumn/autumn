@@ -1,6 +1,8 @@
 /**
  * TDD tests for the multiUpdate billing action — cancel multiple plans in one call.
  *
+ * Slice 1 of 2: EOC cancel with survivors + proration none.
+ *
  * Contract under test:
  *   New endpoints:
  *     - POST /billing.multi_update -> BillingResponse (latest API version only)
@@ -22,8 +24,6 @@
 
 import { test } from "bun:test";
 import type { MultiUpdateParamsV0Input } from "@autumn/shared";
-import { waitForTrackedUsageInDb } from "@tests/integration/billing/legacy/utils/waitForTrackedUsageInDb";
-import { expectMultiUpdatePreviewCorrect } from "@tests/integration/billing/multi-update/utils/expectMultiUpdatePreviewCorrect";
 import { expectCustomerInvoiceCorrect } from "@tests/integration/billing/utils/expectCustomerInvoiceCorrect";
 import {
 	expectCustomerProducts,
@@ -31,6 +31,8 @@ import {
 } from "@tests/integration/billing/utils/expectCustomerProductCorrect";
 import { expectNoStripeSubscription } from "@tests/integration/billing/utils/expectNoStripeSubscription";
 import { expectStripeSubscriptionCorrect } from "@tests/integration/billing/utils/expectStripeSubCorrect/expectStripeSubscriptionCorrect";
+import { quiesceCustomerWebhooks } from "@tests/integration/billing/utils/quiesceCustomerWebhooks";
+import { waitForCustomerUsageInDb } from "@tests/integration/billing/utils/waitForUsageInDb";
 import { TestFeature } from "@tests/setup/v2Features";
 import { items } from "@tests/utils/fixtures/items";
 import { products } from "@tests/utils/fixtures/products";
@@ -92,16 +94,30 @@ test.concurrent(
 				s.attach({ productId: proA.id }),
 				s.attach({ productId: proB.id }),
 				s.attach({ productId: addon.id }),
-				// 400 overage on the add-on's consumable
-				s.track({ featureId: TestFeature.Messages, value: 500 }),
 			],
+		});
+
+		// Three attaches means three subscriptions' worth of Stripe webhooks still
+		// in flight. Let them land BEFORE tracking — one arriving inside the
+		// track→sync window drops the deduction and the cycle-end overage bills $0.
+		await quiesceCustomerWebhooks({
+			stripeCli: ctx.stripeCli,
+			autumn: autumnV2_3,
+			customerId,
+		});
+
+		// 400 overage on the add-on's consumable
+		await autumnV2_3.track({
+			customer_id: customerId,
+			feature_id: TestFeature.Messages,
+			value: 500,
 		});
 
 		// The deduction lives only in Redis until its async sync runs; any
 		// invalidation in that window (a late attach webhook, the multiUpdate's own
 		// cache refresh) can drop it, and the cycle-end overage then bills $0.
 		// Gate on Postgres having it rather than sleeping a fixed 4s.
-		await waitForTrackedUsageInDb({
+		await waitForCustomerUsageInDb({
 			customerId,
 			featureId: TestFeature.Messages,
 			balance: -400,
@@ -155,190 +171,6 @@ test.concurrent(
 			count: 4,
 			latestTotal: 60,
 			settleTimeoutMs: WEBHOOK_SETTLE_TIMEOUT_MS,
-		});
-	},
-);
-
-// ═══════════════════════════════════════════════════════════════════════════════
-// TEST 2: Cancel ALL plans immediately in one call — whole-sub cancel + preview parity
-// ═══════════════════════════════════════════════════════════════════════════════
-
-/**
- * Scenario:
- * - Pro A (group a, $20/mo) + Pro B (group b, $20/mo) on one subscription
- * - previewMultiUpdate both cancels, then multiUpdate with the same params
- *
- * Expected Result:
- * - Preview total = combined prorated credit for both plans (negative)
- * - Execution: both plans removed, Stripe subscription canceled entirely,
- *   ONE credit invoice whose total matches the preview exactly and whose
- *   product_ids cover BOTH plans
- */
-test.concurrent(
-	`${chalk.yellowBright("multi update basic: cancel all plans immediately, whole sub canceled, preview parity")}`,
-	async () => {
-		const customerId = "multi-update-basic-imm-all";
-
-		const proA = products.pro({
-			id: "pro-a",
-			items: [items.monthlyWords({ includedUsage: 100 })],
-			group: `${customerId}_a`,
-		});
-		const proB = products.pro({
-			id: "pro-b",
-			items: [items.monthlyUsers({ includedUsage: 5 })],
-			group: `${customerId}_b`,
-		});
-
-		const { autumnV2_3, ctx } = await initScenario({
-			customerId,
-			setup: [
-				s.customer({ paymentMethod: "success" }),
-				s.products({ list: [proA, proB] }),
-			],
-			actions: [
-				s.attach({ productId: proA.id }),
-				s.attach({ productId: proB.id }),
-			],
-		});
-
-		const multiUpdateParams: MultiUpdateParamsV0Input = {
-			customer_id: customerId,
-			updates: [
-				{ plan_id: proA.id, cancel_action: "cancel_immediately" },
-				{ plan_id: proB.id, cancel_action: "cancel_immediately" },
-			],
-		};
-
-		// ── Contract: preview = exact combined credit; nothing renews next cycle ─
-		const preview = await expectMultiUpdatePreviewCorrect({
-			autumn: autumnV2_3,
-			params: multiUpdateParams,
-			total: -40,
-			subscriptions: [
-				{ planIds: [proA.id, proB.id], total: -40, nextCycleTotal: null },
-			],
-		});
-
-		// ── Contract: execution matches preview, one credit invoice ──────────────
-		await autumnV2_3.billing.multiUpdate<MultiUpdateParamsV0Input>(
-			multiUpdateParams,
-		);
-
-		await expectCustomerProducts({
-			autumn: autumnV2_3,
-			customerId,
-			notPresent: [proA.id, proB.id],
-		});
-
-		// Attach invoices (2) + single combined credit invoice (1) carrying BOTH plans
-		await expectCustomerInvoiceCorrect({
-			customerId,
-			count: 3,
-			latestTotal: preview.total,
-			latestInvoiceProductIds: [proA.id, proB.id],
-		});
-
-		// ── Contract: whole-sub Stripe cancel when nothing survives ──────────────
-		await expectNoStripeSubscription({
-			db: ctx.db,
-			customerId,
-			org: ctx.org,
-			env: ctx.env,
-		});
-	},
-);
-
-// ═══════════════════════════════════════════════════════════════════════════════
-// TEST 3: Cancel 2 of 3 plans immediately — survivor and its sub items untouched
-// ═══════════════════════════════════════════════════════════════════════════════
-
-/**
- * Scenario:
- * - Pro A ($20/mo, group a), Pro B ($20/mo, group b), Premium C ($50/mo, group c)
- * - ONE multiUpdate: cancel Pro A + Pro B immediately
- *
- * Expected Result:
- * - Pro A + Pro B removed with a combined prorated credit, Premium C stays active
- * - Subscription survives with only Premium C's items (partial item removal, not
- *   whole-sub cancel)
- */
-test.concurrent(
-	`${chalk.yellowBright("multi update basic: cancel 2 of 3 plans immediately, survivor intact")}`,
-	async () => {
-		const customerId = "multi-update-basic-partial";
-
-		const proA = products.pro({
-			id: "pro-a",
-			items: [items.monthlyWords({ includedUsage: 100 })],
-			group: `${customerId}_a`,
-		});
-		const proB = products.pro({
-			id: "pro-b",
-			items: [items.monthlyUsers({ includedUsage: 5 })],
-			group: `${customerId}_b`,
-		});
-		const premiumC = products.base({
-			id: "premium-c",
-			items: [items.monthlyPrice({ price: 50 }), items.dashboard()],
-			group: `${customerId}_c`,
-		});
-
-		const { autumnV2_3, ctx } = await initScenario({
-			customerId,
-			setup: [
-				s.customer({ paymentMethod: "success" }),
-				s.products({ list: [proA, proB, premiumC] }),
-			],
-			actions: [
-				s.attach({ productId: proA.id }),
-				s.attach({ productId: proB.id }),
-				s.attach({ productId: premiumC.id }),
-			],
-		});
-
-		const multiUpdateParams: MultiUpdateParamsV0Input = {
-			customer_id: customerId,
-			updates: [
-				{ plan_id: proA.id, cancel_action: "cancel_immediately" },
-				{ plan_id: proB.id, cancel_action: "cancel_immediately" },
-			],
-		};
-
-		// Premium C survives, so this sub's next cycle renews at exactly $50
-		const preview = await expectMultiUpdatePreviewCorrect({
-			autumn: autumnV2_3,
-			params: multiUpdateParams,
-			total: -40,
-			subscriptions: [
-				{ planIds: [proA.id, proB.id], total: -40, nextCycleTotal: 50 },
-			],
-		});
-
-		await autumnV2_3.billing.multiUpdate<MultiUpdateParamsV0Input>(
-			multiUpdateParams,
-		);
-
-		await expectCustomerProducts({
-			autumn: autumnV2_3,
-			customerId,
-			notPresent: [proA.id, proB.id],
-			active: [premiumC.id],
-		});
-
-		// Combined credit for both canceled plans on one invoice (3 attaches + 1 credit)
-		await expectCustomerInvoiceCorrect({
-			customerId,
-			count: 4,
-			latestTotal: preview.total,
-			latestInvoiceProductIds: [proA.id, proB.id],
-		});
-
-		// ── Contract: surviving plan's subscription verifies clean ───────────────
-		await expectStripeSubscriptionCorrect({
-			ctx,
-			customerId,
-			options: { subCount: 1 },
 		});
 	},
 );

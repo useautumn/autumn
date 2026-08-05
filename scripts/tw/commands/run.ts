@@ -76,7 +76,11 @@ import {
 	orderByLongestFirst,
 	persistFileDurations,
 } from "../helpers/fileDurations.ts";
-import { createIngress, pushWorkerMapping } from "../helpers/ingress.ts";
+import {
+	createIngress,
+	fetchIngressStats,
+	pushWorkerMapping,
+} from "../helpers/ingress.ts";
 import { withGlobalLock } from "../helpers/lock.ts";
 import {
 	disableQuietMode,
@@ -1822,6 +1826,7 @@ export const run = async (args: TwRunArgs): Promise<void> => {
 				pool: svixPool,
 				resolveSandbox,
 				toWorkerPath: toSandboxPath,
+				ingress: { url: ingress.publicUrl, token: ingress.token },
 			});
 			await runFiles(svixFiles, svixExecutor, {
 				maxParallel: Math.max(1, args.perWorker),
@@ -1858,6 +1863,7 @@ export const run = async (args: TwRunArgs): Promise<void> => {
 				pool: normalPool,
 				resolveSandbox,
 				toWorkerPath: toSandboxPath,
+				ingress: { url: ingress.publicUrl, token: ingress.token },
 			});
 			const normalParallel = Math.max(
 				1,
@@ -1938,6 +1944,36 @@ export const run = async (args: TwRunArgs): Promise<void> => {
 		// lifetime is within a few seconds of the final.
 		publishSummary(Date.now() - fanoutStart);
 
+		// ----- INGRESS DELIVERY ------------------------------------------------
+		// Read the ingress counters BEFORE teardown deletes it. A Connect event for
+		// an account with no route is dropped — usually Stripe retrying for a
+		// sub-account an earlier run deleted, but ALSO the signature of a mid-run
+		// account (an `s.platform.create` sub-org) that failed to register itself,
+		// which starves that test of every webhook. That used to be invisible; now
+		// it lands in the run log and the failure report.
+		const ingressStats = await fetchIngressStats({
+			ingressUrl: ingress.publicUrl,
+			signal,
+		});
+		const ingressReport: string[] = [];
+		if (ingressStats) {
+			log(
+				`ingress: ${ingressStats.forwarded} event(s) forwarded, ${ingressStats.dropped} dropped across ${ingressStats.distinctDropped} unrouted account(s), ${ingressStats.size} route(s)`,
+			);
+			if (ingressStats.dropped > 0) {
+				ingressReport.push(
+					`\n⚠ ingress dropped ${ingressStats.dropped} Connect event(s) for ${ingressStats.distinctDropped} unrouted account(s)`,
+					"    expected: Stripe retrying events for sub-accounts deleted by an earlier run (the platform webhook is shared per pool key)",
+					"    NOT expected: an account a test minted mid-run — that test saw ZERO webhooks (see server/tests/utils/twIngress.ts)",
+				);
+				for (const { account, count } of ingressStats.droppedAccounts) {
+					ingressReport.push(`    ${account} — ${count} event(s)`);
+				}
+			}
+		} else {
+			warn("ingress: stats unavailable (could not read /ingress/stats)");
+		}
+
 		// ----- TEARDOWN -------------------------------------------------------
 		milestone(
 			args.keep
@@ -1984,6 +2020,10 @@ export const run = async (args: TwRunArgs): Promise<void> => {
 				}
 			}
 		}
+		// Unrouted Connect events are a run-level fault, not a per-file one — append
+		// them so they ride along in the persisted report instead of scrolling past.
+		failureReport.push(...ingressReport);
+
 		let failuresFile: string | undefined;
 		if (failureReport.length > 0) {
 			failuresFile = join(REGISTRY_DIR, "runs", `${runId}-failures.txt`);
@@ -2011,7 +2051,9 @@ export const run = async (args: TwRunArgs): Promise<void> => {
 
 		// Surface the failures right in the terminal (TUI is down now → stdout).
 		if (failureReport.length > 0) {
-			errorLog(`${failedFiles.length} file(s) failed:`);
+			if (failedFiles.length > 0) {
+				errorLog(`${failedFiles.length} file(s) failed:`);
+			}
 			for (const line of failureReport) {
 				sinkLine(line);
 			}

@@ -70,8 +70,19 @@ const postSettleFloorMs = () => (isParallelRun() ? 5000 : 2000);
  * that the boundary did no work. Falling through to `postSettleFloorMs` there
  * would cut the 30–110s these call sites used to sleep down to 5s and hand the
  * test pre-boundary state; hold roughly the legacy wait instead.
+ *
+ * This is now a CEILING rather than a fixed sleep: `waitForAutumnStateChange`
+ * looks for a cheap positive signal first (see below) and only the boundaries
+ * that never produce one pay it in full.
  */
 const noSignalFloorMs = () => (isParallelRun() ? 30_000 : 15_000);
+
+/**
+ * Settle allowance once the no-invoice boundary HAS been observed on the Autumn
+ * customer — the remaining work is the tail of the same webhook chain, not
+ * another round trip to Stripe.
+ */
+const postStateChangeFloorMs = () => (isParallelRun() ? 5000 : 2000);
 
 /**
  * `invoice.created` stores ONLY `subscription_cycle` invoices
@@ -141,9 +152,77 @@ export type ClockInvoiceBaseline = {
 	/** Null when no Autumn customer could be resolved — Stripe-only signal then. */
 	autumn: AutumnInt | null;
 	autumnCustomerIds: string[];
+	/**
+	 * Pre-advance fingerprint of the Autumn customers' product + balance state.
+	 * Null when it could not be read, which just disables the early exit.
+	 */
+	autumnState: string | null;
 };
 
 type AutumnInvoiceRow = { stripe_id?: string | null; status?: string | null };
+
+type AutumnProductRow = {
+	id?: string | null;
+	status?: string | null;
+	started_at?: number | null;
+	current_period_end?: number | null;
+	canceled_at?: number | null;
+};
+
+type AutumnFeatureRow = {
+	balance?: number | null;
+	included_usage?: number | null;
+	next_reset_at?: number | null;
+	usage?: number | null;
+};
+
+type AutumnCustomerRow = {
+	invoices?: AutumnInvoiceRow[];
+	products?: AutumnProductRow[];
+	features?: Record<string, AutumnFeatureRow>;
+};
+
+/**
+ * What a cycle boundary CHANGES on the Autumn customer, as a comparable string:
+ * products expiring/activating/renewing (`current_period_end` moves every cycle)
+ * and balances resetting. Deliberately excludes invoices — those are the other
+ * signal, and this one exists precisely for boundaries that produce none.
+ */
+const fingerprintAutumnCustomers = (
+	customers: AutumnCustomerRow[],
+): string | null => {
+	try {
+		const parts: string[] = [];
+		for (const customer of customers) {
+			const products = (customer.products ?? [])
+				.map((product) =>
+					[
+						product.id ?? "",
+						product.status ?? "",
+						product.started_at ?? "",
+						product.current_period_end ?? "",
+						product.canceled_at ?? "",
+					].join(":"),
+				)
+				.sort();
+			const features = Object.entries(customer.features ?? {})
+				.map(([featureId, feature]) =>
+					[
+						featureId,
+						feature?.balance ?? "",
+						feature?.included_usage ?? "",
+						feature?.usage ?? "",
+						feature?.next_reset_at ?? "",
+					].join(":"),
+				)
+				.sort();
+			parts.push(`${products.join("|")}#${features.join("|")}`);
+		}
+		return parts.join("§");
+	} catch {
+		return null;
+	}
+};
 
 const listStripeInvoices = async ({
 	stripeCli,
@@ -202,13 +281,24 @@ export const captureClockInvoiceBaseline = async ({
 					.map((c) => c.metadata?.autumn_id)
 					.filter((id): id is string => Boolean(id));
 
-		const invoices = await listStripeInvoices({ stripeCli, stripeCustomerIds });
+		const autumnClient =
+			autumnCustomerIds.length > 0 ? (autumn ?? new AutumnInt()) : null;
+
+		// The Autumn read is the positive signal's baseline and is independent of
+		// the Stripe list, so pay for both at once rather than back to back.
+		const [invoices, autumnCustomers] = await Promise.all([
+			listStripeInvoices({ stripeCli, stripeCustomerIds }),
+			fetchAutumnCustomers({ client: autumnClient, autumnCustomerIds }),
+		]);
 
 		return {
 			stripeCustomerIds,
 			invoices: new Map(invoices.map((invoice) => [invoice.id, invoice])),
-			autumn: autumnCustomerIds.length > 0 ? (autumn ?? new AutumnInt()) : null,
+			autumn: autumnClient,
 			autumnCustomerIds,
+			autumnState: autumnCustomers
+				? fingerprintAutumnCustomers(autumnCustomers)
+				: null,
 		};
 	} catch (error) {
 		console.log(
@@ -221,22 +311,20 @@ export const captureClockInvoiceBaseline = async ({
 
 /** Null means the Autumn signal is unavailable (server error, wrong org key) —
  * treated as "don't block on it" rather than as a failure. */
-const fetchAutumnInvoices = async ({
-	baseline,
+const fetchAutumnCustomers = async ({
+	client,
+	autumnCustomerIds,
 }: {
-	baseline: ClockInvoiceBaseline;
-}): Promise<AutumnInvoiceRow[] | null> => {
-	const client = baseline.autumn;
-	if (!client) return null;
+	client: AutumnInt | null;
+	autumnCustomerIds: string[];
+}): Promise<AutumnCustomerRow[] | null> => {
+	if (!client || autumnCustomerIds.length === 0) return null;
 	try {
-		const customers = await Promise.all(
-			baseline.autumnCustomerIds.map((id) =>
-				client.customers.get<{ invoices?: AutumnInvoiceRow[] }>(id, {
-					skip_cache: "true",
-				}),
+		return await Promise.all(
+			autumnCustomerIds.map((id) =>
+				client.customers.get<AutumnCustomerRow>(id, { skip_cache: "true" }),
 			),
 		);
-		return customers.flatMap((customer) => customer.invoices ?? []);
 	} catch {
 		return null;
 	}
@@ -314,7 +402,12 @@ const waitForAutumnInvoices = async ({
 	if (!baseline.autumn || invoiceIds.size === 0) return;
 	let consecutiveFailures = 0;
 	while (true) {
-		const rows = await fetchAutumnInvoices({ baseline });
+		const customers = await fetchAutumnCustomers({
+			client: baseline.autumn,
+			autumnCustomerIds: baseline.autumnCustomerIds,
+		});
+		const rows =
+			customers?.flatMap((customer) => customer.invoices ?? []) ?? null;
 		if (rows === null) {
 			// A one-off 429/hiccup is not a reason to drop the signal; a customer
 			// this client genuinely cannot read is.
@@ -333,6 +426,49 @@ const waitForAutumnInvoices = async ({
 			matched.length >= invoiceIds.size &&
 			(!requireFinalized || matched.every((row) => row.status !== "draft"));
 		if (settled || Date.now() >= deadline) return;
+		await timeout(AUTUMN_POLL_INTERVAL_MS);
+	}
+};
+
+/**
+ * The positive signal for a boundary that produces NO invoice.
+ *
+ * A cancelled-at-period-end subscription, a free product's reset, a scheduled
+ * product going active — none of them mint an invoice, so the invoice signal is
+ * simply absent and the old code paid a flat 30s in case the boundary was still
+ * being processed. But every one of them DOES move the Autumn customer:
+ * `current_period_end` rolls, a product expires or activates, balances reset.
+ * Watching that fingerprint turns "sleep long enough" into "wait until it
+ * happened", which is normally a single round trip.
+ *
+ * Returns true when a change was observed. False means either the signal was
+ * unavailable or nothing moved before the deadline — callers then fall back to
+ * the full legacy floor, so this can only make a boundary faster, never slower
+ * than it already was.
+ */
+const waitForAutumnStateChange = async ({
+	baseline,
+	deadline,
+}: {
+	baseline: ClockInvoiceBaseline;
+	deadline: number;
+}): Promise<boolean> => {
+	if (!baseline.autumn || baseline.autumnState === null) return false;
+	let consecutiveFailures = 0;
+	while (true) {
+		const customers = await fetchAutumnCustomers({
+			client: baseline.autumn,
+			autumnCustomerIds: baseline.autumnCustomerIds,
+		});
+		if (customers === null) {
+			consecutiveFailures += 1;
+			if (consecutiveFailures >= MAX_AUTUMN_FETCH_FAILURES) return false;
+		} else {
+			consecutiveFailures = 0;
+			const current = fingerprintAutumnCustomers(customers);
+			if (current !== null && current !== baseline.autumnState) return true;
+		}
+		if (Date.now() >= deadline) return false;
 		await timeout(AUTUMN_POLL_INTERVAL_MS);
 	}
 };
@@ -373,20 +509,37 @@ export const waitForClockInvoiceSettle = async ({
 }): Promise<void> => {
 	const startedAt = Date.now();
 	const deadline = startedAt + timeoutMs;
-	const settleFloor = async ({ noSignal }: { noSignal: boolean }) => {
-		const floorMs = (() => {
-			// No legacy wait to honour: the call site opted into a settle mode.
-			if (legacyWaitMs === undefined) {
-				return noSignal ? noSignalFloorMs() : postSettleFloorMs();
-			}
-			// Polling replaced an explicit blind wait: honour it in full when the
-			// signal never materialised, collapse it when it did.
-			return noSignal
-				? legacyWaitMs
-				: Math.min(legacyWaitMs, legacyWaitFloorMs());
-		})();
+	const holdUntil = async (floorMs: number) => {
 		const remainingMs = floorMs - (Date.now() - startedAt);
 		if (remainingMs > 0) await timeout(remainingMs);
+	};
+
+	const settleFloor = async ({ noSignal }: { noSignal: boolean }) => {
+		if (!noSignal) {
+			// The invoice signal fired: the boundary is provably done.
+			await holdUntil(
+				legacyWaitMs === undefined
+					? postSettleFloorMs()
+					: Math.min(legacyWaitMs, legacyWaitFloorMs()),
+			);
+			return;
+		}
+
+		// No invoice at this boundary. The blind wait that used to sit here is a
+		// CEILING now: look for the boundary on the Autumn customer instead and
+		// stop as soon as it is visible.
+		const ceilingMs = legacyWaitMs ?? noSignalFloorMs();
+		const changed = await waitForAutumnStateChange({
+			baseline,
+			deadline: Math.min(deadline, startedAt + ceilingMs),
+		});
+		if (!changed) {
+			// Nothing observable moved (or the signal was unavailable) — this is
+			// exactly the case the fixed wait existed for, so pay it in full.
+			await holdUntil(ceilingMs);
+			return;
+		}
+		await timeout(postStateChangeFloorMs());
 	};
 
 	if (mode === "finalize-pending") {

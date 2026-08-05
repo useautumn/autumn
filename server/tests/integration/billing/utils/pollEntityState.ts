@@ -1,4 +1,3 @@
-import { expect } from "bun:test";
 import {
 	type ApiCusFeatureV3,
 	type ApiCusProductV3,
@@ -62,62 +61,11 @@ export const pollEntityUntil = async ({
 	});
 
 /**
- * Entity-scoped sibling of `waitForTrackedUsageInDb`.
- *
- * A `/track` deduction is applied to the Redis balance immediately and reaches
- * Postgres only when its async sync runs. Everything that bills or resets that
- * usage later — `invoice.created`'s arrear line items, `customer.subscription
- * .deleted`'s final arrear invoice, a cancel — reads Postgres, and any
- * full-subject invalidation landing in that window (a Stripe webhook from the
- * attach that preceded the track) drops the cached deduction. Gating on the
- * Postgres-backed read makes the rest of the test immune to that race instead
- * of racing it.
+ * The Postgres-visibility gates now live in ONE place (`waitForUsageInDb.ts`,
+ * customer + entity variants). Re-exported here so the many existing
+ * `pollEntityState` import sites keep working.
  */
-export const waitForEntityUsageInDb = async ({
-	autumn,
-	customerId,
-	entityId,
-	featureId,
-	balance,
-	usage,
-	timeoutMs = DEFAULT_SETTLE_TIMEOUT_MS,
-}: {
-	autumn?: AutumnInt;
-	customerId: string;
-	entityId: string;
-	featureId: string;
-	balance?: number;
-	usage?: number;
-	timeoutMs?: number;
-}): Promise<PolledEntity> =>
-	pollEntityUntil({
-		autumn,
-		customerId,
-		entityId,
-		skipCache: true,
-		timeoutMs,
-		assert: (entity) => {
-			const feature = entity.features?.[featureId];
-			expect(
-				feature,
-				`Feature ${featureId} not found on entity ${entityId} (db read)`,
-			).toBeDefined();
-
-			if (balance !== undefined) {
-				expect(
-					feature?.balance,
-					`Tracked deduction for ${featureId} never reached Postgres for ${customerId}:${entityId}`,
-				).toBe(balance);
-			}
-
-			if (usage !== undefined) {
-				expect(
-					feature?.usage,
-					`Tracked usage for ${featureId} never reached Postgres for ${customerId}:${entityId}`,
-				).toBe(usage);
-			}
-		},
-	});
+export { waitForEntityUsageInDb } from "./waitForUsageInDb.js";
 
 /**
  * Retries an assertion block that fetches its own state (helpers like

@@ -24,6 +24,7 @@ import {
 	expectProductNotPresent,
 } from "@tests/integration/billing/utils/expectCustomerProductCorrect";
 import { expectNoStripeSubscription } from "@tests/integration/billing/utils/expectNoStripeSubscription";
+import { waitForCustomerUsageInDb } from "@tests/integration/billing/utils/waitForUsageInDb";
 import { TestFeature } from "@tests/setup/v2Features";
 import { items } from "@tests/utils/fixtures/items";
 import { products } from "@tests/utils/fixtures/products";
@@ -122,17 +123,18 @@ test.concurrent(
 		// Cancel immediately
 		await autumnV1.subscriptions.update(cancelParams);
 
-		// Verify product is removed
-		const customerAfterCancel =
-			await autumnV1.customers.get<ApiCustomerV3>(customerId);
+		// Removal and the refund invoice both settle on the cancel's Stripe round
+		// trip and its webhook, so poll rather than reading one snapshot.
 		await expectProductNotPresent({
-			customer: customerAfterCancel,
+			autumn: autumnV1,
+			customerId,
 			productId: pro.id,
 		});
 
 		// Verify invoice matches preview
-		expectCustomerInvoiceCorrect({
-			customer: customerAfterCancel,
+		await expectCustomerInvoiceCorrect({
+			autumn: autumnV1,
+			customerId,
 			count: 2,
 			latestTotal: preview.total,
 		});
@@ -370,17 +372,18 @@ test.concurrent(
 		// Cancel immediately
 		await autumnV1.subscriptions.update(cancelParams);
 
-		// Verify product is removed
-		const customerAfterCancel =
-			await autumnV1.customers.get<ApiCustomerV3>(customerId);
+		// Removal and the refund invoice both settle on the cancel's Stripe round
+		// trip and its webhook, so poll rather than reading one snapshot.
 		await expectProductNotPresent({
-			customer: customerAfterCancel,
+			autumn: autumnV1,
+			customerId,
 			productId: pro.id,
 		});
 
 		// Verify invoice matches preview
-		expectCustomerInvoiceCorrect({
-			customer: customerAfterCancel,
+		await expectCustomerInvoiceCorrect({
+			autumn: autumnV1,
+			customerId,
 			count: 2,
 			latestTotal: preview.total,
 		});
@@ -455,6 +458,15 @@ test.concurrent(
 			value: allocatedSeats,
 		});
 
+		// The seat charge the refund is prorated against is only settled once the
+		// deduction is durable in Postgres — gate on it before previewing.
+		await waitForCustomerUsageInDb({
+			autumn: autumnV1,
+			customerId,
+			featureId: TestFeature.Users,
+			balance: -allocatedSeats,
+		});
+
 		// Get billing period for proration calculation
 		const customerMidCycle =
 			await autumnV1.customers.get<ApiCustomerV3>(customerId);
@@ -510,17 +522,18 @@ test.concurrent(
 		// Cancel immediately
 		await autumnV1.subscriptions.update(cancelParams);
 
-		// Verify product is removed
-		const customerAfterCancel =
-			await autumnV1.customers.get<ApiCustomerV3>(customerId);
+		// Removal and the refund invoice both settle on the cancel's Stripe round
+		// trip and its webhook, so poll rather than reading one snapshot.
 		await expectProductNotPresent({
-			customer: customerAfterCancel,
+			autumn: autumnV1,
+			customerId,
 			productId: pro.id,
 		});
 
 		// Verify invoice matches preview
-		expectCustomerInvoiceCorrect({
-			customer: customerAfterCancel,
+		await expectCustomerInvoiceCorrect({
+			autumn: autumnV1,
+			customerId,
 			count: 3, // Initial ($20) + allocated overage + refund
 			latestTotal: preview.total,
 		});

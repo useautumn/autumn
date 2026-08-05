@@ -164,6 +164,42 @@ export const createIngress = async ({
  * on a non-2xx so a provisioning failure surfaces (the mapping is load-bearing for
  * that worker's delivery isolation).
  */
+/** Shape of `GET /ingress/stats` (see `ingress/server.mjs`). */
+export type IngressStats = {
+	forwarded: number;
+	dropped: number;
+	distinctDropped: number;
+	droppedAccounts: { account: string; count: number }[];
+	size: number;
+};
+
+/**
+ * Read the ingress delivery counters (must be called BEFORE teardown deletes the
+ * ingress sandbox). `dropped > 0` means Connect events arrived for accounts with
+ * no route: normally just Stripe retrying for sub-accounts an earlier run
+ * deleted, but it is ALSO the signature of a test-created (mid-run) sub-account
+ * that never registered itself — which silently starves that test of every
+ * webhook. Returns undefined if the ingress is unreachable (never throws: this is
+ * diagnostics, not a run-critical path).
+ */
+export const fetchIngressStats = async ({
+	ingressUrl,
+	signal,
+}: {
+	ingressUrl: string;
+	signal?: AbortSignal;
+}): Promise<IngressStats | undefined> => {
+	try {
+		const response = await fetch(`${ingressUrl}/ingress/stats`, { signal });
+		if (!response.ok) {
+			return undefined;
+		}
+		return (await response.json()) as IngressStats;
+	} catch {
+		return undefined;
+	}
+};
+
 export const pushWorkerMapping = async ({
 	ingressUrl,
 	token,

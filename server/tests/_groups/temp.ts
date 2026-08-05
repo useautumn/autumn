@@ -30,13 +30,18 @@ const activeTempPaths: string[] = [
 	// ✗ "attach: quantity upgrade mid-cycle with prorate immediately"
 	//   Expected: 411, Received: 500 (the deduction never lands).
 	"integration/billing/legacy/attach/update-quantity/legacy-update-quantity.test.ts",
+	"integration/billing/legacy/attach/update-quantity/legacy-update-quantity-3.test.ts",
+	"integration/billing/legacy/attach/update-quantity/legacy-update-quantity-2.test.ts",
 	// ✗ "legacy-upgrade-usage 1: consumable upgrades Pro → Premium → Growth"
 	//   Expected: -100, Received: 100.
 	"integration/billing/legacy/attach/upgrade/legacy-upgrade-usage.test.ts",
+	"integration/billing/legacy/attach/upgrade/legacy-upgrade-usage-2.test.ts",
 	// ✗ "sub.deleted invoice: entity consumable → Stripe cancel at period end →
 	//   CREATES arrear invoice" — Invoice[0] expected $40.00, got $0.00. Also
 	//   "…advance 1 month → cancel immediately → no invoice", Expected 1, got 2.
 	"integration/billing/stripe-webhooks/subscription-deleted/subscription-deleted-invoice.test.ts",
+	"integration/billing/stripe-webhooks/subscription-deleted/subscription-deleted-invoice-3.test.ts",
+	"integration/billing/stripe-webhooks/subscription-deleted/subscription-deleted-invoice-2.test.ts",
 
 	// ── GROUP B: individual bugs ────────────────────────────────────────────
 	// ✗ "cancel end of cycle: downgrade then cancel (with default)"
@@ -46,6 +51,7 @@ const activeTempPaths: string[] = [
 	//   marked canceling, and the default (free) was never scheduled.
 	//   Deterministic — fails the same way solo, so not cross-file collision.
 	"integration/billing/update-subscription/cancel/end-of-cycle/cancel-end-of-cycle.test.ts",
+	"integration/billing/update-subscription/cancel/end-of-cycle/cancel-end-of-cycle-2.test.ts",
 	// ✗ "legacy one-off rwf: prepaid one-off charges major units, not x100"
 	//   Autumn holds the invoice at "draft" forever, and listing invoices on the
 	//   SUB-ORG's own Stripe account returns [] — so no Stripe invoice is ever

@@ -18,11 +18,23 @@
  *   - TW_ENV        — the env path segment for the forwarded connect route
  *                     (`/webhooks/connect/<env>`); default "sandbox".
  *
+ * Mid-run accounts: tests that provision a platform SUB-ORG (`s.platform.create`)
+ * mint a brand-new Connect account INSIDE a worker, long after boot. Those events
+ * still land here (the platform webhook is per pool key, and the sub-account was
+ * created on that same key), but the boot-time map knows nothing about them — so
+ * the test process registers the account itself through `POST /ingress/map`
+ * (`server/tests/utils/twIngress.ts`, called from `createSubOrgTestContext`). The
+ * drop counters below are the backstop for that path ever regressing.
+ *
  * Routes:
  *   - GET  /health               → 200 "ok".
  *   - POST /ingress/map          → token-authed; merge `{ accountId, workerUrl }`
  *                                  and/or `{ map: { [acct]: url } }`; → `{ size }`.
  *   - GET  /ingress/map          → the current map as JSON (debug).
+ *   - GET  /ingress/stats        → `{ forwarded, dropped, distinctDropped,
+ *                                  droppedAccounts, size }` — the orchestrator
+ *                                  reads this before teardown so unrouted events
+ *                                  surface in the run summary instead of vanishing.
  *   - POST /ingress/connect[/:env] → ack 200 immediately, then async forward the
  *                                  raw body to the owning worker's connect route.
  *   - 404 otherwise.
@@ -44,6 +56,28 @@ const defaultEnv = process.env.TW_ENV ?? "sandbox";
 
 /** In-memory routing table: Stripe connected account id → worker public URL. */
 const routes = new Map();
+
+/**
+ * Delivery counters. Events for an account with no route used to vanish without
+ * a trace, which hid a whole class of bug (every `s.platform.create` test ran
+ * with ZERO webhooks because its mid-run sub-account was never mapped). Counting
+ * them — and exposing the count on `/ingress/stats` for the run summary — means
+ * that gap can never hide again.
+ */
+const counters = { forwarded: 0, dropped: 0 };
+
+/** account id → number of dropped events, so the summary can name the offenders. */
+const droppedByAccount = new Map();
+
+/**
+ * How many DISTINCT unknown accounts get a one-time warn line. Stripe retries
+ * events for sub-accounts deleted by earlier runs (the platform Connect webhook
+ * is per pool key, shared across runs), so some drops are expected noise — the
+ * cap keeps that noise bounded while still naming the first offenders.
+ */
+const DROP_WARN_ACCOUNT_LIMIT = 25;
+/** Sample account ids returned by `/ingress/stats`. */
+const DROP_SAMPLE_LIMIT = 10;
 
 const logInfo = (message) => {
 	console.log(`${LOG_PREFIX} ${message}`);
@@ -99,11 +133,22 @@ const forwardConnectEvent = async (rawBody, env) => {
 
 	const workerUrl = routes.get(accountId);
 	if (!workerUrl) {
-		// Silently drop: after teardown, Stripe retries webhooks for deleted
-		// sub-accounts for a while — there's no worker to route them to and it's
-		// expected, so logging each one just spams the run output.
+		// COUNTED drop (it used to be a silent one). Expected: Stripe retrying
+		// events for sub-accounts an earlier run already deleted. NOT expected: an
+		// account a test minted mid-run and failed to register — that silently
+		// starves the test of every webhook, so the count is surfaced in the run
+		// summary (`GET /ingress/stats`) and the first N distinct accounts warn here.
+		counters.dropped += 1;
+		const seen = droppedByAccount.get(accountId) ?? 0;
+		droppedByAccount.set(accountId, seen + 1);
+		if (seen === 0 && droppedByAccount.size <= DROP_WARN_ACCOUNT_LIMIT) {
+			logWarn(
+				`no route for account ${accountId} — dropping its events (unregistered mid-run account, or a deleted account from an earlier run)`,
+			);
+		}
 		return;
 	}
+	counters.forwarded += 1;
 
 	const target = `${workerUrl}/webhooks/connect/${env}`;
 	try {
@@ -157,6 +202,26 @@ const handleMapWrite = async (req, res) => {
 	sendJson(res, HTTP_OK, { size: routes.size });
 };
 
+/**
+ * GET /ingress/stats — delivery counters. The orchestrator reads this once, just
+ * before teardown, and folds `dropped` into the run summary / failure report so
+ * unrouted Connect events are visible without trawling the ingress log.
+ */
+const handleStats = (res) => {
+	const droppedAccounts = [...droppedByAccount.entries()]
+		.sort((a, b) => b[1] - a[1])
+		.slice(0, DROP_SAMPLE_LIMIT)
+		.map(([account, count]) => ({ account, count }));
+
+	sendJson(res, HTTP_OK, {
+		forwarded: counters.forwarded,
+		dropped: counters.dropped,
+		distinctDropped: droppedByAccount.size,
+		droppedAccounts,
+		size: routes.size,
+	});
+};
+
 /** GET /ingress/map — dump the current routing table (debug). */
 const handleMapRead = (res) => {
 	sendJson(res, HTTP_OK, {
@@ -197,6 +262,11 @@ const server = createServer((req, res) => {
 
 			if (method === "GET" && path === "/ingress/map") {
 				handleMapRead(res);
+				return;
+			}
+
+			if (method === "GET" && path === "/ingress/stats") {
+				handleStats(res);
 				return;
 			}
 
