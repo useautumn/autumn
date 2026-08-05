@@ -1,6 +1,10 @@
 import { Text } from "ink";
-import type { PushPrompt } from "../../../../commands/push/prompts.js";
+import type {
+	ConfigResourceChange,
+	PushPrompt,
+} from "../../../../commands/push/prompts.js";
 import { MultiSelect, PromptCard } from "../../components/index.js";
+import { ConfigResourcesPromptCard } from "./ConfigResourcesPromptCard.js";
 
 type VariantConflict = {
 	feature_name?: string;
@@ -50,20 +54,15 @@ export function PushPromptCard({
 				</PromptCard>
 			);
 
-		case "config_resource_delete": {
-			const resourceType = getData<string>(prompt, "resourceType");
+		case "config_resources_confirmation": {
+			const changes = getData<ConfigResourceChange[]>(prompt, "changes");
 			return (
-				<PromptCard
-					title={`Delete ${resourceType}?`}
-					icon="🗑"
+				<ConfigResourcesPromptCard
+					changes={changes}
 					options={prompt.options}
 					onBack={onBack}
-					onSelect={onRespond}
-				>
-					<Text>
-						{resourceType} "{prompt.entityId}" is not in your config.
-					</Text>
-				</PromptCard>
+					onRespond={onRespond}
+				/>
 			);
 		}
 

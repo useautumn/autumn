@@ -10,14 +10,17 @@ const preview = {
 	reward_changes: [
 		{ id: "launch", action: "deleted" },
 		{ id: "launch-updated", action: "updated" },
+		{ id: "launch-created", action: "created" },
 	],
 	referral_program_changes: [
 		{ id: "refer", action: "deleted" },
 		{ id: "refer-updated", action: "updated" },
+		{ id: "refer-created", action: "created" },
 	],
 } as CatalogPreviewUpdateResponse;
 
-test("reward and referral program deletions require confirmation", () => {
+/** Before: only deletions prompted; after: every config-resource change requires one grouped confirmation. */
+test("reward and referral program changes require confirmation", () => {
 	const prompts = buildPromptQueueFromPreview(
 		preview,
 		{ features: [], plans: [] },
@@ -25,10 +28,36 @@ test("reward and referral program deletions require confirmation", () => {
 		[],
 	);
 
-	expect(prompts.map(({ entityId }) => entityId)).toEqual(["launch", "refer"]);
-	expect(prompts.every(({ type }) => type === "config_resource_delete")).toBe(
-		true,
-	);
+	expect(prompts).toHaveLength(1);
+	expect(prompts[0]).toMatchObject({
+		type: "config_resources_confirmation",
+		options: [
+			{ label: "Push changes", value: "confirm", isDefault: true },
+			{ label: "Cancel push", value: "cancel", isDefault: false },
+		],
+		data: {
+			changes: [
+				{ id: "launch", action: "deleted", resourceType: "reward" },
+				{ id: "launch-updated", action: "updated", resourceType: "reward" },
+				{ id: "launch-created", action: "created", resourceType: "reward" },
+				{
+					id: "refer",
+					action: "deleted",
+					resourceType: "referral program",
+				},
+				{
+					id: "refer-updated",
+					action: "updated",
+					resourceType: "referral program",
+				},
+				{
+					id: "refer-created",
+					action: "created",
+					resourceType: "referral program",
+				},
+			],
+		},
+	});
 });
 
 test("reward and referral program changes appear in the push result", () => {

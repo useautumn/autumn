@@ -9,7 +9,7 @@ import type { FeatureDeleteInfo, PlanDeleteInfo } from "./types.js";
 
 export type PromptType =
 	| "prod_confirmation"
-	| "config_resource_delete"
+	| "config_resources_confirmation"
 	| "plan_versioning"
 	| "plan_migration"
 	| "plan_variant_propagation"
@@ -38,6 +38,11 @@ export interface PushPrompt {
 }
 
 export type ConfigResourceType = "reward" | "referral program";
+export type ConfigResourceChange = {
+	action: "created" | "updated" | "deleted";
+	id: string;
+	resourceType: ConfigResourceType;
+};
 
 interface PlanVersioningPromptInfo {
 	plan: Pick<Plan, "id" | "name">;
@@ -94,27 +99,7 @@ export function createProdConfirmationPrompt(): PushPrompt {
 	};
 }
 
-export function createConfigResourceDeletePrompt({
-	id,
-	resourceType,
-}: {
-	id: string;
-	resourceType: ConfigResourceType;
-}): PushPrompt {
-	return {
-		id: generatePromptId(),
-		type: "config_resource_delete",
-		entityId: id,
-		entityName: id,
-		data: { resourceType },
-		options: [
-			{ label: "Delete permanently", value: "delete", isDefault: true },
-			{ label: "Cancel push", value: "cancel", isDefault: false },
-		],
-	};
-}
-
-export function createConfigResourceDeletePrompts(
+export function createConfigResourceReviewPrompts(
 	preview: Pick<
 		CatalogPreviewUpdateResponse,
 		"reward_changes" | "referral_program_changes"
@@ -127,16 +112,29 @@ export function createConfigResourceDeletePrompts(
 			resourceType: "referral program",
 		},
 	] as const;
-	const prompts: PushPrompt[] = [];
+	const changes: ConfigResourceChange[] = [];
 
-	for (const { changes, resourceType } of resources) {
-		for (const { id, action } of changes) {
-			if (action === "deleted") {
-				prompts.push(createConfigResourceDeletePrompt({ id, resourceType }));
-			}
+	for (const { changes: resourceChanges, resourceType } of resources) {
+		for (const { id, action } of resourceChanges) {
+			if (action === "none" || action === "conflict") continue;
+			changes.push({ id, action, resourceType });
 		}
 	}
-	return prompts;
+	if (changes.length === 0) return [];
+
+	return [
+		{
+			id: generatePromptId(),
+			type: "config_resources_confirmation",
+			entityId: "config_resources",
+			entityName: "Config resources",
+			data: { changes },
+			options: [
+				{ label: "Push changes", value: "confirm", isDefault: true },
+				{ label: "Cancel push", value: "cancel", isDefault: false },
+			],
+		},
+	];
 }
 
 /**

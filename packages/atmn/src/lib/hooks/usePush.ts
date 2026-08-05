@@ -5,7 +5,7 @@ import {
 	catalogFeatureChangeHasChanges,
 	catalogPlanChangeHasChanges,
 	catalogPreviewHasChanges,
-	createConfigResourceDeletePrompts,
+	createConfigResourceReviewPrompts,
 	createFeatureArchivedPrompt,
 	createFeatureDeletePrompt,
 	createPlanArchivedPrompt,
@@ -449,7 +449,7 @@ export function usePush(options?: UsePushOptions) {
 				prompts.push(createPlanDeletePrompt(info));
 			}
 
-			prompts.push(...createConfigResourceDeletePrompts(preview));
+			prompts.push(...createConfigResourceReviewPrompts(preview));
 
 			setPromptQueue(prompts);
 

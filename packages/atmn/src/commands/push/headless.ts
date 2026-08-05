@@ -6,7 +6,7 @@ import { type LoadedConfig, loadConfig } from "../../lib/config/loadConfig.js";
 import { AppEnv, resolveConfigPath } from "../../lib/env/index.js";
 import { writeConfig } from "../pull/writeConfig.js";
 import {
-	createConfigResourceDeletePrompts,
+	createConfigResourceReviewPrompts,
 	createFeatureArchivedPrompt,
 	createFeatureDeletePrompt,
 	createPlanArchivedPrompt,
@@ -16,6 +16,7 @@ import {
 	createPlanVersioningPrompt,
 	createProdConfirmationPrompt,
 	type PushPrompt,
+	type ConfigResourceChange,
 } from "./prompts.js";
 import {
 	buildLatestPlanVersionById,
@@ -459,7 +460,7 @@ export function buildPromptQueueFromPreview(
 		);
 	}
 
-	prompts.push(...createConfigResourceDeletePrompts(preview));
+	prompts.push(...createConfigResourceReviewPrompts(preview));
 
 	return prompts;
 }
@@ -475,10 +476,12 @@ function formatIssuesSummary(prompts: PushPrompt[]): string {
 			case "prod_confirmation":
 				issues.push("  - Pushing to production environment");
 				break;
-			case "config_resource_delete":
-				issues.push(
-					`  - ${prompt.data.resourceType === "reward" ? "Reward" : "Referral program"} "${prompt.entityId}" will be deleted`,
-				);
+			case "config_resources_confirmation":
+				for (const change of prompt.data.changes as ConfigResourceChange[]) {
+					const label =
+						change.resourceType === "reward" ? "Reward" : "Referral program";
+					issues.push(`  - ${label} "${change.id}" will be ${change.action}`);
+				}
 				break;
 			case "plan_versioning":
 				issues.push(

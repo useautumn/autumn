@@ -1,7 +1,6 @@
 export { headlessPush } from "./headless.js";
 export {
-	createConfigResourceDeletePrompt,
-	createConfigResourceDeletePrompts,
+	createConfigResourceReviewPrompts,
 	createFeatureArchivedPrompt,
 	createFeatureDeletePrompt,
 	createPlanArchivedPrompt,
@@ -11,6 +10,7 @@ export {
 	createPlanVariantPropagationPrompt,
 	createPlanVersioningPrompt,
 	createProdConfirmationPrompt,
+	type ConfigResourceChange,
 	type ConfigResourceType,
 	type PromptType,
 	type PushPrompt,
