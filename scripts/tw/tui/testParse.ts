@@ -66,9 +66,13 @@ const parseErrorFromLines = (
 		if (meaningful) errorMessage = meaningful.trim().slice(0, 300);
 	}
 
+	// Expected/Received is the best summary of a bare matcher failure, but it
+	// must not clobber a thrown message that carries real diagnostic context.
+	const isGenericMatcherMessage =
+		!errorMessage || /^expect\(/.test(errorMessage);
 	const expectedMatch = errorText.match(EXPECTED_LINE);
 	const receivedMatch = errorText.match(RECEIVED_LINE);
-	if (expectedMatch?.[1] && receivedMatch?.[1]) {
+	if (isGenericMatcherMessage && expectedMatch?.[1] && receivedMatch?.[1]) {
 		errorMessage = `Expected: ${expectedMatch[1]}, Received: ${receivedMatch[1]}`;
 	}
 
