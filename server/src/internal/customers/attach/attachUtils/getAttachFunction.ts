@@ -193,6 +193,7 @@ export const runAttachFunction = async ({
 		if (subId) {
 			// Set lock to prevent webhook handler from processing this cancellation
 			await setStripeSubscriptionLock({
+				ctx,
 				stripeSubscriptionId: subId,
 				lockedAtMs: Date.now(),
 			});

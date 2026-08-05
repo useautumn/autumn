@@ -103,6 +103,7 @@ test.concurrent(
 					controls: payload.controls,
 				});
 				await setMigrationCancelRequested({
+					ctx,
 					migrationRunId: payload.migrationRunId,
 				});
 				return chunkResult;

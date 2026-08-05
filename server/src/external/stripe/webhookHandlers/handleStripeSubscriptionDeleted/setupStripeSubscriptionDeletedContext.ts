@@ -89,6 +89,7 @@ export const setupStripeSubscriptionDeletedContext = async ({
 
 	// 2. Check lock - if Autumn initiated this deletion, skip
 	const lock = await getStripeSubscriptionLock({
+		ctx,
 		stripeSubscriptionId,
 	});
 

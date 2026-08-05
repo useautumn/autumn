@@ -1,7 +1,6 @@
 import type { Redis } from "ioredis";
 import type { MiscRedisInstanceName } from "@/internal/misc/miscRedisConfig/miscRedisConfigSchemas.js";
 import { getActiveMiscRedisInstanceName } from "@/internal/misc/miscRedisConfig/miscRedisConfigStore.js";
-import { createMiscRedisRouter } from "../miscRedisRouting.js";
 import { getMiscBackupRedis, getMiscMainRedis } from "./miscRedisInstances.js";
 
 let lastLoggedInstance: MiscRedisInstanceName | null = null;
@@ -28,13 +27,6 @@ export const getMiscRedis = (): Redis => {
 	}
 	return getMiscMainRedis();
 };
-
-export const miscRedis: Redis = createMiscRedisRouter({
-	resolve: getMiscRedis,
-});
-
-/** @deprecated Use `miscRedis`. Kept for cloud-repo callers. */
-export const redis: Redis = miscRedis;
 
 /** @deprecated Use `getMiscRedis`. Kept for cloud-repo callers. */
 export const getPrimaryRedis = getMiscRedis;

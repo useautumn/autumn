@@ -57,7 +57,7 @@ export const withMigrationRunTracking = async <T>({
 		});
 		await settleLeftoverClaims({ ctx, migrationRunId });
 		if (cancelRequested) {
-			await clearMigrationCancelRequested({ migrationRunId });
+			await clearMigrationCancelRequested({ ctx, migrationRunId });
 		}
 
 		ctx.logger.info(

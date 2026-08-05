@@ -1,6 +1,6 @@
 import { expect } from "bun:test";
 import type { TestContext } from "@tests/utils/testInitUtils/createTestContext.js";
-import { miscRedis } from "@/external/redis/initRedis.js";
+import { getMiscRedis } from "@/external/redis/initRedis.js";
 import { getRedisV2OrgCleanupCandidates } from "@/external/redis/orgRedisUtils/orgRedisMigrationUtils.js";
 import { buildLockReceiptKey } from "@/internal/balances/utils/lock/buildLockReceiptKey.js";
 
@@ -19,7 +19,7 @@ export const expectLockReceiptDeleted = async ({
 		lockKey: hashedKey,
 	});
 
-	const receipt = await miscRedis.call("JSON.GET", redisReceiptKey, "$");
+	const receipt = await getMiscRedis().call("JSON.GET", redisReceiptKey, "$");
 	expect(receipt).toBeNull();
 
 	const v2ReceiptCounts = await Promise.all(

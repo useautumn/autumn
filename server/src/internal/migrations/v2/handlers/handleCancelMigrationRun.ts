@@ -52,6 +52,7 @@ export const handleCancelMigrationRun = createRoute({
 		}
 
 		await setMigrationCancelRequested({
+			ctx,
 			migrationRunId: activeRun.internal_id,
 		});
 

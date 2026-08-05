@@ -38,7 +38,11 @@ export const getSavedView = async ({
 	viewId: string;
 }): Promise<SavedView | null> => {
 	const miscRedis = getMiscRedis();
-	const viewKey = buildSavedViewKey({ orgId: ctx.org.id, env: ctx.env, viewId });
+	const viewKey = buildSavedViewKey({
+		orgId: ctx.org.id,
+		env: ctx.env,
+		viewId,
+	});
 
 	const cached = await tryRedisOp({
 		operation: () => miscRedis.get(viewKey),
@@ -84,7 +88,11 @@ export const deleteSavedView = async ({
 	viewId: string;
 }): Promise<void> => {
 	const miscRedis = getMiscRedis();
-	const viewKey = buildSavedViewKey({ orgId: ctx.org.id, env: ctx.env, viewId });
+	const viewKey = buildSavedViewKey({
+		orgId: ctx.org.id,
+		env: ctx.env,
+		viewId,
+	});
 
 	await tryRedisOp({
 		operation: () => miscRedis.del(viewKey),

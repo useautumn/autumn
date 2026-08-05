@@ -22,7 +22,5 @@ export {
 	getMiscRedis,
 	getPrimaryRedis,
 	getRegionalRedis,
-	miscRedis,
-	redis,
 } from "./miscCache/getMiscRedis.js";
 export { getMiscBackupRedis } from "./miscCache/miscRedisInstances.js";

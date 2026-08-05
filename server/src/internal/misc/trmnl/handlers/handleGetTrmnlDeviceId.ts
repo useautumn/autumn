@@ -8,9 +8,10 @@ import { createRoute } from "@/honoMiddlewares/routeHandler.js";
 export const handleGetTrmnlDeviceId = createRoute({
 	scopes: [Scopes.Organisation.Read],
 	handler: async (c) => {
-		const { org } = c.get("ctx");
+		const ctx = c.get("ctx");
+		const { org } = ctx;
 
-		const trmnlConfig = await getTrmnlOrgConfig({ orgId: org.id });
+		const trmnlConfig = await getTrmnlOrgConfig({ ctx, orgId: org.id });
 
 		return c.json({ trmnlConfig });
 	},

@@ -68,6 +68,7 @@ export const withClaimedCheckoutSessionMetadata = async ({
 	try {
 		if (checkoutContext.stripeSubscription) {
 			await setStripeSubscriptionLock({
+				ctx,
 				stripeSubscriptionId: checkoutContext.stripeSubscription.id,
 				lockedAtMs: Date.now(),
 			});

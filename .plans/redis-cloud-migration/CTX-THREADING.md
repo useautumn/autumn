@@ -23,22 +23,21 @@ fabricating fake contexts — worse than a narrow `requestId?` param.
 - The per-request signal ("this request lost its cache read") belongs at the ACTION
   boundary: Tier A actions log via `ctx.logger` in their `onError`/warn paths.
 
-## Tier A — take `ctx: AutumnContext` (drop `requestId?` params → `ctx.id`; warns → `ctx.logger`)
+## Tier A — takes `ctx: AutumnContext` (IMPLEMENTED on this branch)
 
-| Action | Callers (all ctx-ful) | Change |
+Concrete gain per action: `ctx.id` replaces `requestId?` params, and consequential
+silent failures now warn via `ctx.logger` (`onError`, fields nested under `data`).
+
+| Action | Callers (all ctx-ful) | Implemented |
 |---|---|---|
-| checkoutSessionLock | billing v2 attach/schedule/execute, checkCheckoutSessionLock | already takes ctx — no change |
-| migrationCustomerLock | migrateCustomer, trigger task | already takes ctx — no change |
-| autumnCheckoutCache | checkout actions/middleware, billingPlanToAutumnCheckout | + ctx |
-| expiredCustomerProductsCache | stripe webhook tasks (sub deleted/renewed/canceled, phase changes) | + ctx |
-| oauthStateStore | org stripe/revenuecat oauth handlers, platform handlers, oauthStateUtils | + ctx |
-| savedViewsStore | 3 savedViews handlers | + ctx |
-| trmnlDeviceStore | 3 trmnl handlers + trmnlAuthMiddleware (ctx exists mid-auth; it mutates ctx.org) | + ctx |
-| productsCache | refreshProductsCacheMiddleware, ProductService, copyEnvironment/copyProduct, catalog | + ctx; replaces requestId; invalidation warn → ctx.logger |
-| topEventNamesCache | analytics handlers, eventActions | + ctx (verify eventActions signature at impl) |
-| modelPricingCache | getModelPricing | + ctx (verify getModelPricing callers at impl) |
-| migrationCancelToken | cancel handler, run orchestrators, batch chunks, trigger task | + ctx |
-| stripeSubscriptionLock | subscription webhook handlers | + ctx |
+| checkoutSessionLock | billing v2 attach/schedule/execute, checkCheckoutSessionLock | already took ctx — no change |
+| migrationCustomerLock | migrateCustomer, trigger task | already took ctx — no change |
+| expiredCustomerProductsCache | webhook tasks via `expiredCache` wrappers (sub deleted, phase changes, invoice created/paid/finalized) | ctx + get/set warns |
+| savedViewsStore | 3 savedViews handlers | ctx replaces orgId/env params (keys from ctx.org/env); write warns (Redis is the only store) |
+| trmnlDeviceStore | 3 trmnl handlers + trmnlAuthMiddleware (ctx exists mid-auth) | ctx; write/delete warns |
+| topEventNamesCache | getTopEventNames (handler-fed) | ctx.id replaces requestId |
+| migrationCancelToken | cancel handler + withMigrationRunTracking | set/clear take ctx + warns; `isMigrationCancelRequested` stays ctx-free (gates run at task boot, pre-ctx) |
+| stripeSubscriptionLock | attach/billing/webhook handlers | ctx; get+set warns (silent failure = lost webhook echo-suppression) |
 
 ## Tier B — ctx-free by nature (keep `requestId?`; documented why)
 
@@ -47,6 +46,10 @@ fabricating fake contexts — worse than a narrow `requestId?` param.
 | secretKeyCache | `verifyKey` runs DURING auth — it creates the org context; only `{db, key, requestId}` exists |
 | customerJwtAuthCache | same: `getCustomerJwtAuth` pre-ctx; `customerJwtEpoch` has neither ctx nor requestId |
 | orgWithFeaturesCache | on the pre-ctx auth path via `getCustomerJwtAuth` → `OrgService.getWithFeatures`; `clearOrgCache` also called from tests/scripts with only `{db, orgId}` |
+| autumnCheckoutCache | (moved from Tier A at impl) `getCheckoutFromCacheOrDb` is the checkout-page bootstrap — it loads the checkout the middleware builds ctx FROM; DB fallback makes failures non-critical |
+| productsCache | (moved from Tier A at impl) `ProductService`/`detectProductVariant`/`copyProductForOrgs` are deliberately db-scoped (`{db, orgId, env}`) — requiring ctx would refactor the service layer; invalidate warn already carries orgId/env |
+| modelPricingCache | (dropped at impl) global non-org key, no logs, no requestId, stale-copy fallback — ctx would be pure decoration |
+| oauthStateStore | (moved from Tier A at impl) read side is the provider-redirect callback (raw hono ctx; org derived FROM the state) |
 | oauthRefreshReplay | oauth token endpoint — pre-ctx (it mints the tokens) |
 | queueCapacityLease | worker poll loop, before any message/request exists — process-level |
 | idempotencyKeys (redis leg) | dying code (Dynamo authoritative, kept for rollback) — churn not worth it |

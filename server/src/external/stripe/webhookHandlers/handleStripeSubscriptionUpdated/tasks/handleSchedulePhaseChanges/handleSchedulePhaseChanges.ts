@@ -29,6 +29,7 @@ export const handleSchedulePhaseChanges = async ({
 
 	// Check if subscription is locked (being modified by another process)
 	const lock = await getStripeSubscriptionLock({
+		ctx,
 		stripeSubscriptionId: stripeSubscription.id,
 	});
 	if (lock) {

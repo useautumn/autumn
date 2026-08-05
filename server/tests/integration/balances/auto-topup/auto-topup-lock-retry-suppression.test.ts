@@ -39,14 +39,20 @@ mock.module(
 mock.module(
 	"@/internal/balances/autoTopUp/helpers/enqueueAutoTopupWithBurstSuppression.js",
 	() => ({
-		buildAutoTopupPendingKey: () => "auto_topup:pending:test",
-		clearAutoTopupPendingKey: async () => {
-			calls.clearPending++;
-		},
 		enqueueAutoTopupWithBurstSuppression: async () => ({
 			enqueued: false,
 			reason: "pending_key_exists" as const,
 		}),
+	}),
+);
+
+mock.module(
+	"@/external/redis/actions/autoTopUpSuppression/autoTopUpSuppression.js",
+	() => ({
+		buildAutoTopupPendingKey: () => "auto_topup:pending:test",
+		clearAutoTopupPendingKey: async () => {
+			calls.clearPending++;
+		},
 		keepAutoTopupPendingKey: async ({ ttlMs }: { ttlMs: number }) => {
 			calls.keepPending.push(ttlMs);
 		},

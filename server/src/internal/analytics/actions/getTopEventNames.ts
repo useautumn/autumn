@@ -16,8 +16,6 @@ type TopEventNamesResult = {
 	result: { data: TopEventNameRow[] };
 };
 
-const TOP_EVENT_NAMES_CACHE_TTL = 60 * 5; // 5 minutes
-
 /** Gets top event names by count for the organization */
 export const getTopEventNames = async ({
 	ctx,

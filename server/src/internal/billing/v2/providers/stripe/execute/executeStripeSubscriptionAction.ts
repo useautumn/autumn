@@ -44,6 +44,7 @@ export const executeStripeSubscriptionAction = async ({
 	// 2. Lock stripe subscription
 	if (stripeSubscription) {
 		await setStripeSubscriptionLock({
+			ctx,
 			stripeSubscriptionId: stripeSubscription.id,
 			lockedAtMs: currentEpochMs,
 		});

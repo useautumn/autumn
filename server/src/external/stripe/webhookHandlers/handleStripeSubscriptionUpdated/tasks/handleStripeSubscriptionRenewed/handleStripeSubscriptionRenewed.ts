@@ -50,6 +50,7 @@ export const handleStripeSubscriptionRenewed = async ({
 
 	// 2. Check lock or schedule - skip if Autumn initiated or schedule exists
 	const lock = await getStripeSubscriptionLock({
+		ctx,
 		stripeSubscriptionId: stripeSubscription.id,
 	});
 	const hasSchedule = Boolean(stripeSubscription.schedule);

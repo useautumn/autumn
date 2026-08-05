@@ -50,6 +50,7 @@ export const handleStripeSubscriptionCanceled = async ({
 
 	// 2. Check lock - if Autumn initiated this cancellation, skip
 	const lock = await getStripeSubscriptionLock({
+		ctx,
 		stripeSubscriptionId: stripeSubscription.id,
 	});
 
