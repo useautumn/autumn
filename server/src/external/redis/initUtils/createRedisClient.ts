@@ -3,6 +3,7 @@ import {
 	instrumentRedis,
 	type RedisClientType,
 } from "../otel/instrumentRedis.js";
+import { createStandbyRedisRouter } from "./createStandbyRedisRouter.js";
 import { redisDnsLookup } from "./redisDnsLookup.js";
 import { registerRedisCommands } from "./registerRedisCommands.js";
 
@@ -27,11 +28,13 @@ export const createRedisClient = ({
 	region,
 	redisType,
 	commandTimeout = REDIS_COMMAND_TIMEOUT_MS,
+	autoResendUnfulfilledCommands = true,
 }: {
 	cacheUrl: string;
 	region: string;
 	redisType: RedisClientType;
 	commandTimeout?: number;
+	autoResendUnfulfilledCommands?: boolean;
 }): Redis => {
 	console.log(
 		`[Redis] ${region}: connecting to ${formatRedisEndpoint({ cacheUrl })}`,
@@ -51,6 +54,7 @@ export const createRedisClient = ({
 		// handshake blip. Under a real brownout, commands still fail via the
 		// `Command timed out` path.
 		maxRetriesPerRequest: null,
+		autoResendUnfulfilledCommands,
 	});
 
 	// instrumentRedis must run first so its defineCommand patch
@@ -62,3 +66,23 @@ export const createRedisClient = ({
 };
 
 export const createRedisConnection = createRedisClient;
+
+/** Two connections to the same endpoint behind a router. Command resend is off:
+ *  a resent command would land after work the router already sent to the other
+ *  connection, reordering balance mutations that a single socket kept FIFO. */
+export const createStandbyRedisConnection = ({
+	region,
+	...options
+}: Parameters<typeof createRedisClient>[0]): Redis =>
+	createStandbyRedisRouter({
+		primary: createRedisClient({
+			...options,
+			region: `${region}:primary`,
+			autoResendUnfulfilledCommands: false,
+		}),
+		standby: createRedisClient({
+			...options,
+			region: `${region}:standby`,
+			autoResendUnfulfilledCommands: false,
+		}),
+	});

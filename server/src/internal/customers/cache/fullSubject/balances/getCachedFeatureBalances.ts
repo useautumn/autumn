@@ -3,6 +3,8 @@ import type {
 	SubjectBalance,
 	UsageWindow,
 } from "@autumn/shared";
+import type { Redis } from "ioredis";
+import { throwOnPipelineConnectionError } from "@/external/redis/utils/pipelineErrors.js";
 import { REDIS_OP_TIMEOUT_MS } from "@/external/redis/utils/redisOpTimeouts.js";
 import { runRedisOp } from "@/external/redis/utils/runRedisOp.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
@@ -50,16 +52,15 @@ export type FeatureBalancesBatchOutcome =
 	| { kind: "missing"; reason: string };
 
 const readFeatureBalancesFromMaster = async ({
-	ctx,
+	redis,
 	balanceKey,
 	customerEntitlementIds,
 }: {
-	ctx: AutumnContext;
+	redis: Redis;
 	balanceKey: string;
 	customerEntitlementIds: string[];
 }): Promise<(string | null)[] | null> => {
-	const { redisV2 } = ctx;
-	const multi = redisV2.multi();
+	const multi = redis.multi();
 	multi.hmget(balanceKey, ...customerEntitlementIds);
 	const multiResults = await multi.exec();
 	const firstResult = multiResults?.[0];
@@ -96,16 +97,17 @@ export const getCachedFeatureBalance = async ({
 	}
 
 	const results = await runRedisOp({
-		operation: () =>
+		operation: (redis) =>
 			readMaster
 				? readFeatureBalancesFromMaster({
-						ctx,
+						redis,
 						balanceKey,
 						customerEntitlementIds,
 					})
-				: redisV2.hmget(balanceKey, ...customerEntitlementIds),
+				: redis.hmget(balanceKey, ...customerEntitlementIds),
 		source: "getCachedFeatureBalance",
 		redisInstance: redisV2,
+		retryOnStandby: true,
 		timeoutMs: REDIS_OP_TIMEOUT_MS.featureBalances,
 	});
 
@@ -159,30 +161,32 @@ export const getCachedFeatureBalancesBatch = async ({
 	if (featureIds.length === 0) return { kind: "ok", value: [] };
 
 	const { org, env, redisV2 } = ctx;
-	const pipeline = redisV2.pipeline();
-	for (const featureId of featureIds) {
-		const customerEntitlementIds =
-			customerEntitlementIdsByFeatureId[featureId] ?? [];
-		const fields = [...customerEntitlementIds];
-		if (includeAggregated) fields.push(AGGREGATED_BALANCE_FIELD);
-		if (usageWindowFeatureIds?.has(featureId)) {
-			fields.push(USAGE_WINDOWS_FIELD);
-		}
-		pipeline.hmget(
-			buildSharedFullSubjectBalanceKey({
-				orgId: org.id,
-				env,
-				customerId,
-				featureId,
-			}),
-			...fields,
-		);
-	}
-
 	const results = await runRedisOp({
-		operation: () => pipeline.exec(),
+		operation: (redis) => {
+			const pipeline = redis.pipeline();
+			for (const featureId of featureIds) {
+				const customerEntitlementIds =
+					customerEntitlementIdsByFeatureId[featureId] ?? [];
+				const fields = [...customerEntitlementIds];
+				if (includeAggregated) fields.push(AGGREGATED_BALANCE_FIELD);
+				if (usageWindowFeatureIds?.has(featureId)) {
+					fields.push(USAGE_WINDOWS_FIELD);
+				}
+				pipeline.hmget(
+					buildSharedFullSubjectBalanceKey({
+						orgId: org.id,
+						env,
+						customerId,
+						featureId,
+					}),
+					...fields,
+				);
+			}
+			return pipeline.exec().then(throwOnPipelineConnectionError);
+		},
 		source: "getCachedFeatureBalancesBatch",
 		redisInstance: redisV2,
+		retryOnStandby: true,
 		timeoutMs: REDIS_OP_TIMEOUT_MS.featureBalancesBatch,
 	});
 
