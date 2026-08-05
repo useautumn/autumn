@@ -446,7 +446,10 @@ test(`${chalk.yellowBright("atmn variant versioning: variant customer only edits
 			baseIncluded: 500,
 			basePlanId,
 			ctx,
-			planIntents: { [basePlanId]: "create_version" },
+			planIntents: {
+				[basePlanId]: "create_version",
+				[variantPlanId]: "create_version",
+			},
 			variantIncluded: 2400,
 			variantPlanId,
 			variantPropagations: { [basePlanId]: [variantPlanId] },
@@ -487,7 +490,10 @@ test(`${chalk.yellowBright("atmn variant versioning: base and variant customers 
 			baseIncluded: 500,
 			basePlanId,
 			ctx,
-			planIntents: { [basePlanId]: "create_version" },
+			planIntents: {
+				[basePlanId]: "create_version",
+				[variantPlanId]: "create_version",
+			},
 			variantIncluded: 2400,
 			variantPlanId,
 			variantPropagations: { [basePlanId]: [variantPlanId] },
@@ -581,14 +587,27 @@ test(`${chalk.yellowBright("atmn variant versioning: update current and migrate 
 		expectMessagesAllowance({ product: baseAfter, included: 500 });
 		expect(migration).toBeDefined();
 		expect(migration?.filter).toMatchObject({
-			customer: { plan: { plan_id: basePlanId, custom: false } },
+			customer: {
+				plan: {
+					plan_id: { $in: [basePlanId, variantPlanId] },
+					version: 1,
+					custom: false,
+				},
+			},
 		});
 		expect(migration?.operations).toMatchObject({
 			customer: [
 				{
 					type: "update_plan",
-					plan_filter: { plan_id: basePlanId, custom: false },
-					version: 1,
+					plan_filter: {
+						plan_id: { $in: [basePlanId, variantPlanId] },
+						version: 1,
+						custom: false,
+					},
+					customize: {
+						add_items: [{ feature_id: "messages", included: 500 }],
+						remove_items: [{ feature_id: "messages", interval: "month" }],
+					},
 				},
 			],
 		});
@@ -704,7 +723,11 @@ test(`${chalk.yellowBright("atmn variant versioning: multiple customer-bearing v
 			ctx,
 			firstVariantId,
 			firstVariantIncluded: 1800,
-			planIntents: { [basePlanId]: "create_version" },
+			planIntents: {
+				[basePlanId]: "create_version",
+				[firstVariantId]: "create_version",
+				[secondVariantId]: "create_version",
+			},
 			secondVariantId,
 			secondVariantIncluded: 3600,
 			variantPropagations: {
