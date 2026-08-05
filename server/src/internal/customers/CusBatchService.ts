@@ -1,4 +1,5 @@
 import {
+	ACTIVE_STATUSES,
 	AffectedResource,
 	type ApiCustomerV5,
 	applyResponseVersionChanges,
@@ -24,6 +25,12 @@ import { getCursorPaginatedFullCusQuery } from "./cursorPaginatedFullCusQuery.js
 import type { CustomerListFilters } from "./customerListFilters.js";
 import { getApiCustomerBase } from "./cusUtils/apiCusUtils/getApiCustomerBase.js";
 import {
+	assembleDashboardCustomerList,
+	type DashboardCustomerListCustomer,
+	getCustomerPricesByCustomerProductIds,
+	getDashboardCustomerListRows,
+} from "./dashboardCustomerListQuery.js";
+import {
 	getPaginatedFullCusQuery,
 	parseDashboardIntervalFilter,
 	parseDashboardProcessorFilter,
@@ -38,6 +45,75 @@ import {
 const DASHBOARD_LIST_PRODUCT_PREVIEW_LIMIT = 3;
 
 export class CusBatchService {
+	static async getDashboardListCursorPage({
+		ctx,
+		search,
+		filters,
+		cursor,
+		limit,
+	}: {
+		ctx: RequestContext;
+		search: string;
+		filters?: CustomerListFilters;
+		cursor: { t: number; id: string } | null;
+		limit: number;
+	}): Promise<{
+		customers: DashboardCustomerListCustomer[];
+		next_cursor: string | null;
+	}> {
+		const startedAt = performance.now();
+		const resolved = await CusSearchService.resolveInternalIdsByCursor({
+			db: ctx.db,
+			orgId: ctx.org.id,
+			env: ctx.env,
+			search,
+			filters,
+			cursor,
+			limit,
+		});
+
+		if (resolved.internalIds.length === 0) {
+			return { customers: [], next_cursor: null };
+		}
+
+		const customerRows = await getDashboardCustomerListRows({
+			db: ctx.db,
+			internalCustomerIds: resolved.internalIds,
+			productLimit: DASHBOARD_LIST_PRODUCT_PREVIEW_LIMIT,
+		});
+		const customers = assembleDashboardCustomerList({ rows: customerRows });
+		const primaryCustomerProductIds = customers.flatMap((customer) => {
+			const primaryCustomerProduct = customer.customer_products.find((cp) =>
+				ACTIVE_STATUSES.includes(cp.status as CusProductStatus),
+			);
+			return primaryCustomerProduct ? [primaryCustomerProduct.id] : [];
+		});
+		const pricesByCustomerProductId =
+			await getCustomerPricesByCustomerProductIds({
+				db: ctx.db,
+				customerProductIds: primaryCustomerProductIds,
+			});
+		const customersWithPrices = assembleDashboardCustomerList({
+			rows: customerRows,
+			pricesByCustomerProductId,
+		});
+
+		const lastCustomer = customersWithPrices[customersWithPrices.length - 1];
+		const nextCursor =
+			resolved.peek && lastCustomer?.id
+				? StandardCursor.encode({
+						id: lastCustomer.id,
+						t: lastCustomer.created_at,
+					})
+				: null;
+
+		ctx.logger.info(
+			`[CusBatchService.getDashboardListCursorPage] limit=${limit} rows=${customersWithPrices.length} price_products=${primaryCustomerProductIds.length} total=${(performance.now() - startedAt).toFixed(0)}ms`,
+		);
+
+		return { customers: customersWithPrices, next_cursor: nextCursor };
+	}
+
 	static async getByInternalIds({
 		ctx,
 		internalCustomerIds,

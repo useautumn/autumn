@@ -3,6 +3,7 @@ import {
 	type CustomerSchema,
 	type FullCusProduct,
 	type FullCustomer,
+	type FullCustomerPrice,
 	isCustomerProductTrialing,
 } from "@autumn/shared";
 import {
@@ -21,6 +22,7 @@ import {
 	statusSkeleton,
 } from "@/components/general/table";
 import { formatUnixToDateTime } from "@/utils/formatUtils/formatDateUtils";
+import { formatCustomerProductPrice } from "@/views/customers2/utils/formatCustomerProductPrice";
 import { CustomerProductsStatus } from "../customer-products/CustomerProductsStatus";
 import { CustomerListRowToolbar } from "./CustomerListRowToolbar";
 import { FeatureUsageCell } from "./FeatureUsageCell";
@@ -31,8 +33,11 @@ type CustomerWithProducts = z.infer<typeof CustomerSchema> & {
 		status?: string;
 		canceled_at?: number | null;
 		trial_ends_at?: number | null;
+		quantity?: number | null;
+		customer_prices?: FullCustomerPrice[];
 		[key: string]: unknown;
 	}>;
+	currency?: string | null;
 	products_total_count?: number;
 	/** Full customer data with entitlements - merged from full_customers query */
 	fullCustomer?: FullCustomer;
@@ -46,6 +51,7 @@ export const BASE_COLUMN_IDS = [
 	"customer_id",
 	"email",
 	"customer_products",
+	"plan_price",
 	"created_at",
 	"actions",
 ];
@@ -203,6 +209,30 @@ export const createCustomerListColumns = (): ColumnDef<
 			return getCusProductsInfo({
 				customer: row.original,
 			});
+		},
+	},
+	{
+		id: "plan_price",
+		header: "Plan Price",
+		accessorKey: "plan_price",
+		size: 120,
+		meta: { skeleton: statusSkeleton },
+		cell: ({ row }: { row: Row<CustomerWithProducts> }) => {
+			const customerProduct = row.original.customer_products?.find(
+				(cp) =>
+					(cp as FullCusProduct).status !== CusProductStatus.Expired &&
+					(cp as FullCusProduct).status !== CusProductStatus.Scheduled,
+			);
+			const formattedPrice = formatCustomerProductPrice({
+				customerProduct,
+				currency: row.original.currency,
+			});
+
+			return formattedPrice ? (
+				<span className="text-tertiary-foreground whitespace-nowrap">
+					{formattedPrice}
+				</span>
+			) : null;
 		},
 	},
 	{
