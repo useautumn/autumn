@@ -63,6 +63,7 @@ import {
 	stopMemorySpikeProbe,
 } from "./utils/memory/memorySpikeProbe.js";
 import { startMemoryMonitor } from "./utils/memoryMonitor.js";
+import { stopHttpServer } from "./utils/stopHttpServer.js";
 
 checkEnvVars();
 
@@ -183,7 +184,9 @@ async function gracefulShutdown() {
 	shuttingDown = true;
 	console.log("Shutting down worker, flushing telemetry and closing DB...");
 	try {
-		await stopHttpServer();
+		const server = httpServer;
+		httpServer = undefined;
+		if (server) await stopHttpServer({ server });
 		await shutdownSqsProducers();
 
 		// Flush any buffered OTel spans before shutting down
@@ -210,14 +213,3 @@ async function gracefulShutdown() {
 		process.exit(1);
 	}
 }
-
-const stopHttpServer = async (): Promise<void> => {
-	const server = httpServer;
-	if (!server) return;
-	httpServer = undefined;
-
-	await new Promise<void>((resolve, reject) => {
-		server.close((error) => (error ? reject(error) : resolve()));
-		server.closeIdleConnections();
-	});
-};

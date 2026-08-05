@@ -33,7 +33,7 @@ import { initBlueGreen, shutdownBlueGreen } from "./blueGreen/initBlueGreen.js";
 import { getSqsClient, QUEUE_URL, recreateSqsClient } from "./initSqs.js";
 import { JobName } from "./JobName.js";
 import { processMessage, type SqsJob } from "./processMessage.js";
-import { shutdownSqsProducers } from "./shutdownSqsProducers.js";
+import { shutdownSqsWorker } from "./shutdownSqsWorker.js";
 import {
 	createWorkerActivityTracker,
 	type WorkerActivityTracker,
@@ -619,18 +619,7 @@ export const initWorkers = async ({
 		for (const controller of abortControllers) {
 			controller.abort();
 		}
-		await Promise.allSettled(pollingLoops);
-		await shutdownSqsProducers();
-
-		const isProd = process.env.NODE_ENV === "production";
-		if (isProd) {
-			const shutdownTimeout = setTimeout(() => process.exit(0), 5000);
-			if (shutdownTimeout.unref) {
-				shutdownTimeout.unref();
-			}
-		} else {
-			process.exit(0);
-		}
+		await shutdownSqsWorker({ pollingLoops });
 	};
 
 	process.on("SIGTERM", shutdown);
