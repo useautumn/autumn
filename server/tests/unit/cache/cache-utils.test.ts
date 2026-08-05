@@ -140,9 +140,12 @@ describe("cache utils", () => {
 	});
 
 	test("Redis command errors do not mark Redis unavailable", async () => {
-		await tryRedisWrite(async () => {
-			throw new Error("ERR user_script:2: unexpected symbol near '#'");
-		});
+		await tryRedisWrite(
+			async () => {
+				throw new Error("ERR user_script:2: unexpected symbol near '#'");
+			},
+			{ status: "ready" } as never,
+		);
 
 		expect(mockState.warnings).toHaveLength(1);
 	});
