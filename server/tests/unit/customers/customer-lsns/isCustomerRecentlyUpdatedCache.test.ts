@@ -1,3 +1,29 @@
+import {
+	afterAll,
+	beforeEach,
+	describe,
+	expect,
+	it,
+	mock,
+	spyOn,
+} from "bun:test";
+
+// lru-cache expires entries via performance.now(); an offset patch fast-forwards
+// the TTL without sleeping real time.
+const realPerformanceNow = performance.now.bind(performance);
+let clockOffsetMs = 0;
+performance.now = () => realPerformanceNow() + clockOffsetMs;
+// The macrotask yield lets lru-cache's 1ms cachedNow debounce timer clear —
+// without it the pre-advance timestamp stays cached and nothing expires.
+const advanceClock = async (ms: number) => {
+	clockOffsetMs += ms;
+	await Bun.sleep(2);
+};
+afterAll(() => {
+	performance.now = realPerformanceNow;
+});
+
+import { type DrizzleCli, dbGeneral } from "@/db/initDrizzle.js";
 import { beforeEach, describe, expect, it, mock } from "bun:test";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 import {
@@ -18,16 +44,28 @@ const makeFakeDb = (impl: () => Promise<unknown[]> = async () => []) => {
 	return { db: { execute } as unknown as DrizzleCli, execute };
 };
 
-// $client makes the fake a pool handle, so marks never import the real pool.
-const makeFakeMarkDb = (impl: () => Promise<unknown[]> = async () => []) => {
-	const execute = mock(impl);
+// A pool-like caller handle ($client), the shape replicaDbMiddleware swaps in —
+// marks must never write through it.
+const makeFakeMarkDb = () => {
+	const execute = mock(async (): Promise<unknown[]> => {
+		throw new Error("caller handle must not receive the mark");
+	});
 	return { db: { $client: {}, execute } as unknown as DrizzleCli, execute };
 };
+
+// Marks always write through the primary pool; observe it without a real DB.
+const primaryExecute = spyOn(dbGeneral, "execute");
+
+afterAll(() => {
+	primaryExecute.mockRestore();
+});
 
 const params = { orgId: "org_neg", env: "sandbox", customerId: "cus_neg" };
 
 beforeEach(() => {
 	_resetRecentlyUpdatedNegativeCacheForTesting();
+	primaryExecute.mockClear();
+	primaryExecute.mockImplementation(async () => []);
 });
 
 describe("isCustomerRecentlyUpdated negative cache", () => {
@@ -117,7 +155,9 @@ describe("isCustomerRecentlyUpdated negative cache", () => {
 		expect(await isCustomerRecentlyUpdated({ db, ...params })).toBe(false);
 		expect(execute).toHaveBeenCalledTimes(1);
 
-		await markCustomerUpdatedAt({ db: makeFakeMarkDb().db, ...params });
+		const mark = makeFakeMarkDb();
+		await markCustomerUpdatedAt({ db: mark.db, ...params });
+		expect(mark.execute).not.toHaveBeenCalled();
 
 		expect(await isCustomerRecentlyUpdated({ db, ...params })).toBe(true);
 		expect(execute).toHaveBeenCalledTimes(2);
@@ -131,10 +171,12 @@ describe("isCustomerRecentlyUpdated negative cache", () => {
 		await isCustomerRecentlyUpdated({ db, ...other });
 		expect(execute).toHaveBeenCalledTimes(2);
 
+		const mark = makeFakeMarkDb();
 		await markCustomersUpdatedAt({
-			db: makeFakeMarkDb().db,
+			db: mark.db,
 			customers: [params, other],
 		});
+		expect(mark.execute).not.toHaveBeenCalled();
 
 		await isCustomerRecentlyUpdated({ db, ...params });
 		await isCustomerRecentlyUpdated({ db, ...other });
@@ -147,16 +189,21 @@ describe("isCustomerRecentlyUpdated negative cache", () => {
 		await isCustomerRecentlyUpdated({ db, ...params });
 		expect(execute).toHaveBeenCalledTimes(1);
 
+		// The pool-path mark resolves identities via RETURNING on the primary pool.
+		const resolvedRows = [
+			{
+				org_id: params.orgId,
+				env: params.env,
+				customer_id: params.customerId,
+			},
+		] as never[];
+		primaryExecute.mockImplementation(async () => resolvedRows);
+		const mark = makeFakeMarkDb();
 		await markCustomersUpdatedAtByInternalIds({
-			db: makeFakeMarkDb(async () => [
-				{
-					org_id: params.orgId,
-					env: params.env,
-					customer_id: params.customerId,
-				},
-			]).db,
+			db: mark.db,
 			internalCustomerIds: ["internal_neg"],
 		});
+		expect(mark.execute).not.toHaveBeenCalled();
 
 		await isCustomerRecentlyUpdated({ db, ...params });
 		expect(execute).toHaveBeenCalledTimes(2);
