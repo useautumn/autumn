@@ -7,8 +7,14 @@ import { AppEnv } from "../../src/lib/env/index.js";
 const preview = {
 	feature_changes: [],
 	plan_changes: [],
-	reward_changes: [{ id: "launch", action: "deleted" }],
-	referral_program_changes: [{ id: "refer", action: "deleted" }],
+	reward_changes: [
+		{ id: "launch", action: "deleted" },
+		{ id: "launch-updated", action: "updated" },
+	],
+	referral_program_changes: [
+		{ id: "refer", action: "deleted" },
+		{ id: "refer-updated", action: "updated" },
+	],
 } as CatalogPreviewUpdateResponse;
 
 test("reward and referral program deletions require confirmation", () => {
@@ -25,9 +31,11 @@ test("reward and referral program deletions require confirmation", () => {
 	);
 });
 
-test("reward and referral program deletions appear in the push result", () => {
+test("reward and referral program changes appear in the push result", () => {
 	const result = catalogPreviewToPushResult(preview) as any;
 
 	expect(result.rewardsDeleted).toEqual(["launch"]);
+	expect(result.rewardsUpdated).toEqual(["launch-updated"]);
 	expect(result.referralProgramsDeleted).toEqual(["refer"]);
+	expect(result.referralProgramsUpdated).toEqual(["refer-updated"]);
 });

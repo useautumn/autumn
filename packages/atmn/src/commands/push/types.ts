@@ -99,8 +99,10 @@ export interface PushResult {
 	plansArchived: string[];
 	plansSkipped: string[];
 	rewardsCreated: string[];
+	rewardsUpdated: string[];
 	rewardsDeleted: string[];
 	referralProgramsCreated: string[];
+	referralProgramsUpdated: string[];
 	referralProgramsDeleted: string[];
 }
 

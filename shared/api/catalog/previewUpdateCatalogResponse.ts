@@ -70,7 +70,7 @@ export type CatalogFeaturePreview = z.infer<typeof CatalogFeaturePreviewSchema>;
 
 export const CatalogConfigResourcePreviewSchema = z.object({
 	id: z.string(),
-	action: z.enum(["created", "deleted", "none", "conflict"]),
+	action: z.enum(["created", "updated", "deleted", "none", "conflict"]),
 });
 export type CatalogConfigResourcePreview = z.infer<
 	typeof CatalogConfigResourcePreviewSchema

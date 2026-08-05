@@ -13,8 +13,12 @@ import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import {
 	createApiReferralProgram,
 	deleteApiReferralProgram,
+	updateApiReferralProgram,
 } from "@/internal/rewards/actions/referralProgramCrud/index.js";
-import { deleteApiReward } from "@/internal/rewards/actions/rewardCrud/index.js";
+import {
+	deleteApiReward,
+	updateApiReward,
+} from "@/internal/rewards/actions/rewardCrud/index.js";
 import { createApiReward } from "@/internal/rewards/actions/createApiReward/createApiReward.js";
 import { getApiReferralProgram } from "@/internal/rewards/apiRewards/getApiReferralProgram.js";
 import {
@@ -24,6 +28,34 @@ import {
 
 const rewardId = (reward: CreateRewardParams) =>
 	reward.coupon?.id ?? reward.feature_grant!.id;
+
+const rewardUpdateParams = (reward: CreateRewardParams) => {
+	if (reward.coupon) {
+		const { id: reward_id, ...coupon } = reward.coupon;
+		return { reward_id, coupon };
+	}
+	const { id: reward_id, ...feature_grant } = reward.feature_grant!;
+	return { reward_id, feature_grant };
+};
+
+const referralProgramUpdateParams = (
+	program: NonNullable<CatalogUpdateParams["referral_programs"]>[number],
+) => {
+	const {
+		id: referral_program_id,
+		max_redemptions,
+		plan_ids,
+		exclude_trial,
+		...update
+	} = program;
+	return {
+		referral_program_id,
+		...update,
+		...(max_redemptions == null ? {} : { max_redemptions }),
+		...(plan_ids == null ? {} : { plan_ids }),
+		...(exclude_trial == null ? {} : { exclude_trial }),
+	};
+};
 
 export const assertCatalogConfigResourceScope = ({
 	ctx,
@@ -110,6 +142,17 @@ const comparableProgram = (
 		exclude_trial: program.exclude_trial ?? false,
 	});
 
+const canUpdateProgram = ({
+	existing,
+	program,
+}: {
+	existing: ApiReferralProgramV0;
+	program: CreateReferralProgramParams;
+}) =>
+	(program.max_redemptions != null || existing.max_redemptions == null) &&
+	(program.plan_ids != null || !existing.plan_ids?.some(Boolean)) &&
+	(program.exclude_trial != null || !existing.exclude_trial);
+
 export const resolveCatalogConfigResources = async ({
 	ctx,
 	params,
@@ -182,7 +225,9 @@ export const previewCatalogConfigResources = async ({
 				? "created"
 				: comparableReward(existing) === comparableReward(reward)
 					? "none"
-					: "conflict",
+					: Boolean(existing.coupon) === Boolean(reward.coupon)
+						? "updated"
+						: "conflict",
 		};
 	});
 	if (!params.skip_deletions && params.rewards !== undefined) {
@@ -201,7 +246,9 @@ export const previewCatalogConfigResources = async ({
 				? "created"
 				: comparableProgram(existing) === comparableProgram(program)
 					? "none"
-					: "conflict",
+					: canUpdateProgram({ existing, program })
+						? "updated"
+						: "conflict",
 		};
 	});
 	if (!params.skip_deletions && params.referral_programs !== undefined) {
@@ -255,12 +302,21 @@ export const applyCatalogConfigResources = async ({
 		}
 	}
 	for (const [index, reward] of (params.rewards ?? []).entries()) {
-		if (preview.rewardChanges[index]?.action === "created") {
+		const action = preview.rewardChanges[index]?.action;
+		if (action === "updated") {
+			await updateApiReward({ ctx, params: rewardUpdateParams(reward) });
+		} else if (action === "created") {
 			await createApiReward({ ctx, params: reward });
 		}
 	}
 	for (const [index, program] of (params.referral_programs ?? []).entries()) {
-		if (preview.referralProgramChanges[index]?.action === "created") {
+		const action = preview.referralProgramChanges[index]?.action;
+		if (action === "updated") {
+			await updateApiReferralProgram({
+				ctx,
+				params: referralProgramUpdateParams(program),
+			});
+		} else if (action === "created") {
 			await createApiReferralProgram({ ctx, params: program });
 		}
 	}

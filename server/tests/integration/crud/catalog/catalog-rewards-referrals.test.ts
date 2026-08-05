@@ -18,7 +18,8 @@ test("catalog config returns validation issues for malformed rewards", () => {
 	expect(parse().success).toBe(false);
 });
 
-test("catalog config creates idempotent rewards and a redeemable referral program", async () => {
+/** Before: changed config resources conflicted; after: catalog push updates their definitions. */
+test("catalog config creates, updates, and deletes rewards and referral programs", async () => {
 	const suffix = Date.now();
 	const referrerId = `catalog-referrer-${suffix}`;
 	const referredId = `catalog-referred-${suffix}`;
@@ -125,25 +126,40 @@ test("catalog config creates idempotent rewards and a redeemable referral progra
 	}
 
 	const changedConfig = structuredClone(config);
+	changedConfig.rewards[0]!.coupon!.value = 25;
 	changedConfig.rewards[1]!.feature_grant!.grants[0]!.included = 999;
-	const conflict = (await autumnV2_2.post(
+	changedConfig.referral_programs[0]!.max_redemptions = 7;
+	const changed = (await autumnV2_2.post(
 		"/catalog.preview_update",
 		changedConfig as never,
 	)) as any;
-	expect(conflict.reward_changes[1]).toMatchObject({
-		id: grantId,
-		action: "conflict",
-	});
-	await expect(
-		autumnV2_2.post("/catalog.update", changedConfig as never),
-	).rejects.toThrow();
-	const rewardsAfterConflict = ApiRewardsListV0Schema.parse(
+	expect(changed.reward_changes).toEqual([
+		{ id: couponId, action: "updated" },
+		{ id: grantId, action: "updated" },
+	]);
+	expect(changed.referral_program_changes).toEqual([
+		{ id: programId, action: "updated" },
+	]);
+
+	await autumnV2_2.post("/catalog.update", changedConfig as never);
+	const rewardsAfterUpdate = ApiRewardsListV0Schema.parse(
 		await autumnV2_2.post("/rewards.list", {}),
 	);
 	expect(
-		rewardsAfterConflict.feature_grants.find(({ id }) => id === grantId)
+		rewardsAfterUpdate.coupons.find(({ id }) => id === couponId)?.value,
+	).toBe(25);
+	expect(
+		rewardsAfterUpdate.feature_grants.find(({ id }) => id === grantId)
 			?.grants[0]?.included,
-	).toBe(included);
+	).toBe(999);
+	const programsAfterUpdate = (await autumnV2_2.post(
+		"/referral_programs.list",
+		{},
+	)) as any;
+	expect(
+		programsAfterUpdate.list.find(({ id }: any) => id === programId)
+			?.max_redemptions,
+	).toBe(7);
 
 	await autumnV2_2.post("/catalog.update", {});
 	const listed = ApiRewardsListV0Schema.parse(

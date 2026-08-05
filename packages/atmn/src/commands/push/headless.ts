@@ -78,8 +78,10 @@ interface HeadlessPushResult {
 	plansDeleted: string[];
 	plansArchived: string[];
 	rewardsCreated: string[];
+	rewardsUpdated: string[];
 	rewardsDeleted: string[];
 	referralProgramsCreated: string[];
+	referralProgramsUpdated: string[];
 	referralProgramsDeleted: string[];
 }
 
@@ -107,8 +109,10 @@ function headlessResultFromPushResult(result: PushResult): HeadlessPushResult {
 		plansDeleted: result.plansDeleted,
 		plansArchived: result.plansArchived,
 		rewardsCreated: result.rewardsCreated,
+		rewardsUpdated: result.rewardsUpdated,
 		rewardsDeleted: result.rewardsDeleted,
 		referralProgramsCreated: result.referralProgramsCreated,
+		referralProgramsUpdated: result.referralProgramsUpdated,
 		referralProgramsDeleted: result.referralProgramsDeleted,
 	};
 }
@@ -636,8 +640,10 @@ async function executePushWithDefaults(
 		plansDeleted: [],
 		plansArchived: [],
 		rewardsCreated: [],
+		rewardsUpdated: [],
 		rewardsDeleted: [],
 		referralProgramsCreated: [],
+		referralProgramsUpdated: [],
 		referralProgramsDeleted: [],
 	};
 
@@ -784,8 +790,10 @@ async function _headlessPushImpl(
 			plansDeleted: [],
 			plansArchived: [],
 			rewardsCreated: [],
+			rewardsUpdated: [],
 			rewardsDeleted: [],
 			referralProgramsCreated: [],
+			referralProgramsUpdated: [],
 			referralProgramsDeleted: [],
 		};
 	}
@@ -902,6 +910,11 @@ async function _headlessPushImpl(
 			chalk.dim(`  Rewards created: ${result.rewardsCreated.join(", ")}`),
 		);
 	}
+	if (result.rewardsUpdated.length > 0) {
+		console.log(
+			chalk.dim(`  Rewards updated: ${result.rewardsUpdated.join(", ")}`),
+		);
+	}
 	if (result.rewardsDeleted.length > 0) {
 		console.log(
 			chalk.dim(`  Rewards deleted: ${result.rewardsDeleted.join(", ")}`),
@@ -911,6 +924,13 @@ async function _headlessPushImpl(
 		console.log(
 			chalk.dim(
 				`  Referral programs created: ${result.referralProgramsCreated.join(", ")}`,
+			),
+		);
+	}
+	if (result.referralProgramsUpdated.length > 0) {
+		console.log(
+			chalk.dim(
+				`  Referral programs updated: ${result.referralProgramsUpdated.join(", ")}`,
 			),
 		);
 	}

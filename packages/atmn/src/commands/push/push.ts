@@ -986,8 +986,10 @@ export function catalogPreviewToPushResult(
 		plansArchived: [],
 		plansSkipped: [],
 		rewardsCreated: [],
+		rewardsUpdated: [],
 		rewardsDeleted: [],
 		referralProgramsCreated: [],
+		referralProgramsUpdated: [],
 		referralProgramsDeleted: [],
 	};
 
@@ -1051,10 +1053,12 @@ export function catalogPreviewToPushResult(
 	}
 	for (const { id, action } of preview.reward_changes ?? []) {
 		if (action === "created") result.rewardsCreated.push(id);
+		if (action === "updated") result.rewardsUpdated.push(id);
 		if (action === "deleted") result.rewardsDeleted.push(id);
 	}
 	for (const { id, action } of preview.referral_program_changes ?? []) {
 		if (action === "created") result.referralProgramsCreated.push(id);
+		if (action === "updated") result.referralProgramsUpdated.push(id);
 		if (action === "deleted") result.referralProgramsDeleted.push(id);
 	}
 
