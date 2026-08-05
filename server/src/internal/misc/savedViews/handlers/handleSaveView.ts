@@ -20,7 +20,8 @@ export const handleSaveView = createRoute({
 	scopes: [Scopes.Public],
 	body: SaveViewSchema,
 	handler: async (c) => {
-		const { org, env } = c.get("ctx");
+		const ctx = c.get("ctx");
+		const { org } = ctx;
 		const { name, filters } = c.req.valid("json");
 
 		if (!name) {
@@ -44,11 +45,11 @@ export const handleSaveView = createRoute({
 			org_id: org.id,
 		};
 
-		await setSavedView({ orgId: org.id, env, view });
+		await setSavedView({ ctx, view });
 
-		const existingViews = await getSavedViewIdList({ orgId: org.id, env });
+		const existingViews = await getSavedViewIdList({ ctx });
 		existingViews.push(viewId);
-		await setSavedViewIdList({ orgId: org.id, env, viewIds: existingViews });
+		await setSavedViewIdList({ ctx, viewIds: existingViews });
 
 		return c.json({
 			message: "View saved successfully",

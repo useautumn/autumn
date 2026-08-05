@@ -1,5 +1,8 @@
 import { Redis } from "ioredis";
-import { instrumentRedis } from "../otel/instrumentRedis.js";
+import {
+	instrumentRedis,
+	type RedisClientType,
+} from "../otel/instrumentRedis.js";
 import { redisDnsLookup } from "./redisDnsLookup.js";
 import { registerRedisCommands } from "./registerRedisCommands.js";
 
@@ -22,11 +25,13 @@ const formatRedisEndpoint = ({ cacheUrl }: { cacheUrl: string }) => {
 export const createRedisClient = ({
 	cacheUrl,
 	region,
+	redisType,
 	cacheCert = process.env.CACHE_CERT || null,
 	commandTimeout = REDIS_COMMAND_TIMEOUT_MS,
 }: {
 	cacheUrl: string;
 	region: string;
+	redisType: RedisClientType;
 	cacheCert?: string | null;
 	commandTimeout?: number;
 }): Redis => {
@@ -56,7 +61,7 @@ export const createRedisClient = ({
 
 	// instrumentRedis must run first so its defineCommand patch
 	// is in place when commands are registered.
-	instrumentRedis({ redis: instance, region });
+	instrumentRedis({ redis: instance, region, redisType });
 	registerRedisCommands({ redisInstance: instance });
 
 	return instance;

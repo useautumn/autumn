@@ -1,21 +1,27 @@
 import type { FullCusProduct } from "@autumn/shared";
 import { getCachedExpiredCustomerProducts } from "@/external/redis/actions/expiredCustomerProductsCache/expiredCustomerProductsCache.js";
+import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 
 export const getExpiredCustomerProductsCache = async ({
+	ctx,
 	stripeSubscriptionId,
 }: {
+	ctx: AutumnContext;
 	stripeSubscriptionId: string;
 }): Promise<FullCusProduct[] | null> =>
-	getCachedExpiredCustomerProducts({ stripeSubscriptionId });
+	getCachedExpiredCustomerProducts({ ctx, stripeSubscriptionId });
 
 export const getExpiredCustomerProductsCacheAndMerge = async ({
+	ctx,
 	customerProducts,
 	stripeSubscriptionId,
 }: {
+	ctx: AutumnContext;
 	customerProducts: FullCusProduct[];
 	stripeSubscriptionId: string;
 }): Promise<FullCusProduct[]> => {
 	const cachedExpired = await getExpiredCustomerProductsCache({
+		ctx,
 		stripeSubscriptionId,
 	});
 

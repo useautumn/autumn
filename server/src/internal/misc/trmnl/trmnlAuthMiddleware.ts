@@ -24,7 +24,7 @@ export const trmnlAuthMiddleware = async (c: Context<HonoEnv>, next: Next) => {
 		});
 	}
 
-	const trmnlConfig = await getTrmnlDeviceConfig({ deviceId });
+	const trmnlConfig = await getTrmnlDeviceConfig({ ctx, deviceId });
 
 	if (!trmnlConfig) {
 		throw new RecaseError({

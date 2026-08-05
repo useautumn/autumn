@@ -1,5 +1,6 @@
 import { getMiscRedis } from "@/external/redis/initRedis.js";
 import { tryRedisOp } from "@/external/redis/utils/runRedisOp.js";
+import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 
 /** Pinned: Redis is the ONLY store for saved views (no TTL, no DB row), so
  *  they must live on a single instance. */
@@ -30,16 +31,14 @@ export const buildSavedViewIdListKey = ({
 }) => `saved_views_list:${orgId}:${env}`;
 
 export const getSavedView = async ({
-	orgId,
-	env,
+	ctx,
 	viewId,
 }: {
-	orgId: string;
-	env: string;
+	ctx: AutumnContext;
 	viewId: string;
 }): Promise<SavedView | null> => {
 	const miscRedis = getMiscRedis();
-	const viewKey = buildSavedViewKey({ orgId, env, viewId });
+	const viewKey = buildSavedViewKey({ orgId: ctx.org.id, env: ctx.env, viewId });
 
 	const cached = await tryRedisOp({
 		operation: () => miscRedis.get(viewKey),
@@ -52,52 +51,60 @@ export const getSavedView = async ({
 };
 
 export const setSavedView = async ({
-	orgId,
-	env,
+	ctx,
 	view,
 }: {
-	orgId: string;
-	env: string;
+	ctx: AutumnContext;
 	view: SavedView;
 }): Promise<void> => {
 	const miscRedis = getMiscRedis();
-	const viewKey = buildSavedViewKey({ orgId, env, viewId: view.id });
+	const viewKey = buildSavedViewKey({
+		orgId: ctx.org.id,
+		env: ctx.env,
+		viewId: view.id,
+	});
 
 	await tryRedisOp({
 		operation: () => miscRedis.set(viewKey, JSON.stringify(view)),
 		source: "saved-views:set",
 		redisInstance: miscRedis,
+		onError: (error) =>
+			ctx.logger.warn("[savedViews] set failed", {
+				data: { viewId: view.id },
+				error,
+			}),
 	});
 };
 
 export const deleteSavedView = async ({
-	orgId,
-	env,
+	ctx,
 	viewId,
 }: {
-	orgId: string;
-	env: string;
+	ctx: AutumnContext;
 	viewId: string;
 }): Promise<void> => {
 	const miscRedis = getMiscRedis();
-	const viewKey = buildSavedViewKey({ orgId, env, viewId });
+	const viewKey = buildSavedViewKey({ orgId: ctx.org.id, env: ctx.env, viewId });
 
 	await tryRedisOp({
 		operation: () => miscRedis.del(viewKey),
 		source: "saved-views:delete",
 		redisInstance: miscRedis,
+		onError: (error) =>
+			ctx.logger.warn("[savedViews] delete failed", {
+				data: { viewId },
+				error,
+			}),
 	});
 };
 
 export const getSavedViewIdList = async ({
-	orgId,
-	env,
+	ctx,
 }: {
-	orgId: string;
-	env: string;
+	ctx: AutumnContext;
 }): Promise<string[]> => {
 	const miscRedis = getMiscRedis();
-	const listKey = buildSavedViewIdListKey({ orgId, env });
+	const listKey = buildSavedViewIdListKey({ orgId: ctx.org.id, env: ctx.env });
 
 	const cached = await tryRedisOp({
 		operation: () => miscRedis.get(listKey),
@@ -110,20 +117,20 @@ export const getSavedViewIdList = async ({
 };
 
 export const setSavedViewIdList = async ({
-	orgId,
-	env,
+	ctx,
 	viewIds,
 }: {
-	orgId: string;
-	env: string;
+	ctx: AutumnContext;
 	viewIds: string[];
 }): Promise<void> => {
 	const miscRedis = getMiscRedis();
-	const listKey = buildSavedViewIdListKey({ orgId, env });
+	const listKey = buildSavedViewIdListKey({ orgId: ctx.org.id, env: ctx.env });
 
 	await tryRedisOp({
 		operation: () => miscRedis.set(listKey, JSON.stringify(viewIds)),
 		source: "saved-views:set-list",
 		redisInstance: miscRedis,
+		onError: (error) =>
+			ctx.logger.warn("[savedViews] set-list failed", { error }),
 	});
 };

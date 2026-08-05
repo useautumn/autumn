@@ -11,13 +11,13 @@ import { createRoute } from "@/honoMiddlewares/routeHandler.js";
 export const handleGetViews = createRoute({
 	scopes: [Scopes.Public],
 	handler: async (c) => {
-		const { org, env } = c.get("ctx");
+		const ctx = c.get("ctx");
 
-		const viewIds = await getSavedViewIdList({ orgId: org.id, env });
+		const viewIds = await getSavedViewIdList({ ctx });
 
 		const views = [];
 		for (const viewId of viewIds) {
-			const view = await getSavedView({ orgId: org.id, env, viewId });
+			const view = await getSavedView({ ctx, viewId });
 
 			if (view) {
 				views.push({

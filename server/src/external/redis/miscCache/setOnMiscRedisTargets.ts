@@ -9,17 +9,20 @@ const setOnTarget = ({
 	value,
 	ttlMs,
 	source,
+	onError,
 }: {
 	redis: Redis;
 	key: string;
 	value: string;
 	ttlMs: number;
 	source: string;
+	onError?: (error: unknown) => void;
 }) =>
 	tryRedisOp({
 		operation: () => redis.set(key, value, "PX", ttlMs),
 		source,
 		redisInstance: redis,
+		onError,
 	});
 
 /** Write-through for coordination keys (locks/reservations): the same SET
@@ -29,15 +32,17 @@ export const setOnMiscRedisTargets = async ({
 	value,
 	ttlMs,
 	source,
+	onError,
 }: {
 	key: string;
 	value: string;
 	ttlMs: number;
 	source: string;
+	onError?: (error: unknown) => void;
 }): Promise<void> => {
 	await Promise.all(
 		getMiscRedisTargets().map(({ redis }) =>
-			setOnTarget({ redis, key, value, ttlMs, source }),
+			setOnTarget({ redis, key, value, ttlMs, source, onError }),
 		),
 	);
 };

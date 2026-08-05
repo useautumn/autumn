@@ -62,6 +62,8 @@ Proxy deletion + pinned call sites; then ramp the 5 rampable cache modules onto 
 
 DESCOPED (John, 2026-08-04): no `ctx.miscRedis` threading — call sites call `getMiscRedis()` / `resolveMiscRedis({ requestId: ctx.id })` directly (ctx is already in scope where it matters). The `runRedisOp`/`tryRedisOp` `operation(redis)` callback API change is deferred — keep the current shape for now. John handles the cloud-repo fixes (incl. `initOrgUtils.ts` `redis` import) and runs integration tests himself.
 
+ADDED (John, 2026-08-04) — final PR of the stack: **thread `ctx` into the `external/redis/actions/` functions.** Today every action imports `logger` directly, so their loglines are orphaned (no request/org/env context). Pass `ctx` (or at minimum `ctx.logger`) into each action and log through it instead of the module-level logger.
+
 
 | # | Unit | Scope |
 |---|------|-------|

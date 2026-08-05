@@ -19,6 +19,7 @@ export const hasRedisV2Config = Boolean(dragonflyUrl);
 export const redisV2: Redis = createRedisConnection({
 	cacheUrl: dragonflyUrl || "",
 	region: `${currentRegion}:v2`,
+	redisType: "subject-primary",
 	commandTimeout: REDIS_V2_COMMAND_TIMEOUT_MS,
 });
 
@@ -51,6 +52,7 @@ export const getAlternateRedisV2Instance = (
 	const instance = createRedisConnection({
 		cacheUrl,
 		region: `${currentRegion}:v2:${name}`,
+		redisType: "subject-secondary",
 		commandTimeout: REDIS_V2_COMMAND_TIMEOUT_MS,
 	});
 	instancePool.set(name, instance);

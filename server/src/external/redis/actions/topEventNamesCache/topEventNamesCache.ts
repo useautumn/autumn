@@ -1,6 +1,7 @@
 import type { AppEnv } from "@autumn/shared";
 import { resolveMiscRedis } from "@/external/redis/miscCache/resolveMiscRedis.js";
 import { tryRedisOp } from "@/external/redis/utils/runRedisOp.js";
+import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 
 const TOP_EVENT_NAMES_CACHE_TTL_SECONDS = 60 * 5;
 
@@ -15,13 +16,13 @@ export const buildTopEventNamesCacheKey = ({
 }) => `top_event_names:${orgId}:${env}:${limit}`;
 
 export const getCachedTopEventNames = async <T>({
+	ctx,
 	cacheKey,
-	requestId,
 }: {
+	ctx: AutumnContext;
 	cacheKey: string;
-	requestId?: string;
 }): Promise<T | null> => {
-	const miscRedis = resolveMiscRedis({ requestId });
+	const miscRedis = resolveMiscRedis({ requestId: ctx.id });
 
 	const cached = await tryRedisOp({
 		operation: () => miscRedis.get(cacheKey),
@@ -34,15 +35,15 @@ export const getCachedTopEventNames = async <T>({
 };
 
 export const setCachedTopEventNames = async ({
+	ctx,
 	cacheKey,
 	value,
-	requestId,
 }: {
+	ctx: AutumnContext;
 	cacheKey: string;
 	value: unknown;
-	requestId?: string;
 }): Promise<void> => {
-	const miscRedis = resolveMiscRedis({ requestId });
+	const miscRedis = resolveMiscRedis({ requestId: ctx.id });
 
 	await tryRedisOp({
 		operation: () =>

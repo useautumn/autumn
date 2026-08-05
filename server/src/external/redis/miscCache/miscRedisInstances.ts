@@ -22,7 +22,11 @@ export const getMiscMainRedis = (): Redis => {
 		);
 	}
 
-	mainClient = createRedisClient({ cacheUrl, region: currentRegion });
+	mainClient = createRedisClient({
+		cacheUrl,
+		region: currentRegion,
+		redisType: "misc-primary",
+	});
 	return mainClient;
 };
 
@@ -85,6 +89,7 @@ export const getMiscBackupRedis = (): Redis | null => {
 	const instance = createRedisClient({
 		cacheUrl: decrypted,
 		region: `${currentRegion}:backup`,
+		redisType: "misc-secondary",
 		cacheCert: null,
 	});
 

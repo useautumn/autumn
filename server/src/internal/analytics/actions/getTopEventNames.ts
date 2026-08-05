@@ -30,8 +30,8 @@ export const getTopEventNames = async ({
 	const cacheKey = buildTopEventNamesCacheKey({ orgId: org.id, env, limit });
 
 	const cached = await getCachedTopEventNames<TopEventNamesResult>({
+		ctx,
 		cacheKey,
-		requestId: ctx.id,
 	});
 	if (cached) return cached;
 
@@ -79,7 +79,7 @@ export const getTopEventNames = async ({
 		eventNames,
 		result: resultJson,
 	};
-	await setCachedTopEventNames({ cacheKey, value, requestId: ctx.id });
+	await setCachedTopEventNames({ ctx, cacheKey, value });
 
 	return value;
 };

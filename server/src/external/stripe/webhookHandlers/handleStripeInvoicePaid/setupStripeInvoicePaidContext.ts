@@ -54,6 +54,7 @@ export const setupStripeInvoicePaidContext = async ({
 		);
 
 		customerProducts = await customerProductActions.expiredCache.getAndMerge({
+			ctx,
 			customerProducts,
 			stripeSubscriptionId,
 		});

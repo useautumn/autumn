@@ -12,14 +12,14 @@ import { createRoute } from "@/honoMiddlewares/routeHandler.js";
 export const handleDeleteView = createRoute({
 	scopes: [Scopes.Public],
 	handler: async (c) => {
-		const { org, env } = c.get("ctx");
+		const ctx = c.get("ctx");
 		const { viewId } = c.req.param();
 
-		await deleteSavedView({ orgId: org.id, env, viewId });
+		await deleteSavedView({ ctx, viewId });
 
-		const existingViews = await getSavedViewIdList({ orgId: org.id, env });
+		const existingViews = await getSavedViewIdList({ ctx });
 		const updatedViews = existingViews.filter((id) => id !== viewId);
-		await setSavedViewIdList({ orgId: org.id, env, viewIds: updatedViews });
+		await setSavedViewIdList({ ctx, viewIds: updatedViews });
 
 		return c.json({ message: "View deleted successfully" });
 	},

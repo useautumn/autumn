@@ -6,15 +6,18 @@ import { getMiscRedisTargets } from "./resolveMiscRedis.js";
 export const getFromMiscRedisTargets = async ({
 	key,
 	source,
+	onError,
 }: {
 	key: string;
 	source: string;
+	onError?: (error: unknown) => void;
 }): Promise<string | null> => {
 	for (const { redis } of getMiscRedisTargets()) {
 		const value = await tryRedisOp({
 			operation: () => redis.get(key),
 			source,
 			redisInstance: redis,
+			onError,
 		});
 		if (value) return value;
 	}
