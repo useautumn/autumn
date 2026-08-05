@@ -304,7 +304,29 @@ export const invoiceCheckout = async ({
 		throw new Error("Could not find or click any submit/pay button");
 	}
 
-	// Step 5: Wait for payment processing + webhook delivery
-	await page.waitForTimeout(20000);
-	console.log("[invoiceCheckout] Checkout complete");
+	// Step 5: Wait for the page to confirm payment. A fixed sleep returned while
+	// the invoice was still `open`, so the test failed later as "product not
+	// attached" with no hint that payment never happened.
+	const deadline = Date.now() + 120_000;
+	let pageText = "";
+
+	while (Date.now() < deadline) {
+		pageText = await page.evaluate(() => document.body.innerText);
+		// "Unpaid" does not match \bpaid\b — no word boundary before "paid".
+		if (
+			/\bpaid\b|thanks for your payment|payment (successful|received)/i.test(
+				pageText,
+			)
+		) {
+			console.log("[invoiceCheckout] Payment confirmed by hosted page");
+			return;
+		}
+		await page.waitForTimeout(1000);
+	}
+
+	throw new Error(
+		`Invoice payment never confirmed after clicking pay. Page text: ${pageText
+			.replace(/\s+/g, " ")
+			.slice(0, 400)}`,
+	);
 };
