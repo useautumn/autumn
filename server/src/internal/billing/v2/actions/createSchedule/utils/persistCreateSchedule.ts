@@ -9,70 +9,38 @@ import {
 import { and, eq, inArray } from "drizzle-orm";
 import type { DrizzleCli } from "@/db/initDrizzle";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
-import {
-	resolveCustomerProductsScope,
-	resolveScheduleScopes,
-} from "@/internal/customers/schedules/resolveScheduleScope";
 import { generateId } from "@/utils/genUtils";
 
 /**
- * Finds the schedule occupying the target scope. Scope comes from the opening
- * phase's customer products, so rows with a stale entity column still match.
+ * A customer holds one schedule, so a new one replaces everything queued. Scope
+ * lives on the plans inside the phases, never on the schedule itself.
  */
 const getExistingScheduleState = async ({
 	ctx,
 	internalCustomerId,
-	internalEntityId,
 }: {
 	ctx: AutumnContext;
 	internalCustomerId: string;
-	internalEntityId: string | null;
 }) => {
 	const empty = { scheduleIds: [], existingCustomerProductIds: [] };
 
 	const customerSchedules = await ctx.db
-		.select({
-			id: schedules.id,
-			internal_entity_id: schedules.internal_entity_id,
-		})
+		.select({ id: schedules.id })
 		.from(schedules)
 		.where(eq(schedules.internal_customer_id, internalCustomerId));
 
 	if (customerSchedules.length === 0) return empty;
 
+	const scheduleIds = customerSchedules.map((schedule) => schedule.id);
 	const existingPhases = await ctx.db
-		.select({
-			schedule_id: schedulePhases.schedule_id,
-			starts_at: schedulePhases.starts_at,
-			customer_product_ids: schedulePhases.customer_product_ids,
-		})
+		.select({ customer_product_ids: schedulePhases.customer_product_ids })
 		.from(schedulePhases)
-		.where(
-			inArray(
-				schedulePhases.schedule_id,
-				customerSchedules.map((schedule) => schedule.id),
-			),
-		);
-
-	const schedulesWithPhases = customerSchedules.map((schedule) => ({
-		...schedule,
-		phases: existingPhases.filter((phase) => phase.schedule_id === schedule.id),
-	}));
-
-	const scopes = await resolveScheduleScopes({
-		ctx,
-		schedules: schedulesWithPhases,
-	});
-	const inScope = schedulesWithPhases.filter(
-		(schedule) => (scopes.get(schedule.id) ?? null) === internalEntityId,
-	);
-
-	if (inScope.length === 0) return empty;
+		.where(inArray(schedulePhases.schedule_id, scheduleIds));
 
 	return {
-		scheduleIds: inScope.map((schedule) => schedule.id),
-		existingCustomerProductIds: inScope.flatMap((schedule) =>
-			schedule.phases.flatMap((phase) => phase.customer_product_ids),
+		scheduleIds,
+		existingCustomerProductIds: existingPhases.flatMap(
+			(phase) => phase.customer_product_ids,
 		),
 	};
 };
@@ -121,16 +89,9 @@ export const persistCreateSchedule = async ({
 		const txDb = tx as unknown as DrizzleCli;
 		const txCtx = { ...ctx, db: txDb };
 
-		const openingPhase = [...phases].sort((a, b) => a.startsAt - b.startsAt)[0];
-		const scope = await resolveCustomerProductsScope({
-			ctx: txCtx,
-			customerProductIds: openingPhase?.customerProductIds ?? [],
-		});
-
 		const existingScheduleState = await getExistingScheduleState({
 			ctx: txCtx,
 			internalCustomerId: fullCustomer.internal_id,
-			internalEntityId: scope.internalEntityId,
 		});
 
 		await deleteExistingSchedules({
@@ -145,8 +106,8 @@ export const persistCreateSchedule = async ({
 			env: ctx.env,
 			internal_customer_id: fullCustomer.internal_id,
 			customer_id: customerId,
-			internal_entity_id: scope.internalEntityId,
-			entity_id: scope.entityId,
+			internal_entity_id: null,
+			entity_id: null,
 			created_at: currentEpochMs,
 		});
 

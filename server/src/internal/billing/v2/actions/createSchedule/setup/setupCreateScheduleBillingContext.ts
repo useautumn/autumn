@@ -267,13 +267,6 @@ export const setupCreateScheduleBillingContext = async ({
 		await resolveReplacedScheduleCustomerProductIds({
 			ctx,
 			internalCustomerId: billingContext.fullCustomer.internal_id,
-			requestScopes: [
-				...new Set(
-					billingContext.productContexts.map(
-						({ fullCustomer }) => fullCustomer.entity?.internal_id ?? null,
-					),
-				),
-			],
 		});
 
 	const scheduleBillingContext: CreateScheduleBillingContext = {

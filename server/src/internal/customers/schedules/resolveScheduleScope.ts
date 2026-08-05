@@ -14,16 +14,6 @@ type ProductScope = {
 	entity_id: string | null;
 };
 
-type ScheduleScope = {
-	internalEntityId: string | null;
-	entityId: string | null;
-};
-
-const CUSTOMER_LEVEL_SCOPE: ScheduleScope = {
-	internalEntityId: null,
-	entityId: null,
-};
-
 const selectProductScopes = async ({
 	ctx,
 	customerProductIds,
@@ -61,24 +51,6 @@ const findOwningProduct = ({
 		.map((productId) => products.find((product) => product.id === productId))
 		.find((product) => product?.internal_entity_id);
 
-export const resolveCustomerProductsScope = async ({
-	ctx,
-	customerProductIds,
-}: {
-	ctx: AutumnContext;
-	customerProductIds: string[];
-}): Promise<ScheduleScope> => {
-	const owner = findOwningProduct({
-		customerProductIds,
-		products: await selectProductScopes({ ctx, customerProductIds }),
-	});
-	if (!owner?.internal_entity_id) return CUSTOMER_LEVEL_SCOPE;
-	return {
-		internalEntityId: owner.internal_entity_id,
-		entityId: owner.entity_id,
-	};
-};
-
 /**
  * Customer products the schedules this request replaces put in place. Only
  * these may be expired when the new phases drop them — anything the schedule
@@ -87,28 +59,19 @@ export const resolveCustomerProductsScope = async ({
 export const resolveReplacedScheduleCustomerProductIds = async ({
 	ctx,
 	internalCustomerId,
-	requestScopes,
 }: {
 	ctx: AutumnContext;
 	internalCustomerId: string;
-	requestScopes: (string | null)[];
 }): Promise<string[]> => {
 	const customerSchedules = await ctx.db
-		.select({
-			id: schedules.id,
-			internal_entity_id: schedules.internal_entity_id,
-		})
+		.select({ id: schedules.id })
 		.from(schedules)
 		.where(eq(schedules.internal_customer_id, internalCustomerId));
 
 	if (customerSchedules.length === 0) return [];
 
 	const phases = await ctx.db
-		.select({
-			schedule_id: schedulePhases.schedule_id,
-			starts_at: schedulePhases.starts_at,
-			customer_product_ids: schedulePhases.customer_product_ids,
-		})
+		.select({ customer_product_ids: schedulePhases.customer_product_ids })
 		.from(schedulePhases)
 		.where(
 			inArray(
@@ -117,21 +80,9 @@ export const resolveReplacedScheduleCustomerProductIds = async ({
 			),
 		);
 
-	const schedulesWithPhases = customerSchedules.map((schedule) => ({
-		...schedule,
-		phases: phases.filter((phase) => phase.schedule_id === schedule.id),
-	}));
-	const scopes = await resolveScheduleScopes({
-		ctx,
-		schedules: schedulesWithPhases,
-	});
-
-	const requested = new Set(requestScopes);
-	const replacedProductIds = schedulesWithPhases
-		.filter((schedule) => requested.has(scopes.get(schedule.id) ?? null))
-		.flatMap((schedule) =>
-			schedule.phases.flatMap((phase) => phase.customer_product_ids),
-		);
+	const replacedProductIds = phases.flatMap(
+		(phase) => phase.customer_product_ids,
+	);
 
 	return [...new Set(replacedProductIds)];
 };
