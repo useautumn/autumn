@@ -29,12 +29,14 @@ export const createRedisClient = ({
 	redisType,
 	commandTimeout = REDIS_COMMAND_TIMEOUT_MS,
 	autoResendUnfulfilledCommands = true,
+	maxRetriesPerRequest = null,
 }: {
 	cacheUrl: string;
 	region: string;
 	redisType: RedisClientType;
 	commandTimeout?: number;
 	autoResendUnfulfilledCommands?: boolean;
+	maxRetriesPerRequest?: number | null;
 }): Redis => {
 	console.log(
 		`[Redis] ${region}: connecting to ${formatRedisEndpoint({ cacheUrl })}`,
@@ -47,13 +49,13 @@ export const createRedisClient = ({
 		family: 4,
 		keepAlive: 10000,
 		commandTimeout,
-		// Let `commandTimeout` (default 10s) be the sole bound on how long a command
+		// By default, let `commandTimeout` be the sole bound on how long a command
 		// can wait. `maxRetriesPerRequest: null` disables ioredis's default
 		// "flush pending commands after N reconnect attempts" behavior, which
 		// otherwise aborts commands still in the offline queue on any minor
 		// handshake blip. Under a real brownout, commands still fail via the
 		// `Command timed out` path.
-		maxRetriesPerRequest: null,
+		maxRetriesPerRequest,
 		autoResendUnfulfilledCommands,
 	});
 
@@ -67,9 +69,9 @@ export const createRedisClient = ({
 
 export const createRedisConnection = createRedisClient;
 
-/** Two connections to the same endpoint behind a router. Command resend is off:
- *  a resent command would land after work the router already sent to the other
- *  connection, reordering balance mutations that a single socket kept FIFO. */
+/** Two connections to the same endpoint behind a router. Command resend is off,
+ *  and pending commands fail on the first reconnect so idempotent reads can retry
+ *  immediately on the alternate connection without reordering mutations. */
 export const createStandbyRedisConnection = ({
 	region,
 	...options
@@ -79,10 +81,12 @@ export const createStandbyRedisConnection = ({
 			...options,
 			region: `${region}:primary`,
 			autoResendUnfulfilledCommands: false,
+			maxRetriesPerRequest: 0,
 		}),
 		standby: createRedisClient({
 			...options,
 			region: `${region}:standby`,
 			autoResendUnfulfilledCommands: false,
+			maxRetriesPerRequest: 0,
 		}),
 	});
