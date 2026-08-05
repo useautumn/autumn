@@ -1,10 +1,11 @@
 import {
 	plan as basePlan,
 	billingControls,
-	feature,
+	feature as baseFeature,
 	item,
 } from "./builders/builderFunctions.js";
 import { createVariant } from "./builders/variantFunctions.js";
+import { referralProgram, reward } from "./builders/rewardFunctions.js";
 import type { Feature } from "./models/featureModels.js";
 import type {
 	BillingControls,
@@ -18,8 +19,9 @@ import type {
 	PlanItemFilter,
 	Variant,
 } from "./models/variantModels.js";
+import type { ReferralProgram, Reward } from "./models/rewardModels.js";
 
-export { billingControls, plan, feature, item };
+export { billingControls, plan, feature, item, referralProgram, reward };
 
 export type {
 	BillingControls,
@@ -31,6 +33,8 @@ export type {
 	PlanItemFilter,
 	PlanLicense,
 	Variant,
+	ReferralProgram,
+	Reward,
 };
 
 type PlanInput = Omit<
@@ -42,6 +46,10 @@ type PlanWithVariantMethod = Plan & { variant: NonNullable<Plan["variant"]> };
 
 const plan = (params: PlanInput): PlanWithVariantMethod => {
 	const base = basePlan(params) as PlanWithVariantMethod;
+	Object.defineProperty(base, "__atmnType", {
+		value: "plan",
+		enumerable: false,
+	});
 
 	Object.defineProperty(base, "variant", {
 		value: (variantParams: Omit<Variant, "__atmnType">): Variant => {
@@ -59,6 +67,15 @@ const plan = (params: PlanInput): PlanWithVariantMethod => {
 	return base;
 };
 
+const feature = (params: Feature): Feature => {
+	const value = baseFeature(params);
+	Object.defineProperty(value, "__atmnType", {
+		value: "feature",
+		enumerable: false,
+	});
+	return value;
+};
+
 export type Infinity = "infinity";
 
 // CLI types
@@ -66,4 +83,6 @@ export type Infinity = "infinity";
 export type AutumnConfig = {
 	plans: Plan[];
 	features: Feature[];
+	rewards?: Reward[];
+	referralPrograms?: ReferralProgram[];
 };

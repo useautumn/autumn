@@ -53,12 +53,18 @@ async function _pullImpl(options: PullOptions = {}): Promise<PullResult> {
 		primaryData.features,
 		primaryData.plans,
 		cwd,
-		{ forceOverwrite: forceOverwrite || allVersions },
+		{
+			forceOverwrite: forceOverwrite || allVersions,
+			rewards: primaryData.rewards,
+			referralPrograms: primaryData.referralPrograms,
+		},
 	);
 
 	const result: PullResult = {
 		features: primaryData.features,
 		plans: primaryData.plans,
+		rewards: primaryData.rewards,
+		referralPrograms: primaryData.referralPrograms,
 		configPath: writeResult.configPath,
 		inPlace: writeResult.inPlace,
 		updateResult: writeResult.updateResult,

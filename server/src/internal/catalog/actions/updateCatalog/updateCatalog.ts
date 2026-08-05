@@ -37,6 +37,11 @@ import {
 	validateCatalogVariantUpdates,
 	validateCatalogVariantVersionTargets,
 } from "../validateCatalogVariantUpdates.js";
+import {
+	assertNoCatalogConfigConflicts,
+	createCatalogConfigResources,
+	resolveCatalogConfigResources,
+} from "../catalogConfigResources.js";
 
 const archiveProductVersions = async ({
 	ctx,
@@ -482,10 +487,23 @@ const resolveCatalogUpdateResponse = async ({
 				: null;
 		}),
 	);
+	const { rewardById, programById } = await resolveCatalogConfigResources({
+		ctx,
+		params,
+	});
 
 	return {
 		plans: resolvedPlans.filter((plan) => plan !== null),
 		features: resolvedFeatures.filter((feature) => feature !== null),
+		rewards: (params.rewards ?? []).flatMap((reward) => {
+			const id = reward.coupon?.id ?? reward.feature_grant!.id;
+			const resolved = rewardById.get(id);
+			return resolved ? [resolved] : [];
+		}),
+		referral_programs: (params.referral_programs ?? []).flatMap((program) => {
+			const resolved = programById.get(program.id);
+			return resolved ? [resolved] : [];
+		}),
 	};
 };
 
@@ -498,7 +516,12 @@ export const updateCatalog = async ({
 }) => {
 	// Preflight the whole virtual catalog before any mutation; individual writes
 	// revalidate against the real product identities created by earlier plans.
-	await previewUpdateCatalog({ ctx, params });
+	const preview = await previewUpdateCatalog({ ctx, params });
+	const configPreview = {
+		rewardChanges: preview.reward_changes,
+		referralProgramChanges: preview.referral_program_changes,
+	};
+	assertNoCatalogConfigConflicts(configPreview);
 	const { db, org, env } = ctx;
 	const productsBeforeUpdate = await ProductService.listFull({
 		db,
@@ -519,6 +542,7 @@ export const updateCatalog = async ({
 
 	await upsertFeatures({ ctx, params, products: productsBeforeUpdate });
 	await upsertPlans({ ctx, params });
+	await createCatalogConfigResources({ ctx, params, preview: configPreview });
 	await applyMissingPlanRemovals({ ctx, removals: replacePlanIds });
 
 	const replaceFeatureIds = params.skip_deletions

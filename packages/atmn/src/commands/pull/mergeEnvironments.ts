@@ -47,5 +47,20 @@ export function mergeEnvironments(
 	return {
 		features: Array.from(featureMap.values()),
 		plans: Array.from(planMap.values()),
+		rewards: Array.from(
+			new Map(
+				[...production.rewards, ...sandbox.rewards].map((reward) => [
+					reward.id,
+					reward,
+				]),
+			).values(),
+		),
+		referralPrograms: Array.from(
+			new Map(
+				[...production.referralPrograms, ...sandbox.referralPrograms].map(
+					(program) => [program.id, program],
+				),
+			).values(),
+		),
 	};
 }

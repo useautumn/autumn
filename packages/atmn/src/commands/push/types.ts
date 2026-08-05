@@ -88,6 +88,8 @@ export interface PushResult {
 	plansDeleted: string[];
 	plansArchived: string[];
 	plansSkipped: string[];
+	rewardsCreated: string[];
+	referralProgramsCreated: string[];
 }
 
 // Remote data fetched during analysis

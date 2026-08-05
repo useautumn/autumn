@@ -2,6 +2,7 @@ import { existsSync, writeFileSync } from "node:fs";
 import prettier from "prettier";
 import type { Feature } from "../../compose/models/index.js";
 import type { Plan } from "../../compose/models/variantModels.js";
+import type { ReferralProgram, Reward } from "../../compose/index.js";
 import { resolveConfigPath } from "../../lib/env/index.js";
 import { buildConfigFile } from "../../lib/transforms/index.js";
 import {
@@ -12,6 +13,8 @@ import {
 export interface WriteConfigOptions {
 	/** Force overwrite even if config exists (default: false, will use in-place update) */
 	forceOverwrite?: boolean;
+	rewards?: Reward[];
+	referralPrograms?: ReferralProgram[];
 }
 
 export interface WriteConfigResult {
@@ -38,10 +41,19 @@ export async function writeConfig(
 ): Promise<WriteConfigResult> {
 	const configPath = resolveConfigPath(cwd);
 	const configExists = existsSync(configPath);
-	const { forceOverwrite = false } = options;
+	const {
+		forceOverwrite = false,
+		rewards = [],
+		referralPrograms = [],
+	} = options;
 
 	// Use in-place update if config exists and not forcing overwrite
-	if (configExists && !forceOverwrite) {
+	if (
+		configExists &&
+		!forceOverwrite &&
+		!rewards.length &&
+		!referralPrograms.length
+	) {
 		try {
 			const updateResult = await updateConfigInPlace(features, plans, cwd);
 			return {
@@ -56,7 +68,7 @@ export async function writeConfig(
 	}
 
 	// Generate new config file
-	const code = buildConfigFile(features, plans);
+	const code = buildConfigFile(features, plans, rewards, referralPrograms);
 
 	// Format with prettier
 	let formattedCode: string;

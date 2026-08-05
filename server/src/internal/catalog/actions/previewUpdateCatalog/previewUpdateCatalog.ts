@@ -34,6 +34,7 @@ import {
 	previewSkippedFeature,
 } from "./previewFeature.js";
 import { setupPreviewCatalogContext } from "./setupPreviewCatalogContext.js";
+import { previewCatalogConfigResources } from "../catalogConfigResources.js";
 
 const productUsesFeature = ({
 	product,
@@ -44,7 +45,10 @@ const productUsesFeature = ({
 }) =>
 	(product.entitlements ?? []).some(
 		(entitlement) => entitlement.feature.id === featureId,
-	) || (product.prices ?? []).some((price) => price.config?.feature_id === featureId);
+	) ||
+	(product.prices ?? []).some(
+		(price) => price.config?.feature_id === featureId,
+	);
 
 const productsForFeatureRemovalPreview = ({
 	featureId,
@@ -248,6 +252,7 @@ export const previewUpdateCatalog = async ({
 	params: CatalogUpdateParams;
 }): Promise<CatalogPreviewUpdateResponse> => {
 	validateCatalogVariantUpdates({ params });
+	const configPreview = await previewCatalogConfigResources({ ctx, params });
 
 	const { plans, features, skip_deletions } = params;
 	const currency = ctx.org.default_currency ?? "usd";
@@ -467,5 +472,7 @@ export const previewUpdateCatalog = async ({
 			...removeFeatureResults,
 			...skippedFeatureResults,
 		],
+		reward_changes: configPreview.rewardChanges,
+		referral_program_changes: configPreview.referralProgramChanges,
 	};
 };

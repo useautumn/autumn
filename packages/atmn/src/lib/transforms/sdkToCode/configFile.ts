@@ -5,6 +5,8 @@ import { resolveVarNames } from "./helpers.js";
 import { buildImports } from "./imports.js";
 import { buildPlanCode } from "./plan.js";
 import { buildVariantCode } from "./variant.js";
+import type { ReferralProgram, Reward } from "../../../compose/index.js";
+import { buildReferralProgramCode, buildRewardCode } from "./reward.js";
 
 const versionedCodegenId = ({
 	id,
@@ -17,7 +19,12 @@ const versionedCodegenId = ({
 /**
  * Generate complete autumn.config.ts file content
  */
-export function buildConfigFile(features: Feature[], plans: Plan[]): string {
+export function buildConfigFile(
+	features: Feature[],
+	plans: Plan[],
+	rewards: Reward[] = [],
+	referralPrograms: ReferralProgram[] = [],
+): string {
 	const sections: string[] = [];
 
 	// Resolve var names up front so collisions (e.g. a feature and plan both
@@ -34,6 +41,8 @@ export function buildConfigFile(features: Feature[], plans: Plan[]): string {
 	sections.push(
 		buildImports({
 			includeBillingControls: plans.some((plan) => plan.billingControls),
+			includeRewards: rewards.length > 0,
+			includeReferralPrograms: referralPrograms.length > 0,
 		}),
 	);
 	sections.push("");
@@ -67,6 +76,15 @@ export function buildConfigFile(features: Feature[], plans: Plan[]): string {
 				sections.push("");
 			}
 		}
+	}
+	if (rewards.length > 0) {
+		sections.push("// Rewards");
+		for (const reward of rewards) sections.push(buildRewardCode(reward), "");
+	}
+	if (referralPrograms.length > 0) {
+		sections.push("// Referral programs");
+		for (const program of referralPrograms)
+			sections.push(buildReferralProgramCode(program), "");
 	}
 
 	return sections.join("\n");

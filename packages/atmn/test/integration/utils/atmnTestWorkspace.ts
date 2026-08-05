@@ -154,11 +154,11 @@ const ensureAtmnPackageShim = async (workspaceDir: string) => {
 		),
 		writeFile(
 			join(packageDir, "index.ts"),
-			`export { billingControls, feature, item, plan } from "${composeImportPath}";\n`,
+			`export { billingControls, feature, item, plan, referralProgram, reward } from "${composeImportPath}";\n`,
 		),
 		writeFile(
 			join(packageDir, "index.d.ts"),
-			`export { billingControls, feature, item, plan } from "${composeTypesImportPath}";\n`,
+			`export { billingControls, feature, item, plan, referralProgram, reward } from "${composeTypesImportPath}";\n`,
 		),
 	]);
 };

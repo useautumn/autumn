@@ -1,12 +1,9 @@
-import fs from "node:fs";
-import { resolve } from "node:path";
-import { pathToFileURL } from "node:url";
 import chalk from "chalk";
-import createJiti from "jiti";
 import type { Feature, Plan } from "../../compose/models/index.js";
 import type { CatalogPreviewUpdateResponse } from "../../lib/api/endpoints/index.js";
 import { withAuthRecovery } from "../../lib/auth/headlessAuthRecovery.js";
 import { AppEnv, resolveConfigPath } from "../../lib/env/index.js";
+import { loadConfig, type LoadedConfig } from "../../lib/config/loadConfig.js";
 import { writeConfig } from "../pull/writeConfig.js";
 import {
 	createFeatureArchivedPrompt,
@@ -47,10 +44,7 @@ import {
 	getVariantPropagationPreviews,
 } from "./variantPropagation.js";
 
-interface LocalConfig {
-	features: Feature[];
-	plans: Plan[];
-}
+type LocalConfig = LoadedConfig;
 
 type CombinedPlanUpdateIntent =
 	| "update_current_and_migrate"
@@ -81,6 +75,8 @@ interface HeadlessPushResult {
 	plansUpdated: string[];
 	plansDeleted: string[];
 	plansArchived: string[];
+	rewardsCreated: string[];
+	referralProgramsCreated: string[];
 }
 
 type ArchivedTargets = {
@@ -106,6 +102,8 @@ function headlessResultFromPushResult(result: PushResult): HeadlessPushResult {
 		plansUpdated: [...result.plansUpdated, ...result.plansVersioned],
 		plansDeleted: result.plansDeleted,
 		plansArchived: result.plansArchived,
+		rewardsCreated: result.rewardsCreated,
+		referralProgramsCreated: result.referralProgramsCreated,
 	};
 }
 
@@ -312,65 +310,7 @@ function resolveHeadlessUpdateDecisions({
  * Load local config file using jiti
  */
 async function loadLocalConfig(cwd: string): Promise<LocalConfig> {
-	const configPath = resolveConfigPath(cwd);
-
-	if (!fs.existsSync(configPath)) {
-		throw new Error(
-			`Config file not found at ${configPath}. Run 'atmn pull' first.`,
-		);
-	}
-
-	const absolutePath = resolve(configPath);
-	const fileUrl = pathToFileURL(absolutePath).href;
-
-	const jiti = createJiti(import.meta.url);
-	const mod = await jiti.import(fileUrl);
-
-	const plans: Plan[] = [];
-	const features: Feature[] = [];
-
-	const modRecord = mod as { default?: unknown } & Record<string, unknown>;
-	const defaultExport = modRecord.default as
-		| {
-				plans?: Plan[];
-				features?: Feature[];
-				products?: Plan[];
-		  }
-		| undefined;
-
-	if (defaultExport?.plans && defaultExport?.features) {
-		if (Array.isArray(defaultExport.plans)) {
-			plans.push(...defaultExport.plans);
-		}
-		if (Array.isArray(defaultExport.features)) {
-			features.push(...defaultExport.features);
-		}
-	} else if (defaultExport?.products && defaultExport?.features) {
-		// Legacy format
-		if (Array.isArray(defaultExport.products)) {
-			plans.push(...defaultExport.products);
-		}
-		if (Array.isArray(defaultExport.features)) {
-			features.push(...defaultExport.features);
-		}
-	} else {
-		// New format: individual named exports
-		for (const [key, value] of Object.entries(modRecord)) {
-			if (key === "default") continue;
-			if (isVariantExport(value)) continue;
-
-			const obj = value as { items?: unknown; type?: unknown };
-			if (obj && typeof obj === "object") {
-				if ("type" in obj) {
-					features.push(obj as unknown as Feature);
-				} else if (Array.isArray(obj.items) || "id" in obj) {
-					plans.push(obj as unknown as Plan);
-				}
-			}
-		}
-	}
-
-	return { features, plans };
+	return loadConfig({ cwd });
 }
 
 /**
@@ -683,6 +623,8 @@ async function executePushWithDefaults(
 		plansUpdated: [],
 		plansDeleted: [],
 		plansArchived: [],
+		rewardsCreated: [],
+		referralProgramsCreated: [],
 	};
 
 	// Build response map from defaults
@@ -727,6 +669,8 @@ async function executePushWithDefaults(
 		cwd,
 		features: config.features,
 		plans: config.plans,
+		rewards: config.rewards,
+		referralPrograms: config.referralPrograms,
 		planMigrationSelections: decisions.planMigrationSelections,
 		planUpdateIntentSelections: decisions.planUpdateIntentSelections,
 		preview,
@@ -754,6 +698,8 @@ async function executeCleanPush(
 	const result = await pushCatalog({
 		features: config.features,
 		plans: config.plans,
+		rewards: config.rewards,
+		referralPrograms: config.referralPrograms,
 		preview,
 	});
 
@@ -797,7 +743,7 @@ async function _headlessPushImpl(
 	const config = await loadLocalConfig(cwd);
 	console.log(
 		chalk.dim(
-			`  Found ${config.features.length} features, ${config.plans.length} plans`,
+			`  Found ${config.features.length} features, ${config.plans.length} plans, ${config.rewards.length} rewards, ${config.referralPrograms.length} referral programs`,
 		),
 	);
 
@@ -816,6 +762,8 @@ async function _headlessPushImpl(
 		previewCatalogPush({
 			features: config.features,
 			plans: config.plans,
+			rewards: config.rewards,
+			referralPrograms: config.referralPrograms,
 		}),
 		getArchivedTargets(config, allVersions),
 	]);
@@ -837,6 +785,8 @@ async function _headlessPushImpl(
 			plansUpdated: [],
 			plansDeleted: [],
 			plansArchived: [],
+			rewardsCreated: [],
+			referralProgramsCreated: [],
 		};
 	}
 
@@ -950,6 +900,18 @@ async function _headlessPushImpl(
 	if (result.plansArchived.length > 0) {
 		console.log(
 			chalk.dim(`  Plans archived: ${result.plansArchived.join(", ")}`),
+		);
+	}
+	if (result.rewardsCreated.length > 0) {
+		console.log(
+			chalk.dim(`  Rewards created: ${result.rewardsCreated.join(", ")}`),
+		);
+	}
+	if (result.referralProgramsCreated.length > 0) {
+		console.log(
+			chalk.dim(
+				`  Referral programs created: ${result.referralProgramsCreated.join(", ")}`,
+			),
 		);
 	}
 

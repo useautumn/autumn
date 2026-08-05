@@ -2,6 +2,7 @@ import { Hono } from "hono";
 import type { HonoEnv } from "../../../honoUtils/HonoEnv.js";
 import { handleRedeemReward } from "./handlers/handleRedeemReward.js";
 import { handleCreateReferralProgram } from "./handlers/referralPrograms/handleCreateReferralProgram.js";
+import { handleListReferralPrograms } from "./handlers/referralPrograms/handleListReferralPrograms.js";
 import { handleGetRedemption } from "./handlers/referrals/handleGetRedemption.js";
 import { handleGetReferralCode } from "./handlers/referrals/handleGetReferralCode.js";
 import { handleRedeemReferral } from "./handlers/referrals/handleRedeemReferral.js";
@@ -25,6 +26,7 @@ referralRpcRouter.post(
 	"referral_programs.create",
 	...handleCreateReferralProgram,
 );
+referralRpcRouter.post("referral_programs.list", ...handleListReferralPrograms);
 referralRpcRouter.post("rewards.redeem", ...handleRedeemReward);
 referralRpcRouter.post("rewards.list", ...handleListRewards);
 referralRpcRouter.post("rewards.create", ...handleCreateReward);

@@ -6,6 +6,8 @@ import type {
 	PlanItem,
 	PlanItemFilter,
 	Variant,
+	ReferralProgram,
+	Reward,
 } from "../../compose/models/index.js";
 import type {
 	CatalogPreviewUpdateResponse,
@@ -41,6 +43,8 @@ import {
 	transformFeatureToApi,
 	transformPlanItem,
 	transformPlanToApi,
+	transformReferralProgramToApi,
+	transformRewardToApi,
 } from "../../lib/transforms/sdkToApi/index.js";
 import { writeConfig } from "../pull/writeConfig.js";
 import type {
@@ -773,10 +777,14 @@ function collectVariantPlanIds(plans: Plan[]): string[] {
 
 function collectSkippedPropagationVariantIds({
 	plans,
+	rewards = [],
+	referralPrograms = [],
 	preview,
 	variantPropagationSelections,
 }: {
 	plans: Plan[];
+	rewards?: Reward[];
+	referralPrograms?: ReferralProgram[];
 	preview: CatalogPreviewUpdateResponse;
 	variantPropagationSelections: VariantPropagationSelections;
 }) {
@@ -878,6 +886,8 @@ async function syncSkippedPropagationVariantsToConfig({
 export function buildCatalogUpdateParams({
 	features,
 	plans,
+	rewards = [],
+	referralPrograms = [],
 	skipFeatureIds = [],
 	skipPlanIds = [],
 	planUpdateIntentSelections = {},
@@ -889,6 +899,8 @@ export function buildCatalogUpdateParams({
 }: {
 	features: Feature[];
 	plans: Plan[];
+	rewards?: Reward[];
+	referralPrograms?: ReferralProgram[];
 	skipFeatureIds?: string[];
 	skipPlanIds?: string[];
 	planUpdateIntentSelections?: PlanUpdateIntentSelections;
@@ -925,6 +937,8 @@ export function buildCatalogUpdateParams({
 				skippedPlanIdSet,
 			),
 		),
+		rewards: rewards.map(transformRewardToApi),
+		referral_programs: referralPrograms.map(transformReferralProgramToApi),
 		skip_deletions: false,
 		skip_feature_ids: skipFeatureIds,
 		skip_plan_ids: [
@@ -951,7 +965,11 @@ export const catalogPreviewHasChanges = (
 	preview: CatalogPreviewUpdateResponse,
 ): boolean =>
 	preview.feature_changes.some(catalogFeatureChangeHasChanges) ||
-	preview.plan_changes.some(catalogPlanChangeHasChanges);
+	preview.plan_changes.some(catalogPlanChangeHasChanges) ||
+	(preview.reward_changes ?? []).some(({ action }) => action !== "none") ||
+	(preview.referral_program_changes ?? []).some(
+		({ action }) => action !== "none",
+	);
 
 export function catalogPreviewToPushResult(
 	preview: CatalogPreviewUpdateResponse,
@@ -968,6 +986,8 @@ export function catalogPreviewToPushResult(
 		plansDeleted: [],
 		plansArchived: [],
 		plansSkipped: [],
+		rewardsCreated: [],
+		referralProgramsCreated: [],
 	};
 
 	for (const change of preview.feature_changes) {
@@ -1028,6 +1048,16 @@ export function catalogPreviewToPushResult(
 			}
 		}
 	}
+	result.rewardsCreated.push(
+		...(preview.reward_changes ?? [])
+			.filter(({ action }) => action === "created")
+			.map(({ id }) => id),
+	);
+	result.referralProgramsCreated.push(
+		...(preview.referral_program_changes ?? [])
+			.filter(({ action }) => action === "created")
+			.map(({ id }) => id),
+	);
 
 	return result;
 }
@@ -1035,6 +1065,8 @@ export function catalogPreviewToPushResult(
 export async function previewCatalogPush({
 	features,
 	plans,
+	rewards,
+	referralPrograms,
 	skipFeatureIds,
 	skipPlanIds,
 	planUpdateIntentSelections,
@@ -1045,6 +1077,8 @@ export async function previewCatalogPush({
 }: {
 	features: Feature[];
 	plans: Plan[];
+	rewards?: Reward[];
+	referralPrograms?: ReferralProgram[];
 	skipFeatureIds?: string[];
 	skipPlanIds?: string[];
 	planUpdateIntentSelections?: PlanUpdateIntentSelections;
@@ -1060,6 +1094,8 @@ export async function previewCatalogPush({
 	const params = buildCatalogUpdateParams({
 		features,
 		plans,
+		rewards,
+		referralPrograms,
 		skipFeatureIds,
 		skipPlanIds,
 		planUpdateIntentSelections,
@@ -1079,6 +1115,8 @@ export async function pushCatalog({
 	migratePlanIds,
 	migrateVersioned = false,
 	plans,
+	rewards,
+	referralPrograms,
 	preview,
 	skipFeatureIds,
 	skipPlanIds,
@@ -1093,6 +1131,8 @@ export async function pushCatalog({
 	migratePlanIds?: string[];
 	migrateVersioned?: boolean;
 	plans: Plan[];
+	rewards?: Reward[];
+	referralPrograms?: ReferralProgram[];
 	preview?: CatalogPreviewUpdateResponse;
 	skipFeatureIds?: string[];
 	skipPlanIds?: string[];
@@ -1107,6 +1147,8 @@ export async function pushCatalog({
 	const params = buildCatalogUpdateParams({
 		features,
 		plans,
+		rewards,
+		referralPrograms,
 		skipFeatureIds,
 		skipPlanIds,
 		planUpdateIntentSelections,

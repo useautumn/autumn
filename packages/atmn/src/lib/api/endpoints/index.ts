@@ -49,3 +49,4 @@ export {
 	unarchivePlan,
 	updatePlan,
 } from "./plans.js";
+export { fetchReferralPrograms, fetchRewards } from "./rewards.js";
