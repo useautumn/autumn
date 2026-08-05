@@ -57,11 +57,12 @@ const liveSignal = () => new AbortController().signal;
 
 beforeEach(() => {
 	setResetJobV2ConfigForTesting({
-		config: ResetJobV2ConfigSchema.parse({
-			queueHighWaterMessages: 20,
-			// Schema minimum; keeps blocked-gate tests reasonably fast.
-			queueDepthPollMs: 1_000,
-		}),
+		config: {
+			...ResetJobV2ConfigSchema.parse({ queueHighWaterMessages: 20 }),
+			// Below the schema minimum on purpose: real polls at 1s+ would make
+			// every blocked-gate test sleep for seconds.
+			queueDepthPollMs: 10,
+		},
 	});
 });
 
