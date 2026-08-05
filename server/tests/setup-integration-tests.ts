@@ -67,10 +67,10 @@ if (process.env.TESTS_ORG) {
 	// Availability defaults to degraded until primed (normally at server boot);
 	// unprimed, in-process finalize/track calls silently fail open to SQS replays.
 	const { primeRedisMonitor } = await import(
-		"@/external/redis/initUtils/redisAvailability.js"
+		"@/external/redis/availabilityMonitor/redisAvailability.js"
 	);
 	const { primeRedisV2Monitor } = await import(
-		"@/external/redis/initUtils/redisV2Availability.js"
+		"@/external/redis/availabilityMonitor/redisV2Availability.js"
 	);
 	await Promise.all([primeRedisMonitor(), primeRedisV2Monitor()]);
 

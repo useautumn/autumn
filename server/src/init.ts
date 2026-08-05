@@ -30,7 +30,7 @@ import "./internal/misc/customerBlocks/customerBlockStore.js";
 import "./internal/misc/edgeConfig/orgLimitsStore.js";
 import "./internal/misc/stripeSync/stripeSyncStore.js";
 import "./internal/misc/redisV2Cache/redisV2CacheStore.js";
-import "./internal/misc/mainRedisCache/mainRedisCacheStore.js";
+import "./internal/misc/miscRedisConfig/miscRedisConfigStore.js";
 import "./internal/misc/cacheV2Ramp/cacheV2RampStore.js";
 import "./internal/misc/jobQueues/jobQueueStore.js";
 import "./internal/misc/batchReset/batchResetConfigStore.js";
@@ -47,12 +47,12 @@ import {
 	stopRedisMonitor,
 	warmupRegionalRedis,
 } from "./external/redis/initRedis.js";
-import { primeRedisMonitor } from "./external/redis/initUtils/redisAvailability.js";
+import { primeRedisMonitor } from "./external/redis/availabilityMonitor/redisAvailability.js";
 import {
 	primeRedisV2Monitor,
 	startRedisV2Monitor,
 	stopRedisV2Monitor,
-} from "./external/redis/initUtils/redisV2Availability.js";
+} from "./external/redis/availabilityMonitor/redisV2Availability.js";
 import { preWarmOrgRedisConnections } from "./external/redis/orgRedisPool.js";
 import { createHonoApp } from "./initHono.js";
 import { otelSdk } from "./instrumentation.js";

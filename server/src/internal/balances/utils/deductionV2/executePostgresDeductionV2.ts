@@ -8,7 +8,7 @@ import {
 } from "@autumn/shared";
 import { sql } from "drizzle-orm";
 import { planetScaleTag } from "@/db/dbUtils.js";
-import { withLock } from "@/external/redis/redisUtils.js";
+import { withLock } from "@/external/redis/utils/lockUtils/withLock.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { triggerAutoTopUp } from "@/internal/balances/autoTopUp/triggerAutoTopUp.js";
 import { fireTrackWebhooks } from "@/internal/balances/trackWebhooks/fireTrackWebhooks.js";
@@ -19,8 +19,8 @@ import type { DeductionUpdate } from "../types/deductionUpdate.js";
 import type { FeatureDeduction } from "../types/featureDeduction.js";
 import type { MutationLogItem } from "../types/mutationLogItem.js";
 import { applyDeductionUpdateToFullSubject } from "./applyDeductionUpdateToFullSubject.js";
-import { buildUnlimitedPlanMutationLog } from "./buildUnlimitedPlanMutationLog.js";
 import { applyRolloverUpdatesToFullSubject } from "./applyRolloverUpdatesToFullSubject.js";
+import { buildUnlimitedPlanMutationLog } from "./buildUnlimitedPlanMutationLog.js";
 import { logDeductionUpdatesV2 } from "./logDeductionUpdatesV2.js";
 import { mutationLogsToFeaturesV2 } from "./mutationLogsToFeaturesV2.js";
 import { normalizeDeductionSyncStateV2 } from "./normalizeDeductionSyncStateV2.js";
@@ -146,8 +146,8 @@ export const executePostgresDeductionV2 = async ({
 				continue;
 			}
 
-		const result = await db.execute(
-			sql`SELECT * FROM deduct_from_cus_ents(
+			const result = await db.execute(
+				sql`SELECT * FROM deduct_from_cus_ents(
 			${JSON.stringify({
 				sorted_entitlements: customerEntitlementDeductions,
 				// No usage_window_limits here: the hard usage cap is enforced only on the
@@ -169,7 +169,7 @@ export const executePostgresDeductionV2 = async ({
 				feature_id: feature.id,
 			})}::jsonb
 		) ${planetScaleTag({ query: "deductFromCusEnts" })}`,
-		);
+			);
 
 			const resultJson = result[0]?.deduct_from_cus_ents as {
 				updates: Record<string, DeductionUpdate>;
@@ -326,11 +326,11 @@ export const executePostgresDeductionV2 = async ({
 
 	const deductionResult = resolvedOptions.paidAllocatedV1
 		? await withLock({
-			lockKey: `lock:deduction:${org.id}:${env}:${customerId}`,
-			ttlMs: 60000,
-			errorMessage: `Deduction for paid feature ${deductions[0]?.feature?.name} already in progress for customer ${customerId}.`,
-			fn: executeDeduction,
-		})
+				lockKey: `lock:deduction:${org.id}:${env}:${customerId}`,
+				ttlMs: 60000,
+				errorMessage: `Deduction for paid feature ${deductions[0]?.feature?.name} already in progress for customer ${customerId}.`,
+				fn: executeDeduction,
+			})
 		: await executeDeduction();
 
 	return {

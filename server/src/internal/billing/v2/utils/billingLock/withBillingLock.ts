@@ -1,10 +1,6 @@
-import { setTimeout as sleep } from "node:timers/promises";
-import { ErrCode, RecaseError } from "@autumn/shared";
-import {
-	acquireLock,
-	clearLock,
-	refreshLockLease,
-} from "@/external/redis/redisUtils";
+import { acquireLockWithWait } from "@/external/redis/utils/lockUtils/acquireLockWithWait.js";
+import { clearLock } from "@/external/redis/utils/lockUtils/clearLock.js";
+import { refreshLockLease } from "@/external/redis/utils/lockUtils/refreshLockLease.js";
 
 // Bounded lease, never heartbeat-renewed: a wedged holder must not lock a customer out forever.
 // Past-lease overlap is still safe — the checkout reservation clears only after materialization.
@@ -24,25 +20,21 @@ export const withBillingLock = async <T>({
 	const token = crypto.randomUUID();
 	// Sorted so concurrent multi-key holders acquire in the same order (no deadlock).
 	const sortedKeys = [...new Set(lockKeys)].sort();
-	// Outlives any legitimately-held lease, so a waiter can only time out under
-	// continuous reacquisition by others — never against a single stuck holder.
+	// One deadline across ALL keys — it outlives any legitimately-held lease, so
+	// a waiter can only time out under continuous reacquisition by others.
 	const deadline = Date.now() + BILLING_LOCK_WAIT_MS;
 	const heldKeys: string[] = [];
 
 	try {
 		for (const lockKey of sortedKeys) {
-			while (true) {
-				try {
-					await acquireLock({ lockKey, ttlMs: BILLING_LOCK_TTL_MS, token });
-					heldKeys.push(lockKey);
-					break;
-				} catch (error) {
-					if (!isBillingLockConflict(error) || Date.now() >= deadline) {
-						throw error;
-					}
-					await sleep(BILLING_LOCK_RETRY_MS);
-				}
-			}
+			await acquireLockWithWait({
+				lockKey,
+				ttlMs: BILLING_LOCK_TTL_MS,
+				token,
+				maxWaitMs: deadline - Date.now(),
+				retryMs: BILLING_LOCK_RETRY_MS,
+			});
+			heldKeys.push(lockKey);
 		}
 
 		// Earlier keys' leases burned down while waiting for later ones — re-arm
@@ -58,6 +50,3 @@ export const withBillingLock = async <T>({
 		}
 	}
 };
-
-const isBillingLockConflict = (error: unknown) =>
-	error instanceof RecaseError && error.code === ErrCode.LockAlreadyExists;

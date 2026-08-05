@@ -2,10 +2,10 @@ import {
 	type DeferredAutumnBillingPlanData,
 	MetadataType,
 } from "@autumn/shared";
-import { setStripeSubscriptionLock } from "@/external/stripe/subscriptions/utils/lockStripeSubscriptionUtils";
+import { checkoutSessionLock } from "@/external/redis/actions/checkoutSessionLock/checkoutSessionLock.js";
+import { setStripeSubscriptionLock } from "@/external/redis/actions/stripeSubscriptionLock/stripeSubscriptionLock.js";
 import type { CheckoutSessionCompletedContext } from "@/external/stripe/webhookHandlers/handleStripeCheckoutSessionCompleted/setupCheckoutSessionCompletedContext";
 import type { StripeWebhookContext } from "@/external/stripe/webhookMiddlewares/stripeWebhookContext";
-import { checkoutSessionLock } from "@/internal/billing/v2/actions/locks/checkoutSessionLock/checkoutSessionLock";
 import { MetadataService } from "@/internal/metadata/MetadataService";
 
 /**
@@ -68,6 +68,7 @@ export const withClaimedCheckoutSessionMetadata = async ({
 	try {
 		if (checkoutContext.stripeSubscription) {
 			await setStripeSubscriptionLock({
+				ctx,
 				stripeSubscriptionId: checkoutContext.stripeSubscription.id,
 				lockedAtMs: Date.now(),
 			});

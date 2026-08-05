@@ -1,30 +1,27 @@
 import type { FullCusProduct } from "@autumn/shared";
-import { CacheManager } from "@/utils/cacheUtils/CacheManager";
+import { getCachedExpiredCustomerProducts } from "@/external/redis/actions/expiredCustomerProductsCache/expiredCustomerProductsCache.js";
+import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 
-const getExpiredCacheKey = (stripeSubscriptionId: string) =>
-	`expired-cus-products:${stripeSubscriptionId}`;
-
-/**
- * Retrieves cached expired customer products for a subscription.
- * Used by invoice.created to access products that were expired by subscription.deleted.
- */
 export const getExpiredCustomerProductsCache = async ({
+	ctx,
 	stripeSubscriptionId,
 }: {
+	ctx: AutumnContext;
 	stripeSubscriptionId: string;
-}): Promise<FullCusProduct[] | null> => {
-	const key = getExpiredCacheKey(stripeSubscriptionId);
-	return await CacheManager.getJson<FullCusProduct[]>(key);
-};
+}): Promise<FullCusProduct[] | null> =>
+	getCachedExpiredCustomerProducts({ ctx, stripeSubscriptionId });
 
 export const getExpiredCustomerProductsCacheAndMerge = async ({
+	ctx,
 	customerProducts,
 	stripeSubscriptionId,
 }: {
+	ctx: AutumnContext;
 	customerProducts: FullCusProduct[];
 	stripeSubscriptionId: string;
 }): Promise<FullCusProduct[]> => {
 	const cachedExpired = await getExpiredCustomerProductsCache({
+		ctx,
 		stripeSubscriptionId,
 	});
 

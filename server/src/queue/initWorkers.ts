@@ -14,6 +14,10 @@ import { type DrizzleCli, initDrizzle } from "@/db/initDrizzle.js";
 import { startPgPoolMonitor, stopPgPoolMonitor } from "@/db/pgPoolMonitor.js";
 import { logger } from "@/external/logtail/logtailUtils.js";
 import {
+	type QueueCapacityLease,
+	reserveQueueCapacity,
+} from "@/external/redis/actions/queueCapacityLease/queueCapacityLease.js";
+import {
 	isJobQueueEnabled,
 	JOB_QUEUE_IDS,
 } from "@/internal/misc/jobQueues/jobQueueStore.js";
@@ -26,10 +30,6 @@ import {
 	recordPollAttempt,
 } from "./blueGreen/blueGreenHeartbeat.js";
 import { initBlueGreen, shutdownBlueGreen } from "./blueGreen/initBlueGreen.js";
-import {
-	type QueueCapacityLease,
-	reserveQueueCapacity,
-} from "./concurrency/queueCapacityLease.js";
 import { getSqsClient, QUEUE_URL, recreateSqsClient } from "./initSqs.js";
 import { JobName } from "./JobName.js";
 import { processMessage, type SqsJob } from "./processMessage.js";

@@ -1,5 +1,9 @@
 import { AppEnv, ms } from "@autumn/shared";
-import { withLock } from "@/external/redis/redisUtils.js";
+import {
+	clearAutoTopupPendingKey,
+	keepAutoTopupPendingKey,
+} from "@/external/redis/actions/autoTopUpSuppression/autoTopUpSuppression.js";
+import { withLock } from "@/external/redis/utils/lockUtils/withLock.js";
 import { voidStripeInvoiceIfOpen } from "@/external/stripe/invoices/operations/voidStripeInvoiceIfOpen.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { executeBillingPlan } from "@/internal/billing/v2/execute/executeBillingPlan.js";
@@ -11,10 +15,6 @@ import type { AutoTopUpPayload } from "@/queue/workflows.js";
 import type { AutoTopupContext } from "./autoTopupContext.js";
 import { computeAutoTopupPlan } from "./compute/computeAutoTopupPlan.js";
 import { buildAutoTopUpLockKey } from "./helpers/autoTopUpUtils.js";
-import {
-	clearAutoTopupPendingKey,
-	keepAutoTopupPendingKey,
-} from "./helpers/enqueueAutoTopupWithBurstSuppression.js";
 import { recordAutoTopupAttempt } from "./helpers/limits/index.js";
 import { logAutoTopupContext } from "./logs/logAutoTopupContext.js";
 import { setupAutoTopupContext } from "./setup/setupAutoTopupContext.js";

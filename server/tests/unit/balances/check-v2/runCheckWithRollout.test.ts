@@ -15,7 +15,7 @@ const mockState = {
 	warnCalls: [] as unknown[][],
 };
 
-mock.module("@/external/redis/initUtils/redisV2Availability.js", () => ({
+mock.module("@/external/redis/availabilityMonitor/redisV2Availability.js", () => ({
 	shouldUseRedisV2: () => mockState.shouldUseRedis,
 }));
 

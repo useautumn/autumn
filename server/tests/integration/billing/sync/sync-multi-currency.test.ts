@@ -24,12 +24,12 @@ import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
 import type Stripe from "stripe";
 import { AutumnRpcCli } from "@/external/autumn/autumnRpcCli";
+import { invalidateProductsCache } from "@/external/redis/actions/productsCache/productsCache.js";
 import { createStripePriceIFNotExist } from "@/external/stripe/createStripePrice/createStripePrice";
 import { subscriptionToSyncParams } from "@/internal/billing/v2/actions/sync/subscriptionToSyncParams";
 import { initStripeResourcesForProducts } from "@/internal/billing/v2/providers/stripe/utils/common/initStripeResourcesForProducts";
 import { CusService } from "@/internal/customers/CusService";
 import { ProductService } from "@/internal/products/ProductService";
-import { invalidateProductsCache } from "@/internal/products/productCacheUtils";
 
 const autumnRpc = new AutumnRpcCli({ version: ApiVersion.V2_1 });
 const uniqueId = (prefix: string) =>

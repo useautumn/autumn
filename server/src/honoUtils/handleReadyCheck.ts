@@ -3,7 +3,7 @@ import type { Context } from "hono";
 import { clientCritical } from "@/db/initDrizzle.js";
 import { getPgHealthState } from "@/db/pgHealthMonitor.js";
 import { getRedisAvailability } from "@/external/redis/initRedis.js";
-import { getRedisV2Availability } from "@/external/redis/initUtils/redisV2Availability.js";
+import { getRedisV2Availability } from "@/external/redis/availabilityMonitor/redisV2Availability.js";
 import type { HonoEnv } from "./HonoEnv.js";
 
 const POSTGRES_TIMEOUT_MS = 1_000;
