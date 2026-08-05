@@ -65,7 +65,6 @@ const createBillingContext = ({
 	return {
 		...billingContext,
 		productContexts: scopedProductContexts,
-		unscheduledProductContexts: [],
 		replacedScheduleCustomerProductIds: [],
 		featureQuantities: [],
 		checkoutMode: null,

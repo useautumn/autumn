@@ -8,7 +8,7 @@ import {
 } from "@autumn/shared";
 import { asc, eq, inArray } from "drizzle-orm";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
-import { resolveScheduleScopes } from "../schedules/resolveScheduleScope.js";
+import { resolveScheduleScopes } from "../schedules/utils/resolveScheduleScopes.js";
 
 /** A product is dead once expired or deleted, but phases keep pointing at it either way. */
 const selectLiveProductIds = async ({
