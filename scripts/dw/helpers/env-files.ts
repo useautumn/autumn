@@ -88,7 +88,7 @@ export function provisionedInfraEnv(
 		`http://localhost:${elasticMqPort}/000000000000/${queueName}`;
 	return {
 		REDIS_URL: redisUrl,
-		CACHE_URL: redisUrl,
+		MISC_CACHE_DRAGONFLY_PUBLIC_URL: redisUrl,
 		CACHE_V2_DRAGONFLY_URL: redisUrl,
 		DYNAMODB_ENDPOINT: `http://localhost:${dynamoDbPortFor(worktreeNum)}`,
 		SQS_QUEUE_URL: queueUrl("autumn.fifo"),

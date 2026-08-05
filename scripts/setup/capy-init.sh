@@ -8,7 +8,7 @@
 # Linux containers from inside, so we install the *binaries* the dw stack
 # normally runs in containers:
 #
-#   - Dragonfly  (Redis-protocol, backs REDIS_URL + CACHE_URL +
+#   - Dragonfly  (Redis-protocol, backs REDIS_URL + MISC_CACHE_DRAGONFLY_PUBLIC_URL +
 #                 CACHE_V2_DRAGONFLY_URL — see scripts/dw/helpers/env-files.ts)
 #   - goaws      (Go SQS server, FIFO + explicit dedup — drops in for
 #                 elasticmq; same shape as scripts/tw/image/build-base.sh)

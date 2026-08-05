@@ -1,7 +1,7 @@
 import type { AppEnv, Feature } from "@autumn/shared";
 import type { Redis } from "ioredis";
+import { tryRedisOp } from "@/external/redis/utils/runRedisOp.js";
 import { markCustomersUpdatedAt } from "@/internal/customers/customerLsns/markCustomerUpdatedAt.js";
-import { tryRedisRead, tryRedisWrite } from "@/utils/cacheUtils/cacheUtils.js";
 import { buildFullSubjectKey } from "../../builders/buildFullSubjectKey.js";
 import { buildFullSubjectOrgEnvKey } from "../../builders/buildFullSubjectOrgEnvKey.js";
 import { buildFullSubjectViewEpochKey } from "../../builders/buildFullSubjectViewEpochKey.js";
@@ -28,36 +28,43 @@ const batchInvalidateCachedFullSubjectsOnRedis = async ({
 	featuresByOrgEnv: FeaturesByOrgEnv;
 	redisV2: Redis;
 }): Promise<void> => {
-	if (customers.length === 0 || redisV2.status !== "ready") return;
+	// No not-ready guard: a dedicated org Redis is created lazily, so its very
+	// first use (batch migrations inside a fresh trigger.dev runner) is always
+	// mid-handshake. Dropping the unlink there is silent staleness until TTL.
+	const invalidatable = customers.filter((customer) => customer.customerId);
+	if (invalidatable.length === 0) return;
 
 	for (
 		let offset = 0;
-		offset < customers.length;
+		offset < invalidatable.length;
 		offset += PIPELINE_BATCH_SIZE
 	) {
-		const batch = customers.slice(offset, offset + PIPELINE_BATCH_SIZE);
+		const batch = invalidatable.slice(offset, offset + PIPELINE_BATCH_SIZE);
 		const readPipeline = redisV2.pipeline();
 
 		for (const { orgId, env, customerId } of batch) {
-			if (!customerId) continue;
-
 			const subjectKey = buildFullSubjectKey({ orgId, env, customerId });
 			readPipeline.get(subjectKey);
 		}
 
-		const readResults = await tryRedisRead(() => readPipeline.exec(), redisV2);
-		if (!readResults) continue;
+		// Best-effort: an unavailable manifest read falls back to the org's
+		// feature list below, never to skipping the invalidation.
+		const readResults = await tryRedisOp({
+			operation: () => readPipeline.exec(),
+			source: "batchInvalidateCachedFullSubjects:manifests",
+			redisInstance: redisV2,
+		});
 
 		const writePipeline = redisV2.pipeline();
 
 		for (let index = 0; index < batch.length; index++) {
 			const customer = batch[index];
-			if (!customer?.customerId) continue;
+			if (!customer) continue;
 
 			const { orgId, env, customerId } = customer;
 			const subjectKey = buildFullSubjectKey({ orgId, env, customerId });
 			const epochKey = buildFullSubjectViewEpochKey({ orgId, env, customerId });
-			const subjectTuple = readResults[index];
+			const subjectTuple = readResults?.[index];
 			const cachedRaw =
 				(subjectTuple?.[1] as string | null | undefined) ?? null;
 
@@ -93,7 +100,14 @@ const batchInvalidateCachedFullSubjectsOnRedis = async ({
 			writePipeline.expire(epochKey, FULL_SUBJECT_EPOCH_TTL_SECONDS);
 		}
 
-		await tryRedisWrite(() => writePipeline.exec(), redisV2);
+		// queueIfNotReady: ride out a handshake or reconnect blip rather than
+		// dropping the invalidation — same contract as the single-subject path.
+		await tryRedisOp({
+			operation: () => writePipeline.exec(),
+			source: "batchInvalidateCachedFullSubjects:invalidate",
+			redisInstance: redisV2,
+			queueIfNotReady: true,
+		});
 	}
 };
 

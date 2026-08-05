@@ -34,16 +34,16 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { homedir } from "node:os";
 import { dirname, join } from "node:path";
 import {
+	applyCommittedMigrations,
+	loadDbFunctions,
+} from "../dw/helpers/migration.ts";
+import {
 	connectionString,
 	createBranch,
 	ensureChatDatabase,
 	ensureTemplateBranch,
 	findBranchByName,
 } from "../dw/helpers/neon.ts";
-import {
-	applyCommittedMigrations,
-	loadDbFunctions,
-} from "../dw/helpers/migration.ts";
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -132,8 +132,7 @@ function getSandboxId(): string {
 	if (id) return id;
 	// Outside Capy/Daytona (e.g. local repro) fall back to hostname so the
 	// branch name is still stable per-host. Not a load-bearing path.
-	const host =
-		process.env.HOSTNAME ?? (sh("hostname", []).stdout || "unknown");
+	const host = process.env.HOSTNAME ?? (sh("hostname", []).stdout || "unknown");
 	return host.trim();
 }
 
@@ -182,7 +181,9 @@ function genUrlSafeBase64(bytes: number): string {
 
 function ensureSecrets(state: State | null): State["secrets"] {
 	if (state?.secrets) return state.secrets;
-	log("minting per-sandbox secrets (BETTER_AUTH_SECRET, ENCRYPTION_IV, ENCRYPTION_PASSWORD)");
+	log(
+		"minting per-sandbox secrets (BETTER_AUTH_SECRET, ENCRYPTION_IV, ENCRYPTION_PASSWORD)",
+	);
 	return {
 		betterAuthSecret: genUrlSafeBase64(64),
 		encryptionIv: genUrlSafeBase64(16),
@@ -255,7 +256,9 @@ function startDragonfly(): void {
 		}
 		Bun.sleepSync(250);
 	}
-	fatal(`dragonfly did not become ready within 15s; see ${LOG_DIR}/dragonfly.log`);
+	fatal(
+		`dragonfly did not become ready within 15s; see ${LOG_DIR}/dragonfly.log`,
+	);
 }
 
 async function isGoawsUp(): Promise<boolean> {
@@ -289,7 +292,9 @@ async function startGoaws(): Promise<void> {
 	proc.unref();
 	for (let i = 0; i < 60; i++) {
 		if (await isGoawsUp()) {
-			log(`goaws ready on :${ELASTICMQ_PORT} (autumn.fifo + autumn-track.fifo)`);
+			log(
+				`goaws ready on :${ELASTICMQ_PORT} (autumn.fifo + autumn-track.fifo)`,
+			);
 			return;
 		}
 		await Bun.sleep(250);
@@ -385,12 +390,10 @@ function writeEnvFiles(
 		ENCRYPTION_PASSWORD: secrets.encryptionPassword,
 		DATABASE_URL: dbUrl,
 		DATABASE_CRITICAL_URL: dbUrl,
-		// Dragonfly serves the redis-protocol clients for ALL three cache slots
-		// (CACHE_URL legacy, CACHE_URL_US_EAST regional, CACHE_V2_DRAGONFLY_URL
-		// v2). Matches dw env-files.ts.
+		// Dragonfly serves the redis-protocol clients for every cache slot
+		// (misc + v2). Matches dw env-files.ts.
 		REDIS_URL: redisUrl,
-		CACHE_URL: redisUrl,
-		CACHE_URL_US_EAST: redisUrl,
+		MISC_CACHE_DRAGONFLY_PUBLIC_URL: redisUrl,
 		CACHE_V2_DRAGONFLY_URL: redisUrl,
 		// goaws speaks the SQS protocol; queue URLs match the names declared
 		// in $CAPY_PREFIX/goaws/goaws.yaml.
@@ -490,7 +493,9 @@ function ensureNeonBranch(sandboxId: string, state: State | null): State {
 	}
 
 	// True first run.
-	log(`first run for ${branchName} — provisioning Neon branch off ${NEON_TEMPLATE_BRANCH}`);
+	log(
+		`first run for ${branchName} — provisioning Neon branch off ${NEON_TEMPLATE_BRANCH}`,
+	);
 	ensureTemplateBranch();
 	const branch = createBranch(branchName, NEON_TEMPLATE_BRANCH);
 	const directUrl = connectionString(branchName, { pooled: false });

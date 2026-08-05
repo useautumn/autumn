@@ -2,7 +2,7 @@ export const REDIS_V2_INSTANCE_OPTIONS = [
 	{
 		value: "upstash",
 		label: "Upstash",
-		description: "CACHE_V2_UPSTASH_URL (or CACHE_URL fallback)",
+		description: "CACHE_V2_UPSTASH_URL",
 	},
 	{
 		value: "redis",

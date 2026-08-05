@@ -21,7 +21,7 @@ const tryLatchStartupReady = () => {
 		}
 		miscRedisStatus = miscRedis.status;
 	} catch {
-		// CACHE_URL not injected yet — stay unready; health checks keep retrying.
+		// Misc cache env not injected yet — stay unready; health checks keep retrying.
 		return;
 	}
 
