@@ -27,6 +27,8 @@ import { expectNoStripeSubscription } from "@tests/integration/billing/utils/exp
 import { TestFeature } from "@tests/setup/v2Features";
 import { items } from "@tests/utils/fixtures/items";
 import { products } from "@tests/utils/fixtures/products";
+import { pollUntilAsserted } from "@tests/utils/genUtils";
+import { DEFAULT_SETTLE_TIMEOUT_MS } from "@tests/utils/pollableCustomerExpect";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
 import { Decimal } from "decimal.js";
@@ -47,100 +49,103 @@ import { constructArrearProratedItem } from "@/utils/scriptUtils/constructItem.j
  * - At start of cycle, refund should be close to -$50
  * - Invoice should match preview.total
  */
-test.concurrent(`${chalk.yellowBright("cancel immediately billing: base + prepaid (start of cycle)")}`, async () => {
-	const customerId = "cancel-imm-billing-prepaid-start";
+test.concurrent(
+	`${chalk.yellowBright("cancel immediately billing: base + prepaid (start of cycle)")}`,
+	async () => {
+		const customerId = "cancel-imm-billing-prepaid-start";
 
-	const billingUnits = 100;
-	const pricePerPack = 10;
-	const initialQuantity = 300; // 3 packs
+		const billingUnits = 100;
+		const pricePerPack = 10;
+		const initialQuantity = 300; // 3 packs
 
-	const prepaidItem = items.prepaidMessages({
-		includedUsage: 0,
-		billingUnits,
-		price: pricePerPack,
-	});
+		const prepaidItem = items.prepaidMessages({
+			includedUsage: 0,
+			billingUnits,
+			price: pricePerPack,
+		});
 
-	const pro = products.pro({
-		id: "pro",
-		items: [prepaidItem],
-	});
+		const pro = products.pro({
+			id: "pro",
+			items: [prepaidItem],
+		});
 
-	const { autumnV1, ctx } = await initScenario({
-		customerId,
-		setup: [
-			s.customer({ paymentMethod: "success" }),
-			s.products({ list: [pro] }),
-		],
-		actions: [
-			s.attach({
-				productId: pro.id,
-				options: [
-					{ feature_id: TestFeature.Messages, quantity: initialQuantity },
-				],
-			}),
-		],
-	});
+		const { autumnV1, ctx } = await initScenario({
+			customerId,
+			setup: [
+				s.customer({ paymentMethod: "success" }),
+				s.products({ list: [pro] }),
+			],
+			actions: [
+				s.attach({
+					productId: pro.id,
+					options: [
+						{ feature_id: TestFeature.Messages, quantity: initialQuantity },
+					],
+				}),
+			],
+		});
 
-	// Verify pro is active with correct balance
-	const customerAfterAttach =
-		await autumnV1.customers.get<ApiCustomerV3>(customerId);
-	await expectProductActive({
-		customer: customerAfterAttach,
-		productId: pro.id,
-	});
-	expect(customerAfterAttach.features[TestFeature.Messages].balance).toBe(
-		initialQuantity,
-	);
+		// Verify pro is active with correct balance
+		const customerAfterAttach =
+			await autumnV1.customers.get<ApiCustomerV3>(customerId);
+		await expectProductActive({
+			customer: customerAfterAttach,
+			productId: pro.id,
+		});
+		expect(customerAfterAttach.features[TestFeature.Messages].balance).toBe(
+			initialQuantity,
+		);
 
-	// Initial invoice: $20 (base) + $30 (3 packs * $10) = $50
-	const expectedInitialInvoice =
-		20 + (initialQuantity / billingUnits) * pricePerPack;
-	expectCustomerInvoiceCorrect({
-		customer: customerAfterAttach,
-		count: 1,
-		latestTotal: expectedInitialInvoice,
-	});
+		// Initial invoice: $20 (base) + $30 (3 packs * $10) = $50
+		const expectedInitialInvoice =
+			20 + (initialQuantity / billingUnits) * pricePerPack;
+		expectCustomerInvoiceCorrect({
+			customer: customerAfterAttach,
+			count: 1,
+			latestTotal: expectedInitialInvoice,
+		});
 
-	// Preview cancel immediately
-	const cancelParams = {
-		customer_id: customerId,
-		product_id: pro.id,
-		cancel_action: "cancel_immediately" as const,
-	};
+		// Preview cancel immediately
+		const cancelParams = {
+			customer_id: customerId,
+			product_id: pro.id,
+			cancel_action: "cancel_immediately" as const,
+		};
 
-	const preview = await autumnV1.subscriptions.previewUpdate(cancelParams);
+		const preview = await autumnV1.subscriptions.previewUpdate(cancelParams);
 
-	// At start of cycle, refund should be close to full amount (negative)
-	// Allow some tolerance for timing (within a few dollars of -$50)
-	expect(preview.total).toBeLessThan(0);
-	expect(preview.total).toBeCloseTo(-expectedInitialInvoice, -1); // Within ~$5
+		// At start of cycle, refund should be close to full amount (negative)
+		// Allow some tolerance for timing (within a few dollars of -$50)
+		expect(preview.total).toBeLessThan(0);
+		expect(preview.total).toBeCloseTo(-expectedInitialInvoice, -1); // Within ~$5
 
-	// Cancel immediately
-	await autumnV1.subscriptions.update(cancelParams);
+		// Cancel immediately
+		await autumnV1.subscriptions.update(cancelParams);
 
-	// Verify product is removed
-	const customerAfterCancel =
-		await autumnV1.customers.get<ApiCustomerV3>(customerId);
-	await expectProductNotPresent({
-		customer: customerAfterCancel,
-		productId: pro.id,
-	});
+		// Verify product is removed
+		const customerAfterCancel =
+			await autumnV1.customers.get<ApiCustomerV3>(customerId);
+		await expectProductNotPresent({
+			customer: customerAfterCancel,
+			productId: pro.id,
+		});
 
-	// Verify invoice matches preview
-	expectCustomerInvoiceCorrect({
-		customer: customerAfterCancel,
-		count: 2,
-		latestTotal: preview.total,
-	});
+		// Verify invoice matches preview
+		expectCustomerInvoiceCorrect({
+			customer: customerAfterCancel,
+			count: 2,
+			latestTotal: preview.total,
+		});
 
-	// Verify no Stripe subscription exists
-	await expectNoStripeSubscription({
-		db: ctx.db,
-		customerId,
-		org: ctx.org,
-		env: ctx.env,
-	});
-});
+		// Verify no Stripe subscription exists
+		await expectNoStripeSubscription({
+			db: ctx.db,
+			customerId,
+			org: ctx.org,
+			env: ctx.env,
+		});
+	},
+);
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // TEST 2: Cancel immediately - base price + allocated users (start of cycle)
@@ -157,85 +162,98 @@ test.concurrent(`${chalk.yellowBright("cancel immediately billing: base + prepai
  * - At start of cycle, refund should be close to -$70
  * - Invoice should match preview.total
  */
-test.concurrent(`${chalk.yellowBright("cancel immediately billing: base + allocated (start of cycle)")}`, async () => {
-	const customerId = "cancel-imm-billing-allocated-start";
+test.concurrent(
+	`${chalk.yellowBright("cancel immediately billing: base + allocated (start of cycle)")}`,
+	async () => {
+		const customerId = "cancel-imm-billing-allocated-start";
 
-	const allocatedSeats = 5;
+		const allocatedSeats = 5;
 
-	const allocatedItem = items.allocatedUsers({
-		includedUsage: 0, // No free seats
-	});
+		const allocatedItem = items.allocatedUsers({
+			includedUsage: 0, // No free seats
+		});
 
-	const pro = products.pro({
-		id: "pro",
-		items: [allocatedItem],
-	});
+		const pro = products.pro({
+			id: "pro",
+			items: [allocatedItem],
+		});
 
-	const { autumnV1, ctx } = await initScenario({
-		customerId,
-		setup: [
-			s.customer({ paymentMethod: "success" }),
-			s.products({ list: [pro] }),
-		],
-		actions: [s.attach({ productId: pro.id })],
-	});
+		const { autumnV1, ctx } = await initScenario({
+			customerId,
+			setup: [
+				s.customer({ paymentMethod: "success" }),
+				s.products({ list: [pro] }),
+			],
+			actions: [s.attach({ productId: pro.id })],
+		});
 
-	// Track 5 users (creates invoice for allocated overage)
-	await autumnV1.track({
-		customer_id: customerId,
-		feature_id: TestFeature.Users,
-		value: allocatedSeats,
-	});
+		// Track 5 users (creates invoice for allocated overage)
+		await autumnV1.track({
+			customer_id: customerId,
+			feature_id: TestFeature.Users,
+			value: allocatedSeats,
+		});
 
-	// Verify pro is active with correct balance
-	const customerAfterTrack =
-		await autumnV1.customers.get<ApiCustomerV3>(customerId);
-	await expectProductActive({
-		customer: customerAfterTrack,
-		productId: pro.id,
-	});
-	expect(customerAfterTrack.features[TestFeature.Users].balance).toBe(
-		-allocatedSeats,
-	);
+		// Verify pro is active with correct balance. The allocated deduction lands
+		// in Redis first and reaches Postgres via its async sync, and the seat
+		// quantity update fans out Stripe webhooks that invalidate the cache in that
+		// window — so poll instead of reading once.
+		const customerAfterTrack = await pollUntilAsserted({
+			fetch: () => autumnV1.customers.get<ApiCustomerV3>(customerId),
+			assert: (customer) => {
+				expect(customer.features[TestFeature.Users].balance).toBe(
+					-allocatedSeats,
+				);
+			},
+			timeoutMs: DEFAULT_SETTLE_TIMEOUT_MS,
+		});
+		await expectProductActive({
+			customer: customerAfterTrack,
+			productId: pro.id,
+		});
 
-	// Should have 2 invoices: initial ($20) + allocated overage
-	// Allocated track immediately creates invoice for overage seats
-	expect(customerAfterTrack.invoices?.length).toBeGreaterThanOrEqual(1);
+		// Should have 2 invoices: initial ($20) + allocated overage
+		// Allocated track immediately creates invoice for overage seats
+		expect(customerAfterTrack.invoices?.length).toBeGreaterThanOrEqual(1);
 
-	// Preview cancel immediately
-	const cancelParams = {
-		customer_id: customerId,
-		product_id: pro.id,
-		cancel_action: "cancel_immediately" as const,
-	};
+		// Preview cancel immediately
+		const cancelParams = {
+			customer_id: customerId,
+			product_id: pro.id,
+			cancel_action: "cancel_immediately" as const,
+		};
 
-	const preview = await autumnV1.subscriptions.previewUpdate(cancelParams);
+		const preview = await autumnV1.subscriptions.previewUpdate(cancelParams);
 
-	// At start of cycle, should get refund (negative)
-	expect(preview.total).toBeLessThan(0);
+		// At start of cycle, should get refund (negative)
+		expect(preview.total).toBeLessThan(0);
 
-	// Cancel immediately
-	await autumnV1.subscriptions.update(cancelParams);
+		// Cancel immediately
+		await autumnV1.subscriptions.update(cancelParams);
 
-	// Verify product is removed
-	const customerAfterCancel =
-		await autumnV1.customers.get<ApiCustomerV3>(customerId);
-	await expectProductNotPresent({
-		customer: customerAfterCancel,
-		productId: pro.id,
-	});
+		// Verify product is removed and the refund invoice matches the preview.
+		// Both settle on the cancel's Stripe round trip, so poll for them together.
+		await pollUntilAsserted({
+			fetch: () => autumnV1.customers.get<ApiCustomerV3>(customerId),
+			assert: async (customer) => {
+				await expectProductNotPresent({
+					customer,
+					productId: pro.id,
+				});
+				expect(customer.invoices?.[0]?.total).toBe(preview.total);
+			},
+			timeoutMs: DEFAULT_SETTLE_TIMEOUT_MS,
+		});
 
-	// Verify latest invoice matches preview
-	expect(customerAfterCancel.invoices?.[0]?.total).toBe(preview.total);
-
-	// Verify no Stripe subscription exists
-	await expectNoStripeSubscription({
-		db: ctx.db,
-		customerId,
-		org: ctx.org,
-		env: ctx.env,
-	});
-});
+		// Verify no Stripe subscription exists
+		await expectNoStripeSubscription({
+			db: ctx.db,
+			customerId,
+			org: ctx.org,
+			env: ctx.env,
+		});
+	},
+);
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // TEST 3: Cancel immediately - base + prepaid (mid-cycle with exact proration)
@@ -253,125 +271,128 @@ test.concurrent(`${chalk.yellowBright("cancel immediately billing: base + alloca
  * - Exact calculation: -$70 * (remaining_days / total_days)
  * - Invoice should match preview.total
  */
-test.concurrent(`${chalk.yellowBright("cancel immediately billing: base + prepaid (mid-cycle exact proration)")}`, async () => {
-	const customerId = "cancel-imm-billing-prepaid-mid";
+test.concurrent(
+	`${chalk.yellowBright("cancel immediately billing: base + prepaid (mid-cycle exact proration)")}`,
+	async () => {
+		const customerId = "cancel-imm-billing-prepaid-mid";
 
-	const billingUnits = 100;
-	const pricePerPack = 10;
-	const initialQuantity = 500; // 5 packs
-	const basePrice = 20;
+		const billingUnits = 100;
+		const pricePerPack = 10;
+		const initialQuantity = 500; // 5 packs
+		const basePrice = 20;
 
-	const prepaidItem = items.prepaidMessages({
-		includedUsage: 0,
-		billingUnits,
-		price: pricePerPack,
-	});
+		const prepaidItem = items.prepaidMessages({
+			includedUsage: 0,
+			billingUnits,
+			price: pricePerPack,
+		});
 
-	const pro = products.pro({
-		id: "pro",
-		items: [prepaidItem],
-	});
+		const pro = products.pro({
+			id: "pro",
+			items: [prepaidItem],
+		});
 
-	const { autumnV1, ctx, advancedTo } = await initScenario({
-		customerId,
-		setup: [
-			s.customer({ paymentMethod: "success" }),
-			s.products({ list: [pro] }),
-		],
-		actions: [
-			s.attach({
-				productId: pro.id,
-				options: [
-					{ feature_id: TestFeature.Messages, quantity: initialQuantity },
-				],
-			}),
-			s.advanceTestClock({ days: 15 }), // Mid-cycle
-		],
-	});
+		const { autumnV1, ctx, advancedTo } = await initScenario({
+			customerId,
+			setup: [
+				s.customer({ paymentMethod: "success" }),
+				s.products({ list: [pro] }),
+			],
+			actions: [
+				s.attach({
+					productId: pro.id,
+					options: [
+						{ feature_id: TestFeature.Messages, quantity: initialQuantity },
+					],
+				}),
+				s.advanceTestClock({ days: 15 }), // Mid-cycle
+			],
+		});
 
-	// Verify pro is active
-	const customerMidCycle =
-		await autumnV1.customers.get<ApiCustomerV3>(customerId);
-	await expectProductActive({
-		customer: customerMidCycle,
-		productId: pro.id,
-	});
+		// Verify pro is active
+		const customerMidCycle =
+			await autumnV1.customers.get<ApiCustomerV3>(customerId);
+		await expectProductActive({
+			customer: customerMidCycle,
+			productId: pro.id,
+		});
 
-	// Get billing period for proration calculation
-	const subscription = customerMidCycle.products?.[0];
-	if (
-		!subscription?.current_period_start ||
-		!subscription?.current_period_end
-	) {
-		throw new Error("Missing billing period on subscription");
-	}
+		// Get billing period for proration calculation
+		const subscription = customerMidCycle.products?.[0];
+		if (
+			!subscription?.current_period_start ||
+			!subscription?.current_period_end
+		) {
+			throw new Error("Missing billing period on subscription");
+		}
 
-	const billingPeriod = {
-		start: subscription.current_period_start,
-		end: subscription.current_period_end,
-	};
+		const billingPeriod = {
+			start: subscription.current_period_start,
+			end: subscription.current_period_end,
+		};
 
-	// Calculate expected prorated refund
-	const frozenTimeMs = Math.floor(advancedTo! / 1000) * 1000;
+		// Calculate expected prorated refund
+		const frozenTimeMs = Math.floor(advancedTo! / 1000) * 1000;
 
-	const prepaidAmount = (initialQuantity / billingUnits) * pricePerPack; // $50
+		const prepaidAmount = (initialQuantity / billingUnits) * pricePerPack; // $50
 
-	// Prorated refund for base price
-	const proratedBaseRefund = applyProration({
-		now: frozenTimeMs,
-		billingPeriod,
-		amount: basePrice,
-	});
+		// Prorated refund for base price
+		const proratedBaseRefund = applyProration({
+			now: frozenTimeMs,
+			billingPeriod,
+			amount: basePrice,
+		});
 
-	// Prorated refund for prepaid
-	const proratedPrepaidRefund = applyProration({
-		now: frozenTimeMs,
-		billingPeriod,
-		amount: prepaidAmount,
-	});
+		// Prorated refund for prepaid
+		const proratedPrepaidRefund = applyProration({
+			now: frozenTimeMs,
+			billingPeriod,
+			amount: prepaidAmount,
+		});
 
-	const expectedRefund = new Decimal(-proratedBaseRefund)
-		.minus(proratedPrepaidRefund)
-		.toNumber();
+		const expectedRefund = new Decimal(-proratedBaseRefund)
+			.minus(proratedPrepaidRefund)
+			.toNumber();
 
-	// Preview cancel immediately
-	const cancelParams = {
-		customer_id: customerId,
-		product_id: pro.id,
-		cancel_action: "cancel_immediately" as const,
-	};
+		// Preview cancel immediately
+		const cancelParams = {
+			customer_id: customerId,
+			product_id: pro.id,
+			cancel_action: "cancel_immediately" as const,
+		};
 
-	const preview = await autumnV1.subscriptions.previewUpdate(cancelParams);
+		const preview = await autumnV1.subscriptions.previewUpdate(cancelParams);
 
-	// Preview should match expected prorated refund
-	expect(preview.total).toBeCloseTo(expectedRefund, 0);
+		// Preview should match expected prorated refund
+		expect(preview.total).toBeCloseTo(expectedRefund, 0);
 
-	// Cancel immediately
-	await autumnV1.subscriptions.update(cancelParams);
+		// Cancel immediately
+		await autumnV1.subscriptions.update(cancelParams);
 
-	// Verify product is removed
-	const customerAfterCancel =
-		await autumnV1.customers.get<ApiCustomerV3>(customerId);
-	await expectProductNotPresent({
-		customer: customerAfterCancel,
-		productId: pro.id,
-	});
+		// Verify product is removed
+		const customerAfterCancel =
+			await autumnV1.customers.get<ApiCustomerV3>(customerId);
+		await expectProductNotPresent({
+			customer: customerAfterCancel,
+			productId: pro.id,
+		});
 
-	// Verify invoice matches preview
-	expectCustomerInvoiceCorrect({
-		customer: customerAfterCancel,
-		count: 2,
-		latestTotal: preview.total,
-	});
+		// Verify invoice matches preview
+		expectCustomerInvoiceCorrect({
+			customer: customerAfterCancel,
+			count: 2,
+			latestTotal: preview.total,
+		});
 
-	// Verify no Stripe subscription exists
-	await expectNoStripeSubscription({
-		db: ctx.db,
-		customerId,
-		org: ctx.org,
-		env: ctx.env,
-	});
-});
+		// Verify no Stripe subscription exists
+		await expectNoStripeSubscription({
+			db: ctx.db,
+			customerId,
+			org: ctx.org,
+			env: ctx.env,
+		});
+	},
+);
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // TEST 4: Cancel immediately - base + allocated (mid-cycle with exact proration)
@@ -388,124 +409,127 @@ test.concurrent(`${chalk.yellowBright("cancel immediately billing: base + prepai
  * - Exact calculation: base refund + allocated refund (both prorated)
  * - Invoice should match preview.total
  */
-test.concurrent(`${chalk.yellowBright("cancel immediately billing: base + allocated (mid-cycle exact proration)")}`, async () => {
-	const customerId = "cancel-imm-billing-allocated-mid";
+test.concurrent(
+	`${chalk.yellowBright("cancel immediately billing: base + allocated (mid-cycle exact proration)")}`,
+	async () => {
+		const customerId = "cancel-imm-billing-allocated-mid";
 
-	const allocatedSeats = 8;
-	const pricePerSeat = 10;
-	const basePrice = 20;
+		const allocatedSeats = 8;
+		const pricePerSeat = 10;
+		const basePrice = 20;
 
-	// Mid-cycle seat adds must prorate — the fixture default (bill_immediately)
-	// charges the full cycle price, which this test's proration math doesn't model.
-	const allocatedItem = constructArrearProratedItem({
-		featureId: TestFeature.Users,
-		pricePerUnit: pricePerSeat,
-		includedUsage: 0, // No free seats
-		config: {
-			on_increase: OnIncrease.ProrateImmediately,
-			on_decrease: OnDecrease.None,
-		},
-	}) as LimitedItem;
+		// Mid-cycle seat adds must prorate — the fixture default (bill_immediately)
+		// charges the full cycle price, which this test's proration math doesn't model.
+		const allocatedItem = constructArrearProratedItem({
+			featureId: TestFeature.Users,
+			pricePerUnit: pricePerSeat,
+			includedUsage: 0, // No free seats
+			config: {
+				on_increase: OnIncrease.ProrateImmediately,
+				on_decrease: OnDecrease.None,
+			},
+		}) as LimitedItem;
 
-	const pro = products.pro({
-		id: "pro",
-		items: [allocatedItem],
-	});
+		const pro = products.pro({
+			id: "pro",
+			items: [allocatedItem],
+		});
 
-	const { autumnV1, ctx, advancedTo } = await initScenario({
-		customerId,
-		setup: [
-			s.customer({ paymentMethod: "success" }),
-			s.products({ list: [pro] }),
-		],
-		actions: [
-			s.attach({ productId: pro.id }),
-			s.advanceTestClock({ days: 15 }), // Mid-cycle
-		],
-	});
+		const { autumnV1, ctx, advancedTo } = await initScenario({
+			customerId,
+			setup: [
+				s.customer({ paymentMethod: "success" }),
+				s.products({ list: [pro] }),
+			],
+			actions: [
+				s.attach({ productId: pro.id }),
+				s.advanceTestClock({ days: 15 }), // Mid-cycle
+			],
+		});
 
-	// Track users at mid-cycle
-	await autumnV1.track({
-		customer_id: customerId,
-		feature_id: TestFeature.Users,
-		value: allocatedSeats,
-	});
+		// Track users at mid-cycle
+		await autumnV1.track({
+			customer_id: customerId,
+			feature_id: TestFeature.Users,
+			value: allocatedSeats,
+		});
 
-	// Get billing period for proration calculation
-	const customerMidCycle =
-		await autumnV1.customers.get<ApiCustomerV3>(customerId);
-	const subscription = customerMidCycle.products?.[0];
-	if (
-		!subscription?.current_period_start ||
-		!subscription?.current_period_end
-	) {
-		throw new Error("Missing billing period on subscription");
-	}
+		// Get billing period for proration calculation
+		const customerMidCycle =
+			await autumnV1.customers.get<ApiCustomerV3>(customerId);
+		const subscription = customerMidCycle.products?.[0];
+		if (
+			!subscription?.current_period_start ||
+			!subscription?.current_period_end
+		) {
+			throw new Error("Missing billing period on subscription");
+		}
 
-	const billingPeriod = {
-		start: subscription.current_period_start,
-		end: subscription.current_period_end,
-	};
+		const billingPeriod = {
+			start: subscription.current_period_start,
+			end: subscription.current_period_end,
+		};
 
-	// Calculate expected prorated refund
-	const frozenTimeMs = Math.floor(advancedTo! / 1000) * 1000;
+		// Calculate expected prorated refund
+		const frozenTimeMs = Math.floor(advancedTo! / 1000) * 1000;
 
-	const allocatedAmount = allocatedSeats * pricePerSeat; // $80
+		const allocatedAmount = allocatedSeats * pricePerSeat; // $80
 
-	// Prorated refund for base price (full cycle remaining from start)
-	const proratedBaseRefund = applyProration({
-		now: frozenTimeMs,
-		billingPeriod,
-		amount: basePrice,
-	});
+		// Prorated refund for base price (full cycle remaining from start)
+		const proratedBaseRefund = applyProration({
+			now: frozenTimeMs,
+			billingPeriod,
+			amount: basePrice,
+		});
 
-	// Prorated refund for allocated seats (from mid-cycle when tracked)
-	// Note: allocated seats were added mid-cycle, so they get refund for remaining time
-	const proratedAllocatedRefund = applyProration({
-		now: frozenTimeMs,
-		billingPeriod,
-		amount: allocatedAmount,
-	});
+		// Prorated refund for allocated seats (from mid-cycle when tracked)
+		// Note: allocated seats were added mid-cycle, so they get refund for remaining time
+		const proratedAllocatedRefund = applyProration({
+			now: frozenTimeMs,
+			billingPeriod,
+			amount: allocatedAmount,
+		});
 
-	const expectedRefund = new Decimal(-proratedBaseRefund)
-		.minus(proratedAllocatedRefund)
-		.toNumber();
+		const expectedRefund = new Decimal(-proratedBaseRefund)
+			.minus(proratedAllocatedRefund)
+			.toNumber();
 
-	// Preview cancel immediately
-	const cancelParams = {
-		customer_id: customerId,
-		product_id: pro.id,
-		cancel_action: "cancel_immediately" as const,
-	};
+		// Preview cancel immediately
+		const cancelParams = {
+			customer_id: customerId,
+			product_id: pro.id,
+			cancel_action: "cancel_immediately" as const,
+		};
 
-	const preview = await autumnV1.subscriptions.previewUpdate(cancelParams);
+		const preview = await autumnV1.subscriptions.previewUpdate(cancelParams);
 
-	// Preview should match expected prorated refund
-	expect(preview.total).toBeCloseTo(expectedRefund, 0);
+		// Preview should match expected prorated refund
+		expect(preview.total).toBeCloseTo(expectedRefund, 0);
 
-	// Cancel immediately
-	await autumnV1.subscriptions.update(cancelParams);
+		// Cancel immediately
+		await autumnV1.subscriptions.update(cancelParams);
 
-	// Verify product is removed
-	const customerAfterCancel =
-		await autumnV1.customers.get<ApiCustomerV3>(customerId);
-	await expectProductNotPresent({
-		customer: customerAfterCancel,
-		productId: pro.id,
-	});
+		// Verify product is removed
+		const customerAfterCancel =
+			await autumnV1.customers.get<ApiCustomerV3>(customerId);
+		await expectProductNotPresent({
+			customer: customerAfterCancel,
+			productId: pro.id,
+		});
 
-	// Verify invoice matches preview
-	expectCustomerInvoiceCorrect({
-		customer: customerAfterCancel,
-		count: 3, // Initial ($20) + allocated overage + refund
-		latestTotal: preview.total,
-	});
+		// Verify invoice matches preview
+		expectCustomerInvoiceCorrect({
+			customer: customerAfterCancel,
+			count: 3, // Initial ($20) + allocated overage + refund
+			latestTotal: preview.total,
+		});
 
-	// Verify no Stripe subscription exists
-	await expectNoStripeSubscription({
-		db: ctx.db,
-		customerId,
-		org: ctx.org,
-		env: ctx.env,
-	});
-});
+		// Verify no Stripe subscription exists
+		await expectNoStripeSubscription({
+			db: ctx.db,
+			customerId,
+			org: ctx.org,
+			env: ctx.env,
+		});
+	},
+);

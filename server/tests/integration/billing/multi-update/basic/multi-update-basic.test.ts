@@ -22,6 +22,7 @@
 
 import { test } from "bun:test";
 import type { MultiUpdateParamsV0Input } from "@autumn/shared";
+import { waitForTrackedUsageInDb } from "@tests/integration/billing/legacy/utils/waitForTrackedUsageInDb";
 import { expectMultiUpdatePreviewCorrect } from "@tests/integration/billing/multi-update/utils/expectMultiUpdatePreviewCorrect";
 import { expectCustomerInvoiceCorrect } from "@tests/integration/billing/utils/expectCustomerInvoiceCorrect";
 import {
@@ -91,10 +92,19 @@ test.concurrent(
 				s.attach({ productId: proA.id }),
 				s.attach({ productId: proB.id }),
 				s.attach({ productId: addon.id }),
-				// 400 overage on the add-on's consumable; track needs a settle before
-				// the next billing write or the deduction can lose the DB-sync race
-				s.track({ featureId: TestFeature.Messages, value: 500, timeout: 4000 }),
+				// 400 overage on the add-on's consumable
+				s.track({ featureId: TestFeature.Messages, value: 500 }),
 			],
+		});
+
+		// The deduction lives only in Redis until its async sync runs; any
+		// invalidation in that window (a late attach webhook, the multiUpdate's own
+		// cache refresh) can drop it, and the cycle-end overage then bills $0.
+		// Gate on Postgres having it rather than sleeping a fixed 4s.
+		await waitForTrackedUsageInDb({
+			customerId,
+			featureId: TestFeature.Messages,
+			balance: -400,
 		});
 
 		// ── Contract: one call cancels both plans EOC ────────────────────────────

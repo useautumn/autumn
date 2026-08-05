@@ -1,8 +1,11 @@
 import { expect } from "bun:test";
-import type { ApiCustomerV3 } from "@autumn/shared";
+import { type ApiCustomerV3, ApiVersion } from "@autumn/shared";
 import { pollUntilAsserted } from "@tests/utils/genUtils.js";
 import { DEFAULT_SETTLE_TIMEOUT_MS } from "@tests/utils/pollableCustomerExpect.js";
-import type { AutumnInt } from "@/external/autumn/autumnCli.js";
+import { AutumnInt } from "@/external/autumn/autumnCli.js";
+
+/** Same version the `features` map assertions were written against. */
+const defaultAutumn = new AutumnInt({ version: ApiVersion.V1_2 });
 
 /**
  * Polls the Postgres-backed read (`skip_cache`) until a tracked deduction has
@@ -28,7 +31,7 @@ export const waitForTrackedUsageInDb = async ({
 	usage,
 	timeoutMs = DEFAULT_SETTLE_TIMEOUT_MS,
 }: {
-	autumn: AutumnInt;
+	autumn?: AutumnInt;
 	customerId: string;
 	featureId: string;
 	balance: number;
@@ -37,7 +40,7 @@ export const waitForTrackedUsageInDb = async ({
 }): Promise<ApiCustomerV3> =>
 	pollUntilAsserted({
 		fetch: () =>
-			autumn.customers.get<ApiCustomerV3>(customerId, {
+			(autumn ?? defaultAutumn).customers.get<ApiCustomerV3>(customerId, {
 				skip_cache: "true",
 			}),
 		assert: (customer) => {

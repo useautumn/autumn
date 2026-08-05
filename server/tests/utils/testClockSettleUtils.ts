@@ -64,6 +64,16 @@ const noInvoiceGraceMs = () => (isParallelRun() ? 12_000 : 6_000);
 const postSettleFloorMs = () => (isParallelRun() ? 5000 : 2000);
 
 /**
+ * A `settleMode` call site crosses a billing boundary, so "no new invoice" means
+ * the signal is UNAVAILABLE (the subscription was cancelled at period end, the
+ * invoice list lagged, the baseline was captured on a different customer), not
+ * that the boundary did no work. Falling through to `postSettleFloorMs` there
+ * would cut the 30–110s these call sites used to sleep down to 5s and hand the
+ * test pre-boundary state; hold roughly the legacy wait instead.
+ */
+const noSignalFloorMs = () => (isParallelRun() ? 30_000 : 15_000);
+
+/**
  * `invoice.created` stores ONLY `subscription_cycle` invoices
  * (upsertAutumnInvoice's `skipNonCycleInvoices`); anything else lands later via
  * `invoice.paid`, or never. So a non-cycle invoice never gets the full ceiling.
@@ -364,12 +374,17 @@ export const waitForClockInvoiceSettle = async ({
 	const startedAt = Date.now();
 	const deadline = startedAt + timeoutMs;
 	const settleFloor = async ({ noSignal }: { noSignal: boolean }) => {
-		const floorMs =
-			legacyWaitMs === undefined
-				? postSettleFloorMs()
-				: noSignal
-					? legacyWaitMs
-					: Math.min(legacyWaitMs, legacyWaitFloorMs());
+		const floorMs = (() => {
+			// No legacy wait to honour: the call site opted into a settle mode.
+			if (legacyWaitMs === undefined) {
+				return noSignal ? noSignalFloorMs() : postSettleFloorMs();
+			}
+			// Polling replaced an explicit blind wait: honour it in full when the
+			// signal never materialised, collapse it when it did.
+			return noSignal
+				? legacyWaitMs
+				: Math.min(legacyWaitMs, legacyWaitFloorMs());
+		})();
 		const remainingMs = floorMs - (Date.now() - startedAt);
 		if (remainingMs > 0) await timeout(remainingMs);
 	};

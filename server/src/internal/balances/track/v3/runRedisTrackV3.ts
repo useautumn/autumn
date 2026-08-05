@@ -17,6 +17,7 @@ import {
 	executeRedisDeductionV2,
 	projectMutationLogsToTrackDeductionsV2,
 } from "@/internal/balances/utils/deductionV2/index.js";
+import { buildBalanceSnapshotEntries } from "@/internal/balances/utils/sync/buildBalanceSnapshotEntries.js";
 import { globalSyncBatchingManagerV3 } from "@/internal/balances/utils/sync/SyncBatchingManagerV3.js";
 import { isSyncCoalesceEnabled } from "@/internal/misc/miscellaneousEdgeConfig/miscellaneousEdgeConfigStore.js";
 import type { FeatureDeduction } from "../../utils/types/featureDeduction.js";
@@ -60,6 +61,11 @@ const queueSyncItem = ({
 		entityId: fullSubject.entityId,
 		modifiedCusEntIdsByFeatureId,
 		usageWindowUpdates,
+		// Carried so an invalidation racing this sync can't erase the deduction.
+		balanceSnapshots: buildBalanceSnapshotEntries({
+			fullSubject,
+			modifiedCusEntIdsByFeatureId,
+		}),
 		coalesce: ctx.testOptions?.syncCoalesce ?? isSyncCoalesceEnabled(),
 		coalesceRedis: ctx.redisV2,
 	});

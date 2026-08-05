@@ -73,6 +73,9 @@ interface SyncItemV4 {
 	 *  (no Redis re-read); mirrored to the customer-scoped usage_windows table
 	 *  via full-replace per (customer, feature). */
 	usageWindowUpdates?: UsageWindowUpdate[];
+	/** Post-deduction balance snapshots from the same mutation. Used ONLY when
+	 *  the cache read below misses — see the fallback comment there. */
+	balanceSnapshots?: SyncEntry[];
 }
 
 /** Sync cached subject balances to Postgres using targeted hash reads. */
@@ -89,11 +92,13 @@ export const syncItemV4 = async ({
 		rolloverIds,
 		modifiedCusEntIdsByFeatureId,
 		usageWindowUpdates,
+		balanceSnapshots,
 	} = payload;
 	const { db } = ctx;
 
 	// Read targeted balance hashes
 	let allSubjectBalances: SubjectBalance[] = [];
+	let cacheMissed = false;
 	for (const [featureId, customerEntitlementIds] of Object.entries(
 		modifiedCusEntIdsByFeatureId,
 	)) {
@@ -117,20 +122,34 @@ export const syncItemV4 = async ({
 					feature: featureId,
 				},
 			});
-			// A miss (e.g. an invalidation racing the batch) drops the BALANCE
-			// sync wholesale, but usage-window snapshots ride in the payload and
-			// need no cache read -- they must still land.
+			// A miss (e.g. an invalidation racing the batch) drops the CACHE-READ
+			// balances wholesale -- reads either side of an invalidation can't be
+			// mixed. Usage-window snapshots ride in the payload and need no cache
+			// read, so they must still land.
 			allSubjectBalances = [];
+			cacheMissed = true;
 			break;
 		}
 
 		allSubjectBalances.push(...outcome.value.balances);
 	}
 
-	// Build sync entries
-	const entries: SyncEntry[] = allSubjectBalances.map((subjectBalance) =>
-		subjectBalanceToSyncEntry({ subjectBalance }),
-	);
+	// Build sync entries. On a cache miss the payload's own post-deduction
+	// snapshots stand in: without them the deduction is lost for good (the cache
+	// no longer holds it and Postgres never received it), which silently reverts
+	// tracked usage whenever a webhook or an attach invalidates in that window.
+	// sync_balances_v2's guards still reject anything Postgres has moved past.
+	const entries: SyncEntry[] = cacheMissed
+		? (balanceSnapshots ?? [])
+		: allSubjectBalances.map((subjectBalance) =>
+				subjectBalanceToSyncEntry({ subjectBalance }),
+			);
+
+	if (cacheMissed && entries.length > 0) {
+		ctx.logger.info(
+			`[SYNC V4] (${customerId}) Falling back to ${entries.length} payload balance snapshot(s) after cache miss.`,
+		);
+	}
 
 	// Build rollover sync entries
 	const rolloverEntries: RolloverSyncEntry[] = [];
@@ -210,9 +229,9 @@ export const syncItemV4 = async ({
 		},
 	});
 
-	const hasEntityLevel = allSubjectBalances.some(
-		(subjectBalance) => subjectBalance.isEntityLevel,
-	);
+	const hasEntityLevel = cacheMissed
+		? entries.some((entry) => entry.entity_count > 0)
+		: allSubjectBalances.some((subjectBalance) => subjectBalance.isEntityLevel);
 	if (hasEntityLevel) {
 		const featureIds = Object.keys(modifiedCusEntIdsByFeatureId);
 		const internalFeatureIds = ctx.features
