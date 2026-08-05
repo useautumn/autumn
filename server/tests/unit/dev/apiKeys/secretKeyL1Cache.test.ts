@@ -237,7 +237,8 @@ describe("secret-key L1 cache: TTLs", () => {
 		expect(result?.org.id).toBe("org_ttl"); // Redis still had it (3600s TTL)
 
 		await clearSecretKeyCache({ hashedKey });
-	});
+		// Sleeps past bun's default 5s test timeout — needs its own budget.
+	}, 15_000);
 });
 
 // ── Contract 5: bounded size / LRU eviction ────────────────────────────────

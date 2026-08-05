@@ -31,6 +31,7 @@ mock.module("@/internal/balances/check/runCheckV2.js", () => ({
 	},
 }));
 
+import { ApiVersionClass, LATEST_VERSION } from "@autumn/shared";
 import { RedisUnavailableError } from "@/external/redis/utils/errors.js";
 import { runCheckWithRollout } from "@/internal/balances/check/runCheckWithRollout.js";
 
@@ -45,7 +46,9 @@ beforeEach(resetMockState);
 afterEach(resetMockState);
 
 const rolloutCtx = {
-	apiVersion: { value: "2025-02-01" },
+	apiVersion: new ApiVersionClass(LATEST_VERSION),
+	org: { id: "org_test" },
+	env: "sandbox",
 	features: [],
 	logger: {
 		warn: (...args: unknown[]) => mockState.warnCalls.push(args),
