@@ -15,6 +15,8 @@ const transformDuration = (
 	if (duration.type !== "months") return { type: duration.type };
 	if (duration.length === null)
 		throw new Error("Monthly reward duration is missing its length");
+	if (!Number.isInteger(duration.length) || duration.length <= 0)
+		throw new Error("Monthly reward duration must be a positive integer");
 	return { type: "months", length: duration.length };
 };
 

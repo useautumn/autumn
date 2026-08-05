@@ -33,6 +33,69 @@ test("loads reward-only default exports", async () => {
 	);
 });
 
+test("in-place pull does not duplicate default-export resources", async () => {
+	const source = `export default {
+	rewards: [{ id: "credits", name: "Credits", type: "feature_grant", grants: [{ featureId: "credits", included: 1 }], promoCodes: [{ code: "CREDITS" }] }],
+	referralPrograms: [{ id: "refer", rewardId: "credits", redeemOn: "customer_creation", receivedBy: "all" }],
+};`;
+	await withConfigWorkspace(source, async (cwd) => {
+		await writeConfig({
+			features: [],
+			plans: [],
+			cwd,
+			rewards: [
+				reward({
+					id: "credits",
+					name: "Credits",
+					type: "feature_grant",
+					grants: [{ featureId: "credits", included: 1 }],
+					promoCodes: [{ code: "CREDITS" }],
+				}),
+			],
+			referralPrograms: [
+				referralProgram({
+					id: "refer",
+					rewardId: "credits",
+					redeemOn: "customer_creation",
+					receivedBy: "all",
+				}),
+			],
+		});
+		const updated = readFileSync(join(cwd, "autumn.config.ts"), "utf8");
+
+		expect(updated.match(/id:\s*["']credits["']/g)).toHaveLength(1);
+		expect(updated.match(/id:\s*["']refer["']/g)).toHaveLength(1);
+	});
+});
+
+test("in-place failures preserve customized source", async () => {
+	const source = `// custom source
+export const keepMe = "custom";
+`;
+	await withConfigWorkspace(source, async (cwd) => {
+		let reads = 0;
+		const unstableFeature = {
+			get id() {
+				if (reads++ === 0) throw new Error("in-place update failed");
+				return "new-feature";
+			},
+			name: "New feature",
+			type: "boolean" as const,
+		};
+
+		await expect(
+			writeConfig({
+				features: [unstableFeature],
+				plans: [],
+				cwd,
+				rewards: [],
+				referralPrograms: [],
+			}),
+		).rejects.toThrow("in-place update failed");
+		expect(readFileSync(join(cwd, "autumn.config.ts"), "utf8")).toBe(source);
+	});
+});
+
 test("merges default and named exports without duplicating aliases", async () => {
 	await withConfigWorkspace(
 		`const credits = { id: "credits", name: "Credits", type: "metered", consumable: true };

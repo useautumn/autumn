@@ -42,24 +42,18 @@ export async function writeConfig({
 
 	// Use in-place update if config exists and not forcing overwrite
 	if (configExists && !forceOverwrite) {
-		try {
-			const updateResult = await updateConfigInPlace({
-				features,
-				plans,
-				cwd,
-				rewards,
-				referralPrograms,
-			});
-			return {
-				configPath,
-				inPlace: true,
-				updateResult,
-			};
-		} catch (error) {
-			if (rewards === undefined || referralPrograms === undefined) throw error;
-			// If in-place update fails, fall back to full regeneration
-			console.warn("In-place update failed, regenerating config:", error);
-		}
+		const updateResult = await updateConfigInPlace({
+			features,
+			plans,
+			cwd,
+			rewards,
+			referralPrograms,
+		});
+		return {
+			configPath,
+			inPlace: true,
+			updateResult,
+		};
 	}
 
 	// Generate new config file

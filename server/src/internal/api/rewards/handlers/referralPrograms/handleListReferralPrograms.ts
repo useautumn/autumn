@@ -1,8 +1,4 @@
-import {
-	InternalError,
-	ListReferralProgramsParamsSchema,
-	Scopes,
-} from "@autumn/shared";
+import { ListReferralProgramsParamsSchema, Scopes } from "@autumn/shared";
 import { createRoute } from "@/honoMiddlewares/routeHandler.js";
 import { toApiReferralProgram } from "@/internal/rewards/actions/createApiReferralProgram.js";
 import {
@@ -23,16 +19,13 @@ export const handleListReferralPrograms = createRoute({
 			rewards.map(({ internal_id, id }) => [internal_id, id]),
 		);
 		return c.json({
-			referral_programs: programs.map((rewardProgram) => {
+			referral_programs: programs.flatMap((rewardProgram) => {
 				const rewardId = rewardIdByInternalId.get(
 					rewardProgram.internal_reward_id,
 				);
-				if (!rewardId) {
-					throw new InternalError({
-						message: `Referral program ${rewardProgram.id} has no reward`,
-					});
-				}
-				return toApiReferralProgram({ rewardProgram, rewardId });
+				return rewardId
+					? [toApiReferralProgram({ rewardProgram, rewardId })]
+					: [];
 			}),
 		});
 	},

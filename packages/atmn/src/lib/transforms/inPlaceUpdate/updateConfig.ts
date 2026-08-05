@@ -8,6 +8,7 @@ import { existsSync, writeFileSync } from "node:fs";
 import type { ReferralProgram, Reward } from "../../../compose/index.js";
 import type { Feature } from "../../../compose/models/index.js";
 import type { Plan } from "../../../compose/models/variantModels.js";
+import { loadConfig } from "../../config/loadConfig.js";
 import { resolveConfigPath } from "../../env/index.js";
 import { buildFeatureCode } from "../sdkToCode/feature.js";
 import {
@@ -128,6 +129,9 @@ export async function updateConfigInPlace({
 	}
 
 	const parsed = parseExistingConfig(configPath);
+	const existingConfig = /\bexport\s+default\b/.test(parsed.source)
+		? await loadConfig({ cwd })
+		: undefined;
 	const requiredImports = [
 		...(plans.some((plan) => plan.billingControls) ? ["billingControls"] : []),
 		...(rewards?.length ? ["reward"] : []),
@@ -268,8 +272,12 @@ export async function updateConfigInPlace({
 	// Track which API entities have been matched
 	const matchedFeatureIds = new Set<string>();
 	const matchedPlanIds = new Set<string>();
-	const matchedRewardIds = new Set<string>();
-	const matchedReferralProgramIds = new Set<string>();
+	const matchedRewardIds = new Set(
+		existingConfig?.rewards.map(({ id }) => id) ?? [],
+	);
+	const matchedReferralProgramIds = new Set(
+		existingConfig?.referralPrograms.map(({ id }) => id) ?? [],
+	);
 
 	// Build new file content block by block
 	const outputBlocks: string[] = [];
