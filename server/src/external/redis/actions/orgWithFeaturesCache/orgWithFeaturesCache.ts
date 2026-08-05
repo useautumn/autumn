@@ -5,7 +5,7 @@ import {
 	resolveMiscRedis,
 } from "@/external/redis/miscCache/resolveMiscRedis.js";
 import { REDIS_OP_TIMEOUT_MS } from "@/external/redis/utils/redisOpTimeouts.js";
-import { tryRedisOp } from "@/external/redis/utils/runRedisOp.js";
+import { runRedisOp, tryRedisOp } from "@/external/redis/utils/runRedisOp.js";
 
 /** Short by design: org config changes are also pushed through clearOrgCache, so
  *  this only has to bound the staleness window for anything that misses that. */
@@ -82,12 +82,18 @@ export const clearOrgWithFeaturesCache = async ({
 	);
 
 	await forEachMiscRedisTarget({
+		// One DEL per key: these keys have no hash tag, so a multi-key DEL is
+		// rejected with CROSSSLOT on a clustered instance and nothing is deleted.
 		operation: ({ redis }) =>
-			tryRedisOp({
-				operation: () => redis.del(...cacheKeys),
-				source: "org-features-cache:clear",
-				redisInstance: redis,
-			}),
+			Promise.all(
+				cacheKeys.map((cacheKey) =>
+					runRedisOp({
+						operation: () => redis.del(cacheKey),
+						source: "org-features-cache:clear",
+						redisInstance: redis,
+					}),
+				),
+			),
 		onError: ({ target }) => {
 			logger.warn(
 				`[orgWithFeaturesCache] clear failed on "${target.instanceName}" (org: ${orgId})`,
