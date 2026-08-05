@@ -194,3 +194,47 @@ test.each([CouponDurationType.OneOff, CouponDurationType.Forever])(
 		expect(preview.reward_changes).toEqual([{ id: couponId, action: "none" }]);
 	},
 );
+
+/** Before: replacing plan prices orphaned coupon plan IDs; after: scoped coupons keep stable plan IDs. */
+test("catalog config keeps plan-scoped coupons idempotent across plan updates", async () => {
+	const suffix = Date.now();
+	const planId = `catalog-coupon-plan-${suffix}`;
+	const couponId = `catalog-plan-coupon-${suffix}`;
+	const config = (amount: number) => ({
+		plans: [
+			{
+				plan_id: planId,
+				name: "Coupon plan",
+				price: { amount, interval: "month" },
+				items: [],
+			},
+		],
+		rewards: [
+			{
+				coupon: {
+					id: couponId,
+					name: "Plan coupon",
+					type: RewardType.FixedDiscount,
+					value: 10,
+					duration: { type: CouponDurationType.OneOff, length: null },
+					plan_ids: [planId],
+					promo_codes: [],
+				},
+			},
+		],
+	});
+	const { autumnV2_2 } = await initScenario({
+		customerId: `catalog-plan-coupon-${suffix}`,
+		setup: [s.platform.create({ setupDefaultFeatures: true })],
+		actions: [],
+	});
+
+	await autumnV2_2.post("/catalog.update", config(29) as never);
+	await autumnV2_2.post("/catalog.update", config(39) as never);
+	const preview = (await autumnV2_2.post(
+		"/catalog.preview_update",
+		config(39) as never,
+	)) as { reward_changes: { id: string; action: string }[] };
+
+	expect(preview.reward_changes).toEqual([{ id: couponId, action: "none" }]);
+});
