@@ -1,5 +1,6 @@
 import { Readable } from "node:stream";
 import type { CustomerExportSnapshot } from "@autumn/shared";
+import type { DrizzleCli } from "@/db/initDrizzle.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import type { CustomerExportRow } from "../../csv/createCustomerExportStringifier.js";
 import {
@@ -15,16 +16,18 @@ import { createOneOffProductLookup } from "../../queries/getOneOffProductLookup.
 
 export const createCustomerExportRowStream = ({
 	ctx,
+	readDb,
 	snapshot,
 	population,
 	onPageProcessed,
 }: {
 	ctx: AutumnContext;
+	readDb: DrizzleCli;
 	snapshot: CustomerExportSnapshot;
 	population: CustomerExportPopulation;
 	onPageProcessed: (rowCount: number) => Promise<void> | void;
 }): Readable => {
-	const oneOffProductLookup = createOneOffProductLookup({ db: ctx.db });
+	const oneOffProductLookup = createOneOffProductLookup({ db: readDb });
 
 	const exportRows = async function* (): AsyncGenerator<CustomerExportRow> {
 		let afterInternalId: string | null = null;
@@ -32,7 +35,7 @@ export const createCustomerExportRowStream = ({
 
 		while (hasMorePages) {
 			const scalars = await getCustomerExportScalars({
-				db: ctx.db,
+				db: readDb,
 				orgId: ctx.org.id,
 				env: ctx.env,
 				snapshot,
@@ -44,7 +47,7 @@ export const createCustomerExportRowStream = ({
 			if (!lastScalar) break;
 
 			const planColumnsByCustomer = await getCustomerExportPlanColumns({
-				db: ctx.db,
+				db: readDb,
 				internalCustomerIds: scalars.map((scalar) => scalar.internal_id),
 				oneOffProductLookup,
 			});

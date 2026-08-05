@@ -1,4 +1,5 @@
 import type { DbCustomerExport } from "@autumn/shared";
+import type { DrizzleCli } from "@/db/initDrizzle.js";
 import type { CustomerExportDestination } from "@/external/aws/s3/customerExportsS3Config.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import type { CustomerExportPopulation } from "../../queries/getCustomerExportScalars.js";
@@ -7,12 +8,14 @@ import { uploadCustomerExportCsvStream } from "./uploadCustomerExportCsvStream.j
 
 export const streamCustomerExportCsv = async ({
 	ctx,
+	readDb,
 	customerExport,
 	population,
 	destination,
 	onRowsProcessed,
 }: {
 	ctx: AutumnContext;
+	readDb: DrizzleCli;
 	customerExport: DbCustomerExport;
 	population: CustomerExportPopulation;
 	destination: CustomerExportDestination;
@@ -23,6 +26,7 @@ export const streamCustomerExportCsv = async ({
 
 	const rows = createCustomerExportRowStream({
 		ctx,
+		readDb,
 		snapshot,
 		population,
 		onPageProcessed: async (pageRowCount) => {

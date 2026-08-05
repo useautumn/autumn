@@ -3,6 +3,7 @@ import type { Logger } from "@/external/logtail/logtailUtils.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import type { RunCustomerExportPayload } from "@/trigger/exports/customerExportTaskPayload.js";
 import { CustomerExportService } from "../../CustomerExportService.js";
+import { getCustomerExportReadDb } from "../../getCustomerExportReadDb.js";
 import { resolveCustomerExportPopulation } from "../../queries/getCustomerExportScalars.js";
 import type { CustomerExportProgressReporter } from "../customerExportProgressReporter.js";
 import { streamCustomerExportCsv } from "./streamCustomerExportCsv.js";
@@ -27,9 +28,10 @@ export const uploadCustomerExportCsv = async ({
 	progress?: CustomerExportProgressReporter;
 }): Promise<{ rowCount: number; byteCount: number }> => {
 	const { exportId, orgId, env } = payload;
+	const readDb = getCustomerExportReadDb({ ctx });
 
 	const { population, totalCount } = await resolveCustomerExportPopulation({
-		db: ctx.db,
+		db: readDb,
 		orgId,
 		env,
 		snapshot: customerExport.snapshot,
@@ -42,7 +44,11 @@ export const uploadCustomerExportCsv = async ({
 		s3Key: key,
 	});
 	logger.info("customer-export: started", {
-		data: { exportId, totalCount },
+		data: {
+			exportId,
+			totalCount,
+			readSource: readDb === ctx.db ? "primary" : "replica",
+		},
 	});
 
 	// The reporter is absent for inline runs; retries reset before re-walking.
@@ -51,6 +57,7 @@ export const uploadCustomerExportCsv = async ({
 
 	return await streamCustomerExportCsv({
 		ctx,
+		readDb,
 		customerExport,
 		population,
 		destination: { bucket, region, key },

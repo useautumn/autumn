@@ -3,6 +3,7 @@ import type { Logger } from "@/external/logtail/logtailUtils.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import type { RunCustomerExportPayload } from "@/trigger/exports/customerExportTaskPayload.js";
 import { findPublishedExportObject } from "../../findPublishedExportObject.js";
+import { getCustomerExportReadDb } from "../../getCustomerExportReadDb.js";
 import { resolveCustomerExportPopulation } from "../../queries/getCustomerExportScalars.js";
 import { markCompletedWithRetry } from "../complete/markCompletedWithRetry.js";
 
@@ -33,7 +34,7 @@ export const reconcileUploadedExport = async ({
 	// The exact count died with the failed completion write; recounting the frozen
 	// bounds can drift below the file's rows if customers were deleted since.
 	const { totalCount } = await resolveCustomerExportPopulation({
-		db: ctx.db,
+		db: getCustomerExportReadDb({ ctx }),
 		orgId: payload.orgId,
 		env: payload.env,
 		snapshot: customerExport.snapshot,
