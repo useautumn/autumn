@@ -227,7 +227,7 @@ export const stripeCheckout = async ({
 
 	if (leftCheckout) {
 		console.log(`[stripeCheckout] Checkout complete — landed on ${page.url()}`);
-		return;
+		return { url: page.url(), text: "" };
 	}
 
 	const pageText = await page
@@ -245,4 +245,8 @@ export const stripeCheckout = async ({
 	}
 
 	console.log("[stripeCheckout] No redirect seen; leaving the check to caller");
+
+	// Returned so a caller whose own assertion then fails can say what the page
+	// was showing; µVM stdout never reaches the orchestrator.
+	return { url: page.url(), text: pageText.replace(/\s+/g, " ").slice(0, 400) };
 };

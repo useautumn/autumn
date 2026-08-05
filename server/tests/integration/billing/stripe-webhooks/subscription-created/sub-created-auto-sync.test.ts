@@ -201,7 +201,9 @@ test(`${chalk.yellowBright("customer.subscription.created auto-sync: links produ
 	});
 	expect(checkoutSession.url).toContain("checkout.stripe.com");
 
-	await completeStripeCheckoutFormV2({ url: checkoutSession.url! });
+	const pageState = await completeStripeCheckoutFormV2({
+		url: checkoutSession.url!,
+	});
 
 	// Stripe attaches the subscription once the hosted page finishes processing,
 	// which lags well behind the browser submit on a contended runner.
@@ -216,7 +218,9 @@ test(`${chalk.yellowBright("customer.subscription.created auto-sync: links produ
 			? completedSession.subscription
 			: completedSession.subscription?.id;
 	if (!subscriptionId) {
-		throw new Error("Checkout session did not produce a subscription");
+		throw new Error(
+			`Checkout session did not produce a subscription. Browser ended on ${pageState?.url}: ${pageState?.text}`,
+		);
 	}
 	const stripeSubscription =
 		await ctx.stripeCli.subscriptions.retrieve(subscriptionId);
