@@ -189,6 +189,25 @@ test.concurrent(
 				url: res.checkout_url,
 				overrideQuantity: oneTimeQuantity / oneTimeBillingUnits,
 			});
+
+			// Each purchase must land before the next, or the balances compound wrong.
+			const purchasesSoFar = i + 1;
+			await waitForStripeWebhook({
+				stripeCli: ctx.stripeCli,
+				env: ctx.env,
+				types: ["checkout.session.completed"],
+				until: async () => {
+					const customer = (await AutumnCli.getCustomer(
+						customerId,
+					)) as ApiCustomerV1;
+					const addOn = customer.entitlements.find(
+						(entitlement) =>
+							entitlement.feature_id === TestFeature.Messages &&
+							entitlement.interval === "lifetime",
+					);
+					return (addOn?.balance ?? 0) >= oneTimeQuantity * purchasesSoFar;
+				},
+			});
 		}
 
 		const cusRes = (await AutumnCli.getCustomer(customerId)) as ApiCustomerV1;
@@ -266,6 +285,20 @@ test.concurrent(
 		});
 
 		await completeStripeCheckoutFormV2({ url: res.checkout_url });
+
+		await waitForStripeWebhook({
+			stripeCli: ctx.stripeCli,
+			env: ctx.env,
+			types: ["checkout.session.completed"],
+			until: async () => {
+				const customer =
+					await autumnV1.customers.get<ApiCustomerV3>(customerId);
+				const productIds = (customer.products ?? []).map(
+					(product: { id?: string }) => product.id,
+				);
+				return [pro.id, oneOff.id].every((id) => productIds.includes(id));
+			},
+		});
 
 		await expectCustomerProducts({
 			autumn: autumnV1,
