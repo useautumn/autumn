@@ -7,6 +7,7 @@ import { createListEventNamesPipe } from "./pipes/listEventNamesPipe.js";
 import { createListEventsCursorPipe } from "./pipes/listEventsCursorPipe.js";
 import { createListEventsPaginatedPipe } from "./pipes/listEventsPaginatedPipe.js";
 import { createPropertyKeyExistsPipe } from "./pipes/propertyKeyExistsPipe.js";
+import { createPropertyRollupCoveragePipe } from "./pipes/propertyRollupCoveragePipe.js";
 import { tinybirdConfig } from "./tinybirdUtils.js";
 import { z } from "./tinybirdZod.js";
 
@@ -51,6 +52,7 @@ export const tinybirdPipes = tinybirdClient
 			listEventsCursor: createListEventsCursorPipe(tinybirdClient),
 			listEventsPaginated: createListEventsPaginatedPipe(tinybirdClient),
 			propertyKeyExists: createPropertyKeyExistsPipe(tinybirdClient),
+			propertyRollupCoverage: createPropertyRollupCoveragePipe(tinybirdClient),
 		}
 	: null;
 
@@ -99,4 +101,6 @@ export type {
 	ListEventsPaginatedPipeRow,
 	PropertyKeyExistsPipeParams,
 	PropertyKeyExistsPipeRow,
+	PropertyRollupCoveragePipeParams,
+	PropertyRollupCoveragePipeRow,
 } from "./pipes/index.js";

@@ -1,0 +1,19 @@
+DESCRIPTION >
+    Org-level hourly property states for aggregate-all group-bys. Customer and entity dimensions
+    are intentionally dropped so high-volume org queries scan one row per property value and hour.
+
+SCHEMA >
+    `org_id` String,
+    `env` String,
+    `event_name` String,
+    `property_key` String,
+    `property_value` String,
+    `hour` DateTime,
+    `total_value` AggregateFunction(sum, Float64),
+    `event_count` AggregateFunction(sum, UInt64)
+
+ENGINE "AggregatingMergeTree"
+ENGINE_PARTITION_KEY "toYYYYMM(hour)"
+ENGINE_SORTING_KEY "org_id, env, property_key, event_name, hour, property_value"
+
+BACKFILL skip

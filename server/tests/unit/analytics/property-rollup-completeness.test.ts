@@ -4,6 +4,7 @@ import type { AggregateGroupablePipeRow } from "@/external/tinybird/pipes/aggreg
 import {
 	type EventTotals,
 	groupedResultIsIncomplete,
+	propertyRollupCoverageIsIncomplete,
 	reportsMoreThan,
 	sumAllRows,
 	sumGroupedRowsByEventName,
@@ -225,6 +226,44 @@ test(`${chalk.yellowBright(
 			totals: { action_calls: { count: 9, sum: 0 } },
 		}),
 	).toBe(false);
+});
+
+test(`${chalk.yellowBright(
+	"property rollup: events without the grouped property do not trigger fallback",
+)}`, () => {
+	const rows = [
+		row({ groupValue: "transactional", totalValue: 80, eventCount: 80 }),
+		row({ groupValue: "marketing", totalValue: 10, eventCount: 10 }),
+	];
+
+	expect(
+		propertyRollupCoverageIsIncomplete({
+			rows,
+			coverage: { action_calls: 90 },
+		}),
+	).toBe(false);
+});
+
+test(`${chalk.yellowBright(
+	"property rollup: gate-dropped values still trigger fallback",
+)}`, () => {
+	const rows = [
+		row({ groupValue: "transactional", totalValue: 80, eventCount: 80 }),
+		row({ groupValue: "marketing", totalValue: 10, eventCount: 10 }),
+	];
+
+	expect(
+		propertyRollupCoverageIsIncomplete({
+			rows,
+			coverage: { action_calls: 100 },
+		}),
+	).toBe(true);
+	expect(
+		propertyRollupCoverageIsIncomplete({
+			rows: [],
+			coverage: { action_calls: 42 },
+		}),
+	).toBe(true);
 });
 
 test(`${chalk.yellowBright(
