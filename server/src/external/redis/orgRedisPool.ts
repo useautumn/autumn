@@ -8,6 +8,7 @@ import { decryptData } from "@/utils/encryptUtils.js";
 import { getReachableDragonflyUrl } from "./getReachableDragonflyUrl.js";
 import { createRedisConnection, currentRegion } from "./initRedis.js";
 import { REDIS_V2_COMMAND_TIMEOUT_MS } from "./initUtils/createRedisClient.js";
+import { waitForRedisReady } from "./initUtils/redisWarmup.js";
 import { resolveRedisV2 } from "./resolveRedisV2.js";
 
 export type OrgWithRedisConfig = {
@@ -110,6 +111,40 @@ export const getOrgRedis = ({ org }: { org: OrgWithRedisConfig }): Redis => {
 	});
 	pool.set(org.id, { instance, url: org.redis_config.url });
 	return instance;
+};
+
+const ORG_REDIS_WARMUP_TIMEOUT_MS = 5000;
+
+/**
+ * Opens and awaits readiness of a single org's dedicated connection. Trigger
+ * tasks start cold, so without this the first cache op in the run races the
+ * handshake — invalidations queue, but reads and status checks see a client
+ * that isn't ready yet. Never throws: a failed warmup degrades to the shared
+ * Redis behaviour the callers already tolerate.
+ */
+export const warmOrgRedis = async ({
+	org,
+}: {
+	org: OrgWithRedisConfig;
+}): Promise<void> => {
+	if (!org.redis_config) return;
+
+	const instance = getOrgRedis({ org });
+	if (instance.status === "ready") return;
+
+	try {
+		await waitForRedisReady(
+			instance,
+			`org:${org.slug ?? org.id}`,
+			ORG_REDIS_WARMUP_TIMEOUT_MS,
+		);
+	} catch (error) {
+		logger.warn(
+			`[OrgRedis] org=${org.id}: warmup failed (continuing): ${
+				error instanceof Error ? error.message : String(error)
+			}`,
+		);
+	}
 };
 
 export const removeOrgRedis = ({ orgId }: { orgId: string }): void => {

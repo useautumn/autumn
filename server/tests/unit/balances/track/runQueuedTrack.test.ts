@@ -35,7 +35,7 @@ await mockModuleWithRestore(
 	}),
 );
 
-// CI has no CACHE_URL — the idempotency claim's getMiscRedis() would throw.
+// CI has no misc cache env — the idempotency claim's getMiscRedis() would throw.
 const fakeMiscRedis = {
 	status: "ready",
 	get: async () => null,

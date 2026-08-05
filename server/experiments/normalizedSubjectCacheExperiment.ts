@@ -399,7 +399,7 @@ const getBalancePayloads = ({
 };
 
 const main = async () => {
-	const redisClient = new Redis(process.env.CACHE_URL!);
+	const redisClient = new Redis(process.env.MISC_CACHE_DRAGONFLY_PUBLIC_URL!);
 	let originalSlowlogThreshold = "10000";
 
 	try {

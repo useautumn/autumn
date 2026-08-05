@@ -1,4 +1,5 @@
 import { logger } from "@/external/logtail/logtailUtils.js";
+import { resolveMiscMainUrl } from "@/external/redis/initUtils/redisConfig.js";
 import "dotenv/config";
 
 export const checkEnvVars = () => {
@@ -14,8 +15,10 @@ export const checkEnvVars = () => {
 		process.exit(1);
 	}
 
-	if (!process.env.CACHE_URL?.trim()) {
-		console.error("CACHE_URL is not set (the misc Redis cache is required)");
+	if (!resolveMiscMainUrl()) {
+		console.error(
+			"Misc Redis cache is not configured (set MISC_CACHE_DRAGONFLY_PUBLIC_URL)",
+		);
 		process.exit(1);
 	}
 

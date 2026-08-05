@@ -56,7 +56,7 @@ Set these in the process environment before running `bun dev:agent` and they wil
 | Service | Port | Notes |
 |---|---|---|
 | PostgreSQL | 5432 | Database: `autumn`, user: `postgres`, password: `postgres` |
-| Redis Stack | 6379 | Used for `CACHE_URL` and `CACHE_URL_US_EAST` (RedisJSON required) |
+| Redis Stack | 6379 | Used for `MISC_CACHE_DRAGONFLY_PUBLIC_URL` (RedisJSON required) |
 | ElasticMQ | 9324 | Local SQS replacement, queue: `autumn.fifo` |
 | ClickHouse | 8123 | Used for `TINYBIRD_CLICKHOUSE_URL` |
 | Server | 8080 | Autumn API server |

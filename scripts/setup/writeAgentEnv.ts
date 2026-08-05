@@ -56,8 +56,7 @@ ENCRYPTION_PASSWORD=${genUrlSafeBase64({ bytes: 64 })}
 
 # Local services
 DATABASE_URL=postgresql://postgres:postgres@localhost:5432/autumn
-CACHE_URL=redis://localhost:6379
-CACHE_URL_US_EAST=redis://localhost:6379
+MISC_CACHE_DRAGONFLY_PUBLIC_URL=redis://localhost:6379
 REDIS_URL=redis://localhost:6379
 
 # ElasticMQ (local SQS, per-agent isolated queue)
