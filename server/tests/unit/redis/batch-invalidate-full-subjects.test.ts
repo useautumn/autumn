@@ -1,14 +1,22 @@
 import { describe, expect, test } from "bun:test";
-import type { AppEnv } from "@autumn/shared";
+import type { AppEnv, Feature } from "@autumn/shared";
 import type { Redis } from "ioredis";
 import { batchInvalidateCachedFullSubjects } from "@/internal/customers/cache/fullSubject/actions/invalidate/batchInvalidateCachedFullSubjects.js";
+import { buildFullSubjectKey } from "@/internal/customers/cache/fullSubject/builders/buildFullSubjectKey.js";
+import { buildFullSubjectOrgEnvKey } from "@/internal/customers/cache/fullSubject/builders/buildFullSubjectOrgEnvKey.js";
 
 type RedisCalls = {
 	readKeys: string[];
 	writeOps: string[];
 };
 
-const createFakeRedis = (): { redis: Redis; calls: RedisCalls } => {
+const createFakeRedis = ({
+	status = "ready",
+	readFails = false,
+}: {
+	status?: string;
+	readFails?: boolean;
+} = {}): { redis: Redis; calls: RedisCalls } => {
 	const calls: RedisCalls = {
 		readKeys: [],
 		writeOps: [],
@@ -16,7 +24,7 @@ const createFakeRedis = (): { redis: Redis; calls: RedisCalls } => {
 	let pipelineCount = 0;
 
 	const redis = {
-		status: "ready",
+		status,
 		pipeline: () => {
 			const isReadPipeline = pipelineCount % 2 === 0;
 			pipelineCount++;
@@ -42,6 +50,7 @@ const createFakeRedis = (): { redis: Redis; calls: RedisCalls } => {
 				},
 				exec: async () => {
 					if (isReadPipeline) {
+						if (readFails) throw new Error("Command timed out");
 						calls.readKeys.push(...readKeys);
 						return readKeys.map(() => [
 							null,
@@ -125,6 +134,73 @@ describe("batchInvalidateCachedFullSubjects", () => {
 		expect(primary.calls.readKeys).toHaveLength(1);
 		expect(
 			primary.calls.writeOps.some((op) => op.includes("cus_primary")),
+		).toBe(true);
+	});
+
+	/**
+	 * A dedicated org Redis is created lazily on first use, so inside a fresh
+	 * trigger.dev batch-migration runner it is still "connecting" when finalize
+	 * invalidates. Dropping the invalidation there leaves every migrated
+	 * customer on that org reading a stale FullSubject until the 3-day TTL.
+	 */
+	test("still invalidates when the target Redis is not ready yet", async () => {
+		const connecting = createFakeRedis({ status: "connecting" });
+		const customer = {
+			orgId: "org_test",
+			env: "sandbox" as AppEnv,
+			customerId: "cus_cold_connection",
+		};
+
+		await batchInvalidateCachedFullSubjects({
+			customers: [customer],
+			featuresByOrgEnv: {
+				[buildFullSubjectOrgEnvKey({
+					orgId: customer.orgId,
+					env: customer.env,
+				})]: [{ id: "feature_metered" }] as Feature[],
+			},
+			getRedisTargetsForCustomer: () => [connecting.redis],
+		});
+
+		expect(connecting.calls.writeOps).toContain(
+			`unlink:${buildFullSubjectKey({
+				orgId: customer.orgId,
+				env: customer.env,
+				customerId: customer.customerId,
+			})}`,
+		);
+		expect(connecting.calls.writeOps.some((op) => op.startsWith("incr:"))).toBe(
+			true,
+		);
+		expect(
+			connecting.calls.writeOps.some((op) => op.includes("feature_metered")),
+		).toBe(true);
+	});
+
+	test("falls back to org features when the manifest read is unavailable", async () => {
+		const readBroken = createFakeRedis({ readFails: true });
+		const customer = {
+			orgId: "org_test",
+			env: "sandbox" as AppEnv,
+			customerId: "cus_read_broken",
+		};
+
+		await batchInvalidateCachedFullSubjects({
+			customers: [customer],
+			featuresByOrgEnv: {
+				[buildFullSubjectOrgEnvKey({
+					orgId: customer.orgId,
+					env: customer.env,
+				})]: [{ id: "feature_metered" }] as Feature[],
+			},
+			getRedisTargetsForCustomer: () => [readBroken.redis],
+		});
+
+		expect(
+			readBroken.calls.writeOps.some((op) => op.includes("cus_read_broken")),
+		).toBe(true);
+		expect(
+			readBroken.calls.writeOps.some((op) => op.includes("feature_metered")),
 		).toBe(true);
 	});
 });

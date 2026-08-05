@@ -5,6 +5,7 @@ import {
 	createDualLogger,
 	type Logger,
 } from "@/external/logtail/logtailUtils.js";
+import { warmOrgRedis } from "@/external/redis/orgRedisPool.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { createWorkerContext } from "@/queue/createWorkerContext.js";
 import { addTriggerToLogs } from "@/utils/logging/addContextToLogs.js";
@@ -45,6 +46,11 @@ export const createTriggerContext = async ({
 		);
 
 	ctx.insideTriggerTask = true;
+
+	// Only this org's dedicated connection — trigger runners are cold, and the
+	// pool creates it lazily, so the first cache op would otherwise race the
+	// handshake.
+	await warmOrgRedis({ org: ctx.org });
 
 	return { ctx, logger };
 };
