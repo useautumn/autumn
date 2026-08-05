@@ -1,7 +1,10 @@
-import { Scopes, StandardCursor } from "@autumn/shared";
+import {
+	CustomerListFiltersSchema,
+	Scopes,
+	StandardCursor,
+} from "@autumn/shared";
 import { z } from "zod/v4";
 import { createRoute } from "@/honoMiddlewares/routeHandler";
-import { CustomerListFiltersSchema } from "../customerListFilters";
 import { CusBatchService } from "../CusBatchService";
 
 export const handleGetFullCustomers = createRoute({

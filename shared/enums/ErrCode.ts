@@ -173,6 +173,9 @@ export const ErrCode = {
 	MigrationJobNotFound: "migration_job_not_found",
 	MigrationAlreadyInProgress: "migration_already_in_progress",
 
+	// Exports
+	CustomerExportInProgress: "customer_export_in_progress",
+
 	// Supabase
 	SupabaseNotFound: "supabase_not_found",
 	// Entities
