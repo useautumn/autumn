@@ -115,6 +115,36 @@ describe("stopHttpServer", () => {
 		expect(await shutdown).toBeTrue();
 	});
 
+	test("grants a final handler grace window before reporting forced exit", async () => {
+		let releaseHandler: () => void = () => undefined;
+		const handlerReleased = new Promise<void>((resolve) => {
+			releaseHandler = resolve;
+		});
+		const tracker = createHttpRequestTracker({
+			requestHandler: async () => {
+				await handlerReleased;
+				return new Response("done");
+			},
+		});
+		void tracker.requestHandler();
+		const server = {
+			close: () => server,
+			closeIdleConnections: mock(() => undefined),
+			closeAllConnections: mock(() => undefined),
+		} as unknown as http.Server;
+		const shutdown = stopHttpServer({
+			server,
+			shutdownTimeoutMs: 2,
+			activeRequestTimeoutMs: 2,
+			forcedRequestGraceMs: 25,
+			hasActiveRequests: tracker.hasActiveRequests,
+			waitForActiveRequests: tracker.waitForActiveRequests,
+		});
+		setTimeout(releaseHandler, 10);
+
+		expect(await shutdown).toBeTrue();
+	});
+
 	test("does not report a clean drain when a handler survives force-close", async () => {
 		const closeIdleConnections = mock(() => undefined);
 		const closeAllConnections = mock(() => undefined);

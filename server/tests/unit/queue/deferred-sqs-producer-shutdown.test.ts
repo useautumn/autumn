@@ -61,12 +61,16 @@ describe("deferred SQS producer shutdown", () => {
 			releaseSlowProducer = resolve;
 		});
 		let accumulatorShutdownStarted = false;
+		let sendBatchersFlushed = false;
 
 		const shutdown = shutdownSqsProducers({
 			producers: [
 				{ flush: async () => Promise.reject(producerFailure) },
 				{ flush: async () => slowProducerReleased },
 			],
+			flushSqsSendBatchersFn: async () => {
+				sendBatchersFlushed = true;
+			},
 			shutdownSqsSendBatchersFn: async () => {
 				accumulatorShutdownStarted = true;
 			},
@@ -74,9 +78,11 @@ describe("deferred SQS producer shutdown", () => {
 
 		await Bun.sleep(5);
 		expect(accumulatorShutdownStarted).toBeFalse();
+		expect(sendBatchersFlushed).toBeFalse();
 
 		releaseSlowProducer();
 		expect(await shutdown).toBe(producerFailure);
+		expect(sendBatchersFlushed).toBeTrue();
 		expect(accumulatorShutdownStarted).toBeTrue();
 	});
 

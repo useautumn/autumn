@@ -34,13 +34,15 @@ export const flushSqsProducers = async ({
 
 export const shutdownSqsProducers = async ({
 	producers = defaultProducers,
+	flushSqsSendBatchersFn = flushSqsSendBatchers,
 	shutdownSqsSendBatchersFn = shutdownSqsSendBatchers,
 }: {
 	producers?: DeferredSqsProducer[];
+	flushSqsSendBatchersFn?: () => Promise<void>;
 	shutdownSqsSendBatchersFn?: () => Promise<void>;
 } = {}): Promise<void> => {
 	try {
-		await flushSqsProducers({ producers });
+		await flushSqsProducers({ producers, flushSqsSendBatchersFn });
 	} finally {
 		await shutdownSqsSendBatchersFn();
 	}

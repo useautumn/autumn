@@ -40,12 +40,14 @@ export const stopHttpServer = async ({
 	waitForActiveRequests = async () => undefined,
 	shutdownTimeoutMs = 5000,
 	activeRequestTimeoutMs = shutdownTimeoutMs,
+	forcedRequestGraceMs = 0,
 }: {
 	server: http.Server;
 	hasActiveRequests?: () => boolean;
 	waitForActiveRequests?: () => Promise<void>;
 	shutdownTimeoutMs?: number;
 	activeRequestTimeoutMs?: number;
+	forcedRequestGraceMs?: number;
 }): Promise<boolean> => {
 	const forceClosed = await new Promise<boolean>((resolve, reject) => {
 		let forced = false;
@@ -79,7 +81,7 @@ export const stopHttpServer = async ({
 	return new Promise<boolean>((resolve, reject) => {
 		const activeRequestTimeout = setTimeout(
 			() => resolve(false),
-			activeRequestTimeoutMs,
+			activeRequestTimeoutMs + forcedRequestGraceMs,
 		);
 		activeRequestTimeout.unref?.();
 		void waitForActiveRequests().then(

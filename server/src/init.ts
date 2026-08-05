@@ -78,7 +78,8 @@ let shuttingDown = false;
 let httpServer: http.Server | undefined;
 let hasActiveHttpRequests: (() => boolean) | undefined;
 let waitForActiveHttpRequests: (() => Promise<void>) | undefined;
-const FORCED_SQS_FLUSH_TIMEOUT_MS = 5_000;
+const FORCED_REQUEST_GRACE_MS = 4_000;
+const FINAL_SQS_FLUSH_TIMEOUT_MS = 1_000;
 
 const init = async ({ startupStartedAt }: { startupStartedAt: number }) => {
 	logger.info(getRedactedDatabaseUrls(), "DB URLs");
@@ -206,14 +207,15 @@ async function gracefulShutdown() {
 				server,
 				hasActiveRequests: hasActiveHttpRequests,
 				waitForActiveRequests: waitForActiveHttpRequests,
+				forcedRequestGraceMs: FORCED_REQUEST_GRACE_MS,
 			});
 			if (!requestsDrained) {
 				console.warn(
-					"HTTP shutdown deadline reached with an active handler; flushing SQS producers before forced exit",
+					"HTTP hard shutdown deadline reached with an active handler; flushing completed SQS work before forced exit",
 				);
 				try {
 					await withTimeout({
-						timeoutMs: FORCED_SQS_FLUSH_TIMEOUT_MS,
+						timeoutMs: FINAL_SQS_FLUSH_TIMEOUT_MS,
 						fn: flushSqsProducers,
 						timeoutMessage: "Forced-exit SQS producer flush timed out",
 					});
