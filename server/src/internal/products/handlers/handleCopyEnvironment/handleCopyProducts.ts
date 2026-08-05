@@ -13,6 +13,11 @@ import { copyPlanLicenseLinks } from "@/internal/licenses/actions/links/copyPlan
 import { createProduct } from "../../../product/actions/createProduct.js";
 import { updateProduct } from "../../../product/actions/updateProduct.js";
 import { ProductService } from "../../ProductService.js";
+import {
+	getTargetBaseInternalIds,
+	resolveSourceBasePlanIds,
+	withRequiredBases,
+} from "./resolveVariantBaseLinks.js";
 
 const conformProductToSchema = (
 	product: ProductV2,
@@ -79,9 +84,21 @@ export const handleCopyProducts = async ({
 
 	// undefined => copy every product (original behavior); a list (incl. empty)
 	// => only those ids.
-	const fromProducts = productIds
+	const requestedFromProducts = productIds
 		? fromProductsAll.filter((p) => productIds.includes(p.id))
 		: fromProductsAll;
+
+	const basePlanIdByVariantId = await resolveSourceBasePlanIds({
+		db,
+		fromProducts: requestedFromProducts,
+		fromProductsAll,
+	});
+	const fromProducts = withRequiredBases({
+		fromProducts: requestedFromProducts,
+		fromProductsAll,
+		toProducts,
+		basePlanIdByVariantId,
+	});
 
 	const toProductsV2 = toProducts.map((p) =>
 		mapToProductV2({ product: p, features: toFeatures }),
@@ -113,7 +130,15 @@ export const handleCopyProducts = async ({
 		env: toEnv,
 	};
 
-	const operations = fromProductsV2.map((fromProductV2) => {
+	const copyOneProduct = ({
+		fromProductV2,
+		basePlanId,
+		targetBaseInternalId,
+	}: {
+		fromProductV2: ProductV2;
+		basePlanId?: string;
+		targetBaseInternalId?: string;
+	}) => {
 		const toProductV2 = toProductsV2.find((p) => p.id === fromProductV2.id);
 
 		const conformedProduct = conformProductToSchema(fromProductV2);
@@ -123,17 +148,53 @@ export const handleCopyProducts = async ({
 				ctx: newContext,
 				productId: fromProductV2.id,
 				query: { disable_version: true },
-				updates: conformedProduct,
-			});
-		} else {
-			return createProduct({
-				ctx: newContext,
-				data: conformedProduct,
+				updates: basePlanId
+					? { ...conformedProduct, base_plan_id: basePlanId }
+					: conformedProduct,
 			});
 		}
+		return createProduct({
+			ctx: newContext,
+			data: targetBaseInternalId
+				? {
+						...conformedProduct,
+						base_internal_product_id: targetBaseInternalId,
+					}
+				: conformedProduct,
+		});
+	};
+
+	// Bases first: a variant's link resolves against the target env, so its base
+	// must exist there before the variant is copied.
+	const baseProductsV2 = fromProductsV2.filter(
+		(p) => !basePlanIdByVariantId.has(p.id),
+	);
+	const variantProductsV2 = fromProductsV2.filter((p) =>
+		basePlanIdByVariantId.has(p.id),
+	);
+
+	await Promise.all(
+		baseProductsV2.map((fromProductV2) => copyOneProduct({ fromProductV2 })),
+	);
+
+	const targetBaseInternalIds = await getTargetBaseInternalIds({
+		db,
+		toOrgId: toOrg.id,
+		toEnv,
+		basePlanIds: [...new Set(basePlanIdByVariantId.values())],
 	});
 
-	await Promise.all(operations);
+	await Promise.all(
+		variantProductsV2.map((fromProductV2) => {
+			const basePlanId = basePlanIdByVariantId.get(fromProductV2.id) as string;
+			const targetBaseInternalId = targetBaseInternalIds.get(basePlanId);
+			return copyOneProduct({
+				fromProductV2,
+				basePlanId: targetBaseInternalId ? basePlanId : undefined,
+				targetBaseInternalId,
+			});
+		}),
+	);
 
 	// inIds bypasses the products cache — the copy ops' invalidations land
 	// async, so a plain listFull can still see the pre-copy (empty) snapshot.
