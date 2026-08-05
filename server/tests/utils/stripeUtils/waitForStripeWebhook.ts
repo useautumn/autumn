@@ -47,7 +47,7 @@ export const waitForStripeWebhook = async ({
 }): Promise<void> => {
 	const startedAt = Date.now();
 	const createdGte = Math.floor((since ?? startedAt - 10 * 60 * 1000) / 1000);
-	let replayedCount: number | undefined;
+	let replayReport: string | undefined;
 
 	while (true) {
 		if (await until()) return;
@@ -59,14 +59,14 @@ export const waitForStripeWebhook = async ({
 			// (handler ignored it) are completely different diagnoses.
 			throw new Error(
 				`Timed out after ${timeoutMs}ms waiting for ${types.join(", ")}` +
-					(replayedCount === undefined
+					(replayReport === undefined
 						? " (no replay attempted)"
-						: ` (replayed ${replayedCount} matching event(s) from Stripe, still no effect)`),
+						: ` (replay: ${replayReport} — still no effect)`),
 			);
 		}
 
-		if (replayedCount === undefined && elapsed >= replayAfterMs) {
-			replayedCount = await replayStripeEvents({
+		if (replayReport === undefined && elapsed >= replayAfterMs) {
+			replayReport = await replayStripeEvents({
 				stripeCli,
 				env,
 				types,
@@ -88,7 +88,7 @@ const replayStripeEvents = async ({
 	env: AppEnv;
 	types: string[];
 	createdGte: number;
-}): Promise<number> => {
+}): Promise<string> => {
 	const events = await stripeCli.events.list({
 		types,
 		created: { gte: createdGte },
@@ -98,6 +98,7 @@ const replayStripeEvents = async ({
 		`[waitForStripeWebhook] stripe had ${events.data.length} event(s) matching ${types.join(", ")}`,
 	);
 
+	const statuses: string[] = [];
 	for (const event of events.data.reverse()) {
 		const response = await fetch(
 			// NO org_id: with it, getStripeWebhookSecret takes the DB path and tw
@@ -110,9 +111,9 @@ const replayStripeEvents = async ({
 				body: JSON.stringify(event),
 			},
 		);
-		console.log(
-			`[waitForStripeWebhook] replayed ${event.type} (${event.id}) → ${response.status}`,
-		);
+		statuses.push(`${event.id}→${response.status}`);
 	}
-	return events.data.length;
+	// Statuses travel in the caller's error because µVM stdout never reaches the
+	// orchestrator; a 200 that changes nothing is a very different bug from a 4xx.
+	return `${events.data.length} event(s) [${statuses.join(", ")}]`;
 };
