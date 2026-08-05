@@ -80,7 +80,11 @@ test.concurrent(
 			await autumnV1.customers.get<ApiCustomerV3>(customerId);
 		expect(customerBefore.features?.[TestFeature.Messages]).toBeUndefined();
 
-		await completeInvoiceCheckout({ url: res.checkout_url });
+		await completeInvoiceCheckout({
+			url: res.checkout_url,
+			ctx,
+			customerId,
+		});
 
 		// The attach rides on invoice.paid, so wait on the attach itself — the
 		// invoice reaching "paid" is set by a different event.
@@ -201,7 +205,11 @@ test.concurrent(
 			env: ctx.env,
 		});
 
-		await completeInvoiceCheckout({ url: res.checkout_url });
+		await completeInvoiceCheckout({
+			url: res.checkout_url,
+			ctx,
+			customerId,
+		});
 
 		await waitForCustomerInvoiceStatus({
 			autumn: autumnV1,
@@ -343,7 +351,11 @@ test.concurrent(
 
 		expect(res.checkout_url).toBeDefined();
 
-		await completeInvoiceCheckout({ url: res.checkout_url });
+		await completeInvoiceCheckout({
+			url: res.checkout_url,
+			ctx,
+			customerId,
+		});
 
 		await expectCustomerProducts({
 			autumn: autumnV1,

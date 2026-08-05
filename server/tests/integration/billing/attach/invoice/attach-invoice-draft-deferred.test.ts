@@ -21,11 +21,11 @@ import { expectCustomerFeatureCorrect } from "@tests/integration/billing/utils/e
 import { expectCustomerInvoiceCorrect } from "@tests/integration/billing/utils/expectCustomerInvoiceCorrect";
 import { expectCustomerProducts } from "@tests/integration/billing/utils/expectCustomerProductCorrect";
 import { expectProductTrialing } from "@tests/integration/billing/utils/expectCustomerProductTrialing";
-import { WEBHOOK_SETTLE_TIMEOUT_MS } from "@tests/utils/pollableCustomerExpect";
 import { TestFeature } from "@tests/setup/v2Features";
 import { completeInvoiceCheckoutV2 as completeInvoiceCheckout } from "@tests/utils/browserPool/completeInvoiceCheckoutV2";
 import { items } from "@tests/utils/fixtures/items";
 import { products } from "@tests/utils/fixtures/products";
+import { WEBHOOK_SETTLE_TIMEOUT_MS } from "@tests/utils/pollableCustomerExpect";
 import ctx from "@tests/utils/testInitUtils/createTestContext";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
@@ -121,6 +121,8 @@ test.concurrent(
 		// Complete payment
 		await completeInvoiceCheckout({
 			url: finalizedInvoice.hosted_invoice_url!,
+			ctx,
+			customerId,
 		});
 
 		// After payment - product should be active
@@ -251,6 +253,8 @@ test.concurrent(
 		// Complete payment
 		await completeInvoiceCheckout({
 			url: result.invoice!.hosted_invoice_url!,
+			ctx,
+			customerId,
 		});
 
 		const paidInvoice = await ctx.stripeCli.invoices.retrieve(
@@ -382,6 +386,8 @@ test.concurrent(
 		// Complete payment
 		await completeInvoiceCheckout({
 			url: finalizedInvoice.hosted_invoice_url!,
+			ctx,
+			customerId,
 		});
 
 		// After payment - product should be active
@@ -496,6 +502,8 @@ test.concurrent(
 		// Complete payment
 		await completeInvoiceCheckout({
 			url: finalizedInvoice.hosted_invoice_url!,
+			ctx,
+			customerId,
 		});
 
 		// After payment - product active and credits granted

@@ -73,6 +73,8 @@ test.concurrent(
 
 		await completeInvoiceCheckout({
 			url: res.checkout_url,
+			ctx,
+			customerId,
 		});
 
 		await expectCustomerProducts({
@@ -334,7 +336,11 @@ test.concurrent(
 		expect(res.checkout_url).toContain("invoice.stripe.com");
 		expect(res.message).toBe("Payment action required");
 
-		await completeInvoiceCheckout({ url: res.checkout_url });
+		await completeInvoiceCheckout({
+			url: res.checkout_url,
+			ctx,
+			customerId,
+		});
 
 		// Product should be active after completing invoice checkout
 		await expectCustomerProducts({
@@ -406,7 +412,11 @@ test.concurrent(
 			await autumnV1.customers.get<ApiCustomerV3>(customerId);
 		expect(customerBefore.features?.[TestFeature.Messages]).toBeUndefined();
 
-		await completeInvoiceCheckout({ url: res.checkout_url });
+		await completeInvoiceCheckout({
+			url: res.checkout_url,
+			ctx,
+			customerId,
+		});
 
 		// Product should be active after completing invoice checkout
 		await expectCustomerProducts({
