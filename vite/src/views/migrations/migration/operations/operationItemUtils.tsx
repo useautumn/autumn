@@ -1,18 +1,18 @@
 import type { Feature, ProductItem } from "@autumn/shared";
 import { BillingInterval, EntInterval, UsageModel } from "@autumn/shared";
 import {
+	DropdownMenu,
+	DropdownMenuContent,
+	DropdownMenuItem,
+	DropdownMenuTrigger,
+} from "@autumn/ui";
+import {
 	BoxArrowDownIcon,
 	CaretDownIcon,
 	MoneyWavyIcon,
 	WalletIcon,
 } from "@phosphor-icons/react";
 import type React from "react";
-import {
-	DropdownMenu,
-	DropdownMenuContent,
-	DropdownMenuItem,
-	DropdownMenuTrigger,
-} from "@autumn/ui";
 import { keyToTitle } from "@/utils/formatUtils/formatTextUtils";
 
 const LABEL_OVERRIDES: Record<string, string> = {

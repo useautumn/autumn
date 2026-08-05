@@ -94,15 +94,66 @@ export const executePooledBalancePlan = async ({
 		}
 
 		if (pooledBalancePlan.insertPoolContributions.length > 0) {
-			await tx
+			// A source entitlement holds at most one contribution. If a transition
+			// mis-classifies an already-contributing product as incoming, reconcile
+			// onto the existing row rather than failing the whole request.
+			const writtenContributions = await tx
 				.insert(pooledBalanceContributions)
-				.values(pooledBalancePlan.insertPoolContributions);
+				.values(pooledBalancePlan.insertPoolContributions)
+				.onConflictDoUpdate({
+					target: pooledBalanceContributions.source_customer_entitlement_id,
+					set: {
+						pooled_balance_id: sql`excluded.pooled_balance_id`,
+						source_customer_product_id: sql`excluded.source_customer_product_id`,
+						current_contribution: sql`excluded.current_contribution`,
+						next_cycle_contribution: sql`excluded.next_cycle_contribution`,
+						effective_at: sql`excluded.effective_at`,
+						updated_at: sql`excluded.updated_at`,
+					},
+				})
+				.returning({
+					id: pooledBalanceContributions.id,
+					sourceCustomerEntitlementId:
+						pooledBalanceContributions.source_customer_entitlement_id,
+				});
 
+			const plannedContributionIds = new Set(
+				pooledBalancePlan.insertPoolContributions.map(
+					(contribution) => contribution.id,
+				),
+			);
+			const reconciled = writtenContributions.filter(
+				(row) => !plannedContributionIds.has(row.id),
+			);
+			if (reconciled.length > 0) {
+				ctx.logger.warn(
+					`[executePooledBalancePlan] Reconciled ${reconciled.length} pooled contribution(s) onto existing rows — a transition treated an already-contributing source as incoming`,
+					{
+						data: {
+							sourceCustomerEntitlementIds: reconciled.map(
+								(row) => row.sourceCustomerEntitlementId,
+							),
+						},
+					},
+				);
+			}
+
+			// Point each source at the row that actually exists, which is the
+			// pre-existing contribution whenever the conflict path fired.
+			const contributionIdBySource = new Map(
+				writtenContributions.map((row) => [
+					row.sourceCustomerEntitlementId,
+					row.id,
+				]),
+			);
 			for (const contribution of pooledBalancePlan.insertPoolContributions) {
 				await tx
 					.update(customerEntitlements)
 					.set({
-						pooled_contribution_id: contribution.id,
+						pooled_contribution_id:
+							contributionIdBySource.get(
+								contribution.source_customer_entitlement_id,
+							) ?? contribution.id,
 						pooled_balance_id: null,
 						balance: 0,
 						adjustment: 0,

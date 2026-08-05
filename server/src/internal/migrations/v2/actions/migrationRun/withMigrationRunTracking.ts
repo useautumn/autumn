@@ -5,16 +5,25 @@ import {
 	clearMigrationCancelRequested,
 	isMigrationCancelRequested,
 } from "../../run/utils/migrationCancelToken.js";
+import { settleLeftoverClaims } from "./settleLeftoverClaims.js";
 
+/** Owns the run lifecycle: status transitions AND their logs. `logData` adds
+ * caller context; an object-shaped run result is spread into the final log. */
 export const withMigrationRunTracking = async <T>({
 	ctx,
 	migrationRunId,
+	logData,
 	run,
 }: {
 	ctx: AutumnContext;
 	migrationRunId: string;
+	logData?: Record<string, unknown>;
 	run: () => Promise<T>;
 }): Promise<T> => {
+	ctx.logger.info("migration-run: started", {
+		data: { migrationRunId, ...logData },
+	});
+
 	await migrationRunRepo.update({
 		ctx,
 		internalId: migrationRunId,
@@ -46,9 +55,22 @@ export const withMigrationRunTracking = async <T>({
 						finished_at: Date.now(),
 					},
 		});
+		await settleLeftoverClaims({ ctx, migrationRunId });
 		if (cancelRequested) {
 			await clearMigrationCancelRequested({ migrationRunId });
 		}
+
+		ctx.logger.info(
+			`migration-run: ${cancelRequested ? "canceled" : "succeeded"}`,
+			{
+				data: {
+					migrationRunId,
+					...logData,
+					...(result !== null && typeof result === "object" ? result : {}),
+				},
+			},
+		);
+
 		return result;
 	} catch (error) {
 		await migrationRunRepo.update({
@@ -58,6 +80,15 @@ export const withMigrationRunTracking = async <T>({
 				status: MigrationRunStatus.Failed,
 				error_message: error instanceof Error ? error.message : String(error),
 				finished_at: Date.now(),
+			},
+		});
+		await settleLeftoverClaims({ ctx, migrationRunId });
+
+		ctx.logger.error("migration-run: failed", {
+			data: {
+				migrationRunId,
+				...logData,
+				error: error instanceof Error ? error.message : String(error),
 			},
 		});
 		throw error;

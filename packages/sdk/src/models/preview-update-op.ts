@@ -340,6 +340,10 @@ export type PreviewUpdateItemPlanItem = {
    */
   unlimited?: boolean | undefined;
   /**
+   * Whether entity-level grants contribute to a shared customer balance.
+   */
+  pooled?: boolean | undefined;
+  /**
    * Reset configuration for consumable features. Omit for non-consumable features like seats.
    */
   reset?: PreviewUpdateItemReset | undefined;
@@ -612,6 +616,10 @@ export type PreviewUpdateAddItemPlanItem = {
    * If true, customer has unlimited access to this feature.
    */
   unlimited?: boolean | undefined;
+  /**
+   * Whether entity-level grants contribute to a shared customer balance.
+   */
+  pooled?: boolean | undefined;
   /**
    * Reset configuration for consumable features. Omit for non-consumable features like seats.
    */
@@ -1265,6 +1273,10 @@ export type PreviewUpdateUpsertLicensePlanItem = {
    * If true, customer has unlimited access to this feature.
    */
   unlimited?: boolean | undefined;
+  /**
+   * Whether entity-level grants contribute to a shared customer balance.
+   */
+  pooled?: boolean | undefined;
   /**
    * Reset configuration for consumable features. Omit for non-consumable features like seats.
    */
@@ -2386,6 +2398,7 @@ export type PreviewUpdateItemPlanItem$Outbound = {
   feature_id: string;
   included?: number | undefined;
   unlimited?: boolean | undefined;
+  pooled: boolean;
   reset?: PreviewUpdateItemReset$Outbound | undefined;
   price?: PreviewUpdateItemPrice$Outbound | undefined;
   proration?: PreviewUpdateItemProration$Outbound | undefined;
@@ -2401,6 +2414,7 @@ export const PreviewUpdateItemPlanItem$outboundSchema: z.ZodMiniType<
     featureId: z.string(),
     included: z.optional(z.number()),
     unlimited: z.optional(z.boolean()),
+    pooled: z._default(z.boolean(), false),
     reset: z.optional(z.lazy(() => PreviewUpdateItemReset$outboundSchema)),
     price: z.optional(z.lazy(() => PreviewUpdateItemPrice$outboundSchema)),
     proration: z.optional(
@@ -2741,6 +2755,7 @@ export type PreviewUpdateAddItemPlanItem$Outbound = {
   feature_id: string;
   included?: number | undefined;
   unlimited?: boolean | undefined;
+  pooled: boolean;
   reset?: PreviewUpdateAddItemReset$Outbound | undefined;
   price?: PreviewUpdateAddItemPrice$Outbound | undefined;
   proration?: PreviewUpdateAddItemProration$Outbound | undefined;
@@ -2756,6 +2771,7 @@ export const PreviewUpdateAddItemPlanItem$outboundSchema: z.ZodMiniType<
     featureId: z.string(),
     included: z.optional(z.number()),
     unlimited: z.optional(z.boolean()),
+    pooled: z._default(z.boolean(), false),
     reset: z.optional(z.lazy(() => PreviewUpdateAddItemReset$outboundSchema)),
     price: z.optional(z.lazy(() => PreviewUpdateAddItemPrice$outboundSchema)),
     proration: z.optional(
@@ -3591,6 +3607,7 @@ export type PreviewUpdateUpsertLicensePlanItem$Outbound = {
   feature_id: string;
   included?: number | undefined;
   unlimited?: boolean | undefined;
+  pooled: boolean;
   reset?: PreviewUpdateUpsertLicenseReset$Outbound | undefined;
   price?: PreviewUpdateUpsertLicensePrice$Outbound | undefined;
   proration?: PreviewUpdateUpsertLicenseProration$Outbound | undefined;
@@ -3606,6 +3623,7 @@ export const PreviewUpdateUpsertLicensePlanItem$outboundSchema: z.ZodMiniType<
     featureId: z.string(),
     included: z.optional(z.number()),
     unlimited: z.optional(z.boolean()),
+    pooled: z._default(z.boolean(), false),
     reset: z.optional(
       z.lazy(() => PreviewUpdateUpsertLicenseReset$outboundSchema),
     ),

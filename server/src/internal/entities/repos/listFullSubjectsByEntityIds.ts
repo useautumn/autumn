@@ -7,6 +7,7 @@ import {
 import { sql } from "drizzle-orm";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { getFullSubjectRowsQuery } from "@/internal/customers/repos/getFullSubject/getFullSubjectRowsQuery.js";
+import { unpackSubjectEnvelope } from "@/internal/customers/repos/getFullSubject/unpackSubjectEnvelope.js";
 import { resultToFullSubject } from "@/internal/customers/repos/getFullSubject/index.js";
 import { hydrateEntityRowsWithCustomerData } from "./hydrateEntityRowsWithCustomerData.js";
 
@@ -65,7 +66,7 @@ export const listFullSubjectsByEntityIds = async ({
 	);
 	const mergedRows = await hydrateEntityRowsWithCustomerData({
 		ctx,
-		entityRows: rows as unknown as SubjectQueryRow[],
+		entityRows: unpackSubjectEnvelope({ rows }),
 		inStatuses,
 	});
 

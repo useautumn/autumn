@@ -16,6 +16,8 @@ export * from "./create-entity-op.js";
 export * from "./create-feature-op.js";
 export * from "./create-plan-op.js";
 export * from "./create-referral-code-op.js";
+export * from "./create-referral-program-op.js";
+export * from "./create-reward-op.js";
 export * from "./create-schedule-op.js";
 export * from "./customer-data.js";
 export * from "./customer-expand.js";

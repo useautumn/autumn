@@ -338,6 +338,10 @@ export type SetupPaymentItemPlanItem = {
    */
   unlimited?: boolean | undefined;
   /**
+   * Whether entity-level grants contribute to a shared customer balance.
+   */
+  pooled?: boolean | undefined;
+  /**
    * Reset configuration for consumable features. Omit for non-consumable features like seats.
    */
   reset?: SetupPaymentItemReset | undefined;
@@ -610,6 +614,10 @@ export type SetupPaymentAddItemPlanItem = {
    * If true, customer has unlimited access to this feature.
    */
   unlimited?: boolean | undefined;
+  /**
+   * Whether entity-level grants contribute to a shared customer balance.
+   */
+  pooled?: boolean | undefined;
   /**
    * Reset configuration for consumable features. Omit for non-consumable features like seats.
    */
@@ -1263,6 +1271,10 @@ export type SetupPaymentUpsertLicensePlanItem = {
    * If true, customer has unlimited access to this feature.
    */
   unlimited?: boolean | undefined;
+  /**
+   * Whether entity-level grants contribute to a shared customer balance.
+   */
+  pooled?: boolean | undefined;
   /**
    * Reset configuration for consumable features. Omit for non-consumable features like seats.
    */
@@ -2009,6 +2021,7 @@ export type SetupPaymentItemPlanItem$Outbound = {
   feature_id: string;
   included?: number | undefined;
   unlimited?: boolean | undefined;
+  pooled: boolean;
   reset?: SetupPaymentItemReset$Outbound | undefined;
   price?: SetupPaymentItemPrice$Outbound | undefined;
   proration?: SetupPaymentItemProration$Outbound | undefined;
@@ -2024,6 +2037,7 @@ export const SetupPaymentItemPlanItem$outboundSchema: z.ZodMiniType<
     featureId: z.string(),
     included: z.optional(z.number()),
     unlimited: z.optional(z.boolean()),
+    pooled: z._default(z.boolean(), false),
     reset: z.optional(z.lazy(() => SetupPaymentItemReset$outboundSchema)),
     price: z.optional(z.lazy(() => SetupPaymentItemPrice$outboundSchema)),
     proration: z.optional(
@@ -2363,6 +2377,7 @@ export type SetupPaymentAddItemPlanItem$Outbound = {
   feature_id: string;
   included?: number | undefined;
   unlimited?: boolean | undefined;
+  pooled: boolean;
   reset?: SetupPaymentAddItemReset$Outbound | undefined;
   price?: SetupPaymentAddItemPrice$Outbound | undefined;
   proration?: SetupPaymentAddItemProration$Outbound | undefined;
@@ -2378,6 +2393,7 @@ export const SetupPaymentAddItemPlanItem$outboundSchema: z.ZodMiniType<
     featureId: z.string(),
     included: z.optional(z.number()),
     unlimited: z.optional(z.boolean()),
+    pooled: z._default(z.boolean(), false),
     reset: z.optional(z.lazy(() => SetupPaymentAddItemReset$outboundSchema)),
     price: z.optional(z.lazy(() => SetupPaymentAddItemPrice$outboundSchema)),
     proration: z.optional(
@@ -3208,6 +3224,7 @@ export type SetupPaymentUpsertLicensePlanItem$Outbound = {
   feature_id: string;
   included?: number | undefined;
   unlimited?: boolean | undefined;
+  pooled: boolean;
   reset?: SetupPaymentUpsertLicenseReset$Outbound | undefined;
   price?: SetupPaymentUpsertLicensePrice$Outbound | undefined;
   proration?: SetupPaymentUpsertLicenseProration$Outbound | undefined;
@@ -3223,6 +3240,7 @@ export const SetupPaymentUpsertLicensePlanItem$outboundSchema: z.ZodMiniType<
     featureId: z.string(),
     included: z.optional(z.number()),
     unlimited: z.optional(z.boolean()),
+    pooled: z._default(z.boolean(), false),
     reset: z.optional(
       z.lazy(() => SetupPaymentUpsertLicenseReset$outboundSchema),
     ),

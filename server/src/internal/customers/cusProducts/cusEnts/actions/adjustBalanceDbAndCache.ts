@@ -1,7 +1,6 @@
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { CusEntService } from "../CusEntitlementService.js";
 import { adjustSubjectBalanceCache } from "./cache/adjustSubjectBalanceCache.js";
-import { incrementCachedCusEntBalance } from "./cache/incrementCachedCusEntBalance.js";
 
 /**
  * Adjusts a cusEnt balance in both Postgres and the Redis FullCustomer cache.
@@ -39,16 +38,13 @@ export const adjustBalanceDbAndCache = async ({
 
 	const updatedCustomerEntitlement = updatedRows[0];
 
-	await Promise.all([
-		incrementCachedCusEntBalance({ ctx, customerId, cusEntId, delta }),
-		adjustSubjectBalanceCache({
-			ctx,
-			customerId,
-			featureId,
-			customerEntitlementId: cusEntId,
-			delta,
-		}),
-	]);
+	await adjustSubjectBalanceCache({
+		ctx,
+		customerId,
+		featureId,
+		customerEntitlementId: cusEntId,
+		delta,
+	});
 
 	return updatedCustomerEntitlement;
 };

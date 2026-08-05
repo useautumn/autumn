@@ -37,11 +37,13 @@ export const getResettableCustomerEntitlements = ({
 		) {
 			continue;
 		}
+		// Subscription pools reset here too — invoice.created is a redundant
+		// fast path, guarded against double-apply by the reset CAS.
 		if (
 			isSyntheticPooledBalanceCustomerEntitlement({
 				customerEntitlement: cusEnt,
 			}) &&
-			cusEnt.pooled_balance?.reset_mode !== PooledBalanceResetMode.Lazy
+			cusEnt.pooled_balance?.reset_mode === PooledBalanceResetMode.Lifetime
 		) {
 			continue;
 		}

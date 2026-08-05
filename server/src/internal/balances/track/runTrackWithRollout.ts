@@ -1,11 +1,17 @@
-import type { ApiVersion, TrackParams, TrackResponseV3 } from "@autumn/shared";
+import {
+	type ApiVersion,
+	RouteGroup,
+	type TrackParams,
+	type TrackResponseV3,
+} from "@autumn/shared";
 import { withRedisFailOpen } from "@/external/redis/utils/withRedisFailOpen.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
+import { getTrackBodyIdempotencyKey } from "@/internal/balances/idempotency/trackBodyIdempotencyKey.js";
 import { isFullSubjectGateRejection } from "@/internal/customers/repos/getFullSubject/getFullSubjectGate.js";
+import { withIdempotencyKey } from "@/internal/misc/idempotency/withIdempotencyKey.js";
 import { isFullSubjectRolloutEnabled } from "@/internal/misc/rollouts/fullSubjectRolloutUtils.js";
 import type { FeatureDeduction } from "../utils/types/featureDeduction.js";
 import { queueTrack } from "./utils/queueTrack.js";
-import { withTrackBodyIdempotency } from "./utils/withTrackBodyIdempotency.js";
 import { runTrackV3 } from "./v3/runTrackV3.js";
 
 const TRACK_V3_ENABLED = true;
@@ -24,10 +30,13 @@ export const runTrackWithRollout = async ({
 	featureDeductions: FeatureDeduction[];
 	apiVersion?: ApiVersion;
 }): Promise<TrackResponseV3> => {
-	return withTrackBodyIdempotency({
+	// The body key is claimed at accept time and KEPT — even when the track is
+	// queued for replay, the claim already happened, so the worker skips it
+	// (queueTrack marks the message validateTrackBodyIdempotencyKey: false).
+	return withIdempotencyKey({
 		ctx,
-		body,
-		releaseOnSuccess: () => ctx.extraLogs?.trackQueuedForReplay === true,
+		idempotencyKey: getTrackBodyIdempotencyKey({ body }),
+		routeGroup: RouteGroup.Balances,
 		run: async () => {
 			if (ctx.orgRateLimitDegraded) {
 				const queuedResponse = await queueTrack({ ctx, body });

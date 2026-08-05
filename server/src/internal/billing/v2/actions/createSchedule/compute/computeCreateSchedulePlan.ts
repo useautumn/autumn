@@ -1,7 +1,6 @@
 import {
 	type AutumnBillingPlan,
 	type CreateScheduleBillingContext,
-	isCustomerProductMain,
 	isFreeProduct,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
@@ -10,9 +9,9 @@ import { finalizeLineItems } from "@/internal/billing/v2/compute/finalize/finali
 import { computePooledBalanceTransitionPlan } from "@/internal/billing/v2/pooledBalances/compute/computePooledBalanceTransitionPlan";
 import { cusProductsToOneOffPrepaidCarryOvers } from "@/internal/billing/v2/utils/handleOneOffPrepaidCarryOvers/cusProductToOneOffPrepaidCarryOvers";
 import {
-	addPreservedAddOnsToSchedulePhases,
-	billingContextToRecurringAndScheduled,
-} from "../utils/billingContextToRecurringAndScheduled";
+	addCustomerProductIdsToSchedulePhases,
+	resolveCreateScheduleRecurringProducts,
+} from "../utils/resolveCreateScheduleRecurringProducts";
 import { computeImmediatePhaseCustomerProducts } from "./computeImmediatePhaseCustomerProducts";
 import { computeScheduledCustomerProducts } from "./computeScheduledCustomerProducts";
 
@@ -36,12 +35,10 @@ export const computeCreateSchedulePlan = ({
 }): CreateSchedulePlanResult => {
 	const nextPhaseStartsAt = billingContext.futurePhases[0]?.starts_at;
 	const {
-		recurringActive: currentRecurringCustomerProducts,
+		recurringOutgoing: outgoingCustomerProducts,
+		preservedCustomerProductIdsByPhase,
 		recurringScheduled: existingScheduledCustomerProducts,
-	} = billingContextToRecurringAndScheduled({ billingContext });
-	const outgoingCustomerProducts = billingContext.preserveAddOns
-		? currentRecurringCustomerProducts.filter(isCustomerProductMain)
-		: currentRecurringCustomerProducts;
+	} = resolveCreateScheduleRecurringProducts({ billingContext });
 
 	const immediate = computeImmediatePhaseCustomerProducts({
 		ctx,
@@ -130,9 +127,9 @@ export const computeCreateSchedulePlan = ({
 
 	return {
 		autumnBillingPlan,
-		phases: addPreservedAddOnsToSchedulePhases({
-			billingContext,
+		phases: addCustomerProductIdsToSchedulePhases({
 			phases: [immediatePhase, ...scheduled.scheduledPhases],
+			customerProductIdsByPhase: preservedCustomerProductIdsByPhase,
 		}),
 	};
 };

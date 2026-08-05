@@ -512,6 +512,8 @@ class SetupPaymentItemPlanItemTypedDict(TypedDict):
     r"""Number of free units included. Balance resets to this each interval for consumable features."""
     unlimited: NotRequired[bool]
     r"""If true, customer has unlimited access to this feature."""
+    pooled: NotRequired[bool]
+    r"""Whether entity-level grants contribute to a shared customer balance."""
     reset: NotRequired[SetupPaymentItemResetTypedDict]
     r"""Reset configuration for consumable features. Omit for non-consumable features like seats."""
     price: NotRequired[SetupPaymentItemPriceTypedDict]
@@ -534,6 +536,9 @@ class SetupPaymentItemPlanItem(BaseModel):
     unlimited: Optional[bool] = None
     r"""If true, customer has unlimited access to this feature."""
 
+    pooled: Optional[bool] = False
+    r"""Whether entity-level grants contribute to a shared customer balance."""
+
     reset: Optional[SetupPaymentItemReset] = None
     r"""Reset configuration for consumable features. Omit for non-consumable features like seats."""
 
@@ -549,7 +554,15 @@ class SetupPaymentItemPlanItem(BaseModel):
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
         optional_fields = set(
-            ["included", "unlimited", "reset", "price", "proration", "rollover"]
+            [
+                "included",
+                "unlimited",
+                "pooled",
+                "reset",
+                "price",
+                "proration",
+                "rollover",
+            ]
         )
         serialized = handler(self)
         m = {}
@@ -924,6 +937,8 @@ class SetupPaymentAddItemPlanItemTypedDict(TypedDict):
     r"""Number of free units included. Balance resets to this each interval for consumable features."""
     unlimited: NotRequired[bool]
     r"""If true, customer has unlimited access to this feature."""
+    pooled: NotRequired[bool]
+    r"""Whether entity-level grants contribute to a shared customer balance."""
     reset: NotRequired[SetupPaymentAddItemResetTypedDict]
     r"""Reset configuration for consumable features. Omit for non-consumable features like seats."""
     price: NotRequired[SetupPaymentAddItemPriceTypedDict]
@@ -946,6 +961,9 @@ class SetupPaymentAddItemPlanItem(BaseModel):
     unlimited: Optional[bool] = None
     r"""If true, customer has unlimited access to this feature."""
 
+    pooled: Optional[bool] = False
+    r"""Whether entity-level grants contribute to a shared customer balance."""
+
     reset: Optional[SetupPaymentAddItemReset] = None
     r"""Reset configuration for consumable features. Omit for non-consumable features like seats."""
 
@@ -961,7 +979,15 @@ class SetupPaymentAddItemPlanItem(BaseModel):
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
         optional_fields = set(
-            ["included", "unlimited", "reset", "price", "proration", "rollover"]
+            [
+                "included",
+                "unlimited",
+                "pooled",
+                "reset",
+                "price",
+                "proration",
+                "rollover",
+            ]
         )
         serialized = handler(self)
         m = {}
@@ -1905,6 +1931,8 @@ class SetupPaymentUpsertLicensePlanItemTypedDict(TypedDict):
     r"""Number of free units included. Balance resets to this each interval for consumable features."""
     unlimited: NotRequired[bool]
     r"""If true, customer has unlimited access to this feature."""
+    pooled: NotRequired[bool]
+    r"""Whether entity-level grants contribute to a shared customer balance."""
     reset: NotRequired[SetupPaymentUpsertLicenseResetTypedDict]
     r"""Reset configuration for consumable features. Omit for non-consumable features like seats."""
     price: NotRequired[SetupPaymentUpsertLicensePriceTypedDict]
@@ -1927,6 +1955,9 @@ class SetupPaymentUpsertLicensePlanItem(BaseModel):
     unlimited: Optional[bool] = None
     r"""If true, customer has unlimited access to this feature."""
 
+    pooled: Optional[bool] = False
+    r"""Whether entity-level grants contribute to a shared customer balance."""
+
     reset: Optional[SetupPaymentUpsertLicenseReset] = None
     r"""Reset configuration for consumable features. Omit for non-consumable features like seats."""
 
@@ -1942,7 +1973,15 @@ class SetupPaymentUpsertLicensePlanItem(BaseModel):
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
         optional_fields = set(
-            ["included", "unlimited", "reset", "price", "proration", "rollover"]
+            [
+                "included",
+                "unlimited",
+                "pooled",
+                "reset",
+                "price",
+                "proration",
+                "rollover",
+            ]
         )
         serialized = handler(self)
         m = {}

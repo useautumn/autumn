@@ -5,9 +5,9 @@ import type {
 	ProductV2,
 } from "@autumn/shared";
 import { useMemo } from "react";
-import { applyCreateScheduleStageParams } from "@/components/forms/shared/utils/applyCreateScheduleStageParams";
+import { applyMultiPlanStageParams } from "@/components/forms/shared/utils/applyMultiPlanStageParams";
 import type { BillingStageParams } from "@/components/forms/shared/utils/billingStageParams";
-import { buildCreateSchedulePlan } from "@/components/forms/shared/utils/buildPlanCustomize";
+import { buildBillingPlan } from "@/components/forms/shared/utils/buildPlanCustomize";
 import {
 	getCreateSchedulePhaseTimingError,
 	hasPersistedCreateSchedule,
@@ -52,7 +52,7 @@ export function buildCreateScheduleRequestBody({
 		const plans = phase.plans.flatMap((plan) =>
 			plan.productId
 				? [
-						buildCreateSchedulePlan({
+						buildBillingPlan({
 							productId: plan.productId,
 							prepaidOptions: plan.prepaidOptions,
 							items: plan.items,
@@ -195,7 +195,7 @@ export function useBuildCreateScheduleRequestBody({
 
 				if (!requestBody) return null;
 
-				return applyCreateScheduleStageParams({
+				return applyMultiPlanStageParams({
 					...stageParams,
 					requestBody,
 					enableProductImmediately:

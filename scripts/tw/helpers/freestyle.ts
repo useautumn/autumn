@@ -37,16 +37,19 @@ import { Freestyle } from "freestyle";
 import {
 	DATABASE_CRITICAL_URL,
 	DATABASE_URL,
+	DYNAMODB_ENDPOINT,
 	EDGE_CONFIG_OVERRIDE_B64,
 	INGRESS_PORT,
 	REDIS_URL,
 	SERVER_PORT,
 	SQS_QUEUE_URL_V2,
+	TRACK_ASYNC_SQS_QUEUE_URL,
 	TRACK_SQS_QUEUE_URL,
 	WORKER_TIMEOUT_MS,
 } from "../constants.ts";
 import { READY_SENTINEL } from "../worker/boot.ts";
 import { narrate, sink } from "./logSink.ts";
+import { resolveBakedPlaywrightVersion } from "./playwrightVersion.ts";
 import type {
 	CreateSandboxOptions,
 	DetachedCommand,
@@ -332,6 +335,8 @@ const warmServerEnv = (): Record<string, string> => {
 		CACHE_V2_DRAGONFLY_URL: REDIS_URL,
 		SQS_QUEUE_URL_V2,
 		TRACK_SQS_QUEUE_URL,
+		TRACK_ASYNC_SQS_QUEUE_URL,
+		DYNAMODB_ENDPOINT,
 		ENCRYPTION_IV: requireSecret("ENCRYPTION_IV"),
 		ENCRYPTION_PASSWORD: requireSecret("ENCRYPTION_PASSWORD"),
 		BETTER_AUTH_SECRET: requireSecret("BETTER_AUTH_SECRET"),
@@ -825,7 +830,7 @@ export const freestyleProvider: ProviderImpl = {
 		// revision, so a version bump between commits misses and re-bakes.
 		const chromiumProbe = await execOnVm(
 			vm,
-			`cd ${REPO_ROOT} && CHROME=$(bun -p "require('playwright-core').chromium.executablePath()" 2>/dev/null) && [ -n "$CHROME" ] && [ -x "$CHROME" ]`,
+			`cd ${REPO_ROOT}/server && CHROME=$(bun -p "require('playwright-core').chromium.executablePath()" 2>/dev/null) && [ -n "$CHROME" ] && [ -x "$CHROME" ]`,
 			60_000,
 		);
 		if (chromiumProbe.exitCode === 0) {
@@ -838,8 +843,8 @@ export const freestyleProvider: ProviderImpl = {
 			);
 			const chromium = await execOnVm(
 				vm,
-				`cd ${REPO_ROOT} && PWV=$(bun -p "require('playwright-core/package.json').version" 2>/dev/null || echo 1.60.0) && ` +
-					"apt-get update -qq && bun x playwright@$PWV install --with-deps chromium",
+				`cd ${REPO_ROOT}/server && apt-get update -qq && ` +
+					`bun x playwright@${resolveBakedPlaywrightVersion()} install --with-deps chromium`,
 			);
 			chromiumDone();
 			if (chromium.exitCode !== 0) {

@@ -1,5 +1,15 @@
-import { PanelButton } from "@autumn/ui";
-import { GiftIcon, LightningIcon, PercentIcon } from "@phosphor-icons/react";
+import {
+	PanelButton,
+	Tooltip,
+	TooltipContent,
+	TooltipTrigger,
+} from "@autumn/ui";
+import {
+	GiftIcon,
+	InfoIcon,
+	LightningIcon,
+	PercentIcon,
+} from "@phosphor-icons/react";
 import { SheetSection } from "@/components/v2/sheets/SharedSheetComponents";
 import {
 	FrontendDiscountType,
@@ -11,9 +21,15 @@ import { defaultDiscountConfig } from "../../utils/defaultRewardModels";
 interface SelectRewardTypeProps {
 	reward: FrontendReward;
 	setReward: (reward: FrontendReward) => void;
+	/** Set when editing a reward that is already a free product, so it stays reselectable */
+	showFreeProduct?: boolean;
 }
 
-export function SelectRewardType({ reward, setReward }: SelectRewardTypeProps) {
+export function SelectRewardType({
+	reward,
+	setReward,
+	showFreeProduct = false,
+}: SelectRewardTypeProps) {
 	return (
 		<SheetSection title="Reward Type">
 			<div className="space-y-4">
@@ -44,31 +60,44 @@ export function SelectRewardType({ reward, setReward }: SelectRewardTypeProps) {
 					</div>
 				</div>
 
-				<div className="flex w-full items-center gap-4">
-					<PanelButton
-						isSelected={
-							reward.rewardCategory === FrontendRewardCategory.FreeProduct
-						}
-						onClick={() =>
-							setReward({
-								...reward,
-								rewardCategory: FrontendRewardCategory.FreeProduct,
-								discountType: null,
-								discount_config: null,
-								free_product_id: null,
-								free_product_config: null,
-								featureGrantEntitlements: [],
-							})
-						}
-						icon={<GiftIcon size={16} color="currentColor" />}
-					/>
-					<div className="flex-1">
-						<div className="text-body-highlight mb-1">Free Product</div>
-						<div className="text-body-secondary leading-tight">
-							Used to give away products in a referral program
+				{showFreeProduct && (
+					<div className="flex w-full items-center gap-4">
+						<PanelButton
+							isSelected={
+								reward.rewardCategory === FrontendRewardCategory.FreeProduct
+							}
+							onClick={() =>
+								setReward({
+									...reward,
+									rewardCategory: FrontendRewardCategory.FreeProduct,
+									discountType: null,
+									discount_config: null,
+									free_product_id: null,
+									free_product_config: null,
+									featureGrantEntitlements: [],
+								})
+							}
+							icon={<GiftIcon size={16} color="currentColor" />}
+						/>
+						<div className="flex-1">
+							<div className="mb-1 flex items-center gap-1.5">
+								<span className="text-body-highlight">Free Product</span>
+								<Tooltip>
+									<TooltipTrigger asChild>
+										<InfoIcon className="size-3.5 cursor-help text-tertiary-foreground" />
+									</TooltipTrigger>
+									<TooltipContent>
+										Free products are deprecated. We recommend using feature
+										grants instead
+									</TooltipContent>
+								</Tooltip>
+							</div>
+							<div className="text-body-secondary leading-tight">
+								Give away a plan in a referral program
+							</div>
 						</div>
 					</div>
-				</div>
+				)}
 
 				<div className="flex w-full items-center gap-4">
 					<PanelButton

@@ -48,17 +48,43 @@ export const upsertPooledBalance = ({
 			entitlement: contributionCustomerEntitlement.entitlement,
 		});
 
+	// A source that was already pooled carries balance 0 — its grant lives in the
+	// pool it is leaving. Seed from the contribution instead, whether the grant
+	// lands back on the same pool or on a newly inserted one.
+	const replacesRemovedContribution = Array.from(
+		computeContext.pooledBalanceIdsWithRemovedContributions,
+	).some(
+		(poolId) =>
+			computeContext.pooledCustomerEntitlementByPoolId.get(poolId)
+				?.pooled_balance.internal_feature_id === identity.internalFeatureId,
+	);
+
 	let balanceDelta = tracksBalance
 		? (contributionCustomerEntitlement.balance ?? 0)
 		: 0;
-	if (
-		tracksBalance &&
-		existingPooledCustomerEntitlement &&
-		computeContext.pooledBalanceIdsWithRemovedContributions.has(
-			existingPooledCustomerEntitlement.pooled_balance.id,
-		)
-	) {
+	if (tracksBalance && replacesRemovedContribution) {
 		balanceDelta = contributionAmounts.currentContribution;
+	}
+
+	// Re-admitting a source that still contributes to this very pool would count
+	// its grant twice: the pool already includes it, and nothing removed it. Only
+	// the difference is owed, so re-running a transition is a no-op.
+	const existingContribution =
+		contributionCustomerEntitlement.pooled_balance_contribution;
+	const alreadyCountedByPool =
+		existingContribution &&
+		existingPooledCustomerEntitlement &&
+		existingContribution.pooled_balance_id ===
+			existingPooledCustomerEntitlement.pooled_balance.id &&
+		!computeContext.pooledBalanceIdsWithRemovedContributions.has(
+			existingContribution.pooled_balance_id,
+		);
+	const grantedDelta = alreadyCountedByPool
+		? contributionAmounts.currentContribution -
+			(existingContribution.current_contribution ?? 0)
+		: contributionAmounts.currentContribution;
+	if (alreadyCountedByPool) {
+		balanceDelta = 0;
 	}
 
 	if (!existingPooledCustomerEntitlement) {
@@ -89,7 +115,7 @@ export const upsertPooledBalance = ({
 	}
 
 	const shouldUpdateExistingPooledBalance =
-		balanceDelta !== 0 || contributionAmounts.currentContribution !== 0;
+		balanceDelta !== 0 || grantedDelta !== 0;
 	if (shouldUpdateExistingPooledBalance) {
 		addToUpdatePoolBalances({
 			pooledBalancePlan: computeContext.plan,
@@ -100,7 +126,7 @@ export const upsertPooledBalance = ({
 			}),
 			granted: addSafe({
 				left: existingPooledCustomerEntitlement.pooled_balance.granted,
-				right: contributionAmounts.currentContribution,
+				right: grantedDelta,
 			}),
 		});
 	}

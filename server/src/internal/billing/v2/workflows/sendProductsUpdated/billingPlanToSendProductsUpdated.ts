@@ -7,7 +7,7 @@
  * - Filters out scheduled products from insert webhooks
  */
 
-import type { AutumnBillingPlan, BillingContext } from "@autumn/shared";
+import type { AutumnBillingPlan, FullCustomer } from "@autumn/shared";
 import {
 	AttachScenario,
 	CusProductStatus,
@@ -18,11 +18,11 @@ import {
 	isProductUpgrade,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
-import type { CreateCustomerContext } from "@/internal/customers/actions/createWithDefaults/createCustomerContext";
 import {
 	getExpiredUpdatedCustomerProducts,
 	getUpdateCustomerProducts,
 } from "@/internal/billing/v2/utils/billingPlan/customerProductPlanMutations";
+import type { CreateCustomerContext } from "@/internal/customers/actions/createWithDefaults/createCustomerContext";
 import { workflows } from "@/queue/workflows.js";
 
 // ============================================================================
@@ -128,15 +128,19 @@ export const billingPlanToSendProductsUpdated = async ({
 }: {
 	ctx: AutumnContext;
 	autumnBillingPlan: AutumnBillingPlan;
-	billingContext: BillingContext | CreateCustomerContext;
+	billingContext: { fullCustomer: FullCustomer };
 }) => {
 	if (ctx.testOptions?.skipWebhooks) return;
 
 	const { fullCustomer } = billingContext;
 	const customerId = fullCustomer.id ?? fullCustomer.internal_id;
 	const { insertCustomerProducts } = autumnBillingPlan;
-	const updateCustomerProducts = getUpdateCustomerProducts({ autumnBillingPlan });
-	const expiredProducts = getExpiredUpdatedCustomerProducts({ autumnBillingPlan });
+	const updateCustomerProducts = getUpdateCustomerProducts({
+		autumnBillingPlan,
+	});
+	const expiredProducts = getExpiredUpdatedCustomerProducts({
+		autumnBillingPlan,
+	});
 
 	// A. Handle cancel/uncancel webhook for updateCustomerProduct
 	for (const updateCustomerProduct of updateCustomerProducts) {

@@ -14,13 +14,9 @@ export const checkEnvVars = () => {
 		process.exit(1);
 	}
 
-	if (
-		!process.env.CACHE_URL &&
-		!process.env.CACHE_URL_US_EAST &&
-		!process.env.CACHE_BACKUP_URL?.trim()
-	) {
+	if (!process.env.CACHE_URL && !process.env.CACHE_BACKUP_URL?.trim()) {
 		logger.warn(
-			"No Redis URL set (CACHE_URL, CACHE_URL_US_EAST, or CACHE_BACKUP_URL), running without Redis",
+			"No Redis URL set (CACHE_URL or CACHE_BACKUP_URL), running without Redis",
 		);
 	}
 

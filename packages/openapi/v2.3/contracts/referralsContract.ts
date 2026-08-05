@@ -2,6 +2,10 @@ import {
 	ApiRewardsListV0Schema,
 	CreateReferralCodeParamsSchema,
 	CreateReferralCodeResponseSchema,
+	CreateReferralProgramParamsSchema,
+	CreateReferralProgramResponseSchema,
+	CreateRewardParamsSchema,
+	CreateRewardResponseSchema,
 	RedeemReferralCodeParamsSchema,
 	RedeemReferralCodeResponseSchema,
 	RewardsListParamsSchema,
@@ -142,6 +146,57 @@ export const rewardsListContract = oc
 			],
 		}),
 	);
+
+export const rewardsCreateContract = oc
+	.route({
+		method: "POST",
+		path: "/v1/rewards.create",
+		operationId: "createReward",
+		tags: ["rewards"],
+		description: "Create a coupon or feature grant.",
+		spec: (spec) => ({
+			...spec,
+			"x-speakeasy-name-override": "create",
+		}),
+	})
+	.input(
+		CreateRewardParamsSchema.meta({
+			title: "CreateRewardParams",
+			examples: [
+				{
+					coupon: {
+						id: "summer_sale",
+						name: "Summer Sale",
+						type: "percentage_discount",
+						value: 20,
+						duration: { type: "months", length: 3 },
+						plan_ids: null,
+						promo_codes: [{ code: "SUMMER20" }],
+					},
+				},
+			],
+		}),
+	)
+	.output(CreateRewardResponseSchema);
+
+export const referralProgramsCreateContract = oc
+	.route({
+		method: "POST",
+		path: "/v1/referral_programs.create",
+		operationId: "createReferralProgram",
+		tags: ["referrals"],
+		description: "Create a referral program linked to an existing reward.",
+		spec: (spec) => ({
+			...spec,
+			"x-speakeasy-name-override": "createProgram",
+		}),
+	})
+	.input(
+		CreateReferralProgramParamsSchema.meta({
+			title: "CreateReferralProgramParams",
+		}),
+	)
+	.output(CreateReferralProgramResponseSchema);
 
 export const rewardsRedeemCodeContract = oc
 	.route({

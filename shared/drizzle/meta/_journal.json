@@ -407,6 +407,34 @@
       "when": 1785337088338,
       "tag": "0057_demonic_lionheart",
       "breakpoints": true
+    },
+    {
+      "idx": 58,
+      "version": "7",
+      "when": 1785704393674,
+      "tag": "0058_black_thundra",
+      "breakpoints": true
+    },
+    {
+      "idx": 59,
+      "version": "7",
+      "when": 1785786538657,
+      "tag": "0059_square_captain_cross",
+      "breakpoints": true
+    },
+    {
+      "idx": 60,
+      "version": "7",
+      "when": 1785839076387,
+      "tag": "0060_blushing_leo",
+      "breakpoints": true
+    },
+    {
+      "idx": 61,
+      "version": "7",
+      "when": 1785859361018,
+      "tag": "0061_customer_lsns_fillfactor",
+      "breakpoints": true
     }
   ]
 }

@@ -166,8 +166,17 @@ export function AttachAdvancedSection() {
 	const showStartDate =
 		isPaidRecurringProduct &&
 		!trialEnabled &&
-		effectivePlanSchedule !== "end_of_cycle";
+		effectivePlanSchedule !== "end_of_cycle" &&
+		(!isMultiPlan || createsNewStripeSubscription);
 	const allowBackdatedStartDate = createsNewStripeSubscription;
+	let startDateDescription = "Schedule the plan to start on a future date";
+	if (allowBackdatedStartDate) {
+		startDateDescription =
+			"Start the new subscription on a past or future date";
+	}
+	if (isMultiPlan) {
+		startDateDescription = "Backdate every plan to the same start date";
+	}
 	const showEndDate = !!product && !isFreeProductV2({ items: product.items });
 	const attachStartsAt =
 		effectivePlanSchedule === "end_of_cycle"
@@ -214,16 +223,12 @@ export function AttachAdvancedSection() {
 		form.setFieldValue("customLineItems", updated);
 	};
 
-	const moreOptions = isMultiPlan ? null : (
+	const moreOptions = (
 		<>
 			{showStartDate && (
 				<ConfigRow
 					title="Start Date"
-					description={
-						allowBackdatedStartDate
-							? "Start the new subscription on a past or future date"
-							: "Schedule the plan to start on a future date"
-					}
+					description={startDateDescription}
 					expanded={startDate !== null}
 					action={
 						<Switch
@@ -231,7 +236,9 @@ export function AttachAdvancedSection() {
 							onCheckedChange={(checked) =>
 								form.setFieldValue(
 									"startDate",
-									checked ? addDays(Date.now(), 1).getTime() : null,
+									checked
+										? addDays(Date.now(), isMultiPlan ? -1 : 1).getTime()
+										: null,
 								)
 							}
 						/>
@@ -241,7 +248,9 @@ export function AttachAdvancedSection() {
 						unixDate={startDate}
 						setUnixDate={(value) => form.setFieldValue("startDate", value)}
 						disablePastDates={!allowBackdatedStartDate}
+						disableFutureDates={isMultiPlan}
 						minUnixDate={allowBackdatedStartDate ? undefined : Date.now()}
+						maxUnixDate={isMultiPlan ? Date.now() : undefined}
 						fromYear={
 							allowBackdatedStartDate
 								? new Date().getFullYear() - BACKDATE_START_YEAR_LOOKBACK
@@ -252,7 +261,7 @@ export function AttachAdvancedSection() {
 				</ConfigRow>
 			)}
 
-			{showEndDate && (
+			{!isMultiPlan && showEndDate && (
 				<ConfigRow
 					title="End Date"
 					description="End the plan on a future date"
@@ -427,7 +436,7 @@ export function AttachAdvancedSection() {
 				/>
 			)}
 
-			{hasActiveSubscription && (
+			{!isMultiPlan && hasActiveSubscription && (
 				<ConfigRow
 					title="Reset Billing Cycle"
 					description="Restart the billing cycle from today"
@@ -445,23 +454,27 @@ export function AttachAdvancedSection() {
 				/>
 			)}
 
-			<ConfigRow
-				title="Skip Billing"
-				description="Attach the plan without making changes in Stripe"
-				action={
-					<Switch
-						checked={noBillingChanges}
-						onCheckedChange={(checked) =>
-							form.setFieldValue("noBillingChanges", !!checked)
-						}
-					/>
-				}
-			/>
+			{!isMultiPlan && (
+				<ConfigRow
+					title="Skip Billing"
+					description="Attach the plan without making changes in Stripe"
+					action={
+						<Switch
+							checked={noBillingChanges}
+							onCheckedChange={(checked) =>
+								form.setFieldValue("noBillingChanges", !!checked)
+							}
+						/>
+					}
+				/>
+			)}
 		</>
 	);
 
 	return (
-		<AdvancedSection moreOptions={moreOptions}>
+		<AdvancedSection
+			moreOptions={isMultiPlan && !showStartDate ? undefined : moreOptions}
+		>
 			<ConfigRow
 				title="Discounts"
 				description="Apply percentage or fixed-amount discounts to this plan"

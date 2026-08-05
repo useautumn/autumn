@@ -1,10 +1,10 @@
 import { describe, expect, test } from "bun:test";
+import { PgDialect } from "drizzle-orm/pg-core";
 import {
 	buildCustomerCount,
 	buildCustomerSelect,
 	buildProcessedPreviewSelect,
 } from "@/internal/migrations/v2/filters/customers/buildCustomerSelect.js";
-import { PgDialect } from "drizzle-orm/pg-core";
 
 const dialect = new PgDialect();
 const ctx = { features: [] };
@@ -89,7 +89,11 @@ describe("migration customer select planner wiring", () => {
 		expect(searchSql).toContain("CROSS JOIN LATERAL");
 		// The search predicate must filter BEFORE the walk's LIMIT.
 		const walkEnd = searchSql.indexOf(") walk ORDER BY");
-		expect(searchSql.indexOf("JOIN customers c ON c.internal_id = cp.internal_customer_id")).toBeLessThan(walkEnd);
+		expect(
+			searchSql.indexOf(
+				"JOIN customers c ON c.internal_id = cp.internal_customer_id",
+			),
+		).toBeLessThan(walkEnd);
 		expect(searchSql.indexOf("ILIKE")).toBeGreaterThan(-1);
 		expect(searchSql.indexOf("ILIKE")).toBeLessThan(walkEnd);
 

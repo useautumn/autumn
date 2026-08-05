@@ -2,6 +2,7 @@ import {
 	findFeatureById,
 	notNullish,
 	RecaseError,
+	RouteGroup,
 	Scopes,
 	UpdateBalanceParamsV0Schema,
 } from "@autumn/shared";
@@ -11,6 +12,7 @@ import { isFullSubjectRolloutEnabled } from "@/internal/misc/rollouts/fullSubjec
 
 export const handleUpdateBalance = createRoute({
 	scopes: [Scopes.Balances.Write],
+	routeGroup: RouteGroup.Balances,
 	body: UpdateBalanceParamsV0Schema.extend({}),
 
 	handler: async (c) => {

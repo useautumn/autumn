@@ -10,8 +10,8 @@ import { useCustomerCount } from "./filters/CustomerPreview";
 import { useGuardedStepNavigation } from "./hooks/useGuardedStepNavigation";
 import { MigrationLiveView } from "./live/MigrationLiveView";
 import { useMigrationSheetStore } from "./live/useMigrationSheetStore";
-import { OperationsStep } from "./OperationsStep";
 import { MigrationObjectSheet } from "./MigrationObjectSheet";
+import { OperationsStep } from "./OperationsStep";
 import { STEPS, type StepId } from "./StepIndicator";
 import {
 	toOperationsPayload,

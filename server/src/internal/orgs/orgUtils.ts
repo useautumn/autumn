@@ -271,6 +271,7 @@ export const createOrgResponse = ({
 		onboarded: org.onboarded ?? true,
 		deployed: org.deployed ?? true,
 		config: OrgConfigSchema.parse(org.config || {}),
+		idempotency_config: org.idempotency_config ?? null,
 		custom_buttons: org.custom_buttons ?? [],
 		redis_config: org.redis_config
 			? {

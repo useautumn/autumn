@@ -9,7 +9,6 @@ import {
 import { isUniqueConstraintError } from "@/db/dbUtils.js";
 import { EntityService } from "@/internal/api/entities/EntityService.js";
 import { invalidateCachedFullSubject } from "@/internal/customers/cache/fullSubject/actions/invalidate/invalidateFullSubject.js";
-import { upsertEntityInCache } from "@/internal/customers/cusUtils/fullCustomerCacheUtils/appendEntityToCache.js";
 
 import type { AutumnContext } from "../../../../honoUtils/HonoEnv.js";
 import { CusService } from "../../../customers/CusService.js";
@@ -126,18 +125,11 @@ export const autoCreateEntity = async ({
 	}
 
 	if (entity) {
-		await Promise.all([
-			upsertEntityInCache({
-				ctx,
-				customerId,
-				entity,
-			}),
-			invalidateCachedFullSubject({
-				ctx,
-				customerId,
-				source: "autoCreateEntity",
-			}),
-		]);
+		await invalidateCachedFullSubject({
+			ctx,
+			customerId,
+			source: "autoCreateEntity",
+		});
 	}
 
 	return entity;

@@ -80,19 +80,16 @@ if (process.env.TESTS_ORG) {
 		const { clearOrgCache } = await import(
 			"@/internal/orgs/orgUtils/clearOrgCache.js"
 		);
-		const { getConfiguredRegions, getRegionalRedis, waitForRedisReady } =
-			await import("@/external/redis/initRedis.js");
+		const { getMiscRedis, waitForRedisReady } = await import(
+			"@/external/redis/initRedis.js"
+		);
 		const config = { ...testContext.org.config, multi_currency: true };
 		await OrgService.update({
 			db,
 			orgId: testContext.org.id,
 			updates: { config },
 		});
-		await Promise.all(
-			getConfiguredRegions().map((region) =>
-				waitForRedisReady(getRegionalRedis(region), region),
-			),
-		);
+		await waitForRedisReady(getMiscRedis(), "main");
 		await clearOrgCache({ db, orgId: testContext.org.id });
 		testContext.org.config = config;
 	}

@@ -6,16 +6,14 @@ import {
 	isPastStartDate,
 	isProductPaidAndRecurring,
 	type MultiAttachBillingContext,
+	type MultiAttachParamsV0,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { setupAttachEndOfCycleMs } from "@/internal/billing/v2/actions/attach/setup/setupAttachEndOfCycleMs";
 import { setupAnchorResetRefund } from "@/internal/billing/v2/setup/setupAnchorResetRefund";
 import { setupBillingCycleAnchor } from "@/internal/billing/v2/setup/setupBillingCycleAnchor";
 import { setupResetCycleAnchor } from "@/internal/billing/v2/setup/setupResetCycleAnchor";
-import {
-	type ImmediateMultiProductParams,
-	setupImmediateMultiProductBillingContext,
-} from "../../common/immediateMultiProduct/setupImmediateMultiProductBillingContext";
+import { setupImmediateMultiProductBillingContext } from "../../common/immediateMultiProduct/setupImmediateMultiProductBillingContext";
 import { FIRST_PHASE_TOLERANCE_MS } from "../errors/handleFirstPhaseStartDateErrors";
 import {
 	getInitialCreateSchedulePhase,
@@ -23,7 +21,7 @@ import {
 	phaseHasNumericStart,
 } from "../errors/normalizeCreateSchedulePhases";
 import { validateCreateSchedulePhasePlans } from "../errors/validateCreateSchedulePhasePlans";
-import { billingContextToRecurringAndScheduled } from "../utils/billingContextToRecurringAndScheduled";
+import { resolveCreateScheduleRecurringProducts } from "../utils/resolveCreateScheduleRecurringProducts";
 import { setupScheduledProductsContext } from "./setupScheduledProductsContext";
 
 type CreateScheduleCheckoutModeContext = Pick<
@@ -81,7 +79,7 @@ const phaseToImmediateParams = ({
 }: {
 	params: CreateScheduleParamsV0;
 	phase: CreateScheduleParamsV0["phases"][number];
-}): ImmediateMultiProductParams => ({
+}): MultiAttachParamsV0 => ({
 	customer_id: params.customer_id,
 	entity_id: params.entity_id,
 	plans: phase.plans.map((plan) => ({
@@ -286,7 +284,7 @@ export const setupCreateScheduleBillingContext = async ({
 		scheduledPhaseContexts,
 	};
 
-	const { recurringActive } = billingContextToRecurringAndScheduled({
+	const { recurringActive } = resolveCreateScheduleRecurringProducts({
 		billingContext: scheduleBillingContext,
 	});
 

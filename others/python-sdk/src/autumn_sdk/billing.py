@@ -455,6 +455,13 @@ class Billing(BaseSDK):
             List[models.PhaseStartUnion], List[models.PhaseStartUnionTypedDict]
         ],
         entity_id: Optional[str] = None,
+        free_trial: OptionalNullable[
+            Union[
+                models.CreateScheduleFreeTrialParams,
+                models.CreateScheduleFreeTrialParamsTypedDict,
+            ]
+        ] = UNSET,
+        currency: Optional[str] = None,
         invoice_mode: Optional[
             Union[
                 models.CreateScheduleInvoiceMode,
@@ -472,6 +479,7 @@ class Billing(BaseSDK):
         redirect_mode: Optional[models.CreateScheduleRedirectMode] = "if_required",
         billing_behavior: Optional[models.CreateScheduleBillingBehavior] = None,
         enable_plan_immediately: Optional[bool] = None,
+        preserve_add_ons: Optional[bool] = None,
         retries: OptionalNullable[utils.RetryConfig] = UNSET,
         server_url: Optional[str] = None,
         timeout_ms: Optional[int] = None,
@@ -484,6 +492,8 @@ class Billing(BaseSDK):
         :param customer_id: The ID of the customer to create the schedule for.
         :param phases: Ordered phase definitions for the schedule.
         :param entity_id: Optional entity ID for an entity-scoped schedule.
+        :param free_trial: Free trial configuration applied to every plan in the immediate phase.
+        :param currency: Three-letter Stripe-supported currency code used to bill the immediate phase (for example, 'usd').
         :param invoice_mode: Invoice mode creates and sends an invoice instead of charging the customer's payment method immediately for the first phase.
         :param discounts: List of discounts to apply to the immediate phase. Each discount can be an Autumn reward ID, Stripe coupon ID, or Stripe promotion code.
         :param success_url: URL to redirect to after successful checkout.
@@ -491,6 +501,7 @@ class Billing(BaseSDK):
         :param redirect_mode: Controls when to return a checkout URL for the immediate phase. 'always' forces a confirmation or checkout flow, 'if_required' only redirects when needed, and 'never' disables redirects.
         :param billing_behavior: Whether to prorate the immediate phase. 'none' skips proration charges and credits.
         :param enable_plan_immediately: If true, the immediate-phase cusProducts are activated immediately (and scheduled-phase cusProducts pre-inserted) even when payment is pending via Stripe checkout. The Autumn schedule rows are persisted on checkout.session.completed.
+        :param preserve_add_ons: If true, active recurring add-ons in scopes represented by the phase plans are retained.
         :param retries: Override the default retry configuration for this method
         :param server_url: Override the default server URL for this method
         :param timeout_ms: Override the default request timeout configuration for this method in milliseconds
@@ -509,6 +520,10 @@ class Billing(BaseSDK):
         request = models.CreateScheduleParams(
             customer_id=customer_id,
             entity_id=entity_id,
+            free_trial=utils.get_pydantic_model(
+                free_trial, OptionalNullable[models.CreateScheduleFreeTrialParams]
+            ),
+            currency=currency,
             invoice_mode=utils.get_pydantic_model(
                 invoice_mode, Optional[models.CreateScheduleInvoiceMode]
             ),
@@ -520,6 +535,7 @@ class Billing(BaseSDK):
             redirect_mode=redirect_mode,
             billing_behavior=billing_behavior,
             enable_plan_immediately=enable_plan_immediately,
+            preserve_add_ons=preserve_add_ons,
             phases=utils.get_pydantic_model(phases, List[models.PhaseStartUnion]),
         )
 
@@ -590,6 +606,13 @@ class Billing(BaseSDK):
             List[models.PhaseStartUnion], List[models.PhaseStartUnionTypedDict]
         ],
         entity_id: Optional[str] = None,
+        free_trial: OptionalNullable[
+            Union[
+                models.CreateScheduleFreeTrialParams,
+                models.CreateScheduleFreeTrialParamsTypedDict,
+            ]
+        ] = UNSET,
+        currency: Optional[str] = None,
         invoice_mode: Optional[
             Union[
                 models.CreateScheduleInvoiceMode,
@@ -607,6 +630,7 @@ class Billing(BaseSDK):
         redirect_mode: Optional[models.CreateScheduleRedirectMode] = "if_required",
         billing_behavior: Optional[models.CreateScheduleBillingBehavior] = None,
         enable_plan_immediately: Optional[bool] = None,
+        preserve_add_ons: Optional[bool] = None,
         retries: OptionalNullable[utils.RetryConfig] = UNSET,
         server_url: Optional[str] = None,
         timeout_ms: Optional[int] = None,
@@ -619,6 +643,8 @@ class Billing(BaseSDK):
         :param customer_id: The ID of the customer to create the schedule for.
         :param phases: Ordered phase definitions for the schedule.
         :param entity_id: Optional entity ID for an entity-scoped schedule.
+        :param free_trial: Free trial configuration applied to every plan in the immediate phase.
+        :param currency: Three-letter Stripe-supported currency code used to bill the immediate phase (for example, 'usd').
         :param invoice_mode: Invoice mode creates and sends an invoice instead of charging the customer's payment method immediately for the first phase.
         :param discounts: List of discounts to apply to the immediate phase. Each discount can be an Autumn reward ID, Stripe coupon ID, or Stripe promotion code.
         :param success_url: URL to redirect to after successful checkout.
@@ -626,6 +652,7 @@ class Billing(BaseSDK):
         :param redirect_mode: Controls when to return a checkout URL for the immediate phase. 'always' forces a confirmation or checkout flow, 'if_required' only redirects when needed, and 'never' disables redirects.
         :param billing_behavior: Whether to prorate the immediate phase. 'none' skips proration charges and credits.
         :param enable_plan_immediately: If true, the immediate-phase cusProducts are activated immediately (and scheduled-phase cusProducts pre-inserted) even when payment is pending via Stripe checkout. The Autumn schedule rows are persisted on checkout.session.completed.
+        :param preserve_add_ons: If true, active recurring add-ons in scopes represented by the phase plans are retained.
         :param retries: Override the default retry configuration for this method
         :param server_url: Override the default server URL for this method
         :param timeout_ms: Override the default request timeout configuration for this method in milliseconds
@@ -644,6 +671,10 @@ class Billing(BaseSDK):
         request = models.CreateScheduleParams(
             customer_id=customer_id,
             entity_id=entity_id,
+            free_trial=utils.get_pydantic_model(
+                free_trial, OptionalNullable[models.CreateScheduleFreeTrialParams]
+            ),
+            currency=currency,
             invoice_mode=utils.get_pydantic_model(
                 invoice_mode, Optional[models.CreateScheduleInvoiceMode]
             ),
@@ -655,6 +686,7 @@ class Billing(BaseSDK):
             redirect_mode=redirect_mode,
             billing_behavior=billing_behavior,
             enable_plan_immediately=enable_plan_immediately,
+            preserve_add_ons=preserve_add_ons,
             phases=utils.get_pydantic_model(phases, List[models.PhaseStartUnion]),
         )
 
@@ -731,6 +763,7 @@ class Billing(BaseSDK):
                 models.MultiAttachFreeTrialParamsTypedDict,
             ]
         ] = UNSET,
+        starts_at: Optional[int] = None,
         currency: Optional[str] = None,
         invoice_mode: Optional[
             Union[models.MultiAttachInvoiceMode, models.MultiAttachInvoiceModeTypedDict]
@@ -741,6 +774,7 @@ class Billing(BaseSDK):
                 List[models.MultiAttachAttachDiscountTypedDict],
             ]
         ] = None,
+        billing_behavior: Optional[models.MultiAttachBillingBehavior] = None,
         success_url: Optional[str] = None,
         checkout_session_params: Optional[Dict[str, Any]] = None,
         redirect_mode: Optional[models.MultiAttachRedirectMode] = "if_required",
@@ -765,9 +799,11 @@ class Billing(BaseSDK):
         :param plans: The list of plans to attach to the customer.
         :param entity_id: The ID of the entity to attach the plans to.
         :param free_trial: Free trial configuration applied to all plans. Pass an object to set a custom trial, or null to remove any trial.
+        :param starts_at: Unix timestamp in milliseconds for backdating every plan in this multi-attach.
         :param currency: Currency to bill this multi-attach in (e.g. usd, eur). Must match the customer's currency if they are already locked to one, and every plan must offer a paid price in it. Defaults to the customer's currency, then the org default.
         :param invoice_mode: Invoice mode creates a draft or open invoice and sends it to the customer, instead of charging their card immediately.
         :param discounts: List of discounts to apply. Each discount can be an Autumn reward ID, Stripe coupon ID, or Stripe promotion code.
+        :param billing_behavior: How to handle billing. 'prorate_immediately' charges/credits prorated amounts now, 'none' does not charge/credit anything.
         :param success_url: URL to redirect to after successful checkout.
         :param checkout_session_params: Additional parameters to pass into the creation of the Stripe checkout session.
         :param redirect_mode: Controls when to return a checkout URL. 'always' returns a URL even if payment succeeds, 'if_required' only when payment action is needed, 'never' disables redirects.
@@ -797,6 +833,7 @@ class Billing(BaseSDK):
             free_trial=utils.get_pydantic_model(
                 free_trial, OptionalNullable[models.MultiAttachFreeTrialParams]
             ),
+            starts_at=starts_at,
             currency=currency,
             invoice_mode=utils.get_pydantic_model(
                 invoice_mode, Optional[models.MultiAttachInvoiceMode]
@@ -804,6 +841,7 @@ class Billing(BaseSDK):
             discounts=utils.get_pydantic_model(
                 discounts, Optional[List[models.MultiAttachAttachDiscount]]
             ),
+            billing_behavior=billing_behavior,
             success_url=success_url,
             checkout_session_params=checkout_session_params,
             redirect_mode=redirect_mode,
@@ -890,6 +928,7 @@ class Billing(BaseSDK):
                 models.MultiAttachFreeTrialParamsTypedDict,
             ]
         ] = UNSET,
+        starts_at: Optional[int] = None,
         currency: Optional[str] = None,
         invoice_mode: Optional[
             Union[models.MultiAttachInvoiceMode, models.MultiAttachInvoiceModeTypedDict]
@@ -900,6 +939,7 @@ class Billing(BaseSDK):
                 List[models.MultiAttachAttachDiscountTypedDict],
             ]
         ] = None,
+        billing_behavior: Optional[models.MultiAttachBillingBehavior] = None,
         success_url: Optional[str] = None,
         checkout_session_params: Optional[Dict[str, Any]] = None,
         redirect_mode: Optional[models.MultiAttachRedirectMode] = "if_required",
@@ -924,9 +964,11 @@ class Billing(BaseSDK):
         :param plans: The list of plans to attach to the customer.
         :param entity_id: The ID of the entity to attach the plans to.
         :param free_trial: Free trial configuration applied to all plans. Pass an object to set a custom trial, or null to remove any trial.
+        :param starts_at: Unix timestamp in milliseconds for backdating every plan in this multi-attach.
         :param currency: Currency to bill this multi-attach in (e.g. usd, eur). Must match the customer's currency if they are already locked to one, and every plan must offer a paid price in it. Defaults to the customer's currency, then the org default.
         :param invoice_mode: Invoice mode creates a draft or open invoice and sends it to the customer, instead of charging their card immediately.
         :param discounts: List of discounts to apply. Each discount can be an Autumn reward ID, Stripe coupon ID, or Stripe promotion code.
+        :param billing_behavior: How to handle billing. 'prorate_immediately' charges/credits prorated amounts now, 'none' does not charge/credit anything.
         :param success_url: URL to redirect to after successful checkout.
         :param checkout_session_params: Additional parameters to pass into the creation of the Stripe checkout session.
         :param redirect_mode: Controls when to return a checkout URL. 'always' returns a URL even if payment succeeds, 'if_required' only when payment action is needed, 'never' disables redirects.
@@ -956,6 +998,7 @@ class Billing(BaseSDK):
             free_trial=utils.get_pydantic_model(
                 free_trial, OptionalNullable[models.MultiAttachFreeTrialParams]
             ),
+            starts_at=starts_at,
             currency=currency,
             invoice_mode=utils.get_pydantic_model(
                 invoice_mode, Optional[models.MultiAttachInvoiceMode]
@@ -963,6 +1006,7 @@ class Billing(BaseSDK):
             discounts=utils.get_pydantic_model(
                 discounts, Optional[List[models.MultiAttachAttachDiscount]]
             ),
+            billing_behavior=billing_behavior,
             success_url=success_url,
             checkout_session_params=checkout_session_params,
             redirect_mode=redirect_mode,
@@ -1504,6 +1548,7 @@ class Billing(BaseSDK):
                 models.PreviewMultiAttachFreeTrialParamsTypedDict,
             ]
         ] = UNSET,
+        starts_at: Optional[int] = None,
         currency: Optional[str] = None,
         invoice_mode: Optional[
             Union[
@@ -1517,6 +1562,7 @@ class Billing(BaseSDK):
                 List[models.PreviewMultiAttachAttachDiscountTypedDict],
             ]
         ] = None,
+        billing_behavior: Optional[models.PreviewMultiAttachBillingBehavior] = None,
         success_url: Optional[str] = None,
         checkout_session_params: Optional[Dict[str, Any]] = None,
         redirect_mode: Optional[models.PreviewMultiAttachRedirectMode] = "if_required",
@@ -1544,9 +1590,11 @@ class Billing(BaseSDK):
         :param plans: The list of plans to attach to the customer.
         :param entity_id: The ID of the entity to attach the plans to.
         :param free_trial: Free trial configuration applied to all plans. Pass an object to set a custom trial, or null to remove any trial.
+        :param starts_at: Unix timestamp in milliseconds for backdating every plan in this multi-attach.
         :param currency: Currency to bill this multi-attach in (e.g. usd, eur). Must match the customer's currency if they are already locked to one, and every plan must offer a paid price in it. Defaults to the customer's currency, then the org default.
         :param invoice_mode: Invoice mode creates a draft or open invoice and sends it to the customer, instead of charging their card immediately.
         :param discounts: List of discounts to apply. Each discount can be an Autumn reward ID, Stripe coupon ID, or Stripe promotion code.
+        :param billing_behavior: How to handle billing. 'prorate_immediately' charges/credits prorated amounts now, 'none' does not charge/credit anything.
         :param success_url: URL to redirect to after successful checkout.
         :param checkout_session_params: Additional parameters to pass into the creation of the Stripe checkout session.
         :param redirect_mode: Controls when to return a checkout URL. 'always' returns a URL even if payment succeeds, 'if_required' only when payment action is needed, 'never' disables redirects.
@@ -1576,6 +1624,7 @@ class Billing(BaseSDK):
             free_trial=utils.get_pydantic_model(
                 free_trial, OptionalNullable[models.PreviewMultiAttachFreeTrialParams]
             ),
+            starts_at=starts_at,
             currency=currency,
             invoice_mode=utils.get_pydantic_model(
                 invoice_mode, Optional[models.PreviewMultiAttachInvoiceMode]
@@ -1583,6 +1632,7 @@ class Billing(BaseSDK):
             discounts=utils.get_pydantic_model(
                 discounts, Optional[List[models.PreviewMultiAttachAttachDiscount]]
             ),
+            billing_behavior=billing_behavior,
             success_url=success_url,
             checkout_session_params=checkout_session_params,
             redirect_mode=redirect_mode,
@@ -1670,6 +1720,7 @@ class Billing(BaseSDK):
                 models.PreviewMultiAttachFreeTrialParamsTypedDict,
             ]
         ] = UNSET,
+        starts_at: Optional[int] = None,
         currency: Optional[str] = None,
         invoice_mode: Optional[
             Union[
@@ -1683,6 +1734,7 @@ class Billing(BaseSDK):
                 List[models.PreviewMultiAttachAttachDiscountTypedDict],
             ]
         ] = None,
+        billing_behavior: Optional[models.PreviewMultiAttachBillingBehavior] = None,
         success_url: Optional[str] = None,
         checkout_session_params: Optional[Dict[str, Any]] = None,
         redirect_mode: Optional[models.PreviewMultiAttachRedirectMode] = "if_required",
@@ -1710,9 +1762,11 @@ class Billing(BaseSDK):
         :param plans: The list of plans to attach to the customer.
         :param entity_id: The ID of the entity to attach the plans to.
         :param free_trial: Free trial configuration applied to all plans. Pass an object to set a custom trial, or null to remove any trial.
+        :param starts_at: Unix timestamp in milliseconds for backdating every plan in this multi-attach.
         :param currency: Currency to bill this multi-attach in (e.g. usd, eur). Must match the customer's currency if they are already locked to one, and every plan must offer a paid price in it. Defaults to the customer's currency, then the org default.
         :param invoice_mode: Invoice mode creates a draft or open invoice and sends it to the customer, instead of charging their card immediately.
         :param discounts: List of discounts to apply. Each discount can be an Autumn reward ID, Stripe coupon ID, or Stripe promotion code.
+        :param billing_behavior: How to handle billing. 'prorate_immediately' charges/credits prorated amounts now, 'none' does not charge/credit anything.
         :param success_url: URL to redirect to after successful checkout.
         :param checkout_session_params: Additional parameters to pass into the creation of the Stripe checkout session.
         :param redirect_mode: Controls when to return a checkout URL. 'always' returns a URL even if payment succeeds, 'if_required' only when payment action is needed, 'never' disables redirects.
@@ -1742,6 +1796,7 @@ class Billing(BaseSDK):
             free_trial=utils.get_pydantic_model(
                 free_trial, OptionalNullable[models.PreviewMultiAttachFreeTrialParams]
             ),
+            starts_at=starts_at,
             currency=currency,
             invoice_mode=utils.get_pydantic_model(
                 invoice_mode, Optional[models.PreviewMultiAttachInvoiceMode]
@@ -1749,6 +1804,7 @@ class Billing(BaseSDK):
             discounts=utils.get_pydantic_model(
                 discounts, Optional[List[models.PreviewMultiAttachAttachDiscount]]
             ),
+            billing_behavior=billing_behavior,
             success_url=success_url,
             checkout_session_params=checkout_session_params,
             redirect_mode=redirect_mode,

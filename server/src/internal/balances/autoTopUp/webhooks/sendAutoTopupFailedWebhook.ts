@@ -9,7 +9,7 @@ import {
 	getApiBalance,
 	WebhookEventType,
 } from "@autumn/shared";
-import { redis } from "@/external/redis/initRedis.js";
+import { miscRedis } from "@/external/redis/initRedis.js";
 import { sendSvixEvent } from "@/external/svix/svixHelpers.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { generateId } from "@/utils/genUtils.js";
@@ -28,7 +28,7 @@ const shouldEmitSuppressedWebhook = async ({
 		return true;
 	}
 
-	if (redis.status !== "ready") {
+	if (miscRedis.status !== "ready") {
 		ctx.logger.warn(
 			`[sendAutoTopupFailedWebhook] Redis unavailable, cannot suppress duplicate webhook for ${suppressionKey}`,
 		);
@@ -37,7 +37,13 @@ const shouldEmitSuppressedWebhook = async ({
 
 	try {
 		const ttlSeconds = Math.max(1, Math.ceil(suppressionTtlMs / 1000));
-		const result = await redis.set(suppressionKey, "1", "EX", ttlSeconds, "NX");
+		const result = await miscRedis.set(
+			suppressionKey,
+			"1",
+			"EX",
+			ttlSeconds,
+			"NX",
+		);
 		if (result === "OK") return true;
 
 		ctx.logger.info(
@@ -60,9 +66,9 @@ const releaseSuppressionKey = async ({
 	ctx: AutumnContext;
 	suppressionKey: string;
 }): Promise<void> => {
-	if (redis.status !== "ready") return;
+	if (miscRedis.status !== "ready") return;
 	try {
-		await redis.del(suppressionKey);
+		await miscRedis.del(suppressionKey);
 	} catch (error) {
 		ctx.logger.warn(
 			`[sendAutoTopupFailedWebhook] Failed to release suppression key ${suppressionKey}: ${error}`,

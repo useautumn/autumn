@@ -1095,6 +1095,24 @@ actions:
 
                 # Handle response
                 print(res)
+  - target: $["paths"]["/v1/referral_programs.create"]["post"]
+    update:
+      x-codeSamples:
+        - lang: python
+          label: Python (SDK)
+          source: |-
+            from autumn_sdk import Autumn
+
+
+            with Autumn(
+                x_api_version="2.3.0",
+                secret_key="<YOUR_BEARER_TOKEN_HERE>",
+            ) as autumn:
+
+                res = autumn.referrals.create_program(id="refer_a_friend", reward_id="beta_credits_grant", redeem_on="customer_creation", received_by="referrer", max_redemptions=10, plan_ids=None, exclude_trial=False)
+
+                # Handle response
+                print(res)
   - target: $["paths"]["/v1/referrals.create_code"]["post"]
     update:
       x-codeSamples:
@@ -1128,6 +1146,39 @@ actions:
             ) as autumn:
 
                 res = autumn.referrals.redeem_code(code="REF123", customer_id="cus_456")
+
+                # Handle response
+                print(res)
+  - target: $["paths"]["/v1/rewards.create"]["post"]
+    update:
+      x-codeSamples:
+        - lang: python
+          label: Python (SDK)
+          source: |-
+            from autumn_sdk import Autumn
+
+
+            with Autumn(
+                x_api_version="2.3.0",
+                secret_key="<YOUR_BEARER_TOKEN_HERE>",
+            ) as autumn:
+
+                res = autumn.rewards.create(coupon={
+                    "id": "summer_sale",
+                    "name": "Summer Sale",
+                    "duration": {
+                        "type": "months",
+                        "length": 3,
+                    },
+                    "plan_ids": None,
+                    "promo_codes": [
+                        {
+                            "code": "SUMMER20",
+                        },
+                    ],
+                    "type": "percentage_discount",
+                    "value": 20,
+                })
 
                 # Handle response
                 print(res)

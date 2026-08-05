@@ -332,107 +332,106 @@ test.concurrent(
 	},
 );
 
-test.concurrent(
-	`${chalk.yellowBright("migration run scoping: limit caps live lazy sample runs")}`,
-	async () => {
-		/**
-		 * TDD regression for sample-by-count live runs.
-		 *
-		 * Red-failure mode:
-		 *  - migrations.run({ limit, lazy_run: true }) persists target_limit but
-		 *    still claims every matching customer in migration_item_runs.
-		 *
-		 * Green-success criteria:
-		 *  - The run record keeps target_limit, and the current run only creates
-		 *    item-run rows for the requested limit.
-		 */
-		const suffix = uniqueSuffix();
-		const customerIds = Array.from(
-			{ length: 5 },
-			(_, i) => `run-scope-limit-${i}-${suffix}`,
-		);
-		const plan = products.base({
-			id: `run-scope-limit-plan-${suffix}`,
-			items: [],
-		});
+// Skipped while LAZY_MIGRATION_RUNS_DISABLED is on: `lazy_run: true` is
+// rejected with a 400, so this can't run. Unskip if lazy runs come back.
+test.skip(`${chalk.yellowBright("migration run scoping: limit caps live lazy sample runs")}`, async () => {
+	/**
+	 * TDD regression for sample-by-count live runs.
+	 *
+	 * Red-failure mode:
+	 *  - migrations.run({ limit, lazy_run: true }) persists target_limit but
+	 *    still claims every matching customer in migration_item_runs.
+	 *
+	 * Green-success criteria:
+	 *  - The run record keeps target_limit, and the current run only creates
+	 *    item-run rows for the requested limit.
+	 */
+	const suffix = uniqueSuffix();
+	const customerIds = Array.from(
+		{ length: 5 },
+		(_, i) => `run-scope-limit-${i}-${suffix}`,
+	);
+	const plan = products.base({
+		id: `run-scope-limit-plan-${suffix}`,
+		items: [],
+	});
 
-		const { autumnV2_2, ctx } = await initScenario({
-			customerId: customerIds[0],
-			setup: [
-				s.customer({ testClock: false }),
-				s.otherCustomers(
-					customerIds.slice(1).map((id) => ({
-						id,
-						distinctTestClock: true,
-					})),
+	const { autumnV2_2, ctx } = await initScenario({
+		customerId: customerIds[0],
+		setup: [
+			s.customer({ testClock: false }),
+			s.otherCustomers(
+				customerIds.slice(1).map((id) => ({
+					id,
+					distinctTestClock: true,
+				})),
+			),
+			s.products({ list: [plan] }),
+		],
+		actions: [
+			s.parallel(
+				...customerIds.map((id) =>
+					id === customerIds[0]
+						? s.billing.attach({ productId: plan.id })
+						: s.billing.attach({ customerId: id, productId: plan.id }),
 				),
-				s.products({ list: [plan] }),
+			),
+		],
+	});
+
+	const migration = await autumnV2_2.migrationsV2.deleteAndCreate({
+		id: `run-scope-limit-mig-${suffix}`,
+		filter: { customer: { plan: { plan_id: plan.id } } },
+		operations: {
+			customer: [
+				{
+					type: "update_plan",
+					plan_filter: { plan_id: plan.id },
+					customize: { add_items: [itemsV2.dashboard()] },
+				},
 			],
-			actions: [
-				s.parallel(
-					...customerIds.map((id) =>
-						id === customerIds[0]
-							? s.billing.attach({ productId: plan.id })
-							: s.billing.attach({ customerId: id, productId: plan.id }),
-					),
-				),
-			],
-		});
+		},
+	});
 
-		const migration = await autumnV2_2.migrationsV2.deleteAndCreate({
-			id: `run-scope-limit-mig-${suffix}`,
-			filter: { customer: { plan: { plan_id: plan.id } } },
-			operations: {
-				customer: [
-					{
-						type: "update_plan",
-						plan_filter: { plan_id: plan.id },
-						customize: { add_items: [itemsV2.dashboard()] },
-					},
-				],
-			},
-		});
+	const runResponse = await autumnV2_2.migrationsV2.run({
+		id: migration.id,
+		dry_run: false,
+		limit: 2,
+		lazy_run: true,
+	});
 
-		const runResponse = await autumnV2_2.migrationsV2.run({
-			id: migration.id,
-			dry_run: false,
-			limit: 2,
-			lazy_run: true,
-		});
+	await waitForMigrationResult({
+		timeoutMs: 60_000,
+		pollIntervalMs: 1_000,
+		waitFor: async () => {
+			const counts = await migrationItemRunRepo.getCounts({
+				ctx,
+				migrationInternalId: migration.internal_id,
+				dryRun: false,
+				migrationRunId: runResponse.run_id,
+			});
+			expect(counts.total).toBe(2);
+		},
+	});
+	await timeout(3_000);
 
-		await waitForMigrationResult({
-			timeoutMs: 60_000,
-			pollIntervalMs: 1_000,
-			waitFor: async () => {
-				const counts = await migrationItemRunRepo.getCounts({
-					ctx,
-					migrationInternalId: migration.internal_id,
-					dryRun: false,
-					migrationRunId: runResponse.run_id,
-				});
-				expect(counts.total).toBe(2);
-			},
-		});
-		await timeout(3_000);
+	const [run] = await migrationRunRepo.list({
+		ctx,
+		internalId: runResponse.run_id,
+	});
+	expect(run).toBeDefined();
+	expect(run.only_ids).toBeNull();
+	expect(run.target_limit).toBe(2);
+	expect(run.lazy_run).toBe(true);
 
-		const [run] = await migrationRunRepo.list({
-			ctx,
-			internalId: runResponse.run_id,
-		});
-		expect(run).toBeDefined();
-		expect(run.only_ids).toBeNull();
-		expect(run.target_limit).toBe(2);
-		expect(run.lazy_run).toBe(true);
-
-		const counts = await migrationItemRunRepo.getCounts({
-			ctx,
-			migrationInternalId: migration.internal_id,
-			dryRun: false,
-			migrationRunId: runResponse.run_id,
-		});
-		expect(counts.total).toBe(2);
-	},
-);
+	const counts = await migrationItemRunRepo.getCounts({
+		ctx,
+		migrationInternalId: migration.internal_id,
+		dryRun: false,
+		migrationRunId: runResponse.run_id,
+	});
+	expect(counts.total).toBe(2);
+});
 
 test.concurrent(
 	`${chalk.yellowBright("migration run scoping: full run has null target fields")}`,

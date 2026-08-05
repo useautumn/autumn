@@ -9,7 +9,10 @@ import {
 import { ErrCode, RecaseError } from "@autumn/shared";
 import type { Context } from "hono";
 import { db } from "@/db/initDrizzle.js";
+import { getMiscRedis } from "@/external/redis/initRedis.js";
 import { auth } from "@/utils/auth.js";
+import { decryptData, encryptData } from "@/utils/encryptUtils.js";
+import { timeout } from "@/utils/genUtils.js";
 import { hashOAuthToken } from "@/utils/oauthUtils.js";
 import {
 	oauthAccessTokenRepo,
@@ -116,6 +119,59 @@ const jsonTokenResponse = ({
 		headers: tokenResponseHeaders(response),
 	});
 
+const REFRESH_REPLAY_TTL_SECONDS = 30;
+const REFRESH_REPLAY_PENDING = "pending";
+
+const claimRefreshReplay = async (key: string) => {
+	try {
+		const redis = getMiscRedis();
+		if (redis.status !== "ready") return null;
+		for (let attempt = 0; attempt < 200; attempt++) {
+			const value = await redis.get(key);
+			if (value && value !== REFRESH_REPLAY_PENDING) {
+				return {
+					body: JSON.parse(decryptData(value)) as Record<string, unknown>,
+				};
+			}
+			if (
+				!value &&
+				(await redis.set(
+					key,
+					REFRESH_REPLAY_PENDING,
+					"EX",
+					REFRESH_REPLAY_TTL_SECONDS,
+					"NX",
+				))
+			) {
+				return { body: null };
+			}
+			await timeout(25);
+		}
+		return null;
+	} catch {
+		return null;
+	}
+};
+
+const storeRefreshReplay = async ({
+	body,
+	key,
+}: {
+	body: Record<string, unknown>;
+	key: string;
+}) => {
+	try {
+		await getMiscRedis().set(
+			key,
+			encryptData(JSON.stringify(body)),
+			"EX",
+			REFRESH_REPLAY_TTL_SECONDS,
+		);
+	} catch {
+		return;
+	}
+};
+
 const getRefreshTokenRecord = async (request: Request) => {
 	const refreshToken = await getRefreshTokenForConsentLookup(request);
 	if (!refreshToken) return null;
@@ -202,7 +258,9 @@ const normalizeTokenRequest = async ({
 			if (grantedScopes && typeof body.scope === "string") {
 				body.scope = constrainScope({ scope: body.scope, grantedScopes });
 			}
-			return new Request(request, { body: JSON.stringify(body) });
+			return new Request(request, {
+				body: JSON.stringify(body, Object.keys(body).sort()),
+			});
 		} catch {
 			return new Request(request, { body: rawBody });
 		}
@@ -214,6 +272,7 @@ const normalizeTokenRequest = async ({
 	if (grantedScopes && scope) {
 		params.set("scope", constrainScope({ scope, grantedScopes }));
 	}
+	params.sort();
 	return new Request(request, { body: params });
 };
 
@@ -229,12 +288,35 @@ export const handleOAuthTokenWithApiKey = async (c: Context) => {
 		}))
 			? refreshTokenRecord.scopes
 			: undefined;
-	const response = await auth.handler(
-		await normalizeTokenRequest({
-			request: c.req.raw.clone(),
-			grantedScopes: refreshScopes,
-		}),
-	);
+	const normalizedRequest = await normalizeTokenRequest({
+		request: c.req.raw.clone(),
+		grantedScopes: refreshScopes,
+	});
+	const refreshReplayKey = refreshScopes
+		? `oauth:refresh-replay:${await hashOAuthToken(
+				`${resource ?? ""}\n${normalizedRequest.headers.get("authorization") ?? ""}\n${await normalizedRequest.clone().text()}`,
+			)}`
+		: null;
+	if (refreshReplayKey) {
+		const replay = await claimRefreshReplay(refreshReplayKey);
+		if (!replay) {
+			return jsonTokenResponse({
+				body: {
+					error: "temporarily_unavailable",
+					error_description: "Refresh request coordination unavailable",
+				},
+				status: 503,
+			});
+		}
+		if (replay.body) {
+			return jsonTokenResponse({
+				body: replay.body,
+				status: 200,
+			});
+		}
+	}
+
+	const response = await auth.handler(normalizedRequest);
 	if (!response.ok) return response;
 
 	let body: Record<string, unknown>;
@@ -335,12 +417,19 @@ export const handleOAuthTokenWithApiKey = async (c: Context) => {
 			isMcpClient ||
 			returnsOAuthAccessTokenForClientId({ clientId: tokenRecord.clientId })
 		) {
+			const responseBody = rewriteOAuthAccessTokenBody({
+				accessToken: prefixOAuthToken({ token: accessToken }),
+				body,
+				scopes: tokenRecord.scopes,
+			});
+			if (refreshReplayKey) {
+				await storeRefreshReplay({
+					body: responseBody,
+					key: refreshReplayKey,
+				});
+			}
 			return jsonTokenResponse({
-				body: rewriteOAuthAccessTokenBody({
-					accessToken: prefixOAuthToken({ token: accessToken }),
-					body,
-					scopes: tokenRecord.scopes,
-				}),
+				body: responseBody,
 				response,
 				status: response.status,
 			});

@@ -97,34 +97,66 @@ const main = async () => {
 	const freeNonCustom: CustomerFilter = {
 		plan: { plan_id: BENCH_FREE_PRODUCT_ID, custom: false },
 	};
+	const paidDerived: CustomerFilter = {
+		plan: { plan_id: BENCH_PAID_PRODUCT_ID, paid: true },
+	};
+	const paidRecurring: CustomerFilter = {
+		plan: { plan_id: BENCH_PAID_PRODUCT_ID, recurring: true },
+	};
+	const paidBasePrice: CustomerFilter = {
+		plan: { plan_id: BENCH_PAID_PRODUCT_ID, price: { $ne: null } },
+	};
+	const freeUnpaidResidual: CustomerFilter = {
+		plan: { plan_id: BENCH_FREE_PRODUCT_ID, custom: false, paid: false },
+	};
 
-	const scenarios: { key: string; note: string; build: () => SQL }[] = [
+	const scenarios: { id: string; note: string; build: () => SQL }[] = [
 		{
-			key: "S1-claim-selective",
+			id: "S1-claim-selective",
 			note: "claim page, bench-paid (600k matched), fresh, no cursor",
 			build: () =>
-				buildCustomerSelect({ ...base, filter: paid, checkpoint: freshCheckpoint, limit: PAGE_SIZE }),
+				buildCustomerSelect({
+					...base,
+					filter: paid,
+					checkpoint: freshCheckpoint,
+					limit: PAGE_SIZE,
+				}),
 		},
 		{
-			key: "S2-claim-dominant",
+			id: "S2-claim-dominant",
 			note: "claim page, bench-free (2.4M matched), fresh, no cursor",
 			build: () =>
-				buildCustomerSelect({ ...base, filter: free, checkpoint: freshCheckpoint, limit: PAGE_SIZE }),
+				buildCustomerSelect({
+					...base,
+					filter: free,
+					checkpoint: freshCheckpoint,
+					limit: PAGE_SIZE,
+				}),
 		},
 		{
-			key: "S3-claim-multiplan",
+			id: "S3-claim-multiplan",
 			note: "claim page, plan_id $in [paid, free-bare] (1.6M matched)",
 			build: () =>
-				buildCustomerSelect({ ...base, filter: multi, checkpoint: freshCheckpoint, limit: PAGE_SIZE }),
+				buildCustomerSelect({
+					...base,
+					filter: multi,
+					checkpoint: freshCheckpoint,
+					limit: PAGE_SIZE,
+				}),
 		},
 		{
-			key: "S4-claim-residual",
+			id: "S4-claim-residual",
 			note: "claim page, bench-free + custom:false (prod screenshot shape)",
 			build: () =>
-				buildCustomerSelect({ ...base, filter: freeNonCustom, checkpoint: freshCheckpoint, limit: PAGE_SIZE }),
+				buildCustomerSelect({
+					...base,
+					filter: freeNonCustom,
+					checkpoint: freshCheckpoint,
+					limit: PAGE_SIZE,
+				}),
 		},
 		{
-			key: "S5-claim-deep-cursor",
+			id: "S5-claim-deep-cursor",
 			note: "claim page, bench-free, cursor deep at cus_bench_1100000",
 			build: () =>
 				buildCustomerSelect({
@@ -136,7 +168,7 @@ const main = async () => {
 				}),
 		},
 		{
-			key: "S6-claim-midrun-cursor",
+			id: "S6-claim-midrun-cursor",
 			note: "claim page, bench-paid, 300k processed, resume cursor",
 			build: () =>
 				buildCustomerSelect({
@@ -148,29 +180,87 @@ const main = async () => {
 				}),
 		},
 		{
-			key: "S7-claim-midrun-restart",
+			id: "S7-claim-midrun-restart",
 			note: "claim page, bench-paid, 300k processed, NO cursor (restart)",
 			build: () =>
-				buildCustomerSelect({ ...base, filter: paid, checkpoint: midCheckpoint, limit: PAGE_SIZE }),
+				buildCustomerSelect({
+					...base,
+					filter: paid,
+					checkpoint: midCheckpoint,
+					limit: PAGE_SIZE,
+				}),
 		},
 		{
-			key: "P1-dashboard-page",
+			id: "S8-claim-paid-derived",
+			note: "claim page, bench-paid + paid:true (EXISTS cusPrice per row)",
+			build: () =>
+				buildCustomerSelect({
+					...base,
+					filter: paidDerived,
+					checkpoint: freshCheckpoint,
+					limit: PAGE_SIZE,
+				}),
+		},
+		{
+			id: "S9-claim-recurring",
+			note: "claim page, bench-paid + recurring:true (EXISTS + prices join)",
+			build: () =>
+				buildCustomerSelect({
+					...base,
+					filter: paidRecurring,
+					checkpoint: freshCheckpoint,
+					limit: PAGE_SIZE,
+				}),
+		},
+		{
+			id: "S10-claim-base-price",
+			note: "claim page, bench-paid + price:{$ne:null} (base-price subquery)",
+			build: () =>
+				buildCustomerSelect({
+					...base,
+					filter: paidBasePrice,
+					checkpoint: freshCheckpoint,
+					limit: PAGE_SIZE,
+				}),
+		},
+		{
+			id: "S11-claim-unpaid-residual",
+			note: "claim page, bench-free + custom:false + paid:false (NOT EXISTS over dominant plan)",
+			build: () =>
+				buildCustomerSelect({
+					...base,
+					filter: freeUnpaidResidual,
+					checkpoint: freshCheckpoint,
+					limit: PAGE_SIZE,
+				}),
+		},
+		{
+			id: "P1-dashboard-page",
 			note: "dashboard preview page, bench-free, limit 51",
 			build: () =>
-				buildCustomerSelect({ ...base, filter: free, limit: DASHBOARD_PAGE_SIZE }),
+				buildCustomerSelect({
+					...base,
+					filter: free,
+					limit: DASHBOARD_PAGE_SIZE,
+				}),
 		},
 		{
-			key: "C1-count-selective",
+			id: "C1-count-selective",
 			note: "dashboard count, bench-paid (600k)",
 			build: () => buildCustomerCount({ ...base, filter: paid }),
 		},
 		{
-			key: "C2-count-dominant",
+			id: "C2-count-dominant",
 			note: "dashboard count, bench-free (2.4M)",
 			build: () => buildCustomerCount({ ...base, filter: free }),
 		},
 		{
-			key: "E1-execution-page",
+			id: "C3-count-recurring",
+			note: "dashboard count, bench-paid + recurring:true (600k, EXISTS per row)",
+			build: () => buildCustomerCount({ ...base, filter: paidRecurring }),
+		},
+		{
+			id: "E1-execution-page",
 			note: "execution view page (UNION), bench-paid + 300k processed, limit 51",
 			build: () =>
 				buildProcessedPreviewSelect({
@@ -181,7 +271,7 @@ const main = async () => {
 				}),
 		},
 		{
-			key: "E2-execution-count",
+			id: "E2-execution-count",
 			note: "execution view count (UNION), bench-paid + 300k processed",
 			build: () =>
 				buildProcessedPreviewCount({
@@ -204,7 +294,7 @@ const main = async () => {
 			"Execution Time": number;
 		}[];
 		writeFileSync(
-			join(RESULTS_DIR, `${scenario.key}.json`),
+			join(RESULTS_DIR, `${scenario.id}.json`),
 			JSON.stringify(parsed, null, 2),
 		);
 
@@ -214,7 +304,7 @@ const main = async () => {
 
 		const offenders: string[] = [];
 		walkOffenders(parsed[0].Plan, offenders);
-		const line = `${scenario.key}: ${timedMs}ms (explain ${Math.round(parsed[0]["Execution Time"])}ms, analyze wall ${Date.now() - explainStarted - timedMs}ms) — ${rows.length.toLocaleString()} rows`;
+		const line = `${scenario.id}: ${timedMs}ms (explain ${Math.round(parsed[0]["Execution Time"])}ms, analyze wall ${Date.now() - explainStarted - timedMs}ms) — ${rows.length.toLocaleString()} rows`;
 		summary.push(line);
 		console.log(`\n■ ${line}`);
 		console.log(`  ${scenario.note}`);

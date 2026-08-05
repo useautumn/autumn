@@ -42,12 +42,14 @@ import type { TestExecutor } from "../../testScripts/testExecutor.ts";
 import {
 	DATABASE_CRITICAL_URL,
 	DATABASE_URL,
+	DYNAMODB_ENDPOINT,
 	EDGE_CONFIG_OVERRIDE_B64,
 	PROJECT_ROOT,
 	REDIS_URL,
 	REGISTRY_DIR,
 	SERVER_PORT,
 	SQS_QUEUE_URL_V2,
+	TRACK_ASYNC_SQS_QUEUE_URL,
 	TRACK_SQS_QUEUE_URL,
 	TW_ENV,
 	WARM_SANDBOX_PREFIX,
@@ -678,6 +680,8 @@ const buildWorkerEnv = ({
 		CACHE_V2_DRAGONFLY_URL: REDIS_URL,
 		SQS_QUEUE_URL_V2,
 		TRACK_SQS_QUEUE_URL,
+		TRACK_ASYNC_SQS_QUEUE_URL,
+		DYNAMODB_ENDPOINT,
 		// baked secrets (every worker).
 		ENCRYPTION_IV: requireSecret("ENCRYPTION_IV"),
 		ENCRYPTION_PASSWORD: requireSecret("ENCRYPTION_PASSWORD"),
@@ -733,6 +737,12 @@ const buildWorkerEnv = ({
 	) {
 		env.TINYBIRD_US_EAST_API_URL = process.env.TINYBIRD_US_EAST_API_URL;
 		env.TINYBIRD_US_EAST_TOKEN = process.env.TINYBIRD_US_EAST_TOKEN;
+		// Raw ClickHouse endpoint — the pipes API can't serve single-event reads,
+		// so analytics tests that assert an exact event need this too.
+		if (process.env.TINYBIRD_US_EAST_CLICKHOUSE_URL) {
+			env.TINYBIRD_US_EAST_CLICKHOUSE_URL =
+				process.env.TINYBIRD_US_EAST_CLICKHOUSE_URL;
+		}
 	}
 
 	// Browser tests (Stripe checkout / setup-payment) use the LOCAL Playwright
@@ -776,6 +786,8 @@ const buildWarmEnv = (): Record<string, string> => ({
 	CACHE_V2_DRAGONFLY_URL: REDIS_URL,
 	SQS_QUEUE_URL_V2,
 	TRACK_SQS_QUEUE_URL,
+	TRACK_ASYNC_SQS_QUEUE_URL,
+	DYNAMODB_ENDPOINT,
 	AUTUMN_DB_DIRECT: "1",
 	TW_WORKER_MODE: "1",
 	TW_SKIP_STRIPE_ACCOUNT: "1",

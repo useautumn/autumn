@@ -1,11 +1,16 @@
 import { expect, test } from "bun:test";
-import type { ApiEntityV0, CreateScheduleParamsV0Input } from "@autumn/shared";
+import type {
+	ApiEntityV0,
+	AttachPreviewResponse,
+	CreateScheduleParamsV0Input,
+} from "@autumn/shared";
 import { customerProducts } from "@autumn/shared";
 import { expectCustomerProducts } from "@tests/integration/billing/utils/expectCustomerProductCorrect";
 import { expectNoStripeSubscription } from "@tests/integration/billing/utils/expectNoStripeSubscription";
 import { expectStripeSubscriptionCorrect } from "@tests/integration/billing/utils/expectStripeSubCorrect";
 import { expectSubCount } from "@tests/merged/mergeUtils/expectSubCorrect";
 import { TestFeature } from "@tests/setup/v2Features";
+import { expectAutumnError } from "@tests/utils/expectUtils/expectErrUtils";
 import { items } from "@tests/utils/fixtures/items";
 import { products } from "@tests/utils/fixtures/products";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
@@ -227,5 +232,118 @@ test.concurrent(
 			active: [attachedPlan.id],
 			notPresent: [existingPlan.id],
 		});
+	},
+);
+
+// Regression: add-on-only phases previously expired base plans in represented scopes.
+test.concurrent(
+	`${chalk.yellowBright("create-schedule immediate multi-plan: add-ons preserve base plans across scopes")}`,
+	async () => {
+		const basePlan = products.pro({
+			id: "addon-only-base",
+			items: [items.monthlyMessages()],
+		});
+		const addon = products.base({
+			id: "addon-only-addon",
+			isAddOn: true,
+			items: [items.dashboard()],
+		});
+		const { customerId, autumnV1, ctx, entities } = await initScenario({
+			customerId: "cs-addon-only-preserves-bases-v1",
+			setup: [
+				s.customer({ paymentMethod: "success" }),
+				s.products({ list: [basePlan, addon] }),
+				s.entities({ count: 2, featureId: TestFeature.Users }),
+			],
+			actions: [
+				s.billing.attach({ productId: basePlan.id, entityIndex: 0 }),
+				s.billing.attach({ productId: basePlan.id, entityIndex: 1 }),
+			],
+		});
+		const params = immediateSchedule({
+			customerId,
+			plans: entities.map((entity) => ({
+				plan_id: addon.id,
+				entity_id: entity.id,
+			})),
+		});
+
+		const preview = (await autumnV1.post(
+			"/billing.preview_create_schedule",
+			params,
+		)) as AttachPreviewResponse;
+		expect(preview.outgoing).toHaveLength(0);
+		expect(preview.total).toBe(0);
+
+		const response = await autumnV1.billing.createSchedule(params);
+		expect(response.phases[0]?.customer_product_ids).toHaveLength(4);
+		for (const entity of entities) {
+			const entityCustomer = await autumnV1.entities.get<ApiEntityV0>(
+				customerId,
+				entity.id,
+			);
+			await expectCustomerProducts({
+				customer: entityCustomer,
+				active: [basePlan.id, addon.id],
+			});
+		}
+		await expectStripeSubscriptionCorrect({ ctx, customerId });
+	},
+);
+
+test.concurrent(
+	`${chalk.yellowBright("create-schedule immediate multi-plan: rejects scopes on separate subscriptions")}`,
+	async () => {
+		const base = products.base({
+			id: "separate-sub-base",
+			items: [items.monthlyPrice({ price: 10 })],
+		});
+		const addOn = products.recurringAddOn({
+			id: "separate-sub-addon",
+			items: [items.monthlyWords()],
+		});
+		const { customerId, autumnV1, entities, ctx } = await initScenario({
+			customerId: "cs-immediate-separate-sub-scopes",
+			setup: [
+				s.customer({ paymentMethod: "success" }),
+				s.products({ list: [base, addOn] }),
+				s.entities({ count: 2, featureId: TestFeature.Users }),
+			],
+			actions: [
+				s.billing.attach({ productId: base.id, entityIndex: 0 }),
+				s.billing.attach({
+					productId: base.id,
+					entityIndex: 1,
+					newBillingSubscription: true,
+				}),
+			],
+		});
+
+		await expectAutumnError({
+			errMessage: "multiple existing subscriptions",
+			func: () =>
+				autumnV1.billing.createSchedule(
+					immediateSchedule({
+						customerId,
+						plans: entities.map((entity) => ({
+							plan_id: addOn.id,
+							entity_id: entity.id,
+						})),
+					}),
+				),
+		});
+
+		for (const entity of entities) {
+			const scopedCustomer = await autumnV1.entities.get<ApiEntityV0>(
+				customerId,
+				entity.id,
+			);
+			await expectCustomerProducts({
+				customer: scopedCustomer,
+				active: [base.id],
+				notPresent: [addOn.id],
+			});
+		}
+		await expectSubCount({ ctx, customerId, count: 2 });
 	},
 );

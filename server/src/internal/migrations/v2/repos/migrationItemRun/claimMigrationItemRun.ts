@@ -9,6 +9,7 @@ import type { RepoContext } from "@/db/repoContext.js";
 import { generateId } from "@/utils/genUtils.js";
 import type { RetryableMigrationItemRunStatus } from "../../run/utils/retryItemStatuses.js";
 import { getMigrationItemRun } from "./getMigrationItemRun.js";
+import { isLiveItemExclusiveViolation } from "./liveItemExclusiveViolation.js";
 
 type MigrationItemRunRepoContext = RepoContext & {
 	dbGeneral?: RepoContext["db"];
@@ -76,26 +77,34 @@ export const claimMigrationItemRun = async ({
 	const shouldRetry =
 		claimBehavior === "retry_statuses" && retryStatuses.length > 0;
 
-	const [claimed] = shouldRetry
-		? await db
-				.insert(migrationItemRuns)
-				.values(values)
-				.onConflictDoUpdate({
-					target,
-					targetWhere,
-					set: {
-						migration_run_id: migrationRunId ?? null,
-						status: MigrationItemRunStatus.Running,
-						updated_at: now,
-					},
-					setWhere: inArray(migrationItemRuns.status, retryStatuses),
-				})
-				.returning()
-		: await db
-				.insert(migrationItemRuns)
-				.values(values)
-				.onConflictDoNothing({ target, where: targetWhere })
-				.returning();
+	let claimed: MigrationItemRun | undefined;
+	try {
+		[claimed] = shouldRetry
+			? await db
+					.insert(migrationItemRuns)
+					.values(values)
+					.onConflictDoUpdate({
+						target,
+						targetWhere,
+						set: {
+							migration_run_id: migrationRunId ?? null,
+							status: MigrationItemRunStatus.Running,
+							updated_at: now,
+						},
+						setWhere: inArray(migrationItemRuns.status, retryStatuses),
+					})
+					.returning()
+			: await db
+					.insert(migrationItemRuns)
+					.values(values)
+					.onConflictDoNothing({ target, where: targetWhere })
+					.returning();
+	} catch (error) {
+		// Busy in another live migration — not claimable, not an error.
+		if (isLiveItemExclusiveViolation(error))
+			return { claimed: false, itemRun: null };
+		throw error;
+	}
 
 	if (claimed) return { claimed: true, itemRun: claimed };
 

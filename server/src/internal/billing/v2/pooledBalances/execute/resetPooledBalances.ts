@@ -50,7 +50,12 @@ export const resetPooledBalances = async ({
 		skipped,
 	});
 
-	if (Object.keys(applied).length > 0) {
+	// Promotion changes granted even when the balance reset lost its CAS race,
+	// so a promoted-but-skipped pool still needs the cache dropped.
+	const anyPromoted = computed.some(
+		({ result }) => result.pooledContributionsPromoted,
+	);
+	if (Object.keys(applied).length > 0 || anyPromoted) {
 		await invalidateCachedFullSubject({
 			ctx,
 			customerId: fullCustomer.id ?? fullCustomer.internal_id,

@@ -10,6 +10,20 @@ const free = products.base({
 	items: [items.monthlyMessages({ includedUsage: 100 })],
 });
 
+// Events are read back over raw ClickHouse, which needs the Tinybird endpoint on
+// top of the ingest credentials — skip loudly where it is unset.
+const clickhouseConfigured = Boolean(
+	process.env.TINYBIRD_US_EAST_CLICKHOUSE_URL &&
+		process.env.TINYBIRD_US_EAST_TOKEN,
+);
+const testWithClickhouse = clickhouseConfigured ? test : test.skip;
+
+if (!clickhouseConfigured) {
+	console.warn(
+		"[track-tinybird-migration] skipped: TINYBIRD_US_EAST_CLICKHOUSE_URL / TINYBIRD_US_EAST_TOKEN not set",
+	);
+}
+
 /**
  * Tinybird Migration Test Suite
  *
@@ -20,7 +34,7 @@ const free = products.base({
  * - idempotency key passed in
  */
 
-test("tinybird migration - dual write", async () => {
+testWithClickhouse("tinybird migration - dual write", async () => {
 	const customerId = "track-tinybird-migration";
 
 	const { autumnV1, ctx } = await initScenario({

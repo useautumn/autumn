@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto";
 import { ErrCode, RecaseError } from "@autumn/shared";
-import { hasRedisConfig, redis } from "@/external/redis/initRedis.js";
+import { hasMiscRedisConfig, miscRedis } from "@/external/redis/initRedis.js";
 import { runRedisOp } from "@/external/redis/utils/runRedisOp.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { timeout } from "@/utils/genUtils.js";
@@ -34,7 +34,9 @@ const releaseMigrationCustomerLock = async ({
 }) =>
 	runRedisOp({
 		source: "migration-customer-lock:release",
-		operation: () => redis.eval(RELEASE_LOCK_SCRIPT, 1, lockKey, ownerToken),
+		redisInstance: miscRedis,
+		operation: () =>
+			miscRedis.eval(RELEASE_LOCK_SCRIPT, 1, lockKey, ownerToken),
 	});
 
 export const withMigrationCustomerLock = async <T>({
@@ -48,7 +50,7 @@ export const withMigrationCustomerLock = async <T>({
 	maxWaitMs?: number;
 	run: () => Promise<T>;
 }): Promise<T> => {
-	if (!hasRedisConfig) return run();
+	if (!hasMiscRedisConfig) return run();
 
 	const lockKey = buildMigrationCustomerLockKey({ ctx, customerId });
 	const ownerToken = randomUUID();
@@ -59,8 +61,9 @@ export const withMigrationCustomerLock = async <T>({
 		try {
 			result = await runRedisOp({
 				source: "migration-customer-lock:acquire",
+				redisInstance: miscRedis,
 				operation: () =>
-					redis.set(lockKey, ownerToken, "PX", LOCK_TTL_MS, "NX"),
+					miscRedis.set(lockKey, ownerToken, "PX", LOCK_TTL_MS, "NX"),
 			});
 		} catch (error) {
 			await releaseMigrationCustomerLock({ lockKey, ownerToken }).catch(

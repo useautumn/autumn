@@ -332,9 +332,11 @@ Use this to permanently remove a feature. Note: features that are used in produc
 
 * [create_code](docs/sdks/referrals/README.md#create_code) - Create or fetch a referral code for a customer in a referral program.
 * [redeem_code](docs/sdks/referrals/README.md#redeem_code) - Redeem a referral code for a customer.
+* [create_program](docs/sdks/referrals/README.md#create_program) - Create a referral program linked to an existing reward.
 
 ### [Rewards](docs/sdks/rewardssdk/README.md)
 
+* [create](docs/sdks/rewardssdk/README.md#create) - Create a coupon or feature grant.
 * [list](docs/sdks/rewardssdk/README.md#list) - List the coupons and feature grants configured for the org.
 * [redeem_code](docs/sdks/rewardssdk/README.md#redeem_code) - Redeem a reward promo code for a customer.
 

@@ -2,23 +2,21 @@ import { Switch } from "@autumn/ui";
 
 export const MiscellaneousEdgeConfigSwitch = ({
 	title,
-	description,
+	hint,
 	ariaLabel,
 	checked,
 	onCheckedChange,
 }: {
 	title: string;
-	description: string;
+	hint?: string;
 	ariaLabel: string;
 	checked: boolean;
 	onCheckedChange: (checked: boolean) => void;
 }) => (
-	<div className="rounded-lg border border-border p-3 flex items-center justify-between gap-6">
-		<div className="flex min-w-0 flex-col gap-1">
-			<div className="text-sm font-medium text-foreground">{title}</div>
-			<div className="text-pretty text-xs text-tertiary-foreground">
-				{description}
-			</div>
+	<div className="flex items-center justify-between gap-6 px-3 py-2.5">
+		<div className="flex min-w-0 flex-col">
+			<div className="text-sm text-foreground">{title}</div>
+			{hint && <div className="text-xs text-tertiary-foreground">{hint}</div>}
 		</div>
 		<Switch
 			aria-label={ariaLabel}

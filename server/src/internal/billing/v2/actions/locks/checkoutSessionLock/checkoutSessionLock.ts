@@ -1,5 +1,5 @@
 import { createStripeCli } from "@/external/connect/createStripeCli";
-import { getPrimaryRedis } from "@/external/redis/initRedis";
+import { getMiscRedis } from "@/external/redis/initRedis";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { CacheManager } from "@/utils/cacheUtils/CacheManager";
 
@@ -66,7 +66,7 @@ const clearIfOwned = async ({
 	checkoutSessionId: string;
 }): Promise<void> => {
 	try {
-		const redis = getPrimaryRedis();
+		const redis = getMiscRedis();
 		if (redis.status !== "ready") {
 			ctx.logger.warn(
 				`Redis not ready — checkout reservation for ${customerId} left to TTL`,

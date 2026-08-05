@@ -1357,6 +1357,34 @@ actions:
             }
 
             run();
+  - target: $["paths"]["/v1/referral_programs.create"]["post"]
+    update:
+      x-codeSamples:
+        - lang: typescript
+          label: Typescript (SDK)
+          source: |-
+            import { Autumn } from "@useautumn/sdk";
+
+            const autumn = new Autumn({
+              xApiVersion: "2.3.0",
+              secretKey: process.env["AUTUMN_SECRET_KEY"] ?? "",
+            });
+
+            async function run() {
+              const result = await autumn.referrals.createProgram({
+                id: "refer_a_friend",
+                rewardId: "beta_credits_grant",
+                redeemOn: "customer_creation",
+                receivedBy: "referrer",
+                maxRedemptions: 10,
+                planIds: null,
+                excludeTrial: false,
+              });
+
+              console.log(result);
+            }
+
+            run();
   - target: $["paths"]["/v1/referrals.create_code"]["post"]
     update:
       x-codeSamples:
@@ -1397,6 +1425,43 @@ actions:
               const result = await autumn.referrals.redeemCode({
                 code: "REF123",
                 customerId: "cus_456",
+              });
+
+              console.log(result);
+            }
+
+            run();
+  - target: $["paths"]["/v1/rewards.create"]["post"]
+    update:
+      x-codeSamples:
+        - lang: typescript
+          label: Typescript (SDK)
+          source: |-
+            import { Autumn } from "@useautumn/sdk";
+
+            const autumn = new Autumn({
+              xApiVersion: "2.3.0",
+              secretKey: process.env["AUTUMN_SECRET_KEY"] ?? "",
+            });
+
+            async function run() {
+              const result = await autumn.rewards.create({
+                coupon: {
+                  id: "summer_sale",
+                  name: "Summer Sale",
+                  duration: {
+                    type: "months",
+                    length: 3,
+                  },
+                  planIds: null,
+                  promoCodes: [
+                    {
+                      code: "SUMMER20",
+                    },
+                  ],
+                  type: "percentage_discount",
+                  value: 20,
+                },
               });
 
               console.log(result);

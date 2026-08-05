@@ -39,18 +39,17 @@ export function BillingUnits() {
 	});
 
 	return (
-		<div className="flex shrink w-fit max-w-32">
+		<div className="flex min-w-0 overflow-hidden">
 			<Popover open={open} onOpenChange={setOpen}>
 				<PopoverTrigger asChild>
 					<Button
 						variant="muted"
 						className={cn(
-							item.tiers?.length && item.tiers.length > 1
-								? "max-w-20 text-tertiary-foreground"
-								: "w-full text-tertiary-foreground",
+							"min-w-0 max-w-full justify-start overflow-hidden text-tertiary-foreground",
+							item.tiers?.length && item.tiers.length > 1 && "max-w-20",
 						)}
 					>
-						<span className={cn("truncate text-xs")}>
+						<span className="min-w-0 truncate text-xs">
 							{billingUnitsLabel({ item, features })}
 						</span>
 					</Button>

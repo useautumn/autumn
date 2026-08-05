@@ -31,12 +31,12 @@ describe("preProcessMigrationOperations custom guard", () => {
 	});
 
 	test("keeps custom plans eligible when the migration targets one customer", () => {
-		expect(
-			process({ customer: { customer_id: "cus_1" } }).plan_filter,
-		).toEqual({
-			plan_id: "pro",
-			version: 1,
-		});
+		expect(process({ customer: { customer_id: "cus_1" } }).plan_filter).toEqual(
+			{
+				plan_id: "pro",
+				version: 1,
+			},
+		);
 	});
 
 	test("keeps custom plans eligible when the filter explicitly targets custom", () => {
