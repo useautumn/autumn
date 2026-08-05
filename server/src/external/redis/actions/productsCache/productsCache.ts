@@ -1,12 +1,12 @@
 import crypto from "node:crypto";
 import type { AppEnv } from "@autumn/shared";
 import { logger } from "@/external/logtail/logtailUtils.js";
-import {
-	forEachMiscRedisTarget,
-	resolveMiscRedis,
-} from "@/external/redis/miscCache/resolveMiscRedis.js";
+import { getMiscRedis } from "@/external/redis/initRedis.js";
+import { forEachMiscRedisTarget } from "@/external/redis/miscCache/resolveMiscRedis.js";
 import { tryRedisOp } from "@/external/redis/utils/runRedisOp.js";
 
+/** Pinned: cuts over with activeInstance rather than riding the ramp — a flip
+ *  just re-warms this 24h-TTL catalog cache from Postgres on first miss. */
 const PRODUCTS_CACHE_PREFIX = "products_full";
 
 /** Cache version - bump when cache schema changes to auto-invalidate old entries */
@@ -71,12 +71,10 @@ export const buildAllVersionsProductsCacheKey = ({
 
 export const getCachedProducts = async <T>({
 	cacheKey,
-	requestId,
 }: {
 	cacheKey: string;
-	requestId?: string;
 }): Promise<T | null> => {
-	const miscRedis = resolveMiscRedis({ requestId });
+	const miscRedis = getMiscRedis();
 
 	const cached = await tryRedisOp({
 		operation: () => miscRedis.get(cacheKey),
@@ -91,13 +89,11 @@ export const getCachedProducts = async <T>({
 export const setCachedProducts = async ({
 	cacheKey,
 	value,
-	requestId,
 }: {
 	cacheKey: string;
 	value: unknown;
-	requestId?: string;
 }): Promise<void> => {
-	const miscRedis = resolveMiscRedis({ requestId });
+	const miscRedis = getMiscRedis();
 
 	await tryRedisOp({
 		operation: () =>
@@ -111,7 +107,7 @@ export const setCachedProducts = async ({
 const ARCHIVED_VARIANTS = [undefined, false, true] as const;
 
 /** Invalidates all products cache entries for an org/env — on every live
- *  instance, so ramped readers never serve a stale catalog. */
+ *  instance, so a flip/rollback never resurrects a stale catalog. */
 export const invalidateProductsCache = async ({
 	orgId,
 	env,

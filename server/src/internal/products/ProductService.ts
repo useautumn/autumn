@@ -309,12 +309,10 @@ export class ProductService {
 		db,
 		orgId,
 		env,
-		requestId,
 	}: {
 		db: DrizzleCli;
 		orgId: string;
 		env: AppEnv;
-		requestId?: string;
 	}): Promise<
 		Array<{
 			internal_id: string;
@@ -333,7 +331,6 @@ export class ProductService {
 
 		const cached = await getCachedProducts<ProductVersionRow[]>({
 			cacheKey,
-			requestId,
 		});
 		if (cached) return cached;
 
@@ -347,7 +344,7 @@ export class ProductService {
 			.from(products)
 			.where(and(eq(products.org_id, orgId), eq(products.env, env)));
 
-		await setCachedProducts({ cacheKey, value: rows, requestId });
+		await setCachedProducts({ cacheKey, value: rows });
 		return rows;
 	}
 
