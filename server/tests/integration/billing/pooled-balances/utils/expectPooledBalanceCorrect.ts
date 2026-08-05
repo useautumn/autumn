@@ -1,5 +1,5 @@
 import { expect } from "bun:test";
-import { type EntInterval, PooledBalanceResetMode } from "@autumn/shared";
+import type { EntInterval, PooledBalanceResetMode } from "@autumn/shared";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 import { getPooledBalanceDbState } from "./getPooledBalanceDbState.js";
 
@@ -86,11 +86,9 @@ export const expectPooledBalanceCorrect = async ({
 		} else {
 			expect(pooledCustomerEntitlement.next_reset_at).toBeNull();
 		}
-		if (pool.resetMode === PooledBalanceResetMode.Subscription) {
-			expect(pooledCustomerEntitlement.reset_by_invoice).toBe(
-				!(pool.unlimited ?? false),
-			);
-		}
+		// Pools reset through the lazy/cron paths regardless of mode, so they
+		// are never stamped out of the batch-reset scan.
+		expect(pooledCustomerEntitlement.reset_by_invoice).not.toBe(true);
 		if (pool.rollovers) {
 			expect(pooledCustomerEntitlement.rollovers).toHaveLength(
 				pool.rollovers.length,

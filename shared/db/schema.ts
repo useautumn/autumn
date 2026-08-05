@@ -12,9 +12,11 @@ import { checkoutsRelations } from "../models/checkouts/checkoutRelations.js";
 import { checkouts } from "../models/checkouts/checkoutTable.js";
 import { autoTopupLimitStates } from "../models/cusModels/billingControls/autoTopupLimitTable.js";
 // Customer Relations
+import { customerExports } from "../models/cusModels/cusExportTable.js";
 import { customersRelations } from "../models/cusModels/cusRelations.js";
 // Customer Tables
 import { customers } from "../models/cusModels/cusTable.js";
+import { customerLsns } from "../models/cusModels/customerLsnsTable.js";
 import { entitiesRelations } from "../models/cusModels/entityModels/entityRelations.js";
 import { entities } from "../models/cusModels/entityModels/entityTable.js";
 import { invoiceLineItems } from "../models/cusModels/invoiceModels/invoiceLineItemTable.js";
@@ -154,6 +156,8 @@ export {
 	leafSchema,
 	customerEntitlements,
 	customerEntitlementsRelations,
+	customerExports,
+	customerLsns,
 	customerPrices,
 	customerPricesRelations,
 	customerProducts,

@@ -336,12 +336,14 @@ test.concurrent(
 			].sort((a, b) => a.productId.localeCompare(b.productId)),
 		);
 
-		const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
 		await expectCustomerInvoiceCorrect({
-			customer,
+			autumn: autumnV1,
+			customerId,
 			count: 1,
 			latestInvoiceProductIds: [nowBase.id, nowAddon.id],
 		});
+
+		const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
 		expect(customer.invoices?.[0]?.product_ids).not.toContain(futureGroupB.id);
 		expect(customer.invoices?.[0]?.product_ids).not.toContain(futureGroupC.id);
 	},
@@ -521,9 +523,9 @@ test.concurrent(
 			waitForSeconds: 30,
 		});
 
-		const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
 		await expectCustomerProducts({
-			customer,
+			autumn: autumnV1,
+			customerId,
 			active: [nextAddon.id, nextBase.id],
 			notPresent: [nowAddon.id, nowBase.id],
 		});
@@ -595,18 +597,21 @@ test.concurrent(
 			waitForSeconds: 30,
 		});
 
-		const customerAfterTransition =
-			await autumnV1.customers.get<ApiCustomerV3>(customerId);
 		await expectCustomerProducts({
-			customer: customerAfterTransition,
+			autumn: autumnV1,
+			customerId,
 			active: [premium.id],
 			notPresent: [pro.id],
 		});
 		await expectCustomerInvoiceCorrect({
-			customer: customerAfterTransition,
+			autumn: autumnV1,
+			customerId,
 			count: 2,
 			latestTotal: expectedProration,
 		});
+
+		const customerAfterTransition =
+			await autumnV1.customers.get<ApiCustomerV3>(customerId);
 		const stripeInvoices = await stripeInvoicesForCustomer({
 			ctx,
 			customer: customerAfterTransition,
@@ -632,15 +637,15 @@ test.concurrent(
 			waitForSeconds: 30,
 		});
 
-		const customerAfterRenewal =
-			await autumnV1.customers.get<ApiCustomerV3>(customerId);
 		await expectCustomerProducts({
-			customer: customerAfterRenewal,
+			autumn: autumnV1,
+			customerId,
 			active: [premium.id],
 			notPresent: [pro.id],
 		});
 		await expectCustomerInvoiceCorrect({
-			customer: customerAfterRenewal,
+			autumn: autumnV1,
+			customerId,
 			count: 3,
 			latestTotal: 50,
 		});

@@ -19,6 +19,7 @@ export const replayFailedCustomerCreation = async ({
 	ctx.apiVersion = new ApiVersionClass(payload.apiVersion);
 
 	await getOrCreateApiCustomerByRollout({
+		disableReplicaRead: true,
 		ctx,
 		params: payload.params,
 		source: "customerCreationRecovery",

@@ -63,8 +63,9 @@ test.concurrent(
 		const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
 
 		// Usage preserved, now within included
-		expectCustomerFeatureCorrect({
-			customer,
+		await expectCustomerFeatureCorrect({
+			autumn: autumnV1,
+			customerId,
 			featureId: TestFeature.Messages,
 			includedUsage: newConsumableItem.included_usage,
 			balance: newConsumableItem.included_usage - messagesUsage, // 200 - 80 = 120
@@ -137,8 +138,9 @@ test.concurrent(
 		const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
 
 		// Usage preserved, now in overage (80 used, 50 included = 30 overage)
-		expectCustomerFeatureCorrect({
-			customer,
+		await expectCustomerFeatureCorrect({
+			autumn: autumnV1,
+			customerId,
 			featureId: TestFeature.Messages,
 			includedUsage: newConsumableItem.included_usage,
 			balance: newConsumableItem.included_usage - messagesUsage, // 50 - 80 = -30
@@ -215,8 +217,9 @@ test.concurrent(
 		const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
 
 		// Usage preserved, now within included
-		expectCustomerFeatureCorrect({
-			customer,
+		await expectCustomerFeatureCorrect({
+			autumn: autumnV1,
+			customerId,
 			featureId: TestFeature.Messages,
 			includedUsage: newConsumableItem.included_usage,
 			balance: newConsumableItem.included_usage - messagesUsage,
@@ -296,8 +299,9 @@ test.concurrent(
 		const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
 
 		// Now usage is within included
-		expectCustomerFeatureCorrect({
-			customer,
+		await expectCustomerFeatureCorrect({
+			autumn: autumnV1,
+			customerId,
 			featureId: TestFeature.Messages,
 			includedUsage: newConsumableItem.included_usage,
 			balance: newConsumableItem.included_usage - messagesUsage, // 100 - 80 = 20

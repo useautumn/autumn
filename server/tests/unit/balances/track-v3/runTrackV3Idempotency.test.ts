@@ -9,6 +9,8 @@ import {
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import type { FeatureDeduction } from "@/internal/balances/utils/types/featureDeduction.js";
 
+import { mockModuleWithRestore } from "../../utils/mockModuleWithRestore.js";
+
 const mockState = {
 	runRedisTrackV3Calls: [] as Record<string, unknown>[],
 };
@@ -24,37 +26,43 @@ const fullSubject = {
 	subjectType: "customer",
 } as FullSubject;
 
-mock.module(
+await mockModuleWithRestore(
 	"@/internal/customers/cache/fullSubject/actions/getOrSetCachedFullSubject.js",
 	() => ({
 		getOrSetCachedFullSubject: async () => fullSubject,
 	}),
 );
 
-mock.module(
+await mockModuleWithRestore(
 	"@/internal/customers/cache/fullSubject/actions/getOrCreateCachedFullSubject.js",
 	() => ({
 		getOrCreateCachedFullSubject: async () => fullSubject,
 	}),
 );
 
-mock.module("@/internal/balances/track/v3/trackIdempotencyKey.js", () => ({
-	getTrackIdempotencyKey: ({ ctx }: { ctx: { id: string } }) =>
-		`track:${ctx.id}`,
-}));
+await mockModuleWithRestore(
+	"@/internal/balances/idempotency/trackQueueIdempotency.js",
+	() => ({
+		getTrackQueueIdempotencyKey: ({ ctx }: { ctx: { id: string } }) =>
+			`track:${ctx.id}`,
+	}),
+);
 
-mock.module("@/internal/balances/track/v3/runRedisTrackV3.js", () => ({
-	runRedisTrackV3: async (
-		args: Record<string, unknown>,
-	): Promise<TrackResponseV3> => {
-		mockState.runRedisTrackV3Calls.push(args);
-		return {
-			customer_id: "cus_123",
-			value: 1,
-			balance: null,
-		};
-	},
-}));
+await mockModuleWithRestore(
+	"@/internal/balances/track/v3/runRedisTrackV3.js",
+	() => ({
+		runRedisTrackV3: async (
+			args: Record<string, unknown>,
+		): Promise<TrackResponseV3> => {
+			mockState.runRedisTrackV3Calls.push(args);
+			return {
+				customer_id: "cus_123",
+				value: 1,
+				balance: null,
+			};
+		},
+	}),
+);
 
 const { runTrackV3 } = await import(
 	// @ts-expect-error - Bun test cache-busting import query isolates module mocks.

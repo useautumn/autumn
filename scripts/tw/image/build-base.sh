@@ -42,6 +42,10 @@ LOG_DIR="${TW_LOG_DIR:-$TW_PREFIX/logs}"
 GOAWS_IMAGE="${GOAWS_IMAGE:-docker.io/admiralpiett/goaws:latest}"
 CRANE_VERSION="${CRANE_VERSION:-v0.20.2}"
 DRAGONFLY_VERSION="${DRAGONFLY_VERSION:-latest}" # dw uses :latest (dw.compose.yml:10)
+# dynoxide (native Rust DynamoDB emulator) stands in for amazon/dynamodb-local,
+# which is a JVM app — the same class of problem that pushed elasticmq → goaws
+# here. Pinned (pre-1.0 project) so a release can't silently change behavior.
+DYNOXIDE_VERSION="${DYNOXIDE_VERSION:-v0.13.0}"
 INSTALL_CLICKHOUSE="${TW_INSTALL_CLICKHOUSE:-0}"
 
 PG_PORT="${PG_PORT:-5432}"
@@ -194,6 +198,30 @@ EOF
 log "Wrote goaws config to $GOAWS_CONF (autumn.fifo + autumn-track.fifo, dedup on)"
 
 # ---------------------------------------------------------------------------
+# 4b. dynoxide (native DynamoDB emulator) — backs the idempotency-key store.
+# Static musl binary from GitHub releases; the app's DYNAMODB_ENDPOINT points
+# at it and the server auto-creates the table on first use.
+# ---------------------------------------------------------------------------
+if [ ! -x "$BIN_DIR/dynoxide" ]; then
+  ARCH="$(uname -m)"
+  case "$ARCH" in
+    x86_64) DX_TARGET="x86_64-unknown-linux-musl" ;;
+    aarch64 | arm64) DX_TARGET="aarch64-unknown-linux-musl" ;;
+    *) die "unsupported arch for dynoxide: $ARCH" ;;
+  esac
+  log "Downloading dynoxide ($DYNOXIDE_VERSION, $ARCH)"
+  TMP_DX="$(mktemp -d)"
+  curl -fsSL -o "$TMP_DX/dynoxide.tar.gz" \
+    "https://github.com/nubo-db/dynoxide/releases/download/${DYNOXIDE_VERSION}/dynoxide-${DX_TARGET}.tar.gz"
+  tar -xzf "$TMP_DX/dynoxide.tar.gz" -C "$TMP_DX"
+  DX_EXTRACTED="$(find "$TMP_DX" -type f -name 'dynoxide*' ! -name '*.tar.gz' | head -n1)"
+  [ -n "$DX_EXTRACTED" ] || die "dynoxide binary not found in archive"
+  install -m 0755 "$DX_EXTRACTED" "$BIN_DIR/dynoxide"
+  rm -rf "$TMP_DX"
+fi
+log "dynoxide installed at $BIN_DIR/dynoxide"
+
+# ---------------------------------------------------------------------------
 # 5. ClickHouse (optional — only when analytics tests are in scope).
 # ---------------------------------------------------------------------------
 if [ "$INSTALL_CLICKHOUSE" = "1" ]; then
@@ -322,11 +350,18 @@ sudo dnf install -y --setopt=install_weak_deps=False --skip-broken \
   libXtst libXScrnSaver mesa-libgbm pango cairo alsa-lib gtk3 \
   >/dev/null 2>&1 || log "WARN: some Chromium libraries may be missing"
 
-PLAYWRIGHT_VERSION="$(cd "$REPO_ROOT/server" && node -p "require('playwright-core/package.json').version" 2>/dev/null || echo "1.58.2")"
+# Resolve from server/ — with bun's isolated linker playwright-core exists ONLY
+# there, and a wrong version bakes a revision executablePath() never finds.
+PLAYWRIGHT_VERSION="$(cd "$REPO_ROOT/server" && node -p "require('playwright-core/package.json').version" 2>/dev/null)" \
+  || die "cannot resolve server/node_modules/playwright-core version — chromium bake would mismatch"
+[ -n "$PLAYWRIGHT_VERSION" ] || die "empty playwright-core version — chromium bake would mismatch"
 log "Installing Playwright Chromium (playwright@$PLAYWRIGHT_VERSION) into ~/.cache/ms-playwright"
 ( cd "$REPO_ROOT/server" && bunx "playwright@$PLAYWRIGHT_VERSION" install chromium ) \
   || die "playwright chromium install failed"
-log "Chromium ready at $(cd "$REPO_ROOT/server" && bun -e 'import {chromium} from "playwright-core"; console.log(chromium.executablePath())' 2>/dev/null || echo "(path probe failed)")"
+CHROMIUM_PATH="$(cd "$REPO_ROOT/server" && bun -e 'import {chromium} from "playwright-core"; console.log(chromium.executablePath())' 2>/dev/null)"
+[ -x "$CHROMIUM_PATH" ] \
+  || die "chromium bake mismatch: playwright-core expects $CHROMIUM_PATH, which is not executable"
+log "Chromium ready at $CHROMIUM_PATH"
 
 log "BASE layer built. Paths: PGDATA=$PGDATA, BIN_DIR=$BIN_DIR, GOAWS_CONF=$GOAWS_CONF"
 log "Next: snapshot this filesystem -> base snapshot. Then warmup.sh per run."

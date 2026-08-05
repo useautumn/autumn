@@ -10,9 +10,9 @@ import {
 } from "@autumn/shared";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 import type { Logger } from "@/external/logtail/logtailUtils.js";
+import { invalidateProductsCache } from "@/external/redis/actions/productsCache/productsCache.js";
 import { FeatureService } from "@/internal/features/FeatureService.js";
 import { ProductService } from "@/internal/products/ProductService.js";
-import { invalidateProductsCache } from "@/internal/products/productCacheUtils.js";
 import { copyProduct } from "@/internal/products/productUtils.js";
 import RecaseError from "@/utils/errorUtils.js";
 import { generateId } from "@/utils/genUtils.js";

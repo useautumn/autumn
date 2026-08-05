@@ -4,7 +4,7 @@ import {
 	type FullCusProduct,
 	findMainScheduledCustomerProductByGroup,
 } from "@autumn/shared";
-import { getStripeSubscriptionLock } from "@/external/stripe/subscriptions/utils/lockStripeSubscriptionUtils";
+import { getStripeSubscriptionLock } from "@/external/redis/actions/stripeSubscriptionLock/stripeSubscriptionLock.js";
 import type { StripeWebhookContext } from "@/external/stripe/webhookMiddlewares/stripeWebhookContext";
 import { addProductsUpdatedWebhookTask } from "@/internal/analytics/handlers/handleProductsUpdated";
 import { CusProductService } from "@/internal/customers/cusProducts/CusProductService";
@@ -50,6 +50,7 @@ export const handleStripeSubscriptionRenewed = async ({
 
 	// 2. Check lock or schedule - skip if Autumn initiated or schedule exists
 	const lock = await getStripeSubscriptionLock({
+		ctx,
 		stripeSubscriptionId: stripeSubscription.id,
 	});
 	const hasSchedule = Boolean(stripeSubscription.schedule);

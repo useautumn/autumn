@@ -12,8 +12,11 @@ import {
 } from "./db/pgHealthMonitor.js";
 import { startPgPoolMonitor, stopPgPoolMonitor } from "./db/pgPoolMonitor.js";
 import { getRedactedDatabaseUrls } from "./db/redactDatabaseUrl.js";
+import {
+	startReplicaRoutingProber,
+	stopReplicaRoutingProber,
+} from "./db/replicaRoutingState.js";
 import { logger } from "./external/logtail/logtailUtils.js";
-import { globalAsyncTrackSqsBatcher } from "./internal/balances/track/AsyncTrackSqsBatcher.js";
 import {
 	startAllEdgeConfigPolling,
 	stopAllEdgeConfigPolling,
@@ -27,7 +30,7 @@ import "./internal/misc/customerBlocks/customerBlockStore.js";
 import "./internal/misc/edgeConfig/orgLimitsStore.js";
 import "./internal/misc/stripeSync/stripeSyncStore.js";
 import "./internal/misc/redisV2Cache/redisV2CacheStore.js";
-import "./internal/misc/mainRedisCache/mainRedisCacheStore.js";
+import "./internal/misc/miscRedisConfig/miscRedisConfigStore.js";
 import "./internal/misc/cacheV2Ramp/cacheV2RampStore.js";
 import "./internal/misc/jobQueues/jobQueueStore.js";
 import "./internal/misc/batchReset/batchResetConfigStore.js";
@@ -44,16 +47,16 @@ import {
 	stopRedisMonitor,
 	warmupRegionalRedis,
 } from "./external/redis/initRedis.js";
-import { primeRedisMonitor } from "./external/redis/initUtils/redisAvailability.js";
+import { primeRedisMonitor } from "./external/redis/availabilityMonitor/redisAvailability.js";
 import {
 	primeRedisV2Monitor,
 	startRedisV2Monitor,
 	stopRedisV2Monitor,
-} from "./external/redis/initUtils/redisV2Availability.js";
+} from "./external/redis/availabilityMonitor/redisV2Availability.js";
 import { preWarmOrgRedisConnections } from "./external/redis/orgRedisPool.js";
 import { createHonoApp } from "./initHono.js";
 import { otelSdk } from "./instrumentation.js";
-import { shutdownPrimarySqsSendBatcher } from "./queue/queueUtils.js";
+import { shutdownSqsSendBatchers } from "./queue/queueUtils.js";
 import { checkEnvVars } from "./utils/initUtils.js";
 import {
 	startMemorySpikeProbe,
@@ -72,6 +75,8 @@ const init = async ({ startupStartedAt }: { startupStartedAt: number }) => {
 
 	initPgHealthMonitor({ client: clientCritical });
 	startPgPoolMonitor();
+	// `db` is the general pool — the probe must never occupy a critical-pool slot.
+	startReplicaRoutingProber({ db });
 
 	void warmupRegionalRedis().catch((error) => {
 		logger.warn("[Redis] Warmup failed", { error });
@@ -175,10 +180,7 @@ async function gracefulShutdown() {
 	shuttingDown = true;
 	console.log("Shutting down worker, flushing telemetry and closing DB...");
 	try {
-		await Promise.all([
-			globalAsyncTrackSqsBatcher.shutdown(),
-			shutdownPrimarySqsSendBatcher(),
-		]);
+		await shutdownSqsSendBatchers();
 
 		// Flush any buffered OTel spans before shutting down
 		if (otelSdk) {
@@ -186,6 +188,7 @@ async function gracefulShutdown() {
 		}
 		shutdownPgHealthMonitor();
 		stopPgPoolMonitor();
+		stopReplicaRoutingProber();
 		stopRedisMonitor();
 		stopRedisV2Monitor();
 		stopMemorySpikeProbe();

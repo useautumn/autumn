@@ -33,11 +33,11 @@ export * from "./pooledBalances/index.js";
 // Product
 export * from "./products/index.js";
 // Referrals
+export * from "./referralPrograms/index.js";
 export * from "./referrals/apiReferralCode.js";
 export * from "./referrals/createReferralCodeParams.js";
 export * from "./referrals/redeemReferralCodeParams.js";
 export * from "./referrals/referralOpModels.js";
-// Rewards
 export * from "./rewards/index.js";
 export * from "./stripe/stripeProductModels.js";
 // Helpers

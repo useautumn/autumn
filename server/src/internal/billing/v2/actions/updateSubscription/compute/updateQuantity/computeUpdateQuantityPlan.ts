@@ -1,9 +1,11 @@
 import {
 	type AutumnBillingPlan,
 	isOneOffPrice,
+	notNullish,
 	type UpdateSubscriptionBillingContext,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
+import { emptyPooledBalancePlan } from "@/internal/billing/v2/utils/billingPlan/pooledBalancePlan";
 import { computeUpdateQuantityDetails } from "./computeUpdateQuantityDetails";
 
 export const computeUpdateQuantityPlan = ({
@@ -38,8 +40,19 @@ export const computeUpdateQuantityPlan = ({
 	const updatedOptions = quantityUpdateDetails.map(
 		(detail) => detail.updatedOptions,
 	);
+	const updatePoolContributions = quantityUpdateDetails
+		.map((detail) => detail.pooledContributionUpdate)
+		.filter(notNullish);
 
 	return {
+		...(updatePoolContributions.length > 0
+			? {
+					pooledBalancePlan: {
+						...emptyPooledBalancePlan(),
+						updatePoolContributions,
+					},
+				}
+			: {}),
 		customerId: updateSubscriptionContext.fullCustomer?.id ?? "",
 		insertCustomerProducts: [],
 		customPrices: [],

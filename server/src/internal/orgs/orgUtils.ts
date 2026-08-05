@@ -3,9 +3,7 @@ import {
 	ErrCode,
 	type FrontendOrg,
 	type Organization,
-	type OrgConfig,
 	OrgConfigSchema,
-	organizations,
 } from "@autumn/shared";
 import type { DrizzleCli } from "@server/db/initDrizzle.js";
 import {
@@ -13,20 +11,17 @@ import {
 	shouldUseMaster,
 } from "@server/external/connect/connectUtils.js";
 import { createStripeCli } from "@server/external/connect/createStripeCli.js";
-import { CacheManager } from "@server/utils/cacheUtils/CacheManager.js";
 import {
 	decryptData,
 	generatePublishableKey,
 } from "@server/utils/encryptUtils.js";
 import RecaseError from "@server/utils/errorUtils.js";
 import { notNullish } from "@server/utils/genUtils.js";
-import { eq } from "drizzle-orm";
 import Stripe from "stripe";
 import { FeatureService } from "../features/FeatureService.js";
 import { getRevenueCatConfigDisplay } from "./handlers/handleRevenueCatConfig.js";
 import { getVercelConfigDisplay } from "./handlers/handleVercelConfig.js";
 import { OrgService } from "./OrgService.js";
-import { clearOrgCache } from "./orgUtils/clearOrgCache.js";
 import { toSuccessUrl } from "./orgUtils/convertOrgUtils.js";
 
 export const shouldReconnectStripe = async ({
@@ -271,6 +266,7 @@ export const createOrgResponse = ({
 		onboarded: org.onboarded ?? true,
 		deployed: org.deployed ?? true,
 		config: OrgConfigSchema.parse(org.config || {}),
+		idempotency_config: org.idempotency_config ?? null,
 		custom_buttons: org.custom_buttons ?? [],
 		redis_config: org.redis_config
 			? {
@@ -288,37 +284,6 @@ const getOrgAndFeatures = async ({ req }: { req: any }) => {
 	]);
 
 	return { org, features };
-};
-
-export const updateOrgConfig = async ({
-	db,
-	org,
-	config,
-	disconnectCache = true,
-}: {
-	db: DrizzleCli;
-	org: Organization;
-	config: Partial<OrgConfig>;
-	disconnectCache?: boolean;
-}) => {
-	await db
-		.update(organizations)
-		.set({
-			config: {
-				...org.config,
-				...config,
-			},
-		})
-		.where(eq(organizations.id, org.id));
-
-	await clearOrgCache({
-		db,
-		orgId: org.id,
-	});
-
-	if (disconnectCache) {
-		await CacheManager.disconnect();
-	}
 };
 
 export const unsetOrgStripeKeys = async ({

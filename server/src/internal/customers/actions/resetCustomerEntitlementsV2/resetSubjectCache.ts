@@ -13,6 +13,7 @@ interface SubjectBalanceUpdate {
 	entities: Record<string, unknown> | null;
 	next_reset_at: number | null;
 	expected_next_reset_at: number | null;
+	pooled_granted: number | null;
 	rollover_insert: unknown | null;
 	rollover_overwrites: unknown[] | null;
 	rollover_delete_ids: string[] | null;
@@ -33,6 +34,7 @@ export const resetSubjectCache = async ({
 	oldNextResetAts,
 	clearingMap,
 	customerEntitlementFeatureIds,
+	pooledGrantedByCusEntId,
 }: {
 	ctx: AutumnContext;
 	customerId: string;
@@ -40,6 +42,7 @@ export const resetSubjectCache = async ({
 	oldNextResetAts: Record<string, number>;
 	clearingMap: Record<string, RolloverClearingInfo>;
 	customerEntitlementFeatureIds: Record<string, string>;
+	pooledGrantedByCusEntId?: Record<string, number>;
 }): Promise<void> => {
 	if (resets.length === 0) return;
 
@@ -62,6 +65,7 @@ export const resetSubjectCache = async ({
 				entities: reset.entities,
 				next_reset_at: reset.next_reset_at,
 				expected_next_reset_at: oldNextResetAts[reset.cus_ent_id] ?? null,
+				pooled_granted: pooledGrantedByCusEntId?.[reset.cus_ent_id] ?? null,
 				rollover_insert: reset.rollover_insert,
 				rollover_overwrites:
 					clearing && clearing.overwrites.length > 0

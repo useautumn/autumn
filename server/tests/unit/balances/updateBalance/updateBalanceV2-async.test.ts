@@ -15,6 +15,8 @@ import { _setAsyncBalanceUpdateConfigForTesting } from "@/internal/misc/asyncBal
 import { getSqsClient } from "@/queue/initSqs.js";
 import { JobName } from "@/queue/JobName.js";
 
+import { mockModuleWithRestore } from "../../utils/mockModuleWithRestore.js";
+
 const trackAsyncQueueUrl =
 	"https://sqs.eu-west-1.amazonaws.com/123456789012/track-async-dev.fifo";
 
@@ -25,7 +27,7 @@ const state = {
 	originalSend: null as SQSClient["send"] | null,
 };
 
-mock.module(
+await mockModuleWithRestore(
 	"@/internal/customers/cache/fullSubject/actions/getOrSetCachedFullSubject.js",
 	() => ({
 		getOrSetCachedFullSubject: async (args: Record<string, unknown>) => {
@@ -38,7 +40,7 @@ mock.module(
 	}),
 );
 
-mock.module(
+await mockModuleWithRestore(
 	"@/internal/balances/updateBalance/v2/updateRemainingV2.js",
 	() => ({
 		updateRemainingV2: async (args: Record<string, unknown>) => {
@@ -47,21 +49,24 @@ mock.module(
 	}),
 );
 
-mock.module("@/internal/balances/updateBalance/v2/updateUsageV2.js", () => ({
-	updateUsageV2: async () => {},
-}));
+await mockModuleWithRestore(
+	"@/internal/balances/updateBalance/v2/updateUsageV2.js",
+	() => ({
+		updateUsageV2: async () => {},
+	}),
+);
 
-mock.module(
+await mockModuleWithRestore(
 	"@/internal/balances/updateBalance/v2/updateIncludedGrantV2.js",
 	() => ({ updateIncludedGrantV2: async () => {} }),
 );
 
-mock.module(
+await mockModuleWithRestore(
 	"@/internal/balances/updateBalance/v2/updateNextResetAtV2.js",
 	() => ({ updateNextResetAtV2: async () => {} }),
 );
 
-mock.module(
+await mockModuleWithRestore(
 	"@/internal/balances/updateBalance/v2/updateExpiresAtV2.js",
 	() => ({ updateExpiresAtV2: async () => {} }),
 );
@@ -112,7 +117,11 @@ describe("updateBalanceV2 async routing", () => {
 		state.originalSend = sqsClient.send.bind(sqsClient);
 		sqsClient.send = (async (command: { input: Record<string, unknown> }) => {
 			state.queueCommands.push(command.input);
-			return {};
+			const entries =
+				(command.input.Entries as Array<{ Id?: string }> | undefined) ?? [];
+			return {
+				Successful: entries.map((entry) => ({ Id: entry.Id })),
+			};
 		}) as typeof sqsClient.send;
 	});
 
@@ -139,12 +148,20 @@ describe("updateBalanceV2 async routing", () => {
 		expect(state.queueCommands).toHaveLength(1);
 		expect(state.queueCommands[0]).toMatchObject({
 			QueueUrl: trackAsyncQueueUrl,
+		});
+		// The async-track queue sends through the SQS batcher (SendMessageBatch).
+		const batchEntries = state.queueCommands[0].Entries as Array<
+			Record<string, unknown>
+		>;
+		expect(batchEntries).toHaveLength(1);
+		expect(batchEntries[0]).toMatchObject({
 			MessageGroupId: "org_123:sandbox:cus_123:none",
 			MessageDeduplicationId: ctx.id,
 		});
-		const message = JSON.parse(
-			String(state.queueCommands[0].MessageBody),
-		) as Record<string, unknown>;
+		const message = JSON.parse(String(batchEntries[0].MessageBody)) as Record<
+			string,
+			unknown
+		>;
 		expect(message).toMatchObject({
 			name: JobName.UpdateBalance,
 			data: {

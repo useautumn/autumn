@@ -1,25 +1,30 @@
-import { describe, expect, mock, test } from "bun:test";
-import { FeatureType, type Feature } from "@autumn/shared";
+import { describe, expect, test } from "bun:test";
+import { type Feature, FeatureType } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 
-mock.module("@/internal/features/aiCreditSystemUtils.js", () => ({
-	getModelCreditCostBreakdown: async () => ({
-		cost: 2.5,
-		baseCost: 2,
-		markup: 25,
-		markupSource: "default",
-		tierApplied: false,
-		rates: {
-			input: 1,
-			output: 2,
-			cacheRead: 0,
-			cacheWrite: 0,
-			audioInput: 0,
-			audioOutput: 0,
-			reasoning: 0,
-		},
+import { mockModuleWithRestore } from "../../utils/mockModuleWithRestore.js";
+
+await mockModuleWithRestore(
+	"@/internal/features/aiCreditSystemUtils.js",
+	() => ({
+		getModelCreditCostBreakdown: async () => ({
+			cost: 2.5,
+			baseCost: 2,
+			markup: 25,
+			markupSource: "default",
+			tierApplied: false,
+			rates: {
+				input: 1,
+				output: 2,
+				cacheRead: 0,
+				cacheWrite: 0,
+				audioInput: 0,
+				audioOutput: 0,
+				reasoning: 0,
+			},
+		}),
 	}),
-}));
+);
 
 const { getTokenTrackParams } = await import(
 	"@/internal/balances/track/utils/getTokenTrackParams.js"
@@ -33,7 +38,7 @@ const aiCreditFeature = {
 const createCtx = (): AutumnContext =>
 	({
 		features: [aiCreditFeature],
-	} as unknown as AutumnContext);
+	}) as unknown as AutumnContext;
 
 describe("getTokenTrackParams", () => {
 	test("forwards a backdated timestamp into the TrackParams body", async () => {

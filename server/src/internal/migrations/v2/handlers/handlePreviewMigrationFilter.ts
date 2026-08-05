@@ -1,5 +1,6 @@
 import {
 	CustomerFilterSchema,
+	CustomerListFiltersSchema,
 	customerProducts,
 	customers,
 	MigrationItemKind,
@@ -11,7 +12,6 @@ import { and, eq, inArray } from "drizzle-orm";
 import { z } from "zod/v4";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 import { createRoute } from "@/honoMiddlewares/routeHandler.js";
-import { CustomerListFiltersSchema } from "@/internal/customers/customerListFilters.js";
 import {
 	countCustomers,
 	getCustomerPage,

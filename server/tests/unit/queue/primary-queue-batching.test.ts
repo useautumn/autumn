@@ -12,14 +12,11 @@
  */
 
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
-import { AppEnv } from "@autumn/shared";
+import { ApiVersion, AppEnv } from "@autumn/shared";
 import type { SQSClient } from "@aws-sdk/client-sqs";
 import { getSqsClient } from "@/queue/initSqs.js";
 import { JobName } from "@/queue/JobName.js";
-import {
-	addTaskToQueue,
-	flushPrimarySqsSendBatcher,
-} from "@/queue/queueUtils.js";
+import { addTaskToQueue, flushSqsSendBatchers } from "@/queue/queueUtils.js";
 
 const PRIMARY_QUEUE_URL =
 	"https://sqs.us-east-2.amazonaws.com/123456789012/autumn-prod.fifo";
@@ -71,7 +68,7 @@ describe("primary queue send batching", () => {
 	});
 
 	afterEach(async () => {
-		await flushPrimarySqsSendBatcher();
+		await flushSqsSendBatchers();
 		getSqsClient({ queueUrl: PRIMARY_QUEUE_URL }).send = originalPrimarySend;
 		getSqsClient({ queueUrl: DEDICATED_QUEUE_URL }).send =
 			originalDedicatedSend;
@@ -132,7 +129,7 @@ describe("primary queue send batching", () => {
 			messageDeduplicationId: "refresh_1",
 		});
 
-		await flushPrimarySqsSendBatcher();
+		await flushSqsSendBatchers();
 		await Promise.all([syncJob, refreshJob]);
 
 		const entries = primaryCommands[0].input.Entries as Array<{
@@ -152,7 +149,7 @@ describe("primary queue send batching", () => {
 			delayMs: 2_500,
 		});
 
-		await flushPrimarySqsSendBatcher();
+		await flushSqsSendBatchers();
 		await queued;
 
 		const entries = primaryCommands[0].input.Entries as Array<{
@@ -186,7 +183,7 @@ describe("primary queue send batching", () => {
 				}),
 			),
 		);
-		await flushPrimarySqsSendBatcher();
+		await flushSqsSendBatchers();
 		const results = await resultsPromise;
 
 		expect(results.map(({ status }) => status)).toEqual([
@@ -196,8 +193,65 @@ describe("primary queue send batching", () => {
 		]);
 		expect(results[1]).toMatchObject({
 			status: "rejected",
-			reason: expect.objectContaining({ message: "entry failed" }),
+			reason: expect.objectContaining({
+				message: "Throttled: entry failed (senderFault=?)",
+			}),
 		});
+	});
+
+	test("routes async track queue sends through their own batch", async () => {
+		const ASYNC_TRACK_QUEUE_URL =
+			"https://sqs.us-east-2.amazonaws.com/123456789012/track-async-prod.fifo";
+		const originalAsyncUrl = process.env.TRACK_ASYNC_SQS_QUEUE_URL;
+		process.env.TRACK_ASYNC_SQS_QUEUE_URL = ASYNC_TRACK_QUEUE_URL;
+		const asyncClient = getSqsClient({ queueUrl: ASYNC_TRACK_QUEUE_URL });
+		const originalAsyncSend = asyncClient.send.bind(asyncClient);
+		const asyncCommands: Array<{
+			input: { Entries?: Array<{ Id: string }> };
+		}> = [];
+		asyncClient.send = (async (command: {
+			input: { Entries?: Array<{ Id: string }> };
+		}) => {
+			asyncCommands.push(command);
+			return {
+				Successful: command.input.Entries?.map(({ Id }) => ({ Id })) ?? [],
+			};
+		}) as typeof asyncClient.send;
+
+		try {
+			await Promise.all(
+				Array.from({ length: 2 }, (_, index) =>
+					addTaskToQueue({
+						jobName: JobName.Track,
+						payload: {
+							orgId: "org_1",
+							env: AppEnv.Live,
+							customerId: `customer_${index}`,
+							requestId: `req_${index}`,
+							apiVersion: ApiVersion.V2_1,
+							body: {
+								customer_id: `customer_${index}`,
+								feature_id: "messages",
+								value: 1,
+							},
+							validateTrackBodyIdempotencyKey: false,
+						},
+						queueUrl: ASYNC_TRACK_QUEUE_URL,
+						messageGroupId: `customer_${index}`,
+						messageDeduplicationId: `track_${index}`,
+					}),
+				),
+			);
+
+			expect(asyncCommands).toHaveLength(1);
+			expect(asyncCommands[0].input.Entries).toHaveLength(2);
+			// Primary batcher untouched — the async queue has its own accumulator.
+			expect(primaryCommands).toHaveLength(0);
+		} finally {
+			await flushSqsSendBatchers();
+			asyncClient.send = originalAsyncSend;
+			process.env.TRACK_ASYNC_SQS_QUEUE_URL = originalAsyncUrl;
+		}
 	});
 
 	test("keeps an explicit dedicated queue override on SendMessage", async () => {

@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, mock, test } from "bun:test";
+import { beforeEach, describe, expect, test } from "bun:test";
 import { AppEnv } from "@autumn/shared";
 import { Hono } from "hono";
 import type { AutumnContext, HonoEnv } from "@/honoUtils/HonoEnv.js";
@@ -8,28 +8,47 @@ const mockState = {
 	batchTrackTokenBodies: [] as unknown[],
 };
 
-mock.module("@/internal/balances/track/runBatchTrack.js", () => ({
-	runBatchTrack: async ({ body }: { body: unknown }) => {
-		mockState.batchTrackBodies.push(body);
-	},
-}));
+await mockModuleWithRestore(
+	"@/internal/balances/track/runBatchTrack.js",
+	() => ({
+		runBatchTrack: async ({ body }: { body: unknown }) => {
+			mockState.batchTrackBodies.push(body);
+		},
+	}),
+);
 
-mock.module("@/internal/balances/track/runBatchTrackTokens.js", () => ({
-	runBatchTrackTokens: async ({ body }: { body: unknown }) => {
-		mockState.batchTrackTokenBodies.push(body);
-	},
-}));
+await mockModuleWithRestore(
+	"@/internal/balances/track/runBatchTrackTokens.js",
+	() => ({
+		runBatchTrackTokens: async ({ body }: { body: unknown }) => {
+			mockState.batchTrackTokenBodies.push(body);
+		},
+	}),
+);
 
 import { handleBatchTrack } from "@/internal/balances/handlers/handleBatchTrack.js";
 import { handleBatchTrackTokens } from "@/internal/balances/handlers/handleBatchTrackTokens.js";
+
+import { mockModuleWithRestore } from "../../utils/mockModuleWithRestore.js";
+
+// Full logger shape: the handler's idempotency path hands this ctx logger to
+// fire-and-forget work (Dynamo mirror) that logs failures after the test —
+// a bare {} turns those into unhandled TypeErrors landing in later tests.
+const testLogger = {
+	debug: () => undefined,
+	info: () => undefined,
+	warn: () => undefined,
+	error: () => undefined,
+	child: () => testLogger,
+};
 
 const createCtx = () =>
 	({
 		id: "req_batch_status",
 		org: { id: "org_123" },
 		env: AppEnv.Sandbox,
-		logger: {},
-	}) as AutumnContext;
+		logger: testLogger,
+	}) as unknown as AutumnContext;
 
 const createApp = ({ ctx }: { ctx: AutumnContext }) => {
 	const app = new Hono<HonoEnv>();

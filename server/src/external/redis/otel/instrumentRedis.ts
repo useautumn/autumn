@@ -22,6 +22,15 @@ import { buildRedisSpanOutcomeAttributes } from "./redisSpanOutcomeAttributes.js
 const TRACER_NAME = "autumn.redis";
 const INSTRUMENTED = new WeakSet<object>();
 
+/** Stable instance identity for spans (`db.redis.type`) — unlike `region`,
+ *  which encodes deploy region + ad-hoc suffixes and feeds existing metrics. */
+export type RedisClientType =
+	| "subject-primary"
+	| "subject-secondary"
+	| `subject-dedicated:${string}`
+	| "misc-primary"
+	| "misc-secondary";
+
 /** Commands that are noisy/internal — not worth tracing. */
 const SKIP_COMMANDS = new Set([
 	"ping",
@@ -53,6 +62,7 @@ type SpanContext = {
 	keyContext: RedisKeyContext;
 	operation: string;
 	region?: string;
+	redisType: RedisClientType;
 	key?: string;
 };
 
@@ -64,8 +74,16 @@ const finalizeSpan = ({
 	spanCtx: SpanContext;
 	error?: unknown;
 }) => {
-	const { span, startedAt, thresholds, keyContext, operation, region, key } =
-		spanCtx;
+	const {
+		span,
+		startedAt,
+		thresholds,
+		keyContext,
+		operation,
+		region,
+		redisType,
+		key,
+	} = spanCtx;
 	try {
 		const durationMs = performance.now() - startedAt;
 		span.setAttributes(
@@ -76,12 +94,18 @@ const finalizeSpan = ({
 		);
 
 		if (durationMs > thresholds.severeMs) {
+			// Severity, not `db.redis.slow`, gates the export-sampling bypass.
+			// At a 15ms slow bar nearly every command qualified, so ~all redis
+			// spans bypassed sampling and were exported; the span pipeline
+			// leaks native memory in proportion to spans exported.
+			span.setAttribute("db.redis.severe", true);
 			emitRedisSlowLog({
 				operation,
 				durationMs,
 				thresholds,
 				keyContext,
 				region,
+				redisType,
 				key,
 			});
 		}
@@ -178,12 +202,14 @@ const wrapPipelineExec = ({
 	pipeline,
 	tracer,
 	region,
+	redisType,
 	kind,
 }: {
 	// biome-ignore lint/suspicious/noExplicitAny: ioredis Pipeline/Multi shape varies
 	pipeline: any;
 	tracer: Tracer;
 	region?: string;
+	redisType: RedisClientType;
 	kind: "pipeline" | "multi";
 }) => {
 	const originalExec = pipeline.exec;
@@ -198,6 +224,7 @@ const wrapPipelineExec = ({
 			span.setAttribute("db.system", "redis");
 			span.setAttribute("db.operation", kind.toUpperCase());
 			if (region) span.setAttribute("db.redis.region", region);
+			span.setAttribute("db.redis.type", redisType);
 
 			// biome-ignore lint/suspicious/noExplicitAny: ioredis internal queue
 			const queue = (pipeline as any)._queue;
@@ -232,6 +259,7 @@ const wrapPipelineExec = ({
 				keyContext,
 				operation: kind,
 				region,
+				redisType,
 			};
 		} catch {
 			return originalExec.apply(this, execArgs);
@@ -271,11 +299,13 @@ const wrapCustomCommand = ({
 	name,
 	tracer,
 	region,
+	redisType,
 }: {
 	redis: Redis;
 	name: string;
 	tracer: Tracer;
 	region?: string;
+	redisType: RedisClientType;
 }) => {
 	// biome-ignore lint: dynamic property access for custom redis commands
 	const original = (redis as any)[name] as
@@ -293,6 +323,7 @@ const wrapCustomCommand = ({
 			span.setAttribute("db.system", "redis");
 			span.setAttribute("db.operation", name);
 			if (region) span.setAttribute("db.redis.region", region);
+			span.setAttribute("db.redis.type", redisType);
 
 			const key = extractKey({ args });
 			if (key) span.setAttribute("db.statement", truncateKey(key));
@@ -311,6 +342,7 @@ const wrapCustomCommand = ({
 				keyContext,
 				operation: name,
 				region,
+				redisType,
 				key,
 			};
 		} catch {
@@ -360,9 +392,11 @@ const wrapCustomCommand = ({
 export const instrumentRedis = ({
 	redis,
 	region,
+	redisType,
 }: {
 	redis: Redis;
 	region?: string;
+	redisType: RedisClientType;
 }): Redis => {
 	if (!otelConfig.redis) return redis;
 	if (INSTRUMENTED.has(redis)) return redis;
@@ -393,6 +427,7 @@ export const instrumentRedis = ({
 			span.setAttribute("db.system", "redis");
 			span.setAttribute("db.operation", commandName.toUpperCase());
 			if (region) span.setAttribute("db.redis.region", region);
+			span.setAttribute("db.redis.type", redisType);
 
 			const key = extractKey({ args: command?.args ?? [] });
 			if (key) span.setAttribute("db.statement", truncateKey(key));
@@ -411,6 +446,7 @@ export const instrumentRedis = ({
 				keyContext,
 				operation: commandName,
 				region,
+				redisType,
 				key,
 			};
 		} catch {
@@ -452,7 +488,13 @@ export const instrumentRedis = ({
 	) {
 		const pipeline = originalPipeline(...args);
 		try {
-			wrapPipelineExec({ pipeline, tracer, region, kind: "pipeline" });
+			wrapPipelineExec({
+				pipeline,
+				tracer,
+				region,
+				redisType,
+				kind: "pipeline",
+			});
 		} catch {
 			// Fail-open: wrapping failed, pipeline still works
 		}
@@ -466,7 +508,13 @@ export const instrumentRedis = ({
 	) {
 		const multi = originalMulti(...args);
 		try {
-			wrapPipelineExec({ pipeline: multi, tracer, region, kind: "multi" });
+			wrapPipelineExec({
+				pipeline: multi,
+				tracer,
+				region,
+				redisType,
+				kind: "multi",
+			});
 		} catch {
 			// Fail-open: wrapping failed, multi still works
 		}
@@ -482,7 +530,7 @@ export const instrumentRedis = ({
 	) {
 		originalDefineCommand(name, definition);
 		try {
-			wrapCustomCommand({ redis, name, tracer, region });
+			wrapCustomCommand({ redis, name, tracer, region, redisType });
 		} catch {
 			// Fail-open: wrapping failed, command still works via sendCommand
 		}

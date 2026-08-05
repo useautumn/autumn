@@ -8,6 +8,7 @@ import * as Sentry from "@sentry/bun";
 import { getDbHealth, PgHealth } from "@/db/pgHealthMonitor.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { resetCusEnts } from "@/internal/balances/utils/sql/client.js";
+import { markCustomerUpdatedAt } from "@/internal/customers/customerLsns/markCustomerUpdatedAt.js";
 import type { ProcessResetResult } from "../resetCustomerEntitlements/processReset.js";
 import { processReset } from "../resetCustomerEntitlements/processReset.js";
 import { processResetResultToResetCusEntParam } from "../resetCustomerEntitlements/processResetResultToResetCusEntParam.js";
@@ -102,6 +103,7 @@ export const lazyResetSubjectEntitlements = async ({
 		if (Object.keys(applied).length > 0) {
 			const oldNextResetAts: Record<string, number> = {};
 			const customerEntitlementFeatureIds: Record<string, string> = {};
+			const pooledGrantedByCusEntId: Record<string, number> = {};
 
 			for (const customerEntitlement of customerEntitlementsNeedingReset) {
 				if (customerEntitlement.next_reset_at) {
@@ -111,6 +113,11 @@ export const lazyResetSubjectEntitlements = async ({
 				customerEntitlementFeatureIds[customerEntitlement.id] =
 					customerEntitlement.feature_id;
 			}
+			for (const { customerEntitlementId, result } of computed) {
+				if (result.pooledGranted !== undefined) {
+					pooledGrantedByCusEntId[customerEntitlementId] = result.pooledGranted;
+				}
+			}
 
 			await resetSubjectCache({
 				ctx,
@@ -119,6 +126,16 @@ export const lazyResetSubjectEntitlements = async ({
 				oldNextResetAts,
 				clearingMap,
 				customerEntitlementFeatureIds,
+				pooledGrantedByCusEntId,
+			});
+
+			// Reset wrote new balances — pin this customer to the primary for
+			// 60s so a replica can't serve the pre-reset state.
+			await markCustomerUpdatedAt({
+				db: ctx.db,
+				orgId: ctx.org.id,
+				env: ctx.env,
+				customerId,
 			});
 
 			logger.info(

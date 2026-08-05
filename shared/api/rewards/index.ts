@@ -6,3 +6,4 @@ export * from "./featureGrants/apiFeatureGrantV0.js";
 export * from "./rewardsCreateOpModels.js";
 export * from "./rewardsListOpModels.js";
 export * from "./rewardsOpenApi.js";
+export * from "./rewardsOpModels.js";

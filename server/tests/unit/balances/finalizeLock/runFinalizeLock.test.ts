@@ -7,6 +7,7 @@ import {
 	mock,
 	test,
 } from "bun:test";
+import { mockModuleWithRestore } from "../../utils/mockModuleWithRestore.js";
 
 const mockState = {
 	shouldUseRedis: true,
@@ -19,34 +20,43 @@ const mockState = {
 	queueResponse: { success: true } as { success: true } | null,
 };
 
-mock.module("@/external/redis/initUtils/redisV2Availability.js", () => ({
-	shouldUseRedisV2: () => mockState.shouldUseRedis,
-}));
+await mockModuleWithRestore(
+	"@/external/redis/availabilityMonitor/redisV2Availability.js",
+	() => ({
+		shouldUseRedisV2: () => mockState.shouldUseRedis,
+	}),
+);
 
-mock.module("@/internal/balances/utils/lock/fetchLockReceipt.js", () => ({
-	fetchLockReceipt: async (args: Record<string, unknown>) => {
-		mockState.fetchCalls.push(args);
-		if (mockState.fetchError) throw mockState.fetchError;
+await mockModuleWithRestore(
+	"@/internal/balances/utils/lock/fetchLockReceipt.js",
+	() => ({
+		fetchLockReceipt: async (args: Record<string, unknown>) => {
+			mockState.fetchCalls.push(args);
+			if (mockState.fetchError) throw mockState.fetchError;
 
-		return {
-			source: "redis_v2",
-			receipt: { customer_id: "cus_123", feature_id: "messages", items: [] },
-			lockReceiptKey: "lock:receipt",
-			claimed: true,
-		};
-	},
-}));
+			return {
+				source: "redis_v2",
+				receipt: { customer_id: "cus_123", feature_id: "messages", items: [] },
+				lockReceiptKey: "lock:receipt",
+				claimed: true,
+			};
+		},
+	}),
+);
 
-mock.module("@/internal/balances/finalizeLock/runFinalizeLockV2.js", () => ({
-	runFinalizeLockV2: async (args: Record<string, unknown>) => {
-		mockState.finalizeV2Calls.push(args);
-		if (mockState.finalizeV2Error) throw mockState.finalizeV2Error;
+await mockModuleWithRestore(
+	"@/internal/balances/finalizeLock/runFinalizeLockV2.js",
+	() => ({
+		runFinalizeLockV2: async (args: Record<string, unknown>) => {
+			mockState.finalizeV2Calls.push(args);
+			if (mockState.finalizeV2Error) throw mockState.finalizeV2Error;
 
-		return { success: true };
-	},
-}));
+			return { success: true };
+		},
+	}),
+);
 
-mock.module(
+await mockModuleWithRestore(
 	"@/internal/balances/utils/lockV2/releaseLockClaimMarker.js",
 	() => ({
 		releaseLockClaimMarker: async (args: Record<string, unknown>) => {
@@ -55,12 +65,15 @@ mock.module(
 	}),
 );
 
-mock.module("@/internal/balances/finalizeLock/queueFinalizeLock.js", () => ({
-	queueFinalizeLock: async (args: Record<string, unknown>) => {
-		mockState.queueCalls.push(args);
-		return mockState.queueResponse;
-	},
-}));
+await mockModuleWithRestore(
+	"@/internal/balances/finalizeLock/queueFinalizeLock.js",
+	() => ({
+		queueFinalizeLock: async (args: Record<string, unknown>) => {
+			mockState.queueCalls.push(args);
+			return mockState.queueResponse;
+		},
+	}),
+);
 
 import { RedisUnavailableError } from "@/external/redis/utils/errors.js";
 import { runFinalizeLock } from "@/internal/balances/finalizeLock/runFinalizeLock.js";

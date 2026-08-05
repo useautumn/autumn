@@ -17,7 +17,6 @@ import { ApiVersion, ResetInterval } from "@autumn/shared";
 import { TestFeature } from "@tests/setup/v2Features.js";
 import { items } from "@tests/utils/fixtures/items.js";
 import { products } from "@tests/utils/fixtures/products.js";
-import { timeout } from "@tests/utils/genUtils.js";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";
 import { AutumnInt } from "@/external/autumn/autumnCli.js";
@@ -26,8 +25,8 @@ import {
 	setCustomerUsageLimit,
 } from "../../utils/usage-limit-utils/customerUsageLimitUtils.js";
 import {
+	expectUsageWindowSynced,
 	fetchActivePlanCusEnt,
-	fetchUsageWindowRows,
 } from "../../utils/usage-limit-utils/usageWindowDbTestUtils.js";
 
 // initScenario only exposes clients up to V2_2; build the latest-version client
@@ -65,9 +64,12 @@ test.concurrent(
 			value: 3,
 		});
 
-		// Flush the counter to Postgres before the cache-invalidating change
-		// (the rebuild re-seeds counters from PG).
-		await timeout(4000);
+		await expectUsageWindowSynced({
+			ctx,
+			customerId,
+			featureId: TestFeature.Messages,
+			usage: 3,
+		});
 		const entBefore = await fetchActivePlanCusEnt({
 			ctx,
 			customerId,
@@ -119,17 +121,13 @@ test.concurrent(
 		});
 
 		// ── Contract: PG row stayed on the preserved cycle ────────────────
-		await timeout(4000);
-		const windowRows = await fetchUsageWindowRows({
+		await expectUsageWindowSynced({
 			ctx,
 			customerId,
 			featureId: TestFeature.Messages,
+			usage: 5,
+			windowEndAt: Number(entBefore.next_reset_at),
 		});
-		expect(windowRows).toHaveLength(1);
-		expect(Number(windowRows[0].usage)).toBe(5);
-		expect(Number(windowRows[0].window_end_at)).toBe(
-			Number(entBefore.next_reset_at),
-		);
 	},
 );
 
@@ -143,7 +141,7 @@ test.concurrent(
 		});
 
 		const customerId = "uw-update-item-1";
-		await initScenario({
+		const { ctx } = await initScenario({
 			customerId,
 			setup: [
 				s.customer({ paymentMethod: "success", testClock: false }),
@@ -164,9 +162,12 @@ test.concurrent(
 			value: 3,
 		});
 
-		// Flush the counter to Postgres before the cache-invalidating change
-		// (the rebuild re-seeds counters from PG).
-		await timeout(4000);
+		await expectUsageWindowSynced({
+			ctx,
+			customerId,
+			featureId: TestFeature.Messages,
+			usage: 3,
+		});
 
 		// Bump the capped item's included usage (100 -> 500): the cadence is
 		// unchanged, so the cycle is preserved and the counter survives.

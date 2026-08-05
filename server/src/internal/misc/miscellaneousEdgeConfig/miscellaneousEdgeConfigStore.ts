@@ -3,8 +3,8 @@ import { ADMIN_MISCELLANEOUS_EDGE_CONFIG_KEY } from "@/external/aws/s3/adminS3Co
 import { registerEdgeConfig } from "@/internal/misc/edgeConfig/edgeConfigRegistry.js";
 import { createEdgeConfigStore } from "@/internal/misc/edgeConfig/edgeConfigStore.js";
 import {
-	type MiscellaneousEdgeConfig,
-	MiscellaneousEdgeConfigSchema,
+    type MiscellaneousEdgeConfig,
+    MiscellaneousEdgeConfigSchema,
 } from "./miscellaneousEdgeConfigSchemas.js";
 
 const store = createEdgeConfigStore<MiscellaneousEdgeConfig>({
@@ -59,3 +59,14 @@ export const isSyncCoalesceEnabled = (): boolean => store.get().syncCoalesce;
 /** Global gate: serve subject lookups from Postgres instead of the cache. */
 export const isSubjectLookupDbOnlyEnabled = (): boolean =>
 	store.get().subjectLookupDbOnly;
+
+/** Idempotency-key migration: DynamoDB is the conflict authority. */
+export const isIdempotencyDynamoReadEnabled = (): boolean =>
+	store.get().idempotencyDynamoRead;
+/** Global gate: fall back to Postgres on Redis outage instead of shedding. */
+export const isRedisFallbackToDbEnabled = (): boolean =>
+	store.get().redisFallbackToDb;
+
+/** Global gate: share one in-flight fetch across concurrent subject reads. */
+export const isSubjectReadSingleflightEnabled = (): boolean =>
+	store.get().subjectReadSingleflight;

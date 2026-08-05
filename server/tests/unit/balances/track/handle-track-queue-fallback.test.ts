@@ -24,28 +24,45 @@ const mockState = {
 const trackQueueUrl =
 	"https://sqs.eu-west-1.amazonaws.com/123456789012/track-dev.fifo";
 
-mock.module("@/internal/balances/track/v3/runTrackV3.js", () => ({
-	runTrackV3: async (args: Record<string, unknown>) => {
-		mockState.runTrackV3Calls.push(args);
-		if (mockState.v3Error) throw mockState.v3Error;
-		return { ok: true };
-	},
-}));
+await mockModuleWithRestore(
+	"@/internal/balances/track/v3/runTrackV3.js",
+	() => ({
+		runTrackV3: async (args: Record<string, unknown>) => {
+			mockState.runTrackV3Calls.push(args);
+			if (mockState.v3Error) throw mockState.v3Error;
+			return { ok: true };
+		},
+	}),
+);
 
-mock.module("@/external/redis/initUtils/redisV2Availability.js", () => ({
-	shouldUseRedisV2: () => true,
-}));
+await mockModuleWithRestore(
+	"@/external/redis/availabilityMonitor/redisV2Availability.js",
+	() => ({
+		shouldUseRedisV2: () => true,
+	}),
+);
 
-mock.module("@/internal/misc/idempotency/checkIdempotencyKey.js", () => ({
-	checkIdempotencyKey: async (args: Record<string, unknown>) => {
-		mockState.checkCalls.push(args);
-	},
-	releaseIdempotencyKey: async (args: Record<string, unknown>) => {
-		mockState.releaseCalls.push(args);
-	},
-}));
+await mockModuleWithRestore(
+	"@/internal/misc/idempotency/actions/checkIdempotencyKey.js",
+	() => ({
+		checkIdempotencyKey: async (args: Record<string, unknown>) => {
+			mockState.checkCalls.push(args);
+		},
+	}),
+);
+
+await mockModuleWithRestore(
+	"@/internal/misc/idempotency/actions/releaseIdempotencyKey.js",
+	() => ({
+		releaseIdempotencyKey: async (args: Record<string, unknown>) => {
+			mockState.releaseCalls.push(args);
+		},
+	}),
+);
 
 import { runTrackWithRollout } from "@/internal/balances/track/runTrackWithRollout.js";
+
+import { mockModuleWithRestore } from "../../utils/mockModuleWithRestore.js";
 
 const ctx = {
 	org: { id: "org_123" },
@@ -72,6 +89,8 @@ const body = {
 };
 
 describe("track queue fallback", () => {
+	const originalAsyncQueueUrl = process.env.TRACK_ASYNC_SQS_QUEUE_URL;
+
 	beforeEach(() => {
 		mockState.queueCommands = [];
 		mockState.queueError = null;
@@ -79,7 +98,8 @@ describe("track queue fallback", () => {
 		mockState.checkCalls = [];
 		mockState.releaseCalls = [];
 		mockState.v3Error = null;
-		process.env.TRACK_SQS_QUEUE_URL = trackQueueUrl;
+		// queueTrack resolves the shared track queue from the async URL first.
+		process.env.TRACK_ASYNC_SQS_QUEUE_URL = trackQueueUrl;
 
 		const sqsClient = getSqsClient({ queueUrl: trackQueueUrl });
 		mockState.originalSend = sqsClient.send.bind(sqsClient);
@@ -89,7 +109,11 @@ describe("track queue fallback", () => {
 			}
 
 			mockState.queueCommands.push(command.input);
-			return {};
+			const entries =
+				(command.input.Entries as Array<{ Id?: string }> | undefined) ?? [];
+			return {
+				Successful: entries.map((entry) => ({ Id: entry.Id })),
+			};
 		}) as typeof sqsClient.send;
 	});
 
@@ -115,11 +139,14 @@ describe("track queue fallback", () => {
 				idempotencyKey: "track:idem_123",
 			}),
 		]);
-		expect(mockState.releaseCalls).toEqual([
-			expect.objectContaining({
-				idempotencyKey: "track:idem_123",
-			}),
-		]);
+		// The accept-time claim is KEPT on the queued path — the worker skips
+		// its own claim via the message's validateTrackBodyIdempotencyKey flag.
+		expect(mockState.releaseCalls).toHaveLength(0);
+		const batchEntries = mockState.queueCommands[0].Entries as Array<{
+			MessageBody: string;
+		}>;
+		const messageBody = JSON.parse(batchEntries[0].MessageBody);
+		expect(messageBody.data.validateTrackBodyIdempotencyKey).toBe(false);
 		expect(response).toEqual({
 			customer_id: "cus_123",
 			entity_id: undefined,
@@ -170,6 +197,7 @@ describe("track queue fallback", () => {
 		if (mockState.originalSend) {
 			sqsClient.send = mockState.originalSend;
 		}
+		process.env.TRACK_ASYNC_SQS_QUEUE_URL = originalAsyncQueueUrl;
 	});
 });
 

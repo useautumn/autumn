@@ -21,7 +21,7 @@ const trackQueueUrl =
 const trackAsyncQueueUrl =
 	"https://sqs.eu-west-1.amazonaws.com/123456789012/track-async-dev.fifo";
 
-mock.module(
+await mockModuleWithRestore(
 	"@/internal/balances/track/utils/getQueuedTrackResponse.js",
 	() => ({
 		getQueuedTrackResponse: () => ({
@@ -34,17 +34,27 @@ mock.module(
 
 import { queueTrack } from "@/internal/balances/track/utils/queueTrack.js";
 
+import { mockModuleWithRestore } from "../../utils/mockModuleWithRestore.js";
+
 describe("queueTrack", () => {
 	const originalTrackQueueUrl = process.env.TRACK_SQS_QUEUE_URL;
+	const originalAsyncQueueUrl = process.env.TRACK_ASYNC_SQS_QUEUE_URL;
 
 	beforeEach(() => {
 		mockState.queueCommands = [];
-		process.env.TRACK_SQS_QUEUE_URL = trackQueueUrl;
+		// The async URL is the canonical shared track queue; the deprecated
+		// TRACK_SQS_QUEUE_URL is unset so resolution is deterministic.
+		process.env.TRACK_ASYNC_SQS_QUEUE_URL = trackQueueUrl;
+		delete process.env.TRACK_SQS_QUEUE_URL;
 		const sqsClient = getSqsClient({ queueUrl: trackQueueUrl });
 		mockState.originalSend = sqsClient.send.bind(sqsClient);
 		sqsClient.send = (async (command: { input: Record<string, unknown> }) => {
 			mockState.queueCommands.push(command.input);
-			return {};
+			const entries =
+				(command.input.Entries as Array<{ Id?: string }> | undefined) ?? [];
+			return {
+				Successful: entries.map((entry) => ({ Id: entry.Id })),
+			};
 		}) as typeof sqsClient.send;
 	});
 
@@ -72,12 +82,18 @@ describe("queueTrack", () => {
 		expect(mockState.queueCommands).toHaveLength(1);
 		expect(mockState.queueCommands[0]).toMatchObject({
 			QueueUrl: trackQueueUrl,
+		});
+		// Default resolution hits the shared async-track queue, which sends
+		// through the batcher (SendMessageBatch envelope).
+		const entries = mockState.queueCommands[0]?.Entries as Array<
+			Record<string, unknown>
+		>;
+		expect(entries).toHaveLength(1);
+		expect(entries[0]).toMatchObject({
 			MessageGroupId: "org_123:sandbox:cus_123:ent_123",
 			MessageDeduplicationId: "req_123",
 		});
-		expect(
-			JSON.parse(mockState.queueCommands[0]?.MessageBody as string),
-		).toMatchObject({
+		expect(JSON.parse(entries[0]?.MessageBody as string)).toMatchObject({
 			name: "track",
 			data: {
 				orgId: "org_123",
@@ -90,7 +106,7 @@ describe("queueTrack", () => {
 		});
 	});
 
-	test("routes to explicit queueUrl when passed, ignoring TRACK_SQS_QUEUE_URL", async () => {
+	test("routes to explicit options.queueUrl when passed, ignoring env vars", async () => {
 		const sqsClient = getSqsClient({ queueUrl: trackAsyncQueueUrl });
 		const originalAsyncSend = sqsClient.send.bind(sqsClient);
 		sqsClient.send = (async (command: { input: Record<string, unknown> }) => {
@@ -115,8 +131,10 @@ describe("queueTrack", () => {
 				feature_id: "messages",
 				value: 1,
 			},
-			queueUrl: trackAsyncQueueUrl,
-			messageDeduplicationId: "req_async_1-0",
+			options: {
+				queueUrl: trackAsyncQueueUrl,
+				messageDeduplicationId: "req_async_1-0",
+			},
 		});
 
 		expect(mockState.queueCommands).toHaveLength(1);
@@ -128,7 +146,10 @@ describe("queueTrack", () => {
 		sqsClient.send = originalAsyncSend;
 	});
 
-	test("falls back to TRACK_SQS_QUEUE_URL when queueUrl arg is undefined", async () => {
+	test("falls back to the deprecated TRACK_SQS_QUEUE_URL when the async URL is unset", async () => {
+		delete process.env.TRACK_ASYNC_SQS_QUEUE_URL;
+		process.env.TRACK_SQS_QUEUE_URL = trackQueueUrl;
+
 		const ctx = {
 			id: "req_fallback_1",
 			org: { id: "org_123" },
@@ -154,9 +175,9 @@ describe("queueTrack", () => {
 		});
 	});
 
-	test("returns null when no queueUrl arg and env var is unset", async () => {
-		const previousEnv = process.env.TRACK_SQS_QUEUE_URL;
-		process.env.TRACK_SQS_QUEUE_URL = undefined;
+	test("returns null when no queueUrl option and both env vars are unset", async () => {
+		delete process.env.TRACK_ASYNC_SQS_QUEUE_URL;
+		delete process.env.TRACK_SQS_QUEUE_URL;
 
 		const warnSpy = mock(() => {});
 		const ctx = {
@@ -179,8 +200,6 @@ describe("queueTrack", () => {
 		expect(result).toBeNull();
 		expect(mockState.queueCommands).toHaveLength(0);
 		expect(warnSpy).toHaveBeenCalled();
-
-		process.env.TRACK_SQS_QUEUE_URL = previousEnv;
 	});
 
 	afterEach(() => {
@@ -188,7 +207,16 @@ describe("queueTrack", () => {
 			const sqsClient = getSqsClient({ queueUrl: trackQueueUrl });
 			sqsClient.send = mockState.originalSend as typeof sqsClient.send;
 		}
-		process.env.TRACK_SQS_QUEUE_URL = originalTrackQueueUrl;
+		if (originalTrackQueueUrl === undefined) {
+			delete process.env.TRACK_SQS_QUEUE_URL;
+		} else {
+			process.env.TRACK_SQS_QUEUE_URL = originalTrackQueueUrl;
+		}
+		if (originalAsyncQueueUrl === undefined) {
+			delete process.env.TRACK_ASYNC_SQS_QUEUE_URL;
+		} else {
+			process.env.TRACK_ASYNC_SQS_QUEUE_URL = originalAsyncQueueUrl;
+		}
 	});
 });
 

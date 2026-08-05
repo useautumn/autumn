@@ -3,7 +3,12 @@
  */
 
 import { referralsCreateCode } from "../funcs/referrals-create-code.js";
+import { referralsCreateProgram } from "../funcs/referrals-create-program.js";
+import { referralsDeleteProgram } from "../funcs/referrals-delete-program.js";
+import { referralsGetProgram } from "../funcs/referrals-get-program.js";
+import { referralsListPrograms } from "../funcs/referrals-list-programs.js";
 import { referralsRedeemCode } from "../funcs/referrals-redeem-code.js";
+import { referralsUpdateProgram } from "../funcs/referrals-update-program.js";
 import { ClientSDK, RequestOptions } from "../lib/sdks.js";
 import * as models from "../models/index.js";
 import { unwrapAsync } from "../types/fp.js";
@@ -31,6 +36,76 @@ export class Referrals extends ClientSDK {
     options?: RequestOptions,
   ): Promise<models.RedeemReferralCodeResponse> {
     return unwrapAsync(referralsRedeemCode(
+      this,
+      request,
+      options,
+    ));
+  }
+
+  /**
+   * Create a referral program linked to an existing reward.
+   */
+  async createProgram(
+    request: models.CreateReferralProgramParams,
+    options?: RequestOptions,
+  ): Promise<models.CreateReferralProgramResponse> {
+    return unwrapAsync(referralsCreateProgram(
+      this,
+      request,
+      options,
+    ));
+  }
+
+  /**
+   * List the referral programs configured for the org.
+   */
+  async listPrograms(
+    request?: models.ListReferralProgramsParams | undefined,
+    options?: RequestOptions,
+  ): Promise<models.ListReferralProgramsResponse> {
+    return unwrapAsync(referralsListPrograms(
+      this,
+      request,
+      options,
+    ));
+  }
+
+  /**
+   * Fetch a referral program by ID.
+   */
+  async getProgram(
+    request: models.GetReferralProgramParams,
+    options?: RequestOptions,
+  ): Promise<models.GetReferralProgramResponse> {
+    return unwrapAsync(referralsGetProgram(
+      this,
+      request,
+      options,
+    ));
+  }
+
+  /**
+   * Update a referral program. Omitted fields keep their current value.
+   */
+  async updateProgram(
+    request: models.UpdateReferralProgramParams,
+    options?: RequestOptions,
+  ): Promise<models.UpdateReferralProgramResponse> {
+    return unwrapAsync(referralsUpdateProgram(
+      this,
+      request,
+      options,
+    ));
+  }
+
+  /**
+   * Delete a referral program.
+   */
+  async deleteProgram(
+    request: models.DeleteReferralProgramParams,
+    options?: RequestOptions,
+  ): Promise<models.DeleteReferralProgramResponse> {
+    return unwrapAsync(referralsDeleteProgram(
       this,
       request,
       options,

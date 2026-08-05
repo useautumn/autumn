@@ -7,11 +7,14 @@ import { OrgService } from "@/internal/orgs/OrgService.js";
 import { decryptData } from "@/utils/encryptUtils.js";
 import { getReachableDragonflyUrl } from "./getReachableDragonflyUrl.js";
 import { createRedisConnection, currentRegion } from "./initRedis.js";
-import { REDIS_V2_COMMAND_TIMEOUT_MS } from "./initUtils/redisV2Config.js";
+import { REDIS_V2_COMMAND_TIMEOUT_MS } from "./initUtils/createRedisClient.js";
 import { resolveRedisV2 } from "./resolveRedisV2.js";
 
 export type OrgWithRedisConfig = {
 	id: string;
+	// Optional: routing fallbacks build orgs from rows without slug; those
+	// always have redis_config: null, so the slug-based label is never needed.
+	slug?: string;
 	redis_config?: OrgRedisConfig | null;
 };
 
@@ -25,14 +28,16 @@ const pool = new Map<string, PoolEntry>();
 const createOrgRedisConnection = ({
 	connectionString,
 	orgId,
+	orgSlug,
 }: {
 	connectionString: string;
 	orgId: string;
+	orgSlug: string;
 }): Redis => {
 	const instance = createRedisConnection({
 		cacheUrl: connectionString,
-		region: `org:${orgId}:v2:dragonfly`,
-		supportsUpstashShebang: false,
+		region: `org:${orgSlug}:v2:dragonfly`,
+		redisType: `subject-dedicated:${orgSlug}`,
 		commandTimeout: REDIS_V2_COMMAND_TIMEOUT_MS,
 	});
 
@@ -101,6 +106,7 @@ export const getOrgRedis = ({ org }: { org: OrgWithRedisConfig }): Redis => {
 	const instance = createOrgRedisConnection({
 		connectionString: getReachableDragonflyUrl(connectionString),
 		orgId: org.id,
+		orgSlug: org.slug ?? org.id,
 	});
 	pool.set(org.id, { instance, url: org.redis_config.url });
 	return instance;

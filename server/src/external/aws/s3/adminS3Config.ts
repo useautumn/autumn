@@ -24,6 +24,8 @@ export const ADMIN_FULL_SUBJECT_GATE_CONFIG_KEY =
 export const ADMIN_ASYNC_BALANCE_UPDATE_CONFIG_KEY =
 	"admin/async-balance-update-config.json";
 export const ADMIN_ASYNC_TRACK_CONFIG_KEY = "admin/async-track-config.json";
+export const ADMIN_EDGE_CONFIG_TIMESTAMP_KEY =
+	"admin/edge-config-timestamp.json";
 export const BLUE_GREEN_ACTIVE_SLOT_KEY = "admin/blue-green-active-slot.json";
 export const BLUE_GREEN_CRON_ACTIVE_SLOT_KEY =
 	"admin/blue-green-cron-active-slot.json";
@@ -75,8 +77,8 @@ export const getAdminEdgeConfigSources = () => ({
 			key: ADMIN_REDIS_V2_CACHE_CONFIG_KEY,
 		},
 		{
-			id: "main-redis-cache",
-			label: "Main Redis Instance",
+			id: "misc-redis",
+			label: "Misc Redis",
 			key: ADMIN_MAIN_REDIS_CACHE_CONFIG_KEY,
 		},
 		{

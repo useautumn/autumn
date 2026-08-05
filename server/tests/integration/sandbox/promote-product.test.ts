@@ -244,7 +244,7 @@ describe("promote product from a named sandbox to the master org", () => {
 		expect(masterLiveFeatures.map((f) => f.id)).toContain(DASH);
 		// The sub-org's own Live env stays empty — the old void target.
 		expect(subLiveProducts.length).toBe(0);
-	}, 120_000);
+	});
 
 	test("promotes into master Sandbox (the default sandbox)", async () => {
 		if (!master || !sub) throw new Error("orgs not provisioned");
@@ -267,7 +267,7 @@ describe("promote product from a named sandbox to the master org", () => {
 			env: AppEnv.Sandbox,
 		});
 		expect(masterSandboxProducts.map((p) => p.id)).toContain(PLAN);
-	}, 120_000);
+	});
 
 	test("pulls a credit system's metered dependency along on promote", async () => {
 		if (!master || !sub) throw new Error("orgs not provisioned");
@@ -293,7 +293,7 @@ describe("promote product from a named sandbox to the master org", () => {
 		// The credit system AND the metered feature its schema references.
 		expect(ids).toContain(CREDIT);
 		expect(ids).toContain(MSG);
-	}, 120_000);
+	});
 
 	test("refuses to promote a variant plan across orgs", async () => {
 		if (!master || !sub) throw new Error("orgs not provisioned");
@@ -318,7 +318,7 @@ describe("promote product from a named sandbox to the master org", () => {
 		expect(thrown).toBeInstanceOf(RecaseError);
 		expect((thrown as RecaseError).code).toBe(ErrCode.InvalidRequest);
 		expect((thrown as RecaseError).statusCode).toBe(400);
-	}, 120_000);
+	});
 
 	test("same-org copy is unchanged (regression): master Sandbox to master Live", async () => {
 		if (!master) throw new Error("orgs not provisioned");
@@ -383,5 +383,5 @@ describe("promote product from a named sandbox to the master org", () => {
 		expect(copiedV2.items.map((i) => i.feature_id).filter(Boolean)).toContain(
 			`${DASH}_same`,
 		);
-	}, 120_000);
+	});
 });

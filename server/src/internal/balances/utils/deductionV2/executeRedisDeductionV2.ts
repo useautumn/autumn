@@ -12,7 +12,7 @@ import { triggerAutoTopUp } from "@/internal/balances/autoTopUp/triggerAutoTopUp
 import {
 	getRedisTrackFeatureIdempotencyKey,
 	TRACK_V3_IDEMPOTENCY_TTL_MS,
-} from "@/internal/balances/track/v3/trackIdempotencyKey.js";
+} from "@/internal/balances/idempotency/trackQueueIdempotency.js";
 import { fireTrackWebhooks } from "@/internal/balances/trackWebhooks/fireTrackWebhooks.js";
 import { createAllocatedInvoice } from "@/internal/balances/utils/allocatedInvoice/createAllocatedInvoice.js";
 import { saveLockReceiptV2 } from "@/internal/balances/utils/lockV2/saveLockReceiptV2.js";
@@ -120,6 +120,8 @@ export const executeRedisDeductionV2 = async ({
 	// One timestamp for the whole operation: the resolver keys windows from it
 	// and Lua receives the same value, so they never disagree on the window.
 	const usageWindowNow = Date.now();
+
+	const duplicateFeatureIds: string[] = [];
 
 	for (const deduction of deductions) {
 		const {
@@ -263,6 +265,18 @@ export const executeRedisDeductionV2 = async ({
 		}
 
 		if (resultJson.error) {
+			// This feature already applied on a prior delivery (replay) — skip
+			// it and continue with the remaining features instead of aborting.
+			if (
+				resultJson.error === RedisDeductionErrorCode.DuplicateIdempotencyKey
+			) {
+				duplicateFeatureIds.push(deduction.feature.id);
+				ctx.logger.info(
+					`[executeRedisDeductionV2] Skipping already-applied feature ${deduction.feature.id} (duplicate idempotency key)`,
+				);
+				continue;
+			}
+
 			throw new RedisDeductionError({
 				message: `Redis deduction failed: ${resultJson.error}`,
 				code: resultJson.error as RedisDeductionErrorCode,
@@ -409,6 +423,18 @@ export const executeRedisDeductionV2 = async ({
 				);
 			});
 		}
+	}
+
+	// EVERY feature was a replay — surface the duplicate (sync callers 409;
+	// runQueuedTrack swallows it so the message is acked, not requeued).
+	if (
+		deductions.length > 0 &&
+		duplicateFeatureIds.length === deductions.length
+	) {
+		throw new RedisDeductionError({
+			message: "Redis deduction failed: duplicate idempotency key",
+			code: RedisDeductionErrorCode.DuplicateIdempotencyKey,
+		});
 	}
 
 	return {

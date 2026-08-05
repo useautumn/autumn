@@ -9,10 +9,12 @@ import {
 import { ErrCode, RecaseError } from "@autumn/shared";
 import type { Context } from "hono";
 import { db } from "@/db/initDrizzle.js";
-import { getPrimaryRedis } from "@/external/redis/initRedis.js";
+import {
+	buildOAuthRefreshReplayKey,
+	claimOAuthRefreshReplay,
+	storeOAuthRefreshReplay,
+} from "@/external/redis/actions/oauthRefreshReplay/oauthRefreshReplay.js";
 import { auth } from "@/utils/auth.js";
-import { decryptData, encryptData } from "@/utils/encryptUtils.js";
-import { timeout } from "@/utils/genUtils.js";
 import { hashOAuthToken } from "@/utils/oauthUtils.js";
 import {
 	oauthAccessTokenRepo,
@@ -118,59 +120,6 @@ const jsonTokenResponse = ({
 		status,
 		headers: tokenResponseHeaders(response),
 	});
-
-const REFRESH_REPLAY_TTL_SECONDS = 30;
-const REFRESH_REPLAY_PENDING = "pending";
-
-const claimRefreshReplay = async (key: string) => {
-	try {
-		const redis = getPrimaryRedis();
-		if (redis.status !== "ready") return null;
-		for (let attempt = 0; attempt < 200; attempt++) {
-			const value = await redis.get(key);
-			if (value && value !== REFRESH_REPLAY_PENDING) {
-				return {
-					body: JSON.parse(decryptData(value)) as Record<string, unknown>,
-				};
-			}
-			if (
-				!value &&
-				(await redis.set(
-					key,
-					REFRESH_REPLAY_PENDING,
-					"EX",
-					REFRESH_REPLAY_TTL_SECONDS,
-					"NX",
-				))
-			) {
-				return { body: null };
-			}
-			await timeout(25);
-		}
-		return null;
-	} catch {
-		return null;
-	}
-};
-
-const storeRefreshReplay = async ({
-	body,
-	key,
-}: {
-	body: Record<string, unknown>;
-	key: string;
-}) => {
-	try {
-		await getPrimaryRedis().set(
-			key,
-			encryptData(JSON.stringify(body)),
-			"EX",
-			REFRESH_REPLAY_TTL_SECONDS,
-		);
-	} catch {
-		return;
-	}
-};
 
 const getRefreshTokenRecord = async (request: Request) => {
 	const refreshToken = await getRefreshTokenForConsentLookup(request);
@@ -293,12 +242,14 @@ export const handleOAuthTokenWithApiKey = async (c: Context) => {
 		grantedScopes: refreshScopes,
 	});
 	const refreshReplayKey = refreshScopes
-		? `oauth:refresh-replay:${await hashOAuthToken(
-				`${resource ?? ""}\n${normalizedRequest.headers.get("authorization") ?? ""}\n${await normalizedRequest.clone().text()}`,
-			)}`
+		? buildOAuthRefreshReplayKey(
+				await hashOAuthToken(
+					`${resource ?? ""}\n${normalizedRequest.headers.get("authorization") ?? ""}\n${await normalizedRequest.clone().text()}`,
+				),
+			)
 		: null;
 	if (refreshReplayKey) {
-		const replay = await claimRefreshReplay(refreshReplayKey);
+		const replay = await claimOAuthRefreshReplay(refreshReplayKey);
 		if (!replay) {
 			return jsonTokenResponse({
 				body: {
@@ -423,7 +374,7 @@ export const handleOAuthTokenWithApiKey = async (c: Context) => {
 				scopes: tokenRecord.scopes,
 			});
 			if (refreshReplayKey) {
-				await storeRefreshReplay({
+				await storeOAuthRefreshReplay({
 					body: responseBody,
 					key: refreshReplayKey,
 				});

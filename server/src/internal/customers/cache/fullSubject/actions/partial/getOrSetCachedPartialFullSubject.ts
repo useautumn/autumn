@@ -3,9 +3,11 @@ import {
 	EntityNotFoundError,
 	type FullSubject,
 } from "@autumn/shared";
+import type { SubjectReadFrom } from "@/db/resolveSubjectReadDb.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { getFullSubjectNormalized } from "@/internal/customers/repos/getFullSubject/index.js";
 import { filterFullSubjectByFeatureIds } from "../../filterFullSubjectByFeatureIds.js";
+import { isReplicaSourced } from "../../subjectProvenance.js";
 import { rehydrateWithLiveBalances } from "../rehydrateWithLiveBalances.js";
 import { setCachedFullSubject } from "../setCachedFullSubject/setCachedFullSubject.js";
 import { getCachedPartialFullSubject } from "./getCachedPartialFullSubject.js";
@@ -16,12 +18,14 @@ export const getOrSetCachedPartialFullSubject = async ({
 	entityId,
 	featureIds,
 	source,
+	readFrom = "primary",
 }: {
 	ctx: AutumnContext;
 	customerId: string;
 	entityId?: string;
 	featureIds: string[];
 	source?: string;
+	readFrom?: SubjectReadFrom;
 }): Promise<FullSubject> => {
 	const { skipCache, logger } = ctx;
 	const useRedis = !skipCache;
@@ -45,6 +49,7 @@ export const getOrSetCachedPartialFullSubject = async ({
 			logger.debug(
 				`[getOrSetCachedPartialFullSubject] Subject hit for ${customerId}${entityId ? `:${entityId}` : ""}, source: ${source}`,
 			);
+			if (ctx.subjectReadTrace) ctx.subjectReadTrace.source = "cache";
 			return cached;
 		}
 	}
@@ -57,6 +62,8 @@ export const getOrSetCachedPartialFullSubject = async ({
 		ctx,
 		customerId,
 		entityId,
+		readFrom,
+		routeSource: source,
 	});
 
 	if (!result) {
@@ -66,7 +73,8 @@ export const getOrSetCachedPartialFullSubject = async ({
 
 	const { normalized, fullSubject } = result;
 
-	if (useRedis) {
+	// Replica-sourced hydrations must never fill Redis — serve them as-is.
+	if (useRedis && !isReplicaSourced(normalized)) {
 		await setCachedFullSubject({
 			ctx,
 			normalized,

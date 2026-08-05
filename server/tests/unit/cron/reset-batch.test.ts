@@ -1,4 +1,4 @@
-import { describe, expect, mock, test } from "bun:test";
+import { describe, expect, test } from "bun:test";
 import { AppEnv, type ResetCusEnt } from "@autumn/shared";
 import type { CronContext } from "@/cron/utils/CronContext.js";
 
@@ -13,11 +13,10 @@ const cusEnt = {
 const calls = {
 	fetchParams: null as unknown,
 	reset: 0,
-	cleared: [] as ResetCusEnt[],
 };
 const batchSize = 1_000;
 
-mock.module(
+await mockModuleWithRestore(
 	"@/internal/customers/cusProducts/cusEnts/CusEntitlementService",
 	() => ({
 		CusEntService: {
@@ -29,7 +28,7 @@ mock.module(
 		},
 	}),
 );
-mock.module("@/internal/orgs/OrgService.js", () => ({
+await mockModuleWithRestore("@/internal/orgs/OrgService.js", () => ({
 	OrgService: {
 		getWithFeatures: async () => ({
 			org: { id: "org-1", config: {}, redis_config: null },
@@ -37,26 +36,29 @@ mock.module("@/internal/orgs/OrgService.js", () => ({
 		}),
 	},
 }));
-mock.module("@/internal/misc/resetJob/resetJobStore.js", () => ({
-	getResetJobConfig: () => ({ enabled: true, batchSize }),
-}));
-mock.module("@/cron/resetCron/resetCustomerEntitlement", () => ({
-	resetCustomerEntitlement: async ({
-		updatedCusEnts,
-	}: {
-		updatedCusEnts: ResetCusEnt[];
-	}) => {
-		calls.reset++;
-		updatedCusEnts.push(cusEnt);
-	},
-}));
-mock.module("@/cron/resetCron/clearCusEntsFromCache", () => ({
-	clearCusEntsFromCache: async ({ cusEnts }: { cusEnts: ResetCusEnt[] }) => {
-		calls.cleared = cusEnts;
-	},
-}));
+await mockModuleWithRestore(
+	"@/internal/misc/resetJob/resetJobStore.js",
+	() => ({
+		getResetJobConfig: () => ({ enabled: true, batchSize }),
+	}),
+);
+await mockModuleWithRestore(
+	"@/cron/resetCron/resetCustomerEntitlement",
+	() => ({
+		resetCustomerEntitlement: async ({
+			updatedCusEnts,
+		}: {
+			updatedCusEnts: ResetCusEnt[];
+		}) => {
+			calls.reset++;
+			updatedCusEnts.push(cusEnt);
+		},
+	}),
+);
 
 import { runResetBatch } from "@/cron/resetCron/runResetBatch.js";
+
+import { mockModuleWithRestore } from "../utils/mockModuleWithRestore.js";
 
 describe("reset batch", () => {
 	test("processes a partial page instead of waiting for a full batch", async () => {
@@ -72,7 +74,6 @@ describe("reset batch", () => {
 			limit: batchSize,
 		});
 		expect(calls.reset).toBe(1);
-		expect(calls.cleared).toEqual([cusEnt]);
 		expect(result.batchSize).toBe(batchSize);
 		expect(result.fetched).toBe(1);
 	});

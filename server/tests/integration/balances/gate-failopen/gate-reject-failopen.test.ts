@@ -39,7 +39,7 @@ const { _setFullSubjectGateConfigForTesting } = await import(
 	"@/internal/misc/fullSubjectGateEdgeConfig/fullSubjectGateEdgeConfigStore.js"
 );
 const { primeRedisV2Monitor } = await import(
-	"@/external/redis/initUtils/redisV2Availability.js"
+	"@/external/redis/availabilityMonitor/redisV2Availability.js"
 );
 
 // In-process runs skip server boot, which is what normally primes availability.

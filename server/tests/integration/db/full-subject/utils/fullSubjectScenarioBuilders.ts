@@ -535,6 +535,111 @@ export const buildCustomerMeteredScenario = ({
 	};
 };
 
+/** Two independently-metered features (Messages + Users) on one product —
+ *  for multi-feature deduction tests (per-feature queue idempotency keys). */
+export const buildCustomerTwoMeteredScenario = ({
+	ctx,
+	name,
+}: {
+	ctx: TestContext;
+	name: string;
+}): FullSubjectScenario => {
+	const { key, customer, parentProduct, messagesFeature } =
+		buildBaseCustomerScenario({ ctx, name });
+	const usersFeature = requireFeature({ ctx, featureId: TestFeature.Users });
+
+	const messagesEntitlement = buildEntitlement({
+		ctx,
+		product: parentProduct,
+		feature: messagesFeature,
+		key,
+		suffix: "messages",
+	});
+	const usersEntitlement = buildEntitlement({
+		ctx,
+		product: parentProduct,
+		feature: usersFeature,
+		key,
+		suffix: "users",
+	});
+	const messagesPrice = buildPrice({
+		ctx,
+		product: parentProduct,
+		entitlement: messagesEntitlement,
+		key,
+		suffix: "messages",
+	});
+	const usersPrice = buildPrice({
+		ctx,
+		product: parentProduct,
+		entitlement: usersEntitlement,
+		key,
+		suffix: "users",
+	});
+	const customerProduct = buildCustomerProduct({
+		customer,
+		product: parentProduct,
+		key,
+		suffix: "parent",
+	});
+	const messagesCustomerPrice = buildCustomerPrice({
+		customer,
+		customerProduct,
+		price: messagesPrice,
+		key,
+		suffix: "messages",
+	});
+	const usersCustomerPrice = buildCustomerPrice({
+		customer,
+		customerProduct,
+		price: usersPrice,
+		key,
+		suffix: "users",
+	});
+	const messagesCustomerEntitlement = buildCustomerEntitlement({
+		customer,
+		entitlement: messagesEntitlement,
+		key,
+		suffix: "messages",
+		customerProductId: customerProduct.id,
+		balance: 87,
+	});
+	const usersCustomerEntitlement = buildCustomerEntitlement({
+		customer,
+		entitlement: usersEntitlement,
+		key,
+		suffix: "users",
+		customerProductId: customerProduct.id,
+		balance: 50,
+	});
+
+	return {
+		customer,
+		entities: [],
+		products: [parentProduct],
+		entitlements: [messagesEntitlement, usersEntitlement],
+		prices: [messagesPrice, usersPrice],
+		customerProducts: [customerProduct],
+		customerPrices: [messagesCustomerPrice, usersCustomerPrice],
+		customerEntitlements: [
+			messagesCustomerEntitlement,
+			usersCustomerEntitlement,
+		],
+		rollovers: [],
+		subscriptions: [],
+		invoices: [],
+		ids: {
+			customerId: customer.id ?? "",
+			internalCustomerId: customer.internal_id,
+			entityIds: [],
+			internalEntityIds: [],
+			productInternalIds: [parentProduct.internal_id],
+			productIds: [parentProduct.id],
+			subscriptionIds: [],
+		},
+	};
+};
+
 export const buildCustomerMixedBooleanMeteredScenario = ({
 	ctx,
 	name,

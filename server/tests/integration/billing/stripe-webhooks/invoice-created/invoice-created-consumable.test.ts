@@ -36,61 +36,69 @@ import chalk from "chalk";
  * - Total second invoice: $20 + $15.05 = $35.05
  * - Balance should be reset to 100 (included usage)
  */
-test.concurrent(`${chalk.yellowBright("invoice.created consumable: attach → track decimal overage → advance cycle")}`, async () => {
-	const customerId = "inv-created-cons-decimal";
+test.concurrent(
+	`${chalk.yellowBright("invoice.created consumable: attach → track decimal overage → advance cycle")}`,
+	async () => {
+		const customerId = "inv-created-cons-decimal";
 
-	// Create consumable messages with 100 included
-	const consumableItem = items.consumableMessages({ includedUsage: 100 });
+		// Create consumable messages with 100 included
+		const consumableItem = items.consumableMessages({ includedUsage: 100 });
 
-	const pro = products.pro({
-		id: "pro",
-		items: [consumableItem],
-	});
+		const pro = products.pro({
+			id: "pro",
+			items: [consumableItem],
+		});
 
-	const { autumnV1 } = await initScenario({
-		customerId,
-		setup: [
-			s.customer({ paymentMethod: "success" }),
-			s.products({ list: [pro] }),
-		],
-		actions: [
-			s.attach({ productId: pro.id, timeout: 2000 }),
-			s.track({ featureId: TestFeature.Messages, value: 250.5, timeout: 2000 }),
-			s.advanceToNextInvoice({ withPause: true }),
-		],
-	});
+		const { autumnV1 } = await initScenario({
+			customerId,
+			setup: [
+				s.customer({ paymentMethod: "success" }),
+				s.products({ list: [pro] }),
+			],
+			actions: [
+				s.attach({ productId: pro.id, timeout: 2000 }),
+				s.track({
+					featureId: TestFeature.Messages,
+					value: 250.5,
+					timeout: 2000,
+				}),
+				s.advanceToNextInvoice({ withPause: true }),
+			],
+		});
 
-	// Calculate expected overage: 150.5 units * $0.10 = $15.05
-	const expectedOverage = calculateExpectedInvoiceAmount({
-		items: pro.items,
-		usage: [{ featureId: TestFeature.Messages, value: 250.5 }],
-		options: { includeFixed: false, onlyArrear: true },
-	});
+		// Calculate expected overage: 150.5 units * $0.10 = $15.05
+		const expectedOverage = calculateExpectedInvoiceAmount({
+			items: pro.items,
+			usage: [{ featureId: TestFeature.Messages, value: 250.5 }],
+			options: { includeFixed: false, onlyArrear: true },
+		});
 
-	// Verify overage calculation: (251 - 100) * $0.10 = $15.1
-	expect(expectedOverage).toBe(15.1);
+		// Verify overage calculation: (251 - 100) * $0.10 = $15.1
+		expect(expectedOverage).toBe(15.1);
 
-	// Verify final state
-	const customerAfterAdvance =
-		await autumnV1.customers.get<ApiCustomerV3>(customerId);
+		// The renewal invoice arrives by webhook, so settle on it first and assert
+		// the rest against that same state.
+		// Should have 2 invoices: initial ($20) + renewal ($20 base + $15.05 overage = $35.05)
+		const customerAfterAdvance = await expectCustomerInvoiceCorrect({
+			autumn: autumnV1,
+			customerId,
+			count: 2,
+			latestTotal: 20 + expectedOverage, // $20 base + $15.05 overage
+			latestInvoiceProductId: pro.id,
+		});
 
-	// Product should still be active
-	await expectProductActive({
-		customer: customerAfterAdvance,
-		productId: pro.id,
-	});
+		// Product should still be active
+		await expectProductActive({
+			customer: customerAfterAdvance,
+			productId: pro.id,
+		});
 
-	// Should have 2 invoices: initial ($20) + renewal ($20 base + $15.05 overage = $35.05)
-	expectCustomerInvoiceCorrect({
-		customer: customerAfterAdvance,
-		count: 2,
-		latestTotal: 20 + expectedOverage, // $20 base + $15.05 overage
-		latestInvoiceProductId: pro.id,
-	});
-
-	// Balance should be reset to 100 (included usage) after cycle
-	expect(customerAfterAdvance.features[TestFeature.Messages].balance).toBe(100);
-});
+		// Balance should be reset to 100 (included usage) after cycle
+		expect(customerAfterAdvance.features[TestFeature.Messages].balance).toBe(
+			100,
+		);
+	},
+);
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // TEST 2: No overage - track within included usage → advance cycle
@@ -107,44 +115,49 @@ test.concurrent(`${chalk.yellowBright("invoice.created consumable: attach → tr
  * - After cycle: invoice should only include base price ($20), no overage
  * - Balance should be reset to 100 (included usage)
  */
-test.concurrent(`${chalk.yellowBright("invoice.created consumable: no overage - track within included → advance cycle")}`, async () => {
-	const customerId = "inv-created-cons-no-ovg";
+test.concurrent(
+	`${chalk.yellowBright("invoice.created consumable: no overage - track within included → advance cycle")}`,
+	async () => {
+		const customerId = "inv-created-cons-no-ovg";
 
-	const consumableItem = items.consumableMessages({ includedUsage: 100 });
+		const consumableItem = items.consumableMessages({ includedUsage: 100 });
 
-	const pro = products.pro({
-		id: "pro",
-		items: [consumableItem],
-	});
+		const pro = products.pro({
+			id: "pro",
+			items: [consumableItem],
+		});
 
-	const { autumnV1 } = await initScenario({
-		customerId,
-		setup: [
-			s.customer({ paymentMethod: "success" }),
-			s.products({ list: [pro] }),
-		],
-		actions: [
-			s.attach({ productId: pro.id }),
-			s.track({ featureId: TestFeature.Messages, value: 50 }),
-			s.advanceToNextInvoice({ withPause: true }),
-		],
-	});
+		const { autumnV1 } = await initScenario({
+			customerId,
+			setup: [
+				s.customer({ paymentMethod: "success" }),
+				s.products({ list: [pro] }),
+			],
+			actions: [
+				s.attach({ productId: pro.id }),
+				s.track({ featureId: TestFeature.Messages, value: 50 }),
+				s.advanceToNextInvoice({ withPause: true }),
+			],
+		});
 
-	// Verify final state
-	const customerAfterAdvance =
-		await autumnV1.customers.get<ApiCustomerV3>(customerId);
+		// Verify final state
+		const customerAfterAdvance =
+			await autumnV1.customers.get<ApiCustomerV3>(customerId);
 
-	// Should have 2 invoices: initial ($20) + renewal ($20 base only, no overage)
-	expectCustomerInvoiceCorrect({
-		customer: customerAfterAdvance,
-		count: 2,
-		latestTotal: 20, // Only base price, no overage
-		latestInvoiceProductId: pro.id,
-	});
+		// Should have 2 invoices: initial ($20) + renewal ($20 base only, no overage)
+		expectCustomerInvoiceCorrect({
+			customer: customerAfterAdvance,
+			count: 2,
+			latestTotal: 20, // Only base price, no overage
+			latestInvoiceProductId: pro.id,
+		});
 
-	// Balance should be reset to 100 after cycle
-	expect(customerAfterAdvance.features[TestFeature.Messages].balance).toBe(100);
-});
+		// Balance should be reset to 100 after cycle
+		expect(customerAfterAdvance.features[TestFeature.Messages].balance).toBe(
+			100,
+		);
+	},
+);
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // TEST 3: Large overage with exact calculation
@@ -160,52 +173,57 @@ test.concurrent(`${chalk.yellowBright("invoice.created consumable: no overage - 
  * - Initial invoice: $20 (pro base price)
  * - After cycle: $20 base + $90 overage (900 * $0.10) = $110
  */
-test.concurrent(`${chalk.yellowBright("invoice.created consumable: large overage → advance cycle")}`, async () => {
-	const customerId = "inv-created-cons-large";
+test.concurrent(
+	`${chalk.yellowBright("invoice.created consumable: large overage → advance cycle")}`,
+	async () => {
+		const customerId = "inv-created-cons-large";
 
-	const consumableItem = items.consumableMessages({ includedUsage: 100 });
+		const consumableItem = items.consumableMessages({ includedUsage: 100 });
 
-	const pro = products.pro({
-		id: "pro",
-		items: [consumableItem],
-	});
+		const pro = products.pro({
+			id: "pro",
+			items: [consumableItem],
+		});
 
-	const { autumnV1 } = await initScenario({
-		customerId,
-		setup: [
-			s.customer({ paymentMethod: "success" }),
-			s.products({ list: [pro] }),
-		],
-		actions: [
-			s.attach({ productId: pro.id }),
-			s.track({ featureId: TestFeature.Messages, value: 1000 }),
-			s.advanceToNextInvoice({ withPause: true }),
-		],
-	});
+		const { autumnV1 } = await initScenario({
+			customerId,
+			setup: [
+				s.customer({ paymentMethod: "success" }),
+				s.products({ list: [pro] }),
+			],
+			actions: [
+				s.attach({ productId: pro.id }),
+				s.track({ featureId: TestFeature.Messages, value: 1000 }),
+				s.advanceToNextInvoice({ withPause: true }),
+			],
+		});
 
-	// Calculate expected: 900 * $0.10 = $90
-	const expectedOverage = calculateExpectedInvoiceAmount({
-		items: pro.items,
-		usage: [{ featureId: TestFeature.Messages, value: 1000 }],
-		options: { includeFixed: false, onlyArrear: true },
-	});
-	expect(expectedOverage).toBe(90);
+		// Calculate expected: 900 * $0.10 = $90
+		const expectedOverage = calculateExpectedInvoiceAmount({
+			items: pro.items,
+			usage: [{ featureId: TestFeature.Messages, value: 1000 }],
+			options: { includeFixed: false, onlyArrear: true },
+		});
+		expect(expectedOverage).toBe(90);
 
-	// Verify final state
-	const customerAfterAdvance =
-		await autumnV1.customers.get<ApiCustomerV3>(customerId);
+		// Verify final state
+		const customerAfterAdvance =
+			await autumnV1.customers.get<ApiCustomerV3>(customerId);
 
-	// Should have 2 invoices: initial ($20) + renewal ($20 + $90 = $110)
-	expectCustomerInvoiceCorrect({
-		customer: customerAfterAdvance,
-		count: 2,
-		latestTotal: 20 + expectedOverage, // $110
-		latestInvoiceProductId: pro.id,
-	});
+		// Should have 2 invoices: initial ($20) + renewal ($20 + $90 = $110)
+		expectCustomerInvoiceCorrect({
+			customer: customerAfterAdvance,
+			count: 2,
+			latestTotal: 20 + expectedOverage, // $110
+			latestInvoiceProductId: pro.id,
+		});
 
-	// Balance should be reset to 100
-	expect(customerAfterAdvance.features[TestFeature.Messages].balance).toBe(100);
-});
+		// Balance should be reset to 100
+		expect(customerAfterAdvance.features[TestFeature.Messages].balance).toBe(
+			100,
+		);
+	},
+);
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // TEST 4: Billing units > 1 with rounding up
@@ -222,57 +240,62 @@ test.concurrent(`${chalk.yellowBright("invoice.created consumable: large overage
  * - Price: 6 billing units * $1 = $6 overage
  * - Total second invoice: $20 base + $6 overage = $26
  */
-test.concurrent(`${chalk.yellowBright("invoice.created consumable: billing units rounding up → advance cycle")}`, async () => {
-	const customerId = "inv-created-cons-billing-units";
+test.concurrent(
+	`${chalk.yellowBright("invoice.created consumable: billing units rounding up → advance cycle")}`,
+	async () => {
+		const customerId = "inv-created-cons-billing-units";
 
-	// Create consumable with billingUnits=10, $1 per 10 units
-	const consumableItem = items.consumable({
-		featureId: TestFeature.Messages,
-		includedUsage: 100,
-		price: 1, // $1 per 10 units
-		billingUnits: 10,
-	});
+		// Create consumable with billingUnits=10, $1 per 10 units
+		const consumableItem = items.consumable({
+			featureId: TestFeature.Messages,
+			includedUsage: 100,
+			price: 1, // $1 per 10 units
+			billingUnits: 10,
+		});
 
-	const pro = products.pro({
-		id: "pro",
-		items: [consumableItem],
-	});
+		const pro = products.pro({
+			id: "pro",
+			items: [consumableItem],
+		});
 
-	const { autumnV1 } = await initScenario({
-		customerId,
-		setup: [
-			s.customer({ paymentMethod: "success" }),
-			s.products({ list: [pro] }),
-		],
-		actions: [
-			s.attach({ productId: pro.id }),
-			s.track({ featureId: TestFeature.Messages, value: 155 }),
-			s.advanceToNextInvoice({ withPause: true }),
-		],
-	});
+		const { autumnV1 } = await initScenario({
+			customerId,
+			setup: [
+				s.customer({ paymentMethod: "success" }),
+				s.products({ list: [pro] }),
+			],
+			actions: [
+				s.attach({ productId: pro.id }),
+				s.track({ featureId: TestFeature.Messages, value: 155 }),
+				s.advanceToNextInvoice({ withPause: true }),
+			],
+		});
 
-	// Calculate expected overage: 55 units → ceil(55/10)*10 = 60 → 60/10 * $1 = $6
-	const expectedOverage = calculateExpectedInvoiceAmount({
-		items: pro.items,
-		usage: [{ featureId: TestFeature.Messages, value: 155 }],
-		options: { includeFixed: false, onlyArrear: true },
-	});
+		// Calculate expected overage: 55 units → ceil(55/10)*10 = 60 → 60/10 * $1 = $6
+		const expectedOverage = calculateExpectedInvoiceAmount({
+			items: pro.items,
+			usage: [{ featureId: TestFeature.Messages, value: 155 }],
+			options: { includeFixed: false, onlyArrear: true },
+		});
 
-	// Verify: 55 overage rounds up to 60, which is 6 billing units * $1 = $6
-	expect(expectedOverage).toBe(6);
+		// Verify: 55 overage rounds up to 60, which is 6 billing units * $1 = $6
+		expect(expectedOverage).toBe(6);
 
-	// Verify final state
-	const customerAfterAdvance =
-		await autumnV1.customers.get<ApiCustomerV3>(customerId);
+		// Verify final state
+		const customerAfterAdvance =
+			await autumnV1.customers.get<ApiCustomerV3>(customerId);
 
-	// Should have 2 invoices: initial ($20) + renewal ($20 + $6 = $26)
-	expectCustomerInvoiceCorrect({
-		customer: customerAfterAdvance,
-		count: 2,
-		latestTotal: 20 + expectedOverage, // $26
-		latestInvoiceProductId: pro.id,
-	});
+		// Should have 2 invoices: initial ($20) + renewal ($20 + $6 = $26)
+		expectCustomerInvoiceCorrect({
+			customer: customerAfterAdvance,
+			count: 2,
+			latestTotal: 20 + expectedOverage, // $26
+			latestInvoiceProductId: pro.id,
+		});
 
-	// Balance should be reset to 100
-	expect(customerAfterAdvance.features[TestFeature.Messages].balance).toBe(100);
-});
+		// Balance should be reset to 100
+		expect(customerAfterAdvance.features[TestFeature.Messages].balance).toBe(
+			100,
+		);
+	},
+);

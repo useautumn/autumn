@@ -2,13 +2,28 @@ import { expect, test } from "bun:test";
 import { TestFeature } from "@tests/setup/v2Features";
 import { items } from "@tests/utils/fixtures/items";
 import { products } from "@tests/utils/fixtures/products";
+import { pollUntilAsserted } from "@tests/utils/genUtils.js";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import { eventActions } from "@/internal/analytics/actions/eventActions.js";
-import { generateId, timeout } from "@/utils/genUtils.js";
+import { generateId } from "@/utils/genUtils.js";
 
 const free = products.base({
 	items: [items.monthlyMessages({ includedUsage: 100 })],
 });
+
+// Events are read back over raw ClickHouse, which needs the Tinybird endpoint on
+// top of the ingest credentials — skip loudly where it is unset.
+const clickhouseConfigured = Boolean(
+	process.env.TINYBIRD_US_EAST_CLICKHOUSE_URL &&
+		process.env.TINYBIRD_US_EAST_TOKEN,
+);
+const testWithClickhouse = clickhouseConfigured ? test : test.skip;
+
+if (!clickhouseConfigured) {
+	console.warn(
+		"[track-tinybird-migration] skipped: TINYBIRD_US_EAST_CLICKHOUSE_URL / TINYBIRD_US_EAST_TOKEN not set",
+	);
+}
 
 /**
  * Tinybird Migration Test Suite
@@ -20,7 +35,7 @@ const free = products.base({
  * - idempotency key passed in
  */
 
-test("tinybird migration - dual write", async () => {
+testWithClickhouse("tinybird migration - dual write", async () => {
 	const customerId = "track-tinybird-migration";
 
 	const { autumnV1, ctx } = await initScenario({
@@ -89,42 +104,34 @@ test("tinybird migration - dual write", async () => {
 		},
 	);
 
-	// Wait for async Tinybird ingestion
-	await timeout(10000);
+	// Tinybird ingestion is async and its lag varies with load, so poll for each
+	// event rather than betting on a fixed wait.
+	const getIngestedEvent = (eventId: string) =>
+		pollUntilAsserted({
+			fetch: () =>
+				eventActions.getEventById({ orgId: ctx.org.id, env: ctx.env, eventId }),
+			assert: (event) => expect(event.id).toBe(eventId),
+			timeoutMs: 90_000,
+			intervalMs: 2_000,
+		});
 
 	// Verify all events in Tinybird
-	const checkEvent = await eventActions.getEventById({
-		orgId: ctx.org.id,
-		env: ctx.env,
-		eventId: checkEventId,
-	});
+	const checkEvent = await getIngestedEvent(checkEventId);
 	expect(checkEvent.id).toBe(checkEventId);
 	expect(checkEvent.customer_id).toBe(customerId);
 	expect(Number(checkEvent.value)).toBe(10);
 
-	const redisEvent = await eventActions.getEventById({
-		orgId: ctx.org.id,
-		env: ctx.env,
-		eventId: redisEventId,
-	});
+	const redisEvent = await getIngestedEvent(redisEventId);
 	expect(redisEvent.id).toBe(redisEventId);
 	expect(redisEvent.customer_id).toBe(customerId);
 	expect(Number(redisEvent.value)).toBe(15);
 
-	const postgresEvent = await eventActions.getEventById({
-		orgId: ctx.org.id,
-		env: ctx.env,
-		eventId: postgresEventId,
-	});
+	const postgresEvent = await getIngestedEvent(postgresEventId);
 	expect(postgresEvent.id).toBe(postgresEventId);
 	expect(postgresEvent.customer_id).toBe(customerId);
 	expect(Number(postgresEvent.value)).toBe(20);
 
-	const idempotencyEvent = await eventActions.getEventById({
-		orgId: ctx.org.id,
-		env: ctx.env,
-		eventId: idempotencyEventId,
-	});
+	const idempotencyEvent = await getIngestedEvent(idempotencyEventId);
 	expect(idempotencyEvent.id).toBe(idempotencyEventId);
 	expect(idempotencyEvent.idempotency_key).toBe(idempotencyKey);
 });

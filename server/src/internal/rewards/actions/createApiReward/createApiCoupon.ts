@@ -3,7 +3,6 @@ import {
 	type CreateRewardParams,
 	type CreateRewardResponse,
 	type FullProduct,
-	ProductNotFoundError,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { ProductService } from "@/internal/products/ProductService.js";
@@ -21,19 +20,12 @@ const listCouponPlans = async ({
 }): Promise<FullProduct[]> => {
 	if (planIds === null) return [];
 
-	const plans = await ProductService.listDefault({
+	return ProductService.listFull({
 		db: ctx.db,
 		orgId: ctx.org.id,
 		env: ctx.env,
 		inIds: planIds,
 	});
-	const foundPlanIds = new Set(plans.map(({ id }) => id));
-	for (const planId of planIds) {
-		if (!foundPlanIds.has(planId)) {
-			throw new ProductNotFoundError({ productId: planId });
-		}
-	}
-	return plans;
 };
 
 const couponToRewardData = ({

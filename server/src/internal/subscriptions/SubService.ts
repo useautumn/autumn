@@ -1,14 +1,8 @@
-import {
-	type AppEnv,
-	ErrCode,
-	type Subscription,
-	subscriptions,
-} from "@autumn/shared";
+import { ErrCode, type Subscription, subscriptions } from "@autumn/shared";
 import type { DrizzleCli } from "@server/db/initDrizzle.js";
 import { subToPeriodStartEnd } from "@server/external/stripe/stripeSubUtils/convertSubUtils.js";
 import RecaseError from "@server/utils/errorUtils.js";
-import { generateId } from "@server/utils/genUtils.js";
-import { and, eq, inArray } from "drizzle-orm";
+import { eq, inArray } from "drizzle-orm";
 import type Stripe from "stripe";
 
 export class SubService {
@@ -26,75 +20,25 @@ export class SubService {
 		return data[0] as Subscription;
 	}
 
-	static async addUsageFeatures({
+	/**
+	 * Insert, or return null when a concurrent writer already claimed the
+	 * stripe id. Callers that check-then-insert must handle the null by
+	 * re-reading — two Stripe webhooks for one subscription arrive in parallel.
+	 */
+	static async createSubIfAbsent({
 		db,
-		stripeId,
-		scheduleId,
-		usageFeatures,
-		orgId,
-		env,
+		sub,
 	}: {
 		db: DrizzleCli;
-		stripeId?: string;
-		scheduleId?: string;
-		usageFeatures: string[];
-		orgId: string;
-		env: AppEnv;
-	}) {
-		if (!stripeId && !scheduleId) {
-			throw new Error("Either stripeId or scheduleId must be provided");
-		}
-
+		sub: Subscription;
+	}): Promise<Subscription | null> {
 		const data = await db
-			.select()
-			.from(subscriptions)
-			.where(
-				and(
-					stripeId ? eq(subscriptions.stripe_id, stripeId) : undefined,
-					scheduleId
-						? eq(subscriptions.stripe_schedule_id, scheduleId)
-						: undefined,
-				),
-			);
-
-		if (data.length === 0) {
-			return await SubService.createSub({
-				db,
-				sub: {
-					id: generateId("sub"),
-					created_at: Date.now(),
-					stripe_id: stripeId || null,
-					stripe_schedule_id: scheduleId || null,
-					usage_features: usageFeatures,
-					org_id: orgId,
-					env,
-					current_period_start: null,
-					current_period_end: null,
-					billing_cycle_anchor_seconds: null,
-				},
-			});
-		}
-
-		const curSub = data[0];
-		const updateResult = await db
-			.update(subscriptions)
-			.set({
-				usage_features: [
-					...new Set([...(curSub.usage_features || []), ...usageFeatures]),
-				],
-			})
-			.where(eq(subscriptions.id, curSub.id))
+			.insert(subscriptions)
+			.values(sub)
+			.onConflictDoNothing()
 			.returning();
 
-		if (updateResult.length === 0) {
-			throw new RecaseError({
-				code: ErrCode.UpdateSubscriptionFailed,
-				message: "Failed to update subscription",
-				statusCode: 500,
-			});
-		}
-
-		return updateResult[0] as Subscription;
+		return (data[0] as Subscription | undefined) ?? null;
 	}
 
 	static async update({
@@ -225,22 +169,45 @@ export class SubService {
 			stripeId: subscription.stripe_id ?? "",
 		});
 
+		const periodUpdates = {
+			current_period_start: subscription.current_period_start,
+			current_period_end: subscription.current_period_end,
+			billing_cycle_anchor_seconds: subscription.billing_cycle_anchor_seconds,
+		};
+
 		if (existingSub) {
 			return await SubService.update({
 				db,
 				subscriptionId: existingSub.id,
-				updates: {
-					current_period_start: subscription.current_period_start,
-					current_period_end: subscription.current_period_end,
-					billing_cycle_anchor_seconds:
-						subscription.billing_cycle_anchor_seconds,
-				},
-			});
-		} else {
-			return await SubService.createSub({
-				db,
-				sub: subscription,
+				updates: periodUpdates,
 			});
 		}
+
+		const createdSub = await SubService.createSubIfAbsent({
+			db,
+			sub: subscription,
+		});
+
+		if (createdSub) return createdSub;
+
+		// A concurrent webhook inserted it between the read and the write.
+		const winningSub = await SubService.getByStripeId({
+			db,
+			stripeId: subscription.stripe_id ?? "",
+		});
+
+		if (!winningSub) {
+			throw new RecaseError({
+				code: ErrCode.InsertSubscriptionFailed,
+				message: "Failed to create subscription",
+				statusCode: 500,
+			});
+		}
+
+		return await SubService.update({
+			db,
+			subscriptionId: winningSub.id,
+			updates: periodUpdates,
+		});
 	}
 }

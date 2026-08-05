@@ -7,10 +7,12 @@ import {
 	RewardCategory,
 	type RewardRedemption,
 	RewardTriggerEvent,
+	RewardType,
 	Scopes,
 } from "@autumn/shared";
 import { CusService } from "@/internal/customers/CusService.js";
 import { triggerDiscount } from "@/internal/rewards/actions/triggerDiscount.js";
+import { triggerFeatureGrant } from "@/internal/rewards/actions/triggerFeatureGrant.js";
 import { triggerFreeProduct } from "@/internal/rewards/actions/triggerFreeProduct.js";
 import {
 	redemptionRepo,
@@ -147,8 +149,15 @@ export const handleRedeemReferral = createRoute({
 				});
 			}
 
-			const rewardCat = getRewardCat(reward);
-			if (rewardCat === RewardCategory.FreeProduct) {
+			if (reward.type === RewardType.FeatureGrant) {
+				await triggerFeatureGrant({
+					ctx,
+					referralCode,
+					redeemer: customer,
+					rewardProgram: reward_program,
+					redemption,
+				});
+			} else if (getRewardCat(reward) === RewardCategory.FreeProduct) {
 				await triggerFreeProduct({
 					ctx,
 					referralCode,

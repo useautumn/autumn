@@ -1095,6 +1095,96 @@ actions:
 
                 # Handle response
                 print(res)
+  - target: $["paths"]["/v1/referral_programs.create"]["post"]
+    update:
+      x-codeSamples:
+        - lang: python
+          label: Python (SDK)
+          source: |-
+            from autumn_sdk import Autumn
+
+
+            with Autumn(
+                x_api_version="2.3.0",
+                secret_key="<YOUR_BEARER_TOKEN_HERE>",
+            ) as autumn:
+
+                res = autumn.referrals.create_program(id="refer_a_friend", reward_id="beta_credits_grant", redeem_on="customer_creation", received_by="referrer", max_redemptions=10, plan_ids=None, exclude_trial=False)
+
+                # Handle response
+                print(res)
+  - target: $["paths"]["/v1/referral_programs.delete"]["post"]
+    update:
+      x-codeSamples:
+        - lang: python
+          label: Python (SDK)
+          source: |-
+            from autumn_sdk import Autumn
+
+
+            with Autumn(
+                x_api_version="2.3.0",
+                secret_key="<YOUR_BEARER_TOKEN_HERE>",
+            ) as autumn:
+
+                res = autumn.referrals.delete_program(referral_program_id="<id>")
+
+                # Handle response
+                print(res)
+  - target: $["paths"]["/v1/referral_programs.get"]["post"]
+    update:
+      x-codeSamples:
+        - lang: python
+          label: Python (SDK)
+          source: |-
+            from autumn_sdk import Autumn
+
+
+            with Autumn(
+                x_api_version="2.3.0",
+                secret_key="<YOUR_BEARER_TOKEN_HERE>",
+            ) as autumn:
+
+                res = autumn.referrals.get_program(referral_program_id="<id>")
+
+                # Handle response
+                print(res)
+  - target: $["paths"]["/v1/referral_programs.list"]["post"]
+    update:
+      x-codeSamples:
+        - lang: python
+          label: Python (SDK)
+          source: |-
+            from autumn_sdk import Autumn
+
+
+            with Autumn(
+                x_api_version="2.3.0",
+                secret_key="<YOUR_BEARER_TOKEN_HERE>",
+            ) as autumn:
+
+                res = autumn.referrals.list_programs(request={})
+
+                # Handle response
+                print(res)
+  - target: $["paths"]["/v1/referral_programs.update"]["post"]
+    update:
+      x-codeSamples:
+        - lang: python
+          label: Python (SDK)
+          source: |-
+            from autumn_sdk import Autumn
+
+
+            with Autumn(
+                x_api_version="2.3.0",
+                secret_key="<YOUR_BEARER_TOKEN_HERE>",
+            ) as autumn:
+
+                res = autumn.referrals.update_program(referral_program_id="<id>")
+
+                # Handle response
+                print(res)
   - target: $["paths"]["/v1/referrals.create_code"]["post"]
     update:
       x-codeSamples:
@@ -1164,6 +1254,42 @@ actions:
 
                 # Handle response
                 print(res)
+  - target: $["paths"]["/v1/rewards.delete"]["post"]
+    update:
+      x-codeSamples:
+        - lang: python
+          label: Python (SDK)
+          source: |-
+            from autumn_sdk import Autumn
+
+
+            with Autumn(
+                x_api_version="2.3.0",
+                secret_key="<YOUR_BEARER_TOKEN_HERE>",
+            ) as autumn:
+
+                res = autumn.rewards.delete(reward_id="<id>")
+
+                # Handle response
+                print(res)
+  - target: $["paths"]["/v1/rewards.get"]["post"]
+    update:
+      x-codeSamples:
+        - lang: python
+          label: Python (SDK)
+          source: |-
+            from autumn_sdk import Autumn
+
+
+            with Autumn(
+                x_api_version="2.3.0",
+                secret_key="<YOUR_BEARER_TOKEN_HERE>",
+            ) as autumn:
+
+                res = autumn.rewards.get(reward_id="<id>")
+
+                # Handle response
+                print(res)
   - target: $["paths"]["/v1/rewards.list"]["post"]
     update:
       x-codeSamples:
@@ -1197,6 +1323,24 @@ actions:
             ) as autumn:
 
                 res = autumn.rewards.redeem_code(code="REWARD10", customer_id="cus_456")
+
+                # Handle response
+                print(res)
+  - target: $["paths"]["/v1/rewards.update"]["post"]
+    update:
+      x-codeSamples:
+        - lang: python
+          label: Python (SDK)
+          source: |-
+            from autumn_sdk import Autumn
+
+
+            with Autumn(
+                x_api_version="2.3.0",
+                secret_key="<YOUR_BEARER_TOKEN_HERE>",
+            ) as autumn:
+
+                res = autumn.rewards.update(reward_id="<id>")
 
                 # Handle response
                 print(res)

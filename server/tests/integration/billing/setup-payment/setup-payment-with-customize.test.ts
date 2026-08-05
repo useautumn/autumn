@@ -17,7 +17,7 @@ import {
 	expectCustomerFeatureExists,
 } from "@tests/integration/billing/utils/expectCustomerFeatureCorrect";
 import { expectCustomerInvoiceCorrect } from "@tests/integration/billing/utils/expectCustomerInvoiceCorrect";
-import { expectProductActive } from "@tests/integration/billing/utils/expectCustomerProductCorrect";
+import { expectCustomerProducts } from "@tests/integration/billing/utils/expectCustomerProductCorrect";
 import {
 	calculateTrialEndMs,
 	expectProductTrialing,
@@ -28,7 +28,6 @@ import { completeSetupPaymentFormV2 as completeSetupPaymentForm } from "@tests/u
 import { items } from "@tests/utils/fixtures/items";
 import { itemsV2 } from "@tests/utils/fixtures/itemsV2";
 import { products } from "@tests/utils/fixtures/products";
-import { timeout } from "@tests/utils/genUtils";
 import testCtx from "@tests/utils/testInitUtils/createTestContext";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
@@ -76,12 +75,15 @@ test.concurrent(`${chalk.yellowBright("setup-payment: attach plan with custom pr
 
 	// 2. Complete the setup form
 	await completeSetupPaymentForm({ url: res.url });
-	await timeout(4000);
 
 	// 3. Verify plan attached with custom price
-	const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
+	await expectCustomerProducts({
+		autumn: autumnV1,
+		customerId,
+		active: [base.id],
+	});
 
-	await expectProductActive({ customer, productId: base.id });
+	const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
 
 	expectCustomerFeatureCorrect({
 		customer,
@@ -135,11 +137,14 @@ test.concurrent(`${chalk.yellowBright("setup-payment: custom items override")}`,
 
 	expect(res.url).toBeDefined();
 	await completeSetupPaymentForm({ url: res.url });
-	await timeout(4000);
+
+	await expectCustomerProducts({
+		autumn: autumnV1,
+		customerId,
+		active: [pro.id],
+	});
 
 	const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
-
-	await expectProductActive({ customer, productId: pro.id });
 
 	// Items overridden: Messages should be 250 (not 100)
 	expectCustomerFeatureCorrect({
@@ -199,12 +204,14 @@ test.concurrent(`${chalk.yellowBright("setup-payment: custom items + price + fea
 
 	expect(res.url).toBeDefined();
 	await completeSetupPaymentForm({ url: res.url });
-	await timeout(4000);
+
+	await expectCustomerProducts({
+		autumn: autumnV1,
+		customerId,
+		active: [base.id],
+	});
 
 	const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
-
-	await expectProductActive({ customer, productId: base.id });
-
 	expectCustomerFeatureCorrect({
 		customer,
 		featureId: TestFeature.Messages,
@@ -257,7 +264,13 @@ test.concurrent(`${chalk.yellowBright("setup-payment: custom free trial")}`, asy
 
 	expect(res.url).toBeDefined();
 	await completeSetupPaymentForm({ url: res.url });
-	await timeout(4000);
+
+	// A trialing product reads as active, so this also waits for the webhook
+	await expectCustomerProducts({
+		autumn: autumnV1,
+		customerId,
+		active: [pro.id],
+	});
 
 	const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
 
@@ -344,11 +357,14 @@ test.concurrent(`${chalk.yellowBright("setup-payment: specific version")}`, asyn
 
 	expect(res.url).toBeDefined();
 	await completeSetupPaymentForm({ url: res.url });
-	await timeout(4000);
+
+	await expectCustomerProducts({
+		autumn: autumnV1,
+		customerId: testId,
+		active: [pro.id],
+	});
 
 	const customer = await autumnV1.customers.get<ApiCustomerV3>(testId);
-
-	await expectProductActive({ customer, productId: pro.id });
 
 	// Should have v1 values (100 messages, $20), not v2 (200 messages, $40)
 	expectCustomerFeatureCorrect({
@@ -403,12 +419,14 @@ test.concurrent(`${chalk.yellowBright("setup-payment: discount")}`, async () => 
 
 	expect(res.url).toBeDefined();
 	await completeSetupPaymentForm({ url: res.url });
-	await timeout(4000);
+
+	await expectCustomerProducts({
+		autumn: autumnV1,
+		customerId,
+		active: [pro.id],
+	});
 
 	const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
-
-	await expectProductActive({ customer, productId: pro.id });
-
 	expectCustomerFeatureCorrect({
 		customer,
 		featureId: TestFeature.Messages,

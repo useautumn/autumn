@@ -6,9 +6,33 @@ import pLimit, { type LimitFunction } from "p-limit";
 import type { Logger } from "@/external/logtail/logtailUtils.js";
 import { getRuntimeFullSubjectGateConfig } from "@/internal/misc/fullSubjectGateEdgeConfig/fullSubjectGateEdgeConfigStore.js";
 
+export type FullSubjectGateLane = "primary" | "replica";
+
 const GATE_LOG_WAIT_MS_THRESHOLD = 50;
 const LIMITER_CACHE_MAX = 5000;
 const LIMITER_CACHE_TTL_MS = 30 * 60 * 1000;
+
+// Seed keeps cold processes from over-rejecting before real samples arrive.
+const SERVICE_TIME_EWMA_SEED_MS = 100;
+const SERVICE_TIME_EWMA_ALPHA = 0.2;
+let globalEwmaServiceMs = SERVICE_TIME_EWMA_SEED_MS;
+
+// Per-org-limiter EWMAs so one tenant's slow hydrations don't shed other tenants.
+const perOrgEwmaServiceMs = new LRUCache<string, { valueMs: number }>({
+	max: LIMITER_CACHE_MAX,
+	ttl: LIMITER_CACHE_TTL_MS,
+	updateAgeOnGet: true,
+});
+
+const buildOrgGateKey = ({
+	lane,
+	orgId,
+	env,
+}: {
+	lane: FullSubjectGateLane;
+	orgId: string;
+	env: AppEnv;
+}): string => `${lane}:${orgId}:${env}`;
 
 const perCustomerLimiters = new LRUCache<string, LimitFunction>({
 	max: LIMITER_CACHE_MAX,
@@ -39,11 +63,13 @@ const getOrUpdateLimiter = (
 };
 
 const getCustomerLimiter = ({
+	lane,
 	orgId,
 	env,
 	customerId,
 	limit,
 }: {
+	lane: FullSubjectGateLane;
 	orgId: string;
 	env: AppEnv;
 	customerId: string;
@@ -51,20 +77,29 @@ const getCustomerLimiter = ({
 }): LimitFunction =>
 	getOrUpdateLimiter(
 		perCustomerLimiters,
-		`${orgId}:${env}:${customerId}`,
+		`${lane}:${orgId}:${env}:${customerId}`,
 		limit,
 	);
 
+const predictedWaitMs = (limiter: LimitFunction, serviceMs: number): number =>
+	(limiter.pendingCount / Math.max(1, limiter.concurrency)) * serviceMs;
+
 const getOrgLimiter = ({
+	lane,
 	orgId,
 	env,
 	limit,
 }: {
+	lane: FullSubjectGateLane;
 	orgId: string;
 	env: AppEnv;
 	limit: number;
 }): LimitFunction =>
-	getOrUpdateLimiter(perOrgLimiters, `${orgId}:${env}`, limit);
+	getOrUpdateLimiter(
+		perOrgLimiters,
+		buildOrgGateKey({ lane, orgId, env }),
+		limit,
+	);
 
 const meter = metrics.getMeter("autumn-server");
 const startedCounter = meter.createCounter("autumn.full_subject.gate.started", {
@@ -94,15 +129,25 @@ const rejectedCounter = meter.createCounter(
 	{ description: "FullSubject hydrations rejected (queue full or timed out)" },
 );
 
-const attrs = ({ orgId, env }: { orgId: string; env: AppEnv }) => ({
+const attrs = ({
+	orgId,
+	env,
+	lane,
+}: {
+	orgId: string;
+	env: AppEnv;
+	lane: FullSubjectGateLane;
+}) => ({
 	org_id: orgId,
 	env,
+	lane,
 });
 
 const GATE_REJECTION_REASONS = [
 	"per_customer_queue_full",
 	"per_org_queue_full",
 	"wait_timeout",
+	"predicted_wait_timeout",
 ] as const;
 type GateRejectionReason = (typeof GATE_REJECTION_REASONS)[number];
 const gateRejectionReasonSet: ReadonlySet<string> = new Set(
@@ -152,25 +197,27 @@ export const runWithFullSubjectGate = async <T>({
 	customerId,
 	orgId,
 	env,
+	lane = "primary",
 	logger,
 	queryFn,
 }: {
 	customerId: string | undefined;
 	orgId: string;
 	env: AppEnv;
+	lane?: FullSubjectGateLane;
 	logger?: Logger;
 	queryFn: () => Promise<T>;
 }): Promise<T> => {
+	const config = getRuntimeFullSubjectGateConfig();
+	const { max_wait_ms, fleet_process_count } = config;
 	const {
 		per_customer_limit,
 		per_org_limit,
-		max_wait_ms,
 		per_customer_pending_max,
 		per_org_pending_max,
-		fleet_process_count,
-	} = getRuntimeFullSubjectGateConfig();
+	} = lane === "replica" ? config.replica_lane : config;
 	const enqueuedAt = Date.now();
-	const labels = attrs({ orgId, env });
+	const labels = attrs({ orgId, env, lane });
 
 	const perProcessOrgLimit = toPerProcessLimit(
 		per_org_limit,
@@ -181,11 +228,17 @@ export const runWithFullSubjectGate = async <T>({
 		fleet_process_count,
 	);
 
-	const orgLimiter = getOrgLimiter({ orgId, env, limit: perProcessOrgLimit });
+	const orgLimiter = getOrgLimiter({
+		lane,
+		orgId,
+		env,
+		limit: perProcessOrgLimit,
+	});
 
 	let customerLimiter: LimitFunction | undefined;
 	if (customerId) {
 		customerLimiter = getCustomerLimiter({
+			lane,
 			orgId,
 			env,
 			customerId,
@@ -201,6 +254,21 @@ export const runWithFullSubjectGate = async <T>({
 		rejectOverloaded({ reason: "per_org_queue_full", labels });
 	}
 
+	// Fast-shed: a queue predicted (via EWMA service time) not to drain within
+	// max_wait_ms would only hold the request until the dequeue-time 429.
+	const orgGateKey = buildOrgGateKey({ lane, orgId, env });
+	const gateEwmaMs =
+		perOrgEwmaServiceMs.get(orgGateKey)?.valueMs ?? globalEwmaServiceMs;
+	const enqueuePredictedWaitMs = customerLimiter
+		? Math.max(
+				predictedWaitMs(customerLimiter, gateEwmaMs),
+				predictedWaitMs(orgLimiter, gateEwmaMs),
+			)
+		: predictedWaitMs(orgLimiter, gateEwmaMs);
+	if (enqueuePredictedWaitMs >= max_wait_ms) {
+		rejectOverloaded({ reason: "predicted_wait_timeout", labels });
+	}
+
 	startedCounter.add(1, labels);
 
 	const execute = async (): Promise<T> => {
@@ -211,16 +279,29 @@ export const runWithFullSubjectGate = async <T>({
 		}
 		if (waitMs >= GATE_LOG_WAIT_MS_THRESHOLD) {
 			logger?.info(
-				`[full_subject_gate] queued ${waitMs}ms customer=${customerId ?? "unknown"} org=${orgId} env=${env}`,
+				`[full_subject_gate] queued ${waitMs}ms lane=${lane} customer=${customerId ?? "unknown"} org=${orgId} env=${env}`,
 			);
 		}
 		activeCounter.add(1, labels);
+		const serviceStartedAt = Date.now();
 		try {
 			return await queryFn();
 		} catch (error) {
 			failedCounter.add(1, labels);
 			throw error;
 		} finally {
+			const serviceMs = Date.now() - serviceStartedAt;
+			// Cold orgs seed from the global EWMA, then diverge on their own samples.
+			const orgEwma = perOrgEwmaServiceMs.get(orgGateKey) ?? {
+				valueMs: globalEwmaServiceMs,
+			};
+			orgEwma.valueMs =
+				SERVICE_TIME_EWMA_ALPHA * serviceMs +
+				(1 - SERVICE_TIME_EWMA_ALPHA) * orgEwma.valueMs;
+			perOrgEwmaServiceMs.set(orgGateKey, orgEwma);
+			globalEwmaServiceMs =
+				SERVICE_TIME_EWMA_ALPHA * serviceMs +
+				(1 - SERVICE_TIME_EWMA_ALPHA) * globalEwmaServiceMs;
 			activeCounter.add(-1, labels);
 			completedCounter.add(1, labels);
 		}
@@ -236,3 +317,36 @@ export const runWithFullSubjectGate = async <T>({
 	}
 	return orgLimiter(execute);
 };
+
+export const _setFullSubjectGateEwmaForTesting = (valueMs: number): void => {
+	globalEwmaServiceMs = valueMs;
+	perOrgEwmaServiceMs.clear();
+};
+
+export const _getFullSubjectGateEwmaForTesting = (): number =>
+	globalEwmaServiceMs;
+
+export const _setFullSubjectGateOrgEwmaForTesting = ({
+	lane = "primary",
+	orgId,
+	env,
+	valueMs,
+}: {
+	lane?: FullSubjectGateLane;
+	orgId: string;
+	env: AppEnv;
+	valueMs: number;
+}): void => {
+	perOrgEwmaServiceMs.set(buildOrgGateKey({ lane, orgId, env }), { valueMs });
+};
+
+export const _getFullSubjectGateOrgEwmaForTesting = ({
+	lane = "primary",
+	orgId,
+	env,
+}: {
+	lane?: FullSubjectGateLane;
+	orgId: string;
+	env: AppEnv;
+}): number | undefined =>
+	perOrgEwmaServiceMs.get(buildOrgGateKey({ lane, orgId, env }))?.valueMs;

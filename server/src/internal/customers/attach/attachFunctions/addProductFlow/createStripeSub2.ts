@@ -156,7 +156,8 @@ export const createStripeSub2 = async ({
 		const earliestPeriodEnd = getEarliestPeriodEnd({ sub: subscription });
 		const currentPeriodStart = getLatestPeriodStart({ sub: subscription });
 
-		await SubService.createSub({
+		// customer.subscription.created can land before we get here and store it first.
+		await SubService.createSubIfAbsent({
 			db,
 			sub: {
 				id: generateId("sub"),

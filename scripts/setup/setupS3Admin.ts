@@ -13,6 +13,10 @@ import {
 	getAdminS3Config,
 	ADMIN_REQUEST_BLOCK_CONFIG_KEY as REQUEST_BLOCK_CONFIG_KEY,
 } from "@server/external/aws/s3/adminS3Config.js";
+import {
+	getCustomerExportsS3Config,
+	isCustomerExportsS3Configured,
+} from "@server/external/aws/s3/customerExportsS3Config.js";
 
 const DEFAULT_REQUEST_BLOCK_CONFIG = {
 	orgs: {},
@@ -183,6 +187,21 @@ const main = async () => {
 		s3Client,
 		bucket,
 	});
+
+	if (isCustomerExportsS3Configured()) {
+		const customerExports = getCustomerExportsS3Config();
+		if (customerExports.bucket !== bucket) {
+			await ensureBucketExists({
+				s3Client: createS3Client({ region: customerExports.region }),
+				bucket: customerExports.bucket,
+				region: customerExports.region,
+			});
+		}
+	} else {
+		console.log(
+			"Skipping customer exports bucket setup (S3_CUSTOMER_EXPORTS_BUCKET not set).",
+		);
+	}
 
 	console.log("S3 admin initialization complete.");
 };

@@ -1,13 +1,13 @@
 import { customerJwtFamilies } from "@autumn/shared";
 import { eq, sql } from "drizzle-orm";
 import { db } from "@/db/initDrizzle.js";
+import { invalidateCustomerJwtAuth } from "@/external/redis/actions/customerJwtAuthCache/customerJwtAuthCache.js";
 import { generateId } from "@/utils/genUtils.js";
-import { invalidateCustomerJwtAuth } from "./cacheCustomerJwtAuth.js";
 
 /**
  * Per-customer JWT revocation/rotation state — Postgres is the source of truth
  * (the `customer_jwt_families` table), keyed by the immutable internal_customer_id.
- * Redis is only a cache (see cacheCustomerJwtAuth). No TTL games, no region
+ * Redis is only a cache (see customerJwtAuthCache). No TTL games, no region
  * fan-out: revoke is a single atomic UPDATE.
  */
 export type JwtFamily = {

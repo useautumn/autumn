@@ -335,12 +335,24 @@ describe(chalk.yellowBright("getResettableCustomerEntitlements"), () => {
 		]);
 	});
 
-	test("skips subscription and lifetime synthetic pooled customer entitlements", () => {
+	test("returns an overdue subscription synthetic pooled customer entitlement", () => {
+		const customerEntitlement = buildSyntheticPooledCustomerEntitlement({
+			resetMode: PooledBalanceResetMode.Subscription,
+		});
+
+		const result = getResettableCustomerEntitlements({
+			customerEntitlements: [customerEntitlement],
+			now: NOW,
+		});
+
+		expect(result.map((candidate) => candidate.id)).toEqual([
+			customerEntitlement.id,
+		]);
+	});
+
+	test("skips lifetime synthetic pooled customer entitlements", () => {
 		const result = getResettableCustomerEntitlements({
 			customerEntitlements: [
-				buildSyntheticPooledCustomerEntitlement({
-					resetMode: PooledBalanceResetMode.Subscription,
-				}),
 				buildSyntheticPooledCustomerEntitlement({
 					resetMode: PooledBalanceResetMode.Lifetime,
 				}),

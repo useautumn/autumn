@@ -1,9 +1,9 @@
+import { isMigrationCancelRequested } from "@/external/redis/actions/migrationCancelToken/migrationCancelToken.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import type {
 	MigrationRunControls,
 	MigrationWebhookControls,
 } from "@/internal/migrations/v2/cloudAdapter/types.js";
-import { isMigrationCancelRequested } from "@/internal/migrations/v2/run/utils/migrationCancelToken.js";
 import {
 	getMigrationEventInternalId,
 	type MigrationRuntimeWithEventId,

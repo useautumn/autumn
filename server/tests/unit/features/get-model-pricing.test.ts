@@ -1,27 +1,32 @@
 import { afterAll, afterEach, expect, mock, test } from "bun:test";
 import { ErrCode } from "@autumn/shared";
 
-// Map-backed CacheManager stub — getModelsDevPricing's cache key is shared
-// with the dev server, so the real Redis must never be touched here.
-const store = new Map<string, unknown>();
-const setJsonCalls: { key: string; value: unknown; ttl?: number }[] = [];
+import { mockModuleWithRestore } from "../utils/mockModuleWithRestore.js";
 
-mock.module("@/utils/cacheUtils/CacheManager.js", () => ({
-	CacheManager: {
-		getJson: async (key: string) => store.get(key) ?? null,
-		setJson: async (key: string, value: unknown, ttl?: number) => {
-			setJsonCalls.push({ key, value, ttl });
-			store.set(key, value);
+// Map-backed model-pricing-cache stub — the cache key is shared with the dev
+// server, so the real Redis must never be touched here.
+const store = new Map<string, unknown>();
+const setCalls: unknown[] = [];
+
+const PRIMARY_KEY = "models_dev_pricing";
+const STALE_KEY = "models_dev_pricing_stale";
+
+await mockModuleWithRestore(
+	"@/external/redis/actions/modelPricingCache/modelPricingCache.js",
+	() => ({
+		getCachedModelPricing: async () => store.get(PRIMARY_KEY) ?? null,
+		getCachedStaleModelPricing: async () => store.get(STALE_KEY) ?? null,
+		setCachedModelPricing: async ({ data }: { data: unknown }) => {
+			setCalls.push(data);
+			store.set(PRIMARY_KEY, data);
+			store.set(STALE_KEY, data);
 		},
-	},
-}));
+	}),
+);
 
 const { getModelsDevPricing } = await import(
 	"@/internal/features/utils/getModelPricing.js"
 );
-
-const PRIMARY_KEY = "models_dev_pricing";
-const STALE_KEY = "models_dev_pricing_stale";
 
 const pricingData = {
 	anthropic: { id: "anthropic", name: "Anthropic", models: {} },
@@ -45,7 +50,7 @@ const stubFetch = (impl: () => Promise<Response>) => {
 
 afterEach(() => {
 	store.clear();
-	setJsonCalls.length = 0;
+	setCalls.length = 0;
 	fetchCalls = 0;
 	globalThis.fetch = realFetch;
 });
@@ -77,10 +82,9 @@ test("cache miss fetches and populates primary + stale caches", async () => {
 
 	// Cache writes are fire-and-forget — flush microtasks before asserting
 	await Bun.sleep(0);
-	expect(setJsonCalls).toEqual([
-		{ key: PRIMARY_KEY, value: pricingData, ttl: 60 * 60 * 3 },
-		{ key: STALE_KEY, value: pricingData, ttl: 60 * 60 * 24 * 3 },
-	]);
+	expect(setCalls).toEqual([pricingData]);
+	expect(store.get(PRIMARY_KEY)).toEqual(pricingData);
+	expect(store.get(STALE_KEY)).toEqual(pricingData);
 });
 
 test("non-ok response falls back to the stale cache", async () => {

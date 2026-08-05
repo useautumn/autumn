@@ -208,4 +208,4 @@ test(`${chalk.yellowBright("pool isolation: critical endpoints work while genera
 	console.log("\nWaiting for CPU-burn queries to finish...");
 	await Promise.allSettled(floodPromises);
 	console.log("Done.");
-}, 120000);
+});

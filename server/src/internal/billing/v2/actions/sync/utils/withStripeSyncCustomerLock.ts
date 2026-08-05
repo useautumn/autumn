@@ -1,5 +1,6 @@
 import { ErrCode, ms, RecaseError } from "@autumn/shared";
-import { acquireLock, clearLock } from "@/external/redis/redisUtils";
+import { acquireLock } from "@/external/redis/utils/lockUtils/acquireLock.js";
+import { clearLock } from "@/external/redis/utils/lockUtils/clearLock.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { timeout } from "@/utils/genUtils";
 

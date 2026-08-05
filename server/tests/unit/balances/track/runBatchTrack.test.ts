@@ -205,8 +205,10 @@ describe("runBatchTrack", () => {
 		});
 	});
 
-	test("throws 503 RecaseError when TRACK_ASYNC_SQS_QUEUE_URL is unset", async () => {
-		process.env.TRACK_ASYNC_SQS_QUEUE_URL = undefined;
+	test("throws 503 RecaseError when no track queue URL is set", async () => {
+		const originalTrackUrl = process.env.TRACK_SQS_QUEUE_URL;
+		delete process.env.TRACK_ASYNC_SQS_QUEUE_URL;
+		delete process.env.TRACK_SQS_QUEUE_URL;
 		const ctx = buildCtx();
 
 		await expect(runBatchTrack({ ctx, body })).rejects.toMatchObject({
@@ -217,6 +219,12 @@ describe("runBatchTrack", () => {
 
 		expect(mockState.queueCommands).toHaveLength(0);
 		expect(ctx.logger.error).toHaveBeenCalled();
+
+		if (originalTrackUrl === undefined) {
+			delete process.env.TRACK_SQS_QUEUE_URL;
+		} else {
+			process.env.TRACK_SQS_QUEUE_URL = originalTrackUrl;
+		}
 	});
 
 	test("returns success on partial failure: logs the failed indices but does not throw (avoids client retry of an already-partially-enqueued batch)", async () => {
@@ -230,7 +238,7 @@ describe("runBatchTrack", () => {
 			"[track] batch track enqueue had partial failures",
 			expect.objectContaining({
 				failure_count: 1,
-				failures: [{ index: 1, reason: "SQS unavailable" }],
+				failures: [{ index: 1 }],
 				success_count: 2,
 				total_count: 3,
 			}),

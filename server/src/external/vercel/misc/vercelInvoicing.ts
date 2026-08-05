@@ -9,7 +9,7 @@ import {
 	type Price,
 	productV2ToBasePrice,
 } from "@autumn/shared";
-import { Vercel } from "@vercel/sdk";
+import { Marketplace } from "@vercel/sdk/sdk/marketplace.js";
 import type Stripe from "stripe";
 import type { Logger } from "@/external/logtail/logtailUtils.js";
 import { buildInvoiceMemo } from "@/internal/invoices/invoiceMemoUtils.js";
@@ -55,7 +55,7 @@ export const submitBillingDataToVercel = async ({
 	product: FullProduct;
 	testOptions?: VercelSdkTestOptions;
 }) => {
-	const vercel = new Vercel({
+	const marketplace = new Marketplace({
 		bearerToken: customer.processors?.vercel?.access_token,
 		serverURL: getVercelSdkServerURL(testOptions),
 	});
@@ -95,7 +95,7 @@ export const submitBillingDataToVercel = async ({
 			periodValue: line.quantity || 0,
 		}));
 
-	await vercel.marketplace.submitBillingData({
+	await marketplace.submitBillingData({
 		integrationConfigurationId: installationId,
 		requestBody: {
 			timestamp: new Date(),
@@ -131,7 +131,7 @@ export const submitInvoiceToVercel = async ({
 	logger?: Logger;
 	testOptions?: VercelSdkTestOptions;
 }) => {
-	const vercel = new Vercel({
+	const marketplace = new Marketplace({
 		bearerToken: customer.processors?.vercel?.access_token,
 		serverURL: getVercelSdkServerURL(testOptions),
 	});
@@ -177,7 +177,7 @@ export const submitInvoiceToVercel = async ({
 		}
 	}
 
-	return await vercel.marketplace.submitInvoice({
+	return await marketplace.submitInvoice({
 		integrationConfigurationId: installationId,
 		requestBody: {
 			externalId: invoice.id,

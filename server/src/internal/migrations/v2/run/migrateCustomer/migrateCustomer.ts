@@ -1,3 +1,4 @@
+import { withMigrationCustomerLock } from "@/external/redis/actions/migrationCustomerLock/withMigrationCustomerLock.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { buildPreviewMigrateCustomer } from "@/internal/migrations/v2/preview/index.js";
 import type { MigrationHooks } from "../../hooks/index.js";
@@ -10,7 +11,6 @@ import {
 } from "./logs/index.js";
 import { processOperations } from "./processOperations.js";
 import { setupMigrateCustomerContext } from "./setup/setupMigrateCustomerContext.js";
-import { withMigrationCustomerLock } from "./withMigrationCustomerLock.js";
 
 export type MigrateCustomerItemPreview = {
 	id: string | null;

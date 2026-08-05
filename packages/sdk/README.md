@@ -832,11 +832,19 @@ const response = await client.features.delete({ featureId: "old-feature" });
 
 * [createCode](docs/sdks/referrals/README.md#createcode) - Create or fetch a referral code for a customer in a referral program.
 * [redeemCode](docs/sdks/referrals/README.md#redeemcode) - Redeem a referral code for a customer.
+* [createProgram](docs/sdks/referrals/README.md#createprogram) - Create a referral program linked to an existing reward.
+* [listPrograms](docs/sdks/referrals/README.md#listprograms) - List the referral programs configured for the org.
+* [getProgram](docs/sdks/referrals/README.md#getprogram) - Fetch a referral program by ID.
+* [updateProgram](docs/sdks/referrals/README.md#updateprogram) - Update a referral program. Omitted fields keep their current value.
+* [deleteProgram](docs/sdks/referrals/README.md#deleteprogram) - Delete a referral program.
 
 ### [Rewards](docs/sdks/rewards/README.md)
 
 * [create](docs/sdks/rewards/README.md#create) - Create a coupon or feature grant.
 * [list](docs/sdks/rewards/README.md#list) - List the coupons and feature grants configured for the org.
+* [get](docs/sdks/rewards/README.md#get) - Fetch a coupon or feature grant by ID.
+* [update](docs/sdks/rewards/README.md#update) - Update a coupon or feature grant. Omitted fields keep their current value.
+* [delete](docs/sdks/rewards/README.md#delete) - Delete a coupon or feature grant.
 * [redeemCode](docs/sdks/rewards/README.md#redeemcode) - Redeem a reward promo code for a customer.
 
 </details>
@@ -1442,10 +1450,18 @@ const response = await client.features.update({ featureId: "deprecated-feature",
 - [`platformLinkRevenueCat`](docs/sdks/platform/README.md#linkrevenuecat) - Generate a RevenueCat OAuth URL for linking a project to an organization.
 - [`platformSyncRevenueCat`](docs/sdks/platform/README.md#syncrevenuecat) - Push an organization's plans into RevenueCat as products (creating or renaming them across the project's apps) and set test-store prices from each plan's price. Requires the org to have linked RevenueCat via OAuth.
 - [`referralsCreateCode`](docs/sdks/referrals/README.md#createcode) - Create or fetch a referral code for a customer in a referral program.
+- [`referralsCreateProgram`](docs/sdks/referrals/README.md#createprogram) - Create a referral program linked to an existing reward.
+- [`referralsDeleteProgram`](docs/sdks/referrals/README.md#deleteprogram) - Delete a referral program.
+- [`referralsGetProgram`](docs/sdks/referrals/README.md#getprogram) - Fetch a referral program by ID.
+- [`referralsListPrograms`](docs/sdks/referrals/README.md#listprograms) - List the referral programs configured for the org.
 - [`referralsRedeemCode`](docs/sdks/referrals/README.md#redeemcode) - Redeem a referral code for a customer.
+- [`referralsUpdateProgram`](docs/sdks/referrals/README.md#updateprogram) - Update a referral program. Omitted fields keep their current value.
 - [`rewardsCreate`](docs/sdks/rewards/README.md#create) - Create a coupon or feature grant.
+- [`rewardsDelete`](docs/sdks/rewards/README.md#delete) - Delete a coupon or feature grant.
+- [`rewardsGet`](docs/sdks/rewards/README.md#get) - Fetch a coupon or feature grant by ID.
 - [`rewardsList`](docs/sdks/rewards/README.md#list) - List the coupons and feature grants configured for the org.
 - [`rewardsRedeemCode`](docs/sdks/rewards/README.md#redeemcode) - Redeem a reward promo code for a customer.
+- [`rewardsUpdate`](docs/sdks/rewards/README.md#update) - Update a coupon or feature grant. Omitted fields keep their current value.
 - [`track`](docs/sdks/autumn/README.md#track) - Records usage for a customer feature and returns updated balances.
 
 Use this after an action happens to decrement usage, or send a negative value to credit balance back.

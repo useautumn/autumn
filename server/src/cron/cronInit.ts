@@ -15,7 +15,7 @@ import {
 	stopBlueGreenHeartbeat,
 } from "../queue/blueGreen/blueGreenHeartbeat.js";
 import { stopBlueGreenSlotStorePolling } from "../queue/blueGreen/blueGreenSlotStore.js";
-import { shutdownPrimarySqsSendBatcher } from "../queue/queueUtils.js";
+import { shutdownSqsSendBatchers } from "../queue/queueUtils.js";
 import { runInvoiceCron } from "./invoiceCron/runInvoiceCron.js";
 import { runOneOffCleanup } from "./oneoffCron/runOneOffCleanup.js";
 import { runOneOffExpiry } from "./oneoffCron/runOneOffExpiry.js";
@@ -152,7 +152,7 @@ const shutdown = async (signal: string) => {
 	stopBlueGreenSlotStorePolling({ serviceName: "cron" });
 	stopAllEdgeConfigPolling();
 	await Promise.all([resetLoopPromise, resetLoopV2Promise]);
-	await shutdownPrimarySqsSendBatcher();
+	await shutdownSqsSendBatchers();
 	await client.end();
 	await probeClient.end();
 	process.exit(0);

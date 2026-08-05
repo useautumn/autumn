@@ -6,6 +6,10 @@ import { RolloverService } from "@/internal/customers/cusProducts/cusEnts/cusRol
 import { resetCronQueryTag } from "../resetCronQueryTag.js";
 import type { ResetMutation } from "../types.js";
 
+/** Far tighter than the 300s cron default: a reset batch that stalls holds row
+ * locks the API's lazy-reset path needs, so failing fast beats finishing. */
+const RESET_MUTATION_STATEMENT_TIMEOUT_MS = 2_000;
+
 /**
  * Applies the balance updates with an optimistic guard: a row only updates
  * while its next_reset_at still matches what the mutation was computed from.
@@ -73,41 +77,45 @@ export const executeResetMutations = async ({
 
 	let appliedCustomerEntitlementIds = new Set<string>();
 
-	await withStatementTimeout(db, async (transaction) => {
-		appliedCustomerEntitlementIds = await updateCustomerEntitlements({
-			db: transaction,
-			resetMutations,
-		});
+	await withStatementTimeout(
+		db,
+		async (transaction) => {
+			appliedCustomerEntitlementIds = await updateCustomerEntitlements({
+				db: transaction,
+				resetMutations,
+			});
 
-		// Rollover writes only for rows whose guarded UPDATE applied — a stale
-		// mutation's rollover would double-credit a row someone else already
-		// reset.
-		const appliedMutations = resetMutations.filter(
-			({ customerEntitlementId }) =>
-				appliedCustomerEntitlementIds.has(customerEntitlementId),
-		);
+			// Rollover writes only for rows whose guarded UPDATE applied — a stale
+			// mutation's rollover would double-credit a row someone else already
+			// reset.
+			const appliedMutations = resetMutations.filter(
+				({ customerEntitlementId }) =>
+					appliedCustomerEntitlementIds.has(customerEntitlementId),
+			);
 
-		const rolloverWrites = appliedMutations.flatMap(
-			({ rolloverInserts, rolloverUpdates }) => [
-				...rolloverInserts,
-				...rolloverUpdates,
-			],
-		);
-		const rolloverDeleteIds = appliedMutations.flatMap(
-			({ rolloverDeleteIds }) => rolloverDeleteIds,
-		);
+			const rolloverWrites = appliedMutations.flatMap(
+				({ rolloverInserts, rolloverUpdates }) => [
+					...rolloverInserts,
+					...rolloverUpdates,
+				],
+			);
+			const rolloverDeleteIds = appliedMutations.flatMap(
+				({ rolloverDeleteIds }) => rolloverDeleteIds,
+			);
 
-		await RolloverService.upsert({
-			db: transaction,
-			rows: rolloverWrites,
-			queryTag: resetCronQueryTag("upsertRollovers"),
-		});
-		await RolloverService.delete({
-			db: transaction,
-			ids: rolloverDeleteIds,
-			queryTag: resetCronQueryTag("deleteRollovers"),
-		});
-	});
+			await RolloverService.upsert({
+				db: transaction,
+				rows: rolloverWrites,
+				queryTag: resetCronQueryTag("upsertRollovers"),
+			});
+			await RolloverService.delete({
+				db: transaction,
+				ids: rolloverDeleteIds,
+				queryTag: resetCronQueryTag("deleteRollovers"),
+			});
+		},
+		RESET_MUTATION_STATEMENT_TIMEOUT_MS,
+	);
 
 	return {
 		appliedCustomerEntitlementIds,

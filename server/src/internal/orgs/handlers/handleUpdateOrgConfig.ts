@@ -1,5 +1,13 @@
-import { type OrgConfig, OrgConfigSchema, Scopes } from "@autumn/shared";
-import { sql } from "drizzle-orm";
+import {
+	ErrCode,
+	IdempotencyConfigSchema,
+	type OrgConfig,
+	OrgConfigSchema,
+	organizations,
+	RecaseError,
+	Scopes,
+} from "@autumn/shared";
+import { eq, sql } from "drizzle-orm";
 import { z } from "zod/v4";
 import { createRoute } from "@/honoMiddlewares/routeHandler.js";
 import { clearOrgCache } from "../orgUtils/clearOrgCache.js";
@@ -18,11 +26,28 @@ export const handleUpdateOrgConfig = createRoute({
 
 		// Known config keys present in the request body.
 		const sentKeys = Object.keys(raw).filter((k) => validKeys.has(k));
+		// idempotency_config is its own column (org-wide, not an OrgConfig flag).
+		const idempotencySent = "idempotency_config" in raw;
 
-		if (sentKeys.length === 0) {
+		if (sentKeys.length === 0 && !idempotencySent) {
 			return c.json({
 				success: true,
 				config: OrgConfigSchema.parse(org.config),
+			});
+		}
+
+		// Validate BEFORE any writes so a bad TTL never partially applies a
+		// request that also carries config flags.
+		const parsedIdempotency = idempotencySent
+			? IdempotencyConfigSchema.nullable().safeParse(raw.idempotency_config)
+			: null;
+		if (parsedIdempotency && !parsedIdempotency.success) {
+			throw new RecaseError({
+				message:
+					parsedIdempotency.error.issues[0]?.message ??
+					"Invalid idempotency config",
+				code: ErrCode.InvalidRequest,
+				statusCode: 400,
 			});
 		}
 
@@ -36,19 +61,32 @@ export const handleUpdateOrgConfig = createRoute({
 			sentKeys.map((k) => [k, validated[k]]),
 		) as Partial<OrgConfig>;
 
-		const rows = await db.execute<{ config: OrgConfig }>(
-			sql`UPDATE organizations
-				SET config = COALESCE(config, '{}'::jsonb) || ${JSON.stringify(updates)}::jsonb
-				WHERE id = ${org.id}
-				RETURNING config`,
-		);
+		// One atomic UPDATE for both columns — a mixed request can never
+		// partially commit.
+		const [row] = await db
+			.update(organizations)
+			.set({
+				...(sentKeys.length > 0
+					? {
+							config: sql`COALESCE(config, '{}'::jsonb) || ${JSON.stringify(updates)}::jsonb`,
+						}
+					: {}),
+				...(parsedIdempotency?.success
+					? { idempotency_config: parsedIdempotency.data }
+					: {}),
+			})
+			.where(eq(organizations.id, org.id))
+			.returning({
+				config: organizations.config,
+				idempotency_config: organizations.idempotency_config,
+			});
 
 		await clearOrgCache({ db, orgId: org.id });
 
-		const config = (rows as unknown as { config: OrgConfig }[])[0]?.config;
 		return c.json({
 			success: true,
-			config: OrgConfigSchema.parse(config ?? {}),
+			config: OrgConfigSchema.parse(row?.config ?? {}),
+			idempotency_config: row?.idempotency_config ?? null,
 		});
 	},
 });

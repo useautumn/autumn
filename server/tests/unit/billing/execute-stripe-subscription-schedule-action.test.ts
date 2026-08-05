@@ -9,7 +9,7 @@ const mockState = {
 	updateCalls: [] as unknown[],
 };
 
-mock.module("@server/external/connect/createStripeCli", () => ({
+await mockModuleWithRestore("@server/external/connect/createStripeCli", () => ({
 	createStripeCli: () => ({
 		subscriptionSchedules: {
 			create: async (params: unknown) => {
@@ -44,7 +44,7 @@ mock.module("@server/external/connect/createStripeCli", () => ({
 	}),
 }));
 
-mock.module(
+await mockModuleWithRestore(
 	"@/internal/billing/v2/providers/stripe/utils/subscriptionSchedules/logSubscriptionScheduleAction",
 	() => ({
 		logSubscriptionScheduleAction: () => undefined,
@@ -52,6 +52,8 @@ mock.module(
 );
 
 import { executeStripeSubscriptionScheduleAction } from "@/internal/billing/v2/providers/stripe/execute/executeStripeSubscriptionScheduleAction";
+
+import { mockModuleWithRestore } from "../utils/mockModuleWithRestore.js";
 
 const ctx = {
 	org: { id: "org_123" },

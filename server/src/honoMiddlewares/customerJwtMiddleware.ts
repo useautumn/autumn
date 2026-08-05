@@ -8,12 +8,12 @@ import {
 import type { Context, Next } from "hono";
 import { forceJsonBodyField } from "@/honoUtils/forceJsonBody.js";
 import type { HonoEnv } from "@/honoUtils/HonoEnv.js";
-import { getCustomerJwtAuth } from "@/internal/auth/cacheCustomerJwtAuth.js";
 import {
 	AUD_REFRESH,
 	CustomerJwtConfigError,
 	verifyCustomerJwt,
 } from "@/internal/auth/customerJwt.js";
+import { getCustomerJwtAuth } from "@/internal/auth/getCustomerJwtAuth.js";
 import RecaseError from "@/utils/errorUtils.js";
 
 /**
@@ -79,6 +79,7 @@ export const customerJwtMiddleware = async (
 	// internal_customer_id. Cache miss → DB; DB down → throws → auth fails.
 	const auth = await getCustomerJwtAuth({
 		internalCustomerId: claims.internalCustomerId,
+		requestId: ctx.id,
 	});
 	if (!auth) {
 		// Family gone (customer deleted) or unresolvable org — treat as auth failure.

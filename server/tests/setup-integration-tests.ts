@@ -8,7 +8,14 @@ const loadInfisicalSecrets = async () => {
 	// those, so re-running the infisical CLI per worker is redundant churn
 	// (and a flake source). Skip when env is clearly already populated.
 	// CI never has the infisical CLI; this fetch is a local-dev convenience only.
-	if (process.env.CI || process.env.STRIPE_TEST_KEY || process.env.TESTS_ORG)
+	// Unit lanes (UNIT_TESTS=1) are hermetic and never need secrets — the
+	// infisical shell-out costs ~2s per process, so skip it there too.
+	if (
+		process.env.CI ||
+		process.env.UNIT_TESTS ||
+		process.env.STRIPE_TEST_KEY ||
+		process.env.TESTS_ORG
+	)
 		return;
 
 	try {
@@ -48,9 +55,67 @@ declare global {
 	var __autumnTestContext: TestContext | null | undefined;
 }
 
+/**
+ * Unit lane only: pre-import every module that any unit test mock.module()s.
+ *
+ * bun's mock.module MERGES into a module that is already in the registry but
+ * fully REPLACES one that is not — so a partial factory (most of ours) breaks
+ * every export it omits for all later files in the process. Whether the real
+ * module loaded first depends on file execution order, and bun test runs
+ * files in filesystem-discovery order, which differs across OSes (APFS is
+ * sorted, ext4 is not) — green on macOS, red in CI. Seeding the registry up
+ * front makes every mock a merge regardless of order.
+ */
+const seedMockedModulesForUnitLane = async () => {
+	const { readdirSync, readFileSync, statSync } = await import("node:fs");
+	const { join } = await import("node:path");
+
+	const specifiers = new Set<string>();
+	const collectFrom = (file: string) => {
+		const source = readFileSync(file, "utf8");
+		for (const match of source.matchAll(/mock\.module\(\s*["']([^"']+)["']/g)) {
+			specifiers.add(match[1]);
+		}
+	};
+	const walk = (dir: string) => {
+		for (const entry of readdirSync(dir)) {
+			const full = join(dir, entry);
+			if (statSync(full).isDirectory()) walk(full);
+			else if (/\.(test|spec)\.tsx?$/.test(entry)) collectFrom(full);
+		}
+	};
+
+	// The sharded runner passes its shard's file list so each shard only pays
+	// the import graphs its own files can mock; plain `bun test` runs (no
+	// list) seed from the whole tree.
+	const shardFiles = process.env.UNIT_TEST_FILES?.split("\n").filter(Boolean);
+	if (shardFiles && shardFiles.length > 0) {
+		const serverRoot = join(import.meta.dir, "..");
+		for (const file of shardFiles) collectFrom(join(serverRoot, file));
+	} else {
+		walk(join(import.meta.dir, "unit"));
+	}
+
+	// Relative specifiers are file-local; everything else is importable here.
+	const importable = [...specifiers].filter(
+		(specifier) => !specifier.startsWith("."),
+	);
+	const results = await Promise.allSettled(
+		importable.map((specifier) => import(specifier)),
+	);
+	const failures = results.filter((result) => result.status === "rejected");
+	if (failures.length > 0) {
+		console.warn(
+			`[unit-seed] ${failures.length}/${importable.length} mocked modules failed to pre-import`,
+		);
+	}
+};
+
 console.log("--- Setup integration tests ---");
 await loadInfisicalSecrets();
 loadLocalEnv({ force: true });
+
+if (process.env.UNIT_TESTS) await seedMockedModulesForUnitLane();
 
 // Unit-only lanes don't set TESTS_ORG; silently skip there. Anything else
 // must succeed — a swallowed init failure here resurfaces as the opaque
@@ -67,10 +132,10 @@ if (process.env.TESTS_ORG) {
 	// Availability defaults to degraded until primed (normally at server boot);
 	// unprimed, in-process finalize/track calls silently fail open to SQS replays.
 	const { primeRedisMonitor } = await import(
-		"@/external/redis/initUtils/redisAvailability.js"
+		"@/external/redis/availabilityMonitor/redisAvailability.js"
 	);
 	const { primeRedisV2Monitor } = await import(
-		"@/external/redis/initUtils/redisV2Availability.js"
+		"@/external/redis/availabilityMonitor/redisV2Availability.js"
 	);
 	await Promise.all([primeRedisMonitor(), primeRedisV2Monitor()]);
 
@@ -80,19 +145,16 @@ if (process.env.TESTS_ORG) {
 		const { clearOrgCache } = await import(
 			"@/internal/orgs/orgUtils/clearOrgCache.js"
 		);
-		const { getConfiguredRegions, getRegionalRedis, waitForRedisReady } =
-			await import("@/external/redis/initRedis.js");
+		const { getMiscRedis, waitForRedisReady } = await import(
+			"@/external/redis/initRedis.js"
+		);
 		const config = { ...testContext.org.config, multi_currency: true };
 		await OrgService.update({
 			db,
 			orgId: testContext.org.id,
 			updates: { config },
 		});
-		await Promise.all(
-			getConfiguredRegions().map((region) =>
-				waitForRedisReady(getRegionalRedis(region), region),
-			),
-		);
+		await waitForRedisReady(getMiscRedis(), "main");
 		await clearOrgCache({ db, orgId: testContext.org.id });
 		testContext.org.config = config;
 	}

@@ -76,11 +76,19 @@ import {
 	platformSyncRevenueCatContract,
 } from "./platformContract.js";
 import {
+	referralProgramsCreateContract,
+	referralProgramsDeleteContract,
+	referralProgramsGetContract,
+	referralProgramsListContract,
+	referralProgramsUpdateContract,
 	referralsCreateCodeContract,
 	referralsRedeemCodeContract,
 	rewardsCreateContract,
+	rewardsDeleteContract,
+	rewardsGetContract,
 	rewardsListContract,
 	rewardsRedeemCodeContract,
+	rewardsUpdateContract,
 } from "./referralsContract.js";
 
 export const v2_3ContractRouter = oc.router({
@@ -155,8 +163,16 @@ export const v2_3ContractRouter = oc.router({
 	// Rewards & Referrals
 	referralsCreateCode: referralsCreateCodeContract,
 	referralsRedeemCode: referralsRedeemCodeContract,
+	referralProgramsCreate: referralProgramsCreateContract,
+	referralProgramsList: referralProgramsListContract,
+	referralProgramsGet: referralProgramsGetContract,
+	referralProgramsUpdate: referralProgramsUpdateContract,
+	referralProgramsDelete: referralProgramsDeleteContract,
 	rewardsCreate: rewardsCreateContract,
 	rewardsList: rewardsListContract,
+	rewardsGet: rewardsGetContract,
+	rewardsUpdate: rewardsUpdateContract,
+	rewardsDelete: rewardsDeleteContract,
 	rewardsRedeemCode: rewardsRedeemCodeContract,
 
 	// Platform

@@ -1,5 +1,6 @@
-import { afterAll, describe, expect, mock, test } from "bun:test";
+import { describe, expect, mock, test } from "bun:test";
 import { EventEmitter } from "node:events";
+import { mockModuleWithRestore } from "../utils/mockModuleWithRestore.js";
 
 class FakeRedis extends EventEmitter {
 	status: "wait" | "connecting" | "ready" | "end" = "wait";
@@ -20,34 +21,26 @@ const fakeLogger = {
 	child: mock(() => fakeLogger),
 };
 
-// Real logger captured BEFORE mocking so afterAll can restore it — module
-// mocks leak across test files (mock.restore does not undo them).
-const realLogtailUtils = {
-	...(await import("@/external/logtail/logtailUtils.js")),
-};
-
-mock.module("@/external/redis/initRedis.js", () => ({
-	redis: fakeRedis,
-	hasRedisConfig: true,
+await mockModuleWithRestore("@/external/redis/initRedis.js", () => ({
+	getMiscRedis: () => fakeRedis,
+	hasMiscRedisConfig: true,
 }));
-mock.module("@/external/redis/initRedisV2.js", () => ({
+await mockModuleWithRestore("@/external/redis/initRedisV2.js", () => ({
 	redisV2: fakeRedisV2,
 	hasRedisV2Config: true,
 }));
-mock.module("@/external/logtail/logtailUtils.js", () => ({
+await mockModuleWithRestore("@/external/logtail/logtailUtils.js", () => ({
 	logger: fakeLogger,
 }));
 
-const { handleHealthCheck } = await import("@/honoUtils/handleHealthCheck.js");
-
-afterAll(() => {
-	mock.module("@/external/logtail/logtailUtils.js", () => realLogtailUtils);
-	// Redis modules stay mocked (importing the real ones would open live
-	// connections, which unit tests must never do) — but reset the fakes so
-	// later files see "not ready" fail-open instead of this file's end state.
-	fakeRedis.status = "wait";
-	fakeRedisV2.status = "wait";
-});
+// Cache-busting query: the plain specifier may already be evaluated (initHono
+// imports it), and its module-level startup latch would then carry whatever
+// state earlier files left behind. A fresh instance evaluates under this
+// file's mocks no matter which files ran before.
+const { handleHealthCheck } = await import(
+	// @ts-expect-error - Bun test cache-busting import query isolates module mocks.
+	"@/honoUtils/handleHealthCheck.js?startupGate"
+);
 
 const callHealthCheck = async () => {
 	const responses: { status: number; body: string }[] = [];
