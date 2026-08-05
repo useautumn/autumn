@@ -35438,25 +35438,19 @@ paths:
                   type: string
                   description: "Who receives the reward: the referrer only, or both parties."
                 max_redemptions:
-                  anyOf:
-                    - type: integer
-                      minimum: -9007199254740991
-                      maximum: 9007199254740991
-                      exclusiveMinimum: 0
-                    - type: "null"
-                  description: A positive redemption limit, or null for unlimited redemptions.
+                  type: integer
+                  minimum: -9007199254740991
+                  maximum: 9007199254740991
+                  exclusiveMinimum: 0
+                  description: A positive redemption limit.
                 plan_ids:
-                  anyOf:
-                    - type: array
-                      items:
-                        type: string
-                        minLength: 1
-                    - type: "null"
+                  type: array
+                  items:
+                    type: string
+                    minLength: 1
                   description: Required when redeem_on is checkout. Plan IDs must be unique.
                 exclude_trial:
-                  anyOf:
-                    - type: boolean
-                    - type: "null"
+                  type: boolean
               required:
                 - referral_program_id
               additionalProperties: false

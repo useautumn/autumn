@@ -994,9 +994,9 @@ class Referrals(BaseSDK):
         reward_id: Optional[str] = None,
         redeem_on: Optional[models.UpdateReferralProgramRedeemOnRequest] = None,
         received_by: Optional[models.UpdateReferralProgramReceivedByRequest] = None,
-        max_redemptions: OptionalNullable[int] = UNSET,
-        plan_ids: OptionalNullable[List[str]] = UNSET,
-        exclude_trial: OptionalNullable[bool] = UNSET,
+        max_redemptions: Optional[int] = None,
+        plan_ids: Optional[List[str]] = None,
+        exclude_trial: Optional[bool] = None,
         retries: OptionalNullable[utils.RetryConfig] = UNSET,
         server_url: Optional[str] = None,
         timeout_ms: Optional[int] = None,
@@ -1008,7 +1008,7 @@ class Referrals(BaseSDK):
         :param reward_id: The ID of the reward granted when a code is redeemed.
         :param redeem_on: When the reward is granted: on redemption, or when the redeemer checks out.
         :param received_by: Who receives the reward: the referrer only, or both parties.
-        :param max_redemptions: A positive redemption limit, or null for unlimited redemptions.
+        :param max_redemptions: A positive redemption limit.
         :param plan_ids: Required when redeem_on is checkout. Plan IDs must be unique.
         :param exclude_trial:
         :param retries: Override the default retry configuration for this method
@@ -1104,9 +1104,9 @@ class Referrals(BaseSDK):
         reward_id: Optional[str] = None,
         redeem_on: Optional[models.UpdateReferralProgramRedeemOnRequest] = None,
         received_by: Optional[models.UpdateReferralProgramReceivedByRequest] = None,
-        max_redemptions: OptionalNullable[int] = UNSET,
-        plan_ids: OptionalNullable[List[str]] = UNSET,
-        exclude_trial: OptionalNullable[bool] = UNSET,
+        max_redemptions: Optional[int] = None,
+        plan_ids: Optional[List[str]] = None,
+        exclude_trial: Optional[bool] = None,
         retries: OptionalNullable[utils.RetryConfig] = UNSET,
         server_url: Optional[str] = None,
         timeout_ms: Optional[int] = None,
@@ -1118,7 +1118,7 @@ class Referrals(BaseSDK):
         :param reward_id: The ID of the reward granted when a code is redeemed.
         :param redeem_on: When the reward is granted: on redemption, or when the redeemer checks out.
         :param received_by: Who receives the reward: the referrer only, or both parties.
-        :param max_redemptions: A positive redemption limit, or null for unlimited redemptions.
+        :param max_redemptions: A positive redemption limit.
         :param plan_ids: Required when redeem_on is checkout. Plan IDs must be unique.
         :param exclude_trial:
         :param retries: Override the default retry configuration for this method

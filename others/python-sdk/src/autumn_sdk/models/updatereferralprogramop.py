@@ -67,11 +67,11 @@ class UpdateReferralProgramParamsTypedDict(TypedDict):
     r"""When the reward is granted: on redemption, or when the redeemer checks out."""
     received_by: NotRequired[UpdateReferralProgramReceivedByRequest]
     r"""Who receives the reward: the referrer only, or both parties."""
-    max_redemptions: NotRequired[Nullable[int]]
-    r"""A positive redemption limit, or null for unlimited redemptions."""
-    plan_ids: NotRequired[Nullable[List[str]]]
+    max_redemptions: NotRequired[int]
+    r"""A positive redemption limit."""
+    plan_ids: NotRequired[List[str]]
     r"""Required when redeem_on is checkout. Plan IDs must be unique."""
-    exclude_trial: NotRequired[Nullable[bool]]
+    exclude_trial: NotRequired[bool]
 
 
 class UpdateReferralProgramParams(BaseModel):
@@ -87,13 +87,13 @@ class UpdateReferralProgramParams(BaseModel):
     received_by: Optional[UpdateReferralProgramReceivedByRequest] = None
     r"""Who receives the reward: the referrer only, or both parties."""
 
-    max_redemptions: OptionalNullable[int] = UNSET
-    r"""A positive redemption limit, or null for unlimited redemptions."""
+    max_redemptions: Optional[int] = None
+    r"""A positive redemption limit."""
 
-    plan_ids: OptionalNullable[List[str]] = UNSET
+    plan_ids: Optional[List[str]] = None
     r"""Required when redeem_on is checkout. Plan IDs must be unique."""
 
-    exclude_trial: OptionalNullable[bool] = UNSET
+    exclude_trial: Optional[bool] = None
 
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
@@ -107,24 +107,15 @@ class UpdateReferralProgramParams(BaseModel):
                 "exclude_trial",
             ]
         )
-        nullable_fields = set(["max_redemptions", "plan_ids", "exclude_trial"])
         serialized = handler(self)
         m = {}
 
         for n, f in type(self).model_fields.items():
             k = f.alias or n
             val = serialized.get(k, serialized.get(n))
-            is_nullable_and_explicitly_set = (
-                k in nullable_fields
-                and (self.__pydantic_fields_set__.intersection({n}))  # pylint: disable=no-member
-            )
 
             if val != UNSET_SENTINEL:
-                if (
-                    val is not None
-                    or k not in optional_fields
-                    or is_nullable_and_explicitly_set
-                ):
+                if val is not None or k not in optional_fields:
                     m[k] = val
 
         return m

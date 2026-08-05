@@ -25,15 +25,15 @@ import { DynamicResponseExample } from "/snippets/dynamic-response-example.jsx";
   Who receives the reward: the referrer only, or both parties.
 </DynamicParamField>
 
-<DynamicParamField body="max_redemptions" type="integer | null">
-  A positive redemption limit, or null for unlimited redemptions.
+<DynamicParamField body="max_redemptions" type="integer">
+  A positive redemption limit.
 </DynamicParamField>
 
-<DynamicParamField body="plan_ids" type="string[] | null">
+<DynamicParamField body="plan_ids" type="string[]">
   Required when redeem_on is checkout. Plan IDs must be unique.
 </DynamicParamField>
 
-<DynamicParamField body="exclude_trial" type="boolean | null" />
+<DynamicParamField body="exclude_trial" type="boolean" />
 
 
 ### Response

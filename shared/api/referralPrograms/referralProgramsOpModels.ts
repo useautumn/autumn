@@ -46,12 +46,14 @@ export const UpdateReferralProgramParamsSchema = z
 		}),
 		redeem_on: ApiReferralProgramV0Schema.shape.redeem_on.optional(),
 		received_by: ApiReferralProgramV0Schema.shape.received_by.optional(),
-		max_redemptions: z.number().int().positive().nullish().meta({
-			description:
-				"A positive redemption limit, or null for unlimited redemptions.",
+		max_redemptions: z.number().int().positive().optional().meta({
+			description: "A positive redemption limit.",
 		}),
-		plan_ids: uniquePlanIds,
-		exclude_trial: z.boolean().nullish(),
+		plan_ids: z.array(z.string().min(1)).optional().meta({
+			description:
+				"Required when redeem_on is checkout. Plan IDs must be unique.",
+		}),
+		exclude_trial: z.boolean().optional(),
 	})
 	.strict()
 	.superRefine((program, ctx) => {

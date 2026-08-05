@@ -1,16 +1,16 @@
 lockVersion: 2.0.0
 id: 05940b80-1ef8-40f4-9878-822fb2792070
 management:
-  docChecksum: 8ca673157fd2c0f8c255bc83dba41738
+  docChecksum: f333cefcc437f1ad8472db5f1732c517
   docVersion: 2.3.0
   speakeasyVersion: 1.762.0
   generationVersion: 2.882.0
   releaseVersion: 1.0.2
   configChecksum: f4e1f05a41ffbdd2d471149ad34b3cf6
 persistentEdits:
-  generation_id: 75a54eb9-dc4f-4620-8e8e-e3c0e6702103
-  pristine_commit_hash: faa107b4e5311291e6b7b029e1696446dc24749a
-  pristine_tree_hash: b59e50a756a4814bc6b88ef8967e0f0f18dc2e03
+  generation_id: 91badd37-5d21-40fa-a008-01e85d5eb383
+  pristine_commit_hash: 1c1e13a1f2a2de767773bfaf27f0ac4fa5b4e40a
+  pristine_tree_hash: e8f58634187155f967f90bbb316ce608361e6ee5
 features:
   python:
     additionalDependencies: 1.0.0
@@ -8195,8 +8195,8 @@ trackedFiles:
     pristine_git_object: 670f93d5944eab3e2d6ccbf48571fc92c55b2d59
   docs/models/updatereferralprogramparams.md:
     id: b6f08eac2665
-    last_write_checksum: sha1:0bce57e1e637c869ebbf17c545c216a4522dc8cf
-    pristine_git_object: 4110ad6ebe428a462e27cdd3b8aa9455544d0f53
+    last_write_checksum: sha1:e682f25c8c5890378589de0e6093a4914bb1f13e
+    pristine_git_object: b742492bcc12dbc54e19fe833d99f6d484dd5580
   docs/models/updatereferralprogramreceivedbyrequest.md:
     id: 2ac7f9d25de1
     last_write_checksum: sha1:c0560e9523651c37b19410a058c6f51dc363ffb1
@@ -8555,8 +8555,8 @@ trackedFiles:
     pristine_git_object: 68bfa16724239e249cfa4263dd4e029e148d9af8
   docs/sdks/referrals/README.md:
     id: 50b71f597f20
-    last_write_checksum: sha1:ea1e1cd874622217e99f49aaa286d2e24018caeb
-    pristine_git_object: 01f8c6cb672f154243974b12cf0275dad6b407f8
+    last_write_checksum: sha1:f16c5df31d446cefa459de4931f119db970d3495
+    pristine_git_object: 217548e34b3bddf248ab20e6dd07092bcfad1844
   docs/sdks/rewardssdk/README.md:
     id: 37bf7d853e55
     last_write_checksum: sha1:37d3ed5c17b2c0983f5b877ca443e5aabddbc491
@@ -8951,8 +8951,8 @@ trackedFiles:
     pristine_git_object: a5736aed8fdbf77c6772ac93bf7cd66cae8181af
   src/autumn_sdk/models/updatereferralprogramop.py:
     id: aaa8c189551a
-    last_write_checksum: sha1:8bf429d6d122adf661cf61e83a02e6ecd81cc933
-    pristine_git_object: 1135cc617d94a3d4db0a42a880e21220d2d79458
+    last_write_checksum: sha1:f4962f0dec94422a1792a1665515a5d7436429fb
+    pristine_git_object: 3b643b06b8a20794ee4d04df5ec74d00216fa588
   src/autumn_sdk/models/updaterewardop.py:
     id: 7f4a0781e220
     last_write_checksum: sha1:e8b898d3cf2480deb6eb71903810d91e074c7930
@@ -8971,8 +8971,8 @@ trackedFiles:
     pristine_git_object: 3e38f1a929f7d6b1d6de74604aa87e3d8f010544
   src/autumn_sdk/referrals.py:
     id: fb7e9ff59ffd
-    last_write_checksum: sha1:b4812776b136366e5140159277e3d5787d369751
-    pristine_git_object: cd99a11c8aa866210ba8702ff2c980e79ba83deb
+    last_write_checksum: sha1:d273096899f50517d9d8bbf618f05bc80af14a82
+    pristine_git_object: bcd45e1e0ee483fe30d3d3ece235ba53c16dd625
   src/autumn_sdk/rewards_sdk.py:
     id: 48280b2a7da9
     last_write_checksum: sha1:549861986509a29e8db8a1be1c33d32b3fbac871
