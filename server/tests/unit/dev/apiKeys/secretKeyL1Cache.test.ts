@@ -35,17 +35,6 @@ import {
 	test,
 } from "bun:test";
 
-// lru-cache expires entries via performance.now(); an offset patch fast-forwards
-// the L1 TTLs without sleeping real time. The macrotask yield lets lru-cache's
-// 1ms cachedNow debounce timer clear so the advance is actually observed.
-const realPerformanceNow = performance.now.bind(performance);
-let clockOffsetMs = 0;
-performance.now = () => realPerformanceNow() + clockOffsetMs;
-const advanceClock = async (ms: number) => {
-	clockOffsetMs += ms;
-	await Bun.sleep(2);
-};
-
 // CI has no CACHE_URL, and getMiscMainRedis throws without one. These tests
 // only need SET/GET/DEL semantics, so back the client with an in-memory map.
 const realInstances = {
@@ -68,7 +57,6 @@ mock.module("@/external/redis/miscCache/miscRedisInstances.js", () => ({
 }));
 
 afterAll(() => {
-	performance.now = realPerformanceNow;
 	mock.module(
 		"@/external/redis/miscCache/miscRedisInstances.js",
 		() => realInstances,
@@ -248,7 +236,7 @@ describe("secret-key L1 cache: TTLs", () => {
 		});
 		await getCachedSecretKeyVerification({ hashedKey: negativeKey });
 
-		await advanceClock(SECRET_KEY_L1_NEGATIVE_TTL_MS + 400);
+		await Bun.sleep(SECRET_KEY_L1_NEGATIVE_TTL_MS + 400);
 		redisGet.mockClear();
 
 		// Negative entry is gone -> back to Redis.
@@ -278,7 +266,7 @@ describe("secret-key L1 cache: TTLs", () => {
 			data: buildVerificationData("org_ttl"),
 		});
 
-		await advanceClock(SECRET_KEY_L1_TTL_MS + 400);
+		await Bun.sleep(SECRET_KEY_L1_TTL_MS + 400);
 		redisGet.mockClear();
 
 		const result = await getCachedSecretKeyVerification({ hashedKey });
@@ -287,7 +275,8 @@ describe("secret-key L1 cache: TTLs", () => {
 		expect(result?.org.id).toBe("org_ttl"); // Redis still had it (3600s TTL)
 
 		await clearSecretKeyCache({ hashedKey });
-	});
+		// Sleeps past bun's default 5s test timeout — needs its own budget.
+	}, 15_000);
 });
 
 // ── Contract 5: bounded size / LRU eviction ────────────────────────────────

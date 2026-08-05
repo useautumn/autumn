@@ -1,20 +1,4 @@
-import { afterAll, beforeEach, describe, expect, it, mock } from "bun:test";
-
-// lru-cache expires entries via performance.now(); an offset patch fast-forwards
-// the TTL without sleeping real time.
-const realPerformanceNow = performance.now.bind(performance);
-let clockOffsetMs = 0;
-performance.now = () => realPerformanceNow() + clockOffsetMs;
-// The macrotask yield lets lru-cache's 1ms cachedNow debounce timer clear —
-// without it the pre-advance timestamp stays cached and nothing expires.
-const advanceClock = async (ms: number) => {
-	clockOffsetMs += ms;
-	await Bun.sleep(2);
-};
-afterAll(() => {
-	performance.now = realPerformanceNow;
-});
-
+import { beforeEach, describe, expect, it, mock } from "bun:test";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 import {
 	_recentlyUpdatedNegativeCacheSizeForTesting,
@@ -69,7 +53,7 @@ describe("isCustomerRecentlyUpdated negative cache", () => {
 		const { db, execute } = makeFakeDb();
 
 		await isCustomerRecentlyUpdated({ db, ...params });
-		await advanceClock(NEGATIVE_TTL_MS + 100);
+		await new Promise((resolve) => setTimeout(resolve, NEGATIVE_TTL_MS + 100));
 		await isCustomerRecentlyUpdated({ db, ...params });
 
 		expect(execute).toHaveBeenCalledTimes(2);
