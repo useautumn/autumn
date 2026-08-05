@@ -19,7 +19,8 @@ jobs:
       github.event.pull_request.head.repo.full_name == github.repository &&
       contains(github.event.pull_request.body || '', '<!-- This is an auto-generated description by cubic. -->') &&
       (github.event.action == 'opened' ||
-      !contains(github.event.changes.body.from || '', '<!-- This is an auto-generated description by cubic. -->'))
+      (github.event.changes.body &&
+      !contains(github.event.changes.body.from || '', '<!-- This is an auto-generated description by cubic. -->')))
     runs-on: ubuntu-latest
 
     steps:
@@ -46,9 +47,14 @@ jobs:
 
           summary="${summary%%"$end_marker"*}"
           summary="$start_marker$summary"
-          escaped_summary=$(printf '%s' "$summary" | sed -e 's/&/\&amp;/g' -e 's/</\&lt;/g' -e 's/>/\&gt;/g')
+          slack_summary=$(printf '%s' "$summary" | sed -E \
+            -e '1s/^## Summary by cubic$/*Summary by cubic*/' \
+            -e 's/\*\*([^*]+)\*\*/\*\1\*/g' \
+            -e 's/&/\&amp;/g' \
+            -e 's/</\&lt;/g' \
+            -e 's/>/\&gt;/g')
           printf -v SLACK_MESSAGE '*dev2main* :rocket:\n<%s|PR #%s>\n\n%s' \
-            "$PR_URL" "$PR_NUMBER" "$escaped_summary"
+            "$PR_URL" "$PR_NUMBER" "$slack_summary"
           export SLACK_MESSAGE
 
           node -e 'process.stdout.write(JSON.stringify({ text: process.env.SLACK_MESSAGE }))' \
