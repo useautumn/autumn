@@ -26,6 +26,27 @@ export class SubService {
 		return data[0] as Subscription;
 	}
 
+	/**
+	 * Insert, or return null when a concurrent writer already claimed the
+	 * stripe id. Callers that check-then-insert must handle the null by
+	 * re-reading — two Stripe webhooks for one subscription arrive in parallel.
+	 */
+	static async createSubIfAbsent({
+		db,
+		sub,
+	}: {
+		db: DrizzleCli;
+		sub: Subscription;
+	}): Promise<Subscription | null> {
+		const data = await db
+			.insert(subscriptions)
+			.values(sub)
+			.onConflictDoNothing()
+			.returning();
+
+		return (data[0] as Subscription | undefined) ?? null;
+	}
+
 	static async addUsageFeatures({
 		db,
 		stripeId,
@@ -45,20 +66,25 @@ export class SubService {
 			throw new Error("Either stripeId or scheduleId must be provided");
 		}
 
-		const data = await db
-			.select()
-			.from(subscriptions)
-			.where(
-				and(
-					stripeId ? eq(subscriptions.stripe_id, stripeId) : undefined,
-					scheduleId
-						? eq(subscriptions.stripe_schedule_id, scheduleId)
-						: undefined,
-				),
-			);
+		const findSub = async () =>
+			(
+				await db
+					.select()
+					.from(subscriptions)
+					.where(
+						and(
+							stripeId ? eq(subscriptions.stripe_id, stripeId) : undefined,
+							scheduleId
+								? eq(subscriptions.stripe_schedule_id, scheduleId)
+								: undefined,
+						),
+					)
+			)[0];
 
-		if (data.length === 0) {
-			return await SubService.createSub({
+		const existingSub = await findSub();
+
+		if (!existingSub) {
+			const createdSub = await SubService.createSubIfAbsent({
 				db,
 				sub: {
 					id: generateId("sub"),
@@ -73,9 +99,20 @@ export class SubService {
 					billing_cycle_anchor_seconds: null,
 				},
 			});
+
+			if (createdSub) return createdSub;
 		}
 
-		const curSub = data[0];
+		// Either it existed, or a concurrent webhook won the insert; merge into it.
+		const curSub = existingSub ?? (await findSub());
+
+		if (!curSub) {
+			throw new RecaseError({
+				code: ErrCode.InsertSubscriptionFailed,
+				message: "Failed to create subscription",
+				statusCode: 500,
+			});
+		}
 		const updateResult = await db
 			.update(subscriptions)
 			.set({
@@ -225,22 +262,45 @@ export class SubService {
 			stripeId: subscription.stripe_id ?? "",
 		});
 
+		const periodUpdates = {
+			current_period_start: subscription.current_period_start,
+			current_period_end: subscription.current_period_end,
+			billing_cycle_anchor_seconds: subscription.billing_cycle_anchor_seconds,
+		};
+
 		if (existingSub) {
 			return await SubService.update({
 				db,
 				subscriptionId: existingSub.id,
-				updates: {
-					current_period_start: subscription.current_period_start,
-					current_period_end: subscription.current_period_end,
-					billing_cycle_anchor_seconds:
-						subscription.billing_cycle_anchor_seconds,
-				},
-			});
-		} else {
-			return await SubService.createSub({
-				db,
-				sub: subscription,
+				updates: periodUpdates,
 			});
 		}
+
+		const createdSub = await SubService.createSubIfAbsent({
+			db,
+			sub: subscription,
+		});
+
+		if (createdSub) return createdSub;
+
+		// A concurrent webhook inserted it between the read and the write.
+		const winningSub = await SubService.getByStripeId({
+			db,
+			stripeId: subscription.stripe_id ?? "",
+		});
+
+		if (!winningSub) {
+			throw new RecaseError({
+				code: ErrCode.InsertSubscriptionFailed,
+				message: "Failed to create subscription",
+				statusCode: 500,
+			});
+		}
+
+		return await SubService.update({
+			db,
+			subscriptionId: winningSub.id,
+			updates: periodUpdates,
+		});
 	}
 }
