@@ -1,7 +1,7 @@
 import { Tooltip, TooltipContent, TooltipTrigger } from "@autumn/ui";
 import { CopySimpleIcon, InfoIcon } from "@phosphor-icons/react";
 import { useCreateScheduleFormContext } from "../context/CreateScheduleFormProvider";
-import { filterPlansByScope } from "../scheduleUtils";
+import { resolveCopySourceScope } from "../scheduleUtils";
 
 /** Seeds the opening phase with the customer's current plans at this row's scope. */
 export function CopyExistingPlansButton({
@@ -19,18 +19,14 @@ export function CopyExistingPlansButton({
 	const { formValues, existingPlans, handleCopyExistingPlans, isPhaseLocked } =
 		useCreateScheduleFormContext();
 
-	// Copying replaces the phase's plans, so only offer it while it's untouched.
-	const hasPickedPlan = formValues.phases[phaseIndex]?.plans.some(
-		(plan) => plan.productId,
-	);
-	const scopedPlans = filterPlansByScope({ plans: existingPlans, entityId });
+	// Copying fills this row alone, so other plans in the phase don't block it.
+	const copySource = resolveCopySourceScope({
+		existingPlans,
+		phasePlans: formValues.phases[phaseIndex]?.plans ?? [],
+		entityId,
+	});
 
-	if (
-		phaseIndex !== 0 ||
-		scopedPlans.length === 0 ||
-		hasPickedPlan ||
-		isPhaseLocked({ phaseIndex })
-	) {
+	if (phaseIndex !== 0 || !copySource || isPhaseLocked({ phaseIndex })) {
 		return null;
 	}
 
@@ -39,12 +35,14 @@ export function CopyExistingPlansButton({
 			<button
 				type="button"
 				className="flex min-w-0 flex-1 items-center gap-2"
-				onClick={() => handleCopyExistingPlans({ planIndex, entityId })}
+				onClick={() =>
+					handleCopyExistingPlans({ planIndex, entityId: copySource.entityId })
+				}
 			>
 				<CopySimpleIcon size={12} />
 				Copy existing plans
 			</button>
-			{scopeLabel && (
+			{(copySource.isFallback || scopeLabel) && (
 				<Tooltip>
 					<TooltipTrigger asChild>
 						<InfoIcon
@@ -53,7 +51,9 @@ export function CopyExistingPlansButton({
 						/>
 					</TooltipTrigger>
 					<TooltipContent>
-						Copies from selected scope: {scopeLabel}
+						{copySource.isFallback
+							? "No customer-level plans — copies the first entity's plans"
+							: `Copies from selected scope: ${scopeLabel}`}
 					</TooltipContent>
 				</Tooltip>
 			)}

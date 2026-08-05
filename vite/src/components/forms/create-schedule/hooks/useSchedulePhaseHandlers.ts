@@ -1,3 +1,4 @@
+import type { ProductV2 } from "@autumn/shared";
 import { useCallback } from "react";
 import type { EditingPlan } from "../context/CreateScheduleFormProvider";
 import {
@@ -5,7 +6,10 @@ import {
 	isCreateSchedulePhaseLocked,
 	type SchedulePlan,
 } from "../createScheduleFormSchema";
-import { filterPlansByScope } from "../scheduleUtils";
+import {
+	resolveCopySourceScope,
+	resolveNextPhaseStartsAt,
+} from "../scheduleUtils";
 import type { UseCreateScheduleForm } from "./useCreateScheduleForm";
 
 const clonePlans = (plans: SchedulePlan[]): SchedulePlan[] =>
@@ -18,12 +22,14 @@ const clonePlans = (plans: SchedulePlan[]): SchedulePlan[] =>
 export function useSchedulePhaseHandlers({
 	form,
 	nowMs,
+	products,
 	editingPlan,
 	setEditingPlan,
 	existingPlans,
 }: {
 	form: UseCreateScheduleForm;
 	nowMs: number;
+	products: ProductV2[];
 	editingPlan: EditingPlan | null;
 	setEditingPlan: (editing: EditingPlan | null) => void;
 	existingPlans: SchedulePlan[];
@@ -38,21 +44,33 @@ export function useSchedulePhaseHandlers({
 		[form.store, nowMs],
 	);
 
+	const defaultStartsAt = useCallback(
+		({ afterIndex }: { afterIndex: number }) =>
+			resolveNextPhaseStartsAt({
+				phases: form.store.state.values.phases,
+				afterIndex,
+				products,
+				nowMs,
+			}),
+		[form.store, products, nowMs],
+	);
+
 	const handleAddPhase = useCallback(() => {
+		const phases = form.store.state.values.phases;
 		form.pushFieldValue("phases", {
-			startsAt: null,
+			startsAt: defaultStartsAt({ afterIndex: phases.length - 1 }),
 			plans: [{ ...EMPTY_SCHEDULE_PLAN }],
 		});
-	}, [form]);
+	}, [form, defaultStartsAt]);
 
 	const handleInsertPhase = useCallback(
 		({ afterIndex }: { afterIndex: number }) => {
 			form.insertFieldValue("phases", afterIndex + 1, {
-				startsAt: null,
+				startsAt: defaultStartsAt({ afterIndex }),
 				plans: [{ ...EMPTY_SCHEDULE_PLAN }],
 			});
 		},
-		[form],
+		[form, defaultStartsAt],
 	);
 
 	const handleRemovePhase = useCallback(
@@ -125,16 +143,17 @@ export function useSchedulePhaseHandlers({
 			entityId: string | null;
 		}) => {
 			if (isPhaseLocked({ phaseIndex: 0 })) return;
-			const scopedPlans = filterPlansByScope({
-				plans: existingPlans,
+			const plans = form.store.state.values.phases[0]?.plans ?? [];
+			const copySource = resolveCopySourceScope({
+				existingPlans,
+				phasePlans: plans,
 				entityId,
 			});
-			if (!scopedPlans.length) return;
+			if (!copySource) return;
 
-			const plans = form.store.state.values.phases[0]?.plans ?? [];
 			form.setFieldValue("phases[0].plans", [
 				...clonePlans(plans.slice(0, planIndex)),
-				...clonePlans(scopedPlans),
+				...clonePlans(copySource.plans),
 				...clonePlans(plans.slice(planIndex + 1)),
 			]);
 		},

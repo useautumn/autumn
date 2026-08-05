@@ -221,6 +221,7 @@ export function CreateScheduleFormProvider({
 	} = useSchedulePhaseHandlers({
 		form,
 		nowMs,
+		products,
 		editingPlan,
 		setEditingPlan,
 		existingPlans,
