@@ -81,7 +81,8 @@ export const runRedisOp = async <T>({
 	source: string;
 	redisInstance: Redis;
 	queueIfNotReady?: boolean;
-	/** Retry a failed idempotent read once on the other connection. */
+	/** Retry a failed idempotent read once on the other connection. `operation`
+	 *  must use its injected `redis`; closing over the router re-runs the same one. */
 	retryOnStandby?: boolean;
 	/** Opt-in bound, tighter than the client's `commandTimeout`. Reads only —
 	 *  the race abandons the promise but the command still reaches Redis. */

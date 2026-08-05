@@ -1,5 +1,6 @@
 import type { Redis } from "ioredis";
 import { isConnectionLevelRedisError } from "../utils/isTransientRedisError.js";
+import { firstPipelineConnectionError } from "../utils/pipelineErrors.js";
 
 const STANDBY_ROUTER = Symbol("redisStandbyRouter");
 
@@ -111,14 +112,16 @@ export const createStandbyRedisRouter = ({
 	const observeOutcome = ({
 		result,
 		connection,
+		resolvedError,
 	}: {
 		result: unknown;
 		connection: Redis;
+		resolvedError?: (resolved: unknown) => unknown;
 	}) => {
 		if (!isPromiseLike(result)) return result;
 		return Promise.resolve(result).then(
 			(resolved) => {
-				recordOutcome({ connection });
+				recordOutcome({ connection, error: resolvedError?.(resolved) });
 				return resolved;
 			},
 			(error: unknown) => {
@@ -139,7 +142,13 @@ export const createStandbyRedisRouter = ({
 		if (typeof pipeline?.exec !== "function") return batch;
 		const exec = pipeline.exec.bind(pipeline);
 		pipeline.exec = (...args: unknown[]) =>
-			observeOutcome({ result: exec(...args), connection });
+			observeOutcome({
+				result: exec(...args),
+				connection,
+				// A dead socket surfaces as `[Error, null]` tuples on a resolved
+				// exec, so the promise settling is not proof the connection works.
+				resolvedError: firstPipelineConnectionError,
+			});
 		return pipeline;
 	};
 

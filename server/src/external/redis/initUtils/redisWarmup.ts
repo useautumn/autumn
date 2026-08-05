@@ -26,6 +26,12 @@ export const waitForRedisReady = (
 
 		instance.once("error", (err) => {
 			clearTimeout(timeout);
+			// A standby-routed instance reports ready when either connection is up,
+			// so one socket erroring is not a readiness failure.
+			if (instance.status === "ready") {
+				resolve();
+				return;
+			}
 			reject(err);
 		});
 	});

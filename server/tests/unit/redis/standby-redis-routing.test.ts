@@ -496,6 +496,31 @@ describe("standby Redis breaker", () => {
 		expect(getStandbyRedisRouter(redis)?.ordered()[0]).toBe(asRedis(primary));
 	});
 
+	test("counts a resolved pipeline carrying socket-error tuples", async () => {
+		const { primary, standby, redis } = createPair();
+		primary.pipelineCommandError = connectionError();
+
+		// exec() resolves; only the tuples say the socket died.
+		for (let attempt = 0; attempt < 3; attempt++) {
+			await redis.pipeline().get("subject").exec();
+		}
+
+		expect(getStandbyRedisRouter(redis)?.ordered()[0]).toBe(asRedis(standby));
+	});
+
+	test("keeps a connection preferred when tuples carry only command errors", async () => {
+		const { primary, redis } = createPair();
+		primary.pipelineCommandError = new Error(
+			"WRONGTYPE Operation against a key",
+		);
+
+		for (let attempt = 0; attempt < 5; attempt++) {
+			await redis.pipeline().get("subject").exec();
+		}
+
+		expect(getStandbyRedisRouter(redis)?.ordered()[0]).toBe(asRedis(primary));
+	});
+
 	test("counts a failed pipeline exec against the connection", async () => {
 		const { primary, standby, redis } = createPair();
 		primary.pipelineError = connectionError();
