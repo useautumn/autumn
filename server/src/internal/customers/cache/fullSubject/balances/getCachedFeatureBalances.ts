@@ -4,6 +4,7 @@ import type {
 	UsageWindow,
 } from "@autumn/shared";
 import type { Redis } from "ioredis";
+import { throwOnPipelineConnectionError } from "@/external/redis/utils/pipelineErrors.js";
 import { REDIS_OP_TIMEOUT_MS } from "@/external/redis/utils/redisOpTimeouts.js";
 import { runRedisOp } from "@/external/redis/utils/runRedisOp.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
@@ -181,11 +182,7 @@ export const getCachedFeatureBalancesBatch = async ({
 					...fields,
 				);
 			}
-			return pipeline.exec().then((pipelineResults) => {
-				const commandError = pipelineResults?.find(([error]) => error)?.[0];
-				if (commandError) throw commandError;
-				return pipelineResults;
-			});
+			return pipeline.exec().then(throwOnPipelineConnectionError);
 		},
 		source: "getCachedFeatureBalancesBatch",
 		redisInstance: redisV2,
