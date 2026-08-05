@@ -6,6 +6,7 @@ import { type LoadedConfig, loadConfig } from "../../lib/config/loadConfig.js";
 import { AppEnv, resolveConfigPath } from "../../lib/env/index.js";
 import { writeConfig } from "../pull/writeConfig.js";
 import {
+	createConfigResourceDeletePrompts,
 	createFeatureArchivedPrompt,
 	createFeatureDeletePrompt,
 	createPlanArchivedPrompt,
@@ -77,7 +78,9 @@ interface HeadlessPushResult {
 	plansDeleted: string[];
 	plansArchived: string[];
 	rewardsCreated: string[];
+	rewardsDeleted: string[];
 	referralProgramsCreated: string[];
+	referralProgramsDeleted: string[];
 }
 
 type ArchivedTargets = {
@@ -104,7 +107,9 @@ function headlessResultFromPushResult(result: PushResult): HeadlessPushResult {
 		plansDeleted: result.plansDeleted,
 		plansArchived: result.plansArchived,
 		rewardsCreated: result.rewardsCreated,
+		rewardsDeleted: result.rewardsDeleted,
 		referralProgramsCreated: result.referralProgramsCreated,
+		referralProgramsDeleted: result.referralProgramsDeleted,
 	};
 }
 
@@ -317,7 +322,7 @@ async function loadLocalConfig(cwd: string): Promise<LocalConfig> {
 /**
  * Build the list of prompts that would be shown in interactive mode
  */
-function buildPromptQueueFromPreview(
+export function buildPromptQueueFromPreview(
 	preview: CatalogPreviewUpdateResponse,
 	archivedTargets: ArchivedTargets,
 	environment: AppEnv,
@@ -450,6 +455,8 @@ function buildPromptQueueFromPreview(
 		);
 	}
 
+	prompts.push(...createConfigResourceDeletePrompts(preview));
+
 	return prompts;
 }
 
@@ -463,6 +470,11 @@ function formatIssuesSummary(prompts: PushPrompt[]): string {
 		switch (prompt.type) {
 			case "prod_confirmation":
 				issues.push("  - Pushing to production environment");
+				break;
+			case "config_resource_delete":
+				issues.push(
+					`  - ${prompt.data.resourceType === "reward" ? "Reward" : "Referral program"} "${prompt.entityId}" will be deleted`,
+				);
 				break;
 			case "plan_versioning":
 				issues.push(
@@ -624,7 +636,9 @@ async function executePushWithDefaults(
 		plansDeleted: [],
 		plansArchived: [],
 		rewardsCreated: [],
+		rewardsDeleted: [],
 		referralProgramsCreated: [],
+		referralProgramsDeleted: [],
 	};
 
 	// Build response map from defaults
@@ -770,7 +784,9 @@ async function _headlessPushImpl(
 			plansDeleted: [],
 			plansArchived: [],
 			rewardsCreated: [],
+			rewardsDeleted: [],
 			referralProgramsCreated: [],
+			referralProgramsDeleted: [],
 		};
 	}
 
@@ -886,10 +902,22 @@ async function _headlessPushImpl(
 			chalk.dim(`  Rewards created: ${result.rewardsCreated.join(", ")}`),
 		);
 	}
+	if (result.rewardsDeleted.length > 0) {
+		console.log(
+			chalk.dim(`  Rewards deleted: ${result.rewardsDeleted.join(", ")}`),
+		);
+	}
 	if (result.referralProgramsCreated.length > 0) {
 		console.log(
 			chalk.dim(
 				`  Referral programs created: ${result.referralProgramsCreated.join(", ")}`,
+			),
+		);
+	}
+	if (result.referralProgramsDeleted.length > 0) {
+		console.log(
+			chalk.dim(
+				`  Referral programs deleted: ${result.referralProgramsDeleted.join(", ")}`,
 			),
 		);
 	}

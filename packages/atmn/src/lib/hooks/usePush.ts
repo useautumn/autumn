@@ -5,6 +5,7 @@ import {
 	catalogFeatureChangeHasChanges,
 	catalogPlanChangeHasChanges,
 	catalogPreviewHasChanges,
+	createConfigResourceDeletePrompts,
 	createFeatureArchivedPrompt,
 	createFeatureDeletePrompt,
 	createPlanArchivedPrompt,
@@ -448,6 +449,8 @@ export function usePush(options?: UsePushOptions) {
 				prompts.push(createPlanDeletePrompt(info));
 			}
 
+			prompts.push(...createConfigResourceDeletePrompts(preview));
+
 			setPromptQueue(prompts);
 
 			if (
@@ -874,7 +877,7 @@ export function usePush(options?: UsePushOptions) {
 			if (!currentPrompt) return;
 
 			// Check for cancel on prod confirmation
-			if (currentPrompt.type === "prod_confirmation" && value === "cancel") {
+			if (value === "cancel") {
 				setError("Push cancelled by user");
 				setPhase("error");
 				return;

@@ -986,7 +986,9 @@ export function catalogPreviewToPushResult(
 		plansArchived: [],
 		plansSkipped: [],
 		rewardsCreated: [],
+		rewardsDeleted: [],
 		referralProgramsCreated: [],
+		referralProgramsDeleted: [],
 	};
 
 	for (const change of preview.feature_changes) {
@@ -1047,16 +1049,14 @@ export function catalogPreviewToPushResult(
 			}
 		}
 	}
-	result.rewardsCreated.push(
-		...(preview.reward_changes ?? [])
-			.filter(({ action }) => action === "created")
-			.map(({ id }) => id),
-	);
-	result.referralProgramsCreated.push(
-		...(preview.referral_program_changes ?? [])
-			.filter(({ action }) => action === "created")
-			.map(({ id }) => id),
-	);
+	for (const { id, action } of preview.reward_changes ?? []) {
+		if (action === "created") result.rewardsCreated.push(id);
+		if (action === "deleted") result.rewardsDeleted.push(id);
+	}
+	for (const { id, action } of preview.referral_program_changes ?? []) {
+		if (action === "created") result.referralProgramsCreated.push(id);
+		if (action === "deleted") result.referralProgramsDeleted.push(id);
+	}
 
 	return result;
 }

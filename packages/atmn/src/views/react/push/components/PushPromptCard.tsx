@@ -50,6 +50,23 @@ export function PushPromptCard({
 				</PromptCard>
 			);
 
+		case "config_resource_delete": {
+			const resourceType = getData<string>(prompt, "resourceType");
+			return (
+				<PromptCard
+					title={`Delete ${resourceType}?`}
+					icon="🗑"
+					options={prompt.options}
+					onBack={onBack}
+					onSelect={onRespond}
+				>
+					<Text>
+						{resourceType} "{prompt.entityId}" is not in your config.
+					</Text>
+				</PromptCard>
+			);
+		}
+
 		case "plan_versioning": {
 			const isVariant = getData<string>(prompt, "scope") === "variant";
 			const entityLabel = isVariant ? "Variant" : "Plan";

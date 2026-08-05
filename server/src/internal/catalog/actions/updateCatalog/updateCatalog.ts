@@ -39,7 +39,7 @@ import {
 } from "../validateCatalogVariantUpdates.js";
 import {
 	assertNoCatalogConfigConflicts,
-	createCatalogConfigResources,
+	applyCatalogConfigResources,
 	resolveCatalogConfigResources,
 } from "../catalogConfigResources.js";
 
@@ -542,7 +542,7 @@ export const updateCatalog = async ({
 
 	await upsertFeatures({ ctx, params, products: productsBeforeUpdate });
 	await upsertPlans({ ctx, params });
-	await createCatalogConfigResources({ ctx, params, preview: configPreview });
+	await applyCatalogConfigResources({ ctx, params, preview: configPreview });
 	await applyMissingPlanRemovals({ ctx, removals: replacePlanIds });
 
 	const replaceFeatureIds = params.skip_deletions

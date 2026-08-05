@@ -10,7 +10,11 @@ import {
 	RecaseError,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
-import { createApiReferralProgram } from "@/internal/rewards/actions/referralProgramCrud/index.js";
+import {
+	createApiReferralProgram,
+	deleteApiReferralProgram,
+} from "@/internal/rewards/actions/referralProgramCrud/index.js";
+import { deleteApiReward } from "@/internal/rewards/actions/rewardCrud/index.js";
 import { createApiReward } from "@/internal/rewards/actions/createApiReward/createApiReward.js";
 import { getApiReferralProgram } from "@/internal/rewards/apiRewards/getApiReferralProgram.js";
 import {
@@ -31,7 +35,7 @@ export const assertCatalogConfigResourceScope = ({
 	scope: "rewards:read" | "rewards:write";
 }) => {
 	if (
-		(!params.rewards?.length && !params.referral_programs?.length) ||
+		(params.rewards === undefined && params.referral_programs === undefined) ||
 		!ctx.scopes.length
 	)
 		return;
@@ -113,41 +117,37 @@ export const resolveCatalogConfigResources = async ({
 	ctx: AutumnContext;
 	params: CatalogUpdateParams;
 }) => {
-	const rewardIds = (params.rewards ?? []).map(rewardId);
-	const rewards = rewardIds.length
-		? await rewardRepo.listApiRewards({
-				db: ctx.db,
-				orgId: ctx.org.id,
-				env: ctx.env,
-				features: ctx.features,
-				ids: rewardIds,
-			})
-		: { coupons: [], feature_grants: [] };
+	const rewards =
+		params.rewards !== undefined
+			? await rewardRepo.listApiRewards({
+					db: ctx.db,
+					orgId: ctx.org.id,
+					env: ctx.env,
+					features: ctx.features,
+				})
+			: { coupons: [], feature_grants: [] };
 	const rewardById = new Map<string, CreateRewardResponse>([
 		...rewards.coupons.map((coupon) => [coupon.id, { coupon }] as const),
 		...rewards.feature_grants.map(
 			(feature_grant) => [feature_grant.id, { feature_grant }] as const,
 		),
 	]);
-	const programIds = new Set(
-		(params.referral_programs ?? []).map(({ id }) => id),
-	);
-	const [rawRewards, programs] = programIds.size
-		? await Promise.all([
-				rewardRepo.list({ db: ctx.db, orgId: ctx.org.id, env: ctx.env }),
-				rewardProgramRepo.list({
-					db: ctx.db,
-					orgId: ctx.org.id,
-					env: ctx.env,
-				}),
-			])
-		: [[], []];
+	const [rawRewards, programs] =
+		params.referral_programs !== undefined
+			? await Promise.all([
+					rewardRepo.list({ db: ctx.db, orgId: ctx.org.id, env: ctx.env }),
+					rewardProgramRepo.list({
+						db: ctx.db,
+						orgId: ctx.org.id,
+						env: ctx.env,
+					}),
+				])
+			: [[], []];
 	const rewardIdByInternalId = new Map(
 		rawRewards.map(({ internal_id, id }) => [internal_id, id]),
 	);
 	const programById = new Map<string, ApiReferralProgramV0>();
 	for (const program of programs) {
-		if (!programIds.has(program.id)) continue;
 		const id = rewardIdByInternalId.get(program.internal_reward_id);
 		if (id) {
 			programById.set(
@@ -185,6 +185,12 @@ export const previewCatalogConfigResources = async ({
 					: "conflict",
 		};
 	});
+	if (!params.skip_deletions && params.rewards !== undefined) {
+		const desiredIds = new Set(params.rewards.map(rewardId));
+		for (const id of rewardById.keys()) {
+			if (!desiredIds.has(id)) rewardChanges.push({ id, action: "deleted" });
+		}
+	}
 	const referralProgramChanges: CatalogConfigResourcePreview[] = (
 		params.referral_programs ?? []
 	).map((program) => {
@@ -198,6 +204,15 @@ export const previewCatalogConfigResources = async ({
 					: "conflict",
 		};
 	});
+	if (!params.skip_deletions && params.referral_programs !== undefined) {
+		const desiredIds = new Set(
+			params.referral_programs.map((program) => program.id),
+		);
+		for (const id of programById.keys()) {
+			if (!desiredIds.has(id))
+				referralProgramChanges.push({ id, action: "deleted" });
+		}
+	}
 
 	return { rewardChanges, referralProgramChanges };
 };
@@ -217,7 +232,7 @@ export const assertNoCatalogConfigConflicts = ({
 	});
 };
 
-export const createCatalogConfigResources = async ({
+export const applyCatalogConfigResources = async ({
 	ctx,
 	params,
 	preview,
@@ -226,6 +241,19 @@ export const createCatalogConfigResources = async ({
 	params: CatalogUpdateParams;
 	preview: Awaited<ReturnType<typeof previewCatalogConfigResources>>;
 }) => {
+	for (const { id, action } of preview.referralProgramChanges) {
+		if (action === "deleted") {
+			await deleteApiReferralProgram({
+				ctx,
+				params: { referral_program_id: id },
+			});
+		}
+	}
+	for (const { id, action } of preview.rewardChanges) {
+		if (action === "deleted") {
+			await deleteApiReward({ ctx, params: { reward_id: id } });
+		}
+	}
 	for (const [index, reward] of (params.rewards ?? []).entries()) {
 		if (preview.rewardChanges[index]?.action === "created") {
 			await createApiReward({ ctx, params: reward });

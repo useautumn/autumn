@@ -157,6 +157,43 @@ test("catalog config creates idempotent rewards and a redeemable referral progra
 			referralId: programId,
 		}),
 	).toMatchObject({ code: expect.any(String) });
+
+	const deletionConfig = {
+		rewards: [],
+		referral_programs: [],
+		skip_deletions: false,
+	};
+	const deletionPreview = (await autumnV2_2.post(
+		"/catalog.preview_update",
+		deletionConfig,
+	)) as any;
+	expect(deletionPreview.reward_changes).toHaveLength(2);
+	expect(deletionPreview.reward_changes).toEqual(
+		expect.arrayContaining([
+			{ id: grantId, action: "deleted" },
+			{ id: couponId, action: "deleted" },
+		]),
+	);
+	expect(deletionPreview.referral_program_changes).toEqual([
+		{ id: programId, action: "deleted" },
+	]);
+
+	await autumnV2_2.post("/catalog.update", deletionConfig);
+	const rewardsAfterDeletion = ApiRewardsListV0Schema.parse(
+		await autumnV2_2.post("/rewards.list", {}),
+	);
+	expect(rewardsAfterDeletion.coupons.some(({ id }) => id === couponId)).toBe(
+		false,
+	);
+	expect(
+		rewardsAfterDeletion.feature_grants.some(({ id }) => id === grantId),
+	).toBe(false);
+	await expect(
+		autumnV1.referrals.createCode({
+			customerId: referrerId,
+			referralId: programId,
+		}),
+	).rejects.toThrow();
 });
 
 test.each([CouponDurationType.OneOff, CouponDurationType.Forever])(
