@@ -4,8 +4,8 @@ import { z } from "zod/v4";
 export const ApiInvoicePreviewV0Schema = z.object({
 	object: z.literal("invoice_preview").meta({ internal: true }),
 	subscription_id: z.string().meta({
+		internal: true,
 		description: "The Stripe subscription this invoice will be billed against.",
-		example: "sub_1A2B3C4D5E6F7G8H",
 	}),
 	plan_ids: z.array(z.string()).meta({
 		description: "Plan IDs contributing line items to this invoice.",

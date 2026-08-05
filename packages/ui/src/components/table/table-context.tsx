@@ -30,6 +30,8 @@ export interface TableProps<T> {
 	numberOfColumns: number;
 	isLoading: boolean;
 	isTransitioning?: boolean;
+	/** Skeleton rows shown while loading (default: last known row count). */
+	skeletonRowCount?: number;
 	enableSelection?: boolean;
 	enableSorting?: boolean;
 	enableColumnVisibility?: boolean;
