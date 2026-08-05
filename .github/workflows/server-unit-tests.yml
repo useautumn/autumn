@@ -30,7 +30,9 @@ jobs:
     name: Unit Tests
     needs: changes
     if: needs.changes.outputs.server == 'true'
-    runs-on: blacksmith-4vcpu-ubuntu-2404
+    # 8 vcpus: the sharded suite is CPU-bound on the server import graph
+    # (~2s per shard, 8 shards); 4 vcpus put the test step at ~11s.
+    runs-on: blacksmith-8vcpu-ubuntu-2404
 
     steps:
       - name: Checkout code
@@ -45,5 +47,5 @@ jobs:
         run: bun install --frozen-lockfile
 
       - name: Run unit tests
-        run: bun test --isolate tests/unit
+        run: bun run test:unit
         working-directory: server

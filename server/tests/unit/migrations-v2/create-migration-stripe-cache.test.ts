@@ -6,7 +6,7 @@ const state = {
 	customerFetchArgs: [] as unknown[],
 };
 
-mock.module(
+await mockModuleWithRestore(
 	"@/internal/billing/v2/providers/stripe/setup/fetchStripeCustomerForBilling.js",
 	() => ({
 		fetchStripeCustomerForBilling: async (args: unknown) => {
@@ -21,6 +21,8 @@ mock.module(
 );
 
 import { createMigrationStripeCache } from "@/internal/migrations/v2/stripeCache/createMigrationStripeCache";
+
+import { mockModuleWithRestore } from "../utils/mockModuleWithRestore.js";
 
 const ctx = {} as AutumnContext;
 const fullCustomer = {

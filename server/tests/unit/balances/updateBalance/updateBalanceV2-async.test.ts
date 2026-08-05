@@ -15,6 +15,8 @@ import { _setAsyncBalanceUpdateConfigForTesting } from "@/internal/misc/asyncBal
 import { getSqsClient } from "@/queue/initSqs.js";
 import { JobName } from "@/queue/JobName.js";
 
+import { mockModuleWithRestore } from "../../utils/mockModuleWithRestore.js";
+
 const trackAsyncQueueUrl =
 	"https://sqs.eu-west-1.amazonaws.com/123456789012/track-async-dev.fifo";
 
@@ -25,7 +27,7 @@ const state = {
 	originalSend: null as SQSClient["send"] | null,
 };
 
-mock.module(
+await mockModuleWithRestore(
 	"@/internal/customers/cache/fullSubject/actions/getOrSetCachedFullSubject.js",
 	() => ({
 		getOrSetCachedFullSubject: async (args: Record<string, unknown>) => {
@@ -38,7 +40,7 @@ mock.module(
 	}),
 );
 
-mock.module(
+await mockModuleWithRestore(
 	"@/internal/balances/updateBalance/v2/updateRemainingV2.js",
 	() => ({
 		updateRemainingV2: async (args: Record<string, unknown>) => {
@@ -47,21 +49,24 @@ mock.module(
 	}),
 );
 
-mock.module("@/internal/balances/updateBalance/v2/updateUsageV2.js", () => ({
-	updateUsageV2: async () => {},
-}));
+await mockModuleWithRestore(
+	"@/internal/balances/updateBalance/v2/updateUsageV2.js",
+	() => ({
+		updateUsageV2: async () => {},
+	}),
+);
 
-mock.module(
+await mockModuleWithRestore(
 	"@/internal/balances/updateBalance/v2/updateIncludedGrantV2.js",
 	() => ({ updateIncludedGrantV2: async () => {} }),
 );
 
-mock.module(
+await mockModuleWithRestore(
 	"@/internal/balances/updateBalance/v2/updateNextResetAtV2.js",
 	() => ({ updateNextResetAtV2: async () => {} }),
 );
 
-mock.module(
+await mockModuleWithRestore(
 	"@/internal/balances/updateBalance/v2/updateExpiresAtV2.js",
 	() => ({ updateExpiresAtV2: async () => {} }),
 );
@@ -153,9 +158,10 @@ describe("updateBalanceV2 async routing", () => {
 			MessageGroupId: "org_123:sandbox:cus_123:none",
 			MessageDeduplicationId: ctx.id,
 		});
-		const message = JSON.parse(
-			String(batchEntries[0].MessageBody),
-		) as Record<string, unknown>;
+		const message = JSON.parse(String(batchEntries[0].MessageBody)) as Record<
+			string,
+			unknown
+		>;
 		expect(message).toMatchObject({
 			name: JobName.UpdateBalance,
 			data: {

@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, mock, test } from "bun:test";
+import { beforeEach, describe, expect, test } from "bun:test";
 import { ErrCode, RecaseError } from "@autumn/shared";
 
 const state = {
@@ -7,11 +7,15 @@ const state = {
 	existing: [] as Array<Record<string, unknown>>,
 };
 
-mock.module("@/db/initDrizzle.js", () => ({
+// Spread the real module so every export stays defined — a partial factory
+// poisons later files in the same process with missing-export link errors.
+const realInitDrizzle = await import("@/db/initDrizzle.js");
+await mockModuleWithRestore("@/db/initDrizzle.js", () => ({
+	...realInitDrizzle,
 	db: {},
 	initDrizzle: () => ({ db: {} }),
 }));
-mock.module("@/internal/orgs/OrgService.js", () => ({
+await mockModuleWithRestore("@/internal/orgs/OrgService.js", () => ({
 	OrgService: {
 		get: async () => {
 			if (!state.target) {
@@ -31,6 +35,8 @@ mock.module("@/internal/orgs/OrgService.js", () => ({
 }));
 
 import { updateSandboxForOrg } from "@/internal/sandboxes/updateSandbox.js";
+
+import { mockModuleWithRestore } from "../utils/mockModuleWithRestore.js";
 
 const masterOrg = { id: "org_master" } as never;
 const db = {} as never;

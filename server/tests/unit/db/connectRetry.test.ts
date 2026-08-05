@@ -1,8 +1,10 @@
 import { afterEach, describe, expect, it, mock, spyOn } from "bun:test";
 import type { Pool, PoolClient } from "pg";
 
+import { mockModuleWithRestore } from "../utils/mockModuleWithRestore.js";
+
 const warn = mock((..._args: unknown[]) => {});
-mock.module("@/external/logtail/logtailUtils.js", () => ({
+await mockModuleWithRestore("@/external/logtail/logtailUtils.js", () => ({
 	logger: {
 		info: mock(() => {}),
 		warn,

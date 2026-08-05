@@ -10,7 +10,7 @@
  *   - Messages without a body idempotency_key never touch the claim.
  */
 
-import { describe, expect, mock, test } from "bun:test";
+import { describe, expect, test } from "bun:test";
 import { AppEnv, ErrCode, RecaseError, type TrackParams } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 
@@ -21,7 +21,7 @@ const claimCalls: Array<{ idempotencyKey: string }> = [];
 const releaseCalls: Array<{ idempotencyKey: string }> = [];
 const runTrackV3Calls: Array<{ body: TrackParams }> = [];
 
-mock.module(
+await mockModuleWithRestore(
 	"@/internal/misc/idempotency/actions/checkIdempotencyKey.js",
 	() => ({
 		checkIdempotencyKey: async (args: { idempotencyKey: string }) => {
@@ -37,7 +37,7 @@ mock.module(
 	}),
 );
 
-mock.module(
+await mockModuleWithRestore(
 	"@/internal/misc/idempotency/actions/releaseIdempotencyKey.js",
 	() => ({
 		releaseIdempotencyKey: async (args: { idempotencyKey: string }) => {
@@ -46,18 +46,26 @@ mock.module(
 	}),
 );
 
-mock.module("@/internal/balances/track/v3/runTrackV3.js", () => ({
-	runTrackV3: async (args: { body: TrackParams }) => {
-		runTrackV3Calls.push(args);
-		return { ok: true };
-	},
-}));
+await mockModuleWithRestore(
+	"@/internal/balances/track/v3/runTrackV3.js",
+	() => ({
+		runTrackV3: async (args: { body: TrackParams }) => {
+			runTrackV3Calls.push(args);
+			return { ok: true };
+		},
+	}),
+);
 
-mock.module("@/internal/balances/track/utils/getFeatureDeductions.js", () => ({
-	getTrackFeatureDeductionsForBody: () => [],
-}));
+await mockModuleWithRestore(
+	"@/internal/balances/track/utils/getFeatureDeductions.js",
+	() => ({
+		getTrackFeatureDeductionsForBody: () => [],
+	}),
+);
 
 import { runQueuedTrack } from "@/internal/balances/track/runQueuedTrack.js";
+
+import { mockModuleWithRestore } from "../../utils/mockModuleWithRestore.js";
 
 const makeCtx = () =>
 	({
@@ -65,6 +73,9 @@ const makeCtx = () =>
 		env: AppEnv.Sandbox,
 		logger: {
 			info: () => undefined,
+			// warn included: the idempotency path hands this logger to fire-and-forget
+			// Dynamo-mirror work that logs failures after the test completes.
+			warn: () => undefined,
 		},
 	}) as unknown as AutumnContext;
 

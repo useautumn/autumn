@@ -27,24 +27,27 @@ const trackBody = {
 	value: 3.5,
 };
 
-mock.module("@/internal/features/aiCreditSystemUtils.js", () => ({
-	getModelCreditCostBreakdown: async () => ({
-		cost: 3.5,
-		baseCost: 3,
-		markup: 16.67,
-		markupSource: "default",
-		tierApplied: false,
-		rates: {
-			input: 1,
-			output: 2,
-			cacheRead: 0,
-			cacheWrite: 0,
-			audioInput: 0,
-			audioOutput: 0,
-			reasoning: 0,
-		},
+await mockModuleWithRestore(
+	"@/internal/features/aiCreditSystemUtils.js",
+	() => ({
+		getModelCreditCostBreakdown: async () => ({
+			cost: 3.5,
+			baseCost: 3,
+			markup: 16.67,
+			markupSource: "default",
+			tierApplied: false,
+			rates: {
+				input: 1,
+				output: 2,
+				cacheRead: 0,
+				cacheWrite: 0,
+				audioInput: 0,
+				audioOutput: 0,
+				reasoning: 0,
+			},
+		}),
 	}),
-}));
+);
 
 const featureDeductions = [
 	{
@@ -68,31 +71,39 @@ const fakeMiscRedis = {
 	set: async () => "OK",
 	del: async () => 1,
 } as never;
-mock.module("@/external/redis/miscCache/miscRedisInstances.js", () => ({
-	getMiscMainRedis: () => fakeMiscRedis,
-	getMiscBackupRedis: () => null,
-}));
+await mockModuleWithRestore(
+	"@/external/redis/miscCache/miscRedisInstances.js",
+	() => ({
+		getMiscMainRedis: () => fakeMiscRedis,
+		getMiscBackupRedis: () => null,
+	}),
+);
 
-mock.module("@/internal/balances/track/runTrackWithRollout.js", () => ({
-	runTrackWithRollout: async (args: {
-		ctx: AutumnContext;
-		body: typeof trackBody;
-		featureDeductions: typeof featureDeductions;
-	}) => {
-		mockState.runTrackWithRolloutCalls.push(args);
-		if (mockState.queuedForReplay) {
-			args.ctx.extraLogs.trackQueuedForReplay = true;
-		}
-		return {
-			customer_id: args.body.customer_id,
-			entity_id: args.body.entity_id,
-			value: args.body.value,
-			balance: null,
-		};
-	},
-}));
+await mockModuleWithRestore(
+	"@/internal/balances/track/runTrackWithRollout.js",
+	() => ({
+		runTrackWithRollout: async (args: {
+			ctx: AutumnContext;
+			body: typeof trackBody;
+			featureDeductions: typeof featureDeductions;
+		}) => {
+			mockState.runTrackWithRolloutCalls.push(args);
+			if (mockState.queuedForReplay) {
+				args.ctx.extraLogs.trackQueuedForReplay = true;
+			}
+			return {
+				customer_id: args.body.customer_id,
+				entity_id: args.body.entity_id,
+				value: args.body.value,
+				balance: null,
+			};
+		},
+	}),
+);
 
 import { handleTrackTokens } from "@/internal/balances/handlers/handleTrackTokens.js";
+
+import { mockModuleWithRestore } from "../../utils/mockModuleWithRestore.js";
 
 const requestBody = {
 	customer_id: "cus_123",

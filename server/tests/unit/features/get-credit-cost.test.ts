@@ -1,4 +1,4 @@
-import { describe, expect, mock, test } from "bun:test";
+import { describe, expect, test } from "bun:test";
 import {
 	ErrCode,
 	type Feature,
@@ -6,9 +6,14 @@ import {
 	FeatureUsageType,
 } from "@autumn/shared";
 
-mock.module("@/internal/features/utils/getModelPricing.js", () => ({
-	getModelsDevPricing: async () => ({}),
-}));
+import { mockModuleWithRestore } from "../utils/mockModuleWithRestore.js";
+
+await mockModuleWithRestore(
+	"@/internal/features/utils/getModelPricing.js",
+	() => ({
+		getModelsDevPricing: async () => ({}),
+	}),
+);
 
 const { getModelCreditCost, getModelCreditCostBreakdown } = await import(
 	"@/internal/features/aiCreditSystemUtils.js"
