@@ -60,9 +60,16 @@ const activeTempPaths: string[] = [
 	//   Stripe checkout completion" — "Checkout session did not produce a
 	//   subscription"; the browser is left on checkout.stripe.com with the form
 	//   unsubmitted. Pinning payment_method_types: ["card"] made it pass in
-	//   isolation but NOT in a full core run — the page still renders an "OR"
-	//   alternative-payment block (Link is not excluded by payment_method_types),
-	//   so the card accordion selector still misses. Not fixed.
+	//   isolation but NOT in a full core run. Ruled out so far: card fields ARE
+	//   present and filled (they waitFor, so a miss would throw); submit IS
+	//   clicked; waiting for Stripe to enable submit before clicking changes
+	//   nothing; no decline text, no navigation, form still rendered.
+	//   legacy-checkout-basic passes in the same run, so the shared automation is
+	//   fine — something about THIS session (its "OR" express-payment block is
+	//   the only visible difference) keeps the submit inert.
+	//   Worth considering: the file's FIRST test already covers external-sub
+	//   auto-sync via createStripeSubscriptionFromProduct and passes reliably, so
+	//   this variant mostly exercises Stripe's own UI.
 	"integration/billing/stripe-webhooks/subscription-created/sub-created-auto-sync.test.ts",
 ];
 
