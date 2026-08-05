@@ -5,38 +5,19 @@ import {
 	ShortcutButton,
 } from "@autumn/ui";
 import {
-	ClockCounterClockwiseIcon,
-	FilePlusIcon,
-	type Icon,
-} from "@phosphor-icons/react";
-import {
 	LayoutGroup,
 	SheetHeader,
 	SheetSection,
 } from "@/components/v2/sheets/SharedSheetComponents";
+import { CustomerExportActiveProgress } from "./CustomerExportActiveProgress";
 import { CustomerExportFieldSelector } from "./CustomerExportFieldSelector";
 import { CustomerExportFilterScope } from "./CustomerExportFilterScope";
+import { CustomerExportJobList } from "./CustomerExportJobList";
 import { CustomerExportOverview } from "./CustomerExportOverview";
-import { LiveCustomerExportJobList } from "./LiveCustomerExportJobList";
 import {
 	type CustomerExportSheetProps,
 	useCustomerExportSheet,
 } from "./useCustomerExportSheet";
-
-function SectionTitle({
-	icon: TitleIcon,
-	label,
-}: {
-	icon: Icon;
-	label: string;
-}) {
-	return (
-		<span className="flex items-center gap-2">
-			<TitleIcon size={16} weight="fill" className="text-subtle" />
-			{label}
-		</span>
-	);
-}
 
 export function CustomerExportSheet({
 	open,
@@ -51,7 +32,6 @@ export function CustomerExportSheet({
 		handleOpenChange,
 		hasActiveFilters,
 		hasFilters,
-		invalidateExports,
 		isExportCountLoading,
 		isExportsInitialError,
 		isExportsLoading,
@@ -59,8 +39,11 @@ export function CustomerExportSheet({
 		isFilteredExport,
 		submitBlockedReason,
 		refetchExports,
-		setIsRealtimeDegraded,
 		trimmedSearch,
+		page,
+		setPage,
+		totalExports,
+		totalPages,
 	} = useCustomerExportSheet({ open, onOpenChange });
 
 	return (
@@ -68,20 +51,13 @@ export function CustomerExportSheet({
 			<SheetContent className="flex flex-col overflow-hidden md:max-w-[540px]">
 				<LayoutGroup>
 					<div className="flex h-full flex-col overflow-hidden">
-						<div className="flex min-h-0 flex-1 flex-col">
+						<div className="flex min-h-0 flex-1 flex-col overflow-y-auto">
 							<SheetHeader
 								title="Export customers"
 								description="Download your customer list as a CSV file."
 							/>
 
-							<SheetSection
-								title={
-									<SectionTitle
-										icon={FilePlusIcon}
-										label="Generate new export"
-									/>
-								}
-							>
+							<SheetSection title="Generate new export">
 								<div className="flex flex-col gap-3">
 									<form.Field name="fields">
 										{(field) => (
@@ -116,60 +92,58 @@ export function CustomerExportSheet({
 											/>
 										)}
 									</form.Field>
-
-									<div className="border-border/40 border-t pt-3">
-										<form.Subscribe selector={(state) => state.canSubmit}>
-											{(canSubmit) => (
-												<ConditionalTooltip
-													enabled={Boolean(submitBlockedReason)}
-													content={submitBlockedReason}
-												>
-													{/* Wrap in span so Radix can attach listeners even when the button is disabled. */}
-													<span className="inline-flex w-full">
-														<ShortcutButton
-															variant="primary"
-															className="w-full"
-															onClick={() => form.handleSubmit()}
-															isLoading={createExport.isPending}
-															disabled={
-																!canSubmit ||
-																Boolean(submitBlockedReason) ||
-																isExportCountLoading ||
-																isExportsLoading
-															}
-															metaShortcut="enter"
-														>
-															Start export
-														</ShortcutButton>
-													</span>
-												</ConditionalTooltip>
-											)}
-										</form.Subscribe>
-									</div>
 								</div>
 							</SheetSection>
 
 							<SheetSection
-								title={
-									<SectionTitle
-										icon={ClockCounterClockwiseIcon}
-										label="Recent exports"
-									/>
-								}
+								title="Recent exports"
 								withSeparator={false}
-								className="flex min-h-0 flex-1 flex-col"
+								className="flex min-h-0 flex-col"
 							>
-								<LiveCustomerExportJobList
+								<CustomerExportJobList
 									customerExports={customerExports}
-									activeExport={activeExport}
 									isLoading={isExportsLoading}
 									isInitialError={isExportsInitialError}
 									isRetrying={isExportsRetrying}
-									onExportComplete={invalidateExports}
 									onRetry={refetchExports}
-									onRealtimeDegradedChange={setIsRealtimeDegraded}
+									page={page}
+									totalPages={totalPages}
+									totalExports={totalExports}
+									onPageChange={setPage}
 								/>
 							</SheetSection>
+						</div>
+
+						<div className="border-border/40 border-t px-4 pt-3 pb-4">
+							<CustomerExportActiveProgress activeExport={activeExport} />
+
+							<form.Subscribe selector={(state) => state.canSubmit}>
+								{(canSubmit) => (
+									<ConditionalTooltip
+										enabled={Boolean(submitBlockedReason)}
+										content={submitBlockedReason}
+									>
+										{/* Wrap in span so Radix can attach listeners even when the button is disabled. */}
+										<span className="inline-flex w-full">
+											<ShortcutButton
+												variant="primary"
+												className="w-full"
+												onClick={() => form.handleSubmit()}
+												isLoading={createExport.isPending}
+												disabled={
+													!canSubmit ||
+													Boolean(submitBlockedReason) ||
+													isExportCountLoading ||
+													isExportsLoading
+												}
+												metaShortcut="enter"
+											>
+												Start export
+											</ShortcutButton>
+										</span>
+									</ConditionalTooltip>
+								)}
+							</form.Subscribe>
 						</div>
 					</div>
 				</LayoutGroup>

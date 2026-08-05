@@ -46,12 +46,16 @@ export const listCustomerExports = async ({
 	ctx: AutumnContext;
 	query: ListCustomerExportsQuery;
 }): Promise<ListCustomerExportsResponse> => {
-	const customerExports = await CustomerExportService.list({
-		db: ctx.db,
-		orgId: ctx.org.id,
-		env: ctx.env,
-		limit: query.limit,
-	});
+	const scope = { db: ctx.db, orgId: ctx.org.id, env: ctx.env };
+
+	const [customerExports, total] = await Promise.all([
+		CustomerExportService.list({
+			...scope,
+			limit: query.limit,
+			offset: query.offset,
+		}),
+		CustomerExportService.count(scope),
+	]);
 
 	const exports = await Promise.all(
 		customerExports.map((customerExport) =>
@@ -59,5 +63,11 @@ export const listCustomerExports = async ({
 		),
 	);
 
-	return { exports };
+	return {
+		exports,
+		total,
+		limit: query.limit,
+		offset: query.offset,
+		has_more: query.offset + exports.length < total,
+	};
 };

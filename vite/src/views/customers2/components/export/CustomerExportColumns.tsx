@@ -1,12 +1,8 @@
-import {
-	type CustomerExportResponse,
-	isCustomerExportActive,
-} from "@autumn/shared";
+import type { CustomerExportResponse } from "@autumn/shared";
 import { ConditionalTooltip, IconButton } from "@autumn/ui";
 import { DownloadSimpleIcon } from "@phosphor-icons/react";
 import type { ColumnDef, Row } from "@tanstack/react-table";
 import { formatUnixToDateTimeString } from "@/utils/formatUtils/formatDateUtils";
-import { CustomerExportProgressRow } from "./CustomerExportProgressRow";
 import { CustomerExportStatusBadge } from "./CustomerExportStatusBadge";
 
 const FAILED_FALLBACK_MESSAGE = "Export failed — you can start a new one.";
@@ -32,15 +28,6 @@ export const createCustomerExportColumns = ({
 				customerExport.status === "failed"
 					? (customerExport.error_message ?? FAILED_FALLBACK_MESSAGE)
 					: customerExport.error_message;
-
-			if (isCustomerExportActive(customerExport) && customerExport.progress) {
-				return (
-					<div className="flex flex-col gap-1">
-						<CustomerExportStatusBadge status={customerExport.status} />
-						<CustomerExportProgressRow progress={customerExport.progress} />
-					</div>
-				);
-			}
 
 			if (!errorMessage) {
 				return <CustomerExportStatusBadge status={customerExport.status} />;

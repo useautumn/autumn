@@ -7,7 +7,7 @@ import {
 	customerExports,
 	type DbCustomerExport,
 } from "@autumn/shared";
-import { and, desc, eq, inArray, isNull } from "drizzle-orm";
+import { and, count, desc, eq, inArray, isNull } from "drizzle-orm";
 import { isUniqueConstraintError } from "@/db/dbUtils.js";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 import { generateId } from "@/utils/genUtils.js";
@@ -110,18 +110,38 @@ export const CustomerExportService = {
 		orgId,
 		env,
 		limit,
+		offset = 0,
 	}: {
 		db: DrizzleCli;
 		orgId: string;
 		env: AppEnv;
 		limit: number;
+		offset?: number;
 	}): Promise<DbCustomerExport[]> =>
 		await db
 			.select()
 			.from(customerExports)
 			.where(orgEnvScope({ orgId, env }))
 			.orderBy(desc(customerExports.created_at))
-			.limit(limit),
+			.limit(limit)
+			.offset(offset),
+
+	count: async ({
+		db,
+		orgId,
+		env,
+	}: {
+		db: DrizzleCli;
+		orgId: string;
+		env: AppEnv;
+	}): Promise<number> => {
+		const rows = await db
+			.select({ value: count() })
+			.from(customerExports)
+			.where(orgEnvScope({ orgId, env }));
+
+		return rows[0]?.value ?? 0;
+	},
 
 	setTriggerRunId: async ({
 		db,

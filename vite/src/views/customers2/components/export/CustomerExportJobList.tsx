@@ -2,7 +2,7 @@ import type { CustomerExportResponse, Membership } from "@autumn/shared";
 import { Button } from "@autumn/ui";
 import { getCoreRowModel, useReactTable } from "@tanstack/react-table";
 import { useMemo } from "react";
-import { Table } from "@/components/general/table";
+import { CursorPagination, Table } from "@/components/general/table";
 import { useMemberships } from "@/views/main-sidebar/org-dropdown/hooks/useMemberships";
 import { useDownloadCustomerExport } from "../../hooks/useCustomerExports";
 import { createCustomerExportColumns } from "./CustomerExportColumns";
@@ -28,12 +28,20 @@ export function CustomerExportJobList({
 	isInitialError,
 	isRetrying,
 	onRetry,
+	page,
+	totalPages,
+	totalExports,
+	onPageChange,
 }: {
 	customerExports: CustomerExportResponse[];
 	isLoading: boolean;
 	isInitialError: boolean;
 	isRetrying: boolean;
 	onRetry: () => void;
+	page: number;
+	totalPages: number;
+	totalExports: number;
+	onPageChange: (page: number) => void;
 }) {
 	const download = useDownloadCustomerExport();
 	const memberships: Membership[] = useMemberships().memberships;
@@ -96,12 +104,29 @@ export function CustomerExportJobList({
 				flexibleTableColumns: true,
 			}}
 		>
-			<Table.Container className="min-h-0 flex-1 overflow-y-auto">
+			<Table.Container>
 				<Table.Content>
 					<Table.Header />
 					<Table.Body />
 				</Table.Content>
 			</Table.Container>
+
+			{totalPages > 1 && (
+				<div className="flex items-center justify-between gap-2 pt-3">
+					<span className="text-tertiary-foreground text-xs tabular-nums">
+						{totalExports} total
+					</span>
+					<CursorPagination
+						currentPage={page}
+						totalPages={totalPages}
+						canGoPrev={page > 1}
+						canGoNext={page < totalPages}
+						onPrev={() => onPageChange(page - 1)}
+						onNext={() => onPageChange(page + 1)}
+						disabled={isLoading}
+					/>
+				</div>
+			)}
 		</Table.Provider>
 	);
 }

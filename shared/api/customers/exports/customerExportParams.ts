@@ -32,6 +32,7 @@ export const ListCustomerExportsQuerySchema = z.object({
 		.max(MAX_CUSTOMER_EXPORTS_PAGE_SIZE)
 		.optional()
 		.default(MAX_CUSTOMER_EXPORTS_PAGE_SIZE),
+	offset: z.coerce.number().int().min(0).optional().default(0),
 });
 
 export type ListCustomerExportsQuery = z.infer<
@@ -100,6 +101,10 @@ export type CustomerExportResponse = z.infer<
 
 export const ListCustomerExportsResponseSchema = z.object({
 	exports: z.array(CustomerExportResponseSchema),
+	total: z.number(),
+	limit: z.number(),
+	offset: z.number(),
+	has_more: z.boolean(),
 });
 
 export type ListCustomerExportsResponse = z.infer<

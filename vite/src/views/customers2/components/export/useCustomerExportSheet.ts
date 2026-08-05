@@ -16,11 +16,15 @@ import {
 	hasActiveCustomerFilters,
 	useCustomerFilters,
 } from "@/views/customers/hooks/useCustomerFilters";
+import { useCustomerExportRealtime } from "../../hooks/useCustomerExportRealtime";
 import {
 	useCreateCustomerExport,
 	useCustomerExportsQuery,
 	useInvalidateCustomerExports,
 } from "../../hooks/useCustomerExports";
+import { withLiveProgress } from "./withLiveProgress";
+
+export const CUSTOMER_EXPORTS_PAGE_SIZE = 5;
 
 const CustomerExportFormSchema = z.object({
 	fields: CustomerExportFieldsSchema,
@@ -66,7 +70,6 @@ export function useCustomerExportSheet({
 	const { queryStates, isInitialized } = useCustomerFilters();
 	const createExport = useCreateCustomerExport();
 	const invalidateExports = useInvalidateCustomerExports();
-	const [isRealtimeDegraded, setIsRealtimeDegraded] = useState(false);
 	const trimmedSearch = queryStates.q.trim();
 	const filters = buildCustomerFilterPayload(queryStates);
 	const hasActiveFilters = hasActiveCustomerFilters(queryStates);
@@ -103,12 +106,45 @@ export function useCustomerExportSheet({
 	);
 	const isFilteredExport = hasFilters && restrictToCurrentFilters;
 
+	const [page, setPage] = useState(1);
+	const offset = (page - 1) * CUSTOMER_EXPORTS_PAGE_SIZE;
+
 	const exportsQuery = useCustomerExportsQuery({
 		enabled: open,
-		isRealtimeDegraded,
+		limit: CUSTOMER_EXPORTS_PAGE_SIZE,
+		offset,
 	});
-	const customerExports = exportsQuery.data ?? [];
-	const activeExport = customerExports.find(isCustomerExportActive);
+	const polledExports = exportsQuery.data?.exports ?? [];
+	const totalExports = exportsQuery.data?.total ?? 0;
+
+	// Newest first, so a running export is always on page 1 — keep that page
+	// queried so footer progress survives paging away from it.
+	const firstPageQuery = useCustomerExportsQuery({
+		enabled: open && page > 1,
+		limit: CUSTOMER_EXPORTS_PAGE_SIZE,
+		offset: 0,
+	});
+	const polledActiveExport = (
+		page > 1 ? (firstPageQuery.data?.exports ?? []) : polledExports
+	).find(isCustomerExportActive);
+
+	// One subscription for the sheet, so the footer bar and the table agree.
+	const { progress } = useCustomerExportRealtime({
+		customerExport: polledActiveExport,
+		onComplete: invalidateExports,
+	});
+
+	const customerExports = withLiveProgress({
+		customerExports: polledExports,
+		activeExportId: polledActiveExport?.id,
+		progress,
+	});
+	const activeExport = polledActiveExport
+		? {
+				...polledActiveExport,
+				progress: progress ?? polledActiveExport.progress,
+			}
+		: undefined;
 
 	const filteredCountQuery = useCustomerCountQuery({
 		search: trimmedSearch,
@@ -137,7 +173,7 @@ export function useCustomerExportSheet({
 	const handleOpenChange = (nextOpen: boolean) => {
 		if (!nextOpen) {
 			form.reset();
-			setIsRealtimeDegraded(false);
+			setPage(1);
 		}
 		onOpenChange(nextOpen);
 	};
@@ -151,7 +187,6 @@ export function useCustomerExportSheet({
 		handleOpenChange,
 		hasActiveFilters,
 		hasFilters,
-		invalidateExports,
 		isExportCountLoading,
 		submitBlockedReason: getSubmitBlockedReason({
 			activeExport,
@@ -165,7 +200,13 @@ export function useCustomerExportSheet({
 		isExportsRetrying: exportsQuery.isFetching,
 		isFilteredExport,
 		refetchExports: exportsQuery.refetch,
-		setIsRealtimeDegraded,
 		trimmedSearch,
+		page,
+		setPage,
+		totalExports,
+		totalPages: Math.max(
+			1,
+			Math.ceil(totalExports / CUSTOMER_EXPORTS_PAGE_SIZE),
+		),
 	};
 }
