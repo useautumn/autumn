@@ -13,7 +13,7 @@ import { products } from "@tests/utils/fixtures/products";
 import { timeout } from "@tests/utils/genUtils";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
-import { miscRedis } from "@/external/redis/initRedis";
+import { getMiscRedis } from "@/external/redis/initRedis";
 import { CusService } from "@/internal/customers/CusService";
 
 const customerId = "dual-checkout-completion-race";
@@ -94,7 +94,7 @@ test(`${chalk.yellowBright("checkout race: completion overlapping a fresh attach
 		orgId: ctx.org.id,
 		env: ctx.env,
 	});
-	await miscRedis.del(checkoutLockKey);
+	await getMiscRedis().del(checkoutLockKey);
 
 	const secondAttach = await autumnV2_2.billing.attach(attachParams, {
 		timeout: 0,

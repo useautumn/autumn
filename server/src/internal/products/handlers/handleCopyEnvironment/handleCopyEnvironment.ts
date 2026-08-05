@@ -1,8 +1,8 @@
 import { AppEnv, Scopes } from "@autumn/shared";
+import { invalidateProductsCache } from "@/external/redis/actions/productsCache/productsCache.js";
 import { createRoute } from "@/honoMiddlewares/routeHandler.js";
 import { FeatureService } from "@/internal/features/FeatureService.js";
 import { OrgService } from "@/internal/orgs/OrgService.js";
-import { invalidateProductsCache } from "../../productCacheUtils.js";
 import { handleCopyFeatures } from "./handleCopyFeatures.js";
 import { handleCopyProducts } from "./handleCopyProducts.js";
 

@@ -61,6 +61,18 @@ const featureDeductions = [
 	},
 ];
 
+// CI has no CACHE_URL — the idempotency claim's getMiscRedis() would throw.
+const fakeMiscRedis = {
+	status: "ready",
+	get: async () => null,
+	set: async () => "OK",
+	del: async () => 1,
+} as never;
+mock.module("@/external/redis/miscCache/miscRedisInstances.js", () => ({
+	getMiscMainRedis: () => fakeMiscRedis,
+	getMiscBackupRedis: () => null,
+}));
+
 mock.module("@/internal/balances/track/runTrackWithRollout.js", () => ({
 	runTrackWithRollout: async (args: {
 		ctx: AutumnContext;

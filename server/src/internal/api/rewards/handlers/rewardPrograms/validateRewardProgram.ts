@@ -10,11 +10,11 @@ import {
 const invalidRequest = (message: string) =>
 	new RecaseError({ message, code: ErrCode.InvalidRequest, statusCode: 400 });
 
-/** Free product and discount rewards remain supported for existing programs only */
-export const validateRewardIsFeatureGrant = (reward: Reward) => {
-	if (reward.type !== RewardType.FeatureGrant) {
+/** Free product rewards are deprecated; existing programs using them still run */
+export const validateRewardTypeSupported = (reward: Reward) => {
+	if (reward.type === RewardType.FreeProduct) {
 		throw invalidRequest(
-			"Referral programs must be linked to a feature grant reward. Existing programs using other reward types continue to work.",
+			"Free product rewards are deprecated for referral programs. Use a feature grant or discount reward instead.",
 		);
 	}
 };

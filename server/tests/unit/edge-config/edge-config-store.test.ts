@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, jest, test } from "bun:test";
 import type { S3Client } from "@aws-sdk/client-s3";
 import { z } from "zod/v4";
+import { ADMIN_EDGE_CONFIG_TIMESTAMP_KEY } from "@/external/aws/s3/adminS3Config.js";
 import { createEdgeConfigStore } from "@/internal/misc/edgeConfig/edgeConfigStore.js";
 
 const TestConfigSchema = z.object({
@@ -277,6 +278,34 @@ describe("createEdgeConfigStore", () => {
 	});
 
 	describe("writeToSource", () => {
+		// The config object is already durable at this point; only the propagation
+		// signal failed, and the registry backstop still picks it up.
+		test("keeps the written config locally when the timestamp write fails", async () => {
+			const send = jest.fn(async (command: unknown) => {
+				const input = (command as { input?: { Key?: string; Body?: string } })
+					.input;
+				const name = command?.constructor?.name;
+				if (name === "GetObjectCommand") return makeBody(defaultConfig());
+				if (input?.Key === ADMIN_EDGE_CONFIG_TIMESTAMP_KEY) {
+					throw new Error("AccessDenied");
+				}
+				return {};
+			});
+
+			store = createEdgeConfigStore<TestConfig>({
+				s3Key: "admin/test-config.json",
+				schema: TestConfigSchema,
+				defaultValue: defaultConfig,
+				s3Client: { send } as unknown as S3Client,
+			});
+
+			await store.writeToSource({
+				config: { enabled: true, message: "written" },
+			});
+
+			expect(store.get()).toEqual({ enabled: true, message: "written" });
+		});
+
 		test("updates local cache immediately after write", async () => {
 			const mockClient = createMockS3Client({
 				getResponse: () => makeBody(defaultConfig()),
@@ -300,7 +329,7 @@ describe("createEdgeConfigStore", () => {
 			expect(store.getStatus().healthy).toBe(true);
 		});
 
-		test("calls S3 PutObject with correct payload", async () => {
+		test("writes the config followed by the shared timestamp", async () => {
 			const mockClient = createMockS3Client({
 				getResponse: () => makeBody(defaultConfig()),
 			});
@@ -319,9 +348,21 @@ describe("createEdgeConfigStore", () => {
 			const sendFn = (
 				mockClient as unknown as { send: ReturnType<typeof jest.fn> }
 			).send;
-			const calls = sendFn.mock.calls;
-			const lastCall = calls[calls.length - 1]?.[0];
-			expect(lastCall?.constructor?.name).toBe("PutObjectCommand");
+			const putCommands = sendFn.mock.calls
+				.map(([command]) => command)
+				.filter(
+					(command) => command?.constructor?.name === "PutObjectCommand",
+				) as { input: { Key: string; Body: string } }[];
+
+			expect(putCommands.map(({ input }) => input.Key)).toEqual([
+				"admin/test-config.json",
+				ADMIN_EDGE_CONFIG_TIMESTAMP_KEY,
+			]);
+			expect(JSON.parse(putCommands[0]!.input.Body)).toEqual({
+				enabled: true,
+				message: "test-write",
+			});
+			expect(JSON.parse(putCommands[1]!.input.Body).updatedAt).toBeString();
 		});
 	});
 

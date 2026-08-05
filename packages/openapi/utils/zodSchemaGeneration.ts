@@ -49,6 +49,10 @@ const SCHEMA_SOURCES: SchemaSource[] = [
 		outputFile: "createReferralCodeSchemas.ts",
 	},
 	{
+		sdkFile: "create-referral-program-op.ts",
+		outputFile: "createReferralProgramSchemas.ts",
+	},
+	{
 		sdkFile: "create-reward-op.ts",
 		outputFile: "createRewardSchemas.ts",
 	},

@@ -89,6 +89,10 @@ export type RequestContext = {
 	fullCustomer?: FullCustomer;
 	rolloutSnapshot?: RolloutSnapshot;
 
+	/** Non-prod debug box (x-debug-subject-source); shared by reference across
+	 *  ctx spread-copies so chokepoints can record where the subject came from. */
+	subjectReadTrace?: { source?: "primary" | "replica" | "cache" };
+
 	/** Org is over its aggregate rate cap — check/track flows skip the DB and
 	 *  serve their fail-open responses (allow / SQS queue) instead. */
 	orgRateLimitDegraded?: boolean;

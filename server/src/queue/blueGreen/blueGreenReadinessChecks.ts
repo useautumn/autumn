@@ -4,7 +4,7 @@ import {
 	DEFAULT_AWS_REGION,
 	extractRegionFromQueueUrl,
 } from "@/external/aws/awsRegionUtils.js";
-import { miscRedis } from "@/external/redis/initRedis.js";
+import { getMiscRedis } from "@/external/redis/initRedis.js";
 import { resolveRedisV2 } from "@/external/redis/resolveRedisV2.js";
 import { withTimeout } from "@/utils/withTimeout.js";
 import { QUEUE_URL } from "../initSqs.js";
@@ -85,7 +85,7 @@ export const runBlueGreenReadinessChecks = async ({
 		}),
 		probe({
 			fn: async () => {
-				await miscRedis.ping();
+				await getMiscRedis().ping();
 			},
 		}),
 		probe({

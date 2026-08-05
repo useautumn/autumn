@@ -47,6 +47,7 @@ export const flash = async ({
 		skipGuard: true,
 	});
 	const customer = await getApiCustomerByRollout({
+		disableReplicaRead: true,
 		ctx,
 		customerId,
 		source: "billing.import",

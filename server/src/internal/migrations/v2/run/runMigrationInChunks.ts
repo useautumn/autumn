@@ -1,4 +1,5 @@
 import type { Migration } from "@autumn/shared";
+import { isMigrationCancelRequested } from "@/external/redis/actions/migrationCancelToken/migrationCancelToken.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { batchMigrationPlanToExecutionPlan } from "@/internal/migrations/v2/batchOperations/compute/index.js";
 import { runBatchMigrationChunk } from "@/internal/migrations/v2/batchOperations/execute/runBatchMigrationChunk.js";
@@ -28,7 +29,6 @@ import {
 	type RunMigrationChunkPayload,
 	type RunMigrationPayload,
 } from "./types/migrationRunPayloads.js";
-import { isMigrationCancelRequested } from "./utils/migrationCancelToken.js";
 import { MIGRATION_RUN_CUSTOMER_CONCURRENCY } from "./utils/migrationRunConstants.js";
 
 export type RunMigrationChunkRunner = (

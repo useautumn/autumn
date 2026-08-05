@@ -76,11 +76,13 @@ test(`${chalk.yellowBright("sub.deleted: lazy reset keeps expired product cache 
 
 	const stripeSubscriptionId = "sub_deleted_reset_cache_serialization";
 	await customerProductActions.expiredCache.set({
+		ctx,
 		stripeSubscriptionId,
 		customerProducts: [customerProduct],
 	});
 
 	const cachedCustomerProducts = await customerProductActions.expiredCache.get({
+		ctx,
 		stripeSubscriptionId,
 	});
 	expect(cachedCustomerProducts?.[0]?.id).toBe(customerProduct.id);

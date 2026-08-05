@@ -1,5 +1,8 @@
 import { Redis } from "ioredis";
-import { instrumentRedis } from "../otel/instrumentRedis.js";
+import {
+	instrumentRedis,
+	type RedisClientType,
+} from "../otel/instrumentRedis.js";
 import { redisDnsLookup } from "./redisDnsLookup.js";
 import { registerRedisCommands } from "./registerRedisCommands.js";
 
@@ -22,11 +25,13 @@ const formatRedisEndpoint = ({ cacheUrl }: { cacheUrl: string }) => {
 export const createRedisClient = ({
 	cacheUrl,
 	region,
+	redisType,
 	cacheCert = process.env.CACHE_CERT || null,
 	commandTimeout = REDIS_COMMAND_TIMEOUT_MS,
 }: {
 	cacheUrl: string;
 	region: string;
+	redisType: RedisClientType;
 	cacheCert?: string | null;
 	commandTimeout?: number;
 }): Redis => {
@@ -56,31 +61,10 @@ export const createRedisClient = ({
 
 	// instrumentRedis must run first so its defineCommand patch
 	// is in place when commands are registered.
-	instrumentRedis({ redis: instance, region });
+	instrumentRedis({ redis: instance, region, redisType });
 	registerRedisCommands({ redisInstance: instance });
 
 	return instance;
 };
 
 export const createRedisConnection = createRedisClient;
-
-export const createDisabledRedis = (): Redis =>
-	new Proxy(
-		{},
-		{
-			get(_target, prop) {
-				if (prop === "status") return "end";
-				if (prop === "defineCommand") return () => undefined;
-				if (prop === "on" || prop === "once") return () => undefined;
-				if (prop === "connect" || prop === "quit") {
-					return async () => undefined;
-				}
-				if (prop === "disconnect") {
-					return () => undefined;
-				}
-				return async () => {
-					throw new Error("Redis is not configured");
-				};
-			},
-		},
-	) as Redis;

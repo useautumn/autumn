@@ -37,10 +37,10 @@ export const RewardProgramConfig = ({
 	const { rewards } = useRewardsQuery();
 	const excludeTrialId = useId();
 
-	// Legacy programs may point at other reward types, so keep the current one selectable
+	// Free product rewards are deprecated, but keep an existing one selectable
 	const selectableRewards = rewards.filter(
 		(reward: Reward) =>
-			reward.type === RewardType.FeatureGrant ||
+			reward.type !== RewardType.FreeProduct ||
 			reward.internal_id === rewardProgram.internal_reward_id,
 	);
 

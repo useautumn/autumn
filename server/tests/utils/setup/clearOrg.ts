@@ -10,14 +10,13 @@ import { and, eq, inArray } from "drizzle-orm";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 import { initDrizzle } from "@/db/initDrizzle.js";
 import { AutumnInt } from "@/external/autumn/autumnCli.js";
+import { clearSecretKeyCache } from "@/external/redis/actions/secretKeyCache/secretKeyCache.js";
 import { CusService } from "@/internal/customers/CusService.js";
 import { hashApiKey } from "@/internal/dev/apiKeys/apiKeyUtils.js";
 import { FeatureService } from "@/internal/features/FeatureService.js";
 import { OrgService } from "@/internal/orgs/OrgService.js";
 import { ProductService } from "@/internal/products/ProductService.js";
 import { rewardRepo } from "@/internal/rewards/repos/index.js";
-import { CacheManager } from "@/utils/cacheUtils/CacheManager.js";
-import { CacheType } from "@/utils/cacheUtils/CacheType.js";
 
 /**
  * DB-only org cleanup — no HTTP calls, no connection lifecycle.
@@ -76,17 +75,10 @@ export const clearOrg = async ({
 	const { db, client } = initDrizzle();
 	const org = await OrgService.getBySlug({ db, slug: orgSlug });
 
-	await Promise.all([
-		CacheManager.invalidate({
-			action: CacheType.SecretKey,
-			value: hashApiKey(process.env.UNIT_TEST_AUTUMN_SECRET_KEY!),
-		}),
-		CacheManager.invalidate({
-			action: CacheType.PublicKey,
-			value: process.env.UNIT_TEST_AUTUMN_PUBLIC_KEY!,
-		}),
-	]);
-	// await CacheManager.disconnect();
+	// public_key:* was never written by anything — only the secret key is cached.
+	await clearSecretKeyCache({
+		hashedKey: hashApiKey(process.env.UNIT_TEST_AUTUMN_SECRET_KEY!),
+	});
 
 	if (!org) {
 		throw new Error(`Org ${orgSlug} not found`);

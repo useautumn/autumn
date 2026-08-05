@@ -26,12 +26,12 @@ import {
 	sql,
 } from "drizzle-orm";
 import { StatusCodes } from "http-status-codes";
-import { queryWithCache } from "@/utils/cacheUtils/queryWithCache";
 import {
 	buildAllVersionsProductsCacheKey,
 	buildProductsCacheKey,
-	PRODUCTS_CACHE_TTL,
-} from "./productCacheUtils";
+	getCachedProducts,
+	setCachedProducts,
+} from "@/external/redis/actions/productsCache/productsCache.js";
 import { getLatestProducts, isFreeProduct } from "./productUtils";
 import { sortFullProducts } from "./productUtils/sortProductUtils";
 import {
@@ -314,22 +314,38 @@ export class ProductService {
 		orgId: string;
 		env: AppEnv;
 	}): Promise<
-		Array<{ internal_id: string; id: string; name: string; version: number }>
+		Array<{
+			internal_id: string;
+			id: string;
+			name: string | null;
+			version: number;
+		}>
 	> {
-		return queryWithCache({
-			key: buildAllVersionsProductsCacheKey({ orgId, env }),
-			ttl: PRODUCTS_CACHE_TTL,
-			fn: () =>
-				db
-					.select({
-						internal_id: products.internal_id,
-						id: products.id,
-						name: products.name,
-						version: products.version,
-					})
-					.from(products)
-					.where(and(eq(products.org_id, orgId), eq(products.env, env))),
+		type ProductVersionRow = {
+			internal_id: string;
+			id: string;
+			name: string | null;
+			version: number;
+		};
+		const cacheKey = buildAllVersionsProductsCacheKey({ orgId, env });
+
+		const cached = await getCachedProducts<ProductVersionRow[]>({
+			cacheKey,
 		});
+		if (cached) return cached;
+
+		const rows = await db
+			.select({
+				internal_id: products.internal_id,
+				id: products.id,
+				name: products.name,
+				version: products.version,
+			})
+			.from(products)
+			.where(and(eq(products.org_id, orgId), eq(products.env, env)));
+
+		await setCachedProducts({ cacheKey, value: rows });
+		return rows;
 	}
 
 	static async listFull({
@@ -355,15 +371,23 @@ export class ProductService {
 		const canCache = !inIds && !returnAll && !version && !excludeEnts;
 
 		if (canCache) {
-			return queryWithCache({
-				key: buildProductsCacheKey({
-					orgId,
-					env,
-					queryParams: { archived },
-				}),
-				ttl: PRODUCTS_CACHE_TTL,
-				fn: () => ProductService._listFullQuery({ db, orgId, env, archived }),
+			const cacheKey = buildProductsCacheKey({
+				orgId,
+				env,
+				queryParams: { archived },
 			});
+
+			const cached = await getCachedProducts<FullProduct[]>({ cacheKey });
+			if (cached) return cached;
+
+			const fullProducts = await ProductService._listFullQuery({
+				db,
+				orgId,
+				env,
+				archived,
+			});
+			await setCachedProducts({ cacheKey, value: fullProducts });
+			return fullProducts;
 		}
 
 		return ProductService._listFullQuery({

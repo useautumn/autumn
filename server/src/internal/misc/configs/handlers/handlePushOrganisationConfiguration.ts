@@ -1,3 +1,4 @@
+import { Scopes } from "@autumn/shared";
 import {
 	apiFeatureToDbFeature,
 	CreateFeatureV0ParamsSchema,
@@ -6,14 +7,13 @@ import {
 	CreateProductSchema,
 } from "@shared/index";
 import { z } from "zod/v4";
-import { Scopes } from "@autumn/shared";
 import type { DrizzleCli } from "@/db/initDrizzle";
+import { invalidateProductsCache } from "@/external/redis/actions/productsCache/productsCache.js";
 import { createRoute } from "@/honoMiddlewares/routeHandler";
 import { FeatureService } from "@/internal/features/FeatureService";
 import { createFeature } from "@/internal/features/featureActions/createFeature";
 import { createProduct } from "@/internal/product/actions/createProduct";
 import { ProductService } from "@/internal/products/ProductService";
-import { invalidateProductsCache } from "@/internal/products/productCacheUtils";
 
 const OrganisationConfigurationSchema = z.object({
 	features: z.array(CreateFeatureV0ParamsSchema).optional().default([]),
@@ -26,7 +26,9 @@ const OrganisationConfigurationSchema = z.object({
 });
 
 export const handlePushOrganisationConfiguration = createRoute({
-	scopes: { ALL: [Scopes.Plans.Write, Scopes.Features.Write, Scopes.Customers.Write] },
+	scopes: {
+		ALL: [Scopes.Plans.Write, Scopes.Features.Write, Scopes.Customers.Write],
+	},
 	body: OrganisationConfigurationSchema,
 	handler: async (c) => {
 		const body = c.req.valid("json");

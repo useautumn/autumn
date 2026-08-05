@@ -4,9 +4,9 @@ import { generateObject } from "ai";
 import type { Logger } from "pino";
 import { z } from "zod";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
+import { invalidateProductsCache } from "@/external/redis/actions/productsCache/productsCache.js";
 import { nullish } from "@/utils/genUtils.js";
 import { ProductService } from "../ProductService.js";
-import { invalidateProductsCache } from "../productCacheUtils.js";
 
 const prompt = `Detect whether a given product (called "product_to_detect") is an interval variant of a base product from the list of existing products (called "existing_products").
 

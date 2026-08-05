@@ -5,14 +5,13 @@ import { join, relative, sep } from "node:path";
 import { fileURLToPath } from "node:url";
 import { AppEnv, migrationItemRuns, migrations } from "@autumn/shared";
 import { and, eq, inArray } from "drizzle-orm";
+import { invalidateProductsCache } from "../../../../../server/src/external/redis/actions/productsCache/productsCache.js";
+import { clearSecretKeyCache } from "../../../../../server/src/external/redis/actions/secretKeyCache/secretKeyCache.js";
 import {
 	createHardcodedKey,
 	hashApiKey,
 } from "../../../../../server/src/internal/dev/apiKeys/apiKeyUtils.js";
 import { FeatureService } from "../../../../../server/src/internal/features/FeatureService.js";
-import { invalidateProductsCache } from "../../../../../server/src/internal/products/productCacheUtils.js";
-import { CacheManager } from "../../../../../server/src/utils/cacheUtils/CacheManager.js";
-import { CacheType } from "../../../../../server/src/utils/cacheUtils/CacheType.js";
 import { getFeatures } from "../../../../../server/tests/setup/v2Features.js";
 import { clearOrgDbOnly } from "../../../../../server/tests/utils/setup/clearOrg.js";
 import type { TestContext } from "../../../../../server/tests/utils/testInitUtils/createTestContext.js";
@@ -203,9 +202,8 @@ export const createCleanAtmnIntegrationContext =
 			hardcodedKey: ctx.orgSecretKey,
 			meta: { createdBy: "atmn-integration" },
 		});
-		await CacheManager.invalidate({
-			action: CacheType.SecretKey,
-			value: hashApiKey(ctx.orgSecretKey),
+		await clearSecretKeyCache({
+			hashedKey: hashApiKey(ctx.orgSecretKey),
 		});
 		await clearOrgDbOnly({
 			db: ctx.db,
