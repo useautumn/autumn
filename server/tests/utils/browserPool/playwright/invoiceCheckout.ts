@@ -324,9 +324,14 @@ export const invoiceCheckout = async ({
 		await page.waitForTimeout(1000);
 	}
 
+	const alerts = await page
+		.locator('[role="alert"], .Error, [data-testid*="error"]')
+		.allTextContents()
+		.catch(() => [] as string[]);
+
 	throw new Error(
-		`Invoice payment never confirmed after clicking pay. Page text: ${pageText
+		`Invoice payment never confirmed after clicking pay. url=${page.url()} alerts=[${alerts.join(" | ")}] text=${pageText
 			.replace(/\s+/g, " ")
-			.slice(0, 400)}`,
+			.slice(-900)}`,
 	);
 };
