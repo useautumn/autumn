@@ -4,21 +4,20 @@ import { logger } from "@/external/logtail/logtailUtils.js";
 import { getMiscRedisConfig } from "@/internal/misc/miscRedisConfig/miscRedisConfigStore.js";
 import { decryptData } from "@/utils/encryptUtils.js";
 import { createRedisClient } from "../initUtils/createRedisClient.js";
-import { currentRegion } from "../initUtils/redisConfig.js";
+import { currentRegion, resolveMiscMainUrl } from "../initUtils/redisConfig.js";
 
 let mainClient: Redis | null = null;
 
-/** The "main" misc-cache instance: env-configured (CACHE_URL), created on
- *  first use. Lazy on purpose — env may be injected after import (infisical),
- *  so this reads CACHE_URL at call time and throws until it exists; later
- *  calls retry, so the app self-heals once the env lands. */
+/** The "main" misc-cache instance: env-configured (MISC_CACHE_DRAGONFLY_*),
+ *  created on first use. Lazy on purpose — env may be injected after import
+ *  (infisical); calls retry until the env lands. */
 export const getMiscMainRedis = (): Redis => {
 	if (mainClient) return mainClient;
 
-	const cacheUrl = process.env.CACHE_URL?.trim();
+	const cacheUrl = resolveMiscMainUrl();
 	if (!cacheUrl) {
 		throw new Error(
-			"[Redis] CACHE_URL is not set — the misc cache is required",
+			"[Redis] misc cache is required — set MISC_CACHE_DRAGONFLY_PUBLIC_URL",
 		);
 	}
 
@@ -90,7 +89,6 @@ export const getMiscBackupRedis = (): Redis | null => {
 		cacheUrl: decrypted,
 		region: `${currentRegion}:backup`,
 		redisType: "misc-secondary",
-		cacheCert: null,
 	});
 
 	instance.on("error", (error) => {

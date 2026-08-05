@@ -440,8 +440,7 @@ Local service values:
   DATABASE_URL=${localConfig.databaseUrl}
   CHAT_STATE_DATABASE_URL=${localConfig.chatStateDatabaseUrl}
   NGROK_URL=<printed by bun dev:services up>
-  CACHE_URL=${localConfig.cacheUrl}
-  CACHE_URL_US_EAST=${localConfig.cacheUrl}
+  MISC_CACHE_DRAGONFLY_PUBLIC_URL=${localConfig.cacheUrl}
   CACHE_V2_DRAGONFLY_URL=${localConfig.dragonflyUrl}
   DYNAMODB_ENDPOINT=${localConfig.dynamoDbEndpoint}
 `);

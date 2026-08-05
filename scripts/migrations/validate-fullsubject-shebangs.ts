@@ -55,7 +55,7 @@ if (!v2Config) {
 		"❌ No distinct CACHE_V2_UPSTASH_URL configured — redisV2 is falling back to the primary cache, so Upstash key-locking is NOT in effect.",
 	);
 	console.error(
-		"   Set CACHE_V2_UPSTASH_URL to a value different from CACHE_URL and re-run.",
+		"   Set CACHE_V2_UPSTASH_URL to a value different from the misc cache URL and re-run.",
 	);
 	process.exit(1);
 }
@@ -121,7 +121,6 @@ if (!upstashUrl) {
 console.log("\nRunning live Upstash probe...");
 
 const probeClient = new Redis(upstashUrl, {
-	tls: process.env.CACHE_CERT ? { ca: process.env.CACHE_CERT } : undefined,
 	family: 4,
 	maxRetriesPerRequest: 2,
 	commandTimeout: 10_000,

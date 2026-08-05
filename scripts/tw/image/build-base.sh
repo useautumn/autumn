@@ -99,7 +99,7 @@ log "Using PostgreSQL binaries at $PG_BINDIR ($("$PG_BINDIR/initdb" --version))"
 
 # ---------------------------------------------------------------------------
 # 3. Dragonfly (native binary, Redis protocol). One instance backs REDIS_URL,
-#    CACHE_URL and CACHE_V2_DRAGONFLY_URL (plan §5a port note).
+#    MISC_CACHE_DRAGONFLY_PUBLIC_URL and CACHE_V2_DRAGONFLY_URL (plan §5a port note).
 # ---------------------------------------------------------------------------
 if [ ! -x "$BIN_DIR/dragonfly" ]; then
   ARCH="$(uname -m)"
