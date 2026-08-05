@@ -215,6 +215,38 @@ export const executePostgresDeductionV2 = async ({
 				fullSubject: oldFullSubject,
 			});
 
+			// Publish the Postgres write to the balance cache BEFORE any Stripe
+			// work below. `createAllocatedInvoice` is a multi-second round trip
+			// (subscription quantity update + invoice create/finalize/pay), and the
+			// `customer.subscription.updated` it generates comes back through
+			// stripeWebhookRefreshMiddleware, which GETDELs the cached balances and
+			// FLUSHES them into Postgres. A cache still holding the pre-deduction
+			// value therefore reverts this deduction for good — sync_balances_v2's
+			// guards cannot catch it, because a deduction moves neither
+			// next_reset_at, entity_count nor cache_version.
+			const willCreateAllocatedInvoice = Object.keys(updates).some(
+				(customerEntitlementId) => {
+					const customerEntitlement = customerEntitlements.find(
+						(ce: FullCusEntWithFullCusProduct) =>
+							ce.id === customerEntitlementId,
+					);
+					return customerEntitlement
+						? isUsageBasedAllocatedCustomerEntitlement(customerEntitlement)
+						: false;
+				},
+			);
+
+			if (willCreateAllocatedInvoice) {
+				await syncDeductionUpdatesToFullSubjectCache({
+					ctx,
+					customerId,
+					fullSubject: oldFullSubject,
+					cusEntUpdates: allSyncUpdates,
+					rolloverOverwrites: allRolloverOverwrites,
+					modifiedCusEntIdsByFeatureId: allModifiedCusEntIdsByFeatureId,
+				});
+			}
+
 			try {
 				applyRolloverUpdatesToFullSubject({
 					fullSubject,

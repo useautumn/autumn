@@ -194,10 +194,11 @@ test.concurrent(
 			value: allocatedSeats,
 		});
 
-		// Verify pro is active with correct balance. The allocated deduction lands
-		// in Redis first and reaches Postgres via its async sync, and the seat
-		// quantity update fans out Stripe webhooks that invalidate the cache in that
-		// window — so poll instead of reading once.
+		// Verify pro is active with correct balance. A paid-allocated track runs on
+		// the Postgres deduction path (Redis rejects paid allocated), then spends
+		// seconds inside createAllocatedInvoice updating the seat quantity in
+		// Stripe — whose webhooks come back and touch this customer's cached
+		// balances mid-flight. Poll instead of reading once.
 		const customerAfterTrack = await pollUntilAsserted({
 			fetch: () => autumnV1.customers.get<ApiCustomerV3>(customerId),
 			assert: (customer) => {
