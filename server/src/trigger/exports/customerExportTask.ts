@@ -3,6 +3,9 @@ import {
 	CUSTOMER_EXPORT_TOTAL_ROWS_KEY,
 } from "@autumn/shared";
 import { metadata, task } from "@trigger.dev/sdk/v3";
+import { db } from "@/db/initDrizzle.js";
+import { createDualLogger } from "@/external/logtail/logtailUtils.js";
+import { failCustomerExportRun } from "@/internal/customers/exports/workflows/complete/failCustomerExportRun.js";
 import { executeCustomerExport } from "@/internal/customers/exports/workflows/executeCustomerExport.js";
 import {
 	CUSTOMER_EXPORT_MAX_DURATION_SECONDS,
@@ -11,6 +14,7 @@ import {
 } from "@/trigger/exports/customerExportQueue.js";
 import { RunCustomerExportPayloadSchema } from "@/trigger/exports/customerExportTaskPayload.js";
 import { createTriggerContext } from "@/trigger/utils/createTriggerContext.js";
+import { addTriggerToLogs } from "@/utils/logging/addContextToLogs.js";
 
 export const customerExportTask = task({
 	id: "customer-export",
@@ -46,6 +50,24 @@ export const customerExportTask = task({
 					);
 				},
 			},
+		});
+	},
+
+	// Runs once retries are exhausted. Deliberately avoids createTriggerContext,
+	// which is itself a way `run` fails, and writes through the raw pool instead.
+	onFailure: async ({ payload, error, ctx: triggerCtx }) => {
+		await failCustomerExportRun({
+			db,
+			logger: addTriggerToLogs({
+				logger: createDualLogger(),
+				triggerContext: {
+					run_id: triggerCtx.run.id,
+					task_id: triggerCtx.task.id,
+					attempt_number: triggerCtx.attempt.number,
+				},
+			}),
+			rawPayload: payload,
+			error,
 		});
 	},
 });

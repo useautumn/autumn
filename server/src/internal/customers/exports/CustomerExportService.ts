@@ -247,6 +247,37 @@ export const CustomerExportService = {
 		return updated.length > 0;
 	},
 
+	/**
+	 * Guarded like `markCompleted` so a finished or already-reclaimed export is
+	 * never re-failed; returns whether this call was the one that failed it.
+	 */
+	markFailedIfActive: async ({
+		db,
+		id,
+		errorMessage,
+	}: {
+		db: DrizzleCli;
+		id: string;
+		errorMessage: string;
+	}): Promise<boolean> => {
+		const updated = await db
+			.update(customerExports)
+			.set({
+				status: CustomerExportStatus.Failed,
+				error_message: errorMessage,
+				completed_at: Date.now(),
+			})
+			.where(
+				and(
+					eq(customerExports.id, id),
+					inArray(customerExports.status, [...ACTIVE_CUSTOMER_EXPORT_STATUSES]),
+				),
+			)
+			.returning({ id: customerExports.id });
+
+		return updated.length > 0;
+	},
+
 	markFailed: async ({
 		db,
 		id,
