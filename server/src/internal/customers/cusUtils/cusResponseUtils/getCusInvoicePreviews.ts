@@ -21,6 +21,7 @@ import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { extractStripeDiscounts } from "@/internal/billing/v2/providers/stripe/setup/fetchStripeDiscountsForBilling.js";
 import { billingPlanToNextCyclePreview } from "@/internal/billing/v2/utils/billingPlan/toNextCyclePreview/billingPlanToNextCyclePreview.js";
 import { CusService } from "../../CusService.js";
+import { getFinalUsageInvoicePreview } from "./getFinalUsageInvoicePreview.js";
 
 /**
  * Previews the upcoming invoice for each of the customer's Stripe
@@ -109,20 +110,16 @@ export const getCusInvoicePreviews = async ({
 				options: { chargeUsageLineItems: true },
 			});
 
-			// Nothing recurring survives to the next boundary (e.g. cancelling).
+			// Nothing recurs past the boundary (e.g. cancelling at period end), but
+			// usage accrued this cycle is still invoiced.
 			if (!nextCycle) {
-				ctx.logger.info(
-					`[invoice_previews] no next cycle for ${subscriptionId}`,
-					{
-						customerId: fullCustomer.id,
-						anchorMs: billingContext.billingCycleAnchorMs,
-						nowMs,
-						customerProductIds: fullCustomer.customer_products
-							.filter(isOnSubscription)
-							.map((customerProduct) => customerProduct.id),
-					},
-				);
-				return null;
+				return getFinalUsageInvoicePreview({
+					ctx,
+					billingContext,
+					customerProducts:
+						fullCustomer.customer_products.filter(isOnSubscription),
+					subscriptionId,
+				});
 			}
 
 			return ApiInvoicePreviewV0Schema.parse({

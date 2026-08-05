@@ -108,6 +108,59 @@ test.concurrent(
 );
 
 test.concurrent(
+	`${chalk.yellowBright("get-customer: invoice_previews still shows the final usage invoice when cancelling")}`,
+	async () => {
+		const messagesItem = items.consumableMessages({
+			includedUsage: MESSAGES_INCLUDED,
+			price: MESSAGES_OVERAGE_PRICE,
+		});
+		const pro = products.pro({
+			id: "invoice-previews-cancel-pro",
+			items: [messagesItem],
+		});
+
+		const customerId = "get-customer-invoice-previews-cancel";
+
+		const { autumnV2_2 } = await initScenario({
+			customerId,
+			setup: [
+				s.customer({ paymentMethod: "success" }),
+				s.products({ list: [pro] }),
+			],
+			actions: [
+				s.billing.attach({ productId: pro.id }),
+				s.track({
+					featureId: TestFeature.Messages,
+					value: MESSAGES_TRACKED,
+					timeout: 2000,
+				}),
+				s.updateSubscription({
+					productId: pro.id,
+					cancelAction: "cancel_end_of_cycle",
+				}),
+			],
+		});
+
+		const customer = await autumnV2_2.customers.get<ApiCustomerV5>(customerId, {
+			expand: [CustomerExpand.InvoicePreviews],
+		});
+
+		// Nothing recurs past the boundary, but the accrued overage is still billed.
+		expect(customer.invoice_previews).toHaveLength(1);
+
+		const [preview] = customer.invoice_previews!;
+		const overage = MESSAGES_TRACKED - MESSAGES_INCLUDED;
+
+		expect(preview.total).toBeCloseTo(overage * MESSAGES_OVERAGE_PRICE, 2);
+		expect(
+			preview.line_items.every(
+				(lineItem) => lineItem.feature_id === TestFeature.Messages,
+			),
+		).toBe(true);
+	},
+);
+
+test.concurrent(
 	`${chalk.yellowBright("get-customer: invoice_previews absent unless expanded")}`,
 	async () => {
 		const messagesItem = items.monthlyMessages({ includedUsage: 100 });
