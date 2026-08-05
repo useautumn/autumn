@@ -42,6 +42,7 @@ export const waitForStripeWebhook = async ({
 	since,
 	objectId,
 	customerStripeId,
+	describeOnTimeout,
 	timeoutMs = WEBHOOK_SETTLE_TIMEOUT_MS,
 	replayAfterMs = DEFAULT_REPLAY_AFTER_MS,
 }: {
@@ -63,6 +64,9 @@ export const waitForStripeWebhook = async ({
 	/** Same purpose as `objectId`, for events whose object hangs off a customer
 	 * (invoices) rather than being the thing the test holds an id for. */
 	customerStripeId?: string;
+	/** Extra context for the timeout error, e.g. the Stripe-side invoice status.
+	 * Only called on failure. */
+	describeOnTimeout?: () => Promise<string>;
 	timeoutMs?: number;
 	replayAfterMs?: number;
 }): Promise<void> => {
@@ -78,11 +82,16 @@ export const waitForStripeWebhook = async ({
 			// The count travels in the message because µVM stdout is not captured:
 			// "Stripe had 0" (event never created) and "posted 3, no effect"
 			// (handler ignored it) are completely different diagnoses.
+			const description = describeOnTimeout
+				? ` — ${await describeOnTimeout().catch((error) => `describe failed: ${error}`)}`
+				: "";
+
 			throw new Error(
 				`Timed out after ${timeoutMs}ms waiting for ${types.join(", ")}` +
 					(replayReport === undefined
 						? " (no replay attempted)"
-						: ` (replay: ${replayReport} — still no effect)`),
+						: ` (replay: ${replayReport} — still no effect)`) +
+					description,
 			);
 		}
 

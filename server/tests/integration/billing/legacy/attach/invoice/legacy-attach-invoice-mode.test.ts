@@ -84,11 +84,22 @@ test.concurrent(
 
 		// The attach rides on invoice.paid, so wait on the attach itself — the
 		// invoice reaching "paid" is set by a different event.
+		const stripeCusId = await stripeCustomerId({ ctx, customerId });
+
 		await waitForStripeWebhook({
 			stripeCli: ctx.stripeCli,
 			env: ctx.env,
 			types: ["invoice.paid"],
-			customerStripeId: await stripeCustomerId({ ctx, customerId }),
+			customerStripeId: stripeCusId,
+			describeOnTimeout: async () => {
+				const invoices = await ctx.stripeCli.invoices.list({
+					customer: stripeCusId,
+					limit: 5,
+				});
+				return `stripe invoices: [${invoices.data
+					.map((invoice) => `${invoice.id}:${invoice.status}`)
+					.join(", ")}]`;
+			},
 			until: async () => {
 				const customer = await autumnV1.customers.get<ApiCustomerV3>(
 					customerId,
