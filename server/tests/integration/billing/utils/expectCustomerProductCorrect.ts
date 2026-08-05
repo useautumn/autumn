@@ -81,8 +81,11 @@ const assertCustomerProductCorrect = ({
 	}
 
 	if (!product) {
+		const actual = products
+			.map((p: { id?: string; status?: string }) => `${p.id}:${p.status}`)
+			.join(", ");
 		throw new Error(
-			`Product ${productId} not found but expected state: ${state}`,
+			`Product ${productId} not found but expected state: ${state}. Customer has [${actual}]`,
 		);
 	}
 
