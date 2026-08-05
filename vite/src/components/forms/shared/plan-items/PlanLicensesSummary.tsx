@@ -380,7 +380,7 @@ export function PlanLicensesSummary({
 					(previousPrice?.price ?? null) !== (currentPrice?.price ?? null);
 
 				return (
-					<div key={row.licenseId} className="flex items-center gap-2 py-1">
+					<div className="flex items-center gap-2 py-1" key={row.licenseId}>
 						<div
 							className={cn(
 								"flex items-center flex-1 gap-2 min-w-0 overflow-hidden",
@@ -417,8 +417,9 @@ export function PlanLicensesSummary({
 							{showQuantityControl && (
 								<LicenseQuantityControl
 									editor={quantityEditor}
-									licensePlanId={row.licenseId}
 									includedQuantity={row.included}
+									licenseName={row.license?.name}
+									licensePlanId={row.licenseId}
 								/>
 							)}
 						</div>

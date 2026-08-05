@@ -3,6 +3,8 @@ import { useQuery } from "@tanstack/react-query";
 import { useQueryKeyFactory } from "@/hooks/common/useQueryKeyFactory";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
 
+// `invoice_previews` is deliberately absent — it calls Stripe once per
+// subscription, so it loads lazily via `useCusInvoicePreviewsQuery`.
 const CUSTOMER_EXPAND_PARAMS = [
 	"invoices",
 	"trials_used",

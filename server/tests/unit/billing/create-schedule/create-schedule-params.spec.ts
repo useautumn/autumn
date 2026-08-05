@@ -150,27 +150,70 @@ describe(chalk.yellowBright("CreateScheduleParamsV0Schema"), () => {
 		});
 	});
 
-	test("rejects per-plan scopes outside a single immediate phase", () => {
+	test("accepts per-plan scopes on the first phase of a multi-phase schedule", () => {
+		const parsed = CreateScheduleParamsV0Schema.parse({
+			customer_id: "cus_123",
+			phases: [
+				{
+					starts_at: "now",
+					plans: [
+						{ plan_id: "pro", entity_id: "entity-1" },
+						{ plan_id: "seats", entity_id: null },
+					],
+				},
+				{
+					starting_after: {
+						duration_type: StartingAfterDuration.Month,
+						duration_count: 1,
+					},
+					plans: [{ plan_id: "premium" }],
+				},
+			],
+		});
+
+		expect(parsed.phases[0]?.plans).toMatchObject([
+			{ plan_id: "pro", entity_id: "entity-1" },
+			{ plan_id: "seats", entity_id: null },
+		]);
+	});
+
+	test("accepts per-plan scopes on a numeric first phase", () => {
+		const parsed = CreateScheduleParamsV0Schema.parse({
+			customer_id: "cus_123",
+			phases: [
+				{
+					starts_at: 1_000,
+					plans: [{ plan_id: "pro", entity_id: "entity-1" }],
+				},
+				{
+					starts_at: 2_000,
+					plans: [{ plan_id: "premium" }],
+				},
+			],
+		});
+
+		expect(parsed.phases[0]?.plans[0]?.entity_id).toBe("entity-1");
+	});
+
+	test("rejects per-plan scopes on a later phase", () => {
 		expect(() =>
 			CreateScheduleParamsV0Schema.parse({
 				customer_id: "cus_123",
 				phases: [
 					{
 						starts_at: "now",
-						plans: [{ plan_id: "pro", entity_id: "entity-1" }],
+						plans: [{ plan_id: "pro" }],
 					},
 					{
 						starting_after: {
 							duration_type: StartingAfterDuration.Month,
 							duration_count: 1,
 						},
-						plans: [{ plan_id: "premium" }],
+						plans: [{ plan_id: "premium", entity_id: "entity-1" }],
 					},
 				],
 			}),
-		).toThrow(
-			"Per-plan entity scopes require a single phase with starts_at: 'now'",
-		);
+		).toThrow("Per-plan entity scopes are only allowed on the first phase");
 	});
 
 	test("accepts now and relative phase timing", () => {

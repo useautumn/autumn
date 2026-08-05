@@ -333,11 +333,18 @@ Use this to permanently remove a feature. Note: features that are used in produc
 * [create_code](docs/sdks/referrals/README.md#create_code) - Create or fetch a referral code for a customer in a referral program.
 * [redeem_code](docs/sdks/referrals/README.md#redeem_code) - Redeem a referral code for a customer.
 * [create_program](docs/sdks/referrals/README.md#create_program) - Create a referral program linked to an existing reward.
+* [list_programs](docs/sdks/referrals/README.md#list_programs) - List the referral programs configured for the org.
+* [get_program](docs/sdks/referrals/README.md#get_program) - Fetch a referral program by ID.
+* [update_program](docs/sdks/referrals/README.md#update_program) - Update a referral program. Omitted fields keep their current value.
+* [delete_program](docs/sdks/referrals/README.md#delete_program) - Delete a referral program.
 
 ### [Rewards](docs/sdks/rewardssdk/README.md)
 
 * [create](docs/sdks/rewardssdk/README.md#create) - Create a coupon or feature grant.
 * [list](docs/sdks/rewardssdk/README.md#list) - List the coupons and feature grants configured for the org.
+* [get](docs/sdks/rewardssdk/README.md#get) - Fetch a coupon or feature grant by ID.
+* [update](docs/sdks/rewardssdk/README.md#update) - Update a coupon or feature grant. Omitted fields keep their current value.
+* [delete](docs/sdks/rewardssdk/README.md#delete) - Delete a coupon or feature grant.
 * [redeem_code](docs/sdks/rewardssdk/README.md#redeem_code) - Redeem a reward promo code for a customer.
 
 </details>

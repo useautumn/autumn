@@ -26,10 +26,10 @@ export const InfoBox = ({
 				classNames?.infoBox,
 			)}
 		>
-			<div className={cn("pt-0.25 mr-1", classNames?.infoIcon)}>
+			<div className={cn("pt-0.25 mr-1 shrink-0", classNames?.infoIcon)}>
 				<InfoIcon size={16} className="" weight="fill" />
 			</div>
-			<span className="whitespace-pre-wrap">{children}</span>
+			<span className="min-w-0 whitespace-pre-wrap">{children}</span>
 		</div>
 	);
 };

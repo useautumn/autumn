@@ -25,6 +25,7 @@ export type SheetType =
 	| "balance-delete"
 	| "balance-create"
 	| "invoice-detail"
+	| "upcoming-invoice-detail"
 	| "sync-stripe"
 	| "sync-stripe-v2"
 	| "customer-config-edit"
@@ -43,6 +44,7 @@ export type SheetType =
 	| "create-schedule"
 	| "create-schedule-review"
 	| "create-schedule-send-invoice"
+	| "create-schedule-checkout"
 	| null;
 
 // Store state interface

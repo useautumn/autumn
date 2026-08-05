@@ -6,6 +6,7 @@ import type {
 } from "@autumn/shared";
 import { ProductItemFeatureType } from "@autumn/shared";
 import { useCallback, useMemo } from "react";
+import type { BillingStageParams } from "@/components/forms/shared/utils/billingStageParams";
 import { normalizeBillingRequestItems } from "@/components/forms/shared/utils/normalizeBillingRequestItems";
 import {
 	convertLicenseQuantitiesToParams,
@@ -161,110 +162,132 @@ export function useUpdateSubscriptionRequestBody({
 	const customerProductId =
 		customerProduct.id ?? customerProduct.internal_product_id;
 
-	const buildRequestBody = useCallback((): UpdateSubscriptionV0Params => {
-		const formValues = form.store.state.values;
-		const {
-			prepaidOptions,
-			licenseQuantities,
-			trialLength,
-			trialDuration,
-			removeTrial,
-			trialEnabled,
-			trialCardRequired,
-			version,
-			items,
-			addLicenses,
-			cancelAction,
-			billingBehavior,
-			resetBillingCycle,
-			resetUsage,
-			refundBehavior,
-			refundAmount,
-			noBillingChanges,
-			discounts,
-		} = formValues;
+	const buildRequestBody = useCallback(
+		({
+			useInvoice,
+			enableProductImmediately,
+			finalizeInvoice,
+			invoiceTemplateId,
+			netTermsDays,
+		}: BillingStageParams = {}): UpdateSubscriptionV0Params => {
+			const formValues = form.store.state.values;
+			const {
+				prepaidOptions,
+				licenseQuantities,
+				trialLength,
+				trialDuration,
+				removeTrial,
+				trialEnabled,
+				trialCardRequired,
+				version,
+				items,
+				addLicenses,
+				cancelAction,
+				billingBehavior,
+				resetBillingCycle,
+				resetUsage,
+				refundBehavior,
+				refundAmount,
+				noBillingChanges,
+				discounts,
+			} = formValues;
 
-		const validDiscounts = discounts?.length
-			? discounts.filter((d) => "reward_id" in d && d.reward_id)
-			: undefined;
+			const validDiscounts = discounts?.length
+				? discounts.filter((d) => "reward_id" in d && d.reward_id)
+				: undefined;
 
-		const base = {
-			customer_id: customerId ?? "",
-			product_id: product?.id,
-			entity_id: entityId,
-			customer_product_id: customerProductId,
-		};
+			const base = {
+				customer_id: customerId ?? "",
+				product_id: product?.id,
+				entity_id: entityId,
+				customer_product_id: customerProductId,
+			};
 
-		// For cancel actions, only include cancellation-related fields
-		if (cancelAction) {
-			const isRefund = refundBehavior === "refund";
+			// For cancel actions, only include cancellation-related fields
+			if (cancelAction) {
+				const isRefund = refundBehavior === "refund";
+				return {
+					...base,
+					cancel_action: cancelAction,
+					billing_behavior:
+						cancelAction === "cancel_immediately" && !isRefund
+							? billingBehavior || undefined
+							: undefined,
+					refund_last_payment:
+						cancelAction === "cancel_immediately" && isRefund
+							? refundAmount || "prorated"
+							: undefined,
+					no_billing_changes: noBillingChanges || undefined,
+				};
+			}
+
+			const options = buildUpdateSubscriptionOptions({
+				prepaidItems: currentPrepaidItems,
+				prepaidOptions,
+				initialPrepaidOptions,
+				initialBackendQuantities,
+			});
+
+			// Only send totals the user actually changed; omitted licenses keep
+			// their current paid quantity server-side.
+			const changedLicenseQuantities = Object.fromEntries(
+				Object.entries(licenseQuantities ?? {}).filter(
+					([licenseId, quantity]) =>
+						quantity !== undefined &&
+						quantity !== initialLicenseQuantities[licenseId],
+				),
+			);
+
+			const freeTrial = getFreeTrial({
+				removeTrial,
+				trialLength,
+				trialDuration,
+				trialEnabled,
+				trialCardRequired,
+			});
+
 			return {
 				...base,
-				cancel_action: cancelAction,
-				billing_behavior:
-					cancelAction === "cancel_immediately" && !isRefund
-						? billingBehavior || undefined
-						: undefined,
-				refund_last_payment:
-					cancelAction === "cancel_immediately" && isRefund
-						? refundAmount || "prorated"
-						: undefined,
+				options: options.length > 0 ? options : undefined,
+				license_quantities: convertLicenseQuantitiesToParams({
+					licenseQuantities: changedLicenseQuantities,
+				}),
+				free_trial: freeTrial,
+				...buildUpdateSubscriptionCustomizationParams({ items, addLicenses }),
+				version: version !== initialVersion ? version : undefined,
+				billing_behavior: billingBehavior || undefined,
+				billing_cycle_anchor: resetBillingCycle ? "now" : undefined,
+				carry_over_usages: resetUsage ? { enabled: false } : undefined,
 				no_billing_changes: noBillingChanges || undefined,
+				discounts: validDiscounts,
+				...(useInvoice
+					? {
+							invoice: true,
+							enable_product_immediately: enableProductImmediately,
+							finalize_invoice: finalizeInvoice ?? false,
+							invoice_template_id: invoiceTemplateId,
+							net_terms_days: netTermsDays,
+							// Deferred activation can't be charged inline, so force checkout.
+							...(enableProductImmediately === false
+								? { force_checkout: true }
+								: {}),
+						}
+					: {}),
 			};
-		}
-
-		const options = buildUpdateSubscriptionOptions({
-			prepaidItems: currentPrepaidItems,
-			prepaidOptions,
+		},
+		[
+			form.store,
+			customerId,
+			product?.id,
+			entityId,
+			customerProductId,
+			initialVersion,
+			currentPrepaidItems,
 			initialPrepaidOptions,
 			initialBackendQuantities,
-		});
-
-		// Only send totals the user actually changed; omitted licenses keep
-		// their current paid quantity server-side.
-		const changedLicenseQuantities = Object.fromEntries(
-			Object.entries(licenseQuantities ?? {}).filter(
-				([licenseId, quantity]) =>
-					quantity !== undefined &&
-					quantity !== initialLicenseQuantities[licenseId],
-			),
-		);
-
-		const freeTrial = getFreeTrial({
-			removeTrial,
-			trialLength,
-			trialDuration,
-			trialEnabled,
-			trialCardRequired,
-		});
-
-		return {
-			...base,
-			options: options.length > 0 ? options : undefined,
-			license_quantities: convertLicenseQuantitiesToParams({
-				licenseQuantities: changedLicenseQuantities,
-			}),
-			free_trial: freeTrial,
-			...buildUpdateSubscriptionCustomizationParams({ items, addLicenses }),
-			version: version !== initialVersion ? version : undefined,
-			billing_behavior: billingBehavior || undefined,
-			billing_cycle_anchor: resetBillingCycle ? "now" : undefined,
-			carry_over_usages: resetUsage ? { enabled: false } : undefined,
-			no_billing_changes: noBillingChanges || undefined,
-			discounts: validDiscounts,
-		};
-	}, [
-		form.store,
-		customerId,
-		product?.id,
-		entityId,
-		customerProductId,
-		initialVersion,
-		currentPrepaidItems,
-		initialPrepaidOptions,
-		initialBackendQuantities,
-		initialLicenseQuantities,
-	]);
+			initialLicenseQuantities,
+		],
+	);
 
 	return { buildRequestBody };
 }

@@ -6,9 +6,23 @@ import {
 	CreateReferralProgramResponseSchema,
 	CreateRewardParamsSchema,
 	CreateRewardResponseSchema,
+	DeleteReferralProgramParamsSchema,
+	DeleteReferralProgramResponseSchema,
+	DeleteRewardParamsSchema,
+	DeleteRewardResponseSchema,
+	GetReferralProgramParamsSchema,
+	GetReferralProgramResponseSchema,
+	GetRewardParamsSchema,
+	GetRewardResponseSchema,
 	RedeemReferralCodeParamsSchema,
 	RedeemReferralCodeResponseSchema,
+	ReferralProgramsListParamsSchema,
+	ReferralProgramsListResponseSchema,
 	RewardsListParamsSchema,
+	UpdateReferralProgramParamsSchema,
+	UpdateReferralProgramResponseSchema,
+	UpdateRewardParamsSchema,
+	UpdateRewardResponseSchema,
 } from "@autumn/shared";
 import { oc } from "@orpc/contract";
 import { z } from "zod/v4";
@@ -197,6 +211,118 @@ export const referralProgramsCreateContract = oc
 		}),
 	)
 	.output(CreateReferralProgramResponseSchema);
+
+export const referralProgramsListContract = oc
+	.route({
+		method: "POST",
+		path: "/v1/referral_programs.list",
+		operationId: "listReferralPrograms",
+		tags: ["referrals"],
+		description: "List the referral programs configured for the org.",
+		spec: (spec) => ({
+			...spec,
+			"x-speakeasy-name-override": "listPrograms",
+		}),
+	})
+	.input(
+		ReferralProgramsListParamsSchema.meta({
+			title: "ListReferralProgramsParams",
+			examples: [{}],
+		}),
+	)
+	.output(ReferralProgramsListResponseSchema);
+
+export const referralProgramsGetContract = oc
+	.route({
+		method: "POST",
+		path: "/v1/referral_programs.get",
+		operationId: "getReferralProgram",
+		tags: ["referrals"],
+		description: "Fetch a referral program by ID.",
+		spec: (spec) => ({
+			...spec,
+			"x-speakeasy-name-override": "getProgram",
+		}),
+	})
+	.input(GetReferralProgramParamsSchema)
+	.output(GetReferralProgramResponseSchema);
+
+export const referralProgramsUpdateContract = oc
+	.route({
+		method: "POST",
+		path: "/v1/referral_programs.update",
+		operationId: "updateReferralProgram",
+		tags: ["referrals"],
+		description:
+			"Update a referral program. Omitted fields keep their current value.",
+		spec: (spec) => ({
+			...spec,
+			"x-speakeasy-name-override": "updateProgram",
+		}),
+	})
+	.input(UpdateReferralProgramParamsSchema)
+	.output(UpdateReferralProgramResponseSchema);
+
+export const referralProgramsDeleteContract = oc
+	.route({
+		method: "POST",
+		path: "/v1/referral_programs.delete",
+		operationId: "deleteReferralProgram",
+		tags: ["referrals"],
+		description: "Delete a referral program.",
+		spec: (spec) => ({
+			...spec,
+			"x-speakeasy-name-override": "deleteProgram",
+		}),
+	})
+	.input(DeleteReferralProgramParamsSchema)
+	.output(DeleteReferralProgramResponseSchema);
+
+export const rewardsGetContract = oc
+	.route({
+		method: "POST",
+		path: "/v1/rewards.get",
+		operationId: "getReward",
+		tags: ["rewards"],
+		description: "Fetch a coupon or feature grant by ID.",
+		spec: (spec) => ({
+			...spec,
+			"x-speakeasy-name-override": "get",
+		}),
+	})
+	.input(GetRewardParamsSchema)
+	.output(GetRewardResponseSchema);
+
+export const rewardsUpdateContract = oc
+	.route({
+		method: "POST",
+		path: "/v1/rewards.update",
+		operationId: "updateReward",
+		tags: ["rewards"],
+		description:
+			"Update a coupon or feature grant. Omitted fields keep their current value.",
+		spec: (spec) => ({
+			...spec,
+			"x-speakeasy-name-override": "update",
+		}),
+	})
+	.input(UpdateRewardParamsSchema)
+	.output(UpdateRewardResponseSchema);
+
+export const rewardsDeleteContract = oc
+	.route({
+		method: "POST",
+		path: "/v1/rewards.delete",
+		operationId: "deleteReward",
+		tags: ["rewards"],
+		description: "Delete a coupon or feature grant.",
+		spec: (spec) => ({
+			...spec,
+			"x-speakeasy-name-override": "delete",
+		}),
+	})
+	.input(DeleteRewardParamsSchema)
+	.output(DeleteRewardResponseSchema);
 
 export const rewardsRedeemCodeContract = oc
 	.route({

@@ -25,10 +25,6 @@ import {
 	usePlanLicenseRows,
 } from "@/components/forms/shared/plan-items/PlanLicensesSummary";
 import { applyDefinedFormPatchFields } from "@/components/forms/shared/utils/formPatchUtils";
-import {
-	type UseUpdateSubscriptionPreviewReturn,
-	useUpdateSubscriptionPreview,
-} from "@/components/forms/update-subscription/use-update-subscription-preview";
 import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
 import { useProductVersionQuery } from "@/hooks/queries/useProductVersionQuery";
 import type { PrepaidItemWithFeature } from "@/hooks/stores/useProductStore";
@@ -47,6 +43,10 @@ import {
 	useUpdateSubscriptionForm,
 } from "../hooks/useUpdateSubscriptionForm";
 import { useUpdateSubscriptionMutation } from "../hooks/useUpdateSubscriptionMutation";
+import {
+	type UseUpdateSubscriptionPreviewReturn,
+	useUpdateSubscriptionPreview,
+} from "../hooks/useUpdateSubscriptionPreview";
 import { useUpdateSubscriptionRequestBody } from "../hooks/useUpdateSubscriptionRequestBody";
 import type { UpdateSubscriptionForm } from "../updateSubscriptionFormSchema";
 import {
@@ -341,7 +341,7 @@ export function UpdateSubscriptionFormProvider({
 	);
 
 	const previewQuery = useUpdateSubscriptionPreview({
-		body: previewBody,
+		requestBody: previewBody,
 		enabled: !!(formContext.customerId && formContext.product),
 	});
 

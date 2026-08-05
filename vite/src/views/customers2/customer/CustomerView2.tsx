@@ -2,20 +2,16 @@
 
 import { AppEnv, ProcessorType } from "@autumn/shared";
 import {
-	SheetBackdrop,
 	Tooltip,
 	TooltipContent,
 	TooltipProvider,
 	TooltipTrigger,
-	useIsMobile,
 } from "@autumn/ui";
 import { ClockIcon } from "@phosphor-icons/react";
-import { motion } from "motion/react";
 import { useState } from "react";
 import { Link } from "react-router";
 import { RevenueCatIcon } from "@/components/v2/icons/AutumnIcons";
 import { useCusRewardsQuery } from "@/hooks/queries/useCusRewardsQuery";
-import { useSheetStore } from "@/hooks/stores/useSheetStore";
 import { useEntity } from "@/hooks/stores/useSubscriptionStore";
 import { cn } from "@/lib/utils";
 import { useEnv } from "@/utils/envUtils";
@@ -39,7 +35,6 @@ import { CustomerPageDetails } from "./CustomerPageDetails";
 import { CustomerSheets } from "./CustomerSheets";
 import { CustomerHeaderActions } from "./components/CustomerHeaderActions";
 import { SelectedEntityDetails } from "./components/SelectedEntityDetails";
-import { SHEET_ANIMATION } from "./customerAnimations";
 import { Workbench } from "./workbench/Workbench";
 
 export default function CustomerView2() {
@@ -54,9 +49,6 @@ export default function CustomerView2() {
 	useCusRewardsQuery();
 	const { entityId, setEntityId } = useEntity();
 
-	const sheetType = useSheetStore((s) => s.type);
-	const closeProductSheet = useSheetStore((s) => s.closeSheet);
-	const isMobile = useIsMobile();
 	const [isInlineEditorOpen, setIsInlineEditorOpen] = useState(false);
 
 	const env = useEnv();
@@ -94,13 +86,7 @@ export default function CustomerView2() {
 			}}
 		>
 			<div className="flex w-full h-full overflow-hidden relative">
-				<motion.div
-					className="h-full overflow-hidden absolute inset-0 z-0"
-					animate={{
-						width: sheetType && !isMobile ? "calc(100% - 28rem)" : "100%",
-					}}
-					transition={SHEET_ANIMATION}
-				>
+				<div className="h-full w-full overflow-hidden absolute inset-0 z-0">
 					<div className="flex flex-col overflow-x-hidden overflow-y-auto absolute inset-0 pb-8">
 						{showOnboarding && (
 							<div className="w-full max-w-5xl mx-auto pt-4 sm:pt-8 px-4 sm:px-10">
@@ -212,13 +198,7 @@ export default function CustomerView2() {
 							</div>
 						</div>
 					</div>
-					{!isMobile && (
-						<SheetBackdrop
-							isOpen={!!sheetType && !isInlineEditorOpen}
-							onClose={closeProductSheet}
-						/>
-					)}
-				</motion.div>
+				</div>
 
 				<CustomerSheets />
 				<Workbench />

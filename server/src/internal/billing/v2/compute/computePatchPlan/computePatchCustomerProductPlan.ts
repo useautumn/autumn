@@ -8,7 +8,6 @@ import {
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { buildAutumnLineItems } from "@/internal/billing/v2/compute/computeAutumnUtils/buildAutumnLineItems";
-import { computeSchedulePhaseReplacements } from "@/internal/billing/v2/compute/computeSchedulePhaseReplacements";
 import { computeCustomerLicenseTransitions } from "@/internal/billing/v2/compute/customerLicenseTransitions/computeCustomerLicenseTransitions";
 import { entitlementToResetCycleAnchor } from "@/internal/billing/v2/utils/initFullCustomerProduct/cycleAnchorUtils";
 import { initPatchCustomerProduct } from "@/internal/billing/v2/utils/initFullCustomerProduct/initPatchedCustomerProduct";
@@ -95,11 +94,6 @@ export const computePatchCustomerProductPlan = ({
 			deleteCustomerProduct: isUpdatingScheduledProduct
 				? patchContext.originalCustomerProduct
 				: undefined,
-			schedulePhaseCustomerProductReplacements:
-				computeSchedulePhaseReplacements({
-					oldCustomerProduct: patchContext.originalCustomerProduct,
-					newCustomerProduct: finalCustomerProduct,
-				}),
 		} satisfies AutumnBillingPlan;
 	}
 
