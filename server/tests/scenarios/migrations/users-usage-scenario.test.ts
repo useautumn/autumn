@@ -44,4 +44,4 @@ test(`${chalk.yellowBright("migration-setup: users included with usage")}`, asyn
 			`[migration-setup] plan "${team.id}" has v1-v2. migusers-v1 is on v1 with 5 users included and 4 users used; latest is v2.`,
 		),
 	);
-}, 20_000);
+});

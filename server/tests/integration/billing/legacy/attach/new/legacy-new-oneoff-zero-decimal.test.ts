@@ -75,4 +75,4 @@ test(`${chalk.yellowBright("legacy one-off rwf: prepaid one-off charges major un
 		latestTotal: 23_198,
 		latestStatus: "paid",
 	});
-}, 180_000);
+});

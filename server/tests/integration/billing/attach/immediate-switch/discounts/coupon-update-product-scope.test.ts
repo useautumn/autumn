@@ -65,4 +65,4 @@ test(chalk.yellowBright(
 		plan_id: excluded.id,
 	});
 	expect(result.invoice?.total).toBeCloseTo(preview.total, 2);
-}, 300_000);
+});

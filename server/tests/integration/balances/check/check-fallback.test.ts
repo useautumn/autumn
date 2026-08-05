@@ -91,7 +91,7 @@ test(`${chalk.yellowBright("check-fallback: /check returns allowed=true on retry
 	} finally {
 		outageCustomerIds.delete(customerId);
 	}
-}, 20000);
+});
 
 test(`${chalk.yellowBright("check-fallback-legacy: /check fallback applies response version transforms")}`, async () => {
 	const messagesItem = items.monthlyMessages({ includedUsage: 1000 });
@@ -140,4 +140,4 @@ test(`${chalk.yellowBright("check-fallback-legacy: /check fallback applies respo
 	} finally {
 		outageCustomerIds.delete(customerId);
 	}
-}, 20000);
+});

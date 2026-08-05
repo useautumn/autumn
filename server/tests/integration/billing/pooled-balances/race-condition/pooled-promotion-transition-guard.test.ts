@@ -161,4 +161,4 @@ test(`${chalk.yellowBright("pooled promotion: concurrent pool-row write makes th
 		DOWNGRADED_CONTRIBUTION,
 	);
 	expect(convergedContribution?.effective_at).toBeNull();
-}, 60_000);
+});

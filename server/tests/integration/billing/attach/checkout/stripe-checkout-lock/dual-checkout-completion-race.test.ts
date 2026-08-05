@@ -168,4 +168,4 @@ test(`${chalk.yellowBright("checkout race: completion overlapping a fresh attach
 		stripeSubscriptions: 1,
 		paidInitialInvoices: 1,
 	});
-}, 300_000);
+});

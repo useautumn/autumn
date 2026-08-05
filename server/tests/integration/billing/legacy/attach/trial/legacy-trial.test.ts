@@ -140,7 +140,7 @@ test.concurrent(`${chalk.yellowBright("legacy-trial 1: upgrade during trial (pro
 		org: ctx.org,
 		env: ctx.env,
 	});
-}, 120000);
+});
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // TEST 2: Upgrade after trial ends (pro trial → active → premium trial)

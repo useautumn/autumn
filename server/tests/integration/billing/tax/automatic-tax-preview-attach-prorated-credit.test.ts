@@ -120,7 +120,7 @@ test.concurrent(`${chalk.yellowBright(
 	// which is comfortably outside this band.
 	expect(preview.tax?.total).toBeGreaterThanOrEqual(expectedTax - 0.05);
 	expect(preview.tax?.total).toBeLessThanOrEqual(expectedTax + 0.05);
-}, 300_000);
+});
 
 test.concurrent(`${chalk.yellowBright(
 	"automatic-tax-preview-attach-prorated-credit (downgrade, credit exceeds new charge): preview returns negative tax credit",
@@ -191,7 +191,7 @@ test.concurrent(`${chalk.yellowBright(
 		expectedTax + 0.05,
 	);
 	expect(preview.tax?.amount_inclusive).toBe(0);
-}, 300_000);
+});
 
 test.concurrent(`${chalk.yellowBright(
 	"automatic-tax-preview-attach-prorated-credit (all-positive new attach): regression guard, no proration so tax is unchanged",
@@ -244,4 +244,4 @@ test.concurrent(`${chalk.yellowBright(
 
 	expect(preview.tax?.total).toBeGreaterThanOrEqual(expectedTax - 0.05);
 	expect(preview.tax?.total).toBeLessThanOrEqual(expectedTax + 0.05);
-}, 300_000);
+});

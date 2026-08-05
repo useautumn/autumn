@@ -26,7 +26,7 @@ test("critical DB pool times out slow queries while general pool does not", asyn
 	const generalDurationMs = Date.now() - generalStartedAt;
 
 	expect(generalDurationMs).toBeGreaterThanOrEqual(2_750);
-}, 10_000);
+});
 
 test("critical DB pool is usable after a query timeout", async () => {
 	await expect(dbCritical.execute(sql`SELECT pg_sleep(3)`)).rejects.toThrow(
@@ -36,7 +36,7 @@ test("critical DB pool is usable after a query timeout", async () => {
 	const result = await clientCritical.query<{ ok: number }>("SELECT 1 AS ok");
 
 	expect(result.rows[0]?.ok).toBe(1);
-}, 6_000);
+});
 
 test("db connect timeout fails fast when postgres accepts tcp but never responds", async () => {
 	const server = net.createServer();
@@ -64,4 +64,4 @@ test("db connect timeout fails fast when postgres accepts tcp but never responds
 			server.close((error) => (error ? reject(error) : resolve()));
 		});
 	}
-}, 5_000);
+});

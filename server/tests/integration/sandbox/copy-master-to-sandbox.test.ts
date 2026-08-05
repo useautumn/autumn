@@ -162,7 +162,7 @@ describe("copy a plan from the master org into a named sandbox", () => {
 		});
 		expect(subProducts.map((p) => p.id)).toContain(SBX_PLAN);
 		expect(subFeatures.map((f) => f.id)).toContain(SBX_FEATURE);
-	}, 120_000);
+	});
 
 	test("from production (master Live env)", async () => {
 		if (!master || !sub) throw new Error("orgs not provisioned");
@@ -189,7 +189,7 @@ describe("copy a plan from the master org into a named sandbox", () => {
 		});
 		expect(subProducts.map((p) => p.id)).toContain(LIVE_PLAN);
 		expect(subFeatures.map((f) => f.id)).toContain(LIVE_FEATURE);
-	}, 120_000);
+	});
 
 	test("re-copy overwrites a matching-id plan in the target (upsert, not duplicate)", async () => {
 		if (!master || !sub) throw new Error("orgs not provisioned");
@@ -217,7 +217,7 @@ describe("copy a plan from the master org into a named sandbox", () => {
 			env: AppEnv.Sandbox,
 		});
 		expect(after.filter((p) => p.id === SBX_PLAN).length).toBe(countBefore);
-	}, 120_000);
+	});
 
 	test("a copy with no source specified is rejected", async () => {
 		if (!master || !sub) throw new Error("orgs not provisioned");
@@ -236,7 +236,7 @@ describe("copy a plan from the master org into a named sandbox", () => {
 		}
 		expect(thrown).toBeInstanceOf(RecaseError);
 		expect((thrown as RecaseError).code).toBe(ErrCode.InvalidRequest);
-	}, 120_000);
+	});
 
 	test("a requested plan absent from the source is rejected, not a silent no-op", async () => {
 		if (!master || !sub) throw new Error("orgs not provisioned");
@@ -257,5 +257,5 @@ describe("copy a plan from the master org into a named sandbox", () => {
 		}
 		expect(thrown).toBeInstanceOf(RecaseError);
 		expect((thrown as RecaseError).code).toBe(ErrCode.ProductNotFound);
-	}, 120_000);
+	});
 });

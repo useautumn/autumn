@@ -188,7 +188,7 @@ test.concurrent(`${chalk.yellowBright("attach: entities with new_billing_subscri
 		customer: entity2Final,
 		productId: premium.id,
 	});
-}, 120000);
+});
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // TEST 3: Customer upgrade doesn't affect entity's separate sub
