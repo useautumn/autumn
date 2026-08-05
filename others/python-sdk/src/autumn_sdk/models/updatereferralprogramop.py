@@ -16,11 +16,11 @@ from typing import List, Literal, Optional, Union
 from typing_extensions import Annotated, NotRequired, TypedDict
 
 
-class CreateReferralProgramGlobalsTypedDict(TypedDict):
+class UpdateReferralProgramGlobalsTypedDict(TypedDict):
     x_api_version: NotRequired[str]
 
 
-class CreateReferralProgramGlobals(BaseModel):
+class UpdateReferralProgramGlobals(BaseModel):
     x_api_version: Annotated[
         Optional[str],
         pydantic.Field(alias="x-api-version"),
@@ -44,44 +44,47 @@ class CreateReferralProgramGlobals(BaseModel):
         return m
 
 
-CreateReferralProgramRedeemOnRequest = Literal[
+UpdateReferralProgramRedeemOnRequest = Literal[
     "customer_creation",
     "checkout",
 ]
 r"""When the reward is granted: on redemption, or when the redeemer checks out."""
 
 
-CreateReferralProgramReceivedByRequest = Literal[
+UpdateReferralProgramReceivedByRequest = Literal[
     "referrer",
     "all",
 ]
 r"""Who receives the reward: the referrer only, or both parties."""
 
 
-class CreateReferralProgramParamsTypedDict(TypedDict):
+class UpdateReferralProgramParamsTypedDict(TypedDict):
     id: str
-    reward_id: str
-    redeem_on: CreateReferralProgramRedeemOnRequest
+    r"""The ID of the referral program to update."""
+    reward_id: NotRequired[str]
+    r"""The ID of the reward granted when a code is redeemed."""
+    redeem_on: NotRequired[UpdateReferralProgramRedeemOnRequest]
     r"""When the reward is granted: on redemption, or when the redeemer checks out."""
-    received_by: CreateReferralProgramReceivedByRequest
+    received_by: NotRequired[UpdateReferralProgramReceivedByRequest]
     r"""Who receives the reward: the referrer only, or both parties."""
     max_redemptions: NotRequired[Nullable[int]]
     r"""A positive redemption limit, or null for unlimited redemptions."""
     plan_ids: NotRequired[Nullable[List[str]]]
     r"""Required when redeem_on is checkout. Plan IDs must be unique."""
     exclude_trial: NotRequired[Nullable[bool]]
-    r"""Whether checkouts that start a trial should skip granting the reward."""
 
 
-class CreateReferralProgramParams(BaseModel):
+class UpdateReferralProgramParams(BaseModel):
     id: str
+    r"""The ID of the referral program to update."""
 
-    reward_id: str
+    reward_id: Optional[str] = None
+    r"""The ID of the reward granted when a code is redeemed."""
 
-    redeem_on: CreateReferralProgramRedeemOnRequest
+    redeem_on: Optional[UpdateReferralProgramRedeemOnRequest] = None
     r"""When the reward is granted: on redemption, or when the redeemer checks out."""
 
-    received_by: CreateReferralProgramReceivedByRequest
+    received_by: Optional[UpdateReferralProgramReceivedByRequest] = None
     r"""Who receives the reward: the referrer only, or both parties."""
 
     max_redemptions: OptionalNullable[int] = UNSET
@@ -91,11 +94,19 @@ class CreateReferralProgramParams(BaseModel):
     r"""Required when redeem_on is checkout. Plan IDs must be unique."""
 
     exclude_trial: OptionalNullable[bool] = UNSET
-    r"""Whether checkouts that start a trial should skip granting the reward."""
 
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
-        optional_fields = set(["max_redemptions", "plan_ids", "exclude_trial"])
+        optional_fields = set(
+            [
+                "reward_id",
+                "redeem_on",
+                "received_by",
+                "max_redemptions",
+                "plan_ids",
+                "exclude_trial",
+            ]
+        )
         nullable_fields = set(["max_redemptions", "plan_ids", "exclude_trial"])
         serialized = handler(self)
         m = {}
@@ -119,7 +130,7 @@ class CreateReferralProgramParams(BaseModel):
         return m
 
 
-CreateReferralProgramRedeemOnResponse = Union[
+UpdateReferralProgramRedeemOnResponse = Union[
     Literal[
         "customer_creation",
         "checkout",
@@ -129,7 +140,7 @@ CreateReferralProgramRedeemOnResponse = Union[
 r"""When the reward is granted: on redemption, or when the redeemer checks out."""
 
 
-CreateReferralProgramReceivedByResponse = Union[
+UpdateReferralProgramReceivedByResponse = Union[
     Literal[
         "referrer",
         "all",
@@ -139,16 +150,16 @@ CreateReferralProgramReceivedByResponse = Union[
 r"""Who receives the reward: the referrer only, or both parties."""
 
 
-class CreateReferralProgramCreateReferralProgramResponseTypedDict(TypedDict):
+class UpdateReferralProgramCreateReferralProgramResponseTypedDict(TypedDict):
     r"""OK"""
 
     id: str
     r"""The unique identifier for the referral program."""
     reward_id: str
     r"""The ID of the reward granted when a code is redeemed."""
-    redeem_on: CreateReferralProgramRedeemOnResponse
+    redeem_on: UpdateReferralProgramRedeemOnResponse
     r"""When the reward is granted: on redemption, or when the redeemer checks out."""
-    received_by: CreateReferralProgramReceivedByResponse
+    received_by: UpdateReferralProgramReceivedByResponse
     r"""Who receives the reward: the referrer only, or both parties."""
     created_at: float
     r"""The Unix timestamp (in milliseconds) when the referral program was created."""
@@ -160,7 +171,7 @@ class CreateReferralProgramCreateReferralProgramResponseTypedDict(TypedDict):
     r"""Whether checkouts that start a trial should skip granting the reward."""
 
 
-class CreateReferralProgramCreateReferralProgramResponse(BaseModel):
+class UpdateReferralProgramCreateReferralProgramResponse(BaseModel):
     r"""OK"""
 
     id: str
@@ -169,10 +180,10 @@ class CreateReferralProgramCreateReferralProgramResponse(BaseModel):
     reward_id: str
     r"""The ID of the reward granted when a code is redeemed."""
 
-    redeem_on: CreateReferralProgramRedeemOnResponse
+    redeem_on: UpdateReferralProgramRedeemOnResponse
     r"""When the reward is granted: on redemption, or when the redeemer checks out."""
 
-    received_by: CreateReferralProgramReceivedByResponse
+    received_by: UpdateReferralProgramReceivedByResponse
     r"""Who receives the reward: the referrer only, or both parties."""
 
     created_at: float

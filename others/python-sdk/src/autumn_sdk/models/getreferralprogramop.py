@@ -16,11 +16,11 @@ from typing import List, Literal, Optional, Union
 from typing_extensions import Annotated, NotRequired, TypedDict
 
 
-class CreateReferralProgramGlobalsTypedDict(TypedDict):
+class GetReferralProgramGlobalsTypedDict(TypedDict):
     x_api_version: NotRequired[str]
 
 
-class CreateReferralProgramGlobals(BaseModel):
+class GetReferralProgramGlobals(BaseModel):
     x_api_version: Annotated[
         Optional[str],
         pydantic.Field(alias="x-api-version"),
@@ -44,82 +44,17 @@ class CreateReferralProgramGlobals(BaseModel):
         return m
 
 
-CreateReferralProgramRedeemOnRequest = Literal[
-    "customer_creation",
-    "checkout",
-]
-r"""When the reward is granted: on redemption, or when the redeemer checks out."""
-
-
-CreateReferralProgramReceivedByRequest = Literal[
-    "referrer",
-    "all",
-]
-r"""Who receives the reward: the referrer only, or both parties."""
-
-
-class CreateReferralProgramParamsTypedDict(TypedDict):
+class GetReferralProgramParamsTypedDict(TypedDict):
     id: str
-    reward_id: str
-    redeem_on: CreateReferralProgramRedeemOnRequest
-    r"""When the reward is granted: on redemption, or when the redeemer checks out."""
-    received_by: CreateReferralProgramReceivedByRequest
-    r"""Who receives the reward: the referrer only, or both parties."""
-    max_redemptions: NotRequired[Nullable[int]]
-    r"""A positive redemption limit, or null for unlimited redemptions."""
-    plan_ids: NotRequired[Nullable[List[str]]]
-    r"""Required when redeem_on is checkout. Plan IDs must be unique."""
-    exclude_trial: NotRequired[Nullable[bool]]
-    r"""Whether checkouts that start a trial should skip granting the reward."""
+    r"""The ID of the referral program to fetch."""
 
 
-class CreateReferralProgramParams(BaseModel):
+class GetReferralProgramParams(BaseModel):
     id: str
-
-    reward_id: str
-
-    redeem_on: CreateReferralProgramRedeemOnRequest
-    r"""When the reward is granted: on redemption, or when the redeemer checks out."""
-
-    received_by: CreateReferralProgramReceivedByRequest
-    r"""Who receives the reward: the referrer only, or both parties."""
-
-    max_redemptions: OptionalNullable[int] = UNSET
-    r"""A positive redemption limit, or null for unlimited redemptions."""
-
-    plan_ids: OptionalNullable[List[str]] = UNSET
-    r"""Required when redeem_on is checkout. Plan IDs must be unique."""
-
-    exclude_trial: OptionalNullable[bool] = UNSET
-    r"""Whether checkouts that start a trial should skip granting the reward."""
-
-    @model_serializer(mode="wrap")
-    def serialize_model(self, handler):
-        optional_fields = set(["max_redemptions", "plan_ids", "exclude_trial"])
-        nullable_fields = set(["max_redemptions", "plan_ids", "exclude_trial"])
-        serialized = handler(self)
-        m = {}
-
-        for n, f in type(self).model_fields.items():
-            k = f.alias or n
-            val = serialized.get(k, serialized.get(n))
-            is_nullable_and_explicitly_set = (
-                k in nullable_fields
-                and (self.__pydantic_fields_set__.intersection({n}))  # pylint: disable=no-member
-            )
-
-            if val != UNSET_SENTINEL:
-                if (
-                    val is not None
-                    or k not in optional_fields
-                    or is_nullable_and_explicitly_set
-                ):
-                    m[k] = val
-
-        return m
+    r"""The ID of the referral program to fetch."""
 
 
-CreateReferralProgramRedeemOnResponse = Union[
+GetReferralProgramRedeemOn = Union[
     Literal[
         "customer_creation",
         "checkout",
@@ -129,7 +64,7 @@ CreateReferralProgramRedeemOnResponse = Union[
 r"""When the reward is granted: on redemption, or when the redeemer checks out."""
 
 
-CreateReferralProgramReceivedByResponse = Union[
+GetReferralProgramReceivedBy = Union[
     Literal[
         "referrer",
         "all",
@@ -139,16 +74,16 @@ CreateReferralProgramReceivedByResponse = Union[
 r"""Who receives the reward: the referrer only, or both parties."""
 
 
-class CreateReferralProgramCreateReferralProgramResponseTypedDict(TypedDict):
+class GetReferralProgramCreateReferralProgramResponseTypedDict(TypedDict):
     r"""OK"""
 
     id: str
     r"""The unique identifier for the referral program."""
     reward_id: str
     r"""The ID of the reward granted when a code is redeemed."""
-    redeem_on: CreateReferralProgramRedeemOnResponse
+    redeem_on: GetReferralProgramRedeemOn
     r"""When the reward is granted: on redemption, or when the redeemer checks out."""
-    received_by: CreateReferralProgramReceivedByResponse
+    received_by: GetReferralProgramReceivedBy
     r"""Who receives the reward: the referrer only, or both parties."""
     created_at: float
     r"""The Unix timestamp (in milliseconds) when the referral program was created."""
@@ -160,7 +95,7 @@ class CreateReferralProgramCreateReferralProgramResponseTypedDict(TypedDict):
     r"""Whether checkouts that start a trial should skip granting the reward."""
 
 
-class CreateReferralProgramCreateReferralProgramResponse(BaseModel):
+class GetReferralProgramCreateReferralProgramResponse(BaseModel):
     r"""OK"""
 
     id: str
@@ -169,10 +104,10 @@ class CreateReferralProgramCreateReferralProgramResponse(BaseModel):
     reward_id: str
     r"""The ID of the reward granted when a code is redeemed."""
 
-    redeem_on: CreateReferralProgramRedeemOnResponse
+    redeem_on: GetReferralProgramRedeemOn
     r"""When the reward is granted: on redemption, or when the redeemer checks out."""
 
-    received_by: CreateReferralProgramReceivedByResponse
+    received_by: GetReferralProgramReceivedBy
     r"""Who receives the reward: the referrer only, or both parties."""
 
     created_at: float

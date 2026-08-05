@@ -16,11 +16,11 @@ from typing import List, Literal, Optional, Union
 from typing_extensions import Annotated, NotRequired, TypedDict
 
 
-class CreateRewardGlobalsTypedDict(TypedDict):
+class UpdateRewardGlobalsTypedDict(TypedDict):
     x_api_version: NotRequired[str]
 
 
-class CreateRewardGlobals(BaseModel):
+class UpdateRewardGlobals(BaseModel):
     x_api_version: Annotated[
         Optional[str],
         pydantic.Field(alias="x-api-version"),
@@ -44,49 +44,13 @@ class CreateRewardGlobals(BaseModel):
         return m
 
 
-DurationTypeRequestBody = Literal[
-    "one_off",
-    "months",
-    "forever",
-]
-
-
-class CreateRewardDurationTypedDict(TypedDict):
-    r"""Use a positive integer length for months, and null for one_off or forever."""
-
-    type: DurationTypeRequestBody
-    length: Nullable[int]
-
-
-class CreateRewardDuration(BaseModel):
-    r"""Use a positive integer length for months, and null for one_off or forever."""
-
-    type: DurationTypeRequestBody
-
-    length: Nullable[int]
-
-    @model_serializer(mode="wrap")
-    def serialize_model(self, handler):
-        serialized = handler(self)
-        m = {}
-
-        for n, f in type(self).model_fields.items():
-            k = f.alias or n
-            val = serialized.get(k, serialized.get(n))
-
-            if val != UNSET_SENTINEL:
-                m[k] = val
-
-        return m
-
-
-class CreateRewardCouponPromoCodeTypedDict(TypedDict):
+class UpdateRewardCouponPromoCodeRequestTypedDict(TypedDict):
     code: str
     global_max_redemption: NotRequired[Nullable[int]]
     first_time_transaction: NotRequired[Nullable[bool]]
 
 
-class CreateRewardCouponPromoCode(BaseModel):
+class UpdateRewardCouponPromoCodeRequest(BaseModel):
     code: str
 
     global_max_redemption: OptionalNullable[int] = UNSET
@@ -119,65 +83,50 @@ class CreateRewardCouponPromoCode(BaseModel):
         return m
 
 
-CouponTypeRequestBody = Literal[
-    "percentage_discount",
-    "fixed_discount",
-]
+class UpdateRewardCouponRequestTypedDict(TypedDict):
+    name: NotRequired[str]
+    plan_ids: NotRequired[Nullable[List[str]]]
+    r"""Plan IDs must be unique. Null applies the coupon to all plans."""
+    promo_codes: NotRequired[List[UpdateRewardCouponPromoCodeRequestTypedDict]]
+    r"""Replaces the existing promo codes when provided."""
 
 
-class CreateRewardCouponRequestTypedDict(TypedDict):
-    r"""Provide exactly one of coupon or feature_grant, not both."""
+class UpdateRewardCouponRequest(BaseModel):
+    name: Optional[str] = None
 
-    id: str
-    name: str
-    duration: CreateRewardDurationTypedDict
-    r"""Use a positive integer length for months, and null for one_off or forever."""
-    plan_ids: Nullable[List[str]]
-    r"""Plan IDs must be unique."""
-    promo_codes: List[CreateRewardCouponPromoCodeTypedDict]
-    r"""Promo code values must be unique."""
-    type: CouponTypeRequestBody
-    value: float
-    r"""Percentage discounts must be at most 100; fixed discounts must be positive."""
+    plan_ids: OptionalNullable[List[str]] = UNSET
+    r"""Plan IDs must be unique. Null applies the coupon to all plans."""
 
-
-class CreateRewardCouponRequest(BaseModel):
-    r"""Provide exactly one of coupon or feature_grant, not both."""
-
-    id: str
-
-    name: str
-
-    duration: CreateRewardDuration
-    r"""Use a positive integer length for months, and null for one_off or forever."""
-
-    plan_ids: Nullable[List[str]]
-    r"""Plan IDs must be unique."""
-
-    promo_codes: List[CreateRewardCouponPromoCode]
-    r"""Promo code values must be unique."""
-
-    type: CouponTypeRequestBody
-
-    value: float
-    r"""Percentage discounts must be at most 100; fixed discounts must be positive."""
+    promo_codes: Optional[List[UpdateRewardCouponPromoCodeRequest]] = None
+    r"""Replaces the existing promo codes when provided."""
 
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
+        optional_fields = set(["name", "plan_ids", "promo_codes"])
+        nullable_fields = set(["plan_ids"])
         serialized = handler(self)
         m = {}
 
         for n, f in type(self).model_fields.items():
             k = f.alias or n
             val = serialized.get(k, serialized.get(n))
+            is_nullable_and_explicitly_set = (
+                k in nullable_fields
+                and (self.__pydantic_fields_set__.intersection({n}))  # pylint: disable=no-member
+            )
 
             if val != UNSET_SENTINEL:
-                m[k] = val
+                if (
+                    val is not None
+                    or k not in optional_fields
+                    or is_nullable_and_explicitly_set
+                ):
+                    m[k] = val
 
         return m
 
 
-CreateRewardExpiryTypeRequestBody = Literal[
+UpdateRewardTypeRequestBody = Literal[
     "day",
     "week",
     "month",
@@ -186,35 +135,35 @@ CreateRewardExpiryTypeRequestBody = Literal[
 r"""The unit of time the grant lasts."""
 
 
-class CreateRewardExpiryRequestTypedDict(TypedDict):
-    type: CreateRewardExpiryTypeRequestBody
+class UpdateRewardExpiryRequestTypedDict(TypedDict):
+    type: UpdateRewardTypeRequestBody
     r"""The unit of time the grant lasts."""
     length: int
     r"""The positive integer count of periods before the grant expires."""
 
 
-class CreateRewardExpiryRequest(BaseModel):
-    type: CreateRewardExpiryTypeRequestBody
+class UpdateRewardExpiryRequest(BaseModel):
+    type: UpdateRewardTypeRequestBody
     r"""The unit of time the grant lasts."""
 
     length: int
     r"""The positive integer count of periods before the grant expires."""
 
 
-class CreateRewardGrantTypedDict(TypedDict):
+class UpdateRewardGrantRequestTypedDict(TypedDict):
     feature_id: str
     included: Nullable[float]
-    r"""A positive amount to grant, or null for boolean features."""
-    expiry: Nullable[CreateRewardExpiryRequestTypedDict]
+    expiry: Nullable[UpdateRewardExpiryRequestTypedDict]
+    r"""How long the granted amount lasts before expiring, or null for a permanent grant."""
 
 
-class CreateRewardGrant(BaseModel):
+class UpdateRewardGrantRequest(BaseModel):
     feature_id: str
 
     included: Nullable[float]
-    r"""A positive amount to grant, or null for boolean features."""
 
-    expiry: Nullable[CreateRewardExpiryRequest]
+    expiry: Nullable[UpdateRewardExpiryRequest]
+    r"""How long the granted amount lasts before expiring, or null for a permanent grant."""
 
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
@@ -231,17 +180,15 @@ class CreateRewardGrant(BaseModel):
         return m
 
 
-class CreateRewardFeatureGrantPromoCodeTypedDict(TypedDict):
+class UpdateRewardFeatureGrantPromoCodeRequestTypedDict(TypedDict):
     code: str
     max_uses: Nullable[int]
-    r"""A positive redemption limit, or null for unlimited uses."""
 
 
-class CreateRewardFeatureGrantPromoCode(BaseModel):
+class UpdateRewardFeatureGrantPromoCodeRequest(BaseModel):
     code: str
 
     max_uses: Nullable[int]
-    r"""A positive redemption limit, or null for unlimited uses."""
 
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
@@ -258,44 +205,54 @@ class CreateRewardFeatureGrantPromoCode(BaseModel):
         return m
 
 
-class CreateRewardFeatureGrantRequestTypedDict(TypedDict):
-    r"""Provide exactly one of coupon or feature_grant, not both."""
+class UpdateRewardFeatureGrantRequestTypedDict(TypedDict):
+    name: NotRequired[str]
+    grants: NotRequired[List[UpdateRewardGrantRequestTypedDict]]
+    r"""Replaces the existing grants when provided."""
+    promo_codes: NotRequired[List[UpdateRewardFeatureGrantPromoCodeRequestTypedDict]]
+    r"""Replaces the existing promo codes when provided."""
 
+
+class UpdateRewardFeatureGrantRequest(BaseModel):
+    name: Optional[str] = None
+
+    grants: Optional[List[UpdateRewardGrantRequest]] = None
+    r"""Replaces the existing grants when provided."""
+
+    promo_codes: Optional[List[UpdateRewardFeatureGrantPromoCodeRequest]] = None
+    r"""Replaces the existing promo codes when provided."""
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        optional_fields = set(["name", "grants", "promo_codes"])
+        serialized = handler(self)
+        m = {}
+
+        for n, f in type(self).model_fields.items():
+            k = f.alias or n
+            val = serialized.get(k, serialized.get(n))
+
+            if val != UNSET_SENTINEL:
+                if val is not None or k not in optional_fields:
+                    m[k] = val
+
+        return m
+
+
+class UpdateRewardParamsTypedDict(TypedDict):
     id: str
-    name: str
-    grants: List[CreateRewardGrantTypedDict]
-    r"""Feature IDs must be unique."""
-    promo_codes: List[CreateRewardFeatureGrantPromoCodeTypedDict]
-    r"""Promo code values must be unique."""
+    r"""The ID of the coupon or feature grant to update."""
+    coupon: NotRequired[UpdateRewardCouponRequestTypedDict]
+    feature_grant: NotRequired[UpdateRewardFeatureGrantRequestTypedDict]
 
 
-class CreateRewardFeatureGrantRequest(BaseModel):
-    r"""Provide exactly one of coupon or feature_grant, not both."""
-
+class UpdateRewardParams(BaseModel):
     id: str
+    r"""The ID of the coupon or feature grant to update."""
 
-    name: str
+    coupon: Optional[UpdateRewardCouponRequest] = None
 
-    grants: List[CreateRewardGrant]
-    r"""Feature IDs must be unique."""
-
-    promo_codes: List[CreateRewardFeatureGrantPromoCode]
-    r"""Promo code values must be unique."""
-
-
-class CreateRewardParamsTypedDict(TypedDict):
-    coupon: NotRequired[CreateRewardCouponRequestTypedDict]
-    r"""Provide exactly one of coupon or feature_grant, not both."""
-    feature_grant: NotRequired[CreateRewardFeatureGrantRequestTypedDict]
-    r"""Provide exactly one of coupon or feature_grant, not both."""
-
-
-class CreateRewardParams(BaseModel):
-    coupon: Optional[CreateRewardCouponRequest] = None
-    r"""Provide exactly one of coupon or feature_grant, not both."""
-
-    feature_grant: Optional[CreateRewardFeatureGrantRequest] = None
-    r"""Provide exactly one of coupon or feature_grant, not both."""
+    feature_grant: Optional[UpdateRewardFeatureGrantRequest] = None
 
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
@@ -314,7 +271,7 @@ class CreateRewardParams(BaseModel):
         return m
 
 
-CreateRewardCouponTypeResponse = Union[
+UpdateRewardCouponType = Union[
     Literal[
         "percentage_discount",
         "fixed_discount",
@@ -325,7 +282,7 @@ CreateRewardCouponTypeResponse = Union[
 r"""The type of discount: percentage_discount, fixed_discount, or invoice_credits."""
 
 
-CreateRewardDurationTypeResponse = Union[
+UpdateRewardDurationType = Union[
     Literal[
         "one_off",
         "months",
@@ -336,19 +293,19 @@ CreateRewardDurationTypeResponse = Union[
 r"""The unit of time the duration is measured in."""
 
 
-class CreateRewardDurationResponseTypedDict(TypedDict):
+class UpdateRewardDurationTypedDict(TypedDict):
     r"""How long the coupon applies once redeemed."""
 
-    type: CreateRewardDurationTypeResponse
+    type: UpdateRewardDurationType
     r"""The unit of time the duration is measured in."""
     length: Nullable[float]
     r"""The number of `type` periods the duration lasts, or null when the type has no length (e.g. one_off, forever)."""
 
 
-class CreateRewardDurationResponse(BaseModel):
+class UpdateRewardDuration(BaseModel):
     r"""How long the coupon applies once redeemed."""
 
-    type: CreateRewardDurationTypeResponse
+    type: UpdateRewardDurationType
     r"""The unit of time the duration is measured in."""
 
     length: Nullable[float]
@@ -369,7 +326,7 @@ class CreateRewardDurationResponse(BaseModel):
         return m
 
 
-class CreateRewardCouponPromoCodeResponseTypedDict(TypedDict):
+class UpdateRewardCouponPromoCodeResponseTypedDict(TypedDict):
     code: str
     r"""The promo code customers enter to redeem the coupon."""
     global_max_redemption: NotRequired[Nullable[float]]
@@ -378,7 +335,7 @@ class CreateRewardCouponPromoCodeResponseTypedDict(TypedDict):
     r"""Whether this promo code can only be applied to a customer's first transaction."""
 
 
-class CreateRewardCouponPromoCodeResponse(BaseModel):
+class UpdateRewardCouponPromoCodeResponse(BaseModel):
     code: str
     r"""The promo code customers enter to redeem the coupon."""
 
@@ -414,41 +371,41 @@ class CreateRewardCouponPromoCodeResponse(BaseModel):
         return m
 
 
-class CreateRewardCouponResponseTypedDict(TypedDict):
+class UpdateRewardCouponTypedDict(TypedDict):
     id: str
     r"""The unique identifier for the coupon."""
-    type: CreateRewardCouponTypeResponse
+    type: UpdateRewardCouponType
     r"""The type of discount: percentage_discount, fixed_discount, or invoice_credits."""
     value: float
     r"""The discount value. A percentage for percentage_discount, or an amount for fixed_discount / invoice_credits."""
-    duration: CreateRewardDurationResponseTypedDict
+    duration: UpdateRewardDurationTypedDict
     r"""How long the coupon applies once redeemed."""
     plan_ids: Nullable[List[str]]
     r"""The plan IDs the coupon applies to, or null when it applies to all plans."""
-    promo_codes: List[CreateRewardCouponPromoCodeResponseTypedDict]
+    promo_codes: List[UpdateRewardCouponPromoCodeResponseTypedDict]
     created_at: float
     r"""The Unix timestamp (in milliseconds) when the coupon was created."""
     name: NotRequired[Nullable[str]]
     r"""A human-readable name for the coupon."""
 
 
-class CreateRewardCouponResponse(BaseModel):
+class UpdateRewardCoupon(BaseModel):
     id: str
     r"""The unique identifier for the coupon."""
 
-    type: CreateRewardCouponTypeResponse
+    type: UpdateRewardCouponType
     r"""The type of discount: percentage_discount, fixed_discount, or invoice_credits."""
 
     value: float
     r"""The discount value. A percentage for percentage_discount, or an amount for fixed_discount / invoice_credits."""
 
-    duration: CreateRewardDurationResponse
+    duration: UpdateRewardDuration
     r"""How long the coupon applies once redeemed."""
 
     plan_ids: Nullable[List[str]]
     r"""The plan IDs the coupon applies to, or null when it applies to all plans."""
 
-    promo_codes: List[CreateRewardCouponPromoCodeResponse]
+    promo_codes: List[UpdateRewardCouponPromoCodeResponse]
 
     created_at: float
     r"""The Unix timestamp (in milliseconds) when the coupon was created."""
@@ -482,7 +439,7 @@ class CreateRewardCouponResponse(BaseModel):
         return m
 
 
-CreateRewardExpiryTypeResponse = Union[
+UpdateRewardExpiryTypeResponse = Union[
     Literal[
         "day",
         "week",
@@ -494,38 +451,38 @@ CreateRewardExpiryTypeResponse = Union[
 r"""The unit of time the grant lasts."""
 
 
-class CreateRewardExpiryResponseTypedDict(TypedDict):
-    type: CreateRewardExpiryTypeResponse
+class UpdateRewardExpiryResponseTypedDict(TypedDict):
+    type: UpdateRewardExpiryTypeResponse
     r"""The unit of time the grant lasts."""
     length: int
     r"""The positive integer count of periods before the grant expires."""
 
 
-class CreateRewardExpiryResponse(BaseModel):
-    type: CreateRewardExpiryTypeResponse
+class UpdateRewardExpiryResponse(BaseModel):
+    type: UpdateRewardExpiryTypeResponse
     r"""The unit of time the grant lasts."""
 
     length: int
     r"""The positive integer count of periods before the grant expires."""
 
 
-class CreateRewardGrantResponseTypedDict(TypedDict):
+class UpdateRewardGrantResponseTypedDict(TypedDict):
     feature_id: str
     r"""The feature ID this grant applies to."""
     included: Nullable[float]
     r"""The amount of the feature granted, or null for boolean features."""
-    expiry: Nullable[CreateRewardExpiryResponseTypedDict]
+    expiry: Nullable[UpdateRewardExpiryResponseTypedDict]
     r"""How long the granted amount lasts before expiring, or null for a permanent grant."""
 
 
-class CreateRewardGrantResponse(BaseModel):
+class UpdateRewardGrantResponse(BaseModel):
     feature_id: str
     r"""The feature ID this grant applies to."""
 
     included: Nullable[float]
     r"""The amount of the feature granted, or null for boolean features."""
 
-    expiry: Nullable[CreateRewardExpiryResponse]
+    expiry: Nullable[UpdateRewardExpiryResponse]
     r"""How long the granted amount lasts before expiring, or null for a permanent grant."""
 
     @model_serializer(mode="wrap")
@@ -543,14 +500,14 @@ class CreateRewardGrantResponse(BaseModel):
         return m
 
 
-class CreateRewardFeatureGrantPromoCodeResponseTypedDict(TypedDict):
+class UpdateRewardFeatureGrantPromoCodeResponseTypedDict(TypedDict):
     code: str
     r"""The promo code customers enter to redeem the feature grant."""
     max_uses: Nullable[float]
     r"""Maximum number of times this promo code can be redeemed, or null for unlimited."""
 
 
-class CreateRewardFeatureGrantPromoCodeResponse(BaseModel):
+class UpdateRewardFeatureGrantPromoCodeResponse(BaseModel):
     code: str
     r"""The promo code customers enter to redeem the feature grant."""
 
@@ -572,24 +529,24 @@ class CreateRewardFeatureGrantPromoCodeResponse(BaseModel):
         return m
 
 
-class CreateRewardFeatureGrantResponseTypedDict(TypedDict):
+class UpdateRewardFeatureGrantTypedDict(TypedDict):
     id: str
     r"""The unique identifier for the feature grant."""
-    grants: List[CreateRewardGrantResponseTypedDict]
-    promo_codes: List[CreateRewardFeatureGrantPromoCodeResponseTypedDict]
+    grants: List[UpdateRewardGrantResponseTypedDict]
+    promo_codes: List[UpdateRewardFeatureGrantPromoCodeResponseTypedDict]
     created_at: float
     r"""The Unix timestamp (in milliseconds) when the feature grant was created."""
     name: NotRequired[Nullable[str]]
     r"""A human-readable name for the feature grant."""
 
 
-class CreateRewardFeatureGrantResponse(BaseModel):
+class UpdateRewardFeatureGrant(BaseModel):
     id: str
     r"""The unique identifier for the feature grant."""
 
-    grants: List[CreateRewardGrantResponse]
+    grants: List[UpdateRewardGrantResponse]
 
-    promo_codes: List[CreateRewardFeatureGrantPromoCodeResponse]
+    promo_codes: List[UpdateRewardFeatureGrantPromoCodeResponse]
 
     created_at: float
     r"""The Unix timestamp (in milliseconds) when the feature grant was created."""
@@ -623,19 +580,19 @@ class CreateRewardFeatureGrantResponse(BaseModel):
         return m
 
 
-class CreateRewardResponseTypedDict(TypedDict):
+class UpdateRewardResponseTypedDict(TypedDict):
     r"""OK"""
 
-    coupon: NotRequired[CreateRewardCouponResponseTypedDict]
-    feature_grant: NotRequired[CreateRewardFeatureGrantResponseTypedDict]
+    coupon: NotRequired[UpdateRewardCouponTypedDict]
+    feature_grant: NotRequired[UpdateRewardFeatureGrantTypedDict]
 
 
-class CreateRewardResponse(BaseModel):
+class UpdateRewardResponse(BaseModel):
     r"""OK"""
 
-    coupon: Optional[CreateRewardCouponResponse] = None
+    coupon: Optional[UpdateRewardCoupon] = None
 
-    feature_grant: Optional[CreateRewardFeatureGrantResponse] = None
+    feature_grant: Optional[UpdateRewardFeatureGrant] = None
 
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):

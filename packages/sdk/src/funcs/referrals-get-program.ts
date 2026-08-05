@@ -27,15 +27,15 @@ import { APICall, APIPromise } from "../types/async.js";
 import { Result } from "../types/fp.js";
 
 /**
- * Create a referral program linked to an existing reward.
+ * Fetch a referral program by ID.
  */
-export function referralsCreateProgram(
+export function referralsGetProgram(
   client: AutumnCore,
-  request: models.CreateReferralProgramParams,
+  request: models.GetReferralProgramParams,
   options?: RequestOptions,
 ): APIPromise<
   Result<
-    models.CreateReferralProgramCreateReferralProgramResponse,
+    models.GetReferralProgramCreateReferralProgramResponse,
     | AutumnError
     | ResponseValidationError
     | ConnectionError
@@ -55,12 +55,12 @@ export function referralsCreateProgram(
 
 async function $do(
   client: AutumnCore,
-  request: models.CreateReferralProgramParams,
+  request: models.GetReferralProgramParams,
   options?: RequestOptions,
 ): Promise<
   [
     Result<
-      models.CreateReferralProgramCreateReferralProgramResponse,
+      models.GetReferralProgramCreateReferralProgramResponse,
       | AutumnError
       | ResponseValidationError
       | ConnectionError
@@ -75,8 +75,7 @@ async function $do(
 > {
   const parsed = safeParse(
     request,
-    (value) =>
-      z.parse(models.CreateReferralProgramParams$outboundSchema, value),
+    (value) => z.parse(models.GetReferralProgramParams$outboundSchema, value),
     "Input validation failed",
   );
   if (!parsed.ok) {
@@ -85,7 +84,7 @@ async function $do(
   const payload = parsed.value;
   const body = encodeJSON("body", payload, { explode: true });
 
-  const path = pathToFunc("/v1/referral_programs.create")();
+  const path = pathToFunc("/v1/referral_programs.get")();
 
   const headers = new Headers(compactMap({
     "Content-Type": "application/json",
@@ -104,7 +103,7 @@ async function $do(
   const context = {
     options: client._options,
     baseURL: options?.serverURL ?? client._baseURL ?? "",
-    operationID: "createReferralProgram",
+    operationID: "getReferralProgram",
     oAuth2Scopes: null,
 
     resolvedSecurity: requestSecurity,
@@ -144,7 +143,7 @@ async function $do(
   const response = doResult.value;
 
   const [result] = await M.match<
-    models.CreateReferralProgramCreateReferralProgramResponse,
+    models.GetReferralProgramCreateReferralProgramResponse,
     | AutumnError
     | ResponseValidationError
     | ConnectionError
@@ -156,7 +155,7 @@ async function $do(
   >(
     M.json(
       200,
-      models.CreateReferralProgramCreateReferralProgramResponse$inboundSchema,
+      models.GetReferralProgramCreateReferralProgramResponse$inboundSchema,
     ),
     M.fail("4XX"),
     M.fail("5XX"),

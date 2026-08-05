@@ -11,16 +11,21 @@ import { Result as SafeParseResult } from "../types/fp.js";
 import * as types from "../types/primitives.js";
 import { SDKValidationError } from "./sdk-validation-error.js";
 
-export type ListRewardsGlobals = {
+export type GetRewardGlobals = {
   xApiVersion?: string | undefined;
 };
 
-export type RewardsListParams = {};
+export type GetRewardParams = {
+  /**
+   * The ID of the coupon or feature grant to fetch.
+   */
+  id: string;
+};
 
 /**
  * The type of discount: percentage_discount, fixed_discount, or invoice_credits.
  */
-export const ListRewardsCouponType = {
+export const GetRewardCouponType = {
   PercentageDiscount: "percentage_discount",
   FixedDiscount: "fixed_discount",
   InvoiceCredits: "invoice_credits",
@@ -28,12 +33,12 @@ export const ListRewardsCouponType = {
 /**
  * The type of discount: percentage_discount, fixed_discount, or invoice_credits.
  */
-export type ListRewardsCouponType = OpenEnum<typeof ListRewardsCouponType>;
+export type GetRewardCouponType = OpenEnum<typeof GetRewardCouponType>;
 
 /**
  * The unit of time the duration is measured in.
  */
-export const ListRewardsDurationType = {
+export const GetRewardDurationType = {
   OneOff: "one_off",
   Months: "months",
   Forever: "forever",
@@ -41,23 +46,23 @@ export const ListRewardsDurationType = {
 /**
  * The unit of time the duration is measured in.
  */
-export type ListRewardsDurationType = OpenEnum<typeof ListRewardsDurationType>;
+export type GetRewardDurationType = OpenEnum<typeof GetRewardDurationType>;
 
 /**
  * How long the coupon applies once redeemed.
  */
-export type ListRewardsDuration = {
+export type GetRewardDuration = {
   /**
    * The unit of time the duration is measured in.
    */
-  type: ListRewardsDurationType;
+  type: GetRewardDurationType;
   /**
    * The number of `type` periods the duration lasts, or null when the type has no length (e.g. one_off, forever).
    */
   length: number | null;
 };
 
-export type ListRewardsCouponPromoCode = {
+export type GetRewardCouponPromoCode = {
   /**
    * The promo code customers enter to redeem the coupon.
    */
@@ -72,7 +77,7 @@ export type ListRewardsCouponPromoCode = {
   firstTimeTransaction?: boolean | null | undefined;
 };
 
-export type ListRewardsCoupon = {
+export type GetRewardCoupon = {
   /**
    * The unique identifier for the coupon.
    */
@@ -84,7 +89,7 @@ export type ListRewardsCoupon = {
   /**
    * The type of discount: percentage_discount, fixed_discount, or invoice_credits.
    */
-  type: ListRewardsCouponType;
+  type: GetRewardCouponType;
   /**
    * The discount value. A percentage for percentage_discount, or an amount for fixed_discount / invoice_credits.
    */
@@ -92,7 +97,7 @@ export type ListRewardsCoupon = {
   /**
    * How long the coupon applies once redeemed.
    */
-  duration: ListRewardsDuration;
+  duration: GetRewardDuration;
   /**
    * The plan IDs the coupon applies to, or null when it applies to all plans.
    */
@@ -100,7 +105,7 @@ export type ListRewardsCoupon = {
   /**
    * The promo codes customers can use to redeem the coupon.
    */
-  promoCodes: Array<ListRewardsCouponPromoCode>;
+  promoCodes: Array<GetRewardCouponPromoCode>;
   /**
    * The Unix timestamp (in milliseconds) when the coupon was created.
    */
@@ -110,7 +115,7 @@ export type ListRewardsCoupon = {
 /**
  * The unit of time the grant lasts.
  */
-export const ListRewardsExpiryType = {
+export const GetRewardExpiryType = {
   Day: "day",
   Week: "week",
   Month: "month",
@@ -119,20 +124,20 @@ export const ListRewardsExpiryType = {
 /**
  * The unit of time the grant lasts.
  */
-export type ListRewardsExpiryType = OpenEnum<typeof ListRewardsExpiryType>;
+export type GetRewardExpiryType = OpenEnum<typeof GetRewardExpiryType>;
 
-export type ListRewardsExpiry = {
+export type GetRewardExpiry = {
   /**
    * The unit of time the grant lasts.
    */
-  type: ListRewardsExpiryType;
+  type: GetRewardExpiryType;
   /**
    * The positive integer count of periods before the grant expires.
    */
   length: number;
 };
 
-export type ListRewardsGrant = {
+export type GetRewardGrant = {
   /**
    * The feature ID this grant applies to.
    */
@@ -144,10 +149,10 @@ export type ListRewardsGrant = {
   /**
    * How long the granted amount lasts before expiring, or null for a permanent grant.
    */
-  expiry: ListRewardsExpiry | null;
+  expiry: GetRewardExpiry | null;
 };
 
-export type ListRewardsFeatureGrantPromoCode = {
+export type GetRewardFeatureGrantPromoCode = {
   /**
    * The promo code customers enter to redeem the feature grant.
    */
@@ -158,7 +163,7 @@ export type ListRewardsFeatureGrantPromoCode = {
   maxUses: number | null;
 };
 
-export type ListRewardsFeatureGrant = {
+export type GetRewardFeatureGrant = {
   /**
    * The unique identifier for the feature grant.
    */
@@ -170,11 +175,11 @@ export type ListRewardsFeatureGrant = {
   /**
    * The feature grants awarded when the grant is redeemed.
    */
-  grants: Array<ListRewardsGrant>;
+  grants: Array<GetRewardGrant>;
   /**
    * The promo codes customers can use to redeem the feature grant.
    */
-  promoCodes: Array<ListRewardsFeatureGrantPromoCode>;
+  promoCodes: Array<GetRewardFeatureGrantPromoCode>;
   /**
    * The Unix timestamp (in milliseconds) when the feature grant was created.
    */
@@ -184,68 +189,64 @@ export type ListRewardsFeatureGrant = {
 /**
  * OK
  */
-export type ListRewardsResponse = {
-  /**
-   * The list of coupons configured for the organization.
-   */
-  coupons: Array<ListRewardsCoupon>;
-  /**
-   * The list of feature grants configured for the organization.
-   */
-  featureGrants: Array<ListRewardsFeatureGrant>;
+export type GetRewardResponse = {
+  coupon?: GetRewardCoupon | undefined;
+  featureGrant?: GetRewardFeatureGrant | undefined;
 };
 
 /** @internal */
-export type RewardsListParams$Outbound = {};
+export type GetRewardParams$Outbound = {
+  id: string;
+};
 
 /** @internal */
-export const RewardsListParams$outboundSchema: z.ZodMiniType<
-  RewardsListParams$Outbound,
-  RewardsListParams
-> = z.object({});
+export const GetRewardParams$outboundSchema: z.ZodMiniType<
+  GetRewardParams$Outbound,
+  GetRewardParams
+> = z.object({
+  id: z.string(),
+});
 
-export function rewardsListParamsToJSON(
-  rewardsListParams: RewardsListParams,
+export function getRewardParamsToJSON(
+  getRewardParams: GetRewardParams,
 ): string {
-  return JSON.stringify(
-    RewardsListParams$outboundSchema.parse(rewardsListParams),
-  );
+  return JSON.stringify(GetRewardParams$outboundSchema.parse(getRewardParams));
 }
 
 /** @internal */
-export const ListRewardsCouponType$inboundSchema: z.ZodMiniType<
-  ListRewardsCouponType,
+export const GetRewardCouponType$inboundSchema: z.ZodMiniType<
+  GetRewardCouponType,
   unknown
-> = openEnums.inboundSchema(ListRewardsCouponType);
+> = openEnums.inboundSchema(GetRewardCouponType);
 
 /** @internal */
-export const ListRewardsDurationType$inboundSchema: z.ZodMiniType<
-  ListRewardsDurationType,
+export const GetRewardDurationType$inboundSchema: z.ZodMiniType<
+  GetRewardDurationType,
   unknown
-> = openEnums.inboundSchema(ListRewardsDurationType);
+> = openEnums.inboundSchema(GetRewardDurationType);
 
 /** @internal */
-export const ListRewardsDuration$inboundSchema: z.ZodMiniType<
-  ListRewardsDuration,
+export const GetRewardDuration$inboundSchema: z.ZodMiniType<
+  GetRewardDuration,
   unknown
 > = z.object({
-  type: ListRewardsDurationType$inboundSchema,
+  type: GetRewardDurationType$inboundSchema,
   length: types.nullable(types.number()),
 });
 
-export function listRewardsDurationFromJSON(
+export function getRewardDurationFromJSON(
   jsonString: string,
-): SafeParseResult<ListRewardsDuration, SDKValidationError> {
+): SafeParseResult<GetRewardDuration, SDKValidationError> {
   return safeParse(
     jsonString,
-    (x) => ListRewardsDuration$inboundSchema.parse(JSON.parse(x)),
-    `Failed to parse 'ListRewardsDuration' from JSON`,
+    (x) => GetRewardDuration$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'GetRewardDuration' from JSON`,
   );
 }
 
 /** @internal */
-export const ListRewardsCouponPromoCode$inboundSchema: z.ZodMiniType<
-  ListRewardsCouponPromoCode,
+export const GetRewardCouponPromoCode$inboundSchema: z.ZodMiniType<
+  GetRewardCouponPromoCode,
   unknown
 > = z.pipe(
   z.object({
@@ -261,31 +262,29 @@ export const ListRewardsCouponPromoCode$inboundSchema: z.ZodMiniType<
   }),
 );
 
-export function listRewardsCouponPromoCodeFromJSON(
+export function getRewardCouponPromoCodeFromJSON(
   jsonString: string,
-): SafeParseResult<ListRewardsCouponPromoCode, SDKValidationError> {
+): SafeParseResult<GetRewardCouponPromoCode, SDKValidationError> {
   return safeParse(
     jsonString,
-    (x) => ListRewardsCouponPromoCode$inboundSchema.parse(JSON.parse(x)),
-    `Failed to parse 'ListRewardsCouponPromoCode' from JSON`,
+    (x) => GetRewardCouponPromoCode$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'GetRewardCouponPromoCode' from JSON`,
   );
 }
 
 /** @internal */
-export const ListRewardsCoupon$inboundSchema: z.ZodMiniType<
-  ListRewardsCoupon,
+export const GetRewardCoupon$inboundSchema: z.ZodMiniType<
+  GetRewardCoupon,
   unknown
 > = z.pipe(
   z.object({
     id: types.string(),
     name: z.optional(z.nullable(types.string())),
-    type: ListRewardsCouponType$inboundSchema,
+    type: GetRewardCouponType$inboundSchema,
     value: types.number(),
-    duration: z.lazy(() => ListRewardsDuration$inboundSchema),
+    duration: z.lazy(() => GetRewardDuration$inboundSchema),
     plan_ids: types.nullable(z.array(types.string())),
-    promo_codes: z.array(
-      z.lazy(() => ListRewardsCouponPromoCode$inboundSchema),
-    ),
+    promo_codes: z.array(z.lazy(() => GetRewardCouponPromoCode$inboundSchema)),
     created_at: types.number(),
   }),
   z.transform((v) => {
@@ -297,50 +296,50 @@ export const ListRewardsCoupon$inboundSchema: z.ZodMiniType<
   }),
 );
 
-export function listRewardsCouponFromJSON(
+export function getRewardCouponFromJSON(
   jsonString: string,
-): SafeParseResult<ListRewardsCoupon, SDKValidationError> {
+): SafeParseResult<GetRewardCoupon, SDKValidationError> {
   return safeParse(
     jsonString,
-    (x) => ListRewardsCoupon$inboundSchema.parse(JSON.parse(x)),
-    `Failed to parse 'ListRewardsCoupon' from JSON`,
+    (x) => GetRewardCoupon$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'GetRewardCoupon' from JSON`,
   );
 }
 
 /** @internal */
-export const ListRewardsExpiryType$inboundSchema: z.ZodMiniType<
-  ListRewardsExpiryType,
+export const GetRewardExpiryType$inboundSchema: z.ZodMiniType<
+  GetRewardExpiryType,
   unknown
-> = openEnums.inboundSchema(ListRewardsExpiryType);
+> = openEnums.inboundSchema(GetRewardExpiryType);
 
 /** @internal */
-export const ListRewardsExpiry$inboundSchema: z.ZodMiniType<
-  ListRewardsExpiry,
+export const GetRewardExpiry$inboundSchema: z.ZodMiniType<
+  GetRewardExpiry,
   unknown
 > = z.object({
-  type: ListRewardsExpiryType$inboundSchema,
+  type: GetRewardExpiryType$inboundSchema,
   length: types.number(),
 });
 
-export function listRewardsExpiryFromJSON(
+export function getRewardExpiryFromJSON(
   jsonString: string,
-): SafeParseResult<ListRewardsExpiry, SDKValidationError> {
+): SafeParseResult<GetRewardExpiry, SDKValidationError> {
   return safeParse(
     jsonString,
-    (x) => ListRewardsExpiry$inboundSchema.parse(JSON.parse(x)),
-    `Failed to parse 'ListRewardsExpiry' from JSON`,
+    (x) => GetRewardExpiry$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'GetRewardExpiry' from JSON`,
   );
 }
 
 /** @internal */
-export const ListRewardsGrant$inboundSchema: z.ZodMiniType<
-  ListRewardsGrant,
+export const GetRewardGrant$inboundSchema: z.ZodMiniType<
+  GetRewardGrant,
   unknown
 > = z.pipe(
   z.object({
     feature_id: types.string(),
     included: types.nullable(types.number()),
-    expiry: types.nullable(z.lazy(() => ListRewardsExpiry$inboundSchema)),
+    expiry: types.nullable(z.lazy(() => GetRewardExpiry$inboundSchema)),
   }),
   z.transform((v) => {
     return remap$(v, {
@@ -349,19 +348,19 @@ export const ListRewardsGrant$inboundSchema: z.ZodMiniType<
   }),
 );
 
-export function listRewardsGrantFromJSON(
+export function getRewardGrantFromJSON(
   jsonString: string,
-): SafeParseResult<ListRewardsGrant, SDKValidationError> {
+): SafeParseResult<GetRewardGrant, SDKValidationError> {
   return safeParse(
     jsonString,
-    (x) => ListRewardsGrant$inboundSchema.parse(JSON.parse(x)),
-    `Failed to parse 'ListRewardsGrant' from JSON`,
+    (x) => GetRewardGrant$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'GetRewardGrant' from JSON`,
   );
 }
 
 /** @internal */
-export const ListRewardsFeatureGrantPromoCode$inboundSchema: z.ZodMiniType<
-  ListRewardsFeatureGrantPromoCode,
+export const GetRewardFeatureGrantPromoCode$inboundSchema: z.ZodMiniType<
+  GetRewardFeatureGrantPromoCode,
   unknown
 > = z.pipe(
   z.object({
@@ -375,27 +374,27 @@ export const ListRewardsFeatureGrantPromoCode$inboundSchema: z.ZodMiniType<
   }),
 );
 
-export function listRewardsFeatureGrantPromoCodeFromJSON(
+export function getRewardFeatureGrantPromoCodeFromJSON(
   jsonString: string,
-): SafeParseResult<ListRewardsFeatureGrantPromoCode, SDKValidationError> {
+): SafeParseResult<GetRewardFeatureGrantPromoCode, SDKValidationError> {
   return safeParse(
     jsonString,
-    (x) => ListRewardsFeatureGrantPromoCode$inboundSchema.parse(JSON.parse(x)),
-    `Failed to parse 'ListRewardsFeatureGrantPromoCode' from JSON`,
+    (x) => GetRewardFeatureGrantPromoCode$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'GetRewardFeatureGrantPromoCode' from JSON`,
   );
 }
 
 /** @internal */
-export const ListRewardsFeatureGrant$inboundSchema: z.ZodMiniType<
-  ListRewardsFeatureGrant,
+export const GetRewardFeatureGrant$inboundSchema: z.ZodMiniType<
+  GetRewardFeatureGrant,
   unknown
 > = z.pipe(
   z.object({
     id: types.string(),
     name: z.optional(z.nullable(types.string())),
-    grants: z.array(z.lazy(() => ListRewardsGrant$inboundSchema)),
+    grants: z.array(z.lazy(() => GetRewardGrant$inboundSchema)),
     promo_codes: z.array(
-      z.lazy(() => ListRewardsFeatureGrantPromoCode$inboundSchema),
+      z.lazy(() => GetRewardFeatureGrantPromoCode$inboundSchema),
     ),
     created_at: types.number(),
   }),
@@ -407,40 +406,40 @@ export const ListRewardsFeatureGrant$inboundSchema: z.ZodMiniType<
   }),
 );
 
-export function listRewardsFeatureGrantFromJSON(
+export function getRewardFeatureGrantFromJSON(
   jsonString: string,
-): SafeParseResult<ListRewardsFeatureGrant, SDKValidationError> {
+): SafeParseResult<GetRewardFeatureGrant, SDKValidationError> {
   return safeParse(
     jsonString,
-    (x) => ListRewardsFeatureGrant$inboundSchema.parse(JSON.parse(x)),
-    `Failed to parse 'ListRewardsFeatureGrant' from JSON`,
+    (x) => GetRewardFeatureGrant$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'GetRewardFeatureGrant' from JSON`,
   );
 }
 
 /** @internal */
-export const ListRewardsResponse$inboundSchema: z.ZodMiniType<
-  ListRewardsResponse,
+export const GetRewardResponse$inboundSchema: z.ZodMiniType<
+  GetRewardResponse,
   unknown
 > = z.pipe(
   z.object({
-    coupons: z.array(z.lazy(() => ListRewardsCoupon$inboundSchema)),
-    feature_grants: z.array(
-      z.lazy(() => ListRewardsFeatureGrant$inboundSchema),
+    coupon: types.optional(z.lazy(() => GetRewardCoupon$inboundSchema)),
+    feature_grant: types.optional(
+      z.lazy(() => GetRewardFeatureGrant$inboundSchema),
     ),
   }),
   z.transform((v) => {
     return remap$(v, {
-      "feature_grants": "featureGrants",
+      "feature_grant": "featureGrant",
     });
   }),
 );
 
-export function listRewardsResponseFromJSON(
+export function getRewardResponseFromJSON(
   jsonString: string,
-): SafeParseResult<ListRewardsResponse, SDKValidationError> {
+): SafeParseResult<GetRewardResponse, SDKValidationError> {
   return safeParse(
     jsonString,
-    (x) => ListRewardsResponse$inboundSchema.parse(JSON.parse(x)),
-    `Failed to parse 'ListRewardsResponse' from JSON`,
+    (x) => GetRewardResponse$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'GetRewardResponse' from JSON`,
   );
 }

@@ -1,0 +1,227 @@
+---
+title: "Update Reward"
+openapi: "openapi POST /v1/rewards.update"
+---
+
+import { DynamicParamField } from "/snippets/dynamic-param-field.jsx";
+import { DynamicResponseField } from "/snippets/dynamic-response-field.jsx";
+import { DynamicResponseExample } from "/snippets/dynamic-response-example.jsx";
+
+### Body Parameters
+
+<DynamicParamField body="id" type="string" required>
+  The ID of the coupon or feature grant to update.
+</DynamicParamField>
+
+<DynamicParamField body="coupon" type="object">
+  <Expandable title="properties">
+    <DynamicParamField body="name" type="string" />
+
+    <DynamicParamField body="plan_ids" type="string[] | null">
+      Plan IDs must be unique. Null applies the coupon to all plans.
+    </DynamicParamField>
+
+    <DynamicParamField body="promo_codes" type="object[]">
+      Replaces the existing promo codes when provided.
+      <Expandable title="properties">
+        <DynamicParamField body="code" type="string" required />
+
+        <DynamicParamField body="global_max_redemption" type="integer | null" />
+
+        <DynamicParamField body="first_time_transaction" type="boolean | null" />
+
+      </Expandable>
+    </DynamicParamField>
+
+  </Expandable>
+</DynamicParamField>
+
+<DynamicParamField body="feature_grant" type="object">
+  <Expandable title="properties">
+    <DynamicParamField body="name" type="string" />
+
+    <DynamicParamField body="grants" type="object[]">
+      Replaces the existing grants when provided.
+      <Expandable title="properties">
+        <DynamicParamField body="feature_id" type="string" required />
+
+        <DynamicParamField body="included" type="number | null" required />
+
+        <DynamicParamField body="expiry" type="object | null" required>
+          How long the granted amount lasts before expiring, or null for a permanent grant.
+          <Expandable title="properties">
+            <DynamicParamField body="type" type="'day' | 'week' | 'month' | 'year'" required>
+              The unit of time the grant lasts.
+            </DynamicParamField>
+
+            <DynamicParamField body="length" type="integer" required>
+              The positive integer count of periods before the grant expires.
+            </DynamicParamField>
+
+          </Expandable>
+        </DynamicParamField>
+
+      </Expandable>
+    </DynamicParamField>
+
+    <DynamicParamField body="promo_codes" type="object[]">
+      Replaces the existing promo codes when provided.
+      <Expandable title="properties">
+        <DynamicParamField body="code" type="string" required />
+
+        <DynamicParamField body="max_uses" type="integer | null" required />
+
+      </Expandable>
+    </DynamicParamField>
+
+  </Expandable>
+</DynamicParamField>
+
+
+### Response
+
+<DynamicResponseField name="coupon" type="object">
+  <Expandable title="properties">
+    <DynamicResponseField name="id" type="string">
+      The unique identifier for the coupon.
+    </DynamicResponseField>
+
+    <DynamicResponseField name="name" type="string | null">
+      A human-readable name for the coupon.
+    </DynamicResponseField>
+
+    <DynamicResponseField name="type" type="'percentage_discount' | 'fixed_discount' | 'invoice_credits'">
+      The type of discount: percentage_discount, fixed_discount, or invoice_credits.
+    </DynamicResponseField>
+
+    <DynamicResponseField name="value" type="number">
+      The discount value. A percentage for percentage_discount, or an amount for fixed_discount / invoice_credits.
+    </DynamicResponseField>
+
+    <DynamicResponseField name="duration" type="object">
+      How long the coupon applies once redeemed.
+      <Expandable title="properties">
+        <DynamicResponseField name="type" type="'one_off' | 'months' | 'forever'">
+          The unit of time the duration is measured in.
+        </DynamicResponseField>
+
+        <DynamicResponseField name="length" type="number | null">
+          The number of `type` periods the duration lasts, or null when the type has no length (e.g. one_off, forever).
+        </DynamicResponseField>
+
+      </Expandable>
+    </DynamicResponseField>
+
+    <DynamicResponseField name="plan_ids" type="string[] | null">
+      The plan IDs the coupon applies to, or null when it applies to all plans.
+    </DynamicResponseField>
+
+    <DynamicResponseField name="promo_codes" type="object[]">
+      <Expandable title="properties">
+        <DynamicResponseField name="code" type="string">
+          The promo code customers enter to redeem the coupon.
+        </DynamicResponseField>
+
+        <DynamicResponseField name="global_max_redemption" type="number | null">
+          Maximum number of times this promo code can be redeemed across all customers, or null for unlimited.
+        </DynamicResponseField>
+
+        <DynamicResponseField name="first_time_transaction" type="boolean | null">
+          Whether this promo code can only be applied to a customer's first transaction.
+        </DynamicResponseField>
+
+      </Expandable>
+    </DynamicResponseField>
+
+    <DynamicResponseField name="created_at" type="number">
+      The Unix timestamp (in milliseconds) when the coupon was created.
+    </DynamicResponseField>
+
+  </Expandable>
+</DynamicResponseField>
+
+<DynamicResponseField name="feature_grant" type="object">
+  <Expandable title="properties">
+    <DynamicResponseField name="id" type="string">
+      The unique identifier for the feature grant.
+    </DynamicResponseField>
+
+    <DynamicResponseField name="name" type="string | null">
+      A human-readable name for the feature grant.
+    </DynamicResponseField>
+
+    <DynamicResponseField name="grants" type="object[]">
+      <Expandable title="properties">
+        <DynamicResponseField name="feature_id" type="string">
+          The feature ID this grant applies to.
+        </DynamicResponseField>
+
+        <DynamicResponseField name="included" type="number | null">
+          The amount of the feature granted, or null for boolean features.
+        </DynamicResponseField>
+
+        <DynamicResponseField name="expiry" type="object | null">
+          How long the granted amount lasts before expiring, or null for a permanent grant.
+          <Expandable title="properties">
+            <DynamicResponseField name="type" type="'day' | 'week' | 'month' | 'year'">
+              The unit of time the grant lasts.
+            </DynamicResponseField>
+
+            <DynamicResponseField name="length" type="integer">
+              The positive integer count of periods before the grant expires.
+            </DynamicResponseField>
+
+          </Expandable>
+        </DynamicResponseField>
+
+      </Expandable>
+    </DynamicResponseField>
+
+    <DynamicResponseField name="promo_codes" type="object[]">
+      <Expandable title="properties">
+        <DynamicResponseField name="code" type="string">
+          The promo code customers enter to redeem the feature grant.
+        </DynamicResponseField>
+
+        <DynamicResponseField name="max_uses" type="number | null">
+          Maximum number of times this promo code can be redeemed, or null for unlimited.
+        </DynamicResponseField>
+
+      </Expandable>
+    </DynamicResponseField>
+
+    <DynamicResponseField name="created_at" type="number">
+      The Unix timestamp (in milliseconds) when the feature grant was created.
+    </DynamicResponseField>
+
+  </Expandable>
+</DynamicResponseField>
+
+
+<ResponseExample>
+```json 200
+{
+  "feature_grant": {
+    "id": "beta_credits_grant",
+    "name": "Beta Tester Credits",
+    "promo_codes": [
+      {
+        "code": "BETA2024",
+        "max_uses": 500
+      }
+    ],
+    "grants": [
+      {
+        "feature_id": "credits",
+        "included": 1000,
+        "expiry": {
+          "type": "month",
+          "length": 1
+        }
+      }
+    ],
+    "created_at": 1718000000000
+  }
+}
+```
+</ResponseExample>

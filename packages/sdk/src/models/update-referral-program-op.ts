@@ -11,49 +11,55 @@ import { Result as SafeParseResult } from "../types/fp.js";
 import * as types from "../types/primitives.js";
 import { SDKValidationError } from "./sdk-validation-error.js";
 
-export type CreateReferralProgramGlobals = {
+export type UpdateReferralProgramGlobals = {
   xApiVersion?: string | undefined;
 };
 
 /**
  * When the reward is granted: on redemption, or when the redeemer checks out.
  */
-export const CreateReferralProgramRedeemOnRequest = {
+export const UpdateReferralProgramRedeemOnRequest = {
   CustomerCreation: "customer_creation",
   Checkout: "checkout",
 } as const;
 /**
  * When the reward is granted: on redemption, or when the redeemer checks out.
  */
-export type CreateReferralProgramRedeemOnRequest = ClosedEnum<
-  typeof CreateReferralProgramRedeemOnRequest
+export type UpdateReferralProgramRedeemOnRequest = ClosedEnum<
+  typeof UpdateReferralProgramRedeemOnRequest
 >;
 
 /**
  * Who receives the reward: the referrer only, or both parties.
  */
-export const CreateReferralProgramReceivedByRequest = {
+export const UpdateReferralProgramReceivedByRequest = {
   Referrer: "referrer",
   All: "all",
 } as const;
 /**
  * Who receives the reward: the referrer only, or both parties.
  */
-export type CreateReferralProgramReceivedByRequest = ClosedEnum<
-  typeof CreateReferralProgramReceivedByRequest
+export type UpdateReferralProgramReceivedByRequest = ClosedEnum<
+  typeof UpdateReferralProgramReceivedByRequest
 >;
 
-export type CreateReferralProgramParams = {
+export type UpdateReferralProgramParams = {
+  /**
+   * The ID of the referral program to update.
+   */
   id: string;
-  rewardId: string;
+  /**
+   * The ID of the reward granted when a code is redeemed.
+   */
+  rewardId?: string | undefined;
   /**
    * When the reward is granted: on redemption, or when the redeemer checks out.
    */
-  redeemOn: CreateReferralProgramRedeemOnRequest;
+  redeemOn?: UpdateReferralProgramRedeemOnRequest | undefined;
   /**
    * Who receives the reward: the referrer only, or both parties.
    */
-  receivedBy: CreateReferralProgramReceivedByRequest;
+  receivedBy?: UpdateReferralProgramReceivedByRequest | undefined;
   /**
    * A positive redemption limit, or null for unlimited redemptions.
    */
@@ -62,44 +68,41 @@ export type CreateReferralProgramParams = {
    * Required when redeem_on is checkout. Plan IDs must be unique.
    */
   planIds?: Array<string> | null | undefined;
-  /**
-   * Whether checkouts that start a trial should skip granting the reward.
-   */
   excludeTrial?: boolean | null | undefined;
 };
 
 /**
  * When the reward is granted: on redemption, or when the redeemer checks out.
  */
-export const CreateReferralProgramRedeemOnResponse = {
+export const UpdateReferralProgramRedeemOnResponse = {
   CustomerCreation: "customer_creation",
   Checkout: "checkout",
 } as const;
 /**
  * When the reward is granted: on redemption, or when the redeemer checks out.
  */
-export type CreateReferralProgramRedeemOnResponse = OpenEnum<
-  typeof CreateReferralProgramRedeemOnResponse
+export type UpdateReferralProgramRedeemOnResponse = OpenEnum<
+  typeof UpdateReferralProgramRedeemOnResponse
 >;
 
 /**
  * Who receives the reward: the referrer only, or both parties.
  */
-export const CreateReferralProgramReceivedByResponse = {
+export const UpdateReferralProgramReceivedByResponse = {
   Referrer: "referrer",
   All: "all",
 } as const;
 /**
  * Who receives the reward: the referrer only, or both parties.
  */
-export type CreateReferralProgramReceivedByResponse = OpenEnum<
-  typeof CreateReferralProgramReceivedByResponse
+export type UpdateReferralProgramReceivedByResponse = OpenEnum<
+  typeof UpdateReferralProgramReceivedByResponse
 >;
 
 /**
  * OK
  */
-export type CreateReferralProgramCreateReferralProgramResponse = {
+export type UpdateReferralProgramCreateReferralProgramResponse = {
   /**
    * The unique identifier for the referral program.
    */
@@ -111,11 +114,11 @@ export type CreateReferralProgramCreateReferralProgramResponse = {
   /**
    * When the reward is granted: on redemption, or when the redeemer checks out.
    */
-  redeemOn: CreateReferralProgramRedeemOnResponse;
+  redeemOn: UpdateReferralProgramRedeemOnResponse;
   /**
    * Who receives the reward: the referrer only, or both parties.
    */
-  receivedBy: CreateReferralProgramReceivedByResponse;
+  receivedBy: UpdateReferralProgramReceivedByResponse;
   /**
    * The maximum number of times a referral code can be redeemed.
    */
@@ -135,37 +138,39 @@ export type CreateReferralProgramCreateReferralProgramResponse = {
 };
 
 /** @internal */
-export const CreateReferralProgramRedeemOnRequest$outboundSchema: z.ZodMiniEnum<
-  typeof CreateReferralProgramRedeemOnRequest
-> = z.enum(CreateReferralProgramRedeemOnRequest);
+export const UpdateReferralProgramRedeemOnRequest$outboundSchema: z.ZodMiniEnum<
+  typeof UpdateReferralProgramRedeemOnRequest
+> = z.enum(UpdateReferralProgramRedeemOnRequest);
 
 /** @internal */
-export const CreateReferralProgramReceivedByRequest$outboundSchema:
-  z.ZodMiniEnum<typeof CreateReferralProgramReceivedByRequest> = z.enum(
-    CreateReferralProgramReceivedByRequest,
+export const UpdateReferralProgramReceivedByRequest$outboundSchema:
+  z.ZodMiniEnum<typeof UpdateReferralProgramReceivedByRequest> = z.enum(
+    UpdateReferralProgramReceivedByRequest,
   );
 
 /** @internal */
-export type CreateReferralProgramParams$Outbound = {
+export type UpdateReferralProgramParams$Outbound = {
   id: string;
-  reward_id: string;
-  redeem_on: string;
-  received_by: string;
+  reward_id?: string | undefined;
+  redeem_on?: string | undefined;
+  received_by?: string | undefined;
   max_redemptions?: number | null | undefined;
   plan_ids?: Array<string> | null | undefined;
   exclude_trial?: boolean | null | undefined;
 };
 
 /** @internal */
-export const CreateReferralProgramParams$outboundSchema: z.ZodMiniType<
-  CreateReferralProgramParams$Outbound,
-  CreateReferralProgramParams
+export const UpdateReferralProgramParams$outboundSchema: z.ZodMiniType<
+  UpdateReferralProgramParams$Outbound,
+  UpdateReferralProgramParams
 > = z.pipe(
   z.object({
     id: z.string(),
-    rewardId: z.string(),
-    redeemOn: CreateReferralProgramRedeemOnRequest$outboundSchema,
-    receivedBy: CreateReferralProgramReceivedByRequest$outboundSchema,
+    rewardId: z.optional(z.string()),
+    redeemOn: z.optional(UpdateReferralProgramRedeemOnRequest$outboundSchema),
+    receivedBy: z.optional(
+      UpdateReferralProgramReceivedByRequest$outboundSchema,
+    ),
     maxRedemptions: z.optional(z.nullable(z.int())),
     planIds: z.optional(z.nullable(z.array(z.string()))),
     excludeTrial: z.optional(z.nullable(z.boolean())),
@@ -182,36 +187,36 @@ export const CreateReferralProgramParams$outboundSchema: z.ZodMiniType<
   }),
 );
 
-export function createReferralProgramParamsToJSON(
-  createReferralProgramParams: CreateReferralProgramParams,
+export function updateReferralProgramParamsToJSON(
+  updateReferralProgramParams: UpdateReferralProgramParams,
 ): string {
   return JSON.stringify(
-    CreateReferralProgramParams$outboundSchema.parse(
-      createReferralProgramParams,
+    UpdateReferralProgramParams$outboundSchema.parse(
+      updateReferralProgramParams,
     ),
   );
 }
 
 /** @internal */
-export const CreateReferralProgramRedeemOnResponse$inboundSchema: z.ZodMiniType<
-  CreateReferralProgramRedeemOnResponse,
+export const UpdateReferralProgramRedeemOnResponse$inboundSchema: z.ZodMiniType<
+  UpdateReferralProgramRedeemOnResponse,
   unknown
-> = openEnums.inboundSchema(CreateReferralProgramRedeemOnResponse);
+> = openEnums.inboundSchema(UpdateReferralProgramRedeemOnResponse);
 
 /** @internal */
-export const CreateReferralProgramReceivedByResponse$inboundSchema:
-  z.ZodMiniType<CreateReferralProgramReceivedByResponse, unknown> = openEnums
-    .inboundSchema(CreateReferralProgramReceivedByResponse);
+export const UpdateReferralProgramReceivedByResponse$inboundSchema:
+  z.ZodMiniType<UpdateReferralProgramReceivedByResponse, unknown> = openEnums
+    .inboundSchema(UpdateReferralProgramReceivedByResponse);
 
 /** @internal */
-export const CreateReferralProgramCreateReferralProgramResponse$inboundSchema:
-  z.ZodMiniType<CreateReferralProgramCreateReferralProgramResponse, unknown> = z
+export const UpdateReferralProgramCreateReferralProgramResponse$inboundSchema:
+  z.ZodMiniType<UpdateReferralProgramCreateReferralProgramResponse, unknown> = z
     .pipe(
       z.object({
         id: types.string(),
         reward_id: types.string(),
-        redeem_on: CreateReferralProgramRedeemOnResponse$inboundSchema,
-        received_by: CreateReferralProgramReceivedByResponse$inboundSchema,
+        redeem_on: UpdateReferralProgramRedeemOnResponse$inboundSchema,
+        received_by: UpdateReferralProgramReceivedByResponse$inboundSchema,
         max_redemptions: z.optional(z.nullable(types.number())),
         plan_ids: z.optional(z.nullable(z.array(types.string()))),
         exclude_trial: z.optional(z.nullable(types.boolean())),
@@ -230,18 +235,18 @@ export const CreateReferralProgramCreateReferralProgramResponse$inboundSchema:
       }),
     );
 
-export function createReferralProgramCreateReferralProgramResponseFromJSON(
+export function updateReferralProgramCreateReferralProgramResponseFromJSON(
   jsonString: string,
 ): SafeParseResult<
-  CreateReferralProgramCreateReferralProgramResponse,
+  UpdateReferralProgramCreateReferralProgramResponse,
   SDKValidationError
 > {
   return safeParse(
     jsonString,
     (x) =>
-      CreateReferralProgramCreateReferralProgramResponse$inboundSchema.parse(
+      UpdateReferralProgramCreateReferralProgramResponse$inboundSchema.parse(
         JSON.parse(x),
       ),
-    `Failed to parse 'CreateReferralProgramCreateReferralProgramResponse' from JSON`,
+    `Failed to parse 'UpdateReferralProgramCreateReferralProgramResponse' from JSON`,
   );
 }
