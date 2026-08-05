@@ -41,7 +41,9 @@ export const handleCheckoutSub = async ({
 
 	const { start, end } = subToPeriodStartEnd({ sub: subscription });
 
-	await SubService.createSub({
+	// Replay-safe: Stripe redelivers this event, and customer.subscription.created
+	// may already have stored the same subscription.
+	await SubService.createSubIfAbsent({
 		db,
 		sub: initSubscription({
 			stripeId: subscription.id,

@@ -24,19 +24,25 @@ const mockState = {
 const trackQueueUrl =
 	"https://sqs.eu-west-1.amazonaws.com/123456789012/track-dev.fifo";
 
-mock.module("@/internal/balances/track/v3/runTrackV3.js", () => ({
-	runTrackV3: async (args: Record<string, unknown>) => {
-		mockState.runTrackV3Calls.push(args);
-		if (mockState.v3Error) throw mockState.v3Error;
-		return { ok: true };
-	},
-}));
+await mockModuleWithRestore(
+	"@/internal/balances/track/v3/runTrackV3.js",
+	() => ({
+		runTrackV3: async (args: Record<string, unknown>) => {
+			mockState.runTrackV3Calls.push(args);
+			if (mockState.v3Error) throw mockState.v3Error;
+			return { ok: true };
+		},
+	}),
+);
 
-mock.module("@/external/redis/availabilityMonitor/redisV2Availability.js", () => ({
-	shouldUseRedisV2: () => true,
-}));
+await mockModuleWithRestore(
+	"@/external/redis/availabilityMonitor/redisV2Availability.js",
+	() => ({
+		shouldUseRedisV2: () => true,
+	}),
+);
 
-mock.module(
+await mockModuleWithRestore(
 	"@/internal/misc/idempotency/actions/checkIdempotencyKey.js",
 	() => ({
 		checkIdempotencyKey: async (args: Record<string, unknown>) => {
@@ -45,7 +51,7 @@ mock.module(
 	}),
 );
 
-mock.module(
+await mockModuleWithRestore(
 	"@/internal/misc/idempotency/actions/releaseIdempotencyKey.js",
 	() => ({
 		releaseIdempotencyKey: async (args: Record<string, unknown>) => {
@@ -55,6 +61,8 @@ mock.module(
 );
 
 import { runTrackWithRollout } from "@/internal/balances/track/runTrackWithRollout.js";
+
+import { mockModuleWithRestore } from "../../utils/mockModuleWithRestore.js";
 
 const ctx = {
 	org: { id: "org_123" },

@@ -117,7 +117,7 @@ test.concurrent(`${chalk.yellowBright(
 		expect(addressAfter).not.toBeNull();
 		expect(addressAfter?.country).toBe("AU");
 	}
-}, 600_000);
+});
 
 test.concurrent(`${chalk.yellowBright(
 	"automatic-tax-no-address (Scenario B — pre-flip Checkout, then charge_automatically upgrade): waterfall resolves location, upgrade succeeds WITH tax",
@@ -220,7 +220,7 @@ test.concurrent(`${chalk.yellowBright(
 			`proration_invoice_auto_tax_status=${prorationInvoice.automatic_tax.status}, ` +
 			`proration_invoice_total_tax=${prorationInvoice.total_taxes?.[0]?.amount ?? "N/A"}`,
 	);
-}, 600_000);
+});
 
 test.concurrent(`${chalk.yellowBright(
 	"automatic-tax-no-address (Scenario C — INVOICE-MODE upgrade, no address): post-fix MUST succeed without tax",
@@ -321,4 +321,4 @@ test.concurrent(`${chalk.yellowBright(
 		`[scenario-C] send_invoice invoices: ${sendInvoiceInvoices.length} ` +
 			`found (out of ${invoices.data.length} total), all with auto_tax=false`,
 	);
-}, 300_000);
+});

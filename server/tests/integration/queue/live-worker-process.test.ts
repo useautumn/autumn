@@ -254,7 +254,7 @@ describe("live worker process queue polling", () => {
 				return counts.visible === 0 && counts.notVisible === 0;
 			},
 		});
-	}, 15_000);
+	});
 
 	test("disabled worker leaves the live SQS message untouched", async () => {
 		const queueUrl = await createTestQueue();
@@ -267,5 +267,5 @@ describe("live worker process queue polling", () => {
 		const counts = await getQueueCounts({ queueUrl });
 		expect(counts.visible).toBe(1);
 		expect(counts.notVisible).toBe(0);
-	}, 15_000);
+	});
 });

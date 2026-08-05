@@ -1,8 +1,11 @@
 import { afterEach, beforeEach, describe, expect, mock, test } from "bun:test";
-import type {
-	BatchTrackTokensParams,
+import type { BatchTrackTokensParams } from "@autumn/shared";
+import {
+	ApiVersion,
+	ApiVersionClass,
+	AppEnv,
+	FeatureType,
 } from "@autumn/shared";
-import { ApiVersion, ApiVersionClass, AppEnv, FeatureType } from "@autumn/shared";
 import type { SQSClient } from "@aws-sdk/client-sqs";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { getSqsClient } from "@/queue/initSqs.js";
@@ -16,33 +19,38 @@ const mockState = {
 const trackAsyncQueueUrl =
 	"https://sqs.eu-west-1.amazonaws.com/123456789012/track-async-dev.fifo";
 
-mock.module("@/internal/features/aiCreditSystemUtils.js", () => ({
-	getModelCreditCostBreakdown: async ({
-		modelName,
-	}: {
-		modelName: string;
-	}) => {
-		mockState.modelNames.push(modelName);
-		return {
-			cost: 0.5,
-			baseCost: 0.4,
-			markup: 25,
-			markupSource: "default",
-			tierApplied: false,
-			rates: {
-				input: 1,
-				output: 2,
-				cacheRead: 0,
-				cacheWrite: 0,
-				audioInput: 0,
-				audioOutput: 0,
-				reasoning: 0,
-			},
-		};
-	},
-}));
+await mockModuleWithRestore(
+	"@/internal/features/aiCreditSystemUtils.js",
+	() => ({
+		getModelCreditCostBreakdown: async ({
+			modelName,
+		}: {
+			modelName: string;
+		}) => {
+			mockState.modelNames.push(modelName);
+			return {
+				cost: 0.5,
+				baseCost: 0.4,
+				markup: 25,
+				markupSource: "default",
+				tierApplied: false,
+				rates: {
+					input: 1,
+					output: 2,
+					cacheRead: 0,
+					cacheWrite: 0,
+					audioInput: 0,
+					audioOutput: 0,
+					reasoning: 0,
+				},
+			};
+		},
+	}),
+);
 
 import { runBatchTrackTokens } from "@/internal/balances/track/runBatchTrackTokens.js";
+
+import { mockModuleWithRestore } from "../../utils/mockModuleWithRestore.js";
 
 const buildCtx = () =>
 	({
@@ -70,9 +78,9 @@ describe("runBatchTrackTokens", () => {
 		sqsClient.send = (async (command: { input: Record<string, unknown> }) => {
 			mockState.queueCommands.push(command.input);
 			return {
-				Successful: ((command.input.Entries as Array<{ Id: string }>) ?? []).map(
-					(entry) => ({ Id: entry.Id }),
-				),
+				Successful: (
+					(command.input.Entries as Array<{ Id: string }>) ?? []
+				).map((entry) => ({ Id: entry.Id })),
 			};
 		}) as typeof sqsClient.send;
 	});
@@ -128,8 +136,9 @@ describe("runBatchTrackTokens", () => {
 			"req_batch_tokens_1-0",
 			"req_batch_tokens_1-1",
 		]);
-		expect(entries.map((entry) => JSON.parse(entry.MessageBody).data.body))
-			.toMatchObject([
+		expect(
+			entries.map((entry) => JSON.parse(entry.MessageBody).data.body),
+		).toMatchObject([
 			{
 				customer_id: "cus_123",
 				feature_id: "ai_credits",

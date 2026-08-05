@@ -1,4 +1,5 @@
 import { InternalError } from "@api/errors/base/InternalError.js";
+import { FeatureNotFoundError } from "@api/errors/classes/featureErrClasses.js";
 import type { Feature } from "../../models/featureModels/featureModels.js";
 
 // Overload: errorOnNotFound = true → guaranteed Feature
@@ -63,8 +64,8 @@ export function findFeatureById({
 	const result = features.find((feature) => feature.id === featureId);
 
 	if (errorOnNotFound && !result) {
-		throw new InternalError({
-			message: `Feature not found for id: ${featureId}`,
+		throw new FeatureNotFoundError({
+			featureId,
 		});
 	}
 

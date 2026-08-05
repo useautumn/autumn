@@ -19,10 +19,10 @@ import {
 	expectProductActive,
 	expectProductCanceling,
 	expectProductNotPresent,
-	expectProductScheduled,
 } from "@tests/integration/billing/utils/expectCustomerProductCorrect";
 import { expectNoStripeSubscription } from "@tests/integration/billing/utils/expectNoStripeSubscription";
 import { expectSubToBeCorrect } from "@tests/merged/mergeUtils/expectSubCorrect";
+import { WEBHOOK_SETTLE_TIMEOUT_MS } from "@tests/utils/pollableCustomerExpect";
 import { TestFeature } from "@tests/setup/v2Features";
 import { items } from "@tests/utils/fixtures/items";
 import { products } from "@tests/utils/fixtures/products";
@@ -87,18 +87,13 @@ test.concurrent(`${chalk.yellowBright("cancel end of cycle: with default free pr
 		cancel_action: "cancel_end_of_cycle",
 	});
 
-	// Verify pro is canceling and free is scheduled
-	const customerAfterCancel =
-		await autumnV1.customers.get<ApiCustomerV3>(customerId);
-
-	await expectProductCanceling({
-		customer: customerAfterCancel,
-		productId: pro.id,
-	});
-
-	await expectProductScheduled({
-		customer: customerAfterCancel,
-		productId: free.id,
+	// Verify pro is canceling and free is scheduled (scheduling settles via webhook)
+	await expectCustomerProducts({
+		autumn: autumnV1,
+		customerId,
+		settleTimeoutMs: WEBHOOK_SETTLE_TIMEOUT_MS,
+		canceling: [pro.id],
+		scheduled: [free.id],
 	});
 
 	// Verify Stripe subscription is set to cancel at period end
@@ -111,8 +106,9 @@ test.concurrent(`${chalk.yellowBright("cancel end of cycle: with default free pr
 	});
 
 	// Initial attach invoice
-	expectCustomerInvoiceCorrect({
-		customer: customerAfterCancel,
+	await expectCustomerInvoiceCorrect({
+		autumn: autumnV1,
+		customerId,
 		count: 1,
 		latestTotal: 20, // Pro $20/mo
 	});
@@ -124,17 +120,12 @@ test.concurrent(`${chalk.yellowBright("cancel end of cycle: with default free pr
 	});
 
 	// After advancing, pro should be gone and free should be active
-	const customerAfterAdvance =
-		await autumnV1.customers.get<ApiCustomerV3>(customerId);
-
-	await expectProductNotPresent({
-		customer: customerAfterAdvance,
-		productId: pro.id,
-	});
-
-	await expectProductActive({
-		customer: customerAfterAdvance,
-		productId: free.id,
+	await expectCustomerProducts({
+		autumn: autumnV1,
+		customerId,
+		settleTimeoutMs: WEBHOOK_SETTLE_TIMEOUT_MS,
+		active: [free.id],
+		notPresent: [pro.id],
 	});
 
 	// Verify no Stripe subscription exists after cycle end (free has no price)
@@ -326,12 +317,11 @@ test.concurrent(`${chalk.yellowBright("cancel end of cycle: downgrade then cance
 		cancel_action: "cancel_end_of_cycle",
 	});
 
-	// Verify state after cancel
-	const customerAfterCancel =
-		await autumnV1.customers.get<ApiCustomerV3>(customerId);
-
+	// Verify state after cancel (swapping the scheduled product settles via webhook)
 	await expectCustomerProducts({
-		customer: customerAfterCancel,
+		autumn: autumnV1,
+		customerId,
+		settleTimeoutMs: WEBHOOK_SETTLE_TIMEOUT_MS,
 		canceling: [premium.id],
 		notPresent: [pro.id],
 		scheduled: [free.id],
@@ -350,11 +340,10 @@ test.concurrent(`${chalk.yellowBright("cancel end of cycle: downgrade then cance
 		testClockId: testClockId!,
 	});
 
-	const customerAfterAdvance =
-		await autumnV1.customers.get<ApiCustomerV3>(customerId);
-
 	await expectCustomerProducts({
-		customer: customerAfterAdvance,
+		autumn: autumnV1,
+		customerId,
+		settleTimeoutMs: WEBHOOK_SETTLE_TIMEOUT_MS,
 		active: [free.id],
 		notPresent: [premium.id],
 	});
@@ -599,18 +588,13 @@ test.concurrent(`${chalk.yellowBright("cancel end of cycle: then cancel immediat
 		cancel_action: "cancel_end_of_cycle",
 	});
 
-	// Verify pro is canceling and free is scheduled
-	const customerAfterEocCancel =
-		await autumnV1.customers.get<ApiCustomerV3>(customerId);
-
-	await expectProductCanceling({
-		customer: customerAfterEocCancel,
-		productId: pro.id,
-	});
-
-	await expectProductScheduled({
-		customer: customerAfterEocCancel,
-		productId: free.id,
+	// Verify pro is canceling and free is scheduled (scheduling settles via webhook)
+	await expectCustomerProducts({
+		autumn: autumnV1,
+		customerId,
+		settleTimeoutMs: WEBHOOK_SETTLE_TIMEOUT_MS,
+		canceling: [pro.id],
+		scheduled: [free.id],
 	});
 
 	// Verify Stripe subscription is set to cancel at period end
@@ -630,11 +614,10 @@ test.concurrent(`${chalk.yellowBright("cancel end of cycle: then cancel immediat
 	});
 
 	// Verify pro is gone and free is active immediately
-	const customerAfterImmCancel =
-		await autumnV1.customers.get<ApiCustomerV3>(customerId);
-
 	await expectCustomerProducts({
-		customer: customerAfterImmCancel,
+		autumn: autumnV1,
+		customerId,
+		settleTimeoutMs: WEBHOOK_SETTLE_TIMEOUT_MS,
 		notPresent: [pro.id],
 		active: [free.id],
 	});

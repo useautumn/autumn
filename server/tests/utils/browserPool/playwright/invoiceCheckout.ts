@@ -189,6 +189,8 @@ export const invoiceCheckout = async ({
 	}
 
 	// Step 3: Fill card details
+	// Stripe listens for real key events; `.fill()` sets the value without
+	// keydown/up, so the form stays invalid and the Pay button does nothing.
 	const cardInput = paymentFrame
 		.locator(
 			'input[name="number"], input[data-elements-stable-field-name="cardNumber"], input[placeholder*="1234"], input[aria-label*="Card number"]',
@@ -196,7 +198,7 @@ export const invoiceCheckout = async ({
 		.first();
 	await cardInput.waitFor({ timeout: 15000 });
 	await cardInput.click();
-	await cardInput.fill("4242424242424242");
+	await cardInput.pressSequentially("4242424242424242");
 	console.log("[invoiceCheckout] Card number filled");
 
 	const expiryInput = paymentFrame
@@ -206,7 +208,7 @@ export const invoiceCheckout = async ({
 		.first();
 	await expiryInput.waitFor({ timeout: 10000 });
 	await expiryInput.click();
-	await expiryInput.fill("1228");
+	await expiryInput.pressSequentially("1228");
 	console.log("[invoiceCheckout] Expiry filled");
 
 	const cvcInput = paymentFrame
@@ -216,7 +218,7 @@ export const invoiceCheckout = async ({
 		.first();
 	await cvcInput.waitFor({ timeout: 10000 });
 	await cvcInput.click();
-	await cvcInput.fill("123");
+	await cvcInput.pressSequentially("123");
 	console.log("[invoiceCheckout] CVC filled");
 
 	// Select "United States" as country so we can use a known US zip code.
@@ -243,7 +245,7 @@ export const invoiceCheckout = async ({
 			.first();
 		await postalInput.waitFor({ timeout: 5000 });
 		await postalInput.click();
-		await postalInput.fill("10001");
+		await postalInput.pressSequentially("10001");
 		console.log("[invoiceCheckout] ZIP code filled: 10001");
 	} catch {
 		console.log("[invoiceCheckout] No postal code field, skipping");
@@ -304,7 +306,50 @@ export const invoiceCheckout = async ({
 		throw new Error("Could not find or click any submit/pay button");
 	}
 
-	// Step 5: Wait for payment processing + webhook delivery
-	await page.waitForTimeout(20000);
-	console.log("[invoiceCheckout] Checkout complete");
+	// Step 5: Wait for the page to confirm payment. A fixed sleep returned while
+	// the invoice was still `open`, so the test failed later as "product not
+	// attached" with no hint that payment never happened.
+	// Short: the caller falls back to paying via the Stripe API, so waiting
+	// longer here only burns the test's budget.
+	const deadline = Date.now() + 30_000;
+	let pageText = "";
+
+	while (Date.now() < deadline) {
+		pageText = await page.evaluate(() => document.body.innerText);
+		// "Unpaid" does not match \bpaid\b — no word boundary before "paid".
+		if (
+			/\bpaid\b|thanks for your payment|payment (successful|received)/i.test(
+				pageText,
+			)
+		) {
+			console.log("[invoiceCheckout] Payment confirmed by hosted page");
+			return;
+		}
+		await page.waitForTimeout(1000);
+	}
+
+	const alerts = await page
+		.locator('[role="alert"], .Error, [data-testid*="error"]')
+		.allTextContents()
+		.catch(() => [] as string[]);
+
+	// Validation errors live INSIDE the payment iframe, so a clean main page
+	// says nothing about why the submit did nothing.
+	const frameTexts = await Promise.all(
+		page.frames().map(async (frame) => {
+			try {
+				const text = await frame.locator("body").innerText();
+				if (!text.trim()) return "";
+				return `\n  [${frame.url().slice(0, 50)}] ${text.replace(/\s+/g, " ").slice(0, 250)}`;
+			} catch {
+				return "";
+			}
+		}),
+	);
+
+	throw new Error(
+		`Invoice payment never confirmed after clicking pay. url=${page.url()} alerts=[${alerts.join(" | ")}] text=${pageText
+			.replace(/\s+/g, " ")
+			.slice(-500)} frames:${frameTexts.filter(Boolean).join("")}`,
+	);
 };

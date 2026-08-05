@@ -1,6 +1,8 @@
 import { afterEach, beforeEach, describe, expect, mock, test } from "bun:test";
 import { OAuth2Tokens } from "arctic";
 
+import { mockModuleWithRestore } from "../utils/mockModuleWithRestore.js";
+
 const mockValidateAuthorizationCode = mock(() =>
 	Promise.resolve(
 		new OAuth2Tokens({
@@ -13,7 +15,7 @@ const mockValidateAuthorizationCode = mock(() =>
 	),
 );
 
-mock.module("arctic", () => ({
+await mockModuleWithRestore("arctic", () => ({
 	OAuth2Client: class {
 		createAuthorizationURLWithPKCE() {
 			return new URL("https://api.revenuecat.com/oauth2/authorize?test=1");

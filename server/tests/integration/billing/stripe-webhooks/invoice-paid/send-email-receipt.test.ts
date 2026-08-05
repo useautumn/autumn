@@ -119,7 +119,7 @@ test(`${chalk.yellowBright("invoice.paid: sends email receipt when send_email_re
 	);
 
 	expect(paymentIntent.receipt_email).toBe(testEmail);
-}, 120000); // 2 minute timeout for test clock operations
+}); // 2 minute timeout for test clock operations
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // TEST 2: Email receipt NOT sent when send_email_receipts is false
@@ -198,7 +198,7 @@ test(`${chalk.yellowBright("invoice.paid: does NOT send email receipt when send_
 	);
 
 	expect(paymentIntent.receipt_email).toBeNull();
-}, 120000); // 2 minute timeout for test clock operations
+}); // 2 minute timeout for test clock operations
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // TEST 3: Email receipt NOT sent when customer has no email
@@ -306,4 +306,4 @@ test(`${chalk.yellowBright("invoice.paid: does NOT send email receipt when custo
 	);
 
 	expect(paymentIntent.receipt_email).toBeNull();
-}, 120000); // 2 minute timeout for test clock operations
+}); // 2 minute timeout for test clock operations

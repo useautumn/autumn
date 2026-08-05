@@ -18,20 +18,23 @@ const mockState = {
 	productCalls: 0,
 };
 
-mock.module("@/external/stripe/createStripePrice/createStripePrice", () => ({
-	createStripePriceIFNotExist: async ({
-		price,
-		currency,
-	}: {
-		price: Price;
-		currency?: string;
-	}) => {
-		mockState.priceIds.push(price.id);
-		mockState.currencies.push(currency);
-	},
-}));
+await mockModuleWithRestore(
+	"@/external/stripe/createStripePrice/createStripePrice",
+	() => ({
+		createStripePriceIFNotExist: async ({
+			price,
+			currency,
+		}: {
+			price: Price;
+			currency?: string;
+		}) => {
+			mockState.priceIds.push(price.id);
+			mockState.currencies.push(currency);
+		},
+	}),
+);
 
-mock.module("@/internal/products/productUtils", () => ({
+await mockModuleWithRestore("@/internal/products/productUtils", () => ({
 	checkStripeProductExists: async () => {
 		mockState.productCalls++;
 	},
@@ -39,6 +42,8 @@ mock.module("@/internal/products/productUtils", () => ({
 
 import { initStripeResourcesForBillingPlan } from "@/internal/billing/v2/providers/stripe/utils/common/initStripeResourcesForProducts";
 import { customerProductToStripeItemSpecs } from "@/internal/billing/v2/providers/stripe/utils/subscriptionItems/customerProductToStripeItemSpecs";
+
+import { mockModuleWithRestore } from "../utils/mockModuleWithRestore.js";
 
 const fixedPrice = ({
 	id,

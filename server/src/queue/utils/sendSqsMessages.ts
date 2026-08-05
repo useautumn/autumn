@@ -141,8 +141,11 @@ export const sendSqsMessagesBatch = async ({
 				}),
 			)) as SendMessageBatchCommandOutput;
 		} catch (error) {
+			// SDK errors carry the code in error.name (e.g. ThrottlingException).
 			const reason =
-				error instanceof Error ? error.message : "Unknown SQS send error";
+				error instanceof Error
+					? `${error.name}: ${error.message}`
+					: "Unknown SQS send error";
 			for (const [index] of chunk.entries()) {
 				failures.push({ index: chunkStartIndex + index, reason });
 			}
@@ -157,9 +160,9 @@ export const sendSqsMessagesBatch = async ({
 			(response.Successful ?? []).map(({ Id }) => Id),
 		);
 		const failureReasonById = new Map(
-			(response.Failed ?? []).map(({ Id, Message, Code }) => [
+			(response.Failed ?? []).map(({ Id, Message, Code, SenderFault }) => [
 				Id,
-				Message ?? Code ?? "Unknown SQS batch failure",
+				`${Code ?? "UnknownCode"}: ${Message ?? "Unknown SQS batch failure"} (senderFault=${SenderFault ?? "?"})`,
 			]),
 		);
 		successCount += successfulIds.size;

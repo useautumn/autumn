@@ -72,8 +72,9 @@ test.concurrent(`${chalk.yellowBright("legacy-upgrade-usage 1: consumable upgrad
 		active: [pro.id],
 	});
 
-	expectCustomerFeatureCorrect({
-		customer: customerInitial,
+	await expectCustomerFeatureCorrect({
+		autumn: autumnV1,
+		customerId,
 		featureId: TestFeature.Words,
 		includedUsage: 100,
 		balance: 100,
@@ -99,8 +100,9 @@ test.concurrent(`${chalk.yellowBright("legacy-upgrade-usage 1: consumable upgrad
 	const customerBeforePremium =
 		await autumnV1.customers.get<ApiCustomerV3>(customerId);
 
-	expectCustomerFeatureCorrect({
-		customer: customerBeforePremium,
+	await expectCustomerFeatureCorrect({
+		autumn: autumnV1,
+		customerId,
 		featureId: TestFeature.Words,
 		includedUsage: 100,
 		balance: -100, // 100 - 200 = -100 (overage)
@@ -123,8 +125,9 @@ test.concurrent(`${chalk.yellowBright("legacy-upgrade-usage 1: consumable upgrad
 	});
 
 	// Usage resets after upgrade
-	expectCustomerFeatureCorrect({
-		customer: customerAfterPremium,
+	await expectCustomerFeatureCorrect({
+		autumn: autumnV1,
+		customerId,
 		featureId: TestFeature.Words,
 		includedUsage: 100,
 		balance: 100,
@@ -150,8 +153,9 @@ test.concurrent(`${chalk.yellowBright("legacy-upgrade-usage 1: consumable upgrad
 	const customerBeforeGrowth =
 		await autumnV1.customers.get<ApiCustomerV3>(customerId);
 
-	expectCustomerFeatureCorrect({
-		customer: customerBeforeGrowth,
+	await expectCustomerFeatureCorrect({
+		autumn: autumnV1,
+		customerId,
 		featureId: TestFeature.Words,
 		includedUsage: 100,
 		balance: -200, // 100 - 300 = -200 (overage)
@@ -174,8 +178,9 @@ test.concurrent(`${chalk.yellowBright("legacy-upgrade-usage 1: consumable upgrad
 	});
 
 	// Usage resets after upgrade
-	expectCustomerFeatureCorrect({
-		customer: customerAfterGrowth,
+	await expectCustomerFeatureCorrect({
+		autumn: autumnV1,
+		customerId,
 		featureId: TestFeature.Words,
 		includedUsage: 100,
 		balance: 100,
@@ -248,8 +253,9 @@ test.concurrent(`${chalk.yellowBright("legacy-upgrade-usage 2: monthly → annua
 		active: [proMonthly.id],
 	});
 
-	expectCustomerFeatureCorrect({
-		customer: customerInitial,
+	await expectCustomerFeatureCorrect({
+		autumn: autumnV1,
+		customerId,
 		featureId: TestFeature.Words,
 		includedUsage: 100,
 		balance: 100,
@@ -275,8 +281,9 @@ test.concurrent(`${chalk.yellowBright("legacy-upgrade-usage 2: monthly → annua
 	const customerBeforeProAnnual =
 		await autumnV1.customers.get<ApiCustomerV3>(customerId);
 
-	expectCustomerFeatureCorrect({
-		customer: customerBeforeProAnnual,
+	await expectCustomerFeatureCorrect({
+		autumn: autumnV1,
+		customerId,
 		featureId: TestFeature.Words,
 		includedUsage: 100,
 		balance: -50, // 100 - 150 = -50 (overage)
@@ -300,8 +307,9 @@ test.concurrent(`${chalk.yellowBright("legacy-upgrade-usage 2: monthly → annua
 	});
 
 	// Usage resets after upgrade
-	expectCustomerFeatureCorrect({
-		customer: customerAfterProAnnual,
+	await expectCustomerFeatureCorrect({
+		autumn: autumnV1,
+		customerId,
 		featureId: TestFeature.Words,
 		includedUsage: 100,
 		balance: 100,
@@ -327,8 +335,9 @@ test.concurrent(`${chalk.yellowBright("legacy-upgrade-usage 2: monthly → annua
 	const customerBeforePremiumAnnual =
 		await autumnV1.customers.get<ApiCustomerV3>(customerId);
 
-	expectCustomerFeatureCorrect({
-		customer: customerBeforePremiumAnnual,
+	await expectCustomerFeatureCorrect({
+		autumn: autumnV1,
+		customerId,
 		featureId: TestFeature.Words,
 		includedUsage: 100,
 		balance: -100, // 100 - 200 = -100 (overage)
@@ -352,8 +361,9 @@ test.concurrent(`${chalk.yellowBright("legacy-upgrade-usage 2: monthly → annua
 	});
 
 	// Usage resets after upgrade
-	expectCustomerFeatureCorrect({
-		customer: customerAfterPremiumAnnual,
+	await expectCustomerFeatureCorrect({
+		autumn: autumnV1,
+		customerId,
 		featureId: TestFeature.Words,
 		includedUsage: 100,
 		balance: 100,
@@ -420,8 +430,9 @@ test.concurrent(`${chalk.yellowBright("legacy-upgrade-usage 3: arrear prorated s
 		active: [pro.id],
 	});
 
-	expectCustomerFeatureCorrect({
-		customer: customerInitial,
+	await expectCustomerFeatureCorrect({
+		autumn: autumnV1,
+		customerId,
 		featureId: TestFeature.Users,
 		includedUsage: 0,
 		usage: 2,
@@ -440,24 +451,25 @@ test.concurrent(`${chalk.yellowBright("legacy-upgrade-usage 3: arrear prorated s
 		{ id: "ent-3", name: "Entity 3", feature_id: TestFeature.Users },
 	]);
 
-	await new Promise((r) => setTimeout(r, 3000));
+	// The prorated seat invoice for the new entity is written asynchronously.
+	await expectCustomerInvoiceCorrect({
+		autumn: autumnV1,
+		customerId,
+		count: 2,
+		latestTotal: 10,
+	});
 
 	// Verify state before Premium upgrade - now 3 users
 	const customerBefore =
 		await autumnV1.customers.get<ApiCustomerV3>(customerId);
 
-	expectCustomerFeatureCorrect({
-		customer: customerBefore,
+	await expectCustomerFeatureCorrect({
+		autumn: autumnV1,
+		customerId,
 		featureId: TestFeature.Users,
 		includedUsage: 0,
 		usage: 3,
 		balance: -3, // 0 included - 3 usage = -3
-	});
-
-	await expectCustomerInvoiceCorrect({
-		customer: customerBefore,
-		count: 2,
-		latestTotal: 10,
 	});
 
 	// Upgrade to Premium
@@ -477,8 +489,9 @@ test.concurrent(`${chalk.yellowBright("legacy-upgrade-usage 3: arrear prorated s
 		active: [premium.id],
 	});
 
-	expectCustomerFeatureCorrect({
-		customer: customerAfterPremium,
+	await expectCustomerFeatureCorrect({
+		autumn: autumnV1,
+		customerId,
 		featureId: TestFeature.Users,
 		includedUsage: 0,
 		usage: 3,
@@ -506,8 +519,9 @@ test.concurrent(`${chalk.yellowBright("legacy-upgrade-usage 3: arrear prorated s
 		active: [proAnnual.id],
 	});
 
-	expectCustomerFeatureCorrect({
-		customer: customerAfterProAnnual,
+	await expectCustomerFeatureCorrect({
+		autumn: autumnV1,
+		customerId,
 		featureId: TestFeature.Users,
 		includedUsage: 0,
 		usage: 3,

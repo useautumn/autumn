@@ -168,9 +168,11 @@ test.concurrent(
 			usage: 0,
 		});
 
-		// Only pro invoice ($20), no overage since usage was under included
+		// Only pro invoice ($20), no overage since usage was under included.
+		// The cycle-end invoice lands via webhook, so poll.
 		await expectCustomerInvoiceCorrect({
-			customer: customerAfterCycle,
+			autumn: autumnV1After,
+			customerId,
 			count: 2,
 			latestTotal: 0,
 			latestInvoiceProductIds: [pro.id],
@@ -264,9 +266,11 @@ test.concurrent(
 		});
 
 		// Pro invoice ($20) + overage ($5) = $25
-		// Note: The overage is typically added to the final invoice
+		// Note: The overage is typically added to the final invoice, which lands
+		// via the cycle-end invoice webhook — so poll.
 		await expectCustomerInvoiceCorrect({
-			customer,
+			autumn: autumnV1,
+			customerId,
 			count: 2,
 			latestTotal: expectedOverage,
 			latestInvoiceProductIds: [pro.id],
@@ -372,8 +376,10 @@ test.concurrent(
 		// 1. Premium ($50) + overage at cycle end ($10) = $60
 		// 2. Pro renewal ($20)
 		// Note: The exact invoice structure depends on implementation
+		// The overage line lands via the cycle-end invoice webhook, so poll.
 		await expectCustomerInvoiceCorrect({
-			customer,
+			autumn: autumnV1,
+			customerId,
 			count: 2,
 			latestTotal: 20 + expectedOverage, // Pro renewal + premium overage
 			latestInvoiceProductIds: [pro.id, premium.id],
@@ -481,8 +487,10 @@ test.concurrent(
 		// Invoices:
 		// 1. Premium ($50) initial
 		// 2. Pro renewal ($20) + premium overage ($10) = $30
+		// The overage line lands via the cycle-end invoice webhook, so poll.
 		await expectCustomerInvoiceCorrect({
-			customer,
+			autumn: autumnV1,
+			customerId,
 			count: 2,
 			latestTotal: 20 + expectedOverage,
 			latestInvoiceProductIds: [pro.id, premium.id],
@@ -577,8 +585,10 @@ test.concurrent(
 		// Invoices:
 		// 1. Premium ($50) initial
 		// 2. Premium overage ($15) at cycle end
+		// The overage line lands via the cycle-end invoice webhook, so poll.
 		await expectCustomerInvoiceCorrect({
-			customer,
+			autumn: autumnV1,
+			customerId,
 			count: 2,
 			latestTotal: expectedOverage,
 			latestInvoiceProductIds: [premium.id],

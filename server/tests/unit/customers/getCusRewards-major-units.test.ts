@@ -10,7 +10,9 @@ import {
 	RewardType,
 } from "@autumn/shared";
 
-mock.module("@/external/connect/createStripeCli.js", () => ({
+import { mockModuleWithRestore } from "../utils/mockModuleWithRestore.js";
+
+await mockModuleWithRestore("@/external/connect/createStripeCli.js", () => ({
 	createStripeCli: () => ({
 		customers: {
 			retrieve: async () => ({

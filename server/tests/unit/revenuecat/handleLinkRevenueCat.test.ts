@@ -1,5 +1,7 @@
 import { beforeEach, describe, expect, mock, test } from "bun:test";
 
+import { mockModuleWithRestore } from "../utils/mockModuleWithRestore.js";
+
 const mockValidatePlatformOrg = mock(
 	(): Promise<Record<string, unknown>> =>
 		Promise.resolve({
@@ -18,24 +20,27 @@ const mockCreateRcAuthorizationUrl = mock(
 		new URL("https://api.revenuecat.com/oauth2/authorize?state=state_123"),
 );
 
-mock.module(
+await mockModuleWithRestore(
 	"@/internal/platform/platformBeta/utils/validatePlatformOrg.js",
 	() => ({
 		validatePlatformOrg: mockValidatePlatformOrg,
 	}),
 );
 
-mock.module(
+await mockModuleWithRestore(
 	"@/internal/platform/platformBeta/utils/oauthStateUtils.js",
 	() => ({
 		generateOAuthState: mockGenerateOAuthState,
 	}),
 );
 
-mock.module("@/external/revenueCat/misc/revenuecatOAuth.js", () => ({
-	createRcAuthorizationUrl: mockCreateRcAuthorizationUrl,
-	generateCodeVerifier: () => "test-verifier",
-}));
+await mockModuleWithRestore(
+	"@/external/revenueCat/misc/revenuecatOAuth.js",
+	() => ({
+		createRcAuthorizationUrl: mockCreateRcAuthorizationUrl,
+		generateCodeVerifier: () => "test-verifier",
+	}),
+);
 
 const { handleLinkRevenueCat } = await import(
 	"@/internal/platform/platformBeta/handlers/handleLinkRevenueCat.js"
