@@ -164,7 +164,7 @@ export class SyncBatchingManagerV3 {
 		const totalSize =
 			batch.context.cusEntIds.size + batch.context.rolloverIds.size;
 		if (totalSize >= this.MAX_BATCH_SIZE) {
-			this.executeCustomerBatch({ batchKey });
+			void this.startCustomerBatch({ batchKey });
 		}
 	}
 

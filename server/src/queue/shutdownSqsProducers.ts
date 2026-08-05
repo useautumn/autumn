@@ -3,14 +3,28 @@ import { globalRefreshEntityAggregateBatchingManager } from "@/internal/balances
 import { globalSyncBatchingManagerV3 } from "@/internal/balances/utils/sync/SyncBatchingManagerV3.js";
 import { shutdownSqsSendBatchers } from "./queueUtils.js";
 
-export const shutdownSqsProducers = async (): Promise<void> => {
+type DeferredSqsProducer = {
+	flush: () => Promise<void>;
+};
+
+export const shutdownSqsProducers = async ({
+	producers = [
+		globalEventBatchingManager,
+		globalRefreshEntityAggregateBatchingManager,
+		globalSyncBatchingManagerV3,
+	],
+	shutdownSqsSendBatchersFn = shutdownSqsSendBatchers,
+}: {
+	producers?: DeferredSqsProducer[];
+	shutdownSqsSendBatchersFn?: () => Promise<void>;
+} = {}): Promise<void> => {
 	try {
-		await Promise.all([
-			globalEventBatchingManager.flush(),
-			globalRefreshEntityAggregateBatchingManager.flush(),
-			globalSyncBatchingManagerV3.flush(),
-		]);
+		const results = await Promise.allSettled(
+			producers.map((producer) => producer.flush()),
+		);
+		const failure = results.find((result) => result.status === "rejected");
+		if (failure) throw failure.reason;
 	} finally {
-		await shutdownSqsSendBatchers();
+		await shutdownSqsSendBatchersFn();
 	}
 };

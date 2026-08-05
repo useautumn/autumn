@@ -4,12 +4,29 @@ import { sendEventsToTinybird } from "@server/external/tinybird/sendEvents/sendE
 import { JobName } from "@server/queue/JobName.js";
 import { addTaskToQueue } from "@server/queue/queueUtils.js";
 
+type AddEventBatchToQueue = (args: {
+	jobName: JobName.InsertEventBatch;
+	payload: { events: EventInsert[] };
+}) => Promise<void>;
+
 export class EventBatchingManager {
 	private events: Map<string, EventInsert> = new Map();
 	private timer: NodeJS.Timeout | null = null;
 	private readonly inFlightExecutions = new Set<Promise<void>>();
-	private readonly batchWindow = 350; // 100ms batching window
+	private readonly batchWindow: number;
 	private readonly maxBatchSize = 200; // Max events per batch (~200kb per event, keep batches under 10MB for Tinybird)
+	private readonly _addTaskToQueue: AddEventBatchToQueue;
+
+	constructor({
+		addTaskToQueueFn,
+		batchWindowMs,
+	}: {
+		addTaskToQueueFn?: AddEventBatchToQueue;
+		batchWindowMs?: number;
+	} = {}) {
+		this._addTaskToQueue = addTaskToQueueFn ?? addTaskToQueue;
+		this.batchWindow = batchWindowMs ?? 350;
+	}
 
 	/** Add an event to the batch */
 	addEvent(event: EventInsert): void {
@@ -18,7 +35,7 @@ export class EventBatchingManager {
 
 		// Auto-execute if batch size is reached
 		if (this.events.size >= this.maxBatchSize) {
-			void this.startBatch();
+			this.startBatchInBackground();
 			return;
 		}
 
@@ -28,7 +45,7 @@ export class EventBatchingManager {
 		}
 
 		this.timer = setTimeout(() => {
-			void this.startBatch();
+			this.startBatchInBackground();
 		}, this.batchWindow);
 	}
 
@@ -49,6 +66,12 @@ export class EventBatchingManager {
 		return execution;
 	}
 
+	private startBatchInBackground(): void {
+		void this.startBatch().catch((error: unknown) => {
+			logger.error("[EventBatchingManager] Failed to execute batch", { error });
+		});
+	}
+
 	/** Execute the current batch - queue to SQS for Postgres and send to Tinybird */
 	private async executeBatch(): Promise<void> {
 		if (this.timer) {
@@ -67,7 +90,7 @@ export class EventBatchingManager {
 		const eventItems = Array.from(currentEvents.values());
 
 		// Queue to SQS for Postgres and publish to Tinybird in parallel
-		await addTaskToQueue({
+		await this._addTaskToQueue({
 			jobName: JobName.InsertEventBatch,
 			payload: { events: eventItems },
 		});
