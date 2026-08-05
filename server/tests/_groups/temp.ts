@@ -57,9 +57,15 @@ const activeTempPaths: string[] = [
 	// ── GROUP C: Stripe hosted page never completes ─────────────────────────
 	// ✗ "customer.subscription.created auto-sync: links product after external
 	//   Stripe checkout completion" — "Checkout session did not produce a
-	//   subscription" after polling Stripe for 120s. The session is created
-	//   directly through the Stripe API; our automation fills and submits the
-	//   page, but Stripe never attaches a subscription to the session.
+	//   subscription" after polling Stripe for 120s.
+	//   The error now reports where the browser ended: still on
+	//   checkout.stripe.com with the form UNSUBMITTED and no decline message.
+	//   This session is created straight through the Stripe API without
+	//   payment_method_types, so Stripe renders an "OR" alternative-payment
+	//   block above the card form and our card-accordion selector in
+	//   playwright/stripeCheckout.ts does not match that layout — the submit
+	//   lands on a method we never filled. Autumn-created sessions pin the
+	//   payment methods, which is why every other checkout test passes.
 	"integration/billing/stripe-webhooks/subscription-created/sub-created-auto-sync.test.ts",
 ];
 
