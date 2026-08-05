@@ -5,7 +5,7 @@ const ENTITY_CREATION_RECOVERY_STAGE_KEY = "entityCreationRecoveryStage";
 
 const RECOVERY_STAGES = new Set<EntityCreationRecoveryStage>([
 	"lookup",
-	"pre_commit",
+	"entitlements_updating",
 	"seat_charge",
 	"entities_committed",
 	"completed",

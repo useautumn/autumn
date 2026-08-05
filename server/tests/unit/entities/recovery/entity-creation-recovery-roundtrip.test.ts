@@ -45,6 +45,7 @@ const MOCKED_MODULE_PATHS = [
 	"@/internal/entities/actions/batchCreateEntities.js",
 	"@/internal/customers/actions/getOrCreateApiCustomerByRollout.js",
 	"@/internal/customers/CusService.js",
+	"@/internal/api/entities/EntityService.js",
 ] as const;
 const realModules = new Map<string, Record<string, unknown>>();
 for (const path of MOCKED_MODULE_PATHS) {
@@ -76,7 +77,14 @@ mock.module(
 
 mock.module("@/internal/customers/CusService.js", () => ({
 	CusService: {
-		getFull: async () => ({ id: "customer_123", entities: [] }),
+		get: async () => ({ id: "customer_123", internal_id: "icus_123" }),
+	},
+}));
+
+mock.module("@/internal/api/entities/EntityService.js", () => ({
+	EntityService: {
+		get: async () => undefined,
+		getNull: async () => undefined,
 	},
 }));
 

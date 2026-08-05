@@ -3,6 +3,13 @@ import { isTransientRedisError } from "@/external/redis/utils/isTransientRedisEr
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { isTransientDbError } from "./dbUtils.js";
 
+const SHED_CODE = "service_unavailable";
+
+/** A shed hides the transient error it was raised for, so callers that classify
+ *  errors as retryable have to recognise the shed itself. */
+export const isShedError = ({ error }: { error: unknown }) =>
+	error instanceof RecaseError && error.code === SHED_CODE;
+
 export const shed503OnTransientError = async <T>({
 	ctx,
 	source,
@@ -64,7 +71,7 @@ export const shed503OnTransientError = async <T>({
 		}
 		throw new RecaseError({
 			message: "Service is temporarily unavailable, please retry shortly.",
-			code: "service_unavailable",
+			code: SHED_CODE,
 			statusCode: 503,
 			data: {
 				reason: isDbTransient ? "critical_db_saturated" : "cache_unavailable",

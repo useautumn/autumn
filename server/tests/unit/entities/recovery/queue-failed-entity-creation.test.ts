@@ -142,7 +142,7 @@ describe("queueFailedEntityCreation", () => {
 		await queueFailedEntityCreation({
 			ctx: buildContext(),
 			params,
-			failureStage: "pre_commit",
+			failureStage: "entitlements_updating",
 		});
 
 		expect(mockState.queueCommands[0]?.MessageDeduplicationId).not.toBe(

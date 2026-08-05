@@ -7,16 +7,19 @@ import type {
 
 export type EntityCreationRecoveryStage =
 	| "lookup"
-	| "pre_commit"
+	| "entitlements_updating"
 	| "seat_charge"
 	| "entities_committed"
 	| "completed";
 
-/** Stages where a mutation is already in flight or done. Entity creation is not
- *  idempotent the way get-or-create is: a blind replay can re-charge seats or
- *  silently skip the default products a half-finished create never attached. */
+/** Stages where a write is already in flight or done. Entity creation is not
+ *  idempotent the way get-or-create is, so anything past validation is manual. */
 export const ENTITY_CREATION_MANUAL_REVIEW_STAGES =
-	new Set<EntityCreationRecoveryStage>(["seat_charge", "entities_committed"]);
+	new Set<EntityCreationRecoveryStage>([
+		"entitlements_updating",
+		"seat_charge",
+		"entities_committed",
+	]);
 
 export interface EntityCreationRecoveryParams {
 	customer_id: string;

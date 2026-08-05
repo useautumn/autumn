@@ -27,7 +27,7 @@ const mockState = {
 	queueCalls: [] as Record<string, unknown>[],
 	failWith: transientError as unknown,
 	stageAtFailure: undefined as
-		| "pre_commit"
+		| "entitlements_updating"
 		| "seat_charge"
 		| "entities_committed"
 		| undefined,
@@ -151,7 +151,11 @@ describe("batchCreateEntities recovery capture", () => {
 		});
 	});
 
-	test.each(["pre_commit", "seat_charge", "entities_committed"] as const)(
+	test.each([
+		"entitlements_updating",
+		"seat_charge",
+		"entities_committed",
+	] as const)(
 		"records %s as the stage reached before the failure",
 		async (stage) => {
 			mockState.stageAtFailure = stage;

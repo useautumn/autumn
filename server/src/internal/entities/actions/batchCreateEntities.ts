@@ -51,7 +51,9 @@ const createEntities = async ({
 		createEntityData,
 	});
 
-	setEntityCreationRecoveryStage({ ctx, stage: "pre_commit" });
+	// Linked entitlement maps are rewritten whole in here, so a failure past this
+	// point cannot be replayed blind even when no seat was charged.
+	setEntityCreationRecoveryStage({ ctx, stage: "entitlements_updating" });
 
 	for (const cusProduct of cusProducts) {
 		await createEntityForCusProduct({
@@ -77,6 +79,10 @@ const createEntities = async ({
 	);
 
 	const newEntities: Entity[] = [];
+
+	// Marked before the writes, not after: an insert that lands and then fails to
+	// stamp the customer must not look like a create that never touched a row.
+	setEntityCreationRecoveryStage({ ctx, stage: "entities_committed" });
 
 	const noIdEntity = existingEntities.find((e) => e.id === null);
 	if (noIdEntity) {
@@ -105,8 +111,6 @@ const createEntities = async ({
 	});
 
 	newEntities.push(...insertedEntities);
-
-	setEntityCreationRecoveryStage({ ctx, stage: "entities_committed" });
 
 	await attachDefaultProductsToEntities({
 		ctx,
@@ -152,8 +156,8 @@ export const batchCreateEntities = async (
 
 	setEntityCreationRecoveryStage({ ctx, stage: "lookup" });
 
-	// No Postgres fallback for a cache-only failure: the lock this path takes
-	// lives in Redis, and creating entities without it double-charges seats.
+	// No Postgres fallback: this is a write path, so there is no cache-only read
+	// to re-serve — a transient Redis error mid-write sheds and captures instead.
 	return shed503OnTransientError({
 		ctx,
 		source: "entities.create",

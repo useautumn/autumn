@@ -4,10 +4,12 @@
  * Contract under test:
  * - Safe failures replay the original normalized create with its API semantics.
  * - Replays cannot enqueue themselves again.
- * - Entity creation is not idempotent, so replay only creates what is missing:
- *   entities the shed request already committed are skipped, including the
- *   single id-less entity a customer may hold per feature.
- * - Failures at or after a seat charge stop for manual billing review.
+ * - A request that already landed (a client retry beat the drain) is a no-op,
+ *   read entity by entity so a large customer cannot hide a committed row.
+ * - Anything else replays whole, leaving its own validation to reject a batch
+ *   it can only partly satisfy.
+ * - Failures once writing has started stop for manual billing review, and log
+ *   what they were creating before the worker drops the message.
  */
 
 import { afterAll, beforeEach, describe, expect, mock, test } from "bun:test";
@@ -26,6 +28,7 @@ const mockState = {
 const MOCKED_MODULE_PATHS = [
 	"@/internal/entities/actions/batchCreateEntities.js",
 	"@/internal/customers/CusService.js",
+	"@/internal/api/entities/EntityService.js",
 ] as const;
 const realModules = new Map<string, Record<string, unknown>>();
 for (const path of MOCKED_MODULE_PATHS) {
@@ -47,10 +50,31 @@ mock.module("@/internal/entities/actions/batchCreateEntities.js", () => ({
 
 mock.module("@/internal/customers/CusService.js", () => ({
 	CusService: {
-		getFull: async () =>
+		get: async () =>
 			mockState.customerFound
-				? { id: "customer_123", entities: mockState.existingEntities }
+				? { id: "customer_123", internal_id: "icus_123" }
 				: null,
+	},
+}));
+
+mock.module("@/internal/api/entities/EntityService.js", () => ({
+	EntityService: {
+		get: async ({
+			id,
+			internalFeatureId,
+		}: {
+			id: string;
+			internalFeatureId: string;
+		}) =>
+			mockState.existingEntities.find(
+				(entity) =>
+					entity.id === id && entity.internal_feature_id === internalFeatureId,
+			),
+		getNull: async ({ internalFeatureId }: { internalFeatureId: string }) =>
+			mockState.existingEntities.find(
+				(entity) =>
+					!entity.id && entity.internal_feature_id === internalFeatureId,
+			),
 	},
 }));
 
@@ -127,9 +151,9 @@ describe("replayFailedEntityCreation", () => {
 		]);
 		expect(ctx.extraLogs.entityCreationRecoveryReplay).toMatchObject({
 			outcome: "created",
-			createdCount: 1,
-			skippedCount: 0,
 			sourceRequestId: "req_entity_123",
+			customerId: "customer_123",
+			entities: [{ id: "entity_123", feature_id: "seats" }],
 		});
 	});
 
@@ -145,7 +169,9 @@ describe("replayFailedEntityCreation", () => {
 	});
 
 	test("skips replay when the entity already exists", async () => {
-		mockState.existingEntities = [{ id: "entity_123", deleted: false }];
+		mockState.existingEntities = [
+			{ id: "entity_123", deleted: false, internal_feature_id: "if_seats" },
+		];
 		const ctx = buildContext();
 
 		await replayFailedEntityCreation({
@@ -156,13 +182,14 @@ describe("replayFailedEntityCreation", () => {
 		expect(mockState.batchCreateCalls).toHaveLength(0);
 		expect(ctx.extraLogs.entityCreationRecoveryReplay).toMatchObject({
 			outcome: "already_exists",
-			createdCount: 0,
-			skippedCount: 1,
+			sourceRequestId: "req_entity_123",
 		});
 	});
 
 	test("replays a deleted entity id rather than treating it as created", async () => {
-		mockState.existingEntities = [{ id: "entity_123", deleted: true }];
+		mockState.existingEntities = [
+			{ id: "entity_123", deleted: true, internal_feature_id: "if_seats" },
+		];
 
 		await replayFailedEntityCreation({
 			ctx: buildContext(),
@@ -172,31 +199,28 @@ describe("replayFailedEntityCreation", () => {
 		expect(mockState.batchCreateCalls).toHaveLength(1);
 	});
 
-	test("creates only the entities missing from a partially committed batch", async () => {
-		mockState.existingEntities = [{ id: "entity_123", deleted: false }];
-
-		const ctx = buildContext();
-		await replayFailedEntityCreation({
-			ctx,
-			payload: buildPayload({
-				createEntityData: [
-					{ id: "entity_123", name: "Entity", feature_id: "seats" },
-					{ id: "entity_456", name: "Other", feature_id: "seats" },
-				],
-			}),
-		});
-
-		expect(mockState.batchCreateCalls[0]?.createEntityData).toEqual([
+	test("replays the whole request when only part of the batch exists", async () => {
+		mockState.existingEntities = [
+			{ id: "entity_123", deleted: false, internal_feature_id: "if_seats" },
+		];
+		const createEntityData = [
+			{ id: "entity_123", name: "Entity", feature_id: "seats" },
 			{ id: "entity_456", name: "Other", feature_id: "seats" },
-		]);
-		expect(ctx.extraLogs.entityCreationRecoveryReplay).toMatchObject({
-			outcome: "created",
-			createdCount: 1,
-			skippedCount: 1,
+		];
+
+		await replayFailedEntityCreation({
+			ctx: buildContext(),
+			payload: buildPayload({ createEntityData }),
 		});
+
+		// Creating only entity_456 would turn a request the API would have rejected
+		// outright into a partial success, so validation gets the original batch.
+		expect(mockState.batchCreateCalls[0]?.createEntityData).toEqual(
+			createEntityData,
+		);
 	});
 
-	test("treats an existing id-less entity on the feature as already created", async () => {
+	test("treats an existing id-less entity as already created", async () => {
 		mockState.existingEntities = [
 			{ id: null, deleted: false, internal_feature_id: "if_seats" },
 		];
@@ -211,7 +235,7 @@ describe("replayFailedEntityCreation", () => {
 		expect(mockState.batchCreateCalls).toHaveLength(0);
 	});
 
-	test("replays an id-less entity when the existing one belongs to another feature", async () => {
+	test("replays an id-less entity when the existing one is on another feature", async () => {
 		mockState.existingEntities = [
 			{ id: null, deleted: false, internal_feature_id: "if_workspaces" },
 		];
@@ -226,17 +250,31 @@ describe("replayFailedEntityCreation", () => {
 		expect(mockState.batchCreateCalls).toHaveLength(1);
 	});
 
-	test.each(["seat_charge", "entities_committed"] as const)(
+	test.each([
+		"entitlements_updating",
+		"seat_charge",
+		"entities_committed",
+	] as const)(
 		"refuses automatic replay after a %s failure",
 		async (failureStage) => {
+			const ctx = buildContext();
+
 			await expect(
 				replayFailedEntityCreation({
-					ctx: buildContext(),
+					ctx,
 					payload: buildPayload({ failureStage }),
 				}),
 			).rejects.toThrow("requires manual billing review");
 
 			expect(mockState.batchCreateCalls).toHaveLength(0);
+			expect(ctx.extraLogs.entityCreationRecoveryReplay).toMatchObject({
+				outcome: "manual_review",
+				failureStage,
+				customerId: "customer_123",
+				sourceRequestId: "req_entity_123",
+				entities: [{ id: "entity_123", feature_id: "seats" }],
+			});
+			expect(ctx.logger.error).toHaveBeenCalled();
 		},
 	);
 });

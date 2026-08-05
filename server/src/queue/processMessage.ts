@@ -5,6 +5,7 @@ import chalk from "chalk";
 import type { Logger } from "pino";
 import { isTransientDbError } from "@/db/dbUtils.js";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
+import { isShedError } from "@/db/shed503OnTransientError.js";
 import { logger } from "@/external/logtail/logtailUtils.js";
 import { isTransientRedisError } from "@/external/redis/utils/isTransientRedisError.js";
 import {
@@ -73,8 +74,14 @@ export const shouldRetrySqsJobError = ({
 	error: unknown;
 }) => {
 	switch (jobName) {
+		// A replay re-enters the same shedding wrapper the capture came from, so a
+		// drain started while the incident is still live must stay in SQS.
 		case JobName.CustomerCreationRecovery:
-			return isTransientDbError({ error }) || isTransientRedisError({ error });
+			return (
+				isTransientDbError({ error }) ||
+				isTransientRedisError({ error }) ||
+				isShedError({ error })
+			);
 		case JobName.SyncBalanceBatchV4:
 		case JobName.RefreshEntityAggregate:
 			return isTransientDbError({ error });
