@@ -1,6 +1,5 @@
 import type { AppEnv, Feature } from "@autumn/shared";
 import type { Redis } from "ioredis";
-import { isRedisReadyWithStandby } from "@/external/redis/initUtils/standbyRedis.js";
 import { markCustomersUpdatedAt } from "@/internal/customers/customerLsns/markCustomerUpdatedAt.js";
 import { tryRedisRead, tryRedisWrite } from "@/utils/cacheUtils/cacheUtils.js";
 import { buildFullSubjectKey } from "../../builders/buildFullSubjectKey.js";
@@ -29,7 +28,7 @@ const batchInvalidateCachedFullSubjectsOnRedis = async ({
 	featuresByOrgEnv: FeaturesByOrgEnv;
 	redisV2: Redis;
 }): Promise<void> => {
-	if (customers.length === 0 || !isRedisReadyWithStandby(redisV2)) return;
+	if (customers.length === 0 || redisV2.status !== "ready") return;
 
 	for (
 		let offset = 0;

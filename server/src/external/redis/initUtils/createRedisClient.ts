@@ -3,9 +3,9 @@ import {
 	instrumentRedis,
 	type RedisClientType,
 } from "../otel/instrumentRedis.js";
+import { createStandbyRedisRouter } from "./createStandbyRedisRouter.js";
 import { redisDnsLookup } from "./redisDnsLookup.js";
 import { registerRedisCommands } from "./registerRedisCommands.js";
-import { registerStandbyRedis } from "./standbyRedis.js";
 
 const REDIS_COMMAND_TIMEOUT_MS =
 	process.env.NODE_ENV === "production" ? 10_000 : 60_000;
@@ -73,15 +73,14 @@ export const createRedisClient = ({
 
 export const createRedisConnection = createRedisClient;
 
-/** A second connection to the same endpoint, paired with the returned primary.
- *  Command resend is off on both: a resent command would land after work the
- *  retry path already sent to the other connection, reordering mutations that a
- *  single socket kept FIFO. */
+/** Two connections to the same endpoint behind a router. Command resend is off:
+ *  a resent command would land after work the router already sent to the other
+ *  connection, reordering balance mutations that a single socket kept FIFO. */
 export const createStandbyRedisConnection = ({
 	region,
 	...options
 }: Parameters<typeof createRedisClient>[0]): Redis =>
-	registerStandbyRedis({
+	createStandbyRedisRouter({
 		primary: createRedisClient({
 			...options,
 			region: `${region}:primary`,

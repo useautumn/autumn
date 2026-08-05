@@ -161,10 +161,8 @@ export const getCachedFeatureBalancesBatch = async ({
 	if (featureIds.length === 0) return { kind: "ok", value: [] };
 
 	const { org, env, redisV2 } = ctx;
-	// Built inside the op so a retry rebuilds it against the standby: a pipeline
-	// is pinned to whichever connection created it.
 	const results = await runRedisOp({
-		operation: async (redis) => {
+		operation: (redis) => {
 			const pipeline = redis.pipeline();
 			for (const featureId of featureIds) {
 				const customerEntitlementIds =
@@ -184,7 +182,7 @@ export const getCachedFeatureBalancesBatch = async ({
 					...fields,
 				);
 			}
-			return throwOnPipelineConnectionError(await pipeline.exec());
+			return pipeline.exec().then(throwOnPipelineConnectionError);
 		},
 		source: "getCachedFeatureBalancesBatch",
 		redisInstance: redisV2,

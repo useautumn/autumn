@@ -1,6 +1,5 @@
 import type { SubjectBalance, UsageWindow } from "@autumn/shared";
 import type { Redis } from "ioredis";
-import { isRedisReadyWithStandby } from "@/external/redis/initUtils/standbyRedis.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { flushSubjectBalancesToDb } from "@/internal/balances/utils/sync/flushSubjectBalancesToDb.js";
 import type { UsageWindowUpdate } from "@/internal/balances/utils/types/usageWindowUpdate.js";
@@ -44,7 +43,7 @@ export const invalidateSharedBalanceFields = async ({
 	flushBalances?: boolean;
 }): Promise<void> => {
 	const { org, env } = ctx;
-	if (!customerId || !isRedisReadyWithStandby(redisV2)) return;
+	if (!customerId || redisV2.status !== "ready") return;
 
 	const subjectKey = buildFullSubjectKey({ orgId: org.id, env, customerId });
 

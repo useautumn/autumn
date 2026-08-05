@@ -1,10 +1,7 @@
 import type { Redis } from "ioredis";
 import { logger } from "@/external/logtail/logtailUtils.js";
 import { withTimeout } from "@/utils/withTimeout.js";
-import {
-	getStandbyRedisPair,
-	isRedisReadyWithStandby,
-} from "../initUtils/standbyRedis.js";
+import { getStandbyRedisRouter } from "../initUtils/createStandbyRedisRouter.js";
 import { RedisUnavailableError } from "./errors.js";
 import { isConnectionLevelRedisError } from "./isTransientRedisError.js";
 
@@ -80,13 +77,12 @@ export const runRedisOp = async <T>({
 	retryOnStandby = false,
 	timeoutMs,
 }: {
-	/** Receives the connection to run against. With `retryOnStandby` it must use
-	 *  that argument; closing over the outer client re-runs the same socket. */
 	operation: (redis: Redis) => Promise<T>;
 	source: string;
 	redisInstance: Redis;
 	queueIfNotReady?: boolean;
-	/** Retry a failed idempotent read once on the paired standby connection. */
+	/** Retry a failed idempotent read once on the other connection. `operation`
+	 *  must use its injected `redis`; closing over the router re-runs the same one. */
 	retryOnStandby?: boolean;
 	/** Opt-in bound, tighter than the client's `commandTimeout`. Reads only —
 	 *  the race abandons the promise but the command still reaches Redis. */
@@ -94,7 +90,7 @@ export const runRedisOp = async <T>({
 }): Promise<T> => {
 	const targetRedis = redisInstance;
 
-	if (!queueIfNotReady && !isRedisReadyWithStandby(targetRedis)) {
+	if (!queueIfNotReady && targetRedis.status !== "ready") {
 		const reason: UnavailableReason = "not_ready";
 		warnRedisUnavailable({ source, reason });
 		throw new RedisUnavailableError({ source, reason });
@@ -104,11 +100,11 @@ export const runRedisOp = async <T>({
 	// the ceiling the caller sized against its non-Redis fallback.
 	const deadlineAt = timeoutMs ? Date.now() + timeoutMs : undefined;
 
-	// The message must contain "timeout" so classifyErrorReason maps it to
-	// `timeout` rather than `other` — withTimeout's default says "timed out".
 	const runAttempt = (redis: Redis, budgetMs?: number) =>
 		budgetMs
-			? withTimeout({
+			? // The message must contain "timeout" so classifyErrorReason maps it to
+				// `timeout` rather than `other` — withTimeout's default says "timed out".
+				withTimeout({
 					timeoutMs: budgetMs,
 					fn: () => operation(redis),
 					timeoutMessage: `[redis] ${source} timeout after ${budgetMs}ms`,
@@ -116,16 +112,18 @@ export const runRedisOp = async <T>({
 			: operation(redis);
 
 	try {
-		const pair = retryOnStandby ? getStandbyRedisPair(targetRedis) : undefined;
-		if (!pair) return await runAttempt(targetRedis, timeoutMs);
+		const router = retryOnStandby
+			? getStandbyRedisRouter(targetRedis)
+			: undefined;
+		if (!router) return await runAttempt(targetRedis, timeoutMs);
 
-		const [preferred, alternate] = pair.ordered();
+		const [preferred, alternate] = router.ordered();
 		try {
 			const value = await runAttempt(preferred, timeoutMs);
-			pair.recordOutcome({ connection: preferred });
+			router.recordOutcome({ connection: preferred });
 			return value;
 		} catch (firstError) {
-			pair.recordOutcome({ connection: preferred, error: firstError });
+			router.recordOutcome({ connection: preferred, error: firstError });
 
 			const remainingMs = deadlineAt ? deadlineAt - Date.now() : undefined;
 			const canRetry =
@@ -136,14 +134,14 @@ export const runRedisOp = async <T>({
 
 			try {
 				const value = await runAttempt(alternate, remainingMs);
-				pair.recordOutcome({ connection: alternate });
+				router.recordOutcome({ connection: alternate });
 				logger.info(
 					{ source, type: "redis_standby_failover" },
 					"[redis] standby served a read the preferred connection failed",
 				);
 				return value;
 			} catch (retryError) {
-				pair.recordOutcome({ connection: alternate, error: retryError });
+				router.recordOutcome({ connection: alternate, error: retryError });
 				throw retryError;
 			}
 		}

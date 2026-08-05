@@ -71,8 +71,8 @@ export const getCachedFullSubject = async ({
 				await redis.pipeline().get(subjectKey).get(epochKey).exec(),
 			),
 		source: "getCachedFullSubject:pipeline",
-		retryOnStandby: true,
 		redisInstance: redisV2,
+		retryOnStandby: true,
 		timeoutMs: REDIS_OP_TIMEOUT_MS.subjectPipeline,
 	});
 
