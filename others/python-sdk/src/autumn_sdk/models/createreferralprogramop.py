@@ -44,14 +44,14 @@ class CreateReferralProgramGlobals(BaseModel):
         return m
 
 
-RedeemOnRequest = Literal[
+CreateReferralProgramRedeemOnRequest = Literal[
     "customer_creation",
     "checkout",
 ]
 r"""When the reward is granted: on redemption, or when the redeemer checks out."""
 
 
-ReceivedByRequest = Literal[
+CreateReferralProgramReceivedByRequest = Literal[
     "referrer",
     "all",
 ]
@@ -61,9 +61,9 @@ r"""Who receives the reward: the referrer only, or both parties."""
 class CreateReferralProgramParamsTypedDict(TypedDict):
     id: str
     reward_id: str
-    redeem_on: RedeemOnRequest
+    redeem_on: CreateReferralProgramRedeemOnRequest
     r"""When the reward is granted: on redemption, or when the redeemer checks out."""
-    received_by: ReceivedByRequest
+    received_by: CreateReferralProgramReceivedByRequest
     r"""Who receives the reward: the referrer only, or both parties."""
     max_redemptions: NotRequired[Nullable[int]]
     r"""A positive redemption limit, or null for unlimited redemptions."""
@@ -78,10 +78,10 @@ class CreateReferralProgramParams(BaseModel):
 
     reward_id: str
 
-    redeem_on: RedeemOnRequest
+    redeem_on: CreateReferralProgramRedeemOnRequest
     r"""When the reward is granted: on redemption, or when the redeemer checks out."""
 
-    received_by: ReceivedByRequest
+    received_by: CreateReferralProgramReceivedByRequest
     r"""Who receives the reward: the referrer only, or both parties."""
 
     max_redemptions: OptionalNullable[int] = UNSET
@@ -119,7 +119,7 @@ class CreateReferralProgramParams(BaseModel):
         return m
 
 
-RedeemOnResponse = Union[
+CreateReferralProgramRedeemOnResponse = Union[
     Literal[
         "customer_creation",
         "checkout",
@@ -129,7 +129,7 @@ RedeemOnResponse = Union[
 r"""When the reward is granted: on redemption, or when the redeemer checks out."""
 
 
-ReceivedByResponse = Union[
+CreateReferralProgramReceivedByResponse = Union[
     Literal[
         "referrer",
         "all",
@@ -146,9 +146,9 @@ class CreateReferralProgramResponseTypedDict(TypedDict):
     r"""The unique identifier for the referral program."""
     reward_id: str
     r"""The ID of the reward granted when a code is redeemed."""
-    redeem_on: RedeemOnResponse
+    redeem_on: CreateReferralProgramRedeemOnResponse
     r"""When the reward is granted: on redemption, or when the redeemer checks out."""
-    received_by: ReceivedByResponse
+    received_by: CreateReferralProgramReceivedByResponse
     r"""Who receives the reward: the referrer only, or both parties."""
     created_at: float
     r"""The Unix timestamp (in milliseconds) when the referral program was created."""
@@ -169,10 +169,10 @@ class CreateReferralProgramResponse(BaseModel):
     reward_id: str
     r"""The ID of the reward granted when a code is redeemed."""
 
-    redeem_on: RedeemOnResponse
+    redeem_on: CreateReferralProgramRedeemOnResponse
     r"""When the reward is granted: on redemption, or when the redeemer checks out."""
 
-    received_by: ReceivedByResponse
+    received_by: CreateReferralProgramReceivedByResponse
     r"""Who receives the reward: the referrer only, or both parties."""
 
     created_at: float

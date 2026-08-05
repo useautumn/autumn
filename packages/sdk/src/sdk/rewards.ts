@@ -3,8 +3,11 @@
  */
 
 import { rewardsCreate } from "../funcs/rewards-create.js";
+import { rewardsDelete } from "../funcs/rewards-delete.js";
+import { rewardsGet } from "../funcs/rewards-get.js";
 import { rewardsList } from "../funcs/rewards-list.js";
 import { rewardsRedeemCode } from "../funcs/rewards-redeem-code.js";
+import { rewardsUpdate } from "../funcs/rewards-update.js";
 import { ClientSDK, RequestOptions } from "../lib/sdks.js";
 import * as models from "../models/index.js";
 import { unwrapAsync } from "../types/fp.js";
@@ -32,6 +35,48 @@ export class Rewards extends ClientSDK {
     options?: RequestOptions,
   ): Promise<models.ListRewardsResponse> {
     return unwrapAsync(rewardsList(
+      this,
+      request,
+      options,
+    ));
+  }
+
+  /**
+   * Fetch a coupon or feature grant by ID.
+   */
+  async get(
+    request: models.GetRewardParams,
+    options?: RequestOptions,
+  ): Promise<models.GetRewardResponse> {
+    return unwrapAsync(rewardsGet(
+      this,
+      request,
+      options,
+    ));
+  }
+
+  /**
+   * Update a coupon or feature grant. Omitted fields keep their current value.
+   */
+  async update(
+    request: models.UpdateRewardParams,
+    options?: RequestOptions,
+  ): Promise<models.UpdateRewardResponse> {
+    return unwrapAsync(rewardsUpdate(
+      this,
+      request,
+      options,
+    ));
+  }
+
+  /**
+   * Delete a coupon or feature grant.
+   */
+  async delete(
+    request: models.DeleteRewardParams,
+    options?: RequestOptions,
+  ): Promise<models.DeleteRewardResponse> {
+    return unwrapAsync(rewardsDelete(
       this,
       request,
       options,
