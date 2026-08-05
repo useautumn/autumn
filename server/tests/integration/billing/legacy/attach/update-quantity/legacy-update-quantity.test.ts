@@ -665,11 +665,13 @@ test.concurrent(
 			testClockId: testClockId!,
 		});
 
-		// After next cycle: balance should reset to new quantity (includedUsage + downgradedQuantityV1)
-		const customerAfterCycle =
-			await autumnV1.customers.get<ApiCustomerV3>(customerId);
-		expectCustomerFeatureCorrect({
-			customer: customerAfterCycle,
+		// After next cycle: balance should reset to new quantity (includedUsage + downgradedQuantityV1).
+		// Poll: the pending decrease is applied by `invoice.created`'s prepaid task
+		// (options.upcoming_quantity -> quantity, then reset), and a read taken
+		// before that webhook lands sees the OLD quantity's reset (400).
+		await expectCustomerFeatureCorrect({
+			autumn: autumnV1,
+			customerId,
 			featureId: TestFeature.Messages,
 			includedUsage: downgradedTotalBalance, // 300
 			balance: downgradedTotalBalance, // 300 (reset, usage cleared)

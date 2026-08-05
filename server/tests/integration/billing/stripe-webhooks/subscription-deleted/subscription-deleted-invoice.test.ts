@@ -34,6 +34,8 @@ import { waitForCustomerProductExpired } from "@tests/integration/billing/utils/
 import { TestFeature } from "@tests/setup/v2Features";
 import { items } from "@tests/utils/fixtures/items";
 import { products } from "@tests/utils/fixtures/products";
+import { pollUntilAsserted } from "@tests/utils/genUtils";
+import { DEFAULT_SETTLE_TIMEOUT_MS } from "@tests/utils/pollableCustomerExpect";
 import { advanceTestClock } from "@tests/utils/stripeUtils";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
@@ -455,6 +457,20 @@ test.concurrent(
 			waitForSeconds: 30,
 		});
 
+		// Baseline for "no new invoice": attach ($20) + the renewal the advance
+		// above produced ($20). The renewal invoice reaches Autumn by webhook, so
+		// reading the count straight after the advance can still see only the
+		// attach invoice — and then the renewal landing later reads as the arrear
+		// invoice this test is asserting the absence of. Settling it here also
+		// keeps the cycle reset (same webhook) from landing on top of the track
+		// below.
+		const invoiceCountBeforeCancel = 2;
+		await expectCustomerInvoiceCorrect({
+			autumn: autumnV1,
+			customerId,
+			count: invoiceCountBeforeCancel,
+		});
+
 		// Track 500 messages on entity in the new cycle (100 included, 400 overage)
 		await autumnV1.track({
 			customer_id: customerId,
@@ -466,11 +482,6 @@ test.concurrent(
 		// Verify usage was tracked
 		const entityAfterTrack = await autumnV1.entities.get(customerId, entityId);
 		expect(entityAfterTrack.features[TestFeature.Messages].balance).toBe(-400);
-
-		// Get invoice count before cancel
-		const customerBeforeCancel =
-			await autumnV1.customers.get<ApiCustomerV3>(customerId);
-		const invoiceCountBeforeCancel = customerBeforeCancel.invoices?.length ?? 0;
 
 		// Get subscription ID for entity's product
 		const subscriptionId = await getEntitySubscriptionId({
@@ -506,10 +517,14 @@ test.concurrent(
 		});
 
 		// Key assertion: No NEW invoice from Autumn
-		// Invoice count should be same as before cancel (no arrear invoice)
-		const customerAfterCancel =
-			await autumnV1.customers.get<ApiCustomerV3>(customerId);
-		expect(customerAfterCancel.invoices?.length).toBe(invoiceCountBeforeCancel);
+		// Invoice count should be same as before cancel (no arrear invoice).
+		// `waitForCustomerProductExpired` above already means the sub.deleted
+		// handler ran past its arrear-billing task, so this count is final.
+		await expectCustomerInvoiceCorrect({
+			autumn: autumnV1,
+			customerId,
+			count: invoiceCountBeforeCancel,
+		});
 	},
 );
 
@@ -884,16 +899,36 @@ test.concurrent(
 			env: ctx.env,
 		});
 
-		// Key assertion: Autumn SHOULD have created an arrear invoice
-		// because this was an end-of-period cancellation (cancel_at_period_end = true)
-		// Should have 2 invoices:
-		// 1. Initial attach: $20
-		// 2. Final arrear invoice: $40 (400 overage × $0.10)
-		await expectCustomerInvoiceCorrect({
-			autumn: autumnV1,
-			customerId,
-			count: 2,
-			latestTotal: 40, // Arrear invoice for overage
+		// Key assertion: the 400 units of overage MUST be billed somewhere, because
+		// this was an end-of-period cancellation (cancel_at_period_end = true).
+		//
+		// Asserted by content, not by position: which invoice carries the charge
+		// depends on which handler wins the boundary. `invoice.created` attaches
+		// the arrear line items to Stripe's own final cycle invoice, while
+		// `customer.subscription.deleted` would raise a separate arrear invoice —
+		// so "the latest invoice totals $40" is an assumption about the race, not
+		// about the product. The totals are printed on failure so a red run says
+		// whether the charge landed elsewhere or was lost entirely.
+		const expectedArrearTotal = 40; // 400 overage × $0.10
+		await pollUntilAsserted({
+			fetch: () => autumnV1.customers.get<ApiCustomerV3>(customerId),
+			assert: (customer) => {
+				const totals = (customer.invoices ?? []).map(
+					(invoice) => invoice.total,
+				);
+				const billed = totals.some(
+					(total) => Math.abs(total - expectedArrearTotal) < 0.01,
+				);
+				expect(
+					billed,
+					`No invoice carries the $${expectedArrearTotal} arrear charge for ${customerId} — invoice totals: [${totals.join(", ")}]`,
+				).toBe(true);
+			},
+			// Same ceiling the pollable invoice helper used here before: the advance
+			// already waited for the boundary invoice to finalize, so this only
+			// covers the last webhook hop — and a charge that was LOST must surface
+			// fast rather than burn the file's wall time.
+			timeoutMs: DEFAULT_SETTLE_TIMEOUT_MS,
 		});
 	},
 );
