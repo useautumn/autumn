@@ -8,6 +8,7 @@ export * from "./convertCusProduct/cusProductToFeatureOptions";
 export * from "./convertCusProduct/customerProductsToRecurringActiveAndScheduled";
 export * from "./convertCusProduct/customerProductsToStripeSubscriptionIds";
 export * from "./convertCusProduct/customerProductToEffectivePrices";
+export * from "./convertCusProduct/customerProductToReplacementKey";
 export * from "./cusProductConstants";
 export * from "./cusProductUtils";
 export * from "./customerLicenses/convertCustomerLicense/customerLicenseToGranted";

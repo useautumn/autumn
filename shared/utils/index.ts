@@ -44,7 +44,7 @@ export * from "./productUtils/classifyProduct/classifyProductUtils";
 export * from "./productUtils/classifyProduct/hasMissingStripeResourcesForProduct";
 export * from "./productUtils/classifyProduct/isProductPaidAndRecurring";
 export * from "./productUtils/convertProduct/productToEffectivePrices";
-export * from "./productUtils/convertProduct/productToScopeKey";
+export * from "./productUtils/convertProduct/productToReplacementKey";
 // Product utils
 export * from "./productUtils/convertProductUtils";
 export * from "./productUtils/entUtils/index";

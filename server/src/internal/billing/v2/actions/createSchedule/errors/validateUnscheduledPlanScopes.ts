@@ -5,7 +5,7 @@ import type {
 } from "@autumn/shared";
 import {
 	isOneOffProduct,
-	productToScopeKey,
+	productToReplacementKey,
 	RecaseError,
 } from "@autumn/shared";
 
@@ -18,7 +18,7 @@ const groupAndScopeKey = ({
 	internalEntityId?: string;
 }) =>
 	JSON.stringify([
-		productToScopeKey({ product: fullProduct }),
+		productToReplacementKey({ product: fullProduct }),
 		internalEntityId ?? null,
 	]);
 
