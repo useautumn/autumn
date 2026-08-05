@@ -33,6 +33,7 @@ import type {
 	PlanMigrationSelections,
 	PlanUpdateIntent,
 	PlanUpdateIntentSelections,
+	PushDecisions,
 	PushResult,
 	VariantMigrationSelections,
 	VariantPropagationSelections,
@@ -610,14 +611,7 @@ async function executePushWithDefaults(
 	prompts: PushPrompt[],
 	cwd: string,
 	environment: AppEnv,
-	decisions: {
-		planMigrationSelections?: PlanMigrationSelections;
-		planUpdateIntentSelections?: PlanUpdateIntentSelections;
-		skipPlanIds?: string[];
-		variantMigrationSelections?: VariantMigrationSelections;
-		variantPropagationSelections?: VariantPropagationSelections;
-		variantUpdateIntentSelections?: VariantUpdateIntentSelections;
-	} = {},
+	decisions: PushDecisions = {},
 ): Promise<HeadlessPushResult> {
 	const result: HeadlessPushResult = {
 		success: true,
@@ -673,17 +667,9 @@ async function executePushWithDefaults(
 
 	const pushResult = await pushCatalog({
 		cwd,
-		features: config.features,
-		plans: config.plans,
-		rewards: config.rewards,
-		referralPrograms: config.referralPrograms,
-		planMigrationSelections: decisions.planMigrationSelections,
-		planUpdateIntentSelections: decisions.planUpdateIntentSelections,
+		config,
+		decisions,
 		preview,
-		skipPlanIds: decisions.skipPlanIds,
-		variantMigrationSelections: decisions.variantMigrationSelections,
-		variantPropagationSelections: decisions.variantPropagationSelections,
-		variantUpdateIntentSelections: decisions.variantUpdateIntentSelections,
 	});
 	Object.assign(result, headlessResultFromPushResult(pushResult));
 
@@ -702,10 +688,7 @@ async function executeCleanPush(
 	preview: CatalogPreviewUpdateResponse,
 ): Promise<HeadlessPushResult> {
 	const result = await pushCatalog({
-		features: config.features,
-		plans: config.plans,
-		rewards: config.rewards,
-		referralPrograms: config.referralPrograms,
+		config,
 		preview,
 	});
 
@@ -765,12 +748,7 @@ async function _headlessPushImpl(
 	// Analyze changes
 	console.log(chalk.dim(`Analyzing changes against ${envLabel}...`));
 	const [{ preview }, archivedTargets] = await Promise.all([
-		previewCatalogPush({
-			features: config.features,
-			plans: config.plans,
-			rewards: config.rewards,
-			referralPrograms: config.referralPrograms,
-		}),
+		previewCatalogPush({ config }),
 		getArchivedTargets(config, allVersions),
 	]);
 
@@ -853,12 +831,7 @@ async function _headlessPushImpl(
 			prompts,
 			cwd,
 			environment,
-			{
-				planMigrationSelections: decisions.planMigrationSelections,
-				planUpdateIntentSelections: decisions.planUpdateIntentSelections,
-				skipPlanIds: decisions.skipPlanIds,
-				variantPropagationSelections: decisions.variantPropagationSelections,
-			},
+			decisions,
 		);
 	} else {
 		// No edge cases, clean push

@@ -16,29 +16,29 @@ import {
 	createProdConfirmationPrompt,
 	fetchRemoteData,
 	isHistoricalPlan,
-	planChangeHasHistoricalVersions,
-	planTargetKey,
-	previewCatalogPush,
 	type PlanMigrationSelections,
 	type PlanUpdateIntentSelections,
 	type PushAnalysis,
 	type PushPrompt,
 	type PushResult,
-	type VariantMigrationSelections,
-	type VariantPropagationSelections,
-	type VariantUpdateIntentSelections,
+	planChangeHasHistoricalVersions,
+	planTargetKey,
+	previewCatalogPush,
 	pushCatalog,
 	unarchiveFeature as unarchiveFeatureApi,
 	unarchivePlan as unarchivePlanApi,
+	type VariantMigrationSelections,
+	type VariantPropagationSelections,
+	type VariantUpdateIntentSelections,
 } from "../../commands/push/index.js";
 import {
 	getDirectVariantUpdatePreviews,
 	getVariantPropagationPreviews,
 } from "../../commands/push/variantPropagation.js";
 import type { Feature, Plan } from "../../compose/models/index.js";
-import type { CatalogPreviewUpdateResponse } from "../api/endpoints/index.js";
 import { formatError } from "../api/client.js";
-import { loadConfig, type LoadedConfig } from "../config/loadConfig.js";
+import type { CatalogPreviewUpdateResponse } from "../api/endpoints/index.js";
+import { type LoadedConfig, loadConfig } from "../config/loadConfig.js";
 import { AppEnv } from "../env/index.js";
 import { type OrganizationInfo, useOrganization } from "./useOrganization.js";
 
@@ -361,12 +361,7 @@ export function usePush(options?: UsePushOptions) {
 	const analyzeMutation = useMutation({
 		mutationFn: async (config: LocalConfig) => {
 			const [{ preview }, remoteData] = await Promise.all([
-				previewCatalogPush({
-					features: config.features,
-					plans: config.plans,
-					rewards: config.rewards,
-					referralPrograms: config.referralPrograms,
-				}),
+				previewCatalogPush({ config }),
 				fetchRemoteData({ allVersions }),
 			]);
 
@@ -795,17 +790,16 @@ export function usePush(options?: UsePushOptions) {
 
 			return pushCatalog({
 				cwd: effectiveCwd,
-				features: config.features,
-				plans: config.plans,
-				rewards: config.rewards,
-				referralPrograms: config.referralPrograms,
-				planMigrationSelections: getPlanMigrationSelections(),
-				planUpdateIntentSelections: getPlanUpdateIntentSelections(),
-				skipFeatureIds: skippedFeatureIds,
-				skipPlanIds: skippedPlanIds,
-				variantMigrationSelections: getVariantMigrationSelections(),
-				variantPropagationSelections: getVariantPropagationSelections(),
-				variantUpdateIntentSelections: getVariantUpdateIntentSelections(),
+				config,
+				decisions: {
+					planMigrationSelections: getPlanMigrationSelections(),
+					planUpdateIntentSelections: getPlanUpdateIntentSelections(),
+					skipFeatureIds: skippedFeatureIds,
+					skipPlanIds: skippedPlanIds,
+					variantMigrationSelections: getVariantMigrationSelections(),
+					variantPropagationSelections: getVariantPropagationSelections(),
+					variantUpdateIntentSelections: getVariantUpdateIntentSelections(),
+				},
 			});
 		},
 		onSuccess: (finalResult) => {
