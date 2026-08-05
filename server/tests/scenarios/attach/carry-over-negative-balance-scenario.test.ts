@@ -1,5 +1,5 @@
-/** Leaves a Pro customer at -20 with Premium available for a manual carry-over attach.
- * Attach Premium with carry_over_balances enabled; the resulting balance should be 480. */
+/** Leaves a Premium customer with -20 carried debt ready for dashboard recalculation.
+ * Recalculation should absorb the debt and reduce displayed remaining from 500 to 480. */
 
 import { test } from "bun:test";
 import { findCustomerEntitlement } from "@tests/balances/utils/findCustomerEntitlement";
@@ -10,7 +10,7 @@ import { products } from "@tests/utils/fixtures/products";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
 
-test(`${chalk.yellowBright("scenario: negative balance ready for carry-over attach")}`, async () => {
+test(`${chalk.yellowBright("scenario: negative carry-over ready for recalculation")}`, async () => {
 	const customerId = "carry-over-negative-balance-repro";
 	const pro = products.pro({
 		id: "pro",
@@ -21,7 +21,7 @@ test(`${chalk.yellowBright("scenario: negative balance ready for carry-over atta
 		items: [items.monthlyMessages({ includedUsage: 500 })],
 	});
 
-	const { autumnV2_1, ctx } = await initScenario({
+	const { autumnV2, autumnV2_1, autumnV2_2, ctx } = await initScenario({
 		customerId,
 		setup: [
 			s.customer({ paymentMethod: "success" }),
@@ -47,12 +47,22 @@ test(`${chalk.yellowBright("scenario: negative balance ready for carry-over atta
 		customerEntitlementId: cusEnt.id,
 		expectedBalance: -20,
 	});
+	await autumnV2_2.billing.attach({
+		customer_id: customerId,
+		plan_id: premium.id,
+		carry_over_balances: { enabled: true },
+	});
+	const preview = await autumnV2.balances.previewRecalculate({
+		customer_id: customerId,
+		feature_id: TestFeature.Messages,
+	});
 
 	console.log(
 		chalk.cyanBright(
 			`\nCustomer ${customerId} is ready.\n` +
-				`Current plan: ${pro.id}; messages balance: -20.\n` +
-				`Attach ${premium.id} with carry over balances enabled; expect 480.\n`,
+				`Current plan: ${premium.id}; carried debt: -20.\n` +
+				`Recalculate messages in the dashboard; remaining should become 480.\n`,
 		),
+		preview,
 	);
 });
