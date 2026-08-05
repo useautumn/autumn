@@ -18,6 +18,8 @@ const PASS_OR_FAIL_NAME = /^\((?:pass|fail)\)\s+(.+?)\s+\[/;
 const ERROR_LINE = /^\s*error:\s*(.+)/i;
 const EXPECTED_LINE = /Expected:\s*(.+)/;
 const RECEIVED_LINE = /Received:\s*(.+)/;
+const FAILURE_TEXT =
+	/error|expect|timed out|not found|mismatch|failed|throw|invalid|unable/i;
 const STACK_LINE = /at\s+.*?\(([^)]+\.ts):(\d+):(\d+)\)/;
 
 export const parseDuration = (duration: string): number => {
@@ -53,10 +55,13 @@ const parseErrorFromLines = (
 		const meaningful = errorLines.find(
 			(line) =>
 				line.trim() &&
+				// `[prefix]` lines are the tests' own console.log noise, not failures.
+				!/^\s*\[/.test(line) &&
 				!/^\s*at\s/.test(line) &&
 				!/^\s*\d+\s*\|/.test(line) &&
 				!/^\s*\^/.test(line) &&
-				!PASS_OR_FAIL_NAME.test(line),
+				!PASS_OR_FAIL_NAME.test(line) &&
+				FAILURE_TEXT.test(line),
 		);
 		if (meaningful) errorMessage = meaningful.trim().slice(0, 300);
 	}
@@ -139,6 +144,11 @@ export const parseTestOutput = (
 					lines.slice(i + 1, nextResult === -1 ? lines.length : nextResult),
 					filePath,
 				);
+			}
+			// Last resort: bun prints some failures in a trailing summary, past the
+			// next test result. Better a possibly-misattributed message than none.
+			if (test.error?.message === "Test failed") {
+				parseErrorFromLines(test, lines.slice(i + 1), filePath);
 			}
 			tests.push(test);
 			lastTestEndIndex = i;
