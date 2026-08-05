@@ -38,8 +38,13 @@ const activeTempPaths: string[] = [
 	// ✗ "customer.subscription.created auto-sync: links product after external
 	//   Stripe checkout completion" — bare "Test failed", no assertion message.
 	"integration/billing/stripe-webhooks/subscription-created/sub-created-auto-sync.test.ts",
-	// ✗ "cancel end of cycle: downgrade then cancel (with default)" — free
-	//   product never reaches `scheduled`.
+	// ✗ "cancel end of cycle: downgrade then cancel (with default)"
+	//   Setup leaves premium canceling + pro scheduled. After
+	//   cancel_action: "cancel_end_of_cycle" on premium the customer has ONLY
+	//   [premium:active]: the scheduled downgrade was dropped, premium was NOT
+	//   marked canceling, and the default (free) was never scheduled.
+	//   Deterministic — fails the same way running solo, so it is not
+	//   cross-file product-id collision.
 	"integration/billing/update-subscription/cancel/end-of-cycle/cancel-end-of-cycle.test.ts",
 ];
 
