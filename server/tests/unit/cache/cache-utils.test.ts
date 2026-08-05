@@ -34,9 +34,11 @@ mock.module("@/external/redis/initUtils/redisConfig.js", () => ({
 }));
 mock.module("@/external/redis/miscCache/getMiscRedis.js", () => ({
 	redis: defaultRedis,
+	getMiscRedis: () => defaultRedis,
 }));
 mock.module("@/external/redis/initRedis.js", () => ({
 	redis: defaultRedis,
+	getMiscRedis: () => defaultRedis,
 }));
 
 import { RedisUnavailableError } from "@/external/redis/utils/errors.js";

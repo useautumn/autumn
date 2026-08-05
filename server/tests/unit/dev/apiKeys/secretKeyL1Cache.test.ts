@@ -24,7 +24,45 @@
  * Post-impl green: an LRUCache in cacheApiKeyUtils.ts fronts every Redis read.
  */
 
-import { afterEach, beforeEach, describe, expect, spyOn, test } from "bun:test";
+import {
+	afterAll,
+	afterEach,
+	beforeEach,
+	describe,
+	expect,
+	mock,
+	spyOn,
+	test,
+} from "bun:test";
+
+// CI has no CACHE_URL, and getMiscMainRedis throws without one. These tests
+// only need SET/GET/DEL semantics, so back the client with an in-memory map.
+const realInstances = {
+	...(await import("@/external/redis/miscCache/miscRedisInstances.js")),
+};
+const fakeStore = new Map<string, string>();
+const fakeMiscRedis = {
+	status: "ready",
+	get: async (key: string) => fakeStore.get(key) ?? null,
+	set: async (key: string, value: string) => {
+		fakeStore.set(key, String(value));
+		return "OK";
+	},
+	del: async (key: string) => (fakeStore.delete(key) ? 1 : 0),
+} as never;
+
+mock.module("@/external/redis/miscCache/miscRedisInstances.js", () => ({
+	getMiscMainRedis: () => fakeMiscRedis,
+	getMiscBackupRedis: () => null,
+}));
+
+afterAll(() => {
+	mock.module(
+		"@/external/redis/miscCache/miscRedisInstances.js",
+		() => realInstances,
+	);
+});
+
 import {
 	_resetSecretKeyL1ForTesting,
 	_secretKeyL1SizeForTesting,
