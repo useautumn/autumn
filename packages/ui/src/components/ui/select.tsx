@@ -44,8 +44,14 @@ function SelectGroup({ ...props }: SelectPrimitive.Group.Props) {
 	return <SelectPrimitive.Group data-slot="select-group" {...props} />;
 }
 
-function SelectValue({ ...props }: SelectPrimitive.Value.Props) {
-	return <SelectPrimitive.Value data-slot="select-value" {...props} />;
+function SelectValue({ className, ...props }: SelectPrimitive.Value.Props) {
+	return (
+		<SelectPrimitive.Value
+			data-slot="select-value"
+			className={cn("min-w-0 truncate", className)}
+			{...props}
+		/>
+	);
 }
 
 function SelectTrigger({
@@ -61,7 +67,7 @@ function SelectTrigger({
 			data-slot="select-trigger"
 			data-size={size}
 			className={cn(
-				"[&_svg:not([class*='text-'])]:text-muted-foreground rounded-lg flex items-center justify-between gap-2 text-sm outline-none disabled:cursor-not-allowed disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4 cursor-pointer",
+				"[&_svg:not([class*='text-'])]:text-muted-foreground rounded-lg flex items-center justify-between gap-2 text-sm outline-none disabled:cursor-not-allowed disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4 cursor-pointer min-w-0 whitespace-nowrap",
 				`input-base input-shadow-default input-state-open`,
 				className,
 			)}

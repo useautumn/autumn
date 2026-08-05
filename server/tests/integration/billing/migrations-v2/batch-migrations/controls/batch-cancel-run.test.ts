@@ -40,7 +40,7 @@ const { runBatchMigrationChunk } = await import(
 	"@/internal/migrations/v2/batchOperations/execute/runBatchMigrationChunk.js"
 );
 const { setMigrationCancelRequested } = await import(
-	"@/internal/migrations/v2/run/utils/migrationCancelToken.js"
+	"@/external/redis/actions/migrationCancelToken/migrationCancelToken.js"
 );
 
 afterAll(() => {
@@ -103,6 +103,7 @@ test.concurrent(
 					controls: payload.controls,
 				});
 				await setMigrationCancelRequested({
+					ctx,
 					migrationRunId: payload.migrationRunId,
 				});
 				return chunkResult;

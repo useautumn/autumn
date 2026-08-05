@@ -47,12 +47,12 @@ const mockState = {
 // mock.module it would resolve to the mock and passthrough would recurse.
 const realClaimRedis = (
 	await import(
-		"@/external/redis/idempotencyKeys/operations/claimRedisIdempotencyKey.js"
+		"@/external/redis/actions/idempotencyKeys/operations/claimRedisIdempotencyKey.js"
 	)
 ).claimRedisIdempotencyKey;
 const realReleaseRedis = (
 	await import(
-		"@/external/redis/idempotencyKeys/operations/releaseRedisIdempotencyKey.js"
+		"@/external/redis/actions/idempotencyKeys/operations/releaseRedisIdempotencyKey.js"
 	)
 ).releaseRedisIdempotencyKey;
 const realClaimDynamo = (
@@ -67,7 +67,7 @@ const realReleaseDynamo = (
 ).releaseDynamoIdempotencyKey;
 
 mock.module(
-	"@/external/redis/idempotencyKeys/operations/claimRedisIdempotencyKey.js",
+	"@/external/redis/actions/idempotencyKeys/operations/claimRedisIdempotencyKey.js",
 	() => ({
 		claimRedisIdempotencyKey: async (args: {
 			storageKey: string;
@@ -84,7 +84,7 @@ mock.module(
 );
 
 mock.module(
-	"@/external/redis/idempotencyKeys/operations/releaseRedisIdempotencyKey.js",
+	"@/external/redis/actions/idempotencyKeys/operations/releaseRedisIdempotencyKey.js",
 	() => ({
 		releaseRedisIdempotencyKey: async (args: { storageKey: string }) => {
 			if (mockState.passthrough) {

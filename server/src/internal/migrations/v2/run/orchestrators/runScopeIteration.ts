@@ -1,3 +1,4 @@
+import { isMigrationCancelRequested } from "@/external/redis/actions/migrationCancelToken/migrationCancelToken.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { withMigrationItemTracking } from "../../actions/migrationItem/index.js";
 import { runCloudScopeIteration } from "../../cloudAdapter/runCloudScopeIteration.js";
@@ -14,7 +15,6 @@ import {
 import { migrateCustomer } from "../migrateCustomer/index.js";
 import type { MigrationRunScheduler } from "../types/migrationRunScheduler.js";
 import type { RunScopeItem, RunScopeKind } from "../types/runScope.js";
-import { isMigrationCancelRequested } from "../utils/migrationCancelToken.js";
 import { iterateScope } from "./iterateScope.js";
 
 /** Runs one filtered migration scope iteration. */

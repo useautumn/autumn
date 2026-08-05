@@ -83,6 +83,12 @@ export function CreateRewardProgramSheet({
 				toast.error("Please select at least one plan for checkout trigger");
 				return;
 			}
+
+			// Checkout rewards skip when redemption count >= max, so 0 blocks every grant
+			if (!rewardProgram.max_redemptions) {
+				toast.error("Max redemptions must be greater than 0");
+				return;
+			}
 		}
 
 		setLoading(true);

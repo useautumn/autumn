@@ -5,7 +5,7 @@ import {
 	createRedisConnection,
 	currentRegion,
 } from "@/external/redis/initRedis.js";
-import { REDIS_V2_COMMAND_TIMEOUT_MS } from "@/external/redis/initUtils/redisV2Config.js";
+import { REDIS_V2_COMMAND_TIMEOUT_MS } from "@/external/redis/initUtils/createRedisClient.js";
 import { decryptData } from "@/utils/encryptUtils.js";
 import { getCacheV2RampConfig } from "./cacheV2RampStore.js";
 
@@ -78,7 +78,7 @@ export const getRampDestinationRedis = (): Redis | null => {
 	const instance = createRedisConnection({
 		cacheUrl: reachable,
 		region: `${currentRegion}:v2:ramp`,
-		supportsUpstashShebang: false,
+		redisType: "subject-secondary",
 		commandTimeout: REDIS_V2_COMMAND_TIMEOUT_MS,
 	});
 

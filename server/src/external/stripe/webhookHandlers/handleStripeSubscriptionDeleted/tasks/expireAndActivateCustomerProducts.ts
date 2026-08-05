@@ -99,6 +99,7 @@ export const expireAndActivateCustomerProducts = async ({
 
 	// invoice.created needs the expired snapshots for final usage billing.
 	await customerProductActions.expiredCache.set({
+		ctx,
 		stripeSubscriptionId: stripeSubscription.id,
 		customerProducts: expiredCustomerProducts,
 	});

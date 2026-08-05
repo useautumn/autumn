@@ -1,6 +1,6 @@
 import type { AppEnv, Feature } from "@autumn/shared";
 import type { Redis } from "ioredis";
-import { batchDeleteCachedFullCustomers } from "@/internal/customers/cusUtils/fullCustomerCacheUtils/batchDeleteCachedFullCustomers.js";
+import { markCustomersUpdatedAt } from "@/internal/customers/customerLsns/markCustomerUpdatedAt.js";
 import { tryRedisRead, tryRedisWrite } from "@/utils/cacheUtils/cacheUtils.js";
 import { buildFullSubjectKey } from "../../builders/buildFullSubjectKey.js";
 import { buildFullSubjectOrgEnvKey } from "../../builders/buildFullSubjectOrgEnvKey.js";
@@ -112,7 +112,8 @@ export const batchInvalidateCachedFullSubjects = async ({
 }): Promise<number> => {
 	if (customers.length === 0) return 0;
 
-	const deleted = await batchDeleteCachedFullCustomers({ customers });
+	// Chokepoint freshness marks — a pure DB write, never gated on Redis state.
+	await markCustomersUpdatedAt({ customers });
 
 	const customersByRedis = new Map<Redis, BatchInvalidateCustomer[]>();
 	for (const customer of customers) {
@@ -135,5 +136,5 @@ export const batchInvalidateCachedFullSubjects = async ({
 		),
 	);
 
-	return deleted;
+	return customers.length;
 };

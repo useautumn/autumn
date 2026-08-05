@@ -24,6 +24,7 @@ export const storedInvoiceCreditForPrice = ({
 	customerProduct,
 	billingContext,
 	target,
+	consumedChargeRowIds,
 }: {
 	ctx: AutumnContext;
 	customerProduct: FullCusProduct;
@@ -32,6 +33,9 @@ export const storedInvoiceCreditForPrice = ({
 		price: Price;
 		product?: FullProductWithoutLicenses;
 	};
+	/** Mutated as rows are credited, so callers resolving several prices never
+	 * refund the same stored charge twice. */
+	consumedChargeRowIds?: Set<string>;
 }): StoredInvoiceCreditForPriceResult => {
 	const { price, product } = target;
 	const now = billingContext.currentEpochMs;
@@ -71,8 +75,11 @@ export const storedInvoiceCreditForPrice = ({
 			row.effective_period_end > now,
 	);
 	const lineItems: LineItem[] = [];
+	const creditableRows = consumedChargeRowIds
+		? usableRows.filter((row) => !consumedChargeRowIds.has(row.id))
+		: usableRows;
 
-	for (const chargeRow of usableRows) {
+	for (const chargeRow of creditableRows) {
 		const periodStart = chargeRow.effective_period_start;
 		const periodEnd = chargeRow.effective_period_end;
 		if (periodStart == null || periodEnd == null) continue;
@@ -83,6 +90,7 @@ export const storedInvoiceCreditForPrice = ({
 			anchorResetRefund: billingContext.anchorResetRefund,
 		});
 		if (action.type === "skip") continue;
+		consumedChargeRowIds?.add(chargeRow.id);
 		const effectiveNow =
 			action.type === "use_snapped_now" ? action.snappedNow : now;
 		const alreadyRefunded = computeAlreadyRefundedForCharge({

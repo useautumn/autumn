@@ -30,7 +30,7 @@ import { randomUUID } from "node:crypto";
 import chalk from "chalk";
 import { Hono } from "hono";
 import type Stripe from "stripe";
-import { redis } from "@/external/redis/initRedis";
+import { getMiscRedis } from "@/external/redis/initRedis";
 import { stripeIdempotencyMiddleware } from "@/external/stripe/webhookMiddlewares/stripeIdempotencyMiddleware";
 import { stripeWebhookAckMiddleware } from "@/external/stripe/webhookMiddlewares/stripeWebhookAckMiddleware";
 
@@ -39,9 +39,11 @@ const POLL_INTERVAL_MS = 100;
 
 const waitForRedisReady = async () => {
 	const deadline = Date.now() + REDIS_READY_TIMEOUT_MS;
-	while (redis.status !== "ready") {
+	while (getMiscRedis().status !== "ready") {
 		if (Date.now() > deadline) {
-			throw new Error(`Redis never became ready (status: ${redis.status})`);
+			throw new Error(
+				`Redis never became ready (status: ${getMiscRedis().status})`,
+			);
 		}
 		await new Promise((resolve) => setTimeout(resolve, POLL_INTERVAL_MS));
 	}
@@ -138,7 +140,7 @@ test.concurrent(
 		expect(handlerRuns).toBe(1);
 
 		// ── Side effect: key transitioned to completed ────────────
-		const stored = await redis.get(redisKeyFor({ orgId, eventId }));
+		const stored = await getMiscRedis().get(redisKeyFor({ orgId, eventId }));
 		expect(stored).toBe("completed");
 
 		// ── Redelivery acked as duplicate, handler NOT re-run ─────
@@ -175,7 +177,9 @@ test.concurrent(
 		expect(handlerRuns).toBe(1);
 
 		// ── Lock released: key must be gone, not "processing" ─────
-		const afterFailure = await redis.get(redisKeyFor({ orgId, eventId }));
+		const afterFailure = await getMiscRedis().get(
+			redisKeyFor({ orgId, eventId }),
+		);
 		expect(afterFailure).toBeNull();
 
 		// ── Stripe's retry of the SAME event id succeeds ──────────
@@ -183,7 +187,9 @@ test.concurrent(
 		expect(retry.status).toBe(200);
 		expect(handlerRuns).toBe(2);
 
-		const afterSuccess = await redis.get(redisKeyFor({ orgId, eventId }));
+		const afterSuccess = await getMiscRedis().get(
+			redisKeyFor({ orgId, eventId }),
+		);
 		expect(afterSuccess).toBe("completed");
 	},
 );
@@ -212,7 +218,8 @@ test.concurrent(
 		// Let the first delivery acquire the lock before the duplicate arrives.
 		await waitForCondition({
 			condition: async () =>
-				(await redis.get(redisKeyFor({ orgId, eventId }))) === "processing",
+				(await getMiscRedis().get(redisKeyFor({ orgId, eventId }))) ===
+				"processing",
 			description: "first delivery to acquire the processing lock",
 		});
 
@@ -249,7 +256,8 @@ test.concurrent(
 		// Background processing marks completed asynchronously after the ack.
 		await waitForCondition({
 			condition: async () =>
-				(await redis.get(redisKeyFor({ orgId, eventId }))) === "completed",
+				(await getMiscRedis().get(redisKeyFor({ orgId, eventId }))) ===
+				"completed",
 			description: "early-ack background processing to mark completed",
 		});
 		expect(handlerRuns).toBe(1);

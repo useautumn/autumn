@@ -1,5 +1,5 @@
 import { type RewardProgram, RewardTriggerEvent } from "@autumn/shared";
-import { CopyButton } from "@autumn/ui";
+import { MiniCopyButton } from "@autumn/ui";
 import type { ColumnDef, Row } from "@tanstack/react-table";
 import { keyToTitle } from "@/utils/formatUtils/formatTextUtils";
 import { RewardProgramRowToolbar } from "./RewardProgramRowToolbar";
@@ -17,13 +17,9 @@ export const createRewardProgramsTableColumns = (): ColumnDef<
 			return (
 				<div className="font-mono justify-start flex w-full group overflow-hidden">
 					{program.id ? (
-						<CopyButton
-							text={program.id}
-							size="mini"
-							className="w-fit bg-transparent justify-end px-0! border-none shadow-none hover:text-primary [&_svg]:opacity-0 group-hover:[&_svg]:opacity-100 max-w-full"
-						/>
+						<MiniCopyButton text={program.id} />
 					) : (
-						<span className="px-1 text-tertiary-foreground">NULL</span>
+						<span className="px-1 text-tertiary-foreground">—</span>
 					)}
 				</div>
 			);

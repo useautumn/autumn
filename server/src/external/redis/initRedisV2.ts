@@ -7,10 +7,7 @@ import {
 	currentRegion,
 	waitForRedisReady,
 } from "./initRedis.js";
-import {
-	REDIS_V2_COMMAND_TIMEOUT_MS,
-	supportsUpstashShebangForRedisV2,
-} from "./initUtils/redisV2Config.js";
+import { REDIS_V2_COMMAND_TIMEOUT_MS } from "./initUtils/createRedisClient.js";
 
 const rawDragonflyUrl = process.env.CACHE_V2_DRAGONFLY_URL?.trim();
 const dragonflyUrl = rawDragonflyUrl
@@ -22,7 +19,7 @@ export const hasRedisV2Config = Boolean(dragonflyUrl);
 export const redisV2: Redis = createRedisConnection({
 	cacheUrl: dragonflyUrl || "",
 	region: `${currentRegion}:v2`,
-	supportsUpstashShebang: false,
+	redisType: "subject-primary",
 	commandTimeout: REDIS_V2_COMMAND_TIMEOUT_MS,
 });
 
@@ -55,7 +52,7 @@ export const getAlternateRedisV2Instance = (
 	const instance = createRedisConnection({
 		cacheUrl,
 		region: `${currentRegion}:v2:${name}`,
-		supportsUpstashShebang: supportsUpstashShebangForRedisV2(name),
+		redisType: "subject-secondary",
 		commandTimeout: REDIS_V2_COMMAND_TIMEOUT_MS,
 	});
 	instancePool.set(name, instance);

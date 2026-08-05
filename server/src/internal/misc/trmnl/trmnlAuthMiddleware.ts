@@ -1,8 +1,8 @@
 import { AppEnv, ErrCode, RecaseError } from "@autumn/shared";
 import type { Context, Next } from "hono";
+import { getTrmnlDeviceConfig } from "@/external/redis/actions/trmnlDeviceStore/trmnlDeviceStore.js";
 import type { HonoEnv } from "@/honoUtils/HonoEnv.js";
 import { OrgService } from "@/internal/orgs/OrgService";
-import { CacheManager } from "@/utils/cacheUtils/CacheManager.js";
 
 /**
  * TRMNL authentication middleware for Hono
@@ -24,10 +24,7 @@ export const trmnlAuthMiddleware = async (c: Context<HonoEnv>, next: Next) => {
 		});
 	}
 
-	const trmnlConfig = await CacheManager.getJson<{
-		orgId: string;
-		hideRevenue: boolean;
-	}>(`trmnl:device:${deviceId}`);
+	const trmnlConfig = await getTrmnlDeviceConfig({ ctx, deviceId });
 
 	if (!trmnlConfig) {
 		throw new RecaseError({

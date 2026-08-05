@@ -1,5 +1,4 @@
 import { describe, expect, test } from "bun:test";
-import { UPSTASH_KEY_LOCKING_SHEBANG } from "@/_luaScriptsV2/luaScriptsV2.js";
 import { registerRedisCommands } from "@/external/redis/initUtils/registerRedisCommands.js";
 
 type RegisteredCommand = {
@@ -7,7 +6,7 @@ type RegisteredCommand = {
 	numberOfKeys?: number;
 };
 
-const upstashLockedCommands = new Set([
+const expectedCommands = new Set([
 	"deductFromSubjectBalances",
 	"updateSubjectBalances",
 	"setCachedFullSubject",
@@ -18,9 +17,13 @@ const upstashLockedCommands = new Set([
 	"adjustSubjectBalance",
 	"rollUsageWindows",
 	"getDelFullSubjectBalanceFields",
+	"deleteOwnedLock",
+	"refreshOwnedLock",
+	"acquireQueuePermits",
+	"releaseQueuePermit",
 ]);
 
-const registerCommands = (supportsUpstashShebang: boolean) => {
+const registerCommands = () => {
 	const commands = new Map<string, RegisteredCommand>();
 	const redis = {
 		defineCommand: (name: string, command: RegisteredCommand) => {
@@ -29,40 +32,22 @@ const registerCommands = (supportsUpstashShebang: boolean) => {
 		on: () => undefined,
 	};
 
-	registerRedisCommands({
-		redisInstance: redis as never,
-		supportsUpstashShebang,
-	});
+	registerRedisCommands({ redisInstance: redis as never });
 
 	return commands;
 };
 
-const shebangCount = (script: string) =>
-	script.split(UPSTASH_KEY_LOCKING_SHEBANG).length - 1;
-
 describe("registerRedisCommands", () => {
-	test("adds the Upstash key-locking shebang only to commands that need it", () => {
-		const commands = registerCommands(true);
-
-		expect(
-			[...upstashLockedCommands].filter((command) => !commands.has(command)),
-		).toEqual([]);
-
-		for (const [name, { lua }] of commands) {
-			const expectedCount = upstashLockedCommands.has(name) ? 1 : 0;
-			expect(shebangCount(lua), name).toBe(expectedCount);
-			expect(lua.startsWith(UPSTASH_KEY_LOCKING_SHEBANG), name).toBe(
-				expectedCount === 1,
-			);
-		}
+	test("registers exactly the FullSubject (V2) commands", () => {
+		const commands = registerCommands();
+		expect(new Set(commands.keys())).toEqual(expectedCommands);
 	});
 
-	test("does not add Upstash key-locking shebangs for non-Upstash Redis", () => {
-		const commands = registerCommands(false);
-
+	test("registers scripts without provider-specific shebangs", () => {
+		const commands = registerCommands();
 		for (const [name, { lua }] of commands) {
-			expect(shebangCount(lua), name).toBe(0);
-			expect(lua.startsWith(UPSTASH_KEY_LOCKING_SHEBANG), name).toBe(false);
+			expect(lua.startsWith("#!"), name).toBe(false);
+			expect(lua.length, name).toBeGreaterThan(0);
 		}
 	});
 });

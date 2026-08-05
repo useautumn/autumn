@@ -66,6 +66,7 @@ export const expireEndedCustomerProducts = async ({
 	// Cache expired products so invoice.created can access them for usage-based billing
 	if (expiredCustomerProducts.length > 0) {
 		await customerProductActions.expiredCache.set({
+			ctx,
 			stripeSubscriptionId: stripeSubscription.id,
 			customerProducts: expiredCustomerProducts,
 		});

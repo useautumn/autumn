@@ -16,14 +16,19 @@ import {
 	type RewardProgram,
 	type RewardRedemption,
 	RewardTriggerEvent,
+	RewardType,
 } from "@autumn/shared";
 import { createStripeCli } from "@/external/connect/createStripeCli.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { CusService } from "@/internal/customers/CusService.js";
 import { ProductService } from "@/internal/products/ProductService.js";
-import { redemptionRepo, referralCodeRepo } from "@/internal/rewards/repos/index.js";
-import { triggerFreeProduct } from "@/internal/rewards/actions/triggerFreeProduct.js";
 import { triggerDiscount } from "@/internal/rewards/actions/triggerDiscount.js";
+import { triggerFeatureGrant } from "@/internal/rewards/actions/triggerFeatureGrant.js";
+import { triggerFreeProduct } from "@/internal/rewards/actions/triggerFreeProduct.js";
+import {
+	redemptionRepo,
+	referralCodeRepo,
+} from "@/internal/rewards/repos/index.js";
 import { getRewardCat } from "@/internal/rewards/rewardUtils.js";
 
 export type GrantCheckoutRewardPayload = {
@@ -246,9 +251,15 @@ const applyReward = async ({
 	referralCode: ReferralCode;
 	reward: Reward;
 }) => {
-	const rewardCat = getRewardCat(reward);
-
-	if (rewardCat === RewardCategory.FreeProduct) {
+	if (reward.type === RewardType.FeatureGrant) {
+		await triggerFeatureGrant({
+			ctx,
+			referralCode,
+			redeemer: customer,
+			rewardProgram,
+			redemption,
+		});
+	} else if (getRewardCat(reward) === RewardCategory.FreeProduct) {
 		await triggerFreeProduct({
 			ctx,
 			referralCode,

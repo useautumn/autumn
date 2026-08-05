@@ -1,42 +1,21 @@
 import type { Redis } from "ioredis";
 import {
-	BATCH_DELETE_CUSTOMERS_SCRIPT,
-	DELETE_CUSTOMER_SCRIPT,
-	GET_CUSTOMER_SCRIPT,
-	GET_ENTITY_SCRIPT,
-	getBatchDeductionScript,
-	SET_CUSTOMER_DETAILS_SCRIPT,
-	SET_CUSTOMER_SCRIPT,
-	SET_ENTITIES_BATCH_SCRIPT,
-	SET_ENTITY_PRODUCTS_SCRIPT,
-	SET_GRANTED_BALANCE_SCRIPT,
-	SET_INVOICES_SCRIPT,
-	SET_SUBSCRIPTIONS_SCRIPT,
-} from "../../../_luaScripts/luaScripts.js";
+	ACQUIRE_QUEUE_PERMITS_SCRIPT,
+	DELETE_OWNED_LOCK_SCRIPT,
+	REFRESH_OWNED_LOCK_SCRIPT,
+	RELEASE_QUEUE_PERMIT_SCRIPT,
+} from "../../../_luaScriptsMisc/luaScriptsMisc.js";
 import {
-	ADJUST_CUSTOMER_ENTITLEMENT_BALANCE_SCRIPT,
 	ADJUST_SUBJECT_BALANCE_SCRIPT,
-	APPEND_ENTITY_TO_CUSTOMER_SCRIPT,
-	CLAIM_LOCK_RECEIPT_SCRIPT,
-	DEDUCT_FROM_CUSTOMER_ENTITLEMENTS_SCRIPT,
 	DEDUCT_FROM_SUBJECT_BALANCES_SCRIPT,
-	DELETE_FULL_CUSTOMER_CACHE_SCRIPT,
 	GETDEL_SHARED_BALANCE_FIELDS_SCRIPT,
-	RESET_CUSTOMER_ENTITLEMENTS_SCRIPT,
 	ROLL_USAGE_WINDOWS_SCRIPT,
 	SET_CACHED_FULL_SUBJECT_SCRIPT,
-	SET_FULL_CUSTOMER_CACHE_SCRIPT,
 	UPDATE_CACHED_INVOICE_V2_SCRIPT,
-	UPDATE_CUSTOMER_DATA_SCRIPT,
 	UPDATE_CUSTOMER_DATA_V2_SCRIPT,
-	UPDATE_CUSTOMER_ENTITLEMENTS_SCRIPT,
-	UPDATE_CUSTOMER_PRODUCT_SCRIPT,
 	UPDATE_CUSTOMER_PRODUCT_V2_SCRIPT,
 	UPDATE_ENTITY_DATA_V2_SCRIPT,
-	UPDATE_ENTITY_IN_CUSTOMER_SCRIPT,
 	UPDATE_SUBJECT_BALANCES_SCRIPT,
-	UPSERT_INVOICE_IN_CUSTOMER_SCRIPT,
-	UPSTASH_KEY_LOCKING_SHEBANG,
 } from "../../../_luaScriptsV2/luaScriptsV2.js";
 
 const REDIS_ERROR_LOG_COOLDOWN_MS = 30_000;
@@ -50,8 +29,8 @@ const REDIS_ERROR_LOG_COOLDOWN_MS = 30_000;
  * SAME message within the cooldown. Prod-safe: a real, persistent error is still
  * surfaced (once per cooldown).
  *
- * The dedup state is closed over PER instance (not module-level), so a regional
- * Redis's error is never swallowed just because the primary logged the same
+ * The dedup state is closed over PER instance (not module-level), so one
+ * connection's error is never swallowed just because another logged the same
  * string recently — each connection dedupes independently.
  */
 const makeRedisErrorLogger = (): ((message: string) => void) => {
@@ -71,188 +50,79 @@ const makeRedisErrorLogger = (): ((message: string) => void) => {
 	};
 };
 
-/** Configure a Redis instance with custom commands.
- *  `supportsUpstashShebang` controls whether the `#!lua flags=allow-key-locking`
- *  shebang is kept on V2 scripts. Upstash requires it for per-key locking;
- *  other Redis providers (ElastiCache, Dragonfly, self-hosted) reject it with
- *  `ERR Unexpected flag in script shebang`. Defaults to true. */
+/** Configure a Redis instance with the FullSubject (V2 cache) custom commands. */
 export const registerRedisCommands = ({
 	redisInstance,
-	supportsUpstashShebang = true,
 }: {
 	redisInstance: Redis;
-	supportsUpstashShebang?: boolean;
 }): Redis => {
 	const logRedisConnectionError = makeRedisErrorLogger();
-	const prepareScript = (script: string): string =>
-		supportsUpstashShebang ? `${UPSTASH_KEY_LOCKING_SHEBANG}${script}` : script;
-	const batchDeductionScript = getBatchDeductionScript();
-
-	redisInstance.defineCommand("batchDeduction", {
-		numberOfKeys: 0,
-		lua: batchDeductionScript,
-	});
-
-	redisInstance.defineCommand("getCustomer", {
-		numberOfKeys: 0,
-		lua: GET_CUSTOMER_SCRIPT,
-	});
-
-	redisInstance.defineCommand("setCustomer", {
-		numberOfKeys: 0,
-		lua: SET_CUSTOMER_SCRIPT,
-	});
-
-	redisInstance.defineCommand("setEntitiesBatch", {
-		numberOfKeys: 0,
-		lua: SET_ENTITIES_BATCH_SCRIPT,
-	});
-
-	redisInstance.defineCommand("getEntity", {
-		numberOfKeys: 0,
-		lua: GET_ENTITY_SCRIPT,
-	});
-
-	redisInstance.defineCommand("setSubscriptions", {
-		numberOfKeys: 0,
-		lua: SET_SUBSCRIPTIONS_SCRIPT,
-	});
-
-	redisInstance.defineCommand("setEntityProducts", {
-		numberOfKeys: 0,
-		lua: SET_ENTITY_PRODUCTS_SCRIPT,
-	});
-
-	redisInstance.defineCommand("setInvoices", {
-		numberOfKeys: 0,
-		lua: SET_INVOICES_SCRIPT,
-	});
-
-	redisInstance.defineCommand("setCustomerDetails", {
-		numberOfKeys: 0,
-		lua: SET_CUSTOMER_DETAILS_SCRIPT,
-	});
-
-	redisInstance.defineCommand("setGrantedBalance", {
-		numberOfKeys: 0,
-		lua: SET_GRANTED_BALANCE_SCRIPT,
-	});
-
-	redisInstance.defineCommand("deleteCustomer", {
-		numberOfKeys: 0,
-		lua: DELETE_CUSTOMER_SCRIPT,
-	});
-
-	redisInstance.defineCommand("batchDeleteCustomers", {
-		numberOfKeys: 0,
-		lua: BATCH_DELETE_CUSTOMERS_SCRIPT,
-	});
-
-	redisInstance.defineCommand("deductFromCustomerEntitlements", {
-		numberOfKeys: 1,
-		lua: DEDUCT_FROM_CUSTOMER_ENTITLEMENTS_SCRIPT,
-	});
 
 	redisInstance.defineCommand("deductFromSubjectBalances", {
-		lua: prepareScript(DEDUCT_FROM_SUBJECT_BALANCES_SCRIPT),
+		lua: DEDUCT_FROM_SUBJECT_BALANCES_SCRIPT,
 	});
 
 	redisInstance.defineCommand("updateSubjectBalances", {
 		numberOfKeys: 1,
-		lua: prepareScript(UPDATE_SUBJECT_BALANCES_SCRIPT),
+		lua: UPDATE_SUBJECT_BALANCES_SCRIPT,
 	});
 
 	redisInstance.defineCommand("rollUsageWindows", {
 		numberOfKeys: 1,
-		lua: prepareScript(ROLL_USAGE_WINDOWS_SCRIPT),
-	});
-
-	redisInstance.defineCommand("deleteFullCustomerCache", {
-		numberOfKeys: 4,
-		lua: DELETE_FULL_CUSTOMER_CACHE_SCRIPT,
-	});
-
-	redisInstance.defineCommand("setFullCustomerCache", {
-		numberOfKeys: 3,
-		lua: SET_FULL_CUSTOMER_CACHE_SCRIPT,
+		lua: ROLL_USAGE_WINDOWS_SCRIPT,
 	});
 
 	redisInstance.defineCommand("setCachedFullSubject", {
-		lua: prepareScript(SET_CACHED_FULL_SUBJECT_SCRIPT),
-	});
-
-	redisInstance.defineCommand("resetCustomerEntitlements", {
-		numberOfKeys: 1,
-		lua: RESET_CUSTOMER_ENTITLEMENTS_SCRIPT,
-	});
-
-	redisInstance.defineCommand("updateCustomerEntitlements", {
-		numberOfKeys: 1,
-		lua: UPDATE_CUSTOMER_ENTITLEMENTS_SCRIPT,
-	});
-
-	redisInstance.defineCommand("updateCustomerData", {
-		numberOfKeys: 1,
-		lua: UPDATE_CUSTOMER_DATA_SCRIPT,
+		lua: SET_CACHED_FULL_SUBJECT_SCRIPT,
 	});
 
 	redisInstance.defineCommand("updateFullSubjectCustomerDataV2", {
 		numberOfKeys: 1,
-		lua: prepareScript(UPDATE_CUSTOMER_DATA_V2_SCRIPT),
+		lua: UPDATE_CUSTOMER_DATA_V2_SCRIPT,
 	});
 
 	redisInstance.defineCommand("updateFullSubjectEntityDataV2", {
 		numberOfKeys: 1,
-		lua: prepareScript(UPDATE_ENTITY_DATA_V2_SCRIPT),
+		lua: UPDATE_ENTITY_DATA_V2_SCRIPT,
 	});
 
 	redisInstance.defineCommand("getDelFullSubjectBalanceFields", {
-		lua: prepareScript(GETDEL_SHARED_BALANCE_FIELDS_SCRIPT),
+		lua: GETDEL_SHARED_BALANCE_FIELDS_SCRIPT,
 	});
 
 	redisInstance.defineCommand("updateFullSubjectCustomerProductV2", {
 		numberOfKeys: 1,
-		lua: prepareScript(UPDATE_CUSTOMER_PRODUCT_V2_SCRIPT),
+		lua: UPDATE_CUSTOMER_PRODUCT_V2_SCRIPT,
 	});
 
 	redisInstance.defineCommand("upsertInvoiceInFullSubjectV2", {
 		numberOfKeys: 1,
-		lua: prepareScript(UPDATE_CACHED_INVOICE_V2_SCRIPT),
-	});
-
-	redisInstance.defineCommand("appendEntityToCustomer", {
-		numberOfKeys: 1,
-		lua: APPEND_ENTITY_TO_CUSTOMER_SCRIPT,
-	});
-
-	redisInstance.defineCommand("updateEntityInCustomer", {
-		numberOfKeys: 1,
-		lua: UPDATE_ENTITY_IN_CUSTOMER_SCRIPT,
-	});
-
-	redisInstance.defineCommand("upsertInvoiceInCustomer", {
-		numberOfKeys: 1,
-		lua: UPSERT_INVOICE_IN_CUSTOMER_SCRIPT,
-	});
-
-	redisInstance.defineCommand("adjustCustomerEntitlementBalance", {
-		numberOfKeys: 1,
-		lua: ADJUST_CUSTOMER_ENTITLEMENT_BALANCE_SCRIPT,
+		lua: UPDATE_CACHED_INVOICE_V2_SCRIPT,
 	});
 
 	redisInstance.defineCommand("adjustSubjectBalance", {
 		numberOfKeys: 1,
-		lua: prepareScript(ADJUST_SUBJECT_BALANCE_SCRIPT),
+		lua: ADJUST_SUBJECT_BALANCE_SCRIPT,
 	});
 
-	redisInstance.defineCommand("updateCustomerProduct", {
+	redisInstance.defineCommand("deleteOwnedLock", {
 		numberOfKeys: 1,
-		lua: UPDATE_CUSTOMER_PRODUCT_SCRIPT,
+		lua: DELETE_OWNED_LOCK_SCRIPT,
 	});
 
-	redisInstance.defineCommand("claimLockReceipt", {
+	redisInstance.defineCommand("refreshOwnedLock", {
 		numberOfKeys: 1,
-		lua: CLAIM_LOCK_RECEIPT_SCRIPT,
+		lua: REFRESH_OWNED_LOCK_SCRIPT,
+	});
+
+	redisInstance.defineCommand("acquireQueuePermits", {
+		numberOfKeys: 1,
+		lua: ACQUIRE_QUEUE_PERMITS_SCRIPT,
+	});
+
+	redisInstance.defineCommand("releaseQueuePermit", {
+		numberOfKeys: 1,
+		lua: RELEASE_QUEUE_PERMIT_SCRIPT,
 	});
 
 	redisInstance.on("error", (error) => {

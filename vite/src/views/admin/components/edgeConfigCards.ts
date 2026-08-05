@@ -36,7 +36,7 @@ export type EdgeConfigCardId =
 	| "rate-limit-redis-allowlist"
 	| "stripe-sync"
 	| "redis-v2-cache"
-	| "main-redis-cache"
+	| "misc-redis"
 	| "cache-v2-ramp"
 	| "full-subject-gate"
 	| "miscellaneous";
@@ -213,19 +213,29 @@ export const EDGE_CONFIG_SECTIONS: EdgeConfigSectionDef[] = [
 				},
 			},
 			{
-				id: "main-redis-cache",
-				title: "Main Redis Instance",
+				id: "misc-redis",
+				title: "Misc Redis",
 				description:
-					"Switch auth, idempotency, rate-limit, and lock traffic between instances.",
+					"Active misc-cache instance, migration ramp, and encrypted backup destination.",
 				icon: HardDrive,
-				endpoint: "/admin/main-redis-cache-config",
+				endpoint: "/admin/misc-redis-config",
 				deriveStatus: (data) => {
-					const active = asRecord(data).activeInstance;
+					const record = asRecord(data);
+					const active = record.activeInstance;
 					if (typeof active !== "string") return IDLE;
+
+					if (record.ramp) {
+						const ramp = asRecord(record.ramp);
+						const target = active === "main" ? "backup" : "main";
+						return {
+							label: `${active} · ${ramp.percent ?? 0}% → ${target}`,
+							tone: "warning",
+						};
+					}
 
 					return {
 						label: active,
-						tone: active === "primary" ? "neutral" : "warning",
+						tone: active === "main" ? "neutral" : "warning",
 					};
 				},
 			},

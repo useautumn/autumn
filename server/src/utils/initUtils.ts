@@ -14,14 +14,9 @@ export const checkEnvVars = () => {
 		process.exit(1);
 	}
 
-	if (
-		!process.env.CACHE_URL &&
-		!process.env.CACHE_URL_US_EAST &&
-		!process.env.CACHE_BACKUP_URL?.trim()
-	) {
-		logger.warn(
-			"No Redis URL set (CACHE_URL, CACHE_URL_US_EAST, or CACHE_BACKUP_URL), running without Redis",
-		);
+	if (!process.env.CACHE_URL?.trim()) {
+		console.error("CACHE_URL is not set (the misc Redis cache is required)");
+		process.exit(1);
 	}
 
 	if (!process.env.BETTER_AUTH_SECRET || !process.env.BETTER_AUTH_URL) {

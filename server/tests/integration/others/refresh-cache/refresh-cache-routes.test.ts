@@ -1,7 +1,6 @@
 import { afterAll, beforeAll, describe, expect, test } from "bun:test";
 import type { TestContext } from "@tests/utils/testInitUtils/createTestContext.js";
 import { Hono } from "hono";
-import { redis } from "@/external/redis/initRedis.js";
 import { baseMiddleware } from "@/honoMiddlewares/baseMiddleware.js";
 import {
 	REFRESH_CACHE_ROUTE_CONFIGS,
@@ -14,7 +13,6 @@ import {
 	buildFullSubjectViewEpochKey,
 	getOrSetCachedFullSubject,
 } from "@/internal/customers/cache/fullSubject/index.js";
-import { buildFullCustomerCacheKey } from "@/internal/customers/cusUtils/fullCustomerCacheUtils/fullCustomerCacheConfig.js";
 import { cleanupFullSubjectScenario } from "../../db/full-subject/utils/cleanupFullSubjectScenario.js";
 import { buildEntitySubjectScenario } from "../../db/full-subject/utils/fullSubjectScenarioBuilders.js";
 import { insertFullSubjectScenario } from "../../db/full-subject/utils/insertFullSubjectScenario.js";
@@ -106,17 +104,6 @@ const warmCaches = async ({
 	customerId: string;
 	entityIds: string[];
 }) => {
-	// Seed the legacy fullCustomer key directly — the legacy read/write helpers
-	// are deleted, but refreshCacheMiddleware still clears this key until the
-	// write side of the legacy cache is removed.
-	await redis.set(
-		buildFullCustomerCacheKey({
-			orgId: ctx.org.id,
-			env: ctx.env,
-			customerId,
-		}),
-		"{}",
-	);
 	await getOrSetCachedFullSubject({
 		ctx,
 		customerId,
@@ -184,12 +171,6 @@ describeDb("refreshCacheMiddleware routes", () => {
 		if (customerKeys.length > 0) {
 			await ctx.redisV2.unlink(...customerKeys);
 		}
-		const oldCacheKey = buildFullCustomerCacheKey({
-			orgId: ctx.org.id,
-			env: ctx.env,
-			customerId: scenario.ids.customerId,
-		});
-		await redis.del(oldCacheKey);
 
 		await cleanupFullSubjectScenario({ ctx, scenario });
 	});
@@ -219,11 +200,6 @@ describeDb("refreshCacheMiddleware routes", () => {
 
 			expect(response.status).toBe(200);
 
-			const oldCacheKey = buildFullCustomerCacheKey({
-				orgId: ctx.org.id,
-				env: ctx.env,
-				customerId: scenario.ids.customerId,
-			});
 			const customerSubjectKey = buildFullSubjectKey({
 				orgId: ctx.org.id,
 				env: ctx.env,
@@ -247,7 +223,6 @@ describeDb("refreshCacheMiddleware routes", () => {
 				customerId: scenario.ids.customerId,
 			});
 
-			expect(await redis.exists(oldCacheKey)).toBe(0);
 			expect(await ctx.redisV2.exists(customerSubjectKey)).toBe(0);
 			expect(await ctx.redisV2.get(epochKey)).toBe("1");
 

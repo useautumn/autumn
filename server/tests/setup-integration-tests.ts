@@ -67,10 +67,10 @@ if (process.env.TESTS_ORG) {
 	// Availability defaults to degraded until primed (normally at server boot);
 	// unprimed, in-process finalize/track calls silently fail open to SQS replays.
 	const { primeRedisMonitor } = await import(
-		"@/external/redis/initUtils/redisAvailability.js"
+		"@/external/redis/availabilityMonitor/redisAvailability.js"
 	);
 	const { primeRedisV2Monitor } = await import(
-		"@/external/redis/initUtils/redisV2Availability.js"
+		"@/external/redis/availabilityMonitor/redisV2Availability.js"
 	);
 	await Promise.all([primeRedisMonitor(), primeRedisV2Monitor()]);
 
@@ -80,19 +80,16 @@ if (process.env.TESTS_ORG) {
 		const { clearOrgCache } = await import(
 			"@/internal/orgs/orgUtils/clearOrgCache.js"
 		);
-		const { getConfiguredRegions, getRegionalRedis, waitForRedisReady } =
-			await import("@/external/redis/initRedis.js");
+		const { getMiscRedis, waitForRedisReady } = await import(
+			"@/external/redis/initRedis.js"
+		);
 		const config = { ...testContext.org.config, multi_currency: true };
 		await OrgService.update({
 			db,
 			orgId: testContext.org.id,
 			updates: { config },
 		});
-		await Promise.all(
-			getConfiguredRegions().map((region) =>
-				waitForRedisReady(getRegionalRedis(region), region),
-			),
-		);
+		await waitForRedisReady(getMiscRedis(), "main");
 		await clearOrgCache({ db, orgId: testContext.org.id });
 		testContext.org.config = config;
 	}

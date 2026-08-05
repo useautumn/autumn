@@ -12,7 +12,7 @@ import { getCtxWithCustomerRedis } from "@/external/redis/customerRedisRouting.j
 import { resolveRedisV2 } from "@/external/redis/resolveRedisV2.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { computeRolloutSnapshot } from "@/internal/misc/rollouts/rolloutUtils.js";
-import { getOrgWithFeaturesCached } from "@/internal/orgs/orgUtils/cacheOrgWithFeatures.js";
+import { getOrgWithFeaturesCached } from "@/internal/orgs/orgUtils/getOrgWithFeaturesCached.js";
 
 export const createWorkerAutumnContext = async ({
 	db,
@@ -32,6 +32,7 @@ export const createWorkerAutumnContext = async ({
 		db,
 		orgId,
 		env,
+		requestId: workerId,
 	});
 
 	if (!data) {

@@ -3,6 +3,7 @@ import type {
 	VerifyParamsV1,
 	VerifyResponse,
 } from "@autumn/shared";
+import type Stripe from "stripe";
 import { createStripeCli } from "@/external/connect/createStripeCli";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { setupCustomerLicenseBillingContext } from "@/internal/billing/v2/setup/customerLicenseBillingContext/setupCustomerLicenseBillingContext";
@@ -42,10 +43,14 @@ export const verify = async ({
 	ctx,
 	params,
 	prefetched,
+	stripeCli: stripeCliOverride,
 }: {
 	ctx: AutumnContext;
 	params: VerifyParamsV1;
 	prefetched?: VerifyPrefetched;
+	/** Serves Stripe reads from somewhere other than the live API — bulk audits
+	 * pass a mirror-backed reader so per-customer verification costs no calls. */
+	stripeCli?: Stripe;
 }): Promise<VerifyResponse> => {
 	const {
 		customer_id: customerId,
@@ -63,6 +68,7 @@ export const verify = async ({
 		customerId,
 		subscriptionIdsFilter,
 		prefetched,
+		stripeCli: stripeCliOverride,
 	});
 
 	// Seat-snapshot specs need the license billing rows; free (in-memory gated)
@@ -70,7 +76,8 @@ export const verify = async ({
 	const customerLicenseBillingContext =
 		await setupCustomerLicenseBillingContext({ ctx, fullCustomer });
 
-	const stripeCli = createStripeCli({ org: ctx.org, env: ctx.env });
+	const stripeCli =
+		stripeCliOverride ?? createStripeCli({ org: ctx.org, env: ctx.env });
 
 	const subscriptions: VerifyResponse["subscriptions"] = [];
 

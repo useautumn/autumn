@@ -12,7 +12,7 @@ import "./internal/misc/asyncBalanceUpdate/asyncBalanceUpdateStore.js";
 import "./internal/misc/requestBlocks/requestBlockStore.js";
 import "./internal/misc/rollouts/rolloutConfigStore.js";
 import "./internal/misc/redisV2Cache/redisV2CacheStore.js";
-import "./internal/misc/mainRedisCache/mainRedisCacheStore.js";
+import "./internal/misc/miscRedisConfig/miscRedisConfigStore.js";
 import "./internal/misc/cacheV2Ramp/cacheV2RampStore.js";
 import "./internal/misc/jobQueues/jobQueueStore.js";
 import "./internal/misc/batchReset/batchResetConfigStore.js";
@@ -107,10 +107,10 @@ if (cluster.isPrimary) {
 
 	const { db } = await import("./db/initDrizzle.js");
 	const { primeRedisMonitor } = await import(
-		"./external/redis/initUtils/redisAvailability.js"
+		"./external/redis/availabilityMonitor/redisAvailability.js"
 	);
 	const { primeRedisV2Monitor, startRedisV2Monitor, stopRedisV2Monitor } =
-		await import("./external/redis/initUtils/redisV2Availability.js");
+		await import("./external/redis/availabilityMonitor/redisV2Availability.js");
 	const { startRedisMonitor, stopRedisMonitor } = await import(
 		"./external/redis/initRedis.js"
 	);

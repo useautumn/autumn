@@ -29,6 +29,18 @@ mock.module("@/internal/balances/track/v3/runTrackV3.js", () => ({
 	},
 }));
 
+// CI has no CACHE_URL — the idempotency claim's getMiscRedis() would throw.
+const fakeMiscRedis = {
+	status: "ready",
+	get: async () => null,
+	set: async () => "OK",
+	del: async () => 1,
+} as never;
+mock.module("@/external/redis/miscCache/miscRedisInstances.js", () => ({
+	getMiscMainRedis: () => fakeMiscRedis,
+	getMiscBackupRedis: () => null,
+}));
+
 import { runQueuedTrack } from "@/internal/balances/track/runQueuedTrack.js";
 
 const ctx = {

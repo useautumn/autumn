@@ -10,7 +10,7 @@ import chalk from "chalk";
 import { eq } from "drizzle-orm";
 import { initDrizzle } from "@/db/initDrizzle.js";
 import { logger } from "@/external/logtail/logtailUtils.js";
-import { redis } from "@/external/redis/initRedis.js";
+import { getMiscRedis } from "@/external/redis/initRedis.js";
 import { redisV2 } from "@/external/redis/initRedisV2.js";
 import { deletePlatformSubOrg } from "@/internal/orgs/deleteOrg/deletePlatformSubOrg.js";
 import { OrgService } from "@/internal/orgs/OrgService.js";
@@ -147,7 +147,7 @@ export const clearMasterOrg = async ({
 
 		// Flush primary cache unless pointed at regional Redis.
 		const redisUrl = process.env.REDIS_URL ?? process.env.BUN_REDIS_URL ?? "";
-		if (!isRegionalRedisUrl(redisUrl)) await redis.flushall();
+		if (!isRegionalRedisUrl(redisUrl)) await getMiscRedis().flushall();
 		else
 			console.log(
 				chalk.yellow(
@@ -160,10 +160,12 @@ export const clearMasterOrg = async ({
 		// wiping other developers' state (each dev's TESTS_ORG resolves to a
 		// distinct org id).
 		const cacheV2Url = process.env.CACHE_V2_DRAGONFLY_URL?.trim();
-		if (redisV2 !== redis && cacheV2Url) {
+		if (redisV2 !== getMiscRedis() && cacheV2Url) {
 			if (cacheV2Url.toLowerCase().includes("localhost")) {
 				await redisV2.flushall();
-				console.log(chalk.green("✅ Cleared CACHE_V2_DRAGONFLY_URL redis.\n"));
+				console.log(
+					chalk.green("✅ Cleared CACHE_V2_DRAGONFLY_URL getMiscRedis().\n"),
+				);
 			} else {
 				// Scope dragonfly cleanup to keys for this org id. Subject keys
 				// embed org_id verbatim (`{cust}:<org_id>:<env>:...`), so this

@@ -30,21 +30,20 @@ mock.module("@/external/logtail/logtailUtils.js", () => ({
 }));
 
 mock.module("@/external/redis/initUtils/redisConfig.js", () => ({
-	hasRedisConfig: true,
+	hasMiscRedisConfig: true,
 }));
-mock.module("@/external/redis/initUtils/redisClientRegistry.js", () => ({
+mock.module("@/external/redis/miscCache/getMiscRedis.js", () => ({
 	redis: defaultRedis,
+	getMiscRedis: () => defaultRedis,
 }));
 mock.module("@/external/redis/initRedis.js", () => ({
 	redis: defaultRedis,
+	getMiscRedis: () => defaultRedis,
 }));
 
 import { RedisUnavailableError } from "@/external/redis/utils/errors.js";
-import {
-	tryRedisNx,
-	tryRedisRead,
-	tryRedisWrite,
-} from "@/utils/cacheUtils/cacheUtils.js";
+import { tryRedisNx } from "@/external/redis/utils/tryRedisNx.js";
+import { tryRedisRead, tryRedisWrite } from "@/utils/cacheUtils/cacheUtils.js";
 
 describe("cache utils", () => {
 	beforeEach(() => {
@@ -99,26 +98,27 @@ describe("cache utils", () => {
 		expect(error.reason).toBe("timeout");
 	});
 
-	test("tryRedisNx throws RedisUnavailableError on connection failures", async () => {
-		const error = await tryRedisNx({
+	test("tryRedisNx routes connection failures to onRedisUnavailable", async () => {
+		const result = await tryRedisNx({
 			operation: async () => {
 				throw new Error("Connection is closed.");
 			},
+			source: "test:nx",
 			redisInstance: { status: "ready" } as never,
 			onRedisUnavailable: () => "fallback",
 			onSuccess: () => "success",
 			onKeyAlreadyExists: () => "exists",
-		}).catch((caught) => caught);
+		});
 
-		expect(error).toBeInstanceOf(RedisUnavailableError);
-		expect(error.reason).toBe("connection");
+		expect(result).toBe("fallback");
 	});
 
-	test("tryRedisNx falls back and warns when Redis operation throws", async () => {
+	test("tryRedisNx falls back when Redis operation throws", async () => {
 		const result = await tryRedisNx({
 			operation: async () => {
 				throw new Error("boom");
 			},
+			source: "test:nx",
 			redisInstance: { status: "ready" } as never,
 			onRedisUnavailable: () => "fallback",
 			onSuccess: () => "success",

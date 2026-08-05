@@ -32,7 +32,7 @@ mock.module("@/internal/balances/track/v3/runTrackV3.js", () => ({
 	},
 }));
 
-mock.module("@/external/redis/initUtils/redisV2Availability.js", () => ({
+mock.module("@/external/redis/availabilityMonitor/redisV2Availability.js", () => ({
 	shouldUseRedisV2: () => true,
 }));
 
