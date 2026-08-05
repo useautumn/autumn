@@ -213,11 +213,36 @@ export const stripeCheckout = async ({
 	console.log("[stripeCheckout] Submit clicked");
 
 	// Stripe redirects off checkout.stripe.com once the session completes, so
-	// wait for THAT rather than a fixed sleep: a slow/contended box would other-
-	// wise carry on mid-payment and fail later as a confusing "product not
-	// found". Throwing here names the real failure.
-	await page.waitForURL((url) => !url.host.includes("checkout.stripe.com"), {
-		timeout: 120_000,
-	});
-	console.log(`[stripeCheckout] Checkout complete — landed on ${page.url()}`);
+	// prefer that over a fixed sleep — a slow box would otherwise carry on
+	// mid-payment and fail later as a confusing "product not found". The
+	// redirect can't be required though: sessions built with an unreachable
+	// success_url never leave the page, so only a visible decline fails here
+	// and everything else is left to the caller's own polling.
+	const leftCheckout = await page
+		.waitForURL((url) => !url.host.includes("checkout.stripe.com"), {
+			timeout: 60_000,
+		})
+		.then(() => true)
+		.catch(() => false);
+
+	if (leftCheckout) {
+		console.log(`[stripeCheckout] Checkout complete — landed on ${page.url()}`);
+		return;
+	}
+
+	const pageText = await page
+		.evaluate(() => document.body.innerText)
+		.catch(() => "");
+
+	if (
+		/declined|card was not|insufficient funds|try a different card/i.test(
+			pageText,
+		)
+	) {
+		throw new Error(
+			`Checkout payment failed: ${pageText.replace(/\s+/g, " ").slice(0, 300)}`,
+		);
+	}
+
+	console.log("[stripeCheckout] No redirect seen; leaving the check to caller");
 };
