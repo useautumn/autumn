@@ -331,9 +331,23 @@ export const invoiceCheckout = async ({
 		.allTextContents()
 		.catch(() => [] as string[]);
 
+	// Validation errors live INSIDE the payment iframe, so a clean main page
+	// says nothing about why the submit did nothing.
+	const frameTexts = await Promise.all(
+		page.frames().map(async (frame) => {
+			try {
+				const text = await frame.locator("body").innerText();
+				if (!text.trim()) return "";
+				return `\n  [${frame.url().slice(0, 50)}] ${text.replace(/\s+/g, " ").slice(0, 250)}`;
+			} catch {
+				return "";
+			}
+		}),
+	);
+
 	throw new Error(
 		`Invoice payment never confirmed after clicking pay. url=${page.url()} alerts=[${alerts.join(" | ")}] text=${pageText
 			.replace(/\s+/g, " ")
-			.slice(-900)}`,
+			.slice(-500)} frames:${frameTexts.filter(Boolean).join("")}`,
 	);
 };
