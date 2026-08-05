@@ -8,29 +8,6 @@ import {
 	test,
 } from "bun:test";
 
-// Scale every long timer (the 2s hydration budget in src AND this file's own
-// race timers) by 50× so budget-expiry tests take ~50ms instead of ~2.5s.
-// Uniform scaling preserves which side of each race fires first.
-const TIMER_SCALE = 50;
-const realSetTimeout = globalThis.setTimeout;
-const scaledSetTimeout = ((
-	handler: Parameters<typeof realSetTimeout>[0],
-	timeout?: number,
-	...args: unknown[]
-) =>
-	realSetTimeout(
-		handler,
-		typeof timeout === "number" && timeout >= 400
-			? timeout / TIMER_SCALE
-			: timeout,
-		...args,
-	)) as typeof globalThis.setTimeout;
-scaledSetTimeout.__promisify__ = realSetTimeout.__promisify__;
-globalThis.setTimeout = scaledSetTimeout;
-afterAll(() => {
-	globalThis.setTimeout = realSetTimeout;
-});
-
 const mockState = {
 	hydrationMode: "resolve" as "resolve" | "hang",
 	hydrationCalls: 0,
@@ -141,7 +118,7 @@ describe("check DB hydration budget", () => {
 		expect((thrown as Error).message).toBe("Query read timeout");
 		expect(isTransientDbError({ error: thrown })).toBe(true);
 		expect(Date.now() - startedAt).toBeGreaterThanOrEqual(
-			CHECK_DB_HYDRATION_BUDGET_MS / TIMER_SCALE - 10,
+			CHECK_DB_HYDRATION_BUDGET_MS - 100,
 		);
 	});
 
