@@ -209,6 +209,24 @@ export const stripeCheckout = async ({
 	if ((await submitBtn.count()) === 0) {
 		throw new Error(".SubmitButton-TextContainer not found");
 	}
+
+	// A JS click on a DISABLED button silently does nothing, and Stripe keeps
+	// submit disabled until it has validated the form — longer on sessions that
+	// also render an express-payment block. Wait for enabled before clicking.
+	await page
+		.waitForFunction(
+			() => {
+				const button = document.querySelector<HTMLButtonElement>(
+					"button.SubmitButton, button[type=submit]",
+				);
+				return Boolean(button) && !button?.disabled;
+			},
+			{ timeout: 60_000 },
+		)
+		.catch(() => {
+			console.log("[stripeCheckout] Submit never enabled; clicking anyway");
+		});
+
 	await submitBtn.evaluate((el) => (el as HTMLElement).click());
 	console.log("[stripeCheckout] Submit clicked");
 
