@@ -107,7 +107,9 @@ export const getCachedFeatureBalance = async ({
 				: redis.hmget(balanceKey, ...customerEntitlementIds),
 		source: "getCachedFeatureBalance",
 		redisInstance: redisV2,
-		retryOnStandby: true,
+		// readMaster demands same-socket ordering: a standby retry could land
+		// before an in-flight write on the dying primary socket.
+		retryOnStandby: !readMaster,
 		timeoutMs: REDIS_OP_TIMEOUT_MS.featureBalances,
 	});
 
