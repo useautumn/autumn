@@ -109,9 +109,7 @@ test(`${chalk.yellowBright("referrals9: rewards + referral_programs CRUD")}`, as
 	// --- referral_programs.list ---
 	const listed = await rpc.post("/referral_programs.list", {});
 	expect(
-		listed.referral_programs.some(
-			(program: { id: string }) => program.id === programId,
-		),
+		listed.list.some((program: { id: string }) => program.id === programId),
 	).toBe(true);
 
 	// --- referral_programs.update (partial) ---

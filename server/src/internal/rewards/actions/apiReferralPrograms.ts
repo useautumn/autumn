@@ -83,7 +83,7 @@ export const listApiReferralPrograms = async ({
 	const rewardIds = await rewardIdByInternalId({ ctx, programs });
 
 	return {
-		referral_programs: programs.map((rewardProgram) =>
+		list: programs.map((rewardProgram) =>
 			getApiReferralProgram({
 				rewardProgram,
 				rewardId: rewardIds.get(rewardProgram.internal_reward_id) ?? "",

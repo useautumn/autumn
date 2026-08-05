@@ -72,7 +72,7 @@ ListReferralProgramsReceivedBy = Union[
 r"""Who receives the reward: the referrer only, or both parties."""
 
 
-class ReferralProgramTypedDict(TypedDict):
+class ListReferralProgramsListTypedDict(TypedDict):
     id: str
     r"""The unique identifier for the referral program."""
     reward_id: str
@@ -91,7 +91,7 @@ class ReferralProgramTypedDict(TypedDict):
     r"""Whether checkouts that start a trial should skip granting the reward."""
 
 
-class ReferralProgram(BaseModel):
+class ListReferralProgramsList(BaseModel):
     id: str
     r"""The unique identifier for the referral program."""
 
@@ -145,12 +145,10 @@ class ReferralProgram(BaseModel):
 class ListReferralProgramsResponseTypedDict(TypedDict):
     r"""OK"""
 
-    referral_programs: List[ReferralProgramTypedDict]
-    r"""The list of referral programs configured for the organization."""
+    list: List[ListReferralProgramsListTypedDict]
 
 
 class ListReferralProgramsResponse(BaseModel):
     r"""OK"""
 
-    referral_programs: List[ReferralProgram]
-    r"""The list of referral programs configured for the organization."""
+    list: List[ListReferralProgramsList]

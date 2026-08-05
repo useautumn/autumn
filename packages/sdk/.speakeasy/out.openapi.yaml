@@ -31622,7 +31622,7 @@ paths:
               schema:
                 type: object
                 properties:
-                  referral_programs:
+                  list:
                     type: array
                     items:
                       type: object
@@ -31680,12 +31680,11 @@ paths:
                           plan_ids: null
                           exclude_trial: false
                           created_at: 1718000000000
-                    description: The list of referral programs configured for the organization.
                 required:
-                  - referral_programs
+                  - list
                 title: ListReferralProgramsResponse
                 examples:
-                  - referral_programs:
+                  - list:
                       - id: refer_a_friend
                         reward_id: beta_credits_grant
                         redeem_on: customer_creation

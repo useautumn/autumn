@@ -10,8 +10,7 @@ import { DynamicResponseExample } from "/snippets/dynamic-response-example.jsx";
 
 ### Response
 
-<DynamicResponseField name="referral_programs" type="object[]">
-  The list of referral programs configured for the organization.
+<DynamicResponseField name="list" type="object[]">
   <Expandable title="properties">
     <DynamicResponseField name="id" type="string">
       The unique identifier for the referral program.
@@ -52,7 +51,7 @@ import { DynamicResponseExample } from "/snippets/dynamic-response-example.jsx";
 <ResponseExample>
 ```json 200
 {
-  "referral_programs": [
+  "list": [
     {
       "id": "refer_a_friend",
       "reward_id": "beta_credits_grant",

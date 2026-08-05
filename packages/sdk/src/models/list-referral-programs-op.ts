@@ -45,7 +45,7 @@ export type ListReferralProgramsReceivedBy = OpenEnum<
   typeof ListReferralProgramsReceivedBy
 >;
 
-export type ReferralProgram = {
+export type ListReferralProgramsList = {
   /**
    * The unique identifier for the referral program.
    */
@@ -84,10 +84,7 @@ export type ReferralProgram = {
  * OK
  */
 export type ListReferralProgramsResponse = {
-  /**
-   * The list of referral programs configured for the organization.
-   */
-  referralPrograms: Array<ReferralProgram>;
+  list: Array<ListReferralProgramsList>;
 };
 
 /** @internal */
@@ -120,8 +117,8 @@ export const ListReferralProgramsReceivedBy$inboundSchema: z.ZodMiniType<
 > = openEnums.inboundSchema(ListReferralProgramsReceivedBy);
 
 /** @internal */
-export const ReferralProgram$inboundSchema: z.ZodMiniType<
-  ReferralProgram,
+export const ListReferralProgramsList$inboundSchema: z.ZodMiniType<
+  ListReferralProgramsList,
   unknown
 > = z.pipe(
   z.object({
@@ -147,13 +144,13 @@ export const ReferralProgram$inboundSchema: z.ZodMiniType<
   }),
 );
 
-export function referralProgramFromJSON(
+export function listReferralProgramsListFromJSON(
   jsonString: string,
-): SafeParseResult<ReferralProgram, SDKValidationError> {
+): SafeParseResult<ListReferralProgramsList, SDKValidationError> {
   return safeParse(
     jsonString,
-    (x) => ReferralProgram$inboundSchema.parse(JSON.parse(x)),
-    `Failed to parse 'ReferralProgram' from JSON`,
+    (x) => ListReferralProgramsList$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'ListReferralProgramsList' from JSON`,
   );
 }
 
@@ -161,16 +158,9 @@ export function referralProgramFromJSON(
 export const ListReferralProgramsResponse$inboundSchema: z.ZodMiniType<
   ListReferralProgramsResponse,
   unknown
-> = z.pipe(
-  z.object({
-    referral_programs: z.array(z.lazy(() => ReferralProgram$inboundSchema)),
-  }),
-  z.transform((v) => {
-    return remap$(v, {
-      "referral_programs": "referralPrograms",
-    });
-  }),
-);
+> = z.object({
+  list: z.array(z.lazy(() => ListReferralProgramsList$inboundSchema)),
+});
 
 export function listReferralProgramsResponseFromJSON(
   jsonString: string,

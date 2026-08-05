@@ -1,16 +1,16 @@
 lockVersion: 2.0.0
 id: 7b300647-cd76-49e9-bf77-7d1bf5446d66
 management:
-  docChecksum: dc8f6ae7c8eb4be76a83dcc52fdc668e
+  docChecksum: fb21cbe998c257c25649185c4465222c
   docVersion: 2.3.0
   speakeasyVersion: 1.762.0
   generationVersion: 2.882.0
   releaseVersion: 0.10.18
   configChecksum: a05ee9fa7bf0a40d4f216cac1903f122
 persistentEdits:
-  generation_id: 924fa9de-5a45-44b5-93c1-64ba3ba7beb0
-  pristine_commit_hash: 117f506f5c9d6b7ad243d9f1c6d77cee4e0e7cc7
-  pristine_tree_hash: 8527c5c8ec0dedb0a3d219eef3ed738161d2fbdb
+  generation_id: 53e1e908-8898-403e-a5f3-fd59722ec12f
+  pristine_commit_hash: deded6330bfb767ef648e6cfd55d3d643319d61e
+  pristine_tree_hash: 27bea2944704c28897bc07add3d68c3f8e824dbe
 features:
   typescript:
     additionalDependencies: 0.1.0
@@ -4640,6 +4640,10 @@ trackedFiles:
     id: 818aa5cbe13b
     last_write_checksum: sha1:219ccc7290c74d7fd40d825598eb459522ba3484
     pristine_git_object: c0520d352df9d5f2f879a38c36dbb80193dbe1df
+  docs/models/list-referral-programs-list.md:
+    id: ff3f19445619
+    last_write_checksum: sha1:eaf66edbdcf251e93cfc6caa0004c93f215dc19d
+    pristine_git_object: 7b57fa2f5bf84bca367b3b15ca49638a554e19ea
   docs/models/list-referral-programs-params.md:
     id: b07df21c939a
     last_write_checksum: sha1:78d0f56c1ef3be6b3240bddbbb743b002fd5da55
@@ -4654,8 +4658,8 @@ trackedFiles:
     pristine_git_object: 15883c80dec524e719a6f3cfc759139f7ce10070
   docs/models/list-referral-programs-response.md:
     id: 243ba9f10383
-    last_write_checksum: sha1:0a04eca17cdde7e689237b7d1b69c0d20dd86299
-    pristine_git_object: 5756d18437d9728e50db482ac351bc26acf2ef7c
+    last_write_checksum: sha1:76123c3083fe678abcdd79763d22be81749888fc
+    pristine_git_object: c3c3e4b0f9f150a58af28a06e3d8a00318f67bd2
   docs/models/list-rewards-coupon-promo-code.md:
     id: 1c1829ee8dee
     last_write_checksum: sha1:bcc813071d036fc299df4a3d140f6d259c87e3e6
@@ -6532,10 +6536,6 @@ trackedFiles:
     id: d9629d974163
     last_write_checksum: sha1:e4dab25dd04e413f338e813241694e88cb29c09f
     pristine_git_object: 9537eddc4601bf6752271bc008cf8d9c93637781
-  docs/models/referral-program.md:
-    id: 3e22614fb97d
-    last_write_checksum: sha1:cd79adc08f985658e02c4bd49820dd212e2e0d00
-    pristine_git_object: 20e616a903218e3dd1f84260e55f091f55765020
   docs/models/referral.md:
     id: b58def2d8bbe
     last_write_checksum: sha1:6147d00b05240ea19ab4a012e37012501462790e
@@ -9138,8 +9138,8 @@ trackedFiles:
     pristine_git_object: e5738c0afa2300005245cd0138b0b48451e9d3d6
   src/models/list-referral-programs-op.ts:
     id: 5f7269438351
-    last_write_checksum: sha1:4a802e609359ab60ad94836390373ec7a4628c6e
-    pristine_git_object: bf6603828e8da60e0f6cf7c038e723b0b5e78882
+    last_write_checksum: sha1:7ec26cee3ce175f12edf79ff951738493d7cf166
+    pristine_git_object: 8253422ab994fbd00380962168edbcb659bb0b6f
   src/models/list-rewards-op.ts:
     id: 1fa339fa50fb
     last_write_checksum: sha1:62fdbf3ecef53d94561b55a9089f8f78e60c1fab
@@ -10439,7 +10439,7 @@ examples:
         application/json: {}
       responses:
         "200":
-          application/json: {"referral_programs": [{"id": "refer_a_friend", "reward_id": "beta_credits_grant", "redeem_on": "customer_creation", "received_by": "referrer", "max_redemptions": 10, "plan_ids": null, "exclude_trial": false, "created_at": 1718000000000}]}
+          application/json: {"list": [{"id": "refer_a_friend", "reward_id": "beta_credits_grant", "redeem_on": "customer_creation", "received_by": "referrer", "max_redemptions": 10, "plan_ids": null, "exclude_trial": false, "created_at": 1718000000000}]}
   getReferralProgram:
     speakeasy-default-get-referral-program:
       parameters:

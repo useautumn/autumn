@@ -1,5 +1,6 @@
 import { RewardTriggerEvent } from "@models/rewardModels/rewardProgramModels/rewardProgramEnums.js";
 import { z } from "zod/v4";
+import { getListResponseSchema } from "../common/commonResponses.js";
 import {
 	ApiReferralProgramV0Schema,
 	REFERRAL_PROGRAM_V0_EXAMPLE,
@@ -7,17 +8,12 @@ import {
 
 export const ReferralProgramsListParamsSchema = z.object({}).optional();
 
-export const ReferralProgramsListResponseSchema = z
-	.object({
-		referral_programs: z.array(ApiReferralProgramV0Schema).meta({
-			description:
-				"The list of referral programs configured for the organization.",
-		}),
-	})
-	.meta({
-		title: "ListReferralProgramsResponse",
-		examples: [{ referral_programs: [REFERRAL_PROGRAM_V0_EXAMPLE] }],
-	});
+export const ReferralProgramsListResponseSchema = getListResponseSchema({
+	schema: ApiReferralProgramV0Schema,
+}).meta({
+	title: "ListReferralProgramsResponse",
+	examples: [{ list: [REFERRAL_PROGRAM_V0_EXAMPLE] }],
+});
 
 export const GetReferralProgramParamsSchema = z
 	.object({
