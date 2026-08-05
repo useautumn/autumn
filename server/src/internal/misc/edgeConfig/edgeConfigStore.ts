@@ -1,9 +1,11 @@
 import { ErrCode, ms } from "@autumn/shared";
-import type { S3Client } from "@aws-sdk/client-s3";
 import { GetObjectCommand, PutObjectCommand } from "@aws-sdk/client-s3";
 import type { z } from "zod/v4";
 import { getAdminS3Config } from "@/external/aws/s3/adminS3Config.js";
-import { getS3Client } from "@/external/aws/s3/initS3.js";
+import {
+	createBunS3EdgeConfigClient,
+	type EdgeConfigS3Client,
+} from "@/external/aws/s3/bunS3EdgeConfigClient.js";
 import { getS3BodyAsString } from "@/external/aws/s3/s3Utils.js";
 import type { Logger } from "@/external/logtail/logtailUtils.js";
 import RecaseError from "@/utils/errorUtils.js";
@@ -71,7 +73,7 @@ export const createEdgeConfigStore = <T>({
 	defaultValue: () => T;
 	retainOnError?: boolean;
 	pollIntervalMs?: number;
-	s3Client?: S3Client;
+	s3Client?: EdgeConfigS3Client;
 }) => {
 	let runtimeConfig: T = defaultValue();
 	let runtimeStatus: EdgeConfigStatus = {
@@ -112,7 +114,7 @@ export const createEdgeConfigStore = <T>({
 	const resolveClient = () => {
 		if (injectedS3Client) return injectedS3Client;
 		const { region } = getConfigLocation();
-		return getS3Client({ region });
+		return createBunS3EdgeConfigClient({ region });
 	};
 
 	const readFromSource = async (): Promise<T> => {
