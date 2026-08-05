@@ -138,7 +138,12 @@ const replayStripeEvents = async ({
 				body: JSON.stringify(event),
 			},
 		);
-		statuses.push(`${event.id}→${response.status}`);
+		// The body carries the handler's own error; µVM stdout stops at the health
+		// check, so this response is the only channel for it.
+		const detail = response.ok
+			? ""
+			: `: ${(await response.text()).slice(0, 300)}`;
+		statuses.push(`${event.id}→${response.status}${detail}`);
 	}
 	// Statuses travel in the caller's error because µVM stdout never reaches the
 	// orchestrator; a 200 that changes nothing is a very different bug from a 4xx.
