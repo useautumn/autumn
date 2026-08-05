@@ -27,7 +27,10 @@ import { completeStripeCheckoutFormV2 } from "@tests/utils/browserPool/completeS
 import { items } from "@tests/utils/fixtures/items";
 import { products } from "@tests/utils/fixtures/products";
 import { WEBHOOK_SETTLE_TIMEOUT_MS } from "@tests/utils/pollableCustomerExpect";
-import { waitForStripeWebhook } from "@tests/utils/stripeUtils/waitForStripeWebhook";
+import {
+	checkoutSessionIdFromUrl,
+	waitForStripeWebhook,
+} from "@tests/utils/stripeUtils/waitForStripeWebhook";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
 
@@ -79,6 +82,7 @@ test.concurrent(
 			stripeCli: ctx.stripeCli,
 			env: ctx.env,
 			types: ["checkout.session.completed"],
+			objectId: checkoutSessionIdFromUrl(checkout_url),
 			until: async () => {
 				const customer =
 					await autumnV1.customers.get<ApiCustomerV3>(customerId);
@@ -196,6 +200,7 @@ test.concurrent(
 				stripeCli: ctx.stripeCli,
 				env: ctx.env,
 				types: ["checkout.session.completed"],
+				objectId: checkoutSessionIdFromUrl(res.checkout_url),
 				until: async () => {
 					const customer = (await AutumnCli.getCustomer(
 						customerId,
@@ -290,6 +295,7 @@ test.concurrent(
 			stripeCli: ctx.stripeCli,
 			env: ctx.env,
 			types: ["checkout.session.completed"],
+			objectId: checkoutSessionIdFromUrl(res.checkout_url),
 			until: async () => {
 				const customer =
 					await autumnV1.customers.get<ApiCustomerV3>(customerId);
