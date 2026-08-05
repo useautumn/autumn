@@ -1,9 +1,14 @@
 import type { TestGroup } from "./types";
 
-// Remaining `bun tw core` failures on branch fix/tw-flakiness — 7 files, down
-// from 20 when this work started (run msg10ma3-76o5kn, minus sub-created-auto-
-// sync which is now fixed). Every entry survives 45-150s of assertion polling,
-// so none of these are settle flakes.
+// Remaining `bun tw core` failures on branch fix/tw-flakiness — 9 files in the
+// last measured run (msg2x0v6-93euww), down from 20 when this work started.
+// Every entry survives 45-150s of assertion polling, so none are settle flakes.
+//
+// The GROUP A membership CHURNS between runs: msg10ma3 hit
+// legacy-update-quantity + subscription-deleted-invoice, msg2x0v6 hit
+// multi-update-basic + invoice-created-consumable + update-paid-basic instead.
+// Same root cause, different losers. Any single run undercounts the blast
+// radius, so fix the cause, not the listed files.
 //
 // GROUP A — track-vs-billing-action race (one shared root cause).
 //   A `track` deducts in Redis and queues a sync; a billing action (attach /
@@ -51,6 +56,14 @@ const activeTempPaths: string[] = [
 	// ✗ "create-schedule: now phase stays the exact active set across groups and
 	//   future phases" — expect(received).toEqual(expected). Shape mismatch.
 	"integration/billing/create-schedule/phases/create-schedule-phases.test.ts",
+	// ✗ "customer.subscription.created auto-sync: links product after external
+	//   Stripe checkout completion" — "Checkout session did not produce a
+	//   subscription"; the browser is left on checkout.stripe.com with the form
+	//   unsubmitted. Pinning payment_method_types: ["card"] made it pass in
+	//   isolation but NOT in a full core run — the page still renders an "OR"
+	//   alternative-payment block (Link is not excluded by payment_method_types),
+	//   so the card accordion selector still misses. Not fixed.
+	"integration/billing/stripe-webhooks/subscription-created/sub-created-auto-sync.test.ts",
 ];
 
 export const temp: TestGroup = {
