@@ -12,12 +12,12 @@ import {
 import type { Context, Next } from "hono";
 import { rateLimiter } from "hono-rate-limiter";
 import { StatusCodes } from "http-status-codes";
+import { deleteCheckoutCache } from "@/external/redis/actions/autumnCheckoutCache/autumnCheckoutCache.js";
 import { getCtxWithCustomerRedis } from "@/external/redis/customerRedisRouting.js";
 import type { HonoEnv } from "@/honoUtils/HonoEnv";
 import { checkoutActions } from "@/internal/checkouts/actions";
 import { computeRolloutSnapshot } from "@/internal/misc/rollouts/rolloutUtils.js";
 import { OrgService } from "@/internal/orgs/OrgService";
-import { deleteCheckoutCache } from "../actions/cache";
 import { checkoutRepo } from "../repos/checkoutRepo";
 
 /**

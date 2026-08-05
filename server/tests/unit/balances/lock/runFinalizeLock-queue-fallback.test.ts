@@ -62,7 +62,7 @@ const nextBehavior = (behaviors: (Error | "ok")[]) => {
 	if (behavior instanceof Error) throw behavior;
 };
 
-mock.module("@/external/redis/initUtils/redisV2Availability.js", () => ({
+mock.module("@/external/redis/availabilityMonitor/redisV2Availability.js", () => ({
 	shouldUseRedisV2: () => mockState.redisV2Ready,
 	getRedisV2Availability: () => ({ configured: true, state: "ready" }),
 	primeRedisV2Monitor: () => {},

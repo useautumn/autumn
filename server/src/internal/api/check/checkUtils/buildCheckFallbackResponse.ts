@@ -4,6 +4,9 @@ import {
 	type CheckParams,
 	type CheckResponseV3,
 	CheckResponseV3Schema,
+	type Feature,
+	FeatureType,
+	findFeatureById,
 	type ParsedCheckParams,
 } from "@autumn/shared";
 import type { AutumnContext } from "../../../../honoUtils/HonoEnv.js";
@@ -26,20 +29,33 @@ export const buildCheckFallbackResponse = ({
 		flag: null,
 	});
 
-	const featureToUse = ctx.features.find(
-		(feature) => feature.id === body.feature_id,
-	);
+	const foundFeature = body.feature_id
+		? findFeatureById({ features: ctx.features, featureId: body.feature_id })
+		: undefined;
 
-	return featureToUse
-		? applyResponseVersionChanges<CheckResponseV3>({
-				input: fallbackResponse,
-				targetVersion: ctx.apiVersion,
-				resource: AffectedResource.Check,
-				legacyData: {
-					noCusEnts: false,
-					featureToUse,
-				},
-				ctx,
-			})
-		: fallbackResponse;
+	// Unknown feature: stub it so old-version callers still get their own
+	// response shape instead of a raw V3 body their SDKs can't parse.
+	const featureToUse: Feature = foundFeature ?? {
+		internal_id: "",
+		org_id: ctx.org.id,
+		created_at: Date.now(),
+		env: ctx.env,
+		id: body.feature_id ?? "",
+		name: body.feature_id ?? "",
+		type: FeatureType.Metered,
+		config: null,
+		archived: false,
+		event_names: [],
+	};
+
+	return applyResponseVersionChanges<CheckResponseV3>({
+		input: fallbackResponse,
+		targetVersion: ctx.apiVersion,
+		resource: AffectedResource.Check,
+		legacyData: {
+			noCusEnts: false,
+			featureToUse,
+		},
+		ctx,
+	});
 };

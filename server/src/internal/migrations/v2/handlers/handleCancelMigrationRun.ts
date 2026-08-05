@@ -6,6 +6,7 @@ import {
 } from "@autumn/shared";
 import { runs } from "@trigger.dev/sdk/v3";
 import { z } from "zod/v4";
+import { setMigrationCancelRequested } from "@/external/redis/actions/migrationCancelToken/migrationCancelToken.js";
 import { createRoute } from "@/honoMiddlewares/routeHandler";
 import { settleLeftoverClaims } from "@/internal/migrations/v2/actions/migrationRun/index.js";
 import { isTriggerRunTerminal } from "@/internal/migrations/v2/actions/migrationRun/triggerRunLiveness.js";
@@ -13,7 +14,6 @@ import {
 	migrationRepo,
 	migrationRunRepo,
 } from "@/internal/migrations/v2/repos/index.js";
-import { setMigrationCancelRequested } from "@/internal/migrations/v2/run/utils/migrationCancelToken.js";
 import { clearOrgCache } from "@/internal/orgs/orgUtils/clearOrgCache.js";
 import { isTriggerConfigured } from "@/trigger/configureTrigger.js";
 
@@ -52,6 +52,7 @@ export const handleCancelMigrationRun = createRoute({
 		}
 
 		await setMigrationCancelRequested({
+			ctx,
 			migrationRunId: activeRun.internal_id,
 		});
 

@@ -40,6 +40,7 @@ import { buildConflictUpdateColumns } from "@/db/dbUtils.js";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 import type { RepoContext } from "@/db/repoContext";
 import { withStatementTimeout } from "@/db/withStatementTimeout.js";
+import { markCustomersUpdatedAtByInternalIds } from "@/internal/customers/customerLsns/markCustomerUpdatedAt.js";
 import RecaseError from "@/utils/errorUtils.js";
 
 export class CusEntService {
@@ -193,6 +194,12 @@ export class CusEntService {
 		})) satisfies InsertCustomerEntitlement[];
 
 		await db.insert(customerEntitlements).values(insertData);
+
+		// Grants are structural; balance paths (update/increment/upsert) never mark.
+		await markCustomersUpdatedAtByInternalIds({
+			db,
+			internalCustomerIds: insertData.map((row) => row.internal_customer_id),
+		});
 	}
 
 	static buildActiveResetPassedPage({
@@ -662,8 +669,16 @@ export class CusEntService {
 	}
 
 	static async delete({ db, id }: { db: DrizzleCli; id: string }) {
-		await db
+		const results = await db
 			.delete(customerEntitlements)
-			.where(eq(customerEntitlements.id, id));
+			.where(eq(customerEntitlements.id, id))
+			.returning({
+				internal_customer_id: customerEntitlements.internal_customer_id,
+			});
+
+		await markCustomersUpdatedAtByInternalIds({
+			db,
+			internalCustomerIds: results.map((row) => row.internal_customer_id),
+		});
 	}
 }

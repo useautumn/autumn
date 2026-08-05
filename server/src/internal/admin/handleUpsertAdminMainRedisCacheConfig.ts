@@ -1,37 +1,41 @@
 import { ErrCode, RecaseError, Scopes } from "@autumn/shared";
-import { getFallbackRedis } from "@/external/redis/initRedis.js";
+import { z } from "zod/v4";
+import { getMiscBackupRedis } from "@/external/redis/initRedis.js";
 import { createRoute } from "@/honoMiddlewares/routeHandler.js";
-import { MainRedisCacheConfigSchema } from "@/internal/misc/mainRedisCache/mainRedisCacheSchemas.js";
-import { updateActiveMainRedisInstance } from "@/internal/misc/mainRedisCache/mainRedisCacheStore.js";
+import { MiscRedisConfigSchema } from "@/internal/misc/miscRedisConfig/miscRedisConfigSchemas.js";
+import { setActiveMiscRedisInstance } from "@/internal/misc/miscRedisConfig/miscRedisConfigStore.js";
 
+/** Legacy route kept for API compat — accepts the old primary/fallback
+ *  vocabulary alongside main/backup. Flipping always clears any ramp. */
 export const handleUpsertAdminMainRedisCacheConfig = createRoute({
 	scopes: [Scopes.Superuser],
-	body: MainRedisCacheConfigSchema,
+	body: z.object({
+		activeInstance: MiscRedisConfigSchema.shape.activeInstance,
+	}),
 	handler: async (c) => {
 		const { activeInstance } = c.req.valid("json");
 
-		if (activeInstance === "fallback") {
-			const fallback = getFallbackRedis();
-			if (!fallback || fallback.status !== "ready") {
+		if (activeInstance === "backup") {
+			const backup = getMiscBackupRedis();
+			if (!backup) {
 				throw new RecaseError({
-					message:
-						"CACHE_BACKUP_URL is not configured or its Redis client is not ready",
+					message: "No backup connection is configured",
 					code: ErrCode.InvalidRequest,
 					statusCode: 503,
 				});
 			}
 
-			const pong = await fallback.ping().catch(() => null);
+			const pong = await backup.ping().catch(() => null);
 			if (pong !== "PONG") {
 				throw new RecaseError({
-					message: "Fallback Redis did not respond to its readiness check",
+					message: "Backup Redis did not respond to its readiness check",
 					code: ErrCode.InvalidRequest,
 					statusCode: 503,
 				});
 			}
 		}
 
-		await updateActiveMainRedisInstance({ activeInstance });
+		await setActiveMiscRedisInstance({ activeInstance });
 		return c.json({ success: true, activeInstance });
 	},
 });

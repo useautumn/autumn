@@ -16,6 +16,26 @@ export const FullSubjectGateEdgeConfigSchema = z.object({
 	// Caps above are cluster-wide targets; each process enforces
 	// target / fleet_process_count. Default 1 = per-process (no-op).
 	fleet_process_count: z.number().int().min(1).max(100_000).default(1),
+	// Replica-lane budgets; the top-level numbers stay the primary lane's.
+	replica_lane: z
+		.object({
+			per_customer_limit: z.number().int().min(1).max(10_000).default(540),
+			per_org_limit: z.number().int().min(1).max(10_000).default(810),
+			per_customer_pending_max: z
+				.number()
+				.int()
+				.min(1)
+				.max(100_000)
+				.default(1_500),
+			per_org_pending_max: z.number().int().min(1).max(100_000).default(3_000),
+		})
+		.prefault({}),
+	// 0 = steady-state reads stay primary-only (dark by default, flipped via edge config).
+	read_split: z
+		.object({
+			replica_share: z.number().min(0).max(1).default(0),
+		})
+		.prefault({}),
 });
 
 export type FullSubjectGateEdgeConfig = z.infer<

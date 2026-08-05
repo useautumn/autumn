@@ -1,7 +1,13 @@
 import { ErrCode, RecaseError, Scopes } from "@autumn/shared";
 import { z } from "zod/v4";
+import {
+	deleteTrmnlDeviceConfig,
+	getTrmnlDeviceConfig,
+	getTrmnlOrgConfig,
+	setTrmnlDeviceConfig,
+	setTrmnlOrgConfig,
+} from "@/external/redis/actions/trmnlDeviceStore/trmnlDeviceStore.js";
 import { createRoute } from "@/honoMiddlewares/routeHandler.js";
-import { CacheManager } from "@/utils/cacheUtils/CacheManager.js";
 
 const PostTrmnlDeviceIdSchema = z.object({
 	deviceId: z.string(),
@@ -15,14 +21,12 @@ export const handlePostTrmnlDeviceId = createRoute({
 	scopes: [Scopes.Organisation.Write],
 	body: PostTrmnlDeviceIdSchema,
 	handler: async (c) => {
-		const { org } = c.get("ctx");
+		const ctx = c.get("ctx");
+		const { org } = ctx;
 		const { deviceId, hideRevenue } = c.req.valid("json");
 
 		// Check if device is already registered to another org
-		const existingConfig = await CacheManager.getJson<{
-			orgId: string;
-			hideRevenue: boolean;
-		}>(`trmnl:device:${deviceId}`);
+		const existingConfig = await getTrmnlDeviceConfig({ ctx, deviceId });
 
 		if (existingConfig && existingConfig.orgId !== org.id) {
 			throw new RecaseError({
@@ -33,25 +37,25 @@ export const handlePostTrmnlDeviceId = createRoute({
 		}
 
 		// Get current org's trmnl config and clear old device mapping if exists
-		const currentTrmnlConfig = await CacheManager.getJson<{
-			deviceId: string;
-			hideRevenue: boolean;
-		}>(`trmnl:org:${org.id}`);
+		const currentTrmnlConfig = await getTrmnlOrgConfig({ ctx, orgId: org.id });
 
 		if (currentTrmnlConfig) {
-			await CacheManager.del(`trmnl:device:${currentTrmnlConfig.deviceId}`);
+			await deleteTrmnlDeviceConfig({
+				ctx,
+				deviceId: currentTrmnlConfig.deviceId,
+			});
 		}
 
-		// Save new device-to-org mapping
-		await CacheManager.setJson(`trmnl:device:${deviceId}`, {
-			orgId: org.id,
-			hideRevenue: hideRevenue ?? false,
+		await setTrmnlDeviceConfig({
+			ctx,
+			deviceId,
+			config: { orgId: org.id, hideRevenue: hideRevenue ?? false },
 		});
 
-		// Save org-to-device mapping
-		await CacheManager.setJson(`trmnl:org:${org.id}`, {
-			deviceId,
-			hideRevenue: hideRevenue ?? false,
+		await setTrmnlOrgConfig({
+			ctx,
+			orgId: org.id,
+			config: { deviceId, hideRevenue: hideRevenue ?? false },
 		});
 
 		return c.json({ message: "Device ID saved" });

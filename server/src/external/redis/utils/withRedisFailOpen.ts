@@ -1,5 +1,5 @@
 import { isTransientDbError } from "@/db/dbUtils.js";
-import { shouldUseRedisV2 } from "@/external/redis/initUtils/redisV2Availability.js";
+import { shouldUseRedisV2 } from "@/external/redis/availabilityMonitor/redisV2Availability.js";
 import { RedisUnavailableError } from "./errors.js";
 import { isTransientRedisError } from "./isTransientRedisError.js";
 

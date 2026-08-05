@@ -47,5 +47,20 @@ declare module "ioredis" {
 			cacheTtlSeconds: string,
 			nowMs: string,
 		): Promise<string>;
+		deleteOwnedLock(lockKey: string, token: string): Promise<number>;
+		refreshOwnedLock(
+			lockKey: string,
+			token: string,
+			ttlMs: string,
+		): Promise<number>;
+		acquireQueuePermits(
+			redisKey: string,
+			nowMs: number,
+			expiresAtMs: number,
+			concurrencyLimit: number,
+			requested: number,
+			...permitTokens: string[]
+		): Promise<number>;
+		releaseQueuePermit(redisKey: string, token: string): Promise<number>;
 	}
 }

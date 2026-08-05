@@ -1,21 +1,26 @@
 import { Scopes } from "@autumn/shared";
-import { getFallbackRedis } from "@/external/redis/initRedis.js";
+import { getMiscBackupRedis } from "@/external/redis/initRedis.js";
 import { createRoute } from "@/honoMiddlewares/routeHandler.js";
+import { toLegacyMiscRedisInstanceName } from "@/internal/misc/miscRedisConfig/miscRedisConfigSchemas.js";
 import {
-	getActiveMainRedisInstance,
-	getMainRedisCacheStatus,
-} from "@/internal/misc/mainRedisCache/mainRedisCacheStore.js";
+	getActiveMiscRedisInstanceName,
+	getMiscRedisConfigStatus,
+} from "@/internal/misc/miscRedisConfig/miscRedisConfigStore.js";
 
+/** Legacy route kept for the current admin UI — reports instance names in the
+ *  old primary/fallback vocabulary. New tooling uses /misc-redis-config. */
 export const handleGetAdminMainRedisCacheConfig = createRoute({
 	scopes: [Scopes.Superuser],
 	handler: async (c) => {
-		const status = getMainRedisCacheStatus();
-		const fallback = getFallbackRedis();
+		const status = getMiscRedisConfigStatus();
+		const backup = getMiscBackupRedis();
 
 		return c.json({
-			activeInstance: getActiveMainRedisInstance(),
-			fallbackConfigured: Boolean(fallback),
-			fallbackStatus: fallback?.status ?? "not_configured",
+			activeInstance: toLegacyMiscRedisInstanceName(
+				getActiveMiscRedisInstanceName(),
+			),
+			fallbackConfigured: Boolean(backup),
+			fallbackStatus: backup?.status ?? "not_configured",
 			configHealthy: status.healthy,
 			configConfigured: status.configured,
 			lastSuccessAt: status.lastSuccessAt ?? null,

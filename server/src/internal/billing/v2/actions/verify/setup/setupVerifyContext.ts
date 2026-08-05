@@ -102,11 +102,15 @@ export const setupVerifyContext = async ({
 	customerId,
 	subscriptionIdsFilter,
 	prefetched,
+	stripeCli: stripeCliOverride,
 }: {
 	ctx: AutumnContext;
 	customerId: string;
 	subscriptionIdsFilter?: string[];
 	prefetched?: VerifyPrefetched;
+	/** Serves Stripe reads from somewhere other than the live API — bulk audits
+	 * pass a mirror-backed reader so per-customer verification costs no calls. */
+	stripeCli?: Stripe;
 }): Promise<VerifyContext> => {
 	const fullCustomer =
 		prefetched?.fullCustomer ??
@@ -123,7 +127,8 @@ export const setupVerifyContext = async ({
 	const isAllowed = (subscriptionId: string) =>
 		!allowedSubscriptionIds || allowedSubscriptionIds.has(subscriptionId);
 
-	const stripeCli = createStripeCli({ org: ctx.org, env: ctx.env });
+	const stripeCli =
+		stripeCliOverride ?? createStripeCli({ org: ctx.org, env: ctx.env });
 
 	// The customer's active Stripe subs — the coverage baseline. Without it a
 	// customer with zero cusProducts would derive zero targets and pass vacuously.

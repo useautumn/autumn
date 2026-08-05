@@ -1,6 +1,6 @@
 import type { Context, Next } from "hono";
+import { invalidateProductsCache } from "@/external/redis/actions/productsCache/productsCache.js";
 import type { HonoEnv } from "@/honoUtils/HonoEnv.js";
-import { invalidateProductsCache } from "@/internal/products/productCacheUtils.js";
 import { matchRoute } from "./middlewareUtils.js";
 
 /**

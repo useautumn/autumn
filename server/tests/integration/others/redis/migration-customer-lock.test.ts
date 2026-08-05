@@ -4,7 +4,7 @@ import { describe, expect, test } from "bun:test";
 import { randomUUID } from "node:crypto";
 import { ErrCode, RecaseError } from "@autumn/shared";
 import ctx from "@tests/utils/testInitUtils/createTestContext.js";
-import { withMigrationCustomerLock } from "@/internal/migrations/v2/run/migrateCustomer/withMigrationCustomerLock.js";
+import { withMigrationCustomerLock } from "@/external/redis/actions/migrationCustomerLock/withMigrationCustomerLock.js";
 
 const describeWithRedis = process.env.TESTS_ORG ? describe : describe.skip;
 

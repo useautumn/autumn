@@ -9,15 +9,15 @@ import {
 	Scopes,
 } from "@autumn/shared";
 import { z } from "zod/v4";
+import { clearOrgWithFeaturesCache } from "@/external/redis/actions/orgWithFeaturesCache/orgWithFeaturesCache.js";
+import { invalidateProductsCache } from "@/external/redis/actions/productsCache/productsCache.js";
 import { createRoute } from "@/honoMiddlewares/routeHandler.js";
 import { CusService } from "@/internal/customers/CusService.js";
 import { FeatureService } from "@/internal/features/FeatureService.js";
 import { createFeature } from "@/internal/features/featureActions/createFeature.js";
 import { OrgService } from "@/internal/orgs/OrgService.js";
-import { clearOrgWithFeaturesCache } from "@/internal/orgs/orgUtils/cacheOrgWithFeatures.js";
 import { createProduct } from "@/internal/product/actions/createProduct.js";
 import { ProductService } from "@/internal/products/ProductService.js";
-import { invalidateProductsCache } from "@/internal/products/productCacheUtils.js";
 import { buildPreviewOrgSlug } from "./handleSetupPreviewOrg.js";
 
 const SyncPreviewPricingSchema = z.object({
@@ -99,7 +99,6 @@ export const handleSyncPreviewPricing = createRoute({
 		await clearOrgWithFeaturesCache({
 			orgId: previewOrg.id,
 			env: AppEnv.Sandbox,
-			logger: ctx.logger,
 		});
 
 		// Step 2: Push new config

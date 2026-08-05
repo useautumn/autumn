@@ -1,4 +1,5 @@
 import { type AppEnv, AuthType, createdAtToVersion } from "@autumn/shared";
+import { getOrgWithFeaturesCached } from "@/internal/orgs/orgUtils/getOrgWithFeaturesCached.js";
 import { addAppContextToLogs } from "@/utils/logging/addContextToLogs.js";
 import type { DrizzleCli } from "../db/initDrizzle.js";
 import type { Logger } from "../external/logtail/logtailUtils.js";
@@ -6,7 +7,6 @@ import { getCtxWithCustomerRedis } from "../external/redis/customerRedisRouting.
 import { resolveRedisV2 } from "../external/redis/resolveRedisV2.js";
 import type { AutumnContext } from "../honoUtils/HonoEnv.js";
 import { computeRolloutSnapshot } from "../internal/misc/rollouts/rolloutUtils.js";
-import { getOrgWithFeaturesCached } from "../internal/orgs/orgUtils/cacheOrgWithFeatures.js";
 import { generateId } from "../utils/genUtils.js";
 
 export const createWorkerContext = async ({
@@ -35,7 +35,7 @@ export const createWorkerContext = async ({
 	// changes rarely and is invalidated by clearOrgCache.
 	let orgData: Awaited<ReturnType<typeof getOrgWithFeaturesCached>>;
 	try {
-		orgData = await getOrgWithFeaturesCached({ db, orgId, env });
+		orgData = await getOrgWithFeaturesCached({ db, orgId, env, requestId });
 	} catch {
 		orgData = null;
 	}

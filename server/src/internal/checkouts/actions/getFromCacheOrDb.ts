@@ -1,7 +1,10 @@
 import type { Checkout } from "@autumn/shared";
 import type { DrizzleCli } from "@/db/initDrizzle";
+import {
+	getCheckoutCache,
+	setCheckoutCache,
+} from "@/external/redis/actions/autumnCheckoutCache/autumnCheckoutCache.js";
 import { checkoutRepo } from "../repos/checkoutRepo";
-import { getCheckoutCache, setCheckoutCache } from "./cache";
 
 /** Gets a checkout from cache, falling back to the database. */
 export const getCheckoutFromCacheOrDb = async ({

@@ -7,6 +7,7 @@ import {
 	setCustomerCreationRecoveryStage,
 } from "@/internal/customers/recovery/customerCreationRecoveryStage.js";
 import { queueFailedCustomerCreation } from "@/internal/customers/recovery/queueFailedCustomerCreation.js";
+import { isRedisFallbackToDbEnabled } from "@/internal/misc/miscellaneousEdgeConfig/miscellaneousEdgeConfigStore.js";
 import { isFullSubjectRolloutEnabled } from "@/internal/misc/rollouts/fullSubjectRolloutUtils.js";
 import { getApiCustomerV2 } from "../cusUtils/getApiCustomerV2/index.js";
 import { ensureStripeCustomerFromCustomerData } from "./ensureStripeCustomerFromCustomerData.js";
@@ -17,6 +18,7 @@ export const getOrCreateApiCustomerByRollout = async ({
 	source,
 	withAutumnId,
 	enqueueRecoveryOnTransientFailure = true,
+	disableReplicaRead = false,
 }: {
 	ctx: AutumnContext;
 	params: Omit<TrackParams | CheckParams, "customer_id"> & {
@@ -25,16 +27,29 @@ export const getOrCreateApiCustomerByRollout = async ({
 	source?: string;
 	withAutumnId?: boolean;
 	enqueueRecoveryOnTransientFailure?: boolean;
+	disableReplicaRead?: boolean;
 }) => {
 	setCustomerCreationRecoveryStage({ ctx, stage: "lookup" });
 
 	if (isFullSubjectRolloutEnabled({ ctx })) {
 	}
 
+	const lookup = ({ skipCache }: { skipCache: boolean }) =>
+		getOrCreateCachedFullSubject({
+			// Sole replica grant; writers opt out via disableReplicaRead.
+			readFrom: disableReplicaRead ? "primary" : "replica-ok",
+			ctx: skipCache ? { ...ctx, skipCache: true } : ctx,
+			params,
+			source,
+		});
+
 	const fullSubject = await shed503OnTransientError({
 		ctx,
 		source: "get_or_create",
-		run: () => getOrCreateCachedFullSubject({ ctx, params, source }),
+		run: () => lookup({ skipCache: false }),
+		fallbackOnRedisUnavailable: isRedisFallbackToDbEnabled()
+			? () => lookup({ skipCache: true })
+			: undefined,
 		onTransientError: enqueueRecoveryOnTransientFailure
 			? async () => {
 					await queueFailedCustomerCreation({

@@ -44,11 +44,14 @@ const getAutoTopupFullCustomer = async ({
 	if (isFullSubjectRolloutEnabled({ ctx })) {
 	}
 
-	const { fullSubject: cachedFullSubject } = await getCachedFullSubject({
+	// A Redis failure is just a cache miss here — the DB path below covers it.
+	const cachedFullSubject = await getCachedFullSubject({
 		ctx,
 		customerId,
 		source: "setupAutoTopupContext",
-	});
+	})
+		.then((result) => result.fullSubject)
+		.catch(() => null);
 
 	if (cachedFullSubject) {
 		return fullSubjectToFullCustomer({

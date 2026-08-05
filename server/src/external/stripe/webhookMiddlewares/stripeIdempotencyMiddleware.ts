@@ -1,7 +1,7 @@
 import type { AppEnv } from "@autumn/shared";
 import { tryCatch } from "@autumn/shared";
 import type { Context, Next } from "hono";
-import { miscRedis } from "@/external/redis/initRedis";
+import { getMiscRedis } from "@/external/redis/initRedis";
 import { classifyStripeWebhookAckMode } from "./classifyStripeWebhookAckMode.js";
 import type { StripeWebhookHonoEnv } from "./stripeWebhookContext.js";
 
@@ -32,6 +32,7 @@ export const claimStripeWebhookEvent = async ({
 }: {
 	eventKey: string;
 }): Promise<StripeWebhookClaimResult> => {
+	const miscRedis = getMiscRedis();
 	if (miscRedis.status !== "ready") return "unavailable";
 
 	const { data: result, error } = await tryCatch(
@@ -49,7 +50,9 @@ export const completeStripeWebhookEvent = async ({
 }: {
 	eventKey: string;
 }) => {
-	await tryCatch(miscRedis.set(eventKey, COMPLETED, "PX", COMPLETED_TTL_MS));
+	await tryCatch(
+		getMiscRedis().set(eventKey, COMPLETED, "PX", COMPLETED_TTL_MS),
+	);
 };
 
 export const releaseStripeWebhookEvent = async ({
@@ -57,7 +60,7 @@ export const releaseStripeWebhookEvent = async ({
 }: {
 	eventKey: string;
 }) => {
-	await tryCatch(miscRedis.del(eventKey));
+	await tryCatch(getMiscRedis().del(eventKey));
 };
 
 /**

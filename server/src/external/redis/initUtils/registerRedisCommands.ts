@@ -1,5 +1,11 @@
 import type { Redis } from "ioredis";
 import {
+	ACQUIRE_QUEUE_PERMITS_SCRIPT,
+	DELETE_OWNED_LOCK_SCRIPT,
+	REFRESH_OWNED_LOCK_SCRIPT,
+	RELEASE_QUEUE_PERMIT_SCRIPT,
+} from "../../../_luaScriptsMisc/luaScriptsMisc.js";
+import {
 	ADJUST_SUBJECT_BALANCE_SCRIPT,
 	DEDUCT_FROM_SUBJECT_BALANCES_SCRIPT,
 	GETDEL_SHARED_BALANCE_FIELDS_SCRIPT,
@@ -97,6 +103,26 @@ export const registerRedisCommands = ({
 	redisInstance.defineCommand("adjustSubjectBalance", {
 		numberOfKeys: 1,
 		lua: ADJUST_SUBJECT_BALANCE_SCRIPT,
+	});
+
+	redisInstance.defineCommand("deleteOwnedLock", {
+		numberOfKeys: 1,
+		lua: DELETE_OWNED_LOCK_SCRIPT,
+	});
+
+	redisInstance.defineCommand("refreshOwnedLock", {
+		numberOfKeys: 1,
+		lua: REFRESH_OWNED_LOCK_SCRIPT,
+	});
+
+	redisInstance.defineCommand("acquireQueuePermits", {
+		numberOfKeys: 1,
+		lua: ACQUIRE_QUEUE_PERMITS_SCRIPT,
+	});
+
+	redisInstance.defineCommand("releaseQueuePermit", {
+		numberOfKeys: 1,
+		lua: RELEASE_QUEUE_PERMIT_SCRIPT,
 	});
 
 	redisInstance.on("error", (error) => {

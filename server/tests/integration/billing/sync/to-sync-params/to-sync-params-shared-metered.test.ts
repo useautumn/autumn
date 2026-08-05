@@ -36,8 +36,8 @@ import ctx from "@tests/utils/testInitUtils/createTestContext";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
 import type Stripe from "stripe";
+import { invalidateProductsCache } from "@/external/redis/actions/productsCache/productsCache.js";
 import { subscriptionToSyncParams } from "@/internal/billing/v2/actions/sync/subscriptionToSyncParams";
-import { invalidateProductsCache } from "@/internal/products/productCacheUtils.js";
 import { PriceService } from "@/internal/products/prices/PriceService";
 import {
 	fetchFullProduct,

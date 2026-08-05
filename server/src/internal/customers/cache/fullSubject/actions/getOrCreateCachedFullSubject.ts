@@ -5,11 +5,13 @@ import {
 	SubjectType,
 	type TrackParams,
 } from "@autumn/shared";
+import type { SubjectReadFrom } from "@/db/resolveSubjectReadDb.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { customerActions } from "@/internal/customers/actions/index.js";
 import { updateCustomerData } from "@/internal/customers/actions/updateCustomerData.js";
 import { getFullSubjectNormalized } from "@/internal/customers/repos/getFullSubject/index.js";
 import { autoCreateEntity } from "@/internal/entities/handlers/handleCreateEntity/autoCreateEntity.js";
+import { isReplicaSourced } from "../subjectProvenance.js";
 import { getCachedFullSubject } from "./getCachedFullSubject.js";
 import { setCachedFullSubject } from "./setCachedFullSubject/setCachedFullSubject.js";
 
@@ -17,12 +19,14 @@ export const getOrCreateCachedFullSubject = async ({
 	ctx,
 	params,
 	source,
+	readFrom = "primary",
 }: {
 	ctx: AutumnContext;
 	params: Omit<TrackParams | CheckParams, "customer_id"> & {
 		customer_id: string | null;
 	};
 	source?: string;
+	readFrom?: SubjectReadFrom;
 }): Promise<FullSubject> => {
 	const { skipCache, logger } = ctx;
 	const useRedis = !skipCache;
@@ -52,6 +56,7 @@ export const getOrCreateCachedFullSubject = async ({
 
 		if (fullSubject) {
 			logger.debug(`[getOrCreateCachedFullSubject] Cache hit: ${customerId}`);
+			if (ctx.subjectReadTrace) ctx.subjectReadTrace.source = "cache";
 			setCache = false;
 		}
 	}
@@ -68,6 +73,8 @@ export const getOrCreateCachedFullSubject = async ({
 			customerId,
 			entityId,
 			allowMissingEntity: true,
+			readFrom,
+			routeSource: source,
 		});
 		if (normalizedResult) {
 			fullSubject = normalizedResult.fullSubject;
@@ -127,13 +134,16 @@ export const getOrCreateCachedFullSubject = async ({
 		}
 
 		if (normalizedResult) {
-			await setCachedFullSubject({
-				ctx,
-				normalized: normalizedResult.normalized,
-				fetchedSubjectViewEpoch,
-			}).catch((error) =>
-				logger.error(`Failed to set full subject cache: ${error}`),
-			);
+			// Replica-sourced hydrations must never fill Redis — serve them as-is.
+			if (!isReplicaSourced(normalizedResult.normalized)) {
+				await setCachedFullSubject({
+					ctx,
+					normalized: normalizedResult.normalized,
+					fetchedSubjectViewEpoch,
+				}).catch((error) =>
+					logger.error(`Failed to set full subject cache: ${error}`),
+				);
+			}
 			fullSubject = normalizedResult.fullSubject;
 		}
 	}
