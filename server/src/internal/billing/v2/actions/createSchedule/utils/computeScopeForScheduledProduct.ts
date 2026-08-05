@@ -3,7 +3,7 @@ import type {
 	FullProduct,
 	MultiAttachProductContext,
 } from "@autumn/shared";
-import { productToScopeKey } from "@autumn/shared";
+import { productToReplacementKey } from "@autumn/shared";
 import { resolvePhaseProductContexts } from "./unscheduledProductContexts";
 
 /**
@@ -29,7 +29,7 @@ export const computeScopeForScheduledProduct = ({
 	const scheduledPlans = resolvePhaseProductContexts({
 		productContexts: immediatePhaseProductContexts,
 	});
-	const scopeKey = productToScopeKey({ product: fullProduct });
+	const replacementKey = productToReplacementKey({ product: fullProduct });
 
 	const precedingPlan =
 		scheduledPlans.find(
@@ -37,7 +37,8 @@ export const computeScopeForScheduledProduct = ({
 		) ??
 		scheduledPlans.find(
 			(productContext) =>
-				productToScopeKey({ product: productContext.fullProduct }) === scopeKey,
+				productToReplacementKey({ product: productContext.fullProduct }) ===
+				replacementKey,
 		);
 
 	if (!precedingPlan) return fallbackEntity;
