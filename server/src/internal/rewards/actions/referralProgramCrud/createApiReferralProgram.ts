@@ -9,9 +9,9 @@ import {
 	validateRewardProgramTrigger,
 	validateRewardTypeSupported,
 } from "@/internal/api/rewards/handlers/rewardPrograms/validateRewardProgram.js";
-import { getApiReferralProgram } from "../apiRewards/getApiReferralProgram.js";
-import { rewardProgramRepo, rewardRepo } from "../repos/index.js";
-import { constructRewardProgram } from "../rewardUtils.js";
+import { getApiReferralProgram } from "../../apiRewards/getApiReferralProgram.js";
+import { rewardProgramRepo, rewardRepo } from "../../repos/index.js";
+import { constructRewardProgram } from "../../rewardUtils.js";
 
 export const createApiReferralProgram = async ({
 	ctx,

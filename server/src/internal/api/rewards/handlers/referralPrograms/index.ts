@@ -11,7 +11,7 @@ import {
 	getApiReferralProgramById,
 	listApiReferralPrograms,
 	updateApiReferralProgram,
-} from "@/internal/rewards/actions/apiReferralPrograms.js";
+} from "@/internal/rewards/actions/referralProgramCrud/index.js";
 import { rewardMutationLock } from "@/internal/rewards/rewardLock.js";
 
 export { handleCreateReferralProgram } from "./handleCreateReferralProgram.js";

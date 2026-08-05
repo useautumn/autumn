@@ -21,10 +21,10 @@ import {
 } from "@/external/stripe/stripeCouponUtils/stripeCouponUtils.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { ProductService } from "@/internal/products/ProductService.js";
-import { rewardRepo } from "../repos/index.js";
-import { requireApiReward, toApiRewardResponse } from "./apiRewards.js";
-import { getRewardPrices } from "./getRewardPrices.js";
-import { validateRewardUniqueness } from "./validateRewardUniqueness.js";
+import { rewardRepo } from "../../repos/index.js";
+import { getRewardPrices } from "../getRewardPrices.js";
+import { validateRewardUniqueness } from "../validateRewardUniqueness.js";
+import { requireApiReward, toApiRewardResponse } from "./apiRewardUtils.js";
 
 type CouponUpdate = NonNullable<UpdateRewardParams["coupon"]>;
 type FeatureGrantUpdate = NonNullable<UpdateRewardParams["feature_grant"]>;

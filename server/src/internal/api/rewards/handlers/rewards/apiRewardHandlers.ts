@@ -8,8 +8,8 @@ import { createRoute } from "@/honoMiddlewares/routeHandler.js";
 import {
 	deleteApiReward,
 	getApiRewardById,
-} from "@/internal/rewards/actions/apiRewards.js";
-import { updateApiReward } from "@/internal/rewards/actions/updateApiReward.js";
+	updateApiReward,
+} from "@/internal/rewards/actions/rewardCrud/index.js";
 import { rewardMutationLock } from "@/internal/rewards/rewardLock.js";
 
 export const handleGetReward = createRoute({

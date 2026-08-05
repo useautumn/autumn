@@ -1,6 +1,6 @@
 import { CreateReferralProgramParamsSchema, Scopes } from "@autumn/shared";
 import { createRoute } from "@/honoMiddlewares/routeHandler.js";
-import { createApiReferralProgram } from "@/internal/rewards/actions/createApiReferralProgram.js";
+import { createApiReferralProgram } from "@/internal/rewards/actions/referralProgramCrud/index.js";
 import { rewardMutationLock } from "@/internal/rewards/rewardLock.js";
 
 export const handleCreateReferralProgram = createRoute({
