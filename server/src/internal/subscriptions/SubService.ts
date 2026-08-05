@@ -1,14 +1,8 @@
-import {
-	type AppEnv,
-	ErrCode,
-	type Subscription,
-	subscriptions,
-} from "@autumn/shared";
+import { ErrCode, type Subscription, subscriptions } from "@autumn/shared";
 import type { DrizzleCli } from "@server/db/initDrizzle.js";
 import { subToPeriodStartEnd } from "@server/external/stripe/stripeSubUtils/convertSubUtils.js";
 import RecaseError from "@server/utils/errorUtils.js";
-import { generateId } from "@server/utils/genUtils.js";
-import { and, eq, inArray } from "drizzle-orm";
+import { eq, inArray } from "drizzle-orm";
 import type Stripe from "stripe";
 
 export class SubService {
@@ -45,93 +39,6 @@ export class SubService {
 			.returning();
 
 		return (data[0] as Subscription | undefined) ?? null;
-	}
-
-	static async addUsageFeatures({
-		db,
-		stripeId,
-		scheduleId,
-		usageFeatures,
-		orgId,
-		env,
-	}: {
-		db: DrizzleCli;
-		stripeId?: string;
-		scheduleId?: string;
-		usageFeatures: string[];
-		orgId: string;
-		env: AppEnv;
-	}) {
-		if (!stripeId && !scheduleId) {
-			throw new Error("Either stripeId or scheduleId must be provided");
-		}
-
-		const findSub = async () =>
-			(
-				await db
-					.select()
-					.from(subscriptions)
-					.where(
-						and(
-							stripeId ? eq(subscriptions.stripe_id, stripeId) : undefined,
-							scheduleId
-								? eq(subscriptions.stripe_schedule_id, scheduleId)
-								: undefined,
-						),
-					)
-			)[0];
-
-		const existingSub = await findSub();
-
-		if (!existingSub) {
-			const createdSub = await SubService.createSubIfAbsent({
-				db,
-				sub: {
-					id: generateId("sub"),
-					created_at: Date.now(),
-					stripe_id: stripeId || null,
-					stripe_schedule_id: scheduleId || null,
-					usage_features: usageFeatures,
-					org_id: orgId,
-					env,
-					current_period_start: null,
-					current_period_end: null,
-					billing_cycle_anchor_seconds: null,
-				},
-			});
-
-			if (createdSub) return createdSub;
-		}
-
-		// Either it existed, or a concurrent webhook won the insert; merge into it.
-		const curSub = existingSub ?? (await findSub());
-
-		if (!curSub) {
-			throw new RecaseError({
-				code: ErrCode.InsertSubscriptionFailed,
-				message: "Failed to create subscription",
-				statusCode: 500,
-			});
-		}
-		const updateResult = await db
-			.update(subscriptions)
-			.set({
-				usage_features: [
-					...new Set([...(curSub.usage_features || []), ...usageFeatures]),
-				],
-			})
-			.where(eq(subscriptions.id, curSub.id))
-			.returning();
-
-		if (updateResult.length === 0) {
-			throw new RecaseError({
-				code: ErrCode.UpdateSubscriptionFailed,
-				message: "Failed to update subscription",
-				statusCode: 500,
-			});
-		}
-
-		return updateResult[0] as Subscription;
 	}
 
 	static async update({
