@@ -11,11 +11,15 @@ const activeStatuses = [CusProductStatus.Active, CusProductStatus.PastDue];
 export class CusProdReadService {
 	static async existsForProduct({
 		db,
+		env,
 		internalProductId,
+		orgId,
 		productId,
 	}: {
 		db: DrizzleCli;
+		env?: AppEnv;
 		internalProductId?: string;
+		orgId?: string;
 		productId?: string;
 	}) {
 		const result = await db
@@ -23,12 +27,18 @@ export class CusProdReadService {
 				id: customerProducts.id,
 			})
 			.from(customerProducts)
+			.innerJoin(
+				products,
+				eq(customerProducts.internal_product_id, products.internal_id),
+			)
 			.where(
 				and(
-					productId ? eq(customerProducts.product_id, productId) : undefined,
+					env ? eq(products.env, env) : undefined,
 					internalProductId
 						? eq(customerProducts.internal_product_id, internalProductId)
 						: undefined,
+					orgId ? eq(products.org_id, orgId) : undefined,
+					productId ? eq(products.id, productId) : undefined,
 				),
 			)
 			.limit(1);

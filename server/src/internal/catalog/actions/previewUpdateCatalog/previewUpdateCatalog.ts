@@ -17,6 +17,7 @@ import {
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { CusProdReadService } from "@/internal/customers/cusProducts/CusProdReadService.js";
 import { getPlanResponse } from "@/internal/products/productUtils/productResponseUtils/getPlanResponse.js";
+import { previewCatalogConfigResources } from "../catalogConfigResources.js";
 import { preflightCatalogPlans } from "../catalogPlanPreflight.js";
 import {
 	deriveReplaceFeatureIds,
@@ -34,7 +35,6 @@ import {
 	previewSkippedFeature,
 } from "./previewFeature.js";
 import { setupPreviewCatalogContext } from "./setupPreviewCatalogContext.js";
-import { previewCatalogConfigResources } from "../catalogConfigResources.js";
 
 const productUsesFeature = ({
 	product,
@@ -307,7 +307,7 @@ export const previewUpdateCatalog = async ({
 	);
 	const missingPlanCustomerCounts = await Promise.all(
 		missingProducts.map((product) =>
-			CusProdReadService.getCountsForAllVersions({
+			CusProdReadService.existsForProduct({
 				db: ctx.db,
 				productId: product.id,
 				orgId: ctx.org.id,
@@ -317,9 +317,7 @@ export const previewUpdateCatalog = async ({
 	);
 	const missingPlanCustomers = new Set(
 		missingProducts
-			.filter(
-				(_, index) => Number(missingPlanCustomerCounts[index]?.all ?? 0) > 0,
-			)
+			.filter((_, index) => missingPlanCustomerCounts[index])
 			.map((product) => product.id),
 	);
 

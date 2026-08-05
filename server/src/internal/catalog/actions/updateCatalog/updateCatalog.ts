@@ -24,6 +24,11 @@ import {
 import { updateProduct } from "@/internal/product/actions/updateProduct.js";
 import { ProductService } from "@/internal/products/ProductService.js";
 import { getPlanResponse } from "@/internal/products/productUtils/productResponseUtils/getPlanResponse.js";
+import {
+	applyCatalogConfigResources,
+	assertNoCatalogConfigConflicts,
+	resolveCatalogConfigResources,
+} from "../catalogConfigResources.js";
 import { sortCatalogPlansByDependencies } from "../catalogPlanDependencies.js";
 import {
 	deriveReplaceFeatureIds,
@@ -37,11 +42,6 @@ import {
 	validateCatalogVariantUpdates,
 	validateCatalogVariantVersionTargets,
 } from "../validateCatalogVariantUpdates.js";
-import {
-	assertNoCatalogConfigConflicts,
-	applyCatalogConfigResources,
-	resolveCatalogConfigResources,
-} from "../catalogConfigResources.js";
 
 const archiveProductVersions = async ({
 	ctx,
@@ -337,12 +337,12 @@ const applyMissingPlanRemovals = async ({
 			});
 			if (!product) continue;
 
-			const counts = await CusProdReadService.getCounts({
+			const hasCustomers = await CusProdReadService.existsForProduct({
 				db: ctx.db,
 				internalProductId: product.internal_id,
 			});
 
-			if (Number(counts?.all ?? 0) > 0) {
+			if (hasCustomers) {
 				await ProductService.updateByInternalId({
 					db: ctx.db,
 					internalId: product.internal_id,
@@ -358,14 +358,14 @@ const applyMissingPlanRemovals = async ({
 			continue;
 		}
 
-		const counts = await CusProdReadService.getCountsForAllVersions({
+		const hasCustomers = await CusProdReadService.existsForProduct({
 			db: ctx.db,
 			productId: planId,
 			orgId: ctx.org.id,
 			env: ctx.env,
 		});
 
-		if (Number(counts?.all ?? 0) > 0) {
+		if (hasCustomers) {
 			await archiveProductVersions({ ctx, productId: planId });
 		} else {
 			await deleteProduct({
