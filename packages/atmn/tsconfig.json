@@ -24,6 +24,6 @@
 			"@utils/*": ["../../shared/utils/*"]
 		}
 	},
-	"include": ["source", "src"],
+	"include": ["source", "src", "test/push/reward-types.ts"],
 	"exclude": ["node_modules", "dist"]
 }

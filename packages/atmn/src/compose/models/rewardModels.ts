@@ -1,7 +1,8 @@
-export type RewardDuration = {
-	type: "one_off" | "months" | "forever";
-	length?: number;
-};
+export type RewardDuration =
+	| { type: "months"; length: number }
+	| { type: "one_off" | "forever"; length?: never };
+
+type NonEmptyArray<T> = [T, ...T[]];
 
 export type CouponReward = {
 	id: string;
@@ -22,15 +23,15 @@ export type FeatureGrantReward = {
 	id: string;
 	name: string;
 	type: "feature_grant";
-	grants: Array<{
+	grants: NonEmptyArray<{
 		featureId: string;
 		included?: number;
 		expiry?: {
-			type: "hour" | "day" | "week" | "month" | "year";
+			type: "day" | "week" | "month" | "year";
 			length: number;
 		};
 	}>;
-	promoCodes: Array<{ code: string; maxUses?: number }>;
+	promoCodes: NonEmptyArray<{ code: string; maxUses?: number }>;
 	readonly __atmnType?: "reward";
 };
 

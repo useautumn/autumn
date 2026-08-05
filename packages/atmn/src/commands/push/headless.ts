@@ -2,8 +2,8 @@ import chalk from "chalk";
 import type { Feature, Plan } from "../../compose/models/index.js";
 import type { CatalogPreviewUpdateResponse } from "../../lib/api/endpoints/index.js";
 import { withAuthRecovery } from "../../lib/auth/headlessAuthRecovery.js";
+import { type LoadedConfig, loadConfig } from "../../lib/config/loadConfig.js";
 import { AppEnv, resolveConfigPath } from "../../lib/env/index.js";
-import { loadConfig, type LoadedConfig } from "../../lib/config/loadConfig.js";
 import { writeConfig } from "../pull/writeConfig.js";
 import {
 	createFeatureArchivedPrompt,
@@ -29,11 +29,11 @@ import {
 	unarchiveFeature,
 	unarchivePlan,
 } from "./push.js";
-import type { PushResult } from "./types.js";
 import type {
 	PlanMigrationSelections,
 	PlanUpdateIntent,
 	PlanUpdateIntentSelections,
+	PushResult,
 	VariantMigrationSelections,
 	VariantPropagationSelections,
 	VariantUpdateIntentSelections,
@@ -567,7 +567,13 @@ async function syncArchivedFeaturesToConfig(
 		return;
 	}
 
-	await writeConfig(Array.from(localFeaturesById.values()), config.plans, cwd);
+	await writeConfig({
+		features: Array.from(localFeaturesById.values()),
+		plans: config.plans,
+		cwd,
+		rewards: config.rewards,
+		referralPrograms: config.referralPrograms,
+	});
 }
 
 async function getArchivedTargets(

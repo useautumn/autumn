@@ -1,6 +1,7 @@
 import { expect, test } from "bun:test";
 import {
 	ApiRewardsListV0Schema,
+	CatalogUpdateParamsSchema,
 	CouponDurationType,
 	EntitlementDuration,
 	RewardReceivedBy,
@@ -9,6 +10,13 @@ import {
 } from "@autumn/shared";
 import { TestFeature } from "@tests/setup/v2Features.js";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario.js";
+
+test("catalog config returns validation issues for malformed rewards", () => {
+	const parse = () => CatalogUpdateParamsSchema.safeParse({ rewards: [{}] });
+
+	expect(parse).not.toThrow();
+	expect(parse().success).toBe(false);
+});
 
 test("catalog config creates idempotent rewards and a redeemable referral program", async () => {
 	const suffix = Date.now();
@@ -129,6 +137,13 @@ test("catalog config creates idempotent rewards and a redeemable referral progra
 	await expect(
 		autumnV2_2.post("/catalog.update", changedConfig as never),
 	).rejects.toThrow();
+	const rewardsAfterConflict = ApiRewardsListV0Schema.parse(
+		await autumnV2_2.post("/rewards.list", {}),
+	);
+	expect(
+		rewardsAfterConflict.feature_grants.find(({ id }) => id === grantId)
+			?.grants[0]?.included,
+	).toBe(included);
 
 	await autumnV2_2.post("/catalog.update", {});
 	const listed = ApiRewardsListV0Schema.parse(
@@ -143,3 +158,39 @@ test("catalog config creates idempotent rewards and a redeemable referral progra
 		}),
 	).toMatchObject({ code: expect.any(String) });
 });
+
+test.each([CouponDurationType.OneOff, CouponDurationType.Forever])(
+	"catalog config treats %s coupons as idempotent",
+	async (durationType) => {
+		const suffix = `${durationType}-${Date.now()}`;
+		const couponId = `catalog-${suffix}`;
+		const config = {
+			rewards: [
+				{
+					coupon: {
+						id: couponId,
+						name: `${durationType} coupon`,
+						type: RewardType.PercentageDiscount,
+						value: 20,
+						duration: { type: durationType, length: null },
+						plan_ids: null,
+						promo_codes: [],
+					},
+				},
+			],
+		};
+		const { autumnV2_2 } = await initScenario({
+			customerId: `catalog-duration-${suffix}`,
+			setup: [s.platform.create({ setupDefaultFeatures: true })],
+			actions: [],
+		});
+
+		await autumnV2_2.post("/catalog.update", config as never);
+		const preview = (await autumnV2_2.post(
+			"/catalog.preview_update",
+			config as never,
+		)) as { reward_changes: { id: string; action: string }[] };
+
+		expect(preview.reward_changes).toEqual([{ id: couponId, action: "none" }]);
+	},
+);

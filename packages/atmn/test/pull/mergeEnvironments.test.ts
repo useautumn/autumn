@@ -14,8 +14,8 @@ const reward = (id: string): Reward => ({
 	id,
 	name: id,
 	type: "feature_grant",
-	grants: [],
-	promoCodes: [],
+	grants: [{ featureId: "credits", included: 1 }],
+	promoCodes: [{ code: id }],
 });
 const referralProgram = (id: string): ReferralProgram => ({
 	id,

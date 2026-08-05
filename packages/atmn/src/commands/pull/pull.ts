@@ -49,16 +49,14 @@ async function _pullImpl(options: PullOptions = {}): Promise<PullResult> {
 	const primaryData = await pullFromEnvironment(primaryKey, { allVersions });
 
 	// 3. Write autumn.config.ts (in-place update if exists, unless forceOverwrite)
-	const writeResult = await writeConfig(
-		primaryData.features,
-		primaryData.plans,
+	const writeResult = await writeConfig({
+		features: primaryData.features,
+		plans: primaryData.plans,
 		cwd,
-		{
-			forceOverwrite: forceOverwrite || allVersions,
-			rewards: primaryData.rewards,
-			referralPrograms: primaryData.referralPrograms,
-		},
-	);
+		forceOverwrite: forceOverwrite || allVersions,
+		rewards: primaryData.rewards,
+		referralPrograms: primaryData.referralPrograms,
+	});
 
 	const result: PullResult = {
 		features: primaryData.features,

@@ -24,7 +24,9 @@ export const loadConfig = async ({
 } = {}): Promise<LoadedConfig> => {
 	const configPath = resolveConfigPath(cwd);
 	if (!existsSync(configPath))
-		throw new Error(`Config file not found at ${configPath}.`);
+		throw new Error(
+			`Config file not found at ${configPath}. Run 'atmn pull' first.`,
+		);
 	const mod = (await createJiti(import.meta.url).import(
 		pathToFileURL(resolve(configPath)).href,
 	)) as { default?: Partial<LoadedConfig> & { products?: Plan[] } } & Record<
@@ -39,15 +41,25 @@ export const loadConfig = async ({
 	};
 	const defaults = mod.default;
 	if (defaults?.features) config.features.push(...defaults.features);
-	if (defaults?.plans ?? defaults?.products)
-		config.plans.push(...(defaults.plans ?? defaults.products!));
+	const defaultPlans = defaults?.plans ?? defaults?.products;
+	if (defaultPlans) config.plans.push(...defaultPlans);
 	if (defaults?.rewards) config.rewards.push(...defaults.rewards);
 	if (defaults?.referralPrograms)
 		config.referralPrograms.push(...defaults.referralPrograms);
-	if (defaults?.features || defaults?.plans || defaults?.products)
-		return config;
+	const loadedValues = new Set<unknown>([
+		...config.features,
+		...config.plans,
+		...config.rewards,
+		...config.referralPrograms,
+	]);
 	for (const [name, value] of Object.entries(mod)) {
-		if (name === "default" || !value || typeof value !== "object") continue;
+		if (
+			name === "default" ||
+			!value ||
+			typeof value !== "object" ||
+			loadedValues.has(value)
+		)
+			continue;
 		const tagged = value as {
 			__atmnType?: string;
 			id?: string;
@@ -68,6 +80,7 @@ export const loadConfig = async ({
 			(!tagged.__atmnType && (Array.isArray(tagged.items) || "id" in tagged))
 		)
 			config.plans.push(value as Plan);
+		loadedValues.add(value);
 	}
 	return config;
 };

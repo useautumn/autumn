@@ -13,9 +13,6 @@ function idToTokens(id: string): string[] {
 		.filter(Boolean);
 }
 
-const lowerFirst = (value: string): string =>
-	value.charAt(0).toLowerCase() + value.slice(1);
-
 const upperFirst = (value: string): string =>
 	value.charAt(0).toUpperCase() + value.slice(1);
 
@@ -64,53 +61,101 @@ export function variantIdToVarName(id: string): string {
 	return idToVarName(id, "plan");
 }
 
-/**
- * Resolve variable names for all features and plans, disambiguating any collisions.
- *
- * When a plan and feature share the same sanitized ID (e.g. both have id "free"),
- * the plan's variable name gets a "_plan" suffix to avoid "Cannot redeclare
- * block-scoped variable" errors.
- *
- * Features are declared first in the file so they keep the clean name.
- */
+export function claimVarName({
+	candidate,
+	suffix,
+	usedNames,
+}: {
+	candidate: string;
+	suffix: string;
+	usedNames: Set<string>;
+}): string {
+	let varName = candidate;
+	let index = 1;
+	while (usedNames.has(varName)) {
+		varName = `${candidate}${suffix}${index === 1 ? "" : index}`;
+		index++;
+	}
+	usedNames.add(varName);
+	return varName;
+}
+
+const allocateVarNames = ({
+	ids,
+	candidate,
+	suffix,
+	usedNames,
+}: {
+	ids: string[];
+	candidate: (id: string) => string;
+	suffix: string;
+	usedNames: Set<string>;
+}) =>
+	new Map(
+		ids.map((id) => [
+			id,
+			claimVarName({ candidate: candidate(id), suffix, usedNames }),
+		]),
+	);
+
+/** Allocates unique variable names in declaration order. */
 export function resolveVarNames(
 	featureIds: string[],
 	planIds: string[],
 	variantIds: string[] = [],
+	{
+		rewardIds = [],
+		referralProgramIds = [],
+	}: {
+		rewardIds?: string[];
+		referralProgramIds?: string[];
+	} = {},
 ): {
 	featureVarMap: Map<string, string>;
 	planVarMap: Map<string, string>;
 	variantVarMap: Map<string, string>;
+	rewardVarMap: Map<string, string>;
+	referralProgramVarMap: Map<string, string>;
 } {
-	const featureVarMap = new Map<string, string>();
-	const planVarMap = new Map<string, string>();
-	const variantVarMap = new Map<string, string>();
+	const usedNames = new Set<string>();
+	const featureVarMap = allocateVarNames({
+		ids: featureIds,
+		candidate: featureIdToVarName,
+		suffix: "Feature",
+		usedNames,
+	});
+	const planVarMap = allocateVarNames({
+		ids: planIds,
+		candidate: planIdToVarName,
+		suffix: "Plan",
+		usedNames,
+	});
+	const variantVarMap = allocateVarNames({
+		ids: variantIds,
+		candidate: variantIdToVarName,
+		suffix: "Variant",
+		usedNames,
+	});
+	const rewardVarMap = allocateVarNames({
+		ids: rewardIds,
+		candidate: (id) => idToVarName(`reward-${id}`),
+		suffix: "Reward",
+		usedNames,
+	});
+	const referralProgramVarMap = allocateVarNames({
+		ids: referralProgramIds,
+		candidate: (id) => idToVarName(`referral-program-${id}`),
+		suffix: "ReferralProgram",
+		usedNames,
+	});
 
-	for (const id of featureIds) {
-		featureVarMap.set(id, featureIdToVarName(id));
-	}
-
-	const usedNames = new Set(featureVarMap.values());
-
-	for (const id of planIds) {
-		let varName = planIdToVarName(id);
-		if (usedNames.has(varName)) {
-			varName = `${varName}Plan`;
-		}
-		planVarMap.set(id, varName);
-		usedNames.add(varName);
-	}
-
-	for (const id of variantIds) {
-		let varName = variantIdToVarName(id);
-		if (usedNames.has(varName)) {
-			varName = `${varName}Variant`;
-		}
-		variantVarMap.set(id, varName);
-		usedNames.add(varName);
-	}
-
-	return { featureVarMap, planVarMap, variantVarMap };
+	return {
+		featureVarMap,
+		planVarMap,
+		variantVarMap,
+		rewardVarMap,
+		referralProgramVarMap,
+	};
 }
 
 /**

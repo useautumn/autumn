@@ -1,3 +1,4 @@
+/** biome-ignore-all assist/source/organizeImports: schema initialization order avoids a cycle */
 import { CreateFeatureV2ParamsSchema } from "@api/features/crud/createFeatureParams.js";
 import { UpdatePlanParamsV2Schema } from "@api/products/crud/updatePlanParamsV1.js";
 import { MigrationParamsSchema } from "@api/products/crud/migrationParams.js";
@@ -32,9 +33,10 @@ export const CatalogUpdateParamsSchema = z
 		for (const [path, ids] of [
 			[
 				"rewards",
-				rewards?.map(
-					(reward) => reward.coupon?.id ?? reward.feature_grant!.id,
-				) ?? [],
+				rewards?.flatMap((reward) => {
+					const id = reward.coupon?.id ?? reward.feature_grant?.id;
+					return id ? [id] : [];
+				}) ?? [],
 			],
 			["referral_programs", referral_programs?.map(({ id }) => id) ?? []],
 		] as const) {

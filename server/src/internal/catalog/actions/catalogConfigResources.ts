@@ -70,6 +70,13 @@ const comparableReward = (
 		return comparable({
 			coupon: {
 				...reward.coupon,
+				duration: {
+					...reward.coupon.duration,
+					length:
+						reward.coupon.duration.type === "months"
+							? reward.coupon.duration.length
+							: null,
+				},
 				promo_codes: reward.coupon.promo_codes.map((code) => ({
 					...code,
 					global_max_redemption: code.global_max_redemption ?? null,

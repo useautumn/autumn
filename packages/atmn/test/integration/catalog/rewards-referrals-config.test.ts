@@ -11,9 +11,6 @@ import {
 } from "../utils/atmnTestWorkspace.js";
 
 test("atmn pushes, redeems, pulls, and re-pushes reward config", async () => {
-	if (process.env.AUTUMN_TEST_BASE_URL) {
-		process.env.ATMN_BACKEND_URL = process.env.AUTUMN_TEST_BASE_URL;
-	}
 	const suffix = Date.now();
 	const featureId = `atmn_referral_credits_${suffix}`;
 	const couponId = `atmn_launch_discount_${suffix}`;
@@ -45,6 +42,7 @@ export const referrals = referralProgram({
 	id: '${programId}', rewardId: referralReward.id,
 	redeemOn: 'customer_creation', receivedBy: 'all', maxRedemptions: 5,
 });
+export const customMetadata = { owner: 'atmn-e2e' };
 `,
 	);
 	const push = () =>
@@ -80,7 +78,7 @@ export const referrals = referralProgram({
 	}
 
 	await runAtmnWorkspaceCli({
-		args: ["--force", "--no-declaration-file"],
+		args: ["--no-declaration-file"],
 		command: "pull",
 		headless: true,
 		workspace,
@@ -89,5 +87,6 @@ export const referrals = referralProgram({
 	expect(pulled).toContain(couponId);
 	expect(pulled).toContain(rewardId);
 	expect(pulled).toContain("referralProgram(");
+	expect(pulled).toContain("customMetadata");
 	await push();
 });

@@ -5,3 +5,10 @@ export const ListReferralProgramsParamsSchema = z.object({}).strict();
 export const ListReferralProgramsResponseSchema = z.object({
 	referral_programs: z.array(ApiReferralProgramV0Schema),
 });
+
+export type ListReferralProgramsParams = z.infer<
+	typeof ListReferralProgramsParamsSchema
+>;
+export type ListReferralProgramsResponse = z.infer<
+	typeof ListReferralProgramsResponseSchema
+>;

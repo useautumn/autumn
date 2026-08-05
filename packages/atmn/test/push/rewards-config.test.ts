@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
-import { referralProgram, reward } from "../../src/compose/index.js";
 import { buildCatalogUpdateParams } from "../../src/commands/push/push.js";
+import { referralProgram, reward } from "../../src/compose/index.js";
 import { buildConfigFile } from "../../src/lib/transforms/sdkToCode/configFile.js";
 
 describe("reward config", () => {
@@ -48,5 +48,25 @@ describe("reward config", () => {
 		expect(code).toContain("reward(");
 		expect(code).toContain("referralProgram(");
 		expect(code).toContain("featureId: 'credits'");
+	});
+
+	test("rejects invalid monthly reward durations", () => {
+		for (const length of [0, 1.5]) {
+			const invalidReward = reward({
+				id: "launch-discount",
+				name: "Launch discount",
+				type: "percentage_discount",
+				value: 20,
+				duration: { type: "months", length },
+			});
+			expect(() =>
+				buildCatalogUpdateParams({
+					features: [],
+					plans: [],
+					rewards: [invalidReward],
+					referralPrograms: [],
+				}),
+			).toThrow("Month reward duration length must be a positive integer");
+		}
 	});
 });

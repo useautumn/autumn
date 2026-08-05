@@ -1,5 +1,5 @@
+import type { ListReferralProgramsResponse } from "../../../../../../shared/api/referralPrograms/referralProgramsListOpModels.js";
 import type { ApiRewardsListV0 } from "../../../../../../shared/api/rewards/rewardsListOpModels.js";
-import type { ApiReferralProgramV0 } from "../../../../../../shared/api/referralPrograms/components/apiReferralProgramV0.js";
 import { request } from "../client.js";
 
 export const fetchRewards = ({ secretKey }: { secretKey: string }) =>
@@ -12,7 +12,7 @@ export const fetchRewards = ({ secretKey }: { secretKey: string }) =>
 	});
 
 export const fetchReferralPrograms = ({ secretKey }: { secretKey: string }) =>
-	request<{ referral_programs: ApiReferralProgramV0[] }>({
+	request<ListReferralProgramsResponse>({
 		method: "POST",
 		path: "/v1/referral_programs.list",
 		secretKey,

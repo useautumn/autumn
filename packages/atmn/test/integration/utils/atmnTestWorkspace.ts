@@ -489,6 +489,8 @@ export const runAtmnWorkspaceCli = async ({
 			cwd: workspace.workspaceDir,
 			env: {
 				...process.env,
+				ATMN_BACKEND_URL:
+					process.env.AUTUMN_TEST_BASE_URL ?? process.env.ATMN_BACKEND_URL,
 				ATMN_DISABLE_AUTH_RECOVERY: "1",
 				AUTUMN_SECRET_KEY: workspace.secretKey,
 			},

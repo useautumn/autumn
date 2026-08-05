@@ -5,9 +5,9 @@ import type {
 	Plan,
 	PlanItem,
 	PlanItemFilter,
-	Variant,
 	ReferralProgram,
 	Reward,
+	Variant,
 } from "../../compose/models/index.js";
 import type {
 	CatalogPreviewUpdateResponse,
@@ -777,14 +777,10 @@ function collectVariantPlanIds(plans: Plan[]): string[] {
 
 function collectSkippedPropagationVariantIds({
 	plans,
-	rewards = [],
-	referralPrograms = [],
 	preview,
 	variantPropagationSelections,
 }: {
 	plans: Plan[];
-	rewards?: Reward[];
-	referralPrograms?: ReferralProgram[];
 	preview: CatalogPreviewUpdateResponse;
 	variantPropagationSelections: VariantPropagationSelections;
 }) {
@@ -835,6 +831,8 @@ async function syncSkippedPropagationVariantsToConfig({
 	cwd,
 	features,
 	plans,
+	rewards,
+	referralPrograms,
 	preview,
 	secretKey,
 	variantPropagationSelections,
@@ -842,6 +840,8 @@ async function syncSkippedPropagationVariantsToConfig({
 	cwd: string;
 	features: Feature[];
 	plans: Plan[];
+	rewards: Reward[];
+	referralPrograms: ReferralProgram[];
 	preview: CatalogPreviewUpdateResponse;
 	secretKey: string;
 	variantPropagationSelections: VariantPropagationSelections;
@@ -879,7 +879,13 @@ async function syncSkippedPropagationVariantsToConfig({
 	});
 
 	if (changed) {
-		await writeConfig(features, nextPlans, cwd);
+		await writeConfig({
+			features,
+			plans: nextPlans,
+			cwd,
+			rewards,
+			referralPrograms,
+		});
 	}
 }
 
@@ -1168,6 +1174,8 @@ export async function pushCatalog({
 			cwd,
 			features,
 			plans,
+			rewards: rewards ?? [],
+			referralPrograms: referralPrograms ?? [],
 			preview: resolvedPreview,
 			secretKey,
 			variantPropagationSelections,
