@@ -1,4 +1,5 @@
 import type { Redis } from "ioredis";
+import { isRedisReadyWithStandby } from "@/external/redis/initUtils/standbyRedis.js";
 import { tryRedisWrite } from "@/utils/cacheUtils/cacheUtils.js";
 import { buildSharedFullSubjectBalanceKey } from "../../builders/buildSharedFullSubjectBalanceKey.js";
 import { AGGREGATED_BALANCE_FIELD } from "../../config/fullSubjectCacheConfig.js";
@@ -24,7 +25,7 @@ export const invalidateCustomerEntitlementBalance = async ({
 		!customerId ||
 		!featureId ||
 		!customerEntitlementId ||
-		redisV2.status !== "ready"
+		!isRedisReadyWithStandby(redisV2)
 	) {
 		return;
 	}

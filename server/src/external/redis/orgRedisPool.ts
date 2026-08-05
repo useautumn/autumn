@@ -8,6 +8,7 @@ import { decryptData } from "@/utils/encryptUtils.js";
 import { getReachableDragonflyUrl } from "./getReachableDragonflyUrl.js";
 import { createStandbyRedisConnection, currentRegion } from "./initRedis.js";
 import { REDIS_V2_COMMAND_TIMEOUT_MS } from "./initUtils/createRedisClient.js";
+import { forEachRedisWithStandby } from "./initUtils/standbyRedis.js";
 import { resolveRedisV2 } from "./resolveRedisV2.js";
 
 export type OrgWithRedisConfig = {
@@ -41,12 +42,14 @@ const createOrgRedisConnection = ({
 		commandTimeout: REDIS_V2_COMMAND_TIMEOUT_MS,
 	});
 
-	instance.on("error", (error) => {
-		logger.error(`[OrgRedis] org=${orgId}: ${error.message}`);
-	});
+	forEachRedisWithStandby(instance, (connection) => {
+		connection.on("error", (error) => {
+			logger.error(`[OrgRedis] org=${orgId}: ${error.message}`);
+		});
 
-	instance.on("ready", () => {
-		logger.info(`[OrgRedis] org=${orgId}: connected`);
+		connection.on("ready", () => {
+			logger.info(`[OrgRedis] org=${orgId}: connected`);
+		});
 	});
 
 	return instance;
@@ -83,7 +86,7 @@ export const getOrgRedis = ({ org }: { org: OrgWithRedisConfig }): Redis => {
 	const existing = pool.get(org.id);
 	if (existing) {
 		if (existing.url === org.redis_config.url) return existing.instance;
-		existing.instance.disconnect();
+		forEachRedisWithStandby(existing.instance, (c) => c.disconnect());
 		pool.delete(org.id);
 	}
 
@@ -115,7 +118,7 @@ export const getOrgRedis = ({ org }: { org: OrgWithRedisConfig }): Redis => {
 export const removeOrgRedis = ({ orgId }: { orgId: string }): void => {
 	const existing = pool.get(orgId);
 	if (!existing) return;
-	existing.instance.disconnect();
+	forEachRedisWithStandby(existing.instance, (c) => c.disconnect());
 	pool.delete(orgId);
 };
 

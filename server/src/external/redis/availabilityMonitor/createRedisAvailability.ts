@@ -3,7 +3,6 @@ import type { Redis } from "ioredis";
 import { logger } from "@/external/logtail/logtailUtils.js";
 import { withTimeout } from "@/utils/withTimeout.js";
 import { waitForRedisReady } from "../initUtils/redisWarmup.js";
-import { describeRedisConnections } from "../initUtils/createStandbyRedisRouter.js";
 
 const REDIS_ERROR_LOG_INTERVAL_MS = 30_000;
 const REDIS_PROBE_INTERVAL_MS = 2_000;
@@ -141,7 +140,6 @@ export const createRedisAvailability = ({
 
 		redisAvailabilityState = state;
 		lastAvailabilityLogAt = now;
-		const redis = getRedis();
 
 		logger[state === "healthy" ? "info" : "warn"](
 			state === "healthy"
@@ -151,8 +149,7 @@ export const createRedisAvailability = ({
 				type: logType,
 				previousState,
 				state,
-				redisStatus: redis.status,
-				redisConnections: describeRedisConnections(redis),
+				redisStatus: getRedis().status,
 				probeRedisStatus: getProbeRedisStatus(),
 				consecutiveFailures,
 				consecutiveSuccesses,
