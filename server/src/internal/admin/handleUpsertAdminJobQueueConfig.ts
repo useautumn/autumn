@@ -1,7 +1,7 @@
-import { createRoute } from "@/honoMiddlewares/routeHandler.js";
 import { Scopes } from "@autumn/shared";
-import { JobQueueConfigSchema } from "@/internal/misc/jobQueues/jobQueueSchemas.js";
-import { updateFullJobQueueConfig } from "@/internal/misc/jobQueues/jobQueueStore.js";
+import { createRoute } from "@/honoMiddlewares/routeHandler.js";
+import { JobQueueConfigSchema } from "@/internal/misc/edgeConfigs/jobQueues/jobQueueSchemas.js";
+import { updateFullJobQueueConfig } from "@/internal/misc/edgeConfigs/jobQueues/jobQueueStore.js";
 
 export const handleUpsertAdminJobQueueConfig = createRoute({
 	scopes: [Scopes.Superuser],

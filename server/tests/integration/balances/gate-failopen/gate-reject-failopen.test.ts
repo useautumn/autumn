@@ -36,7 +36,7 @@ const { invalidateCachedFullSubject } = await import(
 	"@/internal/customers/cache/fullSubject/actions/invalidate/invalidateFullSubject.js"
 );
 const { _setFullSubjectGateConfigForTesting } = await import(
-	"@/internal/misc/fullSubjectGateEdgeConfig/fullSubjectGateEdgeConfigStore.js"
+	"@/internal/misc/edgeConfigs/fullSubjectGateEdgeConfig/fullSubjectGateEdgeConfigStore.js"
 );
 const { primeRedisV2Monitor } = await import(
 	"@/external/redis/availabilityMonitor/redisV2Availability.js"

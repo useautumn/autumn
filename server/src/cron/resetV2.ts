@@ -60,7 +60,7 @@ const runResetV2 = async ({
 	environment: ResetEnvironment;
 }) => {
 	await import("../sentry.js");
-	await import("../internal/misc/resetJobV2/resetJobV2Store.js");
+	await import("../internal/misc/edgeConfigs/resetJobV2/resetJobV2Store.js");
 
 	const { initDrizzle } = await import("../db/initDrizzle.js");
 	const { startPgPoolMonitor, stopPgPoolMonitor } = await import(
@@ -71,10 +71,10 @@ const runResetV2 = async ({
 		"../internal/balances/batchReset/runResetLoopV2.js"
 	);
 	const { getResetJobV2Config, getResetJobV2ConfigStatus } = await import(
-		"../internal/misc/resetJobV2/resetJobV2Store.js"
+		"../internal/misc/edgeConfigs/resetJobV2/resetJobV2Store.js"
 	);
 	const { startAllEdgeConfigPolling, stopAllEdgeConfigPolling } = await import(
-		"../internal/misc/edgeConfig/edgeConfigRegistry.js"
+		"../internal/misc/edgeConfigs/edgeConfigRegistry.js"
 	);
 
 	await startAllEdgeConfigPolling({ logger });

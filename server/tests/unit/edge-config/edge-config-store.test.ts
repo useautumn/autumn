@@ -2,7 +2,7 @@ import { afterEach, describe, expect, jest, test } from "bun:test";
 import type { S3Client } from "@aws-sdk/client-s3";
 import { z } from "zod/v4";
 import { ADMIN_EDGE_CONFIG_TIMESTAMP_KEY } from "@/external/aws/s3/adminS3Config.js";
-import { createEdgeConfigStore } from "@/internal/misc/edgeConfig/edgeConfigStore.js";
+import { createEdgeConfigStore } from "@/internal/misc/edgeConfigs/edgeConfigStore.js";
 
 const TestConfigSchema = z.object({
 	enabled: z.boolean().default(false),

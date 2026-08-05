@@ -3,8 +3,8 @@ import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import {
 	getRampDestinationRedis,
 	isCacheV2RampActive,
-} from "@/internal/misc/cacheV2Ramp/index.js";
-import { getActiveRedisV2Instance } from "@/internal/misc/redisV2Cache/redisV2CacheStore.js";
+} from "@/internal/misc/edgeConfigs/cacheV2Ramp/index.js";
+import { getActiveRedisV2Instance } from "@/internal/misc/edgeConfigs/redisV2Cache/redisV2CacheStore.js";
 import { redisV2 as redisV2Primary } from "../initRedisV2.js";
 import { getOrgRedis } from "../orgRedisPool.js";
 import { resolveRedisV2 } from "../resolveRedisV2.js";

@@ -1,6 +1,6 @@
 import type { Context, Next } from "hono";
 import type { HonoEnv } from "@/honoUtils/HonoEnv.js";
-import { computeRolloutSnapshot } from "@/internal/misc/rollouts/rolloutUtils.js";
+import { computeRolloutSnapshot } from "@/internal/misc/edgeConfigs/rollouts/rolloutUtils.js";
 
 /**
  * Computes the rollout snapshot once per request and stores it on ctx.

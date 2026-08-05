@@ -2,7 +2,7 @@ import { ErrCode, RecaseError } from "@autumn/shared";
 import { claimDynamoIdempotencyKey } from "@/external/aws/dynamodb/idempotencyKeys/operations/claimDynamoIdempotencyKey.js";
 import { claimRedisIdempotencyKey } from "@/external/redis/actions/idempotencyKeys/operations/claimRedisIdempotencyKey.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
-import { isIdempotencyDynamoReadEnabled } from "@/internal/misc/miscellaneousEdgeConfig/miscellaneousEdgeConfigStore.js";
+import { isIdempotencyDynamoReadEnabled } from "@/internal/misc/edgeConfigs/miscellaneousEdgeConfig/miscellaneousEdgeConfigStore.js";
 import { buildIdempotencyStorageKey } from "../idempotencyKeyUtils.js";
 
 /**

@@ -4,7 +4,7 @@ import {
 	getFullSubjectGateConfigFromSource,
 	getRuntimeFullSubjectGateConfig,
 	getRuntimeFullSubjectGateConfigStatus,
-} from "@/internal/misc/fullSubjectGateEdgeConfig/fullSubjectGateEdgeConfigStore.js";
+} from "@/internal/misc/edgeConfigs/fullSubjectGateEdgeConfig/fullSubjectGateEdgeConfigStore.js";
 
 export const handleGetAdminFullSubjectGateConfig = createRoute({
 	scopes: [Scopes.Superuser],

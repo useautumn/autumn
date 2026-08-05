@@ -4,7 +4,7 @@ import {
 	_setFullSubjectGateEwmaForTesting,
 	runWithFullSubjectGate,
 } from "@/internal/customers/repos/getFullSubject/getFullSubjectGate.js";
-import { _setFullSubjectGateConfigForTesting } from "@/internal/misc/fullSubjectGateEdgeConfig/fullSubjectGateEdgeConfigStore.js";
+import { _setFullSubjectGateConfigForTesting } from "@/internal/misc/edgeConfigs/fullSubjectGateEdgeConfig/fullSubjectGateEdgeConfigStore.js";
 
 const REPLICA_LANE_WIDE_OPEN = {
 	per_customer_limit: 100,

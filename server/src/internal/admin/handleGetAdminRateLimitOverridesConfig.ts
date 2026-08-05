@@ -1,10 +1,10 @@
 import { Scopes } from "@autumn/shared";
 import { createRoute } from "@/honoMiddlewares/routeHandler.js";
-import { RATE_LIMIT_CONFIGS } from "@/internal/misc/rateLimiter/rateLimitConfigs.js";
+import { RATE_LIMIT_CONFIGS } from "@/internal/misc/edgeConfigs/rateLimiter/rateLimitConfigs.js";
 import {
 	getRateLimitOverridesFromSource,
 	getRuntimeRateLimitOverridesStatus,
-} from "@/internal/misc/rateLimiter/rateLimitOverridesStore.js";
+} from "@/internal/misc/edgeConfigs/rateLimiter/rateLimitOverridesStore.js";
 
 export const handleGetAdminRateLimitOverridesConfig = createRoute({
 	scopes: [Scopes.Superuser],

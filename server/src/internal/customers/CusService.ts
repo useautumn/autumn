@@ -46,11 +46,11 @@ import {
 import { hydrateFullCustomerLicenses } from "@/internal/licenses/actions/hydrateFullCustomerLicenses.js";
 import { checkPendingMigrationsForCustomer } from "@/internal/migrations/v2/lazy/checkPendingMigrationsForCustomer.js";
 import { withSpan } from "../analytics/tracer/spanUtils.js";
+import { isOnNewFlatCusModel } from "../misc/edgeConfigs/miscellaneousEdgeConfig/miscellaneousEdgeConfigStore.js";
 import {
 	getOrgCusProductLimit,
 	getOrgEntitiesLimit,
-} from "../misc/edgeConfig/orgLimitsStore.js";
-import { isOnNewFlatCusModel } from "../misc/miscellaneousEdgeConfig/miscellaneousEdgeConfigStore.js";
+} from "../misc/edgeConfigs/orgLimits/orgLimitsStore.js";
 import { resetCustomerEntitlements } from "./actions/resetCustomerEntitlements/resetCustomerEntitlements.js";
 import { getCursorPaginatedFullCusQuery } from "./cursorPaginatedFullCusQuery.js";
 import {

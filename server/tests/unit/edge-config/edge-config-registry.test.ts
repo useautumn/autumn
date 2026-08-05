@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, jest, test } from "bun:test";
-import { createEdgeConfigRegistry } from "@/internal/misc/edgeConfig/edgeConfigRegistry.js";
+import { createEdgeConfigRegistry } from "@/internal/misc/edgeConfigs/edgeConfigRegistry.js";
 
 const registries: ReturnType<typeof createEdgeConfigRegistry>[] = [];
 

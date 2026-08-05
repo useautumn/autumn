@@ -4,7 +4,7 @@ import {
 	isFullSubjectGateRejection,
 	runWithFullSubjectGate,
 } from "@/internal/customers/repos/getFullSubject/getFullSubjectGate.js";
-import { _setFullSubjectGateConfigForTesting } from "@/internal/misc/fullSubjectGateEdgeConfig/fullSubjectGateEdgeConfigStore.js";
+import { _setFullSubjectGateConfigForTesting } from "@/internal/misc/edgeConfigs/fullSubjectGateEdgeConfig/fullSubjectGateEdgeConfigStore.js";
 
 describe("isFullSubjectGateRejection", () => {
 	test("matches a rejection thrown by the real gate", async () => {

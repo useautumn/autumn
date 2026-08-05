@@ -7,8 +7,8 @@ import {
 	setCustomerCreationRecoveryStage,
 } from "@/internal/customers/recovery/customerCreationRecoveryStage.js";
 import { queueFailedCustomerCreation } from "@/internal/customers/recovery/queueFailedCustomerCreation.js";
-import { isRedisFallbackToDbEnabled } from "@/internal/misc/miscellaneousEdgeConfig/miscellaneousEdgeConfigStore.js";
-import { isFullSubjectRolloutEnabled } from "@/internal/misc/rollouts/fullSubjectRolloutUtils.js";
+import { isRedisFallbackToDbEnabled } from "@/internal/misc/edgeConfigs/miscellaneousEdgeConfig/miscellaneousEdgeConfigStore.js";
+import { isFullSubjectRolloutEnabled } from "@/internal/misc/edgeConfigs/rollouts/fullSubjectRolloutUtils.js";
 import { getApiCustomerV2 } from "../cusUtils/getApiCustomerV2/index.js";
 import { ensureStripeCustomerFromCustomerData } from "./ensureStripeCustomerFromCustomerData.js";
 

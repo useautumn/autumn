@@ -3,7 +3,7 @@ import { createRoute } from "@/honoMiddlewares/routeHandler.js";
 import {
 	getResetJobConfigFromSource,
 	getResetJobConfigStatus,
-} from "@/internal/misc/resetJob/resetJobStore.js";
+} from "@/internal/misc/edgeConfigs/resetJob/resetJobStore.js";
 
 export const handleGetAdminResetJobConfig = createRoute({
 	scopes: [Scopes.Superuser],

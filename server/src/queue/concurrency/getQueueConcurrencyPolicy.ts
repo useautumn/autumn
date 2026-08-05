@@ -1,5 +1,5 @@
-import { JOB_QUEUE_IDS } from "@/internal/misc/jobQueues/jobQueueStore.js";
-import { getResetJobV2Config } from "@/internal/misc/resetJobV2/resetJobV2Store.js";
+import { JOB_QUEUE_IDS } from "@/internal/misc/edgeConfigs/jobQueues/jobQueueStore.js";
+import { getResetJobV2Config } from "@/internal/misc/edgeConfigs/resetJobV2/resetJobV2Store.js";
 
 export type QueueConcurrencyPolicy = {
 	redisKey: string;

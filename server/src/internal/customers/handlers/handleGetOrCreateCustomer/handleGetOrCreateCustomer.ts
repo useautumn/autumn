@@ -7,12 +7,12 @@ import {
 	CreateCustomerQuerySchema,
 	CustomerDataSchema,
 	CustomerExpand,
-	V0_2_InvoicesAlwaysExpanded,
 	Scopes,
+	V0_2_InvoicesAlwaysExpanded,
 } from "@autumn/shared";
 import { createRoute } from "@/honoMiddlewares/routeHandler.js";
 import { getOrCreateApiCustomerByRollout } from "@/internal/customers/actions/getOrCreateApiCustomerByRollout.js";
-import { applySubjectLookupDbOnly } from "@/internal/misc/miscellaneousEdgeConfig/applySubjectLookupDbOnly.js";
+import { applySubjectLookupDbOnly } from "@/internal/misc/edgeConfigs/miscellaneousEdgeConfig/applySubjectLookupDbOnly.js";
 
 export const handlePostCustomer = createRoute({
 	scopes: [Scopes.Customers.Write],

@@ -5,7 +5,7 @@ import type { Logger } from "@/external/logtail/logtailUtils.js";
 import { getCtxWithCustomerRedis } from "@/external/redis/customerRedisRouting.js";
 import type { HonoEnv } from "@/honoUtils/HonoEnv.js";
 import { FeatureService } from "@/internal/features/FeatureService.js";
-import { computeRolloutSnapshot } from "@/internal/misc/rollouts/rolloutUtils.js";
+import { computeRolloutSnapshot } from "@/internal/misc/edgeConfigs/rollouts/rolloutUtils.js";
 import { OrgService } from "@/internal/orgs/OrgService.js";
 import { logCaughtError } from "@/utils/logging/logCaughtError.js";
 import {

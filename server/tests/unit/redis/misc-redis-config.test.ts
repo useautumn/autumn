@@ -3,7 +3,7 @@ import {
 	MiscRedisConfigSchema,
 	otherMiscRedisInstance,
 	toLegacyMiscRedisInstanceName,
-} from "@/internal/misc/miscRedisConfig/miscRedisConfigSchemas.js";
+} from "@/internal/misc/edgeConfigs/miscRedisConfig/miscRedisConfigSchemas.js";
 
 describe("MiscRedisConfigSchema", () => {
 	test("parses the legacy main-redis-cache payload", () => {

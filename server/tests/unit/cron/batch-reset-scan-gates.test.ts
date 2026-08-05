@@ -21,8 +21,8 @@
 
 import { beforeEach, describe, expect, mock, test } from "bun:test";
 import type { BatchResetQueueDepth } from "@/internal/balances/batchReset/concurrency/getBatchResetQueueDepth.js";
-import { ResetJobV2ConfigSchema } from "@/internal/misc/resetJobV2/resetJobV2Schemas.js";
-import { setResetJobV2ConfigForTesting } from "@/internal/misc/resetJobV2/resetJobV2Store.js";
+import { ResetJobV2ConfigSchema } from "@/internal/misc/edgeConfigs/resetJobV2/resetJobV2Schemas.js";
+import { setResetJobV2ConfigForTesting } from "@/internal/misc/edgeConfigs/resetJobV2/resetJobV2Store.js";
 
 // Queue of depth results the mocked getBatchResetQueueDepth serves in order,
 // repeating the last entry. `null` = no dedicated queue; "error" = SQS throw.

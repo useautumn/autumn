@@ -3,7 +3,7 @@ import { rateLimiter } from "hono-rate-limiter";
 import { logger } from "@/external/logtail/logtailUtils.js";
 import { shouldUseRedis } from "@/external/redis/initRedis.js";
 import type { HonoEnv } from "@/honoUtils/HonoEnv.js";
-import { createRateLimitRedisStore } from "@/internal/misc/rateLimiter/rateLimitRedisStore.js";
+import { createRateLimitRedisStore } from "@/internal/misc/edgeConfigs/rateLimiter/rateLimitRedisStore.js";
 
 export const createRouterRateLimiter = ({
 	keyPrefix,

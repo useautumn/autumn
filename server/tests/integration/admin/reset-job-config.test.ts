@@ -15,7 +15,7 @@ const mockState = {
 	updateCalls: [] as unknown[],
 };
 
-mock.module("@/internal/misc/resetJob/resetJobStore.js", () => ({
+mock.module("@/internal/misc/edgeConfigs/resetJob/resetJobStore.js", () => ({
 	getResetJobConfigFromSource: async () => mockState.config,
 	getResetJobConfigStatus: () => mockState.status,
 	updateResetJobConfig: async ({ config }: { config: unknown }) => {

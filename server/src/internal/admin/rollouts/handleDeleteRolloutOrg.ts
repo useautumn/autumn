@@ -1,7 +1,7 @@
-import { z } from "zod/v4";
 import { Scopes } from "@autumn/shared";
+import { z } from "zod/v4";
 import { createRoute } from "@/honoMiddlewares/routeHandler.js";
-import { removeRolloutOrg } from "@/internal/misc/rollouts/rolloutConfigStore.js";
+import { removeRolloutOrg } from "@/internal/misc/edgeConfigs/rollouts/rolloutConfigStore.js";
 
 export const handleDeleteRolloutOrg = createRoute({
 	scopes: [Scopes.Superuser],

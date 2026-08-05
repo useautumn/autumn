@@ -1,7 +1,7 @@
-import { createRoute } from "@/honoMiddlewares/routeHandler.js";
 import { Scopes } from "@autumn/shared";
-import { StripeSyncConfigSchema } from "@/internal/misc/stripeSync/stripeSyncSchemas.js";
-import { updateFullStripeSyncConfig } from "@/internal/misc/stripeSync/stripeSyncStore.js";
+import { createRoute } from "@/honoMiddlewares/routeHandler.js";
+import { StripeSyncConfigSchema } from "@/internal/misc/edgeConfigs/stripeSync/stripeSyncSchemas.js";
+import { updateFullStripeSyncConfig } from "@/internal/misc/edgeConfigs/stripeSync/stripeSyncStore.js";
 
 export const handleUpsertAdminStripeSyncConfig = createRoute({
 	scopes: [Scopes.Superuser],

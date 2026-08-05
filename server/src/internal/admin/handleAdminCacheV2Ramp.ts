@@ -8,7 +8,7 @@ import {
 	removeCacheV2RampConfig,
 	updateCacheV2RampMigrationPercent,
 	upsertCacheV2RampConnection,
-} from "@/internal/misc/cacheV2Ramp/index.js";
+} from "@/internal/misc/edgeConfigs/cacheV2Ramp/index.js";
 import { encryptData } from "@/utils/encryptUtils.js";
 
 const REDIS_PROTOCOLS = new Set(["redis:", "rediss:"]);

@@ -1,7 +1,7 @@
 import type { Redis } from "ioredis";
 import { logger } from "@/external/logtail/logtailUtils.js";
-import type { MiscRedisInstanceName } from "@/internal/misc/miscRedisConfig/miscRedisConfigSchemas.js";
-import { getMiscRedisConfig } from "@/internal/misc/miscRedisConfig/miscRedisConfigStore.js";
+import type { MiscRedisInstanceName } from "@/internal/misc/edgeConfigs/miscRedisConfig/miscRedisConfigSchemas.js";
+import { getMiscRedisConfig } from "@/internal/misc/edgeConfigs/miscRedisConfig/miscRedisConfigStore.js";
 import { getMiscRedis } from "./getMiscRedis.js";
 import { getMiscBackupRedis, getMiscMainRedis } from "./miscRedisInstances.js";
 

@@ -1,7 +1,7 @@
 import { releaseDynamoIdempotencyKey } from "@/external/aws/dynamodb/idempotencyKeys/operations/releaseDynamoIdempotencyKey.js";
 import { releaseRedisIdempotencyKey } from "@/external/redis/actions/idempotencyKeys/operations/releaseRedisIdempotencyKey.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
-import { isIdempotencyDynamoReadEnabled } from "@/internal/misc/miscellaneousEdgeConfig/miscellaneousEdgeConfigStore.js";
+import { isIdempotencyDynamoReadEnabled } from "@/internal/misc/edgeConfigs/miscellaneousEdgeConfig/miscellaneousEdgeConfigStore.js";
 import { buildIdempotencyStorageKey } from "../idempotencyKeyUtils.js";
 
 /** Mirrors checkIdempotencyKey: the authority store's delete is awaited, the

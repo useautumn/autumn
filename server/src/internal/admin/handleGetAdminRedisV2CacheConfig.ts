@@ -1,9 +1,9 @@
-import { createRoute } from "@/honoMiddlewares/routeHandler.js";
 import { Scopes } from "@autumn/shared";
+import { createRoute } from "@/honoMiddlewares/routeHandler.js";
 import {
 	getActiveRedisV2Instance,
 	getRedisV2CacheStatus,
-} from "@/internal/misc/redisV2Cache/redisV2CacheStore.js";
+} from "@/internal/misc/edgeConfigs/redisV2Cache/redisV2CacheStore.js";
 
 export const handleGetAdminRedisV2CacheConfig = createRoute({
 	scopes: [Scopes.Superuser],

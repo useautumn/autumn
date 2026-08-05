@@ -1,9 +1,9 @@
 import { ErrCode, RecaseError } from "@autumn/shared";
 import type { Context, Next } from "hono";
 import type { HonoEnv } from "@/honoUtils/HonoEnv.js";
-import { getRuntimeRequestBlockEntry } from "@/internal/misc/requestBlocks/requestBlockStore.js";
-import { logRequestResult } from "./requestLogging/logRequestResult.js";
+import { getRuntimeRequestBlockEntry } from "@/internal/misc/edgeConfigs/requestBlocks/requestBlockStore.js";
 import { matchRoute } from "./middlewareUtils.js";
+import { logRequestResult } from "./requestLogging/logRequestResult.js";
 
 export const requestBlockMiddleware = async (
 	c: Context<HonoEnv>,

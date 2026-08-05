@@ -17,7 +17,7 @@ import type { AutumnContext, RequestContext } from "@/honoUtils/HonoEnv.js";
 import {
 	getOrgCusProductLimit,
 	getOrgEntitiesLimit,
-} from "../misc/edgeConfig/orgLimitsStore.js";
+} from "../misc/edgeConfigs/orgLimits/orgLimitsStore.js";
 import { triggerBatchResetCustomerEntitlements } from "./actions/resetCustomerEntitlements/triggerBatchResetCustomerEntitlements.js";
 import { CusSearchService } from "./CusSearchService.js";
 import { getCursorPaginatedFullCusQuery } from "./cursorPaginatedFullCusQuery.js";

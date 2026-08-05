@@ -26,7 +26,7 @@ import {
 	getRequestBucket,
 	resolveMiscRedis,
 } from "@/external/redis/miscCache/resolveMiscRedis.js";
-import { _setMiscRedisConfigForTesting } from "@/internal/misc/miscRedisConfig/miscRedisConfigStore.js";
+import { _setMiscRedisConfigForTesting } from "@/internal/misc/edgeConfigs/miscRedisConfig/miscRedisConfigStore.js";
 
 const rampAt = (percent: number) => ({
 	percent,

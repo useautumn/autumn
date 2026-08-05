@@ -1,11 +1,11 @@
 import { Scopes } from "@autumn/shared";
 import { getMiscBackupRedis } from "@/external/redis/initRedis.js";
 import { createRoute } from "@/honoMiddlewares/routeHandler.js";
-import { toLegacyMiscRedisInstanceName } from "@/internal/misc/miscRedisConfig/miscRedisConfigSchemas.js";
+import { toLegacyMiscRedisInstanceName } from "@/internal/misc/edgeConfigs/miscRedisConfig/miscRedisConfigSchemas.js";
 import {
 	getActiveMiscRedisInstanceName,
 	getMiscRedisConfigStatus,
-} from "@/internal/misc/miscRedisConfig/miscRedisConfigStore.js";
+} from "@/internal/misc/edgeConfigs/miscRedisConfig/miscRedisConfigStore.js";
 
 /** Legacy route kept for the current admin UI — reports instance names in the
  *  old primary/fallback vocabulary. New tooling uses /misc-redis-config. */

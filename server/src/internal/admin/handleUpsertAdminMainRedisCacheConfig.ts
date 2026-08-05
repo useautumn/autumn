@@ -2,8 +2,8 @@ import { ErrCode, RecaseError, Scopes } from "@autumn/shared";
 import { z } from "zod/v4";
 import { getMiscBackupRedis } from "@/external/redis/initRedis.js";
 import { createRoute } from "@/honoMiddlewares/routeHandler.js";
-import { MiscRedisConfigSchema } from "@/internal/misc/miscRedisConfig/miscRedisConfigSchemas.js";
-import { setActiveMiscRedisInstance } from "@/internal/misc/miscRedisConfig/miscRedisConfigStore.js";
+import { MiscRedisConfigSchema } from "@/internal/misc/edgeConfigs/miscRedisConfig/miscRedisConfigSchemas.js";
+import { setActiveMiscRedisInstance } from "@/internal/misc/edgeConfigs/miscRedisConfig/miscRedisConfigStore.js";
 
 /** Legacy route kept for API compat — accepts the old primary/fallback
  *  vocabulary alongside main/backup. Flipping always clears any ramp. */

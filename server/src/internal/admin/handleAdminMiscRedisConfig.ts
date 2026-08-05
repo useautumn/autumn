@@ -10,7 +10,7 @@ import {
 	startMiscRedisRamp,
 	updateMiscRedisRampPercent,
 	upsertMiscRedisBackupConnection,
-} from "@/internal/misc/miscRedisConfig/miscRedisConfigStore.js";
+} from "@/internal/misc/edgeConfigs/miscRedisConfig/miscRedisConfigStore.js";
 import { encryptData } from "@/utils/encryptUtils.js";
 
 const REDIS_PROTOCOLS = new Set(["redis:", "rediss:"]);

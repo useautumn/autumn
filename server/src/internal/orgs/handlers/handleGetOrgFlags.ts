@@ -1,6 +1,6 @@
-import { createRoute } from "@/honoMiddlewares/routeHandler.js";
 import { Scopes } from "@autumn/shared";
-import { getRuntimeFeatureFlags } from "@/internal/misc/featureFlags/featureFlagStore.js";
+import { createRoute } from "@/honoMiddlewares/routeHandler.js";
+import { getRuntimeFeatureFlags } from "@/internal/misc/edgeConfigs/featureFlags/featureFlagStore.js";
 
 /** GET /v1/orgs/flags — exposes the current feature flags to the frontend. */
 export const handleGetOrgFlags = createRoute({

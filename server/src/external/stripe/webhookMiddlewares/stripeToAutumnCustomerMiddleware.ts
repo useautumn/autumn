@@ -1,7 +1,7 @@
 import { RELEVANT_STATUSES } from "@autumn/shared";
 import type { Context, Next } from "hono";
 import { getCtxWithCustomerRedis } from "@/external/redis/customerRedisRouting.js";
-import { computeRolloutSnapshot } from "@/internal/misc/rollouts/rolloutUtils.js";
+import { computeRolloutSnapshot } from "@/internal/misc/edgeConfigs/rollouts/rolloutUtils.js";
 import { CusService } from "../../../internal/customers/CusService";
 import type {
 	StripeWebhookContext,

@@ -66,7 +66,7 @@ import { setOnMiscRedisTargets } from "@/external/redis/miscCache/setOnMiscRedis
 import { acquireLock } from "@/external/redis/utils/lockUtils/acquireLock.js";
 import { clearLock } from "@/external/redis/utils/lockUtils/clearLock.js";
 import { refreshLockLease } from "@/external/redis/utils/lockUtils/refreshLockLease.js";
-import { _setMiscRedisConfigForTesting } from "@/internal/misc/miscRedisConfig/miscRedisConfigStore.js";
+import { _setMiscRedisConfigForTesting } from "@/internal/misc/edgeConfigs/miscRedisConfig/miscRedisConfigStore.js";
 
 const withRamp = () => {
 	_setMiscRedisConfigForTesting({

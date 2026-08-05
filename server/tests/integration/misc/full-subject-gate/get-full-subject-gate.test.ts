@@ -8,7 +8,7 @@ import {
 	runWithFullSubjectGate,
 	toPerProcessLimit,
 } from "@/internal/customers/repos/getFullSubject/getFullSubjectGate.js";
-import { _setFullSubjectGateConfigForTesting } from "@/internal/misc/fullSubjectGateEdgeConfig/fullSubjectGateEdgeConfigStore.js";
+import { _setFullSubjectGateConfigForTesting } from "@/internal/misc/edgeConfigs/fullSubjectGateEdgeConfig/fullSubjectGateEdgeConfigStore.js";
 
 beforeAll(() => {
 	_setFullSubjectGateConfigForTesting({

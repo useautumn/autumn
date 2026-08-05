@@ -8,7 +8,7 @@ import {
 } from "@autumn/shared";
 import { createRoute } from "@/honoMiddlewares/routeHandler";
 import { updateBalanceV2 } from "@/internal/balances/updateBalance/v2/updateBalanceV2.js";
-import { isFullSubjectRolloutEnabled } from "@/internal/misc/rollouts/fullSubjectRolloutUtils.js";
+import { isFullSubjectRolloutEnabled } from "@/internal/misc/edgeConfigs/rollouts/fullSubjectRolloutUtils.js";
 
 export const handleUpdateBalance = createRoute({
 	scopes: [Scopes.Balances.Write],

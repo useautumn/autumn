@@ -6,10 +6,8 @@ import {
 } from "@autumn/shared";
 import { shed503OnTransientError } from "@/db/shed503OnTransientError.js";
 import { createRoute } from "@/honoMiddlewares/routeHandler.js";
-import { applySubjectLookupDbOnly } from "@/internal/misc/miscellaneousEdgeConfig/applySubjectLookupDbOnly.js";
-import {
-	isSubjectReadSingleflightEnabled,
-} from "@/internal/misc/miscellaneousEdgeConfig/miscellaneousEdgeConfigStore.js";
+import { applySubjectLookupDbOnly } from "@/internal/misc/edgeConfigs/miscellaneousEdgeConfig/applySubjectLookupDbOnly.js";
+import { isSubjectReadSingleflightEnabled } from "@/internal/misc/edgeConfigs/miscellaneousEdgeConfig/miscellaneousEdgeConfigStore.js";
 import { findCustomerForEntity } from "../../actions/findCustomer.js";
 import { getApiEntityByRollout } from "../../actions/getApiEntityByRollout.js";
 

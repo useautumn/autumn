@@ -5,7 +5,7 @@ import { startPgPoolMonitor, stopPgPoolMonitor } from "../db/pgPoolMonitor.js";
 import { runDbProbes } from "../db/probes/runDbProbes.js";
 import { logger } from "../external/logtail/logtailUtils.js";
 import { runResetLoopV2 } from "../internal/balances/batchReset/runResetLoopV2.js";
-import { stopAllEdgeConfigPolling } from "../internal/misc/edgeConfig/edgeConfigRegistry.js";
+import { stopAllEdgeConfigPolling } from "../internal/misc/edgeConfigs/edgeConfigRegistry.js";
 import {
 	describeSlotGate,
 	isActiveSlot,

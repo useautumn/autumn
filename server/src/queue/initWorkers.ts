@@ -20,7 +20,7 @@ import {
 import {
 	isJobQueueEnabled,
 	JOB_QUEUE_IDS,
-} from "@/internal/misc/jobQueues/jobQueueStore.js";
+} from "@/internal/misc/edgeConfigs/jobQueues/jobQueueStore.js";
 import { generateId } from "@/utils/genUtils.js";
 import { withTimeout } from "@/utils/withTimeout.js";
 import { hatchet } from "../external/hatchet/initHatchet.js";

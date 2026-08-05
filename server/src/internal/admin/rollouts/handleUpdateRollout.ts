@@ -1,7 +1,7 @@
-import { z } from "zod/v4";
 import { Scopes } from "@autumn/shared";
+import { z } from "zod/v4";
 import { createRoute } from "@/honoMiddlewares/routeHandler.js";
-import { updateRolloutPercent } from "@/internal/misc/rollouts/rolloutConfigStore.js";
+import { updateRolloutPercent } from "@/internal/misc/edgeConfigs/rollouts/rolloutConfigStore.js";
 
 export const handleUpdateRollout = createRoute({
 	scopes: [Scopes.Superuser],

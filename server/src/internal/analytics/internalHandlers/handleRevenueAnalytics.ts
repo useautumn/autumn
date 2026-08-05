@@ -1,7 +1,7 @@
 import { ErrCode, Scopes } from "@autumn/shared";
 import { z } from "zod/v4";
 import { createRoute } from "@/honoMiddlewares/routeHandler.js";
-import { getRuntimeFeatureFlag } from "@/internal/misc/featureFlags/featureFlagStore.js";
+import { getRuntimeFeatureFlag } from "@/internal/misc/edgeConfigs/featureFlags/featureFlagStore.js";
 import RecaseError from "@/utils/errorUtils.js";
 import {
 	getArpc,

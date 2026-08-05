@@ -1,10 +1,10 @@
 import { Scopes } from "@autumn/shared";
 import { createRoute } from "@/honoMiddlewares/routeHandler.js";
-import { RESET_JOB_V2_CONFIG_LIMITS } from "@/internal/misc/resetJobV2/resetJobV2Schemas.js";
+import { RESET_JOB_V2_CONFIG_LIMITS } from "@/internal/misc/edgeConfigs/resetJobV2/resetJobV2Schemas.js";
 import {
 	getResetJobV2ConfigFromSource,
 	getResetJobV2ConfigStatus,
-} from "@/internal/misc/resetJobV2/resetJobV2Store.js";
+} from "@/internal/misc/edgeConfigs/resetJobV2/resetJobV2Store.js";
 
 export const handleGetAdminResetJobV2Config = createRoute({
 	scopes: [Scopes.Superuser],

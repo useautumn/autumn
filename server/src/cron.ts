@@ -6,14 +6,16 @@ await warmupRegionalRedis();
 
 // Edge config modules self-register on import (cron reads redis-v2-cache
 // so resolveRedisV2 picks the right instance on each ctx build).
-await import("./internal/misc/redisV2Cache/redisV2CacheStore.js");
-await import("./internal/misc/miscRedisConfig/miscRedisConfigStore.js");
-await import("./internal/misc/cacheV2Ramp/cacheV2RampStore.js");
-await import("./internal/misc/resetJob/resetJobStore.js");
-await import("./internal/misc/resetJobV2/resetJobV2Store.js");
+await import("./internal/misc/edgeConfigs/redisV2Cache/redisV2CacheStore.js");
+await import(
+	"./internal/misc/edgeConfigs/miscRedisConfig/miscRedisConfigStore.js"
+);
+await import("./internal/misc/edgeConfigs/cacheV2Ramp/cacheV2RampStore.js");
+await import("./internal/misc/edgeConfigs/resetJob/resetJobStore.js");
+await import("./internal/misc/edgeConfigs/resetJobV2/resetJobV2Store.js");
 const { logger } = await import("./external/logtail/logtailUtils.js");
 const { startAllEdgeConfigPolling } = await import(
-	"./internal/misc/edgeConfig/edgeConfigRegistry.js"
+	"./internal/misc/edgeConfigs/edgeConfigRegistry.js"
 );
 await startAllEdgeConfigPolling({ logger });
 

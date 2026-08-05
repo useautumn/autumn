@@ -1,9 +1,9 @@
 import { afterEach, describe, expect, test } from "bun:test";
-import { AsyncTrackConfigSchema } from "@/internal/misc/asyncTrack/asyncTrackSchemas.js";
+import { AsyncTrackConfigSchema } from "@/internal/misc/edgeConfigs/asyncTrack/asyncTrackSchemas.js";
 import {
 	_setAsyncTrackConfigForTesting,
 	isAsyncTrackEnabled,
-} from "@/internal/misc/asyncTrack/asyncTrackStore.js";
+} from "@/internal/misc/edgeConfigs/asyncTrack/asyncTrackStore.js";
 
 afterEach(() => {
 	_setAsyncTrackConfigForTesting({ config: { enabledOrgIds: [] } });

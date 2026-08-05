@@ -3,7 +3,7 @@ import { ApiVersionClass, AppEnv, LATEST_VERSION } from "@autumn/shared";
 import type { SQSClient } from "@aws-sdk/client-sqs";
 import { Hono } from "hono";
 import type { AutumnContext, HonoEnv } from "@/honoUtils/HonoEnv.js";
-import { _setAsyncTrackConfigForTesting } from "@/internal/misc/asyncTrack/asyncTrackStore.js";
+import { _setAsyncTrackConfigForTesting } from "@/internal/misc/edgeConfigs/asyncTrack/asyncTrackStore.js";
 import { getSqsClient } from "@/queue/initSqs.js";
 
 const trackAsyncQueueUrl =

@@ -1,7 +1,7 @@
 import { Scopes } from "@autumn/shared";
 import { createRoute } from "@/honoMiddlewares/routeHandler.js";
-import { MiscellaneousEdgeConfigSchema } from "@/internal/misc/miscellaneousEdgeConfig/miscellaneousEdgeConfigSchemas.js";
-import { updateFullMiscellaneousEdgeConfig } from "@/internal/misc/miscellaneousEdgeConfig/miscellaneousEdgeConfigStore.js";
+import { MiscellaneousEdgeConfigSchema } from "@/internal/misc/edgeConfigs/miscellaneousEdgeConfig/miscellaneousEdgeConfigSchemas.js";
+import { updateFullMiscellaneousEdgeConfig } from "@/internal/misc/edgeConfigs/miscellaneousEdgeConfig/miscellaneousEdgeConfigStore.js";
 
 export const handleUpsertAdminMiscellaneousEdgeConfig = createRoute({
 	scopes: [Scopes.Superuser],

@@ -33,7 +33,7 @@ import { runClearCreditSystemCacheTask } from "@/internal/features/featureAction
 import { generateFeatureDisplay } from "@/internal/features/workflows/generateFeatureDisplay.js";
 import { runMigrationTask } from "@/internal/migrations/runMigrationTask.js";
 import { runRewardMigrationTask } from "@/internal/migrations/runRewardMigrationTask.js";
-import { isBatchResetEnabled } from "@/internal/misc/batchReset/batchResetConfigStore.js";
+import { isBatchResetEnabled } from "@/internal/misc/edgeConfigs/batchReset/batchResetConfigStore.js";
 import { detectBaseVariant } from "@/internal/products/productUtils/detectProductVariant.js";
 import { runTriggerCheckoutReward } from "@/internal/rewards/actions/triggerCheckoutReward.js";
 import { generateId } from "@/utils/genUtils.js";

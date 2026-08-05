@@ -9,7 +9,7 @@ import * as Sentry from "@sentry/bun";
 import pLimit from "p-limit";
 import { buildFullSubjectOrgEnvKey } from "@/internal/customers/cache/fullSubject/builders/buildFullSubjectOrgEnvKey.js";
 import { CusEntService } from "@/internal/customers/cusProducts/cusEnts/CusEntitlementService";
-import { getResetJobConfig } from "@/internal/misc/resetJob/resetJobStore.js";
+import { getResetJobConfig } from "@/internal/misc/edgeConfigs/resetJob/resetJobStore.js";
 import { OrgService } from "@/internal/orgs/OrgService.js";
 import type { CronContext } from "../utils/CronContext";
 import { resetCustomerEntitlement } from "./resetCustomerEntitlement";

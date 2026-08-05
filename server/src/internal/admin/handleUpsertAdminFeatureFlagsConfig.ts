@@ -1,7 +1,7 @@
-import { createRoute } from "@/honoMiddlewares/routeHandler.js";
 import { Scopes } from "@autumn/shared";
-import { FeatureFlagConfigSchema } from "@/internal/misc/featureFlags/featureFlagSchemas.js";
-import { updateFullFeatureFlagConfig } from "@/internal/misc/featureFlags/featureFlagStore.js";
+import { createRoute } from "@/honoMiddlewares/routeHandler.js";
+import { FeatureFlagConfigSchema } from "@/internal/misc/edgeConfigs/featureFlags/featureFlagSchemas.js";
+import { updateFullFeatureFlagConfig } from "@/internal/misc/edgeConfigs/featureFlags/featureFlagStore.js";
 
 export const handleUpsertAdminFeatureFlagsConfig = createRoute({
 	scopes: [Scopes.Superuser],

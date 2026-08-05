@@ -1,9 +1,9 @@
-import { createRoute } from "@/honoMiddlewares/routeHandler.js";
 import { Scopes } from "@autumn/shared";
+import { createRoute } from "@/honoMiddlewares/routeHandler.js";
 import {
 	getRuntimeStripeSyncStatus,
 	getStripeSyncConfigFromSource,
-} from "@/internal/misc/stripeSync/stripeSyncStore.js";
+} from "@/internal/misc/edgeConfigs/stripeSync/stripeSyncStore.js";
 
 export const handleGetAdminStripeSyncConfig = createRoute({
 	scopes: [Scopes.Superuser],

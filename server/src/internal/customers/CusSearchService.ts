@@ -1,10 +1,10 @@
 import {
 	type AppEnv,
 	CusProductStatus,
-	RELEVANT_STATUSES,
 	customerProducts,
 	customers,
 	products,
+	RELEVANT_STATUSES,
 } from "@autumn/shared";
 
 import {
@@ -24,7 +24,7 @@ import {
 import { alias } from "drizzle-orm/pg-core";
 import { planetScaleTag } from "@/db/dbUtils.js";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
-import { getOrgCusProductLimit } from "../misc/edgeConfig/orgLimitsStore.js";
+import { getOrgCusProductLimit } from "../misc/edgeConfigs/orgLimits/orgLimitsStore.js";
 import type { CustomerListFilters } from "./customerListFilters.js";
 import {
 	type DashboardIntervalFilter,

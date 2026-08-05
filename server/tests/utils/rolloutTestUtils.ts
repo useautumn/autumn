@@ -1,9 +1,9 @@
 import { timeout } from "@tests/utils/genUtils.js";
-import { FULL_SUBJECT_ROLLOUT_ID } from "@/internal/misc/rollouts/fullSubjectRolloutUtils.js";
+import { FULL_SUBJECT_ROLLOUT_ID } from "@/internal/misc/edgeConfigs/rollouts/fullSubjectRolloutUtils.js";
 import {
 	removeRolloutOrg,
 	updateRolloutPercent,
-} from "@/internal/misc/rollouts/rolloutConfigStore.js";
+} from "@/internal/misc/edgeConfigs/rollouts/rolloutConfigStore.js";
 
 const POLL_SETTLE_MS = 3000;
 

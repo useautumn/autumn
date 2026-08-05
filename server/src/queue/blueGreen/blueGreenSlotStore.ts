@@ -4,7 +4,7 @@ import {
 	BLUE_GREEN_CRON_ACTIVE_SLOT_KEY,
 } from "@/external/aws/s3/adminS3Config.js";
 import type { Logger } from "@/external/logtail/logtailUtils.js";
-import { createEdgeConfigStore } from "@/internal/misc/edgeConfig/edgeConfigStore.js";
+import { createEdgeConfigStore } from "@/internal/misc/edgeConfigs/edgeConfigStore.js";
 import {
 	type ActiveSlotConfig,
 	ActiveSlotConfigSchema,

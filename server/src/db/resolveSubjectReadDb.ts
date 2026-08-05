@@ -1,7 +1,7 @@
 import { logger } from "@/external/logtail/logtailUtils.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { isCustomerRecentlyUpdated } from "@/internal/customers/customerLsns/isCustomerRecentlyUpdated.js";
-import { getRuntimeFullSubjectGateConfig } from "@/internal/misc/fullSubjectGateEdgeConfig/fullSubjectGateEdgeConfigStore.js";
+import { getRuntimeFullSubjectGateConfig } from "@/internal/misc/edgeConfigs/fullSubjectGateEdgeConfig/fullSubjectGateEdgeConfigStore.js";
 import { type DrizzleCli, dbCritical, dbReplica } from "./initDrizzle.js";
 import { getReplicaRoutingState } from "./replicaRoutingState.js";
 

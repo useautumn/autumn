@@ -28,7 +28,7 @@ import {
 } from "@/internal/customers/cusProducts/CusProductService.js";
 import { resultToFullSubject } from "@/internal/customers/repos/getFullSubject/index.js";
 import { unpackSubjectEnvelope } from "@/internal/customers/repos/getFullSubject/unpackSubjectEnvelope.js";
-import { getOrgPaginationMaxLimit } from "../../misc/edgeConfig/orgLimitsStore.js";
+import { getOrgPaginationMaxLimit } from "../../misc/edgeConfigs/orgLimits/orgLimitsStore.js";
 import { getApiEntityBaseV2 } from "../entityUtils/getApiEntityV2/getApiEntityBaseV2.js";
 import { getCursorPaginatedEntitySubjectsQuery } from "../repos/cursorListEntitiesQuery.js";
 import { hydrateEntityRowsWithCustomerData } from "../repos/hydrateEntityRowsWithCustomerData.js";

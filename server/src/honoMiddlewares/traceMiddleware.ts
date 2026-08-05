@@ -1,7 +1,7 @@
 import { context, trace } from "@opentelemetry/api";
 import type { MiddlewareHandler } from "hono";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
-import { isFullSubjectRolloutEnabled } from "@/internal/misc/rollouts/fullSubjectRolloutUtils.js";
+import { isFullSubjectRolloutEnabled } from "@/internal/misc/edgeConfigs/rollouts/fullSubjectRolloutUtils.js";
 import {
 	type TenantAttrs,
 	withTenantContext,

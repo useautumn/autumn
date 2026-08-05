@@ -1,7 +1,7 @@
-import { createRoute } from "@/honoMiddlewares/routeHandler.js";
 import { Scopes } from "@autumn/shared";
-import { CustomerBlockConfigSchema } from "@/internal/misc/customerBlocks/customerBlockSchemas.js";
-import { updateFullCustomerBlockConfig } from "@/internal/misc/customerBlocks/customerBlockStore.js";
+import { createRoute } from "@/honoMiddlewares/routeHandler.js";
+import { CustomerBlockConfigSchema } from "@/internal/misc/edgeConfigs/customerBlocks/customerBlockSchemas.js";
+import { updateFullCustomerBlockConfig } from "@/internal/misc/edgeConfigs/customerBlocks/customerBlockStore.js";
 
 export const handleUpsertAdminCustomerBlockConfig = createRoute({
 	scopes: [Scopes.Superuser],

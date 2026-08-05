@@ -3,7 +3,7 @@ import { createRoute } from "@/honoMiddlewares/routeHandler.js";
 import {
 	getBatchResetConfigFromSource,
 	getBatchResetConfigStatus,
-} from "@/internal/misc/batchReset/batchResetConfigStore.js";
+} from "@/internal/misc/edgeConfigs/batchReset/batchResetConfigStore.js";
 
 export const handleGetAdminBatchResetConfig = createRoute({
 	scopes: [Scopes.Superuser],

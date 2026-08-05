@@ -1,7 +1,7 @@
 import { ErrCode, RecaseError } from "@autumn/shared";
 import type { Context, Next } from "hono";
 import type { HonoEnv } from "@/honoUtils/HonoEnv.js";
-import { isRuntimeCustomerBlocked } from "@/internal/misc/customerBlocks/customerBlockStore.js";
+import { isRuntimeCustomerBlocked } from "@/internal/misc/edgeConfigs/customerBlocks/customerBlockStore.js";
 import { logRequestResult } from "./requestLogging/logRequestResult.js";
 
 export const customerBlockMiddleware = async (

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "bun:test";
-import { FullSubjectGateEdgeConfigSchema } from "@/internal/misc/fullSubjectGateEdgeConfig/fullSubjectGateEdgeConfigSchemas.js";
+import { FullSubjectGateEdgeConfigSchema } from "@/internal/misc/edgeConfigs/fullSubjectGateEdgeConfig/fullSubjectGateEdgeConfigSchemas.js";
 
 describe("FullSubjectGateEdgeConfigSchema defaults", () => {
 	it("parses {} (missing S3 file) into a fully working config, nested objects included", () => {

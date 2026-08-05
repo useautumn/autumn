@@ -6,7 +6,7 @@ import {
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { getOrSetCachedFullSubject } from "@/internal/customers/cache/fullSubject/actions/getOrSetCachedFullSubject.js";
-import { isAsyncBalanceUpdateEnabled } from "@/internal/misc/asyncBalanceUpdate/asyncBalanceUpdateStore.js";
+import { isAsyncBalanceUpdateEnabled } from "@/internal/misc/edgeConfigs/asyncBalanceUpdate/asyncBalanceUpdateStore.js";
 import { JobName } from "@/queue/JobName.js";
 import { addTaskToQueue } from "@/queue/queueUtils.js";
 import { buildCustomerEntitlementFilters } from "../../utils/buildCustomerEntitlementFilters.js";

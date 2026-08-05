@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { isRetryableFullSubjectRolloutError } from "@/internal/misc/rollouts/fullSubjectRolloutUtils.js";
+import { isRetryableFullSubjectRolloutError } from "@/internal/misc/edgeConfigs/rollouts/fullSubjectRolloutUtils.js";
 
 describe("fullSubjectRolloutUtils", () => {
 	test("treats retryable DB errors as retryable rollout errors", () => {
@@ -17,8 +17,9 @@ describe("fullSubjectRolloutUtils", () => {
 		"canceling statement due to lock timeout",
 		"canceling statement due to statement timeout",
 	])("treats no-code DB timeout as retryable: %s", (message) => {
-		expect(isRetryableFullSubjectRolloutError({ error: new Error(message) }))
-			.toBe(true);
+		expect(
+			isRetryableFullSubjectRolloutError({ error: new Error(message) }),
+		).toBe(true);
 	});
 
 	test("treats ioredis max retries as a retryable rollout error", () => {

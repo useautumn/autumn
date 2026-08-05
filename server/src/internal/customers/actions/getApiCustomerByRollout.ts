@@ -5,8 +5,8 @@ import {
 	buildSubjectReadFlightKey,
 	getOrSetCachedFullSubject,
 } from "@/internal/customers/cache/fullSubject/index.js";
-import { isRedisFallbackToDbEnabled } from "@/internal/misc/miscellaneousEdgeConfig/miscellaneousEdgeConfigStore.js";
-import { isFullSubjectRolloutEnabled } from "@/internal/misc/rollouts/fullSubjectRolloutUtils.js";
+import { isRedisFallbackToDbEnabled } from "@/internal/misc/edgeConfigs/miscellaneousEdgeConfig/miscellaneousEdgeConfigStore.js";
+import { isFullSubjectRolloutEnabled } from "@/internal/misc/edgeConfigs/rollouts/fullSubjectRolloutUtils.js";
 import { withTimeout } from "@/utils/withTimeout.js";
 import { getApiCustomerV2 } from "../cusUtils/getApiCustomerV2/index.js";
 

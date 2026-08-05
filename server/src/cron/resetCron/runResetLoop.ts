@@ -1,6 +1,6 @@
 import { ms } from "@autumn/shared";
 import * as Sentry from "@sentry/bun";
-import { isResetJobEnabled } from "@/internal/misc/resetJob/resetJobStore.js";
+import { isResetJobEnabled } from "@/internal/misc/edgeConfigs/resetJob/resetJobStore.js";
 import { isActiveSlot } from "@/queue/blueGreen/blueGreenGate.js";
 import type { CronContext } from "../utils/CronContext.js";
 import { runResetBatch } from "./runResetBatch.js";

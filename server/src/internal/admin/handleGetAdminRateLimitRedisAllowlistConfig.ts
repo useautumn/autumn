@@ -3,7 +3,7 @@ import { createRoute } from "@/honoMiddlewares/routeHandler.js";
 import {
 	getRateLimitRedisAllowlistFromSource,
 	getRuntimeRateLimitRedisAllowlistStatus,
-} from "@/internal/misc/rateLimiter/rateLimitRedisAllowlistStore.js";
+} from "@/internal/misc/edgeConfigs/rateLimiter/rateLimitRedisAllowlistStore.js";
 
 export const handleGetAdminRateLimitRedisAllowlistConfig = createRoute({
 	scopes: [Scopes.Superuser],

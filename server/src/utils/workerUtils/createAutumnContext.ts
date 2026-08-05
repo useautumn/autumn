@@ -11,7 +11,7 @@ import type { Logger } from "@/external/logtail/logtailUtils.js";
 import { getCtxWithCustomerRedis } from "@/external/redis/customerRedisRouting.js";
 import { resolveRedisV2 } from "@/external/redis/resolveRedisV2.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
-import { computeRolloutSnapshot } from "@/internal/misc/rollouts/rolloutUtils.js";
+import { computeRolloutSnapshot } from "@/internal/misc/edgeConfigs/rollouts/rolloutUtils.js";
 import { getOrgWithFeaturesCached } from "@/internal/orgs/orgUtils/getOrgWithFeaturesCached.js";
 
 export const createWorkerAutumnContext = async ({

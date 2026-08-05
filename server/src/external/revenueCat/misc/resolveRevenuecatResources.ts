@@ -15,7 +15,7 @@ import {
 } from "@/external/revenueCat/misc/RCMappingService";
 import type { RevenueCatWebhookContext } from "@/external/revenueCat/webhookMiddlewares/revenuecatWebhookContext";
 import { CusService } from "@/internal/customers/CusService";
-import { computeRolloutSnapshot } from "@/internal/misc/rollouts/rolloutUtils.js";
+import { computeRolloutSnapshot } from "@/internal/misc/edgeConfigs/rollouts/rolloutUtils.js";
 import { ProductService } from "@/internal/products/ProductService";
 import { pricesOnlyOneOff } from "@/internal/products/prices/priceUtils.js";
 import { getOrCreateCustomer } from "../../../internal/customers/cusUtils/getOrCreateCustomer";
@@ -422,7 +422,7 @@ const resolveRevenueCatCustomer = async ({
 		customerId: idIsValid ? appUserId : null,
 		withEntities: true,
 		customerData: {
-			email: idIsValid ? customerEmail : (customerEmail || appUserId),
+			email: idIsValid ? customerEmail : customerEmail || appUserId,
 			fingerprint: customerFingerprint,
 			processors: {
 				revenuecat: {

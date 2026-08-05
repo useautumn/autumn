@@ -1,6 +1,6 @@
 import type { Redis } from "ioredis";
-import type { MiscRedisInstanceName } from "@/internal/misc/miscRedisConfig/miscRedisConfigSchemas.js";
-import { getActiveMiscRedisInstanceName } from "@/internal/misc/miscRedisConfig/miscRedisConfigStore.js";
+import type { MiscRedisInstanceName } from "@/internal/misc/edgeConfigs/miscRedisConfig/miscRedisConfigSchemas.js";
+import { getActiveMiscRedisInstanceName } from "@/internal/misc/edgeConfigs/miscRedisConfig/miscRedisConfigStore.js";
 import { getMiscBackupRedis, getMiscMainRedis } from "./miscRedisInstances.js";
 
 let lastLoggedInstance: MiscRedisInstanceName | null = null;

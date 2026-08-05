@@ -1,11 +1,11 @@
 import { afterEach, describe, expect, test } from "bun:test";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
-import { applySubjectLookupDbOnly } from "@/internal/misc/miscellaneousEdgeConfig/applySubjectLookupDbOnly.js";
-import { MiscellaneousEdgeConfigSchema } from "@/internal/misc/miscellaneousEdgeConfig/miscellaneousEdgeConfigSchemas.js";
+import { applySubjectLookupDbOnly } from "@/internal/misc/edgeConfigs/miscellaneousEdgeConfig/applySubjectLookupDbOnly.js";
+import { MiscellaneousEdgeConfigSchema } from "@/internal/misc/edgeConfigs/miscellaneousEdgeConfig/miscellaneousEdgeConfigSchemas.js";
 import {
 	_setMiscellaneousEdgeConfigForTesting,
 	isSubjectLookupDbOnlyEnabled,
-} from "@/internal/misc/miscellaneousEdgeConfig/miscellaneousEdgeConfigStore.js";
+} from "@/internal/misc/edgeConfigs/miscellaneousEdgeConfig/miscellaneousEdgeConfigStore.js";
 
 const defaultConfig = MiscellaneousEdgeConfigSchema.parse({});
 

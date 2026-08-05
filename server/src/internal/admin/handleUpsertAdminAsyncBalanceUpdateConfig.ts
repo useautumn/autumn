@@ -1,7 +1,7 @@
 import { Scopes } from "@autumn/shared";
 import { createRoute } from "@/honoMiddlewares/routeHandler.js";
-import { AsyncBalanceUpdateConfigSchema } from "@/internal/misc/asyncBalanceUpdate/asyncBalanceUpdateSchemas.js";
-import { updateFullAsyncBalanceUpdateConfig } from "@/internal/misc/asyncBalanceUpdate/asyncBalanceUpdateStore.js";
+import { AsyncBalanceUpdateConfigSchema } from "@/internal/misc/edgeConfigs/asyncBalanceUpdate/asyncBalanceUpdateSchemas.js";
+import { updateFullAsyncBalanceUpdateConfig } from "@/internal/misc/edgeConfigs/asyncBalanceUpdate/asyncBalanceUpdateStore.js";
 
 export const handleUpsertAdminAsyncBalanceUpdateConfig = createRoute({
 	scopes: [Scopes.Superuser],

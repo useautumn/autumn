@@ -98,7 +98,7 @@
  *   src/internal/balances/balancesRouter.ts              -- route registration
  *   src/internal/balances/track/utils/queueTrack.ts      -- per-item enqueue
  *   shared/api/balances/track/trackParams.ts             -- BatchTrackParamsSchema
- *   src/internal/misc/rateLimiter/rateLimitConfigs.ts    -- BatchTrack limiter config
+ *   src/internal/misc/edgeConfigs/rateLimiter/rateLimitConfigs.ts    -- BatchTrack limiter config
  */
 
 import { beforeAll, describe, expect, test } from "bun:test";

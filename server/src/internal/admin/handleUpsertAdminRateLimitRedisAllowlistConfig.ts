@@ -1,7 +1,7 @@
 import { Scopes } from "@autumn/shared";
 import { createRoute } from "@/honoMiddlewares/routeHandler.js";
-import { RateLimitRedisAllowlistConfigSchema } from "@/internal/misc/rateLimiter/rateLimitRedisAllowlistSchemas.js";
-import { updateFullRateLimitRedisAllowlistConfig } from "@/internal/misc/rateLimiter/rateLimitRedisAllowlistStore.js";
+import { RateLimitRedisAllowlistConfigSchema } from "@/internal/misc/edgeConfigs/rateLimiter/rateLimitRedisAllowlistSchemas.js";
+import { updateFullRateLimitRedisAllowlistConfig } from "@/internal/misc/edgeConfigs/rateLimiter/rateLimitRedisAllowlistStore.js";
 
 export const handleUpsertAdminRateLimitRedisAllowlistConfig = createRoute({
 	scopes: [Scopes.Superuser],

@@ -3,12 +3,12 @@ import { TestFeature } from "@tests/setup/v2Features.js";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";
 import { CusService } from "@/internal/customers/CusService.js";
-import type { OrgLimitsConfig } from "@/internal/misc/edgeConfig/orgLimitsSchemas.js";
+import type { OrgLimitsConfig } from "@/internal/misc/edgeConfigs/orgLimits/orgLimitsSchemas.js";
 import {
 	_setOrgLimitsConfigForTesting,
 	DEFAULT_ENTITIES_LIMIT,
 	getOrgEntitiesLimit,
-} from "@/internal/misc/edgeConfig/orgLimitsStore.js";
+} from "@/internal/misc/edgeConfigs/orgLimits/orgLimitsStore.js";
 
 /**
  * These tests mutate the in-memory org limits store (a module-level singleton)

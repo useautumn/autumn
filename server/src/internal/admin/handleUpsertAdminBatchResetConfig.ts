@@ -1,7 +1,7 @@
 import { Scopes } from "@autumn/shared";
 import { createRoute } from "@/honoMiddlewares/routeHandler.js";
-import { BatchResetConfigSchema } from "@/internal/misc/batchReset/batchResetConfigSchemas.js";
-import { updateFullBatchResetConfig } from "@/internal/misc/batchReset/batchResetConfigStore.js";
+import { BatchResetConfigSchema } from "@/internal/misc/edgeConfigs/batchReset/batchResetConfigSchemas.js";
+import { updateFullBatchResetConfig } from "@/internal/misc/edgeConfigs/batchReset/batchResetConfigStore.js";
 
 export const handleUpsertAdminBatchResetConfig = createRoute({
 	scopes: [Scopes.Superuser],

@@ -9,7 +9,7 @@ import { customerEntitlementsRepo } from "@/internal/customers/cusProducts/cusEn
 import {
 	getResetJobV2Config,
 	isResetJobV2Enabled,
-} from "@/internal/misc/resetJobV2/resetJobV2Store.js";
+} from "@/internal/misc/edgeConfigs/resetJobV2/resetJobV2Store.js";
 import { isActiveSlot } from "@/queue/blueGreen/blueGreenGate.js";
 import {
 	waitForQueueBelowHighWater,

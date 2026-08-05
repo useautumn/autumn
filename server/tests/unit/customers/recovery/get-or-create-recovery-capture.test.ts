@@ -22,7 +22,7 @@ const mockState = {
 // Real modules captured BEFORE mocking so afterAll can restore them — module
 // mocks leak across test files (mock.restore does not undo them).
 const MOCKED_MODULE_PATHS = [
-	"@/internal/misc/rollouts/fullSubjectRolloutUtils.js",
+	"@/internal/misc/edgeConfigs/rollouts/fullSubjectRolloutUtils.js",
 	"@/internal/customers/cache/fullSubject/index.js",
 	"@/internal/customers/recovery/queueFailedCustomerCreation.js",
 	"@/internal/customers/actions/ensureStripeCustomerFromCustomerData.js",
@@ -39,9 +39,12 @@ afterAll(() => {
 	}
 });
 
-mock.module("@/internal/misc/rollouts/fullSubjectRolloutUtils.js", () => ({
-	isFullSubjectRolloutEnabled: () => true,
-}));
+mock.module(
+	"@/internal/misc/edgeConfigs/rollouts/fullSubjectRolloutUtils.js",
+	() => ({
+		isFullSubjectRolloutEnabled: () => true,
+	}),
+);
 
 mock.module("@/internal/customers/cache/fullSubject/index.js", () => ({
 	getOrCreateCachedFullSubject: async () => {

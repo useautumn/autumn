@@ -1,9 +1,9 @@
-import { createRoute } from "@/honoMiddlewares/routeHandler.js";
 import { Scopes } from "@autumn/shared";
+import { createRoute } from "@/honoMiddlewares/routeHandler.js";
 import {
 	getCustomerBlockConfigFromSource,
 	getRuntimeCustomerBlockStatus,
-} from "@/internal/misc/customerBlocks/customerBlockStore.js";
+} from "@/internal/misc/edgeConfigs/customerBlocks/customerBlockStore.js";
 
 export const handleGetAdminCustomerBlockConfig = createRoute({
 	scopes: [Scopes.Superuser],

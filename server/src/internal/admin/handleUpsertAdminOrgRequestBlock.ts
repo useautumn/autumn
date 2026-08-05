@@ -1,8 +1,8 @@
-import { z } from "zod/v4";
 import { Scopes } from "@autumn/shared";
+import { z } from "zod/v4";
 import { createRoute } from "@/honoMiddlewares/routeHandler.js";
-import { RequestBlockUpdateSchema } from "@/internal/misc/requestBlocks/requestBlockSchemas.js";
-import { updateOrgRequestBlockInSource } from "@/internal/misc/requestBlocks/requestBlockStore.js";
+import { RequestBlockUpdateSchema } from "@/internal/misc/edgeConfigs/requestBlocks/requestBlockSchemas.js";
+import { updateOrgRequestBlockInSource } from "@/internal/misc/edgeConfigs/requestBlocks/requestBlockStore.js";
 
 export const handleUpsertAdminOrgRequestBlock = createRoute({
 	scopes: [Scopes.Superuser],

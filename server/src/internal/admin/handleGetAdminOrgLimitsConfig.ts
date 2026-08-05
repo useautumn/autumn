@@ -1,9 +1,9 @@
-import { createRoute } from "@/honoMiddlewares/routeHandler.js";
 import { Scopes } from "@autumn/shared";
+import { createRoute } from "@/honoMiddlewares/routeHandler.js";
 import {
 	getOrgLimitsConfigFromSource,
 	getRuntimeOrgLimitsStatus,
-} from "@/internal/misc/edgeConfig/orgLimitsStore.js";
+} from "@/internal/misc/edgeConfigs/orgLimits/orgLimitsStore.js";
 
 export const handleGetAdminOrgLimitsConfig = createRoute({
 	scopes: [Scopes.Superuser],

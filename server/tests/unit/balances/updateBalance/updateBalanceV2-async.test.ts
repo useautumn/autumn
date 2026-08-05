@@ -10,8 +10,8 @@ import {
 } from "@autumn/shared";
 import type { SQSClient } from "@aws-sdk/client-sqs";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
-import { AsyncBalanceUpdateConfigSchema } from "@/internal/misc/asyncBalanceUpdate/asyncBalanceUpdateSchemas.js";
-import { _setAsyncBalanceUpdateConfigForTesting } from "@/internal/misc/asyncBalanceUpdate/asyncBalanceUpdateStore.js";
+import { AsyncBalanceUpdateConfigSchema } from "@/internal/misc/edgeConfigs/asyncBalanceUpdate/asyncBalanceUpdateSchemas.js";
+import { _setAsyncBalanceUpdateConfigForTesting } from "@/internal/misc/edgeConfigs/asyncBalanceUpdate/asyncBalanceUpdateStore.js";
 import { getSqsClient } from "@/queue/initSqs.js";
 import { JobName } from "@/queue/JobName.js";
 
@@ -153,9 +153,10 @@ describe("updateBalanceV2 async routing", () => {
 			MessageGroupId: "org_123:sandbox:cus_123:none",
 			MessageDeduplicationId: ctx.id,
 		});
-		const message = JSON.parse(
-			String(batchEntries[0].MessageBody),
-		) as Record<string, unknown>;
+		const message = JSON.parse(String(batchEntries[0].MessageBody)) as Record<
+			string,
+			unknown
+		>;
 		expect(message).toMatchObject({
 			name: JobName.UpdateBalance,
 			data: {

@@ -5,11 +5,14 @@ const mockState = {
 	disableOverageBillingFlags: {} as Record<string, string[]>,
 };
 
-mock.module("@/internal/misc/featureFlags/featureFlagStore.js", () => ({
-	getDisableOverageBillingCustomers: ({ orgId }: { orgId: string }) => {
-		return mockState.disableOverageBillingFlags[orgId] ?? [];
-	},
-}));
+mock.module(
+	"@/internal/misc/edgeConfigs/featureFlags/featureFlagStore.js",
+	() => ({
+		getDisableOverageBillingCustomers: ({ orgId }: { orgId: string }) => {
+			return mockState.disableOverageBillingFlags[orgId] ?? [];
+		},
+	}),
+);
 
 import { shouldDisableOverageBilling } from "@/external/stripe/webhookHandlers/common/shouldDisableOverageBilling";
 

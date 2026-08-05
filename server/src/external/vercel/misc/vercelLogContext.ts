@@ -2,8 +2,8 @@ import { AuthType } from "@autumn/shared";
 import { getCtxWithCustomerRedis } from "@/external/redis/customerRedisRouting.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { CusService } from "@/internal/customers/CusService.js";
-import { computeRolloutSnapshot } from "@/internal/misc/rollouts/rolloutUtils.js";
-import { isFullSubjectRolloutEnabled } from "@/internal/misc/rollouts/fullSubjectRolloutUtils.js";
+import { isFullSubjectRolloutEnabled } from "@/internal/misc/edgeConfigs/rollouts/fullSubjectRolloutUtils.js";
+import { computeRolloutSnapshot } from "@/internal/misc/edgeConfigs/rollouts/rolloutUtils.js";
 import {
 	addAppContextToLogs,
 	addVercelEventToLogs,
@@ -31,11 +31,7 @@ export const buildVercelEventContext = (
 	};
 };
 
-export const enrichVercelAppLogger = ({
-	ctx,
-}: {
-	ctx: AutumnContext;
-}) => {
+export const enrichVercelAppLogger = ({ ctx }: { ctx: AutumnContext }) => {
 	const customerId = ctx.customerId;
 	const fullSubjectBucket =
 		customerId && ctx.rolloutSnapshot?.customerBucket !== undefined

@@ -41,7 +41,7 @@ const { _resetRecentlyUpdatedNegativeCacheForTesting } = await import(
 	"@/internal/customers/customerLsns/isCustomerRecentlyUpdated.js"
 );
 const { _setFullSubjectGateConfigForTesting } = await import(
-	"@/internal/misc/fullSubjectGateEdgeConfig/fullSubjectGateEdgeConfigStore.js"
+	"@/internal/misc/edgeConfigs/fullSubjectGateEdgeConfig/fullSubjectGateEdgeConfigStore.js"
 );
 
 const makeCtx = (): AutumnContext =>

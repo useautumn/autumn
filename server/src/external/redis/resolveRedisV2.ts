@@ -3,9 +3,9 @@ import { logger } from "@/external/logtail/logtailUtils.js";
 import {
 	getRampDestinationRedis,
 	isCacheV2RampEnabled,
-} from "@/internal/misc/cacheV2Ramp/index.js";
-import type { RedisV2InstanceName } from "@/internal/misc/redisV2Cache/redisV2CacheSchemas.js";
-import { getActiveRedisV2Instance } from "@/internal/misc/redisV2Cache/redisV2CacheStore.js";
+} from "@/internal/misc/edgeConfigs/cacheV2Ramp/index.js";
+import type { RedisV2InstanceName } from "@/internal/misc/edgeConfigs/redisV2Cache/redisV2CacheSchemas.js";
+import { getActiveRedisV2Instance } from "@/internal/misc/edgeConfigs/redisV2Cache/redisV2CacheStore.js";
 import {
 	getAlternateRedisV2Instance,
 	redisV2 as redisV2Primary,

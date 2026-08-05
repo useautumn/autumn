@@ -4,7 +4,7 @@ import { ADMIN_EDGE_CONFIG_TIMESTAMP_KEY } from "@/external/aws/s3/adminS3Config
 import {
 	readEdgeConfigTimestamp,
 	writeEdgeConfigTimestamp,
-} from "@/internal/misc/edgeConfig/edgeConfigTimestamp.js";
+} from "@/internal/misc/edgeConfigs/edgeConfigTimestamp.js";
 
 const makeBody = (data: unknown) => ({
 	Body: {

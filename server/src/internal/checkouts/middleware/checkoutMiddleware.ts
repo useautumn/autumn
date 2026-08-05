@@ -16,7 +16,7 @@ import { deleteCheckoutCache } from "@/external/redis/actions/autumnCheckoutCach
 import { getCtxWithCustomerRedis } from "@/external/redis/customerRedisRouting.js";
 import type { HonoEnv } from "@/honoUtils/HonoEnv";
 import { checkoutActions } from "@/internal/checkouts/actions";
-import { computeRolloutSnapshot } from "@/internal/misc/rollouts/rolloutUtils.js";
+import { computeRolloutSnapshot } from "@/internal/misc/edgeConfigs/rollouts/rolloutUtils.js";
 import { OrgService } from "@/internal/orgs/OrgService";
 import { checkoutRepo } from "../repos/checkoutRepo";
 

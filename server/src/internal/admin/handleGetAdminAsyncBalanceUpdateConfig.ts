@@ -3,7 +3,7 @@ import { createRoute } from "@/honoMiddlewares/routeHandler.js";
 import {
 	getAsyncBalanceUpdateConfigFromSource,
 	getRuntimeAsyncBalanceUpdateConfigStatus,
-} from "@/internal/misc/asyncBalanceUpdate/asyncBalanceUpdateStore.js";
+} from "@/internal/misc/edgeConfigs/asyncBalanceUpdate/asyncBalanceUpdateStore.js";
 
 export const handleGetAdminAsyncBalanceUpdateConfig = createRoute({
 	scopes: [Scopes.Superuser],

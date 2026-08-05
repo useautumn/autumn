@@ -3,8 +3,8 @@ import {
 	_setCacheV2RampConfigForTesting,
 	isCacheV2RampActive,
 	isCacheV2RampEnabled,
-} from "@/internal/misc/cacheV2Ramp/index.js";
-import { getCustomerBucket } from "@/internal/misc/rollouts/rolloutUtils.js";
+} from "@/internal/misc/edgeConfigs/cacheV2Ramp/index.js";
+import { getCustomerBucket } from "@/internal/misc/edgeConfigs/rollouts/rolloutUtils.js";
 
 const makeConfig = (
 	overrides: Partial<{

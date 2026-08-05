@@ -4,12 +4,12 @@ import {
 	getLimiterForType,
 	getRateLimitKey,
 	setRateLimitKeyInContext,
-} from "@/internal/misc/rateLimiter/rateLimitFactory";
+} from "@/internal/misc/edgeConfigs/rateLimiter/rateLimitFactory";
 import {
 	getOrgAggregateType,
 	getRateLimitType,
 	RateLimitType,
-} from "../internal/misc/rateLimiter/rateLimitConfigs";
+} from "../internal/misc/edgeConfigs/rateLimiter/rateLimitConfigs";
 
 /**
  * In-memory rate limiting middleware for Hono

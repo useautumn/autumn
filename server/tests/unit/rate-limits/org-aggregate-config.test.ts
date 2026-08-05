@@ -4,7 +4,7 @@ import {
 	RATE_LIMIT_CONFIGS,
 	RateLimitScope,
 	RateLimitType,
-} from "@/internal/misc/rateLimiter/rateLimitConfigs.js";
+} from "@/internal/misc/edgeConfigs/rateLimiter/rateLimitConfigs.js";
 
 describe("org aggregate rate limits", () => {
 	test("high-volume per-customer types map to an org aggregate", () => {

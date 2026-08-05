@@ -4,7 +4,7 @@ import { metrics } from "@opentelemetry/api";
 import { LRUCache } from "lru-cache";
 import pLimit, { type LimitFunction } from "p-limit";
 import type { Logger } from "@/external/logtail/logtailUtils.js";
-import { getRuntimeFullSubjectGateConfig } from "@/internal/misc/fullSubjectGateEdgeConfig/fullSubjectGateEdgeConfigStore.js";
+import { getRuntimeFullSubjectGateConfig } from "@/internal/misc/edgeConfigs/fullSubjectGateEdgeConfig/fullSubjectGateEdgeConfigStore.js";
 
 export type FullSubjectGateLane = "primary" | "replica";
 

@@ -1,9 +1,9 @@
 import { afterEach, describe, expect, test } from "bun:test";
-import { RateLimitType } from "@/internal/misc/rateLimiter/rateLimitConfigs.js";
+import { RateLimitType } from "@/internal/misc/edgeConfigs/rateLimiter/rateLimitConfigs.js";
 import {
 	_setRateLimitOverridesConfigForTesting,
 	getOrgRateLimitOverride,
-} from "@/internal/misc/rateLimiter/rateLimitOverridesStore.js";
+} from "@/internal/misc/edgeConfigs/rateLimiter/rateLimitOverridesStore.js";
 
 const reset = () => {
 	_setRateLimitOverridesConfigForTesting({ config: { orgs: {} } });

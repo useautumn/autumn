@@ -4,7 +4,7 @@ import { createRoute } from "@/honoMiddlewares/routeHandler.js";
 import {
 	getRolloutConfigFromSource,
 	getRolloutConfigStatus,
-} from "@/internal/misc/rollouts/rolloutConfigStore.js";
+} from "@/internal/misc/edgeConfigs/rollouts/rolloutConfigStore.js";
 
 export const handleGetRollouts = createRoute({
 	scopes: [Scopes.Superuser],

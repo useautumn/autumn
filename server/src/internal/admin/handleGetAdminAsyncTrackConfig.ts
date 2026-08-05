@@ -3,7 +3,7 @@ import { createRoute } from "@/honoMiddlewares/routeHandler.js";
 import {
 	getAsyncTrackConfigFromSource,
 	getRuntimeAsyncTrackStatus,
-} from "@/internal/misc/asyncTrack/asyncTrackStore.js";
+} from "@/internal/misc/edgeConfigs/asyncTrack/asyncTrackStore.js";
 
 export const handleGetAdminAsyncTrackConfig = createRoute({
 	scopes: [Scopes.Superuser],

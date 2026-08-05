@@ -1,9 +1,9 @@
 import { afterEach, describe, expect, test } from "bun:test";
-import { ResetJobV2ConfigSchema } from "@/internal/misc/resetJobV2/resetJobV2Schemas.js";
+import { ResetJobV2ConfigSchema } from "@/internal/misc/edgeConfigs/resetJobV2/resetJobV2Schemas.js";
 import {
 	getResetJobV2Config,
 	setResetJobV2ConfigForTesting,
-} from "@/internal/misc/resetJobV2/resetJobV2Store.js";
+} from "@/internal/misc/edgeConfigs/resetJobV2/resetJobV2Store.js";
 
 const defaultConfig = ResetJobV2ConfigSchema.parse({});
 

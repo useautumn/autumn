@@ -1,10 +1,10 @@
-import { createRoute } from "@/honoMiddlewares/routeHandler.js";
 import { Scopes } from "@autumn/shared";
+import { createRoute } from "@/honoMiddlewares/routeHandler.js";
 import {
 	getJobQueueConfigFromSource,
 	getJobQueueConfigStatus,
 	KNOWN_JOB_QUEUES,
-} from "@/internal/misc/jobQueues/jobQueueStore.js";
+} from "@/internal/misc/edgeConfigs/jobQueues/jobQueueStore.js";
 
 export const handleGetAdminJobQueueConfig = createRoute({
 	scopes: [Scopes.Superuser],

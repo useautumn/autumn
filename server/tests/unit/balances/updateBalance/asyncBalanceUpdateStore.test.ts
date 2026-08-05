@@ -1,9 +1,9 @@
 import { afterEach, describe, expect, test } from "bun:test";
-import { AsyncBalanceUpdateConfigSchema } from "@/internal/misc/asyncBalanceUpdate/asyncBalanceUpdateSchemas.js";
+import { AsyncBalanceUpdateConfigSchema } from "@/internal/misc/edgeConfigs/asyncBalanceUpdate/asyncBalanceUpdateSchemas.js";
 import {
 	_setAsyncBalanceUpdateConfigForTesting,
 	isAsyncBalanceUpdateEnabled,
-} from "@/internal/misc/asyncBalanceUpdate/asyncBalanceUpdateStore.js";
+} from "@/internal/misc/edgeConfigs/asyncBalanceUpdate/asyncBalanceUpdateStore.js";
 
 describe("async balance update edge config", () => {
 	afterEach(() => {

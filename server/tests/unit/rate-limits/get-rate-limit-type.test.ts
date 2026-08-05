@@ -6,7 +6,7 @@ import {
 	RATE_LIMIT_CONFIGS,
 	RateLimitScope,
 	RateLimitType,
-} from "@/internal/misc/rateLimiter/rateLimitConfigs.js";
+} from "@/internal/misc/edgeConfigs/rateLimiter/rateLimitConfigs.js";
 
 const createContext = ({
 	method,

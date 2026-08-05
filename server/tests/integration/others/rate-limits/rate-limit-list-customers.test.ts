@@ -6,7 +6,7 @@ import AutumnError, { AutumnInt } from "@/external/autumn/autumnCli.js";
 import {
 	RATE_LIMIT_CONFIGS,
 	resolveRateLimit,
-} from "@/internal/misc/rateLimiter/rateLimitConfigs";
+} from "@/internal/misc/edgeConfigs/rateLimiter/rateLimitConfigs";
 
 const testCase = "rate-limit-list-customers";
 
@@ -16,9 +16,7 @@ const V2_3_LIMIT = resolveRateLimit({
 	apiVersion: ApiVersion.V2_3,
 }).limit;
 
-const countRateLimited = (
-	results: PromiseSettledResult<unknown>[],
-): number => {
+const countRateLimited = (results: PromiseSettledResult<unknown>[]): number => {
 	return results.filter(
 		(result) =>
 			result.status === "rejected" &&

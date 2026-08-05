@@ -31,8 +31,8 @@ mock.module("@/external/logtail/logtailUtils.js", () => ({
 import {
 	RateLimitScope,
 	RateLimitType,
-} from "@/internal/misc/rateLimiter/rateLimitConfigs.js";
-import { rateLimitFactory } from "@/internal/misc/rateLimiter/rateLimitFactory.js";
+} from "@/internal/misc/edgeConfigs/rateLimiter/rateLimitConfigs.js";
+import { rateLimitFactory } from "@/internal/misc/edgeConfigs/rateLimiter/rateLimitFactory.js";
 
 describe("rateLimitFactory", () => {
 	beforeEach(() => {

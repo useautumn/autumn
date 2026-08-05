@@ -15,7 +15,7 @@ import { fetchStripeCustomerForBilling } from "@/internal/billing/v2/providers/s
 import { CusService } from "@/internal/customers/CusService.js";
 import { getCachedFullSubject } from "@/internal/customers/cache/fullSubject/actions/getCachedFullSubject.js";
 import { getFullSubjectNormalized } from "@/internal/customers/repos/getFullSubject/index.js";
-import { isFullSubjectRolloutEnabled } from "@/internal/misc/rollouts/fullSubjectRolloutUtils.js";
+import { isFullSubjectRolloutEnabled } from "@/internal/misc/edgeConfigs/rollouts/fullSubjectRolloutUtils.js";
 import type { AutoTopUpPayload } from "@/queue/workflows.js";
 import type { AutoTopupContext } from "../autoTopupContext.js";
 import { fullCustomerToAutoTopupObjects } from "../helpers/fullCustomerToAutoTopupObjects.js";

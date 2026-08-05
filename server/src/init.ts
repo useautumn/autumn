@@ -20,39 +20,39 @@ import { logger } from "./external/logtail/logtailUtils.js";
 import {
 	startAllEdgeConfigPolling,
 	stopAllEdgeConfigPolling,
-} from "./internal/misc/edgeConfig/edgeConfigRegistry.js";
+} from "./internal/misc/edgeConfigs/edgeConfigRegistry.js";
 
 // Edge config modules self-register on import
-import "./internal/misc/requestBlocks/requestBlockStore.js";
-import "./internal/misc/rollouts/rolloutConfigStore.js";
-import "./internal/misc/featureFlags/featureFlagStore.js";
-import "./internal/misc/customerBlocks/customerBlockStore.js";
-import "./internal/misc/edgeConfig/orgLimitsStore.js";
-import "./internal/misc/stripeSync/stripeSyncStore.js";
-import "./internal/misc/redisV2Cache/redisV2CacheStore.js";
-import "./internal/misc/miscRedisConfig/miscRedisConfigStore.js";
-import "./internal/misc/cacheV2Ramp/cacheV2RampStore.js";
-import "./internal/misc/jobQueues/jobQueueStore.js";
-import "./internal/misc/batchReset/batchResetConfigStore.js";
-import "./internal/misc/resetJob/resetJobStore.js";
-import "./internal/misc/resetJobV2/resetJobV2Store.js";
-import "./internal/misc/asyncBalanceUpdate/asyncBalanceUpdateStore.js";
-import "./internal/misc/asyncTrack/asyncTrackStore.js";
+import "./internal/misc/edgeConfigs/requestBlocks/requestBlockStore.js";
+import "./internal/misc/edgeConfigs/rollouts/rolloutConfigStore.js";
+import "./internal/misc/edgeConfigs/featureFlags/featureFlagStore.js";
+import "./internal/misc/edgeConfigs/customerBlocks/customerBlockStore.js";
+import "./internal/misc/edgeConfigs/orgLimits/orgLimitsStore.js";
+import "./internal/misc/edgeConfigs/stripeSync/stripeSyncStore.js";
+import "./internal/misc/edgeConfigs/redisV2Cache/redisV2CacheStore.js";
+import "./internal/misc/edgeConfigs/miscRedisConfig/miscRedisConfigStore.js";
+import "./internal/misc/edgeConfigs/cacheV2Ramp/cacheV2RampStore.js";
+import "./internal/misc/edgeConfigs/jobQueues/jobQueueStore.js";
+import "./internal/misc/edgeConfigs/batchReset/batchResetConfigStore.js";
+import "./internal/misc/edgeConfigs/resetJob/resetJobStore.js";
+import "./internal/misc/edgeConfigs/resetJobV2/resetJobV2Store.js";
+import "./internal/misc/edgeConfigs/asyncBalanceUpdate/asyncBalanceUpdateStore.js";
+import "./internal/misc/edgeConfigs/asyncTrack/asyncTrackStore.js";
 
 // Side-effect: configures trigger.dev SDK to use TRIGGER_SERVER_SECRET_KEY.
 import "./trigger/configureTrigger.js";
 import { closeStripeSyncEngine } from "@autumn/stripe-sync";
-import {
-	startRedisMonitor,
-	stopRedisMonitor,
-	warmupRegionalRedis,
-} from "./external/redis/initRedis.js";
 import { primeRedisMonitor } from "./external/redis/availabilityMonitor/redisAvailability.js";
 import {
 	primeRedisV2Monitor,
 	startRedisV2Monitor,
 	stopRedisV2Monitor,
 } from "./external/redis/availabilityMonitor/redisV2Availability.js";
+import {
+	startRedisMonitor,
+	stopRedisMonitor,
+	warmupRegionalRedis,
+} from "./external/redis/initRedis.js";
 import { preWarmOrgRedisConnections } from "./external/redis/orgRedisPool.js";
 import { createHonoApp } from "./initHono.js";
 import { otelSdk } from "./instrumentation.js";

@@ -3,7 +3,7 @@ import { createRoute } from "@/honoMiddlewares/routeHandler.js";
 import {
 	getMiscellaneousEdgeConfigFromSource,
 	getRuntimeMiscellaneousEdgeConfigStatus,
-} from "@/internal/misc/miscellaneousEdgeConfig/miscellaneousEdgeConfigStore.js";
+} from "@/internal/misc/edgeConfigs/miscellaneousEdgeConfig/miscellaneousEdgeConfigStore.js";
 
 export const handleGetAdminMiscellaneousEdgeConfig = createRoute({
 	scopes: [Scopes.Superuser],

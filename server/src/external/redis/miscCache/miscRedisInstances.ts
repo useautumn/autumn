@@ -1,7 +1,7 @@
 import type { Redis } from "ioredis";
 import { resolvePrivateOrPublicUrl } from "@/external/aws/ecs/resolvePrivateOrPublicUrl.js";
 import { logger } from "@/external/logtail/logtailUtils.js";
-import { getMiscRedisConfig } from "@/internal/misc/miscRedisConfig/miscRedisConfigStore.js";
+import { getMiscRedisConfig } from "@/internal/misc/edgeConfigs/miscRedisConfig/miscRedisConfigStore.js";
 import { decryptData } from "@/utils/encryptUtils.js";
 import { createRedisClient } from "../initUtils/createRedisClient.js";
 import { currentRegion } from "../initUtils/redisConfig.js";

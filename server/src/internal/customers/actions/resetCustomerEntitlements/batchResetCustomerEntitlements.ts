@@ -2,7 +2,7 @@ import { CusProductStatus } from "@autumn/shared";
 import pLimit from "p-limit";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import type { BatchResetCusEntsPayload } from "@/queue/workflows.js";
-// import { isFullSubjectRolloutEnabled } from "@/internal/misc/rollouts/fullSubjectRolloutUtils.js";
+// import { isFullSubjectRolloutEnabled } from "@/internal/misc/edgeConfigs/rollouts/fullSubjectRolloutUtils.js";
 import { CusService } from "../../CusService.js";
 import { getFullSubject } from "../../repos/getFullSubject/getFullSubject.js";
 

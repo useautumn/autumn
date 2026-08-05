@@ -7,7 +7,7 @@ import {
 	setCachedFullSubject,
 } from "@/internal/customers/cache/fullSubject/index.js";
 import { getFullSubjectNormalized } from "@/internal/customers/repos/getFullSubject/index.js";
-import { getCustomerBucket } from "@/internal/misc/rollouts/rolloutUtils.js";
+import { getCustomerBucket } from "@/internal/misc/edgeConfigs/rollouts/rolloutUtils.js";
 import { buildCustomerMeteredScenario } from "../full-subject/utils/fullSubjectScenarioBuilders.js";
 import { withInsertedScenario } from "../full-subject/utils/withInsertedScenario.js";
 

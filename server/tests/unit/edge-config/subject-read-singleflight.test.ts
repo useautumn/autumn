@@ -1,9 +1,9 @@
 import { afterEach, describe, expect, test } from "bun:test";
-import { MiscellaneousEdgeConfigSchema } from "@/internal/misc/miscellaneousEdgeConfig/miscellaneousEdgeConfigSchemas.js";
+import { MiscellaneousEdgeConfigSchema } from "@/internal/misc/edgeConfigs/miscellaneousEdgeConfig/miscellaneousEdgeConfigSchemas.js";
 import {
 	_setMiscellaneousEdgeConfigForTesting,
 	isSubjectReadSingleflightEnabled,
-} from "@/internal/misc/miscellaneousEdgeConfig/miscellaneousEdgeConfigStore.js";
+} from "@/internal/misc/edgeConfigs/miscellaneousEdgeConfig/miscellaneousEdgeConfigStore.js";
 
 const defaultConfig = MiscellaneousEdgeConfigSchema.parse({});
 

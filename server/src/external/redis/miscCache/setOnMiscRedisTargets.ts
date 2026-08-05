@@ -1,5 +1,5 @@
 import type { Redis } from "ioredis";
-import { getActiveMiscRedisInstanceName } from "@/internal/misc/miscRedisConfig/miscRedisConfigStore.js";
+import { getActiveMiscRedisInstanceName } from "@/internal/misc/edgeConfigs/miscRedisConfig/miscRedisConfigStore.js";
 import { tryRedisOp } from "../utils/runRedisOp.js";
 import { getMiscRedisTargets } from "./resolveMiscRedis.js";
 

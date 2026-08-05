@@ -8,7 +8,7 @@ import {
 	Scopes,
 } from "@autumn/shared";
 import { createRoute } from "@/honoMiddlewares/routeHandler.js";
-import { assertWithinOrgPaginationLimit } from "../../misc/edgeConfig/orgLimitsStore.js";
+import { assertWithinOrgPaginationLimit } from "../../misc/edgeConfigs/orgLimits/orgLimitsStore.js";
 import { CusService } from "../CusService.js";
 
 export const handleListCustomerProducts = createRoute({

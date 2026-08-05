@@ -1,9 +1,9 @@
-import { createRoute } from "@/honoMiddlewares/routeHandler.js";
 import { Scopes } from "@autumn/shared";
+import { createRoute } from "@/honoMiddlewares/routeHandler.js";
 import {
 	getRequestBlockConfigFromSource,
 	getRuntimeRequestBlockStatus,
-} from "@/internal/misc/requestBlocks/requestBlockStore.js";
+} from "@/internal/misc/edgeConfigs/requestBlocks/requestBlockStore.js";
 
 export const handleGetAdminRequestBlockConfig = createRoute({
 	scopes: [Scopes.Superuser],

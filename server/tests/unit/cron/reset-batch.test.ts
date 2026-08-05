@@ -36,7 +36,7 @@ mock.module("@/internal/orgs/OrgService.js", () => ({
 		}),
 	},
 }));
-mock.module("@/internal/misc/resetJob/resetJobStore.js", () => ({
+mock.module("@/internal/misc/edgeConfigs/resetJob/resetJobStore.js", () => ({
 	getResetJobConfig: () => ({ enabled: true, batchSize }),
 }));
 mock.module("@/cron/resetCron/resetCustomerEntitlement", () => ({

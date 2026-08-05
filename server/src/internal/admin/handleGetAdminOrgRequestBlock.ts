@@ -1,10 +1,10 @@
-import { z } from "zod/v4";
 import { Scopes } from "@autumn/shared";
+import { z } from "zod/v4";
 import { createRoute } from "@/honoMiddlewares/routeHandler.js";
 import {
 	getOrgRequestBlockFromSource,
 	getRuntimeRequestBlockStatus,
-} from "@/internal/misc/requestBlocks/requestBlockStore.js";
+} from "@/internal/misc/edgeConfigs/requestBlocks/requestBlockStore.js";
 
 export const handleGetAdminOrgRequestBlock = createRoute({
 	scopes: [Scopes.Superuser],

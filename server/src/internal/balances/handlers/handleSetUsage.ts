@@ -1,7 +1,7 @@
 import { RouteGroup, Scopes, SetUsageParamsSchema } from "@autumn/shared";
 import { createRoute } from "@/honoMiddlewares/routeHandler.js";
 import { getOrCreateCachedFullSubject } from "@/internal/customers/cache/fullSubject/actions/getOrCreateCachedFullSubject.js";
-import { isFullSubjectRolloutEnabled } from "@/internal/misc/rollouts/fullSubjectRolloutUtils.js";
+import { isFullSubjectRolloutEnabled } from "@/internal/misc/edgeConfigs/rollouts/fullSubjectRolloutUtils.js";
 import { updateUsageV2 } from "../updateBalance/v2/updateUsageV2.js";
 
 export const handleSetUsage = createRoute({

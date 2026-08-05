@@ -4,8 +4,8 @@ import {
 	type BaseApiCustomerV5,
 	type CursorPaginatedResponse,
 	ErrCode,
-	type ListCustomersV2Params,
 	ListCustomersV2_3ParamsSchema,
+	type ListCustomersV2Params,
 	ListCustomersV2ParamsSchema,
 	type PagePaginatedResponse,
 	PaginationType,
@@ -15,7 +15,7 @@ import {
 import type { Context } from "hono";
 import { createRoute } from "@/honoMiddlewares/routeHandler.js";
 import type { HonoEnv } from "@/honoUtils/HonoEnv.js";
-import { getOrgPaginationMaxLimit } from "../../misc/edgeConfig/orgLimitsStore.js";
+import { getOrgPaginationMaxLimit } from "../../misc/edgeConfigs/orgLimits/orgLimitsStore.js";
 import { CusBatchService } from "../CusBatchService.js";
 import { CusService } from "../CusService.js";
 

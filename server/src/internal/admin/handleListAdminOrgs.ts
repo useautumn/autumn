@@ -1,4 +1,4 @@
-import { member, organizations, user, Scopes } from "@autumn/shared";
+import { member, organizations, Scopes, user } from "@autumn/shared";
 import {
 	and,
 	desc,
@@ -12,7 +12,7 @@ import {
 	or,
 } from "drizzle-orm";
 import { createRoute } from "../../honoMiddlewares/routeHandler";
-import { getRequestBlockConfigFromSource } from "../misc/requestBlocks/requestBlockStore.js";
+import { getRequestBlockConfigFromSource } from "../misc/edgeConfigs/requestBlocks/requestBlockStore.js";
 
 export const handleListAdminOrgs = createRoute({
 	scopes: [Scopes.Superuser],

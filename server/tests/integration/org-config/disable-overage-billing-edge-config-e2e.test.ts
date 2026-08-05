@@ -17,11 +17,11 @@ import { timeout } from "@tests/utils/genUtils";
 import { advanceToNextInvoice } from "@tests/utils/testAttachUtils/testAttachUtils";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
-import { FeatureFlagConfigSchema } from "@/internal/misc/featureFlags/featureFlagSchemas";
+import { FeatureFlagConfigSchema } from "@/internal/misc/edgeConfigs/featureFlags/featureFlagSchemas";
 import {
 	getFeatureFlagConfigFromSource,
 	updateFullFeatureFlagConfig,
-} from "@/internal/misc/featureFlags/featureFlagStore";
+} from "@/internal/misc/edgeConfigs/featureFlags/featureFlagStore";
 
 test(`${chalk.yellowBright("disable overage billing: edge config disables Stripe overage and resets")}`, async () => {
 	const customerId = "disable-overage-edge-config";
@@ -96,7 +96,9 @@ test(`${chalk.yellowBright("disable overage billing: edge config disables Stripe
 			balance: 100,
 			usage: 0,
 		});
-		expect(customerAfterRenewal.features[TestFeature.Messages].balance).toBe(100);
+		expect(customerAfterRenewal.features[TestFeature.Messages].balance).toBe(
+			100,
+		);
 	} finally {
 		await updateFullFeatureFlagConfig({ config: originalConfig });
 	}

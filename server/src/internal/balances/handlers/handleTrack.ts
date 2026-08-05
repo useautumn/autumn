@@ -11,7 +11,7 @@ import { runAsyncTrack } from "@/internal/balances/track/runAsyncTrack.js";
 import { runTrackWithRollout } from "@/internal/balances/track/runTrackWithRollout.js";
 import { getTrackFeatureDeductionsForBody } from "@/internal/balances/track/utils/getFeatureDeductions.js";
 import { getQueuedTrackResponse } from "@/internal/balances/track/utils/getQueuedTrackResponse.js";
-import { isAsyncTrackEnabled } from "@/internal/misc/asyncTrack/asyncTrackStore.js";
+import { isAsyncTrackEnabled } from "@/internal/misc/edgeConfigs/asyncTrack/asyncTrackStore.js";
 
 export const handleTrack = createRoute({
 	scopes: [Scopes.Balances.Write],

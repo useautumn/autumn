@@ -1,7 +1,7 @@
-import { createRoute } from "@/honoMiddlewares/routeHandler.js";
 import { Scopes } from "@autumn/shared";
-import { OrgLimitsConfigSchema } from "@/internal/misc/edgeConfig/orgLimitsSchemas.js";
-import { updateFullOrgLimitsConfig } from "@/internal/misc/edgeConfig/orgLimitsStore.js";
+import { createRoute } from "@/honoMiddlewares/routeHandler.js";
+import { OrgLimitsConfigSchema } from "@/internal/misc/edgeConfigs/orgLimits/orgLimitsSchemas.js";
+import { updateFullOrgLimitsConfig } from "@/internal/misc/edgeConfigs/orgLimits/orgLimitsStore.js";
 
 export const handleUpsertAdminOrgLimitsConfig = createRoute({
 	scopes: [Scopes.Superuser],

@@ -11,7 +11,7 @@ import {
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { getOrSetCachedFullSubject } from "@/internal/customers/cache/fullSubject/actions/getOrSetCachedFullSubject.js";
 import { getModelCreditCostBreakdown } from "@/internal/features/aiCreditSystemUtils.js";
-import { isFullSubjectRolloutEnabled } from "@/internal/misc/rollouts/fullSubjectRolloutUtils.js";
+import { isFullSubjectRolloutEnabled } from "@/internal/misc/edgeConfigs/rollouts/fullSubjectRolloutUtils.js";
 import type { FeatureDeduction } from "../../utils/types/featureDeduction.js";
 
 const resolveAiCreditFeatureById = ({

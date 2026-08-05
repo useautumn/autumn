@@ -1,15 +1,15 @@
 import {
-    AffectedResource,
-    CreateCustomerParamsV1Schema,
-    CustomerDataSchema,
-    Scopes,
+	AffectedResource,
+	CreateCustomerParamsV1Schema,
+	CustomerDataSchema,
+	Scopes,
 } from "@autumn/shared";
 import type { z } from "zod/v4";
 import { createRoute } from "@/honoMiddlewares/routeHandler.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { getOrCreateApiCustomerByRollout } from "@/internal/customers/actions/getOrCreateApiCustomerByRollout.js";
-import { applySubjectLookupDbOnly } from "@/internal/misc/miscellaneousEdgeConfig/applySubjectLookupDbOnly.js";
-import { isFullSubjectRolloutEnabled } from "@/internal/misc/rollouts/fullSubjectRolloutUtils.js";
+import { applySubjectLookupDbOnly } from "@/internal/misc/edgeConfigs/miscellaneousEdgeConfig/applySubjectLookupDbOnly.js";
+import { isFullSubjectRolloutEnabled } from "@/internal/misc/edgeConfigs/rollouts/fullSubjectRolloutUtils.js";
 
 export const getOrCreateCustomerV2 = async ({
 	ctx,
@@ -52,7 +52,7 @@ export const handleGetOrCreateCustomerV2 = createRoute({
 		applySubjectLookupDbOnly({ ctx });
 
 		const apiCustomer = await getOrCreateCustomerV2({ ctx, params });
-		
+
 		return c.json(apiCustomer);
 	},
 });

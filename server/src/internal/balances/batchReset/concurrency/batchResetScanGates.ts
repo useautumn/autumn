@@ -1,6 +1,6 @@
 import { ms } from "@autumn/shared";
 import type { Logger } from "@/external/logtail/logtailUtils.js";
-import { getResetJobV2Config } from "@/internal/misc/resetJobV2/resetJobV2Store.js";
+import { getResetJobV2Config } from "@/internal/misc/edgeConfigs/resetJobV2/resetJobV2Store.js";
 import { getBatchResetQueueDepth } from "./getBatchResetQueueDepth.js";
 import { sleepWithAbort } from "./sleepWithAbort.js";
 

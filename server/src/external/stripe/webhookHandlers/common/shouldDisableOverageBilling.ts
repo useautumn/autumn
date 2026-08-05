@@ -1,5 +1,5 @@
 import type { Organization } from "@autumn/shared";
-import { getDisableOverageBillingCustomers } from "@/internal/misc/featureFlags/featureFlagStore.js";
+import { getDisableOverageBillingCustomers } from "@/internal/misc/edgeConfigs/featureFlags/featureFlagStore.js";
 
 export const shouldDisableOverageBilling = ({
 	org,

@@ -1,7 +1,7 @@
 import { Scopes } from "@autumn/shared";
 import { createRoute } from "@/honoMiddlewares/routeHandler.js";
-import { AsyncTrackConfigSchema } from "@/internal/misc/asyncTrack/asyncTrackSchemas.js";
-import { updateFullAsyncTrackConfig } from "@/internal/misc/asyncTrack/asyncTrackStore.js";
+import { AsyncTrackConfigSchema } from "@/internal/misc/edgeConfigs/asyncTrack/asyncTrackSchemas.js";
+import { updateFullAsyncTrackConfig } from "@/internal/misc/edgeConfigs/asyncTrack/asyncTrackStore.js";
 
 export const handleUpsertAdminAsyncTrackConfig = createRoute({
 	scopes: [Scopes.Superuser],

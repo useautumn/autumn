@@ -1,9 +1,9 @@
-import { createRoute } from "@/honoMiddlewares/routeHandler.js";
 import { Scopes } from "@autumn/shared";
+import { createRoute } from "@/honoMiddlewares/routeHandler.js";
 import {
 	getFeatureFlagConfigFromSource,
 	getRuntimeFeatureFlagStatus,
-} from "@/internal/misc/featureFlags/featureFlagStore.js";
+} from "@/internal/misc/edgeConfigs/featureFlags/featureFlagStore.js";
 
 export const handleGetAdminFeatureFlagsConfig = createRoute({
 	scopes: [Scopes.Superuser],

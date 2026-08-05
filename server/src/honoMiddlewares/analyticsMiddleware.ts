@@ -1,6 +1,6 @@
 import type { Context, Next } from "hono";
 import type { HonoEnv } from "@/honoUtils/HonoEnv.js";
-import { isFullSubjectRolloutEnabled } from "@/internal/misc/rollouts/fullSubjectRolloutUtils.js";
+import { isFullSubjectRolloutEnabled } from "@/internal/misc/edgeConfigs/rollouts/fullSubjectRolloutUtils.js";
 import { addAppContextToLogs } from "@/utils/logging/addContextToLogs";
 import { logRequestResult } from "./requestLogging/logRequestResult.js";
 

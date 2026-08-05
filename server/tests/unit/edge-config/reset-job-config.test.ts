@@ -1,10 +1,10 @@
 import { afterEach, describe, expect, test } from "bun:test";
-import { ResetJobConfigSchema } from "@/internal/misc/resetJob/resetJobSchemas.js";
+import { ResetJobConfigSchema } from "@/internal/misc/edgeConfigs/resetJob/resetJobSchemas.js";
 import {
 	getResetJobConfig,
 	isResetJobEnabled,
 	setResetJobConfigForTesting,
-} from "@/internal/misc/resetJob/resetJobStore.js";
+} from "@/internal/misc/edgeConfigs/resetJob/resetJobStore.js";
 
 describe("reset job config", () => {
 	afterEach(() => {

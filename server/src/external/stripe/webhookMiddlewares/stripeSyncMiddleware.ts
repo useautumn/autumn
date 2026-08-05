@@ -1,7 +1,7 @@
 import { isSyncableEvent, processStripeSyncEvent } from "@autumn/stripe-sync";
 import type { Context, Next } from "hono";
 import { orgToAccountId } from "@/external/connect/connectUtils.js";
-import { isStripeSyncEnabled } from "@/internal/misc/stripeSync/stripeSyncStore.js";
+import { isStripeSyncEnabled } from "@/internal/misc/edgeConfigs/stripeSync/stripeSyncStore.js";
 import type {
 	StripeWebhookContext,
 	StripeWebhookHonoEnv,

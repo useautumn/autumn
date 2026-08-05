@@ -1,6 +1,6 @@
 import type { Redis } from "ioredis";
 import { logger } from "@/external/logtail/logtailUtils.js";
-import type { RedisV2InstanceName } from "@/internal/misc/redisV2Cache/redisV2CacheSchemas.js";
+import type { RedisV2InstanceName } from "@/internal/misc/edgeConfigs/redisV2Cache/redisV2CacheSchemas.js";
 import { getReachableDragonflyUrl } from "./getReachableDragonflyUrl.js";
 import {
 	createRedisConnection,

@@ -11,7 +11,7 @@ import {
 } from "@/db/resolveSubjectReadDb.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { _resetRecentlyUpdatedNegativeCacheForTesting } from "@/internal/customers/customerLsns/isCustomerRecentlyUpdated.js";
-import { _setFullSubjectGateConfigForTesting } from "@/internal/misc/fullSubjectGateEdgeConfig/fullSubjectGateEdgeConfigStore.js";
+import { _setFullSubjectGateConfigForTesting } from "@/internal/misc/edgeConfigs/fullSubjectGateEdgeConfig/fullSubjectGateEdgeConfigStore.js";
 
 const primaryDb = { pool: "primary" } as unknown as DrizzleCli;
 const replicaDb = { pool: "replica" } as unknown as DrizzleCli;
