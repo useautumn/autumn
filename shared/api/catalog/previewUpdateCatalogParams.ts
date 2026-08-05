@@ -30,14 +30,13 @@ export const CatalogUpdateParamsSchema = z
 		migration: MigrationParamsSchema.optional(),
 	})
 	.superRefine(({ rewards, referral_programs }, ctx) => {
+		const rewardIds =
+			rewards?.flatMap((reward) => {
+				const id = reward.coupon?.id ?? reward.feature_grant?.id;
+				return id ? [id] : [];
+			}) ?? [];
 		for (const [path, ids] of [
-			[
-				"rewards",
-				rewards?.flatMap((reward) => {
-					const id = reward.coupon?.id ?? reward.feature_grant?.id;
-					return id ? [id] : [];
-				}) ?? [],
-			],
+			["rewards", rewardIds],
 			["referral_programs", referral_programs?.map(({ id }) => id) ?? []],
 		] as const) {
 			if (new Set(ids).size !== ids.length) {
@@ -47,6 +46,17 @@ export const CatalogUpdateParamsSchema = z
 					path: [path],
 				});
 			}
+		}
+
+		if (rewards === undefined) return;
+		const desiredRewardIds = new Set(rewardIds);
+		for (const [index, program] of (referral_programs ?? []).entries()) {
+			if (desiredRewardIds.has(program.reward_id)) continue;
+			ctx.addIssue({
+				code: "custom",
+				message: `Referral program ${program.id} references missing reward ${program.reward_id}. Remove the referral program or restore the reward.`,
+				path: ["referral_programs", index, "reward_id"],
+			});
 		}
 	});
 

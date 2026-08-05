@@ -161,6 +161,15 @@ test("catalog config creates, updates, and deletes rewards and referral programs
 			?.max_redemptions,
 	).toBe(7);
 
+	/** Before: dangling programs failed during apply; after: preview rejects them with repair guidance. */
+	const danglingProgramConfig = structuredClone(changedConfig);
+	danglingProgramConfig.rewards = [changedConfig.rewards[0]!];
+	await expect(
+		autumnV2_2.post("/catalog.preview_update", danglingProgramConfig as never),
+	).rejects.toThrow(
+		`Referral program ${programId} references missing reward ${grantId}. Remove the referral program or restore the reward.`,
+	);
+
 	await autumnV2_2.post("/catalog.update", {});
 	const listed = ApiRewardsListV0Schema.parse(
 		await autumnV2_2.post("/rewards.list", {}),
