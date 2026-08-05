@@ -15,7 +15,7 @@ export type ParsedTest = {
 const PASS_LINE = /^\(pass\)\s+(.+?)\s+\[(\d+(?:\.\d+)?m?s)\]/;
 const FAIL_LINE = /^\(fail\)\s+(.+?)\s+\[(\d+(?:\.\d+)?m?s)\]/;
 const PASS_OR_FAIL_NAME = /^\((?:pass|fail)\)\s+(.+?)\s+\[/;
-const ERROR_LINE = /^error:\s*(.+)/i;
+const ERROR_LINE = /^\s*error:\s*(.+)/i;
 const EXPECTED_LINE = /Expected:\s*(.+)/;
 const RECEIVED_LINE = /Received:\s*(.+)/;
 const STACK_LINE = /at\s+.*?\(([^)]+\.ts):(\d+):(\d+)\)/;
@@ -44,6 +44,21 @@ const parseErrorFromLines = (
 			errorMessage = errorMatch[1].trim();
 			break;
 		}
+	}
+
+	// Bun does not always emit an "error:" line (thrown non-Errors, failures
+	// raised inside helpers). Fall back to the first line that carries meaning
+	// rather than reporting a useless "Test failed".
+	if (!errorMessage) {
+		const meaningful = errorLines.find(
+			(line) =>
+				line.trim() &&
+				!/^\s*at\s/.test(line) &&
+				!/^\s*\d+\s*\|/.test(line) &&
+				!/^\s*\^/.test(line) &&
+				!PASS_OR_FAIL_NAME.test(line),
+		);
+		if (meaningful) errorMessage = meaningful.trim().slice(0, 300);
 	}
 
 	const expectedMatch = errorText.match(EXPECTED_LINE);
