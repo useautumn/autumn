@@ -3,7 +3,7 @@ import {
 	schedulePhases,
 	schedules,
 } from "@autumn/shared";
-import { and, eq, inArray, isNull, notInArray, sql } from "drizzle-orm";
+import { and, eq, inArray, notInArray, sql } from "drizzle-orm";
 import type { RepoContext } from "@/db/repoContext.js";
 
 type Replacement = NonNullable<
@@ -91,17 +91,20 @@ export const replaceScheduledPhaseCustomerProductIds = async ({
 }) => {
 	if (!replacements?.length) return;
 
-	const scopes = new Map<string | null, Replacement[]>();
+	// Keyed by customer alone: a customer product id already identifies the phase
+	// entry to swap, so narrowing by the schedule's entity can only miss.
+	const byCustomer = new Map<string, Replacement[]>();
 	for (const replacement of replacements) {
-		const scopeKey = `${replacement.internalCustomerId}:${replacement.internalEntityId ?? ""}`;
-		scopes.set(scopeKey, [...(scopes.get(scopeKey) ?? []), replacement]);
+		const { internalCustomerId } = replacement;
+		byCustomer.set(internalCustomerId, [
+			...(byCustomer.get(internalCustomerId) ?? []),
+			replacement,
+		]);
 	}
 
 	const touchedScheduleIds = new Set<string>();
 
-	for (const scopeReplacements of scopes.values()) {
-		const [{ internalCustomerId, internalEntityId }] = scopeReplacements;
-
+	for (const [internalCustomerId, customerReplacements] of byCustomer) {
 		const phases = await ctx.db
 			.select({
 				id: schedulePhases.id,
@@ -115,9 +118,6 @@ export const replaceScheduledPhaseCustomerProductIds = async ({
 					eq(schedules.org_id, ctx.org.id),
 					eq(schedules.env, ctx.env),
 					eq(schedules.internal_customer_id, internalCustomerId),
-					internalEntityId
-						? eq(schedules.internal_entity_id, internalEntityId)
-						: isNull(schedules.internal_entity_id),
 				),
 			);
 
@@ -127,7 +127,7 @@ export const replaceScheduledPhaseCustomerProductIds = async ({
 					phase,
 					customerProductIds: applyReplacements({
 						customerProductIds: phase.customerProductIds,
-						replacements: scopeReplacements,
+						replacements: customerReplacements,
 					}),
 				}))
 				.filter(
