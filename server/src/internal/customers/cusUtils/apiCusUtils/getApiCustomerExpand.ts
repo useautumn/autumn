@@ -8,6 +8,7 @@ import {
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { CusService } from "../../CusService.js";
 import { getCusAutoTopupPurchaseLimits } from "../cusResponseUtils/getCusAutoTopupPurchaseLimits.js";
+import { getCusInvoicePreviews } from "../cusResponseUtils/getCusInvoicePreviews.js";
 import { getCusPaymentMethodRes } from "../cusResponseUtils/getCusPaymentMethodRes.js";
 import { getCusReferrals } from "../cusResponseUtils/getCusReferrals.js";
 import { getCusRewards } from "../cusResponseUtils/getCusRewards.js";
@@ -57,46 +58,57 @@ export const getApiCustomerExpand = async ({
 
 	const cusExpand = expand as CustomerExpand[];
 
-	const [rewards, referrals, paymentMethod, trialsUsed, autoTopupsWithLimits] =
-		await Promise.all([
-			getCusRewards({
-				org,
-				env,
-				fullCus,
-				subIds: fullCus.customer_products.flatMap(
-					(cp: FullCusProduct) => cp.subscription_ids || [],
-				),
-				expand: cusExpand,
-			}),
-			getCusReferrals({
-				db,
-				fullCus,
-				expand: cusExpand,
-			}),
-			getCusPaymentMethodRes({
-				org,
-				env,
-				fullCus,
-				expand: cusExpand,
-			}),
-			getCusTrialsUsed({
-				ctx,
-				fullCus,
-				expand: cusExpand,
-			}),
-			getCusAutoTopupPurchaseLimits({
-				ctx,
-				internalCustomerId: fullCus.internal_id,
-				autoTopupsConfig: fullCus.auto_topups,
-				expand: cusExpand,
-			}),
-		]);
+	const [
+		rewards,
+		referrals,
+		paymentMethod,
+		trialsUsed,
+		autoTopupsWithLimits,
+		invoicePreviews,
+	] = await Promise.all([
+		getCusRewards({
+			org,
+			env,
+			fullCus,
+			subIds: fullCus.customer_products.flatMap(
+				(cp: FullCusProduct) => cp.subscription_ids || [],
+			),
+			expand: cusExpand,
+		}),
+		getCusReferrals({
+			db,
+			fullCus,
+			expand: cusExpand,
+		}),
+		getCusPaymentMethodRes({
+			org,
+			env,
+			fullCus,
+			expand: cusExpand,
+		}),
+		getCusTrialsUsed({
+			ctx,
+			fullCus,
+			expand: cusExpand,
+		}),
+		getCusAutoTopupPurchaseLimits({
+			ctx,
+			internalCustomerId: fullCus.internal_id,
+			autoTopupsConfig: fullCus.auto_topups,
+			expand: cusExpand,
+		}),
+		getCusInvoicePreviews({
+			ctx,
+			fullCus,
+			expand: cusExpand,
+		}),
+	]);
 
 	return {
 		trials_used: trialsUsed ?? undefined,
 		entities: getApiCusEntities() ?? undefined,
 		rewards: rewards ?? undefined,
-		// upcoming_invoice: upcomingInvoice,
+		invoice_previews: invoicePreviews ?? undefined,
 		referrals: referrals ?? undefined,
 		payment_method: paymentMethod ?? undefined,
 		billing_controls_override: autoTopupsWithLimits
@@ -104,11 +116,3 @@ export const getApiCustomerExpand = async ({
 			: undefined,
 	};
 };
-
-// getCusUpcomingInvoice({
-// 	db,
-// 	org,
-// 	env,
-// 	fullCus,
-// 	expand: cusExpand,
-// }),
