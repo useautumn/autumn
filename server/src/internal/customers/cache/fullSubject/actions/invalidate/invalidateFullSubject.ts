@@ -2,6 +2,7 @@ import type { Redis } from "ioredis";
 import { getRedisTargetsForCustomer } from "@/external/redis/customerRedisRouting.js";
 import { tryRedisOp } from "@/external/redis/utils/runRedisOp.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
+import { markCustomerUpdatedAt } from "@/internal/customers/customerLsns/markCustomerUpdatedAt.js";
 import { buildFullSubjectKey } from "../../builders/buildFullSubjectKey.js";
 import { buildFullSubjectViewEpochKey } from "../../builders/buildFullSubjectViewEpochKey.js";
 import { FULL_SUBJECT_EPOCH_TTL_SECONDS } from "../../config/fullSubjectCacheConfig.js";
@@ -93,8 +94,16 @@ export const invalidateCachedFullSubject = async ({
 }): Promise<void> => {
 	if (!customerId) return;
 
-	await Promise.all(
-		getRedisTargetsForCustomer({
+	// Freshness mark lives in the chokepoint so no invalidating writer can
+	// forget it; a pure DB write, deliberately not gated on any Redis state.
+	await Promise.all([
+		markCustomerUpdatedAt({
+			db: ctx.db,
+			orgId: ctx.org.id,
+			env: ctx.env,
+			customerId,
+		}),
+		...getRedisTargetsForCustomer({
 			org: ctx.org,
 			currentRedis: ctx.redisV2,
 		}).map((redisV2) =>
@@ -107,5 +116,5 @@ export const invalidateCachedFullSubject = async ({
 				flushBalances,
 			}),
 		),
-	);
+	]);
 };

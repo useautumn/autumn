@@ -6,7 +6,7 @@ import {
 } from "@autumn/shared";
 import { sql } from "drizzle-orm";
 import { planetScaleTag } from "@/db/dbUtils.js";
-import { withLock } from "@/external/redis/redisUtils.js";
+import { withLock } from "@/external/redis/utils/lockUtils/withLock.js";
 import { triggerAutoTopUp } from "@/internal/balances/autoTopUp/triggerAutoTopUp.js";
 import { rollbackDeduction } from "@/internal/balances/utils/paidAllocatedFeature/rollbackDeduction.js";
 import type { AutumnContext } from "../../../../honoUtils/HonoEnv.js";

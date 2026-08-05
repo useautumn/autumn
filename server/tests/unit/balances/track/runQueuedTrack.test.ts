@@ -14,22 +14,45 @@ const mockState = {
 	runTrackV3Error: null as unknown,
 };
 
-mock.module("@/internal/balances/track/utils/getFeatureDeductions.js", () => ({
-	getTrackFeatureDeductionsForBody: (args: Record<string, unknown>) => {
-		mockState.getFeatureDeductionCalls.push(args);
-		return [];
-	},
-}));
+await mockModuleWithRestore(
+	"@/internal/balances/track/utils/getFeatureDeductions.js",
+	() => ({
+		getTrackFeatureDeductionsForBody: (args: Record<string, unknown>) => {
+			mockState.getFeatureDeductionCalls.push(args);
+			return [];
+		},
+	}),
+);
 
-mock.module("@/internal/balances/track/v3/runTrackV3.js", () => ({
-	runTrackV3: async (args: Record<string, unknown>) => {
-		mockState.runTrackV3Calls.push(args);
-		if (mockState.runTrackV3Error) throw mockState.runTrackV3Error;
-		return { customer_id: "cus_123", balance: null };
-	},
-}));
+await mockModuleWithRestore(
+	"@/internal/balances/track/v3/runTrackV3.js",
+	() => ({
+		runTrackV3: async (args: Record<string, unknown>) => {
+			mockState.runTrackV3Calls.push(args);
+			if (mockState.runTrackV3Error) throw mockState.runTrackV3Error;
+			return { customer_id: "cus_123", balance: null };
+		},
+	}),
+);
+
+// CI has no CACHE_URL — the idempotency claim's getMiscRedis() would throw.
+const fakeMiscRedis = {
+	status: "ready",
+	get: async () => null,
+	set: async () => "OK",
+	del: async () => 1,
+} as never;
+await mockModuleWithRestore(
+	"@/external/redis/miscCache/miscRedisInstances.js",
+	() => ({
+		getMiscMainRedis: () => fakeMiscRedis,
+		getMiscBackupRedis: () => null,
+	}),
+);
 
 import { runQueuedTrack } from "@/internal/balances/track/runQueuedTrack.js";
+
+import { mockModuleWithRestore } from "../../utils/mockModuleWithRestore.js";
 
 const ctx = {
 	id: "req_123",
@@ -38,6 +61,9 @@ const ctx = {
 	apiVersion: new ApiVersionClass(ApiVersion.V2_1),
 	logger: {
 		info: mock(() => {}),
+		// warn included: the idempotency path hands this logger to fire-and-forget
+		// Dynamo-mirror work that logs failures after the test completes.
+		warn: mock(() => {}),
 	},
 } as unknown as AutumnContext;
 

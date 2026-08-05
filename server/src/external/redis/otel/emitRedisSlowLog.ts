@@ -14,6 +14,7 @@ export const emitRedisSlowLog = ({
 	thresholds,
 	keyContext,
 	region,
+	redisType,
 	key,
 }: {
 	operation: string;
@@ -21,6 +22,7 @@ export const emitRedisSlowLog = ({
 	thresholds: ResolvedThresholds;
 	keyContext: RedisKeyContext;
 	region?: string;
+	redisType: string;
 	key?: string;
 }): void => {
 	try {
@@ -40,6 +42,7 @@ export const emitRedisSlowLog = ({
 				severe_ms: thresholds.severeMs,
 				breach_ratio: breachRatio,
 				region,
+				redis_type: redisType,
 				key,
 				org_id: keyContext.orgId,
 				customer_id: keyContext.customerId,

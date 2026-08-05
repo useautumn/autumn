@@ -13,12 +13,14 @@ import { ApiVersion, ApiVersionClass, AppEnv } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import type { CustomerCreationRecoveryPayload } from "@/internal/customers/recovery/customerCreationRecoveryTypes.js";
 
+import { mockModuleWithRestore } from "../../utils/mockModuleWithRestore.js";
+
 const mockState = {
 	getOrCreateCalls: [] as Record<string, unknown>[],
 	outcome: "created" as "created" | "existing" | undefined,
 };
 
-mock.module(
+await mockModuleWithRestore(
 	"@/internal/customers/actions/getOrCreateApiCustomerByRollout.js",
 	() => ({
 		getOrCreateApiCustomerByRollout: async (

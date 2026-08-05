@@ -247,8 +247,8 @@ export const createReferralProgram = async ({
 			return;
 		}
 
-		// The API only accepts feature grant rewards, so seed legacy fixtures directly
-		if (error?.message?.includes("feature grant reward")) {
+		// Free product rewards are rejected by the API, so seed legacy fixtures directly
+		if (error?.message?.includes("Free product rewards are deprecated")) {
 			await seedLegacyRewardProgram({ db, orgId, env, reward, rewardProgram });
 			return;
 		}

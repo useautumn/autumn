@@ -79,7 +79,11 @@ const mockMappingsGetAll = mock(
 	(): Promise<{ revenuecat_product_ids: string[] }[]> => Promise.resolve([]),
 );
 
+// Spread the real module so every export stays defined — a partial factory
+// poisons later files in the same process with missing-export link errors.
+const realInitDrizzle = await import("@/db/initDrizzle.js");
 mock.module("@/db/initDrizzle.js", () => ({
+	...realInitDrizzle,
 	initDrizzle: () => ({ db: {} }),
 }));
 

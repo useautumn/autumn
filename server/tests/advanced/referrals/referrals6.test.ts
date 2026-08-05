@@ -87,16 +87,16 @@ test(`${chalk.yellowBright("referrals6: reward program creation rejects non-feat
 		),
 	).rejects.toThrow(AutumnError);
 
-	// Discount rewards are rejected
+	// Discount rewards are still supported
 	const discountReward = rewards.monthOff({ id: "referral6-discount" });
 	await recreateReward({ autumnV1, reward: discountReward });
 
-	await expect(
-		autumnV1.rewardPrograms.create(
-			referralPrograms.onCustomerCreationBoth({
-				id: "referral6-discount-program",
-				rewardId: discountReward.id,
-			}),
-		),
-	).rejects.toThrow(AutumnError);
+	const discountProgram = await autumnV1.rewardPrograms.create(
+		referralPrograms.onCustomerCreationBoth({
+			id: `referral6-discount-${Date.now()}`,
+			rewardId: discountReward.id,
+		}),
+	);
+
+	expect(discountProgram).toBeDefined();
 });

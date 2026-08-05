@@ -1,4 +1,4 @@
-import { describe, expect, mock, test } from "bun:test";
+import { describe, expect, test } from "bun:test";
 import {
 	BillingInterval,
 	type FullProduct,
@@ -7,13 +7,18 @@ import {
 	PriceType,
 } from "@autumn/shared";
 
-mock.module("@server/internal/products/prices/PriceService", () => ({
-	PriceService: {
-		update: async () => undefined,
-	},
-}));
+await mockModuleWithRestore(
+	"@server/internal/products/prices/PriceService",
+	() => ({
+		PriceService: {
+			update: async () => undefined,
+		},
+	}),
+);
 
 import { createStripeFixedPrice } from "@/external/stripe/createStripePrice/createStripeFixedPrice";
+
+import { mockModuleWithRestore } from "../utils/mockModuleWithRestore.js";
 
 const makeStripeCli = (createdId: string, productId: string) => {
 	const calls: Array<{

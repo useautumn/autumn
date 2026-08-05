@@ -2,7 +2,7 @@ import { ms } from "@autumn/shared";
 
 export const IDEMPOTENCY_TTL_MS = ms.hours(24);
 
-/** A store either claims the key, rejects it as already claimed, or is
+/** The store either claims the key, rejects it as already claimed, or is
  *  unavailable — unavailability fails open (the request is allowed). */
 export type IdempotencyClaimResult = "claimed" | "duplicate" | "unavailable";
 
@@ -12,8 +12,8 @@ export const hashIdempotencyKey = (key: string): string => {
 	return hasher.digest("base64url");
 };
 
-/** Storage key shared by both stores (Redis key / Dynamo partition key), so
- *  dual-written entries stay addressable across the migration. */
+/** The DynamoDB partition key. Format is load-bearing across a deploy — a
+ *  change orphans every in-flight key for its full TTL. */
 export const buildIdempotencyStorageKey = ({
 	orgId,
 	env,

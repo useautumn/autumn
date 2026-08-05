@@ -78,6 +78,7 @@ export const getRampDestinationRedis = (): Redis | null => {
 	const instance = createRedisConnection({
 		cacheUrl: reachable,
 		region: `${currentRegion}:v2:ramp`,
+		redisType: "subject-secondary",
 		commandTimeout: REDIS_V2_COMMAND_TIMEOUT_MS,
 	});
 

@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, mock, test } from "bun:test";
+import { beforeEach, describe, expect, test } from "bun:test";
 import { ErrCode, RecaseError } from "@autumn/shared";
 
 const state = {
@@ -6,14 +6,18 @@ const state = {
 	deleteCalls: [] as Array<Record<string, unknown>>,
 };
 
-mock.module("@/db/initDrizzle.js", () => ({
+// Spread the real module so every export stays defined — a partial factory
+// poisons later files in the same process with missing-export link errors.
+const realInitDrizzle = await import("@/db/initDrizzle.js");
+await mockModuleWithRestore("@/db/initDrizzle.js", () => ({
+	...realInitDrizzle,
 	db: {},
 	initDrizzle: () => ({ db: {} }),
 }));
-mock.module("@/external/logtail/logtailUtils.js", () => ({
+await mockModuleWithRestore("@/external/logtail/logtailUtils.js", () => ({
 	logger: { info: () => {}, warn: () => {}, error: () => {} },
 }));
-mock.module("@/internal/orgs/OrgService.js", () => ({
+await mockModuleWithRestore("@/internal/orgs/OrgService.js", () => ({
 	OrgService: {
 		get: async () => {
 			if (!state.target) {
@@ -27,13 +31,18 @@ mock.module("@/internal/orgs/OrgService.js", () => ({
 		},
 	},
 }));
-mock.module("@/internal/orgs/deleteOrg/deletePlatformSubOrg.js", () => ({
-	deletePlatformSubOrg: async (args: Record<string, unknown>) => {
-		state.deleteCalls.push(args);
-	},
-}));
+await mockModuleWithRestore(
+	"@/internal/orgs/deleteOrg/deletePlatformSubOrg.js",
+	() => ({
+		deletePlatformSubOrg: async (args: Record<string, unknown>) => {
+			state.deleteCalls.push(args);
+		},
+	}),
+);
 
 import { deleteSandboxForOrg } from "@/internal/sandboxes/deleteSandbox.js";
+
+import { mockModuleWithRestore } from "../utils/mockModuleWithRestore.js";
 
 const masterOrg = { id: "org_master" } as never;
 const db = {} as never;

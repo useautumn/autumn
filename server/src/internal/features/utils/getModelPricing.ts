@@ -1,12 +1,11 @@
-import { CacheManager } from "@/utils/cacheUtils/CacheManager.js";
-import { ErrCode, InternalError, type ModelsDevProvider } from "@autumn/shared";
+import { ErrCode, InternalError } from "@autumn/shared";
+import {
+	getCachedModelPricing,
+	getCachedStaleModelPricing,
+	type ModelPricingData,
+	setCachedModelPricing,
+} from "@/external/redis/actions/modelPricingCache/modelPricingCache.js";
 
-type ModelPricingData = Record<string, ModelsDevProvider>;
-
-const CACHE_KEY = "models_dev_pricing";
-const STALE_KEY = `${CACHE_KEY}_stale`;
-const TTL_PRIMARY = 60 * 60 * 3;
-const TTL_STALE = 60 * 60 * 24 * 3;
 // Runs inside the track request path — a hanging models.dev must not hang tracks.
 const FETCH_TIMEOUT_MS = 5000;
 
@@ -24,16 +23,16 @@ const fetchFromSource = async (): Promise<ModelPricingData> => {
 };
 
 export const getModelsDevPricing = async (): Promise<ModelPricingData> => {
-	const cached = await CacheManager.getJson<ModelPricingData>(CACHE_KEY);
+	const cached = await getCachedModelPricing();
 	if (cached) return cached;
 
 	try {
 		const data = await fetchFromSource();
-		CacheManager.setJson(CACHE_KEY, data, TTL_PRIMARY).catch(() => {});
-		CacheManager.setJson(STALE_KEY, data, TTL_STALE).catch(() => {});
+		// Fire-and-forget: never-throwing (tryRedisOp), and tracks shouldn't wait on it.
+		void setCachedModelPricing({ data });
 		return data;
 	} catch {
-		const stale = await CacheManager.getJson<ModelPricingData>(STALE_KEY);
+		const stale = await getCachedStaleModelPricing();
 		if (stale) return stale;
 		throw new InternalError({
 			message: "Failed to fetch models.dev pricing and no cache available",

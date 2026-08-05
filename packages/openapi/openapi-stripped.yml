@@ -33561,6 +33561,149 @@ paths:
       x-speakeasy-name-override: redeemCode
       parameters:
         - *a5
+  /v1/referral_programs.create:
+    post:
+      operationId: createReferralProgram
+      description: Create a referral program linked to an existing reward.
+      tags:
+        - referrals
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                id:
+                  type: string
+                  minLength: 1
+                reward_id:
+                  type: string
+                  minLength: 1
+                redeem_on:
+                  enum:
+                    - customer_creation
+                    - checkout
+                  type: string
+                  description: "When the reward is granted: on redemption, or when the redeemer
+                    checks out."
+                received_by:
+                  enum:
+                    - referrer
+                    - all
+                  type: string
+                  description: "Who receives the reward: the referrer only, or both parties."
+                max_redemptions:
+                  anyOf:
+                    - type: integer
+                      minimum: -9007199254740991
+                      maximum: 9007199254740991
+                      exclusiveMinimum: 0
+                    - type: "null"
+                  description: A positive redemption limit, or null for unlimited redemptions.
+                plan_ids:
+                  anyOf:
+                    - type: array
+                      items:
+                        type: string
+                        minLength: 1
+                    - type: "null"
+                  description: Required when redeem_on is checkout. Plan IDs must be unique.
+                exclude_trial:
+                  anyOf:
+                    - type: boolean
+                    - type: "null"
+                  description: Whether checkouts that start a trial should skip granting the
+                    reward.
+              required:
+                - id
+                - reward_id
+                - redeem_on
+                - received_by
+              additionalProperties: false
+              title: CreateReferralProgramParams
+              examples:
+                - &a96
+                  id: refer_a_friend
+                  reward_id: beta_credits_grant
+                  redeem_on: customer_creation
+                  received_by: referrer
+                  max_redemptions: 10
+                  plan_ids: null
+                  exclude_trial: false
+                  created_at: 1718000000000
+            example: *a96
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: string
+                    description: The unique identifier for the referral program.
+                  reward_id:
+                    type: string
+                    description: The ID of the reward granted when a code is redeemed.
+                  redeem_on:
+                    enum:
+                      - customer_creation
+                      - checkout
+                    type: string
+                    description: "When the reward is granted: on redemption, or when the redeemer
+                      checks out."
+                  received_by:
+                    enum:
+                      - referrer
+                      - all
+                    type: string
+                    description: "Who receives the reward: the referrer only, or both parties."
+                  max_redemptions:
+                    anyOf:
+                      - type: number
+                      - type: "null"
+                    description: The maximum number of times a referral code can be redeemed.
+                  plan_ids:
+                    anyOf:
+                      - type: array
+                        items:
+                          type: string
+                      - type: "null"
+                    description: The plans whose checkout triggers the reward. Only used when
+                      redeem_on is checkout.
+                  exclude_trial:
+                    anyOf:
+                      - type: boolean
+                      - type: "null"
+                    description: Whether checkouts that start a trial should skip granting the
+                      reward.
+                  created_at:
+                    type: number
+                    description: The Unix timestamp (in milliseconds) when the referral program was
+                      created.
+                required:
+                  - id
+                  - reward_id
+                  - redeem_on
+                  - received_by
+                  - created_at
+                title: CreateReferralProgramResponse
+                examples:
+                  - &a97
+                    id: refer_a_friend
+                    reward_id: beta_credits_grant
+                    redeem_on: customer_creation
+                    received_by: referrer
+                    max_redemptions: 10
+                    plan_ids: null
+                    exclude_trial: false
+                    created_at: 1718000000000
+              example: *a97
+      x-speakeasy-name-override: createProgram
+      parameters:
+        - *a5
   /v1/rewards.create:
     post:
       operationId: createReward
@@ -33744,7 +33887,7 @@ paths:
               additionalProperties: false
               title: CreateRewardParams
               examples:
-                - &a96
+                - &a98
                   coupon:
                     id: summer_sale
                     name: Summer Sale
@@ -33756,7 +33899,7 @@ paths:
                     plan_ids: null
                     promo_codes:
                       - code: SUMMER20
-            example: *a96
+            example: *a98
       responses:
         "200":
           description: OK
@@ -33981,8 +34124,8 @@ paths:
               type: object
               title: RewardsListParams
               examples:
-                - &a97 {}
-            example: *a97
+                - &a99 {}
+            example: *a99
       responses:
         "200":
           description: OK
@@ -34195,10 +34338,10 @@ paths:
                   - coupons
                   - feature_grants
                 examples:
-                  - &a98
+                  - &a100
                     coupons: []
                     feature_grants: []
-              example: *a98
+              example: *a100
       x-speakeasy-name-override: list
       parameters:
         - *a5
@@ -34226,10 +34369,10 @@ paths:
                 - customer_id
               title: RedeemRewardCodeParams
               examples:
-                - &a99
+                - &a101
                   code: REWARD10
                   customer_id: cus_456
-            example: *a99
+            example: *a101
       responses:
         "200":
           description: OK
@@ -34260,12 +34403,12 @@ paths:
                   - reward_id
                   - entitlements_granted
                 examples:
-                  - &a100
+                  - &a102
                     reward_id: reward_789
                     entitlements_granted:
                       - feature_id: messages
                         balance: 100
-              example: *a100
+              example: *a102
       x-speakeasy-name-override: redeemCode
       parameters:
         - *a5
@@ -34304,12 +34447,12 @@ paths:
                 - redirect_url
               title: LinkRevenueCatParams
               examples:
-                - &a101
+                - &a103
                   organization_slug: acme
                   env: test
                   project_name: acme-mobile
                   redirect_url: https://dashboard.useautumn.com/dev?tab=revenuecat
-            example: *a101
+            example: *a103
       responses:
         "200":
           description: OK
@@ -34324,9 +34467,9 @@ paths:
                   - oauth_url
                 title: LinkRevenueCatResponse
                 examples:
-                  - &a102
+                  - &a104
                     oauth_url: https://api.revenuecat.com/oauth2/authorize?client_id=...&redirect_uri=...&response_type=code&scope=project.read+project.write
-              example: *a102
+              example: *a104
       x-speakeasy-name-override: linkRevenueCat
       parameters:
         - *a5
@@ -34366,13 +34509,13 @@ paths:
                 - env
               title: SyncRevenueCatParams
               examples:
-                - &a103
+                - &a105
                   organization_slug: acme
                   env: test
                   product_ids:
                     - pro
                     - premium
-            example: *a103
+            example: *a105
       responses:
         "200":
           description: OK
@@ -34438,7 +34581,7 @@ paths:
                   - results
                 title: SyncRevenueCatResponse
                 examples:
-                  - &a104
+                  - &a106
                     results:
                       - plan_id: pro
                         status: synced
@@ -34449,7 +34592,7 @@ paths:
                             product: created
                             store_push: skipped
                             price: set
-              example: *a104
+              example: *a106
       x-speakeasy-name-override: syncRevenueCat
       parameters:
         - *a5
@@ -34483,10 +34626,10 @@ paths:
                 - env
               title: GetRevenueCatKeysParams
               examples:
-                - &a105
+                - &a107
                   organization_slug: acme
                   env: test
-            example: *a105
+            example: *a107
       responses:
         "200":
           description: OK
@@ -34549,7 +34692,7 @@ paths:
                   - oauth_access_token
                 title: GetRevenueCatKeysResponse
                 examples:
-                  - &a106
+                  - &a108
                     apps:
                       - app_id: app1a2b3c4d
                         app_type: test_store
@@ -34560,7 +34703,7 @@ paths:
                             environment: production
                             app_id: app1a2b3c4
                     oauth_access_token: atk_aBcDeFgHiJkLmNoPqRsTuVwXyZ
-              example: *a106
+              example: *a108
       x-speakeasy-name-override: getRevenueCatKeys
       parameters:
         - *a5
@@ -34592,67 +34735,8 @@ paths:
                 - customer_id
               title: MintKeyParams
               examples:
-                - &a107
+                - &a109
                   customer_id: cus_123
-            example: *a107
-      responses:
-        "200":
-          description: OK
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  access_token:
-                    type: string
-                    description: Access token (1h, or non-expiring if indefinite), prefixed
-                      `am_jwt_`.
-                  refresh_token:
-                    type: string
-                    description: Rotating refresh token (24h). Omitted for indefinite tokens.
-                  expires_at:
-                    anyOf:
-                      - type: number
-                      - type: "null"
-                    description: Access-token expiry, ms since epoch. null for indefinite tokens.
-                  refresh_expires_at:
-                    type: number
-                    description: Refresh-token expiry, ms since epoch. Omitted for indefinite
-                      tokens.
-                required:
-                  - access_token
-                  - expires_at
-                examples:
-                  - &a108
-                    access_token: am_jwt_eyJhbGciOiJIUzI1NiJ9...
-                    refresh_token: am_jwt_eyJhbGciOiJIUzI1NiJ9...
-                    expires_at: 1781113864000
-                    refresh_expires_at: 1781196664000
-              example: *a108
-      x-speakeasy-name-override: mint
-      parameters:
-        - *a5
-  /v1/keys.refresh:
-    post:
-      operationId: refreshKey
-      description: Exchanges a refresh token (sent as the Bearer credential) for a
-        freshly rotated access + refresh pair. Self-service for the token holder
-        — no secret key required. The previous refresh token is honored for one
-        rotation as a grace window; replaying an older one revokes the
-        customer's tokens.
-      tags:
-        - keys
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              title: RefreshKeyParams
-              description: No body. The refresh token is supplied as the Bearer credential;
-                the response is a freshly rotated access + refresh pair.
-              examples:
-                - &a109 {}
             example: *a109
       responses:
         "200":
@@ -34688,6 +34772,65 @@ paths:
                     expires_at: 1781113864000
                     refresh_expires_at: 1781196664000
               example: *a110
+      x-speakeasy-name-override: mint
+      parameters:
+        - *a5
+  /v1/keys.refresh:
+    post:
+      operationId: refreshKey
+      description: Exchanges a refresh token (sent as the Bearer credential) for a
+        freshly rotated access + refresh pair. Self-service for the token holder
+        — no secret key required. The previous refresh token is honored for one
+        rotation as a grace window; replaying an older one revokes the
+        customer's tokens.
+      tags:
+        - keys
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              title: RefreshKeyParams
+              description: No body. The refresh token is supplied as the Bearer credential;
+                the response is a freshly rotated access + refresh pair.
+              examples:
+                - &a111 {}
+            example: *a111
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  access_token:
+                    type: string
+                    description: Access token (1h, or non-expiring if indefinite), prefixed
+                      `am_jwt_`.
+                  refresh_token:
+                    type: string
+                    description: Rotating refresh token (24h). Omitted for indefinite tokens.
+                  expires_at:
+                    anyOf:
+                      - type: number
+                      - type: "null"
+                    description: Access-token expiry, ms since epoch. null for indefinite tokens.
+                  refresh_expires_at:
+                    type: number
+                    description: Refresh-token expiry, ms since epoch. Omitted for indefinite
+                      tokens.
+                required:
+                  - access_token
+                  - expires_at
+                examples:
+                  - &a112
+                    access_token: am_jwt_eyJhbGciOiJIUzI1NiJ9...
+                    refresh_token: am_jwt_eyJhbGciOiJIUzI1NiJ9...
+                    expires_at: 1781113864000
+                    refresh_expires_at: 1781196664000
+              example: *a112
       x-speakeasy-name-override: refresh
       parameters:
         - *a5
@@ -34714,9 +34857,9 @@ paths:
                 - customer_id
               title: RevokeKeyParams
               examples:
-                - &a111
+                - &a113
                   customer_id: cus_123
-            example: *a111
+            example: *a113
       responses:
         "200":
           description: OK
@@ -34730,9 +34873,9 @@ paths:
                 required:
                   - revoked
                 examples:
-                  - &a112
+                  - &a114
                     revoked: true
-              example: *a112
+              example: *a114
       x-speakeasy-name-override: revoke
       parameters:
         - *a5

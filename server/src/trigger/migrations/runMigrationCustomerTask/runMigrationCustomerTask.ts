@@ -1,12 +1,12 @@
 import { task } from "@trigger.dev/sdk/v3";
 import type { Logger } from "@/external/logtail/logtailUtils.js";
+import { isMigrationCancelRequested } from "@/external/redis/actions/migrationCancelToken/migrationCancelToken.js";
 import { warmupRegionalRedis } from "@/external/redis/initUtils/redisWarmup.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { deleteCachedFullCustomer } from "@/internal/customers/cusUtils/fullCustomerCacheUtils/deleteCachedFullCustomer.js";
 import { withMigrationItemTracking } from "@/internal/migrations/v2/actions/migrationItem/index.js";
 import { migrationRepo } from "@/internal/migrations/v2/repos/index.js";
 import { migrateCustomer } from "@/internal/migrations/v2/run/migrateCustomer/index.js";
-import { isMigrationCancelRequested } from "@/internal/migrations/v2/run/utils/migrationCancelToken.js";
 import { LAZY_MIGRATION_RUNS_DISABLED } from "@/internal/migrations/v2/run/utils/migrationRunConstants.js";
 import { migrationTaskQueue } from "@/trigger/migrations/migrationTaskQueue.js";
 import { createTriggerContext } from "@/trigger/utils/createTriggerContext.js";

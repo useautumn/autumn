@@ -7,12 +7,12 @@ import {
 	RecaseError,
 } from "@autumn/shared";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
+import { invalidateProductsCache } from "@/external/redis/actions/productsCache/productsCache.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { FeatureService } from "@/internal/features/FeatureService.js";
 import { handleCopyFeatures } from "@/internal/products/handlers/handleCopyEnvironment/handleCopyFeatures.js";
 import { handleCopyProducts } from "@/internal/products/handlers/handleCopyEnvironment/handleCopyProducts.js";
 import { ProductService } from "@/internal/products/ProductService.js";
-import { invalidateProductsCache } from "@/internal/products/productCacheUtils.js";
 import { getOwnedSandbox } from "./getOwnedSandbox.js";
 
 /**

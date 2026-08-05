@@ -9,7 +9,10 @@ import {
 	getApiBalance,
 	WebhookEventType,
 } from "@autumn/shared";
-import { miscRedis } from "@/external/redis/initRedis.js";
+import {
+	claimAutoTopupWebhookSuppression,
+	releaseAutoTopupWebhookSuppression,
+} from "@/external/redis/actions/autoTopUpSuppression/autoTopUpSuppression.js";
 import { sendSvixEvent } from "@/external/svix/svixHelpers.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { generateId } from "@/utils/genUtils.js";
@@ -28,52 +31,11 @@ const shouldEmitSuppressedWebhook = async ({
 		return true;
 	}
 
-	if (miscRedis.status !== "ready") {
-		ctx.logger.warn(
-			`[sendAutoTopupFailedWebhook] Redis unavailable, cannot suppress duplicate webhook for ${suppressionKey}`,
-		);
-		return true;
-	}
-
-	try {
-		const ttlSeconds = Math.max(1, Math.ceil(suppressionTtlMs / 1000));
-		const result = await miscRedis.set(
-			suppressionKey,
-			"1",
-			"EX",
-			ttlSeconds,
-			"NX",
-		);
-		if (result === "OK") return true;
-
-		ctx.logger.info(
-			`[sendAutoTopupFailedWebhook] Suppressing duplicate webhook for ${suppressionKey}`,
-		);
-		return false;
-	} catch (error) {
-		ctx.logger.warn(
-			`[sendAutoTopupFailedWebhook] Failed to check suppression key ${suppressionKey}: ${error}`,
-			{ error },
-		);
-		return true;
-	}
-};
-
-const releaseSuppressionKey = async ({
-	ctx,
-	suppressionKey,
-}: {
-	ctx: AutumnContext;
-	suppressionKey: string;
-}): Promise<void> => {
-	if (miscRedis.status !== "ready") return;
-	try {
-		await miscRedis.del(suppressionKey);
-	} catch (error) {
-		ctx.logger.warn(
-			`[sendAutoTopupFailedWebhook] Failed to release suppression key ${suppressionKey}: ${error}`,
-		);
-	}
+	return claimAutoTopupWebhookSuppression({
+		ctx,
+		suppressionKey,
+		suppressionTtlMs,
+	});
 };
 
 const getErrorPayload = ({
@@ -216,7 +178,7 @@ export const sendAutoTopupFailedWebhook = async ({
 		});
 
 		if (suppressionKey && !sent) {
-			await releaseSuppressionKey({ ctx, suppressionKey });
+			await releaseAutoTopupWebhookSuppression({ ctx, suppressionKey });
 		}
 	} catch (webhookError) {
 		ctx.logger.error(

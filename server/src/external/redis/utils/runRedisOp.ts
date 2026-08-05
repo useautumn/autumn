@@ -1,5 +1,6 @@
 import type { Redis } from "ioredis";
 import { logger } from "@/external/logtail/logtailUtils.js";
+import { withTimeout } from "@/utils/withTimeout.js";
 import { RedisUnavailableError } from "./errors.js";
 
 const REDIS_WARNING_INTERVAL_MS = 30_000;
@@ -69,11 +70,15 @@ export const runRedisOp = async <T>({
 	source,
 	redisInstance,
 	queueIfNotReady = false,
+	timeoutMs,
 }: {
 	operation: () => Promise<T>;
 	source: string;
 	redisInstance: Redis;
 	queueIfNotReady?: boolean;
+	/** Opt-in bound, tighter than the client's `commandTimeout`. Reads only —
+	 *  the race abandons the promise but the command still reaches Redis. */
+	timeoutMs?: number;
 }): Promise<T> => {
 	const targetRedis = redisInstance;
 
@@ -84,7 +89,15 @@ export const runRedisOp = async <T>({
 	}
 
 	try {
-		const value = await operation();
+		// The message must contain "timeout" so classifyErrorReason maps it to
+		// `timeout` rather than `other` — withTimeout's default says "timed out".
+		const value = timeoutMs
+			? await withTimeout({
+					timeoutMs,
+					fn: operation,
+					timeoutMessage: `[redis] ${source} timeout after ${timeoutMs}ms`,
+				})
+			: await operation();
 		return value;
 	} catch (error) {
 		const classified = classifyErrorReason(targetRedis, error);
@@ -104,12 +117,14 @@ export const tryRedisOp = async <T>({
 	source,
 	redisInstance,
 	queueIfNotReady,
+	timeoutMs,
 	onError,
 }: {
 	operation: () => Promise<T>;
 	source: string;
 	redisInstance: Redis;
 	queueIfNotReady?: boolean;
+	timeoutMs?: number;
 	onError?: (error: unknown) => void;
 }): Promise<T | undefined> => {
 	try {
@@ -118,6 +133,7 @@ export const tryRedisOp = async <T>({
 			source,
 			redisInstance,
 			queueIfNotReady,
+			timeoutMs,
 		});
 	} catch (error) {
 		onError?.(error);

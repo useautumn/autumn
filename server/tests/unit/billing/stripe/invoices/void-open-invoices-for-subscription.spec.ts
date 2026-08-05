@@ -1,10 +1,12 @@
-import { beforeEach, describe, expect, mock, test } from "bun:test";
+import { beforeEach, describe, expect, test } from "bun:test";
 import chalk from "chalk";
 import type Stripe from "stripe";
 
+import { mockModuleWithRestore } from "../../../utils/mockModuleWithRestore.js";
+
 const updateFromStripeCalls: string[] = [];
 
-mock.module("@/internal/invoices/actions", () => ({
+await mockModuleWithRestore("@/internal/invoices/actions", () => ({
 	invoiceActions: {
 		updateFromStripe: async ({
 			stripeInvoice,

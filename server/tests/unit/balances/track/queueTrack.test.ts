@@ -21,7 +21,7 @@ const trackQueueUrl =
 const trackAsyncQueueUrl =
 	"https://sqs.eu-west-1.amazonaws.com/123456789012/track-async-dev.fifo";
 
-mock.module(
+await mockModuleWithRestore(
 	"@/internal/balances/track/utils/getQueuedTrackResponse.js",
 	() => ({
 		getQueuedTrackResponse: () => ({
@@ -33,6 +33,8 @@ mock.module(
 );
 
 import { queueTrack } from "@/internal/balances/track/utils/queueTrack.js";
+
+import { mockModuleWithRestore } from "../../utils/mockModuleWithRestore.js";
 
 describe("queueTrack", () => {
 	const originalTrackQueueUrl = process.env.TRACK_SQS_QUEUE_URL;

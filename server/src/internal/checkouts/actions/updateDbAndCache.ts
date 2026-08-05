@@ -1,10 +1,10 @@
 import { type Checkout, CheckoutStatus } from "@autumn/shared";
-import type { AutumnContext } from "@/honoUtils/HonoEnv";
-import { checkoutRepo } from "../repos/checkoutRepo";
 import {
 	deleteCheckoutCache,
 	setCheckoutCache,
-} from "./cache/checkoutCacheActions";
+} from "@/external/redis/actions/autumnCheckoutCache/autumnCheckoutCache.js";
+import type { AutumnContext } from "@/honoUtils/HonoEnv";
+import { checkoutRepo } from "../repos/checkoutRepo";
 
 export const updateCheckoutDbAndCache = async ({
 	ctx,

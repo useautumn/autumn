@@ -81,6 +81,7 @@ export type LogRedisData = {
 	severe_ms: number;
 	breach_ratio: number;
 	region?: string;
+	redis_type?: string;
 	key?: string;
 	org_id?: string;
 	customer_id?: string;

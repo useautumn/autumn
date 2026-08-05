@@ -22,6 +22,7 @@ import {
 } from "drizzle-orm";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 import type { RepoContext } from "@/db/repoContext";
+import { markCustomersUpdatedAtByInternalIds } from "@/internal/customers/customerLsns/markCustomerUpdatedAt.js";
 
 export const ACTIVE_STATUSES = [
 	CusProductStatus.Active,
@@ -133,6 +134,12 @@ export class CusProductService {
 		}
 
 		await db.insert(customerProducts).values(data as any);
+
+		const rows = Array.isArray(data) ? data : [data];
+		await markCustomersUpdatedAtByInternalIds({
+			db,
+			internalCustomerIds: rows.map((row) => row.internal_customer_id),
+		});
 	}
 
 	static async list({
@@ -442,12 +449,24 @@ export class CusProductService {
 		updates: Partial<InsertCustomerProduct>;
 	}) {
 		const { db } = ctx;
-		return await db
+		const results = await db
 			.update(customerProducts)
 			.set({ ...updates, updated_at: Date.now() })
-			.where(eq(customerProducts.id, cusProductId));
+			.where(eq(customerProducts.id, cusProductId))
+			.returning({
+				internal_customer_id: customerProducts.internal_customer_id,
+			});
+
+		await markCustomersUpdatedAtByInternalIds({
+			db,
+			internalCustomerIds: results.map((row) => row.internal_customer_id),
+		});
+
+		return results;
 	}
 
+	// Deliberately no freshness mark: the Stripe webhook refresh-cache middleware
+	// invalidation chokepoint already stamps every customer this touches.
 	static async updateByStripeSubId({
 		db,
 		stripeSubId,
@@ -475,7 +494,9 @@ export class CusProductService {
 			)
 			.returning({
 				id: customerProducts.id,
+				internal_customer_id: customerProducts.internal_customer_id,
 			});
+
 		return updated;
 		// const fullUpdated = (await db.query.customerProducts.findMany({
 		// 	where: inArray(
@@ -515,7 +536,13 @@ export class CusProductService {
 			)
 			.returning({
 				id: customerProducts.id,
+				internal_customer_id: customerProducts.internal_customer_id,
 			});
+
+		await markCustomersUpdatedAtByInternalIds({
+			db,
+			internalCustomerIds: updated.map((row) => row.internal_customer_id),
+		});
 
 		const fullUpdated = (await db.query.customerProducts.findMany({
 			where: inArray(
@@ -539,10 +566,17 @@ export class CusProductService {
 		ctx: RepoContext;
 		cusProductId: string;
 	}) {
-		return await ctx.db
+		const results = await ctx.db
 			.delete(customerProducts)
 			.where(eq(customerProducts.id, cusProductId))
 			.returning();
+
+		await markCustomersUpdatedAtByInternalIds({
+			db: ctx.db,
+			internalCustomerIds: results.map((row) => row.internal_customer_id),
+		});
+
+		return results;
 	}
 
 	static async deleteByIds({
@@ -553,10 +587,17 @@ export class CusProductService {
 		cusProductIds: string[];
 	}) {
 		if (cusProductIds.length === 0) return [];
-		return await ctx.db
+		const results = await ctx.db
 			.delete(customerProducts)
 			.where(inArray(customerProducts.id, cusProductIds))
 			.returning();
+
+		await markCustomersUpdatedAtByInternalIds({
+			db: ctx.db,
+			internalCustomerIds: results.map((row) => row.internal_customer_id),
+		});
+
+		return results;
 	}
 
 	static async getByFingerprint({
@@ -681,15 +722,29 @@ export class CusProductService {
 				});
 			}
 
-			await db
+			const deleted = await db
 				.delete(customerProducts)
 				.where(
 					inArray(customerProducts.internal_product_id, internalProductIds),
-				);
+				)
+				.returning({
+					internal_customer_id: customerProducts.internal_customer_id,
+				});
+			await markCustomersUpdatedAtByInternalIds({
+				db,
+				internalCustomerIds: deleted.map((row) => row.internal_customer_id),
+			});
 		} else {
-			await db
+			const deleted = await db
 				.delete(customerProducts)
-				.where(eq(customerProducts.internal_product_id, internalProductId!));
+				.where(eq(customerProducts.internal_product_id, internalProductId!))
+				.returning({
+					internal_customer_id: customerProducts.internal_customer_id,
+				});
+			await markCustomersUpdatedAtByInternalIds({
+				db,
+				internalCustomerIds: deleted.map((row) => row.internal_customer_id),
+			});
 		}
 	}
 }

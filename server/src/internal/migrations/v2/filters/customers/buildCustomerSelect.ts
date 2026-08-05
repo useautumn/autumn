@@ -1,16 +1,16 @@
 import {
 	buildCustomerCandidateQuery,
+	type CustomerFilter,
+	type CustomerListFilters,
+	type CustomerPagePredicate,
 	composeCustomerCount,
 	composeCustomerPage,
 	composeCustomerPreviewCount,
 	composeCustomerPreviewPage,
-	type CustomerFilter,
-	type CustomerPagePredicate,
 	type MigrationItemRunStatus,
 	type ResolutionContext,
 } from "@autumn/shared";
 import { type SQL, sql } from "drizzle-orm";
-import type { CustomerListFilters } from "@/internal/customers/customerListFilters.js";
 import {
 	getCustomerListFilterSql,
 	parseDashboardProcessorFilter,

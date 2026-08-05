@@ -1,11 +1,11 @@
 import { Scopes } from "@autumn/shared";
 import { AppEnv } from "@shared/index";
+import { clearOrgWithFeaturesCache } from "@/external/redis/actions/orgWithFeaturesCache/orgWithFeaturesCache.js";
+import { invalidateProductsCache } from "@/external/redis/actions/productsCache/productsCache.js";
 import { createRoute } from "@/honoMiddlewares/routeHandler";
 import { CusService } from "@/internal/customers/CusService";
 import { FeatureService } from "@/internal/features/FeatureService";
-import { clearOrgWithFeaturesCache } from "@/internal/orgs/orgUtils/cacheOrgWithFeatures.js";
 import { ProductService } from "@/internal/products/ProductService";
-import { invalidateProductsCache } from "@/internal/products/productCacheUtils";
 
 export const handleNukeOrganisationConfiguration = createRoute({
 	scopes: {
@@ -47,7 +47,6 @@ export const handleNukeOrganisationConfiguration = createRoute({
 		await clearOrgWithFeaturesCache({
 			orgId: org.id,
 			env: AppEnv.Sandbox,
-			logger: ctx.logger,
 		});
 
 		return c.json({ message: "Organisation configuration cleared" });

@@ -193,7 +193,9 @@ describe("primary queue send batching", () => {
 		]);
 		expect(results[1]).toMatchObject({
 			status: "rejected",
-			reason: expect.objectContaining({ message: "entry failed" }),
+			reason: expect.objectContaining({
+				message: "Throttled: entry failed (senderFault=?)",
+			}),
 		});
 	});
 

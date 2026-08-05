@@ -17,6 +17,10 @@ const expectedCommands = new Set([
 	"adjustSubjectBalance",
 	"rollUsageWindows",
 	"getDelFullSubjectBalanceFields",
+	"deleteOwnedLock",
+	"refreshOwnedLock",
+	"acquireQueuePermits",
+	"releaseQueuePermit",
 ]);
 
 const registerCommands = () => {

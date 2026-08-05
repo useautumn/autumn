@@ -2,12 +2,13 @@ import { beforeEach, describe, expect, mock, test } from "bun:test";
 import { ApiVersion, ApiVersionClass, AppEnv } from "@autumn/shared";
 import { Hono } from "hono";
 import type { HonoEnv } from "@/honoUtils/HonoEnv.js";
+import { mockModuleWithRestore } from "../../utils/mockModuleWithRestore.js";
 
 const mockState = {
 	queueCalls: [] as Record<string, unknown>[],
 };
 
-mock.module(
+await mockModuleWithRestore(
 	"@/internal/customers/recovery/queueFailedCustomerCreation.js",
 	() => ({
 		queueFailedCustomerCreation: async (args: Record<string, unknown>) => {

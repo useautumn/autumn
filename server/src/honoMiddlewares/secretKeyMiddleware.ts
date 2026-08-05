@@ -76,6 +76,7 @@ export const secretKeyMiddleware = async (c: Context<HonoEnv>, next: Next) => {
 	const data = await verifyKey({
 		db: ctx.db,
 		key: bearerToken,
+		requestId: ctx.id,
 	});
 
 	if (!data) {

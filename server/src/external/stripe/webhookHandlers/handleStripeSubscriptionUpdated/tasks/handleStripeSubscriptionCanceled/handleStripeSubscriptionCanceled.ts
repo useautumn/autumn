@@ -5,7 +5,7 @@ import {
 	notNullish,
 } from "@autumn/shared";
 import { msToSeconds } from "@shared/utils/common/unixUtils";
-import { getStripeSubscriptionLock } from "@/external/stripe/subscriptions/utils/lockStripeSubscriptionUtils";
+import { getStripeSubscriptionLock } from "@/external/redis/actions/stripeSubscriptionLock/stripeSubscriptionLock.js";
 import type { StripeWebhookContext } from "@/external/stripe/webhookMiddlewares/stripeWebhookContext";
 import { addProductsUpdatedWebhookTask } from "@/internal/analytics/handlers/handleProductsUpdated";
 import { CusProductService } from "@/internal/customers/cusProducts/CusProductService";
@@ -50,6 +50,7 @@ export const handleStripeSubscriptionCanceled = async ({
 
 	// 2. Check lock - if Autumn initiated this cancellation, skip
 	const lock = await getStripeSubscriptionLock({
+		ctx,
 		stripeSubscriptionId: stripeSubscription.id,
 	});
 
