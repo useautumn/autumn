@@ -8,7 +8,7 @@ import { existsSync, writeFileSync } from "node:fs";
 import type { ReferralProgram, Reward } from "../../../compose/index.js";
 import type { Feature } from "../../../compose/models/index.js";
 import type { Plan } from "../../../compose/models/variantModels.js";
-import { loadDefaultConfig } from "../../config/loadConfig.js";
+import { DEFAULT_REWARD_EXPORT_ERROR } from "../../config/loadConfig.js";
 import { resolveConfigPath } from "../../env/index.js";
 import { buildFeatureCode } from "../sdkToCode/feature.js";
 import {
@@ -132,16 +132,7 @@ export async function updateConfigInPlace({
 	const hasDefaultResources =
 		/\bexport\s+default\b/.test(parsed.source) &&
 		/\b(?:rewards|referralPrograms)\b/.test(parsed.source);
-	const defaultConfig = hasDefaultResources
-		? await loadDefaultConfig({ cwd })
-		: undefined;
-	if (
-		(rewards !== undefined && defaultConfig?.rewards?.length) ||
-		(referralPrograms !== undefined && defaultConfig?.referralPrograms?.length)
-	)
-		throw new Error(
-			"In-place pull cannot update default-exported rewards or referral programs. Run 'atmn pull --force' to regenerate the config.",
-		);
+	if (hasDefaultResources) throw new Error(DEFAULT_REWARD_EXPORT_ERROR);
 	const requiredImports = [
 		...(plans.some((plan) => plan.billingControls) ? ["billingControls"] : []),
 		...(rewards?.length ? ["reward"] : []),

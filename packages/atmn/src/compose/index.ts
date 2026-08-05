@@ -1,11 +1,11 @@
 import {
+	feature as baseFeature,
 	plan as basePlan,
 	billingControls,
-	feature as baseFeature,
 	item,
 } from "./builders/builderFunctions.js";
-import { createVariant } from "./builders/variantFunctions.js";
 import { referralProgram, reward } from "./builders/rewardFunctions.js";
+import { createVariant } from "./builders/variantFunctions.js";
 import type { Feature } from "./models/featureModels.js";
 import type {
 	BillingControls,
@@ -13,13 +13,13 @@ import type {
 	PlanItem,
 	PlanLicense,
 } from "./models/planModels.js";
+import type { ReferralProgram, Reward } from "./models/rewardModels.js";
 import type {
 	CustomizePlan,
 	Plan,
 	PlanItemFilter,
 	Variant,
 } from "./models/variantModels.js";
-import type { ReferralProgram, Reward } from "./models/rewardModels.js";
 
 export { billingControls, plan, feature, item, referralProgram, reward };
 
@@ -83,6 +83,4 @@ export type Infinity = "infinity";
 export type AutumnConfig = {
 	plans: Plan[];
 	features: Feature[];
-	rewards?: Reward[];
-	referralPrograms?: ReferralProgram[];
 };

@@ -19,16 +19,16 @@ const withConfigWorkspace = async (
 	}
 };
 
-test("loads reward-only default exports", async () => {
+test("rejects default-exported rewards and referral programs", async () => {
 	await withConfigWorkspace(
 		`export default {
 				rewards: [{ id: "credits", name: "Credits", type: "feature_grant", grants: [{ featureId: "credits", included: 1 }], promoCodes: [{ code: "CREDITS" }] }],
 			referralPrograms: [{ id: "refer", rewardId: "credits", redeemOn: "customer_creation", receivedBy: "all" }],
 		};`,
 		async (cwd) => {
-			const config = await loadConfig({ cwd });
-			expect(config.rewards.map(({ id }) => id)).toEqual(["credits"]);
-			expect(config.referralPrograms.map(({ id }) => id)).toEqual(["refer"]);
+			await expect(loadConfig({ cwd })).rejects.toThrow(
+				"must be named reward() and referralProgram() exports",
+			);
 		},
 	);
 });
@@ -62,7 +62,7 @@ test("in-place pull rejects default-export resources without changing source", a
 					}),
 				],
 			}),
-		).rejects.toThrow("atmn pull --force");
+		).rejects.toThrow("must be named reward() and referralProgram() exports");
 		expect(readFileSync(join(cwd, "autumn.config.ts"), "utf8")).toBe(source);
 	});
 });

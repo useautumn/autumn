@@ -18,8 +18,13 @@ export type LoadedConfig = {
 };
 
 type ConfigModule = {
-	default?: Partial<LoadedConfig> & { products?: Plan[] };
+	default?: Partial<Pick<LoadedConfig, "features" | "plans">> & {
+		products?: Plan[];
+	};
 } & Record<string, unknown>;
+
+export const DEFAULT_REWARD_EXPORT_ERROR =
+	"Rewards and referral programs must be named reward() and referralProgram() exports; move them out of the default export before pulling or pushing.";
 
 const importConfig = async ({
 	cwd,
@@ -36,12 +41,6 @@ const importConfig = async ({
 	) as Promise<ConfigModule>;
 };
 
-export const loadDefaultConfig = async ({
-	cwd = process.cwd(),
-}: {
-	cwd?: string;
-} = {}) => (await importConfig({ cwd })).default;
-
 export const loadConfig = async ({
 	cwd = process.cwd(),
 }: {
@@ -55,18 +54,12 @@ export const loadConfig = async ({
 		referralPrograms: [],
 	};
 	const defaults = mod.default;
+	if (defaults && ("rewards" in defaults || "referralPrograms" in defaults))
+		throw new Error(DEFAULT_REWARD_EXPORT_ERROR);
 	if (defaults?.features) config.features.push(...defaults.features);
 	const defaultPlans = defaults?.plans ?? defaults?.products;
 	if (defaultPlans) config.plans.push(...defaultPlans);
-	if (defaults?.rewards) config.rewards.push(...defaults.rewards);
-	if (defaults?.referralPrograms)
-		config.referralPrograms.push(...defaults.referralPrograms);
-	const loadedValues = new Set<unknown>([
-		...config.features,
-		...config.plans,
-		...config.rewards,
-		...config.referralPrograms,
-	]);
+	const loadedValues = new Set<unknown>([...config.features, ...config.plans]);
 	for (const [name, value] of Object.entries(mod)) {
 		if (
 			name === "default" ||
