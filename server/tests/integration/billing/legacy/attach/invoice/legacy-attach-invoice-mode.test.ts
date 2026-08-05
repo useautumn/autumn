@@ -16,6 +16,7 @@
 import { expect, test } from "bun:test";
 import { type ApiCustomerV3, SuccessCode } from "@autumn/shared";
 import { expectCustomerFeatureCorrect } from "@tests/integration/billing/utils/expectCustomerFeatureCorrect";
+import { expectCustomerProducts } from "@tests/integration/billing/utils/expectCustomerProductCorrect";
 import { waitForCustomerInvoiceStatus } from "@tests/integration/billing/utils/waitForCustomerInvoiceStatus";
 import {
 	expectSubCount,
@@ -29,6 +30,8 @@ import {
 } from "@tests/utils/expectUtils/expectProductAttached";
 import { items } from "@tests/utils/fixtures/items";
 import { products } from "@tests/utils/fixtures/products";
+import { stripeCustomerId } from "@tests/utils/stripeUtils/stripeCustomerId";
+import { waitForStripeWebhook } from "@tests/utils/stripeUtils/waitForStripeWebhook";
 import ctx from "@tests/utils/testInitUtils/createTestContext";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
@@ -77,21 +80,50 @@ test.concurrent(
 			await autumnV1.customers.get<ApiCustomerV3>(customerId);
 		expect(customerBefore.features?.[TestFeature.Messages]).toBeUndefined();
 
-		await completeInvoiceCheckout({ url: res.checkout_url });
+		await completeInvoiceCheckout({
+			url: res.checkout_url,
+			ctx,
+			customerId,
+		});
 
-		const customerAfter = await waitForCustomerInvoiceStatus({
+		// The attach rides on invoice.paid, so wait on the attach itself — the
+		// invoice reaching "paid" is set by a different event.
+		const stripeCusId = await stripeCustomerId({ ctx, customerId });
+
+		await waitForStripeWebhook({
+			stripeCli: ctx.stripeCli,
+			env: ctx.env,
+			types: ["invoice.paid"],
+			customerStripeId: stripeCusId,
+			describeOnTimeout: async () => {
+				const invoices = await ctx.stripeCli.invoices.list({
+					customer: stripeCusId,
+					limit: 5,
+				});
+				return `stripe invoices: [${invoices.data
+					.map((invoice) => `${invoice.id}:${invoice.status}`)
+					.join(", ")}]`;
+			},
+			until: async () => {
+				const customer = await autumnV1.customers.get<ApiCustomerV3>(
+					customerId,
+					{ skip_cache: "true" },
+				);
+				return (customer.products ?? []).some(
+					(product: { id?: string }) => product.id === pro.id,
+				);
+			},
+		});
+
+		await expectCustomerProducts({
 			autumn: autumnV1,
 			customerId,
-			status: "paid",
+			active: [pro.id],
 		});
 
-		expectProductAttached({
-			customer: customerAfter as any,
-			product: pro,
-		});
-
-		expectCustomerFeatureCorrect({
-			customer: customerAfter,
+		await expectCustomerFeatureCorrect({
+			autumn: autumnV1,
+			customerId,
 			featureId: TestFeature.Messages,
 			includedUsage: 100,
 			balance: 100,
@@ -173,20 +205,22 @@ test.concurrent(
 			env: ctx.env,
 		});
 
-		await completeInvoiceCheckout({ url: res.checkout_url });
+		await completeInvoiceCheckout({
+			url: res.checkout_url,
+			ctx,
+			customerId,
+		});
 
-		const customerAfter = await waitForCustomerInvoiceStatus({
+		await waitForCustomerInvoiceStatus({
 			autumn: autumnV1,
 			customerId,
 			status: "paid",
 		});
-		expectProductAttached({
-			customer: customerAfter as any,
-			product: pro,
-		});
-		expectProductAttached({
-			customer: customerAfter as any,
-			product: addOn,
+
+		await expectCustomerProducts({
+			autumn: autumnV1,
+			customerId,
+			active: [pro.id, addOn.id],
 		});
 
 		await expectSubCount({ ctx, customerId, count: 2 });
@@ -317,32 +351,34 @@ test.concurrent(
 
 		expect(res.checkout_url).toBeDefined();
 
-		await completeInvoiceCheckout({ url: res.checkout_url });
+		await completeInvoiceCheckout({
+			url: res.checkout_url,
+			ctx,
+			customerId,
+		});
 
-		const customerAfter = await waitForCustomerInvoiceStatus({
+		await expectCustomerProducts({
 			autumn: autumnV1,
 			customerId,
-			status: "paid",
-		});
-		expectProductAttached({
-			customer: customerAfter as any,
-			product: premium,
+			active: [premium.id],
 		});
 
-		expectCustomerFeatureCorrect({
-			customer: customerAfter,
+		await expectCustomerFeatureCorrect({
+			autumn: autumnV1,
+			customerId,
 			featureId: TestFeature.Messages,
 			includedUsage: 500,
 			balance: 500,
 			usage: 0,
 		});
 
-		// Invoice should be paid after checkout
-		const nonCachedCustomer = await autumnV1.customers.get<ApiCustomerV3>(
+		// The upgrade's own invoice posts after the attach, so it must be waited
+		// for here — asserting earlier reads the previous invoice.
+		await waitForCustomerInvoiceStatus({
+			autumn: autumnV1,
 			customerId,
-			{ skip_cache: "true" },
-		);
-		expect(nonCachedCustomer.invoices?.[0].status).toBe("paid");
+			status: "paid",
+		});
 
 		await expectSubToBeCorrect({
 			db: ctx.db,

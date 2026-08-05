@@ -9,15 +9,20 @@ import {
 	type Product,
 } from "@autumn/shared";
 
-mock.module("@server/internal/products/prices/PriceService", () => ({
-	PriceService: { update: async () => undefined },
-}));
+await mockModuleWithRestore(
+	"@server/internal/products/prices/PriceService",
+	() => ({
+		PriceService: { update: async () => undefined },
+	}),
+);
 
 import { createStripeEmptyPrice } from "@/external/stripe/createStripePrice/createStripeEmptyPrice";
 import {
 	createStripeInArrearPrice,
 	priceToInArrearTiers,
 } from "@/external/stripe/createStripePrice/createStripeInArrear";
+
+import { mockModuleWithRestore } from "../utils/mockModuleWithRestore.js";
 
 const consumablePrice = ({
 	currencies,

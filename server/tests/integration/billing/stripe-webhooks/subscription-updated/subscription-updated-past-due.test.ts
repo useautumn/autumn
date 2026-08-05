@@ -169,15 +169,17 @@ test.concurrent(`${chalk.yellowBright("sub.updated: product enters past_due afte
 		],
 	});
 
-	const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
-
-	await expectProductPastDue({
-		customer,
-		productId: pro.id,
+	// Both the past_due flip and the renewal invoice going draft → open arrive
+	// via webhook after the clock advance, so poll instead of snapshotting.
+	await expectCustomerProducts({
+		autumn: autumnV1,
+		customerId,
+		pastDue: [pro.id],
 	});
 
 	await expectCustomerInvoiceCorrect({
-		customer,
+		autumn: autumnV1,
+		customerId,
 		count: 2,
 		invoiceIndex: 0,
 		latestTotal: 20,

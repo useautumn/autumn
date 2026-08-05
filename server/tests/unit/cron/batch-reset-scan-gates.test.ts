@@ -19,17 +19,19 @@
  *     - respects an aborted signal
  */
 
-import { beforeEach, describe, expect, mock, test } from "bun:test";
+import { beforeEach, describe, expect, test } from "bun:test";
 import type { BatchResetQueueDepth } from "@/internal/balances/batchReset/concurrency/getBatchResetQueueDepth.js";
 import { ResetJobV2ConfigSchema } from "@/internal/misc/resetJobV2/resetJobV2Schemas.js";
 import { setResetJobV2ConfigForTesting } from "@/internal/misc/resetJobV2/resetJobV2Store.js";
+
+import { mockModuleWithRestore } from "../utils/mockModuleWithRestore.js";
 
 // Queue of depth results the mocked getBatchResetQueueDepth serves in order,
 // repeating the last entry. `null` = no dedicated queue; "error" = SQS throw.
 let depthResults: (number | null | "error")[] = [];
 let depthCalls = 0;
 
-mock.module(
+await mockModuleWithRestore(
 	"@/internal/balances/batchReset/concurrency/getBatchResetQueueDepth.js",
 	() => ({
 		getBatchResetQueueDepth: (): Promise<BatchResetQueueDepth | null> => {
@@ -57,11 +59,13 @@ const liveSignal = () => new AbortController().signal;
 
 beforeEach(() => {
 	setResetJobV2ConfigForTesting({
-		config: ResetJobV2ConfigSchema.parse({
-			queueHighWaterMessages: 20,
-			// Schema minimum; keeps blocked-gate tests reasonably fast.
-			queueDepthPollMs: 1_000,
-		}),
+		config: {
+			...ResetJobV2ConfigSchema.parse({ queueHighWaterMessages: 20 }),
+			// The gates sleep for real between polls; the schema minimum (1s)
+			// would cost multiple wall-clock seconds per blocked-gate test, so
+			// bypass the parse floor for the poll cadence only.
+			queueDepthPollMs: 1,
+		},
 	});
 });
 

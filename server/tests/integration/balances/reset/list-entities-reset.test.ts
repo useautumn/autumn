@@ -5,6 +5,7 @@ import {
 	fullSubjectToCustomerEntitlements,
 	isEntityCusEnt,
 } from "@autumn/shared";
+import { expectBalanceCorrect } from "@tests/integration/utils/expectBalanceCorrect.js";
 import { TestFeature } from "@tests/setup/v2Features.js";
 import { setCachedSubjectBalanceField } from "@tests/utils/cusProductUtils/resetTestUtils.js";
 import { items } from "@tests/utils/fixtures/items.js";
@@ -99,15 +100,15 @@ test.concurrent(`${chalk.yellowBright("list entities reset: queues stale entity 
 		actions: [],
 	});
 
-	await Promise.all(
-		ENTITY_IDS.map((entityId) =>
-			autumnV2_1.entitiesV2.create({
-				customer_id: CUSTOMER_ID,
-				entity_id: entityId,
-				feature_id: TestFeature.Users,
-				name: entityId,
-			}),
-		),
+	// One batched call: entity creation takes a per-customer lock that fails
+	// fast, so parallel single creates race each other.
+	await autumnV1.entities.create(
+		CUSTOMER_ID,
+		ENTITY_IDS.map((entityId) => ({
+			id: entityId,
+			name: entityId,
+			feature_id: TestFeature.Users,
+		})),
 	);
 
 	await Promise.all(
@@ -130,7 +131,18 @@ test.concurrent(`${chalk.yellowBright("list entities reset: queues stale entity 
 			}),
 		),
 	);
-	await new Promise((resolve) => setTimeout(resolve, 2000));
+	// The tracks must land in Postgres before the resets are queued, otherwise
+	// a late deduction would be applied on top of the freshly reset balance.
+	for (const entityId of ENTITY_IDS) {
+		await expectBalanceCorrect({
+			autumn: autumnV2_1,
+			customerId: CUSTOMER_ID,
+			entityId,
+			featureId: TestFeature.Messages,
+			usage: USAGE[entityId],
+			skipCache: true,
+		});
+	}
 
 	const expiredCusEnts = await Promise.all(
 		STALE_IDS.map((entityId) =>
@@ -156,16 +168,18 @@ test.concurrent(`${chalk.yellowBright("list entities reset: queues stale entity 
 		expect(listRes.list.find((entity) => entity.id === entityId)).toBeDefined();
 	}
 
-	await new Promise((resolve) => setTimeout(resolve, 5000));
-
+	// The list queues the stale resets through the workflow queue; on a
+	// contended runner the workers drain well after the response returns.
 	for (const entityId of STALE_IDS) {
-		const entity = await autumnV2_1.entities.get<ApiEntityV2>(
-			CUSTOMER_ID,
+		await expectBalanceCorrect({
+			autumn: autumnV2_1,
+			customerId: CUSTOMER_ID,
 			entityId,
-			{ skip_cache: "true" },
-		);
-		expect(entity.balances[TestFeature.Messages].remaining).toBe(100);
-		expect(entity.balances[TestFeature.Messages].usage).toBe(0);
+			featureId: TestFeature.Messages,
+			remaining: 100,
+			usage: 0,
+			skipCache: true,
+		});
 	}
 
 	for (const cusEnt of expiredCusEnts) {
@@ -177,14 +191,14 @@ test.concurrent(`${chalk.yellowBright("list entities reset: queues stale entity 
 	}
 
 	for (const entityId of FRESH_IDS) {
-		const entity = await autumnV2_1.entities.get<ApiEntityV2>(
-			CUSTOMER_ID,
+		await expectBalanceCorrect({
+			autumn: autumnV2_1,
+			customerId: CUSTOMER_ID,
 			entityId,
-			{ skip_cache: "true" },
-		);
-		expect(entity.balances[TestFeature.Messages].remaining).toBe(
-			100 - USAGE[entityId],
-		);
-		expect(entity.balances[TestFeature.Messages].usage).toBe(USAGE[entityId]);
+			featureId: TestFeature.Messages,
+			remaining: 100 - USAGE[entityId],
+			usage: USAGE[entityId],
+			skipCache: true,
+		});
 	}
 });

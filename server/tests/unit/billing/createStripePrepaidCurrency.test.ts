@@ -9,11 +9,16 @@ import {
 	type Product,
 } from "@autumn/shared";
 
-mock.module("@server/internal/products/prices/PriceService", () => ({
-	PriceService: { update: async () => undefined },
-}));
+await mockModuleWithRestore(
+	"@server/internal/products/prices/PriceService",
+	() => ({
+		PriceService: { update: async () => undefined },
+	}),
+);
 
 import { createStripePrepaid } from "@/external/stripe/createStripePrice/createStripePrepaid";
+
+import { mockModuleWithRestore } from "../utils/mockModuleWithRestore.js";
 
 type CreateCall = Record<string, unknown>;
 

@@ -294,7 +294,7 @@ describe("sandboxes.copy: copy plans + features between two sandbox sub-orgs", (
 				parentInternalProductIds: [copied!.internal_id],
 			});
 		expect(storedLink.metadata).toEqual({ source: "sandbox-copy" });
-	}, 180_000);
+	});
 
 	test("rejects a non-owned source with a 404 (ownership masked)", async () => {
 		if (!target) throw new Error("sandbox not provisioned");
@@ -424,7 +424,7 @@ describe("sandboxes.copy: selective copy via productIds / featureIds", () => {
 		expect(features.map((f) => f.id).sort()).toEqual(
 			[DASH_FEATURE, MSG_FEATURE].sort(),
 		);
-	}, 180_000);
+	});
 
 	test("featureIds copies only those features and no products", async () => {
 		if (!source) throw new Error("source not provisioned");
@@ -452,7 +452,7 @@ describe("sandboxes.copy: selective copy via productIds / featureIds", () => {
 
 		expect(features.map((f) => f.id)).toEqual([DASH_FEATURE]);
 		expect(dstProducts.length).toBe(0);
-	}, 180_000);
+	});
 
 	test("a requested featureId absent from the source is rejected", async () => {
 		if (!source) throw new Error("source not provisioned");
@@ -473,7 +473,7 @@ describe("sandboxes.copy: selective copy via productIds / featureIds", () => {
 		}
 		expect(thrown).toBeInstanceOf(RecaseError);
 		expect((thrown as RecaseError).code).toBe(ErrCode.FeatureNotFound);
-	}, 180_000);
+	});
 
 	test("a credit-system featureId pulls in the metered feature it references", async () => {
 		if (!source) throw new Error("source not provisioned");
@@ -498,7 +498,7 @@ describe("sandboxes.copy: selective copy via productIds / featureIds", () => {
 		expect(features.map((f) => f.id).sort()).toEqual(
 			[CREDIT_FEATURE, MSG_FEATURE].sort(),
 		);
-	}, 180_000);
+	});
 });
 
 describe("sandboxes.copy: edge cases", () => {
@@ -599,7 +599,7 @@ describe("sandboxes.copy: edge cases", () => {
 			featsAfter.map((f) => f.id).sort(),
 		);
 		expect(prodsAgain.filter((p) => p.id === PRODUCT_ID).length).toBe(1);
-	}, 180_000);
+	});
 
 	test("productIds: [] and featureIds: [] copies nothing", async () => {
 		if (!source) throw new Error("source not provisioned");
@@ -627,7 +627,7 @@ describe("sandboxes.copy: edge cases", () => {
 		});
 		expect(features.length).toBe(0);
 		expect(dstProducts.length).toBe(0);
-	}, 180_000);
+	});
 
 	test("copying from an empty source succeeds and copies nothing", async () => {
 		const emptySource = await freshOrg("empty-src");
@@ -653,5 +653,5 @@ describe("sandboxes.copy: edge cases", () => {
 		});
 		expect(features.length).toBe(0);
 		expect(dstProducts.length).toBe(0);
-	}, 180_000);
+	});
 });

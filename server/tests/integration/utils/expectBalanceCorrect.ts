@@ -3,10 +3,16 @@ import {
 	type ApiBalanceRollover,
 	type ApiCustomerV5,
 	type ApiEntityV2,
+	ApiVersion,
 	BillingMethod,
 	formatMs,
 	type ResetInterval,
 } from "@autumn/shared";
+import {
+	type PollableExpectParams,
+	pollableCustomerExpect,
+} from "@tests/utils/pollableCustomerExpect.js";
+import { AutumnInt } from "@/external/autumn/autumnCli.js";
 
 const roundTo8Dp = (value: number) => Math.round(value * 1e8) / 1e8;
 
@@ -25,23 +31,7 @@ const TEN_MINUTES_MS = 10 * 60 * 1000;
 // (`prepaid`, `usage_based`), or "lifetime" for null-reset buckets.
 type BreakdownExpectation = Partial<Record<BreakdownKey, BucketExpectation>>;
 
-export const expectBalanceCorrect = ({
-	customer,
-	featureId,
-	granted,
-	includedGrant,
-	remaining,
-	planId,
-	usage,
-	nextResetAt,
-	toleranceMs = TEN_MINUTES_MS,
-	breakdown,
-	rollovers,
-	positiveRolloverCount,
-	breakdownCount,
-	breakdownId,
-}: {
-	customer: ApiCustomerV5 | ApiEntityV2;
+type BalanceExpectParams = PollableExpectParams<ApiCustomerV5 | ApiEntityV2> & {
 	featureId: string;
 	granted?: number;
 	includedGrant?: number;
@@ -56,7 +46,24 @@ export const expectBalanceCorrect = ({
 	positiveRolloverCount?: number;
 	breakdownCount?: number;
 	breakdownId?: string;
-}) => {
+};
+
+const assertBalanceCorrect = ({
+	customer,
+	featureId,
+	granted,
+	includedGrant,
+	remaining,
+	planId,
+	usage,
+	nextResetAt,
+	toleranceMs = TEN_MINUTES_MS,
+	breakdown,
+	rollovers,
+	positiveRolloverCount,
+	breakdownCount,
+	breakdownId,
+}: BalanceExpectParams & { customer: ApiCustomerV5 | ApiEntityV2 }) => {
 	const balance = customer.balances[featureId];
 	expect(balance).toBeDefined();
 
@@ -146,3 +153,25 @@ export const expectBalanceCorrect = ({
 		expect(balance.breakdown?.[0]?.id).toBe(breakdownId);
 	}
 };
+
+const defaultAutumn = new AutumnInt({ version: ApiVersion.V2_1 });
+
+/**
+ * Assert a feature balance. Pass `customerId` (instead of a fetched `customer`)
+ * to poll until it settles — see {@link pollableCustomerExpect}.
+ */
+export const expectBalanceCorrect = pollableCustomerExpect({
+	fetchCustomer: ({
+		customerId,
+		entityId,
+		skipCache,
+		autumn,
+	}: BalanceExpectParams): Promise<ApiCustomerV5 | ApiEntityV2> => {
+		const client = autumn ?? defaultAutumn;
+		const query = skipCache ? { skip_cache: "true" } : undefined;
+		return entityId
+			? client.entities.get<ApiEntityV2>(customerId!, entityId, query)
+			: client.customers.get<ApiCustomerV5>(customerId!, query);
+	},
+	assert: assertBalanceCorrect,
+});

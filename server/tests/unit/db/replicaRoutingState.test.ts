@@ -8,6 +8,8 @@ import {
 	setSystemTime,
 } from "bun:test";
 
+import { mockModuleWithRestore } from "../utils/mockModuleWithRestore.js";
+
 const last = <T>(arr: T[]): T | undefined => arr[arr.length - 1];
 
 // Single ordered recorder: info/warn interleaving matters for transition order.
@@ -18,7 +20,7 @@ const info = mock((...args: unknown[]) => {
 const warn = mock((...args: unknown[]) => {
 	loggedFields.push(args[0] as Record<string, unknown>);
 });
-mock.module("@/external/logtail/logtailUtils.js", () => ({
+await mockModuleWithRestore("@/external/logtail/logtailUtils.js", () => ({
 	logger: {
 		info,
 		warn,

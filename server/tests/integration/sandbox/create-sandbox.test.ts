@@ -99,7 +99,7 @@ describe("createSandboxForOrg", () => {
 			where: eq(member.organizationId, org.id),
 		});
 		expect(members.length).toBe(0);
-	}, 120_000);
+	});
 
 	test("a new sandbox inherits the master org's config", async () => {
 		const actorUser = (await db.query.user.findFirst()) as unknown as User;
@@ -136,5 +136,5 @@ describe("createSandboxForOrg", () => {
 		expect(org.config.default_applies_to_entities).toBe(true);
 		expect(org.config.prorate_unused).toBe(false);
 		expect(org.config).toEqual(masterConfig);
-	}, 120_000);
+	});
 });

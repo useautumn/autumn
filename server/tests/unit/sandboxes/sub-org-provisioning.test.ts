@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, mock, test } from "bun:test";
+import { beforeEach, describe, expect, test } from "bun:test";
 import { AppEnv, member, organizations } from "@autumn/shared";
 
 // Sub-org / sandbox provisioning is non-transactional: it creates external
@@ -30,23 +30,32 @@ const reReadOrg = {
 	svix_config: { sandbox_app_id: "app_sandbox", live_app_id: "app_live" },
 };
 
-mock.module("@/db/initDrizzle.js", () => ({
+// Spread the real module so every export stays defined — a partial factory
+// poisons later files in the same process with missing-export link errors.
+const realInitDrizzle = await import("@/db/initDrizzle.js");
+await mockModuleWithRestore("@/db/initDrizzle.js", () => ({
+	...realInitDrizzle,
 	db: {},
 	initDrizzle: () => ({ db: {} }),
 }));
-mock.module("@/external/logtail/logtailUtils.js", () => ({
+await mockModuleWithRestore("@/external/logtail/logtailUtils.js", () => ({
 	logger: { info: () => {}, warn: () => {}, error: () => {} },
 }));
-mock.module("@/utils/posthog.js", () => ({ captureOrgEvent: async () => {} }));
-mock.module("@/internal/orgs/orgUtils/createConnectAccount.js", () => ({
-	createConnectAccount: async () => {
-		if (state.createConnectThrows) {
-			throw new Error("stripe accounts.create failed");
-		}
-		return { id: "acct_test" };
-	},
+await mockModuleWithRestore("@/utils/posthog.js", () => ({
+	captureOrgEvent: async () => {},
 }));
-mock.module("@/external/svix/svixHelpers.js", () => ({
+await mockModuleWithRestore(
+	"@/internal/orgs/orgUtils/createConnectAccount.js",
+	() => ({
+		createConnectAccount: async () => {
+			if (state.createConnectThrows) {
+				throw new Error("stripe accounts.create failed");
+			}
+			return { id: "acct_test" };
+		},
+	}),
+);
+await mockModuleWithRestore("@/external/svix/svixHelpers.js", () => ({
 	createSvixApp: async ({ env }: { env: AppEnv }) => {
 		const which = env === AppEnv.Live ? state.svixLive : state.svixSandbox;
 		if (which === "undef") {
@@ -60,13 +69,13 @@ mock.module("@/external/svix/svixHelpers.js", () => ({
 		state.deletedSvixApps.push(appId);
 	},
 }));
-mock.module("@/external/connect/connectUtils.js", () => ({
+await mockModuleWithRestore("@/external/connect/connectUtils.js", () => ({
 	deleteConnectedAccount: async ({ accountId }: { accountId: string }) => {
 		state.deletedAccounts.push(accountId);
 	},
 	deauthorizeAccount: async () => {},
 }));
-mock.module("@/internal/orgs/OrgService.js", () => ({
+await mockModuleWithRestore("@/internal/orgs/OrgService.js", () => ({
 	OrgService: {
 		update: async ({ updates }: { updates: Record<string, unknown> }) => {
 			if (state.failOnUpdateKey && state.failOnUpdateKey in updates) {
@@ -80,7 +89,7 @@ mock.module("@/internal/orgs/OrgService.js", () => ({
 		listSandboxes: async () => [],
 	},
 }));
-mock.module("@/internal/dev/apiKeys/apiKeyUtils.js", () => ({
+await mockModuleWithRestore("@/internal/dev/apiKeys/apiKeyUtils.js", () => ({
 	createKey: async () => {
 		if (state.keyThrows) {
 			throw new Error("createKey failed");
@@ -88,15 +97,20 @@ mock.module("@/internal/dev/apiKeys/apiKeyUtils.js", () => ({
 		return "am_sk_test_generated";
 	},
 }));
-mock.module("@/internal/orgs/deleteOrg/deletePlatformSubOrg.js", () => ({
-	deletePlatformSubOrg: async ({ org }: { org: Record<string, unknown> }) => {
-		state.teardownOrg = org;
-	},
-}));
+await mockModuleWithRestore(
+	"@/internal/orgs/deleteOrg/deletePlatformSubOrg.js",
+	() => ({
+		deletePlatformSubOrg: async ({ org }: { org: Record<string, unknown> }) => {
+			state.teardownOrg = org;
+		},
+	}),
+);
 
 import { provisionSubOrg } from "@/internal/orgs/orgUtils/provisionSubOrg.js";
 import { createSandboxForOrg } from "@/internal/sandboxes/createSandbox.js";
 import { provisionOrgResources } from "@/utils/authUtils/afterOrgCreated.js";
+
+import { mockModuleWithRestore } from "../utils/mockModuleWithRestore.js";
 
 const fakeDb = {
 	insert: () => ({

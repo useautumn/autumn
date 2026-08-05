@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, mock, test } from "bun:test";
+import { beforeEach, describe, expect, test } from "bun:test";
 import { ErrCode, type Organization } from "@autumn/shared";
 
 const state = {
@@ -12,14 +12,18 @@ const state = {
 	listSandboxesCalls: 0,
 };
 
-mock.module("@/db/initDrizzle.js", () => ({
+// Spread the real module so every export stays defined — a partial factory
+// poisons later files in the same process with missing-export link errors.
+const realInitDrizzle = await import("@/db/initDrizzle.js");
+await mockModuleWithRestore("@/db/initDrizzle.js", () => ({
+	...realInitDrizzle,
 	db: {},
 	initDrizzle: () => ({ db: {} }),
 }));
-mock.module("@/external/logtail/logtailUtils.js", () => ({
+await mockModuleWithRestore("@/external/logtail/logtailUtils.js", () => ({
 	logger: { info: () => {}, warn: () => {}, error: () => {} },
 }));
-mock.module("autumn-js", () => ({
+await mockModuleWithRestore("autumn-js", () => ({
 	Autumn: class {
 		async check(args: Record<string, unknown>) {
 			state.autumnCalled = true;
@@ -31,7 +35,7 @@ mock.module("autumn-js", () => ({
 		}
 	},
 }));
-mock.module("@/internal/orgs/OrgService.js", () => ({
+await mockModuleWithRestore("@/internal/orgs/OrgService.js", () => ({
 	OrgService: {
 		listSandboxes: async () => {
 			state.listSandboxesCalls++;
@@ -39,25 +43,33 @@ mock.module("@/internal/orgs/OrgService.js", () => ({
 		},
 	},
 }));
-mock.module("@/internal/orgs/orgUtils/provisionSubOrg.js", () => ({
-	provisionSubOrg: async ({ slug, name }: { slug: string; name: string }) => {
-		state.provisionCalled = true;
-		return { id: "org_sandbox", slug, name };
-	},
-}));
-mock.module("@/internal/dev/apiKeys/apiKeyUtils.js", () => ({
+await mockModuleWithRestore(
+	"@/internal/orgs/orgUtils/provisionSubOrg.js",
+	() => ({
+		provisionSubOrg: async ({ slug, name }: { slug: string; name: string }) => {
+			state.provisionCalled = true;
+			return { id: "org_sandbox", slug, name };
+		},
+	}),
+);
+await mockModuleWithRestore("@/internal/dev/apiKeys/apiKeyUtils.js", () => ({
 	createKey: async () => "am_sk_test_generated",
 }));
-mock.module("@/internal/orgs/deleteOrg/deletePlatformSubOrg.js", () => ({
-	deletePlatformSubOrg: async () => {
-		state.teardownCalled = true;
-	},
-}));
+await mockModuleWithRestore(
+	"@/internal/orgs/deleteOrg/deletePlatformSubOrg.js",
+	() => ({
+		deletePlatformSubOrg: async () => {
+			state.teardownCalled = true;
+		},
+	}),
+);
 
 import {
 	assertSandboxCapacity,
 	createSandboxForOrg,
 } from "@/internal/sandboxes/createSandbox.js";
+
+import { mockModuleWithRestore } from "../utils/mockModuleWithRestore.js";
 
 const masterOrg = { id: "org_master" } as unknown as Organization;
 const actorUser = { id: "u1", email: "a@b.c" } as never;

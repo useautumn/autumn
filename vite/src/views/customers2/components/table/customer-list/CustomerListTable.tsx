@@ -19,6 +19,7 @@ import { useCustomerListColumns } from "@/views/customers2/hooks/useCustomerList
 import { useCustomerTable } from "@/views/customers2/hooks/useCustomerTable";
 import type { CustomerWithProducts } from "./CustomerListColumns";
 import { CustomerListCreateButton } from "./CustomerListCreateButton";
+import { CustomerListExportMenu } from "./CustomerListExportMenu";
 import { CustomerListFilterButton } from "./CustomerListFilterButton";
 import {
 	CustomerListPageSizeSelector,
@@ -198,6 +199,7 @@ export function CustomerListTable({
 					</Table.Heading>
 					<Table.Actions>
 						<CustomerListCreateButton />
+						<CustomerListExportMenu />
 					</Table.Actions>
 				</Table.Toolbar>
 				<div className="flex flex-wrap items-center gap-2 pb-4">

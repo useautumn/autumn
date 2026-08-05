@@ -22,11 +22,13 @@ import type { Message } from "@aws-sdk/client-sqs";
 import { RedisUnavailableError } from "@/external/redis/utils/errors.js";
 import { JobName } from "@/queue/JobName.js";
 
+import { mockModuleWithRestore } from "../utils/mockModuleWithRestore.js";
+
 const mockState = {
 	createWorkerContextCalls: [] as Record<string, unknown>[],
 };
 
-mock.module("@/queue/createWorkerContext.js", () => ({
+await mockModuleWithRestore("@/queue/createWorkerContext.js", () => ({
 	createWorkerContext: async (args: Record<string, unknown>) => {
 		mockState.createWorkerContextCalls.push(args);
 		const logger = {
