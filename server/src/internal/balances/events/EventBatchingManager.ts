@@ -4,9 +4,10 @@ import { sendEventsToTinybird } from "@server/external/tinybird/sendEvents/sendE
 import { JobName } from "@server/queue/JobName.js";
 import { addTaskToQueue } from "@server/queue/queueUtils.js";
 
-class BatchingManager {
+export class EventBatchingManager {
 	private events: Map<string, EventInsert> = new Map();
 	private timer: NodeJS.Timeout | null = null;
+	private readonly inFlightExecutions = new Set<Promise<void>>();
 	private readonly batchWindow = 350; // 100ms batching window
 	private readonly maxBatchSize = 200; // Max events per batch (~200kb per event, keep batches under 10MB for Tinybird)
 
@@ -17,7 +18,7 @@ class BatchingManager {
 
 		// Auto-execute if batch size is reached
 		if (this.events.size >= this.maxBatchSize) {
-			this.executeBatch();
+			void this.startBatch();
 			return;
 		}
 
@@ -27,8 +28,25 @@ class BatchingManager {
 		}
 
 		this.timer = setTimeout(() => {
-			this.executeBatch();
+			void this.startBatch();
 		}, this.batchWindow);
+	}
+
+	async flush(): Promise<void> {
+		await this.startBatch();
+		while (this.inFlightExecutions.size > 0) {
+			await Promise.all(Array.from(this.inFlightExecutions));
+		}
+	}
+
+	private startBatch(): Promise<void> {
+		const execution = this.executeBatch();
+		this.inFlightExecutions.add(execution);
+		void execution.then(
+			() => this.inFlightExecutions.delete(execution),
+			() => this.inFlightExecutions.delete(execution),
+		);
+		return execution;
 	}
 
 	/** Execute the current batch - queue to SQS for Postgres and send to Tinybird */
@@ -62,4 +80,4 @@ class BatchingManager {
 }
 
 // Global singleton instance
-export const globalEventBatchingManager = new BatchingManager();
+export const globalEventBatchingManager = new EventBatchingManager();

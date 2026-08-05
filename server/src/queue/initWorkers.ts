@@ -33,7 +33,7 @@ import { initBlueGreen, shutdownBlueGreen } from "./blueGreen/initBlueGreen.js";
 import { getSqsClient, QUEUE_URL, recreateSqsClient } from "./initSqs.js";
 import { JobName } from "./JobName.js";
 import { processMessage, type SqsJob } from "./processMessage.js";
-import { shutdownSqsSendBatchers } from "./queueUtils.js";
+import { shutdownSqsProducers } from "./shutdownSqsProducers.js";
 import {
 	createWorkerActivityTracker,
 	type WorkerActivityTracker,
@@ -606,8 +606,12 @@ export const initWorkers = async ({
 	await warmupRegionalRedis();
 
 	await initBlueGreen({ db, logger });
+	const pollingLoops: Promise<void>[] = [];
+	let shuttingDown = false;
 
 	const shutdown = async () => {
+		if (shuttingDown) return;
+		shuttingDown = true;
 		console.log(`[SQS Worker ${process.pid}] Shutting down...`);
 		isRunning = false;
 		stopPgPoolMonitor();
@@ -615,7 +619,8 @@ export const initWorkers = async ({
 		for (const controller of abortControllers) {
 			controller.abort();
 		}
-		await shutdownSqsSendBatchers();
+		await Promise.allSettled(pollingLoops);
+		await shutdownSqsProducers();
 
 		const isProd = process.env.NODE_ENV === "production";
 		if (isProd) {
@@ -635,7 +640,6 @@ export const initWorkers = async ({
 	console.log(
 		`[Worker ${process.pid}] ${queueImplementation} worker ready in ${startupDurationMs}ms`,
 	);
-	const pollingLoops = [];
 	const workerActivity = createWorkerActivityTracker({
 		idleAfterMs: IDLE_SELF_KILL_MS,
 	});

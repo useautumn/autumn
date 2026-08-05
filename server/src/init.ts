@@ -42,21 +42,21 @@ import "./internal/misc/asyncTrack/asyncTrackStore.js";
 // Side-effect: configures trigger.dev SDK to use TRIGGER_SERVER_SECRET_KEY.
 import "./trigger/configureTrigger.js";
 import { closeStripeSyncEngine } from "@autumn/stripe-sync";
-import {
-	startRedisMonitor,
-	stopRedisMonitor,
-	warmupRegionalRedis,
-} from "./external/redis/initRedis.js";
 import { primeRedisMonitor } from "./external/redis/availabilityMonitor/redisAvailability.js";
 import {
 	primeRedisV2Monitor,
 	startRedisV2Monitor,
 	stopRedisV2Monitor,
 } from "./external/redis/availabilityMonitor/redisV2Availability.js";
+import {
+	startRedisMonitor,
+	stopRedisMonitor,
+	warmupRegionalRedis,
+} from "./external/redis/initRedis.js";
 import { preWarmOrgRedisConnections } from "./external/redis/orgRedisPool.js";
 import { createHonoApp } from "./initHono.js";
 import { otelSdk } from "./instrumentation.js";
-import { shutdownSqsSendBatchers } from "./queue/queueUtils.js";
+import { shutdownSqsProducers } from "./queue/shutdownSqsProducers.js";
 import { checkEnvVars } from "./utils/initUtils.js";
 import {
 	startMemorySpikeProbe,
@@ -67,6 +67,7 @@ import { startMemoryMonitor } from "./utils/memoryMonitor.js";
 checkEnvVars();
 
 let shuttingDown = false;
+let httpServer: http.Server | undefined;
 
 const init = async ({ startupStartedAt }: { startupStartedAt: number }) => {
 	logger.info(getRedactedDatabaseUrls(), "DB URLs");
@@ -96,6 +97,7 @@ const init = async ({ startupStartedAt }: { startupStartedAt: number }) => {
 
 	const requestListener = getRequestListener(app.fetch);
 	const server = http.createServer(requestListener);
+	httpServer = server;
 
 	server.keepAliveTimeout = 120000;
 	server.headersTimeout = 120000;
@@ -177,10 +179,12 @@ function registerShutdownHandlers() {
 }
 
 async function gracefulShutdown() {
+	if (shuttingDown) return;
 	shuttingDown = true;
 	console.log("Shutting down worker, flushing telemetry and closing DB...");
 	try {
-		await shutdownSqsSendBatchers();
+		await stopHttpServer();
+		await shutdownSqsProducers();
 
 		// Flush any buffered OTel spans before shutting down
 		if (otelSdk) {
@@ -206,3 +210,14 @@ async function gracefulShutdown() {
 		process.exit(1);
 	}
 }
+
+const stopHttpServer = async (): Promise<void> => {
+	const server = httpServer;
+	if (!server) return;
+	httpServer = undefined;
+
+	await new Promise<void>((resolve, reject) => {
+		server.close((error) => (error ? reject(error) : resolve()));
+		server.closeIdleConnections();
+	});
+};
