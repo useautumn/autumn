@@ -1,7 +1,7 @@
 import { globalEventBatchingManager } from "@/internal/balances/events/EventBatchingManager.js";
 import { globalRefreshEntityAggregateBatchingManager } from "@/internal/balances/utils/refreshEntityAggregate/RefreshEntityAggregateBatchingManager.js";
 import { globalSyncBatchingManagerV3 } from "@/internal/balances/utils/sync/SyncBatchingManagerV3.js";
-import { shutdownSqsSendBatchers } from "./queueUtils.js";
+import { flushSqsSendBatchers, shutdownSqsSendBatchers } from "./queueUtils.js";
 
 type DeferredSqsProducer = {
 	flush: () => Promise<void>;
@@ -15,13 +15,20 @@ const defaultProducers: DeferredSqsProducer[] = [
 
 export const flushSqsProducers = async ({
 	producers = defaultProducers,
+	flushSqsSendBatchersFn = flushSqsSendBatchers,
 }: {
 	producers?: DeferredSqsProducer[];
+	flushSqsSendBatchersFn?: () => Promise<void>;
 } = {}): Promise<void> => {
-	const results = await Promise.allSettled(
+	const producerResults = await Promise.allSettled(
 		producers.map((producer) => producer.flush()),
 	);
-	const failure = results.find((result) => result.status === "rejected");
+	const sendBatcherResult = await Promise.allSettled([
+		flushSqsSendBatchersFn(),
+	]);
+	const failure = [...producerResults, ...sendBatcherResult].find(
+		(result) => result.status === "rejected",
+	);
 	if (failure) throw failure.reason;
 };
 

@@ -56,7 +56,10 @@ import {
 import { preWarmOrgRedisConnections } from "./external/redis/orgRedisPool.js";
 import { createHonoApp } from "./initHono.js";
 import { otelSdk } from "./instrumentation.js";
-import { shutdownSqsProducers } from "./queue/shutdownSqsProducers.js";
+import {
+	flushSqsProducers,
+	shutdownSqsProducers,
+} from "./queue/shutdownSqsProducers.js";
 import { checkEnvVars } from "./utils/initUtils.js";
 import {
 	startMemorySpikeProbe,
@@ -67,6 +70,7 @@ import {
 	createHttpRequestTracker,
 	stopHttpServer,
 } from "./utils/stopHttpServer.js";
+import { withTimeout } from "./utils/withTimeout.js";
 
 checkEnvVars();
 
@@ -74,6 +78,7 @@ let shuttingDown = false;
 let httpServer: http.Server | undefined;
 let hasActiveHttpRequests: (() => boolean) | undefined;
 let waitForActiveHttpRequests: (() => Promise<void>) | undefined;
+const FORCED_SQS_FLUSH_TIMEOUT_MS = 5_000;
 
 const init = async ({ startupStartedAt }: { startupStartedAt: number }) => {
 	logger.info(getRedactedDatabaseUrls(), "DB URLs");
@@ -204,8 +209,20 @@ async function gracefulShutdown() {
 			});
 			if (!requestsDrained) {
 				console.warn(
-					"HTTP shutdown deadline reached with an active handler; exiting without closing SQS producers",
+					"HTTP shutdown deadline reached with an active handler; flushing SQS producers before forced exit",
 				);
+				try {
+					await withTimeout({
+						timeoutMs: FORCED_SQS_FLUSH_TIMEOUT_MS,
+						fn: flushSqsProducers,
+						timeoutMessage: "Forced-exit SQS producer flush timed out",
+					});
+				} catch (error) {
+					console.error(
+						"Failed to flush SQS producers before forced exit:",
+						error,
+					);
+				}
 				process.exit(0);
 			}
 		}

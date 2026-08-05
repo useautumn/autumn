@@ -86,8 +86,8 @@ export class SqsBatchAccumulator<TEntry extends SqsBatchAccumulatorEntry> {
 	}
 
 	async flush(): Promise<void> {
-		await this.startSend();
-		while (this.inFlightSends.size > 0) {
+		while (this.pendingEntries.length > 0 || this.inFlightSends.size > 0) {
+			await this.startSend();
 			await Promise.all(Array.from(this.inFlightSends));
 		}
 	}

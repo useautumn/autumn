@@ -1,15 +1,5 @@
 /**
- * Regression coverage for deferred SQS producers racing accumulator shutdown.
- *
- * Red failures:
- * - accumulator shutdown starts as soon as one concurrent producer rejects;
- * - max-size sync batches are removed from the pending map without being tracked;
- * - background event enqueue failures are silently consumed by tracking cleanup.
- *
- * Green criteria:
- * - all producer drains settle before accumulator shutdown;
- * - every started sync enqueue remains visible to flush();
- * - background event failures are emitted through the application logger.
+ * Covers deferred SQS producers draining before accumulator shutdown or forced exit.
  */
 
 import { describe, expect, spyOn, test } from "bun:test";
@@ -24,9 +14,46 @@ import {
 	type QueueSyncV4Payload,
 	SyncBatchingManagerV3,
 } from "@/internal/balances/utils/sync/SyncBatchingManagerV3.js";
-import { shutdownSqsProducers } from "@/queue/shutdownSqsProducers.js";
+import {
+	flushSqsProducers,
+	shutdownSqsProducers,
+} from "@/queue/shutdownSqsProducers.js";
 
 describe("deferred SQS producer shutdown", () => {
+	test("non-closing flush drains producers and SQS send batchers in order", async () => {
+		const calls: string[] = [];
+
+		await flushSqsProducers({
+			producers: [
+				{
+					flush: async () => {
+						calls.push("producer");
+					},
+				},
+			],
+			flushSqsSendBatchersFn: async () => {
+				calls.push("send batchers");
+			},
+		});
+
+		expect(calls).toEqual(["producer", "send batchers"]);
+	});
+
+	test("non-closing flush drains send batchers after a producer failure", async () => {
+		const producerFailure = new Error("producer failed");
+		let sendBatchersFlushed = false;
+
+		const result = await flushSqsProducers({
+			producers: [{ flush: async () => Promise.reject(producerFailure) }],
+			flushSqsSendBatchersFn: async () => {
+				sendBatchersFlushed = true;
+			},
+		}).catch((error: unknown) => error);
+
+		expect(result).toBe(producerFailure);
+		expect(sendBatchersFlushed).toBeTrue();
+	});
+
 	test("waits for every producer to settle before shutting down accumulators", async () => {
 		const producerFailure = new Error("event producer failed");
 		let releaseSlowProducer: () => void = () => undefined;
