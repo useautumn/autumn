@@ -40,7 +40,7 @@ const getCustomerProduct = async ({
 };
 
 test.concurrent(
-	`${chalk.yellowBright("create-schedule preserve add-ons: keeps the existing recurring add-on in every phase")}`,
+	`${chalk.yellowBright("create-schedule preserve add-ons: keeps the existing recurring add-on active and out of the schedule")}`,
 	async () => {
 		const customerId = "create-schedule-preserve-existing-addon";
 		const pro = products.pro({
@@ -102,11 +102,12 @@ test.concurrent(
 		const response = await autumnV1.billing.createSchedule(params);
 
 		expect(response.phases).toHaveLength(2);
+		// The schedule never placed the add-on, so it belongs to no phase of it.
 		expect(
-			response.phases.every((phase) =>
+			response.phases.some((phase) =>
 				phase.customer_product_ids.includes(addonBefore!.id),
 			),
-		).toBe(true);
+		).toBe(false);
 
 		const addonAfter = await getCustomerProduct({
 			ctx,
@@ -122,7 +123,7 @@ test.concurrent(
 );
 
 test.concurrent(
-	`${chalk.yellowBright("create-schedule preserve add-ons: omitted flag keeps replacement semantics")}`,
+	`${chalk.yellowBright("create-schedule preserve add-ons: an add-on the schedule never mentions survives without the flag")}`,
 	async () => {
 		const customerId = "create-schedule-replace-existing-addon";
 		const pro = products.pro({
@@ -172,7 +173,8 @@ test.concurrent(
 		const addonAfter = await ctx.db.query.customerProducts.findFirst({
 			where: eq(customerProducts.id, addonBefore!.id),
 		});
-		expect(addonAfter?.status).toBe(CusProductStatus.Expired);
+		expect(addonAfter?.status).toBe(CusProductStatus.Active);
+		expect(addonAfter?.ended_at).toBeNull();
 	},
 );
 
@@ -270,12 +272,16 @@ test.concurrent(
 			],
 		});
 
-		expect(response.phases[0]?.customer_product_ids).toContain(
-			currentBaseCustomerProduct?.id,
-		);
-		expect(response.phases[1]?.customer_product_ids).not.toContain(
-			currentBaseCustomerProduct?.id,
-		);
+		expect(
+			response.phases.some((phase) =>
+				phase.customer_product_ids.includes(currentBaseCustomerProduct!.id),
+			),
+		).toBe(false);
+		// The later phase claims the base's slot, so it ends when that phase starts.
+		const currentBaseAfter = await ctx.db.query.customerProducts.findFirst({
+			where: eq(customerProducts.id, currentBaseCustomerProduct!.id),
+		});
+		expect(currentBaseAfter?.ended_at).toBe(response.phases[1]!.starts_at);
 		await expectStripeSubscriptionCorrect({ ctx, customerId });
 	},
 );

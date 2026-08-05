@@ -3,8 +3,12 @@ import type {
 	CheckResponseV2,
 	RecalculateBalancePreview,
 } from "@autumn/shared";
+import { findCustomerEntitlement } from "@tests/balances/utils/findCustomerEntitlement.js";
+import { waitForPostgresBalance } from "@tests/integration/cron/batch-reset-v2/batchResetV2TestUtils.js";
 import { TestFeature } from "@tests/setup/v2Features.js";
 import { expectAutumnError } from "@tests/utils/expectUtils/expectErrUtils.js";
+import { items } from "@tests/utils/fixtures/items.js";
+import { products } from "@tests/utils/fixtures/products.js";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";
 
@@ -504,7 +508,7 @@ test.concurrent(
 			customerId: "recalc-9",
 			setup: [
 				s.customer({ testClock: false }),
-				s.entities({ count: 1, featureId: TestFeature.Users }),
+				s.entities({ count: 1, featureId: TestFeature.Admin }),
 			],
 			actions: [],
 		});
@@ -649,5 +653,79 @@ test.concurrent(
 			skip_cache: true,
 		});
 		expect(breakdownById(after)).toEqual(breakdownById(before));
+	},
+);
+
+// RECALCULATE-11: Negative carry-over debt must be reapplied to the new grant;
+// previously it was counted as a negative grant, making recalculation a no-op.
+test.concurrent(
+	`${chalk.yellowBright("recalculate-11: absorbs negative carry-over into the new plan")}`,
+	async () => {
+		const pro = products.pro({
+			id: "recalc-negative-carry-over-pro",
+			items: [items.consumableMessages({ includedUsage: 100 })],
+		});
+		const premium = products.premium({
+			id: "recalc-negative-carry-over-premium",
+			items: [items.monthlyMessages({ includedUsage: 500 })],
+		});
+		const { customerId, autumnV2, autumnV2_1, autumnV2_2, ctx } =
+			await initScenario({
+				customerId: "recalc-negative-carry-over",
+				setup: [
+					s.customer({ paymentMethod: "success" }),
+					s.products({ list: [pro, premium] }),
+				],
+				actions: [s.attach({ productId: pro.id, timeout: 4000 })],
+			});
+
+		await autumnV2_1.track({
+			customer_id: customerId,
+			feature_id: TestFeature.Messages,
+			value: 120,
+		});
+		const cusEnt = await findCustomerEntitlement({
+			ctx,
+			customerId,
+			featureId: TestFeature.Messages,
+		});
+		await waitForPostgresBalance({
+			db: ctx.db,
+			customerEntitlementId: cusEnt!.id,
+			expectedBalance: -20,
+		});
+
+		await autumnV2_2.billing.attach({
+			customer_id: customerId,
+			plan_id: premium.id,
+			carry_over_balances: { enabled: true },
+		});
+
+		const preview = await autumnV2.balances.previewRecalculate({
+			customer_id: customerId,
+			feature_id: TestFeature.Messages,
+		});
+		expect(preview.total_usage).toBe(20);
+		expect(sumBefore(preview)).toBe(480);
+		expect(sumAfter(preview)).toBe(480);
+		expect(
+			preview.entitlements.some(
+				(entry) => entry.before_remaining !== entry.after_remaining,
+			),
+		).toBe(true);
+
+		await autumnV2.balances.recalculate({
+			customer_id: customerId,
+			feature_id: TestFeature.Messages,
+		});
+		const check = await autumnV2.check<CheckResponseV2>({
+			customer_id: customerId,
+			feature_id: TestFeature.Messages,
+			skip_cache: true,
+		});
+		expect(check.balance?.current_balance).toBe(480);
+		for (const entry of check.balance?.breakdown ?? []) {
+			expect(entry.current_balance).toBeGreaterThanOrEqual(0);
+		}
 	},
 );

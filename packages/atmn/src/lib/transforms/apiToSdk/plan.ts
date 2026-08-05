@@ -106,7 +106,7 @@ const transformApiPlanItemFilter = (
 		? { billingMethod: filter.billing_method }
 		: {}),
 	...(filter.interval !== undefined ? { interval: filter.interval } : {}),
-	...(filter.interval_count !== undefined
+	...(filter.interval_count !== undefined && filter.interval_count !== 1
 		? { intervalCount: filter.interval_count }
 		: {}),
 });

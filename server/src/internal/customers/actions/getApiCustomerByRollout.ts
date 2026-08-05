@@ -7,13 +7,7 @@ import {
 } from "@/internal/customers/cache/fullSubject/index.js";
 import { isRedisFallbackToDbEnabled } from "@/internal/misc/miscellaneousEdgeConfig/miscellaneousEdgeConfigStore.js";
 import { isFullSubjectRolloutEnabled } from "@/internal/misc/rollouts/fullSubjectRolloutUtils.js";
-import { withTimeout } from "@/utils/withTimeout.js";
 import { getApiCustomerV2 } from "../cusUtils/getApiCustomerV2/index.js";
-
-/** Same deadline as check's DB hydration — a Redis-down fallback can't wait out the 15s pool clocks.
- *  "Query read timeout" keeps the expiry classified transient so shed503 sheds instead of rethrowing. */
-export const FALLBACK_DB_HYDRATION_BUDGET_MS = 2_000;
-export const FALLBACK_DB_HYDRATION_TIMEOUT_MESSAGE = "Query read timeout";
 
 export const getApiCustomerByRollout = async ({
 	ctx,
@@ -78,13 +72,9 @@ export const getApiCustomerByRollout = async ({
 		ctx,
 		source: "get_customer",
 		run: () => lookup({ skipCache: false }),
+		// Bounded by the 15s pool clocks and query_timeout, not an extra budget.
 		fallbackOnRedisUnavailable: isRedisFallbackToDbEnabled()
-			? () =>
-					withTimeout({
-						timeoutMs: FALLBACK_DB_HYDRATION_BUDGET_MS,
-						timeoutMessage: FALLBACK_DB_HYDRATION_TIMEOUT_MESSAGE,
-						fn: () => lookup({ skipCache: true }),
-					})
+			? () => lookup({ skipCache: true })
 			: undefined,
 	});
 

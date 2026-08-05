@@ -1,4 +1,4 @@
-/** Red left older omitted versions behind; green removes every omitted explicit version. */
+/** Red either left omitted versions behind or hard-deleted referenced plans; green removes or archives safely. */
 
 import { expect, test } from "bun:test";
 import { products } from "@tests/utils/fixtures/products.js";
@@ -98,4 +98,55 @@ test(`${chalk.yellowBright("catalog: update removes an entirely omitted versione
 		returnAll: true,
 	});
 	expect(versions).toHaveLength(0);
+});
+
+test(`${chalk.yellowBright("catalog: update archives an omitted plan with an expired customer")}`, async () => {
+	const suffix = Math.random().toString(36).slice(2, 9);
+	const product = products.pro({ id: "catalog_remove_expired", items: [] });
+	const planId = `${product.id}_${suffix}`;
+	const customerId = `catalog-remove-expired-${suffix}`;
+	const { autumnV1, autumnV2_2, ctx } = await initScenario({
+		customerId,
+		setup: [
+			s.customer({ paymentMethod: "success" }),
+			s.products({ list: [product], prefix: suffix }),
+		],
+		actions: [s.attach({ productId: product.id })],
+	});
+
+	await autumnV1.subscriptions.update({
+		customer_id: customerId,
+		product_id: planId,
+		cancel_action: "cancel_immediately",
+	});
+
+	const productsBefore = await ProductService.listFull({
+		db: ctx.db,
+		orgId: ctx.org.id,
+		env: ctx.env,
+		returnAll: true,
+	});
+	const params = {
+		features: [],
+		plans: [],
+		skip_deletions: false,
+		skip_feature_ids: ctx.features.map(({ id }) => id),
+		skip_plan_ids: productsBefore
+			.map(({ id }) => id)
+			.filter((id) => id !== planId),
+	};
+
+	const preview = await autumnV2_2.catalog.previewUpdate(params);
+	await autumnV2_2.catalog.update(params);
+
+	expect(preview.plan_changes).toContainEqual(
+		expect.objectContaining({ plan_id: planId, will_archive: true }),
+	);
+	const archived = await ProductService.get({
+		db: ctx.db,
+		id: planId,
+		orgId: ctx.org.id,
+		env: ctx.env,
+	});
+	expect(archived?.archived).toBe(true);
 });

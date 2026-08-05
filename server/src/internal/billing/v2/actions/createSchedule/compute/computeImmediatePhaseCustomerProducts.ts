@@ -41,7 +41,7 @@ const insertImmediateCustomerProducts = ({
 	billingContext: CreateScheduleBillingContext;
 	expiredCustomerProducts: FullCusProduct[];
 	nextPhaseStartsAt: number | undefined;
-}): FullCusProduct[] =>
+}) =>
 	billingContext.productContexts.map((productContext) => {
 		const expiredSameProduct = expiredCustomerProducts.find(
 			(customerProduct) =>
@@ -69,10 +69,15 @@ const insertImmediateCustomerProducts = ({
 
 		applyScheduleTimingToCustomerProductPlan({
 			result: { insertCustomerProduct: newCustomerProduct },
-			endedAt: nextPhaseStartsAt ?? null,
+			// An unscheduled plan outlives the schedule, so it never takes the phase
+			// boundary as its end date.
+			endedAt: productContext.unscheduled ? null : (nextPhaseStartsAt ?? null),
 		});
 
-		return newCustomerProduct;
+		return {
+			customerProduct: newCustomerProduct,
+			unscheduled: productContext.unscheduled === true,
+		};
 	});
 
 /** Compute the immediate-phase customer product expirations and insertions. */
@@ -92,12 +97,22 @@ export const computeImmediatePhaseCustomerProducts = ({
 		currentEpochMs: billingContext.currentEpochMs,
 	});
 
-	const insertCustomerProducts = insertImmediateCustomerProducts({
+	const inserted = insertImmediateCustomerProducts({
 		ctx,
 		billingContext,
 		expiredCustomerProducts: currentRecurringCustomerProducts,
 		nextPhaseStartsAt,
 	});
 
-	return { insertCustomerProducts, updateCustomerProducts };
+	return {
+		// Unscheduled plans still bill now, so they belong to the inserts...
+		insertCustomerProducts: inserted.map(
+			({ customerProduct }) => customerProduct,
+		),
+		updateCustomerProducts,
+		// ...but not to the phase: the schedule must never expire them.
+		phaseCustomerProductIds: inserted
+			.filter(({ unscheduled }) => !unscheduled)
+			.map(({ customerProduct }) => customerProduct.id),
+	};
 };

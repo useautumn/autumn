@@ -47,9 +47,7 @@ export function SubscriptionDetailLicenses({
 								<LicenseIcon size={14} className="shrink-0" />
 								<AdminHover
 									side="top"
-									texts={[
-										{ key: "Plan License ID", value: planLicense.id },
-									]}
+									texts={[{ key: "Plan License ID", value: planLicense.id }]}
 									triggerClassName="min-w-0"
 								>
 									<span className="truncate">

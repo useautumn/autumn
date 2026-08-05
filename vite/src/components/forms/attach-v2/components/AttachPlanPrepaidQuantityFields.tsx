@@ -24,15 +24,16 @@ export function AttachPlanPrepaidQuantityFields({
 			items={items}
 			quantities={quantities}
 			currency={attachCurrency.displayCurrency}
-			renderField={({ featureId, step }) => (
+			renderField={({ featureId, step, stops }) => (
 				<form.AppField name={getFieldName({ featureId })}>
 					{(field) => (
 						<field.QuantityField
+							fullWidth
+							hideFieldInfo
 							label=""
 							min={0}
 							step={step}
-							compact
-							hideFieldInfo
+							stops={stops}
 						/>
 					)}
 				</form.AppField>

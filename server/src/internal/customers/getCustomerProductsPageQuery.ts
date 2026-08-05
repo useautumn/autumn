@@ -44,14 +44,23 @@ const typeRankSql = sql`(
 	END
 )`;
 
-// Status-first ordering: active recurring, then scheduled, then one-off, then
-// everything else (expired/past_due/paused/canceling/add-ons).
+// Status-first ordering: active (including add-ons and canceling plans), then
+// scheduled, then one-off, then everything else (expired/past_due/paused).
 const statusRankSql = sql`(
 	CASE
 		WHEN cp.status = 'scheduled' THEN 1
 		WHEN ${oneOffPredicate} THEN 2
-		WHEN cp.status = 'active' AND cp.canceled_at IS NULL AND NOT prod.is_add_on THEN 0
+		WHEN cp.status = 'active' THEN 0
 		ELSE 3
+	END
+)`;
+
+// Inert (0) outside the scheduled bucket, so scheduled rows sort by start date
+// without disturbing the rest of the ordering.
+const scheduledStartSql = sql`(
+	CASE
+		WHEN cp.status = 'scheduled' THEN COALESCE(cp.starts_at, cp.created_at, 0)
+		ELSE 0
 	END
 )`;
 
@@ -68,7 +77,7 @@ const entityRankSql = sql`(
 	END
 )`;
 
-const customerProductsOrderExpr = sql`${statusRankSql} ASC, ${entityRankSql} ASC, cp.created_at DESC, cp.id ASC`;
+const customerProductsOrderExpr = sql`${statusRankSql} ASC, ${scheduledStartSql} ASC, ${entityRankSql} ASC, cp.created_at DESC, cp.id ASC`;
 
 const customerProductsOrderBy = sql`ORDER BY ${customerProductsOrderExpr}`;
 
@@ -169,9 +178,10 @@ export const getCustomerProductsPageQuery = ({
 	const cursorPredicate = cursor
 		? sql`AND (
 			${statusRankSql} > ${cursor.rank}
-			OR (${statusRankSql} = ${cursor.rank} AND ${entityRankSql} > ${cursor.eRank})
-			OR (${statusRankSql} = ${cursor.rank} AND ${entityRankSql} = ${cursor.eRank} AND cp.created_at < ${cursor.t})
-			OR (${statusRankSql} = ${cursor.rank} AND ${entityRankSql} = ${cursor.eRank} AND cp.created_at = ${cursor.t} AND cp.id > ${cursor.id})
+			OR (${statusRankSql} = ${cursor.rank} AND ${scheduledStartSql} > ${cursor.st})
+			OR (${statusRankSql} = ${cursor.rank} AND ${scheduledStartSql} = ${cursor.st} AND ${entityRankSql} > ${cursor.eRank})
+			OR (${statusRankSql} = ${cursor.rank} AND ${scheduledStartSql} = ${cursor.st} AND ${entityRankSql} = ${cursor.eRank} AND cp.created_at < ${cursor.t})
+			OR (${statusRankSql} = ${cursor.rank} AND ${scheduledStartSql} = ${cursor.st} AND ${entityRankSql} = ${cursor.eRank} AND cp.created_at = ${cursor.t} AND cp.id > ${cursor.id})
 		)`
 		: sql``;
 
@@ -181,6 +191,7 @@ export const getCustomerProductsPageQuery = ({
 		SELECT
 			cp.*,
 			${statusRankSql} AS status_rank,
+			${scheduledStartSql} AS scheduled_start,
 			${entityRankSql} AS entity_rank,
 			row_to_json(prod) AS product,
 			cpr_data.customer_prices,
@@ -240,6 +251,7 @@ export const customerProductsSeedCte = ({
 				cp.id,
 				cp.internal_customer_id,
 				${statusRankSql} AS status_rank,
+				${scheduledStartSql} AS scheduled_start,
 				${entityRankSql} AS entity_rank,
 				cp.created_at,
 				ROW_NUMBER() OVER (
@@ -257,6 +269,7 @@ export const customerProductsSeedCte = ({
 			SELECT
 				cp.*,
 				ranked.status_rank,
+				ranked.scheduled_start,
 				ranked.entity_rank,
 				ranked.total_count,
 				row_to_json(prod) AS product,
@@ -284,7 +297,7 @@ export const customerProductsSeedSelect = sql`
 			internal_customer_id,
 			json_agg(
 				row_to_json(products_seed)
-				ORDER BY status_rank ASC, entity_rank ASC, created_at DESC, id ASC
+				ORDER BY status_rank ASC, scheduled_start ASC, entity_rank ASC, created_at DESC, id ASC
 			) AS rows
 		FROM products_seed
 		GROUP BY internal_customer_id

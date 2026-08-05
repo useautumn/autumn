@@ -8,7 +8,7 @@ import { readFileSync } from "node:fs";
 
 export interface ParsedEntity {
 	id: string;
-	type: "feature" | "plan" | "variant";
+	type: "feature" | "plan" | "referral_program" | "reward" | "variant";
 	varName: string;
 	/** Starting line index (0-based) */
 	startLine: number;
@@ -30,7 +30,7 @@ export interface ParsedBlock {
 export interface ParsedConfig {
 	/** All parsed blocks in order */
 	blocks: ParsedBlock[];
-	/** Just the entity blocks (features and plans) */
+	/** Just the managed config entity blocks */
 	entities: ParsedEntity[];
 	/** Original source lines */
 	lines: string[];
@@ -62,6 +62,8 @@ function extractVarName(line: string): string | null {
  */
 function determineEntityType(lines: string[]): ParsedEntity["type"] | null {
 	const joined = lines.join("\n");
+	if (/=\s*reward\s*\(/.test(joined)) return "reward";
+	if (/=\s*referralProgram\s*\(/.test(joined)) return "referral_program";
 
 	// Check for feature indicators: type: 'boolean'|'metered'|'credit_system'
 	if (/type:\s*['"](?:boolean|metered|credit_system)['"]/.test(joined)) {
@@ -157,7 +159,7 @@ export function parseExistingConfig(configPath: string): ParsedConfig {
 			continue;
 		}
 
-		// Export statement (feature or plan)
+		// Managed config export statement
 		if (trimmed.startsWith("export const")) {
 			const startLine = i;
 			const varName = extractVarName(line);

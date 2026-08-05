@@ -6,7 +6,7 @@
  *     - One createSchedule phase carrying a FREE pooled plan and a PAID recurring
  *       pooled plan produces TWO pools: their identities differ on reset_mode and
  *       stripe_subscription_id (lazy/no-sub vs subscription/sub).
- *     - A second createSchedule for the same plans at the ENTITY level routes each
+ *     - Re-declaring those plans alongside entity-scoped copies routes every
  *       contribution to the pool matching its identity rather than minting new
  *       pools per source.
  *   Side effects:
@@ -16,6 +16,9 @@
  * Pre-impl red: identity is not consulted across schedule phases, so either one
  * pool absorbs both plans or every source mints its own.
  * Post-impl green: pools are keyed by identity and reused when it matches.
+ *
+ * A schedule is customer-level: a later one replaces the earlier one outright,
+ * so each call declares every plan it wants to keep.
  */
 
 import { expect, test } from "bun:test";
@@ -37,7 +40,7 @@ const pooledItem = ({ grant }: { grant: number }) => ({
 
 test(
 	chalk.yellowBright(
-		"pooled createSchedule: free and paid pooled plans form two pools, entity sources join by identity",
+		"pooled createSchedule: free and paid pooled plans form two pools, added entity sources join by identity",
 	),
 	async () => {
 		const customerId = "pooled-schedule-identities";
@@ -93,14 +96,18 @@ test(
 		expect(lazyPool.granted).toBe(FREE_GRANT);
 		expect(subscriptionPool.granted).toBe(PRO_GRANT);
 
-		// ── Same setup again, scoped to an entity ────────────────────────
+		// ── Same plans again, plus an entity-scoped copy of each ─────────
 		const entityLevelParams: CreateScheduleParamsV0Input = {
 			customer_id: customerId,
-			entity_id: entities[0].id,
 			phases: [
 				{
 					starts_at: "now",
-					plans: [{ plan_id: freePlan.id }, { plan_id: proPlan.id }],
+					plans: [
+						{ plan_id: freePlan.id },
+						{ plan_id: proPlan.id },
+						{ plan_id: freePlan.id, entity_id: entities[0].id },
+						{ plan_id: proPlan.id, entity_id: entities[0].id },
+					],
 				},
 			],
 		};

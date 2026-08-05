@@ -1,10 +1,6 @@
-import fs from "node:fs";
-import { resolve } from "node:path";
-import { pathToFileURL } from "node:url";
 import chalk from "chalk";
-import createJiti from "jiti";
 import type { Feature, Plan } from "../../compose/models/index.js";
-import { resolveConfigPath } from "../../lib/env/index.js";
+import { loadConfig } from "../../lib/config/loadConfig.js";
 import { fetchRemoteData } from "../push/push.js";
 
 // ── Inlined normalize helpers (mirrors push.ts exactly) ──────────────────────
@@ -133,67 +129,11 @@ function diffObjects(a: Rec, b: Rec, path = ""): string[] {
 	return diffs;
 }
 
-// ── Config loader (same as headless.ts) ──────────────────────────────────────
-
-const isVariantExport = (value: unknown): boolean =>
-	Boolean(
-		value &&
-			typeof value === "object" &&
-			(value as { __atmnType?: unknown }).__atmnType === "variant",
-	);
-
-async function loadLocalConfig(
-	cwd: string,
-): Promise<{ features: Feature[]; plans: Plan[] }> {
-	const configPath = resolveConfigPath(cwd);
-	if (!fs.existsSync(configPath)) {
-		throw new Error(
-			`Config file not found at ${configPath}. Run 'atmn pull' first.`,
-		);
-	}
-	const absolutePath = resolve(configPath);
-	const fileUrl = pathToFileURL(absolutePath).href;
-	const jiti = createJiti(import.meta.url);
-	const mod = await jiti.import(fileUrl);
-
-	const plans: Plan[] = [];
-	const features: Feature[] = [];
-	const modRecord = mod as { default?: unknown } & Record<string, unknown>;
-	const defaultExport = modRecord.default as
-		| { plans?: Plan[]; features?: Feature[]; products?: Plan[] }
-		| undefined;
-
-	if (defaultExport?.plans && defaultExport?.features) {
-		if (Array.isArray(defaultExport.plans)) plans.push(...defaultExport.plans);
-		if (Array.isArray(defaultExport.features))
-			features.push(...defaultExport.features);
-	} else if (defaultExport?.products && defaultExport?.features) {
-		if (Array.isArray(defaultExport.products))
-			plans.push(...defaultExport.products);
-		if (Array.isArray(defaultExport.features))
-			features.push(...defaultExport.features);
-	} else {
-		for (const [key, value] of Object.entries(modRecord)) {
-			if (key === "default") continue;
-			if (isVariantExport(value)) continue;
-			const obj = value as { items?: unknown; type?: unknown };
-			if (obj && typeof obj === "object") {
-				if ("type" in obj) features.push(obj as unknown as Feature);
-				else if (Array.isArray(obj.items) || "id" in obj)
-					plans.push(obj as unknown as Plan);
-			}
-		}
-	}
-	return { features, plans };
-}
-
 // ── Main ─────────────────────────────────────────────────────────────────────
 
 export async function testDiffCommand(): Promise<void> {
 	console.log(chalk.cyan("Loading local config..."));
-	const { features: localFeatures, plans: localPlans } = await loadLocalConfig(
-		process.cwd(),
-	);
+	const { features: localFeatures, plans: localPlans } = await loadConfig();
 
 	console.log(chalk.cyan("Fetching remote data..."));
 	const remoteData = await fetchRemoteData();

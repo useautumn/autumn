@@ -1,6 +1,10 @@
 import { Text } from "ink";
-import type { PushPrompt } from "../../../../commands/push/prompts.js";
+import type {
+	ConfigResourceChange,
+	PushPrompt,
+} from "../../../../commands/push/prompts.js";
 import { MultiSelect, PromptCard } from "../../components/index.js";
+import { ConfigResourcesPromptCard } from "./ConfigResourcesPromptCard.js";
 
 type VariantConflict = {
 	feature_name?: string;
@@ -49,6 +53,18 @@ export function PushPromptCard({
 					<Text color="yellow">This will affect live customers.</Text>
 				</PromptCard>
 			);
+
+		case "config_resources_confirmation": {
+			const changes = getData<ConfigResourceChange[]>(prompt, "changes");
+			return (
+				<ConfigResourcesPromptCard
+					changes={changes}
+					options={prompt.options}
+					onBack={onBack}
+					onRespond={onRespond}
+				/>
+			);
+		}
 
 		case "plan_versioning": {
 			const isVariant = getData<string>(prompt, "scope") === "variant";

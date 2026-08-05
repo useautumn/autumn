@@ -7,7 +7,7 @@ import {
 	RewardType,
 	rewards,
 } from "@autumn/shared";
-import { and, desc, eq } from "drizzle-orm";
+import { and, desc, eq, inArray } from "drizzle-orm";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 import { PriceService } from "@/internal/products/prices/PriceService.js";
 import { getApiCoupon } from "../apiRewards/getApiCoupon.js";
@@ -28,17 +28,23 @@ export const listApiRewards = async ({
 	orgId,
 	env,
 	features,
+	ids,
 }: {
 	db: DrizzleCli;
 	orgId: string;
 	env: AppEnv;
 	features: Feature[];
+	ids?: string[];
 }): Promise<{
 	coupons: ApiCouponV0[];
 	feature_grants: ApiFeatureGrantV0[];
 }> => {
 	const rows = (await db.query.rewards.findMany({
-		where: and(eq(rewards.org_id, orgId), eq(rewards.env, env)),
+		where: and(
+			eq(rewards.org_id, orgId),
+			eq(rewards.env, env),
+			ids ? inArray(rewards.id, ids) : undefined,
+		),
 		with: { entitlements: true },
 		orderBy: [desc(rewards.internal_id)],
 		limit: MAX_API_REWARDS,

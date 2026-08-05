@@ -9,7 +9,6 @@ import { computeDeleteCustomerProduct } from "@/internal/billing/v2/actions/upda
 import { computeCustomPlanNewCustomerProduct } from "@/internal/billing/v2/actions/updateSubscription/compute/customPlan/computeCustomPlanNewCustomerProduct";
 import { buildAutumnLineItems } from "@/internal/billing/v2/compute/computeAutumnUtils/buildAutumnLineItems";
 import { computePatchCustomerProductPlan } from "@/internal/billing/v2/compute/computePatchPlan";
-import { computeSchedulePhaseReplacements } from "@/internal/billing/v2/compute/computeSchedulePhaseReplacements";
 import { computeCustomerLicenseTransitions } from "@/internal/billing/v2/compute/customerLicenseTransitions/computeCustomerLicenseTransitions";
 import { applyOneOffPrepaidCarryOvers } from "@/internal/billing/v2/utils/handleOneOffPrepaidCarryOvers/applyOneOffPrepaidCarryOvers";
 
@@ -108,10 +107,6 @@ export const computeCustomPlan = async ({
 		deleteCustomerProduct: isUpdatingScheduledProduct
 			? customerProduct
 			: deleteCustomerProduct,
-		schedulePhaseCustomerProductReplacements: computeSchedulePhaseReplacements({
-			oldCustomerProduct: customerProduct,
-			newCustomerProduct: newFullCustomerProduct,
-		}),
 		customPrices,
 		customEntitlements: [
 			...(customEnts ?? []),

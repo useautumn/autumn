@@ -1,13 +1,16 @@
-import type { Invoice, InvoiceLineItem } from "@autumn/shared";
-import { InlineSheetPanel } from "@/components/v2/sheets/InlineSheetPanel";
+import type {
+	ApiInvoicePreviewV0,
+	Invoice,
+	InvoiceLineItem,
+} from "@autumn/shared";
+import { Sheet, SheetContent } from "@autumn/ui";
 import { useCustomerBalanceSheetStore } from "@/hooks/stores/useCustomerBalanceSheetStore";
-import {
-	useSheetEscapeHandler,
-	useSheetStore,
-} from "@/hooks/stores/useSheetStore";
+import { useSheetStore } from "@/hooks/stores/useSheetStore";
+import { cn } from "@/lib/utils";
 import { SubscriptionCancelSheet } from "@/views/customers2/components/sheets/SubscriptionCancelSheet";
 import { SubscriptionUncancelSheet } from "@/views/customers2/components/sheets/SubscriptionUncancelSheet";
 import { SubscriptionUpdateSheet } from "@/views/customers2/components/sheets/SubscriptionUpdateSheet";
+import { useCustomerContext } from "@/views/customers2/customer/CustomerContext";
 import { AttachProductSheet } from "../components/sheets/AttachProductSheet";
 
 import { BalanceCreateSheet } from "../components/sheets/BalanceCreateSheet";
@@ -26,6 +29,7 @@ import { LicenseDetailSheet } from "../components/sheets/LicenseDetailSheet";
 import { LicensePoolDetailSheet } from "../components/sheets/LicensePoolDetailSheet";
 import { RecordUsageSheet } from "../components/sheets/RecordUsageSheet";
 import { SubscriptionDetailSheet } from "../components/sheets/SubscriptionDetailSheet";
+import { UpcomingInvoiceSheet } from "../components/sheets/UpcomingInvoiceSheet";
 import { SyncStripeSheet } from "../components/sync-stripe/SyncStripeSheet";
 import { SyncStripeSheetV2 } from "../components/sync-stripe-v2/SyncStripeSheetV2";
 
@@ -34,7 +38,7 @@ export function CustomerSheets() {
 	const sheetData = useSheetStore((s) => s.data);
 	const closeSheet = useSheetStore((s) => s.closeSheet);
 	const closeBalanceSheet = useCustomerBalanceSheetStore((s) => s.closeSheet);
-	useSheetEscapeHandler();
+	const { isInlineEditorOpen } = useCustomerContext();
 
 	const handleClose = () => {
 		closeSheet();
@@ -76,6 +80,11 @@ export function CustomerSheets() {
 				if (!invoice) return null;
 				return <InvoiceDetailSheet invoice={invoice} lineItems={lineItems} />;
 			}
+			case "upcoming-invoice-detail": {
+				const preview = sheetData?.preview as ApiInvoicePreviewV0 | undefined;
+				if (!preview) return null;
+				return <UpcomingInvoiceSheet preview={preview} />;
+			}
 			case "sync-stripe":
 				return <SyncStripeSheet />;
 			case "sync-stripe-v2":
@@ -104,6 +113,7 @@ export function CustomerSheets() {
 			case "create-schedule":
 			case "create-schedule-review":
 			case "create-schedule-send-invoice":
+			case "create-schedule-checkout":
 				return <CreateScheduleSheet />;
 			default:
 				return null;
@@ -111,8 +121,38 @@ export function CustomerSheets() {
 	};
 
 	return (
-		<InlineSheetPanel isOpen={!!sheetType} onClose={handleClose}>
-			{renderSheet()}
-		</InlineSheetPanel>
+		<Sheet
+			modal={false}
+			onOpenChange={(open, eventDetails) => {
+				if (open) return;
+				// Escape/click-out belongs to the plan editor while it's open.
+				if (isInlineEditorOpen) {
+					eventDetails.cancel();
+					return;
+				}
+				handleClose();
+			}}
+			open={!!sheetType}
+		>
+			{/* The plan editor is a full takeover launched from the sheet. Opacity
+			    only joins the transition list while it's open, so the sheet fades
+			    out under the editor but snaps back instantly behind it on close.
+			    The list must keep `translate` — that's what drives the slide. */}
+			<SheetContent
+				className={cn(
+					"md:max-w-[32rem]",
+					isInlineEditorOpen &&
+						"transition-[opacity,transform,translate,scale,rotate] opacity-0 pointer-events-none",
+				)}
+				// Tooltips/popovers portal out of the sheet, so an invisible sheet can
+				// still surface them on hover or focus. inert kills the whole subtree.
+				inert={isInlineEditorOpen}
+				overlayClassName={cn(
+					isInlineEditorOpen && "opacity-0 pointer-events-none",
+				)}
+			>
+				{renderSheet()}
+			</SheetContent>
+		</Sheet>
 	);
 }

@@ -10,7 +10,10 @@ import {
 import type { Decimal } from "decimal.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { autumnBillingPlanToFinalFullCustomer } from "@/internal/billing/v2/utils/autumnBillingPlanToFinalFullCustomer";
-import { billingPlanToNextCycleLineItems } from "./billingPlanToNextCycleLineItems";
+import {
+	billingPlanToNextCycleLineItems,
+	type NextCycleLineItemOptions,
+} from "./billingPlanToNextCycleLineItems";
 import { computeScheduledAnchorResetPreview } from "./computeScheduledAnchorResetPreview";
 import {
 	getActiveCustomerProductsAt,
@@ -86,12 +89,14 @@ export const billingPlanToNextCyclePreview = ({
 	billingContext,
 	billingPlan,
 	customerProductFilter,
+	options,
 }: {
 	ctx: AutumnContext;
 	billingContext: BillingContext;
 	billingPlan: BillingPlan;
 	/** Scope the preview to a subset of products (e.g. one subscription's). */
 	customerProductFilter?: (customerProduct: FullCusProduct) => boolean;
+	options?: NextCycleLineItemOptions;
 }): NextCyclePreviewResult => {
 	const { billingCycleAnchorMs } = billingContext;
 
@@ -184,6 +189,7 @@ export const billingPlanToNextCyclePreview = ({
 			autumnBillingPlan: billingPlan.autumn,
 			billingContext,
 			nextCycleStart: event.startsAtMs,
+			options,
 		});
 
 		return {
@@ -226,6 +232,7 @@ export const billingPlanToNextCyclePreview = ({
 			autumnBillingPlan: billingPlan.autumn,
 			billingContext,
 			nextCycleStart: event.startsAtMs,
+			options,
 		});
 
 		return {
@@ -293,6 +300,7 @@ export const billingPlanToNextCyclePreview = ({
 					: lineItemsBillingContext.billingCycleAnchorMs,
 		},
 		nextCycleStart,
+		options,
 	});
 
 	if (prorationRatio) {

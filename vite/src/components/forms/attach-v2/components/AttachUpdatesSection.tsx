@@ -1,11 +1,9 @@
-import { formatAmount } from "@autumn/shared";
 import { Skeleton } from "@autumn/ui";
 import {
 	MinusCircleIcon,
 	PauseCircleIcon,
 	PlusCircleIcon,
 } from "@phosphor-icons/react";
-import { getPreviewCreditAmount } from "@/components/forms/shared/previewCreditUtils";
 import { SheetSection } from "@/components/v2/sheets/SharedSheetComponents";
 import { InfoBox } from "@/views/onboarding2/integrate/components/InfoBox";
 import { useAttachFormContext } from "../context/AttachFormProvider";
@@ -83,20 +81,6 @@ export function AttachUpdatesSection() {
 			products.find((candidate) => candidate.id === change.plan_id)?.name ??
 			change.plan_id,
 	}));
-	const creditAmount = getPreviewCreditAmount({ previewData });
-	const hasCreditIndicator = creditAmount > 0;
-	const formattedCreditAmount = hasCreditIndicator
-		? formatAmount({
-				amount: Number(creditAmount.toFixed(2)),
-				currency: previewData?.currency,
-				minFractionDigits: 2,
-				maxFractionDigits: 2,
-				amountFormatOptions: {
-					currencyDisplay: "narrowSymbol",
-				},
-			})
-		: null;
-
 	if (!hasProductSelected) return null;
 	if (isPending) return <AttachUpdatesSkeleton />;
 	if (!product) return null;
@@ -118,12 +102,6 @@ export function AttachUpdatesSection() {
 					<PlanName name={product.name} />
 					{outgoing.length > 0 && (
 						<OutgoingPlans outgoing={outgoing} isPausing={isPausing} />
-					)}
-					{hasCreditIndicator && (
-						<>
-							. This update includes <PlanName name={formattedCreditAmount!} />{" "}
-							in invoice credits.
-						</>
 					)}
 				</span>
 			</InfoBox>

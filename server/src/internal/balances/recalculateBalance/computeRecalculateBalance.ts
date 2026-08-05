@@ -9,6 +9,7 @@ import {
 	type RecalculateBalanceParamsV0,
 	RecaseError,
 } from "@autumn/shared";
+import { Decimal } from "decimal.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { deductFromCusEntsTypescript } from "@/internal/balances/track/deductUtils/deductFromCusEntsTypescript";
 import { CusService } from "@/internal/customers/CusService";
@@ -20,9 +21,11 @@ const resetCusEntInPlace = ({
 }: {
 	cusEnt: FullCusEntWithFullCusProduct;
 }): void => {
+	const startingBalance = cusEntToStartingBalance({ cusEnt });
 	const resetUpdate = getResetBalancesUpdate({
 		cusEnt,
-		allowance: cusEntToStartingBalance({ cusEnt }) ?? undefined,
+		allowance:
+			startingBalance === undefined ? undefined : Math.max(0, startingBalance),
 	});
 	if ("entities" in resetUpdate) {
 		cusEnt.entities = resetUpdate.entities;
@@ -31,6 +34,20 @@ const resetCusEntInPlace = ({
 		cusEnt.additional_balance = resetUpdate.additional_balance;
 	}
 	cusEnt.adjustment = 0;
+};
+
+const cusEntsToRecalculateUsage = ({
+	cusEnts,
+	entityId,
+}: {
+	cusEnts: FullCusEntWithFullCusProduct[];
+	entityId?: string;
+}): number => {
+	let usage = new Decimal(cusEntsToUsage({ cusEnts, entityId }));
+	for (const cusEnt of cusEnts) {
+		usage = usage.sub(Math.min(0, cusEntToStartingBalance({ cusEnt }) ?? 0));
+	}
+	return usage.toNumber();
 };
 
 /**
@@ -74,7 +91,7 @@ export const computeRecalculateBalance = async ({
 		});
 	}
 	const entityId = fullCustomer.entity?.id ?? undefined;
-	const totalUsage = cusEntsToUsage({ cusEnts: before, entityId });
+	const totalUsage = cusEntsToRecalculateUsage({ cusEnts: before, entityId });
 	const after = before.map((cusEnt) => structuredClone(cusEnt));
 	const recalculableScopes = getRecalculableScopeKeys({
 		cusEnts: after,
@@ -94,7 +111,10 @@ export const computeRecalculateBalance = async ({
 		if (!recalculableScopes.has(key)) {
 			continue;
 		}
-		const scopeUsage = cusEntsToUsage({ cusEnts: group, entityId });
+		const scopeUsage = cusEntsToRecalculateUsage({
+			cusEnts: group,
+			entityId,
+		});
 		for (const cusEnt of group) {
 			resetCusEntInPlace({ cusEnt });
 		}

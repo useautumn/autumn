@@ -1,34 +1,33 @@
-import { Button, InlineAction } from "@autumn/ui";
-import { PlusIcon } from "@phosphor-icons/react";
-import { useStore } from "@tanstack/react-form";
 import {
-	DisabledTooltipButton,
-	PlanEntityScopeSelector,
-} from "@/components/forms/shared";
+	Button,
+	InlineAction,
+	Tooltip,
+	TooltipContent,
+	TooltipTrigger,
+} from "@autumn/ui";
+import { InfoIcon, PlusIcon } from "@phosphor-icons/react";
+import { useStore } from "@tanstack/react-form";
+import { DisabledTooltipButton } from "@/components/forms/shared";
+import { BillingFooter } from "@/components/forms/shared/BillingFooter";
+import { getInvoiceButtonState } from "@/components/forms/shared/utils/invoiceButtonState";
 import {
 	SheetFooter,
 	SheetHeader,
 	SheetSection,
 } from "@/components/v2/sheets/SharedSheetComponents";
 import { useSheetStore } from "@/hooks/stores/useSheetStore";
-import { useScopeEntitySearch } from "@/views/customers2/customer/hooks/useScopeEntitySearch";
 import { useCreateScheduleFormContext } from "../context/CreateScheduleFormProvider";
 import { useHasSchedule } from "../hooks/useHasSchedule";
 import { CreateScheduleAdvancedSection } from "./CreateScheduleAdvancedSection";
 import { SchedulePhaseCard } from "./SchedulePhaseCard";
 import { SchedulePreview } from "./SchedulePreview";
+import { UnscheduledPlanRow } from "./UnscheduledPlanRow";
 
 export function CreateScheduleSheetContent() {
-	const { form, formValues, entityId, handleAddPhase, onScopeChange } =
+	const { form, formValues, handleAddPhase, handleAddUnscheduledPlan } =
 		useCreateScheduleFormContext();
 	const { closeSheet, setSheet } = useSheetStore();
-	const hasSchedule = useHasSchedule({ entityId });
-	const {
-		hasEntities,
-		entities,
-		isLoading: isEntitiesLoading,
-		setSearch: setEntitySearch,
-	} = useScopeEntitySearch({ selectedEntityId: entityId });
+	const hasSchedule = useHasSchedule();
 
 	const canSubmit = useStore(form.store, (state) => state.canSubmit);
 	const isDisabled = !canSubmit;
@@ -44,23 +43,6 @@ export function CreateScheduleSheetContent() {
 			/>
 
 			<div className="flex-1 overflow-y-auto">
-				{hasEntities && (
-					<SheetSection title="Scope" withSeparator>
-						<PlanEntityScopeSelector
-							entities={entities}
-							value={entityId}
-							onChange={(nextEntityId) => {
-								const scopeEntityId = nextEntityId ?? undefined;
-								if (scopeEntityId !== entityId) onScopeChange?.(scopeEntityId);
-							}}
-							showLabel={false}
-							wrapInSection={false}
-							onSearchChange={setEntitySearch}
-							isLoading={isEntitiesLoading}
-						/>
-					</SheetSection>
-				)}
-
 				<SheetSection title="Phases" withSeparator>
 					<div className="space-y-4">
 						{formValues.phases.map((_phase, phaseIndex) => (
@@ -80,6 +62,48 @@ export function CreateScheduleSheetContent() {
 						Add phase
 					</InlineAction>
 				</SheetSection>
+
+				{/* Updating a schedule can't attach new plans, so this is create-only. */}
+				{!hasSchedule && (
+					<SheetSection withSeparator={false}>
+						{formValues.unscheduledPlans.length > 0 && (
+							<div className="mb-1.5 flex items-center gap-1.5">
+								<span className="text-xs text-subtle">Unscheduled plans</span>
+								<Tooltip>
+									<TooltipTrigger asChild>
+										<InfoIcon
+											size={13}
+											className="shrink-0 text-subtle hover:text-muted-foreground transition-colors cursor-default"
+										/>
+									</TooltipTrigger>
+									<TooltipContent>
+										Billed with the first phase, then left alone — the schedule
+										never expires or replaces these
+									</TooltipContent>
+								</Tooltip>
+							</div>
+						)}
+
+						<div className="space-y-1.5">
+							{formValues.unscheduledPlans.map((plan, planIndex) => (
+								<UnscheduledPlanRow
+									key={`unscheduled-${planIndex}-${plan.productId || "empty"}`}
+									planIndex={planIndex}
+								/>
+							))}
+						</div>
+
+						<InlineAction
+							icon={<PlusIcon size={11} />}
+							onClick={handleAddUnscheduledPlan}
+							className={
+								formValues.unscheduledPlans.length > 0 ? "mt-1.5" : undefined
+							}
+						>
+							Add unscheduled plan
+						</InlineAction>
+					</SheetSection>
+				)}
 			</div>
 
 			<SheetFooter>
@@ -112,7 +136,7 @@ function getConfirmLabel({
 		| undefined;
 }): string {
 	if (!preview) return "Create Schedule";
-	if (preview.redirect_to_checkout) return "Copy Checkout URL";
+	if (preview.redirect_to_checkout) return "Generate Checkout URL";
 	if (preview.total <= 0) return "Create Schedule";
 	return "Charge Customer";
 }
@@ -125,33 +149,18 @@ export function CreateScheduleReviewContent() {
 		isPreviewLoading,
 		preview,
 		error,
-		entityId,
 		createsRecurringSubscription,
 	} = useCreateScheduleFormContext();
 	const { setSheet } = useSheetStore();
-	const hasSchedule = useHasSchedule({ entityId });
+	const hasSchedule = useHasSchedule();
 
 	const confirmLabel = getConfirmLabel({ preview });
 
-	const hasNothingToInvoice =
-		!!preview && preview.total <= 0 && !createsRecurringSubscription;
-
-	const invoiceDisabledReason = hasNothingToInvoice
-		? "Cannot send an invoice for $0 amounts. Please confirm the change instead."
-		: null;
-
-	// A subtotal still creates a $0 invoice; usage-only plans do not.
-	const willCreateZeroDollarInvoice = (preview?.subtotal ?? 0) > 0;
-
-	const isInvoiceOnlyStart =
-		!!preview &&
-		preview.total <= 0 &&
-		createsRecurringSubscription &&
-		!willCreateZeroDollarInvoice;
-
-	const invoiceButtonLabel = isInvoiceOnlyStart
-		? "Start subscription in invoice mode"
-		: "Send an Invoice";
+	const {
+		isInvoiceOnlyStart,
+		label: invoiceButtonLabel,
+		zeroAmountReason: invoiceDisabledReason,
+	} = getInvoiceButtonState({ preview, createsRecurringSubscription });
 
 	const handleInvoiceButtonClick = () => {
 		if (isInvoiceOnlyStart) {
@@ -188,30 +197,34 @@ export function CreateScheduleReviewContent() {
 				<SchedulePreview />
 			</div>
 
-			<SheetFooter className="flex flex-col grid-cols-1 mt-0">
-				<div className="flex flex-col gap-2 w-full">
-					<DisabledTooltipButton
-						variant="secondary"
-						className="w-full"
-						disabled={isPending || isDisabled}
-						disabledReason={invoiceDisabledReason}
-						tooltipClassName="max-w-(--anchor-width)"
-						isLoading={isInvoiceOnlyStart && isPending}
-						onClick={handleInvoiceButtonClick}
-					>
-						{invoiceButtonLabel}
-					</DisabledTooltipButton>
-					<Button
-						variant="primary"
-						className="w-full"
-						onClick={() => handleSubmit()}
-						isLoading={isPending}
-						disabled={isDisabled}
-					>
-						{confirmLabel}
-					</Button>
-				</div>
-			</SheetFooter>
+			<BillingFooter layout="stacked">
+				<DisabledTooltipButton
+					variant="secondary"
+					className="w-full"
+					disabled={isPending || isDisabled}
+					disabledReason={invoiceDisabledReason}
+					tooltipClassName="max-w-(--anchor-width)"
+					isLoading={isInvoiceOnlyStart && isPending}
+					onClick={handleInvoiceButtonClick}
+				>
+					{invoiceButtonLabel}
+				</DisabledTooltipButton>
+				<Button
+					variant="primary"
+					className="w-full"
+					onClick={() => {
+						if (preview?.redirect_to_checkout) {
+							setSheet({ type: "create-schedule-checkout" });
+							return;
+						}
+						handleSubmit();
+					}}
+					isLoading={isPending}
+					disabled={isDisabled}
+				>
+					{confirmLabel}
+				</Button>
+			</BillingFooter>
 		</div>
 	);
 }

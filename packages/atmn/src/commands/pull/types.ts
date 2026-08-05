@@ -1,5 +1,6 @@
 import type { Feature } from "../../compose/models/index.js";
 import type { Plan } from "../../compose/models/variantModels.js";
+import type { ReferralProgram, Reward } from "../../compose/index.js";
 import type { AppEnv } from "../../lib/env/index.js";
 import type { UpdateResult } from "../../lib/transforms/inPlaceUpdate/index.js";
 
@@ -29,6 +30,8 @@ export interface PullResult {
 	features: Feature[];
 	/** Plans pulled from sandbox */
 	plans: Plan[];
+	rewards: Reward[];
+	referralPrograms: ReferralProgram[];
 	/** Path to generated config file */
 	configPath: string;
 	/** Path to generated SDK types file (if generateSdkTypes was true) */
@@ -45,4 +48,6 @@ export interface PullResult {
 export interface EnvironmentData {
 	features: Feature[];
 	plans: Plan[];
+	rewards: Reward[];
+	referralPrograms: ReferralProgram[];
 }

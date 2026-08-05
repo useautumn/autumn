@@ -1,4 +1,5 @@
 import type {
+	FrontendProduct,
 	FullCustomer,
 	FullCustomerSchedule,
 	ProductItem,
@@ -8,17 +9,10 @@ import {
 	CusProductStatus,
 	findCustomerProductById,
 	mapToProductItems,
+	productV2ToFrontendProduct,
 } from "@autumn/shared";
-import { Button } from "@autumn/ui";
-import { motion } from "motion/react";
-import { useMemo } from "react";
+import { useEffect, useMemo } from "react";
 import { toast } from "sonner";
-import {
-	AttachFormProvider,
-	AttachPlanSection,
-	AttachProductSelection,
-	useAttachFormContext,
-} from "@/components/forms/attach-v2";
 import {
 	CreateScheduleReviewContent,
 	CreateScheduleSheetContent,
@@ -27,42 +21,39 @@ import {
 	CreateScheduleFormProvider,
 	useCreateScheduleFormContext,
 } from "@/components/forms/create-schedule/context/CreateScheduleFormProvider";
-import type { SchedulePlan } from "@/components/forms/create-schedule/createScheduleFormSchema";
 import {
 	type CreateScheduleForm,
 	EMPTY_SCHEDULE_PLAN,
+	type SchedulePlan,
 } from "@/components/forms/create-schedule/createScheduleFormSchema";
+import { useCustomerSchedules } from "@/components/forms/create-schedule/hooks/useCustomerSchedules";
+import { GenerateCheckoutStageWithPreview } from "@/components/forms/shared/GenerateCheckoutStage";
 import { SendInvoiceStageWithPreview } from "@/components/forms/shared/SendInvoiceStage";
-import {
-	STAGGER_CONTAINER,
-	STAGGER_ITEM,
-} from "@/components/forms/update-subscription-v2/constants/animationConstants";
+import { getSupportedPlanFormPatchFromDraftProduct } from "@/components/forms/shared/utils/planCustomizationUtils";
 import { InlinePlanEditor } from "@/components/v2/inline-custom-plan-editor/InlinePlanEditor";
-import {
-	LayoutGroup,
-	SheetFooter,
-	SheetHeader,
-	SheetSection,
-} from "@/components/v2/sheets/SharedSheetComponents";
 import { useOrgStripeQuery } from "@/hooks/queries/useOrgStripeQuery";
 import { useProductsQuery } from "@/hooks/queries/useProductsQuery";
 import { useSheetStore } from "@/hooks/stores/useSheetStore";
-import { useSheetScopeEntityId } from "@/hooks/useSheetScopeEntityId";
 import { backendToDisplayQuantity } from "@/utils/billing/prepaidQuantityUtils";
 import { useEnv } from "@/utils/envUtils";
 import { useCusQuery } from "@/views/customers/customer/hooks/useCusQuery";
 import { useCustomerContext } from "@/views/customers2/customer/CustomerContext";
 
+type MergedSchedulePhase = {
+	starts_at: number;
+	customer_product_ids: string[];
+};
+
 function hasSchedulePhaseBillingCycleReset({
 	customer,
-	schedule,
+	phases,
 	nowMs,
 }: {
 	customer: FullCustomer | undefined;
-	schedule: FullCustomerSchedule;
+	phases: MergedSchedulePhase[];
 	nowMs: number;
 }) {
-	return schedule.phases.some(
+	return phases.some(
 		(phase) =>
 			phase.starts_at > nowMs &&
 			phase.customer_product_ids.some((cpId) => {
@@ -141,199 +132,112 @@ export function cusProductToPlan({
 		prepaidOptions,
 		items,
 		isCustom,
+		// One schedule can span entities, so each plan carries its own scope.
+		entityId: cusProduct.entity_id ?? null,
 	};
+}
+
+/**
+ * Schedules span scopes, so the sheet edits every schedule at once: phases that
+ * start at the same instant collapse into one row of plans, each keeping its own
+ * scope.
+ */
+function mergeSchedulePhases({
+	schedules,
+}: {
+	schedules: FullCustomerSchedule[];
+}): MergedSchedulePhase[] {
+	const productIdsByStart = new Map<number, string[]>();
+
+	for (const schedule of schedules) {
+		for (const phase of schedule.phases) {
+			const existing = productIdsByStart.get(phase.starts_at);
+			if (existing) existing.push(...phase.customer_product_ids);
+			else
+				productIdsByStart.set(phase.starts_at, [...phase.customer_product_ids]);
+		}
+	}
+
+	return [...productIdsByStart.entries()]
+		.sort(([a], [b]) => a - b)
+		.map(([starts_at, customer_product_ids]) => ({
+			starts_at,
+			customer_product_ids,
+		}));
+}
+
+/** Every active plan, whatever its scope — each row carries its own. */
+export function getActiveCustomerPlans({
+	customer,
+	products,
+}: {
+	customer: FullCustomer | undefined;
+	products: ProductV2[];
+}): SchedulePlan[] {
+	return (
+		customer?.customer_products
+			.filter((cp) => cp.status === CusProductStatus.Active && !cp.canceled_at)
+			.map((cp) => cusProductToPlan({ cusProduct: cp, products })) ?? []
+	);
 }
 
 export function buildInitialValues({
 	customer,
-	schedule,
+	schedules,
 	products,
-	entityId,
 	nowMs = Date.now(),
 }: {
 	customer: FullCustomer | undefined;
-	schedule: FullCustomerSchedule | undefined;
+	schedules: FullCustomerSchedule[];
 	products: ProductV2[];
-	entityId?: string;
 	nowMs?: number;
 }): CreateScheduleForm {
-	if (schedule?.phases?.length) {
+	const scheduledPhases = mergeSchedulePhases({ schedules });
+	// An id with no live customer product is a stale phase entry, not a plan the
+	// user has yet to pick — skip it rather than seed a blank row.
+	const persistedPhases = scheduledPhases
+		.map((phase) => ({
+			startsAt: phase.starts_at,
+			persistedStartsAt: phase.starts_at,
+			plans: phase.customer_product_ids.flatMap((cpId) => {
+				const cusProduct = findCustomerProductById({
+					fullCustomer: customer,
+					customerProductId: cpId,
+				});
+				return cusProduct ? [cusProductToPlan({ cusProduct, products })] : [];
+			}),
+		}))
+		.filter((phase) => phase.plans.length > 0);
+
+	if (persistedPhases.length > 0) {
 		return {
-			phases: schedule.phases.map((phase) => ({
-				startsAt: phase.starts_at,
-				persistedStartsAt: phase.starts_at,
-				plans: phase.customer_product_ids.map((cpId) => {
-					const cusProduct = findCustomerProductById({
-						fullCustomer: customer,
-						customerProductId: cpId,
-					});
-					return cusProduct
-						? cusProductToPlan({ cusProduct, products })
-						: { ...EMPTY_SCHEDULE_PLAN };
-				}),
-			})),
+			phases: persistedPhases,
+			unscheduledPlans: [],
 			billingBehavior: null,
 			resetBillingCycle: hasSchedulePhaseBillingCycleReset({
 				customer,
-				schedule,
+				phases: scheduledPhases,
 				nowMs,
 			}),
 			enablePlanImmediately: false,
 		};
 	}
 
-	const activePlans =
-		customer?.customer_products
-			.filter((cp) => {
-				if (cp.status !== CusProductStatus.Active || cp.canceled_at)
-					return false;
-				if (entityId) return cp.entity_id === entityId;
-				return !cp.entity_id;
-			})
-			.map((cp) => cusProductToPlan({ cusProduct: cp, products })) ?? [];
-
+	// A brand new schedule starts empty — existing plans are opt-in, via the
+	// picker's "Copy existing plans" action.
 	return {
 		phases: [
 			{
 				startsAt: null,
 				persistedStartsAt: undefined,
-				plans:
-					activePlans.length > 0 ? activePlans : [{ ...EMPTY_SCHEDULE_PLAN }],
+				plans: [{ ...EMPTY_SCHEDULE_PLAN }],
 			},
 		],
+		unscheduledPlans: [],
 		billingBehavior: null,
 		resetBillingCycle: false,
 		enablePlanImmediately: false,
 	};
-}
-
-function ScheduleEditFooter({
-	onCancel,
-	onSave,
-}: {
-	onCancel: () => void;
-	onSave: (plan: SchedulePlan) => void;
-}) {
-	const { formValues, hasCustomizations } = useAttachFormContext();
-
-	const handleSaveToSchedule = () => {
-		const prepaidOptions = Object.fromEntries(
-			Object.entries(formValues.prepaidOptions).filter(
-				(entry): entry is [string, number] => entry[1] !== undefined,
-			),
-		);
-		onSave({
-			productId: formValues.productId,
-			prepaidOptions,
-			items: formValues.items,
-			isCustom: formValues.isCustom || hasCustomizations,
-			version: formValues.version,
-		});
-	};
-
-	return (
-		<SheetFooter>
-			<Button variant="secondary" onClick={onCancel} className="w-full">
-				Cancel
-			</Button>
-			<Button
-				variant="primary"
-				onClick={handleSaveToSchedule}
-				disabled={!formValues.productId}
-				className="w-full"
-			>
-				Save to Schedule
-			</Button>
-		</SheetFooter>
-	);
-}
-
-function ScheduleEditSheetContent({
-	onCancel,
-	onSave,
-}: {
-	onCancel: () => void;
-	onSave: (plan: SchedulePlan) => void;
-}) {
-	const {
-		formValues,
-		productWithFormItems,
-		showPlanEditor,
-		handlePlanEditorSave,
-		handlePlanEditorCancel,
-	} = useAttachFormContext();
-
-	const hasProductSelected = !!formValues.productId;
-
-	return (
-		<LayoutGroup>
-			<div className="flex flex-col h-full overflow-y-auto">
-				<SheetHeader
-					title="Configure Plan"
-					description="Configure the plan for this schedule phase"
-				/>
-
-				<SheetSection withSeparator={false} className="pb-0">
-					<AttachProductSelection />
-				</SheetSection>
-
-				{hasProductSelected ? (
-					<motion.div
-						initial="hidden"
-						animate="visible"
-						variants={STAGGER_CONTAINER}
-						className="flex flex-col"
-					>
-						<motion.div variants={STAGGER_ITEM}>
-							<AttachPlanSection />
-						</motion.div>
-						<motion.div variants={STAGGER_ITEM}>
-							<ScheduleEditFooter onCancel={onCancel} onSave={onSave} />
-						</motion.div>
-					</motion.div>
-				) : (
-					<ScheduleEditFooter onCancel={onCancel} onSave={onSave} />
-				)}
-
-				{productWithFormItems && (
-					<InlinePlanEditor
-						product={productWithFormItems}
-						onSave={handlePlanEditorSave}
-						onCancel={handlePlanEditorCancel}
-						isOpen={showPlanEditor}
-					/>
-				)}
-			</div>
-		</LayoutGroup>
-	);
-}
-
-function ScheduleEditSheet({
-	editingPlanValue,
-	onCancel,
-	onSave,
-}: {
-	editingPlanValue: SchedulePlan | null;
-	onCancel: () => void;
-	onSave: (plan: SchedulePlan) => void;
-}) {
-	const { customer } = useCusQuery();
-	const { setIsInlineEditorOpen } = useCustomerContext();
-
-	return (
-		<AttachFormProvider
-			customerId={customer?.id ?? customer?.internal_id ?? ""}
-			entityId={undefined}
-			initialProductId={editingPlanValue?.productId ?? undefined}
-			initialSchedulePlan={editingPlanValue}
-			disablePreview
-			onPlanEditorOpen={() => setIsInlineEditorOpen(true)}
-			onPlanEditorClose={() => setIsInlineEditorOpen(false)}
-			onSuccess={onCancel}
-		>
-			<ScheduleEditSheetContent onCancel={onCancel} onSave={onSave} />
-		</AttachFormProvider>
-	);
 }
 
 function ScheduleSendInvoiceContent() {
@@ -355,92 +259,133 @@ function ScheduleSendInvoiceContent() {
 	);
 }
 
-function CreateScheduleSheetBody() {
-	const { editingPlan, editingPlanValue, handlePlanEditSave, setEditingPlan } =
+function ScheduleCheckoutContent() {
+	const { form, formValues, isPending, handleCheckoutSubmit, previewQuery } =
 		useCreateScheduleFormContext();
-	const sheetType = useSheetStore((s) => s.type);
+	const { setSheet } = useSheetStore();
 
-	if (editingPlan) {
-		return (
-			<ScheduleEditSheet
-				editingPlanValue={editingPlanValue}
-				onCancel={() => setEditingPlan(null)}
-				onSave={(plan) => {
-					handlePlanEditSave({ plan });
-					setEditingPlan(null);
-				}}
-			/>
-		);
-	}
-
-	if (sheetType === "create-schedule-send-invoice") {
-		return <ScheduleSendInvoiceContent />;
-	}
-
-	if (sheetType === "create-schedule-review") {
-		return <CreateScheduleReviewContent />;
-	}
-
-	return <CreateScheduleSheetContent />;
+	return (
+		<GenerateCheckoutStageWithPreview
+			previewQuery={previewQuery}
+			isPending={isPending}
+			onSubmit={handleCheckoutSubmit}
+			onBack={() => setSheet({ type: "create-schedule-review" })}
+			// create_schedule has no long_lived_checkout param.
+			showLongLivedCheckout={false}
+			enablePlanImmediately={formValues.enablePlanImmediately}
+			onEnablePlanImmediatelyChange={(value) =>
+				form.setFieldValue("enablePlanImmediately", value)
+			}
+		/>
+	);
 }
 
-type EntityWithSchedule = FullCustomer["entities"][number] & {
-	schedule?: FullCustomerSchedule;
-};
+function CreateScheduleSheetBody() {
+	const {
+		products,
+		editingPlan,
+		editingPlanValue,
+		handlePlanEditSave,
+		setEditingPlan,
+	} = useCreateScheduleFormContext();
+	const sheetType = useSheetStore((s) => s.type);
+	const { setIsInlineEditorOpen } = useCustomerContext();
 
-export function getScheduleForScope({
-	customer,
-	entityId,
-}: {
-	customer: FullCustomer | undefined;
-	entityId: string | undefined;
-}): FullCustomerSchedule | undefined {
-	if (!entityId) return customer?.schedule;
-	const entity = (customer?.entities as EntityWithSchedule[] | undefined)?.find(
-		(e) => e.id === entityId || e.internal_id === entityId,
+	useEffect(() => {
+		setIsInlineEditorOpen(!!editingPlan);
+		return () => setIsInlineEditorOpen(false);
+	}, [editingPlan, setIsInlineEditorOpen]);
+
+	const planEditorProduct = useMemo(() => {
+		const product = products.find((p) => p.id === editingPlanValue?.productId);
+		if (!(editingPlanValue && product)) return undefined;
+		return productV2ToFrontendProduct({
+			product: {
+				...product,
+				items: editingPlanValue.items ?? product.items,
+				version: editingPlanValue.version ?? product.version,
+			},
+		});
+	}, [editingPlanValue, products]);
+
+	const handleInlineSave = (draftProduct: FrontendProduct) => {
+		if (!(editingPlanValue && planEditorProduct)) return setEditingPlan(null);
+
+		const patch = getSupportedPlanFormPatchFromDraftProduct({
+			baseProduct: planEditorProduct,
+			draftProduct,
+		});
+		handlePlanEditSave({
+			plan: {
+				...editingPlanValue,
+				...(patch.items !== undefined && {
+					items: patch.items,
+					isCustom: true,
+				}),
+				...("version" in patch && { version: patch.version }),
+			},
+		});
+	};
+
+	let StageContent = CreateScheduleSheetContent;
+	if (sheetType === "create-schedule-send-invoice") {
+		StageContent = ScheduleSendInvoiceContent;
+	} else if (sheetType === "create-schedule-checkout") {
+		StageContent = ScheduleCheckoutContent;
+	} else if (sheetType === "create-schedule-review") {
+		StageContent = CreateScheduleReviewContent;
+	}
+
+	return (
+		<>
+			<StageContent />
+			{planEditorProduct && (
+				<InlinePlanEditor
+					product={planEditorProduct}
+					onSave={handleInlineSave}
+					onCancel={() => setEditingPlan(null)}
+					isOpen={!!editingPlan}
+				/>
+			)}
+		</>
 	);
-	return entity?.schedule;
 }
 
 export function CreateScheduleSheet() {
 	const { closeSheet } = useSheetStore();
 	const { customer, testClockFrozenTimeMs } = useCusQuery({ schedule: true });
 	const fullCustomer = customer as FullCustomer | undefined;
-	const [scopeEntityId, setScopeEntityId] = useSheetScopeEntityId(fullCustomer);
 
 	const { products } = useProductsQuery();
-	const schedule = getScheduleForScope({
-		customer: fullCustomer,
-		entityId: scopeEntityId,
-	});
+	const schedules = useCustomerSchedules();
 
 	const initialValues = useMemo(
 		() =>
 			buildInitialValues({
 				customer: fullCustomer,
-				schedule,
+				schedules,
 				products,
-				entityId: scopeEntityId,
 				nowMs: testClockFrozenTimeMs,
 			}),
-		[fullCustomer, schedule, products, scopeEntityId, testClockFrozenTimeMs],
+		[fullCustomer, schedules, products, testClockFrozenTimeMs],
 	);
 
-	// Intentionally no `key` on CreateScheduleFormProvider: scope changes should
-	// preserve the user's in-progress draft (mirrors AttachFormProvider). The
-	// provider reads the live `entityId` prop for preview/request building.
+	const existingPlans = useMemo(
+		() => getActiveCustomerPlans({ customer: fullCustomer, products }),
+		[fullCustomer, products],
+	);
+
 	return (
 		<CreateScheduleFormProvider
 			customerId={customer?.id ?? customer?.internal_id ?? ""}
-			entityId={scopeEntityId}
 			initialValues={initialValues}
+			existingPlans={existingPlans}
 			nowMs={testClockFrozenTimeMs}
 			onCheckoutRedirect={(checkoutUrl) => {
 				navigator.clipboard.writeText(checkoutUrl);
 				toast.success("Checkout URL copied to clipboard");
 			}}
 			onSuccess={closeSheet}
-			onScopeChange={setScopeEntityId}
 		>
 			<CreateScheduleSheetBody />
 		</CreateScheduleFormProvider>

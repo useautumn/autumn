@@ -1,4 +1,5 @@
 export { CompletionMessage } from "./CompletionMessage.js";
+export { ConfigResourcesPromptCard } from "./ConfigResourcesPromptCard.js";
 export { ErrorCard } from "./ErrorCard.js";
 export { FeaturesCard } from "./FeaturesCard.js";
 export { NoChangesCard } from "./NoChangesCard.js";

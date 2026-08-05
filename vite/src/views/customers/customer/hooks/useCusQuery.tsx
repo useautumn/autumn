@@ -1,4 +1,8 @@
-import type { FullCusProduct, FullCustomer } from "@autumn/shared";
+import type {
+	FullCusProduct,
+	FullCustomer,
+	FullCustomerSchedule,
+} from "@autumn/shared";
 import {
 	keepPreviousData,
 	useQuery,
@@ -136,6 +140,18 @@ export const useCusQuery = ({
 	}, [customer, scheduleData, fetchSchedule]);
 
 	const schedule = fetchSchedule ? scheduleData?.schedule : undefined;
+
+	// Entity schedules come from the schedule endpoint rather than
+	// `customer.entities`, which is paginated and may omit scheduled entities.
+	const schedules = useMemo(() => {
+		if (!fetchSchedule) return [];
+		const all = [
+			scheduleData?.schedule,
+			...Object.values(scheduleData?.entity_schedules ?? {}),
+		].filter(Boolean) as FullCustomerSchedule[];
+		return [...new Map(all.map((s) => [s.id, s])).values()];
+	}, [scheduleData, fetchSchedule]);
+
 	const testClockFrozenTimeMs: number | undefined =
 		data?.test_clock_frozen_time_ms ?? undefined;
 	const cusWithCacheLoading = cachedCustomer ? false : customerLoading;
@@ -151,6 +167,7 @@ export const useCusQuery = ({
 	return {
 		customer: customerWithSchedules,
 		schedule,
+		schedules,
 		testClockFrozenTimeMs,
 		entities: customerWithSchedules?.entities,
 		products,

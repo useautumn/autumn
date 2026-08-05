@@ -81,6 +81,55 @@ describe("transfer customer product selection", () => {
 		]);
 	});
 
+	test("still moves scheduled successors when an id is provided", () => {
+		const scheduledSuccessor = createCustomerProduct({
+			id: "cus_prod_scheduled_premium",
+			productId: "premium",
+			status: CusProductStatus.Scheduled,
+		});
+
+		const results = getTransferCustomerProducts({
+			fullCustomer: {
+				customer_products: [
+					...fullCustomer.customer_products,
+					scheduledSuccessor,
+				],
+			} as FullCustomer,
+			fromEntity: sourceEntity,
+			product,
+			customerProductId: "cus_prod_target",
+		});
+
+		expect(results.map((customerProduct) => customerProduct.id)).toEqual([
+			"cus_prod_target",
+			"cus_prod_scheduled_premium",
+		]);
+	});
+
+	test("moves a scheduled row of the same plan when an id is provided", () => {
+		const scheduledSameProduct = createCustomerProduct({
+			id: "cus_prod_scheduled_pro",
+			status: CusProductStatus.Scheduled,
+		});
+
+		const results = getTransferCustomerProducts({
+			fullCustomer: {
+				customer_products: [
+					...fullCustomer.customer_products,
+					scheduledSameProduct,
+				],
+			} as FullCustomer,
+			fromEntity: sourceEntity,
+			product,
+			customerProductId: "cus_prod_target",
+		});
+
+		expect(results.map((customerProduct) => customerProduct.id)).toEqual([
+			"cus_prod_target",
+			"cus_prod_scheduled_pro",
+		]);
+	});
+
 	test("keeps legacy related-product selection when no id is provided", () => {
 		const results = getTransferCustomerProducts({
 			fullCustomer,

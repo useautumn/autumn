@@ -5,12 +5,12 @@ export const SuccessResponseSchema = z.object({
 	success: z.boolean(),
 });
 
-export const getListResponseSchema = ({
+export const getListResponseSchema = <Schema extends z.ZodType>({
 	schema,
 	id,
 	description,
 }: {
-	schema: z.ZodType;
+	schema: Schema;
 	id?: string;
 	description?: string;
 }) => {

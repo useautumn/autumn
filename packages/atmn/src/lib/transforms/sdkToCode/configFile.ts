@@ -1,9 +1,11 @@
+import type { ReferralProgram, Reward } from "../../../compose/index.js";
 import type { Feature } from "../../../compose/models/index.js";
 import type { Plan } from "../../../compose/models/variantModels.js";
 import { buildFeatureCode } from "./feature.js";
 import { resolveVarNames } from "./helpers.js";
 import { buildImports } from "./imports.js";
 import { buildPlanCode } from "./plan.js";
+import { buildReferralProgramCode, buildRewardCode } from "./reward.js";
 import { buildVariantCode } from "./variant.js";
 
 const versionedCodegenId = ({
@@ -17,23 +19,40 @@ const versionedCodegenId = ({
 /**
  * Generate complete autumn.config.ts file content
  */
-export function buildConfigFile(features: Feature[], plans: Plan[]): string {
+export function buildConfigFile(
+	features: Feature[],
+	plans: Plan[],
+	rewards: Reward[] = [],
+	referralPrograms: ReferralProgram[] = [],
+): string {
 	const sections: string[] = [];
 
 	// Resolve var names up front so collisions (e.g. a feature and plan both
 	// named "free") are disambiguated before any code is emitted.
-	const { featureVarMap, planVarMap, variantVarMap } = resolveVarNames(
+	const {
+		featureVarMap,
+		planVarMap,
+		variantVarMap,
+		rewardVarMap,
+		referralProgramVarMap,
+	} = resolveVarNames(
 		features.map((f) => f.id),
 		plans.map(versionedCodegenId),
 		plans.flatMap(
 			(p) => p.variants?.map((variant) => versionedCodegenId(variant)) ?? [],
 		),
+		{
+			rewardIds: rewards.map(({ id }) => id),
+			referralProgramIds: referralPrograms.map(({ id }) => id),
+		},
 	);
 
 	// Add imports
 	sections.push(
 		buildImports({
 			includeBillingControls: plans.some((plan) => plan.billingControls),
+			includeRewards: rewards.length > 0,
+			includeReferralPrograms: referralPrograms.length > 0,
 		}),
 	);
 	sections.push("");
@@ -67,6 +86,22 @@ export function buildConfigFile(features: Feature[], plans: Plan[]): string {
 				sections.push("");
 			}
 		}
+	}
+	if (rewards.length > 0) {
+		sections.push("// Rewards");
+		for (const reward of rewards)
+			sections.push(buildRewardCode(reward, rewardVarMap.get(reward.id)), "");
+	}
+	if (referralPrograms.length > 0) {
+		sections.push("// Referral programs");
+		for (const program of referralPrograms)
+			sections.push(
+				buildReferralProgramCode(
+					program,
+					referralProgramVarMap.get(program.id),
+				),
+				"",
+			);
 	}
 
 	return sections.join("\n");

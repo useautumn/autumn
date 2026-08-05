@@ -1,14 +1,11 @@
-import fs from "node:fs";
-import { resolve } from "node:path";
-import { pathToFileURL } from "node:url";
 import { useMutation } from "@tanstack/react-query";
-import createJiti from "jiti";
 import { useCallback, useEffect, useState } from "react";
 import {
 	buildLatestPlanVersionById,
 	catalogFeatureChangeHasChanges,
 	catalogPlanChangeHasChanges,
 	catalogPreviewHasChanges,
+	createConfigResourceReviewPrompts,
 	createFeatureArchivedPrompt,
 	createFeatureDeletePrompt,
 	createPlanArchivedPrompt,
@@ -20,29 +17,30 @@ import {
 	createProdConfirmationPrompt,
 	fetchRemoteData,
 	isHistoricalPlan,
-	planChangeHasHistoricalVersions,
-	planTargetKey,
-	previewCatalogPush,
 	type PlanMigrationSelections,
 	type PlanUpdateIntentSelections,
 	type PushAnalysis,
 	type PushPrompt,
 	type PushResult,
-	type VariantMigrationSelections,
-	type VariantPropagationSelections,
-	type VariantUpdateIntentSelections,
+	planChangeHasHistoricalVersions,
+	planTargetKey,
+	previewCatalogPush,
 	pushCatalog,
 	unarchiveFeature as unarchiveFeatureApi,
 	unarchivePlan as unarchivePlanApi,
+	type VariantMigrationSelections,
+	type VariantPropagationSelections,
+	type VariantUpdateIntentSelections,
 } from "../../commands/push/index.js";
 import {
 	getDirectVariantUpdatePreviews,
 	getVariantPropagationPreviews,
 } from "../../commands/push/variantPropagation.js";
 import type { Feature, Plan } from "../../compose/models/index.js";
-import type { CatalogPreviewUpdateResponse } from "../api/endpoints/index.js";
 import { formatError } from "../api/client.js";
-import { AppEnv, resolveConfigPath } from "../env/index.js";
+import type { CatalogPreviewUpdateResponse } from "../api/endpoints/index.js";
+import { type LoadedConfig, loadConfig } from "../config/loadConfig.js";
+import { AppEnv } from "../env/index.js";
 import { type OrganizationInfo, useOrganization } from "./useOrganization.js";
 
 export type PushPhase =
@@ -84,10 +82,7 @@ export interface UsePushOptions {
 	onComplete?: () => void;
 }
 
-interface LocalConfig {
-	features: Feature[];
-	plans: Plan[];
-}
+type LocalConfig = LoadedConfig;
 
 type PlanVariantInfo = Pick<Plan, "id" | "name">;
 
@@ -95,76 +90,8 @@ type PlanWithVariants = Plan & {
 	variants?: PlanVariantInfo[];
 };
 
-const isVariantExport = (value: unknown): boolean =>
-	Boolean(
-		value &&
-			typeof value === "object" &&
-			(value as { __atmnType?: unknown }).__atmnType === "variant",
-	);
-
-// Load local config file
 async function loadLocalConfig(cwd: string): Promise<LocalConfig> {
-	const configPath = resolveConfigPath(cwd);
-
-	if (!fs.existsSync(configPath)) {
-		throw new Error(
-			`Config file not found at ${configPath}. Run 'atmn pull' first.`,
-		);
-	}
-
-	const absolutePath = resolve(configPath);
-	const fileUrl = pathToFileURL(absolutePath).href;
-
-	const jiti = createJiti(import.meta.url);
-	const mod = await jiti.import(fileUrl);
-
-	const plans: Plan[] = [];
-	const features: Feature[] = [];
-
-	// Check for old-style default export first
-	const modRecord = mod as { default?: unknown } & Record<string, unknown>;
-	const defaultExport = modRecord.default as
-		| {
-				plans?: Plan[];
-				features?: Feature[];
-				products?: Plan[];
-		  }
-		| undefined;
-
-	if (defaultExport?.plans && defaultExport?.features) {
-		if (Array.isArray(defaultExport.plans)) {
-			plans.push(...defaultExport.plans);
-		}
-		if (Array.isArray(defaultExport.features)) {
-			features.push(...defaultExport.features);
-		}
-	} else if (defaultExport?.products && defaultExport?.features) {
-		// Legacy format
-		if (Array.isArray(defaultExport.products)) {
-			plans.push(...defaultExport.products);
-		}
-		if (Array.isArray(defaultExport.features)) {
-			features.push(...defaultExport.features);
-		}
-	} else {
-		// New format: individual named exports
-		for (const [key, value] of Object.entries(modRecord)) {
-			if (key === "default") continue;
-			if (isVariantExport(value)) continue;
-
-			const obj = value as { items?: unknown; type?: unknown };
-			// Detect if it's a plan (has items array) or feature (has type)
-			if (obj && typeof obj === "object") {
-				if ("type" in obj) {
-					features.push(obj as unknown as Feature);
-				} else if (Array.isArray(obj.items) || "id" in obj) {
-					plans.push(obj as unknown as Plan);
-				}
-			}
-		}
-	}
-
-	return { features, plans };
+	return loadConfig({ cwd });
 }
 
 const findPromptResponse = ({
@@ -276,9 +203,7 @@ const catalogPreviewToAnalysis = ({
 	);
 	const localVariantsById = new Map(
 		(plans as PlanWithVariants[]).flatMap((plan) =>
-			(plan.variants ?? []).map(
-				(variant) => [variant.id, variant] as const,
-			),
+			(plan.variants ?? []).map((variant) => [variant.id, variant] as const),
 		),
 	);
 	const analysis: PushAnalysis = {
@@ -437,10 +362,7 @@ export function usePush(options?: UsePushOptions) {
 	const analyzeMutation = useMutation({
 		mutationFn: async (config: LocalConfig) => {
 			const [{ preview }, remoteData] = await Promise.all([
-				previewCatalogPush({
-					features: config.features,
-					plans: config.plans,
-				}),
+				previewCatalogPush({ config }),
 				fetchRemoteData({ allVersions }),
 			]);
 
@@ -526,6 +448,8 @@ export function usePush(options?: UsePushOptions) {
 			for (const info of analysisResult.plansToDelete) {
 				prompts.push(createPlanDeletePrompt(info));
 			}
+
+			prompts.push(...createConfigResourceReviewPrompts(preview));
 
 			setPromptQueue(prompts);
 
@@ -726,23 +650,24 @@ export function usePush(options?: UsePushOptions) {
 			return selections;
 		}, [analysis, promptQueue, promptResponses]);
 
-	const getPlanMigrationSelections = useCallback((): PlanMigrationSelections => {
-		const selections: PlanMigrationSelections = {};
-		for (const planInfo of analysis?.plansToUpdate ?? []) {
-			if (!planInfo.willVersion && !planInfo.hasHistoricalVersions) continue;
-			const response = findPromptResponse({
-				entityId: planInfo.plan.id,
-				promptQueue,
-				promptResponses,
-				scope: "plan",
-				typePrefix: "plan_migration",
-			});
-			if (response !== undefined) {
-				selections[planInfo.plan.id] = response === "create_migration";
+	const getPlanMigrationSelections =
+		useCallback((): PlanMigrationSelections => {
+			const selections: PlanMigrationSelections = {};
+			for (const planInfo of analysis?.plansToUpdate ?? []) {
+				if (!planInfo.willVersion && !planInfo.hasHistoricalVersions) continue;
+				const response = findPromptResponse({
+					entityId: planInfo.plan.id,
+					promptQueue,
+					promptResponses,
+					scope: "plan",
+					typePrefix: "plan_migration",
+				});
+				if (response !== undefined) {
+					selections[planInfo.plan.id] = response === "create_migration";
+				}
 			}
-		}
-		return selections;
-	}, [analysis, promptQueue, promptResponses]);
+			return selections;
+		}, [analysis, promptQueue, promptResponses]);
 
 	const getVariantUpdateIntentSelections =
 		useCallback((): VariantUpdateIntentSelections => {
@@ -868,15 +793,16 @@ export function usePush(options?: UsePushOptions) {
 
 			return pushCatalog({
 				cwd: effectiveCwd,
-				features: config.features,
-				plans: config.plans,
-				planMigrationSelections: getPlanMigrationSelections(),
-				planUpdateIntentSelections: getPlanUpdateIntentSelections(),
-				skipFeatureIds: skippedFeatureIds,
-				skipPlanIds: skippedPlanIds,
-				variantMigrationSelections: getVariantMigrationSelections(),
-				variantPropagationSelections: getVariantPropagationSelections(),
-				variantUpdateIntentSelections: getVariantUpdateIntentSelections(),
+				config,
+				decisions: {
+					planMigrationSelections: getPlanMigrationSelections(),
+					planUpdateIntentSelections: getPlanUpdateIntentSelections(),
+					skipFeatureIds: skippedFeatureIds,
+					skipPlanIds: skippedPlanIds,
+					variantMigrationSelections: getVariantMigrationSelections(),
+					variantPropagationSelections: getVariantPropagationSelections(),
+					variantUpdateIntentSelections: getVariantUpdateIntentSelections(),
+				},
 			});
 		},
 		onSuccess: (finalResult) => {
@@ -938,7 +864,9 @@ export function usePush(options?: UsePushOptions) {
 			);
 			if (!versionPrompt) return false;
 			const response = responses.get(versionPrompt.id);
-			return response === "update_current" || response === "update_all_versions";
+			return (
+				response === "update_current" || response === "update_all_versions"
+			);
 		},
 		[promptQueue],
 	);
@@ -949,7 +877,7 @@ export function usePush(options?: UsePushOptions) {
 			if (!currentPrompt) return;
 
 			// Check for cancel on prod confirmation
-			if (currentPrompt.type === "prod_confirmation" && value === "cancel") {
+			if (value === "cancel") {
 				setError("Push cancelled by user");
 				setPhase("error");
 				return;

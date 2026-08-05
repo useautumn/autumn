@@ -15,6 +15,7 @@ import { ProcessorIcon } from "@/components/v2/icons/ProcessorIcon";
 import { getInvoiceHoverTexts } from "@/views/admin/adminUtils";
 import { createDateTimeColumn } from "@/views/customers2/utils/ColumnHelpers";
 import { CustomerInvoiceStatus } from "./CustomerInvoiceStatus";
+import { InvoiceTotalCell } from "./invoiceAmountUtils";
 
 type CustomerInvoice = Invoice & { productNames: string };
 
@@ -90,17 +91,12 @@ export const getCustomerInvoicesColumns = ({
 		size: 120,
 		cell: ({ row }: { row: Row<CustomerInvoice> }) => {
 			const invoice = row.original;
-			const discountAmount = getTotalDiscountAmount(invoice);
 			return (
-				<div>
-					{invoice.total.toFixed(2)} {invoice.currency.toUpperCase()}
-					{discountAmount > 0 && (
-						<span className="text-tertiary-foreground">
-							{" "}
-							(-{discountAmount.toFixed(2)})
-						</span>
-					)}
-				</div>
+				<InvoiceTotalCell
+					total={invoice.total}
+					currency={invoice.currency}
+					discountAmount={getTotalDiscountAmount(invoice)}
+				/>
 			);
 		},
 	},

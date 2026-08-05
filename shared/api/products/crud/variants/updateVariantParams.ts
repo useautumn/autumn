@@ -11,7 +11,7 @@ export const UpdateVariantParamsSchema = z.object({
 		description:
 			"Display name to use when creating the variant if it does not exist.",
 	}),
-	customize: DiffedCustomizePlanV1Schema.meta({
+	customize: DiffedCustomizePlanV1Schema.or(z.object({}).strict()).meta({
 		description: "The exact customize patch to apply to this variant.",
 	}),
 	disable_version: z.boolean().optional().meta({
