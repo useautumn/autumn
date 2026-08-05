@@ -33,38 +33,51 @@ test("loads reward-only default exports", async () => {
 	);
 });
 
-test("in-place pull does not duplicate default-export resources", async () => {
+test("in-place pull rejects default-export resources without changing source", async () => {
 	const source = `export default {
 	rewards: [{ id: "credits", name: "Credits", type: "feature_grant", grants: [{ featureId: "credits", included: 1 }], promoCodes: [{ code: "CREDITS" }] }],
 	referralPrograms: [{ id: "refer", rewardId: "credits", redeemOn: "customer_creation", receivedBy: "all" }],
 };`;
 	await withConfigWorkspace(source, async (cwd) => {
+		await expect(
+			writeConfig({
+				features: [],
+				plans: [],
+				cwd,
+				rewards: [
+					reward({
+						id: "credits",
+						name: "Credits",
+						type: "feature_grant",
+						grants: [{ featureId: "credits", included: 1 }],
+						promoCodes: [{ code: "CREDITS" }],
+					}),
+				],
+				referralPrograms: [
+					referralProgram({
+						id: "refer",
+						rewardId: "credits",
+						redeemOn: "customer_creation",
+						receivedBy: "all",
+					}),
+				],
+			}),
+		).rejects.toThrow("atmn pull --force");
+		expect(readFileSync(join(cwd, "autumn.config.ts"), "utf8")).toBe(source);
+	});
+});
+
+test("features-only default exports are not executed during in-place pull", async () => {
+	const source = `throw new Error("must not execute");
+export default { features: [], plans: [] };`;
+	await withConfigWorkspace(source, async (cwd) => {
 		await writeConfig({
 			features: [],
 			plans: [],
 			cwd,
-			rewards: [
-				reward({
-					id: "credits",
-					name: "Credits",
-					type: "feature_grant",
-					grants: [{ featureId: "credits", included: 1 }],
-					promoCodes: [{ code: "CREDITS" }],
-				}),
-			],
-			referralPrograms: [
-				referralProgram({
-					id: "refer",
-					rewardId: "credits",
-					redeemOn: "customer_creation",
-					receivedBy: "all",
-				}),
-			],
+			rewards: [],
+			referralPrograms: [],
 		});
-		const updated = readFileSync(join(cwd, "autumn.config.ts"), "utf8");
-
-		expect(updated.match(/id:\s*["']credits["']/g)).toHaveLength(1);
-		expect(updated.match(/id:\s*["']refer["']/g)).toHaveLength(1);
 	});
 });
 

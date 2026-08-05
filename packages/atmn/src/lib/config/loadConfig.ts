@@ -17,22 +17,37 @@ export type LoadedConfig = {
 	referralPrograms: ReferralProgram[];
 };
 
-export const loadConfig = async ({
-	cwd = process.cwd(),
+type ConfigModule = {
+	default?: Partial<LoadedConfig> & { products?: Plan[] };
+} & Record<string, unknown>;
+
+const importConfig = async ({
+	cwd,
 }: {
-	cwd?: string;
-} = {}): Promise<LoadedConfig> => {
+	cwd: string;
+}): Promise<ConfigModule> => {
 	const configPath = resolveConfigPath(cwd);
 	if (!existsSync(configPath))
 		throw new Error(
 			`Config file not found at ${configPath}. Run 'atmn pull' first.`,
 		);
-	const mod = (await createJiti(import.meta.url).import(
+	return createJiti(import.meta.url).import(
 		pathToFileURL(resolve(configPath)).href,
-	)) as { default?: Partial<LoadedConfig> & { products?: Plan[] } } & Record<
-		string,
-		unknown
-	>;
+	) as Promise<ConfigModule>;
+};
+
+export const loadDefaultConfig = async ({
+	cwd = process.cwd(),
+}: {
+	cwd?: string;
+} = {}) => (await importConfig({ cwd })).default;
+
+export const loadConfig = async ({
+	cwd = process.cwd(),
+}: {
+	cwd?: string;
+} = {}): Promise<LoadedConfig> => {
+	const mod = await importConfig({ cwd });
 	const config: LoadedConfig = {
 		features: [],
 		plans: [],
