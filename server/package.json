@@ -33,7 +33,7 @@
 		"atmn-test": "ENV_FILE=.env infisical run --env=dev --recursive -- bun ../packages/atmn/test/integration/cli.ts",
 		"atest": "ENV_FILE=.env infisical run --env=dev --recursive -- bun ../packages/atmn/test/integration/cli.ts",
 		"ts": "bunx tsgo --build --noEmit",
-		"test:unit": "ENV_FILE=.env infisical run --env=dev --recursive -- bun test --isolate tests/unit",
+		"test:unit": "bun tests/testRunner/runUnitTests.ts",
 		"test:integration": "ENV_FILE=.env infisical run --env=dev --recursive -- bun test --timeout 0 --preload ./tests/setup-integration-tests.ts",
 		"loadtest": "ENV_FILE=.env infisical run --env=dev --recursive -- npx artillery run perf/load-test/artillery.yml",
 		"loadtest:leak": "ENV_FILE=.env infisical run --env=dev --recursive -- bun perf/load-test/runLeakTest.ts",

@@ -41,6 +41,7 @@ import {
 import { RedisUnavailableError } from "@/external/redis/utils/errors.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { getSqsClient } from "@/queue/initSqs.js";
+import { mockModuleWithRestore } from "../../utils/mockModuleWithRestore.js";
 
 const trackQueueUrl =
 	"https://sqs.eu-west-1.amazonaws.com/123456789012/track-dev.fifo";
@@ -62,36 +63,45 @@ const nextBehavior = (behaviors: (Error | "ok")[]) => {
 	if (behavior instanceof Error) throw behavior;
 };
 
-mock.module("@/external/redis/availabilityMonitor/redisV2Availability.js", () => ({
-	shouldUseRedisV2: () => mockState.redisV2Ready,
-	getRedisV2Availability: () => ({ configured: true, state: "ready" }),
-	primeRedisV2Monitor: () => {},
-	startRedisV2Monitor: () => {},
-	stopRedisV2Monitor: () => {},
-}));
+await mockModuleWithRestore(
+	"@/external/redis/availabilityMonitor/redisV2Availability.js",
+	() => ({
+		shouldUseRedisV2: () => mockState.redisV2Ready,
+		getRedisV2Availability: () => ({ configured: true, state: "ready" }),
+		primeRedisV2Monitor: () => {},
+		startRedisV2Monitor: () => {},
+		stopRedisV2Monitor: () => {},
+	}),
+);
 
-mock.module("@/internal/balances/utils/lock/fetchLockReceipt.js", () => ({
-	fetchLockReceipt: async () => {
-		mockState.fetchCalls += 1;
-		nextBehavior(mockState.fetchBehaviors);
-		return {
-			receipt: { customer_id: "cus_123", feature_id: "messages", items: [] },
-			lockReceiptKey: "{org_123}:sandbox:lock:hashed",
-			claimed: true,
-			redisInstance: {},
-		};
-	},
-}));
+await mockModuleWithRestore(
+	"@/internal/balances/utils/lock/fetchLockReceipt.js",
+	() => ({
+		fetchLockReceipt: async () => {
+			mockState.fetchCalls += 1;
+			nextBehavior(mockState.fetchBehaviors);
+			return {
+				receipt: { customer_id: "cus_123", feature_id: "messages", items: [] },
+				lockReceiptKey: "{org_123}:sandbox:lock:hashed",
+				claimed: true,
+				redisInstance: {},
+			};
+		},
+	}),
+);
 
-mock.module("@/internal/balances/finalizeLock/runFinalizeLockV2.js", () => ({
-	runFinalizeLockV2: async () => {
-		mockState.v2Calls += 1;
-		nextBehavior(mockState.v2Behaviors);
-		return { success: true };
-	},
-}));
+await mockModuleWithRestore(
+	"@/internal/balances/finalizeLock/runFinalizeLockV2.js",
+	() => ({
+		runFinalizeLockV2: async () => {
+			mockState.v2Calls += 1;
+			nextBehavior(mockState.v2Behaviors);
+			return { success: true };
+		},
+	}),
+);
 
-mock.module(
+await mockModuleWithRestore(
 	"@/internal/balances/utils/lockV2/releaseLockClaimMarker.js",
 	() => ({
 		releaseLockClaimMarker: async (args: Record<string, unknown>) => {

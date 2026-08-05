@@ -1,13 +1,15 @@
-import { describe, expect, it, mock } from "bun:test";
+import { describe, expect, it } from "bun:test";
 import type { FullSubject } from "@autumn/shared";
 import type { SubjectReadFrom } from "@/db/resolveSubjectReadDb.js";
+
+import { mockModuleWithRestore } from "../utils/mockModuleWithRestore.js";
 
 // Captures what readFrom each wrapper hands the cache action — the whole
 // replica-grant contract lives in that one argument.
 const captured: { readFrom?: SubjectReadFrom }[] = [];
 const fakeSubject = { customer: { id: "cus_grant" } } as unknown as FullSubject;
 
-mock.module(
+await mockModuleWithRestore(
 	"@/internal/customers/cache/fullSubject/actions/getOrSetCachedFullSubject.js",
 	() => ({
 		getOrSetCachedFullSubject: async (args: { readFrom?: SubjectReadFrom }) => {

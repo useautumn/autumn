@@ -6,6 +6,7 @@ import { AppEnv } from "@autumn/shared";
 import type { Message } from "@aws-sdk/client-sqs";
 import { RedisUnavailableError } from "@/external/redis/utils/errors.js";
 import { JobName } from "@/queue/JobName.js";
+import { mockModuleWithRestore } from "../utils/mockModuleWithRestore.js";
 
 const state = {
 	createWorkerContextCalls: [] as Record<string, unknown>[],
@@ -14,7 +15,7 @@ const state = {
 	deleteCachedFullCustomerCalls: [] as Record<string, unknown>[],
 };
 
-mock.module("@/queue/createWorkerContext.js", () => ({
+await mockModuleWithRestore("@/queue/createWorkerContext.js", () => ({
 	createWorkerContext: async (args: Record<string, unknown>) => {
 		state.createWorkerContextCalls.push(args);
 		return {
@@ -31,7 +32,7 @@ mock.module("@/queue/createWorkerContext.js", () => ({
 	},
 }));
 
-mock.module(
+await mockModuleWithRestore(
 	"@/internal/customers/cache/fullSubject/actions/getOrSetCachedFullSubject.js",
 	() => ({
 		getOrSetCachedFullSubject: async (args: Record<string, unknown>) => {
@@ -44,7 +45,7 @@ mock.module(
 	}),
 );
 
-mock.module(
+await mockModuleWithRestore(
 	"@/internal/balances/updateBalance/v2/updateRemainingV2.js",
 	() => ({
 		updateRemainingV2: async (args: Record<string, unknown>) => {
@@ -53,7 +54,7 @@ mock.module(
 	}),
 );
 
-mock.module(
+await mockModuleWithRestore(
 	"@/internal/customers/cusUtils/fullCustomerCacheUtils/deleteCachedFullCustomer.js",
 	() => ({
 		deleteCachedFullCustomer: async (args: Record<string, unknown>) => {
@@ -62,21 +63,24 @@ mock.module(
 	}),
 );
 
-mock.module("@/internal/balances/updateBalance/v2/updateUsageV2.js", () => ({
-	updateUsageV2: async () => {},
-}));
+await mockModuleWithRestore(
+	"@/internal/balances/updateBalance/v2/updateUsageV2.js",
+	() => ({
+		updateUsageV2: async () => {},
+	}),
+);
 
-mock.module(
+await mockModuleWithRestore(
 	"@/internal/balances/updateBalance/v2/updateIncludedGrantV2.js",
 	() => ({ updateIncludedGrantV2: async () => {} }),
 );
 
-mock.module(
+await mockModuleWithRestore(
 	"@/internal/balances/updateBalance/v2/updateNextResetAtV2.js",
 	() => ({ updateNextResetAtV2: async () => {} }),
 );
 
-mock.module(
+await mockModuleWithRestore(
 	"@/internal/balances/updateBalance/v2/updateExpiresAtV2.js",
 	() => ({ updateExpiresAtV2: async () => {} }),
 );

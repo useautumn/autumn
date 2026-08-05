@@ -1,13 +1,15 @@
-import { afterAll, beforeEach, describe, expect, mock, test } from "bun:test";
+import { afterAll, beforeEach, describe, expect, test } from "bun:test";
 import { ErrCode } from "@autumn/shared";
 import { Hono } from "hono";
 import RecaseError from "@/utils/errorUtils.js";
+
+import { mockModuleWithRestore } from "../utils/mockModuleWithRestore.js";
 
 const mockState = {
 	getByAccountId: undefined as (() => Promise<unknown>) | undefined,
 };
 
-mock.module("@/internal/orgs/OrgService.js", () => ({
+await mockModuleWithRestore("@/internal/orgs/OrgService.js", () => ({
 	OrgService: {
 		getByAccountId: async () => {
 			if (!mockState.getByAccountId) throw new Error("not configured");
@@ -16,12 +18,12 @@ mock.module("@/internal/orgs/OrgService.js", () => ({
 	},
 }));
 
-mock.module("@/external/connect/initStripeCli.js", () => ({
+await mockModuleWithRestore("@/external/connect/initStripeCli.js", () => ({
 	initMasterStripe: () => ({}),
 	getStripeWebhookSecret: async () => "whsec_test",
 }));
 
-mock.module("@/external/connect/createStripeCli.js", () => ({
+await mockModuleWithRestore("@/external/connect/createStripeCli.js", () => ({
 	createStripeCli: () => ({}),
 }));
 

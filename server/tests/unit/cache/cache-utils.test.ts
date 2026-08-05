@@ -3,7 +3,19 @@ import { afterAll, beforeEach, describe, expect, mock, test } from "bun:test";
 const mockState = {
 	warnings: [] as Array<{ message: string; data?: Record<string, unknown> }>,
 };
-const defaultRedis = { status: "ready" };
+// Honor the ioredis surface consumers touch (initHono attaches `.once`
+// listeners at import time) — a bare `{ status }` fake crashes them.
+const defaultRedis = { status: "ready", once: () => undefined };
+
+// Real modules captured before mocking so afterAll can restore them for
+// later test files in the same process.
+const realRedisConfig = {
+	...(await import("@/external/redis/initUtils/redisConfig.js")),
+};
+const realGetMiscRedis = {
+	...(await import("@/external/redis/miscCache/getMiscRedis.js")),
+};
+const realInitRedis = { ...(await import("@/external/redis/initRedis.js")) };
 
 // Stub the full `Logger` shape — Bun's `mock.module` is process-wide, so
 // later unit tests inherit this stub. Missing methods crash unrelated code.
@@ -30,14 +42,15 @@ mock.module("@/external/logtail/logtailUtils.js", () => ({
 }));
 
 mock.module("@/external/redis/initUtils/redisConfig.js", () => ({
+	...realRedisConfig,
 	hasMiscRedisConfig: true,
 }));
 mock.module("@/external/redis/miscCache/getMiscRedis.js", () => ({
-	redis: defaultRedis,
+	...realGetMiscRedis,
 	getMiscRedis: () => defaultRedis,
 }));
 mock.module("@/external/redis/initRedis.js", () => ({
-	redis: defaultRedis,
+	...realInitRedis,
 	getMiscRedis: () => defaultRedis,
 }));
 
@@ -140,17 +153,29 @@ describe("cache utils", () => {
 	});
 
 	test("Redis command errors do not mark Redis unavailable", async () => {
-		await tryRedisWrite(
+		// Assert on the return value, not warning count — the warn rate-limit
+		// map is process-wide, so another file hitting the same source within
+		// 30s would swallow the warning in a shared-process run.
+		const result = await tryRedisWrite(
 			async () => {
 				throw new Error("ERR user_script:2: unexpected symbol near '#'");
 			},
 			{ status: "ready" } as never,
 		);
 
-		expect(mockState.warnings).toHaveLength(1);
+		expect(result).toBeNull();
 	});
 });
 
 afterAll(() => {
 	mock.restore();
+	mock.module(
+		"@/external/redis/initUtils/redisConfig.js",
+		() => realRedisConfig,
+	);
+	mock.module(
+		"@/external/redis/miscCache/getMiscRedis.js",
+		() => realGetMiscRedis,
+	);
+	mock.module("@/external/redis/initRedis.js", () => realInitRedis);
 });

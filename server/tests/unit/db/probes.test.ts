@@ -1,9 +1,11 @@
 import { beforeEach, describe, expect, it, mock } from "bun:test";
 import type { DbProbe } from "@/db/probes/types.js";
 
+import { mockModuleWithRestore } from "../utils/mockModuleWithRestore.js";
+
 const info = mock((..._args: unknown[]) => {});
 const warn = mock((..._args: unknown[]) => {});
-mock.module("@/external/logtail/logtailUtils.js", () => ({
+await mockModuleWithRestore("@/external/logtail/logtailUtils.js", () => ({
 	logger: {
 		info,
 		warn,

@@ -1,7 +1,9 @@
 /** TDD: pending payments must retain continuation metadata for the eventual Stripe webhook. */
 
-import { expect, mock, test } from "bun:test";
+import { expect, test } from "bun:test";
 import { AppEnv, type Metadata, MetadataType } from "@autumn/shared";
+
+import { mockModuleWithRestore } from "../utils/mockModuleWithRestore.js";
 
 const state = {
 	deletedMetadataIds: [] as string[],
@@ -11,7 +13,7 @@ const state = {
 	pendingPayment: true,
 };
 
-mock.module("@/external/connect/createStripeCli.js", () => ({
+await mockModuleWithRestore("@/external/connect/createStripeCli.js", () => ({
 	createStripeCli: () => ({
 		invoices: {
 			retrieve: async () => ({
@@ -29,7 +31,7 @@ mock.module("@/external/connect/createStripeCli.js", () => ({
 	}),
 }));
 
-mock.module("@/internal/metadata/MetadataService.js", () => ({
+await mockModuleWithRestore("@/internal/metadata/MetadataService.js", () => ({
 	MetadataService: {
 		delete: async ({ id }: { id: string }) => {
 			state.deletedMetadataIds.push(id);

@@ -7,7 +7,7 @@ const mockState = {
 	resolvers: [] as Array<() => void>,
 };
 
-mock.module("@/external/connect/createStripeCli", () => ({
+await mockModuleWithRestore("@/external/connect/createStripeCli", () => ({
 	createStripeCli: () => ({
 		invoiceItems: {
 			create: async (item: unknown) => {
@@ -31,6 +31,8 @@ mock.module("@/external/connect/createStripeCli", () => ({
 }));
 
 import { createStripeInvoiceItems } from "@/internal/billing/v2/providers/stripe/utils/invoices/stripeInvoiceOps";
+
+import { mockModuleWithRestore } from "../utils/mockModuleWithRestore.js";
 
 describe("createStripeInvoiceItems", () => {
 	beforeEach(() => {
