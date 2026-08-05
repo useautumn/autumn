@@ -33,7 +33,8 @@ const bunClientCache = new Map<string, InstanceType<typeof Bun.S3Client>>();
 const resolveContainerCredentials =
 	async (): Promise<ContainerCredentials | null> => {
 		const relativeUri = process.env.AWS_CONTAINER_CREDENTIALS_RELATIVE_URI;
-		if (!relativeUri) return null;
+		const fullUri = process.env.AWS_CONTAINER_CREDENTIALS_FULL_URI;
+		if (!relativeUri && !fullUri) return null;
 
 		const fresh =
 			containerCredentials &&
@@ -41,7 +42,15 @@ const resolveContainerCredentials =
 				containerCredentials.expiresAt - CREDENTIALS_REFRESH_MARGIN_MS;
 		if (fresh) return containerCredentials;
 
-		const response = await fetch(`http://169.254.170.2${relativeUri}`);
+		const url = relativeUri
+			? `http://169.254.170.2${relativeUri}`
+			: (fullUri as string);
+		const authToken = process.env.AWS_CONTAINER_AUTHORIZATION_TOKEN;
+		// A stalled metadata endpoint must not hang boot: polling start is awaited.
+		const response = await fetch(url, {
+			signal: AbortSignal.timeout(5_000),
+			...(authToken ? { headers: { Authorization: authToken } } : {}),
+		});
 		if (!response.ok) {
 			throw new Error(
 				`Container credentials endpoint returned ${response.status}`,
