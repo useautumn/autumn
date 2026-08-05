@@ -27,7 +27,7 @@ const realLogtailUtils = {
 };
 
 mock.module("@/external/redis/initRedis.js", () => ({
-	redis: fakeRedis,
+	getMiscRedis: () => fakeRedis,
 	hasMiscRedisConfig: true,
 }));
 mock.module("@/external/redis/initRedisV2.js", () => ({
