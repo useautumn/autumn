@@ -45,7 +45,10 @@ const resolveContainerCredentials =
 		const url = relativeUri
 			? `http://169.254.170.2${relativeUri}`
 			: (fullUri as string);
-		const authToken = process.env.AWS_CONTAINER_AUTHORIZATION_TOKEN;
+		const tokenFile = process.env.AWS_CONTAINER_AUTHORIZATION_TOKEN_FILE;
+		const authToken =
+			process.env.AWS_CONTAINER_AUTHORIZATION_TOKEN ??
+			(tokenFile ? (await Bun.file(tokenFile).text()).trim() : undefined);
 		// A stalled metadata endpoint must not hang boot: polling start is awaited.
 		const response = await fetch(url, {
 			signal: AbortSignal.timeout(5_000),
