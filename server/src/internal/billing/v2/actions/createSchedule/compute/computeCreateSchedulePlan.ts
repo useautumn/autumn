@@ -124,16 +124,9 @@ export const computeCreateSchedulePlan = ({
 		autumnBillingPlan,
 	});
 
-	// Unscheduled products join no phase: the schedule's scope is read off its
-	// opening phase, and nothing in it should ever expire them.
 	const immediatePhase: SchedulePhasePlan = {
 		startsAt: billingContext.immediatePhase.starts_at,
-		customerProductIds: immediateCustomerProducts
-			.filter(
-				(customerProduct) =>
-					!immediate.unscheduledCustomerProductIds.has(customerProduct.id),
-			)
-			.map((customerProduct) => customerProduct.id),
+		customerProductIds: immediate.phaseCustomerProductIds,
 	};
 
 	return {

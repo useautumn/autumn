@@ -5,6 +5,7 @@ import type {
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { persistCreateSchedule } from "./persistCreateSchedule";
+import { resolveUnscheduledProductContexts } from "./unscheduledProductContexts";
 
 export const isCreateScheduleBillingContext = (
 	billingContext: BillingContext,
@@ -35,7 +36,9 @@ const buildDeferredSchedulePhases = ({
 
 	// Unscheduled plans are attached last within the immediate phase and belong to
 	// no phase, so they are dropped from the opening phase's products.
-	const unscheduledCount = billingContext.unscheduledProductContexts.length;
+	const unscheduledCount = resolveUnscheduledProductContexts({
+		productContexts: billingContext.productContexts,
+	}).length;
 
 	let currentIndex = 0;
 	const phases = phaseSizes.map((phase, index) => {

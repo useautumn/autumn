@@ -1,5 +1,5 @@
-import { customerProducts, schedulePhases, schedules } from "@autumn/shared";
-import { eq, inArray } from "drizzle-orm";
+import { customerProducts } from "@autumn/shared";
+import { inArray } from "drizzle-orm";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 
 type ScheduleWithPhases = {
@@ -50,42 +50,6 @@ const findOwningProduct = ({
 	customerProductIds
 		.map((productId) => products.find((product) => product.id === productId))
 		.find((product) => product?.internal_entity_id);
-
-/**
- * Customer products the schedules this request replaces put in place. Only
- * these may be expired when the new phases drop them — anything the schedule
- * never touched is none of its business.
- */
-export const resolveReplacedScheduleCustomerProductIds = async ({
-	ctx,
-	internalCustomerId,
-}: {
-	ctx: AutumnContext;
-	internalCustomerId: string;
-}): Promise<string[]> => {
-	const customerSchedules = await ctx.db
-		.select({ id: schedules.id })
-		.from(schedules)
-		.where(eq(schedules.internal_customer_id, internalCustomerId));
-
-	if (customerSchedules.length === 0) return [];
-
-	const phases = await ctx.db
-		.select({ customer_product_ids: schedulePhases.customer_product_ids })
-		.from(schedulePhases)
-		.where(
-			inArray(
-				schedulePhases.schedule_id,
-				customerSchedules.map((schedule) => schedule.id),
-			),
-		);
-
-	const replacedProductIds = phases.flatMap(
-		(phase) => phase.customer_product_ids,
-	);
-
-	return [...new Set(replacedProductIds)];
-};
 
 /**
  * Maps each schedule to the entity owning its opening phase, falling back to the

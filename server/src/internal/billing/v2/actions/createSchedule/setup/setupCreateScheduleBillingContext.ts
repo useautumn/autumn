@@ -13,7 +13,7 @@ import { setupAttachEndOfCycleMs } from "@/internal/billing/v2/actions/attach/se
 import { setupAnchorResetRefund } from "@/internal/billing/v2/setup/setupAnchorResetRefund";
 import { setupBillingCycleAnchor } from "@/internal/billing/v2/setup/setupBillingCycleAnchor";
 import { setupResetCycleAnchor } from "@/internal/billing/v2/setup/setupResetCycleAnchor";
-import { resolveReplacedScheduleCustomerProductIds } from "@/internal/customers/schedules/resolveScheduleScope";
+import { setupReplacedScheduleCustomerProductIds } from "@/internal/customers/schedules/setup/setupReplacedScheduleCustomerProductIds";
 import { setupImmediateMultiProductBillingContext } from "../../common/immediateMultiProduct/setupImmediateMultiProductBillingContext";
 import { FIRST_PHASE_TOLERANCE_MS } from "../errors/handleFirstPhaseStartDateErrors";
 import {
@@ -25,7 +25,10 @@ import { validateCreateSchedulePhasePlans } from "../errors/validateCreateSchedu
 import { validateUnscheduledPlanScopes } from "../errors/validateUnscheduledPlanScopes";
 import { isExistingScheduleUpdate } from "../utils/isExistingScheduleUpdate";
 import { resolveCreateScheduleRecurringProducts } from "../utils/resolveCreateScheduleRecurringProducts";
-import { buildOpeningPhaseScopes } from "../utils/resolvePhaseScopeInheritance";
+import {
+	markUnscheduledProductContexts,
+	resolveUnscheduledProductContexts,
+} from "../utils/unscheduledProductContexts";
 import { setupScheduledProductsContext } from "./setupScheduledProductsContext";
 
 type CreateScheduleCheckoutModeContext = Pick<
@@ -147,22 +150,24 @@ const setupCreateScheduleImmediatePhase = async ({
 		: 0;
 	const immediatePhase = normalizedPhases[immediatePhaseIndex]!;
 
-	if (immediatePhaseIndex === 0) {
-		return {
-			billingContext,
-			immediatePhase,
-			futurePhases: normalizedPhases.slice(1),
-		};
-	}
+	// The opening phase already built the context passed in; a later phase has to
+	// rebuild it against its own plans.
+	const immediateBillingContext =
+		immediatePhaseIndex === 0
+			? billingContext
+			: await setupImmediateMultiProductBillingContext({
+					ctx,
+					params: phaseToImmediateParams({ params, phase: immediatePhase }),
+					preview,
+					billingStartsAt: immediatePhase.starts_at,
+					billingStartsAtToleranceMs: FIRST_PHASE_TOLERANCE_MS,
+					includeScheduledProductsForScheduleLookup: true,
+				});
 
 	return {
-		billingContext: await setupImmediateMultiProductBillingContext({
-			ctx,
-			params: phaseToImmediateParams({ params, phase: immediatePhase }),
-			preview,
-			billingStartsAt: immediatePhase.starts_at,
-			billingStartsAtToleranceMs: FIRST_PHASE_TOLERANCE_MS,
-			includeScheduledProductsForScheduleLookup: true,
+		billingContext: markUnscheduledProductContexts({
+			billingContext: immediateBillingContext,
+			unscheduledPlanCount: params.unscheduled_plans?.length ?? 0,
 		}),
 		immediatePhase,
 		futurePhases: normalizedPhases.slice(immediatePhaseIndex + 1),
@@ -226,29 +231,18 @@ export const setupCreateScheduleBillingContext = async ({
 		})),
 	});
 
-	const unscheduledPlanCount = params.unscheduled_plans?.length ?? 0;
-	const phaseProductContexts = billingContext.productContexts.slice(
-		0,
-		billingContext.productContexts.length - unscheduledPlanCount,
-	);
-	const unscheduledProductContexts = billingContext.productContexts.slice(
-		phaseProductContexts.length,
-	);
-
-	// Unscheduled scopes stay out of the inheritance map so a later phase in the
-	// same group can't silently adopt an unscheduled plan's entity.
 	const scheduledPhaseContexts = await setupScheduledProductsContext({
 		ctx,
 		phases: futurePhases,
 		fullCustomer: billingContext.fullCustomer,
 		currentEpochMs: billingContext.currentEpochMs,
-		openingPhaseScopes: buildOpeningPhaseScopes({
-			productContexts: phaseProductContexts,
-		}),
+		immediatePhaseProductContexts: billingContext.productContexts,
 	});
 
 	validateUnscheduledPlanScopes({
-		unscheduledProductContexts,
+		unscheduledProductContexts: resolveUnscheduledProductContexts({
+			productContexts: billingContext.productContexts,
+		}),
 		scheduledPhaseContexts,
 	});
 
@@ -264,14 +258,13 @@ export const setupCreateScheduleBillingContext = async ({
 	);
 
 	const replacedScheduleCustomerProductIds =
-		await resolveReplacedScheduleCustomerProductIds({
+		await setupReplacedScheduleCustomerProductIds({
 			ctx,
 			internalCustomerId: billingContext.fullCustomer.internal_id,
 		});
 
 	const scheduleBillingContext: CreateScheduleBillingContext = {
 		...billingContext,
-		unscheduledProductContexts,
 		replacedScheduleCustomerProductIds,
 		checkoutMode: setupCreateScheduleCheckoutMode({
 			billingContext,

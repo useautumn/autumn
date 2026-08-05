@@ -1,9 +1,26 @@
 import type {
+	FullProduct,
 	MultiAttachProductContext,
 	ScheduledPhaseContext,
 } from "@autumn/shared";
-import { isOneOffProduct, RecaseError } from "@autumn/shared";
-import { productScopeKey } from "../utils/resolvePhaseScopeInheritance";
+import {
+	isOneOffProduct,
+	productToScopeKey,
+	RecaseError,
+} from "@autumn/shared";
+
+/** Identifies the group a plan replaces within one entity scope. */
+const groupAndScopeKey = ({
+	fullProduct,
+	internalEntityId,
+}: {
+	fullProduct: FullProduct;
+	internalEntityId?: string;
+}) =>
+	JSON.stringify([
+		productToScopeKey({ product: fullProduct }),
+		internalEntityId ?? null,
+	]);
 
 /**
  * An unscheduled plan never expires, so a phase claiming its group and scope
@@ -18,13 +35,13 @@ export const validateUnscheduledPlanScopes = ({
 }) => {
 	if (unscheduledProductContexts.length === 0) return;
 
-	const scheduledScopeKeys = new Set(
+	const scheduledGroupAndScopeKeys = new Set(
 		scheduledPhaseContexts.flatMap(({ productContexts }) =>
 			productContexts.flatMap(({ fullProduct, entity }) =>
 				fullProduct.is_add_on || isOneOffProduct({ product: fullProduct })
 					? []
 					: [
-							productScopeKey({
+							groupAndScopeKey({
 								fullProduct,
 								internalEntityId: entity?.internal_id,
 							}),
@@ -38,8 +55,8 @@ export const validateUnscheduledPlanScopes = ({
 			continue;
 		}
 
-		const isClaimedByPhase = scheduledScopeKeys.has(
-			productScopeKey({
+		const isClaimedByPhase = scheduledGroupAndScopeKeys.has(
+			groupAndScopeKey({
 				fullProduct,
 				internalEntityId: fullCustomer.entity?.internal_id,
 			}),
