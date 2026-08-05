@@ -309,7 +309,9 @@ export const invoiceCheckout = async ({
 	// Step 5: Wait for the page to confirm payment. A fixed sleep returned while
 	// the invoice was still `open`, so the test failed later as "product not
 	// attached" with no hint that payment never happened.
-	const deadline = Date.now() + 120_000;
+	// Short: the caller falls back to paying via the Stripe API, so waiting
+	// longer here only burns the test's budget.
+	const deadline = Date.now() + 30_000;
 	let pageText = "";
 
 	while (Date.now() < deadline) {
