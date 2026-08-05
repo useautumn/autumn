@@ -3,6 +3,7 @@ import { Input, SearchableSelect } from "@autumn/ui";
 import { useState } from "react";
 import {
 	PlanEntityScopeSelector,
+	PlanScopeToggleButton,
 	ScopedPlanRow,
 	SelectedPlanRow,
 } from "@/components/forms/shared";
@@ -38,15 +39,22 @@ export function SyncPlanRow({
 	const availableProducts = products.filter((p) => !p.archived);
 	const selectedProduct = products.find((p) => p.id === plan.plan_id);
 	const hasCustomize = Boolean(plan.customize);
-	const hasEntityScope = plan.entity_id !== undefined;
 
-	const [scopeOpen, setScopeOpen] = useState<boolean>(hasEntityScope);
+	const [scopeOpen, setScopeOpen] = useState(false);
 	const {
 		hasEntities,
 		entities,
+		selectedEntity,
 		isLoading: isEntitiesLoading,
 		setSearch: setEntitySearch,
 	} = useScopeEntitySearch({ selectedEntityId: plan.entity_id ?? undefined });
+	// Undefined means the row still inherits the sheet scope, so nothing is chosen.
+	const scopeLabel =
+		plan.entity_id === undefined
+			? undefined
+			: plan.entity_id === null
+				? "Customer-level"
+				: (selectedEntity?.name ?? plan.entity_id);
 
 	if (!plan.plan_id) {
 		return (
@@ -94,23 +102,26 @@ export function SyncPlanRow({
 		originalPriceLabel !== null &&
 		currentPriceLabel !== null &&
 		originalPriceLabel !== currentPriceLabel;
-	const scopeSelector = hasEntities ? (
-		<PlanEntityScopeSelector
-			entities={entities}
-			value={plan.entity_id}
-			onChange={(entityId) => onChange({ ...plan, entity_id: entityId })}
-			inheritLabel={defaultEntityId ? "Default entity scope" : undefined}
-			showLabel={false}
-			wrapInSection={false}
-			onSearchChange={setEntitySearch}
-			isLoading={isEntitiesLoading}
-		/>
-	) : null;
-	const rowScope = scopeSelector
+	const rowScope = hasEntities
 		? {
-				open: scopeOpen,
-				onToggle: () => setScopeOpen((open) => !open),
-				selector: scopeSelector,
+				picker: (
+					<PlanEntityScopeSelector
+						entities={entities}
+						inheritLabel={defaultEntityId ? "Default entity scope" : undefined}
+						isLoading={isEntitiesLoading}
+						onChange={(entityId) => onChange({ ...plan, entity_id: entityId })}
+						onOpenChange={setScopeOpen}
+						onSearchChange={setEntitySearch}
+						open={scopeOpen}
+						trigger={
+							<PlanScopeToggleButton
+								isEntityScoped={!!plan.entity_id}
+								selectedLabel={scopeLabel}
+							/>
+						}
+						value={plan.entity_id}
+					/>
+				),
 			}
 		: undefined;
 

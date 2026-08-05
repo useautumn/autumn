@@ -29,7 +29,6 @@ import {
 	useRef,
 	useState,
 } from "react";
-import type { SchedulePlan } from "@/components/forms/create-schedule/createScheduleFormSchema";
 import { BILLING_OPERATIONS } from "@/components/forms/shared/utils/billingOperations";
 import { getProductWithSupportedPlanFormValues } from "@/components/forms/shared/utils/planCustomizationUtils";
 import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
@@ -131,8 +130,6 @@ interface AttachFormProviderProps {
 	onCheckoutRedirect?: (checkoutUrl: string) => void;
 	onSuccess?: () => void;
 	onScopeChange?: (entityId: string | undefined) => void;
-	initialSchedulePlan?: SchedulePlan | null;
-	disablePreview?: boolean;
 	allowMultiplePlans?: boolean;
 	children: ReactNode;
 }
@@ -146,8 +143,6 @@ export function AttachFormProvider({
 	onCheckoutRedirect,
 	onSuccess,
 	onScopeChange,
-	initialSchedulePlan,
-	disablePreview,
 	allowMultiplePlans = false,
 	children,
 }: AttachFormProviderProps) {
@@ -155,13 +150,7 @@ export function AttachFormProvider({
 		Record<string, number>
 	>({});
 
-	const form = useAttachForm({
-		initialProductId,
-		initialItems: initialSchedulePlan?.items,
-		initialIsCustom: initialSchedulePlan?.isCustom,
-		initialVersion: initialSchedulePlan?.version,
-		initialPrepaidOptions: initialSchedulePlan?.prepaidOptions,
-	});
+	const form = useAttachForm({ initialProductId });
 
 	const { features } = useFeaturesQuery();
 	const { products } = useProductsQuery();
@@ -505,7 +494,6 @@ export function AttachFormProvider({
 	const previewQuery = useAttachPreview({
 		path: billingOperation.previewPath,
 		requestBody: operationRequestBody,
-		enabled: disablePreview ? false : undefined,
 	});
 	const isAutoSelectingImmediateSchedule =
 		!isMultiPlan &&
@@ -561,7 +549,6 @@ export function AttachFormProvider({
 		customerId,
 		buildRequestBody: buildOperationRequestBody,
 		path: billingOperation.path,
-		invalidatesSchedule: billingOperation.invalidatesSchedule,
 		onCheckoutRedirect,
 		onSuccess,
 	});

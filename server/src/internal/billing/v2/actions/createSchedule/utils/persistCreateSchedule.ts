@@ -6,51 +6,42 @@ import {
 	schedulePhases,
 	schedules,
 } from "@autumn/shared";
-import { and, eq, inArray, isNull } from "drizzle-orm";
+import { and, eq, inArray } from "drizzle-orm";
 import type { DrizzleCli } from "@/db/initDrizzle";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { generateId } from "@/utils/genUtils";
 
+/**
+ * A customer holds one schedule, so a new one replaces everything queued. Scope
+ * lives on the plans inside the phases, never on the schedule itself.
+ */
 const getExistingScheduleState = async ({
 	ctx,
 	internalCustomerId,
-	internalEntityId,
 }: {
 	ctx: AutumnContext;
 	internalCustomerId: string;
-	internalEntityId?: string;
 }) => {
-	const existingSchedules = await ctx.db
+	const empty = { scheduleIds: [], existingCustomerProductIds: [] };
+
+	const customerSchedules = await ctx.db
 		.select({ id: schedules.id })
 		.from(schedules)
-		.where(
-			and(
-				eq(schedules.internal_customer_id, internalCustomerId),
-				internalEntityId
-					? eq(schedules.internal_entity_id, internalEntityId)
-					: isNull(schedules.internal_entity_id),
-			),
-		);
+		.where(eq(schedules.internal_customer_id, internalCustomerId));
 
-	if (existingSchedules.length === 0) {
-		return {
-			scheduleIds: [],
-			existingCustomerProductIds: [],
-		};
-	}
+	if (customerSchedules.length === 0) return empty;
 
-	const scheduleIds = existingSchedules.map((schedule) => schedule.id);
+	const scheduleIds = customerSchedules.map((schedule) => schedule.id);
 	const existingPhases = await ctx.db
 		.select({ customer_product_ids: schedulePhases.customer_product_ids })
 		.from(schedulePhases)
 		.where(inArray(schedulePhases.schedule_id, scheduleIds));
-	const existingCustomerProductIds = existingPhases.flatMap(
-		(phase) => phase.customer_product_ids,
-	);
 
 	return {
 		scheduleIds,
-		existingCustomerProductIds,
+		existingCustomerProductIds: existingPhases.flatMap(
+			(phase) => phase.customer_product_ids,
+		),
 	};
 };
 
@@ -101,7 +92,6 @@ export const persistCreateSchedule = async ({
 		const existingScheduleState = await getExistingScheduleState({
 			ctx: txCtx,
 			internalCustomerId: fullCustomer.internal_id,
-			internalEntityId: fullCustomer.entity?.internal_id ?? undefined,
 		});
 
 		await deleteExistingSchedules({
@@ -116,8 +106,8 @@ export const persistCreateSchedule = async ({
 			env: ctx.env,
 			internal_customer_id: fullCustomer.internal_id,
 			customer_id: customerId,
-			internal_entity_id: fullCustomer.entity?.internal_id ?? null,
-			entity_id: fullCustomer.entity?.id ?? null,
+			internal_entity_id: null,
+			entity_id: null,
 			created_at: currentEpochMs,
 		});
 

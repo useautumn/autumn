@@ -1,16 +1,9 @@
-import { useCusQuery } from "@/views/customers/customer/hooks/useCusQuery";
+import { useCustomerSchedules } from "./useCustomerSchedules";
 
-export function useHasSchedule({
-	entityId,
-}: {
-	entityId?: string | null;
-} = {}) {
-	const { schedule, customer } = useCusQuery({ schedule: true });
-	if (entityId) {
-		const entity = customer?.entities?.find(
-			(e) => e.id === entityId || e.internal_id === entityId,
-		);
-		return !!entity?.schedule;
-	}
-	return !!schedule;
+/**
+ * Schedules span scopes, so "has a schedule" is a customer-wide question — the
+ * sheet opens every schedule the customer has, whatever scope each plan sits in.
+ */
+export function useHasSchedule() {
+	return useCustomerSchedules().length > 0;
 }

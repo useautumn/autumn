@@ -98,11 +98,17 @@ export const AutumnBillingPlanSchema = z.object({
 		})
 		.optional(),
 
+	// Set by actions that rewrite the schedule rows themselves, so phases must not
+	// be repointed underneath them.
+	ownsSchedulePersistence: z.boolean().optional(),
+
+	// A null newCustomerProductId drops the old id from its phases instead of
+	// remapping it — the plan retires it without a successor.
 	schedulePhaseCustomerProductReplacements: z
 		.array(
 			z.object({
 				oldCustomerProductId: z.string(),
-				newCustomerProductId: z.string(),
+				newCustomerProductId: z.string().nullable(),
 				internalCustomerId: z.string(),
 				internalEntityId: z.string().nullish(),
 			}),

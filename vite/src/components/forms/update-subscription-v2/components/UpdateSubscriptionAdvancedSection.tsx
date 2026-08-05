@@ -1,6 +1,4 @@
-import { IconButton, Switch } from "@autumn/ui";
-import { PlusIcon } from "@phosphor-icons/react";
-import { AnimatePresence, motion } from "motion/react";
+import { Switch } from "@autumn/ui";
 import {
 	addDiscount,
 	removeDiscount,
@@ -10,7 +8,9 @@ import {
 	AdvancedSection,
 	ConfigRow,
 } from "@/components/forms/shared/advanced-section";
-import { DiscountRow } from "@/components/forms/shared/discount-row/DiscountRow";
+import { BillingOptionToggle } from "@/components/forms/shared/BillingOptionToggle";
+import { DiscountsConfigRow } from "@/components/forms/shared/discount-row/DiscountsConfigRow";
+import { getBillingOptionRules } from "@/components/forms/shared/utils/billingOptionRules";
 import { useUpdateSubscriptionFormContext } from "../context/UpdateSubscriptionFormProvider";
 
 export function UpdateSubscriptionAdvancedSection() {
@@ -24,75 +24,41 @@ export function UpdateSubscriptionAdvancedSection() {
 	} = formValues;
 	const { customerProduct, product } = formContext;
 
-	const hasActiveSubscription =
-		(customerProduct.subscription_ids?.length ?? 0) > 0;
+	const rules = getBillingOptionRules({
+		flow: "update",
+		state: {
+			hasActiveSubscription:
+				(customerProduct.subscription_ids?.length ?? 0) > 0,
+		},
+	});
 	const isProrate = billingBehavior !== "none";
-
-	const handleAddDiscount = () => {
-		form.setFieldValue("discounts", addDiscount(discounts));
-	};
 
 	return (
 		<AdvancedSection>
-			<ConfigRow
-				title="Discounts"
+			<DiscountsConfigRow
+				discounts={discounts}
 				description="Apply percentage or fixed-amount discounts to this subscription"
-				action={
-					<IconButton
-						variant="muted"
-						size="sm"
-						onClick={handleAddDiscount}
-						icon={<PlusIcon size={12} />}
-						className="text-tertiary-foreground"
-					>
-						Add
-					</IconButton>
+				productId={product?.id}
+				onAdd={() => form.setFieldValue("discounts", addDiscount(discounts))}
+				onUpdate={({ index, rewardId }) =>
+					form.setFieldValue(
+						"discounts",
+						updateDiscount(discounts, index, { reward_id: rewardId }),
+					)
 				}
-			>
-				{discounts.length > 0 && (
-					<div className="space-y-2">
-						<AnimatePresence initial={false} mode="popLayout">
-							{discounts.map((discount, index) => (
-								<motion.div
-									key={discount._id}
-									initial={{ opacity: 0, scale: 0.95 }}
-									animate={{ opacity: 1, scale: 1 }}
-									exit={{ opacity: 0, scale: 0.95 }}
-									transition={{ duration: 0.15 }}
-								>
-									<DiscountRow
-										discounts={discounts}
-										index={index}
-										productId={product?.id}
-										onUpdate={({ rewardId }) => {
-											form.setFieldValue(
-												"discounts",
-												updateDiscount(discounts, index, {
-													reward_id: rewardId,
-												}),
-											);
-										}}
-										onRemove={() => {
-											form.setFieldValue(
-												"discounts",
-												removeDiscount(discounts, index),
-											);
-										}}
-									/>
-								</motion.div>
-							))}
-						</AnimatePresence>
-					</div>
-				)}
-			</ConfigRow>
+				onRemove={({ index }) =>
+					form.setFieldValue("discounts", removeDiscount(discounts, index))
+				}
+			/>
 
-			{hasActiveSubscription && (
+			{rules.proration.visible && (
 				<>
 					<ConfigRow
 						title="Prorate Changes"
 						description="Prorate price differences when changing plans mid-cycle"
 						action={
-							<Switch
+							<BillingOptionToggle
+								rule={rules.proration}
 								checked={isProrate}
 								onCheckedChange={(checked) =>
 									form.setFieldValue("billingBehavior", checked ? null : "none")
