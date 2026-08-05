@@ -4,6 +4,7 @@ import { ApiInvoiceV1Schema } from "@api/others/apiInvoice/apiInvoiceV1";
 import { z } from "zod/v4";
 import { BaseApiCustomerSchema } from "./baseApiCustomer";
 import { ApiCusReferralSchema } from "./components/apiCusReferral";
+import { ApiInvoicePreviewV0Schema } from "./components/apiInvoicePreview/apiInvoicePreviewV0";
 import { ApiTrialsUsedV1Schema } from "./components/apiTrialsUsed/apiTrialsUsedV1";
 import { ApiBalanceSchema } from "./cusFeatures/apiBalance";
 import { ApiSubscriptionSchema } from "./cusPlans/apiSubscription";
@@ -16,6 +17,10 @@ export {
 export const ApiCusExpandSchema = z.object({
 	invoices: z.array(ApiInvoiceV1Schema).optional().meta({
 		description: "Invoices for this customer.",
+	}),
+	invoice_previews: z.array(ApiInvoicePreviewV0Schema).optional().meta({
+		description:
+			"Upcoming invoice for each of this customer's Stripe subscriptions.",
 	}),
 	entities: z.array(ApiBaseEntitySchema).optional().meta({
 		description: "Entities associated with this customer.",

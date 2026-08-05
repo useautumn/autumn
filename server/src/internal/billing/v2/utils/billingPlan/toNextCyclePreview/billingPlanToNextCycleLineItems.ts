@@ -7,6 +7,7 @@ import {
 	sumValues,
 	timestampsMatch,
 } from "@autumn/shared";
+import { partitionSkippedOverageLineItems } from "@/external/stripe/webhookHandlers/common/filterSkippedOverageLineItems";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { applyStripeDiscountsToLineItems } from "@/internal/billing/v2/providers/stripe/utils/discounts/applyStripeDiscountsToLineItems";
 import { filterStripeDiscountsForNextCycle } from "@/internal/billing/v2/providers/stripe/utils/discounts/filterStripeDiscountsForNextCycle";
@@ -14,6 +15,15 @@ import { customerProductToArrearLineItems } from "../../lineItems/customerProduc
 import { getLineItemsForDirection } from "../../lineItems/getLineItemsForDirection";
 import { lineItemToPreviewLineItem } from "../../lineItems/lineItemToPreviewLineItem";
 import { lineItemToPreviewUsageLineItem } from "../../lineItems/lineItemToPreviewUsageLineItem";
+
+export type NextCycleLineItemOptions = {
+	/**
+	 * Bill the usage line items instead of listing them as amount-less
+	 * placeholders. Attach-style previews can't know future usage; an invoice
+	 * preview projects the usage accrued so far onto the closing cycle.
+	 */
+	chargeUsageLineItems?: boolean;
+};
 
 type NextCycleLineItemSpec = {
 	customerProducts: FullCusProduct[];
@@ -86,6 +96,7 @@ export const billingPlanToNextCycleLineItems = ({
 	autumnBillingPlan,
 	billingContext,
 	nextCycleStart,
+	options = {},
 }: {
 	ctx: AutumnContext;
 	customerProducts: FullCusProduct[];
@@ -94,6 +105,7 @@ export const billingPlanToNextCycleLineItems = ({
 	autumnBillingPlan: AutumnBillingPlan;
 	billingContext: BillingContext;
 	nextCycleStart: number;
+	options?: NextCycleLineItemOptions;
 }) => {
 	const arrearLineItems = productsForUsageLineItems.flatMap(
 		(customerProduct) =>
@@ -123,6 +135,19 @@ export const billingPlanToNextCycleLineItems = ({
 	nextCycleAutumnLineItems = prefixRefundDescriptions({
 		lineItems: nextCycleAutumnLineItems,
 	});
+
+	// Folded in before the discount pass so an amount-off coupon spreads across
+	// usage and recurring charges together, as it will on the real invoice.
+	if (options.chargeUsageLineItems) {
+		const { billableLineItems } = partitionSkippedOverageLineItems({
+			fullCustomer: billingContext.fullCustomer,
+			lineItems: arrearLineItems,
+		});
+		nextCycleAutumnLineItems = [
+			...nextCycleAutumnLineItems,
+			...billableLineItems,
+		];
+	}
 
 	const deferredLineItems = (autumnBillingPlan.lineItems ?? []).filter(
 		(lineItem) => lineItem.chargeImmediately === false,

@@ -269,6 +269,7 @@ components:
     CustomerExpand:
       enum:
         - invoices
+        - invoice_previews
         - trials_used
         - rewards
         - entities
@@ -999,6 +1000,111 @@ components:
               - currency
               - created_at
           description: Invoices for this customer.
+        invoice_previews:
+          type: array
+          items:
+            type: object
+            properties:
+              subscription_id:
+                type: string
+                description: The Stripe subscription this invoice will be billed against.
+              plan_ids:
+                type: array
+                items:
+                  type: string
+                description: Plan IDs contributing line items to this invoice.
+              invoice_at:
+                type: number
+                description: Unix timestamp (milliseconds) when this invoice will be created.
+              currency:
+                type: string
+                description: The three-letter ISO currency code (e.g., 'usd').
+              subtotal:
+                type: number
+                description: The total before discounts, in major currency units.
+              total:
+                type: number
+                description: The total after discounts, in major currency units.
+              line_items:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    display_name:
+                      type: string
+                      description: The name of the line item to display to the customer if you're
+                        building a UI. It will either be the plan name or the
+                        feature name.
+                    description:
+                      type: string
+                      description: A detailed description of the line item.
+                    subtotal:
+                      type: number
+                      description: The amount in cents before discounts and tax for this line item.
+                    total:
+                      type: number
+                      description: The final amount in cents after discounts and tax for this line
+                        item.
+                    discounts:
+                      type: array
+                      items:
+                        type: object
+                        properties:
+                          amount_off:
+                            type: number
+                          percent_off:
+                            type: number
+                          reward_id:
+                            type: string
+                          reward_name:
+                            type: string
+                        required:
+                          - amount_off
+                      default: []
+                      description: List of discounts applied to this line item.
+                    plan_id:
+                      type: string
+                      description: The ID of the plan that this line item belongs to.
+                    feature_id:
+                      anyOf:
+                        - type: string
+                        - type: "null"
+                      description: The ID of the feature that this line item belongs to.
+                    period:
+                      type: object
+                      properties:
+                        start:
+                          type: number
+                          description: The start of the period in milliseconds since the Unix epoch.
+                        end:
+                          type: number
+                          description: The end of the period in milliseconds since the Unix epoch.
+                      required:
+                        - start
+                        - end
+                      description: The period of time that this line item is being charged for.
+                    quantity:
+                      type: number
+                      description: The quantity of the line item.
+                  required:
+                    - display_name
+                    - description
+                    - subtotal
+                    - total
+                    - plan_id
+                    - feature_id
+                    - quantity
+                description: "The line items this invoice will contain: usage accrued in the
+                  closing cycle, plus recurring charges for the opening cycle."
+            required:
+              - subscription_id
+              - plan_ids
+              - invoice_at
+              - currency
+              - subtotal
+              - total
+              - line_items
+          description: Upcoming invoice for each of this customer's Stripe subscriptions.
         entities:
           type: array
           items:
@@ -3846,6 +3952,112 @@ paths:
                         - currency
                         - created_at
                     description: Invoices for this customer.
+                  invoice_previews:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        subscription_id:
+                          type: string
+                          description: The Stripe subscription this invoice will be billed against.
+                        plan_ids:
+                          type: array
+                          items:
+                            type: string
+                          description: Plan IDs contributing line items to this invoice.
+                        invoice_at:
+                          type: number
+                          description: Unix timestamp (milliseconds) when this invoice will be created.
+                        currency:
+                          type: string
+                          description: The three-letter ISO currency code (e.g., 'usd').
+                        subtotal:
+                          type: number
+                          description: The total before discounts, in major currency units.
+                        total:
+                          type: number
+                          description: The total after discounts, in major currency units.
+                        line_items:
+                          type: array
+                          items:
+                            type: object
+                            properties:
+                              display_name:
+                                type: string
+                                description: The name of the line item to display to the customer if you're
+                                  building a UI. It will either be the plan name
+                                  or the feature name.
+                              description:
+                                type: string
+                                description: A detailed description of the line item.
+                              subtotal:
+                                type: number
+                                description: The amount in cents before discounts and tax for this line item.
+                              total:
+                                type: number
+                                description: The final amount in cents after discounts and tax for this line
+                                  item.
+                              discounts:
+                                type: array
+                                items:
+                                  type: object
+                                  properties:
+                                    amount_off:
+                                      type: number
+                                    percent_off:
+                                      type: number
+                                    reward_id:
+                                      type: string
+                                    reward_name:
+                                      type: string
+                                  required:
+                                    - amount_off
+                                default: []
+                                description: List of discounts applied to this line item.
+                              plan_id:
+                                type: string
+                                description: The ID of the plan that this line item belongs to.
+                              feature_id:
+                                anyOf:
+                                  - type: string
+                                  - type: "null"
+                                description: The ID of the feature that this line item belongs to.
+                              period:
+                                type: object
+                                properties:
+                                  start:
+                                    type: number
+                                    description: The start of the period in milliseconds since the Unix epoch.
+                                  end:
+                                    type: number
+                                    description: The end of the period in milliseconds since the Unix epoch.
+                                required:
+                                  - start
+                                  - end
+                                description: The period of time that this line item is being charged for.
+                              quantity:
+                                type: number
+                                description: The quantity of the line item.
+                            required:
+                              - display_name
+                              - description
+                              - subtotal
+                              - total
+                              - plan_id
+                              - feature_id
+                              - quantity
+                          description: "The line items this invoice will contain: usage accrued in the
+                            closing cycle, plus recurring charges for the
+                            opening cycle."
+                      required:
+                        - subscription_id
+                        - plan_ids
+                        - invoice_at
+                        - currency
+                        - subtotal
+                        - total
+                        - line_items
+                    description: Upcoming invoice for each of this customer's Stripe subscriptions.
                   entities:
                     type: array
                     items:
