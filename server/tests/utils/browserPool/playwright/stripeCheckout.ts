@@ -209,10 +209,62 @@ export const stripeCheckout = async ({
 	if ((await submitBtn.count()) === 0) {
 		throw new Error(".SubmitButton-TextContainer not found");
 	}
+
+	// A JS click on a DISABLED button silently does nothing, and Stripe keeps
+	// submit disabled until it has validated the form — longer on sessions that
+	// also render an express-payment block. Wait for enabled before clicking.
+	await page
+		.waitForFunction(
+			() => {
+				const button = document.querySelector<HTMLButtonElement>(
+					"button.SubmitButton, button[type=submit]",
+				);
+				return Boolean(button) && !button?.disabled;
+			},
+			{ timeout: 60_000 },
+		)
+		.catch(() => {
+			console.log("[stripeCheckout] Submit never enabled; clicking anyway");
+		});
+
 	await submitBtn.evaluate((el) => (el as HTMLElement).click());
 	console.log("[stripeCheckout] Submit clicked");
 
-	// Wait for checkout processing + webhook delivery.
-	await page.waitForTimeout(20000);
-	console.log("[stripeCheckout] Checkout complete");
+	// Stripe redirects off checkout.stripe.com once the session completes, so
+	// prefer that over a fixed sleep — a slow box would otherwise carry on
+	// mid-payment and fail later as a confusing "product not found". The
+	// redirect can't be required though: sessions built with an unreachable
+	// success_url never leave the page, so only a visible decline fails here
+	// and everything else is left to the caller's own polling.
+	const leftCheckout = await page
+		.waitForURL((url) => !url.host.includes("checkout.stripe.com"), {
+			timeout: 60_000,
+		})
+		.then(() => true)
+		.catch(() => false);
+
+	if (leftCheckout) {
+		console.log(`[stripeCheckout] Checkout complete — landed on ${page.url()}`);
+		return { url: page.url(), text: "" };
+	}
+
+	const pageText = await page
+		.evaluate(() => document.body.innerText)
+		.catch(() => "");
+
+	if (
+		/declined|card was not|insufficient funds|try a different card/i.test(
+			pageText,
+		)
+	) {
+		throw new Error(
+			`Checkout payment failed: ${pageText.replace(/\s+/g, " ").slice(0, 300)}`,
+		);
+	}
+
+	console.log("[stripeCheckout] No redirect seen; leaving the check to caller");
+
+	// Returned so a caller whose own assertion then fails can say what the page
+	// was showing; µVM stdout never reaches the orchestrator.
+	return { url: page.url(), text: pageText.replace(/\s+/g, " ").slice(0, 400) };
 };

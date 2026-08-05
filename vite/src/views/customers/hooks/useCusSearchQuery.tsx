@@ -3,6 +3,7 @@ import { keepPreviousData, useQuery } from "@tanstack/react-query";
 
 import { useQueryKeyFactory } from "@/hooks/common/useQueryKeyFactory";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
+import { useCustomerCountQuery } from "./useCustomerCountQuery";
 import {
 	buildCustomerFilterPayload,
 	useCustomerFilters,
@@ -26,14 +27,6 @@ export const useCusSearchQuery = () => {
 			customers: data.customers as CustomerWithProducts[],
 			next_cursor: (data.next_cursor ?? null) as string | null,
 		};
-	};
-
-	const countFetcher = async () => {
-		const { data } = await axiosInstance.post(`/customers/all/count`, {
-			search: trimmedSearch,
-			filters: buildCustomerFilterPayload(queryStates),
-		});
-		return data.totalCount as number;
 	};
 
 	const {
@@ -62,20 +55,13 @@ export const useCusSearchQuery = () => {
 		placeholderData: keepPreviousData,
 	});
 
-	const { data: totalCount, isLoading: isCountLoading } = useQuery({
-		queryKey: buildKey([
-			"customers-count",
-			queryStates.status,
-			queryStates.version,
-			queryStates.none,
-			queryStates.processor,
-			queryStates.interval,
-			trimmedSearch,
-		]),
-		queryFn: countFetcher,
-		enabled: isInitialized,
-		placeholderData: keepPreviousData,
-	});
+	const { data: totalCount, isLoading: isCountLoading } = useCustomerCountQuery(
+		{
+			search: trimmedSearch,
+			filters: buildCustomerFilterPayload(queryStates),
+			enabled: isInitialized,
+		},
+	);
 
 	const isFetchingUncached = Boolean(
 		isPending || (isFetching && isPlaceholderData),

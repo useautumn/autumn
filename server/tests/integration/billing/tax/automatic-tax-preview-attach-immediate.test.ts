@@ -89,7 +89,7 @@ test.concurrent(`${chalk.yellowBright(
 		2,
 	);
 	expect(preview.total).toBeGreaterThan(preview.subtotal);
-}, 300_000);
+});
 
 test.concurrent(`${chalk.yellowBright(
 	"automatic-tax-preview-attach-immediate (auto_tax off): preview omits the tax field entirely",
@@ -121,7 +121,7 @@ test.concurrent(`${chalk.yellowBright(
 	})) as AttachPreviewResponse;
 
 	expect(preview.tax).toBeUndefined();
-}, 300_000);
+});
 
 test.concurrent(`${chalk.yellowBright(
 	"automatic-tax-preview-attach-immediate (auto_tax on, no address): preview returns tax.status=incomplete with zeros",
@@ -164,4 +164,4 @@ test.concurrent(`${chalk.yellowBright(
 	expect(preview.tax?.currency).toBe(preview.currency);
 
 	console.log(`[preview-tax] incomplete: currency=${preview.tax?.currency}`);
-}, 300_000);
+});

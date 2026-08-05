@@ -10,10 +10,13 @@ import type { AutumnContext } from "@/honoUtils/HonoEnv";
 
 const stripeCreates: Record<string, unknown>[] = [];
 
-mock.module("@server/internal/products/prices/PriceService", () => ({
-	PriceService: { update: async () => undefined },
-}));
-mock.module("@/external/connect/createStripeCli", () => ({
+await mockModuleWithRestore(
+	"@server/internal/products/prices/PriceService",
+	() => ({
+		PriceService: { update: async () => undefined },
+	}),
+);
+await mockModuleWithRestore("@/external/connect/createStripeCli", () => ({
 	createStripeCli: () => ({
 		prices: {
 			create: async (params: Record<string, unknown>) => {
@@ -25,6 +28,8 @@ mock.module("@/external/connect/createStripeCli", () => ({
 }));
 
 import { createStripePrepaidPriceV2 } from "@/external/stripe/createStripePrice/createStripePrepaidPriceV2";
+
+import { mockModuleWithRestore } from "../utils/mockModuleWithRestore.js";
 
 const makePrice = ({
 	currencies,

@@ -4,18 +4,26 @@ const mockState = {
 	getCheckDataCalls: [] as unknown[],
 };
 
-mock.module("@/internal/balances/check/getCheckDataV2.js", () => ({
-	getCheckDataV2: async (args: unknown) => {
-		mockState.getCheckDataCalls.push(args);
-		return { source: "v2" };
-	},
-}));
+await mockModuleWithRestore(
+	"@/internal/balances/check/getCheckDataV2.js",
+	() => ({
+		getCheckDataV2: async (args: unknown) => {
+			mockState.getCheckDataCalls.push(args);
+			return { source: "v2" };
+		},
+	}),
+);
 
-mock.module("@/internal/balances/check/getCheckResponseV2.js", () => ({
-	getCheckResponseV2: async () => ({ allowed: true, source: "v2" }),
-}));
+await mockModuleWithRestore(
+	"@/internal/balances/check/getCheckResponseV2.js",
+	() => ({
+		getCheckResponseV2: async () => ({ allowed: true, source: "v2" }),
+	}),
+);
 
 import { runCheckV2 } from "@/internal/balances/check/runCheckV2.js";
+
+import { mockModuleWithRestore } from "../../utils/mockModuleWithRestore.js";
 
 describe("runCheckV2", () => {
 	test("returns check data and response", async () => {

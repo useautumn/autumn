@@ -1,6 +1,5 @@
-import type { CustomerFilter } from "@autumn/shared";
+import type { CustomerFilter, CustomerListFilters } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
-import type { CustomerListFilters } from "@/internal/customers/customerListFilters.js";
 import { iterateOverFilterResults } from "../iterateOverFilterResults.js";
 import {
 	buildCustomerCount,

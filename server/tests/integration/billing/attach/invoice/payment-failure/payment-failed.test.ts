@@ -52,6 +52,8 @@ test.concurrent(`${chalk.yellowBright("payment-failed 1: new plan")}`, async () 
 
 	await completeInvoiceCheckoutV2({
 		url: result.payment_url!,
+		ctx,
+		customerId,
 	});
 
 	const { subscription: stripeSubscription } = await getStripeSubscription({

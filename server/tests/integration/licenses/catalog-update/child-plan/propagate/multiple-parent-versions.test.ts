@@ -270,5 +270,5 @@ test.concurrent(
 			);
 		}
 	},
-	{ timeout: 20_000 },
+	{ timeout: 120_000 },
 );

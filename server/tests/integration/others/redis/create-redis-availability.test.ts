@@ -323,7 +323,7 @@ describe("createRedisAvailability", () => {
 			redis.disconnect();
 			await endpoint.stop().catch(() => {});
 		}
-	}, 15_000);
+	});
 });
 
 class FlippableFakeRedis extends FakeRedis {
@@ -619,5 +619,5 @@ describe("createRedisAvailability real probe-timeout path", () => {
 
 		expect(availability.shouldUseRedis()).toBe(true);
 		expect(redis.connectCalls).toBe(0);
-	}, 20_000);
+	});
 });

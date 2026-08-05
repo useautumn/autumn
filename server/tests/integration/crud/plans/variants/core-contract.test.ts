@@ -26,6 +26,7 @@ import {
 	BillingInterval,
 	type CreatePlanParamsV2Input,
 	type CustomerBillingControls,
+	customizePlanV1DiffsEqual,
 	diffPlanV1,
 	FreeTrialDuration,
 	type PlanUpdatePreview,
@@ -501,7 +502,16 @@ test.concurrent(
 		const newPlan = await getPlanRpc(baseId);
 		const manualDiff = diffPlanV1({ from: oldPlan, to: newPlan });
 
-		expect(preview.customize).toEqual(manualDiff);
+		// The API response is schema-parsed, so optional item fields come back
+		// filled with their defaults (e.g. `pooled: false`) that a local diff
+		// omits — compare semantically rather than structurally.
+		expect(
+			customizePlanV1DiffsEqual({
+				left: preview.customize,
+				right: manualDiff,
+			}),
+			`preview.customize ${JSON.stringify(preview.customize)} should match manual diff ${JSON.stringify(manualDiff)}`,
+		).toBe(true);
 	},
 );
 

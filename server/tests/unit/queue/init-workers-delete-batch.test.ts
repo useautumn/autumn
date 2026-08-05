@@ -1,15 +1,24 @@
-import { describe, expect, mock, test } from "bun:test";
+import { afterAll, describe, expect, mock, test } from "bun:test";
 import {
 	DeleteMessageBatchCommand,
 	type Message,
 	ReceiveMessageCommand,
 } from "@aws-sdk/client-sqs";
 
+// Snapshot (not the live namespace — its bindings retarget to the mock) so
+// afterAll can put the real module back for later files in this process.
+const realProcessMessage = { ...(await import("@/queue/processMessage.js")) };
+
 mock.module("@/queue/processMessage.js", () => ({
+	...realProcessMessage,
 	processMessage: mock(async () => {}),
 }));
 
 const { startPollingLoop } = await import("@/queue/initWorkers.js");
+
+afterAll(() => {
+	mock.module("@/queue/processMessage.js", () => realProcessMessage);
+});
 
 const makeAbortError = () => {
 	const error = new Error("aborted") as Error & { name: string };

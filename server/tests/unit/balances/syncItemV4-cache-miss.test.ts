@@ -1,12 +1,14 @@
 import { afterAll, describe, expect, mock, test } from "bun:test";
 import { AppEnv } from "@autumn/shared";
 
+import { mockModuleWithRestore } from "../utils/mockModuleWithRestore.js";
+
 const mockState = {
 	cacheReads: [] as string[],
 	executeCalls: [] as unknown[],
 };
 
-mock.module(
+await mockModuleWithRestore(
 	"@/internal/customers/cache/fullSubject/balances/getCachedFeatureBalances.js",
 	() => ({
 		getCachedFeatureBalancesBatch: async () => ({ kind: "ok", value: [] }),

@@ -1,6 +1,8 @@
-import { afterEach, describe, expect, it, mock } from "bun:test";
+import { afterEach, describe, expect, it } from "bun:test";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
+
+import { mockModuleWithRestore } from "../utils/mockModuleWithRestore.js";
 
 const primaryDb = { pool: "primary" } as unknown as DrizzleCli;
 const replicaDb = { pool: "replica" } as unknown as DrizzleCli;
@@ -14,7 +16,7 @@ const hydrationPools: string[] = [];
 let executePreparedImpl: (args: { db: DrizzleCli }) => Promise<unknown[]> =
 	() => Promise.resolve([]);
 
-mock.module("@/db/executePrepared.js", () => ({
+await mockModuleWithRestore("@/db/executePrepared.js", () => ({
 	executePrepared: (args: { db: DrizzleCli }) => {
 		hydrationPools.push((args.db as unknown as { pool: string }).pool);
 		return executePreparedImpl(args);

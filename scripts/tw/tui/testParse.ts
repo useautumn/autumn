@@ -15,9 +15,11 @@ export type ParsedTest = {
 const PASS_LINE = /^\(pass\)\s+(.+?)\s+\[(\d+(?:\.\d+)?m?s)\]/;
 const FAIL_LINE = /^\(fail\)\s+(.+?)\s+\[(\d+(?:\.\d+)?m?s)\]/;
 const PASS_OR_FAIL_NAME = /^\((?:pass|fail)\)\s+(.+?)\s+\[/;
-const ERROR_LINE = /^error:\s*(.+)/i;
+const ERROR_LINE = /^\s*error:\s*(.+)/i;
 const EXPECTED_LINE = /Expected:\s*(.+)/;
 const RECEIVED_LINE = /Received:\s*(.+)/;
+const FAILURE_TEXT =
+	/error|expect|timed out|not found|mismatch|failed|throw|invalid|unable/i;
 const STACK_LINE = /at\s+.*?\(([^)]+\.ts):(\d+):(\d+)\)/;
 
 export const parseDuration = (duration: string): number => {
@@ -46,9 +48,31 @@ const parseErrorFromLines = (
 		}
 	}
 
+	// Bun does not always emit an "error:" line (thrown non-Errors, failures
+	// raised inside helpers). Fall back to the first line that carries meaning
+	// rather than reporting a useless "Test failed".
+	if (!errorMessage) {
+		const meaningful = errorLines.find(
+			(line) =>
+				line.trim() &&
+				// `[prefix]` lines are the tests' own console.log noise, not failures.
+				!/^\s*\[/.test(line) &&
+				!/^\s*at\s/.test(line) &&
+				!/^\s*\d+\s*\|/.test(line) &&
+				!/^\s*\^/.test(line) &&
+				!PASS_OR_FAIL_NAME.test(line) &&
+				FAILURE_TEXT.test(line),
+		);
+		if (meaningful) errorMessage = meaningful.trim().slice(0, 300);
+	}
+
+	// Expected/Received is the best summary of a bare matcher failure, but it
+	// must not clobber a thrown message that carries real diagnostic context.
+	const isGenericMatcherMessage =
+		!errorMessage || /^expect\(/.test(errorMessage);
 	const expectedMatch = errorText.match(EXPECTED_LINE);
 	const receivedMatch = errorText.match(RECEIVED_LINE);
-	if (expectedMatch?.[1] && receivedMatch?.[1]) {
+	if (isGenericMatcherMessage && expectedMatch?.[1] && receivedMatch?.[1]) {
 		errorMessage = `Expected: ${expectedMatch[1]}, Received: ${receivedMatch[1]}`;
 	}
 
@@ -104,13 +128,32 @@ export const parseTestOutput = (
 			});
 			lastTestEndIndex = i;
 		} else if (failMatch) {
-			const errorLines = lines.slice(lastTestEndIndex + 1, i);
 			const test: ParsedTest = {
 				name: (failMatch[1] ?? "").trim(),
 				status: "failed",
 				duration: parseDuration(failMatch[2] ?? "0ms"),
 			};
-			parseErrorFromLines(test, errorLines, filePath);
+			parseErrorFromLines(test, lines.slice(lastTestEndIndex + 1, i), filePath);
+			// Concurrent tests print their error block AFTER the (fail) line, so a
+			// backwards-only slice reports a useless "Test failed". Retry forwards,
+			// up to the next test result, when nothing was found behind us.
+			if (test.error?.message === "Test failed") {
+				const nextResult = lines.findIndex(
+					(candidate, index) =>
+						index > i &&
+						(PASS_LINE.test(candidate) || FAIL_LINE.test(candidate)),
+				);
+				parseErrorFromLines(
+					test,
+					lines.slice(i + 1, nextResult === -1 ? lines.length : nextResult),
+					filePath,
+				);
+			}
+			// Last resort: bun prints some failures in a trailing summary, past the
+			// next test result. Better a possibly-misattributed message than none.
+			if (test.error?.message === "Test failed") {
+				parseErrorFromLines(test, lines.slice(i + 1), filePath);
+			}
 			tests.push(test);
 			lastTestEndIndex = i;
 		}

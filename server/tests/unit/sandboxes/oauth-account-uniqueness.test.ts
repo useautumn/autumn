@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, mock, test } from "bun:test";
+import { beforeEach, describe, expect, test } from "bun:test";
 import type { Context } from "hono";
 import type { HonoEnv } from "@/honoUtils/HonoEnv.js";
 
@@ -8,11 +8,15 @@ const state = {
 	updateConnectCalls: [] as Array<Record<string, unknown>>,
 };
 
-mock.module("@/db/initDrizzle.js", () => ({
+// Spread the real module so every export stays defined — a partial factory
+// poisons later files in the same process with missing-export link errors.
+const realInitDrizzle = await import("@/db/initDrizzle.js");
+await mockModuleWithRestore("@/db/initDrizzle.js", () => ({
+	...realInitDrizzle,
 	db: {},
 	initDrizzle: () => ({ db: {} }),
 }));
-mock.module(
+await mockModuleWithRestore(
 	"@/internal/platform/platformBeta/utils/oauthStateUtils.js",
 	() => ({
 		consumeOAuthState: async () => ({
@@ -23,12 +27,12 @@ mock.module(
 		}),
 	}),
 );
-mock.module("@/external/connect/initStripeCli.js", () => ({
+await mockModuleWithRestore("@/external/connect/initStripeCli.js", () => ({
 	initMasterStripe: () => ({
 		oauth: { token: async () => ({ stripe_user_id: state.accountId }) },
 	}),
 }));
-mock.module("@/internal/orgs/OrgService.js", () => ({
+await mockModuleWithRestore("@/internal/orgs/OrgService.js", () => ({
 	OrgService: {
 		getBySlug: async () => ({
 			id: "org_target",
@@ -43,6 +47,8 @@ mock.module("@/internal/orgs/OrgService.js", () => ({
 }));
 
 import { handleOAuthCallback } from "@/internal/orgs/handlers/stripeHandlers/handleOAuthCallback.js";
+
+import { mockModuleWithRestore } from "../utils/mockModuleWithRestore.js";
 
 const runCallback = async () => {
 	let redirectedTo = "";

@@ -74,8 +74,26 @@ describe("isCustomerRecentlyUpdated negative cache", () => {
 		const { db, execute } = makeFakeDb();
 
 		await isCustomerRecentlyUpdated({ db, ...params });
-		await new Promise((resolve) => setTimeout(resolve, NEGATIVE_TTL_MS + 100));
-		await isCustomerRecentlyUpdated({ db, ...params });
+
+		// Advance the monotonic clock lru-cache stamps TTLs with instead of
+		// sleeping out the real TTL — performance.now() is unaffected by fake
+		// timers, so spying on it is the only sleepless way across the boundary.
+		// One macrotask first: lru-cache's cachedNow ignores the spied clock
+		// until its 1ms-reset setTimeout has fired.
+		await new Promise((resolve) => setTimeout(resolve, 5));
+		const realPerfNow = performance.now.bind(performance);
+		const clock = spyOn(performance, "now").mockImplementation(
+			() => realPerfNow() + NEGATIVE_TTL_MS + 100,
+		);
+		try {
+			await isCustomerRecentlyUpdated({ db, ...params });
+		} finally {
+			clock.mockRestore();
+			// Let lru-cache's 1ms cachedNow-reset timer fire, or the future
+			// timestamp stamped during the advanced window leaks into the
+			// next test and makes fresh entries look expired.
+			await new Promise((resolve) => setTimeout(resolve, 5));
+		}
 
 		expect(execute).toHaveBeenCalledTimes(2);
 	});

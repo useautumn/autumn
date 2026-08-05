@@ -26,6 +26,7 @@ import {
 	getEntitySubscriptionId,
 	getSubscriptionId,
 } from "@tests/integration/billing/utils/stripe/getSubscriptionId";
+import { waitForCustomerProductExpired } from "@tests/integration/billing/utils/waitForCustomerProductExpired";
 import { TestFeature } from "@tests/setup/v2Features";
 import { items } from "@tests/utils/fixtures/items";
 import { products } from "@tests/utils/fixtures/products";
@@ -33,7 +34,6 @@ import { advanceTestClock } from "@tests/utils/stripeUtils";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
 import { addMonths } from "date-fns";
-import { timeout } from "@/utils/genUtils";
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // TEST 1: Customer consumable → Stripe cancel immediately → NO final invoice
@@ -105,14 +105,17 @@ test.concurrent(`${chalk.yellowBright("sub.deleted invoice: customer consumable 
 	// Cancel subscription IMMEDIATELY via Stripe client
 	await ctx.stripeCli.subscriptions.cancel(subscriptionId);
 
-	// Wait for webhook to process
-	await timeout(8000);
+	await waitForCustomerProductExpired({
+		db: ctx.db,
+		orgId: ctx.org.id,
+		env: ctx.env,
+		stripeSubscriptionId: subscriptionId,
+	});
 
 	// Verify product is removed
-	const customerAfterCancel =
-		await autumnV1.customers.get<ApiCustomerV3>(customerId);
 	await expectProductNotPresent({
-		customer: customerAfterCancel,
+		autumn: autumnV1,
+		customerId,
 		productId: pro.id,
 	});
 
@@ -128,8 +131,9 @@ test.concurrent(`${chalk.yellowBright("sub.deleted invoice: customer consumable 
 	// No final arrear invoice because:
 	// 1. Customer-level consumables use metered prices (Stripe handles)
 	// 2. This was an immediate cancel (wasImmediateStripeCancellation = true)
-	expectCustomerInvoiceCorrect({
-		customer: customerAfterCancel,
+	await expectCustomerInvoiceCorrect({
+		autumn: autumnV1,
+		customerId,
 		count: 1,
 		latestTotal: 20,
 	});
@@ -213,8 +217,12 @@ test.concurrent(`${chalk.yellowBright("sub.deleted invoice: entity consumable �
 	// Cancel subscription IMMEDIATELY via Stripe client (not at period end)
 	await ctx.stripeCli.subscriptions.cancel(subscriptionId);
 
-	// Wait for webhook to process
-	await timeout(8000);
+	await waitForCustomerProductExpired({
+		db: ctx.db,
+		orgId: ctx.org.id,
+		env: ctx.env,
+		stripeSubscriptionId: subscriptionId,
+	});
 
 	// Verify product is removed from entity
 	const entityAfterCancel = await autumnV1.entities.get(customerId, entityId);
@@ -237,8 +245,9 @@ test.concurrent(`${chalk.yellowBright("sub.deleted invoice: entity consumable �
 		await autumnV1.customers.get<ApiCustomerV3>(customerId);
 
 	// Should have only 1 invoice (initial attach) - no final arrear invoice
-	expectCustomerInvoiceCorrect({
-		customer: customerAfterCancel,
+	await expectCustomerInvoiceCorrect({
+		autumn: autumnV1,
+		customerId,
 		count: 1,
 		latestTotal: 20, // Initial attach only
 	});
@@ -340,8 +349,12 @@ test.concurrent(`${chalk.yellowBright("sub.deleted invoice: multi-interval → a
 	// Cancel subscription IMMEDIATELY via Stripe client (mid-annual-cycle)
 	await ctx.stripeCli.subscriptions.cancel(subscriptionId);
 
-	// Wait for webhook to process
-	await timeout(8000);
+	await waitForCustomerProductExpired({
+		db: ctx.db,
+		orgId: ctx.org.id,
+		env: ctx.env,
+		stripeSubscriptionId: subscriptionId,
+	});
 
 	// Verify product is removed from entity
 	const entityAfterCancel = await autumnV1.entities.get(customerId, entityId);
@@ -456,8 +469,12 @@ test.concurrent(`${chalk.yellowBright("sub.deleted invoice: entity consumable �
 	// Cancel subscription IMMEDIATELY via Stripe client
 	await ctx.stripeCli.subscriptions.cancel(subscriptionId);
 
-	// Wait for webhook to process
-	await timeout(8000);
+	await waitForCustomerProductExpired({
+		db: ctx.db,
+		orgId: ctx.org.id,
+		env: ctx.env,
+		stripeSubscriptionId: subscriptionId,
+	});
 
 	// Verify product is removed from entity
 	const entityAfterCancel = await autumnV1.entities.get(customerId, entityId);
@@ -834,8 +851,9 @@ test.concurrent(`${chalk.yellowBright("sub.deleted invoice: entity consumable �
 	// Should have 2 invoices:
 	// 1. Initial attach: $20
 	// 2. Final arrear invoice: $40 (400 overage × $0.10)
-	expectCustomerInvoiceCorrect({
-		customer: customerAfterCancel,
+	await expectCustomerInvoiceCorrect({
+		autumn: autumnV1,
+		customerId,
 		count: 2,
 		latestTotal: 40, // Arrear invoice for overage
 	});

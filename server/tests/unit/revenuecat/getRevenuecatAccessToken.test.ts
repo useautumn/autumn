@@ -3,6 +3,8 @@ import { AppEnv, type Organization } from "@autumn/shared";
 import { OAuth2Tokens } from "arctic";
 import { encryptData } from "@/utils/encryptUtils.js";
 
+import { mockModuleWithRestore } from "../utils/mockModuleWithRestore.js";
+
 const mockRefreshRcTokens = mock(() =>
 	Promise.resolve(
 		new OAuth2Tokens({
@@ -18,11 +20,14 @@ const mockOrgUpdate = mock(
 	(_args: { updates: Organization }): Promise<null> => Promise.resolve(null),
 );
 
-mock.module("@/external/revenueCat/misc/revenuecatOAuth.js", () => ({
-	refreshRcTokens: mockRefreshRcTokens,
-}));
+await mockModuleWithRestore(
+	"@/external/revenueCat/misc/revenuecatOAuth.js",
+	() => ({
+		refreshRcTokens: mockRefreshRcTokens,
+	}),
+);
 
-mock.module("@/internal/orgs/OrgService.js", () => ({
+await mockModuleWithRestore("@/internal/orgs/OrgService.js", () => ({
 	OrgService: {
 		update: mockOrgUpdate,
 	},

@@ -102,7 +102,14 @@ export function SheetSection({
 							)}
 							{title && (
 								<div className={cn("flex items-center gap-2 flex-1")}>
-									<h3 className={cn("text-sub select-none w-full")}>{title}</h3>
+									<h3
+										className={cn(
+											"text-sub w-full",
+											withTogle && "select-none",
+										)}
+									>
+										{title}
+									</h3>
 								</div>
 							)}
 						</label>

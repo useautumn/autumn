@@ -360,4 +360,4 @@ test(`${chalk.yellowBright("pg failover: critical endpoints failover to replica 
 		await stopFloodWorker();
 		await pgHealth({ action: "force-healthy" }).catch(() => {});
 	}
-}, 300_000);
+});

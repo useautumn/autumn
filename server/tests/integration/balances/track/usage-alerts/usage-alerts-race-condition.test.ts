@@ -128,4 +128,4 @@ test(`${chalk.yellowBright("usage-alert race: concurrent tracks fire two webhook
 		);
 
 	expect(matching.length).toBe(1);
-}, 150_000);
+});

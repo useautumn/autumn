@@ -1,6 +1,8 @@
 import { beforeEach, expect, mock, test } from "bun:test";
 import type Stripe from "stripe";
 
+import { mockModuleWithRestore } from "../utils/mockModuleWithRestore.js";
+
 const subscriptionList = mock(() => ({
 	autoPagingToArray: async () => [{ id: "sub_1" }, { id: "sub_2" }],
 }));
@@ -8,13 +10,13 @@ const scheduleList = mock(() => ({
 	autoPagingToArray: async () => [{ id: "sub_sched_1" }, { id: "sub_sched_2" }],
 }));
 
-mock.module("@/external/connect/createStripeCli", () => ({
+await mockModuleWithRestore("@/external/connect/createStripeCli", () => ({
 	createStripeCli: () => ({
 		subscriptions: { list: subscriptionList },
 		subscriptionSchedules: { list: scheduleList },
 	}),
 }));
-mock.module(
+await mockModuleWithRestore(
 	"@/internal/billing/v2/providers/stripe/utils/sync/fetchStripeSyncObjects",
 	() => ({
 		fetchStripeSyncSchedule: async ({
@@ -26,13 +28,13 @@ mock.module(
 		}),
 	}),
 );
-mock.module("@/internal/customers/CusService", () => ({
+await mockModuleWithRestore("@/internal/customers/CusService", () => ({
 	CusService: { getFull: async () => ({ customer_products: [] }) },
 }));
-mock.module("@/internal/products/ProductService", () => ({
+await mockModuleWithRestore("@/internal/products/ProductService", () => ({
 	ProductService: { listFull: async () => [] },
 }));
-mock.module(
+await mockModuleWithRestore(
 	"@/internal/billing/v2/actions/sync/subscriptionToSyncParams",
 	() => ({
 		subscriptionToSyncParams: async ({

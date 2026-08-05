@@ -1,6 +1,8 @@
 import { afterAll, afterEach, expect, mock, test } from "bun:test";
 import { ErrCode } from "@autumn/shared";
 
+import { mockModuleWithRestore } from "../utils/mockModuleWithRestore.js";
+
 // Map-backed model-pricing-cache stub — the cache key is shared with the dev
 // server, so the real Redis must never be touched here.
 const store = new Map<string, unknown>();
@@ -9,7 +11,7 @@ const setCalls: unknown[] = [];
 const PRIMARY_KEY = "models_dev_pricing";
 const STALE_KEY = "models_dev_pricing_stale";
 
-mock.module(
+await mockModuleWithRestore(
 	"@/external/redis/actions/modelPricingCache/modelPricingCache.js",
 	() => ({
 		getCachedModelPricing: async () => store.get(PRIMARY_KEY) ?? null,

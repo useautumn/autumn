@@ -70,7 +70,7 @@ test.concurrent(`${chalk.yellowBright("automatic-tax-subscription-update (v1 leg
 		limit: 1,
 	});
 	expect(updatedSubs.data[0].automatic_tax.enabled).toBe(true);
-}, 300_000);
+});
 
 test.concurrent(`${chalk.yellowBright("automatic-tax-subscription-update (v2 /v1/billing.attach): mid-life flip propagates auto_tax on upgrade")}`, async () => {
 	const customerId = "tax-mid-life-flip-v2";
@@ -113,4 +113,4 @@ test.concurrent(`${chalk.yellowBright("automatic-tax-subscription-update (v2 /v1
 		limit: 1,
 	});
 	expect(updatedSubs.data[0].automatic_tax.enabled).toBe(true);
-}, 300_000);
+});

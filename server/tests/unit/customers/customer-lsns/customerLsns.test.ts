@@ -8,8 +8,10 @@ import {
 	spyOn,
 } from "bun:test";
 
+import { mockModuleWithRestore } from "../../utils/mockModuleWithRestore.js";
+
 const errorLog = mock((..._args: unknown[]) => {});
-mock.module("@/external/logtail/logtailUtils.js", () => ({
+await mockModuleWithRestore("@/external/logtail/logtailUtils.js", () => ({
 	logger: {
 		info: mock(() => {}),
 		warn: mock(() => {}),
