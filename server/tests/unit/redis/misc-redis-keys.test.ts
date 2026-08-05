@@ -36,10 +36,6 @@ import {
 	buildTrmnlOrgKey,
 } from "@/external/redis/actions/trmnlDeviceStore/trmnlDeviceStore.js";
 import { buildStripeWebhookEventKey } from "@/external/stripe/webhookMiddlewares/stripeIdempotencyMiddleware.js";
-import {
-	buildIdempotencyStorageKey,
-	IDEMPOTENCY_TTL_MS,
-} from "@/internal/misc/idempotency/idempotencyKeyUtils.js";
 
 /**
  * Pins the EXACT key format (and TTL, where exported) of every misc-cache key
@@ -80,16 +76,6 @@ describe("misc redis key formats", () => {
 
 	test("customer JWT auth", () => {
 		expect(buildCustomerJwtAuthCacheKey("icus_1")).toBe("cjwt_auth:icus_1");
-	});
-
-	test("idempotency storage", () => {
-		const { storageKey, hashedKey } = buildIdempotencyStorageKey({
-			orgId: "org_1",
-			env: "live",
-			idempotencyKey: "idem_1",
-		});
-		expect(storageKey).toBe(`org_1:live:idempotency:${hashedKey}`);
-		expect(IDEMPOTENCY_TTL_MS).toBe(24 * 60 * 60 * 1000);
 	});
 
 	test("stripe webhook idempotency", () => {

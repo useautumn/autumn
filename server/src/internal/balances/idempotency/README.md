@@ -23,8 +23,8 @@ Both are independent claims. Duplicate → **409** at accept, on every shape
 worker. A retryable failure (non-409 4xx/5xx, unknown error, failed enqueue)
 releases the claim so the client can retry.
 
-Storage is `misc/idempotency` (Redis + DynamoDB dual-write; the
-`idempotencyDynamoRead` edge config picks the authority).
+Storage is `misc/idempotency`, backed by DynamoDB (`autumn-idempotency-keys`,
+conditional-put for the atomic claim, TTL attribute for expiry).
 
 ## Queue dedupe — server-owned, inside the deduction
 
