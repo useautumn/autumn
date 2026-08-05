@@ -1,8 +1,9 @@
 import type { TestGroup } from "./types";
 
-// Remaining `bun tw core` failures on branch fix/tw-flakiness (run
-// msg10ma3-76o5kn, 8 files — down from 20 when this work started). Every entry
-// survives 45-150s of assertion polling, so none of these are settle flakes.
+// Remaining `bun tw core` failures on branch fix/tw-flakiness — 7 files, down
+// from 20 when this work started (run msg10ma3-76o5kn, minus sub-created-auto-
+// sync which is now fixed). Every entry survives 45-150s of assertion polling,
+// so none of these are settle flakes.
 //
 // GROUP A — track-vs-billing-action race (one shared root cause).
 //   A `track` deducts in Redis and queues a sync; a billing action (attach /
@@ -16,11 +17,6 @@ import type { TestGroup } from "./types";
 //   loses the race, so treat the group, not the list, as the unit of work.
 //
 // GROUP B — individually genuine bugs, unrelated to each other.
-//
-// GROUP C — Stripe hosted pages that never complete inside a tw µVM. The
-//   invoice equivalent was solved by falling back to stripeCli.invoices.pay();
-//   a Checkout Session cannot be completed through the API, so this one still
-//   needs the page itself to work.
 const activeTempPaths: string[] = [
 	// ── GROUP A: track-vs-billing-action race ───────────────────────────────
 	// ✗ "scheduled-switch-basic 1b: pro to free (after cycle)"
@@ -46,27 +42,15 @@ const activeTempPaths: string[] = [
 	//   Deterministic — fails the same way solo, so not cross-file collision.
 	"integration/billing/update-subscription/cancel/end-of-cycle/cancel-end-of-cycle.test.ts",
 	// ✗ "legacy one-off rwf: prepaid one-off charges major units, not x100"
-	//   Expected: "paid", Received: "draft" after 120s. The RWF invoice on the
-	//   dedicated sub-org never leaves draft, so finalize/pay is failing there.
-	//   Needs server-side visibility tw does not forward.
+	//   Autumn holds the invoice at "draft" forever, and listing invoices on the
+	//   SUB-ORG's own Stripe account returns [] — so no Stripe invoice is ever
+	//   created for this attach. The failure is upstream of finalize/pay: either
+	//   the sub-org has no usable Stripe connection under tw, or RWF price
+	//   creation fails there. Next step is server-side, which tw does not forward.
 	"integration/billing/legacy/attach/new/legacy-new-oneoff-zero-decimal.test.ts",
 	// ✗ "create-schedule: now phase stays the exact active set across groups and
 	//   future phases" — expect(received).toEqual(expected). Shape mismatch.
 	"integration/billing/create-schedule/phases/create-schedule-phases.test.ts",
-
-	// ── GROUP C: Stripe hosted page never completes ─────────────────────────
-	// ✗ "customer.subscription.created auto-sync: links product after external
-	//   Stripe checkout completion" — "Checkout session did not produce a
-	//   subscription" after polling Stripe for 120s.
-	//   The error now reports where the browser ended: still on
-	//   checkout.stripe.com with the form UNSUBMITTED and no decline message.
-	//   This session is created straight through the Stripe API without
-	//   payment_method_types, so Stripe renders an "OR" alternative-payment
-	//   block above the card form and our card-accordion selector in
-	//   playwright/stripeCheckout.ts does not match that layout — the submit
-	//   lands on a method we never filled. Autumn-created sessions pin the
-	//   payment methods, which is why every other checkout test passes.
-	"integration/billing/stripe-webhooks/subscription-created/sub-created-auto-sync.test.ts",
 ];
 
 export const temp: TestGroup = {
