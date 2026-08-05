@@ -3,35 +3,15 @@ import {
 	type CreateReferralProgramParams,
 	ErrCode,
 	RecaseError,
-	type RewardProgram,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import {
 	validateRewardProgramTrigger,
 	validateRewardTypeSupported,
 } from "@/internal/api/rewards/handlers/rewardPrograms/validateRewardProgram.js";
-import { rewardProgramRepo, rewardRepo } from "../repos/index.js";
-import { constructRewardProgram } from "../rewardUtils.js";
-
-export const toApiReferralProgram = ({
-	rewardProgram,
-	rewardId,
-}: {
-	rewardProgram: RewardProgram;
-	rewardId: string;
-}): ApiReferralProgramV0 => {
-	const planIds = rewardProgram.product_ids?.filter(Boolean);
-	return {
-		id: rewardProgram.id,
-		reward_id: rewardId,
-		redeem_on: rewardProgram.when,
-		received_by: rewardProgram.received_by,
-		max_redemptions: rewardProgram.max_redemptions ?? null,
-		plan_ids: planIds?.length ? planIds : null,
-		exclude_trial: rewardProgram.exclude_trial ?? false,
-		created_at: rewardProgram.created_at,
-	};
-};
+import { getApiReferralProgram } from "../../apiRewards/getApiReferralProgram.js";
+import { rewardProgramRepo, rewardRepo } from "../../repos/index.js";
+import { constructRewardProgram } from "../../rewardUtils.js";
 
 export const createApiReferralProgram = async ({
 	ctx,
@@ -96,5 +76,5 @@ export const createApiReferralProgram = async ({
 		}),
 	});
 
-	return toApiReferralProgram({ rewardProgram, rewardId: reward.id });
+	return getApiReferralProgram({ rewardProgram, rewardId: reward.id });
 };

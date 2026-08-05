@@ -1,4 +1,4 @@
-import type { ListReferralProgramsResponse } from "../../../../../../shared/api/referralPrograms/referralProgramsListOpModels.js";
+import type { ReferralProgramsListResponse } from "@autumn/shared";
 import type { ApiRewardsListV0 } from "../../../../../../shared/api/rewards/rewardsListOpModels.js";
 import { request } from "../client.js";
 
@@ -12,7 +12,7 @@ export const fetchRewards = ({ secretKey }: { secretKey: string }) =>
 	});
 
 export const fetchReferralPrograms = ({ secretKey }: { secretKey: string }) =>
-	request<ListReferralProgramsResponse>({
+	request<ReferralProgramsListResponse>({
 		method: "POST",
 		path: "/v1/referral_programs.list",
 		secretKey,

@@ -1,25 +1,25 @@
-import { describe, expect, test } from "bun:test";
-import { buildCatalogUpdateParams } from "../../src/commands/push/push.js";
-import { referralProgram, reward } from "../../src/compose/index.js";
-import { buildConfigFile } from "../../src/lib/transforms/sdkToCode/configFile.js";
+import {describe, expect, test} from 'bun:test';
+import {buildCatalogUpdateParams} from '../../src/commands/push/push.js';
+import {referralProgram, reward} from '../../src/compose/index.js';
+import {buildConfigFile} from '../../src/lib/transforms/sdkToCode/configFile.js';
 
-describe("reward config", () => {
+describe('reward config', () => {
 	const grant = reward({
-		id: "referral-credits",
-		name: "Referral credits",
-		type: "feature_grant",
-		grants: [{ featureId: "credits", included: 300 }],
-		promoCodes: [{ code: "REFER", maxUses: 100 }],
+		id: 'referral-credits',
+		name: 'Referral credits',
+		type: 'feature_grant',
+		grants: [{featureId: 'credits', included: 300}],
+		promoCodes: [{code: 'REFER', maxUses: 100}],
 	});
 	const program = referralProgram({
-		id: "refer-a-friend",
+		id: 'refer-a-friend',
 		rewardId: grant.id,
-		redeemOn: "customer_creation",
-		receivedBy: "all",
+		redeemOn: 'customer_creation',
+		receivedBy: 'all',
 		maxRedemptions: 5,
 	});
 
-	test("maps the camelCase DSL to catalog API params", () => {
+	test('maps the camelCase DSL to catalog API params', () => {
 		const params = buildCatalogUpdateParams({
 			features: [],
 			plans: [],
@@ -32,8 +32,8 @@ describe("reward config", () => {
 				feature_grant: {
 					id: grant.id,
 					name: grant.name,
-					grants: [{ feature_id: "credits", included: 300, expiry: null }],
-					promo_codes: [{ code: "REFER", max_uses: 100 }],
+					grants: [{feature_id: 'credits', included: 300, expiry: null}],
+					promo_codes: [{code: 'REFER', max_uses: 100}],
 				},
 			},
 		]);
@@ -43,21 +43,23 @@ describe("reward config", () => {
 		});
 	});
 
-	test("generates a loadable TypeScript config shape", () => {
+	test('generates a loadable TypeScript config shape', () => {
 		const code = buildConfigFile([], [], [grant], [program]);
-		expect(code).toContain("reward(");
-		expect(code).toContain("referralProgram(");
+		expect(code).toContain('reward(');
+		expect(code).toContain('referralProgram(');
 		expect(code).toContain("featureId: 'credits'");
+		expect(code).toContain("reward({\n\tid: 'referral-credits',");
+		expect(code).toContain("referralProgram({\n\tid: 'refer-a-friend',");
 	});
 
-	test("rejects invalid monthly reward durations", () => {
+	test('rejects invalid monthly reward durations', () => {
 		for (const length of [0, 1.5]) {
 			const invalidReward = reward({
-				id: "launch-discount",
-				name: "Launch discount",
-				type: "percentage_discount",
+				id: 'launch-discount',
+				name: 'Launch discount',
+				type: 'percentage_discount',
 				value: 20,
-				duration: { type: "months", length },
+				duration: {type: 'months', length},
 			});
 			expect(() =>
 				buildCatalogUpdateParams({
@@ -66,7 +68,7 @@ describe("reward config", () => {
 					rewards: [invalidReward],
 					referralPrograms: [],
 				}),
-			).toThrow("Month reward duration length must be a positive integer");
+			).toThrow('Month reward duration length must be a positive integer');
 		}
 	});
 });

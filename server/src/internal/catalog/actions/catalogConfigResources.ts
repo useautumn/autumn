@@ -10,11 +10,9 @@ import {
 	RecaseError,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
-import {
-	createApiReferralProgram,
-	toApiReferralProgram,
-} from "@/internal/rewards/actions/createApiReferralProgram.js";
+import { createApiReferralProgram } from "@/internal/rewards/actions/referralProgramCrud/index.js";
 import { createApiReward } from "@/internal/rewards/actions/createApiReward/createApiReward.js";
+import { getApiReferralProgram } from "@/internal/rewards/apiRewards/getApiReferralProgram.js";
 import {
 	rewardProgramRepo,
 	rewardRepo,
@@ -154,7 +152,7 @@ export const resolveCatalogConfigResources = async ({
 		if (id) {
 			programById.set(
 				program.id,
-				toApiReferralProgram({ rewardProgram: program, rewardId: id }),
+				getApiReferralProgram({ rewardProgram: program, rewardId: id }),
 			);
 		}
 	}

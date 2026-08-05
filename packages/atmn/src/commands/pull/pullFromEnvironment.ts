@@ -38,8 +38,6 @@ export async function pullFromEnvironment(
 		rewards: [...apiRewards.coupons, ...apiRewards.feature_grants].map(
 			transformApiReward,
 		),
-		referralPrograms: apiPrograms.referral_programs.map(
-			transformApiReferralProgram,
-		),
+		referralPrograms: apiPrograms.list.map(transformApiReferralProgram),
 	};
 }
