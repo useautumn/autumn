@@ -1,6 +1,6 @@
-import { afterAll, describe, expect, it } from "bun:test";
+import { afterAll, describe, expect, it, mock } from "bun:test";
 import { sql } from "drizzle-orm";
-import { initDrizzle } from "@/db/initDrizzle.js";
+import { type DrizzleCli, initDrizzle } from "@/db/initDrizzle.js";
 import { isCustomerRecentlyUpdated } from "@/internal/customers/customerLsns/isCustomerRecentlyUpdated.js";
 import { markCustomerUpdatedAt } from "@/internal/customers/customerLsns/markCustomerUpdatedAt.js";
 
@@ -105,6 +105,29 @@ describe.skipIf(!process.env.DATABASE_URL)(
 			expect(
 				await isCustomerRecentlyUpdated({ db, orgId, env, customerId }),
 			).toBe(false);
+		});
+
+		it("marks write to the primary pool even when the caller's handle is replica-like", async () => {
+			const customerId = "cus_replica_handle";
+			// A pool handle ($client) that rejects writes, as a replica-swapped ctx.db would.
+			const replicaExecute = mock(async (): Promise<unknown[]> => {
+				throw new Error("cannot execute INSERT in a read-only transaction");
+			});
+			const replicaLikeDb = {
+				$client: {},
+				execute: replicaExecute,
+			} as unknown as DrizzleCli;
+
+			await markCustomerUpdatedAt({
+				db: replicaLikeDb,
+				orgId,
+				env,
+				customerId,
+			});
+
+			expect(replicaExecute).not.toHaveBeenCalled();
+			const rows = await fetchRows(customerId);
+			expect(rows.length).toBe(1);
 		});
 
 		it("unknown customer is not recently updated", async () => {

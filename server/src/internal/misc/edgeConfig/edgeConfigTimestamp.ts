@@ -1,23 +1,25 @@
 import { randomUUID } from "node:crypto";
-import type { S3Client } from "@aws-sdk/client-s3";
 import { GetObjectCommand, PutObjectCommand } from "@aws-sdk/client-s3";
 import {
 	ADMIN_EDGE_CONFIG_TIMESTAMP_KEY,
 	getAdminS3Config,
 } from "@/external/aws/s3/adminS3Config.js";
-import { getS3Client } from "@/external/aws/s3/initS3.js";
+import {
+	createBunS3EdgeConfigClient,
+	type EdgeConfigS3Client,
+} from "@/external/aws/s3/bunS3EdgeConfigClient.js";
 import { getS3BodyAsString } from "@/external/aws/s3/s3Utils.js";
 
-const getClient = (s3Client?: S3Client) => {
+const getClient = (s3Client?: EdgeConfigS3Client) => {
 	if (s3Client) return s3Client;
 	const { region } = getAdminS3Config();
-	return getS3Client({ region });
+	return createBunS3EdgeConfigClient({ region });
 };
 
 export const readEdgeConfigTimestamp = async ({
 	s3Client,
 }: {
-	s3Client?: S3Client;
+	s3Client?: EdgeConfigS3Client;
 } = {}): Promise<string | null> => {
 	const { bucket } = getAdminS3Config();
 
@@ -55,7 +57,7 @@ const WRITE_RETRY_DELAY_MS = 50;
 export const writeEdgeConfigTimestamp = async ({
 	s3Client,
 }: {
-	s3Client?: S3Client;
+	s3Client?: EdgeConfigS3Client;
 } = {}): Promise<string> => {
 	const { bucket } = getAdminS3Config();
 	const client = getClient(s3Client);
