@@ -552,6 +552,12 @@ describe("sandboxes.copy: selective copy via productIds / featureIds", () => {
 		expect(dstProducts.map((p) => p.id).sort()).toEqual(
 			[VARIANT_BASE_ID, VARIANT_ID].sort(),
 		);
+		// The copied variant links to the target env's base, not the source's.
+		const dstBase = dstProducts.find((p) => p.id === VARIANT_BASE_ID);
+		const dstVariant = dstProducts.find((p) => p.id === VARIANT_ID);
+		expect(dstVariant?.base_internal_product_id).toBe(
+			dstBase?.internal_id as string,
+		);
 		// The credit system copied intact plus the metered feature it references.
 		expect(features.map((f) => f.id).sort()).toEqual(
 			[CREDIT_FEATURE, MSG_FEATURE].sort(),

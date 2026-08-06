@@ -1,20 +1,24 @@
 import type { DbPlanLicense, FullProduct } from "@autumn/shared";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
+import type { Logger } from "@/external/logtail/logtailUtils.js";
 import { planLicenseRepo } from "../../repos/planLicenseRepo.js";
 import { validateLicenseLink } from "./validateLicenseLink.js";
 
 /**
  * Recreates plan_license links in a copy target by translating both ends
  * through external plan ids. Links whose parent or license is absent from the
- * target, or would be rejected by link validation, are skipped.
+ * target are skipped silently; validation-rejected links are skipped with a
+ * warning.
  */
 export const copyPlanLicenseLinks = async ({
 	db,
+	logger,
 	links,
 	fromProducts,
 	toProducts,
 }: {
 	db: DrizzleCli;
+	logger: Logger;
 	links: { planLicense: DbPlanLicense; licensePlanId: string }[];
 	fromProducts: FullProduct[];
 	toProducts: FullProduct[];
@@ -49,7 +53,10 @@ export const copyPlanLicenseLinks = async ({
 				prepaidOnly: planLicense.prepaid_only,
 				licensePlanId,
 			});
-		} catch {
+		} catch (error) {
+			logger.warn(
+				`copy env: skipping license link ${toParent.id} -> ${licensePlanId}: ${error instanceof Error ? error.message : error}`,
+			);
 			continue;
 		}
 

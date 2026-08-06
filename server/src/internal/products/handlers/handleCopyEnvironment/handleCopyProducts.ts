@@ -250,6 +250,7 @@ export const handleCopyProducts = async ({
 
 	await copyPlanLicenseLinks({
 		db,
+		logger: ctx.logger,
 		links: licenseLinks,
 		fromProducts,
 		toProducts: [...copiedToProducts, ...existingTargetLicenses],

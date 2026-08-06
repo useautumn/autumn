@@ -58,9 +58,9 @@ export const resolveSourceBasePlanIds = async ({
 };
 
 /**
- * A selective copy may include a variant without its base; the base must exist
- * in the target env for the link to survive, so pull it into the copy set
- * unless the target already has it.
+ * Pulls a variant's base into the copy set unless the target already has a
+ * plan with that id. A same-id target variant can't satisfy the link either
+ * way — updating it wouldn't detach it — so the copy proceeds unlinked.
  */
 export const withRequiredBases = ({
 	fromProducts,
