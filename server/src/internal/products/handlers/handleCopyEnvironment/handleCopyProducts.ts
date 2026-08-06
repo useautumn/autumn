@@ -11,13 +11,14 @@ import {
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { FeatureService } from "@/internal/features/FeatureService.js";
 import { copyPlanLicenseLinks } from "@/internal/licenses/actions/links/copyPlanLicenseLinks.js";
+import { planLicenseRepo } from "@/internal/licenses/repos/planLicenseRepo.js";
 import { createProduct } from "../../../product/actions/createProduct.js";
 import { updateProduct } from "../../../product/actions/updateProduct.js";
 import { ProductService } from "../../ProductService.js";
 import {
 	getTargetBaseInternalIds,
 	resolveSourceBasePlanIds,
-	withRequiredBases,
+	withRequiredPlans,
 } from "./resolveVariantBaseLinks.js";
 
 const conformProductToSchema = (
@@ -89,16 +90,31 @@ export const handleCopyProducts = async ({
 		? fromProductsAll.filter((p) => productIds.includes(p.id))
 		: fromProductsAll;
 
-	const basePlanIdByVariantId = await resolveSourceBasePlanIds({
+	// Licenses first so a pulled-in license also gets its variant base resolved.
+	const licenseLinks = await planLicenseRepo.listWithLicensePlanIdByParents({
 		db,
-		fromProducts: requestedFromProducts,
-		fromProductsAll,
+		parentInternalProductIds: requestedFromProducts.map(
+			(product) => product.internal_id,
+		),
 	});
-	const fromProducts = withRequiredBases({
+	const withLicenses = withRequiredPlans({
 		fromProducts: requestedFromProducts,
 		fromProductsAll,
 		toProducts,
-		basePlanIdByVariantId,
+		requiredPlanIds: licenseLinks.map((link) => link.licensePlanId),
+	});
+
+	const basePlanIdByVariantId = await resolveSourceBasePlanIds({
+		db,
+		fromProducts: withLicenses,
+		fromProductsAll,
+	});
+	const basePlanIds = deduplicateArray([...basePlanIdByVariantId.values()]);
+	const fromProducts = withRequiredPlans({
+		fromProducts: withLicenses,
+		fromProductsAll,
+		toProducts,
+		requiredPlanIds: basePlanIds,
 	});
 
 	const toProductsV2 = toProducts.map((p) =>
@@ -182,7 +198,7 @@ export const handleCopyProducts = async ({
 		db,
 		toOrgId: toOrg.id,
 		toEnv,
-		basePlanIds: deduplicateArray([...basePlanIdByVariantId.values()]),
+		basePlanIds,
 	});
 
 	await Promise.all(
@@ -199,14 +215,20 @@ export const handleCopyProducts = async ({
 
 	// inIds bypasses the products cache — the copy ops' invalidations land
 	// async, so a plain listFull can still see the pre-copy (empty) snapshot.
+	// License plan ids are included so links can resolve against target
+	// licenses that already existed and were not part of the copy set.
 	const copiedToProducts = await ProductService.listFull({
 		db,
 		orgId: toOrg.id,
 		env: toEnv,
-		inIds: fromProducts.map((product) => product.id),
+		inIds: deduplicateArray([
+			...fromProducts.map((product) => product.id),
+			...licenseLinks.map((link) => link.licensePlanId),
+		]),
 	});
 	await copyPlanLicenseLinks({
 		db,
+		links: licenseLinks,
 		fromProducts,
 		toProducts: copiedToProducts,
 	});

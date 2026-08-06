@@ -58,37 +58,36 @@ export const resolveSourceBasePlanIds = async ({
 };
 
 /**
- * A selective copy may include a variant without its base; the base must exist
- * in the target env for the link to survive, so pull it into the copy set
- * unless the target already has it.
+ * A selective copy may reference plans outside the copy set (variant bases,
+ * licenses); each must exist in the target env for its link to survive, so
+ * pull it into the copy set unless the target already has it.
  */
-export const withRequiredBases = ({
+export const withRequiredPlans = ({
 	fromProducts,
 	fromProductsAll,
 	toProducts,
-	basePlanIdByVariantId,
+	requiredPlanIds,
 }: {
 	fromProducts: FullProduct[];
 	fromProductsAll: FullProduct[];
 	toProducts: FullProduct[];
-	basePlanIdByVariantId: Map<string, string>;
+	requiredPlanIds: string[];
 }): FullProduct[] => {
 	const includedIds = new Set(fromProducts.map((product) => product.id));
 	const targetIds = new Set(toProducts.map((product) => product.id));
-	const basePlanIds = deduplicateArray([...basePlanIdByVariantId.values()]);
 
-	const requiredBases: FullProduct[] = [];
-	for (const basePlanId of basePlanIds) {
-		if (includedIds.has(basePlanId) || targetIds.has(basePlanId)) continue;
+	const requiredPlans: FullProduct[] = [];
+	for (const planId of requiredPlanIds) {
+		if (includedIds.has(planId) || targetIds.has(planId)) continue;
 
-		const base = fromProductsAll.find((product) => product.id === basePlanId);
-		if (!base) continue;
+		const plan = fromProductsAll.find((product) => product.id === planId);
+		if (!plan) continue;
 
-		requiredBases.push(base);
-		includedIds.add(basePlanId);
+		requiredPlans.push(plan);
+		includedIds.add(planId);
 	}
 
-	return [...fromProducts, ...requiredBases];
+	return [...fromProducts, ...requiredPlans];
 };
 
 /**

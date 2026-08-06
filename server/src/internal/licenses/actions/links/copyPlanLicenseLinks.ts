@@ -1,62 +1,53 @@
-import type { FullProduct } from "@autumn/shared";
+import type { DbPlanLicense, FullProduct } from "@autumn/shared";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 import { planLicenseRepo } from "../../repos/planLicenseRepo.js";
 
 /**
  * Recreates plan_license links in a copy target by translating both ends
- * through external product ids. Links whose parent or license was not copied
- * are skipped.
+ * through external plan ids. Links whose parent or license is absent from the
+ * target are skipped.
  */
 export const copyPlanLicenseLinks = async ({
 	db,
+	links,
 	fromProducts,
 	toProducts,
 }: {
 	db: DrizzleCli;
+	links: { planLicense: DbPlanLicense; licensePlanId: string }[];
 	fromProducts: FullProduct[];
 	toProducts: FullProduct[];
 }) => {
-	const links = await planLicenseRepo.listCatalogByParentInternalProductIds({
-		db,
-		parentInternalProductIds: fromProducts.map(
-			(product) => product.internal_id,
-		),
-	});
 	if (links.length === 0) return;
 
-	const fromExternalIdByInternalId = new Map(
+	const fromPlanIdByInternalId = new Map(
 		fromProducts.map((product) => [product.internal_id, product.id]),
 	);
-	const latestToProductByExternalId = new Map<string, FullProduct>();
+	const latestToProductByPlanId = new Map<string, FullProduct>();
 	for (const product of toProducts) {
-		const existing = latestToProductByExternalId.get(product.id);
+		const existing = latestToProductByPlanId.get(product.id);
 		if (!existing || product.version > existing.version) {
-			latestToProductByExternalId.set(product.id, product);
+			latestToProductByPlanId.set(product.id, product);
 		}
 	}
 
-	for (const link of links) {
-		const parentExternalId = fromExternalIdByInternalId.get(
-			link.parent_internal_product_id,
+	for (const { planLicense, licensePlanId } of links) {
+		const parentPlanId = fromPlanIdByInternalId.get(
+			planLicense.parent_internal_product_id,
 		);
-		const licenseExternalId = fromExternalIdByInternalId.get(
-			link.license_internal_product_id,
-		);
-		const toParent = parentExternalId
-			? latestToProductByExternalId.get(parentExternalId)
+		const toParent = parentPlanId
+			? latestToProductByPlanId.get(parentPlanId)
 			: undefined;
-		const toLicense = licenseExternalId
-			? latestToProductByExternalId.get(licenseExternalId)
-			: undefined;
+		const toLicense = latestToProductByPlanId.get(licensePlanId);
 		if (!toParent || !toLicense) continue;
 
 		await planLicenseRepo.upsert({
 			db,
 			parentInternalProductId: toParent.internal_id,
 			licenseInternalProductId: toLicense.internal_id,
-			included: link.included,
-			prepaidOnly: link.prepaid_only,
-			metadata: link.metadata ?? {},
+			included: planLicense.included,
+			prepaidOnly: planLicense.prepaid_only,
+			metadata: planLicense.metadata ?? {},
 		});
 	}
 };
