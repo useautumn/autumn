@@ -136,10 +136,12 @@ export const runRedisOp = async <T>({
 		if (!router) return await runAttempt(targetRedis, timeoutMs);
 
 		const [preferred, alternate] = router.ordered();
-		const preferredAttemptBudgetMs =
-			alternate.status === "ready"
-				? getPreferredAttemptBudgetMs({ timeoutMs })
-				: timeoutMs;
+		// Only shorten the preferred attempt for an alternate worth retrying on.
+		// `canRetry` below stays broader on purpose: once the preferred has failed,
+		// a penalized alternate still beats falling open to the non-Redis path.
+		const preferredAttemptBudgetMs = router.isUsable(alternate)
+			? getPreferredAttemptBudgetMs({ timeoutMs })
+			: timeoutMs;
 		try {
 			const value = await runAttempt(preferred, preferredAttemptBudgetMs);
 			router.recordOutcome({ connection: preferred });

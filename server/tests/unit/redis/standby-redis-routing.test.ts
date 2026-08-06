@@ -441,6 +441,40 @@ describe("runRedisOp standby failover", () => {
 		expect(Date.now() - startedAt).toBeLessThan(390);
 	});
 
+	test("keeps the full deadline when the alternate is penalized", async () => {
+		const { primary, standby, redis } = createPair({
+			primaryStatus: "reconnecting",
+		});
+
+		// Fail the standby out of rotation while it is the only usable connection,
+		// then restore the primary: the pair ends up ready but distrusted.
+		standby.failGetWith = connectionError();
+		for (let attempt = 0; attempt < 3; attempt++) {
+			await runRedisOp({
+				redisInstance: redis,
+				source: "standby-test",
+				retryOnStandby: true,
+				operation: (connection) => connection.get("subject"),
+			}).catch(() => undefined);
+		}
+		standby.failGetWith = undefined;
+		primary.status = "ready";
+		const standbyCallsBefore = standby.calls.length;
+
+		primary.hangGetForMs = 520;
+		const result = await runRedisOp({
+			redisInstance: redis,
+			source: "standby-test",
+			retryOnStandby: true,
+			timeoutMs: 600,
+			operation: (connection) => connection.get("subject"),
+		});
+
+		expect(result).toBe("primary");
+		expect(primary.calls).toEqual(["get:subject"]);
+		expect(standby.calls.length).toBe(standbyCallsBefore);
+	});
+
 	test("shares one timeout budget across both attempts", async () => {
 		const { primary, standby, redis } = createPair();
 		// Primary burns most of the budget, then fails; standby never answers.
