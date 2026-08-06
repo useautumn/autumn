@@ -21,8 +21,7 @@ export const invalidateBatchMigrationCaches = async ({
 	ctx: AutumnContext;
 	pageResult: BatchMigrationPageResult;
 }): Promise<number> => {
-	// Targets depend only on the org, so resolve once per page rather than
-	// re-deriving them inside the per-customer loop.
+	// Org-scoped, so the per-customer callback below can return a fixed list.
 	const redisTargets = getRedisTargetsForCustomer({ org: ctx.org });
 
 	return batchInvalidateCachedFullSubjects({

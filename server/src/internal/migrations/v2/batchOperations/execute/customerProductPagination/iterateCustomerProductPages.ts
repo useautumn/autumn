@@ -11,9 +11,6 @@ import {
  * call. The rows a call returns drive the cursor; a short page ends the
  * iteration.
  *
- * The runaway ceiling is checked via `assertWithinCeiling`, which `executePage`
- * must call after selecting and before mutating so it trips without committing.
- *
  * Partial iterations are safe by design: every mutation is dedup-idempotent
  * and the customer page's claims stay `running` until the marks land, so a
  * failure keeps committed pages, aborts only the current one, and a replay
@@ -29,8 +26,9 @@ export const iterateCustomerProductPages = async <
 	db: DrizzleCli;
 	pageSize: number;
 	/** Select + mutate one page inside `transaction`; returns the rows it
-	 * visited (selected, whether or not they were mutated). Call
-	 * `assertWithinCeiling` with the selected count before mutating. */
+	 * visited (selected, whether or not they were mutated). Must call
+	 * `assertWithinCeiling` after selecting and before mutating, so the runaway
+	 * ceiling trips without committing a partial page. */
 	executePage: (args: {
 		transaction: DrizzleCli;
 		afterCustomerProductId: string | undefined;

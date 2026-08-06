@@ -150,7 +150,6 @@ export const runBatchMigrationChunk = async ({
 						deferCaches: caches.defer,
 					}),
 			});
-			// Keep in-flight side effects bounded before starting the next page.
 			await Promise.all([caches.settle(), events.settle()]);
 
 			summary.pages += 1;
