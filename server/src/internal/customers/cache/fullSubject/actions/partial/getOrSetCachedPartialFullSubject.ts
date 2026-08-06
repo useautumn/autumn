@@ -6,6 +6,7 @@ import {
 import type { SubjectReadFrom } from "@/db/resolveSubjectReadDb.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { getFullSubjectNormalized } from "@/internal/customers/repos/getFullSubject/index.js";
+import { filterDrainedLooseEntitlements } from "../../filterDrainedLooseEntitlements.js";
 import { filterFullSubjectByFeatureIds } from "../../filterFullSubjectByFeatureIds.js";
 import { isReplicaSourced } from "../../subjectProvenance.js";
 import { rehydrateWithLiveBalances } from "../rehydrateWithLiveBalances.js";
@@ -50,7 +51,7 @@ export const getOrSetCachedPartialFullSubject = async ({
 				`[getOrSetCachedPartialFullSubject] Subject hit for ${customerId}${entityId ? `:${entityId}` : ""}, source: ${source}`,
 			);
 			if (ctx.subjectReadTrace) ctx.subjectReadTrace.source = "cache";
-			return cached;
+			return filterDrainedLooseEntitlements({ fullSubject: cached });
 		}
 	}
 
@@ -88,16 +89,21 @@ export const getOrSetCachedPartialFullSubject = async ({
 			ctx,
 			normalized,
 		});
+		// Live balance patches can drain a grant that was still live at query time.
 		if (withLiveBalances) {
-			return filterFullSubjectByFeatureIds({
-				fullSubject: withLiveBalances,
-				featureIds,
+			return filterDrainedLooseEntitlements({
+				fullSubject: filterFullSubjectByFeatureIds({
+					fullSubject: withLiveBalances,
+					featureIds,
+				}),
 			});
 		}
 	}
 
-	return filterFullSubjectByFeatureIds({
-		fullSubject,
-		featureIds,
+	return filterDrainedLooseEntitlements({
+		fullSubject: filterFullSubjectByFeatureIds({
+			fullSubject,
+			featureIds,
+		}),
 	});
 };
