@@ -13,5 +13,3 @@ SCHEMA >
 ENGINE "AggregatingMergeTree"
 ENGINE_PARTITION_KEY "toYYYYMM(hour)"
 ENGINE_SORTING_KEY "org_id, env, property_key, event_name, hour"
-
-BACKFILL skip
