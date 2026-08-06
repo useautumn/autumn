@@ -63,7 +63,7 @@ const UpdateFeatureGrantSchema = z
 				z
 					.object({
 						feature_id: z.string().min(1),
-						included: z.number().positive().nullable(),
+						included: z.number().nonnegative().nullable(),
 						expiry: ApiGrantV0Schema.shape.expiry,
 					})
 					.strict(),

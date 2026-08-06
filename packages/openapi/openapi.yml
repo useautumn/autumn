@@ -35297,9 +35297,9 @@ paths:
                           included:
                             anyOf:
                               - type: number
-                                exclusiveMinimum: 0
+                                minimum: 0
                               - type: "null"
-                            description: A positive amount to grant, or null for boolean features.
+                            description: A non-negative amount to grant, or null for boolean features.
                           expiry:
                             anyOf:
                               - type: object
@@ -36136,7 +36136,7 @@ paths:
                           included:
                             anyOf:
                               - type: number
-                                exclusiveMinimum: 0
+                                minimum: 0
                               - type: "null"
                           expiry:
                             anyOf:
