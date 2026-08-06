@@ -202,8 +202,12 @@ describe("createWorkerDrainer", () => {
 		});
 
 		drainer.drain();
-		expect(idleSweeps).toBeGreaterThanOrEqual(1);
 		expect(exits).toHaveLength(0);
+
+		// Sweeps start one interval in, never at t=0 (header-retirement beat).
+		expect(idleSweeps).toBe(0);
+		await new Promise((resolve) => setTimeout(resolve, 25));
+		expect(idleSweeps).toBeGreaterThanOrEqual(1);
 
 		closeCallbacks[0]?.();
 		expect(exits).toEqual([0]);
@@ -229,6 +233,29 @@ describe("createWorkerDrainer", () => {
 
 		await new Promise((resolve) => setTimeout(resolve, 60));
 		expect(exits).toEqual([0]);
+	});
+
+	test("onDrainStart fires before the server begins closing", () => {
+		const order: string[] = [];
+		const server: FakeServer = {
+			close: () => {
+				order.push("close");
+			},
+		};
+
+		const drainer = createWorkerDrainer({
+			server,
+			exit: () => {},
+			drainTimeoutMs: 5_000,
+			idleSweepIntervalMs: 10,
+			onDrainStart: () => {
+				order.push("drainStart");
+			},
+			log: () => {},
+		});
+
+		drainer.drain();
+		expect(order).toEqual(["drainStart", "close"]);
 	});
 
 	test("drain is idempotent — a second call neither double-closes nor double-exits", async () => {

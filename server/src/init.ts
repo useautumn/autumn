@@ -71,6 +71,7 @@ import { startMemoryMonitor } from "./utils/memoryMonitor.js";
 checkEnvVars();
 
 let shuttingDown = false;
+const drainState = { draining: false };
 
 const init = async ({
 	startupStartedAt,
@@ -103,7 +104,12 @@ const init = async ({
 		: 8080;
 
 	const requestListener = getRequestListener(app.fetch);
-	const server = http.createServer(requestListener);
+	const server = http.createServer((req, res) => {
+		// While draining for a fork recycle, tell pooled clients to retire the
+		// socket after this response instead of racing the idle eviction.
+		if (drainState.draining) res.setHeader("connection", "close");
+		requestListener(req, res);
+	});
 
 	server.keepAliveTimeout = 120000;
 	server.headersTimeout = 120000;
@@ -164,6 +170,9 @@ if (process.env.NODE_ENV === "development") {
 		const server = await init({ startupStartedAt: Date.now() });
 		startWorkerForkRecycling({
 			server,
+			onDrainStart: () => {
+				drainState.draining = true;
+			},
 			exitGracefully: () => {
 				// Backstop: a hung flush must not strand a drained fork.
 				const forceExit = setTimeout(() => process.exit(0), 5_000);

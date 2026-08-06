@@ -14,12 +14,17 @@ export const createWorkerDrainer = ({
 	exit,
 	drainTimeoutMs,
 	idleSweepIntervalMs = 1_000,
+	onDrainStart,
 	log,
 }: {
 	server: DrainableServer;
 	exit: (code: number) => void;
 	drainTimeoutMs: number;
 	idleSweepIntervalMs?: number;
+	/** Runs before the server closes — lets the request path start sending
+	 *  `Connection: close` so pooled clients retire sockets instead of racing
+	 *  the idle-connection eviction. */
+	onDrainStart?: () => void;
 	log: (message: string) => void;
 }): WorkerDrainer => {
 	let draining = false;
@@ -28,6 +33,7 @@ export const createWorkerDrainer = ({
 		drain: () => {
 			if (draining) return;
 			draining = true;
+			onDrainStart?.();
 
 			let exited = false;
 			const exitOnce = (reason: string) => {
@@ -40,9 +46,11 @@ export const createWorkerDrainer = ({
 			};
 
 			log(`[ForkRecycle] Worker ${process.pid} draining`);
-			server.closeIdleConnections?.();
 			server.close(() => exitOnce("drained"));
 
+			// First sweep only after a full interval: gives in-flight responses a
+			// beat to carry `Connection: close` so pooled sockets retire themselves
+			// instead of being evicted out from under the client.
 			const idleSweep = setInterval(
 				() => server.closeIdleConnections?.(),
 				idleSweepIntervalMs,

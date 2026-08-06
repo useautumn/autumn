@@ -68,11 +68,13 @@ export const attachPrimaryForkRecycling = ({
 export const startWorkerForkRecycling = ({
 	server,
 	exitGracefully,
+	onDrainStart,
 	logger,
 }: {
 	server: Parameters<typeof createWorkerDrainer>[0]["server"];
 	/** Runs the worker's normal shutdown (flushes, pool close, process.exit). */
 	exitGracefully: () => void;
+	onDrainStart?: () => void;
 	logger: Logger;
 }) => {
 	const config = getForkRecycleConfig();
@@ -85,6 +87,7 @@ export const startWorkerForkRecycling = ({
 		server,
 		exit: () => exitGracefully(),
 		drainTimeoutMs: config.drainTimeoutMs,
+		onDrainStart,
 		log: (message) => logger.info(message),
 	});
 

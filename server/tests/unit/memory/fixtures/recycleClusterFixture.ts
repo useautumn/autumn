@@ -31,10 +31,11 @@ if (cluster.isPrimary) {
 		console.log(`WORKER_DIED ${worker.process.pid}`);
 	});
 } else {
+	const drainState = { draining: false };
 	const server = http.createServer((_req, res) => {
 		// In-flight window so a hard kill mid-request would surface as a failure.
 		setTimeout(() => {
-			res.setHeader("connection", "keep-alive");
+			res.setHeader("connection", drainState.draining ? "close" : "keep-alive");
 			res.end(`ok:${process.pid}`);
 		}, 20);
 	});
@@ -42,6 +43,9 @@ if (cluster.isPrimary) {
 	server.listen(PORT, "127.0.0.1", () => {
 		startWorkerForkRecycling({
 			server,
+			onDrainStart: () => {
+				drainState.draining = true;
+			},
 			exitGracefully: () => process.exit(0),
 			logger: fixtureLogger,
 		});
