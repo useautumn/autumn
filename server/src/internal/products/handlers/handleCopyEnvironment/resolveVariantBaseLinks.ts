@@ -40,7 +40,10 @@ export const resolveSourceBasePlanIds = async ({
 			db,
 			internalIds: missingInternalIds,
 		});
+		const source = fromProductsAll[0];
 		for (const base of olderBaseVersions) {
+			// listByInternalIds is unscoped; ignore rows outside the source org/env.
+			if (base.org_id !== source?.org_id || base.env !== source?.env) continue;
 			basePlanIdByInternalId.set(base.internal_id, base.id);
 		}
 	}
@@ -59,8 +62,8 @@ export const resolveSourceBasePlanIds = async ({
 
 /**
  * Pulls a variant's base into the copy set unless the target already has a
- * plan with that id. A same-id target variant can't satisfy the link either
- * way — updating it wouldn't detach it — so the copy proceeds unlinked.
+ * plan with that id. A copy never rewrites target base links it wasn't asked
+ * to touch, so a same-id target variant leaves the copied variant unlinked.
  */
 export const withRequiredBases = ({
 	fromProducts,

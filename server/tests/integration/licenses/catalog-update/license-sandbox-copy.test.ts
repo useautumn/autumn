@@ -563,8 +563,8 @@ describe("sandboxes.copy: selective copy via productIds / featureIds", () => {
 			[CREDIT_FEATURE, MSG_FEATURE].sort(),
 		);
 		const credit = features.find((f) => f.id === CREDIT_FEATURE);
-		expect(credit).toBeDefined();
-		expect(isAnyCreditSystem(credit!.type)).toBe(true);
+		if (!credit) throw new Error(`${CREDIT_FEATURE} missing in target`);
+		expect(isAnyCreditSystem(credit.type)).toBe(true);
 	});
 
 	test("a credit-system featureId pulls in the metered feature it references", async () => {

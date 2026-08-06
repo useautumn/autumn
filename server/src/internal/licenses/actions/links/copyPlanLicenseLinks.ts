@@ -5,29 +5,26 @@ import { planLicenseRepo } from "../../repos/planLicenseRepo.js";
 import { validateLicenseLink } from "./validateLicenseLink.js";
 
 /**
- * Recreates plan_license links in a copy target by translating both ends
- * through external plan ids. Links whose parent or license is absent from the
- * target are skipped silently; validation-rejected links are skipped with a
- * warning.
+ * Recreates plan_license links in a copy target, translated through external
+ * plan ids. Absent-end links are skipped; validation failures warn and skip.
  */
 export const copyPlanLicenseLinks = async ({
 	db,
 	logger,
 	links,
-	fromProducts,
 	toProducts,
 }: {
 	db: DrizzleCli;
 	logger: Logger;
-	links: { planLicense: DbPlanLicense; licensePlanId: string }[];
-	fromProducts: FullProduct[];
+	links: {
+		planLicense: DbPlanLicense;
+		licensePlanId: string;
+		parentPlanId: string;
+	}[];
 	toProducts: FullProduct[];
 }) => {
 	if (links.length === 0) return;
 
-	const fromPlanIdByInternalId = new Map(
-		fromProducts.map((product) => [product.internal_id, product.id]),
-	);
 	const latestToProductByPlanId = new Map<string, FullProduct>();
 	for (const product of toProducts) {
 		const existing = latestToProductByPlanId.get(product.id);
@@ -36,13 +33,8 @@ export const copyPlanLicenseLinks = async ({
 		}
 	}
 
-	for (const { planLicense, licensePlanId } of links) {
-		const parentPlanId = fromPlanIdByInternalId.get(
-			planLicense.parent_internal_product_id,
-		);
-		const toParent = parentPlanId
-			? latestToProductByPlanId.get(parentPlanId)
-			: undefined;
+	for (const { planLicense, licensePlanId, parentPlanId } of links) {
+		const toParent = latestToProductByPlanId.get(parentPlanId);
 		const toLicense = latestToProductByPlanId.get(licensePlanId);
 		if (!toParent || !toLicense) continue;
 
@@ -55,7 +47,7 @@ export const copyPlanLicenseLinks = async ({
 			});
 		} catch (error) {
 			logger.warn(
-				`copy env: skipping license link ${toParent.id} -> ${licensePlanId}: ${error instanceof Error ? error.message : error}`,
+				`copy env: skipping license link ${parentPlanId} -> ${licensePlanId}: ${error instanceof Error ? error.message : error}`,
 			);
 			continue;
 		}

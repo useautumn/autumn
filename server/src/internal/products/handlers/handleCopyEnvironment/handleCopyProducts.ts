@@ -136,12 +136,10 @@ export const handleCopyProducts = async ({
 
 	const copyOneProduct = ({
 		fromProductV2,
-		basePlanId,
-		targetBaseInternalId,
+		targetBase,
 	}: {
 		fromProductV2: ProductV2;
-		basePlanId?: string;
-		targetBaseInternalId?: string;
+		targetBase?: { planId: string; internalId: string };
 	}) => {
 		const toProductV2 = toProductsV2.find((p) => p.id === fromProductV2.id);
 
@@ -152,19 +150,17 @@ export const handleCopyProducts = async ({
 				ctx: newContext,
 				productId: fromProductV2.id,
 				query: { disable_version: true },
-				updates: basePlanId
-					? { ...conformedProduct, base_plan_id: basePlanId }
+				updates: targetBase
+					? { ...conformedProduct, base_plan_id: targetBase.planId }
 					: conformedProduct,
 			});
 		}
-		// Variants defer Stripe so they reuse the base family's resources below,
-		// matching createVariant.
 		return createProduct({
 			ctx: newContext,
-			data: targetBaseInternalId
+			data: targetBase
 				? {
 						...conformedProduct,
-						base_internal_product_id: targetBaseInternalId,
+						base_internal_product_id: targetBase.internalId,
 						create_in_stripe: false,
 					}
 				: conformedProduct,
@@ -184,32 +180,40 @@ export const handleCopyProducts = async ({
 		baseProductsV2.map((fromProductV2) => copyOneProduct({ fromProductV2 })),
 	);
 
+	// listFull throws on absent ids — only query bases the target actually has.
+	const copiedBaseIds = new Set(baseProductsV2.map((p) => p.id));
+	const targetIds = new Set(toProducts.map((p) => p.id));
 	const targetBaseInternalIds = await getTargetBaseInternalIds({
 		db,
 		toOrgId: toOrg.id,
 		toEnv,
-		basePlanIds: deduplicateArray([...basePlanIdByVariantId.values()]),
+		basePlanIds: deduplicateArray(
+			[...basePlanIdByVariantId.values()].filter(
+				(planId) => copiedBaseIds.has(planId) || targetIds.has(planId),
+			),
+		),
 	});
 
 	await Promise.all(
 		variantProductsV2.map((fromProductV2) => {
-			const basePlanId = basePlanIdByVariantId.get(fromProductV2.id) as string;
-			const targetBaseInternalId = targetBaseInternalIds.get(basePlanId);
-			if (!targetBaseInternalId) {
+			const basePlanId = basePlanIdByVariantId.get(fromProductV2.id);
+			const targetBaseInternalId = basePlanId
+				? targetBaseInternalIds.get(basePlanId)
+				: undefined;
+			if (!basePlanId || !targetBaseInternalId) {
 				ctx.logger.warn(
 					`copy env: target ${basePlanId} cannot be a variant base, copying ${fromProductV2.id} unlinked`,
 				);
+				return copyOneProduct({ fromProductV2 });
 			}
 			return copyOneProduct({
 				fromProductV2,
-				basePlanId: targetBaseInternalId ? basePlanId : undefined,
-				targetBaseInternalId,
+				targetBase: { planId: basePlanId, internalId: targetBaseInternalId },
 			});
 		}),
 	);
 
-	// Licenses are never pulled into the copy set (their features may not be
-	// selected); links resolve only against licenses already in the target.
+	// Licenses are never pulled into the copy set — their features weren't selected.
 	const licenseLinks = await planLicenseRepo.listWithLicensePlanIdByParents({
 		db,
 		parentInternalProductIds: fromProducts.map(
@@ -226,21 +230,20 @@ export const handleCopyProducts = async ({
 		inIds: fromProducts.map((product) => product.id),
 	});
 
-	const copiedVariants = copiedToProducts.filter(
-		(product) => product.base_internal_product_id !== null,
+	// Created variants deferred Stripe; reuse the base family then init,
+	// sequentially like createVariant so siblings can't double-create.
+	const createdVariants = copiedToProducts.filter(
+		(product) =>
+			product.base_internal_product_id !== null && !targetIds.has(product.id),
 	);
 	await applyStripeReuseFromVariantFamilies({
 		ctx: newContext,
-		products: copiedVariants,
+		products: createdVariants,
 	});
-	await Promise.all(
-		copiedVariants.map((product) =>
-			initProductInStripe({ ctx: newContext, product }),
-		),
-	);
+	for (const product of createdVariants) {
+		await initProductInStripe({ ctx: newContext, product });
+	}
 
-	// A license outside the copy set can still satisfy its link if the target
-	// already has a plan with that id.
 	const copiedIds = new Set(copiedToProducts.map((product) => product.id));
 	const existingTargetLicenses = toProducts.filter(
 		(product) =>
@@ -252,7 +255,6 @@ export const handleCopyProducts = async ({
 		db,
 		logger: ctx.logger,
 		links: licenseLinks,
-		fromProducts,
 		toProducts: [...copiedToProducts, ...existingTargetLicenses],
 	});
 };

@@ -52,6 +52,8 @@ const EXIST_PARENT = `cll_exist_parent_${suffix}`;
 const EXIST_LICENSE = `cll_exist_license_${suffix}`;
 const REPAIR_PARENT = `cll_repair_parent_${suffix}`;
 const REPAIR_LICENSE = `cll_repair_license_${suffix}`;
+const ARCH_PARENT = `cll_arch_parent_${suffix}`;
+const ARCH_LICENSE = `cll_arch_license_${suffix}`;
 
 let org: Organization | undefined;
 
@@ -242,6 +244,31 @@ describe("copying an env carries over plan license links", () => {
 		expect(liveLicense.internal_id).toBe(preExistingLicense.internal_id);
 		expect(links).toHaveLength(1);
 		expect(links[0].license_internal_product_id).toBe(liveLicense.internal_id);
+	});
+
+	test("a link to an archived target license is skipped", async () => {
+		await seedLinkedPair({
+			parentId: ARCH_PARENT,
+			licenseId: ARCH_LICENSE,
+		});
+		const preExisting = await seedPlan({
+			env: AppEnv.Live,
+			planId: ARCH_LICENSE,
+		});
+		await ProductService.updateByInternalId({
+			db,
+			internalId: preExisting.internal_id,
+			update: { archived: true },
+		});
+		await invalidateProductsCache({
+			orgId: org?.id as string,
+			env: AppEnv.Live,
+		});
+
+		await copyToLive([ARCH_PARENT]);
+
+		const liveParent = await getLivePlan(ARCH_PARENT);
+		expect(await listLiveLinks(liveParent)).toHaveLength(0);
 	});
 
 	test("re-copy repairs a missing link when both products exist in the target", async () => {

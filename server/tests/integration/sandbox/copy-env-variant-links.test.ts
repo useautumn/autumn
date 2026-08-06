@@ -33,6 +33,9 @@ const SOLO_BASE_PLAN = `cvl_solo_base_${suffix}`;
 const SOLO_VARIANT_PLAN = `cvl_solo_variant_${suffix}`;
 const REPAIR_BASE_PLAN = `cvl_repair_base_${suffix}`;
 const REPAIR_VARIANT_PLAN = `cvl_repair_variant_${suffix}`;
+const COLLIDE_OTHER_PLAN = `cvl_collide_other_${suffix}`;
+const COLLIDE_BASE_PLAN = `cvl_collide_base_${suffix}`;
+const COLLIDE_VARIANT_PLAN = `cvl_collide_variant_${suffix}`;
 
 let org: Organization | undefined;
 
@@ -168,6 +171,41 @@ describe("copying an env preserves variant base plan links", () => {
 		expect(liveBase).toBeDefined();
 		expect(liveVariant?.base_internal_product_id).toBe(
 			liveBase?.internal_id as string,
+		);
+	});
+
+	test("a same-id target variant leaves the copied variant unlinked and untouched", async () => {
+		// Live already uses the base's id for a variant of another plan; the copy
+		// must neither nest under it nor rewrite it.
+		const liveOther = await seedPlan({
+			env: AppEnv.Live,
+			planId: COLLIDE_OTHER_PLAN,
+		});
+		const liveCollider = await seedPlan({
+			env: AppEnv.Live,
+			planId: COLLIDE_BASE_PLAN,
+			baseInternalProductId: liveOther.internal_id,
+		});
+		const sandboxBase = await seedPlan({
+			env: AppEnv.Sandbox,
+			planId: COLLIDE_BASE_PLAN,
+		});
+		await seedPlan({
+			env: AppEnv.Sandbox,
+			planId: COLLIDE_VARIANT_PLAN,
+			baseInternalProductId: sandboxBase.internal_id,
+		});
+
+		await copyToLive([COLLIDE_VARIANT_PLAN]);
+
+		const livePlans = await listLivePlans();
+		const liveVariant = livePlans.find((p) => p.id === COLLIDE_VARIANT_PLAN);
+		const liveColliderAfter = livePlans.find((p) => p.id === COLLIDE_BASE_PLAN);
+
+		expect(liveVariant).toBeDefined();
+		expect(liveVariant?.base_internal_product_id).toBeNull();
+		expect(liveColliderAfter?.base_internal_product_id).toBe(
+			liveCollider.base_internal_product_id,
 		);
 	});
 
