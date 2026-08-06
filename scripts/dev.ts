@@ -44,6 +44,11 @@ const viteAppEnv = envFile.includes(".env.prod")
 		? "staging"
 		: "dev";
 const useLocalAuthUrls = viteAppEnv === "dev" && !isProductionMode;
+// `bun dev:services up` runs Dragonfly on :6379; use it instead of the shared
+// cloud cache. Worktrees provision their own and set this in their env file.
+const LOCAL_MISC_CACHE_URL = "redis://localhost:6379";
+const useLocalMiscCache =
+	viteAppEnv === "dev" && !isProductionMode && worktreeNum === 1;
 const localUrl = (value: string | undefined, fallback: string) =>
 	value && !value.includes(".useautumn.com") ? value : fallback;
 const slackRedirectFromPublicTunnel = publicTunnelUrl
@@ -316,6 +321,9 @@ async function startDev() {
 						process.env.VITE_FRONTEND_URL,
 						LOCAL_CLIENT_URL,
 					),
+				}),
+				...(useLocalMiscCache && {
+					MISC_CACHE_DRAGONFLY_PUBLIC_URL: LOCAL_MISC_CACHE_URL,
 				}),
 				...(process.env.DB_SCHEMA && { DB_SCHEMA: process.env.DB_SCHEMA }),
 				...(worktreeNum > 1 && {
