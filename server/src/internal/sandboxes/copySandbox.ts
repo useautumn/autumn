@@ -12,6 +12,7 @@ import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { FeatureService } from "@/internal/features/FeatureService.js";
 import { handleCopyFeatures } from "@/internal/products/handlers/handleCopyEnvironment/handleCopyFeatures.js";
 import { handleCopyProducts } from "@/internal/products/handlers/handleCopyEnvironment/handleCopyProducts.js";
+import { resolveSourceBasePlanIds } from "@/internal/products/handlers/handleCopyEnvironment/resolveVariantBaseLinks.js";
 import { ProductService } from "@/internal/products/ProductService.js";
 import { getOwnedSandbox } from "./getOwnedSandbox.js";
 
@@ -142,9 +143,23 @@ export const copySandboxForOrg = async ({
 			});
 		}
 
+		// handleCopyProducts pulls a variant's base into the copy set, so the
+		// base's item features must come along too.
+		const basePlanIdByVariantId = await resolveSourceBasePlanIds({
+			db,
+			fromProducts: fromProducts.filter((p) =>
+				requestedProductIds.includes(p.id),
+			),
+			fromProductsAll: fromProducts,
+		});
+		const wantedProductIds = new Set([
+			...requestedProductIds,
+			...basePlanIdByVariantId.values(),
+		]);
+
 		const wantedFeatureIds = new Set(requestedFeatureIds);
 		for (const product of fromProducts) {
-			if (!requestedProductIds.includes(product.id)) continue;
+			if (!wantedProductIds.has(product.id)) continue;
 			const { items } = mapToProductV2({ product, features: fromFeatures });
 			for (const item of items) {
 				if (item.feature_id) wantedFeatureIds.add(item.feature_id);
