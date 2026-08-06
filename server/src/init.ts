@@ -72,7 +72,10 @@ import { startMemoryMonitor } from "./utils/memoryMonitor.js";
 checkEnvVars();
 
 let shuttingDown = false;
-const drainState = { draining: false };
+const drainState: {
+	draining: boolean;
+	getActiveConnectionCount: () => number;
+} = { draining: false, getActiveConnectionCount: () => 0 };
 
 const init = async ({
 	startupStartedAt,
@@ -111,6 +114,17 @@ const init = async ({
 		if (drainState.draining) res.setHeader("connection", "close");
 		requestListener(req, res);
 	});
+
+	// Streamed responses outlive the request middleware (the body keeps writing
+	// after the handler returns), so drain-extension counts sockets: during a
+	// drain the idle sweeps evict keep-alives, leaving only genuinely active
+	// connections — streams included.
+	const openSockets = new Set<import("node:net").Socket>();
+	server.on("connection", (socket) => {
+		openSockets.add(socket);
+		socket.on("close", () => openSockets.delete(socket));
+	});
+	drainState.getActiveConnectionCount = () => openSockets.size;
 
 	server.keepAliveTimeout = 120000;
 	server.headersTimeout = 120000;
@@ -172,7 +186,10 @@ if (process.env.NODE_ENV === "development") {
 		startWorkerForkRecycling({
 			server,
 			getActiveRequestCount: () =>
-				listInFlightRequests({ now: Date.now() }).length,
+				Math.max(
+					listInFlightRequests({ now: Date.now() }).length,
+					drainState.getActiveConnectionCount(),
+				),
 			onDrainStart: () => {
 				drainState.draining = true;
 			},

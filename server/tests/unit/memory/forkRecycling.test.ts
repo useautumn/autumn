@@ -276,6 +276,28 @@ describe("createRecycleCoordinator", () => {
 		expect(drained).toEqual(["w1"]);
 	});
 
+	test("old worker crashing while its drain is deferred completes the cycle instead of wedging", () => {
+		const { coordinator, forked, drained } = createHarness();
+
+		// Crash respawn booting defers the upcoming drain.
+		coordinator.handleWorkerExit({ workerId: "w-crashed" });
+		coordinator.handleRecycleRequest({ workerId: "w1" });
+		coordinator.handleRecycleRequest({ workerId: "w2" });
+		coordinator.handleWorkerListening({ workerId: forked[0] });
+		expect(drained).toHaveLength(0);
+
+		// Old worker dies while deferred: cycle must complete, not wait forever.
+		coordinator.handleWorkerExit({ workerId: "w1" });
+		// w2's queued cycle starts…
+		expect(forked).toHaveLength(2);
+
+		// …and when the crash respawn finally listens, no drain goes to the
+		// dead w1 — only w2's normal drain proceeds.
+		coordinator.handleWorkerListening({ workerId: "respawn-of-w-crashed" });
+		coordinator.handleWorkerListening({ workerId: forked[1] });
+		expect(drained).toEqual(["w2"]);
+	});
+
 	test("queued cycle after a post-drain replacement crash waits for the crash respawn", () => {
 		const { coordinator, forked, drained } = createHarness();
 

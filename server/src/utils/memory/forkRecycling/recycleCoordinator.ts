@@ -188,9 +188,19 @@ export const createRecycleCoordinator = ({
 				}
 
 				if (activeCycle?.oldWorkerId === workerId) {
+					requestedWorkerIds.delete(workerId);
+					if (activeCycle.drainDeferred) {
+						// Replacement is already listening (drain deferred): the crash
+						// completes the cycle outright — a deferred drain to a dead
+						// worker would wait forever on an exit that already happened.
+						log(
+							`[ForkRecycle] Worker ${workerId} died with drain deferred; replacement ${activeCycle.replacementId} adopts its slot`,
+						);
+						startNextPendingCycle();
+						return false;
+					}
 					// Crashed before its drain: the already-booting replacement is its
 					// respawn, so forking again here would leave a surplus worker.
-					requestedWorkerIds.delete(workerId);
 					activeCycle.oldExited = true;
 					log(
 						`[ForkRecycle] Worker ${workerId} died mid-recycle; replacement ${activeCycle.replacementId} adopts its slot`,
