@@ -150,13 +150,13 @@ export const copyProductForOrgs = async ({
 		fromFullProduct.base_variant_id = null;
 	}
 
+	const toContext = { ...ctx, org: toOrg, env: toEnv, features: toFeatures };
+
 	// A license plan already in the target is reused, not copied — pulling its
 	// features in anyway can abort the copy on unrelated type conflicts.
 	const existingTargetLicensePlanIds = await listExistingTargetPlanIds({
-		db,
+		toContext,
 		planIds: licensePlanIds,
-		toOrg,
-		toEnv,
 	});
 	const licensePlansToCopy = sourceLicensePlans.filter(
 		(licensePlan) => !existingTargetLicensePlanIds.has(licensePlan.id),
@@ -215,7 +215,6 @@ export const copyProductForOrgs = async ({
 		logger,
 	});
 
-	const toContext = { ...ctx, org: toOrg, env: toEnv, features: toFeatures };
 	const copiedBase = await ProductService.getFull({
 		db,
 		idOrInternalId: toBaseInternalId,
@@ -225,31 +224,23 @@ export const copyProductForOrgs = async ({
 	await initProductInStripe({ ctx: toContext, product: copiedBase });
 
 	const copiedVariantIds = await copyBaseVariants({
-		ctx,
 		toContext,
 		variants,
 		fromEnv,
-		toOrg,
-		toEnv,
-		toBaseInternalId,
 		fromFeatures,
-		toFeatures,
+		toBaseInternalId,
 		crossOrg,
 	});
 
 	await copyLicenseLinksForPlanCopy({
-		ctx,
 		toContext,
 		fromBase: fromFullProduct,
 		sourceLinks: sourceLicenseLinks,
 		sourceLicensePlans,
 		fromEnv,
-		toOrg,
-		toEnv,
+		fromFeatures,
 		toBaseId: toId,
 		copiedVariantIds,
-		fromFeatures,
-		toFeatures,
 		crossOrg,
 	});
 

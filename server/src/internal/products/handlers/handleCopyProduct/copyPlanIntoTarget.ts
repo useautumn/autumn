@@ -1,29 +1,20 @@
-import type {
-	AppEnv,
-	Feature,
-	FullProduct,
-	Organization,
-} from "@autumn/shared";
-import type { DrizzleCli } from "@/db/initDrizzle.js";
-import type { Logger } from "@/external/logtail/logtailUtils.js";
+import type { AppEnv, Feature, FullProduct } from "@autumn/shared";
+import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { ProductService } from "@/internal/products/ProductService.js";
 import { copyProduct } from "@/internal/products/productUtils.js";
 
 /** Plan ids from the given set that already exist in the target (org, env). */
 export const listExistingTargetPlanIds = async ({
-	db,
+	toContext,
 	planIds,
-	toOrg,
-	toEnv,
 }: {
-	db: DrizzleCli;
+	toContext: AutumnContext;
 	planIds: string[];
-	toOrg: Organization;
-	toEnv: AppEnv;
 }): Promise<Set<string>> => {
+	const { db, org, env } = toContext;
 	const existing = await Promise.all(
 		planIds.map((planId) =>
-			ProductService.get({ db, id: planId, orgId: toOrg.id, env: toEnv }),
+			ProductService.get({ db, id: planId, orgId: org.id, env }),
 		),
 	);
 	return new Set(
@@ -38,43 +29,37 @@ export const listExistingTargetPlanIds = async ({
  * dropping the base variant pointer on cross-org copies.
  */
 export const copyPlanIntoTarget = async ({
-	db,
-	logger,
+	toContext,
 	plan,
 	fromEnv,
-	toOrg,
-	toEnv,
 	fromFeatures,
-	toFeatures,
 	crossOrg,
 	baseInternalProductId,
 }: {
-	db: DrizzleCli;
-	logger: Logger;
+	toContext: AutumnContext;
 	plan: FullProduct;
 	fromEnv: AppEnv;
-	toOrg: Organization;
-	toEnv: AppEnv;
 	fromFeatures: Feature[];
-	toFeatures: Feature[];
 	crossOrg: boolean;
 	baseInternalProductId?: string | null;
-}): Promise<string> =>
-	copyProduct({
+}): Promise<string> => {
+	const { db, logger, org, env, features } = toContext;
+	return copyProduct({
 		db,
 		product: {
 			...plan,
 			is_default: false,
 			base_variant_id: crossOrg ? null : plan.base_variant_id,
 		},
-		toOrgId: toOrg.id,
+		toOrgId: org.id,
 		toId: plan.id,
 		toName: plan.name,
 		fromEnv,
-		toEnv,
-		toFeatures,
+		toEnv: env,
+		toFeatures: features,
 		fromFeatures,
-		org: toOrg,
+		org,
 		logger,
 		baseInternalProductId,
 	});
+};

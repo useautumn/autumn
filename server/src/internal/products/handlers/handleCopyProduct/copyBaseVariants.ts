@@ -51,36 +51,26 @@ export const listSourceVariants = async ({
  * block promoting the base.
  */
 export const copyBaseVariants = async ({
-	ctx,
 	toContext,
 	variants,
 	fromEnv,
-	toOrg,
-	toEnv,
-	toBaseInternalId,
 	fromFeatures,
-	toFeatures,
+	toBaseInternalId,
 	crossOrg,
 }: {
-	ctx: AutumnContext;
 	toContext: AutumnContext;
 	variants: FullProduct[];
 	fromEnv: AppEnv;
-	toOrg: Organization;
-	toEnv: AppEnv;
-	toBaseInternalId: string;
 	fromFeatures: Feature[];
-	toFeatures: Feature[];
+	toBaseInternalId: string;
 	crossOrg: boolean;
 }): Promise<string[]> => {
 	if (variants.length === 0) return [];
 
-	const { db, logger } = ctx;
+	const { db, logger, org: toOrg, env: toEnv } = toContext;
 	const conflictingIds = await listExistingTargetPlanIds({
-		db,
+		toContext,
 		planIds: variants.map((variant) => variant.id),
-		toOrg,
-		toEnv,
 	});
 
 	const copiedVariantIds: string[] = [];
@@ -93,14 +83,10 @@ export const copyBaseVariants = async ({
 		}
 
 		await copyPlanIntoTarget({
-			db,
-			logger,
+			toContext,
 			plan: variant,
 			fromEnv,
-			toOrg,
-			toEnv,
 			fromFeatures,
-			toFeatures,
 			crossOrg,
 			baseInternalProductId: toBaseInternalId,
 		});

@@ -4,7 +4,6 @@ import {
 	deduplicateArray,
 	type Feature,
 	type FullProduct,
-	type Organization,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { copyPlanLicenseLinks } from "@/internal/licenses/actions/links/copyPlanLicenseLinks.js";
@@ -21,21 +20,16 @@ import {
  * id when the copy renamed it.
  */
 export const copyLicenseLinksForPlanCopy = async ({
-	ctx,
 	toContext,
 	fromBase,
 	sourceLinks,
 	sourceLicensePlans,
 	fromEnv,
-	toOrg,
-	toEnv,
+	fromFeatures,
 	toBaseId,
 	copiedVariantIds,
-	fromFeatures,
-	toFeatures,
 	crossOrg,
 }: {
-	ctx: AutumnContext;
 	toContext: AutumnContext;
 	fromBase: FullProduct;
 	sourceLinks: {
@@ -45,15 +39,12 @@ export const copyLicenseLinksForPlanCopy = async ({
 	}[];
 	sourceLicensePlans: FullProduct[];
 	fromEnv: AppEnv;
-	toOrg: Organization;
-	toEnv: AppEnv;
+	fromFeatures: Feature[];
 	toBaseId: string;
 	copiedVariantIds: string[];
-	fromFeatures: Feature[];
-	toFeatures: Feature[];
 	crossOrg: boolean;
 }): Promise<void> => {
-	const { db, logger } = ctx;
+	const { db, logger, org: toOrg, env: toEnv } = toContext;
 	if (sourceLinks.length === 0) return;
 
 	const remapPlanId = (planId: string) =>
@@ -72,10 +63,8 @@ export const copyLicenseLinksForPlanCopy = async ({
 		links.map((link) => link.licensePlanId),
 	).filter((planId) => !copiedPlanIds.has(planId));
 	const presentIds = await listExistingTargetPlanIds({
-		db,
+		toContext,
 		planIds: candidateLicensePlanIds,
-		toOrg,
-		toEnv,
 	});
 
 	const licensePlansToCopy = sourceLicensePlans.filter(
@@ -85,14 +74,10 @@ export const copyLicenseLinksForPlanCopy = async ({
 	);
 	for (const licensePlan of licensePlansToCopy) {
 		await copyPlanIntoTarget({
-			db,
-			logger,
+			toContext,
 			plan: licensePlan,
 			fromEnv,
-			toOrg,
-			toEnv,
 			fromFeatures,
-			toFeatures,
 			crossOrg,
 		});
 	}

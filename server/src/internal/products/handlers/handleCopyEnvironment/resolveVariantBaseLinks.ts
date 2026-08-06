@@ -69,28 +69,9 @@ export const resolveSourceBasePlanIds = async ({
 };
 
 /**
- * Base plan ids that exist in the target after the base pass — the only ids
- * getTargetBaseInternalIds may query, since listFull throws on absent ids.
- */
-export const listResolvableBasePlanIds = ({
-	basePlanIdByVariantId,
-	copiedBaseIds,
-	targetIds,
-}: {
-	basePlanIdByVariantId: Map<string, string>;
-	copiedBaseIds: Set<string>;
-	targetIds: Set<string>;
-}): string[] =>
-	deduplicateArray(
-		[...basePlanIdByVariantId.values()].filter(
-			(planId) => copiedBaseIds.has(planId) || targetIds.has(planId),
-		),
-	);
-
-/**
  * Resolves base plan public ids to internal ids in the target env, after bases
- * have been copied. Target rows that are themselves variants are excluded so a
- * copy never produces a nested variant link.
+ * have been copied. Absent ids and target rows that are themselves variants
+ * are excluded so a copy never produces a dangling or nested variant link.
  */
 export const getTargetBaseInternalIds = async ({
 	db,
@@ -103,18 +84,15 @@ export const getTargetBaseInternalIds = async ({
 	toEnv: AppEnv;
 	basePlanIds: string[];
 }): Promise<Map<string, string>> => {
-	if (basePlanIds.length === 0) return new Map();
-
-	const targetBases = await ProductService.listFull({
-		db,
-		orgId: toOrgId,
-		env: toEnv,
-		inIds: basePlanIds,
-		excludeEnts: true,
-	});
+	const targetBases = await Promise.all(
+		basePlanIds.map((planId) =>
+			ProductService.get({ db, id: planId, orgId: toOrgId, env: toEnv }),
+		),
+	);
 
 	return new Map(
 		targetBases
+			.filter((base) => base !== undefined)
 			.filter((base) => base.base_internal_product_id === null)
 			.map((base) => [base.id, base.internal_id]),
 	);

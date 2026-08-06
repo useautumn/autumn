@@ -155,18 +155,17 @@ export const copySandboxForOrg = async ({
 			fromProductsAll: fromProducts,
 		});
 		const requestedProductIdSet = new Set(requestedProductIds);
-		const pulledInVariantIds = [...basePlanIdByVariantId.entries()]
-			.filter(([, basePlanId]) => requestedProductIdSet.has(basePlanId))
-			.map(([variantId]) => variantId);
-		const pulledInBasePlanIds = requestedProductIds.flatMap((productId) => {
-			const basePlanId = basePlanIdByVariantId.get(productId);
-			return basePlanId ? [basePlanId] : [];
-		});
-		const wantedProductIds = new Set([
-			...requestedProductIds,
-			...pulledInVariantIds,
-			...pulledInBasePlanIds,
-		]);
+		const pulledInVariantIds: string[] = [];
+		const wantedProductIds = new Set(requestedProductIds);
+		for (const [variantId, basePlanId] of basePlanIdByVariantId) {
+			if (requestedProductIdSet.has(basePlanId)) {
+				pulledInVariantIds.push(variantId);
+				wantedProductIds.add(variantId);
+			}
+			if (requestedProductIdSet.has(variantId)) {
+				wantedProductIds.add(basePlanId);
+			}
+		}
 
 		const licenseLinks = await planLicenseRepo.listWithLicensePlanIdByParents({
 			db,

@@ -1,6 +1,7 @@
 import {
 	type AppEnv,
 	type CreateProductV2Params,
+	deduplicateArray,
 	type Feature,
 	mapToProductV2,
 	type Organization,
@@ -17,7 +18,6 @@ import { ProductService } from "../../ProductService.js";
 import { initVariantsInStripe } from "../../stripeResourceUtils/initVariantsInStripe.js";
 import {
 	getTargetBaseInternalIds,
-	listResolvableBasePlanIds,
 	resolveSourceBasePlanIds,
 } from "./resolveVariantBaseLinks.js";
 import { withLicensePlanProducts } from "./withLicensePlanProducts.js";
@@ -195,17 +195,12 @@ export const handleCopyProducts = async ({
 		baseProductsV2.map((fromProductV2) => copyOneProduct({ fromProductV2 })),
 	);
 
-	const copiedBaseIds = new Set(baseProductsV2.map((p) => p.id));
 	const targetIds = new Set(toProducts.map((p) => p.id));
 	const targetBaseInternalIds = await getTargetBaseInternalIds({
 		db,
 		toOrgId: toOrg.id,
 		toEnv,
-		basePlanIds: listResolvableBasePlanIds({
-			basePlanIdByVariantId,
-			copiedBaseIds,
-			targetIds,
-		}),
+		basePlanIds: deduplicateArray([...basePlanIdByVariantId.values()]),
 	});
 
 	const copyOneVariant = (fromProductV2: ProductV2) => {
