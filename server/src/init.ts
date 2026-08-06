@@ -62,6 +62,7 @@ import {
 	attachPrimaryForkRecycling,
 	startWorkerForkRecycling,
 } from "./utils/memory/forkRecycling/attachForkRecycling.js";
+import { listInFlightRequests } from "./utils/memory/inFlightRequests.js";
 import {
 	startMemorySpikeProbe,
 	stopMemorySpikeProbe,
@@ -170,6 +171,8 @@ if (process.env.NODE_ENV === "development") {
 		const server = await init({ startupStartedAt: Date.now() });
 		startWorkerForkRecycling({
 			server,
+			getActiveRequestCount: () =>
+				listInFlightRequests({ now: Date.now() }).length,
 			onDrainStart: () => {
 				drainState.draining = true;
 			},

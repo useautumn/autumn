@@ -9,18 +9,27 @@ export type WorkerDrainer = {
 	drain: () => void;
 };
 
+export const DEFAULT_MAX_DRAIN_MS = 10 * 60_000;
+
 export const createWorkerDrainer = ({
 	server,
 	exit,
 	drainTimeoutMs,
+	maxDrainMs = DEFAULT_MAX_DRAIN_MS,
 	idleSweepIntervalMs = 1_000,
+	getActiveRequestCount,
 	onDrainStart,
 	log,
 }: {
 	server: DrainableServer;
 	exit: (code: number) => void;
 	drainTimeoutMs: number;
+	/** Hard bound for a fork that never goes idle (a truly hung request). */
+	maxDrainMs?: number;
 	idleSweepIntervalMs?: number;
+	/** While this reports active requests (long streams, big imports), the
+	 *  drain deadline extends instead of cutting them mid-response. */
+	getActiveRequestCount?: () => number;
 	/** Runs before the server closes — lets the request path start sending
 	 *  `Connection: close` so pooled clients retire sockets instead of racing
 	 *  the idle-connection eviction. */
@@ -35,12 +44,14 @@ export const createWorkerDrainer = ({
 			draining = true;
 			onDrainStart?.();
 
+			const drainStartedAt = Date.now();
 			let exited = false;
+			let deadline: ReturnType<typeof setTimeout> | null = null;
 			const exitOnce = (reason: string) => {
 				if (exited) return;
 				exited = true;
 				clearInterval(idleSweep);
-				clearTimeout(deadline);
+				if (deadline) clearTimeout(deadline);
 				log(`[ForkRecycle] Worker ${process.pid} exiting (${reason})`);
 				exit(0);
 			};
@@ -57,11 +68,24 @@ export const createWorkerDrainer = ({
 			);
 			idleSweep.unref?.();
 
-			const deadline = setTimeout(
-				() => exitOnce("drain timeout"),
-				drainTimeoutMs,
-			);
-			deadline.unref?.();
+			const onDeadline = () => {
+				const activeRequests = getActiveRequestCount?.() ?? 0;
+				const elapsedMs = Date.now() - drainStartedAt;
+				if (activeRequests > 0 && elapsedMs < maxDrainMs) {
+					log(
+						`[ForkRecycle] Worker ${process.pid} still serving ${activeRequests} request(s) after ${Math.round(elapsedMs / 1000)}s; extending drain`,
+					);
+					armDeadline();
+					return;
+				}
+				exitOnce(activeRequests > 0 ? "max drain exceeded" : "drain timeout");
+			};
+
+			const armDeadline = () => {
+				deadline = setTimeout(onDeadline, drainTimeoutMs);
+				deadline.unref?.();
+			};
+			armDeadline();
 		},
 	};
 };

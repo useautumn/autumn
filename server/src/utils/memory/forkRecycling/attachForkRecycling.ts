@@ -55,9 +55,10 @@ export const attachPrimaryForkRecycling = ({
 			}
 		},
 		respawn: () => {
-			if (!shouldRespawn()) return;
+			if (!shouldRespawn()) return undefined;
 			const worker = clusterModule.fork();
 			workerIds.set(String(worker.id), worker);
+			return String(worker.id);
 		},
 		log: (message) => logger.info(message),
 	});
@@ -87,12 +88,15 @@ export const attachPrimaryForkRecycling = ({
 export const startWorkerForkRecycling = ({
 	server,
 	exitGracefully,
+	getActiveRequestCount,
 	onDrainStart,
 	logger,
 }: {
 	server: Parameters<typeof createWorkerDrainer>[0]["server"];
 	/** Runs the worker's normal shutdown (flushes, pool close, process.exit). */
 	exitGracefully: () => void;
+	/** Long-running requests (streams) extend the drain instead of being cut. */
+	getActiveRequestCount?: () => number;
 	onDrainStart?: () => void;
 	logger: Logger;
 }) => {
@@ -106,6 +110,7 @@ export const startWorkerForkRecycling = ({
 		server,
 		exit: () => exitGracefully(),
 		drainTimeoutMs: config.drainTimeoutMs,
+		getActiveRequestCount,
 		onDrainStart,
 		log: (message) => logger.info(message),
 	});

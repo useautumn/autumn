@@ -69,6 +69,7 @@ const createHarness = ({
 		},
 		respawn: (workerId) => {
 			respawned.push(workerId);
+			return `respawn-of-${workerId}`;
 		},
 		replacementBootTimeoutMs: bootTimeoutMs,
 		log: () => {},
@@ -231,9 +232,12 @@ describe("createRecycleCoordinator", () => {
 		expect(forked).toHaveLength(2);
 
 		expect(coordinator.handleWorkerExit({ workerId: "w1" })).toBe(true);
-		// Accounting: 2 forked + 1 respawned − (w1 out, w2 out after its own
-		// cycle) keeps the fleet at N.
+		// Accounting: w2's drain waits for the crash respawn to boot, then the
+		// fleet returns to N (2 forked + 1 respawned − w1 − w2).
 		coordinator.handleWorkerListening({ workerId: forked[1] });
+		coordinator.handleWorkerListening({
+			workerId: `respawn-of-${forked[0]}`,
+		});
 		expect(drained).toEqual(["w1", "w2"]);
 	});
 
@@ -255,6 +259,42 @@ describe("createRecycleCoordinator", () => {
 		// …and the worker can request again.
 		coordinator.handleRecycleRequest({ workerId: "w1" });
 		expect(forked).toHaveLength(2);
+	});
+
+	test("a drain is deferred while a crash respawn is still booting", () => {
+		const { coordinator, forked, drained } = createHarness();
+
+		// Plain crash: its respawn starts booting.
+		coordinator.handleWorkerExit({ workerId: "w-crashed" });
+
+		coordinator.handleRecycleRequest({ workerId: "w1" });
+		coordinator.handleWorkerListening({ workerId: forked[0] });
+		// Replacement is up, but draining now would dip below N.
+		expect(drained).toHaveLength(0);
+
+		coordinator.handleWorkerListening({ workerId: "respawn-of-w-crashed" });
+		expect(drained).toEqual(["w1"]);
+	});
+
+	test("queued cycle after a post-drain replacement crash waits for the crash respawn", () => {
+		const { coordinator, forked, drained } = createHarness();
+
+		coordinator.handleRecycleRequest({ workerId: "w1" });
+		coordinator.handleRecycleRequest({ workerId: "w2" });
+		coordinator.handleWorkerListening({ workerId: forked[0] });
+		expect(drained).toEqual(["w1"]);
+
+		// Replacement crashes post-drain: w2's cycle forks, but its drain must
+		// wait until the crash respawn is listening.
+		coordinator.handleWorkerExit({ workerId: forked[0] });
+		expect(forked).toHaveLength(2);
+		coordinator.handleWorkerListening({ workerId: forked[1] });
+		expect(drained).toEqual(["w1"]);
+
+		coordinator.handleWorkerListening({
+			workerId: `respawn-of-${forked[0]}`,
+		});
+		expect(drained).toEqual(["w1", "w2"]);
 	});
 
 	test("boot deadline after the old worker crashed refills the slot instead of aborting", async () => {
@@ -336,6 +376,52 @@ describe("createWorkerDrainer", () => {
 		expect(exits).toHaveLength(0);
 
 		await new Promise((resolve) => setTimeout(resolve, 60));
+		expect(exits).toEqual([0]);
+	});
+
+	test("active requests extend the drain deadline instead of being cut", async () => {
+		let activeCount = 1;
+		const server: FakeServer = { close: () => {} };
+
+		const drainer = createWorkerDrainer({
+			server,
+			exit: (code) => {
+				exits.push(code);
+			},
+			drainTimeoutMs: 20,
+			maxDrainMs: 5_000,
+			idleSweepIntervalMs: 10,
+			getActiveRequestCount: () => activeCount,
+			log: () => {},
+		});
+
+		drainer.drain();
+		await new Promise((resolve) => setTimeout(resolve, 35));
+		// A long-running request held the fork alive past the deadline.
+		expect(exits).toHaveLength(0);
+
+		activeCount = 0;
+		await new Promise((resolve) => setTimeout(resolve, 35));
+		expect(exits).toEqual([0]);
+	});
+
+	test("the hard max-drain bound exits even with requests still active", async () => {
+		const server: FakeServer = { close: () => {} };
+
+		const drainer = createWorkerDrainer({
+			server,
+			exit: (code) => {
+				exits.push(code);
+			},
+			drainTimeoutMs: 20,
+			maxDrainMs: 50,
+			idleSweepIntervalMs: 10,
+			getActiveRequestCount: () => 1,
+			log: () => {},
+		});
+
+		drainer.drain();
+		await new Promise((resolve) => setTimeout(resolve, 110));
 		expect(exits).toEqual([0]);
 	});
 
