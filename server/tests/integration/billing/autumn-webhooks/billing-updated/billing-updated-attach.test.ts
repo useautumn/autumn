@@ -25,6 +25,9 @@
 
 import { afterAll, beforeAll, expect, test } from "bun:test";
 import type {
+	ApiCustomerV3,
+	ApiProduct,
+	AttachParamsV0Input,
 	BillingChangeResponse,
 	CustomerPlanChange,
 	PlanChangeAction,
@@ -48,6 +51,15 @@ type BillingUpdatedPayload = {
 	data: BillingChangeResponse;
 };
 
+type CustomerProductsUpdatedPayload = {
+	type: string;
+	data: {
+		scenario: string;
+		customer: ApiCustomerV3;
+		updated_product: ApiProduct;
+	};
+};
+
 const findChange = (
 	plan_changes: CustomerPlanChange[] | undefined,
 	{ action, planId }: { action: PlanChangeAction; planId: string },
@@ -65,7 +77,7 @@ beforeAll(async () => {
 	const appId = getTestSvixAppId({ svixConfig: ctx.org.svix_config });
 	webhook = await setupWebhookTest({
 		appId,
-		filterTypes: ["billing.updated"],
+		filterTypes: ["billing.updated", "customer.products.updated"],
 	});
 	playToken = webhook.playToken;
 });
@@ -486,4 +498,66 @@ test(`${chalk.yellowBright("billing.updated: stripe checkout completion → acti
 	});
 	expect(activated?.subscription?.status).toBe("active");
 	expect(activated?.previous_attributes).toBeNull();
+});
+
+test(`${chalk.yellowBright("enable_plan_immediately: checkout completion → products active + billing updated")}`, async () => {
+	const customerId = "billing-updated-stripe-checkout-immediate";
+	const messagesItem = items.monthlyMessages({ includedUsage: 100 });
+	const pro = products.pro({
+		id: "pro-checkout-immediate",
+		items: [messagesItem],
+	});
+
+	const { autumnV1 } = await initScenario({
+		customerId,
+		setup: [
+			s.customer({ testClock: true, skipWebhooks: true }),
+			s.products({ list: [pro] }),
+		],
+		actions: [],
+	});
+
+	const attachParams: AttachParamsV0Input = {
+		customer_id: customerId,
+		product_id: pro.id,
+		enable_product_immediately: true,
+	};
+	const attachResult = await autumnV1.billing.attach<AttachParamsV0Input>(
+		attachParams,
+	);
+	expect(attachResult.payment_url).toContain("checkout.stripe.com");
+
+	await completeStripeCheckoutForm({ url: attachResult.payment_url });
+
+	const [productsResult, billingResult] = await Promise.all([
+		waitForWebhook<CustomerProductsUpdatedPayload>({
+			token: playToken,
+			predicate: (payload) =>
+				payload.type === "customer.products.updated" &&
+				payload.data?.customer?.id === customerId &&
+				payload.data?.updated_product?.id === pro.id &&
+				payload.data?.scenario === "active",
+			timeoutMs: 30000,
+		}),
+		waitForWebhook<BillingUpdatedPayload>({
+			token: playToken,
+			predicate: (payload) =>
+				payload.type === "billing.updated" &&
+				payload.data?.customer_id === customerId &&
+				findChange(payload.data.plan_changes, {
+					action: "updated",
+					planId: pro.id,
+				}) !== undefined,
+			timeoutMs: 30000,
+		}),
+	]);
+
+	expect(productsResult).not.toBeNull();
+	expect(billingResult).not.toBeNull();
+	expect(
+		findChange(billingResult!.payload.data.plan_changes, {
+			action: "updated",
+			planId: pro.id,
+		})?.subscription?.status,
+	).toBe("active");
 });
