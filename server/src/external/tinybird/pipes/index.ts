@@ -53,3 +53,10 @@ export {
 	propertyKeyExistsPipeParamsSchema,
 	propertyKeyExistsPipeResponseSchema,
 } from "./propertyKeyExistsPipe.js";
+export {
+	createPropertyRollupCoveragePipe,
+	type PropertyRollupCoveragePipeParams,
+	type PropertyRollupCoveragePipeRow,
+	propertyRollupCoveragePipeParamsSchema,
+	propertyRollupCoveragePipeResponseSchema,
+} from "./propertyRollupCoveragePipe.js";
