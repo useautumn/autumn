@@ -17,10 +17,13 @@ test("org property rollup: routes only unfiltered aggregate-all property groups"
 		hasCustomerId: false,
 		hasEntityId: false,
 		hasPropertyFilters: false,
+		propertyKey: "email_type",
 		skipPropertyRollup: false,
 	};
+	const nestedProperty = { ...base, propertyKey: "metadata.region" };
 
 	expect(shouldUseOrgPropertyRollup(base)).toBe(true);
+	expect(shouldUseOrgPropertyRollup(nestedProperty)).toBe(false);
 	expect(shouldUseOrgPropertyRollup({ ...base, hasCustomerId: true })).toBe(
 		false,
 	);

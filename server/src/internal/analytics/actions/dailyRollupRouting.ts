@@ -18,18 +18,21 @@ export const shouldUseOrgPropertyRollup = ({
 	hasCustomerId,
 	hasEntityId,
 	hasPropertyFilters,
+	propertyKey,
 	skipPropertyRollup,
 }: {
 	groupColumn: GroupableColumn;
 	hasCustomerId: boolean;
 	hasEntityId: boolean;
 	hasPropertyFilters: boolean;
+	propertyKey: string;
 	skipPropertyRollup: boolean;
 }): boolean =>
 	groupColumn === "property" &&
 	!hasCustomerId &&
 	!hasEntityId &&
 	!hasPropertyFilters &&
+	!propertyKey.includes(".") &&
 	!skipPropertyRollup;
 
 const parseUtcTimestamp = ({ value }: { value: string }): number => {

@@ -462,6 +462,7 @@ export const aggregate = async ({
 			hasCustomerId: Boolean(customerId),
 			hasEntityId: Boolean(params.entity_id),
 			hasPropertyFilters: Object.keys(filterParams).length > 0,
+			propertyKey,
 			skipPropertyRollup: false,
 		});
 		const useDailyRollup = shouldUsePropertyDailyRollup({
