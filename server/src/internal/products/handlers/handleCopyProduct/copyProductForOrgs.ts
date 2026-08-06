@@ -2,6 +2,7 @@ import {
 	type AppEnv,
 	type CreateFeature,
 	CreateFeatureSchema,
+	deduplicateArray,
 	ErrCode,
 	type Feature,
 	type Organization,
@@ -11,6 +12,7 @@ import { invalidateProductsCache } from "@/external/redis/actions/productsCache/
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { addCreditSystemMeteredFeatureIds } from "@/internal/features/creditSystemUtils.js";
 import { FeatureService } from "@/internal/features/FeatureService.js";
+import { planLicenseRepo } from "@/internal/licenses/repos/planLicenseRepo.js";
 import { ProductService } from "@/internal/products/ProductService.js";
 import {
 	copyProduct,
@@ -117,13 +119,38 @@ export const copyProductForOrgs = async ({
 		fromEnv,
 	});
 
+	const sourceLicenseLinks =
+		await planLicenseRepo.listWithLicensePlanIdByParents({
+			db,
+			parentInternalProductIds: [
+				fromFullProduct.internal_id,
+				...variants.map((variant) => variant.internal_id),
+			],
+		});
+	const familyPlanIds = new Set([
+		fromFullProduct.id,
+		...variants.map((variant) => variant.id),
+	]);
+	const licensePlanIds = deduplicateArray(
+		sourceLicenseLinks.map((link) => link.licensePlanId),
+	).filter((planId) => !familyPlanIds.has(planId));
+	const sourceLicensePlans =
+		licensePlanIds.length > 0
+			? await ProductService.listFull({
+					db,
+					orgId: fromOrg.id,
+					env: fromEnv,
+					inIds: licensePlanIds,
+				})
+			: [];
+
 	fromFullProduct.is_default = false;
 	if (crossOrg) {
 		fromFullProduct.base_variant_id = null;
 	}
 
 	const featureIdsToCopy = new Set(
-		[fromFullProduct, ...variants].flatMap((product) =>
+		[fromFullProduct, ...variants, ...sourceLicensePlans].flatMap((product) =>
 			product.entitlements.map((entitlement) => entitlement.feature.id),
 		),
 	);
@@ -199,12 +226,18 @@ export const copyProductForOrgs = async ({
 
 	await copyLicenseLinksForPlanCopy({
 		ctx,
+		toContext,
 		fromBase: fromFullProduct,
-		variants,
+		sourceLinks: sourceLicenseLinks,
+		sourceLicensePlans,
+		fromEnv,
 		toOrg,
 		toEnv,
 		toBaseId: toId,
 		copiedVariantIds,
+		fromFeatures,
+		toFeatures,
+		crossOrg,
 	});
 
 	await invalidateProductsCache({ orgId: toOrg.id, env: toEnv });

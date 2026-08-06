@@ -34,6 +34,9 @@ const CONFLICT_TAKEN_PLAN = `cpv_conflict_taken_${suffix}`;
 const CONFLICT_FREE_PLAN = `cpv_conflict_free_${suffix}`;
 const LICENSE_PLAN = `cpv_license_${suffix}`;
 const LICENSE_BASE_PLAN = `cpv_license_base_${suffix}`;
+const PULLED_LICENSE_FEATURE = `cpv_pulled_license_feat_${suffix}`;
+const PULLED_LICENSE_PLAN = `cpv_pulled_license_${suffix}`;
+const PULLED_LICENSE_BASE_PLAN = `cpv_pulled_license_base_${suffix}`;
 
 let org: Organization | undefined;
 
@@ -259,5 +262,53 @@ describe("copying a single base plan carries its variants", () => {
 		expect(liveLinks[0]?.planLicense.license_internal_product_id).toBe(
 			targetLicense.internal_id,
 		);
+	});
+
+	test("a license plan absent from the target is copied and linked", async () => {
+		await seedFeature({ featureId: PULLED_LICENSE_FEATURE });
+		const sourceLicense = await seedPlan({
+			env: AppEnv.Sandbox,
+			planId: PULLED_LICENSE_PLAN,
+			featureIds: [PULLED_LICENSE_FEATURE],
+		});
+		const base = await seedPlan({
+			env: AppEnv.Sandbox,
+			planId: PULLED_LICENSE_BASE_PLAN,
+		});
+		await planLicenseRepo.upsert({
+			db,
+			parentInternalProductId: base.internal_id,
+			licenseInternalProductId: sourceLicense.internal_id,
+			included: 2,
+			prepaidOnly: true,
+			metadata: {},
+		});
+
+		await copyPlanToLive({
+			fromProductId: PULLED_LICENSE_BASE_PLAN,
+			toId: PULLED_LICENSE_BASE_PLAN,
+			toName: "Pulled License Base",
+		});
+
+		const livePlans = await listLivePlans();
+		const liveBase = livePlans.find((p) => p.id === PULLED_LICENSE_BASE_PLAN);
+		const liveLicense = livePlans.find((p) => p.id === PULLED_LICENSE_PLAN);
+		const liveLinks = await planLicenseRepo.listWithLicensePlanIdByParents({
+			db,
+			parentInternalProductIds: [liveBase?.internal_id as string],
+		});
+
+		expect(liveLicense).toBeDefined();
+		expect(liveLinks.length).toBe(1);
+		expect(liveLinks[0]?.planLicense.license_internal_product_id).toBe(
+			liveLicense?.internal_id as string,
+		);
+
+		const liveFeatures = await FeatureService.list({
+			db,
+			orgId: org?.id as string,
+			env: AppEnv.Live,
+		});
+		expect(liveFeatures.map((f) => f.id)).toContain(PULLED_LICENSE_FEATURE);
 	});
 });

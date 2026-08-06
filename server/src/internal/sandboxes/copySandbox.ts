@@ -11,6 +11,7 @@ import { invalidateProductsCache } from "@/external/redis/actions/productsCache/
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { addCreditSystemMeteredFeatureIds } from "@/internal/features/creditSystemUtils.js";
 import { FeatureService } from "@/internal/features/FeatureService.js";
+import { planLicenseRepo } from "@/internal/licenses/repos/planLicenseRepo.js";
 import { handleCopyFeatures } from "@/internal/products/handlers/handleCopyEnvironment/handleCopyFeatures.js";
 import { handleCopyProducts } from "@/internal/products/handlers/handleCopyEnvironment/handleCopyProducts.js";
 import { resolveSourceBasePlanIds } from "@/internal/products/handlers/handleCopyEnvironment/resolveVariantBaseLinks.js";
@@ -145,7 +146,8 @@ export const copySandboxForOrg = async ({
 		}
 
 		// A requested variant pulls its base (via handleCopyProducts); a requested
-		// base pulls its variants here. Both need their item features copied.
+		// base pulls its variants here; the set's license plans come along too.
+		// Every pulled-in plan needs its item features copied.
 		const basePlanIdByVariantId = await resolveSourceBasePlanIds({
 			db,
 			logger: ctx.logger,
@@ -165,6 +167,16 @@ export const copySandboxForOrg = async ({
 			...pulledInVariantIds,
 			...pulledInBasePlanIds,
 		]);
+
+		const licenseLinks = await planLicenseRepo.listWithLicensePlanIdByParents({
+			db,
+			parentInternalProductIds: fromProducts
+				.filter((product) => wantedProductIds.has(product.id))
+				.map((product) => product.internal_id),
+		});
+		for (const link of licenseLinks) {
+			wantedProductIds.add(link.licensePlanId);
+		}
 
 		const wantedFeatureIds = new Set(requestedFeatureIds);
 		for (const product of fromProducts) {

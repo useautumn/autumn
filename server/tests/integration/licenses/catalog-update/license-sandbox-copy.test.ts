@@ -401,7 +401,7 @@ describe("sandboxes.copy: selective copy via productIds / featureIds", () => {
 		return dst;
 	};
 
-	test("productIds copies only that product plus the features it references", async () => {
+	test("productIds copies that product, its license plan, and their features", async () => {
 		if (!source) throw new Error("source not provisioned");
 		const dst = await freshTarget("prod");
 
@@ -425,11 +425,24 @@ describe("sandboxes.copy: selective copy via productIds / featureIds", () => {
 			env: AppEnv.Sandbox,
 		});
 
-		// The one product copied; its referenced features (dashboard + messages)
+		// The product plus its license plan; their referenced features
 		// auto-included; the unrelated credit system is NOT pulled in.
-		expect(dstProducts.map((p) => p.id)).toEqual([PRODUCT_ID]);
+		expect(dstProducts.map((p) => p.id).sort()).toEqual(
+			[PRODUCT_ID, LICENSE_ID].sort(),
+		);
 		expect(features.map((f) => f.id).sort()).toEqual(
 			[DASH_FEATURE, MSG_FEATURE].sort(),
+		);
+
+		const dstParent = dstProducts.find((p) => p.id === PRODUCT_ID);
+		const dstLicense = dstProducts.find((p) => p.id === LICENSE_ID);
+		const links = await planLicenseRepo.listCatalogByParentInternalProductIds({
+			db,
+			parentInternalProductIds: [dstParent?.internal_id as string],
+		});
+		expect(links).toHaveLength(1);
+		expect(links[0].license_internal_product_id).toBe(
+			dstLicense?.internal_id as string,
 		);
 	});
 

@@ -21,6 +21,7 @@ import {
 	resolveSourceBasePlanIds,
 	withRequiredBases,
 } from "./resolveVariantBaseLinks.js";
+import { withLicensePlanProducts } from "./withLicensePlanProducts.js";
 
 const conformProductToSchema = (
 	product: ProductV2,
@@ -101,11 +102,16 @@ export const handleCopyProducts = async ({
 		fromProducts: requestedFromProducts,
 		fromProductsAll,
 	});
-	const fromProducts = withRequiredBases({
-		fromProducts: requestedFromProducts,
+	const fromProducts = await withLicensePlanProducts({
+		db,
+		fromProducts: withRequiredBases({
+			fromProducts: requestedFromProducts,
+			fromProductsAll,
+			toProducts,
+			basePlanIdByVariantId,
+		}),
 		fromProductsAll,
 		toProducts,
-		basePlanIdByVariantId,
 	});
 
 	const toProductsV2 = toProducts.map((p) =>
@@ -220,7 +226,6 @@ export const handleCopyProducts = async ({
 	};
 	await Promise.all(variantProductsV2.map(copyOneVariant));
 
-	// Licenses are never pulled into the copy set — their features weren't selected.
 	const licenseLinks = await planLicenseRepo.listWithLicensePlanIdByParents({
 		db,
 		parentInternalProductIds: fromProducts.map(
