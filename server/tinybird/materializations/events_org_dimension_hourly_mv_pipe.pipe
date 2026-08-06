@@ -1,0 +1,27 @@
+DESCRIPTION >
+    Collapses the customer-leading hourly rollup into independent org-hour dimension states.
+
+NODE materialize
+SQL >
+    SELECT
+        org_id,
+        env,
+        event_name,
+        dimension,
+        multiIf(
+            dimension = 'customer_id',
+            customer_id,
+            dimension = 'entity_id',
+            entity_id,
+            coalesce(internal_product_id, '')
+        ) as group_value,
+        hour,
+        sumState(total_value) as total_value,
+        sumState(event_count) as event_count
+    FROM events_customer_hourly_mv ARRAY
+    JOIN ['customer_id', 'entity_id', 'plan_id'] as dimension
+    WHERE dimension != 'entity_id' OR entity_id != ''
+    GROUP BY org_id, env, event_name, dimension, group_value, hour
+
+TYPE MATERIALIZED
+DATASOURCE events_org_dimension_hourly_mv

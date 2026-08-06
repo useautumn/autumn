@@ -26,6 +26,7 @@ import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { validatePropertyPathForJSON } from "@/internal/analytics/actions/eventValidationUtils.js";
 import { getBillingCycleStartDate } from "../analyticsUtils.js";
 import {
+	shouldUseOrgDimensionRollup,
 	shouldUseOrgPropertyRollup,
 	shouldUsePropertyDailyRollup,
 } from "./dailyRollupRouting.js";
@@ -457,6 +458,12 @@ export const aggregate = async ({
 
 		const filterParams = buildFilterParams({ filter_by: params.filter_by });
 		const customerId = params.aggregateAll ? undefined : params.customer_id;
+		const useOrgDimensionRollup = shouldUseOrgDimensionRollup({
+			groupColumn,
+			hasCustomerId: Boolean(customerId),
+			hasEntityId: Boolean(params.entity_id),
+			hasPropertyFilters: Object.keys(filterParams).length > 0,
+		});
 		const useOrgPropertyRollup = shouldUseOrgPropertyRollup({
 			groupColumn,
 			hasCustomerId: Boolean(customerId),
@@ -490,6 +497,9 @@ export const aggregate = async ({
 			...filterParams,
 			max_groups: params.max_groups,
 			use_daily_rollup: useDailyRollup ? ("1" as const) : undefined,
+			use_org_dimension_rollup: useOrgDimensionRollup
+				? ("1" as const)
+				: undefined,
 			use_org_property_rollup: useOrgPropertyRollup
 				? ("1" as const)
 				: undefined,
