@@ -136,7 +136,10 @@ export const runRedisOp = async <T>({
 		if (!router) return await runAttempt(targetRedis, timeoutMs);
 
 		const [preferred, alternate] = router.ordered();
-		const preferredAttemptBudgetMs = getPreferredAttemptBudgetMs({ timeoutMs });
+		const preferredAttemptBudgetMs =
+			alternate.status === "ready"
+				? getPreferredAttemptBudgetMs({ timeoutMs })
+				: timeoutMs;
 		try {
 			const value = await runAttempt(preferred, preferredAttemptBudgetMs);
 			router.recordOutcome({ connection: preferred });

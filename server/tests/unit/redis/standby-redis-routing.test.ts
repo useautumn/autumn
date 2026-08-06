@@ -387,6 +387,23 @@ describe("runRedisOp standby failover", () => {
 		expect(standby.calls).toEqual([]);
 	});
 
+	test("keeps the full deadline when the alternate is not ready", async () => {
+		const { primary, standby, redis } = createPair({ standbyStatus: "end" });
+		primary.hangGetForMs = 175;
+
+		const result = await runRedisOp({
+			redisInstance: redis,
+			source: "standby-test",
+			retryOnStandby: true,
+			timeoutMs: 200,
+			operation: (connection) => connection.get("subject"),
+		});
+
+		expect(result).toBe("primary");
+		expect(primary.calls).toEqual(["get:subject"]);
+		expect(standby.calls).toEqual([]);
+	});
+
 	test("surfaces the retry failure when both connections fail", async () => {
 		const { primary, standby, redis } = createPair();
 		primary.failGetWith = connectionError();
