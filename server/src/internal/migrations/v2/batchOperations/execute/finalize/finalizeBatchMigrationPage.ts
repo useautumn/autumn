@@ -15,7 +15,9 @@ import {
  *
  * Cache invalidation and item-event emission are independent, so they run
  * concurrently. Either can be handed to the caller to drain at chunk end
- * instead of blocking the page. */
+ * instead of blocking the page — pages touch disjoint customers, so they
+ * overlap safely. A deferred invalidation must still complete, so the caller
+ * drains before finishing. */
 export const finalizeBatchMigrationPage = async ({
 	ctx,
 	migrationInternalId,
@@ -35,8 +37,6 @@ export const finalizeBatchMigrationPage = async ({
 	webhooks?: MigrationWebhookControls;
 	phases?: BatchMigrationPagePhases;
 	deferEvents?: (emit: () => Promise<unknown>) => void;
-	/** Pages touch disjoint customers, so invalidations overlap safely. Unlike
-	 * events these must still complete — the caller drains before finishing. */
 	deferCaches?: (invalidate: () => Promise<unknown>) => void;
 }): Promise<void> => {
 	const emitEvents = () =>

@@ -22,6 +22,8 @@ export type DeferredSideEffects = {
  * Rejections are captured at defer time rather than left on the promise: an
  * orphaned rejected promise surfaces as an unhandledRejection and kills the
  * worker, and a rejecting `Promise.race` would abort the page loop.
+ *
+ * `phase` names the drain's timing entry, e.g. "finalize_caches_drain".
  */
 export const createDeferredSideEffects = ({
 	phase,
@@ -29,7 +31,6 @@ export const createDeferredSideEffects = ({
 	logger,
 	logData,
 }: {
-	/** Phase name recorded for the drain, e.g. "finalize_caches_drain". */
 	phase: string;
 	phases: BatchMigrationPagePhases;
 	logger: Logger;
