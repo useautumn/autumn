@@ -78,13 +78,15 @@ export function CustomerComboBox() {
 				<IconButton
 					variant="secondary"
 					size="default"
-					icon={<CaretDownIcon size={12} weight="bold" />}
+					icon={<CaretDownIcon size={12} weight="bold" className="shrink-0" />}
 					iconOrientation="right"
+					className="max-w-64 min-w-0"
+					title={customer?.name || customer?.id || "All customers"}
 					onClick={() => {
 						setValue("");
 					}}
 				>
-					<span className="w-full truncate">
+					<span className="w-full min-w-0 truncate">
 						{customer?.name || customer?.id || "All customers"}
 					</span>
 				</IconButton>

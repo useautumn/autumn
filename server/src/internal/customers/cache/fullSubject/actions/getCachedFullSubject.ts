@@ -4,6 +4,7 @@ import {
 	normalizedToFullSubject,
 } from "@autumn/shared";
 import { isRedisMigrationCacheStale } from "@/external/redis/customerRedisRouting.js";
+import { throwOnPipelineConnectionError } from "@/external/redis/utils/pipelineErrors.js";
 import { REDIS_OP_TIMEOUT_MS } from "@/external/redis/utils/redisOpTimeouts.js";
 import { runRedisOp } from "@/external/redis/utils/runRedisOp.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
@@ -65,9 +66,13 @@ export const getCachedFullSubject = async ({
 	// Read-only GETs — epoch TTL is refreshed on writes (setCachedFullSubject
 	// Lua) and on invalidations, not on reads, to avoid write amplification.
 	const pipelineResults = await runRedisOp({
-		operation: () => redisV2.pipeline().get(subjectKey).get(epochKey).exec(),
+		operation: async (redis) =>
+			throwOnPipelineConnectionError(
+				await redis.pipeline().get(subjectKey).get(epochKey).exec(),
+			),
 		source: "getCachedFullSubject:pipeline",
 		redisInstance: redisV2,
+		retryOnStandby: true,
 		timeoutMs: REDIS_OP_TIMEOUT_MS.subjectPipeline,
 	});
 

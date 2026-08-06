@@ -1,9 +1,13 @@
 import type { Redis } from "ioredis";
 import { logger } from "@/external/logtail/logtailUtils.js";
 import { withTimeout } from "@/utils/withTimeout.js";
+import { getStandbyRedisRouter } from "../initUtils/createStandbyRedisRouter.js";
 import { RedisUnavailableError } from "./errors.js";
+import { isConnectionLevelRedisError } from "./isTransientRedisError.js";
 
 const REDIS_WARNING_INTERVAL_MS = 30_000;
+/** Below this a retry cannot finish, so spend the budget on the fallback. */
+const MIN_RETRY_BUDGET_MS = 50;
 const lastRedisWarningAtBySource = new Map<string, number>();
 
 const classifyErrorReason = (
@@ -70,12 +74,16 @@ export const runRedisOp = async <T>({
 	source,
 	redisInstance,
 	queueIfNotReady = false,
+	retryOnStandby = false,
 	timeoutMs,
 }: {
-	operation: () => Promise<T>;
+	operation: (redis: Redis) => Promise<T>;
 	source: string;
 	redisInstance: Redis;
 	queueIfNotReady?: boolean;
+	/** Retry a failed idempotent read once on the other connection. `operation`
+	 *  must use its injected `redis`; closing over the router re-runs the same one. */
+	retryOnStandby?: boolean;
 	/** Opt-in bound, tighter than the client's `commandTimeout`. Reads only —
 	 *  the race abandons the promise but the command still reaches Redis. */
 	timeoutMs?: number;
@@ -88,17 +96,55 @@ export const runRedisOp = async <T>({
 		throw new RedisUnavailableError({ source, reason });
 	}
 
-	try {
-		// The message must contain "timeout" so classifyErrorReason maps it to
-		// `timeout` rather than `other` — withTimeout's default says "timed out".
-		const value = timeoutMs
-			? await withTimeout({
-					timeoutMs,
-					fn: operation,
-					timeoutMessage: `[redis] ${source} timeout after ${timeoutMs}ms`,
+	// One budget for the whole op, not one per attempt: a retry must not double
+	// the ceiling the caller sized against its non-Redis fallback.
+	const deadlineAt = timeoutMs ? Date.now() + timeoutMs : undefined;
+
+	const runAttempt = (redis: Redis, budgetMs?: number) =>
+		budgetMs
+			? // The message must contain "timeout" so classifyErrorReason maps it to
+				// `timeout` rather than `other` — withTimeout's default says "timed out".
+				withTimeout({
+					timeoutMs: budgetMs,
+					fn: () => operation(redis),
+					timeoutMessage: `[redis] ${source} timeout after ${budgetMs}ms`,
 				})
-			: await operation();
-		return value;
+			: operation(redis);
+
+	try {
+		const router = retryOnStandby
+			? getStandbyRedisRouter(targetRedis)
+			: undefined;
+		if (!router) return await runAttempt(targetRedis, timeoutMs);
+
+		const [preferred, alternate] = router.ordered();
+		try {
+			const value = await runAttempt(preferred, timeoutMs);
+			router.recordOutcome({ connection: preferred });
+			return value;
+		} catch (firstError) {
+			router.recordOutcome({ connection: preferred, error: firstError });
+
+			const remainingMs = deadlineAt ? deadlineAt - Date.now() : undefined;
+			const canRetry =
+				alternate.status === "ready" &&
+				isConnectionLevelRedisError({ error: firstError }) &&
+				(remainingMs === undefined || remainingMs >= MIN_RETRY_BUDGET_MS);
+			if (!canRetry) throw firstError;
+
+			try {
+				const value = await runAttempt(alternate, remainingMs);
+				router.recordOutcome({ connection: alternate });
+				logger.info(
+					{ source, type: "redis_standby_failover" },
+					"[redis] standby served a read the preferred connection failed",
+				);
+				return value;
+			} catch (retryError) {
+				router.recordOutcome({ connection: alternate, error: retryError });
+				throw retryError;
+			}
+		}
 	} catch (error) {
 		const classified = classifyErrorReason(targetRedis, error);
 		const reason: UnavailableReason = classified ?? "other";
@@ -117,13 +163,15 @@ export const tryRedisOp = async <T>({
 	source,
 	redisInstance,
 	queueIfNotReady,
+	retryOnStandby,
 	timeoutMs,
 	onError,
 }: {
-	operation: () => Promise<T>;
+	operation: (redis: Redis) => Promise<T>;
 	source: string;
 	redisInstance: Redis;
 	queueIfNotReady?: boolean;
+	retryOnStandby?: boolean;
 	timeoutMs?: number;
 	onError?: (error: unknown) => void;
 }): Promise<T | undefined> => {
@@ -133,6 +181,7 @@ export const tryRedisOp = async <T>({
 			source,
 			redisInstance,
 			queueIfNotReady,
+			retryOnStandby,
 			timeoutMs,
 		});
 	} catch (error) {
