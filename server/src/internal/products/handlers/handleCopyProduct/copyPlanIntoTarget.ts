@@ -12,16 +12,13 @@ export const listExistingTargetPlanIds = async ({
 	planIds: string[];
 }): Promise<Set<string>> => {
 	const { db, org, env } = toContext;
-	const existing = await Promise.all(
-		planIds.map((planId) =>
-			ProductService.get({ db, id: planId, orgId: org.id, env }),
-		),
-	);
-	return new Set(
-		existing
-			.filter((product) => product !== undefined)
-			.map((product) => product.id),
-	);
+	const existing = await ProductService.listByIds({
+		db,
+		orgId: org.id,
+		env,
+		ids: planIds,
+	});
+	return new Set(existing.map((product) => product.id));
 };
 
 /**

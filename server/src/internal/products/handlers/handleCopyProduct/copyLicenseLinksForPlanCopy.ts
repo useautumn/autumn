@@ -1,12 +1,12 @@
 import {
 	type AppEnv,
-	type DbPlanLicense,
 	deduplicateArray,
 	type Feature,
 	type FullProduct,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { copyPlanLicenseLinks } from "@/internal/licenses/actions/links/copyPlanLicenseLinks.js";
+import type { PlanLicenseWithPlanIds } from "@/internal/licenses/repos/planLicenseRepo.js";
 import { ProductService } from "@/internal/products/ProductService.js";
 import { initProductInStripe } from "@/internal/products/productUtils.js";
 import {
@@ -32,11 +32,7 @@ export const copyLicenseLinksForPlanCopy = async ({
 }: {
 	toContext: AutumnContext;
 	fromBase: FullProduct;
-	sourceLinks: {
-		planLicense: DbPlanLicense;
-		licensePlanId: string;
-		parentPlanId: string;
-	}[];
+	sourceLinks: PlanLicenseWithPlanIds[];
 	sourceLicensePlans: FullProduct[];
 	fromEnv: AppEnv;
 	fromFeatures: Feature[];

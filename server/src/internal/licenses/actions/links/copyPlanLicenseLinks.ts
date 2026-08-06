@@ -1,6 +1,9 @@
-import type { DbPlanLicense, FullProduct } from "@autumn/shared";
+import type { FullProduct } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
-import { planLicenseRepo } from "../../repos/planLicenseRepo.js";
+import {
+	type PlanLicenseWithPlanIds,
+	planLicenseRepo,
+} from "../../repos/planLicenseRepo.js";
 import { validateLicenseLink } from "./validateLicenseLink.js";
 
 /**
@@ -13,11 +16,7 @@ export const copyPlanLicenseLinks = async ({
 	toProducts,
 }: {
 	ctx: AutumnContext;
-	links: {
-		planLicense: DbPlanLicense;
-		licensePlanId: string;
-		parentPlanId: string;
-	}[];
+	links: PlanLicenseWithPlanIds[];
 	toProducts: FullProduct[];
 }) => {
 	const { db, logger } = ctx;

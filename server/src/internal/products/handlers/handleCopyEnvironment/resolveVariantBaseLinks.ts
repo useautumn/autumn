@@ -1,4 +1,9 @@
-import { deduplicateArray, type FullProduct, notNullish } from "@autumn/shared";
+import {
+	deduplicateArray,
+	type FullProduct,
+	notNullish,
+	type Product,
+} from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { ProductService } from "../../ProductService.js";
 
@@ -74,15 +79,23 @@ export const getTargetBaseInternalIds = async ({
 	basePlanIds: string[];
 }): Promise<Map<string, string>> => {
 	const { db, org, env } = toContext;
-	const targetBases = await Promise.all(
-		basePlanIds.map((planId) =>
-			ProductService.get({ db, id: planId, orgId: org.id, env }),
-		),
-	);
+	const targetBases = await ProductService.listByIds({
+		db,
+		orgId: org.id,
+		env,
+		ids: basePlanIds,
+	});
+
+	const latestBaseByPlanId = new Map<string, Product>();
+	for (const base of targetBases) {
+		const existing = latestBaseByPlanId.get(base.id);
+		if (!existing || base.version > existing.version) {
+			latestBaseByPlanId.set(base.id, base);
+		}
+	}
 
 	return new Map(
-		targetBases
-			.filter((base) => base !== undefined)
+		[...latestBaseByPlanId.values()]
 			.filter((base) => base.base_internal_product_id === null)
 			.map((base) => [base.id, base.internal_id]),
 	);

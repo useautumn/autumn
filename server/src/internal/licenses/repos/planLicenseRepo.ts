@@ -151,13 +151,19 @@ const listCatalogByParentInternalProductIds = async ({
 		),
 	});
 
+export type PlanLicenseWithPlanIds = {
+	planLicense: DbPlanLicense;
+	licensePlanId: string;
+	parentPlanId: string;
+};
+
 const listWithLicensePlanIdByParents = async ({
 	db,
 	parentInternalProductIds,
 }: {
 	db: DrizzleCli;
 	parentInternalProductIds: string[];
-}) =>
+}): Promise<PlanLicenseWithPlanIds[]> =>
 	await db
 		.select({
 			planLicense: planLicenses,
