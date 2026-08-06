@@ -2,13 +2,14 @@
 // so parents linking to it stay versionable instead of failing on an unrelated edit.
 
 import { expect, test } from "bun:test";
-import { type ApiPlanV1, ErrCode } from "@autumn/shared";
+import { type ApiPlanV1, ErrCode, entitlements } from "@autumn/shared";
 import { expectAutumnError } from "@tests/utils/expectUtils/expectErrUtils.js";
 import { items } from "@tests/utils/fixtures/items.js";
 import { itemsV2 } from "@tests/utils/fixtures/itemsV2.js";
 import { products } from "@tests/utils/fixtures/products.js";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";
+import { eq } from "drizzle-orm";
 import { ProductService } from "@/internal/products/ProductService.js";
 
 test.concurrent(
@@ -78,6 +79,69 @@ test.concurrent(
 		expect((parentV2.licenses ?? [])[0]).toMatchObject({
 			license_plan_id: license.id,
 			included: 1,
+		});
+	},
+);
+
+test.concurrent(
+	`${chalk.yellowBright("licenses: a linked license plan already carrying a pooled item stays editable")}`,
+	async () => {
+		const parent = products.base({
+			id: "pooled-legacy-editable-parent",
+			items: [items.dashboard()],
+		});
+		const license = products.base({
+			id: "pooled-legacy-editable-child",
+			items: [items.monthlyMessages({ includedUsage: 25 })],
+		});
+
+		const { autumnV2_2, ctx } = await initScenario({
+			customerId: "license-legacy-pooled-editable",
+			setup: [
+				s.customer({ testClock: false }),
+				s.products({ list: [parent, license] }),
+			],
+			actions: [
+				s.licenses.link({
+					parentProductId: parent.id,
+					licenseProductId: license.id,
+					included: 1,
+				}),
+			],
+		});
+
+		// Legacy state: pooled + linked, which the guards now prevent via the API.
+		const licenseBefore = await ProductService.getFull({
+			db: ctx.db,
+			idOrInternalId: license.id,
+			orgId: ctx.org.id,
+			env: ctx.env,
+		});
+		await ctx.db
+			.update(entitlements)
+			.set({ pooled: true })
+			.where(eq(entitlements.internal_product_id, licenseBefore.internal_id));
+
+		await autumnV2_2.post("/plans.update", {
+			plan_id: license.id,
+			name: "Renamed legacy license",
+		});
+
+		const renamed = (await autumnV2_2.post("/plans.get", {
+			plan_id: license.id,
+		})) as ApiPlanV1;
+		expect(renamed.name).toBe("Renamed legacy license");
+
+		await expectAutumnError({
+			errCode: ErrCode.InvalidRequest,
+			errMessage: "Pooled items are not supported for plan licenses",
+			func: () =>
+				autumnV2_2.post("/plans.update", {
+					plan_id: license.id,
+					items: [
+						{ ...itemsV2.monthlyCredits({ included: 100 }), pooled: true },
+					],
+				}),
 		});
 	},
 );

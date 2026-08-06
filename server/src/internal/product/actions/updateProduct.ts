@@ -363,6 +363,7 @@ export const updateProduct = async ({
 		internalProductId: fullProduct.internal_id,
 		planId: fullProduct.id,
 		newItems: newProductV2.items,
+		currentItems: curProductV2.items,
 	});
 	const preparedLicenseSync = await prepareProductLicenseSync({
 		ctx,
