@@ -1,11 +1,7 @@
-import {
-	deduplicateArray,
-	type FullProduct,
-	notNullish,
-	type Product,
-} from "@autumn/shared";
+import { deduplicateArray, type FullProduct, notNullish } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { ProductService } from "../../ProductService.js";
+import { getLatestProducts } from "../../productUtils.js";
 
 /**
  * Maps each variant in the copy set to its base plan's public id. A variant may
@@ -86,16 +82,8 @@ export const getTargetBaseInternalIds = async ({
 		ids: basePlanIds,
 	});
 
-	const latestBaseByPlanId = new Map<string, Product>();
-	for (const base of targetBases) {
-		const existing = latestBaseByPlanId.get(base.id);
-		if (!existing || base.version > existing.version) {
-			latestBaseByPlanId.set(base.id, base);
-		}
-	}
-
 	return new Map(
-		[...latestBaseByPlanId.values()]
+		getLatestProducts(targetBases)
 			.filter((base) => base.base_internal_product_id === null)
 			.map((base) => [base.id, base.internal_id]),
 	);

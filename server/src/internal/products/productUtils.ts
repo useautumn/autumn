@@ -44,17 +44,17 @@ import { PriceService } from "./prices/PriceService.js";
 import { isDefaultTrialFullProduct } from "./productUtils/classifyProduct.js";
 import { applyStripeResourceReuseForProduct } from "./stripeResourceUtils/applyStripeResourceReuseForProduct.js";
 
-export const getLatestProducts = (products: FullProduct[]) => {
-	const latestProducts = products.reduce((acc: any, product: any) => {
-		if (!acc[product.id]) {
-			acc[product.id] = product;
-		} else if (product.version > acc[product.id].version) {
-			acc[product.id] = product;
+export const getLatestProducts = <T extends { id: string; version: number }>(
+	products: T[],
+): T[] => {
+	const latestById = new Map<string, T>();
+	for (const product of products) {
+		const existing = latestById.get(product.id);
+		if (!existing || product.version > existing.version) {
+			latestById.set(product.id, product);
 		}
-		return acc;
-	}, {});
-
-	return Object.values(latestProducts) as FullProduct[];
+	}
+	return [...latestById.values()];
 };
 
 const getProductVersionCounts = (products: FullProduct[]) => {

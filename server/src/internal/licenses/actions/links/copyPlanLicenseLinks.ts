@@ -1,5 +1,6 @@
 import type { FullProduct } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
+import { getLatestProducts } from "@/internal/products/productUtils.js";
 import {
 	type PlanLicenseWithPlanIds,
 	planLicenseRepo,
@@ -22,13 +23,9 @@ export const copyPlanLicenseLinks = async ({
 	const { db, logger } = ctx;
 	if (links.length === 0) return;
 
-	const latestToProductByPlanId = new Map<string, FullProduct>();
-	for (const product of toProducts) {
-		const existing = latestToProductByPlanId.get(product.id);
-		if (!existing || product.version > existing.version) {
-			latestToProductByPlanId.set(product.id, product);
-		}
-	}
+	const latestToProductByPlanId = new Map(
+		getLatestProducts(toProducts).map((product) => [product.id, product]),
+	);
 
 	for (const { planLicense, licensePlanId, parentPlanId } of links) {
 		const toParent = latestToProductByPlanId.get(parentPlanId);

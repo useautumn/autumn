@@ -1,10 +1,4 @@
-import type {
-	AppEnv,
-	Feature,
-	FullProduct,
-	Organization,
-} from "@autumn/shared";
-import type { DrizzleCli } from "@/db/initDrizzle.js";
+import type { AppEnv, Feature, FullProduct } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { ProductService } from "@/internal/products/ProductService.js";
 import { initVariantsInStripe } from "@/internal/products/stripeResourceUtils/initVariantsInStripe.js";
@@ -12,37 +6,6 @@ import {
 	copyPlanIntoTarget,
 	listExistingTargetPlanIds,
 } from "./copyPlanIntoTarget.js";
-
-/**
- * Lists the base plan's variants in the source (org, env). A variant may still
- * link to an older base version, so every version's internal id is queried.
- */
-export const listSourceVariants = async ({
-	db,
-	base,
-	fromOrg,
-	fromEnv,
-}: {
-	db: DrizzleCli;
-	base: FullProduct;
-	fromOrg: Organization;
-	fromEnv: AppEnv;
-}): Promise<FullProduct[]> => {
-	const baseVersions = await ProductService.listFull({
-		db,
-		orgId: fromOrg.id,
-		env: fromEnv,
-		inIds: [base.id],
-		returnAll: true,
-	});
-
-	return ProductService.listVariantsByParent({
-		db,
-		baseInternalProductIds: baseVersions.map((version) => version.internal_id),
-		orgId: fromOrg.id,
-		env: fromEnv,
-	});
-};
 
 /**
  * Copies a base plan's variants into the target (org, env), relinking each to
