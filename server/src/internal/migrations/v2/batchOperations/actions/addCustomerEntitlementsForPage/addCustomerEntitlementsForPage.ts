@@ -71,7 +71,12 @@ export const addCustomerEntitlementsForPage = async ({
 	const { rowCount } = await iterateCustomerProductPages({
 		db,
 		pageSize: candidateRowBatchSize,
-		executePage: async ({ transaction, afterCustomerProductId, limit }) => {
+		executePage: async ({
+			transaction,
+			afterCustomerProductId,
+			limit,
+			assertWithinCeiling,
+		}) => {
 			const candidates = await timePhase({
 				phases,
 				phase: "candidates",
@@ -87,6 +92,7 @@ export const addCustomerEntitlementsForPage = async ({
 					}),
 			});
 			if (candidates.length === 0) return candidates;
+			assertWithinCeiling(candidates.length);
 
 			const inserted = await enrichAndInsertCandidates({
 				db: transaction,

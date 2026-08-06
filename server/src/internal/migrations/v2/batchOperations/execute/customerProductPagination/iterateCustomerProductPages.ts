@@ -11,8 +11,8 @@ import {
  * call. The rows a call returns drive the cursor; a short page ends the
  * iteration.
  *
- * The runaway ceiling counts rows as they are visited, so it costs nothing
- * beyond the pages already being read.
+ * The runaway ceiling is checked via `assertWithinCeiling`, which `executePage`
+ * must call after selecting and before mutating so it trips without committing.
  *
  * Partial iterations are safe by design: every mutation is dedup-idempotent
  * and the customer page's claims stay `running` until the marks land, so a
@@ -29,29 +29,39 @@ export const iterateCustomerProductPages = async <
 	db: DrizzleCli;
 	pageSize: number;
 	/** Select + mutate one page inside `transaction`; returns the rows it
-	 * visited (selected, whether or not they were mutated). */
+	 * visited (selected, whether or not they were mutated). Call
+	 * `assertWithinCeiling` with the selected count before mutating. */
 	executePage: (args: {
 		transaction: DrizzleCli;
 		afterCustomerProductId: string | undefined;
 		limit: number;
+		assertWithinCeiling: (selectedCount: number) => void;
 	}) => Promise<Row[]>;
 }): Promise<{ rowCount: number }> => {
 	let afterCustomerProductId: string | undefined;
 	let rowCount = 0;
+	const assertWithinCeiling = (selectedCount: number) => {
+		if (rowCount + selectedCount <= BATCH_MIGRATION_MAX_CANDIDATE_ROWS_PER_PAGE)
+			return;
+		throw new Error(
+			`batch-migration: page exceeded ${BATCH_MIGRATION_MAX_CANDIDATE_ROWS_PER_PAGE} candidate rows — aborting run`,
+		);
+	};
+
 	while (true) {
 		const rows = await withStatementTimeout(
 			db,
 			(transaction) =>
-				executePage({ transaction, afterCustomerProductId, limit: pageSize }),
+				executePage({
+					transaction,
+					afterCustomerProductId,
+					limit: pageSize,
+					assertWithinCeiling,
+				}),
 			BATCH_MIGRATION_PAGE_STATEMENT_TIMEOUT_MS,
 		);
 		if (rows.length === 0) break;
 		rowCount += rows.length;
-		if (rowCount > BATCH_MIGRATION_MAX_CANDIDATE_ROWS_PER_PAGE) {
-			throw new Error(
-				`batch-migration: page exceeded ${BATCH_MIGRATION_MAX_CANDIDATE_ROWS_PER_PAGE} candidate rows — aborting run`,
-			);
-		}
 		afterCustomerProductId = rows[rows.length - 1].customerProductId;
 		if (rows.length < pageSize) break;
 	}
