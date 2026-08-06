@@ -130,7 +130,17 @@ export const ProductSheets = () => {
 			draftItemSession &&
 			draftItemSession.itemId === itemId
 		) {
-			updateItemDraft({ item: updatedItem });
+			// Edits to feature type or interval change the item's derived id, so
+			// resync it or the plan row stops matching and loses its selection.
+			const newItemId = getItemId({
+				item: updatedItem,
+				itemIndex: draftItemSession.itemIndex,
+			});
+			updateItemDraft({ item: updatedItem, itemId: newItemId });
+			if (newItemId !== itemId) {
+				updateItemId(newItemId);
+				lastItemIdRef.current = newItemId;
+			}
 			return;
 		}
 

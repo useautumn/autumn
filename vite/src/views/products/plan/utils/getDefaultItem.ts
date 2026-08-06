@@ -25,6 +25,9 @@ export const getDefaultItem = ({
 
 	// Create a new item with the selected feature
 	const newItem = {
+		// Identity for an item the backend has not assigned ids to yet; two items
+		// for one feature are otherwise indistinguishable until the plan is saved.
+		_uid: crypto.randomUUID(),
 		feature_id: feature.id,
 		feature_type: itemFeatureType,
 		included_usage: null,

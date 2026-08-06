@@ -23,6 +23,7 @@ const INTERNAL_KEYS = new Set([
 	"price_config", // Internal - backend config
 	"isPrice", // Frontend-only extension
 	"isVariable", // Frontend-only extension
+	"_uid", // Frontend-only editor handle
 ]);
 
 /** Recursively sorts object keys and normalizes undefined to null for consistent comparison */
