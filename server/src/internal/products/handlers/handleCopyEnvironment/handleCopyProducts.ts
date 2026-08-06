@@ -102,8 +102,8 @@ export const handleCopyProducts = async ({
 		fromProducts: requestedFromProducts,
 		fromProductsAll,
 	});
-	// A same-id target plan blocks the base pull: a copy never rewrites target
-	// base links it wasn't asked to touch, so such a variant copies unlinked.
+	// A same-id target plan is never pulled over: a target base is linked to
+	// as-is, but a target variant can't be a base, so the copy lands unlinked.
 	const fromProducts = await withLicensePlanProducts({
 		db,
 		fromProducts: withPulledInPlans({
