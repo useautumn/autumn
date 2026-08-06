@@ -7,6 +7,7 @@ import { createWorkerDrainer } from "./workerDrainer.js";
 
 const RECYCLE_REQUEST = "fork-recycle:request";
 const RECYCLE_DRAIN = "fork-recycle:drain";
+const RECYCLE_ABORT = "fork-recycle:abort";
 
 type RecycleMessage = { type?: string };
 
@@ -34,6 +35,9 @@ export const attachPrimaryForkRecycling = ({
 		},
 		sendDrain: (workerId) => {
 			workerIds.get(workerId)?.send({ type: RECYCLE_DRAIN });
+		},
+		sendAbort: (workerId) => {
+			workerIds.get(workerId)?.send({ type: RECYCLE_ABORT });
 		},
 		respawn: () => {
 			if (!shouldRespawn()) return;
@@ -92,8 +96,17 @@ export const startWorkerForkRecycling = ({
 	});
 
 	process.on("message", (message: RecycleMessage) => {
-		if (message?.type !== RECYCLE_DRAIN) return;
-		drainer.drain();
+		if (message?.type === RECYCLE_DRAIN) {
+			drainer.drain();
+			return;
+		}
+		if (message?.type === RECYCLE_ABORT) {
+			// Replacement failed to boot; re-arm so a later check can ask again.
+			requested = false;
+			logger.info(
+				`[ForkRecycle] Worker ${process.pid} recycle aborted; will re-request if still over threshold`,
+			);
+		}
 	});
 
 	const check = () => {

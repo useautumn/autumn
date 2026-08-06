@@ -33,17 +33,17 @@ type CoordinatorHarness = {
 	coordinator: RecycleCoordinator;
 	forked: string[];
 	drained: string[];
+	aborted: string[];
 	respawned: string[];
-	listening: Map<string, () => void>;
 };
 
-/** Coordinator with capture-everything callbacks. Replacement forks report
- *  listening only when the test releases them via `listening`. */
+/** Coordinator with capture-everything callbacks; tests drive the lifecycle
+ *  through the handle* methods directly. */
 const createHarness = (): CoordinatorHarness => {
 	const forked: string[] = [];
 	const drained: string[] = [];
+	const aborted: string[] = [];
 	const respawned: string[] = [];
-	const listening = new Map<string, () => void>();
 	let nextForkId = 100;
 
 	const coordinator = createRecycleCoordinator({
@@ -55,13 +55,16 @@ const createHarness = (): CoordinatorHarness => {
 		sendDrain: (workerId) => {
 			drained.push(workerId);
 		},
+		sendAbort: (workerId) => {
+			aborted.push(workerId);
+		},
 		respawn: (workerId) => {
 			respawned.push(workerId);
 		},
 		log: () => {},
 	});
 
-	return { coordinator, forked, drained, respawned, listening };
+	return { coordinator, forked, drained, aborted, respawned };
 };
 
 describe("createRecycleCoordinator", () => {
@@ -139,7 +142,7 @@ describe("createRecycleCoordinator", () => {
 		expect(respawned).toEqual(["w-crashed"]);
 	});
 
-	test("a crash of the worker awaiting drain releases the lock", () => {
+	test("old worker crashing pre-drain is NOT respawned — its replacement adopts the slot", () => {
 		const { coordinator, forked, drained, respawned } = createHarness();
 
 		coordinator.handleRecycleRequest({ workerId: "w1" });
@@ -147,24 +150,60 @@ describe("createRecycleCoordinator", () => {
 		// w1 dies before its replacement reports listening.
 		coordinator.handleWorkerExit({ workerId: "w1" });
 
-		// w1 died on its own, so the standard crash respawn applies…
-		expect(respawned).toEqual(["w1"]);
-		// …and w2's cycle proceeds with a second replacement.
+		// No extra fork: the already-booting replacement is w1's respawn.
+		expect(respawned).toHaveLength(0);
+		expect(forked).toHaveLength(1);
+
+		// Replacement comes up, takes the slot without a drain, then w2's
+		// queued cycle starts.
+		coordinator.handleWorkerListening({ workerId: forked[0] });
+		expect(drained).toHaveLength(0);
 		expect(forked).toHaveLength(2);
 		coordinator.handleWorkerListening({ workerId: forked[1] });
 		expect(drained).toEqual(["w2"]);
 	});
 
-	test("a crash of a replacement fork before listening aborts the cycle", () => {
-		const { coordinator, forked, drained, respawned } = createHarness();
+	test("replacement dying while booting aborts without a surplus fork and lets the worker re-request", () => {
+		const { coordinator, forked, drained, aborted, respawned } =
+			createHarness();
 
 		coordinator.handleRecycleRequest({ workerId: "w1" });
 		coordinator.handleWorkerExit({ workerId: forked[0] });
 
-		// The dead replacement is respawn-eligible like any crash…
-		expect(respawned).toEqual([forked[0]]);
-		// …and w1 is never drained (it keeps serving).
+		// Old fork still serves: nothing to respawn, worker told to re-arm.
+		expect(respawned).toHaveLength(0);
+		expect(aborted).toEqual(["w1"]);
 		expect(drained).toHaveLength(0);
+
+		// The re-request starts a fresh cycle.
+		coordinator.handleRecycleRequest({ workerId: "w1" });
+		expect(forked).toHaveLength(2);
+	});
+
+	test("replacement dying after drain was sent is respawned and the old exit stays expected", () => {
+		const { coordinator, forked, drained, respawned } = createHarness();
+
+		coordinator.handleRecycleRequest({ workerId: "w1" });
+		coordinator.handleWorkerListening({ workerId: forked[0] });
+		expect(drained).toEqual(["w1"]);
+
+		// Replacement crashes while w1 is already draining.
+		coordinator.handleWorkerExit({ workerId: forked[0] });
+		expect(respawned).toEqual([forked[0]]);
+
+		// w1's exit is still a recycle completion, not a crash.
+		expect(coordinator.handleWorkerExit({ workerId: "w1" })).toBe(true);
+	});
+
+	test("adopted replacement dying while booting refills the crashed slot", () => {
+		const { coordinator, forked, respawned } = createHarness();
+
+		coordinator.handleRecycleRequest({ workerId: "w1" });
+		coordinator.handleWorkerExit({ workerId: "w1" });
+		// Both the old worker and its adopted replacement are gone: refill.
+		coordinator.handleWorkerExit({ workerId: forked[0] });
+
+		expect(respawned).toEqual([forked[0]]);
 	});
 });
 

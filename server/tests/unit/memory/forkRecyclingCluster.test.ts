@@ -25,6 +25,7 @@ describe("fork recycling in a real bun cluster", () => {
 					FORK_RECYCLE_MIN_AGE_MS: "500",
 					FORK_RECYCLE_CHECK_INTERVAL_MS: "150",
 					FORK_RECYCLE_DRAIN_TIMEOUT_MS: "5000",
+					FORK_RECYCLE_DISABLED: "false",
 				},
 				stdout: "pipe",
 				stderr: "pipe",
@@ -46,52 +47,54 @@ describe("fork recycling in a real bun cluster", () => {
 				}
 			})();
 
-			const waitFor = async (predicate: () => boolean, timeoutMs: number) => {
-				const deadline = Date.now() + timeoutMs;
-				while (!predicate()) {
-					if (Date.now() > deadline) return false;
-					await new Promise((resolve) => setTimeout(resolve, 50));
-				}
-				return true;
-			};
-
-			const workerUpCount = () =>
-				stdoutLines.filter((line) => line.startsWith("WORKER_UP")).length;
-
-			expect(await waitFor(() => workerUpCount() >= 2, 15_000)).toBe(true);
-
-			// Drive sequential traffic through several recycle generations.
-			const servedByPid = new Set<string>();
-			let failures = 0;
-			const trafficDeadline = Date.now() + 8_000;
-			while (Date.now() < trafficDeadline) {
-				try {
-					const response = await fetch(`http://127.0.0.1:${PORT}/`);
-					const body = await response.text();
-					if (!response.ok || !body.startsWith("ok:")) {
-						failures++;
-					} else {
-						servedByPid.add(body.slice(3));
+			try {
+				const waitFor = async (predicate: () => boolean, timeoutMs: number) => {
+					const deadline = Date.now() + timeoutMs;
+					while (!predicate()) {
+						if (Date.now() > deadline) return false;
+						await new Promise((resolve) => setTimeout(resolve, 50));
 					}
-				} catch {
-					failures++;
+					return true;
+				};
+
+				const workerUpCount = () =>
+					stdoutLines.filter((line) => line.startsWith("WORKER_UP")).length;
+
+				expect(await waitFor(() => workerUpCount() >= 2, 15_000)).toBe(true);
+
+				// Drive sequential traffic through several recycle generations.
+				const servedByPid = new Set<string>();
+				let failures = 0;
+				const trafficDeadline = Date.now() + 8_000;
+				while (Date.now() < trafficDeadline) {
+					try {
+						const response = await fetch(`http://127.0.0.1:${PORT}/`);
+						const body = await response.text();
+						if (!response.ok || !body.startsWith("ok:")) {
+							failures++;
+						} else {
+							servedByPid.add(body.slice(3));
+						}
+					} catch {
+						failures++;
+					}
+					await new Promise((resolve) => setTimeout(resolve, 25));
 				}
-				await new Promise((resolve) => setTimeout(resolve, 25));
+
+				expect(failures).toBe(0);
+				// Two boot forks plus at least two recycled replacements served.
+				expect(servedByPid.size).toBeGreaterThanOrEqual(4);
+				// Every exit was a coordinated recycle, never a crash respawn.
+				expect(
+					stdoutLines.filter((line) => line.startsWith("WORKER_DIED")),
+				).toHaveLength(0);
+				expect(
+					stdoutLines.some((line) => line.includes("requesting recycle")),
+				).toBe(true);
+			} finally {
+				fixture.kill();
+				await pump.catch(() => {});
 			}
-
-			expect(failures).toBe(0);
-			// Two boot forks plus at least two recycled replacements served traffic.
-			expect(servedByPid.size).toBeGreaterThanOrEqual(4);
-			// Every exit was a coordinated recycle, never a crash respawn.
-			expect(
-				stdoutLines.filter((line) => line.startsWith("WORKER_DIED")),
-			).toHaveLength(0);
-			expect(
-				stdoutLines.some((line) => line.includes("requesting recycle")),
-			).toBe(true);
-
-			fixture.kill();
-			await pump.catch(() => {});
 		},
 		{ timeout: 40_000 },
 	);
