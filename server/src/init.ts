@@ -42,22 +42,26 @@ import "./internal/misc/asyncTrack/asyncTrackStore.js";
 // Side-effect: configures trigger.dev SDK to use TRIGGER_SERVER_SECRET_KEY.
 import "./trigger/configureTrigger.js";
 import { closeStripeSyncEngine } from "@autumn/stripe-sync";
-import {
-	startRedisMonitor,
-	stopRedisMonitor,
-	warmupRegionalRedis,
-} from "./external/redis/initRedis.js";
 import { primeRedisMonitor } from "./external/redis/availabilityMonitor/redisAvailability.js";
 import {
 	primeRedisV2Monitor,
 	startRedisV2Monitor,
 	stopRedisV2Monitor,
 } from "./external/redis/availabilityMonitor/redisV2Availability.js";
+import {
+	startRedisMonitor,
+	stopRedisMonitor,
+	warmupRegionalRedis,
+} from "./external/redis/initRedis.js";
 import { preWarmOrgRedisConnections } from "./external/redis/orgRedisPool.js";
 import { createHonoApp } from "./initHono.js";
 import { otelSdk } from "./instrumentation.js";
 import { shutdownSqsSendBatchers } from "./queue/queueUtils.js";
 import { checkEnvVars } from "./utils/initUtils.js";
+import {
+	attachPrimaryForkRecycling,
+	startWorkerForkRecycling,
+} from "./utils/memory/forkRecycling/attachForkRecycling.js";
 import {
 	startMemorySpikeProbe,
 	stopMemorySpikeProbe,
@@ -68,7 +72,11 @@ checkEnvVars();
 
 let shuttingDown = false;
 
-const init = async ({ startupStartedAt }: { startupStartedAt: number }) => {
+const init = async ({
+	startupStartedAt,
+}: {
+	startupStartedAt: number;
+}): Promise<http.Server> => {
 	logger.info(getRedactedDatabaseUrls(), "DB URLs");
 
 	const app = createHonoApp();
@@ -111,6 +119,8 @@ const init = async ({ startupStartedAt }: { startupStartedAt: number }) => {
 			resolve();
 		});
 	});
+
+	return server;
 };
 
 if (process.env.NODE_ENV === "development") {
@@ -130,21 +140,38 @@ if (process.env.NODE_ENV === "development") {
 			cluster.fork();
 		}
 
+		const forkRecycling = attachPrimaryForkRecycling({
+			clusterModule: cluster,
+			shouldRespawn: () => !shuttingDown,
+			logger,
+		});
+
 		cluster.on("exit", (worker, code, signal) => {
+			// True = a coordinated recycle finished; the replacement is already
+			// serving and the coordinator respawns crashes itself.
+			if (forkRecycling.handleExit(worker)) return;
 			logger.error("WORKER DIED", {
 				pid: worker.process.pid,
 				code,
 				signal,
 				exitedAfterDisconnect: worker.exitedAfterDisconnect,
 			});
-			if (shuttingDown) return;
-			cluster.fork();
 		});
 
 		registerShutdownHandlers();
 	} else {
 		registerFatalErrorHandlers();
-		await init({ startupStartedAt: Date.now() });
+		const server = await init({ startupStartedAt: Date.now() });
+		startWorkerForkRecycling({
+			server,
+			exitGracefully: () => {
+				// Backstop: a hung flush must not strand a drained fork.
+				const forceExit = setTimeout(() => process.exit(0), 5_000);
+				forceExit.unref?.();
+				void gracefulShutdown();
+			},
+			logger,
+		});
 		registerShutdownHandlers();
 	}
 }
