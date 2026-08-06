@@ -12,7 +12,7 @@ const STANDBY_RETRY_RESERVE_RATIO = 0.25;
 const MAX_STANDBY_RETRY_RESERVE_MS = 250;
 const lastRedisWarningAtBySource = new Map<string, number>();
 
-const getPreferredAttemptBudgetMs = ({
+export const getPreferredAttemptBudgetMs = ({
 	timeoutMs,
 }: {
 	timeoutMs?: number;

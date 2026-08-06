@@ -6,7 +6,11 @@ import {
 } from "@/external/redis/initUtils/createStandbyRedisRouter.js";
 import { RedisUnavailableError } from "@/external/redis/utils/errors.js";
 import { throwOnPipelineConnectionError } from "@/external/redis/utils/pipelineErrors.js";
-import { runRedisOp } from "@/external/redis/utils/runRedisOp.js";
+import { REDIS_OP_TIMEOUT_MS } from "@/external/redis/utils/redisOpTimeouts.js";
+import {
+	getPreferredAttemptBudgetMs,
+	runRedisOp,
+} from "@/external/redis/utils/runRedisOp.js";
 
 type Listener = (...args: unknown[]) => void;
 
@@ -439,6 +443,17 @@ describe("runRedisOp standby failover", () => {
 		expect(primary.calls).toEqual(["get:subject"]);
 		expect(standby.calls).toEqual(["get:subject"]);
 		expect(Date.now() - startedAt).toBeLessThan(390);
+	});
+
+	// The reserve has to fit inside the headroom each deadline was sized with,
+	// not eat into the tail it was sized to cover. Feature balances measure a
+	// p99.9 of 297ms, so the preferred attempt must stay clear of that.
+	test("leaves the feature-balance read its measured tail", () => {
+		expect(
+			getPreferredAttemptBudgetMs({
+				timeoutMs: REDIS_OP_TIMEOUT_MS.featureBalances,
+			}),
+		).toBe(375);
 	});
 
 	test("keeps the full deadline when the alternate is penalized", async () => {
