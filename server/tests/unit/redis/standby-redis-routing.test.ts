@@ -6,7 +6,11 @@ import {
 } from "@/external/redis/initUtils/createStandbyRedisRouter.js";
 import { RedisUnavailableError } from "@/external/redis/utils/errors.js";
 import { throwOnPipelineConnectionError } from "@/external/redis/utils/pipelineErrors.js";
-import { runRedisOp } from "@/external/redis/utils/runRedisOp.js";
+import { REDIS_OP_TIMEOUT_MS } from "@/external/redis/utils/redisOpTimeouts.js";
+import {
+	getPreferredAttemptBudgetMs,
+	runRedisOp,
+} from "@/external/redis/utils/runRedisOp.js";
 
 type Listener = (...args: unknown[]) => void;
 
@@ -387,6 +391,23 @@ describe("runRedisOp standby failover", () => {
 		expect(standby.calls).toEqual([]);
 	});
 
+	test("keeps the full deadline when the alternate is not ready", async () => {
+		const { primary, standby, redis } = createPair({ standbyStatus: "end" });
+		primary.hangGetForMs = 175;
+
+		const result = await runRedisOp({
+			redisInstance: redis,
+			source: "standby-test",
+			retryOnStandby: true,
+			timeoutMs: 200,
+			operation: (connection) => connection.get("subject"),
+		});
+
+		expect(result).toBe("primary");
+		expect(primary.calls).toEqual(["get:subject"]);
+		expect(standby.calls).toEqual([]);
+	});
+
 	test("surfaces the retry failure when both connections fail", async () => {
 		const { primary, standby, redis } = createPair();
 		primary.failGetWith = connectionError();
@@ -403,6 +424,70 @@ describe("runRedisOp standby failover", () => {
 
 		expect(primary.calls).toEqual(["get:subject"]);
 		expect(standby.calls).toEqual(["get:subject"]);
+	});
+
+	test("reserves part of the deadline for a standby retry", async () => {
+		const { primary, standby, redis } = createPair();
+		primary.hangGetForMs = 5_000;
+
+		const startedAt = Date.now();
+		const result = await runRedisOp({
+			redisInstance: redis,
+			source: "standby-test",
+			retryOnStandby: true,
+			timeoutMs: 400,
+			operation: (connection) => connection.get("subject"),
+		});
+
+		expect(result).toBe("standby");
+		expect(primary.calls).toEqual(["get:subject"]);
+		expect(standby.calls).toEqual(["get:subject"]);
+		expect(Date.now() - startedAt).toBeLessThan(390);
+	});
+
+	// The reserve has to fit inside the headroom each deadline was sized with,
+	// not eat into the tail it was sized to cover. Feature balances measure a
+	// p99.9 of 297ms, so the preferred attempt must stay clear of that.
+	test("leaves the feature-balance read its measured tail", () => {
+		expect(
+			getPreferredAttemptBudgetMs({
+				timeoutMs: REDIS_OP_TIMEOUT_MS.featureBalances,
+			}),
+		).toBe(375);
+	});
+
+	test("keeps the full deadline when the alternate is penalized", async () => {
+		const { primary, standby, redis } = createPair({
+			primaryStatus: "reconnecting",
+		});
+
+		// Fail the standby out of rotation while it is the only usable connection,
+		// then restore the primary: the pair ends up ready but distrusted.
+		standby.failGetWith = connectionError();
+		for (let attempt = 0; attempt < 3; attempt++) {
+			await runRedisOp({
+				redisInstance: redis,
+				source: "standby-test",
+				retryOnStandby: true,
+				operation: (connection) => connection.get("subject"),
+			}).catch(() => undefined);
+		}
+		standby.failGetWith = undefined;
+		primary.status = "ready";
+		const standbyCallsBefore = standby.calls.length;
+
+		primary.hangGetForMs = 520;
+		const result = await runRedisOp({
+			redisInstance: redis,
+			source: "standby-test",
+			retryOnStandby: true,
+			timeoutMs: 600,
+			operation: (connection) => connection.get("subject"),
+		});
+
+		expect(result).toBe("primary");
+		expect(primary.calls).toEqual(["get:subject"]);
+		expect(standby.calls.length).toBe(standbyCallsBefore);
 	});
 
 	test("shares one timeout budget across both attempts", async () => {

@@ -8,7 +8,25 @@ import { isConnectionLevelRedisError } from "./isTransientRedisError.js";
 const REDIS_WARNING_INTERVAL_MS = 30_000;
 /** Below this a retry cannot finish, so spend the budget on the fallback. */
 const MIN_RETRY_BUDGET_MS = 50;
+const STANDBY_RETRY_RESERVE_RATIO = 0.25;
+const MAX_STANDBY_RETRY_RESERVE_MS = 250;
 const lastRedisWarningAtBySource = new Map<string, number>();
+
+export const getPreferredAttemptBudgetMs = ({
+	timeoutMs,
+}: {
+	timeoutMs?: number;
+}): number | undefined => {
+	if (timeoutMs === undefined) return undefined;
+
+	const retryReserveMs = Math.min(
+		Math.floor(timeoutMs * STANDBY_RETRY_RESERVE_RATIO),
+		MAX_STANDBY_RETRY_RESERVE_MS,
+	);
+	return retryReserveMs >= MIN_RETRY_BUDGET_MS
+		? timeoutMs - retryReserveMs
+		: timeoutMs;
+};
 
 const classifyErrorReason = (
 	targetRedis: Redis,
@@ -118,8 +136,14 @@ export const runRedisOp = async <T>({
 		if (!router) return await runAttempt(targetRedis, timeoutMs);
 
 		const [preferred, alternate] = router.ordered();
+		// Only shorten the preferred attempt for an alternate worth retrying on.
+		// `canRetry` below stays broader on purpose: once the preferred has failed,
+		// a penalized alternate still beats falling open to the non-Redis path.
+		const preferredAttemptBudgetMs = router.isUsable(alternate)
+			? getPreferredAttemptBudgetMs({ timeoutMs })
+			: timeoutMs;
 		try {
-			const value = await runAttempt(preferred, timeoutMs);
+			const value = await runAttempt(preferred, preferredAttemptBudgetMs);
 			router.recordOutcome({ connection: preferred });
 			return value;
 		} catch (firstError) {

@@ -16,7 +16,6 @@ jobs:
   notify-shipped:
     name: Notify shipped
     if: >-
-      github.event.pull_request.head.ref == 'dev' &&
       github.event.pull_request.head.repo.full_name == github.repository &&
       contains(github.event.pull_request.body || '', '<!-- This is an auto-generated description by cubic. -->') &&
       (github.event.action == 'opened' ||
@@ -53,7 +52,7 @@ jobs:
             -e 's/&/\&amp;/g' \
             -e 's/</\&lt;/g' \
             -e 's/>/\&gt;/g')
-          printf -v SLACK_MESSAGE '*dev2main* :rocket:\n<%s|PR #%s>\n\n%s' \
+          printf -v SLACK_MESSAGE '*→ main* :rocket:\n<%s|PR #%s>\n\n%s' \
             "$PR_URL" "$PR_NUMBER" "$slack_summary"
           export SLACK_MESSAGE
 
@@ -70,7 +69,6 @@ jobs:
     if: >-
       github.event.action == 'closed' &&
       github.event.pull_request.merged == true &&
-      github.event.pull_request.head.ref == 'dev' &&
       github.event.pull_request.head.repo.full_name == github.repository
     runs-on: ubuntu-latest
 
