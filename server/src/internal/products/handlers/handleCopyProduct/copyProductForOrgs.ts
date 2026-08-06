@@ -8,14 +8,14 @@ import {
 	type Organization,
 	ProductAlreadyExistsError,
 } from "@autumn/shared";
-import type { DrizzleCli } from "@/db/initDrizzle.js";
-import type { Logger } from "@/external/logtail/logtailUtils.js";
 import { invalidateProductsCache } from "@/external/redis/actions/productsCache/productsCache.js";
+import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { FeatureService } from "@/internal/features/FeatureService.js";
 import { ProductService } from "@/internal/products/ProductService.js";
 import { copyProduct } from "@/internal/products/productUtils.js";
 import RecaseError from "@/utils/errorUtils.js";
 import { generateId } from "@/utils/genUtils.js";
+import { copyBaseVariants, listSourceVariants } from "./copyBaseVariants.js";
 
 const initNewFeature = ({
 	data,
@@ -41,8 +41,7 @@ const initNewFeature = ({
  * orgs — this only executes the copy.
  */
 export const copyProductForOrgs = async ({
-	db,
-	logger,
+	ctx,
 	fromOrg,
 	fromEnv,
 	toOrg,
@@ -51,8 +50,7 @@ export const copyProductForOrgs = async ({
 	toId,
 	toName,
 }: {
-	db: DrizzleCli;
-	logger: Logger;
+	ctx: AutumnContext;
 	fromOrg: Organization;
 	fromEnv: AppEnv;
 	toOrg: Organization;
@@ -61,6 +59,7 @@ export const copyProductForOrgs = async ({
 	toId: string;
 	toName: string;
 }): Promise<void> => {
+	const { db, logger } = ctx;
 	const crossOrg = fromOrg.id !== toOrg.id;
 
 	if (!crossOrg && fromEnv === toEnv && fromProductId === toId) {
@@ -107,13 +106,22 @@ export const copyProductForOrgs = async ({
 		});
 	}
 
+	const variants = await listSourceVariants({
+		db,
+		base: fromFullProduct,
+		fromOrg,
+		fromEnv,
+	});
+
 	fromFullProduct.is_default = false;
 	if (crossOrg) {
 		fromFullProduct.base_variant_id = null;
 	}
 
 	const featureIdsToCopy = new Set(
-		fromFullProduct.entitlements.map((e) => e.feature.id),
+		[fromFullProduct, ...variants].flatMap((product) =>
+			product.entitlements.map((entitlement) => entitlement.feature.id),
+		),
 	);
 	// Credit systems draw from metered features; bring those along so a promoted
 	// credit system isn't left pointing at a feature the target lacks.
@@ -158,7 +166,7 @@ export const copyProductForOrgs = async ({
 		}
 	}
 
-	await copyProduct({
+	const toBaseInternalId = await copyProduct({
 		db,
 		product: fromFullProduct,
 		toOrgId: toOrg.id,
@@ -170,6 +178,19 @@ export const copyProductForOrgs = async ({
 		fromFeatures,
 		org: toOrg,
 		logger,
+	});
+
+	await copyBaseVariants({
+		ctx,
+		toContext: { ...ctx, org: toOrg, env: toEnv, features: toFeatures },
+		variants,
+		fromEnv,
+		toOrg,
+		toEnv,
+		toBaseInternalId,
+		fromFeatures,
+		toFeatures,
+		crossOrg,
 	});
 
 	await invalidateProductsCache({ orgId: toOrg.id, env: toEnv });

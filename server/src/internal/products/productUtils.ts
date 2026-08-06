@@ -351,6 +351,7 @@ export const copyProduct = async ({
 	fromFeatures,
 	org,
 	logger,
+	baseInternalProductId = null,
 }: {
 	db: DrizzleCli;
 	product: FullProduct;
@@ -363,7 +364,8 @@ export const copyProduct = async ({
 	fromFeatures: Feature[];
 	org: Organization;
 	logger: any;
-}) => {
+	baseInternalProductId?: string | null;
+}): Promise<string> => {
 	const newProduct = {
 		...product,
 		name: toName,
@@ -373,6 +375,9 @@ export const copyProduct = async ({
 		env: toEnv,
 		processor: null,
 		base_variant_id: fromEnv === toEnv ? null : product.base_variant_id,
+		// The source link points at a product in the source (org, env); only an
+		// explicitly remapped target base is safe to persist here.
+		base_internal_product_id: baseInternalProductId,
 	};
 
 	const newEntitlements: Entitlement[] = [];
@@ -496,6 +501,8 @@ export const copyProduct = async ({
 			},
 		});
 	}
+
+	return newProduct.internal_id;
 };
 
 export const isOneOff = (prices: Price[]) => {
