@@ -15,10 +15,12 @@ import { planLicenseRepo } from "@/internal/licenses/repos/planLicenseRepo.js";
 import { createProduct } from "../../../product/actions/createProduct.js";
 import { updateProduct } from "../../../product/actions/updateProduct.js";
 import { ProductService } from "../../ProductService.js";
+import { initProductInStripe } from "../../productUtils.js";
+import { applyStripeReuseFromVariantFamilies } from "../../stripeResourceUtils/applyStripeReuseFromVariantFamilies.js";
 import {
 	getTargetBaseInternalIds,
 	resolveSourceBasePlanIds,
-	withRequiredPlans,
+	withRequiredBases,
 } from "./resolveVariantBaseLinks.js";
 
 const conformProductToSchema = (
@@ -90,31 +92,16 @@ export const handleCopyProducts = async ({
 		? fromProductsAll.filter((p) => productIds.includes(p.id))
 		: fromProductsAll;
 
-	// Licenses first so a pulled-in license also gets its variant base resolved.
-	const licenseLinks = await planLicenseRepo.listWithLicensePlanIdByParents({
+	const basePlanIdByVariantId = await resolveSourceBasePlanIds({
 		db,
-		parentInternalProductIds: requestedFromProducts.map(
-			(product) => product.internal_id,
-		),
+		fromProducts: requestedFromProducts,
+		fromProductsAll,
 	});
-	const withLicenses = withRequiredPlans({
+	const fromProducts = withRequiredBases({
 		fromProducts: requestedFromProducts,
 		fromProductsAll,
 		toProducts,
-		requiredPlanIds: licenseLinks.map((link) => link.licensePlanId),
-	});
-
-	const basePlanIdByVariantId = await resolveSourceBasePlanIds({
-		db,
-		fromProducts: withLicenses,
-		fromProductsAll,
-	});
-	const basePlanIds = deduplicateArray([...basePlanIdByVariantId.values()]);
-	const fromProducts = withRequiredPlans({
-		fromProducts: withLicenses,
-		fromProductsAll,
-		toProducts,
-		requiredPlanIds: basePlanIds,
+		basePlanIdByVariantId,
 	});
 
 	const toProductsV2 = toProducts.map((p) =>
@@ -170,12 +157,15 @@ export const handleCopyProducts = async ({
 					: conformedProduct,
 			});
 		}
+		// Variants defer Stripe so they reuse the base family's resources below,
+		// matching createVariant.
 		return createProduct({
 			ctx: newContext,
 			data: targetBaseInternalId
 				? {
 						...conformedProduct,
 						base_internal_product_id: targetBaseInternalId,
+						create_in_stripe: false,
 					}
 				: conformedProduct,
 		});
@@ -198,13 +188,18 @@ export const handleCopyProducts = async ({
 		db,
 		toOrgId: toOrg.id,
 		toEnv,
-		basePlanIds,
+		basePlanIds: deduplicateArray([...basePlanIdByVariantId.values()]),
 	});
 
 	await Promise.all(
 		variantProductsV2.map((fromProductV2) => {
 			const basePlanId = basePlanIdByVariantId.get(fromProductV2.id) as string;
 			const targetBaseInternalId = targetBaseInternalIds.get(basePlanId);
+			if (!targetBaseInternalId) {
+				ctx.logger.warn(
+					`copy env: target ${basePlanId} cannot be a variant base, copying ${fromProductV2.id} unlinked`,
+				);
+			}
 			return copyOneProduct({
 				fromProductV2,
 				basePlanId: targetBaseInternalId ? basePlanId : undefined,
@@ -213,23 +208,50 @@ export const handleCopyProducts = async ({
 		}),
 	);
 
+	// Licenses are never pulled into the copy set (their features may not be
+	// selected); links resolve only against licenses already in the target.
+	const licenseLinks = await planLicenseRepo.listWithLicensePlanIdByParents({
+		db,
+		parentInternalProductIds: fromProducts.map(
+			(product) => product.internal_id,
+		),
+	});
+
 	// inIds bypasses the products cache — the copy ops' invalidations land
 	// async, so a plain listFull can still see the pre-copy (empty) snapshot.
-	// License plan ids are included so links can resolve against target
-	// licenses that already existed and were not part of the copy set.
 	const copiedToProducts = await ProductService.listFull({
 		db,
 		orgId: toOrg.id,
 		env: toEnv,
-		inIds: deduplicateArray([
-			...fromProducts.map((product) => product.id),
-			...licenseLinks.map((link) => link.licensePlanId),
-		]),
+		inIds: fromProducts.map((product) => product.id),
 	});
+
+	const copiedVariants = copiedToProducts.filter(
+		(product) => product.base_internal_product_id !== null,
+	);
+	await applyStripeReuseFromVariantFamilies({
+		ctx: newContext,
+		products: copiedVariants,
+	});
+	await Promise.all(
+		copiedVariants.map((product) =>
+			initProductInStripe({ ctx: newContext, product }),
+		),
+	);
+
+	// A license outside the copy set can still satisfy its link if the target
+	// already has a plan with that id.
+	const copiedIds = new Set(copiedToProducts.map((product) => product.id));
+	const existingTargetLicenses = toProducts.filter(
+		(product) =>
+			!copiedIds.has(product.id) &&
+			licenseLinks.some((link) => link.licensePlanId === product.id),
+	);
+
 	await copyPlanLicenseLinks({
 		db,
 		links: licenseLinks,
 		fromProducts,
-		toProducts: copiedToProducts,
+		toProducts: [...copiedToProducts, ...existingTargetLicenses],
 	});
 };

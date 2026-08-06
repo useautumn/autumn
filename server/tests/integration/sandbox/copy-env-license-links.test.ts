@@ -30,8 +30,9 @@ import { generateId } from "@/utils/genUtils.js";
  *   New behaviors (handleCopyProducts):
  *     - copy set includes parent + license -> target has a plan_licenses row
  *       linking the copied pair, preserving included / prepaid_only / metadata
- *     - copying a parent alone -> its license product is pulled into the copy
- *       set and the link is recreated (same pattern as variant bases)
+ *     - copying a parent alone -> the license plan is NOT pulled into the copy
+ *       set (selective copies never widen the catalog, see
+ *       license-sandbox-copy.test.ts) and the link is skipped
  *     - copying a parent whose license already exists in the target -> the link
  *       resolves against the existing target license, no duplicate product
  *     - re-copy when both products exist in the target without the link -> the
@@ -45,8 +46,8 @@ const suffix = crypto.randomUUID().slice(0, 8);
 
 const FULL_PARENT = `cll_full_parent_${suffix}`;
 const FULL_LICENSE = `cll_full_license_${suffix}`;
-const PULL_PARENT = `cll_pull_parent_${suffix}`;
-const PULL_LICENSE = `cll_pull_license_${suffix}`;
+const SKIP_PARENT = `cll_skip_parent_${suffix}`;
+const SKIP_LICENSE = `cll_skip_license_${suffix}`;
 const EXIST_PARENT = `cll_exist_parent_${suffix}`;
 const EXIST_LICENSE = `cll_exist_license_${suffix}`;
 const REPAIR_PARENT = `cll_repair_parent_${suffix}`;
@@ -106,7 +107,8 @@ const seedLinkedPair = async ({
 	parentId,
 	licenseId,
 	included = 1,
-	prepaidOnly = false,
+	// prepaid_only: false is rejected by syncPlanLicenses; only seed valid links.
+	prepaidOnly = true,
 	metadata,
 }: {
 	parentId: string;
@@ -192,21 +194,25 @@ describe("copying an env carries over plan license links", () => {
 		expect(links[0].metadata).toEqual({ source: "tdd" });
 	});
 
-	test("copying a parent alone pulls its license into the target env", async () => {
+	test("copying a parent alone skips the link and never pulls the license in", async () => {
 		await seedLinkedPair({
-			parentId: PULL_PARENT,
-			licenseId: PULL_LICENSE,
+			parentId: SKIP_PARENT,
+			licenseId: SKIP_LICENSE,
 		});
 
-		await copyToLive([PULL_PARENT]);
+		await copyToLive([SKIP_PARENT]);
 
-		const liveParent = await getLivePlan(PULL_PARENT);
-		const liveLicense = await getLivePlan(PULL_LICENSE);
+		const liveParent = await getLivePlan(SKIP_PARENT);
+		const liveLicense = await ProductService.get({
+			db,
+			orgId: org?.id as string,
+			env: AppEnv.Live,
+			id: SKIP_LICENSE,
+		});
 		const links = await listLiveLinks(liveParent);
 
-		expect(liveLicense).toBeDefined();
-		expect(links).toHaveLength(1);
-		expect(links[0].license_internal_product_id).toBe(liveLicense.internal_id);
+		expect(liveLicense).toBeFalsy();
+		expect(links).toHaveLength(0);
 	});
 
 	test("copying a parent links to a license that already exists in the target", async () => {

@@ -1,11 +1,12 @@
 import type { DbPlanLicense, FullProduct } from "@autumn/shared";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 import { planLicenseRepo } from "../../repos/planLicenseRepo.js";
+import { validateLicenseLink } from "./validateLicenseLink.js";
 
 /**
  * Recreates plan_license links in a copy target by translating both ends
  * through external plan ids. Links whose parent or license is absent from the
- * target are skipped.
+ * target, or would be rejected by link validation, are skipped.
  */
 export const copyPlanLicenseLinks = async ({
 	db,
@@ -40,6 +41,17 @@ export const copyPlanLicenseLinks = async ({
 			: undefined;
 		const toLicense = latestToProductByPlanId.get(licensePlanId);
 		if (!toParent || !toLicense) continue;
+
+		try {
+			validateLicenseLink({
+				parentProduct: toParent,
+				licenseProduct: toLicense,
+				prepaidOnly: planLicense.prepaid_only,
+				licensePlanId,
+			});
+		} catch {
+			continue;
+		}
 
 		await planLicenseRepo.upsert({
 			db,
