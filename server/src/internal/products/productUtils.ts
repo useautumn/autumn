@@ -106,7 +106,7 @@ export const constructProduct = ({
 		base_variant_id: null,
 		base_internal_product_id:
 			baseInternalProductId ?? productData.base_internal_product_id ?? null,
-		archived: false,
+		archived: productData.archived ?? false,
 		config: {
 			ignore_past_due: productData.config?.ignore_past_due ?? false,
 		},

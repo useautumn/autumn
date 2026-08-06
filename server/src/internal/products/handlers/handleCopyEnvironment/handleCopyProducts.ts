@@ -25,15 +25,19 @@ import {
 
 const conformProductToSchema = (
 	product: ProductV2,
-): UpdateProductV2Params & Omit<CreateProductV2Params, "version"> => {
+): UpdateProductV2Params & CreateProductV2Params => {
 	return {
 		id: product.id,
 		name: product.name,
+		description: product.description ?? null,
 		is_add_on: product.is_add_on,
 		is_default: product.is_default,
 		group: product.group ?? "",
 		archived: product.archived ?? undefined,
 		items: product.items,
+		config: product.config,
+		billing_controls: product.billing_controls,
+		metadata: product.metadata,
 		free_trial: product.free_trial
 			? {
 					length: product.free_trial.length,
@@ -113,18 +117,20 @@ export const handleCopyProducts = async ({
 			product: p,
 			features: fromFeatures,
 		});
-		productV2.items = productV2.items.map((i) => {
-			const {
-				price_id: _price_id,
-				entitlement_id: _ent_id,
-				price_config: _price_config,
-				stripe_price_id: _stripe_price_id,
-				...rest
-			} = i;
-			return rest;
-		});
-
-		return productV2;
+		return {
+			...productV2,
+			description: p.description,
+			items: productV2.items.map((i) => {
+				const {
+					price_id: _price_id,
+					entitlement_id: _ent_id,
+					price_config: _price_config,
+					stripe_price_id: _stripe_price_id,
+					...rest
+				} = i;
+				return rest;
+			}),
+		};
 	});
 
 	const newContext = {
