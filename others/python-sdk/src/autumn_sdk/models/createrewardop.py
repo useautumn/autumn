@@ -204,7 +204,7 @@ class CreateRewardExpiryRequest(BaseModel):
 class CreateRewardGrantTypedDict(TypedDict):
     feature_id: str
     included: Nullable[float]
-    r"""A positive amount to grant, or null for boolean features."""
+    r"""A non-negative amount to grant, or null for boolean features."""
     expiry: Nullable[CreateRewardExpiryRequestTypedDict]
 
 
@@ -212,7 +212,7 @@ class CreateRewardGrant(BaseModel):
     feature_id: str
 
     included: Nullable[float]
-    r"""A positive amount to grant, or null for boolean features."""
+    r"""A non-negative amount to grant, or null for boolean features."""
 
     expiry: Nullable[CreateRewardExpiryRequest]
 

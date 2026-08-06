@@ -99,7 +99,7 @@ export type CreateRewardExpiryRequest = {
 export type CreateRewardGrant = {
   featureId: string;
   /**
-   * A positive amount to grant, or null for boolean features.
+   * A non-negative amount to grant, or null for boolean features.
    */
   included: number | null;
   expiry: CreateRewardExpiryRequest | null;
