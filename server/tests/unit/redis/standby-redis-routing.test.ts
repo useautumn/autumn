@@ -405,6 +405,25 @@ describe("runRedisOp standby failover", () => {
 		expect(standby.calls).toEqual(["get:subject"]);
 	});
 
+	test("reserves part of the deadline for a standby retry", async () => {
+		const { primary, standby, redis } = createPair();
+		primary.hangGetForMs = 5_000;
+
+		const startedAt = Date.now();
+		const result = await runRedisOp({
+			redisInstance: redis,
+			source: "standby-test",
+			retryOnStandby: true,
+			timeoutMs: 400,
+			operation: (connection) => connection.get("subject"),
+		});
+
+		expect(result).toBe("standby");
+		expect(primary.calls).toEqual(["get:subject"]);
+		expect(standby.calls).toEqual(["get:subject"]);
+		expect(Date.now() - startedAt).toBeLessThan(390);
+	});
+
 	test("shares one timeout budget across both attempts", async () => {
 		const { primary, standby, redis } = createPair();
 		// Primary burns most of the budget, then fails; standby never answers.
