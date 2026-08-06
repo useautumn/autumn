@@ -93,8 +93,6 @@ export const customerEntitlements = pgTable(
 		})
 			.onUpdate("cascade")
 			.onDelete("cascade"),
-		// Default collation: serves plain `customer_product_id = $1` lookups and
-		// the FK cascade. The COLLATE "C" variant only matches C-collated inputs.
 		index("idx_customer_entitlements_product_id").on(table.customer_product_id),
 		index("idx_customer_entitlements_internal_customer_id").using(
 			"hash",

@@ -11,8 +11,8 @@ import {
  * call. The rows a call returns drive the cursor; a short page ends the
  * iteration.
  *
- * The runaway ceiling is enforced against rows actually visited rather than a
- * pre-count, which would re-run the whole candidate query once per page.
+ * The runaway ceiling counts rows as they are visited, so it costs nothing
+ * beyond the pages already being read.
  *
  * Partial iterations are safe by design: every mutation is dedup-idempotent
  * and the customer page's claims stay `running` until the marks land, so a

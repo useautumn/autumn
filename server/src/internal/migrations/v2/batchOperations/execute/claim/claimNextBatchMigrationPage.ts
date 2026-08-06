@@ -87,9 +87,8 @@ export const claimNextBatchMigrationPage = async ({
 		...retryItemStatuses,
 	];
 
-	// Select and claim in ONE statement. The previous two-statement form shipped
-	// the page's rows to Node and sent ~9 bind params per row back (~45k at a
-	// 5000 page); here the rows never leave Postgres and the claim carries ~10.
+	// Select and claim in one statement: the page's rows never leave Postgres,
+	// so the claim carries a handful of params rather than ~9 per row.
 	const rows = (await timePhase({
 		phases,
 		phase: "claim_select",

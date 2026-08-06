@@ -14,9 +14,8 @@ import {
 /** Post-commit side effects for one finalized page.
  *
  * Cache invalidation and item-event emission are independent, so they run
- * concurrently. With `deferEvents`, the event emit is handed to the caller to
- * drain at chunk end instead of blocking the page — it is audit telemetry that
- * nothing in the execute path reads back, and its errors are already swallowed. */
+ * concurrently. Either can be handed to the caller to drain at chunk end
+ * instead of blocking the page. */
 export const finalizeBatchMigrationPage = async ({
 	ctx,
 	migrationInternalId,

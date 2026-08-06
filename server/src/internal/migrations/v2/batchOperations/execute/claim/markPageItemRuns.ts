@@ -1,9 +1,8 @@
 import { sql } from "drizzle-orm";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 
-/** Settles the page's `running` claims in ONE statement: succeeded and skipped
- * are split by a CASE over an array param rather than two UPDATEs each carrying
- * a 5000-element IN list. */
+/** Settles the page's `running` claims in one statement; succeeded and skipped
+ * are split by a CASE over array params. */
 export const markPageItemRuns = async ({
 	db,
 	migrationInternalId,

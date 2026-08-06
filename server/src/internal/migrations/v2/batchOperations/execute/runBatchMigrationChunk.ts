@@ -96,8 +96,8 @@ export const runBatchMigrationChunk = async ({
 		};
 	};
 
-	// finally, not just the success paths: a throw mid-loop must never orphan a
-	// pending cache invalidation — that is silent, unrecoverable staleness.
+	// A throw mid-loop must never orphan a pending cache invalidation — that is
+	// silent, unrecoverable staleness — so the drain runs on every exit path.
 	try {
 		while (true) {
 			if (await isMigrationCancelRequested({ migrationRunId }))
