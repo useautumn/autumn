@@ -16,6 +16,7 @@ import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { FeatureService } from "@/internal/features/FeatureService.js";
 import { createFeature } from "@/internal/features/featureActions/createFeature.js";
 import { constructBooleanFeature } from "@/internal/features/utils/constructFeatureUtils.js";
+import { planLicenseRepo } from "@/internal/licenses/repos/planLicenseRepo.js";
 import { deletePlatformSubOrg } from "@/internal/orgs/deleteOrg/deletePlatformSubOrg.js";
 import { OrgService } from "@/internal/orgs/OrgService.js";
 import { createProduct } from "@/internal/product/actions/createProduct.js";
@@ -42,6 +43,8 @@ const RENAME_VARIANT_PLAN = `cpv_rename_variant_${suffix}`;
 const CONFLICT_BASE_PLAN = `cpv_conflict_base_${suffix}`;
 const CONFLICT_TAKEN_PLAN = `cpv_conflict_taken_${suffix}`;
 const CONFLICT_FREE_PLAN = `cpv_conflict_free_${suffix}`;
+const LICENSE_PLAN = `cpv_license_${suffix}`;
+const LICENSE_BASE_PLAN = `cpv_license_base_${suffix}`;
 
 let org: Organization | undefined;
 
@@ -273,5 +276,47 @@ describe("copying a single base plan carries its variants", () => {
 		expect(liveTaken.length).toBe(1);
 		expect(liveTaken[0]?.internal_id).toBe(taken.internal_id);
 		expect(liveTaken[0]?.base_internal_product_id).toBeNull();
+	});
+
+	test("license links are recreated against the target's license plan", async () => {
+		const sourceLicense = await seedPlan({
+			env: AppEnv.Sandbox,
+			planId: LICENSE_PLAN,
+		});
+		const targetLicense = await seedPlan({
+			env: AppEnv.Live,
+			planId: LICENSE_PLAN,
+		});
+		const base = await seedPlan({
+			env: AppEnv.Sandbox,
+			planId: LICENSE_BASE_PLAN,
+		});
+		await planLicenseRepo.upsert({
+			db,
+			parentInternalProductId: base.internal_id,
+			licenseInternalProductId: sourceLicense.internal_id,
+			included: 1,
+			prepaidOnly: true,
+			metadata: {},
+		});
+
+		await copyPlanToLive({
+			fromProductId: LICENSE_BASE_PLAN,
+			toId: LICENSE_BASE_PLAN,
+			toName: "License Base",
+		});
+
+		const livePlans = await listLivePlans();
+		const liveBase = livePlans.find((p) => p.id === LICENSE_BASE_PLAN);
+		const liveLinks = await planLicenseRepo.listWithLicensePlanIdByParents({
+			db,
+			parentInternalProductIds: [liveBase?.internal_id as string],
+		});
+
+		expect(liveLinks.length).toBe(1);
+		expect(liveLinks[0]?.licensePlanId).toBe(LICENSE_PLAN);
+		expect(liveLinks[0]?.planLicense.license_internal_product_id).toBe(
+			targetLicense.internal_id,
+		);
 	});
 });

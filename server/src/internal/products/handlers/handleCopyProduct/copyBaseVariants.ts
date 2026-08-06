@@ -70,8 +70,9 @@ const listConflictingVariantIds = async ({
 
 /**
  * Copies a base plan's variants into the target (org, env), relinking each to
- * the freshly copied base. A variant whose id is already taken in the target is
- * skipped so one stale plan can't block promoting the base.
+ * the freshly copied base, and returns the copied variants' plan ids. A variant
+ * whose id is already taken in the target is skipped so one stale plan can't
+ * block promoting the base.
  */
 export const copyBaseVariants = async ({
 	ctx,
@@ -95,8 +96,8 @@ export const copyBaseVariants = async ({
 	fromFeatures: Feature[];
 	toFeatures: Feature[];
 	crossOrg: boolean;
-}): Promise<void> => {
-	if (variants.length === 0) return;
+}): Promise<string[]> => {
+	if (variants.length === 0) return [];
 
 	const { db, logger } = ctx;
 	const conflictingIds = await listConflictingVariantIds({
@@ -136,7 +137,7 @@ export const copyBaseVariants = async ({
 		copiedVariantIds.push(variant.id);
 	}
 
-	if (copiedVariantIds.length === 0) return;
+	if (copiedVariantIds.length === 0) return [];
 
 	const copiedVariants = await ProductService.listFull({
 		db,
@@ -154,4 +155,6 @@ export const copyBaseVariants = async ({
 	for (const product of copiedVariants) {
 		await initProductInStripe({ ctx: toContext, product });
 	}
+
+	return copiedVariantIds;
 };

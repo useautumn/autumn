@@ -12,10 +12,14 @@ import { invalidateProductsCache } from "@/external/redis/actions/productsCache/
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { FeatureService } from "@/internal/features/FeatureService.js";
 import { ProductService } from "@/internal/products/ProductService.js";
-import { copyProduct } from "@/internal/products/productUtils.js";
+import {
+	copyProduct,
+	initProductInStripe,
+} from "@/internal/products/productUtils.js";
 import RecaseError from "@/utils/errorUtils.js";
 import { generateId } from "@/utils/genUtils.js";
 import { copyBaseVariants, listSourceVariants } from "./copyBaseVariants.js";
+import { copyLicenseLinksForPlanCopy } from "./copyLicenseLinksForPlanCopy.js";
 
 const initNewFeature = ({
 	data,
@@ -180,9 +184,18 @@ export const copyProductForOrgs = async ({
 		logger,
 	});
 
-	await copyBaseVariants({
+	const toContext = { ...ctx, org: toOrg, env: toEnv, features: toFeatures };
+	const copiedBase = await ProductService.getFull({
+		db,
+		idOrInternalId: toBaseInternalId,
+		orgId: toOrg.id,
+		env: toEnv,
+	});
+	await initProductInStripe({ ctx: toContext, product: copiedBase });
+
+	const copiedVariantIds = await copyBaseVariants({
 		ctx,
-		toContext: { ...ctx, org: toOrg, env: toEnv, features: toFeatures },
+		toContext,
 		variants,
 		fromEnv,
 		toOrg,
@@ -191,6 +204,16 @@ export const copyProductForOrgs = async ({
 		fromFeatures,
 		toFeatures,
 		crossOrg,
+	});
+
+	await copyLicenseLinksForPlanCopy({
+		ctx,
+		fromBase: fromFullProduct,
+		variants,
+		toOrg,
+		toEnv,
+		toBaseId: toId,
+		copiedVariantIds,
 	});
 
 	await invalidateProductsCache({ orgId: toOrg.id, env: toEnv });
