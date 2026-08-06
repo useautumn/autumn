@@ -252,7 +252,6 @@ describe("sandboxes.copy: copy plans + features between two sandbox sub-orgs", (
 		expect(targetProductsBefore.length).toBe(0);
 
 		await copySandboxForOrg({
-			db,
 			ctx: baseCtx,
 			masterOrg: defaultCtx.org,
 			fromSandboxId: source.id,
@@ -309,7 +308,6 @@ describe("sandboxes.copy: copy plans + features between two sandbox sub-orgs", (
 		let caught: unknown;
 		try {
 			await copySandboxForOrg({
-				db,
 				ctx: baseCtx,
 				masterOrg: defaultCtx.org,
 				fromSandboxId: `org_${crypto.randomUUID()}`,
@@ -330,7 +328,6 @@ describe("sandboxes.copy: copy plans + features between two sandbox sub-orgs", (
 		let caught: unknown;
 		try {
 			await copySandboxForOrg({
-				db,
 				ctx: baseCtx,
 				masterOrg: defaultCtx.org,
 				fromSandboxId: source.id,
@@ -354,7 +351,6 @@ describe("sandboxes.copy: copy plans + features between two sandbox sub-orgs", (
 		let caught: unknown;
 		try {
 			await copySandboxForOrg({
-				db,
 				ctx: baseCtx,
 				masterOrg: defaultCtx.org,
 				fromSandboxId: source.id,
@@ -375,7 +371,6 @@ describe("sandboxes.copy: copy plans + features between two sandbox sub-orgs", (
 		let caught: unknown;
 		try {
 			await copySandboxForOrg({
-				db,
 				ctx: baseCtx,
 				masterOrg: defaultCtx.org,
 				fromSandboxId: source.id,
@@ -406,7 +401,6 @@ describe("sandboxes.copy: selective copy via productIds / featureIds", () => {
 		const dst = await freshTarget("prod");
 
 		await copySandboxForOrg({
-			db,
 			ctx: baseCtx,
 			masterOrg: defaultCtx.org,
 			fromSandboxId: source.id,
@@ -451,7 +445,6 @@ describe("sandboxes.copy: selective copy via productIds / featureIds", () => {
 		const dst = await freshTarget("feat");
 
 		await copySandboxForOrg({
-			db,
 			ctx: baseCtx,
 			masterOrg: defaultCtx.org,
 			fromSandboxId: source.id,
@@ -481,7 +474,6 @@ describe("sandboxes.copy: selective copy via productIds / featureIds", () => {
 		let thrown: unknown;
 		try {
 			await copySandboxForOrg({
-				db,
 				ctx: baseCtx,
 				masterOrg: defaultCtx.org,
 				fromSandboxId: source.id,
@@ -503,7 +495,6 @@ describe("sandboxes.copy: selective copy via productIds / featureIds", () => {
 		// pulled-in base recreated it in the target as a generic metered feature.
 		const seedCtx = ctxForOrgEnv({ org: source, env: AppEnv.Sandbox });
 		const variantBase = await seedCopyTestPlan({
-			db,
 			ctx: seedCtx,
 			planId: VARIANT_BASE_ID,
 			items: [
@@ -514,14 +505,12 @@ describe("sandboxes.copy: selective copy via productIds / featureIds", () => {
 			],
 		});
 		await seedCopyTestPlan({
-			db,
 			ctx: seedCtx,
 			planId: VARIANT_ID,
 			baseInternalProductId: variantBase.internal_id,
 		});
 
 		await copySandboxForOrg({
-			db,
 			ctx: baseCtx,
 			masterOrg: defaultCtx.org,
 			fromSandboxId: source.id,
@@ -563,7 +552,6 @@ describe("sandboxes.copy: selective copy via productIds / featureIds", () => {
 		const dst = await freshTarget("credit");
 
 		await copySandboxForOrg({
-			db,
 			ctx: baseCtx,
 			masterOrg: defaultCtx.org,
 			fromSandboxId: source.id,
@@ -628,7 +616,6 @@ describe("sandboxes.copy: edge cases", () => {
 		});
 
 		await copySandboxForOrg({
-			db,
 			ctx: baseCtx,
 			masterOrg: defaultCtx.org,
 			fromSandboxId: source.id,
@@ -661,7 +648,6 @@ describe("sandboxes.copy: edge cases", () => {
 		expect(itemFeatureIds.sort()).toEqual([DASH_FEATURE, MSG_FEATURE].sort());
 
 		await copySandboxForOrg({
-			db,
 			ctx: baseCtx,
 			masterOrg: defaultCtx.org,
 			fromSandboxId: source.id,
@@ -689,7 +675,6 @@ describe("sandboxes.copy: edge cases", () => {
 		const dst = await freshOrg("empty-filters");
 
 		await copySandboxForOrg({
-			db,
 			ctx: baseCtx,
 			masterOrg: defaultCtx.org,
 			fromSandboxId: source.id,
@@ -717,7 +702,6 @@ describe("sandboxes.copy: edge cases", () => {
 		const dst = await freshOrg("empty-dst");
 
 		await copySandboxForOrg({
-			db,
 			ctx: baseCtx,
 			masterOrg: defaultCtx.org,
 			fromSandboxId: emptySource.id,

@@ -202,17 +202,12 @@ export const copyProductForOrgs = async ({
 	}
 
 	const toBaseInternalId = await copyProduct({
-		db,
+		ctx: toContext,
 		product: fromFullProduct,
-		toOrgId: toOrg.id,
 		toId,
 		toName,
 		fromEnv,
-		toEnv,
-		toFeatures,
 		fromFeatures,
-		org: toOrg,
-		logger,
 	});
 
 	const copiedBase = await ProductService.getFull({

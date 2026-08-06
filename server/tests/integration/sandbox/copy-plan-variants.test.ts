@@ -57,7 +57,6 @@ const seedPlan = ({
 	baseInternalProductId?: string;
 }): Promise<FullProduct> =>
 	seedCopyTestPlan({
-		db,
 		ctx: ctxForEnv(env),
 		planId,
 		featureIds,

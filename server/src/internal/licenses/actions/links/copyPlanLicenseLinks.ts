@@ -1,6 +1,5 @@
 import type { DbPlanLicense, FullProduct } from "@autumn/shared";
-import type { DrizzleCli } from "@/db/initDrizzle.js";
-import type { Logger } from "@/external/logtail/logtailUtils.js";
+import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { planLicenseRepo } from "../../repos/planLicenseRepo.js";
 import { validateLicenseLink } from "./validateLicenseLink.js";
 
@@ -9,13 +8,11 @@ import { validateLicenseLink } from "./validateLicenseLink.js";
  * plan ids. Absent-end links are skipped; validation failures warn and skip.
  */
 export const copyPlanLicenseLinks = async ({
-	db,
-	logger,
+	ctx,
 	links,
 	toProducts,
 }: {
-	db: DrizzleCli;
-	logger: Logger;
+	ctx: AutumnContext;
 	links: {
 		planLicense: DbPlanLicense;
 		licensePlanId: string;
@@ -23,6 +20,7 @@ export const copyPlanLicenseLinks = async ({
 	}[];
 	toProducts: FullProduct[];
 }) => {
+	const { db, logger } = ctx;
 	if (links.length === 0) return;
 
 	const latestToProductByPlanId = new Map<string, FullProduct>();

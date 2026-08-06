@@ -1,11 +1,5 @@
-import {
-	type AppEnv,
-	deduplicateArray,
-	type FullProduct,
-	notNullish,
-} from "@autumn/shared";
-import type { DrizzleCli } from "@/db/initDrizzle.js";
-import type { Logger } from "@/external/logtail/logtailUtils.js";
+import { deduplicateArray, type FullProduct, notNullish } from "@autumn/shared";
+import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { ProductService } from "../../ProductService.js";
 
 /**
@@ -14,16 +8,15 @@ import { ProductService } from "../../ProductService.js";
  * unresolved internal ids are looked up directly.
  */
 export const resolveSourceBasePlanIds = async ({
-	db,
-	logger,
+	ctx,
 	fromProducts,
 	fromProductsAll,
 }: {
-	db: DrizzleCli;
-	logger: Logger;
+	ctx: AutumnContext;
 	fromProducts: FullProduct[];
 	fromProductsAll: FullProduct[];
 }): Promise<Map<string, string>> => {
+	const { db, logger } = ctx;
 	const basePlanIdByInternalId = new Map(
 		fromProductsAll.map((product) => [product.internal_id, product.id]),
 	);
@@ -74,19 +67,16 @@ export const resolveSourceBasePlanIds = async ({
  * are excluded so a copy never produces a dangling or nested variant link.
  */
 export const getTargetBaseInternalIds = async ({
-	db,
-	toOrgId,
-	toEnv,
+	toContext,
 	basePlanIds,
 }: {
-	db: DrizzleCli;
-	toOrgId: string;
-	toEnv: AppEnv;
+	toContext: AutumnContext;
 	basePlanIds: string[];
 }): Promise<Map<string, string>> => {
+	const { db, org, env } = toContext;
 	const targetBases = await Promise.all(
 		basePlanIds.map((planId) =>
-			ProductService.get({ db, id: planId, orgId: toOrgId, env: toEnv }),
+			ProductService.get({ db, id: planId, orgId: org.id, env }),
 		),
 	);
 

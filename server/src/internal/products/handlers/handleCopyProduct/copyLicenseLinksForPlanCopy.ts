@@ -44,7 +44,7 @@ export const copyLicenseLinksForPlanCopy = async ({
 	copiedVariantIds: string[];
 	crossOrg: boolean;
 }): Promise<void> => {
-	const { db, logger, org: toOrg, env: toEnv } = toContext;
+	const { db, org: toOrg, env: toEnv } = toContext;
 	if (sourceLinks.length === 0) return;
 
 	const remapPlanId = (planId: string) =>
@@ -98,5 +98,5 @@ export const copyLicenseLinksForPlanCopy = async ({
 		await initProductInStripe({ ctx: toContext, product });
 	}
 
-	await copyPlanLicenseLinks({ db, logger, links, toProducts });
+	await copyPlanLicenseLinks({ ctx: toContext, links, toProducts });
 };

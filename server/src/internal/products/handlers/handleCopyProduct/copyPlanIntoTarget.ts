@@ -42,24 +42,17 @@ export const copyPlanIntoTarget = async ({
 	fromFeatures: Feature[];
 	crossOrg: boolean;
 	baseInternalProductId?: string | null;
-}): Promise<string> => {
-	const { db, logger, org, env, features } = toContext;
-	return copyProduct({
-		db,
+}): Promise<string> =>
+	copyProduct({
+		ctx: toContext,
 		product: {
 			...plan,
 			is_default: false,
 			base_variant_id: crossOrg ? null : plan.base_variant_id,
 		},
-		toOrgId: org.id,
 		toId: plan.id,
 		toName: plan.name,
 		fromEnv,
-		toEnv: env,
-		toFeatures: features,
 		fromFeatures,
-		org,
-		logger,
 		baseInternalProductId,
 	});
-};

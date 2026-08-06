@@ -1,5 +1,5 @@
 import type { FullProduct } from "@autumn/shared";
-import type { DrizzleCli } from "@/db/initDrizzle.js";
+import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { planLicenseRepo } from "@/internal/licenses/repos/planLicenseRepo.js";
 import { withPulledInPlans } from "./withPulledInPlans.js";
 
@@ -8,18 +8,18 @@ import { withPulledInPlans } from "./withPulledInPlans.js";
  * plan with that id, so a copied parent never lands without its licenses.
  */
 export const withLicensePlanProducts = async ({
-	db,
+	ctx,
 	fromProducts,
 	fromProductsAll,
 	toProducts,
 }: {
-	db: DrizzleCli;
+	ctx: AutumnContext;
 	fromProducts: FullProduct[];
 	fromProductsAll: FullProduct[];
 	toProducts: FullProduct[];
 }): Promise<FullProduct[]> => {
 	const links = await planLicenseRepo.listWithLicensePlanIdByParents({
-		db,
+		db: ctx.db,
 		parentInternalProductIds: fromProducts.map(
 			(product) => product.internal_id,
 		),

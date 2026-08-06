@@ -56,7 +56,6 @@ const seedPlan = async ({
 	const seedCtx = ctxForOrgEnv({ org, env });
 	await seedCopyTestBooleanFeature({ ctx: seedCtx, featureId });
 	await seedCopyTestPlan({
-		db,
 		ctx: seedCtx,
 		planId,
 		featureIds: [featureId],
@@ -103,7 +102,6 @@ describe("copy a plan from the master org into a named sandbox", () => {
 		if (!master || !sub) throw new Error("orgs not provisioned");
 
 		await copySandboxForOrg({
-			db,
 			ctx: baseCtx,
 			masterOrg: master,
 			fromOrg: master,
@@ -130,7 +128,6 @@ describe("copy a plan from the master org into a named sandbox", () => {
 		if (!master || !sub) throw new Error("orgs not provisioned");
 
 		await copySandboxForOrg({
-			db,
 			ctx: baseCtx,
 			masterOrg: master,
 			fromOrg: master,
@@ -164,7 +161,6 @@ describe("copy a plan from the master org into a named sandbox", () => {
 		const countBefore = before.filter((p) => p.id === SBX_PLAN).length;
 
 		await copySandboxForOrg({
-			db,
 			ctx: baseCtx,
 			masterOrg: master,
 			fromOrg: master,
@@ -202,7 +198,6 @@ describe("copy a plan from the master org into a named sandbox", () => {
 			featureId: VARIANT_FEATURE,
 		});
 		await seedCopyTestPlan({
-			db,
 			ctx: seedCtx,
 			planId: VARIANT_PLAN,
 			featureIds: [VARIANT_FEATURE],
@@ -210,7 +205,6 @@ describe("copy a plan from the master org into a named sandbox", () => {
 		});
 
 		await copySandboxForOrg({
-			db,
 			ctx: baseCtx,
 			masterOrg: master,
 			fromOrg: master,
@@ -246,7 +240,6 @@ describe("copy a plan from the master org into a named sandbox", () => {
 		let thrown: unknown;
 		try {
 			await copySandboxForOrg({
-				db,
 				ctx: baseCtx,
 				masterOrg: master,
 				toSandboxId: sub.id,
@@ -265,7 +258,6 @@ describe("copy a plan from the master org into a named sandbox", () => {
 		let thrown: unknown;
 		try {
 			await copySandboxForOrg({
-				db,
 				ctx: baseCtx,
 				masterOrg: master,
 				fromOrg: master,

@@ -97,15 +97,14 @@ export const handleCopyProducts = async ({
 		: fromProductsAll;
 
 	const basePlanIdByVariantId = await resolveSourceBasePlanIds({
-		db,
-		logger: ctx.logger,
+		ctx,
 		fromProducts: requestedFromProducts,
 		fromProductsAll,
 	});
 	// A same-id target plan is never pulled over: a target base is linked to
 	// as-is, but a target variant can't be a base, so the copy lands unlinked.
 	const fromProducts = await withLicensePlanProducts({
-		db,
+		ctx,
 		fromProducts: withPulledInPlans({
 			fromProducts: requestedFromProducts,
 			fromProductsAll,
@@ -197,9 +196,7 @@ export const handleCopyProducts = async ({
 
 	const targetIds = new Set(toProducts.map((p) => p.id));
 	const targetBaseInternalIds = await getTargetBaseInternalIds({
-		db,
-		toOrgId: toOrg.id,
-		toEnv,
+		toContext: newContext,
 		basePlanIds: deduplicateArray([...basePlanIdByVariantId.values()]),
 	});
 
@@ -254,8 +251,7 @@ export const handleCopyProducts = async ({
 	);
 
 	await copyPlanLicenseLinks({
-		db,
-		logger: ctx.logger,
+		ctx,
 		links: licenseLinks,
 		toProducts: [...copiedToProducts, ...existingTargetLicenses],
 	});

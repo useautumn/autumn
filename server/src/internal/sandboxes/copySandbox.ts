@@ -6,7 +6,6 @@ import {
 	type Organization,
 	RecaseError,
 } from "@autumn/shared";
-import type { DrizzleCli } from "@/db/initDrizzle.js";
 import { invalidateProductsCache } from "@/external/redis/actions/productsCache/productsCache.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { addCreditSystemMeteredFeatureIds } from "@/internal/features/creditSystemUtils.js";
@@ -29,7 +28,6 @@ import { getOwnedSandbox } from "./getOwnedSandbox.js";
  * a 404 and we never touch any org's live catalog.
  */
 export const copySandboxForOrg = async ({
-	db,
 	ctx,
 	masterOrg,
 	fromSandboxId,
@@ -39,7 +37,6 @@ export const copySandboxForOrg = async ({
 	productIds,
 	featureIds,
 }: {
-	db: DrizzleCli;
 	ctx: AutumnContext;
 	masterOrg: Organization;
 	fromSandboxId?: string;
@@ -49,6 +46,7 @@ export const copySandboxForOrg = async ({
 	productIds?: string[];
 	featureIds?: string[];
 }): Promise<{ fromSandbox: Organization; toSandbox: Organization }> => {
+	const { db } = ctx;
 	if (fromSandboxId && fromSandboxId === toSandboxId) {
 		throw new RecaseError({
 			message: "Source and target sandboxes must be different",
@@ -149,8 +147,7 @@ export const copySandboxForOrg = async ({
 		// base pulls its variants here; the set's license plans come along too.
 		// Every pulled-in plan needs its item features copied.
 		const basePlanIdByVariantId = await resolveSourceBasePlanIds({
-			db,
-			logger: ctx.logger,
+			ctx,
 			fromProducts,
 			fromProductsAll: fromProducts,
 		});

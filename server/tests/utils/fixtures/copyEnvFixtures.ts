@@ -79,21 +79,19 @@ export const seedCopyTestBooleanFeature = async ({
 };
 
 export const seedCopyTestPlan = async ({
-	db,
 	ctx,
 	planId,
 	featureIds = [],
 	items,
 	baseInternalProductId,
 }: {
-	db: DrizzleCli;
 	ctx: AutumnContext;
 	planId: string;
 	featureIds?: string[];
 	items?: Parameters<typeof products.base>[0]["items"];
 	baseInternalProductId?: string;
 }): Promise<FullProduct> => {
-	const { org, env } = ctx;
+	const { db, org, env } = ctx;
 	const features = await FeatureService.list({ db, orgId: org.id, env });
 	await createProduct({
 		ctx: { ...ctx, features },

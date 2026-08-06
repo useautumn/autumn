@@ -340,32 +340,24 @@ export const attachToInsertParams = (
 
 // COPY PRODUCT
 export const copyProduct = async ({
-	db,
+	ctx,
 	product,
-	toOrgId,
 	toId,
 	toName,
 	fromEnv,
-	toEnv,
-	toFeatures,
 	fromFeatures,
-	org,
-	logger,
 	baseInternalProductId = null,
 }: {
-	db: DrizzleCli;
+	ctx: AutumnContext;
 	product: FullProduct;
-	toOrgId: string;
-	fromEnv: AppEnv;
-	toEnv: AppEnv;
 	toId: string;
 	toName: string;
-	toFeatures: Feature[];
+	fromEnv: AppEnv;
 	fromFeatures: Feature[];
-	org: Organization;
-	logger: any;
 	baseInternalProductId?: string | null;
 }): Promise<string> => {
+	const { db, env: toEnv, features: toFeatures } = ctx;
+	const toOrgId = ctx.org.id;
 	const newProduct = {
 		...product,
 		name: toName,

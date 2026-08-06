@@ -53,7 +53,7 @@ const seedPlan = ({
 	planId: string;
 	baseInternalProductId?: string;
 }): Promise<FullProduct> =>
-	seedCopyTestPlan({ db, ctx: ctxForEnv(env), planId, baseInternalProductId });
+	seedCopyTestPlan({ ctx: ctxForEnv(env), planId, baseInternalProductId });
 
 const seedLinkedPair = async ({
 	parentId,
