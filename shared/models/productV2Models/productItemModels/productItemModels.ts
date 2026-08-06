@@ -1,17 +1,17 @@
 import { z } from "zod/v4";
 import { ApiFeatureV0Schema } from "../../../api/features/prevVersions/apiFeatureV0.js";
 import {
-    AdditionalCurrencyPriceArraySchema,
-    AdditionalCurrencyTierArraySchema,
+	AdditionalCurrencyPriceArraySchema,
+	AdditionalCurrencyTierArraySchema,
 } from "../../../api/products/components/additionalCurrencies.js";
 import { RolloverExpiryDurationType } from "../../productModels/durationTypes/rolloverExpiryDurationType.js";
 import { ProductItemInterval } from "../../productModels/intervals/productItemInterval.js";
 import { TierBehavior } from "../../productModels/priceModels/priceConfig/usagePriceConfig.js";
 import { Infinite } from "../../productModels/productEnums.js";
 import {
-    AllocatedBillingBehavior,
-    OnDecrease,
-    OnIncrease,
+	AllocatedBillingBehavior,
+	OnDecrease,
+	OnIncrease,
 } from "./productItemEnums.js";
 
 export const TierInfinite = "inf";
@@ -215,6 +215,11 @@ export const ProductItemSchema = z.object({
 	/** One-way Price → ProductItem display context. Never read this back when
 	 * rebuilding a price because an edited item may carry stale Stripe IDs. */
 	price_config: z.any().nullish().meta({
+		internal: true,
+	}),
+	/** Editor-only handle for items with no persisted entitlement/price id yet,
+	 * so two unsaved items for one feature stay individually addressable. */
+	_uid: z.string().nullish().meta({
 		internal: true,
 	}),
 });

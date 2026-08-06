@@ -54,7 +54,7 @@ export function SelectFeatureSheet({
 	const [selectOpen, setSelectOpen] = useState(false);
 
 	const { features } = useFeaturesQuery();
-	const { product, setProduct, initialProduct } = useProduct();
+	const { product, setProduct } = useProduct();
 	const { setSheet } = useSheet();
 
 	const nonArchivedFeatures = useMemo(
@@ -82,14 +82,7 @@ export function SelectFeatureSheet({
 		const selectedFeature = features.find((f) => f.id === featureId);
 		if (!selectedFeature) return;
 
-		// Check if this feature was previously configured in initialProduct
-		const previousItem = initialProduct?.items?.find(
-			(i) => i.feature_id === featureId,
-		);
-
-		// Use the previous configuration if available, otherwise create a new default item
-		const newItem =
-			previousItem ?? getDefaultItem({ feature: selectedFeature });
+		const newItem = getDefaultItem({ feature: selectedFeature });
 
 		// Add the new item to the product
 		const newItems = [...product.items, newItem];
