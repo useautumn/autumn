@@ -25,8 +25,6 @@
 
 import { afterAll, beforeAll, expect, test } from "bun:test";
 import type {
-	ApiCustomerV3,
-	ApiProduct,
 	AttachParamsV0Input,
 	BillingChangeResponse,
 	CustomerPlanChange,
@@ -39,6 +37,7 @@ import {
 	waitForWebhook,
 } from "@tests/integration/utils/svixWebhookTestUtils.js";
 import { TestFeature } from "@tests/setup/v2Features.js";
+import { completeInvoiceConfirmationV2 as completeInvoiceConfirmation } from "@tests/utils/browserPool/completeInvoiceConfirmationV2";
 import { completeStripeCheckoutFormV2 as completeStripeCheckoutForm } from "@tests/utils/browserPool/completeStripeCheckoutFormV2";
 import { items } from "@tests/utils/fixtures/items.js";
 import { products } from "@tests/utils/fixtures/products.js";
@@ -55,8 +54,8 @@ type CustomerProductsUpdatedPayload = {
 	type: string;
 	data: {
 		scenario: string;
-		customer: ApiCustomerV3;
-		updated_product: ApiProduct;
+		customer: { id: string };
+		updated_product: { id: string };
 	};
 };
 
@@ -522,9 +521,8 @@ test(`${chalk.yellowBright("enable_plan_immediately: checkout completion → pro
 		product_id: pro.id,
 		enable_product_immediately: true,
 	};
-	const attachResult = await autumnV1.billing.attach<AttachParamsV0Input>(
-		attachParams,
-	);
+	const attachResult =
+		await autumnV1.billing.attach<AttachParamsV0Input>(attachParams);
 	expect(attachResult.payment_url).toContain("checkout.stripe.com");
 
 	await completeStripeCheckoutForm({ url: attachResult.payment_url });
@@ -561,3 +559,45 @@ test(`${chalk.yellowBright("enable_plan_immediately: checkout completion → pro
 		})?.subscription?.status,
 	).toBe("active");
 });
+
+test.concurrent(
+	`${chalk.yellowBright("billing.updated: 3DS completion → activated")}`,
+	async () => {
+		const customerId = "billing-updated-3ds";
+		const pro = products.pro({
+			id: "pro-3ds",
+			items: [items.monthlyMessages({ includedUsage: 100 })],
+		});
+
+		const { autumnV1 } = await initScenario({
+			customerId,
+			setup: [
+				s.customer({ paymentMethod: "authenticate", skipWebhooks: true }),
+				s.products({ list: [pro] }),
+			],
+			actions: [],
+		});
+
+		const result = await autumnV1.billing.attach<AttachParamsV0Input>({
+			customer_id: customerId,
+			product_id: pro.id,
+		});
+		expect(result.required_action?.code).toBe("3ds_required");
+
+		await completeInvoiceConfirmation({ url: result.payment_url! });
+
+		const webhookResult = await waitForWebhook<BillingUpdatedPayload>({
+			token: playToken,
+			predicate: (payload) =>
+				payload.type === "billing.updated" &&
+				payload.data?.customer_id === customerId &&
+				findChange(payload.data.plan_changes, {
+					action: "activated",
+					planId: pro.id,
+				}) !== undefined,
+			timeoutMs: 30000,
+		});
+
+		expect(webhookResult).not.toBeNull();
+	},
+);

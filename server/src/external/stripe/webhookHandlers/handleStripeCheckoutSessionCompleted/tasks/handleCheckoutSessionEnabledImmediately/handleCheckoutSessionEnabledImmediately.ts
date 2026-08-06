@@ -13,6 +13,7 @@ import type { StripeWebhookContext } from "@/external/stripe/webhookMiddlewares/
 import { persistDeferredCreateSchedule } from "@/internal/billing/v2/actions/createSchedule/utils/persistDeferredCreateSchedule";
 import { executeAutumnBillingPlan } from "@/internal/billing/v2/execute/executeAutumnBillingPlan";
 import { sendBillingUpdatedWebhook } from "@/internal/billing/v2/workflows/sendBillingUpdatedWebhook/sendBillingUpdatedWebhook";
+import { billingPlanToSendProductsUpdated } from "@/internal/billing/v2/workflows/sendProductsUpdated/billingPlanToSendProductsUpdated";
 import { CusProductService } from "@/internal/customers/cusProducts/CusProductService";
 import { MetadataService } from "@/internal/metadata/MetadataService";
 import { workflows } from "@/queue/workflows";
@@ -140,30 +141,13 @@ export const handleCheckoutSessionEnabledImmediately = async ({
 		billingPlan: updatedDeferredData.billingPlan,
 	});
 
-	// 8. Emit the post-payment state change. The initial attach already emitted
-	//    activation webhooks when access was granted; checkout completion is a
-	//    separate update that links the active product to its Stripe subscription.
-	const customerId =
-		updatedDeferredData.billingContext.fullCustomer.id ??
-		updatedDeferredData.billingContext.fullCustomer.internal_id;
-
-	if (!ctx.testOptions?.skipWebhooks) {
-		for (const customerProduct of existingCusProducts) {
-			try {
-				await workflows.triggerSendProductsUpdated({
-					orgId: ctx.org.id,
-					env: ctx.env,
-					customerId,
-					customerProductId: customerProduct.id,
-					scenario: AttachScenario.Active,
-				});
-			} catch (error) {
-				ctx.logger.error(
-					`[checkout.completed] Failed to queue products webhook for ${customerProduct.product.name}: ${error}`,
-				);
-			}
-		}
-	}
+	// 8. Emit post-payment webhooks (mirrors executeBillingPlan).
+	await billingPlanToSendProductsUpdated({
+		ctx,
+		autumnBillingPlan: completionAutumnPlan,
+		billingContext: updatedDeferredData.billingContext,
+		fallbackUpdateScenario: AttachScenario.Active,
+	});
 
 	void sendBillingUpdatedWebhook({
 		ctx,
@@ -179,6 +163,9 @@ export const handleCheckoutSessionEnabledImmediately = async ({
 	// this flow — `handleStripeCheckoutErrors` blocks `enable_plan_immediately`
 	// + adjustable_quantity at attach time, so the cusProduct row inserted
 	// up-front is guaranteed to match what the customer pays for.
+	const customerId =
+		updatedDeferredData.billingContext.fullCustomer.id ??
+		updatedDeferredData.billingContext.fullCustomer.internal_id;
 	for (const product of updatedAutumnPlan.insertCustomerProducts) {
 		await workflows.triggerGrantCheckoutReward({
 			orgId: ctx.org.id,
