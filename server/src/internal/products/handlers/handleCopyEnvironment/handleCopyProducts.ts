@@ -159,6 +159,7 @@ export const handleCopyProducts = async ({
 				updates: targetBase
 					? { ...conformedProduct, base_plan_id: targetBase.planId }
 					: conformedProduct,
+				allowVariantSettingsUpdate: true,
 			});
 		}
 		return createProduct({

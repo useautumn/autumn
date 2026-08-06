@@ -40,6 +40,13 @@ const productDetailsSame = (prod1: Product, prod2: UpdateProduct) => {
 		return false;
 	}
 
+	if (
+		prod2.description !== undefined &&
+		(prod1.description ?? null) !== (prod2.description ?? null)
+	) {
+		return false;
+	}
+
 	if (notNullish(prod2.is_add_on) && prod1.is_add_on !== prod2.is_add_on) {
 		return false;
 	}
@@ -258,6 +265,7 @@ export const handleUpdateProductDetails = async ({
 		update: {
 			id: newProduct.id,
 			name: newProduct.name,
+			description: newProduct.description,
 			group:
 				newProduct.group === "" || newProduct.group === null
 					? ""
@@ -289,6 +297,9 @@ export const handleUpdateProductDetails = async ({
 	}
 
 	curProduct.name = newProduct.name || curProduct.name;
+	if (newProduct.description !== undefined) {
+		curProduct.description = newProduct.description;
+	}
 	curProduct.group = newProduct.group || curProduct.group;
 	curProduct.is_add_on = newProduct.is_add_on ?? curProduct.is_add_on;
 	curProduct.is_default = newProduct.is_default ?? curProduct.is_default;
