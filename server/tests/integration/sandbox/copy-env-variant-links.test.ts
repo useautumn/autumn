@@ -1,25 +1,16 @@
 import { afterAll, beforeAll, describe, expect, test } from "bun:test";
+import { AppEnv, type FullProduct, type Organization } from "@autumn/shared";
 import {
-	AppEnv,
-	type CreateProductV2Params,
-	type FullProduct,
-	type Organization,
-	type OrgConfig,
-	organizations,
-} from "@autumn/shared";
-import { products } from "@tests/utils/fixtures/products.js";
-import defaultCtx from "@tests/utils/testInitUtils/createTestContext.js";
+	ctxForOrgEnv,
+	insertCopyTestOrg,
+	seedCopyTestPlan,
+} from "@tests/utils/fixtures/copyEnvFixtures.js";
 import { initDrizzle } from "@/db/initDrizzle.js";
 import { logger } from "@/external/logtail/logtailUtils.js";
-import { invalidateProductsCache } from "@/external/redis/actions/productsCache/productsCache.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { deletePlatformSubOrg } from "@/internal/orgs/deleteOrg/deletePlatformSubOrg.js";
-import { OrgService } from "@/internal/orgs/OrgService.js";
-import { createProduct } from "@/internal/product/actions/createProduct.js";
 import { handleCopyProducts } from "@/internal/products/handlers/handleCopyEnvironment/handleCopyProducts.js";
 import { ProductService } from "@/internal/products/ProductService.js";
-import { generatePublishableKey } from "@/utils/encryptUtils.js";
-import { generateId } from "@/utils/genUtils.js";
 
 // Copying an env (sandbox -> live, as "copy to production" does) must preserve
 // the variant -> base plan link, remapped to the target env's base product.
@@ -39,34 +30,12 @@ const COLLIDE_VARIANT_PLAN = `cvl_collide_variant_${suffix}`;
 
 let org: Organization | undefined;
 
-const baseCtx = { ...defaultCtx } as AutumnContext;
-
 const ctxForEnv = (env: AppEnv): AutumnContext => {
 	if (!org) throw new Error("org not provisioned");
-	return { ...baseCtx, org, env, features: [] };
+	return ctxForOrgEnv({ org, env });
 };
 
-const insertOrg = async (): Promise<Organization> => {
-	const orgId = generateId("org");
-	await db.insert(organizations).values({
-		id: orgId,
-		slug: `cvl-${crypto.randomUUID()}`,
-		name: `cvl-org-${suffix}`,
-		createdAt: new Date(),
-		created_at: Date.now(),
-		created_by: null,
-		is_sandbox: false,
-		stripe_connected: false,
-		default_currency: "usd",
-		config: {} as OrgConfig,
-		onboarded: true,
-		test_pkey: generatePublishableKey(AppEnv.Sandbox),
-		live_pkey: generatePublishableKey(AppEnv.Live),
-	});
-	return OrgService.get({ db, orgId });
-};
-
-const seedPlan = async ({
+const seedPlan = ({
 	env,
 	planId,
 	baseInternalProductId,
@@ -74,26 +43,8 @@ const seedPlan = async ({
 	env: AppEnv;
 	planId: string;
 	baseInternalProductId?: string;
-}): Promise<FullProduct> => {
-	await createProduct({
-		ctx: ctxForEnv(env),
-		data: {
-			...(products.base({ id: planId, items: [] }) as unknown as Omit<
-				CreateProductV2Params,
-				"base_internal_product_id"
-			>),
-			base_internal_product_id: baseInternalProductId ?? null,
-		},
-	});
-	// The real API invalidates via route middleware; direct calls must do it.
-	await invalidateProductsCache({ orgId: org?.id as string, env });
-	return ProductService.getFull({
-		db,
-		idOrInternalId: planId,
-		orgId: org?.id as string,
-		env,
-	});
-};
+}): Promise<FullProduct> =>
+	seedCopyTestPlan({ db, ctx: ctxForEnv(env), planId, baseInternalProductId });
 
 const listLivePlans = async (): Promise<FullProduct[]> =>
 	ProductService.listFull({
@@ -116,7 +67,7 @@ const copyToLive = async (productIds?: string[]) => {
 };
 
 beforeAll(async () => {
-	org = await insertOrg();
+	org = await insertCopyTestOrg({ db, name: `cvl-org-${suffix}` });
 	const base = await seedPlan({ env: AppEnv.Sandbox, planId: BASE_PLAN });
 	await seedPlan({
 		env: AppEnv.Sandbox,

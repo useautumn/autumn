@@ -1,30 +1,24 @@
 import { afterAll, beforeAll, describe, expect, test } from "bun:test";
 import {
 	AppEnv,
-	type CreateProductV2Params,
 	ErrCode,
 	type Organization,
-	type OrgConfig,
-	organizations,
 	RecaseError,
 } from "@autumn/shared";
-import { products } from "@tests/utils/fixtures/products.js";
+import {
+	ctxForOrgEnv,
+	insertCopyTestOrg,
+	seedCopyTestBooleanFeature,
+	seedCopyTestPlan,
+} from "@tests/utils/fixtures/copyEnvFixtures.js";
 import defaultCtx from "@tests/utils/testInitUtils/createTestContext.js";
 import { initDrizzle } from "@/db/initDrizzle.js";
 import { logger } from "@/external/logtail/logtailUtils.js";
-import { invalidateProductsCache } from "@/external/redis/actions/productsCache/productsCache.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { FeatureService } from "@/internal/features/FeatureService.js";
-import { createFeature } from "@/internal/features/featureActions/createFeature.js";
-import { constructBooleanFeature } from "@/internal/features/utils/constructFeatureUtils.js";
 import { deletePlatformSubOrg } from "@/internal/orgs/deleteOrg/deletePlatformSubOrg.js";
-import { OrgService } from "@/internal/orgs/OrgService.js";
-import { createProduct } from "@/internal/product/actions/createProduct.js";
 import { ProductService } from "@/internal/products/ProductService.js";
 import { copySandboxForOrg } from "@/internal/sandboxes/copySandbox.js";
-import { generatePublishableKey } from "@/utils/encryptUtils.js";
-import { generateId } from "@/utils/genUtils.js";
-import { constructFeatureItem } from "@/utils/scriptUtils/constructItem.js";
 
 // Copying from the master org (default sandbox = master@Sandbox, production =
 // master@Live) INTO a named sandbox. Exercises copySandboxForOrg's fromMaster
@@ -48,34 +42,6 @@ let sub: Organization | undefined;
 
 const baseCtx = { ...defaultCtx } as AutumnContext;
 
-const insertOrg = async ({
-	name,
-	isSandbox,
-	masterOrgId,
-}: {
-	name: string;
-	isSandbox: boolean;
-	masterOrgId: string | null;
-}): Promise<Organization> => {
-	const orgId = generateId("org");
-	await db.insert(organizations).values({
-		id: orgId,
-		slug: `${name}-${crypto.randomUUID()}`,
-		name,
-		createdAt: new Date(),
-		created_at: Date.now(),
-		created_by: masterOrgId,
-		is_sandbox: isSandbox,
-		stripe_connected: false,
-		default_currency: "usd",
-		config: {} as OrgConfig,
-		onboarded: true,
-		test_pkey: generatePublishableKey(AppEnv.Sandbox),
-		live_pkey: generatePublishableKey(AppEnv.Live),
-	});
-	return OrgService.get({ db, orgId });
-};
-
 const seedPlan = async ({
 	org,
 	env,
@@ -87,29 +53,20 @@ const seedPlan = async ({
 	featureId: string;
 	planId: string;
 }) => {
-	const seedCtx: AutumnContext = { ...baseCtx, org, env, features: [] };
-	await createFeature({
+	const seedCtx = ctxForOrgEnv({ org, env });
+	await seedCopyTestBooleanFeature({ ctx: seedCtx, featureId });
+	await seedCopyTestPlan({
+		db,
 		ctx: seedCtx,
-		data: constructBooleanFeature({ featureId, orgId: org.id, env }),
-		skipGenerateDisplay: true,
-	});
-	const features = await FeatureService.list({ db, orgId: org.id, env });
-	await createProduct({
-		ctx: { ...seedCtx, features },
-		data: products.base({
-			id: planId,
-			items: [constructFeatureItem({ featureId, isBoolean: true })],
-		}) as unknown as CreateProductV2Params,
+		planId,
+		featureIds: [featureId],
 	});
 };
 
 beforeAll(async () => {
-	master = await insertOrg({
-		name: `m2s-master-${suffix}`,
-		isSandbox: false,
-		masterOrgId: null,
-	});
-	sub = await insertOrg({
+	master = await insertCopyTestOrg({ db, name: `m2s-master-${suffix}` });
+	sub = await insertCopyTestOrg({
+		db,
 		name: `m2s-sub-${suffix}`,
 		isSandbox: true,
 		masterOrgId: master.id,
@@ -239,44 +196,17 @@ describe("copy a plan from the master org into a named sandbox", () => {
 			orgId: master.id,
 			env: AppEnv.Sandbox,
 		});
-		const seedCtx: AutumnContext = {
-			...baseCtx,
-			org: master,
-			env: AppEnv.Sandbox,
-			features: [],
-		};
-		await createFeature({
+		const seedCtx = ctxForOrgEnv({ org: master, env: AppEnv.Sandbox });
+		await seedCopyTestBooleanFeature({
 			ctx: seedCtx,
-			data: constructBooleanFeature({
-				featureId: VARIANT_FEATURE,
-				orgId: master.id,
-				env: AppEnv.Sandbox,
-			}),
-			skipGenerateDisplay: true,
+			featureId: VARIANT_FEATURE,
 		});
-		const features = await FeatureService.list({
+		await seedCopyTestPlan({
 			db,
-			orgId: master.id,
-			env: AppEnv.Sandbox,
-		});
-		await createProduct({
-			ctx: { ...seedCtx, features },
-			data: {
-				...(products.base({
-					id: VARIANT_PLAN,
-					items: [
-						constructFeatureItem({
-							featureId: VARIANT_FEATURE,
-							isBoolean: true,
-						}),
-					],
-				}) as unknown as CreateProductV2Params),
-				base_internal_product_id: base.internal_id,
-			},
-		});
-		await invalidateProductsCache({
-			orgId: master.id,
-			env: AppEnv.Sandbox,
+			ctx: seedCtx,
+			planId: VARIANT_PLAN,
+			featureIds: [VARIANT_FEATURE],
+			baseInternalProductId: base.internal_id,
 		});
 
 		await copySandboxForOrg({

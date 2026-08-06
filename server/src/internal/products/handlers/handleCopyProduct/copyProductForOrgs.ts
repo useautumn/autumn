@@ -4,13 +4,13 @@ import {
 	CreateFeatureSchema,
 	ErrCode,
 	type Feature,
-	isAnyCreditSystem,
 	type Organization,
 	ProductAlreadyExistsError,
 } from "@autumn/shared";
 import { invalidateProductsCache } from "@/external/redis/actions/productsCache/productsCache.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { FeatureService } from "@/internal/features/FeatureService.js";
+import { expandCreditSystemFeatureIds } from "@/internal/features/utils/expandCreditSystemFeatureIds.js";
 import { ProductService } from "@/internal/products/ProductService.js";
 import {
 	copyProduct,
@@ -122,24 +122,14 @@ export const copyProductForOrgs = async ({
 		fromFullProduct.base_variant_id = null;
 	}
 
-	const featureIdsToCopy = new Set(
-		[fromFullProduct, ...variants].flatMap((product) =>
-			product.entitlements.map((entitlement) => entitlement.feature.id),
+	const featureIdsToCopy = expandCreditSystemFeatureIds({
+		features: fromFeatures,
+		featureIds: new Set(
+			[fromFullProduct, ...variants].flatMap((product) =>
+				product.entitlements.map((entitlement) => entitlement.feature.id),
+			),
 		),
-	);
-	// Credit systems draw from metered features; bring those along so a promoted
-	// credit system isn't left pointing at a feature the target lacks.
-	for (const feature of fromFeatures) {
-		if (!isAnyCreditSystem(feature.type)) continue;
-		if (!featureIdsToCopy.has(feature.id)) continue;
-		const config = feature.config as
-			| { schema?: { metered_feature_id: string }[] }
-			| null
-			| undefined;
-		for (const entry of config?.schema ?? []) {
-			featureIdsToCopy.add(entry.metered_feature_id);
-		}
-	}
+	});
 
 	if (crossOrg || fromEnv !== toEnv) {
 		for (const fromFeature of fromFeatures.filter((f) =>

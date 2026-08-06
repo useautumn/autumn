@@ -1,7 +1,6 @@
 import {
 	AppEnv,
 	ErrCode,
-	isAnyCreditSystem,
 	mapToProductV2,
 	type Organization,
 	RecaseError,
@@ -10,6 +9,7 @@ import type { DrizzleCli } from "@/db/initDrizzle.js";
 import { invalidateProductsCache } from "@/external/redis/actions/productsCache/productsCache.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { FeatureService } from "@/internal/features/FeatureService.js";
+import { expandCreditSystemFeatureIds } from "@/internal/features/utils/expandCreditSystemFeatureIds.js";
 import { handleCopyFeatures } from "@/internal/products/handlers/handleCopyEnvironment/handleCopyFeatures.js";
 import { handleCopyProducts } from "@/internal/products/handlers/handleCopyEnvironment/handleCopyProducts.js";
 import { resolveSourceBasePlanIds } from "@/internal/products/handlers/handleCopyEnvironment/resolveVariantBaseLinks.js";
@@ -173,18 +173,10 @@ export const copySandboxForOrg = async ({
 			}
 		}
 
-		// Credit systems draw from metered features; bring those along too.
-		for (const feature of fromFeatures) {
-			if (!isAnyCreditSystem(feature.type)) continue;
-			if (!wantedFeatureIds.has(feature.id)) continue;
-			const config = feature.config as
-				| { schema?: { metered_feature_id: string }[] }
-				| null
-				| undefined;
-			for (const entry of config?.schema ?? []) {
-				wantedFeatureIds.add(entry.metered_feature_id);
-			}
-		}
+		expandCreditSystemFeatureIds({
+			features: fromFeatures,
+			featureIds: wantedFeatureIds,
+		});
 
 		featuresToCopy = fromFeatures.filter((f) => wantedFeatureIds.has(f.id));
 		productIdsToCopy = [

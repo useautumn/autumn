@@ -1,26 +1,18 @@
 import { afterAll, beforeAll, describe, expect, test } from "bun:test";
+import { AppEnv, type FullProduct, type Organization } from "@autumn/shared";
 import {
-	AppEnv,
-	type CreateProductV2Params,
-	type FullProduct,
-	type Organization,
-	type OrgConfig,
-	organizations,
-} from "@autumn/shared";
-import { products } from "@tests/utils/fixtures/products.js";
-import defaultCtx from "@tests/utils/testInitUtils/createTestContext.js";
+	ctxForOrgEnv,
+	insertCopyTestOrg,
+	seedCopyTestPlan,
+} from "@tests/utils/fixtures/copyEnvFixtures.js";
 import { initDrizzle } from "@/db/initDrizzle.js";
 import { logger } from "@/external/logtail/logtailUtils.js";
 import { invalidateProductsCache } from "@/external/redis/actions/productsCache/productsCache.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { planLicenseRepo } from "@/internal/licenses/repos/planLicenseRepo.js";
 import { deletePlatformSubOrg } from "@/internal/orgs/deleteOrg/deletePlatformSubOrg.js";
-import { OrgService } from "@/internal/orgs/OrgService.js";
-import { createProduct } from "@/internal/product/actions/createProduct.js";
 import { handleCopyProducts } from "@/internal/products/handlers/handleCopyEnvironment/handleCopyProducts.js";
 import { ProductService } from "@/internal/products/ProductService.js";
-import { generatePublishableKey } from "@/utils/encryptUtils.js";
-import { generateId } from "@/utils/genUtils.js";
 
 /**
  * TDD test: copying an env (sandbox -> live, as "copy to production" does) must
@@ -57,53 +49,19 @@ const ARCH_LICENSE = `cll_arch_license_${suffix}`;
 
 let org: Organization | undefined;
 
-const baseCtx = { ...defaultCtx } as AutumnContext;
-
 const ctxForEnv = (env: AppEnv): AutumnContext => {
 	if (!org) throw new Error("org not provisioned");
-	return { ...baseCtx, org, env, features: [] };
+	return ctxForOrgEnv({ org, env });
 };
 
-const insertOrg = async (): Promise<Organization> => {
-	const orgId = generateId("org");
-	await db.insert(organizations).values({
-		id: orgId,
-		slug: `cll-${crypto.randomUUID()}`,
-		name: `cll-org-${suffix}`,
-		createdAt: new Date(),
-		created_at: Date.now(),
-		created_by: null,
-		is_sandbox: false,
-		stripe_connected: false,
-		default_currency: "usd",
-		config: {} as OrgConfig,
-		onboarded: true,
-		test_pkey: generatePublishableKey(AppEnv.Sandbox),
-		live_pkey: generatePublishableKey(AppEnv.Live),
-	});
-	return OrgService.get({ db, orgId });
-};
-
-const seedPlan = async ({
+const seedPlan = ({
 	env,
 	planId,
 }: {
 	env: AppEnv;
 	planId: string;
-}): Promise<FullProduct> => {
-	await createProduct({
-		ctx: ctxForEnv(env),
-		data: products.base({ id: planId, items: [] }) as CreateProductV2Params,
-	});
-	// The real API invalidates via route middleware; direct calls must do it.
-	await invalidateProductsCache({ orgId: org?.id as string, env });
-	return ProductService.getFull({
-		db,
-		idOrInternalId: planId,
-		orgId: org?.id as string,
-		env,
-	});
-};
+}): Promise<FullProduct> =>
+	seedCopyTestPlan({ db, ctx: ctxForEnv(env), planId });
 
 const seedLinkedPair = async ({
 	parentId,
@@ -159,7 +117,7 @@ const copyToLive = async (productIds?: string[]) => {
 };
 
 beforeAll(async () => {
-	org = await insertOrg();
+	org = await insertCopyTestOrg({ db, name: `cll-org-${suffix}` });
 }, 180_000);
 
 afterAll(async () => {
@@ -222,18 +180,10 @@ describe("copying an env carries over plan license links", () => {
 			parentId: EXIST_PARENT,
 			licenseId: EXIST_LICENSE,
 		});
-		await createProduct({
-			ctx: ctxForEnv(AppEnv.Live),
-			data: products.base({
-				id: EXIST_LICENSE,
-				items: [],
-			}) as CreateProductV2Params,
-		});
-		await invalidateProductsCache({
-			orgId: org?.id as string,
+		const preExistingLicense = await seedPlan({
 			env: AppEnv.Live,
+			planId: EXIST_LICENSE,
 		});
-		const preExistingLicense = await getLivePlan(EXIST_LICENSE);
 
 		await copyToLive([EXIST_PARENT]);
 
@@ -278,15 +228,8 @@ describe("copying an env carries over plan license links", () => {
 		});
 		// A pre-fix copy landed both plans in live without the link.
 		for (const planId of [REPAIR_PARENT, REPAIR_LICENSE]) {
-			await createProduct({
-				ctx: ctxForEnv(AppEnv.Live),
-				data: products.base({ id: planId, items: [] }) as CreateProductV2Params,
-			});
+			await seedPlan({ env: AppEnv.Live, planId });
 		}
-		await invalidateProductsCache({
-			orgId: org?.id as string,
-			env: AppEnv.Live,
-		});
 		expect(await listLiveLinks(await getLivePlan(REPAIR_PARENT))).toHaveLength(
 			0,
 		);

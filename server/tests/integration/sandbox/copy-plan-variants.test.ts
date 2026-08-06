@@ -1,30 +1,19 @@
 import { afterAll, beforeAll, describe, expect, test } from "bun:test";
+import { AppEnv, type FullProduct, type Organization } from "@autumn/shared";
 import {
-	AppEnv,
-	type CreateProductV2Params,
-	type FullProduct,
-	type Organization,
-	type OrgConfig,
-	organizations,
-} from "@autumn/shared";
-import { products } from "@tests/utils/fixtures/products.js";
-import defaultCtx from "@tests/utils/testInitUtils/createTestContext.js";
+	ctxForOrgEnv,
+	insertCopyTestOrg,
+	seedCopyTestBooleanFeature,
+	seedCopyTestPlan,
+} from "@tests/utils/fixtures/copyEnvFixtures.js";
 import { initDrizzle } from "@/db/initDrizzle.js";
 import { logger } from "@/external/logtail/logtailUtils.js";
-import { invalidateProductsCache } from "@/external/redis/actions/productsCache/productsCache.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { FeatureService } from "@/internal/features/FeatureService.js";
-import { createFeature } from "@/internal/features/featureActions/createFeature.js";
-import { constructBooleanFeature } from "@/internal/features/utils/constructFeatureUtils.js";
 import { planLicenseRepo } from "@/internal/licenses/repos/planLicenseRepo.js";
 import { deletePlatformSubOrg } from "@/internal/orgs/deleteOrg/deletePlatformSubOrg.js";
-import { OrgService } from "@/internal/orgs/OrgService.js";
-import { createProduct } from "@/internal/product/actions/createProduct.js";
 import { copyProductForOrgs } from "@/internal/products/handlers/handleCopyProduct/copyProductForOrgs.js";
 import { ProductService } from "@/internal/products/ProductService.js";
-import { generatePublishableKey } from "@/utils/encryptUtils.js";
-import { generateId } from "@/utils/genUtils.js";
-import { constructFeatureItem } from "@/utils/scriptUtils/constructItem.js";
 
 // Copying a single base plan (the "Copy Plan to Production" dialog) must carry
 // the base's variants along, relinked to the newly copied base.
@@ -48,80 +37,32 @@ const LICENSE_BASE_PLAN = `cpv_license_base_${suffix}`;
 
 let org: Organization | undefined;
 
-const baseCtx = { ...defaultCtx } as AutumnContext;
-
 const ctxForEnv = (env: AppEnv): AutumnContext => {
 	if (!org) throw new Error("org not provisioned");
-	return { ...baseCtx, org, env, features: [] };
+	return ctxForOrgEnv({ org, env });
 };
 
-const insertOrg = async (): Promise<Organization> => {
-	const orgId = generateId("org");
-	await db.insert(organizations).values({
-		id: orgId,
-		slug: `cpv-${crypto.randomUUID()}`,
-		name: `cpv-org-${suffix}`,
-		createdAt: new Date(),
-		created_at: Date.now(),
-		created_by: null,
-		is_sandbox: false,
-		stripe_connected: false,
-		default_currency: "usd",
-		config: {} as OrgConfig,
-		onboarded: true,
-		test_pkey: generatePublishableKey(AppEnv.Sandbox),
-		live_pkey: generatePublishableKey(AppEnv.Live),
-	});
-	return OrgService.get({ db, orgId });
-};
+const seedFeature = ({ featureId }: { featureId: string }) =>
+	seedCopyTestBooleanFeature({ ctx: ctxForEnv(AppEnv.Sandbox), featureId });
 
-const seedFeature = async ({ featureId }: { featureId: string }) => {
-	if (!org) throw new Error("org not provisioned");
-	await createFeature({
-		ctx: ctxForEnv(AppEnv.Sandbox),
-		data: constructBooleanFeature({
-			featureId,
-			orgId: org.id,
-			env: AppEnv.Sandbox,
-		}),
-		skipGenerateDisplay: true,
-	});
-};
-
-const seedPlan = async ({
+const seedPlan = ({
 	env,
 	planId,
-	featureIds = [],
+	featureIds,
 	baseInternalProductId,
 }: {
 	env: AppEnv;
 	planId: string;
 	featureIds?: string[];
 	baseInternalProductId?: string;
-}): Promise<FullProduct> => {
-	if (!org) throw new Error("org not provisioned");
-	const features = await FeatureService.list({ db, orgId: org.id, env });
-	await createProduct({
-		ctx: { ...ctxForEnv(env), features },
-		data: {
-			...(products.base({
-				id: planId,
-				items: featureIds.map((featureId) =>
-					constructFeatureItem({ featureId, isBoolean: true }),
-				),
-			}) as unknown as Omit<CreateProductV2Params, "base_internal_product_id">),
-			base_internal_product_id: baseInternalProductId ?? null,
-		},
-	});
-	// The real API invalidates via route middleware; direct calls must do it.
-	await invalidateProductsCache({ orgId: org.id, env });
-	return ProductService.getFull({
+}): Promise<FullProduct> =>
+	seedCopyTestPlan({
 		db,
-		idOrInternalId: planId,
-		orgId: org.id,
-		env,
+		ctx: ctxForEnv(env),
+		planId,
+		featureIds,
+		baseInternalProductId,
 	});
-};
 
 const listLivePlans = async (): Promise<FullProduct[]> =>
 	ProductService.listFull({
@@ -142,7 +83,7 @@ const copyPlanToLive = async ({
 }) => {
 	if (!org) throw new Error("org not provisioned");
 	await copyProductForOrgs({
-		ctx: baseCtx,
+		ctx: ctxForEnv(AppEnv.Sandbox),
 		fromOrg: org,
 		fromEnv: AppEnv.Sandbox,
 		toOrg: org,
@@ -154,7 +95,7 @@ const copyPlanToLive = async ({
 };
 
 beforeAll(async () => {
-	org = await insertOrg();
+	org = await insertCopyTestOrg({ db, name: `cpv-org-${suffix}` });
 	await seedFeature({ featureId: BASE_FEATURE });
 	await seedFeature({ featureId: VARIANT_FEATURE });
 }, 180_000);
