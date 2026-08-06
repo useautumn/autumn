@@ -83,12 +83,14 @@ export const seedCopyTestPlan = async ({
 	ctx,
 	planId,
 	featureIds = [],
+	items,
 	baseInternalProductId,
 }: {
 	db: DrizzleCli;
 	ctx: AutumnContext;
 	planId: string;
 	featureIds?: string[];
+	items?: Parameters<typeof products.base>[0]["items"];
 	baseInternalProductId?: string;
 }): Promise<FullProduct> => {
 	const { org, env } = ctx;
@@ -98,9 +100,11 @@ export const seedCopyTestPlan = async ({
 		data: {
 			...(products.base({
 				id: planId,
-				items: featureIds.map((featureId) =>
-					constructFeatureItem({ featureId, isBoolean: true }),
-				),
+				items:
+					items ??
+					featureIds.map((featureId) =>
+						constructFeatureItem({ featureId, isBoolean: true }),
+					),
 			}) as unknown as Omit<CreateProductV2Params, "base_internal_product_id">),
 			base_internal_product_id: baseInternalProductId ?? null,
 		},

@@ -9,8 +9,8 @@ import {
 } from "@autumn/shared";
 import { invalidateProductsCache } from "@/external/redis/actions/productsCache/productsCache.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
+import { addCreditSystemMeteredFeatureIds } from "@/internal/features/creditSystemUtils.js";
 import { FeatureService } from "@/internal/features/FeatureService.js";
-import { expandCreditSystemFeatureIds } from "@/internal/features/utils/expandCreditSystemFeatureIds.js";
 import { ProductService } from "@/internal/products/ProductService.js";
 import {
 	copyProduct,
@@ -122,13 +122,14 @@ export const copyProductForOrgs = async ({
 		fromFullProduct.base_variant_id = null;
 	}
 
-	const featureIdsToCopy = expandCreditSystemFeatureIds({
-		features: fromFeatures,
-		featureIds: new Set(
-			[fromFullProduct, ...variants].flatMap((product) =>
-				product.entitlements.map((entitlement) => entitlement.feature.id),
-			),
+	const featureIdsToCopy = new Set(
+		[fromFullProduct, ...variants].flatMap((product) =>
+			product.entitlements.map((entitlement) => entitlement.feature.id),
 		),
+	);
+	addCreditSystemMeteredFeatureIds({
+		features: fromFeatures,
+		featureIds: featureIdsToCopy,
 	});
 
 	if (crossOrg || fromEnv !== toEnv) {

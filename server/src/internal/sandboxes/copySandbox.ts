@@ -1,5 +1,6 @@
 import {
 	AppEnv,
+	deduplicateArray,
 	ErrCode,
 	mapToProductV2,
 	type Organization,
@@ -8,8 +9,8 @@ import {
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 import { invalidateProductsCache } from "@/external/redis/actions/productsCache/productsCache.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
+import { addCreditSystemMeteredFeatureIds } from "@/internal/features/creditSystemUtils.js";
 import { FeatureService } from "@/internal/features/FeatureService.js";
-import { expandCreditSystemFeatureIds } from "@/internal/features/utils/expandCreditSystemFeatureIds.js";
 import { handleCopyFeatures } from "@/internal/products/handlers/handleCopyEnvironment/handleCopyFeatures.js";
 import { handleCopyProducts } from "@/internal/products/handlers/handleCopyEnvironment/handleCopyProducts.js";
 import { resolveSourceBasePlanIds } from "@/internal/products/handlers/handleCopyEnvironment/resolveVariantBaseLinks.js";
@@ -147,6 +148,7 @@ export const copySandboxForOrg = async ({
 		// base pulls its variants here. Both need their item features copied.
 		const basePlanIdByVariantId = await resolveSourceBasePlanIds({
 			db,
+			logger: ctx.logger,
 			fromProducts,
 			fromProductsAll: fromProducts,
 		});
@@ -173,15 +175,16 @@ export const copySandboxForOrg = async ({
 			}
 		}
 
-		expandCreditSystemFeatureIds({
+		addCreditSystemMeteredFeatureIds({
 			features: fromFeatures,
 			featureIds: wantedFeatureIds,
 		});
 
 		featuresToCopy = fromFeatures.filter((f) => wantedFeatureIds.has(f.id));
-		productIdsToCopy = [
-			...new Set([...requestedProductIds, ...pulledInVariantIds]),
-		];
+		productIdsToCopy = deduplicateArray([
+			...requestedProductIds,
+			...pulledInVariantIds,
+		]);
 	}
 
 	// Features first: products reference them, and credit systems reference

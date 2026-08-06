@@ -5,6 +5,7 @@ import {
 	notNullish,
 } from "@autumn/shared";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
+import type { Logger } from "@/external/logtail/logtailUtils.js";
 import { ProductService } from "../../ProductService.js";
 
 /**
@@ -14,10 +15,12 @@ import { ProductService } from "../../ProductService.js";
  */
 export const resolveSourceBasePlanIds = async ({
 	db,
+	logger,
 	fromProducts,
 	fromProductsAll,
 }: {
 	db: DrizzleCli;
+	logger: Logger;
 	fromProducts: FullProduct[];
 	fromProductsAll: FullProduct[];
 }): Promise<Map<string, string>> => {
@@ -54,7 +57,12 @@ export const resolveSourceBasePlanIds = async ({
 		if (!baseInternalProductId) continue;
 
 		const basePlanId = basePlanIdByInternalId.get(baseInternalProductId);
-		if (!basePlanId || basePlanId === variant.id) continue;
+		if (!basePlanId || basePlanId === variant.id) {
+			logger.warn(
+				`copy env: ${variant.id} base could not be resolved, copying as a standalone plan`,
+			);
+			continue;
+		}
 		basePlanIdByVariantId.set(variant.id, basePlanId);
 	}
 	return basePlanIdByVariantId;

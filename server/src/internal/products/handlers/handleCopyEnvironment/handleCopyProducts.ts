@@ -14,8 +14,7 @@ import { planLicenseRepo } from "@/internal/licenses/repos/planLicenseRepo.js";
 import { createProduct } from "../../../product/actions/createProduct.js";
 import { updateProduct } from "../../../product/actions/updateProduct.js";
 import { ProductService } from "../../ProductService.js";
-import { initProductInStripe } from "../../productUtils.js";
-import { applyStripeReuseFromVariantFamilies } from "../../stripeResourceUtils/applyStripeReuseFromVariantFamilies.js";
+import { initVariantsInStripe } from "../../stripeResourceUtils/initVariantsInStripe.js";
 import {
 	getTargetBaseInternalIds,
 	listResolvableBasePlanIds,
@@ -98,6 +97,7 @@ export const handleCopyProducts = async ({
 
 	const basePlanIdByVariantId = await resolveSourceBasePlanIds({
 		db,
+		logger: ctx.logger,
 		fromProducts: requestedFromProducts,
 		fromProductsAll,
 	});
@@ -207,7 +207,9 @@ export const handleCopyProducts = async ({
 			: undefined;
 		if (!basePlanId || !targetBaseInternalId) {
 			ctx.logger.warn(
-				`copy env: target ${basePlanId} cannot be a variant base, copying ${fromProductV2.id} unlinked`,
+				basePlanId
+					? `copy env: target ${basePlanId} cannot be a variant base, copying ${fromProductV2.id} unlinked`
+					: `copy env: ${fromProductV2.id} has no resolved base, copying unlinked`,
 			);
 			return copyOneProduct({ fromProductV2 });
 		}
@@ -235,19 +237,12 @@ export const handleCopyProducts = async ({
 		inIds: fromProducts.map((product) => product.id),
 	});
 
-	// Created variants deferred Stripe; reuse the base family then init,
-	// sequentially like createVariant so siblings can't double-create.
+	// Created variants deferred Stripe init to copy after their base's family.
 	const createdVariants = copiedToProducts.filter(
 		(product) =>
 			product.base_internal_product_id !== null && !targetIds.has(product.id),
 	);
-	await applyStripeReuseFromVariantFamilies({
-		ctx: newContext,
-		products: createdVariants,
-	});
-	for (const product of createdVariants) {
-		await initProductInStripe({ ctx: newContext, product });
-	}
+	await initVariantsInStripe({ ctx: newContext, products: createdVariants });
 
 	const copiedIds = new Set(copiedToProducts.map((product) => product.id));
 	const existingTargetLicenses = toProducts.filter(

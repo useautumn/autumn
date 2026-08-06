@@ -11,11 +11,14 @@ import {
 	organizations,
 	RecaseError,
 } from "@autumn/shared";
+import {
+	ctxForOrgEnv,
+	seedCopyTestPlan,
+} from "@tests/utils/fixtures/copyEnvFixtures.js";
 import { products } from "@tests/utils/fixtures/products.js";
 import defaultCtx from "@tests/utils/testInitUtils/createTestContext.js";
 import { initDrizzle } from "@/db/initDrizzle.js";
 import { logger } from "@/external/logtail/logtailUtils.js";
-import { invalidateProductsCache } from "@/external/redis/actions/productsCache/productsCache.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { FeatureService } from "@/internal/features/FeatureService.js";
 import { createFeature } from "@/internal/features/featureActions/createFeature.js";
@@ -485,48 +488,23 @@ describe("sandboxes.copy: selective copy via productIds / featureIds", () => {
 
 		// Base carries a credit-system item the variant does not; pre-fix the
 		// pulled-in base recreated it in the target as a generic metered feature.
-		const seedCtx: AutumnContext = {
-			...baseCtx,
-			org: source,
-			env: AppEnv.Sandbox,
-			features: [],
-		};
-		const sourceFeatures = await FeatureService.list({
+		const seedCtx = ctxForOrgEnv({ org: source, env: AppEnv.Sandbox });
+		const variantBase = await seedCopyTestPlan({
 			db,
-			orgId: source.id,
-			env: AppEnv.Sandbox,
+			ctx: seedCtx,
+			planId: VARIANT_BASE_ID,
+			items: [
+				constructFeatureItem({
+					featureId: CREDIT_FEATURE,
+					includedUsage: 50,
+				}),
+			],
 		});
-		await createProduct({
-			ctx: { ...seedCtx, features: sourceFeatures },
-			data: products.base({
-				id: VARIANT_BASE_ID,
-				items: [
-					constructFeatureItem({
-						featureId: CREDIT_FEATURE,
-						includedUsage: 50,
-					}),
-				],
-			}) as unknown as CreateProductV2Params,
-		});
-		const variantBase = await ProductService.getFull({
+		await seedCopyTestPlan({
 			db,
-			orgId: source.id,
-			env: AppEnv.Sandbox,
-			idOrInternalId: VARIANT_BASE_ID,
-		});
-		await createProduct({
-			ctx: { ...seedCtx, features: sourceFeatures },
-			data: {
-				...(products.base({
-					id: VARIANT_ID,
-					items: [],
-				}) as unknown as CreateProductV2Params),
-				base_internal_product_id: variantBase.internal_id,
-			},
-		});
-		await invalidateProductsCache({
-			orgId: source.id,
-			env: AppEnv.Sandbox,
+			ctx: seedCtx,
+			planId: VARIANT_ID,
+			baseInternalProductId: variantBase.internal_id,
 		});
 
 		await copySandboxForOrg({

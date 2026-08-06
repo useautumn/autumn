@@ -7,11 +7,8 @@ import type {
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { ProductService } from "@/internal/products/ProductService.js";
-import {
-	copyProduct,
-	initProductInStripe,
-} from "@/internal/products/productUtils.js";
-import { applyStripeReuseFromVariantFamilies } from "@/internal/products/stripeResourceUtils/applyStripeReuseFromVariantFamilies.js";
+import { copyProduct } from "@/internal/products/productUtils.js";
+import { initVariantsInStripe } from "@/internal/products/stripeResourceUtils/initVariantsInStripe.js";
 
 /**
  * Lists the base plan's variants in the source (org, env). A variant may still
@@ -145,16 +142,7 @@ export const copyBaseVariants = async ({
 		env: toEnv,
 		inIds: copiedVariantIds,
 	});
-
-	// Reuse the family's Stripe resources, then init one at a time so siblings
-	// can't each create their own copy of a shared price.
-	await applyStripeReuseFromVariantFamilies({
-		ctx: toContext,
-		products: copiedVariants,
-	});
-	for (const product of copiedVariants) {
-		await initProductInStripe({ ctx: toContext, product });
-	}
+	await initVariantsInStripe({ ctx: toContext, products: copiedVariants });
 
 	return copiedVariantIds;
 };
