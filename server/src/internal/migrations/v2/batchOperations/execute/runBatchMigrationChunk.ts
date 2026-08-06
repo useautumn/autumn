@@ -14,10 +14,10 @@ import { executeBatchMigrationPage } from "./executeBatchMigrationPage.js";
 import { finalizeBatchMigrationPage } from "./finalize/finalizeBatchMigrationPage.js";
 import type { BatchMigrationChunkResult } from "./types/batchMigrationExecutionTypes.js";
 import {
-	BATCH_MIGRATION_DEFERRED_INFLIGHT,
 	BATCH_MIGRATION_MAX_PAGES,
 	BATCH_MIGRATION_PAGE_SIZE,
 } from "./utils/batchMigrationExecutionConstants.js";
+import { createDeferredSideEffects } from "./utils/deferredSideEffects.js";
 import {
 	type BatchMigrationPagePhases,
 	timePhase,
@@ -67,53 +67,20 @@ export const runBatchMigrationChunk = async ({
 	});
 
 	// Post-commit side effects run off the page's critical path and are drained
-	// before the chunk returns. Pages touch disjoint customers, so they overlap
-	// safely; the in-flight cap keeps a slow dependency from accumulating.
-	const deferred = (phase: string) => {
-		// Rejections are captured here, never left on the promise: an orphaned
-		// rejected promise would surface as an unhandledRejection and kill the
-		// worker, and a rejecting Promise.race would abort the page loop.
-		const inflight = new Set<Promise<void>>();
-		const errors: unknown[] = [];
-		const defer = (run: () => Promise<unknown>) => {
-			const pending = run()
-				.then(
-					() => undefined,
-					(error: unknown) => {
-						errors.push(error);
-					},
-				)
-				.finally(() => {
-					inflight.delete(pending);
-				});
-			inflight.add(pending);
-		};
-		const drain = async () => {
-			if (inflight.size === 0 && errors.length === 0) return;
-			if (inflight.size > 0)
-				await timePhase({
-					phases: chunkPhases,
-					phase,
-					run: () => Promise.all([...inflight]),
-				});
-			if (errors.length > 0)
-				ctx.logger.error(`batch-migration: deferred ${phase} failed`, {
-					data: {
-						migrationRunId,
-						failed: errors.length,
-						error: String(errors[0]),
-					},
-				});
-		};
-		const settle = async () => {
-			while (inflight.size >= BATCH_MIGRATION_DEFERRED_INFLIGHT)
-				await Promise.race(inflight);
-		};
-		return { defer, drain, settle };
-	};
-
-	const events = deferred("finalize_events_drain");
-	const caches = deferred("finalize_caches_drain");
+	// before the chunk returns.
+	const deferredLogData = { migrationRunId };
+	const events = createDeferredSideEffects({
+		phase: "finalize_events_drain",
+		phases: chunkPhases,
+		logger: ctx.logger,
+		logData: deferredLogData,
+	});
+	const caches = createDeferredSideEffects({
+		phase: "finalize_caches_drain",
+		phases: chunkPhases,
+		logger: ctx.logger,
+		logData: deferredLogData,
+	});
 
 	const finish = async (
 		completion: BatchMigrationChunkResult["completion"],
