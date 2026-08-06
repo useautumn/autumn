@@ -9,6 +9,8 @@ import { persistDeferredCreateSchedule } from "@/internal/billing/v2/actions/cre
 import { addStripeSubscriptionIdToBillingPlan } from "@/internal/billing/v2/execute/addStripeSubscriptionIdToBillingPlan";
 import { executeAutumnBillingPlan } from "@/internal/billing/v2/execute/executeAutumnBillingPlan";
 import { executeStripeBillingPlan } from "@/internal/billing/v2/providers/stripe/execute/executeStripeBillingPlan";
+import { sendBillingUpdatedWebhook } from "@/internal/billing/v2/workflows/sendBillingUpdatedWebhook/sendBillingUpdatedWebhook";
+import { billingPlanToSendProductsUpdated } from "@/internal/billing/v2/workflows/sendProductsUpdated/billingPlanToSendProductsUpdated";
 import { checkoutActions, checkoutRepo } from "@/internal/checkouts";
 import { deleteCachedFullCustomer } from "@/internal/customers/cusUtils/fullCustomerCacheUtils/deleteCachedFullCustomer";
 import { MetadataService } from "@/internal/metadata/MetadataService";
@@ -66,6 +68,18 @@ export const executeDeferredBillingPlan = async ({
 		ctx,
 		billingContext,
 		billingPlan,
+	});
+
+	await billingPlanToSendProductsUpdated({
+		ctx,
+		autumnBillingPlan: billingPlan.autumn,
+		billingContext,
+	});
+
+	void sendBillingUpdatedWebhook({
+		ctx,
+		autumnBillingPlan: billingPlan.autumn,
+		originalFullCustomer: billingContext.fullCustomer,
 	});
 
 	await MetadataService.delete({ db, id: metadata.id });
