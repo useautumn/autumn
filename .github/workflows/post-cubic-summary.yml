@@ -5,6 +5,7 @@ on:
     types:
       - opened
       - edited
+      - closed
     branches:
       - main
 
@@ -63,3 +64,37 @@ jobs:
             --header "Content-Type: application/json" \
             --data-binary @"$RUNNER_TEMP/slack-payload.json" \
             "$SLACK_SHIPPED_WEBHOOK_URL"
+
+  notify-merged:
+    name: Reply when merged
+    if: >-
+      github.event.action == 'closed' &&
+      github.event.pull_request.merged == true &&
+      github.event.pull_request.head.ref == 'dev' &&
+      github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Reply in shipped thread
+        env:
+          DEPLOY_SECRET: ${{ secrets.DEPLOY_SECRET }}
+          DEPLOY_URL: ${{ secrets.DEPLOY_URL }}
+          MERGED_AT: ${{ github.event.pull_request.merged_at }}
+          MERGE_COMMIT_SHA: ${{ github.event.pull_request.merge_commit_sha }}
+          PR_URL: ${{ github.event.pull_request.html_url }}
+        run: |
+          if [ -z "$DEPLOY_URL" ] || [ -z "$DEPLOY_SECRET" ]; then
+            echo "::error::DEPLOY_URL and DEPLOY_SECRET must be configured"
+            exit 1
+          fi
+
+          export MERGED_AT MERGE_COMMIT_SHA PR_URL
+          node -e 'process.stdout.write(JSON.stringify({ pullRequestUrl: process.env.PR_URL, mergedAt: process.env.MERGED_AT, mergeCommitSha: process.env.MERGE_COMMIT_SHA }))' \
+            > "$RUNNER_TEMP/shipped-merge-payload.json"
+
+          curl --silent --show-error --fail-with-body --retry 3 --retry-all-errors \
+            --request POST \
+            --header "Content-Type: application/json" \
+            --header "x-deploy-secret: $DEPLOY_SECRET" \
+            --data-binary @"$RUNNER_TEMP/shipped-merge-payload.json" \
+            "$DEPLOY_URL/api/shipped/merge"
