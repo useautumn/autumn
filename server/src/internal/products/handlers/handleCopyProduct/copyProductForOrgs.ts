@@ -22,6 +22,7 @@ import RecaseError from "@/utils/errorUtils.js";
 import { generateId } from "@/utils/genUtils.js";
 import { copyBaseVariants, listSourceVariants } from "./copyBaseVariants.js";
 import { copyLicenseLinksForPlanCopy } from "./copyLicenseLinksForPlanCopy.js";
+import { listExistingTargetPlanIds } from "./copyPlanIntoTarget.js";
 
 const initNewFeature = ({
 	data,
@@ -149,8 +150,20 @@ export const copyProductForOrgs = async ({
 		fromFullProduct.base_variant_id = null;
 	}
 
+	// A license plan already in the target is reused, not copied — pulling its
+	// features in anyway can abort the copy on unrelated type conflicts.
+	const existingTargetLicensePlanIds = await listExistingTargetPlanIds({
+		db,
+		planIds: licensePlanIds,
+		toOrg,
+		toEnv,
+	});
+	const licensePlansToCopy = sourceLicensePlans.filter(
+		(licensePlan) => !existingTargetLicensePlanIds.has(licensePlan.id),
+	);
+
 	const featureIdsToCopy = new Set(
-		[fromFullProduct, ...variants, ...sourceLicensePlans].flatMap((product) =>
+		[fromFullProduct, ...variants, ...licensePlansToCopy].flatMap((product) =>
 			product.entitlements.map((entitlement) => entitlement.feature.id),
 		),
 	);
