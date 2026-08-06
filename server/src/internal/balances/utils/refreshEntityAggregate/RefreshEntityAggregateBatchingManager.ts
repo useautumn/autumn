@@ -42,6 +42,7 @@ interface RefreshEntry {
  */
 export class RefreshEntityAggregateBatchingManager {
 	private entries: Map<string, RefreshEntry> = new Map();
+	private readonly inFlightExecutions = new Set<Promise<void>>();
 
 	private readonly bucketMs: number;
 	private readonly settleBufferMs: number;
@@ -108,7 +109,10 @@ export class RefreshEntityAggregateBatchingManager {
 
 	async flush(): Promise<void> {
 		const keys = Array.from(this.entries.keys());
-		await Promise.all(keys.map((key) => this.fire({ key })));
+		await Promise.all(keys.map((key) => this.startFire({ key })));
+		while (this.inFlightExecutions.size > 0) {
+			await Promise.all(Array.from(this.inFlightExecutions));
+		}
 	}
 
 	getStats(): { totalPending: number } {
@@ -135,15 +139,24 @@ export class RefreshEntityAggregateBatchingManager {
 		entry: RefreshEntry;
 	}): void {
 		const nowMs = this._now();
-		const bucketEndMs =
-			(Math.floor(nowMs / this.bucketMs) + 1) * this.bucketMs;
+		const bucketEndMs = (Math.floor(nowMs / this.bucketMs) + 1) * this.bucketMs;
 		const delayMs = bucketEndMs - nowMs + this.settleBufferMs;
 
 		entry.timer = setTimeout(() => {
-			this.fire({ key });
+			void this.startFire({ key });
 		}, delayMs);
 
 		if (entry.timer.unref) entry.timer.unref();
+	}
+
+	private startFire({ key }: { key: string }): Promise<void> {
+		const execution = this.fire({ key });
+		this.inFlightExecutions.add(execution);
+		void execution.then(
+			() => this.inFlightExecutions.delete(execution),
+			() => this.inFlightExecutions.delete(execution),
+		);
+		return execution;
 	}
 
 	private async fire({ key }: { key: string }): Promise<void> {

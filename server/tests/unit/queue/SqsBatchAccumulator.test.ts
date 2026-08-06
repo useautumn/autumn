@@ -160,6 +160,42 @@ describe("SqsBatchAccumulator", () => {
 		}
 	});
 
+	test("flush drains entries enqueued while a send is in flight", async () => {
+		let releaseFirstSend: () => void = () => undefined;
+		const firstSendReleased = new Promise<void>((resolve) => {
+			releaseFirstSend = resolve;
+		});
+		let markFirstSendStarted: () => void = () => undefined;
+		const firstSendStarted = new Promise<void>((resolve) => {
+			markFirstSendStarted = resolve;
+		});
+		const calls: SendSqsAccumulatorBatchArgs<TestEntry>[] = [];
+		const batcher = new SqsBatchAccumulator<TestEntry>({
+			batchWindowMs: 60_000,
+			sendBatch: async (args) => {
+				calls.push(args);
+				if (calls.length === 1) {
+					markFirstSendStarted();
+					await firstSendReleased;
+				}
+				return { failures: [] };
+			},
+		});
+		const firstEntry = batcher.enqueue(createEntry({ index: 0 }));
+		const flush = batcher.flush();
+		await firstSendStarted;
+		const secondEntry = batcher.enqueue(createEntry({ index: 1 }));
+
+		releaseFirstSend();
+		try {
+			await flush;
+			expect(calls).toHaveLength(2);
+		} finally {
+			await batcher.shutdown();
+			await Promise.all([firstEntry, secondEntry]);
+		}
+	});
+
 	test("shutdown drains pending and in-flight sends before resolving", async () => {
 		let resolveSend:
 			| ((result: {

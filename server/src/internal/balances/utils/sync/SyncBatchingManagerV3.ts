@@ -63,6 +63,7 @@ export type QueueSyncV4Payload = {
  */
 export class SyncBatchingManagerV3 {
 	private customerBatches: Map<string, CustomerBatch> = new Map();
+	private readonly inFlightExecutions = new Set<Promise<void>>();
 
 	private readonly BATCH_WINDOW_MS: number = 1000;
 	private readonly MAX_BATCH_SIZE = 1000;
@@ -163,7 +164,7 @@ export class SyncBatchingManagerV3 {
 		const totalSize =
 			batch.context.cusEntIds.size + batch.context.rolloverIds.size;
 		if (totalSize >= this.MAX_BATCH_SIZE) {
-			this.executeCustomerBatch({ batchKey });
+			void this.startCustomerBatch({ batchKey });
 		}
 	}
 
@@ -188,8 +189,11 @@ export class SyncBatchingManagerV3 {
 	async flush(): Promise<void> {
 		const batchKeys = Array.from(this.customerBatches.keys());
 		await Promise.all(
-			batchKeys.map((batchKey) => this.executeCustomerBatch({ batchKey })),
+			batchKeys.map((batchKey) => this.startCustomerBatch({ batchKey })),
 		);
+		while (this.inFlightExecutions.size > 0) {
+			await Promise.all(Array.from(this.inFlightExecutions));
+		}
 	}
 
 	private buildBatchKey({
@@ -260,12 +264,26 @@ export class SyncBatchingManagerV3 {
 		if (!batch) return;
 
 		batch.timer = setTimeout(() => {
-			this.executeCustomerBatch({ batchKey });
+			void this.startCustomerBatch({ batchKey });
 		}, this.BATCH_WINDOW_MS);
 
 		if (batch.timer.unref) {
 			batch.timer.unref();
 		}
+	}
+
+	private startCustomerBatch({
+		batchKey,
+	}: {
+		batchKey: string;
+	}): Promise<void> {
+		const execution = this.executeCustomerBatch({ batchKey });
+		this.inFlightExecutions.add(execution);
+		void execution.then(
+			() => this.inFlightExecutions.delete(execution),
+			() => this.inFlightExecutions.delete(execution),
+		);
+		return execution;
 	}
 
 	private async executeCustomerBatch({
