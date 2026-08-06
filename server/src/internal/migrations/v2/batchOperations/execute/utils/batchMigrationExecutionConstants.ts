@@ -1,4 +1,6 @@
 /** Customers claimed + mutated + finalized per loop iteration. */
+/** Hard ceiling ~7280: the claim upsert binds ~9 params per row and Postgres
+ * caps a bind message at 65535, failing with 08P01 above that. */
 export const BATCH_MIGRATION_PAGE_SIZE = 5000;
 
 /** Timeout for each bounded page transaction (one candidate batch, or the
@@ -24,3 +26,8 @@ export const BATCH_MIGRATION_PAGES_PER_CHUNK = 20;
 
 /** Concurrent Redis full-customer cache invalidations during finalize. */
 export const BATCH_MIGRATION_CACHE_BUST_CONCURRENCY = 20;
+
+/** Pages whose post-commit side effects (cache invalidation, item events) may
+ * be in flight at once. Bounds memory and downstream load when a dependency
+ * is slower than the page loop. */
+export const BATCH_MIGRATION_DEFERRED_INFLIGHT = 3;

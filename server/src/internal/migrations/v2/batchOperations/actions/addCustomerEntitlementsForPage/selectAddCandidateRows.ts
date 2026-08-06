@@ -8,7 +8,6 @@ import {
 import { sql } from "drizzle-orm";
 import { z } from "zod/v4";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
-import { sqlList } from "@/internal/billing/v2/actions/batchTransition/execute/sql/batchTransitionSqlUtils.js";
 import {
 	type OperationScope,
 	operationScopeSql,
@@ -137,7 +136,7 @@ export const buildAddCandidateRowsQuery = ({
 			ON entity.internal_id = cp.internal_entity_id
 		${siblingJoin}
 		${subscriptionAnchorJoin}
-		WHERE cp.internal_customer_id IN (${sqlList({ values: internalCustomerIds })})
+		WHERE cp.internal_customer_id = ANY(${sql.param(internalCustomerIds)}::text[])
 			AND ${operationScopeSql({ scope })}
 			${afterCustomerProductId ? sql`AND cp.id > ${afterCustomerProductId}` : sql``}
 			AND NOT EXISTS (
@@ -152,29 +151,6 @@ export const buildAddCandidateRowsQuery = ({
 		ORDER BY cp.id
 		${limit !== undefined ? sql`LIMIT ${limit}` : sql``}
 	`;
-};
-
-/** Advisory pre-count of the page's add candidates (no anchor laterals). */
-export const countAddCandidateRows = async ({
-	db,
-	internalCustomerIds,
-	scope,
-	entitlement,
-}: {
-	db: DrizzleCli;
-	internalCustomerIds: string[];
-	scope: OperationScope;
-	entitlement: EntitlementWithFeature;
-}): Promise<number> => {
-	const [row] = await db.execute<{ count: string }>(sql`
-		SELECT COUNT(*)::bigint AS count FROM (${buildAddCandidateRowsQuery({
-			internalCustomerIds,
-			scope,
-			entitlement,
-			includeAnchorSources: false,
-		})}) AS candidates
-	`);
-	return Number(row?.count ?? 0);
 };
 
 export const selectAddCandidateRows = async ({

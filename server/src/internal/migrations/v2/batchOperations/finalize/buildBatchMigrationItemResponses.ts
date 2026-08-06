@@ -1,10 +1,7 @@
 import { type Feature, isOneOffProduct } from "@autumn/shared";
 import { buildBalanceChanges } from "@/internal/migrations/v2/preview/previewMigrateCustomer/buildBalanceChanges.js";
 import { buildFlagChanges } from "@/internal/migrations/v2/preview/previewMigrateCustomer/buildFlagChanges.js";
-import {
-	type PreviewMigrateCustomer,
-	PreviewMigrateCustomerSchema,
-} from "@/internal/migrations/v2/preview/previewMigrateCustomer/types/index.js";
+import type { PreviewMigrateCustomer } from "@/internal/migrations/v2/preview/previewMigrateCustomer/types/index.js";
 import type {
 	BatchMigrationInsertedItem,
 	BatchMigrationPageCustomer,
@@ -85,22 +82,22 @@ export const buildBatchMigrationItemResponses = ({
 				},
 			);
 
-			return [
-				customer.internalId,
-				PreviewMigrateCustomerSchema.parse({
-					object: "migration_customer_preview",
-					customer_id: customer.id ?? customer.internalId,
-					plan_changes: planChanges,
-					balance_changes: buildBalanceChanges({
-						beforeBalances: {},
-						afterBalances: changes.balances,
-					}),
-					flag_changes: buildFlagChanges({
-						beforeFlags: {},
-						afterFlags: changes.flags,
-					}),
+			// Typed literal rather than a Zod parse: this object is built in-process
+			// from already-typed inputs, so parsing 5000x per page re-derives nothing.
+			const preview: PreviewMigrateCustomer = {
+				object: "migration_customer_preview",
+				customer_id: customer.id ?? customer.internalId,
+				plan_changes: planChanges,
+				balance_changes: buildBalanceChanges({
+					beforeBalances: {},
+					afterBalances: changes.balances,
 				}),
-			];
+				flag_changes: buildFlagChanges({
+					beforeFlags: {},
+					afterFlags: changes.flags,
+				}),
+			};
+			return [customer.internalId, preview];
 		}),
 	);
 };

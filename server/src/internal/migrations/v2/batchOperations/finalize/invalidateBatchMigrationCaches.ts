@@ -20,8 +20,12 @@ export const invalidateBatchMigrationCaches = async ({
 }: {
 	ctx: AutumnContext;
 	pageResult: BatchMigrationPageResult;
-}): Promise<number> =>
-	batchInvalidateCachedFullSubjects({
+}): Promise<number> => {
+	// Targets depend only on the org, so resolve once per page rather than
+	// re-deriving them inside the per-customer loop.
+	const redisTargets = getRedisTargetsForCustomer({ org: ctx.org });
+
+	return batchInvalidateCachedFullSubjects({
 		customers: pageResult.succeeded.map((customer) => ({
 			customerId: customer.id ?? customer.internalId,
 			orgId: ctx.org.id,
@@ -32,7 +36,7 @@ export const invalidateBatchMigrationCaches = async ({
 			env: ctx.env,
 			features: ctx.features,
 		}),
-		getRedisTargetsForCustomer: () =>
-			getRedisTargetsForCustomer({ org: ctx.org }),
+		getRedisTargetsForCustomer: () => redisTargets,
 		maxAttempts: MIGRATION_INVALIDATE_MAX_ATTEMPTS,
 	});
+};
