@@ -15,6 +15,9 @@ type StandbyConnections = {
 export type StandbyRedisRouter = {
 	/** Preferred connection first, then the alternate. Never empty. */
 	ordered: () => [Redis, Redis];
+	/** Ready and past its failure penalty. `status` alone says only that the
+	 *  socket is up, not that the router still trusts the connection. */
+	isUsable: (connection: Redis) => boolean;
 	recordOutcome: (args: { connection: Redis; error?: unknown }) => void;
 };
 
@@ -107,7 +110,7 @@ export const createStandbyRedisRouter = ({
 		entry.consecutiveFailures = 0;
 	};
 
-	const router: StandbyRedisRouter = { ordered, recordOutcome };
+	const router: StandbyRedisRouter = { ordered, isUsable, recordOutcome };
 
 	const observeOutcome = ({
 		result,
