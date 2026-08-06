@@ -7,8 +7,11 @@ import type {
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { ProductService } from "@/internal/products/ProductService.js";
-import { copyProduct } from "@/internal/products/productUtils.js";
 import { initVariantsInStripe } from "@/internal/products/stripeResourceUtils/initVariantsInStripe.js";
+import {
+	copyPlanIntoTarget,
+	listExistingTargetPlanIds,
+} from "./copyPlanIntoTarget.js";
 
 /**
  * Lists the base plan's variants in the source (org, env). A variant may still
@@ -39,30 +42,6 @@ export const listSourceVariants = async ({
 		orgId: fromOrg.id,
 		env: fromEnv,
 	});
-};
-
-const listConflictingVariantIds = async ({
-	db,
-	variants,
-	toOrg,
-	toEnv,
-}: {
-	db: DrizzleCli;
-	variants: FullProduct[];
-	toOrg: Organization;
-	toEnv: AppEnv;
-}): Promise<Set<string>> => {
-	const existing = await Promise.all(
-		variants.map((variant) =>
-			ProductService.get({ db, id: variant.id, orgId: toOrg.id, env: toEnv }),
-		),
-	);
-
-	return new Set(
-		existing
-			.filter((product) => product !== undefined)
-			.map((product) => product.id),
-	);
 };
 
 /**
@@ -97,9 +76,9 @@ export const copyBaseVariants = async ({
 	if (variants.length === 0) return [];
 
 	const { db, logger } = ctx;
-	const conflictingIds = await listConflictingVariantIds({
+	const conflictingIds = await listExistingTargetPlanIds({
 		db,
-		variants,
+		planIds: variants.map((variant) => variant.id),
 		toOrg,
 		toEnv,
 	});
@@ -113,22 +92,16 @@ export const copyBaseVariants = async ({
 			continue;
 		}
 
-		await copyProduct({
+		await copyPlanIntoTarget({
 			db,
-			product: {
-				...variant,
-				is_default: false,
-				base_variant_id: crossOrg ? null : variant.base_variant_id,
-			},
-			toOrgId: toOrg.id,
-			toId: variant.id,
-			toName: variant.name,
-			fromEnv,
-			toEnv,
-			toFeatures,
-			fromFeatures,
-			org: toOrg,
 			logger,
+			plan: variant,
+			fromEnv,
+			toOrg,
+			toEnv,
+			fromFeatures,
+			toFeatures,
+			crossOrg,
 			baseInternalProductId: toBaseInternalId,
 		});
 		copiedVariantIds.push(variant.id);

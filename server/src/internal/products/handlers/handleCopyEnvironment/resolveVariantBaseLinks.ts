@@ -69,40 +69,6 @@ export const resolveSourceBasePlanIds = async ({
 };
 
 /**
- * Pulls a variant's base into the copy set unless the target already has a
- * plan with that id. A copy never rewrites target base links it wasn't asked
- * to touch, so a same-id target variant leaves the copied variant unlinked.
- */
-export const withRequiredBases = ({
-	fromProducts,
-	fromProductsAll,
-	toProducts,
-	basePlanIdByVariantId,
-}: {
-	fromProducts: FullProduct[];
-	fromProductsAll: FullProduct[];
-	toProducts: FullProduct[];
-	basePlanIdByVariantId: Map<string, string>;
-}): FullProduct[] => {
-	const includedIds = new Set(fromProducts.map((product) => product.id));
-	const targetIds = new Set(toProducts.map((product) => product.id));
-	const basePlanIds = deduplicateArray([...basePlanIdByVariantId.values()]);
-
-	const requiredBases: FullProduct[] = [];
-	for (const basePlanId of basePlanIds) {
-		if (includedIds.has(basePlanId) || targetIds.has(basePlanId)) continue;
-
-		const base = fromProductsAll.find((product) => product.id === basePlanId);
-		if (!base) continue;
-
-		requiredBases.push(base);
-		includedIds.add(basePlanId);
-	}
-
-	return [...fromProducts, ...requiredBases];
-};
-
-/**
  * Base plan ids that exist in the target after the base pass — the only ids
  * getTargetBaseInternalIds may query, since listFull throws on absent ids.
  */

@@ -9,10 +9,11 @@ import {
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { copyPlanLicenseLinks } from "@/internal/licenses/actions/links/copyPlanLicenseLinks.js";
 import { ProductService } from "@/internal/products/ProductService.js";
+import { initProductInStripe } from "@/internal/products/productUtils.js";
 import {
-	copyProduct,
-	initProductInStripe,
-} from "@/internal/products/productUtils.js";
+	copyPlanIntoTarget,
+	listExistingTargetPlanIds,
+} from "./copyPlanIntoTarget.js";
 
 /**
  * Recreates the copied base's and variants' license links in the target,
@@ -70,15 +71,12 @@ export const copyLicenseLinksForPlanCopy = async ({
 	const candidateLicensePlanIds = deduplicateArray(
 		links.map((link) => link.licensePlanId),
 	).filter((planId) => !copiedPlanIds.has(planId));
-	const existingLicensePlans = await Promise.all(
-		candidateLicensePlanIds.map((planId) =>
-			ProductService.get({ db, id: planId, orgId: toOrg.id, env: toEnv }),
-		),
-	);
-	const presentLicensePlanIds = existingLicensePlans
-		.filter((product) => product !== undefined)
-		.map((product) => product.id);
-	const presentIds = new Set(presentLicensePlanIds);
+	const presentIds = await listExistingTargetPlanIds({
+		db,
+		planIds: candidateLicensePlanIds,
+		toOrg,
+		toEnv,
+	});
 
 	const licensePlansToCopy = sourceLicensePlans.filter(
 		(licensePlan) =>
@@ -86,22 +84,16 @@ export const copyLicenseLinksForPlanCopy = async ({
 			!presentIds.has(licensePlan.id),
 	);
 	for (const licensePlan of licensePlansToCopy) {
-		await copyProduct({
+		await copyPlanIntoTarget({
 			db,
-			product: {
-				...licensePlan,
-				is_default: false,
-				base_variant_id: crossOrg ? null : licensePlan.base_variant_id,
-			},
-			toOrgId: toOrg.id,
-			toId: licensePlan.id,
-			toName: licensePlan.name,
-			fromEnv,
-			toEnv,
-			toFeatures,
-			fromFeatures,
-			org: toOrg,
 			logger,
+			plan: licensePlan,
+			fromEnv,
+			toOrg,
+			toEnv,
+			fromFeatures,
+			toFeatures,
+			crossOrg,
 		});
 	}
 
@@ -113,11 +105,7 @@ export const copyLicenseLinksForPlanCopy = async ({
 		db,
 		orgId: toOrg.id,
 		env: toEnv,
-		inIds: [
-			...copiedPlanIds,
-			...presentLicensePlanIds,
-			...copiedLicensePlanIds,
-		],
+		inIds: [...copiedPlanIds, ...presentIds, ...copiedLicensePlanIds],
 	});
 
 	for (const product of toProducts) {

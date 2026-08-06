@@ -14,23 +14,9 @@ import { deletePlatformSubOrg } from "@/internal/orgs/deleteOrg/deletePlatformSu
 import { handleCopyProducts } from "@/internal/products/handlers/handleCopyEnvironment/handleCopyProducts.js";
 import { ProductService } from "@/internal/products/ProductService.js";
 
-/**
- * TDD test: copying an env (sandbox -> live, as "copy to production" does) must
- * carry over catalog plan license links.
- *
- * Contract under test:
- *   New behaviors (handleCopyProducts):
- *     - copy set includes parent + license -> target has a plan_licenses row
- *       linking the copied pair, preserving included / prepaid_only / metadata
- *     - copying a parent alone -> the license plan is pulled into the copy set
- *       and the link is recreated in the target
- *     - copying a parent whose license already exists in the target -> the link
- *       resolves against the existing target license, no duplicate product
- *     - re-copy when both products exist in the target without the link -> the
- *       link is repaired
- *   Side effects:
- *     - catalog (is_custom = false) rows in plan_licenses in the target env
- */
+// Copying an env (sandbox -> live, as "copy to production" does) must carry
+// over catalog plan license links — pulling absent license plans in, reusing
+// target ones, and repairing missing links on re-copy.
 
 const { db } = initDrizzle();
 const suffix = crypto.randomUUID().slice(0, 8);

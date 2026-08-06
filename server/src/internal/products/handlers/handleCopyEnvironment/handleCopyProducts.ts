@@ -19,9 +19,9 @@ import {
 	getTargetBaseInternalIds,
 	listResolvableBasePlanIds,
 	resolveSourceBasePlanIds,
-	withRequiredBases,
 } from "./resolveVariantBaseLinks.js";
 import { withLicensePlanProducts } from "./withLicensePlanProducts.js";
+import { withPulledInPlans } from "./withPulledInPlans.js";
 
 const conformProductToSchema = (
 	product: ProductV2,
@@ -102,13 +102,15 @@ export const handleCopyProducts = async ({
 		fromProducts: requestedFromProducts,
 		fromProductsAll,
 	});
+	// A same-id target plan blocks the base pull: a copy never rewrites target
+	// base links it wasn't asked to touch, so such a variant copies unlinked.
 	const fromProducts = await withLicensePlanProducts({
 		db,
-		fromProducts: withRequiredBases({
+		fromProducts: withPulledInPlans({
 			fromProducts: requestedFromProducts,
 			fromProductsAll,
 			toProducts,
-			basePlanIdByVariantId,
+			planIds: [...basePlanIdByVariantId.values()],
 		}),
 		fromProductsAll,
 		toProducts,
