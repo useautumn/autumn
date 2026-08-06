@@ -143,18 +143,25 @@ export const copySandboxForOrg = async ({
 			});
 		}
 
-		// handleCopyProducts pulls a variant's base into the copy set, so the
-		// base's item features must come along too.
+		// A requested variant pulls its base (via handleCopyProducts); a requested
+		// base pulls its variants here. Both need their item features copied.
 		const basePlanIdByVariantId = await resolveSourceBasePlanIds({
 			db,
-			fromProducts: fromProducts.filter((p) =>
-				requestedProductIds.includes(p.id),
-			),
+			fromProducts,
 			fromProductsAll: fromProducts,
+		});
+		const requestedProductIdSet = new Set(requestedProductIds);
+		const pulledInVariantIds = [...basePlanIdByVariantId.entries()]
+			.filter(([, basePlanId]) => requestedProductIdSet.has(basePlanId))
+			.map(([variantId]) => variantId);
+		const pulledInBasePlanIds = requestedProductIds.flatMap((productId) => {
+			const basePlanId = basePlanIdByVariantId.get(productId);
+			return basePlanId ? [basePlanId] : [];
 		});
 		const wantedProductIds = new Set([
 			...requestedProductIds,
-			...basePlanIdByVariantId.values(),
+			...pulledInVariantIds,
+			...pulledInBasePlanIds,
 		]);
 
 		const wantedFeatureIds = new Set(requestedFeatureIds);
@@ -180,7 +187,9 @@ export const copySandboxForOrg = async ({
 		}
 
 		featuresToCopy = fromFeatures.filter((f) => wantedFeatureIds.has(f.id));
-		productIdsToCopy = requestedProductIds;
+		productIdsToCopy = [
+			...new Set([...requestedProductIds, ...pulledInVariantIds]),
+		];
 	}
 
 	// Features first: products reference them, and credit systems reference

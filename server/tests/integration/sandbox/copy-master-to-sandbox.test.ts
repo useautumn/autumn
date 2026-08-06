@@ -12,6 +12,7 @@ import { products } from "@tests/utils/fixtures/products.js";
 import defaultCtx from "@tests/utils/testInitUtils/createTestContext.js";
 import { initDrizzle } from "@/db/initDrizzle.js";
 import { logger } from "@/external/logtail/logtailUtils.js";
+import { invalidateProductsCache } from "@/external/redis/actions/productsCache/productsCache.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { FeatureService } from "@/internal/features/FeatureService.js";
 import { createFeature } from "@/internal/features/featureActions/createFeature.js";
@@ -37,6 +38,10 @@ const SBX_FEATURE = `m2s_sbx_${suffix}`;
 const SBX_PLAN = `m2s_sbx_plan_${suffix}`;
 const LIVE_FEATURE = `m2s_live_${suffix}`;
 const LIVE_PLAN = `m2s_live_plan_${suffix}`;
+const VBASE_FEATURE = `m2s_vbase_${suffix}`;
+const VBASE_PLAN = `m2s_vbase_plan_${suffix}`;
+const VARIANT_FEATURE = `m2s_variant_${suffix}`;
+const VARIANT_PLAN = `m2s_variant_plan_${suffix}`;
 
 let master: Organization | undefined;
 let sub: Organization | undefined;
@@ -217,6 +222,92 @@ describe("copy a plan from the master org into a named sandbox", () => {
 			env: AppEnv.Sandbox,
 		});
 		expect(after.filter((p) => p.id === SBX_PLAN).length).toBe(countBefore);
+	});
+
+	test("a selected base brings its variants and their features", async () => {
+		if (!master || !sub) throw new Error("orgs not provisioned");
+
+		await seedPlan({
+			org: master,
+			env: AppEnv.Sandbox,
+			featureId: VBASE_FEATURE,
+			planId: VBASE_PLAN,
+		});
+		const base = await ProductService.getFull({
+			db,
+			idOrInternalId: VBASE_PLAN,
+			orgId: master.id,
+			env: AppEnv.Sandbox,
+		});
+		const seedCtx: AutumnContext = {
+			...baseCtx,
+			org: master,
+			env: AppEnv.Sandbox,
+			features: [],
+		};
+		await createFeature({
+			ctx: seedCtx,
+			data: constructBooleanFeature({
+				featureId: VARIANT_FEATURE,
+				orgId: master.id,
+				env: AppEnv.Sandbox,
+			}),
+			skipGenerateDisplay: true,
+		});
+		const features = await FeatureService.list({
+			db,
+			orgId: master.id,
+			env: AppEnv.Sandbox,
+		});
+		await createProduct({
+			ctx: { ...seedCtx, features },
+			data: {
+				...(products.base({
+					id: VARIANT_PLAN,
+					items: [
+						constructFeatureItem({
+							featureId: VARIANT_FEATURE,
+							isBoolean: true,
+						}),
+					],
+				}) as unknown as CreateProductV2Params),
+				base_internal_product_id: base.internal_id,
+			},
+		});
+		await invalidateProductsCache({
+			orgId: master.id,
+			env: AppEnv.Sandbox,
+		});
+
+		await copySandboxForOrg({
+			db,
+			ctx: baseCtx,
+			masterOrg: master,
+			fromOrg: master,
+			fromEnv: AppEnv.Sandbox,
+			toSandboxId: sub.id,
+			productIds: [VBASE_PLAN],
+		});
+
+		const subProducts = await ProductService.listFull({
+			db,
+			orgId: sub.id,
+			env: AppEnv.Sandbox,
+		});
+		const subFeatures = await FeatureService.list({
+			db,
+			orgId: sub.id,
+			env: AppEnv.Sandbox,
+		});
+		const subBase = subProducts.find((p) => p.id === VBASE_PLAN);
+		const subVariant = subProducts.find((p) => p.id === VARIANT_PLAN);
+
+		expect(subBase).toBeDefined();
+		expect(subVariant).toBeDefined();
+		expect(subVariant?.base_internal_product_id).toBe(
+			subBase?.internal_id as string,
+		);
+		expect(subFeatures.map((f) => f.id)).toContain(VARIANT_FEATURE);
 	});
 
 	test("a copy with no source specified is rejected", async () => {
