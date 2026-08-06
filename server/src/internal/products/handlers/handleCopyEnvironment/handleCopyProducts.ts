@@ -1,6 +1,7 @@
 import {
 	type AppEnv,
 	type CreateProductV2Params,
+	deduplicateArray,
 	type Feature,
 	mapToProductV2,
 	type Organization,
@@ -181,7 +182,7 @@ export const handleCopyProducts = async ({
 		db,
 		toOrgId: toOrg.id,
 		toEnv,
-		basePlanIds: [...new Set(basePlanIdByVariantId.values())],
+		basePlanIds: deduplicateArray([...basePlanIdByVariantId.values()]),
 	});
 
 	await Promise.all(

@@ -1,4 +1,9 @@
-import type { AppEnv, FullProduct } from "@autumn/shared";
+import {
+	type AppEnv,
+	deduplicateArray,
+	type FullProduct,
+	notNullish,
+} from "@autumn/shared";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 import { ProductService } from "../../ProductService.js";
 
@@ -20,17 +25,16 @@ export const resolveSourceBasePlanIds = async ({
 		fromProductsAll.map((product) => [product.internal_id, product.id]),
 	);
 
-	const variants = fromProducts.filter(
-		(product) => product.base_internal_product_id !== null,
+	const variants = fromProducts.filter((product) =>
+		notNullish(product.base_internal_product_id),
 	);
 
-	const missingInternalIds = [
-		...new Set(
-			variants
-				.map((variant) => variant.base_internal_product_id as string)
-				.filter((internalId) => !basePlanIdByInternalId.has(internalId)),
-		),
-	];
+	const missingInternalIds = deduplicateArray(
+		variants
+			.map((variant) => variant.base_internal_product_id)
+			.filter(notNullish)
+			.filter((internalId) => !basePlanIdByInternalId.has(internalId)),
+	);
 	if (missingInternalIds.length > 0) {
 		const olderBaseVersions = await ProductService.listByInternalIds({
 			db,
@@ -43,9 +47,10 @@ export const resolveSourceBasePlanIds = async ({
 
 	const basePlanIdByVariantId = new Map<string, string>();
 	for (const variant of variants) {
-		const basePlanId = basePlanIdByInternalId.get(
-			variant.base_internal_product_id as string,
-		);
+		const baseInternalProductId = variant.base_internal_product_id;
+		if (!baseInternalProductId) continue;
+
+		const basePlanId = basePlanIdByInternalId.get(baseInternalProductId);
 		if (!basePlanId || basePlanId === variant.id) continue;
 		basePlanIdByVariantId.set(variant.id, basePlanId);
 	}
@@ -70,9 +75,10 @@ export const withRequiredBases = ({
 }): FullProduct[] => {
 	const includedIds = new Set(fromProducts.map((product) => product.id));
 	const targetIds = new Set(toProducts.map((product) => product.id));
+	const basePlanIds = deduplicateArray([...basePlanIdByVariantId.values()]);
 
 	const requiredBases: FullProduct[] = [];
-	for (const basePlanId of new Set(basePlanIdByVariantId.values())) {
+	for (const basePlanId of basePlanIds) {
 		if (includedIds.has(basePlanId) || targetIds.has(basePlanId)) continue;
 
 		const base = fromProductsAll.find((product) => product.id === basePlanId);
