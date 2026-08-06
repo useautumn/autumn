@@ -7,8 +7,39 @@ import {
 	buildCountAndSumQuery,
 	hasCompleteUtcDay,
 	selectCountAndSumSource,
+	shouldUseOrgPropertyRollup,
 	shouldUsePropertyDailyRollup,
 } from "@/internal/analytics/actions/dailyRollupRouting.js";
+
+test("org property rollup: routes only unfiltered aggregate-all property groups", () => {
+	const base = {
+		groupColumn: "property" as const,
+		hasCustomerId: false,
+		hasEntityId: false,
+		hasPropertyFilters: false,
+		propertyKey: "email_type",
+		skipPropertyRollup: false,
+	};
+	const nestedProperty = { ...base, propertyKey: "metadata.region" };
+
+	expect(shouldUseOrgPropertyRollup(base)).toBe(true);
+	expect(shouldUseOrgPropertyRollup(nestedProperty)).toBe(false);
+	expect(shouldUseOrgPropertyRollup({ ...base, hasCustomerId: true })).toBe(
+		false,
+	);
+	expect(shouldUseOrgPropertyRollup({ ...base, hasEntityId: true })).toBe(
+		false,
+	);
+	expect(
+		shouldUseOrgPropertyRollup({ ...base, hasPropertyFilters: true }),
+	).toBe(false);
+	expect(
+		shouldUseOrgPropertyRollup({ ...base, groupColumn: "customer_id" }),
+	).toBe(false);
+	expect(
+		shouldUseOrgPropertyRollup({ ...base, skipPropertyRollup: true }),
+	).toBe(false);
+});
 
 test("daily property rollup: routes eligible UTC day, week, and month groups", () => {
 	for (const binSize of ["day", "week", "month"]) {
