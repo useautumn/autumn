@@ -442,13 +442,6 @@
       "when": 1785919170528,
       "tag": "0062_pretty_hex",
       "breakpoints": true
-    },
-    {
-      "idx": 63,
-      "version": "7",
-      "when": 1786023591325,
-      "tag": "0063_fantastic_madelyne_pryor",
-      "breakpoints": true
     }
   ]
 }

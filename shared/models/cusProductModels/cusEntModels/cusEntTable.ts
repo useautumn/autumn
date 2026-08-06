@@ -98,7 +98,13 @@ export const customerEntitlements = pgTable(
 			"hash",
 			table.internal_customer_id,
 		),
+		index("idx_customer_entitlements_internal_customer_id_btree").on(
+			table.internal_customer_id,
+		),
 		index("idx_customer_entitlements_entitlement_id").on(table.entitlement_id),
+		index("idx_customer_entitlements_internal_feature_id_c")
+			.on(sql`${table.internal_feature_id} COLLATE "C"`)
+			.concurrently(),
 		index("idx_ce_internal_feature_id")
 			.on(table.internal_feature_id)
 			.concurrently(),
@@ -117,6 +123,7 @@ export const customerEntitlements = pgTable(
 			"hash",
 			table.internal_entity_id,
 		),
+		index("idx_customer_entitlements_on_next_reset_at").on(table.next_reset_at),
 		index("idx_customer_entitlements_separate_interval_reset")
 			.on(table.next_reset_at, table.id)
 			.where(
@@ -126,6 +133,12 @@ export const customerEntitlements = pgTable(
 		index("idx_customer_entitlements_loose_customer_expires")
 			.on(table.internal_customer_id, table.expires_at)
 			.where(sql`${table.customer_product_id} IS NULL`),
+		index("idx_customer_entitlements_next_reset_not_expired")
+			.on(table.next_reset_at)
+			.where(
+				sql`${table.expired} IS NOT TRUE AND ${table.next_reset_at} IS NOT NULL`,
+			)
+			.concurrently(),
 		index("idx_customer_entitlements_pooled_contribution")
 			.on(table.pooled_contribution_id)
 			.where(sql`${table.pooled_contribution_id} IS NOT NULL`)
