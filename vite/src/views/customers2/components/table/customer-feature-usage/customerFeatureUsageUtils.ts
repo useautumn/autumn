@@ -203,6 +203,28 @@ export function processNonBooleanEntitlements({
 }
 
 /**
+ * Boolean features in the org catalog the customer has not been granted.
+ */
+export function getAvailableBooleanFeatures({
+	features,
+	grantedEnts,
+}: {
+	features: Feature[];
+	grantedEnts: FullCusEntWithFullCusProduct[];
+}): Feature[] {
+	const grantedIds = new Set(
+		grantedEnts.map((ent) => ent.entitlement.feature.id),
+	);
+
+	return features.filter(
+		(feature) =>
+			feature.type === FeatureType.Boolean &&
+			!feature.archived &&
+			!grantedIds.has(feature.id),
+	);
+}
+
+/**
  * Filters entitlements to only boolean features
  */
 function filterBooleanEntitlements({
