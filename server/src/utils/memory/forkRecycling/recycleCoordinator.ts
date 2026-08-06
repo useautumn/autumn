@@ -15,13 +15,17 @@ export type RecycleCoordinator = {
 	handleWorkerExit: (args: { workerId: string }) => boolean;
 };
 
+export const DEFAULT_REPLACEMENT_BOOT_TIMEOUT_MS = 120_000;
+
 /** One recycle in flight at a time, and an invariant every path must hold:
  *  the serving fork count returns to N — no surplus, no deficit. */
 export const createRecycleCoordinator = ({
 	forkReplacement,
 	sendDrain,
 	sendAbort,
+	killWorker,
 	respawn,
+	replacementBootTimeoutMs = DEFAULT_REPLACEMENT_BOOT_TIMEOUT_MS,
 	log,
 }: {
 	forkReplacement: () => string;
@@ -29,13 +33,24 @@ export const createRecycleCoordinator = ({
 	/** Tells a still-serving worker its cycle was aborted so it may request
 	 *  again later (clears the worker-side request latch). */
 	sendAbort: (workerId: string) => void;
+	/** Force-kills a replacement that never reached `listening`. */
+	killWorker: (workerId: string) => void;
 	respawn: (workerId: string) => void;
+	replacementBootTimeoutMs?: number;
 	log: (message: string) => void;
 }): RecycleCoordinator => {
 	let activeCycle: RecycleCycle | null = null;
+	let bootDeadline: ReturnType<typeof setTimeout> | null = null;
 	const pendingWorkerIds: string[] = [];
 	const requestedWorkerIds = new Set<string>();
 	const expectedExitWorkerIds = new Set<string>();
+	// Replacements killed for hanging: their eventual exit needs no respawn.
+	const discardedWorkerIds = new Set<string>();
+
+	const clearBootDeadline = () => {
+		if (bootDeadline) clearTimeout(bootDeadline);
+		bootDeadline = null;
+	};
 
 	const startCycle = (oldWorkerId: string) => {
 		const replacementId = forkReplacement();
@@ -48,9 +63,30 @@ export const createRecycleCoordinator = ({
 		log(
 			`[ForkRecycle] Replacing worker ${oldWorkerId}; replacement ${replacementId} booting`,
 		);
+		bootDeadline = setTimeout(() => {
+			if (!activeCycle || activeCycle.replacementId !== replacementId) return;
+			if (activeCycle.drainSent) return;
+			// Alive but never listening (hung init): without this deadline the
+			// cycle would hold the recycle queue forever.
+			log(
+				`[ForkRecycle] Replacement ${replacementId} not listening after ${replacementBootTimeoutMs}ms; killing and aborting recycle of ${oldWorkerId}`,
+			);
+			discardedWorkerIds.add(replacementId);
+			const { oldExited } = activeCycle;
+			requestedWorkerIds.delete(oldWorkerId);
+			if (oldExited) {
+				respawn(replacementId);
+			} else {
+				sendAbort(oldWorkerId);
+			}
+			killWorker(replacementId);
+			startNextPendingCycle();
+		}, replacementBootTimeoutMs);
+		bootDeadline.unref?.();
 	};
 
 	const startNextPendingCycle = () => {
+		clearBootDeadline();
 		activeCycle = null;
 		const next = pendingWorkerIds.shift();
 		if (next !== undefined) startCycle(next);
@@ -82,6 +118,7 @@ export const createRecycleCoordinator = ({
 				return;
 			}
 
+			clearBootDeadline();
 			activeCycle.drainSent = true;
 			expectedExitWorkerIds.add(activeCycle.oldWorkerId);
 			log(
@@ -91,6 +128,13 @@ export const createRecycleCoordinator = ({
 		},
 
 		handleWorkerExit: ({ workerId }) => {
+			if (discardedWorkerIds.has(workerId)) {
+				// A hung replacement we already killed and accounted for.
+				discardedWorkerIds.delete(workerId);
+				requestedWorkerIds.delete(workerId);
+				return true;
+			}
+
 			if (expectedExitWorkerIds.has(workerId)) {
 				expectedExitWorkerIds.delete(workerId);
 				requestedWorkerIds.delete(workerId);

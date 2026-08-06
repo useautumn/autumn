@@ -27,17 +27,32 @@ export const attachPrimaryForkRecycling = ({
 }): PrimaryForkRecycling => {
 	const workerIds = new Map<string, Worker>();
 
+	// A worker whose IPC channel just closed makes `send` raise; the exit
+	// handler reconciles that case, so the failed write must not crash us.
+	const sendSafely = (workerId: string, type: string) => {
+		try {
+			workerIds.get(workerId)?.send({ type }, (error) => {
+				if (error) logger.warn(`[ForkRecycle] ${type} -> ${workerId} failed`);
+			});
+		} catch {
+			logger.warn(`[ForkRecycle] ${type} -> ${workerId} failed`);
+		}
+	};
+
 	const coordinator = createRecycleCoordinator({
 		forkReplacement: () => {
 			const worker = clusterModule.fork();
 			workerIds.set(String(worker.id), worker);
 			return String(worker.id);
 		},
-		sendDrain: (workerId) => {
-			workerIds.get(workerId)?.send({ type: RECYCLE_DRAIN });
-		},
-		sendAbort: (workerId) => {
-			workerIds.get(workerId)?.send({ type: RECYCLE_ABORT });
+		sendDrain: (workerId) => sendSafely(workerId, RECYCLE_DRAIN),
+		sendAbort: (workerId) => sendSafely(workerId, RECYCLE_ABORT),
+		killWorker: (workerId) => {
+			try {
+				workerIds.get(workerId)?.kill();
+			} catch {
+				logger.warn(`[ForkRecycle] kill -> ${workerId} failed`);
+			}
 		},
 		respawn: () => {
 			if (!shouldRespawn()) return;

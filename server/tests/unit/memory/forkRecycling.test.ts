@@ -34,15 +34,21 @@ type CoordinatorHarness = {
 	forked: string[];
 	drained: string[];
 	aborted: string[];
+	killed: string[];
 	respawned: string[];
 };
 
 /** Coordinator with capture-everything callbacks; tests drive the lifecycle
  *  through the handle* methods directly. */
-const createHarness = (): CoordinatorHarness => {
+const createHarness = ({
+	bootTimeoutMs = 5_000,
+}: {
+	bootTimeoutMs?: number;
+} = {}): CoordinatorHarness => {
 	const forked: string[] = [];
 	const drained: string[] = [];
 	const aborted: string[] = [];
+	const killed: string[] = [];
 	const respawned: string[] = [];
 	let nextForkId = 100;
 
@@ -58,13 +64,17 @@ const createHarness = (): CoordinatorHarness => {
 		sendAbort: (workerId) => {
 			aborted.push(workerId);
 		},
+		killWorker: (workerId) => {
+			killed.push(workerId);
+		},
 		respawn: (workerId) => {
 			respawned.push(workerId);
 		},
+		replacementBootTimeoutMs: bootTimeoutMs,
 		log: () => {},
 	});
 
-	return { coordinator, forked, drained, aborted, respawned };
+	return { coordinator, forked, drained, aborted, killed, respawned };
 };
 
 describe("createRecycleCoordinator", () => {
@@ -204,6 +214,61 @@ describe("createRecycleCoordinator", () => {
 		coordinator.handleWorkerExit({ workerId: forked[0] });
 
 		expect(respawned).toEqual([forked[0]]);
+	});
+
+	test("post-drain replacement crash with a queued request keeps the drained exit expected", () => {
+		const { coordinator, forked, drained, respawned } = createHarness();
+
+		coordinator.handleRecycleRequest({ workerId: "w1" });
+		coordinator.handleRecycleRequest({ workerId: "w2" });
+		coordinator.handleWorkerListening({ workerId: forked[0] });
+		expect(drained).toEqual(["w1"]);
+
+		// Replacement dies after listening; w2's queued cycle starts AND the
+		// dead replacement's slot respawns — but w1's exit must stay expected.
+		coordinator.handleWorkerExit({ workerId: forked[0] });
+		expect(respawned).toEqual([forked[0]]);
+		expect(forked).toHaveLength(2);
+
+		expect(coordinator.handleWorkerExit({ workerId: "w1" })).toBe(true);
+		// Accounting: 2 forked + 1 respawned − (w1 out, w2 out after its own
+		// cycle) keeps the fleet at N.
+		coordinator.handleWorkerListening({ workerId: forked[1] });
+		expect(drained).toEqual(["w1", "w2"]);
+	});
+
+	test("a replacement that never listens is killed at the boot deadline and the cycle aborts", async () => {
+		const { coordinator, forked, aborted, killed, respawned } = createHarness({
+			bootTimeoutMs: 25,
+		});
+
+		coordinator.handleRecycleRequest({ workerId: "w1" });
+		await new Promise((resolve) => setTimeout(resolve, 60));
+
+		expect(killed).toEqual([forked[0]]);
+		expect(aborted).toEqual(["w1"]);
+		expect(respawned).toHaveLength(0);
+
+		// The killed replacement's exit needs no further respawn…
+		expect(coordinator.handleWorkerExit({ workerId: forked[0] })).toBe(true);
+		expect(respawned).toHaveLength(0);
+		// …and the worker can request again.
+		coordinator.handleRecycleRequest({ workerId: "w1" });
+		expect(forked).toHaveLength(2);
+	});
+
+	test("boot deadline after the old worker crashed refills the slot instead of aborting", async () => {
+		const { coordinator, forked, aborted, killed, respawned } = createHarness({
+			bootTimeoutMs: 25,
+		});
+
+		coordinator.handleRecycleRequest({ workerId: "w1" });
+		coordinator.handleWorkerExit({ workerId: "w1" });
+		await new Promise((resolve) => setTimeout(resolve, 60));
+
+		expect(killed).toEqual([forked[0]]);
+		expect(respawned).toEqual([forked[0]]);
+		expect(aborted).toHaveLength(0);
 	});
 });
 
