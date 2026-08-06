@@ -23,10 +23,10 @@ export type ClaimedBatchMigrationPage = {
 };
 
 /**
- * Selects the next unprocessed filter-matched customers (keyset cursor +
- * checkpoint anti-join), then claims them with one bulk upsert. The claim
- * also takes over rows already `running` — crash recovery: a crashed run's
- * orphans are re-claimed and re-executed (mutations are replay-idempotent).
+ * Selects and claims the next unprocessed filter-matched customers (keyset
+ * cursor + checkpoint anti-join) in a single statement. The claim also takes
+ * over rows already `running` — crash recovery: a crashed run's orphans are
+ * re-claimed and re-executed (mutations are replay-idempotent).
  */
 export const claimNextBatchMigrationPage = async ({
 	ctx,
@@ -87,8 +87,9 @@ export const claimNextBatchMigrationPage = async ({
 		...retryItemStatuses,
 	];
 
-	// Select and claim in one statement: the page's rows never leave Postgres,
-	// so the claim carries a handful of params rather than ~9 per row.
+	// Select and claim in one statement so the page's rows never leave Postgres.
+	// The conflict branch resets status to `running` because the page's marks
+	// only flip running rows — that is what lets a re-claimed retry settle.
 	const rows = (await timePhase({
 		phases,
 		phase: "claim_select",

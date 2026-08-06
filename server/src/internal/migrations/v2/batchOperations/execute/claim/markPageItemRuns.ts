@@ -1,8 +1,9 @@
 import { sql } from "drizzle-orm";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 
-/** Settles the page's `running` claims in one statement; succeeded and skipped
- * are split by a CASE over array params. */
+/** Set-based settle of the page's `running` claims: flips them to succeeded or
+ * skipped in one statement, inside the page transaction (visible only with
+ * mutations). Only settles claims held by this run. */
 export const markPageItemRuns = async ({
 	db,
 	migrationInternalId,
