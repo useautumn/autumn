@@ -95,6 +95,25 @@ export const withRequiredBases = ({
 };
 
 /**
+ * Base plan ids that exist in the target after the base pass — the only ids
+ * getTargetBaseInternalIds may query, since listFull throws on absent ids.
+ */
+export const listResolvableBasePlanIds = ({
+	basePlanIdByVariantId,
+	copiedBaseIds,
+	targetIds,
+}: {
+	basePlanIdByVariantId: Map<string, string>;
+	copiedBaseIds: Set<string>;
+	targetIds: Set<string>;
+}): string[] =>
+	deduplicateArray(
+		[...basePlanIdByVariantId.values()].filter(
+			(planId) => copiedBaseIds.has(planId) || targetIds.has(planId),
+		),
+	);
+
+/**
  * Resolves base plan public ids to internal ids in the target env, after bases
  * have been copied. Target rows that are themselves variants are excluded so a
  * copy never produces a nested variant link.

@@ -1,7 +1,6 @@
 import {
 	type AppEnv,
 	type CreateProductV2Params,
-	deduplicateArray,
 	type Feature,
 	mapToProductV2,
 	type Organization,
@@ -19,6 +18,7 @@ import { initProductInStripe } from "../../productUtils.js";
 import { applyStripeReuseFromVariantFamilies } from "../../stripeResourceUtils/applyStripeReuseFromVariantFamilies.js";
 import {
 	getTargetBaseInternalIds,
+	listResolvableBasePlanIds,
 	resolveSourceBasePlanIds,
 	withRequiredBases,
 } from "./resolveVariantBaseLinks.js";
@@ -187,38 +187,36 @@ export const handleCopyProducts = async ({
 		baseProductsV2.map((fromProductV2) => copyOneProduct({ fromProductV2 })),
 	);
 
-	// listFull throws on absent ids — only query bases the target actually has.
 	const copiedBaseIds = new Set(baseProductsV2.map((p) => p.id));
 	const targetIds = new Set(toProducts.map((p) => p.id));
 	const targetBaseInternalIds = await getTargetBaseInternalIds({
 		db,
 		toOrgId: toOrg.id,
 		toEnv,
-		basePlanIds: deduplicateArray(
-			[...basePlanIdByVariantId.values()].filter(
-				(planId) => copiedBaseIds.has(planId) || targetIds.has(planId),
-			),
-		),
+		basePlanIds: listResolvableBasePlanIds({
+			basePlanIdByVariantId,
+			copiedBaseIds,
+			targetIds,
+		}),
 	});
 
-	await Promise.all(
-		variantProductsV2.map((fromProductV2) => {
-			const basePlanId = basePlanIdByVariantId.get(fromProductV2.id);
-			const targetBaseInternalId = basePlanId
-				? targetBaseInternalIds.get(basePlanId)
-				: undefined;
-			if (!basePlanId || !targetBaseInternalId) {
-				ctx.logger.warn(
-					`copy env: target ${basePlanId} cannot be a variant base, copying ${fromProductV2.id} unlinked`,
-				);
-				return copyOneProduct({ fromProductV2 });
-			}
-			return copyOneProduct({
-				fromProductV2,
-				targetBase: { planId: basePlanId, internalId: targetBaseInternalId },
-			});
-		}),
-	);
+	const copyOneVariant = (fromProductV2: ProductV2) => {
+		const basePlanId = basePlanIdByVariantId.get(fromProductV2.id);
+		const targetBaseInternalId = basePlanId
+			? targetBaseInternalIds.get(basePlanId)
+			: undefined;
+		if (!basePlanId || !targetBaseInternalId) {
+			ctx.logger.warn(
+				`copy env: target ${basePlanId} cannot be a variant base, copying ${fromProductV2.id} unlinked`,
+			);
+			return copyOneProduct({ fromProductV2 });
+		}
+		return copyOneProduct({
+			fromProductV2,
+			targetBase: { planId: basePlanId, internalId: targetBaseInternalId },
+		});
+	};
+	await Promise.all(variantProductsV2.map(copyOneVariant));
 
 	// Licenses are never pulled into the copy set — their features weren't selected.
 	const licenseLinks = await planLicenseRepo.listWithLicensePlanIdByParents({
