@@ -76,6 +76,10 @@ export interface BillingContext {
 	// Stripe context
 	stripeCustomer?: Stripe.Customer;
 	stripeSubscription?: Stripe.Subscription;
+	/** The subscription linked to the target customer product exists but is
+	 * canceled, so `stripeSubscription` is absent. Each action decides what that
+	 * means: updateSubscription blocks billing changes, attach buys fresh. */
+	canceledStripeSubscriptionId?: string;
 	stripeSubscriptionSchedule?: Stripe.SubscriptionSchedule;
 	stripeDiscounts?: StripeDiscountWithCoupon[];
 	stripeTaxRate?: Stripe.TaxRate;

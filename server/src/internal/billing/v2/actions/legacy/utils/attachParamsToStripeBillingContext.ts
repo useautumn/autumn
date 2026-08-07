@@ -20,7 +20,7 @@ export const attachParamsToStripeBillingContext = async ({
 	attachParams: AttachParams;
 	fullProduct: FullProduct;
 }): Promise<StripeBillingContextOverride> => {
-	const stripeSubscription = await fetchStripeSubscriptionForBilling({
+	const { stripeSubscription } = await fetchStripeSubscriptionForBilling({
 		ctx,
 		fullCus: attachParams.customer,
 		product: fullProduct,
