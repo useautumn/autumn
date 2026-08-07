@@ -20,7 +20,10 @@ jobs:
       contains(github.event.pull_request.body || '', '<!-- This is an auto-generated description by cubic. -->') &&
       (github.event.action == 'opened' ||
       (github.event.changes.body &&
-      !contains(github.event.changes.body.from || '', '<!-- This is an auto-generated description by cubic. -->')))
+      !contains(github.event.changes.body.from || '', '<!-- This is an auto-generated description by cubic. -->')) ||
+      (github.event.action == 'edited' &&
+      github.event.changes.base.ref.from &&
+      github.event.pull_request.base.ref == 'main'))
     runs-on: ubuntu-latest
 
     steps:
