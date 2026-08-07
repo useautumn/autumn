@@ -20,11 +20,15 @@ export const attachParamsToStripeBillingContext = async ({
 	attachParams: AttachParams;
 	fullProduct: FullProduct;
 }): Promise<StripeBillingContextOverride> => {
-	const { stripeSubscription } = await fetchStripeSubscriptionForBilling({
-		ctx,
-		fullCus: attachParams.customer,
-		product: fullProduct,
-	});
+	// canceledStripeSubscriptionId must survive: this override short-circuits
+	// setupStripeBillingContext, so a dropped marker leaves the legacy paths
+	// with no way to tell "no subscription" from "canceled subscription".
+	const { stripeSubscription, canceledStripeSubscriptionId } =
+		await fetchStripeSubscriptionForBilling({
+			ctx,
+			fullCus: attachParams.customer,
+			product: fullProduct,
+		});
 
 	const stripeSubscriptionSchedule =
 		await fetchStripeSubscriptionScheduleForBilling({
@@ -50,6 +54,7 @@ export const attachParamsToStripeBillingContext = async ({
 
 	return {
 		stripeSubscription,
+		canceledStripeSubscriptionId,
 		stripeSubscriptionSchedule,
 		stripeCustomer,
 		stripeDiscounts,
