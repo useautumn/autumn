@@ -1,6 +1,7 @@
 import type { AutumnContext } from "../../../../honoUtils/HonoEnv.js";
 import type { ImplicitPrepInstance } from "./getImplicitPrepareModules.js";
 import type { PreparedState, PrepareModuleResult } from "./types/index.js";
+import type { PrepareModule } from "./types/prepareModule.js";
 
 /**
  * Pure orchestrator. Walks a list of prep module instances under a
@@ -25,11 +26,20 @@ export const runPrepareModules = async ({
 	const results: PrepareModuleResult[] = [];
 	const nextState: PreparedState = {};
 
-	for (const { key, module, input } of modules) {
+	const runModule = async <Input, Result>(
+		module: PrepareModule<Input, Result>,
+		input: Input,
+	): Promise<Result> => {
 		const planned = await module.plan({ ctx, scopeId, input });
-		const result = dryRun
-			? planned
-			: await module.apply({ ctx, scopeId, input, planned });
+		if (dryRun) return planned;
+		return module.apply({ ctx, scopeId, input, planned });
+	};
+
+	for (const instance of modules) {
+		const { key, module } = instance;
+		const result = await (instance.module.kind === "ensure_plan_licenses"
+			? runModule(instance.module, instance.input)
+			: runModule(instance.module, instance.input));
 		nextState[key] = result;
 		results.push({ key, kind: module.kind, result });
 	}

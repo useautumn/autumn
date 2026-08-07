@@ -73,6 +73,7 @@ const buildPlan = ({
 			opIndex: 0,
 			scope: buildOperationScope({ internalProductId: "prod_pro_internal" }),
 			fromProduct: fromProduct({ prices }),
+			addLicenseEntitlementOps: [],
 			addEntitlementOps: [
 				{
 					entitlement,

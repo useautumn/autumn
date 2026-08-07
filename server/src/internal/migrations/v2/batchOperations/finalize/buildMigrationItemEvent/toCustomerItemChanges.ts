@@ -51,12 +51,21 @@ export const buildEntitlementLookup = ({
 	plan: BatchMigrationExecutionPlan;
 }): Map<string, EntitlementWithFeature> =>
 	new Map(
-		plan.patches.flatMap((patch) =>
-			patch.addEntitlementOps.map((add) => [
-				`${patch.fromProduct.id}:${add.entitlement.feature.id}`,
-				add.entitlement,
-			]),
-		),
+		plan.patches.flatMap((patch) => [
+			...patch.addEntitlementOps.map(
+				(add): [string, EntitlementWithFeature] => [
+					`${patch.fromProduct.id}:${add.entitlement.feature.id}`,
+					add.entitlement,
+				],
+			),
+			// License rows key on their own plan, not the parent the patch filtered on.
+			...patch.addLicenseEntitlementOps.map(
+				(add): [string, EntitlementWithFeature] => [
+					`${add.licensePlanId}:${add.entitlement.feature.id}`,
+					add.entitlement,
+				],
+			),
+		]),
 	);
 
 export const toCustomerItemChanges = ({
