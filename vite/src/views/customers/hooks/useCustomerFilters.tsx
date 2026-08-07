@@ -1,3 +1,4 @@
+import { type SortOrder, SortOrderSchema } from "@autumn/shared";
 import {
 	parseAsArrayOf,
 	parseAsBoolean,
@@ -32,9 +33,6 @@ const FILTER_PARAM_KEYS = [
 	"sort",
 ] as const;
 
-const SORT_ORDERS = ["asc", "desc"] as const;
-export type CustomerSortOrder = (typeof SORT_ORDERS)[number];
-
 type PersistedCustomerFilters = {
 	status: string[];
 	version: string[];
@@ -42,7 +40,7 @@ type PersistedCustomerFilters = {
 	processor: string[];
 	interval: string[];
 	pageSize: number;
-	sort?: CustomerSortOrder;
+	sort?: SortOrder;
 };
 
 function getStorageKey({ orgId, env }: { orgId: string; env: string }) {
@@ -92,7 +90,7 @@ const queryStatesConfig = {
 	processor: parseAsArrayOf(parseAsString).withDefault([]),
 	interval: parseAsArrayOf(parseAsString).withDefault([]),
 	pageSize: parseAsInteger.withDefault(DEFAULT_CUSTOMER_LIST_PAGE_SIZE),
-	sort: parseAsStringLiteral(SORT_ORDERS).withDefault("desc"),
+	sort: parseAsStringLiteral(SortOrderSchema.options).withDefault("desc"),
 };
 
 type QueryStates = ReturnType<typeof useQueryStates<typeof queryStatesConfig>>;
