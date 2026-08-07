@@ -88,6 +88,7 @@ export const addLicenseEntitlementsForPage = async ({
 						internalCustomerIds,
 						scope,
 						internalFeatureId: add.entitlement.internal_feature_id,
+						licenseInternalProductId: add.licenseInternalProductId,
 						afterCustomerProductId,
 						limit,
 					}),

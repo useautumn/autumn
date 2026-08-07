@@ -31,6 +31,8 @@ export type LicenseCandidateRow = z.infer<typeof CandidateRowSchema>;
 
 /**
  * Live assignments whose pool anchors a customized link carrying this feature.
+ * Matched on the license product too, not just the feature — a parent may hold
+ * links to several license plans, and their definitions can share a feature.
  * The parent is aliased `cp` so the plan filter's lowered scope applies to it —
  * assignments own no lifecycle, so status must come from the parent too.
  */
@@ -39,6 +41,7 @@ export const selectLicenseAddCandidateRows = async ({
 	internalCustomerIds,
 	scope,
 	internalFeatureId,
+	licenseInternalProductId,
 	afterCustomerProductId,
 	limit,
 }: {
@@ -46,6 +49,7 @@ export const selectLicenseAddCandidateRows = async ({
 	internalCustomerIds: string[];
 	scope: OperationScope;
 	internalFeatureId: string;
+	licenseInternalProductId: string;
 	afterCustomerProductId?: string;
 	limit: number;
 }): Promise<LicenseCandidateRow[]> => {
@@ -73,6 +77,7 @@ export const selectLicenseAddCandidateRows = async ({
 			JOIN customer_products AS pool_parent
 				ON pool_parent.id = pool.parent_customer_product_id
 			WHERE pool.link_id = assignment.customer_license_link_id
+				AND pool.license_internal_product_id = ${licenseInternalProductId}
 			ORDER BY (pool_parent.status IN (${sqlList({ values: [...MIGRATABLE_STATUSES] })})) DESC,
 				pool.created_at DESC
 			LIMIT 1
@@ -90,7 +95,6 @@ export const selectLicenseAddCandidateRows = async ({
 		LEFT JOIN entities AS entity
 			ON entity.internal_id = assignment.internal_entity_id
 		WHERE assignment.internal_customer_id = ANY(${sql.param(internalCustomerIds)}::text[])
-			AND assignment.customer_license_link_id IS NOT NULL
 			AND assignment.internal_entity_id IS NOT NULL
 			AND assignment.status IN (${sqlList({ values: [...MIGRATABLE_STATUSES] })})
 			AND e.internal_feature_id = ${internalFeatureId}
