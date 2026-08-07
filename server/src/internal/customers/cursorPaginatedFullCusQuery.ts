@@ -8,7 +8,7 @@ import {
 	type SortOrder,
 	type StandardCursorFields,
 } from "@autumn/shared";
-import { sql } from "drizzle-orm";
+import { type Column, type SQL, sql } from "drizzle-orm";
 import { planetScaleTag } from "@/db/dbUtils.js";
 import {
 	cpStatusInClause,
@@ -49,6 +49,25 @@ export type CursorPaginatedFullCusQueryArgs = {
 	withProductsPage?: boolean;
 	sortOrder?: SortOrder;
 };
+
+/**
+ * NULL-id-safe keyset predicate: a row-tuple compare is UNKNOWN for NULL ids,
+ * which asc sorts after the cursor — they'd be silently dropped.
+ */
+export const getCursorPredicateSql = ({
+	createdAtColumn,
+	idColumn,
+	cursor,
+	sortOrder,
+}: {
+	createdAtColumn: SQL | Column;
+	idColumn: SQL | Column;
+	cursor: { t: number; id: string };
+	sortOrder: SortOrder;
+}): SQL =>
+	sortOrder === "asc"
+		? sql`(${createdAtColumn} >= ${cursor.t} AND (${createdAtColumn} > ${cursor.t} OR ${idColumn} > ${cursor.id} OR ${idColumn} IS NULL))`
+		: sql`(${createdAtColumn} <= ${cursor.t} AND (${createdAtColumn} < ${cursor.t} OR ${idColumn} < ${cursor.id}))`;
 
 /**
  * Set-based variant: customer_products/entitlements/prices fetched via single
@@ -111,12 +130,13 @@ export const getCursorPaginatedFullCusQuery = ({
 
 	const orderDirection = sql.raw(sortOrder === "asc" ? "ASC" : "DESC");
 
-	// Expanded instead of a row-tuple compare: asc sorts NULL ids after the
-	// cursor, where a tuple compare evaluates UNKNOWN and silently drops them.
 	const cursorPredicate = cursor
-		? sortOrder === "asc"
-			? sql`AND c.created_at >= ${cursor.t} AND (c.created_at > ${cursor.t} OR c.id > ${cursor.id} OR c.id IS NULL)`
-			: sql`AND c.created_at <= ${cursor.t} AND (c.created_at < ${cursor.t} OR c.id < ${cursor.id})`
+		? sql`AND ${getCursorPredicateSql({
+				createdAtColumn: sql.raw("c.created_at"),
+				idColumn: sql.raw("c.id"),
+				cursor,
+				sortOrder,
+			})}`
 		: sql``;
 
 	const fetchLimit = limit + 1;

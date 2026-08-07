@@ -10,6 +10,7 @@ import {
 import { and, asc, desc, type SQL, sql } from "drizzle-orm";
 import { planetScaleTag } from "@/db/dbUtils.js";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
+import { getCursorPredicateSql } from "./cursorPaginatedFullCusQuery.js";
 import {
 	type DashboardIntervalFilter,
 	type DashboardProductVersionFilter,
@@ -118,12 +119,13 @@ export class CusSearchService {
 			.where(
 				and(
 					predicates.whereRaw,
-					// Expanded instead of a row-tuple compare: asc sorts NULL ids after
-					// the cursor, where a tuple compare is UNKNOWN and drops them.
 					cursor
-						? sortOrder === "asc"
-							? sql`(${customers.created_at} >= ${cursor.t} AND (${customers.created_at} > ${cursor.t} OR ${customers.id} > ${cursor.id} OR ${customers.id} IS NULL))`
-							: sql`(${customers.created_at} <= ${cursor.t} AND (${customers.created_at} < ${cursor.t} OR ${customers.id} < ${cursor.id}))`
+						? getCursorPredicateSql({
+								createdAtColumn: customers.created_at,
+								idColumn: customers.id,
+								cursor,
+								sortOrder,
+							})
 						: undefined,
 				),
 			)
