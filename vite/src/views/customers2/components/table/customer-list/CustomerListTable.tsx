@@ -124,12 +124,12 @@ export function CustomerListTable({
 		columnGroups,
 	});
 
-	// setFilters resets the cursor stack, so a sort toggle lands back on page 1.
 	const sorting = useMemo<SortingState>(
 		() => [{ id: "created_at", desc: queryStates.sort !== "asc" }],
 		[queryStates.sort],
 	);
 
+	// setFilters resets the cursor stack, so a sort toggle lands back on page 1.
 	const onSortingChange = useCallback<OnChangeFn<SortingState>>(
 		(updater) => {
 			const next = typeof updater === "function" ? updater(sorting) : updater;
