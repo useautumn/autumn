@@ -19,6 +19,8 @@ import { mockModuleWithRestore } from "../../utils/mockModuleWithRestore.js";
 
 const trackAsyncQueueUrl =
 	"https://sqs.eu-west-1.amazonaws.com/123456789012/track-async-dev.fifo";
+const trackAsyncStandardQueueUrl =
+	"https://sqs.eu-west-1.amazonaws.com/123456789012/track-async-dev-standard";
 
 const state = {
 	queueCommands: [] as Record<string, unknown>[],
@@ -103,6 +105,8 @@ const params = {
 
 describe("updateBalanceV2 async routing", () => {
 	const originalQueueUrl = process.env.TRACK_ASYNC_SQS_QUEUE_URL;
+	const originalStandardQueueUrl =
+		process.env.TRACK_ASYNC_STANDARD_SQS_QUEUE_URL;
 
 	beforeEach(() => {
 		state.queueCommands = [];
@@ -112,6 +116,7 @@ describe("updateBalanceV2 async routing", () => {
 			config: AsyncBalanceUpdateConfigSchema.parse({}),
 		});
 		process.env.TRACK_ASYNC_SQS_QUEUE_URL = trackAsyncQueueUrl;
+		process.env.TRACK_ASYNC_STANDARD_SQS_QUEUE_URL = trackAsyncStandardQueueUrl;
 
 		const sqsClient = getSqsClient({ queueUrl: trackAsyncQueueUrl });
 		state.originalSend = sqsClient.send.bind(sqsClient);
@@ -135,6 +140,7 @@ describe("updateBalanceV2 async routing", () => {
 			config: AsyncBalanceUpdateConfigSchema.parse({}),
 		});
 		process.env.TRACK_ASYNC_SQS_QUEUE_URL = originalQueueUrl;
+		process.env.TRACK_ASYNC_STANDARD_SQS_QUEUE_URL = originalStandardQueueUrl;
 	});
 
 	test("enqueues configured async updates without running synchronous mutation helpers", async () => {
