@@ -129,7 +129,7 @@ export default defineConfig({
 					"zod",
 				],
 			}),
-			// In DEV: `bun d` runs `bunx trigger.dev dev` under
+			// In DEV: `bun d` runs `bun run trigger dev` under
 			// `infisical run --env=dev --recursive --`, so the trigger CLI
 			// inherits secrets from process.env directly. `syncEnvVars` only
 			// runs at DEPLOY time (pushes Infisical secrets to trigger cloud).

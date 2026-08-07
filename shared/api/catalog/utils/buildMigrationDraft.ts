@@ -35,6 +35,15 @@ export const planDiffHasBillingChanges = (
 ): boolean => {
 	if (diff.price !== undefined) return true;
 	if (diff.add_items?.some((item) => item.price != null)) return true;
+	if (
+		diff.upsert_licenses?.some(
+			(license) =>
+				license.customize?.price != null ||
+				license.customize?.add_items?.some((item) => item.price != null),
+		)
+	) {
+		return true;
+	}
 	// Remove filters can omit billing_method even when priced, so check the
 	// source items by feature_id rather than the lossy filter.
 	const removedFeatureIds = new Set(
@@ -57,6 +66,9 @@ const migratablePlanDiff = (
 		: {}),
 	...(diff.update_items !== undefined
 		? { update_items: diff.update_items }
+		: {}),
+	...(diff.upsert_licenses !== undefined
+		? { upsert_licenses: diff.upsert_licenses }
 		: {}),
 });
 

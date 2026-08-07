@@ -21,6 +21,16 @@ export const batchMigrationPlanToExecutionPlan = ({
 				entitlement: operation.entitlementPrice.entitlement,
 				initialState: operation.initialState,
 			})),
+			addLicenseEntitlementOps: patch.operations.licenseEntitlements.map(
+				(operation) => ({
+					licensePlanId: operation.licensePlanId,
+					planLicenseId: operation.planLicenseId,
+					licenseInternalProductId: operation.licenseInternalProductId,
+					isOneOff: operation.isOneOff,
+					entitlement: operation.entitlement,
+					initialState: operation.initialState,
+				}),
+			),
 		};
 	}),
 });

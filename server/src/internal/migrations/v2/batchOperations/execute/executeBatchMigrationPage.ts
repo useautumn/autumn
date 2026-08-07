@@ -1,6 +1,7 @@
 import { withStatementTimeout } from "@/db/withStatementTimeout.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { addCustomerEntitlementsForPage } from "../actions/addCustomerEntitlementsForPage/addCustomerEntitlementsForPage.js";
+import { addLicenseEntitlementsForPage } from "../actions/addLicenseEntitlementsForPage/addLicenseEntitlementsForPage.js";
 import type { BatchMigrationExecutionPlan } from "../types/index.js";
 import { markPageItemRuns } from "./claim/index.js";
 import type {
@@ -74,6 +75,28 @@ export const executeBatchMigrationPage = async ({
 					candidateCount: result.candidateCount,
 					affected: result.affected,
 					excluded: result.excludedInternalCustomerIds.length,
+				},
+			});
+		}
+
+		for (const add of patch.addLicenseEntitlementOps) {
+			const result = await addLicenseEntitlementsForPage({
+				db: ctx.db,
+				scope: patch.scope,
+				internalCustomerIds: pageInternalIds,
+				add,
+				now,
+				phases,
+			});
+			insertedItems.push(...result.insertedItems);
+			ctx.logger.debug("batch-migration: add license operation", {
+				data: {
+					opIndex: patch.opIndex,
+					licensePlanId: add.licensePlanId,
+					featureId: add.entitlement.feature.id,
+					candidateCount: result.candidateCount,
+					affected: result.affected,
+					repointedPools: result.repointedPools,
 				},
 			});
 		}

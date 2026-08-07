@@ -1,4 +1,4 @@
-import { type Feature, isOneOffProduct } from "@autumn/shared";
+import type { Feature } from "@autumn/shared";
 import type { CustomerPlanChange } from "@autumn/shared/api/billing/common/customerPlanChange.js";
 import type { MigrationWebhookRecord } from "@/internal/migrations/v2/webhookDelivery/types/migrationWebhookRecord.js";
 import type {
@@ -7,7 +7,10 @@ import type {
 	BatchMigrationPageResult,
 } from "../../execute/types/batchMigrationExecutionTypes.js";
 import type { BatchMigrationExecutionPlan } from "../../types/index.js";
-import { buildEntitlementLookup } from "../buildMigrationItemEvent/toCustomerItemChanges.js";
+import {
+	buildEntitlementLookup,
+	buildOneOffByPlanId,
+} from "../buildMigrationItemEvent/toCustomerItemChanges.js";
 import { insertedItemsToPlanChange } from "./insertedItemsToPlanChange.js";
 
 type ItemsByCustomerProduct = Map<string, BatchMigrationInsertedItem[]>;
@@ -57,12 +60,7 @@ export const buildBatchMigrationWebhookRecords = ({
 	features: Feature[];
 }): MigrationWebhookRecord[] => {
 	const entitlementLookup = buildEntitlementLookup({ plan });
-	const oneOffByPlanId = new Map(
-		plan.patches.map((patch) => [
-			patch.fromProduct.id,
-			isOneOffProduct({ prices: patch.fromProduct.prices }),
-		]),
-	);
+	const oneOffByPlanId = buildOneOffByPlanId({ plan });
 	const itemsByCustomer = groupItemsByEntityAndProduct({
 		insertedItems: pageResult.insertedItems,
 	});

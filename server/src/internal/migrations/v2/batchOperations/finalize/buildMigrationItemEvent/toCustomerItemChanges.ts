@@ -3,6 +3,7 @@ import {
 	type ApiFlagV0,
 	type EntitlementWithFeature,
 	FeatureType,
+	isOneOffProduct,
 } from "@autumn/shared";
 import type { BatchMigrationInsertedItem } from "../../execute/types/batchMigrationExecutionTypes.js";
 import type { BatchMigrationExecutionPlan } from "../../types/index.js";
@@ -51,12 +52,39 @@ export const buildEntitlementLookup = ({
 	plan: BatchMigrationExecutionPlan;
 }): Map<string, EntitlementWithFeature> =>
 	new Map(
-		plan.patches.flatMap((patch) =>
-			patch.addEntitlementOps.map((add) => [
-				`${patch.fromProduct.id}:${add.entitlement.feature.id}`,
-				add.entitlement,
+		plan.patches.flatMap((patch) => [
+			...patch.addEntitlementOps.map(
+				(add): [string, EntitlementWithFeature] => [
+					`${patch.fromProduct.id}:${add.entitlement.feature.id}`,
+					add.entitlement,
+				],
+			),
+			// License rows key on their own plan, not the parent the patch filtered on.
+			...patch.addLicenseEntitlementOps.map(
+				(add): [string, EntitlementWithFeature] => [
+					`${add.licensePlanId}:${add.entitlement.feature.id}`,
+					add.entitlement,
+				],
+			),
+		]),
+	);
+
+export const buildOneOffByPlanId = ({
+	plan,
+}: {
+	plan: BatchMigrationExecutionPlan;
+}): Map<string, boolean> =>
+	new Map(
+		plan.patches.flatMap((patch): [string, boolean][] => [
+			[
+				patch.fromProduct.id,
+				isOneOffProduct({ prices: patch.fromProduct.prices }),
+			],
+			...patch.addLicenseEntitlementOps.map((add): [string, boolean] => [
+				add.licensePlanId,
+				add.isOneOff,
 			]),
-		),
+		]),
 	);
 
 export const toCustomerItemChanges = ({

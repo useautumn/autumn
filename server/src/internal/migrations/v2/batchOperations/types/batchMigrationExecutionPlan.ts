@@ -16,6 +16,15 @@ export const BatchMigrationExecutionAddSchema = z.object({
 	initialState: BatchMigrationInitialStateSchema,
 });
 
+export const BatchMigrationExecutionAddLicenseSchema = z.object({
+	licensePlanId: z.string(),
+	planLicenseId: z.string(),
+	licenseInternalProductId: z.string(),
+	isOneOff: z.boolean(),
+	entitlement: EntitlementWithFeatureSchema,
+	initialState: BatchMigrationInitialStateSchema,
+});
+
 /** One op × one plan-filter-matched product. One field per operation
  * category (batchTransition style). `fromProduct` is authoritative for
  * catalog facts; `scope` is the plan filter's lowered row-level residue —
@@ -25,6 +34,9 @@ export const BatchMigrationExecutionPatchSchema = z.object({
 	scope: OperationScopeSchema,
 	fromProduct: FullProductWithoutLicensesSchema,
 	addEntitlementOps: z.array(BatchMigrationExecutionAddSchema),
+	addLicenseEntitlementOps: z
+		.array(BatchMigrationExecutionAddLicenseSchema)
+		.default([]),
 });
 
 /** The immutable, serializable plan chunk tasks execute — computed once at
@@ -35,6 +47,9 @@ export const BatchMigrationExecutionPlanSchema = z.object({
 
 export type BatchMigrationExecutionAdd = z.infer<
 	typeof BatchMigrationExecutionAddSchema
+>;
+export type BatchMigrationExecutionAddLicense = z.infer<
+	typeof BatchMigrationExecutionAddLicenseSchema
 >;
 export type BatchMigrationExecutionPatch = z.infer<
 	typeof BatchMigrationExecutionPatchSchema

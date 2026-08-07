@@ -1,5 +1,9 @@
 import { BasePriceParamsSchema } from "@api/products/components/basePrice/basePrice";
 import { PlanItemFilterSchema } from "@api/products/items/filter/planItemFilter";
+import {
+	CustomizePlanLicenseSchema,
+	licensePatchIssues,
+} from "@models/licenseModels/licenseModels.js";
 import { z } from "zod/v4";
 import { UpdatePlanItemParamsV1Schema } from "../../../../billing/common/customizePlan/customizePlanV1.js";
 import { CreatePlanItemParamsV1Schema } from "../../../../products/items/crud/createPlanItemParamsV1.js";
@@ -20,18 +24,30 @@ export const MigrationUpdatePlanCustomizeSchema = z
 				"Deprecated. Use remove_items and add_items to replace matched plan items.",
 			deprecated: true,
 		}),
+		upsert_licenses: z.array(CustomizePlanLicenseSchema).optional().meta({
+			description:
+				"License links to add or override on each matched customer product, keyed by license_plan_id. A bare entry restores the license to pure catalog inheritance.",
+		}),
 	})
 	.refine(
 		(data) =>
 			data.price !== undefined ||
 			data.add_items !== undefined ||
 			data.remove_items !== undefined ||
-			data.update_items !== undefined,
+			data.update_items !== undefined ||
+			data.upsert_licenses !== undefined,
 		{
 			message:
-				"update_plan.customize requires at least one of price, add_items, remove_items, or deprecated update_items",
+				"update_plan.customize requires at least one of price, add_items, remove_items, upsert_licenses, or deprecated update_items",
 		},
-	);
+	)
+	.superRefine((data, refinementCtx) => {
+		for (const issue of licensePatchIssues({
+			upsertLicenses: data.upsert_licenses,
+		})) {
+			refinementCtx.addIssue({ code: "custom", ...issue });
+		}
+	});
 
 export const FeatureQuantityStrategySchema = z.enum(["round_to_lowest_price"]);
 
