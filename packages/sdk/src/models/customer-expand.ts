@@ -7,6 +7,7 @@ import { ClosedEnum } from "../types/enums.js";
 
 export const CustomerExpand = {
   Invoices: "invoices",
+  InvoicePreviews: "invoice_previews",
   TrialsUsed: "trials_used",
   Rewards: "rewards",
   Entities: "entities",

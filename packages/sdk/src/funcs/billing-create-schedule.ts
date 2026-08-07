@@ -49,7 +49,8 @@ import { Result } from "../types/fp.js";
  * @param billingBehavior - Whether to prorate the immediate phase. 'none' skips proration charges and credits. (optional)
  * @param billingCycleAnchor - Pass 'now' to reset the billing cycle anchor of the immediate phase to the current time. (optional)
  * @param enablePlanImmediately - If true, the immediate-phase cusProducts are activated immediately (and scheduled-phase cusProducts pre-inserted) even when payment is pending via Stripe checkout. The Autumn schedule rows are persisted on checkout.session.completed. (optional)
- * @param preserveAddOns - If true, active recurring add-ons in scopes represented by the phase plans are retained. (optional)
+ * @param preserveAddOns - Deprecated and ignored. Active plans the schedule does not declare are always retained. (optional)
+ * @param unscheduledPlans - Plans billed with the immediate phase that the schedule never expires or replaces. No phase may declare a plan in the same group and scope. (optional)
  * @param phases - Ordered phase definitions for the schedule.
  *
  * @returns A create-schedule response with the schedule ID, persisted phases, and any required payment or checkout URL.

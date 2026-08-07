@@ -792,6 +792,93 @@ export type GetCustomerInvoice = {
   hostedInvoiceUrl?: string | null | undefined;
 };
 
+export type GetCustomerInvoicePreviewDiscount = {
+  amountOff: number;
+  percentOff?: number | undefined;
+  rewardId?: string | undefined;
+  rewardName?: string | undefined;
+};
+
+/**
+ * The period of time that this line item is being charged for.
+ */
+export type GetCustomerPeriod = {
+  /**
+   * The start of the period in milliseconds since the Unix epoch.
+   */
+  start: number;
+  /**
+   * The end of the period in milliseconds since the Unix epoch.
+   */
+  end: number;
+};
+
+export type GetCustomerLineItem = {
+  /**
+   * The name of the line item to display to the customer if you're building a UI. It will either be the plan name or the feature name.
+   */
+  displayName: string;
+  /**
+   * A detailed description of the line item.
+   */
+  description: string;
+  /**
+   * The amount in cents before discounts and tax for this line item.
+   */
+  subtotal: number;
+  /**
+   * The final amount in cents after discounts and tax for this line item.
+   */
+  total: number;
+  /**
+   * List of discounts applied to this line item.
+   */
+  discounts?: Array<GetCustomerInvoicePreviewDiscount> | undefined;
+  /**
+   * The ID of the plan that this line item belongs to.
+   */
+  planId: string;
+  /**
+   * The ID of the feature that this line item belongs to.
+   */
+  featureId: string | null;
+  /**
+   * The period of time that this line item is being charged for.
+   */
+  period?: GetCustomerPeriod | undefined;
+  /**
+   * The quantity of the line item.
+   */
+  quantity: number;
+};
+
+export type GetCustomerInvoicePreview = {
+  /**
+   * Plan IDs contributing line items to this invoice.
+   */
+  planIds: Array<string>;
+  /**
+   * Unix timestamp (milliseconds) when this invoice will be created.
+   */
+  invoiceAt: number;
+  /**
+   * The three-letter ISO currency code (e.g., 'usd').
+   */
+  currency: string;
+  /**
+   * The total before discounts, in major currency units.
+   */
+  subtotal: number;
+  /**
+   * The total after discounts, in major currency units.
+   */
+  total: number;
+  /**
+   * The line items this invoice will contain: usage accrued in the closing cycle, plus recurring charges for the opening cycle.
+   */
+  lineItems: Array<GetCustomerLineItem>;
+};
+
 /**
  * The environment (sandbox/live)
  */
@@ -865,7 +952,7 @@ export const GetCustomerDurationType = {
  */
 export type GetCustomerDurationType = OpenEnum<typeof GetCustomerDurationType>;
 
-export type GetCustomerDiscount = {
+export type GetCustomerRewardsDiscount = {
   /**
    * The unique identifier for this discount
    */
@@ -916,7 +1003,7 @@ export type GetCustomerRewards = {
   /**
    * Array of active discounts applied to the customer
    */
-  discounts: Array<GetCustomerDiscount>;
+  discounts: Array<GetCustomerRewardsDiscount>;
 };
 
 export type GetCustomerCustomer = {
@@ -1008,6 +1095,10 @@ export type GetCustomerResponse = {
    * Invoices for this customer.
    */
   invoices?: Array<GetCustomerInvoice> | undefined;
+  /**
+   * Upcoming invoice for each of this customer's Stripe subscriptions.
+   */
+  invoicePreviews?: Array<GetCustomerInvoicePreview> | undefined;
   /**
    * Entities associated with this customer.
    */
@@ -1887,6 +1978,125 @@ export function getCustomerInvoiceFromJSON(
 }
 
 /** @internal */
+export const GetCustomerInvoicePreviewDiscount$inboundSchema: z.ZodMiniType<
+  GetCustomerInvoicePreviewDiscount,
+  unknown
+> = z.pipe(
+  z.object({
+    amount_off: types.number(),
+    percent_off: types.optional(types.number()),
+    reward_id: types.optional(types.string()),
+    reward_name: types.optional(types.string()),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      "amount_off": "amountOff",
+      "percent_off": "percentOff",
+      "reward_id": "rewardId",
+      "reward_name": "rewardName",
+    });
+  }),
+);
+
+export function getCustomerInvoicePreviewDiscountFromJSON(
+  jsonString: string,
+): SafeParseResult<GetCustomerInvoicePreviewDiscount, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => GetCustomerInvoicePreviewDiscount$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'GetCustomerInvoicePreviewDiscount' from JSON`,
+  );
+}
+
+/** @internal */
+export const GetCustomerPeriod$inboundSchema: z.ZodMiniType<
+  GetCustomerPeriod,
+  unknown
+> = z.object({
+  start: types.number(),
+  end: types.number(),
+});
+
+export function getCustomerPeriodFromJSON(
+  jsonString: string,
+): SafeParseResult<GetCustomerPeriod, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => GetCustomerPeriod$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'GetCustomerPeriod' from JSON`,
+  );
+}
+
+/** @internal */
+export const GetCustomerLineItem$inboundSchema: z.ZodMiniType<
+  GetCustomerLineItem,
+  unknown
+> = z.pipe(
+  z.object({
+    display_name: types.string(),
+    description: types.string(),
+    subtotal: types.number(),
+    total: types.number(),
+    discounts: types.optional(
+      z.array(z.lazy(() => GetCustomerInvoicePreviewDiscount$inboundSchema)),
+    ),
+    plan_id: types.string(),
+    feature_id: types.nullable(types.string()),
+    period: types.optional(z.lazy(() => GetCustomerPeriod$inboundSchema)),
+    quantity: types.number(),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      "display_name": "displayName",
+      "plan_id": "planId",
+      "feature_id": "featureId",
+    });
+  }),
+);
+
+export function getCustomerLineItemFromJSON(
+  jsonString: string,
+): SafeParseResult<GetCustomerLineItem, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => GetCustomerLineItem$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'GetCustomerLineItem' from JSON`,
+  );
+}
+
+/** @internal */
+export const GetCustomerInvoicePreview$inboundSchema: z.ZodMiniType<
+  GetCustomerInvoicePreview,
+  unknown
+> = z.pipe(
+  z.object({
+    plan_ids: z.array(types.string()),
+    invoice_at: types.number(),
+    currency: types.string(),
+    subtotal: types.number(),
+    total: types.number(),
+    line_items: z.array(z.lazy(() => GetCustomerLineItem$inboundSchema)),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      "plan_ids": "planIds",
+      "invoice_at": "invoiceAt",
+      "line_items": "lineItems",
+    });
+  }),
+);
+
+export function getCustomerInvoicePreviewFromJSON(
+  jsonString: string,
+): SafeParseResult<GetCustomerInvoicePreview, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => GetCustomerInvoicePreview$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'GetCustomerInvoicePreview' from JSON`,
+  );
+}
+
+/** @internal */
 export const GetCustomerEntityEnv$inboundSchema: z.ZodMiniType<
   GetCustomerEntityEnv,
   unknown
@@ -1965,8 +2175,8 @@ export const GetCustomerDurationType$inboundSchema: z.ZodMiniType<
 > = openEnums.inboundSchema(GetCustomerDurationType);
 
 /** @internal */
-export const GetCustomerDiscount$inboundSchema: z.ZodMiniType<
-  GetCustomerDiscount,
+export const GetCustomerRewardsDiscount$inboundSchema: z.ZodMiniType<
+  GetCustomerRewardsDiscount,
   unknown
 > = z.pipe(
   z.object({
@@ -1993,13 +2203,13 @@ export const GetCustomerDiscount$inboundSchema: z.ZodMiniType<
   }),
 );
 
-export function getCustomerDiscountFromJSON(
+export function getCustomerRewardsDiscountFromJSON(
   jsonString: string,
-): SafeParseResult<GetCustomerDiscount, SDKValidationError> {
+): SafeParseResult<GetCustomerRewardsDiscount, SDKValidationError> {
   return safeParse(
     jsonString,
-    (x) => GetCustomerDiscount$inboundSchema.parse(JSON.parse(x)),
-    `Failed to parse 'GetCustomerDiscount' from JSON`,
+    (x) => GetCustomerRewardsDiscount$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'GetCustomerRewardsDiscount' from JSON`,
   );
 }
 
@@ -2008,7 +2218,7 @@ export const GetCustomerRewards$inboundSchema: z.ZodMiniType<
   GetCustomerRewards,
   unknown
 > = z.object({
-  discounts: z.array(z.lazy(() => GetCustomerDiscount$inboundSchema)),
+  discounts: z.array(z.lazy(() => GetCustomerRewardsDiscount$inboundSchema)),
 });
 
 export function getCustomerRewardsFromJSON(
@@ -2099,6 +2309,9 @@ export const GetCustomerResponse$inboundSchema: z.ZodMiniType<
     invoices: types.optional(
       z.array(z.lazy(() => GetCustomerInvoice$inboundSchema)),
     ),
+    invoice_previews: types.optional(
+      z.array(z.lazy(() => GetCustomerInvoicePreview$inboundSchema)),
+    ),
     entities: types.optional(
       z.array(z.lazy(() => GetCustomerEntity$inboundSchema)),
     ),
@@ -2119,6 +2332,7 @@ export const GetCustomerResponse$inboundSchema: z.ZodMiniType<
       "stripe_id": "stripeId",
       "send_email_receipts": "sendEmailReceipts",
       "billing_controls": "billingControls",
+      "invoice_previews": "invoicePreviews",
       "trials_used": "trialsUsed",
       "payment_method": "paymentMethod",
     });

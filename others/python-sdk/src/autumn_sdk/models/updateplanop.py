@@ -1738,6 +1738,14 @@ class UpdateLicenseParent(BaseModel):
     version: int
 
 
+class CustomizeVariant2TypedDict(TypedDict):
+    pass
+
+
+class CustomizeVariant2(BaseModel):
+    pass
+
+
 PriceVariantInterval = Literal[
     "one_off",
     "week",
@@ -1873,63 +1881,27 @@ class VariantAddItemAdditionalCurrency(BaseModel):
     r"""Price amount in this currency. Set explicitly per currency, not converted from the base amount."""
 
 
-VariantToTypedDict = TypeAliasType("VariantToTypedDict", Union[float, str])
-
-
-VariantTo = TypeAliasType("VariantTo", Union[float, str])
-
-
-class VariantTierAdditionalCurrencyTypedDict(TypedDict):
-    currency: NotRequired[Any]
-    amount: NotRequired[Any]
-    flat_amount: NotRequired[Any]
-
-
-class VariantTierAdditionalCurrency(BaseModel):
-    currency: Optional[Any] = None
-
-    amount: Optional[Any] = None
-
-    flat_amount: Optional[Any] = None
-
-    @model_serializer(mode="wrap")
-    def serialize_model(self, handler):
-        optional_fields = set(["currency", "amount", "flat_amount"])
-        serialized = handler(self)
-        m = {}
-
-        for n, f in type(self).model_fields.items():
-            k = f.alias or n
-            val = serialized.get(k, serialized.get(n))
-
-            if val != UNSET_SENTINEL:
-                if val is not None or k not in optional_fields:
-                    m[k] = val
-
-        return m
-
-
 class VariantTierTypedDict(TypedDict):
-    to: VariantToTypedDict
+    to: NotRequired[Any]
     amount: NotRequired[float]
     flat_amount: NotRequired[float]
-    additional_currencies: NotRequired[List[VariantTierAdditionalCurrencyTypedDict]]
+    additional_currencies: NotRequired[List[Any]]
     r"""Per-currency amounts for this tier. Tier boundaries ('to') are shared across all currencies."""
 
 
 class VariantTier(BaseModel):
-    to: VariantTo
+    to: Optional[Any] = None
 
     amount: Optional[float] = None
 
     flat_amount: Optional[float] = None
 
-    additional_currencies: Optional[List[VariantTierAdditionalCurrency]] = None
+    additional_currencies: Optional[List[Any]] = None
     r"""Per-currency amounts for this tier. Tier boundaries ('to') are shared across all currencies."""
 
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
-        optional_fields = set(["amount", "flat_amount", "additional_currencies"])
+        optional_fields = set(["to", "amount", "flat_amount", "additional_currencies"])
         serialized = handler(self)
         m = {}
 
@@ -2546,24 +2518,16 @@ VariantUsageLimitInterval = Literal[
 r"""Interval for the cap, aligned to the customer's billing cycle."""
 
 
-VariantPropertiesTypedDict = TypeAliasType(
-    "VariantPropertiesTypedDict", Union[str, float, bool]
-)
-
-
-VariantProperties = TypeAliasType("VariantProperties", Union[str, float, bool])
-
-
 class VariantFilterTypedDict(TypedDict):
     r"""When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature."""
 
-    properties: Dict[str, VariantPropertiesTypedDict]
+    properties: Dict[str, Any]
 
 
 class VariantFilter(BaseModel):
     r"""When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature."""
 
-    properties: Dict[str, VariantProperties]
+    properties: Dict[str, Any]
 
 
 class VariantUsageLimitTypedDict(TypedDict):
@@ -2756,9 +2720,7 @@ class VariantBillingControls(BaseModel):
         return m
 
 
-class VariantCustomizeTypedDict(TypedDict):
-    r"""The exact customize patch to apply to this variant."""
-
+class CustomizeVariant1TypedDict(TypedDict):
     price: NotRequired[Nullable[VariantBasePriceTypedDict]]
     r"""Override the base price of the plan. Pass null to remove the base price."""
     add_items: NotRequired[List[VariantPlanItemTypedDict]]
@@ -2771,9 +2733,7 @@ class VariantCustomizeTypedDict(TypedDict):
     r"""Override the plan's billing controls (auto top-ups, spend limits, usage limits, usage alerts, overage allowed) for this customer."""
 
 
-class VariantCustomize(BaseModel):
-    r"""The exact customize patch to apply to this variant."""
-
+class CustomizeVariant1(BaseModel):
     price: OptionalNullable[VariantBasePrice] = UNSET
     r"""Override the base price of the plan. Pass null to remove the base price."""
 
@@ -2817,6 +2777,16 @@ class VariantCustomize(BaseModel):
         return m
 
 
+Customize2TypedDict = TypeAliasType(
+    "Customize2TypedDict", Union[CustomizeVariant2TypedDict, CustomizeVariant1TypedDict]
+)
+r"""The exact customize patch to apply to this variant."""
+
+
+Customize2 = TypeAliasType("Customize2", Union[CustomizeVariant2, CustomizeVariant1])
+r"""The exact customize patch to apply to this variant."""
+
+
 class VariantMigrationTypedDict(TypedDict):
     r"""Migration draft options for an in-place direct variant update."""
 
@@ -2851,7 +2821,7 @@ class VariantMigration(BaseModel):
 class VariantTypedDict(TypedDict):
     variant_plan_id: str
     r"""The variant plan ID to update or create."""
-    customize: VariantCustomizeTypedDict
+    customize: Customize2TypedDict
     r"""The exact customize patch to apply to this variant."""
     name: NotRequired[str]
     r"""Display name to use when creating the variant if it does not exist."""
@@ -2867,7 +2837,7 @@ class Variant(BaseModel):
     variant_plan_id: str
     r"""The variant plan ID to update or create."""
 
-    customize: VariantCustomize
+    customize: Customize2
     r"""The exact customize patch to apply to this variant."""
 
     name: Optional[str] = None
