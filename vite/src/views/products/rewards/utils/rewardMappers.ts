@@ -1,6 +1,7 @@
 import {
 	type CreateReward,
 	type Feature,
+	FeatureType,
 	findFeatureById,
 	findFeatureByInternalId,
 	getGlobalMaxRedemption,
@@ -100,7 +101,9 @@ export function mapFrontendToApiReward({
 			const feature = features
 				? findFeatureById({ features, featureId: e.feature_id })
 				: undefined;
-			const hasAllowance = e.allowance != null && e.allowance >= 0;
+			const isBoolean = feature?.type === FeatureType.Boolean;
+			const hasAllowance =
+				!isBoolean && e.allowance != null && e.allowance >= 0;
 			return {
 				internal_feature_id: feature?.internal_id ?? e.feature_id,
 				allowance: hasAllowance ? e.allowance : undefined,
@@ -152,7 +155,7 @@ export function mapApiToFrontendReward({
 			: undefined;
 		return {
 			feature_id: feature?.id ?? e.internal_feature_id,
-			allowance: e.allowance ?? 0,
+			allowance: e.allowance ?? undefined,
 			expiry: getFrontendExpiry(e),
 		};
 	});

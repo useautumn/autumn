@@ -306,7 +306,7 @@ export function FeatureGrantRewardConfig({
 															allowance:
 																e.target.value === ""
 																	? undefined
-																	: Number(e.target.value),
+																	: Math.max(0, Number(e.target.value)),
 														},
 													})
 												}
