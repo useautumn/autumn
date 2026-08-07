@@ -9,16 +9,12 @@ import {
 	PopoverTrigger,
 } from "@autumn/ui";
 import { TrashIcon } from "@phosphor-icons/react";
+import { parseAsInteger } from "nuqs";
 import { useState } from "react";
 import { toast } from "sonner";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
 import { getBackendErr } from "@/utils/genUtils";
 import { useCustomerFilters } from "../../hooks/useCustomerFilters";
-
-const parseTimestampParam = (value: string | null) => {
-	const parsed = value ? Number.parseInt(value, 10) : Number.NaN;
-	return Number.isNaN(parsed) ? null : parsed;
-};
 
 interface SavedView {
 	id: string;
@@ -62,8 +58,12 @@ export const SavedViews = ({
 					? processorParam.split(",").filter(Boolean)
 					: [],
 				interval: intervalParam ? intervalParam.split(",").filter(Boolean) : [],
-				joinedFrom: parseTimestampParam(params.get("joinedFrom")),
-				joinedTo: parseTimestampParam(params.get("joinedTo")),
+				joinedFrom: parseAsInteger.parseServerSide(
+					params.get("joinedFrom") ?? undefined,
+				),
+				joinedTo: parseAsInteger.parseServerSide(
+					params.get("joinedTo") ?? undefined,
+				),
 			});
 
 			toast.success(`Applied filters from ${view.name} view`);
