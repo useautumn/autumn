@@ -1095,6 +1095,7 @@ type InitScenarioImplementationResult = {
 	autumnV2_1: AutumnInt;
 	autumnV2_2: AutumnInt;
 	autumnV2_3: AutumnInt;
+	autumnV2_4: AutumnInt;
 	testClockId: string | undefined;
 	testClockIds: Record<string, string>;
 	customer: Awaited<ReturnType<typeof initCustomerV3>>["customer"] | null;
@@ -1124,6 +1125,7 @@ export async function initScenario(params: {
 	autumnV2_1: AutumnInt;
 	autumnV2_2: AutumnInt;
 	autumnV2_3: AutumnInt;
+	autumnV2_4: AutumnInt;
 	testClockId: string | undefined;
 	testClockIds: Record<string, string>;
 	customer: Awaited<ReturnType<typeof initCustomerV3>>["customer"];
@@ -1153,6 +1155,7 @@ export async function initScenario(params: {
 	autumnV2_1: AutumnInt;
 	autumnV2_2: AutumnInt;
 	autumnV2_3: AutumnInt;
+	autumnV2_4: AutumnInt;
 	testClockId: undefined;
 	testClockIds: Record<string, string>;
 	customer: null;
@@ -1444,6 +1447,10 @@ export async function initScenario({
 	});
 	const autumnV2_3 = new AutumnInt({
 		version: ApiVersion.V2_3,
+		secretKey: ctx.orgSecretKey,
+	});
+	const autumnV2_4 = new AutumnInt({
+		version: ApiVersion.V2_4,
 		secretKey: ctx.orgSecretKey,
 	});
 
@@ -1905,6 +1912,7 @@ export async function initScenario({
 		autumnV2_1,
 		autumnV2_2,
 		autumnV2_3,
+		autumnV2_4,
 		testClockId,
 		testClockIds,
 		customer,

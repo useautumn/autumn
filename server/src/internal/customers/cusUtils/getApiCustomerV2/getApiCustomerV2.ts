@@ -8,6 +8,10 @@ import {
 } from "@autumn/shared";
 import type { RequestContext } from "@/honoUtils/HonoEnv.js";
 import { getApiCustomerExpandV2 } from "../apiCusUtils/getApiCustomerExpandV2.js";
+import {
+	shouldAggregateEntityData,
+	subjectWithoutEntityData,
+} from "../customerEntityData.js";
 import { getApiCustomerBaseV2 } from "./getApiCustomerBaseV2.js";
 
 /**
@@ -22,9 +26,17 @@ export const getApiCustomerV2 = async ({
 	fullSubject: FullSubject;
 	withAutumnId?: boolean;
 }): Promise<ApiCustomerV5> => {
+	// Entity-scoped reads already report only their own rows; this drops the
+	// aggregated view a customer-level read used to fold in.
+	const subjectToUse =
+		fullSubject.subjectType === "customer" &&
+		!shouldAggregateEntityData({ apiVersion: ctx.apiVersion })
+			? subjectWithoutEntityData({ fullSubject })
+			: fullSubject;
+
 	const { apiCustomer: baseCustomer, legacyData } = await getApiCustomerBaseV2({
 		ctx,
-		fullSubject,
+		fullSubject: subjectToUse,
 		withAutumnId,
 	});
 
