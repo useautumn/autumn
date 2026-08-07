@@ -19,6 +19,8 @@ export type RecycleCoordinator = {
 };
 
 export const DEFAULT_REPLACEMENT_BOOT_TIMEOUT_MS = 120_000;
+// Above the drainer's own max-drain (10min) + graceful-shutdown backstop.
+export const DEFAULT_DRAIN_COMPLETION_TIMEOUT_MS = 12 * 60_000;
 
 /** One recycle in flight at a time, and an invariant every path must hold:
  *  the serving fork count returns to N — no surplus, no deficit. */
@@ -29,6 +31,7 @@ export const createRecycleCoordinator = ({
 	killWorker,
 	respawn,
 	replacementBootTimeoutMs = DEFAULT_REPLACEMENT_BOOT_TIMEOUT_MS,
+	drainCompletionTimeoutMs = DEFAULT_DRAIN_COMPLETION_TIMEOUT_MS,
 	log,
 }: {
 	forkReplacement: () => string;
@@ -42,6 +45,7 @@ export const createRecycleCoordinator = ({
 	 *  caller is shutting down and skipped the fork). */
 	respawn: (workerId: string) => string | undefined;
 	replacementBootTimeoutMs?: number;
+	drainCompletionTimeoutMs?: number;
 	log: (message: string) => void;
 }): RecycleCoordinator => {
 	let activeCycle: RecycleCycle | null = null;
@@ -83,6 +87,19 @@ export const createRecycleCoordinator = ({
 		respawnBootDeadlines.set(newWorkerId, deadline);
 	};
 
+	// Keyed by drained worker, not by cycle: a cycle can be replaced while its
+	// old fork is still draining, and that fork still needs its deadline.
+	const drainCompletionDeadlines = new Map<
+		string,
+		ReturnType<typeof setTimeout>
+	>();
+
+	const clearDrainCompletionDeadline = (workerId: string) => {
+		const deadline = drainCompletionDeadlines.get(workerId);
+		if (deadline) clearTimeout(deadline);
+		drainCompletionDeadlines.delete(workerId);
+	};
+
 	const sendDrainNow = (cycle: RecycleCycle) => {
 		cycle.drainSent = true;
 		cycle.drainDeferred = false;
@@ -91,6 +108,18 @@ export const createRecycleCoordinator = ({
 			`[ForkRecycle] Replacement ${cycle.replacementId} listening; draining ${cycle.oldWorkerId}`,
 		);
 		sendDrain(cycle.oldWorkerId);
+		// A lost drain message (or wedged drainer) must not hold the queue
+		// forever. The replacement is already serving, so past the worker's own
+		// drain bounds the old fork is killed and its exit completes the cycle.
+		const deadline = setTimeout(() => {
+			drainCompletionDeadlines.delete(cycle.oldWorkerId);
+			log(
+				`[ForkRecycle] Worker ${cycle.oldWorkerId} did not exit within ${drainCompletionTimeoutMs}ms of its drain; killing it (replacement already serving)`,
+			);
+			killWorker(cycle.oldWorkerId);
+		}, drainCompletionTimeoutMs);
+		deadline.unref?.();
+		drainCompletionDeadlines.set(cycle.oldWorkerId, deadline);
 	};
 
 	const releaseDeferredDrainIfClear = () => {
@@ -190,6 +219,11 @@ export const createRecycleCoordinator = ({
 		},
 
 		handleWorkerExit: ({ workerId }) => {
+			clearDrainCompletionDeadline(workerId);
+			// Every branch below must see a dead worker gone from the queue, or a
+			// later cycle forks a replacement for a fork that no longer exists.
+			const pendingIndex = pendingWorkerIds.indexOf(workerId);
+			if (pendingIndex !== -1) pendingWorkerIds.splice(pendingIndex, 1);
 			// A crash respawn dying while booting falls through to the plain-crash
 			// branch below (which respawns again); the deferred-drain release runs
 			// only after that branch has tracked the new respawn.
@@ -260,8 +294,6 @@ export const createRecycleCoordinator = ({
 				}
 
 				requestedWorkerIds.delete(workerId);
-				const pendingIndex = pendingWorkerIds.indexOf(workerId);
-				if (pendingIndex !== -1) pendingWorkerIds.splice(pendingIndex, 1);
 				respawnTracked(workerId);
 				return false;
 			})();

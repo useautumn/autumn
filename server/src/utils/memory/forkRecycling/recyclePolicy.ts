@@ -21,11 +21,15 @@ export const shouldRequestRecycle = ({
 	minAgeMs: number;
 }): boolean => rssBytes >= thresholdBytes && ageMs >= minAgeMs;
 
-// Zero/negative timings would hot-loop checks or defeat the drain bounds.
+// Sub-second timings would hot-loop checks or defeat the drain bounds, so
+// intervals floor at 1s (thresholds/ages just need to be positive).
 const positiveOr = (raw: string | undefined, fallback: number): number => {
 	const value = Number(raw);
 	return Number.isFinite(value) && value > 0 ? value : fallback;
 };
+
+const intervalOr = (raw: string | undefined, fallback: number): number =>
+	Math.max(1_000, positiveOr(raw, fallback));
 
 export const getForkRecycleConfig = () => {
 	return {
@@ -39,11 +43,11 @@ export const getForkRecycleConfig = () => {
 			process.env.FORK_RECYCLE_MIN_AGE_MS,
 			FORK_RECYCLE_DEFAULTS.minAgeMs,
 		),
-		checkIntervalMs: positiveOr(
+		checkIntervalMs: intervalOr(
 			process.env.FORK_RECYCLE_CHECK_INTERVAL_MS,
 			FORK_RECYCLE_DEFAULTS.checkIntervalMs,
 		),
-		drainTimeoutMs: positiveOr(
+		drainTimeoutMs: intervalOr(
 			process.env.FORK_RECYCLE_DRAIN_TIMEOUT_MS,
 			FORK_RECYCLE_DEFAULTS.drainTimeoutMs,
 		),
