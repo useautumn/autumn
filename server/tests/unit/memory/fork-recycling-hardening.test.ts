@@ -116,7 +116,7 @@ describe("drain completion deadline survives cycle churn", () => {
 		expect(forked).toHaveLength(1);
 	});
 
-	test("an exiting worker's request latch is cleared on every branch", () => {
+	test("a dead replacement's request latch is cleared, not left stale", () => {
 		const { coordinator, forked } = createHarness();
 
 		coordinator.handleRecycleRequest({ workerId: "w1" });

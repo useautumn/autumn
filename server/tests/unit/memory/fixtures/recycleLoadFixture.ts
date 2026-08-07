@@ -55,12 +55,9 @@ if (cluster.isPrimary) {
 			onDrainStart: () => {
 				drainState.draining = true;
 			},
-			exitGracefully: () => {
-				// Mirrors init.ts: a bounded backstop after the drain decides to exit.
-				const forceExit = setTimeout(() => process.exit(0), 5_000);
-				forceExit.unref?.();
-				process.exit(0);
-			},
+			// Harsher than init.ts, which awaits an async shutdown behind a timer:
+			// exiting instantly puts the drainer's "safe to exit" call under test.
+			exitGracefully: () => process.exit(0),
 			logger: fixtureLogger,
 		});
 	});
