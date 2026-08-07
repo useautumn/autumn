@@ -80,6 +80,10 @@ export interface BillingContext {
 	 * canceled, so `stripeSubscription` is absent. Each action decides what that
 	 * means: updateSubscription blocks billing changes, attach buys fresh. */
 	canceledStripeSubscriptionId?: string;
+	/** The linked Stripe subscription belongs to a different Stripe customer, so
+	 * this context must not write to Stripe. Only set for flows allowed to
+	 * proceed past that fault (immediate cancel). */
+	mismatchedStripeSubscriptionId?: string;
 	stripeSubscriptionSchedule?: Stripe.SubscriptionSchedule;
 	stripeDiscounts?: StripeDiscountWithCoupon[];
 	stripeTaxRate?: Stripe.TaxRate;
