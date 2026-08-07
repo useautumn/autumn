@@ -96,7 +96,6 @@ const VirtualRow = memo(VirtualRowInner, (prevProps, nextProps) => {
 export function TableBodyVirtualized() {
 	const {
 		table,
-		numberOfColumns,
 		enableSelection,
 		isLoading,
 		isTransitioning,
@@ -178,6 +177,10 @@ export function TableBodyVirtualized() {
 		skeleton: col.columnDef.meta?.skeleton,
 	}));
 
+	// Spanning more columns than are rendered makes the browser invent extra ones,
+	// which steal width from the real columns and break header alignment.
+	const spannedColumnCount = columns.length + (enableSelection ? 1 : 0);
+
 	const configuredSkeletonRows = virtualization?.skeletonRowCount;
 	const containerPx = scrollContainer?.clientHeight ?? 0;
 
@@ -218,7 +221,7 @@ export function TableBodyVirtualized() {
 				<TableRow className="hover:bg-transparent dark:hover:bg-transparent">
 					<TableCell
 						className="h-10 text-center py-0"
-						colSpan={numberOfColumns}
+						colSpan={spannedColumnCount}
 					>
 						<div className="text-subtle text-xs text-center w-full h-full items-center justify-center flex">
 							{emptyStateChildren || emptyStateText}
@@ -272,7 +275,7 @@ export function TableBodyVirtualized() {
 			{paddingTop > 0 && (
 				<tr style={{ height: paddingTop }}>
 					<td
-						colSpan={numberOfColumns}
+						colSpan={spannedColumnCount}
 						style={{ padding: 0, border: "none" }}
 					/>
 				</tr>
@@ -304,7 +307,7 @@ export function TableBodyVirtualized() {
 			{paddingBottom > 0 && (
 				<tr style={{ height: paddingBottom }}>
 					<td
-						colSpan={numberOfColumns}
+						colSpan={spannedColumnCount}
 						style={{ padding: 0, border: "none" }}
 					/>
 				</tr>
