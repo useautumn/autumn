@@ -59,12 +59,6 @@ function HeaderContent<T>({
 			onClick={
 				enableSorting ? header.column.getToggleSortingHandler() : undefined
 			}
-			onKeyDown={(e) => {
-				if (e.key === "Enter" || e.key === " ") {
-					e.preventDefault();
-					header.column.getToggleSortingHandler()?.(e);
-				}
-			}}
 			type="button"
 		>
 			<span className="truncate">
@@ -77,13 +71,7 @@ function HeaderContent<T>({
 	);
 }
 
-export function TableHeader({
-	className,
-	hideBorder,
-}: {
-	className?: string;
-	hideBorder?: boolean;
-}) {
+export function TableHeader({ className }: { className?: string }) {
 	const {
 		table,
 		enableSelection,
@@ -98,8 +86,7 @@ export function TableHeader({
 			{headerGroups.map((headerGroup) => (
 				<TableRow
 					className={cn(
-						"bg-card text-subtle",
-						!hideBorder && "border-b",
+						"bg-card text-subtle border-b",
 						!rows.length && "border-dashed",
 					)}
 					key={headerGroup.id}
