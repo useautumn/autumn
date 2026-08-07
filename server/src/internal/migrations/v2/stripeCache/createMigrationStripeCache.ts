@@ -110,7 +110,7 @@ export const createMigrationStripeCache = ({
 			ctx,
 			fullCus: fullCustomer,
 			targetCusProductId: customerProduct.id,
-		});
+		}).then(({ stripeSubscription }) => stripeSubscription);
 		subscriptionPromises.set(subscriptionId, promise);
 
 		return promise;

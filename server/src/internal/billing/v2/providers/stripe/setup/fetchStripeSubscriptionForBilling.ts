@@ -12,6 +12,12 @@ import type { StripeSubscriptionWithDiscounts } from "@server/external/stripe/su
 import type { AutumnContext } from "@server/honoUtils/HonoEnv";
 import { isStripeSubscriptionCanceled } from "@/external/stripe/subscriptions/utils/classifyStripeSubscriptionUtils";
 
+export interface StripeSubscriptionForBilling {
+	stripeSubscription?: StripeSubscriptionWithDiscounts;
+	/** Set when the linked subscription exists in Stripe but is already canceled. */
+	canceledStripeSubscriptionId?: string;
+}
+
 /**
  * Fetches a Stripe subscription with expanded discounts for billing operations.
  * Returns the subscription with `discounts.source.coupon.applies_to` expanded.
@@ -30,9 +36,9 @@ export const fetchStripeSubscriptionForBilling = async ({
 	targetCusProductId?: string;
 	newBillingSubscription?: boolean;
 	params?: AttachParamsV1 | MultiAttachParamsV0 | UpdateSubscriptionV1Params;
-}): Promise<StripeSubscriptionWithDiscounts | undefined> => {
+}): Promise<StripeSubscriptionForBilling> => {
 	if (newBillingSubscription) {
-		return undefined;
+		return {};
 	}
 
 	const processorSubscriptionId =
@@ -53,7 +59,7 @@ export const fetchStripeSubscriptionForBilling = async ({
 	const subId =
 		processorSubscriptionId ?? cusProductWithSub?.subscription_ids?.[0];
 
-	if (!subId) return undefined;
+	if (!subId) return {};
 
 	const sub = await stripeCli.subscriptions.retrieve(subId, {
 		expand: ["discounts.source.coupon.applies_to"],
@@ -66,13 +72,6 @@ export const fetchStripeSubscriptionForBilling = async ({
 		});
 	}
 
-	if (isStripeSubscriptionCanceled(sub)) {
-		throw new RecaseError({
-			message: `Subscription ${subId} is canceled`,
-			statusCode: 400,
-		});
-	}
-
 	if (sub.customer !== fullCus.processor.id) {
 		throw new RecaseError({
 			message: `Subscription ${subId} is not for the current customer`,
@@ -80,5 +79,11 @@ export const fetchStripeSubscriptionForBilling = async ({
 		});
 	}
 
-	return sub as StripeSubscriptionWithDiscounts;
+	// A canceled sub carries no live billing state. Report it separately so each
+	// caller decides: abandon it (attach) or block Stripe writes (updateSubscription).
+	if (isStripeSubscriptionCanceled(sub)) {
+		return { canceledStripeSubscriptionId: subId };
+	}
+
+	return { stripeSubscription: sub as StripeSubscriptionWithDiscounts };
 };
