@@ -1,6 +1,9 @@
 import {
 	AllowanceType,
 	type Entitlement,
+	type Feature,
+	FeatureType,
+	findFeatureByInternalId,
 	type Reward,
 	type RewardEntitlement,
 } from "@autumn/shared";
@@ -16,16 +19,24 @@ export type RewardWithEntitlementInputs = Partial<
 
 export const rewardToEntitlementRows = ({
 	reward,
+	features,
 }: {
 	reward: RewardWithEntitlementInputs;
+	features?: Feature[];
 }): Entitlement[] => {
 	const entitlements = reward.entitlements ?? [];
 
 	return entitlements.map((entitlement) => {
 		const expiry = "expiry" in entitlement ? entitlement.expiry : undefined;
-		// Boolean grants carry no allowance
+		// Boolean grants carry no allowance, whatever the payload says
+		const isBoolean =
+			features != null &&
+			findFeatureByInternalId({
+				features,
+				internalId: entitlement.internal_feature_id,
+			})?.type === FeatureType.Boolean;
 		const hasAllowance =
-			entitlement.allowance != null && entitlement.allowance >= 0;
+			!isBoolean && entitlement.allowance != null && entitlement.allowance >= 0;
 
 		return {
 			id:
