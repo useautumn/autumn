@@ -304,11 +304,11 @@ describe("createRecycleCoordinator", () => {
 
 	test("a replacement that never listens is killed at the boot deadline and the cycle aborts", async () => {
 		const { coordinator, forked, aborted, killed, respawned } = createHarness({
-			bootTimeoutMs: 25,
+			bootTimeoutMs: 100,
 		});
 
 		coordinator.handleRecycleRequest({ workerId: "w1" });
-		await new Promise((resolve) => setTimeout(resolve, 60));
+		await new Promise((resolve) => setTimeout(resolve, 150));
 
 		expect(killed).toEqual([forked[0]]);
 		expect(aborted).toEqual(["w1"]);
@@ -339,7 +339,7 @@ describe("createRecycleCoordinator", () => {
 
 	test("a hung crash respawn is killed at its boot deadline and drains release", async () => {
 		const { coordinator, forked, drained, killed, respawned } = createHarness({
-			bootTimeoutMs: 25,
+			bootTimeoutMs: 100,
 		});
 
 		// Plain crash: respawn boots... and hangs (never listens).
@@ -348,8 +348,9 @@ describe("createRecycleCoordinator", () => {
 		coordinator.handleWorkerListening({ workerId: forked[0] });
 		expect(drained).toHaveLength(0);
 
-		// One deadline generation only — the recursion re-arms per respawn.
-		await new Promise((resolve) => setTimeout(resolve, 38));
+		// One deadline generation only (fires at 100ms; the next at 200ms) —
+		// 50ms of margin on both sides against CI timer jitter.
+		await new Promise((resolve) => setTimeout(resolve, 150));
 
 		// The hung respawn was killed and replaced; second respawn listening
 		// releases the deferred drain.
@@ -425,13 +426,13 @@ describe("createRecycleCoordinator", () => {
 
 	test("boot deadline after the old worker crashed refills the slot instead of aborting", async () => {
 		const { coordinator, forked, aborted, killed, respawned } = createHarness({
-			bootTimeoutMs: 25,
+			bootTimeoutMs: 100,
 		});
 
 		coordinator.handleRecycleRequest({ workerId: "w1" });
 		coordinator.handleWorkerExit({ workerId: "w1" });
-		// One deadline generation: the refill's own deadline re-arms later.
-		await new Promise((resolve) => setTimeout(resolve, 38));
+		// One deadline generation (fires at 100ms, refill's at 200ms).
+		await new Promise((resolve) => setTimeout(resolve, 150));
 
 		expect(killed).toEqual([forked[0]]);
 		expect(respawned).toEqual([forked[0]]);
