@@ -112,7 +112,7 @@ export function SelectRewardType({
 								discount_config: null,
 								free_product_id: null,
 								free_product_config: null,
-								featureGrantEntitlements: [{ feature_id: "", allowance: 0 }],
+								featureGrantEntitlements: [{ feature_id: "" }],
 							})
 						}
 						icon={<LightningIcon size={16} color="currentColor" />}
