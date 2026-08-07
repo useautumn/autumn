@@ -13,6 +13,22 @@ export type CountAndSumSource =
 const DAILY_BIN_SIZES = new Set(["day", "week", "month"]);
 const MILLISECONDS_PER_DAY = 86_400_000;
 
+export const shouldUseOrgDimensionRollup = ({
+	groupColumn,
+	hasCustomerId,
+	hasEntityId,
+	hasPropertyFilters,
+}: {
+	groupColumn: GroupableColumn;
+	hasCustomerId: boolean;
+	hasEntityId: boolean;
+	hasPropertyFilters: boolean;
+}): boolean =>
+	groupColumn !== "property" &&
+	!hasCustomerId &&
+	!hasEntityId &&
+	!hasPropertyFilters;
+
 export const shouldUseOrgPropertyRollup = ({
 	groupColumn,
 	hasCustomerId,
