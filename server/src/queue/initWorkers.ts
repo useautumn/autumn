@@ -34,7 +34,7 @@ import { getSqsClient, QUEUE_URL, recreateSqsClient } from "./initSqs.js";
 import { JobName } from "./JobName.js";
 import { processMessage, type SqsJob } from "./processMessage.js";
 import { shutdownSqsSendBatchers } from "./queueUtils.js";
-import { getAsyncTrackWorkerQueueUrls } from "./trackAsyncQueueUrls.js";
+import { getTrackAndUpdateBalanceWorkerQueueUrls } from "./trackAsyncQueueUrls.js";
 import {
 	createWorkerActivityTracker,
 	type WorkerActivityTracker,
@@ -657,7 +657,7 @@ export const initWorkers = async ({
 			queueUrl: process.env.TRACK_SQS_QUEUE_URL,
 			defaultEnabled: true,
 		},
-		...getAsyncTrackWorkerQueueUrls().map((queueUrl) => ({
+		...getTrackAndUpdateBalanceWorkerQueueUrls().map((queueUrl) => ({
 			queueId: JOB_QUEUE_IDS.trackAsync,
 			queueUrl,
 			defaultEnabled: true,
