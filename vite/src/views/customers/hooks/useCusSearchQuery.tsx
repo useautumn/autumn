@@ -49,6 +49,8 @@ export const useCusSearchQuery = () => {
 			queryStates.none,
 			queryStates.processor,
 			queryStates.interval,
+			queryStates.joinedFrom,
+			queryStates.joinedTo,
 			queryStates.sort,
 			trimmedSearch,
 		]),

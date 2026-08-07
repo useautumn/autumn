@@ -59,6 +59,8 @@ export function CustomerListTable({
 			queryStates.none,
 			queryStates.processor,
 			queryStates.interval,
+			queryStates.joinedFrom,
+			queryStates.joinedTo,
 			queryStates.sort,
 			queryStates.q,
 		]),

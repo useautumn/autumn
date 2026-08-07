@@ -31,6 +31,8 @@ const FILTER_PARAM_KEYS = [
 	"interval",
 	"pageSize",
 	"sort",
+	"joinedFrom",
+	"joinedTo",
 ] as const;
 
 type PersistedCustomerFilters = {
@@ -41,6 +43,8 @@ type PersistedCustomerFilters = {
 	interval: string[];
 	pageSize: number;
 	sort?: SortOrder;
+	joinedFrom?: number | null;
+	joinedTo?: number | null;
 };
 
 function getStorageKey({ orgId, env }: { orgId: string; env: string }) {
@@ -79,6 +83,8 @@ function buildRestoredState({
 				? filters.pageSize
 				: null,
 		sort: filters?.sort === "asc" ? filters.sort : null,
+		joinedFrom: filters?.joinedFrom ?? null,
+		joinedTo: filters?.joinedTo ?? null,
 	};
 }
 
@@ -91,6 +97,8 @@ const queryStatesConfig = {
 	interval: parseAsArrayOf(parseAsString).withDefault([]),
 	pageSize: parseAsInteger.withDefault(DEFAULT_CUSTOMER_LIST_PAGE_SIZE),
 	sort: parseAsStringLiteral(SortOrderSchema.options).withDefault("desc"),
+	joinedFrom: parseAsInteger,
+	joinedTo: parseAsInteger,
 };
 
 type QueryStates = ReturnType<typeof useQueryStates<typeof queryStatesConfig>>;
@@ -101,17 +109,28 @@ export function hasActiveCustomerFilters(queryStates: QueryStates[0]) {
 		queryStates.version.length > 0 ||
 		queryStates.none ||
 		queryStates.processor.length > 0 ||
-		queryStates.interval.length > 0
+		queryStates.interval.length > 0 ||
+		queryStates.joinedFrom !== null ||
+		queryStates.joinedTo !== null
 	);
 }
 
 export function buildCustomerFilterPayload(queryStates: QueryStates[0]) {
+	const { joinedFrom, joinedTo } = queryStates;
+	const hasJoinedRange = joinedFrom !== null || joinedTo !== null;
+
 	return {
 		status: queryStates.status,
 		version: queryStates.version,
 		none: queryStates.none,
 		processor: queryStates.processor,
 		interval: queryStates.interval,
+		...(hasJoinedRange && {
+			created_at_range: {
+				start: joinedFrom ?? undefined,
+				end: joinedTo ?? undefined,
+			},
+		}),
 	};
 }
 
@@ -210,6 +229,8 @@ export function CustomerFiltersProvider({ children }: { children: ReactNode }) {
 					interval: queryStates.interval,
 					pageSize: queryStates.pageSize,
 					sort: queryStates.sort,
+					joinedFrom: queryStates.joinedFrom,
+					joinedTo: queryStates.joinedTo,
 				}),
 			);
 		} catch {}
@@ -224,6 +245,8 @@ export function CustomerFiltersProvider({ children }: { children: ReactNode }) {
 		queryStates.interval,
 		queryStates.pageSize,
 		queryStates.sort,
+		queryStates.joinedFrom,
+		queryStates.joinedTo,
 	]);
 
 	return (

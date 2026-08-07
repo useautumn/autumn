@@ -12,6 +12,7 @@ import { useState } from "react";
 import { cn } from "@/lib/utils";
 import { FilterStatusSubMenu } from "@/views/customers/components/filter-dropdown/FilterStatusSubMenu";
 import { IntervalSubMenu } from "@/views/customers/components/filter-dropdown/IntervalSubMenu";
+import { JoinedDateSubMenu } from "@/views/customers/components/filter-dropdown/JoinedDateSubMenu";
 import { ProcessorSubMenu } from "@/views/customers/components/filter-dropdown/ProcessorSubMenu";
 import { ProductsSubMenu } from "@/views/customers/components/filter-dropdown/ProductsSubMenu";
 import { SaveViewPopover } from "@/views/customers/components/filter-dropdown/SavedViewPopover";
@@ -54,6 +55,8 @@ export function CustomerListFilterButton({
 			none: false,
 			processor: [],
 			interval: [],
+			joinedFrom: null,
+			joinedTo: null,
 		});
 		onFilterChange?.();
 		onClearExtra?.();
@@ -92,6 +95,7 @@ export function CustomerListFilterButton({
 					<ProductsSubMenu onChange={onFilterChange} />
 					<IntervalSubMenu onChange={onFilterChange} />
 					<ProcessorSubMenu onChange={onFilterChange} />
+					<JoinedDateSubMenu onChange={onFilterChange} />
 				</DropdownMenuGroup>
 				<DropdownMenuSeparator className="m-0" />
 				{!hideSavedViews && views.length > 0 && (
