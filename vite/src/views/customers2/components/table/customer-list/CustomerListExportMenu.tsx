@@ -17,7 +17,7 @@ export function CustomerListExportMenu() {
 			<DropdownMenu>
 				<DropdownMenuTrigger asChild>
 					<Button
-						variant="secondary"
+						variant="skeleton"
 						size="icon"
 						type="button"
 						aria-label="More customer actions"
