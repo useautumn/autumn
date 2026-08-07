@@ -132,7 +132,7 @@ test(`${chalk.yellowBright("SEED: license customize playground")}`, async () => 
 
 	heading("RE-READ STATE LATER");
 	console.log(
-		`./run.sh $(pwd)/tests/integration/licenses/billing/migration/seed-license-customize-playground.test.ts`,
+		`./run.sh $(pwd)/tests/integration/billing/migrations-v2/batch-migrations/licenses/seed-license-customize-playground.test.ts`,
 	);
 	console.log("(re-running resets the playground to this clean state)");
 });
