@@ -122,8 +122,7 @@ export function CustomerListTable({
 		columnGroups,
 	});
 
-	// Sorting is server-side: header clicks update the sort URL param (resetting
-	// the cursor stack), and the backend re-queries in the new direction.
+	// setFilters resets the cursor stack, so a sort toggle lands back on page 1.
 	const sorting = useMemo<SortingState>(
 		() => [{ id: "created_at", desc: queryStates.sort !== "asc" }],
 		[queryStates.sort],
