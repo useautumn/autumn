@@ -1,15 +1,42 @@
 /**
- * Contract: eligible UTC property groups use daily states, while exact range edges stay hourly.
- * Reconciliation uses customer-daily states only when no property filter requires raw events.
+ * Contract: org-wide dimensions use their dedicated rollup, eligible UTC property groups use
+ * daily states, and reconciliation keeps exact hourly range edges.
  */
 import { expect, test } from "bun:test";
 import {
 	buildCountAndSumQuery,
 	hasCompleteUtcDay,
 	selectCountAndSumSource,
+	shouldUseOrgDimensionRollup,
 	shouldUseOrgPropertyRollup,
 	shouldUsePropertyDailyRollup,
 } from "@/internal/analytics/actions/dailyRollupRouting.js";
+
+test("org dimension rollup: routes only unfiltered aggregate-all dimensions", () => {
+	const base = {
+		groupColumn: "customer_id" as const,
+		hasCustomerId: false,
+		hasEntityId: false,
+		hasPropertyFilters: false,
+	};
+
+	for (const groupColumn of ["customer_id", "entity_id", "plan_id"] as const) {
+		expect(shouldUseOrgDimensionRollup({ ...base, groupColumn })).toBe(true);
+	}
+
+	expect(
+		shouldUseOrgDimensionRollup({ ...base, groupColumn: "property" }),
+	).toBe(false);
+	expect(shouldUseOrgDimensionRollup({ ...base, hasCustomerId: true })).toBe(
+		false,
+	);
+	expect(shouldUseOrgDimensionRollup({ ...base, hasEntityId: true })).toBe(
+		false,
+	);
+	expect(
+		shouldUseOrgDimensionRollup({ ...base, hasPropertyFilters: true }),
+	).toBe(false);
+});
 
 test("org property rollup: routes only unfiltered aggregate-all property groups", () => {
 	const base = {

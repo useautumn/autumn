@@ -1,7 +1,6 @@
-import type { EntitlementWithFeature } from "@autumn/shared";
+import { CusProductStatus, type EntitlementWithFeature } from "@autumn/shared";
 import { sql } from "drizzle-orm";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
-import { sqlList } from "@/internal/billing/v2/actions/batchTransition/execute/sql/batchTransitionSqlUtils.js";
 import {
 	type OperationScope,
 	operationScopeSql,
@@ -28,10 +27,6 @@ export const buildInsertCustomerEntitlementRowsQuery = ({
 	rows: InsertableCustomerEntitlementRow[];
 	now: number;
 }) => {
-	const internalCustomerIds = [
-		...new Set(rows.map((row) => row.internalCustomerId)),
-	];
-
 	const serializedRows = JSON.stringify(
 		rows.map((row) => ({
 			id: row.id,
@@ -77,7 +72,8 @@ export const buildInsertCustomerEntitlementRowsQuery = ({
 				cache_version,
 				customer_id,
 				feature_id,
-				external_id
+				external_id,
+				expired
 			)
 			SELECT
 				new_row.id,
@@ -100,13 +96,15 @@ export const buildInsertCustomerEntitlementRowsQuery = ({
 				0,
 				new_row.customer_id,
 				${entitlement.feature.id},
-				NULL
+				NULL,
+				-- Terminal value at insert: leaving this NULL makes the expired
+				-- backfill cron rewrite every index entry in a second pass.
+				(cp.status = ${CusProductStatus.Expired})
 			FROM new_rows AS new_row
 			-- Re-assert scope at insert time: rows whose customer product
 			-- changed since the select (canceled, customized) drop out.
 			INNER JOIN customer_products AS cp
 				ON cp.id = new_row.customer_product_id
-				AND cp.internal_customer_id IN (${sqlList({ values: internalCustomerIds })})
 				AND ${operationScopeSql({ scope })}
 			ON CONFLICT (id) DO NOTHING
 			RETURNING id

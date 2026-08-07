@@ -19,14 +19,11 @@ import {
 } from "@/internal/migrations/v2/batchOperations/utils/enrichCustomerEntitlementCycles.js";
 import { generateId } from "@/utils/genUtils.js";
 import { insertCustomerEntitlementRows } from "./insertCustomerEntitlementRows.js";
-import {
-	countAddCandidateRows,
-	selectAddCandidateRows,
-} from "./selectAddCandidateRows.js";
+import { selectAddCandidateRows } from "./selectAddCandidateRows.js";
 
 export type AddCustomerEntitlementsForPageResult = {
 	affected: number;
-	/** Pre-counted scope-matched candidate rows for the page (advisory). */
+	/** Scope-matched candidate rows visited for the page (advisory). */
 	candidateCount: number;
 	/** Customers a rung refused — the page marks them skipped. */
 	excludedInternalCustomerIds: string[];
@@ -74,19 +71,12 @@ export const addCustomerEntitlementsForPage = async ({
 	const { rowCount } = await iterateCustomerProductPages({
 		db,
 		pageSize: candidateRowBatchSize,
-		countRows: () =>
-			timePhase({
-				phases,
-				phase: "candidate_count",
-				run: () =>
-					countAddCandidateRows({
-						db,
-						internalCustomerIds,
-						scope,
-						entitlement: add.entitlement,
-					}),
-			}),
-		executePage: async ({ transaction, afterCustomerProductId, limit }) => {
+		executePage: async ({
+			transaction,
+			afterCustomerProductId,
+			limit,
+			assertWithinCeiling,
+		}) => {
 			const candidates = await timePhase({
 				phases,
 				phase: "candidates",
@@ -102,6 +92,7 @@ export const addCustomerEntitlementsForPage = async ({
 					}),
 			});
 			if (candidates.length === 0) return candidates;
+			assertWithinCeiling(candidates.length);
 
 			const inserted = await enrichAndInsertCandidates({
 				db: transaction,

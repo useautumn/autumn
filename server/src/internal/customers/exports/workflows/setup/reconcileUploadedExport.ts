@@ -1,4 +1,5 @@
 import type { DbCustomerExport } from "@autumn/shared";
+import { dbReplica } from "@/db/initDrizzle.js";
 import type { Logger } from "@/external/logtail/logtailUtils.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import type { RunCustomerExportPayload } from "@/trigger/exports/customerExportTaskPayload.js";
@@ -33,7 +34,7 @@ export const reconcileUploadedExport = async ({
 	// The exact count died with the failed completion write; recounting the frozen
 	// bounds can drift below the file's rows if customers were deleted since.
 	const { totalCount } = await resolveCustomerExportPopulation({
-		db: ctx.db,
+		db: dbReplica ?? ctx.db,
 		orgId: payload.orgId,
 		env: payload.env,
 		snapshot: customerExport.snapshot,

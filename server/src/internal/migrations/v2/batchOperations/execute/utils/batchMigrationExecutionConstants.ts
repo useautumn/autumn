@@ -1,4 +1,5 @@
-/** Customers claimed + mutated + finalized per loop iteration. */
+/** Customers claimed + mutated + finalized per loop iteration. Max ~7280: the
+ * claim binds ~9 params per row against Postgres' 65535 cap. */
 export const BATCH_MIGRATION_PAGE_SIZE = 5000;
 
 /** Timeout for each bounded page transaction (one candidate batch, or the
@@ -12,8 +13,8 @@ export const BATCH_MIGRATION_PAGE_STATEMENT_TIMEOUT_MS = 60_000;
  * page is. */
 export const BATCH_MIGRATION_CANDIDATE_ROW_BATCH = 10_000;
 
-/** Refuse a page whose pre-counted candidate rows exceed this — grinding
- * through more is never intended; fail loudly instead. */
+/** Refuse a page with more candidate rows than this — grinding through more
+ * is never intended; fail loudly instead. */
 export const BATCH_MIGRATION_MAX_CANDIDATE_ROWS_PER_PAGE = 1_000_000;
 
 /** Runaway backstop: 2000 pages × 5000 customers = 10M per run. */
@@ -24,3 +25,6 @@ export const BATCH_MIGRATION_PAGES_PER_CHUNK = 20;
 
 /** Concurrent Redis full-customer cache invalidations during finalize. */
 export const BATCH_MIGRATION_CACHE_BUST_CONCURRENCY = 20;
+
+/** Pages whose post-commit side effects may be in flight at once. */
+export const BATCH_MIGRATION_DEFERRED_INFLIGHT = 3;
