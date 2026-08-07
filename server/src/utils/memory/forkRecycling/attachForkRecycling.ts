@@ -70,6 +70,9 @@ export const attachPrimaryForkRecycling = ({
 
 	clusterModule.on("message", (worker, message: RecycleMessage) => {
 		if (message?.type !== RECYCLE_REQUEST) return;
+		// A message delivered after the worker's exit was handled would start a
+		// cycle for a corpse that can never complete.
+		if (worker.isDead?.()) return;
 		coordinator.handleRecycleRequest({ workerId: String(worker.id) });
 	});
 
@@ -155,7 +158,11 @@ export const startWorkerForkRecycling = ({
 				},
 			},
 		);
-		process.send?.({ type: RECYCLE_REQUEST });
+		try {
+			process.send?.({ type: RECYCLE_REQUEST }, undefined, undefined, () => {});
+		} catch {
+			// Channel already closed (primary going away); the process is exiting.
+		}
 	};
 
 	// Jitter so same-boot forks never check in sync.

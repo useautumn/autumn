@@ -19,6 +19,8 @@ export type RecycleCoordinator = {
 };
 
 export const DEFAULT_REPLACEMENT_BOOT_TIMEOUT_MS = 120_000;
+// Above the drainer's own max-drain (10min) + graceful-shutdown backstop.
+export const DEFAULT_DRAIN_COMPLETION_TIMEOUT_MS = 12 * 60_000;
 
 /** One recycle in flight at a time, and an invariant every path must hold:
  *  the serving fork count returns to N — no surplus, no deficit. */
@@ -29,6 +31,7 @@ export const createRecycleCoordinator = ({
 	killWorker,
 	respawn,
 	replacementBootTimeoutMs = DEFAULT_REPLACEMENT_BOOT_TIMEOUT_MS,
+	drainCompletionTimeoutMs = DEFAULT_DRAIN_COMPLETION_TIMEOUT_MS,
 	log,
 }: {
 	forkReplacement: () => string;
@@ -42,6 +45,7 @@ export const createRecycleCoordinator = ({
 	 *  caller is shutting down and skipped the fork). */
 	respawn: (workerId: string) => string | undefined;
 	replacementBootTimeoutMs?: number;
+	drainCompletionTimeoutMs?: number;
 	log: (message: string) => void;
 }): RecycleCoordinator => {
 	let activeCycle: RecycleCycle | null = null;
@@ -83,6 +87,13 @@ export const createRecycleCoordinator = ({
 		respawnBootDeadlines.set(newWorkerId, deadline);
 	};
 
+	let drainCompletionDeadline: ReturnType<typeof setTimeout> | null = null;
+
+	const clearDrainCompletionDeadline = () => {
+		if (drainCompletionDeadline) clearTimeout(drainCompletionDeadline);
+		drainCompletionDeadline = null;
+	};
+
 	const sendDrainNow = (cycle: RecycleCycle) => {
 		cycle.drainSent = true;
 		cycle.drainDeferred = false;
@@ -91,6 +102,17 @@ export const createRecycleCoordinator = ({
 			`[ForkRecycle] Replacement ${cycle.replacementId} listening; draining ${cycle.oldWorkerId}`,
 		);
 		sendDrain(cycle.oldWorkerId);
+		// A lost drain message (or wedged drainer) must not hold the queue
+		// forever. The replacement is already serving, so past the worker's own
+		// drain bounds the old fork is killed and its exit completes the cycle.
+		drainCompletionDeadline = setTimeout(() => {
+			if (activeCycle?.oldWorkerId !== cycle.oldWorkerId) return;
+			log(
+				`[ForkRecycle] Worker ${cycle.oldWorkerId} did not exit within ${drainCompletionTimeoutMs}ms of its drain; killing it (replacement already serving)`,
+			);
+			killWorker(cycle.oldWorkerId);
+		}, drainCompletionTimeoutMs);
+		drainCompletionDeadline.unref?.();
 	};
 
 	const releaseDeferredDrainIfClear = () => {
@@ -141,6 +163,7 @@ export const createRecycleCoordinator = ({
 
 	const startNextPendingCycle = () => {
 		clearBootDeadline();
+		clearDrainCompletionDeadline();
 		activeCycle = null;
 		const next = pendingWorkerIds.shift();
 		if (next !== undefined) startCycle(next);
