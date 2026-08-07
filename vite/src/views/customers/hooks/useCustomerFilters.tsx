@@ -3,6 +3,7 @@ import {
 	parseAsBoolean,
 	parseAsInteger,
 	parseAsString,
+	parseAsStringLiteral,
 	useQueryStates,
 } from "nuqs";
 import {
@@ -28,7 +29,11 @@ const FILTER_PARAM_KEYS = [
 	"processor",
 	"interval",
 	"pageSize",
+	"sort",
 ] as const;
+
+const SORT_ORDERS = ["asc", "desc"] as const;
+export type CustomerSortOrder = (typeof SORT_ORDERS)[number];
 
 type PersistedCustomerFilters = {
 	status: string[];
@@ -37,6 +42,7 @@ type PersistedCustomerFilters = {
 	processor: string[];
 	interval: string[];
 	pageSize: number;
+	sort?: CustomerSortOrder;
 };
 
 function getStorageKey({ orgId, env }: { orgId: string; env: string }) {
@@ -74,6 +80,7 @@ function buildRestoredState({
 			filters?.pageSize && filters.pageSize !== DEFAULT_CUSTOMER_LIST_PAGE_SIZE
 				? filters.pageSize
 				: null,
+		sort: filters?.sort === "asc" ? filters.sort : null,
 	};
 }
 
@@ -85,6 +92,7 @@ const queryStatesConfig = {
 	processor: parseAsArrayOf(parseAsString).withDefault([]),
 	interval: parseAsArrayOf(parseAsString).withDefault([]),
 	pageSize: parseAsInteger.withDefault(DEFAULT_CUSTOMER_LIST_PAGE_SIZE),
+	sort: parseAsStringLiteral(SORT_ORDERS).withDefault("desc"),
 };
 
 type QueryStates = ReturnType<typeof useQueryStates<typeof queryStatesConfig>>;
@@ -203,6 +211,7 @@ export function CustomerFiltersProvider({ children }: { children: ReactNode }) {
 					processor: queryStates.processor,
 					interval: queryStates.interval,
 					pageSize: queryStates.pageSize,
+					sort: queryStates.sort,
 				}),
 			);
 		} catch {}
@@ -216,6 +225,7 @@ export function CustomerFiltersProvider({ children }: { children: ReactNode }) {
 		queryStates.processor,
 		queryStates.interval,
 		queryStates.pageSize,
+		queryStates.sort,
 	]);
 
 	return (

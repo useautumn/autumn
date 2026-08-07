@@ -27,6 +27,7 @@ export const useFullCusSearchQuery = () => {
 			queryStates.none,
 			queryStates.processor,
 			queryStates.interval,
+			queryStates.sort,
 			queryStates.q,
 		]),
 		queryFn: async ({ signal }) => {
@@ -37,6 +38,7 @@ export const useFullCusSearchQuery = () => {
 					cursor: currentCursor,
 					limit: queryStates.pageSize,
 					filters: buildCustomerFilterPayload(queryStates),
+					sort_order: queryStates.sort,
 				},
 				{ signal },
 			);

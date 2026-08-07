@@ -2,7 +2,8 @@ import { AppEnv, type FullCustomer } from "@autumn/shared";
 import { IconButton, useColumnVisibility } from "@autumn/ui";
 import { ArrowSquareOutIcon, UsersIcon } from "@phosphor-icons/react";
 import { useQuery } from "@tanstack/react-query";
-import { useMemo } from "react";
+import type { OnChangeFn, SortingState } from "@tanstack/react-table";
+import { useCallback, useMemo } from "react";
 import { Table } from "@/components/general/table";
 import { EmptyState } from "@/components/v2/empty-states/EmptyState";
 import { getLastSwitchedOrgId, useOrg } from "@/hooks/common/useOrg";
@@ -41,7 +42,7 @@ export function CustomerListTable({
 		env === AppEnv.Sandbox ? "calc(100vh - 230px)" : "calc(100vh - 190px)";
 
 	const { features } = useFeaturesQuery();
-	const { queryStates, currentCursor } = useCustomerFilters();
+	const { queryStates, setFilters, currentCursor } = useCustomerFilters();
 	const buildKey = useQueryKeyFactory();
 
 	const {
@@ -58,6 +59,7 @@ export function CustomerListTable({
 			queryStates.none,
 			queryStates.processor,
 			queryStates.interval,
+			queryStates.sort,
 			queryStates.q,
 		]),
 		queryFn: () => Promise.resolve({ fullCustomers: [], next_cursor: null }),
@@ -120,14 +122,37 @@ export function CustomerListTable({
 		columnGroups,
 	});
 
+	// Sorting is server-side: header clicks update the sort URL param (resetting
+	// the cursor stack), and the backend re-queries in the new direction.
+	const sorting = useMemo<SortingState>(
+		() => [{ id: "created_at", desc: queryStates.sort !== "asc" }],
+		[queryStates.sort],
+	);
+
+	const onSortingChange = useCallback<OnChangeFn<SortingState>>(
+		(updater) => {
+			const next = typeof updater === "function" ? updater(sorting) : updater;
+			const createdAtSort = next.find((sort) => sort.id === "created_at");
+			setFilters({
+				sort: createdAtSort && !createdAtSort.desc ? "asc" : "desc",
+			});
+		},
+		[sorting, setFilters],
+	);
+
 	const table = useCustomerTable({
 		data: mergedCustomers,
 		columns,
 		options: {
 			globalFilterFn: "includesString",
 			enableGlobalFilter: true,
-			state: { columnVisibility },
+			enableSorting: true,
+			enableSortingRemoval: false,
+			manualSorting: true,
+			defaultColumn: { enableSorting: false },
+			state: { columnVisibility, sorting },
 			onColumnVisibilityChange: setColumnVisibility,
+			onSortingChange,
 		},
 	});
 
@@ -173,7 +198,7 @@ export function CustomerListTable({
 			config={{
 				table,
 				numberOfColumns: columns.length,
-				enableSorting: false,
+				enableSorting: true,
 				isLoading: isFetchingUncached && customers.length === 0,
 				isTransitioning: isFetchingUncached && customers.length > 0,
 				getRowHref,
