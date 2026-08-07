@@ -6,9 +6,11 @@ import {
 	type PlanItemFilter,
 	refineCustomizePlanV1Schema,
 } from "@autumn/shared";
+import type { CustomizePlanLicense } from "@models/licenseModels/licenseModels.js";
 import { FreeTrialDuration } from "@models/productModels/freeTrialModels/freeTrialEnums.js";
 import { TierBehavior } from "@models/productModels/priceModels/priceConfig/usagePriceConfig.js";
 import type { z } from "zod/v4";
+import { diffPlanLicenses } from "./diffPlanLicenses.js";
 
 export const DiffedCustomizePlanV1Schema = refineCustomizePlanV1Schema(
 	CustomizePlanV1BaseSchema.omit({
@@ -18,7 +20,13 @@ export const DiffedCustomizePlanV1Schema = refineCustomizePlanV1Schema(
 	{ includeItems: false, includeLicenses: false },
 );
 
-export type DiffedCustomizePlanV1 = z.infer<typeof DiffedCustomizePlanV1Schema>;
+/** upsert_licenses is carried as a type only: adding it to the schema above
+ * pulls licenseModels into module init and closes an import cycle. */
+export type DiffedCustomizePlanV1 = z.infer<
+	typeof DiffedCustomizePlanV1Schema
+> & {
+	upsert_licenses?: CustomizePlanLicense[];
+};
 
 type ApiPlanItem = ApiPlanV1["items"][number];
 type PlanItemInput = ApiPlanItem | CreatePlanItemParamsV1;
@@ -411,6 +419,13 @@ export const diffPlanV1 = ({
 			diff.free_trial = on_end == null ? rest : { ...rest, on_end };
 		}
 	}
+
+	const upsertLicenses = diffPlanLicenses({
+		from,
+		to,
+		customizeEqual: customizePlanV1DiffsEqual,
+	});
+	if (upsertLicenses.length > 0) diff.upsert_licenses = upsertLicenses;
 
 	return diff;
 };

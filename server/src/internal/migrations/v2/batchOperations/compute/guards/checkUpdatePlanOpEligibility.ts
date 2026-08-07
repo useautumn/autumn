@@ -69,6 +69,17 @@ export const checkUpdatePlanOpEligibility = ({
 		});
 	}
 
+	// operationScope excludes assignment rows, so the batch lane can never see
+	// the rows a license customize has to touch.
+	if ((op.customize?.upsert_licenses?.length ?? 0) > 0) {
+		rejections.push({
+			code: "unsupported_upsert_licenses",
+			opIndex,
+			message:
+				"customize.upsert_licenses mutates license definitions and assignment rows; only the per-customer lane applies it.",
+		});
+	}
+
 	if (op.customize?.price !== undefined) {
 		rejections.push({
 			code: "base_price_customize",
