@@ -1,10 +1,12 @@
 /**
- * TDD contract for migrating async Track from FIFO to Standard SQS.
+ * TDD contract for routing async Track and UpdateBalance jobs.
  *
  * Contract under test:
  *   - Producers prefer TRACK_ASYNC_STANDARD_SQS_QUEUE_URL.
  *   - Producers fall back to TRACK_ASYNC_SQS_QUEUE_URL during rollout.
- *   - Workers consume both configured URLs without duplicate pollers.
+ *   - UpdateBalance prefers its explicit queue URL and falls back to the legacy
+ *     TRACK_ASYNC_SQS_QUEUE_URL.
+ *   - Workers consume all configured URLs without duplicate pollers.
  *   - Standard-queue sends omit FIFO-only message identifiers.
  *
  * Pre-implementation red: the queue URL resolver does not exist and producers
@@ -22,15 +24,20 @@ import { getSqsClient } from "@/queue/initSqs.js";
 import {
 	getAsyncTrackProducerQueueUrl,
 	getAsyncTrackWorkerQueueUrls,
+	getTrackAndUpdateBalanceWorkerQueueUrls,
+	getUpdateBalanceProducerQueueUrl,
 } from "@/queue/trackAsyncQueueUrls.js";
 
 const STANDARD_QUEUE_URL =
 	"https://sqs.us-east-2.amazonaws.com/123456789012/track-async-standard";
 const LEGACY_FIFO_QUEUE_URL =
 	"https://sqs.us-east-2.amazonaws.com/123456789012/track-async.fifo";
+const UPDATE_BALANCE_QUEUE_URL =
+	"https://sqs.us-east-2.amazonaws.com/123456789012/update-balance.fifo";
 
 const originalStandardQueueUrl = process.env.TRACK_ASYNC_STANDARD_SQS_QUEUE_URL;
 const originalLegacyQueueUrl = process.env.TRACK_ASYNC_SQS_QUEUE_URL;
+const originalUpdateBalanceQueueUrl = process.env.UPDATE_BALANCE_SQS_QUEUE_URL;
 
 const restoreEnv = ({ key, value }: { key: string; value?: string }) => {
 	if (value === undefined) delete process.env[key];
@@ -45,6 +52,10 @@ afterEach(() => {
 	restoreEnv({
 		key: "TRACK_ASYNC_SQS_QUEUE_URL",
 		value: originalLegacyQueueUrl,
+	});
+	restoreEnv({
+		key: "UPDATE_BALANCE_SQS_QUEUE_URL",
+		value: originalUpdateBalanceQueueUrl,
 	});
 });
 
@@ -74,6 +85,48 @@ test("falls back to the legacy FIFO and avoids duplicate worker pollers", () => 
 
 	process.env.TRACK_ASYNC_STANDARD_SQS_QUEUE_URL = "";
 	expect(getAsyncTrackProducerQueueUrl()).toBe(LEGACY_FIFO_QUEUE_URL);
+});
+
+test("routes UpdateBalance through its explicit queue with a legacy fallback", () => {
+	process.env.UPDATE_BALANCE_SQS_QUEUE_URL = UPDATE_BALANCE_QUEUE_URL;
+	process.env.TRACK_ASYNC_SQS_QUEUE_URL = LEGACY_FIFO_QUEUE_URL;
+
+	expect(getUpdateBalanceProducerQueueUrl()).toBe(UPDATE_BALANCE_QUEUE_URL);
+
+	delete process.env.UPDATE_BALANCE_SQS_QUEUE_URL;
+	expect(getUpdateBalanceProducerQueueUrl()).toBe(LEGACY_FIFO_QUEUE_URL);
+
+	process.env.UPDATE_BALANCE_SQS_QUEUE_URL = "";
+	expect(getUpdateBalanceProducerQueueUrl()).toBe(LEGACY_FIFO_QUEUE_URL);
+});
+
+test("workers and readiness include each Track and UpdateBalance queue once", () => {
+	process.env.TRACK_ASYNC_STANDARD_SQS_QUEUE_URL = STANDARD_QUEUE_URL;
+	process.env.UPDATE_BALANCE_SQS_QUEUE_URL = UPDATE_BALANCE_QUEUE_URL;
+	process.env.TRACK_ASYNC_SQS_QUEUE_URL = LEGACY_FIFO_QUEUE_URL;
+
+	expect(getTrackAndUpdateBalanceWorkerQueueUrls()).toEqual([
+		STANDARD_QUEUE_URL,
+		UPDATE_BALANCE_QUEUE_URL,
+		LEGACY_FIFO_QUEUE_URL,
+	]);
+	for (const queueUrl of [
+		STANDARD_QUEUE_URL,
+		UPDATE_BALANCE_QUEUE_URL,
+		LEGACY_FIFO_QUEUE_URL,
+	]) {
+		expect(
+			getBlueGreenQueueUrls().filter(
+				(configuredQueueUrl) => configuredQueueUrl === queueUrl,
+			),
+		).toHaveLength(1);
+	}
+
+	process.env.UPDATE_BALANCE_SQS_QUEUE_URL = LEGACY_FIFO_QUEUE_URL;
+	expect(getTrackAndUpdateBalanceWorkerQueueUrls()).toEqual([
+		STANDARD_QUEUE_URL,
+		LEGACY_FIFO_QUEUE_URL,
+	]);
 });
 
 test("sends async Track to Standard without FIFO-only identifiers", async () => {
