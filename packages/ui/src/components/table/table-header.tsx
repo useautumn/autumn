@@ -15,7 +15,7 @@ function SortIcon({ sortDirection }: { sortDirection: string | false }) {
 			<ChevronUpIcon
 				aria-hidden="true"
 				className="shrink-0 text-foreground"
-				size={16}
+				size={12}
 			/>
 		);
 	}
@@ -27,7 +27,7 @@ function SortIcon({ sortDirection }: { sortDirection: string | false }) {
 				"shrink-0",
 				sortDirection ? "text-foreground" : "opacity-30",
 			)}
-			size={16}
+			size={12}
 		/>
 	);
 }
@@ -53,7 +53,7 @@ function HeaderContent<T>({
 	return (
 		<button
 			className={cn(
-				"flex h-full select-none items-center gap-1",
+				"flex min-w-0 select-none items-center gap-1",
 				enableSorting && "cursor-pointer",
 			)}
 			onClick={
@@ -67,7 +67,9 @@ function HeaderContent<T>({
 			}}
 			type="button"
 		>
-			{flexRender(header.column.columnDef.header, header.getContext())}
+			<span className="truncate">
+				{flexRender(header.column.columnDef.header, header.getContext())}
+			</span>
 			{enableSorting && (
 				<SortIcon sortDirection={header.column.getIsSorted()} />
 			)}
