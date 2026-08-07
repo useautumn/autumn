@@ -19,7 +19,7 @@ import type {
 	AttachParamsV1Input,
 } from "@autumn/shared";
 import { customerEntitlements, planLicenses } from "@autumn/shared";
-import { runUpdatePlanMigration } from "@tests/integration/billing/migrations-v2/utils/runUpdatePlanMigration";
+import { runChunkedMigration } from "@tests/integration/billing/migrations-v2/utils/runChunkedMigration";
 import { getLicenseDbState } from "@tests/integration/licenses/licenseTestUtils";
 import { TestFeature } from "@tests/setup/v2Features";
 import { items } from "@tests/utils/fixtures/items";
@@ -150,11 +150,10 @@ test.concurrent(
 		expect(catalogRowBefore[0]?.is_custom).toBe(false);
 
 		// ── Migrate: customize the license, scoped to the TARGET plan only ──
-		await runUpdatePlanMigration({
+		await runChunkedMigration({
 			ctx,
 			migrationClient: target.autumnV2_2,
 			migrationId: `${ID_PREFIX}-migration`,
-			customerId: TARGET_CUSTOMER,
 			filter: { customer: { plan: { plan_id: targetPlan.id, custom: false } } },
 			operations: {
 				customer: [
