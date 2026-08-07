@@ -226,7 +226,7 @@ export class CusBatchService {
 			search,
 			plans,
 			processors,
-			createdAtRange: created_at_range,
+			createdAtRangeFilter: created_at_range,
 			cusProductLimit,
 			sortOrder: query.sort_order,
 		});
@@ -399,7 +399,7 @@ export class CusBatchService {
 			processors: requiresResolveStep
 				? undefined
 				: parseDashboardProcessorFilter(filters?.processor),
-			createdAtRange: requiresResolveStep
+			createdAtRangeFilter: requiresResolveStep
 				? undefined
 				: filters?.created_at_range,
 			cusProductLimit,

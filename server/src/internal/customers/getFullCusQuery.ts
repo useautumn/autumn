@@ -1040,7 +1040,7 @@ export const getCustomerListFilterSql = ({
 	noneFilter,
 	productVersionFilters,
 	intervalFilters,
-	createdAtRange,
+	createdAtRangeFilter,
 }: {
 	internalCustomerIds?: string[];
 	orgId?: string;
@@ -1053,16 +1053,16 @@ export const getCustomerListFilterSql = ({
 	noneFilter?: boolean;
 	productVersionFilters?: DashboardProductVersionFilter[];
 	intervalFilters?: DashboardIntervalFilter[];
-	createdAtRange?: CreatedAtRange;
+	createdAtRangeFilter?: CreatedAtRange;
 }) => {
 	const filters = [];
 
-	if (createdAtRange?.start !== undefined) {
-		filters.push(sql`AND c.created_at >= ${createdAtRange.start}`);
+	if (createdAtRangeFilter?.start !== undefined) {
+		filters.push(sql`AND c.created_at >= ${createdAtRangeFilter.start}`);
 	}
 
-	if (createdAtRange?.end !== undefined) {
-		filters.push(sql`AND c.created_at <= ${createdAtRange.end}`);
+	if (createdAtRangeFilter?.end !== undefined) {
+		filters.push(sql`AND c.created_at <= ${createdAtRangeFilter.end}`);
 	}
 
 	if (internalCustomerIds && internalCustomerIds.length > 0) {

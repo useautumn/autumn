@@ -44,7 +44,7 @@ export type CursorPaginatedFullCusQueryArgs = {
 	noneFilter?: boolean;
 	productVersionFilters?: DashboardProductVersionFilter[];
 	intervalFilters?: DashboardIntervalFilter[];
-	createdAtRange?: CreatedAtRange;
+	createdAtRangeFilter?: CreatedAtRange;
 	cusProductLimit: number;
 	customerId?: string;
 	/** Emit products_page / products_total_count. Dashboard only. */
@@ -95,7 +95,7 @@ export const getCursorPaginatedFullCusQuery = ({
 	noneFilter,
 	productVersionFilters,
 	intervalFilters,
-	createdAtRange,
+	createdAtRangeFilter,
 	cusProductLimit,
 	customerId,
 	withProductsPage = false,
@@ -129,7 +129,7 @@ export const getCursorPaginatedFullCusQuery = ({
 		noneFilter,
 		productVersionFilters,
 		intervalFilters,
-		createdAtRange,
+		createdAtRangeFilter,
 	});
 
 	const orderDirection = sql.raw(sortOrder === "asc" ? "ASC" : "DESC");
