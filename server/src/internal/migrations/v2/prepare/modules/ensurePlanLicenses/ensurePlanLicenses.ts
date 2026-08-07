@@ -65,8 +65,7 @@ const getMatchedParentProducts = async ({
  */
 export const ensurePlanLicenses: PrepareModule<
 	EnsurePlanLicensesInput,
-	EnsurePlanLicensesResult,
-	"ensure_plan_licenses"
+	EnsurePlanLicensesResult
 > = {
 	kind: "ensure_plan_licenses",
 

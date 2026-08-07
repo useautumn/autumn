@@ -1,26 +1,32 @@
 import type { Operations } from "@autumn/shared";
 import type { UpdatePlanOp } from "@autumn/shared/api/migrations/operations/customer/updatePlan/index.js";
-import type { EnsurePlanLicensesInput } from "./modules/ensurePlanLicenses/ensurePlanLicenses.js";
 import { ensurePlanLicenses } from "./modules/ensurePlanLicenses/ensurePlanLicenses.js";
-import type {
-	EnsurePricesAndEntitlementsInput,
-	ensurePricesAndEntitlements,
-} from "./modules/ensurePricesAndEntitlements/index.js";
+import type { ensurePricesAndEntitlements } from "./modules/ensurePricesAndEntitlements/index.js";
 import { ensurePricesAndEntitlements as ensurePricesAndEntitlementsModule } from "./modules/ensurePricesAndEntitlements/index.js";
+import type { PrepareModule } from "./types/prepareModule.js";
 import { buildPrepareModuleKey } from "./utils/index.js";
 
-/** One instance of a prep module to run. */
+/** One instance of a prep module to run, with `module` and `input` correlated
+ * per member — building the pair separately would let them drift apart. */
+type InstanceOf<Module> = Module extends PrepareModule<
+	infer Input,
+	infer _Result,
+	string
+>
+	? { key: string; module: Module; input: Input }
+	: never;
+
 export type ImplicitPrepInstance =
-	| {
-			key: string;
-			module: typeof ensurePricesAndEntitlements;
-			input: EnsurePricesAndEntitlementsInput;
-	  }
-	| {
-			key: string;
-			module: typeof ensurePlanLicenses;
-			input: EnsurePlanLicensesInput;
-	  };
+	| InstanceOf<typeof ensurePricesAndEntitlements>
+	| InstanceOf<typeof ensurePlanLicenses>;
+
+/** The union with its per-member correlation erased. The orchestrator runs
+ * every member the same way and is blind to result shapes by design. */
+export type PrepInstance = {
+	key: string;
+	module: PrepareModule<unknown, unknown>;
+	input: unknown;
+};
 
 /**
  * Pure walker. Takes an `operations` object directly so scripts and
