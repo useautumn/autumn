@@ -53,26 +53,26 @@ export const selectLicenseAddCandidateRows = async ({
 
 	const rows = await db.execute(sql`
 		SELECT
-			seat.id AS "customerProductId",
-			seat.internal_customer_id AS "internalCustomerId",
+			assignment.id AS "customerProductId",
+			assignment.internal_customer_id AS "internalCustomerId",
 			customer.id AS "customerId",
 			entity.id AS "entityId",
-			seat.internal_entity_id AS "internalEntityId",
+			assignment.internal_entity_id AS "internalEntityId",
 			e.id AS "entitlementId",
 			e.internal_feature_id AS "internalFeatureId",
 			f.id AS "featureId",
-			seat.status AS "status",
-			seat.starts_at AS "startsAt",
-			seat.canceled_at AS "canceledAt",
-			seat.ended_at AS "endedAt",
-			seat.trial_ends_at AS "trialEndsAt"
-		FROM customer_products AS seat
+			assignment.status AS "status",
+			assignment.starts_at AS "startsAt",
+			assignment.canceled_at AS "canceledAt",
+			assignment.ended_at AS "endedAt",
+			assignment.trial_ends_at AS "trialEndsAt"
+		FROM customer_products AS assignment
 		JOIN LATERAL (
 			SELECT pool.*
 			FROM customer_licenses AS pool
 			JOIN customer_products AS pool_parent
 				ON pool_parent.id = pool.parent_customer_product_id
-			WHERE pool.link_id = seat.customer_license_link_id
+			WHERE pool.link_id = assignment.customer_license_link_id
 			ORDER BY (pool_parent.status IN (${sqlList({ values: [...MIGRATABLE_STATUSES] })})) DESC,
 				pool.created_at DESC
 			LIMIT 1
@@ -86,23 +86,23 @@ export const selectLicenseAddCandidateRows = async ({
 		INNER JOIN features AS f
 			ON f.internal_id = e.internal_feature_id
 		INNER JOIN customers AS customer
-			ON customer.internal_id = seat.internal_customer_id
+			ON customer.internal_id = assignment.internal_customer_id
 		LEFT JOIN entities AS entity
-			ON entity.internal_id = seat.internal_entity_id
-		WHERE seat.internal_customer_id = ANY(${sql.param(internalCustomerIds)}::text[])
-			AND seat.customer_license_link_id IS NOT NULL
-			AND seat.internal_entity_id IS NOT NULL
-			AND seat.status IN (${sqlList({ values: [...MIGRATABLE_STATUSES] })})
+			ON entity.internal_id = assignment.internal_entity_id
+		WHERE assignment.internal_customer_id = ANY(${sql.param(internalCustomerIds)}::text[])
+			AND assignment.customer_license_link_id IS NOT NULL
+			AND assignment.internal_entity_id IS NOT NULL
+			AND assignment.status IN (${sqlList({ values: [...MIGRATABLE_STATUSES] })})
 			AND e.internal_feature_id = ${internalFeatureId}
 			AND ${operationScopeSql({ scope })}
-			${afterCustomerProductId ? sql`AND seat.id > ${afterCustomerProductId}` : sql``}
+			${afterCustomerProductId ? sql`AND assignment.id > ${afterCustomerProductId}` : sql``}
 			AND NOT EXISTS (
 				SELECT 1
 				FROM customer_entitlements AS existing
-				WHERE existing.customer_product_id = seat.id
+				WHERE existing.customer_product_id = assignment.id
 					AND existing.internal_feature_id = e.internal_feature_id
 			)
-		ORDER BY seat.id
+		ORDER BY assignment.id
 		LIMIT ${limit}
 	`);
 

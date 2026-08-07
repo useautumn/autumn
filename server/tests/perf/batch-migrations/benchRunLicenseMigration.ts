@@ -4,7 +4,7 @@
  * seed pools + assignments → prepareMigration → shouldRunBatchLane →
  * runBatchMigrationChunk(maxPages: 1).
  *
- *   bun tests/perf/batch-migrations/benchRunLicenseMigration.ts --seats 3 --pages all
+ *   bun tests/perf/batch-migrations/benchRunLicenseMigration.ts --assignments 3 --pages all
  *   bun tests/perf/batch-migrations/benchRunLicenseMigration.ts --cleanup
  *
  * Correctness is asserted after the run: every live assignment under a
@@ -42,7 +42,7 @@ const parseArgs = () => {
 	};
 	const pagesArg = get("--pages") ?? "all";
 	return {
-		seats: Number(get("--seats") ?? "3"),
+		assignmentsPerCustomer: Number(get("--assignments") ?? "3"),
 		customers: Number(get("--customers") ?? "1000"),
 		pages: pagesArg === "all" ? Number.POSITIVE_INFINITY : Number(pagesArg),
 		cleanup: args.includes("--cleanup"),
@@ -50,7 +50,7 @@ const parseArgs = () => {
 };
 
 const main = async () => {
-	const { seats, customers, pages, cleanup } = parseArgs();
+	const { assignmentsPerCustomer, customers, pages, cleanup } = parseArgs();
 	const { ctx, org } = await getBenchContext();
 	const { db } = ctx;
 
@@ -109,7 +109,7 @@ const main = async () => {
 	await seedBenchLicenses({
 		db,
 		count: customers,
-		seatsPerCustomer: seats,
+		assignmentsPerCustomer,
 		licenseInternalProductId: link.license_internal_product_id,
 		licenseProductId: link.license_product_id,
 		catalogPlanLicenseId: link.id,
@@ -118,7 +118,7 @@ const main = async () => {
 		env: ctx.env,
 	});
 	console.log(
-		`bench: seeded ${customers.toLocaleString()} pools × ${seats} seats in ${Date.now() - seedStarted}ms`,
+		`bench: seeded ${customers.toLocaleString()} pools × ${assignmentsPerCustomer} assignments in ${Date.now() - seedStarted}ms`,
 	);
 
 	const migrationId = "bench-mig-license";
@@ -221,7 +221,7 @@ const main = async () => {
 	}
 
 	const totalMs = Date.now() - runStarted;
-	const expectedSeats = customers * seats;
+	const expectedAssignments = customers * assignmentsPerCustomer;
 
 	// Correctness: every live assignment gained exactly one row for the feature.
 	const [counts]: Array<{
@@ -252,19 +252,19 @@ const main = async () => {
 		`bench: ${pageTimings.length} pages, ${totalProcessed.toLocaleString()} customers in ${totalMs}ms`,
 	);
 	console.log(
-		`bench: ${Number(counts.with_feature).toLocaleString()}/${expectedSeats.toLocaleString()} assignments carry '${LICENSE_FEATURE_ID}'`,
+		`bench: ${Number(counts.with_feature).toLocaleString()}/${expectedAssignments.toLocaleString()} assignments carry '${LICENSE_FEATURE_ID}'`,
 	);
 	console.log(
-		`bench: ${totalMs > 0 ? Math.round((expectedSeats / totalMs) * 1000).toLocaleString() : 0} assignments/s`,
+		`bench: ${totalMs > 0 ? Math.round((expectedAssignments / totalMs) * 1000).toLocaleString() : 0} assignments/s`,
 	);
 
 	const correct =
-		Number(counts.with_feature) === expectedSeats &&
+		Number(counts.with_feature) === expectedAssignments &&
 		Number(counts.duplicates) === 0;
 	console.log(
 		correct
 			? "bench: CORRECT — every assignment has exactly one row"
-			: `bench: INCORRECT — ${counts.duplicates} duplicated, ${expectedSeats - Number(counts.with_feature)} missing`,
+			: `bench: INCORRECT — ${counts.duplicates} duplicated, ${expectedAssignments - Number(counts.with_feature)} missing`,
 	);
 	process.exit(correct ? 0 : 1);
 };

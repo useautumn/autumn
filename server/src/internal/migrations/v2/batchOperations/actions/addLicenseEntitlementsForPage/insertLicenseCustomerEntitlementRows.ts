@@ -85,15 +85,15 @@ export const insertLicenseCustomerEntitlementRows = async ({
 				new_row.customer_id,
 				new_row.feature_id,
 				NULL,
-				(seat.status = ${CusProductStatus.Expired})
+				(assignment.status = ${CusProductStatus.Expired})
 			FROM new_rows AS new_row
 			-- Re-assert at insert time: assignments whose row changed since the
 			-- select (released, expired) drop out.
-			INNER JOIN customer_products AS seat
-				ON seat.id = new_row.customer_product_id
-				AND seat.customer_license_link_id IS NOT NULL
-				AND seat.internal_entity_id IS NOT NULL
-				AND seat.status IN (${sqlList({ values: [...MIGRATABLE_STATUSES] })})
+			INNER JOIN customer_products AS assignment
+				ON assignment.id = new_row.customer_product_id
+				AND assignment.customer_license_link_id IS NOT NULL
+				AND assignment.internal_entity_id IS NOT NULL
+				AND assignment.status IN (${sqlList({ values: [...MIGRATABLE_STATUSES] })})
 			ON CONFLICT (id) DO NOTHING
 			RETURNING id
 		)

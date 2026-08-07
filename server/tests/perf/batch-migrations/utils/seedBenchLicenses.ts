@@ -13,14 +13,14 @@ export const BENCH_ASSIGNMENT_PREFIX = "cp_bench_seat_";
 export const BENCH_ENTITY_PREFIX = "ety_bench_";
 
 /**
- * Seeds one pool per bench customer plus `seatsPerCustomer` entity-scoped
+ * Seeds one pool per bench customer plus `assignmentsPerCustomer` entity-scoped
  * assignments under it — the shape a license customize migration fans out to.
  * Pools start on the catalog link so a bench run measures the real repoint.
  */
 export const seedBenchLicenses = async ({
 	db,
 	count,
-	seatsPerCustomer,
+	assignmentsPerCustomer,
 	licenseInternalProductId,
 	licenseProductId,
 	catalogPlanLicenseId,
@@ -30,7 +30,7 @@ export const seedBenchLicenses = async ({
 }: {
 	db: DrizzleCli;
 	count: number;
-	seatsPerCustomer: number;
+	assignmentsPerCustomer: number;
 	licenseInternalProductId: string;
 	licenseProductId: string;
 	catalogPlanLicenseId: string;
@@ -53,7 +53,7 @@ export const seedBenchLicenses = async ({
 			${BENCH_CUSTOMER_PRODUCT_PREFIX} || i,
 			${licenseInternalProductId},
 			${catalogPlanLicenseId},
-			${seatsPerCustomer},
+			${assignmentsPerCustomer},
 			0,
 			0,
 			${startsAt},
@@ -79,7 +79,7 @@ export const seedBenchLicenses = async ({
 			${env},
 			${orgId},
 			false
-		FROM ${series}, GENERATE_SERIES(1, ${seatsPerCustomer}) AS s
+		FROM ${series}, GENERATE_SERIES(1, ${assignmentsPerCustomer}) AS s
 		ON CONFLICT DO NOTHING
 	`);
 
@@ -102,7 +102,7 @@ export const seedBenchLicenses = async ({
 			${BENCH_LICENSE_LINK_PREFIX} || i,
 			${BENCH_ENTITY_PREFIX} || i || '_' || s,
 			'{}'::jsonb[]
-		FROM ${series}, GENERATE_SERIES(1, ${seatsPerCustomer}) AS s
+		FROM ${series}, GENERATE_SERIES(1, ${assignmentsPerCustomer}) AS s
 		ON CONFLICT DO NOTHING
 	`);
 };
