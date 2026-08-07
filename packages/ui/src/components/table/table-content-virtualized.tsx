@@ -19,10 +19,10 @@ export function TableContentVirtualized({
 }) {
 	const context = useTableContext();
 	const {
+		flexibleTableColumns,
 		enableColumnVisibility,
 		columnVisibilityInToolbar,
 		columnVisibilityClassName,
-		enableSelection,
 		table,
 		virtualization,
 	} = context;
@@ -82,17 +82,6 @@ export function TableContentVirtualized({
 	// Using full column IDs ensures any visibility change is detected
 	const visibleColumnKey = visibleColumns.map((col) => col.id).join(",");
 
-	// Header and body are separate fixed-layout tables; a shared colgroup pins
-	// identical column widths in both, immune to colSpan spacer rows.
-	const columnWidths = (
-		<colgroup>
-			{enableSelection && <col style={{ width: "50px" }} />}
-			{visibleColumns.map((column) => (
-				<col key={column.id} style={{ width: `${column.getSize()}px` }} />
-			))}
-		</colgroup>
-	);
-
 	// Provide updated context with scroll container to children
 	const contextWithRef = {
 		...context,
@@ -139,8 +128,10 @@ export function TableContentVirtualized({
 								<TableColumnVisibility />
 							</div>
 						)}
-						<Table className="p-0 w-full rounded-t-lg">
-							{columnWidths}
+						<Table
+							className="p-0 w-full rounded-t-lg"
+							flexibleTableColumns={flexibleTableColumns}
+						>
 							<TableHeader hideBorder />
 						</Table>
 					</div>
@@ -161,8 +152,11 @@ export function TableContentVirtualized({
 						scrollbarGutter,
 					}}
 				>
-					<Table className="p-0 w-full" style={{ minWidth: `${totalWidth}px` }}>
-						{columnWidths}
+					<Table
+						className="p-0 w-full"
+						flexibleTableColumns={flexibleTableColumns}
+						style={{ minWidth: `${totalWidth}px` }}
+					>
 						{React.Children.map(children, (child) =>
 							React.isValidElement(child)
 								? React.cloneElement(child, { key: visibleColumnKey })
