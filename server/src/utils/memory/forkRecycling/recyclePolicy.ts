@@ -21,25 +21,31 @@ export const shouldRequestRecycle = ({
 	minAgeMs: number;
 }): boolean => rssBytes >= thresholdBytes && ageMs >= minAgeMs;
 
-export const getForkRecycleConfig = () => {
-	const thresholdMb = Number(process.env.FORK_RECYCLE_RSS_MB);
-	const minAgeMs = Number(process.env.FORK_RECYCLE_MIN_AGE_MS);
-	const checkIntervalMs = Number(process.env.FORK_RECYCLE_CHECK_INTERVAL_MS);
-	const drainTimeoutMs = Number(process.env.FORK_RECYCLE_DRAIN_TIMEOUT_MS);
+// Zero/negative timings would hot-loop checks or defeat the drain bounds.
+const positiveOr = (raw: string | undefined, fallback: number): number => {
+	const value = Number(raw);
+	return Number.isFinite(value) && value > 0 ? value : fallback;
+};
 
+export const getForkRecycleConfig = () => {
 	return {
 		enabled: process.env.FORK_RECYCLE_DISABLED !== "true",
-		rssThresholdBytes: Number.isFinite(thresholdMb)
-			? thresholdMb * MB
-			: FORK_RECYCLE_DEFAULTS.rssThresholdBytes,
-		minAgeMs: Number.isFinite(minAgeMs)
-			? minAgeMs
-			: FORK_RECYCLE_DEFAULTS.minAgeMs,
-		checkIntervalMs: Number.isFinite(checkIntervalMs)
-			? checkIntervalMs
-			: FORK_RECYCLE_DEFAULTS.checkIntervalMs,
-		drainTimeoutMs: Number.isFinite(drainTimeoutMs)
-			? drainTimeoutMs
-			: FORK_RECYCLE_DEFAULTS.drainTimeoutMs,
+		rssThresholdBytes:
+			positiveOr(
+				process.env.FORK_RECYCLE_RSS_MB,
+				FORK_RECYCLE_DEFAULTS.rssThresholdBytes / MB,
+			) * MB,
+		minAgeMs: positiveOr(
+			process.env.FORK_RECYCLE_MIN_AGE_MS,
+			FORK_RECYCLE_DEFAULTS.minAgeMs,
+		),
+		checkIntervalMs: positiveOr(
+			process.env.FORK_RECYCLE_CHECK_INTERVAL_MS,
+			FORK_RECYCLE_DEFAULTS.checkIntervalMs,
+		),
+		drainTimeoutMs: positiveOr(
+			process.env.FORK_RECYCLE_DRAIN_TIMEOUT_MS,
+			FORK_RECYCLE_DEFAULTS.drainTimeoutMs,
+		),
 	};
 };

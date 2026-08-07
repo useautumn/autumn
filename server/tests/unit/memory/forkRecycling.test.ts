@@ -1,9 +1,12 @@
-import { afterEach, describe, expect, test } from "bun:test";
+import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import {
 	createRecycleCoordinator,
 	type RecycleCoordinator,
 } from "@/utils/memory/forkRecycling/recycleCoordinator.js";
-import { shouldRequestRecycle } from "@/utils/memory/forkRecycling/recyclePolicy.js";
+import {
+	getForkRecycleConfig,
+	shouldRequestRecycle,
+} from "@/utils/memory/forkRecycling/recyclePolicy.js";
 import { createWorkerDrainer } from "@/utils/memory/forkRecycling/workerDrainer.js";
 
 const MB = 1024 * 1024;
@@ -26,6 +29,64 @@ describe("shouldRequestRecycle", () => {
 
 	test("never recycles a young fork regardless of rss", () => {
 		expect(shouldRequestRecycle({ ...base, ageMs: 5 * 60_000 })).toBe(false);
+	});
+});
+
+describe("getForkRecycleConfig", () => {
+	const ENV_KEYS = [
+		"FORK_RECYCLE_RSS_MB",
+		"FORK_RECYCLE_MIN_AGE_MS",
+		"FORK_RECYCLE_CHECK_INTERVAL_MS",
+		"FORK_RECYCLE_DRAIN_TIMEOUT_MS",
+		"FORK_RECYCLE_DISABLED",
+	] as const;
+	const saved = new Map<string, string | undefined>();
+
+	beforeEach(() => {
+		for (const key of ENV_KEYS) {
+			saved.set(key, process.env[key]);
+			delete process.env[key];
+		}
+	});
+
+	afterEach(() => {
+		for (const key of ENV_KEYS) {
+			const value = saved.get(key);
+			if (value === undefined) delete process.env[key];
+			else process.env[key] = value;
+		}
+	});
+
+	test("defaults apply when nothing is set", () => {
+		const config = getForkRecycleConfig();
+		expect(config.enabled).toBe(true);
+		expect(config.rssThresholdBytes).toBe(3072 * MB);
+		expect(config.minAgeMs).toBe(30 * 60_000);
+	});
+
+	test("valid overrides are honored", () => {
+		process.env.FORK_RECYCLE_RSS_MB = "1536";
+		process.env.FORK_RECYCLE_CHECK_INTERVAL_MS = "5000";
+		const config = getForkRecycleConfig();
+		expect(config.rssThresholdBytes).toBe(1536 * MB);
+		expect(config.checkIntervalMs).toBe(5000);
+	});
+
+	test("zero, negative, and garbage values fall back to defaults", () => {
+		process.env.FORK_RECYCLE_CHECK_INTERVAL_MS = "0";
+		process.env.FORK_RECYCLE_DRAIN_TIMEOUT_MS = "-5";
+		process.env.FORK_RECYCLE_RSS_MB = "not-a-number";
+		const config = getForkRecycleConfig();
+		expect(config.checkIntervalMs).toBe(30_000);
+		expect(config.drainTimeoutMs).toBe(30_000);
+		expect(config.rssThresholdBytes).toBe(3072 * MB);
+	});
+
+	test("FORK_RECYCLE_DISABLED=true turns recycling off", () => {
+		process.env.FORK_RECYCLE_DISABLED = "true";
+		expect(getForkRecycleConfig().enabled).toBe(false);
+		process.env.FORK_RECYCLE_DISABLED = "false";
+		expect(getForkRecycleConfig().enabled).toBe(true);
 	});
 });
 
@@ -276,6 +337,49 @@ describe("createRecycleCoordinator", () => {
 		expect(drained).toEqual(["w1"]);
 	});
 
+	test("a hung crash respawn is killed at its boot deadline and drains release", async () => {
+		const { coordinator, forked, drained, killed, respawned } = createHarness({
+			bootTimeoutMs: 25,
+		});
+
+		// Plain crash: respawn boots... and hangs (never listens).
+		coordinator.handleWorkerExit({ workerId: "w-crashed" });
+		coordinator.handleRecycleRequest({ workerId: "w1" });
+		coordinator.handleWorkerListening({ workerId: forked[0] });
+		expect(drained).toHaveLength(0);
+
+		// One deadline generation only — the recursion re-arms per respawn.
+		await new Promise((resolve) => setTimeout(resolve, 38));
+
+		// The hung respawn was killed and replaced; second respawn listening
+		// releases the deferred drain.
+		expect(killed).toEqual(["respawn-of-w-crashed"]);
+		expect(respawned).toEqual(["w-crashed", "respawn-of-w-crashed"]);
+		coordinator.handleWorkerListening({
+			workerId: "respawn-of-respawn-of-w-crashed",
+		});
+		expect(drained).toEqual(["w1"]);
+	});
+
+	test("replacement crashing while the drain is deferred aborts without a respawn (capacity intact)", () => {
+		const { coordinator, forked, drained, aborted, respawned } =
+			createHarness();
+
+		coordinator.handleWorkerExit({ workerId: "w-crashed" });
+		coordinator.handleRecycleRequest({ workerId: "w1" });
+		coordinator.handleWorkerListening({ workerId: forked[0] });
+		// Deferred; now the listening replacement itself dies.
+		coordinator.handleWorkerExit({ workerId: forked[0] });
+
+		// Old worker never got its drain and still serves: no respawn owed
+		// beyond the original crash's, and w1 is re-armed to ask again.
+		expect(respawned).toEqual(["w-crashed"]);
+		expect(aborted).toEqual(["w1"]);
+		expect(drained).toHaveLength(0);
+		coordinator.handleRecycleRequest({ workerId: "w1" });
+		expect(forked).toHaveLength(2);
+	});
+
 	test("old worker crashing while its drain is deferred completes the cycle instead of wedging", () => {
 		const { coordinator, forked, drained } = createHarness();
 
@@ -326,7 +430,8 @@ describe("createRecycleCoordinator", () => {
 
 		coordinator.handleRecycleRequest({ workerId: "w1" });
 		coordinator.handleWorkerExit({ workerId: "w1" });
-		await new Promise((resolve) => setTimeout(resolve, 60));
+		// One deadline generation: the refill's own deadline re-arms later.
+		await new Promise((resolve) => setTimeout(resolve, 38));
 
 		expect(killed).toEqual([forked[0]]);
 		expect(respawned).toEqual([forked[0]]);

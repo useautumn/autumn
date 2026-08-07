@@ -55,9 +55,32 @@ export const createRecycleCoordinator = ({
 	// stacks on top of reduced capacity.
 	const bootingRespawnIds = new Set<string>();
 
+	const respawnBootDeadlines = new Map<string, ReturnType<typeof setTimeout>>();
+
+	const untrackBootingRespawn = (workerId: string): boolean => {
+		const deadline = respawnBootDeadlines.get(workerId);
+		if (deadline) clearTimeout(deadline);
+		respawnBootDeadlines.delete(workerId);
+		return bootingRespawnIds.delete(workerId);
+	};
+
 	const respawnTracked = (workerId: string) => {
 		const newWorkerId = respawn(workerId);
-		if (newWorkerId !== undefined) bootingRespawnIds.add(newWorkerId);
+		if (newWorkerId === undefined) return;
+		bootingRespawnIds.add(newWorkerId);
+		// A respawn that hangs before `listening` would defer drains forever.
+		const deadline = setTimeout(() => {
+			if (!untrackBootingRespawn(newWorkerId)) return;
+			log(
+				`[ForkRecycle] Crash respawn ${newWorkerId} not listening after ${replacementBootTimeoutMs}ms; killing and replacing it`,
+			);
+			discardedWorkerIds.add(newWorkerId);
+			killWorker(newWorkerId);
+			respawnTracked(newWorkerId);
+			releaseDeferredDrainIfClear();
+		}, replacementBootTimeoutMs);
+		deadline.unref?.();
+		respawnBootDeadlines.set(newWorkerId, deadline);
 	};
 
 	const sendDrainNow = (cycle: RecycleCycle) => {
@@ -136,7 +159,7 @@ export const createRecycleCoordinator = ({
 		},
 
 		handleWorkerListening: ({ workerId }) => {
-			if (bootingRespawnIds.delete(workerId)) {
+			if (untrackBootingRespawn(workerId)) {
 				releaseDeferredDrainIfClear();
 				return;
 			}
@@ -170,7 +193,7 @@ export const createRecycleCoordinator = ({
 			// A crash respawn dying while booting falls through to the plain-crash
 			// branch below (which respawns again); the deferred-drain release runs
 			// only after that branch has tracked the new respawn.
-			const wasBootingRespawn = bootingRespawnIds.delete(workerId);
+			const wasBootingRespawn = untrackBootingRespawn(workerId);
 			const wasExpected = (() => {
 				if (discardedWorkerIds.has(workerId)) {
 					// A hung replacement we already killed and accounted for.

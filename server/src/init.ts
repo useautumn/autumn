@@ -171,6 +171,8 @@ if (process.env.NODE_ENV === "development") {
 			// True = a coordinated recycle finished; the replacement is already
 			// serving and the coordinator respawns crashes itself.
 			if (forkRecycling.handleExit(worker)) return;
+			// Intentional SIGTERM exits during shutdown are not crashes.
+			if (shuttingDown) return;
 			logger.error("WORKER DIED", {
 				pid: worker.process.pid,
 				code,

@@ -82,7 +82,14 @@ export const createWorkerDrainer = ({
 			};
 
 			const armDeadline = () => {
-				deadline = setTimeout(onDeadline, drainTimeoutMs);
+				// Cap each arm at the remaining max-drain budget so the hard bound
+				// cannot be overshot by an oversized interval.
+				const remainingMs = maxDrainMs - (Date.now() - drainStartedAt);
+				const intervalMs = Math.max(
+					1,
+					Math.min(drainTimeoutMs, Math.max(remainingMs, 1)),
+				);
+				deadline = setTimeout(onDeadline, intervalMs);
 				deadline.unref?.();
 			};
 			armDeadline();
