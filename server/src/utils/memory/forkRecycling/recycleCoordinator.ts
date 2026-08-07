@@ -87,11 +87,17 @@ export const createRecycleCoordinator = ({
 		respawnBootDeadlines.set(newWorkerId, deadline);
 	};
 
-	let drainCompletionDeadline: ReturnType<typeof setTimeout> | null = null;
+	// Keyed by drained worker, not by cycle: a cycle can be replaced while its
+	// old fork is still draining, and that fork still needs its deadline.
+	const drainCompletionDeadlines = new Map<
+		string,
+		ReturnType<typeof setTimeout>
+	>();
 
-	const clearDrainCompletionDeadline = () => {
-		if (drainCompletionDeadline) clearTimeout(drainCompletionDeadline);
-		drainCompletionDeadline = null;
+	const clearDrainCompletionDeadline = (workerId: string) => {
+		const deadline = drainCompletionDeadlines.get(workerId);
+		if (deadline) clearTimeout(deadline);
+		drainCompletionDeadlines.delete(workerId);
 	};
 
 	const sendDrainNow = (cycle: RecycleCycle) => {
@@ -105,14 +111,15 @@ export const createRecycleCoordinator = ({
 		// A lost drain message (or wedged drainer) must not hold the queue
 		// forever. The replacement is already serving, so past the worker's own
 		// drain bounds the old fork is killed and its exit completes the cycle.
-		drainCompletionDeadline = setTimeout(() => {
-			if (activeCycle?.oldWorkerId !== cycle.oldWorkerId) return;
+		const deadline = setTimeout(() => {
+			drainCompletionDeadlines.delete(cycle.oldWorkerId);
 			log(
 				`[ForkRecycle] Worker ${cycle.oldWorkerId} did not exit within ${drainCompletionTimeoutMs}ms of its drain; killing it (replacement already serving)`,
 			);
 			killWorker(cycle.oldWorkerId);
 		}, drainCompletionTimeoutMs);
-		drainCompletionDeadline.unref?.();
+		deadline.unref?.();
+		drainCompletionDeadlines.set(cycle.oldWorkerId, deadline);
 	};
 
 	const releaseDeferredDrainIfClear = () => {
@@ -163,7 +170,6 @@ export const createRecycleCoordinator = ({
 
 	const startNextPendingCycle = () => {
 		clearBootDeadline();
-		clearDrainCompletionDeadline();
 		activeCycle = null;
 		const next = pendingWorkerIds.shift();
 		if (next !== undefined) startCycle(next);
@@ -213,6 +219,11 @@ export const createRecycleCoordinator = ({
 		},
 
 		handleWorkerExit: ({ workerId }) => {
+			clearDrainCompletionDeadline(workerId);
+			// Every branch below must see a dead worker gone from the queue, or a
+			// later cycle forks a replacement for a fork that no longer exists.
+			const pendingIndex = pendingWorkerIds.indexOf(workerId);
+			if (pendingIndex !== -1) pendingWorkerIds.splice(pendingIndex, 1);
 			// A crash respawn dying while booting falls through to the plain-crash
 			// branch below (which respawns again); the deferred-drain release runs
 			// only after that branch has tracked the new respawn.
@@ -283,8 +294,6 @@ export const createRecycleCoordinator = ({
 				}
 
 				requestedWorkerIds.delete(workerId);
-				const pendingIndex = pendingWorkerIds.indexOf(workerId);
-				if (pendingIndex !== -1) pendingWorkerIds.splice(pendingIndex, 1);
 				respawnTracked(workerId);
 				return false;
 			})();
