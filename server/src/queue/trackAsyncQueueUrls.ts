@@ -4,7 +4,7 @@ export const getAsyncTrackProducerQueueUrl = ({
 }: {
 	standardQueueUrl?: string;
 	legacyFifoQueueUrl?: string;
-} = {}): string | undefined => standardQueueUrl ?? legacyFifoQueueUrl;
+} = {}): string | undefined => standardQueueUrl || legacyFifoQueueUrl;
 
 export const getAsyncTrackWorkerQueueUrls = ({
 	standardQueueUrl = process.env.TRACK_ASYNC_STANDARD_SQS_QUEUE_URL,

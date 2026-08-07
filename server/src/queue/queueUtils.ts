@@ -17,7 +17,7 @@ import type { GenerateFeatureDisplayPayload } from "@/internal/features/workflow
 import { getSqsClient } from "./initSqs.js";
 import { JobName } from "./JobName.js";
 import { SqsBatchAccumulator } from "./SqsBatchAccumulator.js";
-import { getAsyncTrackProducerQueueUrl } from "./trackAsyncQueueUrls.js";
+import { getAsyncTrackWorkerQueueUrls } from "./trackAsyncQueueUrls.js";
 import {
 	type SqsBatchMessage,
 	type SqsSendResult,
@@ -137,7 +137,7 @@ const resolveSqsSendBatcher = (queueUrl: string) => {
 	if (queueUrl === process.env.SQS_QUEUE_URL_V2) {
 		return globalPrimarySqsSendBatcher;
 	}
-	if (queueUrl === getAsyncTrackProducerQueueUrl()) {
+	if (getAsyncTrackWorkerQueueUrls().includes(queueUrl)) {
 		return globalAsyncTrackSqsSendBatcher;
 	}
 	return null;

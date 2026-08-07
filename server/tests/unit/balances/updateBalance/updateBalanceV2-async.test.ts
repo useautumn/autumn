@@ -118,7 +118,7 @@ describe("updateBalanceV2 async routing", () => {
 		process.env.TRACK_ASYNC_SQS_QUEUE_URL = trackAsyncQueueUrl;
 		process.env.TRACK_ASYNC_STANDARD_SQS_QUEUE_URL = trackAsyncStandardQueueUrl;
 
-		const sqsClient = getSqsClient({ queueUrl: trackAsyncStandardQueueUrl });
+		const sqsClient = getSqsClient({ queueUrl: trackAsyncQueueUrl });
 		state.originalSend = sqsClient.send.bind(sqsClient);
 		sqsClient.send = (async (command: { input: Record<string, unknown> }) => {
 			state.queueCommands.push(command.input);
@@ -132,7 +132,7 @@ describe("updateBalanceV2 async routing", () => {
 
 	afterEach(() => {
 		if (state.originalSend) {
-			const sqsClient = getSqsClient({ queueUrl: trackAsyncStandardQueueUrl });
+			const sqsClient = getSqsClient({ queueUrl: trackAsyncQueueUrl });
 			sqsClient.send = state.originalSend;
 			state.originalSend = null;
 		}
@@ -153,15 +153,17 @@ describe("updateBalanceV2 async routing", () => {
 
 		expect(state.queueCommands).toHaveLength(1);
 		expect(state.queueCommands[0]).toMatchObject({
-			QueueUrl: trackAsyncStandardQueueUrl,
+			QueueUrl: trackAsyncQueueUrl,
 		});
 		// The async-track queue sends through the SQS batcher (SendMessageBatch).
 		const batchEntries = state.queueCommands[0].Entries as Array<
 			Record<string, unknown>
 		>;
 		expect(batchEntries).toHaveLength(1);
-		expect(batchEntries[0]).not.toHaveProperty("MessageGroupId");
-		expect(batchEntries[0]).not.toHaveProperty("MessageDeduplicationId");
+		expect(batchEntries[0]).toMatchObject({
+			MessageGroupId: "org_123:sandbox:cus_123:none",
+			MessageDeduplicationId: ctx.id,
+		});
 		const message = JSON.parse(String(batchEntries[0].MessageBody)) as Record<
 			string,
 			unknown
@@ -212,7 +214,6 @@ describe("updateBalanceV2 async routing", () => {
 			config: { enabledOrgIds: ["org_123"] },
 		});
 		process.env.TRACK_ASYNC_SQS_QUEUE_URL = undefined;
-		process.env.TRACK_ASYNC_STANDARD_SQS_QUEUE_URL = undefined;
 
 		await expect(
 			updateBalanceV2({

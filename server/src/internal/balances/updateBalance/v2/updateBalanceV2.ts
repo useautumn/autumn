@@ -9,7 +9,6 @@ import { getOrSetCachedFullSubject } from "@/internal/customers/cache/fullSubjec
 import { isAsyncBalanceUpdateEnabled } from "@/internal/misc/asyncBalanceUpdate/asyncBalanceUpdateStore.js";
 import { JobName } from "@/queue/JobName.js";
 import { addTaskToQueue } from "@/queue/queueUtils.js";
-import { getAsyncTrackProducerQueueUrl } from "@/queue/trackAsyncQueueUrls.js";
 import { buildCustomerEntitlementFilters } from "../../utils/buildCustomerEntitlementFilters.js";
 import { updateExpiresAtV2 } from "./updateExpiresAtV2.js";
 import { updateIncludedGrantV2 } from "./updateIncludedGrantV2.js";
@@ -101,7 +100,7 @@ const queueUpdateBalanceV2 = async ({
 	params: UpdateBalanceParamsV0;
 	targetBalance?: number;
 }) => {
-	const queueUrl = getAsyncTrackProducerQueueUrl();
+	const queueUrl = process.env.TRACK_ASYNC_SQS_QUEUE_URL;
 	if (!queueUrl) {
 		throw new RecaseError({
 			message: ASYNC_UPDATE_BALANCE_UNAVAILABLE_MESSAGE,

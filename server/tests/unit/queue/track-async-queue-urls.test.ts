@@ -71,6 +71,9 @@ test("falls back to the legacy FIFO and avoids duplicate worker pollers", () => 
 
 	process.env.TRACK_ASYNC_STANDARD_SQS_QUEUE_URL = LEGACY_FIFO_QUEUE_URL;
 	expect(getAsyncTrackWorkerQueueUrls()).toEqual([LEGACY_FIFO_QUEUE_URL]);
+
+	process.env.TRACK_ASYNC_STANDARD_SQS_QUEUE_URL = "";
+	expect(getAsyncTrackProducerQueueUrl()).toBe(LEGACY_FIFO_QUEUE_URL);
 });
 
 test("sends async Track to Standard without FIFO-only identifiers", async () => {
