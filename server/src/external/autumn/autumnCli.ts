@@ -460,6 +460,7 @@ export class AutumnInt {
 			subscription_status?: string[];
 			processors?: Array<"stripe" | "revenuecat" | "vercel">;
 			sort_order?: "asc" | "desc";
+			created_at_range?: { start?: number; end?: number };
 			keepInternalFields?: boolean;
 		}) => {
 			const { keepInternalFields, ...listParams } = params || {};

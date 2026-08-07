@@ -1,6 +1,7 @@
 import {
 	ACTIVE_STATUSES,
 	type AppEnv,
+	type CreatedAtRange,
 	CUSTOMER_PRODUCTS_DEFAULT_LIMIT,
 	type CusProductStatus,
 	type ListCustomersV2Params,
@@ -43,6 +44,7 @@ export type CursorPaginatedFullCusQueryArgs = {
 	noneFilter?: boolean;
 	productVersionFilters?: DashboardProductVersionFilter[];
 	intervalFilters?: DashboardIntervalFilter[];
+	createdAtRange?: CreatedAtRange;
 	cusProductLimit: number;
 	customerId?: string;
 	/** Emit products_page / products_total_count. Dashboard only. */
@@ -93,6 +95,7 @@ export const getCursorPaginatedFullCusQuery = ({
 	noneFilter,
 	productVersionFilters,
 	intervalFilters,
+	createdAtRange,
 	cusProductLimit,
 	customerId,
 	withProductsPage = false,
@@ -126,6 +129,7 @@ export const getCursorPaginatedFullCusQuery = ({
 		noneFilter,
 		productVersionFilters,
 		intervalFilters,
+		createdAtRange,
 	});
 
 	const orderDirection = sql.raw(sortOrder === "asc" ? "ASC" : "DESC");

@@ -191,6 +191,12 @@ export const buildSearchPredicates = ({
 						sql` OR `,
 					)})`
 				: null,
+			filters?.created_at_range?.start !== undefined
+				? sql`${customers.created_at} >= ${filters.created_at_range.start}`
+				: null,
+			filters?.created_at_range?.end !== undefined
+				? sql`${customers.created_at} <= ${filters.created_at_range.end}`
+				: null,
 		].filter((c): c is NonNullable<typeof c> => c !== null),
 		sql` AND `,
 	);

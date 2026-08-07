@@ -5,6 +5,7 @@ import {
 	PaginationDefaults,
 	SortOrderSchema,
 } from "../../common/cursorPaginationSchemas.js";
+import { CreatedAtRangeSchema } from "../customerListFilters.js";
 
 export const ListCustomersV2_3ParamsSchema = z.object({
 	start_cursor: CursorRequestFieldSchema,
@@ -45,6 +46,11 @@ export const ListCustomersV2_3ParamsSchema = z.object({
 	sort_order: SortOrderSchema.optional().meta({
 		description:
 			"Sort by customer creation time. Defaults to desc (newest first).",
+	}),
+
+	created_at_range: CreatedAtRangeSchema.optional().meta({
+		description:
+			"Filter by customer creation time (epoch milliseconds, inclusive bounds).",
 	}),
 });
 
