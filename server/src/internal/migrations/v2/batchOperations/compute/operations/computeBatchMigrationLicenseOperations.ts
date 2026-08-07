@@ -1,5 +1,6 @@
 import type { Feature, FullProduct } from "@autumn/shared";
 import type { UpdatePlanOp } from "@autumn/shared/api/migrations/operations/customer/updatePlan/index.js";
+import { isResettingEntitlement } from "@autumn/shared/utils/productUtils/entUtils/classifyEntUtils.js";
 import { enrichEntitlementsWithFeatures } from "@autumn/shared/utils/productUtils/entUtils/enrichEntitlement.js";
 import { computeCustomerEntitlementInitialState } from "@/internal/billing/v2/actions/batchTransition/compute/operations/entitlementPriceOperations/computeCustomerEntitlementPatch.js";
 import { EnsurePlanLicensesResultSchema } from "@/internal/migrations/v2/prepare/modules/ensurePlanLicenses/types.js";
@@ -107,6 +108,21 @@ export const computeBatchMigrationLicenseOperations = ({
 					message:
 						"prepared license entitlement references a feature missing from the org.",
 					details: { licensePlanId: entry.license_plan_id },
+				});
+				continue;
+			}
+
+			if (isResettingEntitlement({ entitlement: enriched })) {
+				rejections.push({
+					code: "resetting_license_entitlement",
+					opIndex,
+					planId: fromProduct.id,
+					message:
+						"An assignment carries no billing cycle of its own, so a resetting entitlement has no anchor to inherit in the batch lane.",
+					details: {
+						licensePlanId: entry.license_plan_id,
+						featureId: enriched.feature.id,
+					},
 				});
 				continue;
 			}

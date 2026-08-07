@@ -10,6 +10,9 @@ export type InsertableLicenseRow = LicenseCandidateRow & { id: string };
 /**
  * Set-based insert onto assignment rows. Entitlement fields ride the recordset
  * rather than binding as scalars: each customized link carries its own row.
+ *
+ * Cycle columns are NULL because compute rejects resetting entitlements — an
+ * assignment has no billing cycle of its own to anchor against.
  */
 export const insertLicenseCustomerEntitlementRows = async ({
 	db,
