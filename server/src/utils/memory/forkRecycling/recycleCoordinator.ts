@@ -220,10 +220,12 @@ export const createRecycleCoordinator = ({
 
 		handleWorkerExit: ({ workerId }) => {
 			clearDrainCompletionDeadline(workerId);
-			// Every branch below must see a dead worker gone from the queue, or a
-			// later cycle forks a replacement for a fork that no longer exists.
+			// Every branch below must see a dead worker gone from the queue and its
+			// latch, or a later cycle forks a replacement for a fork that no longer
+			// exists. Branches still clear OTHER workers' latches themselves.
 			const pendingIndex = pendingWorkerIds.indexOf(workerId);
 			if (pendingIndex !== -1) pendingWorkerIds.splice(pendingIndex, 1);
+			requestedWorkerIds.delete(workerId);
 			// A crash respawn dying while booting falls through to the plain-crash
 			// branch below (which respawns again); the deferred-drain release runs
 			// only after that branch has tracked the new respawn.
@@ -232,20 +234,17 @@ export const createRecycleCoordinator = ({
 				if (discardedWorkerIds.has(workerId)) {
 					// A hung replacement we already killed and accounted for.
 					discardedWorkerIds.delete(workerId);
-					requestedWorkerIds.delete(workerId);
 					return true;
 				}
 
 				if (expectedExitWorkerIds.has(workerId)) {
 					expectedExitWorkerIds.delete(workerId);
-					requestedWorkerIds.delete(workerId);
 					if (activeCycle?.oldWorkerId === workerId) startNextPendingCycle();
 					log(`[ForkRecycle] Worker ${workerId} recycled`);
 					return true;
 				}
 
 				if (activeCycle?.oldWorkerId === workerId) {
-					requestedWorkerIds.delete(workerId);
 					if (activeCycle.drainDeferred) {
 						// Replacement is already listening (drain deferred): the crash
 						// completes the cycle outright — a deferred drain to a dead
@@ -293,7 +292,6 @@ export const createRecycleCoordinator = ({
 					return false;
 				}
 
-				requestedWorkerIds.delete(workerId);
 				respawnTracked(workerId);
 				return false;
 			})();

@@ -70,8 +70,8 @@ export const attachPrimaryForkRecycling = ({
 
 	clusterModule.on("message", (worker, message: RecycleMessage) => {
 		if (message?.type !== RECYCLE_REQUEST) return;
-		// A message delivered after the worker's exit was handled would start a
-		// cycle for a corpse that can never complete.
+		// Load-bearing: the coordinator clears a worker's latch on exit and has no
+		// other guard, so a post-exit request would start a cycle for a corpse.
 		if (worker.isDead?.()) return;
 		coordinator.handleRecycleRequest({ workerId: String(worker.id) });
 	});
