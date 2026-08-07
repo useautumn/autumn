@@ -106,7 +106,6 @@ export class CusSearchService {
 	}> {
 		const predicates = buildSearchPredicates({ orgId, env, search, filters });
 		const fetchLimit = limit + 1;
-		const cursorOp = sortOrder === "asc" ? sql.raw(">") : sql.raw("<");
 		const orderColumn = sortOrder === "asc" ? asc : desc;
 
 		const matched = db
@@ -119,9 +118,12 @@ export class CusSearchService {
 			.where(
 				and(
 					predicates.whereRaw,
-					// Drizzle has no native row-tuple comparison for keyset pagination.
+					// Expanded instead of a row-tuple compare: asc sorts NULL ids after
+					// the cursor, where a tuple compare is UNKNOWN and drops them.
 					cursor
-						? sql`(${customers.created_at}, ${customers.id}) ${cursorOp} (${cursor.t}, ${cursor.id})`
+						? sortOrder === "asc"
+							? sql`(${customers.created_at} >= ${cursor.t} AND (${customers.created_at} > ${cursor.t} OR ${customers.id} > ${cursor.id} OR ${customers.id} IS NULL))`
+							: sql`(${customers.created_at} <= ${cursor.t} AND (${customers.created_at} < ${cursor.t} OR ${customers.id} < ${cursor.id}))`
 						: undefined,
 				),
 			)

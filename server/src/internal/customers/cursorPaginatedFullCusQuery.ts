@@ -109,13 +109,14 @@ export const getCursorPaginatedFullCusQuery = ({
 		intervalFilters,
 	});
 
-	// The cursor comparison operator must match the ORDER BY direction, or
-	// pagination walks the wrong way and repeats/skips rows.
-	const cursorOp = sortOrder === "asc" ? sql.raw(">") : sql.raw("<");
 	const orderDirection = sql.raw(sortOrder === "asc" ? "ASC" : "DESC");
 
+	// Expanded instead of a row-tuple compare: asc sorts NULL ids after the
+	// cursor, where a tuple compare evaluates UNKNOWN and silently drops them.
 	const cursorPredicate = cursor
-		? sql`AND (c.created_at, c.id) ${cursorOp} (${cursor.t}, ${cursor.id})`
+		? sortOrder === "asc"
+			? sql`AND c.created_at >= ${cursor.t} AND (c.created_at > ${cursor.t} OR c.id > ${cursor.id} OR c.id IS NULL)`
+			: sql`AND c.created_at <= ${cursor.t} AND (c.created_at < ${cursor.t} OR c.id < ${cursor.id})`
 		: sql``;
 
 	const fetchLimit = limit + 1;
