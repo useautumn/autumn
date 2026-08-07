@@ -19,7 +19,6 @@ export function TableContentVirtualized({
 }) {
 	const context = useTableContext();
 	const {
-		flexibleTableColumns,
 		enableColumnVisibility,
 		columnVisibilityInToolbar,
 		columnVisibilityClassName,
@@ -128,10 +127,9 @@ export function TableContentVirtualized({
 								<TableColumnVisibility />
 							</div>
 						)}
-						<Table
-							className="p-0 w-full rounded-t-lg"
-							flexibleTableColumns={flexibleTableColumns}
-						>
+						{/* Header and body are separate tables: they only stay column-aligned
+						    under fixed layout, so flexibleTableColumns is deliberately not forwarded. */}
+						<Table className="p-0 w-full rounded-t-lg">
 							<TableHeader hideBorder />
 						</Table>
 					</div>
@@ -152,11 +150,7 @@ export function TableContentVirtualized({
 						scrollbarGutter,
 					}}
 				>
-					<Table
-						className="p-0 w-full"
-						flexibleTableColumns={flexibleTableColumns}
-						style={{ minWidth: `${totalWidth}px` }}
-					>
+					<Table className="p-0 w-full" style={{ minWidth: `${totalWidth}px` }}>
 						{React.Children.map(children, (child) =>
 							React.isValidElement(child)
 								? React.cloneElement(child, { key: visibleColumnKey })
