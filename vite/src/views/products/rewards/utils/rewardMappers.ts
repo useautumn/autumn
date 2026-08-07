@@ -100,7 +100,7 @@ export function mapFrontendToApiReward({
 			const feature = features
 				? findFeatureById({ features, featureId: e.feature_id })
 				: undefined;
-			const hasAllowance = e.allowance != null && e.allowance > 0;
+			const hasAllowance = e.allowance != null && e.allowance >= 0;
 			return {
 				internal_feature_id: feature?.internal_id ?? e.feature_id,
 				allowance: hasAllowance ? e.allowance : undefined,
