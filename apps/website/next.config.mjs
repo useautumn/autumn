@@ -9,6 +9,20 @@ const isProd = process.env.NODE_ENV === "production";
 // which holds the hoisted node_modules the app symlinks into.
 const monorepoRoot = join(import.meta.dirname, "..", "..");
 
+// RB2B's loader fans out to several identity/data providers (and LiveIntent
+// loads a second script of its own), so every host is allowed on each
+// directive the chain touches rather than mapped one-by-one.
+const RB2B_HOSTS = [
+  "https://ddwl4m2hdecbv.cloudfront.net",
+  "https://app.rb2b.com",
+  "https://b2bjsstore.s3.us-west-2.amazonaws.com",
+  "https://s3-us-west-2.amazonaws.com",
+  "https://a.usbrowserspeed.com",
+  "https://alocdn.com",
+  "https://pro.ip-api.com",
+  "https://*.liadm.com",
+];
+
 const rehypePrettyCodeOptions = {
   theme: "github-dark-dimmed",
   keepBackground: false,
@@ -95,12 +109,26 @@ const nextConfig = {
             key: "Content-Security-Policy",
             value: [
               "default-src 'self'",
-              "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://vercel.live",
+              [
+                "script-src 'self' 'unsafe-inline' 'unsafe-eval'",
+                "https://vercel.live",
+                ...RB2B_HOSTS,
+              ].join(" "),
               "style-src 'self' 'unsafe-inline'",
-              "img-src 'self' data: blob:",
+              [
+                "img-src 'self' data: blob:",
+                // Blog posts embed images hosted on Framer.
+                "https://framerusercontent.com",
+                ...RB2B_HOSTS,
+              ].join(" "),
               "font-src 'self' data:",
               "media-src 'self'",
-              "connect-src 'self' https://*.vercel.app https://vitals.vercel-insights.com",
+              [
+                "connect-src 'self' https://*.vercel.app",
+                "https://vitals.vercel-insights.com",
+                ...RB2B_HOSTS,
+              ].join(" "),
+              ["frame-src 'self'", ...RB2B_HOSTS].join(" "),
               "frame-ancestors 'none'",
             ].join("; "),
           },
