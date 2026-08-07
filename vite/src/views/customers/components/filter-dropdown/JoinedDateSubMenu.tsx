@@ -7,19 +7,59 @@ import {
 import { endOfDay, format, isSameDay, startOfDay, subMonths } from "date-fns";
 import { useState } from "react";
 import type { DateRange } from "react-day-picker";
+import { cn } from "@/lib/utils";
 import { useCustomerFilters } from "../../hooks/useCustomerFilters";
 
 type JoinedBounds = { from: number | null; to: number | null };
+type JoinedMode = "range" | "before" | "after";
+type JoinedAnchor = { from: Date; to: Date };
+type JoinedSelection = { mode: JoinedMode; anchor: JoinedAnchor | null };
 
 const ACTION_BUTTON_CLASS =
 	"flex-1 rounded-md px-2 py-1 text-xs text-tertiary-foreground hover:bg-accent hover:text-muted-foreground disabled:pointer-events-none disabled:opacity-40";
+const ACTION_BUTTON_ACTIVE_CLASS = "bg-accent text-foreground";
 
-const toDateRange = ({ from, to }: JoinedBounds): DateRange | undefined => {
-	if (from === null && to === null) return undefined;
+const toJoinedBounds = ({ mode, anchor }: JoinedSelection): JoinedBounds => {
+	if (anchor === null) return { from: null, to: null };
+	if (mode === "before")
+		return { from: null, to: endOfDay(anchor.to).getTime() };
+	if (mode === "after")
+		return { from: startOfDay(anchor.from).getTime(), to: null };
 	return {
-		from: from === null ? undefined : new Date(from),
-		to: to === null ? undefined : new Date(to),
+		from: startOfDay(anchor.from).getTime(),
+		to: endOfDay(anchor.to).getTime(),
 	};
+};
+
+const toJoinedSelection = ({ from, to }: JoinedBounds): JoinedSelection => {
+	if (from !== null && to !== null)
+		return {
+			mode: "range",
+			anchor: { from: new Date(from), to: new Date(to) },
+		};
+	if (to !== null) {
+		const boundary = new Date(to);
+		return { mode: "before", anchor: { from: boundary, to: boundary } };
+	}
+	if (from !== null) {
+		const boundary = new Date(from);
+		return { mode: "after", anchor: { from: boundary, to: boundary } };
+	}
+	return { mode: "range", anchor: null };
+};
+
+/** react-day-picker reports the resulting range, not the day, so infer it from whichever endpoint moved. */
+const getClickedDay = ({
+	from,
+	to,
+	anchor,
+}: {
+	from: Date;
+	to: Date | undefined;
+	anchor: JoinedAnchor | null;
+}): Date => {
+	if (anchor === null || to === undefined) return from;
+	return isSameDay(from, anchor.from) ? to : from;
 };
 
 const getJoinedLabel = ({ from, to }: JoinedBounds): string | null => {
@@ -35,53 +75,55 @@ const getJoinedLabel = ({ from, to }: JoinedBounds): string | null => {
 
 export const JoinedDateSubMenu = ({ onChange }: { onChange?: () => void }) => {
 	const { queryStates, setFilters } = useCustomerFilters();
-	const [draftRange, setDraftRange] = useState<DateRange | undefined>(
-		undefined,
-	);
 
 	const bounds: JoinedBounds = {
 		from: queryStates.joinedFrom,
 		to: queryStates.joinedTo,
 	};
-	const selectedRange = toDateRange(bounds);
+
+	const [selection, setSelection] = useState<JoinedSelection>(() =>
+		toJoinedSelection(bounds),
+	);
+	const { mode, anchor } = selection;
 	const label = getJoinedLabel(bounds);
 
-	const applyBounds = ({ from, to }: JoinedBounds) => {
-		setFilters({ joinedFrom: from, joinedTo: to });
+	const commitSelection = (next: JoinedSelection) => {
+		const nextBounds = toJoinedBounds(next);
+		setSelection(next);
+		setFilters({ joinedFrom: nextBounds.from, joinedTo: nextBounds.to });
 		onChange?.();
 	};
 
 	const handleSelect = (range: DateRange | undefined) => {
-		setDraftRange(range);
 		if (!range?.from) {
-			applyBounds({ from: null, to: null });
+			commitSelection({ mode: "range", anchor: null });
 			return;
 		}
-		applyBounds({
-			from: startOfDay(range.from).getTime(),
-			to: endOfDay(range.to ?? range.from).getTime(),
-		});
+		if (mode === "range") {
+			commitSelection({
+				mode,
+				anchor: { from: range.from, to: range.to ?? range.from },
+			});
+			return;
+		}
+		const boundary = getClickedDay({ from: range.from, to: range.to, anchor });
+		commitSelection({ mode, anchor: { from: boundary, to: boundary } });
 	};
 
-	const keepEndBoundOnly = () => {
-		setDraftRange({ from: undefined, to: draftRange?.to });
-		applyBounds({ from: null, to: bounds.to });
+	const toggleMode = (nextMode: JoinedMode) => {
+		if (anchor === null) return;
+		commitSelection({ mode: mode === nextMode ? "range" : nextMode, anchor });
 	};
 
-	const keepStartBoundOnly = () => {
-		setDraftRange({ from: draftRange?.from, to: undefined });
-		applyBounds({ from: bounds.from, to: null });
-	};
+	const clearJoinedRange = () =>
+		commitSelection({ mode: "range", anchor: null });
 
-	const clearJoinedRange = () => {
-		setDraftRange(undefined);
-		applyBounds({ from: null, to: null });
-	};
+	const hasAnchor = anchor !== null;
 
 	return (
 		<DropdownMenuSub
 			onOpenChange={(open) => {
-				if (open) setDraftRange(selectedRange);
+				if (open) setSelection(toJoinedSelection(bounds));
 			}}
 		>
 			<DropdownMenuSubTrigger className="flex items-center gap-2 cursor-pointer">
@@ -96,34 +138,40 @@ export const JoinedDateSubMenu = ({ onChange }: { onChange?: () => void }) => {
 				<Calendar
 					mode="range"
 					numberOfMonths={2}
-					selected={draftRange ?? selectedRange}
+					selected={anchor ?? undefined}
 					onSelect={handleSelect}
-					defaultMonth={
-						draftRange?.from ?? draftRange?.to ?? subMonths(new Date(), 1)
-					}
+					defaultMonth={anchor?.from ?? subMonths(new Date(), 1)}
 					disabled={{ after: new Date() }}
 				/>
 				<div className="flex items-center gap-1 border-t border-border p-1">
 					<button
 						type="button"
-						className={ACTION_BUTTON_CLASS}
-						disabled={bounds.to === null}
-						onClick={keepEndBoundOnly}
+						className={cn(
+							ACTION_BUTTON_CLASS,
+							mode === "before" && ACTION_BUTTON_ACTIVE_CLASS,
+						)}
+						aria-pressed={mode === "before"}
+						disabled={!hasAnchor}
+						onClick={() => toggleMode("before")}
 					>
 						Before
 					</button>
 					<button
 						type="button"
-						className={ACTION_BUTTON_CLASS}
-						disabled={bounds.from === null}
-						onClick={keepStartBoundOnly}
+						className={cn(
+							ACTION_BUTTON_CLASS,
+							mode === "after" && ACTION_BUTTON_ACTIVE_CLASS,
+						)}
+						aria-pressed={mode === "after"}
+						disabled={!hasAnchor}
+						onClick={() => toggleMode("after")}
 					>
 						After
 					</button>
 					<button
 						type="button"
 						className={ACTION_BUTTON_CLASS}
-						disabled={label === null}
+						disabled={!hasAnchor}
 						onClick={clearJoinedRange}
 					>
 						Clear
