@@ -129,6 +129,7 @@ export const setupUpdateSubscriptionBillingContext = async ({
 		paymentMethod,
 		testClockFrozenTime,
 		canceledStripeSubscriptionId,
+		mismatchedStripeSubscriptionId,
 	} = await setupStripeBillingContext({
 		ctx,
 		fullCustomer,
@@ -142,10 +143,13 @@ export const setupUpdateSubscriptionBillingContext = async ({
 			!preview && params.no_billing_changes !== true,
 	});
 
-	// Updating a plan whose subscription is already canceled must never fall
-	// through to creating a replacement subscription and charging again.
+	// A subscription we can't bill against — canceled, or owned by a different
+	// Stripe customer — must never fall through to creating a replacement
+	// subscription and charging again.
 	const skipBillingChanges =
-		skipBillingChangesBase || canceledStripeSubscriptionId !== undefined;
+		skipBillingChangesBase ||
+		canceledStripeSubscriptionId !== undefined ||
+		mismatchedStripeSubscriptionId !== undefined;
 
 	const subscriptionTaxRate = stripeSubscription?.default_tax_rates?.[0];
 	const inheritedTaxRateId =
@@ -262,6 +266,7 @@ export const setupUpdateSubscriptionBillingContext = async ({
 		paymentMethod,
 		taxRateId: inheritedTaxRateId,
 		canceledStripeSubscriptionId,
+		mismatchedStripeSubscriptionId,
 
 		currentEpochMs,
 		billingCycleAnchorMs,

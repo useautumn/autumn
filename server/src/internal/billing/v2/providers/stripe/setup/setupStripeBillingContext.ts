@@ -70,6 +70,7 @@ export const setupStripeBillingContext = async ({
 			paymentMethod: undefined,
 			testClockFrozenTime: undefined,
 			canceledStripeSubscriptionId: undefined,
+			mismatchedStripeSubscriptionId: undefined,
 		};
 	}
 
@@ -146,8 +147,11 @@ export const setupStripeBillingContext = async ({
 		},
 	});
 
-	const { stripeSubscription, canceledStripeSubscriptionId } =
-		subscriptionResult;
+	const {
+		stripeSubscription,
+		canceledStripeSubscriptionId,
+		mismatchedStripeSubscriptionId,
+	} = subscriptionResult;
 
 	const stripeSubscriptionScheduleForContext =
 		stripeSubscription && stripeSubscriptionSchedule
@@ -166,5 +170,6 @@ export const setupStripeBillingContext = async ({
 		paymentMethod,
 		testClockFrozenTime,
 		canceledStripeSubscriptionId,
+		mismatchedStripeSubscriptionId,
 	};
 };
