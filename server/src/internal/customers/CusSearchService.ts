@@ -4,9 +4,10 @@ import {
 	type CustomerListFilters,
 	customerProducts,
 	customers,
+	type SortOrder,
 } from "@autumn/shared";
 
-import { and, desc, type SQL, sql } from "drizzle-orm";
+import { and, asc, desc, type SQL, sql } from "drizzle-orm";
 import { planetScaleTag } from "@/db/dbUtils.js";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 import {
@@ -89,6 +90,7 @@ export class CusSearchService {
 		filters,
 		cursor,
 		limit,
+		sortOrder = "desc",
 	}: {
 		db: DrizzleCli;
 		orgId: string;
@@ -97,12 +99,15 @@ export class CusSearchService {
 		filters?: SearchFilters;
 		cursor?: { t: number; id: string } | null;
 		limit: number;
+		sortOrder?: SortOrder;
 	}): Promise<{
 		internalIds: string[];
 		peek: { t: number; id: string } | null;
 	}> {
 		const predicates = buildSearchPredicates({ orgId, env, search, filters });
 		const fetchLimit = limit + 1;
+		const cursorOp = sortOrder === "asc" ? sql.raw(">") : sql.raw("<");
+		const orderColumn = sortOrder === "asc" ? asc : desc;
 
 		const matched = db
 			.select({
@@ -116,11 +121,11 @@ export class CusSearchService {
 					predicates.whereRaw,
 					// Drizzle has no native row-tuple comparison for keyset pagination.
 					cursor
-						? sql`(${customers.created_at}, ${customers.id}) < (${cursor.t}, ${cursor.id})`
+						? sql`(${customers.created_at}, ${customers.id}) ${cursorOp} (${cursor.t}, ${cursor.id})`
 						: undefined,
 				),
 			)
-			.orderBy(desc(customers.created_at), desc(customers.id))
+			.orderBy(orderColumn(customers.created_at), orderColumn(customers.id))
 			.limit(fetchLimit);
 
 		const rows = await db.execute<{

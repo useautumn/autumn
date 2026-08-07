@@ -2,6 +2,7 @@ import {
 	CustomerListFiltersSchema,
 	type FullCusProduct,
 	Scopes,
+	SortOrderSchema,
 	StandardCursor,
 } from "@autumn/shared";
 import { z } from "zod/v4";
@@ -15,10 +16,11 @@ export const handleSearchCustomers = createRoute({
 		limit: z.number().int().min(1).max(1000).optional().default(50),
 		cursor: z.string().optional().default(""),
 		filters: CustomerListFiltersSchema.optional(),
+		sort_order: SortOrderSchema.optional(),
 	}),
 	handler: async (c) => {
 		const ctx = c.get("ctx");
-		const { search, limit, cursor, filters } = c.req.valid("json");
+		const { search, limit, cursor, filters, sort_order } = c.req.valid("json");
 
 		const decoded = StandardCursor.decode(cursor);
 
@@ -29,6 +31,7 @@ export const handleSearchCustomers = createRoute({
 				filters,
 				cursor: decoded ? { t: decoded.t, id: decoded.id } : null,
 				limit,
+				sortOrder: sort_order,
 			});
 
 		const customers = fullCustomers.map((c) => ({

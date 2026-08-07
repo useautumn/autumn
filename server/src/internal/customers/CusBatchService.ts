@@ -10,6 +10,7 @@ import {
 	type ListCustomersV2_3Params,
 	type ListCustomersV2Params,
 	RELEVANT_STATUSES,
+	type SortOrder,
 	StandardCursor,
 	type StandardCursorFields,
 } from "@autumn/shared";
@@ -219,6 +220,7 @@ export class CusBatchService {
 			plans,
 			processors,
 			cusProductLimit,
+			sortOrder: query.sort_order,
 		});
 
 		const tSqlStart = performance.now();
@@ -311,12 +313,14 @@ export class CusBatchService {
 		filters,
 		cursor,
 		limit,
+		sortOrder,
 	}: {
 		ctx: RequestContext;
 		search: string;
 		filters?: CustomerListFilters;
 		cursor: { t: number; id: string } | null;
 		limit: number;
+		sortOrder?: SortOrder;
 	}): Promise<{
 		fullCustomers: FullCustomer[];
 		next_cursor: string | null;
@@ -354,6 +358,7 @@ export class CusBatchService {
 				filters,
 				cursor,
 				limit,
+				sortOrder,
 			});
 			internalIds = resolved.internalIds;
 			resolvedPeek = resolved.peek;
@@ -387,6 +392,7 @@ export class CusBatchService {
 				? undefined
 				: parseDashboardProcessorFilter(filters?.processor),
 			cusProductLimit,
+			sortOrder,
 		});
 
 		const tSqlStart = performance.now();

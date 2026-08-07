@@ -5,6 +5,7 @@ import {
 	type CusProductStatus,
 	type ListCustomersV2Params,
 	RELEVANT_STATUSES,
+	type SortOrder,
 	type StandardCursorFields,
 } from "@autumn/shared";
 import { sql } from "drizzle-orm";
@@ -46,6 +47,7 @@ export type CursorPaginatedFullCusQueryArgs = {
 	customerId?: string;
 	/** Emit products_page / products_total_count. Dashboard only. */
 	withProductsPage?: boolean;
+	sortOrder?: SortOrder;
 };
 
 /**
@@ -75,6 +77,7 @@ export const getCursorPaginatedFullCusQuery = ({
 	cusProductLimit,
 	customerId,
 	withProductsPage = false,
+	sortOrder = "desc",
 }: CursorPaginatedFullCusQueryArgs) => {
 	const cpStatusFilter = cpStatusInClause(inStatuses);
 
@@ -106,8 +109,13 @@ export const getCursorPaginatedFullCusQuery = ({
 		intervalFilters,
 	});
 
+	// The cursor comparison operator must match the ORDER BY direction, or
+	// pagination walks the wrong way and repeats/skips rows.
+	const cursorOp = sortOrder === "asc" ? sql.raw(">") : sql.raw("<");
+	const orderDirection = sql.raw(sortOrder === "asc" ? "ASC" : "DESC");
+
 	const cursorPredicate = cursor
-		? sql`AND (c.created_at, c.id) < (${cursor.t}, ${cursor.id})`
+		? sql`AND (c.created_at, c.id) ${cursorOp} (${cursor.t}, ${cursor.id})`
 		: sql``;
 
 	const fetchLimit = limit + 1;
@@ -172,7 +180,7 @@ export const getCursorPaginatedFullCusQuery = ({
 		WHERE c.org_id = ${orgId}
 			AND c.env = ${env}
 			${customerId ? sql`AND (c.id = ${customerId} OR c.internal_id = ${customerId})` : sql`${customerListFilterSql}${cursorPredicate}`}
-		ORDER BY c.created_at DESC, c.id DESC
+		ORDER BY c.created_at ${orderDirection}, c.id ${orderDirection}
 		LIMIT ${fetchLimit}
 		),
 		cp_ranked_raw AS MATERIALIZED (

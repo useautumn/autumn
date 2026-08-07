@@ -459,6 +459,7 @@ export class AutumnInt {
 			plans?: Array<{ id: string; versions?: number[] }>;
 			subscription_status?: string[];
 			processors?: Array<"stripe" | "revenuecat" | "vercel">;
+			sort_order?: "asc" | "desc";
 			keepInternalFields?: boolean;
 		}) => {
 			const { keepInternalFields, ...listParams } = params || {};

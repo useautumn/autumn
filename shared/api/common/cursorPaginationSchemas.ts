@@ -1,7 +1,7 @@
-import { sql, type Column, type SQL } from "drizzle-orm";
+import { type Column, type SQL, sql } from "drizzle-orm";
 import { z } from "zod/v4";
-import { RecaseError } from "../errors/base/RecaseError.js";
 import { ErrCode } from "../../enums/ErrCode.js";
+import { RecaseError } from "../errors/base/RecaseError.js";
 
 const CURRENT_CURSOR_VERSION = 0 as const;
 
@@ -22,7 +22,9 @@ export function defineCursor<TFields extends { v: number }>({
 }: {
 	fieldsSchema: z.ZodType<TFields>;
 }): CursorCodec<TFields> {
-	const encode = (fields: Omit<TFields, "v"> & { v?: TFields["v"] }): string => {
+	const encode = (
+		fields: Omit<TFields, "v"> & { v?: TFields["v"] },
+	): string => {
 		const full = { v: CURRENT_CURSOR_VERSION, ...fields } as TFields;
 		const json = JSON.stringify(full);
 		return Buffer.from(json, "utf8").toString("base64url");
@@ -123,6 +125,10 @@ export type StandardCursorFields = z.infer<typeof StandardCursorFieldsSchema>;
 export const StandardCursor = defineCursor({
 	fieldsSchema: StandardCursorFieldsSchema,
 });
+
+export const SortOrderSchema = z.enum(["asc", "desc"]);
+
+export type SortOrder = z.infer<typeof SortOrderSchema>;
 
 export const PaginationDefaults = {
 	DefaultLimit: 50,
