@@ -39,6 +39,24 @@ import { DynamicResponseExample } from "/snippets/dynamic-response-example.jsx";
   Filter by customer processor type (stripe, revenuecat, vercel).
 </DynamicParamField>
 
+<DynamicParamField body="sort_order" type="'asc' | 'desc'">
+  Sort by customer creation time. Defaults to desc (newest first).
+</DynamicParamField>
+
+<DynamicParamField body="created_at_range" type="object">
+  Filter by customer creation time (epoch milliseconds, inclusive bounds).
+  <Expandable title="properties">
+    <DynamicParamField body="start" type="number">
+      Include customers created at or after this timestamp (epoch milliseconds, inclusive)
+    </DynamicParamField>
+
+    <DynamicParamField body="end" type="number">
+      Include customers created at or before this timestamp (epoch milliseconds, inclusive)
+    </DynamicParamField>
+
+  </Expandable>
+</DynamicParamField>
+
 
 ### Response
 
