@@ -116,6 +116,23 @@ describe("drain completion deadline survives cycle churn", () => {
 		expect(forked).toHaveLength(1);
 	});
 
+	test("an exiting worker's request latch is cleared on every branch", () => {
+		const { coordinator, forked } = createHarness();
+
+		coordinator.handleRecycleRequest({ workerId: "w1" });
+		coordinator.handleWorkerListening({ workerId: forked[0] });
+
+		// The replacement queues a recycle of its own, then dies post-drain.
+		coordinator.handleRecycleRequest({ workerId: forked[0] });
+		coordinator.handleWorkerExit({ workerId: forked[0] });
+		coordinator.handleWorkerExit({ workerId: "w1" });
+
+		// Its id must not stay latched, or a reused id could never recycle again.
+		const forkedBefore = forked.length;
+		coordinator.handleRecycleRequest({ workerId: forked[0] });
+		expect(forked.length).toBe(forkedBefore + 1);
+	});
+
 	test("old worker exiting normally leaves no stray kill behind", async () => {
 		const { coordinator, forked, killed } = createHarness({
 			drainCompletionTimeoutMs: 40,
