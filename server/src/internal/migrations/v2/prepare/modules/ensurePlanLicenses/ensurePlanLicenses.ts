@@ -19,6 +19,10 @@ import { ProductService } from "@/internal/products/ProductService.js";
 import { hashJson } from "@/utils/hash/hashJson.js";
 import type { PrepareModule } from "../../types/prepareModule.js";
 import { hashPlanItemArtifact } from "../ensurePricesAndEntitlements/hashPlanItemArtifact.js";
+import {
+	licenseEntitlementIdFor,
+	planLicenseIdFor,
+} from "./preparedPlanLicenseIds.js";
 import type {
 	EnsurePlanLicensesResult,
 	PreparedPlanLicenseRef,
@@ -32,62 +36,6 @@ export type EnsurePlanLicensesInput = {
 		op: UpdatePlanOp;
 	}[];
 };
-
-/** Content-addressed so a re-run recomputes the same id and converges on
- * ON CONFLICT (id) — plan_license has no natural key for custom rows. */
-const planLicenseIdFor = ({
-	scopeId,
-	opIndex,
-	licensePlanId,
-	parentInternalProductId,
-	hash,
-}: {
-	scopeId: string;
-	opIndex: number;
-	licensePlanId: string;
-	parentInternalProductId: string;
-	hash: string;
-}): string =>
-	`plan_lic_${hashJson({
-		value: {
-			scopeId,
-			opIndex,
-			licensePlanId,
-			parentInternalProductId,
-			hash,
-			kind: "plan_license",
-		},
-	})}`;
-
-const licenseEntitlementIdFor = ({
-	scopeId,
-	opIndex,
-	licensePlanId,
-	itemIndex,
-	internalFeatureId,
-	licenseInternalProductId,
-	hash,
-}: {
-	scopeId: string;
-	opIndex: number;
-	licensePlanId: string;
-	itemIndex: number;
-	internalFeatureId: string;
-	licenseInternalProductId: string;
-	hash: string;
-}): string =>
-	`ent_${hashJson({
-		value: {
-			scopeId,
-			opIndex,
-			licensePlanId,
-			itemIndex,
-			internalFeatureId,
-			licenseInternalProductId,
-			hash,
-			kind: "license_add_item",
-		},
-	})}`;
 
 const getMatchedParentProducts = async ({
 	ctx,
