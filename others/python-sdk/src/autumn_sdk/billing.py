@@ -480,6 +480,9 @@ class Billing(BaseSDK):
         billing_behavior: Optional[models.CreateScheduleBillingBehavior] = None,
         enable_plan_immediately: Optional[bool] = None,
         preserve_add_ons: Optional[bool] = None,
+        unscheduled_plans: Optional[
+            Union[List[models.UnscheduledPlan], List[models.UnscheduledPlanTypedDict]]
+        ] = None,
         retries: OptionalNullable[utils.RetryConfig] = UNSET,
         server_url: Optional[str] = None,
         timeout_ms: Optional[int] = None,
@@ -501,7 +504,8 @@ class Billing(BaseSDK):
         :param redirect_mode: Controls when to return a checkout URL for the immediate phase. 'always' forces a confirmation or checkout flow, 'if_required' only redirects when needed, and 'never' disables redirects.
         :param billing_behavior: Whether to prorate the immediate phase. 'none' skips proration charges and credits.
         :param enable_plan_immediately: If true, the immediate-phase cusProducts are activated immediately (and scheduled-phase cusProducts pre-inserted) even when payment is pending via Stripe checkout. The Autumn schedule rows are persisted on checkout.session.completed.
-        :param preserve_add_ons: If true, active recurring add-ons in scopes represented by the phase plans are retained.
+        :param preserve_add_ons: Deprecated and ignored. Active plans the schedule does not declare are always retained.
+        :param unscheduled_plans: Plans billed with the immediate phase that the schedule never expires or replaces. No phase may declare a plan in the same group and scope.
         :param retries: Override the default retry configuration for this method
         :param server_url: Override the default server URL for this method
         :param timeout_ms: Override the default request timeout configuration for this method in milliseconds
@@ -536,6 +540,9 @@ class Billing(BaseSDK):
             billing_behavior=billing_behavior,
             enable_plan_immediately=enable_plan_immediately,
             preserve_add_ons=preserve_add_ons,
+            unscheduled_plans=utils.get_pydantic_model(
+                unscheduled_plans, Optional[List[models.UnscheduledPlan]]
+            ),
             phases=utils.get_pydantic_model(phases, List[models.PhaseStartUnion]),
         )
 
@@ -631,6 +638,9 @@ class Billing(BaseSDK):
         billing_behavior: Optional[models.CreateScheduleBillingBehavior] = None,
         enable_plan_immediately: Optional[bool] = None,
         preserve_add_ons: Optional[bool] = None,
+        unscheduled_plans: Optional[
+            Union[List[models.UnscheduledPlan], List[models.UnscheduledPlanTypedDict]]
+        ] = None,
         retries: OptionalNullable[utils.RetryConfig] = UNSET,
         server_url: Optional[str] = None,
         timeout_ms: Optional[int] = None,
@@ -652,7 +662,8 @@ class Billing(BaseSDK):
         :param redirect_mode: Controls when to return a checkout URL for the immediate phase. 'always' forces a confirmation or checkout flow, 'if_required' only redirects when needed, and 'never' disables redirects.
         :param billing_behavior: Whether to prorate the immediate phase. 'none' skips proration charges and credits.
         :param enable_plan_immediately: If true, the immediate-phase cusProducts are activated immediately (and scheduled-phase cusProducts pre-inserted) even when payment is pending via Stripe checkout. The Autumn schedule rows are persisted on checkout.session.completed.
-        :param preserve_add_ons: If true, active recurring add-ons in scopes represented by the phase plans are retained.
+        :param preserve_add_ons: Deprecated and ignored. Active plans the schedule does not declare are always retained.
+        :param unscheduled_plans: Plans billed with the immediate phase that the schedule never expires or replaces. No phase may declare a plan in the same group and scope.
         :param retries: Override the default retry configuration for this method
         :param server_url: Override the default server URL for this method
         :param timeout_ms: Override the default request timeout configuration for this method in milliseconds
@@ -687,6 +698,9 @@ class Billing(BaseSDK):
             billing_behavior=billing_behavior,
             enable_plan_immediately=enable_plan_immediately,
             preserve_add_ons=preserve_add_ons,
+            unscheduled_plans=utils.get_pydantic_model(
+                unscheduled_plans, Optional[List[models.UnscheduledPlan]]
+            ),
             phases=utils.get_pydantic_model(phases, List[models.PhaseStartUnion]),
         )
 

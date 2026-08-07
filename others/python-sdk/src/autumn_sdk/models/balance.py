@@ -491,6 +491,8 @@ class Breakdown(BaseModel):
 
 
 class BalanceRolloverTypedDict(TypedDict):
+    granted: float
+    r"""Amount originally rolled over from a previous period, before any of it was consumed."""
     balance: float
     r"""Amount of balance rolled over from a previous period."""
     expires_at: float
@@ -498,6 +500,9 @@ class BalanceRolloverTypedDict(TypedDict):
 
 
 class BalanceRollover(BaseModel):
+    granted: float
+    r"""Amount originally rolled over from a previous period, before any of it was consumed."""
+
     balance: float
     r"""Amount of balance rolled over from a previous period."""
 

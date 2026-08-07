@@ -1273,6 +1273,168 @@ class Invoice(BaseModel):
         return m
 
 
+class InvoicePreviewDiscountTypedDict(TypedDict):
+    amount_off: float
+    percent_off: NotRequired[float]
+    reward_id: NotRequired[str]
+    reward_name: NotRequired[str]
+
+
+class InvoicePreviewDiscount(BaseModel):
+    amount_off: float
+
+    percent_off: Optional[float] = None
+
+    reward_id: Optional[str] = None
+
+    reward_name: Optional[str] = None
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        optional_fields = set(["percent_off", "reward_id", "reward_name"])
+        serialized = handler(self)
+        m = {}
+
+        for n, f in type(self).model_fields.items():
+            k = f.alias or n
+            val = serialized.get(k, serialized.get(n))
+
+            if val != UNSET_SENTINEL:
+                if val is not None or k not in optional_fields:
+                    m[k] = val
+
+        return m
+
+
+class PeriodTypedDict(TypedDict):
+    r"""The period of time that this line item is being charged for."""
+
+    start: float
+    r"""The start of the period in milliseconds since the Unix epoch."""
+    end: float
+    r"""The end of the period in milliseconds since the Unix epoch."""
+
+
+class Period(BaseModel):
+    r"""The period of time that this line item is being charged for."""
+
+    start: float
+    r"""The start of the period in milliseconds since the Unix epoch."""
+
+    end: float
+    r"""The end of the period in milliseconds since the Unix epoch."""
+
+
+class LineItemTypedDict(TypedDict):
+    display_name: str
+    r"""The name of the line item to display to the customer if you're building a UI. It will either be the plan name or the feature name."""
+    description: str
+    r"""A detailed description of the line item."""
+    subtotal: float
+    r"""The amount in cents before discounts and tax for this line item."""
+    total: float
+    r"""The final amount in cents after discounts and tax for this line item."""
+    plan_id: str
+    r"""The ID of the plan that this line item belongs to."""
+    feature_id: Nullable[str]
+    r"""The ID of the feature that this line item belongs to."""
+    quantity: float
+    r"""The quantity of the line item."""
+    discounts: NotRequired[List[InvoicePreviewDiscountTypedDict]]
+    r"""List of discounts applied to this line item."""
+    period: NotRequired[PeriodTypedDict]
+    r"""The period of time that this line item is being charged for."""
+
+
+class LineItem(BaseModel):
+    display_name: str
+    r"""The name of the line item to display to the customer if you're building a UI. It will either be the plan name or the feature name."""
+
+    description: str
+    r"""A detailed description of the line item."""
+
+    subtotal: float
+    r"""The amount in cents before discounts and tax for this line item."""
+
+    total: float
+    r"""The final amount in cents after discounts and tax for this line item."""
+
+    plan_id: str
+    r"""The ID of the plan that this line item belongs to."""
+
+    feature_id: Nullable[str]
+    r"""The ID of the feature that this line item belongs to."""
+
+    quantity: float
+    r"""The quantity of the line item."""
+
+    discounts: Optional[List[InvoicePreviewDiscount]] = None
+    r"""List of discounts applied to this line item."""
+
+    period: Optional[Period] = None
+    r"""The period of time that this line item is being charged for."""
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        optional_fields = set(["discounts", "period"])
+        nullable_fields = set(["feature_id"])
+        serialized = handler(self)
+        m = {}
+
+        for n, f in type(self).model_fields.items():
+            k = f.alias or n
+            val = serialized.get(k, serialized.get(n))
+            is_nullable_and_explicitly_set = (
+                k in nullable_fields
+                and (self.__pydantic_fields_set__.intersection({n}))  # pylint: disable=no-member
+            )
+
+            if val != UNSET_SENTINEL:
+                if (
+                    val is not None
+                    or k not in optional_fields
+                    or is_nullable_and_explicitly_set
+                ):
+                    m[k] = val
+
+        return m
+
+
+class InvoicePreviewTypedDict(TypedDict):
+    plan_ids: List[str]
+    r"""Plan IDs contributing line items to this invoice."""
+    invoice_at: float
+    r"""Unix timestamp (milliseconds) when this invoice will be created."""
+    currency: str
+    r"""The three-letter ISO currency code (e.g., 'usd')."""
+    subtotal: float
+    r"""The total before discounts, in major currency units."""
+    total: float
+    r"""The total after discounts, in major currency units."""
+    line_items: List[LineItemTypedDict]
+    r"""The line items this invoice will contain: usage accrued in the closing cycle, plus recurring charges for the opening cycle."""
+
+
+class InvoicePreview(BaseModel):
+    plan_ids: List[str]
+    r"""Plan IDs contributing line items to this invoice."""
+
+    invoice_at: float
+    r"""Unix timestamp (milliseconds) when this invoice will be created."""
+
+    currency: str
+    r"""The three-letter ISO currency code (e.g., 'usd')."""
+
+    subtotal: float
+    r"""The total before discounts, in major currency units."""
+
+    total: float
+    r"""The total after discounts, in major currency units."""
+
+    line_items: List[LineItem]
+    r"""The line items this invoice will contain: usage accrued in the closing cycle, plus recurring charges for the opening cycle."""
+
+
 CustomerEntityEnv = Union[
     Literal[
         "sandbox",
@@ -1406,7 +1568,7 @@ CustomerDurationType = Union[
 r"""How long the discount lasts"""
 
 
-class DiscountTypedDict(TypedDict):
+class RewardsDiscountTypedDict(TypedDict):
     id: str
     r"""The unique identifier for this discount"""
     name: str
@@ -1431,7 +1593,7 @@ class DiscountTypedDict(TypedDict):
     r"""Total amount saved from this discount"""
 
 
-class Discount(BaseModel):
+class RewardsDiscount(BaseModel):
     id: str
     r"""The unique identifier for this discount"""
 
@@ -1510,12 +1672,12 @@ class Discount(BaseModel):
 
 
 class RewardsTypedDict(TypedDict):
-    discounts: List[DiscountTypedDict]
+    discounts: List[RewardsDiscountTypedDict]
     r"""Array of active discounts applied to the customer"""
 
 
 class Rewards(BaseModel):
-    discounts: List[Discount]
+    discounts: List[RewardsDiscount]
     r"""Array of active discounts applied to the customer"""
 
 
@@ -1612,6 +1774,8 @@ class CustomerTypedDict(TypedDict):
     r"""Payment processors this customer is connected to (Stripe, Vercel, RevenueCat). Omitted entirely when the customer has not been created in any processor."""
     invoices: NotRequired[List[InvoiceTypedDict]]
     r"""Invoices for this customer."""
+    invoice_previews: NotRequired[List[InvoicePreviewTypedDict]]
+    r"""Upcoming invoice for each of this customer's Stripe subscriptions."""
     entities: NotRequired[List[EntityTypedDict]]
     r"""Entities associated with this customer."""
     trials_used: NotRequired[List[TrialsUsedTypedDict]]
@@ -1679,6 +1843,9 @@ class Customer(BaseModel):
     invoices: Optional[List[Invoice]] = None
     r"""Invoices for this customer."""
 
+    invoice_previews: Optional[List[InvoicePreview]] = None
+    r"""Upcoming invoice for each of this customer's Stripe subscriptions."""
+
     entities: Optional[List[Entity]] = None
     r"""Entities associated with this customer."""
 
@@ -1701,6 +1868,7 @@ class Customer(BaseModel):
                 "config",
                 "processors",
                 "invoices",
+                "invoice_previews",
                 "entities",
                 "trials_used",
                 "rewards",

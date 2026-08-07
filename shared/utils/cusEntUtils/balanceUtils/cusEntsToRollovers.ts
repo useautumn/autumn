@@ -1,3 +1,4 @@
+import { Decimal } from "decimal.js";
 import { getRolloverFields, notNullish } from "../../..";
 import type { ApiBalanceRollover } from "../../../api/customers/cusFeatures/apiBalance";
 import type { FullCusEntWithFullCusProduct } from "../../../models/cusProductModels/cusEntModels/cusEntWithProduct";
@@ -20,6 +21,7 @@ export const cusEntsToRollovers = ({
 			const rolloverFields = getRolloverFields({ cusEnt, entityId });
 			if (rolloverFields)
 				return rolloverFields.rollovers.map((rollover) => ({
+					granted: new Decimal(rollover.balance).add(rollover.usage).toNumber(),
 					balance: rollover.balance,
 					expires_at: rollover.expires_at || 0,
 				}));

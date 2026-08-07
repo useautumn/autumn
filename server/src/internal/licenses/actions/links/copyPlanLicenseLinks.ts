@@ -1,62 +1,58 @@
 import type { FullProduct } from "@autumn/shared";
-import type { DrizzleCli } from "@/db/initDrizzle.js";
-import { planLicenseRepo } from "../../repos/planLicenseRepo.js";
+import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
+import { getLatestProducts } from "@/internal/products/productUtils.js";
+import {
+	type PlanLicenseWithPlanIds,
+	planLicenseRepo,
+} from "../../repos/planLicenseRepo.js";
+import { validateLicenseLink } from "./validateLicenseLink.js";
 
 /**
- * Recreates plan_license links in a copy target by translating both ends
- * through external product ids. Links whose parent or license was not copied
- * are skipped.
+ * Recreates plan_license links in a copy target, translated through external
+ * plan ids. Absent-end links are skipped; validation failures warn and skip.
  */
 export const copyPlanLicenseLinks = async ({
-	db,
-	fromProducts,
+	ctx,
+	links,
 	toProducts,
 }: {
-	db: DrizzleCli;
-	fromProducts: FullProduct[];
+	ctx: AutumnContext;
+	links: PlanLicenseWithPlanIds[];
 	toProducts: FullProduct[];
 }) => {
-	const links = await planLicenseRepo.listCatalogByParentInternalProductIds({
-		db,
-		parentInternalProductIds: fromProducts.map(
-			(product) => product.internal_id,
-		),
-	});
+	const { db, logger } = ctx;
 	if (links.length === 0) return;
 
-	const fromExternalIdByInternalId = new Map(
-		fromProducts.map((product) => [product.internal_id, product.id]),
+	const latestToProductByPlanId = new Map(
+		getLatestProducts(toProducts).map((product) => [product.id, product]),
 	);
-	const latestToProductByExternalId = new Map<string, FullProduct>();
-	for (const product of toProducts) {
-		const existing = latestToProductByExternalId.get(product.id);
-		if (!existing || product.version > existing.version) {
-			latestToProductByExternalId.set(product.id, product);
-		}
-	}
 
-	for (const link of links) {
-		const parentExternalId = fromExternalIdByInternalId.get(
-			link.parent_internal_product_id,
-		);
-		const licenseExternalId = fromExternalIdByInternalId.get(
-			link.license_internal_product_id,
-		);
-		const toParent = parentExternalId
-			? latestToProductByExternalId.get(parentExternalId)
-			: undefined;
-		const toLicense = licenseExternalId
-			? latestToProductByExternalId.get(licenseExternalId)
-			: undefined;
+	for (const { planLicense, licensePlanId, parentPlanId } of links) {
+		const toParent = latestToProductByPlanId.get(parentPlanId);
+		const toLicense = latestToProductByPlanId.get(licensePlanId);
 		if (!toParent || !toLicense) continue;
+
+		try {
+			validateLicenseLink({
+				parentProduct: toParent,
+				licenseProduct: toLicense,
+				prepaidOnly: planLicense.prepaid_only,
+				licensePlanId,
+			});
+		} catch (error) {
+			logger.warn(
+				`copy env: skipping license link ${parentPlanId} -> ${licensePlanId}: ${error instanceof Error ? error.message : error}`,
+			);
+			continue;
+		}
 
 		await planLicenseRepo.upsert({
 			db,
 			parentInternalProductId: toParent.internal_id,
 			licenseInternalProductId: toLicense.internal_id,
-			included: link.included,
-			prepaidOnly: link.prepaid_only,
-			metadata: link.metadata ?? {},
+			included: planLicense.included,
+			prepaidOnly: planLicense.prepaid_only,
+			metadata: planLicense.metadata ?? {},
 		});
 	}
 };
