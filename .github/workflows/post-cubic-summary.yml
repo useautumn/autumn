@@ -27,6 +27,7 @@ jobs:
       - name: Post summary to shipped
         env:
           PR_BODY: ${{ github.event.pull_request.body }}
+          PR_HEAD_REF: ${{ github.event.pull_request.head.ref }}
           PR_NUMBER: ${{ github.event.pull_request.number }}
           PR_URL: ${{ github.event.pull_request.html_url }}
           SLACK_SHIPPED_WEBHOOK_URL: ${{ secrets.SLACK_SHIPPED_WEBHOOK_URL }}
@@ -34,6 +35,16 @@ jobs:
           if [ -z "$SLACK_SHIPPED_WEBHOOK_URL" ]; then
             echo "::error::SLACK_SHIPPED_WEBHOOK_URL is not configured"
             exit 1
+          fi
+
+          if [ "$PR_HEAD_REF" = "dev" ]; then
+            route_label="dev2main"
+          else
+            slack_head_ref=$(printf '%s' "$PR_HEAD_REF" | sed \
+              -e 's/&/\&amp;/g' \
+              -e 's/</\&lt;/g' \
+              -e 's/>/\&gt;/g')
+            route_label="$slack_head_ref → main"
           fi
 
           start_marker="## Summary by cubic"
@@ -52,8 +63,8 @@ jobs:
             -e 's/&/\&amp;/g' \
             -e 's/</\&lt;/g' \
             -e 's/>/\&gt;/g')
-          printf -v SLACK_MESSAGE '*→ main* :rocket:\n<%s|PR #%s>\n\n%s' \
-            "$PR_URL" "$PR_NUMBER" "$slack_summary"
+          printf -v SLACK_MESSAGE '*%s* :rocket:\n<%s|PR #%s>\n\n%s' \
+            "$route_label" "$PR_URL" "$PR_NUMBER" "$slack_summary"
           export SLACK_MESSAGE
 
           node -e 'process.stdout.write(JSON.stringify({ text: process.env.SLACK_MESSAGE }))' \
