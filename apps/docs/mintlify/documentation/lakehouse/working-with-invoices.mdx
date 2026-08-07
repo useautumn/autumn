@@ -4,20 +4,6 @@ sidebarTitle: "Working with invoices"
 description: "Revenue, and paying-customer metrics — the rows to drop and the column that actually carries truth."
 ---
 
-{/*
-  MAINTAINER SOURCE TRACE — ground every recipe here in code, not prose.
-  - ETL reshape (warehouse columns are passed through verbatim from the billing tables):
-      terraform/risingwave-etl/sql/03_v2.3_mvs_invoices.sql   (api_2_3.invoices, api_2_3.invoice_line_items)
-      terraform/risingwave-etl/sql/03_v2.3_mvs_states.sql      (api_2_3.subscriptions / purchases)
-      terraform/risingwave-etl/sql/03_v2.3_mvs_catalog.sql     (api_2_3.plans price_* columns)
-  - API builders the columns mirror:
-      server/src/internal/invoices/invoiceUtils.ts                                   (invoicesToResponse)
-      server/src/internal/customers/cusUtils/getApiCustomerV2/getApiSubscription/getApiSubscriptionsV2.ts
-  Note: invoices carry no org_id/env of their own — both are joined from the customer in the ETL.
-  Plan-header price (v2_3_plans.price_amount) is the base list price; custom/enterprise pricing is
-  set per subscription and is NOT on the plan header, so plan-header MRR undercounts those accounts.
-*/}
-
 <Warning>
   **Available on request** — The Autumn Lakehouse is provisioned per customer. Contact us at [hey@useautumn.com](mailto:hey@useautumn.com) to get access.
 </Warning>
@@ -70,6 +56,8 @@ WHERE s.env = 'live'
 
 Overage (on the balances side) has the same "two figures" hazard as revenue here — **billable** (what you invoice) vs **displayed** (what the dashboard header shows) diverge by undrawn grants. If a report combines revenue and overage, make sure both pages agree on which overage you mean. See [Working with balances → Overage](/documentation/lakehouse/balance-semantics#overage-is-derived-not-stored-and-there-are-two-of-them).
 
+There's a second trap in the same direction: `v2_3_balances` and `v2_3_breakdowns` **exclude rollover balances**, which live in `v2_3_rollovers`. Unspent rollover is real allowance, so an overage figure computed without it overstates — and it's the kind of error that only shows up on the accounts that roll over, which are usually your largest. See [Working with balances → Rollovers](/documentation/lakehouse/balance-semantics#rollovers-live-in-their-own-table).
+
 <Note>
-  All queries here use `env = 'live'` (**not** `production`) and the `` `<catalog>`.`<namespace>.v2_3_…` `` addressing form. Join on `internal_*` ids — external ids are mutable and versioned. See [Querying](/documentation/lakehouse/querying) for the addressing and `IS NULL` footguns.
+  All queries here use `env = 'live'` (**not** `production`) and the ClickHouse `` `<catalog>`.`<namespace>.v2_3_…` `` addressing form. On BigQuery, address tables as `` `<project>.<dataset>.v2_3_…` `` and swap `uniqExact(x)` → `COUNT(DISTINCT x)` and `toUnixTimestamp(now()) * 1000` → `UNIX_MILLIS(CURRENT_TIMESTAMP())`; everything else runs as written. Join on `internal_*` ids — external ids are mutable and versioned. See [Querying](/documentation/lakehouse/querying) for the addressing and `IS NULL` footguns.
 </Note>
