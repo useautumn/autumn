@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
-import { DEFAULT_OAUTH_RESOURCE_SCOPES } from "@autumn/shared";
 import { getProtectedResourceMetadata } from "@autumn/auth/oauth";
+import { DEFAULT_OAUTH_RESOURCE_SCOPES } from "@autumn/shared";
 import type { OAuthHttpError } from "../../../src/mcp/auth/protectedResourceMetadata.js";
 import {
 	buildAuthForRequest,
@@ -63,12 +63,12 @@ describe("MCP OAuth auth resolution", () => {
 		} satisfies Partial<OAuthHttpError>);
 	});
 
-	test("passes OAuth bearer tokens through without local verification", async () => {
+	test("validates OAuth bearer tokens and uses the resolved identity", async () => {
 		const originalFetch = globalThis.fetch;
-		let fetchCalled = false;
-		const mockFetch = (async () => {
-			fetchCalled = true;
-			return Response.json({});
+		let validationRequest: Request | undefined;
+		const mockFetch = (async (input: RequestInfo | URL, init?: RequestInit) => {
+			validationRequest = new Request(input, init);
+			return Response.json({ id: "org_1", user: { id: "user_1" } });
 		}) as unknown as typeof fetch;
 		globalThis.fetch = mockFetch;
 
@@ -86,12 +86,78 @@ describe("MCP OAuth auth resolution", () => {
 				apiKey: "am_oauth_token",
 				authMethod: "oauth",
 				env: "sandbox",
-				principalId: "oauth:unverified",
+				orgId: "org_1",
 				resource: "http://localhost:2718/mcp",
 				scopes: [...DEFAULT_OAUTH_RESOURCE_SCOPES],
 				serverURL: "http://localhost:8080",
 			});
-			expect(fetchCalled).toBe(false);
+			expect(auth.principalId).toStartWith("oauth:");
+			expect(validationRequest?.url).toBe(
+				"http://localhost:8080/v1/organization/me",
+			);
+			expect(validationRequest?.method).toBe("GET");
+			expect(validationRequest?.headers.get("authorization")).toBe(
+				"Bearer am_oauth_token",
+			);
+			expect(validationRequest?.headers.get("x-autumn-oauth-resource")).toBe(
+				resourceUrl,
+			);
+		} finally {
+			globalThis.fetch = originalFetch;
+		}
+	});
+
+	test("challenges expired OAuth bearer tokens at the MCP boundary", async () => {
+		const originalFetch = globalThis.fetch;
+		globalThis.fetch = (async () =>
+			Response.json(
+				{
+					code: "invalid_request",
+					message: "Invalid or expired access token",
+				},
+				{ status: 401 },
+			)) as unknown as typeof fetch;
+
+		try {
+			await expect(
+				buildAuthForRequest({
+					headers: new Headers({
+						authorization: "Bearer am_oauth_expired",
+					}),
+					flags: flags as MCPOAuthFlags,
+					logger,
+					resourceUrl,
+				}),
+			).rejects.toMatchObject({
+				status: 401,
+				error: "invalid_token",
+				wwwAuthenticate:
+					'Bearer resource_metadata="http://localhost:2718/.well-known/oauth-protected-resource/mcp", error="invalid_token"',
+			} satisfies Partial<OAuthHttpError>);
+		} finally {
+			globalThis.fetch = originalFetch;
+		}
+	});
+
+	test("does not misreport validation service failures as invalid tokens", async () => {
+		const originalFetch = globalThis.fetch;
+		globalThis.fetch = (async () =>
+			Response.json(
+				{ error: "unavailable" },
+				{ status: 503 },
+			)) as unknown as typeof fetch;
+
+		try {
+			await expect(
+				buildAuthForRequest({
+					headers: new Headers({
+						authorization: "Bearer am_oauth_token",
+					}),
+					flags: flags as MCPOAuthFlags,
+					logger,
+					resourceUrl,
+				}),
+			).rejects.toThrow("Autumn OAuth token validation failed (503)");
 		} finally {
 			globalThis.fetch = originalFetch;
 		}

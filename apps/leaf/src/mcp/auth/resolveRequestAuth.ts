@@ -7,6 +7,7 @@ import {
 import {
 	type AutumnMcpAuth,
 	DEFAULT_API_VERSION,
+	DEFAULT_AUTUMN_API_URL,
 	environmentSchema,
 	type MCPServerFlags,
 	type OAuthEnvironment,
@@ -26,6 +27,10 @@ export interface MCPOAuthFlags extends MCPServerFlags {
 
 const xApiVersionSchema = z.string().default(DEFAULT_API_VERSION);
 const secretKeySchema = z.string().min(1).optional();
+const oauthIdentitySchema = z.object({
+	id: z.string().min(1),
+	user: z.object({ id: z.string().min(1) }),
+});
 const failOpenSchema = z
 	.union([
 		z.boolean(),
@@ -100,6 +105,62 @@ const principalFromSecret = ({
 	return `${kind}:${digest}`;
 };
 
+const getInvalidTokenChallenge = (resourceUrl: string) =>
+	getWwwAuthenticateHeader({
+		resourceMetadataUrl: getProtectedResourceMetadataUrl({ resourceUrl }),
+		error: "invalid_token",
+	});
+
+const validateOAuthToken = async ({
+	bearer,
+	failOpen,
+	resourceUrl,
+	serverUrl,
+	xApiVersion,
+}: {
+	bearer: string;
+	failOpen: boolean;
+	resourceUrl: string;
+	serverUrl?: string | undefined;
+	xApiVersion: string;
+}) => {
+	const response = await fetch(
+		new URL("/v1/organization/me", serverUrl ?? DEFAULT_AUTUMN_API_URL),
+		{
+			method: "GET",
+			headers: {
+				Accept: "application/json",
+				Authorization: `Bearer ${bearer}`,
+				"fail-open": String(failOpen),
+				"x-api-version": xApiVersion,
+				"x-autumn-oauth-resource": resourceUrl,
+			},
+		},
+	);
+
+	if (response.status === 401) {
+		throw new OAuthHttpError(
+			401,
+			"Invalid or expired OAuth access token",
+			"invalid_token",
+			getInvalidTokenChallenge(resourceUrl),
+		);
+	}
+	if (!response.ok) {
+		throw new Error(
+			`Autumn OAuth token validation failed (${response.status})`,
+		);
+	}
+
+	const parsed = oauthIdentitySchema.safeParse(await response.json());
+	if (!parsed.success) {
+		throw new Error(
+			"Autumn OAuth token validation returned an invalid identity",
+		);
+	}
+	return parsed.data;
+};
+
 export const buildAuthForRequest = async ({
 	headers,
 	flags,
@@ -144,12 +205,23 @@ export const buildAuthForRequest = async ({
 
 	const bearer = getBearerToken({ headers });
 	if (bearer && isOAuthToken({ token: bearer })) {
+		const identity = await validateOAuthToken({
+			bearer,
+			failOpen,
+			resourceUrl,
+			serverUrl: flags["server-url"],
+			xApiVersion,
+		});
 		return {
 			apiKey: bearer,
 			authMethod: "oauth",
 			env,
+			orgId: identity.id,
 			resource: resourceUrl,
-			principalId: "oauth:unverified",
+			principalId: principalFromSecret({
+				kind: "oauth",
+				value: `${identity.id}:${identity.user.id}`,
+			}),
 			scopes: [...DEFAULT_OAUTH_RESOURCE_SCOPES],
 			serverURL: flags["server-url"],
 			xApiVersion,
@@ -162,6 +234,7 @@ export const buildAuthForRequest = async ({
 			401,
 			"Invalid OAuth token prefix",
 			"invalid_token",
+			getInvalidTokenChallenge(resourceUrl),
 		);
 	}
 
@@ -170,12 +243,7 @@ export const buildAuthForRequest = async ({
 			401,
 			"Missing Autumn API key bearer token",
 			"invalid_token",
-			getWwwAuthenticateHeader({
-				resourceMetadataUrl: getProtectedResourceMetadataUrl({
-					resourceUrl,
-				}),
-				error: "invalid_token",
-			}),
+			getInvalidTokenChallenge(resourceUrl),
 		);
 	}
 
