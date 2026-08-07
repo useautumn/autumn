@@ -1,8 +1,6 @@
 /**
- * customers.list created_at_range (V2.3 cursor path):
- * - both bounds inclusive, each independently optional
- * - start > end is rejected as invalid input
- * - composes with sort_order and cursor pagination
+ * customers.list created_at_range (V2.3 cursor path): inclusive optional bounds,
+ * start > end rejected, composes with sort_order and cursor pagination.
  */
 
 import { beforeAll, describe, expect, test } from "bun:test";

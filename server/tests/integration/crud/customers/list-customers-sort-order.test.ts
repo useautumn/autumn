@@ -1,8 +1,6 @@
 /**
- * customers.list sort_order (V2.3 cursor path):
- * - omitted / "desc" → newest first (existing behavior)
- * - "asc" → oldest first, exact reverse of desc
- * - cursor pagination walks forward correctly in both directions
+ * customers.list sort_order (V2.3 cursor path): "asc" is the exact reverse of
+ * the default "desc"; cursor pagination walks correctly in both directions.
  */
 
 import { expect, test } from "bun:test";
