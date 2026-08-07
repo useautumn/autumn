@@ -75,7 +75,7 @@ export const copyLicenseLinksForPlanCopy = async ({
 	const copiedLicensePlanIds = new Set(
 		licensePlansToCopy.map((licensePlan) => licensePlan.id),
 	);
-	// inIds bypasses the stale products cache; absent ids are simply omitted.
+	// inIds bypasses the stale products cache; requested ids must exist.
 	const toProducts = await ProductService.listFull({
 		db,
 		orgId: toOrg.id,
