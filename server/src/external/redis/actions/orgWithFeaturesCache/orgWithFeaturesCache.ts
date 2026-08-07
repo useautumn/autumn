@@ -52,6 +52,8 @@ export const getCachedOrgWithFeatures = async <T>({
 	const miscRedis = resolveMiscRedis({ requestId });
 	const cacheKey = buildOrgWithFeaturesCacheKey({ orgId, env });
 
+	// Hands back the cached reference, not a copy — callers must treat the org
+	// and its features as read-only, or the write leaks into every later hit.
 	const local = orgWithFeaturesL1.get(cacheKey);
 	if (local) return local.value as T;
 
