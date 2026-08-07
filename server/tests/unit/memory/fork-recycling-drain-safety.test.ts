@@ -114,15 +114,25 @@ describe("drain safety under concurrent load", () => {
 				if (failures.length > 0) {
 					console.log("first failures:", failures.slice(0, 5));
 				}
-				const maxDrainExceeded = stdoutLines.filter((line) =>
-					line.includes("max drain exceeded"),
+				const extended = stdoutLines.filter((line) =>
+					line.includes("extending drain"),
 				);
-				console.log("max-drain-exceeded exits:", maxDrainExceeded.length);
+				console.log(
+					`drain extensions=${extended.length} maxDrainExceeded=${
+						stdoutLines.filter((l) => l.includes("max drain exceeded")).length
+					}`,
+				);
 
 				// Recycles actually happened, and nothing was dropped or cut.
 				expect(recycleCount).toBeGreaterThanOrEqual(3);
 				expect(servingPids.size).toBeGreaterThanOrEqual(5);
 				expect(failures).toHaveLength(0);
+				// Without this the suite could stop exercising the case it exists for:
+				// a slow request must push the drain deadline back, not get cut.
+				expect(extended.length).toBeGreaterThan(0);
+				expect(
+					stdoutLines.filter((line) => line.includes("max drain exceeded")),
+				).toHaveLength(0);
 				expect(
 					stdoutLines.filter((line) => line.startsWith("WORKER_DIED")),
 				).toHaveLength(0);
