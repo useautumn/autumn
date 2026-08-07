@@ -20,6 +20,7 @@ export const BatchMigrationExecutionAddLicenseSchema = z.object({
 	licensePlanId: z.string(),
 	planLicenseId: z.string(),
 	licenseInternalProductId: z.string(),
+	isOneOff: z.boolean(),
 	entitlement: EntitlementWithFeatureSchema,
 	initialState: BatchMigrationInitialStateSchema,
 });

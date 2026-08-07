@@ -8,6 +8,7 @@ export const PreparedPlanLicenseRefSchema = z.object({
 	hash: z.string(),
 	parent_internal_product_id: z.string(),
 	license_internal_product_id: z.string(),
+	is_one_off: z.boolean(),
 	plan_license_id: z.string(),
 	entitlement_id: z.string(),
 	internal_feature_id: z.string(),

@@ -26,6 +26,7 @@ export const batchMigrationPlanToExecutionPlan = ({
 					licensePlanId: operation.licensePlanId,
 					planLicenseId: operation.planLicenseId,
 					licenseInternalProductId: operation.licenseInternalProductId,
+					isOneOff: operation.isOneOff,
 					entitlement: operation.entitlement,
 					initialState: operation.initialState,
 				}),

@@ -101,11 +101,11 @@ export const computeBatchMigrationLicenseOperations = ({
 			});
 			if (!enriched) {
 				rejections.push({
-					code: "missing_prepared_state",
+					code: "license_entitlement_unresolved",
 					opIndex,
 					planId: fromProduct.id,
 					message:
-						"prepared license entitlement references a feature missing from the org. Re-run prepare.",
+						"prepared license entitlement references a feature missing from the org.",
 					details: { licensePlanId: entry.license_plan_id },
 				});
 				continue;
@@ -116,6 +116,7 @@ export const computeBatchMigrationLicenseOperations = ({
 				licensePlanId: entry.license_plan_id,
 				planLicenseId: artifact.plan_license_id,
 				licenseInternalProductId: artifact.license_internal_product_id,
+				isOneOff: artifact.is_one_off,
 				entitlement: enriched,
 				initialState: computeCustomerEntitlementInitialState({
 					entitlement: enriched,
@@ -123,6 +124,8 @@ export const computeBatchMigrationLicenseOperations = ({
 			});
 		}
 	}
+
+	if (rejections.length > 0) return { operations: [], rejections };
 
 	return { operations, rejections };
 };

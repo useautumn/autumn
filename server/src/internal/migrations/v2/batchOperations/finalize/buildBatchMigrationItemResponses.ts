@@ -1,4 +1,4 @@
-import { type Feature, isOneOffProduct } from "@autumn/shared";
+import type { Feature } from "@autumn/shared";
 import { buildBalanceChanges } from "@/internal/migrations/v2/preview/previewMigrateCustomer/buildBalanceChanges.js";
 import { buildFlagChanges } from "@/internal/migrations/v2/preview/previewMigrateCustomer/buildFlagChanges.js";
 import type { PreviewMigrateCustomer } from "@/internal/migrations/v2/preview/previewMigrateCustomer/types/index.js";
@@ -10,6 +10,7 @@ import type { BatchMigrationExecutionPlan } from "../types/index.js";
 import { insertedItemsToPlanChange } from "./buildBatchMigrationWebhookRecords/insertedItemsToPlanChange.js";
 import {
 	buildEntitlementLookup,
+	buildOneOffByPlanId,
 	toCustomerItemChanges,
 } from "./buildMigrationItemEvent/toCustomerItemChanges.js";
 
@@ -46,12 +47,7 @@ export const buildBatchMigrationItemResponses = ({
 }): Map<string, PreviewMigrateCustomer> => {
 	const entitlementLookup = buildEntitlementLookup({ plan });
 	const itemsByCustomer = groupByCustomer({ insertedItems });
-	const oneOffByPlanId = new Map(
-		plan.patches.map((patch) => [
-			patch.fromProduct.id,
-			isOneOffProduct({ prices: patch.fromProduct.prices }),
-		]),
-	);
+	const oneOffByPlanId = buildOneOffByPlanId({ plan });
 
 	return new Map(
 		customers.map((customer) => {

@@ -22,6 +22,7 @@ export type BatchMigrationAddLicenseEntitlementOp = {
 	licensePlanId: string;
 	planLicenseId: string;
 	licenseInternalProductId: string;
+	isOneOff: boolean;
 	entitlement: EntitlementWithFeature;
 	initialState: CustomerEntitlementInitialState;
 };

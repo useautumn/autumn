@@ -29,9 +29,9 @@ export const repointLicensePoolsForPage = async ({
 		UPDATE customer_licenses AS pool
 		SET
 			plan_license_id = ${planLicenseId},
-			granted = ${sql.raw("target.included")} + pool.paid_quantity,
+			granted = target.included + pool.paid_quantity,
 			remaining = GREATEST(
-				pool.remaining + ((${sql.raw("target.included")} + pool.paid_quantity) - pool.granted),
+				pool.remaining + ((target.included + pool.paid_quantity) - pool.granted),
 				0
 			),
 			updated_at = ${Date.now()}

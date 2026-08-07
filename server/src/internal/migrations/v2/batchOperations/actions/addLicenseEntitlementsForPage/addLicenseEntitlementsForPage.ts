@@ -1,9 +1,12 @@
-import type { CusProductStatus } from "@autumn/shared";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
+import { withStatementTimeout } from "@/db/withStatementTimeout.js";
 import { generateId } from "@/utils/genUtils.js";
 import { iterateCustomerProductPages } from "../../execute/customerProductPagination/iterateCustomerProductPages.js";
 import type { BatchMigrationInsertedItem } from "../../execute/types/batchMigrationExecutionTypes.js";
-import { BATCH_MIGRATION_CANDIDATE_ROW_BATCH } from "../../execute/utils/batchMigrationExecutionConstants.js";
+import {
+	BATCH_MIGRATION_CANDIDATE_ROW_BATCH,
+	BATCH_MIGRATION_PAGE_STATEMENT_TIMEOUT_MS,
+} from "../../execute/utils/batchMigrationExecutionConstants.js";
 import {
 	type BatchMigrationPagePhases,
 	timePhase,
@@ -26,31 +29,46 @@ export type AddLicenseEntitlementsForPageResult = {
  * link's entitlement onto every live assignment under it. Non-resetting only,
  * so there are no cycles to resolve — the anchor ladder that governs owned
  * rows reads columns an assignment does not carry.
- *
- * The repoint shares the page transaction with the select that reads it: a
- * separate connection would not see the new plan_license_id.
  */
 export const addLicenseEntitlementsForPage = async ({
 	db,
-	internalCustomerIds,
 	scope,
+	internalCustomerIds,
 	add,
 	now,
 	phases,
 	candidateRowBatchSize = BATCH_MIGRATION_CANDIDATE_ROW_BATCH,
 }: {
 	db: DrizzleCli;
-	internalCustomerIds: string[];
+	/** The patch's lowered row-level scope, applied to the pool's parent. */
 	scope: OperationScope;
+	internalCustomerIds: string[];
 	add: BatchMigrationExecutionAddLicense;
 	now: number;
 	phases?: BatchMigrationPagePhases;
 	candidateRowBatchSize?: number;
 }): Promise<AddLicenseEntitlementsForPageResult> => {
 	const insertedItems: BatchMigrationInsertedItem[] = [];
-	let affected = 0;
-	let repointedPools = 0;
-	let repointed = false;
+
+	// Whole-page, so it commits before any candidate select reads the pool —
+	// not per batch, which would mutate before the ceiling assertion.
+	const repointedPools = await timePhase({
+		phases,
+		phase: "insert",
+		run: () =>
+			withStatementTimeout(
+				db,
+				(transaction) =>
+					repointLicensePoolsForPage({
+						db: transaction,
+						internalCustomerIds,
+						scope,
+						planLicenseId: add.planLicenseId,
+						licenseInternalProductId: add.licenseInternalProductId,
+					}),
+				BATCH_MIGRATION_PAGE_STATEMENT_TIMEOUT_MS,
+			),
+	});
 
 	const { rowCount } = await iterateCustomerProductPages({
 		db,
@@ -61,22 +79,6 @@ export const addLicenseEntitlementsForPage = async ({
 			limit,
 			assertWithinCeiling,
 		}) => {
-			if (!repointed) {
-				repointedPools = await timePhase({
-					phases,
-					phase: "insert",
-					run: () =>
-						repointLicensePoolsForPage({
-							db: transaction,
-							internalCustomerIds,
-							scope,
-							planLicenseId: add.planLicenseId,
-							licenseInternalProductId: add.licenseInternalProductId,
-						}),
-				});
-				repointed = true;
-			}
-
 			const candidates = await timePhase({
 				phases,
 				phase: "candidates",
@@ -121,20 +123,19 @@ export const addLicenseEntitlementsForPage = async ({
 					granted: add.initialState.granted,
 					unlimited: add.initialState.unlimited === true,
 					nextResetAt: null,
-					status: row.status as CusProductStatus,
+					status: row.status,
 					startsAt: row.startsAt,
 					canceledAt: row.canceledAt,
 					endedAt: row.endedAt,
 					trialEndsAt: row.trialEndsAt,
 				});
 			}
-			affected += insertedIds.length;
 			return candidates;
 		},
 	});
 
 	return {
-		affected,
+		affected: insertedItems.length,
 		candidateCount: rowCount,
 		repointedPools,
 		insertedItems,

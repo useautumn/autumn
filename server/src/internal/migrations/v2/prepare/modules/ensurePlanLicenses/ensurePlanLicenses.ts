@@ -2,6 +2,7 @@ import {
 	type DbPlanLicense,
 	type Entitlement,
 	findFeatureById,
+	isOneOffProduct,
 	planLicenses,
 } from "@autumn/shared";
 import type { UpdatePlanOp } from "@autumn/shared/api/migrations/operations/customer/updatePlan/index.js";
@@ -193,7 +194,11 @@ export const ensurePlanLicenses: PrepareModule<
 							internalProductId: licenseProduct.internal_id,
 							isCustom: true,
 						});
-						if (!newEnt) continue;
+						if (!newEnt) {
+							throw new Error(
+								`ensurePlanLicenses: no entitlement for ${item.feature_id} on ${entry.license_plan_id} — the eligibility guard should have rejected this item`,
+							);
+						}
 
 						entitlements.push({
 							...newEnt,
@@ -207,6 +212,7 @@ export const ensurePlanLicenses: PrepareModule<
 							hash: itemHash,
 							parent_internal_product_id: parentProduct.internal_id,
 							license_internal_product_id: licenseProduct.internal_id,
+							is_one_off: isOneOffProduct({ prices: licenseProduct.prices }),
 							plan_license_id: planLicenseId,
 							entitlement_id: entitlementId,
 							internal_feature_id: feature.internal_id,
