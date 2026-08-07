@@ -18,6 +18,18 @@ export type PaginationConfig = {
 	maxLimit: number;
 };
 
+/**
+ * V2_4 tightens the default page ceiling on the customer and entity list
+ * endpoints. An explicit per-org override still wins, so ops keeps its
+ * escape hatch for anyone who genuinely needs bigger pages.
+ */
+export const V2_4_MAX_PAGINATION_LIMIT = 200;
+
+export const V2_4_CAPPED_PAGINATION_TYPES: PaginationType[] = [
+	PaginationType.ListCustomers,
+	PaginationType.ListEntities,
+];
+
 export const PAGINATION_CONFIGS: Record<PaginationType, PaginationConfig> = {
 	[PaginationType.ListCustomers]: {
 		defaultLimit: PaginationDefaults.DefaultLimit,
