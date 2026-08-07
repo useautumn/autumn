@@ -1,6 +1,8 @@
 import {
 	type AppEnv,
+	type CreateFeature,
 	ErrCode,
+	type Feature,
 	type Organization,
 	ProductAlreadyExistsError,
 } from "@autumn/shared";
@@ -14,11 +16,29 @@ import {
 	initProductInStripe,
 } from "@/internal/products/productUtils.js";
 import RecaseError from "@/utils/errorUtils.js";
+import { generateId } from "@/utils/genUtils.js";
 import { copyBaseVariants } from "./copyBaseVariants.js";
 import { copyLicenseLinksForPlanCopy } from "./copyLicenseLinksForPlanCopy.js";
 import { copyMissingFeatures } from "./copyMissingFeatures.js";
 import { listExistingTargetPlanIds } from "./listExistingTargetPlanIds.js";
 import { loadSourcePlanFamily } from "./loadSourcePlanFamily.js";
+
+export const initNewFeature = ({
+	data,
+	orgId,
+	env,
+}: {
+	data: CreateFeature;
+	orgId: string;
+	env: AppEnv;
+}): Feature => ({
+	...data,
+	org_id: orgId,
+	env,
+	created_at: Date.now(),
+	internal_id: generateId("fe"),
+	archived: false,
+});
 
 /**
  * Copies a single product between (org, env) pairs. When fromOrg === toOrg this
