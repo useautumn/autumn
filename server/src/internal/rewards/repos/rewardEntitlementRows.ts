@@ -25,7 +25,7 @@ export const rewardToEntitlementRows = ({
 		const expiry = "expiry" in entitlement ? entitlement.expiry : undefined;
 		// Boolean grants carry no allowance
 		const hasAllowance =
-			entitlement.allowance != null && entitlement.allowance > 0;
+			entitlement.allowance != null && entitlement.allowance >= 0;
 
 		return {
 			id:
