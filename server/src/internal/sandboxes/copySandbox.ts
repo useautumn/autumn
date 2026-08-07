@@ -198,11 +198,8 @@ export const copySandboxForOrg = async ({
 	// Features first: products reference them, and credit systems reference
 	// metered features (handleCopyFeatures orders the batches accordingly).
 	await handleCopyFeatures({
-		ctx,
+		toContext: { ...ctx, org: toSandbox, env: toEnv, features: toFeatures },
 		fromFeatures: featuresToCopy,
-		toOrg: toSandbox,
-		toEnv,
-		toFeatures,
 	});
 
 	await handleCopyProducts({

@@ -1,9 +1,4 @@
-import {
-	type AppEnv,
-	type Feature,
-	FeatureType,
-	type Organization,
-} from "@autumn/shared";
+import { type Feature, FeatureType } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { createFeature } from "@/internal/features/featureActions/createFeature.js";
 import { updateFeature } from "@/internal/features/featureActions/updateFeature.js";
@@ -13,28 +8,16 @@ import { updateFeature } from "@/internal/features/featureActions/updateFeature.
  *
  * Generalised from the original sandbox→live copy: the source and target may
  * live in different organizations (e.g. two sandbox sub-orgs of the same master
- * org), so the write context is rebuilt around an explicit `toOrg`/`toEnv`
- * rather than reusing `ctx.org`.
+ * org), so the caller passes an explicit target context rather than `ctx`.
  */
 export const handleCopyFeatures = async ({
-	ctx,
+	toContext,
 	fromFeatures,
-	toOrg,
-	toEnv,
-	toFeatures,
 }: {
-	ctx: AutumnContext;
+	toContext: AutumnContext;
 	fromFeatures: Feature[];
-	toOrg: Organization;
-	toEnv: AppEnv;
-	toFeatures: Feature[];
 }) => {
-	const newContext = {
-		...ctx,
-		org: toOrg,
-		features: toFeatures,
-		env: toEnv,
-	};
+	const { features: toFeatures } = toContext;
 
 	// Separate features by type: Boolean/Metered must be created before CreditSystem
 	// since credit systems can reference metered features in their credit_schema
@@ -55,7 +38,7 @@ export const handleCopyFeatures = async ({
 		if (toFeature) {
 			firstBatchPromises.push(
 				updateFeature({
-					ctx: newContext,
+					ctx: toContext,
 					featureId: fromFeature.id,
 					updates: fromFeature,
 				}),
@@ -63,7 +46,7 @@ export const handleCopyFeatures = async ({
 		} else {
 			firstBatchPromises.push(
 				createFeature({
-					ctx: newContext,
+					ctx: toContext,
 					data: fromFeature,
 				}),
 			);
@@ -79,7 +62,7 @@ export const handleCopyFeatures = async ({
 		if (toFeature) {
 			secondBatchPromises.push(
 				updateFeature({
-					ctx: newContext,
+					ctx: toContext,
 					featureId: fromFeature.id,
 					updates: fromFeature,
 				}),
@@ -87,7 +70,7 @@ export const handleCopyFeatures = async ({
 		} else {
 			secondBatchPromises.push(
 				createFeature({
-					ctx: newContext,
+					ctx: toContext,
 					data: fromFeature,
 				}),
 			);

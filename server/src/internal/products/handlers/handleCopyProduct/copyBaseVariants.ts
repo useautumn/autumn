@@ -1,11 +1,12 @@
-import type { AppEnv, Feature, FullProduct } from "@autumn/shared";
+import type { FullProduct } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { ProductService } from "@/internal/products/ProductService.js";
-import { initVariantsInStripe } from "@/internal/products/stripeResourceUtils/initVariantsInStripe.js";
 import {
-	copyPlanIntoTarget,
-	listExistingTargetPlanIds,
-} from "./copyPlanIntoTarget.js";
+	copyProduct,
+	type PlanCopySource,
+} from "@/internal/products/productUtils.js";
+import { initVariantsInStripe } from "@/internal/products/stripeResourceUtils/initVariantsInStripe.js";
+import { listExistingTargetPlanIds } from "./listExistingTargetPlanIds.js";
 
 /**
  * Copies a base plan's variants into the target (org, env), relinking each to
@@ -14,19 +15,15 @@ import {
  * block promoting the base.
  */
 export const copyBaseVariants = async ({
+	source,
 	toContext,
 	variants,
-	fromEnv,
-	fromFeatures,
 	toBaseInternalId,
-	crossOrg,
 }: {
+	source: PlanCopySource;
 	toContext: AutumnContext;
 	variants: FullProduct[];
-	fromEnv: AppEnv;
-	fromFeatures: Feature[];
 	toBaseInternalId: string;
-	crossOrg: boolean;
 }): Promise<string[]> => {
 	if (variants.length === 0) return [];
 
@@ -45,12 +42,12 @@ export const copyBaseVariants = async ({
 			continue;
 		}
 
-		await copyPlanIntoTarget({
-			toContext,
-			plan: variant,
-			fromEnv,
-			fromFeatures,
-			crossOrg,
+		await copyProduct({
+			source,
+			ctx: toContext,
+			product: variant,
+			toId: variant.id,
+			toName: variant.name,
 			baseInternalProductId: toBaseInternalId,
 		});
 		copiedVariantIds.push(variant.id);

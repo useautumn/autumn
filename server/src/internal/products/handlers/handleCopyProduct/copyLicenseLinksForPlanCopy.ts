@@ -1,18 +1,14 @@
-import {
-	type AppEnv,
-	deduplicateArray,
-	type Feature,
-	type FullProduct,
-} from "@autumn/shared";
+import type { FullProduct } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { copyPlanLicenseLinks } from "@/internal/licenses/actions/links/copyPlanLicenseLinks.js";
 import type { PlanLicenseWithPlanIds } from "@/internal/licenses/repos/planLicenseRepo.js";
 import { ProductService } from "@/internal/products/ProductService.js";
-import { initProductInStripe } from "@/internal/products/productUtils.js";
 import {
-	copyPlanIntoTarget,
-	listExistingTargetPlanIds,
-} from "./copyPlanIntoTarget.js";
+	copyProduct,
+	initProductInStripe,
+	type PlanCopySource,
+} from "@/internal/products/productUtils.js";
+import { listExistingTargetPlanIds } from "./listExistingTargetPlanIds.js";
 
 /**
  * Recreates the copied base's and variants' license links in the target,
@@ -20,31 +16,27 @@ import {
  * id when the copy renamed it.
  */
 export const copyLicenseLinksForPlanCopy = async ({
+	source,
 	toContext,
-	fromBase,
+	fromBaseId,
 	sourceLinks,
 	sourceLicensePlans,
-	fromEnv,
-	fromFeatures,
 	toBaseId,
 	copiedVariantIds,
-	crossOrg,
 }: {
+	source: PlanCopySource;
 	toContext: AutumnContext;
-	fromBase: FullProduct;
+	fromBaseId: string;
 	sourceLinks: PlanLicenseWithPlanIds[];
 	sourceLicensePlans: FullProduct[];
-	fromEnv: AppEnv;
-	fromFeatures: Feature[];
 	toBaseId: string;
 	copiedVariantIds: string[];
-	crossOrg: boolean;
 }): Promise<void> => {
 	const { db, org: toOrg, env: toEnv } = toContext;
 	if (sourceLinks.length === 0) return;
 
 	const remapPlanId = (planId: string) =>
-		planId === fromBase.id ? toBaseId : planId;
+		planId === fromBaseId ? toBaseId : planId;
 	const copiedPlanIds = new Set([toBaseId, ...copiedVariantIds]);
 	const links = sourceLinks
 		.map((link) => ({
@@ -55,33 +47,35 @@ export const copyLicenseLinksForPlanCopy = async ({
 		.filter((link) => copiedPlanIds.has(link.parentPlanId));
 	if (links.length === 0) return;
 
-	const candidateLicensePlanIds = deduplicateArray(
-		links.map((link) => link.licensePlanId),
-	).filter((planId) => !copiedPlanIds.has(planId));
+	const candidateLicensePlanIds = new Set(
+		links
+			.map((link) => link.licensePlanId)
+			.filter((planId) => !copiedPlanIds.has(planId)),
+	);
 	const presentIds = await listExistingTargetPlanIds({
 		toContext,
-		planIds: candidateLicensePlanIds,
+		planIds: [...candidateLicensePlanIds],
 	});
 
 	const licensePlansToCopy = sourceLicensePlans.filter(
 		(licensePlan) =>
-			candidateLicensePlanIds.includes(licensePlan.id) &&
+			candidateLicensePlanIds.has(licensePlan.id) &&
 			!presentIds.has(licensePlan.id),
 	);
 	for (const licensePlan of licensePlansToCopy) {
-		await copyPlanIntoTarget({
-			toContext,
-			plan: licensePlan,
-			fromEnv,
-			fromFeatures,
-			crossOrg,
+		await copyProduct({
+			source,
+			ctx: toContext,
+			product: licensePlan,
+			toId: licensePlan.id,
+			toName: licensePlan.name,
 		});
 	}
 
-	const copiedLicensePlanIds = licensePlansToCopy.map(
-		(licensePlan) => licensePlan.id,
+	const copiedLicensePlanIds = new Set(
+		licensePlansToCopy.map((licensePlan) => licensePlan.id),
 	);
-	// listFull throws on absent ids, and inIds bypasses the stale products cache.
+	// inIds bypasses the stale products cache; absent ids are simply omitted.
 	const toProducts = await ProductService.listFull({
 		db,
 		orgId: toOrg.id,
@@ -90,7 +84,7 @@ export const copyLicenseLinksForPlanCopy = async ({
 	});
 
 	for (const product of toProducts) {
-		if (!copiedLicensePlanIds.includes(product.id)) continue;
+		if (!copiedLicensePlanIds.has(product.id)) continue;
 		await initProductInStripe({ ctx: toContext, product });
 	}
 

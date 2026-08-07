@@ -339,25 +339,38 @@ export const attachToInsertParams = (
 };
 
 // COPY PRODUCT
+
+/** The (org, env) a plan family is read from, plus that env's feature catalog. */
+export type PlanCopySource = {
+	org: Organization;
+	env: AppEnv;
+	features: Feature[];
+};
+
 export const copyProduct = async ({
+	source,
 	ctx,
 	product,
 	toId,
 	toName,
-	fromEnv,
-	fromFeatures,
 	baseInternalProductId = null,
 }: {
+	source: PlanCopySource;
 	ctx: AutumnContext;
 	product: FullProduct;
 	toId: string;
 	toName: string;
-	fromEnv: AppEnv;
-	fromFeatures: Feature[];
 	baseInternalProductId?: string | null;
 }): Promise<string> => {
 	const { db, env: toEnv, features: toFeatures } = ctx;
+	const { features: fromFeatures } = source;
 	const toOrgId = ctx.org.id;
+
+	// A base variant id resolves within its own (org, env), so only a same-org
+	// cross-env copy can carry it over.
+	const keepsBaseVariantLink =
+		source.env !== toEnv && source.org.id === ctx.org.id;
+
 	const newProduct = {
 		...product,
 		name: toName,
@@ -366,7 +379,8 @@ export const copyProduct = async ({
 		org_id: toOrgId,
 		env: toEnv,
 		processor: null,
-		base_variant_id: fromEnv === toEnv ? null : product.base_variant_id,
+		is_default: false,
+		base_variant_id: keepsBaseVariantLink ? product.base_variant_id : null,
 		// The source link points at a product in the source (org, env); only an
 		// explicitly remapped target base is safe to persist here.
 		base_internal_product_id: baseInternalProductId,

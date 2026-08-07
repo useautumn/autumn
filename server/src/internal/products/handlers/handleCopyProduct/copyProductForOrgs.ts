@@ -17,7 +17,7 @@ import RecaseError from "@/utils/errorUtils.js";
 import { copyBaseVariants } from "./copyBaseVariants.js";
 import { copyLicenseLinksForPlanCopy } from "./copyLicenseLinksForPlanCopy.js";
 import { copyMissingFeatures } from "./copyMissingFeatures.js";
-import { listExistingTargetPlanIds } from "./copyPlanIntoTarget.js";
+import { listExistingTargetPlanIds } from "./listExistingTargetPlanIds.js";
 import { loadSourcePlanFamily } from "./loadSourcePlanFamily.js";
 
 /**
@@ -46,9 +46,10 @@ export const copyProductForOrgs = async ({
 	toName: string;
 }): Promise<void> => {
 	const { db } = ctx;
-	const crossOrg = fromOrg.id !== toOrg.id;
 
-	if (!crossOrg && fromEnv === toEnv && fromProductId === toId) {
+	const copyingOntoItself =
+		fromOrg.id === toOrg.id && fromEnv === toEnv && fromProductId === toId;
+	if (copyingOntoItself) {
 		throw new RecaseError({
 			message: `Product ID ${toId} already exists in ${toEnv}`,
 			code: ErrCode.InvalidRequest,
@@ -93,16 +94,13 @@ export const copyProductForOrgs = async ({
 		});
 	}
 
+	const source = { org: fromOrg, env: fromEnv, features: fromFeatures };
+	const toContext = { ...ctx, org: toOrg, env: toEnv, features: toFeatures };
+	const crossOrg = fromOrg.id !== toOrg.id;
+
 	// 2. Load the plan family: variants, license links, and license plans
 	const { variants, sourceLicenseLinks, sourceLicensePlans } =
-		await loadSourcePlanFamily({ db, base: fromFullProduct, fromOrg, fromEnv });
-
-	fromFullProduct.is_default = false;
-	if (crossOrg) {
-		fromFullProduct.base_variant_id = null;
-	}
-
-	const toContext = { ...ctx, org: toOrg, env: toEnv, features: toFeatures };
+		await loadSourcePlanFamily({ ctx, source, base: fromFullProduct });
 
 	// 3. Copy the features the copied plans reference. A license plan already
 	// in the target is reused, not copied, so its features stay out of scope.
@@ -124,20 +122,19 @@ export const copyProductForOrgs = async ({
 	});
 	if (crossOrg || fromEnv !== toEnv) {
 		await copyMissingFeatures({
+			source,
 			toContext,
-			fromFeatures,
 			featureIds: featureIdsToCopy,
 		});
 	}
 
 	// 4. Copy the base and init its Stripe resources
 	const toBaseInternalId = await copyProduct({
+		source,
 		ctx: toContext,
 		product: fromFullProduct,
 		toId,
 		toName,
-		fromEnv,
-		fromFeatures,
 	});
 	const copiedBase = await ProductService.getFull({
 		db,
@@ -149,25 +146,21 @@ export const copyProductForOrgs = async ({
 
 	// 5. Copy the base's variants, relinked to the copied base
 	const copiedVariantIds = await copyBaseVariants({
+		source,
 		toContext,
 		variants,
-		fromEnv,
-		fromFeatures,
 		toBaseInternalId,
-		crossOrg,
 	});
 
 	// 6. Recreate the family's license links in the target
 	await copyLicenseLinksForPlanCopy({
+		source,
 		toContext,
-		fromBase: fromFullProduct,
+		fromBaseId: fromFullProduct.id,
 		sourceLinks: sourceLicenseLinks,
 		sourceLicensePlans,
-		fromEnv,
-		fromFeatures,
 		toBaseId: toId,
 		copiedVariantIds,
-		crossOrg,
 	});
 
 	await invalidateProductsCache({ orgId: toOrg.id, env: toEnv });

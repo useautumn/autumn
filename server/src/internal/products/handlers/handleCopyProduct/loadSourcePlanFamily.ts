@@ -1,33 +1,28 @@
-import {
-	type AppEnv,
-	deduplicateArray,
-	type FullProduct,
-	type Organization,
-} from "@autumn/shared";
-import type { DrizzleCli } from "@/db/initDrizzle.js";
+import { deduplicateArray, type FullProduct } from "@autumn/shared";
+import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import {
 	type PlanLicenseWithPlanIds,
 	planLicenseRepo,
 } from "@/internal/licenses/repos/planLicenseRepo.js";
 import { ProductService } from "@/internal/products/ProductService.js";
+import type { PlanCopySource } from "@/internal/products/productUtils.js";
 
 /** A variant may still link to an older base version, so every version's
  * internal id is queried. */
 const listSourceVariants = async ({
-	db,
+	ctx,
+	source,
 	base,
-	fromOrg,
-	fromEnv,
 }: {
-	db: DrizzleCli;
+	ctx: AutumnContext;
+	source: PlanCopySource;
 	base: FullProduct;
-	fromOrg: Organization;
-	fromEnv: AppEnv;
 }): Promise<FullProduct[]> => {
+	const { db } = ctx;
 	const baseVersions = await ProductService.listFull({
 		db,
-		orgId: fromOrg.id,
-		env: fromEnv,
+		orgId: source.org.id,
+		env: source.env,
 		inIds: [base.id],
 		returnAll: true,
 	});
@@ -35,8 +30,8 @@ const listSourceVariants = async ({
 	return ProductService.listVariantsByParent({
 		db,
 		baseInternalProductIds: baseVersions.map((version) => version.internal_id),
-		orgId: fromOrg.id,
-		env: fromEnv,
+		orgId: source.org.id,
+		env: source.env,
 	});
 };
 
@@ -45,21 +40,20 @@ const listSourceVariants = async ({
  * the family's license links, and the license plans those links point at.
  */
 export const loadSourcePlanFamily = async ({
-	db,
+	ctx,
+	source,
 	base,
-	fromOrg,
-	fromEnv,
 }: {
-	db: DrizzleCli;
+	ctx: AutumnContext;
+	source: PlanCopySource;
 	base: FullProduct;
-	fromOrg: Organization;
-	fromEnv: AppEnv;
 }): Promise<{
 	variants: FullProduct[];
 	sourceLicenseLinks: PlanLicenseWithPlanIds[];
 	sourceLicensePlans: FullProduct[];
 }> => {
-	const variants = await listSourceVariants({ db, base, fromOrg, fromEnv });
+	const { db } = ctx;
+	const variants = await listSourceVariants({ ctx, source, base });
 
 	const sourceLicenseLinks =
 		await planLicenseRepo.listWithLicensePlanIdByParents({
@@ -81,8 +75,8 @@ export const loadSourcePlanFamily = async ({
 		licensePlanIds.length > 0
 			? await ProductService.listFull({
 					db,
-					orgId: fromOrg.id,
-					env: fromEnv,
+					orgId: source.org.id,
+					env: source.env,
 					inIds: licensePlanIds,
 				})
 			: [];
