@@ -34,6 +34,7 @@ import { getSqsClient, QUEUE_URL, recreateSqsClient } from "./initSqs.js";
 import { JobName } from "./JobName.js";
 import { processMessage, type SqsJob } from "./processMessage.js";
 import { shutdownSqsSendBatchers } from "./queueUtils.js";
+import { getAsyncTrackWorkerQueueUrls } from "./trackAsyncQueueUrls.js";
 import {
 	createWorkerActivityTracker,
 	type WorkerActivityTracker,
@@ -640,12 +641,12 @@ export const initWorkers = async ({
 		idleAfterMs: IDLE_SELF_KILL_MS,
 	});
 
-	for (const {
-		queueId,
-		queueUrl,
-		defaultEnabled,
-		visibilityTimeoutSeconds,
-	} of [
+	const queueConfigs: Array<{
+		queueId: string;
+		queueUrl?: string;
+		defaultEnabled: boolean;
+		visibilityTimeoutSeconds?: number;
+	}> = [
 		{
 			queueId: JOB_QUEUE_IDS.primary,
 			queueUrl: QUEUE_URL,
@@ -656,11 +657,11 @@ export const initWorkers = async ({
 			queueUrl: process.env.TRACK_SQS_QUEUE_URL,
 			defaultEnabled: true,
 		},
-		{
+		...getAsyncTrackWorkerQueueUrls().map((queueUrl) => ({
 			queueId: JOB_QUEUE_IDS.trackAsync,
-			queueUrl: process.env.TRACK_ASYNC_SQS_QUEUE_URL,
+			queueUrl,
 			defaultEnabled: true,
-		},
+		})),
 		{
 			queueId: JOB_QUEUE_IDS.customerCreationRecovery,
 			queueUrl: process.env.CUSTOMER_CREATION_RECOVERY_SQS_QUEUE_URL,
@@ -681,7 +682,14 @@ export const initWorkers = async ({
 			// depth, so a long window stalls the whole sweep.
 			visibilityTimeoutSeconds: 900,
 		},
-	]) {
+	];
+
+	for (const {
+		queueId,
+		queueUrl,
+		defaultEnabled,
+		visibilityTimeoutSeconds,
+	} of queueConfigs) {
 		if (!queueUrl) continue;
 
 		pollingLoops.push(
