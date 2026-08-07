@@ -8,12 +8,19 @@ import {
 	type SettingChange,
 } from "./PlanSettingsChanges";
 
+export type MigrateTargetLicenseChanges = {
+	licensePlanId: string;
+	itemChanges: PlanUpdatePreviewItemChange[];
+	hasPriceChange: boolean;
+};
+
 export type MigrateTargetRow = {
 	version: number;
 	isCurrent: boolean;
 	isNew: boolean;
 	itemChanges: PlanUpdatePreviewItemChange[];
 	hasPriceChange: boolean;
+	licenseChanges: MigrateTargetLicenseChanges[];
 	settingChanges: SettingChange[];
 	customerCount: number;
 	conflicts: PlanUpdatePreviewVariantConflict[];
@@ -25,6 +32,29 @@ export type MigrateTarget = {
 	isBase: boolean;
 	rows: MigrateTargetRow[];
 };
+
+/** Linked-license changes stay attributed to their license plan — they reach
+ * live assignments, not the parent's own customers. */
+const resolveEntryChanges = (
+	entry: Pick<
+		PlanUpdatePreview,
+		"item_changes" | "price_change" | "license_changes"
+	>,
+) => ({
+	itemChanges: entry.item_changes ?? [],
+	hasPriceChange: entry.price_change !== undefined,
+	licenseChanges: (entry.license_changes ?? []).flatMap((license) =>
+		license.plan_changes
+			? [
+					{
+						licensePlanId: license.license_plan_id,
+						itemChanges: license.plan_changes.item_changes ?? [],
+						hasPriceChange: license.plan_changes.price_change !== undefined,
+					},
+				]
+			: [],
+	),
+});
 
 export const getLicenseParentTargetId = ({
 	plan_id,
@@ -72,8 +102,7 @@ export function buildMigrateTargets({
 			version: baseCreatesNewVersion ? currentVersion + 1 : currentVersion,
 			isCurrent: !baseCreatesNewVersion,
 			isNew: baseCreatesNewVersion,
-			itemChanges: preview.item_changes ?? [],
-			hasPriceChange: preview.price_change !== undefined,
+			...resolveEntryChanges(preview),
 			settingChanges: previousAttributesToSettingChanges(
 				preview.previous_attributes,
 			),
@@ -85,8 +114,7 @@ export function buildMigrateTargets({
 					version: version.version,
 					isCurrent: false,
 					isNew: false,
-					itemChanges: version.item_changes ?? [],
-					hasPriceChange: version.price_change !== undefined,
+					...resolveEntryChanges(version),
 					settingChanges: previousAttributesToSettingChanges(
 						version.previous_attributes,
 					),
@@ -123,8 +151,7 @@ export function buildMigrateTargets({
 					version: createsNewVersion ? entry.version + 1 : entry.version,
 					isCurrent: isLatest && !createsNewVersion,
 					isNew: createsNewVersion,
-					itemChanges: entry.item_changes ?? [],
-					hasPriceChange: entry.price_change !== undefined,
+					...resolveEntryChanges(entry),
 					settingChanges: previousAttributesToSettingChanges(
 						entry.previous_attributes,
 					),
@@ -152,6 +179,7 @@ export function buildMigrateTargets({
 					isNew: createsNewVersion,
 					itemChanges: planChanges?.item_changes ?? [],
 					hasPriceChange: planChanges?.price_change !== undefined,
+					licenseChanges: [],
 					settingChanges: [],
 					customerCount: entry.customer_count,
 					conflicts: entry.conflicts,

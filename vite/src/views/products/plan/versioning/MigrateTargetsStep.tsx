@@ -54,6 +54,7 @@ function VersionBody({
 	const hasChanges =
 		row.itemChanges.length > 0 ||
 		row.hasPriceChange ||
+		row.licenseChanges.length > 0 ||
 		settingChanges.length > 0;
 	return (
 		<div className="flex flex-col gap-1.5">
@@ -65,6 +66,24 @@ function VersionBody({
 					Base price change
 				</span>
 			)}
+			{row.licenseChanges.map((license) => (
+				<div className="flex flex-col gap-1" key={license.licensePlanId}>
+					<span className="text-tertiary-foreground text-xs">
+						On license{" "}
+						<span className="font-medium text-foreground">
+							{license.licensePlanId}
+						</span>
+					</span>
+					{license.itemChanges.length > 0 && (
+						<ItemChangeList itemChanges={license.itemChanges} />
+					)}
+					{license.hasPriceChange && (
+						<span className="text-tertiary-foreground text-xs">
+							Seat price change
+						</span>
+					)}
+				</div>
+			))}
 			{settingChanges.map((change) => (
 				<div className="flex items-center gap-1.5 text-xs" key={change.key}>
 					<span className="font-medium text-foreground">{change.label}</span>

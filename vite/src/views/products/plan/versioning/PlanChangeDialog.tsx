@@ -1,4 +1,8 @@
-import type { FrontendProduct, PlanUpdatePreview } from "@autumn/shared";
+import type {
+	FrontendProduct,
+	PlanUpdatePreview,
+	PlanUpdatePreviewPlanChanges,
+} from "@autumn/shared";
 import {
 	AreaRadioGroupItem,
 	Dialog,
@@ -50,8 +54,8 @@ import {
 	useHasLicenseChanges,
 } from "../components/plan-licenses/useLicenseSaveRegistry";
 import {
-	buildSelectedLicenseParentUpdates,
 	buildMigrateTargets,
+	buildSelectedLicenseParentUpdates,
 	getLicenseParentTargetId,
 } from "./buildMigrateTargets";
 import {
@@ -122,16 +126,27 @@ function ConfirmInput({
 	);
 }
 
+const hasMigratableDiff = (
+	changes: Pick<PlanUpdatePreviewPlanChanges, "item_changes" | "price_change">,
+) =>
+	(changes.item_changes?.length ?? 0) > 0 || changes.price_change !== undefined;
+
 // A version needs a migration only when it has customers to move AND a
 // migratable diff (item/price changes; free-trial edits version without one).
+// A linked license's own item/price changes count: they reach live assignments.
 const entryNeedsMigration = (
 	entry: Pick<
 		PlanUpdatePreview,
-		"item_changes" | "price_change" | "has_customers"
+		"item_changes" | "price_change" | "has_customers" | "license_changes"
 	>,
 ) =>
 	entry.has_customers &&
-	((entry.item_changes?.length ?? 0) > 0 || entry.price_change !== undefined);
+	(hasMigratableDiff(entry) ||
+		(entry.license_changes ?? []).some(
+			(license) =>
+				license.plan_changes !== null &&
+				hasMigratableDiff(license.plan_changes),
+		));
 
 const hasMigrationTargets = ({
 	preview,

@@ -10,6 +10,7 @@ import { CurrencyCircleDollarIcon, GitBranchIcon } from "@phosphor-icons/react";
 import type { ReactNode } from "react";
 import { SubscriptionItemRow } from "@/components/forms/update-subscription-v2/components/SubscriptionItemRow";
 import { ItemStatusDot } from "@/components/v2/ItemStatusDot";
+import { LicenseIcon } from "@/components/v2/icons/LicenseIcon";
 import { FeatureIconCluster } from "@/components/v2/PlanItemLabel";
 import { useOrg } from "@/hooks/common/useOrg";
 import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
@@ -103,6 +104,7 @@ export function OperationsPreview({ operations }: { operations: Operations }) {
 					const customize = updateOp.customize;
 					const addItems = customize?.add_items ?? [];
 					const removeItems = customize?.remove_items ?? [];
+					const upsertLicenses = customize?.upsert_licenses ?? [];
 
 					const priceCurrencies = customize?.price?.additional_currencies ?? [];
 					const previousCurrencies =
@@ -196,6 +198,25 @@ export function OperationsPreview({ operations }: { operations: Operations }) {
 									item={migrationItemToProductItem(item, features)}
 									isCreated
 								/>
+							))}
+
+							{upsertLicenses.map((license) => (
+								<div
+									className="flex flex-col gap-1"
+									key={`license-${license.license_plan_id}`}
+								>
+									<span className="flex items-center gap-1.5 text-xs text-subtle">
+										<LicenseIcon size={12} className="shrink-0" />
+										{license.license_plan_id}
+									</span>
+									{(license.customize?.add_items ?? []).map((item, idx) => (
+										<SubscriptionItemRow
+											key={`license-add-${idx}`}
+											item={migrationItemToProductItem(item, features)}
+											isCreated
+										/>
+									))}
+								</div>
 							))}
 
 							{removeItems.map((item, idx) => (
