@@ -8,7 +8,7 @@ import { getMiscRedis } from "@/external/redis/initRedis.js";
 import { resolveRedisV2 } from "@/external/redis/resolveRedisV2.js";
 import { withTimeout } from "@/utils/withTimeout.js";
 import { QUEUE_URL } from "../initSqs.js";
-import { getAsyncTrackWorkerQueueUrls } from "../trackAsyncQueueUrls.js";
+import { getTrackAndUpdateBalanceWorkerQueueUrls } from "../trackAsyncQueueUrls.js";
 import type { BlueGreenProbeResult } from "./blueGreenSchemas.js";
 
 const CHECK_TIMEOUT_MS = 5_000;
@@ -45,7 +45,7 @@ const getConfiguredQueueUrls = () =>
 	[
 		QUEUE_URL,
 		process.env.TRACK_SQS_QUEUE_URL,
-		...getAsyncTrackWorkerQueueUrls(),
+		...getTrackAndUpdateBalanceWorkerQueueUrls(),
 		process.env.CUSTOMER_CREATION_RECOVERY_SQS_QUEUE_URL,
 	].filter((url): url is string => Boolean(url));
 
