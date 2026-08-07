@@ -85,7 +85,7 @@ export const JoinedDateSubMenu = ({ onChange }: { onChange?: () => void }) => {
 			}}
 		>
 			<DropdownMenuSubTrigger className="flex items-center gap-2 cursor-pointer">
-				Joined
+				Created At
 				{label && (
 					<span className="truncate text-xs text-tertiary-foreground bg-muted px-1 py-0 rounded-md">
 						{label}
