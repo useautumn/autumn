@@ -127,6 +127,10 @@ export const CreateProductV2ParamsSchema = z
 			internal: true,
 		}),
 
+		archived: z.boolean().optional().meta({
+			internal: true,
+		}),
+
 		base_internal_product_id: z.string().nullable().optional().meta({
 			internal: true,
 		}),

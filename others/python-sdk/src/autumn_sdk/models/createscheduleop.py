@@ -212,6 +212,1570 @@ CreateScheduleBillingBehavior = Literal[
 r"""Whether to prorate the immediate phase. 'none' skips proration charges and credits."""
 
 
+class UnscheduledPlanFeatureQuantityTypedDict(TypedDict):
+    r"""Quantity configuration for a prepaid feature."""
+
+    feature_id: str
+    r"""The ID of the feature to set quantity for."""
+    quantity: NotRequired[float]
+    r"""The quantity of the feature."""
+    adjustable: NotRequired[bool]
+    r"""Whether the customer can adjust the quantity."""
+
+
+class UnscheduledPlanFeatureQuantity(BaseModel):
+    r"""Quantity configuration for a prepaid feature."""
+
+    feature_id: str
+    r"""The ID of the feature to set quantity for."""
+
+    quantity: Optional[float] = None
+    r"""The quantity of the feature."""
+
+    adjustable: Optional[bool] = None
+    r"""Whether the customer can adjust the quantity."""
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        optional_fields = set(["quantity", "adjustable"])
+        serialized = handler(self)
+        m = {}
+
+        for n, f in type(self).model_fields.items():
+            k = f.alias or n
+            val = serialized.get(k, serialized.get(n))
+
+            if val != UNSET_SENTINEL:
+                if val is not None or k not in optional_fields:
+                    m[k] = val
+
+        return m
+
+
+PriceUnscheduledPlanInterval = Literal[
+    "one_off",
+    "week",
+    "month",
+    "quarter",
+    "semi_annual",
+    "year",
+]
+r"""Billing interval (e.g. 'month', 'year')."""
+
+
+class UnscheduledPlanAdditionalCurrencyTypedDict(TypedDict):
+    currency: str
+    r"""Three-letter Stripe-supported currency code (e.g. 'eur', 'gbp')."""
+    amount: float
+    r"""Price amount in this currency. Set explicitly per currency, not converted from the base amount."""
+
+
+class UnscheduledPlanAdditionalCurrency(BaseModel):
+    currency: str
+    r"""Three-letter Stripe-supported currency code (e.g. 'eur', 'gbp')."""
+
+    amount: float
+    r"""Price amount in this currency. Set explicitly per currency, not converted from the base amount."""
+
+
+class UnscheduledPlanBasePriceTypedDict(TypedDict):
+    r"""Base price configuration for a plan."""
+
+    amount: float
+    r"""Base price amount for the plan."""
+    interval: PriceUnscheduledPlanInterval
+    r"""Billing interval (e.g. 'month', 'year')."""
+    interval_count: NotRequired[float]
+    r"""Number of intervals per billing cycle. Defaults to 1."""
+    additional_currencies: NotRequired[List[UnscheduledPlanAdditionalCurrencyTypedDict]]
+    r"""Base price amounts in additional currencies. The base 'amount' is in the org's default currency."""
+
+
+class UnscheduledPlanBasePrice(BaseModel):
+    r"""Base price configuration for a plan."""
+
+    amount: float
+    r"""Base price amount for the plan."""
+
+    interval: PriceUnscheduledPlanInterval
+    r"""Billing interval (e.g. 'month', 'year')."""
+
+    interval_count: Optional[float] = None
+    r"""Number of intervals per billing cycle. Defaults to 1."""
+
+    additional_currencies: Optional[List[UnscheduledPlanAdditionalCurrency]] = None
+    r"""Base price amounts in additional currencies. The base 'amount' is in the org's default currency."""
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        optional_fields = set(["interval_count", "additional_currencies"])
+        serialized = handler(self)
+        m = {}
+
+        for n, f in type(self).model_fields.items():
+            k = f.alias or n
+            val = serialized.get(k, serialized.get(n))
+
+            if val != UNSET_SENTINEL:
+                if val is not None or k not in optional_fields:
+                    m[k] = val
+
+        return m
+
+
+UnscheduledPlanItemResetInterval = Literal[
+    "one_off",
+    "minute",
+    "hour",
+    "day",
+    "week",
+    "month",
+    "quarter",
+    "semi_annual",
+    "year",
+]
+r"""Interval at which balance resets (e.g. 'month', 'year'). For consumable features only."""
+
+
+class UnscheduledPlanItemResetTypedDict(TypedDict):
+    r"""Reset configuration for consumable features. Omit for non-consumable features like seats."""
+
+    interval: UnscheduledPlanItemResetInterval
+    r"""Interval at which balance resets (e.g. 'month', 'year'). For consumable features only."""
+    interval_count: NotRequired[float]
+    r"""Number of intervals between resets. Defaults to 1."""
+
+
+class UnscheduledPlanItemReset(BaseModel):
+    r"""Reset configuration for consumable features. Omit for non-consumable features like seats."""
+
+    interval: UnscheduledPlanItemResetInterval
+    r"""Interval at which balance resets (e.g. 'month', 'year'). For consumable features only."""
+
+    interval_count: Optional[float] = None
+    r"""Number of intervals between resets. Defaults to 1."""
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        optional_fields = set(["interval_count"])
+        serialized = handler(self)
+        m = {}
+
+        for n, f in type(self).model_fields.items():
+            k = f.alias or n
+            val = serialized.get(k, serialized.get(n))
+
+            if val != UNSET_SENTINEL:
+                if val is not None or k not in optional_fields:
+                    m[k] = val
+
+        return m
+
+
+class UnscheduledPlanItemAdditionalCurrencyTypedDict(TypedDict):
+    currency: str
+    r"""Three-letter Stripe-supported currency code (e.g. 'eur', 'gbp')."""
+    amount: float
+    r"""Price amount in this currency. Set explicitly per currency, not converted from the base amount."""
+
+
+class UnscheduledPlanItemAdditionalCurrency(BaseModel):
+    currency: str
+    r"""Three-letter Stripe-supported currency code (e.g. 'eur', 'gbp')."""
+
+    amount: float
+    r"""Price amount in this currency. Set explicitly per currency, not converted from the base amount."""
+
+
+CreateScheduleItemToTypedDict = TypeAliasType(
+    "CreateScheduleItemToTypedDict", Union[float, str]
+)
+
+
+CreateScheduleItemTo = TypeAliasType("CreateScheduleItemTo", Union[float, str])
+
+
+class UnscheduledPlanItemTierAdditionalCurrencyTypedDict(TypedDict):
+    currency: NotRequired[Any]
+    amount: NotRequired[Any]
+    flat_amount: NotRequired[Any]
+
+
+class UnscheduledPlanItemTierAdditionalCurrency(BaseModel):
+    currency: Optional[Any] = None
+
+    amount: Optional[Any] = None
+
+    flat_amount: Optional[Any] = None
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        optional_fields = set(["currency", "amount", "flat_amount"])
+        serialized = handler(self)
+        m = {}
+
+        for n, f in type(self).model_fields.items():
+            k = f.alias or n
+            val = serialized.get(k, serialized.get(n))
+
+            if val != UNSET_SENTINEL:
+                if val is not None or k not in optional_fields:
+                    m[k] = val
+
+        return m
+
+
+class UnscheduledPlanItemTierTypedDict(TypedDict):
+    to: CreateScheduleItemToTypedDict
+    amount: NotRequired[float]
+    flat_amount: NotRequired[float]
+    additional_currencies: NotRequired[
+        List[UnscheduledPlanItemTierAdditionalCurrencyTypedDict]
+    ]
+    r"""Per-currency amounts for this tier. Tier boundaries ('to') are shared across all currencies."""
+
+
+class UnscheduledPlanItemTier(BaseModel):
+    to: CreateScheduleItemTo
+
+    amount: Optional[float] = None
+
+    flat_amount: Optional[float] = None
+
+    additional_currencies: Optional[List[UnscheduledPlanItemTierAdditionalCurrency]] = (
+        None
+    )
+    r"""Per-currency amounts for this tier. Tier boundaries ('to') are shared across all currencies."""
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        optional_fields = set(["amount", "flat_amount", "additional_currencies"])
+        serialized = handler(self)
+        m = {}
+
+        for n, f in type(self).model_fields.items():
+            k = f.alias or n
+            val = serialized.get(k, serialized.get(n))
+
+            if val != UNSET_SENTINEL:
+                if val is not None or k not in optional_fields:
+                    m[k] = val
+
+        return m
+
+
+UnscheduledPlanItemTierBehavior = Literal[
+    "graduated",
+    "volume",
+]
+
+
+UnscheduledPlanItemPriceInterval = Literal[
+    "one_off",
+    "week",
+    "month",
+    "quarter",
+    "semi_annual",
+    "year",
+]
+r"""Billing interval. For consumable features, should match reset.interval."""
+
+
+UnscheduledPlanItemBillingMethod = Literal[
+    "prepaid",
+    "usage_based",
+]
+r"""'prepaid' for upfront payment (seats), 'usage_based' for pay-as-you-go."""
+
+
+class UnscheduledPlanItemPriceTypedDict(TypedDict):
+    r"""Pricing for usage beyond included units. Omit for free features."""
+
+    interval: UnscheduledPlanItemPriceInterval
+    r"""Billing interval. For consumable features, should match reset.interval."""
+    billing_method: UnscheduledPlanItemBillingMethod
+    r"""'prepaid' for upfront payment (seats), 'usage_based' for pay-as-you-go."""
+    amount: NotRequired[float]
+    r"""Price per billing_units after included usage. Either 'amount' or 'tiers' is required."""
+    additional_currencies: NotRequired[
+        List[UnscheduledPlanItemAdditionalCurrencyTypedDict]
+    ]
+    r"""Amounts in additional currencies for this flat price. The base 'amount' is in the org's default currency. Only valid with 'amount', not 'tiers'."""
+    tiers: NotRequired[List[UnscheduledPlanItemTierTypedDict]]
+    r"""Tiered pricing.  Either 'amount' or 'tiers' is required."""
+    tier_behavior: NotRequired[UnscheduledPlanItemTierBehavior]
+    interval_count: NotRequired[float]
+    r"""Number of intervals per billing cycle. Defaults to 1."""
+    billing_units: NotRequired[float]
+    r"""Units per price increment. Usage is rounded UP when billed (e.g. billing_units=100 means 101 rounds to 200)."""
+    max_purchase: NotRequired[Nullable[float]]
+    r"""Max units purchasable beyond included. E.g. included=100, max_purchase=300 allows 400 total. Null for no limit."""
+
+
+class UnscheduledPlanItemPrice(BaseModel):
+    r"""Pricing for usage beyond included units. Omit for free features."""
+
+    interval: UnscheduledPlanItemPriceInterval
+    r"""Billing interval. For consumable features, should match reset.interval."""
+
+    billing_method: UnscheduledPlanItemBillingMethod
+    r"""'prepaid' for upfront payment (seats), 'usage_based' for pay-as-you-go."""
+
+    amount: Optional[float] = None
+    r"""Price per billing_units after included usage. Either 'amount' or 'tiers' is required."""
+
+    additional_currencies: Optional[List[UnscheduledPlanItemAdditionalCurrency]] = None
+    r"""Amounts in additional currencies for this flat price. The base 'amount' is in the org's default currency. Only valid with 'amount', not 'tiers'."""
+
+    tiers: Optional[List[UnscheduledPlanItemTier]] = None
+    r"""Tiered pricing.  Either 'amount' or 'tiers' is required."""
+
+    tier_behavior: Optional[UnscheduledPlanItemTierBehavior] = None
+
+    interval_count: Optional[float] = 1
+    r"""Number of intervals per billing cycle. Defaults to 1."""
+
+    billing_units: Optional[float] = 1
+    r"""Units per price increment. Usage is rounded UP when billed (e.g. billing_units=100 means 101 rounds to 200)."""
+
+    max_purchase: OptionalNullable[float] = UNSET
+    r"""Max units purchasable beyond included. E.g. included=100, max_purchase=300 allows 400 total. Null for no limit."""
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        optional_fields = set(
+            [
+                "amount",
+                "additional_currencies",
+                "tiers",
+                "tier_behavior",
+                "interval_count",
+                "billing_units",
+                "max_purchase",
+            ]
+        )
+        nullable_fields = set(["max_purchase"])
+        serialized = handler(self)
+        m = {}
+
+        for n, f in type(self).model_fields.items():
+            k = f.alias or n
+            val = serialized.get(k, serialized.get(n))
+            is_nullable_and_explicitly_set = (
+                k in nullable_fields
+                and (self.__pydantic_fields_set__.intersection({n}))  # pylint: disable=no-member
+            )
+
+            if val != UNSET_SENTINEL:
+                if (
+                    val is not None
+                    or k not in optional_fields
+                    or is_nullable_and_explicitly_set
+                ):
+                    m[k] = val
+
+        return m
+
+
+UnscheduledPlanItemOnIncrease = Literal[
+    "bill_immediately",
+    "prorate_immediately",
+    "prorate_next_cycle",
+    "bill_next_cycle",
+]
+r"""Billing behavior when quantity increases mid-cycle."""
+
+
+UnscheduledPlanItemOnDecrease = Literal[
+    "prorate",
+    "prorate_immediately",
+    "prorate_next_cycle",
+    "none",
+    "no_prorations",
+]
+r"""Credit behavior when quantity decreases mid-cycle."""
+
+
+class UnscheduledPlanItemProrationTypedDict(TypedDict):
+    r"""Proration settings for prepaid features. Controls mid-cycle quantity change billing."""
+
+    on_increase: UnscheduledPlanItemOnIncrease
+    r"""Billing behavior when quantity increases mid-cycle."""
+    on_decrease: UnscheduledPlanItemOnDecrease
+    r"""Credit behavior when quantity decreases mid-cycle."""
+
+
+class UnscheduledPlanItemProration(BaseModel):
+    r"""Proration settings for prepaid features. Controls mid-cycle quantity change billing."""
+
+    on_increase: UnscheduledPlanItemOnIncrease
+    r"""Billing behavior when quantity increases mid-cycle."""
+
+    on_decrease: UnscheduledPlanItemOnDecrease
+    r"""Credit behavior when quantity decreases mid-cycle."""
+
+
+UnscheduledPlanItemExpiryDurationType = Literal[
+    "month",
+    "forever",
+]
+r"""When rolled over units expire."""
+
+
+class UnscheduledPlanItemRolloverTypedDict(TypedDict):
+    r"""Rollover config for unused units. If set, unused included units carry over."""
+
+    expiry_duration_type: UnscheduledPlanItemExpiryDurationType
+    r"""When rolled over units expire."""
+    max: NotRequired[float]
+    r"""Max rollover units. Omit for unlimited rollover."""
+    max_percentage: NotRequired[float]
+    r"""Maximum rollover as a percentage (0-100) of included + prepaid grant. Mutually exclusive with max."""
+    expiry_duration_length: NotRequired[float]
+    r"""Number of periods before expiry."""
+
+
+class UnscheduledPlanItemRollover(BaseModel):
+    r"""Rollover config for unused units. If set, unused included units carry over."""
+
+    expiry_duration_type: UnscheduledPlanItemExpiryDurationType
+    r"""When rolled over units expire."""
+
+    max: Optional[float] = None
+    r"""Max rollover units. Omit for unlimited rollover."""
+
+    max_percentage: Optional[float] = None
+    r"""Maximum rollover as a percentage (0-100) of included + prepaid grant. Mutually exclusive with max."""
+
+    expiry_duration_length: Optional[float] = None
+    r"""Number of periods before expiry."""
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        optional_fields = set(["max", "max_percentage", "expiry_duration_length"])
+        serialized = handler(self)
+        m = {}
+
+        for n, f in type(self).model_fields.items():
+            k = f.alias or n
+            val = serialized.get(k, serialized.get(n))
+
+            if val != UNSET_SENTINEL:
+                if val is not None or k not in optional_fields:
+                    m[k] = val
+
+        return m
+
+
+class UnscheduledPlanItemPlanItemTypedDict(TypedDict):
+    r"""Configuration for a feature item in a plan, including usage limits, pricing, and rollover settings."""
+
+    feature_id: str
+    r"""The ID of the feature to configure."""
+    included: NotRequired[float]
+    r"""Number of free units included. Balance resets to this each interval for consumable features."""
+    unlimited: NotRequired[bool]
+    r"""If true, customer has unlimited access to this feature."""
+    pooled: NotRequired[bool]
+    r"""Whether entity-level grants contribute to a shared customer balance."""
+    reset: NotRequired[UnscheduledPlanItemResetTypedDict]
+    r"""Reset configuration for consumable features. Omit for non-consumable features like seats."""
+    price: NotRequired[UnscheduledPlanItemPriceTypedDict]
+    r"""Pricing for usage beyond included units. Omit for free features."""
+    proration: NotRequired[UnscheduledPlanItemProrationTypedDict]
+    r"""Proration settings for prepaid features. Controls mid-cycle quantity change billing."""
+    rollover: NotRequired[UnscheduledPlanItemRolloverTypedDict]
+    r"""Rollover config for unused units. If set, unused included units carry over."""
+
+
+class UnscheduledPlanItemPlanItem(BaseModel):
+    r"""Configuration for a feature item in a plan, including usage limits, pricing, and rollover settings."""
+
+    feature_id: str
+    r"""The ID of the feature to configure."""
+
+    included: Optional[float] = None
+    r"""Number of free units included. Balance resets to this each interval for consumable features."""
+
+    unlimited: Optional[bool] = None
+    r"""If true, customer has unlimited access to this feature."""
+
+    pooled: Optional[bool] = False
+    r"""Whether entity-level grants contribute to a shared customer balance."""
+
+    reset: Optional[UnscheduledPlanItemReset] = None
+    r"""Reset configuration for consumable features. Omit for non-consumable features like seats."""
+
+    price: Optional[UnscheduledPlanItemPrice] = None
+    r"""Pricing for usage beyond included units. Omit for free features."""
+
+    proration: Optional[UnscheduledPlanItemProration] = None
+    r"""Proration settings for prepaid features. Controls mid-cycle quantity change billing."""
+
+    rollover: Optional[UnscheduledPlanItemRollover] = None
+    r"""Rollover config for unused units. If set, unused included units carry over."""
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        optional_fields = set(
+            [
+                "included",
+                "unlimited",
+                "pooled",
+                "reset",
+                "price",
+                "proration",
+                "rollover",
+            ]
+        )
+        serialized = handler(self)
+        m = {}
+
+        for n, f in type(self).model_fields.items():
+            k = f.alias or n
+            val = serialized.get(k, serialized.get(n))
+
+            if val != UNSET_SENTINEL:
+                if val is not None or k not in optional_fields:
+                    m[k] = val
+
+        return m
+
+
+UnscheduledPlanAddItemResetInterval = Literal[
+    "one_off",
+    "minute",
+    "hour",
+    "day",
+    "week",
+    "month",
+    "quarter",
+    "semi_annual",
+    "year",
+]
+r"""Interval at which balance resets (e.g. 'month', 'year'). For consumable features only."""
+
+
+class UnscheduledPlanAddItemResetTypedDict(TypedDict):
+    r"""Reset configuration for consumable features. Omit for non-consumable features like seats."""
+
+    interval: UnscheduledPlanAddItemResetInterval
+    r"""Interval at which balance resets (e.g. 'month', 'year'). For consumable features only."""
+    interval_count: NotRequired[float]
+    r"""Number of intervals between resets. Defaults to 1."""
+
+
+class UnscheduledPlanAddItemReset(BaseModel):
+    r"""Reset configuration for consumable features. Omit for non-consumable features like seats."""
+
+    interval: UnscheduledPlanAddItemResetInterval
+    r"""Interval at which balance resets (e.g. 'month', 'year'). For consumable features only."""
+
+    interval_count: Optional[float] = None
+    r"""Number of intervals between resets. Defaults to 1."""
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        optional_fields = set(["interval_count"])
+        serialized = handler(self)
+        m = {}
+
+        for n, f in type(self).model_fields.items():
+            k = f.alias or n
+            val = serialized.get(k, serialized.get(n))
+
+            if val != UNSET_SENTINEL:
+                if val is not None or k not in optional_fields:
+                    m[k] = val
+
+        return m
+
+
+class UnscheduledPlanAddItemAdditionalCurrencyTypedDict(TypedDict):
+    currency: str
+    r"""Three-letter Stripe-supported currency code (e.g. 'eur', 'gbp')."""
+    amount: float
+    r"""Price amount in this currency. Set explicitly per currency, not converted from the base amount."""
+
+
+class UnscheduledPlanAddItemAdditionalCurrency(BaseModel):
+    currency: str
+    r"""Three-letter Stripe-supported currency code (e.g. 'eur', 'gbp')."""
+
+    amount: float
+    r"""Price amount in this currency. Set explicitly per currency, not converted from the base amount."""
+
+
+CreateScheduleAddItemToTypedDict = TypeAliasType(
+    "CreateScheduleAddItemToTypedDict", Union[float, str]
+)
+
+
+CreateScheduleAddItemTo = TypeAliasType("CreateScheduleAddItemTo", Union[float, str])
+
+
+class UnscheduledPlanAddItemTierAdditionalCurrencyTypedDict(TypedDict):
+    currency: NotRequired[Any]
+    amount: NotRequired[Any]
+    flat_amount: NotRequired[Any]
+
+
+class UnscheduledPlanAddItemTierAdditionalCurrency(BaseModel):
+    currency: Optional[Any] = None
+
+    amount: Optional[Any] = None
+
+    flat_amount: Optional[Any] = None
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        optional_fields = set(["currency", "amount", "flat_amount"])
+        serialized = handler(self)
+        m = {}
+
+        for n, f in type(self).model_fields.items():
+            k = f.alias or n
+            val = serialized.get(k, serialized.get(n))
+
+            if val != UNSET_SENTINEL:
+                if val is not None or k not in optional_fields:
+                    m[k] = val
+
+        return m
+
+
+class UnscheduledPlanAddItemTierTypedDict(TypedDict):
+    to: CreateScheduleAddItemToTypedDict
+    amount: NotRequired[float]
+    flat_amount: NotRequired[float]
+    additional_currencies: NotRequired[
+        List[UnscheduledPlanAddItemTierAdditionalCurrencyTypedDict]
+    ]
+    r"""Per-currency amounts for this tier. Tier boundaries ('to') are shared across all currencies."""
+
+
+class UnscheduledPlanAddItemTier(BaseModel):
+    to: CreateScheduleAddItemTo
+
+    amount: Optional[float] = None
+
+    flat_amount: Optional[float] = None
+
+    additional_currencies: Optional[
+        List[UnscheduledPlanAddItemTierAdditionalCurrency]
+    ] = None
+    r"""Per-currency amounts for this tier. Tier boundaries ('to') are shared across all currencies."""
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        optional_fields = set(["amount", "flat_amount", "additional_currencies"])
+        serialized = handler(self)
+        m = {}
+
+        for n, f in type(self).model_fields.items():
+            k = f.alias or n
+            val = serialized.get(k, serialized.get(n))
+
+            if val != UNSET_SENTINEL:
+                if val is not None or k not in optional_fields:
+                    m[k] = val
+
+        return m
+
+
+UnscheduledPlanAddItemTierBehavior = Literal[
+    "graduated",
+    "volume",
+]
+
+
+UnscheduledPlanAddItemPriceInterval = Literal[
+    "one_off",
+    "week",
+    "month",
+    "quarter",
+    "semi_annual",
+    "year",
+]
+r"""Billing interval. For consumable features, should match reset.interval."""
+
+
+UnscheduledPlanAddItemBillingMethod = Literal[
+    "prepaid",
+    "usage_based",
+]
+r"""'prepaid' for upfront payment (seats), 'usage_based' for pay-as-you-go."""
+
+
+class UnscheduledPlanAddItemPriceTypedDict(TypedDict):
+    r"""Pricing for usage beyond included units. Omit for free features."""
+
+    interval: UnscheduledPlanAddItemPriceInterval
+    r"""Billing interval. For consumable features, should match reset.interval."""
+    billing_method: UnscheduledPlanAddItemBillingMethod
+    r"""'prepaid' for upfront payment (seats), 'usage_based' for pay-as-you-go."""
+    amount: NotRequired[float]
+    r"""Price per billing_units after included usage. Either 'amount' or 'tiers' is required."""
+    additional_currencies: NotRequired[
+        List[UnscheduledPlanAddItemAdditionalCurrencyTypedDict]
+    ]
+    r"""Amounts in additional currencies for this flat price. The base 'amount' is in the org's default currency. Only valid with 'amount', not 'tiers'."""
+    tiers: NotRequired[List[UnscheduledPlanAddItemTierTypedDict]]
+    r"""Tiered pricing.  Either 'amount' or 'tiers' is required."""
+    tier_behavior: NotRequired[UnscheduledPlanAddItemTierBehavior]
+    interval_count: NotRequired[float]
+    r"""Number of intervals per billing cycle. Defaults to 1."""
+    billing_units: NotRequired[float]
+    r"""Units per price increment. Usage is rounded UP when billed (e.g. billing_units=100 means 101 rounds to 200)."""
+    max_purchase: NotRequired[Nullable[float]]
+    r"""Max units purchasable beyond included. E.g. included=100, max_purchase=300 allows 400 total. Null for no limit."""
+
+
+class UnscheduledPlanAddItemPrice(BaseModel):
+    r"""Pricing for usage beyond included units. Omit for free features."""
+
+    interval: UnscheduledPlanAddItemPriceInterval
+    r"""Billing interval. For consumable features, should match reset.interval."""
+
+    billing_method: UnscheduledPlanAddItemBillingMethod
+    r"""'prepaid' for upfront payment (seats), 'usage_based' for pay-as-you-go."""
+
+    amount: Optional[float] = None
+    r"""Price per billing_units after included usage. Either 'amount' or 'tiers' is required."""
+
+    additional_currencies: Optional[List[UnscheduledPlanAddItemAdditionalCurrency]] = (
+        None
+    )
+    r"""Amounts in additional currencies for this flat price. The base 'amount' is in the org's default currency. Only valid with 'amount', not 'tiers'."""
+
+    tiers: Optional[List[UnscheduledPlanAddItemTier]] = None
+    r"""Tiered pricing.  Either 'amount' or 'tiers' is required."""
+
+    tier_behavior: Optional[UnscheduledPlanAddItemTierBehavior] = None
+
+    interval_count: Optional[float] = 1
+    r"""Number of intervals per billing cycle. Defaults to 1."""
+
+    billing_units: Optional[float] = 1
+    r"""Units per price increment. Usage is rounded UP when billed (e.g. billing_units=100 means 101 rounds to 200)."""
+
+    max_purchase: OptionalNullable[float] = UNSET
+    r"""Max units purchasable beyond included. E.g. included=100, max_purchase=300 allows 400 total. Null for no limit."""
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        optional_fields = set(
+            [
+                "amount",
+                "additional_currencies",
+                "tiers",
+                "tier_behavior",
+                "interval_count",
+                "billing_units",
+                "max_purchase",
+            ]
+        )
+        nullable_fields = set(["max_purchase"])
+        serialized = handler(self)
+        m = {}
+
+        for n, f in type(self).model_fields.items():
+            k = f.alias or n
+            val = serialized.get(k, serialized.get(n))
+            is_nullable_and_explicitly_set = (
+                k in nullable_fields
+                and (self.__pydantic_fields_set__.intersection({n}))  # pylint: disable=no-member
+            )
+
+            if val != UNSET_SENTINEL:
+                if (
+                    val is not None
+                    or k not in optional_fields
+                    or is_nullable_and_explicitly_set
+                ):
+                    m[k] = val
+
+        return m
+
+
+UnscheduledPlanAddItemOnIncrease = Literal[
+    "bill_immediately",
+    "prorate_immediately",
+    "prorate_next_cycle",
+    "bill_next_cycle",
+]
+r"""Billing behavior when quantity increases mid-cycle."""
+
+
+UnscheduledPlanAddItemOnDecrease = Literal[
+    "prorate",
+    "prorate_immediately",
+    "prorate_next_cycle",
+    "none",
+    "no_prorations",
+]
+r"""Credit behavior when quantity decreases mid-cycle."""
+
+
+class UnscheduledPlanAddItemProrationTypedDict(TypedDict):
+    r"""Proration settings for prepaid features. Controls mid-cycle quantity change billing."""
+
+    on_increase: UnscheduledPlanAddItemOnIncrease
+    r"""Billing behavior when quantity increases mid-cycle."""
+    on_decrease: UnscheduledPlanAddItemOnDecrease
+    r"""Credit behavior when quantity decreases mid-cycle."""
+
+
+class UnscheduledPlanAddItemProration(BaseModel):
+    r"""Proration settings for prepaid features. Controls mid-cycle quantity change billing."""
+
+    on_increase: UnscheduledPlanAddItemOnIncrease
+    r"""Billing behavior when quantity increases mid-cycle."""
+
+    on_decrease: UnscheduledPlanAddItemOnDecrease
+    r"""Credit behavior when quantity decreases mid-cycle."""
+
+
+UnscheduledPlanAddItemExpiryDurationType = Literal[
+    "month",
+    "forever",
+]
+r"""When rolled over units expire."""
+
+
+class UnscheduledPlanAddItemRolloverTypedDict(TypedDict):
+    r"""Rollover config for unused units. If set, unused included units carry over."""
+
+    expiry_duration_type: UnscheduledPlanAddItemExpiryDurationType
+    r"""When rolled over units expire."""
+    max: NotRequired[float]
+    r"""Max rollover units. Omit for unlimited rollover."""
+    max_percentage: NotRequired[float]
+    r"""Maximum rollover as a percentage (0-100) of included + prepaid grant. Mutually exclusive with max."""
+    expiry_duration_length: NotRequired[float]
+    r"""Number of periods before expiry."""
+
+
+class UnscheduledPlanAddItemRollover(BaseModel):
+    r"""Rollover config for unused units. If set, unused included units carry over."""
+
+    expiry_duration_type: UnscheduledPlanAddItemExpiryDurationType
+    r"""When rolled over units expire."""
+
+    max: Optional[float] = None
+    r"""Max rollover units. Omit for unlimited rollover."""
+
+    max_percentage: Optional[float] = None
+    r"""Maximum rollover as a percentage (0-100) of included + prepaid grant. Mutually exclusive with max."""
+
+    expiry_duration_length: Optional[float] = None
+    r"""Number of periods before expiry."""
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        optional_fields = set(["max", "max_percentage", "expiry_duration_length"])
+        serialized = handler(self)
+        m = {}
+
+        for n, f in type(self).model_fields.items():
+            k = f.alias or n
+            val = serialized.get(k, serialized.get(n))
+
+            if val != UNSET_SENTINEL:
+                if val is not None or k not in optional_fields:
+                    m[k] = val
+
+        return m
+
+
+class UnscheduledPlanAddItemPlanItemTypedDict(TypedDict):
+    r"""Configuration for a feature item in a plan, including usage limits, pricing, and rollover settings."""
+
+    feature_id: str
+    r"""The ID of the feature to configure."""
+    included: NotRequired[float]
+    r"""Number of free units included. Balance resets to this each interval for consumable features."""
+    unlimited: NotRequired[bool]
+    r"""If true, customer has unlimited access to this feature."""
+    pooled: NotRequired[bool]
+    r"""Whether entity-level grants contribute to a shared customer balance."""
+    reset: NotRequired[UnscheduledPlanAddItemResetTypedDict]
+    r"""Reset configuration for consumable features. Omit for non-consumable features like seats."""
+    price: NotRequired[UnscheduledPlanAddItemPriceTypedDict]
+    r"""Pricing for usage beyond included units. Omit for free features."""
+    proration: NotRequired[UnscheduledPlanAddItemProrationTypedDict]
+    r"""Proration settings for prepaid features. Controls mid-cycle quantity change billing."""
+    rollover: NotRequired[UnscheduledPlanAddItemRolloverTypedDict]
+    r"""Rollover config for unused units. If set, unused included units carry over."""
+
+
+class UnscheduledPlanAddItemPlanItem(BaseModel):
+    r"""Configuration for a feature item in a plan, including usage limits, pricing, and rollover settings."""
+
+    feature_id: str
+    r"""The ID of the feature to configure."""
+
+    included: Optional[float] = None
+    r"""Number of free units included. Balance resets to this each interval for consumable features."""
+
+    unlimited: Optional[bool] = None
+    r"""If true, customer has unlimited access to this feature."""
+
+    pooled: Optional[bool] = False
+    r"""Whether entity-level grants contribute to a shared customer balance."""
+
+    reset: Optional[UnscheduledPlanAddItemReset] = None
+    r"""Reset configuration for consumable features. Omit for non-consumable features like seats."""
+
+    price: Optional[UnscheduledPlanAddItemPrice] = None
+    r"""Pricing for usage beyond included units. Omit for free features."""
+
+    proration: Optional[UnscheduledPlanAddItemProration] = None
+    r"""Proration settings for prepaid features. Controls mid-cycle quantity change billing."""
+
+    rollover: Optional[UnscheduledPlanAddItemRollover] = None
+    r"""Rollover config for unused units. If set, unused included units carry over."""
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        optional_fields = set(
+            [
+                "included",
+                "unlimited",
+                "pooled",
+                "reset",
+                "price",
+                "proration",
+                "rollover",
+            ]
+        )
+        serialized = handler(self)
+        m = {}
+
+        for n, f in type(self).model_fields.items():
+            k = f.alias or n
+            val = serialized.get(k, serialized.get(n))
+
+            if val != UNSET_SENTINEL:
+                if val is not None or k not in optional_fields:
+                    m[k] = val
+
+        return m
+
+
+UnscheduledPlanRemoveItemBillingMethod = Literal[
+    "prepaid",
+    "usage_based",
+]
+r"""Match items with this billing method (prepaid or usage_based)."""
+
+
+IntervalUnscheduledPlanRemoveItemEnum2 = Literal[
+    "one_off",
+    "minute",
+    "hour",
+    "day",
+    "week",
+    "month",
+    "quarter",
+    "semi_annual",
+    "year",
+]
+
+
+IntervalUnscheduledPlanRemoveItemEnum1 = Literal[
+    "one_off",
+    "week",
+    "month",
+    "quarter",
+    "semi_annual",
+    "year",
+]
+
+
+UnscheduledPlanIntervalUnionTypedDict = TypeAliasType(
+    "UnscheduledPlanIntervalUnionTypedDict",
+    Union[
+        IntervalUnscheduledPlanRemoveItemEnum1, IntervalUnscheduledPlanRemoveItemEnum2
+    ],
+)
+r"""Match items with this interval. Accepts either a BillingInterval (price-side) or a ResetInterval (reset-side, includes day/hour/minute) so price-less items keyed by reset.interval can be disambiguated."""
+
+
+UnscheduledPlanIntervalUnion = TypeAliasType(
+    "UnscheduledPlanIntervalUnion",
+    Union[
+        IntervalUnscheduledPlanRemoveItemEnum1, IntervalUnscheduledPlanRemoveItemEnum2
+    ],
+)
+r"""Match items with this interval. Accepts either a BillingInterval (price-side) or a ResetInterval (reset-side, includes day/hour/minute) so price-less items keyed by reset.interval can be disambiguated."""
+
+
+class UnscheduledPlanPlanItemFilterTypedDict(TypedDict):
+    r"""Filter for matching plan items. All provided fields must match (AND)."""
+
+    feature_id: NotRequired[str]
+    r"""Match items linked to this feature."""
+    billing_method: NotRequired[UnscheduledPlanRemoveItemBillingMethod]
+    r"""Match items with this billing method (prepaid or usage_based)."""
+    interval: NotRequired[UnscheduledPlanIntervalUnionTypedDict]
+    r"""Match items with this interval. Accepts either a BillingInterval (price-side) or a ResetInterval (reset-side, includes day/hour/minute) so price-less items keyed by reset.interval can be disambiguated."""
+    interval_count: NotRequired[int]
+    r"""Match items with this interval_count. Disambiguates between items that share an interval but differ in count."""
+
+
+class UnscheduledPlanPlanItemFilter(BaseModel):
+    r"""Filter for matching plan items. All provided fields must match (AND)."""
+
+    feature_id: Optional[str] = None
+    r"""Match items linked to this feature."""
+
+    billing_method: Optional[UnscheduledPlanRemoveItemBillingMethod] = None
+    r"""Match items with this billing method (prepaid or usage_based)."""
+
+    interval: Optional[UnscheduledPlanIntervalUnion] = None
+    r"""Match items with this interval. Accepts either a BillingInterval (price-side) or a ResetInterval (reset-side, includes day/hour/minute) so price-less items keyed by reset.interval can be disambiguated."""
+
+    interval_count: Optional[int] = None
+    r"""Match items with this interval_count. Disambiguates between items that share an interval but differ in count."""
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        optional_fields = set(
+            ["feature_id", "billing_method", "interval", "interval_count"]
+        )
+        serialized = handler(self)
+        m = {}
+
+        for n, f in type(self).model_fields.items():
+            k = f.alias or n
+            val = serialized.get(k, serialized.get(n))
+
+            if val != UNSET_SENTINEL:
+                if val is not None or k not in optional_fields:
+                    m[k] = val
+
+        return m
+
+
+UnscheduledPlanPurchaseLimitInterval = Literal[
+    "hour",
+    "day",
+    "week",
+    "month",
+]
+r"""The time interval for the purchase limit window."""
+
+
+class UnscheduledPlanPurchaseLimitTypedDict(TypedDict):
+    r"""Optional rate limit to cap how often auto top-ups occur. Pass count to set the current window's consumed top-ups."""
+
+    interval: UnscheduledPlanPurchaseLimitInterval
+    r"""The time interval for the purchase limit window."""
+    limit: float
+    r"""Maximum number of auto top-ups allowed within the interval."""
+    interval_count: NotRequired[float]
+    r"""Number of intervals in the purchase limit window."""
+    count: NotRequired[float]
+    r"""Set the current window's consumed auto top-up count. Omit to leave runtime state unchanged."""
+
+
+class UnscheduledPlanPurchaseLimit(BaseModel):
+    r"""Optional rate limit to cap how often auto top-ups occur. Pass count to set the current window's consumed top-ups."""
+
+    interval: UnscheduledPlanPurchaseLimitInterval
+    r"""The time interval for the purchase limit window."""
+
+    limit: float
+    r"""Maximum number of auto top-ups allowed within the interval."""
+
+    interval_count: Optional[float] = 1
+    r"""Number of intervals in the purchase limit window."""
+
+    count: Optional[float] = None
+    r"""Set the current window's consumed auto top-up count. Omit to leave runtime state unchanged."""
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        optional_fields = set(["interval_count", "count"])
+        serialized = handler(self)
+        m = {}
+
+        for n, f in type(self).model_fields.items():
+            k = f.alias or n
+            val = serialized.get(k, serialized.get(n))
+
+            if val != UNSET_SENTINEL:
+                if val is not None or k not in optional_fields:
+                    m[k] = val
+
+        return m
+
+
+class UnscheduledPlanAutoTopupTypedDict(TypedDict):
+    feature_id: str
+    r"""The ID of the feature (credit balance) to auto top-up."""
+    threshold: float
+    r"""When the balance drops below this threshold, an auto top-up will be purchased."""
+    quantity: float
+    r"""Amount of credits to add per auto top-up."""
+    enabled: NotRequired[bool]
+    r"""Whether auto top-up is enabled."""
+    purchase_limit: NotRequired[UnscheduledPlanPurchaseLimitTypedDict]
+    r"""Optional rate limit to cap how often auto top-ups occur. Pass count to set the current window's consumed top-ups."""
+    invoice_mode: NotRequired[bool]
+    r"""When true, auto top-up creates a send_invoice invoice instead of auto-charging."""
+
+
+class UnscheduledPlanAutoTopup(BaseModel):
+    feature_id: str
+    r"""The ID of the feature (credit balance) to auto top-up."""
+
+    threshold: float
+    r"""When the balance drops below this threshold, an auto top-up will be purchased."""
+
+    quantity: float
+    r"""Amount of credits to add per auto top-up."""
+
+    enabled: Optional[bool] = False
+    r"""Whether auto top-up is enabled."""
+
+    purchase_limit: Optional[UnscheduledPlanPurchaseLimit] = None
+    r"""Optional rate limit to cap how often auto top-ups occur. Pass count to set the current window's consumed top-ups."""
+
+    invoice_mode: Optional[bool] = None
+    r"""When true, auto top-up creates a send_invoice invoice instead of auto-charging."""
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        optional_fields = set(["enabled", "purchase_limit", "invoice_mode"])
+        serialized = handler(self)
+        m = {}
+
+        for n, f in type(self).model_fields.items():
+            k = f.alias or n
+            val = serialized.get(k, serialized.get(n))
+
+            if val != UNSET_SENTINEL:
+                if val is not None or k not in optional_fields:
+                    m[k] = val
+
+        return m
+
+
+UnscheduledPlanLimitType = Literal[
+    "absolute",
+    "usage_percentage",
+]
+r"""How overage_limit is interpreted: an absolute overage cap (default) or a percentage of the main-plan allowance."""
+
+
+class UnscheduledPlanSpendLimitTypedDict(TypedDict):
+    feature_id: NotRequired[str]
+    r"""Optional feature ID this spend limit applies to."""
+    enabled: NotRequired[bool]
+    r"""Whether the overage spend limit is enabled."""
+    limit_type: NotRequired[UnscheduledPlanLimitType]
+    r"""How overage_limit is interpreted: an absolute overage cap (default) or a percentage of the main-plan allowance."""
+    overage_limit: NotRequired[float]
+    r"""Overage cap for the feature: absolute units, or a percent (e.g. 120) when limit_type is usage_percentage."""
+    skip_overage_billing: NotRequired[bool]
+    r"""When true, overage for this feature is not posted to Stripe. Usage tracking and balance resets still behave normally."""
+
+
+class UnscheduledPlanSpendLimit(BaseModel):
+    feature_id: Optional[str] = None
+    r"""Optional feature ID this spend limit applies to."""
+
+    enabled: Optional[bool] = False
+    r"""Whether the overage spend limit is enabled."""
+
+    limit_type: Optional[UnscheduledPlanLimitType] = None
+    r"""How overage_limit is interpreted: an absolute overage cap (default) or a percentage of the main-plan allowance."""
+
+    overage_limit: Optional[float] = None
+    r"""Overage cap for the feature: absolute units, or a percent (e.g. 120) when limit_type is usage_percentage."""
+
+    skip_overage_billing: Optional[bool] = None
+    r"""When true, overage for this feature is not posted to Stripe. Usage tracking and balance resets still behave normally."""
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        optional_fields = set(
+            [
+                "feature_id",
+                "enabled",
+                "limit_type",
+                "overage_limit",
+                "skip_overage_billing",
+            ]
+        )
+        serialized = handler(self)
+        m = {}
+
+        for n, f in type(self).model_fields.items():
+            k = f.alias or n
+            val = serialized.get(k, serialized.get(n))
+
+            if val != UNSET_SENTINEL:
+                if val is not None or k not in optional_fields:
+                    m[k] = val
+
+        return m
+
+
+UnscheduledPlanUsageLimitInterval = Literal[
+    "day",
+    "week",
+    "month",
+    "year",
+]
+r"""Interval for the cap, aligned to the customer's billing cycle."""
+
+
+CreateSchedulePropertiesTypedDict = TypeAliasType(
+    "CreateSchedulePropertiesTypedDict", Union[str, float, bool]
+)
+
+
+CreateScheduleProperties = TypeAliasType(
+    "CreateScheduleProperties", Union[str, float, bool]
+)
+
+
+class UnscheduledPlanFilterTypedDict(TypedDict):
+    r"""When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature."""
+
+    properties: Dict[str, CreateSchedulePropertiesTypedDict]
+
+
+class UnscheduledPlanFilter(BaseModel):
+    r"""When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature."""
+
+    properties: Dict[str, CreateScheduleProperties]
+
+
+class UnscheduledPlanUsageLimitTypedDict(TypedDict):
+    feature_id: str
+    r"""The feature this usage limit applies to."""
+    limit: float
+    r"""Maximum units allowed per interval."""
+    interval: UnscheduledPlanUsageLimitInterval
+    r"""Interval for the cap, aligned to the customer's billing cycle."""
+    enabled: NotRequired[bool]
+    r"""Whether this usage limit is enabled."""
+    filter_: NotRequired[UnscheduledPlanFilterTypedDict]
+    r"""When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature."""
+
+
+class UnscheduledPlanUsageLimit(BaseModel):
+    feature_id: str
+    r"""The feature this usage limit applies to."""
+
+    limit: float
+    r"""Maximum units allowed per interval."""
+
+    interval: UnscheduledPlanUsageLimitInterval
+    r"""Interval for the cap, aligned to the customer's billing cycle."""
+
+    enabled: Optional[bool] = True
+    r"""Whether this usage limit is enabled."""
+
+    filter_: Annotated[
+        Optional[UnscheduledPlanFilter], pydantic.Field(alias="filter")
+    ] = None
+    r"""When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature."""
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        optional_fields = set(["enabled", "filter"])
+        serialized = handler(self)
+        m = {}
+
+        for n, f in type(self).model_fields.items():
+            k = f.alias or n
+            val = serialized.get(k, serialized.get(n))
+
+            if val != UNSET_SENTINEL:
+                if val is not None or k not in optional_fields:
+                    m[k] = val
+
+        return m
+
+
+UnscheduledPlanThresholdType = Literal[
+    "usage",
+    "usage_percentage",
+    "remaining",
+    "remaining_percentage",
+]
+r"""Whether the threshold is an absolute count or a percentage of the usage allowance or remaining balance."""
+
+
+class UnscheduledPlanUsageAlertTypedDict(TypedDict):
+    threshold: float
+    r"""The threshold value that triggers the alert. For usage or remaining, this is an absolute count. For usage_percentage or remaining_percentage, this is a percentage (0-100)."""
+    threshold_type: UnscheduledPlanThresholdType
+    r"""Whether the threshold is an absolute count or a percentage of the usage allowance or remaining balance."""
+    feature_id: NotRequired[str]
+    r"""The feature ID this alert applies to."""
+    enabled: NotRequired[bool]
+    r"""Whether this usage alert is enabled."""
+    name: NotRequired[str]
+    r"""Optional user-defined label to distinguish multiple alerts on the same feature."""
+
+
+class UnscheduledPlanUsageAlert(BaseModel):
+    threshold: float
+    r"""The threshold value that triggers the alert. For usage or remaining, this is an absolute count. For usage_percentage or remaining_percentage, this is a percentage (0-100)."""
+
+    threshold_type: UnscheduledPlanThresholdType
+    r"""Whether the threshold is an absolute count or a percentage of the usage allowance or remaining balance."""
+
+    feature_id: Optional[str] = None
+    r"""The feature ID this alert applies to."""
+
+    enabled: Optional[bool] = True
+    r"""Whether this usage alert is enabled."""
+
+    name: Optional[str] = None
+    r"""Optional user-defined label to distinguish multiple alerts on the same feature."""
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        optional_fields = set(["feature_id", "enabled", "name"])
+        serialized = handler(self)
+        m = {}
+
+        for n, f in type(self).model_fields.items():
+            k = f.alias or n
+            val = serialized.get(k, serialized.get(n))
+
+            if val != UNSET_SENTINEL:
+                if val is not None or k not in optional_fields:
+                    m[k] = val
+
+        return m
+
+
+class UnscheduledPlanOverageAllowedTypedDict(TypedDict):
+    feature_id: str
+    r"""The feature ID this overage allowed control applies to."""
+    enabled: NotRequired[bool]
+    r"""Whether overage is allowed for this feature."""
+
+
+class UnscheduledPlanOverageAllowed(BaseModel):
+    feature_id: str
+    r"""The feature ID this overage allowed control applies to."""
+
+    enabled: Optional[bool] = False
+    r"""Whether overage is allowed for this feature."""
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        optional_fields = set(["enabled"])
+        serialized = handler(self)
+        m = {}
+
+        for n, f in type(self).model_fields.items():
+            k = f.alias or n
+            val = serialized.get(k, serialized.get(n))
+
+            if val != UNSET_SENTINEL:
+                if val is not None or k not in optional_fields:
+                    m[k] = val
+
+        return m
+
+
+class UnscheduledPlanBillingControlsTypedDict(TypedDict):
+    r"""Override the plan's billing controls (auto top-ups, spend limits, usage limits, usage alerts, overage allowed) for this customer."""
+
+    auto_topups: NotRequired[List[UnscheduledPlanAutoTopupTypedDict]]
+    r"""List of auto top-up configurations per feature."""
+    spend_limits: NotRequired[List[UnscheduledPlanSpendLimitTypedDict]]
+    r"""List of overage spend limits per feature (caps overage spend)."""
+    usage_limits: NotRequired[List[UnscheduledPlanUsageLimitTypedDict]]
+    r"""List of hard usage caps per feature (max units per interval)."""
+    usage_alerts: NotRequired[List[UnscheduledPlanUsageAlertTypedDict]]
+    r"""List of usage alert configurations per feature."""
+    overage_allowed: NotRequired[List[UnscheduledPlanOverageAllowedTypedDict]]
+    r"""List of overage allowed controls per feature. When enabled, usage can exceed balance."""
+
+
+class UnscheduledPlanBillingControls(BaseModel):
+    r"""Override the plan's billing controls (auto top-ups, spend limits, usage limits, usage alerts, overage allowed) for this customer."""
+
+    auto_topups: Optional[List[UnscheduledPlanAutoTopup]] = None
+    r"""List of auto top-up configurations per feature."""
+
+    spend_limits: Optional[List[UnscheduledPlanSpendLimit]] = None
+    r"""List of overage spend limits per feature (caps overage spend)."""
+
+    usage_limits: Optional[List[UnscheduledPlanUsageLimit]] = None
+    r"""List of hard usage caps per feature (max units per interval)."""
+
+    usage_alerts: Optional[List[UnscheduledPlanUsageAlert]] = None
+    r"""List of usage alert configurations per feature."""
+
+    overage_allowed: Optional[List[UnscheduledPlanOverageAllowed]] = None
+    r"""List of overage allowed controls per feature. When enabled, usage can exceed balance."""
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        optional_fields = set(
+            [
+                "auto_topups",
+                "spend_limits",
+                "usage_limits",
+                "usage_alerts",
+                "overage_allowed",
+            ]
+        )
+        serialized = handler(self)
+        m = {}
+
+        for n, f in type(self).model_fields.items():
+            k = f.alias or n
+            val = serialized.get(k, serialized.get(n))
+
+            if val != UNSET_SENTINEL:
+                if val is not None or k not in optional_fields:
+                    m[k] = val
+
+        return m
+
+
+class UnscheduledPlanCustomizeTypedDict(TypedDict):
+    r"""Customize the plan to schedule. Can override price, replace items, or patch items with add_items and remove_items."""
+
+    price: NotRequired[Nullable[UnscheduledPlanBasePriceTypedDict]]
+    r"""Override the base price of the plan. Pass null to remove the base price."""
+    items: NotRequired[List[UnscheduledPlanItemPlanItemTypedDict]]
+    r"""Override the items in the plan (PUT-style — replaces all existing items). Mutually exclusive with add_items / remove_items / deprecated update_items."""
+    add_items: NotRequired[List[UnscheduledPlanAddItemPlanItemTypedDict]]
+    r"""Items to add to the plan."""
+    remove_items: NotRequired[List[UnscheduledPlanPlanItemFilterTypedDict]]
+    r"""Filters selecting items to remove from the plan."""
+    billing_controls: NotRequired[UnscheduledPlanBillingControlsTypedDict]
+    r"""Override the plan's billing controls (auto top-ups, spend limits, usage limits, usage alerts, overage allowed) for this customer."""
+
+
+class UnscheduledPlanCustomize(BaseModel):
+    r"""Customize the plan to schedule. Can override price, replace items, or patch items with add_items and remove_items."""
+
+    price: OptionalNullable[UnscheduledPlanBasePrice] = UNSET
+    r"""Override the base price of the plan. Pass null to remove the base price."""
+
+    items: Optional[List[UnscheduledPlanItemPlanItem]] = None
+    r"""Override the items in the plan (PUT-style — replaces all existing items). Mutually exclusive with add_items / remove_items / deprecated update_items."""
+
+    add_items: Optional[List[UnscheduledPlanAddItemPlanItem]] = None
+    r"""Items to add to the plan."""
+
+    remove_items: Optional[List[UnscheduledPlanPlanItemFilter]] = None
+    r"""Filters selecting items to remove from the plan."""
+
+    billing_controls: Optional[UnscheduledPlanBillingControls] = None
+    r"""Override the plan's billing controls (auto top-ups, spend limits, usage limits, usage alerts, overage allowed) for this customer."""
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        optional_fields = set(
+            ["price", "items", "add_items", "remove_items", "billing_controls"]
+        )
+        nullable_fields = set(["price"])
+        serialized = handler(self)
+        m = {}
+
+        for n, f in type(self).model_fields.items():
+            k = f.alias or n
+            val = serialized.get(k, serialized.get(n))
+            is_nullable_and_explicitly_set = (
+                k in nullable_fields
+                and (self.__pydantic_fields_set__.intersection({n}))  # pylint: disable=no-member
+            )
+
+            if val != UNSET_SENTINEL:
+                if (
+                    val is not None
+                    or k not in optional_fields
+                    or is_nullable_and_explicitly_set
+                ):
+                    m[k] = val
+
+        return m
+
+
+class UnscheduledPlanTypedDict(TypedDict):
+    plan_id: str
+    r"""The ID of the plan to schedule in this phase."""
+    entity_id: NotRequired[Nullable[str]]
+    r"""The immediate plan scope. Omit to inherit the request entity, pass null for customer-level, or pass an entity ID."""
+    feature_quantities: NotRequired[List[UnscheduledPlanFeatureQuantityTypedDict]]
+    r"""Optional prepaid feature quantities for this phase's plan."""
+    version: NotRequired[float]
+    r"""Optional explicit plan version to schedule."""
+    customize: NotRequired[UnscheduledPlanCustomizeTypedDict]
+    r"""Customize the plan to schedule. Can override price, replace items, or patch items with add_items and remove_items."""
+    subscription_id: NotRequired[str]
+    r"""A unique ID to identify this subscription. Useful when scheduling the same plan multiple times."""
+
+
+class UnscheduledPlan(BaseModel):
+    plan_id: str
+    r"""The ID of the plan to schedule in this phase."""
+
+    entity_id: OptionalNullable[str] = UNSET
+    r"""The immediate plan scope. Omit to inherit the request entity, pass null for customer-level, or pass an entity ID."""
+
+    feature_quantities: Optional[List[UnscheduledPlanFeatureQuantity]] = None
+    r"""Optional prepaid feature quantities for this phase's plan."""
+
+    version: Optional[float] = None
+    r"""Optional explicit plan version to schedule."""
+
+    customize: Optional[UnscheduledPlanCustomize] = None
+    r"""Customize the plan to schedule. Can override price, replace items, or patch items with add_items and remove_items."""
+
+    subscription_id: Optional[str] = None
+    r"""A unique ID to identify this subscription. Useful when scheduling the same plan multiple times."""
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        optional_fields = set(
+            [
+                "entity_id",
+                "feature_quantities",
+                "version",
+                "customize",
+                "subscription_id",
+            ]
+        )
+        nullable_fields = set(["entity_id"])
+        serialized = handler(self)
+        m = {}
+
+        for n, f in type(self).model_fields.items():
+            k = f.alias or n
+            val = serialized.get(k, serialized.get(n))
+            is_nullable_and_explicitly_set = (
+                k in nullable_fields
+                and (self.__pydantic_fields_set__.intersection({n}))  # pylint: disable=no-member
+            )
+
+            if val != UNSET_SENTINEL:
+                if (
+                    val is not None
+                    or k not in optional_fields
+                    or is_nullable_and_explicitly_set
+                ):
+                    m[k] = val
+
+        return m
+
+
 StartsAt2TypedDict = TypeAliasType("StartsAt2TypedDict", Union[float, str])
 r"""When this phase should start, in epoch milliseconds, or 'now' for the immediate phase."""
 
@@ -246,7 +1810,7 @@ class StartingAfter2(BaseModel):
     r"""How many duration_type periods after the prior phase to start."""
 
 
-class CreateScheduleFeatureQuantity2TypedDict(TypedDict):
+class PhaseStartFeatureQuantityTypedDict(TypedDict):
     r"""Quantity configuration for a prepaid feature."""
 
     feature_id: str
@@ -257,7 +1821,7 @@ class CreateScheduleFeatureQuantity2TypedDict(TypedDict):
     r"""Whether the customer can adjust the quantity."""
 
 
-class CreateScheduleFeatureQuantity2(BaseModel):
+class PhaseStartFeatureQuantity(BaseModel):
     r"""Quantity configuration for a prepaid feature."""
 
     feature_id: str
@@ -286,7 +1850,7 @@ class CreateScheduleFeatureQuantity2(BaseModel):
         return m
 
 
-CreateSchedulePriceInterval2 = Literal[
+PhaseStartPriceInterval = Literal[
     "one_off",
     "week",
     "month",
@@ -297,14 +1861,14 @@ CreateSchedulePriceInterval2 = Literal[
 r"""Billing interval (e.g. 'month', 'year')."""
 
 
-class CreateScheduleAdditionalCurrency2TypedDict(TypedDict):
+class PhaseStartAdditionalCurrencyTypedDict(TypedDict):
     currency: str
     r"""Three-letter Stripe-supported currency code (e.g. 'eur', 'gbp')."""
     amount: float
     r"""Price amount in this currency. Set explicitly per currency, not converted from the base amount."""
 
 
-class CreateScheduleAdditionalCurrency2(BaseModel):
+class PhaseStartAdditionalCurrency(BaseModel):
     currency: str
     r"""Three-letter Stripe-supported currency code (e.g. 'eur', 'gbp')."""
 
@@ -312,32 +1876,32 @@ class CreateScheduleAdditionalCurrency2(BaseModel):
     r"""Price amount in this currency. Set explicitly per currency, not converted from the base amount."""
 
 
-class CreateScheduleBasePrice2TypedDict(TypedDict):
+class PhaseStartBasePriceTypedDict(TypedDict):
     r"""Base price configuration for a plan."""
 
     amount: float
     r"""Base price amount for the plan."""
-    interval: CreateSchedulePriceInterval2
+    interval: PhaseStartPriceInterval
     r"""Billing interval (e.g. 'month', 'year')."""
     interval_count: NotRequired[float]
     r"""Number of intervals per billing cycle. Defaults to 1."""
-    additional_currencies: NotRequired[List[CreateScheduleAdditionalCurrency2TypedDict]]
+    additional_currencies: NotRequired[List[PhaseStartAdditionalCurrencyTypedDict]]
     r"""Base price amounts in additional currencies. The base 'amount' is in the org's default currency."""
 
 
-class CreateScheduleBasePrice2(BaseModel):
+class PhaseStartBasePrice(BaseModel):
     r"""Base price configuration for a plan."""
 
     amount: float
     r"""Base price amount for the plan."""
 
-    interval: CreateSchedulePriceInterval2
+    interval: PhaseStartPriceInterval
     r"""Billing interval (e.g. 'month', 'year')."""
 
     interval_count: Optional[float] = None
     r"""Number of intervals per billing cycle. Defaults to 1."""
 
-    additional_currencies: Optional[List[CreateScheduleAdditionalCurrency2]] = None
+    additional_currencies: Optional[List[PhaseStartAdditionalCurrency]] = None
     r"""Base price amounts in additional currencies. The base 'amount' is in the org's default currency."""
 
     @model_serializer(mode="wrap")
@@ -357,7 +1921,7 @@ class CreateScheduleBasePrice2(BaseModel):
         return m
 
 
-CreateScheduleItemResetInterval2 = Literal[
+PhaseStartItemResetInterval = Literal[
     "one_off",
     "minute",
     "hour",
@@ -371,19 +1935,19 @@ CreateScheduleItemResetInterval2 = Literal[
 r"""Interval at which balance resets (e.g. 'month', 'year'). For consumable features only."""
 
 
-class CreateScheduleItemReset2TypedDict(TypedDict):
+class PhaseStartItemResetTypedDict(TypedDict):
     r"""Reset configuration for consumable features. Omit for non-consumable features like seats."""
 
-    interval: CreateScheduleItemResetInterval2
+    interval: PhaseStartItemResetInterval
     r"""Interval at which balance resets (e.g. 'month', 'year'). For consumable features only."""
     interval_count: NotRequired[float]
     r"""Number of intervals between resets. Defaults to 1."""
 
 
-class CreateScheduleItemReset2(BaseModel):
+class PhaseStartItemReset(BaseModel):
     r"""Reset configuration for consumable features. Omit for non-consumable features like seats."""
 
-    interval: CreateScheduleItemResetInterval2
+    interval: PhaseStartItemResetInterval
     r"""Interval at which balance resets (e.g. 'month', 'year'). For consumable features only."""
 
     interval_count: Optional[float] = None
@@ -406,12 +1970,12 @@ class CreateScheduleItemReset2(BaseModel):
         return m
 
 
-class CreateScheduleItemAdditionalCurrency2TypedDict(TypedDict):
+class PhaseStartItemAdditionalCurrencyTypedDict(TypedDict):
     currency: NotRequired[Any]
     amount: NotRequired[Any]
 
 
-class CreateScheduleItemAdditionalCurrency2(BaseModel):
+class PhaseStartItemAdditionalCurrency(BaseModel):
     currency: Optional[Any] = None
 
     amount: Optional[Any] = None
@@ -433,14 +1997,14 @@ class CreateScheduleItemAdditionalCurrency2(BaseModel):
         return m
 
 
-class CreateScheduleItemTier2TypedDict(TypedDict):
+class PhaseStartItemTierTypedDict(TypedDict):
     to: NotRequired[Any]
     amount: NotRequired[Any]
     flat_amount: NotRequired[Any]
     additional_currencies: NotRequired[Any]
 
 
-class CreateScheduleItemTier2(BaseModel):
+class PhaseStartItemTier(BaseModel):
     to: Optional[Any] = None
 
     amount: Optional[Any] = None
@@ -466,13 +2030,13 @@ class CreateScheduleItemTier2(BaseModel):
         return m
 
 
-CreateScheduleItemTierBehavior2 = Literal[
+PhaseStartItemTierBehavior = Literal[
     "graduated",
     "volume",
 ]
 
 
-CreateScheduleItemPriceInterval2 = Literal[
+PhaseStartItemPriceInterval = Literal[
     "one_off",
     "week",
     "month",
@@ -483,29 +2047,27 @@ CreateScheduleItemPriceInterval2 = Literal[
 r"""Billing interval. For consumable features, should match reset.interval."""
 
 
-CreateScheduleItemBillingMethod2 = Literal[
+PhaseStartItemBillingMethod = Literal[
     "prepaid",
     "usage_based",
 ]
 r"""'prepaid' for upfront payment (seats), 'usage_based' for pay-as-you-go."""
 
 
-class CreateScheduleItemPrice2TypedDict(TypedDict):
+class PhaseStartItemPriceTypedDict(TypedDict):
     r"""Pricing for usage beyond included units. Omit for free features."""
 
-    interval: CreateScheduleItemPriceInterval2
+    interval: PhaseStartItemPriceInterval
     r"""Billing interval. For consumable features, should match reset.interval."""
-    billing_method: CreateScheduleItemBillingMethod2
+    billing_method: PhaseStartItemBillingMethod
     r"""'prepaid' for upfront payment (seats), 'usage_based' for pay-as-you-go."""
     amount: NotRequired[float]
     r"""Price per billing_units after included usage. Either 'amount' or 'tiers' is required."""
-    additional_currencies: NotRequired[
-        List[CreateScheduleItemAdditionalCurrency2TypedDict]
-    ]
+    additional_currencies: NotRequired[List[PhaseStartItemAdditionalCurrencyTypedDict]]
     r"""Amounts in additional currencies for this flat price. The base 'amount' is in the org's default currency. Only valid with 'amount', not 'tiers'."""
-    tiers: NotRequired[List[CreateScheduleItemTier2TypedDict]]
+    tiers: NotRequired[List[PhaseStartItemTierTypedDict]]
     r"""Tiered pricing.  Either 'amount' or 'tiers' is required."""
-    tier_behavior: NotRequired[CreateScheduleItemTierBehavior2]
+    tier_behavior: NotRequired[PhaseStartItemTierBehavior]
     interval_count: NotRequired[float]
     r"""Number of intervals per billing cycle. Defaults to 1."""
     billing_units: NotRequired[float]
@@ -514,25 +2076,25 @@ class CreateScheduleItemPrice2TypedDict(TypedDict):
     r"""Max units purchasable beyond included. E.g. included=100, max_purchase=300 allows 400 total. Null for no limit."""
 
 
-class CreateScheduleItemPrice2(BaseModel):
+class PhaseStartItemPrice(BaseModel):
     r"""Pricing for usage beyond included units. Omit for free features."""
 
-    interval: CreateScheduleItemPriceInterval2
+    interval: PhaseStartItemPriceInterval
     r"""Billing interval. For consumable features, should match reset.interval."""
 
-    billing_method: CreateScheduleItemBillingMethod2
+    billing_method: PhaseStartItemBillingMethod
     r"""'prepaid' for upfront payment (seats), 'usage_based' for pay-as-you-go."""
 
     amount: Optional[float] = None
     r"""Price per billing_units after included usage. Either 'amount' or 'tiers' is required."""
 
-    additional_currencies: Optional[List[CreateScheduleItemAdditionalCurrency2]] = None
+    additional_currencies: Optional[List[PhaseStartItemAdditionalCurrency]] = None
     r"""Amounts in additional currencies for this flat price. The base 'amount' is in the org's default currency. Only valid with 'amount', not 'tiers'."""
 
-    tiers: Optional[List[CreateScheduleItemTier2]] = None
+    tiers: Optional[List[PhaseStartItemTier]] = None
     r"""Tiered pricing.  Either 'amount' or 'tiers' is required."""
 
-    tier_behavior: Optional[CreateScheduleItemTierBehavior2] = None
+    tier_behavior: Optional[PhaseStartItemTierBehavior] = None
 
     interval_count: Optional[float] = 1
     r"""Number of intervals per billing cycle. Defaults to 1."""
@@ -579,7 +2141,7 @@ class CreateScheduleItemPrice2(BaseModel):
         return m
 
 
-CreateScheduleItemOnIncrease2 = Literal[
+PhaseStartItemOnIncrease = Literal[
     "bill_immediately",
     "prorate_immediately",
     "prorate_next_cycle",
@@ -588,7 +2150,7 @@ CreateScheduleItemOnIncrease2 = Literal[
 r"""Billing behavior when quantity increases mid-cycle."""
 
 
-CreateScheduleItemOnDecrease2 = Literal[
+PhaseStartItemOnDecrease = Literal[
     "prorate",
     "prorate_immediately",
     "prorate_next_cycle",
@@ -598,36 +2160,36 @@ CreateScheduleItemOnDecrease2 = Literal[
 r"""Credit behavior when quantity decreases mid-cycle."""
 
 
-class CreateScheduleItemProration2TypedDict(TypedDict):
+class PhaseStartItemProrationTypedDict(TypedDict):
     r"""Proration settings for prepaid features. Controls mid-cycle quantity change billing."""
 
-    on_increase: CreateScheduleItemOnIncrease2
+    on_increase: PhaseStartItemOnIncrease
     r"""Billing behavior when quantity increases mid-cycle."""
-    on_decrease: CreateScheduleItemOnDecrease2
+    on_decrease: PhaseStartItemOnDecrease
     r"""Credit behavior when quantity decreases mid-cycle."""
 
 
-class CreateScheduleItemProration2(BaseModel):
+class PhaseStartItemProration(BaseModel):
     r"""Proration settings for prepaid features. Controls mid-cycle quantity change billing."""
 
-    on_increase: CreateScheduleItemOnIncrease2
+    on_increase: PhaseStartItemOnIncrease
     r"""Billing behavior when quantity increases mid-cycle."""
 
-    on_decrease: CreateScheduleItemOnDecrease2
+    on_decrease: PhaseStartItemOnDecrease
     r"""Credit behavior when quantity decreases mid-cycle."""
 
 
-CreateScheduleItemExpiryDurationType2 = Literal[
+PhaseStartItemExpiryDurationType = Literal[
     "month",
     "forever",
 ]
 r"""When rolled over units expire."""
 
 
-class CreateScheduleItemRollover2TypedDict(TypedDict):
+class PhaseStartItemRolloverTypedDict(TypedDict):
     r"""Rollover config for unused units. If set, unused included units carry over."""
 
-    expiry_duration_type: CreateScheduleItemExpiryDurationType2
+    expiry_duration_type: PhaseStartItemExpiryDurationType
     r"""When rolled over units expire."""
     max: NotRequired[float]
     r"""Max rollover units. Omit for unlimited rollover."""
@@ -637,10 +2199,10 @@ class CreateScheduleItemRollover2TypedDict(TypedDict):
     r"""Number of periods before expiry."""
 
 
-class CreateScheduleItemRollover2(BaseModel):
+class PhaseStartItemRollover(BaseModel):
     r"""Rollover config for unused units. If set, unused included units carry over."""
 
-    expiry_duration_type: CreateScheduleItemExpiryDurationType2
+    expiry_duration_type: PhaseStartItemExpiryDurationType
     r"""When rolled over units expire."""
 
     max: Optional[float] = None
@@ -669,7 +2231,7 @@ class CreateScheduleItemRollover2(BaseModel):
         return m
 
 
-class CreateScheduleItemPlanItem2TypedDict(TypedDict):
+class PhaseStartItemPlanItemTypedDict(TypedDict):
     r"""Configuration for a feature item in a plan, including usage limits, pricing, and rollover settings."""
 
     feature_id: str
@@ -680,17 +2242,17 @@ class CreateScheduleItemPlanItem2TypedDict(TypedDict):
     r"""If true, customer has unlimited access to this feature."""
     pooled: NotRequired[bool]
     r"""Whether entity-level grants contribute to a shared customer balance."""
-    reset: NotRequired[CreateScheduleItemReset2TypedDict]
+    reset: NotRequired[PhaseStartItemResetTypedDict]
     r"""Reset configuration for consumable features. Omit for non-consumable features like seats."""
-    price: NotRequired[CreateScheduleItemPrice2TypedDict]
+    price: NotRequired[PhaseStartItemPriceTypedDict]
     r"""Pricing for usage beyond included units. Omit for free features."""
-    proration: NotRequired[CreateScheduleItemProration2TypedDict]
+    proration: NotRequired[PhaseStartItemProrationTypedDict]
     r"""Proration settings for prepaid features. Controls mid-cycle quantity change billing."""
-    rollover: NotRequired[CreateScheduleItemRollover2TypedDict]
+    rollover: NotRequired[PhaseStartItemRolloverTypedDict]
     r"""Rollover config for unused units. If set, unused included units carry over."""
 
 
-class CreateScheduleItemPlanItem2(BaseModel):
+class PhaseStartItemPlanItem(BaseModel):
     r"""Configuration for a feature item in a plan, including usage limits, pricing, and rollover settings."""
 
     feature_id: str
@@ -705,16 +2267,16 @@ class CreateScheduleItemPlanItem2(BaseModel):
     pooled: Optional[bool] = False
     r"""Whether entity-level grants contribute to a shared customer balance."""
 
-    reset: Optional[CreateScheduleItemReset2] = None
+    reset: Optional[PhaseStartItemReset] = None
     r"""Reset configuration for consumable features. Omit for non-consumable features like seats."""
 
-    price: Optional[CreateScheduleItemPrice2] = None
+    price: Optional[PhaseStartItemPrice] = None
     r"""Pricing for usage beyond included units. Omit for free features."""
 
-    proration: Optional[CreateScheduleItemProration2] = None
+    proration: Optional[PhaseStartItemProration] = None
     r"""Proration settings for prepaid features. Controls mid-cycle quantity change billing."""
 
-    rollover: Optional[CreateScheduleItemRollover2] = None
+    rollover: Optional[PhaseStartItemRollover] = None
     r"""Rollover config for unused units. If set, unused included units carry over."""
 
     @model_serializer(mode="wrap")
@@ -744,7 +2306,7 @@ class CreateScheduleItemPlanItem2(BaseModel):
         return m
 
 
-CreateScheduleAddItemResetInterval2 = Literal[
+PhaseStartAddItemResetInterval = Literal[
     "one_off",
     "minute",
     "hour",
@@ -758,19 +2320,19 @@ CreateScheduleAddItemResetInterval2 = Literal[
 r"""Interval at which balance resets (e.g. 'month', 'year'). For consumable features only."""
 
 
-class CreateScheduleAddItemReset2TypedDict(TypedDict):
+class PhaseStartAddItemResetTypedDict(TypedDict):
     r"""Reset configuration for consumable features. Omit for non-consumable features like seats."""
 
-    interval: CreateScheduleAddItemResetInterval2
+    interval: PhaseStartAddItemResetInterval
     r"""Interval at which balance resets (e.g. 'month', 'year'). For consumable features only."""
     interval_count: NotRequired[float]
     r"""Number of intervals between resets. Defaults to 1."""
 
 
-class CreateScheduleAddItemReset2(BaseModel):
+class PhaseStartAddItemReset(BaseModel):
     r"""Reset configuration for consumable features. Omit for non-consumable features like seats."""
 
-    interval: CreateScheduleAddItemResetInterval2
+    interval: PhaseStartAddItemResetInterval
     r"""Interval at which balance resets (e.g. 'month', 'year'). For consumable features only."""
 
     interval_count: Optional[float] = None
@@ -793,12 +2355,12 @@ class CreateScheduleAddItemReset2(BaseModel):
         return m
 
 
-class CreateScheduleAddItemAdditionalCurrency2TypedDict(TypedDict):
+class PhaseStartAddItemAdditionalCurrencyTypedDict(TypedDict):
     currency: NotRequired[Any]
     amount: NotRequired[Any]
 
 
-class CreateScheduleAddItemAdditionalCurrency2(BaseModel):
+class PhaseStartAddItemAdditionalCurrency(BaseModel):
     currency: Optional[Any] = None
 
     amount: Optional[Any] = None
@@ -820,14 +2382,14 @@ class CreateScheduleAddItemAdditionalCurrency2(BaseModel):
         return m
 
 
-class CreateScheduleAddItemTier2TypedDict(TypedDict):
+class PhaseStartAddItemTierTypedDict(TypedDict):
     to: NotRequired[Any]
     amount: NotRequired[Any]
     flat_amount: NotRequired[Any]
     additional_currencies: NotRequired[Any]
 
 
-class CreateScheduleAddItemTier2(BaseModel):
+class PhaseStartAddItemTier(BaseModel):
     to: Optional[Any] = None
 
     amount: Optional[Any] = None
@@ -853,13 +2415,13 @@ class CreateScheduleAddItemTier2(BaseModel):
         return m
 
 
-CreateScheduleAddItemTierBehavior2 = Literal[
+PhaseStartAddItemTierBehavior = Literal[
     "graduated",
     "volume",
 ]
 
 
-CreateScheduleAddItemPriceInterval2 = Literal[
+PhaseStartAddItemPriceInterval = Literal[
     "one_off",
     "week",
     "month",
@@ -870,29 +2432,29 @@ CreateScheduleAddItemPriceInterval2 = Literal[
 r"""Billing interval. For consumable features, should match reset.interval."""
 
 
-CreateScheduleAddItemBillingMethod2 = Literal[
+PhaseStartAddItemBillingMethod = Literal[
     "prepaid",
     "usage_based",
 ]
 r"""'prepaid' for upfront payment (seats), 'usage_based' for pay-as-you-go."""
 
 
-class CreateScheduleAddItemPrice2TypedDict(TypedDict):
+class PhaseStartAddItemPriceTypedDict(TypedDict):
     r"""Pricing for usage beyond included units. Omit for free features."""
 
-    interval: CreateScheduleAddItemPriceInterval2
+    interval: PhaseStartAddItemPriceInterval
     r"""Billing interval. For consumable features, should match reset.interval."""
-    billing_method: CreateScheduleAddItemBillingMethod2
+    billing_method: PhaseStartAddItemBillingMethod
     r"""'prepaid' for upfront payment (seats), 'usage_based' for pay-as-you-go."""
     amount: NotRequired[float]
     r"""Price per billing_units after included usage. Either 'amount' or 'tiers' is required."""
     additional_currencies: NotRequired[
-        List[CreateScheduleAddItemAdditionalCurrency2TypedDict]
+        List[PhaseStartAddItemAdditionalCurrencyTypedDict]
     ]
     r"""Amounts in additional currencies for this flat price. The base 'amount' is in the org's default currency. Only valid with 'amount', not 'tiers'."""
-    tiers: NotRequired[List[CreateScheduleAddItemTier2TypedDict]]
+    tiers: NotRequired[List[PhaseStartAddItemTierTypedDict]]
     r"""Tiered pricing.  Either 'amount' or 'tiers' is required."""
-    tier_behavior: NotRequired[CreateScheduleAddItemTierBehavior2]
+    tier_behavior: NotRequired[PhaseStartAddItemTierBehavior]
     interval_count: NotRequired[float]
     r"""Number of intervals per billing cycle. Defaults to 1."""
     billing_units: NotRequired[float]
@@ -901,27 +2463,25 @@ class CreateScheduleAddItemPrice2TypedDict(TypedDict):
     r"""Max units purchasable beyond included. E.g. included=100, max_purchase=300 allows 400 total. Null for no limit."""
 
 
-class CreateScheduleAddItemPrice2(BaseModel):
+class PhaseStartAddItemPrice(BaseModel):
     r"""Pricing for usage beyond included units. Omit for free features."""
 
-    interval: CreateScheduleAddItemPriceInterval2
+    interval: PhaseStartAddItemPriceInterval
     r"""Billing interval. For consumable features, should match reset.interval."""
 
-    billing_method: CreateScheduleAddItemBillingMethod2
+    billing_method: PhaseStartAddItemBillingMethod
     r"""'prepaid' for upfront payment (seats), 'usage_based' for pay-as-you-go."""
 
     amount: Optional[float] = None
     r"""Price per billing_units after included usage. Either 'amount' or 'tiers' is required."""
 
-    additional_currencies: Optional[List[CreateScheduleAddItemAdditionalCurrency2]] = (
-        None
-    )
+    additional_currencies: Optional[List[PhaseStartAddItemAdditionalCurrency]] = None
     r"""Amounts in additional currencies for this flat price. The base 'amount' is in the org's default currency. Only valid with 'amount', not 'tiers'."""
 
-    tiers: Optional[List[CreateScheduleAddItemTier2]] = None
+    tiers: Optional[List[PhaseStartAddItemTier]] = None
     r"""Tiered pricing.  Either 'amount' or 'tiers' is required."""
 
-    tier_behavior: Optional[CreateScheduleAddItemTierBehavior2] = None
+    tier_behavior: Optional[PhaseStartAddItemTierBehavior] = None
 
     interval_count: Optional[float] = 1
     r"""Number of intervals per billing cycle. Defaults to 1."""
@@ -968,7 +2528,7 @@ class CreateScheduleAddItemPrice2(BaseModel):
         return m
 
 
-CreateScheduleAddItemOnIncrease2 = Literal[
+PhaseStartAddItemOnIncrease = Literal[
     "bill_immediately",
     "prorate_immediately",
     "prorate_next_cycle",
@@ -977,7 +2537,7 @@ CreateScheduleAddItemOnIncrease2 = Literal[
 r"""Billing behavior when quantity increases mid-cycle."""
 
 
-CreateScheduleAddItemOnDecrease2 = Literal[
+PhaseStartAddItemOnDecrease = Literal[
     "prorate",
     "prorate_immediately",
     "prorate_next_cycle",
@@ -987,36 +2547,36 @@ CreateScheduleAddItemOnDecrease2 = Literal[
 r"""Credit behavior when quantity decreases mid-cycle."""
 
 
-class CreateScheduleAddItemProration2TypedDict(TypedDict):
+class PhaseStartAddItemProrationTypedDict(TypedDict):
     r"""Proration settings for prepaid features. Controls mid-cycle quantity change billing."""
 
-    on_increase: CreateScheduleAddItemOnIncrease2
+    on_increase: PhaseStartAddItemOnIncrease
     r"""Billing behavior when quantity increases mid-cycle."""
-    on_decrease: CreateScheduleAddItemOnDecrease2
+    on_decrease: PhaseStartAddItemOnDecrease
     r"""Credit behavior when quantity decreases mid-cycle."""
 
 
-class CreateScheduleAddItemProration2(BaseModel):
+class PhaseStartAddItemProration(BaseModel):
     r"""Proration settings for prepaid features. Controls mid-cycle quantity change billing."""
 
-    on_increase: CreateScheduleAddItemOnIncrease2
+    on_increase: PhaseStartAddItemOnIncrease
     r"""Billing behavior when quantity increases mid-cycle."""
 
-    on_decrease: CreateScheduleAddItemOnDecrease2
+    on_decrease: PhaseStartAddItemOnDecrease
     r"""Credit behavior when quantity decreases mid-cycle."""
 
 
-CreateScheduleAddItemExpiryDurationType2 = Literal[
+PhaseStartAddItemExpiryDurationType = Literal[
     "month",
     "forever",
 ]
 r"""When rolled over units expire."""
 
 
-class CreateScheduleAddItemRollover2TypedDict(TypedDict):
+class PhaseStartAddItemRolloverTypedDict(TypedDict):
     r"""Rollover config for unused units. If set, unused included units carry over."""
 
-    expiry_duration_type: CreateScheduleAddItemExpiryDurationType2
+    expiry_duration_type: PhaseStartAddItemExpiryDurationType
     r"""When rolled over units expire."""
     max: NotRequired[float]
     r"""Max rollover units. Omit for unlimited rollover."""
@@ -1026,10 +2586,10 @@ class CreateScheduleAddItemRollover2TypedDict(TypedDict):
     r"""Number of periods before expiry."""
 
 
-class CreateScheduleAddItemRollover2(BaseModel):
+class PhaseStartAddItemRollover(BaseModel):
     r"""Rollover config for unused units. If set, unused included units carry over."""
 
-    expiry_duration_type: CreateScheduleAddItemExpiryDurationType2
+    expiry_duration_type: PhaseStartAddItemExpiryDurationType
     r"""When rolled over units expire."""
 
     max: Optional[float] = None
@@ -1058,7 +2618,7 @@ class CreateScheduleAddItemRollover2(BaseModel):
         return m
 
 
-class CreateScheduleAddItemPlanItem2TypedDict(TypedDict):
+class PhaseStartAddItemPlanItemTypedDict(TypedDict):
     r"""Configuration for a feature item in a plan, including usage limits, pricing, and rollover settings."""
 
     feature_id: str
@@ -1069,17 +2629,17 @@ class CreateScheduleAddItemPlanItem2TypedDict(TypedDict):
     r"""If true, customer has unlimited access to this feature."""
     pooled: NotRequired[bool]
     r"""Whether entity-level grants contribute to a shared customer balance."""
-    reset: NotRequired[CreateScheduleAddItemReset2TypedDict]
+    reset: NotRequired[PhaseStartAddItemResetTypedDict]
     r"""Reset configuration for consumable features. Omit for non-consumable features like seats."""
-    price: NotRequired[CreateScheduleAddItemPrice2TypedDict]
+    price: NotRequired[PhaseStartAddItemPriceTypedDict]
     r"""Pricing for usage beyond included units. Omit for free features."""
-    proration: NotRequired[CreateScheduleAddItemProration2TypedDict]
+    proration: NotRequired[PhaseStartAddItemProrationTypedDict]
     r"""Proration settings for prepaid features. Controls mid-cycle quantity change billing."""
-    rollover: NotRequired[CreateScheduleAddItemRollover2TypedDict]
+    rollover: NotRequired[PhaseStartAddItemRolloverTypedDict]
     r"""Rollover config for unused units. If set, unused included units carry over."""
 
 
-class CreateScheduleAddItemPlanItem2(BaseModel):
+class PhaseStartAddItemPlanItem(BaseModel):
     r"""Configuration for a feature item in a plan, including usage limits, pricing, and rollover settings."""
 
     feature_id: str
@@ -1094,16 +2654,16 @@ class CreateScheduleAddItemPlanItem2(BaseModel):
     pooled: Optional[bool] = False
     r"""Whether entity-level grants contribute to a shared customer balance."""
 
-    reset: Optional[CreateScheduleAddItemReset2] = None
+    reset: Optional[PhaseStartAddItemReset] = None
     r"""Reset configuration for consumable features. Omit for non-consumable features like seats."""
 
-    price: Optional[CreateScheduleAddItemPrice2] = None
+    price: Optional[PhaseStartAddItemPrice] = None
     r"""Pricing for usage beyond included units. Omit for free features."""
 
-    proration: Optional[CreateScheduleAddItemProration2] = None
+    proration: Optional[PhaseStartAddItemProration] = None
     r"""Proration settings for prepaid features. Controls mid-cycle quantity change billing."""
 
-    rollover: Optional[CreateScheduleAddItemRollover2] = None
+    rollover: Optional[PhaseStartAddItemRollover] = None
     r"""Rollover config for unused units. If set, unused included units carry over."""
 
     @model_serializer(mode="wrap")
@@ -1133,14 +2693,14 @@ class CreateScheduleAddItemPlanItem2(BaseModel):
         return m
 
 
-CreateScheduleRemoveItemBillingMethod2 = Literal[
+PhaseStartRemoveItemBillingMethod = Literal[
     "prepaid",
     "usage_based",
 ]
 r"""Match items with this billing method (prepaid or usage_based)."""
 
 
-CreateScheduleIntervalRemoveItemEnum4 = Literal[
+PhaseStartIntervalRemoveItemEnum2 = Literal[
     "one_off",
     "minute",
     "hour",
@@ -1153,7 +2713,7 @@ CreateScheduleIntervalRemoveItemEnum4 = Literal[
 ]
 
 
-CreateScheduleIntervalRemoveItemEnum3 = Literal[
+PhaseStartIntervalRemoveItemEnum1 = Literal[
     "one_off",
     "week",
     "month",
@@ -1163,43 +2723,43 @@ CreateScheduleIntervalRemoveItemEnum3 = Literal[
 ]
 
 
-CreateScheduleIntervalUnion2TypedDict = TypeAliasType(
-    "CreateScheduleIntervalUnion2TypedDict",
-    Union[CreateScheduleIntervalRemoveItemEnum3, CreateScheduleIntervalRemoveItemEnum4],
+PhaseStartIntervalUnionTypedDict = TypeAliasType(
+    "PhaseStartIntervalUnionTypedDict",
+    Union[PhaseStartIntervalRemoveItemEnum1, PhaseStartIntervalRemoveItemEnum2],
 )
 r"""Match items with this interval. Accepts either a BillingInterval (price-side) or a ResetInterval (reset-side, includes day/hour/minute) so price-less items keyed by reset.interval can be disambiguated."""
 
 
-CreateScheduleIntervalUnion2 = TypeAliasType(
-    "CreateScheduleIntervalUnion2",
-    Union[CreateScheduleIntervalRemoveItemEnum3, CreateScheduleIntervalRemoveItemEnum4],
+PhaseStartIntervalUnion = TypeAliasType(
+    "PhaseStartIntervalUnion",
+    Union[PhaseStartIntervalRemoveItemEnum1, PhaseStartIntervalRemoveItemEnum2],
 )
 r"""Match items with this interval. Accepts either a BillingInterval (price-side) or a ResetInterval (reset-side, includes day/hour/minute) so price-less items keyed by reset.interval can be disambiguated."""
 
 
-class CreateSchedulePlanItemFilter2TypedDict(TypedDict):
+class PhaseStartPlanItemFilterTypedDict(TypedDict):
     r"""Filter for matching plan items. All provided fields must match (AND)."""
 
     feature_id: NotRequired[str]
     r"""Match items linked to this feature."""
-    billing_method: NotRequired[CreateScheduleRemoveItemBillingMethod2]
+    billing_method: NotRequired[PhaseStartRemoveItemBillingMethod]
     r"""Match items with this billing method (prepaid or usage_based)."""
-    interval: NotRequired[CreateScheduleIntervalUnion2TypedDict]
+    interval: NotRequired[PhaseStartIntervalUnionTypedDict]
     r"""Match items with this interval. Accepts either a BillingInterval (price-side) or a ResetInterval (reset-side, includes day/hour/minute) so price-less items keyed by reset.interval can be disambiguated."""
     interval_count: NotRequired[int]
     r"""Match items with this interval_count. Disambiguates between items that share an interval but differ in count."""
 
 
-class CreateSchedulePlanItemFilter2(BaseModel):
+class PhaseStartPlanItemFilter(BaseModel):
     r"""Filter for matching plan items. All provided fields must match (AND)."""
 
     feature_id: Optional[str] = None
     r"""Match items linked to this feature."""
 
-    billing_method: Optional[CreateScheduleRemoveItemBillingMethod2] = None
+    billing_method: Optional[PhaseStartRemoveItemBillingMethod] = None
     r"""Match items with this billing method (prepaid or usage_based)."""
 
-    interval: Optional[CreateScheduleIntervalUnion2] = None
+    interval: Optional[PhaseStartIntervalUnion] = None
     r"""Match items with this interval. Accepts either a BillingInterval (price-side) or a ResetInterval (reset-side, includes day/hour/minute) so price-less items keyed by reset.interval can be disambiguated."""
 
     interval_count: Optional[int] = None
@@ -1224,7 +2784,7 @@ class CreateSchedulePlanItemFilter2(BaseModel):
         return m
 
 
-CreateSchedulePurchaseLimitInterval2 = Literal[
+PhaseStartPurchaseLimitInterval = Literal[
     "hour",
     "day",
     "week",
@@ -1233,10 +2793,10 @@ CreateSchedulePurchaseLimitInterval2 = Literal[
 r"""The time interval for the purchase limit window."""
 
 
-class CreateSchedulePurchaseLimit2TypedDict(TypedDict):
+class PhaseStartPurchaseLimitTypedDict(TypedDict):
     r"""Optional rate limit to cap how often auto top-ups occur. Pass count to set the current window's consumed top-ups."""
 
-    interval: CreateSchedulePurchaseLimitInterval2
+    interval: PhaseStartPurchaseLimitInterval
     r"""The time interval for the purchase limit window."""
     limit: float
     r"""Maximum number of auto top-ups allowed within the interval."""
@@ -1246,10 +2806,10 @@ class CreateSchedulePurchaseLimit2TypedDict(TypedDict):
     r"""Set the current window's consumed auto top-up count. Omit to leave runtime state unchanged."""
 
 
-class CreateSchedulePurchaseLimit2(BaseModel):
+class PhaseStartPurchaseLimit(BaseModel):
     r"""Optional rate limit to cap how often auto top-ups occur. Pass count to set the current window's consumed top-ups."""
 
-    interval: CreateSchedulePurchaseLimitInterval2
+    interval: PhaseStartPurchaseLimitInterval
     r"""The time interval for the purchase limit window."""
 
     limit: float
@@ -1278,7 +2838,7 @@ class CreateSchedulePurchaseLimit2(BaseModel):
         return m
 
 
-class CreateScheduleAutoTopup2TypedDict(TypedDict):
+class PhaseStartAutoTopupTypedDict(TypedDict):
     feature_id: str
     r"""The ID of the feature (credit balance) to auto top-up."""
     threshold: float
@@ -1287,13 +2847,13 @@ class CreateScheduleAutoTopup2TypedDict(TypedDict):
     r"""Amount of credits to add per auto top-up."""
     enabled: NotRequired[bool]
     r"""Whether auto top-up is enabled."""
-    purchase_limit: NotRequired[CreateSchedulePurchaseLimit2TypedDict]
+    purchase_limit: NotRequired[PhaseStartPurchaseLimitTypedDict]
     r"""Optional rate limit to cap how often auto top-ups occur. Pass count to set the current window's consumed top-ups."""
     invoice_mode: NotRequired[bool]
     r"""When true, auto top-up creates a send_invoice invoice instead of auto-charging."""
 
 
-class CreateScheduleAutoTopup2(BaseModel):
+class PhaseStartAutoTopup(BaseModel):
     feature_id: str
     r"""The ID of the feature (credit balance) to auto top-up."""
 
@@ -1306,7 +2866,7 @@ class CreateScheduleAutoTopup2(BaseModel):
     enabled: Optional[bool] = False
     r"""Whether auto top-up is enabled."""
 
-    purchase_limit: Optional[CreateSchedulePurchaseLimit2] = None
+    purchase_limit: Optional[PhaseStartPurchaseLimit] = None
     r"""Optional rate limit to cap how often auto top-ups occur. Pass count to set the current window's consumed top-ups."""
 
     invoice_mode: Optional[bool] = None
@@ -1329,19 +2889,19 @@ class CreateScheduleAutoTopup2(BaseModel):
         return m
 
 
-CreateScheduleLimitType2 = Literal[
+PhaseStartLimitType = Literal[
     "absolute",
     "usage_percentage",
 ]
 r"""How overage_limit is interpreted: an absolute overage cap (default) or a percentage of the main-plan allowance."""
 
 
-class CreateScheduleSpendLimit2TypedDict(TypedDict):
+class PhaseStartSpendLimitTypedDict(TypedDict):
     feature_id: NotRequired[str]
     r"""Optional feature ID this spend limit applies to."""
     enabled: NotRequired[bool]
     r"""Whether the overage spend limit is enabled."""
-    limit_type: NotRequired[CreateScheduleLimitType2]
+    limit_type: NotRequired[PhaseStartLimitType]
     r"""How overage_limit is interpreted: an absolute overage cap (default) or a percentage of the main-plan allowance."""
     overage_limit: NotRequired[float]
     r"""Overage cap for the feature: absolute units, or a percent (e.g. 120) when limit_type is usage_percentage."""
@@ -1349,14 +2909,14 @@ class CreateScheduleSpendLimit2TypedDict(TypedDict):
     r"""When true, overage for this feature is not posted to Stripe. Usage tracking and balance resets still behave normally."""
 
 
-class CreateScheduleSpendLimit2(BaseModel):
+class PhaseStartSpendLimit(BaseModel):
     feature_id: Optional[str] = None
     r"""Optional feature ID this spend limit applies to."""
 
     enabled: Optional[bool] = False
     r"""Whether the overage spend limit is enabled."""
 
-    limit_type: Optional[CreateScheduleLimitType2] = None
+    limit_type: Optional[PhaseStartLimitType] = None
     r"""How overage_limit is interpreted: an absolute overage cap (default) or a percentage of the main-plan allowance."""
 
     overage_limit: Optional[float] = None
@@ -1390,7 +2950,7 @@ class CreateScheduleSpendLimit2(BaseModel):
         return m
 
 
-CreateScheduleUsageLimitInterval2 = Literal[
+PhaseStartUsageLimitInterval = Literal[
     "day",
     "week",
     "month",
@@ -1399,47 +2959,47 @@ CreateScheduleUsageLimitInterval2 = Literal[
 r"""Interval for the cap, aligned to the customer's billing cycle."""
 
 
-class CreateScheduleFilter2TypedDict(TypedDict):
+class PhaseStartFilterTypedDict(TypedDict):
     r"""When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature."""
 
     properties: Dict[str, Any]
 
 
-class CreateScheduleFilter2(BaseModel):
+class PhaseStartFilter(BaseModel):
     r"""When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature."""
 
     properties: Dict[str, Any]
 
 
-class CreateScheduleUsageLimit2TypedDict(TypedDict):
+class PhaseStartUsageLimitTypedDict(TypedDict):
     feature_id: str
     r"""The feature this usage limit applies to."""
     limit: float
     r"""Maximum units allowed per interval."""
-    interval: CreateScheduleUsageLimitInterval2
+    interval: PhaseStartUsageLimitInterval
     r"""Interval for the cap, aligned to the customer's billing cycle."""
     enabled: NotRequired[bool]
     r"""Whether this usage limit is enabled."""
-    filter_: NotRequired[CreateScheduleFilter2TypedDict]
+    filter_: NotRequired[PhaseStartFilterTypedDict]
     r"""When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature."""
 
 
-class CreateScheduleUsageLimit2(BaseModel):
+class PhaseStartUsageLimit(BaseModel):
     feature_id: str
     r"""The feature this usage limit applies to."""
 
     limit: float
     r"""Maximum units allowed per interval."""
 
-    interval: CreateScheduleUsageLimitInterval2
+    interval: PhaseStartUsageLimitInterval
     r"""Interval for the cap, aligned to the customer's billing cycle."""
 
     enabled: Optional[bool] = True
     r"""Whether this usage limit is enabled."""
 
-    filter_: Annotated[
-        Optional[CreateScheduleFilter2], pydantic.Field(alias="filter")
-    ] = None
+    filter_: Annotated[Optional[PhaseStartFilter], pydantic.Field(alias="filter")] = (
+        None
+    )
     r"""When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature."""
 
     @model_serializer(mode="wrap")
@@ -1459,7 +3019,7 @@ class CreateScheduleUsageLimit2(BaseModel):
         return m
 
 
-CreateScheduleThresholdType2 = Literal[
+PhaseStartThresholdType = Literal[
     "usage",
     "usage_percentage",
     "remaining",
@@ -1468,10 +3028,10 @@ CreateScheduleThresholdType2 = Literal[
 r"""Whether the threshold is an absolute count or a percentage of the usage allowance or remaining balance."""
 
 
-class CreateScheduleUsageAlert2TypedDict(TypedDict):
+class PhaseStartUsageAlertTypedDict(TypedDict):
     threshold: float
     r"""The threshold value that triggers the alert. For usage or remaining, this is an absolute count. For usage_percentage or remaining_percentage, this is a percentage (0-100)."""
-    threshold_type: CreateScheduleThresholdType2
+    threshold_type: PhaseStartThresholdType
     r"""Whether the threshold is an absolute count or a percentage of the usage allowance or remaining balance."""
     feature_id: NotRequired[str]
     r"""The feature ID this alert applies to."""
@@ -1481,11 +3041,11 @@ class CreateScheduleUsageAlert2TypedDict(TypedDict):
     r"""Optional user-defined label to distinguish multiple alerts on the same feature."""
 
 
-class CreateScheduleUsageAlert2(BaseModel):
+class PhaseStartUsageAlert(BaseModel):
     threshold: float
     r"""The threshold value that triggers the alert. For usage or remaining, this is an absolute count. For usage_percentage or remaining_percentage, this is a percentage (0-100)."""
 
-    threshold_type: CreateScheduleThresholdType2
+    threshold_type: PhaseStartThresholdType
     r"""Whether the threshold is an absolute count or a percentage of the usage allowance or remaining balance."""
 
     feature_id: Optional[str] = None
@@ -1514,14 +3074,14 @@ class CreateScheduleUsageAlert2(BaseModel):
         return m
 
 
-class CreateScheduleOverageAllowed2TypedDict(TypedDict):
+class PhaseStartOverageAllowedTypedDict(TypedDict):
     feature_id: str
     r"""The feature ID this overage allowed control applies to."""
     enabled: NotRequired[bool]
     r"""Whether overage is allowed for this feature."""
 
 
-class CreateScheduleOverageAllowed2(BaseModel):
+class PhaseStartOverageAllowed(BaseModel):
     feature_id: str
     r"""The feature ID this overage allowed control applies to."""
 
@@ -1545,37 +3105,37 @@ class CreateScheduleOverageAllowed2(BaseModel):
         return m
 
 
-class CreateScheduleBillingControls2TypedDict(TypedDict):
+class PhaseStartBillingControlsTypedDict(TypedDict):
     r"""Override the plan's billing controls (auto top-ups, spend limits, usage limits, usage alerts, overage allowed) for this customer."""
 
-    auto_topups: NotRequired[List[CreateScheduleAutoTopup2TypedDict]]
+    auto_topups: NotRequired[List[PhaseStartAutoTopupTypedDict]]
     r"""List of auto top-up configurations per feature."""
-    spend_limits: NotRequired[List[CreateScheduleSpendLimit2TypedDict]]
+    spend_limits: NotRequired[List[PhaseStartSpendLimitTypedDict]]
     r"""List of overage spend limits per feature (caps overage spend)."""
-    usage_limits: NotRequired[List[CreateScheduleUsageLimit2TypedDict]]
+    usage_limits: NotRequired[List[PhaseStartUsageLimitTypedDict]]
     r"""List of hard usage caps per feature (max units per interval)."""
-    usage_alerts: NotRequired[List[CreateScheduleUsageAlert2TypedDict]]
+    usage_alerts: NotRequired[List[PhaseStartUsageAlertTypedDict]]
     r"""List of usage alert configurations per feature."""
-    overage_allowed: NotRequired[List[CreateScheduleOverageAllowed2TypedDict]]
+    overage_allowed: NotRequired[List[PhaseStartOverageAllowedTypedDict]]
     r"""List of overage allowed controls per feature. When enabled, usage can exceed balance."""
 
 
-class CreateScheduleBillingControls2(BaseModel):
+class PhaseStartBillingControls(BaseModel):
     r"""Override the plan's billing controls (auto top-ups, spend limits, usage limits, usage alerts, overage allowed) for this customer."""
 
-    auto_topups: Optional[List[CreateScheduleAutoTopup2]] = None
+    auto_topups: Optional[List[PhaseStartAutoTopup]] = None
     r"""List of auto top-up configurations per feature."""
 
-    spend_limits: Optional[List[CreateScheduleSpendLimit2]] = None
+    spend_limits: Optional[List[PhaseStartSpendLimit]] = None
     r"""List of overage spend limits per feature (caps overage spend)."""
 
-    usage_limits: Optional[List[CreateScheduleUsageLimit2]] = None
+    usage_limits: Optional[List[PhaseStartUsageLimit]] = None
     r"""List of hard usage caps per feature (max units per interval)."""
 
-    usage_alerts: Optional[List[CreateScheduleUsageAlert2]] = None
+    usage_alerts: Optional[List[PhaseStartUsageAlert]] = None
     r"""List of usage alert configurations per feature."""
 
-    overage_allowed: Optional[List[CreateScheduleOverageAllowed2]] = None
+    overage_allowed: Optional[List[PhaseStartOverageAllowed]] = None
     r"""List of overage allowed controls per feature. When enabled, usage can exceed balance."""
 
     @model_serializer(mode="wrap")
@@ -1603,37 +3163,37 @@ class CreateScheduleBillingControls2(BaseModel):
         return m
 
 
-class CreateScheduleCustomize2TypedDict(TypedDict):
+class PhaseStartCustomizeTypedDict(TypedDict):
     r"""Customize the plan to schedule. Can override price, replace items, or patch items with add_items and remove_items."""
 
-    price: NotRequired[Nullable[CreateScheduleBasePrice2TypedDict]]
+    price: NotRequired[Nullable[PhaseStartBasePriceTypedDict]]
     r"""Override the base price of the plan. Pass null to remove the base price."""
-    items: NotRequired[List[CreateScheduleItemPlanItem2TypedDict]]
+    items: NotRequired[List[PhaseStartItemPlanItemTypedDict]]
     r"""Override the items in the plan (PUT-style — replaces all existing items). Mutually exclusive with add_items / remove_items / deprecated update_items."""
-    add_items: NotRequired[List[CreateScheduleAddItemPlanItem2TypedDict]]
+    add_items: NotRequired[List[PhaseStartAddItemPlanItemTypedDict]]
     r"""Items to add to the plan."""
-    remove_items: NotRequired[List[CreateSchedulePlanItemFilter2TypedDict]]
+    remove_items: NotRequired[List[PhaseStartPlanItemFilterTypedDict]]
     r"""Filters selecting items to remove from the plan."""
-    billing_controls: NotRequired[CreateScheduleBillingControls2TypedDict]
+    billing_controls: NotRequired[PhaseStartBillingControlsTypedDict]
     r"""Override the plan's billing controls (auto top-ups, spend limits, usage limits, usage alerts, overage allowed) for this customer."""
 
 
-class CreateScheduleCustomize2(BaseModel):
+class PhaseStartCustomize(BaseModel):
     r"""Customize the plan to schedule. Can override price, replace items, or patch items with add_items and remove_items."""
 
-    price: OptionalNullable[CreateScheduleBasePrice2] = UNSET
+    price: OptionalNullable[PhaseStartBasePrice] = UNSET
     r"""Override the base price of the plan. Pass null to remove the base price."""
 
-    items: Optional[List[CreateScheduleItemPlanItem2]] = None
+    items: Optional[List[PhaseStartItemPlanItem]] = None
     r"""Override the items in the plan (PUT-style — replaces all existing items). Mutually exclusive with add_items / remove_items / deprecated update_items."""
 
-    add_items: Optional[List[CreateScheduleAddItemPlanItem2]] = None
+    add_items: Optional[List[PhaseStartAddItemPlanItem]] = None
     r"""Items to add to the plan."""
 
-    remove_items: Optional[List[CreateSchedulePlanItemFilter2]] = None
+    remove_items: Optional[List[PhaseStartPlanItemFilter]] = None
     r"""Filters selecting items to remove from the plan."""
 
-    billing_controls: Optional[CreateScheduleBillingControls2] = None
+    billing_controls: Optional[PhaseStartBillingControls] = None
     r"""Override the plan's billing controls (auto top-ups, spend limits, usage limits, usage alerts, overage allowed) for this customer."""
 
     @model_serializer(mode="wrap")
@@ -1669,11 +3229,11 @@ class CreateSchedulePlan2TypedDict(TypedDict):
     r"""The ID of the plan to schedule in this phase."""
     entity_id: NotRequired[Nullable[str]]
     r"""The immediate plan scope. Omit to inherit the request entity, pass null for customer-level, or pass an entity ID."""
-    feature_quantities: NotRequired[List[CreateScheduleFeatureQuantity2TypedDict]]
+    feature_quantities: NotRequired[List[PhaseStartFeatureQuantityTypedDict]]
     r"""Optional prepaid feature quantities for this phase's plan."""
     version: NotRequired[float]
     r"""Optional explicit plan version to schedule."""
-    customize: NotRequired[CreateScheduleCustomize2TypedDict]
+    customize: NotRequired[PhaseStartCustomizeTypedDict]
     r"""Customize the plan to schedule. Can override price, replace items, or patch items with add_items and remove_items."""
     subscription_id: NotRequired[str]
     r"""A unique ID to identify this subscription. Useful when scheduling the same plan multiple times."""
@@ -1686,13 +3246,13 @@ class CreateSchedulePlan2(BaseModel):
     entity_id: OptionalNullable[str] = UNSET
     r"""The immediate plan scope. Omit to inherit the request entity, pass null for customer-level, or pass an entity ID."""
 
-    feature_quantities: Optional[List[CreateScheduleFeatureQuantity2]] = None
+    feature_quantities: Optional[List[PhaseStartFeatureQuantity]] = None
     r"""Optional prepaid feature quantities for this phase's plan."""
 
     version: Optional[float] = None
     r"""Optional explicit plan version to schedule."""
 
-    customize: Optional[CreateScheduleCustomize2] = None
+    customize: Optional[PhaseStartCustomize] = None
     r"""Customize the plan to schedule. Can override price, replace items, or patch items with add_items and remove_items."""
 
     subscription_id: Optional[str] = None
@@ -1811,7 +3371,9 @@ class CreateScheduleParamsTypedDict(TypedDict):
     enable_plan_immediately: NotRequired[bool]
     r"""If true, the immediate-phase cusProducts are activated immediately (and scheduled-phase cusProducts pre-inserted) even when payment is pending via Stripe checkout. The Autumn schedule rows are persisted on checkout.session.completed."""
     preserve_add_ons: NotRequired[bool]
-    r"""If true, active recurring add-ons in scopes represented by the phase plans are retained."""
+    r"""Deprecated and ignored. Active plans the schedule does not declare are always retained."""
+    unscheduled_plans: NotRequired[List[UnscheduledPlanTypedDict]]
+    r"""Plans billed with the immediate phase that the schedule never expires or replaces. No phase may declare a plan in the same group and scope."""
 
 
 class CreateScheduleParams(BaseModel):
@@ -1858,7 +3420,10 @@ class CreateScheduleParams(BaseModel):
     r"""If true, the immediate-phase cusProducts are activated immediately (and scheduled-phase cusProducts pre-inserted) even when payment is pending via Stripe checkout. The Autumn schedule rows are persisted on checkout.session.completed."""
 
     preserve_add_ons: Optional[bool] = None
-    r"""If true, active recurring add-ons in scopes represented by the phase plans are retained."""
+    r"""Deprecated and ignored. Active plans the schedule does not declare are always retained."""
+
+    unscheduled_plans: Optional[List[UnscheduledPlan]] = None
+    r"""Plans billed with the immediate phase that the schedule never expires or replaces. No phase may declare a plan in the same group and scope."""
 
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
@@ -1876,6 +3441,7 @@ class CreateScheduleParams(BaseModel):
                 "billing_cycle_anchor",
                 "enable_plan_immediately",
                 "preserve_add_ons",
+                "unscheduled_plans",
             ]
         )
         nullable_fields = set(["free_trial"])
@@ -2079,7 +3645,11 @@ class CreateScheduleResponse(BaseModel):
 
 
 try:
-    CreateScheduleUsageLimit2.model_rebuild()
+    UnscheduledPlanUsageLimit.model_rebuild()
+except NameError:
+    pass
+try:
+    PhaseStartUsageLimit.model_rebuild()
 except NameError:
     pass
 try:

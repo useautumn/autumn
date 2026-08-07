@@ -1047,6 +1047,8 @@ export type UpdateLicenseParent = {
   version: number;
 };
 
+export type CustomizeVariant2 = {};
+
 /**
  * Billing interval (e.g. 'month', 'year').
  */
@@ -1140,22 +1142,14 @@ export type VariantAddItemAdditionalCurrency = {
   amount: number;
 };
 
-export type VariantTo = number | string;
-
-export type VariantTierAdditionalCurrency = {
-  currency?: any | undefined;
-  amount?: any | undefined;
-  flatAmount?: any | undefined;
-};
-
 export type VariantTier = {
-  to: number | string;
+  to?: any | undefined;
   amount?: number | undefined;
   flatAmount?: number | undefined;
   /**
    * Per-currency amounts for this tier. Tier boundaries ('to') are shared across all currencies.
    */
-  additionalCurrencies?: Array<VariantTierAdditionalCurrency> | undefined;
+  additionalCurrencies?: Array<any> | undefined;
 };
 
 export const VariantTierBehavior = {
@@ -1588,13 +1582,11 @@ export type VariantUsageLimitInterval = ClosedEnum<
   typeof VariantUsageLimitInterval
 >;
 
-export type VariantProperties = string | number | boolean;
-
 /**
  * When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature.
  */
 export type VariantFilter = {
-  properties: { [k: string]: string | number | boolean };
+  properties: { [k: string]: any };
 };
 
 export type VariantUsageLimit = {
@@ -1694,10 +1686,7 @@ export type VariantBillingControls = {
   overageAllowed?: Array<VariantOverageAllowed> | undefined;
 };
 
-/**
- * The exact customize patch to apply to this variant.
- */
-export type VariantCustomize = {
+export type CustomizeVariant1 = {
   /**
    * Override the base price of the plan. Pass null to remove the base price.
    */
@@ -1721,6 +1710,11 @@ export type VariantCustomize = {
 };
 
 /**
+ * The exact customize patch to apply to this variant.
+ */
+export type Customize2 = CustomizeVariant1 | CustomizeVariant2;
+
+/**
  * Migration draft options for an in-place direct variant update.
  */
 export type VariantMigration = {
@@ -1740,7 +1734,7 @@ export type Variant = {
   /**
    * The exact customize patch to apply to this variant.
    */
-  customize: VariantCustomize;
+  customize: CustomizeVariant1 | CustomizeVariant2;
   /**
    * Edit this variant in place instead of versioning it for this update.
    */
@@ -4851,6 +4845,23 @@ export function updateLicenseParentToJSON(
 }
 
 /** @internal */
+export type CustomizeVariant2$Outbound = {};
+
+/** @internal */
+export const CustomizeVariant2$outboundSchema: z.ZodMiniType<
+  CustomizeVariant2$Outbound,
+  CustomizeVariant2
+> = z.object({});
+
+export function customizeVariant2ToJSON(
+  customizeVariant2: CustomizeVariant2,
+): string {
+  return JSON.stringify(
+    CustomizeVariant2$outboundSchema.parse(customizeVariant2),
+  );
+}
+
+/** @internal */
 export const PriceVariantInterval$outboundSchema: z.ZodMiniEnum<
   typeof PriceVariantInterval
 > = z.enum(PriceVariantInterval);
@@ -4972,60 +4983,11 @@ export function variantAddItemAdditionalCurrencyToJSON(
 }
 
 /** @internal */
-export type VariantTo$Outbound = number | string;
-
-/** @internal */
-export const VariantTo$outboundSchema: z.ZodMiniType<
-  VariantTo$Outbound,
-  VariantTo
-> = smartUnion([z.number(), z.string()]);
-
-export function variantToToJSON(variantTo: VariantTo): string {
-  return JSON.stringify(VariantTo$outboundSchema.parse(variantTo));
-}
-
-/** @internal */
-export type VariantTierAdditionalCurrency$Outbound = {
-  currency?: any | undefined;
-  amount?: any | undefined;
-  flat_amount?: any | undefined;
-};
-
-/** @internal */
-export const VariantTierAdditionalCurrency$outboundSchema: z.ZodMiniType<
-  VariantTierAdditionalCurrency$Outbound,
-  VariantTierAdditionalCurrency
-> = z.pipe(
-  z.object({
-    currency: z.optional(z.any()),
-    amount: z.optional(z.any()),
-    flatAmount: z.optional(z.any()),
-  }),
-  z.transform((v) => {
-    return remap$(v, {
-      flatAmount: "flat_amount",
-    });
-  }),
-);
-
-export function variantTierAdditionalCurrencyToJSON(
-  variantTierAdditionalCurrency: VariantTierAdditionalCurrency,
-): string {
-  return JSON.stringify(
-    VariantTierAdditionalCurrency$outboundSchema.parse(
-      variantTierAdditionalCurrency,
-    ),
-  );
-}
-
-/** @internal */
 export type VariantTier$Outbound = {
-  to: number | string;
+  to?: any | undefined;
   amount?: number | undefined;
   flat_amount?: number | undefined;
-  additional_currencies?:
-    | Array<VariantTierAdditionalCurrency$Outbound>
-    | undefined;
+  additional_currencies?: Array<any> | undefined;
 };
 
 /** @internal */
@@ -5034,12 +4996,10 @@ export const VariantTier$outboundSchema: z.ZodMiniType<
   VariantTier
 > = z.pipe(
   z.object({
-    to: smartUnion([z.number(), z.string()]),
+    to: z.optional(z.any()),
     amount: z.optional(z.number()),
     flatAmount: z.optional(z.number()),
-    additionalCurrencies: z.optional(
-      z.array(z.lazy(() => VariantTierAdditionalCurrency$outboundSchema)),
-    ),
+    additionalCurrencies: z.optional(z.array(z.any())),
   }),
   z.transform((v) => {
     return remap$(v, {
@@ -5490,25 +5450,8 @@ export const VariantUsageLimitInterval$outboundSchema: z.ZodMiniEnum<
 > = z.enum(VariantUsageLimitInterval);
 
 /** @internal */
-export type VariantProperties$Outbound = string | number | boolean;
-
-/** @internal */
-export const VariantProperties$outboundSchema: z.ZodMiniType<
-  VariantProperties$Outbound,
-  VariantProperties
-> = smartUnion([z.string(), z.number(), z.boolean()]);
-
-export function variantPropertiesToJSON(
-  variantProperties: VariantProperties,
-): string {
-  return JSON.stringify(
-    VariantProperties$outboundSchema.parse(variantProperties),
-  );
-}
-
-/** @internal */
 export type VariantFilter$Outbound = {
-  properties: { [k: string]: string | number | boolean };
+  properties: { [k: string]: any };
 };
 
 /** @internal */
@@ -5516,10 +5459,7 @@ export const VariantFilter$outboundSchema: z.ZodMiniType<
   VariantFilter$Outbound,
   VariantFilter
 > = z.object({
-  properties: z.record(
-    z.string(),
-    smartUnion([z.string(), z.number(), z.boolean()]),
-  ),
+  properties: z.record(z.string(), z.any()),
 });
 
 export function variantFilterToJSON(variantFilter: VariantFilter): string {
@@ -5685,7 +5625,7 @@ export function variantBillingControlsToJSON(
 }
 
 /** @internal */
-export type VariantCustomize$Outbound = {
+export type CustomizeVariant1$Outbound = {
   price?: VariantBasePrice$Outbound | null | undefined;
   add_items?: Array<VariantPlanItem$Outbound> | undefined;
   remove_items?: Array<VariantPlanItemFilter$Outbound> | undefined;
@@ -5694,9 +5634,9 @@ export type VariantCustomize$Outbound = {
 };
 
 /** @internal */
-export const VariantCustomize$outboundSchema: z.ZodMiniType<
-  VariantCustomize$Outbound,
-  VariantCustomize
+export const CustomizeVariant1$outboundSchema: z.ZodMiniType<
+  CustomizeVariant1$Outbound,
+  CustomizeVariant1
 > = z.pipe(
   z.object({
     price: z.optional(
@@ -5723,12 +5663,30 @@ export const VariantCustomize$outboundSchema: z.ZodMiniType<
   }),
 );
 
-export function variantCustomizeToJSON(
-  variantCustomize: VariantCustomize,
+export function customizeVariant1ToJSON(
+  customizeVariant1: CustomizeVariant1,
 ): string {
   return JSON.stringify(
-    VariantCustomize$outboundSchema.parse(variantCustomize),
+    CustomizeVariant1$outboundSchema.parse(customizeVariant1),
   );
+}
+
+/** @internal */
+export type Customize2$Outbound =
+  | CustomizeVariant1$Outbound
+  | CustomizeVariant2$Outbound;
+
+/** @internal */
+export const Customize2$outboundSchema: z.ZodMiniType<
+  Customize2$Outbound,
+  Customize2
+> = smartUnion([
+  z.lazy(() => CustomizeVariant1$outboundSchema),
+  z.lazy(() => CustomizeVariant2$outboundSchema),
+]);
+
+export function customize2ToJSON(customize2: Customize2): string {
+  return JSON.stringify(Customize2$outboundSchema.parse(customize2));
 }
 
 /** @internal */
@@ -5765,7 +5723,7 @@ export function variantMigrationToJSON(
 export type Variant$Outbound = {
   variant_plan_id: string;
   name?: string | undefined;
-  customize: VariantCustomize$Outbound;
+  customize: CustomizeVariant1$Outbound | CustomizeVariant2$Outbound;
   disable_version?: boolean | undefined;
   force_version?: boolean | undefined;
   migration?: VariantMigration$Outbound | undefined;
@@ -5777,7 +5735,10 @@ export const Variant$outboundSchema: z.ZodMiniType<Variant$Outbound, Variant> =
     z.object({
       variantPlanId: z.string(),
       name: z.optional(z.string()),
-      customize: z.lazy(() => VariantCustomize$outboundSchema),
+      customize: smartUnion([
+        z.lazy(() => CustomizeVariant1$outboundSchema),
+        z.lazy(() => CustomizeVariant2$outboundSchema),
+      ]),
       disableVersion: z.optional(z.boolean()),
       forceVersion: z.optional(z.boolean()),
       migration: z.optional(z.lazy(() => VariantMigration$outboundSchema)),

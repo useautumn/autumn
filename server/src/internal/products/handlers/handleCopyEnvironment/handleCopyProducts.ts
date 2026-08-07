@@ -1,41 +1,14 @@
-import {
-	type AppEnv,
-	type CreateProductV2Params,
-	type Feature,
-	mapToProductV2,
-	type Organization,
-	type ProductV2,
-	type UpdateProductV2Params,
-} from "@autumn/shared";
+import type { AppEnv, Feature, Organization } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { FeatureService } from "@/internal/features/FeatureService.js";
-import { copyPlanLicenseLinks } from "@/internal/licenses/actions/links/copyPlanLicenseLinks.js";
-import { createProduct } from "../../../product/actions/createProduct.js";
-import { updateProduct } from "../../../product/actions/updateProduct.js";
 import { ProductService } from "../../ProductService.js";
-
-const conformProductToSchema = (
-	product: ProductV2,
-): UpdateProductV2Params & Omit<CreateProductV2Params, "version"> => {
-	return {
-		id: product.id,
-		name: product.name,
-		is_add_on: product.is_add_on,
-		is_default: product.is_default,
-		group: product.group ?? "",
-		archived: product.archived ?? undefined,
-		items: product.items,
-		free_trial: product.free_trial
-			? {
-					length: product.free_trial.length,
-					unique_fingerprint: product.free_trial.unique_fingerprint,
-					duration: product.free_trial.duration,
-					card_required: product.free_trial.card_required,
-					on_end: product.free_trial.on_end,
-				}
-			: null,
-	};
-};
+import { initVariantsInStripe } from "../../stripeResourceUtils/initVariantsInStripe.js";
+import { copyEnvLicenseLinks } from "./copyEnvLicenseLinks.js";
+import { copyEnvVariantPlans } from "./copyEnvVariantPlans.js";
+import { resolveSourceBasePlanIds } from "./resolveVariantBaseLinks.js";
+import { toCopyReadyProductsV2, upsertCopiedPlan } from "./upsertCopiedPlan.js";
+import { withLicensePlanProducts } from "./withLicensePlanProducts.js";
+import { withPulledInPlans } from "./withPulledInPlans.js";
 
 /**
  * Copies products from one (org, env) into another (org, env).
@@ -68,6 +41,7 @@ export const handleCopyProducts = async ({
 	// Feature-only copy: nothing to read or map on the product side.
 	if (productIds?.length === 0) return;
 
+	// 1. Load both sides
 	const [fromFeatures, toFeatures, fromProductsAll, toProducts] =
 		await Promise.all([
 			providedFromFeatures ??
@@ -79,62 +53,59 @@ export const handleCopyProducts = async ({
 
 	// undefined => copy every product (original behavior); a list (incl. empty)
 	// => only those ids.
-	const fromProducts = productIds
+	const requestedFromProducts = productIds
 		? fromProductsAll.filter((p) => productIds.includes(p.id))
 		: fromProductsAll;
 
-	const toProductsV2 = toProducts.map((p) =>
-		mapToProductV2({ product: p, features: toFeatures }),
+	// 2. Build the copy set: variants pull their bases in, parents pull their
+	// license plans in. A same-id target plan is never pulled over.
+	const basePlanIdByVariantId = await resolveSourceBasePlanIds({
+		ctx,
+		fromProducts: requestedFromProducts,
+		fromProductsAll,
+	});
+	const fromProducts = await withLicensePlanProducts({
+		ctx,
+		fromProducts: withPulledInPlans({
+			fromProducts: requestedFromProducts,
+			fromProductsAll,
+			toProducts,
+			planIds: [...basePlanIdByVariantId.values()],
+		}),
+		fromProductsAll,
+		toProducts,
+	});
+
+	const toContext = { ...ctx, org: toOrg, features: toFeatures, env: toEnv };
+	const targetIds = new Set(toProducts.map((p) => p.id));
+	const fromProductsV2 = toCopyReadyProductsV2({
+		products: fromProducts,
+		features: fromFeatures,
+	});
+
+	// 3. Copy bases first: a variant's link resolves against the target env, so
+	// its base must exist there before the variant is copied.
+	const baseProductsV2 = fromProductsV2.filter(
+		(p) => !basePlanIdByVariantId.has(p.id),
+	);
+	await Promise.all(
+		baseProductsV2.map((fromProductV2) =>
+			upsertCopiedPlan({ toContext, fromProductV2, targetIds }),
+		),
 	);
 
-	const fromProductsV2 = fromProducts.map((p) => {
-		const productV2 = mapToProductV2({
-			product: p,
-			features: fromFeatures,
-		});
-		productV2.items = productV2.items.map((i) => {
-			const {
-				price_id: _price_id,
-				entitlement_id: _ent_id,
-				price_config: _price_config,
-				stripe_price_id: _stripe_price_id,
-				...rest
-			} = i;
-			return rest;
-		});
-
-		return productV2;
+	// 4. Copy variants, linked to their bases in the target env
+	const variantProductsV2 = fromProductsV2.filter((p) =>
+		basePlanIdByVariantId.has(p.id),
+	);
+	await copyEnvVariantPlans({
+		toContext,
+		variantProductsV2,
+		basePlanIdByVariantId,
+		targetIds,
 	});
 
-	const newContext = {
-		...ctx,
-		org: toOrg,
-		features: toFeatures,
-		env: toEnv,
-	};
-
-	const operations = fromProductsV2.map((fromProductV2) => {
-		const toProductV2 = toProductsV2.find((p) => p.id === fromProductV2.id);
-
-		const conformedProduct = conformProductToSchema(fromProductV2);
-
-		if (toProductV2) {
-			return updateProduct({
-				ctx: newContext,
-				productId: fromProductV2.id,
-				query: { disable_version: true },
-				updates: conformedProduct,
-			});
-		} else {
-			return createProduct({
-				ctx: newContext,
-				data: conformedProduct,
-			});
-		}
-	});
-
-	await Promise.all(operations);
-
+	// 5. Init created variants in Stripe after their base's family exists.
 	// inIds bypasses the products cache — the copy ops' invalidations land
 	// async, so a plain listFull can still see the pre-copy (empty) snapshot.
 	const copiedToProducts = await ProductService.listFull({
@@ -143,9 +114,17 @@ export const handleCopyProducts = async ({
 		env: toEnv,
 		inIds: fromProducts.map((product) => product.id),
 	});
-	await copyPlanLicenseLinks({
-		db,
+	const createdVariants = copiedToProducts.filter(
+		(product) =>
+			product.base_internal_product_id !== null && !targetIds.has(product.id),
+	);
+	await initVariantsInStripe({ ctx: toContext, products: createdVariants });
+
+	// 6. Recreate the copy set's license links in the target env
+	await copyEnvLicenseLinks({
+		toContext,
 		fromProducts,
-		toProducts: copiedToProducts,
+		toProducts,
+		copiedToProducts,
 	});
 };

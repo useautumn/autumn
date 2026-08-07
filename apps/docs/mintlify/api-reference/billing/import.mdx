@@ -2529,6 +2529,10 @@ import { DynamicResponseExample } from "/snippets/dynamic-response-example.jsx";
         <DynamicResponseField name="rollovers" type="object[]">
           Rollover balances carried over from previous periods.
           <Expandable title="properties">
+            <DynamicResponseField name="granted" type="number">
+              Amount originally rolled over from a previous period, before any of it was consumed.
+            </DynamicResponseField>
+
             <DynamicResponseField name="balance" type="number">
               Amount of balance rolled over from a previous period.
             </DynamicResponseField>
@@ -2734,6 +2738,94 @@ import { DynamicResponseExample } from "/snippets/dynamic-response-example.jsx";
 
         <DynamicResponseField name="hosted_invoice_url" type="string | null">
           URL to the Stripe-hosted invoice page
+        </DynamicResponseField>
+
+      </Expandable>
+    </DynamicResponseField>
+
+    <DynamicResponseField name="invoice_previews" type="object[]">
+      Upcoming invoice for each of this customer's Stripe subscriptions.
+      <Expandable title="properties">
+        <DynamicResponseField name="plan_ids" type="string[]">
+          Plan IDs contributing line items to this invoice.
+        </DynamicResponseField>
+
+        <DynamicResponseField name="invoice_at" type="number">
+          Unix timestamp (milliseconds) when this invoice will be created.
+        </DynamicResponseField>
+
+        <DynamicResponseField name="currency" type="string">
+          The three-letter ISO currency code (e.g., 'usd').
+        </DynamicResponseField>
+
+        <DynamicResponseField name="subtotal" type="number">
+          The total before discounts, in major currency units.
+        </DynamicResponseField>
+
+        <DynamicResponseField name="total" type="number">
+          The total after discounts, in major currency units.
+        </DynamicResponseField>
+
+        <DynamicResponseField name="line_items" type="object[]">
+          The line items this invoice will contain: usage accrued in the closing cycle, plus recurring charges for the opening cycle.
+          <Expandable title="properties">
+            <DynamicResponseField name="display_name" type="string">
+              The name of the line item to display to the customer if you're building a UI. It will either be the plan name or the feature name.
+            </DynamicResponseField>
+
+            <DynamicResponseField name="description" type="string">
+              A detailed description of the line item.
+            </DynamicResponseField>
+
+            <DynamicResponseField name="subtotal" type="number">
+              The amount in cents before discounts and tax for this line item.
+            </DynamicResponseField>
+
+            <DynamicResponseField name="total" type="number">
+              The final amount in cents after discounts and tax for this line item.
+            </DynamicResponseField>
+
+            <DynamicResponseField name="discounts" type="object[]">
+              List of discounts applied to this line item.
+              <Expandable title="properties">
+                <DynamicResponseField name="amount_off" type="number" />
+
+                <DynamicResponseField name="percent_off" type="number" />
+
+                <DynamicResponseField name="reward_id" type="string" />
+
+                <DynamicResponseField name="reward_name" type="string" />
+
+              </Expandable>
+            </DynamicResponseField>
+
+            <DynamicResponseField name="plan_id" type="string">
+              The ID of the plan that this line item belongs to.
+            </DynamicResponseField>
+
+            <DynamicResponseField name="feature_id" type="string | null">
+              The ID of the feature that this line item belongs to.
+            </DynamicResponseField>
+
+            <DynamicResponseField name="period" type="object">
+              The period of time that this line item is being charged for.
+              <Expandable title="properties">
+                <DynamicResponseField name="start" type="number">
+                  The start of the period in milliseconds since the Unix epoch.
+                </DynamicResponseField>
+
+                <DynamicResponseField name="end" type="number">
+                  The end of the period in milliseconds since the Unix epoch.
+                </DynamicResponseField>
+
+              </Expandable>
+            </DynamicResponseField>
+
+            <DynamicResponseField name="quantity" type="number">
+              The quantity of the line item.
+            </DynamicResponseField>
+
+          </Expandable>
         </DynamicResponseField>
 
       </Expandable>

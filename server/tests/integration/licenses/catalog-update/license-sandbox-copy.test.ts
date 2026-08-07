@@ -4,12 +4,17 @@ import {
 	type CreateProductV2Params,
 	ErrCode,
 	FeatureUsageType,
+	isAnyCreditSystem,
 	mapToProductV2,
 	type Organization,
 	type OrgConfig,
 	organizations,
 	RecaseError,
 } from "@autumn/shared";
+import {
+	ctxForOrgEnv,
+	seedCopyTestPlan,
+} from "@tests/utils/fixtures/copyEnvFixtures.js";
 import { products } from "@tests/utils/fixtures/products.js";
 import defaultCtx from "@tests/utils/testInitUtils/createTestContext.js";
 import { initDrizzle } from "@/db/initDrizzle.js";
@@ -53,6 +58,8 @@ const CREDIT_FEATURE = "copy_credits";
 const AI_CREDIT_FEATURE = "copy_ai_credits";
 const PRODUCT_ID = "copy_pro";
 const LICENSE_ID = "copy_license";
+const VARIANT_BASE_ID = "copy_variant_base";
+const VARIANT_ID = "copy_variant";
 
 const suffix = crypto.randomUUID().slice(0, 8);
 
@@ -245,7 +252,6 @@ describe("sandboxes.copy: copy plans + features between two sandbox sub-orgs", (
 		expect(targetProductsBefore.length).toBe(0);
 
 		await copySandboxForOrg({
-			db,
 			ctx: baseCtx,
 			masterOrg: defaultCtx.org,
 			fromSandboxId: source.id,
@@ -302,7 +308,6 @@ describe("sandboxes.copy: copy plans + features between two sandbox sub-orgs", (
 		let caught: unknown;
 		try {
 			await copySandboxForOrg({
-				db,
 				ctx: baseCtx,
 				masterOrg: defaultCtx.org,
 				fromSandboxId: `org_${crypto.randomUUID()}`,
@@ -323,7 +328,6 @@ describe("sandboxes.copy: copy plans + features between two sandbox sub-orgs", (
 		let caught: unknown;
 		try {
 			await copySandboxForOrg({
-				db,
 				ctx: baseCtx,
 				masterOrg: defaultCtx.org,
 				fromSandboxId: source.id,
@@ -347,7 +351,6 @@ describe("sandboxes.copy: copy plans + features between two sandbox sub-orgs", (
 		let caught: unknown;
 		try {
 			await copySandboxForOrg({
-				db,
 				ctx: baseCtx,
 				masterOrg: defaultCtx.org,
 				fromSandboxId: source.id,
@@ -368,7 +371,6 @@ describe("sandboxes.copy: copy plans + features between two sandbox sub-orgs", (
 		let caught: unknown;
 		try {
 			await copySandboxForOrg({
-				db,
 				ctx: baseCtx,
 				masterOrg: defaultCtx.org,
 				fromSandboxId: source.id,
@@ -394,12 +396,11 @@ describe("sandboxes.copy: selective copy via productIds / featureIds", () => {
 		return dst;
 	};
 
-	test("productIds copies only that product plus the features it references", async () => {
+	test("productIds copies that product, its license plan, and their features", async () => {
 		if (!source) throw new Error("source not provisioned");
 		const dst = await freshTarget("prod");
 
 		await copySandboxForOrg({
-			db,
 			ctx: baseCtx,
 			masterOrg: defaultCtx.org,
 			fromSandboxId: source.id,
@@ -418,11 +419,24 @@ describe("sandboxes.copy: selective copy via productIds / featureIds", () => {
 			env: AppEnv.Sandbox,
 		});
 
-		// The one product copied; its referenced features (dashboard + messages)
+		// The product plus its license plan; their referenced features
 		// auto-included; the unrelated credit system is NOT pulled in.
-		expect(dstProducts.map((p) => p.id)).toEqual([PRODUCT_ID]);
+		expect(dstProducts.map((p) => p.id).sort()).toEqual(
+			[PRODUCT_ID, LICENSE_ID].sort(),
+		);
 		expect(features.map((f) => f.id).sort()).toEqual(
 			[DASH_FEATURE, MSG_FEATURE].sort(),
+		);
+
+		const dstParent = dstProducts.find((p) => p.id === PRODUCT_ID);
+		const dstLicense = dstProducts.find((p) => p.id === LICENSE_ID);
+		const links = await planLicenseRepo.listCatalogByParentInternalProductIds({
+			db,
+			parentInternalProductIds: [dstParent?.internal_id as string],
+		});
+		expect(links).toHaveLength(1);
+		expect(links[0].license_internal_product_id).toBe(
+			dstLicense?.internal_id as string,
 		);
 	});
 
@@ -431,7 +445,6 @@ describe("sandboxes.copy: selective copy via productIds / featureIds", () => {
 		const dst = await freshTarget("feat");
 
 		await copySandboxForOrg({
-			db,
 			ctx: baseCtx,
 			masterOrg: defaultCtx.org,
 			fromSandboxId: source.id,
@@ -461,7 +474,6 @@ describe("sandboxes.copy: selective copy via productIds / featureIds", () => {
 		let thrown: unknown;
 		try {
 			await copySandboxForOrg({
-				db,
 				ctx: baseCtx,
 				masterOrg: defaultCtx.org,
 				fromSandboxId: source.id,
@@ -475,12 +487,71 @@ describe("sandboxes.copy: selective copy via productIds / featureIds", () => {
 		expect((thrown as RecaseError).code).toBe(ErrCode.FeatureNotFound);
 	});
 
+	test("a selectively copied variant brings its base's features intact", async () => {
+		if (!source) throw new Error("source not provisioned");
+		const dst = await freshTarget("variant-base");
+
+		// Base carries a credit-system item the variant does not; pre-fix the
+		// pulled-in base recreated it in the target as a generic metered feature.
+		const seedCtx = ctxForOrgEnv({ org: source, env: AppEnv.Sandbox });
+		const variantBase = await seedCopyTestPlan({
+			ctx: seedCtx,
+			planId: VARIANT_BASE_ID,
+			items: [
+				constructFeatureItem({
+					featureId: CREDIT_FEATURE,
+					includedUsage: 50,
+				}),
+			],
+		});
+		await seedCopyTestPlan({
+			ctx: seedCtx,
+			planId: VARIANT_ID,
+			baseInternalProductId: variantBase.internal_id,
+		});
+
+		await copySandboxForOrg({
+			ctx: baseCtx,
+			masterOrg: defaultCtx.org,
+			fromSandboxId: source.id,
+			toSandboxId: dst.id,
+			productIds: [VARIANT_ID],
+		});
+
+		const features = await FeatureService.list({
+			db,
+			orgId: dst.id,
+			env: AppEnv.Sandbox,
+		});
+		const dstProducts = await ProductService.listFull({
+			db,
+			orgId: dst.id,
+			env: AppEnv.Sandbox,
+		});
+
+		expect(dstProducts.map((p) => p.id).sort()).toEqual(
+			[VARIANT_BASE_ID, VARIANT_ID].sort(),
+		);
+		// The copied variant links to the target env's base, not the source's.
+		const dstBase = dstProducts.find((p) => p.id === VARIANT_BASE_ID);
+		const dstVariant = dstProducts.find((p) => p.id === VARIANT_ID);
+		expect(dstVariant?.base_internal_product_id).toBe(
+			dstBase?.internal_id as string,
+		);
+		// The credit system copied intact plus the metered feature it references.
+		expect(features.map((f) => f.id).sort()).toEqual(
+			[CREDIT_FEATURE, MSG_FEATURE].sort(),
+		);
+		const credit = features.find((f) => f.id === CREDIT_FEATURE);
+		if (!credit) throw new Error(`${CREDIT_FEATURE} missing in target`);
+		expect(isAnyCreditSystem(credit.type)).toBe(true);
+	});
+
 	test("a credit-system featureId pulls in the metered feature it references", async () => {
 		if (!source) throw new Error("source not provisioned");
 		const dst = await freshTarget("credit");
 
 		await copySandboxForOrg({
-			db,
 			ctx: baseCtx,
 			masterOrg: defaultCtx.org,
 			fromSandboxId: source.id,
@@ -545,7 +616,6 @@ describe("sandboxes.copy: edge cases", () => {
 		});
 
 		await copySandboxForOrg({
-			db,
 			ctx: baseCtx,
 			masterOrg: defaultCtx.org,
 			fromSandboxId: source.id,
@@ -578,7 +648,6 @@ describe("sandboxes.copy: edge cases", () => {
 		expect(itemFeatureIds.sort()).toEqual([DASH_FEATURE, MSG_FEATURE].sort());
 
 		await copySandboxForOrg({
-			db,
 			ctx: baseCtx,
 			masterOrg: defaultCtx.org,
 			fromSandboxId: source.id,
@@ -606,7 +675,6 @@ describe("sandboxes.copy: edge cases", () => {
 		const dst = await freshOrg("empty-filters");
 
 		await copySandboxForOrg({
-			db,
 			ctx: baseCtx,
 			masterOrg: defaultCtx.org,
 			fromSandboxId: source.id,
@@ -634,7 +702,6 @@ describe("sandboxes.copy: edge cases", () => {
 		const dst = await freshOrg("empty-dst");
 
 		await copySandboxForOrg({
-			db,
 			ctx: baseCtx,
 			masterOrg: defaultCtx.org,
 			fromSandboxId: emptySource.id,
