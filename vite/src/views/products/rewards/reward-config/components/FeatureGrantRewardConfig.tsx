@@ -72,7 +72,6 @@ export function FeatureGrantRewardConfig({
 				...entitlements,
 				{
 					feature_id: "",
-					allowance: 0,
 					expiry: existingExpiry ? { ...existingExpiry } : undefined,
 				},
 			],
