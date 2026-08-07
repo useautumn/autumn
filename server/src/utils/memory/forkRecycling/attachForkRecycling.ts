@@ -32,10 +32,10 @@ export const attachPrimaryForkRecycling = ({
 	const sendSafely = (workerId: string, type: string) => {
 		try {
 			workerIds.get(workerId)?.send({ type }, (error) => {
-				if (error) logger.warn(`[ForkRecycle] ${type} -> ${workerId} failed`);
+				if (error) console.warn(`[ForkRecycle] ${type} -> ${workerId} failed`);
 			});
 		} catch {
-			logger.warn(`[ForkRecycle] ${type} -> ${workerId} failed`);
+			console.warn(`[ForkRecycle] ${type} -> ${workerId} failed`);
 		}
 	};
 
@@ -51,7 +51,7 @@ export const attachPrimaryForkRecycling = ({
 			try {
 				workerIds.get(workerId)?.kill();
 			} catch {
-				logger.warn(`[ForkRecycle] kill -> ${workerId} failed`);
+				console.warn(`[ForkRecycle] kill -> ${workerId} failed`);
 			}
 		},
 		respawn: () => {
@@ -60,7 +60,9 @@ export const attachPrimaryForkRecycling = ({
 			workerIds.set(String(worker.id), worker);
 			return String(worker.id);
 		},
-		log: (message) => logger.info(message),
+		// FireLens delivers console output reliably; the logger transport
+		// drops most lines, which hid the first prod recycle wave entirely.
+		log: (message) => console.log(message),
 	});
 
 	clusterModule.on("listening", (worker) => {
@@ -112,7 +114,7 @@ export const startWorkerForkRecycling = ({
 		drainTimeoutMs: config.drainTimeoutMs,
 		getActiveRequestCount,
 		onDrainStart,
-		log: (message) => logger.info(message),
+		log: (message) => console.log(message),
 	});
 
 	process.on("message", (message: RecycleMessage) => {
@@ -123,7 +125,7 @@ export const startWorkerForkRecycling = ({
 		if (message?.type === RECYCLE_ABORT) {
 			// Replacement failed to boot; re-arm so a later check can ask again.
 			requested = false;
-			logger.info(
+			console.log(
 				`[ForkRecycle] Worker ${process.pid} recycle aborted; will re-request if still over threshold`,
 			);
 		}
@@ -144,6 +146,10 @@ export const startWorkerForkRecycling = ({
 		}
 
 		requested = true;
+		console.log(
+			`[ForkRecycle] Worker ${process.pid} requesting recycle at rss=${Math.round(rssBytes / 1024 / 1024)}MB after ${Math.round((Date.now() - startedAt) / 60_000)}min`,
+		);
+		// Keep the structured event for the fraction the logger pipeline delivers.
 		logger.info(
 			`[ForkRecycle] Worker ${process.pid} requesting recycle at rss=${Math.round(rssBytes / 1024 / 1024)}MB after ${Math.round((Date.now() - startedAt) / 60_000)}min`,
 			{
