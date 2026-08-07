@@ -1,11 +1,14 @@
-import type { BasePriceParams } from "@api/products/components/basePrice/basePrice.js";
+// Deep imports, not the "@autumn/shared" barrel: the barrel re-exports
+// updatePlanParamsV1, which reaches back here via variants/updateVariantParams,
+// and the resulting cycle throws a TDZ ReferenceError depending on load order.
 import {
-	type ApiPlanV1,
-	type CreatePlanItemParamsV1,
 	CustomizePlanV1BaseSchema,
-	type PlanItemFilter,
 	refineCustomizePlanV1Schema,
-} from "@autumn/shared";
+} from "@api/billing/common/customizePlan/customizePlanV1.js";
+import type { ApiPlanV1 } from "@api/products/apiPlanV1.js";
+import type { BasePriceParams } from "@api/products/components/basePrice/basePrice.js";
+import type { CreatePlanItemParamsV1 } from "@api/products/items/crud/createPlanItemParamsV1.js";
+import type { PlanItemFilter } from "@api/products/items/filter/planItemFilter.js";
 import { FreeTrialDuration } from "@models/productModels/freeTrialModels/freeTrialEnums.js";
 import { TierBehavior } from "@models/productModels/priceModels/priceConfig/usagePriceConfig.js";
 import type { z } from "zod/v4";
