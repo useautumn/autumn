@@ -13,6 +13,12 @@ import { generateId } from "@/utils/genUtils.js";
 const licenseProducts = alias(products, "license_products");
 const parentProducts = alias(products, "parent_products");
 
+export type PlanLicenseWithPlanIds = {
+	planLicense: DbPlanLicense;
+	licensePlanId: string;
+	parentPlanId: string;
+};
+
 const upsert = async ({
 	db,
 	id = generateId("plan_lic"),
@@ -150,12 +156,6 @@ const listCatalogByParentInternalProductIds = async ({
 			eq(planLicenses.is_custom, false),
 		),
 	});
-
-export type PlanLicenseWithPlanIds = {
-	planLicense: DbPlanLicense;
-	licensePlanId: string;
-	parentPlanId: string;
-};
 
 const listWithLicensePlanIdByParents = async ({
 	db,
