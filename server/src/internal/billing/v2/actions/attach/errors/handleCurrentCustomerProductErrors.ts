@@ -1,8 +1,8 @@
 import {
-    type AttachBillingContext,
-    ErrCode,
-    isCustomerProductPaid,
-    RecaseError,
+	type AttachBillingContext,
+	ErrCode,
+	isCustomerProductPaid,
+	RecaseError,
 } from "@autumn/shared";
 
 export const handleCurrentCustomerProductErrors = ({
@@ -15,6 +15,7 @@ export const handleCurrentCustomerProductErrors = ({
 		attachProduct,
 		stripeSubscription,
 		skipExternalPSPGuard,
+		canceledStripeSubscriptionId,
 	} = billingContext;
 
 	if (currentCustomerProduct?.product.id === attachProduct.id) {
@@ -30,9 +31,11 @@ export const handleCurrentCustomerProductErrors = ({
 	// current products with no Stripe subscription — they opt out via
 	// `skipExternalPSPGuard`. Stripe-origin cus_products with `processor: null`
 	// must still be checked, so this is gated on the explicit flag rather than
-	// on `cusProductToProcessorType`.
+	// on `cusProductToProcessorType`. A subscription that is linked but canceled
+	// is explained linkage, not broken linkage, so it passes too.
 	if (
 		!skipExternalPSPGuard &&
+		!canceledStripeSubscriptionId &&
 		isCustomerProductPaid(currentCustomerProduct) &&
 		!stripeSubscription
 	) {
