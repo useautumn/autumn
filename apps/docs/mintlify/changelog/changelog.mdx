@@ -4,6 +4,64 @@ mode: "center"
 description: "Some new things we've shipped at Autumn HQ"
 ---
 
+<Update label="August 6th 2026">
+  ## Customer CSV exports
+
+  You can now export customers directly from the dashboard. Pick the columns you want, watch progress live as the export runs, and download a signed CSV when it finishes. Large workspaces stream in the background so you can leave the page and come back to a completed export in your history.
+
+  ## Rewards and referral programs on the public API
+
+  Rewards and referral programs are now fully manageable over the public API. Beyond `create`, you can list, fetch, update, and delete both resources, so you can script promotional flows end-to-end from your own systems. See the new [Rewards](/api-reference/rewards/listRewards) and [Referral programs](/api-reference/referrals/listReferralPrograms) endpoints.
+
+  ## Feature-grant rewards in referral programs
+
+  Referral programs now support feature-grant rewards, not just coupons. Referrers and referees can be granted feature quota directly on redemption, and expiring rewards created from the dashboard now keep their expiry when redeemed. Free-product rewards are deprecated in favor of feature grants.
+
+  ## Invoice previews on `customers.get`
+
+  [`customers.get`](/api-reference/customers/getCustomer) now accepts `expand=invoice_previews`, returning one upcoming-invoice preview per active Stripe subscription. Each preview reflects both recurring charges and usage accrued so far in the current cycle, and the dashboard surfaces the same data in a new **Upcoming invoice** section on the customer page.
+
+  ## Multi-plan attach: full flow
+
+  [`billing.multi_attach`](/api-reference/billing/multiAttach) is now feature-complete. A single request can atomically move a customer across multiple product groups with per-plan scopes, request-wide trials, proration, discounts, pooled balances, one-off carryover, and Checkout — with the same idempotency guarantees as `attach`. The dashboard's plan editor now routes through the endpoint, so any transition you can build in the UI is expressible over the API.
+
+  ## Rewards and referrals in `atmn` config
+
+  You can now define rewards and referral programs alongside features and products in your `atmn` config. Typed `reward()` and `referralProgram()` builders round-trip through `pull`, `preview`, and `push`, and codegen keeps your generated types in sync. Existing resources are reconciled append-only so hand-created rewards are never overwritten.
+
+  <AccordionGroup>
+    <Accordion title="Improvements">
+      - Lazy resets now apply to every pooled balance, and next-cycle contributions are promoted correctly at reset time so pooled entitlements stay accurate across cycle boundaries — [#2576](https://github.com/useautumn/autumn/pull/2576)
+      - Checkout attaches that resolve to an immediately enabled plan now emit the completion webhook so downstream systems see the plan as active without polling — [#2635](https://github.com/useautumn/autumn/pull/2635)
+      - Feature grants with a zero value are now accepted, which is useful for provisioning a feature slot that will be topped up later — [#2637](https://github.com/useautumn/autumn/pull/2637)
+      - Added a per-organization opt-in setting to pay down existing overages first before applying new credits — [#2494](https://github.com/useautumn/autumn/pull/2494)
+      - `customers.get` invoice previews now respect phase anchors on scheduled changes, so previews for scheduled attachments match what Stripe will actually bill — [#2225](https://github.com/useautumn/autumn/pull/2225)
+      - Balance deductions now consume the sooner-expiring credit first, so expiring grants are used before evergreen ones — [#2508](https://github.com/useautumn/autumn/pull/2508)
+      - Finite included usage is now capped at 10 trillion to prevent overflow when configuring effectively-unlimited plans — [#2522](https://github.com/useautumn/autumn/pull/2522)
+      - Per-call timeout overrides are now honored end-to-end so long-running attaches and previews no longer hit the default budget — [#2516](https://github.com/useautumn/autumn/pull/2516)
+      - Customer event listing in analytics is significantly faster on high-volume workspaces — [#2524](https://github.com/useautumn/autumn/pull/2524)
+    </Accordion>
+    <Accordion title="Fixes">
+      - Fixed negative carry-over balances being recalculated incorrectly when a customer moved between plans — [#2617](https://github.com/useautumn/autumn/pull/2617)
+      - Fixed a regression that blocked discount rewards on referral programs; only free-product rewards are now deprecated — [#2583](https://github.com/useautumn/autumn/pull/2583)
+      - Fixed a next-cycle boundary bug where annual plans with monthly metered items produced incorrect `attach`, `update`, and `createSchedule` previews around the trial-end anchor — [#2604](https://github.com/useautumn/autumn/pull/2604)
+      - Add-ons attached alongside a scheduled base plan now preserve the base plan on the schedule instead of clearing it — [#2513](https://github.com/useautumn/autumn/pull/2513)
+      - Add-ons provisioned through Stripe Checkout are now attached via `optional_items` so the base plan and add-on land on the same subscription — [#2512](https://github.com/useautumn/autumn/pull/2512)
+      - Fixed default plans being applied to customers who already have an active paid plan — [#2447](https://github.com/useautumn/autumn/pull/2447)
+      - Fixed the Stripe product-sync webhook so product metadata changes propagate reliably — [#2507](https://github.com/useautumn/autumn/pull/2507)
+      - The dashboard plan editor now preserves the base price when re-selecting a paid plan — [#2332](https://github.com/useautumn/autumn/pull/2332)
+      - Long customer names no longer overflow their column in the dashboard — [#2631](https://github.com/useautumn/autumn/pull/2631)
+      - Long billing-unit labels no longer overflow, and the billing-units button now sizes to its content — [#2544](https://github.com/useautumn/autumn/pull/2544), [#2514](https://github.com/useautumn/autumn/pull/2514)
+      - Coupon major units are now preserved when editing via the dashboard — [#2532](https://github.com/useautumn/autumn/pull/2532)
+      - Plan editor items now have a stable identity, so reordering and editing no longer swap fields between rows — [#2644](https://github.com/useautumn/autumn/pull/2644)
+      - Nested property rollup fallbacks are now preserved end-to-end — [#2641](https://github.com/useautumn/autumn/pull/2641)
+      - Request-log metadata is now deduplicated so repeated fields don't inflate the log payload — [#2511](https://github.com/useautumn/autumn/pull/2511)
+      - Retried MCP refresh responses now replay correctly instead of failing subsequent calls — [#2505](https://github.com/useautumn/autumn/pull/2505)
+      - Internal auth scopes are no longer surfaced to MCP clients — [#2548](https://github.com/useautumn/autumn/pull/2548)
+    </Accordion>
+  </AccordionGroup>
+</Update>
+
 <Update label="July 31st 2026">
   ## Pooled balances
 
