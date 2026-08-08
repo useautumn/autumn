@@ -4,8 +4,8 @@ import {
 	type BaseApiCustomerV5,
 	type CursorPaginatedResponse,
 	ErrCode,
-	type ListCustomersV2Params,
 	ListCustomersV2_3ParamsSchema,
+	type ListCustomersV2Params,
 	ListCustomersV2ParamsSchema,
 	type PagePaginatedResponse,
 	PaginationType,
@@ -84,6 +84,7 @@ export const handleListCustomersV2 = createRoute({
 				orgId: ctx.org.id,
 				orgSlug: ctx.org.slug,
 				type: PaginationType.ListCustomers,
+				apiVersion: ctx.apiVersion,
 			});
 			if (body.limit > maxLimit) {
 				throw new RecaseError({

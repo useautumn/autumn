@@ -14,6 +14,10 @@ import { z } from "zod/v4";
 import type { RequestContext } from "@/honoUtils/HonoEnv.js";
 import { invoicesToResponse } from "../../../invoices/invoiceUtils.js";
 import { getCusProcessors } from "../cusResponseUtils/getCusProcessors.js";
+import {
+	fullCustomerWithoutEntityData,
+	shouldAggregateEntityData,
+} from "../customerEntityData.js";
 import { getApiCustomerLicenses } from "../getApiCustomerV2/getApiCustomerLicense/getApiCustomerLicenses.js";
 import { getApiSubscriptions } from "./getApiSubscription/getApiSubscriptions.js";
 
@@ -31,9 +35,17 @@ export const getApiCustomerBase = async ({
 	fullCus: FullCustomer;
 	withAutumnId?: boolean;
 }): Promise<{ apiCustomer: ApiCustomerV5; legacyData: CustomerLegacyData }> => {
+	// Entity-scoped reads already report only their own rows; this drops the
+	// entity-level subscriptions a customer-level read used to fold in.
+	const fullCustomer =
+		!fullCus.entity &&
+		!shouldAggregateEntityData({ apiVersion: ctx.apiVersion })
+			? fullCustomerWithoutEntityData({ fullCustomer: fullCus })
+			: fullCus;
+
 	const { balances: apiBalances, flags: apiFlags } = await getApiBalances({
 		ctx,
-		fullCus,
+		fullCus: fullCustomer,
 	});
 
 	const subscriptionsScopedCtx = scopeExpandForCtx({
@@ -47,10 +59,10 @@ export const getApiCustomerBase = async ({
 		legacyData: cusProductLegacyData,
 	} = await getApiSubscriptions({
 		ctx: subscriptionsScopedCtx,
-		fullCus,
+		fullCus: fullCustomer,
 	});
 	const usageLimits = fullSubjectToApiUsageLimits({
-		fullSubject: fullCustomerToFullSubject({ fullCustomer: fullCus }),
+		fullSubject: fullCustomerToFullSubject({ fullCustomer }),
 		features: ctx.features,
 		inStatuses: orgToInStatuses({ org: ctx.org }),
 	});
@@ -74,7 +86,7 @@ export const getApiCustomerBase = async ({
 		purchases: apiPurchases,
 		licenses: getApiCustomerLicenses({
 			ctx,
-			customerProducts: fullCus.customer_products,
+			customerProducts: fullCustomer.customer_products,
 		}),
 		balances: apiBalances,
 		flags: apiFlags,
@@ -94,8 +106,8 @@ export const getApiCustomerBase = async ({
 			: undefined,
 
 		processors: getCusProcessors({
-			customer: fullCus,
-			customer_products: fullCus.customer_products,
+			customer: fullCustomer,
+			customer_products: fullCustomer.customer_products,
 		}),
 
 		invoices:

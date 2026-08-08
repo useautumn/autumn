@@ -7,6 +7,8 @@ export interface VersionMetadata {
 	description: string;
 	deprecated?: boolean;
 	migrateToVersion?: ApiVersion;
+	/** autumn-js release that ships this version. Unset for versions predating this field. */
+	autumnJsVersion?: string;
 }
 
 /**
@@ -14,6 +16,13 @@ export interface VersionMetadata {
  * SemVer ↔ CalVer mappings and metadata
  */
 export const VERSION_REGISTRY: Record<ApiVersion, VersionMetadata> = {
+	[ApiVersion.V2_4]: {
+		semver: ApiVersion.V2_4,
+		calver: "2026-08-06",
+		releasedAt: new Date("2026-08-06").getTime(),
+		description: "Customer object no longer returns entity-level data",
+		autumnJsVersion: "1.3.0",
+	},
 	[ApiVersion.V2_3]: {
 		semver: ApiVersion.V2_3,
 		calver: "2026-05-13",
