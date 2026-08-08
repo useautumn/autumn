@@ -27,13 +27,16 @@ export const constructStripeInvoiceItem = ({
 	stripeCustomerId: string;
 	periodStart: number;
 	periodEnd: number;
+	currency?: string;
 }) => {
 	const { org } = ctx;
 	const config = price.config as UsagePriceConfig;
 
+	const invoiceCurrency = currency || org.default_currency || "usd";
+
 	const amountInCents = atmnToStripeAmount({
 		amount,
-		currency: org.default_currency || "usd",
+		currency: invoiceCurrency,
 	});
 
 	const priceData =
@@ -41,13 +44,13 @@ export const constructStripeInvoiceItem = ({
 			? {
 					price_data: {
 						unit_amount: amountInCents,
-						currency: org.default_currency || "usd",
+						currency: invoiceCurrency,
 						product: config.stripe_product_id || (product.processor?.id ?? ""),
 					},
 				}
 			: {
 					amount: amountInCents,
-					currency: org.default_currency || "usd",
+					currency: invoiceCurrency,
 				};
 
 	const invoiceItem: Stripe.InvoiceItemCreateParams = {

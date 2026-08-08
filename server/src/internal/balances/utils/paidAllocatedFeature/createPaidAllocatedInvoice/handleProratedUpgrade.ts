@@ -37,6 +37,7 @@ export const getPrevAndNewPriceForUpgrade = ({
 	newBalance: number;
 	prevBalance: number;
 	logger: any;
+	currency?: string;
 }) => {
 	const { usage: prevUsage, overage: prevOverage } = getUsageFromBalance({
 		ent,
@@ -57,6 +58,7 @@ export const getPrevAndNewPriceForUpgrade = ({
 			usage: prevOverage,
 			price,
 		}),
+		currency,
 	});
 
 	const newPrice = priceToInvoiceAmount({
@@ -66,6 +68,7 @@ export const getPrevAndNewPriceForUpgrade = ({
 			usage: newOverage,
 			price,
 		}),
+		currency,
 	});
 
 	return {
@@ -134,6 +137,7 @@ export const handleProratedUpgrade = async ({
 		newBalance,
 		prevBalance,
 		logger,
+		currency: sub.currency,
 	});
 
 	logger.info(
