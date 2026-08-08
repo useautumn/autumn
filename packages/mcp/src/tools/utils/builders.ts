@@ -49,16 +49,19 @@ export const createDomainTools = <
 	const billingPreview = ({
 		id,
 		description,
+		expand,
 		writeToolName,
 	}: {
 		id: EndpointId;
 		description: string;
+		expand?: string[];
 		writeToolName: ConfirmedWriteToolName;
 	}): BillingPreviewToolConfig => ({
 		id,
 		description,
 		schema: schemas[id],
 		previewEndpoint: endpoints[id],
+		expand,
 		writeToolName,
 	});
 

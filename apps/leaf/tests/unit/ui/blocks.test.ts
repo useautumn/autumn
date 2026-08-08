@@ -50,13 +50,38 @@ describe("approval card", () => {
 		);
 		expect(json).toContain("Due now");
 		expect(json).toContain("$400.00");
-		expect(json).toContain("Next cycle · Jul 12, 2026 — $400.00");
+		expect(json).toContain("Next charge on Jul 12, 2026 — $400.00");
 		expect(json).toContain("✓ Invoice (draft)");
 		expect(json).not.toContain("Prorations");
 		expect(card.children.at(-1)?.type).toBe("actions");
 		expect(json).toContain("approve_billing_action");
 		expect(json).toContain("Dismiss");
 		expect(json).not.toContain('"request"');
+	});
+
+	test("uses the plan name as the attach subject without repeating it", () => {
+		const card = approvalCard({
+			id: "approval_1",
+			toolName: "attach",
+			toolArgs: {
+				request: { customer_id: "testa", plan_id: "mc_e2e_sdkce88" },
+			},
+			preview: wrapMcpResult({
+				preview: {
+					incoming: [
+						{
+							plan_id: "mc_e2e_sdkce88",
+							plan: { name: "MC E2E Plan" },
+						},
+					],
+				},
+			}),
+		});
+
+		const json = JSON.stringify(card);
+		expect(json).toContain("Attach **MC E2E Plan** to **testa**?");
+		expect(json).not.toContain("Attach **mc_e2e_sdkce88**");
+		expect(json).not.toContain("Attaching MC E2E Plan");
 	});
 
 	test("escalates live environment on the subtitle and approve button", () => {
@@ -74,7 +99,7 @@ describe("approval card", () => {
 		);
 	});
 
-	test("shows custom prices as a money field, not a param dump", () => {
+	test("shows custom prices as the recurring price, not a param dump", () => {
 		const card = approvalCard({
 			id: "approval_1",
 			toolName: "updateSubscription",
@@ -89,7 +114,7 @@ describe("approval card", () => {
 
 		const json = JSON.stringify(card);
 		expect(json).toContain("Update **charlie**'s subscription to **pro**?");
-		expect(json).toContain("Custom price");
+		expect(json).toContain("Recurring price");
 		expect(json).toContain("$200.00/month");
 		expect(json).not.toContain('"customize"');
 	});
@@ -152,7 +177,7 @@ describe("approval card", () => {
 
 		const json = JSON.stringify(card);
 		expect(json).toContain("view_approval_payload");
-		expect(json).toContain("{} Payload");
+		expect(json).toContain("View Payload");
 	});
 
 	test("renders customized add_items and remove_items as grouped changes", () => {
@@ -186,23 +211,88 @@ describe("approval card", () => {
 							},
 						],
 						remove_items: [
+							{ feature_id: "credits" },
 							{ feature_id: "audit_logs" },
 							{ billing_method: "prepaid", interval: "year" },
 						],
 					},
 				},
 			},
+			preview: wrapMcpResult({
+				preview: {
+					incoming: [
+						{
+							plan: {
+								items: [
+									{ feature_id: "seats", feature: { name: "Seats" } },
+									{ feature_id: "credits", feature: { name: "Credits" } },
+									{ feature_id: "api_calls", feature: { name: "API Calls" } },
+								],
+							},
+						},
+					],
+					outgoing: [
+						{
+							plan: {
+								items: [
+									{ feature_id: "credits", feature: { name: "Credits" } },
+									{ feature_id: "audit_logs", feature: { name: "Audit Logs" } },
+								],
+							},
+						},
+					],
+				},
+			}),
 		});
 
 		const json = JSON.stringify(card);
-		expect(json).toContain("**Plan changes**");
-		expect(json).toContain("＋ seats — unlimited");
+		expect(json).toContain("**Updated plan items**");
 		expect(json).toContain(
-			"＋ credits — 5,000 included, then $0.10 each · usage-based · monthly",
+			"• Credits — 5,000 included, then $0.10 each · usage-based · monthly",
 		);
-		expect(json).toContain("＋ api_calls — $5.00 per 1,000 · usage-based");
-		expect(json).toContain("− audit_logs");
-		expect(json).toContain("− prepaid · yearly");
+		expect(json).toContain("**Added to plan**");
+		expect(json).toContain("• Seats — unlimited");
+		expect(json).toContain("• API Calls — $5.00 per 1,000 · usage-based");
+		expect(json).toContain("**Removed from plan**");
+		expect(json).toContain("• Audit Logs");
+		expect(json).toContain("• prepaid · yearly");
+		expect(json).not.toContain("**Plan changes**");
+	});
+
+	test("shows no charge today and keeps the full removal list", () => {
+		const removeItems = Array.from({ length: 10 }, (_, index) => ({
+			feature_id: `feature_${index + 1}`,
+		}));
+		const card = approvalCard({
+			id: "approval_1",
+			toolName: "attach",
+			toolArgs: {
+				request: {
+					...attachArgs.request,
+					customize: { remove_items: removeItems },
+				},
+			},
+			preview: wrapMcpResult({ preview: { total: 0, currency: "usd" } }),
+		});
+
+		const json = JSON.stringify(card);
+		expect(json).toContain("No charge today");
+		expect(json).toContain("Feature 10");
+		expect(json).not.toContain("No charge now");
+	});
+
+	test("shortens UUID customer labels without shortening their link", () => {
+		const customerId = "085298c2-2d68-429b-a583-2165976701fa";
+		const card = approvalCard({
+			id: "approval_1",
+			env: AppEnv.Live,
+			toolName: "attach",
+			toolArgs: { request: { customer_id: customerId, plan_id: "pro" } },
+		});
+		const json = JSON.stringify(card);
+
+		expect(json).toContain("085298c2…701fa");
+		expect(json).toContain(`/customers/${customerId}`);
 	});
 
 	test("omits the changes block when nothing is customized", () => {
