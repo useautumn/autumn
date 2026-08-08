@@ -1,4 +1,4 @@
-import { Scopes } from "@autumn/shared";
+import { makeScopeChecker, Scopes } from "@autumn/shared";
 import { clearSecretKeyCache } from "@/external/redis/actions/secretKeyCache/secretKeyCache.js";
 import { createRoute } from "../../../honoMiddlewares/routeHandler";
 import { apiKeyRepo } from "../repos/index.js";
@@ -14,6 +14,7 @@ export const handleDeleteSecretKey = createRoute({
 			db,
 			id: key_id,
 			orgId: org.id,
+			allowHidden: makeScopeChecker(ctx.scopes).isSuperuser,
 		});
 
 		if (data.length === 0) {

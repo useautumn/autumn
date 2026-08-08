@@ -613,6 +613,19 @@ const ROUTES = [
 		isWebhookExempt: false,
 	},
 	{
+		handlerName: "handleListHiddenApiKeys",
+		handlerFile: "src/internal/dev/handlers/handleListHiddenApiKeys.ts",
+		method: "GET",
+		path: "/dev/api_key/hidden",
+		style: "REST",
+		group: "dev",
+		mountChain: ["", "/dev", "/api_key/hidden"],
+		sourceRouterFile: "src/internal/dev/devRouter.ts",
+		routeKind: "createRoute",
+		needsScopes: true,
+		isWebhookExempt: false,
+	},
+	{
 		handlerName: "handleGetDevData",
 		handlerFile: "src/internal/dev/handlers/handleGetDevData.ts",
 		method: "GET",
@@ -1325,8 +1338,7 @@ const ROUTES = [
 		style: "RPC",
 		group: "v1/platform",
 		mountChain: ["/v1", "", "", "/platform.link_revenuecat"],
-		sourceRouterFile:
-			"src/internal/platform/platformBeta/platformRpcRouter.ts",
+		sourceRouterFile: "src/internal/platform/platformBeta/platformRpcRouter.ts",
 		routeKind: "createRoute",
 		needsScopes: true,
 		isWebhookExempt: false,
@@ -1340,8 +1352,7 @@ const ROUTES = [
 		style: "RPC",
 		group: "v1/platform",
 		mountChain: ["/v1", "", "", "/platform.sync_revenuecat"],
-		sourceRouterFile:
-			"src/internal/platform/platformBeta/platformRpcRouter.ts",
+		sourceRouterFile: "src/internal/platform/platformBeta/platformRpcRouter.ts",
 		routeKind: "createRoute",
 		needsScopes: true,
 		isWebhookExempt: false,
@@ -1355,8 +1366,7 @@ const ROUTES = [
 		style: "RPC",
 		group: "v1/platform",
 		mountChain: ["/v1", "", "", "/platform.get_revenuecat_keys"],
-		sourceRouterFile:
-			"src/internal/platform/platformBeta/platformRpcRouter.ts",
+		sourceRouterFile: "src/internal/platform/platformBeta/platformRpcRouter.ts",
 		routeKind: "createRoute",
 		needsScopes: true,
 		isWebhookExempt: false,
@@ -3922,6 +3932,12 @@ const SCOPE_DECISIONS: Record<
 		scopes: ["apiKeys:write"],
 		shape: "array",
 		decidedAt: "2026-04-24T15:16:54.341Z",
+	},
+	"GET|/dev/api_key/hidden|handleListHiddenApiKeys": {
+		decision: "decided",
+		scopes: ["superuser"],
+		shape: "array",
+		decidedAt: "2026-08-08T13:05:00.000Z",
 	},
 	"GET|/dev/data|handleGetDevData": {
 		decision: "decided",
