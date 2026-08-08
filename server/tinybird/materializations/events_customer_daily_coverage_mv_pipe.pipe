@@ -1,0 +1,19 @@
+DESCRIPTION >
+    Records expected scoped UTC-day counts from the customer hourly source. Daily queries compare
+    these counts directly with the daily target rows returned for the same request scope.
+
+NODE materialize
+SQL >
+    SELECT
+        org_id,
+        env,
+        customer_id,
+        entity_id,
+        event_name,
+        toStartOfDay(hour) as day,
+        sumState(event_count) as expected_event_count
+    FROM events_customer_hourly_mv
+    GROUP BY org_id, env, customer_id, entity_id, event_name, day
+
+TYPE materialized
+DATASOURCE events_customer_daily_coverage_mv

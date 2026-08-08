@@ -21,6 +21,30 @@ import {
 
 const DATE_FORMAT = "yyyy-MM-dd'T'HH:mm:ss";
 
+type CountAndSumRow = {
+	event_name: string;
+	count: string;
+	sum: string;
+	actual_daily_event_count?: string | number;
+	expected_daily_event_count?: string | number;
+};
+
+const hasCompleteDailyCoverage = ({
+	rows,
+}: {
+	rows: CountAndSumRow[];
+}): boolean =>
+	rows.length > 0 &&
+	rows.every((row) => {
+		const actualDailyEventCount = Number(row.actual_daily_event_count);
+		const expectedDailyEventCount = Number(row.expected_daily_event_count);
+		return (
+			Number.isFinite(actualDailyEventCount) &&
+			Number.isFinite(expectedDailyEventCount) &&
+			actualDailyEventCount === expectedDailyEventCount
+		);
+	});
+
 const intervalTypeToDaysMap = (gap = 0): Record<string, number> => ({
 	"24h": 1,
 	"7d": 7,
@@ -132,6 +156,16 @@ export const getCountAndSum = async ({
 		filterBySql,
 		hasEntityId: Boolean(params.entity_id),
 	});
+	const queryParams = {
+		org_id: org.id,
+		env,
+		customer_id: params.customer_id,
+		entity_id: params.entity_id,
+		start_date: startDate,
+		end_date: endDate,
+		event_names: params.event_names,
+		...filterByParams,
+	};
 
 	ctx.logger.debug("Getting count and sum", {
 		eventNames: params.event_names,
@@ -141,27 +175,38 @@ export const getCountAndSum = async ({
 		endDate,
 	});
 
-	const result = await ch.query({
-		query,
-		query_params: {
-			org_id: org.id,
-			env,
-			customer_id: params.customer_id,
-			entity_id: params.entity_id,
-			start_date: startDate,
-			end_date: endDate,
-			event_names: params.event_names,
-			...filterByParams,
-		},
-		format: "JSON",
-	});
+	const executeQuery = async ({ query }: { query: string }) => {
+		const result = await ch.query({
+			query,
+			query_params: queryParams,
+			format: "JSON",
+		});
+		const resultJson =
+			(await result.json()) as ClickHouseResult<CountAndSumRow>;
+		return resultJson.data;
+	};
 
-	const resultJson = (await result.json()) as ClickHouseResult;
-	const rows = resultJson.data as Array<{
-		event_name: string;
-		count: string;
-		sum: string;
-	}>;
+	const executeHourlyFallback = async () => {
+		ctx.logger.warn("Daily analytics totals unavailable; using hourly rollup", {
+			type: "daily_rollup_fallback",
+			reason: "incomplete_daily_coverage",
+			orgId: org.id,
+			customerId: params.customer_id,
+		});
+		return executeQuery({
+			query: buildCountAndSumQuery({
+				source: "customer_hourly",
+				aggregateAll: Boolean(params.aggregateAll),
+				hasEntityId: Boolean(params.entity_id),
+			}),
+		});
+	};
+
+	let rows = await executeQuery({ query });
+
+	if (source === "customer_daily" && !hasCompleteDailyCoverage({ rows })) {
+		rows = await executeHourlyFallback();
+	}
 
 	const summary = rows.reduce(
 		(acc, row) => {
