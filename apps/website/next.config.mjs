@@ -20,7 +20,12 @@ const RB2B_HOSTS = [
   "https://a.usbrowserspeed.com",
   "https://alocdn.com",
   "https://pro.ip-api.com",
+  // *.liadm.com does not match the apex, which RB2B also calls.
+  "https://liadm.com",
   "https://*.liadm.com",
+  // Subdomain comes from the account's apiGateway config and is concatenated
+  // at runtime, so it never appears as a literal in the bundle.
+  "https://9xgnrndqve.execute-api.us-west-2.amazonaws.com",
 ];
 
 const rehypePrettyCodeOptions = {
