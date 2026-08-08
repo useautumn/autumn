@@ -18,6 +18,7 @@ import {
 	applyPreparedPlanLicenseSync,
 	validatePlanLicenseUpdate,
 } from "@/internal/licenses/actions/links/syncPlanLicenses.js";
+import { validatePooledItemsOnLicensePlan } from "@/internal/licenses/actions/links/validatePooledItemsOnLicensePlan.js";
 import { applyLicenseParentPropagation } from "@/internal/licenses/actions/propagation/applyLicenseParentPropagation.js";
 import { prepareLicenseParentPropagation } from "@/internal/licenses/actions/propagation/prepareLicenseParentPropagation.js";
 import { updateVariants } from "@/internal/product/actions/updateVariants/updateVariants.js";
@@ -357,6 +358,13 @@ export const updateProduct = async ({
 	const productWillVersion = productVersioningEligible && productChanged;
 	const willVersion =
 		force_version || billingControlsWillVersion || productWillVersion;
+	await validatePooledItemsOnLicensePlan({
+		db,
+		internalProductId: fullProduct.internal_id,
+		planId: fullProduct.id,
+		newItems: newProductV2.items,
+		currentItems: curProductV2.items,
+	});
 	const preparedLicenseSync = await prepareProductLicenseSync({
 		ctx,
 		fromInternalProductId: fullProduct.internal_id,
