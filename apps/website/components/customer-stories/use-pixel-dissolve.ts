@@ -1,7 +1,7 @@
 import { type RefObject, useEffect, useRef } from "react";
 
 export const PIXEL_CELL = 4;
-const SWEEP_MS = 520;
+const SWEEP_MS = 500;
 const DEFAULT_FROM = "#0A0A0A";
 const DIRECTION_BIAS = 0.5;
 
@@ -59,8 +59,13 @@ export type PixelDissolveOptions = {
 	width: number;
 	height: number;
 	revealKey: number;
-	// Colour the outgoing cells dissolve away from (defaults to the dark surface).
+	// Colour used by the pixel cells (defaults to the dark surface).
 	fromColor?: string;
+	// Optional colour for the left-hand strip that survives as the compact spine.
+	retainedColor?: string;
+	retainedWidth?: number;
+	// "reveal" removes a solid pixel layer; "cover" builds one over the content.
+	mode?: "reveal" | "cover";
 	// +1 sweeps right→left, -1 left→right.
 	direction?: number;
 	// Decorrelates the noise pattern between surfaces sharing a revealKey.
@@ -69,22 +74,31 @@ export type PixelDissolveOptions = {
 	// continuous sweep across neighbouring canvases instead of restarting locally.
 	trackX?: number;
 	trackWidth?: number;
+	onComplete?: () => void;
 };
 
-// Paints a canvas full of fromColor square cells (the outgoing surface) that
-// dissolve away cell by cell on each revealKey change, uncovering the new slide
-// beneath — so each pixel flips old-colour → new-slide, never through black.
+// Paints or removes square cells one by one. Reveal mode uncovers content below;
+// cover mode lets an outgoing surface disappear into the supplied colour.
 export function usePixelDissolve({
 	width,
 	height,
 	revealKey,
 	fromColor = DEFAULT_FROM,
+	retainedColor,
+	retainedWidth = 0,
+	mode = "reveal",
 	direction = 1,
 	seed,
 	trackX = 0,
 	trackWidth,
+	onComplete,
 }: PixelDissolveOptions): RefObject<HTMLCanvasElement | null> {
 	const canvasRef = useRef<HTMLCanvasElement | null>(null);
+	const onCompleteRef = useRef(onComplete);
+
+	useEffect(() => {
+		onCompleteRef.current = onComplete;
+	}, [onComplete]);
 
 	useEffect(() => {
 		const canvas = canvasRef.current;
@@ -111,23 +125,38 @@ export function usePixelDissolve({
 
 		const paint = (progress: number) => {
 			ctx.clearRect(0, 0, width, height);
-			ctx.fillStyle = fromColor;
-			for (let row = 0; row < rows; row++) {
-				for (let col = 0; col < cols; col++) {
-					if (thresholds[row * cols + col] > progress) {
-						ctx.fillRect(
-							col * PIXEL_CELL,
-							row * PIXEL_CELL,
-							PIXEL_CELL,
-							PIXEL_CELL,
-						);
+			const retainedCols = retainedColor
+				? Math.ceil(Math.min(retainedWidth, width) / PIXEL_CELL)
+				: 0;
+
+			const paintRange = (startCol: number, endCol: number, color: string) => {
+				ctx.fillStyle = color;
+				for (let row = 0; row < rows; row++) {
+					for (let col = startCol; col < endCol; col++) {
+						const threshold = thresholds[row * cols + col];
+						const shouldPaint =
+							mode === "cover" ? threshold <= progress : threshold > progress;
+						if (shouldPaint) {
+							ctx.fillRect(
+								col * PIXEL_CELL,
+								row * PIXEL_CELL,
+								PIXEL_CELL,
+								PIXEL_CELL,
+							);
+						}
 					}
 				}
+			};
+
+			if (retainedCols > 0 && retainedColor) {
+				paintRange(0, retainedCols, retainedColor);
 			}
+			paintRange(retainedCols, cols, fromColor);
 		};
 
 		if (prefersReducedMotion()) {
 			paint(1);
+			onCompleteRef.current?.();
 			return;
 		}
 
@@ -138,7 +167,11 @@ export function usePixelDissolve({
 			if (!start) start = now;
 			const progress = easeOut(Math.min((now - start) / SWEEP_MS, 1));
 			paint(progress);
-			if (progress < 1) raf = requestAnimationFrame(frame);
+			if (progress < 1) {
+				raf = requestAnimationFrame(frame);
+			} else {
+				onCompleteRef.current?.();
+			}
 		};
 		raf = requestAnimationFrame(frame);
 		return () => cancelAnimationFrame(raf);
@@ -147,6 +180,9 @@ export function usePixelDissolve({
 		height,
 		revealKey,
 		fromColor,
+		retainedColor,
+		retainedWidth,
+		mode,
 		direction,
 		seed,
 		trackX,
