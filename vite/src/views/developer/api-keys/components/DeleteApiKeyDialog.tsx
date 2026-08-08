@@ -1,4 +1,4 @@
-import type { ApiKey } from "@autumn/shared";
+import type { ApiKeyListItem } from "@autumn/shared";
 import {
 	Button,
 	Dialog,
@@ -9,9 +9,9 @@ import {
 	DialogTitle,
 	Input,
 } from "@autumn/ui";
+import { useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
-import { useDevQuery } from "@/hooks/queries/useDevQuery";
 import { DevService } from "@/services/DevService";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
 
@@ -20,11 +20,11 @@ export const DeleteApiKeyDialog = ({
 	setOpen,
 	open,
 }: {
-	apiKey: ApiKey;
+	apiKey: ApiKeyListItem;
 	setOpen: (open: boolean) => void;
 	open: boolean;
 }) => {
-	const { refetch } = useDevQuery();
+	const queryClient = useQueryClient();
 	const axiosInstance = useAxiosInstance();
 	const [confirmText, setConfirmText] = useState("");
 
@@ -47,7 +47,10 @@ export const DeleteApiKeyDialog = ({
 		try {
 			await DevService.deleteAPIKey(axiosInstance, apiKey.id);
 			setOpen(false);
-			await refetch();
+			await Promise.all([
+				queryClient.invalidateQueries({ queryKey: ["dev"] }),
+				queryClient.invalidateQueries({ queryKey: ["hidden-api-keys"] }),
+			]);
 		} catch (_error) {
 			toast.error("Failed to delete API key");
 		}
