@@ -1,17 +1,18 @@
-import type { Registry, RegistryEntry } from "../types.ts";
-import {
-	setupAgentWorktree,
-	autoSetupTestOrg,
-	autoSeedSlackInstall,
-} from "./setup.ts";
-import { ensureChatDatabase } from "./neon.ts";
 import { promoteAllUsersToAdmin } from "../commands/admin.ts";
+import type { Registry, RegistryEntry } from "../types.ts";
 import { ensureComposeStack, readNgrokTunnelUrl } from "./compose.ts";
-import { ensureReservedDomain, ngrokApiAvailable } from "./ngrok.ts";
-import { writeEnvLocalFiles } from "./env-files.ts";
 import { ensureEmulateRunning } from "./emulate.ts";
-import { log } from "./shell.ts";
+import { writeEnvLocalFiles } from "./env-files.ts";
+import { isHeadless } from "./headless.ts";
+import { ensureChatDatabase } from "./neon.ts";
+import { ensureReservedDomain, ngrokApiAvailable } from "./ngrok.ts";
 import { saveRegistry } from "./registry.ts";
+import {
+	autoSeedSlackInstall,
+	autoSetupTestOrg,
+	setupAgentWorktree,
+} from "./setup.ts";
+import { log } from "./shell.ts";
 
 export async function provisionWorktree({
 	entry,
@@ -57,7 +58,7 @@ export async function provisionWorktree({
 	}
 
 	writeEnvLocalFiles(current);
-	ensureEmulateRunning();
+	if (!isHeadless()) ensureEmulateRunning();
 
 	if (created) {
 		log("first provision — seeding test org");

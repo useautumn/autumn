@@ -5,6 +5,7 @@ import { PROJECT_ROOT } from "../constants.ts";
 import type { RegistryEntry } from "../types.ts";
 import { isProvisioned } from "./entry.ts";
 import { provisionedInfraEnv } from "./env-files.ts";
+import { isHeadless } from "./headless.ts";
 import { registerPortlessAliases } from "./portless.ts";
 import { portlessHttpsUrl } from "./ports.ts";
 import { fatal, log } from "./shell.ts";
@@ -32,11 +33,15 @@ function applyProvisionedDevEnv(
 	if (existsSync(portlessCa) && !next.NODE_EXTRA_CA_CERTS) {
 		next.NODE_EXTRA_CA_CERTS = portlessCa;
 	}
-	const aliases = registerPortlessAliases(worktreeNum);
-	next.BETTER_AUTH_URL = aliases.apiUrl;
-	next.CLIENT_URL = aliases.viteUrl;
-	next.VITE_BACKEND_URL = aliases.apiUrl;
-	next.VITE_FRONTEND_URL = aliases.viteUrl;
+	// Headless boxes have no portless binary and nothing resolves *.localhost;
+	// .env.local already carries plain localhost URLs there.
+	if (!isHeadless()) {
+		const aliases = registerPortlessAliases(worktreeNum);
+		next.BETTER_AUTH_URL = aliases.apiUrl;
+		next.CLIENT_URL = aliases.viteUrl;
+		next.VITE_BACKEND_URL = aliases.apiUrl;
+		next.VITE_FRONTEND_URL = aliases.viteUrl;
+	}
 	if (entry.ngrokUrl && !next.NGROK_URL) {
 		next.NGROK_URL = entry.ngrokUrl;
 	}
