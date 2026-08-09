@@ -56,10 +56,10 @@ function ensureAiSubmoduleSynced(): void {
 	}
 
 	log("syncing ai skills");
-	// Headless boxes have no folder picker, and syncMcps resolves the cloud root
-	// through one; `sync devin` covers skills + rules without it.
-	const syncArgs = isHeadless() ? ["sync", "devin"] : ["sync"];
-	const syncCode = shInherit("bun", syncArgs, { cwd: aiDir });
+	// Full sync everywhere: syncMcps now drops the cloud-root servers instead of
+	// aborting, so headless boxes get .mcp.json too. `sync devin` skipped it and
+	// left cloud workspaces with skills but no MCP servers.
+	const syncCode = shInherit("bun", ["sync"], { cwd: aiDir });
 	if (syncCode !== 0) {
 		fatal(`bun sync failed in ai submodule (exit ${syncCode})`);
 	}
