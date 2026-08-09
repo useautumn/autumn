@@ -22,6 +22,8 @@ if ! docker info >/dev/null 2>&1; then
     || { echo "[conductor] docker failed to start; see /tmp/dockerd.log" >&2; exit 1; }
 fi
 
-# `bun dw` provisions when needed and then starts the dev server, so this is
-# idempotent across restarts of the Run button.
-exec bun dw
+# `bun dw` with no args does NOT provision — cmdDefault falls through to a bare
+# startDev when the registry has no entry, which is every fresh workspace. Run
+# setup explicitly first; it is idempotent, so Run-button restarts are cheap.
+bun dw setup
+exec bun dw run
