@@ -28,17 +28,27 @@ export async function provisionWorktree({
 	if (current.branchName) ensureChatDatabase(current.branchName);
 
 	let reservedDomain: string | undefined;
+	let reservedViteDomain: string | undefined;
 	if (ngrokApiAvailable() && process.env.NGROK_AUTHTOKEN) {
 		const reserved = await ensureReservedDomain(
 			current.worktreeNum,
 			current.path,
 		);
+		// Separate domain for the dashboard — one ngrok agent forwards one port.
+		const reservedVite = await ensureReservedDomain(
+			current.worktreeNum,
+			current.path,
+			{ vite: true },
+		);
 		current = {
 			...current,
 			reservedDomainId: reserved.id,
 			ngrokUrl: `https://${reserved.domain}`,
+			reservedViteDomainId: reservedVite.id,
+			ngrokViteUrl: `https://${reservedVite.domain}`,
 		};
 		reservedDomain = reserved.domain;
+		reservedViteDomain = reservedVite.domain;
 		registry[cwd] = current;
 		saveRegistry(registry);
 	}
@@ -47,6 +57,7 @@ export async function provisionWorktree({
 		current.worktreeNum,
 		current.branchName,
 		reservedDomain,
+		reservedViteDomain,
 	);
 	if (ngrokEnabled && !reservedDomain) {
 		current = {
