@@ -40,6 +40,17 @@ for _ in $(seq 1 30); do
 done
 sudo docker version --format '{{.Server.Version}}'
 
+
+# --- docker compose plugin -------------------------------------------------
+# `dnf install docker` ships the engine only; without this, dw logs
+# "docker compose not available" and skips the entire infra stack.
+sudo mkdir -p /usr/libexec/docker/cli-plugins
+sudo curl -fsSL \
+  "https://github.com/docker/compose/releases/latest/download/docker-compose-linux-$(uname -m)" \
+  -o /usr/libexec/docker/cli-plugins/docker-compose
+sudo chmod +x /usr/libexec/docker/cli-plugins/docker-compose
+docker compose version
+
 # --- pre-pull the dw stack (~1.1GB; baked here, free per workspace) ---------
 # Tags omitted deliberately — `:latest` is the default, and an explicit tag got
 # mangled to `:late` somewhere between the config field and the daemon.
