@@ -248,9 +248,18 @@ async function startDev() {
 			// Forwards to the direct localhost port (not portless) so we avoid CA trust issues.
 			const stripeAvailable = Bun.spawnSync(["which", "stripe"]).exitCode === 0;
 			if (stripeAvailable) {
+				// Sandbox key only — never the live key. Passed via STRIPE_API_KEY so
+				// headless boxes need no `stripe login`, and via env rather than argv
+				// so it never shows up in `ps`.
+				const stripeEnv = {
+					...(process.env as Record<string, string>),
+					...(process.env.STRIPE_SANDBOX_SECRET_KEY
+						? { STRIPE_API_KEY: process.env.STRIPE_SANDBOX_SECRET_KEY }
+						: {}),
+				};
 				const auth = Bun.spawnSync(
 					["stripe", "customers", "list", "--limit", "1"],
-					{ stdout: "pipe", stderr: "pipe" },
+					{ stdout: "pipe", stderr: "pipe", env: stripeEnv },
 				);
 				if (auth.exitCode !== 0) {
 					const stderr = new TextDecoder().decode(auth.stderr);
@@ -283,6 +292,11 @@ async function startDev() {
 			cwd: projectRoot,
 			env: {
 				...process.env,
+				// Sandbox key only. `stripe listen` reads STRIPE_API_KEY, so no
+				// `stripe login` is needed on a headless box.
+				...(process.env.STRIPE_SANDBOX_SECRET_KEY
+					? { STRIPE_API_KEY: process.env.STRIPE_SANDBOX_SECRET_KEY }
+					: {}),
 				VITE_PORT: VITE_PORT.toString(),
 				SERVER_PORT: SERVER_PORT.toString(),
 				CHECKOUT_PORT: CHECKOUT_PORT.toString(),

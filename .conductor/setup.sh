@@ -8,10 +8,12 @@ set -euo pipefail
 
 if ! docker info >/dev/null 2>&1; then
   # setsid, not a bare `&`: a backgrounded dockerd dies with the setup script's
-  # process group when it exits, which is why the daemon was up during the build
-  # and gone by the time a workspace shell ran.
-  sudo systemctl start docker 2>/dev/null \
-    || sudo setsid dockerd >/tmp/dockerd.log 2>&1 </dev/null &
+  # process group, which is why the daemon was up during the machine build and
+  # gone by the time a workspace shell ran. Written as if/then because `a || b &`
+  # backgrounds the whole list rather than just the fallback.
+  if ! sudo systemctl start docker 2>/dev/null; then
+    sudo setsid dockerd >/tmp/dockerd.log 2>&1 </dev/null &
+  fi
   for _ in $(seq 1 30); do
     docker info >/dev/null 2>&1 && break
     sleep 2
