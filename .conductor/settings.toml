@@ -9,9 +9,8 @@ setup = "bash .conductor/setup.sh"
 archive = "bun dw teardown"
 run_mode = "concurrent"
 
-# Conductor writes an untracked settings.local.toml that shadows `scripts.setup`
-# above, so setup.sh never runs. Settings replace per key, and the local file
-# defines only `setup` — this stays ours, so provisioning lives in workspace.sh.
+# Provisioning lives in setup.sh (runs once at workspace creation); this only
+# starts the stack, so the Run button stays fast and repeatable.
 [scripts.run.dev]
 command = "bash .conductor/workspace.sh"
 default = true
