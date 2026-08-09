@@ -36,6 +36,13 @@ if ! docker compose version >/dev/null 2>&1; then
   docker compose version
 fi
 
+# Make interactive terminals feel like a local shell. Non-secret aliases/PATH
+# only — see the header in shellrc.sh.
+if ! grep -q 'conductor/shellrc.sh' "$HOME/.bashrc" 2>/dev/null; then
+  echo '[ -f "$HOME/autumn/.conductor/shellrc.sh" ] && . "$HOME/autumn/.conductor/shellrc.sh"' \
+    >> "$HOME/.bashrc"
+fi
+
 # `bun dw` with no args does NOT provision — cmdDefault falls through to a bare
 # startDev when the registry has no entry, which is every fresh workspace. Run
 # setup explicitly first; it is idempotent, so Run-button restarts are cheap.
