@@ -19,4 +19,12 @@ if ! docker info >/dev/null 2>&1; then
   done
 fi
 
+# setup.sh is still shadowed at runtime by an untracked settings.local.toml that
+# only does ai-sync, so a fresh workspace often arrives unprovisioned. Without
+# this, the Run button just exits 1 with "no provisioned worktree".
+if ! bun dw identify >/dev/null 2>&1; then
+  echo "[conductor] worktree not provisioned — running setup"
+  bun dw setup
+fi
+
 exec bun dw run
