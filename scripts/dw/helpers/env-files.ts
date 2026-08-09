@@ -14,6 +14,7 @@ import {
 } from "../constants.ts";
 import type { RegistryEntry } from "../types.ts";
 import { isProvisioned } from "./entry.ts";
+import { isHeadless } from "./headless.ts";
 import {
 	aliasesFor,
 	dragonflyPortFor,
@@ -103,7 +104,7 @@ function urlsForEntry(entry: RegistryEntry): {
 	apiUrl: string;
 	viteUrl: string;
 } {
-	if (isProvisioned(entry)) {
+	if (isProvisioned(entry) && !isHeadless()) {
 		const aliases = aliasesFor(entry.worktreeNum);
 		return { apiUrl: aliases.apiUrl, viteUrl: aliases.viteUrl };
 	}
