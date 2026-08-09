@@ -11,8 +11,8 @@ run_mode = "concurrent"
 
 # Conductor writes an untracked settings.local.toml that shadows `scripts.setup`
 # above, so setup.sh never runs. Settings replace per key, and the local file
-# defines only `setup` — this stays ours, so provisioning lives in run.sh.
+# defines only `setup` — this stays ours, so provisioning lives in workspace.sh.
 [scripts.run.dev]
-command = "bash .conductor/run.sh"
+command = "bash .conductor/workspace.sh"
 default = true
 icon = "play"
