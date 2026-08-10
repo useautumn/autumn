@@ -1,6 +1,6 @@
 import { type AttachConfig, ErrCode } from "@autumn/shared";
 import type { Logger } from "@server/external/logtail/logtailUtils";
-import type Stripe from "stripe";
+import Stripe from "stripe";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 import { getCusPaymentMethod } from "@/external/stripe/stripeCusUtils.js";
 import {
@@ -182,12 +182,19 @@ export const createStripeSub2 = async ({
 		console.log("Decline code:", error.decline_code);
 		console.log("Error original stack:", error.stack);
 
+		// Stripe rejects caller-fixable params (unactivated payment method type,
+		// currency mismatch, declined card) with 4xx — don't mask those as 500.
+		const stripeStatusCode =
+			error instanceof Stripe.errors.StripeError ? error.statusCode : undefined;
+		const isClientError =
+			!!stripeStatusCode && stripeStatusCode >= 400 && stripeStatusCode < 500;
+
 		throw new RecaseError({
 			code: ErrCode.CreateStripeSubscriptionFailed,
 			message: `Create stripe subscription failed ${
 				error.code ? `(${error.code})` : ""
 			}: ${error.message || ""}`,
-			statusCode: 500,
+			statusCode: isClientError ? stripeStatusCode : 500,
 		});
 	}
 };
