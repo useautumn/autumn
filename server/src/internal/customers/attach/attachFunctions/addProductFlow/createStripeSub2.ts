@@ -60,6 +60,20 @@ export const createStripeSub2 = async ({
 	// Custom PMs (Vercel, etc.) use external payment confirmation.
 	const isCustomPaymentMethod = paymentMethod?.type === "custom";
 
+	const invoicePaymentMethodTypes = invoiceOnly
+		? org.config.allowed_payment_methods
+		: undefined;
+
+	const paymentSettings: Stripe.SubscriptionCreateParams.PaymentSettings = {
+		// Save the custom PM on the sub so webhook handlers and renewals can find it.
+		...(isCustomPaymentMethod && {
+			save_default_payment_method: "on_subscription" as const,
+		}),
+		...(invoicePaymentMethodTypes?.length && {
+			payment_method_types: invoicePaymentMethodTypes,
+		}),
+	};
+
 	try {
 		// Skip auto_tax in invoice mode: send_invoice has no
 		// address-collection UI so Stripe Tax rejects.
@@ -97,12 +111,8 @@ export const createStripeSub2 = async ({
 				...buildAutumnSubscriptionMetadata({ actionSource: "v1Attach" }),
 			},
 
-			// Save the custom PM on the sub so webhook handlers and renewals
-			// can find it.
-			...(isCustomPaymentMethod && {
-				payment_settings: {
-					save_default_payment_method: "on_subscription",
-				},
+			...(Object.keys(paymentSettings).length > 0 && {
+				payment_settings: paymentSettings,
 			}),
 
 			trial_settings:

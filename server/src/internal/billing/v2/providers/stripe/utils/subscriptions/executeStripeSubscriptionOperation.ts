@@ -21,10 +21,23 @@ export const executeStripeSubscriptionOperation = async ({
 	const stripeClient = createStripeCli({ org, env });
 	const { paymentMethod } = billingContext;
 
+	// Merge onto the action's own payment_settings so the custom-PM
+	// save_default_payment_method survives.
+	const actionPaymentSettings =
+		"params" in subscriptionAction
+			? subscriptionAction.params.payment_settings
+			: undefined;
+
 	const invoiceModeParams = billingContext.invoiceMode
 		? {
 				collection_method: "send_invoice" as const,
 				days_until_due: billingContext.invoiceMode.daysUntilDue ?? 30,
+				...(billingContext.invoiceMode.paymentMethodTypes?.length && {
+					payment_settings: {
+						...actionPaymentSettings,
+						payment_method_types: billingContext.invoiceMode.paymentMethodTypes,
+					},
+				}),
 			}
 		: {};
 

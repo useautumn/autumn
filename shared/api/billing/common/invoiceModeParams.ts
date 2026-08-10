@@ -1,3 +1,4 @@
+import { InvoicePaymentMethodSchema } from "@models/orgModels/orgConfig";
 import { z } from "zod/v4";
 export const InvoiceModeParamsSchema = z
 	.object({
@@ -21,6 +22,13 @@ export const InvoiceModeParamsSchema = z
 			description:
 				"Number of days the customer has to pay the invoice before it is due (Stripe days_until_due).",
 		}),
+		allowed_payment_methods: z
+			.array(InvoicePaymentMethodSchema)
+			.optional()
+			.meta({
+				description:
+					"Payment methods offered on the invoices this subscription generates. Overrides the org-level setting for this attach, and only applies in invoice mode.",
+			}),
 	})
 	.meta({
 		title: "InvoiceMode",
