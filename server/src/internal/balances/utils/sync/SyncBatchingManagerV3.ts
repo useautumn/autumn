@@ -187,12 +187,15 @@ export class SyncBatchingManagerV3 {
 
 	async flush(): Promise<void> {
 		const batchKeys = Array.from(this.customerBatches.keys());
-		await Promise.all(
-			batchKeys.map((batchKey) => this.runCustomerBatch({ batchKey })),
-		);
-		// Batches delete their map entry before awaiting Redis/queue work, so
-		// also await executions that were already mid-flight.
-		await Promise.all(Array.from(this.inFlightExecutions));
+		// Settle pending and mid-flight executions together: batches delete
+		// their map entry before awaiting Redis/queue work, and a fail-fast
+		// await would abandon the rest on the first rejection.
+		const results = await Promise.allSettled([
+			...batchKeys.map((batchKey) => this.runCustomerBatch({ batchKey })),
+			...Array.from(this.inFlightExecutions),
+		]);
+		const failure = results.find((r) => r.status === "rejected");
+		if (failure && failure.status === "rejected") throw failure.reason;
 	}
 
 	private inFlightExecutions = new Set<Promise<void>>();
