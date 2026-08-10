@@ -99,8 +99,12 @@ const init = async ({
 
 	// Kicked off early, awaited (bounded) just before listen: a fork must not
 	// serve its first requests against still-connecting redis clients.
+	// Each arm catches its own failure: a regional rejection must not
+	// short-circuit the wait for healthy dedicated org connections.
 	const redisWarmup = Promise.all([
-		warmupRegionalRedis(),
+		warmupRegionalRedis().catch((error) => {
+			console.error("[Redis] regional warmup failed -", error);
+		}),
 		preWarmOrgRedisConnections({ db }).catch((error) => {
 			logger.warn("[OrgRedis] Warmup failed", { error });
 		}),

@@ -1,4 +1,4 @@
-import { describe, expect, mock, test } from "bun:test";
+import { afterAll, describe, expect, mock, test } from "bun:test";
 import { EventEmitter } from "node:events";
 
 class FakeRedis extends EventEmitter {
@@ -18,6 +18,21 @@ const fakeOrg = (id: string) => ({
 	},
 });
 
+// Capture the real modules before mocking so afterAll can restore them —
+// bun's mock.module leaks across test files otherwise.
+const realOrgService = {
+	...(await import("@/internal/orgs/OrgService.js")),
+};
+const realEncryptUtils = {
+	...(await import("@/utils/encryptUtils.js")),
+};
+const realResolveRedisV2 = {
+	...(await import("@/external/redis/resolveRedisV2.js")),
+};
+const realInitRedis = {
+	...(await import("@/external/redis/initRedis.js")),
+};
+
 mock.module("@/internal/orgs/OrgService.js", () => ({
 	OrgService: {
 		listWithRedisConfig: async () => [fakeOrg("org-a"), fakeOrg("org-b")],
@@ -26,9 +41,6 @@ mock.module("@/internal/orgs/OrgService.js", () => ({
 mock.module("@/utils/encryptUtils.js", () => ({
 	decryptData: (value: string) => value,
 	encryptData: (value: string) => value,
-}));
-mock.module("@/external/aws/ecs/onAwsEcs.js", () => ({
-	onAwsEcs: () => false,
 }));
 mock.module("@/external/redis/resolveRedisV2.js", () => ({
 	resolveRedisV2: () => new FakeRedis(),
@@ -41,6 +53,13 @@ mock.module("@/external/redis/initRedis.js", () => ({
 		return instance;
 	},
 }));
+
+afterAll(() => {
+	mock.module("@/internal/orgs/OrgService.js", () => realOrgService);
+	mock.module("@/utils/encryptUtils.js", () => realEncryptUtils);
+	mock.module("@/external/redis/resolveRedisV2.js", () => realResolveRedisV2);
+	mock.module("@/external/redis/initRedis.js", () => realInitRedis);
+});
 
 describe("preWarmOrgRedisConnections", () => {
 	test("resolves only once every dedicated connection is ready", async () => {
