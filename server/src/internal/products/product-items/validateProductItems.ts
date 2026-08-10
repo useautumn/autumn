@@ -317,9 +317,9 @@ const validateProductItem = ({
 
 		// Validate rollover max amount
 		if (rollover.max !== null && typeof rollover.max === "number") {
-			if (rollover.max < 0) {
+			if (rollover.max <= 0) {
 				throw new RecaseError({
-					message: "Rollover maximum amount must be positive",
+					message: "Rollover maximum amount must be greater than 0",
 					code: ErrCode.InvalidInputs,
 					statusCode: StatusCodes.BAD_REQUEST,
 				});

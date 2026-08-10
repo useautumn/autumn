@@ -5,6 +5,7 @@ import {
 import { PlanSheetFooter } from "@/components/v2/sheets/PlanSheetFooter";
 import { useProductItemContext } from "@/views/products/product/product-item/ProductItemContext";
 import { checkItemCurrenciesValid } from "../../utils/currencyUtils";
+import { checkItemRolloverValid } from "../../utils/rolloverUtils";
 
 export function SheetFooterActions({
 	isDirty,
@@ -31,6 +32,7 @@ export function SheetFooterActions({
 
 	const handleUpdateItem = async () => {
 		if (item && !checkItemCurrenciesValid(item)) return;
+		if (item && !checkItemRolloverValid(item)) return;
 		await onBeforeCommit?.();
 		await handleUpdateProductItem();
 	};
