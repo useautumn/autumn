@@ -1,5 +1,5 @@
 import type { Feature, FullCusEntWithFullCusProduct } from "@autumn/shared";
-import { Tabs, TabsList, TabsTrigger } from "@autumn/ui";
+import { SectionTag, Tabs, TabsList, TabsTrigger } from "@autumn/ui";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import { cn } from "@/lib/utils";
 import { flagPillClassName, OVERFLOW_PILL_CLASSNAME } from "./FlagPill";
@@ -63,14 +63,14 @@ export function CustomerFlagsSection({
 
 	return (
 		<div className="flex flex-col">
-			<div className="flex items-center mb-3">
-				<Tabs
-					value={showingCatalog ? "catalog" : "enabled"}
-					onValueChange={(value) => setShowingCatalog(value === "catalog")}
-				>
-					<TabsList className="h-auto gap-0.5 p-0.5 rounded-lg bg-muted dark:bg-muted">
-						{FLAG_VIEWS.map(({ value, label }) =>
-							value === "catalog" && availableFeatures.length === 0 ? null : (
+			{availableFeatures.length > 0 ? (
+				<div className="flex items-center mb-3">
+					<Tabs
+						value={showingCatalog ? "catalog" : "enabled"}
+						onValueChange={(value) => setShowingCatalog(value === "catalog")}
+					>
+						<TabsList className="h-auto gap-0.5 p-0.5 rounded-lg bg-muted dark:bg-muted">
+							{FLAG_VIEWS.map(({ value, label }) => (
 								<TabsTrigger
 									key={value}
 									value={value}
@@ -78,11 +78,13 @@ export function CustomerFlagsSection({
 								>
 									{label}
 								</TabsTrigger>
-							),
-						)}
-					</TabsList>
-				</Tabs>
-			</div>
+							))}
+						</TabsList>
+					</Tabs>
+				</div>
+			) : (
+				<SectionTag>Flags</SectionTag>
+			)}
 
 			<div ref={containerRef} className="relative">
 				{/* Always mounted — gating this on the view would leave the count stale
