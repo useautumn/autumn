@@ -41,8 +41,20 @@ export const repointLicensePoolsForPage = async ({
 			AND pool.license_internal_product_id = ${licenseInternalProductId}
 			AND pool.plan_license_id IS DISTINCT FROM ${planLicenseId}
 			AND cp.internal_customer_id = ANY(${sql.param(internalCustomerIds)}::text[])
-			AND cp.status IN (${sqlList({ values: [...MIGRATABLE_STATUSES] })})
 			AND ${operationScopeSql({ scope })}
+			-- A link_id outlives plan transitions, so predecessor pools linger.
+			-- Repoint only the one the candidate select will read back.
+			AND pool.id = (
+				SELECT live.id
+				FROM customer_licenses AS live
+				JOIN customer_products AS live_parent
+					ON live_parent.id = live.parent_customer_product_id
+				WHERE live.link_id = pool.link_id
+					AND live.license_internal_product_id = ${licenseInternalProductId}
+				ORDER BY (live_parent.status IN (${sqlList({ values: [...MIGRATABLE_STATUSES] })})) DESC,
+					live.created_at DESC, live.id DESC
+				LIMIT 1
+			)
 		RETURNING pool.id
 	`);
 

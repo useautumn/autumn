@@ -16,7 +16,6 @@ export type BatchMigrationRejectionCode =
 	| "base_price_customize"
 	| "priced_add_item"
 	| "unsupported_upsert_licenses"
-	| "license_entitlement_unresolved"
 	| "unsupported_plan_filter"
 	// Group-level (compute output guards)
 	| "no_matched_products"

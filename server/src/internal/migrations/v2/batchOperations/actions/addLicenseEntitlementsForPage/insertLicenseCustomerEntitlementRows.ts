@@ -1,4 +1,4 @@
-import { CusProductStatus, MIGRATABLE_STATUSES } from "@autumn/shared";
+import { MIGRATABLE_STATUSES } from "@autumn/shared";
 import { sql } from "drizzle-orm";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 import { sqlList } from "@/internal/billing/v2/actions/batchTransition/execute/sql/batchTransitionSqlUtils.js";
@@ -91,7 +91,7 @@ export const insertLicenseCustomerEntitlementRows = async ({
 				new_row.customer_id,
 				new_row.feature_id,
 				NULL,
-				(assignment.status = ${CusProductStatus.Expired})
+				false
 			FROM new_rows AS new_row
 			-- Re-assert at insert time: assignments whose row changed since the
 			-- select (released, expired) drop out.

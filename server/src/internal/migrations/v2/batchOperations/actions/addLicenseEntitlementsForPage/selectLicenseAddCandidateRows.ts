@@ -110,7 +110,7 @@ export const selectLicenseAddCandidateRows = async ({
 			WHERE pool.link_id = assignment.customer_license_link_id
 				AND pool.license_internal_product_id = ${licenseInternalProductId}
 			ORDER BY (pool_parent.status IN (${sqlList({ values: [...MIGRATABLE_STATUSES] })})) DESC,
-				pool.created_at DESC
+				pool.created_at DESC, pool.id DESC
 			LIMIT 1
 		) AS pool ON true
 		INNER JOIN customer_products AS cp

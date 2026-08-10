@@ -142,6 +142,37 @@ test.concurrent(
 			}
 		}
 
+		// Replay: the migration must be idempotent. pollUntil returns on FIRST
+		// convergence, so a duplicate row needs an exact count after re-running.
+		await runChunkedMigration({
+			ctx,
+			migrationClient: autumnV2_2,
+			migrationId: `${idPrefix}-migration-replay`,
+			filter: { customer: { plan: { plan_id: parent.id, custom: false } } },
+			operations: {
+				customer: [
+					{
+						type: "update_plan",
+						plan_filter: { plan_id: parent.id, custom: false },
+						customize: {
+							upsert_licenses: [
+								{
+									license_plan_id: devSeat.id,
+									customize: {
+										add_items: [
+											itemsV2.monthlyWords({ included: ADDED_WORDS }),
+										],
+									},
+								},
+							],
+						},
+					},
+				],
+			},
+			noBillingChanges: true,
+		});
+		expect(await readAssignmentWordRows()).toHaveLength(ASSIGNED_SEATS);
+
 		const customerV3 = await autumnV1.customers.get<ApiCustomerV3>(customerId);
 		await expectCustomerInvoiceCorrect({ customer: customerV3, count: 1 });
 	},

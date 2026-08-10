@@ -84,15 +84,17 @@ export const ensurePlanLicenses: PrepareModule<
 				const addItems = entry.customize?.add_items ?? [];
 				if (addItems.length === 0) continue;
 
-				const licenseProduct = await getFullLicenseProduct({
-					ctx,
-					idOrInternalId: entry.license_plan_id,
-				});
-
 				for (const parentProduct of parentProducts) {
 					const catalogLink = parentProduct.licenses?.find(
 						(link) => link.product.id === entry.license_plan_id,
 					);
+					// The link pins a version; only an unlinked plan resolves to latest.
+					const licenseProduct =
+						catalogLink?.product ??
+						(await getFullLicenseProduct({
+							ctx,
+							idOrInternalId: entry.license_plan_id,
+						}));
 					const hash = hashJson({ value: { entry } });
 					const planLicenseId = planLicenseIdFor({
 						scopeId,

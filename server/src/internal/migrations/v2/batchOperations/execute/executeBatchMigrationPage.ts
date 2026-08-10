@@ -88,6 +88,9 @@ export const executeBatchMigrationPage = async ({
 				now,
 				phases,
 			});
+			for (const id of result.excludedInternalCustomerIds) {
+				excludedIds.add(id);
+			}
 			insertedItems.push(...result.insertedItems);
 			ctx.logger.debug("batch-migration: add license operation", {
 				data: {
@@ -97,6 +100,7 @@ export const executeBatchMigrationPage = async ({
 					candidateCount: result.candidateCount,
 					affected: result.affected,
 					repointedPools: result.repointedPools,
+					excluded: result.excludedInternalCustomerIds.length,
 				},
 			});
 		}

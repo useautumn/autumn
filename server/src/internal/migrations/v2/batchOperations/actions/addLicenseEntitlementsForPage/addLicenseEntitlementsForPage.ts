@@ -24,6 +24,8 @@ export type AddLicenseEntitlementsForPageResult = {
 	candidateCount: number;
 	repointedPools: number;
 	insertedItems: BatchMigrationInsertedItem[];
+	/** Customers a cycle rung refused — routed to skipped, as the owned path does. */
+	excludedInternalCustomerIds: string[];
 };
 
 /**
@@ -50,6 +52,7 @@ export const addLicenseEntitlementsForPage = async ({
 	candidateRowBatchSize?: number;
 }): Promise<AddLicenseEntitlementsForPageResult> => {
 	const insertedItems: BatchMigrationInsertedItem[] = [];
+	const excludedIds = new Set<string>();
 	const resetting = isResettingEntitlement({ entitlement: add.entitlement });
 
 	// Whole-page, so it commits before any candidate select reads the pool —
@@ -98,17 +101,22 @@ export const addLicenseEntitlementsForPage = async ({
 			if (candidates.length === 0) return candidates;
 			assertWithinCeiling(candidates.length);
 
-			const enrichedRows = resetting
+			const enriched = resetting
 				? enrichCustomerEntitlementCycles({
 						candidates,
 						entitlement: add.entitlement,
 						now,
-					}).rows
-				: candidates.map((candidate) => ({
-						...candidate,
-						resetCycleAnchor: null,
-						nextResetAt: null,
-					}));
+					})
+				: null;
+			for (const id of enriched?.excludedInternalCustomerIds ?? [])
+				excludedIds.add(id);
+			const enrichedRows =
+				enriched?.rows ??
+				candidates.map((candidate) => ({
+					...candidate,
+					resetCycleAnchor: null,
+					nextResetAt: null,
+				}));
 			const insertableRows = enrichedRows.map((row) => ({
 				...row,
 				id: generateId("cus_ent"),
@@ -153,5 +161,6 @@ export const addLicenseEntitlementsForPage = async ({
 		candidateCount: rowCount,
 		repointedPools,
 		insertedItems,
+		excludedInternalCustomerIds: [...excludedIds],
 	};
 };

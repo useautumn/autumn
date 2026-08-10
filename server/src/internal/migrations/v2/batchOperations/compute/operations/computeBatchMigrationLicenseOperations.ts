@@ -99,17 +99,6 @@ export const computeBatchMigrationLicenseOperations = ({
 				entitlements: [entitlement],
 				features,
 			});
-			if (!enriched) {
-				rejections.push({
-					code: "license_entitlement_unresolved",
-					opIndex,
-					planId: fromProduct.id,
-					message:
-						"prepared license entitlement references a feature missing from the org.",
-					details: { licensePlanId: entry.license_plan_id },
-				});
-				continue;
-			}
 
 			if (enriched.entity_feature_id) {
 				rejections.push({
