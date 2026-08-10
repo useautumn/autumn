@@ -12,8 +12,8 @@ describe("getServerForkCount", () => {
 		else process.env.SERVER_FORK_COUNT = saved;
 	});
 
-	test("defaults to 3", () => {
-		expect(getServerForkCount()).toBe(3);
+	test("defaults to 4", () => {
+		expect(getServerForkCount()).toBe(4);
 	});
 
 	test("honors a valid override", () => {
@@ -23,17 +23,17 @@ describe("getServerForkCount", () => {
 
 	test("clamps garbage, zero, negatives, and absurd values to sane bounds", () => {
 		process.env.SERVER_FORK_COUNT = "0";
-		expect(getServerForkCount()).toBe(3);
+		expect(getServerForkCount()).toBe(4);
 		process.env.SERVER_FORK_COUNT = "-2";
-		expect(getServerForkCount()).toBe(3);
+		expect(getServerForkCount()).toBe(4);
 		process.env.SERVER_FORK_COUNT = "not-a-number";
-		expect(getServerForkCount()).toBe(3);
+		expect(getServerForkCount()).toBe(4);
 		process.env.SERVER_FORK_COUNT = "64";
 		expect(getServerForkCount()).toBe(6);
 	});
 
 	test("fractional values fall back to the default", () => {
 		process.env.SERVER_FORK_COUNT = "2.9";
-		expect(getServerForkCount()).toBe(3);
+		expect(getServerForkCount()).toBe(4);
 	});
 });

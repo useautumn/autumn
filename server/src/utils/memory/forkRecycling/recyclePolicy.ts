@@ -87,7 +87,7 @@ const nonNegativeOr = (raw: string | undefined, fallback: number): number => {
  *  overshoot) + primary can OOM a 16GB task; revisit if the threshold drops. */
 export const getServerForkCount = (): number => {
 	const value = Number(process.env.SERVER_FORK_COUNT);
-	if (!Number.isInteger(value) || value < 1) return 3;
+	if (!Number.isInteger(value) || value < 1) return 4;
 	return Math.min(6, value);
 };
 
