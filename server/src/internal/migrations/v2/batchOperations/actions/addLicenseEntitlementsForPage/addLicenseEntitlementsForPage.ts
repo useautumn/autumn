@@ -13,6 +13,7 @@ import {
 } from "../../execute/utils/pagePhaseTimings.js";
 import type { OperationScope } from "../../scope/operationScope.js";
 import type { BatchMigrationExecutionAddLicense } from "../../types/batchMigrationExecutionPlan.js";
+import { enrichCustomerEntitlementCycles } from "../../utils/enrichCustomerEntitlementCycles.js";
 import { insertLicenseCustomerEntitlementRows } from "./insertLicenseCustomerEntitlementRows.js";
 import { repointLicensePoolsForPage } from "./repointLicensePoolsForPage.js";
 import { selectLicenseAddCandidateRows } from "./selectLicenseAddCandidateRows.js";
@@ -26,9 +27,8 @@ export type AddLicenseEntitlementsForPageResult = {
 
 /**
  * Points each matched parent's pool at the prepared link, then fans that
- * link's entitlement onto every live assignment under it. Non-resetting only,
- * so there are no cycles to resolve — the anchor ladder that governs owned
- * rows reads columns an assignment does not carry.
+ * link's entitlement onto every live assignment under it, each resolving its
+ * own reset cycle from the parent it bills with.
  */
 export const addLicenseEntitlementsForPage = async ({
 	db,
@@ -87,7 +87,7 @@ export const addLicenseEntitlementsForPage = async ({
 						db: transaction,
 						internalCustomerIds,
 						scope,
-						internalFeatureId: add.entitlement.internal_feature_id,
+						entitlement: add.entitlement,
 						licenseInternalProductId: add.licenseInternalProductId,
 						afterCustomerProductId,
 						limit,
@@ -96,7 +96,12 @@ export const addLicenseEntitlementsForPage = async ({
 			if (candidates.length === 0) return candidates;
 			assertWithinCeiling(candidates.length);
 
-			const insertableRows = candidates.map((row) => ({
+			const { rows: enrichedRows } = enrichCustomerEntitlementCycles({
+				candidates,
+				entitlement: add.entitlement,
+				now,
+			});
+			const insertableRows = enrichedRows.map((row) => ({
 				...row,
 				id: generateId("cus_ent"),
 			}));
@@ -123,7 +128,7 @@ export const addLicenseEntitlementsForPage = async ({
 					featureId: row.featureId,
 					granted: add.initialState.granted,
 					unlimited: add.initialState.unlimited === true,
-					nextResetAt: null,
+					nextResetAt: row.nextResetAt,
 					status: row.status,
 					startsAt: row.startsAt,
 					canceledAt: row.canceledAt,

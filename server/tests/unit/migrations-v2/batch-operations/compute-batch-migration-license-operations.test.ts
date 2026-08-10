@@ -108,7 +108,7 @@ describe("computeBatchMigrationLicenseOperations", () => {
 		expect(operations[0]?.initialState.tracksBalance).toBe(false);
 	});
 
-	test("rejects a resetting entitlement instead of inserting a row that never resets", () => {
+	test("lowers a resetting entitlement with a tracked balance", () => {
 		const { operations, rejections } = computeBatchMigrationLicenseOperations({
 			migration: buildMigration({ entitlement: meteredEntitlement }),
 			op,
@@ -117,12 +117,9 @@ describe("computeBatchMigrationLicenseOperations", () => {
 			features: [messagesFeature],
 		});
 
-		expect(operations).toHaveLength(0);
-		expect(rejections).toHaveLength(1);
-		expect(rejections[0]?.code).toBe("resetting_license_entitlement");
-		expect(rejections[0]?.details).toMatchObject({
-			licensePlanId: LICENSE_PLAN_ID,
-			featureId: messagesFeature.id,
-		});
+		expect(rejections).toHaveLength(0);
+		expect(operations).toHaveLength(1);
+		expect(operations[0]?.initialState.tracksBalance).toBe(true);
+		expect(operations[0]?.initialState.granted).toBe(100);
 	});
 });

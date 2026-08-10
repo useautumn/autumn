@@ -1,4 +1,10 @@
-import { CusProductStatus, MIGRATABLE_STATUSES } from "@autumn/shared";
+import {
+	BillingInterval,
+	CusProductStatus,
+	EntInterval,
+	type EntitlementWithFeature,
+	MIGRATABLE_STATUSES,
+} from "@autumn/shared";
 import { sql } from "drizzle-orm";
 import { z } from "zod/v4";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
@@ -25,6 +31,10 @@ const CandidateRowSchema = z.object({
 	canceledAt: nullableNumeric,
 	endedAt: nullableNumeric,
 	trialEndsAt: nullableNumeric,
+	isPaidRecurring: z.boolean(),
+	billingCycleAnchor: nullableNumeric,
+	subscriptionCycleAnchor: nullableNumeric,
+	siblingResetCycleAnchor: nullableNumeric,
 });
 
 export type LicenseCandidateRow = z.infer<typeof CandidateRowSchema>;
@@ -40,7 +50,7 @@ export const selectLicenseAddCandidateRows = async ({
 	db,
 	internalCustomerIds,
 	scope,
-	internalFeatureId,
+	entitlement,
 	licenseInternalProductId,
 	afterCustomerProductId,
 	limit,
@@ -48,12 +58,15 @@ export const selectLicenseAddCandidateRows = async ({
 	db: DrizzleCli;
 	internalCustomerIds: string[];
 	scope: OperationScope;
-	internalFeatureId: string;
+	entitlement: EntitlementWithFeature;
 	licenseInternalProductId: string;
 	afterCustomerProductId?: string;
 	limit: number;
 }): Promise<LicenseCandidateRow[]> => {
 	if (internalCustomerIds.length === 0) return [];
+
+	const targetInterval = String(entitlement.interval ?? EntInterval.Lifetime);
+	const targetIntervalCount = entitlement.interval_count ?? 1;
 
 	const rows = await db.execute(sql`
 		SELECT
@@ -69,7 +82,20 @@ export const selectLicenseAddCandidateRows = async ({
 			assignment.starts_at AS "startsAt",
 			assignment.canceled_at AS "canceledAt",
 			assignment.ended_at AS "endedAt",
-			assignment.trial_ends_at AS "trialEndsAt"
+			assignment.trial_ends_at AS "trialEndsAt",
+			EXISTS (
+				SELECT 1
+				FROM customer_prices AS customer_price
+				INNER JOIN prices AS price ON price.id = customer_price.price_id
+				WHERE customer_price.customer_product_id = assignment.id
+					AND price.config->>'interval' IS DISTINCT FROM ${BillingInterval.OneOff}
+			) AS "isPaidRecurring",
+			COALESCE(
+				assignment.billing_cycle_anchor,
+				cp.billing_cycle_anchor
+			) AS "billingCycleAnchor",
+			sub_anchor.billing_cycle_anchor_ms AS "subscriptionCycleAnchor",
+			sibling.reset_cycle_anchor AS "siblingResetCycleAnchor"
 		FROM customer_products AS assignment
 		JOIN LATERAL (
 			SELECT pool.*
@@ -94,10 +120,34 @@ export const selectLicenseAddCandidateRows = async ({
 			ON customer.internal_id = assignment.internal_customer_id
 		LEFT JOIN entities AS entity
 			ON entity.internal_id = assignment.internal_entity_id
+		-- Anchors are synced in SECONDS; the ladder is ms throughout.
+		LEFT JOIN LATERAL (
+			SELECT subscription.billing_cycle_anchor_seconds * 1000 AS billing_cycle_anchor_ms
+			FROM UNNEST(COALESCE(cp.subscription_ids, ARRAY[]::text[])) AS cp_subscription(stripe_id)
+			INNER JOIN subscriptions AS subscription
+				ON subscription.stripe_id = cp_subscription.stripe_id
+			WHERE subscription.billing_cycle_anchor_seconds IS NOT NULL
+			ORDER BY subscription.created_at, subscription.id
+			LIMIT 1
+		) AS sub_anchor ON true
+		LEFT JOIN LATERAL (
+			SELECT sibling_entitlement.reset_cycle_anchor
+			FROM customer_entitlements AS sibling_entitlement
+			INNER JOIN entitlements AS sibling_definition
+				ON sibling_definition.id = sibling_entitlement.entitlement_id
+			WHERE sibling_entitlement.customer_product_id = assignment.id
+				AND NOT sibling_entitlement.separate_interval
+				AND sibling_entitlement.reset_cycle_anchor IS NOT NULL
+				AND sibling_entitlement.next_reset_at IS NOT NULL
+				AND COALESCE(sibling_definition.interval, ${EntInterval.Lifetime}) = ${targetInterval}
+				AND COALESCE(sibling_definition.interval_count, 1) = ${targetIntervalCount}
+			ORDER BY sibling_entitlement.created_at, sibling_entitlement.id
+			LIMIT 1
+		) AS sibling ON true
 		WHERE assignment.internal_customer_id = ANY(${sql.param(internalCustomerIds)}::text[])
 			AND assignment.internal_entity_id IS NOT NULL
 			AND assignment.status IN (${sqlList({ values: [...MIGRATABLE_STATUSES] })})
-			AND e.internal_feature_id = ${internalFeatureId}
+			AND e.internal_feature_id = ${entitlement.internal_feature_id}
 			AND ${operationScopeSql({ scope })}
 			${afterCustomerProductId ? sql`AND assignment.id > ${afterCustomerProductId}` : sql``}
 			AND NOT EXISTS (

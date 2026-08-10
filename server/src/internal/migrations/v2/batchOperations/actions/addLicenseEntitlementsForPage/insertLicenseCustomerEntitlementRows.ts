@@ -3,16 +3,18 @@ import { sql } from "drizzle-orm";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 import { sqlList } from "@/internal/billing/v2/actions/batchTransition/execute/sql/batchTransitionSqlUtils.js";
 import type { CustomerEntitlementInitialState } from "../../types/index.js";
+import type { EnrichedCycleCandidate } from "../../utils/enrichCustomerEntitlementCycles.js";
 import type { LicenseCandidateRow } from "./selectLicenseAddCandidateRows.js";
 
-export type InsertableLicenseRow = LicenseCandidateRow & { id: string };
+export type InsertableLicenseRow = LicenseCandidateRow &
+	Pick<EnrichedCycleCandidate, "resetCycleAnchor" | "nextResetAt"> & {
+		id: string;
+	};
 
 /**
- * Set-based insert onto assignment rows. Entitlement fields ride the recordset
- * rather than binding as scalars: each customized link carries its own row.
- *
- * Cycle columns are NULL because compute rejects resetting entitlements — an
- * assignment has no billing cycle of its own to anchor against.
+ * Set-based insert onto assignment rows. Entitlement and cycle fields ride the
+ * recordset rather than binding as scalars: each customized link carries its
+ * own row, and each assignment resolves its own cycle.
  */
 export const insertLicenseCustomerEntitlementRows = async ({
 	db,
@@ -37,6 +39,8 @@ export const insertLicenseCustomerEntitlementRows = async ({
 			entitlement_id: row.entitlementId,
 			internal_feature_id: row.internalFeatureId,
 			feature_id: row.featureId,
+			reset_cycle_anchor: row.resetCycleAnchor,
+			next_reset_at: row.nextResetAt,
 		})),
 	);
 
@@ -51,7 +55,9 @@ export const insertLicenseCustomerEntitlementRows = async ({
 				internal_entity_id text,
 				entitlement_id text,
 				internal_feature_id text,
-				feature_id text
+				feature_id text,
+				reset_cycle_anchor numeric,
+				next_reset_at numeric
 			)
 		),
 		inserted AS (
@@ -73,8 +79,8 @@ export const insertLicenseCustomerEntitlementRows = async ({
 				${initialState.unlimited},
 				${initialState.granted},
 				${now},
-				NULL,
-				NULL,
+				new_row.reset_cycle_anchor,
+				new_row.next_reset_at,
 				false,
 				false,
 				0,
