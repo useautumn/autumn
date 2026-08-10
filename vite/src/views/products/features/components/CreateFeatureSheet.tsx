@@ -1,8 +1,4 @@
-import {
-	CreateFeatureSchema,
-	FeatureUsageType,
-	isAnyCreditSystem,
-} from "@autumn/shared";
+import { CreateFeatureSchema, isAnyCreditSystem } from "@autumn/shared";
 import { Sheet, SheetContent, ShortcutButton } from "@autumn/ui";
 import type { AxiosError } from "axios";
 import { useEffect, useState } from "react";
@@ -11,17 +7,15 @@ import {
 	SheetFooter,
 	SheetHeader,
 } from "@/components/v2/sheets/SharedSheetComponents";
-import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
+import { useUpdateCatalogMutation } from "@/hooks/queries/catalog/useUpdateCatalogMutation";
 import { useFeatureStore } from "@/hooks/stores/useFeatureStore";
-import { FeatureService } from "@/services/FeatureService";
-import { useAxiosInstance } from "@/services/useAxiosInstance";
 import { getBackendErr } from "@/utils/genUtils";
 import { NewFeatureAdvanced } from "../../plan/components/new-feature/NewFeatureAdvanced";
 import { NewFeatureBehaviour } from "../../plan/components/new-feature/NewFeatureBehaviour";
 import { NewFeatureDetails } from "../../plan/components/new-feature/NewFeatureDetails";
 import { NewFeatureType } from "../../plan/components/new-feature/NewFeatureType";
 import { validateCreditSystem } from "../credit-systems/utils/validateCreditSystem";
-import { buildFeatureMarkupParams } from "../utils/buildFeatureMutationParams";
+import { featureToCatalogFeatureParams } from "../utils/buildFeatureMutationParams";
 import { getDefaultFeature } from "../utils/defaultFeature";
 
 function CreateFeatureSheet({
@@ -35,7 +29,6 @@ function CreateFeatureSheet({
 	onSuccess?: (featureId: string) => void;
 	isControlled?: boolean;
 } = {}) {
-	const [loading, setLoading] = useState(false);
 	const [internalOpen, setInternalOpen] = useState(false);
 
 	const open = controlledOpen !== undefined ? controlledOpen : internalOpen;
@@ -45,9 +38,7 @@ function CreateFeatureSheet({
 	const setFeature = useFeatureStore((s) => s.setFeature);
 	const reset = useFeatureStore((s) => s.reset);
 
-	const axiosInstance = useAxiosInstance();
-
-	const { refetch } = useFeaturesQuery();
+	const { mutateAsync: updateCatalog, isPending } = useUpdateCatalogMutation();
 
 	const handleCreateFeature = async () => {
 		// Validate credit system specific fields first
@@ -59,49 +50,31 @@ function CreateFeatureSheet({
 			}
 		}
 
-		setLoading(true);
 		const result = CreateFeatureSchema.safeParse(feature);
 		if (result.error) {
 			console.log(result.error.issues);
 			toast.error("Invalid feature", {
 				description: result.error.issues.map((x) => x.message).join(".\n"),
 			});
-			setLoading(false);
-		} else {
-			try {
-				const { data: createdFeature } = await FeatureService.createFeature(
-					axiosInstance,
-					{
-						name: feature.name,
-						id: feature.id,
-						type: feature.type,
-						consumable: feature.config?.usage_type === FeatureUsageType.Single,
-						...buildFeatureMarkupParams({
-							type: feature.type,
-							modelMarkups: feature.model_markups ?? undefined,
-							defaultMarkup: feature.config?.default_markup,
-							providerMarkups: feature.config?.provider_markups,
-							schema: feature.config?.schema,
-						}),
-						event_names: feature.event_names,
-					},
-				);
+			return;
+		}
 
-				await refetch();
-				toast.success("Feature created successfully");
-				setOpen(false);
+		try {
+			await updateCatalog({
+				features: [featureToCatalogFeatureParams({ feature })],
+			});
 
-				if (onSuccess && createdFeature.id) {
-					onSuccess(createdFeature.id);
-				}
-			} catch (error: unknown) {
-				console.error("Error creating feature", error);
-				toast.error(
-					getBackendErr(error as AxiosError, "Failed to create feature"),
-				);
-			} finally {
-				setLoading(false);
+			toast.success("Feature created successfully");
+			setOpen(false);
+
+			if (onSuccess && feature.id) {
+				onSuccess(feature.id);
 			}
+		} catch (error: unknown) {
+			console.error("Error creating feature", error);
+			toast.error(
+				getBackendErr(error as AxiosError, "Failed to create feature"),
+			);
 		}
 	};
 
@@ -145,7 +118,7 @@ function CreateFeatureSheet({
 						className="w-full"
 						onClick={handleCreateFeature}
 						metaShortcut="enter"
-						isLoading={loading}
+						isLoading={isPending}
 					>
 						Create feature
 					</ShortcutButton>
