@@ -40,9 +40,9 @@ export const AllowedPaymentMethodsSubsection = () => {
 		onError: () => toast.error("Failed to update invoice payment methods"),
 	});
 
-	const allowedMethods = isPending
-		? (variables ?? null)
-		: (org?.config?.allowed_payment_methods ?? null);
+	// While a save is in flight, reflect the value being saved.
+	const allowedMethods =
+		(isPending ? variables : org?.config?.allowed_payment_methods) ?? null;
 	const selected = allowedMethods ?? [];
 
 	const handleToggle = ({
@@ -52,14 +52,11 @@ export const AllowedPaymentMethodsSubsection = () => {
 		method: InvoicePaymentMethod;
 		checked: boolean;
 	}) => {
-		const next = new Set(selected);
-		if (checked) next.add(method);
-		else next.delete(method);
-		const ordered = PAYMENT_METHOD_OPTIONS.filter((option) =>
-			next.has(option.value),
+		const next = PAYMENT_METHOD_OPTIONS.filter((option) =>
+			option.value === method ? checked : selected.includes(option.value),
 		).map((option) => option.value);
 		// An empty array would break invoice finalization at Stripe.
-		mutate(ordered.length > 0 ? ordered : null);
+		mutate(next.length > 0 ? next : null);
 	};
 
 	return (
