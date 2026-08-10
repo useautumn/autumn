@@ -17,6 +17,7 @@ import { SubService } from "@/internal/subscriptions/SubService.js";
 import RecaseError from "@/utils/errorUtils.js";
 import { generateId } from "@/utils/genUtils.js";
 import type { ItemSet } from "@/utils/models/ItemSet.js";
+import { buildStripeSubPaymentSettings } from "./buildStripeSubPaymentSettings.js";
 
 export const createStripeSub2 = async ({
 	db,
@@ -60,16 +61,11 @@ export const createStripeSub2 = async ({
 	// Custom PMs (Vercel, etc.) use external payment confirmation.
 	const isCustomPaymentMethod = paymentMethod?.type === "custom";
 
-	const paymentSettings: Stripe.SubscriptionCreateParams.PaymentSettings = {};
-
-	if (isCustomPaymentMethod) {
-		// Save the custom PM on the sub so webhook handlers and renewals can find it.
-		paymentSettings.save_default_payment_method = "on_subscription";
-	}
-
-	if (invoiceOnly && org.config.allowed_payment_methods?.length) {
-		paymentSettings.payment_method_types = org.config.allowed_payment_methods;
-	}
+	const paymentSettings = buildStripeSubPaymentSettings({
+		isCustomPaymentMethod,
+		invoiceOnly,
+		allowedPaymentMethods: org.config.allowed_payment_methods,
+	});
 
 	try {
 		// Skip auto_tax in invoice mode: send_invoice has no
@@ -108,9 +104,7 @@ export const createStripeSub2 = async ({
 				...buildAutumnSubscriptionMetadata({ actionSource: "v1Attach" }),
 			},
 
-			...(Object.keys(paymentSettings).length > 0 && {
-				payment_settings: paymentSettings,
-			}),
+			...(paymentSettings && { payment_settings: paymentSettings }),
 
 			trial_settings:
 				freeTrial && !freeTrial.card_required

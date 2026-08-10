@@ -1,12 +1,12 @@
 import type { BillingContext, StripeSubscriptionAction } from "@autumn/shared";
 import { InternalError } from "@autumn/shared";
-import type Stripe from "stripe";
 import { createStripeCli } from "@/external/connect/createStripeCli";
 import { autumnStripeRequestOptions } from "@/external/stripe/common/autumnStripeIdempotency";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { buildAutumnSubscriptionMetadata } from "@/internal/billing/v2/providers/stripe/utils/common/autumnStripeMetadata";
 import { mergeStripeMetadata } from "@/internal/billing/v2/providers/stripe/utils/common/mergeStripeMetadata";
 import { shouldEnableStripeAutomaticTax } from "@/internal/billing/v2/providers/stripe/utils/tax/shouldEnableStripeAutomaticTax";
+import { buildInvoiceModeSubscriptionParams } from "./buildInvoiceModeSubscriptionParams";
 import { willStripeSubscriptionUpdateCreateInvoice } from "./willStripeSubscriptionUpdateCreateInvoice";
 
 export const executeStripeSubscriptionOperation = async ({
@@ -22,28 +22,10 @@ export const executeStripeSubscriptionOperation = async ({
 	const stripeClient = createStripeCli({ org, env });
 	const { paymentMethod, invoiceMode } = billingContext;
 
-	const actionPaymentSettings =
-		subscriptionAction.type === "create" || subscriptionAction.type === "update"
-			? subscriptionAction.params.payment_settings
-			: undefined;
-
-	const invoiceModeParams: Pick<
-		Stripe.SubscriptionCreateParams,
-		"collection_method" | "days_until_due" | "payment_settings"
-	> = {};
-
-	if (invoiceMode) {
-		invoiceModeParams.collection_method = "send_invoice";
-		invoiceModeParams.days_until_due = invoiceMode.daysUntilDue ?? 30;
-
-		if (invoiceMode.paymentMethodTypes?.length) {
-			// Spread first so the custom-PM save_default_payment_method survives.
-			invoiceModeParams.payment_settings = {
-				...actionPaymentSettings,
-				payment_method_types: invoiceMode.paymentMethodTypes,
-			};
-		}
-	}
+	const invoiceModeParams = buildInvoiceModeSubscriptionParams({
+		invoiceMode,
+		subscriptionAction,
+	});
 
 	const updateWillCreateInvoice = willStripeSubscriptionUpdateCreateInvoice({
 		billingContext,
