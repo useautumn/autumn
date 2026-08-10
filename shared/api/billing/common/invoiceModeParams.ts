@@ -24,6 +24,7 @@ export const InvoiceModeParamsSchema = z
 		}),
 		allowed_payment_methods: z
 			.array(InvoicePaymentMethodSchema)
+			.min(1)
 			.optional()
 			.meta({
 				description:

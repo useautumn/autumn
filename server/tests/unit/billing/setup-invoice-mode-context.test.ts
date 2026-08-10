@@ -1,5 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import type { AttachParamsV1, InvoicePaymentMethod } from "@autumn/shared";
+import { InvoiceModeParamsSchema, OrgConfigSchema } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { setupInvoiceModeContext } from "@/internal/billing/v2/setup/setupInvoiceModeContext";
 
@@ -70,5 +71,40 @@ describe("setupInvoiceModeContext payment method types", () => {
 		});
 
 		expect(invoiceMode).toBeUndefined();
+	});
+});
+
+describe("allowed_payment_methods schemas reject empty lists", () => {
+	test("org config rejects an empty array but allows null or omitted", () => {
+		expect(
+			OrgConfigSchema.safeParse({ allowed_payment_methods: [] }).success,
+		).toBe(false);
+		expect(
+			OrgConfigSchema.parse({ allowed_payment_methods: null })
+				.allowed_payment_methods,
+		).toBeNull();
+		expect(OrgConfigSchema.parse({}).allowed_payment_methods).toBeUndefined();
+		expect(
+			OrgConfigSchema.parse({ allowed_payment_methods: ["card"] })
+				.allowed_payment_methods,
+		).toEqual(["card"]);
+	});
+
+	test("invoice mode params reject an empty array but allow omitted", () => {
+		expect(
+			InvoiceModeParamsSchema.safeParse({
+				enabled: true,
+				allowed_payment_methods: [],
+			}).success,
+		).toBe(false);
+		expect(
+			InvoiceModeParamsSchema.parse({ enabled: true }).allowed_payment_methods,
+		).toBeUndefined();
+		expect(
+			InvoiceModeParamsSchema.parse({
+				enabled: true,
+				allowed_payment_methods: ["sepa_debit"],
+			}).allowed_payment_methods,
+		).toEqual(["sepa_debit"]);
 	});
 });

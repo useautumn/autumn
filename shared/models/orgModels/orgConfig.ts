@@ -64,7 +64,7 @@ export const OrgConfigSchema = z.object({
 
 	// Unset (or null) leaves Stripe on the org's own invoice payment method
 	// settings; an explicit list overrides them. Never default this.
-	allowed_payment_methods: z.array(InvoicePaymentMethodSchema).nullish(),
+	allowed_payment_methods: z.array(InvoicePaymentMethodSchema).min(1).nullish(),
 });
 
 export type OrgConfig = z.infer<typeof OrgConfigSchema>;
