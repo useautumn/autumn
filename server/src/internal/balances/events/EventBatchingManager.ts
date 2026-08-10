@@ -31,6 +31,11 @@ class BatchingManager {
 		}, this.batchWindow);
 	}
 
+	/** Deliver anything still waiting on the batch timer (shutdown path). */
+	async flush(): Promise<void> {
+		await this.executeBatch();
+	}
+
 	/** Execute the current batch - queue to SQS for Postgres and send to Tinybird */
 	private async executeBatch(): Promise<void> {
 		if (this.timer) {

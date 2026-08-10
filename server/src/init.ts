@@ -56,6 +56,8 @@ import {
 import { preWarmOrgRedisConnections } from "./external/redis/orgRedisPool.js";
 import { createHonoApp } from "./initHono.js";
 import { otelSdk } from "./instrumentation.js";
+import { globalEventBatchingManager } from "./internal/balances/events/EventBatchingManager.js";
+import { globalSyncBatchingManagerV3 } from "./internal/balances/utils/sync/SyncBatchingManagerV3.js";
 import { shutdownSqsSendBatchers } from "./queue/queueUtils.js";
 import { checkEnvVars } from "./utils/initUtils.js";
 import {
@@ -192,7 +194,34 @@ if (process.env.NODE_ENV === "development") {
 			});
 		});
 
-		registerShutdownHandlers();
+		// Container init delivers SIGTERM to this primary only; without
+		// forwarding, workers never run their graceful shutdown and ECS
+		// SIGKILLs them mid-request at stopTimeout.
+		const shutdownPrimary = async () => {
+			if (shuttingDown) return;
+			shuttingDown = true;
+			console.log("[Shutdown] primary forwarding SIGTERM to workers");
+			for (const worker of Object.values(cluster.workers ?? {})) {
+				try {
+					worker?.process.kill("SIGTERM");
+				} catch {}
+			}
+			const workersAlive = () =>
+				Object.values(cluster.workers ?? {}).filter((w) => w && !w.isDead())
+					.length;
+			const deadline = Date.now() + 20_000;
+			while (workersAlive() > 0 && Date.now() < deadline) {
+				await new Promise((resolve) => setTimeout(resolve, 200));
+			}
+			if (workersAlive() > 0) {
+				console.warn(
+					`[Shutdown] ${workersAlive()} worker(s) still alive after 20s; exiting anyway`,
+				);
+			}
+			await gracefulShutdown();
+		};
+		process.on("SIGTERM", () => void shutdownPrimary());
+		process.on("SIGINT", () => void shutdownPrimary());
 	} else {
 		registerFatalErrorHandlers();
 		const server = await init({ startupStartedAt: Date.now() });
@@ -251,11 +280,18 @@ async function waitForInFlightRequestsToSettle({
 }: {
 	timeoutMs: number;
 }) {
+	// Streamed bodies outlive the request registry, so wait on open sockets
+	// too (idle keep-alives clear within a sweep once accepting stopped).
+	const activeWork = () =>
+		Math.max(
+			listInFlightRequests({ now: Date.now() }).length,
+			drainState.getActiveConnectionCount(),
+		);
 	const deadline = Date.now() + timeoutMs;
-	while (listInFlightRequests({ now: Date.now() }).length > 0) {
+	while (activeWork() > 0) {
 		if (Date.now() > deadline) {
 			console.warn(
-				`[Shutdown] proceeding with ${listInFlightRequests({ now: Date.now() }).length} request(s) still in flight after ${timeoutMs}ms`,
+				`[Shutdown] proceeding with ${listInFlightRequests({ now: Date.now() }).length} request(s) / ${drainState.getActiveConnectionCount()} connection(s) still active after ${timeoutMs}ms`,
 			);
 			return;
 		}
@@ -284,8 +320,15 @@ async function gracefulShutdown() {
 		stopRedisV2Monitor();
 		stopMemorySpikeProbe();
 		stopAllEdgeConfigPolling();
-		// Request-scheduled timers may have enqueued during teardown: deliver
-		// those, then close the batchers at the last possible moment.
+		// App-level batch windows (events 350ms, balance sync 1s) hold work in
+		// timers that process.exit would silently kill: deliver them, then close
+		// the SQS batchers at the last possible moment.
+		await Promise.all([
+			globalEventBatchingManager.flush(),
+			globalSyncBatchingManagerV3.flush(),
+		]).catch((error) => {
+			console.warn("[Shutdown] app-level batch flush failed:", error);
+		});
 		await shutdownSqsSendBatchers();
 		await Promise.all([
 			client.end(),
