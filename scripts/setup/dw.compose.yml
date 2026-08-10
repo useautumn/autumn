@@ -65,3 +65,23 @@ services:
     extra_hosts:
       - "host.docker.internal:host-gateway"
     restart: unless-stopped
+
+  # Second tunnel for the dashboard. One ngrok agent forwards to one port, so
+  # exposing vite as well needs its own container and its own reserved domain.
+  ngrok-vite:
+    image: ngrok/ngrok:latest
+    container_name: ${COMPOSE_PROJECT_NAME}-ngrok-vite
+    profiles:
+      - ngrok
+    environment:
+      NGROK_AUTHTOKEN: ${NGROK_AUTHTOKEN:-}
+    entrypoint:
+      - /bin/sh
+      - -c
+    command:
+      - "ngrok http host.docker.internal:${VITE_PORT:-3000} --pooling-enabled --log=stdout ${NGROK_VITE_URL_FLAG:-}"
+    ports:
+      - "${NGROK_VITE_API_PORT:-4140}:4040"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    restart: unless-stopped

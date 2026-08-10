@@ -768,6 +768,8 @@ export function MigrationLiveView({
 						hasActiveExtraFilters={hasActiveExecutionFilters(executionStatuses)}
 						onClearExtra={() => handleExecutionStatusesChange([])}
 						hideSavedViews
+						hideInterval
+						hideCreatedAt
 					/>
 				}
 				trailing={

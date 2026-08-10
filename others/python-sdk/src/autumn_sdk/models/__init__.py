@@ -1779,6 +1779,8 @@ if TYPE_CHECKING:
         LinkRevenueCatResponseTypedDict,
     )
     from .listcustomersop import (
+        CreatedAtRange,
+        CreatedAtRangeTypedDict,
         ListCustomersAutoTopup,
         ListCustomersAutoTopupSource,
         ListCustomersAutoTopupTypedDict,
@@ -1854,6 +1856,7 @@ if TYPE_CHECKING:
         ListCustomersUsageLimitTypedDict,
         ListCustomersVercel,
         ListCustomersVercelTypedDict,
+        SortOrder,
     )
     from .listentitiesop import (
         ListEntitiesBillingControls,
@@ -4633,6 +4636,8 @@ __all__ = [
     "CreateScheduleResponse",
     "CreateScheduleResponseTypedDict",
     "CreateScheduleStatus",
+    "CreatedAtRange",
+    "CreatedAtRangeTypedDict",
     "Customer",
     "CustomerAutoTopup",
     "CustomerAutoTopupTypedDict",
@@ -6599,6 +6604,7 @@ __all__ = [
     "SetupPaymentUsageLimit",
     "SetupPaymentUsageLimitInterval",
     "SetupPaymentUsageLimitTypedDict",
+    "SortOrder",
     "SpendLimitSource",
     "StartingAfter2",
     "StartingAfter2TypedDict",
@@ -9013,6 +9019,8 @@ _dynamic_imports: dict[str, str] = {
     "LinkRevenueCatParamsTypedDict": ".linkrevenuecatop",
     "LinkRevenueCatResponse": ".linkrevenuecatop",
     "LinkRevenueCatResponseTypedDict": ".linkrevenuecatop",
+    "CreatedAtRange": ".listcustomersop",
+    "CreatedAtRangeTypedDict": ".listcustomersop",
     "ListCustomersAutoTopup": ".listcustomersop",
     "ListCustomersAutoTopupSource": ".listcustomersop",
     "ListCustomersAutoTopupTypedDict": ".listcustomersop",
@@ -9088,6 +9096,7 @@ _dynamic_imports: dict[str, str] = {
     "ListCustomersUsageLimitTypedDict": ".listcustomersop",
     "ListCustomersVercel": ".listcustomersop",
     "ListCustomersVercelTypedDict": ".listcustomersop",
+    "SortOrder": ".listcustomersop",
     "ListEntitiesBillingControls": ".listentitiesop",
     "ListEntitiesBillingControlsTypedDict": ".listentitiesop",
     "ListEntitiesCreditSchema": ".listentitiesop",

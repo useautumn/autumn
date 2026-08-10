@@ -25,6 +25,7 @@ import {
 	type CreateBalanceParamsV0,
 	type CreateCustomerInternalOptions,
 	type CreateCustomerParamsV0Input,
+	type CreatedAtRange,
 	type CreateEntityParams,
 	type CreateRewardProgram,
 	type CreateScheduleParamsV0Input,
@@ -459,6 +460,8 @@ export class AutumnInt {
 			plans?: Array<{ id: string; versions?: number[] }>;
 			subscription_status?: string[];
 			processors?: Array<"stripe" | "revenuecat" | "vercel">;
+			sort_order?: "asc" | "desc";
+			created_at_range?: CreatedAtRange;
 			keepInternalFields?: boolean;
 		}) => {
 			const { keepInternalFields, ...listParams } = params || {};
