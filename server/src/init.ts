@@ -53,6 +53,7 @@ import {
 	stopRedisMonitor,
 	warmupRegionalRedis,
 } from "./external/redis/initRedis.js";
+import { awaitBoundedWarmup } from "./external/redis/initUtils/boundedWarmup.js";
 import { preWarmOrgRedisConnections } from "./external/redis/orgRedisPool.js";
 import { createHonoApp } from "./initHono.js";
 import { otelSdk } from "./instrumentation.js";
@@ -96,9 +97,9 @@ const init = async ({
 	// `db` is the general pool — the probe must never occupy a critical-pool slot.
 	startReplicaRoutingProber({ db });
 
-	void warmupRegionalRedis().catch((error) => {
-		logger.warn("[Redis] Warmup failed", { error });
-	});
+	// Kicked off early, awaited (bounded) just before listen: a fork must not
+	// serve its first requests against still-connecting redis clients.
+	const regionalRedisWarmup = warmupRegionalRedis();
 	void preWarmOrgRedisConnections({ db }).catch((error) => {
 		logger.warn("[OrgRedis] Warmup failed", { error });
 	});
@@ -140,6 +141,12 @@ const init = async ({
 		const idleSweep = setInterval(() => server.closeIdleConnections?.(), 1_000);
 		idleSweep.unref?.();
 	};
+
+	await awaitBoundedWarmup({
+		warmup: regionalRedisWarmup,
+		timeoutMs: 10_000,
+		log: (message) => console.warn(message),
+	});
 
 	await new Promise<void>((resolve) => {
 		server.listen(PORT, "0.0.0.0", () => {
