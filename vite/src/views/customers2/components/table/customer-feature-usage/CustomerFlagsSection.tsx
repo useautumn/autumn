@@ -35,6 +35,7 @@ export function CustomerFlagsSection({
 	availableFeatures: Feature[];
 }) {
 	const reduceMotion = useReducedMotion() ?? false;
+	const hasCatalog = availableFeatures.length > 0;
 	const {
 		showingCatalog,
 		expanded,
@@ -48,7 +49,7 @@ export function CustomerFlagsSection({
 		rowRef,
 		setShowingCatalog,
 		toggleExpanded,
-	} = useFlagsView({ booleanEnts });
+	} = useFlagsView({ booleanEnts, hasCatalog });
 
 	// Pills keep their slot across views — only trailing ones are added or
 	// removed — so a plain fade reads calmer than layout animation plus scale.
@@ -64,7 +65,7 @@ export function CustomerFlagsSection({
 
 	return (
 		<div className="flex flex-col">
-			{availableFeatures.length > 0 ? (
+			{hasCatalog ? (
 				<div className="flex items-center mb-3">
 					<Tabs
 						value={showingCatalog ? "catalog" : "enabled"}
