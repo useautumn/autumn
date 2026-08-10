@@ -378,6 +378,7 @@ export class ProductService {
 		version,
 		excludeEnts = false,
 		archived,
+		skipCache = false,
 	}: {
 		db: DrizzleCli;
 		orgId: string;
@@ -387,9 +388,12 @@ export class ProductService {
 		version?: number;
 		excludeEnts?: boolean;
 		archived?: boolean;
+		/** Read straight from the DB — for writes deciding off the result. */
+		skipCache?: boolean;
 	}): Promise<FullProduct[]> {
 		// Use caching for simple queries (no inIds, returnAll, version, or excludeEnts)
-		const canCache = !inIds && !returnAll && !version && !excludeEnts;
+		const canCache =
+			!inIds && !returnAll && !version && !excludeEnts && !skipCache;
 
 		if (canCache) {
 			const cacheKey = buildProductsCacheKey({

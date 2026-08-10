@@ -8,14 +8,15 @@ import {
 	DialogHeader,
 	DialogTitle,
 } from "@autumn/ui";
+import { useQuery } from "@tanstack/react-query";
 import type { AxiosError } from "axios";
-import { useEffect, useState } from "react";
 import { toast } from "sonner";
-import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
-import { useGeneralQuery } from "@/hooks/queries/useGeneralQuery";
-import { FeatureService } from "@/services/FeatureService";
+import { useQueryKeyFactory } from "@/hooks/common/useQueryKeyFactory";
+import { useUpdateCatalogMutation } from "@/hooks/queries/catalog/useUpdateCatalogMutation";
+import { CatalogV2Service } from "@/services/CatalogV2Service";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
 import { getBackendErr } from "@/utils/genUtils";
+import { featureToCatalogFeatureParams } from "../utils/buildFeatureMutationParams";
 
 export const DeleteFeatureDialog = ({
 	feature,
@@ -28,116 +29,115 @@ export const DeleteFeatureDialog = ({
 	setOpen: (open: boolean) => void;
 	dropdownOpen: boolean;
 }) => {
-	const { refetch } = useFeaturesQuery();
 	const axiosInstance = useAxiosInstance();
-	const [loading, setLoading] = useState(false);
+	const buildKey = useQueryKeyFactory();
+	const { mutateAsync: updateCatalog, isPending } = useUpdateCatalogMutation();
 
 	const {
-		data: deletionText,
+		data: preview,
 		isLoading,
-		refetch: refetchFeatureInfo,
-	} = useGeneralQuery({
-		url: `/v1/features/${feature.id}/deletion_info`,
-		queryKey: ["featureInfo", feature.id],
-		enabled: dropdownOpen,
-		method: "GET",
+		refetch: refetchPreview,
+	} = useQuery({
+		queryKey: buildKey(["catalogV2FeatureDeletePreview", feature.id]),
+		queryFn: () =>
+			CatalogV2Service.previewUpdate(axiosInstance, {
+				remove_features: [{ feature_id: feature.id }],
+			}),
+		enabled: dropdownOpen || open,
 	});
 
-	useEffect(() => {
-		if (open) {
-			refetchFeatureInfo();
-		}
-	}, [open, feature.id, refetchFeatureInfo]);
+	const entry = preview?.features.find(
+		(candidate) => candidate.feature_id === feature.id,
+	);
+	const willArchive = entry?.state.will_archive ?? false;
+	const reasons = entry?.state.reasons ?? [];
 
-	const hasProducts = deletionText?.totalCount > 0;
+	const reasonText = reasons.map((reason) => reason.message).join(" ");
 
-	const getDeleteMessage = () => {
-		if (feature.archived) {
-			return "This feature is currently archived. Would you like to unarchive it to make it visible again?";
-		}
-
-		if (hasProducts) {
-			if (deletionText?.productName && deletionText?.totalCount) {
-				const totalCount = Number.parseInt(deletionText.totalCount);
-
-				if (Number.isNaN(totalCount) || totalCount <= 0) {
-					return "There are plans using this feature. You must remove this feature from the plans first, or archive it instead.";
-				}
-				if (totalCount === 1) {
-					return `Plan "${deletionText.productName}" is using this feature. You must remove this feature from the plan first, or archive it instead.`;
-				}
-				const otherCount = totalCount - 1;
-				return `Plans "${deletionText.productName}" and ${otherCount} other plan${otherCount > 1 ? "s" : ""} are using this feature. You must remove this feature first, or archive it instead.`;
+	const handleConfirm = async () => {
+		try {
+			if (feature.archived) {
+				await updateCatalog({
+					features: [
+						featureToCatalogFeatureParams({
+							feature,
+							archived: false,
+						}),
+					],
+				});
+				toast.success(`Feature ${feature.name} unarchived successfully`);
+			} else {
+				await updateCatalog({
+					remove_features: [{ feature_id: feature.id }],
+				});
+				toast.success(
+					willArchive
+						? `Feature ${feature.name} archived successfully`
+						: "Feature deleted successfully",
+				);
 			}
-			return "There are plans using this feature. You must remove this feature from the plans first, or archive it instead.";
-		}
-		return "Are you sure you want to delete this feature? This action cannot be undone.";
-	};
-
-	const handleDelete = async () => {
-		setLoading(true);
-		try {
-			await FeatureService.deleteFeature(axiosInstance, feature.id);
-			await refetch();
-			toast.success("Feature deleted successfully");
-			setOpen(false);
-		} catch (error: unknown) {
-			toast.error(getBackendErr(error as AxiosError, "Error deleting feature"));
-		} finally {
-			setLoading(false);
-		}
-	};
-
-	const handleArchive = async () => {
-		setLoading(true);
-		const newArchivedState = !feature.archived;
-		try {
-			await FeatureService.updateFeature(axiosInstance, feature.id, {
-				archived: newArchivedState,
-			});
-			await refetch();
-			toast.success(
-				`Feature ${feature.name} ${newArchivedState ? "archived" : "unarchived"} successfully`,
-			);
 			setOpen(false);
 		} catch (error: unknown) {
 			toast.error(
 				getBackendErr(
 					error as AxiosError,
-					`Error ${newArchivedState ? "archiving" : "unarchiving"} feature`,
+					feature.archived
+						? "Error unarchiving feature"
+						: willArchive
+							? "Error archiving feature"
+							: "Error deleting feature",
 				),
 			);
-		} finally {
-			setLoading(false);
 		}
 	};
 
-	if (isLoading) return null;
+	if (isLoading && !feature.archived) return null;
+
+	const titleAction = feature.archived
+		? "Unarchive"
+		: willArchive
+			? "Archive"
+			: "Delete";
 
 	return (
-		<Dialog open={open} onOpenChange={setOpen}>
+		<Dialog
+			open={open}
+			onOpenChange={(nextOpen) => {
+				setOpen(nextOpen);
+				if (nextOpen) void refetchPreview();
+			}}
+		>
 			<DialogContent
 				className="bg-background"
 				onClick={(e) => e.stopPropagation()}
 			>
 				<DialogHeader className="max-w-full">
 					<DialogTitle className="truncate max-w-[400px]">
-						{feature.archived
-							? "Unarchive"
-							: hasProducts
-								? "Archive"
-								: "Delete"}{" "}
-						{feature.name}
+						{titleAction} {feature.name}
 					</DialogTitle>
-					<DialogDescription className="max-w-[400px] wrap-break-word">
-						{getDeleteMessage()
-							.split("\n")
-							.map((line, index) => (
-								<span key={index}>
-									{line}
-									{index < getDeleteMessage().split("\n").length - 1 && <br />}
-								</span>
-							))}
+					<DialogDescription asChild>
+						<div className="max-w-[400px] wrap-break-word space-y-2">
+							{feature.archived ? (
+								<p>
+									This feature is currently archived. Would you like to
+									unarchive it to make it visible again?
+								</p>
+							) : willArchive ? (
+								<>
+									<p>
+										Cannot delete feature {feature.name}, archive it instead.
+									</p>
+									{reasonText ? (
+										<p className="text-muted-foreground">{reasonText}</p>
+									) : null}
+								</>
+							) : (
+								<p>
+									{reasonText ||
+										"Are you sure you want to delete this feature? This action cannot be undone."}
+								</p>
+							)}
+						</div>
 					</DialogDescription>
 				</DialogHeader>
 
@@ -145,33 +145,15 @@ export const DeleteFeatureDialog = ({
 					<Button variant="secondary" onClick={() => setOpen(false)}>
 						Cancel
 					</Button>
-					{feature.archived && (
-						<Button
-							variant="primary"
-							onClick={handleArchive}
-							isLoading={loading}
-						>
-							Unarchive
-						</Button>
-					)}
-					{hasProducts && !feature.archived && (
-						<Button
-							variant="primary"
-							onClick={handleArchive}
-							isLoading={loading}
-						>
-							Archive
-						</Button>
-					)}
-					{!hasProducts && !feature.archived && (
-						<Button
-							variant="destructive"
-							onClick={handleDelete}
-							isLoading={loading}
-						>
-							Delete
-						</Button>
-					)}
+					<Button
+						variant={
+							feature.archived || willArchive ? "primary" : "destructive"
+						}
+						onClick={handleConfirm}
+						isLoading={isPending}
+					>
+						{titleAction}
+					</Button>
 				</DialogFooter>
 			</DialogContent>
 		</Dialog>

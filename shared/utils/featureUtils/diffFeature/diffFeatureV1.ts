@@ -1,67 +1,135 @@
 import type { ApiFeatureV1 } from "@api/features/apiFeatureV1.js";
 
-type JsonObject = Record<string, unknown>;
+type FeatureDisplay = ApiFeatureV1["display"];
+type CreditSchema = ApiFeatureV1["credit_schema"];
+type ModelMarkups = ApiFeatureV1["model_markups"];
+type ProviderMarkups = ApiFeatureV1["provider_markups"];
 
-const sortObject = (value: JsonObject): JsonObject =>
-	Object.fromEntries(
-		Object.entries(value)
-			.filter(([, entry]) => entry !== undefined)
-			.sort(([left], [right]) => left.localeCompare(right))
-			.map(([key, entry]) => [key, normalizeValue(entry)]),
+const nullableNumbersEqual = (
+	left: number | null | undefined,
+	right: number | null | undefined,
+) => (left ?? null) === (right ?? null);
+
+const stringArraysEqualUnordered = (
+	left: string[] | null | undefined,
+	right: string[] | null | undefined,
+) => {
+	const sortedLeft = [...(left ?? [])].sort();
+	const sortedRight = [...(right ?? [])].sort();
+	return (
+		sortedLeft.length === sortedRight.length &&
+		sortedLeft.every((value, index) => value === sortedRight[index])
+	);
+};
+
+const displaysEqual = (left: FeatureDisplay, right: FeatureDisplay) => {
+	if (!left && !right) return true;
+	if (!left || !right) return false;
+	return (
+		(left.singular ?? null) === (right.singular ?? null) &&
+		(left.plural ?? null) === (right.plural ?? null)
+	);
+};
+
+const creditSchemasEqual = (left: CreditSchema, right: CreditSchema) => {
+	const leftEntries = left ?? [];
+	const rightEntries = right ?? [];
+	const costByFeatureId = new Map(
+		leftEntries.map((entry) => [entry.metered_feature_id, entry.credit_cost]),
+	);
+	return (
+		leftEntries.length === rightEntries.length &&
+		rightEntries.every(
+			(entry) =>
+				costByFeatureId.get(entry.metered_feature_id) === entry.credit_cost,
+		)
+	);
+};
+
+const recordsEqual = <T>(
+	left: Record<string, T> | null | undefined,
+	right: Record<string, T> | null | undefined,
+	entriesEqual: (leftEntry: T, rightEntry: T) => boolean,
+) => {
+	const leftRecord = left ?? {};
+	const rightRecord = right ?? {};
+	const leftKeys = Object.keys(leftRecord);
+	return (
+		leftKeys.length === Object.keys(rightRecord).length &&
+		leftKeys.every(
+			(key) =>
+				rightRecord[key] !== undefined &&
+				entriesEqual(leftRecord[key], rightRecord[key]),
+		)
+	);
+};
+
+const modelMarkupsEqual = (left: ModelMarkups, right: ModelMarkups) =>
+	recordsEqual(
+		left,
+		right,
+		(leftEntry, rightEntry) =>
+			nullableNumbersEqual(leftEntry.markup, rightEntry.markup) &&
+			nullableNumbersEqual(leftEntry.input_cost, rightEntry.input_cost) &&
+			nullableNumbersEqual(leftEntry.output_cost, rightEntry.output_cost),
 	);
 
-const normalizeValue = (value: unknown): unknown => {
-	if (value == null) return null;
-	if (Array.isArray(value)) {
-		const normalized = value.map(normalizeValue);
-		return normalized.every((entry) => typeof entry === "string")
-			? normalized.sort()
-			: normalized;
-	}
-	if (typeof value === "object") {
-		const normalized = sortObject(value as JsonObject);
-		return Object.keys(normalized).length > 0 ? normalized : null;
-	}
-	return value;
+const providerMarkupsEqual = (left: ProviderMarkups, right: ProviderMarkups) =>
+	recordsEqual(left, right, (leftEntry, rightEntry) =>
+		nullableNumbersEqual(leftEntry.markup, rightEntry.markup),
+	);
+
+type FieldComparison = {
+	key: keyof ApiFeatureV1;
+	isSame: (from: ApiFeatureV1, to: ApiFeatureV1) => boolean;
 };
 
-const normalizeFeatureValue = ({
-	key,
-	value,
-}: {
-	key: keyof ApiFeatureV1;
-	value: unknown;
-}) => {
-	if (key === "display" && value && typeof value === "object") {
-		const display = value as JsonObject;
-		const normalized = Object.fromEntries(
-			Object.entries(display).filter(([, entry]) => entry != null),
-		);
-		return Object.keys(normalized).length > 0 ? sortObject(normalized) : null;
-	}
-
-	if (key === "credit_schema" && Array.isArray(value)) {
-		return value
-			.map(normalizeValue)
-			.sort((left, right) =>
-				JSON.stringify(left).localeCompare(JSON.stringify(right)),
-			);
-	}
-
-	return normalizeValue(value);
-};
-
-const valuesEqual = ({
-	key,
-	left,
-	right,
-}: {
-	key: keyof ApiFeatureV1;
-	left: unknown;
-	right: unknown;
-}) =>
-	JSON.stringify(normalizeFeatureValue({ key, value: left })) ===
-	JSON.stringify(normalizeFeatureValue({ key, value: right }));
+/** Absent and default values compare equal — undefined event_names == [],
+ * undefined markups == {}, nullish numbers match — so db-side rows and
+ * param-side rows never phantom-diff. */
+const fieldComparisons: FieldComparison[] = [
+	{ key: "id", isSame: (from, to) => from.id === to.id },
+	{ key: "name", isSame: (from, to) => from.name === to.name },
+	{ key: "type", isSame: (from, to) => from.type === to.type },
+	{
+		key: "consumable",
+		isSame: (from, to) =>
+			(from.consumable ?? false) === (to.consumable ?? false),
+	},
+	{
+		key: "archived",
+		isSame: (from, to) => (from.archived ?? false) === (to.archived ?? false),
+	},
+	{
+		key: "display",
+		isSame: (from, to) => displaysEqual(from.display, to.display),
+	},
+	{
+		key: "event_names",
+		isSame: (from, to) =>
+			stringArraysEqualUnordered(from.event_names, to.event_names),
+	},
+	{
+		key: "credit_schema",
+		isSame: (from, to) =>
+			creditSchemasEqual(from.credit_schema, to.credit_schema),
+	},
+	{
+		key: "default_markup",
+		isSame: (from, to) =>
+			nullableNumbersEqual(from.default_markup, to.default_markup),
+	},
+	{
+		key: "model_markups",
+		isSame: (from, to) =>
+			modelMarkupsEqual(from.model_markups, to.model_markups),
+	},
+	{
+		key: "provider_markups",
+		isSame: (from, to) =>
+			providerMarkupsEqual(from.provider_markups, to.provider_markups),
+	},
+];
 
 export const diffFeatureV1 = ({
 	from,
@@ -72,9 +140,9 @@ export const diffFeatureV1 = ({
 }): { previous_attributes: Record<string, unknown> | null } => {
 	const previous: Record<string, unknown> = {};
 
-	for (const key of Object.keys(to) as (keyof ApiFeatureV1)[]) {
-		if (!valuesEqual({ key, left: from[key], right: to[key] })) {
-			previous[key] = from[key];
+	for (const { key, isSame } of fieldComparisons) {
+		if (!isSame(from, to)) {
+			previous[key] = from[key] ?? null;
 		}
 	}
 
