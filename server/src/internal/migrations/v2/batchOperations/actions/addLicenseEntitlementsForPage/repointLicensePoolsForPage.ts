@@ -22,10 +22,11 @@ export const repointLicensePoolsForPage = async ({
 	scope: OperationScope;
 	planLicenseId: string;
 	licenseInternalProductId: string;
-}): Promise<number> => {
-	if (internalCustomerIds.length === 0) return 0;
+}): Promise<{ pools: number; internalCustomerIds: string[] }> => {
+	if (internalCustomerIds.length === 0)
+		return { pools: 0, internalCustomerIds: [] };
 
-	const updated = await db.execute<{ id: string }>(sql`
+	const updated = await db.execute<{ internal_customer_id: string }>(sql`
 		UPDATE customer_licenses AS pool
 		SET
 			plan_license_id = ${planLicenseId},
@@ -55,8 +56,13 @@ export const repointLicensePoolsForPage = async ({
 					live.created_at DESC, live.id DESC
 				LIMIT 1
 			)
-		RETURNING pool.id
+		RETURNING cp.internal_customer_id
 	`);
 
-	return updated.length;
+	return {
+		pools: updated.length,
+		internalCustomerIds: [
+			...new Set(updated.map((row) => row.internal_customer_id)),
+		],
+	};
 };

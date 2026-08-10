@@ -21,6 +21,9 @@ export type AddLicenseEntitlementsForPageResult = {
 	affected: number;
 	candidateCount: number;
 	repointedPools: number;
+	/** Customers whose pool was repointed. They changed even when no assignment
+	 * gained a row, so they must not be reported as skipped. */
+	repointedInternalCustomerIds: string[];
 	insertedItems: BatchMigrationInsertedItem[];
 	/** Customers a cycle rung refused — routed to skipped, as the owned path does. */
 	excludedInternalCustomerIds: string[];
@@ -55,7 +58,7 @@ export const addLicenseEntitlementsForPage = async ({
 
 	// Whole-page, so it commits before any candidate select reads the pool —
 	// not per batch, which would mutate before the ceiling assertion.
-	const repointedPools = await timePhase({
+	const repointed = await timePhase({
 		phases,
 		phase: "repoint",
 		run: () =>
@@ -119,7 +122,8 @@ export const addLicenseEntitlementsForPage = async ({
 	return {
 		affected: insertedItems.length,
 		candidateCount: rowCount,
-		repointedPools,
+		repointedPools: repointed.pools,
+		repointedInternalCustomerIds: repointed.internalCustomerIds,
 		insertedItems,
 		excludedInternalCustomerIds: [...excludedIds],
 	};

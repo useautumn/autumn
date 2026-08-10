@@ -51,6 +51,7 @@ export const executeBatchMigrationPage = async ({
 	// Customers a patch cannot serve (e.g. no usable reset anchor) drop
 	// from succeeded into skipped — the per-customer lane's territory.
 	const excludedIds = new Set<string>();
+	const repointedIds = new Set<string>();
 
 	for (const patch of plan.patches) {
 		for (const add of patch.addEntitlementOps) {
@@ -91,6 +92,9 @@ export const executeBatchMigrationPage = async ({
 			for (const id of result.excludedInternalCustomerIds) {
 				excludedIds.add(id);
 			}
+			for (const id of result.repointedInternalCustomerIds) {
+				repointedIds.add(id);
+			}
 			insertedItems.push(...result.insertedItems);
 			ctx.logger.debug("batch-migration: add license operation", {
 				data: {
@@ -106,9 +110,12 @@ export const executeBatchMigrationPage = async ({
 		}
 	}
 
-	const succeeded = new Set(
-		insertedItems.map((item) => item.internalCustomerId),
-	);
+	// A repointed pool is a real change even with no assignment rows inserted;
+	// leaving it out of `succeeded` would skip its cache invalidation.
+	const succeeded = new Set([
+		...insertedItems.map((item) => item.internalCustomerId),
+		...repointedIds,
+	]);
 	for (const id of excludedIds) succeeded.delete(id);
 	const skippedIds = pageInternalIds.filter((id) => !succeeded.has(id));
 

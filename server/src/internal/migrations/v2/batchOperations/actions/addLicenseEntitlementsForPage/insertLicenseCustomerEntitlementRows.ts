@@ -78,7 +78,9 @@ export const insertLicenseCustomerEntitlementRows = async ({
 				new_row.customer_product_id,
 				new_row.entitlement_id,
 				new_row.internal_customer_id,
-				new_row.internal_entity_id,
+				-- The entity lives on the assignment, not the cusEnt: the canonical
+				-- init and both sibling batch inserts leave this null.
+				NULL,
 				new_row.internal_feature_id,
 				${initialState.unlimited},
 				${initialState.granted},
