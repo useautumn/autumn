@@ -73,6 +73,7 @@ export const getCachedFullSubject = async ({
 		source: "getCachedFullSubject:pipeline",
 		redisInstance: redisV2,
 		retryOnStandby: true,
+		useReadPool: true,
 		timeoutMs: REDIS_OP_TIMEOUT_MS.subjectPipeline,
 	});
 

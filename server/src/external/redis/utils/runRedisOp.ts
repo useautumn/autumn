@@ -1,6 +1,7 @@
 import type { Redis } from "ioredis";
 import { logger } from "@/external/logtail/logtailUtils.js";
 import { withTimeout } from "@/utils/withTimeout.js";
+import { acquireRedisReadLane } from "../initUtils/createRedisReadPool.js";
 import { getStandbyRedisRouter } from "../initUtils/createStandbyRedisRouter.js";
 import { RedisUnavailableError } from "./errors.js";
 import { isConnectionLevelRedisError } from "./isTransientRedisError.js";
@@ -93,6 +94,7 @@ export const runRedisOp = async <T>({
 	redisInstance,
 	queueIfNotReady = false,
 	retryOnStandby = false,
+	useReadPool = false,
 	timeoutMs,
 }: {
 	operation: (redis: Redis) => Promise<T>;
@@ -102,78 +104,86 @@ export const runRedisOp = async <T>({
 	/** Retry a failed idempotent read once on the other connection. `operation`
 	 *  must use its injected `redis`; closing over the router re-runs the same one. */
 	retryOnStandby?: boolean;
+	/** Select the least-busy read lane. Requires `retryOnStandby` so only
+	 *  operations already declared idempotent can enter the pool. */
+	useReadPool?: boolean;
 	/** Opt-in bound, tighter than the client's `commandTimeout`. Reads only —
 	 *  the race abandons the promise but the command still reaches Redis. */
 	timeoutMs?: number;
 }): Promise<T> => {
-	const targetRedis = redisInstance;
-
-	if (!queueIfNotReady && targetRedis.status !== "ready") {
-		const reason: UnavailableReason = "not_ready";
-		warnRedisUnavailable({ source, reason });
-		throw new RedisUnavailableError({ source, reason });
-	}
-
-	// One budget for the whole op, not one per attempt: a retry must not double
-	// the ceiling the caller sized against its non-Redis fallback.
-	const deadlineAt = timeoutMs ? Date.now() + timeoutMs : undefined;
-
-	const runAttempt = (redis: Redis, budgetMs?: number) =>
-		budgetMs
-			? // The message must contain "timeout" so classifyErrorReason maps it to
-				// `timeout` rather than `other` — withTimeout's default says "timed out".
-				withTimeout({
-					timeoutMs: budgetMs,
-					fn: () => operation(redis),
-					timeoutMessage: `[redis] ${source} timeout after ${budgetMs}ms`,
-				})
-			: operation(redis);
+	const readLaneLease =
+		retryOnStandby && useReadPool
+			? acquireRedisReadLane(redisInstance)
+			: undefined;
+	const targetRedis = readLaneLease?.redis ?? redisInstance;
 
 	try {
-		const router = retryOnStandby
-			? getStandbyRedisRouter(targetRedis)
-			: undefined;
-		if (!router) return await runAttempt(targetRedis, timeoutMs);
+		if (!queueIfNotReady && targetRedis.status !== "ready") {
+			const reason: UnavailableReason = "not_ready";
+			warnRedisUnavailable({ source, reason });
+			throw new RedisUnavailableError({ source, reason });
+		}
 
-		const [preferred, alternate] = router.ordered();
-		// Only shorten the preferred attempt for an alternate worth retrying on.
-		// `canRetry` below stays broader on purpose: once the preferred has failed,
-		// a penalized alternate still beats falling open to the non-Redis path.
-		const preferredAttemptBudgetMs = router.isUsable(alternate)
-			? getPreferredAttemptBudgetMs({ timeoutMs })
-			: timeoutMs;
+		// One budget for the whole op, not one per attempt: a retry must not double
+		// the ceiling the caller sized against its non-Redis fallback.
+		const deadlineAt = timeoutMs ? Date.now() + timeoutMs : undefined;
+		const runAttempt = (redis: Redis, budgetMs?: number) =>
+			budgetMs
+				? withTimeout({
+						timeoutMs: budgetMs,
+						fn: () => operation(redis),
+						timeoutMessage: `[redis] ${source} timeout after ${budgetMs}ms`,
+					})
+				: operation(redis);
+
 		try {
-			const value = await runAttempt(preferred, preferredAttemptBudgetMs);
-			router.recordOutcome({ connection: preferred });
-			return value;
-		} catch (firstError) {
-			router.recordOutcome({ connection: preferred, error: firstError });
+			const router = retryOnStandby
+				? getStandbyRedisRouter(targetRedis)
+				: undefined;
+			if (!router) return await runAttempt(targetRedis, timeoutMs);
 
-			const remainingMs = deadlineAt ? deadlineAt - Date.now() : undefined;
-			const canRetry =
-				alternate.status === "ready" &&
-				isConnectionLevelRedisError({ error: firstError }) &&
-				(remainingMs === undefined || remainingMs >= MIN_RETRY_BUDGET_MS);
-			if (!canRetry) throw firstError;
+			const [preferred, alternate] = router.ordered();
+			// Only shorten the preferred attempt for an alternate worth retrying on.
+			// A penalized alternate still beats the non-Redis fallback after failure.
+			const preferredAttemptBudgetMs = router.isUsable(alternate)
+				? getPreferredAttemptBudgetMs({ timeoutMs })
+				: timeoutMs;
 
 			try {
-				const value = await runAttempt(alternate, remainingMs);
-				router.recordOutcome({ connection: alternate });
-				logger.info(
-					{ source, type: "redis_standby_failover" },
-					"[redis] standby served a read the preferred connection failed",
-				);
+				const value = await runAttempt(preferred, preferredAttemptBudgetMs);
+				router.recordOutcome({ connection: preferred });
 				return value;
-			} catch (retryError) {
-				router.recordOutcome({ connection: alternate, error: retryError });
-				throw retryError;
+			} catch (firstError) {
+				router.recordOutcome({ connection: preferred, error: firstError });
+
+				const remainingMs = deadlineAt ? deadlineAt - Date.now() : undefined;
+				const canRetry =
+					alternate.status === "ready" &&
+					isConnectionLevelRedisError({ error: firstError }) &&
+					(remainingMs === undefined || remainingMs >= MIN_RETRY_BUDGET_MS);
+				if (!canRetry) throw firstError;
+
+				try {
+					const value = await runAttempt(alternate, remainingMs);
+					router.recordOutcome({ connection: alternate });
+					logger.info(
+						{ source, type: "redis_standby_failover" },
+						"[redis] standby served a read the preferred connection failed",
+					);
+					return value;
+				} catch (retryError) {
+					router.recordOutcome({ connection: alternate, error: retryError });
+					throw retryError;
+				}
 			}
+		} catch (error) {
+			const classified = classifyErrorReason(targetRedis, error);
+			const reason: UnavailableReason = classified ?? "other";
+			warnRedisUnavailable({ source, reason, error });
+			throw new RedisUnavailableError({ source, reason, cause: error });
 		}
-	} catch (error) {
-		const classified = classifyErrorReason(targetRedis, error);
-		const reason: UnavailableReason = classified ?? "other";
-		warnRedisUnavailable({ source, reason, error });
-		throw new RedisUnavailableError({ source, reason, cause: error });
+	} finally {
+		readLaneLease?.release();
 	}
 };
 
@@ -188,6 +198,7 @@ export const tryRedisOp = async <T>({
 	redisInstance,
 	queueIfNotReady,
 	retryOnStandby,
+	useReadPool,
 	timeoutMs,
 	onError,
 }: {
@@ -196,6 +207,7 @@ export const tryRedisOp = async <T>({
 	redisInstance: Redis;
 	queueIfNotReady?: boolean;
 	retryOnStandby?: boolean;
+	useReadPool?: boolean;
 	timeoutMs?: number;
 	onError?: (error: unknown) => void;
 }): Promise<T | undefined> => {
@@ -206,6 +218,7 @@ export const tryRedisOp = async <T>({
 			redisInstance,
 			queueIfNotReady,
 			retryOnStandby,
+			useReadPool,
 			timeoutMs,
 		});
 	} catch (error) {

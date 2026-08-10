@@ -6,9 +6,12 @@ import { logger } from "@/external/logtail/logtailUtils.js";
 import { OrgService } from "@/internal/orgs/OrgService.js";
 import { decryptData } from "@/utils/encryptUtils.js";
 import { getReachableDragonflyUrl } from "./getReachableDragonflyUrl.js";
-import { createStandbyRedisConnection, currentRegion } from "./initRedis.js";
+import {
+	createPooledStandbyRedisConnection,
+	currentRegion,
+} from "./initRedis.js";
 import { REDIS_V2_COMMAND_TIMEOUT_MS } from "./initUtils/createRedisClient.js";
-import { waitForRedisReady } from "./initUtils/redisWarmup.js";
+import { waitForRedisReadPoolReady } from "./initUtils/redisWarmup.js";
 import { resolveRedisV2 } from "./resolveRedisV2.js";
 
 export type OrgWithRedisConfig = {
@@ -35,7 +38,7 @@ const createOrgRedisConnection = ({
 	orgId: string;
 	orgSlug: string;
 }): Redis => {
-	const instance = createStandbyRedisConnection({
+	const instance = createPooledStandbyRedisConnection({
 		cacheUrl: connectionString,
 		region: `org:${orgSlug}:v2:dragonfly`,
 		redisType: `subject-dedicated:${orgSlug}`,
@@ -130,14 +133,13 @@ export const warmOrgRedis = async ({
 	if (!org.redis_config) return;
 
 	const instance = getOrgRedis({ org });
-	if (instance.status === "ready") return;
 
 	try {
-		await waitForRedisReady(
+		await waitForRedisReadPoolReady({
 			instance,
-			`org:${org.slug ?? org.id}`,
-			ORG_REDIS_WARMUP_TIMEOUT_MS,
-		);
+			label: `org:${org.slug ?? org.id}`,
+			timeoutMs: ORG_REDIS_WARMUP_TIMEOUT_MS,
+		});
 	} catch (error) {
 		logger.warn(
 			`[OrgRedis] org=${org.id}: warmup failed (continuing): ${

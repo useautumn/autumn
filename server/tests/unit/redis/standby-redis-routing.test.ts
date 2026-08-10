@@ -1,5 +1,6 @@
 import { describe, expect, setSystemTime, test } from "bun:test";
 import type { Redis } from "ioredis";
+import { createRedisReadPool } from "@/external/redis/initUtils/createRedisReadPool.js";
 import {
 	createStandbyRedisRouter,
 	getStandbyRedisRouter,
@@ -20,6 +21,7 @@ type FakeRedis = {
 	listeners: Map<string, Set<Listener>>;
 	failGetWith?: Error;
 	hangGetForMs?: number;
+	waitForGet?: Promise<void>;
 	pipelineError?: Error;
 	/** Resolve exec() with a per-command error tuple, as real ioredis does. */
 	pipelineCommandError?: Error;
@@ -98,6 +100,7 @@ const createFakeRedis = ({
 		},
 		async get(key) {
 			calls.push(`get:${key}`);
+			if (redis.waitForGet) await redis.waitForGet;
 			if (redis.hangGetForMs) {
 				await new Promise((resolve) => setTimeout(resolve, redis.hangGetForMs));
 			}
@@ -144,6 +147,22 @@ const createPair = (options?: {
 		name: "standby",
 		status: options?.standbyStatus,
 	});
+	const redis = createStandbyRedisRouter({
+		primary: asRedis(primary),
+		standby: asRedis(standby),
+	});
+	return { primary, standby, redis };
+};
+
+const createNamedPair = ({
+	primaryName,
+	standbyName,
+}: {
+	primaryName: string;
+	standbyName: string;
+}) => {
+	const primary = createFakeRedis({ name: primaryName });
+	const standby = createFakeRedis({ name: standbyName });
 	const redis = createStandbyRedisRouter({
 		primary: asRedis(primary),
 		standby: asRedis(standby),
@@ -530,6 +549,186 @@ describe("runRedisOp standby failover", () => {
 		).rejects.toBeInstanceOf(RedisUnavailableError);
 
 		expect(standby.calls).toEqual([]);
+	});
+});
+
+describe("Redis read pool", () => {
+	test("skips a lane whose preferred and standby connections are unavailable", async () => {
+		const laneZero = createNamedPair({
+			primaryName: "lane-zero-primary",
+			standbyName: "lane-zero-standby",
+		});
+		const laneOne = createNamedPair({
+			primaryName: "lane-one-primary",
+			standbyName: "lane-one-standby",
+		});
+		laneZero.primary.status = "reconnecting";
+		laneZero.standby.status = "end";
+		const redis = createRedisReadPool({
+			lanes: [laneZero.redis, laneOne.redis],
+		});
+
+		const result = await runRedisOp({
+			redisInstance: redis,
+			source: "read-pool-test",
+			retryOnStandby: true,
+			useReadPool: true,
+			operation: (connection) => connection.get("subject"),
+		});
+
+		expect(result).toBe("lane-one-primary");
+		expect(laneZero.primary.calls).toEqual([]);
+		expect(laneZero.standby.calls).toEqual([]);
+	});
+
+	test("routes a concurrent retry-safe read to the least-busy lane", async () => {
+		const laneZero = createNamedPair({
+			primaryName: "lane-zero-primary",
+			standbyName: "lane-zero-standby",
+		});
+		const laneOne = createNamedPair({
+			primaryName: "lane-one-primary",
+			standbyName: "lane-one-standby",
+		});
+		let releaseFirstRead: (() => void) | undefined;
+		laneZero.primary.waitForGet = new Promise<void>((resolve) => {
+			releaseFirstRead = resolve;
+		});
+		const redis = createRedisReadPool({
+			lanes: [laneZero.redis, laneOne.redis],
+		});
+
+		const firstRead = runRedisOp({
+			redisInstance: redis,
+			source: "read-pool-test",
+			retryOnStandby: true,
+			useReadPool: true,
+			operation: (connection) => connection.get("first"),
+		});
+		const secondRead = await runRedisOp({
+			redisInstance: redis,
+			source: "read-pool-test",
+			retryOnStandby: true,
+			useReadPool: true,
+			operation: (connection) => connection.get("second"),
+		});
+
+		expect(secondRead).toBe("lane-one-primary");
+		expect(laneOne.primary.calls).toEqual(["get:second"]);
+		releaseFirstRead?.();
+		expect(await firstRead).toBe("lane-zero-primary");
+	});
+
+	test("keeps non-retry-safe operations pinned to lane zero", async () => {
+		const laneZero = createNamedPair({
+			primaryName: "lane-zero-primary",
+			standbyName: "lane-zero-standby",
+		});
+		const laneOne = createNamedPair({
+			primaryName: "lane-one-primary",
+			standbyName: "lane-one-standby",
+		});
+		let releaseFirstRead: (() => void) | undefined;
+		laneZero.primary.waitForGet = new Promise<void>((resolve) => {
+			releaseFirstRead = resolve;
+		});
+		const redis = createRedisReadPool({
+			lanes: [laneZero.redis, laneOne.redis],
+		});
+
+		const firstRead = runRedisOp({
+			redisInstance: redis,
+			source: "read-pool-test",
+			retryOnStandby: true,
+			useReadPool: true,
+			operation: (connection) => connection.get("first"),
+		});
+		const write = await runRedisOp({
+			redisInstance: redis,
+			source: "read-pool-test",
+			operation: (connection) => connection.set("subject", "value"),
+		});
+
+		expect(write).toBe("OK");
+		expect(laneZero.primary.calls).toContain("set:subject:value");
+		expect(laneOne.primary.calls).toEqual([]);
+		releaseFirstRead?.();
+		await firstRead;
+	});
+
+	test("keeps standby failover inside the selected lane", async () => {
+		const laneZero = createNamedPair({
+			primaryName: "lane-zero-primary",
+			standbyName: "lane-zero-standby",
+		});
+		const laneOne = createNamedPair({
+			primaryName: "lane-one-primary",
+			standbyName: "lane-one-standby",
+		});
+		laneZero.primary.failGetWith = connectionError();
+		const redis = createRedisReadPool({
+			lanes: [laneZero.redis, laneOne.redis],
+		});
+
+		const result = await runRedisOp({
+			redisInstance: redis,
+			source: "read-pool-test",
+			retryOnStandby: true,
+			useReadPool: true,
+			operation: (connection) => connection.get("subject"),
+		});
+
+		expect(result).toBe("lane-zero-standby");
+		expect(laneZero.standby.calls).toEqual(["get:subject"]);
+		expect(laneOne.primary.calls).toEqual([]);
+		expect(laneOne.standby.calls).toEqual([]);
+	});
+
+	test("fans connection listeners out across both lanes", () => {
+		const laneZero = createNamedPair({
+			primaryName: "lane-zero-primary",
+			standbyName: "lane-zero-standby",
+		});
+		const laneOne = createNamedPair({
+			primaryName: "lane-one-primary",
+			standbyName: "lane-one-standby",
+		});
+		const redis = createRedisReadPool({
+			lanes: [laneZero.redis, laneOne.redis],
+		});
+		const seen: string[] = [];
+
+		redis.on("error", (error) => seen.push((error as Error).message));
+		laneZero.primary.emit("error", new Error("lane zero"));
+		laneOne.primary.emit("error", new Error("lane one"));
+
+		expect(seen).toEqual(["lane zero", "lane one"]);
+	});
+
+	test("closes every primary and standby connection during teardown", async () => {
+		const laneZero = createNamedPair({
+			primaryName: "lane-zero-primary",
+			standbyName: "lane-zero-standby",
+		});
+		const laneOne = createNamedPair({
+			primaryName: "lane-one-primary",
+			standbyName: "lane-one-standby",
+		});
+		const redis = createRedisReadPool({
+			lanes: [laneZero.redis, laneOne.redis],
+		});
+
+		redis.disconnect();
+		expect(laneZero.primary.calls).toEqual(["disconnect"]);
+		expect(laneZero.standby.calls).toEqual(["disconnect"]);
+		expect(laneOne.primary.calls).toEqual(["disconnect"]);
+		expect(laneOne.standby.calls).toEqual(["disconnect"]);
+
+		await redis.quit();
+		expect(laneZero.primary.calls).toEqual(["disconnect", "quit"]);
+		expect(laneZero.standby.calls).toEqual(["disconnect", "quit"]);
+		expect(laneOne.primary.calls).toEqual(["disconnect", "quit"]);
+		expect(laneOne.standby.calls).toEqual(["disconnect", "quit"]);
 	});
 });
 
