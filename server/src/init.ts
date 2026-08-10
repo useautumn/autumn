@@ -99,10 +99,12 @@ const init = async ({
 
 	// Kicked off early, awaited (bounded) just before listen: a fork must not
 	// serve its first requests against still-connecting redis clients.
-	const regionalRedisWarmup = warmupRegionalRedis();
-	void preWarmOrgRedisConnections({ db }).catch((error) => {
-		logger.warn("[OrgRedis] Warmup failed", { error });
-	});
+	const redisWarmup = Promise.all([
+		warmupRegionalRedis(),
+		preWarmOrgRedisConnections({ db }).catch((error) => {
+			logger.warn("[OrgRedis] Warmup failed", { error });
+		}),
+	]);
 
 	await startAllEdgeConfigPolling({ logger });
 	await Promise.all([primeRedisMonitor(), primeRedisV2Monitor()]);
@@ -143,7 +145,7 @@ const init = async ({
 	};
 
 	await awaitBoundedWarmup({
-		warmup: regionalRedisWarmup,
+		warmup: redisWarmup,
 		timeoutMs: 10_000,
 		log: (message) => console.warn(message),
 	});
