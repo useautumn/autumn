@@ -16,6 +16,7 @@ export const PreparedPlanLicenseRefSchema = z.object({
 		z.object({
 			entitlementId: z.string().optional(),
 			priceId: z.string().optional(),
+			internalFeatureId: z.string().optional(),
 		}),
 	),
 });

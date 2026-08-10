@@ -193,18 +193,36 @@ export const ensurePlanLicenses: PrepareModule<
 				});
 		}
 
-		// replaceItems swaps the whole item set, so base items ride along.
+		// replaceItems swaps the whole item set, so base items ride along. A base
+		// item for the same feature is superseded by the minted one — keying on
+		// entitlement id alone would leave both and grant the feature twice.
 		const refsByPlanLicenseId = new Map<string, Map<string, LicenseItemRef>>();
 		for (const artifact of planned.artifacts) {
 			const refs =
 				refsByPlanLicenseId.get(artifact.plan_license_id) ??
 				new Map<string, LicenseItemRef>();
-			for (const ref of [
-				...artifact.base_item_refs,
-				{ entitlementId: artifact.entitlement_id },
-			]) {
+			const supersededFeatureIds = new Set(
+				planned.artifacts
+					.filter(
+						(candidate) =>
+							candidate.plan_license_id === artifact.plan_license_id,
+					)
+					.map((candidate) => candidate.internal_feature_id),
+			);
+			for (const ref of artifact.base_item_refs) {
+				// Drop the base item entirely when the customize re-adds its
+				// feature — including a priced one, whose price ref carries the
+				// same entitlement and would otherwise grant the feature twice.
+				if (
+					ref.internalFeatureId &&
+					supersededFeatureIds.has(ref.internalFeatureId)
+				) {
+					continue;
+				}
 				refs.set(`${ref.entitlementId ?? ""}:${ref.priceId ?? ""}`, ref);
 			}
+			const mintedRef = { entitlementId: artifact.entitlement_id };
+			refs.set(`${mintedRef.entitlementId}:`, mintedRef);
 			refsByPlanLicenseId.set(artifact.plan_license_id, refs);
 		}
 		for (const [planLicenseId, refs] of refsByPlanLicenseId) {
