@@ -131,10 +131,10 @@ export const JoinedDateSubMenu = ({ onChange }: { onChange?: () => void }) => {
 		>
 			<DropdownMenuSubTrigger
 				className="flex items-center gap-2 cursor-pointer"
-				aria-label="Filter customers by created date"
+				aria-label={label ? `Created At: ${label}` : "Created At"}
 			>
 				{label ? (
-					<span className="truncate text-xs text-tertiary-foreground bg-muted px-1 py-0 rounded-md">
+					<span className="flex-1 min-w-0 truncate text-xs text-tertiary-foreground bg-muted px-1 py-0 rounded-md">
 						{label}
 					</span>
 				) : (
