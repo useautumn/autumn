@@ -151,10 +151,12 @@ const entryNeedsMigration = (
 const hasMigrationTargets = ({
 	preview,
 	selectedVariantIds,
+	selectedLicenseParentIds,
 	versionChoice,
 }: {
 	preview: PlanUpdatePreview | undefined;
 	selectedVariantIds: string[];
+	selectedLicenseParentIds: string[];
 	versionChoice: VersionChoice;
 }): boolean => {
 	// New-version grandfathers everyone; update/all patch live versions.
@@ -166,6 +168,19 @@ const hasMigrationTargets = ({
 		...(includeHistorical ? (preview.other_versions ?? []) : []),
 	];
 	if (baseEntries.some(entryNeedsMigration)) return true;
+
+	// A parent's own items never change — the diff rides on license_changes,
+	// which entryNeedsMigration already reads.
+	const selectedParentIdSet = new Set(selectedLicenseParentIds);
+	if (
+		preview.license_parents.some(
+			(parent) =>
+				selectedParentIdSet.has(getLicenseParentTargetId(parent)) &&
+				entryNeedsMigration(parent),
+		)
+	) {
+		return true;
+	}
 
 	return selectedVariantIds.some((variantId) => {
 		const entries = preview.variants
@@ -360,9 +375,15 @@ export default function PlanChangeDialog({
 			hasMigrationTargets({
 				preview,
 				selectedVariantIds: effectiveVariantIds,
+				selectedLicenseParentIds: effectiveLicenseParentIds,
 				versionChoice: effectiveVersionChoice,
 			}),
-		[preview, effectiveVariantIds, effectiveVersionChoice],
+		[
+			preview,
+			effectiveVariantIds,
+			effectiveLicenseParentIds,
+			effectiveVersionChoice,
+		],
 	);
 
 	// Metadata-only edits always apply across all versions; there's no strategy

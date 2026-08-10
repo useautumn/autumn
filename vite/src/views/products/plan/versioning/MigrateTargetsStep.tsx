@@ -107,6 +107,12 @@ function VersionBody({
 	);
 }
 
+const ROLE_LABEL = {
+	base: "Base",
+	variant: "Variant",
+	license_parent: "Parent plan",
+} as const;
+
 export function MigrateTargetsStep({
 	targets,
 	showCustomers = true,
@@ -142,7 +148,7 @@ export function MigrateTargetsStep({
 										showCustomers={showCustomers}
 									/>
 								)}
-								{target.isBase && <MetaBadge>Base</MetaBadge>}
+								<MetaBadge>{ROLE_LABEL[target.role]}</MetaBadge>
 							</div>
 						</div>
 						{singleRow ? (

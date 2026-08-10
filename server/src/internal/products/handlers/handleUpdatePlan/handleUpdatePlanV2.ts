@@ -6,12 +6,14 @@ import {
 	type UpdateProductV2Params,
 } from "@autumn/shared";
 import { createRoute } from "@/honoMiddlewares/routeHandler.js";
-import { updateProduct } from "../../../product/actions/updateProduct.js";
+import { buildLicenseParentTargetCustomize } from "@/internal/licenses/actions/propagation/buildLicenseParentCustomize.js";
+import { prepareLicenseParentPropagation } from "@/internal/licenses/actions/propagation/prepareLicenseParentPropagation.js";
 import {
 	createPlanMigrationDraft,
 	getVariantMigrationSnapshots,
 	validateNoDirectVariantMigrationDrafts,
 } from "../../../product/actions/updateProduct/createPlanMigrationDraft.js";
+import { updateProduct } from "../../../product/actions/updateProduct.js";
 import { ProductService } from "../../ProductService.js";
 import { getPlanResponse } from "../../productUtils/productResponseUtils/getPlanResponse.js";
 
@@ -81,6 +83,16 @@ export const handleUpdatePlanV2 = createRoute({
 			variantsBefore,
 		});
 
+		// Snapshot parents BEFORE the write: their effective license plans are
+		// rebased by updateProduct, and the draft needs the pre-update baseline.
+		const parentsBefore = fromPlan
+			? await prepareLicenseParentPropagation({
+					ctx,
+					child: initialFullProduct,
+					targets: update_license_parents,
+				})
+			: null;
+
 		await updateProduct({
 			ctx,
 			productId: plan_id,
@@ -110,6 +122,19 @@ export const handleUpdatePlanV2 = createRoute({
 					product: after,
 					features: ctx.features,
 				});
+				const licenseParents = (parentsBefore?.selectedParents ?? [])
+					.filter(({ hasCustomers }) => hasCustomers)
+					.map(({ parent, link, currentEffectivePlan }) => ({
+						planId: parent.id,
+						version: parent.version,
+						customize: buildLicenseParentTargetCustomize({
+							currentChildPlan: fromPlan,
+							editedChildPlan: toPlan,
+							currentEffectivePlan,
+							customized: link.customized,
+						}).migrationCustomize,
+					}));
+
 				migrationId = await createPlanMigrationDraft({
 					ctx,
 					current: initialFullProduct,
@@ -118,6 +143,7 @@ export const handleUpdatePlanV2 = createRoute({
 					mode: all_versions ? "all_versions" : "version",
 					planId: plan_id,
 					selectedVariantIds,
+					licenseParents,
 					toPlan,
 					variantsBefore,
 				});

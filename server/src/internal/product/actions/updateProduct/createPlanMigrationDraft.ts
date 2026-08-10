@@ -2,8 +2,10 @@ import {
 	type ApiPlanV1,
 	buildAllVersionsUpdateMigrationDraft,
 	buildCombinedVariantMigrationDraft,
+	type DiffedCustomizePlanV1,
 	diffPlanV1,
 	type FullProduct,
+	type LicenseCustomize,
 	type Operations,
 	type PlanFilter,
 	planDiffHasBillingChanges,
@@ -23,6 +25,12 @@ import {
 export type VariantMigrationSnapshot = {
 	product: FullProduct;
 	plan: ApiPlanV1;
+};
+
+export type LicenseParentMigrationTarget = {
+	planId: string;
+	version: number;
+	customize: LicenseCustomize | undefined;
 };
 
 const hasVersionableUsage = ({
@@ -156,6 +164,34 @@ export const validateNoDirectVariantMigrationDrafts = ({
 	}
 };
 
+/** Parents receive the child's edit as a license customize, never as their own
+ * item diff — their plan items are untouched. Identical customize values collapse
+ * into one op downstream, so N parents cost one op, not N.
+ *
+ * Always version-scoped, including in all_versions mode: a link pins a version,
+ * and two versions of one parent can carry different customizes — a bare
+ * plan_id would let each op match the other's customers. */
+const licenseParentTargets = ({
+	planId,
+	parents,
+}: {
+	planId: string;
+	parents: LicenseParentMigrationTarget[];
+}) =>
+	parents
+		// An entry without a customize resets the link to catalog inheritance, so
+		// a parent with nothing to change must not produce a target at all.
+		.filter((parent) => parent.customize !== undefined)
+		.map((parent) => ({
+			id: parent.planId,
+			version: parent.version,
+			customize: {
+				upsert_licenses: [
+					{ license_plan_id: planId, customize: parent.customize },
+				],
+			} satisfies DiffedCustomizePlanV1,
+		}));
+
 export const createPlanMigrationDraft = async ({
 	ctx,
 	current,
@@ -164,6 +200,7 @@ export const createPlanMigrationDraft = async ({
 	includeCustom = false,
 	planId,
 	selectedVariantIds,
+	licenseParents = [],
 	toPlan,
 	variantsBefore = [],
 }: {
@@ -174,11 +211,13 @@ export const createPlanMigrationDraft = async ({
 	mode: "all_versions" | "version";
 	planId: string;
 	selectedVariantIds: string[];
+	licenseParents?: LicenseParentMigrationTarget[];
 	toPlan: ApiPlanV1;
 	variantsBefore?: VariantMigrationSnapshot[];
 }): Promise<string | undefined> => {
 	const baseDiff = diffPlanV1({ from: fromPlan, to: toPlan });
-	if (Object.keys(baseDiff).length === 0) return;
+	// Parents can need migrating even when the child's own diff is empty.
+	if (Object.keys(baseDiff).length === 0 && licenseParents.length === 0) return;
 	const selectedVariantsBefore =
 		variantsBefore.length > 0 || selectedVariantIds.length === 0
 			? variantsBefore
@@ -201,6 +240,7 @@ export const createPlanMigrationDraft = async ({
 				version: before.product.version,
 				customize: baseDiff,
 			})),
+			...licenseParentTargets({ planId, parents: licenseParents }),
 		];
 		const draft = buildCombinedVariantMigrationDraft({
 			targets,
@@ -235,6 +275,8 @@ export const createPlanMigrationDraft = async ({
 		internalProductIds: baseVersions.map((product) => product.internal_id),
 	});
 
+	// Base and variants sweep every version; parents keep theirs, since a link
+	// pins the version it offers.
 	const targets = [
 		...(hasVersionableUsage({ products: baseVersions, usageByProduct })
 			? [{ id: planId, customize: baseDiff }]
@@ -243,6 +285,7 @@ export const createPlanMigrationDraft = async ({
 			id: before.product.id,
 			customize: baseDiff,
 		})),
+		...licenseParentTargets({ planId, parents: licenseParents }),
 	];
 	const draft = buildAllVersionsUpdateMigrationDraft({
 		targets,

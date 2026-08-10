@@ -62,7 +62,7 @@ export function PropagationTargetsStep({
 						>
 							<Checkbox checked={checked} className="pointer-events-none" />
 							<div className="flex min-w-0 flex-1 items-baseline gap-2">
-								<span className="text-sm font-medium text-foreground">
+								<span className="truncate text-sm font-medium text-foreground">
 									{target.name}
 								</span>
 								<span className="truncate font-mono text-tertiary-foreground text-xs">
@@ -72,7 +72,7 @@ export function PropagationTargetsStep({
 							<HoverCard>
 								<HoverCardTrigger asChild closeDelay={0} delay={0}>
 									<span
-										className="flex shrink-0 cursor-help items-center gap-1 text-xs"
+										className="flex shrink-0 cursor-pointer items-center gap-1 text-xs"
 										onClick={(event) => event.stopPropagation()}
 									>
 										{hasConflict ? (
@@ -81,9 +81,11 @@ export function PropagationTargetsStep({
 												{conflictBadgeLabel(target.conflicts)}
 											</span>
 										) : (
-											<span className="flex items-center gap-1 text-muted-foreground">
-												<EyeIcon size={11} />
-												Preview
+											<span
+												className="flex items-center text-muted-foreground"
+												title="Preview changes"
+											>
+												<EyeIcon size={13} />
 											</span>
 										)}
 									</span>

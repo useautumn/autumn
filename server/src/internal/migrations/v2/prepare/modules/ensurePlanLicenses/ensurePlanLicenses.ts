@@ -70,8 +70,8 @@ export const ensurePlanLicenses: PrepareModule<
 	kind: "ensure_plan_licenses",
 
 	async plan({ ctx, scopeId, input }) {
-		const planLicenseRows: DbPlanLicense[] = [];
-		const entitlements: Entitlement[] = [];
+		const planLicensesById = new Map<string, DbPlanLicense>();
+		const entitlementsById = new Map<string, Entitlement>();
 		const artifacts: PreparedPlanLicenseRef[] = [];
 
 		for (const { opIndex, op } of input.updatePlanOps) {
@@ -105,7 +105,7 @@ export const ensurePlanLicenses: PrepareModule<
 					});
 					const now = Date.now();
 
-					planLicenseRows.push({
+					planLicensesById.set(planLicenseId, {
 						id: planLicenseId,
 						parent_internal_product_id: parentProduct.internal_id,
 						license_internal_product_id: licenseProduct.internal_id,
@@ -149,11 +149,15 @@ export const ensurePlanLicenses: PrepareModule<
 							);
 						}
 
-						entitlements.push({
-							...newEnt,
-							id: entitlementId,
-							internal_product_id: licenseProduct.internal_id,
-						});
+						// Parent-independent by design: every parent matched by this op
+						// shares one entitlement, so only the first parent mints it.
+						if (!entitlementsById.has(entitlementId)) {
+							entitlementsById.set(entitlementId, {
+								...newEnt,
+								id: entitlementId,
+								internal_product_id: licenseProduct.internal_id,
+							});
+						}
 						artifacts.push({
 							op_index: opIndex,
 							license_plan_id: entry.license_plan_id,
@@ -172,7 +176,11 @@ export const ensurePlanLicenses: PrepareModule<
 			}
 		}
 
-		return { planLicenses: planLicenseRows, entitlements, artifacts };
+		return {
+			planLicenses: [...planLicensesById.values()],
+			entitlements: [...entitlementsById.values()],
+			artifacts,
+		};
 	},
 
 	async apply({ ctx, planned }) {
