@@ -167,7 +167,7 @@ export const preWarmOrgRedisConnections = async ({
 		`[OrgRedis] Pre-warming connections for ${orgsWithRedis.length} orgs in ${currentRegion}...`,
 	);
 
-	for (const org of orgsWithRedis) {
-		getOrgRedis({ org });
-	}
+	// Await readiness (bounded per org, never throws) so callers can gate
+	// listen on it — an open-but-handshaking client still times out ops.
+	await Promise.all(orgsWithRedis.map((org) => warmOrgRedis({ org })));
 };
