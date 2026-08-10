@@ -179,7 +179,7 @@ function genUrlSafeBase64(bytes: number): string {
 		.replace(/=+$/g, "");
 }
 
-function ensureSecrets(state: State | null): State["secrets"] {
+function ensureSecrets(state: State | null): NonNullable<State["secrets"]> {
 	if (state?.secrets) return state.secrets;
 	log(
 		"minting per-sandbox secrets (BETTER_AUTH_SECRET, ENCRYPTION_IV, ENCRYPTION_PASSWORD)",

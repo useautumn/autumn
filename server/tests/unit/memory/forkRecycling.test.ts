@@ -60,15 +60,15 @@ describe("getForkRecycleConfig", () => {
 	test("defaults apply when nothing is set", () => {
 		const config = getForkRecycleConfig();
 		expect(config.enabled).toBe(true);
-		expect(config.rssThresholdBytes).toBe(3072 * MB);
+		expect(config.rssThresholdBytes).toBe(1536 * MB);
 		expect(config.minAgeMs).toBe(30 * 60_000);
 	});
 
 	test("valid overrides are honored", () => {
-		process.env.FORK_RECYCLE_RSS_MB = "1536";
+		process.env.FORK_RECYCLE_RSS_MB = "2048";
 		process.env.FORK_RECYCLE_CHECK_INTERVAL_MS = "5000";
 		const config = getForkRecycleConfig();
-		expect(config.rssThresholdBytes).toBe(1536 * MB);
+		expect(config.rssThresholdBytes).toBe(2048 * MB);
 		expect(config.checkIntervalMs).toBe(5000);
 	});
 
@@ -79,7 +79,7 @@ describe("getForkRecycleConfig", () => {
 		const config = getForkRecycleConfig();
 		expect(config.checkIntervalMs).toBe(30_000);
 		expect(config.drainTimeoutMs).toBe(30_000);
-		expect(config.rssThresholdBytes).toBe(3072 * MB);
+		expect(config.rssThresholdBytes).toBe(1536 * MB);
 	});
 
 	test("FORK_RECYCLE_DISABLED=true turns recycling off", () => {

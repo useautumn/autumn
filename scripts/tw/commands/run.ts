@@ -30,13 +30,13 @@ import { readdirSync, readFileSync, statSync, writeFileSync } from "node:fs";
 import { readdir, stat } from "node:fs/promises";
 import { join } from "node:path";
 import { deleteSvixApp as serverDeleteSvixApp } from "@server/external/svix/svixHelpers.js";
-import chalk from "chalk";
-import pLimit from "p-limit";
 import {
 	getGroup,
 	resolveSuite,
 	resolveTestPaths,
-} from "../../../server/tests/_groups/index.ts";
+} from "@tests/_groups/index.ts";
+import chalk from "chalk";
+import pLimit from "p-limit";
 import { TEST_ORG_CONFIG } from "../../setupTestUtils/createTestOrg.ts";
 import type { TestExecutor } from "../../testScripts/testExecutor.ts";
 import {
