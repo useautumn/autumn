@@ -52,9 +52,10 @@ export const AllowedPaymentMethodsSubsection = () => {
 		method: InvoicePaymentMethod;
 		checked: boolean;
 	}) => {
-		const next = PAYMENT_METHOD_OPTIONS.filter((option) =>
-			option.value === method ? checked : selected.includes(option.value),
-		).map((option) => option.value);
+		const next = PAYMENT_METHOD_OPTIONS.filter((option) => {
+			if (option.value === method) return checked;
+			return selected.includes(option.value);
+		}).map((option) => option.value);
 		// An empty array would break invoice finalization at Stripe.
 		mutate(next.length > 0 ? next : null);
 	};
