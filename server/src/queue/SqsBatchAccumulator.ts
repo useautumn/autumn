@@ -54,8 +54,16 @@ export class SqsBatchAccumulator<TEntry extends SqsBatchAccumulatorEntry> {
 		this.sendBatch = sendBatch;
 	}
 
+	private rejectedDuringShutdown = 0;
+
 	enqueue(entry: TEntry): Promise<void> {
 		if (!this.acceptingEntries) {
+			// Every rejection here is a dropped send from a request that outlived
+			// teardown — must stay visible and countable.
+			this.rejectedDuringShutdown++;
+			console.warn(
+				`[SqsBatch] enqueue rejected during shutdown (#${this.rejectedDuringShutdown}, queue=${entry.queueUrl.split("/").pop()})`,
+			);
 			return Promise.reject(
 				new Error("SQS batch accumulator is shutting down"),
 			);

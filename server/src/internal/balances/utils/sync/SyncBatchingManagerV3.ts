@@ -163,7 +163,7 @@ export class SyncBatchingManagerV3 {
 		const totalSize =
 			batch.context.cusEntIds.size + batch.context.rolloverIds.size;
 		if (totalSize >= this.MAX_BATCH_SIZE) {
-			this.executeCustomerBatch({ batchKey });
+			void this.runCustomerBatch({ batchKey });
 		}
 	}
 
@@ -187,9 +187,27 @@ export class SyncBatchingManagerV3 {
 
 	async flush(): Promise<void> {
 		const batchKeys = Array.from(this.customerBatches.keys());
-		await Promise.all(
-			batchKeys.map((batchKey) => this.executeCustomerBatch({ batchKey })),
+		// Settle pending and mid-flight executions together: batches delete
+		// their map entry before awaiting Redis/queue work, and a fail-fast
+		// await would abandon the rest on the first rejection.
+		const results = await Promise.allSettled([
+			...batchKeys.map((batchKey) => this.runCustomerBatch({ batchKey })),
+			...Array.from(this.inFlightExecutions),
+		]);
+		const failure = results.find((r) => r.status === "rejected");
+		if (failure && failure.status === "rejected") throw failure.reason;
+	}
+
+	private inFlightExecutions = new Set<Promise<void>>();
+
+	private runCustomerBatch({ batchKey }: { batchKey: string }): Promise<void> {
+		const executionPromise = this.executeCustomerBatch({ batchKey }).finally(
+			() => {
+				this.inFlightExecutions.delete(executionPromise);
+			},
 		);
+		this.inFlightExecutions.add(executionPromise);
+		return executionPromise;
 	}
 
 	private buildBatchKey({
@@ -260,7 +278,7 @@ export class SyncBatchingManagerV3 {
 		if (!batch) return;
 
 		batch.timer = setTimeout(() => {
-			this.executeCustomerBatch({ batchKey });
+			void this.runCustomerBatch({ batchKey });
 		}, this.BATCH_WINDOW_MS);
 
 		if (batch.timer.unref) {
