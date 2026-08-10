@@ -2,7 +2,12 @@ import type cluster from "node:cluster";
 import type { Worker } from "node:cluster";
 import type { Logger } from "@/external/logtail/logtailUtils.js";
 import { createRecycleCoordinator } from "./recycleCoordinator.js";
-import { getForkRecycleConfig, shouldRequestRecycle } from "./recyclePolicy.js";
+import {
+	getForkRecycleConfig,
+	msUntilHourlyBlackoutEnd,
+	rollEligibilityDelayMs,
+	shouldRequestRecycle,
+} from "./recyclePolicy.js";
 import { createWorkerDrainer } from "./workerDrainer.js";
 
 const RECYCLE_REQUEST = "fork-recycle:request";
@@ -108,8 +113,15 @@ export const startWorkerForkRecycling = ({
 	const config = getForkRecycleConfig();
 	if (!config.enabled) return;
 
+	const delayMs = rollEligibilityDelayMs(config);
+	// uptime spans transpile+eval too — the boot phases init timers can't see.
+	console.log(
+		`[ForkRecycle] Worker ${process.pid} ready in ${Math.round(process.uptime() * 1000)}ms; eligibility delay: ${Math.round(delayMs / 1000)}s`,
+	);
+
 	const startedAt = Date.now();
 	let requested = false;
+	let requestAtMs: number | null = null;
 
 	const drainer = createWorkerDrainer({
 		server,
@@ -145,6 +157,24 @@ export const startWorkerForkRecycling = ({
 				minAgeMs: config.minAgeMs,
 			})
 		) {
+			requestAtMs = null;
+			return;
+		}
+		const now = Date.now();
+		if (requestAtMs === null) requestAtMs = now + delayMs;
+		if (now < requestAtMs) return;
+		// A boot at the hourly burst competes with the serving forks for cores;
+		// release with a fresh roll so held workers don't stampede at the exit.
+		const blackoutRemainingMs = msUntilHourlyBlackoutEnd({
+			now,
+			beforeMs: config.blackoutBeforeMs,
+			afterMs: config.blackoutAfterMs,
+		});
+		if (blackoutRemainingMs > 0) {
+			requestAtMs = now + blackoutRemainingMs + rollEligibilityDelayMs(config);
+			console.log(
+				`[ForkRecycle] Worker ${process.pid} deferring recycle past hourly blackout (${Math.round((requestAtMs - now) / 1000)}s)`,
+			);
 			return;
 		}
 
@@ -175,4 +205,26 @@ export const startWorkerForkRecycling = ({
 	const interval = config.checkIntervalMs * (0.9 + Math.random() * 0.2);
 	const timer = setInterval(check, interval);
 	timer.unref?.();
+
+	// 1s heartbeat: a missed beat is an event-loop stall. Logs only on real
+	// stalls, with own-CPU% so a starved fork (low) reads apart from a busy
+	// one (high) — boot-vs-serving contention measured, not inferred.
+	let lastBeatMs = Date.now();
+	let lastCpu = process.cpuUsage();
+	const stallTimer = setInterval(() => {
+		const now = Date.now();
+		const cpu = process.cpuUsage();
+		const elapsedMs = now - lastBeatMs;
+		const stallMs = elapsedMs - 1_000;
+		const cpuMs =
+			(cpu.user + cpu.system - lastCpu.user - lastCpu.system) / 1_000;
+		lastBeatMs = now;
+		lastCpu = cpu;
+		if (stallMs > 100 && elapsedMs > 0) {
+			console.log(
+				`[ForkRecycle] Worker ${process.pid} event-loop stall: ${stallMs}ms (own cpu ${Math.round((cpuMs / elapsedMs) * 100)}%)`,
+			);
+		}
+	}, 1_000);
+	stallTimer.unref?.();
 };
