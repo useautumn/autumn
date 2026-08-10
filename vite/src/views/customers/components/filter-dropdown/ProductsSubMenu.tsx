@@ -1,12 +1,18 @@
-import { Checkbox } from "@autumn/ui";
 import {
+	Checkbox,
+	Command,
+	CommandInput,
 	DropdownMenuItem,
 	DropdownMenuSeparator,
 	DropdownMenuSub,
 	DropdownMenuSubContent,
 	DropdownMenuSubTrigger,
 } from "@autumn/ui";
-import { useProductsQuery } from "@/hooks/queries/useProductsQuery";
+import { useState } from "react";
+import {
+	type ProductListItem,
+	useProductsQuery,
+} from "@/hooks/queries/useProductsQuery";
 import { cn } from "@/lib/utils";
 import { getVersionCounts } from "@/utils/productUtils";
 import { useCustomerFilters } from "../../hooks/useCustomerFilters";
@@ -14,18 +20,26 @@ import { useCustomerFilters } from "../../hooks/useCustomerFilters";
 export const ProductsSubMenu = ({ onChange }: { onChange?: () => void }) => {
 	const { products } = useProductsQuery();
 	const { queryStates, setFilters } = useCustomerFilters();
+	const [search, setSearch] = useState("");
 	const versionCounts = getVersionCounts(products);
 
 	const selectedVersions = queryStates.version;
 
 	// Deduplicate products by ID (since backend may return multiple entries per product, one per version)
-	const uniqueProducts =
-		products?.reduce((acc: any[], product: any) => {
-			if (!acc.find((p) => p.id === product.id)) {
-				acc.push(product);
-			}
-			return acc;
-		}, []) || [];
+	const uniqueProducts = products.reduce<ProductListItem[]>((acc, product) => {
+		if (!acc.find((p) => p.id === product.id)) {
+			acc.push(product);
+		}
+		return acc;
+	}, []);
+	const normalizedSearch = search.trim().toLowerCase();
+	const filteredProducts = normalizedSearch
+		? uniqueProducts.filter(
+				(product) =>
+					product.name?.toLowerCase().includes(normalizedSearch) ||
+					product.id.toLowerCase().includes(normalizedSearch),
+			)
+		: uniqueProducts;
 
 	// Get all possible product:version combinations
 	const getAllProductVersions = () => {
@@ -34,7 +48,7 @@ export const ProductsSubMenu = ({ onChange }: { onChange?: () => void }) => {
 			version: string;
 			key: string;
 		}> = [];
-		uniqueProducts?.forEach((product: any) => {
+		uniqueProducts.forEach((product) => {
 			const versionCount = versionCounts?.[product.id] || 1;
 			for (let v = 1; v <= versionCount; v++) {
 				productVersions.push({
@@ -73,7 +87,7 @@ export const ProductsSubMenu = ({ onChange }: { onChange?: () => void }) => {
 		onChange?.();
 	};
 
-	const toggleProduct = (product: any) => {
+	const toggleProduct = (product: ProductListItem) => {
 		const versionCount = versionCounts?.[product.id] || 1;
 		const productVersionKeys = Array.from(
 			{ length: versionCount },
@@ -145,7 +159,11 @@ export const ProductsSubMenu = ({ onChange }: { onChange?: () => void }) => {
 	};
 
 	return (
-		<DropdownMenuSub>
+		<DropdownMenuSub
+			onOpenChange={(open) => {
+				if (!open) setSearch("");
+			}}
+		>
 			<DropdownMenuSubTrigger className="flex items-center gap-2 cursor-pointer">
 				Plans
 				{hasSelections && (
@@ -154,13 +172,19 @@ export const ProductsSubMenu = ({ onChange }: { onChange?: () => void }) => {
 					</span>
 				)}
 			</DropdownMenuSubTrigger>
-			<DropdownMenuSubContent className="w-64">
+			<DropdownMenuSubContent className="w-64 p-0">
 				{uniqueProducts.length === 0 ? (
 					<div className="px-2 py-3 text-center text-tertiary-foreground text-sm">
 						No products found
 					</div>
 				) : (
-					<>
+					<Command shouldFilter={false} className="bg-interactive-secondary">
+						<CommandInput
+							value={search}
+							onValueChange={setSearch}
+							onKeyDown={(event) => event.stopPropagation()}
+							placeholder="Search plans..."
+						/>
 						<div className="flex items-center justify-between px-2 h-6">
 							<button
 								type="button"
@@ -190,8 +214,13 @@ export const ProductsSubMenu = ({ onChange }: { onChange?: () => void }) => {
 						</div>
 						<DropdownMenuSeparator />
 
-						<div className="max-h-64 overflow-y-auto">
-							{uniqueProducts?.map((product: any) => {
+						<div className="max-h-64 overflow-y-auto p-1">
+							{filteredProducts.length === 0 && (
+								<div className="px-2 py-3 text-center text-tertiary-foreground text-sm">
+									No plans found
+								</div>
+							)}
+							{filteredProducts.map((product) => {
 								const versionCount = versionCounts?.[product.id] || 1;
 								const productVersionKeys = Array.from(
 									{ length: versionCount },
@@ -238,7 +267,7 @@ export const ProductsSubMenu = ({ onChange }: { onChange?: () => void }) => {
 													<Checkbox
 														checked={allProductVersionsSelected}
 														className="border-border"
-														ref={(ref: any) => {
+														ref={(ref: HTMLButtonElement | null) => {
 															if (
 																ref &&
 																(someProductVersionsSelected ||
@@ -317,7 +346,7 @@ export const ProductsSubMenu = ({ onChange }: { onChange?: () => void }) => {
 								);
 							})}
 						</div>
-					</>
+					</Command>
 				)}
 			</DropdownMenuSubContent>
 		</DropdownMenuSub>
