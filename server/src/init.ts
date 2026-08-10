@@ -53,6 +53,7 @@ import {
 	stopRedisMonitor,
 	warmupRegionalRedis,
 } from "./external/redis/initRedis.js";
+import { awaitBoundedWarmup } from "./external/redis/initUtils/boundedWarmup.js";
 import { preWarmOrgRedisConnections } from "./external/redis/orgRedisPool.js";
 import { createHonoApp } from "./initHono.js";
 import { otelSdk } from "./instrumentation.js";
@@ -96,12 +97,21 @@ const init = async ({
 	// `db` is the general pool — the probe must never occupy a critical-pool slot.
 	startReplicaRoutingProber({ db });
 
-	void warmupRegionalRedis().catch((error) => {
-		logger.warn("[Redis] Warmup failed", { error });
-	});
-	void preWarmOrgRedisConnections({ db }).catch((error) => {
-		logger.warn("[OrgRedis] Warmup failed", { error });
-	});
+	// Kicked off early, awaited (bounded) just before listen: a fork must not
+	// serve its first requests against still-connecting redis clients.
+	// Each arm catches its own failure: a regional rejection must not
+	// short-circuit the wait for healthy dedicated org connections.
+	const redisWarmup = Promise.all([
+		warmupRegionalRedis().catch((error) => {
+			console.error("[Redis] regional warmup failed -", error);
+		}),
+		preWarmOrgRedisConnections({ db }).catch((error) => {
+			logger.warn("[OrgRedis] Warmup failed", { error });
+		}),
+	]);
+	// Observed immediately: awaits run before the bounded wait consumes it, and
+	// an early rejection would otherwise hit the fatal unhandledRejection exit.
+	void redisWarmup.catch(() => {});
 
 	await startAllEdgeConfigPolling({ logger });
 	await Promise.all([primeRedisMonitor(), primeRedisV2Monitor()]);
@@ -140,6 +150,12 @@ const init = async ({
 		const idleSweep = setInterval(() => server.closeIdleConnections?.(), 1_000);
 		idleSweep.unref?.();
 	};
+
+	await awaitBoundedWarmup({
+		warmup: redisWarmup,
+		timeoutMs: 10_000,
+		log: (message) => console.warn(message),
+	});
 
 	await new Promise<void>((resolve) => {
 		server.listen(PORT, "0.0.0.0", () => {
