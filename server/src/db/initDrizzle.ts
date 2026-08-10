@@ -9,6 +9,7 @@ import type { SQLWrapper } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/node-postgres";
 import pg, { type PoolConfig } from "pg";
 import { logger } from "../external/logtail/logtailUtils.js";
+import { getServerForkCount } from "../utils/memory/forkRecycling/recyclePolicy.js";
 import { otelConfig } from "../utils/otel/otelConfig.js";
 import { applyConnectRefusedRetry } from "./connectRetry.js";
 import { attachPoolErrorHandlers, registerPool } from "./pgPoolMonitor.js";
@@ -124,9 +125,9 @@ const REPLICA_PGBOUNCER_MAX_CLIENT_CONN = 1_000;
  *  many clients onto far fewer of these. Kept for sizing, not for this guard. */
 const POSTGRES_MAX_SERVER_CONNECTIONS = 7_600;
 
-/** Request-serving processes: 30 tasks x 3 cluster workers. Primaries hold pool
- *  objects but never query, and `min` doesn't pre-create, so they contribute 0. */
-const BUDGETED_FLEET_PROCESSES = 90;
+/** 20 pinned tasks x forks. Recycles transiently add +1 fork/task — headroom
+ *  absorbs that at <=4 forks; at 5+ also lower REPLICA_DB_POOL_MAX. */
+const BUDGETED_FLEET_PROCESSES = 20 * getServerForkCount();
 
 /** Dedicated worker/cron pools that exist outside the three exported ones. */
 const BUDGETED_NON_SERVER_CONNECTIONS = 362;
@@ -158,16 +159,17 @@ export const computePoolBudgetWarnings = ({
 	criticalPoolMax: critical,
 	generalPoolMax: general,
 	replicaPoolMax: replica,
+	fleetProcesses = BUDGETED_FLEET_PROCESSES,
 }: {
 	criticalPoolMax: number;
 	generalPoolMax: number;
 	replicaPoolMax: number;
+	fleetProcesses?: number;
 }): string[] => {
 	const warnings: string[] = [];
 
 	const primaryFleetConnections =
-		BUDGETED_FLEET_PROCESSES * (critical + general) +
-		BUDGETED_NON_SERVER_CONNECTIONS;
+		fleetProcesses * (critical + general) + BUDGETED_NON_SERVER_CONNECTIONS;
 	if (
 		primaryFleetConnections >
 		PGBOUNCER_MAX_CLIENT_CONN * POOL_BUDGET_HEADROOM
@@ -177,7 +179,7 @@ export const computePoolBudgetWarnings = ({
 		);
 	}
 
-	const replicaFleetConnections = BUDGETED_FLEET_PROCESSES * replica;
+	const replicaFleetConnections = fleetProcesses * replica;
 	if (
 		replicaFleetConnections >
 		REPLICA_PGBOUNCER_MAX_CLIENT_CONN * POOL_BUDGET_HEADROOM
