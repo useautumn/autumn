@@ -72,6 +72,9 @@ import { startMemoryMonitor } from "./utils/memoryMonitor.js";
 checkEnvVars();
 
 let shuttingDown = false;
+// Set once the worker's HTTP server exists; SIGTERM shutdown uses it to stop
+// accepting before any teardown, mirroring the fork-recycle drain shape.
+let stopAcceptingRequests: (() => void) | null = null;
 const drainState: {
 	draining: boolean;
 	getActiveConnectionCount: () => number;
@@ -128,6 +131,13 @@ const init = async ({
 
 	server.keepAliveTimeout = 120000;
 	server.headersTimeout = 120000;
+
+	stopAcceptingRequests = () => {
+		drainState.draining = true;
+		server.close(() => {});
+		const idleSweep = setInterval(() => server.closeIdleConnections?.(), 1_000);
+		idleSweep.unref?.();
+	};
 
 	await new Promise<void>((resolve) => {
 		server.listen(PORT, "0.0.0.0", () => {
@@ -257,11 +267,11 @@ async function gracefulShutdown() {
 	shuttingDown = true;
 	console.log("Shutting down worker, flushing telemetry and closing DB...");
 	try {
-		// Requests still executing enqueue SQS work (track fallbacks, async
-		// track); closing the batchers under them rejects those sends. Give
-		// in-flight requests a bounded window to finish first.
+		// Stop taking new requests first (SIGTERM path: ALB keeps routing
+		// through deregistration), then let in-flight work finish. Requests and
+		// their delayed timers enqueue SQS work, so the batchers close LAST.
+		stopAcceptingRequests?.();
 		await waitForInFlightRequestsToSettle({ timeoutMs: 10_000 });
-		await shutdownSqsSendBatchers();
 
 		// Flush any buffered OTel spans before shutting down
 		if (otelSdk) {
@@ -274,6 +284,9 @@ async function gracefulShutdown() {
 		stopRedisV2Monitor();
 		stopMemorySpikeProbe();
 		stopAllEdgeConfigPolling();
+		// Request-scheduled timers may have enqueued during teardown: deliver
+		// those, then close the batchers at the last possible moment.
+		await shutdownSqsSendBatchers();
 		await Promise.all([
 			client.end(),
 			clientCritical.end(),
