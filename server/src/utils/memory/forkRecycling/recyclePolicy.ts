@@ -82,6 +82,14 @@ const nonNegativeOr = (raw: string | undefined, fallback: number): number => {
 	return Number.isFinite(value) && value >= 0 ? value : fallback;
 };
 
+/** Serving forks per task — single-threaded loops, so this is capacity.
+ *  Cap 8: worst-case forks x ~2.3GB (threshold+overshoot) must fit 16GB. */
+export const getServerForkCount = (): number => {
+	const value = Number(process.env.SERVER_FORK_COUNT);
+	if (!Number.isFinite(value) || value < 1) return 3;
+	return Math.min(8, Math.floor(value));
+};
+
 export const getForkRecycleConfig = () => {
 	return {
 		enabled: process.env.FORK_RECYCLE_DISABLED !== "true",
