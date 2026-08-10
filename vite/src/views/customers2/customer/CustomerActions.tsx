@@ -16,7 +16,6 @@ import {
 	BroomIcon,
 	CaretDownIcon,
 	PencilSimpleIcon,
-	SealCheckIcon,
 	SlidersHorizontalIcon,
 	SubtractIcon,
 	TicketIcon,
@@ -146,30 +145,17 @@ export function CustomerActions() {
 					</DropdownMenuItem>
 					{stripeCustomerId &&
 						customer?.processor?.type === ProcessorType.Stripe && (
-							<>
-								<DropdownMenuItem
-									onClick={() => {
-										setSheet({ type: "sync-stripe-v2" });
-										setActionsOpen(false);
-									}}
-									className="flex gap-2"
-									shortcut="y"
-								>
-									<ArrowsClockwiseIcon />
-									Sync from Stripe
-								</DropdownMenuItem>
-								<DropdownMenuItem
-									onClick={() => {
-										setSheet({ type: "verify-stripe" });
-										setActionsOpen(false);
-									}}
-									className="flex gap-2"
-									shortcut="v"
-								>
-									<SealCheckIcon />
-									Verify Stripe
-								</DropdownMenuItem>
-							</>
+							<DropdownMenuItem
+								onClick={() => {
+									setSheet({ type: "sync-stripe-v2" });
+									setActionsOpen(false);
+								}}
+								className="flex gap-2"
+								shortcut="y"
+							>
+								<ArrowsClockwiseIcon />
+								Sync from Stripe
+							</DropdownMenuItem>
 						)}
 					{isAdmin && (
 						<DropdownMenuItem

@@ -1,15 +1,12 @@
-import type { SubscriptionVerifyResult, VerifyResponse } from "@autumn/shared";
+import type { SubscriptionVerifyResult } from "@autumn/shared";
 import { Button, SmallSpinner } from "@autumn/ui";
 import { CheckCircleIcon } from "@phosphor-icons/react";
-import { useQuery } from "@tanstack/react-query";
 import { getCoreRowModel, useReactTable } from "@tanstack/react-table";
 import { useMemo } from "react";
 import { Table } from "@/components/general/table";
 import { SheetHeader } from "@/components/v2/sheets/SharedSheetComponents";
-import { useQueryKeyFactory } from "@/hooks/common/useQueryKeyFactory";
-import { useAxiosInstance } from "@/services/useAxiosInstance";
 import { getBackendErr } from "@/utils/genUtils";
-import { useCusQuery } from "@/views/customers/customer/hooks/useCusQuery";
+import { useVerifyStripeQuery } from "./hooks/useVerifyStripeQuery";
 import { createVerifyMismatchColumns } from "./VerifyStripeColumns";
 import {
 	resultToDisplayStatus,
@@ -75,30 +72,14 @@ function SubscriptionVerifyGroup({
 }
 
 export function VerifyStripeSheet() {
-	const { customer } = useCusQuery();
-	const axiosInstance = useAxiosInstance();
-	const buildKey = useQueryKeyFactory();
-
-	const customerId = customer?.id ?? customer?.internal_id ?? "";
-
-	const { data, isLoading, error, refetch, isRefetching } = useQuery({
-		queryKey: buildKey(["verify-stripe", customerId]),
-		queryFn: async (): Promise<VerifyResponse> => {
-			const { data } = await axiosInstance.post("/v1/billing.verify", {
-				customer_id: customerId,
-			});
-			return data;
-		},
-		enabled: Boolean(customerId),
-		gcTime: 0,
-		staleTime: 0,
-	});
-
-	const subscriptions = data?.subscriptions ?? [];
-	const mismatchCount = subscriptions.reduce(
-		(count, subscription) => count + subscription.mismatches.length,
-		0,
-	);
+	const {
+		subscriptions,
+		mismatchCount,
+		isLoading,
+		error,
+		refetch,
+		isRefetching,
+	} = useVerifyStripeQuery();
 
 	return (
 		<div className="flex flex-col h-full">
