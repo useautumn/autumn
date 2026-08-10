@@ -19,8 +19,9 @@ elif [[ "$filename" == *".test.ts" ]]; then
 elif [[ "$filename" == *".sh"* ]]; then
     "$filename"
 else
-    # Regular scripts (preload configured in bunfig.toml allows .env to override Infisical)
-    infisical run --env=dev --recursive -- bun  "$filename"
+    # Regular scripts (preload configured in bunfig.toml allows .env to override Infisical).
+    # Forward trailing args so flag-driven scripts (benchmarks) work through here.
+    infisical run --env=dev --recursive -- bun "$filename" "${@:2}"
 fi
 
 # OLD: Using scripts/test.ts for test file matching (deprecated)

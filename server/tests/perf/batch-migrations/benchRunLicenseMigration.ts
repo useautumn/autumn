@@ -4,8 +4,11 @@
  * seed pools + assignments → prepareMigration → shouldRunBatchLane →
  * runBatchMigrationChunk(maxPages: 1).
  *
- *   bun tests/perf/batch-migrations/benchRunLicenseMigration.ts --assignments 3 --pages all
- *   bun tests/perf/batch-migrations/benchRunLicenseMigration.ts --cleanup
+ *   ./run.sh <abs path> --customers 20000 --assignments 3 --pages all
+ *   ./run.sh <abs path> --cleanup
+ *
+ * --customers must cover a real share of the bench org or the rate measures
+ * empty-page scan rather than the fan-out; the run warns when it does not.
  *
  * Correctness is asserted after the run: every live assignment under a
  * repointed pool must carry exactly one row for the added feature.
@@ -257,6 +260,14 @@ const main = async () => {
 	console.log(
 		`bench: ${totalMs > 0 ? Math.round((expectedAssignments / totalMs) * 1000).toLocaleString() : 0} assignments/s`,
 	);
+	// Pages with no seeded pool still cost a scan, so a small seed against a
+	// large org measures empty-page throughput rather than the fan-out.
+	const seededShare = totalProcessed > 0 ? customers / totalProcessed : 0;
+	if (seededShare < 0.5) {
+		console.log(
+			`bench: WARNING — only ${customers.toLocaleString()} of ${totalProcessed.toLocaleString()} customers scanned hold a pool (${Math.round(seededShare * 100)}%). Raise --customers for a meaningful rate.`,
+		);
+	}
 
 	const correct =
 		Number(counts.with_feature) === expectedAssignments &&
