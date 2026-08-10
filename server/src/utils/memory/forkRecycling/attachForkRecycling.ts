@@ -114,8 +114,9 @@ export const startWorkerForkRecycling = ({
 	if (!config.enabled) return;
 
 	const delayMs = rollEligibilityDelayMs(config);
+	// uptime spans transpile+eval too — the boot phases init timers can't see.
 	console.log(
-		`[ForkRecycle] Worker ${process.pid} eligibility delay: ${Math.round(delayMs / 1000)}s`,
+		`[ForkRecycle] Worker ${process.pid} ready in ${Math.round(process.uptime() * 1000)}ms; eligibility delay: ${Math.round(delayMs / 1000)}s`,
 	);
 
 	const startedAt = Date.now();
@@ -206,15 +207,22 @@ export const startWorkerForkRecycling = ({
 	timer.unref?.();
 
 	// 1s heartbeat: a missed beat is an event-loop stall. Logs only on real
-	// stalls, so boot-vs-serving starvation gets measured instead of inferred.
+	// stalls, with own-CPU% so a starved fork (low) reads apart from a busy
+	// one (high) — boot-vs-serving contention measured, not inferred.
 	let lastBeatMs = Date.now();
+	let lastCpu = process.cpuUsage();
 	const stallTimer = setInterval(() => {
 		const now = Date.now();
-		const stallMs = now - lastBeatMs - 1_000;
+		const cpu = process.cpuUsage();
+		const elapsedMs = now - lastBeatMs;
+		const stallMs = elapsedMs - 1_000;
+		const cpuMs =
+			(cpu.user + cpu.system - lastCpu.user - lastCpu.system) / 1_000;
 		lastBeatMs = now;
-		if (stallMs > 100) {
+		lastCpu = cpu;
+		if (stallMs > 100 && elapsedMs > 0) {
 			console.log(
-				`[ForkRecycle] Worker ${process.pid} event-loop stall: ${stallMs}ms`,
+				`[ForkRecycle] Worker ${process.pid} event-loop stall: ${stallMs}ms (own cpu ${Math.round((cpuMs / elapsedMs) * 100)}%)`,
 			);
 		}
 	}, 1_000);
