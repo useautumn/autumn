@@ -127,6 +127,8 @@ export const createInvoiceForBilling = async ({
 	const finalizedInvoice = await finalizeStripeInvoice({
 		stripeCli,
 		invoiceId: invoiceWithLines.id,
+		// Invoice mode: let Stripe email the finalized invoice (fires invoice.sent).
+		autoAdvance: isInvoiceMode,
 	});
 
 	if (finalizedInvoice.status === "paid") {
