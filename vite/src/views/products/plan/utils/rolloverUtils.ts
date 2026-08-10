@@ -1,7 +1,7 @@
-import type { ProductItem, RolloverConfig } from "@autumn/shared";
+import type { RolloverConfig } from "@autumn/shared";
 import { toast } from "sonner";
 
-// Mirrors the server's rollover rules in validateProductItems so saves fail fast.
+/** Mirrors the server's rollover rules in validateProductItems so saves fail fast. */
 export const checkRolloverConfigValid = (
 	rollover: RolloverConfig | null | undefined,
 	showToast = true,
@@ -32,9 +32,3 @@ export const checkRolloverConfigValid = (
 
 	return true;
 };
-
-export const checkItemRolloverValid = (item: ProductItem, showToast = true) =>
-	checkRolloverConfigValid(
-		item.config?.rollover as RolloverConfig | null | undefined,
-		showToast,
-	);
