@@ -1,13 +1,13 @@
 import {
 	Checkbox,
-	Command,
-	CommandInput,
 	DropdownMenuItem,
 	DropdownMenuSeparator,
 	DropdownMenuSub,
 	DropdownMenuSubContent,
 	DropdownMenuSubTrigger,
+	Input,
 } from "@autumn/ui";
+import { MagnifyingGlassIcon } from "@phosphor-icons/react";
 import { useState } from "react";
 import {
 	type ProductListItem,
@@ -178,13 +178,20 @@ export const ProductsSubMenu = ({ onChange }: { onChange?: () => void }) => {
 						No products found
 					</div>
 				) : (
-					<Command shouldFilter={false} className="bg-interactive-secondary">
-						<CommandInput
-							value={search}
-							onValueChange={setSearch}
-							onKeyDown={(event) => event.stopPropagation()}
-							placeholder="Search plans..."
-						/>
+					<div>
+						<div className="flex h-10 items-center gap-2 border-b border-border/50 px-3">
+							<MagnifyingGlassIcon className="size-3.5 text-subtle" />
+							<Input
+								variant="headless"
+								value={search}
+								onChange={(event) => setSearch(event.target.value)}
+								onKeyDown={(event) => {
+									if (event.key.length === 1) event.stopPropagation();
+								}}
+								placeholder="Search plans..."
+								className="h-full text-sm"
+							/>
+						</div>
 						<div className="flex items-center justify-between px-2 h-6">
 							<button
 								type="button"
@@ -346,7 +353,7 @@ export const ProductsSubMenu = ({ onChange }: { onChange?: () => void }) => {
 								);
 							})}
 						</div>
-					</Command>
+					</div>
 				)}
 			</DropdownMenuSubContent>
 		</DropdownMenuSub>
