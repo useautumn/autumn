@@ -41,9 +41,11 @@ describe("SQS queue worker recycling", () => {
 			stderr += chunk.toString();
 		});
 
+		// Generous: a cold-cache CI bun boot alone can take seconds; the wait
+		// resolves on exit, so healthy runs never pay the full bound.
 		const exitedNaturally = await waitForNaturalExit({
 			child,
-			timeoutMs: 2_500,
+			timeoutMs: 15_000,
 		});
 		if (!exitedNaturally) {
 			child.kill("SIGKILL");

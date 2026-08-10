@@ -121,8 +121,12 @@ if (cluster.isPrimary) {
 		"./external/redis/orgRedisPool.js"
 	);
 
+	// Each arm catches its own failure: a regional rejection must not
+	// short-circuit the wait for healthy dedicated org connections.
 	const redisWarmup = Promise.all([
-		warmupRegionalRedis(),
+		warmupRegionalRedis().catch((error) => {
+			console.error("[Redis] regional warmup failed -", error);
+		}),
 		preWarmOrgRedisConnections({ db }).catch((error) => {
 			logger.warn("[OrgRedis] Warmup failed", { error });
 		}),

@@ -9,17 +9,33 @@ const orgRedisWarmup = new Promise<void>((resolve) => {
 	resolveOrgRedisWarmup = resolve;
 });
 
-mock.module("node:cluster", () => ({
+// Capture each real module before mocking so afterAll can restore it —
+// bun's mock.module leaks across test files otherwise. The preload has
+// already seeded these into the registry, so the imports are cheap.
+const realModules = new Map<string, Record<string, unknown>>();
+const mockModuleRestorable = async (
+	path: string,
+	factory: () => Record<string, unknown>,
+) => {
+	const real = await import(path).catch(() => null);
+	if (real) realModules.set(path, { ...real });
+	mock.module(path, factory);
+};
+
+await mockModuleRestorable("node:cluster", () => ({
 	default: { isPrimary: false },
 }));
 
-mock.module("@/external/infisical/initInfisical.js", () => ({
+await mockModuleRestorable("@/external/infisical/initInfisical.js", () => ({
 	initInfisical: async () => {},
 }));
-mock.module("@/internal/misc/edgeConfig/edgeConfigRegistry.js", () => ({
-	startAllEdgeConfigPolling: async () => {},
-	stopAllEdgeConfigPolling: () => {},
-}));
+await mockModuleRestorable(
+	"@/internal/misc/edgeConfig/edgeConfigRegistry.js",
+	() => ({
+		startAllEdgeConfigPolling: async () => {},
+		stopAllEdgeConfigPolling: () => {},
+	}),
+);
 
 for (const modulePath of [
 	"@/internal/misc/miscellaneousEdgeConfig/miscellaneousEdgeConfigStore.js",
@@ -32,21 +48,21 @@ for (const modulePath of [
 	"@/internal/misc/jobQueues/jobQueueStore.js",
 	"@/internal/misc/batchReset/batchResetConfigStore.js",
 ]) {
-	mock.module(modulePath, () => ({}));
+	await mockModuleRestorable(modulePath, () => ({}));
 }
 
-mock.module("@/utils/memoryMonitor.js", () => ({
+await mockModuleRestorable("@/utils/memoryMonitor.js", () => ({
 	startMemoryMonitor: () => {},
 }));
-mock.module("@/instrumentation.js", () => ({}));
-mock.module("@/db/initDrizzle.js", () => ({ db: {} }));
-mock.module(
+await mockModuleRestorable("@/instrumentation.js", () => ({}));
+await mockModuleRestorable("@/db/initDrizzle.js", () => ({ db: {} }));
+await mockModuleRestorable(
 	"@/external/redis/availabilityMonitor/redisAvailability.js",
 	() => ({
 		primeRedisMonitor: async () => {},
 	}),
 );
-mock.module(
+await mockModuleRestorable(
 	"@/external/redis/availabilityMonitor/redisV2Availability.js",
 	() => ({
 		primeRedisV2Monitor: async () => {},
@@ -54,15 +70,15 @@ mock.module(
 		stopRedisV2Monitor: () => {},
 	}),
 );
-mock.module("@/external/redis/initRedis.js", () => ({
+await mockModuleRestorable("@/external/redis/initRedis.js", () => ({
 	startRedisMonitor: () => {},
 	stopRedisMonitor: () => {},
 	warmupRegionalRedis: async () => {},
 }));
-mock.module("@/external/redis/orgRedisPool.js", () => ({
+await mockModuleRestorable("@/external/redis/orgRedisPool.js", () => ({
 	preWarmOrgRedisConnections: () => orgRedisWarmup,
 }));
-mock.module("@/queue/initWorkers.js", () => ({
+await mockModuleRestorable("@/queue/initWorkers.js", () => ({
 	initWorkers: async () => {
 		initWorkersCalled = true;
 	},
@@ -72,15 +88,22 @@ describe("queue worker Redis startup gate", () => {
 	test("does not initialize SQS polling until dedicated Redis is ready", async () => {
 		const workerStartup = import("@/workers.js");
 
-		await Bun.sleep(30);
-		expect(initWorkersCalled).toBe(false);
-
-		resolveOrgRedisWarmup();
+		// Release the warmup even when the first assertion throws, so a red
+		// run fails fast instead of waiting out the fail-open bound.
+		try {
+			await Bun.sleep(30);
+			expect(initWorkersCalled).toBe(false);
+		} finally {
+			resolveOrgRedisWarmup();
+		}
 		await workerStartup;
 		expect(initWorkersCalled).toBe(true);
 	});
 });
 
 afterAll(() => {
+	for (const [path, real] of realModules) {
+		mock.module(path, () => real);
+	}
 	mock.restore();
 });
