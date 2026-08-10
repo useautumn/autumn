@@ -1,4 +1,5 @@
 import type { Redis } from "ioredis";
+import { getStandbyRedisRouter } from "./createStandbyRedisRouter.js";
 
 const REDIS_READ_POOL = Symbol("redisReadPool");
 
@@ -35,11 +36,24 @@ export const acquireRedisReadLane = (
 	const state = getRedisReadPoolState(redis);
 	if (!state) return undefined;
 
-	const readyIndexes = state.lanes
-		.map((lane, index) => ({ lane, index }))
+	const indexedLanes = state.lanes.map((lane, index) => ({ lane, index }));
+	const usableIndexes = indexedLanes
+		.filter(({ lane }) => {
+			const router = getStandbyRedisRouter(lane);
+			return router
+				? router.ordered().some((connection) => router.isUsable(connection))
+				: lane.status === "ready";
+		})
+		.map(({ index }) => index);
+	const readyIndexes = indexedLanes
 		.filter(({ lane }) => lane.status === "ready")
 		.map(({ index }) => index);
-	const candidateIndexes = readyIndexes.length > 0 ? readyIndexes : [0, 1];
+	const candidateIndexes =
+		usableIndexes.length > 0
+			? usableIndexes
+			: readyIndexes.length > 0
+				? readyIndexes
+				: [0, 1];
 	let selectedIndex = candidateIndexes[0] ?? 0;
 
 	// Ties go to the highest lane: lane 0 also carries every unpooled op

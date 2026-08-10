@@ -606,6 +606,47 @@ describe("Redis read pool", () => {
 		expect(laneZero.standby.calls).toEqual([]);
 	});
 
+	test("skips a lane whose ready connections are breaker-penalized", async () => {
+		const laneZero = createNamedPair({
+			primaryName: "lane-zero-primary",
+			standbyName: "lane-zero-standby",
+		});
+		const laneOne = createNamedPair({
+			primaryName: "lane-one-primary",
+			standbyName: "lane-one-standby",
+		});
+		const laneOneRouter = getStandbyRedisRouter(laneOne.redis);
+		if (!laneOneRouter) throw new Error("Expected lane one to have a router");
+		const [laneOnePrimary, laneOneStandby] = laneOneRouter.ordered();
+
+		for (let attempt = 0; attempt < 3; attempt++) {
+			laneOneRouter.recordOutcome({
+				connection: laneOnePrimary,
+				error: connectionError(),
+			});
+			laneOneRouter.recordOutcome({
+				connection: laneOneStandby,
+				error: connectionError(),
+			});
+		}
+		const redis = createRedisReadPool({
+			lanes: [laneZero.redis, laneOne.redis],
+		});
+
+		expect(laneOne.redis.status).toBe("ready");
+		const result = await runRedisOp({
+			redisInstance: redis,
+			source: "read-pool-test",
+			retryOnStandby: true,
+			useReadPool: true,
+			operation: (connection) => connection.get("subject"),
+		});
+
+		expect(result).toBe("lane-zero-primary");
+		expect(laneOne.primary.calls).toEqual([]);
+		expect(laneOne.standby.calls).toEqual([]);
+	});
+
 	test("routes a concurrent retry-safe read to the least-busy lane", async () => {
 		const laneZero = createNamedPair({
 			primaryName: "lane-zero-primary",
@@ -642,6 +683,69 @@ describe("Redis read pool", () => {
 		expect(laneZero.primary.calls).toEqual(["get:second"]);
 		releaseFirstRead?.();
 		expect(await firstRead).toBe("lane-one-primary");
+	});
+
+	test("keeps a timed-out lane busy after standby succeeds", async () => {
+		const laneZero = createNamedPair({
+			primaryName: "lane-zero-primary",
+			standbyName: "lane-zero-standby",
+		});
+		const laneOne = createNamedPair({
+			primaryName: "lane-one-primary",
+			standbyName: "lane-one-standby",
+		});
+		let releaseBlockedRead: (() => void) | undefined;
+		laneOne.primary.waitForGet = new Promise<void>((resolve) => {
+			releaseBlockedRead = resolve;
+		});
+		const redis = createRedisReadPool({
+			lanes: [laneZero.redis, laneOne.redis],
+		});
+		let blockedRead: Promise<string | null> | undefined;
+		const identifyLane = async (connection: Redis) =>
+			connection === asRedis(laneZero.primary)
+				? "lane-zero-primary"
+				: "lane-one-primary";
+
+		const result = await runRedisOp({
+			redisInstance: redis,
+			source: "read-pool-test",
+			retryOnStandby: true,
+			useReadPool: true,
+			timeoutMs: 400,
+			operation: (connection) => {
+				const command = connection.get("blocked");
+				if (connection === asRedis(laneOne.primary)) blockedRead = command;
+				return command;
+			},
+		});
+		expect(result).toBe("lane-one-standby");
+
+		try {
+			const whileCommandIsPending = await runRedisOp({
+				redisInstance: redis,
+				source: "read-pool-test",
+				retryOnStandby: true,
+				useReadPool: true,
+				operation: identifyLane,
+			});
+			expect(whileCommandIsPending).toBe("lane-zero-primary");
+		} finally {
+			releaseBlockedRead?.();
+		}
+
+		if (!blockedRead) throw new Error("Expected a blocked Redis command");
+		await blockedRead;
+		await Promise.resolve();
+
+		const afterCommandSettles = await runRedisOp({
+			redisInstance: redis,
+			source: "read-pool-test",
+			retryOnStandby: true,
+			useReadPool: true,
+			operation: identifyLane,
+		});
+		expect(afterCommandSettles).toBe("lane-one-primary");
 	});
 
 	test("keeps non-retry-safe operations pinned to lane zero", async () => {

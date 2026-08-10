@@ -116,6 +116,7 @@ export const runRedisOp = async <T>({
 			? acquireRedisReadLane(redisInstance)
 			: undefined;
 	const targetRedis = readLaneLease?.redis ?? redisInstance;
+	const redisAttempts: Promise<T>[] = [];
 
 	try {
 		if (!queueIfNotReady && targetRedis.status !== "ready") {
@@ -127,14 +128,17 @@ export const runRedisOp = async <T>({
 		// One budget for the whole op, not one per attempt: a retry must not double
 		// the ceiling the caller sized against its non-Redis fallback.
 		const deadlineAt = timeoutMs ? Date.now() + timeoutMs : undefined;
-		const runAttempt = (redis: Redis, budgetMs?: number) =>
-			budgetMs
+		const runAttempt = (redis: Redis, budgetMs?: number) => {
+			const attempt = operation(redis);
+			redisAttempts.push(attempt);
+			return budgetMs
 				? withTimeout({
 						timeoutMs: budgetMs,
-						fn: () => operation(redis),
+						fn: () => attempt,
 						timeoutMessage: `[redis] ${source} timeout after ${budgetMs}ms`,
 					})
-				: operation(redis);
+				: attempt;
+		};
 
 		try {
 			const router = retryOnStandby
@@ -183,7 +187,13 @@ export const runRedisOp = async <T>({
 			throw new RedisUnavailableError({ source, reason, cause: error });
 		}
 	} finally {
-		readLaneLease?.release();
+		if (readLaneLease && redisAttempts.length === 0) readLaneLease.release();
+		if (readLaneLease && redisAttempts.length > 0) {
+			// Caller deadlines must not make a running command look like spare capacity.
+			void Promise.allSettled(redisAttempts).then(() =>
+				readLaneLease.release(),
+			);
+		}
 	}
 };
 
