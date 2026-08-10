@@ -15,16 +15,13 @@ import { TierBehavior } from "@models/productModels/priceModels/priceConfig/usag
 import type { z } from "zod/v4";
 import { diffPlanLicenses } from "./diffPlanLicenses.js";
 
+// A versioned license customize diffs into `upsert_licenses`, so the key has
+// to survive validation — omitting it made every preview of such a plan 500.
 export const DiffedCustomizePlanV1Schema = refineCustomizePlanV1Schema(
-	CustomizePlanV1BaseSchema.omit({
-		items: true,
-		upsert_licenses: true,
-	}).strict(),
-	{ includeItems: false, includeLicenses: false },
+	CustomizePlanV1BaseSchema.omit({ items: true }).strict(),
+	{ includeItems: false, includeLicenses: true },
 );
 
-/** upsert_licenses is carried as a type only: adding it to the schema above
- * pulls licenseModels into module init and closes an import cycle. */
 export type DiffedCustomizePlanV1 = z.infer<
 	typeof DiffedCustomizePlanV1Schema
 > & {
