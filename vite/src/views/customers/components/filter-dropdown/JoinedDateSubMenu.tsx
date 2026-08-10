@@ -129,12 +129,16 @@ export const JoinedDateSubMenu = ({ onChange }: { onChange?: () => void }) => {
 				if (open) setSelection(toJoinedSelection(bounds));
 			}}
 		>
-			<DropdownMenuSubTrigger className="flex items-center gap-2 cursor-pointer">
-				Created At
-				{label && (
+			<DropdownMenuSubTrigger
+				className="flex items-center gap-2 cursor-pointer"
+				aria-label="Filter customers by created date"
+			>
+				{label ? (
 					<span className="truncate text-xs text-tertiary-foreground bg-muted px-1 py-0 rounded-md">
 						{label}
 					</span>
+				) : (
+					"Created At"
 				)}
 			</DropdownMenuSubTrigger>
 			<DropdownMenuSubContent className="p-0">

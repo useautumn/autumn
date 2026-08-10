@@ -1,9 +1,9 @@
 import {
-	Button,
 	DropdownMenu,
 	DropdownMenuContent,
 	DropdownMenuItem,
 	DropdownMenuTrigger,
+	IconButton,
 } from "@autumn/ui";
 import { EllipsisVertical } from "lucide-react";
 import { useState } from "react";
@@ -16,14 +16,15 @@ export function CustomerListExportMenu() {
 		<>
 			<DropdownMenu>
 				<DropdownMenuTrigger asChild>
-					<Button
+					<IconButton
+						icon={<EllipsisVertical />}
 						variant="skeleton"
-						size="icon"
+						size="default"
+						iconOrientation="center"
+						className="!h-7"
 						type="button"
 						aria-label="More customer actions"
-					>
-						<EllipsisVertical size={16} />
-					</Button>
+					/>
 				</DropdownMenuTrigger>
 				<DropdownMenuContent align="end">
 					<DropdownMenuItem onClick={() => setIsSheetOpen(true)}>
