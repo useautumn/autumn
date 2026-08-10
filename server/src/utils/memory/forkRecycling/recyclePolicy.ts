@@ -3,7 +3,7 @@ const MB = 1024 * 1024;
 /** JSC never returns allocator-retained pages, so forks only shed memory by
  *  dying; recycling above this RSS is the bound the engine cannot provide. */
 export const FORK_RECYCLE_DEFAULTS = {
-	rssThresholdBytes: 3072 * MB,
+	rssThresholdBytes: 1536 * MB,
 	minAgeMs: 30 * 60_000,
 	checkIntervalMs: 30_000,
 	drainTimeoutMs: 30_000,

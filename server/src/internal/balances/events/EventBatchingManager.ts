@@ -7,6 +7,9 @@ import { addTaskToQueue } from "@server/queue/queueUtils.js";
 class BatchingManager {
 	private events: Map<string, EventInsert> = new Map();
 	private timer: NodeJS.Timeout | null = null;
+	// Batches clear the map before their sends complete, so shutdown flushes
+	// must await these, not just the pending map.
+	private inFlightBatches = new Set<Promise<void>>();
 	private readonly batchWindow = 350; // 100ms batching window
 	private readonly maxBatchSize = 200; // Max events per batch (~200kb per event, keep batches under 10MB for Tinybird)
 
@@ -17,7 +20,7 @@ class BatchingManager {
 
 		// Auto-execute if batch size is reached
 		if (this.events.size >= this.maxBatchSize) {
-			this.executeBatch();
+			void this.runBatch();
 			return;
 		}
 
@@ -27,8 +30,22 @@ class BatchingManager {
 		}
 
 		this.timer = setTimeout(() => {
-			this.executeBatch();
+			void this.runBatch();
 		}, this.batchWindow);
+	}
+
+	/** Deliver pending AND already-executing batches (shutdown path). */
+	async flush(): Promise<void> {
+		await this.runBatch();
+		await Promise.all(Array.from(this.inFlightBatches));
+	}
+
+	private runBatch(): Promise<void> {
+		const batchPromise = this.executeBatch().finally(() => {
+			this.inFlightBatches.delete(batchPromise);
+		});
+		this.inFlightBatches.add(batchPromise);
+		return batchPromise;
 	}
 
 	/** Execute the current batch - queue to SQS for Postgres and send to Tinybird */
