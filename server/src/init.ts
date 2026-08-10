@@ -209,13 +209,14 @@ if (process.env.NODE_ENV === "development") {
 			const workersAlive = () =>
 				Object.values(cluster.workers ?? {}).filter((w) => w && !w.isDead())
 					.length;
-			const deadline = Date.now() + 20_000;
+			// Must exceed the workers' own 30s shutdown backstop.
+			const deadline = Date.now() + 35_000;
 			while (workersAlive() > 0 && Date.now() < deadline) {
 				await new Promise((resolve) => setTimeout(resolve, 200));
 			}
 			if (workersAlive() > 0) {
 				console.warn(
-					`[Shutdown] ${workersAlive()} worker(s) still alive after 20s; exiting anyway`,
+					`[Shutdown] ${workersAlive()} worker(s) still alive after 35s; exiting anyway`,
 				);
 			}
 			await gracefulShutdown();
@@ -323,12 +324,15 @@ async function gracefulShutdown() {
 		// App-level batch windows (events 350ms, balance sync 1s) hold work in
 		// timers that process.exit would silently kill: deliver them, then close
 		// the SQS batchers at the last possible moment.
-		await Promise.all([
+		const flushResults = await Promise.allSettled([
 			globalEventBatchingManager.flush(),
 			globalSyncBatchingManagerV3.flush(),
-		]).catch((error) => {
-			console.warn("[Shutdown] app-level batch flush failed:", error);
-		});
+		]);
+		for (const result of flushResults) {
+			if (result.status === "rejected") {
+				console.warn("[Shutdown] app-level batch flush failed:", result.reason);
+			}
+		}
 		await shutdownSqsSendBatchers();
 		await Promise.all([
 			client.end(),
