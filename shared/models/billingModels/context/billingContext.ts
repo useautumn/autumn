@@ -12,6 +12,7 @@ import type {
 import type { PaymentBehaviorIntent } from "@models/billingModels/context/paymentBehaviorIntent";
 import type { TransitionConfig } from "@models/billingModels/context/transitionConfig";
 import type { DbInvoiceLineItem } from "@models/cusModels/invoiceModels/invoiceLineItemTable";
+import { InvoicePaymentMethodSchema } from "@models/orgModels/orgConfig";
 import type { EntInterval } from "@models/productModels/intervals/entitlementInterval";
 import type Stripe from "stripe";
 import { z } from "zod/v4";
@@ -27,6 +28,7 @@ const InvoiceModeSchema = z.object({
 	footer: z.string().optional(),
 	memo: z.string().optional(),
 	daysUntilDue: z.number().optional(),
+	paymentMethodTypes: z.array(InvoicePaymentMethodSchema).optional(),
 });
 
 export type InvoiceMode = z.infer<typeof InvoiceModeSchema>;

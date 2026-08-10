@@ -1,3 +1,4 @@
+import type { InvoicePaymentMethod } from "@autumn/shared";
 import type Stripe from "stripe";
 import { createStripeCli } from "@/external/connect/createStripeCli";
 import { autumnStripeRequestOptions } from "@/external/stripe/common/autumnStripeIdempotency";
@@ -15,6 +16,7 @@ type CreateInvoiceParams = {
 	discounts?: Stripe.InvoiceCreateParams["discounts"];
 	collectionMethod?: "charge_automatically" | "send_invoice";
 	daysUntilDue?: number;
+	paymentMethodTypes?: InvoicePaymentMethod[];
 	description?: string;
 	footer?: string;
 	metadata?: Stripe.InvoiceCreateParams["metadata"];
@@ -29,6 +31,7 @@ export const createStripeInvoice = async ({
 	currency,
 	collectionMethod = "charge_automatically",
 	daysUntilDue,
+	paymentMethodTypes,
 	description,
 	footer,
 	metadata,
@@ -50,6 +53,9 @@ export const createStripeInvoice = async ({
 			collection_method: collectionMethod,
 			days_until_due:
 				collectionMethod === "send_invoice" ? (daysUntilDue ?? 30) : undefined,
+			...(paymentMethodTypes?.length
+				? { payment_settings: { payment_method_types: paymentMethodTypes } }
+				: {}),
 			...(discounts ? { discounts } : {}),
 			...(hasManualTaxRates ? { default_tax_rates: defaultTaxRates } : {}),
 			...(automaticTax && !hasManualTaxRates
