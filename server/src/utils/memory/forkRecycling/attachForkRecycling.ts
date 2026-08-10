@@ -4,7 +4,8 @@ import type { Logger } from "@/external/logtail/logtailUtils.js";
 import { createRecycleCoordinator } from "./recycleCoordinator.js";
 import {
 	getForkRecycleConfig,
-	jitterRecycleTriggers,
+	msUntilHourlyBlackoutEnd,
+	rollEligibilityDelayMs,
 	shouldRequestRecycle,
 } from "./recyclePolicy.js";
 import { createWorkerDrainer } from "./workerDrainer.js";
@@ -112,13 +113,14 @@ export const startWorkerForkRecycling = ({
 	const config = getForkRecycleConfig();
 	if (!config.enabled) return;
 
-	const triggers = jitterRecycleTriggers(config);
+	const delayMs = rollEligibilityDelayMs(config);
 	console.log(
-		`[ForkRecycle] Worker ${process.pid} triggers: rss=${Math.round(triggers.rssThresholdBytes / 1024 / 1024)}MB minAge=${Math.round(triggers.minAgeMs / 60_000)}min`,
+		`[ForkRecycle] Worker ${process.pid} eligibility delay: ${Math.round(delayMs / 1000)}s`,
 	);
 
 	const startedAt = Date.now();
 	let requested = false;
+	let requestAtMs: number | null = null;
 
 	const drainer = createWorkerDrainer({
 		server,
@@ -149,11 +151,29 @@ export const startWorkerForkRecycling = ({
 		if (
 			!shouldRequestRecycle({
 				rssBytes,
-				thresholdBytes: triggers.rssThresholdBytes,
+				thresholdBytes: config.rssThresholdBytes,
 				ageMs: Date.now() - startedAt,
-				minAgeMs: triggers.minAgeMs,
+				minAgeMs: config.minAgeMs,
 			})
 		) {
+			requestAtMs = null;
+			return;
+		}
+		const now = Date.now();
+		if (requestAtMs === null) requestAtMs = now + delayMs;
+		if (now < requestAtMs) return;
+		// A boot at the hourly burst competes with the serving forks for cores;
+		// release with a fresh roll so held workers don't stampede at the exit.
+		const blackoutRemainingMs = msUntilHourlyBlackoutEnd({
+			now,
+			beforeMs: config.blackoutBeforeMs,
+			afterMs: config.blackoutAfterMs,
+		});
+		if (blackoutRemainingMs > 0) {
+			requestAtMs = now + blackoutRemainingMs + rollEligibilityDelayMs(config);
+			console.log(
+				`[ForkRecycle] Worker ${process.pid} deferring recycle past hourly blackout (${Math.round((requestAtMs - now) / 1000)}s)`,
+			);
 			return;
 		}
 
@@ -184,4 +204,19 @@ export const startWorkerForkRecycling = ({
 	const interval = config.checkIntervalMs * (0.9 + Math.random() * 0.2);
 	const timer = setInterval(check, interval);
 	timer.unref?.();
+
+	// 1s heartbeat: a missed beat is an event-loop stall. Logs only on real
+	// stalls, so boot-vs-serving starvation gets measured instead of inferred.
+	let lastBeatMs = Date.now();
+	const stallTimer = setInterval(() => {
+		const now = Date.now();
+		const stallMs = now - lastBeatMs - 1_000;
+		lastBeatMs = now;
+		if (stallMs > 100) {
+			console.log(
+				`[ForkRecycle] Worker ${process.pid} event-loop stall: ${stallMs}ms`,
+			);
+		}
+	}, 1_000);
+	stallTimer.unref?.();
 };
