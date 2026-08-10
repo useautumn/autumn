@@ -29,6 +29,11 @@ describe("getServerForkCount", () => {
 		process.env.SERVER_FORK_COUNT = "not-a-number";
 		expect(getServerForkCount()).toBe(3);
 		process.env.SERVER_FORK_COUNT = "64";
-		expect(getServerForkCount()).toBe(8);
+		expect(getServerForkCount()).toBe(6);
+	});
+
+	test("fractional values fall back to the default", () => {
+		process.env.SERVER_FORK_COUNT = "2.9";
+		expect(getServerForkCount()).toBe(3);
 	});
 });

@@ -125,8 +125,8 @@ const REPLICA_PGBOUNCER_MAX_CLIENT_CONN = 1_000;
  *  many clients onto far fewer of these. Kept for sizing, not for this guard. */
 const POSTGRES_MAX_SERVER_CONNECTIONS = 7_600;
 
-/** Request-serving processes: 20 tasks (fleet runs pinned at 20; revisit if
- *  autoscaling headroom to 30 is used) x configured forks per task. */
+/** 20 pinned tasks x forks. Recycles transiently add +1 fork/task — headroom
+ *  absorbs that at <=4 forks; at 5+ also lower REPLICA_DB_POOL_MAX. */
 const BUDGETED_FLEET_PROCESSES = 20 * getServerForkCount();
 
 /** Dedicated worker/cron pools that exist outside the three exported ones. */
