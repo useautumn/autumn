@@ -30,9 +30,9 @@ import { LicensePoolDetailSheet } from "../components/sheets/LicensePoolDetailSh
 import { RecordUsageSheet } from "../components/sheets/RecordUsageSheet";
 import { SubscriptionDetailSheet } from "../components/sheets/SubscriptionDetailSheet";
 import { UpcomingInvoiceSheet } from "../components/sheets/UpcomingInvoiceSheet";
-import { VerifyStripeSheet } from "../components/sheets/VerifyStripeSheet";
 import { SyncStripeSheet } from "../components/sync-stripe/SyncStripeSheet";
 import { SyncStripeSheetV2 } from "../components/sync-stripe-v2/SyncStripeSheetV2";
+import { VerifyStripeSheet } from "../components/verify-stripe/VerifyStripeSheet";
 
 export function CustomerSheets() {
 	const sheetType = useSheetStore((s) => s.type);
