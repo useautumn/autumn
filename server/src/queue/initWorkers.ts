@@ -603,8 +603,6 @@ export const initWorkers = async ({
 }) => {
 	const { db } = initDrizzle({ name: "worker", maxConnections: 40 });
 	startPgPoolMonitor();
-	const { warmupRegionalRedis } = await import("@/external/redis/initRedis.js");
-	await warmupRegionalRedis();
 
 	await initBlueGreen({ db, logger });
 
