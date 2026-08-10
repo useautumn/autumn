@@ -2,7 +2,11 @@ import type cluster from "node:cluster";
 import type { Worker } from "node:cluster";
 import type { Logger } from "@/external/logtail/logtailUtils.js";
 import { createRecycleCoordinator } from "./recycleCoordinator.js";
-import { getForkRecycleConfig, shouldRequestRecycle } from "./recyclePolicy.js";
+import {
+	getForkRecycleConfig,
+	jitterRecycleTriggers,
+	shouldRequestRecycle,
+} from "./recyclePolicy.js";
 import { createWorkerDrainer } from "./workerDrainer.js";
 
 const RECYCLE_REQUEST = "fork-recycle:request";
@@ -108,6 +112,11 @@ export const startWorkerForkRecycling = ({
 	const config = getForkRecycleConfig();
 	if (!config.enabled) return;
 
+	const triggers = jitterRecycleTriggers(config);
+	console.log(
+		`[ForkRecycle] Worker ${process.pid} triggers: rss=${Math.round(triggers.rssThresholdBytes / 1024 / 1024)}MB minAge=${Math.round(triggers.minAgeMs / 60_000)}min`,
+	);
+
 	const startedAt = Date.now();
 	let requested = false;
 
@@ -140,9 +149,9 @@ export const startWorkerForkRecycling = ({
 		if (
 			!shouldRequestRecycle({
 				rssBytes,
-				thresholdBytes: config.rssThresholdBytes,
+				thresholdBytes: triggers.rssThresholdBytes,
 				ageMs: Date.now() - startedAt,
-				minAgeMs: config.minAgeMs,
+				minAgeMs: triggers.minAgeMs,
 			})
 		) {
 			return;

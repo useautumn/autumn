@@ -9,6 +9,22 @@ export const FORK_RECYCLE_DEFAULTS = {
 	drainTimeoutMs: 30_000,
 } as const;
 
+/** Rolled once per fork: private trigger lines de-phase same-boot cohorts so
+ *  bursts stop harvesting whole tasks at once. Threshold jitters up from the
+ *  base (floor intact), age jitters down (30min ceiling intact). */
+export const jitterRecycleTriggers = ({
+	rssThresholdBytes,
+	minAgeMs,
+	random = Math.random,
+}: {
+	rssThresholdBytes: number;
+	minAgeMs: number;
+	random?: () => number;
+}) => ({
+	rssThresholdBytes: Math.round(rssThresholdBytes * (1 + random() * 0.3)),
+	minAgeMs: Math.round(minAgeMs * (1 - random() * 0.15)),
+});
+
 export const shouldRequestRecycle = ({
 	rssBytes,
 	thresholdBytes,
