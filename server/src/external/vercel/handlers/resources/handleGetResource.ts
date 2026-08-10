@@ -60,7 +60,6 @@ export const handleGetResource = createRoute({
 			metadata: resource.metadata,
 			status: resource.status,
 			...(billingPlan ? { billingPlan } : {}),
-			notification: null,
 		});
 	},
 });
