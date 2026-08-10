@@ -29,6 +29,7 @@ const CandidateRowSchema = z.object({
 	featureId: z.string(),
 	status: z.enum(CusProductStatus),
 	startsAt: nullableNumeric,
+	assignmentStartsAt: nullableNumeric,
 	canceledAt: nullableNumeric,
 	endedAt: nullableNumeric,
 	trialEndsAt: nullableNumeric,
@@ -84,7 +85,12 @@ export const selectLicenseAddCandidateRows = async ({
 			e.internal_feature_id AS "internalFeatureId",
 			f.id AS "featureId",
 			assignment.status AS "status",
-			assignment.starts_at AS "startsAt",
+			-- The ladder's last rung anchors here, and an assignment bills on the
+			-- parent's cycle — setupAttachLicenseContext anchors a seat off the
+			-- parent too. assignmentStartsAt carries the seat's own date for the
+			-- webhook snapshot.
+			COALESCE(cp.starts_at, assignment.starts_at) AS "startsAt",
+			assignment.starts_at AS "assignmentStartsAt",
 			assignment.canceled_at AS "canceledAt",
 			assignment.ended_at AS "endedAt",
 			assignment.trial_ends_at AS "trialEndsAt",

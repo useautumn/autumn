@@ -85,7 +85,7 @@ export const enrichAndInsertLicenseCandidates = async ({
 			unlimited: add.initialState.unlimited === true,
 			nextResetAt: row.nextResetAt,
 			status: row.status,
-			startsAt: row.startsAt,
+			startsAt: row.assignmentStartsAt,
 			canceledAt: row.canceledAt,
 			endedAt: row.endedAt,
 			trialEndsAt: row.trialEndsAt,
