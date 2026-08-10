@@ -236,9 +236,9 @@ if (process.env.NODE_ENV === "development") {
 				drainState.draining = true;
 			},
 			exitGracefully: () => {
-				// Backstop: a hung flush must not strand a drained fork. Sized above
-				// the in-flight settle window inside gracefulShutdown.
-				const forceExit = setTimeout(() => process.exit(0), 15_000);
+				// Backstop: a hung flush must not strand a drained fork. Sized so a
+				// full 10s settle still leaves teardown ample time.
+				const forceExit = setTimeout(() => process.exit(0), 30_000);
 				forceExit.unref?.();
 				void gracefulShutdown();
 			},
