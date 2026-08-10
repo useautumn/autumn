@@ -23,7 +23,7 @@ export const executeStripeSubscriptionOperation = async ({
 	const { paymentMethod, invoiceMode } = billingContext;
 
 	const actionPaymentSettings =
-		"params" in subscriptionAction
+		subscriptionAction.type === "create" || subscriptionAction.type === "update"
 			? subscriptionAction.params.payment_settings
 			: undefined;
 
@@ -37,8 +37,7 @@ export const executeStripeSubscriptionOperation = async ({
 		invoiceModeParams.days_until_due = invoiceMode.daysUntilDue ?? 30;
 
 		if (invoiceMode.paymentMethodTypes?.length) {
-			// Merge onto the action's own payment_settings so the custom-PM
-			// save_default_payment_method survives.
+			// Spread first so the custom-PM save_default_payment_method survives.
 			invoiceModeParams.payment_settings = {
 				...actionPaymentSettings,
 				payment_method_types: invoiceMode.paymentMethodTypes,

@@ -62,8 +62,7 @@ export const OrgConfigSchema = z.object({
 
 	multi_currency: z.boolean().default(false),
 
-	// Unset (or null) leaves Stripe on the org's own invoice payment method
-	// settings; an explicit list overrides them. Never default this.
+	// Unset/null = Stripe's own invoice settings apply; never add a default.
 	allowed_payment_methods: z.array(InvoicePaymentMethodSchema).min(1).nullish(),
 });
 
