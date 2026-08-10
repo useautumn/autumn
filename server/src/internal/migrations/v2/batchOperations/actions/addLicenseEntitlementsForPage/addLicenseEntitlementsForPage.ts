@@ -1,7 +1,6 @@
 import { isResettingEntitlement } from "@autumn/shared";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 import { withStatementTimeout } from "@/db/withStatementTimeout.js";
-import { generateId } from "@/utils/genUtils.js";
 import { iterateCustomerProductPages } from "../../execute/customerProductPagination/iterateCustomerProductPages.js";
 import type { BatchMigrationInsertedItem } from "../../execute/types/batchMigrationExecutionTypes.js";
 import {
@@ -14,8 +13,7 @@ import {
 } from "../../execute/utils/pagePhaseTimings.js";
 import type { OperationScope } from "../../scope/operationScope.js";
 import type { BatchMigrationExecutionAddLicense } from "../../types/batchMigrationExecutionPlan.js";
-import { enrichCustomerEntitlementCycles } from "../../utils/enrichCustomerEntitlementCycles.js";
-import { insertLicenseCustomerEntitlementRows } from "./insertLicenseCustomerEntitlementRows.js";
+import { enrichAndInsertLicenseCandidates } from "./enrichAndInsertLicenseCandidates.js";
 import { repointLicensePoolsForPage } from "./repointLicensePoolsForPage.js";
 import { selectLicenseAddCandidateRows } from "./selectLicenseAddCandidateRows.js";
 
@@ -59,7 +57,7 @@ export const addLicenseEntitlementsForPage = async ({
 	// not per batch, which would mutate before the ceiling assertion.
 	const repointedPools = await timePhase({
 		phases,
-		phase: "insert",
+		phase: "repoint",
 		run: () =>
 			withStatementTimeout(
 				db,
@@ -101,57 +99,19 @@ export const addLicenseEntitlementsForPage = async ({
 			if (candidates.length === 0) return candidates;
 			assertWithinCeiling(candidates.length);
 
-			const enriched = resetting
-				? enrichCustomerEntitlementCycles({
-						candidates,
-						entitlement: add.entitlement,
-						now,
-					})
-				: null;
-			for (const id of enriched?.excludedInternalCustomerIds ?? [])
-				excludedIds.add(id);
-			const enrichedRows =
-				enriched?.rows ??
-				candidates.map((candidate) => ({
-					...candidate,
-					resetCycleAnchor: null,
-					nextResetAt: null,
-				}));
-			const insertableRows = enrichedRows.map((row) => ({
-				...row,
-				id: generateId("cus_ent"),
-			}));
-			const insertedIds = await timePhase({
-				phases,
-				phase: "insert",
-				run: () =>
-					insertLicenseCustomerEntitlementRows({
-						db: transaction,
-						rows: insertableRows,
-						initialState: add.initialState,
-						now,
-					}),
-			});
-
-			const insertedIdSet = new Set(insertedIds);
-			for (const row of insertableRows) {
-				if (!insertedIdSet.has(row.id)) continue;
-				insertedItems.push({
-					internalCustomerId: row.internalCustomerId,
-					customerProductId: row.customerProductId,
-					entityId: row.entityId,
-					planId: add.licensePlanId,
-					featureId: row.featureId,
-					granted: add.initialState.granted,
-					unlimited: add.initialState.unlimited === true,
-					nextResetAt: row.nextResetAt,
-					status: row.status,
-					startsAt: row.startsAt,
-					canceledAt: row.canceledAt,
-					endedAt: row.endedAt,
-					trialEndsAt: row.trialEndsAt,
+			const { insertedItems: pageItems, excludedInternalCustomerIds } =
+				await enrichAndInsertLicenseCandidates({
+					db: transaction,
+					candidates,
+					scope,
+					add,
+					resetting,
+					now,
+					phases,
 				});
-			}
+			for (const id of excludedInternalCustomerIds) excludedIds.add(id);
+			insertedItems.push(...pageItems);
+
 			return candidates;
 		},
 	});

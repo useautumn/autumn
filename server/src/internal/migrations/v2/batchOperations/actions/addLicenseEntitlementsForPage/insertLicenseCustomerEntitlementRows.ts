@@ -2,6 +2,8 @@ import { MIGRATABLE_STATUSES } from "@autumn/shared";
 import { sql } from "drizzle-orm";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 import { sqlList } from "@/internal/billing/v2/actions/batchTransition/execute/sql/batchTransitionSqlUtils.js";
+import type { OperationScope } from "../../scope/operationScope.js";
+import { operationScopeSql } from "../../scope/operationScope.js";
 import type { CustomerEntitlementInitialState } from "../../types/index.js";
 import type { EnrichedCycleCandidate } from "../../utils/enrichCustomerEntitlementCycles.js";
 import type { LicenseCandidateRow } from "./selectLicenseAddCandidateRows.js";
@@ -19,11 +21,13 @@ export type InsertableLicenseRow = LicenseCandidateRow &
 export const insertLicenseCustomerEntitlementRows = async ({
 	db,
 	rows,
+	scope,
 	initialState,
 	now,
 }: {
 	db: DrizzleCli;
 	rows: InsertableLicenseRow[];
+	scope: OperationScope;
 	initialState: CustomerEntitlementInitialState;
 	now: number;
 }): Promise<string[]> => {
@@ -94,12 +98,18 @@ export const insertLicenseCustomerEntitlementRows = async ({
 				false
 			FROM new_rows AS new_row
 			-- Re-assert at insert time: assignments whose row changed since the
-			-- select (released, expired) drop out.
+			-- select (released, expired) drop out. Scope lives on the parent, so
+			-- reach it through the pool the same way the candidate select does.
 			INNER JOIN customer_products AS assignment
 				ON assignment.id = new_row.customer_product_id
 				AND assignment.customer_license_link_id IS NOT NULL
 				AND assignment.internal_entity_id IS NOT NULL
 				AND assignment.status IN (${sqlList({ values: [...MIGRATABLE_STATUSES] })})
+			INNER JOIN customer_licenses AS pool
+				ON pool.link_id = assignment.customer_license_link_id
+			INNER JOIN customer_products AS cp
+				ON cp.id = pool.parent_customer_product_id
+				AND ${operationScopeSql({ scope })}
 			ON CONFLICT (id) DO NOTHING
 			RETURNING id
 		)
