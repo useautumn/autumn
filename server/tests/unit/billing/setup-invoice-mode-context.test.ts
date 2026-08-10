@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import type { AttachParamsV1, InvoicePaymentMethod } from "@autumn/shared";
-import { InvoiceModeParamsSchema, OrgConfigSchema } from "@autumn/shared";
+import { OrgConfigSchema } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { setupInvoiceModeContext } from "@/internal/billing/v2/setup/setupInvoiceModeContext";
 
@@ -17,19 +17,12 @@ const makeCtx = ({
 		},
 	}) as unknown as AutumnContext;
 
-const makeParams = ({
-	enabled = true,
-	allowedPaymentMethods,
-}: {
-	enabled?: boolean;
-	allowedPaymentMethods?: InvoicePaymentMethod[];
-}) =>
+const makeParams = ({ enabled = true }: { enabled?: boolean }) =>
 	({
 		invoice_mode: {
 			enabled,
 			enable_plan_immediately: false,
 			finalize: true,
-			allowed_payment_methods: allowedPaymentMethods,
 		},
 	}) as unknown as AttachParamsV1;
 
@@ -44,15 +37,6 @@ describe("setupInvoiceModeContext payment method types", () => {
 			"card",
 			"us_bank_account",
 		]);
-	});
-
-	test("per-attach override beats the org config", async () => {
-		const invoiceMode = await setupInvoiceModeContext({
-			ctx: makeCtx({ allowedPaymentMethods: ["card"] }),
-			params: makeParams({ allowedPaymentMethods: ["sepa_debit"] }),
-		});
-
-		expect(invoiceMode?.paymentMethodTypes).toEqual(["sepa_debit"]);
 	});
 
 	test("stays undefined when nothing is configured", async () => {
@@ -74,8 +58,8 @@ describe("setupInvoiceModeContext payment method types", () => {
 	});
 });
 
-describe("allowed_payment_methods schemas reject empty lists", () => {
-	test("org config rejects an empty array but allows null or omitted", () => {
+describe("allowed_payment_methods org config schema", () => {
+	test("rejects an empty array but allows null or omitted", () => {
 		expect(
 			OrgConfigSchema.safeParse({ allowed_payment_methods: [] }).success,
 		).toBe(false);
@@ -88,23 +72,5 @@ describe("allowed_payment_methods schemas reject empty lists", () => {
 			OrgConfigSchema.parse({ allowed_payment_methods: ["card"] })
 				.allowed_payment_methods,
 		).toEqual(["card"]);
-	});
-
-	test("invoice mode params reject an empty array but allow omitted", () => {
-		expect(
-			InvoiceModeParamsSchema.safeParse({
-				enabled: true,
-				allowed_payment_methods: [],
-			}).success,
-		).toBe(false);
-		expect(
-			InvoiceModeParamsSchema.parse({ enabled: true }).allowed_payment_methods,
-		).toBeUndefined();
-		expect(
-			InvoiceModeParamsSchema.parse({
-				enabled: true,
-				allowed_payment_methods: ["sepa_debit"],
-			}).allowed_payment_methods,
-		).toEqual(["sepa_debit"]);
 	});
 });

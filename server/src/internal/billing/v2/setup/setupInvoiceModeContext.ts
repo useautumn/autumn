@@ -17,8 +17,7 @@ export const setupInvoiceModeContext = async ({
 	if (params?.invoice_mode?.enabled !== true) {
 		return undefined;
 	}
-	const { invoice_template_id, net_terms_days, allowed_payment_methods } =
-		params.invoice_mode;
+	const { invoice_template_id, net_terms_days } = params.invoice_mode;
 	const template = invoice_template_id
 		? await InvoiceTemplateService.getById({
 				db: ctx.db,
@@ -32,9 +31,6 @@ export const setupInvoiceModeContext = async ({
 		footer: template?.footer,
 		memo: template?.memo,
 		daysUntilDue: net_terms_days ?? template?.net_terms_days,
-		paymentMethodTypes:
-			allowed_payment_methods ??
-			ctx.org.config.allowed_payment_methods ??
-			undefined,
+		paymentMethodTypes: ctx.org.config.allowed_payment_methods ?? undefined,
 	};
 };
