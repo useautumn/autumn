@@ -197,8 +197,9 @@ if (process.env.NODE_ENV === "development") {
 				drainState.draining = true;
 			},
 			exitGracefully: () => {
-				// Backstop: a hung flush must not strand a drained fork.
-				const forceExit = setTimeout(() => process.exit(0), 5_000);
+				// Backstop: a hung flush must not strand a drained fork. Sized above
+				// the in-flight settle window inside gracefulShutdown.
+				const forceExit = setTimeout(() => process.exit(0), 15_000);
 				forceExit.unref?.();
 				void gracefulShutdown();
 			},
@@ -235,10 +236,31 @@ function registerShutdownHandlers() {
 	// Do NOT use process.on("exit", ...) for async cleanup!
 }
 
+async function waitForInFlightRequestsToSettle({
+	timeoutMs,
+}: {
+	timeoutMs: number;
+}) {
+	const deadline = Date.now() + timeoutMs;
+	while (listInFlightRequests({ now: Date.now() }).length > 0) {
+		if (Date.now() > deadline) {
+			console.warn(
+				`[Shutdown] proceeding with ${listInFlightRequests({ now: Date.now() }).length} request(s) still in flight after ${timeoutMs}ms`,
+			);
+			return;
+		}
+		await new Promise((resolve) => setTimeout(resolve, 200));
+	}
+}
+
 async function gracefulShutdown() {
 	shuttingDown = true;
 	console.log("Shutting down worker, flushing telemetry and closing DB...");
 	try {
+		// Requests still executing enqueue SQS work (track fallbacks, async
+		// track); closing the batchers under them rejects those sends. Give
+		// in-flight requests a bounded window to finish first.
+		await waitForInFlightRequestsToSettle({ timeoutMs: 10_000 });
 		await shutdownSqsSendBatchers();
 
 		// Flush any buffered OTel spans before shutting down
