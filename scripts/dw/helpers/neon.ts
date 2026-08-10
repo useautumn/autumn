@@ -10,7 +10,6 @@ import {
 	withNeonContextSync,
 } from "./neonContext.ts";
 import { fatal, log, sh } from "./shell.ts";
-import { forceSslVerifyFull } from "./url.ts";
 
 let neonCmd: string | undefined;
 
@@ -156,7 +155,7 @@ export function connectionString(
 			`neon connection-string for ${branchName} failed: ${res.stderr || res.stdout}`,
 		);
 	}
-	return forceSslVerifyFull(res.stdout.trim());
+	return res.stdout.trim();
 }
 
 // Leaf's chat-sdk connects to a separate `chat` database on the same branch
