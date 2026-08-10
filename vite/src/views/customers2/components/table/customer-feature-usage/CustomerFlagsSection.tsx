@@ -7,8 +7,9 @@ import { useFlagsView } from "./useFlagsView";
 
 type FlagsView = "enabled" | "catalog";
 
+const FLAGS_LABEL = "Flags";
 const FLAG_VIEWS: { value: FlagsView; label: string }[] = [
-	{ value: "enabled", label: "Flags" },
+	{ value: "enabled", label: FLAGS_LABEL },
 	{ value: "catalog", label: "Full Catalog" },
 ];
 
@@ -83,7 +84,7 @@ export function CustomerFlagsSection({
 					</Tabs>
 				</div>
 			) : (
-				<SectionTag>Flags</SectionTag>
+				<SectionTag>{FLAGS_LABEL}</SectionTag>
 			)}
 
 			<div ref={containerRef} className="relative">
