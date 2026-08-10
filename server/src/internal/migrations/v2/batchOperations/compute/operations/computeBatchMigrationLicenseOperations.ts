@@ -111,6 +111,22 @@ export const computeBatchMigrationLicenseOperations = ({
 				continue;
 			}
 
+			if (enriched.entity_feature_id) {
+				rejections.push({
+					code: "entity_scoped_entitlement_add",
+					opIndex,
+					planId: fromProduct.id,
+					message:
+						"Adding an entity-scoped entitlement fans out per entity; row counts vary per customer.",
+					details: {
+						licensePlanId: entry.license_plan_id,
+						featureId: enriched.feature.id,
+						entityFeatureId: enriched.entity_feature_id,
+					},
+				});
+				continue;
+			}
+
 			operations.push({
 				type: "add_license_entitlement",
 				licensePlanId: entry.license_plan_id,

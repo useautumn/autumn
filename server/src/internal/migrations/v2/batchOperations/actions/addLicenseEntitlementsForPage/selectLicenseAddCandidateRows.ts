@@ -3,6 +3,7 @@ import {
 	CusProductStatus,
 	EntInterval,
 	type EntitlementWithFeature,
+	isBooleanEntitlement,
 	MIGRATABLE_STATUSES,
 } from "@autumn/shared";
 import { sql } from "drizzle-orm";
@@ -67,6 +68,10 @@ export const selectLicenseAddCandidateRows = async ({
 
 	const targetInterval = String(entitlement.interval ?? EntInterval.Lifetime);
 	const targetIntervalCount = entitlement.interval_count ?? 1;
+
+	const dedupIntervalCondition = isBooleanEntitlement({ entitlement })
+		? sql``
+		: sql`AND COALESCE(existing_definition.interval, ${EntInterval.Lifetime}) = ${targetInterval}`;
 
 	const rows = await db.execute(sql`
 		SELECT
@@ -147,14 +152,17 @@ export const selectLicenseAddCandidateRows = async ({
 		WHERE assignment.internal_customer_id = ANY(${sql.param(internalCustomerIds)}::text[])
 			AND assignment.internal_entity_id IS NOT NULL
 			AND assignment.status IN (${sqlList({ values: [...MIGRATABLE_STATUSES] })})
-			AND e.internal_feature_id = ${entitlement.internal_feature_id}
+			AND e.id = ${entitlement.id}
 			AND ${operationScopeSql({ scope })}
 			${afterCustomerProductId ? sql`AND assignment.id > ${afterCustomerProductId}` : sql``}
 			AND NOT EXISTS (
 				SELECT 1
 				FROM customer_entitlements AS existing
+				INNER JOIN entitlements AS existing_definition
+					ON existing_definition.id = existing.entitlement_id
 				WHERE existing.customer_product_id = assignment.id
-					AND existing.internal_feature_id = e.internal_feature_id
+					AND existing.internal_feature_id = ${entitlement.internal_feature_id}
+					${dedupIntervalCondition}
 			)
 		ORDER BY assignment.id
 		LIMIT ${limit}

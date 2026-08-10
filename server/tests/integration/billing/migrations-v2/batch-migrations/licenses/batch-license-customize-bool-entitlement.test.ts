@@ -24,7 +24,7 @@
 import { expect, test } from "bun:test";
 import type { ApiCustomerV3, ApiCustomerV5 } from "@autumn/shared";
 import { customerEntitlements } from "@autumn/shared";
-import { runUpdatePlanMigration } from "@tests/integration/billing/migrations-v2/utils/runUpdatePlanMigration";
+import { runChunkedMigration } from "@tests/integration/billing/migrations-v2/utils/runChunkedMigration";
 import { expectCustomerInvoiceCorrect } from "@tests/integration/billing/utils/expectCustomerInvoiceCorrect";
 import { setupLicenseUpdateScenario } from "@tests/integration/licenses/billing/update/setupLicenseUpdateScenario";
 import { getLicenseDbState } from "@tests/integration/licenses/licenseTestUtils";
@@ -73,11 +73,10 @@ test.concurrent(
 		const devSeatPlanId = devSeat.id;
 
 		// ── The op: license-only customize adding a free bool entitlement ──
-		await runUpdatePlanMigration({
+		await runChunkedMigration({
 			ctx,
 			migrationClient: autumnV2_2,
 			migrationId: `${idPrefix}-migration`,
-			customerId,
 			filter: { customer: { plan: { plan_id: parentPlanId, custom: false } } },
 			operations: {
 				customer: [
@@ -154,6 +153,8 @@ test.concurrent(
 				.select({
 					entitlementId: customerEntitlements.entitlement_id,
 					featureId: customerEntitlements.internal_feature_id,
+					resetCycleAnchor: customerEntitlements.reset_cycle_anchor,
+					nextResetAt: customerEntitlements.next_reset_at,
 				})
 				.from(customerEntitlements)
 				.where(
@@ -176,6 +177,9 @@ test.concurrent(
 		expect(convergedRows).toHaveLength(ASSIGNED_SEATS);
 		for (const row of convergedRows) {
 			expect(row.entitlementId).toBe(boolEntitlement?.id ?? "");
+			// A boolean never resets — a cycle here would reset a flag on a clock.
+			expect(row.resetCycleAnchor).toBeNull();
+			expect(row.nextResetAt).toBeNull();
 		}
 
 		// ── No invoice: a free bool entitlement is not a billing change ────

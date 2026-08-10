@@ -1,3 +1,4 @@
+import { isResettingEntitlement } from "@autumn/shared";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 import { withStatementTimeout } from "@/db/withStatementTimeout.js";
 import { generateId } from "@/utils/genUtils.js";
@@ -49,6 +50,7 @@ export const addLicenseEntitlementsForPage = async ({
 	candidateRowBatchSize?: number;
 }): Promise<AddLicenseEntitlementsForPageResult> => {
 	const insertedItems: BatchMigrationInsertedItem[] = [];
+	const resetting = isResettingEntitlement({ entitlement: add.entitlement });
 
 	// Whole-page, so it commits before any candidate select reads the pool —
 	// not per batch, which would mutate before the ceiling assertion.
@@ -96,11 +98,17 @@ export const addLicenseEntitlementsForPage = async ({
 			if (candidates.length === 0) return candidates;
 			assertWithinCeiling(candidates.length);
 
-			const { rows: enrichedRows } = enrichCustomerEntitlementCycles({
-				candidates,
-				entitlement: add.entitlement,
-				now,
-			});
+			const enrichedRows = resetting
+				? enrichCustomerEntitlementCycles({
+						candidates,
+						entitlement: add.entitlement,
+						now,
+					}).rows
+				: candidates.map((candidate) => ({
+						...candidate,
+						resetCycleAnchor: null,
+						nextResetAt: null,
+					}));
 			const insertableRows = enrichedRows.map((row) => ({
 				...row,
 				id: generateId("cus_ent"),
