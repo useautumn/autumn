@@ -219,6 +219,10 @@ if (process.env.NODE_ENV === "development") {
 					`[Shutdown] ${workersAlive()} worker(s) still alive after 35s; exiting anyway`,
 				);
 			}
+			// Same bound as every other exit path: a hung pool close must not
+			// leave the primary for the platform SIGKILL.
+			const forceExit = setTimeout(() => process.exit(0), 30_000);
+			forceExit.unref?.();
 			await gracefulShutdown();
 		};
 		process.on("SIGTERM", () => void shutdownPrimary());
