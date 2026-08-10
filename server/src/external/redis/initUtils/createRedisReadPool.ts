@@ -42,8 +42,10 @@ export const acquireRedisReadLane = (
 	const candidateIndexes = readyIndexes.length > 0 ? readyIndexes : [0, 1];
 	let selectedIndex = candidateIndexes[0] ?? 0;
 
+	// Ties go to the highest lane: lane 0 also carries every unpooled op
+	// (writes, readMaster), so idle pooled reads defect to the quiet lane.
 	for (const candidateIndex of candidateIndexes.slice(1)) {
-		if (state.inFlight[candidateIndex] < state.inFlight[selectedIndex]) {
+		if (state.inFlight[candidateIndex] <= state.inFlight[selectedIndex]) {
 			selectedIndex = candidateIndex;
 		}
 	}

@@ -553,6 +553,31 @@ describe("runRedisOp standby failover", () => {
 });
 
 describe("Redis read pool", () => {
+	test("sends a lone pooled read to the high lane, away from unpooled traffic", async () => {
+		const laneZero = createNamedPair({
+			primaryName: "lane-zero-primary",
+			standbyName: "lane-zero-standby",
+		});
+		const laneOne = createNamedPair({
+			primaryName: "lane-one-primary",
+			standbyName: "lane-one-standby",
+		});
+		const redis = createRedisReadPool({
+			lanes: [laneZero.redis, laneOne.redis],
+		});
+
+		const result = await runRedisOp({
+			redisInstance: redis,
+			source: "read-pool-test",
+			retryOnStandby: true,
+			useReadPool: true,
+			operation: (connection) => connection.get("subject"),
+		});
+
+		expect(result).toBe("lane-one-primary");
+		expect(laneZero.primary.calls).toEqual([]);
+	});
+
 	test("skips a lane whose preferred and standby connections are unavailable", async () => {
 		const laneZero = createNamedPair({
 			primaryName: "lane-zero-primary",
@@ -591,7 +616,7 @@ describe("Redis read pool", () => {
 			standbyName: "lane-one-standby",
 		});
 		let releaseFirstRead: (() => void) | undefined;
-		laneZero.primary.waitForGet = new Promise<void>((resolve) => {
+		laneOne.primary.waitForGet = new Promise<void>((resolve) => {
 			releaseFirstRead = resolve;
 		});
 		const redis = createRedisReadPool({
@@ -613,10 +638,10 @@ describe("Redis read pool", () => {
 			operation: (connection) => connection.get("second"),
 		});
 
-		expect(secondRead).toBe("lane-one-primary");
-		expect(laneOne.primary.calls).toEqual(["get:second"]);
+		expect(secondRead).toBe("lane-zero-primary");
+		expect(laneZero.primary.calls).toEqual(["get:second"]);
 		releaseFirstRead?.();
-		expect(await firstRead).toBe("lane-zero-primary");
+		expect(await firstRead).toBe("lane-one-primary");
 	});
 
 	test("keeps non-retry-safe operations pinned to lane zero", async () => {
@@ -629,7 +654,7 @@ describe("Redis read pool", () => {
 			standbyName: "lane-one-standby",
 		});
 		let releaseFirstRead: (() => void) | undefined;
-		laneZero.primary.waitForGet = new Promise<void>((resolve) => {
+		laneOne.primary.waitForGet = new Promise<void>((resolve) => {
 			releaseFirstRead = resolve;
 		});
 		const redis = createRedisReadPool({
@@ -650,8 +675,8 @@ describe("Redis read pool", () => {
 		});
 
 		expect(write).toBe("OK");
-		expect(laneZero.primary.calls).toContain("set:subject:value");
-		expect(laneOne.primary.calls).toEqual([]);
+		expect(laneZero.primary.calls).toEqual(["set:subject:value"]);
+		expect(laneOne.primary.calls).toEqual(["get:first"]);
 		releaseFirstRead?.();
 		await firstRead;
 	});
@@ -665,7 +690,7 @@ describe("Redis read pool", () => {
 			primaryName: "lane-one-primary",
 			standbyName: "lane-one-standby",
 		});
-		laneZero.primary.failGetWith = connectionError();
+		laneOne.primary.failGetWith = connectionError();
 		const redis = createRedisReadPool({
 			lanes: [laneZero.redis, laneOne.redis],
 		});
@@ -678,10 +703,10 @@ describe("Redis read pool", () => {
 			operation: (connection) => connection.get("subject"),
 		});
 
-		expect(result).toBe("lane-zero-standby");
-		expect(laneZero.standby.calls).toEqual(["get:subject"]);
-		expect(laneOne.primary.calls).toEqual([]);
-		expect(laneOne.standby.calls).toEqual([]);
+		expect(result).toBe("lane-one-standby");
+		expect(laneOne.standby.calls).toEqual(["get:subject"]);
+		expect(laneZero.primary.calls).toEqual([]);
+		expect(laneZero.standby.calls).toEqual([]);
 	});
 
 	test("fans connection listeners out across both lanes", () => {
