@@ -223,6 +223,7 @@ export function CustomerFeatureUsageTable() {
 			</Table.Provider>
 			{!isLoading && hasFlagsSection && (
 				<CustomerFlagsSection
+					key={availableBooleanFeatures.length > 0 ? "catalog" : "flags"}
 					booleanEnts={booleanEnts}
 					availableFeatures={availableBooleanFeatures}
 				/>
