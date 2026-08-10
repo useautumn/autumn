@@ -19,8 +19,10 @@ export function useFlagsView({
 		showingCatalog: false,
 		expanded: false,
 	});
-	const { showingCatalog: catalogSelected, expanded } = state;
-	const showingCatalog = hasCatalog && catalogSelected;
+	const { showingCatalog, expanded } = state;
+	if (!hasCatalog && showingCatalog) {
+		setState({ ...state, showingCatalog: false });
+	}
 
 	// Measures a hidden layer, so it can always run — the count stays correct
 	// across every view instead of lagging a frame behind a toggle.
