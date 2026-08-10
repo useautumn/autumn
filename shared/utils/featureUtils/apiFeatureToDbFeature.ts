@@ -8,9 +8,8 @@ import {
 	FeatureUsageType,
 } from "@models/featureModels/featureEnums.js";
 import type { Feature } from "@models/featureModels/featureModels.js";
-import { isAiCreditSystem } from "@utils/featureUtils/classifyFeature/isAiCreditSystem";
-import { isAnyCreditSystem } from "./classifyFeature/isAnyCreditSystem.js";
 import { AppEnv } from "@models/genModels/genEnums.js";
+import { isAiCreditSystem } from "@utils/featureUtils/classifyFeature/isAiCreditSystem";
 import type { ApiFeatureV1 } from "../../api/features/apiFeatureV1.js";
 import type {
 	CreateFeatureV1Params,
@@ -26,6 +25,7 @@ import type { CreditSchemaItem } from "../../models/featureModels/featureConfig/
 import type { SharedContext } from "../../types/sharedContext.js";
 import { notNullish, nullish } from "../utils.js";
 import { buildAiCreditSystemConfig } from "./buildAiCreditSystemConfig.js";
+import { isAnyCreditSystem } from "./classifyFeature/isAnyCreditSystem.js";
 
 export const apiFeatureToDbFeature = ({
 	apiFeature,
@@ -45,10 +45,12 @@ export const apiFeatureToDbFeature = ({
 		usageType = apiFeature.type as unknown as FeatureUsageType;
 	}
 
+	// Cloned — mutating the original's config in place would make the produced
+	// row and originalFeature indistinguishable to diffing.
 	const newConfig =
 		featureType === FeatureType.Boolean
 			? undefined
-			: originalFeature?.config || {};
+			: structuredClone(originalFeature?.config ?? {});
 
 	if (usageType) {
 		newConfig.usage_type = usageType;
@@ -151,10 +153,12 @@ export const featureV1ToDbFeature = ({
 	const featureType = apiFeature.type;
 	const eventNames = apiFeature.event_names;
 
+	// Cloned — mutating the original's config in place would make the produced
+	// row and originalFeature indistinguishable to diffing.
 	const newConfig =
 		featureType === FeatureType.Boolean
 			? undefined
-			: originalFeature?.config || {};
+			: structuredClone(originalFeature?.config ?? {});
 
 	if (apiFeature.type === FeatureType.Metered) {
 		newConfig.usage_type = apiFeature.consumable
@@ -201,6 +205,14 @@ export const featureV1ToDbFeature = ({
 				: (originalFeature?.archived ?? false),
 		event_names: eventNames ?? [],
 		model_markups: modelMarkups,
+		// Omitted display keeps the current (often LLM-generated) one.
+		display:
+			apiFeature.display?.singular != null && apiFeature.display?.plural != null
+				? {
+						singular: apiFeature.display.singular,
+						plural: apiFeature.display.plural,
+					}
+				: (originalFeature?.display ?? null),
 	} satisfies Feature;
 };
 

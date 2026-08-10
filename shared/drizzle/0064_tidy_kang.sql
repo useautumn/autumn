@@ -1,0 +1,2 @@
+CREATE INDEX CONCURRENTLY "idx_entitlements_entity_feature_id" ON "entitlements" USING btree ("entity_feature_id") WHERE "entitlements"."entity_feature_id" IS NOT NULL;--> statement-breakpoint
+CREATE INDEX CONCURRENTLY "idx_prices_config_internal_feature_id" ON "prices" USING btree (("config" ->> 'internal_feature_id')) WHERE ("prices"."config" ->> 'internal_feature_id') IS NOT NULL;
