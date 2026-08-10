@@ -1,4 +1,4 @@
-import type { InvoicePaymentMethod, OrgConfig } from "@autumn/shared";
+import type { InvoicePaymentMethod } from "@autumn/shared";
 import {
 	DropdownMenu,
 	DropdownMenuCheckboxItem,
@@ -28,10 +28,9 @@ export const AllowedPaymentMethodsSubsection = () => {
 
 	const { mutate, isPending, variables } = useMutation({
 		mutationFn: async (methods: InvoicePaymentMethod[] | null) => {
-			const { data } = await axiosInstance.patch("/organization/config", {
+			await axiosInstance.patch("/organization/config", {
 				allowed_payment_methods: methods,
 			});
-			return data as { config: OrgConfig };
 		},
 		onSuccess: async () => {
 			await refetchOrg();
