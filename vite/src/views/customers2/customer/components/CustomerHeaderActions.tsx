@@ -104,7 +104,7 @@ export function CustomerHeaderActions() {
 			/>
 			{mismatchCount > 0 && (
 				<IconTooltipButton
-					tooltip="Stripe subscriptions out of sync — click to review"
+					tooltip="State mismatch detected"
 					icon={
 						<WarningCircleIcon
 							size={14}
