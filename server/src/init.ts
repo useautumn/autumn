@@ -105,6 +105,9 @@ const init = async ({
 			logger.warn("[OrgRedis] Warmup failed", { error });
 		}),
 	]);
+	// Observed immediately: awaits run before the bounded wait consumes it, and
+	// an early rejection would otherwise hit the fatal unhandledRejection exit.
+	void redisWarmup.catch(() => {});
 
 	await startAllEdgeConfigPolling({ logger });
 	await Promise.all([primeRedisMonitor(), primeRedisV2Monitor()]);

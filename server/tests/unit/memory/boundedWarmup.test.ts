@@ -35,4 +35,28 @@ describe("awaitBoundedWarmup", () => {
 		expect(result).toBe("failed");
 		expect(logs.length).toBe(1);
 	});
+
+	// The init path observes the warmup with a no-op catch, then consumes it
+	// ticks later — that must still report "failed", never unhandledRejection.
+	test("pre-observed early rejection still reports 'failed' when consumed late", async () => {
+		let unhandled = 0;
+		const onUnhandled = () => {
+			unhandled += 1;
+		};
+		process.on("unhandledRejection", onUnhandled);
+		try {
+			const warmup = Promise.reject(new Error("bad redis config"));
+			void warmup.catch(() => {});
+			await Bun.sleep(20);
+			const result = await awaitBoundedWarmup({
+				warmup,
+				timeoutMs: 1_000,
+				log: () => {},
+			});
+			expect(result).toBe("failed");
+			expect(unhandled).toBe(0);
+		} finally {
+			process.off("unhandledRejection", onUnhandled);
+		}
+	});
 });
