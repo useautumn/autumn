@@ -271,8 +271,14 @@ function registerFatalErrorHandlers() {
 }
 
 function registerShutdownHandlers() {
-	process.on("SIGTERM", gracefulShutdown);
-	process.on("SIGINT", gracefulShutdown);
+	// Same 30s bound as recycle exits: no shutdown path may hang unbounded.
+	const shutdownWithBackstop = () => {
+		const forceExit = setTimeout(() => process.exit(0), 30_000);
+		forceExit.unref?.();
+		void gracefulShutdown();
+	};
+	process.on("SIGTERM", shutdownWithBackstop);
+	process.on("SIGINT", shutdownWithBackstop);
 	// Do NOT use process.on("exit", ...) for async cleanup!
 }
 
