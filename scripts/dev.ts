@@ -36,6 +36,9 @@ const CHAT_URL = process.env.CHAT_URL ?? publicTunnelUrl ?? LOCAL_CHAT_URL;
 const SLACK_BOT_URL = process.env.SLACK_BOT_URL ?? publicTunnelUrl ?? CHAT_URL;
 const skipWorkers = false;
 const isProductionMode = process.argv.includes("--production");
+// Only one `trigger.dev dev` may consume a project's dev environment; a second
+// instance strands runs. Skip it here to run it in its own terminal.
+const skipTrigger = process.argv.includes("--no-trigger");
 
 const envFile = process.env.ENV_FILE ?? ".env";
 const viteAppEnv = envFile.includes(".env.prod")
@@ -166,6 +169,10 @@ async function startDev() {
 		console.log(`  eve:      ${EVE_SERVER_URL}/eve/v1/info`);
 		console.log(`  mcp:      http://localhost:${CHAT_PORT}/mcp\n`);
 
+		if (skipTrigger) {
+			console.log("  trigger:  skipped — run `bun run trigger dev` yourself\n");
+		}
+
 		// Use cmd on Windows, sh on Unix
 		const isWindows = process.platform === "win32";
 
@@ -208,15 +215,17 @@ async function startDev() {
 				);
 			}
 
-			names.push("trigger");
-			colors.push("cyan");
-			// Local Trigger's Bun worker can't resolve the optional Axiom transport.
-			// Run the installed CLI, not `bunx` — bunx resolves latest, which then
-			// mismatches the pinned @trigger.dev/* packages and refuses to build.
-			const triggerCmd = isWindows
-				? "set AXIOM_TOKEN= && bun run trigger dev"
-				: "env -u AXIOM_TOKEN bun run trigger dev";
-			cmds.push(`"${triggerCmd}"`);
+			if (!skipTrigger) {
+				names.push("trigger");
+				colors.push("cyan");
+				// Local Trigger's Bun worker can't resolve the optional Axiom transport.
+				// Run the installed CLI, not `bunx` — bunx resolves latest, which then
+				// mismatches the pinned @trigger.dev/* packages and refuses to build.
+				const triggerCmd = isWindows
+					? "set AXIOM_TOKEN= && bun run trigger dev"
+					: "env -u AXIOM_TOKEN bun run trigger dev";
+				cmds.push(`"${triggerCmd}"`);
+			}
 
 			names.push("vite", "checkout");
 			colors.push("blue", "magenta");
