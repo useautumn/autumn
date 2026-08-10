@@ -1,4 +1,4 @@
-import { describe, expect, mock, test } from "bun:test";
+import { afterAll, describe, expect, mock, test } from "bun:test";
 
 // Recycled SQS workers previously polled while dedicated Redis was connecting.
 // They now wait for bounded warmup before initializing queue consumers.
@@ -79,4 +79,8 @@ describe("queue worker Redis startup gate", () => {
 		await workerStartup;
 		expect(initWorkersCalled).toBe(true);
 	});
+});
+
+afterAll(() => {
+	mock.restore();
 });
