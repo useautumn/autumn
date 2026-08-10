@@ -8,8 +8,10 @@ type FlagsViewState = { showingCatalog: boolean; expanded: boolean };
 
 export function useFlagsView({
 	booleanEnts,
+	hasCatalog,
 }: {
 	booleanEnts: FullCusEntWithFullCusProduct[];
+	hasCatalog: boolean;
 }) {
 	// Expansion survives a trip through the catalog, so the two axes are
 	// independent rather than one enum.
@@ -18,6 +20,9 @@ export function useFlagsView({
 		expanded: false,
 	});
 	const { showingCatalog, expanded } = state;
+	if (!hasCatalog && showingCatalog) {
+		setState({ ...state, showingCatalog: false });
+	}
 
 	// Measures a hidden layer, so it can always run — the count stays correct
 	// across every view instead of lagging a frame behind a toggle.
