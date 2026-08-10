@@ -36,8 +36,14 @@ class BatchingManager {
 
 	/** Deliver pending AND already-executing batches (shutdown path). */
 	async flush(): Promise<void> {
-		await this.runBatch();
-		await Promise.all(Array.from(this.inFlightBatches));
+		// Settle everything before returning: a fail-fast await would abandon
+		// tracked in-flight batches on the first rejection.
+		const results = await Promise.allSettled([
+			this.runBatch(),
+			...Array.from(this.inFlightBatches),
+		]);
+		const failure = results.find((r) => r.status === "rejected");
+		if (failure && failure.status === "rejected") throw failure.reason;
 	}
 
 	private runBatch(): Promise<void> {
