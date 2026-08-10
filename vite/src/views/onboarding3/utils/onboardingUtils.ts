@@ -2,7 +2,6 @@
 import {
 	AppEnv,
 	type CreateFeature,
-	CreateFeatureSchema,
 	type Feature,
 	FeatureType,
 	FeatureUsageType,
@@ -14,7 +13,6 @@ import {
 import type { AxiosError, AxiosInstance } from "axios";
 import type { MutableRefObject } from "react";
 import { toast } from "sonner";
-import { FeatureService } from "@/services/FeatureService";
 import { ProductService } from "@/services/products/ProductService";
 import { getBackendErr } from "@/utils/genUtils";
 
@@ -305,41 +303,6 @@ const createProduct = async (product: any, axiosInstance: AxiosInstance) => {
 		console.error("Failed to create/update product:", error);
 		toast.error(
 			getBackendErr(error as AxiosError, "Failed to create/update product"),
-		);
-		return null;
-	}
-};
-
-// Feature creation helper
-const createFeature = async (
-	feature: CreateFeature,
-	axiosInstance: AxiosInstance,
-) => {
-	const result = CreateFeatureSchema.safeParse(feature);
-	if (result.error) {
-		toast.error("Invalid feature", {
-			description: result.error.issues.map((x) => x.message).join(".\n"),
-		});
-		return null;
-	}
-
-	try {
-		// Create the feature
-		const { data } = await FeatureService.createFeature(axiosInstance, {
-			name: feature.name,
-			id: feature.id,
-			type: feature.type,
-			config: feature.config,
-		});
-
-		toast.success(`Feature "${feature.name}" created successfully!`);
-
-		if (!data?.id) return null;
-
-		return data;
-	} catch (error: unknown) {
-		toast.error(
-			getBackendErr(error as AxiosError, "Failed to create/update feature"),
 		);
 		return null;
 	}

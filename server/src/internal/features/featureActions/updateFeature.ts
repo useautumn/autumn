@@ -139,7 +139,7 @@ const hasAiMarkupConfigChanged = ({
 };
 
 /** Reproduce the exact error `updateFeature` historically threw for a blocker. */
-const throwFeatureUpdateBlocker = ({
+export const throwFeatureUpdateBlocker = ({
 	blocker,
 	newId,
 }: {
@@ -296,6 +296,7 @@ export const updateFeature = async ({
 			event_names: updates.event_names,
 			config: newConfig,
 			model_markups: updates.model_markups,
+			display: updates.display,
 		},
 	});
 
