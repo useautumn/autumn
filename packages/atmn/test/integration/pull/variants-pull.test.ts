@@ -158,6 +158,7 @@ test(`${chalk.yellowBright("atmn pull variants: method exports, boolean items, c
 		{
 			featureId: "automation_runs",
 			interval: BillingInterval.Month,
+			intervalCount: 1,
 		},
 	]);
 	expect(variant.customize?.addItems).toEqual([
@@ -184,6 +185,93 @@ test(`${chalk.yellowBright("atmn pull variants: method exports, boolean items, c
 
 	expect(inPlaceConfig.match(variantExportPattern)).toHaveLength(1);
 	expect(inPlaceConfig).toContain("price: { amount: 510, interval: 'year' }");
+});
+
+/** Red: pull drops an explicit interval_count of 1 from a variant removal filter.
+ * Green: the generated config preserves intervalCount: 1 for an exact round trip. */
+test(`${chalk.yellowBright("atmn pull variants: preserves interval count 1 in removal filters")}`, async () => {
+	const ctx = await createCleanAtmnIntegrationContext();
+	const rpc = new AutumnRpcCli({
+		secretKey: ctx.orgSecretKey,
+		version: ApiVersion.V2_1,
+	});
+	const featureId = "variant_interval_count";
+	const basePlanId = "interval-count-base";
+	const variantPlanId = "interval-count-variant";
+	const monthlyItem = ({
+		included,
+		intervalCount,
+	}: {
+		included: number;
+		intervalCount: number;
+	}) => ({
+		feature_id: featureId,
+		included,
+		reset: { interval: ResetInterval.Month, interval_count: intervalCount },
+	});
+
+	await rpc.post("/features.create", {
+		feature_id: featureId,
+		name: "Variant interval count",
+		type: "metered",
+		consumable: true,
+	});
+	await rpc.plans.create<ApiPlanV1, CreatePlanParamsV2Input>({
+		plan_id: basePlanId,
+		name: "Interval count base",
+		items: [
+			monthlyItem({ included: 100, intervalCount: 1 }),
+			monthlyItem({ included: 200, intervalCount: 2 }),
+		],
+	});
+	await rpc.post("/plans.create_variant", {
+		base_plan_id: basePlanId,
+		variant_plan_id: variantPlanId,
+		name: "Interval count variant",
+	});
+	await rpc.plans.update<ApiPlanV1>(variantPlanId, {
+		items: [
+			monthlyItem({ included: 150, intervalCount: 1 }),
+			monthlyItem({ included: 200, intervalCount: 2 }),
+		],
+		disable_version: true,
+	});
+
+	const apiVariant = await rpc.plans.get<ApiPlanV1>(variantPlanId);
+	expect(apiVariant.variant_details?.customize?.remove_items).toContainEqual({
+		feature_id: featureId,
+		interval: ResetInterval.Month,
+		interval_count: 1,
+	});
+
+	const workspace = await pullConfig({ secretKey: ctx.orgSecretKey });
+	const config = await readFile(workspace.configPath, "utf8");
+	const mod = await loadConfigModule(workspace.configPath);
+	const variant = mod.intervalCountVariant as {
+		customize?: { removeItems?: unknown[] };
+	};
+
+	expect(config).toContain("intervalCount: 1");
+	expect(variant.customize?.removeItems).toContainEqual({
+		featureId,
+		interval: ResetInterval.Month,
+		intervalCount: 1,
+	});
+
+	await runAtmnWorkspaceCli({
+		args: ["--yes"],
+		command: "push",
+		headless: true,
+		workspace,
+	});
+	const roundTrippedVariant = await rpc.plans.get<ApiPlanV1>(variantPlanId);
+	expect(
+		roundTrippedVariant.variant_details?.customize?.remove_items,
+	).toContainEqual({
+		feature_id: featureId,
+		interval: ResetInterval.Month,
+		interval_count: 1,
+	});
 });
 
 test(`${chalk.yellowBright("atmn pull variants: variable names handle collisions and numeric prefixes")}`, async () => {
