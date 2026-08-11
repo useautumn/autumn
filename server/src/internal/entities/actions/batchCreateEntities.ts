@@ -25,8 +25,6 @@ type BatchCreateEntitiesParams = {
 	customerId: string;
 	createEntityData: CreateEntityParams[] | CreateEntityParams;
 	withAutumnId?: boolean;
-	source?: string;
-	enqueueRecoveryOnTransientFailure?: boolean;
 };
 
 const createEntities = async ({
@@ -137,15 +135,7 @@ const createEntities = async ({
 export const batchCreateEntities = async (
 	params: BatchCreateEntitiesParams,
 ) => {
-	const {
-		ctx,
-		customerId,
-		createEntityData,
-		customerData,
-		withAutumnId,
-		source,
-		enqueueRecoveryOnTransientFailure = true,
-	} = params;
+	const { ctx, customerId, createEntityData, customerData } = params;
 	const { org, env } = ctx;
 
 	// No Postgres fallback: a write path has no cache-only read to re-serve. The
@@ -160,22 +150,18 @@ export const batchCreateEntities = async (
 					"Entity creation already in progress for this customer, try again in a few seconds",
 				fn: () => createEntities(params),
 			}),
-		onTransientError: enqueueRecoveryOnTransientFailure
-			? async () => {
-					await queueFailedEntityCreation({
-						ctx,
-						params: {
-							customer_id: customerId,
-							create_entity_data: Array.isArray(createEntityData)
-								? createEntityData
-								: [createEntityData],
-							customer_data: customerData,
-						},
-						source,
-						withAutumnId,
-						mayHaveWritten: entityCreationWrote({ ctx }),
-					});
-				}
-			: undefined,
+		onTransientError: async () => {
+			await queueFailedEntityCreation({
+				ctx,
+				params: {
+					customer_id: customerId,
+					create_entity_data: Array.isArray(createEntityData)
+						? createEntityData
+						: [createEntityData],
+					customer_data: customerData,
+				},
+				mayHaveWritten: entityCreationWrote({ ctx }),
+			});
+		},
 	});
 };

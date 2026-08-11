@@ -25,7 +25,6 @@ export const createEntityV2 = async ({
 			},
 		],
 		customerData: params.customer_data,
-		source: "handleCreateEntityV2",
 	});
 
 	return apiEntities[0];

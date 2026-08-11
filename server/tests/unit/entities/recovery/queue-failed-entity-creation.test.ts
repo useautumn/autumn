@@ -89,15 +89,11 @@ describe("queueFailedEntityCreation", () => {
 			ctx: firstContext,
 			params,
 			mayHaveWritten: false,
-			source: "handleCreateEntityV2",
-			withAutumnId: true,
 		});
 		const secondQueued = await queueFailedEntityCreation({
 			ctx: secondContext,
 			params,
 			mayHaveWritten: false,
-			source: "handleCreateEntityV2",
-			withAutumnId: true,
 		});
 
 		expect(firstQueued).toBe(true);
@@ -124,10 +120,11 @@ describe("queueFailedEntityCreation", () => {
 				requestId: "req_entity_123",
 				apiVersion: ApiVersion.V2_1,
 				params,
-				source: "handleCreateEntityV2",
-				withAutumnId: true,
 			},
 		});
+		expect(queuedMessage.data).not.toHaveProperty("source");
+		expect(queuedMessage.data).not.toHaveProperty("withAutumnId");
+		expect(queuedMessage.data).not.toHaveProperty("failedAt");
 		expect(JSON.stringify(queuedMessage)).not.toContain("apiKey");
 		expect(JSON.stringify(queuedMessage)).not.toContain("secretKey");
 	});
@@ -152,7 +149,6 @@ describe("queueFailedEntityCreation", () => {
 			ctx,
 			params,
 			mayHaveWritten: false,
-			source: "handleCreateEntityV2",
 		});
 
 		expect(queued).toBe(false);
@@ -168,7 +164,6 @@ describe("queueFailedEntityCreation", () => {
 			ctx,
 			params,
 			mayHaveWritten: false,
-			source: "handleCreateEntityV2",
 		});
 
 		expect(queued).toBe(false);

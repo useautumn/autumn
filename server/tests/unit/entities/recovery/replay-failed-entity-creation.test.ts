@@ -131,7 +131,6 @@ const buildPayload = ({
 		customer_data: { email: "customer@example.com" },
 	},
 	mayHaveWritten,
-	failedAt: 1_785_000_000_000,
 });
 
 describe("replayFailedEntityCreation", () => {

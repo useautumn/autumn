@@ -120,8 +120,6 @@ const capture = async () => {
 	const queued = await queueFailedEntityCreation({
 		ctx: buildRequestContext(),
 		params,
-		source: "handleCreateEntityV2",
-		withAutumnId: true,
 		mayHaveWritten: false,
 	});
 

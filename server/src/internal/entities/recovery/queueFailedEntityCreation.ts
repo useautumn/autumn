@@ -7,12 +7,10 @@ import type { EntityCreationRecoveryParams } from "./entityCreationRecoveryTypes
 const getDeduplicationId = ({
 	ctx,
 	params,
-	withAutumnId,
 	mayHaveWritten,
 }: {
 	ctx: AutumnContext;
 	params: EntityCreationRecoveryParams;
-	withAutumnId?: boolean;
 	mayHaveWritten: boolean;
 }) =>
 	`entity-creation-${Bun.hash(
@@ -21,7 +19,6 @@ const getDeduplicationId = ({
 			env: ctx.env,
 			apiVersion: ctx.apiVersion.value,
 			params,
-			withAutumnId,
 			mayHaveWritten,
 			// Two attempts that each part-wrote are two reconciliations. Collapsing
 			// them on identical params would hide one from review.
@@ -32,14 +29,10 @@ const getDeduplicationId = ({
 export const queueFailedEntityCreation = async ({
 	ctx,
 	params,
-	source,
-	withAutumnId,
 	mayHaveWritten,
 }: {
 	ctx: AutumnContext;
 	params: EntityCreationRecoveryParams;
-	source?: string;
-	withAutumnId?: boolean;
 	mayHaveWritten: boolean;
 }): Promise<boolean> => {
 	// Shares the customer creation recovery queue: an entity can only be created
@@ -61,7 +54,6 @@ export const queueFailedEntityCreation = async ({
 			messageDeduplicationId: getDeduplicationId({
 				ctx,
 				params,
-				withAutumnId,
 				mayHaveWritten,
 			}),
 			generateDeduplicationId: false,
@@ -73,10 +65,7 @@ export const queueFailedEntityCreation = async ({
 				requestId: ctx.id,
 				apiVersion: ctx.apiVersion.value,
 				params,
-				source,
-				withAutumnId,
 				mayHaveWritten,
-				failedAt: Date.now(),
 			},
 		});
 		ctx.extraLogs.entityCreationRecoveryQueued = { queueUrl, mayHaveWritten };

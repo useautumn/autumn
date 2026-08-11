@@ -31,14 +31,11 @@ export interface EntityCreationRecoveryPayload {
 	requestId: string;
 	apiVersion: ApiVersion;
 	params: EntityCreationRecoveryParams;
-	source?: string;
-	withAutumnId?: boolean;
 	/** The create reached the point where a failure can leave a decremented
 	 *  balance or an entity whose defaults never attached, neither of which a
 	 *  later read can detect. Such a capture is never replayed automatically.
 	 *  Optional on the wire: only an explicit `false` is treated as safe. */
 	mayHaveWritten?: boolean;
-	failedAt: number;
 }
 
 export const isEntityCreationRecoveryPayload = (

@@ -108,8 +108,6 @@ describe("batchCreateEntities recovery capture", () => {
 				customerId: "customer_123",
 				createEntityData,
 				customerData,
-				withAutumnId: true,
-				source: "handleCreateEntityV2",
 			}),
 		).rejects.toMatchObject({
 			statusCode: 503,
@@ -124,8 +122,6 @@ describe("batchCreateEntities recovery capture", () => {
 					create_entity_data: createEntityData,
 					customer_data: customerData,
 				},
-				source: "handleCreateEntityV2",
-				withAutumnId: true,
 				// Validation threw, so nothing downstream of it ran.
 				mayHaveWritten: false,
 			}),
@@ -159,20 +155,6 @@ describe("batchCreateEntities recovery capture", () => {
 				createEntityData,
 			}),
 		).rejects.toMatchObject({ statusCode: 409 });
-
-		expect(mockState.queueCalls).toHaveLength(0);
-	});
-
-	test("does not recursively capture a recovery replay", async () => {
-		await expect(
-			batchCreateEntities({
-				ctx: buildContext(),
-				customerId: "customer_123",
-				createEntityData,
-				source: "entityCreationRecovery",
-				enqueueRecoveryOnTransientFailure: false,
-			}),
-		).rejects.toMatchObject({ statusCode: 503 });
 
 		expect(mockState.queueCalls).toHaveLength(0);
 	});
