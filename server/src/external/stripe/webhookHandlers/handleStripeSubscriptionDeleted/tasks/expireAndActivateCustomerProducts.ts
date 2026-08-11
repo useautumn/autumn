@@ -10,7 +10,6 @@ import { applyPooledBalanceCustomerProductTransitions } from "@/internal/billing
 import { trackCustomerProductDeletion } from "@/internal/billing/v2/workflows/sendBillingUpdatedWebhook/billingChangeCollector";
 import { customerProductActions } from "@/internal/customers/cusProducts/actions";
 import { deleteScheduledCustomerProduct } from "@/internal/customers/cusProducts/actions/deleteScheduledCustomerProduct";
-import { expireAndActivateWithTracking } from "../../common";
 import type { StripeSubscriptionDeletedContext } from "../setupStripeSubscriptionDeletedContext";
 
 /** Expires live products, then activates or removes their scheduled successors. */
@@ -48,10 +47,11 @@ export const expireAndActivateCustomerProducts = async ({
 			expiredCustomerProduct,
 			activatedCustomerProduct,
 			insertedCustomerProduct,
-		} = await expireAndActivateWithTracking({
+		} = await customerProductActions.expireAndActivateDefault({
 			ctx,
-			eventContext,
 			customerProduct,
+			fullCustomer,
+			collector: eventContext,
 		});
 
 		expiredCustomerProducts.push(expiredCustomerProduct);

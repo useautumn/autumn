@@ -1,7 +1,6 @@
 import { type FullCusProduct, hasCustomerProductEnded } from "@autumn/shared";
 import type { StripeWebhookContext } from "@/external/stripe/webhookMiddlewares/stripeWebhookContext";
 import { customerProductActions } from "@/internal/customers/cusProducts/actions";
-import { expireAndActivateWithTracking } from "../../../common";
 import type { StripeSubscriptionUpdatedContext } from "../../stripeSubscriptionUpdatedContext";
 
 /**
@@ -22,7 +21,7 @@ export const expireEndedCustomerProducts = async ({
 
 	const expiredCustomerProducts: FullCusProduct[] = [];
 
-	// Iterate over a snapshot: `expireAndActivateWithTracking` may insert a
+	// Iterate over a snapshot: `expireAndActivateDefault` may insert a
 	// default product (via `trackCustomerProductInsertion`), which `push`es
 	// onto `customerProducts`. Without the snapshot the for-of would then
 	// iterate the newly inserted default product as an extra pass.
@@ -54,11 +53,13 @@ export const expireEndedCustomerProducts = async ({
 			});
 		}
 
-		const { expiredCustomerProduct } = await expireAndActivateWithTracking({
-			ctx,
-			eventContext,
-			customerProduct,
-		});
+		const { expiredCustomerProduct } =
+			await customerProductActions.expireAndActivateDefault({
+				ctx,
+				customerProduct,
+				fullCustomer,
+				collector: eventContext,
+			});
 
 		expiredCustomerProducts.push(expiredCustomerProduct);
 	}

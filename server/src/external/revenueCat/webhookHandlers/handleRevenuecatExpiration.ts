@@ -56,7 +56,6 @@ export const handleExpiration = async ({
 			ended_at: event.expiration_at_ms,
 			canceled: !!curSameProduct.canceled_at,
 		},
-		emitBillingUpdated: true,
 	});
 
 	logger.info(`Expired cus_product: ${curSameProduct.id}`);

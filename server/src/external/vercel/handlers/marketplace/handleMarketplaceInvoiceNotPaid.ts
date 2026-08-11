@@ -3,6 +3,7 @@ import { getInvoiceSubscriptionId } from "@/external/vercel/misc/vercelInvoiceUt
 import { ensureVercelInvoiceModeSubscription } from "@/external/vercel/misc/vercelStripeInvoiceMode.js";
 import { VercelResourceService } from "@/external/vercel/services/VercelResourceService.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
+import { createBillingChangeCollector } from "@/internal/billing/v2/workflows/sendBillingUpdatedWebhook/billingChangeCollector";
 import { CusService } from "@/internal/customers/CusService.js";
 import { customerProductActions } from "@/internal/customers/cusProducts/actions";
 import { customerProductRepo } from "@/internal/customers/cusProducts/repos";
@@ -134,19 +135,20 @@ export const handleMarketplaceInvoiceNotPaid = async ({
 				idOrInternalId: customerInternalId,
 			});
 			if (fullCustomer) {
-				const existingCusProducts =
-					await customerProductRepo.getByStripeSubId({
-						db,
-						stripeSubId: subscription.id,
-						orgId: org.id,
-						env,
-					});
+				const existingCusProducts = await customerProductRepo.getByStripeSubId({
+					db,
+					stripeSubId: subscription.id,
+					orgId: org.id,
+					env,
+				});
 
 				if (existingCusProducts.length > 0) {
 					await customerProductActions.expireAndActivateDefault({
 						ctx,
 						customerProduct: existingCusProducts[0],
 						fullCustomer,
+						// TODO(next commit): drop to start emitting billing.updated
+						collector: createBillingChangeCollector({ fullCustomer }),
 					});
 				} else {
 					logger.info(

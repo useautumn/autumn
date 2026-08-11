@@ -8,6 +8,11 @@ import {
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { addProductsUpdatedWebhookTask } from "@/internal/analytics/handlers/handleProductsUpdated";
 import { executeAutumnBillingPlan } from "@/internal/billing/v2/execute/executeAutumnBillingPlan.js";
+import {
+	type BillingChangeCollector,
+	trackCustomerProductInsertion,
+	trackCustomerProductUpdate,
+} from "@/internal/billing/v2/workflows/sendBillingUpdatedWebhook/billingChangeCollector";
 import { emitBillingUpdated } from "@/internal/billing/v2/workflows/sendBillingUpdatedWebhook/emitBillingUpdated";
 import { activateFreeSuccessorProduct } from "@/internal/customers/cusProducts/actions/activateFreeSuccessorProduct";
 
@@ -18,10 +23,11 @@ import { activateFreeSuccessorProduct } from "@/internal/customers/cusProducts/a
  * 1. Sets status to Expired
  * 2. Sends the products_updated (Expired) webhook
  * 3. Activates free successor (scheduled or default) if no other active product in group
- * 4. Emits billing.updated when emitBillingUpdated is set (opt-in — some callers
- *    batch their own emission)
+ * 4. Records the transitions on `collector` when given, otherwise emits
+ *    billing.updated itself
  *
  * @returns updates - The updates applied to the expired customer product
+ * @returns expiredCustomerProduct - The expired product with `updates` applied
  * @returns activatedCustomerProduct - If a scheduled product was activated (UPDATE)
  * @returns insertedCustomerProduct - If a new default product was created (INSERT)
  */
@@ -30,15 +36,16 @@ export const expireCustomerProductAndActivateDefault = async ({
 	customerProduct,
 	fullCustomer,
 	updates: extraUpdates,
-	emitBillingUpdated: shouldEmitBillingUpdated = false,
+	collector,
 }: {
 	ctx: AutumnContext;
 	customerProduct: FullCusProduct;
 	fullCustomer: FullCustomer;
 	updates?: CustomerProductUpdates;
-	emitBillingUpdated?: boolean;
+	collector?: BillingChangeCollector;
 }): Promise<{
 	updates: CustomerProductUpdates;
+	expiredCustomerProduct: FullCusProduct;
 	activatedCustomerProduct?: FullCusProduct;
 	insertedCustomerProduct?: FullCusProduct;
 }> => {
@@ -75,7 +82,8 @@ export const expireCustomerProductAndActivateDefault = async ({
 	);
 
 	// 2. Send products_updated (Expired) — must be enqueued before successor
-	// activation, which enqueues its own products_updated (New).
+	// activation, which enqueues its own products_updated (New). Guarded by
+	// expire-and-activate-default-emission.test.ts.
 	await addProductsUpdatedWebhookTask({
 		ctx,
 		internalCustomerId: customerProduct.internal_customer_id,
@@ -94,8 +102,35 @@ export const expireCustomerProductAndActivateDefault = async ({
 			fullCustomer,
 		});
 
-	// 4. Emit billing.updated (payload needs the activated/inserted products)
-	if (shouldEmitBillingUpdated) {
+	// 4. Record the transitions (payload needs the activated/inserted products).
+	// Entry order feeds plan-change collapsing, so expired must land first.
+	let expiredCustomerProduct = {
+		...customerProduct,
+		...updates,
+	} as FullCusProduct;
+
+	if (collector) {
+		expiredCustomerProduct = trackCustomerProductUpdate({
+			collector,
+			customerProduct,
+			updates,
+		});
+
+		if (activatedCustomerProduct) {
+			trackCustomerProductUpdate({
+				collector,
+				customerProduct: activatedCustomerProduct,
+				updates: { status: CusProductStatus.Active },
+			});
+		}
+
+		if (insertedCustomerProduct) {
+			trackCustomerProductInsertion({
+				collector,
+				customerProduct: insertedCustomerProduct,
+			});
+		}
+	} else {
 		emitBillingUpdated({
 			ctx,
 			originalFullCustomer,
@@ -116,5 +151,10 @@ export const expireCustomerProductAndActivateDefault = async ({
 		});
 	}
 
-	return { updates, activatedCustomerProduct, insertedCustomerProduct };
+	return {
+		updates,
+		expiredCustomerProduct,
+		activatedCustomerProduct,
+		insertedCustomerProduct,
+	};
 };
