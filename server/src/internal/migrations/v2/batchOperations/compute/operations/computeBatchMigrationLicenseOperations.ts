@@ -6,7 +6,7 @@ import { EnsurePlanLicensesResultSchema } from "@/internal/migrations/v2/prepare
 import { buildPrepareModuleKey } from "@/internal/migrations/v2/prepare/utils/index.js";
 import type { MigrationRuntime } from "@/internal/migrations/v2/types/migrationDefinition.js";
 import type {
-	BatchMigrationAddLicenseEntitlementOp,
+	BatchMigrationLicenseEntitlementOp,
 	BatchMigrationRejection,
 } from "../../types/index.js";
 
@@ -28,7 +28,7 @@ export const computeBatchMigrationLicenseOperations = ({
 	fromProduct: FullProduct;
 	features: Feature[];
 }): {
-	operations: BatchMigrationAddLicenseEntitlementOp[];
+	operations: BatchMigrationLicenseEntitlementOp[];
 	rejections: BatchMigrationRejection[];
 } => {
 	const upsertLicenses = op.customize?.upsert_licenses ?? [];
@@ -55,7 +55,7 @@ export const computeBatchMigrationLicenseOperations = ({
 		};
 	}
 
-	const operations: BatchMigrationAddLicenseEntitlementOp[] = [];
+	const operations: BatchMigrationLicenseEntitlementOp[] = [];
 	const rejections: BatchMigrationRejection[] = [];
 
 	for (const entry of upsertLicenses) {

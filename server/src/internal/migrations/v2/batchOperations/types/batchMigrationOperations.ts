@@ -21,7 +21,7 @@ export type BatchMigrationEntitlementOp = BatchMigrationAddEntitlementOp;
 
 /** Fans a customized license link's entitlement out to that link's live
  * assignments. The entitlement row is minted once by prepare and shared. */
-export type BatchMigrationAddLicenseEntitlementOp = {
+export type BatchMigrationLicenseEntitlementOp = {
 	type: "add_license_entitlement";
 	licensePlanId: string;
 	planLicenseId: string;
@@ -47,5 +47,5 @@ export type BatchMigrationAddLicenseEntitlementOp = {
 
 export type BatchMigrationOperations = {
 	entitlements: BatchMigrationEntitlementOp[];
-	licenseEntitlements: BatchMigrationAddLicenseEntitlementOp[];
+	licenseEntitlements: BatchMigrationLicenseEntitlementOp[];
 };

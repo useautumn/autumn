@@ -82,13 +82,13 @@ export const executeBatchMigrationPage = async ({
 			});
 		}
 
-		for (const add of patch.addLicenseEntitlementOps) {
+		for (const operation of patch.addLicenseEntitlementOps) {
 			const result = await addLicenseEntitlementsForPage({
 				db: ctx.db,
 				features: ctx.features,
 				scope: patch.scope,
 				internalCustomerIds: pageInternalIds,
-				add,
+				operation,
 				now,
 				phases,
 			});
@@ -103,8 +103,8 @@ export const executeBatchMigrationPage = async ({
 			ctx.logger.debug("batch-migration: add license operation", {
 				data: {
 					opIndex: patch.opIndex,
-					licensePlanId: add.licensePlanId,
-					kind: add.kind,
+					licensePlanId: operation.licensePlanId,
+					kind: operation.kind,
 					candidateCount: result.candidateCount,
 					affected: result.affected,
 					repointedPools: result.repointedPools,

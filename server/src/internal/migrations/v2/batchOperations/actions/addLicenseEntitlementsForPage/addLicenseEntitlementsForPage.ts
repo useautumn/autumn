@@ -15,7 +15,7 @@ import {
 	timePhase,
 } from "../../execute/utils/pagePhaseTimings.js";
 import type { OperationScope } from "../../scope/operationScope.js";
-import type { BatchMigrationExecutionAddLicense } from "../../types/batchMigrationExecutionPlan.js";
+import type { BatchMigrationExecutionLicenseOp } from "../../types/batchMigrationExecutionPlan.js";
 import { enrichAndInsertLicenseCandidates } from "./enrichAndInsertLicenseCandidates.js";
 import { removeLicenseEntitlementRows } from "./removeLicenseEntitlementRows.js";
 import { replaceLicenseEntitlementRows } from "./replaceLicenseEntitlementRows.js";
@@ -36,7 +36,7 @@ export const addLicenseEntitlementsForPage = async ({
 	db,
 	scope,
 	internalCustomerIds,
-	add,
+	operation,
 	now,
 	features,
 	phases,
@@ -46,7 +46,7 @@ export const addLicenseEntitlementsForPage = async ({
 	features: Feature[];
 	scope: OperationScope;
 	internalCustomerIds: string[];
-	add: BatchMigrationExecutionAddLicense;
+	operation: BatchMigrationExecutionLicenseOp;
 	now: number;
 	phases?: BatchMigrationPagePhases;
 	candidateRowBatchSize?: number;
@@ -67,14 +67,14 @@ export const addLicenseEntitlementsForPage = async ({
 						db: transaction,
 						internalCustomerIds,
 						scope,
-						planLicenseId: add.planLicenseId,
-						licensePlanId: add.licensePlanId,
+						planLicenseId: operation.planLicenseId,
+						licensePlanId: operation.licensePlanId,
 					}),
 				BATCH_MIGRATION_PAGE_STATEMENT_TIMEOUT_MS,
 			),
 	});
 
-	if (add.kind === "remove") {
+	if (operation.kind === "remove") {
 		const removed = await timePhase({
 			phases,
 			phase: "remove",
@@ -86,8 +86,8 @@ export const addLicenseEntitlementsForPage = async ({
 							db: transaction,
 							internalCustomerIds,
 							scope,
-							filter: add.filter,
-							licensePlanId: add.licensePlanId,
+							filter: operation.filter,
+							licensePlanId: operation.licensePlanId,
 							features,
 						}),
 					BATCH_MIGRATION_PAGE_STATEMENT_TIMEOUT_MS,
@@ -108,9 +108,11 @@ export const addLicenseEntitlementsForPage = async ({
 		};
 	}
 
-	const resetting = isResettingEntitlement({ entitlement: add.entitlement });
+	const resetting = isResettingEntitlement({
+		entitlement: operation.entitlement,
+	});
 	const replaced =
-		add.kind === "replace"
+		operation.kind === "replace"
 			? await timePhase({
 					phases,
 					phase: "replace",
@@ -122,10 +124,10 @@ export const addLicenseEntitlementsForPage = async ({
 									db: transaction,
 									internalCustomerIds,
 									scope,
-									fromEntitlementId: add.fromEntitlementId,
-									toEntitlementId: add.entitlement.id,
-									licensePlanId: add.licensePlanId,
-									initialState: add.initialState,
+									fromEntitlementId: operation.fromEntitlementId,
+									toEntitlementId: operation.entitlement.id,
+									licensePlanId: operation.licensePlanId,
+									initialState: operation.initialState,
 								}),
 							BATCH_MIGRATION_PAGE_STATEMENT_TIMEOUT_MS,
 						),
@@ -149,8 +151,8 @@ export const addLicenseEntitlementsForPage = async ({
 						db: transaction,
 						internalCustomerIds,
 						scope,
-						entitlement: add.entitlement,
-						licensePlanId: add.licensePlanId,
+						entitlement: operation.entitlement,
+						licensePlanId: operation.licensePlanId,
 						afterCustomerProductId,
 						limit,
 					}),
@@ -163,7 +165,7 @@ export const addLicenseEntitlementsForPage = async ({
 					db: transaction,
 					candidates,
 					scope,
-					add,
+					operation,
 					resetting,
 					now,
 					phases,

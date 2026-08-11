@@ -99,7 +99,7 @@ test.concurrent(
 		const [patch] = batchMigrationPlanToExecutionPlan({
 			plan: batchLane.plan,
 		}).patches;
-		const [add] = patch.addLicenseEntitlementOps;
+		const [operation] = patch.addLicenseEntitlementOps;
 		const internalCustomerIds = [
 			await getInternalCustomerId({ ctx, customerId }),
 		];
@@ -110,7 +110,7 @@ test.concurrent(
 			features: ctx.features,
 			scope: patch.scope,
 			internalCustomerIds,
-			add,
+			operation,
 			now: Date.now(),
 			candidateRowBatchSize: 1,
 		});
@@ -145,7 +145,7 @@ test.concurrent(
 			features: ctx.features,
 			scope: patch.scope,
 			internalCustomerIds,
-			add,
+			operation,
 			now: Date.now(),
 			candidateRowBatchSize: 1,
 		});
