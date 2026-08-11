@@ -15,8 +15,8 @@ import { CusProductService } from "@/internal/customers/cusProducts/CusProductSe
  *
  * This action:
  * 1. Sets status to Active on the customer product
- * 2. Sends billing.updated; products_updated is gated by sendProductsUpdatedWebhook
- * 3. Updates the FullCustomer in memory
+ * 2. Updates the FullCustomer in memory
+ * 3. Sends billing.updated; products_updated is gated by sendProductsUpdatedWebhook
  *
  * Used by RevenueCat renewal webhooks (past-due → active recovery) and any
  * external active-recovery flow.
@@ -50,6 +50,12 @@ export const markCustomerProductActive = async ({
 		`[markCustomerProductActive]: marking ${customerProduct.product.name} as active`,
 	);
 
+	fullCustomer.customer_products = fullCustomer.customer_products.map((cp) =>
+		cp.id === customerProduct.id
+			? ({ ...cp, ...updates } as FullCusProduct)
+			: cp,
+	);
+
 	if (sendProductsUpdatedWebhook) {
 		await addProductsUpdatedWebhookTask({
 			ctx,
@@ -61,12 +67,6 @@ export const markCustomerProductActive = async ({
 			cusProduct: customerProduct,
 		});
 	}
-
-	fullCustomer.customer_products = fullCustomer.customer_products.map((cp) =>
-		cp.id === customerProduct.id
-			? ({ ...cp, ...updates } as FullCusProduct)
-			: cp,
-	);
 
 	emitCustomerProductBillingUpdated({
 		ctx,

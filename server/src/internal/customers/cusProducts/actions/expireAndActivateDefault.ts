@@ -17,9 +17,9 @@ import { emitCustomerProductBillingUpdated } from "@/internal/customers/cusProdu
  *
  * This action:
  * 1. Sets status to Expired
- * 2. Sends products_updated webhook with Expired scenario
- * 3. Activates free successor (scheduled or default) if no other active product in group
- * 4. Emits billing.updated when emitBillingUpdated is set (opt-in — some callers batch their own emission)
+ * 2. Activates free successor (scheduled or default) if no other active product in group
+ * 3. Sends webhooks: products_updated, plus billing.updated when emitBillingUpdated
+ *    is set (opt-in — some callers batch their own emission)
  *
  * @returns updates - The updates applied to the expired customer product
  * @returns activatedCustomerProduct - If a scheduled product was activated (UPDATE)
@@ -72,7 +72,22 @@ export const expireCustomerProductAndActivateDefault = async ({
 		`[expireCustomerProduct]: expiring ${customerProduct.product.name}`,
 	);
 
-	// 2. Send webhook
+	// Update full customer
+	fullCustomer.customer_products = fullCustomer.customer_products.map((cp) =>
+		cp.id === customerProduct.id
+			? ({ ...cp, ...updates } as FullCusProduct)
+			: cp,
+	);
+
+	// 2. Activate free successor (scheduled or default)
+	const { activatedCustomerProduct, insertedCustomerProduct } =
+		await activateFreeSuccessorProduct({
+			ctx,
+			fromCustomerProduct: customerProduct,
+			fullCustomer,
+		});
+
+	// 3. Send webhooks
 	await addProductsUpdatedWebhookTask({
 		ctx,
 		internalCustomerId: customerProduct.internal_customer_id,
@@ -82,21 +97,6 @@ export const expireCustomerProductAndActivateDefault = async ({
 		scenario: AttachScenario.Expired,
 		cusProduct: customerProduct,
 	});
-
-	// Update full customer
-	fullCustomer.customer_products = fullCustomer.customer_products.map((cp) =>
-		cp.id === customerProduct.id
-			? ({ ...cp, ...updates } as FullCusProduct)
-			: cp,
-	);
-
-	// 3. Activate free successor (scheduled or default)
-	const { activatedCustomerProduct, insertedCustomerProduct } =
-		await activateFreeSuccessorProduct({
-			ctx,
-			fromCustomerProduct: customerProduct,
-			fullCustomer,
-		});
 
 	if (emitBillingUpdated) {
 		emitCustomerProductBillingUpdated({

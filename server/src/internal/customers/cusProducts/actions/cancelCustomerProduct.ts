@@ -14,8 +14,8 @@ import { CusProductService } from "@/internal/customers/cusProducts/CusProductSe
  *
  * This action:
  * 1. Sets canceled=true, canceled_at, and ended_at on the customer product
- * 2. Sends products_updated + billing.updated webhooks
- * 3. Updates the FullCustomer in memory
+ * 2. Updates the FullCustomer in memory
+ * 3. Sends products_updated + billing.updated webhooks
  *
  * Used by RevenueCat cancellation webhooks and any external cancellation flow.
  */
@@ -51,7 +51,14 @@ export const cancelCustomerProduct = async ({
 		`[cancelCustomerProduct]: canceling ${customerProduct.product.name}`,
 	);
 
-	// 2. Send webhook
+	// 2. Update full customer in memory
+	fullCustomer.customer_products = fullCustomer.customer_products.map((cp) =>
+		cp.id === customerProduct.id
+			? ({ ...cp, ...updates } as FullCusProduct)
+			: cp,
+	);
+
+	// 3. Send webhooks
 	await addProductsUpdatedWebhookTask({
 		ctx,
 		internalCustomerId: customerProduct.internal_customer_id,
@@ -61,13 +68,6 @@ export const cancelCustomerProduct = async ({
 		scenario: AttachScenario.Cancel,
 		cusProduct: customerProduct,
 	});
-
-	// 3. Update full customer in memory
-	fullCustomer.customer_products = fullCustomer.customer_products.map((cp) =>
-		cp.id === customerProduct.id
-			? ({ ...cp, ...updates } as FullCusProduct)
-			: cp,
-	);
 
 	emitCustomerProductBillingUpdated({
 		ctx,

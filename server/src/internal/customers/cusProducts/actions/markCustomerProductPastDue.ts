@@ -15,8 +15,8 @@ import { CusProductService } from "@/internal/customers/cusProducts/CusProductSe
  *
  * This action:
  * 1. Sets status to PastDue on the customer product
- * 2. Sends products_updated + billing.updated webhooks
- * 3. Updates the FullCustomer in memory
+ * 2. Updates the FullCustomer in memory
+ * 3. Sends products_updated + billing.updated webhooks
  *
  * Used by RevenueCat billing issue webhooks and any external billing issue flow.
  */
@@ -48,7 +48,14 @@ export const markCustomerProductPastDue = async ({
 		`[markCustomerProductPastDue]: marking ${customerProduct.product.name} as past due`,
 	);
 
-	// 2. Send webhook
+	// 2. Update full customer in memory
+	fullCustomer.customer_products = fullCustomer.customer_products.map((cp) =>
+		cp.id === customerProduct.id
+			? ({ ...cp, ...updates } as FullCusProduct)
+			: cp,
+	);
+
+	// 3. Send webhooks
 	await addProductsUpdatedWebhookTask({
 		ctx,
 		internalCustomerId: customerProduct.internal_customer_id,
@@ -58,13 +65,6 @@ export const markCustomerProductPastDue = async ({
 		scenario: AttachScenario.PastDue,
 		cusProduct: customerProduct,
 	});
-
-	// 3. Update full customer in memory
-	fullCustomer.customer_products = fullCustomer.customer_products.map((cp) =>
-		cp.id === customerProduct.id
-			? ({ ...cp, ...updates } as FullCusProduct)
-			: cp,
-	);
 
 	emitCustomerProductBillingUpdated({
 		ctx,
