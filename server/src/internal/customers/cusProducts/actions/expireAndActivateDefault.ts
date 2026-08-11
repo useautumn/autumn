@@ -1,10 +1,9 @@
 import {
 	AttachScenario,
 	CusProductStatus,
-	type CustomerProductUpdate,
+	type CustomerProductUpdates,
 	type FullCusProduct,
 	type FullCustomer,
-	type InsertCustomerProduct,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { addProductsUpdatedWebhookTask } from "@/internal/analytics/handlers/handleProductsUpdated";
@@ -36,10 +35,10 @@ export const expireCustomerProductAndActivateDefault = async ({
 	ctx: AutumnContext;
 	customerProduct: FullCusProduct;
 	fullCustomer: FullCustomer;
-	updates?: Partial<InsertCustomerProduct>;
+	updates?: CustomerProductUpdates;
 	emitBillingUpdated?: boolean;
 }): Promise<{
-	updates: Partial<InsertCustomerProduct>;
+	updates: CustomerProductUpdates;
 	activatedCustomerProduct?: FullCusProduct;
 	insertedCustomerProduct?: FullCusProduct;
 }> => {
@@ -48,7 +47,7 @@ export const expireCustomerProductAndActivateDefault = async ({
 	const originalFullCustomer = structuredClone(fullCustomer);
 
 	// 1. Expire the product
-	const updates: Partial<InsertCustomerProduct> = {
+	const updates: CustomerProductUpdates = {
 		status: CusProductStatus.Expired,
 		...extraUpdates,
 	};
@@ -60,12 +59,7 @@ export const expireCustomerProductAndActivateDefault = async ({
 		autumnBillingPlan: {
 			customerId: fullCustomer.id || fullCustomer.internal_id,
 			insertCustomerProducts: [],
-			updateCustomerProducts: [
-				{
-					customerProduct,
-					updates: updates as CustomerProductUpdate["updates"],
-				},
-			],
+			updateCustomerProducts: [{ customerProduct, updates }],
 		},
 	});
 

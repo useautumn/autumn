@@ -1,10 +1,9 @@
 import {
 	AttachScenario,
 	CusProductStatus,
-	type CustomerProductUpdate,
+	type CustomerProductUpdates,
 	type FullCusProduct,
 	type FullCustomer,
-	type InsertCustomerProduct,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { addProductsUpdatedWebhookTask } from "@/internal/analytics/handlers/handleProductsUpdated";
@@ -29,7 +28,7 @@ export const activateScheduledCustomerProduct = async ({
 	fullCustomer: FullCustomer;
 	subscriptionIds?: string[];
 	scheduledIds?: string[];
-}): Promise<{ updates: Partial<InsertCustomerProduct> }> => {
+}): Promise<{ updates: CustomerProductUpdates }> => {
 	const { org, env, logger } = ctx;
 
 	logger.info(
@@ -54,7 +53,7 @@ export const activateScheduledCustomerProduct = async ({
 	});
 
 	// 1. Update status and subscription/schedule IDs
-	const updates: Partial<InsertCustomerProduct> = {
+	const updates: CustomerProductUpdates = {
 		status: CusProductStatus.Active,
 		subscription_ids: subscriptionIds,
 		scheduled_ids: scheduledIds,
@@ -73,12 +72,7 @@ export const activateScheduledCustomerProduct = async ({
 		autumnBillingPlan: {
 			customerId: fullCustomer.id || fullCustomer.internal_id,
 			insertCustomerProducts: [],
-			updateCustomerProducts: [
-				{
-					customerProduct,
-					updates: updates as CustomerProductUpdate["updates"],
-				},
-			],
+			updateCustomerProducts: [{ customerProduct, updates }],
 			customerLicenseTransitions,
 		},
 	});

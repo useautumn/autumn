@@ -1,9 +1,9 @@
 import {
 	AttachScenario,
 	CusProductStatus,
+	type CustomerProductUpdates,
 	type FullCusProduct,
 	type FullCustomer,
-	type InsertCustomerProduct,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { addProductsUpdatedWebhookTask } from "@/internal/analytics/handlers/handleProductsUpdated";
@@ -29,12 +29,12 @@ export const markCustomerProductActive = async ({
 	ctx: AutumnContext;
 	customerProduct: FullCusProduct;
 	fullCustomer: FullCustomer;
-}): Promise<{ updates: Partial<InsertCustomerProduct> }> => {
+}): Promise<{ updates: CustomerProductUpdates }> => {
 	const { org, env } = ctx;
 
 	const originalFullCustomer = structuredClone(fullCustomer);
 
-	const updates: Partial<InsertCustomerProduct> = {
+	const updates: CustomerProductUpdates = {
 		status: CusProductStatus.Active,
 	};
 

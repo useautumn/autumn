@@ -197,6 +197,7 @@ export const AutumnBillingPlanSchema = z.object({
 
 export type AutumnBillingPlan = z.infer<typeof AutumnBillingPlanSchema>;
 export type CustomerProductUpdate = z.infer<typeof CustomerProductUpdateSchema>;
+export type CustomerProductUpdates = CustomerProductUpdate["updates"];
 
 export type UpdateCustomerEntitlement = z.infer<
 	typeof UpdateCustomerEntitlementSchema
