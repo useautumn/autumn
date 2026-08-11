@@ -2,6 +2,7 @@ import { describe, expect, test } from "bun:test";
 import { ReceiveMessageCommand } from "@aws-sdk/client-sqs";
 import { getSqsClient, recreateSqsClient } from "@/queue/initSqs.js";
 import {
+	RECOVERY_MESSAGE_TIMEOUT_MS,
 	RECOVERY_QUEUE_VISIBILITY_TIMEOUT_SECONDS,
 	startPollingLoop,
 } from "@/queue/initWorkers.js";
@@ -15,6 +16,10 @@ const makeAbortError = () => {
 describe("SQS poll recovery", () => {
 	test("keeps entity-creation recovery invisible long enough to prevent overlapping replays", () => {
 		expect(RECOVERY_QUEUE_VISIBILITY_TIMEOUT_SECONDS).toBe(900);
+		expect(RECOVERY_MESSAGE_TIMEOUT_MS).toBe(600_000);
+		expect(RECOVERY_MESSAGE_TIMEOUT_MS).toBeLessThan(
+			RECOVERY_QUEUE_VISIBILITY_TIMEOUT_SECONDS * 1000,
+		);
 	});
 
 	test("recovers a hung receive without recycling the worker", async () => {

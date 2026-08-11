@@ -56,6 +56,7 @@ const MESSAGE_TIMEOUT_MS = 25_000;
 // Batch resets legitimately outrun the default bound (up to 1k rows plus Stripe
 // anchor checks), so they get a longer one — never an unbounded one.
 const BATCH_RESET_MESSAGE_TIMEOUT_MS = ms.minutes(1);
+export const RECOVERY_MESSAGE_TIMEOUT_MS = ms.minutes(10);
 const SQS_RECEIVE_BATCH_LIMIT = 10;
 const SQS_RECEIVE_TIMEOUT_MS = ms.seconds(30);
 const QUEUE_CAPACITY_RETRY_MS = 1_000;
@@ -63,7 +64,7 @@ const DELETE_RETRY_DELAYS_MS = [100, 250, 500] as const;
 export const RECOVERY_QUEUE_VISIBILITY_TIMEOUT_SECONDS = 900;
 
 type JobOverride = {
-	ack: "upfront" | "always-after-processing";
+	ack?: "upfront" | "always-after-processing";
 	dispatch: "inline" | "background";
 	/** Per-message bound. Omit for MESSAGE_TIMEOUT_MS; `null` runs unbounded,
 	 * which is only safe when the message is ACKed upfront. */
@@ -95,6 +96,10 @@ const JOB_OVERRIDES: Partial<Record<JobName, JobOverride>> = {
 		ack: "always-after-processing",
 		dispatch: "inline",
 		timeoutMs: BATCH_RESET_MESSAGE_TIMEOUT_MS,
+	},
+	[JobName.CustomerCreationRecovery]: {
+		dispatch: "inline",
+		timeoutMs: RECOVERY_MESSAGE_TIMEOUT_MS,
 	},
 };
 

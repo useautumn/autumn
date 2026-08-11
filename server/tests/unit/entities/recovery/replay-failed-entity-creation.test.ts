@@ -8,6 +8,7 @@ import {
 	ApiVersion,
 	ApiVersionClass,
 	AppEnv,
+	CustomerNotFoundError,
 	EntityErrorCode,
 	RecaseError,
 } from "@autumn/shared";
@@ -21,6 +22,13 @@ const mockState = {
 	executePlanCalls: [] as Record<string, unknown>[],
 	entityInsertError: undefined as unknown,
 	existingEntities: [] as Record<string, unknown>[],
+	fullCustomer: {
+		id: "customer_123",
+		internal_id: "icus_123",
+		customer_products: [],
+		entities: [],
+	} as Record<string, unknown>,
+	fullCustomerError: undefined as unknown,
 };
 
 const mockedPaths = [
@@ -69,11 +77,10 @@ mock.module(
 mock.module("@/internal/customers/CusService.js", () => ({
 	CusService: {
 		get: async () => ({ id: "customer_123", internal_id: "icus_123" }),
-		getFull: async () => ({
-			id: "customer_123",
-			internal_id: "icus_123",
-			customer_products: [],
-		}),
+		getFull: async () => {
+			if (mockState.fullCustomerError) throw mockState.fullCustomerError;
+			return mockState.fullCustomer;
+		},
 	},
 }));
 
@@ -141,6 +148,13 @@ describe("replayFailedEntityCreation", () => {
 		mockState.executePlanCalls = [];
 		mockState.entityInsertError = undefined;
 		mockState.existingEntities = [];
+		mockState.fullCustomer = {
+			id: "customer_123",
+			internal_id: "icus_123",
+			customer_products: [],
+			entities: [],
+		};
+		mockState.fullCustomerError = undefined;
 	});
 
 	test("atomically inserts entities and attaches free defaults without replaying seat billing", async () => {
@@ -232,5 +246,44 @@ describe("replayFailedEntityCreation", () => {
 				payload: payloadWithoutMarker,
 			}),
 		).rejects.toThrow("requires manual review");
+	});
+
+	test("does not replay id-less entities without a stable conflict key", async () => {
+		const ctx = buildContext();
+
+		await expect(
+			replayFailedEntityCreation({
+				ctx,
+				payload: buildPayload({
+					createEntityData: [{ id: null, name: "Entity", feature_id: "seats" }],
+				}),
+			}),
+		).rejects.toThrow("requires manual review");
+
+		expect(mockState.entityInsertCalls).toHaveLength(0);
+	});
+
+	test("does not replace a null-ID placeholder during replay", async () => {
+		mockState.fullCustomer.entities = [{ id: null }];
+		const ctx = buildContext();
+
+		await expect(
+			replayFailedEntityCreation({ ctx, payload: buildPayload() }),
+		).rejects.toThrow("requires manual review");
+
+		expect(mockState.entityInsertCalls).toHaveLength(0);
+	});
+
+	test("does not create a missing customer during an entity-only replay", async () => {
+		mockState.fullCustomerError = new CustomerNotFoundError({
+			customerId: "customer_123",
+		});
+		const ctx = buildContext();
+
+		await expect(
+			replayFailedEntityCreation({ ctx, payload: buildPayload() }),
+		).rejects.toThrow("requires manual review");
+
+		expect(mockState.entityInsertCalls).toHaveLength(0);
 	});
 });

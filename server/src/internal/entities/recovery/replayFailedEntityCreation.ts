@@ -1,6 +1,8 @@
 import {
 	ApiVersionClass,
+	CustomerNotFoundError,
 	EntityErrorCode,
+	type FullCustomer,
 	findFeatureById,
 	RecaseError,
 } from "@autumn/shared";
@@ -20,6 +22,29 @@ import type { EntityCreationRecoveryPayload } from "./entityCreationRecoveryType
 const isAlreadyCreated = ({ error }: { error: unknown }) =>
 	error instanceof RecaseError &&
 	error.code === EntityErrorCode.EntityAlreadyExists;
+
+const requireManualReview = ({
+	ctx,
+	replayLog,
+	reason,
+}: {
+	ctx: AutumnContext;
+	replayLog: Record<string, unknown>;
+	reason: string;
+}): never => {
+	ctx.extraLogs.entityCreationRecoveryReplay = {
+		outcome: "manual_review",
+		reason,
+		...replayLog,
+	};
+	ctx.logger.error("[entityCreationRecovery] Replay requires manual review", {
+		...replayLog,
+		reason,
+	});
+	throw new Error(
+		`Entity creation recovery requires manual review (${reason})`,
+	);
+};
 
 /** A conflict only proves one entity landed. Anything left unconfirmed is a batch
  *  something else partly satisfied, which the replay cannot finish on its own. */
@@ -93,30 +118,48 @@ export const replayFailedEntityCreation = async ({
 	// producer that does not set it, and neither can be assumed to have written
 	// nothing.
 	if (payload.mayHaveWritten !== false) {
-		// The worker acks a non-transient throw, so this log is the only surviving
-		// record of what the shed request was part-way through creating.
-		ctx.extraLogs.entityCreationRecoveryReplay = {
-			outcome: "manual_review",
-			...replayLog,
-		};
-		ctx.logger.error(
-			"[entityCreationRecovery] Replay requires manual review, the request may already have written",
+		requireManualReview({
+			ctx,
 			replayLog,
-		);
-
-		throw new Error(
-			`Entity creation recovery ${payload.requestId} requires manual review (the shed request may already have decremented a balance or committed an entity)`,
-		);
+			reason: "the request may already have written",
+		});
+	}
+	if (createEntityData.some(({ id }) => !id)) {
+		requireManualReview({
+			ctx,
+			replayLog,
+			reason: "an entity has no stable ID",
+		});
 	}
 
 	ctx.apiVersion = new ApiVersionClass(payload.apiVersion);
 	ctx.skipCache = true;
 
+	let customer: FullCustomer;
 	try {
-		const customer = await CusService.getFull({
+		customer = await CusService.getFull({
 			ctx,
 			idOrInternalId: customerId,
 		});
+	} catch (error) {
+		if (error instanceof CustomerNotFoundError) {
+			requireManualReview({
+				ctx,
+				replayLog,
+				reason: "the customer was not created",
+			});
+		}
+		throw error;
+	}
+	if (customer.entities.some((entity) => entity.id === null)) {
+		requireManualReview({
+			ctx,
+			replayLog,
+			reason: "the customer has a null-ID entity placeholder",
+		});
+	}
+
+	try {
 		const entities = createEntityData.map((inputEntity) =>
 			constructEntity({
 				inputEntity,
