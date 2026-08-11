@@ -3,9 +3,11 @@ import {
 	CustomerNotFoundError,
 	EntityErrorCode,
 	type FullCustomer,
+	featureUtils,
 	findFeatureById,
 	RecaseError,
 } from "@autumn/shared";
+import { StatusCodes } from "http-status-codes";
 import { isTransientDbError } from "@/db/dbUtils.js";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 import { isTransientRedisError } from "@/external/redis/utils/isTransientRedisError.js";
@@ -160,19 +162,26 @@ export const replayFailedEntityCreation = async ({
 	}
 
 	try {
-		const entities = createEntityData.map((inputEntity) =>
-			constructEntity({
+		const entities = createEntityData.map((inputEntity) => {
+			const feature = findFeatureById({
+				features: ctx.features,
+				featureId: inputEntity.feature_id,
+				errorOnNotFound: true,
+			});
+			if (featureUtils.isConsumable(feature)) {
+				throw new RecaseError({
+					message: `Feature '${inputEntity.feature_id}' is consumable. Entities can only be created for non-consumable features.`,
+					statusCode: StatusCodes.BAD_REQUEST,
+				});
+			}
+			return constructEntity({
 				inputEntity,
-				feature: findFeatureById({
-					features: ctx.features,
-					featureId: inputEntity.feature_id,
-					errorOnNotFound: true,
-				}),
+				feature,
 				internalCustomerId: customer.internal_id,
 				orgId: ctx.org.id,
 				env: ctx.env,
-			}),
-		);
+			});
+		});
 		const autumnBillingPlans = await buildEntityDefaultProductsPlans({
 			ctx,
 			fullCustomer: customer,

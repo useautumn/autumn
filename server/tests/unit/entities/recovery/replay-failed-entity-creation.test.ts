@@ -10,6 +10,7 @@ import {
 	AppEnv,
 	CustomerNotFoundError,
 	EntityErrorCode,
+	FeatureType,
 	RecaseError,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
@@ -283,6 +284,19 @@ describe("replayFailedEntityCreation", () => {
 		await expect(
 			replayFailedEntityCreation({ ctx, payload: buildPayload() }),
 		).rejects.toThrow("requires manual review");
+
+		expect(mockState.entityInsertCalls).toHaveLength(0);
+	});
+
+	test("does not insert entities for consumable features", async () => {
+		const ctx = buildContext();
+		ctx.features = [
+			{ id: "seats", internal_id: "if_seats", type: FeatureType.CreditSystem },
+		] as never;
+
+		await expect(
+			replayFailedEntityCreation({ ctx, payload: buildPayload() }),
+		).rejects.toThrow("consumable");
 
 		expect(mockState.entityInsertCalls).toHaveLength(0);
 	});
