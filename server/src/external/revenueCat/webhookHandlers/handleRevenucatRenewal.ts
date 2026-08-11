@@ -3,7 +3,12 @@ import {
 	ACTIVE_STATUSES,
 	AttachScenario,
 	CusProductStatus,
+	type CustomerProductUpdate,
 } from "@shared/index";
+import {
+	emitRevenueCatBillingUpdated,
+	snapshotFullCustomer,
+} from "@/external/revenueCat/misc/emitRevenueCatBillingUpdated";
 import {
 	getRevenueCatCustomerEmail,
 	getRevenueCatCustomerFingerprint,
@@ -64,6 +69,16 @@ export const handleRenewal = async ({
 			cusProduct: curSameProduct,
 		});
 
+		// No cusProduct mutation on renewal — empty updates still surface an
+		// "updated" plan change so billing.updated mirrors the legacy webhook.
+		emitRevenueCatBillingUpdated({
+			ctx: customerCtx,
+			originalFullCustomer: snapshotFullCustomer(customer),
+			updateCustomerProducts: [
+				{ customerProduct: curSameProduct, updates: {} },
+			],
+		});
+
 		await recordRevenueCatInvoice({
 			ctx: customerCtx,
 			event,
@@ -80,11 +95,23 @@ export const handleRenewal = async ({
 			`Renewal for existing past due product ${product.id}, marking as active`,
 		);
 
-		await customerProductActions.markActive({
+		const originalFullCustomer = snapshotFullCustomer(customer);
+		const { updates } = await customerProductActions.markActive({
 			ctx: customerCtx,
 			customerProduct: curSameProduct,
 			fullCustomer: customer,
 			sendWebhook: true,
+		});
+
+		emitRevenueCatBillingUpdated({
+			ctx: customerCtx,
+			originalFullCustomer,
+			updateCustomerProducts: [
+				{
+					customerProduct: curSameProduct,
+					updates: updates as CustomerProductUpdate["updates"],
+				},
+			],
 		});
 
 		logger.info(`Marked past due product as active: ${curSameProduct.id}`);
@@ -101,10 +128,22 @@ export const handleRenewal = async ({
 
 	// Reactivate same product (expired/canceled → active).
 	if (curSameProduct) {
-		await customerProductActions.uncancel({
+		const originalFullCustomer = snapshotFullCustomer(customer);
+		const { updates } = await customerProductActions.uncancel({
 			ctx: customerCtx,
 			customerProduct: curSameProduct,
 			fullCustomer: customer,
+		});
+
+		emitRevenueCatBillingUpdated({
+			ctx: customerCtx,
+			originalFullCustomer,
+			updateCustomerProducts: [
+				{
+					customerProduct: curSameProduct,
+					updates: updates as CustomerProductUpdate["updates"],
+				},
+			],
 		});
 
 		logger.info(`Reactivated cus_product: ${curSameProduct.id}`);

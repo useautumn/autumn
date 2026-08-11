@@ -1,5 +1,13 @@
 import type { WebhookCancellation } from "@puzzmo/revenue-cat-webhook-types";
-import { ErrCode, RecaseError } from "@shared/index";
+import {
+	type CustomerProductUpdate,
+	ErrCode,
+	RecaseError,
+} from "@shared/index";
+import {
+	emitRevenueCatBillingUpdated,
+	snapshotFullCustomer,
+} from "@/external/revenueCat/misc/emitRevenueCatBillingUpdated";
 import {
 	getRevenueCatCustomerEmail,
 	getRevenueCatCustomerFingerprint,
@@ -58,11 +66,23 @@ export const handleCancellation = async ({
 			return;
 		}
 
-		await customerProductActions.cancel({
+		const originalFullCustomer = snapshotFullCustomer(customer);
+		const { updates } = await customerProductActions.cancel({
 			ctx: customerCtx,
 			customerProduct: curSameProduct,
 			fullCustomer: customer,
 			endedAt: expiration_at_ms,
+		});
+
+		emitRevenueCatBillingUpdated({
+			ctx: customerCtx,
+			originalFullCustomer,
+			updateCustomerProducts: [
+				{
+					customerProduct: curSameProduct,
+					updates: updates as CustomerProductUpdate["updates"],
+				},
+			],
 		});
 
 		logger.info(
@@ -79,11 +99,23 @@ export const handleCancellation = async ({
 		});
 	}
 
-	await customerProductActions.cancel({
+	const originalFullCustomer = snapshotFullCustomer(customer);
+	const { updates } = await customerProductActions.cancel({
 		ctx: customerCtx,
 		customerProduct: curSameProduct,
 		fullCustomer: customer,
 		endedAt: expiration_at_ms,
+	});
+
+	emitRevenueCatBillingUpdated({
+		ctx: customerCtx,
+		originalFullCustomer,
+		updateCustomerProducts: [
+			{
+				customerProduct: curSameProduct,
+				updates: updates as CustomerProductUpdate["updates"],
+			},
+		],
 	});
 
 	logger.info(

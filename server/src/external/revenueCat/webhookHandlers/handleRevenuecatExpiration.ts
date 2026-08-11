@@ -1,5 +1,14 @@
 import type { WebhookExpiration } from "@puzzmo/revenue-cat-webhook-types";
-import { ErrCode, RecaseError } from "@shared/index";
+import {
+	CusProductStatus,
+	type CustomerProductUpdate,
+	ErrCode,
+	RecaseError,
+} from "@shared/index";
+import {
+	emitRevenueCatBillingUpdated,
+	snapshotFullCustomer,
+} from "@/external/revenueCat/misc/emitRevenueCatBillingUpdated";
 import {
 	getRevenueCatCustomerEmail,
 	getRevenueCatCustomerFingerprint,
@@ -48,14 +57,38 @@ export const handleExpiration = async ({
 		});
 	}
 
-	await customerProductActions.expireAndActivateDefault({
+	const originalFullCustomer = snapshotFullCustomer(customer);
+	const { updates, activatedCustomerProduct, insertedCustomerProduct } =
+		await customerProductActions.expireAndActivateDefault({
+			ctx: customerCtx,
+			customerProduct: curSameProduct,
+			fullCustomer: customer,
+			updates: {
+				ended_at: event.expiration_at_ms,
+				canceled: !!curSameProduct.canceled_at,
+			},
+		});
+
+	emitRevenueCatBillingUpdated({
 		ctx: customerCtx,
-		customerProduct: curSameProduct,
-		fullCustomer: customer,
-		updates: {
-			ended_at: event.expiration_at_ms,
-			canceled: !!curSameProduct.canceled_at,
-		},
+		originalFullCustomer,
+		updateCustomerProducts: [
+			{
+				customerProduct: curSameProduct,
+				updates: updates as CustomerProductUpdate["updates"],
+			},
+			...(activatedCustomerProduct
+				? [
+						{
+							customerProduct: activatedCustomerProduct,
+							updates: { status: CusProductStatus.Active },
+						},
+					]
+				: []),
+		],
+		insertCustomerProducts: insertedCustomerProduct
+			? [insertedCustomerProduct]
+			: [],
 	});
 
 	logger.info(`Expired cus_product: ${curSameProduct.id}`);

@@ -1,5 +1,14 @@
 import type { WebhookUnCancellation } from "@puzzmo/revenue-cat-webhook-types";
-import { ErrCode, ProcessorType, RecaseError } from "@shared/index";
+import {
+	type CustomerProductUpdate,
+	ErrCode,
+	ProcessorType,
+	RecaseError,
+} from "@shared/index";
+import {
+	emitRevenueCatBillingUpdated,
+	snapshotFullCustomer,
+} from "@/external/revenueCat/misc/emitRevenueCatBillingUpdated";
 import {
 	getRevenueCatCustomerEmail,
 	getRevenueCatCustomerFingerprint,
@@ -48,10 +57,22 @@ export const handleUncancellation = async ({
 		});
 	}
 
-	await customerProductActions.uncancel({
+	const originalFullCustomer = snapshotFullCustomer(customer);
+	const { updates } = await customerProductActions.uncancel({
 		ctx: customerCtx,
 		customerProduct: cusProduct,
 		fullCustomer: customer,
+	});
+
+	emitRevenueCatBillingUpdated({
+		ctx: customerCtx,
+		originalFullCustomer,
+		updateCustomerProducts: [
+			{
+				customerProduct: cusProduct,
+				updates: updates as CustomerProductUpdate["updates"],
+			},
+		],
 	});
 
 	logger.info(`Uncancelled cus_product ${cusProduct.id}`);
