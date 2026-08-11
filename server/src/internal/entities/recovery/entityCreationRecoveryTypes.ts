@@ -4,6 +4,15 @@ import type {
 	CreateEntityParams,
 	CustomerData,
 } from "@autumn/shared";
+import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
+
+/** Marks on the request context that the create passed the point where it can
+ *  first mutate. Read by the capture, and by a replay deciding whether its own
+ *  attempt is safe to redeliver. */
+export const ENTITY_CREATION_WROTE_KEY = "entityCreationWrote";
+
+export const entityCreationWrote = ({ ctx }: { ctx: AutumnContext }) =>
+	ctx.extraLogs[ENTITY_CREATION_WROTE_KEY] === true;
 
 export interface EntityCreationRecoveryParams {
 	customer_id: string;

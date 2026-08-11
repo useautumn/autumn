@@ -74,16 +74,12 @@ export const createEntityForCusProduct = async ({
 	cusProduct,
 	inputEntities,
 	fromAutoCreate = false,
-	skipSeatCharge = false,
 }: {
 	ctx: AutumnContext;
 	customer: FullCustomer;
 	cusProduct: FullCusProduct;
 	inputEntities: CreateEntityParams[];
 	fromAutoCreate?: boolean;
-	/** Replay only. The original request may already have invoiced this seat, and
-	 *  a proration cannot be detected after the fact, so recovery never re-bills. */
-	skipSeatCharge?: boolean;
 }) => {
 	const featureToEntities = inputEntities.reduce(
 		(acc, entity) => {
@@ -169,28 +165,17 @@ export const createEntityForCusProduct = async ({
 					});
 				}
 
-				// The balance still moves on a replay: skipping the invoice is the
-				// deliberate loss, leaving the seat count wrong is not.
-				if (skipSeatCharge) {
-					logger.warn("[entityCreationRecovery] Skipping seat charge", {
-						customerId: customer.id,
-						featureId,
-						entities: inputEntities.length,
+				const { deletedReplaceables: deletedReplaceables_ } =
+					await adjustAllowance({
+						ctx,
+						cusPrices,
+						customer,
+						affectedFeature: feature!,
+						cusEnt: mainCusEntWithCusProduct,
+						originalBalance,
+						newBalance,
+						errorIfIncomplete: true,
 					});
-				}
-
-				const { deletedReplaceables: deletedReplaceables_ } = skipSeatCharge
-					? { deletedReplaceables: [] as Replaceable[] }
-					: await adjustAllowance({
-							ctx,
-							cusPrices,
-							customer,
-							affectedFeature: feature!,
-							cusEnt: mainCusEntWithCusProduct,
-							originalBalance,
-							newBalance,
-							errorIfIncomplete: true,
-						});
 
 				deletedReplaceables = deletedReplaceables_ || [];
 

@@ -4,7 +4,10 @@ import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { EntityService } from "@/internal/api/entities/EntityService.js";
 import { CusService } from "@/internal/customers/CusService.js";
 import { batchCreateEntities } from "../actions/batchCreateEntities.js";
-import type { EntityCreationRecoveryPayload } from "./entityCreationRecoveryTypes.js";
+import {
+	type EntityCreationRecoveryPayload,
+	entityCreationWrote,
+} from "./entityCreationRecoveryTypes.js";
 
 /** Both the validation check and the insert's unique constraint raise this, so
  *  it covers a replay whose entities landed before the drain reached them. */
@@ -109,7 +112,6 @@ export const replayFailedEntityCreation = async ({
 			withAutumnId: payload.withAutumnId,
 			source: "entityCreationRecovery",
 			enqueueRecoveryOnTransientFailure: false,
-			skipSeatCharge: true,
 		});
 	} catch (error) {
 		if (isAlreadyCreated({ error })) {
@@ -149,8 +151,26 @@ export const replayFailedEntityCreation = async ({
 			return;
 		}
 
-		// A shed stays in SQS, but anything else drops the message, so the reason
-		// the request could not be recreated has to be logged here.
+		// A shed normally stays in SQS for redelivery, but not once this replay has
+		// written: the payload describes the original attempt, so a redelivery
+		// would decrement or attach a second time.
+		if (isShedError({ error }) && entityCreationWrote({ ctx })) {
+			ctx.extraLogs.entityCreationRecoveryReplay = {
+				outcome: "manual_review",
+				...replayLog,
+			};
+			ctx.logger.error(
+				"[entityCreationRecovery] Replay shed after writing, not safe to redeliver",
+				replayLog,
+			);
+
+			throw new Error(
+				`Entity creation recovery ${payload.requestId} requires manual review (the replay shed after it had already written)`,
+			);
+		}
+
+		// Anything non-transient drops the message, so the reason the request
+		// could not be recreated has to be logged here.
 		if (!isShedError({ error })) {
 			ctx.extraLogs.entityCreationRecoveryReplay = {
 				outcome: "rejected",

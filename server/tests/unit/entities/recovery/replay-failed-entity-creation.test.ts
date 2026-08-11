@@ -3,8 +3,9 @@
  *
  * Contract under test:
  * - A capture replays the original normalized create with its API semantics.
- * - Replay never re-bills: the shed request may already have invoiced a seat,
- *   and a proration cannot be detected after the fact.
+ * - A capture is only replayed when it is known to have written nothing, so the
+ *   replay bills normally; anything else stops for review.
+ * - A replay that sheds after its own write is not safe to redeliver either.
  * - Replays cannot enqueue themselves again.
  * - Entities that landed before the drain reached them surface as an
  *   already-exists conflict, which is the no-op signal rather than a failure.
@@ -26,6 +27,7 @@ import type { EntityCreationRecoveryPayload } from "@/internal/entities/recovery
 const mockState = {
 	batchCreateCalls: [] as Record<string, unknown>[],
 	createFailsWith: undefined as unknown,
+	markWroteOnCall: false,
 	existingEntities: [] as Record<string, unknown>[],
 };
 
@@ -50,6 +52,9 @@ afterAll(() => {
 mock.module("@/internal/entities/actions/batchCreateEntities.js", () => ({
 	batchCreateEntities: async (args: Record<string, unknown>) => {
 		mockState.batchCreateCalls.push(args);
+		if (mockState.markWroteOnCall) {
+			(args.ctx as AutumnContext).extraLogs.entityCreationWrote = true;
+		}
 		if (mockState.createFailsWith) throw mockState.createFailsWith;
 		return [];
 	},
@@ -118,9 +123,10 @@ describe("replayFailedEntityCreation", () => {
 		mockState.batchCreateCalls = [];
 		mockState.createFailsWith = undefined;
 		mockState.existingEntities = [];
+		mockState.markWroteOnCall = false;
 	});
 
-	test("replays the request with its original API semantics and no seat charge", async () => {
+	test("replays the request with its original API semantics", async () => {
 		const ctx = buildContext();
 		const payload = buildPayload();
 
@@ -137,9 +143,6 @@ describe("replayFailedEntityCreation", () => {
 				withAutumnId: true,
 				source: "entityCreationRecovery",
 				enqueueRecoveryOnTransientFailure: false,
-				// The shed request may already have invoiced this seat, and nothing
-				// downstream can tell whether it did.
-				skipSeatCharge: true,
 			}),
 		]);
 		expect(ctx.extraLogs.entityCreationRecoveryReplay).toMatchObject({
@@ -287,5 +290,24 @@ describe("replayFailedEntityCreation", () => {
 		// Absent is not false: it predates the marker or came from a producer that
 		// does not set it, and neither can be assumed to have written nothing.
 		expect(mockState.batchCreateCalls).toHaveLength(0);
+	});
+	test("does not redeliver a replay that shed after it had written", async () => {
+		mockState.createFailsWith = new RecaseError({
+			message: "Service is temporarily unavailable, please retry shortly.",
+			code: "service_unavailable",
+			statusCode: 503,
+		});
+		mockState.markWroteOnCall = true;
+		const ctx = buildContext();
+
+		// Redelivery would replay the original payload, which still says nothing was
+		// written, and decrement or attach a second time.
+		await expect(
+			replayFailedEntityCreation({ ctx, payload: buildPayload() }),
+		).rejects.toThrow("requires manual review");
+
+		expect(ctx.extraLogs.entityCreationRecoveryReplay).toMatchObject({
+			outcome: "manual_review",
+		});
 	});
 });

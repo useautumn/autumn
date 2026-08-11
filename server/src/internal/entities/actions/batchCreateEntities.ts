@@ -8,14 +8,16 @@ import { shed503OnTransientError } from "@/db/shed503OnTransientError.js";
 import { withLock } from "@/external/redis/utils/lockUtils/withLock.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { EntityService } from "@/internal/api/entities/EntityService";
+import {
+	ENTITY_CREATION_WROTE_KEY,
+	entityCreationWrote,
+} from "@/internal/entities/recovery/entityCreationRecoveryTypes.js";
 import { queueFailedEntityCreation } from "@/internal/entities/recovery/queueFailedEntityCreation.js";
 import { getApiEntity } from "../entityUtils/apiEntityUtils/getApiEntity";
 import { constructEntity } from "../entityUtils/entityUtils";
 import { createEntityForCusProduct } from "../handlers/handleCreateEntity/createEntityForCusProduct";
 import { validateAndGetInputEntities } from "../handlers/handleCreateEntity/getInputEntities";
 import { attachDefaultProductsToEntities } from "./batchCreateEntities/attachDefaultProductsToEntities";
-
-const ENTITY_CREATION_WROTE_KEY = "entityCreationWrote";
 
 type BatchCreateEntitiesParams = {
 	ctx: AutumnContext;
@@ -25,7 +27,6 @@ type BatchCreateEntitiesParams = {
 	withAutumnId?: boolean;
 	source?: string;
 	enqueueRecoveryOnTransientFailure?: boolean;
-	skipSeatCharge?: boolean;
 };
 
 const createEntities = async ({
@@ -34,7 +35,6 @@ const createEntities = async ({
 	customerData,
 	createEntityData,
 	withAutumnId = false,
-	skipSeatCharge = false,
 }: BatchCreateEntitiesParams) => {
 	const { db, org, env, features } = ctx;
 
@@ -61,7 +61,6 @@ const createEntities = async ({
 			customer: fullCus,
 			cusProduct,
 			inputEntities,
-			skipSeatCharge,
 		});
 	}
 
@@ -174,7 +173,7 @@ export const batchCreateEntities = async (
 						},
 						source,
 						withAutumnId,
-						mayHaveWritten: ctx.extraLogs[ENTITY_CREATION_WROTE_KEY] === true,
+						mayHaveWritten: entityCreationWrote({ ctx }),
 					});
 				}
 			: undefined,
