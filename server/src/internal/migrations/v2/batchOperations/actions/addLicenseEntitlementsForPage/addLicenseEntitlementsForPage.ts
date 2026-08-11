@@ -13,9 +13,9 @@ import {
 } from "../../execute/utils/pagePhaseTimings.js";
 import type { OperationScope } from "../../scope/operationScope.js";
 import type { BatchMigrationExecutionAddLicense } from "../../types/batchMigrationExecutionPlan.js";
+import { carryLicenseEntitlementRows } from "./carryLicenseEntitlementRows.js";
 import { enrichAndInsertLicenseCandidates } from "./enrichAndInsertLicenseCandidates.js";
 import { repointLicensePoolsForPage } from "./repointLicensePoolsForPage.js";
-import { repointSupersededEntitlementRows } from "./repointSupersededEntitlementRows.js";
 import { selectLicenseAddCandidateRows } from "./selectLicenseAddCandidateRows.js";
 
 export type AddLicenseEntitlementsForPageResult = {
@@ -77,7 +77,8 @@ export const addLicenseEntitlementsForPage = async ({
 			),
 	});
 
-	const repointedRowIds = add.supersedes
+	const carryFromEntitlementId = add.carryFromEntitlementId;
+	const carriedRowIds = carryFromEntitlementId
 		? await timePhase({
 				phases,
 				phase: "repoint",
@@ -85,12 +86,12 @@ export const addLicenseEntitlementsForPage = async ({
 					withStatementTimeout(
 						db,
 						(transaction) =>
-							repointSupersededEntitlementRows({
+							carryLicenseEntitlementRows({
 								db: transaction,
 								internalCustomerIds,
 								scope,
-								supersededEntitlementId: add.supersedes?.entitlementId ?? "",
-								entitlementId: add.entitlement.id,
+								fromEntitlementId: carryFromEntitlementId,
+								toEntitlementId: add.entitlement.id,
 								licenseInternalProductId: add.licenseInternalProductId,
 							}),
 						BATCH_MIGRATION_PAGE_STATEMENT_TIMEOUT_MS,
@@ -142,7 +143,7 @@ export const addLicenseEntitlementsForPage = async ({
 	});
 
 	return {
-		affected: insertedItems.length + repointedRowIds.length,
+		affected: insertedItems.length + carriedRowIds.length,
 		candidateCount: rowCount,
 		repointedPools: repointed.pools,
 		repointedInternalCustomerIds: repointed.internalCustomerIds,

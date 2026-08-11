@@ -116,7 +116,7 @@ export const computeBatchMigrationLicenseOperations = ({
 				continue;
 			}
 
-			const supersededEntitlementId = artifact.base_item_refs.find(
+			const carryFromEntitlementId = artifact.base_item_refs.find(
 				(ref) =>
 					ref.entitlementId !== undefined &&
 					ref.internalFeatureId === artifact.internal_feature_id,
@@ -132,9 +132,7 @@ export const computeBatchMigrationLicenseOperations = ({
 				initialState: computeCustomerEntitlementInitialState({
 					entitlement: enriched,
 				}),
-				...(supersededEntitlementId
-					? { supersedes: { entitlementId: supersededEntitlementId } }
-					: {}),
+				carryFromEntitlementId,
 			});
 		}
 	}

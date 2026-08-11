@@ -18,7 +18,7 @@ const planFilterHasItem = (filter: PlanFilter): boolean => {
 /** diffPlanV1 expresses a modify-in-place as a remove plus an add sharing one
  * match key, which the assignment fan-out already collapses. A remove without
  * a matching add is a real deletion and stays per-customer. */
-const isSupersedeOnly = ({
+const isModifyInPlaceOnly = ({
 	addItems,
 	removeItems,
 }: {
@@ -64,7 +64,7 @@ const checkUpsertLicensesEligibility = ({
 				entry.metadata !== undefined;
 			const changesBeyondAddItems =
 				customize?.price !== undefined ||
-				!isSupersedeOnly({
+				!isModifyInPlaceOnly({
 					addItems: customize?.add_items,
 					removeItems: customize?.remove_items,
 				});

@@ -8,37 +8,37 @@ import {
 } from "../../scope/operationScope.js";
 
 /**
- * Moves assignments already holding the superseded entitlement onto the minted
- * one, crediting the allowance delta so consumption carries over. The delta is
- * read from the two definitions rather than passed in, so a partially used
- * balance moves by the same amount the allowance did.
+ * Carries assignments from the entitlement they hold onto the minted one,
+ * crediting the allowance delta so consumption survives. The delta is read from
+ * the two definitions rather than passed in, so a partly used balance moves by
+ * the same amount the allowance did.
  */
-export const repointSupersededEntitlementRows = async ({
+export const carryLicenseEntitlementRows = async ({
 	db,
 	internalCustomerIds,
 	scope,
-	supersededEntitlementId,
-	entitlementId,
+	fromEntitlementId,
+	toEntitlementId,
 	licenseInternalProductId,
 }: {
 	db: DrizzleCli;
 	internalCustomerIds: string[];
 	scope: OperationScope;
-	supersededEntitlementId: string;
-	entitlementId: string;
+	fromEntitlementId: string;
+	toEntitlementId: string;
 	licenseInternalProductId: string;
 }): Promise<string[]> => {
 	if (internalCustomerIds.length === 0) return [];
 
-	const repointed = await db.execute<{ id: string }>(sql`
+	const carried = await db.execute<{ id: string }>(sql`
 		WITH allowances AS (
 			SELECT
-				(SELECT allowance FROM entitlements WHERE id = ${entitlementId}) AS next,
-				(SELECT allowance FROM entitlements WHERE id = ${supersededEntitlementId}) AS previous
+				(SELECT allowance FROM entitlements WHERE id = ${toEntitlementId}) AS next,
+				(SELECT allowance FROM entitlements WHERE id = ${fromEntitlementId}) AS previous
 		)
 		UPDATE customer_entitlements AS target
 		SET
-			entitlement_id = ${entitlementId},
+			entitlement_id = ${toEntitlementId},
 			balance = target.balance
 				+ COALESCE(allowances.next, 0)
 				- COALESCE(allowances.previous, 0)
@@ -50,7 +50,7 @@ export const repointSupersededEntitlementRows = async ({
 			AND pool.link_id = assignment.customer_license_link_id
 			AND pool.license_internal_product_id = ${licenseInternalProductId}
 			AND cp.id = pool.parent_customer_product_id
-			AND target.entitlement_id = ${supersededEntitlementId}
+			AND target.entitlement_id = ${fromEntitlementId}
 			AND target.balance IS NOT NULL
 			AND assignment.internal_customer_id = ANY(${sql.param(internalCustomerIds)}::text[])
 			AND assignment.internal_entity_id IS NOT NULL
@@ -59,5 +59,5 @@ export const repointSupersededEntitlementRows = async ({
 		RETURNING target.id
 	`);
 
-	return repointed.map((row) => row.id);
+	return carried.map((row) => row.id);
 };
