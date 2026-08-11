@@ -10,6 +10,7 @@ import {
 import type { UpdatePlanOp } from "@autumn/shared/api/migrations/operations/customer/updatePlan/index.js";
 import { planItemV1ToPriceAndEnt } from "@autumn/shared/api/products/items/mappers/planItemV1ToPriceAndEnt.js";
 import { planFilterMatchesProduct } from "@autumn/shared/api/products/utils/match/index.js";
+import { planItemFilterMatchKey } from "@autumn/shared/utils/planV1Utils/diff/diffPlanV1.js";
 import { buildConflictUpdateColumns } from "@/db/dbUtils.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { derivePlanLicenseItemRefs } from "@/internal/licenses/actions/customize/computeLicenseCustomize.js";
@@ -32,35 +33,6 @@ import type {
 } from "./types.js";
 
 type LicenseItemRef = PreparedPlanLicenseRef["base_item_refs"][number];
-
-/** The base entitlement a remove_items filter drops. Matched on the license
- * product's own entitlements so the filter's interval is honoured, then mapped
- * back to the ref that carries the entitlement id. */
-const removedBaseItem = ({
-	licenseProduct,
-	refs,
-	filter,
-}: {
-	licenseProduct: FullProduct;
-	refs: LicenseItemRef[];
-	filter: PlanItemFilter;
-}) => {
-	const matched = licenseProduct.entitlements.filter(
-		(entitlement) => entitlement.feature_id === filter.feature_id,
-	);
-	if (matched.length !== 1) return undefined;
-
-	const [entitlement] = matched;
-	const ref = refs.find(
-		(candidate) => candidate.entitlementId === entitlement.id,
-	);
-	if (!ref?.entitlementId || !ref.internalFeatureId) return undefined;
-
-	return {
-		entitlementId: ref.entitlementId,
-		internalFeatureId: ref.internalFeatureId,
-	};
-};
 
 /** The base entitlement a minted row replaces: the license plan's own ref for
  * the same feature. Shared with apply(), which drops that ref from the item set
@@ -236,12 +208,10 @@ export const ensurePlanLicenses: PrepareModule<
 					}
 
 					for (const filter of removeFilters) {
-						const removed = removedBaseItem({
-							licenseProduct,
-							refs: baseItemRefs,
-							filter,
-						});
-						if (!removed) continue;
+						const feature = ctx.features.find(
+							(candidate) => candidate.id === filter.feature_id,
+						);
+						if (!feature) continue;
 
 						artifacts.push({
 							op_index: opIndex,
@@ -252,8 +222,8 @@ export const ensurePlanLicenses: PrepareModule<
 							license_internal_product_id: licenseProduct.internal_id,
 							is_one_off: isOneOffProduct({ prices: licenseProduct.prices }),
 							plan_license_id: planLicenseId,
-							internal_feature_id: removed.internalFeatureId,
-							removes_entitlement_id: removed.entitlementId,
+							internal_feature_id: feature.internal_id,
+							removes_filter: filter,
 							base_item_refs: baseItemRefs,
 						});
 					}

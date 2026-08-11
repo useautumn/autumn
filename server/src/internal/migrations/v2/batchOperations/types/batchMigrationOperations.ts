@@ -1,4 +1,8 @@
-import type { EntitlementPrice, EntitlementWithFeature } from "@autumn/shared";
+import type {
+	EntitlementPrice,
+	EntitlementWithFeature,
+	PlanItemFilter,
+} from "@autumn/shared";
 import type { computeCustomerEntitlementInitialState } from "@/internal/billing/v2/actions/batchTransition/compute/operations/entitlementPriceOperations/computeCustomerEntitlementPatch.js";
 
 export type CustomerEntitlementInitialState = ReturnType<
@@ -38,9 +42,11 @@ export type BatchMigrationAddLicenseEntitlementOp = {
 			initialState: CustomerEntitlementInitialState;
 	  }
 	| {
-			/** Nothing is minted: assignments lose their row for this feature. */
+			/** Nothing is minted: assignments lose their row for this item. The
+			 * filter resolves against their own rows at execute time — the catalog
+			 * has already dropped the item, so prepare has no stable id to name. */
 			kind: "remove";
-			fromEntitlementId: string;
+			filter: PlanItemFilter;
 	  }
 );
 

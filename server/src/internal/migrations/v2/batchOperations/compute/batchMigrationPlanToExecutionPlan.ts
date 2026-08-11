@@ -28,10 +28,7 @@ export const batchMigrationPlanToExecutionPlan = ({
 					licenseInternalProductId: operation.licenseInternalProductId,
 					isOneOff: operation.isOneOff,
 					...(operation.kind === "remove"
-						? {
-								kind: operation.kind,
-								fromEntitlementId: operation.fromEntitlementId,
-							}
+						? { kind: operation.kind, filter: operation.filter }
 						: {
 								entitlement: operation.entitlement,
 								initialState: operation.initialState,

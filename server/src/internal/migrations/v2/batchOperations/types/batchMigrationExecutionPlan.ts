@@ -1,6 +1,7 @@
 import {
 	EntitlementWithFeatureSchema,
 	FullProductWithoutLicensesSchema,
+	type PlanItemFilter,
 } from "@autumn/shared";
 import { z } from "zod/v4";
 import { OperationScopeSchema } from "../scope/operationScope.js";
@@ -39,7 +40,7 @@ export const BatchMigrationExecutionAddLicenseSchema = z.discriminatedUnion(
 		}),
 		BatchMigrationLicenseOpBaseSchema.extend({
 			kind: z.literal("remove"),
-			fromEntitlementId: z.string(),
+			filter: z.custom<PlanItemFilter>(),
 		}),
 	],
 );

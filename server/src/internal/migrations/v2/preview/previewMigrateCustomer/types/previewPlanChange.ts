@@ -1,8 +1,8 @@
 import {
-	CustomerPlanChangeSchema,
-	CustomerPlanItemChangeSchema,
 	type CustomerPlanChange,
+	CustomerPlanChangeSchema,
 	type CustomerPlanItemChange,
+	CustomerPlanItemChangeSchema,
 } from "@autumn/shared/api/billing/common/customerPlanChange.js";
 
 export const PreviewPlanItemChangeSchema = CustomerPlanItemChangeSchema;

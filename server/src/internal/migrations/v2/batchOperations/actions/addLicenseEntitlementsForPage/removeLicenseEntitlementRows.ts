@@ -1,4 +1,8 @@
-import { MIGRATABLE_STATUSES } from "@autumn/shared";
+import {
+	EntInterval,
+	MIGRATABLE_STATUSES,
+	type PlanItemFilter,
+} from "@autumn/shared";
 import { sql } from "drizzle-orm";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 import { sqlList } from "@/internal/billing/v2/actions/batchTransition/execute/sql/batchTransitionSqlUtils.js";
@@ -25,18 +29,26 @@ export const removeLicenseEntitlementRows = async ({
 	db,
 	internalCustomerIds,
 	scope,
-	fromEntitlementId,
+	filter,
 	licenseInternalProductId,
 }: {
 	db: DrizzleCli;
 	internalCustomerIds: string[];
 	scope: OperationScope;
-	fromEntitlementId: string;
+	filter: PlanItemFilter;
 	licenseInternalProductId: string;
 }): Promise<{ rows: number; internalCustomerIds: string[] }> => {
 	if (internalCustomerIds.length === 0) {
 		return { rows: 0, internalCustomerIds: [] };
 	}
+
+	// The catalog has already dropped the item, so the removal names a filter
+	// rather than an id and resolves against the rows it is deleting.
+	const intervalCondition =
+		filter.interval === undefined
+			? sql``
+			: sql`AND COALESCE(definition.interval, ${EntInterval.Lifetime}) = ${filter.interval}
+				AND COALESCE(definition.interval_count, 1) = ${filter.interval_count ?? 1}`;
 
 	const removed = await db.execute<{
 		id: string;
@@ -44,7 +56,8 @@ export const removeLicenseEntitlementRows = async ({
 	}>(sql`
 		WITH dropped AS (
 			DELETE FROM customer_entitlements AS target
-			USING customer_products AS assignment
+			USING entitlements AS definition,
+				customer_products AS assignment
 				JOIN LATERAL (
 					SELECT pool.parent_customer_product_id
 					FROM customer_licenses AS pool
@@ -59,21 +72,23 @@ export const removeLicenseEntitlementRows = async ({
 				JOIN customer_products AS cp
 					ON cp.id = pool.parent_customer_product_id
 			WHERE assignment.id = target.customer_product_id
-				AND target.entitlement_id = ${fromEntitlementId}
+				AND definition.id = target.entitlement_id
+				AND definition.feature_id = ${filter.feature_id}
+				${intervalCondition}
 				AND assignment.internal_customer_id = ANY(${sql.param(internalCustomerIds)}::text[])
 				AND assignment.internal_entity_id IS NOT NULL
 				AND assignment.status IN (${sqlList({ values: [...MIGRATABLE_STATUSES] })})
 				AND NOT target.is_pooled_balance
 				AND target.pooled_contribution_id IS NULL
 				AND ${operationScopeSql({ scope })}
-			RETURNING target.id, target.customer_product_id,
+			RETURNING target.id, target.customer_product_id, target.entitlement_id,
 				assignment.internal_customer_id
 		), dropped_prices AS (
 			DELETE FROM customer_prices AS price
-			USING dropped, prices AS definition
+			USING dropped, prices AS price_definition
 			WHERE price.customer_product_id = dropped.customer_product_id
-				AND definition.id = price.price_id
-				AND definition.entitlement_id = ${fromEntitlementId}
+				AND price_definition.id = price.price_id
+				AND price_definition.entitlement_id = dropped.entitlement_id
 			RETURNING price.id
 		)
 		SELECT id, internal_customer_id FROM dropped

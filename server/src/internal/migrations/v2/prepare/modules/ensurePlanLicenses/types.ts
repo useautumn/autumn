@@ -1,4 +1,8 @@
-import { type DbPlanLicense, EntitlementSchema } from "@autumn/shared";
+import {
+	type DbPlanLicense,
+	EntitlementSchema,
+	type PlanItemFilter,
+} from "@autumn/shared";
 import { z } from "zod/v4";
 
 export const PreparedPlanLicenseRefSchema = z.object({
@@ -16,8 +20,10 @@ export const PreparedPlanLicenseRefSchema = z.object({
 	/** The base entitlement this minted row replaces, when the customize
 	 * re-adds a feature the license plan already grants. */
 	replaces_entitlement_id: z.string().optional(),
-	/** The base entitlement a remove_items filter drops, with nothing minted. */
-	removes_entitlement_id: z.string().optional(),
+	/** The filter a removal applies, resolved against the assignments' own rows
+	 * at execute time. The catalog has already dropped the item by the time
+	 * prepare runs, so there is no stable id to name here. */
+	removes_filter: z.custom<PlanItemFilter>().optional(),
 	base_item_refs: z.array(
 		z.object({
 			entitlementId: z.string().optional(),

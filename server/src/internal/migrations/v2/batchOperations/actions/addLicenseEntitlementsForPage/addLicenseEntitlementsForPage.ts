@@ -90,7 +90,7 @@ export const addLicenseEntitlementsForPage = async ({
 							db: transaction,
 							internalCustomerIds,
 							scope,
-							fromEntitlementId: add.fromEntitlementId,
+							filter: add.filter,
 							licenseInternalProductId: add.licenseInternalProductId,
 						}),
 					BATCH_MIGRATION_PAGE_STATEMENT_TIMEOUT_MS,

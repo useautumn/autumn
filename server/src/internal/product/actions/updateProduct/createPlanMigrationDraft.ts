@@ -273,6 +273,7 @@ export const createPlanMigrationDraft = async ({
 		const baseUsage = await customerProductRepo.getVersioningUsageForProduct({
 			db: ctx.db,
 			internalProductId: current.internal_id,
+			excludeLicenseAssignments: true,
 		});
 		const targets = [
 			...(baseUsage.hasVersionableCustomerProducts
@@ -304,6 +305,7 @@ export const createPlanMigrationDraft = async ({
 	const usageByProduct = await customerProductRepo.getVersioningUsage({
 		db: ctx.db,
 		internalProductIds: baseVersions.map((product) => product.internal_id),
+		excludeLicenseAssignments: true,
 	});
 
 	// Base and variants sweep every version; the parent draft stays version-
