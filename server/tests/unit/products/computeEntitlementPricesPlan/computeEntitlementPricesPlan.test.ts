@@ -5,6 +5,7 @@ import {
 	BillingMethod,
 	EntInterval,
 	FeatureUsageType,
+	RecaseError,
 	ResetInterval,
 } from "@autumn/shared";
 import type { CreatePlanItemParamsV1 } from "@autumn/shared/api/products/items/crud/createPlanItemParamsV1";
@@ -93,14 +94,23 @@ const bucketCounts = (plan: EntitlementPricesPlan) => ({
 });
 
 describe("computeEntitlementPricesPlan", () => {
-	test("1. create — no currentRows → all new", () => {
+	test("1. create — PUT price + items → all new", () => {
 		const plan = computeEntitlementPricesPlan({
 			ctx,
 			params: {
 				mode: { type: "update", protectReferencedRows: false },
 				product,
-				basePrice,
-				planItems: [freeMessagesItem(), pricedMessagesItem({ feature_id: "seats", included: 2, reset: undefined })],
+				customize: {
+					price: basePrice,
+					items: [
+						freeMessagesItem(),
+						pricedMessagesItem({
+							feature_id: "seats",
+							included: 2,
+							reset: undefined,
+						}),
+					],
+				},
 			},
 		});
 
@@ -111,7 +121,7 @@ describe("computeEntitlementPricesPlan", () => {
 		expect(plan.entitlements.same).toEqual([]);
 	});
 
-	test("2. update no-op — identical desired vs current → all same (ids kept)", () => {
+	test("2. update no-op — identical PUT → all same (ids kept)", () => {
 		const currentEnt = entitlements.buildWithFeature({
 			id: "ent_messages",
 			internal_feature_id: messagesFeature.internal_id,
@@ -133,8 +143,10 @@ describe("computeEntitlementPricesPlan", () => {
 			params: {
 				mode: { type: "update", protectReferencedRows: false },
 				product,
-				basePrice,
-				planItems: [pricedMessagesItem()],
+				customize: {
+					price: basePrice,
+					items: [pricedMessagesItem()],
+				},
 				currentRows: {
 					prices: [currentBase, currentPrice],
 					entitlements: [currentEnt],
@@ -153,7 +165,7 @@ describe("computeEntitlementPricesPlan", () => {
 		expect(plan.entitlements.same[0].id).toBe("ent_messages");
 	});
 
-	test("3a. update amount edit (no protect) → delete old + mint new", () => {
+	test("3a. PUT amount edit (no protect) → delete old + mint new", () => {
 		const currentEnt = entitlements.buildWithFeature({
 			id: "ent_messages",
 			internal_feature_id: messagesFeature.internal_id,
@@ -174,16 +186,18 @@ describe("computeEntitlementPricesPlan", () => {
 			params: {
 				mode: { type: "update", protectReferencedRows: false },
 				product,
-				planItems: [
-					pricedMessagesItem({
-						price: {
-							amount: 9,
-							interval: BillingInterval.Month,
-							billing_units: 1,
-							billing_method: BillingMethod.UsageBased,
-						},
-					}),
-				],
+				customize: {
+					items: [
+						pricedMessagesItem({
+							price: {
+								amount: 9,
+								interval: BillingInterval.Month,
+								billing_units: 1,
+								billing_method: BillingMethod.UsageBased,
+							},
+						}),
+					],
+				},
 				currentRows: {
 					prices: [currentPrice],
 					entitlements: [currentEnt],
@@ -191,7 +205,6 @@ describe("computeEntitlementPricesPlan", () => {
 			},
 		});
 
-		// Definition-only claim: amount differ → no claim → leave + new.
 		expect(plan.prices.deleted.map((price) => price.id)).toEqual([
 			"pr_messages",
 		]);
@@ -203,7 +216,7 @@ describe("computeEntitlementPricesPlan", () => {
 		expect(plan.prices.updated).toEqual([]);
 	});
 
-	test("3b. update amount edit (protect) → retired + new", () => {
+	test("3b. PUT amount edit (protect) → retired + new", () => {
 		const currentEnt = entitlements.buildWithFeature({
 			id: "ent_messages",
 			internal_feature_id: messagesFeature.internal_id,
@@ -221,16 +234,18 @@ describe("computeEntitlementPricesPlan", () => {
 			params: {
 				mode: { type: "update", protectReferencedRows: true },
 				product,
-				planItems: [
-					pricedMessagesItem({
-						price: {
-							amount: 9,
-							interval: BillingInterval.Month,
-							billing_units: 1,
-							billing_method: BillingMethod.UsageBased,
-						},
-					}),
-				],
+				customize: {
+					items: [
+						pricedMessagesItem({
+							price: {
+								amount: 9,
+								interval: BillingInterval.Month,
+								billing_units: 1,
+								billing_method: BillingMethod.UsageBased,
+							},
+						}),
+					],
+				},
 				currentRows: {
 					prices: [currentPrice],
 					entitlements: [currentEnt],
@@ -249,7 +264,7 @@ describe("computeEntitlementPricesPlan", () => {
 		expect(plan.prices.new[0].id).not.toBe("pr_messages");
 	});
 
-	test("4. update remove feature → deleted / retired", () => {
+	test("4. PUT remove feature → deleted / retired", () => {
 		const currentEnt = entitlements.buildWithFeature({
 			id: "ent_messages",
 			internal_feature_id: messagesFeature.internal_id,
@@ -264,7 +279,7 @@ describe("computeEntitlementPricesPlan", () => {
 			params: {
 				mode: { type: "update", protectReferencedRows: false },
 				product,
-				planItems: [],
+				customize: { items: [] },
 				currentRows: {
 					prices: [],
 					entitlements: [currentEnt],
@@ -280,7 +295,7 @@ describe("computeEntitlementPricesPlan", () => {
 			params: {
 				mode: { type: "update", protectReferencedRows: true },
 				product,
-				planItems: [],
+				customize: { items: [] },
 				currentRows: {
 					prices: [],
 					entitlements: [currentEnt],
@@ -292,13 +307,13 @@ describe("computeEntitlementPricesPlan", () => {
 		]);
 	});
 
-	test("5. update add feature → new", () => {
+	test("5. PUT add feature → new", () => {
 		const plan = computeEntitlementPricesPlan({
 			ctx,
 			params: {
 				mode: { type: "update", protectReferencedRows: false },
 				product,
-				planItems: [freeMessagesItem()],
+				customize: { items: [freeMessagesItem()] },
 				currentRows: { prices: [], entitlements: [] },
 			},
 		});
@@ -306,7 +321,7 @@ describe("computeEntitlementPricesPlan", () => {
 		expect(plan.entitlements.new[0].feature_id).toBe("messages");
 	});
 
-	test("6. update free→paid same feature → leave free + mint paid", () => {
+	test("6. PUT free→paid same feature → leave free + mint paid", () => {
 		const currentEnt = entitlements.buildWithFeature({
 			id: "ent_messages",
 			internal_feature_id: messagesFeature.internal_id,
@@ -321,7 +336,7 @@ describe("computeEntitlementPricesPlan", () => {
 			params: {
 				mode: { type: "update", protectReferencedRows: false },
 				product,
-				planItems: [pricedMessagesItem()],
+				customize: { items: [pricedMessagesItem()] },
 				currentRows: {
 					prices: [],
 					entitlements: [currentEnt],
@@ -337,7 +352,7 @@ describe("computeEntitlementPricesPlan", () => {
 		expect(plan.entitlements.updated).toEqual([]);
 	});
 
-	test("7–8. update base amount / remove base", () => {
+	test("7–8. PATCH/PUT base amount / remove base", () => {
 		const currentBase = prices.buildFixed({
 			overrides: { id: "pr_base" },
 			configOverrides: { amount: 50 },
@@ -348,12 +363,12 @@ describe("computeEntitlementPricesPlan", () => {
 			params: {
 				mode: { type: "update", protectReferencedRows: false },
 				product,
-				basePrice: { amount: 75, interval: BillingInterval.Month },
-				planItems: [],
+				customize: {
+					price: { amount: 75, interval: BillingInterval.Month },
+				},
 				currentRows: { prices: [currentBase], entitlements: [] },
 			},
 		});
-		// Definition-only: amount differ → leave + new (same as EP lane).
 		expect(amountEdit.prices.deleted.map((price) => price.id)).toEqual([
 			"pr_base",
 		]);
@@ -365,7 +380,7 @@ describe("computeEntitlementPricesPlan", () => {
 			params: {
 				mode: { type: "update", protectReferencedRows: false },
 				product,
-				planItems: [],
+				customize: { price: null },
 				currentRows: { prices: [currentBase], entitlements: [] },
 			},
 		});
@@ -392,7 +407,7 @@ describe("computeEntitlementPricesPlan", () => {
 			params: {
 				mode: { type: "version" },
 				product,
-				planItems: [pricedMessagesItem()],
+				customize: { items: [pricedMessagesItem()] },
 				currentRows: {
 					prices: [currentPrice],
 					entitlements: [currentEnt],
@@ -426,7 +441,7 @@ describe("computeEntitlementPricesPlan", () => {
 			params: {
 				mode: { type: "custom" },
 				product,
-				planItems: [pricedMessagesItem()],
+				customize: { items: [pricedMessagesItem()] },
 				currentRows: {
 					prices: [currentPrice],
 					entitlements: [currentEnt],
@@ -444,16 +459,18 @@ describe("computeEntitlementPricesPlan", () => {
 			params: {
 				mode: { type: "custom" },
 				product,
-				planItems: [
-					pricedMessagesItem({
-						price: {
-							amount: 9,
-							interval: BillingInterval.Month,
-							billing_units: 1,
-							billing_method: BillingMethod.UsageBased,
-						},
-					}),
-				],
+				customize: {
+					items: [
+						pricedMessagesItem({
+							price: {
+								amount: 9,
+								interval: BillingInterval.Month,
+								billing_units: 1,
+								billing_method: BillingMethod.UsageBased,
+							},
+						}),
+					],
+				},
 				currentRows: {
 					prices: [currentPrice],
 					entitlements: [currentEnt],
@@ -489,8 +506,10 @@ describe("computeEntitlementPricesPlan", () => {
 			params: {
 				mode: { type: "update", protectReferencedRows: false },
 				product,
-				basePrice,
-				planItems: [pricedMessagesItem()],
+				customize: {
+					price: basePrice,
+					items: [pricedMessagesItem()],
+				},
 				currentRows: {
 					prices: [currentBase, currentPrice],
 					entitlements: [currentEnt],
@@ -506,6 +525,123 @@ describe("computeEntitlementPricesPlan", () => {
 			"ent_messages",
 		]);
 	});
+
+	test("PATCH price only — feature rows stay same", () => {
+		const currentEnt = entitlements.buildWithFeature({
+			id: "ent_messages",
+			internal_feature_id: messagesFeature.internal_id,
+			feature_id: messagesFeature.id,
+			feature: messagesFeature,
+			allowance: 100,
+			interval: EntInterval.Month,
+		});
+		const currentPrice = prices.buildUsage({
+			overrides: { id: "pr_messages", entitlement_id: "ent_messages" },
+		});
+		const currentBase = prices.buildFixed({
+			overrides: { id: "pr_base" },
+			configOverrides: { amount: 50 },
+		});
+
+		const plan = computeEntitlementPricesPlan({
+			ctx,
+			params: {
+				mode: { type: "update", protectReferencedRows: false },
+				product,
+				customize: {
+					price: { amount: 75, interval: BillingInterval.Month },
+				},
+				currentRows: {
+					prices: [currentBase, currentPrice],
+					entitlements: [currentEnt],
+				},
+			},
+		});
+
+		expect(plan.entitlements.same.map((ent) => ent.id)).toEqual([
+			"ent_messages",
+		]);
+		expect(plan.prices.same.map((price) => price.id)).toEqual(["pr_messages"]);
+		expect(plan.prices.deleted.map((price) => price.id)).toEqual(["pr_base"]);
+		expect(plan.prices.new).toHaveLength(1);
+		expect(plan.entitlements.deleted).toEqual([]);
+	});
+
+	test("PUT items only — base stays same", () => {
+		const currentEnt = entitlements.buildWithFeature({
+			id: "ent_messages",
+			internal_feature_id: messagesFeature.internal_id,
+			feature_id: messagesFeature.id,
+			feature: messagesFeature,
+			allowance: 100,
+			interval: EntInterval.Month,
+		});
+		const currentPrice = prices.buildUsage({
+			overrides: { id: "pr_messages", entitlement_id: "ent_messages" },
+		});
+		const currentBase = prices.buildFixed({
+			overrides: { id: "pr_base" },
+			configOverrides: { amount: 50 },
+		});
+
+		const plan = computeEntitlementPricesPlan({
+			ctx,
+			params: {
+				mode: { type: "update", protectReferencedRows: false },
+				product,
+				customize: { items: [freeMessagesItem({ included: 200 })] },
+				currentRows: {
+					prices: [currentBase, currentPrice],
+					entitlements: [currentEnt],
+				},
+			},
+		});
+
+		expect(plan.prices.same.map((price) => price.id)).toEqual(["pr_base"]);
+		expect(plan.prices.deleted.map((price) => price.id)).toEqual([
+			"pr_messages",
+		]);
+		expect(plan.entitlements.deleted.map((ent) => ent.id)).toEqual([
+			"ent_messages",
+		]);
+		expect(plan.entitlements.new).toHaveLength(1);
+		expect(plan.entitlements.new[0].allowance).toBe(200);
+	});
+
+	test("create price-only / items-only", () => {
+		const priceOnly = computeEntitlementPricesPlan({
+			ctx,
+			params: {
+				mode: { type: "update", protectReferencedRows: false },
+				product,
+				customize: { price: basePrice },
+			},
+		});
+		expect(priceOnly.prices.new).toHaveLength(1);
+		expect(priceOnly.entitlements.new).toEqual([]);
+
+		const itemsOnly = computeEntitlementPricesPlan({
+			ctx,
+			params: {
+				mode: { type: "update", protectReferencedRows: false },
+				product,
+				customize: { items: [freeMessagesItem()] },
+			},
+		});
+		expect(itemsOnly.entitlements.new).toHaveLength(1);
+		expect(itemsOnly.prices.new).toEqual([]);
+	});
+
+	test("add_items is not implemented yet", () => {
+		expect(() =>
+			computeEntitlementPricesPlan({
+				ctx,
+				params: {
+					mode: { type: "update", protectReferencedRows: false },
+					product,
+					customize: { add_items: [freeMessagesItem()] },
+				},
+			}),
+		).toThrow(RecaseError);
+	});
 });
-
-

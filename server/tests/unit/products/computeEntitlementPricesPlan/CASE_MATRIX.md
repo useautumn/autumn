@@ -1,5 +1,7 @@
 # computeEntitlementPricesPlan — mode × outcome case matrix
 
+Input is CustomizePlanV1 items/price slice (`customize`): PUT (`items`) and/or PATCH (`price`; future `add_items`/`remove_items`). Omitted lanes carry current → claim `same`.
+
 Claim = definition match only. A claim always means `same`; mismatches are leave + new.
 
 ## Modes
@@ -25,22 +27,23 @@ EP claim uses `EntitlementPriceMatchPrecision.EntitlementAndPriceDefinition`. Ba
 
 ## Cases to unit-test (minimum)
 
-1. **Create** — no `currentRows`; one base + one free EP + one priced EP → all `new`
-2. **Update no-op** — identical desired vs current → all `same` (ids kept; no churn)
-3. **Update amount edit** — EP amount change → no claim → `deleted`+`new` (no protect) / `retired`+`new` (protect)
-4. **Update remove feature** — current EP unclaimed → `deleted` / `retired`
-5. **Update add feature** — desired with no match → `new`
-6. **Update free→paid same feature** — definition mismatch → leave free + mint paid
-7. **Update base amount** — no claim → leave + new
-8. **Update remove base** — base `leaving`
-9. **Version** — identical content → all desired `new` (fresh ids); current ignored (no deleted/retired)
-10. **Custom exact** — catalog rows reused → `same`; no deleted
-11. **Custom changed** → `new` with `is_custom`; catalog current ignored
-12. **Stripe carry** — `new` prices receive stripe ids from matching current via `carryForwardStripeResources`
-13. **Resulting content** — `basePriceAndEntitlementPrices` = new+updated+same for fullProduct
+1. **Create PUT** — `price` + `items`; no `currentRows` → all `new`
+2. **Update no-op PUT** — identical → all `same`
+3. **PUT amount edit** — EP amount change → `deleted`+`new` / `retired`+`new`
+4. **PUT remove feature** — `items: []` → leave
+5. **PUT add feature** → `new`
+6. **PUT free→paid** → leave free + mint paid
+7. **PATCH base amount** — `price` only → leave + new; features `same`
+8. **PATCH remove base** — `price: null` → base leave; features untouched when items omitted
+9. **Version** — all desired `new`; current ignored
+10. **Custom exact / changed** — `same` / `new` is_custom
+11. **PUT items only** — base `same`
+12. **Create price-only / items-only**
+13. **`add_items`** → not-implemented error (extension point)
+14. **projected** — new+updated+same
 
 ## Intentional non-goals in this suite
 
 - `handleNewProductItems` adoption
-- PATCH `add_items`/`remove_items`/`update_items` adapter
+- Implementing `add_items` / `remove_items` expand
 - Catalog execute consuming buckets

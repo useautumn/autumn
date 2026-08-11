@@ -41,7 +41,12 @@ export async function updateCatalogV2({
 	});
 
 	// 3. Errors
-	handleUpdateCatalogErrors({ ctx, catalogContext, updateCatalogPlan });
+	handleUpdateCatalogErrors({
+		ctx,
+		catalogContext,
+		updateCatalogPlan,
+		params,
+	});
 
 	if (preview) {
 		return { catalogContext, updateCatalogPlan };

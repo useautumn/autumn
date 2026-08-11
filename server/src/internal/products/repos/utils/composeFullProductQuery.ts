@@ -11,23 +11,16 @@ import {
 } from "@autumn/shared";
 import { eq } from "drizzle-orm";
 
-const composeProductItems = ({ excludeEnts = false } = {}) => ({
-	entitlements: excludeEnts
-		? undefined
-		: {
-				with: { feature: true as const },
-				where: eq(entitlements.is_custom, false),
-			},
+const composeProductItems = () => ({
+	entitlements: {
+		with: { feature: true as const },
+		where: eq(entitlements.is_custom, false),
+	},
 	prices: { where: eq(prices.is_custom, false) },
 	free_trials: { where: eq(freeTrials.is_custom, false) },
 });
 
-export const composeFullProductQuery = ({
-	excludeEnts = false,
-}: {
-	excludeEnts?: boolean;
-} = {}) => ({
-	...composeProductItems({ excludeEnts }),
+const composeLicenseSide = () => ({
 	licenses: {
 		where: eq(planLicenses.is_custom, false),
 		with: {
@@ -42,6 +35,18 @@ export const composeFullProductQuery = ({
 			priceRefs: { with: { price: true as const } },
 		},
 	},
+});
+
+/** Nested base/variants: items + license plans. Skip parent_plan_licenses —
+ * nesting that relation under base/variants hits a Postgres LATERAL alias bug. */
+const composeNestedVariantProduct = () => ({
+	...composeProductItems(),
+	...composeLicenseSide(),
+});
+
+export const composeFullProductQuery = () => ({
+	...composeProductItems(),
+	...composeLicenseSide(),
 	// Reverse direction: links where this product IS the license. Indexed by
 	// idx_plan_license_license — an empty probe for non-license products.
 	parent_plan_licenses: {
@@ -52,6 +57,12 @@ export const composeFullProductQuery = ({
 			},
 			priceRefs: { with: { price: true as const } },
 		},
+	},
+	base_product: {
+		with: composeNestedVariantProduct(),
+	},
+	variants: {
+		with: composeNestedVariantProduct(),
 	},
 });
 
@@ -75,6 +86,8 @@ export type ProductWithLicenseRelations = FullProductWithoutLicenses & {
 			}>;
 		}
 	>;
+	base_product?: ProductWithLicenseRelations | null;
+	variants?: ProductWithLicenseRelations[];
 };
 
 /** Hydrated link row + its product, with free_trial resolved. */
@@ -115,7 +128,7 @@ export const normalizeFullProductLicenses = ({
 }: {
 	product: ProductWithLicenseRelations;
 }): FullProduct => {
-	const { parent_plan_licenses, ...rest } = product;
+	const { parent_plan_licenses, base_product, variants, ...rest } = product;
 	return {
 		...rest,
 		licenses: product.licenses?.map(
@@ -126,6 +139,12 @@ export const normalizeFullProductLicenses = ({
 				...normalizeLinkProduct(link, parentProduct),
 				license_prices: priceRefs.map(({ price }) => price),
 			}),
+		),
+		base_product: base_product
+			? normalizeFullProductLicenses({ product: base_product })
+			: null,
+		variants: (variants ?? []).map((variant) =>
+			normalizeFullProductLicenses({ product: variant }),
 		),
 	};
 };

@@ -9,12 +9,13 @@ import { validateProductItems } from "@/internal/products/product-items/validate
 import { buildEntitlementPricesPlan } from "./buildEntitlementPricesPlan/buildEntitlementPricesPlan";
 import { claimCurrentRows } from "./claimCurrentRows/claimCurrentRows";
 import { carryForwardStripeResources } from "./helpers/carryForwardStripeResources";
+import { resolveEntitlementPricesCustomize } from "./resolveEntitlementPricesCustomize";
 import type { ComputeEntitlementPricesPlanParams } from "./types/computeEntitlementPricesPlanParams";
 import type { EntitlementPricesPlan } from "./types/entitlementPricesPlan";
 
 /**
- * Claim-based planner: desired basePrice + planItems → price/entitlement write buckets.
- * ProductItem exists only for validate + the shared convert; claim works on EPs.
+ * Claim-based planner: PUT/PATCH customize → price/entitlement write buckets.
+ * Expand omitted lanes from current, then mint/claim/build as a full desired set.
  */
 export const computeEntitlementPricesPlan = ({
 	ctx,
@@ -23,16 +24,20 @@ export const computeEntitlementPricesPlan = ({
 	ctx: AutumnContext;
 	params: ComputeEntitlementPricesPlanParams;
 }): EntitlementPricesPlan => {
-	// Interim: validate still speaks ProductItem. Convert once, then leave it behind.
+	const { basePrice, planItems } = resolveEntitlementPricesCustomize({
+		ctx,
+		params,
+	});
+
 	const items = planV1ToProductItems({
 		ctx,
 		plan: {
-			price: params.basePrice ?? null,
-			items: params.planItems,
+			price: basePrice ?? null,
+			items: planItems,
 		},
 	});
 
-	const { allFeatures, newFeatures } = validateProductItems({
+	const { allFeatures } = validateProductItems({
 		newItems: items,
 		features: ctx.features,
 		orgId: params.product.org_id!,
@@ -54,7 +59,6 @@ export const computeEntitlementPricesPlan = ({
 	const plan = buildEntitlementPricesPlan({
 		mode: params.mode,
 		claims,
-		newFeatures,
 	});
 
 	carryForwardStripeResources({
