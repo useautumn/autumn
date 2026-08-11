@@ -54,16 +54,28 @@ function EditedRow({
 function RemovedFilterRow({ filter }: { filter: ItemFilter }) {
 	const { features } = useFeaturesQuery();
 	return (
-		<div className="flex items-center gap-2">
-			<div className="flex items-center flex-1 min-w-0 gap-2 py-1 opacity-50">
-				<div className="flex flex-row items-center flex-1 gap-2 min-w-0 overflow-hidden">
-					<FeatureIconCluster item={filterToProductItem(filter)} />
-					<p className="whitespace-nowrap truncate flex-1 min-w-0 text-body">
-						{getFilterSummary(filter, features)}
-					</p>
-				</div>
-				<ItemStatusDot state="removed" />
+		<div className="flex items-center flex-1 min-w-0 h-10 px-3 rounded-xl input-base gap-2">
+			<div className="flex flex-row items-center flex-1 gap-2 min-w-0 overflow-hidden opacity-50">
+				<FeatureIconCluster item={filterToProductItem(filter)} />
+				<p className="whitespace-nowrap truncate flex-1 min-w-0 text-body">
+					{getFilterSummary(filter, features)}
+				</p>
 			</div>
+			<ItemStatusDot state="removed" />
+		</div>
+	);
+}
+
+/** SubscriptionItemRow draws its own bare row, so the card lives here to match
+ * the edited and removed rows beside it. */
+function AddedItemRow({
+	item,
+}: {
+	item: Parameters<typeof SubscriptionItemRow>[0]["item"];
+}) {
+	return (
+		<div className="flex items-center flex-1 min-w-0 h-10 px-3 rounded-xl input-base gap-2">
+			<SubscriptionItemRow item={item} isCreated />
 		</div>
 	);
 }
@@ -193,10 +205,9 @@ export function OperationsPreview({ operations }: { operations: Operations }) {
 							)}
 
 							{addItems.map((item, idx) => (
-								<SubscriptionItemRow
+								<AddedItemRow
 									key={`add-${idx}`}
 									item={migrationItemToProductItem(item, features)}
-									isCreated
 								/>
 							))}
 
@@ -234,10 +245,9 @@ export function OperationsPreview({ operations }: { operations: Operations }) {
 											/>
 										)}
 										{(license.customize?.add_items ?? []).map((item, idx) => (
-											<SubscriptionItemRow
+											<AddedItemRow
 												key={`license-add-${idx}`}
 												item={migrationItemToProductItem(item, features)}
-												isCreated
 											/>
 										))}
 										{(license.customize?.remove_items ?? []).map(
