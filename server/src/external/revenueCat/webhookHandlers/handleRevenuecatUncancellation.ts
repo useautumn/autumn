@@ -1,10 +1,5 @@
 import type { WebhookUnCancellation } from "@puzzmo/revenue-cat-webhook-types";
-import {
-	type CustomerProductUpdate,
-	ErrCode,
-	ProcessorType,
-	RecaseError,
-} from "@shared/index";
+import { ErrCode, ProcessorType, RecaseError } from "@shared/index";
 import {
 	emitRevenueCatBillingUpdated,
 	snapshotFullCustomer,
@@ -70,7 +65,7 @@ export const handleUncancellation = async ({
 		updateCustomerProducts: [
 			{
 				customerProduct: cusProduct,
-				updates: updates as CustomerProductUpdate["updates"],
+				updates,
 			},
 		],
 	});

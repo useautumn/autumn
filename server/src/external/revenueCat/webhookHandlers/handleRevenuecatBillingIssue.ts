@@ -1,7 +1,6 @@
 import type { WebhookBillingIssue } from "@puzzmo/revenue-cat-webhook-types";
 import { RecaseError } from "@shared/api/errors/base/RecaseError";
 import { ErrCode } from "@shared/enums/ErrCode";
-import type { CustomerProductUpdate } from "@shared/index";
 import { CusProductStatus } from "@shared/models/cusProductModels/cusProductEnums";
 import {
 	emitRevenueCatBillingUpdated,
@@ -77,7 +76,7 @@ export const handleBillingIssue = async ({
 			updateCustomerProducts: [
 				{
 					customerProduct: curSameProduct,
-					updates: updates as CustomerProductUpdate["updates"],
+					updates,
 				},
 			],
 		});

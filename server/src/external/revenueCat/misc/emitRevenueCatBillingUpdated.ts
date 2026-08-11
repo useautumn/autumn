@@ -7,9 +7,16 @@ import type {
 	CustomerProductUpdate,
 	FullCusProduct,
 	FullCustomer,
+	InsertCustomerProduct,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { sendBillingUpdatedWebhook } from "@/internal/billing/v2/workflows/sendBillingUpdatedWebhook/sendBillingUpdatedWebhook";
+
+/** Accepts the wider update shape lifecycle actions return, narrowed once here. */
+type LifecycleCustomerProductUpdate = {
+	customerProduct: FullCusProduct;
+	updates: Partial<InsertCustomerProduct>;
+};
 
 /** Snapshot BEFORE a lifecycle action — actions replace `customer_products` in place. */
 export const snapshotFullCustomer = (
@@ -27,7 +34,7 @@ export const emitRevenueCatBillingUpdated = ({
 }: {
 	ctx: AutumnContext;
 	originalFullCustomer: FullCustomer;
-	updateCustomerProducts?: CustomerProductUpdate[];
+	updateCustomerProducts?: LifecycleCustomerProductUpdate[];
 	insertCustomerProducts?: FullCusProduct[];
 }): void => {
 	void sendBillingUpdatedWebhook({
@@ -35,7 +42,12 @@ export const emitRevenueCatBillingUpdated = ({
 		autumnBillingPlan: {
 			customerId: originalFullCustomer.id ?? originalFullCustomer.internal_id,
 			insertCustomerProducts,
-			updateCustomerProducts,
+			updateCustomerProducts: updateCustomerProducts.map(
+				({ customerProduct, updates }) => ({
+					customerProduct,
+					updates: updates as CustomerProductUpdate["updates"],
+				}),
+			),
 		},
 		originalFullCustomer,
 	});

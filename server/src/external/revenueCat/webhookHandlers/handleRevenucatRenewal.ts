@@ -3,7 +3,6 @@ import {
 	ACTIVE_STATUSES,
 	AttachScenario,
 	CusProductStatus,
-	type CustomerProductUpdate,
 } from "@shared/index";
 import {
 	emitRevenueCatBillingUpdated,
@@ -109,7 +108,7 @@ export const handleRenewal = async ({
 			updateCustomerProducts: [
 				{
 					customerProduct: curSameProduct,
-					updates: updates as CustomerProductUpdate["updates"],
+					updates,
 				},
 			],
 		});
@@ -141,7 +140,7 @@ export const handleRenewal = async ({
 			updateCustomerProducts: [
 				{
 					customerProduct: curSameProduct,
-					updates: updates as CustomerProductUpdate["updates"],
+					updates,
 				},
 			],
 		});

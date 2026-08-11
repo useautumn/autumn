@@ -1,10 +1,5 @@
 import type { WebhookExpiration } from "@puzzmo/revenue-cat-webhook-types";
-import {
-	CusProductStatus,
-	type CustomerProductUpdate,
-	ErrCode,
-	RecaseError,
-} from "@shared/index";
+import { CusProductStatus, ErrCode, RecaseError } from "@shared/index";
 import {
 	emitRevenueCatBillingUpdated,
 	snapshotFullCustomer,
@@ -75,7 +70,7 @@ export const handleExpiration = async ({
 		updateCustomerProducts: [
 			{
 				customerProduct: curSameProduct,
-				updates: updates as CustomerProductUpdate["updates"],
+				updates,
 			},
 			...(activatedCustomerProduct
 				? [

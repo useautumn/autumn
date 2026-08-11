@@ -1,9 +1,5 @@
 import type { WebhookCancellation } from "@puzzmo/revenue-cat-webhook-types";
-import {
-	type CustomerProductUpdate,
-	ErrCode,
-	RecaseError,
-} from "@shared/index";
+import { ErrCode, RecaseError } from "@shared/index";
 import {
 	emitRevenueCatBillingUpdated,
 	snapshotFullCustomer,
@@ -80,7 +76,7 @@ export const handleCancellation = async ({
 			updateCustomerProducts: [
 				{
 					customerProduct: curSameProduct,
-					updates: updates as CustomerProductUpdate["updates"],
+					updates,
 				},
 			],
 		});
@@ -113,7 +109,7 @@ export const handleCancellation = async ({
 		updateCustomerProducts: [
 			{
 				customerProduct: curSameProduct,
-				updates: updates as CustomerProductUpdate["updates"],
+				updates,
 			},
 		],
 	});
