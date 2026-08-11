@@ -254,6 +254,8 @@ export * from "./utils/billingUtils/index";
 export * from "./utils/checkoutUtils/index";
 export * from "./utils/common/formatUtils/formatAmount";
 export * from "./utils/common/index";
+export * from "./utils/planV1Utils/convertPlanV1/planV1ToEntitlementPrices";
+export * from "./utils/planV1Utils/convertPlanV1/productItemsToEntitlementPrices";
 export * from "./utils/cusEntUtils/balanceUtils/cusEntsToUsage";
 export * from "./utils/cusEntUtils/balanceUtils/cusEntToMinBalance";
 export * from "./utils/cusEntUtils/balanceUtils/cusEntToUsageAllowed";

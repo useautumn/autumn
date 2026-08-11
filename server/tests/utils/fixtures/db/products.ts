@@ -30,6 +30,7 @@ const create = ({
 	base_variant_id: null,
 	archived: false,
 	config: { ignore_past_due: false },
+	metadata: {},
 });
 
 /**
@@ -66,6 +67,7 @@ const createFull = ({
 		base_variant_id: null,
 		archived: false,
 		config: { ignore_past_due: false },
+		metadata: {},
 		prices,
 		entitlements,
 		free_trial: null,

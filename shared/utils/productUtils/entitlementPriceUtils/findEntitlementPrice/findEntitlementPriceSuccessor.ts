@@ -104,12 +104,19 @@ export const findEntitlementPriceSuccessor = ({
 	sourceEntitlementPrice,
 	candidateEntitlementPrices,
 	excludedEntitlementIds,
+	matchPrecision,
 }: {
 	sourceEntitlementPrice: EntitlementPrice;
 	candidateEntitlementPrices: EntitlementPrice[];
 	excludedEntitlementIds?: Set<string>;
+	/** When set, only this precision is tried (no ladder). */
+	matchPrecision?: EntitlementPriceMatchPrecision;
 }): EntitlementPrice | undefined => {
-	for (const matchPrecision of ENTITLEMENT_PRICE_MATCH_PRECISIONS) {
+	const matchPrecisions = matchPrecision
+		? [matchPrecision]
+		: ENTITLEMENT_PRICE_MATCH_PRECISIONS;
+
+	for (const currentMatchPrecision of matchPrecisions) {
 		const candidate = candidateEntitlementPrices.find(
 			(candidateEntitlementPrice) => {
 				const candidateEntitlementId =
@@ -119,7 +126,7 @@ export const findEntitlementPriceSuccessor = ({
 				return entitlementPricesMatchAtPrecision({
 					sourceEntitlementPrice,
 					candidateEntitlementPrice,
-					matchPrecision,
+					matchPrecision: currentMatchPrecision,
 				});
 			},
 		);

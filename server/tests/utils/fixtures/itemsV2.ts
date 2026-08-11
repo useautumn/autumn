@@ -1,8 +1,6 @@
 import {
 	BillingInterval,
 	BillingMethod,
-	OnDecrease,
-	OnIncrease,
 	ResetInterval,
 	TierBehavior,
 	TierInfinite,
@@ -128,6 +126,7 @@ const consumableMessages = ({ amount = 1 }: { amount?: number } = {}) => ({
 	},
 });
 
+/** Allocated usage-based — public V2 forbids top-level proration on UsageBased. */
 const allocatedUsers = ({
 	amount = 10,
 	included = 0,
@@ -142,10 +141,6 @@ const allocatedUsers = ({
 		interval: BillingInterval.Month,
 		billing_method: BillingMethod.UsageBased,
 		billing_units: 1,
-	},
-	proration: {
-		on_increase: OnIncrease.ProrateImmediately,
-		on_decrease: OnDecrease.Prorate,
 	},
 });
 
@@ -163,10 +158,6 @@ const allocatedWorkflows = ({
 		interval: BillingInterval.Month,
 		billing_method: BillingMethod.UsageBased,
 		billing_units: 1,
-	},
-	proration: {
-		on_increase: OnIncrease.BillImmediately,
-		on_decrease: OnDecrease.None,
 	},
 });
 
