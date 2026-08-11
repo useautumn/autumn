@@ -7,6 +7,7 @@ import {
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { addProductsUpdatedWebhookTask } from "@/internal/analytics/handlers/handleProductsUpdated";
+import { emitCustomerProductBillingUpdated } from "@/internal/customers/cusProducts/actions/emitCustomerProductBillingUpdated";
 import { CusProductService } from "@/internal/customers/cusProducts/CusProductService";
 
 /**
@@ -14,8 +15,8 @@ import { CusProductService } from "@/internal/customers/cusProducts/CusProductSe
  *
  * This action:
  * 1. Sets status to PastDue on the customer product
- * 2. Sends products_updated webhook with PastDue scenario
- * 3. Updates the FullCustomer in memory
+ * 2. Updates the FullCustomer in memory
+ * 3. Sends products_updated + billing.updated webhooks
  *
  * Used by RevenueCat billing issue webhooks and any external billing issue flow.
  */
@@ -29,6 +30,8 @@ export const markCustomerProductPastDue = async ({
 	fullCustomer: FullCustomer;
 }): Promise<{ updates: Partial<InsertCustomerProduct> }> => {
 	const { org, env } = ctx;
+
+	const originalFullCustomer = structuredClone(fullCustomer);
 
 	// 1. Mark as past due
 	const updates: Partial<InsertCustomerProduct> = {
@@ -45,7 +48,14 @@ export const markCustomerProductPastDue = async ({
 		`[markCustomerProductPastDue]: marking ${customerProduct.product.name} as past due`,
 	);
 
-	// 2. Send webhook
+	// 2. Update full customer in memory
+	fullCustomer.customer_products = fullCustomer.customer_products.map((cp) =>
+		cp.id === customerProduct.id
+			? ({ ...cp, ...updates } as FullCusProduct)
+			: cp,
+	);
+
+	// 3. Send webhooks
 	await addProductsUpdatedWebhookTask({
 		ctx,
 		internalCustomerId: customerProduct.internal_customer_id,
@@ -56,12 +66,11 @@ export const markCustomerProductPastDue = async ({
 		cusProduct: customerProduct,
 	});
 
-	// 3. Update full customer in memory
-	fullCustomer.customer_products = fullCustomer.customer_products.map((cp) =>
-		cp.id === customerProduct.id
-			? ({ ...cp, ...updates } as FullCusProduct)
-			: cp,
-	);
+	emitCustomerProductBillingUpdated({
+		ctx,
+		originalFullCustomer,
+		updateCustomerProducts: [{ customerProduct, updates }],
+	});
 
 	return { updates };
 };
