@@ -75,7 +75,10 @@ export const replayFailedEntityCreation = async ({
 		})),
 	};
 
-	if (payload.mayHaveWritten) {
+	// Absent, not false: a payload without the marker predates it or came from a
+	// producer that does not set it, and neither can be assumed to have written
+	// nothing.
+	if (payload.mayHaveWritten !== false) {
 		// The worker acks a non-transient throw, so this log is the only surviving
 		// record of what the shed request was part-way through creating.
 		ctx.extraLogs.entityCreationRecoveryReplay = {

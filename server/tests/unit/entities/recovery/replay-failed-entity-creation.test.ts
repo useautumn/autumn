@@ -273,4 +273,19 @@ describe("replayFailedEntityCreation", () => {
 			unconfirmed: [{ id: null, feature_id: "seats" }],
 		});
 	});
+	test("refuses a payload that carries no write marker at all", async () => {
+		const ctx = buildContext();
+		const { mayHaveWritten, ...untagged } = buildPayload();
+
+		await expect(
+			replayFailedEntityCreation({
+				ctx,
+				payload: untagged as typeof untagged & { mayHaveWritten?: boolean },
+			}),
+		).rejects.toThrow("requires manual review");
+
+		// Absent is not false: it predates the marker or came from a producer that
+		// does not set it, and neither can be assumed to have written nothing.
+		expect(mockState.batchCreateCalls).toHaveLength(0);
+	});
 });
