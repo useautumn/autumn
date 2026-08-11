@@ -209,41 +209,46 @@ export function OperationsPreview({ operations }: { operations: Operations }) {
 										<LicenseIcon size={12} className="shrink-0" />
 										{license.license_plan_id}
 									</span>
-									{license.customize?.price !== undefined && (
-										<EditedRow
-											icon={
-												<CurrencyCircleDollarIcon
-													size={16}
-													weight="duotone"
-													className="text-yellow-500 shrink-0"
+									<div className="flex flex-col gap-1 border-l border-border pl-3 ml-1.5">
+										{license.customize?.price !== undefined && (
+											<EditedRow
+												icon={
+													<CurrencyCircleDollarIcon
+														size={16}
+														weight="duotone"
+														className="text-yellow-500 shrink-0"
+													/>
+												}
+												text={`${formatAmount({
+													currency,
+													amount: license.customize.price?.amount ?? 0,
+													amountFormatOptions: {
+														style: "currency",
+														currencyDisplay: "narrowSymbol",
+													},
+												})} ${formatInterval({
+													interval:
+														license.customize.price?.interval ?? "month",
+													intervalCount: 1,
+												})}`}
+											/>
+										)}
+										{(license.customize?.add_items ?? []).map((item, idx) => (
+											<SubscriptionItemRow
+												key={`license-add-${idx}`}
+												item={migrationItemToProductItem(item, features)}
+												isCreated
+											/>
+										))}
+										{(license.customize?.remove_items ?? []).map(
+											(item, idx) => (
+												<RemovedFilterRow
+													filter={item as ItemFilter}
+													key={`license-remove-${idx}`}
 												/>
-											}
-											text={`${formatAmount({
-												currency,
-												amount: license.customize.price?.amount ?? 0,
-												amountFormatOptions: {
-													style: "currency",
-													currencyDisplay: "narrowSymbol",
-												},
-											})} ${formatInterval({
-												interval: license.customize.price?.interval ?? "month",
-												intervalCount: 1,
-											})}`}
-										/>
-									)}
-									{(license.customize?.add_items ?? []).map((item, idx) => (
-										<SubscriptionItemRow
-											key={`license-add-${idx}`}
-											item={migrationItemToProductItem(item, features)}
-											isCreated
-										/>
-									))}
-									{(license.customize?.remove_items ?? []).map((item, idx) => (
-										<RemovedFilterRow
-											filter={item as ItemFilter}
-											key={`license-remove-${idx}`}
-										/>
-									))}
+											),
+										)}
+									</div>
 								</div>
 							))}
 
