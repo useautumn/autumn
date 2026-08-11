@@ -1,0 +1,33 @@
+import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
+import { CUSTOMER_CREATION_RECOVERY_MESSAGE_GROUP_ID } from "@/internal/customers/recovery/queueFailedCustomerCreation.js";
+import { JobName } from "@/queue/JobName.js";
+import { addTaskToQueue } from "@/queue/queueUtils.js";
+import type { EntityCreationRecoveryPayload } from "./entityCreationRecoveryTypes.js";
+
+export const queueFailedEntityCreation = async ({
+	ctx,
+	params,
+}: {
+	ctx: AutumnContext;
+	params: EntityCreationRecoveryPayload["params"];
+}) => {
+	const queueUrl = process.env.CUSTOMER_CREATION_RECOVERY_SQS_QUEUE_URL;
+	if (!queueUrl) return false;
+	await addTaskToQueue({
+		jobName: JobName.CustomerCreationRecovery,
+		queueUrl,
+		messageGroupId: CUSTOMER_CREATION_RECOVERY_MESSAGE_GROUP_ID,
+		messageDeduplicationId: `entity-creation-${Bun.hash(JSON.stringify(params)).toString(16)}`,
+		generateDeduplicationId: false,
+		payload: {
+			kind: "entity",
+			orgId: ctx.org.id,
+			env: ctx.env,
+			customerId: params.customer_id,
+			requestId: ctx.id,
+			apiVersion: ctx.apiVersion.value,
+			params,
+		},
+	});
+	return true;
+};

@@ -29,6 +29,8 @@ import { storeDeferredInvoiceLineItems } from "@/internal/billing/v2/workflows/s
 import { storeInvoiceLineItems } from "@/internal/billing/v2/workflows/storeInvoiceLineItems/storeInvoiceLineItems.js";
 import { batchResetCustomerEntitlements } from "@/internal/customers/actions/resetCustomerEntitlements/batchResetCustomerEntitlements.js";
 import { replayFailedCustomerCreation } from "@/internal/customers/recovery/replayFailedCustomerCreation.js";
+import { isEntityCreationRecoveryPayload } from "@/internal/entities/recovery/entityCreationRecoveryTypes.js";
+import { replayFailedEntityCreation } from "@/internal/entities/recovery/replayFailedEntityCreation.js";
 import { runClearCreditSystemCacheTask } from "@/internal/features/featureActions/runClearCreditSystemCacheTask.js";
 import { generateFeatureDisplay } from "@/internal/features/workflows/generateFeatureDisplay.js";
 import { runMigrationTask } from "@/internal/migrations/runMigrationTask.js";
@@ -209,10 +211,11 @@ export const processMessage = async ({
 			if (!ctx) {
 				throw new Error("No context found for customer creation recovery job");
 			}
-			await replayFailedCustomerCreation({
-				ctx,
-				payload: job.data,
-			});
+			if (isEntityCreationRecoveryPayload(job.data)) {
+				await replayFailedEntityCreation({ ctx, payload: job.data });
+			} else {
+				await replayFailedCustomerCreation({ ctx, payload: job.data });
+			}
 			return;
 		}
 
