@@ -30,6 +30,22 @@ import type {
 
 type LicenseItemRef = PreparedPlanLicenseRef["base_item_refs"][number];
 
+/** The base entitlement a minted row replaces: the license plan's own ref for
+ * the same feature. Shared with apply(), which drops that ref from the item set
+ * so the feature is not granted twice. */
+const supersededEntitlementId = ({
+	refs,
+	internalFeatureId,
+}: {
+	refs: LicenseItemRef[];
+	internalFeatureId: string;
+}) =>
+	refs.find(
+		(ref) =>
+			ref.entitlementId !== undefined &&
+			ref.internalFeatureId === internalFeatureId,
+	)?.entitlementId;
+
 export type EnsurePlanLicensesInput = {
 	updatePlanOps: {
 		opIndex: number;
@@ -95,6 +111,7 @@ export const ensurePlanLicenses: PrepareModule<
 							ctx,
 							idOrInternalId: entry.license_plan_id,
 						}));
+					const baseItemRefs = derivePlanLicenseItemRefs(licenseProduct);
 					const hash = hashJson({ value: { entry } });
 					const planLicenseId = planLicenseIdFor({
 						scopeId,
@@ -169,7 +186,11 @@ export const ensurePlanLicenses: PrepareModule<
 							plan_license_id: planLicenseId,
 							entitlement_id: entitlementId,
 							internal_feature_id: feature.internal_id,
-							base_item_refs: derivePlanLicenseItemRefs(licenseProduct),
+							supersedes_entitlement_id: supersededEntitlementId({
+								refs: baseItemRefs,
+								internalFeatureId: feature.internal_id,
+							}),
+							base_item_refs: baseItemRefs,
 						});
 					}
 				}

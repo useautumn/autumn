@@ -23,7 +23,7 @@ export const BatchMigrationExecutionAddLicenseSchema = z.object({
 	isOneOff: z.boolean(),
 	entitlement: EntitlementWithFeatureSchema,
 	initialState: BatchMigrationInitialStateSchema,
-	carryFromEntitlementId: z.string().optional(),
+	supersedesEntitlementId: z.string().optional(),
 });
 
 /** One op × one plan-filter-matched product. One field per operation

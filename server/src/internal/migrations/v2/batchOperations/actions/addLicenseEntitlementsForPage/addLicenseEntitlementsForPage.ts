@@ -13,17 +13,17 @@ import {
 } from "../../execute/utils/pagePhaseTimings.js";
 import type { OperationScope } from "../../scope/operationScope.js";
 import type { BatchMigrationExecutionAddLicense } from "../../types/batchMigrationExecutionPlan.js";
-import { carryLicenseEntitlementRows } from "./carryLicenseEntitlementRows.js";
 import { enrichAndInsertLicenseCandidates } from "./enrichAndInsertLicenseCandidates.js";
 import { repointLicensePoolsForPage } from "./repointLicensePoolsForPage.js";
+import { repointSupersededEntitlementRows } from "./repointSupersededEntitlementRows.js";
 import { selectLicenseAddCandidateRows } from "./selectLicenseAddCandidateRows.js";
 
 export type AddLicenseEntitlementsForPageResult = {
 	affected: number;
 	candidateCount: number;
 	repointedPools: number;
-	/** Customers whose pool was repointed or whose assignments carried onto a
-	 * new definition. They changed even when no assignment gained a row, so they
+	/** Customers whose pool was repointed or whose assignments moved onto a new
+	 * definition. They changed even when no assignment gained a row, so they
 	 * must not be reported as skipped. */
 	repointedInternalCustomerIds: string[];
 	insertedItems: BatchMigrationInsertedItem[];
@@ -78,20 +78,20 @@ export const addLicenseEntitlementsForPage = async ({
 			),
 	});
 
-	const carryFromEntitlementId = add.carryFromEntitlementId;
-	const carried = carryFromEntitlementId
+	const supersedesEntitlementId = add.supersedesEntitlementId;
+	const superseded = supersedesEntitlementId
 		? await timePhase({
 				phases,
-				phase: "carry",
+				phase: "supersede",
 				run: () =>
 					withStatementTimeout(
 						db,
 						(transaction) =>
-							carryLicenseEntitlementRows({
+							repointSupersededEntitlementRows({
 								db: transaction,
 								internalCustomerIds,
 								scope,
-								fromEntitlementId: carryFromEntitlementId,
+								fromEntitlementId: supersedesEntitlementId,
 								toEntitlementId: add.entitlement.id,
 								licenseInternalProductId: add.licenseInternalProductId,
 								initialState: add.initialState,
@@ -145,12 +145,12 @@ export const addLicenseEntitlementsForPage = async ({
 	});
 
 	return {
-		affected: insertedItems.length + carried.rows,
+		affected: insertedItems.length + superseded.rows,
 		candidateCount: rowCount,
 		repointedPools: repointed.pools,
 		repointedInternalCustomerIds: [
 			...repointed.internalCustomerIds,
-			...carried.internalCustomerIds,
+			...superseded.internalCustomerIds,
 		],
 		insertedItems,
 		excludedInternalCustomerIds: [...excludedIds],

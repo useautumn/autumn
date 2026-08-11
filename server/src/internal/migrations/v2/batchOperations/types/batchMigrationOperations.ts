@@ -26,8 +26,8 @@ export type BatchMigrationAddLicenseEntitlementOp = {
 	entitlement: EntitlementWithFeature;
 	initialState: CustomerEntitlementInitialState;
 	/** The entitlement assignments currently hold for this feature. Set when the
-	 * minted row replaces it, so they carry across instead of gaining a row. */
-	carryFromEntitlementId?: string;
+	 * minted row replaces it, so they move across instead of gaining a row. */
+	supersedesEntitlementId?: string;
 };
 
 export type BatchMigrationOperations = {
