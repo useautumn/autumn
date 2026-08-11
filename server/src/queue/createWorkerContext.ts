@@ -1,4 +1,6 @@
 import { type AppEnv, AuthType, createdAtToVersion } from "@autumn/shared";
+import { isTransientDbError } from "@/db/dbUtils.js";
+import { isTransientRedisError } from "@/external/redis/utils/isTransientRedisError.js";
 import { getOrgWithFeaturesCached } from "@/internal/orgs/orgUtils/getOrgWithFeaturesCached.js";
 import { addAppContextToLogs } from "@/utils/logging/addContextToLogs.js";
 import type { DrizzleCli } from "../db/initDrizzle.js";
@@ -14,6 +16,7 @@ export const createWorkerContext = async ({
 	payload,
 	logger,
 	skipCache = true,
+	throwOnTransientOrgLookupError = false,
 }: {
 	db: DrizzleCli;
 	payload: {
@@ -24,6 +27,7 @@ export const createWorkerContext = async ({
 	};
 	logger: Logger;
 	skipCache?: boolean;
+	throwOnTransientOrgLookupError?: boolean;
 }) => {
 	const { orgId, env, customerId, requestId } = payload;
 	if (!orgId || !env) return;
@@ -36,7 +40,13 @@ export const createWorkerContext = async ({
 	let orgData: Awaited<ReturnType<typeof getOrgWithFeaturesCached>>;
 	try {
 		orgData = await getOrgWithFeaturesCached({ db, orgId, env, requestId });
-	} catch {
+	} catch (error) {
+		if (
+			throwOnTransientOrgLookupError &&
+			(isTransientDbError({ error }) || isTransientRedisError({ error }))
+		) {
+			throw error;
+		}
 		orgData = null;
 	}
 

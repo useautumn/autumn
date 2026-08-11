@@ -60,6 +60,7 @@ const SQS_RECEIVE_BATCH_LIMIT = 10;
 const SQS_RECEIVE_TIMEOUT_MS = ms.seconds(30);
 const QUEUE_CAPACITY_RETRY_MS = 1_000;
 const DELETE_RETRY_DELAYS_MS = [100, 250, 500] as const;
+export const RECOVERY_QUEUE_VISIBILITY_TIMEOUT_SECONDS = 900;
 
 type JobOverride = {
 	ack: "upfront" | "always-after-processing";
@@ -666,6 +667,8 @@ export const initWorkers = async ({
 			queueId: JOB_QUEUE_IDS.customerCreationRecovery,
 			queueUrl: process.env.CUSTOMER_CREATION_RECOVERY_SQS_QUEUE_URL,
 			defaultEnabled: false,
+			// Keep a timed-out recovery invisible long enough to prevent overlap.
+			visibilityTimeoutSeconds: RECOVERY_QUEUE_VISIBILITY_TIMEOUT_SECONDS,
 		},
 		{
 			queueId: JOB_QUEUE_IDS.stripeWebhookReplay,

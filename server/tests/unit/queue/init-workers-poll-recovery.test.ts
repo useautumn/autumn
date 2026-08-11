@@ -1,7 +1,10 @@
 import { describe, expect, test } from "bun:test";
 import { ReceiveMessageCommand } from "@aws-sdk/client-sqs";
 import { getSqsClient, recreateSqsClient } from "@/queue/initSqs.js";
-import { startPollingLoop } from "@/queue/initWorkers.js";
+import {
+	RECOVERY_QUEUE_VISIBILITY_TIMEOUT_SECONDS,
+	startPollingLoop,
+} from "@/queue/initWorkers.js";
 
 const makeAbortError = () => {
 	const error = new Error("aborted") as Error & { name: string };
@@ -10,6 +13,10 @@ const makeAbortError = () => {
 };
 
 describe("SQS poll recovery", () => {
+	test("keeps entity-creation recovery invisible long enough to prevent overlapping replays", () => {
+		expect(RECOVERY_QUEUE_VISIBILITY_TIMEOUT_SECONDS).toBe(900);
+	});
+
 	test("recovers a hung receive without recycling the worker", async () => {
 		let releaseHungReceive = () => {};
 		let recreateCalls = 0;

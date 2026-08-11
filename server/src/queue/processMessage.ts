@@ -197,6 +197,8 @@ export const processMessage = async ({
 			payload: job.data,
 			logger: workerLogger,
 			skipCache: !usesCustomerCache,
+			throwOnTransientOrgLookupError:
+				job.name === JobName.CustomerCreationRecovery,
 		});
 		workerCtx = ctx;
 
