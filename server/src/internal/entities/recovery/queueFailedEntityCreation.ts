@@ -23,6 +23,9 @@ const getDeduplicationId = ({
 			params,
 			withAutumnId,
 			mayHaveWritten,
+			// Two attempts that each part-wrote are two reconciliations. Collapsing
+			// them on identical params would hide one from review.
+			...(mayHaveWritten && { requestId: ctx.id }),
 		}),
 	).toString(16)}`;
 

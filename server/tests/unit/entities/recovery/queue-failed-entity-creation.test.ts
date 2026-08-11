@@ -174,4 +174,39 @@ describe("queueFailedEntityCreation", () => {
 		expect(queued).toBe(false);
 		expect(ctx.logger.error).toHaveBeenCalled();
 	});
+	test("keeps captures that may have written apart per request", async () => {
+		// Each carries its own half-applied state to reconcile, so collapsing them
+		// on identical params would hide one from review.
+		await queueFailedEntityCreation({
+			ctx: buildContext({ id: "req_first" }),
+			params,
+			mayHaveWritten: true,
+		});
+		await queueFailedEntityCreation({
+			ctx: buildContext({ id: "req_second" }),
+			params,
+			mayHaveWritten: true,
+		});
+
+		expect(mockState.queueCommands[0]?.MessageDeduplicationId).not.toBe(
+			mockState.queueCommands[1]?.MessageDeduplicationId,
+		);
+	});
+
+	test("still collapses replayable captures from separate requests", async () => {
+		await queueFailedEntityCreation({
+			ctx: buildContext({ id: "req_first" }),
+			params,
+			mayHaveWritten: false,
+		});
+		await queueFailedEntityCreation({
+			ctx: buildContext({ id: "req_second" }),
+			params,
+			mayHaveWritten: false,
+		});
+
+		expect(mockState.queueCommands[0]?.MessageDeduplicationId).toBe(
+			mockState.queueCommands[1]?.MessageDeduplicationId,
+		);
+	});
 });
