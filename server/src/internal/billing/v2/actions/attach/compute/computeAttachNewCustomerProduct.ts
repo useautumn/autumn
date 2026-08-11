@@ -71,7 +71,13 @@ export const computeAttachNewCustomerProduct = ({
 		processorTypeOverride,
 	} = attachBillingContext;
 
-	const currentCustomerEntitlements = carryOverSourceCustomerProduct?.customer_entitlements ?? [];
+	// multiAttach / scheduled-activation contexts don't set the carry-over source;
+	// fall back to the same-group product so their carry-over is preserved.
+	const carryOverSource =
+		carryOverSourceCustomerProduct ?? currentCustomerProduct;
+
+	const currentCustomerEntitlements =
+		carryOverSource?.customer_entitlements ?? [];
 	const carryOverUsages = params.carry_over_usages;
 
 	// LEGACY: carry_from_previous flag on entitlements
@@ -94,25 +100,25 @@ export const computeAttachNewCustomerProduct = ({
 		: undefined;
 
 	let existingUsagesConfig: ExistingUsagesConfig | undefined =
-		!isScheduled && carryOverSourceCustomerProduct
+		!isScheduled && carryOverSource
 			? {
-					fromCustomerProduct: carryOverSourceCustomerProduct,
+					fromCustomerProduct: carryOverSource,
 					consumableFeatureIdsToCarry: featuresToCarryUsagesFor,
 				}
 			: undefined;
 
 	const existingRolloversConfig =
-		!isScheduled && carryOverSourceCustomerProduct
+		!isScheduled && carryOverSource
 			? {
-					fromCustomerProduct: carryOverSourceCustomerProduct,
+					fromCustomerProduct: carryOverSource,
 				}
 			: undefined;
 
-	if (!isScheduled && carryOverSourceCustomerProduct && carryOverUsages?.enabled) {
+	if (!isScheduled && carryOverSource && carryOverUsages?.enabled) {
 		existingUsagesConfig = carryOverUsagesToExistingUsagesConfig({
 			ctx,
 			params,
-			currentCustomerProduct: carryOverSourceCustomerProduct,
+			currentCustomerProduct: carryOverSource,
 		});
 	}
 
