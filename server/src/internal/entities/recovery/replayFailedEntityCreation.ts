@@ -27,49 +27,55 @@ export const replayFailedEntityCreation = async ({
 		ctx,
 		idOrInternalId: payload.params.customer_id,
 	});
-	const missing: Array<{ inputEntity: CreateEntityParams; feature: Feature }> =
-		[];
-	for (const inputEntity of payload.params.create_entity_data) {
-		const feature = findFeatureById({
-			features: ctx.features,
-			featureId: inputEntity.feature_id,
-			errorOnNotFound: true,
-		});
-		const existing = await EntityService.get({
-			db: ctx.db,
-			id: inputEntity.id as string,
-			internalCustomerId: customer.internal_id,
-			internalFeatureId: feature.internal_id,
-		});
-		if (!existing) missing.push({ inputEntity, feature });
-	}
-	if (missing.length === 0) return;
-	await ctx.db.transaction(async (tx) => {
-		const transactionCtx = { ...ctx, db: tx as unknown as DrizzleCli };
-		const entities = missing.map(({ inputEntity, feature }) =>
-			constructEntity({
-				inputEntity,
-				feature,
+	while (true) {
+		const missing: Array<{
+			inputEntity: CreateEntityParams;
+			feature: Feature;
+		}> = [];
+		for (const inputEntity of payload.params.create_entity_data) {
+			const feature = findFeatureById({
+				features: ctx.features,
+				featureId: inputEntity.feature_id,
+				errorOnNotFound: true,
+			});
+			const existing = await EntityService.get({
+				db: ctx.db,
+				id: inputEntity.id as string,
 				internalCustomerId: customer.internal_id,
-				orgId: ctx.org.id,
-				env: ctx.env,
-			}),
-		);
-		try {
-			await EntityService.insert({ db: transactionCtx.db, data: entities });
-		} catch (error) {
-			if (
-				!(error instanceof RecaseError) ||
-				error.code !== EntityErrorCode.EntityAlreadyExists
-			)
-				throw error;
-			return;
+				internalFeatureId: feature.internal_id,
+			});
+			if (!existing) missing.push({ inputEntity, feature });
 		}
-		await attachDefaultProductsToEntities({
-			ctx: transactionCtx,
-			fullCustomer: customer,
-			entities,
-			customerData: payload.params.customer_data,
+		if (missing.length === 0) return;
+		const inserted = await ctx.db.transaction(async (tx) => {
+			const transactionCtx = { ...ctx, db: tx as unknown as DrizzleCli };
+			const entities = missing.map(({ inputEntity, feature }) =>
+				constructEntity({
+					inputEntity,
+					feature,
+					internalCustomerId: customer.internal_id,
+					orgId: ctx.org.id,
+					env: ctx.env,
+				}),
+			);
+			try {
+				await EntityService.insert({ db: transactionCtx.db, data: entities });
+			} catch (error) {
+				if (
+					!(error instanceof RecaseError) ||
+					error.code !== EntityErrorCode.EntityAlreadyExists
+				)
+					throw error;
+				return false;
+			}
+			await attachDefaultProductsToEntities({
+				ctx: transactionCtx,
+				fullCustomer: customer,
+				entities,
+				customerData: payload.params.customer_data,
+			});
+			return true;
 		});
-	});
+		if (inserted) return;
+	}
 };
