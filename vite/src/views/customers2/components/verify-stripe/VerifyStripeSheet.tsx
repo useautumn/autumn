@@ -134,6 +134,7 @@ export function VerifyStripeSheet() {
 				)}
 
 				{!isLoading &&
+					!error &&
 					subscriptions.map((result) => (
 						<SubscriptionVerifyGroup
 							key={result.stripe_subscription_id}
