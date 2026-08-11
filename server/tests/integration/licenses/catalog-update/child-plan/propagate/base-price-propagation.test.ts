@@ -23,9 +23,10 @@ import { initScenario, s } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";
 import { migrationRepo } from "@/internal/migrations/v2/repos/index.js";
 import { runMigrationInChunks } from "@/internal/migrations/v2/run/runMigrationInChunks.js";
-import { ProductService } from "@/internal/products/ProductService.js";
 import { generateId } from "@/utils/genUtils.js";
 
+const ATTACHED_SEATS = 3;
+const INCLUDED_SEATS = 1;
 const SEAT_PRICE = 10;
 const NEW_SEAT_PRICE = 20;
 const OVERRIDE_SEAT_PRICE = 15;
@@ -63,7 +64,7 @@ test(`${chalk.yellowBright("plans.update: a base seat price rise propagates per-
 			s.licenses.link({
 				parentProductId: pro.id,
 				licenseProductId: devSeat.id,
-				included: 1,
+				included: INCLUDED_SEATS,
 			}),
 			// This parent pins its own seat price, so the base rise must skip it.
 			s.licenses.link({
@@ -79,7 +80,9 @@ test(`${chalk.yellowBright("plans.update: a base seat price rise propagates per-
 			}),
 			s.billing.attach({
 				productId: pro.id,
-				licenseQuantities: [{ licenseProductId: devSeat.id, quantity: 3 }],
+				licenseQuantities: [
+					{ licenseProductId: devSeat.id, quantity: ATTACHED_SEATS },
+				],
 			}),
 			s.billing.attach({
 				customerId: overrideCustomerId,
@@ -150,18 +153,38 @@ test(`${chalk.yellowBright("plans.update: a base seat price rise propagates per-
 	});
 	expect(link?.is_custom).toBe(true);
 
-	const licenseProduct = await ProductService.getFull({
-		db: ctx.db,
-		idOrInternalId: link?.license_internal_product_id as string,
-		orgId: ctx.org.id,
-		env: ctx.env,
-	});
-	const fixedPrices = (licenseProduct?.prices ?? []).filter(
-		(price) => (price.config as { type?: string })?.type === "fixed",
-	);
-	expect(fixedPrices).toHaveLength(1);
-	expect(fixedPrices[0]?.config).toMatchObject({ amount: NEW_SEAT_PRICE });
-
 	// Seat quantity survives the price swap.
-	expect(pools[0]?.granted).toBeGreaterThan(0);
+	expect(pools[0]?.granted).toBe(ATTACHED_SEATS);
+
+	// ── The PAID seats reprice on Stripe, so next cycle bills the new
+	// rate. Included seats are free and must not add anything. ─────────
+	const customerRow = await ctx.db.query.customers.findFirst({
+		where: (customer, { eq }) => eq(customer.id, parentCustomerId),
+	});
+	const customerProducts = await ctx.db.query.customerProducts.findMany({
+		where: (customerProduct, { eq }) =>
+			eq(customerProduct.internal_customer_id, customerRow?.internal_id ?? ""),
+	});
+	const subscriptionIds = [
+		...new Set(
+			customerProducts.flatMap(
+				(customerProduct) => customerProduct.subscription_ids ?? [],
+			),
+		),
+	];
+	expect(subscriptionIds.length).toBeGreaterThan(0);
+
+	const seatLineTotals: number[] = [];
+	for (const subscriptionId of subscriptionIds) {
+		const subscription =
+			await ctx.stripeCli.subscriptions.retrieve(subscriptionId);
+		for (const item of subscription.items.data) {
+			const unitAmount = item.price.unit_amount ?? 0;
+			if (unitAmount === 0) continue;
+			seatLineTotals.push((unitAmount / 100) * (item.quantity ?? 0));
+		}
+	}
+
+	const paidSeats = ATTACHED_SEATS - INCLUDED_SEATS;
+	expect(seatLineTotals).toContain(paidSeats * NEW_SEAT_PRICE);
 });
