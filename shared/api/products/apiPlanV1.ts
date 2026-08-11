@@ -54,7 +54,7 @@ export const API_PLAN_V1_EXAMPLE = {
 	metadata: {},
 };
 
-const VariantCustomizeSchema = refineCustomizePlanV1Schema(
+export const VariantCustomizeSchema = refineCustomizePlanV1Schema(
 	CustomizePlanV1BaseSchema.omit({
 		items: true,
 		upsert_licenses: true,
@@ -215,3 +215,49 @@ export const ApiPlanV1WithMeta = ApiPlanV1Schema.meta({
 		"A plan defines a set of features, pricing, and entitlements that can be attached to customers.",
 	example: API_PLAN_V1_EXAMPLE,
 });
+
+export const ApiPlanLicenseWithPlanV1Schema = ApiPlanLicenseV1Schema.extend({
+	plan: ApiPlanV1Schema.optional().meta({
+		description:
+			"The effective plan for this license link — the pinned version, with the link's customize applied. Present when license plans are expanded.",
+	}),
+});
+
+export type ApiPlanLicenseWithPlanV1 = z.infer<
+	typeof ApiPlanLicenseWithPlanV1Schema
+>;
+
+/** A base plan's down-link to a variant derived from it. */
+export const ApiPlanVariantV1Schema = z.object({
+	variant_plan_id: z.string().meta({
+		description: "The plan ID of the variant derived from this base plan.",
+	}),
+	name: z.string().meta({
+		description: "Display name of the variant plan.",
+	}),
+	customize: VariantCustomizeSchema.optional().meta({
+		description:
+			"The variant's declared divergence from its base plan — exactly what you would re-submit to recreate it.",
+	}),
+	plan: ApiPlanV1Schema.omit({ variant_details: true }).optional().meta({
+		description:
+			"The variant's fully resolved plan (base + customize applied). Present when variants are expanded.",
+	}),
+});
+
+export type ApiPlanVariantV1 = z.infer<typeof ApiPlanVariantV1Schema>;
+
+/** ApiPlanV1 with its graph edges expanded: license plans and nested variants. */
+export const ApiPlanExpandedV1Schema = ApiPlanV1Schema.extend({
+	licenses: z.array(ApiPlanLicenseWithPlanV1Schema).optional().meta({
+		internal: true,
+		description:
+			"Plans offered as assignable licenses under this plan, each with its resolved plan. Omitted when the plan has none.",
+	}),
+	variants: z.array(ApiPlanVariantV1Schema).optional().meta({
+		description:
+			"Variant plans derived from this base plan. Omitted when the plan has none.",
+	}),
+});
+
+export type ApiPlanExpandedV1 = z.infer<typeof ApiPlanExpandedV1Schema>;

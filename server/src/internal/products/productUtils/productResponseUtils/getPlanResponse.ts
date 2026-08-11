@@ -1,10 +1,11 @@
 import {
 	type ApiFreeTrialV2,
 	ApiFreeTrialV2Schema,
+	type ApiPlanExpandedV1,
+	ApiPlanExpandedV1Schema,
 	type ApiPlanV1,
 	ApiPlanV1Schema,
 	billingControlsFromColumns,
-	diffPlanV1,
 	type Feature,
 	type FullCustomer,
 	type FullProduct,
@@ -17,11 +18,11 @@ import {
 	sortProductItems,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
-import { toApiPlanLicenseWithCustomize } from "@/internal/licenses/actions/customize/toApiPlanLicenseWithCustomize.js";
-
-import { ProductService } from "../../ProductService.js";
 import { mapToProductItems } from "../../productV2Utils.js";
+import { buildApiPlanLicense } from "./buildApiPlanLicense.js";
+import { buildApiPlanVariant } from "./buildApiPlanVariant.js";
 import { buildCustomerEligibility } from "./buildCustomerEligibility.js";
+import { buildVariantDetails } from "./buildVariantDetails.js";
 
 /**
  * Get free trial response in Plan V2 format
@@ -40,28 +41,57 @@ const getFreeTrialV2Response = ({
 	});
 };
 
-/**
- * Convert FullProduct (DB format) to Plan API response format (V1/latest)
- */
-export const getPlanResponse = async ({
-	ctx,
-	product,
-	features,
-	fullCus,
-	expand = [],
-	currency = "usd",
-	baseFullProduct,
-	resolveBaseFullProduct = true,
-}: {
+type GetPlanResponseArgs = {
 	ctx?: AutumnContext;
 	product: FullProduct;
 	features: Feature[];
 	fullCus?: FullCustomer;
 	expand?: string[];
 	currency?: string;
+	/** Pre-rendered base plan — reuse it instead of re-rendering per variant. */
+	basePlan?: ApiPlanV1;
 	baseFullProduct?: FullProduct;
 	resolveBaseFullProduct?: boolean;
-}): Promise<ApiPlanV1> => {
+};
+
+type PlanExpansions = {
+	/** Keep each license entry's rendered effective plan. */
+	expandLicensePlans?: boolean;
+	/** Attach variants[] edges built from the product's hydrated variants. */
+	expandVariants?: boolean;
+};
+
+/**
+ * Convert FullProduct (DB format) to Plan API response format (V1/latest).
+ * Expansions keep the plan's graph edges (license plans, variants) in the response.
+ */
+export async function getPlanResponse(
+	args: GetPlanResponseArgs & PlanExpansions & { expandLicensePlans: true },
+): Promise<ApiPlanExpandedV1>;
+export async function getPlanResponse(
+	args: GetPlanResponseArgs & PlanExpansions & { expandVariants: true },
+): Promise<ApiPlanExpandedV1>;
+export async function getPlanResponse(
+	args: GetPlanResponseArgs & {
+		expandLicensePlans?: false;
+		expandVariants?: false;
+	},
+): Promise<ApiPlanV1>;
+export async function getPlanResponse({
+	ctx,
+	product,
+	features,
+	fullCus,
+	expand = [],
+	currency = "usd",
+	basePlan,
+	baseFullProduct,
+	resolveBaseFullProduct = true,
+	expandLicensePlans = false,
+	expandVariants = false,
+}: GetPlanResponseArgs & PlanExpansions): Promise<
+	ApiPlanV1 | ApiPlanExpandedV1
+> {
 	// 1. Convert prices/entitlements to items
 	const rawItems = mapToProductItems({
 		prices: product.prices ?? [],
@@ -127,17 +157,16 @@ export const getPlanResponse = async ({
 	const apiLicenses = product.licenses?.length
 		? await Promise.all(
 				product.licenses.map((license) =>
-					toApiPlanLicenseWithCustomize({
-						license,
-						resolvePlan: (licenseProduct) =>
-							getPlanResponse({
-								product: licenseProduct,
+					expandLicensePlans
+						? buildApiPlanLicense({
+								ctx,
+								license,
 								features,
 								expand,
 								currency,
-								resolveBaseFullProduct: false,
-							}),
-					}),
+								expandPlan: true,
+							})
+						: buildApiPlanLicense({ ctx, license, features, expand, currency }),
 				),
 			)
 		: undefined;
@@ -170,40 +199,41 @@ export const getPlanResponse = async ({
 		customer_eligibility: customerEligibility,
 	} satisfies ApiPlanV1;
 
-	const resolvedBaseFullProduct =
-		baseFullProduct ??
-		(resolveBaseFullProduct && ctx && product.base_internal_product_id
-			? ((await ProductService.getFull({
-					db: ctx.db,
-					idOrInternalId: product.base_internal_product_id,
-					orgId: ctx.org.id,
-					env: ctx.env,
-					allowNotFound: true,
-				})) ?? undefined)
-			: undefined);
-	const basePlan = resolvedBaseFullProduct
-		? await getPlanResponse({
-				ctx,
-				product: resolvedBaseFullProduct,
-				features,
-				expand,
-				currency,
-			})
-		: undefined;
-	const customize = basePlan
-		? diffPlanV1({ from: basePlan, to: plan })
-		: undefined;
-	const hasCustomize = customize && Object.keys(customize).length > 0;
+	// 10. Graph edges: up-link to the base plan, down-links to variants.
+	const variantDetails = await buildVariantDetails({
+		ctx,
+		product,
+		plan,
+		features,
+		expand,
+		currency,
+		basePlan,
+		baseFullProduct,
+		resolveBaseFullProduct,
+	});
+	const variants =
+		expandVariants && product.variants?.length
+			? await Promise.all(
+					product.variants.map((variant) =>
+						buildApiPlanVariant({
+							ctx,
+							basePlan: plan,
+							variant,
+							features,
+							expand,
+							currency,
+						}),
+					),
+				)
+			: undefined;
 
-	return ApiPlanV1Schema.parse({
+	const planResponse = {
 		...plan,
-		...(basePlan
-			? {
-					variant_details: {
-						base_plan_id: basePlan.id,
-						...(hasCustomize ? { customize } : {}),
-					},
-				}
-			: {}),
-	} satisfies ApiPlanV1);
-};
+		...(variantDetails ? { variant_details: variantDetails } : {}),
+		...(variants ? { variants } : {}),
+	};
+
+	return expandLicensePlans || expandVariants
+		? ApiPlanExpandedV1Schema.parse(planResponse)
+		: ApiPlanV1Schema.parse(planResponse);
+}

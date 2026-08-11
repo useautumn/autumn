@@ -12,16 +12,14 @@ import {
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { customerProductRepo } from "@/internal/customers/cusProducts/repos/index.js";
+import { diffLicensePlanCustomize } from "@/internal/licenses/actions/customize/diffLicensePlanCustomize.js";
 import { applyLicenseCustomizeToBasePlan } from "@/internal/licenses/actions/customize/rebaseCatalogPlanLicenses.js";
-import {
-	diffLicensePlanCustomize,
-	toApiPlanLicenseWithCustomize,
-} from "@/internal/licenses/actions/customize/toApiPlanLicenseWithCustomize.js";
 import { listLicenseParentContexts } from "@/internal/licenses/actions/propagation/listLicenseParentContexts.js";
 import {
 	licenseParentTargetKey,
 	resolveLicenseParentTargets,
 } from "@/internal/licenses/actions/propagation/resolveLicenseParentTargets.js";
+import { buildApiPlanLicense } from "@/internal/products/productUtils/productResponseUtils/buildApiPlanLicense.js";
 import { getPlanResponse } from "@/internal/products/productUtils/productResponseUtils/getPlanResponse.js";
 import { getApiPlanDiff } from "../common/planTransformUtils.js";
 import { buildCorePlanUpdatePreview } from "./buildCorePlanUpdatePreview.js";
@@ -111,14 +109,10 @@ export const previewAffectedLicenseParents = async ({
 						product: currentLink.product,
 						features: ctx.features,
 					}),
-					toApiPlanLicenseWithCustomize({
+					buildApiPlanLicense({
+						ctx,
 						license: currentLink,
-						resolvePlan: (product) =>
-							getPlanResponse({
-								ctx,
-								product,
-								features: ctx.features,
-							}),
+						features: ctx.features,
 					}),
 				]);
 			const currentCustomize = getApiPlanDiff({

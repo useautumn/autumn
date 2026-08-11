@@ -7,11 +7,9 @@ import {
 	planUpdatePreviewHasDiff,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
-import {
-	diffLicensePlanCustomize,
-	toApiPlanLicenseWithCustomize,
-} from "@/internal/licenses/actions/customize/toApiPlanLicenseWithCustomize.js";
+import { diffLicensePlanCustomize } from "@/internal/licenses/actions/customize/diffLicensePlanCustomize.js";
 import type { ResolvedPlanLicenseLink } from "@/internal/licenses/actions/links/syncPlanLicenses.js";
+import { buildApiPlanLicense } from "@/internal/products/productUtils/productResponseUtils/buildApiPlanLicense.js";
 import { getPlanResponse } from "@/internal/products/productUtils/productResponseUtils/getPlanResponse.js";
 import { buildCorePlanUpdatePreview } from "./buildCorePlanUpdatePreview.js";
 
@@ -78,14 +76,10 @@ export const previewAffectedLicenses = async ({
 
 		if (!targetLink) {
 			if (!currentLink || structuralChange?.action !== "remove") continue;
-			const current = await toApiPlanLicenseWithCustomize({
+			const current = await buildApiPlanLicense({
+				ctx,
 				license: currentLink,
-				resolvePlan: (product) =>
-					getPlanResponse({
-						ctx,
-						product,
-						features: ctx.features,
-					}),
+				features: ctx.features,
 			});
 			changes.push(
 				PlanUpdatePreviewLicenseChangeSchema.parse({
@@ -134,14 +128,10 @@ export const previewAffectedLicenses = async ({
 					})
 				: null,
 			currentLink
-				? toApiPlanLicenseWithCustomize({
+				? buildApiPlanLicense({
+						ctx,
 						license: currentLink,
-						resolvePlan: (product) =>
-							getPlanResponse({
-								ctx,
-								product,
-								features: ctx.features,
-							}),
+						features: ctx.features,
 					})
 				: null,
 		]);
