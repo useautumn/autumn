@@ -66,7 +66,7 @@ export const handleRenewal = async ({
 		// "updated" plan change so billing.updated mirrors the legacy webhook.
 		emitBillingUpdated({
 			ctx: customerCtx,
-			originalFullCustomer: structuredClone(customer),
+			originalFullCustomer: customer,
 			updateCustomerProducts: [
 				{ customerProduct: curSameProduct, updates: {} },
 			],
