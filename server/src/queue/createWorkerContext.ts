@@ -1,6 +1,4 @@
 import { type AppEnv, AuthType, createdAtToVersion } from "@autumn/shared";
-import { isTransientDbError } from "@/db/dbUtils.js";
-import { isTransientRedisError } from "@/external/redis/utils/isTransientRedisError.js";
 import { getOrgWithFeaturesCached } from "@/internal/orgs/orgUtils/getOrgWithFeaturesCached.js";
 import { addAppContextToLogs } from "@/utils/logging/addContextToLogs.js";
 import type { DrizzleCli } from "../db/initDrizzle.js";
@@ -38,11 +36,7 @@ export const createWorkerContext = async ({
 	let orgData: Awaited<ReturnType<typeof getOrgWithFeaturesCached>>;
 	try {
 		orgData = await getOrgWithFeaturesCached({ db, orgId, env, requestId });
-	} catch (error) {
-		// A blip here is not a deleted org, and swallowing it acks the message.
-		// Recovery drains run while the incident that queued them is still clearing.
-		if (isTransientDbError({ error }) || isTransientRedisError({ error }))
-			throw error;
+	} catch {
 		orgData = null;
 	}
 
