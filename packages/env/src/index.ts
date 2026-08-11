@@ -45,7 +45,8 @@ export const createAutumnEnv = (
 		},
 		runtimeEnv: {
 			AUTUMN_API_URL: runtimeEnv.AUTUMN_API_URL,
-			AUTUMN_PUBLIC_API_URL: runtimeEnv.AUTUMN_PUBLIC_API_URL,
+			AUTUMN_PUBLIC_API_URL:
+				runtimeEnv.AUTUMN_PUBLIC_API_URL || runtimeEnv.AUTUMN_API_URL,
 		},
 		emptyStringAsUndefined: true,
 		onValidationError: (issues) => {

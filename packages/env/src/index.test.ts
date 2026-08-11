@@ -16,13 +16,27 @@ describe("Autumn environment", () => {
 		expect(env).toEqual(validEnv);
 	});
 
-	test.each(["AUTUMN_API_URL", "AUTUMN_PUBLIC_API_URL"] as const)(
-		"requires %s",
-		(key) => {
-			expect(() => createAutumnEnv({ ...validEnv, [key]: undefined })).toThrow(
-				key,
-			);
-			expect(() => createAutumnEnv({ ...validEnv, [key]: "" })).toThrow(key);
+	test("requires AUTUMN_API_URL", () => {
+		expect(() =>
+			createAutumnEnv({ ...validEnv, AUTUMN_API_URL: undefined }),
+		).toThrow("AUTUMN_API_URL");
+		expect(() => createAutumnEnv({ ...validEnv, AUTUMN_API_URL: "" })).toThrow(
+			"AUTUMN_API_URL",
+		);
+	});
+
+	test.each([undefined, ""] as const)(
+		"falls back AUTUMN_PUBLIC_API_URL to AUTUMN_API_URL when %s",
+		(value) => {
+			const env = createAutumnEnv({
+				AUTUMN_API_URL: validEnv.AUTUMN_API_URL,
+				AUTUMN_PUBLIC_API_URL: value,
+			});
+
+			expect(env).toEqual({
+				AUTUMN_API_URL: validEnv.AUTUMN_API_URL,
+				AUTUMN_PUBLIC_API_URL: validEnv.AUTUMN_API_URL,
+			});
 		},
 	);
 
@@ -52,12 +66,15 @@ describe("Autumn environment", () => {
 	});
 
 	test("does not use a legacy webhook URL when AUTUMN_PUBLIC_API_URL is missing", () => {
-		expect(() =>
-			createAutumnEnv({
-				AUTUMN_API_URL: validEnv.AUTUMN_API_URL,
-				STRIPE_WEBHOOK_URL: validEnv.AUTUMN_PUBLIC_API_URL,
-				NGROK_URL: validEnv.AUTUMN_PUBLIC_API_URL,
-			}),
-		).toThrow("AUTUMN_PUBLIC_API_URL");
+		const env = createAutumnEnv({
+			AUTUMN_API_URL: validEnv.AUTUMN_API_URL,
+			STRIPE_WEBHOOK_URL: validEnv.AUTUMN_PUBLIC_API_URL,
+			NGROK_URL: validEnv.AUTUMN_PUBLIC_API_URL,
+		});
+
+		expect(env).toEqual({
+			AUTUMN_API_URL: validEnv.AUTUMN_API_URL,
+			AUTUMN_PUBLIC_API_URL: validEnv.AUTUMN_API_URL,
+		});
 	});
 });
