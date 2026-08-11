@@ -376,7 +376,6 @@ export class ProductService {
 		inIds,
 		returnAll = false,
 		version,
-		excludeEnts = false,
 		archived,
 		skipCache = false,
 	}: {
@@ -386,14 +385,12 @@ export class ProductService {
 		inIds?: string[];
 		returnAll?: boolean;
 		version?: number;
-		excludeEnts?: boolean;
 		archived?: boolean;
 		/** Read straight from the DB — for writes deciding off the result. */
 		skipCache?: boolean;
 	}): Promise<FullProduct[]> {
-		// Use caching for simple queries (no inIds, returnAll, version, or excludeEnts)
-		const canCache =
-			!inIds && !returnAll && !version && !excludeEnts && !skipCache;
+		// Use caching for simple queries (no inIds, returnAll, or version)
+		const canCache = !inIds && !returnAll && !version && !skipCache;
 
 		if (canCache) {
 			const cacheKey = buildProductsCacheKey({
@@ -422,7 +419,6 @@ export class ProductService {
 			inIds,
 			returnAll,
 			version,
-			excludeEnts,
 			archived,
 		});
 	}
@@ -434,7 +430,6 @@ export class ProductService {
 		inIds,
 		returnAll = false,
 		version,
-		excludeEnts = false,
 		archived,
 	}: {
 		db: DrizzleCli;
@@ -443,7 +438,6 @@ export class ProductService {
 		inIds?: string[];
 		returnAll?: boolean;
 		version?: number;
-		excludeEnts?: boolean;
 		archived?: boolean;
 	}): Promise<FullProduct[]> {
 		// Optimization: Use a subquery to only fetch the latest version of each product
@@ -488,7 +482,7 @@ export class ProductService {
 						)
 					: undefined,
 			),
-			with: composeFullProductQuery({ excludeEnts }),
+			with: composeFullProductQuery(),
 		})) as ProductWithLicenseRelations[];
 
 		const data = rows.map((product) =>
@@ -496,6 +490,14 @@ export class ProductService {
 		);
 
 		parseFreeTrials({ products: data });
+		for (const product of data) {
+			if (product.base_product) {
+				parseFreeTrials({ product: product.base_product });
+			}
+			if (product.variants) {
+				parseFreeTrials({ products: product.variants });
+			}
+		}
 
 		if (returnAll) {
 			return data;
@@ -626,8 +628,15 @@ export class ProductService {
 			throw new ProductNotFoundError({ productId: idOrInternalId, version });
 		}
 
-		parseFreeTrials({ product: data as FullProduct });
-		return normalizeFullProductLicenses({ product: data });
+		const product = normalizeFullProductLicenses({ product: data });
+		parseFreeTrials({ product });
+		if (product.base_product) {
+			parseFreeTrials({ product: product.base_product });
+		}
+		if (product.variants) {
+			parseFreeTrials({ products: product.variants });
+		}
+		return product;
 	}
 
 	static async getProductVersionCount({

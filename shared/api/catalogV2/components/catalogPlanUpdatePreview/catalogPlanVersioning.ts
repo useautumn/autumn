@@ -5,15 +5,15 @@ export const CatalogPlanVersioningSchema = z.object({
 	current_version: z.number().int(),
 	new_version: z.number().int().nullable().meta({
 		description:
-			"Version that applying would create. Null when the update stays in place.",
+			"Version that applying would create. Null when the update edits an existing row.",
 	}),
-	resolved: z.enum(["in_place", "new_version"]).meta({
+	resolved: z.enum(["existing", "new_version", "all_versions"]).meta({
 		description:
 			"What actually happens to this plan with the requested params.",
 	}),
 	options: z.array(
 		z.object({
-			strategy: z.enum(["in_place", "new_version", "all_versions"]),
+			strategy: z.enum(["existing", "new_version", "all_versions"]),
 			available: z.boolean(),
 			reason: z.string().optional().meta({
 				description:
