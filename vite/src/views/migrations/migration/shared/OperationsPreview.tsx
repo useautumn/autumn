@@ -44,7 +44,9 @@ function EditedRow({
 				<p className="whitespace-nowrap truncate min-w-0 text-body">{text}</p>
 				{hint}
 			</div>
-			<span className="size-2 rounded-full shrink-0 bg-amber-500" />
+			<div className="flex items-center shrink-0">
+				<ItemStatusDot state="updated" />
+			</div>
 		</div>
 	);
 }
@@ -61,7 +63,9 @@ function RemovedFilterRow({ filter }: { filter: ItemFilter }) {
 					{getFilterSummary(filter, features)}
 				</p>
 			</div>
-			<ItemStatusDot state="removed" />
+			<div className="flex items-center shrink-0">
+				<ItemStatusDot state="removed" />
+			</div>
 		</div>
 	);
 }
@@ -74,7 +78,7 @@ function AddedItemRow({
 	item: Parameters<typeof SubscriptionItemRow>[0]["item"];
 }) {
 	return (
-		<div className="flex items-center flex-1 min-w-0 h-10 px-3 rounded-xl input-base gap-2">
+		<div className="flex items-center flex-1 min-w-0 h-10 px-3 rounded-xl input-base gap-2 [&>div]:flex-1 [&>div]:min-w-0">
 			<SubscriptionItemRow item={item} isCreated />
 		</div>
 	);
@@ -95,7 +99,7 @@ export function OperationsPreview({ operations }: { operations: Operations }) {
 	return (
 		<div className="flex flex-col gap-3 min-w-0">
 			<Separator />
-			<div className="flex flex-col gap-3 min-w-0 max-h-72 overflow-y-auto">
+			<div className="flex flex-col gap-3 min-w-0 max-h-72 overflow-y-auto overflow-x-hidden">
 				{ops.map((op, index) => {
 					if (op.type === "add_plan") {
 						const addOp = op as AddPlanOp;
@@ -216,9 +220,11 @@ export function OperationsPreview({ operations }: { operations: Operations }) {
 									className="flex flex-col gap-1"
 									key={`license-${license.license_plan_id}`}
 								>
-									<span className="flex items-center gap-1.5 text-xs text-subtle">
+									<span className="flex items-center gap-1.5 text-xs text-subtle min-w-0">
 										<LicenseIcon size={12} className="shrink-0" />
-										{license.license_plan_id}
+										<span className="truncate min-w-0">
+											{license.license_plan_id}
+										</span>
 									</span>
 									<div className="flex flex-col gap-1 border-l border-border pl-3 ml-1.5">
 										{license.customize?.price !== undefined && (
