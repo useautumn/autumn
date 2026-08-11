@@ -14,8 +14,8 @@ import {
 import type { OperationScope } from "../../scope/operationScope.js";
 import type { BatchMigrationExecutionAddLicense } from "../../types/batchMigrationExecutionPlan.js";
 import { enrichAndInsertLicenseCandidates } from "./enrichAndInsertLicenseCandidates.js";
+import { replaceLicenseEntitlementRows } from "./replaceLicenseEntitlementRows.js";
 import { repointLicensePoolsForPage } from "./repointLicensePoolsForPage.js";
-import { repointSupersededEntitlementRows } from "./repointSupersededEntitlementRows.js";
 import { selectLicenseAddCandidateRows } from "./selectLicenseAddCandidateRows.js";
 
 export type AddLicenseEntitlementsForPageResult = {
@@ -78,28 +78,28 @@ export const addLicenseEntitlementsForPage = async ({
 			),
 	});
 
-	const supersedesEntitlementId = add.supersedesEntitlementId;
-	const superseded = supersedesEntitlementId
-		? await timePhase({
-				phases,
-				phase: "supersede",
-				run: () =>
-					withStatementTimeout(
-						db,
-						(transaction) =>
-							repointSupersededEntitlementRows({
-								db: transaction,
-								internalCustomerIds,
-								scope,
-								fromEntitlementId: supersedesEntitlementId,
-								toEntitlementId: add.entitlement.id,
-								licenseInternalProductId: add.licenseInternalProductId,
-								initialState: add.initialState,
-							}),
-						BATCH_MIGRATION_PAGE_STATEMENT_TIMEOUT_MS,
-					),
-			})
-		: { rows: 0, internalCustomerIds: [] };
+	const replaced =
+		add.kind === "replace"
+			? await timePhase({
+					phases,
+					phase: "replace",
+					run: () =>
+						withStatementTimeout(
+							db,
+							(transaction) =>
+								replaceLicenseEntitlementRows({
+									db: transaction,
+									internalCustomerIds,
+									scope,
+									fromEntitlementId: add.fromEntitlementId,
+									toEntitlementId: add.entitlement.id,
+									licenseInternalProductId: add.licenseInternalProductId,
+									initialState: add.initialState,
+								}),
+							BATCH_MIGRATION_PAGE_STATEMENT_TIMEOUT_MS,
+						),
+				})
+			: { rows: 0, internalCustomerIds: [] };
 
 	const { rowCount } = await iterateCustomerProductPages({
 		db,
@@ -145,12 +145,12 @@ export const addLicenseEntitlementsForPage = async ({
 	});
 
 	return {
-		affected: insertedItems.length + superseded.rows,
+		affected: insertedItems.length + replaced.rows,
 		candidateCount: rowCount,
 		repointedPools: repointed.pools,
 		repointedInternalCustomerIds: [
 			...repointed.internalCustomerIds,
-			...superseded.internalCustomerIds,
+			...replaced.internalCustomerIds,
 		],
 		insertedItems,
 		excludedInternalCustomerIds: [...excludedIds],

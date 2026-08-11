@@ -16,15 +16,25 @@ export const BatchMigrationExecutionAddSchema = z.object({
 	initialState: BatchMigrationInitialStateSchema,
 });
 
-export const BatchMigrationExecutionAddLicenseSchema = z.object({
+const BatchMigrationLicenseOpBaseSchema = z.object({
 	licensePlanId: z.string(),
 	planLicenseId: z.string(),
 	licenseInternalProductId: z.string(),
 	isOneOff: z.boolean(),
 	entitlement: EntitlementWithFeatureSchema,
 	initialState: BatchMigrationInitialStateSchema,
-	supersedesEntitlementId: z.string().optional(),
 });
+
+export const BatchMigrationExecutionAddLicenseSchema = z.discriminatedUnion(
+	"kind",
+	[
+		BatchMigrationLicenseOpBaseSchema.extend({ kind: z.literal("add") }),
+		BatchMigrationLicenseOpBaseSchema.extend({
+			kind: z.literal("replace"),
+			fromEntitlementId: z.string(),
+		}),
+	],
+);
 
 /** One op × one plan-filter-matched product. One field per operation
  * category (batchTransition style). `fromProduct` is authoritative for

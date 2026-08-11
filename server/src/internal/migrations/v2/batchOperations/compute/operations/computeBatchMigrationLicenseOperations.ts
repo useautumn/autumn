@@ -126,7 +126,12 @@ export const computeBatchMigrationLicenseOperations = ({
 				initialState: computeCustomerEntitlementInitialState({
 					entitlement: enriched,
 				}),
-				supersedesEntitlementId: artifact.supersedes_entitlement_id,
+				...(artifact.replaces_entitlement_id
+					? {
+							kind: "replace" as const,
+							fromEntitlementId: artifact.replaces_entitlement_id,
+						}
+					: { kind: "add" as const }),
 			});
 		}
 	}

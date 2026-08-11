@@ -14,7 +14,7 @@ export const PreparedPlanLicenseRefSchema = z.object({
 	internal_feature_id: z.string(),
 	/** The base entitlement this minted row replaces, when the customize
 	 * re-adds a feature the license plan already grants. */
-	supersedes_entitlement_id: z.string().optional(),
+	replaces_entitlement_id: z.string().optional(),
 	base_item_refs: z.array(
 		z.object({
 			entitlementId: z.string().optional(),

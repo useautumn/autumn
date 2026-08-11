@@ -9,7 +9,7 @@ import {
 import type { CustomerEntitlementInitialState } from "../../types/index.js";
 
 /**
- * Repoints assignments from the entitlement they hold onto the minted one,
+ * Moves assignments from the entitlement they hold onto the minted one,
  * crediting the allowance delta so consumption survives. The delta is read from
  * the two definitions rather than passed in, so a partly used balance moves by
  * the same amount the allowance did.
@@ -18,7 +18,7 @@ import type { CustomerEntitlementInitialState } from "../../types/index.js";
  * uses: link_id is not unique, so an assignment can reach more than one pool and
  * the scope must apply to the parent that actually bills it.
  */
-export const repointSupersededEntitlementRows = async ({
+export const replaceLicenseEntitlementRows = async ({
 	db,
 	internalCustomerIds,
 	scope,
@@ -48,7 +48,7 @@ export const repointSupersededEntitlementRows = async ({
 				- COALESCE((SELECT allowance FROM entitlements WHERE id = ${fromEntitlementId}), 0)`
 		: sql`${initialState.granted}`;
 
-	const repointed = await db.execute<{
+	const replaced = await db.execute<{
 		id: string;
 		internal_customer_id: string;
 	}>(sql`
@@ -81,9 +81,9 @@ export const repointSupersededEntitlementRows = async ({
 	`);
 
 	return {
-		rows: repointed.length,
+		rows: replaced.length,
 		internalCustomerIds: [
-			...new Set(repointed.map((row) => row.internal_customer_id)),
+			...new Set(replaced.map((row) => row.internal_customer_id)),
 		],
 	};
 };

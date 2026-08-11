@@ -33,7 +33,7 @@ type LicenseItemRef = PreparedPlanLicenseRef["base_item_refs"][number];
 /** The base entitlement a minted row replaces: the license plan's own ref for
  * the same feature. Shared with apply(), which drops that ref from the item set
  * so the feature is not granted twice. */
-const supersededEntitlementId = ({
+const replacedEntitlementId = ({
 	refs,
 	internalFeatureId,
 }: {
@@ -186,7 +186,7 @@ export const ensurePlanLicenses: PrepareModule<
 							plan_license_id: planLicenseId,
 							entitlement_id: entitlementId,
 							internal_feature_id: feature.internal_id,
-							supersedes_entitlement_id: supersededEntitlementId({
+							replaces_entitlement_id: replacedEntitlementId({
 								refs: baseItemRefs,
 								internalFeatureId: feature.internal_id,
 							}),
@@ -223,14 +223,14 @@ export const ensurePlanLicenses: PrepareModule<
 		}
 
 		// replaceItems swaps the whole item set, so base items ride along. A base
-		// item for the same feature is superseded by the minted one — keying on
+		// item for the same feature is replaced by the minted one — keying on
 		// entitlement id alone would leave both and grant the feature twice.
 		const refsByPlanLicenseId = new Map<string, Map<string, LicenseItemRef>>();
 		for (const artifact of planned.artifacts) {
 			const refs =
 				refsByPlanLicenseId.get(artifact.plan_license_id) ??
 				new Map<string, LicenseItemRef>();
-			const supersededFeatureIds = new Set(
+			const replacedFeatureIds = new Set(
 				planned.artifacts
 					.filter(
 						(candidate) =>
@@ -244,7 +244,7 @@ export const ensurePlanLicenses: PrepareModule<
 				// same entitlement and would otherwise grant the feature twice.
 				if (
 					ref.internalFeatureId &&
-					supersededFeatureIds.has(ref.internalFeatureId)
+					replacedFeatureIds.has(ref.internalFeatureId)
 				) {
 					continue;
 				}

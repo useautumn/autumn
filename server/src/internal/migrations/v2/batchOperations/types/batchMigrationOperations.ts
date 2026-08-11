@@ -25,10 +25,15 @@ export type BatchMigrationAddLicenseEntitlementOp = {
 	isOneOff: boolean;
 	entitlement: EntitlementWithFeature;
 	initialState: CustomerEntitlementInitialState;
-	/** The entitlement assignments currently hold for this feature. Set when the
-	 * minted row replaces it, so they move across instead of gaining a row. */
-	supersedesEntitlementId?: string;
-};
+} & (
+	| { kind: "add" }
+	| {
+			/** Assignments already hold `fromEntitlementId` for this feature, so
+			 * they move onto the minted row instead of gaining a second one. */
+			kind: "replace";
+			fromEntitlementId: string;
+	  }
+);
 
 export type BatchMigrationOperations = {
 	entitlements: BatchMigrationEntitlementOp[];

@@ -29,7 +29,12 @@ export const batchMigrationPlanToExecutionPlan = ({
 					isOneOff: operation.isOneOff,
 					entitlement: operation.entitlement,
 					initialState: operation.initialState,
-					supersedesEntitlementId: operation.supersedesEntitlementId,
+					...(operation.kind === "replace"
+						? {
+								kind: operation.kind,
+								fromEntitlementId: operation.fromEntitlementId,
+							}
+						: { kind: operation.kind }),
 				}),
 			),
 		};
