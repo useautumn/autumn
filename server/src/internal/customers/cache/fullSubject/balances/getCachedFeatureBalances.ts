@@ -110,6 +110,7 @@ export const getCachedFeatureBalance = async ({
 		// readMaster demands same-socket ordering: a standby retry could land
 		// before an in-flight write on the dying primary socket.
 		retryOnStandby: !readMaster,
+		useReadPool: !readMaster,
 		timeoutMs: REDIS_OP_TIMEOUT_MS.featureBalances,
 	});
 
@@ -189,6 +190,7 @@ export const getCachedFeatureBalancesBatch = async ({
 		source: "getCachedFeatureBalancesBatch",
 		redisInstance: redisV2,
 		retryOnStandby: true,
+		useReadPool: true,
 		timeoutMs: REDIS_OP_TIMEOUT_MS.featureBalancesBatch,
 	});
 

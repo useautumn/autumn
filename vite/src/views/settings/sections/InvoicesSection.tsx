@@ -1,4 +1,5 @@
 import { SettingsSection } from "../SettingsSection";
+import { AllowedPaymentMethodsSubsection } from "./components/AllowedPaymentMethodsSubsection";
 import { InvoiceTemplatesSubsection } from "./components/InvoiceTemplatesSubsection";
 
 export const InvoicesSection = () => {
@@ -8,6 +9,7 @@ export const InvoicesSection = () => {
 			description="Configure how invoices are sent to your customers"
 		>
 			<InvoiceTemplatesSubsection />
+			<AllowedPaymentMethodsSubsection />
 		</SettingsSection>
 	);
 };
