@@ -125,7 +125,7 @@ jobs:
           fi
 
           export PR_URL
-          node -e 'process.stdout.write(JSON.stringify({ text: "<@U0BNDL9VC92> Initiate an Honest Burgers trip to celebrate this release: " + process.env.PR_URL }))' \
+          node -e 'process.stdout.write(JSON.stringify({ text: "🍔🎉 <@U0BNDL9VC92> Honest Burgers trip unlocked! 🎊🚀\nCelebrate this release: " + process.env.PR_URL }))' \
             > "$RUNNER_TEMP/honest-burgers-payload.json"
 
           curl --silent --show-error --fail-with-body --retry 3 --retry-all-errors \
