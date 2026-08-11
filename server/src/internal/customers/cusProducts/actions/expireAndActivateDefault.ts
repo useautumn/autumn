@@ -17,9 +17,10 @@ import { emitCustomerProductBillingUpdated } from "@/internal/customers/cusProdu
  *
  * This action:
  * 1. Sets status to Expired
- * 2. Activates free successor (scheduled or default) if no other active product in group
- * 3. Sends webhooks: products_updated, plus billing.updated when emitBillingUpdated
- *    is set (opt-in — some callers batch their own emission)
+ * 2. Sends the products_updated (Expired) webhook
+ * 3. Activates free successor (scheduled or default) if no other active product in group
+ * 4. Emits billing.updated when emitBillingUpdated is set (opt-in — some callers
+ *    batch their own emission)
  *
  * @returns updates - The updates applied to the expired customer product
  * @returns activatedCustomerProduct - If a scheduled product was activated (UPDATE)
@@ -79,15 +80,8 @@ export const expireCustomerProductAndActivateDefault = async ({
 			: cp,
 	);
 
-	// 2. Activate free successor (scheduled or default)
-	const { activatedCustomerProduct, insertedCustomerProduct } =
-		await activateFreeSuccessorProduct({
-			ctx,
-			fromCustomerProduct: customerProduct,
-			fullCustomer,
-		});
-
-	// 3. Send webhooks
+	// 2. Send products_updated (Expired) — must be enqueued before successor
+	// activation, which enqueues its own products_updated (New).
 	await addProductsUpdatedWebhookTask({
 		ctx,
 		internalCustomerId: customerProduct.internal_customer_id,
@@ -98,6 +92,15 @@ export const expireCustomerProductAndActivateDefault = async ({
 		cusProduct: customerProduct,
 	});
 
+	// 3. Activate free successor (scheduled or default)
+	const { activatedCustomerProduct, insertedCustomerProduct } =
+		await activateFreeSuccessorProduct({
+			ctx,
+			fromCustomerProduct: customerProduct,
+			fullCustomer,
+		});
+
+	// 4. Emit billing.updated (payload needs the activated/inserted products)
 	if (emitBillingUpdated) {
 		emitCustomerProductBillingUpdated({
 			ctx,
