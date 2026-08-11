@@ -8,7 +8,7 @@ import {
 	TooltipContent,
 	TooltipTrigger,
 } from "@autumn/ui";
-import { PlusIcon } from "@phosphor-icons/react";
+import { CurrencyCircleDollarIcon, PlusIcon } from "@phosphor-icons/react";
 import { useState } from "react";
 import { LicenseIcon } from "@/components/v2/icons/LicenseIcon";
 import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
@@ -106,6 +106,27 @@ export function UpsertLicenseRows({
 			</div>
 
 			<div className="flex flex-col gap-2 pl-6">
+				{license.customize?.price !== undefined && (
+					<div className="flex items-center gap-2 group/row">
+						<span className="text-xs text-subtle w-10 shrink-0 select-none">
+							Price
+						</span>
+						<div className="flex items-center gap-2 h-8 px-3 rounded-xl input-base flex-1 min-w-0">
+							<CurrencyCircleDollarIcon
+								size={16}
+								weight="duotone"
+								className="text-yellow-500 shrink-0"
+							/>
+							<span className="text-body truncate">
+								${license.customize.price?.amount ?? 0} per{" "}
+								{license.customize.price?.interval ?? "month"}
+							</span>
+						</div>
+						<RemoveButton
+							onClick={() => updateCustomize({ price: undefined })}
+						/>
+					</div>
+				)}
 				{addItems.map((item, index) => (
 					<div
 						className="flex items-center gap-2 group/row"

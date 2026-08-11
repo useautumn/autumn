@@ -209,6 +209,28 @@ export function OperationsPreview({ operations }: { operations: Operations }) {
 										<LicenseIcon size={12} className="shrink-0" />
 										{license.license_plan_id}
 									</span>
+									{license.customize?.price !== undefined && (
+										<EditedRow
+											icon={
+												<CurrencyCircleDollarIcon
+													size={16}
+													weight="duotone"
+													className="text-yellow-500 shrink-0"
+												/>
+											}
+											text={`${formatAmount({
+												currency,
+												amount: license.customize.price?.amount ?? 0,
+												amountFormatOptions: {
+													style: "currency",
+													currencyDisplay: "narrowSymbol",
+												},
+											})} ${formatInterval({
+												interval: license.customize.price?.interval ?? "month",
+												intervalCount: 1,
+											})}`}
+										/>
+									)}
 									{(license.customize?.add_items ?? []).map((item, idx) => (
 										<SubscriptionItemRow
 											key={`license-add-${idx}`}
