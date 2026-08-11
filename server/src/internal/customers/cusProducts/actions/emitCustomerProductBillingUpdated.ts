@@ -1,6 +1,6 @@
 /**
- * Mirrors the Stripe handlers' `emitBillingChangeWebhook` step for RevenueCat
- * lifecycle changes: builds a minimal AutumnBillingPlan and fires `billing.updated`.
+ * Mirrors the Stripe handlers' `emitBillingChangeWebhook` step for lifecycle
+ * actions: builds a minimal AutumnBillingPlan and fires `billing.updated`.
  */
 
 import type {
@@ -12,7 +12,7 @@ import type {
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { sendBillingUpdatedWebhook } from "@/internal/billing/v2/workflows/sendBillingUpdatedWebhook/sendBillingUpdatedWebhook";
 
-/** Accepts the wider update shape lifecycle actions return, narrowed once here. */
+/** Accepts the wider update shape lifecycle actions produce, narrowed once here. */
 type LifecycleCustomerProductUpdate = {
 	customerProduct: FullCusProduct;
 	updates: Partial<InsertCustomerProduct>;
@@ -26,7 +26,7 @@ export const snapshotFullCustomer = (
 	customer_products: [...fullCustomer.customer_products],
 });
 
-export const emitRevenueCatBillingUpdated = ({
+export const emitCustomerProductBillingUpdated = ({
 	ctx,
 	originalFullCustomer,
 	updateCustomerProducts = [],

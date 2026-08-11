@@ -7,6 +7,10 @@ import {
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { addProductsUpdatedWebhookTask } from "@/internal/analytics/handlers/handleProductsUpdated";
+import {
+	emitCustomerProductBillingUpdated,
+	snapshotFullCustomer,
+} from "@/internal/customers/cusProducts/actions/emitCustomerProductBillingUpdated";
 import { CusProductService } from "@/internal/customers/cusProducts/CusProductService";
 
 /**
@@ -14,7 +18,7 @@ import { CusProductService } from "@/internal/customers/cusProducts/CusProductSe
  *
  * This action:
  * 1. Sets status to Active on the customer product
- * 2. Optionally sends a products_updated webhook with Renew scenario (off by default)
+ * 2. Sends billing.updated; products_updated is gated by sendWebhook (off by default)
  * 3. Updates the FullCustomer in memory
  *
  * Used by RevenueCat renewal webhooks (past-due → active recovery) and any
@@ -32,6 +36,8 @@ export const markCustomerProductActive = async ({
 	sendWebhook?: boolean;
 }): Promise<{ updates: Partial<InsertCustomerProduct> }> => {
 	const { org, env } = ctx;
+
+	const originalFullCustomer = snapshotFullCustomer(fullCustomer);
 
 	const updates: Partial<InsertCustomerProduct> = {
 		status: CusProductStatus.Active,
@@ -64,6 +70,12 @@ export const markCustomerProductActive = async ({
 			? ({ ...cp, ...updates } as FullCusProduct)
 			: cp,
 	);
+
+	emitCustomerProductBillingUpdated({
+		ctx,
+		originalFullCustomer,
+		updateCustomerProducts: [{ customerProduct, updates }],
+	});
 
 	return { updates };
 };

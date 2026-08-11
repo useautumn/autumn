@@ -2,10 +2,6 @@ import type { WebhookBillingIssue } from "@puzzmo/revenue-cat-webhook-types";
 import { RecaseError } from "@shared/api/errors/base/RecaseError";
 import { ErrCode } from "@shared/enums/ErrCode";
 import { CusProductStatus } from "@shared/models/cusProductModels/cusProductEnums";
-import {
-	emitRevenueCatBillingUpdated,
-	snapshotFullCustomer,
-} from "@/external/revenueCat/misc/emitRevenueCatBillingUpdated";
 import type { RevenueCatWebhookContext } from "@/external/revenueCat/webhookMiddlewares/revenuecatWebhookContext";
 import { customerProductActions } from "@/internal/customers/cusProducts/actions";
 import { ACTIVE_STATUSES } from "@/internal/customers/cusProducts/CusProductService";
@@ -63,22 +59,10 @@ export const handleBillingIssue = async ({
 	}
 
 	if (ACTIVE_STATUSES.includes(curSameProduct.status)) {
-		const originalFullCustomer = snapshotFullCustomer(customer);
-		const { updates } = await customerProductActions.markPastDue({
+		await customerProductActions.markPastDue({
 			ctx: customerCtx,
 			customerProduct: curSameProduct,
 			fullCustomer: customer,
-		});
-
-		emitRevenueCatBillingUpdated({
-			ctx: customerCtx,
-			originalFullCustomer,
-			updateCustomerProducts: [
-				{
-					customerProduct: curSameProduct,
-					updates,
-				},
-			],
 		});
 
 		return { success: true };

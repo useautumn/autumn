@@ -10,7 +10,10 @@ import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { addProductsUpdatedWebhookTask } from "@/internal/analytics/handlers/handleProductsUpdated";
 import { executeAutumnBillingPlan } from "@/internal/billing/v2/execute/executeAutumnBillingPlan.js";
 import { activateFreeSuccessorProduct } from "@/internal/customers/cusProducts/actions/activateFreeSuccessorProduct";
-import { CusProductService } from "@/internal/customers/cusProducts/CusProductService";
+import {
+	emitCustomerProductBillingUpdated,
+	snapshotFullCustomer,
+} from "@/internal/customers/cusProducts/actions/emitCustomerProductBillingUpdated";
 
 /**
  * Expires a customer product and activates the default product if needed.
@@ -19,6 +22,8 @@ import { CusProductService } from "@/internal/customers/cusProducts/CusProductSe
  * 1. Sets status to Expired
  * 2. Sends products_updated webhook with Expired scenario
  * 3. Activates free successor (scheduled or default) if no other active product in group
+ * 4. Optionally emits billing.updated — opt-in because Stripe callers batch
+ *    their own emission at the handler level via emitBillingChangeWebhook
  *
  * @returns updates - The updates applied to the expired customer product
  * @returns activatedCustomerProduct - If a scheduled product was activated (UPDATE)
@@ -29,17 +34,21 @@ export const expireCustomerProductAndActivateDefault = async ({
 	customerProduct,
 	fullCustomer,
 	updates: extraUpdates,
+	emitBillingUpdated = false,
 }: {
 	ctx: AutumnContext;
 	customerProduct: FullCusProduct;
 	fullCustomer: FullCustomer;
 	updates?: Partial<InsertCustomerProduct>;
+	emitBillingUpdated?: boolean;
 }): Promise<{
 	updates: Partial<InsertCustomerProduct>;
 	activatedCustomerProduct?: FullCusProduct;
 	insertedCustomerProduct?: FullCusProduct;
 }> => {
-	const { db, org, env } = ctx;
+	const { org, env } = ctx;
+
+	const originalFullCustomer = snapshotFullCustomer(fullCustomer);
 
 	// 1. Expire the product
 	const updates: Partial<InsertCustomerProduct> = {
@@ -92,6 +101,27 @@ export const expireCustomerProductAndActivateDefault = async ({
 			fromCustomerProduct: customerProduct,
 			fullCustomer,
 		});
+
+	if (emitBillingUpdated) {
+		emitCustomerProductBillingUpdated({
+			ctx,
+			originalFullCustomer,
+			updateCustomerProducts: [
+				{ customerProduct, updates },
+				...(activatedCustomerProduct
+					? [
+							{
+								customerProduct: activatedCustomerProduct,
+								updates: { status: CusProductStatus.Active },
+							},
+						]
+					: []),
+			],
+			insertCustomerProducts: insertedCustomerProduct
+				? [insertedCustomerProduct]
+				: [],
+		});
+	}
 
 	return { updates, activatedCustomerProduct, insertedCustomerProduct };
 };

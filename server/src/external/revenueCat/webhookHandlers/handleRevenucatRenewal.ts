@@ -5,10 +5,6 @@ import {
 	CusProductStatus,
 } from "@shared/index";
 import {
-	emitRevenueCatBillingUpdated,
-	snapshotFullCustomer,
-} from "@/external/revenueCat/misc/emitRevenueCatBillingUpdated";
-import {
 	getRevenueCatCustomerEmail,
 	getRevenueCatCustomerFingerprint,
 	getRevenueCatOverrideCustomerId,
@@ -19,6 +15,10 @@ import { recordRevenueCatInvoice } from "@/external/revenueCat/utils/recordReven
 import type { RevenueCatWebhookContext } from "@/external/revenueCat/webhookMiddlewares/revenuecatWebhookContext";
 import { addProductsUpdatedWebhookTask } from "@/internal/analytics/handlers/handleProductsUpdated";
 import { customerProductActions } from "@/internal/customers/cusProducts/actions";
+import {
+	emitCustomerProductBillingUpdated,
+	snapshotFullCustomer,
+} from "@/internal/customers/cusProducts/actions/emitCustomerProductBillingUpdated";
 import { getExistingCusProducts } from "@/internal/customers/cusProducts/cusProductUtils/getExistingCusProducts";
 
 export const handleRenewal = async ({
@@ -70,7 +70,7 @@ export const handleRenewal = async ({
 
 		// No cusProduct mutation on renewal — empty updates still surface an
 		// "updated" plan change so billing.updated mirrors the legacy webhook.
-		emitRevenueCatBillingUpdated({
+		emitCustomerProductBillingUpdated({
 			ctx: customerCtx,
 			originalFullCustomer: snapshotFullCustomer(customer),
 			updateCustomerProducts: [
@@ -94,23 +94,11 @@ export const handleRenewal = async ({
 			`Renewal for existing past due product ${product.id}, marking as active`,
 		);
 
-		const originalFullCustomer = snapshotFullCustomer(customer);
-		const { updates } = await customerProductActions.markActive({
+		await customerProductActions.markActive({
 			ctx: customerCtx,
 			customerProduct: curSameProduct,
 			fullCustomer: customer,
 			sendWebhook: true,
-		});
-
-		emitRevenueCatBillingUpdated({
-			ctx: customerCtx,
-			originalFullCustomer,
-			updateCustomerProducts: [
-				{
-					customerProduct: curSameProduct,
-					updates,
-				},
-			],
 		});
 
 		logger.info(`Marked past due product as active: ${curSameProduct.id}`);
@@ -127,22 +115,10 @@ export const handleRenewal = async ({
 
 	// Reactivate same product (expired/canceled → active).
 	if (curSameProduct) {
-		const originalFullCustomer = snapshotFullCustomer(customer);
-		const { updates } = await customerProductActions.uncancel({
+		await customerProductActions.uncancel({
 			ctx: customerCtx,
 			customerProduct: curSameProduct,
 			fullCustomer: customer,
-		});
-
-		emitRevenueCatBillingUpdated({
-			ctx: customerCtx,
-			originalFullCustomer,
-			updateCustomerProducts: [
-				{
-					customerProduct: curSameProduct,
-					updates,
-				},
-			],
 		});
 
 		logger.info(`Reactivated cus_product: ${curSameProduct.id}`);

@@ -1,10 +1,6 @@
 import type { WebhookCancellation } from "@puzzmo/revenue-cat-webhook-types";
 import { ErrCode, RecaseError } from "@shared/index";
 import {
-	emitRevenueCatBillingUpdated,
-	snapshotFullCustomer,
-} from "@/external/revenueCat/misc/emitRevenueCatBillingUpdated";
-import {
 	getRevenueCatCustomerEmail,
 	getRevenueCatCustomerFingerprint,
 	getRevenueCatOverrideCustomerId,
@@ -72,23 +68,11 @@ export const handleCancellation = async ({
 		});
 	}
 
-	const originalFullCustomer = snapshotFullCustomer(customer);
-	const { updates } = await customerProductActions.cancel({
+	await customerProductActions.cancel({
 		ctx: customerCtx,
 		customerProduct: curSameProduct,
 		fullCustomer: customer,
 		endedAt: expiration_at_ms,
-	});
-
-	emitRevenueCatBillingUpdated({
-		ctx: customerCtx,
-		originalFullCustomer,
-		updateCustomerProducts: [
-			{
-				customerProduct: curSameProduct,
-				updates,
-			},
-		],
 	});
 
 	logger.info(

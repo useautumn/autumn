@@ -7,6 +7,10 @@ import {
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { addProductsUpdatedWebhookTask } from "@/internal/analytics/handlers/handleProductsUpdated";
+import {
+	emitCustomerProductBillingUpdated,
+	snapshotFullCustomer,
+} from "@/internal/customers/cusProducts/actions/emitCustomerProductBillingUpdated";
 import { CusProductService } from "@/internal/customers/cusProducts/CusProductService";
 
 /**
@@ -14,7 +18,7 @@ import { CusProductService } from "@/internal/customers/cusProducts/CusProductSe
  *
  * This action:
  * 1. Clears canceled/canceled_at/ended_at and sets status back to Active
- * 2. Sends products_updated webhook with Renew scenario
+ * 2. Sends products_updated + billing.updated webhooks
  * 3. Updates the FullCustomer in memory
  *
  * Used by RevenueCat uncancellation webhooks.
@@ -29,6 +33,8 @@ export const uncancelCustomerProduct = async ({
 	fullCustomer: FullCustomer;
 }): Promise<{ updates: Partial<InsertCustomerProduct> }> => {
 	const { org, env } = ctx;
+
+	const originalFullCustomer = snapshotFullCustomer(fullCustomer);
 
 	// 1. Uncancel the product
 	const updates: Partial<InsertCustomerProduct> = {
@@ -65,6 +71,12 @@ export const uncancelCustomerProduct = async ({
 			? ({ ...cp, ...updates } as FullCusProduct)
 			: cp,
 	);
+
+	emitCustomerProductBillingUpdated({
+		ctx,
+		originalFullCustomer,
+		updateCustomerProducts: [{ customerProduct, updates }],
+	});
 
 	return { updates };
 };
