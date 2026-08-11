@@ -39,7 +39,7 @@ export const KNOWN_JOB_QUEUES = [
 		id: JOB_QUEUE_IDS.customerCreationRecovery,
 		label: "Customer Creation Recovery Queue",
 		description:
-			"Serialized replay queue for transient customer get-or-create failures.",
+			"Serialized replay queue for transient customer get-or-create and entity creation failures.",
 		defaultEnabled: false,
 	},
 	{

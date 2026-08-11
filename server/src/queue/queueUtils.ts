@@ -12,6 +12,7 @@ import { generateId } from "@server/utils/genUtils";
 import type { StripeWebhookReplayPayload } from "@/external/stripe/webhookReplay/runStripeWebhookReplay.js";
 import type { BatchResetCustomerEntitlementsV2Payload } from "@/internal/balances/batchReset/types.js";
 import type { CustomerCreationRecoveryPayload } from "@/internal/customers/recovery/customerCreationRecoveryTypes.js";
+import type { EntityCreationRecoveryPayload } from "@/internal/entities/recovery/entityCreationRecoveryTypes.js";
 import type { ClearCreditSystemCachePayload } from "@/internal/features/featureActions/runClearCreditSystemCacheTask.js";
 import type { GenerateFeatureDisplayPayload } from "@/internal/features/workflows/generateFeatureDisplay.js";
 import { getSqsClient } from "./initSqs.js";
@@ -85,7 +86,9 @@ export interface Payloads {
 		redisInstance: string;
 		timestamp: number;
 	};
-	[JobName.CustomerCreationRecovery]: CustomerCreationRecoveryPayload;
+	[JobName.CustomerCreationRecovery]:
+		| CustomerCreationRecoveryPayload
+		| EntityCreationRecoveryPayload;
 	[JobName.StripeWebhookReplay]: StripeWebhookReplayPayload;
 	[JobName.ClearCreditSystemCustomerCache]: ClearCreditSystemCachePayload;
 	[JobName.GenerateFeatureDisplay]: GenerateFeatureDisplayPayload;

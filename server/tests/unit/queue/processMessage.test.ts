@@ -1,5 +1,7 @@
 import { describe, expect, test } from "bun:test";
+import { shed503OnTransientError } from "@/db/shed503OnTransientError.js";
 import { RedisUnavailableError } from "@/external/redis/utils/errors.js";
+import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { JobName } from "@/queue/JobName.js";
 import { shouldRetrySqsJobError } from "@/queue/processMessage.js";
 
@@ -32,6 +34,29 @@ describe("shouldRetrySqsJobError", () => {
 					source: "customerCreationRecovery",
 					reason: "timeout",
 				}),
+			}),
+		).toBe(true);
+	});
+
+	test("retries customer creation recovery when the replay itself sheds", async () => {
+		const ctx = {
+			logger: { warn: () => {}, error: () => {} },
+		} as unknown as AutumnContext;
+
+		const shedError = await shed503OnTransientError({
+			ctx,
+			source: "entities.create",
+			run: () => {
+				throw Object.assign(new Error("connect timeout"), {
+					code: "CONNECT_TIMEOUT",
+				});
+			},
+		}).catch((error: unknown) => error);
+
+		expect(
+			shouldRetrySqsJobError({
+				jobName: JobName.CustomerCreationRecovery,
+				error: shedError,
 			}),
 		).toBe(true);
 	});

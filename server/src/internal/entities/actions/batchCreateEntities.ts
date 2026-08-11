@@ -4,9 +4,11 @@ import {
 	type Entity,
 	findFeatureById,
 } from "@autumn/shared";
+import { shed503OnTransientError } from "@/db/shed503OnTransientError.js";
 import { withLock } from "@/external/redis/utils/lockUtils/withLock.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { EntityService } from "@/internal/api/entities/EntityService";
+import { queueFailedEntityCreation } from "@/internal/entities/recovery/queueFailedEntityCreation.js";
 import { getApiEntity } from "../entityUtils/apiEntityUtils/getApiEntity";
 import { constructEntity } from "../entityUtils/entityUtils";
 import { createEntityForCusProduct } from "../handlers/handleCreateEntity/createEntityForCusProduct";
@@ -19,6 +21,9 @@ type BatchCreateEntitiesParams = {
 	customerId: string;
 	createEntityData: CreateEntityParams[] | CreateEntityParams;
 	withAutumnId?: boolean;
+	source?: string;
+	enqueueRecoveryOnTransientFailure?: boolean;
+	skipSeatCharge?: boolean;
 };
 
 const createEntities = async ({
@@ -27,6 +32,7 @@ const createEntities = async ({
 	customerData,
 	createEntityData,
 	withAutumnId = false,
+	skipSeatCharge = false,
 }: BatchCreateEntitiesParams) => {
 	const { db, org, env, features } = ctx;
 
@@ -49,6 +55,7 @@ const createEntities = async ({
 			customer: fullCus,
 			cusProduct,
 			inputEntities,
+			skipSeatCharge,
 		});
 	}
 
@@ -125,13 +132,44 @@ const createEntities = async ({
 export const batchCreateEntities = async (
 	params: BatchCreateEntitiesParams,
 ) => {
-	const { ctx, customerId } = params;
+	const {
+		ctx,
+		customerId,
+		createEntityData,
+		customerData,
+		withAutumnId,
+		source,
+		enqueueRecoveryOnTransientFailure = true,
+	} = params;
 	const { org, env } = ctx;
 
-	return withLock({
-		lockKey: `lock:create-entity-request:${org.id}:${env}:${customerId}`,
-		errorMessage:
-			"Entity creation already in progress for this customer, try again in a few seconds",
-		fn: () => createEntities(params),
+	// No Postgres fallback: a write path has no cache-only read to re-serve. The
+	// lock fails open on Redis, so in practice only DB transients shed here.
+	return shed503OnTransientError({
+		ctx,
+		source: "entities.create",
+		run: () =>
+			withLock({
+				lockKey: `lock:create-entity-request:${org.id}:${env}:${customerId}`,
+				errorMessage:
+					"Entity creation already in progress for this customer, try again in a few seconds",
+				fn: () => createEntities(params),
+			}),
+		onTransientError: enqueueRecoveryOnTransientFailure
+			? async () => {
+					await queueFailedEntityCreation({
+						ctx,
+						params: {
+							customer_id: customerId,
+							create_entity_data: Array.isArray(createEntityData)
+								? createEntityData
+								: [createEntityData],
+							customer_data: customerData,
+						},
+						source,
+						withAutumnId,
+					});
+				}
+			: undefined,
 	});
 };
