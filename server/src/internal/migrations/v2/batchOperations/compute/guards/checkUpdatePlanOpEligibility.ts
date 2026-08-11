@@ -1,3 +1,9 @@
+import {
+	type CreatePlanItemParamsV1,
+	composeMatchKey,
+	type PlanItemFilter,
+	planItemFilterMatchKey,
+} from "@autumn/shared";
 import type { PlanFilter } from "@autumn/shared/api/migrations/filters/planFilter.js";
 import type { UpdatePlanOp } from "@autumn/shared/api/migrations/operations/customer/updatePlan/index.js";
 import type { BatchMigrationRejection } from "../../types/index.js";
@@ -7,6 +13,23 @@ import type { BatchMigrationRejection } from "../../types/index.js";
 const planFilterHasItem = (filter: PlanFilter): boolean => {
 	if (filter.item !== undefined) return true;
 	return filter.$or?.some((subFilter) => planFilterHasItem(subFilter)) ?? false;
+};
+
+/** diffPlanV1 expresses a modify-in-place as a remove plus an add sharing one
+ * match key, which the assignment fan-out already collapses. A remove without
+ * a matching add is a real deletion and stays per-customer. */
+const isSupersedeOnly = ({
+	addItems,
+	removeItems,
+}: {
+	addItems: CreatePlanItemParamsV1[] | undefined;
+	removeItems: PlanItemFilter[] | undefined;
+}): boolean => {
+	if (!removeItems?.length) return true;
+	const addedKeys = new Set((addItems ?? []).map(composeMatchKey));
+	return removeItems.every((filter) =>
+		addedKeys.has(planItemFilterMatchKey(filter)),
+	);
 };
 
 /** Only a pure free `add_items` customize lowers into the assignment fan-out —
@@ -41,14 +64,17 @@ const checkUpsertLicensesEligibility = ({
 				entry.metadata !== undefined;
 			const changesBeyondAddItems =
 				customize?.price !== undefined ||
-				(customize?.remove_items?.length ?? 0) > 0;
+				!isSupersedeOnly({
+					addItems: customize?.add_items,
+					removeItems: customize?.remove_items,
+				});
 			if (changesLinkFields || changesBeyondAddItems) {
 				return [
 					{
 						code: "unsupported_upsert_licenses" as const,
 						opIndex,
 						message:
-							"customize.upsert_licenses link fields, base price, and remove_items are per-customer definition work.",
+							"customize.upsert_licenses link fields, base price, and item deletions are per-customer definition work.",
 						details,
 					},
 				];

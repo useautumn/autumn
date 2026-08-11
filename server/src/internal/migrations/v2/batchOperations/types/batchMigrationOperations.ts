@@ -25,6 +25,9 @@ export type BatchMigrationAddLicenseEntitlementOp = {
 	isOneOff: boolean;
 	entitlement: EntitlementWithFeature;
 	initialState: CustomerEntitlementInitialState;
+	/** Set when the minted entitlement replaces one the assignments already
+	 * hold, so they are repointed and rebalanced instead of gaining a row. */
+	supersedes?: { entitlementId: string };
 };
 
 export type BatchMigrationOperations = {

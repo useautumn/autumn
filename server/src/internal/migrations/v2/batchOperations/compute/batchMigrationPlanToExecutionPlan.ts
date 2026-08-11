@@ -29,6 +29,7 @@ export const batchMigrationPlanToExecutionPlan = ({
 					isOneOff: operation.isOneOff,
 					entitlement: operation.entitlement,
 					initialState: operation.initialState,
+					supersedes: operation.supersedes,
 				}),
 			),
 		};
