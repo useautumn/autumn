@@ -83,7 +83,7 @@ describe("replica fallback vs gate shed", () => {
 
 		const result = await getFullSubject({
 			ctx: makeCtx(),
-			customerId: "cus_no_primary_hedge",
+			customerId: "cus_no_backup_read",
 		});
 
 		expect(result).toBeUndefined();
@@ -93,9 +93,9 @@ describe("replica fallback vs gate shed", () => {
 	it("honors the runtime kill switch for an opted-in caller", async () => {
 		_setFullSubjectGateConfigForTesting({
 			config: {
-				primary_hydration_hedge: {
+				delayed_postgres_backup_read: {
 					enabled: false,
-					hedge_after_ms: 10,
+					delay_ms: 10,
 					max_in_flight_per_process: 1,
 				},
 			},
@@ -104,20 +104,22 @@ describe("replica fallback vs gate shed", () => {
 
 		const result = await getFullSubject({
 			ctx: makeCtx(),
-			customerId: "cus_disabled_primary_hedge",
-			hedgePrimaryHydration: true,
+			customerId: "cus_disabled_backup_read",
+			useDelayedPostgresBackupRead: true,
 		});
 
 		expect(result).toBeUndefined();
 		expect(hydrationPools).toEqual(["primary"]);
 	});
 
-	it("hedges an opted-in slow primary hydration through the independent general pool", async () => {
+	it("admits an opted-in backup independently when the primary lane limit is one", async () => {
 		_setFullSubjectGateConfigForTesting({
 			config: {
-				primary_hydration_hedge: {
+				per_customer_limit: 1,
+				fleet_process_count: 1,
+				delayed_postgres_backup_read: {
 					enabled: true,
-					hedge_after_ms: 10,
+					delay_ms: 10,
 					max_in_flight_per_process: 1,
 				},
 			},
@@ -134,8 +136,8 @@ describe("replica fallback vs gate shed", () => {
 
 		const hydration = getFullSubject({
 			ctx: makeCtx(),
-			customerId: "cus_primary_hedge",
-			hedgePrimaryHydration: true,
+			customerId: "cus_primary_backup_read",
+			useDelayedPostgresBackupRead: true,
 		});
 		const outcome = await Promise.race([
 			hydration,

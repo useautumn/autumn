@@ -22,14 +22,15 @@ import { lazyResetSubjectUsageWindows } from "../../actions/resetUsageWindows/la
 import { markReplicaSourced } from "../../cache/fullSubject/subjectProvenance.js";
 import { RELEVANT_STATUSES } from "../../cusProducts/CusProductService.js";
 import {
+	type FullSubjectGateLane,
 	isFullSubjectGateRejection,
 	runWithFullSubjectGate,
 } from "./getFullSubjectGate.js";
 import { getFullSubjectQuery } from "./getFullSubjectQuery.js";
 import {
-	type PrimaryHydrationHedgeEvent,
-	runPrimaryHydrationWithHedge,
-} from "./runPrimaryHydrationWithHedge.js";
+	type DelayedPostgresBackupReadEvent,
+	runWithDelayedPostgresBackupRead,
+} from "./runWithDelayedPostgresBackupRead.js";
 import {
 	resultToFullSubject,
 	subjectQueryRowToNormalized,
@@ -46,7 +47,7 @@ const runRoutedHydration = async ({
 	allowMissingEntity,
 	readFrom,
 	routeSource,
-	hedgePrimaryHydration,
+	useDelayedPostgresBackupRead,
 }: {
 	ctx: AutumnContext;
 	customerId?: string;
@@ -55,7 +56,7 @@ const runRoutedHydration = async ({
 	allowMissingEntity: boolean;
 	readFrom: SubjectReadFrom;
 	routeSource?: string;
-	hedgePrimaryHydration: boolean;
+	useDelayedPostgresBackupRead: boolean;
 }): Promise<{ rows: SubjectQueryRow[]; source: SubjectReadSource }> => {
 	const { org, env } = ctx;
 
@@ -64,7 +65,7 @@ const runRoutedHydration = async ({
 		lane,
 	}: {
 		db: DrizzleCli;
-		lane: SubjectReadSource;
+		lane: FullSubjectGateLane;
 	}) =>
 		runWithFullSubjectGate({
 			customerId,
@@ -99,40 +100,40 @@ const runRoutedHydration = async ({
 	let result: Awaited<ReturnType<typeof runHydration>>;
 
 	if (resolved.source === "primary") {
-		const { primary_hydration_hedge: hedgeConfig } =
+		const { delayed_postgres_backup_read: backupReadConfig } =
 			getRuntimeFullSubjectGateConfig();
-		const useHedge =
-			hedgePrimaryHydration &&
-			hedgeConfig.enabled &&
+		const startDelayedBackupRead =
+			useDelayedPostgresBackupRead &&
+			backupReadConfig.enabled &&
 			resolved.db !== ctx.dbGeneral;
 
-		if (!useHedge) {
+		if (!startDelayedBackupRead) {
 			result = await runHydration({ db: resolved.db, lane: "primary" });
 		} else {
-			const logHedgeEvent = (outcome: PrimaryHydrationHedgeEvent) => {
+			const logBackupReadEvent = (outcome: DelayedPostgresBackupReadEvent) => {
 				const fields = {
-					type: "primary_hydration_hedge",
+					type: "delayed_postgres_backup_read",
 					outcome,
 					route: routeSource,
 					customer_id: customerId,
 					entity_id: entityId,
-					hedge_after_ms: hedgeConfig.hedge_after_ms,
+					delay_ms: backupReadConfig.delay_ms,
 				};
 				if (outcome === "both_failed") {
 					ctx.logger.warn(fields, "Both primary hydration reads failed");
 				} else {
-					ctx.logger.info(fields, "Primary hydration hedge event");
+					ctx.logger.info(fields, "Delayed Postgres backup read event");
 				}
 			};
 
-			result = await runPrimaryHydrationWithHedge({
+			result = await runWithDelayedPostgresBackupRead({
 				primaryFn: () => runHydration({ db: resolved.db, lane: "primary" }),
-				hedgeFn: () => runHydration({ db: ctx.dbGeneral, lane: "primary" }),
-				hedgeAfterMs: hedgeConfig.hedge_after_ms,
-				maxInFlightHedges: hedgeConfig.max_in_flight_per_process,
-				shouldHedgeOnError: (error) =>
+				backupFn: () => runHydration({ db: ctx.dbGeneral, lane: "backup" }),
+				delayMs: backupReadConfig.delay_ms,
+				maxInFlightBackups: backupReadConfig.max_in_flight_per_process,
+				shouldStartBackupOnError: (error) =>
 					!isFullSubjectGateRejection(error) && isTransientDbError({ error }),
-				onEvent: logHedgeEvent,
+				onEvent: logBackupReadEvent,
 			});
 		}
 	} else {
@@ -183,7 +184,7 @@ export async function getFullSubject({
 	allowMissingEntity = false,
 	readFrom = "primary",
 	routeSource,
-	hedgePrimaryHydration = false,
+	useDelayedPostgresBackupRead = false,
 }: {
 	ctx: AutumnContext;
 	customerId?: string;
@@ -192,7 +193,7 @@ export async function getFullSubject({
 	allowMissingEntity?: boolean;
 	readFrom?: SubjectReadFrom;
 	routeSource?: string;
-	hedgePrimaryHydration?: boolean;
+	useDelayedPostgresBackupRead?: boolean;
 }): Promise<FullSubject | undefined> {
 	const { rows: subjectRows, source } = await runRoutedHydration({
 		ctx,
@@ -202,7 +203,7 @@ export async function getFullSubject({
 		allowMissingEntity,
 		readFrom,
 		routeSource,
-		hedgePrimaryHydration,
+		useDelayedPostgresBackupRead,
 	});
 	if (!subjectRows.length) return undefined;
 
@@ -241,7 +242,7 @@ export async function getFullSubjectNormalized({
 	runLazyResets = true,
 	readFrom = "primary",
 	routeSource,
-	hedgePrimaryHydration = false,
+	useDelayedPostgresBackupRead = false,
 }: {
 	ctx: AutumnContext;
 	customerId?: string;
@@ -251,7 +252,7 @@ export async function getFullSubjectNormalized({
 	runLazyResets?: boolean;
 	readFrom?: SubjectReadFrom;
 	routeSource?: string;
-	hedgePrimaryHydration?: boolean;
+	useDelayedPostgresBackupRead?: boolean;
 }): Promise<
 	{ normalized: NormalizedFullSubject; fullSubject: FullSubject } | undefined
 > {
@@ -263,7 +264,7 @@ export async function getFullSubjectNormalized({
 		allowMissingEntity,
 		readFrom,
 		routeSource,
-		hedgePrimaryHydration,
+		useDelayedPostgresBackupRead,
 	});
 	if (!subjectRows.length) return undefined;
 

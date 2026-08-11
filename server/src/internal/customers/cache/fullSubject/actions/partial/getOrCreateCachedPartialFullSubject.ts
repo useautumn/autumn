@@ -10,7 +10,7 @@ export const getOrCreateCachedPartialFullSubject = async ({
 	params,
 	featureIds,
 	source,
-	hedgePrimaryHydration = false,
+	useDelayedPostgresBackupRead = false,
 }: {
 	ctx: AutumnContext;
 	params: Omit<TrackParams | CheckParams, "customer_id"> & {
@@ -18,7 +18,7 @@ export const getOrCreateCachedPartialFullSubject = async ({
 	};
 	featureIds: string[];
 	source?: string;
-	hedgePrimaryHydration?: boolean;
+	useDelayedPostgresBackupRead?: boolean;
 }): Promise<FullSubject> => {
 	const { skipCache, logger } = ctx;
 	const useRedis = !skipCache;
@@ -50,7 +50,7 @@ export const getOrCreateCachedPartialFullSubject = async ({
 		ctx,
 		params,
 		source,
-		hedgePrimaryHydration,
+		useDelayedPostgresBackupRead,
 	});
 
 	return filterFullSubjectByFeatureIds({

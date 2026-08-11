@@ -82,14 +82,14 @@ export const getCheckDataV2 = async ({
 					entityId: entity_id,
 					featureIds,
 					source: "getCheckDataV2",
-					hedgePrimaryHydration: true,
+					useDelayedPostgresBackupRead: true,
 				})
 			: getOrCreateCachedPartialFullSubject({
 					ctx,
 					params: body,
 					featureIds,
 					source: "getCheckDataV2",
-					hedgePrimaryHydration: true,
+					useDelayedPostgresBackupRead: true,
 				}),
 	);
 

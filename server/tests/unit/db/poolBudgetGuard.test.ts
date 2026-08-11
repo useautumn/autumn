@@ -11,7 +11,7 @@ const prodDefaults = {
 const NINETY = { fleetProcesses: 90 };
 
 describe("computePoolBudgetWarnings", () => {
-	test("keeps one startup-warmed general connection for the hedge lane", () => {
+	test("keeps one startup-warmed general connection for backup reads", () => {
 		expect(clientGeneral.options.min).toBe(1);
 	});
 

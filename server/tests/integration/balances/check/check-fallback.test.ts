@@ -21,7 +21,7 @@ const realGetFullSubjectModule: {
 const outageCustomerIds = new Set<string>();
 /** Customers whose hydration must throw a deterministic application error. */
 const fatalCustomerIds = new Set<string>();
-const observedHedgeOptIn = new Map<string, boolean | undefined>();
+const observedBackupReadOptIn = new Map<string, boolean | undefined>();
 
 // Both /check hydration paths (V2_1 partial + legacy) load the subject through
 // this module, so it is the only seam where a DB outage can be injected.
@@ -31,11 +31,17 @@ mock.module(GET_FULL_SUBJECT_MODULE, () => ({
 		args: Parameters<typeof getFullSubjectNormalized>[0],
 	) => {
 		if (args.customerId && fatalCustomerIds.has(args.customerId)) {
-			observedHedgeOptIn.set(args.customerId, args.hedgePrimaryHydration);
+			observedBackupReadOptIn.set(
+				args.customerId,
+				args.useDelayedPostgresBackupRead,
+			);
 			throw new Error("simulated non-transient hydration failure");
 		}
 		if (args.customerId && outageCustomerIds.has(args.customerId)) {
-			observedHedgeOptIn.set(args.customerId, args.hedgePrimaryHydration);
+			observedBackupReadOptIn.set(
+				args.customerId,
+				args.useDelayedPostgresBackupRead,
+			);
 			const error = new Error("simulated db outage") as Error & {
 				code: string;
 			};
@@ -49,7 +55,7 @@ mock.module(GET_FULL_SUBJECT_MODULE, () => ({
 afterAll(() => {
 	outageCustomerIds.clear();
 	fatalCustomerIds.clear();
-	observedHedgeOptIn.clear();
+	observedBackupReadOptIn.clear();
 	mock.module(GET_FULL_SUBJECT_MODULE, () => realGetFullSubjectModule);
 });
 
@@ -86,10 +92,10 @@ test(`${chalk.yellowBright("check-errors: a non-transient hydration failure rema
 		);
 
 		expect(response.status).toBe(500);
-		expect(observedHedgeOptIn.get(customerId)).toBe(true);
+		expect(observedBackupReadOptIn.get(customerId)).toBe(true);
 	} finally {
 		fatalCustomerIds.delete(customerId);
-		observedHedgeOptIn.delete(customerId);
+		observedBackupReadOptIn.delete(customerId);
 	}
 });
 
@@ -138,10 +144,10 @@ test(`${chalk.yellowBright("check-fallback: /check returns allowed=true on retry
 			balance: null,
 			flag: null,
 		});
-		expect(observedHedgeOptIn.get(customerId)).toBe(true);
+		expect(observedBackupReadOptIn.get(customerId)).toBe(true);
 	} finally {
 		outageCustomerIds.delete(customerId);
-		observedHedgeOptIn.delete(customerId);
+		observedBackupReadOptIn.delete(customerId);
 	}
 });
 
@@ -189,9 +195,9 @@ test(`${chalk.yellowBright("check-fallback-legacy: /check fallback applies respo
 			entity_id: undefined,
 			required_balance: 1,
 		});
-		expect(observedHedgeOptIn.get(customerId)).toBe(true);
+		expect(observedBackupReadOptIn.get(customerId)).toBe(true);
 	} finally {
 		outageCustomerIds.delete(customerId);
-		observedHedgeOptIn.delete(customerId);
+		observedBackupReadOptIn.delete(customerId);
 	}
 });

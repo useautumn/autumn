@@ -223,7 +223,7 @@ export const { db: dbGeneral, client: clientGeneral } = initDrizzle({
 	maxConnections: generalPoolMax,
 	connectTimeout: isProd ? 5 : 30,
 	poolConfig: {
-		// Preserve startup-warmed capacity so a delayed critical-read hedge
+		// Preserve startup-warmed capacity so a delayed critical-read backup
 		// never pays cold PgBouncer/TLS setup inside check's 2s deadline.
 		min: 1,
 	},

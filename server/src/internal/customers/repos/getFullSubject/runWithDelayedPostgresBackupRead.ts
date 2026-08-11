@@ -1,21 +1,21 @@
-export type PrimaryHydrationHedgeEvent =
+export type DelayedPostgresBackupReadEvent =
 	| "started"
 	| "primary_won"
-	| "hedge_won"
+	| "backup_won"
 	| "skipped_capacity"
 	| "both_failed";
 
 type ReadOutcome<T> =
-	| { source: "primary" | "hedge"; status: "fulfilled"; value: T }
-	| { source: "primary" | "hedge"; status: "rejected"; reason: unknown };
+	| { source: "primary" | "backup"; status: "fulfilled"; value: T }
+	| { source: "primary" | "backup"; status: "rejected"; reason: unknown };
 
-let activePrimaryHydrationHedges = 0;
+let activeDelayedPostgresBackupReads = 0;
 
 const settleRead = <T>({
 	source,
 	run,
 }: {
-	source: "primary" | "hedge";
+	source: "primary" | "backup";
 	run: () => Promise<T>;
 }): Promise<ReadOutcome<T>> =>
 	Promise.resolve()
@@ -25,26 +25,26 @@ const settleRead = <T>({
 			(reason: unknown) => ({ source, status: "rejected", reason }),
 		);
 
-const tryAcquireHedge = ({
-	maxInFlightHedges,
+const tryAcquireBackup = ({
+	maxInFlightBackups,
 }: {
-	maxInFlightHedges: number;
+	maxInFlightBackups: number;
 }): (() => void) | null => {
 	if (
-		maxInFlightHedges <= 0 ||
-		activePrimaryHydrationHedges >= maxInFlightHedges
+		maxInFlightBackups <= 0 ||
+		activeDelayedPostgresBackupReads >= maxInFlightBackups
 	) {
 		return null;
 	}
 
-	activePrimaryHydrationHedges++;
+	activeDelayedPostgresBackupReads++;
 	let released = false;
 	return () => {
 		if (released) return;
 		released = true;
-		activePrimaryHydrationHedges = Math.max(
+		activeDelayedPostgresBackupReads = Math.max(
 			0,
-			activePrimaryHydrationHedges - 1,
+			activeDelayedPostgresBackupReads - 1,
 		);
 	};
 };
@@ -54,24 +54,24 @@ const unwrapOutcome = <T>(outcome: ReadOutcome<T>): T => {
 	throw outcome.reason;
 };
 
-/** Starts one capped, delayed duplicate; the first successful read wins.
- * Losing queries retain their hedge slot until they settle because they cannot be cancelled safely. */
-export const runPrimaryHydrationWithHedge = async <T>({
+/** Starts one capped, delayed backup; the first successful read wins.
+ * Losing queries retain their slot until they settle because they cannot be cancelled safely. */
+export const runWithDelayedPostgresBackupRead = async <T>({
 	primaryFn,
-	hedgeFn,
-	hedgeAfterMs,
-	maxInFlightHedges,
-	shouldHedgeOnError = () => true,
+	backupFn,
+	delayMs,
+	maxInFlightBackups,
+	shouldStartBackupOnError = () => true,
 	onEvent,
 }: {
 	primaryFn: () => Promise<T>;
-	hedgeFn: () => Promise<T>;
-	hedgeAfterMs: number;
-	maxInFlightHedges: number;
-	shouldHedgeOnError?: (error: unknown) => boolean;
-	onEvent?: (event: PrimaryHydrationHedgeEvent) => void;
+	backupFn: () => Promise<T>;
+	delayMs: number;
+	maxInFlightBackups: number;
+	shouldStartBackupOnError?: (error: unknown) => boolean;
+	onEvent?: (event: DelayedPostgresBackupReadEvent) => void;
 }): Promise<T> => {
-	const emit = (event: PrimaryHydrationHedgeEvent) => {
+	const emit = (event: DelayedPostgresBackupReadEvent) => {
 		try {
 			onEvent?.(event);
 		} catch {
@@ -83,10 +83,10 @@ export const runPrimaryHydrationWithHedge = async <T>({
 		source: "primary",
 		run: primaryFn,
 	});
-	const delayElapsed = Symbol("primary hydration hedge delay elapsed");
+	const delayElapsed = Symbol("delayed Postgres backup read delay elapsed");
 	let delayTimer: ReturnType<typeof setTimeout> | undefined;
 	const delayPromise = new Promise<typeof delayElapsed>((resolve) => {
-		delayTimer = setTimeout(() => resolve(delayElapsed), hedgeAfterMs);
+		delayTimer = setTimeout(() => resolve(delayElapsed), delayMs);
 		delayTimer.unref?.();
 	});
 
@@ -98,37 +98,37 @@ export const runPrimaryHydrationWithHedge = async <T>({
 
 	if (initialOutcome !== delayElapsed) {
 		if (initialOutcome.status === "fulfilled") return initialOutcome.value;
-		if (!shouldHedgeOnError(initialOutcome.reason)) {
+		if (!shouldStartBackupOnError(initialOutcome.reason)) {
 			throw initialOutcome.reason;
 		}
 	}
 
-	const releaseHedge = tryAcquireHedge({ maxInFlightHedges });
-	if (!releaseHedge) {
+	const releaseBackup = tryAcquireBackup({ maxInFlightBackups });
+	if (!releaseBackup) {
 		emit("skipped_capacity");
 		return unwrapOutcome(await primaryOutcomePromise);
 	}
 
 	emit("started");
-	const hedgeOutcomePromise = settleRead({
-		source: "hedge",
-		run: hedgeFn,
-	}).finally(releaseHedge);
+	const backupOutcomePromise = settleRead({
+		source: "backup",
+		run: backupFn,
+	}).finally(releaseBackup);
 	const firstOutcome = await Promise.race([
 		primaryOutcomePromise,
-		hedgeOutcomePromise,
+		backupOutcomePromise,
 	]);
 
 	if (firstOutcome.status === "fulfilled") {
-		emit(firstOutcome.source === "primary" ? "primary_won" : "hedge_won");
+		emit(firstOutcome.source === "primary" ? "primary_won" : "backup_won");
 		return firstOutcome.value;
 	}
 
 	const secondOutcome = await (firstOutcome.source === "primary"
-		? hedgeOutcomePromise
+		? backupOutcomePromise
 		: primaryOutcomePromise);
 	if (secondOutcome.status === "fulfilled") {
-		emit(secondOutcome.source === "primary" ? "primary_won" : "hedge_won");
+		emit(secondOutcome.source === "primary" ? "primary_won" : "backup_won");
 		return secondOutcome.value;
 	}
 
@@ -138,9 +138,9 @@ export const runPrimaryHydrationWithHedge = async <T>({
 	throw primaryOutcome.reason;
 };
 
-export const _getActivePrimaryHydrationHedgesForTesting = (): number =>
-	activePrimaryHydrationHedges;
+export const _getActiveDelayedPostgresBackupReadsForTesting = (): number =>
+	activeDelayedPostgresBackupReads;
 
-export const _resetPrimaryHydrationHedgeForTesting = (): void => {
-	activePrimaryHydrationHedges = 0;
+export const _resetDelayedPostgresBackupReadsForTesting = (): void => {
+	activeDelayedPostgresBackupReads = 0;
 };
