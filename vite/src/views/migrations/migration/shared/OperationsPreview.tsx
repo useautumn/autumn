@@ -27,7 +27,7 @@ import {
 import { extractPlanIds } from "../operations/UpdatePlanOpForm";
 import { migrationItemToProductItem } from "./migrationItemUtils";
 
-/** Matches SubscriptionItemRow's shape so edits, adds and removals line up. */
+/** Full-width row matching SubscriptionItemRow, with an amber dot for an edited value. */
 function EditedRow({
 	icon,
 	text,
@@ -38,15 +38,13 @@ function EditedRow({
 	hint?: ReactNode;
 }) {
 	return (
-		<div className="flex items-center gap-2">
-			<div className="flex items-center flex-1 min-w-0 gap-2 py-1">
-				<div className="flex flex-row items-center flex-1 gap-2 min-w-0 overflow-hidden">
-					{icon}
-					<p className="whitespace-nowrap truncate min-w-0 text-body">{text}</p>
-					{hint}
-				</div>
-				<span className="size-2 rounded-full shrink-0 bg-amber-500" />
+		<div className="flex items-center flex-1 min-w-0 h-10 px-3 rounded-xl input-base gap-2">
+			<div className="flex flex-row items-center flex-1 gap-2 min-w-0 overflow-hidden">
+				{icon}
+				<p className="whitespace-nowrap truncate min-w-0 text-body">{text}</p>
+				{hint}
 			</div>
+			<span className="size-2 rounded-full shrink-0 bg-amber-500" />
 		</div>
 	);
 }
