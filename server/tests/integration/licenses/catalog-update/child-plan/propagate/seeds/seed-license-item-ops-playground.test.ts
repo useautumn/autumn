@@ -24,7 +24,7 @@ import { getLicenseDbState } from "@tests/integration/licenses/licenseTestUtils"
 import { TestFeature } from "@tests/setup/v2Features";
 import { items } from "@tests/utils/fixtures/items";
 import chalk from "chalk";
-import { eq, inArray } from "drizzle-orm";
+import { and, eq, inArray } from "drizzle-orm";
 
 const CUSTOMER_ID = "lic-ops-customer";
 const ID_PREFIX = "lic-ops";
@@ -62,11 +62,17 @@ test(`${chalk.yellowBright("SEED: license item add/edit/delete playground")}`, a
 		(assignment) => assignment.internal_entity_id,
 	);
 
-	// Spend one assignment down, so an edit must preserve consumption.
+	// Spend one assignment's messages down, so an edit must preserve
+	// consumption. Words is left alone as the control.
 	await ctx.db
 		.update(customerEntitlements)
 		.set({ balance: CONSUMED_TO })
-		.where(eq(customerEntitlements.customer_product_id, live[0]?.id ?? ""));
+		.where(
+			and(
+				eq(customerEntitlements.customer_product_id, live[0]?.id ?? ""),
+				eq(customerEntitlements.feature_id, TestFeature.Messages),
+			),
+		);
 
 	const rows = await ctx.db
 		.select({

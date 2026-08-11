@@ -26,8 +26,6 @@ export type MigrateTargetRow = {
 	conflicts: PlanUpdatePreviewVariantConflict[];
 };
 
-/** Which plan a migrate card describes. Parents are a different operation on a
- * different customer population, so the review step has to say which is which. */
 export type MigrateTargetRole = "base" | "variant" | "license_parent";
 
 export type MigrateTarget = {
@@ -170,7 +168,6 @@ export function buildMigrateTargets({
 	for (const entry of preview.license_parents) {
 		const targetId = getLicenseParentTargetId(entry);
 		if (!selectedLicenseParentIdSet.has(targetId)) continue;
-		const planChanges = entry.license_changes[0]?.plan_changes;
 		const createsNewVersion = isNewVersion && entry.has_customers;
 		targets.push({
 			id: `license-parent:${targetId}`,
@@ -181,9 +178,7 @@ export function buildMigrateTargets({
 					version: createsNewVersion ? entry.version + 1 : entry.version,
 					isCurrent: !createsNewVersion,
 					isNew: createsNewVersion,
-					itemChanges: planChanges?.item_changes ?? [],
-					hasPriceChange: planChanges?.price_change !== undefined,
-					licenseChanges: [],
+					...resolveEntryChanges(entry),
 					settingChanges: [],
 					customerCount: entry.customer_count,
 					conflicts: entry.conflicts,

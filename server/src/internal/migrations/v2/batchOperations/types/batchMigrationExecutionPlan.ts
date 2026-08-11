@@ -45,10 +45,6 @@ export const BatchMigrationExecutionAddLicenseSchema = z.discriminatedUnion(
 	],
 );
 
-/** One op × one plan-filter-matched product. One field per operation
- * category (batchTransition style). `fromProduct` is authoritative for
- * catalog facts; `scope` is the plan filter's lowered row-level residue —
- * which customer product rows the patch may touch. */
 export const BatchMigrationExecutionPatchSchema = z.object({
 	opIndex: z.number().int(),
 	scope: OperationScopeSchema,
@@ -59,8 +55,6 @@ export const BatchMigrationExecutionPatchSchema = z.object({
 		.default([]),
 });
 
-/** The immutable, serializable plan chunk tasks execute — computed once at
- * run start, carried in every chunk payload. Only what execution needs. */
 export const BatchMigrationExecutionPlanSchema = z.object({
 	patches: z.array(BatchMigrationExecutionPatchSchema),
 });
@@ -68,7 +62,6 @@ export const BatchMigrationExecutionPlanSchema = z.object({
 export type BatchMigrationExecutionAdd = z.infer<
 	typeof BatchMigrationExecutionAddSchema
 >;
-/** The minted kinds — a removal carries no entitlement to insert. */
 export type BatchMigrationExecutionMintedLicense = z.infer<
 	typeof BatchMigrationLicenseMintedSchema
 > & { kind: "add" | "replace" };

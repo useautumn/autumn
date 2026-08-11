@@ -34,17 +34,12 @@ export type BatchMigrationAddLicenseEntitlementOp = {
 			initialState: CustomerEntitlementInitialState;
 	  }
 	| {
-			/** Assignments already hold `fromEntitlementId` for this feature, so
-			 * they move onto the minted row instead of gaining a second one. */
 			kind: "replace";
 			fromEntitlementId: string;
 			entitlement: EntitlementWithFeature;
 			initialState: CustomerEntitlementInitialState;
 	  }
 	| {
-			/** Nothing is minted: assignments lose their row for this item. The
-			 * filter resolves against their own rows at execute time — the catalog
-			 * has already dropped the item, so prepare has no stable id to name. */
 			kind: "remove";
 			filter: PlanItemFilter;
 	  }

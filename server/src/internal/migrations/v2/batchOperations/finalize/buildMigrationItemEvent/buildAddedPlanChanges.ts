@@ -8,27 +8,44 @@ import type { CustomerPlanItemChange } from "@autumn/shared/api/billing/common/c
 import type { PreviewPlanChange } from "@/internal/migrations/v2/preview/previewMigrateCustomer/types/index.js";
 import type { CustomerItemChanges } from "./toCustomerItemChanges.js";
 
-/** `created` item changes for entitlements the migration added. */
+export type EntitlementChange = {
+	entitlement: EntitlementWithFeature;
+	action: "created" | "deleted";
+};
+
+export const buildItemChanges = ({
+	changes,
+	features,
+}: {
+	changes: EntitlementChange[];
+	features: Feature[];
+}): CustomerPlanItemChange[] => {
+	const planItems = productItemsToPlanItemsV1({
+		items: changes.map((change) => toProductItem({ ent: change.entitlement })),
+		features,
+	});
+
+	return changes.map((change, index) => ({
+		action: change.action,
+		feature_id: change.entitlement.feature.id,
+		item: planItems[index],
+	}));
+};
+
 export const buildCreatedItemChanges = ({
 	entitlements,
 	features,
 }: {
 	entitlements: EntitlementWithFeature[];
 	features: Feature[];
-}): CustomerPlanItemChange[] => {
-	const planItems = productItemsToPlanItemsV1({
-		items: entitlements.map((entitlement) =>
-			toProductItem({ ent: entitlement }),
-		),
+}): CustomerPlanItemChange[] =>
+	buildItemChanges({
+		changes: entitlements.map((entitlement) => ({
+			entitlement,
+			action: "created" as const,
+		})),
 		features,
 	});
-
-	return entitlements.map((entitlement, index) => ({
-		action: "created" as const,
-		feature_id: entitlement.feature.id,
-		item: planItems[index],
-	}));
-};
 
 /**
  * One "updated" plan change per plan that gained items. No subscription /

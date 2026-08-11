@@ -8,6 +8,7 @@ import type {
 	BatchMigrationInsertedItem,
 	BatchMigrationPageCustomer,
 	BatchMigrationPageResult,
+	BatchMigrationRemovedItem,
 } from "./types/batchMigrationExecutionTypes.js";
 import { BATCH_MIGRATION_PAGE_STATEMENT_TIMEOUT_MS } from "./utils/batchMigrationExecutionConstants.js";
 import {
@@ -43,11 +44,12 @@ export const executeBatchMigrationPage = async ({
 	phases?: BatchMigrationPagePhases;
 }): Promise<BatchMigrationPageResult> => {
 	if (customers.length === 0)
-		return { succeeded: [], skipped: [], insertedItems: [] };
+		return { succeeded: [], skipped: [], insertedItems: [], removedItems: [] };
 
 	const pageInternalIds = customers.map((customer) => customer.internalId);
 	const now = Date.now();
 	const insertedItems: BatchMigrationInsertedItem[] = [];
+	const removedItems: BatchMigrationRemovedItem[] = [];
 	// Customers a patch cannot serve (e.g. no usable reset anchor) drop
 	// from succeeded into skipped — the per-customer lane's territory.
 	const excludedIds = new Set<string>();
@@ -83,6 +85,7 @@ export const executeBatchMigrationPage = async ({
 		for (const add of patch.addLicenseEntitlementOps) {
 			const result = await addLicenseEntitlementsForPage({
 				db: ctx.db,
+				features: ctx.features,
 				scope: patch.scope,
 				internalCustomerIds: pageInternalIds,
 				add,
@@ -96,6 +99,7 @@ export const executeBatchMigrationPage = async ({
 				repointedIds.add(id);
 			}
 			insertedItems.push(...result.insertedItems);
+			removedItems.push(...result.removedItems);
 			ctx.logger.debug("batch-migration: add license operation", {
 				data: {
 					opIndex: patch.opIndex,
@@ -145,5 +149,6 @@ export const executeBatchMigrationPage = async ({
 			(customer) => !succeeded.has(customer.internalId),
 		),
 		insertedItems,
+		removedItems,
 	};
 };

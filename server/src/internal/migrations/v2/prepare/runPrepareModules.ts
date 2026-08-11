@@ -5,12 +5,6 @@ import type {
 } from "./getImplicitPrepareModules.js";
 import type { PreparedState, PrepareModuleResult } from "./types/index.js";
 
-/**
- * Pure orchestrator. Walks a list of prep module instances under a
- * given `scopeId`, runs plan → apply per module (apply skipped on
- * dry-run), threads `preparedState` through. No DB reads/writes
- * outside what the modules themselves do — script-callable.
- */
 export const runPrepareModules = async ({
 	ctx,
 	scopeId,
@@ -28,9 +22,8 @@ export const runPrepareModules = async ({
 	const results: PrepareModuleResult[] = [];
 	const nextState: PreparedState = {};
 
-	/** The orchestrator is deliberately blind to result shapes — consumers
-	 * re-parse `prepared_state` with their own schema. `module` and `input`
-	 * are correlated per union member, so they stay paired as one value. */
+	/** Deliberately blind to result shapes — consumers re-parse
+	 * `prepared_state` with their own schema. */
 	const runInstance = async (
 		instance: ImplicitPrepInstance,
 	): Promise<unknown> => {

@@ -6,6 +6,7 @@ import type { OperationScope } from "../../scope/operationScope.js";
 import { operationScopeSql } from "../../scope/operationScope.js";
 import type { CustomerEntitlementInitialState } from "../../types/index.js";
 import type { EnrichedCycleCandidate } from "../../utils/enrichCustomerEntitlementCycles.js";
+import { canonicalPoolLateralSql } from "./licensePoolSql.js";
 import type { LicenseCandidateRow } from "./selectLicenseAddCandidateRows.js";
 
 export type InsertableLicenseRow = LicenseCandidateRow &
@@ -13,22 +14,19 @@ export type InsertableLicenseRow = LicenseCandidateRow &
 		id: string;
 	};
 
-/**
- * Set-based insert onto assignment rows. Entitlement and cycle fields ride the
- * recordset rather than binding as scalars: each customized link carries its
- * own row, and each assignment resolves its own cycle.
- */
 export const insertLicenseCustomerEntitlementRows = async ({
 	db,
 	rows,
 	scope,
 	initialState,
+	licenseInternalProductId,
 	now,
 }: {
 	db: DrizzleCli;
 	rows: InsertableLicenseRow[];
 	scope: OperationScope;
 	initialState: CustomerEntitlementInitialState;
+	licenseInternalProductId: string;
 	now: number;
 }): Promise<string[]> => {
 	if (rows.length === 0) return [];
@@ -78,8 +76,7 @@ export const insertLicenseCustomerEntitlementRows = async ({
 				new_row.customer_product_id,
 				new_row.entitlement_id,
 				new_row.internal_customer_id,
-				-- The entity lives on the assignment, not the cusEnt: the canonical
-				-- init and both sibling batch inserts leave this null.
+				-- The entity lives on the assignment, not the cusEnt.
 				NULL,
 				new_row.internal_feature_id,
 				${initialState.unlimited},
@@ -100,15 +97,13 @@ export const insertLicenseCustomerEntitlementRows = async ({
 				false
 			FROM new_rows AS new_row
 			-- Re-assert at insert time: assignments whose row changed since the
-			-- select (released, expired) drop out. Scope lives on the parent, so
-			-- reach it through the pool the same way the candidate select does.
+			-- select (released, expired) drop out.
 			INNER JOIN customer_products AS assignment
 				ON assignment.id = new_row.customer_product_id
 				AND assignment.customer_license_link_id IS NOT NULL
 				AND assignment.internal_entity_id IS NOT NULL
 				AND assignment.status IN (${sqlList({ values: [...MIGRATABLE_STATUSES] })})
-			INNER JOIN customer_licenses AS pool
-				ON pool.link_id = assignment.customer_license_link_id
+			${canonicalPoolLateralSql({ licenseInternalProductId })}
 			INNER JOIN customer_products AS cp
 				ON cp.id = pool.parent_customer_product_id
 				AND ${operationScopeSql({ scope })}

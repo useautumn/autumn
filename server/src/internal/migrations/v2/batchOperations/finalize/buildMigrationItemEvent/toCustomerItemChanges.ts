@@ -8,12 +8,9 @@ import {
 import type { BatchMigrationInsertedItem } from "../../execute/types/batchMigrationExecutionTypes.js";
 import type { BatchMigrationExecutionPlan } from "../../types/index.js";
 
-/** One customer's inserted rows, split by how the response renders them. */
 export type CustomerItemChanges = {
 	balances: Record<string, ApiBalanceV1>;
 	flags: Record<string, ApiFlagV0>;
-	/** Feature added per plan, deduped — a customer may hold several products
-	 * on the same plan, but the plan gained the item once. */
 	addedEntitlementsByPlan: Map<string, EntitlementWithFeature[]>;
 };
 
@@ -45,7 +42,6 @@ const toApiFlag = ({
 	expires_at: null,
 });
 
-/** Catalog entitlement per (plan, feature) — the item snapshot source. */
 export const buildEntitlementLookup = ({
 	plan,
 }: {
@@ -60,7 +56,6 @@ export const buildEntitlementLookup = ({
 				],
 			),
 			// License rows key on their own plan, not the parent the patch filtered on.
-			// A removal mints nothing, so it contributes no inserted row to describe.
 			...patch.addLicenseEntitlementOps.flatMap(
 				(add): [string, EntitlementWithFeature][] =>
 					add.kind === "remove"

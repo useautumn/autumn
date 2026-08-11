@@ -6,8 +6,8 @@ import { ensurePricesAndEntitlements as ensurePricesAndEntitlementsModule } from
 import type { PrepareModule } from "./types/prepareModule.js";
 import { buildPrepareModuleKey } from "./utils/index.js";
 
-/** One instance of a prep module to run, with `module` and `input` correlated
- * per member — building the pair separately would let them drift apart. */
+/** `module` and `input` are correlated per member — building the pair
+ * separately would let them drift apart. */
 type InstanceOf<Module> = Module extends PrepareModule<
 	infer Input,
 	infer _Result,
@@ -20,19 +20,15 @@ export type ImplicitPrepInstance =
 	| InstanceOf<typeof ensurePricesAndEntitlements>
 	| InstanceOf<typeof ensurePlanLicenses>;
 
-/** The union with its per-member correlation erased. The orchestrator runs
- * every member the same way and is blind to result shapes by design. */
+/** The union with its per-member correlation deliberately erased. */
 export type PrepInstance = {
 	key: string;
 	module: PrepareModule<unknown, unknown>;
 	input: unknown;
 };
 
-/**
- * Pure walker. Takes an `operations` object directly so scripts and
- * other callers can derive prep instances without a Migration row.
- * Module key format: `<module_kind>:update_plan`.
- */
+/** Takes an `operations` object directly so callers can derive prep instances
+ * without a Migration row. */
 export const getImplicitPrepareModules = ({
 	operations,
 }: {

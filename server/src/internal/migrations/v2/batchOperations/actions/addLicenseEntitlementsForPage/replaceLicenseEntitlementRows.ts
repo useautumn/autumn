@@ -1,4 +1,8 @@
-import { MIGRATABLE_STATUSES } from "@autumn/shared";
+import {
+	AllowanceType,
+	FeatureType,
+	MIGRATABLE_STATUSES,
+} from "@autumn/shared";
 import { sql } from "drizzle-orm";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 import { sqlList } from "@/internal/billing/v2/actions/batchTransition/execute/sql/batchTransitionSqlUtils.js";
@@ -7,17 +11,10 @@ import {
 	operationScopeSql,
 } from "../../scope/operationScope.js";
 import type { CustomerEntitlementInitialState } from "../../types/index.js";
+import { canonicalPoolLateralSql } from "./licensePoolSql.js";
 
-/**
- * Moves assignments from the entitlement they hold onto the minted one,
- * crediting the allowance delta so consumption survives. The delta is read from
- * the two definitions rather than passed in, so a partly used balance moves by
- * the same amount the allowance did.
- *
- * The pool is resolved through the same canonical LATERAL the candidate select
- * uses: link_id is not unique, so an assignment can reach more than one pool and
- * the scope must apply to the parent that actually bills it.
- */
+/** Mirrors computeBalancePatch in SQL: compute never resolves the pre-edit
+ * definition, so the from-side is read here. */
 export const replaceLicenseEntitlementRows = async ({
 	db,
 	internalCustomerIds,
@@ -39,14 +36,32 @@ export const replaceLicenseEntitlementRows = async ({
 		return { rows: 0, internalCustomerIds: [] };
 	}
 
-	// A balance only moves by the allowance delta while both definitions track
-	// one. When tracking flips — metered to unlimited or back — the incoming
-	// starting balance replaces it, matching computeCustomerEntitlementPatch.
+	const fromTracksBalanceSql = sql`EXISTS (
+		SELECT 1
+		FROM entitlements AS from_definition
+		INNER JOIN features AS from_feature
+			ON from_feature.internal_id = from_definition.internal_feature_id
+		WHERE from_definition.id = ${fromEntitlementId}
+			AND from_feature.type IS DISTINCT FROM ${FeatureType.Boolean}
+			AND from_definition.allowance_type IS DISTINCT FROM ${AllowanceType.Unlimited}
+	)`;
+
 	const balanceSql = initialState.tracksBalance
-		? sql`target.balance
-				+ COALESCE((SELECT allowance FROM entitlements WHERE id = ${toEntitlementId}), 0)
-				- COALESCE((SELECT allowance FROM entitlements WHERE id = ${fromEntitlementId}), 0)`
-		: sql`${initialState.granted}`;
+		? sql`CASE WHEN ${fromTracksBalanceSql}
+				THEN target.balance
+					+ COALESCE((SELECT allowance FROM entitlements WHERE id = ${toEntitlementId}), 0)
+					- COALESCE((SELECT allowance FROM entitlements WHERE id = ${fromEntitlementId}), 0)
+				ELSE ${initialState.granted}
+			END`
+		: sql`CASE WHEN ${fromTracksBalanceSql}
+				THEN ${initialState.granted}
+				ELSE target.balance
+			END`;
+
+	const unlimitedSql =
+		initialState.unlimited === null
+			? sql`target.unlimited`
+			: sql`${initialState.unlimited}`;
 
 	const replaced = await db.execute<{
 		id: string;
@@ -56,19 +71,9 @@ export const replaceLicenseEntitlementRows = async ({
 		SET
 			entitlement_id = ${toEntitlementId},
 			balance = ${balanceSql},
-			unlimited = ${initialState.unlimited}
+			unlimited = ${unlimitedSql}
 		FROM customer_products AS assignment
-			JOIN LATERAL (
-				SELECT pool.parent_customer_product_id
-				FROM customer_licenses AS pool
-				JOIN customer_products AS pool_parent
-					ON pool_parent.id = pool.parent_customer_product_id
-				WHERE pool.link_id = assignment.customer_license_link_id
-					AND pool.license_internal_product_id = ${licenseInternalProductId}
-				ORDER BY (pool_parent.status IN (${sqlList({ values: [...MIGRATABLE_STATUSES] })})) DESC,
-					pool.created_at DESC, pool.id DESC
-				LIMIT 1
-			) AS pool ON true
+			${canonicalPoolLateralSql({ licenseInternalProductId })}
 			JOIN customer_products AS cp
 				ON cp.id = pool.parent_customer_product_id
 		WHERE assignment.id = target.customer_product_id

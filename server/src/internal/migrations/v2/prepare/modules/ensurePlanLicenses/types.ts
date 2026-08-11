@@ -14,15 +14,9 @@ export const PreparedPlanLicenseRefSchema = z.object({
 	license_internal_product_id: z.string(),
 	is_one_off: z.boolean(),
 	plan_license_id: z.string(),
-	/** Absent on a removal: nothing is minted, the base ref is only dropped. */
 	entitlement_id: z.string().optional(),
 	internal_feature_id: z.string(),
-	/** The base entitlement this minted row replaces, when the customize
-	 * re-adds a feature the license plan already grants. */
 	replaces_entitlement_id: z.string().optional(),
-	/** The filter a removal applies, resolved against the assignments' own rows
-	 * at execute time. The catalog has already dropped the item by the time
-	 * prepare runs, so there is no stable id to name here. */
 	removes_filter: z.custom<PlanItemFilter>().optional(),
 	base_item_refs: z.array(
 		z.object({

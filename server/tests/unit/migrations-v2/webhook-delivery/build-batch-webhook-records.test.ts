@@ -126,6 +126,7 @@ describe("buildBatchMigrationWebhookRecords", () => {
 					customer({ internalId: "cus_2", id: "customer-2" }),
 				],
 				skipped: [customer({ internalId: "cus_3", id: "customer-3" })],
+				removedItems: [],
 				insertedItems: [
 					insertedItem({
 						internalCustomerId: "cus_1",
@@ -171,6 +172,7 @@ describe("buildBatchMigrationWebhookRecords", () => {
 			pageResult: {
 				succeeded: [customer({ internalId: "cus_1", id: "customer-1" })],
 				skipped: [],
+				removedItems: [],
 				insertedItems: [
 					insertedItem({
 						internalCustomerId: "cus_1",
@@ -194,6 +196,7 @@ describe("buildBatchMigrationWebhookRecords", () => {
 			pageResult: {
 				succeeded: [customer({ internalId: "cus_1", id: "customer-1" })],
 				skipped: [],
+				removedItems: [],
 				insertedItems: [
 					insertedItem({
 						internalCustomerId: "cus_1",
@@ -224,6 +227,7 @@ describe("buildBatchMigrationWebhookRecords", () => {
 				succeeded: [customer({ internalId: "cus_1", id: "customer-1" })],
 				skipped: [customer({ internalId: "cus_2", id: "customer-2" })],
 				insertedItems: [],
+				removedItems: [],
 			},
 			plan,
 			features,

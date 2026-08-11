@@ -31,8 +31,6 @@ export const isModifyInPlaceOnly = ({
 	);
 };
 
-/** Only a pure free `add_items` customize lowers into the assignment fan-out —
- * everything else is per-customer definition work. */
 const checkUpsertLicensesEligibility = ({
 	op,
 	opIndex,
@@ -45,8 +43,6 @@ const checkUpsertLicensesEligibility = ({
 			const customize = entry.customize;
 			const details = { licensePlanId: entry.license_plan_id };
 
-			// Neither adds nor removes: the entry resets the link to catalog
-			// inheritance, which only the per-customer lane applies.
 			if (
 				(customize?.add_items?.length ?? 0) === 0 &&
 				(customize?.remove_items?.length ?? 0) === 0
@@ -90,12 +86,6 @@ const checkUpsertLicensesEligibility = ({
 		},
 	);
 
-/**
- * Scalar guards on a single update_plan op. Everything rejected here is
- * either per-customer-variable (quantity strategies), billing-affecting
- * (proration, base price, priced items), or deprecated — i.e. provably not
- * a uniform free-entitlement mutation.
- */
 export const checkUpdatePlanOpEligibility = ({
 	op,
 	opIndex,

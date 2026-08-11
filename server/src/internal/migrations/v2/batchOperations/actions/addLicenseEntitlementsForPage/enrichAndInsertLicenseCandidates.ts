@@ -16,11 +16,8 @@ export type EnrichAndInsertLicenseCandidatesResult = {
 	excludedInternalCustomerIds: string[];
 };
 
-/**
- * Resolves each candidate's reset cycle, then inserts. Non-resetting
- * entitlements carry no cycle — a boolean with a next_reset_at would reset a
- * flag on a clock it never had.
- */
+/** Non-resetting entitlements carry no cycle — a boolean with a next_reset_at
+ * would reset a flag on a clock it never had. */
 export const enrichAndInsertLicenseCandidates = async ({
 	db,
 	candidates,
@@ -67,6 +64,7 @@ export const enrichAndInsertLicenseCandidates = async ({
 				rows: insertableRows,
 				scope,
 				initialState: add.initialState,
+				licenseInternalProductId: add.licenseInternalProductId,
 				now,
 			}),
 	});

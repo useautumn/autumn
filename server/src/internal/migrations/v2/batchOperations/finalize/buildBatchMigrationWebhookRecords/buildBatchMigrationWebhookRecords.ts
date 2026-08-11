@@ -5,6 +5,7 @@ import type {
 	BatchMigrationInsertedItem,
 	BatchMigrationPageCustomer,
 	BatchMigrationPageResult,
+	BatchMigrationRemovedItem,
 } from "../../execute/types/batchMigrationExecutionTypes.js";
 import type { BatchMigrationExecutionPlan } from "../../types/index.js";
 import {
@@ -13,27 +14,42 @@ import {
 } from "../buildMigrationItemEvent/toCustomerItemChanges.js";
 import { insertedItemsToPlanChange } from "./insertedItemsToPlanChange.js";
 
-type ItemsByCustomerProduct = Map<string, BatchMigrationInsertedItem[]>;
+export type ChangedItem = (
+	| (BatchMigrationInsertedItem & { action: "created" })
+	| (BatchMigrationRemovedItem & { action: "deleted" })
+) & { entityId: string | null };
+
+export const toChangedItems = ({
+	insertedItems,
+	removedItems,
+}: Pick<
+	BatchMigrationPageResult,
+	"insertedItems" | "removedItems"
+>): ChangedItem[] => [
+	...insertedItems.map((item) => ({ ...item, action: "created" as const })),
+	...removedItems.map((item) => ({ ...item, action: "deleted" as const })),
+];
+
+type ItemsByCustomerProduct = Map<string, ChangedItem[]>;
 
 /** customer → entity (null = customer-level) → customer product → its rows.
  * Webhooks go out per (customer, entity): entity-level products notify the
  * entity, matching the per-customer lane's entity-targeted operations. */
 const groupItemsByEntityAndProduct = ({
-	insertedItems,
+	changedItems,
 }: {
-	insertedItems: BatchMigrationInsertedItem[];
+	changedItems: ChangedItem[];
 }): Map<string, Map<string | null, ItemsByCustomerProduct>> => {
 	const byCustomer = new Map<
 		string,
 		Map<string | null, ItemsByCustomerProduct>
 	>();
-	for (const item of insertedItems) {
+	for (const item of changedItems) {
 		const byEntity =
 			byCustomer.get(item.internalCustomerId) ??
 			new Map<string | null, ItemsByCustomerProduct>();
 		const byCustomerProduct =
-			byEntity.get(item.entityId) ??
-			new Map<string, BatchMigrationInsertedItem[]>();
+			byEntity.get(item.entityId) ?? new Map<string, ChangedItem[]>();
 		const items = byCustomerProduct.get(item.customerProductId) ?? [];
 		items.push(item);
 		byCustomerProduct.set(item.customerProductId, items);
@@ -62,7 +78,7 @@ export const buildBatchMigrationWebhookRecords = ({
 	const entitlementLookup = buildEntitlementLookup({ plan });
 	const oneOffByPlanId = buildOneOffByPlanId({ plan });
 	const itemsByCustomer = groupItemsByEntityAndProduct({
-		insertedItems: pageResult.insertedItems,
+		changedItems: toChangedItems(pageResult),
 	});
 
 	const toEntityRecord = ({

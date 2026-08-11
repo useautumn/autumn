@@ -12,6 +12,7 @@ import type { DrizzleCli } from "@/db/initDrizzle.js";
 import { sqlList } from "@/internal/billing/v2/actions/batchTransition/execute/sql/batchTransitionSqlUtils.js";
 import type { OperationScope } from "../../scope/operationScope.js";
 import { operationScopeSql } from "../../scope/operationScope.js";
+import { canonicalPoolLateralSql } from "./licensePoolSql.js";
 
 const nullableNumeric = z.preprocess(
 	(value) => (value === null || value === undefined ? null : Number(value)),
@@ -41,13 +42,8 @@ const CandidateRowSchema = z.object({
 
 export type LicenseCandidateRow = z.infer<typeof CandidateRowSchema>;
 
-/**
- * Live assignments whose pool anchors a customized link carrying this feature.
- * Matched on the license product too, not just the feature — a parent may hold
- * links to several license plans, and their definitions can share a feature.
- * The parent is aliased `cp` so the plan filter's lowered scope applies to it —
- * assignments own no lifecycle, so status must come from the parent too.
- */
+/** Matched on the license product too, not just the feature — a parent may hold
+ * links to several license plans, and their definitions can share a feature. */
 export const selectLicenseAddCandidateRows = async ({
 	db,
 	internalCustomerIds,
@@ -72,7 +68,8 @@ export const selectLicenseAddCandidateRows = async ({
 
 	const dedupIntervalCondition = isBooleanEntitlement({ entitlement })
 		? sql``
-		: sql`AND COALESCE(existing_definition.interval, ${EntInterval.Lifetime}) = ${targetInterval}`;
+		: sql`AND COALESCE(existing_definition.interval, ${EntInterval.Lifetime}) = ${targetInterval}
+			AND COALESCE(existing_definition.interval_count, 1) = ${targetIntervalCount}`;
 
 	const rows = await db.execute(sql`
 		SELECT
@@ -85,10 +82,7 @@ export const selectLicenseAddCandidateRows = async ({
 			e.internal_feature_id AS "internalFeatureId",
 			f.id AS "featureId",
 			assignment.status AS "status",
-			-- The ladder's last rung anchors here, and an assignment bills on the
-			-- parent's cycle — setupAttachLicenseContext anchors a seat off the
-			-- parent too. assignmentStartsAt carries the seat's own date for the
-			-- webhook snapshot.
+			-- An assignment bills on the parent's cycle, so the parent's date wins.
 			COALESCE(cp.starts_at, assignment.starts_at) AS "startsAt",
 			assignment.starts_at AS "assignmentStartsAt",
 			assignment.canceled_at AS "canceledAt",
@@ -108,17 +102,7 @@ export const selectLicenseAddCandidateRows = async ({
 			sub_anchor.billing_cycle_anchor_ms AS "subscriptionCycleAnchor",
 			sibling.reset_cycle_anchor AS "siblingResetCycleAnchor"
 		FROM customer_products AS assignment
-		JOIN LATERAL (
-			SELECT pool.*
-			FROM customer_licenses AS pool
-			JOIN customer_products AS pool_parent
-				ON pool_parent.id = pool.parent_customer_product_id
-			WHERE pool.link_id = assignment.customer_license_link_id
-				AND pool.license_internal_product_id = ${licenseInternalProductId}
-			ORDER BY (pool_parent.status IN (${sqlList({ values: [...MIGRATABLE_STATUSES] })})) DESC,
-				pool.created_at DESC, pool.id DESC
-			LIMIT 1
-		) AS pool ON true
+		${canonicalPoolLateralSql({ licenseInternalProductId, columns: sql`pool.*` })}
 		INNER JOIN customer_products AS cp
 			ON cp.id = pool.parent_customer_product_id
 		INNER JOIN license_entitlements AS le

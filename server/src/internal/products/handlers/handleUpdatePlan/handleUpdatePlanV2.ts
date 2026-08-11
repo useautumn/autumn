@@ -150,8 +150,8 @@ export const handleUpdatePlanV2 = createRoute({
 			}
 		}
 
-		// Fetch the latest version (no `version` pin): when a new version was
-		// created, newBase must be it — not the version that was edited.
+		// No `version` pin: when a new version was created, it must win over the
+		// version that was edited.
 		const latestFullProduct =
 			responseFullProduct ??
 			(await ProductService.getFull({
@@ -166,8 +166,6 @@ export const handleUpdatePlanV2 = createRoute({
 			features: ctx.features,
 		});
 
-		// `migration` stays for the single-draft case so existing consumers keep
-		// working; `migrations` carries every draft when parents add their own.
 		const [firstMigrationId] = migrationIds;
 		return c.json(
 			firstMigrationId

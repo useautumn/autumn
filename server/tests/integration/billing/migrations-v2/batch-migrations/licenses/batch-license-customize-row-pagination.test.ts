@@ -107,6 +107,7 @@ test.concurrent(
 		// One assignment per batch: every boundary crossed.
 		const result = await addLicenseEntitlementsForPage({
 			db: ctx.db,
+			features: ctx.features,
 			scope: patch.scope,
 			internalCustomerIds,
 			add,
@@ -141,6 +142,7 @@ test.concurrent(
 		// Replay over the paginated path: per-batch dedup still holds.
 		const replay = await addLicenseEntitlementsForPage({
 			db: ctx.db,
+			features: ctx.features,
 			scope: patch.scope,
 			internalCustomerIds,
 			add,

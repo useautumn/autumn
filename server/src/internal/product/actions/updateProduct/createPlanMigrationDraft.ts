@@ -60,10 +60,8 @@ const matchedPlanIds = (matcher: PlanFilter["plan_id"]): string[] => {
 
 const previousPriceKey = (price: PreviousBasePrice) => JSON.stringify(price);
 
-// Stamped onto price-change ops so the migration UI can show per-currency
-// diffs after the catalog has already been updated in place. An op covering
-// plans with differing previous prices is left unstamped rather than showing
-// the base plan's history for a variant.
+// An op covering plans with differing previous prices is left unstamped rather
+// than showing the base plan's history for a variant.
 const withPreviousPrice = <T extends { operations: Operations }>({
 	draft,
 	previousPriceByPlanId,
@@ -176,13 +174,8 @@ const licenseParentsHaveBillingChanges = (
 			parent.customize?.add_items?.some((item) => item.price != null),
 	);
 
-/** Parents receive the child's edit as a license customize, never as their own
- * item diff — their plan items are untouched. Identical customize values collapse
- * into one op downstream, so N parents cost one op, not N.
- *
- * Always version-scoped, including in all_versions mode: a link pins a version,
- * and two versions of one parent can carry different customizes — a bare
- * plan_id would let each op match the other's customers. */
+/** Always version-scoped, including in all_versions mode: a link pins a version,
+ * and a bare plan_id would let each op match the other version's customers. */
 const licenseParentTargets = ({
 	planId,
 	parents,
@@ -191,8 +184,7 @@ const licenseParentTargets = ({
 	parents: LicenseParentMigrationTarget[];
 }) =>
 	parents
-		// An entry without a customize resets the link to catalog inheritance, so
-		// a parent with nothing to change must not produce a target at all.
+		// An entry without a customize resets the link to catalog inheritance.
 		.filter((parent) => parent.customize !== undefined)
 		.map((parent) => ({
 			id: parent.planId,
@@ -308,8 +300,6 @@ export const createPlanMigrationDraft = async ({
 		excludeLicenseAssignments: true,
 	});
 
-	// Base and variants sweep every version; the parent draft stays version-
-	// scoped, since a link pins the version it offers.
 	const targets = [
 		...(hasVersionableUsage({ products: baseVersions, usageByProduct })
 			? [{ id: planId, customize: baseDiff }]

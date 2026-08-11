@@ -15,8 +15,6 @@ const ensurePlanLicensesKey = buildPrepareModuleKey({
 	parts: ["update_plan"],
 });
 
-/** Lowers customize.upsert_licenses into per-license add operations, using the
- * shared entitlement rows prepare minted for this parent product. */
 export const computeBatchMigrationLicenseOperations = ({
 	migration,
 	op,

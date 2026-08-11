@@ -3,10 +3,8 @@ import { applyLicenseCustomizeToBasePlan } from "@/internal/licenses/actions/cus
 import { diffLicensePlanCustomize } from "@/internal/licenses/actions/customize/toApiPlanLicenseWithCustomize.js";
 import { getApiPlanDiff } from "@/internal/product/actions/common/planTransformUtils.js";
 
-/** The license customize a parent ends up with once the child's edit lands.
- * A customized link keeps its own overrides rebased onto the edited child; an
- * uncustomized one simply follows the child. Shared by the update preview and
- * the migration draft so the two cannot disagree about what a parent receives. */
+/** A customized link keeps its own overrides rebased onto the edited child; an
+ * uncustomized one simply follows the child. */
 export const buildLicenseParentTargetCustomize = ({
 	currentChildPlan,
 	editedChildPlan,

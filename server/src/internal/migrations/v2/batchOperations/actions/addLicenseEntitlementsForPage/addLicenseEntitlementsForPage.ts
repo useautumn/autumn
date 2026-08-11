@@ -1,8 +1,11 @@
-import { isResettingEntitlement } from "@autumn/shared";
+import { type Feature, isResettingEntitlement } from "@autumn/shared";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 import { withStatementTimeout } from "@/db/withStatementTimeout.js";
 import { iterateCustomerProductPages } from "../../execute/customerProductPagination/iterateCustomerProductPages.js";
-import type { BatchMigrationInsertedItem } from "../../execute/types/batchMigrationExecutionTypes.js";
+import type {
+	BatchMigrationInsertedItem,
+	BatchMigrationRemovedItem,
+} from "../../execute/types/batchMigrationExecutionTypes.js";
 import {
 	BATCH_MIGRATION_CANDIDATE_ROW_BATCH,
 	BATCH_MIGRATION_PAGE_STATEMENT_TIMEOUT_MS,
@@ -23,31 +26,24 @@ export type AddLicenseEntitlementsForPageResult = {
 	affected: number;
 	candidateCount: number;
 	repointedPools: number;
-	/** Customers whose pool was repointed or whose assignments moved onto a new
-	 * definition. They changed even when no assignment gained a row, so they
-	 * must not be reported as skipped. */
 	repointedInternalCustomerIds: string[];
 	insertedItems: BatchMigrationInsertedItem[];
-	/** Customers a cycle rung refused — routed to skipped, as the owned path does. */
+	removedItems: BatchMigrationRemovedItem[];
 	excludedInternalCustomerIds: string[];
 };
 
-/**
- * Points each matched parent's pool at the prepared link, then fans that
- * link's entitlement onto every live assignment under it, each resolving its
- * own reset cycle from the parent it bills with.
- */
 export const addLicenseEntitlementsForPage = async ({
 	db,
 	scope,
 	internalCustomerIds,
 	add,
 	now,
+	features,
 	phases,
 	candidateRowBatchSize = BATCH_MIGRATION_CANDIDATE_ROW_BATCH,
 }: {
 	db: DrizzleCli;
-	/** The patch's lowered row-level scope, applied to the pool's parent. */
+	features: Feature[];
 	scope: OperationScope;
 	internalCustomerIds: string[];
 	add: BatchMigrationExecutionAddLicense;
@@ -91,7 +87,9 @@ export const addLicenseEntitlementsForPage = async ({
 							internalCustomerIds,
 							scope,
 							filter: add.filter,
+							licensePlanId: add.licensePlanId,
 							licenseInternalProductId: add.licenseInternalProductId,
+							features,
 						}),
 					BATCH_MIGRATION_PAGE_STATEMENT_TIMEOUT_MS,
 				),
@@ -106,6 +104,7 @@ export const addLicenseEntitlementsForPage = async ({
 				...removed.internalCustomerIds,
 			],
 			insertedItems: [],
+			removedItems: removed.removedItems,
 			excludedInternalCustomerIds: [],
 		};
 	}
@@ -186,6 +185,7 @@ export const addLicenseEntitlementsForPage = async ({
 			...replaced.internalCustomerIds,
 		],
 		insertedItems,
+		removedItems: [],
 		excludedInternalCustomerIds: [...excludedIds],
 	};
 };

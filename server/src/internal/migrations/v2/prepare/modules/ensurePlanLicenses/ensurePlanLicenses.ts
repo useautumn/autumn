@@ -1,16 +1,13 @@
 import {
 	type DbPlanLicense,
 	type Entitlement,
-	type FullProduct,
 	findFeatureById,
 	isOneOffProduct,
-	type PlanItemFilter,
 	planLicenses,
 } from "@autumn/shared";
 import type { UpdatePlanOp } from "@autumn/shared/api/migrations/operations/customer/updatePlan/index.js";
 import { planItemV1ToPriceAndEnt } from "@autumn/shared/api/products/items/mappers/planItemV1ToPriceAndEnt.js";
 import { planFilterMatchesProduct } from "@autumn/shared/api/products/utils/match/index.js";
-import { planItemFilterMatchKey } from "@autumn/shared/utils/planV1Utils/diff/diffPlanV1.js";
 import { buildConflictUpdateColumns } from "@/db/dbUtils.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { derivePlanLicenseItemRefs } from "@/internal/licenses/actions/customize/computeLicenseCustomize.js";
@@ -34,9 +31,6 @@ import type {
 
 type LicenseItemRef = PreparedPlanLicenseRef["base_item_refs"][number];
 
-/** The base entitlement a minted row replaces: the license plan's own ref for
- * the same feature. Shared with apply(), which drops that ref from the item set
- * so the feature is not granted twice. */
 const replacedEntitlementId = ({
 	refs,
 	internalFeatureId,
@@ -78,11 +72,8 @@ const getMatchedParentProducts = async ({
 	);
 };
 
-/**
- * Mints the customized plan_license rows a license customize migration needs,
- * one per (op, license plan, parent product) rather than per customer, so the
- * batch lane can fan a single shared entitlement out to every assignment.
- */
+/** Mints one row per (op, license plan, parent product) rather than per
+ * customer, so one shared entitlement fans out to every assignment. */
 export const ensurePlanLicenses: PrepareModule<
 	EnsurePlanLicensesInput,
 	EnsurePlanLicensesResult
@@ -256,16 +247,13 @@ export const ensurePlanLicenses: PrepareModule<
 				});
 		}
 
-		// replaceItems swaps the whole item set, so base items ride along. A base
-		// item for the same feature is replaced by the minted one — keying on
-		// entitlement id alone would leave both and grant the feature twice.
+		// replaceItems swaps the whole item set, so a base item for a re-added
+		// feature must be dropped or the feature is granted twice.
 		const refsByPlanLicenseId = new Map<string, Map<string, LicenseItemRef>>();
 		for (const artifact of planned.artifacts) {
 			const refs =
 				refsByPlanLicenseId.get(artifact.plan_license_id) ??
 				new Map<string, LicenseItemRef>();
-			// A removal drops its base ref the same way a replacement does; the
-			// difference is only that nothing is minted in its place.
 			const replacedFeatureIds = new Set(
 				planned.artifacts
 					.filter(
@@ -275,9 +263,6 @@ export const ensurePlanLicenses: PrepareModule<
 					.map((candidate) => candidate.internal_feature_id),
 			);
 			for (const ref of artifact.base_item_refs) {
-				// Drop the base item entirely when the customize re-adds its
-				// feature — including a priced one, whose price ref carries the
-				// same entitlement and would otherwise grant the feature twice.
 				if (
 					ref.internalFeatureId &&
 					replacedFeatureIds.has(ref.internalFeatureId)

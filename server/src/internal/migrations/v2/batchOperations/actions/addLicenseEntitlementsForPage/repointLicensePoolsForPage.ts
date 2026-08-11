@@ -5,11 +5,7 @@ import { sqlList } from "@/internal/billing/v2/actions/batchTransition/execute/s
 import type { OperationScope } from "../../scope/operationScope.js";
 import { operationScopeSql } from "../../scope/operationScope.js";
 
-/**
- * Points every matched parent's pool at the prepared customized link. Runs
- * before the entitlement fan-out, which reads the pool to find the definition.
- * Granted stays derived: included moves, paid_quantity is billing-owned.
- */
+/** Granted stays derived: included moves, paid_quantity is billing-owned. */
 export const repointLicensePoolsForPage = async ({
 	db,
 	internalCustomerIds,
