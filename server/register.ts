@@ -1,4 +1,5 @@
 import "dotenv/config";
+import { getAutumnEnv } from "@autumn/env";
 import { loadLocalEnv } from "./src/utils/envUtils";
 import Stripe from "stripe";
 import {
@@ -16,7 +17,7 @@ const main = async () => {
 	const stripe = new Stripe(process.env.STRIPE_SANDBOX_SECRET_KEY || "");
 
 	const result = await stripe.webhookEndpoints.create({
-		url: `${process.env.STRIPE_WEBHOOK_URL}/webhooks/connect/sandbox`,
+		url: `${getAutumnEnv().AUTUMN_PUBLIC_API_URL}/webhooks/connect/sandbox`,
 		enabled_events: allEventTypes,
 		connect: true,
 	});

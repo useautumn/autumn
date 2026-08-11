@@ -37,13 +37,16 @@ function applyProvisionedDevEnv(
 	// .env.local already carries plain localhost URLs there.
 	if (!isHeadless()) {
 		const aliases = registerPortlessAliases(worktreeNum);
-		next.BETTER_AUTH_URL = aliases.apiUrl;
+		next.AUTUMN_API_URL = aliases.apiUrl;
+		next.AUTUMN_PUBLIC_API_URL = entry.ngrokUrl ?? aliases.apiUrl;
 		next.CLIENT_URL = aliases.viteUrl;
 		next.VITE_BACKEND_URL = aliases.apiUrl;
 		next.VITE_FRONTEND_URL = aliases.viteUrl;
 	}
-	if (entry.ngrokUrl && !next.NGROK_URL) {
-		next.NGROK_URL = entry.ngrokUrl;
+	if (isHeadless()) {
+		const apiUrl = `http://localhost:${8080 + (worktreeNum - 1) * 100}`;
+		next.AUTUMN_API_URL = apiUrl;
+		next.AUTUMN_PUBLIC_API_URL = entry.ngrokUrl ?? apiUrl;
 	}
 	return next;
 }

@@ -222,6 +222,11 @@ export const { db: dbGeneral, client: clientGeneral } = initDrizzle({
 	name: "general",
 	maxConnections: generalPoolMax,
 	connectTimeout: isProd ? 5 : 30,
+	poolConfig: {
+		// Preserve startup-warmed capacity so a delayed critical-read backup
+		// never pays cold PgBouncer/TLS setup inside check's 2s deadline.
+		min: 1,
+	},
 });
 
 // -- Replica pool: used as fallback when primary is degraded --

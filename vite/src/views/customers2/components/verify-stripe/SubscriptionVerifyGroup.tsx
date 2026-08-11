@@ -1,9 +1,6 @@
 import type { SubscriptionVerifyResult } from "@autumn/shared";
 import { CheckCircleIcon } from "@phosphor-icons/react";
-import { getCoreRowModel, useReactTable } from "@tanstack/react-table";
-import { useMemo } from "react";
-import { Table } from "@/components/general/table";
-import { createVerifyMismatchColumns } from "./VerifyStripeColumns";
+import { MismatchTable } from "./MismatchTable";
 import {
 	resultToDisplayStatus,
 	VerifyStripeStatusBadge,
@@ -14,15 +11,6 @@ export function SubscriptionVerifyGroup({
 }: {
 	result: SubscriptionVerifyResult;
 }) {
-	const columns = useMemo(() => createVerifyMismatchColumns(), []);
-
-	const table = useReactTable({
-		data: result.mismatches,
-		columns,
-		getCoreRowModel: getCoreRowModel(),
-		enableSorting: false,
-	});
-
 	return (
 		<div>
 			<div className="flex items-center justify-between gap-3 pb-2">
@@ -44,24 +32,7 @@ export function SubscriptionVerifyGroup({
 					Matches Autumn's expected state
 				</div>
 			) : (
-				<div className="rounded-lg border shadow-card overflow-hidden">
-					<Table.Provider
-						config={{
-							table,
-							numberOfColumns: columns.length,
-							isLoading: false,
-							enableSorting: false,
-							flexibleTableColumns: true,
-						}}
-					>
-						<Table.Container>
-							<Table.Content className="!rounded-none !border-0 !shadow-none">
-								<Table.Header />
-								<Table.Body />
-							</Table.Content>
-						</Table.Container>
-					</Table.Provider>
-				</div>
+				<MismatchTable mismatches={result.mismatches} />
 			)}
 		</div>
 	);
