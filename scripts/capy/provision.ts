@@ -1,6 +1,6 @@
 // scripts/capy/provision.ts
 //
-// One-shot provisioning for a Capy sandbox. Sister to scripts/dw (which
+// One-shot provisioning for a Capy v2 VM. Sister to scripts/dw (which
 // uses Docker + portless on a developer laptop) and scripts/tw (which
 // targets the Vercel µVM with snapshot fork).
 //
@@ -8,30 +8,27 @@
 //   1. Verify NEON_API_KEY is set (neon CLI auth — see
 //      https://neon.com/docs/cli/auth — falls back to OAuth browser flow
 //      otherwise, which isn't possible inside a Capy sandbox).
-//   2. Start Dragonfly + goaws as nohup background processes on the
-//      ports server/.env.local expects (6379, 9324). Idempotent.
-//   3. Provision (or resume) a Neon branch named capy-<shortHash(sandboxId)>
+//   2. Verify the Docker Compose services started by capy-startup.sh.
+//   3. Provision (or resume) a Neon branch named capy-<shortHash(machineId)>
 //      off the shared `dw-template` branch. Reuses scripts/dw/helpers/neon.ts
 //      so the dw and capy stacks branch out of the same template.
-//   4. Apply committed migrations + load SQL functions on first run only;
-//      a previously-provisioned branch is reused as-is.
+//   4. Apply pending committed migrations and refresh SQL functions.
 //   5. Write server/.env.local, vite/.env.local, apps/checkout/.env.local
-//      with the per-sandbox DATABASE_URL + Daytona preview URLs.
+//      with the per-machine DATABASE_URL + localhost service URLs.
 //
 // Run via `bun scripts/capy/provision.ts`. Idempotent: a second run is a
 // no-op for the Neon branch and refreshes env files in place.
 //
-// Daytona preview URLs follow the pattern documented at
-// https://www.daytona.io/docs/en/preview/ :
-//   https://{port}-{DAYTONA_SANDBOX_ID}.proxy.daytona.work
-// Sandboxes are private by default so the browser sees a 307 to Auth0 once,
-// then carries the Daytona session cookie. From inside the sandbox the
-// preview URL is unreachable (no Daytona auth on server-to-self), so all
-// server-internal traffic uses localhost.
-
 import { createHash, randomBytes } from "node:crypto";
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
-import { homedir } from "node:os";
+import {
+	chmodSync,
+	existsSync,
+	mkdirSync,
+	readFileSync,
+	writeFileSync,
+} from "node:fs";
+import { connect } from "node:net";
+import { homedir, hostname } from "node:os";
 import { dirname, join } from "node:path";
 import {
 	applyCommittedMigrations,
@@ -53,38 +50,16 @@ const SCRIPT_DIR = new URL(".", import.meta.url).pathname;
 const PROJECT_ROOT = join(SCRIPT_DIR, "..", "..");
 const CAPY_PREFIX = process.env.CAPY_PREFIX ?? join(homedir(), ".autumn-capy");
 const CAPY_STATE = join(CAPY_PREFIX, "state.json");
-const LOG_DIR = join(CAPY_PREFIX, "logs");
-const BIN_DIR = join(CAPY_PREFIX, "bin");
-const GOAWS_CONF = join(CAPY_PREFIX, "goaws", "goaws.yaml");
-const DRAGONFLY_DIR = join(CAPY_PREFIX, "dragonfly");
 
 const NEON_TEMPLATE_BRANCH = "dw-template";
 
-// Browser-facing ports — these are surfaced as Daytona preview URLs in the
-// env files. Internal-only ports (checkout :3001, leaf/chat :3099) don't
-// need to leak into env vars — `dev.ts` already hardcodes their localhost
-// URLs for sibling processes.
-//
-// SERVER_PORT is NOT 8080 because Capy's `kappu` visual desktop server (the
-// one the `computer` tool drives) listens there as a supervisord-managed
-// process; binding `bun dev`'s server to 8080 sends kappu FATAL and kills
-// the desktop stream the user (and the agent) need for browser checks. 8090
-// is close enough to remember and outside Capy's reserved range (8000
-// internal bun_server, 8080 kappu, 7681 ttyd, 2280 toolbox, 22220 ssh,
-// 22222 web terminal, 33333 recording dashboard). We emit SERVER_PORT into
-// server/.env.local so scripts/dev.ts picks it up via the preload-env shim.
-const SERVER_PORT = 8090;
+// Capy v2 discovers listening HTTP services automatically. Its desktop
+// service moved off :8080, so Autumn can use its standard local ports again.
+const SERVER_PORT = 8080;
 const VITE_PORT = 3000;
 const DRAGONFLY_PORT = 6379;
 const ELASTICMQ_PORT = 9324;
-
-// Daytona's public proxy domain — verified live in this sandbox by curl'ing
-// https://{port}-{sandboxId}.proxy.daytona.work and observing a 307 to
-// daytonaio.us.auth0.com/authorize (sandbox is private; the browser session
-// cookie unlocks it). The `app.daytona.io` proxy variant returns 000 from
-// inside the sandbox, so we use proxy.daytona.work only.
-const DAYTONA_PROXY_DOMAIN =
-	process.env.DAYTONA_PROXY_DOMAIN ?? "proxy.daytona.work";
+const DYNAMODB_PORT = 8000;
 
 // ---------------------------------------------------------------------------
 // Tiny logging / shell helpers (we don't reuse dw's helpers because they tag
@@ -101,47 +76,33 @@ function fatal(msg: string): never {
 	process.exit(1);
 }
 
-function sh(
-	cmd: string,
-	args: string[],
-	opts: { env?: Record<string, string>; cwd?: string } = {},
-): { stdout: string; stderr: string; code: number } {
-	const proc = Bun.spawnSync([cmd, ...args], {
-		cwd: opts.cwd,
-		env: opts.env ?? (process.env as Record<string, string>),
-		stdout: "pipe",
-		stderr: "pipe",
-	});
-	return {
-		stdout: new TextDecoder().decode(proc.stdout).trim(),
-		stderr: new TextDecoder().decode(proc.stderr).trim(),
-		code: proc.exitCode ?? 1,
-	};
-}
-
 // ---------------------------------------------------------------------------
-// Sandbox identity
+// Machine identity
 // ---------------------------------------------------------------------------
 
 function shortHash(input: string): string {
 	return createHash("sha1").update(input).digest("hex").slice(0, 7);
 }
 
-function getSandboxId(): string {
-	const id = process.env.DAYTONA_SANDBOX_ID?.trim();
-	if (id) return id;
-	// Outside Capy/Daytona (e.g. local repro) fall back to hostname so the
-	// branch name is still stable per-host. Not a load-bearing path.
-	const host = process.env.HOSTNAME ?? (sh("hostname", []).stdout || "unknown");
-	return host.trim();
+function getMachineId(): string {
+	const configPath = process.env.CAPY_MACHINE_CONFIG?.trim();
+	if (configPath && existsSync(configPath)) {
+		try {
+			const config = JSON.parse(readFileSync(configPath, "utf-8")) as {
+				bindingId?: string;
+			};
+			if (config.bindingId?.trim()) return config.bindingId.trim();
+		} catch {
+			log(`machine config at ${configPath} is unreadable, using hostname`);
+		}
+	}
+	// Local repros do not have Capy's machine config. The hostname keeps the
+	// branch stable for the lifetime of that host.
+	return (process.env.HOSTNAME ?? hostname() ?? "unknown").trim();
 }
 
-function deriveBranchName(sandboxId: string): string {
-	return `capy-${shortHash(sandboxId)}`;
-}
-
-function daytonaPreviewUrl(port: number, sandboxId: string): string {
-	return `https://${port}-${sandboxId}.${DAYTONA_PROXY_DOMAIN}`;
+function deriveBranchName(machineId: string): string {
+	return `capy-${shortHash(machineId)}`;
 }
 
 // ---------------------------------------------------------------------------
@@ -151,12 +112,12 @@ function daytonaPreviewUrl(port: number, sandboxId: string): string {
 // ---------------------------------------------------------------------------
 
 type State = {
-	sandboxId: string;
+	machineId: string;
 	branchName?: string;
 	branchId?: string;
 	databaseUrl?: string;
 	createdAt: number;
-	// Per-sandbox secrets — generated once on first run, persisted, then
+	// Per-machine secrets — generated once on first run, persisted, then
 	// re-used so a server restart doesn't invalidate every session.
 	// scripts/setup/writeAgentEnv.ts does the same for the legacy bootstrap;
 	// the dw flow inherits these from infisical instead.
@@ -182,7 +143,7 @@ function genUrlSafeBase64(bytes: number): string {
 function ensureSecrets(state: State | null): NonNullable<State["secrets"]> {
 	if (state?.secrets) return state.secrets;
 	log(
-		"minting per-sandbox secrets (BETTER_AUTH_SECRET, ENCRYPTION_IV, ENCRYPTION_PASSWORD)",
+		"minting per-machine secrets (BETTER_AUTH_SECRET, ENCRYPTION_IV, ENCRYPTION_PASSWORD)",
 	);
 	return {
 		betterAuthSecret: genUrlSafeBase64(64),
@@ -203,111 +164,75 @@ function loadState(): State | null {
 
 function saveState(state: State): void {
 	mkdirSync(dirname(CAPY_STATE), { recursive: true });
-	writeFileSync(CAPY_STATE, JSON.stringify(state, null, 2));
+	writeFileSync(CAPY_STATE, JSON.stringify(state, null, 2), { mode: 0o600 });
+	chmodSync(CAPY_STATE, 0o600);
 }
 
 // ---------------------------------------------------------------------------
-// Service supervisors. We nohup dragonfly + goaws into background processes
-// the first time, then PING/HTTP-probe to confirm. No process supervisor
-// because Capy's supervisord owns the VM lifecycle; if the sandbox restarts
-// the startup hook re-runs us and we redaemon.
+// Service readiness. capy-startup.sh owns Docker Compose; this script waits
+// for published ports before writing env files that point at them.
 // ---------------------------------------------------------------------------
 
-function isDragonflyUp(): boolean {
-	const r = sh("redis-cli", ["-p", String(DRAGONFLY_PORT), "PING"]);
-	return r.code === 0 && r.stdout === "PONG";
+function isDragonflyUp(): Promise<boolean> {
+	return new Promise((resolve) => {
+		const socket = connect(DRAGONFLY_PORT, "127.0.0.1");
+		let settled = false;
+		const finish = (ready: boolean) => {
+			if (settled) return;
+			settled = true;
+			socket.destroy();
+			resolve(ready);
+		};
+		socket.setTimeout(800);
+		socket.once("connect", () => socket.write("*1\r\n$4\r\nPING\r\n"));
+		socket.once("data", (data) => finish(data.toString().startsWith("+PONG")));
+		socket.once("error", () => finish(false));
+		socket.once("timeout", () => finish(false));
+	});
 }
 
-function startDragonfly(): void {
-	if (isDragonflyUp()) {
-		log("dragonfly already running");
-		return;
-	}
-	const bin = join(BIN_DIR, "dragonfly");
-	if (!existsSync(bin)) fatal(`dragonfly binary missing at ${bin}`);
-	mkdirSync(LOG_DIR, { recursive: true });
-	mkdirSync(DRAGONFLY_DIR, { recursive: true });
-	log(`starting dragonfly on :${DRAGONFLY_PORT}`);
-	// setsid + disown the process; bun's spawn keeps the parent alive until
-	// the child exits, but a fresh fork+exec is what we want here.
-	const proc = Bun.spawn(
-		[
-			bin,
-			"--port",
-			String(DRAGONFLY_PORT),
-			"--bind",
-			"127.0.0.1",
-			"--dir",
-			DRAGONFLY_DIR,
-			"--dbfilename",
-			"dump",
-		],
-		{
-			stdout: Bun.file(join(LOG_DIR, "dragonfly.log")),
-			stderr: Bun.file(join(LOG_DIR, "dragonfly.log")),
-			stdin: "ignore",
-		},
-	);
-	proc.unref();
+async function waitForDragonfly(): Promise<void> {
 	for (let i = 0; i < 60; i++) {
-		if (isDragonflyUp()) {
+		if (await isDragonflyUp()) {
 			log(`dragonfly ready on :${DRAGONFLY_PORT}`);
 			return;
 		}
-		Bun.sleepSync(250);
+		await Bun.sleep(250);
 	}
 	fatal(
-		`dragonfly did not become ready within 15s; see ${LOG_DIR}/dragonfly.log`,
+		"dragonfly did not become ready within 15s; inspect `docker compose logs`",
 	);
 }
 
-async function isGoawsUp(): Promise<boolean> {
+async function isHttpServiceUp(port: number): Promise<boolean> {
 	try {
-		const res = await fetch(`http://localhost:${ELASTICMQ_PORT}/`, {
+		const res = await fetch(`http://localhost:${port}/`, {
 			signal: AbortSignal.timeout(800),
 		});
-		// `GET /` without Action returns 400 from goaws but means the server is
-		// listening; any HTTP response counts as up.
 		return res.status > 0;
 	} catch {
 		return false;
 	}
 }
 
-async function startGoaws(): Promise<void> {
-	if (await isGoawsUp()) {
-		log("goaws already running");
-		return;
-	}
-	const bin = join(BIN_DIR, "goaws");
-	if (!existsSync(bin)) fatal(`goaws binary missing at ${bin}`);
-	if (!existsSync(GOAWS_CONF)) fatal(`goaws config missing at ${GOAWS_CONF}`);
-	mkdirSync(LOG_DIR, { recursive: true });
-	log(`starting goaws on :${ELASTICMQ_PORT}`);
-	const proc = Bun.spawn([bin, "-config", GOAWS_CONF], {
-		stdout: Bun.file(join(LOG_DIR, "goaws.log")),
-		stderr: Bun.file(join(LOG_DIR, "goaws.log")),
-		stdin: "ignore",
-	});
-	proc.unref();
+async function waitForHttpService(name: string, port: number): Promise<void> {
 	for (let i = 0; i < 60; i++) {
-		if (await isGoawsUp()) {
-			log(
-				`goaws ready on :${ELASTICMQ_PORT} (autumn.fifo + autumn-track.fifo)`,
-			);
+		if (await isHttpServiceUp(port)) {
+			log(`${name} ready on :${port}`);
 			return;
 		}
 		await Bun.sleep(250);
 	}
-	fatal(`goaws did not become ready within 15s; see ${LOG_DIR}/goaws.log`);
+	fatal(
+		`${name} did not become ready within 15s; inspect \`docker compose logs\``,
+	);
 }
 
 // ---------------------------------------------------------------------------
-// Env file writer — port-for-port equivalent of
-// scripts/dw/helpers/env-files.ts::writeEnvLocalFiles, but with Daytona
-// preview URLs instead of portless `wtN.localhost` aliases. preload-env.ts
-// auto-loads these into every `bun` invocation, so `bun dev` picks them up
-// without further plumbing.
+// Env file writer — localhost equivalent of
+// scripts/dw/helpers/env-files.ts::writeEnvLocalFiles. Capy v2's desktop and
+// browser run inside the VM, and listening services are discovered
+// automatically. preload-env.ts loads these into every bun invocation.
 // ---------------------------------------------------------------------------
 
 function forceSslVerifyFull(url: string): string {
@@ -368,19 +293,16 @@ function writeEnvFile(relPath: string, managed: Record<string, string>): void {
 
 function writeEnvFiles(
 	databaseUrl: string,
-	sandboxId: string,
 	secrets: NonNullable<State["secrets"]>,
 ): void {
-	const serverUrl = daytonaPreviewUrl(SERVER_PORT, sandboxId);
-	const viteUrl = daytonaPreviewUrl(VITE_PORT, sandboxId);
+	const serverUrl = `http://localhost:${SERVER_PORT}`;
+	const viteUrl = `http://localhost:${VITE_PORT}`;
 
 	const dbUrl = forceSslVerifyFull(databaseUrl);
 	const redisUrl = `redis://localhost:${DRAGONFLY_PORT}`;
 	const sqsBase = `http://localhost:${ELASTICMQ_PORT}/000000000000`;
 
 	const serverEnv: Record<string, string> = {
-		// scripts/dev.ts reads SERVER_PORT from env (default 8080) — we set 8090
-		// to dodge kappu, the supervisord-managed visual desktop server.
 		SERVER_PORT: String(SERVER_PORT),
 		// server/src/utils/initUtils.ts::checkEnvVars exits if any of these are
 		// missing; legacy writeAgentEnv.ts handled the same set. Re-minted only
@@ -395,22 +317,18 @@ function writeEnvFiles(
 		REDIS_URL: redisUrl,
 		MISC_CACHE_DRAGONFLY_PUBLIC_URL: redisUrl,
 		CACHE_V2_DRAGONFLY_URL: redisUrl,
-		// goaws speaks the SQS protocol; queue URLs match the names declared
-		// in $CAPY_PREFIX/goaws/goaws.yaml.
+		DYNAMODB_ENDPOINT: `http://localhost:${DYNAMODB_PORT}`,
+		SQS_QUEUE_URL: `${sqsBase}/autumn.fifo`,
 		SQS_QUEUE_URL_V2: `${sqsBase}/autumn.fifo`,
 		TRACK_SQS_QUEUE_URL: `${sqsBase}/autumn-track.fifo`,
+		TRACK_ASYNC_SQS_QUEUE_URL: `${sqsBase}/autumn-track.fifo`,
+		STRIPE_WEBHOOK_SQS_QUEUE_URL: `${sqsBase}/autumn-stripe-webhook.fifo`,
 		AWS_REGION: "us-east-1",
 		AWS_ACCESS_KEY_ID: "x",
 		AWS_SECRET_ACCESS_KEY: "x",
-		// Daytona preview URLs — browser-facing. The server uses these to build
-		// OAuth callbacks (better-auth) and CORS allow lists. Internal calls go
-		// to http://localhost:PORT (set in dev.ts).
 		BETTER_AUTH_URL: serverUrl,
 		CLIENT_URL: viteUrl,
 		STRIPE_WEBHOOK_URL: serverUrl,
-		// Webhook signature verification needs the original Stripe-signed URL;
-		// the Capy proxy rewrites Host, so always skip-verify here. dw does the
-		// same.
 		STRIPE_WEBHOOK_SKIP_VERIFY: "true",
 		// Login flow that works without external services: dev `sendOTPEmail`
 		// prints the OTP to the server log. The README documents this path.
@@ -424,10 +342,6 @@ function writeEnvFiles(
 
 	const checkoutEnv: Record<string, string> = {
 		VITE_BACKEND_URL: serverUrl,
-		// apps/checkout reads VITE_API_URL directly (not VITE_BACKEND_URL) in
-		// checkoutClient.ts and LongLivedCheckoutPage.tsx — without it the
-		// browser falls back to http://localhost:8080, which from the user's
-		// laptop hits THEIR machine, not this sandbox.
 		VITE_API_URL: serverUrl,
 	};
 
@@ -451,17 +365,18 @@ function ensureNeonAuth(): void {
 			[
 				"NEON_API_KEY is not set.",
 				"",
-				"The dw/capy stack provisions a Neon branch per sandbox. Add a Neon",
+				"The dw/capy stack provisions a Neon branch per machine. Add a Neon",
 				"personal API key (https://console.neon.tech → Account settings → API",
-				"keys) to the Capy project environment as NEON_API_KEY. The Neon CLI",
+				"keys) to Settings → Project → Environment variables as NEON_API_KEY.",
+				"The Neon CLI",
 				"reads it automatically (see https://neon.com/docs/cli/auth).",
 			].join("\n"),
 		);
 	}
 }
 
-function ensureNeonBranch(sandboxId: string, state: State | null): State {
-	const branchName = deriveBranchName(sandboxId);
+function ensureNeonBranch(machineId: string, state: State | null): State {
+	const branchName = deriveBranchName(machineId);
 
 	// Branch already provisioned in state file and still exists on Neon →
 	// just refresh the connection string and return.
@@ -484,7 +399,7 @@ function ensureNeonBranch(sandboxId: string, state: State | null): State {
 		log(`adopting existing Neon branch ${branchName} (${existingByName.id})`);
 		const pooledUrl = connectionString(branchName, { pooled: true });
 		return {
-			sandboxId,
+			machineId,
 			branchName,
 			branchId: existingByName.id,
 			databaseUrl: pooledUrl,
@@ -498,12 +413,9 @@ function ensureNeonBranch(sandboxId: string, state: State | null): State {
 	);
 	ensureTemplateBranch();
 	const branch = createBranch(branchName, NEON_TEMPLATE_BRANCH);
-	const directUrl = connectionString(branchName, { pooled: false });
-	applyCommittedMigrations(branchName, directUrl);
-	loadDbFunctions(branchName, directUrl);
 	const pooledUrl = connectionString(branchName, { pooled: true });
 	return {
-		sandboxId,
+		machineId,
 		branchName,
 		branchId: branch.id,
 		databaseUrl: pooledUrl,
@@ -520,20 +432,27 @@ async function main(): Promise<void> {
 		fatal("capy provision is disabled when NODE_ENV=production");
 	}
 
-	const sandboxId = getSandboxId();
-	log(`sandbox=${sandboxId} branch=${deriveBranchName(sandboxId)}`);
+	const machineId = getMachineId();
+	log(`branch=${deriveBranchName(machineId)}`);
 
-	// 1. Native services first — they don't need credentials and they're
-	// useful for db CLI ops below.
-	startDragonfly();
-	await startGoaws();
+	// 1. Local services were started by capy-startup.sh. Wait for their
+	// published ports before provisioning anything that writes their URLs.
+	await waitForDragonfly();
+	await Promise.all([
+		waitForHttpService("elasticmq", ELASTICMQ_PORT),
+		waitForHttpService("dynamodb", DYNAMODB_PORT),
+	]);
 
 	// 2. Neon auth + branch + migrations.
 	ensureNeonAuth();
 	const priorState = loadState();
-	const nextState = ensureNeonBranch(sandboxId, priorState);
+	const nextState = ensureNeonBranch(machineId, priorState);
+	if (!nextState.branchName) fatal("provisioning produced no branchName");
+	const directUrl = connectionString(nextState.branchName, { pooled: false });
+	applyCommittedMigrations(nextState.branchName, directUrl);
+	loadDbFunctions(nextState.branchName, directUrl);
 
-	// Per-sandbox secrets — mint on first run, then persist. Server can't
+	// Per-machine secrets — mint on first run, then persist. Server can't
 	// boot without BETTER_AUTH_SECRET / ENCRYPTION_IV / ENCRYPTION_PASSWORD.
 	nextState.secrets = ensureSecrets(priorState);
 
@@ -547,7 +466,7 @@ async function main(): Promise<void> {
 	if (nextState.branchName) ensureChatDatabase(nextState.branchName);
 
 	// 3. Env files. preload-env.ts at every bun entry point auto-loads these.
-	writeEnvFiles(nextState.databaseUrl, sandboxId, nextState.secrets);
+	writeEnvFiles(nextState.databaseUrl, nextState.secrets);
 
 	log("capy provision complete — run `bun dev` to start the stack");
 }
