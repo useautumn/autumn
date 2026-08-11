@@ -107,8 +107,8 @@ export const runRedisOp = async <T>({
 	/** Select the least-busy read lane. Requires `retryOnStandby` so only
 	 *  operations already declared idempotent can enter the pool. */
 	useReadPool?: boolean;
-	/** Opt-in bound, tighter than the client's `commandTimeout`. Reads only —
-	 *  the race abandons the promise but the command still reaches Redis. */
+	/** Opt-in planned budget, tighter than the client's `commandTimeout`. Reads
+	 *  only — the race abandons the promise but the command still reaches Redis. */
 	timeoutMs?: number;
 }): Promise<T> => {
 	const readLaneLease =
@@ -125,8 +125,8 @@ export const runRedisOp = async <T>({
 			throw new RedisUnavailableError({ source, reason });
 		}
 
-		// One budget for the whole op, not one per attempt: a retry must not double
-		// the ceiling the caller sized against its non-Redis fallback.
+		// Plan one budget for the whole op, not one per attempt: a retry must not
+		// double the ceiling the caller sized against its non-Redis fallback.
 		const deadlineAt = timeoutMs ? Date.now() + timeoutMs : undefined;
 		const runAttempt = (redis: Redis, budgetMs?: number) => {
 			const attempt = operation(redis);
@@ -152,6 +152,10 @@ export const runRedisOp = async <T>({
 			const preferredAttemptBudgetMs = router.isUsable(alternate)
 				? getPreferredAttemptBudgetMs({ timeoutMs })
 				: timeoutMs;
+			const reservedRetryBudgetMs =
+				timeoutMs !== undefined && preferredAttemptBudgetMs !== undefined
+					? timeoutMs - preferredAttemptBudgetMs
+					: 0;
 
 			try {
 				const value = await runAttempt(preferred, preferredAttemptBudgetMs);
@@ -161,14 +165,20 @@ export const runRedisOp = async <T>({
 				router.recordOutcome({ connection: preferred, error: firstError });
 
 				const remainingMs = deadlineAt ? deadlineAt - Date.now() : undefined;
+				// A delayed timeout callback must not consume the budget deliberately
+				// reserved for the alternate connection.
+				const retryBudgetMs =
+					remainingMs === undefined
+						? undefined
+						: Math.max(remainingMs, reservedRetryBudgetMs);
 				const canRetry =
 					alternate.status === "ready" &&
 					isConnectionLevelRedisError({ error: firstError }) &&
-					(remainingMs === undefined || remainingMs >= MIN_RETRY_BUDGET_MS);
+					(retryBudgetMs === undefined || retryBudgetMs >= MIN_RETRY_BUDGET_MS);
 				if (!canRetry) throw firstError;
 
 				try {
-					const value = await runAttempt(alternate, remainingMs);
+					const value = await runAttempt(alternate, retryBudgetMs);
 					router.recordOutcome({ connection: alternate });
 					logger.info(
 						{ source, type: "redis_standby_failover" },
