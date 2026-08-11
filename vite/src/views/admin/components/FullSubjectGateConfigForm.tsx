@@ -1,4 +1,4 @@
-import { Badge, Button, DialogFooter, Separator } from "@autumn/ui";
+import { Badge, Button, DialogFooter, Separator, Switch } from "@autumn/ui";
 import { useStore } from "@tanstack/react-form";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
@@ -6,10 +6,12 @@ import { useAppForm } from "@/hooks/form/form";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
 import { getBackendErr } from "@/utils/genUtils";
 import {
+	DELAYED_POSTGRES_BACKUP_READ_LIMITS,
 	FULL_SUBJECT_GATE_LIMITS,
 	FULL_SUBJECT_GATE_QUERY_KEY,
 	type FullSubjectGateConfig,
 	type FullSubjectGateFormValues,
+	getFullSubjectGateFormValues,
 } from "./fullSubjectGateConfigTypes";
 
 export const FullSubjectGateConfigForm = ({
@@ -21,6 +23,7 @@ export const FullSubjectGateConfigForm = ({
 }) => {
 	const axiosInstance = useAxiosInstance();
 	const queryClient = useQueryClient();
+	const initialValues = getFullSubjectGateFormValues({ config });
 	const mutation = useMutation({
 		mutationFn: async (nextConfig: FullSubjectGateFormValues) => {
 			await axiosInstance.put("/admin/full-subject-gate-config", nextConfig);
@@ -38,14 +41,24 @@ export const FullSubjectGateConfigForm = ({
 	});
 	const form = useAppForm({
 		defaultValues: {
-			fleet_process_count: config.fleet_process_count as number | null,
-			per_customer_limit: config.per_customer_limit as number | null,
-			per_org_limit: config.per_org_limit as number | null,
-			max_wait_ms: config.max_wait_ms as number | null,
-			per_customer_pending_max: config.per_customer_pending_max as
+			fleet_process_count: initialValues.fleet_process_count as number | null,
+			per_customer_limit: initialValues.per_customer_limit as number | null,
+			per_org_limit: initialValues.per_org_limit as number | null,
+			max_wait_ms: initialValues.max_wait_ms as number | null,
+			per_customer_pending_max: initialValues.per_customer_pending_max as
 				| number
 				| null,
-			per_org_pending_max: config.per_org_pending_max as number | null,
+			per_org_pending_max: initialValues.per_org_pending_max as number | null,
+			replica_lane: initialValues.replica_lane,
+			read_split: initialValues.read_split,
+			delayed_postgres_backup_read: {
+				enabled: initialValues.delayed_postgres_backup_read.enabled,
+				delay_ms: initialValues.delayed_postgres_backup_read.delay_ms as
+					| number
+					| null,
+				max_in_flight_per_process: initialValues.delayed_postgres_backup_read
+					.max_in_flight_per_process as number | null,
+			},
 		},
 		onSubmit: async ({ value }) => {
 			if (
@@ -54,7 +67,9 @@ export const FullSubjectGateConfigForm = ({
 				value.per_org_limit === null ||
 				value.max_wait_ms === null ||
 				value.per_customer_pending_max === null ||
-				value.per_org_pending_max === null
+				value.per_org_pending_max === null ||
+				value.delayed_postgres_backup_read.delay_ms === null ||
+				value.delayed_postgres_backup_read.max_in_flight_per_process === null
 			) {
 				return;
 			}
@@ -66,6 +81,14 @@ export const FullSubjectGateConfigForm = ({
 				max_wait_ms: value.max_wait_ms,
 				per_customer_pending_max: value.per_customer_pending_max,
 				per_org_pending_max: value.per_org_pending_max,
+				replica_lane: value.replica_lane,
+				read_split: value.read_split,
+				delayed_postgres_backup_read: {
+					enabled: value.delayed_postgres_backup_read.enabled,
+					delay_ms: value.delayed_postgres_backup_read.delay_ms,
+					max_in_flight_per_process:
+						value.delayed_postgres_backup_read.max_in_flight_per_process,
+				},
 			});
 		},
 	});
@@ -137,6 +160,59 @@ export const FullSubjectGateConfigForm = ({
 								description="Requests waiting per org before new ones are rejected."
 								min={FULL_SUBJECT_GATE_LIMITS.per_org_pending_max.min}
 								max={FULL_SUBJECT_GATE_LIMITS.per_org_pending_max.max}
+								inputClassName="tabular-nums"
+							/>
+						)}
+					</form.AppField>
+				</div>
+
+				<Separator />
+				<form.AppField name="delayed_postgres_backup_read.enabled">
+					{(field) => (
+						<div className="flex items-center justify-between gap-6">
+							<div className="flex flex-col gap-1">
+								<div className="text-sm font-medium text-foreground">
+									Delayed Postgres backup read
+								</div>
+								<div className="text-pretty text-xs text-tertiary-foreground">
+									If the critical-pool read is still running after the delay,
+									start the same read on the general pool. First success wins.
+								</div>
+							</div>
+							<Switch
+								aria-label="Enable delayed Postgres backup read"
+								checked={field.state.value}
+								onCheckedChange={field.handleChange}
+							/>
+						</div>
+					)}
+				</form.AppField>
+
+				<div className="grid gap-x-6 gap-y-5 md:grid-cols-2">
+					<form.AppField name="delayed_postgres_backup_read.delay_ms">
+						{(field) => (
+							<field.NumberField
+								label="Backup delay (ms)"
+								description="Wait before starting the general-pool read."
+								min={DELAYED_POSTGRES_BACKUP_READ_LIMITS.delay_ms.min}
+								max={DELAYED_POSTGRES_BACKUP_READ_LIMITS.delay_ms.max}
+								inputClassName="tabular-nums"
+							/>
+						)}
+					</form.AppField>
+					<form.AppField name="delayed_postgres_backup_read.max_in_flight_per_process">
+						{(field) => (
+							<field.NumberField
+								label="Backup reads per process"
+								description="Maximum backup reads running concurrently."
+								min={
+									DELAYED_POSTGRES_BACKUP_READ_LIMITS.max_in_flight_per_process
+										.min
+								}
+								max={
+									DELAYED_POSTGRES_BACKUP_READ_LIMITS.max_in_flight_per_process
+										.max
+								}
 								inputClassName="tabular-nums"
 							/>
 						)}
