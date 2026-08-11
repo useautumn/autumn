@@ -1,12 +1,14 @@
 import {
 	type AppEnv,
 	BillingInterval,
+	type CreatedAtRange,
 	CusProductStatus,
 	type ListCustomersV2Params,
 	RELEVANT_STATUSES,
 } from "@autumn/shared";
 import { type SQL, sql } from "drizzle-orm";
 import { planetScaleTag } from "@/db/dbUtils.js";
+import { looseEntitlementIsLiveSql } from "./looseEntitlementSql.js";
 
 const RECURRING_BILLING_INTERVALS = [
 	BillingInterval.Week,
@@ -406,6 +408,7 @@ const buildExtraEntitlementsCTE = () => {
 		  AND ce.pooled_balance_id IS NULL
 		  AND ce.pooled_contribution_id IS NULL
           AND (ce.expires_at IS NULL OR ce.expires_at > EXTRACT(EPOCH FROM now()) * 1000)
+          AND ${looseEntitlementIsLiveSql()}
         ORDER BY ce.id DESC
 		LIMIT ${EXTRA_CUSTOMER_ENTITLEMENT_LIMIT}
       ) ce
@@ -764,6 +767,7 @@ export const getPaginatedFullCusQuery = ({
 		AND ce.pooled_balance_id IS NULL
 		AND ce.pooled_contribution_id IS NULL
         AND (ce.expires_at IS NULL OR ce.expires_at > EXTRACT(EPOCH FROM now()) * 1000)
+        AND ${looseEntitlementIsLiveSql()}
       ORDER BY ce.id DESC
 	  LIMIT ${EXTRA_CUSTOMER_ENTITLEMENT_LIMIT}
     ) ce ON true
@@ -1039,6 +1043,7 @@ export const getCustomerListFilterSql = ({
 	noneFilter,
 	productVersionFilters,
 	intervalFilters,
+	createdAtRangeFilter,
 }: {
 	internalCustomerIds?: string[];
 	orgId?: string;
@@ -1051,8 +1056,17 @@ export const getCustomerListFilterSql = ({
 	noneFilter?: boolean;
 	productVersionFilters?: DashboardProductVersionFilter[];
 	intervalFilters?: DashboardIntervalFilter[];
+	createdAtRangeFilter?: CreatedAtRange;
 }) => {
 	const filters = [];
+
+	if (createdAtRangeFilter?.start !== undefined) {
+		filters.push(sql`AND c.created_at >= ${createdAtRangeFilter.start}`);
+	}
+
+	if (createdAtRangeFilter?.end !== undefined) {
+		filters.push(sql`AND c.created_at <= ${createdAtRangeFilter.end}`);
+	}
 
 	if (internalCustomerIds && internalCustomerIds.length > 0) {
 		filters.push(

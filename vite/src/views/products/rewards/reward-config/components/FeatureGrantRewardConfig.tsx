@@ -72,7 +72,6 @@ export function FeatureGrantRewardConfig({
 				...entitlements,
 				{
 					feature_id: "",
-					allowance: 0,
 					expiry: existingExpiry ? { ...existingExpiry } : undefined,
 				},
 			],
@@ -297,11 +296,17 @@ export function FeatureGrantRewardConfig({
 											<FormLabel>Balance Grant</FormLabel>
 											<Input
 												type="number"
-												value={ent.allowance || ""}
+												min={0}
+												value={ent.allowance ?? ""}
 												onChange={(e) =>
 													updateEntitlement({
 														index,
-														updates: { allowance: Number(e.target.value) },
+														updates: {
+															allowance:
+																e.target.value === ""
+																	? undefined
+																	: Math.max(0, Number(e.target.value)),
+														},
 													})
 												}
 												placeholder="0"

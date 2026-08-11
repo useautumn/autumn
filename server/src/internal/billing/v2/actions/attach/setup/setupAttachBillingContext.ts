@@ -124,6 +124,7 @@ export const setupAttachBillingContext = async ({
 		stripeTaxRate,
 		paymentMethod,
 		testClockFrozenTime,
+		canceledStripeSubscriptionId,
 	} = await setupStripeBillingContext({
 		ctx,
 		fullCustomer,
@@ -280,6 +281,7 @@ export const setupAttachBillingContext = async ({
 
 		currentCustomerProduct,
 		scheduledCustomerProduct,
+		canceledStripeSubscriptionId,
 
 		planTiming,
 		endOfCycleMs,

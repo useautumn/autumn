@@ -12,6 +12,24 @@ import type { StripeSubscriptionWithDiscounts } from "@server/external/stripe/su
 import type { AutumnContext } from "@server/honoUtils/HonoEnv";
 import { isStripeSubscriptionCanceled } from "@/external/stripe/subscriptions/utils/classifyStripeSubscriptionUtils";
 
+export interface StripeSubscriptionForBilling {
+	stripeSubscription?: StripeSubscriptionWithDiscounts;
+	/** Set when the linked subscription exists in Stripe but is already canceled. */
+	canceledStripeSubscriptionId?: string;
+	/** Set when the linked subscription belongs to a different Stripe customer.
+	 *  Only surfaced for flows allowed to proceed past that fault. */
+	mismatchedStripeSubscriptionId?: string;
+}
+
+/** An immediate cancel only detaches Autumn-side state, so a subscription it
+ *  will never touch must not block it. */
+const isImmediateCancelRequest = (
+	params?: AttachParamsV1 | MultiAttachParamsV0 | UpdateSubscriptionV1Params,
+) =>
+	params !== undefined &&
+	"cancel_action" in params &&
+	params.cancel_action === "cancel_immediately";
+
 /**
  * Fetches a Stripe subscription with expanded discounts for billing operations.
  * Returns the subscription with `discounts.source.coupon.applies_to` expanded.
@@ -30,9 +48,9 @@ export const fetchStripeSubscriptionForBilling = async ({
 	targetCusProductId?: string;
 	newBillingSubscription?: boolean;
 	params?: AttachParamsV1 | MultiAttachParamsV0 | UpdateSubscriptionV1Params;
-}): Promise<StripeSubscriptionWithDiscounts | undefined> => {
+}): Promise<StripeSubscriptionForBilling> => {
 	if (newBillingSubscription) {
-		return undefined;
+		return {};
 	}
 
 	const processorSubscriptionId =
@@ -53,7 +71,7 @@ export const fetchStripeSubscriptionForBilling = async ({
 	const subId =
 		processorSubscriptionId ?? cusProductWithSub?.subscription_ids?.[0];
 
-	if (!subId) return undefined;
+	if (!subId) return {};
 
 	const sub = await stripeCli.subscriptions.retrieve(subId, {
 		expand: ["discounts.source.coupon.applies_to"],
@@ -66,19 +84,24 @@ export const fetchStripeSubscriptionForBilling = async ({
 		});
 	}
 
-	if (isStripeSubscriptionCanceled(sub)) {
-		throw new RecaseError({
-			message: `Subscription ${subId} is canceled`,
-			statusCode: 400,
-		});
-	}
-
+	// Wrong-customer linkage is a data fault worth surfacing, except to an
+	// immediate cancel — blocking that would strand the plan with no way out.
 	if (sub.customer !== fullCus.processor.id) {
+		if (isImmediateCancelRequest(params)) {
+			return { mismatchedStripeSubscriptionId: subId };
+		}
+
 		throw new RecaseError({
 			message: `Subscription ${subId} is not for the current customer`,
 			statusCode: 400,
 		});
 	}
 
-	return sub as StripeSubscriptionWithDiscounts;
+	// A canceled sub carries no live billing state. Report it separately so each
+	// caller decides: abandon it (attach) or block Stripe writes (updateSubscription).
+	if (isStripeSubscriptionCanceled(sub)) {
+		return { canceledStripeSubscriptionId: subId };
+	}
+
+	return { stripeSubscription: sub as StripeSubscriptionWithDiscounts };
 };

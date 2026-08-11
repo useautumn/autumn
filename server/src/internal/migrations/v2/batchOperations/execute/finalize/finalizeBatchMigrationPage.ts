@@ -11,7 +11,13 @@ import {
 	timePhase,
 } from "../utils/pagePhaseTimings.js";
 
-/** Post-commit side effects for one finalized page, in order. */
+/** Post-commit side effects for one finalized page.
+ *
+ * Cache invalidation and item-event emission are independent, so they run
+ * concurrently. Either can be handed to the caller to drain at chunk end
+ * instead of blocking the page — pages touch disjoint customers, so they
+ * overlap safely. A deferred invalidation must still complete, so the caller
+ * drains before finishing. */
 export const finalizeBatchMigrationPage = async ({
 	ctx,
 	migrationInternalId,
@@ -20,6 +26,8 @@ export const finalizeBatchMigrationPage = async ({
 	pageResult,
 	webhooks,
 	phases,
+	deferEvents,
+	deferCaches,
 }: {
 	ctx: AutumnContext;
 	migrationInternalId: string;
@@ -28,24 +36,43 @@ export const finalizeBatchMigrationPage = async ({
 	pageResult: BatchMigrationPageResult;
 	webhooks?: MigrationWebhookControls;
 	phases?: BatchMigrationPagePhases;
+	deferEvents?: (emit: () => Promise<unknown>) => void;
+	deferCaches?: (invalidate: () => Promise<unknown>) => void;
 }): Promise<void> => {
-	const cachesInvalidated = await timePhase({
-		phases,
-		phase: "finalize_caches",
-		run: () => invalidateBatchMigrationCaches({ ctx, pageResult }),
-	});
-	const { eventCount } = await timePhase({
-		phases,
-		phase: "finalize_events",
-		run: () =>
-			emitBatchMigrationItemEvents({
-				ctx,
-				migrationInternalId,
-				migrationRunId,
-				plan,
-				pageResult,
-			}),
-	});
+	const emitEvents = () =>
+		emitBatchMigrationItemEvents({
+			ctx,
+			migrationInternalId,
+			migrationRunId,
+			plan,
+			pageResult,
+		});
+
+	const invalidateCaches = () =>
+		invalidateBatchMigrationCaches({ ctx, pageResult });
+
+	const runCaches = async () => {
+		if (!deferCaches)
+			return timePhase({
+				phases,
+				phase: "finalize_caches",
+				run: invalidateCaches,
+			});
+		deferCaches(invalidateCaches);
+		return null;
+	};
+	const runEvents = async () => {
+		if (!deferEvents)
+			return timePhase({ phases, phase: "finalize_events", run: emitEvents });
+		deferEvents(emitEvents);
+		return undefined;
+	};
+
+	const [cachesInvalidated, emitted] = await Promise.all([
+		runCaches(),
+		runEvents(),
+	]);
+	const eventCount = emitted?.eventCount ?? null;
 	const webhookRecords = webhooks?.sendWebhooks
 		? await timePhase({
 				phases,

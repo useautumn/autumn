@@ -18,14 +18,13 @@ const ngrokConfigFiles = [
 const localConfig = {
 	postgresPort: 5432,
 	ngrokApiPort: 4040,
-	redisStackPort: 6379,
+	miscCachePort: 6379,
 	dragonflyPort: 6380,
 	dynamoDbPort: 8000,
 	apiServerPort: 8080,
-	mcpServerPort: 3099,
 	databaseUrl: "postgresql://postgres:postgres@localhost:5432/autumn",
 	chatStateDatabaseUrl: "postgresql://postgres:postgres@localhost:5432/chat",
-	cacheUrl: "redis://localhost:6379",
+	miscCacheUrl: "redis://localhost:6379",
 	dragonflyUrl: "redis://localhost:6380",
 	dynamoDbEndpoint: "http://localhost:8000",
 };
@@ -87,20 +86,18 @@ const getDomainFromUrl = ({ url }: { url: string }) => {
 };
 
 const configureNgrokUrl = () => {
-	const ngrokUrl = composeEnv.NGROK_URL;
+	const ngrokUrl = composeEnv.AUTUMN_PUBLIC_API_URL;
 	if (!ngrokUrl) {
 		throw new Error(
-			"NGROK_URL is required for dev services. It should be injected from Infisical dev secrets.",
+			"AUTUMN_PUBLIC_API_URL is required for dev services. It should be injected from Infisical dev secrets.",
 		);
 	}
 
 	composeEnv.NGROK_DOMAIN = getDomainFromUrl({ url: ngrokUrl });
 };
 
-const configureNgrokTarget = ({ target }: { target: "api" | "mcp" }) => {
-	const port =
-		target === "mcp" ? localConfig.mcpServerPort : localConfig.apiServerPort;
-	composeEnv.NGROK_TARGET = `host.docker.internal:${port}`;
+const configureNgrokTarget = () => {
+	composeEnv.NGROK_TARGET = `host.docker.internal:${localConfig.apiServerPort}`;
 };
 
 const configureNgrokToken = async () => {
@@ -226,9 +223,11 @@ const removeVolumes = ({
 	const volumes = [
 		...(nonPostgres
 			? [
-					"autumn-dev-redis-stack",
+					"autumn-dev-dragonfly-misc",
 					"autumn-dev-dragonfly",
 					"autumn-dev-localstack",
+					// Left behind by the pre-Dragonfly misc cache.
+					"autumn-dev-redis-stack",
 				]
 			: []),
 		...(postgres ? ["autumn-dev-postgres-18", "autumn-dev-postgres"] : []),
@@ -269,11 +268,11 @@ const doctor = async () => {
 				waitForTcp({ port: localConfig.postgresPort, label: "Postgres" }),
 		}),
 		check({
-			label: "Redis Stack :6379",
+			label: "Dragonfly (misc cache) :6379",
 			fn: () =>
 				waitForTcp({
-					port: localConfig.redisStackPort,
-					label: "Redis Stack",
+					port: localConfig.miscCachePort,
+					label: "Dragonfly (misc cache)",
 				}),
 		}),
 		check({
@@ -365,9 +364,9 @@ const getNgrokUrl = async () => {
 	throw new Error("ngrok did not expose a public URL on :4040");
 };
 
-const up = async ({ ngrokTarget }: { ngrokTarget: "api" | "mcp" }) => {
+const up = async () => {
 	configureNgrokUrl();
-	configureNgrokTarget({ target: ngrokTarget });
+	configureNgrokTarget();
 	await configureNgrokToken();
 	log("starting Docker services");
 	dockerCompose({
@@ -380,7 +379,10 @@ const up = async ({ ngrokTarget }: { ngrokTarget: "api" | "mcp" }) => {
 
 	await Promise.all([
 		waitForTcp({ port: localConfig.postgresPort, label: "Postgres" }),
-		waitForTcp({ port: localConfig.redisStackPort, label: "Redis Stack" }),
+		waitForTcp({
+			port: localConfig.miscCachePort,
+			label: "Dragonfly (misc cache)",
+		}),
 		waitForTcp({ port: localConfig.dragonflyPort, label: "Dragonfly" }),
 		waitForTcp({ port: localConfig.dynamoDbPort, label: "DynamoDB" }),
 		waitForTcp({ port: localConfig.ngrokApiPort, label: "ngrok" }),
@@ -393,7 +395,7 @@ const up = async ({ ngrokTarget }: { ngrokTarget: "api" | "mcp" }) => {
 	const ngrokUrl = await getNgrokUrl();
 	log(`ngrok target: ${composeEnv.NGROK_TARGET}`);
 	log(`ngrok URL: ${ngrokUrl}`);
-	log(`export NGROK_URL=${ngrokUrl}`);
+	log(`export AUTUMN_PUBLIC_API_URL=${ngrokUrl}`);
 };
 
 const down = () => {
@@ -426,11 +428,9 @@ const help = () => {
 	console.log(`Usage: bun dev:services <command>
 
 Commands:
-  up                         Start local Postgres, Redis Stack, Dragonfly, DynamoDB, and ngrok
-  up --mcp                   Start services with ngrok pointed at localhost:3099
-  up:mcp                     Alias for up --mcp
+  up                         Start local Postgres, Dragonfly (misc cache + cache v2), DynamoDB, and ngrok
   down                       Stop local services and keep all data
-  down --volumes             Stop services and delete Redis/Dragonfly data
+  down --volumes             Stop services and delete Dragonfly data
   down --postgres            Stop services and delete Postgres data
   doctor                     Check local service readiness
   prune [--postgres]         Delete non-Postgres volumes and prune dangling Docker cache
@@ -439,8 +439,8 @@ Commands:
 Local service values:
   DATABASE_URL=${localConfig.databaseUrl}
   CHAT_STATE_DATABASE_URL=${localConfig.chatStateDatabaseUrl}
-  NGROK_URL=<printed by bun dev:services up>
-  MISC_CACHE_DRAGONFLY_PUBLIC_URL=${localConfig.cacheUrl}
+  AUTUMN_PUBLIC_API_URL=<printed by bun dev:services up>
+  MISC_CACHE_DRAGONFLY_PUBLIC_URL=${localConfig.miscCacheUrl}
   CACHE_V2_DRAGONFLY_URL=${localConfig.dragonflyUrl}
   DYNAMODB_ENDPOINT=${localConfig.dynamoDbEndpoint}
 `);
@@ -448,10 +448,7 @@ Local service values:
 
 switch (command) {
 	case "up":
-		await up({ ngrokTarget: flags.has("--mcp") ? "mcp" : "api" });
-		break;
-	case "up:mcp":
-		await up({ ngrokTarget: "mcp" });
+		await up();
 		break;
 	case "down":
 		down();

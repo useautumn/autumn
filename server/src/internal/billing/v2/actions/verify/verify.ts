@@ -11,6 +11,7 @@ import { computeExpectedSubscriptionState } from "./compute/computeExpectedSubsc
 import { evaluateCancelState } from "./evaluate/evaluateCancelState";
 import { evaluateItems } from "./evaluate/evaluateItems";
 import { evaluateSchedulePhases } from "./evaluate/evaluateSchedulePhases";
+import { evaluateSharedStripeCustomer } from "./evaluate/evaluateSharedStripeCustomer";
 import { verifyMismatchToMessage } from "./format/verifyMismatchToMessage";
 import {
 	setupVerifyContext,
@@ -21,6 +22,7 @@ import {
  * else defaults to error. */
 const WARNING_MISMATCH_TYPES = new Set<SubscriptionMismatch["type"]>([
 	"stripe_sub_not_in_autumn",
+	"shared_stripe_customer",
 ]);
 
 const stampMessages = (
@@ -78,6 +80,10 @@ export const verify = async ({
 
 	const stripeCli =
 		stripeCliOverride ?? createStripeCli({ org: ctx.org, env: ctx.env });
+
+	const customerMismatches = stampMessages(
+		await evaluateSharedStripeCustomer({ ctx, fullCustomer }),
+	);
 
 	const subscriptions: VerifyResponse["subscriptions"] = [];
 
@@ -166,5 +172,9 @@ export const verify = async ({
 		});
 	}
 
-	return { customer_id: customerId, subscriptions };
+	return {
+		customer_id: customerId,
+		customer_mismatches: customerMismatches,
+		subscriptions,
+	};
 };

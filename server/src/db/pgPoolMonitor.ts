@@ -216,6 +216,8 @@ const emitSnapshot = (): void => {
 
 export const startPgPoolMonitor = (intervalMs = 30_000): void => {
 	if (snapshotInterval) return;
+	// Pool snapshots are an ops signal; locally they just flood the console.
+	if (process.env.NODE_ENV === "development") return;
 	// Not unref'd: under Bun an unref'd interval was never observed to fire, and
 	// the server keeps the loop alive anyway — stopPgPoolMonitor clears it.
 	snapshotInterval = setInterval(emitSnapshot, intervalMs);

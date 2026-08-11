@@ -5,6 +5,7 @@ on:
     types:
       - opened
       - edited
+      - closed
     branches:
       - main
 
@@ -15,7 +16,6 @@ jobs:
   notify-shipped:
     name: Notify shipped
     if: >-
-      github.event.pull_request.head.ref == 'dev' &&
       github.event.pull_request.head.repo.full_name == github.repository &&
       contains(github.event.pull_request.body || '', '<!-- This is an auto-generated description by cubic. -->') &&
       (github.event.action == 'opened' ||
@@ -27,6 +27,7 @@ jobs:
       - name: Post summary to shipped
         env:
           PR_BODY: ${{ github.event.pull_request.body }}
+          PR_HEAD_REF: ${{ github.event.pull_request.head.ref }}
           PR_NUMBER: ${{ github.event.pull_request.number }}
           PR_URL: ${{ github.event.pull_request.html_url }}
           SLACK_SHIPPED_WEBHOOK_URL: ${{ secrets.SLACK_SHIPPED_WEBHOOK_URL }}
@@ -34,6 +35,16 @@ jobs:
           if [ -z "$SLACK_SHIPPED_WEBHOOK_URL" ]; then
             echo "::error::SLACK_SHIPPED_WEBHOOK_URL is not configured"
             exit 1
+          fi
+
+          if [ "$PR_HEAD_REF" = "dev" ]; then
+            route_label="dev2main"
+          else
+            slack_head_ref=$(printf '%s' "$PR_HEAD_REF" | sed \
+              -e 's/&/\&amp;/g' \
+              -e 's/</\&lt;/g' \
+              -e 's/>/\&gt;/g')
+            route_label="$slack_head_ref → main"
           fi
 
           start_marker="## Summary by cubic"
@@ -52,8 +63,8 @@ jobs:
             -e 's/&/\&amp;/g' \
             -e 's/</\&lt;/g' \
             -e 's/>/\&gt;/g')
-          printf -v SLACK_MESSAGE '*dev2main* :rocket:\n<%s|PR #%s>\n\n%s' \
-            "$PR_URL" "$PR_NUMBER" "$slack_summary"
+          printf -v SLACK_MESSAGE '*%s* :rocket:\n<%s|PR #%s>\n\n%s' \
+            "$route_label" "$PR_URL" "$PR_NUMBER" "$slack_summary"
           export SLACK_MESSAGE
 
           node -e 'process.stdout.write(JSON.stringify({ text: process.env.SLACK_MESSAGE }))' \
@@ -62,4 +73,62 @@ jobs:
           curl --silent --show-error --fail-with-body --retry 3 --retry-all-errors \
             --header "Content-Type: application/json" \
             --data-binary @"$RUNNER_TEMP/slack-payload.json" \
+            "$SLACK_SHIPPED_WEBHOOK_URL"
+
+  notify-merged:
+    name: Reply when merged
+    if: >-
+      github.event.action == 'closed' &&
+      github.event.pull_request.merged == true &&
+      github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Reply in shipped thread
+        env:
+          DEPLOY_SECRET: ${{ secrets.DEPLOY_SECRET }}
+          DEPLOY_URL: ${{ secrets.DEPLOY_URL }}
+          MERGED_AT: ${{ github.event.pull_request.merged_at }}
+          MERGE_COMMIT_SHA: ${{ github.event.pull_request.merge_commit_sha }}
+          PR_URL: ${{ github.event.pull_request.html_url }}
+        run: |
+          if [ -z "$DEPLOY_URL" ] || [ -z "$DEPLOY_SECRET" ]; then
+            echo "::error::DEPLOY_URL and DEPLOY_SECRET must be configured"
+            exit 1
+          fi
+
+          export MERGED_AT MERGE_COMMIT_SHA PR_URL
+          node -e 'process.stdout.write(JSON.stringify({ pullRequestUrl: process.env.PR_URL, mergedAt: process.env.MERGED_AT, mergeCommitSha: process.env.MERGE_COMMIT_SHA }))' \
+            > "$RUNNER_TEMP/shipped-merge-payload.json"
+
+          curl --silent --show-error --fail-with-body --retry 3 --retry-all-errors \
+            --request POST \
+            --header "Content-Type: application/json" \
+            --header "x-deploy-secret: $DEPLOY_SECRET" \
+            --data-binary @"$RUNNER_TEMP/shipped-merge-payload.json" \
+            "$DEPLOY_URL/api/shipped/merge"
+
+      - name: Maybe celebrate with Honest Burgers
+        if: ${{ !cancelled() }}
+        env:
+          PR_URL: ${{ github.event.pull_request.html_url }}
+          SLACK_SHIPPED_WEBHOOK_URL: ${{ secrets.SLACK_SHIPPED_WEBHOOK_URL }}
+        run: |
+          if [ "$(node -e 'process.stdout.write(String(require("node:crypto").randomInt(100)))')" -ne 0 ]; then
+            echo "No Honest Burgers trip for this merge"
+            exit 0
+          fi
+
+          if [ -z "$SLACK_SHIPPED_WEBHOOK_URL" ]; then
+            echo "::error::SLACK_SHIPPED_WEBHOOK_URL is not configured"
+            exit 1
+          fi
+
+          export PR_URL
+          node -e 'process.stdout.write(JSON.stringify({ text: "🍔🎉 Please schedule an Honest Burgers trip to celebrate this release! 🎊🚀\n" + process.env.PR_URL }))' \
+            > "$RUNNER_TEMP/honest-burgers-payload.json"
+
+          curl --silent --show-error --fail-with-body --retry 3 --retry-all-errors \
+            --header "Content-Type: application/json" \
+            --data-binary @"$RUNNER_TEMP/honest-burgers-payload.json" \
             "$SLACK_SHIPPED_WEBHOOK_URL"

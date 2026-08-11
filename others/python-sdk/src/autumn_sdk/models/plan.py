@@ -1813,7 +1813,7 @@ class PlanVariantDetailsBillingControls(BaseModel):
         return m
 
 
-class CustomizeTypedDict(TypedDict):
+class Customize1TypedDict(TypedDict):
     r"""The customization that transforms the base plan into this variant."""
 
     price: NotRequired[Nullable[BasePriceTypedDict]]
@@ -1828,7 +1828,7 @@ class CustomizeTypedDict(TypedDict):
     r"""Override the plan's billing controls (auto top-ups, spend limits, usage limits, usage alerts, overage allowed) for this customer."""
 
 
-class Customize(BaseModel):
+class Customize1(BaseModel):
     r"""The customization that transforms the base plan into this variant."""
 
     price: OptionalNullable[BasePrice] = UNSET
@@ -1879,7 +1879,7 @@ class VariantDetailsTypedDict(TypedDict):
 
     base_plan_id: str
     r"""The ID of the base plan this variant was derived from."""
-    customize: NotRequired[CustomizeTypedDict]
+    customize: NotRequired[Customize1TypedDict]
     r"""The customization that transforms the base plan into this variant."""
 
 
@@ -1889,7 +1889,7 @@ class VariantDetails(BaseModel):
     base_plan_id: str
     r"""The ID of the base plan this variant was derived from."""
 
-    customize: Optional[Customize] = None
+    customize: Optional[Customize1] = None
     r"""The customization that transforms the base plan into this variant."""
 
     @model_serializer(mode="wrap")

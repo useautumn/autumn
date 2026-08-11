@@ -1,13 +1,15 @@
 import {
 	ACTIVE_STATUSES,
 	type AppEnv,
+	type CreatedAtRange,
 	CUSTOMER_PRODUCTS_DEFAULT_LIMIT,
 	type CusProductStatus,
 	type ListCustomersV2Params,
 	RELEVANT_STATUSES,
+	type SortOrder,
 	type StandardCursorFields,
 } from "@autumn/shared";
-import { sql } from "drizzle-orm";
+import { type Column, type SQL, sql } from "drizzle-orm";
 import { planetScaleTag } from "@/db/dbUtils.js";
 import {
 	cpStatusInClause,
@@ -22,6 +24,7 @@ import {
 	getCustomerListFilterSql,
 	POOLED_CUSTOMER_ENTITLEMENT_LIMIT,
 } from "./getFullCusQuery.js";
+import { looseEntitlementIsLiveSql } from "./looseEntitlementSql.js";
 
 export type CursorPaginatedFullCusQueryArgs = {
 	orgId: string;
@@ -42,11 +45,32 @@ export type CursorPaginatedFullCusQueryArgs = {
 	noneFilter?: boolean;
 	productVersionFilters?: DashboardProductVersionFilter[];
 	intervalFilters?: DashboardIntervalFilter[];
+	createdAtRangeFilter?: CreatedAtRange;
 	cusProductLimit: number;
 	customerId?: string;
 	/** Emit products_page / products_total_count. Dashboard only. */
 	withProductsPage?: boolean;
+	sortOrder?: SortOrder;
 };
+
+/**
+ * NULL-id-safe keyset predicate: a row-tuple compare is UNKNOWN for NULL ids,
+ * which asc sorts after the cursor — they'd be silently dropped.
+ */
+export const getCursorPredicateSql = ({
+	createdAtColumn,
+	idColumn,
+	cursor,
+	sortOrder,
+}: {
+	createdAtColumn: SQL | Column;
+	idColumn: SQL | Column;
+	cursor: { t: number; id: string };
+	sortOrder: SortOrder;
+}): SQL =>
+	sortOrder === "asc"
+		? sql`(${createdAtColumn} >= ${cursor.t} AND (${createdAtColumn} > ${cursor.t} OR ${idColumn} > ${cursor.id} OR ${idColumn} IS NULL))`
+		: sql`(${createdAtColumn} <= ${cursor.t} AND (${createdAtColumn} < ${cursor.t} OR ${idColumn} < ${cursor.id}))`;
 
 /**
  * Set-based variant: customer_products/entitlements/prices fetched via single
@@ -72,9 +96,11 @@ export const getCursorPaginatedFullCusQuery = ({
 	noneFilter,
 	productVersionFilters,
 	intervalFilters,
+	createdAtRangeFilter,
 	cusProductLimit,
 	customerId,
 	withProductsPage = false,
+	sortOrder = "desc",
 }: CursorPaginatedFullCusQueryArgs) => {
 	const cpStatusFilter = cpStatusInClause(inStatuses);
 
@@ -104,10 +130,18 @@ export const getCursorPaginatedFullCusQuery = ({
 		noneFilter,
 		productVersionFilters,
 		intervalFilters,
+		createdAtRangeFilter,
 	});
 
+	const orderDirection = sql.raw(sortOrder === "asc" ? "ASC" : "DESC");
+
 	const cursorPredicate = cursor
-		? sql`AND (c.created_at, c.id) < (${cursor.t}, ${cursor.id})`
+		? sql`AND ${getCursorPredicateSql({
+				createdAtColumn: sql.raw("c.created_at"),
+				idColumn: sql.raw("c.id"),
+				cursor,
+				sortOrder,
+			})}`
 		: sql``;
 
 	const fetchLimit = limit + 1;
@@ -172,7 +206,7 @@ export const getCursorPaginatedFullCusQuery = ({
 		WHERE c.org_id = ${orgId}
 			AND c.env = ${env}
 			${customerId ? sql`AND (c.id = ${customerId} OR c.internal_id = ${customerId})` : sql`${customerListFilterSql}${cursorPredicate}`}
-		ORDER BY c.created_at DESC, c.id DESC
+		ORDER BY c.created_at ${orderDirection}, c.id ${orderDirection}
 		LIMIT ${fetchLimit}
 		),
 		cp_ranked_raw AS MATERIALIZED (
@@ -250,6 +284,7 @@ export const getCursorPaginatedFullCusQuery = ({
 					AND ce.pooled_balance_id IS NULL
 					AND ce.pooled_contribution_id IS NULL
 					AND (ce.expires_at IS NULL OR ce.expires_at > EXTRACT(EPOCH FROM now()) * 1000)
+					AND ${looseEntitlementIsLiveSql()}
 				ORDER BY ce.id DESC
 				LIMIT ${EXTRA_CUSTOMER_ENTITLEMENT_LIMIT}
 			) ce ON true

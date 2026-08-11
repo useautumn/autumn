@@ -19,6 +19,10 @@ import { mockModuleWithRestore } from "../../utils/mockModuleWithRestore.js";
 
 const trackAsyncQueueUrl =
 	"https://sqs.eu-west-1.amazonaws.com/123456789012/track-async-dev.fifo";
+const trackAsyncStandardQueueUrl =
+	"https://sqs.eu-west-1.amazonaws.com/123456789012/track-async-dev-standard";
+const updateBalanceQueueUrl =
+	"https://sqs.eu-west-1.amazonaws.com/123456789012/update-balance-dev.fifo";
 
 const state = {
 	queueCommands: [] as Record<string, unknown>[],
@@ -103,6 +107,10 @@ const params = {
 
 describe("updateBalanceV2 async routing", () => {
 	const originalQueueUrl = process.env.TRACK_ASYNC_SQS_QUEUE_URL;
+	const originalStandardQueueUrl =
+		process.env.TRACK_ASYNC_STANDARD_SQS_QUEUE_URL;
+	const originalUpdateBalanceQueueUrl =
+		process.env.UPDATE_BALANCE_SQS_QUEUE_URL;
 
 	beforeEach(() => {
 		state.queueCommands = [];
@@ -112,8 +120,10 @@ describe("updateBalanceV2 async routing", () => {
 			config: AsyncBalanceUpdateConfigSchema.parse({}),
 		});
 		process.env.TRACK_ASYNC_SQS_QUEUE_URL = trackAsyncQueueUrl;
+		process.env.TRACK_ASYNC_STANDARD_SQS_QUEUE_URL = trackAsyncStandardQueueUrl;
+		process.env.UPDATE_BALANCE_SQS_QUEUE_URL = updateBalanceQueueUrl;
 
-		const sqsClient = getSqsClient({ queueUrl: trackAsyncQueueUrl });
+		const sqsClient = getSqsClient({ queueUrl: updateBalanceQueueUrl });
 		state.originalSend = sqsClient.send.bind(sqsClient);
 		sqsClient.send = (async (command: { input: Record<string, unknown> }) => {
 			state.queueCommands.push(command.input);
@@ -127,7 +137,7 @@ describe("updateBalanceV2 async routing", () => {
 
 	afterEach(() => {
 		if (state.originalSend) {
-			const sqsClient = getSqsClient({ queueUrl: trackAsyncQueueUrl });
+			const sqsClient = getSqsClient({ queueUrl: updateBalanceQueueUrl });
 			sqsClient.send = state.originalSend;
 			state.originalSend = null;
 		}
@@ -135,6 +145,8 @@ describe("updateBalanceV2 async routing", () => {
 			config: AsyncBalanceUpdateConfigSchema.parse({}),
 		});
 		process.env.TRACK_ASYNC_SQS_QUEUE_URL = originalQueueUrl;
+		process.env.TRACK_ASYNC_STANDARD_SQS_QUEUE_URL = originalStandardQueueUrl;
+		process.env.UPDATE_BALANCE_SQS_QUEUE_URL = originalUpdateBalanceQueueUrl;
 	});
 
 	test("enqueues configured async updates without running synchronous mutation helpers", async () => {
@@ -147,21 +159,13 @@ describe("updateBalanceV2 async routing", () => {
 
 		expect(state.queueCommands).toHaveLength(1);
 		expect(state.queueCommands[0]).toMatchObject({
-			QueueUrl: trackAsyncQueueUrl,
-		});
-		// The async-track queue sends through the SQS batcher (SendMessageBatch).
-		const batchEntries = state.queueCommands[0].Entries as Array<
-			Record<string, unknown>
-		>;
-		expect(batchEntries).toHaveLength(1);
-		expect(batchEntries[0]).toMatchObject({
+			QueueUrl: updateBalanceQueueUrl,
 			MessageGroupId: "org_123:sandbox:cus_123:none",
 			MessageDeduplicationId: ctx.id,
 		});
-		const message = JSON.parse(String(batchEntries[0].MessageBody)) as Record<
-			string,
-			unknown
-		>;
+		const message = JSON.parse(
+			String(state.queueCommands[0].MessageBody),
+		) as Record<string, unknown>;
 		expect(message).toMatchObject({
 			name: JobName.UpdateBalance,
 			data: {
@@ -208,6 +212,7 @@ describe("updateBalanceV2 async routing", () => {
 			config: { enabledOrgIds: ["org_123"] },
 		});
 		process.env.TRACK_ASYNC_SQS_QUEUE_URL = undefined;
+		process.env.UPDATE_BALANCE_SQS_QUEUE_URL = undefined;
 
 		await expect(
 			updateBalanceV2({

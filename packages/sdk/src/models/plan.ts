@@ -1087,7 +1087,7 @@ export type PlanVariantDetailsBillingControls = {
 /**
  * The customization that transforms the base plan into this variant.
  */
-export type Customize = {
+export type Customize1 = {
   /**
    * Override the base price of the plan. Pass null to remove the base price.
    */
@@ -1121,7 +1121,7 @@ export type VariantDetails = {
   /**
    * The customization that transforms the base plan into this variant.
    */
-  customize?: Customize | undefined;
+  customize?: Customize1 | undefined;
 };
 
 /**
@@ -2677,7 +2677,7 @@ export function planVariantDetailsBillingControlsFromJSON(
 }
 
 /** @internal */
-export const Customize$inboundSchema: z.ZodMiniType<Customize, unknown> = z
+export const Customize1$inboundSchema: z.ZodMiniType<Customize1, unknown> = z
   .pipe(
     z.object({
       price: z.optional(z.nullable(z.lazy(() => BasePrice$inboundSchema))),
@@ -2702,13 +2702,13 @@ export const Customize$inboundSchema: z.ZodMiniType<Customize, unknown> = z
     }),
   );
 
-export function customizeFromJSON(
+export function customize1FromJSON(
   jsonString: string,
-): SafeParseResult<Customize, SDKValidationError> {
+): SafeParseResult<Customize1, SDKValidationError> {
   return safeParse(
     jsonString,
-    (x) => Customize$inboundSchema.parse(JSON.parse(x)),
-    `Failed to parse 'Customize' from JSON`,
+    (x) => Customize1$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'Customize1' from JSON`,
   );
 }
 
@@ -2719,7 +2719,7 @@ export const VariantDetails$inboundSchema: z.ZodMiniType<
 > = z.pipe(
   z.object({
     base_plan_id: types.string(),
-    customize: types.optional(z.lazy(() => Customize$inboundSchema)),
+    customize: types.optional(z.lazy(() => Customize1$inboundSchema)),
   }),
   z.transform((v) => {
     return remap$(v, {

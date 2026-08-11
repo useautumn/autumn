@@ -14,6 +14,7 @@ import {
 } from "../constants.ts";
 import type { RegistryEntry } from "../types.ts";
 import { isProvisioned } from "./entry.ts";
+import { isHeadless } from "./headless.ts";
 import {
 	aliasesFor,
 	dragonflyPortFor,
@@ -103,7 +104,7 @@ function urlsForEntry(entry: RegistryEntry): {
 	apiUrl: string;
 	viteUrl: string;
 } {
-	if (isProvisioned(entry)) {
+	if (isProvisioned(entry) && !isHeadless()) {
 		const aliases = aliasesFor(entry.worktreeNum);
 		return { apiUrl: aliases.apiUrl, viteUrl: aliases.viteUrl };
 	}
@@ -129,7 +130,8 @@ export function writeEnvLocalFiles(entry: RegistryEntry): void {
 	const serverEnv: Record<string, string> = {
 		DATABASE_URL: dbUrl,
 		DATABASE_CRITICAL_URL: dbUrl,
-		BETTER_AUTH_URL: apiUrl,
+		AUTUMN_API_URL: apiUrl,
+		AUTUMN_PUBLIC_API_URL: entry.ngrokUrl ?? apiUrl,
 		CLIENT_URL: viteUrl,
 		EMULATE_GOOGLE_URL: portlessHttpsUrl("google.emulate.localhost"),
 		AUTUMN_TEST_BASE_URL: `http://localhost:${serverPort}`,
@@ -142,20 +144,13 @@ export function writeEnvLocalFiles(entry: RegistryEntry): void {
 	if (existsSync(portlessCa)) {
 		serverEnv.NODE_EXTRA_CA_CERTS = portlessCa;
 	}
-	// Public tunnel for this worktree (CMA reaches /mcp through it). dev.ts derives
-	// MCP_SERVER_URL/CHAT_URL/SLACK_BOT_URL from NGROK_URL; we also write it here so
-	// it's visible to a standalone `cd server && bun dev` and documents the tunnel.
-	if (entry.ngrokUrl) {
-		serverEnv.NGROK_URL = entry.ngrokUrl;
-	}
-
 	const viteEnv: Record<string, string> = {
 		VITE_BACKEND_URL: apiUrl,
 		VITE_FRONTEND_URL: viteUrl,
 	};
 
 	const checkoutEnv: Record<string, string> = {
-		VITE_BACKEND_URL: apiUrl,
+		VITE_API_URL: apiUrl,
 	};
 
 	const writeOne = (relPath: string, managed: Record<string, string>) => {

@@ -25,10 +25,15 @@ import {
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { validatePropertyPathForJSON } from "@/internal/analytics/actions/eventValidationUtils.js";
 import { getBillingCycleStartDate } from "../analyticsUtils.js";
-import { shouldUsePropertyDailyRollup } from "./dailyRollupRouting.js";
+import {
+	shouldUseOrgDimensionRollup,
+	shouldUseOrgPropertyRollup,
+	shouldUsePropertyDailyRollup,
+} from "./dailyRollupRouting.js";
 import { getCountAndSum } from "./getCountAndSum.js";
 import {
 	groupedResultIsIncomplete,
+	propertyRollupCoverageIsIncomplete,
 	reportsMoreThan,
 } from "./propertyRollupCompleteness.js";
 
@@ -452,6 +457,21 @@ export const aggregate = async ({
 		}
 
 		const filterParams = buildFilterParams({ filter_by: params.filter_by });
+		const customerId = params.aggregateAll ? undefined : params.customer_id;
+		const useOrgDimensionRollup = shouldUseOrgDimensionRollup({
+			groupColumn,
+			hasCustomerId: Boolean(customerId),
+			hasEntityId: Boolean(params.entity_id),
+			hasPropertyFilters: Object.keys(filterParams).length > 0,
+		});
+		const useOrgPropertyRollup = shouldUseOrgPropertyRollup({
+			groupColumn,
+			hasCustomerId: Boolean(customerId),
+			hasEntityId: Boolean(params.entity_id),
+			hasPropertyFilters: Object.keys(filterParams).length > 0,
+			propertyKey,
+			skipPropertyRollup: false,
+		});
 		const useDailyRollup = shouldUsePropertyDailyRollup({
 			binSize,
 			endDate,
@@ -470,13 +490,19 @@ export const aggregate = async ({
 			end_date: endDate,
 			bin_size: binSize,
 			timezone,
-			customer_id: params.aggregateAll ? undefined : params.customer_id,
+			customer_id: customerId,
 			entity_id: params.entity_id,
 			group_column: groupColumn,
 			property_key: propertyKey,
 			...filterParams,
 			max_groups: params.max_groups,
 			use_daily_rollup: useDailyRollup ? ("1" as const) : undefined,
+			use_org_dimension_rollup: useOrgDimensionRollup
+				? ("1" as const)
+				: undefined,
+			use_org_property_rollup: useOrgPropertyRollup
+				? ("1" as const)
+				: undefined,
 		};
 
 		let result = await pipes.aggregateGroupable(pipeParams);
@@ -486,13 +512,36 @@ export const aggregate = async ({
 			groupColumn === "property" && Object.keys(filterParams).length === 0;
 
 		if (readsGatedRollup) {
-			const totals = await getCountAndSum({
-				ctx,
-				params,
-				dateRange: { startDate, endDate },
-			});
+			let rollupIsIncomplete: boolean;
+			if (useOrgPropertyRollup) {
+				const coverageResult = await pipes.propertyRollupCoverage({
+					org_id: org.id,
+					env,
+					event_names: params.event_names,
+					start_date: startDate,
+					end_date: endDate,
+					property_key: propertyKey,
+				});
+				const coverage = Object.fromEntries(
+					coverageResult.data.map((row) => [row.event_name, row.event_count]),
+				);
+				rollupIsIncomplete = propertyRollupCoverageIsIncomplete({
+					rows: result.data,
+					coverage,
+				});
+			} else {
+				const totals = await getCountAndSum({
+					ctx,
+					params,
+					dateRange: { startDate, endDate },
+				});
+				rollupIsIncomplete = groupedResultIsIncomplete({
+					rows: result.data,
+					totals,
+				});
+			}
 
-			if (groupedResultIsIncomplete({ rows: result.data, totals })) {
+			if (rollupIsIncomplete) {
 				const ungated = await pipes.aggregateGroupable({
 					...pipeParams,
 					skip_property_rollup: "1",

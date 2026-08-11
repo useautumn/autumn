@@ -30,7 +30,7 @@ import {
 const authDashboard = async (cookie: string | null | undefined) => {
 	const session = await verifyDashboardSession({
 		cookie,
-		authBaseUrl: env.BETTER_AUTH_URL,
+		authBaseUrl: env.AUTUMN_API_URL,
 	});
 	if (!session?.activeOrganizationId) return null;
 	return {
@@ -79,7 +79,7 @@ app.route(
 	createMcpRouter({
 		"oauth-enabled": true,
 		"oauth-environment": env.MCP_OAUTH_ENVIRONMENT,
-		"server-url": env.BETTER_AUTH_URL,
+		"server-url": env.AUTUMN_API_URL,
 		logger,
 		resourceUrl: new URL("/mcp", env.MCP_SERVER_URL).href,
 	}),

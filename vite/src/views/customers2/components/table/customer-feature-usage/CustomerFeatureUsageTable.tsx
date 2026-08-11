@@ -24,6 +24,7 @@ import {
 	deduplicateEntitlements,
 	flattenCustomerEntitlements,
 	flattenStandaloneCustomerEntitlements,
+	getAvailableBooleanFeatures,
 	processNonBooleanEntitlements,
 } from "./customerFeatureUsageUtils";
 
@@ -164,8 +165,17 @@ export function CustomerFeatureUsageTable() {
 		[deduplicatedCusEnts],
 	);
 
+	const availableBooleanFeatures = useMemo(
+		() =>
+			getAvailableBooleanFeatures({
+				features: features ?? [],
+				grantedEnts: booleanEnts,
+			}),
+		[features, booleanEnts],
+	);
+
 	const hasMeteredBalances = balanceEnts.length > 0;
-	const hasBooleanFlags = booleanEnts.length > 0;
+	const hasFlagsSection = booleanEnts.length > 0;
 
 	return (
 		<div className="flex flex-col gap-6">
@@ -195,7 +205,7 @@ export function CustomerFeatureUsageTable() {
 							</Button>
 						</Table.Actions>
 					</Table.Toolbar>
-					{hasBooleanFlags && <SectionTag>Balances</SectionTag>}
+					{hasFlagsSection && <SectionTag>Balances</SectionTag>}
 					{hasMeteredBalances ? (
 						<CustomerBalanceTable
 							allEnts={balanceEnts}
@@ -205,14 +215,17 @@ export function CustomerFeatureUsageTable() {
 						/>
 					) : (
 						!isLoading &&
-						!hasBooleanFlags && (
+						!hasFlagsSection && (
 							<EmptyState text="Enable a plan to grant access to features" />
 						)
 					)}
 				</Table.Container>
 			</Table.Provider>
-			{!isLoading && hasBooleanFlags && (
-				<CustomerFlagsSection booleanEnts={booleanEnts} />
+			{!isLoading && hasFlagsSection && (
+				<CustomerFlagsSection
+					booleanEnts={booleanEnts}
+					availableFeatures={availableBooleanFeatures}
+				/>
 			)}
 		</div>
 	);

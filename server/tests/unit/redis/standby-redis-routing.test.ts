@@ -1,12 +1,17 @@
 import { describe, expect, setSystemTime, test } from "bun:test";
 import type { Redis } from "ioredis";
+import { createRedisReadPool } from "@/external/redis/initUtils/createRedisReadPool.js";
 import {
 	createStandbyRedisRouter,
 	getStandbyRedisRouter,
 } from "@/external/redis/initUtils/createStandbyRedisRouter.js";
 import { RedisUnavailableError } from "@/external/redis/utils/errors.js";
 import { throwOnPipelineConnectionError } from "@/external/redis/utils/pipelineErrors.js";
-import { runRedisOp } from "@/external/redis/utils/runRedisOp.js";
+import { REDIS_OP_TIMEOUT_MS } from "@/external/redis/utils/redisOpTimeouts.js";
+import {
+	getPreferredAttemptBudgetMs,
+	runRedisOp,
+} from "@/external/redis/utils/runRedisOp.js";
 
 type Listener = (...args: unknown[]) => void;
 
@@ -16,6 +21,7 @@ type FakeRedis = {
 	listeners: Map<string, Set<Listener>>;
 	failGetWith?: Error;
 	hangGetForMs?: number;
+	waitForGet?: Promise<void>;
 	pipelineError?: Error;
 	/** Resolve exec() with a per-command error tuple, as real ioredis does. */
 	pipelineCommandError?: Error;
@@ -94,6 +100,7 @@ const createFakeRedis = ({
 		},
 		async get(key) {
 			calls.push(`get:${key}`);
+			if (redis.waitForGet) await redis.waitForGet;
 			if (redis.hangGetForMs) {
 				await new Promise((resolve) => setTimeout(resolve, redis.hangGetForMs));
 			}
@@ -140,6 +147,22 @@ const createPair = (options?: {
 		name: "standby",
 		status: options?.standbyStatus,
 	});
+	const redis = createStandbyRedisRouter({
+		primary: asRedis(primary),
+		standby: asRedis(standby),
+	});
+	return { primary, standby, redis };
+};
+
+const createNamedPair = ({
+	primaryName,
+	standbyName,
+}: {
+	primaryName: string;
+	standbyName: string;
+}) => {
+	const primary = createFakeRedis({ name: primaryName });
+	const standby = createFakeRedis({ name: standbyName });
 	const redis = createStandbyRedisRouter({
 		primary: asRedis(primary),
 		standby: asRedis(standby),
@@ -387,6 +410,23 @@ describe("runRedisOp standby failover", () => {
 		expect(standby.calls).toEqual([]);
 	});
 
+	test("keeps the full deadline when the alternate is not ready", async () => {
+		const { primary, standby, redis } = createPair({ standbyStatus: "end" });
+		primary.hangGetForMs = 175;
+
+		const result = await runRedisOp({
+			redisInstance: redis,
+			source: "standby-test",
+			retryOnStandby: true,
+			timeoutMs: 200,
+			operation: (connection) => connection.get("subject"),
+		});
+
+		expect(result).toBe("primary");
+		expect(primary.calls).toEqual(["get:subject"]);
+		expect(standby.calls).toEqual([]);
+	});
+
 	test("surfaces the retry failure when both connections fail", async () => {
 		const { primary, standby, redis } = createPair();
 		primary.failGetWith = connectionError();
@@ -403,6 +443,125 @@ describe("runRedisOp standby failover", () => {
 
 		expect(primary.calls).toEqual(["get:subject"]);
 		expect(standby.calls).toEqual(["get:subject"]);
+	});
+
+	test("reserves part of the deadline for a standby retry", async () => {
+		const { primary, standby, redis } = createPair();
+		primary.hangGetForMs = 5_000;
+
+		const startedAt = Date.now();
+		const result = await runRedisOp({
+			redisInstance: redis,
+			source: "standby-test",
+			retryOnStandby: true,
+			timeoutMs: 400,
+			operation: (connection) => connection.get("subject"),
+		});
+
+		expect(result).toBe("standby");
+		expect(primary.calls).toEqual(["get:subject"]);
+		expect(standby.calls).toEqual(["get:subject"]);
+		expect(Date.now() - startedAt).toBeLessThan(390);
+	});
+
+	test("uses the reserved retry budget when timeout delivery is late", async () => {
+		const { primary, standby, redis } = createPair();
+		const startedAt = Date.now();
+		primary.get = async (key) => {
+			primary.calls.push(`get:${key}`);
+			setSystemTime(new Date(startedAt + 500));
+			throw new Error("[redis] standby-test timeout after 300ms");
+		};
+
+		try {
+			const result = await runRedisOp({
+				redisInstance: redis,
+				source: "standby-test",
+				retryOnStandby: true,
+				timeoutMs: 400,
+				operation: (connection) => connection.get("subject"),
+			});
+
+			expect(result).toBe("standby");
+			expect(primary.calls).toEqual(["get:subject"]);
+			expect(standby.calls).toEqual(["get:subject"]);
+		} finally {
+			setSystemTime();
+		}
+	});
+
+	test("bounds a late standby retry to the reserved budget", async () => {
+		const { primary, standby, redis } = createPair();
+		const startedAt = Date.now();
+		primary.get = async (key) => {
+			primary.calls.push(`get:${key}`);
+			setSystemTime(new Date(startedAt + 500));
+			throw new Error("[redis] standby-test timeout after 300ms");
+		};
+		standby.hangGetForMs = 5_000;
+		const attemptStartedAt = performance.now();
+
+		try {
+			await expect(
+				runRedisOp({
+					redisInstance: redis,
+					source: "standby-test",
+					retryOnStandby: true,
+					timeoutMs: 400,
+					operation: (connection) => connection.get("subject"),
+				}),
+			).rejects.toBeInstanceOf(RedisUnavailableError);
+
+			expect(standby.calls).toEqual(["get:subject"]);
+			expect(performance.now() - attemptStartedAt).toBeLessThan(250);
+		} finally {
+			setSystemTime();
+		}
+	});
+
+	// The reserve has to fit inside the headroom each deadline was sized with,
+	// not eat into the tail it was sized to cover. Feature balances measure a
+	// p99.9 of 297ms, so the preferred attempt must stay clear of that.
+	test("leaves the feature-balance read its measured tail", () => {
+		expect(
+			getPreferredAttemptBudgetMs({
+				timeoutMs: REDIS_OP_TIMEOUT_MS.featureBalances,
+			}),
+		).toBe(375);
+	});
+
+	test("keeps the full deadline when the alternate is penalized", async () => {
+		const { primary, standby, redis } = createPair({
+			primaryStatus: "reconnecting",
+		});
+
+		// Fail the standby out of rotation while it is the only usable connection,
+		// then restore the primary: the pair ends up ready but distrusted.
+		standby.failGetWith = connectionError();
+		for (let attempt = 0; attempt < 3; attempt++) {
+			await runRedisOp({
+				redisInstance: redis,
+				source: "standby-test",
+				retryOnStandby: true,
+				operation: (connection) => connection.get("subject"),
+			}).catch(() => undefined);
+		}
+		standby.failGetWith = undefined;
+		primary.status = "ready";
+		const standbyCallsBefore = standby.calls.length;
+
+		primary.hangGetForMs = 520;
+		const result = await runRedisOp({
+			redisInstance: redis,
+			source: "standby-test",
+			retryOnStandby: true,
+			timeoutMs: 600,
+			operation: (connection) => connection.get("subject"),
+		});
+
+		expect(result).toBe("primary");
+		expect(primary.calls).toEqual(["get:subject"]);
+		expect(standby.calls.length).toBe(standbyCallsBefore);
 	});
 
 	test("shares one timeout budget across both attempts", async () => {
@@ -445,6 +604,315 @@ describe("runRedisOp standby failover", () => {
 		).rejects.toBeInstanceOf(RedisUnavailableError);
 
 		expect(standby.calls).toEqual([]);
+	});
+});
+
+describe("Redis read pool", () => {
+	test("sends a lone pooled read to the high lane, away from unpooled traffic", async () => {
+		const laneZero = createNamedPair({
+			primaryName: "lane-zero-primary",
+			standbyName: "lane-zero-standby",
+		});
+		const laneOne = createNamedPair({
+			primaryName: "lane-one-primary",
+			standbyName: "lane-one-standby",
+		});
+		const redis = createRedisReadPool({
+			lanes: [laneZero.redis, laneOne.redis],
+		});
+
+		const result = await runRedisOp({
+			redisInstance: redis,
+			source: "read-pool-test",
+			retryOnStandby: true,
+			useReadPool: true,
+			operation: (connection) => connection.get("subject"),
+		});
+
+		expect(result).toBe("lane-one-primary");
+		expect(laneZero.primary.calls).toEqual([]);
+	});
+
+	test("skips a lane whose preferred and standby connections are unavailable", async () => {
+		const laneZero = createNamedPair({
+			primaryName: "lane-zero-primary",
+			standbyName: "lane-zero-standby",
+		});
+		const laneOne = createNamedPair({
+			primaryName: "lane-one-primary",
+			standbyName: "lane-one-standby",
+		});
+		laneZero.primary.status = "reconnecting";
+		laneZero.standby.status = "end";
+		const redis = createRedisReadPool({
+			lanes: [laneZero.redis, laneOne.redis],
+		});
+
+		const result = await runRedisOp({
+			redisInstance: redis,
+			source: "read-pool-test",
+			retryOnStandby: true,
+			useReadPool: true,
+			operation: (connection) => connection.get("subject"),
+		});
+
+		expect(result).toBe("lane-one-primary");
+		expect(laneZero.primary.calls).toEqual([]);
+		expect(laneZero.standby.calls).toEqual([]);
+	});
+
+	test("skips a lane whose ready connections are breaker-penalized", async () => {
+		const laneZero = createNamedPair({
+			primaryName: "lane-zero-primary",
+			standbyName: "lane-zero-standby",
+		});
+		const laneOne = createNamedPair({
+			primaryName: "lane-one-primary",
+			standbyName: "lane-one-standby",
+		});
+		const laneOneRouter = getStandbyRedisRouter(laneOne.redis);
+		if (!laneOneRouter) throw new Error("Expected lane one to have a router");
+		const [laneOnePrimary, laneOneStandby] = laneOneRouter.ordered();
+
+		for (let attempt = 0; attempt < 3; attempt++) {
+			laneOneRouter.recordOutcome({
+				connection: laneOnePrimary,
+				error: connectionError(),
+			});
+			laneOneRouter.recordOutcome({
+				connection: laneOneStandby,
+				error: connectionError(),
+			});
+		}
+		const redis = createRedisReadPool({
+			lanes: [laneZero.redis, laneOne.redis],
+		});
+
+		expect(laneOne.redis.status).toBe("ready");
+		const result = await runRedisOp({
+			redisInstance: redis,
+			source: "read-pool-test",
+			retryOnStandby: true,
+			useReadPool: true,
+			operation: (connection) => connection.get("subject"),
+		});
+
+		expect(result).toBe("lane-zero-primary");
+		expect(laneOne.primary.calls).toEqual([]);
+		expect(laneOne.standby.calls).toEqual([]);
+	});
+
+	test("routes a concurrent retry-safe read to the least-busy lane", async () => {
+		const laneZero = createNamedPair({
+			primaryName: "lane-zero-primary",
+			standbyName: "lane-zero-standby",
+		});
+		const laneOne = createNamedPair({
+			primaryName: "lane-one-primary",
+			standbyName: "lane-one-standby",
+		});
+		let releaseFirstRead: (() => void) | undefined;
+		laneOne.primary.waitForGet = new Promise<void>((resolve) => {
+			releaseFirstRead = resolve;
+		});
+		const redis = createRedisReadPool({
+			lanes: [laneZero.redis, laneOne.redis],
+		});
+
+		const firstRead = runRedisOp({
+			redisInstance: redis,
+			source: "read-pool-test",
+			retryOnStandby: true,
+			useReadPool: true,
+			operation: (connection) => connection.get("first"),
+		});
+		const secondRead = await runRedisOp({
+			redisInstance: redis,
+			source: "read-pool-test",
+			retryOnStandby: true,
+			useReadPool: true,
+			operation: (connection) => connection.get("second"),
+		});
+
+		expect(secondRead).toBe("lane-zero-primary");
+		expect(laneZero.primary.calls).toEqual(["get:second"]);
+		releaseFirstRead?.();
+		expect(await firstRead).toBe("lane-one-primary");
+	});
+
+	test("keeps a timed-out lane busy after standby succeeds", async () => {
+		const laneZero = createNamedPair({
+			primaryName: "lane-zero-primary",
+			standbyName: "lane-zero-standby",
+		});
+		const laneOne = createNamedPair({
+			primaryName: "lane-one-primary",
+			standbyName: "lane-one-standby",
+		});
+		let releaseBlockedRead: (() => void) | undefined;
+		laneOne.primary.waitForGet = new Promise<void>((resolve) => {
+			releaseBlockedRead = resolve;
+		});
+		const redis = createRedisReadPool({
+			lanes: [laneZero.redis, laneOne.redis],
+		});
+		let blockedRead: Promise<string | null> | undefined;
+		const identifyLane = async (connection: Redis) =>
+			connection === asRedis(laneZero.primary)
+				? "lane-zero-primary"
+				: "lane-one-primary";
+
+		const result = await runRedisOp({
+			redisInstance: redis,
+			source: "read-pool-test",
+			retryOnStandby: true,
+			useReadPool: true,
+			timeoutMs: 400,
+			operation: (connection) => {
+				const command = connection.get("blocked");
+				if (connection === asRedis(laneOne.primary)) blockedRead = command;
+				return command;
+			},
+		});
+		expect(result).toBe("lane-one-standby");
+
+		try {
+			const whileCommandIsPending = await runRedisOp({
+				redisInstance: redis,
+				source: "read-pool-test",
+				retryOnStandby: true,
+				useReadPool: true,
+				operation: identifyLane,
+			});
+			expect(whileCommandIsPending).toBe("lane-zero-primary");
+		} finally {
+			releaseBlockedRead?.();
+		}
+
+		if (!blockedRead) throw new Error("Expected a blocked Redis command");
+		await blockedRead;
+		await Promise.resolve();
+
+		const afterCommandSettles = await runRedisOp({
+			redisInstance: redis,
+			source: "read-pool-test",
+			retryOnStandby: true,
+			useReadPool: true,
+			operation: identifyLane,
+		});
+		expect(afterCommandSettles).toBe("lane-one-primary");
+	});
+
+	test("keeps non-retry-safe operations pinned to lane zero", async () => {
+		const laneZero = createNamedPair({
+			primaryName: "lane-zero-primary",
+			standbyName: "lane-zero-standby",
+		});
+		const laneOne = createNamedPair({
+			primaryName: "lane-one-primary",
+			standbyName: "lane-one-standby",
+		});
+		let releaseFirstRead: (() => void) | undefined;
+		laneOne.primary.waitForGet = new Promise<void>((resolve) => {
+			releaseFirstRead = resolve;
+		});
+		const redis = createRedisReadPool({
+			lanes: [laneZero.redis, laneOne.redis],
+		});
+
+		const firstRead = runRedisOp({
+			redisInstance: redis,
+			source: "read-pool-test",
+			retryOnStandby: true,
+			useReadPool: true,
+			operation: (connection) => connection.get("first"),
+		});
+		const write = await runRedisOp({
+			redisInstance: redis,
+			source: "read-pool-test",
+			operation: (connection) => connection.set("subject", "value"),
+		});
+
+		expect(write).toBe("OK");
+		expect(laneZero.primary.calls).toEqual(["set:subject:value"]);
+		expect(laneOne.primary.calls).toEqual(["get:first"]);
+		releaseFirstRead?.();
+		await firstRead;
+	});
+
+	test("keeps standby failover inside the selected lane", async () => {
+		const laneZero = createNamedPair({
+			primaryName: "lane-zero-primary",
+			standbyName: "lane-zero-standby",
+		});
+		const laneOne = createNamedPair({
+			primaryName: "lane-one-primary",
+			standbyName: "lane-one-standby",
+		});
+		laneOne.primary.failGetWith = connectionError();
+		const redis = createRedisReadPool({
+			lanes: [laneZero.redis, laneOne.redis],
+		});
+
+		const result = await runRedisOp({
+			redisInstance: redis,
+			source: "read-pool-test",
+			retryOnStandby: true,
+			useReadPool: true,
+			operation: (connection) => connection.get("subject"),
+		});
+
+		expect(result).toBe("lane-one-standby");
+		expect(laneOne.standby.calls).toEqual(["get:subject"]);
+		expect(laneZero.primary.calls).toEqual([]);
+		expect(laneZero.standby.calls).toEqual([]);
+	});
+
+	test("fans connection listeners out across both lanes", () => {
+		const laneZero = createNamedPair({
+			primaryName: "lane-zero-primary",
+			standbyName: "lane-zero-standby",
+		});
+		const laneOne = createNamedPair({
+			primaryName: "lane-one-primary",
+			standbyName: "lane-one-standby",
+		});
+		const redis = createRedisReadPool({
+			lanes: [laneZero.redis, laneOne.redis],
+		});
+		const seen: string[] = [];
+
+		redis.on("error", (error) => seen.push((error as Error).message));
+		laneZero.primary.emit("error", new Error("lane zero"));
+		laneOne.primary.emit("error", new Error("lane one"));
+
+		expect(seen).toEqual(["lane zero", "lane one"]);
+	});
+
+	test("closes every primary and standby connection during teardown", async () => {
+		const laneZero = createNamedPair({
+			primaryName: "lane-zero-primary",
+			standbyName: "lane-zero-standby",
+		});
+		const laneOne = createNamedPair({
+			primaryName: "lane-one-primary",
+			standbyName: "lane-one-standby",
+		});
+		const redis = createRedisReadPool({
+			lanes: [laneZero.redis, laneOne.redis],
+		});
+
+		redis.disconnect();
+		expect(laneZero.primary.calls).toEqual(["disconnect"]);
+		expect(laneZero.standby.calls).toEqual(["disconnect"]);
+		expect(laneOne.primary.calls).toEqual(["disconnect"]);
+		expect(laneOne.standby.calls).toEqual(["disconnect"]);
+
+		await redis.quit();
+		expect(laneZero.primary.calls).toEqual(["disconnect", "quit"]);
+		expect(laneZero.standby.calls).toEqual(["disconnect", "quit"]);
+		expect(laneOne.primary.calls).toEqual(["disconnect", "quit"]);
+		expect(laneOne.standby.calls).toEqual(["disconnect", "quit"]);
 	});
 });
 

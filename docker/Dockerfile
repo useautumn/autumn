@@ -31,6 +31,7 @@ COPY packages/atmn/package.json packages/atmn/
 COPY packages/atmn-tests/package.json packages/atmn-tests/
 COPY packages/auth/package.json packages/auth/
 COPY packages/autumn-js/package.json packages/autumn-js/
+COPY packages/env/package.json packages/env/
 COPY packages/gateway/package.json packages/gateway/
 COPY packages/ksuid/package.json packages/ksuid/
 COPY packages/logging/package.json packages/logging/

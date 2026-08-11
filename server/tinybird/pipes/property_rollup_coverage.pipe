@@ -1,0 +1,21 @@
+DESCRIPTION >
+    Counts events where a property is present, including values collapsed by the cardinality gate.
+    The server compares this with returned grouped counts before deciding to retry ungated.
+
+TOKEN "property_rollup_coverage_read" READ
+
+NODE endpoint
+TYPE endpoint
+SQL >
+    %
+    SELECT
+        event_name,
+        sumMerge(event_count) as event_count
+    FROM events_org_property_coverage_hourly_mv
+    WHERE org_id = {{ String(org_id, '') }}
+        AND env = {{ String(env, 'test') }}
+        AND event_name IN {{ Array(event_names, 'String', default='[]') }}
+        AND property_key = {{ String(property_key, '') }}
+        AND hour >= toDateTime({{ String(start_date, '2024-01-01 00:00:00') }})
+        AND hour <= toDateTime({{ String(end_date, '2024-12-31 23:59:59') }})
+    GROUP BY event_name

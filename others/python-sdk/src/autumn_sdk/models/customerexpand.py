@@ -6,6 +6,7 @@ from typing import Literal
 
 CustomerExpand = Literal[
     "invoices",
+    "invoice_previews",
     "trials_used",
     "rewards",
     "entities",

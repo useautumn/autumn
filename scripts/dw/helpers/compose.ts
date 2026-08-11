@@ -8,7 +8,9 @@ import {
 	dynamoDbPortFor,
 	elasticMqPortFor,
 	ngrokApiPortFor,
+	ngrokViteApiPortFor,
 	serverPortFor,
+	vitePortFor,
 } from "./ports.ts";
 import { log, sh } from "./shell.ts";
 
@@ -33,6 +35,7 @@ export function ensureComposeStack(
 	worktreeNum: number,
 	branchName: string | undefined,
 	ngrokDomainArg?: string,
+	ngrokViteDomainArg?: string,
 ): { ngrokEnabled: boolean } {
 	if (worktreeNum === 1 && !branchName) return { ngrokEnabled: false };
 	if (!dockerComposeAvailable()) {
@@ -58,6 +61,17 @@ export function ensureComposeStack(
 		.trim();
 	const ngrokUrlFlag = ngrokDomain ? `--url=https://${ngrokDomain}` : "";
 
+	// Dashboard tunnel — one agent forwards one port, so vite gets its own.
+	const vitePort = String(vitePortFor(worktreeNum));
+	const ngrokViteApiPort = String(ngrokViteApiPortFor(worktreeNum));
+	const ngrokViteDomain = ngrokViteDomainArg
+		?.replace(/^https?:\/\//, "")
+		.replace(/\/.*$/, "")
+		.trim();
+	const ngrokViteUrlFlag = ngrokViteDomain
+		? `--url=https://${ngrokViteDomain}`
+		: "";
+
 	const env = {
 		...(process.env as Record<string, string>),
 		COMPOSE_PROJECT_NAME: project,
@@ -65,8 +79,11 @@ export function ensureComposeStack(
 		ELASTICMQ_PORT: elasticMqPort,
 		DYNAMODB_PORT: dynamoDbPort,
 		SERVER_PORT: serverPort,
+		VITE_PORT: vitePort,
 		NGROK_API_PORT: ngrokApiPort,
-		NGROK_URL_FLAG: ngrokUrlFlag,
+		NGROK_DOMAIN_FLAG: ngrokUrlFlag,
+		NGROK_VITE_API_PORT: ngrokViteApiPort,
+		NGROK_VITE_URL_FLAG: ngrokViteUrlFlag,
 	};
 
 	const args = ["compose", "-f", composeFilePath, "-p", project];
@@ -118,7 +135,7 @@ export async function readNgrokTunnelUrl(
 		await new Promise((resolve) => setTimeout(resolve, 500));
 	}
 	log(
-		`ngrok tunnel did not expose a public URL on :${apiPort} within 30s; continuing without NGROK_URL`,
+		`ngrok tunnel did not expose a public URL on :${apiPort} within 30s; continuing without AUTUMN_PUBLIC_API_URL`,
 	);
 	return undefined;
 }

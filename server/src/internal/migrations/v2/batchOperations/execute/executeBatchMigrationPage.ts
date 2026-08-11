@@ -29,12 +29,14 @@ import {
 export const executeBatchMigrationPage = async ({
 	ctx,
 	migrationInternalId,
+	migrationRunId,
 	plan,
 	customers,
 	phases,
 }: {
 	ctx: AutumnContext;
 	migrationInternalId: string;
+	migrationRunId: string;
 	plan: BatchMigrationExecutionPlan;
 	customers: BatchMigrationPageCustomer[];
 	phases?: BatchMigrationPagePhases;
@@ -89,20 +91,14 @@ export const executeBatchMigrationPage = async ({
 		run: () =>
 			withStatementTimeout(
 				ctx.db,
-				async (transaction) => {
-					await markPageItemRuns({
+				(transaction) =>
+					markPageItemRuns({
 						db: transaction,
 						migrationInternalId,
-						internalCustomerIds: [...succeeded],
-						status: "succeeded",
-					});
-					await markPageItemRuns({
-						db: transaction,
-						migrationInternalId,
-						internalCustomerIds: skippedIds,
-						status: "skipped",
-					});
-				},
+						migrationRunId,
+						succeededInternalCustomerIds: [...succeeded],
+						skippedInternalCustomerIds: skippedIds,
+					}),
 				BATCH_MIGRATION_PAGE_STATEMENT_TIMEOUT_MS,
 			),
 	});
