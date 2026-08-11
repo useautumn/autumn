@@ -16,6 +16,7 @@ export type BillingChangeCollector = {
 	}[];
 	insertedCustomerProducts: FullCusProduct[];
 	deletedCustomerProducts: FullCusProduct[];
+	/** Signals pushed via `addBillingChangeTag`, appended to the payload. */
 	billingChangeTags: Set<string>;
 };
 

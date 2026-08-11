@@ -1,10 +1,5 @@
-/**
- * Central emission point for `billing.updated`. Builds the AutumnBillingPlan
- * from a collector's tracked mutations and fires the webhook fire-and-forget.
- */
-
 import type {
-	CustomerProductUpdates,
+	CustomerProductUpdate,
 	FullCusProduct,
 	FullCustomer,
 } from "@autumn/shared";
@@ -16,6 +11,10 @@ import {
 } from "./billingChangeCollector";
 import { sendBillingUpdatedWebhook } from "./sendBillingUpdatedWebhook";
 
+/**
+ * Central emission point for `billing.updated`. Builds the AutumnBillingPlan
+ * from a collector's tracked mutations and fires the webhook fire-and-forget.
+ */
 export const flushBillingUpdated = ({
 	ctx,
 	collector,
@@ -43,10 +42,7 @@ export const emitBillingUpdated = ({
 }: {
 	ctx: AutumnContext;
 	originalFullCustomer: FullCustomer;
-	updateCustomerProducts?: {
-		customerProduct: FullCusProduct;
-		updates: CustomerProductUpdates;
-	}[];
+	updateCustomerProducts?: CustomerProductUpdate[];
 	insertCustomerProducts?: FullCusProduct[];
 }): void => {
 	const collector = createBillingChangeCollector({

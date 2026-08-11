@@ -58,6 +58,10 @@ export const expireCustomerProductAndActivateDefault = async ({
 		status: CusProductStatus.Expired,
 		...extraUpdates,
 	};
+	const expiredCustomerProduct = {
+		...customerProduct,
+		...updates,
+	} as FullCusProduct;
 
 	// Executing through the shared plan runs the license lifecycle when the
 	// expiring product carried license state.
@@ -76,14 +80,11 @@ export const expireCustomerProductAndActivateDefault = async ({
 
 	// Update full customer
 	fullCustomer.customer_products = fullCustomer.customer_products.map((cp) =>
-		cp.id === customerProduct.id
-			? ({ ...cp, ...updates } as FullCusProduct)
-			: cp,
+		cp.id === customerProduct.id ? expiredCustomerProduct : cp,
 	);
 
 	// 2. Send products_updated (Expired) — must be enqueued before successor
-	// activation, which enqueues its own products_updated (New). Guarded by
-	// expire-and-activate-default-emission.test.ts.
+	// activation, which enqueues its own products_updated (New).
 	await addProductsUpdatedWebhookTask({
 		ctx,
 		internalCustomerId: customerProduct.internal_customer_id,
@@ -104,17 +105,8 @@ export const expireCustomerProductAndActivateDefault = async ({
 
 	// 4. Record the transitions (payload needs the activated/inserted products).
 	// Entry order feeds plan-change collapsing, so expired must land first.
-	let expiredCustomerProduct = {
-		...customerProduct,
-		...updates,
-	} as FullCusProduct;
-
 	if (collector) {
-		expiredCustomerProduct = trackCustomerProductUpdate({
-			collector,
-			customerProduct,
-			updates,
-		});
+		trackCustomerProductUpdate({ collector, customerProduct, updates });
 
 		if (activatedCustomerProduct) {
 			trackCustomerProductUpdate({
