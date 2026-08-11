@@ -1,4 +1,5 @@
 import {
+	type AutumnBillingPlan,
 	type CustomerData,
 	type Entity,
 	type FullCustomer,
@@ -10,7 +11,7 @@ import { executeAutumnBillingPlan } from "@/internal/billing/v2/execute/executeA
 import { initFullCustomerProductFromProduct } from "@/internal/billing/v2/utils/initFullCustomerProduct/initFullCustomerProductFromProduct";
 import { setupDefaultProductsContext } from "@/internal/customers/actions/createWithDefaults/setup/setupDefaultProductsContext";
 
-export const attachDefaultProductsToEntities = async ({
+export const buildEntityDefaultProductsPlans = async ({
 	ctx,
 	fullCustomer,
 	entities,
@@ -21,7 +22,7 @@ export const attachDefaultProductsToEntities = async ({
 	entities: Entity[];
 	customerData?: CustomerData;
 }) => {
-	if (!orgDefaultAppliesToEntities({ ctx })) return;
+	if (!orgDefaultAppliesToEntities({ ctx })) return [];
 
 	const defaultProducts = await setupDefaultProductsContext({
 		ctx,
@@ -34,7 +35,7 @@ export const attachDefaultProductsToEntities = async ({
 	);
 
 	const currentEpochMs = Date.now();
-	for (const entity of entities) {
+	return entities.map((entity) => {
 		const insertCustomerProducts = freeDefaultProducts.map((product) =>
 			initFullCustomerProductFromProduct({
 				ctx,
@@ -49,12 +50,32 @@ export const attachDefaultProductsToEntities = async ({
 			}),
 		);
 
-		await executeAutumnBillingPlan({
-			ctx,
-			autumnBillingPlan: {
-				customerId: fullCustomer.id ?? "",
-				insertCustomerProducts,
-			},
-		});
+		return {
+			customerId: fullCustomer.id ?? "",
+			insertCustomerProducts,
+		} satisfies AutumnBillingPlan;
+	});
+};
+
+export const attachDefaultProductsToEntities = async ({
+	ctx,
+	fullCustomer,
+	entities,
+	customerData,
+}: {
+	ctx: AutumnContext;
+	fullCustomer: FullCustomer;
+	entities: Entity[];
+	customerData?: CustomerData;
+}) => {
+	const autumnBillingPlans = await buildEntityDefaultProductsPlans({
+		ctx,
+		fullCustomer,
+		entities,
+		customerData,
+	});
+
+	for (const autumnBillingPlan of autumnBillingPlans) {
+		await executeAutumnBillingPlan({ ctx, autumnBillingPlan });
 	}
 };

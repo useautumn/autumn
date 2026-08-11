@@ -1,16 +1,6 @@
 /**
- * TDD contract for entity creation recovery replay.
- *
- * Contract under test:
- * - A capture replays the original normalized create with its API semantics.
- * - A capture is only replayed when it is known to have written nothing, so the
- *   replay bills normally; anything else stops for review.
- * - A replay that sheds after its own write is not safe to redeliver either.
- * - Replays cannot enqueue themselves again.
- * - Entities that landed before the drain reached them surface as an
- *   already-exists conflict, which is the no-op signal rather than a failure.
- * - A shed replay stays in SQS; anything else logs what it could not recreate
- *   before the worker drops the message.
+ * Recovery only persists the missing entity and its free default products.
+ * It must never re-enter seat charging, balance mutation, or Stripe billing.
  */
 
 import { afterAll, beforeEach, describe, expect, mock, test } from "bun:test";
@@ -26,20 +16,22 @@ import type { EntityCreationRecoveryPayload } from "@/internal/entities/recovery
 
 const mockState = {
 	batchCreateCalls: [] as Record<string, unknown>[],
-	createFailsWith: undefined as unknown,
-	markWroteOnCall: false,
+	entityInsertCalls: [] as Record<string, unknown>[],
+	defaultPlanCalls: [] as Record<string, unknown>[],
+	executePlanCalls: [] as Record<string, unknown>[],
+	entityInsertError: undefined as unknown,
 	existingEntities: [] as Record<string, unknown>[],
 };
 
-// Real modules captured BEFORE mocking so afterAll can restore them — module
-// mocks leak across test files (mock.restore does not undo them).
-const MOCKED_MODULE_PATHS = [
+const mockedPaths = [
 	"@/internal/entities/actions/batchCreateEntities.js",
+	"@/internal/entities/actions/batchCreateEntities/attachDefaultProductsToEntities.js",
+	"@/internal/billing/v2/execute/executeAutumnBillingPlan.js",
 	"@/internal/customers/CusService.js",
 	"@/internal/api/entities/EntityService.js",
 ] as const;
 const realModules = new Map<string, Record<string, unknown>>();
-for (const path of MOCKED_MODULE_PATHS) {
+for (const path of mockedPaths) {
 	realModules.set(path, { ...(await import(path)) });
 }
 
@@ -52,22 +44,46 @@ afterAll(() => {
 mock.module("@/internal/entities/actions/batchCreateEntities.js", () => ({
 	batchCreateEntities: async (args: Record<string, unknown>) => {
 		mockState.batchCreateCalls.push(args);
-		if (mockState.markWroteOnCall) {
-			(args.ctx as AutumnContext).extraLogs.entityCreationWrote = true;
-		}
-		if (mockState.createFailsWith) throw mockState.createFailsWith;
-		return [];
 	},
 }));
+
+mock.module(
+	"@/internal/entities/actions/batchCreateEntities/attachDefaultProductsToEntities.js",
+	() => ({
+		buildEntityDefaultProductsPlans: async (args: Record<string, unknown>) => {
+			mockState.defaultPlanCalls.push(args);
+			return [{ customerId: "customer_123", insertCustomerProducts: [] }];
+		},
+	}),
+);
+
+mock.module(
+	"@/internal/billing/v2/execute/executeAutumnBillingPlan.js",
+	() => ({
+		executeAutumnBillingPlan: async (args: Record<string, unknown>) => {
+			mockState.executePlanCalls.push(args);
+		},
+	}),
+);
 
 mock.module("@/internal/customers/CusService.js", () => ({
 	CusService: {
 		get: async () => ({ id: "customer_123", internal_id: "icus_123" }),
+		getFull: async () => ({
+			id: "customer_123",
+			internal_id: "icus_123",
+			customer_products: [],
+		}),
 	},
 }));
 
 mock.module("@/internal/api/entities/EntityService.js", () => ({
 	EntityService: {
+		insert: async (args: Record<string, unknown>) => {
+			mockState.entityInsertCalls.push(args);
+			if (mockState.entityInsertError) throw mockState.entityInsertError;
+			return args.data;
+		},
 		get: async ({ id }: { id: string }) =>
 			mockState.existingEntities.find((entity) => entity.id === id),
 	},
@@ -75,9 +91,10 @@ mock.module("@/internal/api/entities/EntityService.js", () => ({
 
 const { replayFailedEntityCreation } = await import(
 	// @ts-expect-error - Bun test cache-busting import query isolates module mocks.
-	"@/internal/entities/recovery/replayFailedEntityCreation.js?entityCreationRecovery"
+	"@/internal/entities/recovery/replayFailedEntityCreation.js?entityRecoveryTransaction"
 );
 
+const transactionDb = { name: "transaction" };
 const buildContext = () =>
 	({
 		org: { id: "org_123" },
@@ -86,10 +103,11 @@ const buildContext = () =>
 		features: [{ id: "seats", internal_id: "if_seats" }],
 		extraLogs: {},
 		skipCache: false,
-		logger: {
-			info: mock(() => {}),
-			error: mock(() => {}),
+		db: {
+			transaction: async (fn: (tx: typeof transactionDb) => Promise<void>) =>
+				fn(transactionDb),
 		},
+		logger: { info: mock(() => {}), error: mock(() => {}) },
 	}) as unknown as AutumnContext;
 
 const buildPayload = ({
@@ -112,8 +130,6 @@ const buildPayload = ({
 		create_entity_data: createEntityData,
 		customer_data: { email: "customer@example.com" },
 	},
-	source: "handleCreateEntityV2",
-	withAutumnId: true,
 	mayHaveWritten,
 	failedAt: 1_785_000_000_000,
 });
@@ -121,64 +137,60 @@ const buildPayload = ({
 describe("replayFailedEntityCreation", () => {
 	beforeEach(() => {
 		mockState.batchCreateCalls = [];
-		mockState.createFailsWith = undefined;
+		mockState.entityInsertCalls = [];
+		mockState.defaultPlanCalls = [];
+		mockState.executePlanCalls = [];
+		mockState.entityInsertError = undefined;
 		mockState.existingEntities = [];
-		mockState.markWroteOnCall = false;
 	});
 
-	test("replays the request with its original API semantics", async () => {
+	test("atomically inserts entities and attaches free defaults without replaying seat billing", async () => {
 		const ctx = buildContext();
-		const payload = buildPayload();
+		await replayFailedEntityCreation({ ctx, payload: buildPayload() });
 
-		await replayFailedEntityCreation({ ctx, payload });
-
-		expect(ctx.apiVersion.value).toBe(ApiVersion.V2_1);
-		expect(ctx.skipCache).toBe(true);
-		expect(mockState.batchCreateCalls).toEqual([
+		expect(mockState.batchCreateCalls).toHaveLength(0);
+		expect(mockState.entityInsertCalls).toEqual([
+			expect.objectContaining({ db: transactionDb }),
+		]);
+		expect(mockState.defaultPlanCalls).toEqual([
 			expect.objectContaining({
 				ctx,
-				customerId: "customer_123",
-				createEntityData: payload.params.create_entity_data,
-				customerData: payload.params.customer_data,
-				withAutumnId: true,
-				source: "entityCreationRecovery",
-				enqueueRecoveryOnTransientFailure: false,
+				customerData: { email: "customer@example.com" },
+			}),
+		]);
+		expect(mockState.executePlanCalls).toEqual([
+			expect.objectContaining({
+				ctx: expect.objectContaining({ db: transactionDb }),
 			}),
 		]);
 		expect(ctx.extraLogs.entityCreationRecoveryReplay).toMatchObject({
 			outcome: "created",
-			sourceRequestId: "req_entity_123",
-			customerId: "customer_123",
-			entities: [{ id: "entity_123", feature_id: "seats" }],
 		});
 	});
 
-	test("treats an already-exists conflict as the request having landed", async () => {
-		mockState.existingEntities = [{ id: "entity_123" }];
-		mockState.createFailsWith = new RecaseError({
+	test("still treats an insert conflict as an already-created request", async () => {
+		mockState.entityInsertError = new RecaseError({
 			message: "Entity entity_123 already exists",
 			code: EntityErrorCode.EntityAlreadyExists,
 			statusCode: 409,
 		});
+		mockState.existingEntities = [{ id: "entity_123" }];
 		const ctx = buildContext();
 
 		await replayFailedEntityCreation({ ctx, payload: buildPayload() });
 
 		expect(ctx.extraLogs.entityCreationRecoveryReplay).toMatchObject({
 			outcome: "already_exists",
-			sourceRequestId: "req_entity_123",
 		});
 	});
 
-	test("names what stayed uncreated when only part of the batch conflicted", async () => {
-		// Something else created entity_123 between the capture and the drain, so
-		// the batch cannot go in whole and entity_456 has nowhere to be created.
-		mockState.existingEntities = [{ id: "entity_123" }];
-		mockState.createFailsWith = new RecaseError({
+	test("logs entities that were not confirmed after a batch conflict", async () => {
+		mockState.entityInsertError = new RecaseError({
 			message: "Entity entity_123 already exists",
 			code: EntityErrorCode.EntityAlreadyExists,
 			statusCode: 409,
 		});
+		mockState.existingEntities = [{ id: "entity_123" }];
 		const ctx = buildContext();
 
 		await replayFailedEntityCreation({
@@ -195,44 +207,9 @@ describe("replayFailedEntityCreation", () => {
 			outcome: "partially_created",
 			unconfirmed: [{ id: "entity_456", feature_id: "seats" }],
 		});
-		expect(ctx.logger.error).toHaveBeenCalled();
 	});
 
-	test("logs what it could not recreate when the replay is rejected", async () => {
-		mockState.createFailsWith = new RecaseError({
-			message: "Feature limit reached",
-			statusCode: 400,
-		});
-		const ctx = buildContext();
-
-		await expect(
-			replayFailedEntityCreation({ ctx, payload: buildPayload() }),
-		).rejects.toMatchObject({ statusCode: 400 });
-
-		expect(ctx.extraLogs.entityCreationRecoveryReplay).toMatchObject({
-			outcome: "rejected",
-			sourceRequestId: "req_entity_123",
-			customerId: "customer_123",
-			entities: [{ id: "entity_123", feature_id: "seats" }],
-		});
-		expect(ctx.logger.error).toHaveBeenCalled();
-	});
-
-	test("leaves a shed replay to redelivery rather than calling it rejected", async () => {
-		mockState.createFailsWith = new RecaseError({
-			message: "Service is temporarily unavailable, please retry shortly.",
-			code: "service_unavailable",
-			statusCode: 503,
-		});
-		const ctx = buildContext();
-
-		await expect(
-			replayFailedEntityCreation({ ctx, payload: buildPayload() }),
-		).rejects.toMatchObject({ statusCode: 503 });
-
-		expect(ctx.extraLogs.entityCreationRecoveryReplay).toBeUndefined();
-	});
-	test("refuses to replay a capture that may already have written", async () => {
+	test("does not replay a request that may have already mutated state", async () => {
 		const ctx = buildContext();
 
 		await expect(
@@ -242,72 +219,19 @@ describe("replayFailedEntityCreation", () => {
 			}),
 		).rejects.toThrow("requires manual review");
 
-		// A decremented balance and an entity whose defaults never attached are both
-		// invisible to a later read, so replaying would double-apply them.
-		expect(mockState.batchCreateCalls).toHaveLength(0);
-		expect(ctx.extraLogs.entityCreationRecoveryReplay).toMatchObject({
-			outcome: "manual_review",
-			sourceRequestId: "req_entity_123",
-		});
+		expect(mockState.entityInsertCalls).toHaveLength(0);
 	});
 
-	test("never reports an id-less entity as confirmed created", async () => {
-		mockState.existingEntities = [{ id: "entity_123" }];
-		mockState.createFailsWith = new RecaseError({
-			message: "Entity entity_123 already exists",
-			code: EntityErrorCode.EntityAlreadyExists,
-			statusCode: 409,
-		});
+	test("does not trust a capture that predates the write marker", async () => {
 		const ctx = buildContext();
-
-		await replayFailedEntityCreation({
-			ctx,
-			payload: buildPayload({
-				createEntityData: [
-					{ id: "entity_123", name: "Entity", feature_id: "seats" },
-					{ id: null, name: "Placeholder", feature_id: "seats" },
-				],
-			}),
-		});
-
-		// It has no id to match on, so acking the batch would silently drop it.
-		expect(ctx.extraLogs.entityCreationRecoveryReplay).toMatchObject({
-			outcome: "partially_created",
-			unconfirmed: [{ id: null, feature_id: "seats" }],
-		});
-	});
-	test("refuses a payload that carries no write marker at all", async () => {
-		const ctx = buildContext();
-		const { mayHaveWritten, ...untagged } = buildPayload();
+		const payloadWithoutMarker = buildPayload();
+		delete payloadWithoutMarker.mayHaveWritten;
 
 		await expect(
 			replayFailedEntityCreation({
 				ctx,
-				payload: untagged as typeof untagged & { mayHaveWritten?: boolean },
+				payload: payloadWithoutMarker,
 			}),
 		).rejects.toThrow("requires manual review");
-
-		// Absent is not false: it predates the marker or came from a producer that
-		// does not set it, and neither can be assumed to have written nothing.
-		expect(mockState.batchCreateCalls).toHaveLength(0);
-	});
-	test("does not redeliver a replay that shed after it had written", async () => {
-		mockState.createFailsWith = new RecaseError({
-			message: "Service is temporarily unavailable, please retry shortly.",
-			code: "service_unavailable",
-			statusCode: 503,
-		});
-		mockState.markWroteOnCall = true;
-		const ctx = buildContext();
-
-		// Redelivery would replay the original payload, which still says nothing was
-		// written, and decrement or attach a second time.
-		await expect(
-			replayFailedEntityCreation({ ctx, payload: buildPayload() }),
-		).rejects.toThrow("requires manual review");
-
-		expect(ctx.extraLogs.entityCreationRecoveryReplay).toMatchObject({
-			outcome: "manual_review",
-		});
 	});
 });

@@ -1,13 +1,19 @@
-import { ApiVersionClass, EntityErrorCode, RecaseError } from "@autumn/shared";
-import { isShedError } from "@/db/shed503OnTransientError.js";
+import {
+	ApiVersionClass,
+	EntityErrorCode,
+	findFeatureById,
+	RecaseError,
+} from "@autumn/shared";
+import { isTransientDbError } from "@/db/dbUtils.js";
+import type { DrizzleCli } from "@/db/initDrizzle.js";
+import { isTransientRedisError } from "@/external/redis/utils/isTransientRedisError.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { EntityService } from "@/internal/api/entities/EntityService.js";
+import { executeAutumnBillingPlan } from "@/internal/billing/v2/execute/executeAutumnBillingPlan.js";
 import { CusService } from "@/internal/customers/CusService.js";
-import { batchCreateEntities } from "../actions/batchCreateEntities.js";
-import {
-	type EntityCreationRecoveryPayload,
-	entityCreationWrote,
-} from "./entityCreationRecoveryTypes.js";
+import { buildEntityDefaultProductsPlans } from "../actions/batchCreateEntities/attachDefaultProductsToEntities.js";
+import { constructEntity } from "../entityUtils/entityUtils.js";
+import type { EntityCreationRecoveryPayload } from "./entityCreationRecoveryTypes.js";
 
 /** Both the validation check and the insert's unique constraint raise this, so
  *  it covers a replay whose entities landed before the drain reached them. */
@@ -104,19 +110,42 @@ export const replayFailedEntityCreation = async ({
 	}
 
 	ctx.apiVersion = new ApiVersionClass(payload.apiVersion);
-	// Both create handlers read through to Postgres; a replay must do the same or
-	// it decides idempotency from a cache the shed request already invalidated.
 	ctx.skipCache = true;
 
 	try {
-		await batchCreateEntities({
+		const customer = await CusService.getFull({
 			ctx,
-			customerId,
-			createEntityData,
+			idOrInternalId: customerId,
+		});
+		const entities = createEntityData.map((inputEntity) =>
+			constructEntity({
+				inputEntity,
+				feature: findFeatureById({
+					features: ctx.features,
+					featureId: inputEntity.feature_id,
+					errorOnNotFound: true,
+				}),
+				internalCustomerId: customer.internal_id,
+				orgId: ctx.org.id,
+				env: ctx.env,
+			}),
+		);
+		const autumnBillingPlans = await buildEntityDefaultProductsPlans({
+			ctx,
+			fullCustomer: customer,
+			entities,
 			customerData: payload.params.customer_data,
-			withAutumnId: payload.withAutumnId,
-			source: "entityCreationRecovery",
-			enqueueRecoveryOnTransientFailure: false,
+		});
+
+		await ctx.db.transaction(async (tx) => {
+			const transactionCtx = { ...ctx, db: tx as unknown as DrizzleCli };
+			await EntityService.insert({ db: transactionCtx.db, data: entities });
+			for (const autumnBillingPlan of autumnBillingPlans) {
+				await executeAutumnBillingPlan({
+					ctx: transactionCtx,
+					autumnBillingPlan,
+				});
+			}
 		});
 	} catch (error) {
 		if (isAlreadyCreated({ error })) {
@@ -156,27 +185,7 @@ export const replayFailedEntityCreation = async ({
 			return;
 		}
 
-		// A shed normally stays in SQS for redelivery, but not once this replay has
-		// written: the payload describes the original attempt, so a redelivery
-		// would decrement or attach a second time.
-		if (isShedError({ error }) && entityCreationWrote({ ctx })) {
-			ctx.extraLogs.entityCreationRecoveryReplay = {
-				outcome: "manual_review",
-				...replayLog,
-			};
-			ctx.logger.error(
-				"[entityCreationRecovery] Replay shed after writing, not safe to redeliver",
-				replayLog,
-			);
-
-			throw new Error(
-				`Entity creation recovery ${payload.requestId} requires manual review (the replay shed after it had already written)`,
-			);
-		}
-
-		// Anything non-transient drops the message, so the reason the request
-		// could not be recreated has to be logged here.
-		if (!isShedError({ error })) {
+		if (!isTransientDbError({ error }) && !isTransientRedisError({ error })) {
 			ctx.extraLogs.entityCreationRecoveryReplay = {
 				outcome: "rejected",
 				...replayLog,

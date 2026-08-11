@@ -33,17 +33,15 @@ const recoveryQueueUrl =
 const mockState = {
 	queueCommands: [] as Record<string, unknown>[],
 	originalSend: null as SQSClient["send"] | null,
-	batchCreateCalls: [] as Record<string, unknown>[],
+	replayEntityCreationCalls: [] as Record<string, unknown>[],
 	getOrCreateCustomerCalls: [] as Record<string, unknown>[],
 };
 
 // Real modules captured BEFORE mocking so afterAll can restore them — module
 // mocks leak across test files (mock.restore does not undo them).
 const MOCKED_MODULE_PATHS = [
-	"@/internal/entities/actions/batchCreateEntities.js",
 	"@/internal/customers/actions/getOrCreateApiCustomerByRollout.js",
-	"@/internal/customers/CusService.js",
-	"@/internal/api/entities/EntityService.js",
+	"@/internal/entities/recovery/replayFailedEntityCreation.js",
 ] as const;
 const realModules = new Map<string, Record<string, unknown>>();
 for (const path of MOCKED_MODULE_PATHS) {
@@ -56,13 +54,6 @@ afterAll(() => {
 	}
 });
 
-mock.module("@/internal/entities/actions/batchCreateEntities.js", () => ({
-	batchCreateEntities: async (args: Record<string, unknown>) => {
-		mockState.batchCreateCalls.push(args);
-		return [];
-	},
-}));
-
 mock.module(
 	"@/internal/customers/actions/getOrCreateApiCustomerByRollout.js",
 	() => ({
@@ -73,18 +64,14 @@ mock.module(
 	}),
 );
 
-mock.module("@/internal/customers/CusService.js", () => ({
-	CusService: {
-		get: async () => ({ id: "customer_123", internal_id: "icus_123" }),
-	},
-}));
-
-mock.module("@/internal/api/entities/EntityService.js", () => ({
-	EntityService: {
-		get: async () => undefined,
-		getNull: async () => undefined,
-	},
-}));
+mock.module(
+	"@/internal/entities/recovery/replayFailedEntityCreation.js",
+	() => ({
+		replayFailedEntityCreation: async (args: Record<string, unknown>) => {
+			mockState.replayEntityCreationCalls.push(args);
+		},
+	}),
+);
 
 const { replayCreationRecovery } = await import(
 	// @ts-expect-error - Bun test cache-busting import query isolates module mocks.
@@ -154,7 +141,7 @@ describe("creation recovery round trip", () => {
 
 	beforeEach(() => {
 		mockState.queueCommands = [];
-		mockState.batchCreateCalls = [];
+		mockState.replayEntityCreationCalls = [];
 		mockState.getOrCreateCustomerCalls = [];
 		process.env.CUSTOMER_CREATION_RECOVERY_SQS_QUEUE_URL = recoveryQueueUrl;
 
@@ -186,21 +173,12 @@ describe("creation recovery round trip", () => {
 		const workerCtx = await drain({ envelope });
 
 		expect(mockState.getOrCreateCustomerCalls).toHaveLength(0);
-		expect(mockState.batchCreateCalls).toEqual([
+		expect(mockState.replayEntityCreationCalls).toEqual([
 			expect.objectContaining({
-				customerId: "customer_123",
-				createEntityData: params.create_entity_data,
-				customerData: params.customer_data,
-				withAutumnId: true,
-				source: "entityCreationRecovery",
-				enqueueRecoveryOnTransientFailure: false,
+				ctx: workerCtx,
+				payload: envelope.data,
 			}),
 		]);
-		expect(workerCtx.apiVersion.value).toBe(ApiVersion.V2_1);
-		expect(workerCtx.extraLogs.entityCreationRecoveryReplay).toMatchObject({
-			outcome: "created",
-			sourceRequestId: "req_entity_123",
-		});
 	});
 
 	test("still replays an untagged customer capture as a customer", async () => {
@@ -221,7 +199,7 @@ describe("creation recovery round trip", () => {
 			},
 		});
 
-		expect(mockState.batchCreateCalls).toHaveLength(0);
+		expect(mockState.replayEntityCreationCalls).toHaveLength(0);
 		expect(mockState.getOrCreateCustomerCalls).toEqual([
 			expect.objectContaining({ source: "customerCreationRecovery" }),
 		]);
