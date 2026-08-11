@@ -216,6 +216,12 @@ export function OperationsPreview({ operations }: { operations: Operations }) {
 											isCreated
 										/>
 									))}
+									{(license.customize?.remove_items ?? []).map((item, idx) => (
+										<RemovedFilterRow
+											filter={item as ItemFilter}
+											key={`license-remove-${idx}`}
+										/>
+									))}
 								</div>
 							))}
 

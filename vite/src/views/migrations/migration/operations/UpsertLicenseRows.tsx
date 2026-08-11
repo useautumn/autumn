@@ -24,8 +24,11 @@ import {
 	MigrationOperationSheet,
 	type OperationSheetMode,
 } from "./MigrationOperationSheet";
+import { RemoveItemRows } from "./RemoveItemRows";
 
-type LicenseItems = NonNullable<CustomizePlanLicense["customize"]>["add_items"];
+type LicenseCustomize = NonNullable<CustomizePlanLicense["customize"]>;
+type LicenseItems = LicenseCustomize["add_items"];
+type LicenseFilters = LicenseCustomize["remove_items"];
 
 export function UpsertLicenseRows({
 	license,
@@ -45,18 +48,19 @@ export function UpsertLicenseRows({
 	const [editingItemIndex, setEditingItemIndex] = useState<number | null>(null);
 
 	const addItems = license.customize?.add_items ?? [];
+	const removeItems = license.customize?.remove_items ?? [];
 	const licenseName =
 		licenseProducts.find((product) => product.id === license.license_plan_id)
 			?.name ?? license.license_plan_id;
 
+	const updateCustomize = (patch: Partial<LicenseCustomize>) =>
+		onChange({ ...license, customize: { ...license.customize, ...patch } });
+
 	const updateItems = (items: LicenseItems) =>
-		onChange({
-			...license,
-			customize: {
-				...license.customize,
-				add_items: items?.length ? items : undefined,
-			},
-		});
+		updateCustomize({ add_items: items?.length ? items : undefined });
+
+	const updateFilters = (filters: LicenseFilters) =>
+		updateCustomize({ remove_items: filters?.length ? filters : undefined });
 
 	const openSheet = (mode: OperationSheetMode, itemIndex?: number) => {
 		setSheetMode(mode);
@@ -124,6 +128,21 @@ export function UpsertLicenseRows({
 					</div>
 				))}
 
+				{removeItems.map((item, index) => (
+					<RemoveItemRows
+						item={item as Record<string, unknown>}
+						key={`license-remove-${index}`}
+						onChange={(updated) => {
+							const filters = [...removeItems];
+							filters[index] = updated as LicenseFilters[number];
+							updateFilters(filters);
+						}}
+						onRemove={() =>
+							updateFilters(removeItems.filter((_, i) => i !== index))
+						}
+					/>
+				))}
+
 				<DropdownMenu>
 					<DropdownMenuTrigger className={DASHED_BUTTON_CLASS}>
 						<PlusIcon size={10} />
@@ -135,6 +154,12 @@ export function UpsertLicenseRows({
 							onClick={() => openSheet("add-feature")}
 						>
 							Add Item
+						</DropdownMenuItem>
+						<DropdownMenuItem
+							closeOnClick
+							onClick={() => updateFilters([...removeItems, {}])}
+						>
+							Remove Item
 						</DropdownMenuItem>
 					</DropdownMenuContent>
 				</DropdownMenu>
