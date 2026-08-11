@@ -50,6 +50,7 @@ export const computeAttachNewCustomerProduct = ({
 		attachProduct,
 		fullCustomer,
 		currentCustomerProduct,
+		carryOverSourceCustomerProduct,
 		planTiming,
 		endOfCycleMs,
 		stripeSubscription,
@@ -70,8 +71,7 @@ export const computeAttachNewCustomerProduct = ({
 		processorTypeOverride,
 	} = attachBillingContext;
 
-	const currentCustomerEntitlements =
-		currentCustomerProduct?.customer_entitlements ?? [];
+	const currentCustomerEntitlements = carryOverSourceCustomerProduct?.customer_entitlements ?? [];
 	const carryOverUsages = params.carry_over_usages;
 
 	// LEGACY: carry_from_previous flag on entitlements
@@ -94,25 +94,25 @@ export const computeAttachNewCustomerProduct = ({
 		: undefined;
 
 	let existingUsagesConfig: ExistingUsagesConfig | undefined =
-		!isScheduled && currentCustomerProduct
+		!isScheduled && carryOverSourceCustomerProduct
 			? {
-					fromCustomerProduct: currentCustomerProduct,
+					fromCustomerProduct: carryOverSourceCustomerProduct,
 					consumableFeatureIdsToCarry: featuresToCarryUsagesFor,
 				}
 			: undefined;
 
 	const existingRolloversConfig =
-		!isScheduled && currentCustomerProduct
+		!isScheduled && carryOverSourceCustomerProduct
 			? {
-					fromCustomerProduct: currentCustomerProduct,
+					fromCustomerProduct: carryOverSourceCustomerProduct,
 				}
 			: undefined;
 
-	if (!isScheduled && currentCustomerProduct && carryOverUsages?.enabled) {
+	if (!isScheduled && carryOverSourceCustomerProduct && carryOverUsages?.enabled) {
 		existingUsagesConfig = carryOverUsagesToExistingUsagesConfig({
 			ctx,
 			params,
-			currentCustomerProduct,
+			currentCustomerProduct: carryOverSourceCustomerProduct,
 		});
 	}
 

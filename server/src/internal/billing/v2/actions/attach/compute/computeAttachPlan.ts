@@ -29,6 +29,7 @@ export const computeAttachPlan = ({
 }): AutumnBillingPlan => {
 	const {
 		currentCustomerProduct,
+		carryOverSourceCustomerProduct,
 		scheduledCustomerProduct,
 		planTiming,
 		customPrices,
@@ -83,9 +84,9 @@ export const computeAttachPlan = ({
 	// expires. Skipped on scheduled transitions — the outgoing product remains
 	// active until end-of-cycle and the preservation runs at activation time.
 	const oneOffPrepaidCarryOvers =
-		planTiming === "immediate" && currentCustomerProduct
+		planTiming === "immediate" && carryOverSourceCustomerProduct
 			? cusProductToOneOffPrepaidCarryOvers({
-					currentCustomerProduct,
+					currentCustomerProduct: carryOverSourceCustomerProduct,
 					fullCustomer: attachBillingContext.fullCustomer,
 				})
 			: { entitlements: [], customerEntitlements: [] };

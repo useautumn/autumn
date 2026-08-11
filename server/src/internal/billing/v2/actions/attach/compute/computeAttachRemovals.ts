@@ -34,6 +34,24 @@ export const computeAttachRemovals = ({
 	);
 	if (removePlanIds.length === 0) return [];
 
+	// Carry-over reads a single source. With no same-group product to carry from,
+	// removing multiple plans is ambiguous — there is no merge rule.
+	const carryOverRequested = Boolean(
+		params.carry_over_usages?.enabled || params.carry_over_balances?.enabled,
+	);
+	if (
+		!currentCustomerProduct &&
+		carryOverRequested &&
+		removePlanIds.length > 1
+	) {
+		throw new RecaseError({
+			code: ErrCode.InvalidRequest,
+			message:
+				"Cannot carry over usage when removing multiple plans. Remove them one at a time.",
+			statusCode: 400,
+		});
+	}
+
 	return removePlanIds.map((productId) =>
 		computeRemovalUpdate({
 			productId,
