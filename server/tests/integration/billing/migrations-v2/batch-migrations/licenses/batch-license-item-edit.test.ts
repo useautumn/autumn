@@ -34,6 +34,7 @@ const INCLUDED_SEATS = 1;
 const ATTACHED_SEATS = 3;
 const ASSIGNED_SEATS = 2;
 const CONSUMED = 60;
+const SEAT_PRICE = 20;
 
 test(`${chalk.yellowBright("batch-license-customize: editing an existing allowance batch-lowers")}`, async () => {
 	const customerId = "batch-item-edit-customer";
@@ -42,6 +43,105 @@ test(`${chalk.yellowBright("batch-license-customize: editing an existing allowan
 	const scenario = await setupLicenseUpdateScenario({
 		customerId,
 		idPrefix,
+		seatItems: [items.monthlyMessages({ includedUsage: SEAT_MESSAGES })],
+		includedSeats: INCLUDED_SEATS,
+		attachedSeats: ATTACHED_SEATS,
+	});
+	await scenario.assignSeats({ count: ASSIGNED_SEATS });
+
+	const { ctx, autumnV2_2, parent, devSeat } = scenario;
+	const { assignments } = await getLicenseDbState({ db: ctx.db, customerId });
+	const liveAssignments = assignments.filter(
+		(assignment) => assignment.internal_entity_id,
+	);
+	expect(liveAssignments).toHaveLength(ASSIGNED_SEATS);
+
+	// Spend part of one assignment's allowance, so the migration has to credit
+	// the delta rather than reset the balance.
+	await ctx.db
+		.update(customerEntitlements)
+		.set({ balance: SEAT_MESSAGES - CONSUMED })
+		.where(
+			eq(customerEntitlements.customer_product_id, liveAssignments[0]!.id),
+		);
+
+	const { result } = await runChunkedMigration({
+		ctx,
+		migrationClient: autumnV2_2,
+		migrationId: `${idPrefix}-migration`,
+		filter: { customer: { plan: { plan_id: parent.id, custom: false } } },
+		operations: {
+			customer: [
+				{
+					type: "update_plan",
+					plan_filter: { plan_id: parent.id, custom: false },
+					customize: {
+						upsert_licenses: [
+							{
+								license_plan_id: devSeat.id,
+								customize: {
+									add_items: [
+										itemsV2.monthlyMessages({ included: NEW_SEAT_MESSAGES }),
+									],
+									remove_items: [
+										{
+											feature_id: TestFeature.Messages,
+											interval: BillingInterval.Month,
+											interval_count: 1,
+										},
+									],
+								},
+							},
+						],
+					},
+				},
+			],
+		},
+		noBillingChanges: true,
+	});
+
+	expect(result?.lane).toBe("batch");
+
+	const readMessageRows = async () => {
+		const rows = await ctx.db
+			.select({
+				featureId: customerEntitlements.feature_id,
+				balance: customerEntitlements.balance,
+			})
+			.from(customerEntitlements)
+			.where(
+				inArray(
+					customerEntitlements.customer_product_id,
+					liveAssignments.map((assignment) => assignment.id),
+				),
+			);
+		return rows.filter((row) => row.featureId === TestFeature.Messages);
+	};
+
+	const converged = await pollUntil({
+		fetch: readMessageRows,
+		until: (rows) =>
+			rows.length >= ASSIGNED_SEATS &&
+			rows.every((row) => row.balance > SEAT_MESSAGES),
+		timeoutMs: 15_000,
+		intervalMs: 250,
+	});
+
+	expect(converged).toHaveLength(ASSIGNED_SEATS);
+	expect(converged.map((row) => row.balance).sort((a, b) => a - b)).toEqual([
+		NEW_SEAT_MESSAGES - CONSUMED,
+		NEW_SEAT_MESSAGES,
+	]);
+});
+
+test(`${chalk.yellowBright("batch-license-customize: editing an allowance on a PRICED license plan batch-lowers")}`, async () => {
+	const customerId = "batch-item-edit-priced-customer";
+	const idPrefix = "batch-item-edit-priced";
+
+	const scenario = await setupLicenseUpdateScenario({
+		customerId,
+		idPrefix,
+		seatPrice: SEAT_PRICE,
 		seatItems: [items.monthlyMessages({ includedUsage: SEAT_MESSAGES })],
 		includedSeats: INCLUDED_SEATS,
 		attachedSeats: ATTACHED_SEATS,

@@ -10,6 +10,7 @@ import {
 export const BENCH_LICENSE_LINK_PREFIX = "cus_lic_link_bench_";
 export const BENCH_CUSTOMER_LICENSE_PREFIX = "cus_lic_bench_";
 export const BENCH_ASSIGNMENT_PREFIX = "cp_bench_seat_";
+export const BENCH_SEAT_ENTITLEMENT_PREFIX = "ce_bench_seat_";
 export const BENCH_ENTITY_PREFIX = "ety_bench_";
 
 /**
@@ -27,6 +28,7 @@ export const seedBenchLicenses = async ({
 	startsAt,
 	orgId,
 	env,
+	existingEntitlement,
 }: {
 	db: DrizzleCli;
 	count: number;
@@ -37,6 +39,13 @@ export const seedBenchLicenses = async ({
 	startsAt: number;
 	orgId: string;
 	env: string;
+	/** Plants a row on every assignment so a supersede has something to repoint. */
+	existingEntitlement?: {
+		entitlementId: string;
+		internalFeatureId: string;
+		featureId: string;
+		balance: number;
+	};
 }) => {
 	const series = sql`GENERATE_SERIES(1, ${count}) AS i`;
 
@@ -102,6 +111,29 @@ export const seedBenchLicenses = async ({
 			${BENCH_LICENSE_LINK_PREFIX} || i,
 			${BENCH_ENTITY_PREFIX} || i || '_' || s,
 			'{}'::jsonb[]
+		FROM ${series}, GENERATE_SERIES(1, ${assignmentsPerCustomer}) AS s
+		ON CONFLICT DO NOTHING
+	`);
+
+	if (!existingEntitlement) return;
+
+	await db.execute(sql`
+		INSERT INTO customer_entitlements (
+			id, customer_product_id, internal_customer_id, customer_id,
+			internal_entity_id, entitlement_id, internal_feature_id, feature_id,
+			balance, created_at
+		)
+		SELECT
+			${BENCH_SEAT_ENTITLEMENT_PREFIX} || i || '_' || s,
+			${BENCH_ASSIGNMENT_PREFIX} || i || '_' || s,
+			${BENCH_INTERNAL_CUSTOMER_PREFIX} || i,
+			${BENCH_CUSTOMER_ID_PREFIX} || i,
+			${BENCH_ENTITY_PREFIX} || i || '_' || s,
+			${existingEntitlement.entitlementId},
+			${existingEntitlement.internalFeatureId},
+			${existingEntitlement.featureId},
+			${existingEntitlement.balance},
+			${startsAt}
 		FROM ${series}, GENERATE_SERIES(1, ${assignmentsPerCustomer}) AS s
 		ON CONFLICT DO NOTHING
 	`);
