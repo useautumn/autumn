@@ -79,6 +79,21 @@ export const computeBatchMigrationLicenseOperations = ({
 
 		for (const artifact of artifacts) {
 			if (artifact.removes_filter) {
+				if (artifact.removes_priced_item) {
+					rejections.push({
+						code: "priced_remove_item",
+						opIndex,
+						planId: fromProduct.id,
+						message:
+							"upsert_licenses remove_items matching a paid item needs a Stripe write; only free entitlements are batch-lowered.",
+						details: {
+							licensePlanId: entry.license_plan_id,
+							featureId: artifact.removes_filter.feature_id,
+						},
+					});
+					continue;
+				}
+
 				operations.push({
 					type: "add_license_entitlement",
 					licensePlanId: entry.license_plan_id,

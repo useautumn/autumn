@@ -215,6 +215,11 @@ export const ensurePlanLicenses: PrepareModule<
 							plan_license_id: planLicenseId,
 							internal_feature_id: feature.internal_id,
 							removes_filter: filter,
+							removes_priced_item: baseItemRefs.some(
+								(ref) =>
+									ref.internalFeatureId === feature.internal_id &&
+									"priceId" in ref,
+							),
 							base_item_refs: baseItemRefs,
 						});
 					}

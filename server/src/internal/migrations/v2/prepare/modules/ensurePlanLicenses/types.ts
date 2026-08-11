@@ -18,6 +18,7 @@ export const PreparedPlanLicenseRefSchema = z.object({
 	internal_feature_id: z.string(),
 	replaces_entitlement_id: z.string().optional(),
 	removes_filter: z.custom<PlanItemFilter>().optional(),
+	removes_priced_item: z.boolean().optional(),
 	base_item_refs: z.array(
 		z.object({
 			entitlementId: z.string().optional(),
