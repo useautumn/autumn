@@ -30,16 +30,24 @@ export const useVerifyStripeQuery = () => {
 	});
 
 	const subscriptions = query.data?.subscriptions ?? [];
-	const mismatchCount = subscriptions.reduce(
-		(count, subscription) => count + subscription.mismatches.length,
-		0,
-	);
-	const hasErrorMismatch = subscriptions.some((subscription) =>
-		subscription.mismatches.some((mismatch) => mismatch.severity !== "warning"),
-	);
+	const customerMismatches = query.data?.customer_mismatches ?? [];
+	const mismatchCount =
+		customerMismatches.length +
+		subscriptions.reduce(
+			(count, subscription) => count + subscription.mismatches.length,
+			0,
+		);
+	const hasErrorMismatch =
+		customerMismatches.some((mismatch) => mismatch.severity !== "warning") ||
+		subscriptions.some((subscription) =>
+			subscription.mismatches.some(
+				(mismatch) => mismatch.severity !== "warning",
+			),
+		);
 
 	return {
 		subscriptions,
+		customerMismatches,
 		mismatchCount,
 		hasErrorMismatch,
 		isLoading: query.isLoading,
