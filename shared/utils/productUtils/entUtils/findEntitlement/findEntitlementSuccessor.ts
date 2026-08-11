@@ -1,5 +1,9 @@
 import type { Entitlement } from "@models/productModels/entModels/entModels";
-import { entsAreSame } from "../compareEnt/entsAreSame.js";
+import {
+	entsAreSame,
+	normalizedEntitlementInterval,
+	normalizedEntitlementIntervalCount,
+} from "../compareEnt/entsAreSame.js";
 
 export enum EntitlementMatchPrecision {
 	Definition = "definition",
@@ -13,11 +17,8 @@ export const ENTITLEMENT_MATCH_PRECISIONS = [
 	EntitlementMatchPrecision.Feature,
 ] as const;
 
-const entitlementIntervalKey = (entitlement: Entitlement): string => {
-	const interval = entitlement.interval ?? "";
-	const intervalCount = interval ? (entitlement.interval_count ?? 1) : "";
-	return `${entitlement.internal_feature_id}|${interval}|${intervalCount}`;
-};
+const entitlementIntervalKey = (entitlement: Entitlement): string =>
+	`${entitlement.internal_feature_id}|${normalizedEntitlementInterval(entitlement)}|${normalizedEntitlementIntervalCount(entitlement)}`;
 
 const entitlementsMatchAtPrecision = ({
 	sourceEntitlement,
