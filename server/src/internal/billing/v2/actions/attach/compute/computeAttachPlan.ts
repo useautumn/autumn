@@ -11,6 +11,7 @@ import { computeAttachPooledBalancePlan } from "@/internal/billing/v2/pooledBala
 import { cusProductToExistingBalanceCarryOvers } from "@/internal/billing/v2/utils/handleCarryOvers/cusProductToExistingBalanceCarryOvers";
 import { cusProductToOneOffPrepaidCarryOvers } from "@/internal/billing/v2/utils/handleOneOffPrepaidCarryOvers/cusProductToOneOffPrepaidCarryOvers";
 import { computeAttachNewCustomerProduct } from "./computeAttachNewCustomerProduct";
+import { computeAttachRemovals } from "./computeAttachRemovals";
 import { computeAttachTransitionUpdates } from "./computeAttachTransitionUpdates";
 import { computeOneOffPurchaseRebalance } from "./computeOneOffPurchaseRebalance";
 import { finalizeAttachPlan } from "./finalizeAttachPlan";
@@ -46,6 +47,11 @@ export const computeAttachPlan = ({
 	});
 
 	const updateCustomerProduct = computeAttachTransitionUpdates({
+		attachBillingContext,
+		params,
+	});
+
+	const removeCustomerProducts = computeAttachRemovals({
 		attachBillingContext,
 		params,
 	});
@@ -131,6 +137,7 @@ export const computeAttachPlan = ({
 		insertCustomerProducts: [preparedNewCustomerProduct],
 		lockCustomerCurrency,
 		updateCustomerProduct,
+		updateCustomerProducts: removeCustomerProducts,
 		deleteCustomerProduct: scheduledCustomerProduct,
 		customPrices,
 		customEntitlements: [
