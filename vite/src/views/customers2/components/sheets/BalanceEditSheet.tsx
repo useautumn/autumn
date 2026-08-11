@@ -683,12 +683,13 @@ function SubmitButton({
 					const defaultGPB =
 						form.options.defaultValues?.grantedAndPurchasedBalance ?? 0;
 					const newGPB = defaultGPB + addAmount;
-					const grantedBalanceInput = values.updateGrantedBalance
-						? computeGrantedBalanceInput({
-								newGPB,
-								prepaidAllowance: form.prepaidAllowance,
-							})
-						: undefined;
+					// add_to_balance now records the grant server-side (so refunds via
+					// track can restore it). When the toggle is off, pin the granted
+					// balance at its current value to keep it unchanged.
+					const grantedBalanceInput = computeGrantedBalanceInput({
+						newGPB: values.updateGrantedBalance ? newGPB : defaultGPB,
+						prepaidAllowance: form.prepaidAllowance,
+					});
 
 					promises.push(
 						axiosInstance.post("/v1/balances/update", {
