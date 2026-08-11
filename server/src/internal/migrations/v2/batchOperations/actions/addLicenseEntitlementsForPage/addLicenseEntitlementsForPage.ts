@@ -14,6 +14,7 @@ import {
 import type { OperationScope } from "../../scope/operationScope.js";
 import type { BatchMigrationExecutionAddLicense } from "../../types/batchMigrationExecutionPlan.js";
 import { enrichAndInsertLicenseCandidates } from "./enrichAndInsertLicenseCandidates.js";
+import { removeLicenseEntitlementRows } from "./removeLicenseEntitlementRows.js";
 import { replaceLicenseEntitlementRows } from "./replaceLicenseEntitlementRows.js";
 import { repointLicensePoolsForPage } from "./repointLicensePoolsForPage.js";
 import { selectLicenseAddCandidateRows } from "./selectLicenseAddCandidateRows.js";
@@ -56,7 +57,6 @@ export const addLicenseEntitlementsForPage = async ({
 }): Promise<AddLicenseEntitlementsForPageResult> => {
 	const insertedItems: BatchMigrationInsertedItem[] = [];
 	const excludedIds = new Set<string>();
-	const resetting = isResettingEntitlement({ entitlement: add.entitlement });
 
 	// Whole-page, so it commits before any candidate select reads the pool —
 	// not per batch, which would mutate before the ceiling assertion.
@@ -78,6 +78,39 @@ export const addLicenseEntitlementsForPage = async ({
 			),
 	});
 
+	if (add.kind === "remove") {
+		const removed = await timePhase({
+			phases,
+			phase: "remove",
+			run: () =>
+				withStatementTimeout(
+					db,
+					(transaction) =>
+						removeLicenseEntitlementRows({
+							db: transaction,
+							internalCustomerIds,
+							scope,
+							fromEntitlementId: add.fromEntitlementId,
+							licenseInternalProductId: add.licenseInternalProductId,
+						}),
+					BATCH_MIGRATION_PAGE_STATEMENT_TIMEOUT_MS,
+				),
+		});
+
+		return {
+			affected: removed.rows,
+			candidateCount: 0,
+			repointedPools: repointed.pools,
+			repointedInternalCustomerIds: [
+				...repointed.internalCustomerIds,
+				...removed.internalCustomerIds,
+			],
+			insertedItems: [],
+			excludedInternalCustomerIds: [],
+		};
+	}
+
+	const resetting = isResettingEntitlement({ entitlement: add.entitlement });
 	const replaced =
 		add.kind === "replace"
 			? await timePhase({

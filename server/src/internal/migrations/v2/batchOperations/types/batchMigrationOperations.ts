@@ -23,14 +23,23 @@ export type BatchMigrationAddLicenseEntitlementOp = {
 	planLicenseId: string;
 	licenseInternalProductId: string;
 	isOneOff: boolean;
-	entitlement: EntitlementWithFeature;
-	initialState: CustomerEntitlementInitialState;
 } & (
-	| { kind: "add" }
+	| {
+			kind: "add";
+			entitlement: EntitlementWithFeature;
+			initialState: CustomerEntitlementInitialState;
+	  }
 	| {
 			/** Assignments already hold `fromEntitlementId` for this feature, so
 			 * they move onto the minted row instead of gaining a second one. */
 			kind: "replace";
+			fromEntitlementId: string;
+			entitlement: EntitlementWithFeature;
+			initialState: CustomerEntitlementInitialState;
+	  }
+	| {
+			/** Nothing is minted: assignments lose their row for this feature. */
+			kind: "remove";
 			fromEntitlementId: string;
 	  }
 );

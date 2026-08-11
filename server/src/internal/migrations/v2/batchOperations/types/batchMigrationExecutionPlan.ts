@@ -21,16 +21,24 @@ const BatchMigrationLicenseOpBaseSchema = z.object({
 	planLicenseId: z.string(),
 	licenseInternalProductId: z.string(),
 	isOneOff: z.boolean(),
-	entitlement: EntitlementWithFeatureSchema,
-	initialState: BatchMigrationInitialStateSchema,
 });
+
+const BatchMigrationLicenseMintedSchema =
+	BatchMigrationLicenseOpBaseSchema.extend({
+		entitlement: EntitlementWithFeatureSchema,
+		initialState: BatchMigrationInitialStateSchema,
+	});
 
 export const BatchMigrationExecutionAddLicenseSchema = z.discriminatedUnion(
 	"kind",
 	[
-		BatchMigrationLicenseOpBaseSchema.extend({ kind: z.literal("add") }),
-		BatchMigrationLicenseOpBaseSchema.extend({
+		BatchMigrationLicenseMintedSchema.extend({ kind: z.literal("add") }),
+		BatchMigrationLicenseMintedSchema.extend({
 			kind: z.literal("replace"),
+			fromEntitlementId: z.string(),
+		}),
+		BatchMigrationLicenseOpBaseSchema.extend({
+			kind: z.literal("remove"),
 			fromEntitlementId: z.string(),
 		}),
 	],
@@ -59,6 +67,11 @@ export const BatchMigrationExecutionPlanSchema = z.object({
 export type BatchMigrationExecutionAdd = z.infer<
 	typeof BatchMigrationExecutionAddSchema
 >;
+/** The minted kinds — a removal carries no entitlement to insert. */
+export type BatchMigrationExecutionMintedLicense = z.infer<
+	typeof BatchMigrationLicenseMintedSchema
+> & { kind: "add" | "replace" };
+
 export type BatchMigrationExecutionAddLicense = z.infer<
 	typeof BatchMigrationExecutionAddLicenseSchema
 >;

@@ -16,9 +16,8 @@ const planFilterHasItem = (filter: PlanFilter): boolean => {
 };
 
 /** diffPlanV1 expresses a modify-in-place as a remove plus an add sharing one
- * match key, which the assignment fan-out already collapses. A remove without
- * a matching add is a real deletion and stays per-customer. */
-const isModifyInPlaceOnly = ({
+ * match key. A remove without a matching add is a standalone deletion. */
+export const isModifyInPlaceOnly = ({
 	addItems,
 	removeItems,
 }: {
@@ -46,13 +45,18 @@ const checkUpsertLicensesEligibility = ({
 			const customize = entry.customize;
 			const details = { licensePlanId: entry.license_plan_id };
 
-			if ((customize?.add_items?.length ?? 0) === 0) {
+			// Neither adds nor removes: the entry resets the link to catalog
+			// inheritance, which only the per-customer lane applies.
+			if (
+				(customize?.add_items?.length ?? 0) === 0 &&
+				(customize?.remove_items?.length ?? 0) === 0
+			) {
 				return [
 					{
 						code: "unsupported_upsert_licenses" as const,
 						opIndex,
 						message:
-							"upsert_licenses without add_items resets the link to catalog inheritance; only the per-customer lane applies it.",
+							"upsert_licenses without add_items or remove_items resets the link to catalog inheritance; only the per-customer lane applies it.",
 						details,
 					},
 				];
@@ -62,19 +66,13 @@ const checkUpsertLicensesEligibility = ({
 				entry.included !== undefined ||
 				entry.prepaid_only !== undefined ||
 				entry.metadata !== undefined;
-			const changesBeyondAddItems =
-				customize?.price !== undefined ||
-				!isModifyInPlaceOnly({
-					addItems: customize?.add_items,
-					removeItems: customize?.remove_items,
-				});
-			if (changesLinkFields || changesBeyondAddItems) {
+			if (changesLinkFields || customize?.price !== undefined) {
 				return [
 					{
 						code: "unsupported_upsert_licenses" as const,
 						opIndex,
 						message:
-							"customize.upsert_licenses link fields, base price, and item deletions are per-customer definition work.",
+							"customize.upsert_licenses link fields and base price are per-customer definition work.",
 						details,
 					},
 				];

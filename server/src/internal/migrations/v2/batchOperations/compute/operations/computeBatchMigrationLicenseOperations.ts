@@ -80,6 +80,19 @@ export const computeBatchMigrationLicenseOperations = ({
 		}
 
 		for (const artifact of artifacts) {
+			if (artifact.removes_entitlement_id) {
+				operations.push({
+					type: "add_license_entitlement",
+					licensePlanId: entry.license_plan_id,
+					planLicenseId: artifact.plan_license_id,
+					licenseInternalProductId: artifact.license_internal_product_id,
+					isOneOff: artifact.is_one_off,
+					kind: "remove",
+					fromEntitlementId: artifact.removes_entitlement_id,
+				});
+				continue;
+			}
+
 			const entitlement = parsed.data.entitlements.find(
 				(candidate) => candidate.id === artifact.entitlement_id,
 			);

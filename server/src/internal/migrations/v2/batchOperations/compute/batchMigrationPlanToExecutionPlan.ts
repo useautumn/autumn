@@ -27,14 +27,21 @@ export const batchMigrationPlanToExecutionPlan = ({
 					planLicenseId: operation.planLicenseId,
 					licenseInternalProductId: operation.licenseInternalProductId,
 					isOneOff: operation.isOneOff,
-					entitlement: operation.entitlement,
-					initialState: operation.initialState,
-					...(operation.kind === "replace"
+					...(operation.kind === "remove"
 						? {
 								kind: operation.kind,
 								fromEntitlementId: operation.fromEntitlementId,
 							}
-						: { kind: operation.kind }),
+						: {
+								entitlement: operation.entitlement,
+								initialState: operation.initialState,
+								...(operation.kind === "add"
+									? { kind: operation.kind }
+									: {
+											kind: operation.kind,
+											fromEntitlementId: operation.fromEntitlementId,
+										}),
+							}),
 				}),
 			),
 		};

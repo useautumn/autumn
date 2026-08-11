@@ -6,7 +6,7 @@ import {
 	timePhase,
 } from "../../execute/utils/pagePhaseTimings.js";
 import type { OperationScope } from "../../scope/operationScope.js";
-import type { BatchMigrationExecutionAddLicense } from "../../types/batchMigrationExecutionPlan.js";
+import type { BatchMigrationExecutionMintedLicense } from "../../types/batchMigrationExecutionPlan.js";
 import { enrichCustomerEntitlementCycles } from "../../utils/enrichCustomerEntitlementCycles.js";
 import { insertLicenseCustomerEntitlementRows } from "./insertLicenseCustomerEntitlementRows.js";
 import type { LicenseCandidateRow } from "./selectLicenseAddCandidateRows.js";
@@ -33,7 +33,7 @@ export const enrichAndInsertLicenseCandidates = async ({
 	db: DrizzleCli;
 	candidates: LicenseCandidateRow[];
 	scope: OperationScope;
-	add: BatchMigrationExecutionAddLicense;
+	add: BatchMigrationExecutionMintedLicense;
 	resetting: boolean;
 	now: number;
 	phases?: BatchMigrationPagePhases;

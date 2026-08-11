@@ -1,8 +1,10 @@
 import {
 	type DbPlanLicense,
 	type Entitlement,
+	type FullProduct,
 	findFeatureById,
 	isOneOffProduct,
+	type PlanItemFilter,
 	planLicenses,
 } from "@autumn/shared";
 import type { UpdatePlanOp } from "@autumn/shared/api/migrations/operations/customer/updatePlan/index.js";
@@ -13,6 +15,7 @@ import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { derivePlanLicenseItemRefs } from "@/internal/licenses/actions/customize/computeLicenseCustomize.js";
 import { getFullLicenseProduct } from "@/internal/licenses/licenseUtils.js";
 import { licenseItemRepo } from "@/internal/licenses/repos/licenseItemRepo.js";
+import { isModifyInPlaceOnly } from "@/internal/migrations/v2/batchOperations/compute/guards/checkUpdatePlanOpEligibility.js";
 import { toCatalogPlanFilter } from "@/internal/migrations/v2/batchOperations/scope/operationScope.js";
 import { EntitlementService } from "@/internal/products/entitlements/EntitlementService.js";
 import { ProductService } from "@/internal/products/ProductService.js";
@@ -29,6 +32,35 @@ import type {
 } from "./types.js";
 
 type LicenseItemRef = PreparedPlanLicenseRef["base_item_refs"][number];
+
+/** The base entitlement a remove_items filter drops. Matched on the license
+ * product's own entitlements so the filter's interval is honoured, then mapped
+ * back to the ref that carries the entitlement id. */
+const removedBaseItem = ({
+	licenseProduct,
+	refs,
+	filter,
+}: {
+	licenseProduct: FullProduct;
+	refs: LicenseItemRef[];
+	filter: PlanItemFilter;
+}) => {
+	const matched = licenseProduct.entitlements.filter(
+		(entitlement) => entitlement.feature_id === filter.feature_id,
+	);
+	if (matched.length !== 1) return undefined;
+
+	const [entitlement] = matched;
+	const ref = refs.find(
+		(candidate) => candidate.entitlementId === entitlement.id,
+	);
+	if (!ref?.entitlementId || !ref.internalFeatureId) return undefined;
+
+	return {
+		entitlementId: ref.entitlementId,
+		internalFeatureId: ref.internalFeatureId,
+	};
+};
 
 /** The base entitlement a minted row replaces: the license plan's own ref for
  * the same feature. Shared with apply(), which drops that ref from the item set
@@ -98,7 +130,16 @@ export const ensurePlanLicenses: PrepareModule<
 
 			for (const entry of upsertLicenses) {
 				const addItems = entry.customize?.add_items ?? [];
-				if (addItems.length === 0) continue;
+				// A removal keeps the same match key as the add that supersedes it,
+				// so only filters without one are standalone deletions.
+				const removeFilters = (entry.customize?.remove_items ?? []).filter(
+					(filter) =>
+						!isModifyInPlaceOnly({
+							addItems,
+							removeItems: [filter],
+						}),
+				);
+				if (addItems.length === 0 && removeFilters.length === 0) continue;
 
 				for (const parentProduct of parentProducts) {
 					const catalogLink = parentProduct.licenses?.find(
@@ -193,6 +234,29 @@ export const ensurePlanLicenses: PrepareModule<
 							base_item_refs: baseItemRefs,
 						});
 					}
+
+					for (const filter of removeFilters) {
+						const removed = removedBaseItem({
+							licenseProduct,
+							refs: baseItemRefs,
+							filter,
+						});
+						if (!removed) continue;
+
+						artifacts.push({
+							op_index: opIndex,
+							license_plan_id: entry.license_plan_id,
+							item_index: 0,
+							hash: hashJson({ value: { filter } }),
+							parent_internal_product_id: parentProduct.internal_id,
+							license_internal_product_id: licenseProduct.internal_id,
+							is_one_off: isOneOffProduct({ prices: licenseProduct.prices }),
+							plan_license_id: planLicenseId,
+							internal_feature_id: removed.internalFeatureId,
+							removes_entitlement_id: removed.entitlementId,
+							base_item_refs: baseItemRefs,
+						});
+					}
 				}
 			}
 		}
@@ -230,6 +294,8 @@ export const ensurePlanLicenses: PrepareModule<
 			const refs =
 				refsByPlanLicenseId.get(artifact.plan_license_id) ??
 				new Map<string, LicenseItemRef>();
+			// A removal drops its base ref the same way a replacement does; the
+			// difference is only that nothing is minted in its place.
 			const replacedFeatureIds = new Set(
 				planned.artifacts
 					.filter(
@@ -250,8 +316,10 @@ export const ensurePlanLicenses: PrepareModule<
 				}
 				refs.set(`${ref.entitlementId ?? ""}:${ref.priceId ?? ""}`, ref);
 			}
-			const mintedRef = { entitlementId: artifact.entitlement_id };
-			refs.set(`${mintedRef.entitlementId}:`, mintedRef);
+			if (artifact.entitlement_id) {
+				const mintedRef = { entitlementId: artifact.entitlement_id };
+				refs.set(`${mintedRef.entitlementId}:`, mintedRef);
+			}
 			refsByPlanLicenseId.set(artifact.plan_license_id, refs);
 		}
 		for (const [planLicenseId, refs] of refsByPlanLicenseId) {

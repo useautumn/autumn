@@ -54,7 +54,9 @@ export const getImplicitPrepareModules = ({
 
 		if (
 			(op.customize?.upsert_licenses ?? []).some(
-				(entry) => (entry.customize?.add_items?.length ?? 0) > 0,
+				(entry) =>
+					(entry.customize?.add_items?.length ?? 0) > 0 ||
+					(entry.customize?.remove_items?.length ?? 0) > 0,
 			)
 		) {
 			licenseOps.push({ opIndex, op });

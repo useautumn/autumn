@@ -10,11 +10,14 @@ export const PreparedPlanLicenseRefSchema = z.object({
 	license_internal_product_id: z.string(),
 	is_one_off: z.boolean(),
 	plan_license_id: z.string(),
-	entitlement_id: z.string(),
+	/** Absent on a removal: nothing is minted, the base ref is only dropped. */
+	entitlement_id: z.string().optional(),
 	internal_feature_id: z.string(),
 	/** The base entitlement this minted row replaces, when the customize
 	 * re-adds a feature the license plan already grants. */
 	replaces_entitlement_id: z.string().optional(),
+	/** The base entitlement a remove_items filter drops, with nothing minted. */
+	removes_entitlement_id: z.string().optional(),
 	base_item_refs: z.array(
 		z.object({
 			entitlementId: z.string().optional(),

@@ -105,7 +105,9 @@ describe("computeBatchMigrationLicenseOperations", () => {
 		expect(rejections).toHaveLength(0);
 		expect(operations).toHaveLength(1);
 		expect(operations[0]?.licensePlanId).toBe(LICENSE_PLAN_ID);
-		expect(operations[0]?.initialState.tracksBalance).toBe(false);
+		const [added] = operations;
+		if (added?.kind === "remove") throw new Error("expected a minted op");
+		expect(added?.initialState.tracksBalance).toBe(false);
 	});
 
 	test("lowers a resetting entitlement with a tracked balance", () => {
@@ -119,7 +121,9 @@ describe("computeBatchMigrationLicenseOperations", () => {
 
 		expect(rejections).toHaveLength(0);
 		expect(operations).toHaveLength(1);
-		expect(operations[0]?.initialState.tracksBalance).toBe(true);
-		expect(operations[0]?.initialState.granted).toBe(100);
+		const [minted] = operations;
+		if (minted?.kind === "remove") throw new Error("expected a minted op");
+		expect(minted?.initialState.tracksBalance).toBe(true);
+		expect(minted?.initialState.granted).toBe(100);
 	});
 });

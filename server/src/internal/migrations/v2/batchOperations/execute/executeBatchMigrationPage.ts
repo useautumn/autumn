@@ -100,7 +100,7 @@ export const executeBatchMigrationPage = async ({
 				data: {
 					opIndex: patch.opIndex,
 					licensePlanId: add.licensePlanId,
-					featureId: add.entitlement.feature.id,
+					kind: add.kind,
 					candidateCount: result.candidateCount,
 					affected: result.affected,
 					repointedPools: result.repointedPools,

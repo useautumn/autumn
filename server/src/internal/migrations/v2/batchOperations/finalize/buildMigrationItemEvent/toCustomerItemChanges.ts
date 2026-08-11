@@ -60,11 +60,17 @@ export const buildEntitlementLookup = ({
 				],
 			),
 			// License rows key on their own plan, not the parent the patch filtered on.
-			...patch.addLicenseEntitlementOps.map(
-				(add): [string, EntitlementWithFeature] => [
-					`${add.licensePlanId}:${add.entitlement.feature.id}`,
-					add.entitlement,
-				],
+			// A removal mints nothing, so it contributes no inserted row to describe.
+			...patch.addLicenseEntitlementOps.flatMap(
+				(add): [string, EntitlementWithFeature][] =>
+					add.kind === "remove"
+						? []
+						: [
+								[
+									`${add.licensePlanId}:${add.entitlement.feature.id}`,
+									add.entitlement,
+								],
+							],
 			),
 		]),
 	);
