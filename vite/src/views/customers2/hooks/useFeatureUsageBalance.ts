@@ -76,10 +76,9 @@ export function useFeatureUsageBalance({
 		withRollovers: false,
 	});
 
-	const shouldShowOutOfBalance =
-		allowance + prepaidAllowance > 0 || balance > 0;
-	const shouldShowUsed =
-		balance < 0 || ((balance ?? 0) === 0 && (allowance ?? 0) <= 0);
+	const totalAllowance = allowance + prepaidAllowance;
+	const shouldShowOutOfBalance = totalAllowance > 0 || balance >= 0;
+	const shouldShowUsed = balance < 0;
 
 	const rolloverBalance = sumValues(
 		cusEnts.map(
