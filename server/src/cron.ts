@@ -1,6 +1,8 @@
+import { getAutumnEnv } from "@autumn/env";
 import { initInfisical } from "./external/infisical/initInfisical.js";
 
 await initInfisical();
+getAutumnEnv();
 const { warmupRegionalRedis } = await import("./external/redis/initRedis.js");
 await warmupRegionalRedis();
 

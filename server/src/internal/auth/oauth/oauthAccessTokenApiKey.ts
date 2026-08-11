@@ -1,5 +1,6 @@
 import { stripOAuthTokenPrefix } from "@autumn/auth";
 import { getOAuthResourceScopes } from "@autumn/auth/oauth";
+import { getAutumnEnv } from "@autumn/env";
 import {
 	AppEnv,
 	checkScopes,
@@ -19,8 +20,7 @@ import { oauthAccessTokenRepo, oauthConsentRepo } from "../repos/index.js";
 import { isAtmnOAuthClientId } from "./atmnOAuthClients.js";
 import { rotateOAuthConsentApiKey } from "./oauthConsentApiKey.js";
 
-const getOAuthIssuer = () =>
-	`${process.env.BETTER_AUTH_URL?.replace(/\/$/, "") ?? ""}/api/auth`;
+const getOAuthIssuer = () => `${getAutumnEnv().AUTUMN_API_URL}/api/auth`;
 
 const verifyResourceAccessToken = async ({
 	accessToken,
