@@ -1,6 +1,6 @@
 import { CreateFeatureV2ParamsSchema } from "@api/features/crud/createFeatureParams.js";
-import { UpdatePlanParamsV2Schema } from "@api/products/crud/updatePlanParamsV1.js";
 import { z } from "zod/v4";
+import { UpdateCatalogPlanParamsSchema } from "./components/updateCatalogPlanParams.js";
 
 // Intersection, not .extend — extend silently drops the create-schema refines.
 export const UpdateCatalogFeatureParamsSchema = z.intersection(
@@ -36,7 +36,7 @@ export const UpdateCatalogParamsSchema = z.object({
 		.array(RemoveCatalogFeatureParamsSchema)
 		.optional()
 		.default([]),
-	plans: z.array(UpdatePlanParamsV2Schema).optional().default([]),
+	plans: z.array(UpdateCatalogPlanParamsSchema).optional().default([]),
 
 	// rewards: z.array(CreateRewardParamsSchema).optional().meta({
 	// 	description:

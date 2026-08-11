@@ -18,14 +18,11 @@ import {
 export const buildEntitlementPricesPlan = ({
 	mode,
 	claims,
-	newFeatures,
 }: {
 	mode: EntitlementPricesPlanMode;
 	claims: ClaimResult;
-	newFeatures: EntitlementPricesPlan["newFeatures"];
 }): EntitlementPricesPlan => {
 	const plan = emptyEntitlementPricesPlan();
-	plan.newFeatures = newFeatures;
 
 	const isCustom = mode.type === "custom";
 	const leaveBucket = leaveBucketForMode({ mode });

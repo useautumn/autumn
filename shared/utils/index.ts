@@ -44,6 +44,7 @@ export * from "./pooledBalanceUtils/index";
 export * from "./productUtils/classifyProduct/classifyProductUtils";
 export * from "./productUtils/classifyProduct/hasMissingStripeResourcesForProduct";
 export * from "./productUtils/classifyProduct/isProductPaidAndRecurring";
+export * from "./productUtils/compareProduct/productDetailsAreSame";
 export * from "./productUtils/convertProduct/productKey";
 export * from "./productUtils/convertProduct/productToEffectivePrices";
 export * from "./productUtils/convertProduct/productToProductKey";

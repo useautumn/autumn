@@ -7,6 +7,7 @@ import {
 import { createRoute } from "@/honoMiddlewares/routeHandler.js";
 import { catalogV2Actions } from "@/internal/catalogV2/actions/index.js";
 import { buildUpdateCatalogPlanPreview } from "@/internal/catalogV2/actions/updateCatalog/preview/buildUpdateCatalogPlanPreview";
+import { buildUpsertProductsPreview } from "@/internal/catalogV2/actions/updateCatalog/preview/buildUpsertProductsPreview";
 
 /** Resolve a proposed catalog change WITHOUT persisting — same params as catalogV2.update. */
 export const handlePreviewUpdateCatalogV2 = createRoute({
@@ -26,7 +27,7 @@ export const handlePreviewUpdateCatalogV2 = createRoute({
 
 		return c.json(
 			PreviewUpdateCatalogResponseSchema.parse({
-				plans: [],
+				plans: buildUpsertProductsPreview({ updateCatalogPlan }),
 				features: buildUpdateCatalogPlanPreview({
 					catalogContext,
 					updateCatalogPlan,

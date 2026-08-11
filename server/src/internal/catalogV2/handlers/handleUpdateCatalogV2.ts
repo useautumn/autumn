@@ -20,9 +20,8 @@ export const handleUpdateCatalogV2 = createRoute({
 		const ctx = c.get("ctx");
 		const params = c.req.valid("json");
 
-		const { updateCatalogPlan, catalogResult } = await catalogV2Actions.updateCatalog(
-			{ ctx, params },
-		);
+		const { updateCatalogPlan, catalogResult } =
+			await catalogV2Actions.updateCatalog({ ctx, params });
 
 		const response = UpdateCatalogResponseSchema.parse({
 			plans: [],
@@ -38,7 +37,10 @@ export const handleUpdateCatalogV2 = createRoute({
 					targetVersion: FEATURE_TARGET_VERSION,
 				}),
 			),
-			results: { plans: [], features: catalogResult?.features ?? [] },
+			results: {
+				plans: catalogResult?.plans ?? [],
+				features: catalogResult?.features ?? [],
+			},
 		});
 		return c.json(response);
 	},

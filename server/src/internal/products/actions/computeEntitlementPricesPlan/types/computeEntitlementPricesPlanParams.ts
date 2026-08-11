@@ -1,6 +1,4 @@
-import type { BasePriceParams } from "@autumn/shared/api/products/components/basePrice/basePrice";
-import type { CreatePlanItemParamsV1 } from "@autumn/shared/api/products/items/crud/createPlanItemParamsV1";
-import type { ApiPlanItemV1 } from "@autumn/shared/api/products/items/apiPlanItemV1";
+import type { CustomizePlanV1 } from "@autumn/shared";
 import type {
 	EntitlementWithFeature,
 	Price,
@@ -16,14 +14,21 @@ export type EntitlementPricesPlanMode =
 	| { type: "version" }
 	| { type: "custom" };
 
+/** Items/price slice of CustomizePlanV1 — not free_trial / billing_controls / licenses. */
+export type EntitlementPricesCustomize = Pick<
+	CustomizePlanV1,
+	"price" | "items" | "add_items" | "remove_items"
+>;
+
 export type ComputeEntitlementPricesPlanParams = {
 	mode: EntitlementPricesPlanMode;
 	/** Stamp only — org_id / internal_id / env / version. */
 	product: Product;
-	/** Absent = the plan has no base price (PUT semantics). */
-	basePrice?: BasePriceParams | null;
-	/** Full desired set — required; callers with no item changes don't call. */
-	planItems: ApiPlanItemV1[] | CreatePlanItemParamsV1[];
+	/**
+	 * PUT (`items`) and/or PATCH (`price` / `add_items` / `remove_items`).
+	 * Omit a lane = leave that lane's current rows alone.
+	 */
+	customize: EntitlementPricesCustomize;
 	/** Omitted = create (everything mints new). */
 	currentRows?: {
 		prices: Price[];
