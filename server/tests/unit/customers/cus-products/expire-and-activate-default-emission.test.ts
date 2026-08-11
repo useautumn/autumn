@@ -31,6 +31,16 @@ const activatedCustomerProduct = {
 	product: { name: "Free", group: "main" },
 } as unknown as FullCusProduct;
 
+const insertedDefaultCustomerProduct = {
+	id: "cus_prod_free_inserted",
+	internal_customer_id: "internal_cus_1",
+	product: { name: "Free Default", group: "main" },
+} as unknown as FullCusProduct;
+
+/** Successor activation INSERTs a default only when none was scheduled;
+ * tests opt into that branch by setting this before the call. */
+let successorInsertedCustomerProduct: FullCusProduct | undefined;
+
 await mockModuleWithRestore(
 	"@/internal/analytics/handlers/handleProductsUpdated",
 	() => ({
@@ -49,7 +59,10 @@ await mockModuleWithRestore(
 	() => ({
 		activateFreeSuccessorProduct: async () => {
 			calls.push("activate_successor");
-			return { activatedCustomerProduct, insertedCustomerProduct: undefined };
+			return {
+				activatedCustomerProduct,
+				insertedCustomerProduct: successorInsertedCustomerProduct,
+			};
 		},
 	}),
 );
@@ -97,6 +110,7 @@ describe("expireCustomerProductAndActivateDefault emission", () => {
 	beforeEach(() => {
 		calls.length = 0;
 		sentBillingPlans.length = 0;
+		successorInsertedCustomerProduct = undefined;
 	});
 
 	test("enqueues products_updated (Expired) before activating the successor", async () => {
@@ -153,5 +167,42 @@ describe("expireCustomerProductAndActivateDefault emission", () => {
 		expect(collector.updatedCustomerProducts[1].updates.status).toBe(
 			CusProductStatus.Active,
 		);
+	});
+
+	test("emits an inserted successor on the billing plan when no collector is passed", async () => {
+		successorInsertedCustomerProduct = insertedDefaultCustomerProduct;
+
+		await expireCustomerProductAndActivateDefault({
+			ctx: buildContext(),
+			customerProduct: expiringCustomerProduct,
+			fullCustomer: buildFullCustomer(),
+		});
+
+		expect(sentBillingPlans).toHaveLength(1);
+		expect(
+			sentBillingPlans[0].insertCustomerProducts.map(
+				(customerProduct) => customerProduct.id,
+			),
+		).toEqual([insertedDefaultCustomerProduct.id]);
+	});
+
+	test("records an inserted successor onto the collector instead of emitting", async () => {
+		successorInsertedCustomerProduct = insertedDefaultCustomerProduct;
+		const fullCustomer = buildFullCustomer();
+		const collector = createBillingChangeCollector({ fullCustomer });
+
+		await expireCustomerProductAndActivateDefault({
+			ctx: buildContext(),
+			customerProduct: expiringCustomerProduct,
+			fullCustomer,
+			collector,
+		});
+
+		expect(sentBillingPlans).toHaveLength(0);
+		expect(
+			collector.insertedCustomerProducts.map(
+				(customerProduct) => customerProduct.id,
+			),
+		).toEqual([insertedDefaultCustomerProduct.id]);
 	});
 });

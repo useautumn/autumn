@@ -6,15 +6,18 @@
  */
 
 import { afterAll, beforeAll, expect, test } from "bun:test";
-import { AppEnv } from "@autumn/shared";
 import {
-	expectBillingUpdatedCorrect,
-	waitForBillingUpdatedWebhook,
-} from "@tests/integration/billing/autumn-webhooks/utils/expectBillingUpdatedWebhook.js";
+	AppEnv,
+	type BillingChangeResponse,
+	type CustomerPlanChange,
+	type PlanChangeAction,
+} from "@autumn/shared";
+import { expectBillingUpdatedCorrect } from "@tests/integration/billing/autumn-webhooks/utils/expectBillingUpdatedWebhook.js";
 import {
 	getTestSvixAppId,
 	setupWebhookTest,
 	type WebhookTestSetup,
+	waitForWebhook,
 } from "@tests/integration/utils/svixWebhookTestUtils.js";
 import { items } from "@tests/utils/fixtures/items.js";
 import { products } from "@tests/utils/fixtures/products.js";
@@ -27,6 +30,21 @@ import { encryptData } from "@/utils/encryptUtils";
 import { RevenueCatWebhookClient } from "./utils/revenue-cat-webhook-client";
 
 const RC_WEBHOOK_SECRET = "test_rc_webhook_secret_12345";
+
+type BillingUpdatedPayload = {
+	type: string;
+	data: BillingChangeResponse;
+};
+
+const findChange = (
+	planChanges: CustomerPlanChange[] | undefined,
+	{ action, planId }: { action: PlanChangeAction; planId: string },
+): CustomerPlanChange | undefined =>
+	planChanges?.find(
+		(change) =>
+			change.action === action &&
+			(change.subscription?.plan_id ?? change.purchase?.plan_id) === planId,
+	);
 
 const rcProMonthly = ({ id }: { id: string }) =>
 	products.base({
@@ -129,6 +147,29 @@ afterAll(async () => {
 	await webhook?.cleanup();
 });
 
+/** Setup's initial purchase emits its own billing.updated for the same
+ * customer, so every wait must match the specific plan change it expects. */
+const waitForPlanChange = async ({
+	customerId,
+	matchesPlanChanges,
+}: {
+	customerId: string;
+	matchesPlanChanges: (
+		planChanges: CustomerPlanChange[] | undefined,
+	) => boolean;
+}): Promise<BillingChangeResponse | null> => {
+	const result = await waitForWebhook<BillingUpdatedPayload>({
+		token: playToken,
+		predicate: (payload) =>
+			payload.type === "billing.updated" &&
+			payload.data?.customer_id === customerId &&
+			matchesPlanChanges(payload.data?.plan_changes),
+		timeoutMs: 30_000,
+		logWebhook: false,
+	});
+	return result?.payload.data ?? null;
+};
+
 test(`${chalk.yellowBright("billing.updated: revenuecat expiration → expired change")}`, async () => {
 	const customerId = "rc-billing-updated-expire";
 	const revenuecatProductId = "com.app.rcbu1_pro_monthly";
@@ -146,11 +187,13 @@ test(`${chalk.yellowBright("billing.updated: revenuecat expiration → expired c
 		originalTransactionId: "rcbu1_tx_001",
 	});
 
-	const data = await waitForBillingUpdatedWebhook({
-		playToken,
+	const data = await waitForPlanChange({
 		customerId,
-		requireUpdatedChange: false,
-		timeoutMs: 30_000,
+		matchesPlanChanges: (planChanges) =>
+			findChange(planChanges, {
+				action: "expired",
+				planId: proMonthly.id,
+			}) !== undefined,
 	});
 
 	expectBillingUpdatedCorrect({
@@ -179,10 +222,18 @@ test(`${chalk.yellowBright("billing.updated: revenuecat cancellation → updated
 		originalTransactionId: "rcbu2_tx_001",
 	});
 
-	const data = await waitForBillingUpdatedWebhook({
-		playToken,
+	const data = await waitForPlanChange({
 		customerId,
-		timeoutMs: 30_000,
+		matchesPlanChanges: (planChanges) => {
+			const change = findChange(planChanges, {
+				action: "updated",
+				planId: proMonthly.id,
+			});
+			return (
+				change?.previous_attributes != null &&
+				"canceled_at" in change.previous_attributes
+			);
+		},
 	});
 
 	expectBillingUpdatedCorrect({
@@ -191,8 +242,9 @@ test(`${chalk.yellowBright("billing.updated: revenuecat cancellation → updated
 		planChanges: [{ planId: proMonthly.id, action: "updated" }],
 	});
 
-	const canceledChange = data?.plan_changes?.find(
-		(change) => change.subscription?.plan_id === proMonthly.id,
-	);
+	const canceledChange = findChange(data?.plan_changes, {
+		action: "updated",
+		planId: proMonthly.id,
+	});
 	expect(canceledChange?.previous_attributes).toHaveProperty("canceled_at");
 });
