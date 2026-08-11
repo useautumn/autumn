@@ -51,7 +51,7 @@ export function CustomerHeaderActions() {
 
 	const [showObjectOpen, setShowObjectOpen] = useState(false);
 	const setSheet = useSheetStore((s) => s.setSheet);
-	const { mismatchCount, hasErrorMismatch } = useVerifyStripeQuery();
+	const { mismatchCount } = useVerifyStripeQuery();
 
 	const stripeCustomerId = customer?.processor?.id;
 	const showStripe =
@@ -109,7 +109,7 @@ export function CustomerHeaderActions() {
 						<WarningCircleIcon
 							size={14}
 							weight="fill"
-							className={hasErrorMismatch ? "text-red-500" : "text-amber-500"}
+							className="text-yellow-400"
 						/>
 					}
 					onClick={() => setSheet({ type: "verify-stripe" })}
