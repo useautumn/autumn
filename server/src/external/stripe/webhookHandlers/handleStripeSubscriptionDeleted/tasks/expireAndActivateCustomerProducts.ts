@@ -7,12 +7,10 @@ import {
 } from "@autumn/shared";
 import type { StripeWebhookContext } from "@/external/stripe/webhookMiddlewares/stripeWebhookContext";
 import { applyPooledBalanceCustomerProductTransitions } from "@/internal/billing/v2/pooledBalances/execute/applyPooledBalanceCustomerProductTransitions";
+import { trackCustomerProductDeletion } from "@/internal/billing/v2/workflows/sendBillingUpdatedWebhook/billingChangeCollector";
 import { customerProductActions } from "@/internal/customers/cusProducts/actions";
 import { deleteScheduledCustomerProduct } from "@/internal/customers/cusProducts/actions/deleteScheduledCustomerProduct";
-import {
-	expireAndActivateWithTracking,
-	trackCustomerProductDeletion,
-} from "../../common";
+import { expireAndActivateWithTracking } from "../../common";
 import type { StripeSubscriptionDeletedContext } from "../setupStripeSubscriptionDeletedContext";
 
 /** Expires live products, then activates or removes their scheduled successors. */
@@ -83,7 +81,7 @@ export const expireAndActivateCustomerProducts = async ({
 			});
 
 			trackCustomerProductDeletion({
-				eventContext,
+				collector: eventContext,
 				customerProduct: scheduledCustomerProduct,
 			});
 		}

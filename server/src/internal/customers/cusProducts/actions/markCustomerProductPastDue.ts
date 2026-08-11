@@ -7,7 +7,7 @@ import {
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { addProductsUpdatedWebhookTask } from "@/internal/analytics/handlers/handleProductsUpdated";
-import { emitCustomerProductBillingUpdated } from "@/internal/customers/cusProducts/actions/emitCustomerProductBillingUpdated";
+import { emitBillingUpdated } from "@/internal/billing/v2/workflows/sendBillingUpdatedWebhook/emitBillingUpdated";
 import { CusProductService } from "@/internal/customers/cusProducts/CusProductService";
 
 /**
@@ -66,7 +66,7 @@ export const markCustomerProductPastDue = async ({
 		cusProduct: customerProduct,
 	});
 
-	emitCustomerProductBillingUpdated({
+	emitBillingUpdated({
 		ctx,
 		originalFullCustomer,
 		updateCustomerProducts: [{ customerProduct, updates }],

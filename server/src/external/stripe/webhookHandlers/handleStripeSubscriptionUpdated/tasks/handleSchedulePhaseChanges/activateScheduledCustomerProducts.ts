@@ -5,9 +5,9 @@ import {
 	isCustomerProductOnStripeSubscriptionSchedule,
 } from "@autumn/shared";
 import type { StripeWebhookContext } from "@/external/stripe/webhookMiddlewares/stripeWebhookContext";
+import { trackCustomerProductUpdate } from "@/internal/billing/v2/workflows/sendBillingUpdatedWebhook/billingChangeCollector";
 import { customerProductActions } from "@/internal/customers/cusProducts/actions";
 import { addToExtraLogs } from "@/utils/logging/addToExtraLogs";
-import { trackCustomerProductUpdate } from "../../../common/trackCustomerProductUpdate";
 import type { StripeSubscriptionUpdatedContext } from "../../stripeSubscriptionUpdatedContext";
 
 /**
@@ -82,7 +82,7 @@ export const activateScheduledCustomerProducts = async ({
 		});
 
 		trackCustomerProductUpdate({
-			eventContext,
+			collector: eventContext,
 			customerProduct,
 			updates,
 		});

@@ -9,9 +9,9 @@ import { canAutoSync } from "@/internal/billing/v2/actions/sync/canAutoSync/inde
 import { buildIncrementalSyncParams } from "@/internal/billing/v2/actions/sync/scope/buildIncrementalSyncParams.js";
 import { subscriptionToSyncParams } from "@/internal/billing/v2/actions/sync/subscriptionToSyncParams";
 import { isAutumnManagedSubscriptionMetadata } from "@/internal/billing/v2/providers/stripe/utils/common/autumnStripeMetadata";
+import { trackCustomerProductUpdate } from "@/internal/billing/v2/workflows/sendBillingUpdatedWebhook/billingChangeCollector";
 import { CusProductService } from "@/internal/customers/cusProducts/CusProductService";
 import type { StripeWebhookContext } from "../../../webhookMiddlewares/stripeWebhookContext";
-import { trackCustomerProductUpdate } from "../../common/trackCustomerProductUpdate";
 import type { StripeSubscriptionUpdatedContext } from "../stripeSubscriptionUpdatedContext";
 
 const stripeProductId = (
@@ -68,7 +68,7 @@ const expireRemovedCustomerProducts = async ({
 			updates,
 		});
 		trackCustomerProductUpdate({
-			eventContext: subscriptionUpdatedContext,
+			collector: subscriptionUpdatedContext,
 			customerProduct,
 			updates,
 		});

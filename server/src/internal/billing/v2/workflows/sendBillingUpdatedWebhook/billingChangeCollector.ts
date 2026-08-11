@@ -1,10 +1,38 @@
-import type { FullCusProduct, InsertCustomerProduct } from "@autumn/shared";
-import type { StripeSubscriptionDeletedContext } from "../handleStripeSubscriptionDeleted/setupStripeSubscriptionDeletedContext";
-import type { StripeSubscriptionUpdatedContext } from "../handleStripeSubscriptionUpdated/stripeSubscriptionUpdatedContext";
+import type {
+	AutumnBillingPlan,
+	FullCusProduct,
+	FullCustomer,
+	InsertCustomerProduct,
+} from "@autumn/shared";
 
-type SubscriptionEventContext =
-	| StripeSubscriptionUpdatedContext
-	| StripeSubscriptionDeletedContext;
+export type BillingChangeCollector = {
+	/** FullCustomer the flush reports against. */
+	fullCustomer: FullCustomer;
+	/** Optional scoped subset (Stripe: products on the subscription) kept in sync. */
+	customerProducts?: FullCusProduct[];
+	updatedCustomerProducts: {
+		customerProduct: FullCusProduct;
+		updates: Partial<InsertCustomerProduct>;
+	}[];
+	insertedCustomerProducts: FullCusProduct[];
+	deletedCustomerProducts: FullCusProduct[];
+	billingChangeTags: Set<string>;
+};
+
+export const createBillingChangeCollector = ({
+	fullCustomer,
+	customerProducts,
+}: {
+	fullCustomer: FullCustomer;
+	customerProducts?: FullCusProduct[];
+}): BillingChangeCollector => ({
+	fullCustomer,
+	customerProducts,
+	updatedCustomerProducts: [],
+	insertedCustomerProducts: [],
+	deletedCustomerProducts: [],
+	billingChangeTags: new Set<string>(),
+});
 
 /**
  * Tracks a customer product update for subscription event workflows.
@@ -17,24 +45,27 @@ type SubscriptionEventContext =
  * `for (const cp of [...customerProducts])`, to avoid iterator invalidation.
  */
 export const trackCustomerProductUpdate = ({
-	eventContext,
+	collector,
 	customerProduct,
 	updates,
 }: {
-	eventContext: SubscriptionEventContext;
+	collector: BillingChangeCollector;
 	customerProduct: FullCusProduct;
 	updates: Partial<InsertCustomerProduct>;
 }): FullCusProduct => {
-	const { customerProducts, fullCustomer, updatedCustomerProducts } =
-		eventContext;
+	const { customerProducts, fullCustomer, updatedCustomerProducts } = collector;
 
 	updatedCustomerProducts.push({ customerProduct, updates });
 
 	const updatedProduct = { ...customerProduct, ...updates } as FullCusProduct;
 
-	const idx = customerProducts.findIndex((cp) => cp.id === customerProduct.id);
-	if (idx >= 0) {
-		customerProducts[idx] = updatedProduct;
+	if (customerProducts) {
+		const idx = customerProducts.findIndex(
+			(cp) => cp.id === customerProduct.id,
+		);
+		if (idx >= 0) {
+			customerProducts[idx] = updatedProduct;
+		}
 	}
 
 	const fullCustomerIdx = fullCustomer.customer_products.findIndex(
@@ -58,22 +89,23 @@ export const trackCustomerProductUpdate = ({
  * `for (const cp of [...customerProducts])`, to avoid iterator invalidation.
  */
 export const trackCustomerProductDeletion = ({
-	eventContext,
+	collector,
 	customerProduct,
 }: {
-	eventContext:
-		| StripeSubscriptionDeletedContext
-		| StripeSubscriptionUpdatedContext;
+	collector: BillingChangeCollector;
 	customerProduct: FullCusProduct;
 }): void => {
-	const { customerProducts, fullCustomer, deletedCustomerProducts } =
-		eventContext;
+	const { customerProducts, fullCustomer, deletedCustomerProducts } = collector;
 
 	deletedCustomerProducts.push(customerProduct);
 
-	const idx = customerProducts.findIndex((cp) => cp.id === customerProduct.id);
-	if (idx >= 0) {
-		customerProducts.splice(idx, 1);
+	if (customerProducts) {
+		const idx = customerProducts.findIndex(
+			(cp) => cp.id === customerProduct.id,
+		);
+		if (idx >= 0) {
+			customerProducts.splice(idx, 1);
+		}
 	}
 
 	const fullCustomerIdx = fullCustomer.customer_products.findIndex(
@@ -91,20 +123,30 @@ export const trackCustomerProductDeletion = ({
  * - Note: fullCustomer.customer_products should already be updated by the action
  */
 export const trackCustomerProductInsertion = ({
-	eventContext,
+	collector,
 	customerProduct,
 }: {
-	eventContext:
-		| StripeSubscriptionDeletedContext
-		| StripeSubscriptionUpdatedContext;
+	collector: BillingChangeCollector;
 	customerProduct: FullCusProduct;
 }): void => {
-	const { customerProducts, insertedCustomerProducts } = eventContext;
+	const { customerProducts, insertedCustomerProducts } = collector;
 
 	insertedCustomerProducts.push(customerProduct);
 
-	const exists = customerProducts.some((cp) => cp.id === customerProduct.id);
-	if (!exists) {
-		customerProducts.push(customerProduct);
+	if (customerProducts) {
+		const exists = customerProducts.some((cp) => cp.id === customerProduct.id);
+		if (!exists) {
+			customerProducts.push(customerProduct);
+		}
 	}
 };
+
+export const collectorToAutumnBillingPlan = (
+	collector: BillingChangeCollector,
+): AutumnBillingPlan =>
+	({
+		customerId: collector.fullCustomer.id ?? collector.fullCustomer.internal_id,
+		insertCustomerProducts: collector.insertedCustomerProducts,
+		updateCustomerProducts: collector.updatedCustomerProducts,
+		deleteCustomerProducts: collector.deletedCustomerProducts,
+	}) as AutumnBillingPlan;

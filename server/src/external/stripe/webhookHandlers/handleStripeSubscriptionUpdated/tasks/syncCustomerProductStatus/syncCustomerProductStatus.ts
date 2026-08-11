@@ -15,17 +15,17 @@ import {
 } from "@/external/stripe/subscriptions/utils/convertStripeSubscription";
 import type { StripeWebhookContext } from "@/external/stripe/webhookMiddlewares/stripeWebhookContext";
 import { addProductsUpdatedWebhookTask } from "@/internal/analytics/handlers/handleProductsUpdated";
+import { trackCustomerProductUpdate } from "@/internal/billing/v2/workflows/sendBillingUpdatedWebhook/billingChangeCollector";
 import { CusProductService } from "@/internal/customers/cusProducts/CusProductService";
-import { trackCustomerProductUpdate } from "../../../common/trackCustomerProductUpdate";
 import type {
 	StripeSubscriptionUpdatedContext,
 	SubscriptionPreviousAttributes,
 } from "../../stripeSubscriptionUpdatedContext";
 import { fixUnexpectedStatuses } from "./fixUnexpectedStatuses";
 
-const isManualBillingUpdateInvoice = (
-	invoice: { metadata?: Record<string, string> | null },
-) =>
+const isManualBillingUpdateInvoice = (invoice: {
+	metadata?: Record<string, string> | null;
+}) =>
 	invoice.metadata?.autumn_billing_update &&
 	invoice.metadata?.autumn_invoice_mode !== "true";
 
@@ -174,7 +174,7 @@ export const syncCustomerProductStatus = async ({
 		});
 
 		trackCustomerProductUpdate({
-			eventContext: subscriptionUpdatedContext,
+			collector: subscriptionUpdatedContext,
 			customerProduct,
 			updates,
 		});

@@ -1,7 +1,5 @@
 import {
 	type FullCusProduct,
-	type FullCustomer,
-	type InsertCustomerProduct,
 	isCustomerProductOnStripeSubscription,
 } from "@autumn/shared";
 import type Stripe from "stripe";
@@ -16,12 +14,13 @@ import {
 	getExpandedStripeSubscription,
 } from "@/external/stripe/subscriptions/operations/getExpandedStripeSubscription";
 import { stripeSubscriptionToNowMs } from "@/external/stripe/subscriptions/utils/convertStripeSubscription";
+import type { BillingChangeCollector } from "@/internal/billing/v2/workflows/sendBillingUpdatedWebhook/billingChangeCollector";
 import type { StripeWebhookContext } from "../../webhookMiddlewares/stripeWebhookContext";
 
-export interface StripeSubscriptionDeletedContext {
+export interface StripeSubscriptionDeletedContext
+	extends BillingChangeCollector {
 	stripeSubscription: ExpandedStripeSubscription;
 	stripeCustomer: ExpandedStripeCustomer;
-	fullCustomer: FullCustomer;
 	/**
 	 * Mutable list of customer products on this subscription. Updated in place
 	 * by the `trackCustomerProduct{Update,Deletion,Insertion}` helpers.
@@ -34,18 +33,6 @@ export interface StripeSubscriptionDeletedContext {
 	nowMs: number;
 	/** Customer's payment method for paying arrear invoices */
 	paymentMethod: Stripe.PaymentMethod | null;
-	/** Tracks all updates made to customer products during this handler */
-	updatedCustomerProducts: {
-		customerProduct: FullCusProduct;
-		updates: Partial<InsertCustomerProduct>;
-	}[];
-	/** Tracks all deletions made to customer products during this handler */
-	deletedCustomerProducts: FullCusProduct[];
-	/** Tracks all insertions (new customer products created) during this handler */
-	insertedCustomerProducts: FullCusProduct[];
-	/** Tags accumulated by tasks during this handler — appended to the
-	 * `billing.updated` webhook payload. */
-	billingChangeTags: Set<string>;
 }
 
 /**

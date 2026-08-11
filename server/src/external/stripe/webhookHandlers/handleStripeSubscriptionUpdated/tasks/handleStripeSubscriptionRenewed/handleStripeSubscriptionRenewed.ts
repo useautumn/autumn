@@ -7,11 +7,11 @@ import {
 import { getStripeSubscriptionLock } from "@/external/redis/actions/stripeSubscriptionLock/stripeSubscriptionLock.js";
 import type { StripeWebhookContext } from "@/external/stripe/webhookMiddlewares/stripeWebhookContext";
 import { addProductsUpdatedWebhookTask } from "@/internal/analytics/handlers/handleProductsUpdated";
-import { CusProductService } from "@/internal/customers/cusProducts/CusProductService";
 import {
 	trackCustomerProductDeletion,
 	trackCustomerProductUpdate,
-} from "../../../common/trackCustomerProductUpdate";
+} from "@/internal/billing/v2/workflows/sendBillingUpdatedWebhook/billingChangeCollector";
+import { CusProductService } from "@/internal/customers/cusProducts/CusProductService";
 import type { StripeSubscriptionUpdatedContext } from "../../stripeSubscriptionUpdatedContext";
 import { isStripeSubscriptionRenewedEvent } from "./isStripeSubscriptionRenewedEvent";
 
@@ -95,7 +95,7 @@ export const handleStripeSubscriptionRenewed = async ({
 		});
 
 		trackCustomerProductUpdate({
-			eventContext: subscriptionUpdatedContext,
+			collector: subscriptionUpdatedContext,
 			customerProduct,
 			updates,
 		});
@@ -132,7 +132,7 @@ export const handleStripeSubscriptionRenewed = async ({
 				);
 
 				trackCustomerProductDeletion({
-					eventContext: subscriptionUpdatedContext,
+					collector: subscriptionUpdatedContext,
 					customerProduct: scheduledProduct,
 				});
 			}

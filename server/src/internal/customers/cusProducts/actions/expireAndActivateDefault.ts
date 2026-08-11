@@ -8,8 +8,8 @@ import {
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { addProductsUpdatedWebhookTask } from "@/internal/analytics/handlers/handleProductsUpdated";
 import { executeAutumnBillingPlan } from "@/internal/billing/v2/execute/executeAutumnBillingPlan.js";
+import { emitBillingUpdated } from "@/internal/billing/v2/workflows/sendBillingUpdatedWebhook/emitBillingUpdated";
 import { activateFreeSuccessorProduct } from "@/internal/customers/cusProducts/actions/activateFreeSuccessorProduct";
-import { emitCustomerProductBillingUpdated } from "@/internal/customers/cusProducts/actions/emitCustomerProductBillingUpdated";
 
 /**
  * Expires a customer product and activates the default product if needed.
@@ -30,7 +30,7 @@ export const expireCustomerProductAndActivateDefault = async ({
 	customerProduct,
 	fullCustomer,
 	updates: extraUpdates,
-	emitBillingUpdated = false,
+	emitBillingUpdated: shouldEmitBillingUpdated = false,
 }: {
 	ctx: AutumnContext;
 	customerProduct: FullCusProduct;
@@ -95,8 +95,8 @@ export const expireCustomerProductAndActivateDefault = async ({
 		});
 
 	// 4. Emit billing.updated (payload needs the activated/inserted products)
-	if (emitBillingUpdated) {
-		emitCustomerProductBillingUpdated({
+	if (shouldEmitBillingUpdated) {
+		emitBillingUpdated({
 			ctx,
 			originalFullCustomer,
 			updateCustomerProducts: [

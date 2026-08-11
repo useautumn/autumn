@@ -1,8 +1,9 @@
 import type Stripe from "stripe";
 import { handleStripeSubscriptionCanceled } from "@/external/stripe/webhookHandlers/handleStripeSubscriptionUpdated/tasks/handleStripeSubscriptionCanceled/handleStripeSubscriptionCanceled.js";
 import { syncAutumnSubscription } from "@/external/stripe/webhookHandlers/handleStripeSubscriptionUpdated/tasks/syncAutumnSubscription.js";
+import { flushBillingUpdated } from "@/internal/billing/v2/workflows/sendBillingUpdatedWebhook/emitBillingUpdated";
 import type { StripeWebhookContext } from "../../webhookMiddlewares/stripeWebhookContext.js";
-import { emitBillingChangeWebhook, logCustomerProductUpdates } from "../common";
+import { logCustomerProductUpdates } from "../common";
 import { setupStripeSubscriptionUpdatedContext } from "./setupStripeSubscriptionUpdatedContext.js";
 import { applyPooledBalanceTransitions } from "./tasks/applyPooledBalanceTransitions";
 import { autoSyncUpdatedSubscription } from "./tasks/autoSyncUpdatedSubscription.js";
@@ -96,8 +97,8 @@ export const handleStripeSubscriptionUpdated = async ({
 	});
 
 	// 8. Emit billing.updated webhook (fire-and-forget) if anything changed
-	emitBillingChangeWebhook({
+	flushBillingUpdated({
 		ctx,
-		eventContext: subscriptionUpdatedContext,
+		collector: subscriptionUpdatedContext,
 	});
 };

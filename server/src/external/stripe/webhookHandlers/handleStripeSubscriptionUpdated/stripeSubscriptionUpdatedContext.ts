@@ -1,10 +1,7 @@
-import type {
-	FullCusProduct,
-	FullCustomer,
-	InsertCustomerProduct,
-} from "@autumn/shared";
+import type { FullCusProduct } from "@autumn/shared";
 import type Stripe from "stripe";
 import type { ExpandedStripeSubscription } from "@/external/stripe/subscriptions/operations/getExpandedStripeSubscription";
+import type { BillingChangeCollector } from "@/internal/billing/v2/workflows/sendBillingUpdatedWebhook/billingChangeCollector";
 
 /**
  * Previous attributes from Stripe subscription.updated event.
@@ -19,10 +16,10 @@ export interface SubscriptionPreviousAttributes {
 	items?: Stripe.ApiList<Stripe.SubscriptionItem>;
 }
 
-export interface StripeSubscriptionUpdatedContext {
+export interface StripeSubscriptionUpdatedContext
+	extends BillingChangeCollector {
 	stripeSubscription: ExpandedStripeSubscription;
 	previousAttributes: SubscriptionPreviousAttributes;
-	fullCustomer: FullCustomer;
 	/**
 	 * Mutable list of customer products. Updated in place by the
 	 * `trackCustomerProduct{Update,Deletion,Insertion}` helpers so subsequent
@@ -34,15 +31,6 @@ export interface StripeSubscriptionUpdatedContext {
 	customerProducts: FullCusProduct[];
 	/** Current time in ms, respecting test clocks */
 	nowMs: number;
-
-	updatedCustomerProducts: {
-		customerProduct: FullCusProduct;
-		updates: Partial<InsertCustomerProduct>;
-	}[];
-	/** Tracks all deletions made to customer products during this handler */
-	deletedCustomerProducts: FullCusProduct[];
-	/** Tracks all insertions (new customer products created) during this handler */
-	insertedCustomerProducts: FullCusProduct[];
 	/**
 	 * Tracks one-off prepaid lifetime cusEnts persisted by
 	 * `customerProductActions.preserveOneOffPrepaid` as each outgoing cusProduct

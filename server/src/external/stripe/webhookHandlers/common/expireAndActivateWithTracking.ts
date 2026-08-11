@@ -1,12 +1,12 @@
 import { CusProductStatus, type FullCusProduct } from "@autumn/shared";
 import type { StripeWebhookContext } from "@/external/stripe/webhookMiddlewares/stripeWebhookContext";
-import { customerProductActions } from "@/internal/customers/cusProducts/actions";
-import type { StripeSubscriptionDeletedContext } from "../handleStripeSubscriptionDeleted/setupStripeSubscriptionDeletedContext";
-import type { StripeSubscriptionUpdatedContext } from "../handleStripeSubscriptionUpdated/stripeSubscriptionUpdatedContext";
 import {
 	trackCustomerProductInsertion,
 	trackCustomerProductUpdate,
-} from "./trackCustomerProductUpdate";
+} from "@/internal/billing/v2/workflows/sendBillingUpdatedWebhook/billingChangeCollector";
+import { customerProductActions } from "@/internal/customers/cusProducts/actions";
+import type { StripeSubscriptionDeletedContext } from "../handleStripeSubscriptionDeleted/setupStripeSubscriptionDeletedContext";
+import type { StripeSubscriptionUpdatedContext } from "../handleStripeSubscriptionUpdated/stripeSubscriptionUpdatedContext";
 
 type SubscriptionEventContext =
 	| StripeSubscriptionUpdatedContext
@@ -37,7 +37,7 @@ export const expireAndActivateWithTracking = async ({
 
 	// Track expired product (UPDATE)
 	const expiredCustomerProduct = trackCustomerProductUpdate({
-		eventContext,
+		collector: eventContext,
 		customerProduct,
 		updates,
 	});
@@ -45,7 +45,7 @@ export const expireAndActivateWithTracking = async ({
 	// Track activated scheduled product (UPDATE: scheduled → active)
 	if (activatedCustomerProduct) {
 		trackCustomerProductUpdate({
-			eventContext,
+			collector: eventContext,
 			customerProduct: activatedCustomerProduct,
 			updates: { status: CusProductStatus.Active },
 		});
@@ -54,7 +54,7 @@ export const expireAndActivateWithTracking = async ({
 	// Track inserted default product (INSERT)
 	if (insertedCustomerProduct) {
 		trackCustomerProductInsertion({
-			eventContext,
+			collector: eventContext,
 			customerProduct: insertedCustomerProduct,
 		});
 	}

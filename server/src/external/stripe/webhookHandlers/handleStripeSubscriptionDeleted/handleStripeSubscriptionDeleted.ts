@@ -1,6 +1,7 @@
 import type Stripe from "stripe";
+import { flushBillingUpdated } from "@/internal/billing/v2/workflows/sendBillingUpdatedWebhook/emitBillingUpdated";
 import type { StripeWebhookContext } from "../../webhookMiddlewares/stripeWebhookContext";
-import { emitBillingChangeWebhook, logCustomerProductUpdates } from "../common";
+import { logCustomerProductUpdates } from "../common";
 import { setupStripeSubscriptionDeletedContext } from "./setupStripeSubscriptionDeletedContext";
 import { expireAndActivateCustomerProducts } from "./tasks/expireAndActivateCustomerProducts";
 import { processConsumablePricesForSubscriptionDeleted } from "./tasks/processConsumablePricesForSubscriptionDeleted";
@@ -50,8 +51,8 @@ export const handleStripeSubscriptionDeleted = async ({
 	});
 
 	// Task 5: Emit billing.updated webhook (fire-and-forget) if anything changed
-	emitBillingChangeWebhook({
+	flushBillingUpdated({
 		ctx,
-		eventContext,
+		collector: eventContext,
 	});
 };

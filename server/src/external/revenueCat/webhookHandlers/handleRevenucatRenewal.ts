@@ -10,8 +10,8 @@ import { resolveRevenuecatResources } from "@/external/revenueCat/misc/resolveRe
 import { recordRevenueCatInvoice } from "@/external/revenueCat/utils/recordRevenueCatInvoice";
 import type { RevenueCatWebhookContext } from "@/external/revenueCat/webhookMiddlewares/revenuecatWebhookContext";
 import { addProductsUpdatedWebhookTask } from "@/internal/analytics/handlers/handleProductsUpdated";
+import { emitBillingUpdated } from "@/internal/billing/v2/workflows/sendBillingUpdatedWebhook/emitBillingUpdated";
 import { customerProductActions } from "@/internal/customers/cusProducts/actions";
-import { emitCustomerProductBillingUpdated } from "@/internal/customers/cusProducts/actions/emitCustomerProductBillingUpdated";
 import { getExistingCusProducts } from "@/internal/customers/cusProducts/cusProductUtils/getExistingCusProducts";
 
 export const handleRenewal = async ({
@@ -64,7 +64,7 @@ export const handleRenewal = async ({
 
 		// No cusProduct mutation on renewal — empty updates still surface an
 		// "updated" plan change so billing.updated mirrors the legacy webhook.
-		emitCustomerProductBillingUpdated({
+		emitBillingUpdated({
 			ctx: customerCtx,
 			originalFullCustomer: structuredClone(customer),
 			updateCustomerProducts: [

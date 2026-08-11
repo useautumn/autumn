@@ -1,9 +1,9 @@
 import { describe, expect, test } from "bun:test";
 import { CusProductStatus, type InsertCustomerProduct } from "@autumn/shared";
-import { eventContextToAutumnBillingPlan } from "@/external/stripe/webhookHandlers/common/eventContextToAutumnBillingPlan";
 import type { StripeSubscriptionUpdatedContext } from "@/external/stripe/webhookHandlers/handleStripeSubscriptionUpdated/stripeSubscriptionUpdatedContext";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { buildBillingChangeResponse } from "@/internal/billing/v2/utils/billingChangeResponse";
+import { collectorToAutumnBillingPlan } from "@/internal/billing/v2/workflows/sendBillingUpdatedWebhook/billingChangeCollector";
 import {
 	expectBillingChangeResponse,
 	expectPlanChange,
@@ -49,14 +49,14 @@ const updateOf = (
 	updates,
 });
 
-describe("eventContextToAutumnBillingPlan + buildBillingChangeResponse", () => {
+describe("collectorToAutumnBillingPlan + buildBillingChangeResponse", () => {
 	test("empty context produces an empty response", () => {
 		const eventContext = makeUpdatedContext();
 
 		const response = buildBillingChangeResponse({
 			ctx,
 			originalFullCustomer: eventContext.fullCustomer,
-			autumnBillingPlan: eventContextToAutumnBillingPlan(eventContext),
+			autumnBillingPlan: collectorToAutumnBillingPlan(eventContext),
 		});
 		logChangeResponse("event-context / empty", response);
 
@@ -75,7 +75,7 @@ describe("eventContextToAutumnBillingPlan + buildBillingChangeResponse", () => {
 		const response = buildBillingChangeResponse({
 			ctx,
 			originalFullCustomer: eventContext.fullCustomer,
-			autumnBillingPlan: eventContextToAutumnBillingPlan(eventContext),
+			autumnBillingPlan: collectorToAutumnBillingPlan(eventContext),
 		});
 		logChangeResponse("event-context / inserted active", response);
 
@@ -101,7 +101,7 @@ describe("eventContextToAutumnBillingPlan + buildBillingChangeResponse", () => {
 		const response = buildBillingChangeResponse({
 			ctx,
 			originalFullCustomer: eventContext.fullCustomer,
-			autumnBillingPlan: eventContextToAutumnBillingPlan(eventContext),
+			autumnBillingPlan: collectorToAutumnBillingPlan(eventContext),
 		});
 		logChangeResponse("event-context / inserted scheduled", response);
 
@@ -121,7 +121,7 @@ describe("eventContextToAutumnBillingPlan + buildBillingChangeResponse", () => {
 		const response = buildBillingChangeResponse({
 			ctx,
 			originalFullCustomer: eventContext.fullCustomer,
-			autumnBillingPlan: eventContextToAutumnBillingPlan(eventContext),
+			autumnBillingPlan: collectorToAutumnBillingPlan(eventContext),
 		});
 		logChangeResponse("event-context / updated to past_due", response);
 
@@ -158,7 +158,7 @@ describe("eventContextToAutumnBillingPlan + buildBillingChangeResponse", () => {
 		const response = buildBillingChangeResponse({
 			ctx,
 			originalFullCustomer: eventContext.fullCustomer,
-			autumnBillingPlan: eventContextToAutumnBillingPlan(eventContext),
+			autumnBillingPlan: collectorToAutumnBillingPlan(eventContext),
 		});
 		logChangeResponse("event-context / updated to expired", response);
 
@@ -188,7 +188,7 @@ describe("eventContextToAutumnBillingPlan + buildBillingChangeResponse", () => {
 		const response = buildBillingChangeResponse({
 			ctx,
 			originalFullCustomer: eventContext.fullCustomer,
-			autumnBillingPlan: eventContextToAutumnBillingPlan(eventContext),
+			autumnBillingPlan: collectorToAutumnBillingPlan(eventContext),
 		});
 		logChangeResponse("event-context / deleted ignored", response);
 
@@ -221,7 +221,7 @@ describe("eventContextToAutumnBillingPlan + buildBillingChangeResponse", () => {
 		const response = buildBillingChangeResponse({
 			ctx,
 			originalFullCustomer: eventContext.fullCustomer,
-			autumnBillingPlan: eventContextToAutumnBillingPlan(eventContext),
+			autumnBillingPlan: collectorToAutumnBillingPlan(eventContext),
 		});
 		logChangeResponse("event-context / schedule phase change", response);
 
@@ -249,7 +249,7 @@ describe("eventContextToAutumnBillingPlan + buildBillingChangeResponse", () => {
 		const response = buildBillingChangeResponse({
 			ctx,
 			originalFullCustomer: eventContext.fullCustomer,
-			autumnBillingPlan: eventContextToAutumnBillingPlan(eventContext),
+			autumnBillingPlan: collectorToAutumnBillingPlan(eventContext),
 		});
 		logChangeResponse("event-context / cancel at period end", response);
 
