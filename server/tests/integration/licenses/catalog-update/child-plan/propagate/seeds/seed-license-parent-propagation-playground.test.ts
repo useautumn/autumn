@@ -31,6 +31,7 @@ const ID_PREFIX = "lic-prop";
 const PRO_CUSTOMER_ID = `${ID_PREFIX}-pro-customer`;
 const SCALE_CUSTOMER_ID = `${ID_PREFIX}-scale-customer`;
 const ENT_CUSTOMER_ID = `${ID_PREFIX}-ent-customer`;
+const DIRECT_CUSTOMER_ID = `${ID_PREFIX}-direct-customer`;
 const SEAT_PRICE = 20;
 const SEAT_MESSAGES = 500;
 const ENT_SEAT_MESSAGES = 900;
@@ -67,6 +68,7 @@ test(`${chalk.yellowBright("SEED: license parent propagation playground (3 paren
 			s.otherCustomers([
 				{ id: SCALE_CUSTOMER_ID, paymentMethod: "success" },
 				{ id: ENT_CUSTOMER_ID, paymentMethod: "success" },
+				{ id: DIRECT_CUSTOMER_ID, paymentMethod: "success" },
 			]),
 			// Pinned so the seeded plan ids stay short and predictable in the
 			// dashboard; the default prefix is the customer id.
@@ -102,6 +104,12 @@ test(`${chalk.yellowBright("SEED: license parent propagation playground (3 paren
 				productId: scale.id,
 				licenseQuantities: [{ licenseProductId: devSeat.id, quantity: 3 }],
 			}),
+			// Straight onto the license plan, so the child has its OWN customers
+			// and the update drafts a child migration as well as a parent one.
+			s.billing.attach({
+				customerId: DIRECT_CUSTOMER_ID,
+				productId: devSeat.id,
+			}),
 			s.billing.attach({
 				customerId: ENT_CUSTOMER_ID,
 				productId: ent.id,
@@ -117,6 +125,9 @@ test(`${chalk.yellowBright("SEED: license parent propagation playground (3 paren
 	console.log(`parent B       ${scale.id}   customer ${SCALE_CUSTOMER_ID}`);
 	console.log(
 		`parent C       ${ent.id}   customer ${ENT_CUSTOMER_ID}   (CUSTOMIZED: ${ENT_SEAT_MESSAGES} messages)`,
+	);
+	console.log(
+		`direct cus     ${DIRECT_CUSTOMER_ID}   (on the license plan itself)`,
 	);
 	console.log(`org            ${ctx.org.id}`);
 
@@ -134,34 +145,38 @@ test(`${chalk.yellowBright("SEED: license parent propagation playground (3 paren
 	);
 	console.log("Review step         parent cards badged 'Parent plan'");
 	console.log(
-		"Confirm button      reads 'Apply & migrate' (NOT 'Update version'),",
-	);
-	console.log(
-		`                    even though '${devSeat.id}' has no customers of its own`,
+		"Confirm button      reads 'Apply & migrate' (NOT 'Update version')",
 	);
 
-	heading("EXPECTED IN THE MIGRATION");
-	console.log("pro + scale         collapse into ONE op via plan_id.$in");
+	heading("EXPECTED: TWO SEPARATE MIGRATIONS");
+	console.log("You should land on /migrations with TWO new rows:");
+	console.log("");
+	console.log(`  1. child   plan_id ${devSeat.id}`);
 	console.log(
-		`                    customize.upsert_licenses -> ${SEAT_MESSAGES} to 1000`,
+		`             moves ${DIRECT_CUSTOMER_ID} (add_items/remove_items)`,
+	);
+	console.log(`  2. parents plan_id $in [${pro.id}, ${scale.id}]`);
+	console.log("             moves their customers (upsert_licenses)");
+	console.log("");
+	console.log("Each runs and cancels on its own.");
+	console.log(
+		`'${ent.id}' is in NEITHER: its link overrides messages to ${ENT_SEAT_MESSAGES},`,
 	);
 	console.log(
-		`${ent.id}   its own op: the customize rebases onto ${ENT_SEAT_MESSAGES},`,
+		"so the child's edit never reaches it and there is nothing to migrate.",
 	);
-	console.log(
-		"                    so its delta differs and cannot share the $in op",
-	);
-	console.log("child op            none — the seat plan has no direct customers");
 
 	heading("MORE SCENARIOS TO TRY");
-	console.log("- Deselect a parent in the Parents step: it keeps the old terms");
+	console.log(
+		"- Deselect a parent in the Parents step: it keeps the old terms",
+	);
 	console.log("- Select ONLY the customized parent: expect a single op");
 	console.log("- Add a free boolean item instead: expect no_billing_changes");
 	console.log("- Change the seat PRICE: expect billing changes on all parents");
 
 	heading("RE-READ STATE LATER");
 	console.log(
-		`./run.sh $(pwd)/tests/integration/licenses/catalog-update/child-plan/propagate/seed-license-parent-propagation-playground.test.ts`,
+		`./run.sh $(pwd)/tests/integration/licenses/catalog-update/child-plan/propagate/seeds/seed-license-parent-propagation-playground.test.ts`,
 	);
 	console.log("(re-running resets the playground to this clean state)");
 });

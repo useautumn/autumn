@@ -543,12 +543,16 @@ export default function PlanChangeDialog({
 
 			if (willMigrate) {
 				void invalidateMigrations();
-				const migrationId = (
-					result as { migration?: { id?: string } } | undefined
-				)?.migration?.id;
+				const migrationIds =
+					(
+						result as { migrations?: { id: string }[] } | undefined
+					)?.migrations?.map(({ id }) => id) ?? [];
+				// A parent propagation drafts its own migration alongside the plan's.
+				// Deep-linking would auto-run one and hide the other, so send the
+				// user to the list to run each deliberately.
 				navigateTo(
-					migrationId
-						? `/migrations/${migrationId}?step=live&run=true`
+					migrationIds.length === 1
+						? `/migrations/${migrationIds[0]}?step=live&run=true`
 						: "/migrations",
 					navigate,
 				);

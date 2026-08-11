@@ -6,6 +6,7 @@ import {
 	diffPlanV1,
 	type FullProduct,
 	type LicenseCustomize,
+	type MigrationDraft,
 	type Operations,
 	type PlanFilter,
 	planDiffHasBillingChanges,
@@ -164,6 +165,17 @@ export const validateNoDirectVariantMigrationDrafts = ({
 	}
 };
 
+/** A parent's bill changes only if the license customize it receives carries a
+ * price — the child's own diff says nothing about the parent's invoice. */
+const licenseParentsHaveBillingChanges = (
+	parents: LicenseParentMigrationTarget[],
+) =>
+	parents.some(
+		(parent) =>
+			parent.customize?.price != null ||
+			parent.customize?.add_items?.some((item) => item.price != null),
+	);
+
 /** Parents receive the child's edit as a license customize, never as their own
  * item diff — their plan items are untouched. Identical customize values collapse
  * into one op downstream, so N parents cost one op, not N.
@@ -214,10 +226,12 @@ export const createPlanMigrationDraft = async ({
 	licenseParents?: LicenseParentMigrationTarget[];
 	toPlan: ApiPlanV1;
 	variantsBefore?: VariantMigrationSnapshot[];
-}): Promise<string | undefined> => {
+}): Promise<string[]> => {
 	const baseDiff = diffPlanV1({ from: fromPlan, to: toPlan });
 	// Parents can need migrating even when the child's own diff is empty.
-	if (Object.keys(baseDiff).length === 0 && licenseParents.length === 0) return;
+	if (Object.keys(baseDiff).length === 0 && licenseParents.length === 0) {
+		return [];
+	}
 	const selectedVariantsBefore =
 		variantsBefore.length > 0 || selectedVariantIds.length === 0
 			? variantsBefore
@@ -225,6 +239,35 @@ export const createPlanMigrationDraft = async ({
 					ctx,
 					variantIds: selectedVariantIds,
 				});
+
+	// Sequential: the ids are returned in draft order, and the child migration
+	// should exist before the parent one that follows it.
+	const insertDrafts = async (drafts: (MigrationDraft | null)[]) => {
+		const ids: string[] = [];
+		for (const draft of drafts.filter((draft) => draft !== null)) {
+			const migration = await migrationRepo.insert({
+				ctx,
+				insert: withPreviousPrice({
+					draft,
+					previousPriceByPlanId: buildPreviousPriceMap({
+						planId,
+						fromPlan,
+						variantsBefore: selectedVariantsBefore,
+					}),
+				}),
+			});
+			ids.push(migration.id);
+		}
+		return ids;
+	};
+
+	// Parents move a different customer population by a different operation, so
+	// they get their own migration — runnable and cancellable on its own.
+	const parentDraft = buildCombinedVariantMigrationDraft({
+		targets: licenseParentTargets({ planId, parents: licenseParents }),
+		hasBillingChanges: licenseParentsHaveBillingChanges(licenseParents),
+		includeCustom,
+	});
 
 	if (mode === "version") {
 		const baseUsage = await customerProductRepo.getVersioningUsageForProduct({
@@ -240,27 +283,15 @@ export const createPlanMigrationDraft = async ({
 				version: before.product.version,
 				customize: baseDiff,
 			})),
-			...licenseParentTargets({ planId, parents: licenseParents }),
 		];
-		const draft = buildCombinedVariantMigrationDraft({
-			targets,
-			hasBillingChanges: planDiffHasBillingChanges(baseDiff, fromPlan),
-			includeCustom,
-		});
-		if (!draft) return;
-
-		const migration = await migrationRepo.insert({
-			ctx,
-			insert: withPreviousPrice({
-				draft,
-				previousPriceByPlanId: buildPreviousPriceMap({
-					planId,
-					fromPlan,
-					variantsBefore: selectedVariantsBefore,
-				}),
+		return insertDrafts([
+			buildCombinedVariantMigrationDraft({
+				targets,
+				hasBillingChanges: planDiffHasBillingChanges(baseDiff, fromPlan),
+				includeCustom,
 			}),
-		});
-		return migration.id;
+			parentDraft,
+		]);
 	}
 
 	const baseVersions = await ProductService.listFull({
@@ -275,8 +306,8 @@ export const createPlanMigrationDraft = async ({
 		internalProductIds: baseVersions.map((product) => product.internal_id),
 	});
 
-	// Base and variants sweep every version; parents keep theirs, since a link
-	// pins the version it offers.
+	// Base and variants sweep every version; the parent draft stays version-
+	// scoped, since a link pins the version it offers.
 	const targets = [
 		...(hasVersionableUsage({ products: baseVersions, usageByProduct })
 			? [{ id: planId, customize: baseDiff }]
@@ -285,25 +316,13 @@ export const createPlanMigrationDraft = async ({
 			id: before.product.id,
 			customize: baseDiff,
 		})),
-		...licenseParentTargets({ planId, parents: licenseParents }),
 	];
-	const draft = buildAllVersionsUpdateMigrationDraft({
-		targets,
-		hasBillingChanges: planDiffHasBillingChanges(baseDiff, fromPlan),
-		includeCustom,
-	});
-	if (!draft) return;
-
-	const migration = await migrationRepo.insert({
-		ctx,
-		insert: withPreviousPrice({
-			draft,
-			previousPriceByPlanId: buildPreviousPriceMap({
-				planId,
-				fromPlan,
-				variantsBefore: selectedVariantsBefore,
-			}),
+	return insertDrafts([
+		buildAllVersionsUpdateMigrationDraft({
+			targets,
+			hasBillingChanges: planDiffHasBillingChanges(baseDiff, fromPlan),
+			includeCustom,
 		}),
-	});
-	return migration.id;
+		parentDraft,
+	]);
 };

@@ -106,7 +106,7 @@ export const handleUpdatePlanV2 = createRoute({
 
 		const latestPlanId = new_plan_id || plan_id;
 		let responseFullProduct = null;
-		let migrationId: string | undefined;
+		let migrationIds: string[] = [];
 		if (fromPlan) {
 			const after = await ProductService.getFull({
 				db: ctx.db,
@@ -135,7 +135,7 @@ export const handleUpdatePlanV2 = createRoute({
 						}).migrationCustomize,
 					}));
 
-				migrationId = await createPlanMigrationDraft({
+				migrationIds = await createPlanMigrationDraft({
 					ctx,
 					current: initialFullProduct,
 					fromPlan,
@@ -166,9 +166,16 @@ export const handleUpdatePlanV2 = createRoute({
 			features: ctx.features,
 		});
 
+		// `migration` stays for the single-draft case so existing consumers keep
+		// working; `migrations` carries every draft when parents add their own.
+		const [firstMigrationId] = migrationIds;
 		return c.json(
-			migrationId
-				? { ...latestPlan, migration: { id: migrationId } }
+			firstMigrationId
+				? {
+						...latestPlan,
+						migration: { id: firstMigrationId },
+						migrations: migrationIds.map((id) => ({ id })),
+					}
 				: latestPlan,
 		);
 	},
