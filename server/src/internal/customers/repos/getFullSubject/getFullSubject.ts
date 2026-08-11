@@ -6,6 +6,7 @@ import {
 	normalizedToFullSubject,
 	type SubjectQueryRow,
 } from "@autumn/shared";
+import { isTransientDbError } from "@/db/dbUtils.js";
 import { executePrepared } from "@/db/executePrepared.js";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 import {
@@ -15,6 +16,7 @@ import {
 } from "@/db/resolveSubjectReadDb.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { checkPendingMigrationsForCustomer } from "@/internal/migrations/v2/lazy/checkPendingMigrationsForCustomer.js";
+import { getRuntimeFullSubjectGateConfig } from "@/internal/misc/fullSubjectGateEdgeConfig/fullSubjectGateEdgeConfigStore.js";
 import { lazyResetSubjectEntitlements } from "../../actions/resetCustomerEntitlementsV2/lazyResetSubjectEntitlements.js";
 import { lazyResetSubjectUsageWindows } from "../../actions/resetUsageWindows/lazyResetSubjectUsageWindows.js";
 import { markReplicaSourced } from "../../cache/fullSubject/subjectProvenance.js";
@@ -24,6 +26,10 @@ import {
 	runWithFullSubjectGate,
 } from "./getFullSubjectGate.js";
 import { getFullSubjectQuery } from "./getFullSubjectQuery.js";
+import {
+	type PrimaryHydrationHedgeEvent,
+	runPrimaryHydrationWithHedge,
+} from "./runPrimaryHydrationWithHedge.js";
 import {
 	resultToFullSubject,
 	subjectQueryRowToNormalized,
@@ -40,6 +46,7 @@ const runRoutedHydration = async ({
 	allowMissingEntity,
 	readFrom,
 	routeSource,
+	hedgePrimaryHydration,
 }: {
 	ctx: AutumnContext;
 	customerId?: string;
@@ -48,6 +55,7 @@ const runRoutedHydration = async ({
 	allowMissingEntity: boolean;
 	readFrom: SubjectReadFrom;
 	routeSource?: string;
+	hedgePrimaryHydration: boolean;
 }): Promise<{ rows: SubjectQueryRow[]; source: SubjectReadSource }> => {
 	const { org, env } = ctx;
 
@@ -89,25 +97,65 @@ const runRoutedHydration = async ({
 
 	let source: SubjectReadSource = resolved.source;
 	let result: Awaited<ReturnType<typeof runHydration>>;
-	try {
-		result = await runHydration({ db: resolved.db, lane: resolved.source });
-	} catch (error) {
-		if (resolved.source !== "replica") throw error;
-		// A gate shed is load protection — re-admitting it on primary defeats it.
-		if (isFullSubjectGateRejection(error)) throw error;
-		source = "primary";
-		ctx.logger.warn(
-			{
-				type: "replica_read",
-				source: "primary_fallback",
-				route: routeSource,
-				customer_id: customerId,
-				entity_id: entityId,
-				error: error instanceof Error ? error.message : String(error),
-			},
-			"Replica hydration failed — retrying once on primary",
-		);
-		result = await runHydration({ db: ctx.db, lane: "primary" });
+
+	if (resolved.source === "primary") {
+		const { primary_hydration_hedge: hedgeConfig } =
+			getRuntimeFullSubjectGateConfig();
+		const useHedge =
+			hedgePrimaryHydration &&
+			hedgeConfig.enabled &&
+			resolved.db !== ctx.dbGeneral;
+
+		if (!useHedge) {
+			result = await runHydration({ db: resolved.db, lane: "primary" });
+		} else {
+			const logHedgeEvent = (outcome: PrimaryHydrationHedgeEvent) => {
+				const fields = {
+					type: "primary_hydration_hedge",
+					outcome,
+					route: routeSource,
+					customer_id: customerId,
+					entity_id: entityId,
+					hedge_after_ms: hedgeConfig.hedge_after_ms,
+				};
+				if (outcome === "both_failed") {
+					ctx.logger.warn(fields, "Both primary hydration reads failed");
+				} else {
+					ctx.logger.info(fields, "Primary hydration hedge event");
+				}
+			};
+
+			result = await runPrimaryHydrationWithHedge({
+				primaryFn: () => runHydration({ db: resolved.db, lane: "primary" }),
+				hedgeFn: () => runHydration({ db: ctx.dbGeneral, lane: "primary" }),
+				hedgeAfterMs: hedgeConfig.hedge_after_ms,
+				maxInFlightHedges: hedgeConfig.max_in_flight_per_process,
+				shouldHedgeOnError: (error) =>
+					!isFullSubjectGateRejection(error) && isTransientDbError({ error }),
+				onEvent: logHedgeEvent,
+			});
+		}
+	} else {
+		try {
+			result = await runHydration({ db: resolved.db, lane: resolved.source });
+		} catch (error) {
+			if (resolved.source !== "replica") throw error;
+			// A gate shed is load protection — re-admitting it on primary defeats it.
+			if (isFullSubjectGateRejection(error)) throw error;
+			source = "primary";
+			ctx.logger.warn(
+				{
+					type: "replica_read",
+					source: "primary_fallback",
+					route: routeSource,
+					customer_id: customerId,
+					entity_id: entityId,
+					error: error instanceof Error ? error.message : String(error),
+				},
+				"Replica hydration failed — retrying once on primary",
+			);
+			result = await runHydration({ db: ctx.db, lane: "primary" });
+		}
 	}
 
 	if (source === "replica") {
@@ -135,6 +183,7 @@ export async function getFullSubject({
 	allowMissingEntity = false,
 	readFrom = "primary",
 	routeSource,
+	hedgePrimaryHydration = false,
 }: {
 	ctx: AutumnContext;
 	customerId?: string;
@@ -143,6 +192,7 @@ export async function getFullSubject({
 	allowMissingEntity?: boolean;
 	readFrom?: SubjectReadFrom;
 	routeSource?: string;
+	hedgePrimaryHydration?: boolean;
 }): Promise<FullSubject | undefined> {
 	const { rows: subjectRows, source } = await runRoutedHydration({
 		ctx,
@@ -152,6 +202,7 @@ export async function getFullSubject({
 		allowMissingEntity,
 		readFrom,
 		routeSource,
+		hedgePrimaryHydration,
 	});
 	if (!subjectRows.length) return undefined;
 
@@ -190,6 +241,7 @@ export async function getFullSubjectNormalized({
 	runLazyResets = true,
 	readFrom = "primary",
 	routeSource,
+	hedgePrimaryHydration = false,
 }: {
 	ctx: AutumnContext;
 	customerId?: string;
@@ -199,6 +251,7 @@ export async function getFullSubjectNormalized({
 	runLazyResets?: boolean;
 	readFrom?: SubjectReadFrom;
 	routeSource?: string;
+	hedgePrimaryHydration?: boolean;
 }): Promise<
 	{ normalized: NormalizedFullSubject; fullSubject: FullSubject } | undefined
 > {
@@ -210,6 +263,7 @@ export async function getFullSubjectNormalized({
 		allowMissingEntity,
 		readFrom,
 		routeSource,
+		hedgePrimaryHydration,
 	});
 	if (!subjectRows.length) return undefined;
 

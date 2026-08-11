@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { computePoolBudgetWarnings } from "@/db/initDrizzle.js";
+import { clientGeneral, computePoolBudgetWarnings } from "@/db/initDrizzle.js";
 
 const prodDefaults = {
 	criticalPoolMax: 22,
@@ -11,6 +11,10 @@ const prodDefaults = {
 const NINETY = { fleetProcesses: 90 };
 
 describe("computePoolBudgetWarnings", () => {
+	test("keeps one startup-warmed general connection for the hedge lane", () => {
+		expect(clientGeneral.options.min).toBe(1);
+	});
+
 	test("prod defaults stay inside both bouncer budgets", () => {
 		expect(computePoolBudgetWarnings(prodDefaults)).toEqual([]);
 	});

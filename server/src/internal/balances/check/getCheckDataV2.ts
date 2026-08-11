@@ -74,22 +74,23 @@ export const getCheckDataV2 = async ({
 
 	// "Query read timeout" is in TRANSIENT_DB_ERROR_MESSAGES, so isTransientDbError
 	// classifies the expiry as transient and check's withRedisFailOpen fallback engages.
-	const fullSubject = await withCheckDbHydrationBudget(
-		() =>
-			ctx.apiVersion.gte(ApiVersion.V2_1)
-				? getOrSetCachedPartialFullSubject({
-						ctx,
-						customerId: customer_id,
-						entityId: entity_id,
-						featureIds,
-						source: "getCheckDataV2",
-					})
-				: getOrCreateCachedPartialFullSubject({
-						ctx,
-						params: body,
-						featureIds,
-						source: "getCheckDataV2",
-					}),
+	const fullSubject = await withCheckDbHydrationBudget(() =>
+		ctx.apiVersion.gte(ApiVersion.V2_1)
+			? getOrSetCachedPartialFullSubject({
+					ctx,
+					customerId: customer_id,
+					entityId: entity_id,
+					featureIds,
+					source: "getCheckDataV2",
+					hedgePrimaryHydration: true,
+				})
+			: getOrCreateCachedPartialFullSubject({
+					ctx,
+					params: body,
+					featureIds,
+					source: "getCheckDataV2",
+					hedgePrimaryHydration: true,
+				}),
 	);
 
 	const apiSubject = await getApiSubject({

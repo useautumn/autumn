@@ -19,6 +19,30 @@ describe("FullSubjectGateEdgeConfigSchema defaults", () => {
 			per_org_pending_max: 3_000,
 		});
 		expect(config.read_split).toEqual({ replica_share: 0 });
+		expect(config.primary_hydration_hedge).toEqual({
+			enabled: true,
+			hedge_after_ms: 1_000,
+			max_in_flight_per_process: 1,
+		});
+	});
+
+	it("fills partial primary hydration hedge config and validates its bounds", () => {
+		const config = FullSubjectGateEdgeConfigSchema.parse({
+			primary_hydration_hedge: { hedge_after_ms: 750 },
+		});
+		expect(config.primary_hydration_hedge).toEqual({
+			enabled: true,
+			hedge_after_ms: 750,
+			max_in_flight_per_process: 1,
+		});
+
+		for (const hedge_after_ms of [499, 1_501]) {
+			expect(
+				FullSubjectGateEdgeConfigSchema.safeParse({
+					primary_hydration_hedge: { hedge_after_ms },
+				}).success,
+			).toBe(false);
+		}
 	});
 
 	it("fills unspecified nested fields with defaults when only some are set", () => {

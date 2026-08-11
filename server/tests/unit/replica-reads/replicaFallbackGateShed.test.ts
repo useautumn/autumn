@@ -5,6 +5,7 @@ import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { mockModuleWithRestore } from "../utils/mockModuleWithRestore.js";
 
 const primaryDb = { pool: "primary" } as unknown as DrizzleCli;
+const generalDb = { pool: "general" } as unknown as DrizzleCli;
 const replicaDb = { pool: "replica" } as unknown as DrizzleCli;
 const quietLedgerDb = {
 	execute: () => Promise.resolve([]),
@@ -49,6 +50,7 @@ const { _setFullSubjectGateConfigForTesting } = await import(
 const makeCtx = (): AutumnContext =>
 	({
 		db: primaryDb,
+		dbGeneral: generalDb,
 		org: { id: "org_gate_shed" },
 		env: "sandbox",
 		skipCache: true,
@@ -76,6 +78,79 @@ afterEach(() => {
 });
 
 describe("replica fallback vs gate shed", () => {
+	it("keeps ordinary FullSubject reads on the original primary pool", async () => {
+		executePreparedImpl = async () => [];
+
+		const result = await getFullSubject({
+			ctx: makeCtx(),
+			customerId: "cus_no_primary_hedge",
+		});
+
+		expect(result).toBeUndefined();
+		expect(hydrationPools).toEqual(["primary"]);
+	});
+
+	it("honors the runtime kill switch for an opted-in caller", async () => {
+		_setFullSubjectGateConfigForTesting({
+			config: {
+				primary_hydration_hedge: {
+					enabled: false,
+					hedge_after_ms: 10,
+					max_in_flight_per_process: 1,
+				},
+			},
+		});
+		executePreparedImpl = async () => [];
+
+		const result = await getFullSubject({
+			ctx: makeCtx(),
+			customerId: "cus_disabled_primary_hedge",
+			hedgePrimaryHydration: true,
+		});
+
+		expect(result).toBeUndefined();
+		expect(hydrationPools).toEqual(["primary"]);
+	});
+
+	it("hedges an opted-in slow primary hydration through the independent general pool", async () => {
+		_setFullSubjectGateConfigForTesting({
+			config: {
+				primary_hydration_hedge: {
+					enabled: true,
+					hedge_after_ms: 10,
+					max_in_flight_per_process: 1,
+				},
+			},
+		});
+
+		let releasePrimary: () => void = () => {};
+		const heldPrimary = new Promise<void>((resolve) => {
+			releasePrimary = resolve;
+		});
+		executePreparedImpl = async ({ db }) => {
+			if (db === primaryDb) await heldPrimary;
+			return [];
+		};
+
+		const hydration = getFullSubject({
+			ctx: makeCtx(),
+			customerId: "cus_primary_hedge",
+			hedgePrimaryHydration: true,
+		});
+		const outcome = await Promise.race([
+			hydration,
+			new Promise<"timed_out">((resolve) =>
+				setTimeout(() => resolve("timed_out"), 75),
+			),
+		]);
+
+		expect(outcome).toBeUndefined();
+		expect(hydrationPools).toEqual(["primary", "general"]);
+
+		releasePrimary();
+		await hydration;
+	});
+
 	it("propagates a replica-lane gate shed instead of re-admitting on primary", async () => {
 		makeReplicaEligible();
 		_setFullSubjectGateConfigForTesting({
