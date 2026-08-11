@@ -1,3 +1,4 @@
+import { getAutumnEnv } from "@autumn/env";
 import {
 	account,
 	ErrCode,
@@ -26,8 +27,7 @@ export type SsoConnectionStatus =
 
 type RequestHeaders = Headers | Record<string, string>;
 
-const authBaseUrl = () =>
-	process.env.BETTER_AUTH_URL?.replace(/\/$/, "") ?? "http://localhost:8080";
+const authBaseUrl = () => getAutumnEnv().AUTUMN_API_URL;
 
 const clientBaseUrl = () =>
 	process.env.CLIENT_URL?.replace(/\/$/, "") ?? "http://localhost:3000";

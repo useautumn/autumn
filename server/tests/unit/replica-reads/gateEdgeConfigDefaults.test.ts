@@ -19,6 +19,30 @@ describe("FullSubjectGateEdgeConfigSchema defaults", () => {
 			per_org_pending_max: 3_000,
 		});
 		expect(config.read_split).toEqual({ replica_share: 0 });
+		expect(config.delayed_postgres_backup_read).toEqual({
+			enabled: true,
+			delay_ms: 1_000,
+			max_in_flight_per_process: 1,
+		});
+	});
+
+	it("fills delayed Postgres backup read defaults and validates its bounds", () => {
+		const config = FullSubjectGateEdgeConfigSchema.parse({
+			delayed_postgres_backup_read: { delay_ms: 750 },
+		});
+		expect(config.delayed_postgres_backup_read).toEqual({
+			enabled: true,
+			delay_ms: 750,
+			max_in_flight_per_process: 1,
+		});
+
+		for (const delay_ms of [499, 1_501]) {
+			expect(
+				FullSubjectGateEdgeConfigSchema.safeParse({
+					delayed_postgres_backup_read: { delay_ms },
+				}).success,
+			).toBe(false);
+		}
 	});
 
 	it("fills unspecified nested fields with defaults when only some are set", () => {

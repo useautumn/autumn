@@ -58,7 +58,7 @@ the browser flow works transparently when accessed via the Capy UI.
 Server-internal traffic stays on `http://localhost:{port}` (the proxy edge
 won't honor server-to-self requests — they redirect to Auth0). `dev.ts`
 defaults to localhost for inter-process calls; the Daytona URLs only land
-in `BETTER_AUTH_URL`, `CLIENT_URL`, `VITE_BACKEND_URL`,
+in `AUTUMN_API_URL`, `AUTUMN_PUBLIC_API_URL`, `CLIENT_URL`, `VITE_BACKEND_URL`,
 `VITE_FRONTEND_URL`, and `VITE_API_URL`.
 
 ### Validating the auth flow from inside the sandbox

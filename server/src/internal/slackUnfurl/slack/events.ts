@@ -108,7 +108,7 @@ export async function handleLinkShared(
 	});
 	const card: UnfurlCard = {
 		url: resolved[0].url,
-		imageUrl: `${env.PUBLIC_BASE_URL}/slack-unfurl/cards/${token}.png?v=${hourBucket}`,
+		imageUrl: `${env.AUTUMN_PUBLIC_API_URL}/slack-unfurl/cards/${token}.png?v=${hourBucket}`,
 		// Slack rejects image blocks whose alt_text exceeds 2000 chars.
 		altText: resolved
 			.map((link) => link.name)
