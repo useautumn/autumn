@@ -49,7 +49,7 @@ export const selectLicenseAddCandidateRows = async ({
 	internalCustomerIds,
 	scope,
 	entitlement,
-	licenseInternalProductId,
+	licensePlanId,
 	afterCustomerProductId,
 	limit,
 }: {
@@ -57,7 +57,7 @@ export const selectLicenseAddCandidateRows = async ({
 	internalCustomerIds: string[];
 	scope: OperationScope;
 	entitlement: EntitlementWithFeature;
-	licenseInternalProductId: string;
+	licensePlanId: string;
 	afterCustomerProductId?: string;
 	limit: number;
 }): Promise<LicenseCandidateRow[]> => {
@@ -102,7 +102,7 @@ export const selectLicenseAddCandidateRows = async ({
 			sub_anchor.billing_cycle_anchor_ms AS "subscriptionCycleAnchor",
 			sibling.reset_cycle_anchor AS "siblingResetCycleAnchor"
 		FROM customer_products AS assignment
-		${canonicalPoolLateralSql({ licenseInternalProductId, columns: sql`pool.*` })}
+		${canonicalPoolLateralSql({ licensePlanId, columns: sql`pool.*` })}
 		INNER JOIN customer_products AS cp
 			ON cp.id = pool.parent_customer_product_id
 		INNER JOIN license_entitlements AS le

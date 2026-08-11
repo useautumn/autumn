@@ -21,7 +21,7 @@ export const replaceLicenseEntitlementRows = async ({
 	scope,
 	fromEntitlementId,
 	toEntitlementId,
-	licenseInternalProductId,
+	licensePlanId,
 	initialState,
 }: {
 	db: DrizzleCli;
@@ -29,7 +29,7 @@ export const replaceLicenseEntitlementRows = async ({
 	scope: OperationScope;
 	fromEntitlementId: string;
 	toEntitlementId: string;
-	licenseInternalProductId: string;
+	licensePlanId: string;
 	initialState: CustomerEntitlementInitialState;
 }): Promise<{ rows: number; internalCustomerIds: string[] }> => {
 	if (internalCustomerIds.length === 0) {
@@ -73,7 +73,7 @@ export const replaceLicenseEntitlementRows = async ({
 			balance = ${balanceSql},
 			unlimited = ${unlimitedSql}
 		FROM customer_products AS assignment
-			${canonicalPoolLateralSql({ licenseInternalProductId })}
+			${canonicalPoolLateralSql({ licensePlanId })}
 			JOIN customer_products AS cp
 				ON cp.id = pool.parent_customer_product_id
 		WHERE assignment.id = target.customer_product_id

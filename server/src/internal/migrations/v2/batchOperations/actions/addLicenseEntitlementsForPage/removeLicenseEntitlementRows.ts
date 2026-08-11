@@ -25,7 +25,6 @@ export const removeLicenseEntitlementRows = async ({
 	scope,
 	filter,
 	licensePlanId,
-	licenseInternalProductId,
 	features,
 }: {
 	db: DrizzleCli;
@@ -33,7 +32,6 @@ export const removeLicenseEntitlementRows = async ({
 	scope: OperationScope;
 	filter: PlanItemFilter;
 	licensePlanId: string;
-	licenseInternalProductId: string;
 	features: Feature[];
 }): Promise<{
 	rows: number;
@@ -70,7 +68,7 @@ export const removeLicenseEntitlementRows = async ({
 			DELETE FROM customer_entitlements AS target
 			USING entitlements AS definition,
 				customer_products AS assignment
-				${canonicalPoolLateralSql({ licenseInternalProductId })}
+				${canonicalPoolLateralSql({ licensePlanId })}
 				JOIN customer_products AS cp
 					ON cp.id = pool.parent_customer_product_id
 			WHERE assignment.id = target.customer_product_id

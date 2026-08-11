@@ -19,14 +19,14 @@ export const insertLicenseCustomerEntitlementRows = async ({
 	rows,
 	scope,
 	initialState,
-	licenseInternalProductId,
+	licensePlanId,
 	now,
 }: {
 	db: DrizzleCli;
 	rows: InsertableLicenseRow[];
 	scope: OperationScope;
 	initialState: CustomerEntitlementInitialState;
-	licenseInternalProductId: string;
+	licensePlanId: string;
 	now: number;
 }): Promise<string[]> => {
 	if (rows.length === 0) return [];
@@ -103,7 +103,7 @@ export const insertLicenseCustomerEntitlementRows = async ({
 				AND assignment.customer_license_link_id IS NOT NULL
 				AND assignment.internal_entity_id IS NOT NULL
 				AND assignment.status IN (${sqlList({ values: [...MIGRATABLE_STATUSES] })})
-			${canonicalPoolLateralSql({ licenseInternalProductId })}
+			${canonicalPoolLateralSql({ licensePlanId })}
 			INNER JOIN customer_products AS cp
 				ON cp.id = pool.parent_customer_product_id
 				AND ${operationScopeSql({ scope })}

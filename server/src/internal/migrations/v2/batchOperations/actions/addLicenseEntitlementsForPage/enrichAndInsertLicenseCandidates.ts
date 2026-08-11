@@ -64,7 +64,7 @@ export const enrichAndInsertLicenseCandidates = async ({
 				rows: insertableRows,
 				scope,
 				initialState: add.initialState,
-				licenseInternalProductId: add.licenseInternalProductId,
+				licensePlanId: add.licensePlanId,
 				now,
 			}),
 	});
