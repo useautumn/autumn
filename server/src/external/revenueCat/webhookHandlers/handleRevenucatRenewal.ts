@@ -15,10 +15,7 @@ import { recordRevenueCatInvoice } from "@/external/revenueCat/utils/recordReven
 import type { RevenueCatWebhookContext } from "@/external/revenueCat/webhookMiddlewares/revenuecatWebhookContext";
 import { addProductsUpdatedWebhookTask } from "@/internal/analytics/handlers/handleProductsUpdated";
 import { customerProductActions } from "@/internal/customers/cusProducts/actions";
-import {
-	emitCustomerProductBillingUpdated,
-	snapshotFullCustomer,
-} from "@/internal/customers/cusProducts/actions/emitCustomerProductBillingUpdated";
+import { emitCustomerProductBillingUpdated } from "@/internal/customers/cusProducts/actions/emitCustomerProductBillingUpdated";
 import { getExistingCusProducts } from "@/internal/customers/cusProducts/cusProductUtils/getExistingCusProducts";
 
 export const handleRenewal = async ({
@@ -72,7 +69,7 @@ export const handleRenewal = async ({
 		// "updated" plan change so billing.updated mirrors the legacy webhook.
 		emitCustomerProductBillingUpdated({
 			ctx: customerCtx,
-			originalFullCustomer: snapshotFullCustomer(customer),
+			originalFullCustomer: structuredClone(customer),
 			updateCustomerProducts: [
 				{ customerProduct: curSameProduct, updates: {} },
 			],
@@ -98,7 +95,7 @@ export const handleRenewal = async ({
 			ctx: customerCtx,
 			customerProduct: curSameProduct,
 			fullCustomer: customer,
-			sendWebhook: true,
+			sendProductsUpdatedWebhook: true,
 		});
 
 		logger.info(`Marked past due product as active: ${curSameProduct.id}`);

@@ -6,10 +6,7 @@ import {
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { addProductsUpdatedWebhookTask } from "@/internal/analytics/handlers/handleProductsUpdated";
-import {
-	emitCustomerProductBillingUpdated,
-	snapshotFullCustomer,
-} from "@/internal/customers/cusProducts/actions/emitCustomerProductBillingUpdated";
+import { emitCustomerProductBillingUpdated } from "@/internal/customers/cusProducts/actions/emitCustomerProductBillingUpdated";
 import { CusProductService } from "@/internal/customers/cusProducts/CusProductService";
 
 /**
@@ -35,7 +32,7 @@ export const cancelCustomerProduct = async ({
 }): Promise<{ updates: Partial<InsertCustomerProduct> }> => {
 	const { org, env } = ctx;
 
-	const originalFullCustomer = snapshotFullCustomer(fullCustomer);
+	const originalFullCustomer = structuredClone(fullCustomer);
 
 	// 1. Cancel the product
 	const updates: Partial<InsertCustomerProduct> = {

@@ -18,14 +18,6 @@ type LifecycleCustomerProductUpdate = {
 	updates: Partial<InsertCustomerProduct>;
 };
 
-/** Snapshot BEFORE a lifecycle action — actions replace `customer_products` in place. */
-export const snapshotFullCustomer = (
-	fullCustomer: FullCustomer,
-): FullCustomer => ({
-	...fullCustomer,
-	customer_products: [...fullCustomer.customer_products],
-});
-
 export const emitCustomerProductBillingUpdated = ({
 	ctx,
 	originalFullCustomer,

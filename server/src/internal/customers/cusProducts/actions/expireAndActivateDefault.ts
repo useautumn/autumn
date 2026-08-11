@@ -10,10 +10,7 @@ import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { addProductsUpdatedWebhookTask } from "@/internal/analytics/handlers/handleProductsUpdated";
 import { executeAutumnBillingPlan } from "@/internal/billing/v2/execute/executeAutumnBillingPlan.js";
 import { activateFreeSuccessorProduct } from "@/internal/customers/cusProducts/actions/activateFreeSuccessorProduct";
-import {
-	emitCustomerProductBillingUpdated,
-	snapshotFullCustomer,
-} from "@/internal/customers/cusProducts/actions/emitCustomerProductBillingUpdated";
+import { emitCustomerProductBillingUpdated } from "@/internal/customers/cusProducts/actions/emitCustomerProductBillingUpdated";
 
 /**
  * Expires a customer product and activates the default product if needed.
@@ -22,8 +19,7 @@ import {
  * 1. Sets status to Expired
  * 2. Sends products_updated webhook with Expired scenario
  * 3. Activates free successor (scheduled or default) if no other active product in group
- * 4. Optionally emits billing.updated — opt-in because Stripe callers batch
- *    their own emission at the handler level via emitBillingChangeWebhook
+ * 4. Emits billing.updated when emitBillingUpdated is set (opt-in — some callers batch their own emission)
  *
  * @returns updates - The updates applied to the expired customer product
  * @returns activatedCustomerProduct - If a scheduled product was activated (UPDATE)
@@ -48,7 +44,7 @@ export const expireCustomerProductAndActivateDefault = async ({
 }> => {
 	const { org, env } = ctx;
 
-	const originalFullCustomer = snapshotFullCustomer(fullCustomer);
+	const originalFullCustomer = structuredClone(fullCustomer);
 
 	// 1. Expire the product
 	const updates: Partial<InsertCustomerProduct> = {
