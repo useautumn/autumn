@@ -14,6 +14,7 @@ import {
 	type SubjectReadFrom,
 	type SubjectReadSource,
 } from "@/db/resolveSubjectReadDb.js";
+import { withStatementTimeout } from "@/db/withStatementTimeout.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { checkPendingMigrationsForCustomer } from "@/internal/migrations/v2/lazy/checkPendingMigrationsForCustomer.js";
 import { getRuntimeFullSubjectGateConfig } from "@/internal/misc/fullSubjectGateEdgeConfig/fullSubjectGateEdgeConfigStore.js";
@@ -36,6 +37,8 @@ import {
 	subjectQueryRowToNormalized,
 } from "./subjectQueryRowToNormalized.js";
 import { unpackSubjectEnvelope } from "./unpackSubjectEnvelope.js";
+
+const BACKUP_READ_STATEMENT_TIMEOUT_MS = 2_000;
 
 /** Runs the hydration on the resolved pool. A replica DB failure retries ONCE
  *  on primary via normal gate admission; a gate shed propagates untouched. */
@@ -63,9 +66,11 @@ const runRoutedHydration = async ({
 	const runHydration = ({
 		db,
 		lane,
+		statementTimeoutMs,
 	}: {
 		db: DrizzleCli;
 		lane: FullSubjectGateLane;
+		statementTimeoutMs?: number;
 	}) =>
 		runWithFullSubjectGate({
 			customerId,
@@ -73,19 +78,29 @@ const runRoutedHydration = async ({
 			env,
 			lane,
 			logger: ctx.logger,
-			queryFn: () =>
-				executePrepared({
-					db,
-					label: "getFullSubject",
-					query: getFullSubjectQuery({
-						orgId: org.id,
-						env,
-						customerId,
-						entityId,
-						inStatuses,
-						allowMissingEntity,
-					}),
-				}),
+			queryFn: () => {
+				const execute = ({ queryDb }: { queryDb: DrizzleCli }) =>
+					executePrepared({
+						db: queryDb,
+						label: "getFullSubject",
+						query: getFullSubjectQuery({
+							orgId: org.id,
+							env,
+							customerId,
+							entityId,
+							inStatuses,
+							allowMissingEntity,
+						}),
+					});
+
+				return statementTimeoutMs === undefined
+					? execute({ queryDb: db })
+					: withStatementTimeout(
+							db,
+							(transaction) => execute({ queryDb: transaction }),
+							statementTimeoutMs,
+						);
+			},
 		});
 
 	const resolved = await resolveSubjectReadDb({
@@ -128,7 +143,12 @@ const runRoutedHydration = async ({
 
 			result = await runWithDelayedPostgresBackupRead({
 				primaryFn: () => runHydration({ db: resolved.db, lane: "primary" }),
-				backupFn: () => runHydration({ db: ctx.dbGeneral, lane: "backup" }),
+				backupFn: () =>
+					runHydration({
+						db: ctx.dbGeneral,
+						lane: "backup",
+						statementTimeoutMs: BACKUP_READ_STATEMENT_TIMEOUT_MS,
+					}),
 				delayMs: backupReadConfig.delay_ms,
 				maxInFlightBackups: backupReadConfig.max_in_flight_per_process,
 				shouldStartBackupOnError: (error) =>

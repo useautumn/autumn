@@ -14,6 +14,7 @@ const quietLedgerDb = {
 // Records which pool each hydration ran on — the whole no-primary-retry
 // contract for gate sheds lives in that sequence.
 const hydrationPools: string[] = [];
+const backupReadTimeouts: number[] = [];
 let executePreparedImpl: (args: { db: DrizzleCli }) => Promise<unknown[]> =
 	() => Promise.resolve([]);
 
@@ -23,6 +24,17 @@ await mockModuleWithRestore("@/db/executePrepared.js", () => ({
 		return executePreparedImpl(args);
 	},
 	preparedStatementNames: () => [],
+}));
+
+await mockModuleWithRestore("@/db/withStatementTimeout.js", () => ({
+	withStatementTimeout: async <T>(
+		db: DrizzleCli,
+		fn: (transaction: DrizzleCli) => Promise<T>,
+		timeoutMs: number,
+	): Promise<T> => {
+		backupReadTimeouts.push(timeoutMs);
+		return fn(db);
+	},
 }));
 
 const { EXPECTED_REPLICA_COUNT } = await import(
@@ -68,6 +80,7 @@ const makeReplicaEligible = () => {
 
 afterEach(() => {
 	hydrationPools.length = 0;
+	backupReadTimeouts.length = 0;
 	executePreparedImpl = () => Promise.resolve([]);
 	_setReplicaDbOverrideForTesting(null);
 	_setLedgerDbOverrideForTesting(null);
@@ -148,6 +161,7 @@ describe("replica fallback vs gate shed", () => {
 
 		expect(outcome).toBeUndefined();
 		expect(hydrationPools).toEqual(["primary", "general"]);
+		expect(backupReadTimeouts).toEqual([2_000]);
 
 		releasePrimary();
 		await hydration;
