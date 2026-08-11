@@ -22,8 +22,9 @@ export type AddLicenseEntitlementsForPageResult = {
 	affected: number;
 	candidateCount: number;
 	repointedPools: number;
-	/** Customers whose pool was repointed. They changed even when no assignment
-	 * gained a row, so they must not be reported as skipped. */
+	/** Customers whose pool was repointed or whose assignments carried onto a
+	 * new definition. They changed even when no assignment gained a row, so they
+	 * must not be reported as skipped. */
 	repointedInternalCustomerIds: string[];
 	insertedItems: BatchMigrationInsertedItem[];
 	/** Customers a cycle rung refused — routed to skipped, as the owned path does. */
@@ -78,10 +79,10 @@ export const addLicenseEntitlementsForPage = async ({
 	});
 
 	const carryFromEntitlementId = add.carryFromEntitlementId;
-	const carriedRowIds = carryFromEntitlementId
+	const carried = carryFromEntitlementId
 		? await timePhase({
 				phases,
-				phase: "repoint",
+				phase: "carry",
 				run: () =>
 					withStatementTimeout(
 						db,
@@ -93,11 +94,12 @@ export const addLicenseEntitlementsForPage = async ({
 								fromEntitlementId: carryFromEntitlementId,
 								toEntitlementId: add.entitlement.id,
 								licenseInternalProductId: add.licenseInternalProductId,
+								initialState: add.initialState,
 							}),
 						BATCH_MIGRATION_PAGE_STATEMENT_TIMEOUT_MS,
 					),
 			})
-		: [];
+		: { rows: 0, internalCustomerIds: [] };
 
 	const { rowCount } = await iterateCustomerProductPages({
 		db,
@@ -143,10 +145,13 @@ export const addLicenseEntitlementsForPage = async ({
 	});
 
 	return {
-		affected: insertedItems.length + carriedRowIds.length,
+		affected: insertedItems.length + carried.rows,
 		candidateCount: rowCount,
 		repointedPools: repointed.pools,
-		repointedInternalCustomerIds: repointed.internalCustomerIds,
+		repointedInternalCustomerIds: [
+			...repointed.internalCustomerIds,
+			...carried.internalCustomerIds,
+		],
 		insertedItems,
 		excludedInternalCustomerIds: [...excludedIds],
 	};

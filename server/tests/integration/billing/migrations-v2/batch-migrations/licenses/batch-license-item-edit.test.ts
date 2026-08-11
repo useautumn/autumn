@@ -17,7 +17,11 @@
  *    consumption instead of being reset
  */
 import { expect, test } from "bun:test";
-import { BillingInterval, customerEntitlements } from "@autumn/shared";
+import {
+	BillingInterval,
+	customerEntitlements,
+	migrationItemRuns,
+} from "@autumn/shared";
 import { runChunkedMigration } from "@tests/integration/billing/migrations-v2/utils/runChunkedMigration";
 import { setupLicenseUpdateScenario } from "@tests/integration/licenses/billing/update/setupLicenseUpdateScenario";
 import { getLicenseDbState } from "@tests/integration/licenses/licenseTestUtils";
@@ -65,7 +69,7 @@ test(`${chalk.yellowBright("batch-license-customize: editing an existing allowan
 			eq(customerEntitlements.customer_product_id, liveAssignments[0]!.id),
 		);
 
-	const { result } = await runChunkedMigration({
+	const { result, migration } = await runChunkedMigration({
 		ctx,
 		migrationClient: autumnV2_2,
 		migrationId: `${idPrefix}-migration`,
@@ -101,6 +105,17 @@ test(`${chalk.yellowBright("batch-license-customize: editing an existing allowan
 	});
 
 	expect(result?.lane).toBe("batch");
+
+	// A carried customer changed even though no assignment gained a row. Marking
+	// it skipped would skip its cache invalidation.
+	const itemRuns = await ctx.db
+		.select({ status: migrationItemRuns.status })
+		.from(migrationItemRuns)
+		.where(
+			eq(migrationItemRuns.migration_internal_id, migration.internal_id),
+		);
+	expect(itemRuns.length).toBeGreaterThan(0);
+	expect(itemRuns.every((run) => run.status !== "skipped")).toBe(true);
 
 	const readMessageRows = async () => {
 		const rows = await ctx.db
@@ -164,7 +179,7 @@ test(`${chalk.yellowBright("batch-license-customize: editing an allowance on a P
 			eq(customerEntitlements.customer_product_id, liveAssignments[0]!.id),
 		);
 
-	const { result } = await runChunkedMigration({
+	const { result, migration } = await runChunkedMigration({
 		ctx,
 		migrationClient: autumnV2_2,
 		migrationId: `${idPrefix}-migration`,
