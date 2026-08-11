@@ -16,7 +16,7 @@ import { CusProductService } from "@/internal/customers/cusProducts/CusProductSe
  * This action:
  * 1. Sets status to Active on the customer product
  * 2. Updates the FullCustomer in memory
- * 3. Sends billing.updated; products_updated is gated by sendProductsUpdatedWebhook
+ * 3. Sends products_updated + billing.updated webhooks
  *
  * Used by RevenueCat renewal webhooks (past-due → active recovery) and any
  * external active-recovery flow.
@@ -25,12 +25,10 @@ export const markCustomerProductActive = async ({
 	ctx,
 	customerProduct,
 	fullCustomer,
-	sendProductsUpdatedWebhook = false,
 }: {
 	ctx: AutumnContext;
 	customerProduct: FullCusProduct;
 	fullCustomer: FullCustomer;
-	sendProductsUpdatedWebhook?: boolean;
 }): Promise<{ updates: Partial<InsertCustomerProduct> }> => {
 	const { org, env } = ctx;
 
@@ -56,17 +54,15 @@ export const markCustomerProductActive = async ({
 			: cp,
 	);
 
-	if (sendProductsUpdatedWebhook) {
-		await addProductsUpdatedWebhookTask({
-			ctx,
-			internalCustomerId: customerProduct.internal_customer_id,
-			org,
-			env,
-			customerId: fullCustomer.id || "",
-			scenario: AttachScenario.Renew,
-			cusProduct: customerProduct,
-		});
-	}
+	await addProductsUpdatedWebhookTask({
+		ctx,
+		internalCustomerId: customerProduct.internal_customer_id,
+		org,
+		env,
+		customerId: fullCustomer.id || "",
+		scenario: AttachScenario.Renew,
+		cusProduct: customerProduct,
+	});
 
 	emitCustomerProductBillingUpdated({
 		ctx,

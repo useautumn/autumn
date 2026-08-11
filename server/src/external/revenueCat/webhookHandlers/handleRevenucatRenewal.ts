@@ -1,9 +1,5 @@
 import type { WebhookRenewal } from "@puzzmo/revenue-cat-webhook-types";
-import {
-	ACTIVE_STATUSES,
-	AttachScenario,
-	CusProductStatus,
-} from "@shared/index";
+import { AttachScenario, CusProductStatus } from "@shared/index";
 import {
 	getRevenueCatCustomerEmail,
 	getRevenueCatCustomerFingerprint,
@@ -50,7 +46,8 @@ export const handleRenewal = async ({
 
 	// Same active product: pure side-effect (webhook + invoice record). No DB
 	// mutation on the cusProduct; the cycle anchor is owned by the app store.
-	if (curSameProduct && ACTIVE_STATUSES.includes(curSameProduct.status)) {
+	// Active only — past-due must fall through to the recovery branch below.
+	if (curSameProduct && curSameProduct.status === CusProductStatus.Active) {
 		logger.info(
 			`Renewal for existing active product ${product.id}, sending webhook`,
 		);
@@ -95,7 +92,6 @@ export const handleRenewal = async ({
 			ctx: customerCtx,
 			customerProduct: curSameProduct,
 			fullCustomer: customer,
-			sendProductsUpdatedWebhook: true,
 		});
 
 		logger.info(`Marked past due product as active: ${curSameProduct.id}`);
