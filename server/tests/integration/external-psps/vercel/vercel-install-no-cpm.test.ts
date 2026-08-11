@@ -23,9 +23,9 @@
  */
 
 import { expect, test } from "bun:test";
+import ctx from "@tests/utils/testInitUtils/createTestContext";
 import chalk from "chalk";
 import { CusService } from "@/internal/customers/CusService";
-import ctx from "@tests/utils/testInitUtils/createTestContext";
 import {
 	buildTestOidcHeaders,
 	setupVercelOrg,
@@ -34,7 +34,10 @@ import {
 const TEST_CASE = "vinst-nocpm";
 
 const baseUrl = () =>
-	(process.env.BETTER_AUTH_URL ?? "http://localhost:8080").replace(/\/$/, "");
+	(process.env.AUTUMN_TEST_BASE_URL ?? "http://localhost:8080").replace(
+		/\/$/,
+		"",
+	);
 
 const installationUrl = (installationId: string) =>
 	`${baseUrl()}/webhooks/vercel/${ctx.org.id}/${ctx.env}/v1/installations/${installationId}`;
@@ -60,13 +63,7 @@ const upsertInstallationViaHttp = async ({
 	return { response, data };
 };
 
-const buildUpsertBody = ({
-	email,
-	name,
-}: {
-	email: string;
-	name: string;
-}) => ({
+const buildUpsertBody = ({ email, name }: { email: string; name: string }) => ({
 	scopes: ["read-write:marketplace", "read-write:integration-resource"],
 	acceptedPolicies: {
 		eula: new Date().toISOString(),

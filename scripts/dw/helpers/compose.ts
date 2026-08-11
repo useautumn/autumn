@@ -81,7 +81,7 @@ export function ensureComposeStack(
 		SERVER_PORT: serverPort,
 		VITE_PORT: vitePort,
 		NGROK_API_PORT: ngrokApiPort,
-		NGROK_URL_FLAG: ngrokUrlFlag,
+		NGROK_DOMAIN_FLAG: ngrokUrlFlag,
 		NGROK_VITE_API_PORT: ngrokViteApiPort,
 		NGROK_VITE_URL_FLAG: ngrokViteUrlFlag,
 	};
@@ -135,7 +135,7 @@ export async function readNgrokTunnelUrl(
 		await new Promise((resolve) => setTimeout(resolve, 500));
 	}
 	log(
-		`ngrok tunnel did not expose a public URL on :${apiPort} within 30s; continuing without NGROK_URL`,
+		`ngrok tunnel did not expose a public URL on :${apiPort} within 30s; continuing without AUTUMN_PUBLIC_API_URL`,
 	);
 	return undefined;
 }

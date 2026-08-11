@@ -1,5 +1,6 @@
 import "dotenv/config";
 import cluster from "node:cluster";
+import { getAutumnEnv } from "@autumn/env";
 
 import { initInfisical } from "./external/infisical/initInfisical.js";
 import { logger } from "./external/logtail/logtailUtils.js";
@@ -27,6 +28,7 @@ import { startMemoryMonitor } from "./utils/memoryMonitor.js";
 
 if (cluster.isPrimary) {
 	await initInfisical();
+	getAutumnEnv();
 
 	// const { initHatchetWorker } = await import("./queue/initWorkers.js");
 	// await initHatchetWorker();
@@ -96,6 +98,7 @@ if (cluster.isPrimary) {
 		}
 	});
 } else {
+	getAutumnEnv();
 	// Worker process — start OTel SDK so child spans (Stripe/Redis/Drizzle/
 	// withSpan/withWorkerSpan) export to Axiom.
 	await import("./instrumentation.js");

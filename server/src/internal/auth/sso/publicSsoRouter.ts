@@ -1,3 +1,4 @@
+import { getAutumnEnv } from "@autumn/env";
 import { Hono } from "hono";
 import { z } from "zod/v4";
 import type { HonoEnv } from "@/honoUtils/HonoEnv.js";
@@ -69,19 +70,16 @@ publicSsoRouter.get("/start", async (c) => {
 		origin: trustedIssuerOrigin,
 		run: () =>
 			auth.handler(
-				new Request(
-					`${process.env.BETTER_AUTH_URL?.replace(/\/$/, "") ?? "http://localhost:8080"}/api/auth/sign-in/sso`,
-					{
-						method: "POST",
-						headers: requestHeaders,
-						body: JSON.stringify({
-							providerId,
-							callbackURL,
-							errorCallbackURL: callbackURL,
-							newUserCallbackURL: callbackURL,
-						}),
-					},
-				),
+				new Request(`${getAutumnEnv().AUTUMN_API_URL}/api/auth/sign-in/sso`, {
+					method: "POST",
+					headers: requestHeaders,
+					body: JSON.stringify({
+						providerId,
+						callbackURL,
+						errorCallbackURL: callbackURL,
+						newUserCallbackURL: callbackURL,
+					}),
+				}),
 			),
 	});
 	const data = (await response
