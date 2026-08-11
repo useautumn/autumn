@@ -8,13 +8,13 @@ import {
 	oauthRefreshToken,
 	Scopes,
 } from "@autumn/shared";
+import { hashOAuthToken } from "@autumn/shared/utils/auth/oauthAccessTokens";
 import defaultCtx from "@tests/utils/testInitUtils/createTestContext.js";
 import { createDashboardSession } from "@tests/utils/testInitUtils/dashboardSession.js";
 import { OAuth2Client } from "arctic";
 import { eq } from "drizzle-orm";
 import { initDrizzle } from "@/db/initDrizzle.js";
 import { generateId } from "@/utils/genUtils.js";
-import { hashOAuthToken } from "@/utils/oauthUtils.js";
 
 const { db } = initDrizzle();
 const baseUrl =

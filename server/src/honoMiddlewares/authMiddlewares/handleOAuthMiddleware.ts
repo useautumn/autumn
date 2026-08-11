@@ -5,19 +5,19 @@ import {
 	ErrCode,
 	type Feature,
 	features,
+	type Organization,
+	OrgConfigSchema,
 	oauthAccessToken,
 	oauthConsent,
-	OrgConfigSchema,
-	type Organization,
 	organizations,
 	RecaseError,
 	sortFeatures,
 } from "@autumn/shared";
+import { getOAuthAccessTokenValues } from "@autumn/shared/utils/auth/oauthAccessTokens";
 import { and, eq, gt, inArray } from "drizzle-orm";
 import { alias } from "drizzle-orm/pg-core";
 import type { Context, Next } from "hono";
 import type { HonoEnv } from "@/honoUtils/HonoEnv.js";
-import { hashOAuthToken } from "@/utils/oauthUtils.js";
 
 const masterOrg = alias(organizations, "master_org");
 
@@ -31,12 +31,6 @@ const getOAuthEnvironment = ({ env }: { env?: AppEnv | null }) => {
 	});
 };
 
-const getOAuthTokenValues = async ({ token }: { token: string }) => {
-	const rawAccessToken = stripOAuthTokenPrefix({ token });
-	const hashedToken = await hashOAuthToken(rawAccessToken);
-	return [...new Set([hashedToken, rawAccessToken])];
-};
-
 const getOAuthRequestContext = async ({
 	c,
 	token,
@@ -45,7 +39,9 @@ const getOAuthRequestContext = async ({
 	token: string;
 }) => {
 	const ctx = c.get("ctx");
-	const tokenValues = await getOAuthTokenValues({ token });
+	const tokenValues = await getOAuthAccessTokenValues(
+		stripOAuthTokenPrefix({ token }),
+	);
 	const rows = await ctx.db
 		.select({
 			tokenUserId: oauthAccessToken.userId,
@@ -60,7 +56,10 @@ const getOAuthRequestContext = async ({
 			oauthConsent,
 			eq(oauthAccessToken.oauthConsentId, oauthConsent.id),
 		)
-		.innerJoin(organizations, eq(oauthAccessToken.referenceId, organizations.id))
+		.innerJoin(
+			organizations,
+			eq(oauthAccessToken.referenceId, organizations.id),
+		)
 		.leftJoin(masterOrg, eq(organizations.created_by, masterOrg.id))
 		.leftJoin(
 			features,

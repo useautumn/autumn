@@ -80,6 +80,7 @@ app.route(
 		"oauth-enabled": true,
 		"oauth-environment": env.MCP_OAUTH_ENVIRONMENT,
 		"server-url": env.BETTER_AUTH_URL,
+		db,
 		logger,
 		resourceUrl: new URL("/mcp", env.MCP_SERVER_URL).href,
 	}),

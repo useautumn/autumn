@@ -4,8 +4,8 @@ import {
 	AppEnv,
 	type ChatOAuthCredential,
 	chatInstallations,
-	chatThreadContexts,
 	chatOAuthCredentials,
+	chatThreadContexts,
 	createChatInstallState,
 	ErrCode,
 	oauthAccessToken,
@@ -16,12 +16,12 @@ import {
 	Scopes,
 	slackAdminThreads,
 } from "@autumn/shared";
+import { hashOAuthToken } from "@autumn/shared/utils/auth/oauthAccessTokens";
 import { addMinutes } from "date-fns";
 import { and, eq, inArray } from "drizzle-orm";
 import { z } from "zod/v4";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 import { createRoute } from "@/honoMiddlewares/routeHandler.js";
-import { hashOAuthToken } from "@/utils/oauthUtils.js";
 import {
 	createSlackInstallUrl,
 	getChatStateSecret,

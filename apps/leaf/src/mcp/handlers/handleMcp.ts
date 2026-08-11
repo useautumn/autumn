@@ -38,6 +38,7 @@ export const createHandleMcp =
 		try {
 			auth = await buildAuthForRequest({
 				headers: c.req.raw.headers,
+				db: options.db,
 				flags: options,
 				logger: options.logger,
 				resourceUrl: options.resourceUrl,

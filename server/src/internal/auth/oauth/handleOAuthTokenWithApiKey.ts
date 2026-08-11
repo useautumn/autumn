@@ -7,6 +7,7 @@ import {
 	UNRESTRICTED_CHAT_OAUTH_CONSENT_KIND,
 } from "@autumn/auth/oauth";
 import { ErrCode, RecaseError } from "@autumn/shared";
+import { hashOAuthToken } from "@autumn/shared/utils/auth/oauthAccessTokens";
 import type { Context } from "hono";
 import { db } from "@/db/initDrizzle.js";
 import {
@@ -15,7 +16,6 @@ import {
 	storeOAuthRefreshReplay,
 } from "@/external/redis/actions/oauthRefreshReplay/oauthRefreshReplay.js";
 import { auth } from "@/utils/auth.js";
-import { hashOAuthToken } from "@/utils/oauthUtils.js";
 import {
 	oauthAccessTokenRepo,
 	oauthConsentRepo,

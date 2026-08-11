@@ -7,6 +7,7 @@ import {
 	RecaseError,
 	type ScopeString,
 } from "@autumn/shared";
+import { hashOAuthToken } from "@autumn/shared/utils/auth/oauthAccessTokens";
 import { verifyAccessToken } from "better-auth/oauth2";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 import {
@@ -14,7 +15,6 @@ import {
 	type ResourceAccessTokenRecord,
 	tokenRecordFromResourceToken,
 } from "@/internal/dev/cli/oauthApiKeyUtils.js";
-import { hashOAuthToken } from "@/utils/oauthUtils.js";
 import { oauthAccessTokenRepo, oauthConsentRepo } from "../repos/index.js";
 import { isAtmnOAuthClientId } from "./atmnOAuthClients.js";
 import { rotateOAuthConsentApiKey } from "./oauthConsentApiKey.js";

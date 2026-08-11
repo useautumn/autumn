@@ -1,6 +1,7 @@
 import { describe, expect, test } from "bun:test";
-import { DEFAULT_OAUTH_RESOURCE_SCOPES } from "@autumn/shared";
 import { getProtectedResourceMetadata } from "@autumn/auth/oauth";
+import { DEFAULT_OAUTH_RESOURCE_SCOPES } from "@autumn/shared";
+import type { OAuthAccessTokenDb } from "@autumn/shared/utils/auth/oauthAccessTokens";
 import type { OAuthHttpError } from "../../../src/mcp/auth/protectedResourceMetadata.js";
 import {
 	buildAuthForRequest,
@@ -16,6 +17,13 @@ const flags = {
 const logger = {
 	warning: () => {},
 } as never;
+
+const oauthTokenDb = (row: unknown) =>
+	({
+		query: { oauthAccessToken: { findFirst: async () => row } },
+	}) as unknown as OAuthAccessTokenDb;
+
+const unusedDb = oauthTokenDb(undefined);
 
 const resourceUrl = "http://localhost:2718/mcp";
 const internalResourceUrl = "http://localhost:2718/internal/mcp";
@@ -35,6 +43,7 @@ describe("MCP OAuth auth resolution", () => {
 		await expect(
 			buildAuthForRequest({
 				headers: new Headers(),
+				db: unusedDb,
 				flags: flags as MCPOAuthFlags,
 				logger,
 				resourceUrl,
@@ -51,6 +60,7 @@ describe("MCP OAuth auth resolution", () => {
 		await expect(
 			buildAuthForRequest({
 				headers: new Headers(),
+				db: unusedDb,
 				flags: flags as MCPOAuthFlags,
 				logger,
 				resourceUrl: internalResourceUrl,
@@ -63,38 +73,87 @@ describe("MCP OAuth auth resolution", () => {
 		} satisfies Partial<OAuthHttpError>);
 	});
 
-	test("passes OAuth bearer tokens through without local verification", async () => {
-		const originalFetch = globalThis.fetch;
-		let fetchCalled = false;
-		const mockFetch = (async () => {
-			fetchCalled = true;
-			return Response.json({});
-		}) as unknown as typeof fetch;
-		globalThis.fetch = mockFetch;
+	test("validates OAuth bearer tokens and uses the stored identity", async () => {
+		const auth = await buildAuthForRequest({
+			headers: new Headers({
+				authorization: "Bearer am_oauth_token",
+			}),
+			db: oauthTokenDb({ userId: "user_1", referenceId: "org_1" }),
+			flags: flags as MCPOAuthFlags,
+			logger,
+			resourceUrl,
+		});
 
-		try {
-			const auth = await buildAuthForRequest({
+		expect(auth).toMatchObject({
+			apiKey: "am_oauth_token",
+			authMethod: "oauth",
+			env: "sandbox",
+			orgId: "org_1",
+			resource: "http://localhost:2718/mcp",
+			scopes: [...DEFAULT_OAUTH_RESOURCE_SCOPES],
+			serverURL: "http://localhost:8080",
+		});
+		expect(auth.principalId).toStartWith("oauth:");
+	});
+
+	test("challenges expired or unknown OAuth bearer tokens at the MCP boundary", async () => {
+		await expect(
+			buildAuthForRequest({
 				headers: new Headers({
-					authorization: "Bearer am_oauth_token",
+					authorization: "Bearer am_oauth_expired",
 				}),
+				db: oauthTokenDb(undefined),
 				flags: flags as MCPOAuthFlags,
 				logger,
 				resourceUrl,
-			});
+			}),
+		).rejects.toMatchObject({
+			status: 401,
+			error: "invalid_token",
+			wwwAuthenticate:
+				'Bearer resource_metadata="http://localhost:2718/.well-known/oauth-protected-resource/mcp", error="invalid_token"',
+		} satisfies Partial<OAuthHttpError>);
+	});
 
-			expect(auth).toMatchObject({
-				apiKey: "am_oauth_token",
-				authMethod: "oauth",
-				env: "sandbox",
-				principalId: "oauth:unverified",
-				resource: "http://localhost:2718/mcp",
-				scopes: [...DEFAULT_OAUTH_RESOURCE_SCOPES],
-				serverURL: "http://localhost:8080",
-			});
-			expect(fetchCalled).toBe(false);
-		} finally {
-			globalThis.fetch = originalFetch;
-		}
+	test("challenges OAuth tokens missing a user or organization", async () => {
+		await expect(
+			buildAuthForRequest({
+				headers: new Headers({
+					authorization: "Bearer am_oauth_token",
+				}),
+				db: oauthTokenDb({ userId: null, referenceId: "org_1" }),
+				flags: flags as MCPOAuthFlags,
+				logger,
+				resourceUrl,
+			}),
+		).rejects.toMatchObject({
+			status: 401,
+			error: "invalid_token",
+		} satisfies Partial<OAuthHttpError>);
+	});
+
+	test("does not misreport token store failures as invalid tokens", async () => {
+		const db = {
+			query: {
+				oauthAccessToken: {
+					findFirst: async () => {
+						throw new Error("database unavailable");
+					},
+				},
+			},
+		} as unknown as OAuthAccessTokenDb;
+
+		await expect(
+			buildAuthForRequest({
+				headers: new Headers({
+					authorization: "Bearer am_oauth_token",
+				}),
+				db,
+				flags: flags as MCPOAuthFlags,
+				logger,
+				resourceUrl,
+			}),
+		).rejects.toThrow("database unavailable");
 	});
 
 	test("accepts a static secret-key when OAuth is enabled", async () => {
@@ -102,6 +161,7 @@ describe("MCP OAuth auth resolution", () => {
 			headers: new Headers({
 				"secret-key": "am_sk_test_chat",
 			}),
+			db: unusedDb,
 			flags: flags as MCPOAuthFlags,
 			logger,
 			resourceUrl,
@@ -118,6 +178,7 @@ describe("MCP OAuth auth resolution", () => {
 			headers: new Headers({
 				authorization: "Bearer am_sk_test_chat",
 			}),
+			db: unusedDb,
 			flags: flags as MCPOAuthFlags,
 			logger,
 			resourceUrl,
@@ -132,6 +193,7 @@ describe("MCP OAuth auth resolution", () => {
 			headers: new Headers({
 				authorization: "Bearer am_sk_test_chat",
 			}),
+			db: unusedDb,
 			flags: flags as MCPOAuthFlags,
 			logger,
 			resourceUrl: internalResourceUrl,
@@ -151,6 +213,7 @@ describe("MCP OAuth auth resolution", () => {
 		await expect(
 			buildAuthForRequest({
 				headers: new Headers(),
+				db: unusedDb,
 				flags: {
 					...flags,
 					"oauth-enabled": false,

@@ -1,5 +1,10 @@
 import { createHash } from "node:crypto";
-import { getBearerToken, isOAuthToken, isSecretKeyPrefix } from "@autumn/auth";
+import {
+	getBearerToken,
+	isOAuthToken,
+	isSecretKeyPrefix,
+	stripOAuthTokenPrefix,
+} from "@autumn/auth";
 import {
 	getProtectedResourceMetadataUrl,
 	getWwwAuthenticateHeader,
@@ -12,6 +17,10 @@ import {
 	type OAuthEnvironment,
 } from "@autumn/mcp";
 import { DEFAULT_OAUTH_RESOURCE_SCOPES } from "@autumn/shared";
+import {
+	findActiveOAuthAccessToken,
+	type OAuthAccessTokenDb,
+} from "@autumn/shared/utils/auth/oauthAccessTokens";
 import * as z from "zod/v4";
 import { OAuthHttpError } from "./protectedResourceMetadata.js";
 
@@ -100,13 +109,51 @@ const principalFromSecret = ({
 	return `${kind}:${digest}`;
 };
 
+const getInvalidTokenChallenge = (resourceUrl: string) =>
+	getWwwAuthenticateHeader({
+		resourceMetadataUrl: getProtectedResourceMetadataUrl({ resourceUrl }),
+		error: "invalid_token",
+	});
+
+/**
+ * Authenticates an OAuth bearer against the shared token store — the same
+ * expiry check the api server's OAuth middleware applies — so expired
+ * tokens get a transport-level 401 challenge instead of a tool error.
+ */
+const authenticateOAuthBearer = async ({
+	bearer,
+	db,
+	resourceUrl,
+}: {
+	bearer: string;
+	db: OAuthAccessTokenDb;
+	resourceUrl: string;
+}) => {
+	const accessToken = await findActiveOAuthAccessToken({
+		db,
+		rawAccessToken: stripOAuthTokenPrefix({ token: bearer }),
+	});
+
+	if (!accessToken?.userId || !accessToken.referenceId) {
+		throw new OAuthHttpError(
+			401,
+			"Invalid or expired OAuth access token",
+			"invalid_token",
+			getInvalidTokenChallenge(resourceUrl),
+		);
+	}
+	return { orgId: accessToken.referenceId, userId: accessToken.userId };
+};
+
 export const buildAuthForRequest = async ({
 	headers,
+	db,
 	flags,
 	logger,
 	resourceUrl,
 }: {
 	headers: Headers;
+	db: OAuthAccessTokenDb;
 	flags: MCPOAuthFlags;
 	logger: AuthLogger;
 	resourceUrl: string;
@@ -144,12 +191,21 @@ export const buildAuthForRequest = async ({
 
 	const bearer = getBearerToken({ headers });
 	if (bearer && isOAuthToken({ token: bearer })) {
+		const identity = await authenticateOAuthBearer({
+			bearer,
+			db,
+			resourceUrl,
+		});
 		return {
 			apiKey: bearer,
 			authMethod: "oauth",
 			env,
+			orgId: identity.orgId,
 			resource: resourceUrl,
-			principalId: "oauth:unverified",
+			principalId: principalFromSecret({
+				kind: "oauth",
+				value: `${identity.orgId}:${identity.userId}`,
+			}),
 			scopes: [...DEFAULT_OAUTH_RESOURCE_SCOPES],
 			serverURL: flags["server-url"],
 			xApiVersion,
@@ -162,6 +218,7 @@ export const buildAuthForRequest = async ({
 			401,
 			"Invalid OAuth token prefix",
 			"invalid_token",
+			getInvalidTokenChallenge(resourceUrl),
 		);
 	}
 
@@ -170,12 +227,7 @@ export const buildAuthForRequest = async ({
 			401,
 			"Missing Autumn API key bearer token",
 			"invalid_token",
-			getWwwAuthenticateHeader({
-				resourceMetadataUrl: getProtectedResourceMetadataUrl({
-					resourceUrl,
-				}),
-				error: "invalid_token",
-			}),
+			getInvalidTokenChallenge(resourceUrl),
 		);
 	}
 
