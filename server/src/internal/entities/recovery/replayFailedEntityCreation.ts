@@ -43,7 +43,12 @@ const findUnconfirmedEntities = async ({
 		const internalFeatureId = ctx.features.find(
 			(feature) => feature.id === inputEntity.feature_id,
 		)?.internal_id;
-		if (!internalFeatureId) continue;
+		// A feature removed or renamed since the capture cannot be looked up, which
+		// is a reason to doubt the entity landed, not to assume it did.
+		if (!internalFeatureId) {
+			unconfirmed.push(inputEntity);
+			continue;
+		}
 
 		// Read per entity rather than through the customer aggregate, which caps
 		// how many entities it returns and would report a committed one as missing.

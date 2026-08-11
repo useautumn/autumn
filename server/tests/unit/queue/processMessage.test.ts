@@ -1,4 +1,5 @@
 import { describe, expect, test } from "bun:test";
+import { ErrCode, RecaseError } from "@autumn/shared";
 import { shed503OnTransientError } from "@/db/shed503OnTransientError.js";
 import { RedisUnavailableError } from "@/external/redis/utils/errors.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
@@ -80,5 +81,18 @@ describe("shouldRetrySqsJobError", () => {
 				error: new Error("insufficient balance"),
 			}),
 		).toBe(false);
+	});
+	test("retries a recovery job that collided with a live entity create", () => {
+		// The capture is fine; something else just held the customer lock.
+		expect(
+			shouldRetrySqsJobError({
+				jobName: JobName.CustomerCreationRecovery,
+				error: new RecaseError({
+					message: "Entity creation already in progress for this customer",
+					code: ErrCode.LockAlreadyExists,
+					statusCode: 423,
+				}),
+			}),
+		).toBe(true);
 	});
 });

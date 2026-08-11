@@ -8,6 +8,7 @@ import type { DrizzleCli } from "@/db/initDrizzle.js";
 import { isShedError } from "@/db/shed503OnTransientError.js";
 import { logger } from "@/external/logtail/logtailUtils.js";
 import { isTransientRedisError } from "@/external/redis/utils/isTransientRedisError.js";
+import { isLockConflict } from "@/external/redis/utils/lockUtils/acquireLock.js";
 import {
 	runStripeWebhookReplay,
 	StripeWebhookReplayInFlightError,
@@ -76,11 +77,14 @@ export const shouldRetrySqsJobError = ({
 	switch (jobName) {
 		// A replay re-enters the same shedding wrapper the capture came from, so a
 		// drain started while the incident is still live must stay in SQS.
+		// A drain colliding with a live create holds nothing against the capture,
+		// so the lock conflict has to redeliver rather than ack it away.
 		case JobName.CustomerCreationRecovery:
 			return (
 				isTransientDbError({ error }) ||
 				isTransientRedisError({ error }) ||
-				isShedError({ error })
+				isShedError({ error }) ||
+				isLockConflict(error)
 			);
 		case JobName.SyncBalanceBatchV4:
 		case JobName.RefreshEntityAggregate:
