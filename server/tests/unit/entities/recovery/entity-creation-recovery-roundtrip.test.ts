@@ -135,6 +135,7 @@ const capture = async () => {
 		params,
 		source: "handleCreateEntityV2",
 		withAutumnId: true,
+		mayHaveWritten: false,
 	});
 
 	expect(queued).toBe(true);
@@ -214,6 +215,7 @@ describe("creation recovery round trip", () => {
 					apiVersion: ApiVersion.V2_1,
 					params: { customer_id: "customer_123" },
 					source: "handleGetOrCreateCustomerV2",
+					failureStage: "completed",
 					failedAt: 1_785_000_000_000,
 				},
 			},

@@ -12,9 +12,9 @@ const isAlreadyCreated = ({ error }: { error: unknown }) =>
 	error instanceof RecaseError &&
 	error.code === EntityErrorCode.EntityAlreadyExists;
 
-/** A conflict only proves one entity landed. Anything still missing is a batch
+/** A conflict only proves one entity landed. Anything left unconfirmed is a batch
  *  something else partly satisfied, which the replay cannot finish on its own. */
-const findMissingEntities = async ({
+const findUnconfirmedEntities = async ({
 	ctx,
 	payload,
 }: {
@@ -29,9 +29,14 @@ const findMissingEntities = async ({
 	});
 	if (!customer) return payload.params.create_entity_data;
 
-	const missing = [];
+	const unconfirmed = [];
 	for (const inputEntity of payload.params.create_entity_data) {
-		if (!inputEntity.id) continue;
+		// An id-less entity has nothing to match on, so it can never be confirmed
+		// created. Claiming the batch landed would silently drop it.
+		if (!inputEntity.id) {
+			unconfirmed.push(inputEntity);
+			continue;
+		}
 		const internalFeatureId = ctx.features.find(
 			(feature) => feature.id === inputEntity.feature_id,
 		)?.internal_id;
@@ -45,10 +50,10 @@ const findMissingEntities = async ({
 			internalCustomerId: customer.internal_id,
 			internalFeatureId,
 		});
-		if (!entity) missing.push(inputEntity);
+		if (!entity) unconfirmed.push(inputEntity);
 	}
 
-	return missing;
+	return unconfirmed;
 };
 
 export const replayFailedEntityCreation = async ({
@@ -70,6 +75,23 @@ export const replayFailedEntityCreation = async ({
 		})),
 	};
 
+	if (payload.mayHaveWritten) {
+		// The worker acks a non-transient throw, so this log is the only surviving
+		// record of what the shed request was part-way through creating.
+		ctx.extraLogs.entityCreationRecoveryReplay = {
+			outcome: "manual_review",
+			...replayLog,
+		};
+		ctx.logger.error(
+			"[entityCreationRecovery] Replay requires manual review, the request may already have written",
+			replayLog,
+		);
+
+		throw new Error(
+			`Entity creation recovery ${payload.requestId} requires manual review (the shed request may already have decremented a balance or committed an entity)`,
+		);
+	}
+
 	ctx.apiVersion = new ApiVersionClass(payload.apiVersion);
 	// Both create handlers read through to Postgres; a replay must do the same or
 	// it decides idempotency from a cache the shed request already invalidated.
@@ -88,8 +110,8 @@ export const replayFailedEntityCreation = async ({
 		});
 	} catch (error) {
 		if (isAlreadyCreated({ error })) {
-			const missing = await findMissingEntities({ ctx, payload });
-			if (missing.length === 0) {
+			const unconfirmed = await findUnconfirmedEntities({ ctx, payload });
+			if (unconfirmed.length === 0) {
 				ctx.extraLogs.entityCreationRecoveryReplay = {
 					outcome: "already_exists",
 					...replayLog,
@@ -106,13 +128,19 @@ export const replayFailedEntityCreation = async ({
 			ctx.extraLogs.entityCreationRecoveryReplay = {
 				outcome: "partially_created",
 				...replayLog,
-				missing: missing.map(({ id, feature_id }) => ({ id, feature_id })),
+				unconfirmed: unconfirmed.map(({ id, feature_id }) => ({
+					id,
+					feature_id,
+				})),
 			};
 			ctx.logger.error(
 				"[entityCreationRecovery] Replay conflicted, entities left uncreated",
 				{
 					...replayLog,
-					missing: missing.map(({ id, feature_id }) => ({ id, feature_id })),
+					unconfirmed: unconfirmed.map(({ id, feature_id }) => ({
+						id,
+						feature_id,
+					})),
 				},
 			);
 			return;

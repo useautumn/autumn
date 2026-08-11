@@ -126,6 +126,8 @@ describe("batchCreateEntities recovery capture", () => {
 				},
 				source: "handleCreateEntityV2",
 				withAutumnId: true,
+				// Validation threw, so nothing downstream of it ran.
+				mayHaveWritten: false,
 			}),
 		]);
 	});

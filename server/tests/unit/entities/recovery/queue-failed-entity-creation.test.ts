@@ -88,12 +88,14 @@ describe("queueFailedEntityCreation", () => {
 		const firstQueued = await queueFailedEntityCreation({
 			ctx: firstContext,
 			params,
+			mayHaveWritten: false,
 			source: "handleCreateEntityV2",
 			withAutumnId: true,
 		});
 		const secondQueued = await queueFailedEntityCreation({
 			ctx: secondContext,
 			params,
+			mayHaveWritten: false,
 			source: "handleCreateEntityV2",
 			withAutumnId: true,
 		});
@@ -134,6 +136,7 @@ describe("queueFailedEntityCreation", () => {
 		await queueFailedEntityCreation({
 			ctx: buildContext(),
 			params,
+			mayHaveWritten: false,
 		});
 
 		expect(mockState.queueCommands[0]?.MessageDeduplicationId).toMatch(
@@ -148,6 +151,7 @@ describe("queueFailedEntityCreation", () => {
 		const queued = await queueFailedEntityCreation({
 			ctx,
 			params,
+			mayHaveWritten: false,
 			source: "handleCreateEntityV2",
 		});
 
@@ -163,6 +167,7 @@ describe("queueFailedEntityCreation", () => {
 		const queued = await queueFailedEntityCreation({
 			ctx,
 			params,
+			mayHaveWritten: false,
 			source: "handleCreateEntityV2",
 		});
 

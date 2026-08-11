@@ -8,10 +8,12 @@ const getDeduplicationId = ({
 	ctx,
 	params,
 	withAutumnId,
+	mayHaveWritten,
 }: {
 	ctx: AutumnContext;
 	params: EntityCreationRecoveryParams;
 	withAutumnId?: boolean;
+	mayHaveWritten: boolean;
 }) =>
 	`entity-creation-${Bun.hash(
 		JSON.stringify({
@@ -20,6 +22,7 @@ const getDeduplicationId = ({
 			apiVersion: ctx.apiVersion.value,
 			params,
 			withAutumnId,
+			mayHaveWritten,
 		}),
 	).toString(16)}`;
 
@@ -28,11 +31,13 @@ export const queueFailedEntityCreation = async ({
 	params,
 	source,
 	withAutumnId,
+	mayHaveWritten,
 }: {
 	ctx: AutumnContext;
 	params: EntityCreationRecoveryParams;
 	source?: string;
 	withAutumnId?: boolean;
+	mayHaveWritten: boolean;
 }): Promise<boolean> => {
 	// Shares the customer creation recovery queue: an entity can only be created
 	// once its customer exists, so both replay under one FIFO group at a
@@ -54,6 +59,7 @@ export const queueFailedEntityCreation = async ({
 				ctx,
 				params,
 				withAutumnId,
+				mayHaveWritten,
 			}),
 			generateDeduplicationId: false,
 			payload: {
@@ -66,10 +72,11 @@ export const queueFailedEntityCreation = async ({
 				params,
 				source,
 				withAutumnId,
+				mayHaveWritten,
 				failedAt: Date.now(),
 			},
 		});
-		ctx.extraLogs.entityCreationRecoveryQueued = { queueUrl };
+		ctx.extraLogs.entityCreationRecoveryQueued = { queueUrl, mayHaveWritten };
 		return true;
 	} catch (error) {
 		ctx.logger.error(

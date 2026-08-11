@@ -91,8 +91,10 @@ const buildPayload = ({
 	createEntityData = [
 		{ id: "entity_123", name: "Entity", feature_id: "seats" },
 	],
+	mayHaveWritten = false,
 }: {
 	createEntityData?: EntityCreationRecoveryPayload["params"]["create_entity_data"];
+	mayHaveWritten?: boolean;
 } = {}): EntityCreationRecoveryPayload => ({
 	kind: "entity",
 	orgId: "org_123",
@@ -107,6 +109,7 @@ const buildPayload = ({
 	},
 	source: "handleCreateEntityV2",
 	withAutumnId: true,
+	mayHaveWritten,
 	failedAt: 1_785_000_000_000,
 });
 
@@ -187,7 +190,7 @@ describe("replayFailedEntityCreation", () => {
 
 		expect(ctx.extraLogs.entityCreationRecoveryReplay).toMatchObject({
 			outcome: "partially_created",
-			missing: [{ id: "entity_456", feature_id: "seats" }],
+			unconfirmed: [{ id: "entity_456", feature_id: "seats" }],
 		});
 		expect(ctx.logger.error).toHaveBeenCalled();
 	});
@@ -225,5 +228,49 @@ describe("replayFailedEntityCreation", () => {
 		).rejects.toMatchObject({ statusCode: 503 });
 
 		expect(ctx.extraLogs.entityCreationRecoveryReplay).toBeUndefined();
+	});
+	test("refuses to replay a capture that may already have written", async () => {
+		const ctx = buildContext();
+
+		await expect(
+			replayFailedEntityCreation({
+				ctx,
+				payload: buildPayload({ mayHaveWritten: true }),
+			}),
+		).rejects.toThrow("requires manual review");
+
+		// A decremented balance and an entity whose defaults never attached are both
+		// invisible to a later read, so replaying would double-apply them.
+		expect(mockState.batchCreateCalls).toHaveLength(0);
+		expect(ctx.extraLogs.entityCreationRecoveryReplay).toMatchObject({
+			outcome: "manual_review",
+			sourceRequestId: "req_entity_123",
+		});
+	});
+
+	test("never reports an id-less entity as confirmed created", async () => {
+		mockState.existingEntities = [{ id: "entity_123" }];
+		mockState.createFailsWith = new RecaseError({
+			message: "Entity entity_123 already exists",
+			code: EntityErrorCode.EntityAlreadyExists,
+			statusCode: 409,
+		});
+		const ctx = buildContext();
+
+		await replayFailedEntityCreation({
+			ctx,
+			payload: buildPayload({
+				createEntityData: [
+					{ id: "entity_123", name: "Entity", feature_id: "seats" },
+					{ id: null, name: "Placeholder", feature_id: "seats" },
+				],
+			}),
+		});
+
+		// It has no id to match on, so acking the batch would silently drop it.
+		expect(ctx.extraLogs.entityCreationRecoveryReplay).toMatchObject({
+			outcome: "partially_created",
+			unconfirmed: [{ id: null, feature_id: "seats" }],
+		});
 	});
 });

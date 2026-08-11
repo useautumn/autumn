@@ -15,6 +15,8 @@ import { createEntityForCusProduct } from "../handlers/handleCreateEntity/create
 import { validateAndGetInputEntities } from "../handlers/handleCreateEntity/getInputEntities";
 import { attachDefaultProductsToEntities } from "./batchCreateEntities/attachDefaultProductsToEntities";
 
+const ENTITY_CREATION_WROTE_KEY = "entityCreationWrote";
+
 type BatchCreateEntitiesParams = {
 	ctx: AutumnContext;
 	customerData?: CustomerData;
@@ -48,6 +50,10 @@ const createEntities = async ({
 		customerData,
 		createEntityData,
 	});
+
+	// Past here a failure can leave state no later read can find: a decremented
+	// balance with no row, or a committed row whose defaults never attached.
+	ctx.extraLogs[ENTITY_CREATION_WROTE_KEY] = true;
 
 	for (const cusProduct of cusProducts) {
 		await createEntityForCusProduct({
@@ -168,6 +174,7 @@ export const batchCreateEntities = async (
 						},
 						source,
 						withAutumnId,
+						mayHaveWritten: ctx.extraLogs[ENTITY_CREATION_WROTE_KEY] === true,
 					});
 				}
 			: undefined,
