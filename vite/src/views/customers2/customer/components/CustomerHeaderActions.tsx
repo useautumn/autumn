@@ -1,7 +1,11 @@
 import type { FullCustomer } from "@autumn/shared";
 import { ProcessorType } from "@autumn/shared";
 import { IconTooltipButton } from "@autumn/ui";
-import { BracketsSquareIcon, UserCircleGearIcon } from "@phosphor-icons/react";
+import {
+	BracketsSquareIcon,
+	UserCircleGearIcon,
+	WarningCircleIcon,
+} from "@phosphor-icons/react";
 import { useMutation } from "@tanstack/react-query";
 import { useState } from "react";
 import { useParams } from "react-router";
@@ -9,6 +13,7 @@ import { toast } from "sonner";
 import { StripeIcon } from "@/components/v2/icons/AutumnIcons";
 import { useOrg } from "@/hooks/common/useOrg";
 import { useOrgStripeQuery } from "@/hooks/queries/useOrgStripeQuery";
+import { useSheetStore } from "@/hooks/stores/useSheetStore";
 import { getInitialScopeEntityId } from "@/hooks/useSheetScopeEntityId";
 import { CusService } from "@/services/customers/CusService";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
@@ -21,6 +26,7 @@ import {
 import { useAdmin } from "@/views/admin/hooks/useAdmin";
 import { useMasterStripeAccount } from "@/views/admin/hooks/useMasterStripeAccount";
 import { useCusQuery } from "@/views/customers/customer/hooks/useCusQuery";
+import { useVerifyStripeQuery } from "../../components/verify-stripe/hooks/useVerifyStripeQuery";
 import { useCustomerObjectQuery } from "../hooks/useCustomerObjectQuery";
 import { CustomButtons } from "./CustomButtons";
 import { ShowCustomerObjectSheet } from "./ShowCustomerObjectSheet";
@@ -44,6 +50,8 @@ export function CustomerHeaderActions() {
 	});
 
 	const [showObjectOpen, setShowObjectOpen] = useState(false);
+	const setSheet = useSheetStore((s) => s.setSheet);
+	const { mismatchCount, hasErrorMismatch } = useVerifyStripeQuery();
 
 	const stripeCustomerId = customer?.processor?.id;
 	const showStripe =
@@ -94,6 +102,19 @@ export function CustomerHeaderActions() {
 				open={showObjectOpen}
 				setOpen={setShowObjectOpen}
 			/>
+			{mismatchCount > 0 && (
+				<IconTooltipButton
+					tooltip="State mismatch detected"
+					icon={
+						<WarningCircleIcon
+							size={14}
+							weight="fill"
+							className={hasErrorMismatch ? "text-red-500" : "text-amber-500"}
+						/>
+					}
+					onClick={() => setSheet({ type: "verify-stripe" })}
+				/>
+			)}
 			<IconTooltipButton
 				tooltip="Show customer object"
 				icon={<BracketsSquareIcon size={14} />}
