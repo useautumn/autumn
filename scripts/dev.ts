@@ -31,9 +31,11 @@ const LOCAL_EVE_URL = `http://localhost:${EVE_PORT}`;
 const EVE_SERVER_URL = process.env.EVE_SERVER_URL ?? LOCAL_EVE_URL;
 const EVE_INTERNAL_AUTH_TOKEN =
 	process.env.EVE_INTERNAL_AUTH_TOKEN ?? "local-eve-internal-token";
-const publicTunnelUrl = process.env.NGROK_URL?.replace(/\/$/, "");
-const CHAT_URL = process.env.CHAT_URL ?? publicTunnelUrl ?? LOCAL_CHAT_URL;
-const SLACK_BOT_URL = process.env.SLACK_BOT_URL ?? publicTunnelUrl ?? CHAT_URL;
+const AUTUMN_PUBLIC_API_URL =
+	process.env.AUTUMN_PUBLIC_API_URL ?? LOCAL_SERVER_URL;
+const publicApiUrl = AUTUMN_PUBLIC_API_URL.replace(/\/$/, "");
+const CHAT_URL = process.env.CHAT_URL ?? publicApiUrl;
+const SLACK_BOT_URL = process.env.SLACK_BOT_URL ?? publicApiUrl;
 const skipWorkers = false;
 const isProductionMode = process.argv.includes("--production");
 
@@ -51,11 +53,14 @@ const useLocalMiscCache =
 	viteAppEnv === "dev" && !isProductionMode && worktreeNum === 1;
 const localUrl = (value: string | undefined, fallback: string) =>
 	value && !value.includes(".useautumn.com") ? value : fallback;
-const slackRedirectFromPublicTunnel = publicTunnelUrl
-	? `${publicTunnelUrl}/slack/oauth/callback`
+const AUTUMN_API_URL = useLocalAuthUrls
+	? localUrl(process.env.AUTUMN_API_URL, LOCAL_SERVER_URL)
+	: (process.env.AUTUMN_API_URL ?? LOCAL_SERVER_URL);
+const slackRedirectFromPublicApi = publicApiUrl
+	? `${publicApiUrl}/slack/oauth/callback`
 	: undefined;
 const SLACK_REDIRECT_URI = useLocalAuthUrls
-	? (slackRedirectFromPublicTunnel ??
+	? (slackRedirectFromPublicApi ??
 		localUrl(
 			process.env.SLACK_REDIRECT_URI,
 			`${SLACK_BOT_URL}/slack/oauth/callback`,
@@ -306,16 +311,14 @@ async function startDev() {
 				EVE_INTERNAL_AUTH_TOKEN,
 				MCP_DEBUG_PENDING_ACTIONS: process.env.MCP_DEBUG_PENDING_ACTIONS ?? "1",
 				// CMA runs in Anthropic's cloud and can't reach localhost — prefer the
-				// public NGROK_URL (proxied to leaf's /mcp) so Slack → CMA works locally.
-				MCP_SERVER_URL:
-					process.env.MCP_SERVER_URL ??
-					process.env.NGROK_URL ??
-					`http://localhost:${CHAT_PORT}`,
+				// public API origin (proxied to leaf's /mcp) so Slack → CMA works locally.
+				MCP_SERVER_URL: process.env.MCP_SERVER_URL ?? AUTUMN_PUBLIC_API_URL,
 				CHAT_SERVER_URL:
 					process.env.CHAT_SERVER_URL ?? `http://localhost:${CHAT_PORT}`,
 				MCP_RESOURCE_URLS:
 					process.env.MCP_RESOURCE_URLS ?? `http://localhost:${CHAT_PORT}/mcp`,
-				AUTUMN_API_URL: process.env.AUTUMN_API_URL ?? LOCAL_SERVER_URL,
+				AUTUMN_API_URL,
+				AUTUMN_PUBLIC_API_URL,
 				CHAT_URL,
 				SLACK_BOT_URL,
 				SLACK_REDIRECT_URI,
@@ -323,10 +326,6 @@ async function startDev() {
 				VITE_APP_ENV: viteAppEnv,
 				...(useLocalAuthUrls && {
 					CLIENT_URL: localUrl(process.env.CLIENT_URL, LOCAL_CLIENT_URL),
-					BETTER_AUTH_URL: localUrl(
-						process.env.BETTER_AUTH_URL,
-						LOCAL_SERVER_URL,
-					),
 					VITE_BACKEND_URL: localUrl(
 						process.env.VITE_BACKEND_URL,
 						LOCAL_SERVER_URL,
@@ -342,10 +341,6 @@ async function startDev() {
 				...(process.env.DB_SCHEMA && { DB_SCHEMA: process.env.DB_SCHEMA }),
 				...(worktreeNum > 1 && {
 					CLIENT_URL: localUrl(process.env.CLIENT_URL, LOCAL_CLIENT_URL),
-					BETTER_AUTH_URL: localUrl(
-						process.env.BETTER_AUTH_URL,
-						LOCAL_SERVER_URL,
-					),
 					VITE_BACKEND_URL: localUrl(
 						process.env.VITE_BACKEND_URL,
 						LOCAL_SERVER_URL,

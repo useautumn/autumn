@@ -60,9 +60,9 @@ export function cmdIdentify(): void {
 	console.log(`  Vite port:     ${vitePort}`);
 	console.log();
 	console.log(`DW_WORKTREE_NUM=${worktreeNum}`);
-	console.log(`DW_SERVER_URL=${serverUrl}`);
+	console.log(`DW_API_URL=${serverUrl}`);
 	console.log(`DW_VITE_URL=${viteUrl}`);
-	console.log(`DW_NGROK_URL=${ngrokUrl}`);
+	console.log(`DW_PUBLIC_API_URL=${ngrokUrl}`);
 	console.log(`DW_NGROK_VITE_URL=${entry.ngrokViteUrl ?? ""}`);
 	console.log(`DW_TMUX_SESSION=${tmux}`);
 	console.log(`DW_SERVER_PORT=${serverPort}`);

@@ -109,34 +109,27 @@ jobs:
             "$DEPLOY_URL/api/shipped/merge"
 
       - name: Maybe celebrate with Honest Burgers
+        if: ${{ !cancelled() }}
         env:
           PR_NUMBER: ${{ github.event.pull_request.number }}
           PR_URL: ${{ github.event.pull_request.html_url }}
           SLACK_SHIPPED_WEBHOOK_URL: ${{ secrets.SLACK_SHIPPED_WEBHOOK_URL }}
         run: |
-          # 1% chance per merge to main
-          roll=$((RANDOM % 100))
-          if [ "$roll" -ne 0 ]; then
-            echo "No Honest Burgers this time (roll=$roll)"
+          if [ "$(node -e 'process.stdout.write(String(require("node:crypto").randomInt(100)))')" -ne 0 ]; then
+            echo "No Honest Burgers trip for this merge"
             exit 0
           fi
 
           if [ -z "$SLACK_SHIPPED_WEBHOOK_URL" ]; then
-            echo "::warning::SLACK_SHIPPED_WEBHOOK_URL is not configured; skipping burgers celebration"
-            exit 0
+            echo "::error::SLACK_SHIPPED_WEBHOOK_URL is not configured"
+            exit 1
           fi
 
-          printf -v SLACK_MESSAGE \
-            '<@U0BNDL9VC92> this merge hit the 1%% jackpot — time to initiate an Honest Burgers trip to celebrate the release :hamburger:\n<%s|PR #%s>' \
-            "$PR_URL" "$PR_NUMBER"
-          export SLACK_MESSAGE
-
-          node -e 'process.stdout.write(JSON.stringify({ text: process.env.SLACK_MESSAGE }))' \
-            > "$RUNNER_TEMP/burgers-payload.json"
+          export PR_NUMBER PR_URL
+          node -e 'process.stdout.write(JSON.stringify({ text: "<@U0BNDL9VC92> 🍔🎉 this merge hit the 1% jackpot — time to initiate an Honest Burgers trip to celebrate the release! 🎊🚀\n<" + process.env.PR_URL + "|PR #" + process.env.PR_NUMBER + ">" }))' \
+            > "$RUNNER_TEMP/honest-burgers-payload.json"
 
           curl --silent --show-error --fail-with-body --retry 3 --retry-all-errors \
             --header "Content-Type: application/json" \
-            --data-binary @"$RUNNER_TEMP/burgers-payload.json" \
+            --data-binary @"$RUNNER_TEMP/honest-burgers-payload.json" \
             "$SLACK_SHIPPED_WEBHOOK_URL"
-
-          echo "Honest Burgers celebration posted (roll=$roll)"
