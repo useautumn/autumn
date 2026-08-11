@@ -3,7 +3,6 @@ import { getInvoiceSubscriptionId } from "@/external/vercel/misc/vercelInvoiceUt
 import { ensureVercelInvoiceModeSubscription } from "@/external/vercel/misc/vercelStripeInvoiceMode.js";
 import { VercelResourceService } from "@/external/vercel/services/VercelResourceService.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
-import { createBillingChangeCollector } from "@/internal/billing/v2/workflows/sendBillingUpdatedWebhook/billingChangeCollector";
 import { CusService } from "@/internal/customers/CusService.js";
 import { customerProductActions } from "@/internal/customers/cusProducts/actions";
 import { customerProductRepo } from "@/internal/customers/cusProducts/repos";
@@ -147,8 +146,6 @@ export const handleMarketplaceInvoiceNotPaid = async ({
 						ctx,
 						customerProduct: existingCusProducts[0],
 						fullCustomer,
-						// TODO(next commit): drop to start emitting billing.updated
-						collector: createBillingChangeCollector({ fullCustomer }),
 					});
 				} else {
 					logger.info(
