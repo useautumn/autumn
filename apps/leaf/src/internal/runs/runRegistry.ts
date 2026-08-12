@@ -77,19 +77,27 @@ export const registerRun = ({
 		text: string;
 	}) => Promise<void>;
 }): ActiveRun => {
-	let resolveSessionId!: (sessionId: string) => void;
+	let resolveFirstSessionId!: (sessionId: string) => void;
 	const sessionId = new Promise<string>((resolve) => {
-		resolveSessionId = resolve;
+		resolveFirstSessionId = resolve;
 	});
 	let interruptSent = false;
+	// A harness can re-home a run onto a new session mid-flight, and the promise
+	// only ever resolves once — so interrupts read the latest id, not the first.
+	let latestSessionId: string | undefined;
+	const resolveSessionId = (id: string) => {
+		latestSessionId = id;
+		resolveFirstSessionId(id);
+	};
 
-	const resolveSessionIdOrNull = () =>
-		Promise.race([
+	const resolveSessionIdOrNull = async () =>
+		latestSessionId ??
+		(await Promise.race([
 			sessionId,
 			new Promise<null>((resolve) =>
 				setTimeout(() => resolve(null), SESSION_RESOLVE_TIMEOUT_MS),
 			),
-		]);
+		]));
 
 	const run: ActiveRun = {
 		key,

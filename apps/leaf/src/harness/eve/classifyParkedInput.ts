@@ -21,7 +21,7 @@ export type ParkedEveInput =
 	| { kind: "question"; question: PendingQuestion }
 	| { kind: "waiting"; text: string };
 
-const WAITING_FALLBACK_TEXT = "Eve is waiting for input.";
+export const WAITING_FALLBACK_TEXT = "Eve is waiting for input.";
 
 /**
  * What a resumed turn is parked on, ignoring the request just answered. A park
@@ -40,6 +40,8 @@ export const classifyParkedEveInput = ({
 	);
 	if (pending.length === 0) return undefined;
 
+	// Eve's built-in `ask_question` also carries a populated `action.toolName`
+	// (its own), so exclude it — only a real approval-gated tool call is a write.
 	const gated = pending.find(
 		(request) =>
 			request.requestId &&

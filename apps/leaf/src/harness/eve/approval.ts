@@ -219,7 +219,9 @@ const collectText = async ({
 				break;
 			}
 			if (parkedInput) {
-				text = parkedInput.text;
+				// Only when the turn said nothing — the model's own reply beats a
+				// generic "waiting for input" line.
+				if (!(text || pendingText)) text = parkedInput.text;
 				session.state.status = "waiting";
 				break;
 			}

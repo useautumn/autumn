@@ -13,11 +13,5 @@ describe("eveTurnProducedOutput", () => {
 		expect(
 			eveTurnProducedOutput({ catalogDecision: { id: "pro" }, text: "" }),
 		).toBe(true);
-		expect(eveTurnProducedOutput({ question: { prompt: "Which?" } })).toBe(
-			true,
-		);
-		expect(eveTurnProducedOutput({ suspension: { toolName: "attach" } })).toBe(
-			true,
-		);
 	});
 });

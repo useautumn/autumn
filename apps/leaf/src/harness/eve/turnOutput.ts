@@ -5,12 +5,8 @@
  */
 export const eveTurnProducedOutput = ({
 	catalogDecision,
-	question,
-	suspension,
 	text,
 }: {
 	catalogDecision?: unknown;
-	question?: unknown;
-	suspension?: unknown;
 	text?: string;
-}) => Boolean(text?.trim() || catalogDecision || question || suspension);
+}) => Boolean(text?.trim() || catalogDecision);

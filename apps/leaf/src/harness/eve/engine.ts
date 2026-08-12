@@ -1,9 +1,6 @@
 import type { ChatApproval } from "@autumn/shared";
 import type { AgentEngine } from "../../agent/runMessage/types.js";
-import {
-	isSilentTool,
-	normalizeToolName,
-} from "../../agent/tools/toolPolicy.js";
+import { isSilentTool } from "../../agent/tools/toolPolicy.js";
 import { chatApprovalRepo } from "../../internal/approvals/repos/chatApprovalRepo.js";
 import { executeAutumnMcpTool } from "../../internal/autumnMcp/client.js";
 import { autumnOrgContextService } from "../../internal/autumnMcp/orgContextService.js";
@@ -14,10 +11,15 @@ import { buildHarnessMessageText } from "../common/messageText.js";
 import { buildThreadKey } from "../common/threadKey.js";
 import { adoptPostedEveSession } from "./adoptPostedSession.js";
 import { denyOptionFromApproval, drainParkedEveTurn } from "./approval.js";
+import { canRetryOnFreshEveSession } from "./canRetryOnFreshEveSession.js";
 import {
 	catalogPlanNeedingDecision,
 	enrichCatalogPreview,
 } from "./catalogDecision.js";
+import {
+	classifyParkedEveInput,
+	WAITING_FALLBACK_TEXT,
+} from "./classifyParkedInput.js";
 import {
 	type EveMessageContent,
 	EveStreamDisconnectedError,
@@ -45,10 +47,11 @@ import type {
 	EveSessionState,
 } from "./types.js";
 
-/** ~10s of reconnects: eve resumes turns asynchronously, so the first stream
- * after a post can legitimately close empty a few times. */
+/** Together ~10s of reconnects: eve resumes turns asynchronously, so the first
+ * stream after a post can legitimately close empty a few times. */
 const MAX_IDLE_RETRIES = 20;
 const STREAM_RETRY_DELAY_MS = 500;
+
 const MAX_STREAM_DISCONNECT_RETRIES = 5;
 
 const initialState = (continuationToken: string): EveSessionState => ({
@@ -274,6 +277,9 @@ export const eveEngine: AgentEngine = {
 							signal: abortController.signal,
 						})) {
 							sawEvent = true;
+							// Recorded here rather than after the stream closes — a stream
+							// that yields events and then drops must not look silent.
+							sawAnyEvent = true;
 							session.state.streamIndex += 1;
 							session.state.lastEventAt = Date.now();
 							if (run?.stop) {
@@ -375,32 +381,25 @@ export const eveEngine: AgentEngine = {
 							} else if (event.type === "input.requested" && turnStarted) {
 								const requests = (event.data?.requests ??
 									[]) as EveInputRequest[];
-								// Eve's built-in `ask_question` also carries a populated
-								// `action.toolName` (its own), so exclude it — only a real
-								// approval-gated tool call should render as an approval card.
-								const approval = requests.find(
-									(request) =>
-										request.requestId &&
-										request.action?.toolName &&
-										normalizeToolName(request.action.toolName) !==
-											"ask_question",
-								);
-								if (approval?.requestId && approval.action?.toolName) {
+								const parked = classifyParkedEveInput({ requests });
+								if (parked?.kind === "gated") {
 									await updateState({
 										orgId: org.id,
 										session,
 										state: { status: "waiting" },
 									});
-									const options = approvalOptionIds(approval);
+									const options = approvalOptionIds({
+										options: parked.chained.options,
+									});
 									return {
 										env,
 										runId: session.sessionId,
 										text: finalText,
 										suspension: {
-											toolCallId: approval.requestId,
-											toolName: approval.action.toolName,
+											toolCallId: parked.chained.requestId,
+											toolName: parked.chained.toolName,
 											toolArgs: {
-												...(approval.action.input ?? {}),
+												...(parked.chained.input ?? {}),
 												_eveApproveOptionId: options.approve,
 												_eveDenyOptionId: options.deny,
 											},
@@ -409,29 +408,20 @@ export const eveEngine: AgentEngine = {
 									};
 								}
 								finalText =
-									textForInputRequests(requests) || "Eve is waiting for input.";
+									textForInputRequests(requests) || WAITING_FALLBACK_TEXT;
 								await updateState({
 									orgId: org.id,
 									session,
 									state: { status: "waiting" },
 								});
-								// Surface the first optioned question structurally so rich surfaces
+								// An optioned question also rides structurally so rich surfaces
 								// can render answer buttons; `text` keeps the flat fallback.
-								const optioned = requests.find(
-									(request) => (request.options?.length ?? 0) > 0,
-								);
 								return {
 									env,
 									runId: session.sessionId,
 									text: finalText,
 									question:
-										optioned?.prompt && optioned.options && optioned.requestId
-											? {
-													options: optioned.options,
-													prompt: optioned.prompt,
-													requestId: optioned.requestId,
-												}
-											: undefined,
+										parked?.kind === "question" ? parked.question : undefined,
 								};
 							} else if (
 								turnStarted &&
@@ -538,7 +528,6 @@ export const eveEngine: AgentEngine = {
 							"Eve stopped responding mid-turn — please send your message again.",
 						);
 					}
-					if (sawEvent) sawAnyEvent = true;
 					if (endedWithoutOutput) break;
 					idleRetries = sawEvent ? 0 : idleRetries + 1;
 					// Nothing at all came back: the cursor may have drifted past
@@ -568,33 +557,29 @@ export const eveEngine: AgentEngine = {
 			}
 
 			if (pendingText) finalText = pendingText;
-			await updateState({
-				orgId: org.id,
-				session,
-				state: { status: "waiting" },
-			});
 			if (eveTurnProducedOutput({ text: finalText })) {
+				await updateState({
+					orgId: org.id,
+					session,
+					state: { status: "waiting" },
+				});
 				return { env, runId: session.sessionId, text: finalText };
 			}
-			// A session created in this run can't be stale, so a second fresh one
-			// would go the same way.
-			if (restartedOnFreshSession || session.newSession) {
-				return {
-					env,
-					runId: session.sessionId,
-					sessionDead: restartedOnFreshSession,
-					text: finalText,
-				};
-			}
 
-			// Either the run is gone (eve answers every post with a 200 even when
-			// it silently re-homed) or it is awake but stuck behind an unanswered
-			// request. Neither can be talked out of; only a new session can.
-			restartedOnFreshSession = true;
-			logger.warn("Eve session produced no reply; starting a fresh one", {
-				event: "leaf.eve_session_restarted",
+			// This session can no longer answer — either it is gone (eve answers
+			// every post with a 200 even when it silently re-homed) or it is awake
+			// but stuck behind a request nobody can answer. Drop it either way, so
+			// the thread's next message opens a clean run instead of wedging here.
+			const retryOnFreshSession = canRetryOnFreshEveSession({
+				alreadyRetried: restartedOnFreshSession,
+				sessionIsNew: session.newSession,
+				streamedAnyEvent: sawAnyEvent,
+			});
+			logger.warn("Eve session produced no reply", {
+				event: "leaf.eve_session_no_reply",
 				data: {
 					reason: sawAnyEvent ? "no_output" : "no_events",
+					retrying: retryOnFreshSession,
 					session_id: session.sessionId,
 				},
 			});
@@ -604,7 +589,21 @@ export const eveEngine: AgentEngine = {
 				orgId: org.id,
 				threadKey: session.threadKey,
 			});
+			// A turn that streamed events already did whatever it did; replaying the
+			// message on a fresh session would re-run those side effects, so ask the
+			// user to resend instead of deciding that for them.
+			if (!retryOnFreshSession) {
+				return {
+					env,
+					runId: session.sessionId,
+					sessionDead: true,
+					text: finalText,
+				};
+			}
+
+			restartedOnFreshSession = true;
 			session = undefined;
+			await onAction?.("Loading context");
 			orgContext = await autumnOrgContextService.load({ env, logger, token });
 			message = composeEveMessage({ isNewSession: true });
 		}
