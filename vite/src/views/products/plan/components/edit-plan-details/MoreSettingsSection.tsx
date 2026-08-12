@@ -18,7 +18,7 @@ import { useParams } from "react-router";
 import { hasBillingControls } from "@/components/billing-controls/BillingControlsDisplay";
 import { ConfigRow } from "@/components/forms/shared/ConfigRow";
 import { useProduct } from "@/components/v2/inline-custom-plan-editor/PlanEditorContext";
-import { useProductsQuery } from "@/hooks/queries/useProductsQuery";
+import { useVariantLinkVisibility } from "../../hooks/useVariantLinkVisibility";
 import { MetadataEditor } from "./MetadataEditor";
 import { PlanBillingControlsSection } from "./PlanBillingControlsSection";
 
@@ -28,25 +28,30 @@ export const MoreSettingsSection = () => {
 	const { product, setProduct } = useProduct();
 	const { customer_id } = useParams();
 	const isCustomPlan = notNullish(customer_id);
-	const { products } = useProductsQuery();
+	const { hasVariants, basePlanId, basePlan, basePlanOptions } =
+		useVariantLinkVisibility(product);
 
 	const hasGroup = notNullish(product.group);
-	const currentListProduct = products.find((p) => p.id === product.id);
+	// An explicit null on the working copy means "detach", so it must not fall
+	// back to the persisted link; only an absent base_id defers to it.
 	const selectedBasePlanId =
-		product.base_id ?? currentListProduct?.base_id ?? null;
-	const basePlanOptions = products.filter(
-		(p) => p.id !== product.id && !p.base_id,
-	);
-	const selectedBasePlan = products.find((p) => p.id === selectedBasePlanId);
-	const hasSelectedBaseOption = basePlanOptions.some(
-		(p) => p.id === selectedBasePlanId,
-	);
+		product.base_id === undefined ? basePlanId : product.base_id;
+	// The linked base can be archived or a variant itself, so it is kept
+	// selectable even though it is not offered as a new target.
 	const visibleBasePlanOptions =
-		selectedBasePlan && !hasSelectedBaseOption
-			? [selectedBasePlan, ...basePlanOptions]
+		basePlan && !basePlanOptions.some((p) => p.id === basePlan.id)
+			? [basePlan, ...basePlanOptions]
 			: basePlanOptions;
 	const hasVariantBase = selectedBasePlanId !== null;
 	const canSelectBasePlan = visibleBasePlanOptions.length > 0;
+
+	// Writing back the persisted link clears the pending change instead of
+	// queueing a no-op save.
+	const setBasePlan = (nextBasePlanId: string | null) =>
+		setProduct({
+			...product,
+			base_id: nextBasePlanId === basePlanId ? undefined : nextBasePlanId,
+		});
 
 	const hasMetadata = Object.keys(product.metadata ?? {}).length > 0;
 	const [metadataOpened, setMetadataOpened] = useState(false);
@@ -110,33 +115,35 @@ export const MoreSettingsSection = () => {
 					{!isCustomPlan && (
 						<ConfigRow
 							title="Base plan"
-							description="Link this plan as a variant of another plan."
+							description={
+								hasVariants
+									? "Plans that already have variants can't become variants themselves."
+									: "Link this plan as a variant of another plan."
+							}
 							expanded={hasVariantBase}
 							action={
 								<Switch
 									checked={hasVariantBase}
-									disabled={!hasVariantBase && !canSelectBasePlan}
-									onCheckedChange={(checked) => {
-										setProduct({
-											...product,
-											base_id: checked
+									disabled={
+										hasVariants || (!hasVariantBase && !canSelectBasePlan)
+									}
+									onCheckedChange={(checked) =>
+										setBasePlan(
+											checked
 												? (selectedBasePlanId ??
-													visibleBasePlanOptions[0]?.id ??
-													null)
+														visibleBasePlanOptions[0]?.id ??
+														null)
 												: null,
-										});
-									}}
+										)
+									}
 								/>
 							}
 						>
 							<Select
 								value={selectedBasePlanId ?? NO_BASE_PLAN}
-								onValueChange={(value) => {
-									setProduct({
-										...product,
-										base_id: value === NO_BASE_PLAN ? null : value,
-									});
-								}}
+								onValueChange={(value) =>
+									setBasePlan(value === NO_BASE_PLAN ? null : value)
+								}
 							>
 								<SelectTrigger className="w-full">
 									<SelectValue placeholder="Select base plan" />

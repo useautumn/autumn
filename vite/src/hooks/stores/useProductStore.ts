@@ -92,6 +92,34 @@ export const useHasChanges = () => {
 	}, [product, baseProduct, features]);
 };
 
+// True when the base-plan link is the only pending change. It rides its own
+// metadata-only request, so such saves skip the versioning flow entirely.
+export const useIsBasePlanOnlyChange = () => {
+	const product = useProductStore((s) => s.product);
+	const baseProduct = useProductStore((s) => s.baseProduct);
+	const { features = [] } = useFeaturesQuery();
+
+	return useMemo(() => {
+		if (!baseProduct) return false;
+		if (product.base_id === baseProduct.base_id) return false;
+
+		const comparison = productsAreSame({
+			newProductV2: product as unknown as FrontendProduct,
+			curProductV2: baseProduct as unknown as FrontendProduct,
+			features,
+		});
+
+		return (
+			comparison.itemsSame &&
+			comparison.detailsSame &&
+			comparison.freeTrialsSame &&
+			comparison.configSame &&
+			comparison.billingControlsSame &&
+			comparison.metadataSame
+		);
+	}, [product, baseProduct, features]);
+};
+
 // True when metadata is the only pending change — such saves skip the
 // "create new version?" dialog since metadata never versions.
 export const useIsMetadataOnlyChange = () => {

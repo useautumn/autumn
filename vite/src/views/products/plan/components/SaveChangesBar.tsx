@@ -13,6 +13,7 @@ import { usePlanVariants } from "@/hooks/queries/usePlanVariants";
 import { useProductsQuery } from "@/hooks/queries/useProductsQuery";
 import {
 	useHasChanges,
+	useIsBasePlanOnlyChange,
 	useIsCusPlanEditor,
 	useIsMetadataOnlyChange,
 	useProductStore,
@@ -23,6 +24,7 @@ import { getBackendErr } from "@/utils/genUtils";
 import { useProductQuery } from "../../product/hooks/useProductQuery";
 import { useProductContext } from "../../product/ProductContext";
 import { updateProduct } from "../../product/utils/updateProduct";
+import { useApplyBasePlanLink } from "../hooks/useApplyBasePlanLink";
 import { checkItemCurrenciesValid } from "../utils/currencyUtils";
 import { buildPreviewUpdatePlanParams } from "../versioning/buildMigrationDraft";
 import { previewHasLicenseParentTargets } from "../versioning/previewHasAffectedCustomers";
@@ -53,6 +55,11 @@ export const SaveChangesBar = ({
 	const planHasChanges = useHasChanges();
 	const licenseHasChanges = useHasLicenseChanges();
 	const hasChanges = planHasChanges || licenseHasChanges;
+	const isBasePlanOnlyChange = useIsBasePlanOnlyChange();
+	// A base-plan link never versions and never propagates, so it must not drag
+	// the rest of the save through the versioning flow.
+	const contentHasChanges = planHasChanges && !isBasePlanOnlyChange;
+	const applyBasePlanLink = useApplyBasePlanLink();
 	const planLicenses = catalogLicenses.map(({ planLicense }) => planLicense);
 	const { features = [] } = useFeaturesQuery();
 	const fetchPlanUpdatePreview = useFetchPlanUpdatePreview();
@@ -72,7 +79,7 @@ export const SaveChangesBar = ({
 
 	const { data: variants = [] } = usePlanVariants(
 		product.id,
-		hasChanges && !isOnboarding,
+		contentHasChanges && !isOnboarding,
 	);
 
 	const handleSaveClicked = async () => {
@@ -93,7 +100,7 @@ export const SaveChangesBar = ({
 			return;
 		}
 
-		if (!isOnboarding && hasChanges) {
+		if (!isOnboarding && (contentHasChanges || licenseHasChanges)) {
 			let preview: PlanUpdatePreview;
 			setSaving(true);
 			try {
@@ -114,14 +121,14 @@ export const SaveChangesBar = ({
 			}
 
 			const needsVersionChoice =
-				licenseHasChanges || (planHasChanges && !isMetadataOnlyChange);
+				licenseHasChanges || (contentHasChanges && !isMetadataOnlyChange);
 			const hasCustomers = preview.has_customers && needsVersionChoice;
 			const hasParentPropagationDecision =
-				planHasChanges && previewHasLicenseParentTargets(preview);
+				contentHasChanges && previewHasLicenseParentTargets(preview);
 			if (
 				hasCustomers ||
 				hasParentPropagationDecision ||
-				(planHasChanges && variants.length > 0)
+				(contentHasChanges && variants.length > 0)
 			) {
 				setShowNewVersionDialog(true);
 				return;
@@ -139,7 +146,7 @@ export const SaveChangesBar = ({
 			});
 		}
 
-		const planSaved = planHasChanges
+		const planSaved = contentHasChanges
 			? await updateProduct({
 					axiosInstance,
 					productId: product.id,
@@ -152,7 +159,10 @@ export const SaveChangesBar = ({
 					},
 				})
 			: true;
-		const licensesSaved = planSaved
+		const basePlanLinkSaved = planSaved
+			? await applyBasePlanLink({ planId: product.id })
+			: false;
+		const licensesSaved = basePlanLinkSaved
 			? await saveAllLicenses({
 					axiosInstance,
 					parentPlanId: product.id,
@@ -162,9 +172,9 @@ export const SaveChangesBar = ({
 				})
 			: false;
 
-		// License failures already toast their own error, so only the combined
-		// success gets a toast here.
-		if (planSaved && licensesSaved) {
+		// License and base-plan failures already toast their own error, so only the
+		// combined success gets a toast here.
+		if (planSaved && basePlanLinkSaved && licensesSaved) {
 			toast.success("Changes saved successfully");
 		}
 

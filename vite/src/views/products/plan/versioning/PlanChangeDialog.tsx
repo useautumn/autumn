@@ -49,9 +49,10 @@ import {
 	getLicenseUpdatePayload,
 	useHasLicenseChanges,
 } from "../components/plan-licenses/useLicenseSaveRegistry";
+import { useApplyBasePlanLink } from "../hooks/useApplyBasePlanLink";
 import {
-	buildSelectedLicenseParentUpdates,
 	buildMigrateTargets,
+	buildSelectedLicenseParentUpdates,
 	getLicenseParentTargetId,
 } from "./buildMigrateTargets";
 import {
@@ -188,6 +189,7 @@ export default function PlanChangeDialog({
 	const licenseHasChanges = useHasLicenseChanges();
 	const { invalidate: invalidateMigrations } = useMigrationsQuery();
 	const { org } = useOrg();
+	const applyBasePlanLink = useApplyBasePlanLink();
 
 	const [step, setStep] = useState<StepKey>("review");
 	const [versionChoice, setVersionChoice] = useState<VersionChoice>("new");
@@ -491,6 +493,9 @@ export default function PlanChangeDialog({
 				commitLicenseChanges();
 				void invalidateLicenseProducts();
 			}
+			// plans.update carries no base_plan_id, so the link is persisted after
+			// the content save — a new version inherits it either way.
+			await applyBasePlanLink({ planId: product.id });
 			markSaved();
 			toast.success(
 				effectiveVersionChoice === "new"

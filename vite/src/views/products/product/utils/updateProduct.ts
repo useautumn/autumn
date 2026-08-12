@@ -14,10 +14,6 @@ import { stripEditorFields } from "@/utils/product/productItemUtils";
 import { normalizeItemCurrencies } from "../../plan/utils/currencyUtils";
 import { validateItemsBeforeSave } from "../../plan/utils/validateItemsBeforeSave";
 
-type EditableProductUpdate = UpdateProductV2Params & {
-	base_id?: string | null;
-};
-
 export const updateProduct = async ({
 	axiosInstance,
 	productId,
@@ -29,7 +25,7 @@ export const updateProduct = async ({
 }: {
 	axiosInstance: AxiosInstance;
 	productId: string;
-	product: EditableProductUpdate;
+	product: UpdateProductV2Params;
 	onSuccess: () => Promise<void>;
 	version?: number;
 	disableVersion?: boolean;
@@ -52,10 +48,10 @@ export const updateProduct = async ({
 		const sortedItems = stripEditorFields({
 			items: sortPlanItems({ items }),
 		});
-		const { base_id, ...productUpdates } = product;
+		// The base-plan link rides its own metadata-only request, so it is
+		// deliberately not part of this payload.
 		const updateData = UpdateProductV2ParamsSchema.parse({
-			...productUpdates,
-			...(base_id !== undefined ? { base_plan_id: base_id } : {}),
+			...product,
 			items: sortedItems,
 			free_trial: product.free_trial,
 		});
