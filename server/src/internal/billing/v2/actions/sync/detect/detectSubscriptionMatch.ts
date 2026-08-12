@@ -71,7 +71,7 @@ export const detectSubscriptionMatch = async ({
 			),
 			org: ctx.org,
 		});
-		const plans = itemDiffsToMatchedPlans({ itemDiffs });
+		const plans = itemDiffsToMatchedPlans({ ctx, itemDiffs });
 		return {
 			start_date: snapshot.start_date,
 			end_date: snapshot.end_date,

@@ -22,6 +22,7 @@ export type StripeItemSnapshot = {
 	recurring_interval: Stripe.Price.Recurring.Interval | null;
 	recurring_interval_count: number | null;
 	recurring_usage_type: "licensed" | "metered" | null;
+	stripe_meter_id: string | null;
 	metadata: Stripe.Metadata;
 };
 

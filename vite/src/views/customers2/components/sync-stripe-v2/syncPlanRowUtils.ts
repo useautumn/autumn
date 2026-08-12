@@ -4,18 +4,31 @@ import {
 	formatAmount,
 	formatInterval,
 	isPriceItem,
-	planItemV0ToProductItem,
-	planItemV1ToV0,
 	type ProductItem,
 	type ProductV2,
+	planItemV0ToProductItem,
+	planItemV1ToV0,
 	type SharedContext,
 } from "@autumn/shared";
+
+/** A remove_items filter matches a feature item by its feature. */
+const removesFeatureItem = ({
+	filter,
+	item,
+}: {
+	filter: NonNullable<CustomizePlanV1["remove_items"]>[number];
+	item: ProductItem;
+}): boolean =>
+	filter.feature_id !== undefined && item.feature_id === filter.feature_id;
 
 /**
  * Apply a `customize` block to a `ProductV2`, returning the effective
  * product. `customize.items` are V1 plan items (feature items only) — they
  * must be converted back to `ProductItem` shape, else the editor reads
  * `included_usage`/`price` off the wrong shape and renders NaN.
+ *
+ * Supports both PUT-style (`items`) and PATCH-style (`add_items` /
+ * `remove_items`) customize, matching what the sync action applies.
  */
 export const applyCustomizeToProduct = ({
 	product,
@@ -31,22 +44,39 @@ export const applyCustomizeToProduct = ({
 	const ctx = { features } as unknown as SharedContext;
 	const productItems = product.items ?? [];
 
-	const featureItems: ProductItem[] = customize.items
-		? customize.items.flatMap((item) => {
-				try {
-					return [
-						planItemV0ToProductItem({
-							ctx,
-							planItem: planItemV1ToV0({ ctx, item }),
-						}),
-					];
-				} catch {
-					// Conversion throws if the feature referenced in `customize` has been
-				// deleted since it was saved; drop that item instead of crashing the editor.
-					return [];
-				}
-			})
-		: productItems.filter((item) => !isPriceItem(item));
+	const toProductItem = (
+		item: NonNullable<CustomizePlanV1["add_items"]>[number],
+	): ProductItem[] => {
+		try {
+			return [
+				planItemV0ToProductItem({
+					ctx,
+					planItem: planItemV1ToV0({ ctx, item }),
+				}),
+			];
+		} catch {
+			// Conversion throws if the feature referenced in `customize` has been
+			// deleted since it was saved; drop that item instead of crashing the editor.
+			return [];
+		}
+	};
+
+	const catalogFeatureItems = productItems.filter((item) => !isPriceItem(item));
+
+	let featureItems: ProductItem[];
+	if (customize.items) {
+		featureItems = customize.items.flatMap(toProductItem);
+	} else {
+		const removeFilters = customize.remove_items ?? [];
+		const keptItems = catalogFeatureItems.filter(
+			(item) =>
+				!removeFilters.some((filter) => removesFeatureItem({ filter, item })),
+		);
+		featureItems = [
+			...keptItems,
+			...(customize.add_items ?? []).flatMap(toProductItem),
+		];
+	}
 
 	let priceItems: ProductItem[];
 	if (customize.price === undefined) {

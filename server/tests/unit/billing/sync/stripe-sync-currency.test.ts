@@ -5,6 +5,7 @@ import {
 	type FullProduct,
 	type Price,
 	PriceType,
+	type SharedContext,
 	type SyncBillingContext,
 } from "@autumn/shared";
 import type Stripe from "stripe";
@@ -156,6 +157,7 @@ const snapshot = {
 	recurring_interval: "month",
 	recurring_interval_count: 3,
 	recurring_usage_type: "licensed",
+	stripe_meter_id: null,
 	metadata: {},
 } satisfies StripeItemSnapshot;
 
@@ -181,9 +183,12 @@ const itemDiff = ({
 	},
 });
 
+const testCtx = { features: [], expand: [] } as unknown as SharedContext;
+
 describe("Stripe sync base rollup", () => {
 	test("keeps an exact source Price ID as a catalog match", () => {
 		const [plan] = itemDiffsToMatchedPlans({
+			ctx: testCtx,
 			itemDiffs: [itemDiff({ exact: true })],
 		});
 
@@ -193,6 +198,7 @@ describe("Stripe sync base rollup", () => {
 
 	test("preserves a shape-matched source as a JPY quarterly custom base", () => {
 		const [plan] = itemDiffsToMatchedPlans({
+			ctx: testCtx,
 			itemDiffs: [itemDiff({ exact: false })],
 		});
 
@@ -208,6 +214,7 @@ describe("Stripe sync base rollup", () => {
 
 	test("does not coerce a missing Stripe amount to zero", () => {
 		const [plan] = itemDiffsToMatchedPlans({
+			ctx: testCtx,
 			itemDiffs: [
 				itemDiff({
 					exact: false,
