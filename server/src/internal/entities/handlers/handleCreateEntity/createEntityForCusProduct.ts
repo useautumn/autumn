@@ -129,22 +129,26 @@ export const createEntityForCusProduct = async ({
 		}
 
 		const isPooled = mainCusEntWithCusProduct?.entitlement.pooled === true;
-		const targetCusEnt = isPooled
-			? (customer.pooled_customer_entitlements?.find(
-					(p) => p.entitlement.feature.id === feature.id,
-				) as FullCusEntWithFullCusProduct | undefined) || mainCusEntWithCusProduct
-			: mainCusEntWithCusProduct;
+		let targetCusEnt = mainCusEntWithCusProduct;
 
-		let newEntitiesToCreate = inputEntities;
-		if (isPooled && targetCusEnt) {
-			const existingEntities = targetCusEnt.entities || {};
-			newEntitiesToCreate = inputEntities.filter(
-				(e) => !e.id || !existingEntities[e.id],
+		if (isPooled) {
+			const sourcePoolId =
+				mainCusEntWithCusProduct?.pooled_balance_contribution?.pooled_balance_id;
+			const foundPool = customer.pooled_customer_entitlements?.find(
+				(p) =>
+					p.pooled_balance_id === sourcePoolId ||
+					p.pooled_balance?.id === sourcePoolId,
 			);
-			if (newEntitiesToCreate.length === 0) {
+			if (!foundPool) {
+				logger.warn(
+					`[createEntityForCusProduct] Synthetic pooled customer entitlement not found for poolId: ${sourcePoolId}, skipping decrement/entities on source entitlement.`,
+				);
 				continue;
 			}
+			targetCusEnt = foundPool as FullCusEntWithFullCusProduct;
 		}
+
+		let newEntitiesToCreate = inputEntities;
 
 		// 1. If target cus ent:
 		let deletedReplaceables: Replaceable[] = [];
@@ -159,6 +163,31 @@ export const createEntityForCusProduct = async ({
 			});
 
 			try {
+				// Reload the target customer entitlement from the DB to get the latest state inside the lock
+				const reloadedCusEnts = await CusEntService.getByIds({
+					db,
+					ids: [targetCusEnt.id],
+				});
+				const latestCusEnt = reloadedCusEnts[0];
+				if (!latestCusEnt) {
+					throw new RecaseError({
+						message: "Customer entitlement not found",
+						statusCode: 404,
+					});
+				}
+				targetCusEnt.balance = latestCusEnt.balance;
+				targetCusEnt.entities = latestCusEnt.entities;
+
+				if (isPooled) {
+					const existingEntities = targetCusEnt.entities || {};
+					newEntitiesToCreate = inputEntities.filter(
+						(e) => !e.id || !existingEntities[e.id],
+					);
+					if (newEntitiesToCreate.length === 0) {
+						continue;
+					}
+				}
+
 				const originalBalance = targetCusEnt.balance || 0;
 				const newBalance = originalBalance - newEntitiesToCreate.length;
 

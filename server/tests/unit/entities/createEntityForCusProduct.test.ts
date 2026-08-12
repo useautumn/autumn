@@ -6,6 +6,8 @@ const mockUpdate = mock(async () => {});
 const mockAdjustAllowance = mock(async () => ({ deletedReplaceables: [] }));
 const mockGetReps = mock(() => []);
 
+let latestCusEnts: any[] = [];
+
 await mockModuleWithRestore("@/external/redis/utils/lockUtils/acquireLock.js", () => ({
 	acquireLock: mock(async () => {}),
 }));
@@ -22,6 +24,9 @@ await mockModuleWithRestore("@/internal/customers/cusProducts/cusEnts/CusEntitle
 	CusEntService: {
 		decrement: mockDecrement,
 		update: mockUpdate,
+		getByIds: mock(async ({ ids }) => {
+			return latestCusEnts.filter((c) => ids.includes(c.id));
+		}),
 	},
 }));
 await mockModuleWithRestore("@/internal/customers/cusUtils/fullCustomerCacheUtils/deleteCachedFullCustomer", () => ({
@@ -54,6 +59,7 @@ describe("createEntityForCusProduct (pooled balance fix)", () => {
 					balance: 10,
 					entities: {},
 					is_pooled_balance: true,
+					pooled_balance_id: "pool_123",
 					pooled_balance: {
 						granted: 10,
 					},
@@ -77,6 +83,9 @@ describe("createEntityForCusProduct (pooled balance fix)", () => {
 					},
 					balance: 0,
 					entities: null,
+					pooled_balance_contribution: {
+						pooled_balance_id: "pool_123",
+					},
 				},
 			],
 			customer_prices: [],
@@ -98,6 +107,9 @@ describe("createEntityForCusProduct (pooled balance fix)", () => {
 					},
 					balance: 0,
 					entities: null,
+					pooled_balance_contribution: {
+						pooled_balance_id: "pool_123",
+					},
 				},
 			],
 			customer_prices: [],
@@ -113,7 +125,19 @@ describe("createEntityForCusProduct (pooled balance fix)", () => {
 					name: "Organization",
 				},
 			],
+			db: {} as any,
+			logger: {
+				info: () => {},
+				warn: () => {},
+				error: () => {},
+			},
 		};
+
+		latestCusEnts = [
+			customer.pooled_customer_entitlements[0],
+			cusProduct1.customer_entitlements[0],
+			cusProduct2.customer_entitlements[0],
+		];
 
 		const inputEntities = [{ id: "org_1", feature_id: "organization" }];
 
