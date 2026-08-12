@@ -92,7 +92,7 @@ export function buildAttachRequestBody({
 	customLineItems,
 	disableProration,
 	currency,
-	removePlanIds,
+	removePlanIds = [],
 }: BuildAttachRequestBodyParams): AttachParamsV0 | null {
 	if (!customerId || !product) {
 		return null;
