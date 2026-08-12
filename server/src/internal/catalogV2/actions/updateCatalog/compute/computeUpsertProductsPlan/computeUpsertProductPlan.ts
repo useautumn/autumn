@@ -9,6 +9,7 @@ import type {
 	UpsertProductPlan,
 	UpsertProductSource,
 } from "@/internal/catalogV2/actions/updateCatalog/types/upsertProductPlan";
+import { computeFreeTrialPlan } from "@/internal/catalogV2/actions/updateCatalog/compute/computeUpsertProductsPlan/computeFreeTrialPlan/computeFreeTrialPlan";
 import { productKeyToState } from "@/internal/catalogV2/actions/updateCatalog/utils/productStateUtils/productKeyToState";
 
 /** One productKey + planParams → UpsertProductPlan against productStatesContext. */
@@ -37,8 +38,11 @@ export const computeUpsertProductPlan = ({
 		version: productKey.version,
 	});
 
-	const detailsChanged =
-		!currentFullProduct || details.previousAttributes !== undefined;
+	const freeTrialPlan = computeFreeTrialPlan({
+		freeTrialParams: planParams.free_trial,
+		currentFreeTrial: currentFullProduct?.free_trial ?? null,
+		internalProductId: details.product.internal_id,
+	});
 
 	const entitlementPricesPlan = computeCatalogEntitlementPricesPlan({
 		ctx,
@@ -56,14 +60,16 @@ export const computeUpsertProductPlan = ({
 	const nextFullProduct = assembleNextFullProduct({
 		product: details.product,
 		entitlementPricesPlan,
+		freeTrial: freeTrialPlan.projected,
 		features: ctx.features,
 		currentFullProduct,
 	});
 
 	const op = resolveUpsertOp({
 		currentFullProduct,
-		detailsChanged,
+		detailsChanged: details.changed,
 		entitlementPricesPlan,
+		freeTrialChanged: freeTrialPlan.changed,
 	});
 
 	return {
@@ -75,8 +81,9 @@ export const computeUpsertProductPlan = ({
 			currentFullProduct,
 			nextFullProduct,
 		},
-		...(detailsChanged ? { details } : {}),
+		...(details.changed ? { details } : {}),
 		...(entitlementPricesPlan ? { entitlementPricesPlan } : {}),
+		...(freeTrialPlan.changed ? { freeTrialPlan } : {}),
 		state: {
 			hasCustomers: customerUsage.hasVersionableCustomerProducts,
 		},

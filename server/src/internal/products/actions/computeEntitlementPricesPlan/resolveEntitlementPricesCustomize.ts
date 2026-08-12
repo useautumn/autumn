@@ -1,6 +1,8 @@
 import {
 	type CreatePlanItemParamsV1,
+	enrichCtxWithFeatures,
 	ErrCode,
+	type Feature,
 	mapToProductItems,
 	RecaseError,
 } from "@autumn/shared";
@@ -16,6 +18,24 @@ export type ResolvedEntitlementPricesDesired = {
 	/** undefined = no base price in desired. */
 	basePrice?: BasePriceParams | null;
 	planItems: CreatePlanItemParamsV1[];
+};
+
+const withCurrentRowFeatures = ({
+	features,
+	currentRows,
+}: {
+	features: Feature[];
+	currentRows: ComputeEntitlementPricesPlanParams["currentRows"];
+}): Feature[] => {
+	const byInternalId = new Map(
+		features.map((feature) => [feature.internal_id, feature]),
+	);
+	for (const entitlement of currentRows?.entitlements ?? []) {
+		if (!byInternalId.has(entitlement.feature.internal_id)) {
+			byInternalId.set(entitlement.feature.internal_id, entitlement.feature);
+		}
+	}
+	return [...byInternalId.values()];
 };
 
 const hasCustomizeField = ({
@@ -74,12 +94,18 @@ export const resolveEntitlementPricesCustomize = ({
 		});
 	}
 
+	// ctx.features may be projected (e.g. a feature removed this call);
+	// current rows still reference the old set, so union in their embedded features.
+	const currentRowFeatures = withCurrentRowFeatures({
+		features: ctx.features,
+		currentRows,
+	});
 	const currentAsCustomize = productItemsToCustomizePlanV1({
-		ctx,
+		ctx: enrichCtxWithFeatures({ ctx, features: currentRowFeatures }),
 		items: mapToProductItems({
 			prices: currentRows?.prices ?? [],
 			entitlements: currentRows?.entitlements ?? [],
-			features: ctx.features,
+			features: currentRowFeatures,
 		}),
 	});
 

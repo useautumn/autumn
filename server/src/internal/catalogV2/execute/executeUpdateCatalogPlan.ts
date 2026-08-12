@@ -6,7 +6,7 @@ import {
 	executeCreditSystemSchemaRewrites,
 	executeFeatureReferenceRewrites,
 } from "@/internal/catalogV2/execute/executeFeatureReferenceRewrites";
-import { executeUpsertProducts } from "@/internal/catalogV2/execute/executeUpsertProducts";
+import { executeUpsertProducts } from "@/internal/catalogV2/execute/executeUpsertProducts/executeUpsertProducts";
 import { FeatureService } from "@/internal/features/FeatureService.js";
 import type { ClearCreditSystemCachePayload } from "@/internal/features/featureActions/runClearCreditSystemCacheTask.js";
 import { clearOrgCache } from "@/internal/orgs/orgUtils/clearOrgCache";

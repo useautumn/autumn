@@ -1,4 +1,4 @@
-import type { UpdateCatalogParams } from "@autumn/shared";
+import { enrichCtxWithFeatures, type UpdateCatalogParams } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { computeInsertFeaturesPlan } from "@/internal/catalogV2/actions/updateCatalog/compute/computeInsertFeaturesPlan/computeInsertFeaturesPlan";
 import { computeRemoveFeaturesPlan } from "@/internal/catalogV2/actions/updateCatalog/compute/computeRemoveFeaturesPlan/computeRemoveFeaturesPlan";
@@ -56,9 +56,10 @@ export const computeUpdateCatalogPlan = ({
 		}),
 	});
 
+	// Plan items resolve against post-feature-ops features (same-call creates/renames).
 	compute.advance({
 		step: computeUpsertProductsPlan({
-			ctx,
+			ctx: enrichCtxWithFeatures({ ctx, features: compute.projected.features }),
 			catalogContext,
 			params,
 		}),

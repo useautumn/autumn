@@ -45,5 +45,10 @@ export const initProductRow = ({
 		archived: patch.archived ?? false,
 		config: { ignore_past_due: patch.config?.ignore_past_due ?? false },
 		metadata: patch.metadata ?? {},
+		auto_topups: patch.auto_topups ?? null,
+		spend_limits: patch.spend_limits ?? null,
+		usage_limits: patch.usage_limits ?? null,
+		usage_alerts: patch.usage_alerts ?? null,
+		overage_allowed: patch.overage_allowed ?? null,
 	};
 };

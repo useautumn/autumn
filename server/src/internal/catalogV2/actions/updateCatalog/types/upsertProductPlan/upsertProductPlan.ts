@@ -1,5 +1,6 @@
 import type { FullProduct } from "@autumn/shared";
 import type { EntitlementPricesPlan } from "@/internal/products/actions/computeEntitlementPricesPlan";
+import type { FreeTrialPlan } from "./freeTrialPlan";
 import type { ProductDetailsPlan } from "./productDetailsPlan";
 
 export type UpsertProductOp = "create" | "update" | "none";
@@ -29,7 +30,7 @@ export type UpsertProductRow = {
 /**
  * One write intent per product ROW (plan_id @ version).
  * Flat list on UpdateCatalogPlan = execute order.
- * Future facets (trial, billing controls, links…) enter as optional keys.
+ * Future facets (billing controls, links…) enter as optional keys.
  */
 export type UpsertProductPlan = {
 	row: UpsertProductRow;
@@ -37,6 +38,8 @@ export type UpsertProductPlan = {
 	details?: ProductDetailsPlan;
 	/** Absent = items/price facet not run. */
 	entitlementPricesPlan?: EntitlementPricesPlan;
+	/** Absent = free-trial facet unchanged (or omitted). */
+	freeTrialPlan?: FreeTrialPlan;
 
 	state: { hasCustomers: boolean };
 };
