@@ -142,7 +142,7 @@ export const keepMe = "custom";
  * Existing exports must remain unique across repeated in-place rewrites. */
 test("in-place updates match semicolonless exports with constant IDs", async () => {
 	await withConfigWorkspace(
-		`import { feature, plan } from "./builders"
+		`import { feature, plan } from "./builders" // config builders
 import { FEATURE_IDS, PLAN_IDS } from "./ids"
 export const employees = feature({ id: FEATURE_IDS.EMPLOYEES, name: "Employees", type: "metered", consumable: false })
 export const basePlan = plan({ id: PLAN_IDS.BASE, name: "Base Plan", items: [] })

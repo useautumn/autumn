@@ -160,7 +160,10 @@ export function parseExistingConfig({
 		// Import statement
 		if (trimmed.startsWith("import ")) {
 			const startLine = i;
-			while (i < lines.length && !/(?:["'];?|;)\s*$/.test(lines[i]!)) {
+			while (
+				i < lines.length &&
+				!/(?:["'];?|;)\s*(?:\/\/.*|\/\*.*\*\/)?$/.test(lines[i]!)
+			) {
 				i++;
 			}
 			const endLine = i;
