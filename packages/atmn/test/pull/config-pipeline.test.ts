@@ -2,6 +2,7 @@ import { expect, test } from "bun:test";
 import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { pathToFileURL } from "node:url";
 import { writeConfig } from "../../src/commands/pull/writeConfig.js";
 import { referralProgram, reward } from "../../src/compose/index.js";
 import { loadConfig } from "../../src/lib/config/loadConfig.js";
@@ -14,8 +15,9 @@ const withConfigWorkspace = async (
 	try {
 		writeFileSync(
 			join(cwd, "builders.ts"),
-			`export const feature = value => ({ ...value, __atmnType: "feature" });
-export const plan = value => ({ ...value, __atmnType: "plan", variant: variant => ({ ...variant, __atmnType: "variant" }) });`,
+			`export { feature, plan } from ${JSON.stringify(
+				pathToFileURL(join(import.meta.dir, "../../src/compose/index.ts")).href,
+			)};`,
 		);
 		if (config !== null) writeFileSync(join(cwd, "autumn.config.ts"), config);
 		await run(cwd);
@@ -69,6 +71,28 @@ test("in-place pull rejects default-export resources without changing source", a
 			}),
 		).rejects.toThrow("must be named reward() and referralProgram() exports");
 		expect(readFileSync(join(cwd, "autumn.config.ts"), "utf8")).toBe(source);
+	});
+});
+
+test("default-export resources are rejected before constant IDs execute", async () => {
+	const source = `throw new Error("must not execute");
+export const basePlan = plan({ id: PLAN_IDS.BASE, name: "Base", items: [] });
+export default { rewards: [] };`;
+	await withConfigWorkspace(source, async (cwd) => {
+		await expect(
+			writeConfig({ features: [], plans: [], cwd, rewards: [] }),
+		).rejects.toThrow("must be named reward() and referralProgram() exports");
+		expect(readFileSync(join(cwd, "autumn.config.ts"), "utf8")).toBe(source);
+	});
+});
+
+test("entity-shaped helper exports do not trigger config execution", async () => {
+	const source = `export const buildPlanShape = () => ({ id: PLAN_IDS.BASE, items: [] });`;
+	await withConfigWorkspace(source, async (cwd) => {
+		await writeConfig({ features: [], plans: [], cwd });
+		expect(readFileSync(join(cwd, "autumn.config.ts"), "utf8")).toContain(
+			source,
+		);
 	});
 });
 

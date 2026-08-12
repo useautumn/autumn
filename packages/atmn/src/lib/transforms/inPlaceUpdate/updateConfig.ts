@@ -142,6 +142,10 @@ export async function updateConfigInPlace({
 	}
 
 	let parsed = parseExistingConfig({ configPath });
+	const hasDefaultResources =
+		/\bexport\s+default\b/.test(parsed.source) &&
+		/\b(?:rewards|referralPrograms)\b/.test(parsed.source);
+	if (hasDefaultResources) throw new Error(DEFAULT_REWARD_EXPORT_ERROR);
 	const versionedIdsByType = new Map<ParsedEntity["type"], Set<string>>([
 		["plan", versionedIds(plans)],
 		["variant", versionedIds(plans.flatMap((plan) => plan.variants ?? []))],
@@ -178,10 +182,6 @@ export async function updateConfigInPlace({
 		}
 		parsed = parseExistingConfig({ configPath, identitiesByTypeAndVarName });
 	}
-	const hasDefaultResources =
-		/\bexport\s+default\b/.test(parsed.source) &&
-		/\b(?:rewards|referralPrograms)\b/.test(parsed.source);
-	if (hasDefaultResources) throw new Error(DEFAULT_REWARD_EXPORT_ERROR);
 	const requiredImports = [
 		...(plans.some((plan) => plan.billingControls) ? ["billingControls"] : []),
 		...(rewards?.length ? ["reward"] : []),

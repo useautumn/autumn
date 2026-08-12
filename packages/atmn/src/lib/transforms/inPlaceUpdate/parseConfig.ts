@@ -122,6 +122,10 @@ function determineEntityType(lines: string[]): ParsedEntity["type"] | null {
 	return null;
 }
 
+const isResourceExpression = (source: string) =>
+	/=\s*(?:feature|plan|referralProgram|reward)\s*\(/.test(source) ||
+	/=\s*\w+\.variant\s*\(/.test(source);
+
 /**
  * Parse an existing autumn.config.ts file using line-based parsing
  */
@@ -235,7 +239,7 @@ export function parseExistingConfig({
 			const entityType = determineEntityType(blockLines);
 			const blockSource = blockLines.join("\n");
 			const declaration =
-				entityType && varName
+				entityType && varName && isResourceExpression(blockSource)
 					? {
 							requiresRuntimeIdentity: !/id:\s*['"][^'"]+['"]/.test(
 								blockSource,
