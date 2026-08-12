@@ -89,62 +89,107 @@ export const expectFeatureUsageCorrect = ({
 	}
 };
 
+type ExpectedPlanPreview = {
+	planId: string;
+	action: CatalogAction;
+	hasCustomers?: boolean;
+	willArchive?: boolean;
+};
+
 /** Optional fields are asserted only when passed. */
 export const expectCatalogPreviewCorrect = ({
 	preview,
 	features,
+	plans,
 }: {
 	preview: PreviewUpdateCatalogResponse;
-	features: ExpectedFeaturePreview[];
+	features?: ExpectedFeaturePreview[];
+	plans?: ExpectedPlanPreview[];
 }) => {
-	expect(preview.features).toHaveLength(features.length);
-	for (const expected of features) {
-		const entry = preview.features.find(
-			(candidate) => candidate.feature_id === expected.featureId,
-		);
-		expect(entry).toBeDefined();
-		expect(entry?.action).toBe(expected.action);
-		if (expected.hasCustomerEntitlements !== undefined) {
-			expect(entry?.state.has_customers).toBe(
-				expected.hasCustomerEntitlements,
+	if (features !== undefined) {
+		expect(preview.features).toHaveLength(features.length);
+		for (const expected of features) {
+			const entry = preview.features.find(
+				(candidate) => candidate.feature_id === expected.featureId,
 			);
+			expect(entry).toBeDefined();
+			expect(entry?.action).toBe(expected.action);
+			if (expected.hasCustomerEntitlements !== undefined) {
+				expect(entry?.state.has_customers).toBe(
+					expected.hasCustomerEntitlements,
+				);
+			}
+			if (expected.willArchive !== undefined) {
+				expect(entry?.state.will_archive).toBe(expected.willArchive);
+			}
+			if (expected.previousAttributes === null) {
+				expect(entry?.previous_attributes).toBeNull();
+			} else if (expected.previousAttributes !== undefined) {
+				expect(entry?.previous_attributes).toEqual(expected.previousAttributes);
+			}
+			if (expected.usage !== undefined && entry) {
+				expectFeatureUsageCorrect({
+					usage: entry.state.usage,
+					...expected.usage,
+				});
+			}
+			const reasonMessages =
+				entry?.state.reasons.map((reason) => reason.message) ?? [];
+			if (expected.reasonMessages !== undefined) {
+				expect(reasonMessages).toEqual(expected.reasonMessages);
+			}
+			if (expected.reasonsInclude !== undefined) {
+				for (const message of expected.reasonsInclude) {
+					expect(reasonMessages).toContain(message);
+				}
+			}
 		}
-		if (expected.willArchive !== undefined) {
-			expect(entry?.state.will_archive).toBe(expected.willArchive);
-		}
-		if (expected.previousAttributes === null) {
-			expect(entry?.previous_attributes).toBeNull();
-		} else if (expected.previousAttributes !== undefined) {
-			expect(entry?.previous_attributes).toEqual(expected.previousAttributes);
-		}
-		if (expected.usage !== undefined && entry) {
-			expectFeatureUsageCorrect({
-				usage: entry.state.usage,
-				...expected.usage,
-			});
-		}
-		const reasonMessages =
-			entry?.state.reasons.map((reason) => reason.message) ?? [];
-		if (expected.reasonMessages !== undefined) {
-			expect(reasonMessages).toEqual(expected.reasonMessages);
-		}
-		if (expected.reasonsInclude !== undefined) {
-			for (const message of expected.reasonsInclude) {
-				expect(reasonMessages).toContain(message);
+	}
+
+	// Plans: containment only — extra entries and new fields must NOT break
+	// existing tests. Assert exactly the fields passed, nothing else.
+	if (plans !== undefined) {
+		for (const expected of plans) {
+			const entry = preview.plans.find(
+				(candidate) => candidate.plan_id === expected.planId,
+			);
+			expect(entry, `missing preview entry for ${expected.planId}`).toBeDefined();
+			expect(entry?.action).toBe(expected.action);
+			if (expected.hasCustomers !== undefined) {
+				expect(entry?.state.has_customers).toBe(expected.hasCustomers);
+			}
+			if (expected.willArchive !== undefined) {
+				expect(entry?.state.will_archive).toBe(expected.willArchive);
 			}
 		}
 	}
 };
 
-/** Exact match on what the update reports it did, in order. */
+/**
+ * Features: exact match, in order. Plans: containment — each expected
+ * {id, action} must be reported, extra entries tolerated (future expansions).
+ */
 export const expectCatalogResultsCorrect = ({
 	response,
 	features,
+	plans,
 }: {
 	response: UpdateCatalogResponse;
-	features: { id: string; action: CatalogAction }[];
+	features?: { id: string; action: CatalogAction }[];
+	plans?: { id: string; action: CatalogAction }[];
 }) => {
-	expect(response.results.features).toEqual(features);
+	if (features !== undefined) {
+		expect(response.results.features).toEqual(features);
+	}
+	if (plans !== undefined) {
+		for (const expected of plans) {
+			const entry = response.results.plans.find(
+				(candidate) => candidate.id === expected.id,
+			);
+			expect(entry, `missing result for plan ${expected.id}`).toBeDefined();
+			expect(entry?.action).toBe(expected.action);
+		}
+	}
 };
 
 /** The plan's items reference exactly these feature ids, in item order. */

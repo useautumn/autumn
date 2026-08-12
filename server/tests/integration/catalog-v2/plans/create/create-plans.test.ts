@@ -23,13 +23,13 @@ import chalk from "chalk";
 import {
 	expectCatalogPreviewCorrect,
 	expectCatalogResultsCorrect,
-} from "../utils/expectCatalogUpdate.js";
-import { uniqueTestId } from "../utils/uniqueTestId.js";
+} from "../../utils/expectCatalogUpdate.js";
+import { uniqueTestId } from "../../utils/uniqueTestId.js";
 import {
 	deleteDbPlans,
 	expectCatalogPlansCorrect,
 	expectDbPlansAbsent,
-} from "./utils/expectCatalogPlans.js";
+} from "../utils/expectCatalogPlans.js";
 
 test.concurrent(
 	`${chalk.yellowBright("catalogV2 create plans: preview create, update inserts minimal")}`,
@@ -67,7 +67,7 @@ test.concurrent(
 						isDefault: false,
 						featureIds: [],
 						basePrice: null,
-						hasFreeTrial: false,
+						freeTrial: null,
 					},
 				],
 			});
@@ -195,7 +195,12 @@ test.concurrent(
 						isAddOn: true,
 						// auto_enable maps to is_default on the product row
 						isDefault: true,
-						hasFreeTrial: true,
+						freeTrial: {
+							duration_type: FreeTrialDuration.Day,
+							duration_length: 14,
+							card_required: false,
+							on_end: null,
+						},
 						metadata: { source: "catalog-v2-create", tier: 1 },
 						config: { ignore_past_due: true },
 						billingControls,
