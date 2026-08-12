@@ -9,14 +9,75 @@ import { expectCustomerProductStatuses } from "@tests/integration/billing/utils/
 import { items } from "@tests/utils/fixtures/items";
 import { itemsV2 } from "@tests/utils/fixtures/itemsV2";
 import { products } from "@tests/utils/fixtures/products";
+import type { TestContext } from "@tests/utils/testInitUtils/createTestContext";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
+import { billingActions } from "@/internal/billing/v2/actions";
 import { CusService } from "@/internal/customers/CusService";
 import { CusProductService } from "@/internal/customers/cusProducts/CusProductService";
+import { deleteCachedFullCustomer } from "@/internal/customers/cusUtils/fullCustomerCacheUtils/deleteCachedFullCustomer";
+
+const withoutStripe = (ctx: TestContext): TestContext => ({
+	...ctx,
+	org: {
+		...ctx.org,
+		stripe_connected: false,
+		stripe_config: null,
+		test_stripe_connect: {},
+	},
+});
 
 test(`${chalk.yellowBright("processor_subscription_id: attach with existing stripe subscription anchors reset cycle")}`, async () => {});
 
 test(`${chalk.yellowBright("processor_subscription_id: upgrade with no_billing_changes preserves anchor and subscription")}`, async () => {});
+
+test.concurrent(
+	`${chalk.yellowBright("update no_billing_changes: updates a priced plan without a Stripe connection")}`,
+	async () => {
+		const customerId = "update-no-billing-unlinked-org";
+		const pro = products.base({
+			id: "pro-unlinked-org",
+			items: [
+				items.monthlyMessages({ includedUsage: 100 }),
+				items.monthlyPrice({ price: 20 }),
+			],
+		});
+
+		const { autumnV2_2, ctx } = await initScenario({
+			customerId,
+			setup: [s.customer({ testClock: false }), s.products({ list: [pro] })],
+			actions: [],
+		});
+		const noStripeCtx = withoutStripe(ctx);
+
+		await billingActions.attach({
+			ctx: noStripeCtx,
+			params: {
+				customer_id: customerId,
+				plan_id: pro.id,
+				no_billing_changes: true,
+				redirect_mode: "never",
+			},
+		});
+		await deleteCachedFullCustomer({ ctx, customerId });
+
+		await billingActions.updateSubscription({
+			ctx: noStripeCtx,
+			params: {
+				customer_id: customerId,
+				plan_id: pro.id,
+				no_billing_changes: true,
+				customize: { price: itemsV2.monthlyPrice({ amount: 50 }) },
+			},
+		});
+		await deleteCachedFullCustomer({ ctx, customerId });
+
+		await expectCustomerProducts({
+			customer: await autumnV2_2.customers.get(customerId),
+			active: [pro.id],
+		});
+	},
+);
 
 test(`${chalk.yellowBright("update no_billing_changes: customize preserves subscription_ids on new cusProduct")}`, async () => {
 	const customerId = "update-no-billing-preserves-sub";

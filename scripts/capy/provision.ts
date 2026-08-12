@@ -405,9 +405,9 @@ function writeEnvFiles(
 		// Daytona preview URLs — browser-facing. The server uses these to build
 		// OAuth callbacks (better-auth) and CORS allow lists. Internal calls go
 		// to http://localhost:PORT (set in dev.ts).
-		BETTER_AUTH_URL: serverUrl,
+		AUTUMN_API_URL: serverUrl,
+		AUTUMN_PUBLIC_API_URL: serverUrl,
 		CLIENT_URL: viteUrl,
-		STRIPE_WEBHOOK_URL: serverUrl,
 		// Webhook signature verification needs the original Stripe-signed URL;
 		// the Capy proxy rewrites Host, so always skip-verify here. dw does the
 		// same.

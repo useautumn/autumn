@@ -62,7 +62,7 @@ export function FullSubjectGateDialog({
 				>
 					{(config) => (
 						<FullSubjectGateConfigForm
-							key={`${config.fleet_process_count}:${config.per_customer_limit}:${config.per_org_limit}:${config.max_wait_ms}:${config.per_customer_pending_max}:${config.per_org_pending_max}`}
+							key={`${config.fleet_process_count}:${config.per_customer_limit}:${config.per_org_limit}:${config.max_wait_ms}:${config.per_customer_pending_max}:${config.per_org_pending_max}:${config.delayed_postgres_backup_read.enabled}:${config.delayed_postgres_backup_read.delay_ms}:${config.delayed_postgres_backup_read.max_in_flight_per_process}`}
 							config={config}
 							onClose={() => onOpenChange(false)}
 						/>

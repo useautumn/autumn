@@ -762,6 +762,7 @@ export const previewAttachParamsOutboundSchema = z.object({
 	enable_plan_immediately: z.union([z.boolean(), z.undefined()]).optional(),
 	tax_rate_id: z.union([z.string(), z.undefined()]).optional(),
 	currency: z.union([z.string(), z.undefined()]).optional(),
+	remove_plan_ids: z.union([z.array(z.string()), z.undefined()]).optional(),
 });
 
 const closedEnumSchema = z.any();
@@ -1252,6 +1253,7 @@ export const previewAttachParamsSchema = z.object({
 	enablePlanImmediately: z.union([z.boolean(), z.undefined()]).optional(),
 	taxRateId: z.union([z.string(), z.undefined()]).optional(),
 	currency: z.union([z.string(), z.undefined()]).optional(),
+	removePlanIds: z.union([z.array(z.string()), z.undefined()]).optional(),
 });
 
 export const previewAttachIncomingSchema = z.object({

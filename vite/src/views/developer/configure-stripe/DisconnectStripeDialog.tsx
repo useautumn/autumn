@@ -14,6 +14,7 @@ import { toast } from "sonner";
 import { OrgService } from "@/services/OrgService";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
 import { getBackendErr } from "@/utils/genUtils";
+import { InfoBox } from "@/views/onboarding2/integrate/components/InfoBox";
 
 const CONFIRM_TEXT = "disconnect";
 
@@ -25,11 +26,13 @@ const CHANNEL_LABEL: Record<"secret_key" | "oauth", string> = {
 export const DisconnectStripeDialog = ({
 	onSuccess,
 	channel,
+	willRemoveCatalogMappings = false,
 	label = "Disconnect Stripe",
 	icon,
 }: {
 	onSuccess: () => Promise<void>;
 	channel?: "secret_key" | "oauth";
+	willRemoveCatalogMappings?: boolean;
 	label?: string;
 	icon?: React.ReactNode;
 }) => {
@@ -88,6 +91,14 @@ export const DisconnectStripeDialog = ({
 						Stripe operations.
 					</DialogDescription>
 				</DialogHeader>
+
+				{willRemoveCatalogMappings && (
+					<InfoBox variant="warning">
+						This will remove all existing, active and archived product and price
+						mappings to Autumn plans. This will break any links existing
+						customers have.
+					</InfoBox>
+				)}
 
 				<Input
 					autoFocus

@@ -27,7 +27,9 @@ const UsageLimitFilterValueSchema = z
 		z.number(),
 		z.boolean(),
 	])
-	.transform(String);
+	.transform(String)
+	// Declares the post-transform type so OpenAPI output schemas can serialize it.
+	.pipe(z.string());
 
 export const UsageLimitFilterSchema = z.object({
 	properties: z

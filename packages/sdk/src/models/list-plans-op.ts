@@ -508,7 +508,7 @@ export type ListPlansBasePrice = {
 /**
  * Interval at which balance resets (e.g. 'month', 'year'). For consumable features only.
  */
-export const ListPlansVariantDetailsResetInterval = {
+export const ListPlansAddItemResetInterval = {
   OneOff: "one_off",
   Minute: "minute",
   Hour: "hour",
@@ -522,8 +522,8 @@ export const ListPlansVariantDetailsResetInterval = {
 /**
  * Interval at which balance resets (e.g. 'month', 'year'). For consumable features only.
  */
-export type ListPlansVariantDetailsResetInterval = OpenEnum<
-  typeof ListPlansVariantDetailsResetInterval
+export type ListPlansAddItemResetInterval = OpenEnum<
+  typeof ListPlansAddItemResetInterval
 >;
 
 /**
@@ -533,7 +533,7 @@ export type ListPlansVariantDetailsReset = {
   /**
    * Interval at which balance resets (e.g. 'month', 'year'). For consumable features only.
    */
-  interval: ListPlansVariantDetailsResetInterval;
+  interval: ListPlansAddItemResetInterval;
   /**
    * Number of intervals between resets. Defaults to 1.
    */
@@ -1000,7 +1000,7 @@ export type ListPlansVariantDetailsUsageLimitInterval = OpenEnum<
  * When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature.
  */
 export type ListPlansVariantDetailsFilter = {
-  properties: { [k: string]: any };
+  properties: { [k: string]: string };
 };
 
 export type ListPlansVariantDetailsUsageLimit = {
@@ -1268,7 +1268,7 @@ export type ListPlansUsageLimitInterval = OpenEnum<
  * When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature.
  */
 export type ListPlansFilter = {
-  properties: { [k: string]: any };
+  properties: { [k: string]: string };
 };
 
 export type ListPlansUsageLimit = {
@@ -2096,10 +2096,10 @@ export function listPlansBasePriceFromJSON(
 }
 
 /** @internal */
-export const ListPlansVariantDetailsResetInterval$inboundSchema: z.ZodMiniType<
-  ListPlansVariantDetailsResetInterval,
+export const ListPlansAddItemResetInterval$inboundSchema: z.ZodMiniType<
+  ListPlansAddItemResetInterval,
   unknown
-> = openEnums.inboundSchema(ListPlansVariantDetailsResetInterval);
+> = openEnums.inboundSchema(ListPlansAddItemResetInterval);
 
 /** @internal */
 export const ListPlansVariantDetailsReset$inboundSchema: z.ZodMiniType<
@@ -2107,7 +2107,7 @@ export const ListPlansVariantDetailsReset$inboundSchema: z.ZodMiniType<
   unknown
 > = z.pipe(
   z.object({
-    interval: ListPlansVariantDetailsResetInterval$inboundSchema,
+    interval: ListPlansAddItemResetInterval$inboundSchema,
     interval_count: types.optional(types.number()),
   }),
   z.transform((v) => {
@@ -2587,7 +2587,7 @@ export const ListPlansVariantDetailsFilter$inboundSchema: z.ZodMiniType<
   ListPlansVariantDetailsFilter,
   unknown
 > = z.object({
-  properties: z.record(z.string(), z.any()),
+  properties: z.record(z.string(), types.string()),
 });
 
 export function listPlansVariantDetailsFilterFromJSON(
@@ -2945,7 +2945,7 @@ export const ListPlansFilter$inboundSchema: z.ZodMiniType<
   ListPlansFilter,
   unknown
 > = z.object({
-  properties: z.record(z.string(), z.any()),
+  properties: z.record(z.string(), types.string()),
 });
 
 export function listPlansFilterFromJSON(

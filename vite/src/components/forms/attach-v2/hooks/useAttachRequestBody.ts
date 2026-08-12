@@ -56,6 +56,7 @@ export interface BuildAttachRequestBodyParams {
 	customLineItems: FormCustomLineItem[];
 	disableProration: boolean;
 	currency: string | null;
+	removePlanIds: string[];
 }
 
 /** Pure function to build the attach request body. Extracted for testability. */
@@ -91,6 +92,7 @@ export function buildAttachRequestBody({
 	customLineItems,
 	disableProration,
 	currency,
+	removePlanIds = [],
 }: BuildAttachRequestBodyParams): AttachParamsV0 | null {
 	if (!customerId || !product) {
 		return null;
@@ -232,6 +234,10 @@ export function buildAttachRequestBody({
 		}));
 	}
 
+	if (removePlanIds.length > 0) {
+		body.remove_plan_ids = removePlanIds;
+	}
+
 	return body as AttachParamsV0;
 }
 
@@ -268,6 +274,7 @@ export function useAttachRequestBody(params: BuildAttachRequestBodyParams) {
 		customLineItems,
 		disableProration,
 		currency,
+		removePlanIds,
 	} = params;
 
 	const requestBody = useMemo(
@@ -304,6 +311,7 @@ export function useAttachRequestBody(params: BuildAttachRequestBodyParams) {
 				customLineItems,
 				disableProration,
 				currency,
+				removePlanIds,
 			}),
 		[
 			customerId,
@@ -337,6 +345,7 @@ export function useAttachRequestBody(params: BuildAttachRequestBodyParams) {
 			customLineItems,
 			disableProration,
 			currency,
+			removePlanIds,
 		],
 	);
 

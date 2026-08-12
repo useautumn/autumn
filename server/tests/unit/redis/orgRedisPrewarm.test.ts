@@ -1,5 +1,7 @@
 import { afterAll, describe, expect, mock, test } from "bun:test";
 import { EventEmitter } from "node:events";
+import type { Redis } from "ioredis";
+import { createRedisReadPool } from "@/external/redis/initUtils/createRedisReadPool.js";
 
 class FakeRedis extends EventEmitter {
 	status = "connecting";
@@ -7,6 +9,12 @@ class FakeRedis extends EventEmitter {
 }
 
 const instances: FakeRedis[] = [];
+
+const createFakeRedis = (): FakeRedis => {
+	const instance = new FakeRedis();
+	instances.push(instance);
+	return instance;
+};
 
 const fakeOrg = (id: string) => ({
 	id,
@@ -47,11 +55,14 @@ mock.module("@/external/redis/resolveRedisV2.js", () => ({
 }));
 mock.module("@/external/redis/initRedis.js", () => ({
 	currentRegion: "test",
-	createStandbyRedisConnection: () => {
-		const instance = new FakeRedis();
-		instances.push(instance);
-		return instance;
-	},
+	createStandbyRedisConnection: createFakeRedis,
+	createPooledStandbyRedisConnection: () =>
+		createRedisReadPool({
+			lanes: [
+				createFakeRedis() as unknown as Redis,
+				createFakeRedis() as unknown as Redis,
+			],
+		}),
 }));
 
 afterAll(() => {
@@ -73,13 +84,20 @@ describe("preWarmOrgRedisConnections", () => {
 		});
 
 		await Bun.sleep(30);
-		expect(instances.length).toBe(2);
+		expect(instances.length).toBe(4);
 		expect(settled).toBe(false);
 
-		for (const instance of instances) {
+		for (const instance of instances.slice(0, 3)) {
 			instance.status = "ready";
 			instance.emit("ready");
 		}
+		await Bun.sleep(10);
+		expect(settled).toBe(false);
+
+		const lastInstance = instances[3];
+		expect(lastInstance).toBeDefined();
+		lastInstance!.status = "ready";
+		lastInstance!.emit("ready");
 		await warmup;
 		expect(settled).toBe(true);
 	});

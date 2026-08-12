@@ -211,7 +211,7 @@ export type CustomerUsageLimitInterval = OpenEnum<
  * When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature.
  */
 export type CustomerFilter = {
-  properties: { [k: string]: any };
+  properties: { [k: string]: string };
 };
 
 /**
@@ -1265,7 +1265,7 @@ export const CustomerFilter$inboundSchema: z.ZodMiniType<
   CustomerFilter,
   unknown
 > = z.object({
-  properties: z.record(z.string(), z.any()),
+  properties: z.record(z.string(), types.string()),
 });
 
 export function customerFilterFromJSON(
