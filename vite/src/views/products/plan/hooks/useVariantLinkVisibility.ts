@@ -2,8 +2,8 @@ import type { ProductV2 } from "@autumn/shared";
 import { useProductsQuery } from "@/hooks/queries/useProductsQuery";
 
 /**
- * Linking is only offered on standalone, unarchived plans; detaching is only
- * offered on plans that already have a base.
+ * Variant-relationship predicates for a plan. `canLink`/`canDetach` cover the
+ * common cases; callers with different rules compose the raw flags.
  */
 export function useVariantLinkVisibility(product: ProductV2) {
 	const { products } = useProductsQuery();
@@ -19,6 +19,9 @@ export function useVariantLinkVisibility(product: ProductV2) {
 	const isArchived = !!(listedProduct?.archived ?? product.archived);
 
 	return {
+		isVariant,
+		hasVariants,
+		isArchived,
 		canLink: !(isVariant || hasVariants || isArchived),
 		canDetach: isVariant,
 	};

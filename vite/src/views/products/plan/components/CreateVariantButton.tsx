@@ -1,25 +1,16 @@
 import { IconButton } from "@autumn/ui";
 import { GitForkIcon } from "lucide-react";
-import { useMemo } from "react";
-import { useProductsQuery } from "@/hooks/queries/useProductsQuery";
 import { useProductStore } from "@/hooks/stores/useProductStore";
 import { useCreateVariant } from "../hooks/useCreateVariant";
+import { useVariantLinkVisibility } from "../hooks/useVariantLinkVisibility";
 import { CreateVariantDialog } from "./CreateVariantDialog";
 
 export const CreateVariantButton = () => {
 	const product = useProductStore((s) => s.product);
-	const { products } = useProductsQuery();
+	const { isVariant, hasVariants } = useVariantLinkVisibility(product);
 	const createVariant = useCreateVariant(product);
 
-	// base_id lives on the products-list entry, not the store product.
-	const { isVariant, hasVariants } = useMemo(() => {
-		const current = products.find((p) => p.id === product.id);
-		return {
-			isVariant: !!current?.base_id && current.base_id !== product.id,
-			hasVariants: products.some((p) => p.base_id === product.id),
-		};
-	}, [products, product.id]);
-
+	// Unlike linking, creating a variant stays available on archived plans.
 	if (isVariant || hasVariants) return null;
 
 	return (
