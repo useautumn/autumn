@@ -137,6 +137,29 @@ export const upsertEveSession = async ({
 		});
 };
 
+/** Drops a thread's session so the next message opens a brand-new eve run. */
+export const deleteEveSession = async ({
+	db,
+	env,
+	orgId,
+	threadKey,
+}: {
+	db: ChatDb;
+	env: AppEnv;
+	orgId: string;
+	threadKey: string;
+}) => {
+	await db
+		.delete(harnessSessions)
+		.where(
+			and(
+				eq(harnessSessions.org_id, orgId),
+				eq(harnessSessions.env, env),
+				eq(harnessSessions.thread_key, threadKey),
+			),
+		);
+};
+
 export const listHarnessSessions = async ({
 	db,
 	env,
