@@ -143,6 +143,9 @@ export const CreateScheduleParamsV0Schema = z
 			description:
 				"Whether to prorate the immediate phase. 'none' skips proration charges and credits.",
 		}),
+		no_billing_changes: z.boolean().optional().meta({
+			description: "If true, skips any billing changes for the schedule.",
+		}),
 		billing_cycle_anchor: BillingCycleAnchorSchema.optional().meta({
 			description:
 				"Pass 'now' to reset the billing cycle anchor of the immediate phase to the current time.",
