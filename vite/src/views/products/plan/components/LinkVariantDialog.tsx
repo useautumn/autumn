@@ -41,6 +41,11 @@ export function LinkVariantDialog({
 		(candidate) =>
 			candidate.id !== product.id && !candidate.base_id && !candidate.archived,
 	);
+	// The list refetches while the dialog is open, so a selection can drop out of
+	// it; Radix then renders the trigger blank and must not stay submittable.
+	const hasValidSelection = basePlanOptions.some(
+		(candidate) => candidate.id === basePlanId,
+	);
 
 	return (
 		<Dialog open={open} onOpenChange={setOpen}>
@@ -76,7 +81,7 @@ export function LinkVariantDialog({
 						metaShortcut="enter"
 						onClick={onLink}
 						isLoading={isLoading}
-						disabled={isLoading || !basePlanId}
+						disabled={isLoading || !hasValidSelection}
 						className="w-full justify-center"
 					>
 						Link as variant

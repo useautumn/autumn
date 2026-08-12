@@ -11,8 +11,15 @@ export function useLinkVariant(product: ProductV2) {
 	const axiosInstance = useAxiosInstance();
 	const { invalidate: invalidateProducts } = useProductsQuery();
 
-	const [open, setOpen] = useState(false);
+	const [open, setOpenState] = useState(false);
 	const [basePlanId, setBasePlanId] = useState("");
+
+	// Clearing on close stops a selection that has since been archived or turned
+	// into a variant from resurfacing blank-but-submittable on the next open.
+	const setOpen = (next: boolean) => {
+		setOpenState(next);
+		if (!next) setBasePlanId("");
+	};
 
 	const { mutate: linkToBasePlan, isPending: isLoading } = useMutation({
 		mutationFn: async (baseId: string) => {
@@ -23,7 +30,6 @@ export function useLinkVariant(product: ProductV2) {
 		onSuccess: async () => {
 			toast.success("Plan linked as variant");
 			setOpen(false);
-			setBasePlanId("");
 			await invalidateProducts();
 		},
 		onError: (error) =>
