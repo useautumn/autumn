@@ -355,13 +355,13 @@ const VariantSelect = () => {
 	const showAllVariants = useVariantViewStore((s) => s.showAllVariants);
 	const setShowAllVariants = useVariantViewStore((s) => s.setShowAllVariants);
 
-	// A base plan is its own base.
 	const { selectedBasePlanId } = useVariantLinkVisibility(product);
+	// A base plan is its own base.
 	const baseId = selectedBasePlanId ?? product.id;
 
-	// The edited plan is listed under its base even while the link is unsaved.
 	const variantOptions = useMemo(() => {
 		const base = products.find((p) => p.id === baseId);
+		// The edited plan joins the group before its link is saved.
 		const variants = products
 			.filter(
 				(p) => p.id !== baseId && (p.base_id === baseId || p.id === product.id),

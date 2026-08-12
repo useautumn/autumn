@@ -22,10 +22,10 @@ export function useApplyBasePlanLink() {
 			});
 		},
 		onSuccess: async () => {
-			// Drop the pending edit only once the list carries the persisted link,
-			// otherwise the editor briefly falls back to the previous base.
+			// Clearing before the list refreshes flashes the previous base.
 			await invalidateProducts();
-			setProduct({ ...useProductStore.getState().product, base_id: undefined });
+			const { product: latestProduct } = useProductStore.getState();
+			setProduct({ ...latestProduct, base_id: undefined });
 		},
 	});
 

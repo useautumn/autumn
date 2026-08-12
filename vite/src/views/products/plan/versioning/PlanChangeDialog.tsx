@@ -419,7 +419,7 @@ export default function PlanChangeDialog({
 		await Promise.all([invalidateProduct(), invalidateProducts()]);
 	};
 
-	// Read from the store: applying the base-plan link clears its pending edit.
+	// Read live: applying the base-plan link clears its pending edit mid-save.
 	const markSaved = () => setBaseProduct(useProductStore.getState().product);
 
 	const closeDialog = () => {

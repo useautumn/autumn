@@ -6,11 +6,10 @@ export function useVariantLinkVisibility(product: ProductV2) {
 
 	// base_id lives on the products-list entry, not the store product.
 	const listedProduct = products.find((p) => p.id === product.id);
-	// A self-referential base_id is not a real link.
-	const basePlanId =
-		listedProduct?.base_id && listedProduct.base_id !== product.id
-			? listedProduct.base_id
-			: null;
+	const listedBasePlanId = listedProduct?.base_id || null;
+	// A plan whose base row is another of its own versions resolves to its own id.
+	const isSelfReferentialBase = listedBasePlanId === product.id;
+	const basePlanId = isSelfReferentialBase ? null : listedBasePlanId;
 	const basePlan = products.find((p) => p.id === basePlanId) ?? null;
 	const hasVariants = products.some(
 		(p) => p.id !== product.id && p.base_id === product.id,
@@ -21,9 +20,9 @@ export function useVariantLinkVisibility(product: ProductV2) {
 			candidate.id !== product.id && !candidate.base_id && !candidate.archived,
 	);
 
-	// On the editor's working copy base_id is undefined until edited, null to detach.
+	// The editor leaves base_id undefined until edited; null means detach.
 	const selectedBasePlanId =
-		product.base_id === undefined ? basePlanId : (product.base_id ?? null);
+		product.base_id === undefined ? basePlanId : product.base_id;
 
 	return {
 		isVariant: basePlanId !== null,

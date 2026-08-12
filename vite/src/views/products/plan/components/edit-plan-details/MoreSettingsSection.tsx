@@ -45,11 +45,11 @@ export const MoreSettingsSection = () => {
 	const hasVariantBase = selectedBasePlanId !== null;
 	const canSelectBasePlan = visibleBasePlanOptions.length > 0;
 
-	const setBasePlan = (nextBasePlanId: string | null) =>
-		setProduct({
-			...product,
-			base_id: nextBasePlanId === basePlanId ? undefined : nextBasePlanId,
-		});
+	const setBasePlan = (nextBasePlanId: string | null) => {
+		const matchesPersistedBase = nextBasePlanId === basePlanId;
+		const pendingBasePlanId = matchesPersistedBase ? undefined : nextBasePlanId;
+		setProduct({ ...product, base_id: pendingBasePlanId });
+	};
 
 	const hasMetadata = Object.keys(product.metadata ?? {}).length > 0;
 	const [metadataOpened, setMetadataOpened] = useState(false);
