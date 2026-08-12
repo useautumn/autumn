@@ -11,7 +11,7 @@ const mockGetByIds = mock(async ({ ids }: { ids: string[] }) =>
 		.map((c) => JSON.parse(JSON.stringify(c))), // deep clone to simulate a DB snapshot
 );
 
-// latestCusEnts is populated per-test in beforeEach
+// latestCusEnts is populated per-test in the test body and reset in afterEach
 let latestCusEnts: any[] = [];
 
 await mockModuleWithRestore("@/external/redis/utils/lockUtils/acquireLock.js", () => ({

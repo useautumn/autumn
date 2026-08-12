@@ -68,6 +68,79 @@ const updateLinkedCusEnt = async ({
 
 	linkedCusEnt.entities = newEntities;
 };
+export const preflightCreateEntityForCusProduct = ({
+	ctx,
+	customer,
+	cusProduct,
+	inputEntities,
+	fromAutoCreate = false,
+}: CreateEntityParams) => {
+	const { features } = ctx;
+
+	const featureToEntities = inputEntities.reduce(
+		(acc, entity) => {
+			if (!acc[entity.feature_id]) {
+				acc[entity.feature_id] = [];
+			}
+			acc[entity.feature_id].push(entity);
+			return acc;
+		},
+		{} as Record<string, Partial<Entity>[]>,
+	);
+
+	for (const featureId in featureToEntities) {
+		const feature = findFeatureById({
+			features,
+			featureId,
+			errorOnNotFound: true,
+		});
+
+		const mainCusEnt = cusProduct.customer_entitlements.find(
+			(ce) => ce.entitlement.feature.id === feature.id,
+		);
+
+		let mainCusEntWithCusProduct: FullCusEntWithFullCusProduct | undefined;
+
+		if (mainCusEnt) {
+			mainCusEntWithCusProduct = addCusProductToCusEnt({
+				cusEnt: mainCusEnt,
+				cusProduct,
+			});
+
+			const cusPrice = cusEntToCusPrice({
+				cusEnt: mainCusEntWithCusProduct,
+			});
+
+			if (fromAutoCreate && cusPrice) {
+				throw new RecaseError({
+					message: `Failed to auto create entity for feature ${feature.name} because it is a paid feature.`,
+					code: ErrCode.InvalidInputs,
+					statusCode: 400,
+				});
+			}
+		}
+
+		const isPooled = mainCusEntWithCusProduct?.entitlement.pooled === true;
+
+		if (isPooled) {
+			const sourcePoolId =
+				mainCusEntWithCusProduct?.pooled_balance_contribution?.pooled_balance_id;
+			const foundPool = customer.pooled_customer_entitlements?.find(
+				(p) =>
+					p.pooled_balance_id === sourcePoolId ||
+					p.pooled_balance?.id === sourcePoolId,
+			);
+			if (!foundPool) {
+				throw new RecaseError({
+					message: `[createEntityForCusProduct] Synthetic pooled customer entitlement not found for poolId: ${sourcePoolId}. Cannot create entities without a valid pool to decrement.`,
+					code: ErrCode.InternalError,
+					statusCode: 500,
+				});
+			}
+		}
+	}
+};
+
 export const createEntityForCusProduct = async ({
 	ctx,
 	customer,
