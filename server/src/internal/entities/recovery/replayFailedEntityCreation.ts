@@ -1,11 +1,4 @@
-import {
-	ApiVersionClass,
-	type CreateEntityParams,
-	EntityErrorCode,
-	type Feature,
-	findFeatureById,
-	RecaseError,
-} from "@autumn/shared";
+import { ApiVersionClass, findFeatureById } from "@autumn/shared";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { EntityService } from "@/internal/api/entities/EntityService.js";
@@ -27,55 +20,32 @@ export const replayFailedEntityCreation = async ({
 		ctx,
 		idOrInternalId: payload.params.customer_id,
 	});
-	while (true) {
-		const missing: Array<{
-			inputEntity: CreateEntityParams;
-			feature: Feature;
-		}> = [];
-		for (const inputEntity of payload.params.create_entity_data) {
-			const feature = findFeatureById({
-				features: ctx.features,
-				featureId: inputEntity.feature_id,
-				errorOnNotFound: true,
-			});
-			const existing = await EntityService.get({
-				db: ctx.db,
-				id: inputEntity.id as string,
-				internalCustomerId: customer.internal_id,
-				internalFeatureId: feature.internal_id,
-			});
-			if (!existing) missing.push({ inputEntity, feature });
-		}
-		if (missing.length === 0) return;
-		const inserted = await ctx.db.transaction(async (tx) => {
-			const transactionCtx = { ...ctx, db: tx as unknown as DrizzleCli };
-			const entities = missing.map(({ inputEntity, feature }) =>
-				constructEntity({
-					inputEntity,
-					feature,
-					internalCustomerId: customer.internal_id,
-					orgId: ctx.org.id,
-					env: ctx.env,
+	await ctx.db.transaction(async (tx) => {
+		const transactionCtx = { ...ctx, db: tx as unknown as DrizzleCli };
+		const entities = payload.params.create_entity_data.map((inputEntity) =>
+			constructEntity({
+				inputEntity,
+				feature: findFeatureById({
+					features: ctx.features,
+					featureId: inputEntity.feature_id,
+					errorOnNotFound: true,
 				}),
-			);
-			try {
-				await EntityService.insert({ db: transactionCtx.db, data: entities });
-			} catch (error) {
-				if (
-					!(error instanceof RecaseError) ||
-					error.code !== EntityErrorCode.EntityAlreadyExists
-				)
-					throw error;
-				return false;
-			}
-			await attachDefaultProductsToEntities({
-				ctx: transactionCtx,
-				fullCustomer: customer,
-				entities,
-				customerData: payload.params.customer_data,
-			});
-			return true;
+				internalCustomerId: customer.internal_id,
+				orgId: ctx.org.id,
+				env: ctx.env,
+			}),
+		);
+		const insertedEntities = await EntityService.insert({
+			db: transactionCtx.db,
+			data: entities,
+			ignoreConflicts: true,
 		});
-		if (inserted) return;
-	}
+		if (insertedEntities.length === 0) return;
+		await attachDefaultProductsToEntities({
+			ctx: transactionCtx,
+			fullCustomer: customer,
+			entities: insertedEntities,
+			customerData: payload.params.customer_data,
+		});
+	});
 };

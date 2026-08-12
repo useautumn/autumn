@@ -78,13 +78,24 @@ export class EntityService {
 				),
 		});
 	}
-	static async insert({ db, data }: { db: DrizzleCli; data: Entity[] }) {
+	static async insert({
+		db,
+		data,
+		ignoreConflicts = false,
+	}: {
+		db: DrizzleCli;
+		data: Entity[];
+		ignoreConflicts?: boolean;
+	}) {
 		if (data.length === 0) {
 			return [];
 		}
 
 		try {
-			const results = await db.insert(entities).values(data).returning();
+			const insert = db.insert(entities).values(data);
+			const results = await (ignoreConflicts
+				? insert.onConflictDoNothing().returning()
+				: insert.returning());
 
 			await markCustomersUpdatedAtByInternalIds({
 				db,
