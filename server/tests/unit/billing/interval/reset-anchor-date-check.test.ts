@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import { EntInterval, type FullCusProduct } from "@autumn/shared";
-import { toUnix, fromUnix } from "@tests/utils/testIntervalUtils/testUnixUtils";
+import { fromUnix, toUnix } from "@tests/utils/testIntervalUtils/testUnixUtils";
 import { getResetAtUpdate } from "@/internal/customers/actions/resetCustomerEntitlements/getResetAtUpdate";
 
 /**
@@ -41,7 +41,13 @@ describe("reset-anchor-date-check: getResetAtUpdate", () => {
 		});
 
 		test("30-minute: curReset Feb 28 10:00 -> Feb 28 10:30", async () => {
-			const curResetAt = toUnix({ year: 2027, month: 2, day: 28, hour: 10, minute: 0 });
+			const curResetAt = toUnix({
+				year: 2027,
+				month: 2,
+				day: 28,
+				hour: 10,
+				minute: 0,
+			});
 
 			const result = await getResetAtUpdate({
 				curResetAt,

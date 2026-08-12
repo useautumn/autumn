@@ -89,7 +89,10 @@ describe(
 				const result = buildStripeSubscriptionItemsUpdate({
 					ctx,
 					billingContext,
-					autumnBillingPlan: { customerId: "test", insertCustomerProducts: [entity1ProProduct, entity2ProProduct] } as never,
+					autumnBillingPlan: {
+						customerId: "test",
+						insertCustomerProducts: [entity1ProProduct, entity2ProProduct],
+					} as never,
 					finalCustomerProducts: [entity1ProProduct, entity2ProProduct],
 				});
 
@@ -200,11 +203,14 @@ describe(
 				const result = buildStripeSubscriptionItemsUpdate({
 					ctx,
 					billingContext,
-					autumnBillingPlan: { customerId: "test", insertCustomerProducts: [
-						entity1ProProduct,
-						entity2ProProduct,
-						entity3ProProduct,
-					] } as never,
+					autumnBillingPlan: {
+						customerId: "test",
+						insertCustomerProducts: [
+							entity1ProProduct,
+							entity2ProProduct,
+							entity3ProProduct,
+						],
+					} as never,
 					finalCustomerProducts: [
 						entity1ProProduct,
 						entity2ProProduct,
@@ -297,7 +303,10 @@ describe(
 				const result = buildStripeSubscriptionItemsUpdate({
 					ctx,
 					billingContext,
-					autumnBillingPlan: { customerId: "test", insertCustomerProducts: [entity1ProProduct, entity2ProProduct] } as never,
+					autumnBillingPlan: {
+						customerId: "test",
+						insertCustomerProducts: [entity1ProProduct, entity2ProProduct],
+					} as never,
 					finalCustomerProducts: [entity1ProProduct, entity2ProProduct],
 				});
 
@@ -379,7 +388,10 @@ describe(
 				const result = buildStripeSubscriptionItemsUpdate({
 					ctx,
 					billingContext,
-					autumnBillingPlan: { customerId: "test", insertCustomerProducts: [entity1ProProduct] } as never,
+					autumnBillingPlan: {
+						customerId: "test",
+						insertCustomerProducts: [entity1ProProduct],
+					} as never,
 					finalCustomerProducts: [entity1ProProduct],
 				});
 
@@ -462,7 +474,10 @@ describe(
 				const result = buildStripeSubscriptionItemsUpdate({
 					ctx,
 					billingContext,
-					autumnBillingPlan: { customerId: "test", insertCustomerProducts: [entity1ProProduct, entity2PremiumProduct] } as never,
+					autumnBillingPlan: {
+						customerId: "test",
+						insertCustomerProducts: [entity1ProProduct, entity2PremiumProduct],
+					} as never,
 					finalCustomerProducts: [entity1ProProduct, entity2PremiumProduct],
 				});
 
@@ -538,7 +553,10 @@ describe(
 				const result = buildStripeSubscriptionItemsUpdate({
 					ctx,
 					billingContext,
-					autumnBillingPlan: { customerId: "test", insertCustomerProducts: [customerProProduct, entityProProduct] } as never,
+					autumnBillingPlan: {
+						customerId: "test",
+						insertCustomerProducts: [customerProProduct, entityProProduct],
+					} as never,
 					finalCustomerProducts: [customerProProduct, entityProProduct],
 				});
 
@@ -627,7 +645,10 @@ describe(
 				const result = buildStripeSubscriptionItemsUpdate({
 					ctx,
 					billingContext,
-					autumnBillingPlan: { customerId: "test", insertCustomerProducts: [entityProProduct] } as never,
+					autumnBillingPlan: {
+						customerId: "test",
+						insertCustomerProducts: [entityProProduct],
+					} as never,
 					finalCustomerProducts: [entityProProduct],
 				});
 
@@ -711,7 +732,10 @@ describe(
 				const result = buildStripeSubscriptionItemsUpdate({
 					ctx,
 					billingContext,
-					autumnBillingPlan: { customerId: "test", insertCustomerProducts: [customerPremiumProduct, entityProProduct] } as never,
+					autumnBillingPlan: {
+						customerId: "test",
+						insertCustomerProducts: [customerPremiumProduct, entityProProduct],
+					} as never,
 					finalCustomerProducts: [customerPremiumProduct, entityProProduct],
 				});
 
@@ -786,7 +810,10 @@ describe(
 				const result = buildStripeSubscriptionItemsUpdate({
 					ctx,
 					billingContext,
-					autumnBillingPlan: { customerId: "test", insertCustomerProducts: [proCustomerProduct, addOnCustomerProduct] } as never,
+					autumnBillingPlan: {
+						customerId: "test",
+						insertCustomerProducts: [proCustomerProduct, addOnCustomerProduct],
+					} as never,
 					finalCustomerProducts: [proCustomerProduct, addOnCustomerProduct],
 				});
 
@@ -857,7 +884,10 @@ describe(
 				const result = buildStripeSubscriptionItemsUpdate({
 					ctx,
 					billingContext,
-					autumnBillingPlan: { customerId: "test", insertCustomerProducts: [proCustomerProduct] } as never,
+					autumnBillingPlan: {
+						customerId: "test",
+						insertCustomerProducts: [proCustomerProduct],
+					} as never,
 					finalCustomerProducts: [proCustomerProduct],
 				});
 
@@ -932,7 +962,10 @@ describe(
 				const result = buildStripeSubscriptionItemsUpdate({
 					ctx,
 					billingContext,
-					autumnBillingPlan: { customerId: "test", insertCustomerProducts: [proCustomerProduct, addOnCustomerProduct] } as never,
+					autumnBillingPlan: {
+						customerId: "test",
+						insertCustomerProducts: [proCustomerProduct, addOnCustomerProduct],
+					} as never,
 					finalCustomerProducts: [proCustomerProduct, addOnCustomerProduct],
 				});
 
@@ -1031,11 +1064,14 @@ describe(
 				const result = buildStripeSubscriptionItemsUpdate({
 					ctx,
 					billingContext,
-					autumnBillingPlan: { customerId: "test", insertCustomerProducts: [
-						customerPremiumProduct,
-						entity1ProProduct,
-						entity2ProProduct,
-					] } as never,
+					autumnBillingPlan: {
+						customerId: "test",
+						insertCustomerProducts: [
+							customerPremiumProduct,
+							entity1ProProduct,
+							entity2ProProduct,
+						],
+					} as never,
 					finalCustomerProducts: [
 						customerPremiumProduct,
 						entity1ProProduct,
@@ -1118,7 +1154,10 @@ describe(
 				const result = buildStripeSubscriptionItemsUpdate({
 					ctx,
 					billingContext,
-					autumnBillingPlan: { customerId: "test", insertCustomerProducts: [proProduct1, proProduct2] } as never,
+					autumnBillingPlan: {
+						customerId: "test",
+						insertCustomerProducts: [proProduct1, proProduct2],
+					} as never,
 					finalCustomerProducts: [proProduct1, proProduct2],
 				});
 
@@ -1211,7 +1250,13 @@ describe(
 				const result = buildStripeSubscriptionItemsUpdate({
 					ctx,
 					billingContext,
-					autumnBillingPlan: { customerId: "test", insertCustomerProducts: [proCustomerProduct, premiumCustomerProduct] } as never,
+					autumnBillingPlan: {
+						customerId: "test",
+						insertCustomerProducts: [
+							proCustomerProduct,
+							premiumCustomerProduct,
+						],
+					} as never,
 					finalCustomerProducts: [proCustomerProduct, premiumCustomerProduct],
 				});
 
@@ -1277,20 +1322,20 @@ describe(
 				const ctx = contexts.create({ features: [] });
 				// One-off / add-on attach: no existing Stripe subscription
 				const billingContext = contexts.createBilling({
-					customerProducts: [
-						rcMainCustomerProduct,
-						stripeAddOnCustomerProduct,
-					],
+					customerProducts: [rcMainCustomerProduct, stripeAddOnCustomerProduct],
 					stripeSubscription: undefined,
 				});
 
 				const result = buildStripeSubscriptionItemsUpdate({
 					ctx,
 					billingContext,
-					autumnBillingPlan: { customerId: "test", insertCustomerProducts: [
-						rcMainCustomerProduct,
-						stripeAddOnCustomerProduct,
-					] } as never,
+					autumnBillingPlan: {
+						customerId: "test",
+						insertCustomerProducts: [
+							rcMainCustomerProduct,
+							stripeAddOnCustomerProduct,
+						],
+					} as never,
 					finalCustomerProducts: [
 						rcMainCustomerProduct,
 						stripeAddOnCustomerProduct,
@@ -1342,7 +1387,10 @@ describe(
 				const result = buildStripeSubscriptionItemsUpdate({
 					ctx,
 					billingContext,
-					autumnBillingPlan: { customerId: "test", insertCustomerProducts: [rcMainCustomerProduct] } as never,
+					autumnBillingPlan: {
+						customerId: "test",
+						insertCustomerProducts: [rcMainCustomerProduct],
+					} as never,
 					finalCustomerProducts: [rcMainCustomerProduct],
 				});
 
