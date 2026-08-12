@@ -1,5 +1,8 @@
 import { env } from "../../lib/env.js";
-import { isRetryableEveStreamError } from "./streamErrors.js";
+import {
+	EveSessionRequestError,
+	isRetryableEveStreamError,
+} from "./streamErrors.js";
 import type { EveAuthContext, EveSessionRef } from "./types.js";
 
 export type EveEvent = {
@@ -30,6 +33,8 @@ const eveHeaders = (auth: EveAuthContext, init?: HeadersInit) => {
 	return headers;
 };
 
+const ERROR_BODY_MAX_LENGTH = 200;
+
 const parseSessionResponse = async ({
 	existing,
 	response,
@@ -38,7 +43,11 @@ const parseSessionResponse = async ({
 	response: Response;
 }) => {
 	if (!response.ok) {
-		throw new Error(`Eve session request failed: ${response.status}`);
+		const body = await response.text().catch(() => "");
+		throw new EveSessionRequestError({
+			body: body.slice(0, ERROR_BODY_MAX_LENGTH),
+			status: response.status,
+		});
 	}
 	const body = (await response.json()) as {
 		continuationToken?: string;
