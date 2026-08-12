@@ -1,4 +1,4 @@
-import type { FrontendProduct, PlanUpdatePreview } from "@autumn/shared";
+import type { PlanUpdatePreview } from "@autumn/shared";
 import {
 	AreaRadioGroupItem,
 	Dialog,
@@ -419,7 +419,8 @@ export default function PlanChangeDialog({
 		await Promise.all([invalidateProduct(), invalidateProducts()]);
 	};
 
-	const markSaved = () => setBaseProduct(product as FrontendProduct);
+	// Read from the store: applying the base-plan link clears its pending edit.
+	const markSaved = () => setBaseProduct(useProductStore.getState().product);
 
 	const closeDialog = () => {
 		setOpen(false);
@@ -437,6 +438,9 @@ export default function PlanChangeDialog({
 		}
 		setIsLoading(true);
 		try {
+			// Linking first keeps a failure retryable; a new version inherits the link.
+			if (!(await applyBasePlanLink())) return;
+
 			const willMigrate = migrateNeeded && migrate;
 			let updateParams: ReturnType<typeof buildInPlaceUpdatePlanParams>;
 			if (
@@ -493,7 +497,6 @@ export default function PlanChangeDialog({
 				commitLicenseChanges();
 				void invalidateLicenseProducts();
 			}
-			await applyBasePlanLink();
 			markSaved();
 			toast.success(
 				effectiveVersionChoice === "new"

@@ -11,16 +11,22 @@ import { useVariantLinkVisibility } from "./useVariantLinkVisibility";
 export function useApplyBasePlanLink() {
 	const axiosInstance = useAxiosInstance();
 	const product = useProductStore((s) => s.product);
+	const setProduct = useProductStore((s) => s.setProduct);
 	const { basePlanId, selectedBasePlanId } = useVariantLinkVisibility(product);
 	const { invalidate: invalidateProducts } = useProductsQuery();
 
 	const { mutateAsync } = useMutation({
-		mutationFn: async (basePlanId: string | null) => {
+		mutationFn: async (nextBasePlanId: string | null) => {
 			await ProductService.updateProduct(axiosInstance, product.id, {
-				base_plan_id: basePlanId,
+				base_plan_id: nextBasePlanId,
 			});
 		},
-		onSuccess: () => invalidateProducts(),
+		onSuccess: async () => {
+			// Drop the pending edit only once the list carries the persisted link,
+			// otherwise the editor briefly falls back to the previous base.
+			await invalidateProducts();
+			setProduct({ ...useProductStore.getState().product, base_id: undefined });
+		},
 	});
 
 	return async () => {

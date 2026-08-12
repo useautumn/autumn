@@ -102,20 +102,11 @@ export const useIsBasePlanOnlyChange = () => {
 		if (!baseProduct) return false;
 		if (product.base_id === baseProduct.base_id) return false;
 
-		const comparison = productsAreSame({
+		return productsAreSame({
 			newProductV2: product as unknown as FrontendProduct,
 			curProductV2: baseProduct as unknown as FrontendProduct,
 			features,
-		});
-
-		return (
-			comparison.itemsSame &&
-			comparison.detailsSame &&
-			comparison.freeTrialsSame &&
-			comparison.configSame &&
-			comparison.billingControlsSame &&
-			comparison.metadataSame
-		);
+		}).same;
 	}, [product, baseProduct, features]);
 };
 
