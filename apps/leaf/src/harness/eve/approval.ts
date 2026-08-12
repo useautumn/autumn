@@ -7,6 +7,10 @@ import { getOrgInstallationToken } from "../../internal/installations/actions/ge
 import { db } from "../../lib/db.js";
 import { logger } from "../../lib/logger.js";
 import {
+	adoptPostedEveSession,
+	type PostedEveSession,
+} from "./adoptPostedSession.js";
+import {
 	EveStreamIdleTimeoutError,
 	postEveInputResponse,
 	resyncEveStreamIndex,
@@ -14,6 +18,10 @@ import {
 } from "./client.js";
 import { approvalOptionIds, type EveInputRequest } from "./events.js";
 import { getEveSessionBySessionId, upsertEveSession } from "./repo.js";
+import {
+	EveSessionRequestError,
+	isEveInputResponseRehomeRefusal,
+} from "./streamErrors.js";
 import type { EveAuthContext, EveSessionRef } from "./types.js";
 
 /** A gated write the resumed turn parked on after the answered one. */
@@ -57,6 +65,10 @@ const MAX_DRAIN_DENIES = 3;
 /** Drain discards a dead-end turn — give up on silence much sooner than a
  * live run would, an incomplete drain beats blocking the user's message. */
 const DRAIN_IDLE_TIMEOUT_MS = 60_000;
+/** ~5s of reconnects while a resumed turn spins up — shorter than the engine's
+ * budget because a click is already showing a running card. */
+const MAX_COLLECT_STREAM_ATTEMPTS = 10;
+const COLLECT_RETRY_DELAY_MS = 500;
 
 /** Consumes (and discards) the turn that resumes after a deny, so its reply
  * never posts and the next user message streams from a clean park. Any gated
@@ -94,7 +106,7 @@ export const drainParkedEveTurn = async ({
 							request.action?.toolName &&
 							normalizeToolName(request.action.toolName) !== "ask_question",
 					);
-					if (gated?.requestId && denies < MAX_DRAIN_DENIES) {
+					if (gated?.requestId) {
 						denies += 1;
 						const options = approvalOptionIds(gated);
 						const posted = await postEveInputResponse({
@@ -104,8 +116,17 @@ export const drainParkedEveTurn = async ({
 							requestId: gated.requestId,
 							session,
 						});
-						session.sessionId = posted.sessionId;
-						session.state.continuationToken = posted.continuationToken;
+						adoptPostedEveSession({ posted, session });
+						// Past the cap the model is ping-ponging requests: the deny is
+						// still delivered so nothing stays parked, but stop draining.
+						if (denies >= MAX_DRAIN_DENIES) {
+							logger.warn("Stopped draining after repeated gated requests", {
+								event: "leaf.eve_drain_deny_limit",
+								data: { denies, session_id: session.sessionId },
+							});
+							session.state.status = "waiting";
+							break;
+						}
 						parkedAgain = true;
 						break;
 					}
@@ -175,9 +196,7 @@ export const withdrawEveSuspension = async ({
 		requestId: suspension.toolCallId,
 		session,
 	});
-	session.sessionId = posted.sessionId;
-	session.state.continuationToken = posted.continuationToken;
-	session.state.status = "running";
+	adoptPostedEveSession({ posted, session, status: "running" });
 	await drainParkedEveTurn({ auth, orgId, session });
 	return true;
 };
@@ -204,85 +223,124 @@ const collectText = async ({
 	let pendingText = "";
 	let chained: ChainedPendingRequest | undefined;
 	let question: PendingQuestion | undefined;
-	// Stale tail events from the parked turn replay first (see engine.ts) —
-	// only honor terminal events once the resumed turn's turn.started arrives.
-	let turnStarted = false;
-	for await (const event of streamEveEvents({ auth, session })) {
-		session.state.streamIndex += 1;
-		session.state.lastEventAt = Date.now();
-		if (event.type === "turn.started") {
-			turnStarted = true;
-		} else if (event.type === "input.requested") {
-			// The resumed turn can chain straight into another gated write, parked
-			// where nobody streams. Capture it so a fresh approval row exists.
-			const requests = (event.data?.requests ?? []) as EveInputRequest[];
-			const found = requests.find(
-				(request) =>
-					request.requestId &&
-					request.requestId !== skipRequestId &&
-					request.action?.toolName &&
-					normalizeToolName(request.action.toolName) !== "ask_question",
-			);
-			if (found?.requestId && found.action?.toolName) {
-				chained = {
-					input: found.action.input,
-					options: found.options,
-					requestId: found.requestId,
-					toolName: found.action.toolName,
-				};
+
+	// One pass over the resumed turn's stream. `parked` means the turn reached
+	// an end state; anything else is a stream that closed early.
+	const readStreamOnce = async () => {
+		let parked = false;
+		let sawEvent = false;
+		// Stale tail events from the parked turn replay first (see engine.ts) —
+		// only honor terminal events once the resumed turn's turn.started arrives.
+		let turnStarted = false;
+		for await (const event of streamEveEvents({ auth, session })) {
+			sawEvent = true;
+			session.state.streamIndex += 1;
+			session.state.lastEventAt = Date.now();
+			if (event.type === "turn.started") {
+				turnStarted = true;
+			} else if (event.type === "input.requested") {
+				// The resumed turn can chain straight into another gated write, parked
+				// where nobody streams. Capture it so a fresh approval row exists.
+				const requests = (event.data?.requests ?? []) as EveInputRequest[];
+				const found = requests.find(
+					(request) =>
+						request.requestId &&
+						request.requestId !== skipRequestId &&
+						request.action?.toolName &&
+						normalizeToolName(request.action.toolName) !== "ask_question",
+				);
+				if (found?.requestId && found.action?.toolName) {
+					chained = {
+						input: found.action.input,
+						options: found.options,
+						requestId: found.requestId,
+						toolName: found.action.toolName,
+					};
+					parked = true;
+					break;
+				}
+				// An optioned ask_question also parks the session — capture it so
+				// button-driven surfaces can render answer chips instead of dead text.
+				const optioned = requests.find(
+					(request) =>
+						request.requestId !== skipRequestId &&
+						request.prompt &&
+						(request.options?.length ?? 0) > 0,
+				);
+				if (optioned?.requestId && optioned.prompt) {
+					question = {
+						options: optioned.options ?? [],
+						prompt: optioned.prompt,
+						requestId: optioned.requestId,
+					};
+					session.state.status = "waiting";
+					parked = true;
+					break;
+				}
+			} else if (event.type === "message.appended" && turnStarted) {
+				const messageSoFar = event.data?.messageSoFar;
+				pendingText =
+					typeof messageSoFar === "string"
+						? messageSoFar
+						: `${pendingText}${String(event.data?.messageDelta ?? "")}`;
+			} else if (event.type === "message.completed" && turnStarted) {
+				if (event.data?.finishReason !== "tool-calls") {
+					text = String(event.data?.message ?? pendingText);
+				}
+				pendingText = "";
+			} else if (
+				turnStarted &&
+				(event.type === "session.waiting" || event.type === "session.completed")
+			) {
+				session.state.status =
+					event.type === "session.completed" ? "completed" : "waiting";
+				parked = true;
 				break;
+			} else if (
+				turnStarted &&
+				(event.type === "turn.failed" || event.type === "session.failed")
+			) {
+				session.state.status = "failed";
+				throw new Error(String(event.data?.message ?? "Eve failed"));
 			}
-			// An optioned ask_question also parks the session — capture it so
-			// button-driven surfaces can render answer chips instead of dead text.
-			const optioned = requests.find(
-				(request) =>
-					request.requestId !== skipRequestId &&
-					request.prompt &&
-					(request.options?.length ?? 0) > 0,
-			);
-			if (optioned?.requestId && optioned.prompt) {
-				question = {
-					options: optioned.options ?? [],
-					prompt: optioned.prompt,
-					requestId: optioned.requestId,
-				};
-				session.state.status = "waiting";
-				break;
-			}
-		} else if (event.type === "message.appended" && turnStarted) {
-			const messageSoFar = event.data?.messageSoFar;
-			pendingText =
-				typeof messageSoFar === "string"
-					? messageSoFar
-					: `${pendingText}${String(event.data?.messageDelta ?? "")}`;
-		} else if (event.type === "message.completed" && turnStarted) {
-			if (event.data?.finishReason !== "tool-calls") {
-				text = String(event.data?.message ?? pendingText);
-			}
-			pendingText = "";
-		} else if (
-			turnStarted &&
-			(event.type === "session.waiting" || event.type === "session.completed")
-		) {
-			session.state.status =
-				event.type === "session.completed" ? "completed" : "waiting";
-			break;
-		} else if (
-			turnStarted &&
-			(event.type === "turn.failed" || event.type === "session.failed")
-		) {
-			session.state.status = "failed";
-			throw new Error(String(event.data?.message ?? "Eve failed"));
 		}
+		return { parked, sawEvent };
+	};
+
+	// Eve resumes a turn asynchronously, so the first stream after an answer can
+	// close before the turn produces anything — reconnect instead of reporting
+	// an empty resume, and heal the cursor once if nothing ever arrives.
+	let attempts = 0;
+	let sawAnyEvent = false;
+	let resyncedAfterSilence = false;
+	while (attempts < MAX_COLLECT_STREAM_ATTEMPTS) {
+		const { parked, sawEvent } = await readStreamOnce();
+		if (sawEvent) sawAnyEvent = true;
+		if (parked) break;
+		attempts += 1;
+		const silentlyExhausted =
+			attempts >= MAX_COLLECT_STREAM_ATTEMPTS &&
+			!(sawAnyEvent || resyncedAfterSilence);
+		if (silentlyExhausted) {
+			resyncedAfterSilence = true;
+			await resyncEveStreamIndex({ auth, session });
+			attempts = 0;
+			continue;
+		}
+		await new Promise((resolve) => setTimeout(resolve, COLLECT_RETRY_DELAY_MS));
 	}
-	await upsertEveSession({
-		db,
-		env: session.env,
-		orgId,
-		sessionId: session.sessionId,
-		state: session.state,
-		threadKey: session.threadKey,
-	});
+	// Nothing was read, so nothing advanced — never persist a cursor the turn
+	// did not actually reach.
+	if (sawAnyEvent) {
+		await upsertEveSession({
+			db,
+			env: session.env,
+			orgId,
+			sessionId: session.sessionId,
+			state: session.state,
+			threadKey: session.threadKey,
+		});
+	}
 	return { chained, question, text: text || pendingText };
 };
 
@@ -317,16 +375,34 @@ const answerEveApproval = async ({
 		};
 	}
 	const auth = authFromApproval(approval, providerUserId);
-	const posted = await postEveInputResponse({
-		auth,
-		note,
-		optionId,
-		requestId: approval.tool_call_id,
-		session,
-	});
-	session.sessionId = posted.sessionId;
-	session.state.continuationToken = posted.continuationToken;
-	session.state.status = "running";
+	let posted: PostedEveSession;
+	try {
+		posted = await postEveInputResponse({
+			auth,
+			note,
+			optionId,
+			requestId: approval.tool_call_id,
+			session,
+		});
+	} catch (error) {
+		// Eve rejected the answer outright (most often refusing to re-home it
+		// onto a replacement run), so nothing was written — keep the approval
+		// clickable instead of reporting a failed write.
+		if (!(error instanceof EveSessionRequestError)) throw error;
+		logger.warn("Eve rejected the approval answer", {
+			event: "leaf.eve_input_response_rejected",
+			approval_id: approval.id,
+			data: { session_id: session.sessionId, status: error.status },
+		});
+		return {
+			error: true,
+			message: isEveInputResponseRehomeRefusal(error)
+				? "Eve restarted this conversation's run, so the approval couldn't be delivered."
+				: `Eve rejected the approval (${error.status}).`,
+			retryable: true,
+		};
+	}
+	adoptPostedEveSession({ posted, session, status: "running" });
 	await upsertEveSession({
 		db,
 		env: session.env,
@@ -466,9 +542,7 @@ export const answerEveQuestion = async ({
 		requestId,
 		session,
 	});
-	session.sessionId = posted.sessionId;
-	session.state.continuationToken = posted.continuationToken;
-	session.state.status = "running";
+	adoptPostedEveSession({ posted, session, status: "running" });
 	await upsertEveSession({
 		db,
 		env: session.env,
