@@ -11,6 +11,11 @@ import {
 	type PostedEveSession,
 } from "./adoptPostedSession.js";
 import {
+	type ChainedPendingRequest,
+	classifyParkedEveInput,
+	type PendingQuestion,
+} from "./classifyParkedInput.js";
+import {
 	EveStreamIdleTimeoutError,
 	postEveInputResponse,
 	resyncEveStreamIndex,
@@ -23,14 +28,6 @@ import {
 	isEveInputResponseRehomeRefusal,
 } from "./streamErrors.js";
 import type { EveAuthContext, EveSessionRef } from "./types.js";
-
-/** A gated write the resumed turn parked on after the answered one. */
-export type ChainedPendingRequest = {
-	input?: Record<string, unknown>;
-	options?: { id?: string; label?: string }[];
-	requestId: string;
-	toolName: string;
-};
 
 export const approveOptionFromApproval = (approval: ChatApproval) => {
 	const args = approval.tool_args as Record<string, unknown>;
@@ -201,13 +198,6 @@ export const withdrawEveSuspension = async ({
 	return true;
 };
 
-/** An optioned ask_question the resumed turn parked on. */
-export type PendingQuestion = {
-	options: { id?: string; label?: string }[];
-	prompt: string;
-	requestId: string;
-};
-
 const collectText = async ({
 	auth,
 	orgId,
@@ -239,40 +229,25 @@ const collectText = async ({
 			if (event.type === "turn.started") {
 				turnStarted = true;
 			} else if (event.type === "input.requested") {
-				// The resumed turn can chain straight into another gated write, parked
-				// where nobody streams. Capture it so a fresh approval row exists.
-				const requests = (event.data?.requests ?? []) as EveInputRequest[];
-				const found = requests.find(
-					(request) =>
-						request.requestId &&
-						request.requestId !== skipRequestId &&
-						request.action?.toolName &&
-						normalizeToolName(request.action.toolName) !== "ask_question",
-				);
-				if (found?.requestId && found.action?.toolName) {
-					chained = {
-						input: found.action.input,
-						options: found.options,
-						requestId: found.requestId,
-						toolName: found.action.toolName,
-					};
+				// The resumed turn parks where nobody streams — every shape has to be
+				// captured here or the request is orphaned and the thread wedges.
+				const parkedInput = classifyParkedEveInput({
+					requests: (event.data?.requests ?? []) as EveInputRequest[],
+					skipRequestId,
+				});
+				if (parkedInput?.kind === "gated") {
+					chained = parkedInput.chained;
 					parked = true;
 					break;
 				}
-				// An optioned ask_question also parks the session — capture it so
-				// button-driven surfaces can render answer chips instead of dead text.
-				const optioned = requests.find(
-					(request) =>
-						request.requestId !== skipRequestId &&
-						request.prompt &&
-						(request.options?.length ?? 0) > 0,
-				);
-				if (optioned?.requestId && optioned.prompt) {
-					question = {
-						options: optioned.options ?? [],
-						prompt: optioned.prompt,
-						requestId: optioned.requestId,
-					};
+				if (parkedInput?.kind === "question") {
+					question = parkedInput.question;
+					session.state.status = "waiting";
+					parked = true;
+					break;
+				}
+				if (parkedInput) {
+					text = parkedInput.text;
 					session.state.status = "waiting";
 					parked = true;
 					break;
