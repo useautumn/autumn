@@ -1,11 +1,13 @@
 import { AppEnv, type Customer } from "@autumn/shared";
 import {
+	Command,
 	CommandDialog,
 	CommandEmpty,
 	CommandGroup,
 	CommandInput,
 	CommandList,
 	Skeleton,
+	useIsMobile,
 } from "@autumn/ui";
 import {
 	ArrowsClockwiseIcon,
@@ -26,6 +28,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useHotkeys } from "react-hotkeys-hook";
 import { useNavigate } from "react-router";
 import { toast } from "sonner";
+import { Drawer as DrawerPrimitive } from "vaul";
 import { useTheme } from "@/contexts/ThemeProvider";
 import { useOrg } from "@/hooks/common/useOrg";
 import { useQueryKeyFactory } from "@/hooks/common/useQueryKeyFactory";
@@ -40,7 +43,9 @@ import { impersonateUser } from "@/views/admin/adminUtils";
 import { useAdmin } from "@/views/admin/hooks/useAdmin";
 import { CommandRow } from "@/views/command-bar/command-row";
 import { calculateRelevanceScore } from "@/views/command-bar/commandUtils";
+import { isMobilePhone } from "@/views/command-bar/shakeDetection";
 import { useCommandBarHotkeys } from "@/views/command-bar/useCommandBarHotkeys";
+import { useShakeToOpenCommandBar } from "@/views/command-bar/useShakeToOpenCommandBar";
 import { useOrgSwitch } from "@/views/main-sidebar/components/OrgDropdown";
 import { useEnvChange } from "@/views/main-sidebar/EnvDropdown";
 
@@ -64,6 +69,10 @@ type Org = {
 const CommandBar = () => {
 	const open = useCommandBarStore((state) => state.open);
 	const setOpen = useCommandBarStore((state) => state.setOpen);
+	const openCommandBar = useCommandBarStore((state) => state.openCommandBar);
+	const isMobile = useIsMobile() || isMobilePhone(navigator.userAgent);
+	const { permission: motionPermission, requestPermission } =
+		useShakeToOpenCommandBar(openCommandBar);
 	const [search, setSearch] = useState("");
 	const [debouncedSearch, setDebouncedSearch] = useState("");
 	const [currentPage, setCurrentPage] = useState<
@@ -859,8 +868,8 @@ const CommandBar = () => {
 		[closeDialog, setOpen],
 	);
 
-	return (
-		<CommandDialog open={open} onOpenChange={handleOpenChange}>
+	const commandContent = (
+		<>
 			<CommandInput
 				placeholder={
 					currentPage === "main"
@@ -872,13 +881,68 @@ const CommandBar = () => {
 				value={search}
 				onValueChange={setSearch}
 				onKeyDown={handleInputKeyDown}
+				className={isMobile ? "text-base" : undefined}
 			/>
-			<CommandList>
+			<CommandList
+				className={
+					isMobile ? "max-h-none flex-1 overscroll-contain" : undefined
+				}
+			>
 				{/* Use last rendered content during transition to prevent flash */}
 				{isTransitioningRef.current && lastRenderedContentRef.current
 					? lastRenderedContentRef.current
 					: currentContent}
 			</CommandList>
+		</>
+	);
+
+	if (isMobile) {
+		return (
+			<DrawerPrimitive.Root
+				open={open}
+				onOpenChange={handleOpenChange}
+				repositionInputs
+			>
+				<DrawerPrimitive.Portal>
+					<DrawerPrimitive.Overlay className="fixed inset-0 z-[170] bg-black/50 dark:bg-black/80" />
+					<DrawerPrimitive.Content className="fixed inset-x-0 bottom-0 z-[180] flex h-[min(82dvh,42rem)] flex-col overflow-hidden rounded-t-2xl bg-interactive-secondary shadow-2xl outline-none">
+						<DrawerPrimitive.Handle className="mt-2.5 mb-1 h-1 w-10 shrink-0 rounded-full bg-border" />
+						<div className="flex h-10 shrink-0 items-center justify-between px-4">
+							<DrawerPrimitive.Title className="text-sm font-medium text-foreground">
+								Command palette
+							</DrawerPrimitive.Title>
+							<DrawerPrimitive.Description className="sr-only">
+								Search for customers, plans, and commands
+							</DrawerPrimitive.Description>
+							{motionPermission === "prompt" ||
+							motionPermission === "requesting" ? (
+								<button
+									type="button"
+									onClick={requestPermission}
+									disabled={motionPermission === "requesting"}
+									className="min-h-8 rounded-md bg-accent px-2.5 text-xs font-medium text-foreground disabled:opacity-50"
+								>
+									{motionPermission === "requesting"
+										? "Enabling…"
+										: "Enable shake"}
+								</button>
+							) : null}
+						</div>
+						<Command
+							shouldFilter={false}
+							className="min-h-0 flex-1 rounded-none pb-[env(safe-area-inset-bottom)] [&_[cmdk-item]]:min-h-11 [&_[cmdk-item]]:px-3 [&_[cmdk-item]]:py-2.5"
+						>
+							{commandContent}
+						</Command>
+					</DrawerPrimitive.Content>
+				</DrawerPrimitive.Portal>
+			</DrawerPrimitive.Root>
+		);
+	}
+
+	return (
+		<CommandDialog open={open} onOpenChange={handleOpenChange}>
+			{commandContent}
 		</CommandDialog>
 	);
 };

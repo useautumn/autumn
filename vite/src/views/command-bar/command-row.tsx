@@ -1,4 +1,4 @@
-import { CommandItem } from "@autumn/ui";
+import { CommandItem, useIsMobile } from "@autumn/ui";
 import * as React from "react";
 import { cn } from "@/lib/utils";
 
@@ -63,6 +63,8 @@ export const CommandRow = React.forwardRef<HTMLDivElement, CommandRowProps>(
 		},
 		ref,
 	) => {
+		const isMobile = useIsMobile();
+
 		const renderIcon = (icon: React.ReactNode) => {
 			if (!icon) return null;
 
@@ -81,6 +83,8 @@ export const CommandRow = React.forwardRef<HTMLDivElement, CommandRowProps>(
 		};
 
 		const renderShortcuts = () => {
+			if (isMobile) return null;
+
 			// Custom shortcuts take precedence
 			if (customShortcuts && customShortcuts.length > 0) {
 				return (

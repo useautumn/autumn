@@ -1,7 +1,10 @@
-import { ListIcon } from "@phosphor-icons/react";
+import { ListIcon, MagnifyingGlassIcon } from "@phosphor-icons/react";
+import { useCommandBarStore } from "@/hooks/stores/useCommandBarStore";
 
 /** Thin sticky bar shown only on mobile with hamburger menu trigger. */
 export function MobileTopBar({ onMenuClick }: { onMenuClick: () => void }) {
+	const openCommandBar = useCommandBarStore((state) => state.openCommandBar);
+
 	return (
 		<div className="sticky top-0 z-50 flex items-center h-11 px-3 bg-background border-b border-border/40 sm:hidden">
 			<button
@@ -11,6 +14,14 @@ export function MobileTopBar({ onMenuClick }: { onMenuClick: () => void }) {
 				aria-label="Open menu"
 			>
 				<ListIcon size={18} weight="bold" />
+			</button>
+			<button
+				type="button"
+				onClick={openCommandBar}
+				className="ml-auto flex items-center justify-center size-8 -mr-1 rounded-md text-muted-foreground hover:text-foreground hover:bg-accent/50 transition-colors"
+				aria-label="Open command palette"
+			>
+				<MagnifyingGlassIcon size={18} weight="bold" />
 			</button>
 		</div>
 	);
