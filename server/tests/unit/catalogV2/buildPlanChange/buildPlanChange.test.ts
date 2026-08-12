@@ -79,17 +79,17 @@ test("name-only change returns previous_attributes", () => {
 		previous_attributes: { name: "Pro" },
 		item_changes: [],
 	});
-	expect(change?.base_price_change).toBeUndefined();
+	expect(change?.price_change).toBeUndefined();
 	expect(change?.free_trial_change).toBeUndefined();
 	expect(change?.plan).toBeUndefined();
 });
 
-test("base price add/change/remove", () => {
+test("price add/change/remove", () => {
 	const added = buildPlanChange({
 		from: plan({ price: null }),
 		to: plan({ price: monthPrice(10) }),
 	});
-	expect(added?.base_price_change).toEqual({
+	expect(added?.price_change).toEqual({
 		previous: null,
 		current: monthPrice(10),
 	});
@@ -99,7 +99,7 @@ test("base price add/change/remove", () => {
 		from: plan({ price: monthPrice(10) }),
 		to: plan({ price: monthPrice(20) }),
 	});
-	expect(changed?.base_price_change).toEqual({
+	expect(changed?.price_change).toEqual({
 		previous: monthPrice(10),
 		current: monthPrice(20),
 	});
@@ -108,7 +108,7 @@ test("base price add/change/remove", () => {
 		from: plan({ price: monthPrice(10) }),
 		to: plan({ price: null }),
 	});
-	expect(removed?.base_price_change).toEqual({
+	expect(removed?.price_change).toEqual({
 		previous: monthPrice(10),
 		current: null,
 	});
@@ -135,7 +135,7 @@ test("item add/remove", () => {
 		item: seatsItem(),
 	});
 	expect(change?.previous_attributes).toBeNull();
-	expect(change?.base_price_change).toBeUndefined();
+	expect(change?.price_change).toBeUndefined();
 });
 
 test("trial add/change/remove", () => {

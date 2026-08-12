@@ -275,9 +275,11 @@ async function startDev() {
 			});
 			// Local Trigger's Bun worker can't resolve the optional Axiom transport.
 			// --branch + TRIGGER_DEV_BRANCH keep worker + server on the same queue.
+			// Run the installed CLI, not bunx — bunx resolves latest and can
+			// mismatch the pinned @trigger.dev/* packages.
 			const triggerCmd = isWindows
-				? `set AXIOM_TOKEN= && bunx trigger.dev dev --branch ${triggerDevBranch}`
-				: `env -u AXIOM_TOKEN bunx trigger.dev dev --branch ${triggerDevBranch}`;
+				? `set AXIOM_TOKEN= && bun run trigger dev --branch ${triggerDevBranch}`
+				: `env -u AXIOM_TOKEN bun run trigger dev --branch ${triggerDevBranch}`;
 			cmds.push(`"${triggerCmd}"`);
 
 			names.push("vite", "checkout");

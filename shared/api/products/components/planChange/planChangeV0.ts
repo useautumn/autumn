@@ -4,13 +4,13 @@ import { ApiFreeTrialV2Schema } from "../apiFreeTrialV2.js";
 import { PlanItemChangeV0Schema } from "./planItemChangeV0.js";
 import { PlanPreviousAttributesV0Schema } from "./planPreviousAttributesV0.js";
 
-/** Before/after for the plan's base price. Absent when the base price is unchanged. */
-export const PlanBasePriceChangeV0Schema = z.object({
+/** Before/after for the plan's price. Absent when the price is unchanged. */
+export const PlanPriceChangeV0Schema = z.object({
 	previous: ApiPlanV1Schema.shape.price.meta({
-		description: "The plan's base price before the change.",
+		description: "The plan's price before the change.",
 	}),
 	current: ApiPlanV1Schema.shape.price.meta({
-		description: "The plan's base price after the change.",
+		description: "The plan's price after the change.",
 	}),
 });
 
@@ -37,8 +37,8 @@ export const PlanChangeV0Schema = z.object({
 		description:
 			"Sparse map of scalar plan fields that changed, holding their previous values. Null when the plan is new.",
 	}),
-	base_price_change: PlanBasePriceChangeV0Schema.optional().meta({
-		description: "Present when the plan's base price changed.",
+	price_change: PlanPriceChangeV0Schema.optional().meta({
+		description: "Present when the plan's price changed.",
 	}),
 	free_trial_change: PlanFreeTrialChangeV0Schema.optional().meta({
 		description: "Present when the plan's free trial changed.",
@@ -48,6 +48,6 @@ export const PlanChangeV0Schema = z.object({
 	}),
 });
 
-export type PlanBasePriceChangeV0 = z.infer<typeof PlanBasePriceChangeV0Schema>;
+export type PlanPriceChangeV0 = z.infer<typeof PlanPriceChangeV0Schema>;
 export type PlanFreeTrialChangeV0 = z.infer<typeof PlanFreeTrialChangeV0Schema>;
 export type PlanChangeV0 = z.infer<typeof PlanChangeV0Schema>;

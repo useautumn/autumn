@@ -1,10 +1,10 @@
 export {
-	type PlanBasePriceChangeV0,
-	PlanBasePriceChangeV0Schema,
 	type PlanChangeV0,
 	PlanChangeV0Schema,
 	type PlanFreeTrialChangeV0,
 	PlanFreeTrialChangeV0Schema,
+	type PlanPriceChangeV0,
+	PlanPriceChangeV0Schema,
 } from "./planChangeV0.js";
 export {
 	type PlanItemChangeV0,
