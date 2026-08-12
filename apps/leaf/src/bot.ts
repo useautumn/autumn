@@ -201,6 +201,12 @@ const slackRunKey = ({
 
 const ERROR_NOTICE_MAX = 160;
 
+const EMPTY_REPLY_NOTICE =
+	"I couldn't produce a reply to that — please send it again.";
+
+const LOST_SESSION_NOTICE =
+	"I lost my working session for this thread and started a new one, but it still couldn't answer — please send that message again.";
+
 /** One clean, human line about what failed — never a stack or a shrug. */
 const errorNotice = (error: unknown) => {
 	const message = error instanceof Error ? error.message : String(error);
@@ -559,13 +565,30 @@ const runAndReply = async ({
 		});
 		if (postedApproval) return;
 
+		// Empty output with nothing to show is a failed run, not a silent success.
+		if (!output.text?.trim()) {
+			await finishLoading(target, loading, "No reply produced.");
+			await target.post({
+				markdown: `:warning: ${output.sessionDead ? LOST_SESSION_NOTICE : EMPTY_REPLY_NOTICE}`,
+			});
+			logger.warn("Agent produced no reply", {
+				event: "leaf.slack_empty_response",
+				data: {
+					finish_reason: output.finishReason,
+					run_id: output.runId,
+					session_dead: Boolean(output.sessionDead),
+				},
+			});
+			return;
+		}
+
 		await finishLoading(target, loading, "Done.");
 
-		await target.post({ markdown: output.text || "Done." });
+		await target.post({ markdown: output.text });
 		logger.info("Posted Slack response", {
 			event: "leaf.slack_response_posted",
 			data: {
-				has_text: Boolean(output.text),
+				has_text: true,
 			},
 		});
 	} catch (error) {
