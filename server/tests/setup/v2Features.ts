@@ -34,6 +34,8 @@ export enum TestFeature {
 	AiCreditsTiered = "ai_credits_tiered", // AI credit system with global + provider markup tiers
 
 	Orbs = "orbs", // credit system that wraps an AI credit system (1000 orbs per $1)
+
+	PoolCredits = "pool_credits", // credit system fed by five metered features
 }
 
 export const getFeatures = ({ orgId }: { orgId: string }) => ({
@@ -103,6 +105,20 @@ export const getFeatures = ({ orgId }: { orgId: string }) => ({
 		env: AppEnv.Sandbox,
 		usageType: FeatureUsageType.Single,
 		eventNames: ["action-event"],
+	}),
+	[TestFeature.PoolCredits]: constructCreditSystem({
+		featureId: TestFeature.PoolCredits,
+		orgId,
+		env: AppEnv.Sandbox,
+		// Five sources at deliberately different rates, so a breakdown of what
+		// drew on the pool has enough slices to be worth drawing.
+		schema: [
+			{ metered_feature_id: TestFeature.Action1, credit_cost: 0.2 },
+			{ metered_feature_id: TestFeature.Action2, credit_cost: 0.6 },
+			{ metered_feature_id: TestFeature.Action3, credit_cost: 1.4 },
+			{ metered_feature_id: TestFeature.Words, credit_cost: 0.01 },
+			{ metered_feature_id: TestFeature.Messages, credit_cost: 2 },
+		],
 	}),
 	[TestFeature.Credits]: constructCreditSystem({
 		featureId: TestFeature.Credits,

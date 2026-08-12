@@ -160,8 +160,10 @@ export function parseExistingConfig({
 		// Import statement
 		if (trimmed.startsWith("import ")) {
 			const startLine = i;
-			// Import can span multiple lines until semicolon
-			while (i < lines.length && !lines[i]!.includes(";")) {
+			while (
+				i < lines.length &&
+				!/(?:["'];?|;)\s*(?:\/\/.*|\/\*.*)?$/.test(lines[i]!)
+			) {
 				i++;
 			}
 			const endLine = i;
@@ -226,8 +228,7 @@ export function parseExistingConfig({
 					}
 				}
 
-				// End when we close all braces and see semicolon
-				if (foundStart && depth === 0 && currentLine.includes(";")) {
+				if (foundStart && depth === 0) {
 					break;
 				}
 				i++;

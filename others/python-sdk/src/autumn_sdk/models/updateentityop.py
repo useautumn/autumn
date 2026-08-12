@@ -14,7 +14,7 @@ from autumn_sdk.types import (
 from autumn_sdk.utils import FieldMetadata, HeaderMetadata
 import pydantic
 from pydantic import model_serializer
-from typing import Any, Dict, List, Literal, Optional, Union
+from typing import Dict, List, Literal, Optional, Union
 from typing_extensions import Annotated, NotRequired, TypeAliasType, TypedDict
 
 
@@ -53,7 +53,7 @@ UpdateEntityLimitTypeRequestBody = Literal[
 r"""How overage_limit is interpreted: an absolute overage cap (default) or a percentage of the main-plan allowance."""
 
 
-class UpdateEntitySpendLimitRequestTypedDict(TypedDict):
+class UpdateEntitySpendLimitRequestBodyTypedDict(TypedDict):
     feature_id: NotRequired[str]
     r"""Optional feature ID this spend limit applies to."""
     enabled: NotRequired[bool]
@@ -66,7 +66,7 @@ class UpdateEntitySpendLimitRequestTypedDict(TypedDict):
     r"""When true, overage for this feature is not posted to Stripe. Usage tracking and balance resets still behave normally."""
 
 
-class UpdateEntitySpendLimitRequest(BaseModel):
+class UpdateEntitySpendLimitRequestBody(BaseModel):
     feature_id: Optional[str] = None
     r"""Optional feature ID this spend limit applies to."""
 
@@ -126,19 +126,19 @@ UpdateEntityProperties = TypeAliasType(
 )
 
 
-class UpdateEntityFilterRequestTypedDict(TypedDict):
+class UpdateEntityFilterRequestBodyTypedDict(TypedDict):
     r"""When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature."""
 
     properties: Dict[str, UpdateEntityPropertiesTypedDict]
 
 
-class UpdateEntityFilterRequest(BaseModel):
+class UpdateEntityFilterRequestBody(BaseModel):
     r"""When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature."""
 
     properties: Dict[str, UpdateEntityProperties]
 
 
-class UpdateEntityUsageLimitRequestTypedDict(TypedDict):
+class UpdateEntityUsageLimitRequestBodyTypedDict(TypedDict):
     feature_id: str
     r"""The feature this usage limit applies to."""
     limit: float
@@ -147,11 +147,11 @@ class UpdateEntityUsageLimitRequestTypedDict(TypedDict):
     r"""Interval for the cap, aligned to the customer's billing cycle."""
     enabled: NotRequired[bool]
     r"""Whether this usage limit is enabled."""
-    filter_: NotRequired[UpdateEntityFilterRequestTypedDict]
+    filter_: NotRequired[UpdateEntityFilterRequestBodyTypedDict]
     r"""When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature."""
 
 
-class UpdateEntityUsageLimitRequest(BaseModel):
+class UpdateEntityUsageLimitRequestBody(BaseModel):
     feature_id: str
     r"""The feature this usage limit applies to."""
 
@@ -165,7 +165,7 @@ class UpdateEntityUsageLimitRequest(BaseModel):
     r"""Whether this usage limit is enabled."""
 
     filter_: Annotated[
-        Optional[UpdateEntityFilterRequest], pydantic.Field(alias="filter")
+        Optional[UpdateEntityFilterRequestBody], pydantic.Field(alias="filter")
     ] = None
     r"""When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature."""
 
@@ -241,14 +241,14 @@ class UpdateEntityUsageAlertRequestBody(BaseModel):
         return m
 
 
-class UpdateEntityOverageAllowedRequestTypedDict(TypedDict):
+class UpdateEntityOverageAllowedRequestBodyTypedDict(TypedDict):
     feature_id: str
     r"""The feature ID this overage allowed control applies to."""
     enabled: NotRequired[bool]
     r"""Whether overage is allowed for this feature."""
 
 
-class UpdateEntityOverageAllowedRequest(BaseModel):
+class UpdateEntityOverageAllowedRequestBody(BaseModel):
     feature_id: str
     r"""The feature ID this overage allowed control applies to."""
 
@@ -272,32 +272,32 @@ class UpdateEntityOverageAllowedRequest(BaseModel):
         return m
 
 
-class UpdateEntityBillingControlsRequestTypedDict(TypedDict):
+class UpdateEntityBillingControlsRequestBodyTypedDict(TypedDict):
     r"""Billing controls to replace on the entity."""
 
-    spend_limits: NotRequired[List[UpdateEntitySpendLimitRequestTypedDict]]
+    spend_limits: NotRequired[List[UpdateEntitySpendLimitRequestBodyTypedDict]]
     r"""List of spend limits per feature. Each entry caps overage (overage_limit) and/or per-interval usage (usage_limit)."""
-    usage_limits: NotRequired[List[UpdateEntityUsageLimitRequestTypedDict]]
+    usage_limits: NotRequired[List[UpdateEntityUsageLimitRequestBodyTypedDict]]
     r"""List of hard usage caps per feature for this entity. An entity entry overrides the customer's for that feature."""
     usage_alerts: NotRequired[List[UpdateEntityUsageAlertRequestBodyTypedDict]]
     r"""List of usage alert configurations per feature."""
-    overage_allowed: NotRequired[List[UpdateEntityOverageAllowedRequestTypedDict]]
+    overage_allowed: NotRequired[List[UpdateEntityOverageAllowedRequestBodyTypedDict]]
     r"""List of overage allowed controls per feature. When enabled, usage can exceed balance."""
 
 
-class UpdateEntityBillingControlsRequest(BaseModel):
+class UpdateEntityBillingControlsRequestBody(BaseModel):
     r"""Billing controls to replace on the entity."""
 
-    spend_limits: Optional[List[UpdateEntitySpendLimitRequest]] = None
+    spend_limits: Optional[List[UpdateEntitySpendLimitRequestBody]] = None
     r"""List of spend limits per feature. Each entry caps overage (overage_limit) and/or per-interval usage (usage_limit)."""
 
-    usage_limits: Optional[List[UpdateEntityUsageLimitRequest]] = None
+    usage_limits: Optional[List[UpdateEntityUsageLimitRequestBody]] = None
     r"""List of hard usage caps per feature for this entity. An entity entry overrides the customer's for that feature."""
 
     usage_alerts: Optional[List[UpdateEntityUsageAlertRequestBody]] = None
     r"""List of usage alert configurations per feature."""
 
-    overage_allowed: Optional[List[UpdateEntityOverageAllowedRequest]] = None
+    overage_allowed: Optional[List[UpdateEntityOverageAllowedRequestBody]] = None
     r"""List of overage allowed controls per feature. When enabled, usage can exceed balance."""
 
     @model_serializer(mode="wrap")
@@ -324,7 +324,7 @@ class UpdateEntityParamsTypedDict(TypedDict):
     r"""The ID of the entity."""
     customer_id: NotRequired[str]
     r"""The ID of the customer that owns the entity."""
-    billing_controls: NotRequired[UpdateEntityBillingControlsRequestTypedDict]
+    billing_controls: NotRequired[UpdateEntityBillingControlsRequestBodyTypedDict]
     r"""Billing controls to replace on the entity."""
 
 
@@ -335,7 +335,7 @@ class UpdateEntityParams(BaseModel):
     customer_id: Optional[str] = None
     r"""The ID of the customer that owns the entity."""
 
-    billing_controls: Optional[UpdateEntityBillingControlsRequest] = None
+    billing_controls: Optional[UpdateEntityBillingControlsRequestBody] = None
     r"""Billing controls to replace on the entity."""
 
     @model_serializer(mode="wrap")
@@ -923,13 +923,13 @@ r"""Interval for the cap, aligned to the customer's billing cycle."""
 class UpdateEntityFilterResponseTypedDict(TypedDict):
     r"""When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature."""
 
-    properties: Dict[str, Any]
+    properties: Dict[str, str]
 
 
 class UpdateEntityFilterResponse(BaseModel):
     r"""When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature."""
 
-    properties: Dict[str, Any]
+    properties: Dict[str, str]
 
 
 UpdateEntityUsageLimitSource = Union[
@@ -1335,7 +1335,7 @@ class UpdateEntityResponse(BaseModel):
 
 
 try:
-    UpdateEntityUsageLimitRequest.model_rebuild()
+    UpdateEntityUsageLimitRequestBody.model_rebuild()
 except NameError:
     pass
 try:
