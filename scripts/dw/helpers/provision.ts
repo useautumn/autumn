@@ -1,17 +1,19 @@
-import type { Registry, RegistryEntry } from "../types.ts";
-import {
-	setupAgentWorktree,
-	autoSetupTestOrg,
-	autoSeedSlackInstall,
-} from "./setup.ts";
-import { ensureChatDatabase } from "./neon.ts";
 import { promoteAllUsersToAdmin } from "../commands/admin.ts";
+import type { Registry, RegistryEntry } from "../types.ts";
 import { ensureComposeStack, readNgrokTunnelUrl } from "./compose.ts";
-import { ensureReservedDomain, ngrokApiAvailable } from "./ngrok.ts";
-import { writeEnvLocalFiles } from "./env-files.ts";
 import { ensureEmulateRunning } from "./emulate.ts";
-import { log } from "./shell.ts";
+import { writeEnvLocalFiles } from "./env-files.ts";
+import { isHeadless } from "./headless.ts";
+import { ensureChatDatabase } from "./neon.ts";
+import { ensureReservedDomain, ngrokApiAvailable } from "./ngrok.ts";
 import { saveRegistry } from "./registry.ts";
+import {
+	autoEnsureTestOrgSecretKey,
+	autoSeedSlackInstall,
+	autoSetupTestOrg,
+	setupAgentWorktree,
+} from "./setup.ts";
+import { log } from "./shell.ts";
 
 export async function provisionWorktree({
 	entry,
@@ -27,17 +29,27 @@ export async function provisionWorktree({
 	if (current.branchName) ensureChatDatabase(current.branchName);
 
 	let reservedDomain: string | undefined;
+	let reservedViteDomain: string | undefined;
 	if (ngrokApiAvailable() && process.env.NGROK_AUTHTOKEN) {
 		const reserved = await ensureReservedDomain(
 			current.worktreeNum,
 			current.path,
 		);
+		// Separate domain for the dashboard — one ngrok agent forwards one port.
+		const reservedVite = await ensureReservedDomain(
+			current.worktreeNum,
+			current.path,
+			{ vite: true },
+		);
 		current = {
 			...current,
 			reservedDomainId: reserved.id,
 			ngrokUrl: `https://${reserved.domain}`,
+			reservedViteDomainId: reservedVite.id,
+			ngrokViteUrl: `https://${reservedVite.domain}`,
 		};
 		reservedDomain = reserved.domain;
+		reservedViteDomain = reservedVite.domain;
 		registry[cwd] = current;
 		saveRegistry(registry);
 	}
@@ -46,6 +58,7 @@ export async function provisionWorktree({
 		current.worktreeNum,
 		current.branchName,
 		reservedDomain,
+		reservedViteDomain,
 	);
 	if (ngrokEnabled && !reservedDomain) {
 		current = {
@@ -57,7 +70,7 @@ export async function provisionWorktree({
 	}
 
 	writeEnvLocalFiles(current);
-	ensureEmulateRunning();
+	if (!isHeadless()) ensureEmulateRunning();
 
 	if (created) {
 		log("first provision — seeding test org");
@@ -73,6 +86,10 @@ export async function provisionWorktree({
 			}
 		}
 	}
+
+	// Always re-ensure: Neon reuse / failed prior seed leaves Infisical's key
+	// absent from api_keys while bun t still sends that Bearer token.
+	await autoEnsureTestOrgSecretKey(current);
 
 	return current;
 }

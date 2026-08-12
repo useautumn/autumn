@@ -1,7 +1,7 @@
 import {
 	type ApiPlanItemV1,
-	FixedPriceConfigSchema,
 	type Feature,
+	FixedPriceConfigSchema,
 	type FullProduct,
 	getProductItemDisplay,
 	isFeaturePriceItem,
@@ -165,7 +165,9 @@ export const buildProductMappingContext = ({
 		product: { items: sortedItems } as any,
 	});
 	const basePrice = basePriceItem?.price_id
-		? (product.prices ?? []).find((price) => price.id === basePriceItem.price_id)
+		? (product.prices ?? []).find(
+				(price) => price.id === basePriceItem.price_id,
+			)
 		: undefined;
 
 	const featureItems = productV2ToFeatureItems({
@@ -204,6 +206,25 @@ export const buildProductMappingContext = ({
 	};
 };
 
+const clearCurrencyStripePriceFields = (
+	currencies: Price["config"]["currencies"],
+) => {
+	if (!currencies) return currencies;
+
+	return Object.fromEntries(
+		Object.entries(currencies).map(([currency, config]) => [
+			currency,
+			{
+				...config,
+				stripe_price_id: null,
+				stripe_empty_price_id: null,
+				stripe_placeholder_price_id: null,
+				stripe_prepaid_price_v2_id: null,
+			},
+		]),
+	);
+};
+
 export const clearDependentStripePriceFields = ({
 	price,
 	stripeProductId,
@@ -219,6 +240,7 @@ export const clearDependentStripePriceFields = ({
 		const config = FixedPriceConfigSchema.parse(price.config);
 		return {
 			...config,
+			currencies: clearCurrencyStripePriceFields(config.currencies),
 			stripe_product_id: stripeProductId,
 			stripe_price_id: stripePriceId ?? null,
 			stripe_empty_price_id: null,
@@ -228,6 +250,7 @@ export const clearDependentStripePriceFields = ({
 	const config = UsagePriceConfigSchema.parse(price.config);
 	return {
 		...config,
+		currencies: clearCurrencyStripePriceFields(config.currencies),
 		stripe_product_id: stripeProductId,
 		stripe_price_id: stripePriceId ?? null,
 		stripe_empty_price_id: null,

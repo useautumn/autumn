@@ -1,6 +1,6 @@
-import { type AppEnv, ErrCode } from "@autumn/shared";
+import { getAutumnEnv } from "@autumn/env";
+import type { AppEnv } from "@autumn/shared";
 import Stripe from "stripe";
-import RecaseError from "@/utils/errorUtils.js";
 import {
 	MAIN_STRIPE_EVENT_TYPES,
 	SYNC_STRIPE_EVENT_TYPES,
@@ -20,16 +20,7 @@ export const createWebhookEndpoint = async (
 ) => {
 	const stripe = new Stripe(apiKey);
 
-	const webhookBaseUrl =
-		process.env.STRIPE_WEBHOOK_URL || process.env.SERVER_URL;
-
-	if (!webhookBaseUrl) {
-		throw new RecaseError({
-			message: "Stripe webhook baseURL not found",
-			code: ErrCode.StripeKeyInvalid,
-			statusCode: 500,
-		});
-	}
+	const webhookBaseUrl = getAutumnEnv().AUTUMN_PUBLIC_API_URL;
 
 	const endpoint = await stripe.webhookEndpoints.create({
 		url: `${webhookBaseUrl}/webhooks/stripe/${orgId}/${env}`,

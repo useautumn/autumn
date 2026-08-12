@@ -3,10 +3,10 @@ import { logger } from "@/external/logtail/logtailUtils.js";
 import type { RedisV2InstanceName } from "@/internal/misc/redisV2Cache/redisV2CacheSchemas.js";
 import { getReachableDragonflyUrl } from "./getReachableDragonflyUrl.js";
 import {
+	createPooledStandbyRedisConnection,
 	createRedisConnection,
-	createStandbyRedisConnection,
 	currentRegion,
-	waitForRedisReady,
+	waitForRedisReadPoolReady,
 } from "./initRedis.js";
 import { REDIS_V2_COMMAND_TIMEOUT_MS } from "./initUtils/createRedisClient.js";
 
@@ -18,7 +18,7 @@ const dragonflyUrl = rawDragonflyUrl
 export const hasRedisV2Config = Boolean(dragonflyUrl);
 
 export const redisV2: Redis = dragonflyUrl
-	? createStandbyRedisConnection({
+	? createPooledStandbyRedisConnection({
 			cacheUrl: dragonflyUrl,
 			region: `${currentRegion}:v2`,
 			redisType: "subject-primary",
@@ -70,5 +70,5 @@ export const getAlternateRedisV2Instance = (
 export const warmupRedisV2 = async (): Promise<void> => {
 	if (!hasRedisV2Config) return;
 
-	await waitForRedisReady(redisV2, "v2");
+	await waitForRedisReadPoolReady({ instance: redisV2, label: "v2" });
 };

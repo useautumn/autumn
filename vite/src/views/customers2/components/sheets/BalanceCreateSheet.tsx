@@ -35,6 +35,7 @@ import { useAxiosInstance } from "@/services/useAxiosInstance";
 import { getBackendErr } from "@/utils/genUtils";
 import { useCusQuery } from "@/views/customers/customer/hooks/useCusQuery";
 import { RolloverConfigForm } from "@/views/products/plan/components/edit-plan-feature/advanced-settings/RolloverConfigForm";
+import { checkRolloverConfigValid } from "@/views/products/plan/utils/rolloverUtils";
 import { useCustomerContext } from "../../customer/CustomerContext";
 import { EntityScopeSelector } from "./EntityScopeSelector";
 
@@ -151,6 +152,7 @@ export function BalanceCreateSheet() {
 		}
 
 		if (rollover && canEnableRollover) {
+			if (!checkRolloverConfigValid(rollover)) return;
 			params.rollover = rollover;
 		}
 

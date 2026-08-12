@@ -152,7 +152,7 @@ function Calendar({
 				day_outside: "day-outside text-subtle aria-selected:text-subtle",
 				day_disabled: "text-subtle opacity-50",
 				day_range_middle:
-					"aria-selected:bg-accent aria-selected:text-accent-foreground",
+					"aria-selected:bg-accent aria-selected:!text-accent-foreground",
 				day_hidden: "invisible",
 				...classNames,
 			}}

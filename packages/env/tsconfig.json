@@ -1,0 +1,16 @@
+{
+	"compilerOptions": {
+		"declaration": true,
+		"declarationMap": true,
+		"esModuleInterop": true,
+		"isolatedModules": true,
+		"module": "Preserve",
+		"moduleResolution": "bundler",
+		"noEmit": true,
+		"skipLibCheck": true,
+		"strict": true,
+		"target": "ES2022",
+		"types": ["bun", "node"]
+	},
+	"include": ["src/**/*.ts"]
+}

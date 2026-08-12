@@ -146,7 +146,7 @@ export const bot = new Chat({
 			getUser: async (request) => {
 				const session = await verifyDashboardSession({
 					cookie: request.headers.get("cookie"),
-					authBaseUrl: env.BETTER_AUTH_URL,
+					authBaseUrl: env.AUTUMN_API_URL,
 				});
 				rootLogger.info("Web chat getUser", {
 					event: "leaf.web_chat_get_user",

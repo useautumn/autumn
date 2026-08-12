@@ -10,6 +10,7 @@ import {
 	type ListCustomersV2_3Params,
 	type ListCustomersV2Params,
 	RELEVANT_STATUSES,
+	type SortOrder,
 	StandardCursor,
 	type StandardCursorFields,
 } from "@autumn/shared";
@@ -195,7 +196,14 @@ export class CusBatchService {
 		ctx: RequestContext;
 		query: ListCustomersV2_3Params;
 	}): Promise<{ list: ApiCustomerV5[]; next_cursor: string | null }> {
-		const { limit, plans, subscription_status, search, processors } = query;
+		const {
+			limit,
+			plans,
+			subscription_status,
+			search,
+			processors,
+			created_at_range,
+		} = query;
 
 		const cursor: StandardCursorFields | null = StandardCursor.decode(
 			query.start_cursor,
@@ -218,7 +226,9 @@ export class CusBatchService {
 			search,
 			plans,
 			processors,
+			createdAtRangeFilter: created_at_range,
 			cusProductLimit,
+			sortOrder: query.sort_order,
 		});
 
 		const tSqlStart = performance.now();
@@ -311,12 +321,14 @@ export class CusBatchService {
 		filters,
 		cursor,
 		limit,
+		sortOrder,
 	}: {
 		ctx: RequestContext;
 		search: string;
 		filters?: CustomerListFilters;
 		cursor: { t: number; id: string } | null;
 		limit: number;
+		sortOrder?: SortOrder;
 	}): Promise<{
 		fullCustomers: FullCustomer[];
 		next_cursor: string | null;
@@ -354,6 +366,7 @@ export class CusBatchService {
 				filters,
 				cursor,
 				limit,
+				sortOrder,
 			});
 			internalIds = resolved.internalIds;
 			resolvedPeek = resolved.peek;
@@ -386,7 +399,11 @@ export class CusBatchService {
 			processors: requiresResolveStep
 				? undefined
 				: parseDashboardProcessorFilter(filters?.processor),
+			createdAtRangeFilter: requiresResolveStep
+				? undefined
+				: filters?.created_at_range,
 			cusProductLimit,
+			sortOrder,
 		});
 
 		const tSqlStart = performance.now();

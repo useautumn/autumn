@@ -1,3 +1,4 @@
+import { getAutumnEnv } from "@autumn/env";
 import { z } from "zod";
 import {
 	DEFAULT_CHAT_MODEL,
@@ -20,7 +21,6 @@ const envSchema = z
 		ANTHROPIC_API_KEY: optionalString,
 		MCP_SERVER_URL: optionalString,
 		BETTER_AUTH_SECRET: optionalString,
-		BETTER_AUTH_URL: optionalString,
 		CHAT_MODEL: z.string().min(1).default(DEFAULT_CHAT_MODEL),
 		CHAT_NAME: z.string().min(1).default("Autumn"),
 		CHAT_STATE_DATABASE_URL: optionalString,
@@ -69,11 +69,6 @@ const envSchema = z
 			// In-process callers (mastra, tool context) hit leaf's own /mcp on
 			// loopback — MCP_SERVER_URL is the public tunnel for Claude Managed Agents.
 			LOCAL_MCP_URL: `http://localhost:${values.PORT}`,
-			BETTER_AUTH_URL:
-				values.BETTER_AUTH_URL ??
-				(process.env.NODE_ENV === "production"
-					? "https://api.useautumn.com"
-					: "http://localhost:8080"),
 			CHAT_STATE_DATABASE_URL:
 				values.CHAT_STATE_DATABASE_URL ?? databaseUrl.toString(),
 			CHAT_STATE_SECRET:
@@ -90,4 +85,7 @@ const envSchema = z
 		};
 	});
 
-export const env = envSchema.parse(process.env);
+export const env = {
+	...envSchema.parse(process.env),
+	...getAutumnEnv(),
+};

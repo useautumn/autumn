@@ -10,6 +10,7 @@ export interface ParsedEntity {
 	id: string;
 	type: "feature" | "plan" | "referral_program" | "reward" | "variant";
 	varName: string;
+	version?: number;
 	/** Starting line index (0-based) */
 	startLine: number;
 	/** Ending line index (0-based, inclusive) */
@@ -18,11 +19,23 @@ export interface ParsedEntity {
 	lines: string[];
 }
 
+export interface ParsedIdentity {
+	id: string;
+	version?: number;
+}
+
+export interface ParsedDeclaration {
+	requiresRuntimeIdentity: boolean;
+	type: ParsedEntity["type"];
+	varName: string;
+}
+
 export interface ParsedBlock {
 	type: "import" | "comment" | "export" | "other";
 	startLine: number;
 	endLine: number;
 	lines: string[];
+	declaration?: ParsedDeclaration;
 	/** For export blocks */
 	entity?: ParsedEntity;
 }
@@ -38,14 +51,33 @@ export interface ParsedConfig {
 	source: string;
 }
 
-/**
- * Extract the 'id' value from source lines using regex
- */
-function extractId(lines: string[]): string | null {
+/** Resolve a literal ID, falling back to the generated variable name. */
+function extractIdentity({
+	identitiesByTypeAndVarName,
+	lines,
+	type,
+	varName,
+}: {
+	identitiesByTypeAndVarName?: Map<
+		ParsedEntity["type"],
+		Map<string, ParsedIdentity>
+	>;
+	lines: string[];
+	type: ParsedEntity["type"] | null;
+	varName: string | null;
+}): ParsedIdentity | null {
 	const joined = lines.join("\n");
-	// Match id: 'value' or id: "value"
-	const match = joined.match(/id:\s*['"]([^'"]+)['"]/);
-	return match ? (match[1] ?? null) : null;
+	const mapped =
+		type && varName
+			? identitiesByTypeAndVarName?.get(type)?.get(varName)
+			: undefined;
+	const id = joined.match(/id:\s*['"]([^'"]+)['"]/)?.[1];
+	if (!id) return mapped ?? null;
+	if (mapped?.id === id) return mapped;
+	const version = joined.match(
+		/id:\s*['"][^'"]+['"]\s*,?\s*version:\s*(\d+)/,
+	)?.[1];
+	return { id, version: version === undefined ? undefined : Number(version) };
 }
 
 /**
@@ -90,10 +122,23 @@ function determineEntityType(lines: string[]): ParsedEntity["type"] | null {
 	return null;
 }
 
+const isResourceExpression = (source: string) =>
+	/=\s*(?:feature|plan|referralProgram|reward)\s*\(/.test(source) ||
+	/=\s*\w+\.variant\s*\(/.test(source);
+
 /**
  * Parse an existing autumn.config.ts file using line-based parsing
  */
-export function parseExistingConfig(configPath: string): ParsedConfig {
+export function parseExistingConfig({
+	configPath,
+	identitiesByTypeAndVarName,
+}: {
+	configPath: string;
+	identitiesByTypeAndVarName?: Map<
+		ParsedEntity["type"],
+		Map<string, ParsedIdentity>
+	>;
+}): ParsedConfig {
 	const source = readFileSync(configPath, "utf-8");
 	const lines = source.split("\n");
 
@@ -191,12 +236,28 @@ export function parseExistingConfig(configPath: string): ParsedConfig {
 			const endLine = i;
 			const blockLines = lines.slice(startLine, endLine + 1);
 
-			const id = extractId(blockLines);
 			const entityType = determineEntityType(blockLines);
+			const blockSource = blockLines.join("\n");
+			const declaration =
+				entityType && varName && isResourceExpression(blockSource)
+					? {
+							requiresRuntimeIdentity: !/id:\s*['"][^'"]+['"]/.test(
+								blockSource,
+							),
+							type: entityType,
+							varName,
+						}
+					: undefined;
+			const identity = extractIdentity({
+				identitiesByTypeAndVarName,
+				lines: blockLines,
+				type: entityType,
+				varName,
+			});
 
-			if (id && entityType && varName) {
+			if (identity && entityType && varName) {
 				const entity: ParsedEntity = {
-					id,
+					...identity,
 					type: entityType,
 					varName,
 					startLine,
@@ -209,6 +270,7 @@ export function parseExistingConfig(configPath: string): ParsedConfig {
 					startLine,
 					endLine,
 					lines: blockLines,
+					declaration,
 					entity,
 				});
 
@@ -220,6 +282,7 @@ export function parseExistingConfig(configPath: string): ParsedConfig {
 					startLine,
 					endLine,
 					lines: blockLines,
+					declaration,
 				});
 			}
 

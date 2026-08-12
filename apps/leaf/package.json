@@ -8,7 +8,7 @@
 		"eval": "zsh -lc 'braintrust eval tests/evals/**/*.eval.ts --external-packages @mastra/mcp @mastra/core @mastra/braintrust @mastra/observability @anthropic-ai/claude-agent-sdk @anthropic-ai/sdk @ngrok/ngrok \"$@\"' --",
 		"eval:mcp": "zsh -lc 'braintrust eval tests/evals/mcp/**/*.eval.ts --external-packages @mastra/mcp @mastra/core @mastra/braintrust @mastra/observability @anthropic-ai/claude-agent-sdk @anthropic-ai/sdk @ngrok/ngrok \"$@\"' --",
 		"start": "bun src/index.ts",
-		"test": "bun test tests/unit",
+		"test": "AUTUMN_API_URL=http://localhost:8080 AUTUMN_PUBLIC_API_URL=http://localhost:8080 bun test tests/unit",
 		"ts": "tsc --noEmit"
 	},
 	"dependencies": {
@@ -17,6 +17,7 @@
 		"@anthropic-ai/sdk": "^0.102.0",
 		"@autumn/agent-docs": "workspace:*",
 		"@autumn/auth": "workspace:*",
+		"@autumn/env": "workspace:*",
 		"@autumn/logging": "workspace:*",
 		"@autumn/mcp": "workspace:*",
 		"@autumn/render": "workspace:*",

@@ -22,7 +22,6 @@ const localConfig = {
 	dragonflyPort: 6380,
 	dynamoDbPort: 8000,
 	apiServerPort: 8080,
-	mcpServerPort: 3099,
 	databaseUrl: "postgresql://postgres:postgres@localhost:5432/autumn",
 	chatStateDatabaseUrl: "postgresql://postgres:postgres@localhost:5432/chat",
 	miscCacheUrl: "redis://localhost:6379",
@@ -87,20 +86,18 @@ const getDomainFromUrl = ({ url }: { url: string }) => {
 };
 
 const configureNgrokUrl = () => {
-	const ngrokUrl = composeEnv.NGROK_URL;
+	const ngrokUrl = composeEnv.AUTUMN_PUBLIC_API_URL;
 	if (!ngrokUrl) {
 		throw new Error(
-			"NGROK_URL is required for dev services. It should be injected from Infisical dev secrets.",
+			"AUTUMN_PUBLIC_API_URL is required for dev services. It should be injected from Infisical dev secrets.",
 		);
 	}
 
 	composeEnv.NGROK_DOMAIN = getDomainFromUrl({ url: ngrokUrl });
 };
 
-const configureNgrokTarget = ({ target }: { target: "api" | "mcp" }) => {
-	const port =
-		target === "mcp" ? localConfig.mcpServerPort : localConfig.apiServerPort;
-	composeEnv.NGROK_TARGET = `host.docker.internal:${port}`;
+const configureNgrokTarget = () => {
+	composeEnv.NGROK_TARGET = `host.docker.internal:${localConfig.apiServerPort}`;
 };
 
 const configureNgrokToken = async () => {
@@ -367,9 +364,9 @@ const getNgrokUrl = async () => {
 	throw new Error("ngrok did not expose a public URL on :4040");
 };
 
-const up = async ({ ngrokTarget }: { ngrokTarget: "api" | "mcp" }) => {
+const up = async () => {
 	configureNgrokUrl();
-	configureNgrokTarget({ target: ngrokTarget });
+	configureNgrokTarget();
 	await configureNgrokToken();
 	log("starting Docker services");
 	dockerCompose({
@@ -398,7 +395,7 @@ const up = async ({ ngrokTarget }: { ngrokTarget: "api" | "mcp" }) => {
 	const ngrokUrl = await getNgrokUrl();
 	log(`ngrok target: ${composeEnv.NGROK_TARGET}`);
 	log(`ngrok URL: ${ngrokUrl}`);
-	log(`export NGROK_URL=${ngrokUrl}`);
+	log(`export AUTUMN_PUBLIC_API_URL=${ngrokUrl}`);
 };
 
 const down = () => {
@@ -432,8 +429,6 @@ const help = () => {
 
 Commands:
   up                         Start local Postgres, Dragonfly (misc cache + cache v2), DynamoDB, and ngrok
-  up --mcp                   Start services with ngrok pointed at localhost:3099
-  up:mcp                     Alias for up --mcp
   down                       Stop local services and keep all data
   down --volumes             Stop services and delete Dragonfly data
   down --postgres            Stop services and delete Postgres data
@@ -444,7 +439,7 @@ Commands:
 Local service values:
   DATABASE_URL=${localConfig.databaseUrl}
   CHAT_STATE_DATABASE_URL=${localConfig.chatStateDatabaseUrl}
-  NGROK_URL=<printed by bun dev:services up>
+  AUTUMN_PUBLIC_API_URL=<printed by bun dev:services up>
   MISC_CACHE_DRAGONFLY_PUBLIC_URL=${localConfig.miscCacheUrl}
   CACHE_V2_DRAGONFLY_URL=${localConfig.dragonflyUrl}
   DYNAMODB_ENDPOINT=${localConfig.dynamoDbEndpoint}
@@ -453,10 +448,7 @@ Local service values:
 
 switch (command) {
 	case "up":
-		await up({ ngrokTarget: flags.has("--mcp") ? "mcp" : "api" });
-		break;
-	case "up:mcp":
-		await up({ ngrokTarget: "mcp" });
+		await up();
 		break;
 	case "down":
 		down();

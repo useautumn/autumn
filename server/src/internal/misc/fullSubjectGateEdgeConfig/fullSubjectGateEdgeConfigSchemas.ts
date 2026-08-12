@@ -36,6 +36,15 @@ export const FullSubjectGateEdgeConfigSchema = z.object({
 			replica_share: z.number().min(0).max(1).default(0),
 		})
 		.prefault({}),
+	// Delayed backup reads reuse the general pool and are capped per process so
+	// a shared DB incident cannot multiply load without bound.
+	delayed_postgres_backup_read: z
+		.object({
+			enabled: z.boolean().default(true),
+			delay_ms: z.number().int().min(500).max(1_500).default(1_000),
+			max_in_flight_per_process: z.number().int().min(1).max(10).default(1),
+		})
+		.prefault({}),
 });
 
 export type FullSubjectGateEdgeConfig = z.infer<

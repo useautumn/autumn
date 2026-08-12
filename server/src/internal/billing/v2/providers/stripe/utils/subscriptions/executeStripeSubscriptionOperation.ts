@@ -6,6 +6,7 @@ import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { buildAutumnSubscriptionMetadata } from "@/internal/billing/v2/providers/stripe/utils/common/autumnStripeMetadata";
 import { mergeStripeMetadata } from "@/internal/billing/v2/providers/stripe/utils/common/mergeStripeMetadata";
 import { shouldEnableStripeAutomaticTax } from "@/internal/billing/v2/providers/stripe/utils/tax/shouldEnableStripeAutomaticTax";
+import { buildInvoiceModeSubscriptionParams } from "./buildInvoiceModeSubscriptionParams";
 import { willStripeSubscriptionUpdateCreateInvoice } from "./willStripeSubscriptionUpdateCreateInvoice";
 
 export const executeStripeSubscriptionOperation = async ({
@@ -19,14 +20,12 @@ export const executeStripeSubscriptionOperation = async ({
 }) => {
 	const { org, env } = ctx;
 	const stripeClient = createStripeCli({ org, env });
-	const { paymentMethod } = billingContext;
+	const { paymentMethod, invoiceMode } = billingContext;
 
-	const invoiceModeParams = billingContext.invoiceMode
-		? {
-				collection_method: "send_invoice" as const,
-				days_until_due: billingContext.invoiceMode.daysUntilDue ?? 30,
-			}
-		: {};
+	const invoiceModeParams = buildInvoiceModeSubscriptionParams({
+		invoiceMode,
+		subscriptionAction,
+	});
 
 	const updateWillCreateInvoice = willStripeSubscriptionUpdateCreateInvoice({
 		billingContext,
