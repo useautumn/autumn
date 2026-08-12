@@ -287,10 +287,12 @@ export const setupCreateScheduleBillingContext = async ({
 	const scheduleBillingContext: CreateScheduleBillingContext = {
 		...billingContext,
 		replacedScheduleCustomerProductIds,
-		checkoutMode: setupCreateScheduleCheckoutMode({
-			billingContext,
-			redirectMode: params.redirect_mode,
-		}),
+		checkoutMode: billingContext.skipBillingChanges
+			? null
+			: setupCreateScheduleCheckoutMode({
+					billingContext,
+					redirectMode: params.redirect_mode,
+				}),
 		customPrices: [
 			...(billingContext.customPrices ?? []),
 			...scheduledCustomPrices,

@@ -28,13 +28,15 @@ const setupExternalSchedule = async ({
 	suffix,
 	noBillingChanges,
 	historicalPhase,
+	paid,
 }: {
 	suffix: string;
 	noBillingChanges?: boolean;
 	historicalPhase?: boolean;
+	paid?: boolean;
 }) => {
 	const customerId = `create-schedule-no-stripe-${suffix}`;
-	const pro = products[historicalPhase ? "pro" : "base"]({
+	const pro = products[historicalPhase || paid ? "pro" : "base"]({
 		id: `pro-no-stripe-schedule-${suffix}`,
 		items: [items.monthlyMessages({ includedUsage: 100 })],
 	});
@@ -158,7 +160,27 @@ test.concurrent(
 );
 
 test.concurrent(
-	`${chalk.yellowBright("create-schedule billing_behavior none: connected organizations still update Stripe")}`,
+	`${chalk.yellowBright("create-schedule external billing: no_billing_changes persists without checkout")}`,
+	async () => {
+		const { ctx, noStripeCtx, params } = await setupExternalSchedule({
+			suffix: "checkout",
+			noBillingChanges: true,
+			paid: true,
+		});
+		params.enable_plan_immediately = true;
+		params.redirect_mode = "if_required";
+
+		const response = await billingActions.createSchedule({
+			ctx: noStripeCtx,
+			params,
+		});
+
+		await expectScheduleCreated({ ctx, response });
+	},
+);
+
+test.concurrent(
+	`${chalk.yellowBright("create-schedule billing linkage: connected schedules use Stripe and no-billing updates preserve IDs")}`,
 	async () => {
 		const customerId = "create-schedule-none-connected-stripe";
 		const pro = products.pro({
@@ -207,5 +229,38 @@ test.concurrent(
 			stripeSubscriptionId!,
 		);
 		expect(stripeSubscription.schedule).toBeTruthy();
+
+		const replacement = await billingActions.createSchedule({
+			ctx: withoutStripe(ctx),
+			params: {
+				customer_id: customerId,
+				no_billing_changes: true,
+				billing_behavior: "none",
+				redirect_mode: "never",
+				phases: [
+					{ starts_at: now, plans: [{ plan_id: pro.id }] },
+					{
+						starts_at: now + 31 * 24 * 60 * 60 * 1000,
+						plans: [{ plan_id: premium.id }],
+					},
+				],
+			},
+		});
+		const [replacementCustomerProduct] = await ctx.db
+			.select()
+			.from(customerProducts)
+			.where(
+				eq(
+					customerProducts.id,
+					replacement.phases[0]!.customer_product_ids[0]!,
+				),
+			);
+
+		expect(replacementCustomerProduct?.subscription_ids).toEqual(
+			activeCustomerProduct?.subscription_ids,
+		);
+		expect(replacementCustomerProduct?.scheduled_ids).toEqual(
+			activeCustomerProduct?.scheduled_ids,
+		);
 	},
 );
