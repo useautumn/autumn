@@ -70,7 +70,7 @@ class UpdatePlanAdditionalCurrencyRequestBody(BaseModel):
     r"""Price amount in this currency. Set explicitly per currency, not converted from the base amount."""
 
 
-class UpdatePlanBasePriceRequestTypedDict(TypedDict):
+class UpdatePlanBasePriceRequestBodyTypedDict(TypedDict):
     r"""Base price configuration for a plan."""
 
     amount: float
@@ -85,7 +85,7 @@ class UpdatePlanBasePriceRequestTypedDict(TypedDict):
     r"""Base price amounts in additional currencies. The base 'amount' is in the org's default currency."""
 
 
-class UpdatePlanBasePriceRequest(BaseModel):
+class UpdatePlanBasePriceRequestBody(BaseModel):
     r"""Base price configuration for a plan."""
 
     amount: float
@@ -1223,7 +1223,7 @@ class UpdatePlanLicense(BaseModel):
         return m
 
 
-UpdatePlanDurationTypeRequest = Literal[
+UpdatePlanDurationTypeRequestBody = Literal[
     "day",
     "month",
     "year",
@@ -1231,39 +1231,39 @@ UpdatePlanDurationTypeRequest = Literal[
 r"""Unit of time for the trial ('day', 'month', 'year')."""
 
 
-UpdatePlanOnEndRequest = Literal[
+UpdatePlanOnEndRequestBody = Literal[
     "bill",
     "revert",
 ]
 r"""Behavior when the trial ends. 'bill' charges the customer (default). 'revert' expires the trial and restores the customer's previous plan."""
 
 
-class UpdatePlanFreeTrialParamsRequestTypedDict(TypedDict):
+class UpdatePlanFreeTrialParamsRequestBodyTypedDict(TypedDict):
     r"""Free trial configuration for a plan."""
 
     duration_length: float
     r"""Number of duration_type periods the trial lasts."""
-    duration_type: NotRequired[UpdatePlanDurationTypeRequest]
+    duration_type: NotRequired[UpdatePlanDurationTypeRequestBody]
     r"""Unit of time for the trial ('day', 'month', 'year')."""
     card_required: NotRequired[bool]
     r"""If true, payment method required to start trial. Customer is charged after trial ends."""
-    on_end: NotRequired[UpdatePlanOnEndRequest]
+    on_end: NotRequired[UpdatePlanOnEndRequestBody]
     r"""Behavior when the trial ends. 'bill' charges the customer (default). 'revert' expires the trial and restores the customer's previous plan."""
 
 
-class UpdatePlanFreeTrialParamsRequest(BaseModel):
+class UpdatePlanFreeTrialParamsRequestBody(BaseModel):
     r"""Free trial configuration for a plan."""
 
     duration_length: float
     r"""Number of duration_type periods the trial lasts."""
 
-    duration_type: Optional[UpdatePlanDurationTypeRequest] = "month"
+    duration_type: Optional[UpdatePlanDurationTypeRequestBody] = "month"
     r"""Unit of time for the trial ('day', 'month', 'year')."""
 
     card_required: Optional[bool] = True
     r"""If true, payment method required to start trial. Customer is charged after trial ends."""
 
-    on_end: Optional[UpdatePlanOnEndRequest] = None
+    on_end: Optional[UpdatePlanOnEndRequestBody] = None
     r"""Behavior when the trial ends. 'bill' charges the customer (default). 'revert' expires the trial and restores the customer's previous plan."""
 
     @model_serializer(mode="wrap")
@@ -1283,14 +1283,14 @@ class UpdatePlanFreeTrialParamsRequest(BaseModel):
         return m
 
 
-class UpdatePlanConfigRequestTypedDict(TypedDict):
+class UpdatePlanConfigRequestBodyTypedDict(TypedDict):
     r"""Miscellaneous plan-level configuration flags."""
 
     ignore_past_due: NotRequired[bool]
     r"""If true, entitlements attached to this plan will still reset on schedule even when the customer's product is in a past_due state."""
 
 
-class UpdatePlanConfigRequest(BaseModel):
+class UpdatePlanConfigRequestBody(BaseModel):
     r"""Miscellaneous plan-level configuration flags."""
 
     ignore_past_due: Optional[bool] = False
@@ -1322,7 +1322,7 @@ UpdatePlanPurchaseLimitIntervalRequestBody = Literal[
 r"""The time interval for the purchase limit window."""
 
 
-class UpdatePlanPurchaseLimitRequestTypedDict(TypedDict):
+class UpdatePlanPurchaseLimitRequestBodyTypedDict(TypedDict):
     r"""Optional rate limit to cap how often auto top-ups occur. Pass count to set the current window's consumed top-ups."""
 
     interval: UpdatePlanPurchaseLimitIntervalRequestBody
@@ -1335,7 +1335,7 @@ class UpdatePlanPurchaseLimitRequestTypedDict(TypedDict):
     r"""Set the current window's consumed auto top-up count. Omit to leave runtime state unchanged."""
 
 
-class UpdatePlanPurchaseLimitRequest(BaseModel):
+class UpdatePlanPurchaseLimitRequestBody(BaseModel):
     r"""Optional rate limit to cap how often auto top-ups occur. Pass count to set the current window's consumed top-ups."""
 
     interval: UpdatePlanPurchaseLimitIntervalRequestBody
@@ -1367,7 +1367,7 @@ class UpdatePlanPurchaseLimitRequest(BaseModel):
         return m
 
 
-class UpdatePlanAutoTopupRequestTypedDict(TypedDict):
+class UpdatePlanAutoTopupRequestBodyTypedDict(TypedDict):
     feature_id: str
     r"""The ID of the feature (credit balance) to auto top-up."""
     threshold: float
@@ -1376,13 +1376,13 @@ class UpdatePlanAutoTopupRequestTypedDict(TypedDict):
     r"""Amount of credits to add per auto top-up."""
     enabled: NotRequired[bool]
     r"""Whether auto top-up is enabled."""
-    purchase_limit: NotRequired[UpdatePlanPurchaseLimitRequestTypedDict]
+    purchase_limit: NotRequired[UpdatePlanPurchaseLimitRequestBodyTypedDict]
     r"""Optional rate limit to cap how often auto top-ups occur. Pass count to set the current window's consumed top-ups."""
     invoice_mode: NotRequired[bool]
     r"""When true, auto top-up creates a send_invoice invoice instead of auto-charging."""
 
 
-class UpdatePlanAutoTopupRequest(BaseModel):
+class UpdatePlanAutoTopupRequestBody(BaseModel):
     feature_id: str
     r"""The ID of the feature (credit balance) to auto top-up."""
 
@@ -1395,7 +1395,7 @@ class UpdatePlanAutoTopupRequest(BaseModel):
     enabled: Optional[bool] = False
     r"""Whether auto top-up is enabled."""
 
-    purchase_limit: Optional[UpdatePlanPurchaseLimitRequest] = None
+    purchase_limit: Optional[UpdatePlanPurchaseLimitRequestBody] = None
     r"""Optional rate limit to cap how often auto top-ups occur. Pass count to set the current window's consumed top-ups."""
 
     invoice_mode: Optional[bool] = None
@@ -1425,7 +1425,7 @@ UpdatePlanLimitTypeRequestBody = Literal[
 r"""How overage_limit is interpreted: an absolute overage cap (default) or a percentage of the main-plan allowance."""
 
 
-class UpdatePlanSpendLimitRequestTypedDict(TypedDict):
+class UpdatePlanSpendLimitRequestBodyTypedDict(TypedDict):
     feature_id: NotRequired[str]
     r"""Optional feature ID this spend limit applies to."""
     enabled: NotRequired[bool]
@@ -1438,7 +1438,7 @@ class UpdatePlanSpendLimitRequestTypedDict(TypedDict):
     r"""When true, overage for this feature is not posted to Stripe. Usage tracking and balance resets still behave normally."""
 
 
-class UpdatePlanSpendLimitRequest(BaseModel):
+class UpdatePlanSpendLimitRequestBody(BaseModel):
     feature_id: Optional[str] = None
     r"""Optional feature ID this spend limit applies to."""
 
@@ -1496,19 +1496,19 @@ UpdatePlanPropertiesTypedDict = TypeAliasType(
 UpdatePlanProperties = TypeAliasType("UpdatePlanProperties", Union[str, float, bool])
 
 
-class UpdatePlanFilterRequestTypedDict(TypedDict):
+class UpdatePlanFilterRequestBodyTypedDict(TypedDict):
     r"""When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature."""
 
     properties: Dict[str, UpdatePlanPropertiesTypedDict]
 
 
-class UpdatePlanFilterRequest(BaseModel):
+class UpdatePlanFilterRequestBody(BaseModel):
     r"""When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature."""
 
     properties: Dict[str, UpdatePlanProperties]
 
 
-class UpdatePlanUsageLimitRequestTypedDict(TypedDict):
+class UpdatePlanUsageLimitRequestBodyTypedDict(TypedDict):
     feature_id: str
     r"""The feature this usage limit applies to."""
     limit: float
@@ -1517,11 +1517,11 @@ class UpdatePlanUsageLimitRequestTypedDict(TypedDict):
     r"""Interval for the cap, aligned to the customer's billing cycle."""
     enabled: NotRequired[bool]
     r"""Whether this usage limit is enabled."""
-    filter_: NotRequired[UpdatePlanFilterRequestTypedDict]
+    filter_: NotRequired[UpdatePlanFilterRequestBodyTypedDict]
     r"""When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature."""
 
 
-class UpdatePlanUsageLimitRequest(BaseModel):
+class UpdatePlanUsageLimitRequestBody(BaseModel):
     feature_id: str
     r"""The feature this usage limit applies to."""
 
@@ -1535,7 +1535,7 @@ class UpdatePlanUsageLimitRequest(BaseModel):
     r"""Whether this usage limit is enabled."""
 
     filter_: Annotated[
-        Optional[UpdatePlanFilterRequest], pydantic.Field(alias="filter")
+        Optional[UpdatePlanFilterRequestBody], pydantic.Field(alias="filter")
     ] = None
     r"""When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature."""
 
@@ -1611,14 +1611,14 @@ class UpdatePlanUsageAlertRequestBody(BaseModel):
         return m
 
 
-class UpdatePlanOverageAllowedRequestTypedDict(TypedDict):
+class UpdatePlanOverageAllowedRequestBodyTypedDict(TypedDict):
     feature_id: str
     r"""The feature ID this overage allowed control applies to."""
     enabled: NotRequired[bool]
     r"""Whether overage is allowed for this feature."""
 
 
-class UpdatePlanOverageAllowedRequest(BaseModel):
+class UpdatePlanOverageAllowedRequestBody(BaseModel):
     feature_id: str
     r"""The feature ID this overage allowed control applies to."""
 
@@ -1642,37 +1642,37 @@ class UpdatePlanOverageAllowedRequest(BaseModel):
         return m
 
 
-class UpdatePlanBillingControlsRequestTypedDict(TypedDict):
+class UpdatePlanBillingControlsRequestBodyTypedDict(TypedDict):
     r"""Plan-level billing controls used as customer defaults."""
 
-    auto_topups: NotRequired[List[UpdatePlanAutoTopupRequestTypedDict]]
+    auto_topups: NotRequired[List[UpdatePlanAutoTopupRequestBodyTypedDict]]
     r"""List of auto top-up configurations per feature."""
-    spend_limits: NotRequired[List[UpdatePlanSpendLimitRequestTypedDict]]
+    spend_limits: NotRequired[List[UpdatePlanSpendLimitRequestBodyTypedDict]]
     r"""List of overage spend limits per feature (caps overage spend)."""
-    usage_limits: NotRequired[List[UpdatePlanUsageLimitRequestTypedDict]]
+    usage_limits: NotRequired[List[UpdatePlanUsageLimitRequestBodyTypedDict]]
     r"""List of hard usage caps per feature (max units per interval)."""
     usage_alerts: NotRequired[List[UpdatePlanUsageAlertRequestBodyTypedDict]]
     r"""List of usage alert configurations per feature."""
-    overage_allowed: NotRequired[List[UpdatePlanOverageAllowedRequestTypedDict]]
+    overage_allowed: NotRequired[List[UpdatePlanOverageAllowedRequestBodyTypedDict]]
     r"""List of overage allowed controls per feature. When enabled, usage can exceed balance."""
 
 
-class UpdatePlanBillingControlsRequest(BaseModel):
+class UpdatePlanBillingControlsRequestBody(BaseModel):
     r"""Plan-level billing controls used as customer defaults."""
 
-    auto_topups: Optional[List[UpdatePlanAutoTopupRequest]] = None
+    auto_topups: Optional[List[UpdatePlanAutoTopupRequestBody]] = None
     r"""List of auto top-up configurations per feature."""
 
-    spend_limits: Optional[List[UpdatePlanSpendLimitRequest]] = None
+    spend_limits: Optional[List[UpdatePlanSpendLimitRequestBody]] = None
     r"""List of overage spend limits per feature (caps overage spend)."""
 
-    usage_limits: Optional[List[UpdatePlanUsageLimitRequest]] = None
+    usage_limits: Optional[List[UpdatePlanUsageLimitRequestBody]] = None
     r"""List of hard usage caps per feature (max units per interval)."""
 
     usage_alerts: Optional[List[UpdatePlanUsageAlertRequestBody]] = None
     r"""List of usage alert configurations per feature."""
 
-    overage_allowed: Optional[List[UpdatePlanOverageAllowedRequest]] = None
+    overage_allowed: Optional[List[UpdatePlanOverageAllowedRequestBody]] = None
     r"""List of overage allowed controls per feature. When enabled, usage can exceed balance."""
 
     @model_serializer(mode="wrap")
@@ -2880,17 +2880,17 @@ class UpdatePlanParamsTypedDict(TypedDict):
     r"""Whether the plan is an add-on."""
     auto_enable: NotRequired[bool]
     r"""Whether the plan is automatically enabled."""
-    price: NotRequired[Nullable[UpdatePlanBasePriceRequestTypedDict]]
+    price: NotRequired[Nullable[UpdatePlanBasePriceRequestBodyTypedDict]]
     r"""The price of the plan. Set to null to remove the base price."""
     items: NotRequired[List[UpdatePlanItemPlanItemTypedDict]]
     r"""Feature configurations for this plan. Each item defines included units, pricing, and reset behavior."""
     licenses: NotRequired[List[UpdatePlanLicenseTypedDict]]
     r"""Plans offered as assignable licenses under this plan. The full set replaces existing links."""
-    free_trial: NotRequired[Nullable[UpdatePlanFreeTrialParamsRequestTypedDict]]
+    free_trial: NotRequired[Nullable[UpdatePlanFreeTrialParamsRequestBodyTypedDict]]
     r"""The free trial of the plan. Set to null to remove the free trial."""
-    config: NotRequired[UpdatePlanConfigRequestTypedDict]
+    config: NotRequired[UpdatePlanConfigRequestBodyTypedDict]
     r"""Miscellaneous plan-level configuration flags."""
-    billing_controls: NotRequired[UpdatePlanBillingControlsRequestTypedDict]
+    billing_controls: NotRequired[UpdatePlanBillingControlsRequestBodyTypedDict]
     r"""Plan-level billing controls used as customer defaults."""
     metadata: NotRequired[Dict[str, Any]]
     r"""Arbitrary key-value metadata defined by you for your own use (e.g. UI copy, feature highlights). Values can be any JSON-serializable value. Shared across all versions of the plan."""
@@ -2934,7 +2934,7 @@ class UpdatePlanParams(BaseModel):
     auto_enable: Optional[bool] = None
     r"""Whether the plan is automatically enabled."""
 
-    price: OptionalNullable[UpdatePlanBasePriceRequest] = UNSET
+    price: OptionalNullable[UpdatePlanBasePriceRequestBody] = UNSET
     r"""The price of the plan. Set to null to remove the base price."""
 
     items: Optional[List[UpdatePlanItemPlanItem]] = None
@@ -2943,13 +2943,13 @@ class UpdatePlanParams(BaseModel):
     licenses: Optional[List[UpdatePlanLicense]] = None
     r"""Plans offered as assignable licenses under this plan. The full set replaces existing links."""
 
-    free_trial: OptionalNullable[UpdatePlanFreeTrialParamsRequest] = UNSET
+    free_trial: OptionalNullable[UpdatePlanFreeTrialParamsRequestBody] = UNSET
     r"""The free trial of the plan. Set to null to remove the free trial."""
 
-    config: Optional[UpdatePlanConfigRequest] = None
+    config: Optional[UpdatePlanConfigRequestBody] = None
     r"""Miscellaneous plan-level configuration flags."""
 
-    billing_controls: Optional[UpdatePlanBillingControlsRequest] = None
+    billing_controls: Optional[UpdatePlanBillingControlsRequestBody] = None
     r"""Plan-level billing controls used as customer defaults."""
 
     metadata: Optional[Dict[str, Any]] = None
@@ -3624,7 +3624,7 @@ class UpdatePlanItemRolloverResponse(BaseModel):
         return m
 
 
-class UpdatePlanItemTypedDict(TypedDict):
+class PlansUpdatePlanItemTypedDict(TypedDict):
     feature_id: str
     r"""The ID of the feature this item configures."""
     included: float
@@ -3645,7 +3645,7 @@ class UpdatePlanItemTypedDict(TypedDict):
     r"""Rollover configuration for unused units. If set, unused included units roll over to the next period."""
 
 
-class UpdatePlanItem(BaseModel):
+class PlansUpdatePlanItem(BaseModel):
     feature_id: str
     r"""The ID of the feature this item configures."""
 
@@ -4034,7 +4034,7 @@ UpdatePlanVariantDetailsAddItemPriceInterval = Union[
 r"""Billing interval. For consumable features, should match reset.interval."""
 
 
-UpdatePlanVariantDetailsAddItemBillingMethod = Union[
+UpdatePlanAddItemBillingMethodResponse = Union[
     Literal[
         "prepaid",
         "usage_based",
@@ -4049,7 +4049,7 @@ class UpdatePlanVariantDetailsPriceTypedDict(TypedDict):
 
     interval: UpdatePlanVariantDetailsAddItemPriceInterval
     r"""Billing interval. For consumable features, should match reset.interval."""
-    billing_method: UpdatePlanVariantDetailsAddItemBillingMethod
+    billing_method: UpdatePlanAddItemBillingMethodResponse
     r"""'prepaid' for upfront payment (seats), 'usage_based' for pay-as-you-go."""
     amount: NotRequired[float]
     r"""Price per billing_units after included usage. Either 'amount' or 'tiers' is required."""
@@ -4074,7 +4074,7 @@ class UpdatePlanVariantDetailsPrice(BaseModel):
     interval: UpdatePlanVariantDetailsAddItemPriceInterval
     r"""Billing interval. For consumable features, should match reset.interval."""
 
-    billing_method: UpdatePlanVariantDetailsAddItemBillingMethod
+    billing_method: UpdatePlanAddItemBillingMethodResponse
     r"""'prepaid' for upfront payment (seats), 'usage_based' for pay-as-you-go."""
 
     amount: Optional[float] = None
@@ -4135,7 +4135,7 @@ class UpdatePlanVariantDetailsPrice(BaseModel):
         return m
 
 
-UpdatePlanVariantDetailsOnIncrease = Union[
+UpdatePlanOnIncreaseResponse = Union[
     Literal[
         "bill_immediately",
         "prorate_immediately",
@@ -4147,7 +4147,7 @@ UpdatePlanVariantDetailsOnIncrease = Union[
 r"""Billing behavior when quantity increases mid-cycle."""
 
 
-UpdatePlanVariantDetailsOnDecrease = Union[
+UpdatePlanOnDecreaseResponse = Union[
     Literal[
         "prorate",
         "prorate_immediately",
@@ -4163,19 +4163,19 @@ r"""Credit behavior when quantity decreases mid-cycle."""
 class UpdatePlanProrationResponseTypedDict(TypedDict):
     r"""Proration settings for prepaid features. Controls mid-cycle quantity change billing."""
 
-    on_increase: UpdatePlanVariantDetailsOnIncrease
+    on_increase: UpdatePlanOnIncreaseResponse
     r"""Billing behavior when quantity increases mid-cycle."""
-    on_decrease: UpdatePlanVariantDetailsOnDecrease
+    on_decrease: UpdatePlanOnDecreaseResponse
     r"""Credit behavior when quantity decreases mid-cycle."""
 
 
 class UpdatePlanProrationResponse(BaseModel):
     r"""Proration settings for prepaid features. Controls mid-cycle quantity change billing."""
 
-    on_increase: UpdatePlanVariantDetailsOnIncrease
+    on_increase: UpdatePlanOnIncreaseResponse
     r"""Billing behavior when quantity increases mid-cycle."""
 
-    on_decrease: UpdatePlanVariantDetailsOnDecrease
+    on_decrease: UpdatePlanOnDecreaseResponse
     r"""Credit behavior when quantity decreases mid-cycle."""
 
 
@@ -4309,7 +4309,7 @@ class UpdatePlanPlanItemResponse(BaseModel):
         return m
 
 
-UpdatePlanVariantDetailsRemoveItemBillingMethod = Union[
+UpdatePlanRemoveItemBillingMethodResponse = Union[
     Literal[
         "prepaid",
         "usage_based",
@@ -4373,7 +4373,7 @@ class UpdatePlanPlanItemFilterResponseTypedDict(TypedDict):
 
     feature_id: NotRequired[str]
     r"""Match items linked to this feature."""
-    billing_method: NotRequired[UpdatePlanVariantDetailsRemoveItemBillingMethod]
+    billing_method: NotRequired[UpdatePlanRemoveItemBillingMethodResponse]
     r"""Match items with this billing method (prepaid or usage_based)."""
     interval: NotRequired[UpdatePlanVariantDetailsIntervalUnionTypedDict]
     r"""Match items with this interval. Accepts either a BillingInterval (price-side) or a ResetInterval (reset-side, includes day/hour/minute) so price-less items keyed by reset.interval can be disambiguated."""
@@ -4387,7 +4387,7 @@ class UpdatePlanPlanItemFilterResponse(BaseModel):
     feature_id: Optional[str] = None
     r"""Match items linked to this feature."""
 
-    billing_method: Optional[UpdatePlanVariantDetailsRemoveItemBillingMethod] = None
+    billing_method: Optional[UpdatePlanRemoveItemBillingMethodResponse] = None
     r"""Match items with this billing method (prepaid or usage_based)."""
 
     interval: Optional[UpdatePlanVariantDetailsIntervalUnion] = None
@@ -4668,13 +4668,13 @@ r"""Interval for the cap, aligned to the customer's billing cycle."""
 class UpdatePlanVariantDetailsFilterTypedDict(TypedDict):
     r"""When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature."""
 
-    properties: Dict[str, Any]
+    properties: Dict[str, str]
 
 
 class UpdatePlanVariantDetailsFilter(BaseModel):
     r"""When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature."""
 
-    properties: Dict[str, Any]
+    properties: Dict[str, str]
 
 
 class UpdatePlanVariantDetailsUsageLimitTypedDict(TypedDict):
@@ -5180,13 +5180,13 @@ r"""Interval for the cap, aligned to the customer's billing cycle."""
 class UpdatePlanFilterResponseTypedDict(TypedDict):
     r"""When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature."""
 
-    properties: Dict[str, Any]
+    properties: Dict[str, str]
 
 
 class UpdatePlanFilterResponse(BaseModel):
     r"""When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature."""
 
-    properties: Dict[str, Any]
+    properties: Dict[str, str]
 
 
 class UpdatePlanUsageLimitResponseTypedDict(TypedDict):
@@ -5472,7 +5472,7 @@ class UpdatePlanResponseTypedDict(TypedDict):
     r"""If true, this plan is automatically attached when a customer is created. Used for free plans."""
     price: Nullable[UpdatePlanPriceResponseTypedDict]
     r"""Base recurring price for the plan. Null for free plans or usage-only plans."""
-    items: List[UpdatePlanItemTypedDict]
+    items: List[PlansUpdatePlanItemTypedDict]
     r"""Feature configurations included in this plan. Each item defines included units, pricing, and reset behavior for a feature."""
     created_at: float
     r"""Unix timestamp (ms) when the plan was created."""
@@ -5522,7 +5522,7 @@ class UpdatePlanResponse(BaseModel):
     price: Nullable[UpdatePlanPriceResponse]
     r"""Base recurring price for the plan. Null for free plans or usage-only plans."""
 
-    items: List[UpdatePlanItem]
+    items: List[PlansUpdatePlanItem]
     r"""Feature configurations included in this plan. Each item defines included units, pricing, and reset behavior for a feature."""
 
     created_at: float
@@ -5588,7 +5588,7 @@ class UpdatePlanResponse(BaseModel):
 
 
 try:
-    UpdatePlanUsageLimitRequest.model_rebuild()
+    UpdatePlanUsageLimitRequestBody.model_rebuild()
 except NameError:
     pass
 try:
