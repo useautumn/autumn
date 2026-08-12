@@ -13,7 +13,6 @@ import { usePlanVariants } from "@/hooks/queries/usePlanVariants";
 import { useProductsQuery } from "@/hooks/queries/useProductsQuery";
 import {
 	useHasChanges,
-	useIsBasePlanOnlyChange,
 	useIsCusPlanEditor,
 	useIsMetadataOnlyChange,
 	useProductStore,
@@ -55,8 +54,6 @@ export const SaveChangesBar = ({
 	const planHasChanges = useHasChanges();
 	const licenseHasChanges = useHasLicenseChanges();
 	const hasChanges = planHasChanges || licenseHasChanges;
-	const isBasePlanOnlyChange = useIsBasePlanOnlyChange();
-	const contentHasChanges = planHasChanges && !isBasePlanOnlyChange;
 	const applyBasePlanLink = useApplyBasePlanLink();
 	const planLicenses = catalogLicenses.map(({ planLicense }) => planLicense);
 	const { features = [] } = useFeaturesQuery();
@@ -77,7 +74,7 @@ export const SaveChangesBar = ({
 
 	const { data: variants = [] } = usePlanVariants(
 		product.id,
-		contentHasChanges && !isOnboarding,
+		hasChanges && !isOnboarding,
 	);
 
 	const handleSaveClicked = async () => {
@@ -98,7 +95,7 @@ export const SaveChangesBar = ({
 			return;
 		}
 
-		if (!isOnboarding && (contentHasChanges || licenseHasChanges)) {
+		if (!isOnboarding && hasChanges) {
 			let preview: PlanUpdatePreview;
 			setSaving(true);
 			try {
@@ -119,14 +116,14 @@ export const SaveChangesBar = ({
 			}
 
 			const needsVersionChoice =
-				licenseHasChanges || (contentHasChanges && !isMetadataOnlyChange);
+				licenseHasChanges || (planHasChanges && !isMetadataOnlyChange);
 			const hasCustomers = preview.has_customers && needsVersionChoice;
 			const hasParentPropagationDecision =
-				contentHasChanges && previewHasLicenseParentTargets(preview);
+				planHasChanges && previewHasLicenseParentTargets(preview);
 			if (
 				hasCustomers ||
 				hasParentPropagationDecision ||
-				(contentHasChanges && variants.length > 0)
+				(planHasChanges && variants.length > 0)
 			) {
 				setShowNewVersionDialog(true);
 				return;
@@ -144,7 +141,7 @@ export const SaveChangesBar = ({
 			});
 		}
 
-		const planSaved = contentHasChanges
+		const planSaved = planHasChanges
 			? await updateProduct({
 					axiosInstance,
 					productId: product.id,

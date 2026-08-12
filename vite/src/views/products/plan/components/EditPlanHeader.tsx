@@ -44,7 +44,6 @@ import {
 	useProductQueryState,
 } from "../../product/hooks/useProductQuery";
 import { useCreateVariant } from "../hooks/useCreateVariant";
-import { useVariantLinkVisibility } from "../hooks/useVariantLinkVisibility";
 import {
 	MigrateCustomersDialog,
 	useMigratableVersions,
@@ -355,20 +354,20 @@ const VariantSelect = () => {
 	const showAllVariants = useVariantViewStore((s) => s.showAllVariants);
 	const setShowAllVariants = useVariantViewStore((s) => s.setShowAllVariants);
 
-	const { selectedBasePlanId } = useVariantLinkVisibility(product);
-	// A base plan is its own base.
-	const baseId = selectedBasePlanId ?? product.id;
+	// base_id is only populated on products-list entries, not the store product,
+	// so resolve it from the list. A base plan is its own base.
+	const baseId = useMemo(() => {
+		const current = products.find((p) => p.id === product.id);
+		return current?.base_id ?? product.id;
+	}, [products, product.id]);
 
 	const variantOptions = useMemo(() => {
 		const base = products.find((p) => p.id === baseId);
-		// The edited plan joins the group before its link is saved.
 		const variants = products
-			.filter(
-				(p) => p.id !== baseId && (p.base_id === baseId || p.id === product.id),
-			)
+			.filter((p) => p.base_id === baseId)
 			.sort((a, b) => a.name.localeCompare(b.name));
 		return base ? [base, ...variants] : variants;
-	}, [products, baseId, product.id]);
+	}, [products, baseId]);
 
 	const baseProduct = products.find((p) => p.id === baseId);
 	const createVariant = useCreateVariant(baseProduct ?? product);

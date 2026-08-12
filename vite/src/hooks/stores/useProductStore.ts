@@ -92,24 +92,6 @@ export const useHasChanges = () => {
 	}, [product, baseProduct, features]);
 };
 
-// The base-plan link saves through its own request, so it never versions.
-export const useIsBasePlanOnlyChange = () => {
-	const product = useProductStore((s) => s.product);
-	const baseProduct = useProductStore((s) => s.baseProduct);
-	const { features = [] } = useFeaturesQuery();
-
-	return useMemo(() => {
-		if (!baseProduct) return false;
-		if (product.base_id === baseProduct.base_id) return false;
-
-		return productsAreSame({
-			newProductV2: product as unknown as FrontendProduct,
-			curProductV2: baseProduct as unknown as FrontendProduct,
-			features,
-		}).same;
-	}, [product, baseProduct, features]);
-};
-
 // True when metadata is the only pending change — such saves skip the
 // "create new version?" dialog since metadata never versions.
 export const useIsMetadataOnlyChange = () => {

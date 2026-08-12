@@ -1,4 +1,4 @@
-import type { PlanUpdatePreview } from "@autumn/shared";
+import type { FrontendProduct, PlanUpdatePreview } from "@autumn/shared";
 import {
 	AreaRadioGroupItem,
 	Dialog,
@@ -419,8 +419,7 @@ export default function PlanChangeDialog({
 		await Promise.all([invalidateProduct(), invalidateProducts()]);
 	};
 
-	// Read live: applying the base-plan link clears its pending edit mid-save.
-	const markSaved = () => setBaseProduct(useProductStore.getState().product);
+	const markSaved = () => setBaseProduct(product as FrontendProduct);
 
 	const closeDialog = () => {
 		setOpen(false);

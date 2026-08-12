@@ -11,7 +11,6 @@ import { useVariantLinkVisibility } from "./useVariantLinkVisibility";
 export function useApplyBasePlanLink() {
 	const axiosInstance = useAxiosInstance();
 	const product = useProductStore((s) => s.product);
-	const setProduct = useProductStore((s) => s.setProduct);
 	const { basePlanId, selectedBasePlanId } = useVariantLinkVisibility(product);
 	const { invalidate: invalidateProducts } = useProductsQuery();
 
@@ -21,12 +20,7 @@ export function useApplyBasePlanLink() {
 				base_plan_id: nextBasePlanId,
 			});
 		},
-		onSuccess: async () => {
-			// Clearing before the list refreshes flashes the previous base.
-			await invalidateProducts();
-			const { product: latestProduct } = useProductStore.getState();
-			setProduct({ ...latestProduct, base_id: undefined });
-		},
+		onSuccess: invalidateProducts,
 	});
 
 	return async () => {
