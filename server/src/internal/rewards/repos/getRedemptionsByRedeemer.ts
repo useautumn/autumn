@@ -21,8 +21,8 @@ export const getRedemptionsByRedeemer = async ({
 		limit,
 	});
 
-	return data.map((d) => ({
+	return data.map(({ related_customer, ...d }) => ({
 		...d,
-		referrer: d.related_customer,
+		referrer: related_customer,
 	}));
 };
