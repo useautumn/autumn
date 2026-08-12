@@ -3,9 +3,11 @@ import { DisabledTooltipButton } from "@/components/forms/shared";
 import { BillingFooter } from "@/components/forms/shared/BillingFooter";
 import { getInvoiceButtonState } from "@/components/forms/shared/utils/invoiceButtonState";
 import { useSheetStore } from "@/hooks/stores/useSheetStore";
+import { getBackendErr } from "@/utils/genUtils";
 import { useAttachFormContext } from "../context/AttachFormProvider";
 import { isFutureStartDate } from "../utils/buildAttachPreviewTotals";
 import { getAttachConfirmLabel } from "../utils/getAttachConfirmLabel";
+import { shouldDisableAttachInvoiceButton } from "../utils/shouldDisableAttachInvoiceButton";
 
 export function AttachFooterV3() {
 	const {
@@ -23,7 +25,10 @@ export function AttachFooterV3() {
 	const { isEndOfCycleSelected, createsRecurringSubscription } = billingOptions;
 
 	const previewData = previewQuery.data;
-	const previewFailed = !!previewQuery.error;
+	const previewError = previewQuery.error
+		? getBackendErr(previewQuery.error, "Failed to load preview")
+		: undefined;
+	const previewFailed = !!previewError;
 	const isMultiPlan = additionalPlans.isMultiPlan;
 	const startDate = isMultiPlan ? null : formValues.startDate;
 	const hasFutureStartDate = isFutureStartDate(startDate);
@@ -60,6 +65,7 @@ export function AttachFooterV3() {
 	};
 
 	return (
+<<<<<<< Updated upstream
 		<BillingFooter layout="stacked">
 			<DisabledTooltipButton
 				variant="secondary"
@@ -90,5 +96,42 @@ export function AttachFooterV3() {
 				{confirmLabel}
 			</Button>
 		</BillingFooter>
+=======
+		<SheetFooter className="flex flex-col grid-cols-1 mt-0">
+			<div className="flex flex-col gap-2 w-full">
+				<DisabledTooltipButton
+					variant="secondary"
+					className="w-full"
+					disabled={shouldDisableAttachInvoiceButton({
+						isPending,
+						previewError,
+					})}
+					disabledReason={invoiceDisabledReason}
+					tooltipClassName="max-w-(--anchor-width)"
+					isLoading={isInvoiceOnlyStart && isPending}
+					onClick={handleInvoiceButtonClick}
+				>
+					{invoiceButtonLabel}
+				</DisabledTooltipButton>
+				<Button
+					variant="primary"
+					className="w-full"
+					disabled={previewFailed}
+					onClick={() => {
+						if (hasFutureStartDate) {
+							setSheet({ type: "attach-schedule-plan", itemId });
+						} else if (previewData?.redirect_to_checkout) {
+							setSheet({ type: "attach-checkout-session", itemId });
+						} else {
+							handleConfirm();
+						}
+					}}
+					isLoading={isPending}
+				>
+					{confirmLabel}
+				</Button>
+			</div>
+		</SheetFooter>
+>>>>>>> Stashed changes
 	);
 }

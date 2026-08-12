@@ -69,9 +69,7 @@ test(`${chalk.yellowBright("batch-license-customize: editing a boolean item leav
 							{
 								license_plan_id: devSeat.id,
 								customize: {
-									add_items: [
-										{ feature_id: TestFeature.Dashboard, pooled: true },
-									],
+									add_items: [{ feature_id: TestFeature.Dashboard }],
 									remove_items: [{ feature_id: TestFeature.Dashboard }],
 								},
 							},

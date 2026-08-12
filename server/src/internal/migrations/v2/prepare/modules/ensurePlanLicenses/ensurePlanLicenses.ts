@@ -1,5 +1,4 @@
 import {
-	composeMatchKey,
 	type DbPlanLicense,
 	EntInterval,
 	type Entitlement,
@@ -7,7 +6,6 @@ import {
 	findFeatureById,
 	isOneOffProduct,
 	type PlanItemFilter,
-	planItemFilterMatchKey,
 	planLicenses,
 } from "@autumn/shared";
 import type { UpdatePlanOp } from "@autumn/shared/api/migrations/operations/customer/updatePlan/index.js";
@@ -99,7 +97,7 @@ const supersessionKey = ({
 	featureId: string;
 	interval?: string | null;
 	intervalCount?: number | null;
-}) => `${featureId}|${interval ?? ""}|${intervalCount ?? 1}`;
+}) => `${featureId}|${interval ?? EntInterval.Lifetime}|${intervalCount ?? 1}`;
 
 const supersessionKeysByEntitlementId = (licenseProduct: FullProduct) =>
 	new Map(

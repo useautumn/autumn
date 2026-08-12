@@ -1,5 +1,5 @@
 import type { ProductItem } from "@autumn/shared";
-import { customerEntitlements, entitlements } from "@autumn/shared";
+import { customerEntitlements } from "@autumn/shared";
 import { runChunkedMigration } from "@tests/integration/billing/migrations-v2/utils/runChunkedMigration";
 import { setupLicenseUpdateScenario } from "@tests/integration/licenses/billing/update/setupLicenseUpdateScenario";
 import { getLicenseDbState } from "@tests/integration/licenses/licenseTestUtils";
@@ -8,7 +8,7 @@ import type {
 	ItemSpec,
 	MigrationScenario,
 } from "@tests/perf/batch-migrations/scenarios/migrationScenarioTypes";
-import { eq, inArray } from "drizzle-orm";
+import { inArray } from "drizzle-orm";
 import {
 	constructFeatureItem,
 	constructPrepaidItem,
