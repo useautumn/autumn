@@ -16,6 +16,19 @@ describe("isMissingSessionApiError", () => {
 		).toBe(true);
 	});
 
+	test("recognises a 400 invalid-session-id rejection", () => {
+		expect(
+			isMissingSessionApiError(
+				Object.assign(
+					new Error(
+						'400 {"type":"error","error":{"type":"invalid_request_error","message":"Invalid session ID: session_dead_test"}}',
+					),
+					{ status: 400 },
+				),
+			),
+		).toBe(true);
+	});
+
 	test("does not swallow unrelated failures", () => {
 		expect(
 			isMissingSessionApiError(
