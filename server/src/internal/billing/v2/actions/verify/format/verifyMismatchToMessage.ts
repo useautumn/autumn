@@ -116,6 +116,8 @@ const describe = (mismatch: SubscriptionMismatch): string => {
 			return "Autumn products link to a Stripe subscription that is not in the customer's active set";
 		case "expected_state_error":
 			return `Could not compute Autumn's expected Stripe state — ${mismatch.error}`;
+		case "shared_stripe_customer":
+			return `Stripe customer ${mismatch.stripe_customer_id} is also linked to Autumn customer(s): ${mismatch.other_customer_ids.join(", ")}`;
 		case "base_price_mismatch": {
 			const { reason, expected_amount, actual_amount } = mismatch;
 			const label = planPriceLabel(mismatch);

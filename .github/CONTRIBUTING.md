@@ -117,7 +117,8 @@ When you need to create version-controlled migrations (e.g., for new releases):
 
 ### Authentication
 - `BETTER_AUTH_SECRET` - Secret key for better-auth provider
-- `BETTER_AUTH_URL` - Base URL for better-auth
+- `AUTUMN_API_URL` - Canonical Autumn API origin
+- `AUTUMN_PUBLIC_API_URL` - Browser- and webhook-reachable Autumn API origin
 - `CLIENT_URL` - Client application URL
 
 ### Encryption
@@ -126,9 +127,8 @@ When you need to create version-controlled migrations (e.g., for new releases):
 
 ### Webhooks & Tunneling
 - `LOCALTUNNEL_RESERVED_KEY` - Reserved subdomain key for localtunnel service
-- `STRIPE_WEBHOOK_URL` - Base URL for registering Stripe webhooks
 
-The `docker-compose.dev.yml` runs localtunnel using your `LOCALTUNNEL_RESERVED_KEY` as the subdomain. If using alternative tunneling (ngrok, cloudflared), ensure it points to port 8080 and update `STRIPE_WEBHOOK_URL` accordingly.
+The `docker-compose.dev.yml` runs localtunnel using your `LOCALTUNNEL_RESERVED_KEY` as the subdomain. If using alternative tunneling (ngrok, cloudflared), ensure it points to port 8080 and set `AUTUMN_PUBLIC_API_URL` to its origin.
 
 ### Database
 - `DATABASE_URL` - PostgreSQL connection string -->

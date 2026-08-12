@@ -1,3 +1,4 @@
+import { getAutumnEnv } from "@autumn/env";
 import { AppEnv, ErrCode, RecaseError, Scopes } from "@autumn/shared";
 import { z } from "zod/v4";
 import { createRoute } from "@/honoMiddlewares/routeHandler.js";
@@ -63,7 +64,7 @@ export const handleGetPlatformOAuth = createRoute({
 		oauthUrl.searchParams.set("state", stateKey);
 		oauthUrl.searchParams.set(
 			"redirect_uri",
-			`${process.env.BETTER_AUTH_URL || "https://express.dev.useautumn.com"}/stripe/oauth_callback`,
+			`${getAutumnEnv().AUTUMN_PUBLIC_API_URL}/stripe/oauth_callback`,
 		);
 
 		logger.info(`Generated OAuth URL for platform org ${org.slug} (${env})`);

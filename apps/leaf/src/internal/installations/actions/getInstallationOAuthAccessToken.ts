@@ -17,7 +17,7 @@ import { replaceInstallationOAuthCredentials } from "./replaceInstallationOAuthC
 const TOKEN_EXPIRY_SKEW_MS = 60_000;
 
 const getTokenEndpoint = () =>
-	new URL("/api/auth/oauth2/token", leafEnv.BETTER_AUTH_URL).href;
+	new URL("/api/auth/oauth2/token", leafEnv.AUTUMN_API_URL).href;
 
 const getDefaultExpiresAt = () => Date.now() + 60 * 60 * 1000;
 
@@ -30,9 +30,7 @@ const resolveCredentialUserId = ({
 }) => {
 	const credentialUserId = userId ?? installation.installed_by_user_id;
 	if (!credentialUserId) {
-		throw new Error(
-			"Missing installer user id for chat MCP OAuth credentials",
-		);
+		throw new Error("Missing installer user id for chat MCP OAuth credentials");
 	}
 
 	return credentialUserId;

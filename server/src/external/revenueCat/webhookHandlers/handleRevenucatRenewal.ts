@@ -1,9 +1,5 @@
 import type { WebhookRenewal } from "@puzzmo/revenue-cat-webhook-types";
-import {
-	ACTIVE_STATUSES,
-	AttachScenario,
-	CusProductStatus,
-} from "@shared/index";
+import { AttachScenario, CusProductStatus } from "@shared/index";
 import {
 	getRevenueCatCustomerEmail,
 	getRevenueCatCustomerFingerprint,
@@ -15,6 +11,7 @@ import { recordRevenueCatInvoice } from "@/external/revenueCat/utils/recordReven
 import type { RevenueCatWebhookContext } from "@/external/revenueCat/webhookMiddlewares/revenuecatWebhookContext";
 import { addProductsUpdatedWebhookTask } from "@/internal/analytics/handlers/handleProductsUpdated";
 import { customerProductActions } from "@/internal/customers/cusProducts/actions";
+import { emitCustomerProductBillingUpdated } from "@/internal/customers/cusProducts/actions/emitCustomerProductBillingUpdated";
 import { getExistingCusProducts } from "@/internal/customers/cusProducts/cusProductUtils/getExistingCusProducts";
 
 export const handleRenewal = async ({
@@ -49,7 +46,8 @@ export const handleRenewal = async ({
 
 	// Same active product: pure side-effect (webhook + invoice record). No DB
 	// mutation on the cusProduct; the cycle anchor is owned by the app store.
-	if (curSameProduct && ACTIVE_STATUSES.includes(curSameProduct.status)) {
+	// Active only — past-due must fall through to the recovery branch below.
+	if (curSameProduct && curSameProduct.status === CusProductStatus.Active) {
 		logger.info(
 			`Renewal for existing active product ${product.id}, sending webhook`,
 		);
@@ -62,6 +60,16 @@ export const handleRenewal = async ({
 			customerId: customer.id || "",
 			scenario: AttachScenario.Renew,
 			cusProduct: curSameProduct,
+		});
+
+		// No cusProduct mutation on renewal — empty updates still surface an
+		// "updated" plan change so billing.updated mirrors the legacy webhook.
+		emitCustomerProductBillingUpdated({
+			ctx: customerCtx,
+			originalFullCustomer: structuredClone(customer),
+			updateCustomerProducts: [
+				{ customerProduct: curSameProduct, updates: {} },
+			],
 		});
 
 		await recordRevenueCatInvoice({
@@ -84,7 +92,6 @@ export const handleRenewal = async ({
 			ctx: customerCtx,
 			customerProduct: curSameProduct,
 			fullCustomer: customer,
-			sendWebhook: true,
 		});
 
 		logger.info(`Marked past due product as active: ${curSameProduct.id}`);

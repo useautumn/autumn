@@ -1,23 +1,8 @@
-/**
- * TDD test for Stripe dual-auth channel-specific disconnect.
- *
- * Contract under test:
- *   resolveDisconnectChannels({ org, env, channel }) -> { clearSecretKey, clearOauth }
- *     - channel "secret_key": clearSecretKey true, clearOauth false (leaves oauth intact)
- *     - channel "oauth": clearOauth true, clearSecretKey false (leaves key + direct webhook intact)
- *     - channel undefined (legacy): clears whichever channel(s) are present for the env
- *
- *   computeClearedStripeConfig / computeClearedStripeConnect (pure field mutators):
- *     - clearing secret key nulls *_api_key + *_webhook_secret, leaves *_connect_webhook_secret + account_id
- *     - clearing oauth deletes account_id, leaves stripe_config untouched
- *
- * Pre-impl red: these helpers do not exist; disconnect is all-or-nothing branched on
- * throughSecretKey.
- * Post-impl green: disconnect is channel-scoped and never clears the other channel.
- */
+/** Channel resolution clears catalog mappings only when the last Stripe channel is removed.
+ * Channel-specific config mutation must continue preserving the other channel. */
 
 import { describe, expect, test } from "bun:test";
-import { AppEnv, type Organization } from "@autumn/shared";
+import { AppEnv, type Organization, type StripeConfig } from "@autumn/shared";
 import {
 	computeClearedStripeConfig,
 	computeClearedStripeConnect,
@@ -41,7 +26,7 @@ const dualOrg = () =>
 			test_api_key: encryptData("sk_test"),
 			test_webhook_secret: encryptData("whsec_direct"),
 			test_connect_webhook_secret: encryptData("whsec_connect"),
-		} as any,
+		} satisfies StripeConfig,
 		test_stripe_connect: { account_id: "acct_dual" },
 	});
 
@@ -53,18 +38,47 @@ describe("dual-auth: resolveDisconnectChannels", () => {
 		const res = resolveDisconnectChannels({ org, env, channel: "secret_key" });
 		expect(res.clearSecretKey).toBe(true);
 		expect(res.clearOauth).toBe(false);
+		expect(res.clearCatalogMappings).toBe(false);
 	});
 
 	test("channel oauth clears only oauth", () => {
 		const res = resolveDisconnectChannels({ org, env, channel: "oauth" });
 		expect(res.clearOauth).toBe(true);
 		expect(res.clearSecretKey).toBe(false);
+		expect(res.clearCatalogMappings).toBe(false);
 	});
 
 	test("no channel (legacy) clears both present channels", () => {
 		const res = resolveDisconnectChannels({ org, env, channel: undefined });
 		expect(res.clearSecretKey).toBe(true);
 		expect(res.clearOauth).toBe(true);
+		expect(res.clearCatalogMappings).toBe(true);
+	});
+
+	test("clearing the only connected channel clears catalog mappings", () => {
+		const secretOnly = buildOrg({
+			stripe_config: {
+				test_api_key: encryptData("sk_test"),
+			} satisfies StripeConfig,
+		});
+		const oauthOnly = buildOrg({
+			test_stripe_connect: { account_id: "acct_oauth" },
+		});
+
+		expect(
+			resolveDisconnectChannels({
+				org: secretOnly,
+				env,
+				channel: "secret_key",
+			}).clearCatalogMappings,
+		).toBe(true);
+		expect(
+			resolveDisconnectChannels({
+				org: oauthOnly,
+				env,
+				channel: "oauth",
+			}).clearCatalogMappings,
+		).toBe(true);
 	});
 });
 

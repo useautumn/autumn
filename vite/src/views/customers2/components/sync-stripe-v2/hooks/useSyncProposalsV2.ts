@@ -32,6 +32,9 @@ export const useSyncProposalsV2 = ({ customerId }: { customerId: string }) => {
 			queryClient.invalidateQueries({
 				queryKey: queryKeyFactory(["customer"]),
 			});
+			queryClient.invalidateQueries({
+				queryKey: queryKeyFactory(["verify-stripe", customerId]),
+			});
 		},
 		onError: (error) => {
 			toast.error(getBackendErr(error, "Failed to sync from Stripe"));

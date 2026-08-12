@@ -21,7 +21,7 @@ import { getCustomerProduct } from "../attach/params/start-date/utils";
 test.concurrent(
 	`${chalk.yellowBright("multi-attach backdate: shared starts_at backdates every plan")}`,
 	async () => {
-		const customerId = "multi-attach-backdate";
+		const customerId = "multi-attach-backdate-invoice";
 		const plan = products.pro({
 			id: "plan",
 			items: [items.monthlyMessages({ includedUsage: 100 })],
@@ -81,7 +81,7 @@ test.concurrent(
 test.concurrent(
 	`${chalk.yellowBright("multi-attach backdate: preview and execution reject Stripe Checkout")}`,
 	async () => {
-		const customerId = "multi-attach-backdate-checkout";
+		const customerId = "multi-attach-backdate-validation-order";
 		const plan = products.pro({
 			id: "plan",
 			items: [items.monthlyMessages({ includedUsage: 100 })],
@@ -105,7 +105,6 @@ test.concurrent(
 			errMessage:
 				"Past starts_at cannot be used when Stripe Checkout is required",
 		};
-
 		await expectAutumnError({
 			...expectedError,
 			func: () => autumnV2_2.billing.previewMultiAttach(params),

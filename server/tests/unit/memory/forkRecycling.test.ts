@@ -60,15 +60,15 @@ describe("getForkRecycleConfig", () => {
 	test("defaults apply when nothing is set", () => {
 		const config = getForkRecycleConfig();
 		expect(config.enabled).toBe(true);
-		expect(config.rssThresholdBytes).toBe(3072 * MB);
+		expect(config.rssThresholdBytes).toBe(2000 * MB);
 		expect(config.minAgeMs).toBe(30 * 60_000);
 	});
 
 	test("valid overrides are honored", () => {
-		process.env.FORK_RECYCLE_RSS_MB = "1536";
+		process.env.FORK_RECYCLE_RSS_MB = "2048";
 		process.env.FORK_RECYCLE_CHECK_INTERVAL_MS = "5000";
 		const config = getForkRecycleConfig();
-		expect(config.rssThresholdBytes).toBe(1536 * MB);
+		expect(config.rssThresholdBytes).toBe(2048 * MB);
 		expect(config.checkIntervalMs).toBe(5000);
 	});
 
@@ -79,7 +79,7 @@ describe("getForkRecycleConfig", () => {
 		const config = getForkRecycleConfig();
 		expect(config.checkIntervalMs).toBe(30_000);
 		expect(config.drainTimeoutMs).toBe(30_000);
-		expect(config.rssThresholdBytes).toBe(3072 * MB);
+		expect(config.rssThresholdBytes).toBe(2000 * MB);
 	});
 
 	test("FORK_RECYCLE_DISABLED=true turns recycling off", () => {
@@ -103,8 +103,10 @@ type CoordinatorHarness = {
  *  through the handle* methods directly. */
 const createHarness = ({
 	bootTimeoutMs = 5_000,
+	drainCompletionTimeoutMs = 5_000,
 }: {
 	bootTimeoutMs?: number;
+	drainCompletionTimeoutMs?: number;
 } = {}): CoordinatorHarness => {
 	const forked: string[] = [];
 	const drained: string[] = [];
@@ -133,6 +135,7 @@ const createHarness = ({
 			return `respawn-of-${workerId}`;
 		},
 		replacementBootTimeoutMs: bootTimeoutMs,
+		drainCompletionTimeoutMs,
 		log: () => {},
 	});
 
@@ -335,6 +338,27 @@ describe("createRecycleCoordinator", () => {
 
 		coordinator.handleWorkerListening({ workerId: "respawn-of-w-crashed" });
 		expect(drained).toEqual(["w1"]);
+	});
+
+	test("a drained worker that never exits is killed at the completion deadline", async () => {
+		const { coordinator, forked, drained, killed, respawned } = createHarness({
+			drainCompletionTimeoutMs: 100,
+		});
+
+		coordinator.handleRecycleRequest({ workerId: "w1" });
+		coordinator.handleRecycleRequest({ workerId: "w2" });
+		coordinator.handleWorkerListening({ workerId: forked[0] });
+		expect(drained).toEqual(["w1"]);
+
+		// Drain message lost / drainer wedged: no exit arrives.
+		await new Promise((resolve) => setTimeout(resolve, 150));
+		expect(killed).toEqual(["w1"]);
+
+		// The kill's exit completes the cycle through the expected path —
+		// no respawn (replacement already serves) and w2's cycle starts.
+		expect(coordinator.handleWorkerExit({ workerId: "w1" })).toBe(true);
+		expect(respawned).toHaveLength(0);
+		expect(forked).toHaveLength(2);
 	});
 
 	test("a hung crash respawn is killed at its boot deadline and drains release", async () => {

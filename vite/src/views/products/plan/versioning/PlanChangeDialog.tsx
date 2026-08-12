@@ -671,6 +671,11 @@ export default function PlanChangeDialog({
 												features={features}
 											/>
 										</div>
+										{settingsChanges.some((c) => c.key === "name") && (
+											<div className="rounded-lg bg-secondary/40 px-3 py-2.5 text-xs text-muted-foreground">
+												This update will rename Stripe products.
+											</div>
+										)}
 									</div>
 								)}
 

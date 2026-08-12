@@ -1,6 +1,6 @@
 import type { EntitlementWithFeature, Feature } from "@autumn/shared";
 import type { CustomerPlanChange } from "@autumn/shared/api/billing/common/customerPlanChange.js";
-import { toCustomerPlanSnapshotFromFields } from "@/internal/billing/v2/utils/billingChangeResponse/toCustomerPlanSnapshot.js";
+import { toCustomerPlanSnapshotFromFields } from "@/internal/billing/v2/actions/buildBillingChanges";
 import { buildItemChanges } from "../buildMigrationItemEvent/buildAddedPlanChanges.js";
 import type { ChangedItem } from "./buildBatchMigrationWebhookRecords.js";
 

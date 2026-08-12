@@ -1,6 +1,8 @@
-import type { Feature } from "@autumn/shared";
-import { buildBalanceChanges } from "@/internal/migrations/v2/preview/previewMigrateCustomer/buildBalanceChanges.js";
-import { buildFlagChanges } from "@/internal/migrations/v2/preview/previewMigrateCustomer/buildFlagChanges.js";
+import { type Feature, isOneOffProduct } from "@autumn/shared";
+import {
+	buildBalanceChanges,
+	buildFlagChanges,
+} from "@/internal/billing/v2/actions/buildBillingChanges";
 import type { PreviewMigrateCustomer } from "@/internal/migrations/v2/preview/previewMigrateCustomer/types/index.js";
 import type { BatchMigrationPageCustomer } from "../execute/types/batchMigrationExecutionTypes.js";
 import type { BatchMigrationExecutionPlan } from "../types/index.js";

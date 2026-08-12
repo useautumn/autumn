@@ -65,24 +65,51 @@ export async function setupAgentWorktree(
 	return { entry: next, created: true };
 }
 
-// Auto-seed unit test org into the per-worktree Neon branch.
-// Only invoked on first Neon branch creation (see provisionWorktree).
+function worktreeDbEnv(entry: RegistryEntry): Record<string, string> {
+	return {
+		...(process.env as Record<string, string>),
+		DATABASE_URL: entry.databaseUrl!,
+		DATABASE_CRITICAL_URL: entry.databaseUrl!,
+	};
+}
+
+// Full seed: org + features/products + API key. First Neon branch create only.
 export async function autoSetupTestOrg(entry: RegistryEntry): Promise<void> {
 	if (!entry.databaseUrl) {
-		log("autoSetupTestOrg: no databaseUrl on entry, skipping");
-		return;
+		fatal("autoSetupTestOrg: no databaseUrl on entry");
 	}
 	log(`seeding unit test org in ${entry.branchName ?? "worktree"}`);
 	const code = shInherit("bun", ["scripts/setup/setup-test.ts", "--yes"], {
 		cwd: PROJECT_ROOT,
-		env: {
-			...(process.env as Record<string, string>),
-			DATABASE_URL: entry.databaseUrl,
-			DATABASE_CRITICAL_URL: entry.databaseUrl,
-		},
+		env: worktreeDbEnv(entry),
 	});
 	if (code !== 0) {
-		console.error(`[dw] setup-test exited with code ${code}; continuing`);
+		fatal(`setup-test exited with code ${code}`);
+	}
+}
+
+// Cheap idempotent ensure: Infisical/env secret hash ∈ this worktree's api_keys,
+// and refresh SECRET+PUBLIC in server/.env.local if that file already exists
+// (writeEnvLocalFiles runs first). Never creates .env.local for bun d.
+export async function autoEnsureTestOrgSecretKey(
+	entry: RegistryEntry,
+): Promise<void> {
+	if (!entry.databaseUrl) {
+		fatal("autoEnsureTestOrgSecretKey: no databaseUrl on entry");
+	}
+	log(
+		`ensuring unit-test-org API key in ${entry.branchName ?? "worktree"}`,
+	);
+	const code = shInherit(
+		"bun",
+		["scripts/setup/setup-test.ts", "--ensure-key"],
+		{
+			cwd: PROJECT_ROOT,
+			env: worktreeDbEnv(entry),
+		},
+	);
+	if (code !== 0) {
+		fatal(`ensure-test-org-key exited with code ${code}`);
 	}
 }
 
@@ -91,7 +118,7 @@ export async function autoSetupTestOrg(entry: RegistryEntry): Promise<void> {
 // Needs SLACK_BOT_TOKEN (the app's Bot User OAuth Token). SLACK_CLIENT_ID /
 // SLACK_CLIENT_SECRET configure OAuth, but cannot mint a bot token without an
 // install callback code; skips otherwise.
-// Non-fatal, like autoSetupTestOrg.
+// Non-fatal (Slack token may be absent in some environments).
 export async function autoSeedSlackInstall(
 	entry: RegistryEntry,
 ): Promise<void> {

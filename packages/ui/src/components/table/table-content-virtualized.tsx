@@ -8,7 +8,7 @@ import { TableHeader } from "@autumn/ui/components/table/table-header";
 import { TableMobileCards } from "@autumn/ui/components/table/table-mobile-cards";
 import { Table } from "@autumn/ui/components/ui/table";
 import { cn } from "@autumn/ui/lib/utils";
-import React, { useCallback, useMemo, useRef, useState } from "react";
+import React, { useMemo, useState } from "react";
 
 export function TableContentVirtualized({
 	children,
@@ -19,7 +19,6 @@ export function TableContentVirtualized({
 }) {
 	const context = useTableContext();
 	const {
-		flexibleTableColumns,
 		enableColumnVisibility,
 		columnVisibilityInToolbar,
 		columnVisibilityClassName,
@@ -30,31 +29,15 @@ export function TableContentVirtualized({
 	const rows = table.getRowModel().rows;
 	const showMobileCards = useShowMobileCards();
 
-	// Use state instead of ref so changes trigger re-renders for virtualizer
+	// State, not a ref, so the virtualizer re-renders once the container mounts.
 	const [scrollContainer, setScrollContainer] = useState<HTMLDivElement | null>(
 		null,
 	);
 
-	// Ref for header container to sync horizontal scroll
-	const headerRef = useRef<HTMLDivElement>(null);
-
-	// Sync header horizontal scroll with body scroll
-	const handleScroll = useCallback((e: React.UIEvent<HTMLDivElement>) => {
-		if (headerRef.current) {
-			headerRef.current.scrollLeft = e.currentTarget.scrollLeft;
-		}
-	}, []);
-
-	// Calculate header height for scroll container offset
-	const headerHeight = 28; // h-7 = 1.75rem = 28px
 	const rowHeight = virtualization?.rowHeight ?? 40;
-
-	// Calculate actual content height based on row count
 	const contentHeight = rows.length * rowHeight;
 
-	// minHeight ensures usability on small screens, but only when content would exceed it
-	// This allows small tables to be exactly as tall as their content
-	// Skip minHeight if containerHeight is explicitly set to a small value
+	// Small tables stay as short as their content; taller ones get a usable floor.
 	const MIN_TABLE_HEIGHT = 400;
 	const containerHeightPx = virtualization?.containerHeight
 		? Number.parseInt(virtualization.containerHeight, 10)
@@ -66,23 +49,15 @@ export function TableContentVirtualized({
 				? MIN_TABLE_HEIGHT
 				: undefined;
 
-	const viewportHeight = containerHeightPx
-		? containerHeightPx - headerHeight
-		: (minHeight ?? Number.POSITIVE_INFINITY);
-	const hasVerticalScroll = contentHeight > viewportHeight;
-	const scrollbarGutter = hasVerticalScroll ? "stable" : undefined;
-
-	// Calculate total width from visible columns to sync header and body tables
+	// Declared column widths are the floor before horizontal scrolling kicks in.
 	const visibleColumns = table.getVisibleLeafColumns();
 	const totalWidth = useMemo(() => {
 		return visibleColumns.reduce((sum, col) => sum + col.getSize(), 0);
 	}, [visibleColumns]);
 
-	// Create a key that changes when visible columns change to force body remount
-	// Using full column IDs ensures any visibility change is detected
+	// Remounts the body whenever the visible column set changes.
 	const visibleColumnKey = visibleColumns.map((col) => col.id).join(",");
 
-	// Provide updated context with scroll container to children
 	const contextWithRef = {
 		...context,
 		scrollContainer,
@@ -109,54 +84,31 @@ export function TableContentVirtualized({
 					<div className="bg-white/40 dark:bg-black/40 absolute pointer-events-none rounded-lg -inset-[1px] z-70" />
 				)}
 
-				<div
-					ref={headerRef}
-					className="overflow-x-auto overflow-y-hidden scrollbar-none shrink-0"
-					style={{ scrollbarWidth: "none", scrollbarGutter }}
-				>
+				{enableColumnVisibility && !columnVisibilityInToolbar && (
 					<div
-						className="relative bg-card border-b"
-						style={{ minWidth: `${totalWidth}px` }}
-					>
-						{enableColumnVisibility && !columnVisibilityInToolbar && (
-							<div
-								className={cn(
-									"absolute right-7 top-1 z-45",
-									columnVisibilityClassName,
-								)}
-							>
-								<TableColumnVisibility />
-							</div>
+						className={cn(
+							"absolute right-7 top-1 z-45",
+							columnVisibilityClassName,
 						)}
-						<Table
-							className="p-0 w-full rounded-t-lg"
-							flexibleTableColumns={flexibleTableColumns}
-						>
-							<TableHeader hideBorder />
-						</Table>
+					>
+						<TableColumnVisibility />
 					</div>
-				</div>
+				)}
 
 				<div
 					key={visibleColumnKey}
 					ref={setScrollContainer}
-					onScroll={handleScroll}
 					className={cn("w-full overflow-auto", isFlexFill && "flex-1 min-h-0")}
 					style={{
 						minHeight: isFlexFill ? undefined : minHeight,
-						maxHeight:
-							!isFlexFill && virtualization?.containerHeight
-								? `calc(${virtualization.containerHeight} - ${headerHeight}px)`
-								: undefined,
+						maxHeight: isFlexFill ? undefined : virtualization?.containerHeight,
 						willChange: "scroll-position",
-						scrollbarGutter,
 					}}
 				>
-					<Table
-						className="p-0 w-full"
-						flexibleTableColumns={flexibleTableColumns}
-						style={{ minWidth: `${totalWidth}px` }}
-					>
+					{/* One table with a sticky thead: separate header/body tables size their
+					    columns independently. Fixed layout pins them to the header row. */}
+					<Table className="p-0 w-full" style={{ minWidth: `${totalWidth}px` }}>
+						<TableHeader />
 						{React.Children.map(children, (child) =>
 							React.isValidElement(child)
 								? React.cloneElement(child, { key: visibleColumnKey })
