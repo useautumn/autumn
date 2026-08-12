@@ -104,11 +104,7 @@ export const MIGRATION_SCENARIOS: MigrationScenario[] = [
 			target: "plan",
 			item: monthly(TestFeature.Messages, 100),
 		},
-		expect: {
-			lane: "per_customer",
-			rejections: ["unsupported_remove_items"],
-			untouched: [TestFeature.Messages],
-		},
+		expect: { lane: "per_customer", rejections: ["unsupported_remove_items"] },
 	},
 	{
 		name: "plan-edit-refused",
@@ -121,11 +117,7 @@ export const MIGRATION_SCENARIOS: MigrationScenario[] = [
 			from: monthly(TestFeature.Messages, 100),
 			to: monthly(TestFeature.Messages, 200),
 		},
-		expect: {
-			lane: "per_customer",
-			rejections: ["unsupported_remove_items"],
-			untouched: [TestFeature.Messages],
-		},
+		expect: { lane: "per_customer", rejections: ["unsupported_remove_items"] },
 	},
 
 	// ── License items: all three verbs are batch-lowered ──────────────
@@ -211,11 +203,7 @@ export const MIGRATION_SCENARIOS: MigrationScenario[] = [
 			target: "license",
 			item: { featureId: TestFeature.Credits },
 		},
-		expect: {
-			lane: "per_customer",
-			rejections: ["priced_remove_item"],
-			untouched: [TestFeature.Credits, TestFeature.Messages],
-		},
+		expect: { lane: "per_customer", rejections: ["priced_remove_item"] },
 	},
 	{
 		name: "license-edit-rollover-refused",

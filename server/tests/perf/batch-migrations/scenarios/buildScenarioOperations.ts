@@ -19,6 +19,8 @@ const toPlanItem = (item: ItemSpec) => ({
 				price: {
 					amount: item.priced.amount,
 					billing_units: item.priced.billingUnits,
+					billing_method: "prepaid",
+					interval: item.interval ?? "month",
 				},
 			}
 		: {}),

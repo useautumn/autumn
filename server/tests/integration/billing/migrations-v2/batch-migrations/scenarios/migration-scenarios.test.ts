@@ -10,6 +10,10 @@ import { MIGRATION_SCENARIOS } from "@tests/perf/batch-migrations/scenarios/migr
 import chalk from "chalk";
 import { runMigrationScenario } from "./runMigrationScenario";
 
+// Plans persist between runs, so a stable id would re-use the previous run's
+// shape rather than the one the scenario declares.
+const RUN_SUFFIX = Date.now().toString(36);
+
 for (const scenario of MIGRATION_SCENARIOS) {
 	const title = `${chalk.yellowBright("migration scenario")} ${scenario.name}: ${scenario.description}`;
 
@@ -21,7 +25,7 @@ for (const scenario of MIGRATION_SCENARIOS) {
 	test(title, async () => {
 		const outcome = await runMigrationScenario({
 			scenario,
-			idPrefix: `sc-${scenario.name}`.slice(0, 40),
+			idPrefix: `sc-${RUN_SUFFIX}-${scenario.name}`.slice(0, 44),
 		});
 
 		expect(outcome.lane).toBe(scenario.expect.lane);

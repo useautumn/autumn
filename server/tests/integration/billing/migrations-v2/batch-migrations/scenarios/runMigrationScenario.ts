@@ -9,20 +9,35 @@ import type {
 	MigrationScenario,
 } from "@tests/perf/batch-migrations/scenarios/migrationScenarioTypes";
 import { eq, inArray } from "drizzle-orm";
-import { constructFeatureItem } from "@/utils/scriptUtils/constructItem";
+import {
+	constructFeatureItem,
+	constructPrepaidItem,
+} from "@/utils/scriptUtils/constructItem";
 
 const INCLUDED_SEATS = 1;
 const ATTACHED_SEATS = 3;
 const ASSIGNED_SEATS = 2;
 
-const toProductItem = (item: ItemSpec): ProductItem =>
-	constructFeatureItem({
+const toProductItem = (item: ItemSpec): ProductItem => {
+	if (item.priced) {
+		return constructPrepaidItem({
+			featureId: item.featureId,
+			price: item.priced.amount,
+			billingUnits: item.priced.billingUnits,
+			includedUsage: item.included ?? 0,
+		}) as ProductItem;
+	}
+	return constructFeatureItem({
 		featureId: item.featureId,
 		includedUsage: item.included,
 		isBoolean: item.boolean,
 		interval: item.interval as never,
 		entityFeatureId: item.entityFeatureId,
-	}) as ProductItem;
+		rolloverConfig: item.rollover
+			? { max: item.rollover.max, length: 1 }
+			: undefined,
+	} as never) as ProductItem;
+};
 
 export type ScenarioRunOutcome = {
 	lane: string | undefined;
@@ -68,14 +83,19 @@ export const runMigrationScenario = async ({
 		noBillingChanges: true,
 	});
 
-	const { assignments } = await getLicenseDbState({ db: ctx.db, customerId });
+	const { assignments, products } = await getLicenseDbState({
+		db: ctx.db,
+		customerId,
+	});
+	// A license op writes to the seat assignments; a plan op writes to the
+	// customer product for the plan itself, which carries no link id.
 	const targetIds = targetsLicense
 		? assignments
 				.filter((assignment) => assignment.internal_entity_id)
 				.map((assignment) => assignment.id)
-		: assignments
-				.filter((assignment) => !assignment.customer_license_link_id)
-				.map((assignment) => assignment.id);
+		: products
+				.filter((product) => !product.customer_license_link_id)
+				.map((product) => product.id);
 
 	const rows =
 		targetIds.length === 0
