@@ -78,16 +78,11 @@ export const DeleteCustomerDialog = ({
 			>
 				<DialogHeader>
 					<DialogTitle>
-						Delete customer {customer.name || customer.email || customer.id}
+						Delete customer {customer.name ?? customer.email ?? customer.id}
 					</DialogTitle>
 				</DialogHeader>
 
 				<div className="mb-2 text-sm">
-					<div className="mb-3 rounded-md border border-border bg-muted/50 p-3 font-semibold">
-						<div>Name: {customer.name || "Not provided"}</div>
-						<div>Email: {customer.email || "Not provided"}</div>
-						<div>ID: {customer.id || customer.internal_id}</div>
-					</div>
 					<p className="text-muted-foreground">
 						Are you sure you want to delete this customer in Autumn? This action
 						cannot be undone. Select whether to delete this customer in Stripe
