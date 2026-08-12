@@ -1,13 +1,5 @@
-import { Checkbox, IconButton } from "@autumn/ui";
 import {
-	CaretDownIcon,
-	MagnifyingGlassIcon,
-	PencilSimpleIcon,
-} from "@phosphor-icons/react";
-import { Check } from "lucide-react";
-import { useEffect, useRef, useState } from "react";
-import { useLocation, useNavigate, useSearchParams } from "react-router";
-import {
+	Checkbox,
 	DropdownMenu,
 	DropdownMenuContent,
 	DropdownMenuGroup,
@@ -18,9 +10,25 @@ import {
 	DropdownMenuSubContent,
 	DropdownMenuSubTrigger,
 	DropdownMenuTrigger,
+	IconButton,
+	Tabs,
+	TabsList,
+	TabsTrigger,
+	Tooltip,
+	TooltipContent,
+	TooltipTrigger,
 } from "@autumn/ui";
+import {
+	CaretDownIcon,
+	MagnifyingGlassIcon,
+	PencilSimpleIcon,
+} from "@phosphor-icons/react";
+import { Check } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import { useLocation, useNavigate, useSearchParams } from "react-router";
 import { cn } from "@/lib/utils";
 import { useAnalyticsContext } from "../AnalyticsContext";
+import { useAnalyticsQueryState } from "../hooks/useAnalyticsQueryState";
 
 export const SelectGroupByDropdown = ({
 	propertyKeys,
@@ -71,8 +79,31 @@ export const SelectGroupByDropdown = ({
 	const showCustomerIdOption = !customerId;
 	const maxGroups = Number(searchParams.get("max_groups")) || 10;
 
+	const { queryStates, setQueryStates } = useAnalyticsQueryState();
+	// Without a customer the hook never sends aggregate_on, so the chart shows
+	// values regardless of the URL — reflect that instead of a lying tab.
+	const isDeducted = queryStates.aggregate_on === "deducted" && !!customerId;
+
+	const handleModeChange = (mode: string) => {
+		// The deduction rollup is keyed by customer, so the mode needs one.
+		if (mode === "deductions" && !customerId) return;
+		setQueryStates({
+			aggregate_on: mode === "deductions" ? "deducted" : null,
+		});
+		// Plan grouping isn't served in deducted mode — drop it rather than
+		// leave the chart pointing at a grouping that returns nothing.
+		if (mode === "deductions" && currentGroupBy === "plan_id") {
+			updateQueryParams({ groupBy: null });
+		}
+	};
+
+	// Built from window.location, NOT react-router's `location.search`: the
+	// Values/Deductions tab writes aggregate_on through nuqs, whose history push
+	// react-router may not have observed yet. Rebuilding from a stale snapshot
+	// silently dropped that param (picking a group-by kicked you out of deducted
+	// mode). window.location is always the real current URL, whoever wrote last.
 	const updateQueryParams = ({ groupBy }: { groupBy: string | null }) => {
-		const params = new URLSearchParams(location.search);
+		const params = new URLSearchParams(window.location.search);
 
 		if (groupBy) {
 			params.set("group_by", groupBy);
@@ -86,7 +117,7 @@ export const SelectGroupByDropdown = ({
 
 	const updateMaxGroups = ({ value }: { value: number }) => {
 		const clamped = Math.min(250, Math.max(1, value));
-		const params = new URLSearchParams(location.search);
+		const params = new URLSearchParams(window.location.search);
 		params.set("max_groups", String(clamped));
 		navigate(`${location.pathname}?${params.toString()}`);
 	};
@@ -145,6 +176,47 @@ export const SelectGroupByDropdown = ({
 				</IconButton>
 			</DropdownMenuTrigger>
 			<DropdownMenuContent align="end" className="w-[200px]">
+				<div className="p-1 border-b border-border">
+					<Tabs
+						value={isDeducted ? "deductions" : "values"}
+						onValueChange={handleModeChange}
+					>
+						{/* Bare primitives on purpose — same look as the admin tabs. */}
+						<TabsList className="w-full h-7">
+							<TabsTrigger value="values" className="flex-1 text-xs">
+								Values
+							</TabsTrigger>
+							{customerId ? (
+								<TabsTrigger value="deductions" className="flex-1 text-xs">
+									Deductions
+								</TabsTrigger>
+							) : (
+								<Tooltip>
+									{/* Disabled buttons swallow pointer events; the span keeps
+									    the tooltip alive. The title is a fallback for anything
+									    that renders outside the tooltip provider. */}
+									<TooltipTrigger asChild>
+										<span
+											className="flex-1"
+											title="Select a customer to break down deductions"
+										>
+											<TabsTrigger
+												value="deductions"
+												disabled
+												className="w-full text-xs"
+											>
+												Deductions
+											</TabsTrigger>
+										</span>
+									</TooltipTrigger>
+									<TooltipContent>
+										Select a customer to break down deductions
+									</TooltipContent>
+								</Tooltip>
+							)}
+						</TabsList>
+					</Tabs>
+				</div>
 				{propertyKeys.length > 5 && (
 					<div className="flex items-center gap-2 px-2 py-1.5 border-b border-border">
 						<MagnifyingGlassIcon className="size-4 text-subtle" />
@@ -200,7 +272,11 @@ export const SelectGroupByDropdown = ({
 						)}
 					</DropdownMenuItem>
 					<DropdownMenuItem
-						onClick={() => handleSelect({ property: "plan_id" })}
+						disabled={isDeducted}
+						onClick={() => {
+							if (isDeducted) return;
+							handleSelect({ property: "plan_id" });
+						}}
 						className="flex items-center justify-between"
 					>
 						<span className="text-xs font-medium text-muted-foreground">

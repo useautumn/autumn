@@ -1,10 +1,5 @@
-import { Calendar, IconButton } from "@autumn/ui";
-import { CalendarBlankIcon, CaretDownIcon } from "@phosphor-icons/react";
-import { endOfDay, format, subMonths } from "date-fns";
-import { Check } from "lucide-react";
-import { useState } from "react";
-import type { DateRange } from "react-day-picker";
 import {
+	Calendar,
 	DropdownMenu,
 	DropdownMenuContent,
 	DropdownMenuGroup,
@@ -15,7 +10,13 @@ import {
 	DropdownMenuSubContent,
 	DropdownMenuSubTrigger,
 	DropdownMenuTrigger,
+	IconButton,
 } from "@autumn/ui";
+import { CalendarBlankIcon, CaretDownIcon } from "@phosphor-icons/react";
+import { endOfDay, format, subMonths } from "date-fns";
+import { Check } from "lucide-react";
+import { useState } from "react";
+import type { DateRange } from "react-day-picker";
 
 import { useAnalyticsContext } from "../AnalyticsContext";
 import { useAnalyticsQueryState } from "../hooks/useAnalyticsQueryState";

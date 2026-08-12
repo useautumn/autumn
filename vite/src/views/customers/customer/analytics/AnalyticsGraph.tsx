@@ -8,6 +8,7 @@ import {
 	useRef,
 	useState,
 } from "react";
+import { createPortal } from "react-dom";
 import { Bar, BarChart, CartesianGrid, XAxis, YAxis } from "recharts";
 import { cn } from "@/lib/utils";
 import type { Row } from "./components/analytics-types";
@@ -73,14 +74,41 @@ export const EventsBarChart = memo(function EventsBarChart({
 	const selectedInterval = queryStates.interval;
 	const [hoveredKey, setHoveredKey] = useState<string | null>(null);
 	const [activeRow, setActiveRow] = useState<Row | null>(null);
-	const [mousePos, setMousePos] = useState<{ x: number; y: number } | null>(
-		null,
-	);
 	const containerRef = useRef<HTMLDivElement>(null);
+
+	// Cursor tracking is imperative: a per-pixel setState here re-renders the
+	// whole recharts tree per mousemove, which is what made the tooltip choppy.
+	const tooltipRef = useRef<HTMLDivElement>(null);
+	const lastMousePos = useRef<{ x: number; y: number } | null>(null);
+
+	// Fixed positioning in viewport coords: the animated card wrapper creates a
+	// stacking context, so an absolute tooltip gets clipped at the card edge.
+	const positionTooltip = useCallback(() => {
+		const tooltip = tooltipRef.current;
+		const pos = lastMousePos.current;
+		const rect = containerRef.current?.getBoundingClientRect();
+		if (!tooltip || !pos || !rect) return;
+		const clientX = rect.left + pos.x;
+		const clientY = rect.top + pos.y;
+		tooltip.style.top = `${clientY - 12}px`;
+		if (window.innerWidth - clientX < 200) {
+			tooltip.style.left = "auto";
+			tooltip.style.right = `${window.innerWidth - clientX + 12}px`;
+		} else {
+			tooltip.style.right = "auto";
+			tooltip.style.left = `${clientX + 12}px`;
+		}
+	}, []);
+
+	// Plot-area x-range, used to resolve which column the cursor is over.
+	const plotXRef = useRef<{ left: number; width: number } | null>(null);
+	// Lets mousemove retry when the first measure ran before recharts drew the
+	// grid — the ResizeObserver never refires if the container size is stable.
+	const measureRef = useRef<(() => void) | null>(null);
 
 	useLayoutEffect(() => {
 		const container = containerRef.current;
-		if (!container || !onGeometry) {
+		if (!container) {
 			return;
 		}
 		const measure = () => {
@@ -93,36 +121,61 @@ export const EventsBarChart = memo(function EventsBarChart({
 			if (g.width === 0 || g.height === 0) {
 				return;
 			}
-			onGeometry({
+			plotXRef.current = { left: g.left - c.left, width: g.width };
+			onGeometry?.({
 				left: Math.round(g.left - c.left),
 				right: Math.round(c.right - g.right),
 				top: Math.round(g.top - c.top),
 				bottom: Math.round(c.bottom - g.bottom),
 			});
 		};
+		measureRef.current = measure;
 		measure();
 		const observer = new ResizeObserver(measure);
 		observer.observe(container);
-		return () => observer.disconnect();
+		return () => {
+			observer.disconnect();
+			measureRef.current = null;
+		};
 	}, [onGeometry, data]);
 
+	// Segment hover narrows the tooltip to that series; the active COLUMN is
+	// resolved from the cursor's x against the measured plot area, so hovering
+	// empty space above a bar still shows that column's full stack. Deliberately
+	// not recharts' activeTooltipIndex — it does not reach chart-level handlers
+	// in this setup, which is exactly the bug this replaces.
 	const handleBarMouseEnter = useCallback(
-		(dataKey: string) => (entry: any) =>
-			startTransition(() => {
-				setHoveredKey(dataKey);
-				setActiveRow(entry?.payload ?? null);
-			}),
+		(dataKey: string) => () => startTransition(() => setHoveredKey(dataKey)),
 		[],
 	);
-	const handleMouseMove = useCallback((e: React.MouseEvent) => {
-		const rect = containerRef.current?.getBoundingClientRect();
-		if (rect)
-			setMousePos({ x: e.clientX - rect.left, y: e.clientY - rect.top });
-	}, []);
+	const handleBarMouseLeave = useCallback(
+		() => startTransition(() => setHoveredKey(null)),
+		[],
+	);
+	const handleMouseMove = useCallback(
+		(e: React.MouseEvent) => {
+			const rect = containerRef.current?.getBoundingClientRect();
+			if (!rect) return;
+			const x = e.clientX - rect.left;
+			lastMousePos.current = { x, y: e.clientY - rect.top };
+			positionTooltip();
+
+			if (!plotXRef.current) measureRef.current?.();
+			const plot = plotXRef.current;
+			const count = data.data.length;
+			if (!plot || count === 0 || plot.width <= 0) return;
+			const index = Math.floor(((x - plot.left) / plot.width) * count);
+			const row = index >= 0 && index < count ? data.data[index] : null;
+			startTransition(() =>
+				setActiveRow((prev) => (prev === row ? prev : row)),
+			);
+		},
+		[data, positionTooltip],
+	);
 	const handleChartMouseLeave = useCallback(() => {
 		setHoveredKey(null);
 		setActiveRow(null);
-		setMousePos(null);
+		lastMousePos.current = null;
 	}, []);
 
 	const formatXAxis = useCallback(
@@ -149,8 +202,13 @@ export const EventsBarChart = memo(function EventsBarChart({
 				color: s.fill,
 			}))
 			.filter((i) => i.value !== 0);
-		const items = hoveredKey
+		// A stale or zero-valued hoveredKey must not blank the tooltip while the
+		// CSS hover state is still lit — fall back to the full stack instead.
+		const hoveredItems = hoveredKey
 			? allItems.filter((i) => i.dataKey === hoveredKey)
+			: [];
+		const items = hoveredItems.length
+			? hoveredItems
 			: allItems.sort((a, b) => b.value - a.value);
 		if (!items.length) return null;
 		return { period: String(activeRow.period), items };
@@ -170,13 +228,9 @@ export const EventsBarChart = memo(function EventsBarChart({
 					.reduce((s, i) => s + i.value, 0)
 			: 0;
 
-	return (
-		<div
-			ref={containerRef}
-			className="h-full w-full relative"
-			onMouseMove={handleMouseMove}
-			onMouseLeave={handleChartMouseLeave}
-		>
+	// Memoized so tooltip-driven re-renders never touch the recharts tree.
+	const chart = useMemo(
+		() => (
 			<ChartContainer
 				config={rechartsConfig}
 				className={cn(
@@ -228,48 +282,71 @@ export const EventsBarChart = memo(function EventsBarChart({
 							activeBar={false}
 							style={CHART_STYLE}
 							onMouseEnter={barHandlers[si]}
+							onMouseLeave={handleBarMouseLeave}
 							isAnimationActive={false}
 						/>
 					))}
 				</BarChart>
 			</ChartContainer>
-			{tooltipData && mousePos && (
-				<div
-					className="pointer-events-none absolute z-50 bg-popover text-popover-foreground grid min-w-[8rem] items-start gap-1.5 rounded-lg px-2.5 py-1.5 text-xs shadow-md ring-1 ring-foreground/10"
-					style={{
-						top: mousePos.y - 12,
-						...((containerRef.current?.offsetWidth ?? 0) - mousePos.x < 200
-							? {
-									right:
-										(containerRef.current?.offsetWidth ?? 0) - mousePos.x + 12,
-								}
-							: { left: mousePos.x + 12 }),
-					}}
-				>
-					<div className="font-medium">{formatXAxis(tooltipData.period)}</div>
-					<div className="grid gap-1">
-						{visible.map((item) => (
-							<TooltipItem
-								key={item.dataKey}
-								item={item}
-								label={
-									(rechartsConfig[item.dataKey]?.label as string) ??
-									item.dataKey
-								}
-							/>
-						))}
-						{overflow > 0 && (
-							<div className="flex items-center gap-2 text-muted-foreground">
-								<span className="h-2.5 w-2.5 shrink-0" />
-								<span className="flex-1">+{overflow} more</span>
-								<span className="tabular-nums">
-									{overflowSum.toLocaleString()}
-								</span>
-							</div>
-						)}
-					</div>
-				</div>
-			)}
+		),
+		[
+			data,
+			rechartsConfig,
+			chartConfig,
+			domainMax,
+			formatXAxis,
+			barHandlers,
+			handleBarMouseLeave,
+		],
+	);
+
+	// Position before paint so the tooltip never flashes at a stale corner.
+	useLayoutEffect(() => {
+		if (tooltipData) positionTooltip();
+	}, [tooltipData, positionTooltip]);
+
+	return (
+		<div
+			ref={containerRef}
+			className="h-full w-full relative"
+			onMouseMove={handleMouseMove}
+			onMouseLeave={handleChartMouseLeave}
+		>
+			{chart}
+			{/* Portaled: sticky table headers and animated card wrappers otherwise
+			    win the stacking-context fight regardless of z-index. */}
+			{tooltipData &&
+				lastMousePos.current &&
+				createPortal(
+					<div
+						ref={tooltipRef}
+						className="pointer-events-none fixed z-[100] bg-popover text-popover-foreground grid min-w-[8rem] items-start gap-1.5 rounded-lg px-2.5 py-1.5 text-xs shadow-md ring-1 ring-foreground/10"
+					>
+						<div className="font-medium">{formatXAxis(tooltipData.period)}</div>
+						<div className="grid gap-1">
+							{visible.map((item) => (
+								<TooltipItem
+									key={item.dataKey}
+									item={item}
+									label={
+										(rechartsConfig[item.dataKey]?.label as string) ??
+										item.dataKey
+									}
+								/>
+							))}
+							{overflow > 0 && (
+								<div className="flex items-center gap-2 text-muted-foreground">
+									<span className="h-2.5 w-2.5 shrink-0" />
+									<span className="flex-1">+{overflow} more</span>
+									<span className="tabular-nums">
+										{overflowSum.toLocaleString()}
+									</span>
+								</div>
+							)}
+						</div>
+					</div>,
+					document.body,
+				)}
 		</div>
 	);
 });
