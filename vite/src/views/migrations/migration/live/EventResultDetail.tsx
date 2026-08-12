@@ -121,6 +121,13 @@ function getPlanId(change: PlanChange): string | undefined {
 	);
 }
 
+/** Top-level item_changes is deprecated; content lives on plan_change now.
+ * Fallback covers older payloads and migration event records. */
+function getItemChanges(change: PlanChange): ItemChange[] {
+	const nested = change.plan_change?.item_changes;
+	return nested?.length ? nested : (change.item_changes ?? []);
+}
+
 function getPlanStatus(change: PlanChange): string | undefined {
 	return change.subscription?.status ?? change.purchase?.status;
 }
@@ -267,7 +274,7 @@ function PlanChangeRows({
 	absorbedFlags?: FlagChange[];
 }) {
 	const action = change.action ?? "unknown";
-	const items = change.item_changes ?? [];
+	const items = getItemChanges(change);
 	const planId = getPlanId(change);
 	const status = getPlanStatus(change);
 	const hasAbsorbed =
@@ -331,7 +338,7 @@ function PreviewSummary({ preview }: { preview: MigrationPreview }) {
 
 	const itemChangeFeatureIds = new Set<string>();
 	for (const pc of planChanges) {
-		for (const ic of pc.item_changes ?? []) {
+		for (const ic of getItemChanges(pc)) {
 			if (ic.feature_id) itemChangeFeatureIds.add(ic.feature_id);
 		}
 	}
@@ -343,11 +350,11 @@ function PreviewSummary({ preview }: { preview: MigrationPreview }) {
 		(fc) => fc.feature_id && !itemChangeFeatureIds.has(fc.feature_id),
 	);
 
-	// New plans without item_changes absorb standalone balance/flag changes as children
+	// New plans without item changes absorb standalone balance/flag changes as children
 	const newPlanIndex = planChanges.findIndex(
 		(pc) =>
 			(pc.action === "activated" || pc.action === "created") &&
-			!pc.item_changes?.length,
+			getItemChanges(pc).length === 0,
 	);
 	const absorbed =
 		newPlanIndex >= 0 &&

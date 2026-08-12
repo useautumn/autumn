@@ -8,7 +8,10 @@ import { existsSync, writeFileSync } from "node:fs";
 import type { ReferralProgram, Reward } from "../../../compose/index.js";
 import type { Feature } from "../../../compose/models/index.js";
 import type { Plan } from "../../../compose/models/variantModels.js";
-import { DEFAULT_REWARD_EXPORT_ERROR } from "../../config/loadConfig.js";
+import {
+	DEFAULT_REWARD_EXPORT_ERROR,
+	loadConfigModule,
+} from "../../config/loadConfig.js";
 import { resolveConfigPath } from "../../env/index.js";
 import { buildFeatureCode } from "../sdkToCode/feature.js";
 import {
@@ -17,6 +20,7 @@ import {
 	idToVarName,
 	planIdToVarName,
 	variantIdToVarName,
+	versionedCodegenId,
 } from "../sdkToCode/helpers.js";
 import { buildImports } from "../sdkToCode/imports.js";
 import { buildPlanCode } from "../sdkToCode/plan.js";
@@ -25,7 +29,11 @@ import {
 	buildRewardCode,
 } from "../sdkToCode/reward.js";
 import { buildVariantCode } from "../sdkToCode/variant.js";
-import { parseExistingConfig } from "./parseConfig.js";
+import {
+	type ParsedEntity,
+	type ParsedIdentity,
+	parseExistingConfig,
+} from "./parseConfig.js";
 
 export interface UpdateResult {
 	/** Number of features updated in place */
@@ -92,7 +100,7 @@ function generatePlanWithVariantsCode({
 			variant,
 			features,
 			featureVarMap,
-			varNameOverride: variantVarMap.get(variant.id),
+			varNameOverride: variantVarMap.get(versionedCodegenId(variant)),
 		}),
 	);
 
@@ -106,6 +114,11 @@ const ensureAtmnImports = (importText: string, imports: string[]) =>
 				? text
 				: text.replace(/\{/, `{ ${name},`),
 		importText,
+	);
+
+const versionedIds = (resources: ParsedIdentity[]) =>
+	new Set(
+		resources.flatMap(({ id, version }) => (version === undefined ? [] : [id])),
 	);
 
 /** Updates managed entities in place while preserving custom source. */
@@ -128,11 +141,47 @@ export async function updateConfigInPlace({
 		throw new Error(`Config file not found: ${configPath}`);
 	}
 
-	const parsed = parseExistingConfig(configPath);
+	let parsed = parseExistingConfig({ configPath });
 	const hasDefaultResources =
 		/\bexport\s+default\b/.test(parsed.source) &&
 		/\b(?:rewards|referralPrograms)\b/.test(parsed.source);
 	if (hasDefaultResources) throw new Error(DEFAULT_REWARD_EXPORT_ERROR);
+	const versionedIdsByType = new Map<ParsedEntity["type"], Set<string>>([
+		["plan", versionedIds(plans)],
+		["variant", versionedIds(plans.flatMap((plan) => plan.variants ?? []))],
+	]);
+	const runtimeDeclarations = parsed.blocks.flatMap(
+		({ declaration, entity }) =>
+			declaration &&
+			(declaration.requiresRuntimeIdentity ||
+				(entity && versionedIdsByType.get(entity.type)?.has(entity.id)))
+				? [declaration]
+				: [],
+	);
+	if (runtimeDeclarations.length) {
+		const mod = await loadConfigModule({ cwd });
+		const identitiesByTypeAndVarName = new Map<
+			ParsedEntity["type"],
+			Map<string, ParsedIdentity>
+		>();
+		for (const declaration of runtimeDeclarations) {
+			const value = mod[declaration.varName] as
+				| { id?: unknown; version?: unknown }
+				| undefined;
+			if (typeof value?.id !== "string")
+				throw new Error(
+					`Could not resolve the ID of export '${declaration.varName}'.`,
+				);
+			const identities =
+				identitiesByTypeAndVarName.get(declaration.type) ?? new Map();
+			identities.set(declaration.varName, {
+				id: value.id,
+				version: typeof value.version === "number" ? value.version : undefined,
+			});
+			identitiesByTypeAndVarName.set(declaration.type, identities);
+		}
+		parsed = parseExistingConfig({ configPath, identitiesByTypeAndVarName });
+	}
 	const requiredImports = [
 		...(plans.some((plan) => plan.billingControls) ? ["billingControls"] : []),
 		...(rewards?.length ? ["reward"] : []),
@@ -149,7 +198,7 @@ export async function updateConfigInPlace({
 
 	// Build lookup maps
 	const apiFeatureMap = new Map(features.map((f) => [f.id, f]));
-	const apiPlanMap = new Map(plans.map((p) => [p.id, p]));
+	const apiPlanMap = new Map(plans.map((p) => [versionedCodegenId(p), p]));
 	const apiRewardMap = new Map(
 		(rewards ?? []).map((reward) => [reward.id, reward]),
 	);
@@ -158,7 +207,9 @@ export async function updateConfigInPlace({
 	);
 	const apiVariantMap = new Map(
 		plans.flatMap((plan) =>
-			(plan.variants ?? []).map((variant) => [variant.id, variant] as const),
+			(plan.variants ?? []).map(
+				(variant) => [versionedCodegenId(variant), variant] as const,
+			),
 		),
 	);
 
@@ -170,7 +221,7 @@ export async function updateConfigInPlace({
 		if (entity.type === "feature") {
 			featureVarMap.set(entity.id, entity.varName);
 		} else if (entity.type === "variant") {
-			existingVariantVarMap.set(entity.id, entity.varName);
+			existingVariantVarMap.set(versionedCodegenId(entity), entity.varName);
 		}
 	}
 
@@ -203,11 +254,11 @@ export async function updateConfigInPlace({
 	// Resolve new plan var names, avoiding all names already in use.
 	// "New" means the plan ID is not present in any parsed entity.
 	const existingPlanIds = new Set(
-		parsed.entities.filter((e) => e.type === "plan").map((e) => e.id),
+		parsed.entities.filter((e) => e.type === "plan").map(versionedCodegenId),
 	);
 	const newPlanIds = plans
-		.filter((p) => !existingPlanIds.has(p.id))
-		.map((p) => p.id);
+		.filter((p) => !existingPlanIds.has(versionedCodegenId(p)))
+		.map(versionedCodegenId);
 
 	const newPlanVarMap = new Map<string, string>();
 	for (const id of newPlanIds) {
@@ -220,18 +271,18 @@ export async function updateConfigInPlace({
 	}
 
 	const variantVarMap = new Map<string, string>();
-	for (const id of apiVariantMap.keys()) {
-		if (existingVariantVarMap.has(id)) {
-			variantVarMap.set(id, existingVariantVarMap.get(id)!);
+	for (const key of apiVariantMap.keys()) {
+		if (existingVariantVarMap.has(key)) {
+			variantVarMap.set(key, existingVariantVarMap.get(key)!);
 			continue;
 		}
 
 		const varName = claimVarName({
-			candidate: variantIdToVarName(id),
+			candidate: variantIdToVarName(key),
 			suffix: "Variant",
 			usedNames: existingVarNames,
 		});
-		variantVarMap.set(id, varName);
+		variantVarMap.set(key, varName);
 	}
 
 	const newRewardVarMap = new Map<string, string>();
@@ -343,7 +394,8 @@ export async function updateConfigInPlace({
 					result.featuresDeleted++;
 				}
 			} else if (entity.type === "plan") {
-				const apiPlan = apiPlanMap.get(entity.id);
+				const planKey = versionedCodegenId(entity);
+				const apiPlan = apiPlanMap.get(planKey);
 				if (apiPlan) {
 					// Update existing plan
 					const newCode = generatePlanWithVariantsCode({
@@ -354,7 +406,7 @@ export async function updateConfigInPlace({
 						variantVarMap,
 					});
 					outputBlocks.push(newCode);
-					matchedPlanIds.add(entity.id);
+					matchedPlanIds.add(planKey);
 					lastPlanBlockIndex = outputBlocks.length - 1;
 					result.plansUpdated++;
 				} else {
@@ -362,7 +414,7 @@ export async function updateConfigInPlace({
 					result.plansDeleted++;
 				}
 			} else if (entity.type === "variant") {
-				if (!apiVariantMap.has(entity.id)) {
+				if (!apiVariantMap.has(versionedCodegenId(entity))) {
 					result.plansDeleted++;
 				}
 			} else if (entity.type === "reward") {
@@ -471,7 +523,9 @@ export async function updateConfigInPlace({
 	}
 
 	// Add new plans (in API but not in local config)
-	const newPlans = plans.filter((p) => !matchedPlanIds.has(p.id));
+	const newPlans = plans.filter(
+		(p) => !matchedPlanIds.has(versionedCodegenId(p)),
+	);
 	if (newPlans.length > 0) {
 		const newPlanCode = newPlans
 			.map((p) =>
@@ -479,7 +533,7 @@ export async function updateConfigInPlace({
 					featureVarMap,
 					features,
 					plan: p,
-					planVarName: newPlanVarMap.get(p.id),
+					planVarName: newPlanVarMap.get(versionedCodegenId(p)),
 					variantVarMap,
 				}),
 			)

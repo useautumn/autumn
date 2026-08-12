@@ -276,6 +276,7 @@ export const updateApiReward = async ({
 			Object.keys(rewardColumns).length > 0
 				? update
 				: { ...update, name: reward.name },
+		features,
 	});
 
 	// Re-read: the update only returns joined entitlements when it rewrote them

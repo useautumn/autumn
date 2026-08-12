@@ -9,7 +9,7 @@ import {
 	Input,
 	ShortcutButton,
 } from "@autumn/ui";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router";
 import { toast } from "sonner";
 import { CusService } from "@/services/customers/CusService";
@@ -22,6 +22,7 @@ import { CustomerConfig } from "./CustomerConfig";
 
 const UpdateCustomerDialog = ({
 	selectedCustomer,
+	open,
 	setOpen,
 }: {
 	selectedCustomer: Customer;
@@ -33,6 +34,14 @@ const UpdateCustomerDialog = ({
 	const [stripeId, setStripeId] = useState(
 		selectedCustomer.processor?.id ?? "",
 	);
+
+	// Dialog stays mounted across customer navigation, so reseed the form each open.
+	useEffect(() => {
+		if (open) {
+			setCustomer(curCustomer);
+			setStripeId(selectedCustomer.processor?.id ?? "");
+		}
+	}, [open, curCustomer, selectedCustomer]);
 
 	const [loading, setLoading] = useState(false);
 	const env = useEnv();

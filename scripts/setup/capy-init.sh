@@ -117,6 +117,7 @@ Local:
   Queues:
     - Name: autumn.fifo
     - Name: autumn-track.fifo
+    - Name: autumn-track-async
 EOF
   log "wrote $GOAWS_CONF"
 fi

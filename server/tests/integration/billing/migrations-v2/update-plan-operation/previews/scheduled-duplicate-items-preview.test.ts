@@ -11,7 +11,10 @@ import { itemsV2 } from "@tests/utils/fixtures/itemsV2";
 import { products } from "@tests/utils/fixtures/products";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
-import { expectMigrationPreviewCorrect } from "./expectMigrationPreviewCorrect";
+import {
+	expectMigrationPreviewCorrect,
+	getPreviewItemChanges,
+} from "./expectMigrationPreviewCorrect";
 import type { PreviewMigrateCustomer, PreviewPlanChange } from "./previewTestUtils";
 import { runUpdatePlanPreview } from "./previewTestUtils";
 
@@ -30,7 +33,7 @@ const getUpdatedPlanChanges = ({
 	);
 
 const getCreatedFeatureIds = (change: PreviewPlanChange) =>
-	change.item_changes
+	getPreviewItemChanges(change)
 		.filter((itemChange) => itemChange.action === "created")
 		.map((itemChange) => itemChange.feature_id)
 		.sort();

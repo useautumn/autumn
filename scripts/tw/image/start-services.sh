@@ -176,6 +176,12 @@ fi
 wait_for "PostgreSQL" "pg_isready -h localhost -p $PG_PORT" 60 "$LOG_DIR/pg.log"
 wait_for "Dragonfly" "redis-cli -p $DRAGONFLY_PORT PING" 60 "$LOG_DIR/dragonfly.log"
 wait_for "goaws" "$goaws_ready_probe" 120 "$LOG_DIR/goaws.log"
+# Self-heal: older base images may lack autumn-track-async in goaws.yaml.
+# CreateQueue is idempotent when the config already declares it.
+if ! curl -sS -o /dev/null \
+  "http://localhost:${ELASTICMQ_PORT}/?Action=CreateQueue&QueueName=autumn-track-async&Version=2012-11-05"; then
+  log "WARN: CreateQueue autumn-track-async failed"
+fi
 if [ "${DYNOXIDE_DISABLED:-0}" != "1" ]; then
   wait_for "dynoxide" "$dynoxide_ready_probe" 60 "$LOG_DIR/dynoxide.log"
 fi

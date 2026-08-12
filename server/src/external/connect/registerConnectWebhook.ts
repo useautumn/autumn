@@ -1,3 +1,4 @@
+import { getAutumnEnv } from "@autumn/env";
 import type Stripe from "stripe";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { OrgService } from "@/internal/orgs/OrgService.js";
@@ -15,9 +16,7 @@ export const registerConnectWebhook = async ({
 	const stripeCli = initPlatformStripe({ masterOrg: org, env });
 
 	const curWebhookEndpoints = await stripeCli.webhookEndpoints.list();
-	const backendUrl = process.env.SERVER_URL || process.env.STRIPE_WEBHOOK_URL;
-
-	const webhookUrl = `${backendUrl}/webhooks/connect/${env}?org_id=${org.id}`;
+	const webhookUrl = `${getAutumnEnv().AUTUMN_PUBLIC_API_URL}/webhooks/connect/${env}?org_id=${org.id}`;
 
 	if (curWebhookEndpoints.data.some((webhook) => webhook.url === webhookUrl))
 		return;

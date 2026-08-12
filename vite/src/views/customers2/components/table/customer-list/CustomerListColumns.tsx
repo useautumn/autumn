@@ -209,7 +209,8 @@ export const createCustomerListColumns = (): ColumnDef<
 		id: "created_at",
 		header: "Created At",
 		accessorKey: "created_at",
-		size: 90,
+		size: 100,
+		enableSorting: true,
 		meta: { skeleton: dateSkeleton },
 		cell: ({ row }: { row: Row<CustomerWithProducts> }) => {
 			const { date, time } = formatUnixToDateTime(row.original.created_at);

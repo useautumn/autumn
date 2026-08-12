@@ -60,6 +60,14 @@ export function variantIdToVarName(id: string): string {
 	return idToVarName(id, 'plan');
 }
 
+export const versionedCodegenId = ({
+	id,
+	version,
+}: {
+	id: string;
+	version?: number;
+}) => (version === undefined ? id : `${id}-v-${version}`);
+
 export function claimVarName({
 	candidate,
 	suffix,

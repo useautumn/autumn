@@ -4,8 +4,10 @@ import {
 	productItemsToPlanItemsV1,
 	toProductItem,
 } from "@autumn/shared";
-import type { CustomerPlanItemChange } from "@autumn/shared/api/billing/common/customerPlanChange.js";
-import type { PreviewPlanChange } from "@/internal/migrations/v2/preview/previewMigrateCustomer/types/index.js";
+import type {
+	CustomerPlanChange,
+	CustomerPlanItemChange,
+} from "@autumn/shared";
 import type { CustomerItemChanges } from "./toCustomerItemChanges.js";
 
 /** `created` item changes for entitlements the migration added. */
@@ -41,9 +43,9 @@ export const buildAddedPlanChanges = ({
 }: {
 	addedEntitlementsByPlan: CustomerItemChanges["addedEntitlementsByPlan"];
 	features: Feature[];
-}): PreviewPlanChange[] =>
+}): CustomerPlanChange[] =>
 	[...addedEntitlementsByPlan.values()].map((entitlements) => ({
 		action: "updated" as const,
-		previous_attributes: {},
+		previous_attributes: null,
 		item_changes: buildCreatedItemChanges({ entitlements, features }),
 	}));

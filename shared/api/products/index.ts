@@ -7,6 +7,7 @@ export * from "./components/apiFreeTrialV2";
 export * from "./components/basePrice/basePriceToProductItem";
 export * from "./components/billingMethod";
 export * from "./components/display";
+export * from "./components/planChange/index";
 export * from "./components/planExpand";
 export * from "./crud/index";
 export * from "./items/index";

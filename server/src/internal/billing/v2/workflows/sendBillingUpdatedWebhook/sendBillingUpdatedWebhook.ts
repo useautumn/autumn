@@ -21,7 +21,7 @@ import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import {
 	billingChangeResponseHasContent,
 	buildBillingChangeResponse,
-} from "@/internal/billing/v2/utils/billingChangeResponse";
+} from "@/internal/billing/v2/actions/buildBillingChanges";
 
 export const sendBillingUpdatedWebhook = async ({
 	ctx,
