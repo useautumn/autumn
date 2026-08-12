@@ -79,7 +79,7 @@ export const listPlansVariantDetailsTierSchema = z.object({
 });
 
 export const listPlansVariantDetailsFilterSchema = z.object({
-	properties: z.record(z.string(), z.any()),
+	properties: z.record(z.string(), z.string()),
 });
 
 export const listPlansVariantDetailsOverageAllowedSchema = z.object({
@@ -92,7 +92,7 @@ export const listPlansConfigSchema = z.object({
 });
 
 export const listPlansFilterSchema = z.object({
-	properties: z.record(z.string(), z.any()),
+	properties: z.record(z.string(), z.string()),
 });
 
 export const listPlansOverageAllowedSchema = z.object({
@@ -215,10 +215,10 @@ export const listPlansBasePriceSchema = z.object({
 		.optional(),
 });
 
-export const listPlansVariantDetailsResetIntervalSchema = openEnumSchema;
+export const listPlansAddItemResetIntervalSchema = openEnumSchema;
 
 export const listPlansVariantDetailsResetSchema = z.object({
-	interval: listPlansVariantDetailsResetIntervalSchema,
+	interval: listPlansAddItemResetIntervalSchema,
 	intervalCount: z.union([z.number(), z.undefined()]).optional(),
 });
 

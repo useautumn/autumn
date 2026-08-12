@@ -55,7 +55,7 @@ UpdateCustomerPurchaseLimitIntervalRequestBody = Literal[
 r"""The time interval for the purchase limit window."""
 
 
-class UpdateCustomerPurchaseLimitRequestTypedDict(TypedDict):
+class UpdateCustomerPurchaseLimitRequestBodyTypedDict(TypedDict):
     r"""Optional rate limit to cap how often auto top-ups occur. Pass count to set the current window's consumed top-ups."""
 
     interval: UpdateCustomerPurchaseLimitIntervalRequestBody
@@ -68,7 +68,7 @@ class UpdateCustomerPurchaseLimitRequestTypedDict(TypedDict):
     r"""Set the current window's consumed auto top-up count. Omit to leave runtime state unchanged."""
 
 
-class UpdateCustomerPurchaseLimitRequest(BaseModel):
+class UpdateCustomerPurchaseLimitRequestBody(BaseModel):
     r"""Optional rate limit to cap how often auto top-ups occur. Pass count to set the current window's consumed top-ups."""
 
     interval: UpdateCustomerPurchaseLimitIntervalRequestBody
@@ -100,7 +100,7 @@ class UpdateCustomerPurchaseLimitRequest(BaseModel):
         return m
 
 
-class UpdateCustomerAutoTopupRequestTypedDict(TypedDict):
+class UpdateCustomerAutoTopupRequestBodyTypedDict(TypedDict):
     feature_id: str
     r"""The ID of the feature (credit balance) to auto top-up."""
     threshold: float
@@ -109,13 +109,13 @@ class UpdateCustomerAutoTopupRequestTypedDict(TypedDict):
     r"""Amount of credits to add per auto top-up."""
     enabled: NotRequired[bool]
     r"""Whether auto top-up is enabled."""
-    purchase_limit: NotRequired[UpdateCustomerPurchaseLimitRequestTypedDict]
+    purchase_limit: NotRequired[UpdateCustomerPurchaseLimitRequestBodyTypedDict]
     r"""Optional rate limit to cap how often auto top-ups occur. Pass count to set the current window's consumed top-ups."""
     invoice_mode: NotRequired[bool]
     r"""When true, auto top-up creates a send_invoice invoice instead of auto-charging."""
 
 
-class UpdateCustomerAutoTopupRequest(BaseModel):
+class UpdateCustomerAutoTopupRequestBody(BaseModel):
     feature_id: str
     r"""The ID of the feature (credit balance) to auto top-up."""
 
@@ -128,7 +128,7 @@ class UpdateCustomerAutoTopupRequest(BaseModel):
     enabled: Optional[bool] = False
     r"""Whether auto top-up is enabled."""
 
-    purchase_limit: Optional[UpdateCustomerPurchaseLimitRequest] = None
+    purchase_limit: Optional[UpdateCustomerPurchaseLimitRequestBody] = None
     r"""Optional rate limit to cap how often auto top-ups occur. Pass count to set the current window's consumed top-ups."""
 
     invoice_mode: Optional[bool] = None
@@ -158,7 +158,7 @@ UpdateCustomerLimitTypeRequestBody = Literal[
 r"""How overage_limit is interpreted: an absolute overage cap (default) or a percentage of the main-plan allowance."""
 
 
-class UpdateCustomerSpendLimitRequestTypedDict(TypedDict):
+class UpdateCustomerSpendLimitRequestBodyTypedDict(TypedDict):
     feature_id: NotRequired[str]
     r"""Optional feature ID this spend limit applies to."""
     enabled: NotRequired[bool]
@@ -171,7 +171,7 @@ class UpdateCustomerSpendLimitRequestTypedDict(TypedDict):
     r"""When true, overage for this feature is not posted to Stripe. Usage tracking and balance resets still behave normally."""
 
 
-class UpdateCustomerSpendLimitRequest(BaseModel):
+class UpdateCustomerSpendLimitRequestBody(BaseModel):
     feature_id: Optional[str] = None
     r"""Optional feature ID this spend limit applies to."""
 
@@ -231,19 +231,19 @@ UpdateCustomerProperties = TypeAliasType(
 )
 
 
-class UpdateCustomerFilterRequestTypedDict(TypedDict):
+class UpdateCustomerFilterRequestBodyTypedDict(TypedDict):
     r"""When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature."""
 
     properties: Dict[str, UpdateCustomerPropertiesTypedDict]
 
 
-class UpdateCustomerFilterRequest(BaseModel):
+class UpdateCustomerFilterRequestBody(BaseModel):
     r"""When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature."""
 
     properties: Dict[str, UpdateCustomerProperties]
 
 
-class UpdateCustomerUsageLimitRequestTypedDict(TypedDict):
+class UpdateCustomerUsageLimitRequestBodyTypedDict(TypedDict):
     feature_id: str
     r"""The feature this usage limit applies to."""
     limit: float
@@ -252,11 +252,11 @@ class UpdateCustomerUsageLimitRequestTypedDict(TypedDict):
     r"""Interval for the cap, aligned to the customer's billing cycle."""
     enabled: NotRequired[bool]
     r"""Whether this usage limit is enabled."""
-    filter_: NotRequired[UpdateCustomerFilterRequestTypedDict]
+    filter_: NotRequired[UpdateCustomerFilterRequestBodyTypedDict]
     r"""When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature."""
 
 
-class UpdateCustomerUsageLimitRequest(BaseModel):
+class UpdateCustomerUsageLimitRequestBody(BaseModel):
     feature_id: str
     r"""The feature this usage limit applies to."""
 
@@ -270,7 +270,7 @@ class UpdateCustomerUsageLimitRequest(BaseModel):
     r"""Whether this usage limit is enabled."""
 
     filter_: Annotated[
-        Optional[UpdateCustomerFilterRequest], pydantic.Field(alias="filter")
+        Optional[UpdateCustomerFilterRequestBody], pydantic.Field(alias="filter")
     ] = None
     r"""When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature."""
 
@@ -346,14 +346,14 @@ class UpdateCustomerUsageAlertRequestBody(BaseModel):
         return m
 
 
-class UpdateCustomerOverageAllowedRequestTypedDict(TypedDict):
+class UpdateCustomerOverageAllowedRequestBodyTypedDict(TypedDict):
     feature_id: str
     r"""The feature ID this overage allowed control applies to."""
     enabled: NotRequired[bool]
     r"""Whether overage is allowed for this feature."""
 
 
-class UpdateCustomerOverageAllowedRequest(BaseModel):
+class UpdateCustomerOverageAllowedRequestBody(BaseModel):
     feature_id: str
     r"""The feature ID this overage allowed control applies to."""
 
@@ -377,37 +377,37 @@ class UpdateCustomerOverageAllowedRequest(BaseModel):
         return m
 
 
-class UpdateCustomerBillingControlsRequestTypedDict(TypedDict):
+class UpdateCustomerBillingControlsRequestBodyTypedDict(TypedDict):
     r"""Billing controls for the customer (auto top-ups, etc.)"""
 
-    auto_topups: NotRequired[List[UpdateCustomerAutoTopupRequestTypedDict]]
+    auto_topups: NotRequired[List[UpdateCustomerAutoTopupRequestBodyTypedDict]]
     r"""List of auto top-up configurations per feature."""
-    spend_limits: NotRequired[List[UpdateCustomerSpendLimitRequestTypedDict]]
+    spend_limits: NotRequired[List[UpdateCustomerSpendLimitRequestBodyTypedDict]]
     r"""List of overage spend limits per feature (caps overage spend)."""
-    usage_limits: NotRequired[List[UpdateCustomerUsageLimitRequestTypedDict]]
+    usage_limits: NotRequired[List[UpdateCustomerUsageLimitRequestBodyTypedDict]]
     r"""List of hard usage caps per feature (max units per interval)."""
     usage_alerts: NotRequired[List[UpdateCustomerUsageAlertRequestBodyTypedDict]]
     r"""List of usage alert configurations per feature."""
-    overage_allowed: NotRequired[List[UpdateCustomerOverageAllowedRequestTypedDict]]
+    overage_allowed: NotRequired[List[UpdateCustomerOverageAllowedRequestBodyTypedDict]]
     r"""List of overage allowed controls per feature. When enabled, usage can exceed balance."""
 
 
-class UpdateCustomerBillingControlsRequest(BaseModel):
+class UpdateCustomerBillingControlsRequestBody(BaseModel):
     r"""Billing controls for the customer (auto top-ups, etc.)"""
 
-    auto_topups: Optional[List[UpdateCustomerAutoTopupRequest]] = None
+    auto_topups: Optional[List[UpdateCustomerAutoTopupRequestBody]] = None
     r"""List of auto top-up configurations per feature."""
 
-    spend_limits: Optional[List[UpdateCustomerSpendLimitRequest]] = None
+    spend_limits: Optional[List[UpdateCustomerSpendLimitRequestBody]] = None
     r"""List of overage spend limits per feature (caps overage spend)."""
 
-    usage_limits: Optional[List[UpdateCustomerUsageLimitRequest]] = None
+    usage_limits: Optional[List[UpdateCustomerUsageLimitRequestBody]] = None
     r"""List of hard usage caps per feature (max units per interval)."""
 
     usage_alerts: Optional[List[UpdateCustomerUsageAlertRequestBody]] = None
     r"""List of usage alert configurations per feature."""
 
-    overage_allowed: Optional[List[UpdateCustomerOverageAllowedRequest]] = None
+    overage_allowed: Optional[List[UpdateCustomerOverageAllowedRequestBody]] = None
     r"""List of overage allowed controls per feature. When enabled, usage can exceed balance."""
 
     @model_serializer(mode="wrap")
@@ -435,7 +435,7 @@ class UpdateCustomerBillingControlsRequest(BaseModel):
         return m
 
 
-class UpdateCustomerConfigRequestTypedDict(TypedDict):
+class UpdateCustomerConfigRequestBodyTypedDict(TypedDict):
     r"""Miscellaneous configurations for the customer."""
 
     disable_pooled_balance: NotRequired[bool]
@@ -444,7 +444,7 @@ class UpdateCustomerConfigRequestTypedDict(TypedDict):
     r"""Stops Autumn from posting usage-overage line items to Stripe for this customer. Check/track and balance resets still behave normally. When set, this overrides the organization-level disable_overage_billing setting."""
 
 
-class UpdateCustomerConfigRequest(BaseModel):
+class UpdateCustomerConfigRequestBody(BaseModel):
     r"""Miscellaneous configurations for the customer."""
 
     disable_pooled_balance: Optional[bool] = None
@@ -487,9 +487,9 @@ class UpdateCustomerParamsTypedDict(TypedDict):
     r"""Whether to send email receipts to this customer"""
     currency: NotRequired[Nullable[str]]
     r"""Currency to bill this customer in (e.g. usd, eur). Defaults to the organization's default currency."""
-    billing_controls: NotRequired[UpdateCustomerBillingControlsRequestTypedDict]
+    billing_controls: NotRequired[UpdateCustomerBillingControlsRequestBodyTypedDict]
     r"""Billing controls for the customer (auto top-ups, etc.)"""
-    config: NotRequired[UpdateCustomerConfigRequestTypedDict]
+    config: NotRequired[UpdateCustomerConfigRequestBodyTypedDict]
     r"""Miscellaneous configurations for the customer."""
     new_customer_id: NotRequired[str]
     r"""Your unique identifier for the customer"""
@@ -520,10 +520,10 @@ class UpdateCustomerParams(BaseModel):
     currency: OptionalNullable[str] = UNSET
     r"""Currency to bill this customer in (e.g. usd, eur). Defaults to the organization's default currency."""
 
-    billing_controls: Optional[UpdateCustomerBillingControlsRequest] = None
+    billing_controls: Optional[UpdateCustomerBillingControlsRequestBody] = None
     r"""Billing controls for the customer (auto top-ups, etc.)"""
 
-    config: Optional[UpdateCustomerConfigRequest] = None
+    config: Optional[UpdateCustomerConfigRequestBody] = None
     r"""Miscellaneous configurations for the customer."""
 
     new_customer_id: Optional[str] = None
@@ -861,13 +861,13 @@ r"""Interval for the cap, aligned to the customer's billing cycle."""
 class UpdateCustomerFilterResponseTypedDict(TypedDict):
     r"""When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature."""
 
-    properties: Dict[str, Any]
+    properties: Dict[str, str]
 
 
 class UpdateCustomerFilterResponse(BaseModel):
     r"""When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature."""
 
-    properties: Dict[str, Any]
+    properties: Dict[str, str]
 
 
 UpdateCustomerUsageLimitSource = Union[
@@ -1874,7 +1874,7 @@ class UpdateCustomerResponse(BaseModel):
 
 
 try:
-    UpdateCustomerUsageLimitRequest.model_rebuild()
+    UpdateCustomerUsageLimitRequestBody.model_rebuild()
 except NameError:
     pass
 try:

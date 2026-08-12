@@ -893,7 +893,7 @@ class ListPlansBasePrice(BaseModel):
         return m
 
 
-ListPlansVariantDetailsResetInterval = Union[
+ListPlansAddItemResetInterval = Union[
     Literal[
         "one_off",
         "minute",
@@ -913,7 +913,7 @@ r"""Interval at which balance resets (e.g. 'month', 'year'). For consumable feat
 class ListPlansVariantDetailsResetTypedDict(TypedDict):
     r"""Reset configuration for consumable features. Omit for non-consumable features like seats."""
 
-    interval: ListPlansVariantDetailsResetInterval
+    interval: ListPlansAddItemResetInterval
     r"""Interval at which balance resets (e.g. 'month', 'year'). For consumable features only."""
     interval_count: NotRequired[float]
     r"""Number of intervals between resets. Defaults to 1."""
@@ -922,7 +922,7 @@ class ListPlansVariantDetailsResetTypedDict(TypedDict):
 class ListPlansVariantDetailsReset(BaseModel):
     r"""Reset configuration for consumable features. Omit for non-consumable features like seats."""
 
-    interval: ListPlansVariantDetailsResetInterval
+    interval: ListPlansAddItemResetInterval
     r"""Interval at which balance resets (e.g. 'month', 'year'). For consumable features only."""
 
     interval_count: Optional[float] = None
@@ -1642,13 +1642,13 @@ r"""Interval for the cap, aligned to the customer's billing cycle."""
 class ListPlansVariantDetailsFilterTypedDict(TypedDict):
     r"""When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature."""
 
-    properties: Dict[str, Any]
+    properties: Dict[str, str]
 
 
 class ListPlansVariantDetailsFilter(BaseModel):
     r"""When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature."""
 
-    properties: Dict[str, Any]
+    properties: Dict[str, str]
 
 
 class ListPlansVariantDetailsUsageLimitTypedDict(TypedDict):
@@ -2154,13 +2154,13 @@ r"""Interval for the cap, aligned to the customer's billing cycle."""
 class ListPlansFilterTypedDict(TypedDict):
     r"""When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature."""
 
-    properties: Dict[str, Any]
+    properties: Dict[str, str]
 
 
 class ListPlansFilter(BaseModel):
     r"""When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature."""
 
-    properties: Dict[str, Any]
+    properties: Dict[str, str]
 
 
 class ListPlansUsageLimitTypedDict(TypedDict):
