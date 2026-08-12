@@ -50,6 +50,7 @@ const baseParams: Omit<
 	carryOverUsages: false,
 	carryOverUsageFeatureIds: [],
 	customLineItems: [],
+	removePlanIds: [],
 	disableProration: false,
 	enablePlanImmediately: false,
 	currency: null,
