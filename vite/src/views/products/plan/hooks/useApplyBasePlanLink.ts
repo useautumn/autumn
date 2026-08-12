@@ -11,9 +11,8 @@ import { useVariantLinkVisibility } from "./useVariantLinkVisibility";
 export function useApplyBasePlanLink() {
 	const axiosInstance = useAxiosInstance();
 	const product = useProductStore((s) => s.product);
-	const { basePlanId: linkedBasePlanId } = useVariantLinkVisibility(product);
+	const { basePlanId, selectedBasePlanId } = useVariantLinkVisibility(product);
 	const { invalidate: invalidateProducts } = useProductsQuery();
-	const editedBasePlanId = product.base_id;
 
 	const { mutateAsync } = useMutation({
 		mutationFn: async (basePlanId: string | null) => {
@@ -25,19 +24,16 @@ export function useApplyBasePlanLink() {
 	});
 
 	return async () => {
-		if (editedBasePlanId === undefined) return true;
-
-		const nextBasePlanId = editedBasePlanId ?? null;
-		if (nextBasePlanId === linkedBasePlanId) return true;
+		if (selectedBasePlanId === basePlanId) return true;
 
 		try {
-			await mutateAsync(nextBasePlanId);
+			await mutateAsync(selectedBasePlanId);
 			return true;
 		} catch (error) {
 			toast.error(
 				getBackendErr(
 					error,
-					nextBasePlanId
+					selectedBasePlanId
 						? "Failed to link plan as a variant"
 						: "Failed to detach plan from its base",
 				),

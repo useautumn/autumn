@@ -28,13 +28,15 @@ export const MoreSettingsSection = () => {
 	const { product, setProduct } = useProduct();
 	const { customer_id } = useParams();
 	const isCustomPlan = notNullish(customer_id);
-	const { hasVariants, basePlanId, basePlan, basePlanOptions } =
-		useVariantLinkVisibility(product);
+	const {
+		hasVariants,
+		basePlanId,
+		selectedBasePlanId,
+		basePlan,
+		basePlanOptions,
+	} = useVariantLinkVisibility(product);
 
 	const hasGroup = notNullish(product.group);
-	// On the working copy base_id is undefined until edited and null to detach.
-	const selectedBasePlanId =
-		product.base_id === undefined ? basePlanId : product.base_id;
 	// The linked base can be archived or a variant, so it stays selectable.
 	const visibleBasePlanOptions =
 		basePlan && !basePlanOptions.some((p) => p.id === basePlan.id)
@@ -140,14 +142,20 @@ export const MoreSettingsSection = () => {
 								onValueChange={(value) =>
 									setBasePlan(value === NO_BASE_PLAN ? null : value)
 								}
+								items={Object.fromEntries(
+									visibleBasePlanOptions.map((option) => [
+										option.id,
+										option.name || option.id,
+									]),
+								)}
 							>
 								<SelectTrigger className="w-full">
 									<SelectValue placeholder="Select base plan" />
 								</SelectTrigger>
 								<SelectContent>
-									{visibleBasePlanOptions.map((basePlan) => (
-										<SelectItem key={basePlan.id} value={basePlan.id}>
-											{basePlan.name}
+									{visibleBasePlanOptions.map((option) => (
+										<SelectItem key={option.id} value={option.id}>
+											{option.name || option.id}
 										</SelectItem>
 									))}
 								</SelectContent>

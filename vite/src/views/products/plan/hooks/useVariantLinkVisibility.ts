@@ -21,10 +21,15 @@ export function useVariantLinkVisibility(product: ProductV2) {
 			candidate.id !== product.id && !candidate.base_id && !candidate.archived,
 	);
 
+	// On the editor's working copy base_id is undefined until edited, null to detach.
+	const selectedBasePlanId =
+		product.base_id === undefined ? basePlanId : (product.base_id ?? null);
+
 	return {
 		isVariant: basePlanId !== null,
 		hasVariants,
 		basePlanId,
+		selectedBasePlanId,
 		basePlan,
 		basePlanOptions,
 	};
