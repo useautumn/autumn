@@ -273,8 +273,10 @@ export const claudeManagedEngine: AgentEngine = {
 
 		const attempt = await runOnSession({ sessionRef });
 		// A dead session poisons every later turn in the thread, so drop the row
-		// even when this turn still produced an answer.
-		if (attempt.sessionDead) {
+		// even when this turn still produced an answer — but an interrupted run
+		// can end its stream early without the session actually being gone.
+		const stopped = attempt.output?.finishReason === "stopped";
+		if (attempt.sessionDead && !stopped) {
 			await dropSessionRow({ sessionId: sessionRef.sessionId });
 		}
 		if (attempt.output) return attempt.output;
