@@ -49,7 +49,9 @@ const updateLinkedCusEnt = async ({
 			};
 			delete newEntities[replaceableId];
 		} else {
-			const balance = linkedCusEnt.entitlement.allowance ?? 0; // cannot be null, must be 0 in unlimited case.
+			const balance = linkedCusEnt.is_pooled_balance
+				? (linkedCusEnt.pooled_balance?.granted ?? 0)
+				: (linkedCusEnt.entitlement.allowance ?? 0);
 			newEntities[entity.id] = {
 				id: entity.id,
 				balance,
@@ -64,10 +66,8 @@ const updateLinkedCusEnt = async ({
 		updates: { entities: newEntities },
 	});
 
-	// The create response is built from this request's customer snapshot.
 	linkedCusEnt.entities = newEntities;
 };
-
 export const createEntityForCusProduct = async ({
 	ctx,
 	customer,
@@ -128,9 +128,27 @@ export const createEntityForCusProduct = async ({
 			}
 		}
 
-		// 1. If main cus ent:
+		const isPooled = mainCusEntWithCusProduct?.entitlement.pooled === true;
+		const targetCusEnt = isPooled
+			? (customer.pooled_customer_entitlements?.find(
+					(p) => p.entitlement.feature.id === feature.id,
+				) as FullCusEntWithFullCusProduct | undefined) || mainCusEntWithCusProduct
+			: mainCusEntWithCusProduct;
+
+		let newEntitiesToCreate = inputEntities;
+		if (isPooled && targetCusEnt) {
+			const existingEntities = targetCusEnt.entities || {};
+			newEntitiesToCreate = inputEntities.filter(
+				(e) => !e.id || !existingEntities[e.id],
+			);
+			if (newEntitiesToCreate.length === 0) {
+				continue;
+			}
+		}
+
+		// 1. If target cus ent:
 		let deletedReplaceables: Replaceable[] = [];
-		if (mainCusEntWithCusProduct) {
+		if (targetCusEnt) {
 			// Acquire lock to prevent race conditions on seat charging
 			const lockKey = `lock:create-entity:${org.id}:${env}:${customer.id}`;
 			await acquireLock({
@@ -141,25 +159,25 @@ export const createEntityForCusProduct = async ({
 			});
 
 			try {
-				const originalBalance = mainCusEntWithCusProduct.balance || 0;
-				const newBalance = originalBalance - inputEntities.length;
+				const originalBalance = targetCusEnt.balance || 0;
+				const newBalance = originalBalance - newEntitiesToCreate.length;
 
 				// Pre-compute reps only for the usage limit check —
 				// handleProratedUpgrade applies reps itself, so we must NOT
 				// pass an already-adjusted balance to adjustAllowance.
 				const repsLength = getReps({
-					cusEnt: mainCusEntWithCusProduct,
+					cusEnt: targetCusEnt,
 					prevBalance: originalBalance,
 					newBalance,
 				}).length;
 				const balanceAfterReps = newBalance + repsLength;
 
 				if (
-					notNullish(mainCusEntWithCusProduct.entitlement.usage_limit) &&
-					balanceAfterReps < -mainCusEntWithCusProduct.entitlement.usage_limit!
+					notNullish(targetCusEnt.entitlement.usage_limit) &&
+					balanceAfterReps < -targetCusEnt.entitlement.usage_limit!
 				) {
 					throw new RecaseError({
-						message: `Cannot create ${inputEntities.length} entities for feature ${feature.name} as it would exceed the usage limit.`,
+						message: `Cannot create ${newEntitiesToCreate.length} entities for feature ${feature.name} as it would exceed the usage limit.`,
 						code: ErrCode.FeatureLimitReached,
 						statusCode: 400,
 					});
@@ -171,7 +189,7 @@ export const createEntityForCusProduct = async ({
 						cusPrices,
 						customer,
 						affectedFeature: feature!,
-						cusEnt: mainCusEntWithCusProduct,
+						cusEnt: targetCusEnt,
 						originalBalance,
 						newBalance,
 						errorIfIncomplete: true,
@@ -181,9 +199,12 @@ export const createEntityForCusProduct = async ({
 
 				await CusEntService.decrement({
 					ctx,
-					id: mainCusEntWithCusProduct.id,
-					amount: inputEntities.length - deletedReplaceables.length,
+					id: targetCusEnt.id,
+					amount: newEntitiesToCreate.length - deletedReplaceables.length,
 				});
+
+				// Update in-memory balance
+				targetCusEnt.balance = (targetCusEnt.balance || 0) - (newEntitiesToCreate.length - deletedReplaceables.length);
 			} finally {
 				await clearLock({ lockKey });
 			}
@@ -192,23 +213,25 @@ export const createEntityForCusProduct = async ({
 		const entityToReplacement: Record<string, string> = {};
 		for (let i = 0; i < deletedReplaceables.length; i++) {
 			const replaceable = deletedReplaceables[i];
-			entityToReplacement[inputEntities[i].id!] = replaceable.id;
+			entityToReplacement[newEntitiesToCreate[i].id!] = replaceable.id;
 
-			if (i >= inputEntities.length) {
+			if (i >= newEntitiesToCreate.length) {
 				break;
 			}
 		}
 
-		const linkedCusEnts = findLinkedCusEnts({
-			cusEnts,
-			feature,
-		});
+		const linkedCusEnts = isPooled && targetCusEnt
+			? [targetCusEnt]
+			: findLinkedCusEnts({
+					cusEnts,
+					feature,
+				});
 
 		for (const linkedCusEnt of linkedCusEnts) {
 			await updateLinkedCusEnt({
 				ctx,
 				linkedCusEnt,
-				inputEntities,
+				inputEntities: newEntitiesToCreate,
 				entityToReplacement,
 			});
 		}
