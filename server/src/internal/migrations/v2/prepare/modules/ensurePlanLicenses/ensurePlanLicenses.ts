@@ -76,6 +76,7 @@ const unsupportedTraitsOf = ({
 	});
 
 	return {
+		matchedEntitlementIds: matched.map((entitlement) => entitlement.id),
 		priced: baseItemRefs.some(
 			(ref) => ref.internalFeatureId === internalFeatureId && "priceId" in ref,
 		),
@@ -337,6 +338,7 @@ export const ensurePlanLicenses: PrepareModule<
 								intervalCount: filter.interval_count,
 							}),
 							removes_filter: filter,
+							removes_entitlement_ids: removedTraits.matchedEntitlementIds,
 							removes_priced_item: removedTraits.priced,
 							removes_entity_scoped_item: removedTraits.entityScoped,
 							removes_rollover_item: removedTraits.rollover,
@@ -373,8 +375,8 @@ export const ensurePlanLicenses: PrepareModule<
 				});
 		}
 
-		// replaceItems swaps the whole item set, so a base item for a re-added
-		// feature must be dropped or the feature is granted twice.
+		// replaceItems swaps the whole item set, so a base item that was superseded
+		// or removed must be dropped or it is granted again on the next assignment.
 		const refsByPlanLicenseId = new Map<string, Map<string, LicenseItemRef>>();
 		for (const artifact of planned.artifacts) {
 			const refs =
@@ -386,11 +388,12 @@ export const ensurePlanLicenses: PrepareModule<
 						(candidate) =>
 							candidate.plan_license_id === artifact.plan_license_id,
 					)
-					.flatMap((candidate) =>
-						candidate.replaces_entitlement_id
+					.flatMap((candidate) => [
+						...(candidate.replaces_entitlement_id
 							? [candidate.replaces_entitlement_id]
-							: [],
-					),
+							: []),
+						...(candidate.removes_entitlement_ids ?? []),
+					]),
 			);
 			for (const ref of artifact.base_item_refs) {
 				if (

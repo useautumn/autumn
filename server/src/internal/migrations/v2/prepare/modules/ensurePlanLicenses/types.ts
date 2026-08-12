@@ -20,6 +20,7 @@ export const PreparedPlanLicenseRefSchema = z.object({
 	adds_pooled_item: z.boolean().optional(),
 	replaces_entitlement_id: z.string().optional(),
 	removes_filter: z.custom<PlanItemFilter>().optional(),
+	removes_entitlement_ids: z.array(z.string()).optional(),
 	removes_priced_item: z.boolean().optional(),
 	removes_rollover_item: z.boolean().optional(),
 	removes_pooled_item: z.boolean().optional(),

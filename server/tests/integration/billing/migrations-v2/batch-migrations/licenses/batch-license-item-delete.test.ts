@@ -16,7 +16,14 @@
  *  - customers whose only change was the delete are not reported as skipped
  */
 import { expect, test } from "bun:test";
-import { customerEntitlements, migrationItemRuns } from "@autumn/shared";
+import {
+	customerEntitlements,
+	entitlements,
+	licenseEntitlements,
+	migrationItemRuns,
+	planLicenses,
+	products,
+} from "@autumn/shared";
 import { runChunkedMigration } from "@tests/integration/billing/migrations-v2/utils/runChunkedMigration";
 import { setupLicenseUpdateScenario } from "@tests/integration/licenses/billing/update/setupLicenseUpdateScenario";
 import { getLicenseDbState } from "@tests/integration/licenses/licenseTestUtils";
@@ -130,4 +137,27 @@ test(`${chalk.yellowBright("batch-license-customize: deleting an item batch-lowe
 	expect(
 		converged.filter((row) => row.featureId === TestFeature.Dashboard),
 	).toHaveLength(ASSIGNED_SEATS);
+
+	// ── The customized link stops carrying the deleted entitlement, or a
+	// later assignment is granted it again ────────────────────────────
+	const linkedFeatureIds = await ctx.db
+		.select({ featureId: entitlements.feature_id })
+		.from(licenseEntitlements)
+		.innerJoin(
+			entitlements,
+			eq(licenseEntitlements.entitlement_id, entitlements.id),
+		)
+		.innerJoin(
+			planLicenses,
+			eq(licenseEntitlements.plan_license_id, planLicenses.id),
+		)
+		.innerJoin(
+			products,
+			eq(planLicenses.license_internal_product_id, products.internal_id),
+		)
+		.where(eq(products.id, devSeat.id));
+
+	expect(
+		linkedFeatureIds.filter((row) => row.featureId === TestFeature.Messages),
+	).toHaveLength(0);
 });
