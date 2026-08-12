@@ -73,7 +73,8 @@ export const handleRegisterRevenueCatWebhook = createRoute({
 		const accessToken = await getRevenuecatAccessToken({ db, org, env });
 		if (!projectId || !accessToken) {
 			throw new RecaseError({
-				message: "Connect RevenueCat (and select a project) before registering a webhook",
+				message:
+					"Connect RevenueCat (and select a project) before registering a webhook",
 				code: ErrCode.InvalidRequest,
 				statusCode: StatusCodes.BAD_REQUEST,
 			});
@@ -100,7 +101,7 @@ export const handleRegisterRevenueCatWebhook = createRoute({
 		}
 
 		const rcCli = initRevenuecatCli({ projectId, accessToken });
-		const result = await registerRevenuecatWebhook({
+		await registerRevenuecatWebhook({
 			rcCli,
 			orgId: org.id,
 			env,
@@ -108,7 +109,7 @@ export const handleRegisterRevenueCatWebhook = createRoute({
 		});
 
 		return c.json({
-			status: result === "skipped" ? "unknown" : "registered",
+			status: "registered",
 			url: getRevenuecatWebhookUrl({ orgId: org.id, env }),
 			secret,
 		});

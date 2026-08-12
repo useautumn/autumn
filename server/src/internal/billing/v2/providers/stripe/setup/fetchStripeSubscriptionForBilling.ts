@@ -16,7 +16,19 @@ export interface StripeSubscriptionForBilling {
 	stripeSubscription?: StripeSubscriptionWithDiscounts;
 	/** Set when the linked subscription exists in Stripe but is already canceled. */
 	canceledStripeSubscriptionId?: string;
+	/** Set when the linked subscription belongs to a different Stripe customer.
+	 *  Only surfaced for flows allowed to proceed past that fault. */
+	mismatchedStripeSubscriptionId?: string;
 }
+
+/** An immediate cancel only detaches Autumn-side state, so a subscription it
+ *  will never touch must not block it. */
+const isImmediateCancelRequest = (
+	params?: AttachParamsV1 | MultiAttachParamsV0 | UpdateSubscriptionV1Params,
+) =>
+	params !== undefined &&
+	"cancel_action" in params &&
+	params.cancel_action === "cancel_immediately";
 
 /**
  * Fetches a Stripe subscription with expanded discounts for billing operations.
@@ -72,7 +84,13 @@ export const fetchStripeSubscriptionForBilling = async ({
 		});
 	}
 
+	// Wrong-customer linkage is a data fault worth surfacing, except to an
+	// immediate cancel — blocking that would strand the plan with no way out.
 	if (sub.customer !== fullCus.processor.id) {
+		if (isImmediateCancelRequest(params)) {
+			return { mismatchedStripeSubscriptionId: subId };
+		}
+
 		throw new RecaseError({
 			message: `Subscription ${subId} is not for the current customer`,
 			statusCode: 400,

@@ -105,10 +105,11 @@ scripts/ops/.backfill_neon_done and skipped on rerun.`;
 
 type CliArgs = { from: string; org: string; to: string };
 
-const fail = (message: string): never => {
+// Function declaration (not a const arrow) so TS narrows `never` at call sites.
+function fail(message: string): never {
 	console.error(message);
 	process.exit(1);
-};
+}
 
 // psql needs an explicit root-cert source for sslmode=verify-full URLs; Node's pg uses
 // the system CA store natively, so only the psql-facing URL gets the parameter.
@@ -157,15 +158,17 @@ const parseArgs = (argv: string[]): CliArgs => {
 const loadOrgs = (): Record<string, string> => {
 	const raw = process.env.BACKFILL_ORGS;
 	if (!raw) {
-		fail(`BACKFILL_ORGS env var is required (e.g. "acme=org_123,globex=org_456")`);
+		fail(
+			`BACKFILL_ORGS env var is required (e.g. "acme=org_123,globex=org_456")`,
+		);
 	}
 	const orgs: Record<string, string> = {};
-	for (const pair of (raw as string).split(",")) {
+	for (const pair of raw.split(",")) {
 		const [slug, orgId] = pair.split("=").map((s) => s.trim());
 		if (!(slug && orgId)) {
 			fail(`BACKFILL_ORGS entry "${pair}" is not slug=org_id`);
 		}
-		orgs[slug as string] = orgId as string;
+		orgs[slug] = orgId;
 	}
 	return orgs;
 };
@@ -280,7 +283,9 @@ const stageChunk = async (
 };
 
 const mergeChunk = async (neonUrl: string): Promise<number> => {
-	console.log(`[${hms()}]   merging staged rows into events (dedup on conflict)...`);
+	console.log(
+		`[${hms()}]   merging staged rows into events (dedup on conflict)...`,
+	);
 	const result =
 		await $`psql ${withSystemRootCert(neonUrl)} -X -v ON_ERROR_STOP=1 -c ${SET_UTC} -c ${MERGE_SQL} -c ${"TRUNCATE events_staging"}`
 			.quiet()

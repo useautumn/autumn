@@ -77,6 +77,7 @@ export const getCachedPartialFullSubject = async ({
 		source: "getCachedPartialFullSubject:pipeline",
 		redisInstance: redisV2,
 		retryOnStandby: true,
+		useReadPool: true,
 		timeoutMs: REDIS_OP_TIMEOUT_MS.subjectPipeline,
 	});
 

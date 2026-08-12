@@ -129,10 +129,9 @@ export default defineConfig({
 					"zod",
 				],
 			}),
-			// In DEV: `bun d` runs `bun run trigger dev` under
-			// `infisical run --env=dev --recursive --`, so the trigger CLI
-			// inherits secrets from process.env directly. `syncEnvVars` only
-			// runs at DEPLOY time (pushes Infisical secrets to trigger cloud).
+			// In DEV: `bun d` / `bun dw` run `bunx trigger.dev dev --branch <user-git>`
+			// under Infisical, with TRIGGER_DEV_BRANCH set so the server SDK and
+			// CLI share an isolated queue. `syncEnvVars` only runs at DEPLOY time.
 			syncEnvVars(async (ctx) => fetchInfisicalSecretsFromEnv(ctx.env)),
 		],
 	},

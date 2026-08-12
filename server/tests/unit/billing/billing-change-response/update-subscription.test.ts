@@ -1,7 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import { CusProductStatus } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
-import { buildBillingChangeResponse } from "@/internal/billing/v2/utils/billingChangeResponse";
+import { buildBillingChangeResponse } from "@/internal/billing/v2/actions/buildBillingChanges";
 import {
 	expectBillingChangeResponse,
 	expectPlanChange,
@@ -51,11 +51,14 @@ describe("buildBillingChangeResponse — updateSubscription", () => {
 			updated: ["pro"],
 			scheduled: ["free"],
 		});
-		expectPlanChange(findPlanChange(response, { action: "updated", planId: "pro" }), {
-			action: "updated",
-			planId: "pro",
-			previousAttributes: { canceled_at: null, expires_at: null },
-		});
+		expectPlanChange(
+			findPlanChange(response, { action: "updated", planId: "pro" }),
+			{
+				action: "updated",
+				planId: "pro",
+				previousAttributes: { canceled_at: null, expires_at: null },
+			},
+		);
 		const scheduled = findPlanChange(response, {
 			action: "scheduled",
 			planId: "free",
@@ -93,15 +96,18 @@ describe("buildBillingChangeResponse — updateSubscription", () => {
 			expired: ["pro"],
 			activated: ["free"],
 		});
-		expectPlanChange(findPlanChange(response, { action: "expired", planId: "pro" }), {
-			action: "expired",
-			planId: "pro",
-			previousAttributes: {
-				status: CusProductStatus.Active,
-				canceled_at: null,
-				expires_at: null,
+		expectPlanChange(
+			findPlanChange(response, { action: "expired", planId: "pro" }),
+			{
+				action: "expired",
+				planId: "pro",
+				previousAttributes: {
+					status: CusProductStatus.Active,
+					canceled_at: null,
+					expires_at: null,
+				},
 			},
-		});
+		);
 	});
 
 	test("uncancel", () => {
@@ -129,14 +135,17 @@ describe("buildBillingChangeResponse — updateSubscription", () => {
 		logChangeResponse("update / uncancel", response);
 
 		expectBillingChangeResponse(response, { updated: ["pro"] });
-		expectPlanChange(findPlanChange(response, { action: "updated", planId: "pro" }), {
-			action: "updated",
-			planId: "pro",
-			previousAttributes: {
-				canceled_at: NOW - 500,
-				expires_at: PERIOD_END,
+		expectPlanChange(
+			findPlanChange(response, { action: "updated", planId: "pro" }),
+			{
+				action: "updated",
+				planId: "pro",
+				previousAttributes: {
+					canceled_at: NOW - 500,
+					expires_at: PERIOD_END,
+				},
 			},
-		});
+		);
 		const updated = findPlanChange(response, {
 			action: "updated",
 			planId: "pro",
@@ -169,11 +178,14 @@ describe("buildBillingChangeResponse — updateSubscription", () => {
 			expired: ["pro"],
 			activated: ["pro_v2"],
 		});
-		expectPlanChange(findPlanChange(response, { action: "expired", planId: "pro" }), {
-			action: "expired",
-			planId: "pro",
-			previousAttributes: { status: CusProductStatus.Active },
-		});
+		expectPlanChange(
+			findPlanChange(response, { action: "expired", planId: "pro" }),
+			{
+				action: "expired",
+				planId: "pro",
+				previousAttributes: { status: CusProductStatus.Active },
+			},
+		);
 	});
 
 	test("delete a scheduled product emits nothing (deletes ignored for now)", () => {
@@ -219,17 +231,20 @@ describe("buildBillingChangeResponse — updateSubscription", () => {
 		logChangeResponse("update / patch items", response);
 
 		expectBillingChangeResponse(response, { updated: ["pro"] });
-		expectPlanChange(findPlanChange(response, { action: "updated", planId: "pro" }), {
-			action: "updated",
-			planId: "pro",
-			itemChanges: [
-				{ action: "created", feature_id: "api_calls" },
-				{ action: "deleted", feature_id: "legacy_feature" },
-			],
-		});
+		expectPlanChange(
+			findPlanChange(response, { action: "updated", planId: "pro" }),
+			{
+				action: "updated",
+				planId: "pro",
+				itemChanges: [
+					{ action: "created", feature_id: "api_calls" },
+					{ action: "deleted", feature_id: "legacy_feature" },
+				],
+			},
+		);
 	});
 
-	test("quantity-only update — empty previous_attributes (v1 limitation)", () => {
+	test("quantity-only update — null previous_attributes (v1 limitation)", () => {
 		const pro = makeFullCusProduct({ planId: "pro", startedAt: NOW - 1000 });
 
 		const response = buildBillingChangeResponse({
@@ -251,8 +266,9 @@ describe("buildBillingChangeResponse — updateSubscription", () => {
 			action: "updated",
 			planId: "pro",
 		});
-		expect(updated?.previous_attributes).toEqual({});
+		expect(updated?.previous_attributes).toBeNull();
 		expect(updated?.item_changes).toEqual([]);
+		expect(updated?.plan_change?.item_changes ?? []).toEqual([]);
 	});
 
 	test("anchor reset — empty updates object", () => {
@@ -272,7 +288,7 @@ describe("buildBillingChangeResponse — updateSubscription", () => {
 			action: "updated",
 			planId: "pro",
 		});
-		expect(updated?.previous_attributes).toEqual({});
+		expect(updated?.previous_attributes).toBeNull();
 	});
 
 	// Regression for the collapseSamePlanIdPairs double-match bug: an inserted
@@ -360,13 +376,16 @@ describe("buildBillingChangeResponse — updateSubscription", () => {
 		});
 
 		expectBillingChangeResponse(response, { updated: ["pro"] });
-		expectPlanChange(findPlanChange(response, { action: "updated", planId: "pro" }), {
-			action: "updated",
-			planId: "pro",
-			itemChanges: [
-				{ action: "created", feature_id: "api_calls" },
-				{ action: "deleted", feature_id: "legacy_feature" },
-			],
-		});
+		expectPlanChange(
+			findPlanChange(response, { action: "updated", planId: "pro" }),
+			{
+				action: "updated",
+				planId: "pro",
+				itemChanges: [
+					{ action: "created", feature_id: "api_calls" },
+					{ action: "deleted", feature_id: "legacy_feature" },
+				],
+			},
+		);
 	});
 });
