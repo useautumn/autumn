@@ -17,6 +17,7 @@ import {
 } from "../../../internal/approvals/utils/toolRegistry.js";
 import type { KeyedActionLogger } from "../../../ui/progress.js";
 import { claudeManagedConfig } from "../config.js";
+import { denyExtraSuspendedCalls } from "./denyExtraSuspendedCalls.js";
 import {
 	driveSessionTurn,
 	type SessionTurnOutcome,
@@ -193,6 +194,7 @@ export const runClaudeManagedTurn = async ({
 	};
 
 	const outcome = await driveTurnWithInterruptRetry({ content, span });
+	await denyExtraSuspendedCalls({ client, logger, outcome, sessionId });
 
 	// Attach the captured preview to the suspended write so the card shows cost.
 	const suspended = outcome.suspendedQueue?.[0];
