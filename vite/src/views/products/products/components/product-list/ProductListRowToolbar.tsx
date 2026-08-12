@@ -15,6 +15,8 @@ import {
 	ArrowCounterClockwiseIcon,
 	CopyIcon,
 	GitForkIcon,
+	LinkBreakIcon,
+	LinkIcon,
 	TrashIcon,
 } from "@phosphor-icons/react";
 import { useState } from "react";
@@ -31,6 +33,11 @@ import { useAxiosInstance } from "@/services/useAxiosInstance";
 import { useEnv } from "@/utils/envUtils";
 import { getBackendErr, pushPage } from "@/utils/genUtils";
 import { CreateVariantDialog } from "@/views/products/plan/components/CreateVariantDialog";
+import { DetachVariantDialog } from "@/views/products/plan/components/DetachVariantDialog";
+import { LinkVariantDialog } from "@/views/products/plan/components/LinkVariantDialog";
+import { useDetachVariant } from "@/views/products/plan/hooks/useDetachVariant";
+import { useLinkVariant } from "@/views/products/plan/hooks/useLinkVariant";
+import { useVariantLinkVisibility } from "@/views/products/plan/hooks/useVariantLinkVisibility";
 import { CopyProductDialog } from "../CopyProductDialog";
 
 export const ProductListRowToolbar = ({
@@ -58,6 +65,9 @@ export const ProductListRowToolbar = ({
 	// context; activeSandbox can be stale on a production route (no header sent).
 	const inNamedSandbox = env === AppEnv.Sandbox && !!activeSandbox;
 	const copySandbox = useCopySandbox();
+	const { canLink, canDetach } = useVariantLinkVisibility(product);
+	const linkVariant = useLinkVariant(product);
+	const detachVariant = useDetachVariant(product);
 
 	const currentSandboxId = inNamedSandbox ? activeSandbox?.id : undefined;
 	const otherSandboxes = sandboxes.filter((s) => s.id !== currentSandboxId);
@@ -142,6 +152,10 @@ export const ProductListRowToolbar = ({
 					onCreate={handleCreateVariant}
 				/>
 			)}
+			{linkVariant.open && <LinkVariantDialog {...linkVariant.dialogProps} />}
+			{detachVariant.open && (
+				<DetachVariantDialog {...detachVariant.dialogProps} />
+			)}
 
 			<DropdownMenu open={dropdownOpen} onOpenChange={setDropdownOpen}>
 				<div
@@ -219,6 +233,34 @@ export const ProductListRowToolbar = ({
 						>
 							<GitForkIcon />
 							Create variant
+						</DropdownMenuItem>
+					)}
+					{canLink && (
+						<DropdownMenuItem
+							className="flex gap-2"
+							onClick={(e) => {
+								e.stopPropagation();
+								e.preventDefault();
+								setDropdownOpen(false);
+								linkVariant.setOpen(true);
+							}}
+						>
+							<LinkIcon />
+							Link as variant of…
+						</DropdownMenuItem>
+					)}
+					{canDetach && (
+						<DropdownMenuItem
+							className="flex gap-2"
+							onClick={(e) => {
+								e.stopPropagation();
+								e.preventDefault();
+								setDropdownOpen(false);
+								detachVariant.setOpen(true);
+							}}
+						>
+							<LinkBreakIcon />
+							Detach from base
 						</DropdownMenuItem>
 					)}
 					<DropdownMenuItem
