@@ -33,7 +33,7 @@ export const customerProductActions = {
 	/** Marks a customer product as past due and sends a PastDue webhook */
 	markPastDue: markCustomerProductPastDue,
 
-	/** Marks a customer product as active (e.g. recovery from past-due); webhook gated by sendWebhook flag */
+	/** Marks a customer product as active (e.g. recovery from past-due) and sends webhooks */
 	markActive: markCustomerProductActive,
 
 	/**

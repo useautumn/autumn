@@ -3,6 +3,7 @@ import {
 	instrumentRedis,
 	type RedisClientType,
 } from "../otel/instrumentRedis.js";
+import { createRedisReadPool } from "./createRedisReadPool.js";
 import { createStandbyRedisRouter } from "./createStandbyRedisRouter.js";
 import { redisDnsLookup } from "./redisDnsLookup.js";
 import { registerRedisCommands } from "./registerRedisCommands.js";
@@ -89,4 +90,19 @@ export const createStandbyRedisConnection = ({
 			autoResendUnfulfilledCommands: false,
 			maxRetriesPerRequest: 0,
 		}),
+	});
+
+/** Two read lanes, each retaining the preferred/standby failover pair. */
+export const createPooledStandbyRedisConnection = ({
+	region,
+	...options
+}: Parameters<typeof createRedisClient>[0]): Redis =>
+	createRedisReadPool({
+		lanes: [
+			createStandbyRedisConnection({ ...options, region }),
+			createStandbyRedisConnection({
+				...options,
+				region: `${region}:lane-1`,
+			}),
+		],
 	});

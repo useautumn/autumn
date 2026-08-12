@@ -125,7 +125,7 @@ class PlanPrice(BaseModel):
         return m
 
 
-PlanType = Union[
+PlanType1 = Union[
     Literal[
         "static",
         "boolean",
@@ -139,14 +139,14 @@ PlanType = Union[
 r"""The type of the feature"""
 
 
-class PlanFeatureDisplayTypedDict(TypedDict):
+class PlanFeatureDisplay1TypedDict(TypedDict):
     singular: str
     r"""The singular display name for the feature."""
     plural: str
     r"""The plural display name for the feature."""
 
 
-class PlanFeatureDisplay(BaseModel):
+class PlanFeatureDisplay1(BaseModel):
     singular: str
     r"""The singular display name for the feature."""
 
@@ -154,14 +154,14 @@ class PlanFeatureDisplay(BaseModel):
     r"""The plural display name for the feature."""
 
 
-class PlanCreditSchemaTypedDict(TypedDict):
+class PlanCreditSchema1TypedDict(TypedDict):
     metered_feature_id: str
     r"""The ID of the metered feature (should be a single_use feature)."""
     credit_cost: float
     r"""The credit cost of the metered feature."""
 
 
-class PlanCreditSchema(BaseModel):
+class PlanCreditSchema1(BaseModel):
     metered_feature_id: str
     r"""The ID of the metered feature (should be a single_use feature)."""
 
@@ -169,39 +169,39 @@ class PlanCreditSchema(BaseModel):
     r"""The credit cost of the metered feature."""
 
 
-class PlanFeatureTypedDict(TypedDict):
+class PlanFeature1TypedDict(TypedDict):
     r"""The full feature object if expanded."""
 
     id: str
     r"""The ID of the feature, used to refer to it in other API calls like /track or /check."""
-    type: PlanType
+    type: PlanType1
     r"""The type of the feature"""
     name: NotRequired[Nullable[str]]
     r"""The name of the feature."""
-    display: NotRequired[Nullable[PlanFeatureDisplayTypedDict]]
+    display: NotRequired[Nullable[PlanFeatureDisplay1TypedDict]]
     r"""Singular and plural display names for the feature."""
-    credit_schema: NotRequired[Nullable[List[PlanCreditSchemaTypedDict]]]
+    credit_schema: NotRequired[Nullable[List[PlanCreditSchema1TypedDict]]]
     r"""Credit cost schema for credit system features."""
     archived: NotRequired[Nullable[bool]]
     r"""Whether or not the feature is archived."""
 
 
-class PlanFeature(BaseModel):
+class PlanFeature1(BaseModel):
     r"""The full feature object if expanded."""
 
     id: str
     r"""The ID of the feature, used to refer to it in other API calls like /track or /check."""
 
-    type: PlanType
+    type: PlanType1
     r"""The type of the feature"""
 
     name: OptionalNullable[str] = UNSET
     r"""The name of the feature."""
 
-    display: OptionalNullable[PlanFeatureDisplay] = UNSET
+    display: OptionalNullable[PlanFeatureDisplay1] = UNSET
     r"""Singular and plural display names for the feature."""
 
-    credit_schema: OptionalNullable[List[PlanCreditSchema]] = UNSET
+    credit_schema: OptionalNullable[List[PlanCreditSchema1]] = UNSET
     r"""Credit cost schema for credit system features."""
 
     archived: OptionalNullable[bool] = UNSET
@@ -485,7 +485,7 @@ class PlanItemPrice(BaseModel):
         return m
 
 
-class PlanItemDisplayTypedDict(TypedDict):
+class PlanItemDisplay1TypedDict(TypedDict):
     r"""Display text for showing this item in pricing pages."""
 
     primary_text: str
@@ -494,7 +494,7 @@ class PlanItemDisplayTypedDict(TypedDict):
     r"""Secondary display text (e.g. 'per month' or 'then $0.5 per 100')."""
 
 
-class PlanItemDisplay(BaseModel):
+class PlanItemDisplay1(BaseModel):
     r"""Display text for showing this item in pricing pages."""
 
     primary_text: str
@@ -595,11 +595,11 @@ class ItemTypedDict(TypedDict):
     r"""Reset configuration for consumable features. Null for non-consumable features like seats where usage persists across billing cycles."""
     price: Nullable[PlanItemPriceTypedDict]
     r"""Pricing configuration for usage beyond included units. Null if feature is entirely free."""
-    feature: NotRequired[PlanFeatureTypedDict]
+    feature: NotRequired[PlanFeature1TypedDict]
     r"""The full feature object if expanded."""
     pooled: NotRequired[bool]
     r"""Whether entity-level grants contribute to a shared customer balance."""
-    display: NotRequired[PlanItemDisplayTypedDict]
+    display: NotRequired[PlanItemDisplay1TypedDict]
     r"""Display text for showing this item in pricing pages."""
     rollover: NotRequired[PlanItemRolloverTypedDict]
     r"""Rollover configuration for unused units. If set, unused included units roll over to the next period."""
@@ -621,13 +621,13 @@ class Item(BaseModel):
     price: Nullable[PlanItemPrice]
     r"""Pricing configuration for usage beyond included units. Null if feature is entirely free."""
 
-    feature: Optional[PlanFeature] = None
+    feature: Optional[PlanFeature1] = None
     r"""The full feature object if expanded."""
 
     pooled: Optional[bool] = False
     r"""Whether entity-level grants contribute to a shared customer balance."""
 
-    display: Optional[PlanItemDisplay] = None
+    display: Optional[PlanItemDisplay1] = None
     r"""Display text for showing this item in pricing pages."""
 
     rollover: Optional[PlanItemRollover] = None
@@ -659,7 +659,7 @@ class Item(BaseModel):
         return m
 
 
-PlanDurationType = Union[
+PlanDurationType1 = Union[
     Literal[
         "day",
         "month",
@@ -684,7 +684,7 @@ class FreeTrialTypedDict(TypedDict):
 
     duration_length: float
     r"""Number of duration_type periods the trial lasts."""
-    duration_type: PlanDurationType
+    duration_type: PlanDurationType1
     r"""Unit of time for the trial duration ('day', 'month', 'year')."""
     card_required: bool
     r"""Whether a payment method is required to start the trial. If true, customer will be charged after trial ends."""
@@ -698,7 +698,7 @@ class FreeTrial(BaseModel):
     duration_length: float
     r"""Number of duration_type periods the trial lasts."""
 
-    duration_type: PlanDurationType
+    duration_type: PlanDurationType1
     r"""Unit of time for the trial duration ('day', 'month', 'year')."""
 
     card_required: bool
@@ -817,7 +817,7 @@ class BasePrice(BaseModel):
         return m
 
 
-PlanVariantDetailsResetInterval = Union[
+PlanAddItemResetInterval = Union[
     Literal[
         "one_off",
         "minute",
@@ -837,7 +837,7 @@ r"""Interval at which balance resets (e.g. 'month', 'year'). For consumable feat
 class PlanVariantDetailsResetTypedDict(TypedDict):
     r"""Reset configuration for consumable features. Omit for non-consumable features like seats."""
 
-    interval: PlanVariantDetailsResetInterval
+    interval: PlanAddItemResetInterval
     r"""Interval at which balance resets (e.g. 'month', 'year'). For consumable features only."""
     interval_count: NotRequired[float]
     r"""Number of intervals between resets. Defaults to 1."""
@@ -846,7 +846,7 @@ class PlanVariantDetailsResetTypedDict(TypedDict):
 class PlanVariantDetailsReset(BaseModel):
     r"""Reset configuration for consumable features. Omit for non-consumable features like seats."""
 
-    interval: PlanVariantDetailsResetInterval
+    interval: PlanAddItemResetInterval
     r"""Interval at which balance resets (e.g. 'month', 'year'). For consumable features only."""
 
     interval_count: Optional[float] = None
@@ -1182,7 +1182,7 @@ class PlanVariantDetailsRollover(BaseModel):
         return m
 
 
-class PlanItemTypedDict(TypedDict):
+class PlanPlanItemTypedDict(TypedDict):
     r"""Configuration for a feature item in a plan, including usage limits, pricing, and rollover settings."""
 
     feature_id: str
@@ -1203,7 +1203,7 @@ class PlanItemTypedDict(TypedDict):
     r"""Rollover config for unused units. If set, unused included units carry over."""
 
 
-class PlanItem(BaseModel):
+class PlanPlanItem(BaseModel):
     r"""Configuration for a feature item in a plan, including usage limits, pricing, and rollover settings."""
 
     feature_id: str
@@ -1356,7 +1356,7 @@ class PlanItemFilter(BaseModel):
         return m
 
 
-PlanVariantDetailsDurationType = Union[
+PlanVariantDetailsDurationType1 = Union[
     Literal[
         "day",
         "month",
@@ -1382,7 +1382,7 @@ class FreeTrialParamsTypedDict(TypedDict):
 
     duration_length: float
     r"""Number of duration_type periods the trial lasts."""
-    duration_type: NotRequired[PlanVariantDetailsDurationType]
+    duration_type: NotRequired[PlanVariantDetailsDurationType1]
     r"""Unit of time for the trial ('day', 'month', 'year')."""
     card_required: NotRequired[bool]
     r"""If true, payment method required to start trial. Customer is charged after trial ends."""
@@ -1396,7 +1396,7 @@ class FreeTrialParams(BaseModel):
     duration_length: float
     r"""Number of duration_type periods the trial lasts."""
 
-    duration_type: Optional[PlanVariantDetailsDurationType] = "month"
+    duration_type: Optional[PlanVariantDetailsDurationType1] = "month"
     r"""Unit of time for the trial ('day', 'month', 'year')."""
 
     card_required: Optional[bool] = True
@@ -1609,13 +1609,13 @@ r"""Interval for the cap, aligned to the customer's billing cycle."""
 class PlanVariantDetailsFilterTypedDict(TypedDict):
     r"""When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature."""
 
-    properties: Dict[str, Any]
+    properties: Dict[str, str]
 
 
 class PlanVariantDetailsFilter(BaseModel):
     r"""When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature."""
 
-    properties: Dict[str, Any]
+    properties: Dict[str, str]
 
 
 class PlanVariantDetailsUsageLimitTypedDict(TypedDict):
@@ -1818,7 +1818,7 @@ class Customize1TypedDict(TypedDict):
 
     price: NotRequired[Nullable[BasePriceTypedDict]]
     r"""Override the base price of the plan. Pass null to remove the base price."""
-    add_items: NotRequired[List[PlanItemTypedDict]]
+    add_items: NotRequired[List[PlanPlanItemTypedDict]]
     r"""Items to add to the plan."""
     remove_items: NotRequired[List[PlanItemFilterTypedDict]]
     r"""Filters selecting items to remove from the plan."""
@@ -1834,7 +1834,7 @@ class Customize1(BaseModel):
     price: OptionalNullable[BasePrice] = UNSET
     r"""Override the base price of the plan. Pass null to remove the base price."""
 
-    add_items: Optional[List[PlanItem]] = None
+    add_items: Optional[List[PlanPlanItem]] = None
     r"""Items to add to the plan."""
 
     remove_items: Optional[List[PlanItemFilter]] = None
@@ -1909,14 +1909,14 @@ class VariantDetails(BaseModel):
         return m
 
 
-class PlanConfigTypedDict(TypedDict):
+class PlanConfig1TypedDict(TypedDict):
     r"""Miscellaneous plan-level configuration flags."""
 
     ignore_past_due: NotRequired[bool]
     r"""If true, entitlements attached to this plan will still reset on schedule even when the customer's product is in a past_due state."""
 
 
-class PlanConfig(BaseModel):
+class PlanConfig1(BaseModel):
     r"""Miscellaneous plan-level configuration flags."""
 
     ignore_past_due: Optional[bool] = False
@@ -2121,13 +2121,13 @@ r"""Interval for the cap, aligned to the customer's billing cycle."""
 class PlanFilterTypedDict(TypedDict):
     r"""When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature."""
 
-    properties: Dict[str, Any]
+    properties: Dict[str, str]
 
 
 class PlanFilter(BaseModel):
     r"""When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature."""
 
-    properties: Dict[str, Any]
+    properties: Dict[str, str]
 
 
 class PlanUsageLimitTypedDict(TypedDict):
@@ -2419,7 +2419,7 @@ class PlanTypedDict(TypedDict):
     r"""Whether the plan is archived. Archived plans cannot be attached to new customers."""
     base_variant_id: Nullable[str]
     r"""Deprecated. Use variant_details.base_plan_id instead. If this is a variant, the ID of the base plan it was created from."""
-    config: PlanConfigTypedDict
+    config: PlanConfig1TypedDict
     r"""Miscellaneous plan-level configuration flags."""
     metadata: Dict[str, Any]
     r"""Arbitrary key-value metadata defined by you for your own use. Shared across all versions of the plan."""
@@ -2472,7 +2472,7 @@ class Plan(BaseModel):
     base_variant_id: Nullable[str]
     r"""Deprecated. Use variant_details.base_plan_id instead. If this is a variant, the ID of the base plan it was created from."""
 
-    config: PlanConfig
+    config: PlanConfig1
     r"""Miscellaneous plan-level configuration flags."""
 
     metadata: Dict[str, Any]

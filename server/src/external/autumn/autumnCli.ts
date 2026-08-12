@@ -957,13 +957,15 @@ export class AutumnInt {
 		},
 
 		aggregate: async (params: {
-			customer_id: string;
+			// Optional so the "aggregate_on without a customer" rejection is callable.
+			customer_id?: string;
 			entity_id?: string;
 			feature_id?: string | string[];
 			group_by?: string;
 			range?: string;
 			bin_size?: string;
 			max_groups?: number;
+			aggregate_on?: "deducted";
 		}) => {
 			const data = await this.post(`/events/aggregate`, params);
 			return data;

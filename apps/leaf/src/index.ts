@@ -1,6 +1,8 @@
+import { getAutumnEnv } from "@autumn/env";
 import { initInfisical } from "@autumn/shared/utils/infisical";
 
 await initInfisical();
+getAutumnEnv();
 // Bind leaf's port before eve's ~30s build/boot, or ALB health checks
 // (5s interval, 2-fail threshold, no grace period) kill the task first.
 await import("./main.js");

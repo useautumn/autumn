@@ -20,10 +20,11 @@ async function main() {
 		BETTER_AUTH_SECRET: genUrlSafeBase64(64),
 		ENCRYPTION_IV: process.env.ENCRYPTION_IV,
 		ENCRYPTION_PASSWORD: process.env.ENCRYPTION_PASSWORD,
-		BETTER_AUTH_URL: "http://localhost:8080",
+		AUTUMN_API_URL: "http://localhost:8080",
+		AUTUMN_PUBLIC_API_URL:
+			process.env.AUTUMN_PUBLIC_API_URL ?? "http://localhost:8080",
 		CLIENT_URL: "http://localhost:3000",
 		LOCALTUNNEL_RESERVED_KEY: process.env.LOCALTUNNEL_RESERVED_KEY,
-		STRIPE_WEBHOOK_URL: process.env.STRIPE_WEBHOOK_URL,
 	};
 
 	const databaseUrl = process.env.DATABASE_URL;
@@ -40,7 +41,8 @@ async function main() {
 	envSections.push(
 		"# Auth",
 		`BETTER_AUTH_SECRET=${secrets.BETTER_AUTH_SECRET}`,
-		`BETTER_AUTH_URL=${secrets.BETTER_AUTH_URL}`,
+		`AUTUMN_API_URL=${secrets.AUTUMN_API_URL}`,
+		`AUTUMN_PUBLIC_API_URL=${secrets.AUTUMN_PUBLIC_API_URL}`,
 		`CLIENT_URL=${secrets.CLIENT_URL}`,
 		"",
 	);
@@ -51,7 +53,6 @@ async function main() {
 		`LOCALTUNNEL_RESERVED_KEY=${secrets.LOCALTUNNEL_RESERVED_KEY}`,
 		`ENCRYPTION_IV=${secrets.ENCRYPTION_IV}`,
 		`ENCRYPTION_PASSWORD=${secrets.ENCRYPTION_PASSWORD}`,
-		`STRIPE_WEBHOOK_URL=${secrets.STRIPE_WEBHOOK_URL}`,
 		"",
 	);
 

@@ -161,6 +161,30 @@ export const billingPlanToNextCyclePreview = ({
 			customerProducts,
 			startsAtMs: event.startsAtMs - MS_PER_SECOND,
 		});
+		const chargeNewPlan = {
+			customerProducts: event.incomingCustomerProducts,
+			direction: "charge" as const,
+			billingCycleAnchorMs: event.resetsBillingCycle
+				? event.startsAtMs
+				: anchorMs,
+			filterBillingPeriodStart: false,
+			priceFilters: { excludeOneOffPrices: true },
+		};
+
+		const creditOldPlanUnusedTime = {
+			customerProducts: event.outgoingCustomerProducts,
+			direction: "refund" as const,
+			billingCycleAnchorMs: anchorMs,
+			filterBillingPeriodStart: false,
+			priceFilters: { excludeOneOffPrices: true },
+		};
+
+		// A reset starts a fresh full cycle, so we don't credit the old plan's
+		// leftover time — mirrors proration_behavior "none" on the Stripe phase.
+		const lineItemSpecs = event.resetsBillingCycle
+			? [chargeNewPlan]
+			: [chargeNewPlan, creditOldPlanUnusedTime];
+
 		const lineItemsResult = billingPlanToNextCycleLineItems({
 			ctx,
 			customerProducts: [
@@ -168,24 +192,7 @@ export const billingPlanToNextCyclePreview = ({
 				...event.outgoingCustomerProducts,
 			],
 			productsForUsageLineItems,
-			lineItemSpecs: [
-				{
-					customerProducts: event.incomingCustomerProducts,
-					direction: "charge",
-					billingCycleAnchorMs: event.resetsBillingCycle
-						? event.startsAtMs
-						: anchorMs,
-					filterBillingPeriodStart: false,
-					priceFilters: { excludeOneOffPrices: true },
-				},
-				{
-					customerProducts: event.outgoingCustomerProducts,
-					direction: "refund",
-					billingCycleAnchorMs: anchorMs,
-					filterBillingPeriodStart: false,
-					priceFilters: { excludeOneOffPrices: true },
-				},
-			],
+			lineItemSpecs,
 			autumnBillingPlan: billingPlan.autumn,
 			billingContext,
 			nextCycleStart: event.startsAtMs,

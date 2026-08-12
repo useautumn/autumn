@@ -104,6 +104,7 @@ export const createInvoiceForBilling = async ({
 			: billingContextToCurrency({ org: ctx.org, billingContext }),
 		collectionMethod,
 		daysUntilDue: invoiceMode?.daysUntilDue,
+		paymentMethodTypes: invoiceMode?.paymentMethodTypes,
 		footer: invoiceMode?.footer,
 		description: invoiceMode?.memo,
 		metadata: invoiceMetadata,

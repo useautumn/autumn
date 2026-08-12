@@ -3,6 +3,7 @@
 import "dotenv/config";
 
 import cluster from "node:cluster";
+import { getAutumnEnv } from "@autumn/env";
 
 import { initInfisical } from "./external/infisical/initInfisical.js";
 
@@ -11,6 +12,7 @@ import { initInfisical } from "./external/infisical/initInfisical.js";
 if (cluster.isPrimary) {
 	await initInfisical();
 }
+getAutumnEnv();
 
 // Now dynamically import and run the main app
 await import("./instrumentation.js");

@@ -1,7 +1,7 @@
 import { describe, test } from "bun:test";
 import { CusProductStatus } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
-import { buildBillingChangeResponse } from "@/internal/billing/v2/utils/billingChangeResponse";
+import { buildBillingChangeResponse } from "@/internal/billing/v2/actions/buildBillingChanges";
 import {
 	expectBillingChangeResponse,
 	expectPlanChange,
@@ -45,11 +45,14 @@ describe("buildBillingChangeResponse — migrate", () => {
 			expired: ["pro"],
 			activated: ["pro_v2"],
 		});
-		expectPlanChange(findPlanChange(response, { action: "expired", planId: "pro" }), {
-			action: "expired",
-			planId: "pro",
-			previousAttributes: { status: CusProductStatus.Active },
-		});
+		expectPlanChange(
+			findPlanChange(response, { action: "expired", planId: "pro" }),
+			{
+				action: "expired",
+				planId: "pro",
+				previousAttributes: { status: CusProductStatus.Active },
+			},
+		);
 	});
 
 	test("migrate via patch items (carry rollover)", () => {
@@ -76,14 +79,17 @@ describe("buildBillingChangeResponse — migrate", () => {
 		logChangeResponse("migrate / patch items (carry rollover)", response);
 
 		expectBillingChangeResponse(response, { updated: ["pro"] });
-		expectPlanChange(findPlanChange(response, { action: "updated", planId: "pro" }), {
-			action: "updated",
-			planId: "pro",
-			itemChanges: [
-				{ action: "created", feature_id: "new_feature_x" },
-				{ action: "created", feature_id: "new_feature_y" },
-				{ action: "deleted", feature_id: "old_feature" },
-			],
-		});
+		expectPlanChange(
+			findPlanChange(response, { action: "updated", planId: "pro" }),
+			{
+				action: "updated",
+				planId: "pro",
+				itemChanges: [
+					{ action: "created", feature_id: "new_feature_x" },
+					{ action: "created", feature_id: "new_feature_y" },
+					{ action: "deleted", feature_id: "old_feature" },
+				],
+			},
+		);
 	});
 });

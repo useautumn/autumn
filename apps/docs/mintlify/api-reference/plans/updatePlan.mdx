@@ -1761,7 +1761,7 @@ await autumn.plans.update({
                 <DynamicResponseField name="filter" type="object">
                   When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature.
                   <Expandable title="properties">
-                    <DynamicResponseField name="properties" type="object" />
+                    <DynamicResponseField name="properties.{key}" type="string" />
 
                   </Expandable>
                 </DynamicResponseField>
@@ -1923,7 +1923,7 @@ await autumn.plans.update({
         <DynamicResponseField name="filter" type="object">
           When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature.
           <Expandable title="properties">
-            <DynamicResponseField name="properties" type="object" />
+            <DynamicResponseField name="properties.{key}" type="string" />
 
           </Expandable>
         </DynamicResponseField>

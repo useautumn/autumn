@@ -31,5 +31,6 @@ export const setupInvoiceModeContext = async ({
 		footer: template?.footer,
 		memo: template?.memo,
 		daysUntilDue: net_terms_days ?? template?.net_terms_days,
+		paymentMethodTypes: ctx.org.config.allowed_payment_methods ?? undefined,
 	};
 };

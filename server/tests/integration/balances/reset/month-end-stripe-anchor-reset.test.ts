@@ -1,4 +1,4 @@
-import { afterAll, expect, mock, test } from "bun:test";
+import { afterAll, afterEach, expect, mock, test } from "bun:test";
 import {
 	AppEnv,
 	EntInterval,
@@ -19,21 +19,26 @@ const JULY_31_2026 = Date.UTC(2026, 6, 31, 15, 13, 9);
 
 const realDateNow = Date.now;
 let stripeBillingCycleAnchor = MAY_31_2026;
+let stripeCliCalls = 0;
+let stripeSubscriptionIds = ["sub_month_end"];
 
 mock.module("@/external/connect/createStripeCli.js", () => ({
-	createStripeCli: () => ({
-		subscriptions: {
-			retrieve: async () => ({
-				billing_cycle_anchor: Math.floor(stripeBillingCycleAnchor / 1000),
-			}),
-		},
-	}),
+	createStripeCli: () => {
+		stripeCliCalls++;
+		return {
+			subscriptions: {
+				retrieve: async () => ({
+					billing_cycle_anchor: Math.floor(stripeBillingCycleAnchor / 1000),
+				}),
+			},
+		};
+	},
 }));
 
 mock.module("@/internal/customers/cusProducts/CusProductService", () => ({
 	CusProductService: {
 		getByIdForReset: async () => ({
-			subscription_ids: ["sub_month_end"],
+			subscription_ids: stripeSubscriptionIds,
 			product: {
 				env: AppEnv.Sandbox,
 				org: { id: "org_month_end" },
@@ -59,6 +64,11 @@ const monthEndCusEnt = {
 
 afterAll(() => {
 	Date.now = realDateNow;
+});
+
+afterEach(() => {
+	stripeCliCalls = 0;
+	stripeSubscriptionIds = ["sub_month_end"];
 });
 
 test(
@@ -169,5 +179,22 @@ test(
 		});
 
 		expect(nextResetAt).toBe(JUNE_30_2026);
+	},
+);
+
+test(
+	`${chalk.yellowBright("month-end reset cron: free plan does not require Stripe")}`,
+	async () => {
+		stripeSubscriptionIds = [];
+
+		const nextResetAt = await getStripeSubscriptionAnchor({
+			db: null as never,
+			cusEnt: monthEndCusEnt,
+			curResetAt: MAY_31_2026,
+			nextResetAt: JUNE_30_2026,
+		});
+
+		expect(nextResetAt).toBe(JUNE_30_2026);
+		expect(stripeCliCalls).toBe(0);
 	},
 );
