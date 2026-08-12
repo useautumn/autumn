@@ -162,7 +162,7 @@ export function parseExistingConfig({
 			const startLine = i;
 			while (
 				i < lines.length &&
-				!/(?:["'];?|;)\s*(?:\/\/.*|\/\*.*\*\/)?$/.test(lines[i]!)
+				!/(?:["'];?|;)\s*(?:\/\/.*|\/\*.*)?$/.test(lines[i]!)
 			) {
 				i++;
 			}
