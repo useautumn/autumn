@@ -153,6 +153,71 @@ export const basePlanYearly = basePlan.variant({ id: PLAN_IDS.BASE_YEARLY, name:
 	);
 });
 
+/** A removed collision must not change the identity of a constant-ID export.
+ * The surviving plan keeps its existing suffixed variable name. */
+test("constant-ID exports survive disappearing name collisions", async () => {
+	await withConfigWorkspace(
+		`import { plan } from "atmn";
+import { PLAN_IDS } from "./ids";
+export const freePlan = plan({ id: PLAN_IDS.FREE, name: "Free", items: [] });
+`,
+		async (cwd) => {
+			await writeConfig({
+				features: [],
+				plans: [{ id: "free", name: "Free", items: [] }],
+				cwd,
+			});
+			const source = readFileSync(join(cwd, "autumn.config.ts"), "utf8");
+			const exports = [...source.matchAll(/export const (\w+)/g)].map(
+				([, varName]) => varName,
+			);
+
+			expect(exports).toEqual(["freePlan"]);
+		},
+	);
+});
+
+/** Versioned constant-ID plans must use the same identity keys as full codegen.
+ * In-place rewrites preserve each version exactly once. */
+test("in-place updates match versioned plans with constant IDs", async () => {
+	await withConfigWorkspace(
+		`import { plan } from "atmn";
+import { PLAN_IDS } from "./ids";
+export const proV1 = plan({ id: PLAN_IDS.PRO, version: 1, name: "Pro v1", items: [] });
+export const proV2 = plan({ id: PLAN_IDS.PRO, version: 2, name: "Pro v2", items: [] });
+export const proAnnualV1 = proV2.variant({ id: PLAN_IDS.PRO_ANNUAL, version: 1, name: "Pro annual v1" });
+export const proAnnualV2 = proV2.variant({ id: PLAN_IDS.PRO_ANNUAL, version: 2, name: "Pro annual v2" });
+`,
+		async (cwd) => {
+			await writeConfig({
+				features: [],
+				plans: [
+					{ id: "pro", version: 1, name: "Pro v1", items: [] },
+					{
+						id: "pro",
+						version: 2,
+						name: "Pro v2",
+						items: [],
+						variants: [
+							{ id: "pro-annual", version: 1, name: "Pro annual v1" },
+							{ id: "pro-annual", version: 2, name: "Pro annual v2" },
+						],
+					},
+				],
+				cwd,
+			});
+			const source = readFileSync(join(cwd, "autumn.config.ts"), "utf8");
+			const exports = [...source.matchAll(/export const (\w+)/g)].map(
+				([, varName]) => varName,
+			);
+
+			expect(exports).toEqual(["proV1", "proV2", "proAnnualV1", "proAnnualV2"]);
+			expect(source.match(/version: 1/g)).toHaveLength(2);
+			expect(source.match(/version: 2/g)).toHaveLength(2);
+		},
+	);
+});
+
 test("merges default and named exports without duplicating aliases", async () => {
 	await withConfigWorkspace(
 		`const credits = { id: "credits", name: "Credits", type: "metered", consumable: true };

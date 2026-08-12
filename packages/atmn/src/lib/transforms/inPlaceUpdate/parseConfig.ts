@@ -10,12 +10,18 @@ export interface ParsedEntity {
 	id: string;
 	type: "feature" | "plan" | "referral_program" | "reward" | "variant";
 	varName: string;
+	version?: number;
 	/** Starting line index (0-based) */
 	startLine: number;
 	/** Ending line index (0-based, inclusive) */
 	endLine: number;
 	/** The original source lines */
 	lines: string[];
+}
+
+export interface ParsedIdentity {
+	id: string;
+	version?: number;
 }
 
 export interface ParsedBlock {
@@ -39,21 +45,32 @@ export interface ParsedConfig {
 }
 
 /** Resolve a literal ID, falling back to the generated variable name. */
-function extractId({
-	idsByVarName,
+function extractIdentity({
+	identitiesByTypeAndVarName,
 	lines,
+	type,
 	varName,
 }: {
-	idsByVarName?: Map<string, string>;
+	identitiesByTypeAndVarName?: Map<
+		ParsedEntity["type"],
+		Map<string, ParsedIdentity>
+	>;
 	lines: string[];
+	type: ParsedEntity["type"] | null;
 	varName: string | null;
-}): string | null {
+}): ParsedIdentity | null {
 	const joined = lines.join("\n");
-	// Match id: 'value' or id: "value"
-	const match = joined.match(/id:\s*['"]([^'"]+)['"]/);
-	return (
-		match?.[1] ?? (varName ? idsByVarName?.get(varName) : undefined) ?? null
-	);
+	const mapped =
+		type && varName
+			? identitiesByTypeAndVarName?.get(type)?.get(varName)
+			: undefined;
+	const id = joined.match(/id:\s*['"]([^'"]+)['"]/)?.[1];
+	if (!id) return mapped ?? null;
+	if (mapped?.id === id) return mapped;
+	const version = joined.match(
+		/id:\s*['"][^'"]+['"]\s*,?\s*version:\s*(\d+)/,
+	)?.[1];
+	return { id, version: version === undefined ? undefined : Number(version) };
 }
 
 /**
@@ -103,10 +120,13 @@ function determineEntityType(lines: string[]): ParsedEntity["type"] | null {
  */
 export function parseExistingConfig({
 	configPath,
-	idsByVarName,
+	identitiesByTypeAndVarName,
 }: {
 	configPath: string;
-	idsByVarName?: Map<string, string>;
+	identitiesByTypeAndVarName?: Map<
+		ParsedEntity["type"],
+		Map<string, ParsedIdentity>
+	>;
 }): ParsedConfig {
 	const source = readFileSync(configPath, "utf-8");
 	const lines = source.split("\n");
@@ -205,12 +225,17 @@ export function parseExistingConfig({
 			const endLine = i;
 			const blockLines = lines.slice(startLine, endLine + 1);
 
-			const id = extractId({ idsByVarName, lines: blockLines, varName });
 			const entityType = determineEntityType(blockLines);
+			const identity = extractIdentity({
+				identitiesByTypeAndVarName,
+				lines: blockLines,
+				type: entityType,
+				varName,
+			});
 
-			if (id && entityType && varName) {
+			if (identity && entityType && varName) {
 				const entity: ParsedEntity = {
-					id,
+					...identity,
 					type: entityType,
 					varName,
 					startLine,
