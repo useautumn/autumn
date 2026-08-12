@@ -56,6 +56,18 @@ export const aggregateDeductionsPipeParamsSchema = z.object({
 	max_groups: z.number().int().min(1).max(250).optional(),
 });
 
+/** The pipe silently prefers the property branch — reject ambiguity instead. */
+export const assertDeductionGroupingUnambiguous = (params: {
+	group_column?: string;
+	property_key?: string;
+}) => {
+	if (params.group_column !== undefined && params.property_key !== undefined) {
+		throw new Error(
+			"group_column and property_key are mutually exclusive on aggregate_deductions",
+		);
+	}
+};
+
 export type AggregateDeductionsPipeParams = z.infer<
 	typeof aggregateDeductionsPipeParamsSchema
 >;

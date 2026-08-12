@@ -1,12 +1,12 @@
 import type { AggregatedEventRow, ProcessedEventRow } from "@autumn/shared";
 import {
-    AffectedResource,
-    applyResponseVersionChanges,
-    CustomerNotFoundError,
-    ErrCode,
-    EventsAggregateParamsSchema,
-    RecaseError,
-    Scopes,
+	AffectedResource,
+	applyResponseVersionChanges,
+	CustomerNotFoundError,
+	ErrCode,
+	EventsAggregateParamsSchema,
+	RecaseError,
+	Scopes,
 } from "@autumn/shared";
 import { StatusCodes } from "http-status-codes";
 import { aggregateDeductions } from "@/internal/analytics/actions/aggregateDeductions.js";
@@ -14,10 +14,10 @@ import { eventActions } from "@/internal/analytics/actions/eventActions.js";
 import { CusService } from "@/internal/customers/CusService";
 import { createRoute } from "../../../honoMiddlewares/routeHandler";
 import {
-    backfillMissingGroupValues,
-    buildGroupedTimeseries,
-    collectGroupingMetadata,
-    convertPeriodsToEpoch,
+	backfillMissingGroupValues,
+	buildGroupedTimeseries,
+	collectGroupingMetadata,
+	convertPeriodsToEpoch,
 } from "../eventUtils.js";
 
 export const handleExternalAggregateEvents = createRoute({
@@ -50,6 +50,16 @@ export const handleExternalAggregateEvents = createRoute({
 			throw new RecaseError({
 				message:
 					"group_by $plan_id is not supported when aggregate_on is set — deductions already include plan_id per balance",
+				code: ErrCode.InvalidRequest,
+				statusCode: StatusCodes.BAD_REQUEST,
+			});
+		}
+
+		// The deduction rollup carries no event properties, so it cannot honor
+		// property filters — reject rather than return mismatched sections.
+		if (aggregate_on && filter_by && Object.keys(filter_by).length > 0) {
+			throw new RecaseError({
+				message: "filter_by is not supported when aggregate_on is set",
 				code: ErrCode.InvalidRequest,
 				statusCode: StatusCodes.BAD_REQUEST,
 			});

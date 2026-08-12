@@ -84,6 +84,14 @@ export const SelectGroupByDropdown = ({
 	// values regardless of the URL — reflect that instead of a lying tab.
 	const isDeducted = queryStates.aggregate_on === "deducted" && !!customerId;
 
+	// Deducted mode doesn't serve plan grouping. The mode switch below clears
+	// it, but the combination can also arrive via URL load or back-navigation.
+	useEffect(() => {
+		if (isDeducted && currentGroupBy === "plan_id") {
+			updateQueryParams({ groupBy: null });
+		}
+	});
+
 	const handleModeChange = (mode: string) => {
 		// The deduction rollup is keyed by customer, so the mode needs one.
 		if (mode === "deductions" && !customerId) return;

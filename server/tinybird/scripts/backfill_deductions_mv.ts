@@ -72,6 +72,10 @@ function parseArgs(): Args {
 		const arg = process.argv[i];
 		if (arg === "--chunk-hours" && process.argv[i + 1]) {
 			args.chunkHours = parseInt(process.argv[++i], 10);
+			if (!Number.isInteger(args.chunkHours) || args.chunkHours <= 0) {
+				console.error("--chunk-hours must be a positive integer");
+				process.exit(1);
+			}
 		} else if (arg === "--target-date" && process.argv[i + 1]) {
 			args.targetDate = process.argv[++i];
 		} else if (arg === "--dry-run") {
@@ -252,7 +256,15 @@ function deriveSeam(minHour: string): string {
 		),
 	);
 	if (mvCount === 0) {
-		return bucketStart;
+		// The bucket came from min(hour), so it MUST contain rows — zero means
+		// the count query failed. Falling back to the hour boundary would
+		// silently skip everything between it and the actual promote time.
+		console.error(
+			"\nRefusing to run: the MV count query for the seam bucket failed or" +
+				"\nreturned zero, which is impossible for the min(hour) bucket." +
+				"\nRe-run when tb is responsive.",
+		);
+		process.exit(1);
 	}
 
 	const seam = extractTimestamp(

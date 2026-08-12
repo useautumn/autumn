@@ -21,6 +21,7 @@ import {
 	prices,
 	products,
 	type ResetCusEnt,
+	rollovers,
 } from "@autumn/shared";
 import {
 	and,
@@ -181,6 +182,47 @@ export class CusEntService {
 			);
 
 		return rows as Array<{
+			cusEnt: CustomerEntitlement;
+			productInternalEntityId: string | null;
+		}>;
+	}
+
+	/** Resolves rollover balance ids to their owning entitlement (+ product entity). */
+	static async getByRolloverIdsWithProductEntity({
+		db,
+		ids,
+		internalCustomerId,
+	}: {
+		db: DrizzleCli;
+		ids: string[];
+		internalCustomerId: string;
+	}) {
+		if (ids.length === 0) return [];
+
+		const rows = await db
+			.select({
+				rolloverId: rollovers.id,
+				cusEnt: customerEntitlements,
+				productInternalEntityId: customerProducts.internal_entity_id,
+			})
+			.from(rollovers)
+			.innerJoin(
+				customerEntitlements,
+				eq(rollovers.cus_ent_id, customerEntitlements.id),
+			)
+			.leftJoin(
+				customerProducts,
+				eq(customerEntitlements.customer_product_id, customerProducts.id),
+			)
+			.where(
+				and(
+					inArray(rollovers.id, ids),
+					eq(customerEntitlements.internal_customer_id, internalCustomerId),
+				),
+			);
+
+		return rows as Array<{
+			rolloverId: string;
 			cusEnt: CustomerEntitlement;
 			productInternalEntityId: string | null;
 		}>;

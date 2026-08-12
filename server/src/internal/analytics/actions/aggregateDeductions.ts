@@ -12,6 +12,7 @@ import { isAnyCreditSystem, notNullish } from "@autumn/shared";
 import { UTCDate } from "@date-fns/utc";
 import type { AggregateDeductionsPipeRow } from "@/external/tinybird/initTinybird.js";
 import { getTinybirdPipes } from "@/external/tinybird/initTinybird.js";
+import { assertDeductionGroupingUnambiguous } from "@/external/tinybird/pipes/aggregateDeductionsPipe.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { CusEntService } from "@/internal/customers/cusProducts/cusEnts/CusEntitlementService.js";
 import { getCreditCost } from "@/internal/features/creditSystemUtils.js";
@@ -189,6 +190,11 @@ export const aggregateDeductions = async ({
 		? bareGroupBy.slice("properties.".length)
 		: undefined;
 
+	assertDeductionGroupingUnambiguous({
+		group_column: groupColumn,
+		property_key: propertyKey,
+	});
+
 	const { data: rows } = await getTinybirdPipes().aggregateDeductions({
 		org_id: ctx.org.id,
 		env: ctx.env,
@@ -225,6 +231,24 @@ export const aggregateDeductions = async ({
 	});
 	for (const { cusEnt, productInternalEntityId } of fetched) {
 		cusEntById.set(cusEnt.id, {
+			cusEnt,
+			internalEntityId:
+				cusEnt.internal_entity_id ?? productInternalEntityId ?? null,
+		});
+	}
+
+	// rollover_* ids share the balance_id namespace with cus_ent_* ids —
+	// resolve the leftovers through the rollover's owning entitlement.
+	const rolloverIds = unresolvedBalanceIds.filter(
+		(balanceId) => !cusEntById.has(balanceId),
+	);
+	const rolloverRows = await CusEntService.getByRolloverIdsWithProductEntity({
+		db: ctx.db,
+		ids: rolloverIds,
+		internalCustomerId: params.customer.internal_id,
+	});
+	for (const { rolloverId, cusEnt, productInternalEntityId } of rolloverRows) {
+		cusEntById.set(rolloverId, {
 			cusEnt,
 			internalEntityId:
 				cusEnt.internal_entity_id ?? productInternalEntityId ?? null,

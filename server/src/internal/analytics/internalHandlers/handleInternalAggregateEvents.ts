@@ -68,6 +68,14 @@ export const handleInternalAggregateEvents = createRoute({
 		let customer: FullCustomer | undefined;
 		let bcExclusionFlag = false;
 
+		if (aggregate_on && !customer_id) {
+			throw new RecaseError({
+				message: "customer_id is required when aggregate_on is set",
+				code: ErrCode.InvalidRequest,
+				statusCode: StatusCodes.BAD_REQUEST,
+			});
+		}
+
 		if (!customer_id) {
 			// No customer ID provided, set aggregateAll to true
 			aggregateAll = true;
@@ -268,11 +276,11 @@ export const handleInternalAggregateEvents = createRoute({
 							entityId: entity_id,
 							featureIds: event_names,
 							groupBy: group_by,
-							// The internal schema types interval as a loose string; the action
-							// takes the RangeEnum that calculateDateRange actually accepts.
-							interval: (interval ?? undefined) as RangeEnum | undefined,
-							customRange: custom_range,
-							binSize: bin_size ?? "day",
+							// Same normalized window and bin as the event aggregation above,
+							// so both series cover identical, aligned buckets.
+							interval: customRange ? undefined : (interval as RangeEnum),
+							customRange,
+							binSize,
 							maxGroups: max_groups,
 							timezone,
 						},

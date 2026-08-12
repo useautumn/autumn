@@ -178,6 +178,19 @@ export const EventsBarChart = memo(function EventsBarChart({
 		lastMousePos.current = null;
 	}, []);
 
+	// The tooltip is fixed in viewport coords; scrolling moves the chart out
+	// from under it. Dismiss rather than track — the pointer is no longer over
+	// the same data point anyway.
+	useLayoutEffect(() => {
+		const dismiss = () => handleChartMouseLeave();
+		window.addEventListener("scroll", dismiss, true);
+		window.addEventListener("resize", dismiss);
+		return () => {
+			window.removeEventListener("scroll", dismiss, true);
+			window.removeEventListener("resize", dismiss);
+		};
+	}, [handleChartMouseLeave]);
+
 	const formatXAxis = useCallback(
 		(value: string): string => {
 			return formatPeriodLabel({ period: value, interval: selectedInterval });
