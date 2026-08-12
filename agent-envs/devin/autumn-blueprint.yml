@@ -1,0 +1,71 @@
+# Devin repo blueprint for useautumn/autumn
+# Settings > Environment > Blueprints > autumn
+#
+# Runs after the org blueprint, inside the cloned repo root.
+
+clone:
+  ref: dev
+  # ai/ is a private submodule; the GitHub app needs access to useautumn/ai.
+  submodules: recursive
+
+initialize:
+  - name: Install dependencies
+    # Never regenerate bun.lock — it flips configVersion 0 -> 1 (hoisted ->
+    # isolated linker) and breaks the prod image at runtime.
+    run: bun install --frozen-lockfile
+
+  # `sync rules` only — it generates the gitignored AGENTS.md that Devin reads.
+  # Bare `bun sync` also runs syncMcps, which calls resolveCloudRoot() and opens
+  # an OS folder picker; in a headless VM that blocks the build forever.
+  - name: Sync agent skills and rules
+    run: cd ai && bun install && bun sync devin
+
+# maintenance steps DO execute during the build, despite the docs saying they are
+# only surfaced as context. So `dw setup` must not live here — it provisions a
+# Neon branch, and one baked into the snapshot would be shared by every session.
+# It belongs in knowledge, for the agent to run per session.
+maintenance:
+  - name: Install dependencies
+    run: bun install --frozen-lockfile
+
+knowledge:
+  - name: auth
+    contents: |
+      RUN THIS FIRST, BEFORE ANY OTHER COMMAND IN THE SESSION:
+
+        export INFISICAL_TOKEN=$(autumn-infisical-login)
+
+      Every `bun` script here is wrapped in `infisical run`. Without that export
+      the CLI finds no login session and drops into an interactive region picker
+      that cannot be answered, and the command dies with "Unable to parse domain
+      url". That error always means this step was skipped — just run it and retry.
+
+      Verify with: echo ${#INFISICAL_TOKEN}   (expect a few hundred, never 0)
+
+  - name: dev-stack
+    contents: |
+      Before running the server or any integration test, run `bun dw setup` in
+      the repo root. It provisions this session's own Neon branch, Dragonfly,
+      ElasticMQ and DynamoDB, and writes .env.local. It has NOT been run for you.
+
+      Then start the stack in the background:
+        bun dw run
+
+      That runs the server and the queue workers together. Both are required —
+      without workers, integration tests silently produce missing rows rather
+      than failing.
+
+  - name: tests
+    contents: |
+      Whole suites:  bun t
+      Single file:   ./run.sh <path>
+      Typecheck:     cd server && bun ts
+      Format:        ./node_modules/.bin/biome check --write <files you touched>
+
+      Never run biome repo-wide — the repo carries unformatted drift and a
+      repo-wide pass reformats ~1000 unrelated files.
+
+  - name: teardown
+    contents: |
+      Run `bun dw teardown` before the session ends. It deletes this session's
+      Neon branch and docker stack. Skipping it leaks a branch per session.

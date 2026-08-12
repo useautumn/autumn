@@ -12,6 +12,7 @@ import { useState } from "react";
 import { cn } from "@/lib/utils";
 import { FilterStatusSubMenu } from "@/views/customers/components/filter-dropdown/FilterStatusSubMenu";
 import { IntervalSubMenu } from "@/views/customers/components/filter-dropdown/IntervalSubMenu";
+import { JoinedDateSubMenu } from "@/views/customers/components/filter-dropdown/JoinedDateSubMenu";
 import { ProcessorSubMenu } from "@/views/customers/components/filter-dropdown/ProcessorSubMenu";
 import { ProductsSubMenu } from "@/views/customers/components/filter-dropdown/ProductsSubMenu";
 import { SaveViewPopover } from "@/views/customers/components/filter-dropdown/SavedViewPopover";
@@ -28,6 +29,8 @@ interface CustomerListFilterButtonProps {
 	onClearExtra?: () => void;
 	onFilterChange?: () => void;
 	hideSavedViews?: boolean;
+	hideInterval?: boolean;
+	hideCreatedAt?: boolean;
 }
 
 export function CustomerListFilterButton({
@@ -36,6 +39,8 @@ export function CustomerListFilterButton({
 	onClearExtra,
 	onFilterChange,
 	hideSavedViews,
+	hideInterval,
+	hideCreatedAt,
 }: CustomerListFilterButtonProps = {}) {
 	const { queryStates, setFilters } = useCustomerFilters();
 	const [open, setOpen] = useState(false);
@@ -54,6 +59,8 @@ export function CustomerListFilterButton({
 			none: false,
 			processor: [],
 			interval: [],
+			joinedFrom: null,
+			joinedTo: null,
 		});
 		onFilterChange?.();
 		onClearExtra?.();
@@ -90,8 +97,9 @@ export function CustomerListFilterButton({
 					{extraMenuItems}
 					<FilterStatusSubMenu onChange={onFilterChange} />
 					<ProductsSubMenu onChange={onFilterChange} />
-					<IntervalSubMenu onChange={onFilterChange} />
+					{!hideInterval && <IntervalSubMenu onChange={onFilterChange} />}
 					<ProcessorSubMenu onChange={onFilterChange} />
+					{!hideCreatedAt && <JoinedDateSubMenu onChange={onFilterChange} />}
 				</DropdownMenuGroup>
 				<DropdownMenuSeparator className="m-0" />
 				{!hideSavedViews && views.length > 0 && (

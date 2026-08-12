@@ -1,9 +1,10 @@
 {
 	"compilerOptions": {
 		"target": "ES2022",
-		"module": "ESNext",
+		"module": "Preserve",
 		"lib": ["ES2022", "DOM", "DOM.Iterable"],
 		"moduleResolution": "bundler",
+		"jsx": "react-jsx",
 		"resolveJsonModule": true,
 		"typeRoots": ["./node_modules/@types", "../node_modules/@types"],
 		"types": ["bun", "node"],
@@ -25,14 +26,21 @@
 			"@models/*": ["../shared/models/*"],
 			"@utils/*": ["../shared/utils/*"],
 			"@lua/*": ["../server/src/_luaScripts/*"],
+			"@autumn/ksuid": ["../packages/ksuid/src/index.ts"],
 			"@autumn/shared": ["../shared/index.ts"],
 			"@autumn/shared/*": ["../shared/*"],
 			"autumn-js": ["../packages/autumn-js/src/sdk/index.ts"],
-			"autumn-js/backend/hono": ["../packages/autumn-js/src/backend/adapters/hono.ts"],
+			"autumn-js/backend/hono": [
+				"../packages/autumn-js/src/backend/adapters/hono.ts"
+			],
 			"@useautumn/sdk": ["../packages/sdk/src/index.ts"],
-			"@useautumn/sdk/*": ["../packages/sdk/src/*"]
+			"@useautumn/sdk/*": ["../packages/sdk/src/*"],
+
+			// Explicitly set drizzle-orm path to avoid monorepo issues
+			"drizzle-orm": ["../node_modules/drizzle-orm"],
+			"drizzle-orm/*": ["../node_modules/drizzle-orm/*"]
 		}
 	},
-	"include": ["**/*.ts", "**/*.js"],
+	"include": ["**/*.ts", "**/*.tsx", "**/*.js"],
 	"exclude": ["node_modules", "dist"]
 }

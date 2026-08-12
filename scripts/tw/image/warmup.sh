@@ -48,6 +48,8 @@ export MISC_CACHE_DRAGONFLY_PUBLIC_URL="$REDIS_URL"
 export CACHE_V2_DRAGONFLY_URL="$REDIS_URL"
 export SQS_QUEUE_URL_V2="http://localhost:${ELASTICMQ_PORT}/000000000000/autumn.fifo"
 export TRACK_SQS_QUEUE_URL="http://localhost:${ELASTICMQ_PORT}/000000000000/autumn-track.fifo"
+export TRACK_ASYNC_SQS_QUEUE_URL="$TRACK_SQS_QUEUE_URL"
+export TRACK_ASYNC_STANDARD_SQS_QUEUE_URL="http://localhost:${ELASTICMQ_PORT}/000000000000/autumn-track-async"
 
 # Bypass Infisical for all DB CLI ops (env.ts:66-74): direct mode requires
 # DATABASE_URL injected, which we just set.

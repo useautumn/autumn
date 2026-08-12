@@ -128,7 +128,8 @@ const buildWarmEnv = (): Record<string, string> => ({
 	ENCRYPTION_IV: requireSecret("ENCRYPTION_IV"),
 	ENCRYPTION_PASSWORD: requireSecret("ENCRYPTION_PASSWORD"),
 	BETTER_AUTH_SECRET: requireSecret("BETTER_AUTH_SECRET"),
-	BETTER_AUTH_URL: `http://localhost:${SERVER_PORT}`,
+	AUTUMN_API_URL: `http://localhost:${SERVER_PORT}`,
+	AUTUMN_PUBLIC_API_URL: `http://localhost:${SERVER_PORT}`,
 });
 
 // ---- snapshot state (direct API — the provider seam has no exact-name check;

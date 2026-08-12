@@ -1,6 +1,7 @@
 import {
 	type AppEnv,
 	BillingInterval,
+	type CreatedAtRange,
 	CusProductStatus,
 	type ListCustomersV2Params,
 	RELEVANT_STATUSES,
@@ -1042,6 +1043,7 @@ export const getCustomerListFilterSql = ({
 	noneFilter,
 	productVersionFilters,
 	intervalFilters,
+	createdAtRangeFilter,
 }: {
 	internalCustomerIds?: string[];
 	orgId?: string;
@@ -1054,8 +1056,17 @@ export const getCustomerListFilterSql = ({
 	noneFilter?: boolean;
 	productVersionFilters?: DashboardProductVersionFilter[];
 	intervalFilters?: DashboardIntervalFilter[];
+	createdAtRangeFilter?: CreatedAtRange;
 }) => {
 	const filters = [];
+
+	if (createdAtRangeFilter?.start !== undefined) {
+		filters.push(sql`AND c.created_at >= ${createdAtRangeFilter.start}`);
+	}
+
+	if (createdAtRangeFilter?.end !== undefined) {
+		filters.push(sql`AND c.created_at <= ${createdAtRangeFilter.end}`);
+	}
 
 	if (internalCustomerIds && internalCustomerIds.length > 0) {
 		filters.push(

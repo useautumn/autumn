@@ -87,6 +87,48 @@ ListCustomersProcessor = Literal[
 ]
 
 
+SortOrder = Literal[
+    "asc",
+    "desc",
+]
+r"""Sort by customer creation time. Defaults to desc (newest first)."""
+
+
+class CreatedAtRangeTypedDict(TypedDict):
+    r"""Filter by customer creation time (epoch milliseconds, inclusive bounds)."""
+
+    start: NotRequired[float]
+    r"""Include customers created at or after this timestamp (epoch milliseconds, inclusive)"""
+    end: NotRequired[float]
+    r"""Include customers created at or before this timestamp (epoch milliseconds, inclusive)"""
+
+
+class CreatedAtRange(BaseModel):
+    r"""Filter by customer creation time (epoch milliseconds, inclusive bounds)."""
+
+    start: Optional[float] = None
+    r"""Include customers created at or after this timestamp (epoch milliseconds, inclusive)"""
+
+    end: Optional[float] = None
+    r"""Include customers created at or before this timestamp (epoch milliseconds, inclusive)"""
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        optional_fields = set(["start", "end"])
+        serialized = handler(self)
+        m = {}
+
+        for n, f in type(self).model_fields.items():
+            k = f.alias or n
+            val = serialized.get(k, serialized.get(n))
+
+            if val != UNSET_SENTINEL:
+                if val is not None or k not in optional_fields:
+                    m[k] = val
+
+        return m
+
+
 class ListCustomersParamsTypedDict(TypedDict):
     start_cursor: NotRequired[str]
     r"""Opaque pagination cursor. Empty string (default) requests the first page; use next_cursor from a prior response for subsequent pages."""
@@ -100,6 +142,10 @@ class ListCustomersParamsTypedDict(TypedDict):
     r"""Search customers by id, name, or email."""
     processors: NotRequired[List[ListCustomersProcessor]]
     r"""Filter by customer processor type (stripe, revenuecat, vercel)."""
+    sort_order: NotRequired[SortOrder]
+    r"""Sort by customer creation time. Defaults to desc (newest first)."""
+    created_at_range: NotRequired[CreatedAtRangeTypedDict]
+    r"""Filter by customer creation time (epoch milliseconds, inclusive bounds)."""
 
 
 class ListCustomersParams(BaseModel):
@@ -121,6 +167,12 @@ class ListCustomersParams(BaseModel):
     processors: Optional[List[ListCustomersProcessor]] = None
     r"""Filter by customer processor type (stripe, revenuecat, vercel)."""
 
+    sort_order: Optional[SortOrder] = None
+    r"""Sort by customer creation time. Defaults to desc (newest first)."""
+
+    created_at_range: Optional[CreatedAtRange] = None
+    r"""Filter by customer creation time (epoch milliseconds, inclusive bounds)."""
+
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
         optional_fields = set(
@@ -131,6 +183,8 @@ class ListCustomersParams(BaseModel):
                 "subscription_status",
                 "search",
                 "processors",
+                "sort_order",
+                "created_at_range",
             ]
         )
         serialized = handler(self)

@@ -26,6 +26,12 @@ export const withClaimedCheckoutSessionMetadata = async ({
 	execute: () => Promise<void>;
 }): Promise<void> => {
 	const deferredData = metadata.data as DeferredAutumnBillingPlanData;
+
+	// Only the initiating org sends the webhook — handles when multiple Stripe
+	// orgs are linked to the same account and both receive this event.
+	const owningOrgId = deferredData?.billingContext?.fullCustomer?.org_id;
+	if (owningOrgId && owningOrgId !== ctx.org.id) return;
+
 	const lockCustomerId =
 		deferredData?.billingContext?.fullCustomer?.id ??
 		deferredData?.billingContext?.fullCustomer?.internal_id;
