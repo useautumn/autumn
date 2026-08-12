@@ -92,8 +92,7 @@ export const useHasChanges = () => {
 	}, [product, baseProduct, features]);
 };
 
-// True when the base-plan link is the only pending change. It rides its own
-// metadata-only request, so such saves skip the versioning flow entirely.
+// The base-plan link saves through its own request, so it never versions.
 export const useIsBasePlanOnlyChange = () => {
 	const product = useProductStore((s) => s.product);
 	const baseProduct = useProductStore((s) => s.baseProduct);

@@ -56,8 +56,6 @@ export const SaveChangesBar = ({
 	const licenseHasChanges = useHasLicenseChanges();
 	const hasChanges = planHasChanges || licenseHasChanges;
 	const isBasePlanOnlyChange = useIsBasePlanOnlyChange();
-	// A base-plan link never versions and never propagates, so it must not drag
-	// the rest of the save through the versioning flow.
 	const contentHasChanges = planHasChanges && !isBasePlanOnlyChange;
 	const applyBasePlanLink = useApplyBasePlanLink();
 	const planLicenses = catalogLicenses.map(({ planLicense }) => planLicense);
@@ -159,9 +157,7 @@ export const SaveChangesBar = ({
 					},
 				})
 			: true;
-		const basePlanLinkSaved = planSaved
-			? await applyBasePlanLink({ planId: product.id })
-			: false;
+		const basePlanLinkSaved = planSaved ? await applyBasePlanLink() : false;
 		const licensesSaved = basePlanLinkSaved
 			? await saveAllLicenses({
 					axiosInstance,
@@ -172,8 +168,7 @@ export const SaveChangesBar = ({
 				})
 			: false;
 
-		// License and base-plan failures already toast their own error, so only the
-		// combined success gets a toast here.
+		// Each step toasts its own failure, so only the combined success toasts here.
 		if (planSaved && basePlanLinkSaved && licensesSaved) {
 			toast.success("Changes saved successfully");
 		}

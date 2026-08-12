@@ -1,15 +1,12 @@
 import type { ProductV2 } from "@autumn/shared";
 import { useProductsQuery } from "@/hooks/queries/useProductsQuery";
 
-/**
- * Variant relationships for a plan, plus the plans it may be linked under.
- */
 export function useVariantLinkVisibility(product: ProductV2) {
 	const { products } = useProductsQuery();
 
 	// base_id lives on the products-list entry, not the store product.
 	const listedProduct = products.find((p) => p.id === product.id);
-	// A self-referential base_id is not a real link, so it reads as unlinked.
+	// A self-referential base_id is not a real link.
 	const basePlanId =
 		listedProduct?.base_id && listedProduct.base_id !== product.id
 			? listedProduct.base_id
@@ -18,8 +15,7 @@ export function useVariantLinkVisibility(product: ProductV2) {
 	const hasVariants = products.some(
 		(p) => p.id !== product.id && p.base_id === product.id,
 	);
-	// The backend rejects a variant as a base plan, and archived plans are never
-	// sensible targets.
+	// The backend rejects a variant as a base plan.
 	const basePlanOptions = products.filter(
 		(candidate) =>
 			candidate.id !== product.id && !candidate.base_id && !candidate.archived,

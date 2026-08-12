@@ -7,11 +7,7 @@ import { useAxiosInstance } from "@/services/useAxiosInstance";
 import { getBackendErr } from "@/utils/genUtils";
 import { useVariantLinkVisibility } from "./useVariantLinkVisibility";
 
-/**
- * Persists the editor's pending base-plan link as its own metadata-only request.
- * The content save paths carry no base_plan_id, and a minimal request also skips
- * the server's variant-settings guard.
- */
+/** Neither content save path carries base_plan_id, so the link needs its own request. */
 export function useApplyBasePlanLink() {
 	const axiosInstance = useAxiosInstance();
 	const product = useProductStore((s) => s.product);
@@ -20,28 +16,22 @@ export function useApplyBasePlanLink() {
 	const editedBasePlanId = product.base_id;
 
 	const { mutateAsync } = useMutation({
-		mutationFn: async ({
-			planId,
-			basePlanId,
-		}: {
-			planId: string;
-			basePlanId: string | null;
-		}) => {
-			await ProductService.updateProduct(axiosInstance, planId, {
+		mutationFn: async (basePlanId: string | null) => {
+			await ProductService.updateProduct(axiosInstance, product.id, {
 				base_plan_id: basePlanId,
 			});
 		},
 		onSuccess: () => invalidateProducts(),
 	});
 
-	return async ({ planId }: { planId: string }) => {
+	return async () => {
 		if (editedBasePlanId === undefined) return true;
 
 		const nextBasePlanId = editedBasePlanId ?? null;
 		if (nextBasePlanId === linkedBasePlanId) return true;
 
 		try {
-			await mutateAsync({ planId, basePlanId: nextBasePlanId });
+			await mutateAsync(nextBasePlanId);
 			return true;
 		} catch (error) {
 			toast.error(

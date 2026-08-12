@@ -493,9 +493,7 @@ export default function PlanChangeDialog({
 				commitLicenseChanges();
 				void invalidateLicenseProducts();
 			}
-			// plans.update carries no base_plan_id, so the link is persisted after
-			// the content save — a new version inherits it either way.
-			await applyBasePlanLink({ planId: product.id });
+			await applyBasePlanLink();
 			markSaved();
 			toast.success(
 				effectiveVersionChoice === "new"

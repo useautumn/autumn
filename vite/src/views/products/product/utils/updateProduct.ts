@@ -48,8 +48,6 @@ export const updateProduct = async ({
 		const sortedItems = stripEditorFields({
 			items: sortPlanItems({ items }),
 		});
-		// The base-plan link rides its own metadata-only request, so it is
-		// deliberately not part of this payload.
 		const updateData = UpdateProductV2ParamsSchema.parse({
 			...product,
 			items: sortedItems,

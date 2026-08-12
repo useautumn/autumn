@@ -32,12 +32,10 @@ export const MoreSettingsSection = () => {
 		useVariantLinkVisibility(product);
 
 	const hasGroup = notNullish(product.group);
-	// An explicit null on the working copy means "detach", so it must not fall
-	// back to the persisted link; only an absent base_id defers to it.
+	// On the working copy base_id is undefined until edited and null to detach.
 	const selectedBasePlanId =
 		product.base_id === undefined ? basePlanId : product.base_id;
-	// The linked base can be archived or a variant itself, so it is kept
-	// selectable even though it is not offered as a new target.
+	// The linked base can be archived or a variant, so it stays selectable.
 	const visibleBasePlanOptions =
 		basePlan && !basePlanOptions.some((p) => p.id === basePlan.id)
 			? [basePlan, ...basePlanOptions]
@@ -45,8 +43,6 @@ export const MoreSettingsSection = () => {
 	const hasVariantBase = selectedBasePlanId !== null;
 	const canSelectBasePlan = visibleBasePlanOptions.length > 0;
 
-	// Writing back the persisted link clears the pending change instead of
-	// queueing a no-op save.
 	const setBasePlan = (nextBasePlanId: string | null) =>
 		setProduct({
 			...product,
