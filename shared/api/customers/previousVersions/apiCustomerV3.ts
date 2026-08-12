@@ -118,7 +118,7 @@ const cusDescriptions = {
 	referrals:
 		"The referrals for the customer. Returned only if referrals is provided in the expand parameter.",
 	referred_by:
-		"The referral records where this customer was referred. Returned only if referrals or referred_by is provided in the expand parameter.",
+		"The referral records where this customer was referred. Returned only if referred_by is provided in the expand parameter.",
 	upcoming_invoice:
 		"The upcoming invoice for the customer. Returned only if upcoming_invoice is provided in the expand parameter.",
 	payment_method:

@@ -15,10 +15,7 @@ export const getCusReferredBy = async ({
 	fullCus: FullCustomer;
 	expand?: CustomerExpand[];
 }) => {
-	if (
-		!expand?.includes(CustomerExpand.Referrals) &&
-		!expand?.includes(CustomerExpand.ReferredBy)
-	) {
+	if (!expand?.includes(CustomerExpand.ReferredBy)) {
 		return undefined;
 	}
 

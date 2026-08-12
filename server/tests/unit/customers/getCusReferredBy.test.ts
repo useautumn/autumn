@@ -8,8 +8,8 @@ const mockGetByRedeemer = mock(async () => [
 		referral_code_id: "rc_123",
 		internal_customer_id: "cus_redeemer_int_id",
 		internal_reward_program_id: "prog_int_123",
-		applied: true, // referrer applied
-		redeemer_applied: true, // redeemer applied
+		applied: false, // referrer applied is false
+		redeemer_applied: true, // redeemer applied is true
 		created_at: 1718000000,
 		referrer: {
 			id: "cus_referrer_1",
@@ -34,35 +34,20 @@ const { getCusReferredBy } = await import(
 );
 
 describe("getCusReferredBy", () => {
-	test("returns undefined when expand is empty or does not include referrals/referred_by", async () => {
-		const res = await getCusReferredBy({
+	test("returns undefined when expand is empty or does not include referred_by", async () => {
+		const resInvoices = await getCusReferredBy({
 			db: {} as never,
 			fullCus: { internal_id: "cus_redeemer_int_id" } as never,
 			expand: [CustomerExpand.Invoices],
 		});
+		expect(resInvoices).toBeUndefined();
 
-		expect(res).toBeUndefined();
-	});
-
-	test("returns referred_by records when expand includes CustomerExpand.Referrals", async () => {
-		const res = await getCusReferredBy({
+		const resReferrals = await getCusReferredBy({
 			db: {} as never,
 			fullCus: { internal_id: "cus_redeemer_int_id" } as never,
 			expand: [CustomerExpand.Referrals],
 		});
-
-		expect(res).toBeDefined();
-		expect(res).toHaveLength(1);
-		expect(res![0]).toEqual({
-			program_id: "prog_public_id",
-			referrer: {
-				id: "cus_referrer_1",
-				name: "Alice Referrer",
-				email: "alice@example.com",
-			},
-			reward_applied: true,
-			created_at: 1718000000,
-		});
+		expect(resReferrals).toBeUndefined();
 	});
 
 	test("returns referred_by records when expand includes CustomerExpand.ReferredBy", async () => {
@@ -81,7 +66,7 @@ describe("getCusReferredBy", () => {
 				name: "Alice Referrer",
 				email: "alice@example.com",
 			},
-			reward_applied: true,
+			reward_applied: true, // verifies mapping from redeemer_applied (true) rather than applied (false)
 			created_at: 1718000000,
 		});
 	});
