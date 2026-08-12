@@ -7,19 +7,14 @@ import { db } from "../../../lib/db.js";
 import { env as chatEnv } from "../../../lib/env.js";
 import { cmaRepo } from "../repos/claudeManagedRepo.js";
 
-// CMA refreshes the OAuth token from its cloud, so the token endpoint must be a
-// public HTTPS URL. In prod BETTER_AUTH_URL already is; in local dev it's
-// http://localhost, so use the public autumn-server origin (the same NGROK tunnel
-// MCP_SERVER_URL points at — it serves /api/auth alongside the /mcp proxy).
 const tokenEndpoint = () => {
-	const authBase =
-		new URL(chatEnv.BETTER_AUTH_URL).protocol === "https:"
-			? chatEnv.BETTER_AUTH_URL
-			: new URL(chatEnv.MCP_SERVER_URL).origin;
-	const endpoint = new URL("/api/auth/oauth2/token", authBase).href;
+	const endpoint = new URL(
+		"/api/auth/oauth2/token",
+		chatEnv.AUTUMN_PUBLIC_API_URL,
+	).href;
 	if (new URL(endpoint).protocol !== "https:") {
 		throw new Error(
-			`The CMA vault OAuth token_endpoint must be HTTPS, but resolved to "${endpoint}". Set MCP_SERVER_URL to your public https tunnel (e.g. https://j.dev.useautumn.com).`,
+			`The CMA vault OAuth token_endpoint must be HTTPS, but resolved to "${endpoint}". Set AUTUMN_PUBLIC_API_URL to the public HTTPS API origin.`,
 		);
 	}
 	return endpoint;

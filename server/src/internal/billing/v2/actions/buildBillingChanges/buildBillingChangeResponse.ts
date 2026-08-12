@@ -5,7 +5,7 @@ import {
 	type FullCustomer,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
-import { buildPlanChanges } from "./buildPlanChanges";
+import { buildBillingChanges } from "./buildBillingChanges";
 
 export const buildBillingChangeResponse = ({
 	ctx: _ctx,
@@ -21,15 +21,16 @@ export const buildBillingChangeResponse = ({
 	// entity_id comes from the enriched FullCustomer (set when the operation
 	// is scoped to a single entity via `enrichFullCustomerWithEntity`).
 	const entityId = originalFullCustomer.entity?.id ?? undefined;
+	const { planChanges } = buildBillingChanges({
+		autumnBillingPlan,
+		originalFullCustomer,
+	});
 
 	return BillingChangeResponseSchema.parse({
 		object: "billing.updated",
 		customer_id: originalFullCustomer.id ?? originalFullCustomer.internal_id,
 		...(entityId !== undefined ? { entity_id: entityId } : {}),
-		plan_changes: buildPlanChanges({
-			autumnBillingPlan,
-			originalFullCustomer,
-		}),
+		plan_changes: planChanges,
 		tags,
 	});
 };

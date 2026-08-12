@@ -532,7 +532,8 @@ const makeModalProvider = (v2: boolean): ProviderImpl => {
 			}
 			env[name] = value;
 		}
-		env.BETTER_AUTH_URL = `http://localhost:${SERVER_PORT}`;
+		env.AUTUMN_API_URL = `http://localhost:${SERVER_PORT}`;
+		env.AUTUMN_PUBLIC_API_URL = `http://localhost:${SERVER_PORT}`;
 		return env;
 	};
 

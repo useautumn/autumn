@@ -1,7 +1,7 @@
 # Local OAuth emulator for agent worktrees.
 # Run once on the host: `bash scripts/setup/start-emulate.sh` (or `npx emulate --portless --seed emulate.config.yaml`).
 # No oauth_clients are seeded — emulate then skips client_id/redirect_uri validation, so
-# every worktree's BETTER_AUTH_URL/api/auth/callback/google is accepted automatically.
+# every worktree's AUTUMN_API_URL/api/auth/callback/google is accepted automatically.
 google:
   users:
     - uid: emulate-agent-uid-001

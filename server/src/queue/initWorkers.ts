@@ -171,6 +171,7 @@ export const startPollingLoop = async ({
 	shouldPoll = () => true,
 	visibilityTimeoutSeconds = 30,
 	receiveTimeoutMs = SQS_RECEIVE_TIMEOUT_MS,
+	maxMessagesBeforeRecycle = MAX_MESSAGES_BEFORE_RECYCLE,
 	workerActivity = createWorkerActivityTracker({
 		idleAfterMs: IDLE_SELF_KILL_MS,
 	}),
@@ -187,6 +188,7 @@ export const startPollingLoop = async ({
 	 * rows concurrently. */
 	visibilityTimeoutSeconds?: number;
 	receiveTimeoutMs?: number;
+	maxMessagesBeforeRecycle?: number;
 	workerActivity?: WorkerActivityTracker;
 }) => {
 	// Per-loop state
@@ -221,7 +223,7 @@ export const startPollingLoop = async ({
 	};
 
 	const recycleWorkerIfNeeded = () => {
-		if (totalMessagesProcessed < MAX_MESSAGES_BEFORE_RECYCLE) {
+		if (totalMessagesProcessed < maxMessagesBeforeRecycle) {
 			return;
 		}
 
@@ -603,8 +605,6 @@ export const initWorkers = async ({
 }) => {
 	const { db } = initDrizzle({ name: "worker", maxConnections: 40 });
 	startPgPoolMonitor();
-	const { warmupRegionalRedis } = await import("@/external/redis/initRedis.js");
-	await warmupRegionalRedis();
 
 	await initBlueGreen({ db, logger });
 
