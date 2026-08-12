@@ -53,7 +53,10 @@ test(`${chalk.yellowBright("SEED: license held by seats AND directly (two migrat
 
 	// The second population: a customer holding the license plan in its own
 	// right, which only a plan-scoped migration can reach.
-	await autumnV2_3.customers.get(DIRECT_CUSTOMER_ID).catch(() => undefined);
+	await autumnV2_3.post("/customers", {
+		id: DIRECT_CUSTOMER_ID,
+		name: "Two Mig Direct",
+	});
 	await autumnV2_3.billing.attach({
 		customer_id: DIRECT_CUSTOMER_ID,
 		plan_id: devSeat.id,
