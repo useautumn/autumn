@@ -16,6 +16,9 @@ export type SuspendedToolCall = {
 /** Harness-agnostic outcome of one driven agent turn. */
 export type SessionTurnOutcome = {
 	errorMessage?: string;
+	/** The session can no longer answer (terminated, deleted, or the stream
+	 * ended mid-turn) — the caller must start a fresh one to make progress. */
+	sessionDead?: boolean;
 	/** All confirmations the turn is waiting on. */
 	suspendedQueue?: SuspendedToolCall[];
 	textParts: string[];

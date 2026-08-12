@@ -141,6 +141,93 @@ describe("driveSessionTurn", () => {
 		expect(outcome.textParts).toEqual(["second turn"]);
 	});
 
+	test("leaves a turn that ends normally usable", async () => {
+		const outcome = await driveSessionTurn({
+			autumnMcpServerName: "autumn",
+			client: clientWithEvents([
+				{ type: "agent.message", content: [{ type: "text", text: "hi" }] },
+				idleEndTurn,
+			]),
+			kickoff: async () => {},
+			sessionId: "sesn_1",
+		});
+
+		expect(outcome.sessionDead).toBeUndefined();
+		expect(outcome.errorMessage).toBeUndefined();
+	});
+
+	test("reports a terminated session as dead instead of an empty answer", async () => {
+		const outcome = await driveSessionTurn({
+			autumnMcpServerName: "autumn",
+			client: clientWithEvents([{ type: "session.status_terminated" }]),
+			kickoff: async () => {},
+			sessionId: "sesn_1",
+		});
+
+		expect(outcome.sessionDead).toBe(true);
+		expect(outcome.errorMessage).toBe(
+			"The agent session terminated before finishing the turn.",
+		);
+		expect(outcome.textParts).toEqual([]);
+	});
+
+	test("reports a deleted session as dead", async () => {
+		const outcome = await driveSessionTurn({
+			autumnMcpServerName: "autumn",
+			client: clientWithEvents([{ type: "session.deleted" }]),
+			kickoff: async () => {},
+			sessionId: "sesn_1",
+		});
+
+		expect(outcome.sessionDead).toBe(true);
+		expect(outcome.errorMessage).toBe("The agent session no longer exists.");
+	});
+
+	test("reports a stream that ends without a terminal event as dead", async () => {
+		const outcome = await driveSessionTurn({
+			autumnMcpServerName: "autumn",
+			client: clientWithEvents([
+				{
+					type: "agent.message",
+					content: [{ type: "text", text: "half an answer" }],
+				},
+			]),
+			kickoff: async () => {},
+			sessionId: "sesn_1",
+		});
+
+		expect(outcome.sessionDead).toBe(true);
+		expect(outcome.errorMessage).toBe(
+			"The agent session stream ended before the turn finished.",
+		);
+		expect(outcome.textParts).toEqual(["half an answer"]);
+	});
+
+	test("keeps a suspended turn alive", async () => {
+		const outcome = await driveSessionTurn({
+			autumnMcpServerName: "autumn",
+			client: clientWithEvents([
+				{
+					type: "agent.mcp_tool_use",
+					id: "t1",
+					name: "attach",
+					mcp_server_name: "autumn",
+					input: { plan_id: "pro" },
+					evaluated_permission: "ask",
+				},
+				{
+					type: "session.status_idle",
+					stop_reason: { type: "requires_action", event_ids: ["t1"] },
+				},
+			]),
+			kickoff: async () => {},
+			sessionId: "sesn_1",
+		});
+
+		expect(outcome.sessionDead).toBeUndefined();
+		expect(outcome.suspendedQueue).toHaveLength(1);
+	});
+
 	test("keeps terminal session errors as turn failures", async () => {
 		const outcome = await driveSessionTurn({
 			autumnMcpServerName: "autumn",

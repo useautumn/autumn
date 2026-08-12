@@ -107,6 +107,9 @@ export const driveSessionTurn = async ({
 
 	const verbose = Boolean(process.env.LEAF_PERF_VERBOSE);
 	let lastEventAt = performance.now();
+	// A turn must end on an explicit terminal event; falling out of the loop any
+	// other way means the stream died and the outcome is not a real answer.
+	let reachedTerminalEvent = false;
 	for await (const event of stream) {
 		if (verbose) {
 			const now = performance.now();
@@ -217,7 +220,16 @@ export const driveSessionTurn = async ({
 			} else {
 				outcome.errorMessage = error.message ?? "Session error";
 			}
-		} else if (event.type === "session.status_terminated") {
+		} else if (
+			event.type === "session.status_terminated" ||
+			event.type === "session.deleted"
+		) {
+			outcome.sessionDead = true;
+			outcome.errorMessage ??=
+				event.type === "session.deleted"
+					? "The agent session no longer exists."
+					: "The agent session terminated before finishing the turn.";
+			reachedTerminalEvent = true;
 			break;
 		} else if (event.type === "session.status_idle") {
 			if (event.stop_reason.type === "requires_action") {
@@ -234,6 +246,7 @@ export const driveSessionTurn = async ({
 				if (queue.length > 0) {
 					outcome.suspendedQueue = queue;
 				}
+				reachedTerminalEvent = true;
 				break;
 			}
 			if (event.stop_reason.type === "end_turn" && onTurnEnd) {
@@ -245,8 +258,14 @@ export const driveSessionTurn = async ({
 				}
 			}
 			// end_turn and retries_exhausted are turn-terminal.
+			reachedTerminalEvent = true;
 			break;
 		}
+	}
+	if (!reachedTerminalEvent) {
+		outcome.sessionDead = true;
+		outcome.errorMessage ??=
+			"The agent session stream ended before the turn finished.";
 	}
 	const turnPerf = {
 		label: perfLabel ?? "turn",
@@ -258,6 +277,7 @@ export const driveSessionTurn = async ({
 		autumn_tool_calls: outcome.toolResults?.length ?? 0,
 		input_tokens: outcome.usage.inputTokens,
 		cache_read_tokens: outcome.usage.cacheReadInputTokens,
+		session_dead: Boolean(outcome.sessionDead),
 		suspended: Boolean(outcome.suspendedQueue?.length),
 	};
 	rootLogger.info("[perf] session turn", {
