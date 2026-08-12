@@ -54,6 +54,9 @@ describe("createEntityForCusProduct (pooled balance fix)", () => {
 					balance: 10,
 					entities: {},
 					is_pooled_balance: true,
+					pooled_balance: {
+						granted: 10,
+					},
 				},
 			],
 		};
