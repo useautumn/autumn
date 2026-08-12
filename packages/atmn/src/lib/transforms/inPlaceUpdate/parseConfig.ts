@@ -38,14 +38,22 @@ export interface ParsedConfig {
 	source: string;
 }
 
-/**
- * Extract the 'id' value from source lines using regex
- */
-function extractId(lines: string[]): string | null {
+/** Resolve a literal ID, falling back to the generated variable name. */
+function extractId({
+	idsByVarName,
+	lines,
+	varName,
+}: {
+	idsByVarName?: Map<string, string>;
+	lines: string[];
+	varName: string | null;
+}): string | null {
 	const joined = lines.join("\n");
 	// Match id: 'value' or id: "value"
 	const match = joined.match(/id:\s*['"]([^'"]+)['"]/);
-	return match ? (match[1] ?? null) : null;
+	return (
+		match?.[1] ?? (varName ? idsByVarName?.get(varName) : undefined) ?? null
+	);
 }
 
 /**
@@ -93,7 +101,13 @@ function determineEntityType(lines: string[]): ParsedEntity["type"] | null {
 /**
  * Parse an existing autumn.config.ts file using line-based parsing
  */
-export function parseExistingConfig(configPath: string): ParsedConfig {
+export function parseExistingConfig({
+	configPath,
+	idsByVarName,
+}: {
+	configPath: string;
+	idsByVarName?: Map<string, string>;
+}): ParsedConfig {
 	const source = readFileSync(configPath, "utf-8");
 	const lines = source.split("\n");
 
@@ -191,7 +205,7 @@ export function parseExistingConfig(configPath: string): ParsedConfig {
 			const endLine = i;
 			const blockLines = lines.slice(startLine, endLine + 1);
 
-			const id = extractId(blockLines);
+			const id = extractId({ idsByVarName, lines: blockLines, varName });
 			const entityType = determineEntityType(blockLines);
 
 			if (id && entityType && varName) {

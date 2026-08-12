@@ -109,6 +109,50 @@ export const keepMe = "custom";
 	});
 });
 
+/** Previously, constant IDs were unmatched and rewrites appended suffixed declarations.
+ * Existing exports must remain unique across repeated in-place rewrites. */
+test("in-place updates match exports with constant IDs", async () => {
+	await withConfigWorkspace(
+		`import { feature, plan } from "atmn";
+import { FEATURE_IDS, PLAN_IDS } from "./ids";
+export const employees = feature({ id: FEATURE_IDS.EMPLOYEES, name: "Employees", type: "metered", consumable: false });
+export const basePlan = plan({ id: PLAN_IDS.BASE, name: "Base Plan", items: [] });
+export const basePlanYearly = basePlan.variant({ id: PLAN_IDS.BASE_YEARLY, name: "Base Plan Yearly" });
+`,
+		async (cwd) => {
+			const config = {
+				features: [
+					{
+						id: "employees",
+						name: "Employees",
+						type: "metered" as const,
+						consumable: false,
+					},
+				],
+				plans: [
+					{
+						id: "base-plan",
+						name: "Base Plan",
+						items: [],
+						variants: [{ id: "base-plan-yearly", name: "Base Plan Yearly" }],
+					},
+				],
+			};
+
+			await writeConfig({ ...config, cwd });
+			const firstPull = readFileSync(join(cwd, "autumn.config.ts"), "utf8");
+			await writeConfig({ ...config, cwd });
+			const secondPull = readFileSync(join(cwd, "autumn.config.ts"), "utf8");
+			const exports = [...secondPull.matchAll(/export const (\w+)/g)].map(
+				([, varName]) => varName,
+			);
+
+			expect(exports).toEqual(["employees", "basePlan", "basePlanYearly"]);
+			expect(secondPull).toBe(firstPull);
+		},
+	);
+});
+
 test("merges default and named exports without duplicating aliases", async () => {
 	await withConfigWorkspace(
 		`const credits = { id: "credits", name: "Credits", type: "metered", consumable: true };

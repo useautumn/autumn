@@ -16,6 +16,7 @@ import {
 	featureIdToVarName,
 	idToVarName,
 	planIdToVarName,
+	resolveVarNames,
 	variantIdToVarName,
 } from "../sdkToCode/helpers.js";
 import { buildImports } from "../sdkToCode/imports.js";
@@ -128,7 +129,21 @@ export async function updateConfigInPlace({
 		throw new Error(`Config file not found: ${configPath}`);
 	}
 
-	const parsed = parseExistingConfig(configPath);
+	const resolvedVarNames = resolveVarNames(
+		features.map(({ id }) => id),
+		plans.map(({ id }) => id),
+		plans.flatMap((plan) => plan.variants?.map(({ id }) => id) ?? []),
+		{
+			rewardIds: rewards?.map(({ id }) => id),
+			referralProgramIds: referralPrograms?.map(({ id }) => id),
+		},
+	);
+	const idsByVarName = new Map(
+		Object.values(resolvedVarNames).flatMap((varNames) =>
+			[...varNames].map(([id, varName]) => [varName, id] as const),
+		),
+	);
+	const parsed = parseExistingConfig({ configPath, idsByVarName });
 	const hasDefaultResources =
 		/\bexport\s+default\b/.test(parsed.source) &&
 		/\b(?:rewards|referralPrograms)\b/.test(parsed.source);
