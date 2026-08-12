@@ -2,21 +2,18 @@ import type { Metadata } from "next";
 import AnimatedFooterImage from "@/components/animated-footer-image";
 import Footer from "@/components/footer";
 import Navbar from "@/components/navbar";
-import {
-	PRIVACY_EFFECTIVE_DATE,
-	privacyPolicySections,
-} from "@/lib/privacyPolicyContent";
+import { TERMS_EFFECTIVE_DATE, termsSections } from "@/lib/termsContent";
 import type { PageStyle } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
 export const metadata: Metadata = {
-	title: "Privacy Policy",
+	title: "Terms of Service",
 	description:
-		"Autumn's Privacy Policy covering how we collect, use, and protect personal information across our billing infrastructure, APIs, and SDKs.",
-	alternates: { canonical: "/privacy" },
+		"Autumn's Terms of Service covering use of our billing infrastructure, APIs, and SDKs.",
+	alternates: { canonical: "/terms" },
 };
 
-export default function PrivacyPolicy() {
+export default function TermsOfService() {
 	return (
 		<div
 			className="w-full overflow-x-hidden overflow-y-auto bg-[#000000]"
@@ -45,7 +42,7 @@ export default function PrivacyPolicy() {
 							<div className="hidden md:block w-1/8 lg:w-1/6 border-r bg-[#0F0F0F] border-[#292929]" />
 							<div className="flex-1 bg-[#0F0F0F] px-4 sm:px-8 py-10 md:py-16">
 								<h1 className="text-white text-[40px] font-sans tracking-[-2%] uppercase">
-									Privacy Policy
+									Terms of Service
 								</h1>
 							</div>
 							<div className="hidden md:block w-1/8 lg:w-1/6 border-l bg-[#0F0F0F] border-[#292929]" />
@@ -57,21 +54,21 @@ export default function PrivacyPolicy() {
 								<p className="mb-10">
 									Autumn (Rebase, Inc.)
 									<br />
-									Effective Date: {PRIVACY_EFFECTIVE_DATE}
+									Effective Date: {TERMS_EFFECTIVE_DATE}
 								</p>
 
-								{privacyPolicySections.map((section) => (
-									<div key={section.title}>
+								{termsSections.map((term) => (
+									<div key={term.title}>
 										<h3 className="mb-2 mt-8 text-[24px] leading-[30px] font-normal tracking-[-2%] text-white">
-											{section.title}
+											{term.title}
 										</h3>
 										<p
 											className={cn(
 												"mb-6 text-[16px] leading-[20px] font-light tracking-[-2%] md:leading-[24px]",
-												section.isUppercase && "uppercase",
+												term.isUppercase && "uppercase",
 											)}
 										>
-											{section.content}
+											{term.content}
 										</p>
 									</div>
 								))}
