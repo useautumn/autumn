@@ -4,11 +4,14 @@
  * Uses line-based parsing for reliability
  */
 
-import { existsSync, readFileSync, writeFileSync } from "node:fs";
+import { existsSync, writeFileSync } from "node:fs";
 import type { ReferralProgram, Reward } from "../../../compose/index.js";
 import type { Feature } from "../../../compose/models/index.js";
 import type { Plan } from "../../../compose/models/variantModels.js";
-import { DEFAULT_REWARD_EXPORT_ERROR } from "../../config/loadConfig.js";
+import {
+	DEFAULT_REWARD_EXPORT_ERROR,
+	loadConfigModule,
+} from "../../config/loadConfig.js";
 import { resolveConfigPath } from "../../env/index.js";
 import { buildFeatureCode } from "../sdkToCode/feature.js";
 import {
@@ -16,7 +19,6 @@ import {
 	featureIdToVarName,
 	idToVarName,
 	planIdToVarName,
-	resolveVarNames,
 	variantIdToVarName,
 	versionedCodegenId,
 } from "../sdkToCode/helpers.js";
@@ -114,39 +116,10 @@ const ensureAtmnImports = (importText: string, imports: string[]) =>
 		importText,
 	);
 
-const resolveExistingVarNames = ({
-	candidate,
-	declaredVarNames,
-	resolvedVarNames,
-	resources,
-	suffix,
-}: {
-	candidate: (resource: ParsedIdentity) => string;
-	declaredVarNames: string[];
-	resolvedVarNames: Map<string, string>;
-	resources: ParsedIdentity[];
-	suffix: string;
-}) => {
-	const identitiesByVarName = new Map<string, ParsedIdentity>();
-	for (const resource of resources) {
-		const varName = resolvedVarNames.get(versionedCodegenId(resource));
-		if (varName) identitiesByVarName.set(varName, resource);
-	}
-	for (const varName of declaredVarNames) {
-		if (identitiesByVarName.has(varName)) continue;
-		const matches = resources.filter((resource) => {
-			const baseName = candidate(resource);
-			const claimedSuffix = varName.slice(baseName.length + suffix.length);
-			return (
-				varName === baseName ||
-				(varName.startsWith(baseName + suffix) && /^\d*$/.test(claimedSuffix))
-			);
-		});
-		const [match] = matches;
-		if (matches.length === 1 && match) identitiesByVarName.set(varName, match);
-	}
-	return identitiesByVarName;
-};
+const versionedIds = (resources: ParsedIdentity[]) =>
+	new Set(
+		resources.flatMap(({ id, version }) => (version === undefined ? [] : [id])),
+	);
 
 /** Updates managed entities in place while preserving custom source. */
 export async function updateConfigInPlace({
@@ -168,83 +141,43 @@ export async function updateConfigInPlace({
 		throw new Error(`Config file not found: ${configPath}`);
 	}
 
-	const resolvedVarNames = resolveVarNames(
-		features.map(({ id }) => id),
-		plans.map(versionedCodegenId),
-		plans.flatMap((plan) => plan.variants?.map(versionedCodegenId) ?? []),
-		{
-			rewardIds: rewards?.map(({ id }) => id),
-			referralProgramIds: referralPrograms?.map(({ id }) => id),
-		},
+	let parsed = parseExistingConfig({ configPath });
+	const versionedIdsByType = new Map<ParsedEntity["type"], Set<string>>([
+		["plan", versionedIds(plans)],
+		["variant", versionedIds(plans.flatMap((plan) => plan.variants ?? []))],
+	]);
+	const runtimeDeclarations = parsed.blocks.flatMap(
+		({ declaration, entity }) =>
+			declaration &&
+			(declaration.requiresRuntimeIdentity ||
+				(entity && versionedIdsByType.get(entity.type)?.has(entity.id)))
+				? [declaration]
+				: [],
 	);
-	const declaredVarNames = [
-		...readFileSync(configPath, "utf8").matchAll(
-			/export\s+const\s+([\w$]+)\s*=/g,
-		),
-	].flatMap(([, varName]) => (varName ? [varName] : []));
-	const variants = plans.flatMap((plan) => plan.variants ?? []);
-	const resourceGroups: [
-		ParsedEntity["type"],
-		ParsedIdentity[],
-		Map<string, string>,
-		(resource: ParsedIdentity) => string,
-		string,
-	][] = [
-		[
-			"feature",
-			features,
-			resolvedVarNames.featureVarMap,
-			({ id }) => featureIdToVarName(id),
-			"Feature",
-		],
-		[
-			"plan",
-			plans,
-			resolvedVarNames.planVarMap,
-			(resource) => planIdToVarName(versionedCodegenId(resource)),
-			"Plan",
-		],
-		[
-			"variant",
-			variants,
-			resolvedVarNames.variantVarMap,
-			(resource) => variantIdToVarName(versionedCodegenId(resource)),
-			"Variant",
-		],
-		[
-			"reward",
-			rewards ?? [],
-			resolvedVarNames.rewardVarMap,
-			({ id }) => idToVarName(`reward-${id}`),
-			"Reward",
-		],
-		[
-			"referral_program",
-			referralPrograms ?? [],
-			resolvedVarNames.referralProgramVarMap,
-			({ id }) => idToVarName(`referral-program-${id}`),
-			"ReferralProgram",
-		],
-	];
-	const identitiesByTypeAndVarName = new Map<
-		ParsedEntity["type"],
-		Map<string, ParsedIdentity>
-	>(
-		resourceGroups.map(([type, resources, varNames, candidate, suffix]) => [
-			type,
-			resolveExistingVarNames({
-				candidate,
-				declaredVarNames,
-				resolvedVarNames: varNames,
-				resources,
-				suffix,
-			}),
-		]),
-	);
-	const parsed = parseExistingConfig({
-		configPath,
-		identitiesByTypeAndVarName,
-	});
+	if (runtimeDeclarations.length) {
+		const mod = await loadConfigModule({ cwd });
+		const identitiesByTypeAndVarName = new Map<
+			ParsedEntity["type"],
+			Map<string, ParsedIdentity>
+		>();
+		for (const declaration of runtimeDeclarations) {
+			const value = mod[declaration.varName] as
+				| { id?: unknown; version?: unknown }
+				| undefined;
+			if (typeof value?.id !== "string")
+				throw new Error(
+					`Could not resolve the ID of export '${declaration.varName}'.`,
+				);
+			const identities =
+				identitiesByTypeAndVarName.get(declaration.type) ?? new Map();
+			identities.set(declaration.varName, {
+				id: value.id,
+				version: typeof value.version === "number" ? value.version : undefined,
+			});
+			identitiesByTypeAndVarName.set(declaration.type, identities);
+		}
+		parsed = parseExistingConfig({ configPath, identitiesByTypeAndVarName });
+	}
 	const hasDefaultResources =
 		/\bexport\s+default\b/.test(parsed.source) &&
 		/\b(?:rewards|referralPrograms)\b/.test(parsed.source);

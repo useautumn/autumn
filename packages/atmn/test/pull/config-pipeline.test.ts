@@ -12,6 +12,11 @@ const withConfigWorkspace = async (
 ) => {
 	const cwd = mkdtempSync(join(tmpdir(), "atmn-config-pipeline-"));
 	try {
+		writeFileSync(
+			join(cwd, "builders.ts"),
+			`export const feature = value => ({ ...value, __atmnType: "feature" });
+export const plan = value => ({ ...value, __atmnType: "plan", variant: variant => ({ ...variant, __atmnType: "variant" }) });`,
+		);
 		if (config !== null) writeFileSync(join(cwd, "autumn.config.ts"), config);
 		await run(cwd);
 	} finally {
@@ -113,13 +118,18 @@ export const keepMe = "custom";
  * Existing exports must remain unique across repeated in-place rewrites. */
 test("in-place updates match exports with constant IDs", async () => {
 	await withConfigWorkspace(
-		`import { feature, plan } from "atmn";
+		`import { feature, plan } from "./builders";
 import { FEATURE_IDS, PLAN_IDS } from "./ids";
 export const employees = feature({ id: FEATURE_IDS.EMPLOYEES, name: "Employees", type: "metered", consumable: false });
 export const basePlan = plan({ id: PLAN_IDS.BASE, name: "Base Plan", items: [] });
 export const basePlanYearly = basePlan.variant({ id: PLAN_IDS.BASE_YEARLY, name: "Base Plan Yearly" });
 `,
 		async (cwd) => {
+			writeFileSync(
+				join(cwd, "ids.ts"),
+				`export const FEATURE_IDS = { EMPLOYEES: "employees" };
+export const PLAN_IDS = { BASE: "base-plan", BASE_YEARLY: "base-plan-yearly" };`,
+			);
 			const config = {
 				features: [
 					{
@@ -157,14 +167,19 @@ export const basePlanYearly = basePlan.variant({ id: PLAN_IDS.BASE_YEARLY, name:
  * The surviving plan keeps its existing suffixed variable name. */
 test("constant-ID exports survive disappearing name collisions", async () => {
 	await withConfigWorkspace(
-		`import { plan } from "atmn";
+		`import { plan } from "./builders";
 import { PLAN_IDS } from "./ids";
-export const freePlan = plan({ id: PLAN_IDS.FREE, name: "Free", items: [] });
+export const fooBar = plan({ id: PLAN_IDS.FOO_DASH, name: "Dash", items: [] });
+export const fooBarPlan = plan({ id: PLAN_IDS.FOO_UNDERSCORE, name: "Underscore", items: [] });
 `,
 		async (cwd) => {
+			writeFileSync(
+				join(cwd, "ids.ts"),
+				`export const PLAN_IDS = { FOO_DASH: "foo-bar", FOO_UNDERSCORE: "foo_bar" };`,
+			);
 			await writeConfig({
 				features: [],
-				plans: [{ id: "free", name: "Free", items: [] }],
+				plans: [{ id: "foo_bar", name: "Underscore", items: [] }],
 				cwd,
 			});
 			const source = readFileSync(join(cwd, "autumn.config.ts"), "utf8");
@@ -172,7 +187,41 @@ export const freePlan = plan({ id: PLAN_IDS.FREE, name: "Free", items: [] });
 				([, varName]) => varName,
 			);
 
-			expect(exports).toEqual(["freePlan"]);
+			expect(exports).toEqual(["fooBarPlan"]);
+			expect(source).toContain("name: 'Underscore'");
+		},
+	);
+});
+
+/** Adding a colliding resource must not rebind an existing constant-ID export.
+ * The existing resource keeps its variable name regardless of API order. */
+test("constant-ID exports survive new name collisions", async () => {
+	await withConfigWorkspace(
+		`import { plan } from "./builders";
+import { PLAN_IDS } from "./ids";
+export const fooBar = plan({ id: PLAN_IDS.FOO_DASH, name: "Dash", items: [] });
+`,
+		async (cwd) => {
+			writeFileSync(
+				join(cwd, "ids.ts"),
+				`export const PLAN_IDS = { FOO_DASH: "foo-bar" };`,
+			);
+			await writeConfig({
+				features: [],
+				plans: [
+					{ id: "foo_bar", name: "Underscore", items: [] },
+					{ id: "foo-bar", name: "Dash", items: [] },
+				],
+				cwd,
+			});
+			const source = readFileSync(join(cwd, "autumn.config.ts"), "utf8");
+
+			expect(source).toMatch(
+				/export const fooBar = plan\(\{[\s\S]*?id: 'foo-bar',[\s\S]*?name: 'Dash'/,
+			);
+			expect(source).toMatch(
+				/export const fooBarPlan = plan\(\{[\s\S]*?id: 'foo_bar',[\s\S]*?name: 'Underscore'/,
+			);
 		},
 	);
 });
@@ -181,7 +230,7 @@ export const freePlan = plan({ id: PLAN_IDS.FREE, name: "Free", items: [] });
  * In-place rewrites preserve each version exactly once. */
 test("in-place updates match versioned plans with constant IDs", async () => {
 	await withConfigWorkspace(
-		`import { plan } from "atmn";
+		`import { plan } from "./builders";
 import { PLAN_IDS } from "./ids";
 export const proV1 = plan({ id: PLAN_IDS.PRO, version: 1, name: "Pro v1", items: [] });
 export const proV2 = plan({ id: PLAN_IDS.PRO, version: 2, name: "Pro v2", items: [] });
@@ -189,6 +238,10 @@ export const proAnnualV1 = proV2.variant({ id: PLAN_IDS.PRO_ANNUAL, version: 1, 
 export const proAnnualV2 = proV2.variant({ id: PLAN_IDS.PRO_ANNUAL, version: 2, name: "Pro annual v2" });
 `,
 		async (cwd) => {
+			writeFileSync(
+				join(cwd, "ids.ts"),
+				`export const PLAN_IDS = { PRO: "pro", PRO_ANNUAL: "pro-annual" };`,
+			);
 			await writeConfig({
 				features: [],
 				plans: [
@@ -214,6 +267,33 @@ export const proAnnualV2 = proV2.variant({ id: PLAN_IDS.PRO_ANNUAL, version: 2, 
 			expect(exports).toEqual(["proV1", "proV2", "proAnnualV1", "proAnnualV2"]);
 			expect(source.match(/version: 1/g)).toHaveLength(2);
 			expect(source.match(/version: 2/g)).toHaveLength(2);
+		},
+	);
+});
+
+/** Literal version identity must not depend on property order or adjacency.
+ * Reordered versioned exports remain stable across in-place rewrites. */
+test("in-place updates parse reordered top-level versions", async () => {
+	await withConfigWorkspace(
+		`import { plan } from "./builders";
+export const legacyPro = plan({
+	version: 1,
+	name: "Pro v1",
+	id: "pro",
+	items: [],
+});
+`,
+		async (cwd) => {
+			await writeConfig({
+				features: [],
+				plans: [{ id: "pro", version: 1, name: "Pro v1", items: [] }],
+				cwd,
+			});
+			const source = readFileSync(join(cwd, "autumn.config.ts"), "utf8");
+
+			expect([...source.matchAll(/export const (\w+)/g)]).toHaveLength(1);
+			expect(source).toContain("export const legacyPro = plan({");
+			expect(source).toContain("version: 1");
 		},
 	);
 });

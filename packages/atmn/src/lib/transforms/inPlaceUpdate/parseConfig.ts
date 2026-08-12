@@ -24,11 +24,18 @@ export interface ParsedIdentity {
 	version?: number;
 }
 
+export interface ParsedDeclaration {
+	requiresRuntimeIdentity: boolean;
+	type: ParsedEntity["type"];
+	varName: string;
+}
+
 export interface ParsedBlock {
 	type: "import" | "comment" | "export" | "other";
 	startLine: number;
 	endLine: number;
 	lines: string[];
+	declaration?: ParsedDeclaration;
 	/** For export blocks */
 	entity?: ParsedEntity;
 }
@@ -226,6 +233,17 @@ export function parseExistingConfig({
 			const blockLines = lines.slice(startLine, endLine + 1);
 
 			const entityType = determineEntityType(blockLines);
+			const blockSource = blockLines.join("\n");
+			const declaration =
+				entityType && varName
+					? {
+							requiresRuntimeIdentity: !/id:\s*['"][^'"]+['"]/.test(
+								blockSource,
+							),
+							type: entityType,
+							varName,
+						}
+					: undefined;
 			const identity = extractIdentity({
 				identitiesByTypeAndVarName,
 				lines: blockLines,
@@ -248,6 +266,7 @@ export function parseExistingConfig({
 					startLine,
 					endLine,
 					lines: blockLines,
+					declaration,
 					entity,
 				});
 
@@ -259,6 +278,7 @@ export function parseExistingConfig({
 					startLine,
 					endLine,
 					lines: blockLines,
+					declaration,
 				});
 			}
 
