@@ -214,6 +214,20 @@ export const processMessage = async ({
 			if (isEntityCreationRecoveryPayload(job.data)) {
 				await replayFailedEntityCreation({ ctx, payload: job.data });
 			} else {
+				if (
+					typeof job.data === "object" &&
+					job.data !== null &&
+					"kind" in job.data &&
+					job.data.kind !== undefined
+				) {
+					workerLogger.warn(
+						"[customerCreationRecovery] Unknown recovery payload kind",
+						{
+							kind: job.data.kind,
+							sourceRequestId: job.data.requestId,
+						},
+					);
+				}
 				await replayFailedCustomerCreation({ ctx, payload: job.data });
 			}
 			return;

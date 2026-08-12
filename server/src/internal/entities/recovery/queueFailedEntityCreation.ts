@@ -18,28 +18,37 @@ export const queueFailedEntityCreation = async ({
 		);
 		return false;
 	}
-	await addTaskToQueue({
-		jobName: JobName.CustomerCreationRecovery,
-		queueUrl,
-		messageGroupId: CUSTOMER_CREATION_RECOVERY_MESSAGE_GROUP_ID,
-		messageDeduplicationId: `entity-creation-${Bun.hash(
-			JSON.stringify({
+	try {
+		await addTaskToQueue({
+			jobName: JobName.CustomerCreationRecovery,
+			queueUrl,
+			messageGroupId: CUSTOMER_CREATION_RECOVERY_MESSAGE_GROUP_ID,
+			messageDeduplicationId: `entity-creation-${Bun.hash(
+				JSON.stringify({
+					orgId: ctx.org.id,
+					env: ctx.env,
+					apiVersion: ctx.apiVersion.value,
+					params,
+				}),
+			).toString(16)}`,
+			generateDeduplicationId: false,
+			payload: {
+				kind: "entity",
 				orgId: ctx.org.id,
 				env: ctx.env,
+				customerId: params.customer_id,
+				requestId: ctx.id,
 				apiVersion: ctx.apiVersion.value,
 				params,
-			}),
-		).toString(16)}`,
-		generateDeduplicationId: false,
-		payload: {
-			kind: "entity",
-			orgId: ctx.org.id,
-			env: ctx.env,
-			customerId: params.customer_id,
-			requestId: ctx.id,
-			apiVersion: ctx.apiVersion.value,
-			params,
-		},
-	});
-	return true;
+			},
+		});
+		ctx.extraLogs.entityCreationRecoveryQueued = { queueUrl };
+		return true;
+	} catch (error) {
+		ctx.logger.error(
+			"[entityCreationRecovery] Failed to enqueue entity creation recovery",
+			{ error },
+		);
+		return false;
+	}
 };

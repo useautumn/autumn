@@ -95,7 +95,7 @@ describe("replayFailedEntityCreation", () => {
 		expect(state.inserts).toBe(1);
 		expect(state.attaches).toBe(1);
 	});
-	test("does nothing when the entity already exists", async () => {
+	test("does not attach defaults when the entity already exists", async () => {
 		state.existing = true;
 		await replayFailedEntityCreation({
 			ctx: context(),
