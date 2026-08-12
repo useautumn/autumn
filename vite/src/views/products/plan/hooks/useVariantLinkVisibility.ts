@@ -25,16 +25,11 @@ export function useVariantLinkVisibility(product: ProductV2) {
 			candidate.id !== product.id && !candidate.base_id && !candidate.archived,
 	);
 
-	const isVariant = basePlanId !== null;
-	const isArchived = !!(listedProduct?.archived ?? product.archived);
-
 	return {
-		isVariant,
+		isVariant: basePlanId !== null,
 		hasVariants,
 		basePlanId,
 		basePlan,
 		basePlanOptions,
-		canLink: !(isVariant || hasVariants || isArchived),
-		canDetach: isVariant,
 	};
 }
