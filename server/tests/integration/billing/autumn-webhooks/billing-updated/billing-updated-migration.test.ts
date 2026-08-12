@@ -9,6 +9,7 @@ import type {
 	CustomerPlanChange,
 	PlanChangeAction,
 } from "@autumn/shared";
+import { getWebhookItemChanges } from "@tests/integration/billing/autumn-webhooks/utils/expectBillingUpdatedWebhook.js";
 import { runUpdatePlanMigration } from "@tests/integration/billing/migrations-v2/utils/runUpdatePlanMigration.js";
 import {
 	getTestSvixAppId,
@@ -121,7 +122,7 @@ test(`${chalk.yellowBright("billing.updated: migration update_plan emits webhook
 		planId: enterprise.id,
 	});
 	expect(updated).toBeDefined();
-	expect(updated?.item_changes).toEqual(
+	expect(getWebhookItemChanges(updated)).toEqual(
 		expect.arrayContaining([
 			expect.objectContaining({
 				action: "created",

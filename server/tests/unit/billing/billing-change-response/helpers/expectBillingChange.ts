@@ -1,9 +1,9 @@
+import { expect } from "bun:test";
 import type {
 	BillingChangeResponse,
 	CustomerPlanChange,
 	PlanChangeAction,
 } from "@autumn/shared";
-import { expect } from "bun:test";
 
 /**
  * Returns the plan_id of a change regardless of whether it carries a
@@ -54,7 +54,9 @@ export const expectPlanChange = (
 	}
 
 	if (itemChanges !== undefined) {
-		expect(resolved.item_changes).toEqual(
+		// item_changes is deprecated (always empty); content moved to plan_change.
+		expect(resolved.item_changes).toEqual([]);
+		expect(resolved.plan_change?.item_changes ?? []).toEqual(
 			expect.arrayContaining(
 				itemChanges.map((itemChange) => expect.objectContaining(itemChange)),
 			),

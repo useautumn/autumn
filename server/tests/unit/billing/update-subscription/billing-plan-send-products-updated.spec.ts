@@ -151,7 +151,7 @@ describe(chalk.yellowBright("billingPlanToSendProductsUpdated"), () => {
 						customerPrices: [
 							prices.createCustomer({
 								customerProductId: "cus_prod_expired_1",
-						price: prices.createFixed({ id: "price_old_1" }),
+								price: prices.createFixed({ id: "price_old_1" }),
 							}),
 						],
 					}),
@@ -164,13 +164,13 @@ describe(chalk.yellowBright("billingPlanToSendProductsUpdated"), () => {
 						customerPrices: [
 							prices.createCustomer({
 								customerProductId: "cus_prod_expired_2",
-						price: {
-								...prices.createFixed({ id: "price_old_2" }),
-								config: {
-									...prices.createFixed({ id: "price_old_2" }).config,
-									amount: 300,
-								} as Price["config"],
-							},
+								price: {
+									...prices.createFixed({ id: "price_old_2" }),
+									config: {
+										...prices.createFixed({ id: "price_old_2" }).config,
+										amount: 300,
+									} as Price["config"],
+								},
 							}),
 						],
 					}),
@@ -184,13 +184,13 @@ describe(chalk.yellowBright("billingPlanToSendProductsUpdated"), () => {
 					customerPrices: [
 						prices.createCustomer({
 							customerProductId: "cus_prod_new_1",
-						price: {
-							...prices.createFixed({ id: "price_new_1" }),
-							config: {
-								...prices.createFixed({ id: "price_new_1" }).config,
-								amount: 200,
-							} as Price["config"],
-						},
+							price: {
+								...prices.createFixed({ id: "price_new_1" }),
+								config: {
+									...prices.createFixed({ id: "price_new_1" }).config,
+									amount: 200,
+								} as Price["config"],
+							},
 						}),
 					],
 				}),
@@ -200,7 +200,7 @@ describe(chalk.yellowBright("billingPlanToSendProductsUpdated"), () => {
 					customerPrices: [
 						prices.createCustomer({
 							customerProductId: "cus_prod_new_2",
-						price: prices.createFixed({ id: "price_new_2" }),
+							price: prices.createFixed({ id: "price_new_2" }),
 						}),
 					],
 				}),

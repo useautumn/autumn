@@ -17,7 +17,7 @@ export type LoadedConfig = {
 	referralPrograms: ReferralProgram[];
 };
 
-type ConfigModule = {
+export type ConfigModule = {
 	default?: Partial<Pick<LoadedConfig, "features" | "plans">> & {
 		products?: Plan[];
 	};
@@ -26,7 +26,7 @@ type ConfigModule = {
 export const DEFAULT_REWARD_EXPORT_ERROR =
 	"Rewards and referral programs must be named reward() and referralProgram() exports; move them out of the default export before pulling or pushing.";
 
-const importConfig = async ({
+export const loadConfigModule = async ({
 	cwd,
 }: {
 	cwd: string;
@@ -46,7 +46,7 @@ export const loadConfig = async ({
 }: {
 	cwd?: string;
 } = {}): Promise<LoadedConfig> => {
-	const mod = await importConfig({ cwd });
+	const mod = await loadConfigModule({ cwd });
 	const config: LoadedConfig = {
 		features: [],
 		plans: [],

@@ -456,6 +456,7 @@ export function AttachFormProvider({
 		customLineItems,
 		disableProration,
 		currency: attachCurrency.requestCurrency,
+		removePlanIds: formValues.removePlanIds,
 	});
 	const {
 		requestBody: multiRequestBody,

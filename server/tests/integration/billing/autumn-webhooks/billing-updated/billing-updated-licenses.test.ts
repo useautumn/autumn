@@ -86,7 +86,7 @@ const expectGenericUpdatedPlan = ({
 			status: "active",
 			past_due: false,
 		},
-		previous_attributes: {},
+		previous_attributes: null,
 		item_changes: [],
 	});
 };

@@ -1,6 +1,6 @@
 import type { EntitlementWithFeature, Feature } from "@autumn/shared";
 import type { CustomerPlanChange } from "@autumn/shared/api/billing/common/customerPlanChange.js";
-import { toCustomerPlanSnapshotFromFields } from "@/internal/billing/v2/utils/billingChangeResponse/toCustomerPlanSnapshot.js";
+import { toCustomerPlanSnapshotFromFields } from "@/internal/billing/v2/actions/buildBillingChanges";
 import type { BatchMigrationInsertedItem } from "../../execute/types/batchMigrationExecutionTypes.js";
 import { buildCreatedItemChanges } from "../buildMigrationItemEvent/buildAddedPlanChanges.js";
 
@@ -39,7 +39,7 @@ export const insertedItemsToPlanChange = ({
 			endedAt: first.endedAt,
 			trialEndsAt: first.trialEndsAt,
 		}),
-		previous_attributes: {},
+		previous_attributes: null,
 		item_changes: buildCreatedItemChanges({ entitlements, features }),
 	};
 };
