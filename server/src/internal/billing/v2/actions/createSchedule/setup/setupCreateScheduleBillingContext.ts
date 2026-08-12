@@ -14,6 +14,7 @@ import { setupAnchorResetRefund } from "@/internal/billing/v2/setup/setupAnchorR
 import { setupBillingCycleAnchor } from "@/internal/billing/v2/setup/setupBillingCycleAnchor";
 import { setupResetCycleAnchor } from "@/internal/billing/v2/setup/setupResetCycleAnchor";
 import { setupReplacedScheduleCustomerProductIds } from "@/internal/customers/schedules/setup/setupReplacedScheduleCustomerProductIds";
+import { isStripeConnected } from "@/internal/orgs/orgUtils";
 import { setupImmediateMultiProductBillingContext } from "../../common/immediateMultiProduct/setupImmediateMultiProductBillingContext";
 import { FIRST_PHASE_TOLERANCE_MS } from "../errors/handleFirstPhaseStartDateErrors";
 import {
@@ -39,6 +40,18 @@ type CreateScheduleCheckoutModeContext = Pick<
 	| "trialContext"
 	| "invoiceMode"
 >;
+
+const resolveNoBillingChanges = ({
+	ctx,
+	params,
+}: {
+	ctx: AutumnContext;
+	params: CreateScheduleParamsV0;
+}) =>
+	params.no_billing_changes === true ||
+	(!isStripeConnected({ org: ctx.org, env: ctx.env }) &&
+		params.billing_behavior === "none" &&
+		params.redirect_mode === "never");
 
 const setupCreateScheduleCheckoutMode = ({
 	billingContext,
@@ -81,14 +94,18 @@ const setupCreateScheduleCheckoutMode = ({
 };
 
 const phaseToImmediateParams = ({
+	ctx,
 	params,
 	phase,
 }: {
+	ctx: AutumnContext;
 	params: CreateScheduleParamsV0;
 	phase: CreateScheduleParamsV0["phases"][number];
-}): MultiAttachParamsV0 => ({
+}): MultiAttachParamsV0 &
+	Pick<CreateScheduleParamsV0, "no_billing_changes"> => ({
 	customer_id: params.customer_id,
 	entity_id: params.entity_id,
+	no_billing_changes: resolveNoBillingChanges({ ctx, params }),
 	// Unscheduled plans bill with the immediate phase, so they attach alongside
 	// it — always last, which is how the contexts are told apart afterwards.
 	plans: [...phase.plans, ...(params.unscheduled_plans ?? [])].map((plan) => ({
@@ -157,7 +174,11 @@ const setupCreateScheduleImmediatePhase = async ({
 			? billingContext
 			: await setupImmediateMultiProductBillingContext({
 					ctx,
-					params: phaseToImmediateParams({ params, phase: immediatePhase }),
+					params: phaseToImmediateParams({
+						ctx,
+						params,
+						phase: immediatePhase,
+					}),
 					preview,
 					billingStartsAt: immediatePhase.starts_at,
 					billingStartsAtToleranceMs: FIRST_PHASE_TOLERANCE_MS,
@@ -190,7 +211,7 @@ export const setupCreateScheduleBillingContext = async ({
 
 	let billingContext = await setupImmediateMultiProductBillingContext({
 		ctx,
-		params: phaseToImmediateParams({ params, phase: initialPhase }),
+		params: phaseToImmediateParams({ ctx, params, phase: initialPhase }),
 		preview,
 		billingStartsAt: phaseHasNumericStart(initialPhase)
 			? initialPhase.starts_at
