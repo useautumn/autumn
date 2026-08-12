@@ -1,3 +1,4 @@
+export type { FreeTrialPlan } from "./freeTrialPlan";
 export type { ProductDetailsPlan } from "./productDetailsPlan";
 export type {
 	ProductUpsertIntent,

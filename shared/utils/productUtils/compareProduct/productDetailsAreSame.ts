@@ -1,5 +1,7 @@
+import type { BillingControlKey } from "../../../models/cusModels/billingControls/customerBillingControls.js";
 import type { Product } from "../../../models/productModels/productModels.js";
 import {
+	compareBillingControls,
 	compareConfig,
 	compareMetadata,
 } from "../../productV2Utils/compareProductUtils/compareProductUtils.js";
@@ -14,6 +16,11 @@ export const PRODUCT_DETAIL_KEYS = [
 	"archived",
 	"config",
 	"metadata",
+	"auto_topups",
+	"spend_limits",
+	"usage_limits",
+	"usage_alerts",
+	"overage_allowed",
 ] as const;
 
 export type ProductDetailKey = (typeof PRODUCT_DETAIL_KEYS)[number];
@@ -27,6 +34,43 @@ const strictEqual =
 	<K extends ProductDetailKey>(): DetailComparator<K> =>
 	({ left, right }) =>
 		left === right;
+
+/** JSONB round-trips reorder object keys; sort so compareBillingControls is stable. */
+const stabilizeBillingControlColumn = (
+	value: unknown,
+): unknown => {
+	if (value == null) return undefined;
+	if (!Array.isArray(value)) return value;
+
+	const stabilize = (entry: unknown): unknown => {
+		if (!entry || typeof entry !== "object" || Array.isArray(entry)) {
+			return entry;
+		}
+		return Object.keys(entry as Record<string, unknown>)
+			.sort()
+			.reduce<Record<string, unknown>>((acc, objectKey) => {
+				acc[objectKey] = stabilize(
+					(entry as Record<string, unknown>)[objectKey],
+				);
+				return acc;
+			}, {});
+	};
+
+	return value.map(stabilize);
+};
+
+/** null/undefined/[] + spend_limits normalize via compareBillingControls. */
+const billingControlColumnIsSame =
+	<K extends BillingControlKey>(key: K): DetailComparator<K> =>
+	({ left, right }) =>
+		compareBillingControls({
+			newBillingControls: {
+				[key]: stabilizeBillingControlColumn(left),
+			},
+			curBillingControls: {
+				[key]: stabilizeBillingControlColumn(right),
+			},
+		});
 
 /**
  * Explicit per-field equivalence for product detail columns.
@@ -46,6 +90,11 @@ export const productDetailComparators: {
 		compareConfig({ newConfig: left, curConfig: right }),
 	metadata: ({ left, right }) =>
 		compareMetadata({ newMetadata: left, curMetadata: right }),
+	auto_topups: billingControlColumnIsSame("auto_topups"),
+	spend_limits: billingControlColumnIsSame("spend_limits"),
+	usage_limits: billingControlColumnIsSame("usage_limits"),
+	usage_alerts: billingControlColumnIsSame("usage_alerts"),
+	overage_allowed: billingControlColumnIsSame("overage_allowed"),
 };
 
 export const productDetailFieldIsSame = <K extends ProductDetailKey>({

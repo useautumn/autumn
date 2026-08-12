@@ -26,21 +26,28 @@ export const computeProductDetailsPlan = ({
 	version: number;
 }): ProductDetailsPlan => {
 	if (!currentFullProduct) {
-		return { product: initProductRow({ ctx, planParams, version }) };
+		return {
+			changed: true,
+			product: initProductRow({ ctx, planParams, version }),
+		};
 	}
 
 	const patch = planParamsToProductRowPatch({
 		planParams,
 		current: currentFullProduct,
 	});
-	if (isEmptyObject(patch)) return { product: currentFullProduct };
+	if (isEmptyObject(patch)) {
+		return { changed: false, product: currentFullProduct };
+	}
 
 	const next: Product = { ...currentFullProduct, ...patch };
 	const previousAttributes = diffProductDetails({
 		current: currentFullProduct,
 		next,
 	});
-	if (isEmptyObject(previousAttributes)) return { product: currentFullProduct };
+	if (isEmptyObject(previousAttributes)) {
+		return { changed: false, product: currentFullProduct };
+	}
 
-	return { product: next, previousAttributes };
+	return { changed: true, product: next, previousAttributes };
 };
