@@ -31,7 +31,7 @@ const buildRecords = (count: number): MigrationWebhookRecord[] =>
 		entityId: null,
 		customerProductIds: [`cp_${index}`],
 		planChanges: [
-			{ action: "updated" as const, previous_attributes: {}, item_changes: [] },
+			{ action: "updated" as const, previous_attributes: null, item_changes: [] },
 		],
 	}));
 

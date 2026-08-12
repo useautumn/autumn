@@ -1,17 +1,12 @@
 import {
 	CusProductStatus,
+	customerProductToApiSubscriptionStatus,
 	type FullCusProduct,
 	isCustomerProductOneOff,
 	type PurchaseSnapshot,
 	type PurchaseStatus,
 	type SubscriptionSnapshot,
-	type SubscriptionStatus,
 } from "@autumn/shared";
-import { cusProductStatusToPublicStatus } from "./cusProductStatusMapping";
-
-const cusProductStatusToSubscriptionStatus = (
-	status: CusProductStatus,
-): SubscriptionStatus => cusProductStatusToPublicStatus(status);
 
 const cusProductStatusToPurchaseStatus = (
 	status: CusProductStatus,
@@ -25,13 +20,6 @@ const cusProductStatusToPurchaseStatus = (
 			return "active";
 	}
 };
-
-export type CustomerPlanSnapshotOverrides = Partial<{
-	status: CusProductStatus;
-	canceled_at: number | null;
-	ended_at: number | null;
-	trial_ends_at: number | null;
-}>;
 
 export type CustomerPlanSnapshotForChange =
 	| { subscription: SubscriptionSnapshot; purchase?: undefined }
@@ -76,7 +64,7 @@ export const toCustomerPlanSnapshotFromFields = ({
 	return {
 		subscription: {
 			plan_id: planId,
-			status: cusProductStatusToSubscriptionStatus(status),
+			status: customerProductToApiSubscriptionStatus({ status }),
 			past_due: status === CusProductStatus.PastDue,
 			started_at: startsAt,
 			canceled_at: canceledAt,
@@ -90,26 +78,15 @@ export const toCustomerPlanSnapshotFromFields = ({
 
 export const toCustomerPlanSnapshot = ({
 	cusProduct,
-	overrides,
 }: {
 	cusProduct: FullCusProduct;
-	overrides?: CustomerPlanSnapshotOverrides;
 }): CustomerPlanSnapshotForChange =>
 	toCustomerPlanSnapshotFromFields({
 		planId: cusProduct.product_id,
-		status: overrides?.status ?? cusProduct.status,
+		status: cusProduct.status,
 		isOneOff: isCustomerProductOneOff(cusProduct),
 		startsAt: cusProduct.starts_at ?? null,
-		canceledAt:
-			overrides?.canceled_at !== undefined
-				? overrides.canceled_at
-				: (cusProduct.canceled_at ?? null),
-		endedAt:
-			overrides?.ended_at !== undefined
-				? overrides.ended_at
-				: (cusProduct.ended_at ?? null),
-		trialEndsAt:
-			overrides?.trial_ends_at !== undefined
-				? overrides.trial_ends_at
-				: (cusProduct.trial_ends_at ?? null),
+		canceledAt: cusProduct.canceled_at ?? null,
+		endedAt: cusProduct.ended_at ?? null,
+		trialEndsAt: cusProduct.trial_ends_at ?? null,
 	});

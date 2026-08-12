@@ -1,6 +1,41 @@
 import { existsSync, readFileSync, rmSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
+import { resolveTriggerDevBranch } from "./triggerDevBranch.ts";
+
+function spawnTriggerDevBranchReaper({
+	projectRoot,
+	branch,
+	watchPid,
+}: {
+	projectRoot: string;
+	branch: string;
+	watchPid: number;
+}): void {
+	const reaperPath = join(
+		dirname(fileURLToPath(import.meta.url)),
+		"triggerDevBranchReaper.ts",
+	);
+	const proc = Bun.spawn(
+		[
+			"bun",
+			reaperPath,
+			"--watch-pid",
+			String(watchPid),
+			"--branch",
+			branch,
+			"--project-root",
+			projectRoot,
+		],
+		{
+			cwd: projectRoot,
+			detached: true,
+			stdio: ["ignore", "ignore", "ignore"],
+			env: process.env as Record<string, string>,
+		},
+	);
+	proc.unref();
+}
 
 const worktreeIdx = process.argv.indexOf("--worktree");
 const worktreeNum =
@@ -120,6 +155,14 @@ async function startDev() {
 	const projectRoot = join(rootDir, "..");
 	const serverOnly = process.argv.includes("--server-only");
 
+	// Isolate local Trigger runs from coworkers sharing the Autumn DEV project.
+	// Server SDK + CLI both read TRIGGER_DEV_BRANCH (x-trigger-branch).
+	const triggerDevBranch = resolveTriggerDevBranch({
+		projectRoot,
+		worktreeNum,
+	});
+	process.env.TRIGGER_DEV_BRANCH = triggerDevBranch;
+
 	try {
 		if (serverOnly) {
 			console.log("Starting server and workers only (--server-only)...\n");
@@ -183,8 +226,8 @@ async function startDev() {
 		if (serverOnly) {
 			// Only start server and workers (for test sandboxes)
 			if (isWindows) {
-				const serverCmd = `cd server && set SERVER_PORT=${SERVER_PORT} && bun start`;
-				const workersCmd = `cd server && bun workers`;
+				const serverCmd = `cd server && set SERVER_PORT=${SERVER_PORT} && set TRIGGER_DEV_BRANCH=${triggerDevBranch} && bun start`;
+				const workersCmd = `cd server && set TRIGGER_DEV_BRANCH=${triggerDevBranch} && bun workers`;
 				shellArgs = [
 					"cmd",
 					"/c",
@@ -194,7 +237,7 @@ async function startDev() {
 				shellArgs = [
 					"sh",
 					"-c",
-					`bunx concurrently -n server,workers -c green,yellow "cd server && SERVER_PORT=${SERVER_PORT} bun start" "cd server && bun workers"`,
+					`bunx concurrently -n server,workers -c green,yellow "cd server && SERVER_PORT=${SERVER_PORT} TRIGGER_DEV_BRANCH=${triggerDevBranch} bun start" "cd server && TRIGGER_DEV_BRANCH=${triggerDevBranch} bun workers"`,
 				];
 			}
 		} else {
@@ -202,10 +245,12 @@ async function startDev() {
 			const colors = ["green"];
 			const serverScript = isProductionMode ? "dev:prod" : "dev";
 			const workersScript = isProductionMode ? "workers:prod" : "workers:dev";
+			// Inline TRIGGER_DEV_BRANCH on the server cmd — inherited env alone
+			// is not enough (odw/ol can drop it); SDK must send x-trigger-branch.
 			const cmds = [
 				isWindows
-					? `"cd server && set SERVER_PORT=${SERVER_PORT} && bun ${serverScript}"`
-					: `"cd server && SERVER_PORT=${SERVER_PORT} bun ${serverScript}"`,
+					? `"cd server && set SERVER_PORT=${SERVER_PORT} && set TRIGGER_DEV_BRANCH=${triggerDevBranch} && bun ${serverScript}"`
+					: `"cd server && SERVER_PORT=${SERVER_PORT} TRIGGER_DEV_BRANCH=${triggerDevBranch} bun ${serverScript}"`,
 			];
 
 			if (!skipWorkers) {
@@ -213,17 +258,26 @@ async function startDev() {
 				colors.push("yellow");
 				cmds.push(
 					isWindows
-						? `"cd server && bun ${workersScript}"`
-						: `"cd server && bun ${workersScript}"`,
+						? `"cd server && set TRIGGER_DEV_BRANCH=${triggerDevBranch} && bun ${workersScript}"`
+						: `"cd server && TRIGGER_DEV_BRANCH=${triggerDevBranch} bun ${workersScript}"`,
 				);
 			}
 
 			names.push("trigger");
 			colors.push("cyan");
+			console.log(`Trigger DEV branch: ${triggerDevBranch}\n`);
+			// Detached: archives the branch when this scripts/dev.ts pid dies
+			// (Ctrl+C, crash, kill -9). Does not survive laptop power-off.
+			spawnTriggerDevBranchReaper({
+				projectRoot,
+				branch: triggerDevBranch,
+				watchPid: process.pid,
+			});
 			// Local Trigger's Bun worker can't resolve the optional Axiom transport.
+			// --branch + TRIGGER_DEV_BRANCH keep worker + server on the same queue.
 			const triggerCmd = isWindows
-				? "set AXIOM_TOKEN= && bunx trigger.dev dev"
-				: "env -u AXIOM_TOKEN bunx trigger.dev dev";
+				? `set AXIOM_TOKEN= && bunx trigger.dev dev --branch ${triggerDevBranch}`
+				: `env -u AXIOM_TOKEN bunx trigger.dev dev --branch ${triggerDevBranch}`;
 			cmds.push(`"${triggerCmd}"`);
 
 			names.push("vite", "checkout");
@@ -297,6 +351,7 @@ async function startDev() {
 			cwd: projectRoot,
 			env: {
 				...process.env,
+				TRIGGER_DEV_BRANCH: triggerDevBranch,
 				// Sandbox key only. `stripe listen` reads STRIPE_API_KEY, so no
 				// `stripe login` is needed on a headless box.
 				...(process.env.STRIPE_SANDBOX_SECRET_KEY

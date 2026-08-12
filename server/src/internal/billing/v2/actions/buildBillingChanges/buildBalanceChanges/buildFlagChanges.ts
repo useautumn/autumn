@@ -1,5 +1,4 @@
-import type { ApiFlagV0 } from "@autumn/shared";
-import type { PreviewFlagChange } from "./types/index.js";
+import type { ApiFlagV0, PreviewFlagChange } from "@autumn/shared";
 
 export const buildFlagChanges = ({
 	beforeFlags,
