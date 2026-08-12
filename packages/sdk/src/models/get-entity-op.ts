@@ -358,7 +358,7 @@ export type GetEntityInterval = OpenEnum<typeof GetEntityInterval>;
  * When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature.
  */
 export type GetEntityFilter = {
-  properties: { [k: string]: any };
+  properties: { [k: string]: string };
 };
 
 /**
@@ -966,7 +966,7 @@ export const GetEntityFilter$inboundSchema: z.ZodMiniType<
   GetEntityFilter,
   unknown
 > = z.object({
-  properties: z.record(z.string(), z.any()),
+  properties: z.record(z.string(), types.string()),
 });
 
 export function getEntityFilterFromJSON(

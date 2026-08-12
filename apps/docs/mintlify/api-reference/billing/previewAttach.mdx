@@ -940,6 +940,10 @@ import { DynamicResponseExample } from "/snippets/dynamic-response-example.jsx";
   Currency to bill this attach in (e.g. usd, eur). Must match the customer's currency if they are already locked to one, and the plan must offer a paid price in it. Defaults to the customer's currency, then the org default.
 </DynamicParamField>
 
+<DynamicParamField body="remove_plan_ids" type="string[]">
+  Plan IDs to expire on the customer as part of this attach. Each must be an active plan billed on the same subscription as the attach (or a free plan); plans on a separate subscription are rejected.
+</DynamicParamField>
+
 
 ### Response
 
@@ -1787,7 +1791,7 @@ import { DynamicResponseExample } from "/snippets/dynamic-response-example.jsx";
                         <DynamicResponseField name="filter" type="object">
                           When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature.
                           <Expandable title="properties">
-                            <DynamicResponseField name="properties" type="object" />
+                            <DynamicResponseField name="properties.{key}" type="string" />
 
                           </Expandable>
                         </DynamicResponseField>
@@ -1949,7 +1953,7 @@ import { DynamicResponseExample } from "/snippets/dynamic-response-example.jsx";
                 <DynamicResponseField name="filter" type="object">
                   When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature.
                   <Expandable title="properties">
-                    <DynamicResponseField name="properties" type="object" />
+                    <DynamicResponseField name="properties.{key}" type="string" />
 
                   </Expandable>
                 </DynamicResponseField>
@@ -2712,7 +2716,7 @@ import { DynamicResponseExample } from "/snippets/dynamic-response-example.jsx";
                         <DynamicResponseField name="filter" type="object">
                           When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature.
                           <Expandable title="properties">
-                            <DynamicResponseField name="properties" type="object" />
+                            <DynamicResponseField name="properties.{key}" type="string" />
 
                           </Expandable>
                         </DynamicResponseField>
@@ -2874,7 +2878,7 @@ import { DynamicResponseExample } from "/snippets/dynamic-response-example.jsx";
                 <DynamicResponseField name="filter" type="object">
                   When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature.
                   <Expandable title="properties">
-                    <DynamicResponseField name="properties" type="object" />
+                    <DynamicResponseField name="properties.{key}" type="string" />
 
                   </Expandable>
                 </DynamicResponseField>

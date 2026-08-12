@@ -103,6 +103,10 @@
 		"packages/render": {
 			"project": ["src/**/*.ts"]
 		},
+		"packages/env": {
+			"project": ["src/**/*.ts"],
+			"ignore": ["src/index.test.ts"]
+		},
 		"apps/testbench": {
 			"entry": ["**/*.ts"],
 			"project": ["**/*.ts"]
