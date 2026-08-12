@@ -11,7 +11,7 @@ import { carryOverUsagesToExistingUsagesConfig } from "@/internal/billing/v2/uti
 import { initFullCustomerProduct } from "@/internal/billing/v2/utils/initFullCustomerProduct/initFullCustomerProduct";
 
 type NewCustomerProductParams = Partial<
-	Pick<AttachParamsV1, "carry_over_usages" | "ends_at">
+	Pick<AttachParamsV1, "carry_over_usages" | "ends_at" | "no_billing_changes">
 >;
 
 const getScheduledBillingCycleAnchorResetAt = ({
@@ -118,6 +118,9 @@ export const computeAttachNewCustomerProduct = ({
 
 	const isRevertTrial =
 		trialContext?.onEnd === "revert" && planTiming === "immediate";
+	const preservedBillingLinkage = params.no_billing_changes
+		? currentCustomerProduct
+		: undefined;
 
 	const newFullCustomerProduct = initFullCustomerProduct({
 		ctx,
@@ -138,8 +141,11 @@ export const computeAttachNewCustomerProduct = ({
 		},
 		initOptions: {
 			isCustom,
-			subscriptionId: stripeSubscription?.id,
-			subscriptionScheduleId: stripeSubscriptionSchedule?.id,
+			subscriptionId:
+				stripeSubscription?.id ?? preservedBillingLinkage?.subscription_ids?.[0],
+			subscriptionScheduleId:
+				stripeSubscriptionSchedule?.id ??
+				preservedBillingLinkage?.scheduled_ids?.[0],
 			startsAt,
 			endedAt: params.ends_at,
 			accessStartsAt,
