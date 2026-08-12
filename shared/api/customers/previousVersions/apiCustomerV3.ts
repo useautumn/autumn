@@ -1,4 +1,7 @@
-import { ApiCusReferralSchema } from "@api/customers/components/apiCusReferral";
+import {
+	ApiCusReferralSchema,
+	ApiCusReferredBySchema,
+} from "@api/customers/components/apiCusReferral";
 import { ApiCusUpcomingInvoiceSchema } from "@api/customers/components/apiCusUpcomingInvoice";
 import { ApiBaseEntitySchema } from "@api/entities/apiEntity";
 import { ApiCusRewardsSchema } from "@api/others/apiDiscount";
@@ -114,6 +117,8 @@ const cusDescriptions = {
 		"The rewards for the customer. Returned only if rewards is provided in the expand parameter.",
 	referrals:
 		"The referrals for the customer. Returned only if referrals is provided in the expand parameter.",
+	referred_by:
+		"The referral records where this customer was referred. Returned only if referrals or referred_by is provided in the expand parameter.",
 	upcoming_invoice:
 		"The upcoming invoice for the customer. Returned only if upcoming_invoice is provided in the expand parameter.",
 	payment_method:
@@ -135,6 +140,9 @@ export const ApiCusExpandV3Schema = z.object({
 	}),
 	referrals: z.array(ApiCusReferralSchema).optional().meta({
 		description: cusDescriptions.referrals,
+	}),
+	referred_by: z.array(ApiCusReferredBySchema).optional().meta({
+		description: cusDescriptions.referred_by,
 	}),
 	upcoming_invoice: ApiCusUpcomingInvoiceSchema.nullish().meta({
 		description: cusDescriptions.upcoming_invoice,
