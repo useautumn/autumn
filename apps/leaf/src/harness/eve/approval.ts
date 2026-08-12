@@ -6,6 +6,7 @@ import { fetchApprovalPreview } from "../../internal/approvals/utils/fetchApprov
 import { getOrgInstallationToken } from "../../internal/installations/actions/getOrgInstallationToken.js";
 import { db } from "../../lib/db.js";
 import { logger } from "../../lib/logger.js";
+import { adoptPostedEveSession } from "./adoptPostedSession.js";
 import {
 	EveStreamIdleTimeoutError,
 	postEveInputResponse,
@@ -104,8 +105,7 @@ export const drainParkedEveTurn = async ({
 							requestId: gated.requestId,
 							session,
 						});
-						session.sessionId = posted.sessionId;
-						session.state.continuationToken = posted.continuationToken;
+						adoptPostedEveSession({ posted, session });
 						parkedAgain = true;
 						break;
 					}
@@ -175,9 +175,7 @@ export const withdrawEveSuspension = async ({
 		requestId: suspension.toolCallId,
 		session,
 	});
-	session.sessionId = posted.sessionId;
-	session.state.continuationToken = posted.continuationToken;
-	session.state.status = "running";
+	adoptPostedEveSession({ posted, session, status: "running" });
 	await drainParkedEveTurn({ auth, orgId, session });
 	return true;
 };
@@ -324,9 +322,7 @@ const answerEveApproval = async ({
 		requestId: approval.tool_call_id,
 		session,
 	});
-	session.sessionId = posted.sessionId;
-	session.state.continuationToken = posted.continuationToken;
-	session.state.status = "running";
+	adoptPostedEveSession({ posted, session, status: "running" });
 	await upsertEveSession({
 		db,
 		env: session.env,
@@ -466,9 +462,7 @@ export const answerEveQuestion = async ({
 		requestId,
 		session,
 	});
-	session.sessionId = posted.sessionId;
-	session.state.continuationToken = posted.continuationToken;
-	session.state.status = "running";
+	adoptPostedEveSession({ posted, session, status: "running" });
 	await upsertEveSession({
 		db,
 		env: session.env,

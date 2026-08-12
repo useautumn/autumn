@@ -12,6 +12,7 @@ import { env as leafEnv } from "../../lib/env.js";
 import { parsePreviewPayload } from "../../ui/previewContent.js";
 import { buildHarnessMessageText } from "../common/messageText.js";
 import { buildThreadKey } from "../common/threadKey.js";
+import { adoptPostedEveSession } from "./adoptPostedSession.js";
 import { denyOptionFromApproval, drainParkedEveTurn } from "./approval.js";
 import {
 	catalogPlanNeedingDecision,
@@ -132,13 +133,7 @@ export const eveEngine: AgentEngine = {
 								requestId: approval.tool_call_id,
 								session,
 							});
-							session.sessionId = posted.sessionId;
-							session.state = {
-								...session.state,
-								continuationToken: posted.continuationToken,
-								status: "running",
-								lastEventAt: Date.now(),
-							};
+							adoptPostedEveSession({ posted, session, status: "running" });
 							// Discard the withdrawal turn's reply — without this, its
 							// text would end THIS run and the user's actual message
 							// would be processed with nobody streaming.
@@ -205,21 +200,15 @@ export const eveEngine: AgentEngine = {
 			message: answeringQuestion ? undefined : message,
 			session,
 		});
-		if (!session) {
+		if (session) {
+			adoptPostedEveSession({ posted, session, status: "running" });
+		} else {
 			session = {
 				env,
 				newSession: true,
 				sessionId: posted.sessionId,
 				state: initialState(posted.continuationToken),
 				threadKey: buildThreadKey({ env, thread }),
-			};
-		} else {
-			session.sessionId = posted.sessionId;
-			session.state = {
-				...session.state,
-				continuationToken: posted.continuationToken,
-				status: "running",
-				lastEventAt: Date.now(),
 			};
 		}
 		await upsertEveSession({

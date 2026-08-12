@@ -10,6 +10,7 @@ import { fetchApprovalPreview } from "../../internal/approvals/utils/fetchApprov
 import { db } from "../../lib/db.js";
 import type { Suspension } from "../../types.js";
 import { parsePreviewPayload } from "../../ui/previewContent.js";
+import { adoptPostedEveSession } from "./adoptPostedSession.js";
 import { postEveInputResponse } from "./client.js";
 import { getEveSessionBySessionId, upsertEveSession } from "./repo.js";
 import type { EveAuthContext } from "./types.js";
@@ -196,9 +197,7 @@ export const redirectCatalogSuspensionToDecision = async ({
 			requestId: suspension.toolCallId,
 			session,
 		});
-		session.sessionId = posted.sessionId;
-		session.state.continuationToken = posted.continuationToken;
-		session.state.status = "waiting";
+		adoptPostedEveSession({ posted, session, status: "waiting" });
 		await upsertEveSession({
 			db,
 			env: session.env,
