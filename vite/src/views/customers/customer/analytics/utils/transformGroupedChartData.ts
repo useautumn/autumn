@@ -1,5 +1,6 @@
 import type { Feature } from "@autumn/shared";
 import { FeatureType } from "@autumn/shared";
+import { CUSTOMER_BALANCE_SUFFIX } from "./deductionsToEventsData";
 
 /**
  * Row data from the events API
@@ -65,6 +66,26 @@ function getFeatureName({
 	});
 
 	return feature?.name || eventName;
+}
+
+/**
+ * Splits a pivoted `feature__groupValue` column name into its parts. Feature
+ * ids can themselves contain underscores, so the group value is the segment
+ * after the LAST `__` separator. Returns null for names without a separator
+ * (e.g. `period` or ungrouped feature columns).
+ */
+export function parseSeriesKey({
+	name,
+}: {
+	name: string;
+}): { featureKey: string; groupValue: string } | null {
+	const parts = name.split("__");
+	if (parts.length < 2) return null;
+
+	return {
+		featureKey: parts.slice(0, -1).join("__"),
+		groupValue: parts[parts.length - 1],
+	};
 }
 
 /**
@@ -263,11 +284,10 @@ export function generateChartConfig({
 		if (meta.name === "period") continue;
 
 		// Parse feature__groupValue format
-		const parts = meta.name.split("__");
-		if (parts.length < 2) continue;
+		const parsed = parseSeriesKey({ name: meta.name });
+		if (!parsed) continue;
 
-		const featureKey = parts.slice(0, -1).join("__"); // Handle feature names with underscores
-		const groupValue = parts[parts.length - 1];
+		const { featureKey, groupValue } = parsed;
 
 		const featureName = getFeatureName({ key: featureKey, features });
 		let displayGroupValue: string;
@@ -275,6 +295,12 @@ export function generateChartConfig({
 			displayGroupValue = "Other values";
 		} else if (groupBy === "plan_id" && groupValue === "") {
 			displayGroupValue = "No plan";
+		} else if (
+			groupBy === "entity_id" &&
+			groupValue.endsWith(CUSTOMER_BALANCE_SUFFIX)
+		) {
+			const base = groupValue.slice(0, -CUSTOMER_BALANCE_SUFFIX.length);
+			displayGroupValue = `${entityNames?.[base] ?? base}${CUSTOMER_BALANCE_SUFFIX}`;
 		} else if (groupBy === "entity_id" && entityNames?.[groupValue]) {
 			displayGroupValue = entityNames[groupValue];
 		} else if (groupBy === "customer_id" && customerNames?.[groupValue]) {

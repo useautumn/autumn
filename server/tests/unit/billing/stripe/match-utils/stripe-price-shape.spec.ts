@@ -1,8 +1,8 @@
 import { describe, expect, test } from "bun:test";
 import {
 	AllowanceType,
-	BillWhen,
 	BillingInterval,
+	BillWhen,
 	type Entitlement,
 	type FixedPriceConfig,
 	Infinite,
@@ -11,16 +11,16 @@ import {
 	PriceType,
 	TierBehavior,
 } from "@autumn/shared";
+import type Stripe from "stripe";
 import {
 	autumnBasePriceToStripePriceShape,
 	autumnConsumablePriceToStripePriceShape,
 } from "@/internal/billing/v2/providers/stripe/utils/matchUtils/autumnPriceShape";
 import {
+	type StripePriceShape,
 	stripePriceShapesEqual,
 	stripePriceToShape,
-	type StripePriceShape,
 } from "@/internal/billing/v2/providers/stripe/utils/matchUtils/stripePriceShape";
-import type Stripe from "stripe";
 
 const org = { default_currency: "usd" } as Organization;
 
@@ -44,7 +44,11 @@ const consumablePrice = ({
 	billingUnits = 1,
 	tierBehavior = null,
 }: {
-	tiers?: Array<{ to: number | typeof Infinite; amount?: number; flat_amount?: number }>;
+	tiers?: Array<{
+		to: number | typeof Infinite;
+		amount?: number;
+		flat_amount?: number;
+	}>;
 	billingUnits?: number;
 	tierBehavior?: TierBehavior | null;
 } = {}): Price =>
@@ -268,10 +272,30 @@ describe("autumnConsumablePriceToStripePriceShape", () => {
 			org,
 		});
 		const mismatches = [
-			stripePrice({ product: "prod_other", billingScheme: "per_unit", tiersMode: null, unitAmount: 10 }),
-			stripePrice({ currency: "eur", billingScheme: "per_unit", tiersMode: null, unitAmount: 10 }),
-			stripePrice({ interval: "year", billingScheme: "per_unit", tiersMode: null, unitAmount: 10 }),
-			stripePrice({ usageType: "licensed", billingScheme: "per_unit", tiersMode: null, unitAmount: 10 }),
+			stripePrice({
+				product: "prod_other",
+				billingScheme: "per_unit",
+				tiersMode: null,
+				unitAmount: 10,
+			}),
+			stripePrice({
+				currency: "eur",
+				billingScheme: "per_unit",
+				tiersMode: null,
+				unitAmount: 10,
+			}),
+			stripePrice({
+				interval: "year",
+				billingScheme: "per_unit",
+				tiersMode: null,
+				unitAmount: 10,
+			}),
+			stripePrice({
+				usageType: "licensed",
+				billingScheme: "per_unit",
+				tiersMode: null,
+				unitAmount: 10,
+			}),
 		];
 
 		for (const mismatch of mismatches) {

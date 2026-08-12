@@ -13,6 +13,7 @@ import { all } from "better-all";
 import type Stripe from "stripe";
 import { stripeSubscriptionToScheduleId } from "@/external/stripe/subscriptions/utils/convertStripeSubscription";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
+import { isStripeConnected } from "@/internal/orgs/orgUtils";
 import { fetchStripeCustomerForBilling } from "./fetchStripeCustomerForBilling";
 import { fetchStripeDiscountsForBilling } from "./fetchStripeDiscountsForBilling";
 import {
@@ -60,7 +61,13 @@ export const setupStripeBillingContext = async ({
 
 	if (stripeBillingContext) return stripeBillingContext;
 
-	if (skipBillingFetching) {
+	if (
+		skipBillingFetching ||
+		(params &&
+			"no_billing_changes" in params &&
+			params.no_billing_changes === true &&
+			!isStripeConnected({ org: ctx.org, env: ctx.env }))
+	) {
 		return {
 			stripeSubscription: undefined,
 			stripeSubscriptionSchedule: undefined,

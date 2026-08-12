@@ -1,0 +1,49 @@
+DESCRIPTION >
+    Materializes the `deductions` array on `events` into per-balance hourly rows.
+
+    ARRAY JOIN over JSONExtractArrayRaw(toString(deductions), 'list') fans one event out to one row
+    per deduction — normally 1:1, max 3 observed in prod. Events with an empty deduction set produce
+    no rows, since ARRAY JOIN over an empty array drops them.
+
+    The double JSONExtractString is not a mistake. `deductions` holds {"list": [...]} where each
+    element is a JSON *string* containing the deduction object, so the inner call unwraps the string
+    and the outer one reads the field. This is the only place that decode happens; the read pipe
+    never touches JSON.
+
+    No properties are carried through — see the datasource description for why.
+
+NODE materialize
+SQL >
+    SELECT
+        org_id,
+        env,
+        customer_id,
+        coalesce(entity_id, '') as entity_id,
+        event_name,
+        JSONExtractString(JSONExtractString(d), 'feature_id') as balance_feature_id,
+        JSONExtractString(JSONExtractString(d), 'balance_id') as balance_id,
+        JSONExtractString(JSONExtractString(d), 'plan_id') as plan_id,
+        JSONExtractString(
+            JSONExtractRaw(JSONExtractString(d), 'reset'),
+            'interval'
+        ) as reset_interval,
+        toStartOfHour(timestamp) as hour,
+        sum(JSONExtractFloat(JSONExtractString(d), 'value')) as deducted,
+        count() as deduction_count
+    FROM events
+    ARRAY JOIN JSONExtractArrayRaw(toString(deductions), 'list') as d
+    WHERE JSONExtractString(JSONExtractString(d), 'balance_id') != ''
+    GROUP BY
+        org_id,
+        env,
+        customer_id,
+        entity_id,
+        event_name,
+        balance_feature_id,
+        balance_id,
+        plan_id,
+        reset_interval,
+        hour
+
+TYPE materialized
+DATASOURCE events_deductions_hourly_mv

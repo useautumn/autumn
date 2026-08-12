@@ -96,6 +96,7 @@ export function provisionedInfraEnv(
 		SQS_QUEUE_URL_V2: queueUrl("autumn.fifo"),
 		TRACK_SQS_QUEUE_URL: queueUrl("autumn-track.fifo"),
 		TRACK_ASYNC_SQS_QUEUE_URL: queueUrl("autumn-track.fifo"),
+		TRACK_ASYNC_STANDARD_SQS_QUEUE_URL: queueUrl("autumn-track-async"),
 		STRIPE_WEBHOOK_SQS_QUEUE_URL: queueUrl("autumn-stripe-webhook.fifo"),
 	};
 }

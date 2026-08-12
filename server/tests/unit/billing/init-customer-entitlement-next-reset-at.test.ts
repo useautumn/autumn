@@ -6,8 +6,8 @@
 import { expect, test } from "bun:test";
 import {
 	AllowanceType,
-	FeatureType,
 	type EntitlementWithFeature,
+	FeatureType,
 } from "@autumn/shared";
 import { initCustomerEntitlementNextResetAt } from "@/internal/billing/v2/utils/initFullCustomerProduct/initCustomerEntitlement/initCustomerEntitlementNextResetAt";
 

@@ -1,5 +1,8 @@
-import type { ApiBalanceV1 } from "@autumn/shared";
-import type { PreviewBalance, PreviewBalanceChange } from "./types/index.js";
+import type {
+	ApiBalanceV1,
+	PreviewBalance,
+	PreviewBalanceChange,
+} from "@autumn/shared";
 
 const balanceSubset = (balance: ApiBalanceV1 | undefined): PreviewBalance => ({
 	granted: balance?.granted ?? 0,

@@ -1,9 +1,9 @@
 import { describe, expect, test } from "bun:test";
 import {
-	BillWhen,
 	BillingInterval,
-	PriceType,
+	BillWhen,
 	type Price,
+	PriceType,
 } from "@autumn/shared";
 import { consumablePriceToStripeItem } from "@/external/stripe/priceToStripeItem/consumablePriceToStripeItem";
 
