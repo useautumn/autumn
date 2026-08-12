@@ -6,7 +6,7 @@ infisical scan git-changes --staged --redact --verbose --silent --telemetry=fals
 
 changed_files="$(git diff --cached --name-only)"
 
-bun knip
+bunx turbo run knip
 
 if printf '%s\n' "$changed_files" | grep -q '^server/'; then
 	bunx turbo run ts --filter=@autumn/server
