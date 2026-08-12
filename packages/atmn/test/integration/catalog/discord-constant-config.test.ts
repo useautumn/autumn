@@ -131,4 +131,22 @@ export const addOnPayrollPlan = plan({
 		headless: true,
 		workspace,
 	});
+	expect(await readFile(workspace.configPath, "utf8")).toBe(pulled);
+	const repushedPlans = await fetchPlans({ secretKey: ctx.orgSecretKey });
+	const repushedBaseYearly = repushedPlans.find(
+		({ id }) => id === "base-yearly",
+	);
+	expect(repushedBaseYearly?.variant_details?.customize?.free_trial).toBeNull();
+	expect(repushedBaseYearly?.auto_enable).toBe(false);
+	for (const id of [
+		"base",
+		"base-yearly",
+		"premium",
+		"premium-yearly",
+		"add-on-projects",
+		"add-on-ip-box",
+		"add-on-payroll",
+	]) {
+		expect(repushedPlans.filter((plan) => plan.id === id)).toHaveLength(1);
+	}
 });
