@@ -9,6 +9,7 @@ import {
 	Scopes,
 } from "@autumn/shared";
 import { StatusCodes } from "http-status-codes";
+import { aggregateDeductions } from "@/internal/analytics/actions/aggregateDeductions.js";
 import { eventActions } from "@/internal/analytics/actions/eventActions.js";
 import { CusService } from "@/internal/customers/CusService";
 import { createRoute } from "../../../honoMiddlewares/routeHandler";
@@ -34,7 +35,18 @@ export const handleExternalAggregateEvents = createRoute({
 			custom_range,
 			filter_by,
 			max_groups,
+			aggregate_on,
 		} = c.req.valid("json");
+
+		// Deduction rollups are keyed (org, env, customer_id, ...) in Tinybird, so a
+		// customer-less query cannot use the sort key prefix and degrades to a scan.
+		if (aggregate_on && !customer_id) {
+			throw new RecaseError({
+				message: "customer_id is required when aggregate_on is set",
+				code: ErrCode.InvalidRequest,
+				statusCode: StatusCodes.BAD_REQUEST,
+			});
+		}
 
 		let customer: Awaited<ReturnType<typeof CusService.getFull>> | undefined;
 		let aggregateAll = false;
@@ -44,6 +56,8 @@ export const handleExternalAggregateEvents = createRoute({
 				ctx,
 				idOrInternalId: customer_id,
 				withSubs: true,
+				// Deductions resolve each balance's owning entity from the customer.
+				withEntities: Boolean(aggregate_on),
 			});
 
 			if (!customer) {
@@ -159,9 +173,28 @@ export const handleExternalAggregateEvents = createRoute({
 			}));
 		}
 
+		const deductions =
+			aggregate_on === "deducted" && customer
+				? await aggregateDeductions({
+						ctx,
+						params: {
+							customer,
+							customerId: customer_id as string,
+							entityId: entity_id,
+							featureIds,
+							groupBy: group_by,
+							interval: range,
+							customRange: custom_range,
+							binSize: bin_size ?? "day",
+							maxGroups: max_groups,
+						},
+					})
+				: undefined;
+
 		const v1Response = {
 			list: v1List,
 			total,
+			...(deductions ? { deductions } : {}),
 		};
 
 		const versionedResponse = applyResponseVersionChanges({

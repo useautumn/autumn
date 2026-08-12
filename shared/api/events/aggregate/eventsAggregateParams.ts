@@ -64,6 +64,10 @@ export const ExtEventsAggregateParamsSchema = z.object({
 		description:
 			"Maximum number of distinct group values to return per time bin when using group_by. Remaining values are bundled into an 'Other' bucket. Defaults to 9",
 	}),
+	aggregate_on: z.literal("deducted").optional().meta({
+		description:
+			'Set to "deducted" to additionally return a per-balance breakdown of what each event consumed, under `deductions`. Purely additive: `list` and `total` are unchanged. Requires customer_id.',
+	}),
 });
 
 export const EventsAggregateParamsSchema =

@@ -1,4 +1,11 @@
 export {
+	type AggregateDeductionsPipeParams,
+	type AggregateDeductionsPipeRow,
+	aggregateDeductionsPipeParamsSchema,
+	aggregateDeductionsPipeResponseSchema,
+	createAggregateDeductionsPipe,
+} from "./aggregateDeductionsPipe.js";
+export {
 	type AggregateGroupablePipeParams,
 	type AggregateGroupablePipeRow,
 	aggregateGroupablePipeParamsSchema,

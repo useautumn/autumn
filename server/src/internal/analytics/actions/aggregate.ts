@@ -87,7 +87,7 @@ const intervalToDays = ({
 };
 
 /** Calculates start and end dates for the query */
-const calculateDateRange = async ({
+export const calculateDateRange = async ({
 	ctx,
 	params,
 }: {
