@@ -17,6 +17,7 @@ import {
 	getUpdateCustomerProducts,
 } from "@/internal/billing/v2/utils/billingPlan/customerProductPlanMutations";
 import { CusService } from "@/internal/customers/CusService";
+import { invalidateCachedFullSubject } from "@/internal/customers/cache/fullSubject/actions/invalidate/invalidateFullSubject";
 import { CusProductService } from "@/internal/customers/cusProducts/CusProductService";
 import { CusEntService } from "@/internal/customers/cusProducts/cusEnts/CusEntitlementService";
 import { replaceScheduledPhaseCustomerProductIds } from "@/internal/customers/schedules/repos/replaceScheduledPhaseCustomerProductIds";
@@ -33,14 +34,24 @@ export const executeAutumnBillingPlan = async ({
 	stripeInvoice,
 	stripeInvoiceItems,
 	autumnInvoice,
+	clearCache = true,
 }: {
 	ctx: AutumnContext;
 	autumnBillingPlan: AutumnBillingPlan;
 	stripeInvoice?: Stripe.Invoice;
 	stripeInvoiceItems?: Stripe.InvoiceItem[];
 	autumnInvoice?: Invoice;
+	clearCache?: boolean;
 }) => {
 	const { db } = ctx;
+	const clearCustomerCache = () =>
+		invalidateCachedFullSubject({
+			ctx,
+			customerId: autumnBillingPlan.customerId,
+			source: "executeAutumnBillingPlan",
+			flushBalances: true,
+		});
+	if (clearCache) await clearCustomerCache();
 	const {
 		insertCustomerProducts,
 		customPrices,
@@ -241,4 +252,6 @@ export const executeAutumnBillingPlan = async ({
 			billingLineItems: autumnBillingPlan.lineItems,
 		});
 	}
+
+	if (clearCache) await clearCustomerCache();
 };
