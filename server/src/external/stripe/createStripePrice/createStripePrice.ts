@@ -26,8 +26,8 @@ import {
 import { createStripeEmptyPrice } from "./createStripeEmptyPrice";
 import { createStripeFixedPrice } from "./createStripeFixedPrice";
 import { createStripeInArrearPrice } from "./createStripeInArrear";
-import { createStripeOneOffTieredProduct } from "./createStripeOneOffTiered";
 import { createStripePrepaid } from "./createStripePrepaid";
+import { resolveStripeFeatureProduct } from "./resolveStripeFeatureProduct";
 
 const CREATE_STRIPE_EMPTY_PRICES = false;
 
@@ -96,10 +96,14 @@ const checkCurStripePrice = async ({
 	}
 
 	// Get stripe product
-	let stripeProd: Stripe.Product | null = null;
-	if (!config.stripe_product_id) {
-		stripeProd = null;
-	} else {
+	const expandedPriceProduct = stripePrice?.product;
+	let stripeProd =
+		expandedPriceProduct &&
+		typeof expandedPriceProduct !== "string" &&
+		!("deleted" in expandedPriceProduct)
+			? expandedPriceProduct
+			: null;
+	if (!stripeProd && config.stripe_product_id) {
 		try {
 			stripeProd = await stripeCli.products.retrieve(config.stripe_product_id!);
 			if (!stripeProd.active) {
@@ -194,13 +198,17 @@ export const createStripePriceIFNotExist = async ({
 		});
 	}
 
-	const { stripePrice, stripeEmptyPrice, stripePrepaidPriceV2, stripeProd } =
-		await checkCurStripePrice({
-			price,
-			stripeCli,
-			currency,
-			orgDefault,
-		});
+	const {
+		stripePrice,
+		stripeEmptyPrice,
+		stripePrepaidPriceV2,
+		stripeProd: currentStripeProduct,
+	} = await checkCurStripePrice({
+		price,
+		stripeCli,
+		currency,
+		orgDefault,
+	});
 
 	setPriceCurrencyStripeId({
 		config,
@@ -209,9 +217,20 @@ export const createStripePriceIFNotExist = async ({
 		slot: "stripe_price_id",
 		id: stripePrice?.id,
 	});
-	config.stripe_product_id = stripeProd?.id;
+	config.stripe_product_id = currentStripeProduct?.id;
 
 	const isOneOffAndTiered = priceUtils.isTieredOneOff({ price, product });
+	const stripeProd = isFixed
+		? currentStripeProduct
+		: await resolveStripeFeatureProduct({
+				ctx,
+				stripeCli,
+				price,
+				product,
+				entitlements,
+				currentStripeProduct,
+			});
+	config.stripe_product_id = stripeProd?.id;
 
 	// 1. If fixed price, just create price
 	if (
@@ -232,17 +251,6 @@ export const createStripePriceIFNotExist = async ({
 
 	// 2. If prepaid
 	if (billingType === BillingType.UsageInAdvance) {
-		if (isOneOffAndTiered && !stripeProd) {
-			logger.info(`Creating stripe one off tiered product`);
-			await createStripeOneOffTieredProduct({
-				db,
-				stripeCli,
-				price,
-				entitlements,
-				product,
-			});
-		}
-
 		if (!isOneOffAndTiered && !stripePrice) {
 			logger.info(`Creating stripe prepaid price`);
 			await createStripePrepaid({

@@ -8,7 +8,7 @@ import {
 } from "@autumn/shared";
 import { buildConflictUpdateColumns } from "@server/db/dbUtils";
 import type { DrizzleCli } from "@server/db/initDrizzle";
-import { and, eq, inArray, or, sql } from "drizzle-orm";
+import { and, asc, eq, inArray, or, sql } from "drizzle-orm";
 
 export class PriceService {
 	static async get({ db, id }: { db: DrizzleCli; id: string }) {
@@ -161,6 +161,25 @@ export class PriceService {
 			if (cfg.stripe_product_id) byStripeProductId[cfg.stripe_product_id] = row;
 		}
 		return byStripeProductId;
+	}
+
+	static async listByInternalFeatureId({
+		db,
+		orgId,
+		internalFeatureId,
+	}: {
+		db: DrizzleCli;
+		orgId: string;
+		internalFeatureId: string;
+	}) {
+		return (await db.query.prices.findMany({
+			where: and(
+				eq(prices.org_id, orgId),
+				sql`${prices.config} ->> 'internal_feature_id' = ${internalFeatureId}`,
+				sql`${prices.config} ->> 'stripe_product_id' IS NOT NULL`,
+			),
+			orderBy: [asc(prices.created_at)],
+		})) as Price[];
 	}
 
 	static async updateConfig({

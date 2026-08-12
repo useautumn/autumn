@@ -345,7 +345,7 @@ export const createStripeInArrearPrice = async ({
 					usage_type: "metered",
 				}
 			: undefined,
-		nickname: `Autumn Price (${relatedEnt.feature.name})`,
+		nickname: `Autumn Price (${product.name})`,
 	});
 
 	setPriceCurrencyStripeId({

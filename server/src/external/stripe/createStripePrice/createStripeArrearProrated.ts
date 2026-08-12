@@ -104,7 +104,7 @@ export const createStripeMeteredPrice = async ({
 		...productData,
 		...priceAmountData,
 		currency,
-		nickname: `Autumn Price (${feature!.name}) [Placeholder]`,
+		nickname: `Autumn Price (${product.name}) [Placeholder]`,
 		recurring: {
 			...(billingIntervalToStripe({
 				interval: price.config!.interval,
@@ -232,7 +232,7 @@ export const createStripeArrearProrated = async ({
 		recurring: {
 			...(recurringData as any),
 		},
-		nickname: `Autumn Price (${relatedEnt.feature.name})`,
+		nickname: `Autumn Price (${product.name})`,
 	});
 
 	setPriceCurrencyStripeId({

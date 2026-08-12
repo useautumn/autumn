@@ -123,6 +123,7 @@ export const createStripePrepaid = async ({
 			...productData,
 			unit_amount_decimal: unitAmountDecimalStr,
 			currency,
+			nickname: `Autumn Price (${product.name})`,
 		});
 
 		config.stripe_product_id = stripePrice.product as string;
@@ -154,7 +155,7 @@ export const createStripePrepaid = async ({
 			recurring: {
 				...(recurringData as any),
 			},
-			nickname: `Autumn Price (${relatedEnt.feature.name})`,
+			nickname: `Autumn Price (${product.name})`,
 		});
 
 		config.stripe_product_id = stripePrice.product as string;
