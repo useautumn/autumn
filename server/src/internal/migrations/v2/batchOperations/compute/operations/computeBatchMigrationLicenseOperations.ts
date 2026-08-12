@@ -2,7 +2,10 @@ import type { Feature, FullProduct } from "@autumn/shared";
 import type { UpdatePlanOp } from "@autumn/shared/api/migrations/operations/customer/updatePlan/index.js";
 import { enrichEntitlementsWithFeatures } from "@autumn/shared/utils/productUtils/entUtils/enrichEntitlement.js";
 import { computeCustomerEntitlementInitialState } from "@/internal/billing/v2/actions/batchTransition/compute/operations/entitlementPriceOperations/computeCustomerEntitlementPatch.js";
-import { EnsurePlanLicensesResultSchema } from "@/internal/migrations/v2/prepare/modules/ensurePlanLicenses/types.js";
+import {
+	EnsurePlanLicensesResultSchema,
+	type PreparedPlanLicenseRef,
+} from "@/internal/migrations/v2/prepare/modules/ensurePlanLicenses/types.js";
 import { buildPrepareModuleKey } from "@/internal/migrations/v2/prepare/utils/index.js";
 import type { MigrationRuntime } from "@/internal/migrations/v2/types/migrationDefinition.js";
 import type {
@@ -14,6 +17,40 @@ const ensurePlanLicensesKey = buildPrepareModuleKey({
 	kind: "ensure_plan_licenses",
 	parts: ["update_plan"],
 });
+
+/** Traits the set-based lane cannot express. Listed once so a new verb inherits
+ * every guard rather than the subset its author remembered. */
+const UNSUPPORTED_LICENSE_TRAITS: {
+	code: BatchMigrationRejection["code"];
+	message: string;
+	carries: (artifact: PreparedPlanLicenseRef) => boolean | undefined;
+}[] = [
+	{
+		code: "priced_remove_item",
+		message:
+			"A paid item needs a Stripe write; only free entitlements are batch-lowered.",
+		carries: (artifact) => artifact.removes_priced_item,
+	},
+	{
+		code: "rollover_remove_item",
+		message:
+			"Rollover balances outlive the row they hang off; carrying them across is per-customer work.",
+		carries: (artifact) => artifact.removes_rollover_item,
+	},
+	{
+		code: "entity_scoped_entitlement",
+		message:
+			"Entity-scoped entitlements carry per-entity sub-balances; row counts vary per customer.",
+		carries: (artifact) => artifact.removes_entity_scoped_item,
+	},
+	{
+		code: "pooled_add_item",
+		message:
+			"A pooled item's anchor row hangs off no customer product, so the set-based writes never reach it.",
+		carries: (artifact) =>
+			artifact.adds_pooled_item || artifact.removes_pooled_item,
+	},
+];
 
 export const computeBatchMigrationLicenseOperations = ({
 	migration,
@@ -78,22 +115,24 @@ export const computeBatchMigrationLicenseOperations = ({
 		}
 
 		for (const artifact of artifacts) {
-			if (artifact.removes_filter) {
-				if (artifact.removes_priced_item) {
-					rejections.push({
-						code: "priced_remove_item",
-						opIndex,
-						planId: fromProduct.id,
-						message:
-							"upsert_licenses remove_items matching a paid item needs a Stripe write; only free entitlements are batch-lowered.",
-						details: {
-							licensePlanId: entry.license_plan_id,
-							featureId: artifact.removes_filter.feature_id,
-						},
-					});
-					continue;
-				}
+			const unsupported = UNSUPPORTED_LICENSE_TRAITS.find(
+				({ carries }) => carries(artifact) === true,
+			);
+			if (unsupported) {
+				rejections.push({
+					code: unsupported.code,
+					opIndex,
+					planId: fromProduct.id,
+					message: unsupported.message,
+					details: {
+						licensePlanId: entry.license_plan_id,
+						featureId: artifact.removes_filter?.feature_id,
+					},
+				});
+				continue;
+			}
 
+			if (artifact.removes_filter) {
 				operations.push({
 					type: "add_license_entitlement",
 					licensePlanId: entry.license_plan_id,
@@ -128,7 +167,7 @@ export const computeBatchMigrationLicenseOperations = ({
 
 			if (enriched.entity_feature_id) {
 				rejections.push({
-					code: "entity_scoped_entitlement_add",
+					code: "entity_scoped_entitlement",
 					opIndex,
 					planId: fromProduct.id,
 					message:

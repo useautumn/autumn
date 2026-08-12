@@ -1,8 +1,13 @@
 import {
+	composeMatchKey,
 	type DbPlanLicense,
+	EntInterval,
 	type Entitlement,
+	type FullProduct,
 	findFeatureById,
 	isOneOffProduct,
+	type PlanItemFilter,
+	planItemFilterMatchKey,
 	planLicenses,
 } from "@autumn/shared";
 import type { UpdatePlanOp } from "@autumn/shared/api/migrations/operations/customer/updatePlan/index.js";
@@ -31,17 +36,96 @@ import type {
 
 type LicenseItemRef = PreparedPlanLicenseRef["base_item_refs"][number];
 
+/** Mirrors removeLicenseEntitlementRows' interval predicate so the guard sees
+ * exactly the rows that deletion would drop. */
+const entitlementMatchesRemovalInterval = ({
+	entitlement,
+	filter,
+}: {
+	entitlement: Entitlement;
+	filter: PlanItemFilter;
+}) => {
+	if (filter.interval === undefined) return true;
+	return (
+		String(entitlement.interval ?? EntInterval.Lifetime) ===
+			String(filter.interval) &&
+		(entitlement.interval_count ?? 1) === (filter.interval_count ?? 1)
+	);
+};
+
+/** What the batch lane cannot express about a catalog entitlement it is about to
+ * drop or move. Both verbs resolve it the same way so a guard can never land on
+ * one and miss the other. */
+const unsupportedTraitsOf = ({
+	licenseProduct,
+	entitlementId,
+	internalFeatureId,
+	filter,
+	baseItemRefs,
+}: {
+	licenseProduct: FullProduct;
+	entitlementId?: string;
+	internalFeatureId: string;
+	filter?: PlanItemFilter;
+	baseItemRefs: LicenseItemRef[];
+}) => {
+	const matched = licenseProduct.entitlements.filter((entitlement) => {
+		if (entitlementId) return entitlement.id === entitlementId;
+		if (entitlement.internal_feature_id !== internalFeatureId) return false;
+		return filter
+			? entitlementMatchesRemovalInterval({ entitlement, filter })
+			: true;
+	});
+
+	return {
+		priced: baseItemRefs.some(
+			(ref) => ref.internalFeatureId === internalFeatureId && "priceId" in ref,
+		),
+		entityScoped: matched.some((entitlement) =>
+			Boolean(entitlement.entity_feature_id),
+		),
+		rollover: matched.some((entitlement) => Boolean(entitlement.rollover)),
+		pooled: matched.some((entitlement) => entitlement.pooled === true),
+	};
+};
+
+/** Supersession keys on feature AND interval, the identity diffPlanV1 pairs
+ * items by, so an item only ever replaces one at its own interval. */
+const supersessionKey = ({
+	featureId,
+	interval,
+	intervalCount,
+}: {
+	featureId: string;
+	interval?: string | null;
+	intervalCount?: number | null;
+}) => `${featureId}|${interval ?? ""}|${intervalCount ?? 1}`;
+
+const supersessionKeysByEntitlementId = (licenseProduct: FullProduct) =>
+	new Map(
+		licenseProduct.entitlements.map((entitlement) => [
+			entitlement.id,
+			supersessionKey({
+				featureId: entitlement.feature_id ?? "",
+				interval: entitlement.interval,
+				intervalCount: entitlement.interval_count,
+			}),
+		]),
+	);
+
 const replacedEntitlementId = ({
 	refs,
-	internalFeatureId,
+	matchKey,
+	matchKeys,
 }: {
 	refs: LicenseItemRef[];
-	internalFeatureId: string;
+	matchKey: string;
+	matchKeys: Map<string, string>;
 }) =>
 	refs.find(
 		(ref) =>
 			ref.entitlementId !== undefined &&
-			ref.internalFeatureId === internalFeatureId,
+			matchKeys.get(ref.entitlementId) === matchKey,
 	)?.entitlementId;
 
 export type EnsurePlanLicensesInput = {
@@ -116,6 +200,7 @@ export const ensurePlanLicenses: PrepareModule<
 							idOrInternalId: entry.license_plan_id,
 						}));
 					const baseItemRefs = derivePlanLicenseItemRefs(licenseProduct);
+					const baseMatchKeys = supersessionKeysByEntitlementId(licenseProduct);
 					const hash = hashJson({ value: { entry } });
 					const planLicenseId = planLicenseIdFor({
 						scopeId,
@@ -170,6 +255,23 @@ export const ensurePlanLicenses: PrepareModule<
 							);
 						}
 
+						const supersededEntitlementId = replacedEntitlementId({
+							refs: baseItemRefs,
+							matchKey: supersessionKey({
+								featureId: item.feature_id,
+								interval: item.reset?.interval ?? item.price?.interval,
+								intervalCount:
+									item.reset?.interval_count ?? item.price?.interval_count,
+							}),
+							matchKeys: baseMatchKeys,
+						});
+						const supersededTraits = unsupportedTraitsOf({
+							licenseProduct,
+							entitlementId: supersededEntitlementId,
+							internalFeatureId: feature.internal_id,
+							baseItemRefs,
+						});
+
 						// Parent-independent by design: every parent matched by this op
 						// shares one entitlement, so only the first parent mints it.
 						if (!entitlementsById.has(entitlementId)) {
@@ -190,10 +292,20 @@ export const ensurePlanLicenses: PrepareModule<
 							plan_license_id: planLicenseId,
 							entitlement_id: entitlementId,
 							internal_feature_id: feature.internal_id,
-							replaces_entitlement_id: replacedEntitlementId({
-								refs: baseItemRefs,
-								internalFeatureId: feature.internal_id,
+							match_key: supersessionKey({
+								featureId: item.feature_id,
+								interval: item.reset?.interval ?? item.price?.interval,
+								intervalCount:
+									item.reset?.interval_count ?? item.price?.interval_count,
 							}),
+							adds_pooled_item: newEnt.pooled === true,
+							replaces_entitlement_id: supersededEntitlementId,
+							...(supersededEntitlementId
+								? {
+										removes_entity_scoped_item: supersededTraits.entityScoped,
+										removes_rollover_item: supersededTraits.rollover,
+									}
+								: {}),
 							base_item_refs: baseItemRefs,
 						});
 					}
@@ -203,6 +315,13 @@ export const ensurePlanLicenses: PrepareModule<
 							(candidate) => candidate.id === filter.feature_id,
 						);
 						if (!feature) continue;
+
+						const removedTraits = unsupportedTraitsOf({
+							licenseProduct,
+							internalFeatureId: feature.internal_id,
+							filter,
+							baseItemRefs,
+						});
 
 						artifacts.push({
 							op_index: opIndex,
@@ -214,12 +333,16 @@ export const ensurePlanLicenses: PrepareModule<
 							is_one_off: isOneOffProduct({ prices: licenseProduct.prices }),
 							plan_license_id: planLicenseId,
 							internal_feature_id: feature.internal_id,
+							match_key: supersessionKey({
+								featureId: filter.feature_id ?? "",
+								interval: filter.interval,
+								intervalCount: filter.interval_count,
+							}),
 							removes_filter: filter,
-							removes_priced_item: baseItemRefs.some(
-								(ref) =>
-									ref.internalFeatureId === feature.internal_id &&
-									"priceId" in ref,
-							),
+							removes_priced_item: removedTraits.priced,
+							removes_entity_scoped_item: removedTraits.entityScoped,
+							removes_rollover_item: removedTraits.rollover,
+							removes_pooled_item: removedTraits.pooled,
 							base_item_refs: baseItemRefs,
 						});
 					}
@@ -259,21 +382,24 @@ export const ensurePlanLicenses: PrepareModule<
 			const refs =
 				refsByPlanLicenseId.get(artifact.plan_license_id) ??
 				new Map<string, LicenseItemRef>();
-			const replacedFeatureIds = new Set(
+			const supersededEntitlementIds = new Set(
 				planned.artifacts
 					.filter(
 						(candidate) =>
 							candidate.plan_license_id === artifact.plan_license_id,
 					)
-					.map((candidate) => candidate.internal_feature_id),
+					.flatMap((candidate) =>
+						candidate.replaces_entitlement_id
+							? [candidate.replaces_entitlement_id]
+							: [],
+					),
 			);
 			for (const ref of artifact.base_item_refs) {
 				if (
-					ref.internalFeatureId &&
-					replacedFeatureIds.has(ref.internalFeatureId)
-				) {
+					ref.entitlementId &&
+					supersededEntitlementIds.has(ref.entitlementId)
+				)
 					continue;
-				}
 				refs.set(`${ref.entitlementId ?? ""}:${ref.priceId ?? ""}`, ref);
 			}
 			if (artifact.entitlement_id) {
