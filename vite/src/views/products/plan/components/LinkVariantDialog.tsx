@@ -39,7 +39,7 @@ export function LinkVariantDialog({
 
 	const basePlanOptions = products.filter(
 		(candidate) =>
-			candidate.id !== product.id && !(candidate.base_id || candidate.archived),
+			candidate.id !== product.id && !candidate.base_id && !candidate.archived,
 	);
 
 	return (
@@ -54,7 +54,7 @@ export function LinkVariantDialog({
 				<div className="py-4">
 					<FormLabel>Base plan</FormLabel>
 					<Select value={basePlanId} onValueChange={setBasePlanId}>
-						<SelectTrigger className="w-full">
+						<SelectTrigger className="w-full" aria-label="Base plan">
 							<SelectValue placeholder="Select base plan" />
 						</SelectTrigger>
 						<SelectContent>

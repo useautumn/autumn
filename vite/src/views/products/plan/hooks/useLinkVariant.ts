@@ -1,39 +1,41 @@
 import type { ProductV2 } from "@autumn/shared";
+import { useMutation } from "@tanstack/react-query";
 import { useState } from "react";
 import { toast } from "sonner";
 import { useProductsQuery } from "@/hooks/queries/useProductsQuery";
 import { ProductService } from "@/services/products/ProductService";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
+import { getBackendErr } from "@/utils/genUtils";
 
 export function useLinkVariant(product: ProductV2) {
 	const axiosInstance = useAxiosInstance();
 	const { invalidate: invalidateProducts } = useProductsQuery();
 
 	const [open, setOpen] = useState(false);
-	const [isLoading, setIsLoading] = useState(false);
 	const [basePlanId, setBasePlanId] = useState("");
 
-	const onLink = async () => {
-		if (!basePlanId) {
-			toast.error("Select a base plan");
-			return;
-		}
-		setIsLoading(true);
-		try {
+	const { mutate: linkToBasePlan, isPending: isLoading } = useMutation({
+		mutationFn: async (baseId: string) => {
 			await ProductService.updateProduct(axiosInstance, product.id, {
-				base_plan_id: basePlanId,
+				base_plan_id: baseId,
 			});
+		},
+		onSuccess: async () => {
 			toast.success("Plan linked as variant");
 			setOpen(false);
 			setBasePlanId("");
 			await invalidateProducts();
-		} catch (error) {
-			const message = (error as { response?: { data?: { message?: string } } })
-				?.response?.data?.message;
-			toast.error(message ?? "Failed to link variant");
-		} finally {
-			setIsLoading(false);
+		},
+		onError: (error) =>
+			toast.error(getBackendErr(error, "Failed to link variant")),
+	});
+
+	const onLink = () => {
+		if (!basePlanId) {
+			toast.error("Select a base plan");
+			return;
 		}
+		linkToBasePlan(basePlanId);
 	};
 
 	const dialogProps = {

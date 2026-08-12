@@ -26,9 +26,9 @@ export function DetachVariantDialog({
 }: DetachVariantDialogProps) {
 	return (
 		<Dialog open={open} onOpenChange={setOpen}>
-			<DialogContent className="max-w-md" onClick={(e) => e.stopPropagation()}>
+			<DialogContent className="max-w-md">
 				<DialogHeader>
-					<DialogTitle className="truncate">Detach from base</DialogTitle>
+					<DialogTitle>Detach from base</DialogTitle>
 					<DialogDescription>
 						{product.name} will become a standalone plan and stop inheriting
 						changes from its base plan.

@@ -1,20 +1,22 @@
 import type { ProductV2 } from "@autumn/shared";
-import { useMemo } from "react";
 import { useProductsQuery } from "@/hooks/queries/useProductsQuery";
 
+/**
+ * Linking is only offered on standalone, unarchived plans; detaching is only
+ * offered on plans that already have a base.
+ */
 export function useVariantLinkVisibility(product: ProductV2) {
 	const { products } = useProductsQuery();
 
 	// base_id lives on the products-list entry, not the store product.
-	return useMemo(() => {
-		const current = products.find((p) => p.id === product.id);
-		const isVariant = !!current?.base_id && current.base_id !== product.id;
-		const hasVariants = products.some((p) => p.base_id === product.id);
-		const isArchived = !!(current?.archived ?? product.archived);
+	const listedProduct = products.find((p) => p.id === product.id);
+	const isVariant =
+		!!listedProduct?.base_id && listedProduct.base_id !== product.id;
+	const hasVariants = products.some((p) => p.base_id === product.id);
+	const isArchived = !!(listedProduct?.archived ?? product.archived);
 
-		return {
-			canLink: !(isVariant || hasVariants || isArchived),
-			canDetach: isVariant,
-		};
-	}, [products, product.id, product.archived]);
+	return {
+		canLink: !(isVariant || hasVariants || isArchived),
+		canDetach: isVariant,
+	};
 }
