@@ -1,16 +1,18 @@
-import type { Feature, FullProduct, Product } from "@autumn/shared";
+import type { Feature, FreeTrial, FullProduct, Product } from "@autumn/shared";
 import type { EntitlementPricesPlan } from "@/internal/products/actions/computeEntitlementPricesPlan";
 import { getEntsWithFeature } from "@/internal/products/entitlements/entitlementUtils.js";
 
-/** Join product stamp + projected prices/ents into the next FullProduct. */
+/** Join product stamp + projected prices/ents/trial into the next FullProduct. */
 export const assembleNextFullProduct = ({
 	product,
 	entitlementPricesPlan,
+	freeTrial,
 	features,
 	currentFullProduct,
 }: {
 	product: Product;
 	entitlementPricesPlan?: EntitlementPricesPlan;
+	freeTrial: FreeTrial | null;
 	features: Feature[];
 	currentFullProduct: FullProduct | null;
 }): FullProduct => {
@@ -28,6 +30,6 @@ export const assembleNextFullProduct = ({
 		...product,
 		prices,
 		entitlements,
-		free_trial: currentFullProduct?.free_trial ?? null,
+		free_trial: freeTrial,
 	} as FullProduct;
 };

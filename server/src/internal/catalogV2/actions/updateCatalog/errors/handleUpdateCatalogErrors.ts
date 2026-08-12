@@ -2,6 +2,8 @@ import type { UpdateCatalogParams } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { handleRemoveFeatureErrors } from "@/internal/catalogV2/actions/updateCatalog/errors/handleRemoveFeatureErrors/handleRemoveFeatureErrors";
 import { handleUpdateFeatureErrors } from "@/internal/catalogV2/actions/updateCatalog/errors/handleUpdateFeatureErrors/handleUpdateFeatureErrors";
+import { handleUpsertProductErrors } from "@/internal/catalogV2/actions/updateCatalog/errors/handleUpsertProductErrors/handleUpsertProductErrors";
+import { handleUpsertProductRenameErrors } from "@/internal/catalogV2/actions/updateCatalog/errors/handleUpsertProductRenameErrors";
 import { handleUpsertProductVersioningErrors } from "@/internal/catalogV2/actions/updateCatalog/errors/handleUpsertProductVersioningErrors";
 import type { UpdateCatalogContext } from "@/internal/catalogV2/actions/updateCatalog/types/updateCatalogContext";
 import type { UpdateCatalogPlan } from "@/internal/catalogV2/actions/updateCatalog/types/updateCatalogPlan";
@@ -20,5 +22,16 @@ export const handleUpdateCatalogErrors = ({
 }): void => {
 	handleUpdateFeatureErrors({ ctx, catalogContext, updateCatalogPlan });
 	handleRemoveFeatureErrors({ updateCatalogPlan });
-	handleUpsertProductVersioningErrors({ params });
+	handleUpsertProductVersioningErrors({
+		params,
+		productStatesContext: catalogContext.productStatesContext,
+	});
+	handleUpsertProductRenameErrors({
+		params,
+		productStatesContext: catalogContext.productStatesContext,
+	});
+	handleUpsertProductErrors({
+		updateCatalogPlan,
+		productStatesContext: catalogContext.productStatesContext,
+	});
 };

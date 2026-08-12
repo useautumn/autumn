@@ -38,6 +38,7 @@ const getFreeTrialV2Response = ({
 		duration_type: product.free_trial.duration,
 		duration_length: product.free_trial.length,
 		card_required: product.free_trial.card_required ?? false,
+		on_end: product.free_trial.on_end ?? null,
 	});
 };
 

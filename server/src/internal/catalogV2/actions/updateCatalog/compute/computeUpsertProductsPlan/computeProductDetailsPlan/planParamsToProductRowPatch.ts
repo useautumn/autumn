@@ -1,4 +1,8 @@
-import type { Product, UpdateCatalogPlanParams } from "@autumn/shared";
+import {
+	type Product,
+	pickBillingControlColumns,
+	type UpdateCatalogPlanParams,
+} from "@autumn/shared";
 
 /**
  * Only-provided detail columns as a row patch.
@@ -36,6 +40,12 @@ export const planParamsToProductRowPatch = ({
 		};
 	}
 	if (planParams.metadata !== undefined) patch.metadata = planParams.metadata;
+	if (planParams.billing_controls !== undefined) {
+		Object.assign(
+			patch,
+			pickBillingControlColumns(planParams.billing_controls),
+		);
+	}
 
 	return patch;
 };
