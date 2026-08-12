@@ -31,6 +31,30 @@ const queuedCounts = new Map<string, number>();
 export const hasQueuedThreadMessage = (runKey: string) =>
 	(queuedCounts.get(runKey) ?? 0) > 0;
 
+/** Runs `task` after the thread's current run, and holds the thread until it
+ * finishes — the engine can't drive two turns on one session. */
+export const runExclusiveThreadTask = async <T>({
+	runKey,
+	task,
+}: {
+	runKey: string;
+	task: () => Promise<T>;
+}): Promise<T> => {
+	const tail = newRunTails.get(runKey) ?? Promise.resolve();
+	const result = tail.then(task);
+	// The tail must never reject, or every task queued behind it is skipped.
+	const next = result.then(
+		() => undefined,
+		() => undefined,
+	);
+	newRunTails.set(runKey, next);
+	try {
+		return await result;
+	} finally {
+		if (newRunTails.get(runKey) === next) newRunTails.delete(runKey);
+	}
+};
+
 export const dispatchThreadMessage = async ({
 	hasAttachments,
 	onFollowUpInjected,
@@ -85,20 +109,14 @@ export const dispatchThreadMessage = async ({
 
 	// New runs (and non-injectable messages) wait for the thread's current
 	// run — the engine can't drive two turns on one session.
-	const tail = newRunTails.get(runKey) ?? Promise.resolve();
 	queuedCounts.set(runKey, (queuedCounts.get(runKey) ?? 0) + 1);
-	const next = tail
-		.then(() => {
+	await runExclusiveThreadTask({
+		runKey,
+		task: async () => {
 			const remaining = (queuedCounts.get(runKey) ?? 1) - 1;
 			if (remaining > 0) queuedCounts.set(runKey, remaining);
 			else queuedCounts.delete(runKey);
-			return runNewMessage();
-		})
-		.catch(() => {});
-	newRunTails.set(runKey, next);
-	try {
-		await next;
-	} finally {
-		if (newRunTails.get(runKey) === next) newRunTails.delete(runKey);
-	}
+			await runNewMessage();
+		},
+	}).catch(() => {});
 };

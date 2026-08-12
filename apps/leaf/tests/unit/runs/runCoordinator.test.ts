@@ -2,6 +2,7 @@ import { describe, expect, test } from "bun:test";
 import {
 	dispatchThreadMessage,
 	isStopMessage,
+	runExclusiveThreadTask,
 } from "../../../src/internal/runs/runCoordinator.js";
 import {
 	closeRun,
@@ -160,6 +161,77 @@ describe("dispatchThreadMessage", () => {
 
 		expect(newRuns).toBe(1);
 		closeRun({ key: "co5", run });
+	});
+
+	test("holds a new run until an exclusive thread task finishes", async () => {
+		const order: string[] = [];
+		const approvalResume = runExclusiveThreadTask({
+			runKey: "co7",
+			task: async () => {
+				order.push("approval:start");
+				await Bun.sleep(20);
+				order.push("approval:end");
+				return "resumed";
+			},
+		});
+		const message = dispatchThreadMessage({
+			hasAttachments: false,
+			providerUserId: "U1",
+			runKey: "co7",
+			runNewMessage: async () => {
+				order.push("message:start");
+			},
+			text: "and now cancel it",
+		});
+
+		const [resumeResult] = await Promise.all([approvalResume, message]);
+		expect(resumeResult).toBe("resumed");
+		expect(order).toEqual(["approval:start", "approval:end", "message:start"]);
+	});
+
+	test("serializes two approval resumes on one thread", async () => {
+		const order: string[] = [];
+		const resume = (label: string) =>
+			runExclusiveThreadTask({
+				runKey: "co8",
+				task: async () => {
+					order.push(`${label}:start`);
+					await Bun.sleep(10);
+					order.push(`${label}:end`);
+				},
+			});
+
+		await Promise.all([resume("first"), resume("second")]);
+
+		expect(order).toEqual([
+			"first:start",
+			"first:end",
+			"second:start",
+			"second:end",
+		]);
+	});
+
+	test("frees the thread when an exclusive task throws", async () => {
+		const failing = runExclusiveThreadTask({
+			runKey: "co9",
+			task: async () => {
+				throw new Error("resume failed");
+			},
+		});
+
+		await expect(failing).rejects.toThrow("resume failed");
+		let newRuns = 0;
+		await dispatchThreadMessage({
+			hasAttachments: false,
+			providerUserId: "U1",
+			runKey: "co9",
+			runNewMessage: async () => {
+				newRuns += 1;
+			},
+			text: "try again",
+		});
+
+		expect(newRuns).toBe(1);
 	});
 
 	test("does not inject a different sender's message into the owner's run", async () => {
