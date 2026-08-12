@@ -9,10 +9,12 @@ import { resolveSlackCallerAuth } from "../../../../agent/runMessage/setup/resol
 import { denyEveApproval } from "../../../../harness/eve/approval.js";
 import { db } from "../../../../lib/db.js";
 import { logger as rootLogger } from "../../../../lib/logger.js";
-import { approvalStatusCard } from "../../../../ui/blocks.js";
+import { approvalCard, approvalStatusCard } from "../../../../ui/blocks.js";
 import { questionCard } from "../../../../ui/eveCards.js";
 import { createThrottledCardEditor } from "../../../../ui/throttledEditor.js";
 import { getInstallationOAuthAccessToken } from "../../../installations/actions/getInstallationOAuthAccessToken.js";
+import { runExclusiveThreadTask } from "../../../runs/runCoordinator.js";
+import { runKeyForThread } from "../../../runs/runRegistry.js";
 import { validateSlackAdminAccess } from "../../../slackAdmin/access.js";
 import { isInternalAutumnSlackProvider } from "../../../slackAdmin/provider.js";
 import { resolveApproval } from "../../actions/resolveApproval.js";
@@ -21,6 +23,7 @@ import type {
 	ApprovalActionDeps,
 	ApprovalAuthorization,
 	ApprovalCardStatus,
+	ApprovalRunResult,
 } from "../../types.js";
 import {
 	approvalErrorResult,
@@ -39,6 +42,27 @@ const detailsFromApproval = ({ approval }: { approval?: ChatApproval }) => ({
 	env: approval?.env,
 	preview: approval?.preview ?? undefined,
 });
+
+const isRetryableApprovalResult = (
+	result: ApprovalRunResult,
+): result is { error: true; message: string; retryable?: boolean } =>
+	"error" in result && result.retryable === true;
+
+// A resume drives the same session as a message run, so it takes the thread's
+// run slot rather than racing an in-flight turn (or a second approver's click).
+const approvalThreadRunKey = ({
+	approval,
+	event,
+}: {
+	approval: ChatApproval;
+	event: ActionEvent;
+}) =>
+	runKeyForThread({
+		channelId: approval.channel_id,
+		provider: approval.provider,
+		threadId: event.threadId,
+		workspaceId: approval.workspace_id,
+	});
 
 const authorizeSlackApprovalClicker = async ({
 	approval,
@@ -319,16 +343,20 @@ export const handleApprovalActionWithDeps = async ({
 		const heartbeat = setInterval(() => editor.requestEdit(), 10_000);
 		let result: Awaited<ReturnType<ApprovalActionDeps["resolveApproval"]>>;
 		try {
-			result = await deps.resolveApproval({
-				approval: claimed,
-				onProgress: (line) => {
-					statusText = line;
-					editor.requestEdit();
-				},
-				providerUserId,
-				approverToken: authorization?.allowed
-					? authorization.approverToken
-					: undefined,
+			result = await runExclusiveThreadTask({
+				runKey: approvalThreadRunKey({ approval: claimed, event }),
+				task: () =>
+					deps.resolveApproval({
+						approval: claimed,
+						onProgress: (line) => {
+							statusText = line;
+							editor.requestEdit();
+						},
+						providerUserId,
+						approverToken: authorization?.allowed
+							? authorization.approverToken
+							: undefined,
+					}),
 			});
 		} finally {
 			clearInterval(heartbeat);
@@ -341,6 +369,27 @@ export const handleApprovalActionWithDeps = async ({
 			status: failed ? "failed" : "approved",
 			tool: details.toolName,
 		});
+
+		// A retryable failure means the write never ran and the row went back to
+		// pending — keep the buttons so the same card can be approved again.
+		if (isRetryableApprovalResult(result)) {
+			await deps.editActionMessage({
+				content: approvalCard({
+					env: claimed.env,
+					id: approvalId,
+					preview: claimed.preview ?? undefined,
+					requesterId: claimed.provider_user_id,
+					toolArgs: details.toolArgs,
+					toolName: claimed.tool_name,
+				}),
+				event,
+			});
+			await deps.postThreadReply({
+				event,
+				markdown: `I couldn't complete that action (${result.message}) and nothing was written. The approval is still open — approve it again to retry.`,
+			});
+			return;
+		}
 
 		// The agent's continuation is conversation — it belongs in the thread,
 		// while the card stays a compact record of what ran.

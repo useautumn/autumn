@@ -39,7 +39,12 @@ export const resolveApproval = async ({
 
 	let result: ApprovalRunResult;
 	try {
-		result = await resume({ approval, onProgress, providerUserId, approverToken });
+		result = await resume({
+			approval,
+			onProgress,
+			providerUserId,
+			approverToken,
+		});
 	} catch (error) {
 		// A thrown resumer error means the write never ran — keep the approval
 		// pending so the user can retry.
@@ -50,14 +55,21 @@ export const resolveApproval = async ({
 		return approvalErrorResult(error, { retryable: true });
 	}
 
-	// Retryable errors leave the row pending; everything else is finalized.
-	if (!("error" in result && result.retryable)) {
-		await chatApprovalRepo.finalize({
+	// A retryable error means the write never ran — hand the row back to
+	// 'pending' so the card can be clicked again; everything else is finalized.
+	if ("error" in result && result.retryable) {
+		await chatApprovalRepo.release({
 			approvalId: approval.id,
 			db,
 			providerUserId,
-			status: "error" in result ? "failed" : "approved",
 		});
+		return result;
 	}
+	await chatApprovalRepo.finalize({
+		approvalId: approval.id,
+		db,
+		providerUserId,
+		status: "error" in result ? "failed" : "approved",
+	});
 	return result;
 };
