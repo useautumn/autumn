@@ -99,9 +99,9 @@ export const grantRewardEntitlements = async ({
 
 		const isBoolean = feature.type === FeatureType.Boolean;
 		const allowance = rewardEnt.allowance;
-		if (!isBoolean && (!allowance || allowance <= 0)) {
+		if (!isBoolean && (allowance == null || allowance < 0)) {
 			throw new RecaseError({
-				message: `Reward entitlement for feature "${feature.id}" must have a positive allowance`,
+				message: `Reward entitlement for feature "${feature.id}" must have a non-negative allowance`,
 				code: ErrCode.InvalidReward,
 				statusCode: 400,
 			});

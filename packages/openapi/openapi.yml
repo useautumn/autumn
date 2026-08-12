@@ -4439,6 +4439,25 @@ paths:
                       - vercel
                     type: string
                   description: Filter by customer processor type (stripe, revenuecat, vercel).
+                sort_order:
+                  enum:
+                    - asc
+                    - desc
+                  type: string
+                  description: Sort by customer creation time. Defaults to desc (newest first).
+                created_at_range:
+                  type: object
+                  properties:
+                    start:
+                      type: number
+                      description: Include customers created at or after this timestamp (epoch
+                        milliseconds, inclusive)
+                    end:
+                      type: number
+                      description: Include customers created at or before this timestamp (epoch
+                        milliseconds, inclusive)
+                  description: Filter by customer creation time (epoch milliseconds, inclusive
+                    bounds).
               title: ListCustomersParams
               examples:
                 - start_cursor: ""
@@ -37982,7 +38001,7 @@ webhooks:
       operationId: balancesLimitReached
       summary: Limit Reached
       description: Fired when a customer reaches the limit for a feature (included
-        allowance, max purchase, or spend limit).
+        allowance, max purchase, spend limit, or a usage-limit billing control).
       requestBody:
         required: true
         content:
@@ -38015,13 +38034,14 @@ webhooks:
                       description: The feature ID whose limit was reached.
                       type: string
                     limit_type:
-                      description: "Which limit was hit: included allowance, max purchase cap, or
-                        spend limit."
+                      description: "Which limit was hit: included allowance, max purchase cap, spend
+                        limit, or a usage-limit billing control."
                       type: string
                       enum:
                         - included
                         - max_purchase
                         - spend_limit
+                        - usage_limit
                   required:
                     - customer_id
                     - feature_id

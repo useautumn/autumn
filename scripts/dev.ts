@@ -1,6 +1,41 @@
 import { existsSync, readFileSync, rmSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
+import { resolveTriggerDevBranch } from "./triggerDevBranch.ts";
+
+function spawnTriggerDevBranchReaper({
+	projectRoot,
+	branch,
+	watchPid,
+}: {
+	projectRoot: string;
+	branch: string;
+	watchPid: number;
+}): void {
+	const reaperPath = join(
+		dirname(fileURLToPath(import.meta.url)),
+		"triggerDevBranchReaper.ts",
+	);
+	const proc = Bun.spawn(
+		[
+			"bun",
+			reaperPath,
+			"--watch-pid",
+			String(watchPid),
+			"--branch",
+			branch,
+			"--project-root",
+			projectRoot,
+		],
+		{
+			cwd: projectRoot,
+			detached: true,
+			stdio: ["ignore", "ignore", "ignore"],
+			env: process.env as Record<string, string>,
+		},
+	);
+	proc.unref();
+}
 
 const worktreeIdx = process.argv.indexOf("--worktree");
 const worktreeNum =
@@ -31,9 +66,11 @@ const LOCAL_EVE_URL = `http://localhost:${EVE_PORT}`;
 const EVE_SERVER_URL = process.env.EVE_SERVER_URL ?? LOCAL_EVE_URL;
 const EVE_INTERNAL_AUTH_TOKEN =
 	process.env.EVE_INTERNAL_AUTH_TOKEN ?? "local-eve-internal-token";
-const publicTunnelUrl = process.env.NGROK_URL?.replace(/\/$/, "");
-const CHAT_URL = process.env.CHAT_URL ?? publicTunnelUrl ?? LOCAL_CHAT_URL;
-const SLACK_BOT_URL = process.env.SLACK_BOT_URL ?? publicTunnelUrl ?? CHAT_URL;
+const AUTUMN_PUBLIC_API_URL =
+	process.env.AUTUMN_PUBLIC_API_URL ?? LOCAL_SERVER_URL;
+const publicApiUrl = AUTUMN_PUBLIC_API_URL.replace(/\/$/, "");
+const CHAT_URL = process.env.CHAT_URL ?? publicApiUrl;
+const SLACK_BOT_URL = process.env.SLACK_BOT_URL ?? publicApiUrl;
 const skipWorkers = false;
 const isProductionMode = process.argv.includes("--production");
 
@@ -44,13 +81,21 @@ const viteAppEnv = envFile.includes(".env.prod")
 		? "staging"
 		: "dev";
 const useLocalAuthUrls = viteAppEnv === "dev" && !isProductionMode;
+// `bun dev:services up` runs Dragonfly on :6379; use it instead of the shared
+// cloud cache. Worktrees provision their own and set this in their env file.
+const LOCAL_MISC_CACHE_URL = "redis://localhost:6379";
+const useLocalMiscCache =
+	viteAppEnv === "dev" && !isProductionMode && worktreeNum === 1;
 const localUrl = (value: string | undefined, fallback: string) =>
 	value && !value.includes(".useautumn.com") ? value : fallback;
-const slackRedirectFromPublicTunnel = publicTunnelUrl
-	? `${publicTunnelUrl}/slack/oauth/callback`
+const AUTUMN_API_URL = useLocalAuthUrls
+	? localUrl(process.env.AUTUMN_API_URL, LOCAL_SERVER_URL)
+	: (process.env.AUTUMN_API_URL ?? LOCAL_SERVER_URL);
+const slackRedirectFromPublicApi = publicApiUrl
+	? `${publicApiUrl}/slack/oauth/callback`
 	: undefined;
 const SLACK_REDIRECT_URI = useLocalAuthUrls
-	? (slackRedirectFromPublicTunnel ??
+	? (slackRedirectFromPublicApi ??
 		localUrl(
 			process.env.SLACK_REDIRECT_URI,
 			`${SLACK_BOT_URL}/slack/oauth/callback`,
@@ -109,6 +154,14 @@ async function startDev() {
 	const rootDir = dirname(fileURLToPath(import.meta.url));
 	const projectRoot = join(rootDir, "..");
 	const serverOnly = process.argv.includes("--server-only");
+
+	// Isolate local Trigger runs from coworkers sharing the Autumn DEV project.
+	// Server SDK + CLI both read TRIGGER_DEV_BRANCH (x-trigger-branch).
+	const triggerDevBranch = resolveTriggerDevBranch({
+		projectRoot,
+		worktreeNum,
+	});
+	process.env.TRIGGER_DEV_BRANCH = triggerDevBranch;
 
 	try {
 		if (serverOnly) {
@@ -173,8 +226,8 @@ async function startDev() {
 		if (serverOnly) {
 			// Only start server and workers (for test sandboxes)
 			if (isWindows) {
-				const serverCmd = `cd server && set SERVER_PORT=${SERVER_PORT} && bun start`;
-				const workersCmd = `cd server && bun workers`;
+				const serverCmd = `cd server && set SERVER_PORT=${SERVER_PORT} && set TRIGGER_DEV_BRANCH=${triggerDevBranch} && bun start`;
+				const workersCmd = `cd server && set TRIGGER_DEV_BRANCH=${triggerDevBranch} && bun workers`;
 				shellArgs = [
 					"cmd",
 					"/c",
@@ -184,7 +237,7 @@ async function startDev() {
 				shellArgs = [
 					"sh",
 					"-c",
-					`bunx concurrently -n server,workers -c green,yellow "cd server && SERVER_PORT=${SERVER_PORT} bun start" "cd server && bun workers"`,
+					`bunx concurrently -n server,workers -c green,yellow "cd server && SERVER_PORT=${SERVER_PORT} TRIGGER_DEV_BRANCH=${triggerDevBranch} bun start" "cd server && TRIGGER_DEV_BRANCH=${triggerDevBranch} bun workers"`,
 				];
 			}
 		} else {
@@ -192,10 +245,12 @@ async function startDev() {
 			const colors = ["green"];
 			const serverScript = isProductionMode ? "dev:prod" : "dev";
 			const workersScript = isProductionMode ? "workers:prod" : "workers:dev";
+			// Inline TRIGGER_DEV_BRANCH on the server cmd — inherited env alone
+			// is not enough (odw/ol can drop it); SDK must send x-trigger-branch.
 			const cmds = [
 				isWindows
-					? `"cd server && set SERVER_PORT=${SERVER_PORT} && bun ${serverScript}"`
-					: `"cd server && SERVER_PORT=${SERVER_PORT} bun ${serverScript}"`,
+					? `"cd server && set SERVER_PORT=${SERVER_PORT} && set TRIGGER_DEV_BRANCH=${triggerDevBranch} && bun ${serverScript}"`
+					: `"cd server && SERVER_PORT=${SERVER_PORT} TRIGGER_DEV_BRANCH=${triggerDevBranch} bun ${serverScript}"`,
 			];
 
 			if (!skipWorkers) {
@@ -203,19 +258,28 @@ async function startDev() {
 				colors.push("yellow");
 				cmds.push(
 					isWindows
-						? `"cd server && bun ${workersScript}"`
-						: `"cd server && bun ${workersScript}"`,
+						? `"cd server && set TRIGGER_DEV_BRANCH=${triggerDevBranch} && bun ${workersScript}"`
+						: `"cd server && TRIGGER_DEV_BRANCH=${triggerDevBranch} bun ${workersScript}"`,
 				);
 			}
 
 			names.push("trigger");
 			colors.push("cyan");
+			console.log(`Trigger DEV branch: ${triggerDevBranch}\n`);
+			// Detached: archives the branch when this scripts/dev.ts pid dies
+			// (Ctrl+C, crash, kill -9). Does not survive laptop power-off.
+			spawnTriggerDevBranchReaper({
+				projectRoot,
+				branch: triggerDevBranch,
+				watchPid: process.pid,
+			});
 			// Local Trigger's Bun worker can't resolve the optional Axiom transport.
-			// Run the installed CLI, not `bunx` — bunx resolves latest, which then
-			// mismatches the pinned @trigger.dev/* packages and refuses to build.
+			// --branch + TRIGGER_DEV_BRANCH keep worker + server on the same queue.
+			// Run the installed CLI, not bunx — bunx resolves latest and can
+			// mismatch the pinned @trigger.dev/* packages.
 			const triggerCmd = isWindows
-				? "set AXIOM_TOKEN= && bun run trigger dev"
-				: "env -u AXIOM_TOKEN bun run trigger dev";
+				? `set AXIOM_TOKEN= && bun run trigger dev --branch ${triggerDevBranch}`
+				: `env -u AXIOM_TOKEN bun run trigger dev --branch ${triggerDevBranch}`;
 			cmds.push(`"${triggerCmd}"`);
 
 			names.push("vite", "checkout");
@@ -245,9 +309,18 @@ async function startDev() {
 			// Forwards to the direct localhost port (not portless) so we avoid CA trust issues.
 			const stripeAvailable = Bun.spawnSync(["which", "stripe"]).exitCode === 0;
 			if (stripeAvailable) {
+				// Sandbox key only — never the live key. Passed via STRIPE_API_KEY so
+				// headless boxes need no `stripe login`, and via env rather than argv
+				// so it never shows up in `ps`.
+				const stripeEnv = {
+					...(process.env as Record<string, string>),
+					...(process.env.STRIPE_SANDBOX_SECRET_KEY
+						? { STRIPE_API_KEY: process.env.STRIPE_SANDBOX_SECRET_KEY }
+						: {}),
+				};
 				const auth = Bun.spawnSync(
 					["stripe", "customers", "list", "--limit", "1"],
-					{ stdout: "pipe", stderr: "pipe" },
+					{ stdout: "pipe", stderr: "pipe", env: stripeEnv },
 				);
 				if (auth.exitCode !== 0) {
 					const stderr = new TextDecoder().decode(auth.stderr);
@@ -280,6 +353,12 @@ async function startDev() {
 			cwd: projectRoot,
 			env: {
 				...process.env,
+				TRIGGER_DEV_BRANCH: triggerDevBranch,
+				// Sandbox key only. `stripe listen` reads STRIPE_API_KEY, so no
+				// `stripe login` is needed on a headless box.
+				...(process.env.STRIPE_SANDBOX_SECRET_KEY
+					? { STRIPE_API_KEY: process.env.STRIPE_SANDBOX_SECRET_KEY }
+					: {}),
 				VITE_PORT: VITE_PORT.toString(),
 				SERVER_PORT: SERVER_PORT.toString(),
 				CHECKOUT_PORT: CHECKOUT_PORT.toString(),
@@ -289,16 +368,14 @@ async function startDev() {
 				EVE_INTERNAL_AUTH_TOKEN,
 				MCP_DEBUG_PENDING_ACTIONS: process.env.MCP_DEBUG_PENDING_ACTIONS ?? "1",
 				// CMA runs in Anthropic's cloud and can't reach localhost — prefer the
-				// public NGROK_URL (proxied to leaf's /mcp) so Slack → CMA works locally.
-				MCP_SERVER_URL:
-					process.env.MCP_SERVER_URL ??
-					process.env.NGROK_URL ??
-					`http://localhost:${CHAT_PORT}`,
+				// public API origin (proxied to leaf's /mcp) so Slack → CMA works locally.
+				MCP_SERVER_URL: process.env.MCP_SERVER_URL ?? AUTUMN_PUBLIC_API_URL,
 				CHAT_SERVER_URL:
 					process.env.CHAT_SERVER_URL ?? `http://localhost:${CHAT_PORT}`,
 				MCP_RESOURCE_URLS:
 					process.env.MCP_RESOURCE_URLS ?? `http://localhost:${CHAT_PORT}/mcp`,
-				AUTUMN_API_URL: process.env.AUTUMN_API_URL ?? LOCAL_SERVER_URL,
+				AUTUMN_API_URL,
+				AUTUMN_PUBLIC_API_URL,
 				CHAT_URL,
 				SLACK_BOT_URL,
 				SLACK_REDIRECT_URI,
@@ -306,10 +383,6 @@ async function startDev() {
 				VITE_APP_ENV: viteAppEnv,
 				...(useLocalAuthUrls && {
 					CLIENT_URL: localUrl(process.env.CLIENT_URL, LOCAL_CLIENT_URL),
-					BETTER_AUTH_URL: localUrl(
-						process.env.BETTER_AUTH_URL,
-						LOCAL_SERVER_URL,
-					),
 					VITE_BACKEND_URL: localUrl(
 						process.env.VITE_BACKEND_URL,
 						LOCAL_SERVER_URL,
@@ -319,13 +392,12 @@ async function startDev() {
 						LOCAL_CLIENT_URL,
 					),
 				}),
+				...(useLocalMiscCache && {
+					MISC_CACHE_DRAGONFLY_PUBLIC_URL: LOCAL_MISC_CACHE_URL,
+				}),
 				...(process.env.DB_SCHEMA && { DB_SCHEMA: process.env.DB_SCHEMA }),
 				...(worktreeNum > 1 && {
 					CLIENT_URL: localUrl(process.env.CLIENT_URL, LOCAL_CLIENT_URL),
-					BETTER_AUTH_URL: localUrl(
-						process.env.BETTER_AUTH_URL,
-						LOCAL_SERVER_URL,
-					),
 					VITE_BACKEND_URL: localUrl(
 						process.env.VITE_BACKEND_URL,
 						LOCAL_SERVER_URL,

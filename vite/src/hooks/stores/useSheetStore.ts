@@ -28,6 +28,7 @@ export type SheetType =
 	| "upcoming-invoice-detail"
 	| "sync-stripe"
 	| "sync-stripe-v2"
+	| "verify-stripe"
 	| "customer-config-edit"
 	| "billing-auto-topup-add"
 	| "billing-auto-topup-edit"

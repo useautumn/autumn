@@ -1,8 +1,12 @@
 import { Button } from "@autumn/ui";
 import { DisabledTooltipButton } from "@/components/forms/shared";
 import { BillingFooter } from "@/components/forms/shared/BillingFooter";
-import { getInvoiceButtonState } from "@/components/forms/shared/utils/invoiceButtonState";
+import {
+	getInvoiceButtonState,
+	shouldDisableInvoiceButton,
+} from "@/components/forms/shared/utils/invoiceButtonState";
 import { useSheetStore } from "@/hooks/stores/useSheetStore";
+import { getBackendErr } from "@/utils/genUtils";
 import { useAttachFormContext } from "../context/AttachFormProvider";
 import { isFutureStartDate } from "../utils/buildAttachPreviewTotals";
 import { getAttachConfirmLabel } from "../utils/getAttachConfirmLabel";
@@ -23,7 +27,10 @@ export function AttachFooterV3() {
 	const { isEndOfCycleSelected, createsRecurringSubscription } = billingOptions;
 
 	const previewData = previewQuery.data;
-	const previewFailed = !!previewQuery.error;
+	const previewError = previewQuery.error
+		? getBackendErr(previewQuery.error, "Failed to load preview")
+		: undefined;
+	const previewFailed = !!previewError;
 	const isMultiPlan = additionalPlans.isMultiPlan;
 	const startDate = isMultiPlan ? null : formValues.startDate;
 	const hasFutureStartDate = isFutureStartDate(startDate);
@@ -32,6 +39,7 @@ export function AttachFooterV3() {
 	const { isInvoiceOnlyStart, label, zeroAmountReason } = getInvoiceButtonState(
 		{
 			preview: previewData,
+			previewFailed,
 			createsRecurringSubscription,
 			trialEnabled: formValues.trialEnabled === true,
 		},
@@ -64,7 +72,7 @@ export function AttachFooterV3() {
 			<DisabledTooltipButton
 				variant="secondary"
 				className="w-full"
-				disabled={previewFailed || isPending}
+				disabled={shouldDisableInvoiceButton({ isPending, previewError })}
 				disabledReason={invoiceDisabledReason}
 				tooltipClassName="max-w-(--anchor-width)"
 				isLoading={isInvoiceOnlyStart && isPending}

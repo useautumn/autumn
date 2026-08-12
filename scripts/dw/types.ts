@@ -10,8 +10,10 @@ export type RegistryEntry = {
 	lastUsedAt?: number;
 	/** Public ngrok URL for this worktree's tunnel, refreshed each `bun dw setup`. */
 	ngrokUrl?: string;
+	ngrokViteUrl?: string;
 	/** ngrok reserved-domain id, so `bun dw teardown` can release it via the API. */
 	reservedDomainId?: string;
+	reservedViteDomainId?: string;
 	/** Neon project when provisioned outside the default Autumn project. */
 	neonProjectId?: string;
 	/** Neon region id (e.g. aws-us-west-2) for regional provisioning. */

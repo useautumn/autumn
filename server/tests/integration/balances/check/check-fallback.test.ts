@@ -19,6 +19,9 @@ const realGetFullSubjectModule: {
 
 /** Customers whose DB hydration must throw a retryable driver error. */
 const outageCustomerIds = new Set<string>();
+/** Customers whose hydration must throw a deterministic application error. */
+const fatalCustomerIds = new Set<string>();
+const observedBackupReadOptIn = new Map<string, boolean | undefined>();
 
 // Both /check hydration paths (V2_1 partial + legacy) load the subject through
 // this module, so it is the only seam where a DB outage can be injected.
@@ -27,7 +30,18 @@ mock.module(GET_FULL_SUBJECT_MODULE, () => ({
 	getFullSubjectNormalized: async (
 		args: Parameters<typeof getFullSubjectNormalized>[0],
 	) => {
+		if (args.customerId && fatalCustomerIds.has(args.customerId)) {
+			observedBackupReadOptIn.set(
+				args.customerId,
+				args.useDelayedPostgresBackupRead,
+			);
+			throw new Error("simulated non-transient hydration failure");
+		}
 		if (args.customerId && outageCustomerIds.has(args.customerId)) {
+			observedBackupReadOptIn.set(
+				args.customerId,
+				args.useDelayedPostgresBackupRead,
+			);
 			const error = new Error("simulated db outage") as Error & {
 				code: string;
 			};
@@ -40,7 +54,49 @@ mock.module(GET_FULL_SUBJECT_MODULE, () => ({
 
 afterAll(() => {
 	outageCustomerIds.clear();
+	fatalCustomerIds.clear();
+	observedBackupReadOptIn.clear();
 	mock.module(GET_FULL_SUBJECT_MODULE, () => realGetFullSubjectModule);
+});
+
+test(`${chalk.yellowBright("check-errors: a non-transient hydration failure remains an HTTP 500")}`, async () => {
+	const messagesItem = items.monthlyMessages({ includedUsage: 1000 });
+	const freeProd = products.base({
+		id: "check-fatal-error-free",
+		items: [messagesItem],
+	});
+
+	const { customerId } = await initScenario({
+		customerId: "check-fatal-error",
+		setup: [s.customer({ testClock: false }), s.products({ list: [freeProd] })],
+		actions: [s.attach({ productId: freeProd.id })],
+	});
+	const app = createHonoApp();
+
+	try {
+		fatalCustomerIds.add(customerId);
+		const response = await app.fetch(
+			new Request("http://localhost/v1/balances.check", {
+				method: "POST",
+				headers: {
+					Authorization: `Bearer ${process.env.UNIT_TEST_AUTUMN_SECRET_KEY || ""}`,
+					"Content-Type": "application/json",
+					"x-api-version": ApiVersion.V2_1.toString(),
+					"x-skip-cache": "true",
+				},
+				body: JSON.stringify({
+					customer_id: customerId,
+					feature_id: TestFeature.Messages,
+				}),
+			}),
+		);
+
+		expect(response.status).toBe(500);
+		expect(observedBackupReadOptIn.get(customerId)).toBe(true);
+	} finally {
+		fatalCustomerIds.delete(customerId);
+		observedBackupReadOptIn.delete(customerId);
+	}
 });
 
 test(`${chalk.yellowBright("check-fallback: /check returns allowed=true on retryable customer load failure")}`, async () => {
@@ -88,8 +144,10 @@ test(`${chalk.yellowBright("check-fallback: /check returns allowed=true on retry
 			balance: null,
 			flag: null,
 		});
+		expect(observedBackupReadOptIn.get(customerId)).toBe(true);
 	} finally {
 		outageCustomerIds.delete(customerId);
+		observedBackupReadOptIn.delete(customerId);
 	}
 });
 
@@ -137,7 +195,9 @@ test(`${chalk.yellowBright("check-fallback-legacy: /check fallback applies respo
 			entity_id: undefined,
 			required_balance: 1,
 		});
+		expect(observedBackupReadOptIn.get(customerId)).toBe(true);
 	} finally {
 		outageCustomerIds.delete(customerId);
+		observedBackupReadOptIn.delete(customerId);
 	}
 });

@@ -83,5 +83,5 @@ export const createReward = async ({
 		}
 	}
 
-	return rewardRepo.insert({ db, data: reward });
+	return rewardRepo.insert({ db, data: reward, features: ctx.features });
 };

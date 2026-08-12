@@ -1,5 +1,5 @@
 import type { Feature, FullCusEntWithFullCusProduct } from "@autumn/shared";
-import { Tabs, TabsList, TabsTrigger } from "@autumn/ui";
+import { SectionTag, Tabs, TabsList, TabsTrigger } from "@autumn/ui";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import { cn } from "@/lib/utils";
 import { flagPillClassName, OVERFLOW_PILL_CLASSNAME } from "./FlagPill";
@@ -34,6 +34,7 @@ export function CustomerFlagsSection({
 	availableFeatures: Feature[];
 }) {
 	const reduceMotion = useReducedMotion() ?? false;
+	const hasCatalog = availableFeatures.length > 0;
 	const {
 		showingCatalog,
 		expanded,
@@ -47,7 +48,7 @@ export function CustomerFlagsSection({
 		rowRef,
 		setShowingCatalog,
 		toggleExpanded,
-	} = useFlagsView({ booleanEnts });
+	} = useFlagsView({ booleanEnts, hasCatalog });
 
 	// Pills keep their slot across views — only trailing ones are added or
 	// removed — so a plain fade reads calmer than layout animation plus scale.
@@ -63,14 +64,14 @@ export function CustomerFlagsSection({
 
 	return (
 		<div className="flex flex-col">
-			<div className="flex items-center mb-3">
-				<Tabs
-					value={showingCatalog ? "catalog" : "enabled"}
-					onValueChange={(value) => setShowingCatalog(value === "catalog")}
-				>
-					<TabsList className="h-auto gap-0.5 p-0.5 rounded-lg bg-muted dark:bg-muted">
-						{FLAG_VIEWS.map(({ value, label }) =>
-							value === "catalog" && availableFeatures.length === 0 ? null : (
+			{hasCatalog ? (
+				<div className="flex items-center mb-3">
+					<Tabs
+						value={showingCatalog ? "catalog" : "enabled"}
+						onValueChange={(value) => setShowingCatalog(value === "catalog")}
+					>
+						<TabsList className="h-auto gap-0.5 p-0.5 rounded-lg bg-muted dark:bg-muted">
+							{FLAG_VIEWS.map(({ value, label }) => (
 								<TabsTrigger
 									key={value}
 									value={value}
@@ -78,11 +79,13 @@ export function CustomerFlagsSection({
 								>
 									{label}
 								</TabsTrigger>
-							),
-						)}
-					</TabsList>
-				</Tabs>
-			</div>
+							))}
+						</TabsList>
+					</Tabs>
+				</div>
+			) : (
+				<SectionTag>{FLAG_VIEWS[0].label}</SectionTag>
+			)}
 
 			<div ref={containerRef} className="relative">
 				{/* Always mounted — gating this on the view would leave the count stale

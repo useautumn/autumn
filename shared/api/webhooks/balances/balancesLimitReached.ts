@@ -1,6 +1,11 @@
 import { z } from "zod/v4";
 
-export const LimitType = z.enum(["included", "max_purchase", "spend_limit"]);
+export const LimitType = z.enum([
+	"included",
+	"max_purchase",
+	"spend_limit",
+	"usage_limit",
+]);
 
 export const BALANCES_LIMIT_REACHED_EXAMPLE = {
 	customer_id: "org_123",
@@ -23,7 +28,7 @@ export const BalancesLimitReachedSchema = z
 		}),
 		limit_type: LimitType.meta({
 			description:
-				"Which limit was hit: included allowance, max purchase cap, or spend limit.",
+				"Which limit was hit: included allowance, max purchase cap, spend limit, or a usage-limit billing control.",
 		}),
 	})
 	.meta({

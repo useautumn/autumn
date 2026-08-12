@@ -20,7 +20,10 @@ import {
 const TEST_CASE = "vprov";
 
 const baseUrl = () =>
-	(process.env.BETTER_AUTH_URL ?? "http://localhost:8080").replace(/\/$/, "");
+	(process.env.AUTUMN_TEST_BASE_URL ?? "http://localhost:8080").replace(
+		/\/$/,
+		"",
+	);
 
 const resourcesUrl = (installationId: string) =>
 	`${baseUrl()}/webhooks/vercel/${ctx.org.id}/${ctx.env}/v1/installations/${installationId}/resources`;

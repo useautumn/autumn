@@ -1,5 +1,9 @@
+import { PlanChangeV0Schema } from "@api/products/components/planChange/planChangeV0.js";
+import {
+	type PlanItemChangeV0,
+	PlanItemChangeV0Schema,
+} from "@api/products/components/planChange/planItemChangeV0.js";
 import { z } from "zod/v4";
-import { ApiPlanItemV1Schema } from "../../products/items/apiPlanItemV1.js";
 
 export const PlanChangeActionEnum = z.enum([
 	"activated",
@@ -8,7 +12,11 @@ export const PlanChangeActionEnum = z.enum([
 	"expired",
 ]);
 
-export const SubscriptionStatusEnum = z.enum(["active", "scheduled", "expired"]);
+export const SubscriptionStatusEnum = z.enum([
+	"active",
+	"scheduled",
+	"expired",
+]);
 
 export const PurchaseStatusEnum = z.enum(["active", "scheduled", "expired"]);
 
@@ -39,10 +47,12 @@ export const SubscriptionSnapshotSchema = z.object({
 			"When the trial ends, in milliseconds since the Unix epoch. Null when not actively trialing.",
 	}),
 	current_period_start: z.number().nullable().meta({
-		description: "Start of the current billing period, or null if not applicable.",
+		description:
+			"Start of the current billing period, or null if not applicable.",
 	}),
 	current_period_end: z.number().nullable().meta({
-		description: "End of the current billing period, or null if not applicable.",
+		description:
+			"End of the current billing period, or null if not applicable.",
 	}),
 });
 
@@ -59,17 +69,18 @@ export const PurchaseSnapshotSchema = z.object({
 	}),
 });
 
-export const CustomerPlanItemChangeSchema = z.object({
-	action: z.enum(["created", "deleted"]).meta({
-		description: "Whether the feature was added to or removed from the plan.",
-	}),
-	feature_id: z.string().meta({
-		description: "The ID of the feature that was added or removed.",
-	}),
-	item: ApiPlanItemV1Schema.meta({
-		description: "The item snapshot that was added or removed.",
-	}),
-});
+/** @deprecated Use PlanItemChangeV0Schema. */
+export const CustomerPlanItemChangeSchema = PlanItemChangeV0Schema;
+
+/** Sparse lifecycle scalars that changed, holding their previous values. */
+export const CustomerPlanPreviousAttributesSchema =
+	SubscriptionSnapshotSchema.pick({
+		status: true,
+		past_due: true,
+		canceled_at: true,
+		expires_at: true,
+		trial_ends_at: true,
+	}).partial();
 
 export const CustomerPlanChangeSchema = z.object({
 	action: PlanChangeActionEnum.meta({
@@ -84,20 +95,19 @@ export const CustomerPlanChangeSchema = z.object({
 		description:
 			"The purchase as it stands after this change. Present when the plan is a one-off purchase.",
 	}),
-	previous_attributes: z
-		.record(z.string(), z.unknown())
-		.nullable()
-		.meta({
-			description:
-				"Sparse map of scalar fields whose values changed, holding their previous values. Null when the plan is newly activated or scheduled.",
-		}),
-	item_changes: z
-		.array(CustomerPlanItemChangeSchema)
-		.default([])
-		.meta({
-			description:
-				"Features that were added to or removed from this plan. Only populated for updated plans.",
-		}),
+	previous_attributes: CustomerPlanPreviousAttributesSchema.nullable().meta({
+		description:
+			"Sparse map of lifecycle scalar fields whose values changed, holding their previous values. Null when the plan is newly activated or scheduled, or when no lifecycle field changed.",
+	}),
+	plan_change: PlanChangeV0Schema.optional().meta({
+		description:
+			"Content-level change to the plan definition for this customer plan (items, base price, free trial).",
+	}),
+	item_changes: z.array(PlanItemChangeV0Schema).default([]).meta({
+		deprecated: true,
+		description:
+			"Deprecated — use plan_change.item_changes. Features that were added to or removed from this plan.",
+	}),
 });
 
 export type PlanChangeAction = z.infer<typeof PlanChangeActionEnum>;
@@ -105,5 +115,9 @@ export type SubscriptionStatus = z.infer<typeof SubscriptionStatusEnum>;
 export type PurchaseStatus = z.infer<typeof PurchaseStatusEnum>;
 export type SubscriptionSnapshot = z.infer<typeof SubscriptionSnapshotSchema>;
 export type PurchaseSnapshot = z.infer<typeof PurchaseSnapshotSchema>;
-export type CustomerPlanItemChange = z.infer<typeof CustomerPlanItemChangeSchema>;
+export type CustomerPlanPreviousAttributes = z.infer<
+	typeof CustomerPlanPreviousAttributesSchema
+>;
+/** @deprecated Use PlanItemChangeV0. */
+export type CustomerPlanItemChange = PlanItemChangeV0;
 export type CustomerPlanChange = z.infer<typeof CustomerPlanChangeSchema>;

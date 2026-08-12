@@ -48,30 +48,19 @@ export const handleCancellation = async ({
 		cusProducts,
 	});
 
-	if (isRefundCancellation(event)) {
+	const isRefund = isRefundCancellation(event);
+	if (isRefund) {
 		await refundRevenueCatInvoice({ ctx: customerCtx, event, customer });
+	}
 
-		if (!curSameProduct) {
+	if (!curSameProduct) {
+		if (isRefund) {
 			logger.info(
 				`[handleCancellation] refund cancellation for customer ${customer.id} but no active cus_product to mark cancelled, returning successfully`,
 			);
 			return;
 		}
 
-		await customerProductActions.cancel({
-			ctx: customerCtx,
-			customerProduct: curSameProduct,
-			fullCustomer: customer,
-			endedAt: expiration_at_ms,
-		});
-
-		logger.info(
-			`Refund cancellation: marked cus_product ${curSameProduct.id} cancelled, expires at ${expiration_at_ms}`,
-		);
-		return;
-	}
-
-	if (!curSameProduct) {
 		throw new RecaseError({
 			message: "Cus product not found",
 			code: ErrCode.CusProductNotFound,
@@ -87,6 +76,6 @@ export const handleCancellation = async ({
 	});
 
 	logger.info(
-		`Marked cus_product ${curSameProduct.id} as cancelled, will expire at ${expiration_at_ms}`,
+		`${isRefund ? "Refund cancellation: marked" : "Marked"} cus_product ${curSameProduct.id} as cancelled, will expire at ${expiration_at_ms}`,
 	);
 };
