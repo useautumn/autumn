@@ -195,13 +195,16 @@ export const runClaudeManagedTurn = async ({
 	const outcome = await driveTurnWithInterruptRetry({ content, span });
 
 	// Attach the captured preview to the suspended write so the card shows cost.
-	const suspended = outcome.suspendedQueue?.[0];
+	// The turn captures one preview, so it only belongs to a lone write —
+	// otherwise each card item is backfilled per write and nobody sees another
+	// customer's cost.
+	const suspended = outcome.suspendedQueue;
 	if (
-		suspended &&
+		suspended?.length === 1 &&
 		lastPreview &&
-		writeToPreviewTool(suspended.toolName) === lastPreview.previewTool
+		writeToPreviewTool(suspended[0].toolName) === lastPreview.previewTool
 	) {
-		suspended.preview = lastPreview.preview;
+		suspended[0].preview = lastPreview.preview;
 	}
 	return outcome;
 };

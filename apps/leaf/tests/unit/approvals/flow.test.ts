@@ -4,7 +4,7 @@ import type { AutumnLogger } from "@autumn/logging";
 import { AppEnv, type ChatApproval } from "@autumn/shared";
 import type { ActionEvent } from "chat";
 import { approvalErrorResult } from "../../../src/internal/approvals/utils/approvalErrors.js";
-import { approvalRequestFromOutput } from "../../../src/internal/approvals/utils/approvalRequest.js";
+import { approvalRequestsFromOutput } from "../../../src/internal/approvals/utils/approvalRequest.js";
 import type { AgentOutput } from "../../../src/types.js";
 
 const setLeafTestEnv = () => {
@@ -27,58 +27,86 @@ const testLogger = {
 
 describe("approval flow", () => {
 	test("maps a suspended write to a pending approval request", () => {
-		const request = approvalRequestFromOutput({
+		const requests = approvalRequestsFromOutput({
 			env: AppEnv.Sandbox,
 			finishReason: "suspended",
 			runId: "run_1",
-			suspension: {
+			suspensions: [
+				{
+					toolCallId: "call_1",
+					toolName: "attach",
+					toolArgs: { request: { customer_id: "cus_1", plan_id: "pro" } },
+					preview: { total: 20 },
+				},
+			],
+			text: "Preview ready.",
+		} satisfies AgentOutput);
+
+		expect(requests).toEqual([
+			{
+				env: AppEnv.Sandbox,
+				runId: "run_1",
 				toolCallId: "call_1",
 				toolName: "attach",
 				toolArgs: { request: { customer_id: "cus_1", plan_id: "pro" } },
 				preview: { total: 20 },
 			},
-			text: "Preview ready.",
-		} satisfies AgentOutput);
-
-		expect(request).toEqual({
-			env: AppEnv.Sandbox,
-			runId: "run_1",
-			toolCallId: "call_1",
-			toolName: "attach",
-			toolArgs: { request: { customer_id: "cus_1", plan_id: "pro" } },
-			preview: { total: 20 },
-		});
+		]);
 	});
 
 	test("maps a suspended write whose preview wasn't captured (card backfills later)", () => {
-		const request = approvalRequestFromOutput({
+		const requests = approvalRequestsFromOutput({
 			env: AppEnv.Live,
 			finishReason: "suspended",
 			runId: "run_2",
-			suspension: {
+			suspensions: [
+				{
+					toolCallId: "call_2",
+					toolName: "updateSubscription",
+					toolArgs: { request: { customer_id: "cus_1", plan_id: "pro" } },
+				},
+			],
+		} satisfies AgentOutput);
+
+		expect(requests).toEqual([
+			{
+				env: AppEnv.Live,
+				runId: "run_2",
 				toolCallId: "call_2",
 				toolName: "updateSubscription",
 				toolArgs: { request: { customer_id: "cus_1", plan_id: "pro" } },
+				preview: undefined,
 			},
+		]);
+	});
+
+	test("maps every gated write of a fan-out, not just the first", () => {
+		const requests = approvalRequestsFromOutput({
+			env: AppEnv.Live,
+			finishReason: "suspended",
+			runId: "run_3",
+			suspensions: ["cus_1", "cus_2", "cus_3"].map((customerId, index) => ({
+				toolCallId: `call_${index}`,
+				toolName: "attach",
+				toolArgs: { request: { customer_id: customerId, plan_id: "pro" } },
+			})),
 		} satisfies AgentOutput);
 
-		expect(request).toEqual({
-			env: AppEnv.Live,
-			runId: "run_2",
-			toolCallId: "call_2",
-			toolName: "updateSubscription",
-			toolArgs: { request: { customer_id: "cus_1", plan_id: "pro" } },
-			preview: undefined,
-		});
+		expect(requests).toHaveLength(3);
+		expect(requests.map((request) => request.toolCallId)).toEqual([
+			"call_0",
+			"call_1",
+			"call_2",
+		]);
 	});
 
 	test("returns nothing when the turn did not suspend", () => {
 		expect(
-			approvalRequestFromOutput({
+			approvalRequestsFromOutput({
 				env: AppEnv.Sandbox,
 				text: "Done.",
 			} satisfies AgentOutput),
-		).toBeUndefined();
+		).toEqual([]);
 	});
 
 	test("formats Autumn API errors for Slack approval cards", () => {
@@ -149,7 +177,7 @@ describe("approval flow", () => {
 
 	test("direct approver token approvals fail MCP isError results and release the suspended session via deny", async () => {
 		setLeafTestEnv();
-		const { resumeClaudeManagedApproval } = await import(
+		const { resumeClaudeManagedApprovalGroup } = await import(
 			"../../../src/harness/claudeManaged/approval.js"
 		);
 		const calls: string[] = [];
@@ -163,8 +191,8 @@ describe("approval flow", () => {
 			tool_args: { request: { customer_id: "cus_1", plan_id: "pro" } },
 		} as unknown as ChatApproval;
 
-		const resultPromise = resumeClaudeManagedApproval({
-			approval,
+		const resultPromise = resumeClaudeManagedApprovalGroup({
+			approvals: [approval],
 			providerUserId: "U1",
 			approverToken: "am_oauth_clicker",
 			deps: {
@@ -175,7 +203,7 @@ describe("approval flow", () => {
 						content: [{ type: "text", text: "Tool failed" }],
 					};
 				},
-				notifySuspendedToolDenied: async () => {
+				notifySuspendedToolsDenied: async () => {
 					calls.push("notify:start");
 					await new Promise<void>((resolve) => {
 						finishNotify = resolve;
@@ -230,16 +258,16 @@ describe("approval flow", () => {
 		await handleApprovalActionWithDeps({
 			event,
 			deps: {
-				resolveApproval: async () => ({
+				resolveApprovalGroup: async () => ({
 					error: true,
 					message: "Missing email.",
 				}),
-				cancelApproval: async () => approval,
-				claimApproval: async () => approval,
+				cancelApprovalGroup: async () => [approval],
+				claimApprovalGroup: async () => [approval],
 				editActionMessage: async ({ content }) => {
 					edits.push(content);
 				},
-				getApproval: async () => approval,
+				getApprovalGroup: async () => [approval],
 				logger: {
 					error: () => {},
 					info: () => {},
@@ -290,20 +318,20 @@ describe("approval flow", () => {
 		await handleApprovalActionWithDeps({
 			event,
 			deps: {
-				resolveApproval: async () => {
+				resolveApprovalGroup: async () => {
 					calls.push("run");
-					return { result: { status: "active" }, text: "All done!" };
+					return { text: "All done!" };
 				},
-				cancelApproval: async () => approval,
-				claimApproval: async () => {
+				cancelApprovalGroup: async () => [approval],
+				claimApprovalGroup: async () => {
 					calls.push("claim");
-					return approval;
+					return [approval];
 				},
 				editActionMessage: async ({ content }) => {
 					calls.push("edit");
 					edits.push(content);
 				},
-				getApproval: async () => approval,
+				getApprovalGroup: async () => [approval],
 				logger: { error: () => {}, info: () => {}, warn: () => {} },
 				postThreadReply: async ({ markdown }) => {
 					replies.push(markdown);
@@ -343,27 +371,27 @@ describe("approval flow", () => {
 		await handleApprovalActionWithDeps({
 			event,
 			deps: {
-				resolveApproval: async () => {
+				resolveApprovalGroup: async () => {
 					calls.push("run");
-					return { result: {}, text: "ran" };
+					return { text: "ran" };
 				},
-				cancelApproval: async () => approval,
+				cancelApprovalGroup: async () => [approval],
 				authorizeApprovalClicker: async () => ({
 					allowed: false,
 					text: "Missing plans:write.",
 				}),
-				claimApproval: async () => {
+				claimApprovalGroup: async () => {
 					calls.push("claim");
-					return approval;
+					return [approval];
 				},
-				releaseApproval: async () => {
+				releaseApprovalGroup: async () => {
 					calls.push("release");
-					return approval;
+					return [approval];
 				},
 				editActionMessage: async () => {
 					calls.push("edit");
 				},
-				getApproval: async () => approval,
+				getApprovalGroup: async () => [approval],
 				logger: { error: () => {}, info: () => {}, warn: () => {} },
 				postThreadReply: async ({ markdown }) => {
 					replies.push(markdown);
@@ -403,28 +431,28 @@ describe("approval flow", () => {
 		await handleApprovalActionWithDeps({
 			event,
 			deps: {
-				resolveApproval: async () => {
+				resolveApprovalGroup: async () => {
 					calls.push("run");
-					return { result: {}, text: "ran" };
+					return { text: "ran" };
 				},
-				cancelApproval: async () => approval,
+				cancelApprovalGroup: async () => [approval],
 				authorizeApprovalClicker: async () => {
 					calls.push("authorize");
 					throw new Error("auth exploded");
 				},
-				claimApproval: async () => {
+				claimApprovalGroup: async () => {
 					calls.push("claim");
-					return approval;
+					return [approval];
 				},
-				releaseApproval: async () => {
+				releaseApprovalGroup: async () => {
 					calls.push("release");
-					return approval;
+					return [approval];
 				},
 				editActionMessage: async ({ content }) => {
 					calls.push("edit");
 					edits.push(content);
 				},
-				getApproval: async () => approval,
+				getApprovalGroup: async () => [approval],
 				logger: { error: () => {}, info: () => {}, warn: () => {} },
 				postThreadReply: async ({ markdown }) => {
 					calls.push("reply");
@@ -464,18 +492,18 @@ describe("approval flow", () => {
 		await handleApprovalActionWithDeps({
 			event,
 			deps: {
-				resolveApproval: async ({ approverToken }) => {
+				resolveApprovalGroup: async ({ approverToken }) => {
 					resolverApproverToken = approverToken;
-					return { result: {}, text: "" };
+					return { text: "" };
 				},
-				cancelApproval: async () => approval,
+				cancelApprovalGroup: async () => [approval],
 				authorizeApprovalClicker: async () => ({
 					allowed: true,
 					approverToken: "am_oauth_clicker",
 				}),
-				claimApproval: async () => approval,
+				claimApprovalGroup: async () => [approval],
 				editActionMessage: async () => {},
-				getApproval: async () => approval,
+				getApprovalGroup: async () => [approval],
 				logger: { error: () => {}, info: () => {}, warn: () => {} },
 				postThreadReply: async () => {},
 			},
@@ -509,15 +537,15 @@ describe("approval flow", () => {
 		await handleApprovalActionWithDeps({
 			event,
 			deps: {
-				resolveApproval: async () => {
+				resolveApprovalGroup: async () => {
 					throw new Error("should not run");
 				},
-				cancelApproval: async () => undefined,
-				claimApproval: async () => undefined,
+				cancelApprovalGroup: async () => [],
+				claimApprovalGroup: async () => [],
 				editActionMessage: async ({ content }) => {
 					edits.push(content);
 				},
-				getApproval: async () => approval,
+				getApprovalGroup: async () => [approval],
 				logger: { error: () => {}, info: () => {}, warn: () => {} },
 				postThreadReply: async () => {},
 			},
@@ -552,15 +580,15 @@ describe("approval flow", () => {
 		await handleApprovalActionWithDeps({
 			event,
 			deps: {
-				resolveApproval: async () => {
+				resolveApprovalGroup: async () => {
 					throw new Error("should not run");
 				},
-				cancelApproval: async () => undefined,
-				claimApproval: async () => undefined,
+				cancelApprovalGroup: async () => [],
+				claimApprovalGroup: async () => [],
 				editActionMessage: async ({ content }) => {
 					edits.push(content);
 				},
-				getApproval: async () => approval,
+				getApprovalGroup: async () => [approval],
 				logger: { error: () => {}, info: () => {}, warn: () => {} },
 				postThreadReply: async () => {},
 			},
@@ -686,5 +714,180 @@ describe("approval flow", () => {
 		});
 
 		expect(cancelled).toHaveLength(1);
+	});
+});
+
+describe("approval group decisions", () => {
+	const groupOf = (customerIds: string[]) =>
+		customerIds.map(
+			(customerId, index) =>
+				({
+					env: AppEnv.Sandbox,
+					expires_at: Date.now() + 60_000,
+					group_id: "group_1",
+					id: `approval_${index}`,
+					status: "pending",
+					tool_name: "attach",
+					tool_args: { request: { customer_id: customerId, plan_id: "pro" } },
+				}) as unknown as ChatApproval,
+		);
+
+	const approveEvent = {
+		actionId: "approve_billing_action",
+		messageId: "message_1",
+		threadId: "thread_1",
+		user: { userId: "U1" },
+		value: "approval_0",
+	} as unknown as ActionEvent;
+
+	const silentLogger = { error: () => {}, info: () => {}, warn: () => {} };
+
+	test("one click decides the whole group and resolves it in a single call", async () => {
+		setLeafTestEnv();
+		const { handleApprovalActionWithDeps } = await import(
+			"../../../src/internal/approvals/surfaces/slack/decide.js"
+		);
+		const approvals = groupOf(["acme", "beta", "gamma"]);
+		const resolved: ChatApproval[][] = [];
+		const edits: unknown[] = [];
+
+		await handleApprovalActionWithDeps({
+			event: approveEvent,
+			deps: {
+				resolveApprovalGroup: async ({ approvals: group }) => {
+					resolved.push(group);
+					return { text: "All three are on Pro." };
+				},
+				cancelApprovalGroup: async () => approvals,
+				claimApprovalGroup: async () => approvals,
+				editActionMessage: async ({ content }) => {
+					edits.push(content);
+				},
+				getApprovalGroup: async () => approvals,
+				logger: silentLogger,
+				postThreadReply: async () => {},
+			},
+		});
+
+		// One resume for the group, not one per write.
+		expect(resolved).toHaveLength(1);
+		expect(resolved[0]).toHaveLength(3);
+		expect(JSON.stringify(edits.at(-1))).toContain("✅ Applied all 3 changes");
+	});
+
+	test("a missing permission on any one write blocks the whole group", async () => {
+		setLeafTestEnv();
+		const { handleApprovalActionWithDeps } = await import(
+			"../../../src/internal/approvals/surfaces/slack/decide.js"
+		);
+		const approvals = groupOf(["acme", "beta", "gamma"]);
+		const calls: string[] = [];
+		const replies: string[] = [];
+
+		await handleApprovalActionWithDeps({
+			event: approveEvent,
+			deps: {
+				resolveApprovalGroup: async () => {
+					calls.push("run");
+					return { text: "ran" };
+				},
+				authorizeApprovalClicker: async ({ approval }) =>
+					approval.id === "approval_2"
+						? { allowed: false, text: "Missing billing:write." }
+						: { allowed: true },
+				cancelApprovalGroup: async () => approvals,
+				claimApprovalGroup: async () => {
+					calls.push("claim");
+					return approvals;
+				},
+				releaseApprovalGroup: async ({ approvals: released }) => {
+					calls.push(`release:${released.length}`);
+					return released;
+				},
+				editActionMessage: async () => {
+					calls.push("edit");
+				},
+				getApprovalGroup: async () => approvals,
+				logger: silentLogger,
+				postThreadReply: async ({ markdown }) => {
+					replies.push(markdown);
+				},
+			},
+		});
+
+		// Nothing runs, and every claimed row goes back to pending.
+		expect(calls).toEqual(["claim", "release:3"]);
+		expect(replies).toEqual(["Missing billing:write."]);
+	});
+
+	test("a partial claim releases what it took and runs nothing", async () => {
+		setLeafTestEnv();
+		const { handleApprovalActionWithDeps } = await import(
+			"../../../src/internal/approvals/surfaces/slack/decide.js"
+		);
+		const approvals = groupOf(["acme", "beta", "gamma"]);
+		const calls: string[] = [];
+
+		await handleApprovalActionWithDeps({
+			event: approveEvent,
+			deps: {
+				resolveApprovalGroup: async () => {
+					calls.push("run");
+					return { text: "ran" };
+				},
+				cancelApprovalGroup: async () => approvals,
+				// Another click already took one of the rows.
+				claimApprovalGroup: async () => approvals.slice(0, 2),
+				releaseApprovalGroup: async ({ approvals: released }) => {
+					calls.push(`release:${released.length}`);
+					return released;
+				},
+				editActionMessage: async () => {
+					calls.push("edit");
+				},
+				getApprovalGroup: async () => approvals,
+				logger: silentLogger,
+				postThreadReply: async () => {},
+			},
+		});
+
+		expect(calls).toEqual(["release:2", "edit"]);
+	});
+
+	test("dismissing denies every parked write in the group", async () => {
+		setLeafTestEnv();
+		const { handleApprovalActionWithDeps } = await import(
+			"../../../src/internal/approvals/surfaces/slack/decide.js"
+		);
+		const approvals = groupOf(["acme", "beta", "gamma"]);
+		const cancelled: ChatApproval[][] = [];
+		const edits: unknown[] = [];
+
+		await handleApprovalActionWithDeps({
+			event: {
+				...approveEvent,
+				actionId: "cancel_billing_action",
+			} as ActionEvent,
+			deps: {
+				resolveApprovalGroup: async () => {
+					throw new Error("should not run");
+				},
+				cancelApprovalGroup: async ({ approvals: group }) => {
+					cancelled.push(group);
+					return group;
+				},
+				claimApprovalGroup: async () => approvals,
+				editActionMessage: async ({ content }) => {
+					edits.push(content);
+				},
+				getApprovalGroup: async () => approvals,
+				logger: silentLogger,
+				postThreadReply: async () => {},
+			},
+		});
+
+		expect(cancelled).toHaveLength(1);
+		expect(cancelled[0]).toHaveLength(3);
+		expect(JSON.stringify(edits.at(-1))).toContain("Dismissed");
 	});
 });

@@ -256,7 +256,7 @@ export const streamWebChat = async ({
 			// updateCatalog is the chokepoint the model can't skip: if the change
 			// needs versioning/variant/migration decisions and none were given,
 			// deny the parked call and render the decision card instead.
-			if (output.suspension && harness === "eve") {
+			if (output.suspensions?.length && harness === "eve") {
 				const decisionPlan = await redirectCatalogSuspensionToDecision({
 					decisionProvided: Boolean(clientContext?.catalogDecision),
 					env,
@@ -264,7 +264,7 @@ export const streamWebChat = async ({
 					orgId,
 					providerUserId: userId,
 					runId: output.runId,
-					suspension: output.suspension,
+					suspensions: output.suspensions,
 					thread,
 					token: accessToken,
 				});
@@ -308,11 +308,11 @@ export const streamWebChat = async ({
 				writeText(output.text);
 			}
 
-			if (output.suspension) {
-				// presentWebApproval backfills the preview (the agent may write
-				// without a preceding preview call), so use its returned preview —
-				// not output.suspension.preview, which can be empty.
-				const approval = await presentWebApproval({
+			if (output.suspensions?.length) {
+				// presentWebApproval backfills each preview (the agent may write
+				// without a preceding preview call), so use its returned previews —
+				// not the suspensions' own, which can be empty.
+				const approvals = await presentWebApproval({
 					channelId: thread.channelId,
 					harness,
 					logger,
@@ -323,7 +323,7 @@ export const streamWebChat = async ({
 					token: accessToken,
 					workspaceId: orgId,
 				});
-				if (approval) {
+				for (const approval of approvals) {
 					writer.write({
 						data: {
 							approvalId: approval.approvalId,

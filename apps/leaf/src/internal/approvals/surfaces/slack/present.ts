@@ -13,65 +13,108 @@ import {
 } from "../../../../ui/progress.js";
 import { getInstallationOAuthAccessToken } from "../../../installations/actions/getInstallationOAuthAccessToken.js";
 import { chatApprovalRepo } from "../../repos/chatApprovalRepo.js";
-import { approvalRequestFromOutput } from "../../utils/approvalRequest.js";
+import {
+	type ApprovalRequest,
+	approvalRequestsFromOutput,
+} from "../../utils/approvalRequest.js";
 import {
 	fetchApprovalPreview,
 	shouldRefreshApprovalPreview,
 } from "../../utils/fetchApprovalPreview.js";
+import { approvalCardItems, publicToolArgs } from "./cardItems.js";
 
 const getRequest = (args?: Record<string, unknown>) =>
 	args?.request && typeof args.request === "object"
 		? (args.request as Record<string, unknown>)
 		: args;
 
-const publicToolArgs = (args: Record<string, unknown>) =>
-	Object.fromEntries(
-		Object.entries(args).filter(([key]) => !key.startsWith("_eve")),
-	);
-
-/** Posts the card for an approval row that already exists (a chained write
- * surfaced by an approve/answer resume, which never flows through
- * `presentApproval`). */
-export const postApprovalCardForRow = async ({
-	approval,
+/** Posts the card for approvals that already exist (chained writes surfaced by
+ * an approve/answer resume, which never flow through `presentApproval`). */
+export const postApprovalCardForGroup = async ({
+	approvals,
 	logger = rootLogger,
 	target,
 }: {
-	approval: ChatApproval;
+	approvals: ChatApproval[];
 	logger?: AutumnLogger;
 	/** Structural post-only view so ActionEvent threads (unknown state generic) fit. */
 	target: { post: (message: unknown) => Promise<{ id: string }> };
 }) => {
-	const toolArgs =
-		approval.tool_args && typeof approval.tool_args === "object"
-			? (approval.tool_args as Record<string, unknown>)
-			: {};
+	const [first] = approvals;
+	if (!first) return;
 	const sent = await target.post(
 		approvalCard({
-			id: approval.id,
-			env: approval.env,
-			preview: approval.preview ?? undefined,
-			requesterId: approval.provider_user_id,
-			toolArgs: publicToolArgs(toolArgs),
-			toolName: approval.tool_name,
+			id: first.id,
+			env: first.env,
+			items: approvalCardItems(approvals),
+			requesterId: first.provider_user_id,
 		}),
 	);
+	// Stored on the clicked row so a later turn can replace the card.
 	try {
 		await chatApprovalRepo.setMessageTs({
-			approvalId: approval.id,
+			approvalId: first.id,
 			db,
 			messageTs: sent.id,
 		});
 	} catch (error) {
 		logger.warn("Could not store chained approval message id", {
 			event: "leaf.approval_message_ts_failed",
-			approval_id: approval.id,
+			approval_id: first.id,
 			error,
 		});
 	}
 };
 
-/** Posts an approval card when the agent output suspended on a destructive tool. */
+/** Backfills the money facts for a write whose preview wasn't captured. Every
+ * gated call has to show its own cost — an approver must never see another
+ * customer's number next to this one's arguments. */
+const withBackfilledPreview = async ({
+	installation,
+	logger,
+	orgId,
+	request,
+}: {
+	installation: ChatInstallation;
+	logger: AutumnLogger;
+	orgId: string;
+	request: ApprovalRequest;
+}) => {
+	if (
+		!shouldRefreshApprovalPreview({
+			preview: request.preview,
+			toolName: request.toolName,
+		})
+	) {
+		return request;
+	}
+	try {
+		const token = await getInstallationOAuthAccessToken({
+			installation,
+			env: request.env,
+			orgId,
+		});
+		const body = getRequest(publicToolArgs(request.toolArgs));
+		if (!body) return request;
+		const preview = await fetchApprovalPreview({
+			env: request.env,
+			logger,
+			request: body,
+			token,
+			toolName: request.toolName,
+		});
+		return preview ? { ...request, preview } : request;
+	} catch (error) {
+		logger.warn("Could not backfill approval preview", {
+			event: "leaf.approval_preview_backfill_failed",
+			tool: request.toolName,
+			error,
+		});
+		return request;
+	}
+};
+
+/** Posts one approval card when the agent output suspended on gated writes. */
 export const presentApproval = async ({
 	channelId,
 	installation,
@@ -93,108 +136,90 @@ export const presentApproval = async ({
 	providerUserId: string;
 	target: ReplyTarget;
 }) => {
-	const approval = approvalRequestFromOutput(output);
-	if (!approval) return false;
+	const requests = approvalRequestsFromOutput(output);
+	if (requests.length === 0) return false;
 
-	// resolveApproval can only confirm a suspended session tool, so a card missing
-	// either id would always fail at approval time — fall back to plain text.
-	if (!approval.runId || !approval.toolCallId) {
+	// resolveApprovalGroup can only confirm suspended session tools, so a card
+	// missing either id would always fail at approval time — fall back to text.
+	if (requests.some((request) => !(request.runId && request.toolCallId))) {
 		logger.warn("Skipped unexecutable approval request", {
 			event: "leaf.approval_unexecutable_skipped",
-			context: { env: approval.env, org_id: orgId },
-			tool: approval.toolName,
+			context: { env: output.env, org_id: orgId },
+			data: { tools: requests.map((request) => request.toolName) },
 		});
 		return false;
 	}
 
 	// Catalog decisions change write args, so refresh against the exact request;
 	// other writes only backfill when their preview is absent.
-	if (
-		shouldRefreshApprovalPreview({
-			preview: approval.preview,
-			toolName: approval.toolName,
-		})
-	) {
-		try {
-			const token = await getInstallationOAuthAccessToken({
-				installation,
-				env: approval.env,
-				orgId,
-			});
-			const request = getRequest(publicToolArgs(approval.toolArgs));
-			if (request) {
-				const preview = await fetchApprovalPreview({
-					env: approval.env,
-					logger,
-					request,
-					token,
-					toolName: approval.toolName,
-				});
-				if (preview) approval.preview = preview;
-			}
-		} catch (error) {
-			logger.warn("Could not backfill approval preview", {
-				event: "leaf.approval_preview_backfill_failed",
-				tool: approval.toolName,
-				error,
-			});
-		}
-	}
+	const previewed = await Promise.all(
+		requests.map((request) =>
+			withBackfilledPreview({ installation, logger, orgId, request }),
+		),
+	);
 
-	const approvalId = await chatApprovalRepo.insert({
+	const { groupId, ids } = await chatApprovalRepo.insertGroup({
 		db,
-		data: {
+		items: previewed.map((request) => ({
+			preview: request.preview,
+			toolArgs: request.toolArgs,
+			toolCallId: request.toolCallId,
+			toolName: request.toolName,
+		})),
+		shared: {
+			channelId,
+			env: output.env,
+			harness: chatEnv.SLACK_AGENT_HARNESS,
 			orgId,
 			provider: installation.provider,
-			workspaceId: installation.workspace_id,
-			channelId,
 			providerUserId,
-			env: approval.env,
-			harness: chatEnv.SLACK_AGENT_HARNESS,
-			preview: approval.preview,
-			runId: approval.runId,
-			toolArgs: approval.toolArgs,
-			toolCallId: approval.toolCallId,
-			toolName: approval.toolName,
+			runId: output.runId,
+			workspaceId: installation.workspace_id,
 		},
 	});
 
-	await logAction(`Waiting for approval: ${toolLabel(approval.toolName)}`);
+	await logAction(
+		previewed.length > 1
+			? `Waiting for approval: ${previewed.length} changes`
+			: `Waiting for approval: ${toolLabel(previewed[0].toolName)}`,
+	);
 	logger.info("Created approval request", {
 		event: "leaf.approval_created",
-		context: {
-			env: approval.env,
-			org_id: orgId,
+		context: { env: output.env, org_id: orgId },
+		approval_id: groupId,
+		data: {
+			count: previewed.length,
+			tools: previewed.map((request) => request.toolName),
 		},
-		approval_id: approvalId,
-		tool: approval.toolName,
 	});
 	await finishLoading(target, loading, "Preview ready.");
 
 	// One message: the agent's preview prose rides inside the card.
 	const sent = await target.post(
 		approvalCard({
-			id: approvalId,
-			env: approval.env,
-			preview: approval.preview,
+			id: ids[0],
+			env: output.env,
+			items: previewed.map((request) => ({
+				preview: request.preview,
+				toolArgs: publicToolArgs(request.toolArgs),
+				toolName: request.toolName,
+			})),
 			requesterId: providerUserId,
 			summary: output.text,
-			toolArgs: publicToolArgs(approval.toolArgs),
-			toolName: approval.toolName,
 		}),
 	);
 
 	// Stored so a later turn can replace the card if it goes stale.
 	try {
 		await chatApprovalRepo.setMessageTs({
-			approvalId,
+			approvalId: ids[0],
 			db,
 			messageTs: sent.id,
 		});
 	} catch (error) {
 		logger.warn("Could not store approval message id", {
 			event: "leaf.approval_message_ts_failed",
-			approval_id: approvalId,
+			approval_id: ids[0],
 			error,
 		});
 	}

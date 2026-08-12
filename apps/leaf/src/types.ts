@@ -18,8 +18,8 @@ export const agentOutputSchema = z.preprocess(
 			value && typeof value === "object"
 				? (value as Record<string, unknown>)
 				: {};
-		const suspension = payload.suspension as
-			| Record<string, unknown>
+		const suspensions = payload.suspensions as
+			| Record<string, unknown>[]
 			| undefined;
 		const catalogDecision = payload.catalogDecision as
 			| Record<string, unknown>
@@ -31,12 +31,12 @@ export const agentOutputSchema = z.preprocess(
 			finishReason: payload.finishReason,
 			stopReason: payload.stopReason,
 			runId: payload.runId,
-			suspension: suspension && {
+			suspensions: suspensions?.map((suspension) => ({
 				toolCallId: suspension.toolCallId,
 				toolName: suspension.toolName,
 				toolArgs: suspension.toolArgs,
 				preview: suspension.preview,
-			},
+			})),
 			catalogDecision: catalogDecision && {
 				plan: catalogDecision.plan,
 			},
@@ -53,14 +53,17 @@ export const agentOutputSchema = z.preprocess(
 		finishReason: z.string().optional(),
 		stopReason: z.enum(["timeout", "user"]).optional(),
 		runId: z.string().optional(),
-		// Set when the agent paused on a destructive write awaiting approval.
-		suspension: z
-			.strictObject({
-				toolCallId: z.string().optional(),
-				toolName: z.string(),
-				toolArgs: z.record(z.string(), z.unknown()),
-				preview: z.unknown(),
-			})
+		// Every destructive write the turn paused on. The agent can gate several at
+		// once (one operation across many customers); they are decided together.
+		suspensions: z
+			.array(
+				z.strictObject({
+					toolCallId: z.string().optional(),
+					toolName: z.string(),
+					toolArgs: z.record(z.string(), z.unknown()),
+					preview: z.unknown(),
+				}),
+			)
 			.optional(),
 		// Set when `previewUpdateCatalog` returned a plan that needs a
 		// versioning/variant/migration decision before the write can run.
@@ -87,8 +90,8 @@ export const agentOutputSchema = z.preprocess(
 );
 
 export type Suspension = NonNullable<
-	z.infer<typeof agentOutputSchema>["suspension"]
->;
+	z.infer<typeof agentOutputSchema>["suspensions"]
+>[number];
 
 export type AgentOutput = z.infer<typeof agentOutputSchema>;
 

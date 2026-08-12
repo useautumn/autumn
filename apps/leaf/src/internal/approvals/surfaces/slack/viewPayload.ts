@@ -3,6 +3,7 @@ import { db } from "../../../../lib/db.js";
 import { logger } from "../../../../lib/logger.js";
 import { approvalPayloadModal } from "../../../../ui/blocks.js";
 import { chatApprovalRepo } from "../../repos/chatApprovalRepo.js";
+import { approvalCardItems } from "./cardItems.js";
 
 /** Opens a modal showing the exact tool arguments behind an approval card. */
 export const handleViewPayloadAction = async (event: ActionEvent) => {
@@ -10,8 +11,9 @@ export const handleViewPayloadAction = async (event: ActionEvent) => {
 	if (!approvalId) return;
 
 	try {
-		const approval = await chatApprovalRepo.get({ approvalId, db });
-		if (!approval) {
+		const approvals = await chatApprovalRepo.getGroup({ approvalId, db });
+		const [first] = approvals;
+		if (!first) {
 			logger.warn("Payload requested for unknown approval", {
 				event: "leaf.approval_payload_missing",
 				approval_id: approvalId,
@@ -20,18 +22,14 @@ export const handleViewPayloadAction = async (event: ActionEvent) => {
 		}
 		await event.openModal(
 			approvalPayloadModal({
-				env: approval.env,
-				toolArgs:
-					approval.tool_args && typeof approval.tool_args === "object"
-						? (approval.tool_args as Record<string, unknown>)
-						: undefined,
-				toolName: approval.tool_name,
+				env: first.env,
+				items: approvalCardItems(approvals),
 			}),
 		);
 		logger.info("Opened approval payload modal", {
 			event: "leaf.approval_payload_viewed",
 			approval_id: approvalId,
-			tool: approval.tool_name,
+			data: { count: approvals.length },
 		});
 	} catch (error) {
 		logger.error("[chat] Could not open approval payload modal", error, {

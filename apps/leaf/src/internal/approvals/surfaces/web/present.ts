@@ -5,7 +5,10 @@ import { db } from "../../../../lib/db.js";
 import { logger as rootLogger } from "../../../../lib/logger.js";
 import type { AgentOutput } from "../../../../types.js";
 import { chatApprovalRepo } from "../../repos/chatApprovalRepo.js";
-import { approvalRequestFromOutput } from "../../utils/approvalRequest.js";
+import {
+	type ApprovalRequest,
+	approvalRequestsFromOutput,
+} from "../../utils/approvalRequest.js";
 import {
 	fetchApprovalPreview,
 	shouldRefreshApprovalPreview,
@@ -21,12 +24,50 @@ const publicToolArgs = (args: Record<string, unknown>) =>
 		Object.entries(args).filter(([key]) => !key.startsWith("_eve")),
 	);
 
+const withBackfilledPreview = async ({
+	logger,
+	request,
+	token,
+}: {
+	logger: AutumnLogger;
+	request: ApprovalRequest;
+	token: string;
+}) => {
+	if (
+		!shouldRefreshApprovalPreview({
+			preview: request.preview,
+			toolName: request.toolName,
+		})
+	) {
+		return request;
+	}
+	try {
+		const body = getRequest(publicToolArgs(request.toolArgs));
+		if (!body) return request;
+		const preview = await fetchApprovalPreview({
+			env: request.env,
+			logger,
+			request: body,
+			token,
+			toolName: request.toolName,
+		});
+		return preview ? { ...request, preview } : request;
+	} catch (error) {
+		logger.warn("Could not backfill web approval preview", {
+			event: "leaf.approval_preview_backfill_failed",
+			tool: request.toolName,
+			error,
+		});
+		return request;
+	}
+};
+
 /**
- * Record an approval for a suspended web turn. The dashboard fetches it via
- * `/agent/interactions` and renders the captured preview + approve/reject; there
- * is no card to post (the web stream is text-only). Returns the approval id, or
- * undefined when the suspension can't be resumed (so the caller can fall back to
- * plain text).
+ * Record the approvals a suspended web turn is waiting on. The dashboard
+ * fetches them via `/agent/interactions` and renders each captured preview +
+ * approve/reject; there is no card to post (the web stream is text-only).
+ * Returns one entry per gated write, or an empty list when the suspension can't
+ * be resumed (so the caller can fall back to plain text).
  */
 export const presentWebApproval = async ({
 	channelId,
@@ -49,78 +90,61 @@ export const presentWebApproval = async ({
 	token: string;
 	workspaceId: string;
 }): Promise<
-	| { approvalId: string; params: unknown; preview: unknown; toolName: string }
-	| undefined
+	{ approvalId: string; params: unknown; preview: unknown; toolName: string }[]
 > => {
-	const approval = approvalRequestFromOutput(output);
-	if (!approval) return undefined;
-	if (!(approval.runId && approval.toolCallId)) {
+	const requests = approvalRequestsFromOutput(output);
+	if (requests.length === 0) return [];
+	if (requests.some((request) => !(request.runId && request.toolCallId))) {
 		logger.warn("Skipped unexecutable web approval request", {
 			event: "leaf.approval_unexecutable_skipped",
-			context: { env: approval.env, org_id: orgId },
-			tool: approval.toolName,
+			context: { env: output.env, org_id: orgId },
+			data: { tools: requests.map((request) => request.toolName) },
 		});
-		return undefined;
+		return [];
 	}
 
-	if (
-		shouldRefreshApprovalPreview({
-			preview: approval.preview,
-			toolName: approval.toolName,
-		})
-	) {
-		try {
-			const request = getRequest(publicToolArgs(approval.toolArgs));
-			if (request) {
-				const preview = await fetchApprovalPreview({
-					env: approval.env,
-					logger,
-					request,
-					token,
-					toolName: approval.toolName,
-				});
-				if (preview) approval.preview = preview;
-			}
-		} catch (error) {
-			logger.warn("Could not backfill web approval preview", {
-				event: "leaf.approval_preview_backfill_failed",
-				tool: approval.toolName,
-				error,
-			});
-		}
-	}
+	const previewed = await Promise.all(
+		requests.map((request) =>
+			withBackfilledPreview({ logger, request, token }),
+		),
+	);
 
-	const approvalId = await chatApprovalRepo.insert({
+	const { groupId, ids } = await chatApprovalRepo.insertGroup({
 		db,
-		data: {
+		items: previewed.map((request) => ({
+			preview: request.preview,
+			toolArgs: request.toolArgs,
+			toolCallId: request.toolCallId,
+			toolName: request.toolName,
+		})),
+		shared: {
+			channelId,
+			env: output.env,
+			harness,
 			orgId,
 			provider,
-			workspaceId,
-			channelId,
 			providerUserId,
-			env: approval.env,
-			harness,
-			preview: approval.preview,
-			runId: approval.runId,
-			toolArgs: approval.toolArgs,
-			toolCallId: approval.toolCallId,
-			toolName: approval.toolName,
+			runId: output.runId,
+			workspaceId,
 		},
 	});
 
 	logger.info("Created web approval request", {
 		event: "leaf.approval_created",
-		context: { env: approval.env, org_id: orgId },
-		approval_id: approvalId,
-		tool: approval.toolName,
+		context: { env: output.env, org_id: orgId },
+		approval_id: groupId,
+		data: {
+			count: previewed.length,
+			tools: previewed.map((request) => request.toolName),
+		},
 	});
 
-	return {
-		approvalId,
+	return previewed.map((request, index) => ({
+		approvalId: ids[index],
 		params:
-			getRequest(publicToolArgs(approval.toolArgs)) ??
-			publicToolArgs(approval.toolArgs),
-		preview: approval.preview,
-		toolName: approval.toolName,
-	};
+			getRequest(publicToolArgs(request.toolArgs)) ??
+			publicToolArgs(request.toolArgs),
+		preview: request.preview,
+		toolName: request.toolName,
+	}));
 };

@@ -23,22 +23,26 @@ describe("approval card", () => {
 		const card = approvalCard({
 			id: "approval_1",
 			env: AppEnv.Sandbox,
-			toolName: "attach",
-			toolArgs: {
-				request: {
-					...attachArgs.request,
-					invoice_mode: { enabled: true, finalize: false },
-				},
-			},
 			requesterId: "U1",
-			preview: wrapMcpResult({
-				pending: true,
-				preview: {
-					total: 400,
-					currency: "usd",
-					next_cycle: { total: 400, starts_at: Date.UTC(2026, 6, 12) },
+			items: [
+				{
+					preview: wrapMcpResult({
+						pending: true,
+						preview: {
+							total: 400,
+							currency: "usd",
+							next_cycle: { total: 400, starts_at: Date.UTC(2026, 6, 12) },
+						},
+					}),
+					toolArgs: {
+						request: {
+							...attachArgs.request,
+							invoice_mode: { enabled: true, finalize: false },
+						},
+					},
+					toolName: "attach",
 				},
-			}),
+			],
 		});
 
 		const json = JSON.stringify(card);
@@ -63,8 +67,7 @@ describe("approval card", () => {
 		const card = approvalCard({
 			id: "approval_1",
 			env: AppEnv.Live,
-			toolName: "attach",
-			toolArgs: attachArgs,
+			items: [{ toolArgs: attachArgs, toolName: "attach" }],
 		});
 
 		expect(card.subtitle).toContain("🔴 Live");
@@ -77,14 +80,18 @@ describe("approval card", () => {
 	test("shows custom prices as a money field, not a param dump", () => {
 		const card = approvalCard({
 			id: "approval_1",
-			toolName: "updateSubscription",
-			toolArgs: {
-				request: {
-					customer_id: "charlie",
-					plan_id: "pro",
-					customize: { price: { amount: 200, interval: "month" } },
+			items: [
+				{
+					toolArgs: {
+						request: {
+							customer_id: "charlie",
+							plan_id: "pro",
+							customize: { price: { amount: 200, interval: "month" } },
+						},
+					},
+					toolName: "updateSubscription",
 				},
-			},
+			],
 		});
 
 		const json = JSON.stringify(card);
@@ -97,8 +104,7 @@ describe("approval card", () => {
 	test("omits badges and money facts when nothing was set", () => {
 		const card = approvalCard({
 			id: "approval_1",
-			toolName: "attach",
-			toolArgs: attachArgs,
+			items: [{ toolArgs: attachArgs, toolName: "attach" }],
 		});
 
 		const types = card.children.map((child) => child.type);
@@ -109,11 +115,15 @@ describe("approval card", () => {
 	test("shows negative due-now amounts as a credit", () => {
 		const card = approvalCard({
 			id: "approval_1",
-			toolName: "updateSubscription",
-			toolArgs: { request: { customer_id: "cus_1", plan_id: "starter" } },
-			preview: wrapMcpResult({
-				preview: { total: -250.5, currency: "usd" },
-			}),
+			items: [
+				{
+					preview: wrapMcpResult({
+						preview: { total: -250.5, currency: "usd" },
+					}),
+					toolArgs: { request: { customer_id: "cus_1", plan_id: "starter" } },
+					toolName: "updateSubscription",
+				},
+			],
 		});
 
 		const json = JSON.stringify(card);
@@ -127,10 +137,9 @@ describe("approval card", () => {
 		const card = approvalCard({
 			id: "approval_1",
 			env: AppEnv.Sandbox,
-			toolName: "attach",
-			toolArgs: attachArgs,
 			summary:
 				"Preview — Scale Yearly, custom $8,000/yr:\n- Due now: $8,000\n- Term: 12 Jun 2026 → 12 Jun 2027\n\nApprove to attach?",
+			items: [{ toolArgs: attachArgs, toolName: "attach" }],
 		});
 
 		const json = JSON.stringify(card);
@@ -146,8 +155,7 @@ describe("approval card", () => {
 	test("offers a payload viewer button", () => {
 		const card = approvalCard({
 			id: "approval_1",
-			toolName: "attach",
-			toolArgs: attachArgs,
+			items: [{ toolArgs: attachArgs, toolName: "attach" }],
 		});
 
 		const json = JSON.stringify(card);
@@ -159,39 +167,43 @@ describe("approval card", () => {
 		const card = approvalCard({
 			id: "approval_1",
 			env: AppEnv.Sandbox,
-			toolName: "attach",
-			toolArgs: {
-				request: {
-					...attachArgs.request,
-					customize: {
-						add_items: [
-							{ feature_id: "seats", unlimited: true },
-							{
-								feature_id: "credits",
-								included: 5000,
-								price: {
-									amount: 0.1,
-									interval: "month",
-									billing_method: "usage_based",
-								},
+			items: [
+				{
+					toolArgs: {
+						request: {
+							...attachArgs.request,
+							customize: {
+								add_items: [
+									{ feature_id: "seats", unlimited: true },
+									{
+										feature_id: "credits",
+										included: 5000,
+										price: {
+											amount: 0.1,
+											interval: "month",
+											billing_method: "usage_based",
+										},
+									},
+									{
+										feature_id: "api_calls",
+										price: {
+											amount: 5,
+											billing_units: 1000,
+											interval: "month",
+											billing_method: "usage_based",
+										},
+									},
+								],
+								remove_items: [
+									{ feature_id: "audit_logs" },
+									{ billing_method: "prepaid", interval: "year" },
+								],
 							},
-							{
-								feature_id: "api_calls",
-								price: {
-									amount: 5,
-									billing_units: 1000,
-									interval: "month",
-									billing_method: "usage_based",
-								},
-							},
-						],
-						remove_items: [
-							{ feature_id: "audit_logs" },
-							{ billing_method: "prepaid", interval: "year" },
-						],
+						},
 					},
+					toolName: "attach",
 				},
-			},
+			],
 		});
 
 		const json = JSON.stringify(card);
@@ -208,8 +220,7 @@ describe("approval card", () => {
 	test("omits the changes block when nothing is customized", () => {
 		const card = approvalCard({
 			id: "approval_1",
-			toolName: "attach",
-			toolArgs: attachArgs,
+			items: [{ toolArgs: attachArgs, toolName: "attach" }],
 		});
 
 		const json = JSON.stringify(card);
@@ -222,11 +233,15 @@ describe("approval payload modal", () => {
 	test("renders only the request body as a code block", () => {
 		const modal = approvalPayloadModal({
 			env: AppEnv.Sandbox,
-			toolName: "attach",
-			toolArgs: {
-				intent: "Attach the scale yearly plan.",
-				request: attachArgs.request,
-			},
+			items: [
+				{
+					toolArgs: {
+						intent: "Attach the scale yearly plan.",
+						request: attachArgs.request,
+					},
+					toolName: "attach",
+				},
+			],
 		});
 
 		const json = JSON.stringify(modal);
@@ -239,8 +254,12 @@ describe("approval payload modal", () => {
 
 	test("truncates oversized payloads", () => {
 		const modal = approvalPayloadModal({
-			toolName: "attach",
-			toolArgs: { request: { blob: "x".repeat(5000) } },
+			items: [
+				{
+					toolArgs: { request: { blob: "x".repeat(5000) } },
+					toolName: "attach",
+				},
+			],
 		});
 
 		expect(JSON.stringify(modal)).toContain("(truncated)");
@@ -252,12 +271,16 @@ describe("approval status card", () => {
 		const card = approvalStatusCard({
 			status: "running",
 			env: AppEnv.Sandbox,
-			toolName: "attach",
-			toolArgs: attachArgs,
 			actorId: "U1",
-			preview: wrapMcpResult({
-				preview: { total: 400, currency: "usd" },
-			}),
+			items: [
+				{
+					preview: wrapMcpResult({
+						preview: { total: 400, currency: "usd" },
+					}),
+					toolArgs: attachArgs,
+					toolName: "attach",
+				},
+			],
 		});
 
 		const json = JSON.stringify(card);
@@ -278,10 +301,9 @@ describe("approval status card", () => {
 	test("shows a live status line while running", () => {
 		const card = approvalStatusCard({
 			status: "running",
-			toolName: "attach",
-			toolArgs: attachArgs,
 			actorId: "U1",
 			statusLine: "Creating invoice… · 24s",
+			items: [{ toolArgs: attachArgs, toolName: "attach" }],
 		});
 
 		expect(JSON.stringify(card)).toContain("▸ Creating invoice… · 24s");
@@ -291,24 +313,25 @@ describe("approval status card", () => {
 		const card = approvalStatusCard({
 			status: "approved",
 			env: AppEnv.Sandbox,
-			toolName: "attach",
-			toolArgs: attachArgs,
 			actorId: "U1",
-			result: {
-				result: wrapMcpResult({
-					customer_id: "kp-customer-1000",
-					invoice: {
-						status: "draft",
-						total: 0,
-						currency: "usd",
-						stripe_id: "in_123",
-						hosted_invoice_url: "https://invoice.example",
-					},
-					payment_url: "https://pay.example",
-				}),
-				text: "",
-				toolName: "attach",
-			},
+			items: [{ toolArgs: attachArgs, toolName: "attach" }],
+			results: [
+				{
+					result: wrapMcpResult({
+						customer_id: "kp-customer-1000",
+						invoice: {
+							status: "draft",
+							total: 0,
+							currency: "usd",
+							stripe_id: "in_123",
+							hosted_invoice_url: "https://invoice.example",
+						},
+						payment_url: "https://pay.example",
+					}),
+					text: "",
+					toolName: "attach",
+				},
+			],
 		});
 
 		const json = JSON.stringify(card);
@@ -329,13 +352,17 @@ describe("approval status card", () => {
 		const card = approvalStatusCard({
 			status: "approved",
 			env: AppEnv.Sandbox,
-			toolName: "attach",
-			toolArgs: attachArgs,
 			actorId: "U1",
-			preview: wrapMcpResult({
-				preview: { total: 400, currency: "usd" },
-			}),
-			result: { result: wrapMcpResult({ customer_id: "kp-customer-1000" }) },
+			items: [
+				{
+					preview: wrapMcpResult({
+						preview: { total: 400, currency: "usd" },
+					}),
+					toolArgs: attachArgs,
+					toolName: "attach",
+				},
+			],
+			results: [{ result: wrapMcpResult({ customer_id: "kp-customer-1000" }) }],
 		});
 
 		const json = JSON.stringify(card);
@@ -351,12 +378,14 @@ describe("approval status card", () => {
 		const card = approvalStatusCard({
 			status: "approved",
 			env: AppEnv.Sandbox,
-			toolName: "attach",
-			result: {
-				result: wrapMcpResult({
-					customer_id: "cus_from_result",
-				}),
-			},
+			items: [{ toolName: "attach" }],
+			results: [
+				{
+					result: wrapMcpResult({
+						customer_id: "cus_from_result",
+					}),
+				},
+			],
 		});
 
 		const json = JSON.stringify(card);
@@ -370,17 +399,19 @@ describe("approval status card", () => {
 		const card = approvalStatusCard({
 			status: "approved",
 			env: AppEnv.Live,
-			toolName: "attach",
-			result: {
-				result: {
-					invoice: {
-						status: "open",
-						stripe_id: "in_live",
-						hosted_invoice_url: "https://invoice.example/open",
+			items: [{ toolName: "attach" }],
+			results: [
+				{
+					result: {
+						invoice: {
+							status: "open",
+							stripe_id: "in_live",
+							hosted_invoice_url: "https://invoice.example/open",
+						},
+						payment_url: "https://invoice.example/open",
 					},
-					payment_url: "https://invoice.example/open",
 				},
-			},
+			],
 		});
 
 		const json = JSON.stringify(card);
@@ -394,26 +425,30 @@ describe("approval status card", () => {
 		const sandbox = approvalStatusCard({
 			status: "approved",
 			env: AppEnv.Sandbox,
-			toolName: "attach",
-			result: {
-				result: {
-					invoice: {
-						status: "draft",
-						stripe_id: "in_123",
-						hosted_invoice_url: null,
+			items: [{ toolName: "attach" }],
+			results: [
+				{
+					result: {
+						invoice: {
+							status: "draft",
+							stripe_id: "in_123",
+							hosted_invoice_url: null,
+						},
 					},
 				},
-			},
+			],
 		});
 		const live = approvalStatusCard({
 			status: "approved",
 			env: AppEnv.Live,
-			toolName: "attach",
-			result: {
-				result: {
-					invoice: { stripe_id: "in_live", hosted_invoice_url: null },
+			items: [{ toolName: "attach" }],
+			results: [
+				{
+					result: {
+						invoice: { stripe_id: "in_live", hosted_invoice_url: null },
+					},
 				},
-			},
+			],
 		});
 
 		expect(JSON.stringify(sandbox)).toContain(
@@ -429,18 +464,19 @@ describe("approval status card", () => {
 		const card = approvalStatusCard({
 			status: "approved",
 			env: AppEnv.Live,
-			toolName: "attach",
-			toolArgs: attachArgs,
-			result: {
-				result: {
-					customer_id: "kp-customer-1000",
-					required_action: {
-						code: "payment_method_required",
-						reason: "Customer has no card on file.",
+			items: [{ toolArgs: attachArgs, toolName: "attach" }],
+			results: [
+				{
+					result: {
+						customer_id: "kp-customer-1000",
+						required_action: {
+							code: "payment_method_required",
+							reason: "Customer has no card on file.",
+						},
+						payment_url: "https://pay.example/setup",
 					},
-					payment_url: "https://pay.example/setup",
 				},
-			},
+			],
 		});
 
 		const json = JSON.stringify(card);
@@ -454,12 +490,13 @@ describe("approval status card", () => {
 	test("renders failures with the error message and no raw fields", () => {
 		const card = approvalStatusCard({
 			status: "failed",
-			toolName: "attach",
-			toolArgs: attachArgs,
-			result: {
-				error: true,
-				message: "Missing email.",
-			},
+			items: [{ toolArgs: attachArgs, toolName: "attach" }],
+			results: [
+				{
+					error: true,
+					message: "Missing email.",
+				},
+			],
 		});
 
 		const json = JSON.stringify(card);
@@ -474,15 +511,19 @@ describe("approval status card", () => {
 		const card = approvalStatusCard({
 			status: "cancelled",
 			env: AppEnv.Sandbox,
-			toolName: "attach",
-			toolArgs: attachArgs,
 			actorId: "U2",
-			preview: wrapMcpResult({
-				preview: {
-					total: 400,
-					currency: "usd",
+			items: [
+				{
+					preview: wrapMcpResult({
+						preview: {
+							total: 400,
+							currency: "usd",
+						},
+					}),
+					toolArgs: attachArgs,
+					toolName: "attach",
 				},
-			}),
+			],
 		});
 
 		const json = JSON.stringify(card);
@@ -506,19 +547,22 @@ describe("approval status card", () => {
 		const superseded = approvalStatusCard({
 			status: "superseded",
 			env: AppEnv.Sandbox,
-			toolName: "attach",
-			toolArgs: attachArgs,
-			preview: wrapMcpResult({
-				preview: {
-					total: 400,
-					currency: "usd",
+			items: [
+				{
+					preview: wrapMcpResult({
+						preview: {
+							total: 400,
+							currency: "usd",
+						},
+					}),
+					toolArgs: attachArgs,
+					toolName: "attach",
 				},
-			}),
+			],
 		});
 		const expired = approvalStatusCard({
 			status: "expired",
-			toolName: "attach",
-			toolArgs: attachArgs,
+			items: [{ toolArgs: attachArgs, toolName: "attach" }],
 		});
 
 		const supersededJson = JSON.stringify(superseded);
@@ -542,10 +586,99 @@ describe("approval status card", () => {
 	test("keeps a sane fallback for unknown tools and empty results", () => {
 		const card = approvalStatusCard({
 			status: "approved",
-			toolName: "configureWebhooks",
-			result: {},
+			items: [{ toolName: "configureWebhooks" }],
+			results: [{}],
 		});
 
 		expect(JSON.stringify(card)).toContain("✅ Configure Webhooks completed");
+	});
+});
+
+describe("approval card for a group of writes", () => {
+	const attachTo = ({
+		customerId,
+		currency = "usd",
+		total = 49,
+	}: {
+		customerId: string;
+		currency?: string;
+		total?: number;
+	}) => ({
+		preview: wrapMcpResult({ preview: { total, currency } }),
+		toolArgs: { request: { customer_id: customerId, plan_id: "pro" } },
+		toolName: "attach",
+	});
+
+	test("renders every write and sums what is due today", () => {
+		const card = approvalCard({
+			id: "approval_1",
+			env: AppEnv.Live,
+			items: ["acme", "beta", "gamma"].map((customerId) =>
+				attachTo({ customerId }),
+			),
+			requesterId: "U1",
+		});
+
+		const json = JSON.stringify(card);
+		expect(card.title).toBe("3 changes");
+		// Every call an approver is about to run has to be on the card.
+		expect(json).toContain("1. Attach **pro**");
+		expect(json).toContain("2. Attach **pro**");
+		expect(json).toContain("3. Attach **pro**");
+		for (const customerId of ["acme", "beta", "gamma"]) {
+			expect(json).toContain(customerId);
+		}
+		expect(json).toContain("Total due now");
+		expect(json).toContain("$147.00");
+		expect(json).toContain("Approve all 3 in Live");
+	});
+
+	test("omits the total when the writes don't share a currency", () => {
+		const card = approvalCard({
+			id: "approval_1",
+			items: [
+				attachTo({ customerId: "acme", currency: "usd", total: 49 }),
+				attachTo({ customerId: "beta", currency: "eur", total: 49 }),
+			],
+		});
+
+		const json = JSON.stringify(card);
+		expect(json).toContain("beta");
+		expect(json).not.toContain("Total due now");
+	});
+
+	test("lists every write even past the detailed-render limit", () => {
+		const customerIds = Array.from(
+			{ length: 12 },
+			(_, index) => `cus_${index}`,
+		);
+		const card = approvalCard({
+			id: "approval_1",
+			items: customerIds.map((customerId) => attachTo({ customerId })),
+		});
+
+		const json = JSON.stringify(card);
+		expect(card.title).toBe("12 changes");
+		// Compact mode still names all of them — a truncated list would hide a
+		// write the approver is about to run.
+		for (const customerId of customerIds) {
+			expect(json).toContain(customerId);
+		}
+		expect(json).toContain("12. Attach **pro**");
+	});
+
+	test("a single write renders exactly as it did before grouping", () => {
+		const card = approvalCard({
+			id: "approval_1",
+			env: AppEnv.Sandbox,
+			items: [attachTo({ customerId: "acme" })],
+		});
+
+		const json = JSON.stringify(card);
+		expect(card.title).toBe("Attach plan");
+		expect(json).toContain("Attach **pro**");
+		expect(json).not.toContain("1. Attach");
+		expect(json).not.toContain("Total due now");
+		expect(json).toContain('"label":"Approve"');
 	});
 });

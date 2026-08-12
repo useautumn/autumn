@@ -6,7 +6,7 @@ import {
 import type { ActionEvent } from "chat";
 import { and, eq } from "drizzle-orm";
 import { resolveSlackCallerAuth } from "../../../../agent/runMessage/setup/resolveSlackCallerAuth.js";
-import { denyEveApproval } from "../../../../harness/eve/approval.js";
+import { denyEveApprovalGroup } from "../../../../harness/eve/approval.js";
 import { db } from "../../../../lib/db.js";
 import { logger as rootLogger } from "../../../../lib/logger.js";
 import { approvalStatusCard } from "../../../../ui/blocks.js";
@@ -15,7 +15,7 @@ import { createThrottledCardEditor } from "../../../../ui/throttledEditor.js";
 import { getInstallationOAuthAccessToken } from "../../../installations/actions/getInstallationOAuthAccessToken.js";
 import { validateSlackAdminAccess } from "../../../slackAdmin/access.js";
 import { isInternalAutumnSlackProvider } from "../../../slackAdmin/provider.js";
-import { resolveApproval } from "../../actions/resolveApproval.js";
+import { resolveApprovalGroup } from "../../actions/resolveApprovalGroup.js";
 import { chatApprovalRepo } from "../../repos/chatApprovalRepo.js";
 import type {
 	ApprovalActionDeps,
@@ -28,17 +28,8 @@ import {
 } from "../../utils/approvalErrors.js";
 import { formatElapsed } from "../../utils/approvalProgress.js";
 import { approvalScopeRequirements } from "../../utils/approvalScopeRequirements.js";
-import { postApprovalCardForRow } from "./present.js";
-
-const detailsFromApproval = ({ approval }: { approval?: ChatApproval }) => ({
-	toolName: approval?.tool_name ?? "billing action",
-	toolArgs:
-		approval?.tool_args && typeof approval.tool_args === "object"
-			? (approval.tool_args as Record<string, unknown>)
-			: undefined,
-	env: approval?.env,
-	preview: approval?.preview ?? undefined,
-});
+import { approvalCardItems } from "./cardItems.js";
+import { postApprovalCardForGroup } from "./present.js";
 
 const authorizeSlackApprovalClicker = async ({
 	approval,
@@ -47,7 +38,7 @@ const authorizeSlackApprovalClicker = async ({
 	approval: ChatApproval;
 	providerUserId: string;
 }): Promise<ApprovalAuthorization> => {
-	const { toolName } = detailsFromApproval({ approval });
+	const toolName = approval.tool_name;
 
 	// Slack-admin approvals are gated upstream by validateSlackAdminAccess.
 	if (isInternalAutumnSlackProvider({ provider: approval.provider })) {
@@ -116,36 +107,65 @@ const authorizeSlackApprovalClicker = async ({
 };
 
 const defaultApprovalActionDeps: ApprovalActionDeps = {
-	resolveApproval,
-	cancelApproval: ({ approvalId, providerUserId }) =>
-		chatApprovalRepo.cancel({ approvalId, db, providerUserId }),
+	resolveApprovalGroup,
+	cancelApprovalGroup: ({ approvals, providerUserId }) =>
+		chatApprovalRepo.cancelGroup({ approvals, db, providerUserId }),
 	authorizeApprovalClicker: authorizeSlackApprovalClicker,
-	claimApproval: ({ approvalId, providerUserId }) =>
-		chatApprovalRepo.claim({ approvalId, db, providerUserId }),
-	releaseApproval: ({ approvalId, providerUserId }) =>
-		chatApprovalRepo.release({ approvalId, db, providerUserId }),
+	claimApprovalGroup: ({ approvals, providerUserId }) =>
+		chatApprovalRepo.claimGroup({ approvals, db, providerUserId }),
+	releaseApprovalGroup: ({ approvals, providerUserId }) =>
+		chatApprovalRepo.releaseGroup({ approvals, db, providerUserId }),
 	editActionMessage: async ({ content, event }) => {
 		await event.adapter.editMessage?.(event.threadId, event.messageId, content);
 	},
-	getApproval: ({ approvalId }) => chatApprovalRepo.get({ approvalId, db }),
+	getApprovalGroup: ({ approvalId }) =>
+		chatApprovalRepo.getGroup({ approvalId, db }),
 	logger: rootLogger,
 	postThreadReply: async ({ event, markdown }) => {
 		await event.thread?.post({ markdown });
 	},
 };
 
-// Maps a DB row to the card state shown when a click can no longer act on it.
-const cardStatusForApproval = ({
-	approval,
+// Maps the group's rows to the card state shown when a click can no longer act
+// on it. A mixed group takes the least-settled state so the card never claims
+// more finality than the rows have.
+const cardStatusForApprovals = ({
+	approvals,
 }: {
-	approval?: ChatApproval;
+	approvals: ChatApproval[];
 }): ApprovalCardStatus => {
-	const status = approval?.status;
+	const [first] = approvals;
+	const status = first?.status;
 	if (status === "approved" || status === "cancelled" || status === "running")
 		return status;
-	if (status === "pending" && (approval?.expires_at ?? 0) <= Date.now())
+	if (status === "pending" && (first?.expires_at ?? 0) <= Date.now())
 		return "expired";
 	return "failed";
+};
+
+/** Every write in the group must be permitted before any of them runs — a
+ * partial approval would apply some writes and strand the rest. */
+const authorizeGroup = async ({
+	approvals,
+	deps,
+	providerUserId,
+}: {
+	approvals: ChatApproval[];
+	deps: ApprovalActionDeps;
+	providerUserId: string;
+}) => {
+	let approverToken: string | undefined;
+	for (const approval of approvals) {
+		const authorization = await deps.authorizeApprovalClicker?.({
+			approval,
+			providerUserId,
+		});
+		if (authorization && !authorization.allowed) return authorization;
+		approverToken ??= authorization?.allowed
+			? authorization.approverToken
+			: undefined;
+	}
+	return { allowed: true as const, approverToken };
 };
 
 export const handleApprovalActionWithDeps = async ({
@@ -160,12 +180,13 @@ export const handleApprovalActionWithDeps = async ({
 	const providerUserId = event.user.userId;
 
 	const editToCurrentStatus = async () => {
-		const current = await deps.getApproval({ approvalId });
+		const current = await deps.getApprovalGroup({ approvalId });
 		await deps.editActionMessage({
 			content: approvalStatusCard({
-				status: cardStatusForApproval({ approval: current }),
-				...detailsFromApproval({ approval: current }),
-				actorId: current?.decided_by_provider_user_id ?? undefined,
+				status: cardStatusForApprovals({ approvals: current }),
+				actorId: current[0]?.decided_by_provider_user_id ?? undefined,
+				env: current[0]?.env,
+				items: approvalCardItems(current),
 			}),
 			event,
 		});
@@ -179,17 +200,18 @@ export const handleApprovalActionWithDeps = async ({
 			data: { provider_user_id: providerUserId },
 		});
 
-		const approval = await deps.getApproval({ approvalId });
-		if (!approval) {
+		const approvals = await deps.getApprovalGroup({ approvalId });
+		const [first] = approvals;
+		if (!first) {
 			await editToCurrentStatus();
 			return;
 		}
 		if (
-			approval.provider &&
-			isInternalAutumnSlackProvider({ provider: approval.provider })
+			first.provider &&
+			isInternalAutumnSlackProvider({ provider: first.provider })
 		) {
 			const access = validateSlackAdminAccess({
-				workspaceId: approval.workspace_id,
+				workspaceId: first.workspace_id,
 			});
 			if (!access.allowed) {
 				deps.logger.warn("Slack admin approval action denied", {
@@ -201,14 +223,23 @@ export const handleApprovalActionWithDeps = async ({
 			}
 		}
 
+		const items = approvalCardItems(approvals);
+		const env = first.env;
+
 		if (event.actionId === "cancel_billing_action") {
-			// Eve parks the whole turn on the approval — deny it in the session too,
-			// or it keeps waiting, holds the next message behind the stale approval,
-			// and the discarded write can still run later.
-			if (approval.harness === "eve" && approval.status === "pending") {
-				const denied = await denyEveApproval({ approval, providerUserId });
+			// Eve parks the whole turn on the approvals — deny them in the session
+			// too, or it keeps waiting, holds the next message behind the stale
+			// approvals, and the discarded writes can still run later.
+			const pending = approvals.filter(
+				(approval) => approval.status === "pending",
+			);
+			if (first.harness === "eve" && pending.length > 0) {
+				const denied = await denyEveApprovalGroup({
+					approvals: pending,
+					providerUserId,
+				});
 				if ("error" in denied && denied.error) {
-					deps.logger.warn("Could not deny Eve approval on dismiss", {
+					deps.logger.warn("Could not deny Eve approvals on dismiss", {
 						event: "leaf.eve_dismiss_deny_failed",
 						approval_id: approvalId,
 						data: { message: denied.message },
@@ -221,11 +252,11 @@ export const handleApprovalActionWithDeps = async ({
 					}
 				}
 			}
-			const cancelled = await deps.cancelApproval({
-				approvalId,
+			const cancelled = await deps.cancelApprovalGroup({
+				approvals,
 				providerUserId,
 			});
-			if (!cancelled) {
+			if (cancelled.length === 0) {
 				deps.logger.warn("Approval cancellation ignored", {
 					event: "leaf.approval_cancel_ignored",
 					approval_id: approvalId,
@@ -236,43 +267,54 @@ export const handleApprovalActionWithDeps = async ({
 			await deps.editActionMessage({
 				content: approvalStatusCard({
 					status: "cancelled",
-					...detailsFromApproval({ approval: cancelled }),
 					actorId: providerUserId,
+					env,
+					items,
 				}),
 				event,
 			});
 			deps.logger.info("Cancelled approval", {
 				event: "leaf.approval_cancelled",
 				approval_id: approvalId,
-				tool: cancelled.tool_name,
+				data: { count: cancelled.length },
 			});
 			return;
 		}
 
 		// Claim first so exactly one click wins; losers never reach authorization.
-		const claimed = await deps.claimApproval({ approvalId, providerUserId });
-		if (!claimed) {
+		const claimed = await deps.claimApprovalGroup({
+			approvals,
+			providerUserId,
+		});
+		if (claimed.length !== approvals.length) {
+			// A partial claim means another click is already running some of these
+			// writes — hand back what we took rather than running a subset.
+			await deps.releaseApprovalGroup?.({
+				approvals: claimed,
+				providerUserId,
+			});
 			deps.logger.warn("Approval claim rejected", {
 				event: "leaf.approval_claim_rejected",
 				approval_id: approvalId,
+				data: { claimed: claimed.length, expected: approvals.length },
 			});
 			await editToCurrentStatus();
 			return;
 		}
 
-		// On denial, release the claim so another authorized user can still approve.
-		let authorization: ApprovalAuthorization | undefined;
+		// On denial, release the claims so another authorized user can still approve.
+		let authorization: Awaited<ReturnType<typeof authorizeGroup>> | undefined;
 		try {
-			authorization = await deps.authorizeApprovalClicker?.({
-				approval: claimed,
+			authorization = await authorizeGroup({
+				approvals: claimed,
+				deps,
 				providerUserId,
 			});
 		} catch (error) {
-			await deps.releaseApproval?.({ approvalId, providerUserId });
+			await deps.releaseApprovalGroup?.({ approvals: claimed, providerUserId });
 			deps.logger.error("[chat] Approval authorization failed", error, {
 				event: "leaf.approval_authorization_failed",
 				approval_id: approvalId,
-				tool: claimed.tool_name,
 				data: { provider_user_id: providerUserId },
 			});
 			await deps.postThreadReply({
@@ -282,28 +324,25 @@ export const handleApprovalActionWithDeps = async ({
 			});
 			return;
 		}
-		if (authorization && !authorization.allowed) {
-			await deps.releaseApproval?.({ approvalId, providerUserId });
+		if (!authorization.allowed) {
+			await deps.releaseApprovalGroup?.({ approvals: claimed, providerUserId });
 			deps.logger.warn("Approval action denied by Autumn scopes", {
 				event: "leaf.approval_scope_denied",
 				approval_id: approvalId,
-				tool: approval.tool_name,
 				data: { provider_user_id: providerUserId },
 			});
-			await deps.postThreadReply({
-				event,
-				markdown: authorization.text,
-			});
+			await deps.postThreadReply({ event, markdown: authorization.text });
 			return;
 		}
-		const details = detailsFromApproval({ approval: claimed });
+
 		const startedAt = Date.now();
 		let statusText: string | undefined;
 		const renderRunningCard = () =>
 			approvalStatusCard({
 				status: "running",
-				...details,
 				actorId: providerUserId,
+				env,
+				items,
 				statusLine: statusText
 					? Date.now() - startedAt >= 10_000
 						? `${statusText} · ${formatElapsed(startedAt)}`
@@ -317,18 +356,16 @@ export const handleApprovalActionWithDeps = async ({
 		editor.requestEdit();
 
 		const heartbeat = setInterval(() => editor.requestEdit(), 10_000);
-		let result: Awaited<ReturnType<ApprovalActionDeps["resolveApproval"]>>;
+		let result: Awaited<ReturnType<ApprovalActionDeps["resolveApprovalGroup"]>>;
 		try {
-			result = await deps.resolveApproval({
-				approval: claimed,
+			result = await deps.resolveApprovalGroup({
+				approvals: claimed,
 				onProgress: (line) => {
 					statusText = line;
 					editor.requestEdit();
 				},
 				providerUserId,
-				approverToken: authorization?.allowed
-					? authorization.approverToken
-					: undefined,
+				approverToken: authorization.approverToken,
 			});
 		} finally {
 			clearInterval(heartbeat);
@@ -339,7 +376,7 @@ export const handleApprovalActionWithDeps = async ({
 			event: "leaf.approval_completed",
 			approval_id: approvalId,
 			status: failed ? "failed" : "approved",
-			tool: details.toolName,
+			data: { count: claimed.length },
 		});
 
 		// The agent's continuation is conversation — it belongs in the thread,
@@ -355,17 +392,17 @@ export const handleApprovalActionWithDeps = async ({
 				});
 			}
 		}
-		// The resumed turn can park again (chained write or a question) where
+		// The resumed turn can park again (chained writes or a question) where
 		// nothing streams — surface those as fresh cards or they stay invisible.
 		if (!failed && event.thread) {
 			try {
-				if ("chainedApprovalId" in result && result.chainedApprovalId) {
-					const chained = await deps.getApproval({
-						approvalId: result.chainedApprovalId,
+				if ("chainedGroupId" in result && result.chainedGroupId) {
+					const chained = await deps.getApprovalGroup({
+						approvalId: result.chainedGroupId,
 					});
-					if (chained) {
-						await postApprovalCardForRow({
-							approval: chained,
+					if (chained.length > 0) {
+						await postApprovalCardForGroup({
+							approvals: chained,
 							logger: rootLogger,
 							target: event.thread,
 						});
@@ -374,9 +411,9 @@ export const handleApprovalActionWithDeps = async ({
 				if ("question" in result && result.question) {
 					await event.thread.post(
 						questionCard({
-							env: claimed.env,
+							env,
 							options: result.question.options,
-							orgId: claimed.org_id,
+							orgId: first.org_id,
 							prompt: result.question.prompt,
 							requestId: result.question.requestId,
 							sessionId: result.question.sessionId,
@@ -395,9 +432,15 @@ export const handleApprovalActionWithDeps = async ({
 		await deps.editActionMessage({
 			content: approvalStatusCard({
 				status: failed ? "failed" : "approved",
-				...details,
 				actorId: providerUserId,
-				result,
+				env,
+				failure: failed ? result : undefined,
+				items,
+				results: failed
+					? undefined
+					: claimed.map((approval) =>
+							"results" in result ? result.results?.[approval.id] : undefined,
+						),
 			}),
 			event,
 		});
@@ -407,12 +450,13 @@ export const handleApprovalActionWithDeps = async ({
 			approval_id: approvalId,
 			action: event.actionId,
 		});
-		const current = await deps.getApproval({ approvalId });
+		const current = await deps.getApprovalGroup({ approvalId });
 		await deps.editActionMessage({
 			content: approvalStatusCard({
-				status: cardStatusForApproval({ approval: current }),
-				...detailsFromApproval({ approval: current }),
-				result: approvalErrorResult(error),
+				status: cardStatusForApprovals({ approvals: current }),
+				env: current[0]?.env,
+				failure: approvalErrorResult(error),
+				items: approvalCardItems(current),
 			}),
 			event,
 		});

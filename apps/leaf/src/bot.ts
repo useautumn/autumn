@@ -10,13 +10,13 @@ import { Chat } from "chat";
 import { runMessage } from "./agent/runMessage/runMessage.js";
 import {
 	answerEveQuestion,
-	withdrawEveSuspension,
+	withdrawEveSuspensions,
 } from "./harness/eve/approval.js";
 import { redirectCatalogSuspensionToDecision } from "./harness/eve/catalogDecision.js";
 import { chatApprovalRepo } from "./internal/approvals/repos/chatApprovalRepo.js";
 import { handleApprovalAction } from "./internal/approvals/surfaces/slack/decide.js";
 import {
-	postApprovalCardForRow,
+	postApprovalCardForGroup,
 	presentApproval,
 } from "./internal/approvals/surfaces/slack/present.js";
 import { editSupersededApprovalCards } from "./internal/approvals/surfaces/slack/superseded.js";
@@ -437,9 +437,9 @@ const runAndReply = async ({
 		// into the next turn instead of posting two bot responses back-to-back.
 		// A parked write is withdrawn silently (its card was never shown).
 		if (evePresenter && hasQueuedThreadMessage(runKey)) {
-			if (output.suspension && output.runId) {
+			if (output.suspensions?.length && output.runId) {
 				try {
-					await withdrawEveSuspension({
+					await withdrawEveSuspensions({
 						auth: {
 							appEnv: output.env,
 							channelId,
@@ -451,10 +451,10 @@ const runAndReply = async ({
 						},
 						orgId,
 						runId: output.runId,
-						suspension: output.suspension,
+						suspensions: output.suspensions,
 					});
 				} catch (error) {
-					logger.warn("Could not withdraw suspension for queued message", {
+					logger.warn("Could not withdraw suspensions for queued message", {
 						event: "leaf.eve_queued_withdraw_failed",
 						error,
 					});
@@ -462,7 +462,7 @@ const runAndReply = async ({
 			}
 			logger.info("Suppressed reply; newer message queued", {
 				event: "leaf.slack_reply_suppressed",
-				data: { had_suspension: Boolean(output.suspension) },
+				data: { suspension_count: output.suspensions?.length ?? 0 },
 			});
 			return;
 		}
@@ -471,7 +471,7 @@ const runAndReply = async ({
 		// write still needs versioning/variant/migration choices, deny it and
 		// render the decision card instead of an approval card.
 		let decisionPlan: CatalogPlanPreview | undefined;
-		if (evePresenter && output.suspension) {
+		if (evePresenter && output.suspensions?.length) {
 			try {
 				logAction("Reviewing versioning impact");
 				const token = await getInstallationOAuthAccessToken({
@@ -486,7 +486,7 @@ const runAndReply = async ({
 					orgId,
 					providerUserId,
 					runId: output.runId,
-					suspension: output.suspension,
+					suspensions: output.suspensions,
 					thread: {
 						channelId,
 						provider: outputInstallation.provider,
@@ -758,14 +758,14 @@ bot.onAction(indexedActionIds(ANSWER_QUESTION_ACTION), async (event) => {
 				}),
 			);
 		}
-		if (result.chainedApprovalId && event.thread) {
-			const chained = await chatApprovalRepo.get({
-				approvalId: result.chainedApprovalId,
+		if (result.chainedGroupId && event.thread) {
+			const chained = await chatApprovalRepo.getGroup({
+				approvalId: result.chainedGroupId,
 				db,
 			});
-			if (chained) {
-				await postApprovalCardForRow({
-					approval: chained,
+			if (chained.length > 0) {
+				await postApprovalCardForGroup({
+					approvals: chained,
 					target: event.thread,
 				});
 			}
