@@ -11,6 +11,14 @@ type PreviewBalanceExpectation = Partial<PreviewBalanceChange["balance"]>;
 const getPreviewPlanId = (change: PreviewPlanChange): string | undefined =>
 	change.subscription?.plan_id ?? change.purchase?.plan_id;
 
+/** Top-level item_changes is deprecated (always []); content lives on plan_change. */
+export const getPreviewItemChanges = (
+	change: PreviewPlanChange,
+): PreviewPlanItemChange[] => {
+	const nested = change.plan_change?.item_changes;
+	return nested?.length ? nested : (change.item_changes ?? []);
+};
+
 export const logMigrationPreview = ({
 	preview,
 	log = true,
@@ -43,7 +51,7 @@ export const expectMigrationPreviewCorrect = ({
 		expect(typeof planChange).toBe("object");
 		expect(planChange).not.toBeNull();
 		expect(Array.isArray(planChange.item_changes)).toBe(true);
-		for (const itemChange of planChange.item_changes) {
+		for (const itemChange of getPreviewItemChanges(planChange)) {
 			expect(itemChange.item).toEqual(
 				expect.objectContaining({
 					feature_id: itemChange.feature_id,
@@ -68,12 +76,14 @@ export const expectPreviewPlanChange = ({
 		(change) => change.action === action && getPreviewPlanId(change) === planId,
 	);
 	const planChange = itemChanges
-		? matchingPlanChanges.find((change) => change.item_changes.length > 0)
+		? matchingPlanChanges.find(
+				(change) => getPreviewItemChanges(change).length > 0,
+			)
 		: matchingPlanChanges[0];
 	expect(planChange).toBeDefined();
 
 	if (itemChanges) {
-		expect(planChange?.item_changes).toEqual(
+		expect(getPreviewItemChanges(planChange!)).toEqual(
 			expect.arrayContaining(
 				itemChanges.map((itemChange) => expect.objectContaining(itemChange)),
 			),

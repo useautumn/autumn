@@ -1,0 +1,191 @@
+DESCRIPTION >
+    Reads events_deductions_hourly_mv for aggregate_on="deducted".
+    Returns the finest grain the response needs — (period, balance, group_value) — and the server
+    pivots it into values{} / balances[] / grouped_values{}. Both levels come from these rows:
+    balances[] is the sum across group_value, grouped_values is the split.
+
+    customer_id is REQUIRED. It leads the MV sorting key, so pinning it keeps every query on the key
+    prefix instead of scanning the org. The server rejects the request before reaching this pipe.
+
+    feature_ids matches EITHER side of the edge — a deduction is included if the tracked feature is
+    in the list OR the balance's feature is. Passing a credit system's id therefore returns only what
+    drew on that pool (nobody /tracks a credit system), while passing a normal feature returns every
+    balance it touched.
+
+    group_by is resolved from the EVENT for entity_id (a shared pool is a customer-level balance
+    drawn by many entities, so the balance carries no entity of its own) and from the BALANCE
+    for plan_id. Property grouping is not served here — this rollup carries no properties by design;
+    the server routes those to the raw `events` path.
+
+    Ranking is WINDOW-WIDE, not per bin. aggregate_groupable.pipe partitions its row_number by
+    period, which means AUTUMN_RESERVED holds different members in every bucket — fine for a single
+    total, wrong for a stacked series over time, where segments would appear and vanish between
+    columns. Here the top N is chosen once across the whole window per balance, then applied
+    identically to every bin.
+
+TOKEN "aggregate_deductions_read" READ
+
+NODE base
+DESCRIPTION >
+    Filter to one customer's deductions and project the period and grouping value.
+
+    Two sources. The MV serves every query shape it can (no properties by design —
+    property values are unbounded and a property key in the rollup is the write
+    amplification trap). Property grouping instead reads RAW `events`, decoding the
+    deductions JSON at read time: acceptable ONLY because customer_id is mandatory
+    and leads the events sorting key, so the scan is one customer's rows in the
+    window — typically hundreds to a few thousand — not the org's.
+SQL >
+    %
+    {% set use_property = defined(property_key) and String(property_key, '') != '' %}
+    {% if use_property %}
+    SELECT
+        {% if String(bin_size, 'day') == 'hour' %}
+        formatDateTime(toStartOfHour(timestamp, {{ String(timezone, 'UTC') }}), '%F %T') as period,
+        {% elif String(bin_size, 'day') == 'month' %}
+        formatDateTime(toStartOfMonth(timestamp, {{ String(timezone, 'UTC') }}), '%F %T') as period,
+        {% elif String(bin_size, 'day') == 'week' %}
+        formatDateTime(toStartOfWeek(timestamp, 1, {{ String(timezone, 'UTC') }}), '%F %T') as period,
+        {% else %}
+        formatDateTime(toStartOfDay(timestamp, {{ String(timezone, 'UTC') }}), '%F %T') as period,
+        {% end %}
+        JSONExtractString(JSONExtractString(d), 'feature_id') as balance_feature_id,
+        JSONExtractString(JSONExtractString(d), 'balance_id') as balance_id,
+        JSONExtractString(JSONExtractString(d), 'plan_id') as plan_id,
+        JSONExtractString(
+            JSONExtractRaw(JSONExtractString(d), 'reset'),
+            'interval'
+        ) as reset_interval,
+        {{ column('properties.' + String(property_key, '')) }}::String as group_value,
+        sum(JSONExtractFloat(JSONExtractString(d), 'value')) as deducted,
+        count() as deduction_count
+    FROM events
+    ARRAY JOIN JSONExtractArrayRaw(toString(deductions), 'list') as d
+    WHERE
+        org_id = {{ String(org_id, '') }}
+        AND env = {{ String(env, 'test') }}
+        AND customer_id = {{ String(customer_id, '') }}
+        AND timestamp >= toDateTime({{ String(start_date, '2024-01-01 00:00:00') }})
+        AND timestamp <= toDateTime({{ String(end_date, '2024-12-31 23:59:59') }})
+        AND JSONExtractString(JSONExtractString(d), 'balance_id') != ''
+        {% if defined(feature_ids) %}
+        AND (
+            event_name IN {{ Array(feature_ids, 'String', default='[]') }}
+            OR JSONExtractString(JSONExtractString(d), 'feature_id') IN {{ Array(feature_ids, 'String', default='[]') }}
+        )
+        {% end %}
+        {% if defined(entity_id) and String(entity_id, '') != '' %}
+        AND entity_id = {{ String(entity_id) }}
+        {% end %}
+    GROUP BY
+        period,
+        balance_feature_id,
+        balance_id,
+        plan_id,
+        reset_interval,
+        group_value
+    {% else %}
+    SELECT
+        {% if String(bin_size, 'day') == 'hour' %}
+        formatDateTime(hour, '%F %T') as period,
+        {% elif String(bin_size, 'day') == 'month' %}
+        formatDateTime(toStartOfMonth(hour, {{ String(timezone, 'UTC') }}), '%F %T') as period,
+        {% elif String(bin_size, 'day') == 'week' %}
+        formatDateTime(toStartOfWeek(hour, 1, {{ String(timezone, 'UTC') }}), '%F %T') as period,
+        {% else %}
+        formatDateTime(toStartOfDay(hour, {{ String(timezone, 'UTC') }}), '%F %T') as period,
+        {% end %}
+        balance_feature_id,
+        balance_id,
+        plan_id,
+        reset_interval,
+        {% if String(group_column, '') == 'entity_id' %}
+        entity_id as group_value,
+        {% elif String(group_column, '') == 'source_feature_id' %}
+        event_name as group_value,
+        {% elif String(group_column, '') == 'plan_id' %}
+        plan_id as group_value,
+        {% else %}
+        '' as group_value,
+        {% end %}
+        sum(deducted) as deducted,
+        sum(deduction_count) as deduction_count
+    FROM events_deductions_hourly_mv
+    WHERE
+        org_id = {{ String(org_id, '') }}
+        AND env = {{ String(env, 'test') }}
+        AND customer_id = {{ String(customer_id, '') }}
+        AND hour >= toDateTime({{ String(start_date, '2024-01-01 00:00:00') }})
+        AND hour <= toDateTime({{ String(end_date, '2024-12-31 23:59:59') }})
+        {% if defined(feature_ids) %}
+        AND (
+            event_name IN {{ Array(feature_ids, 'String', default='[]') }}
+            OR balance_feature_id IN {{ Array(feature_ids, 'String', default='[]') }}
+        )
+        {% end %}
+        {% if defined(entity_id) and String(entity_id, '') != '' %}
+        AND entity_id = {{ String(entity_id) }}
+        {% end %}
+        {% if String(group_column, '') == 'entity_id' %}
+        AND entity_id != ''
+        {% end %}
+    GROUP BY
+        period,
+        balance_feature_id,
+        balance_id,
+        plan_id,
+        reset_interval,
+        group_value
+    {% end %}
+
+NODE window_ranked
+DESCRIPTION >
+    Rank each balance's groups by their total over the WHOLE window, so the same set of groups is
+    kept in every bin. Ungrouped queries collapse to a single '' group and rank 1.
+SQL >
+    SELECT
+        balance_id,
+        group_value,
+        row_number() OVER (
+            PARTITION BY balance_id
+            ORDER BY sum(deducted) DESC, group_value ASC
+        ) as rn
+    FROM base
+    GROUP BY balance_id, group_value
+
+NODE endpoint
+TYPE endpoint
+DESCRIPTION >
+    Fold everything outside the top N into AUTUMN_RESERVED, using the window-wide ranking.
+SQL >
+    %
+    SELECT
+        base.period as period,
+        base.balance_feature_id as balance_feature_id,
+        base.balance_id as balance_id,
+        base.plan_id as plan_id,
+        base.reset_interval as reset_interval,
+        if(
+            window_ranked.rn <= {{ Int32(max_groups, 9) }},
+            base.group_value,
+            'AUTUMN_RESERVED'
+        ) as group_value,
+        sum(base.deducted) as deducted,
+        sum(base.deduction_count) as deduction_count,
+        max(window_ranked.rn) > {{ Int32(max_groups, 9) }} as _truncated
+    FROM base
+    INNER JOIN window_ranked
+        ON base.balance_id = window_ranked.balance_id
+        AND base.group_value = window_ranked.group_value
+    GROUP BY
+        period,
+        balance_feature_id,
+        balance_id,
+        plan_id,
+        reset_interval,
+        group_value
+    ORDER BY
+        period,
+        balance_feature_id,
+        balance_id,
+        group_value

@@ -2,19 +2,11 @@ import type { ReferralProgram, Reward } from "../../../compose/index.js";
 import type { Feature } from "../../../compose/models/index.js";
 import type { Plan } from "../../../compose/models/variantModels.js";
 import { buildFeatureCode } from "./feature.js";
-import { resolveVarNames } from "./helpers.js";
+import { resolveVarNames, versionedCodegenId } from "./helpers.js";
 import { buildImports } from "./imports.js";
 import { buildPlanCode } from "./plan.js";
 import { buildReferralProgramCode, buildRewardCode } from "./reward.js";
 import { buildVariantCode } from "./variant.js";
-
-const versionedCodegenId = ({
-	id,
-	version,
-}: {
-	id: string;
-	version?: number;
-}) => (version === undefined ? id : `${id}-v-${version}`);
 
 /**
  * Generate complete autumn.config.ts file content

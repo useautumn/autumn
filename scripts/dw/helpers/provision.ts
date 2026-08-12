@@ -8,6 +8,7 @@ import { ensureChatDatabase } from "./neon.ts";
 import { ensureReservedDomain, ngrokApiAvailable } from "./ngrok.ts";
 import { saveRegistry } from "./registry.ts";
 import {
+	autoEnsureTestOrgSecretKey,
 	autoSeedSlackInstall,
 	autoSetupTestOrg,
 	setupAgentWorktree,
@@ -85,6 +86,10 @@ export async function provisionWorktree({
 			}
 		}
 	}
+
+	// Always re-ensure: Neon reuse / failed prior seed leaves Infisical's key
+	// absent from api_keys while bun t still sends that Bearer token.
+	await autoEnsureTestOrgSecretKey(current);
 
 	return current;
 }

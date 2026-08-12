@@ -14,6 +14,7 @@ export const handleCurrentCustomerProductErrors = ({
 		currentCustomerProduct,
 		attachProduct,
 		stripeSubscription,
+		skipBillingChanges,
 		skipExternalPSPGuard,
 		canceledStripeSubscriptionId,
 	} = billingContext;
@@ -34,6 +35,7 @@ export const handleCurrentCustomerProductErrors = ({
 	// on `cusProductToProcessorType`. A subscription that is linked but canceled
 	// is explained linkage, not broken linkage, so it passes too.
 	if (
+		!skipBillingChanges &&
 		!skipExternalPSPGuard &&
 		!canceledStripeSubscriptionId &&
 		isCustomerProductPaid(currentCustomerProduct) &&

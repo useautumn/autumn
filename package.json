@@ -155,7 +155,7 @@
 		"axiom:prod": "ENV_FILE=.env.prod infisical run --env=prod --recursive -- bun scripts/axiom/cli.ts",
 		"slack": "ENV_FILE=.env infisical run --env=dev --recursive -- bun scripts/slack/index.ts",
 		"add-mcp": "bun scripts/mcp/addMcp.ts",
-		"trigger:deploy": "bunx trigger.dev deploy",
+		"trigger:deploy": "bun run trigger deploy",
 		"setupci": "node scripts/setup/setupci.js",
 		"replicate": "bun scripts/db/replicate.ts",
 		"db:pull": "bun scripts/db/pull.ts",
@@ -168,6 +168,7 @@
 		"knip:fix": "knip --fix",
 		"knip:fix-all": "knip --fix --allow-remove-files",
 		"prepare": "husky",
+		"postinstall": "bun scripts/trigger/ensureBunExecPath.ts",
 		"api": "cd packages/openapi && bun generate",
 		"svix:push": "infisical run --env=dev --recursive -- bun packages/openapi/scripts/svixPush.ts",
 		"svix:push:prod": "infisical run --env=prod --recursive -- bun packages/openapi/scripts/svixPush.ts",
@@ -195,7 +196,7 @@
 		"@aws-sdk/client-sqs": "^3.985.0",
 		"@better-auth/core": "catalog:",
 		"@better-auth/oauth-provider": "catalog:",
-		"@trigger.dev/sdk": "4.4.6",
+		"@trigger.dev/sdk": "4.5.10",
 		"@wooorm/starry-night": "^3.8.0",
 		"ag-charts-react": "^12.3.0",
 		"better-auth": "catalog:",
@@ -208,7 +209,7 @@
 		"@better-auth/cli": "^1.4.21",
 		"@biomejs/biome": "2.2.2",
 		"@infisical/cli": "0.43.116",
-		"@trigger.dev/build": "4.4.6",
+		"@trigger.dev/build": "4.5.10",
 		"@types/node": "^24.9.1",
 		"ajv": "8.20.0",
 		"concurrently": "^9.2.1",
@@ -216,9 +217,9 @@
 		"husky": "^9.1.7",
 		"inquirer": "^12.10.0",
 		"knip": "^6.7.0",
-		"trigger.dev": "4.4.6",
+		"trigger.dev": "4.5.10",
 		"ts-to-zod": "^5.1.0",
-		"turbo": "^2.9.6"
+		"turbo": "2.10.9"
 	},
 	"trustedDependencies": [
 		"@infisical/cli"

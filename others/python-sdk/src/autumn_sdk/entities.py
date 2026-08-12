@@ -18,8 +18,8 @@ class Entities(BaseSDK):
         name: OptionalNullable[str] = UNSET,
         billing_controls: Optional[
             Union[
-                models.CreateEntityBillingControlsRequest,
-                models.CreateEntityBillingControlsRequestTypedDict,
+                models.CreateEntityBillingControlsRequestBody,
+                models.CreateEntityBillingControlsRequestBodyTypedDict,
             ]
         ] = None,
         customer_data: Optional[
@@ -59,7 +59,8 @@ class Entities(BaseSDK):
             name=name,
             feature_id=feature_id,
             billing_controls=utils.get_pydantic_model(
-                billing_controls, Optional[models.CreateEntityBillingControlsRequest]
+                billing_controls,
+                Optional[models.CreateEntityBillingControlsRequestBody],
             ),
             customer_data=utils.get_pydantic_model(
                 customer_data, Optional[models.CustomerData]
@@ -136,8 +137,8 @@ class Entities(BaseSDK):
         name: OptionalNullable[str] = UNSET,
         billing_controls: Optional[
             Union[
-                models.CreateEntityBillingControlsRequest,
-                models.CreateEntityBillingControlsRequestTypedDict,
+                models.CreateEntityBillingControlsRequestBody,
+                models.CreateEntityBillingControlsRequestBodyTypedDict,
             ]
         ] = None,
         customer_data: Optional[
@@ -177,7 +178,8 @@ class Entities(BaseSDK):
             name=name,
             feature_id=feature_id,
             billing_controls=utils.get_pydantic_model(
-                billing_controls, Optional[models.CreateEntityBillingControlsRequest]
+                billing_controls,
+                Optional[models.CreateEntityBillingControlsRequestBody],
             ),
             customer_data=utils.get_pydantic_model(
                 customer_data, Optional[models.CustomerData]
@@ -670,8 +672,8 @@ class Entities(BaseSDK):
         customer_id: Optional[str] = None,
         billing_controls: Optional[
             Union[
-                models.UpdateEntityBillingControlsRequest,
-                models.UpdateEntityBillingControlsRequestTypedDict,
+                models.UpdateEntityBillingControlsRequestBody,
+                models.UpdateEntityBillingControlsRequestBodyTypedDict,
             ]
         ] = None,
         retries: OptionalNullable[utils.RetryConfig] = UNSET,
@@ -705,7 +707,8 @@ class Entities(BaseSDK):
             customer_id=customer_id,
             entity_id=entity_id,
             billing_controls=utils.get_pydantic_model(
-                billing_controls, Optional[models.UpdateEntityBillingControlsRequest]
+                billing_controls,
+                Optional[models.UpdateEntityBillingControlsRequestBody],
             ),
         )
 
@@ -775,8 +778,8 @@ class Entities(BaseSDK):
         customer_id: Optional[str] = None,
         billing_controls: Optional[
             Union[
-                models.UpdateEntityBillingControlsRequest,
-                models.UpdateEntityBillingControlsRequestTypedDict,
+                models.UpdateEntityBillingControlsRequestBody,
+                models.UpdateEntityBillingControlsRequestBodyTypedDict,
             ]
         ] = None,
         retries: OptionalNullable[utils.RetryConfig] = UNSET,
@@ -810,7 +813,8 @@ class Entities(BaseSDK):
             customer_id=customer_id,
             entity_id=entity_id,
             billing_controls=utils.get_pydantic_model(
-                billing_controls, Optional[models.UpdateEntityBillingControlsRequest]
+                billing_controls,
+                Optional[models.UpdateEntityBillingControlsRequestBody],
             ),
         )
 

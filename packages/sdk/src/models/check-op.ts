@@ -195,14 +195,14 @@ export type Flag2 = {
 /**
  * The reason access was denied. 'usage_limit' means the customer exceeded their balance, 'feature_flag' means the feature is not included in their plan.
  */
-export const Scenario2 = {
+export const CheckScenario2 = {
   UsageLimit: "usage_limit",
   FeatureFlag: "feature_flag",
 } as const;
 /**
  * The reason access was denied. 'usage_limit' means the customer exceeded their balance, 'feature_flag' means the feature is not included in their plan.
  */
-export type Scenario2 = OpenEnum<typeof Scenario2>;
+export type CheckScenario2 = OpenEnum<typeof CheckScenario2>;
 
 /**
  * The environment of the product
@@ -223,13 +223,13 @@ export const ProductType2 = {
 } as const;
 export type ProductType2 = OpenEnum<typeof ProductType2>;
 
-export const FeatureType2 = {
+export const CheckFeatureType2 = {
   SingleUse: "single_use",
   ContinuousUse: "continuous_use",
   Boolean: "boolean",
   Static: "static",
 } as const;
-export type FeatureType2 = OpenEnum<typeof FeatureType2>;
+export type CheckFeatureType2 = OpenEnum<typeof CheckFeatureType2>;
 
 export type IncludedUsage2 = number | string;
 
@@ -313,7 +313,7 @@ export type CheckItem2 = {
   /**
    * Single use features are used once and then depleted, like API calls or credits. Continuous use features are those being used on an ongoing-basis, like storage or seats.
    */
-  featureType?: FeatureType2 | null | undefined;
+  featureType?: CheckFeatureType2 | null | undefined;
   /**
    * The amount of usage included for this feature.
    */
@@ -534,7 +534,7 @@ export type CheckUsageLimitInterval2 = OpenEnum<
  * When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature.
  */
 export type CheckFilter2 = {
-  properties: { [k: string]: any };
+  properties: { [k: string]: string };
 };
 
 export type CheckUsageLimit2 = {
@@ -744,7 +744,7 @@ export type Preview2 = {
   /**
    * The reason access was denied. 'usage_limit' means the customer exceeded their balance, 'feature_flag' means the feature is not included in their plan.
    */
-  scenario: Scenario2;
+  scenario: CheckScenario2;
   /**
    * A title suitable for displaying in a paywall or upgrade modal.
    */
@@ -930,14 +930,14 @@ export type Flag1 = {
 /**
  * The reason access was denied. 'usage_limit' means the customer exceeded their balance, 'feature_flag' means the feature is not included in their plan.
  */
-export const Scenario1 = {
+export const CheckScenario1 = {
   UsageLimit: "usage_limit",
   FeatureFlag: "feature_flag",
 } as const;
 /**
  * The reason access was denied. 'usage_limit' means the customer exceeded their balance, 'feature_flag' means the feature is not included in their plan.
  */
-export type Scenario1 = OpenEnum<typeof Scenario1>;
+export type CheckScenario1 = OpenEnum<typeof CheckScenario1>;
 
 /**
  * The environment of the product
@@ -958,13 +958,13 @@ export const ProductType1 = {
 } as const;
 export type ProductType1 = OpenEnum<typeof ProductType1>;
 
-export const FeatureType1 = {
+export const CheckFeatureType1 = {
   SingleUse: "single_use",
   ContinuousUse: "continuous_use",
   Boolean: "boolean",
   Static: "static",
 } as const;
-export type FeatureType1 = OpenEnum<typeof FeatureType1>;
+export type CheckFeatureType1 = OpenEnum<typeof CheckFeatureType1>;
 
 export type IncludedUsage1 = number | string;
 
@@ -1048,7 +1048,7 @@ export type CheckItem1 = {
   /**
    * Single use features are used once and then depleted, like API calls or credits. Continuous use features are those being used on an ongoing-basis, like storage or seats.
    */
-  featureType?: FeatureType1 | null | undefined;
+  featureType?: CheckFeatureType1 | null | undefined;
   /**
    * The amount of usage included for this feature.
    */
@@ -1269,7 +1269,7 @@ export type CheckUsageLimitInterval1 = OpenEnum<
  * When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature.
  */
 export type CheckFilter1 = {
-  properties: { [k: string]: any };
+  properties: { [k: string]: string };
 };
 
 export type CheckUsageLimit1 = {
@@ -1479,7 +1479,7 @@ export type Preview1 = {
   /**
    * The reason access was denied. 'usage_limit' means the customer exceeded their balance, 'feature_flag' means the feature is not included in their plan.
    */
-  scenario: Scenario1;
+  scenario: CheckScenario1;
   /**
    * A title suitable for displaying in a paywall or upgrade modal.
    */
@@ -1786,8 +1786,10 @@ export function flag2FromJSON(
 }
 
 /** @internal */
-export const Scenario2$inboundSchema: z.ZodMiniType<Scenario2, unknown> =
-  openEnums.inboundSchema(Scenario2);
+export const CheckScenario2$inboundSchema: z.ZodMiniType<
+  CheckScenario2,
+  unknown
+> = openEnums.inboundSchema(CheckScenario2);
 
 /** @internal */
 export const CheckEnv2$inboundSchema: z.ZodMiniType<CheckEnv2, unknown> =
@@ -1798,8 +1800,10 @@ export const ProductType2$inboundSchema: z.ZodMiniType<ProductType2, unknown> =
   openEnums.inboundSchema(ProductType2);
 
 /** @internal */
-export const FeatureType2$inboundSchema: z.ZodMiniType<FeatureType2, unknown> =
-  openEnums.inboundSchema(FeatureType2);
+export const CheckFeatureType2$inboundSchema: z.ZodMiniType<
+  CheckFeatureType2,
+  unknown
+> = openEnums.inboundSchema(CheckFeatureType2);
 
 /** @internal */
 export const IncludedUsage2$inboundSchema: z.ZodMiniType<
@@ -1940,7 +1944,7 @@ export const CheckItem2$inboundSchema: z.ZodMiniType<CheckItem2, unknown> = z
     z.object({
       type: z.optional(z.nullable(ProductType2$inboundSchema)),
       feature_id: z.optional(z.nullable(types.string())),
-      feature_type: z.optional(z.nullable(FeatureType2$inboundSchema)),
+      feature_type: z.optional(z.nullable(CheckFeatureType2$inboundSchema)),
       included_usage: z.optional(
         z.nullable(smartUnion([types.number(), types.string()])),
       ),
@@ -2143,7 +2147,7 @@ export const CheckUsageLimitInterval2$inboundSchema: z.ZodMiniType<
 /** @internal */
 export const CheckFilter2$inboundSchema: z.ZodMiniType<CheckFilter2, unknown> =
   z.object({
-    properties: z.record(z.string(), z.any()),
+    properties: z.record(z.string(), types.string()),
   });
 
 export function checkFilter2FromJSON(
@@ -2377,7 +2381,7 @@ export function checkProduct2FromJSON(
 /** @internal */
 export const Preview2$inboundSchema: z.ZodMiniType<Preview2, unknown> = z.pipe(
   z.object({
-    scenario: Scenario2$inboundSchema,
+    scenario: CheckScenario2$inboundSchema,
     title: types.string(),
     message: types.string(),
     feature_id: types.string(),
@@ -2610,8 +2614,10 @@ export function flag1FromJSON(
 }
 
 /** @internal */
-export const Scenario1$inboundSchema: z.ZodMiniType<Scenario1, unknown> =
-  openEnums.inboundSchema(Scenario1);
+export const CheckScenario1$inboundSchema: z.ZodMiniType<
+  CheckScenario1,
+  unknown
+> = openEnums.inboundSchema(CheckScenario1);
 
 /** @internal */
 export const CheckEnv1$inboundSchema: z.ZodMiniType<CheckEnv1, unknown> =
@@ -2622,8 +2628,10 @@ export const ProductType1$inboundSchema: z.ZodMiniType<ProductType1, unknown> =
   openEnums.inboundSchema(ProductType1);
 
 /** @internal */
-export const FeatureType1$inboundSchema: z.ZodMiniType<FeatureType1, unknown> =
-  openEnums.inboundSchema(FeatureType1);
+export const CheckFeatureType1$inboundSchema: z.ZodMiniType<
+  CheckFeatureType1,
+  unknown
+> = openEnums.inboundSchema(CheckFeatureType1);
 
 /** @internal */
 export const IncludedUsage1$inboundSchema: z.ZodMiniType<
@@ -2764,7 +2772,7 @@ export const CheckItem1$inboundSchema: z.ZodMiniType<CheckItem1, unknown> = z
     z.object({
       type: z.optional(z.nullable(ProductType1$inboundSchema)),
       feature_id: z.optional(z.nullable(types.string())),
-      feature_type: z.optional(z.nullable(FeatureType1$inboundSchema)),
+      feature_type: z.optional(z.nullable(CheckFeatureType1$inboundSchema)),
       included_usage: z.optional(
         z.nullable(smartUnion([types.number(), types.string()])),
       ),
@@ -2967,7 +2975,7 @@ export const CheckUsageLimitInterval1$inboundSchema: z.ZodMiniType<
 /** @internal */
 export const CheckFilter1$inboundSchema: z.ZodMiniType<CheckFilter1, unknown> =
   z.object({
-    properties: z.record(z.string(), z.any()),
+    properties: z.record(z.string(), types.string()),
   });
 
 export function checkFilter1FromJSON(
@@ -3201,7 +3209,7 @@ export function checkProduct1FromJSON(
 /** @internal */
 export const Preview1$inboundSchema: z.ZodMiniType<Preview1, unknown> = z.pipe(
   z.object({
-    scenario: Scenario1$inboundSchema,
+    scenario: CheckScenario1$inboundSchema,
     title: types.string(),
     message: types.string(),
     feature_id: types.string(),
