@@ -140,10 +140,11 @@ export const createEntityForCusProduct = async ({
 					p.pooled_balance?.id === sourcePoolId,
 			);
 			if (!foundPool) {
-				logger.warn(
-					`[createEntityForCusProduct] Synthetic pooled customer entitlement not found for poolId: ${sourcePoolId}, skipping decrement/entities on source entitlement.`,
-				);
-				continue;
+				throw new RecaseError({
+					message: `[createEntityForCusProduct] Synthetic pooled customer entitlement not found for poolId: ${sourcePoolId}. Cannot create entities without a valid pool to decrement.`,
+					code: ErrCode.InternalError,
+					statusCode: 500,
+				});
 			}
 			targetCusEnt = foundPool as FullCusEntWithFullCusProduct;
 		}
