@@ -38,6 +38,7 @@ import {
 	textForInputRequests,
 } from "./events.js";
 import { deleteEveSession, getEveSession, upsertEveSession } from "./repo.js";
+import { eveTurnProducedOutput } from "./turnOutput.js";
 import type {
 	EveAuthContext,
 	EveSessionRef,
@@ -255,6 +256,7 @@ export const eveEngine: AgentEngine = {
 			let turnStarted = false;
 			let sawAnyEvent = false;
 			let resyncedAfterSilence = false;
+			let endedWithoutOutput = false;
 
 			try {
 				// Eve resumes turns asynchronously: right after posting a message or
@@ -462,14 +464,25 @@ export const eveEngine: AgentEngine = {
 								// versioning/variant/migration choices — surface the decision
 								// card now that the turn is genuinely over.
 								const decisionPlan = catalogPlanNeedingDecision(lastPreview);
-								return {
-									env,
-									runId: session.sessionId,
-									text: finalText,
-									catalogDecision: decisionPlan
-										? { plan: decisionPlan }
-										: undefined,
-								};
+								if (
+									eveTurnProducedOutput({
+										catalogDecision: decisionPlan,
+										text: finalText,
+									})
+								) {
+									return {
+										env,
+										runId: session.sessionId,
+										text: finalText,
+										catalogDecision: decisionPlan
+											? { plan: decisionPlan }
+											: undefined,
+									};
+								}
+								// The turn ended with nothing to show: the run is awake but
+								// stuck behind a request nobody can answer. Recover outside.
+								endedWithoutOutput = true;
+								break;
 							}
 
 							if (session.state.streamIndex % 10 === 0) {
@@ -526,6 +539,7 @@ export const eveEngine: AgentEngine = {
 						);
 					}
 					if (sawEvent) sawAnyEvent = true;
+					if (endedWithoutOutput) break;
 					idleRetries = sawEvent ? 0 : idleRetries + 1;
 					// Nothing at all came back: the cursor may have drifted past
 					// eve's replay buffer, so heal it once and re-arm the budget.
@@ -559,7 +573,7 @@ export const eveEngine: AgentEngine = {
 				session,
 				state: { status: "waiting" },
 			});
-			if (sawAnyEvent) {
+			if (eveTurnProducedOutput({ text: finalText })) {
 				return { env, runId: session.sessionId, text: finalText };
 			}
 			// A session created in this run can't be stale, so a second fresh one
@@ -573,12 +587,16 @@ export const eveEngine: AgentEngine = {
 				};
 			}
 
-			// The run behind this session is gone: eve answers every post with a
-			// 200 even when it silently re-homed, so silence is the only signal.
+			// Either the run is gone (eve answers every post with a 200 even when
+			// it silently re-homed) or it is awake but stuck behind an unanswered
+			// request. Neither can be talked out of; only a new session can.
 			restartedOnFreshSession = true;
-			logger.warn("Eve session produced no events; starting a fresh one", {
+			logger.warn("Eve session produced no reply; starting a fresh one", {
 				event: "leaf.eve_session_restarted",
-				data: { session_id: session.sessionId },
+				data: {
+					reason: sawAnyEvent ? "no_output" : "no_events",
+					session_id: session.sessionId,
+				},
 			});
 			await deleteEveSession({
 				db,
