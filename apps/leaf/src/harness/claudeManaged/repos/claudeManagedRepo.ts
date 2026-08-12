@@ -88,6 +88,30 @@ export const cmaRepo = {
 			);
 	},
 
+	// Drops a thread's session row so the next turn starts a fresh session.
+	// Scoped by session id so a concurrently created replacement survives.
+	deleteSessionById: async ({
+		db,
+		env,
+		orgId,
+		sessionId,
+	}: {
+		db: ChatDb;
+		env: AppEnv;
+		orgId: string;
+		sessionId: string;
+	}) => {
+		await db
+			.delete(cmaSessions)
+			.where(
+				and(
+					eq(cmaSessions.org_id, orgId),
+					eq(cmaSessions.env, env),
+					eq(cmaSessions.session_id, sessionId),
+				),
+			);
+	},
+
 	getVaultId: async ({
 		chatInstallationId,
 		db,
