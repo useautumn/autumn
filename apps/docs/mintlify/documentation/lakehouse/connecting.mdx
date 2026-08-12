@@ -1,7 +1,7 @@
 ---
 title: "Connecting"
 sidebarTitle: "Connecting"
-description: "Attach ClickHouse to your Autumn Lakehouse catalog."
+description: "Attach ClickHouse or BigQuery to your Autumn Lakehouse catalog."
 ---
 
 <Warning>
@@ -14,7 +14,7 @@ When your Lakehouse is provisioned, Autumn privately sends you:
 - A **scoped access key and secret** for the underlying object storage.
 - The **region**: `us-east-2`.
 
-Keep these credentials private. Then connect your engine below.
+Keep these credentials private. If you're connecting **BigQuery**, you get a **project** and **dataset** instead of a catalog, namespace, and storage key — Autumn owns the external connection, so there are no object-storage credentials for you to hold. Then connect your engine below.
 
 <Tabs>
 <Tab title="ClickHouse">
@@ -56,30 +56,33 @@ Save the connection. The catalog mounts as a database, and your tables appear as
 </Steps>
 
 </Tab>
-{/*
-BigQuery delivery is not live yet — this tab is hidden until BQ delivery ships. Restore by removing this comment wrapper.
-TODO confirm BigQuery onboarding exact steps before re-enabling.
 <Tab title="BigQuery">
 
 <Steps>
 <Step>
-Access the dataset
+#### Access the dataset
 
-Autumn provisions your Iceberg tables as BigLake / external tables in a dataset you're granted access to (or via an external connection to the storage bucket). We'll share the project and dataset with you during onboarding.
-
-IMAGE bq-dataset.png: BigQuery dataset showing the external v2_3 tables — place at /assets/lakehouse/bq-dataset.png
-
+Autumn provisions your Iceberg tables as BigLake external tables in a BigQuery dataset you're granted access to. We share the **project** and **dataset** names with you during onboarding — you don't create the external connection yourself.
 </Step>
 
 <Step>
-Verify access
+#### Verify access
 
-List the dataset to confirm the tables are visible. They appear as project.dataset.v2_3_object.
+List the dataset to confirm the tables are visible. They appear as `` `<project>.<dataset>.v2_3_<object>` ``, plus the unversioned `events` table.
+
+```sql
+SELECT table_name
+FROM `<project>.<dataset>.INFORMATION_SCHEMA.TABLES`
+ORDER BY table_name;
+```
+
+<Note>
+  Unlike ClickHouse, BigQuery addressing is ordinary three-part `project.dataset.table` — there is no literal dot inside the table name. See [Querying](/documentation/lakehouse/querying#identifier-syntax).
+</Note>
 </Step>
 </Steps>
 
 </Tab>
-*/}
 </Tabs>
 
 ## Test the connection
@@ -87,7 +90,7 @@ List the dataset to confirm the tables are visible. They appear as project.datas
 Run a quick count against any table to confirm everything is wired up:
 
 ```sql
-SELECT count() FROM <your v2_3_customers table>;
+SELECT count() FROM <your v2_3_customers table>;   -- BigQuery: COUNT(*)
 ```
 
 <Frame>

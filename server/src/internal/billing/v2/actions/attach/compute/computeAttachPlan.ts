@@ -11,6 +11,7 @@ import { computeAttachPooledBalancePlan } from "@/internal/billing/v2/pooledBala
 import { cusProductToExistingBalanceCarryOvers } from "@/internal/billing/v2/utils/handleCarryOvers/cusProductToExistingBalanceCarryOvers";
 import { cusProductToOneOffPrepaidCarryOvers } from "@/internal/billing/v2/utils/handleOneOffPrepaidCarryOvers/cusProductToOneOffPrepaidCarryOvers";
 import { computeAttachNewCustomerProduct } from "./computeAttachNewCustomerProduct";
+import { computeAttachRemovals } from "./computeAttachRemovals";
 import { computeAttachTransitionUpdates } from "./computeAttachTransitionUpdates";
 import { computeOneOffPurchaseRebalance } from "./computeOneOffPurchaseRebalance";
 import { finalizeAttachPlan } from "./finalizeAttachPlan";
@@ -28,6 +29,7 @@ export const computeAttachPlan = ({
 }): AutumnBillingPlan => {
 	const {
 		currentCustomerProduct,
+		carryOverSourceCustomerProduct,
 		scheduledCustomerProduct,
 		planTiming,
 		customPrices,
@@ -46,6 +48,11 @@ export const computeAttachPlan = ({
 	});
 
 	const updateCustomerProduct = computeAttachTransitionUpdates({
+		attachBillingContext,
+		params,
+	});
+
+	const removeCustomerProducts = computeAttachRemovals({
 		attachBillingContext,
 		params,
 	});
@@ -77,9 +84,9 @@ export const computeAttachPlan = ({
 	// expires. Skipped on scheduled transitions — the outgoing product remains
 	// active until end-of-cycle and the preservation runs at activation time.
 	const oneOffPrepaidCarryOvers =
-		planTiming === "immediate" && currentCustomerProduct
+		planTiming === "immediate" && carryOverSourceCustomerProduct
 			? cusProductToOneOffPrepaidCarryOvers({
-					currentCustomerProduct,
+					currentCustomerProduct: carryOverSourceCustomerProduct,
 					fullCustomer: attachBillingContext.fullCustomer,
 				})
 			: { entitlements: [], customerEntitlements: [] };
@@ -131,6 +138,7 @@ export const computeAttachPlan = ({
 		insertCustomerProducts: [preparedNewCustomerProduct],
 		lockCustomerCurrency,
 		updateCustomerProduct,
+		updateCustomerProducts: removeCustomerProducts,
 		deleteCustomerProduct: scheduledCustomerProduct,
 		customPrices,
 		customEntitlements: [

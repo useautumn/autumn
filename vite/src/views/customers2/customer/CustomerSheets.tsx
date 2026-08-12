@@ -32,6 +32,7 @@ import { SubscriptionDetailSheet } from "../components/sheets/SubscriptionDetail
 import { UpcomingInvoiceSheet } from "../components/sheets/UpcomingInvoiceSheet";
 import { SyncStripeSheet } from "../components/sync-stripe/SyncStripeSheet";
 import { SyncStripeSheetV2 } from "../components/sync-stripe-v2/SyncStripeSheetV2";
+import { VerifyStripeSheet } from "../components/verify-stripe/VerifyStripeSheet";
 
 export function CustomerSheets() {
 	const sheetType = useSheetStore((s) => s.type);
@@ -89,6 +90,8 @@ export function CustomerSheets() {
 				return <SyncStripeSheet />;
 			case "sync-stripe-v2":
 				return <SyncStripeSheetV2 />;
+			case "verify-stripe":
+				return <VerifyStripeSheet />;
 			case "customer-config-edit":
 				return <CustomerConfigSheet />;
 			case "billing-auto-topup-add":
