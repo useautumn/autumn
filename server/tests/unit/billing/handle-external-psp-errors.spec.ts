@@ -145,9 +145,7 @@ describe(
 		});
 
 		test("does not throw when no cusProduct is provided", () => {
-			expect(() =>
-				handleExternalPSPErrors({ action: "update" }),
-			).not.toThrow();
+			expect(() => handleExternalPSPErrors({ action: "update" })).not.toThrow();
 		});
 	},
 );

@@ -1,5 +1,9 @@
 import { describe, expect, test } from "bun:test";
-import type { BillingContext, DbInvoiceLineItem, LineItem } from "@autumn/shared";
+import type {
+	BillingContext,
+	DbInvoiceLineItem,
+	LineItem,
+} from "@autumn/shared";
 import { contexts } from "@tests/utils/fixtures/db/contexts";
 import { customerProducts } from "@tests/utils/fixtures/db/customerProducts";
 import { prices } from "@tests/utils/fixtures/db/prices";

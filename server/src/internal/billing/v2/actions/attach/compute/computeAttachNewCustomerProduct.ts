@@ -11,7 +11,7 @@ import { carryOverUsagesToExistingUsagesConfig } from "@/internal/billing/v2/uti
 import { initFullCustomerProduct } from "@/internal/billing/v2/utils/initFullCustomerProduct/initFullCustomerProduct";
 
 type NewCustomerProductParams = Partial<
-	Pick<AttachParamsV1, "carry_over_usages" | "ends_at">
+	Pick<AttachParamsV1, "carry_over_usages" | "ends_at" | "no_billing_changes">
 >;
 
 const getScheduledBillingCycleAnchorResetAt = ({
@@ -50,6 +50,7 @@ export const computeAttachNewCustomerProduct = ({
 		attachProduct,
 		fullCustomer,
 		currentCustomerProduct,
+		carryOverSourceCustomerProduct,
 		planTiming,
 		endOfCycleMs,
 		stripeSubscription,
@@ -70,8 +71,13 @@ export const computeAttachNewCustomerProduct = ({
 		processorTypeOverride,
 	} = attachBillingContext;
 
+	// multiAttach / scheduled-activation contexts don't set the carry-over source;
+	// fall back to the same-group product so their carry-over is preserved.
+	const carryOverSource =
+		carryOverSourceCustomerProduct ?? currentCustomerProduct;
+
 	const currentCustomerEntitlements =
-		currentCustomerProduct?.customer_entitlements ?? [];
+		carryOverSource?.customer_entitlements ?? [];
 	const carryOverUsages = params.carry_over_usages;
 
 	// LEGACY: carry_from_previous flag on entitlements
@@ -94,30 +100,33 @@ export const computeAttachNewCustomerProduct = ({
 		: undefined;
 
 	let existingUsagesConfig: ExistingUsagesConfig | undefined =
-		!isScheduled && currentCustomerProduct
+		!isScheduled && carryOverSource
 			? {
-					fromCustomerProduct: currentCustomerProduct,
+					fromCustomerProduct: carryOverSource,
 					consumableFeatureIdsToCarry: featuresToCarryUsagesFor,
 				}
 			: undefined;
 
 	const existingRolloversConfig =
-		!isScheduled && currentCustomerProduct
+		!isScheduled && carryOverSource
 			? {
-					fromCustomerProduct: currentCustomerProduct,
+					fromCustomerProduct: carryOverSource,
 				}
 			: undefined;
 
-	if (!isScheduled && currentCustomerProduct && carryOverUsages?.enabled) {
+	if (!isScheduled && carryOverSource && carryOverUsages?.enabled) {
 		existingUsagesConfig = carryOverUsagesToExistingUsagesConfig({
 			ctx,
 			params,
-			currentCustomerProduct,
+			currentCustomerProduct: carryOverSource,
 		});
 	}
 
 	const isRevertTrial =
 		trialContext?.onEnd === "revert" && planTiming === "immediate";
+	const preservedBillingLinkage = params.no_billing_changes
+		? currentCustomerProduct
+		: undefined;
 
 	const newFullCustomerProduct = initFullCustomerProduct({
 		ctx,
@@ -138,8 +147,11 @@ export const computeAttachNewCustomerProduct = ({
 		},
 		initOptions: {
 			isCustom,
-			subscriptionId: stripeSubscription?.id,
-			subscriptionScheduleId: stripeSubscriptionSchedule?.id,
+			subscriptionId:
+				stripeSubscription?.id ?? preservedBillingLinkage?.subscription_ids?.[0],
+			subscriptionScheduleId:
+				stripeSubscriptionSchedule?.id ??
+				preservedBillingLinkage?.scheduled_ids?.[0],
 			startsAt,
 			endedAt: params.ends_at,
 			accessStartsAt,

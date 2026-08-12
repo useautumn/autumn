@@ -53,15 +53,19 @@ import {
 	stopRedisMonitor,
 	warmupRegionalRedis,
 } from "./external/redis/initRedis.js";
+import { awaitBoundedWarmup } from "./external/redis/initUtils/boundedWarmup.js";
 import { preWarmOrgRedisConnections } from "./external/redis/orgRedisPool.js";
 import { createHonoApp } from "./initHono.js";
 import { otelSdk } from "./instrumentation.js";
+import { globalEventBatchingManager } from "./internal/balances/events/EventBatchingManager.js";
+import { globalSyncBatchingManagerV3 } from "./internal/balances/utils/sync/SyncBatchingManagerV3.js";
 import { shutdownSqsSendBatchers } from "./queue/queueUtils.js";
 import { checkEnvVars } from "./utils/initUtils.js";
 import {
 	attachPrimaryForkRecycling,
 	startWorkerForkRecycling,
 } from "./utils/memory/forkRecycling/attachForkRecycling.js";
+import { getServerForkCount } from "./utils/memory/forkRecycling/recyclePolicy.js";
 import { listInFlightRequests } from "./utils/memory/inFlightRequests.js";
 import {
 	startMemorySpikeProbe,
@@ -72,6 +76,9 @@ import { startMemoryMonitor } from "./utils/memoryMonitor.js";
 checkEnvVars();
 
 let shuttingDown = false;
+// Set once the worker's HTTP server exists; SIGTERM shutdown uses it to stop
+// accepting before any teardown, mirroring the fork-recycle drain shape.
+let stopAcceptingRequests: (() => void) | null = null;
 const drainState: {
 	draining: boolean;
 	getActiveConnectionCount: () => number;
@@ -91,12 +98,21 @@ const init = async ({
 	// `db` is the general pool — the probe must never occupy a critical-pool slot.
 	startReplicaRoutingProber({ db });
 
-	void warmupRegionalRedis().catch((error) => {
-		logger.warn("[Redis] Warmup failed", { error });
-	});
-	void preWarmOrgRedisConnections({ db }).catch((error) => {
-		logger.warn("[OrgRedis] Warmup failed", { error });
-	});
+	// Kicked off early, awaited (bounded) just before listen: a fork must not
+	// serve its first requests against still-connecting redis clients.
+	// Each arm catches its own failure: a regional rejection must not
+	// short-circuit the wait for healthy dedicated org connections.
+	const redisWarmup = Promise.all([
+		warmupRegionalRedis().catch((error) => {
+			console.error("[Redis] regional warmup failed -", error);
+		}),
+		preWarmOrgRedisConnections({ db }).catch((error) => {
+			logger.warn("[OrgRedis] Warmup failed", { error });
+		}),
+	]);
+	// Observed immediately: awaits run before the bounded wait consumes it, and
+	// an early rejection would otherwise hit the fatal unhandledRejection exit.
+	void redisWarmup.catch(() => {});
 
 	await startAllEdgeConfigPolling({ logger });
 	await Promise.all([primeRedisMonitor(), primeRedisV2Monitor()]);
@@ -129,6 +145,19 @@ const init = async ({
 	server.keepAliveTimeout = 120000;
 	server.headersTimeout = 120000;
 
+	stopAcceptingRequests = () => {
+		drainState.draining = true;
+		server.close(() => {});
+		const idleSweep = setInterval(() => server.closeIdleConnections?.(), 1_000);
+		idleSweep.unref?.();
+	};
+
+	await awaitBoundedWarmup({
+		warmup: redisWarmup,
+		timeoutMs: 10_000,
+		log: (message) => console.warn(message),
+	});
+
 	await new Promise<void>((resolve) => {
 		server.listen(PORT, "0.0.0.0", () => {
 			const startupDurationMs = Date.now() - startupStartedAt;
@@ -155,7 +184,8 @@ if (process.env.NODE_ENV === "development") {
 		console.log(`Master ${process.pid} is running`);
 		console.log("Number of CPUs", numCPUs);
 
-		const numWorkers = 3;
+		const numWorkers = getServerForkCount();
+		console.log(`Forking ${numWorkers} workers`);
 
 		for (let i = 0; i < numWorkers; i++) {
 			cluster.fork();
@@ -182,7 +212,39 @@ if (process.env.NODE_ENV === "development") {
 			});
 		});
 
-		registerShutdownHandlers();
+		// Container init delivers SIGTERM to this primary only; without
+		// forwarding, workers never run their graceful shutdown and ECS
+		// SIGKILLs them mid-request at stopTimeout.
+		const shutdownPrimary = async () => {
+			if (shuttingDown) return;
+			shuttingDown = true;
+			console.log("[Shutdown] primary forwarding SIGTERM to workers");
+			for (const worker of Object.values(cluster.workers ?? {})) {
+				try {
+					worker?.process.kill("SIGTERM");
+				} catch {}
+			}
+			const workersAlive = () =>
+				Object.values(cluster.workers ?? {}).filter((w) => w && !w.isDead())
+					.length;
+			// Must exceed the workers' own 30s shutdown backstop.
+			const deadline = Date.now() + 35_000;
+			while (workersAlive() > 0 && Date.now() < deadline) {
+				await new Promise((resolve) => setTimeout(resolve, 200));
+			}
+			if (workersAlive() > 0) {
+				console.warn(
+					`[Shutdown] ${workersAlive()} worker(s) still alive after 35s; exiting anyway`,
+				);
+			}
+			// Same bound as every other exit path: a hung pool close must not
+			// leave the primary for the platform SIGKILL.
+			const forceExit = setTimeout(() => process.exit(0), 30_000);
+			forceExit.unref?.();
+			await gracefulShutdown();
+		};
+		process.on("SIGTERM", () => void shutdownPrimary());
+		process.on("SIGINT", () => void shutdownPrimary());
 	} else {
 		registerFatalErrorHandlers();
 		const server = await init({ startupStartedAt: Date.now() });
@@ -197,8 +259,9 @@ if (process.env.NODE_ENV === "development") {
 				drainState.draining = true;
 			},
 			exitGracefully: () => {
-				// Backstop: a hung flush must not strand a drained fork.
-				const forceExit = setTimeout(() => process.exit(0), 5_000);
+				// Backstop: a hung flush must not strand a drained fork. Sized so a
+				// full 10s settle still leaves teardown ample time.
+				const forceExit = setTimeout(() => process.exit(0), 30_000);
 				forceExit.unref?.();
 				void gracefulShutdown();
 			},
@@ -230,16 +293,50 @@ function registerFatalErrorHandlers() {
 }
 
 function registerShutdownHandlers() {
-	process.on("SIGTERM", gracefulShutdown);
-	process.on("SIGINT", gracefulShutdown);
+	// Same 30s bound as recycle exits: no shutdown path may hang unbounded.
+	const shutdownWithBackstop = () => {
+		const forceExit = setTimeout(() => process.exit(0), 30_000);
+		forceExit.unref?.();
+		void gracefulShutdown();
+	};
+	process.on("SIGTERM", shutdownWithBackstop);
+	process.on("SIGINT", shutdownWithBackstop);
 	// Do NOT use process.on("exit", ...) for async cleanup!
+}
+
+async function waitForInFlightRequestsToSettle({
+	timeoutMs,
+}: {
+	timeoutMs: number;
+}) {
+	// Streamed bodies outlive the request registry, so wait on open sockets
+	// too (idle keep-alives clear within a sweep once accepting stopped).
+	const activeWork = () =>
+		Math.max(
+			listInFlightRequests({ now: Date.now() }).length,
+			drainState.getActiveConnectionCount(),
+		);
+	const deadline = Date.now() + timeoutMs;
+	while (activeWork() > 0) {
+		if (Date.now() > deadline) {
+			console.warn(
+				`[Shutdown] proceeding with ${listInFlightRequests({ now: Date.now() }).length} request(s) / ${drainState.getActiveConnectionCount()} connection(s) still active after ${timeoutMs}ms`,
+			);
+			return;
+		}
+		await new Promise((resolve) => setTimeout(resolve, 200));
+	}
 }
 
 async function gracefulShutdown() {
 	shuttingDown = true;
 	console.log("Shutting down worker, flushing telemetry and closing DB...");
 	try {
-		await shutdownSqsSendBatchers();
+		// Stop taking new requests first (SIGTERM path: ALB keeps routing
+		// through deregistration), then let in-flight work finish. Requests and
+		// their delayed timers enqueue SQS work, so the batchers close LAST.
+		stopAcceptingRequests?.();
+		await waitForInFlightRequestsToSettle({ timeoutMs: 10_000 });
 
 		// Flush any buffered OTel spans before shutting down
 		if (otelSdk) {
@@ -252,6 +349,19 @@ async function gracefulShutdown() {
 		stopRedisV2Monitor();
 		stopMemorySpikeProbe();
 		stopAllEdgeConfigPolling();
+		// App-level batch windows (events 350ms, balance sync 1s) hold work in
+		// timers that process.exit would silently kill: deliver them, then close
+		// the SQS batchers at the last possible moment.
+		const flushResults = await Promise.allSettled([
+			globalEventBatchingManager.flush(),
+			globalSyncBatchingManagerV3.flush(),
+		]);
+		for (const result of flushResults) {
+			if (result.status === "rejected") {
+				console.warn("[Shutdown] app-level batch flush failed:", result.reason);
+			}
+		}
+		await shutdownSqsSendBatchers();
 		await Promise.all([
 			client.end(),
 			clientCritical.end(),

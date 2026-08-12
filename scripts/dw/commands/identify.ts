@@ -1,7 +1,7 @@
-import { loadRegistry } from "../helpers/registry.ts";
-import { getCurrentWorktree } from "../helpers/git.ts";
 import { isPlainCanonical, isProvisioned } from "../helpers/entry.ts";
+import { getCurrentWorktree } from "../helpers/git.ts";
 import { aliasesFor } from "../helpers/ports.ts";
+import { loadRegistry } from "../helpers/registry.ts";
 import { tmuxSessionName } from "../helpers/tmux.ts";
 
 export function cmdIdentify(): void {
@@ -54,14 +54,16 @@ export function cmdIdentify(): void {
 	console.log(`  Server URL:    ${serverUrl}`);
 	console.log(`  Vite URL:      ${viteUrl}`);
 	console.log(`  Ngrok URL:     ${ngrokHuman}`);
+	console.log(`  Ngrok Vite:    ${entry.ngrokViteUrl ?? "(none)"}`);
 	console.log(`  Tmux session:  ${tmuxHuman}`);
 	console.log(`  Server port:   ${serverPort}`);
 	console.log(`  Vite port:     ${vitePort}`);
 	console.log();
 	console.log(`DW_WORKTREE_NUM=${worktreeNum}`);
-	console.log(`DW_SERVER_URL=${serverUrl}`);
+	console.log(`DW_API_URL=${serverUrl}`);
 	console.log(`DW_VITE_URL=${viteUrl}`);
-	console.log(`DW_NGROK_URL=${ngrokUrl}`);
+	console.log(`DW_PUBLIC_API_URL=${ngrokUrl}`);
+	console.log(`DW_NGROK_VITE_URL=${entry.ngrokViteUrl ?? ""}`);
 	console.log(`DW_TMUX_SESSION=${tmux}`);
 	console.log(`DW_SERVER_PORT=${serverPort}`);
 	console.log(`DW_VITE_PORT=${vitePort}`);
