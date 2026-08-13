@@ -51,7 +51,12 @@ const toLicenseOps = (
 				: [],
 	);
 
-	return [...added, ...replaced, ...removed];
+	return [
+		{ ...target, type: "repoint_license_pool" as const },
+		...added,
+		...replaced,
+		...removed,
+	];
 };
 
 /** Lowers both halves of a patch into the operations a page executes. Paid

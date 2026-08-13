@@ -200,10 +200,7 @@ export async function selectLicenseCandidateRows({
 				WHERE customer_price.customer_product_id = assignment.id
 					AND price.config->>'interval' IS DISTINCT FROM ${BillingInterval.OneOff}
 			) AS "isPaidRecurring",
-			COALESCE(
-				assignment.billing_cycle_anchor,
-				cp.billing_cycle_anchor
-			) AS "billingCycleAnchor",
+			cp.billing_cycle_anchor AS "billingCycleAnchor",
 			sub_anchor.billing_cycle_anchor_ms AS "subscriptionCycleAnchor",
 			${matched.siblingAnchor} AS "siblingResetCycleAnchor",
 			${matched.liveBalance} AS "liveBalance",

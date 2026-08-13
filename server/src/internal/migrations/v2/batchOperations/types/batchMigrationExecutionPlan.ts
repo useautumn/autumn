@@ -33,6 +33,9 @@ const BatchMigrationLicenseMintedSchema =
 export const BatchMigrationExecutionLicenseOpSchema = z.discriminatedUnion(
 	"type",
 	[
+		BatchMigrationLicenseOpBaseSchema.extend({
+			type: z.literal("repoint_license_pool"),
+		}),
 		BatchMigrationLicenseMintedSchema.extend({
 			type: z.literal("add_license_entitlement"),
 		}),

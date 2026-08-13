@@ -26,6 +26,11 @@ type BatchMigrationLicenseOpTarget = {
 	isOneOff: boolean;
 };
 
+export type BatchMigrationRepointLicensePoolOp =
+	BatchMigrationLicenseOpTarget & {
+		type: "repoint_license_pool";
+	};
+
 /** Fans a customized link's entitlement out to that link's live assignments.
  * The entitlement row is minted once by prepare and shared. */
 export type BatchMigrationAddLicenseEntitlementOp =
@@ -53,6 +58,7 @@ export type BatchMigrationRemoveLicenseEntitlementOp =
 	};
 
 export type BatchMigrationLicenseEntitlementOp =
+	| BatchMigrationRepointLicensePoolOp
 	| BatchMigrationAddLicenseEntitlementOp
 	| BatchMigrationReplaceLicenseEntitlementOp
 	| BatchMigrationRemoveLicenseEntitlementOp;
