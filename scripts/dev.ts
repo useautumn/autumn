@@ -324,22 +324,34 @@ async function startDev() {
 				);
 				if (auth.exitCode !== 0) {
 					const stderr = new TextDecoder().decode(auth.stderr);
+					const headless =
+						process.env.DW_HEADLESS === "1" ||
+						process.env.DW_HEADLESS === "true";
 					console.error(
 						"\nStripe CLI is installed but not authenticated (or key expired).",
 					);
 					console.error(
 						`  ${stderr.trim().split("\n").slice(-3).join("\n  ")}`,
 					);
-					console.error("\nRun `stripe login` and try again.\n");
-					process.exit(1);
+					if (headless) {
+						// Cursor Cloud / Devin: don't take down server+vite because
+						// stripe listen isn't ready. Infisical keys may land on a later boot.
+						console.error(
+							"DW_HEADLESS=1 — skipping stripe listen; the rest of the stack will start.\n",
+						);
+					} else {
+						console.error("\nRun `stripe login` and try again.\n");
+						process.exit(1);
+					}
+				} else {
+					const forwardUrl = `http://localhost:${SERVER_PORT}/webhooks/connect/sandbox`;
+					names.push("stripe");
+					colors.push("cyan");
+					// --forward-connect-to forwards events from connected accounts;
+					// the /webhooks/connect/* endpoint expects Connect-mode events.
+					const stripeCmd = `stripe listen --forward-connect-to ${forwardUrl} --skip-verify`;
+					cmds.push(isWindows ? `"${stripeCmd}"` : `"${stripeCmd}"`);
 				}
-				const forwardUrl = `http://localhost:${SERVER_PORT}/webhooks/connect/sandbox`;
-				names.push("stripe");
-				colors.push("cyan");
-				// --forward-connect-to forwards events from connected accounts;
-				// the /webhooks/connect/* endpoint expects Connect-mode events.
-				const stripeCmd = `stripe listen --forward-connect-to ${forwardUrl} --skip-verify`;
-				cmds.push(isWindows ? `"${stripeCmd}"` : `"${stripeCmd}"`);
 			}
 
 			shellArgs = [

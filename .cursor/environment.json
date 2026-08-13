@@ -6,7 +6,12 @@
 		{
 			"name": "dw",
 			"command": "DW_HEADLESS=1 bun dw",
-			"description": "Autumn dev stack: API :8080, vite :3000, checkout :3001. Headless — local Postgres/Redis/ElasticMQ, no Infisical/portless/Neon unless those secrets are set."
+			"description": "Autumn dev stack: API :8080, vite :3000, checkout :3001. Infisical machine identity injects Stripe/etc; server/.env keeps DB/Redis/SQS on localhost. stripe listen forwards Connect webhooks to the API."
+		},
+		{
+			"name": "ngrok",
+			"command": "bash scripts/setup/cursor-cloud-ngrok.sh",
+			"description": "Public ngrok tunnels for :3000 (dashboard) and :8080 (API) when NGROK_AUTHTOKEN is in Infisical. Otherwise prints how to use remote desktop."
 		}
 	],
 	"ports": [

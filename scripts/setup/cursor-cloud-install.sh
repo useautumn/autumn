@@ -15,6 +15,41 @@ git submodule update --init --recursive
 log "workspace install"
 "$BUN" install --frozen-lockfile
 
+if [ ! -x /usr/local/bin/stripe ]; then
+	log "installing Stripe CLI (stripe listen → localhost webhooks)"
+	arch="$(uname -m)"
+	case "$arch" in
+		x86_64) stripe_arch="x86_64" ;;
+		aarch64|arm64) stripe_arch="arm64" ;;
+		*) stripe_arch="x86_64" ;;
+	esac
+	tmp="$(mktemp -d)"
+	# Pin so Builds are reproducible. Bump when we want a CLI upgrade.
+	stripe_ver="1.33.0"
+	curl -fsSL -o "$tmp/stripe.tar.gz" \
+		"https://github.com/stripe/stripe-cli/releases/download/v${stripe_ver}/stripe_${stripe_ver}_linux_${stripe_arch}.tar.gz"
+	tar -xzf "$tmp/stripe.tar.gz" -C "$tmp"
+	sudo install -m 0755 "$tmp/stripe" /usr/local/bin/stripe
+	rm -rf "$tmp"
+	stripe version
+fi
+
+if [ ! -x /usr/local/bin/ngrok ]; then
+	log "installing ngrok (optional dashboard/API public URL)"
+	arch="$(uname -m)"
+	case "$arch" in
+		x86_64) ngrok_arch="amd64" ;;
+		aarch64|arm64) ngrok_arch="arm64" ;;
+		*) ngrok_arch="amd64" ;;
+	esac
+	tmp="$(mktemp -d)"
+	curl -fsSL -o "$tmp/ngrok.tgz" \
+		"https://bin.equinox.io/c/bNyj1mQVY4c/ngrok-v3-stable-linux-${ngrok_arch}.tgz"
+	sudo tar -xzf "$tmp/ngrok.tgz" -C /usr/local/bin ngrok
+	rm -rf "$tmp"
+	ngrok version
+fi
+
 if [ -f ai/package.json ]; then
 	log "ai deps + bun sync (skills, rules, MCP into .cursor/)"
 	(cd ai && "$BUN" install)

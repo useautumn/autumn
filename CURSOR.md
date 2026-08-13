@@ -26,11 +26,11 @@ bun dw identify # URLs / ports
 Stack: server `:8080`, vite `:3000`, checkout `:3001`, workers, leaf `:3099`.
 
 Other `package.json` aliases that still wrap `infisical run` (`bun d`, `bun t`,
-`bun db` without `AUTUMN_DB_DIRECT=1`) will fail without Infisical. Use the
-underlying scripts, or add Infisical secrets (below).
+`bun db` without `AUTUMN_DB_DIRECT=1`) work once the Infisical machine identity
+is in Cursor secrets (start exports `INFISICAL_TOKEN`).
 
 Non-blocking noise: `trigger` waits for a login; `leaf` may crash without
-`SLACK_*` / `FIRECRAWL_API_KEY`; dummy `AWS_ACCESS_KEY_ID=x` produces S3 warnings.
+`SLACK_*` / `FIRECRAWL_API_KEY`.
 
 ## Backing services
 
@@ -81,28 +81,50 @@ Add `--bootstrap` only on a fresh/empty DB.
 Email OTP login. With no `RESEND_API_KEY`, the code is printed to the server log:
 `grep -a "SIGN IN OTP" <server output>`.
 
-## Secrets
+## Secrets (Infisical machine identity)
 
-Add these on the [environment page](https://cursor.com/dashboard/cloud-agents)
-if you want more than local dashboard/product creation. They are injected into
-the process environment and picked up when missing from `server/.env`.
+**Do not paste client IDs or secrets into chat.** Add them as **Runtime Secrets**
+(redacted from the transcript) on the environment:
 
-Optional, for Infisical-wrapped scripts and Stripe/email:
+[https://cursor.com/dashboard/cloud-agents/environments/e/401b82fb-73ca-11f1-a8a0-cafc5ef88358](https://cursor.com/dashboard/cloud-agents/environments/e/401b82fb-73ca-11f1-a8a0-cafc5ef88358)
 
-| Secret | Why |
-|---|---|
-| `INFISICAL_CLIENT_ID` / `INFISICAL_CLIENT_SECRET` | `bun dw` and other `infisical run` aliases |
-| `STRIPE_SANDBOX_SECRET_KEY` / `_WEBHOOK_SECRET` / `_CLIENT_ID` | checkout / attach |
-| `ANTHROPIC_API_KEY` | feature names |
-| `RESEND_API_KEY` / `RESEND_DOMAIN` | emailed OTP |
-| `NEON_WORKTREE_API_KEY` | only if you want `bun dw setup` to create Neon branches (also needs Docker, which this VM does not have) |
+| Name | Type | Why |
+|---|---|---|
+| `INFISICAL_CLIENT_ID` | Runtime Secret | Machine identity (universal-auth) |
+| `INFISICAL_CLIENT_SECRET` | Runtime Secret | Machine identity |
+
+That is the only pair you need. Start runs `infisical login --method=universal-auth`,
+caches a short-lived `INFISICAL_TOKEN`, and `bun dw` does `infisical run --env=dev --recursive`.
+Every Infisical `dev` secret (Stripe, ngrok, Resend, …) is then in the process.
+
+`server/.env` is an **overlay**, not the vault: it pins `DATABASE_URL` / Redis / SQS
+to localhost so this VM does not share the team Neon DB or AWS queue. Empty
+`STRIPE_*=` lines are stripped so they cannot clobber Infisical.
+
+## Stripe webhooks
+
+`scripts/dev.ts` starts `stripe listen --forward-connect-to http://localhost:8080/webhooks/connect/sandbox`
+when the Stripe CLI is installed and `STRIPE_SANDBOX_SECRET_KEY` is present (from Infisical).
+Stripe's CLI opens an outbound tunnel — **no public URL / ngrok required** for webhooks.
+
+`STRIPE_WEBHOOK_SKIP_VERIFY=true` is set in `server/.env` because the CLI's `whsec_`
+is not the Infisical dashboard endpoint secret. Signature skip is localhost-only.
+
+If the CLI is present but not yet authenticated, `DW_HEADLESS=1` skips `stripe listen`
+instead of killing the whole stack.
+
+## Opening the dashboard from your laptop
+
+Cursor Cloud does not SSH-mount the VM. Three options, best first:
+
+1. **Remote desktop** on the agent page — take control, open Chrome with `--no-sandbox`, go to `http://localhost:3000`. Best for “click around this agent's app”.
+2. **ngrok terminal** (`scripts/setup/cursor-cloud-ngrok.sh`) — if Infisical has `NGROK_AUTHTOKEN`, it tunnels `:3000` (dashboard) and `:8080` (API) on **random** `*.ngrok.app` URLs (reserved names collide across concurrent VMs). Watch the `ngrok` tmux pane for the URLs.
+3. **`ports` in `.cursor/environment.json`** (8080 / 3000 / 3001) — Cursor may offer these in the agent UI like devcontainer port forwarding. If a forwarded link appears, use it; if not, use (1) or (2).
+
+Vite will 403 unknown hosts; `.ngrok.app` is already in `server.allowedHosts` from the Conductor work. Remote desktop / localhost does not hit that.
 
 ## Lint / typecheck / test
 
 - Lint/format: `bunx biome check .` (config `biome.json`).
 - Typecheck: `bun ts`.
 - Integration tests: `bun test:integration` (needs services + `server/.env`).
-
-## GUI testing
-
-`localhost` is reachable in Chrome only when launched with `--no-sandbox` in this VM.
