@@ -15,6 +15,7 @@ import {
 	approvalOptionIds,
 	type EveInputRequest,
 	isGatedRequest,
+	storedOptionIds,
 } from "./events.js";
 import { getEveSessionBySessionId, upsertEveSession } from "./repo.js";
 import type { EveAuthContext, EveSessionRef } from "./types.js";
@@ -27,19 +28,11 @@ export type ChainedPendingRequest = {
 	toolName: string;
 };
 
-export const approveOptionFromApproval = (approval: ChatApproval) => {
-	const args = approval.tool_args as Record<string, unknown>;
-	return typeof args._eveApproveOptionId === "string"
-		? args._eveApproveOptionId
-		: "approve";
-};
+export const approveOptionFromApproval = (approval: ChatApproval) =>
+	storedOptionIds(approval.tool_args as Record<string, unknown>).approve;
 
-export const denyOptionFromApproval = (approval: ChatApproval) => {
-	const args = approval.tool_args as Record<string, unknown>;
-	return typeof args._eveDenyOptionId === "string"
-		? args._eveDenyOptionId
-		: "deny";
-};
+export const denyOptionFromApproval = (approval: ChatApproval) =>
+	storedOptionIds(approval.tool_args as Record<string, unknown>).deny;
 
 const authFromApproval = (
 	approval: ChatApproval,
@@ -187,10 +180,7 @@ export const withdrawEveSuspensions = async ({
 		auth,
 		note: DRAIN_DENY_NOTE,
 		responses: parked.map((suspension) => ({
-			optionId:
-				typeof suspension.toolArgs._eveDenyOptionId === "string"
-					? suspension.toolArgs._eveDenyOptionId
-					: "deny",
+			optionId: storedOptionIds(suspension.toolArgs).deny,
 			requestId: suspension.toolCallId as string,
 		})),
 		session,

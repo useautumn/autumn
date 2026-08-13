@@ -77,6 +77,17 @@ export const isGatedRequest = (request: EveInputRequest) =>
 			normalizeToolName(request.action.toolName) !== "ask_question",
 	);
 
+/** Reads back the ids `approvalOptionIds` stashed on the gated call's args.
+ * The literals are a floor for rows written before they were stored. */
+export const storedOptionIds = (args: Record<string, unknown>) => ({
+	approve:
+		typeof args._eveApproveOptionId === "string"
+			? args._eveApproveOptionId
+			: "approve",
+	deny:
+		typeof args._eveDenyOptionId === "string" ? args._eveDenyOptionId : "deny",
+});
+
 export const approvalOptionIds = (request: EveInputRequest) => {
 	const options = request.options ?? [];
 	const optionText = (option: { id?: string; label?: string }) =>

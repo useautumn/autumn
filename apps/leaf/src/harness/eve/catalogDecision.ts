@@ -11,6 +11,7 @@ import { db } from "../../lib/db.js";
 import type { Suspension } from "../../types.js";
 import { parsePreviewPayload } from "../../ui/previewContent.js";
 import { postEveInputResponses } from "./client.js";
+import { storedOptionIds } from "./events.js";
 import { getEveSessionBySessionId, upsertEveSession } from "./repo.js";
 import type { EveAuthContext } from "./types.js";
 
@@ -125,11 +126,6 @@ const requestFromSuspension = (suspension: Suspension) => {
 		: rest;
 };
 
-const denyOptionOf = (suspension: Suspension) =>
-	typeof suspension.toolArgs._eveDenyOptionId === "string"
-		? suspension.toolArgs._eveDenyOptionId
-		: "deny";
-
 /** The one chokepoint the model can't skip: an `updateCatalog` suspension.
  * When the (flag-forced) preview shows the plan needs versioning/variant/
  * migration decisions and none were given, deny the parked calls and hand the
@@ -198,7 +194,7 @@ export const redirectCatalogSuspensionToDecision = async ({
 			responses: suspensions
 				.filter((candidate) => candidate.toolCallId)
 				.map((candidate) => ({
-					optionId: denyOptionOf(candidate),
+					optionId: storedOptionIds(candidate.toolArgs).deny,
 					requestId: candidate.toolCallId as string,
 				})),
 			session,
