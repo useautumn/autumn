@@ -9,18 +9,16 @@ snapshot already has Postgres 18, Redis Stack, ClickHouse, JRE, and ElasticMQ.
 
 ## `bun dw`
 
-`bun dw` and `bun dw run` go through `scripts/dw/with-env.sh` →
-`scripts/setup/cursor-cloud/with-infisical.sh`. That mints an Infisical token from the Cursor
-Runtime Secrets machine identity, then `infisical run --env=dev --recursive`.
-Isolation env (`scripts/setup/cursor-cloud/isolation.env`) is applied *after*
-Infisical so DATABASE_URL / Redis / SQS stay on localhost.
+`package.json` is unchanged from laptop: `bun dw` is still
+`infisical run --env=dev --recursive -- bun scripts/dw/index.ts`.
 
-Without the machine identity, headless `bun dw` still starts against `server/.env`.
+Cloud `start` mints `INFISICAL_TOKEN` from the machine-identity Runtime Secrets
+and puts `node_modules/.bin` on PATH, so that existing wrapper works. It does
+**not** start the app. Run `bun dw` yourself when the task needs server/vite.
 
 `DW_HEADLESS=1` is set on start. That skips portless HTTPS aliases, the emulate
-daemon, and Neon branch provisioning (`NEON_WORKTREE_API_KEY` is unset even if
-Infisical has it). Worktree #1 uses the local Postgres/Redis/ElasticMQ from
-`agent-services.sh`.
+daemon, and Neon (even if Infisical has `NEON_WORKTREE_API_KEY`). Worktree #1
+uses the local Postgres/Redis/ElasticMQ from `agent-services.sh`.
 
 ```sh
 bun dw          # provision-if-needed is a no-op without Neon; starts the app
@@ -30,10 +28,6 @@ bun dw identify # URLs / ports
 ```
 
 Stack: server `:8080`, vite `:3000`, checkout `:3001`, workers, leaf `:3099`.
-
-`bun d` also goes through `with-infisical.sh`. Other `package.json` aliases that
-still wrap `infisical run` (`bun t`, `bun db` without `AUTUMN_DB_DIRECT=1`) work
-once start has exported `INFISICAL_TOKEN` into `~/.autumn-agent/env.sh`.
 
 Non-blocking noise: `trigger` waits for a login; `leaf` may crash without
 `SLACK_*` / `FIRECRAWL_API_KEY`.
@@ -102,16 +96,14 @@ Secrets → add:
 | `INFISICAL_CLIENT_ID` | Runtime Secret | Machine identity (universal-auth) |
 | `INFISICAL_CLIENT_SECRET` | Runtime Secret | Machine identity |
 
-That is the only pair you need. Start runs `infisical login --method=universal-auth`,
-caches a short-lived `INFISICAL_TOKEN`, dumps Infisical `dev` into
-`~/.autumn-agent/dev-secrets.env` (isolation keys stripped), and `bun dw` /
-`bun dw run` do `infisical run --env=dev --recursive`. Every Infisical `dev`
-secret (Stripe, ngrok, Resend, …) is then in the process.
+That is the only pair you need. Start runs `infisical login --method=universal-auth`
+and caches a short-lived `INFISICAL_TOKEN`. Existing `package.json` scripts
+(`bun dw`, `bun d`, `bun t`, …) then work as on a laptop.
 
-`server/.env` and `scripts/setup/cursor-cloud/isolation.env` are an **overlay**, not the vault:
-they pin `DATABASE_URL` / Redis / SQS to localhost so this VM does not share the
-team Neon DB or AWS queue. Empty `STRIPE_*=` lines are stripped so they cannot
-clobber Infisical.
+`server/.env` and `scripts/setup/cursor-cloud/isolation.env` are an **overlay**,
+not the vault: they pin `DATABASE_URL` / Redis / SQS to localhost so this VM
+does not share the team Neon DB or AWS queue. Empty `STRIPE_*=` lines are
+stripped so they cannot clobber Infisical. The vault is **not** dumped to disk.
 
 ## Stripe webhooks
 
@@ -139,12 +131,12 @@ Three ways to click around the running app:
    `DW_HEADLESS=1` so preview hostnames do not 403.
 2. **Remote desktop** on the agent page — take control, open Chrome with
    `--no-sandbox`, go to `http://localhost:3000`. Most reliable if Ports is empty.
-3. **ngrok** (`scripts/setup/cursor-cloud/ngrok.sh`) — if Infisical has
-   `NGROK_AUTHTOKEN`, it tunnels `:3000` and `:8080` on random `*.ngrok.app`
-   URLs (reserved names collide across concurrent VMs). Watch the `ngrok` or
-   `access` tmux pane, or `~/.autumn-agent/public-urls.txt`.
+3. **ngrok** (`bash scripts/setup/cursor-cloud/ngrok.sh`) — opt-in, not on boot.
+   If Infisical has `NGROK_AUTHTOKEN`, it tunnels `:3000` and `:8080` on random
+   `*.ngrok.app` URLs. URLs go to stdout and `~/.autumn-agent/public-urls.txt`.
 
-The `access` terminal reprints these instructions on every boot.
+The `access` terminal reprints these instructions on every boot. It does not
+start the app.
 
 ## Lint / typecheck / test
 

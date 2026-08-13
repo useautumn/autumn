@@ -70,10 +70,10 @@ export function wantsCanonicalProvision(
 	gitBranch: string,
 	defaultBranch: string,
 ): boolean {
-	// Cursor Cloud / Devin / CI: no Neon key and no browser for neonctl auth.
-	// Stay on the local Postgres from agent-services instead of provisioning
-	// a Neon branch that would fail the setup.
-	if (isHeadless() && !process.env.NEON_WORKTREE_API_KEY) {
+	// Cursor Cloud / Devin / CI: no Docker and no neonctl browser login.
+	// Stay on the local Postgres from agent-services. Never honor
+	// NEON_WORKTREE_API_KEY here even if Infisical injects it.
+	if (isHeadless()) {
 		return false;
 	}
 	return cwd === canonical && gitBranch !== defaultBranch;

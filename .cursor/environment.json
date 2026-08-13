@@ -4,19 +4,9 @@
 	"start": "bash scripts/setup/cursor-cloud/start.sh",
 	"terminals": [
 		{
-			"name": "dw",
-			"command": "DW_HEADLESS=1 bun dw",
-			"description": "Autumn dev stack via bun dw (setup if needed, then run): API :8080, vite :3000, checkout :3001. Infisical machine identity injects Stripe/etc; isolation overlay keeps DB/Redis/SQS on localhost. stripe listen forwards Connect webhooks to the API."
-		},
-		{
-			"name": "ngrok",
-			"command": "bash scripts/setup/cursor-cloud/ngrok.sh",
-			"description": "Public ngrok tunnels for :3000 (dashboard) and :8080 (API) when NGROK_AUTHTOKEN is in Infisical. Stripe webhooks use stripe listen, not ngrok."
-		},
-		{
 			"name": "access",
 			"command": "bash scripts/setup/cursor-cloud/access.sh",
-			"description": "How to open the dashboard from a laptop: Cursor port forwarding, remote desktop, or ngrok URLs."
+			"description": "How to open the dashboard from a laptop. Does not start bun dw — run that yourself if the task needs the app."
 		}
 	],
 	"ports": [

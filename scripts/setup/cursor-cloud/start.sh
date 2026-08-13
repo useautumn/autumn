@@ -23,7 +23,6 @@ mkdir -p "${HOME}/.autumn-agent"
 # secrets; we never store them in the repo. Token is cached under ~/.cache.
 if token="$(bash "$ROOT/scripts/setup/cursor-cloud/infisical-machine-login.sh")"; then
 	export INFISICAL_TOKEN="$token"
-	bash "$ROOT/scripts/setup/cursor-cloud/export-dev-secrets.sh"
 	echo "[cursor-cloud-start] Infisical machine identity: token ready"
 else
 	echo "[cursor-cloud-start] Infisical machine identity not configured (INFISICAL_CLIENT_ID/SECRET unset)"
@@ -37,12 +36,6 @@ export PATH="${ROOT}/node_modules/.bin:/usr/local/bin:\$HOME/.bun/bin:\$PATH"
 if [ -z "\${INFISICAL_TOKEN:-}" ] && [ -n "\${INFISICAL_CLIENT_ID:-}\${INFISICAL_UNIVERSAL_AUTH_CLIENT_ID:-}" ]; then
   INFISICAL_TOKEN="\$("${ROOT}/scripts/setup/cursor-cloud/infisical-machine-login.sh" 2>/dev/null || true)"
   [ -n "\$INFISICAL_TOKEN" ] && export INFISICAL_TOKEN
-fi
-if [ -f "\$HOME/.autumn-agent/dev-secrets.env" ]; then
-  set -a
-  # shellcheck disable=SC1091
-  . "\$HOME/.autumn-agent/dev-secrets.env"
-  set +a
 fi
 if [ -f "${ROOT}/scripts/setup/cursor-cloud/isolation.env" ]; then
   set -a
