@@ -84,14 +84,14 @@ export const applyLicenseReplacePatches = async ({
 			${unlimitedAssignment}
 		FROM patched
 		INNER JOIN customer_products AS assignment
-			ON assignment.id = target.customer_product_id
-			AND assignment.internal_entity_id IS NOT NULL
+			ON assignment.internal_entity_id IS NOT NULL
 			AND assignment.status IN (${sqlList({ values: [...MIGRATABLE_STATUSES] })})
 		${canonicalPoolLateralSql({ licensePlanId })}
 		INNER JOIN customer_products AS cp
 			ON cp.id = pool.parent_customer_product_id
 			AND ${operationScopeSql({ scope })}
 		WHERE target.id = patched.id
+			AND assignment.id = target.customer_product_id
 		RETURNING target.id, assignment.internal_customer_id
 	`);
 
