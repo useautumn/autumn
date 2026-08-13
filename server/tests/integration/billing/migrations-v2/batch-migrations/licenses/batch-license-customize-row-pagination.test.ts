@@ -21,7 +21,7 @@ import { items } from "@tests/utils/fixtures/items";
 import { itemsV2 } from "@tests/utils/fixtures/itemsV2";
 import chalk from "chalk";
 import { inArray } from "drizzle-orm";
-import { addLicenseEntitlementsForPage } from "@/internal/migrations/v2/batchOperations/actions/addLicenseEntitlementsForPage/addLicenseEntitlementsForPage.js";
+import { addLicenseEntitlementsForPage } from "@/internal/migrations/v2/batchOperations/actions/licenseEntitlementsForPage/addLicenseEntitlementsForPage.js";
 import { batchMigrationPlanToExecutionPlan } from "@/internal/migrations/v2/batchOperations/compute/index.js";
 import { prepareMigration } from "@/internal/migrations/v2/run/runMigration.js";
 import { shouldRunBatchLane } from "@/internal/migrations/v2/utils/shouldRunBatchLane.js";
