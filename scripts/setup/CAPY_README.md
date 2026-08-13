@@ -10,7 +10,7 @@ Configure this repository under **Settings → Project → Dev environment**:
 
 | Lifecycle | Command | Responsibility |
 | --- | --- | --- |
-| Initialize | `bash scripts/setup/capy-init.sh` | installs workspace dependencies and `neonctl`, then pulls the Dragonfly, ElasticMQ, and DynamoDB Local images for snapshot reuse |
+| Initialize | `bash scripts/setup/capy-init.sh` | installs workspace dependencies and `neonctl`, then pulls the Autumn and Trigger.dev infrastructure images for snapshot reuse |
 | Update after checkout | `bun install --frozen-lockfile` | reconciles dependencies when a reused or snapshotted VM checks out another commit |
 | Startup | `bash scripts/setup/capy-startup.sh` | idempotently starts local infrastructure, provisions or resumes the VM's Neon branch, applies pending migrations and SQL functions, and writes local env files |
 
@@ -41,14 +41,25 @@ Optional integration variables such as `STRIPE_SANDBOX_SECRET_KEY`,
 
 ## Runtime services
 
-Startup launches the existing `scripts/setup/dw.compose.yml` services under the
-Compose project `autumn-capy`:
+Startup launches Autumn's `scripts/setup/dw.compose.yml` services and the
+Trigger.dev control plane in `scripts/setup/trigger.compose.yml`:
 
 | Port | Service |
 | --- | --- |
 | 6379 | Dragonfly |
 | 8000 | DynamoDB Local |
+| 8030 | Trigger.dev webapp and API |
 | 9324 | ElasticMQ |
+
+Trigger.dev runs its pinned v4.5.10 control plane locally. Startup creates its
+datastore credentials in `~/.autumn-capy/trigger.env`, seeds the matching
+Autumn project, and writes `TRIGGER_API_URL`, `TRIGGER_ACCESS_TOKEN`, and
+`TRIGGER_SERVER_SECRET_KEY` into `server/.env.local`. `bun dev` therefore keeps
+using the repository's existing local Trigger worker, but its queues and run
+data are isolated to this VM instead of the shared Trigger.dev cloud project.
+The control plane uses about 2 GB of RAM after startup on the standard 16 GB
+Capy VM; the source worker and application stack bring steady-state use to
+about 9 GB on the current image.
 
 The application remains opt-in. Run the Setup command `dev` or `bun dev` when a
 task needs the full stack:
@@ -89,6 +100,10 @@ Inspect local infrastructure with:
 ```bash
 docker compose -f scripts/setup/dw.compose.yml -p autumn-capy ps
 docker compose -f scripts/setup/dw.compose.yml -p autumn-capy logs
+docker compose --env-file ~/.autumn-capy/trigger.env \
+  -f scripts/setup/trigger.compose.yml -p autumn-capy-trigger ps
+docker compose --env-file ~/.autumn-capy/trigger.env \
+  -f scripts/setup/trigger.compose.yml -p autumn-capy-trigger logs
 ```
 
 Re-run Startup to repair stopped containers and refresh env files:

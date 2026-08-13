@@ -21,6 +21,18 @@ command -v bun >/dev/null 2>&1 || die "bun is required"
 docker info >/dev/null 2>&1 || die "Docker Engine is required (use a Capy v2 VM)"
 docker compose version >/dev/null 2>&1 || die "Docker Compose is required"
 
+if [ "$(sysctl -n fs.inotify.max_user_watches)" -lt 524288 ]; then
+  log "raising inotify watcher limit for the Trigger.dev source worker"
+  if [ "$EUID" -eq 0 ]; then
+    SUDO=()
+  else
+    command -v sudo >/dev/null 2>&1 || die "sudo is required to configure inotify"
+    SUDO=(sudo)
+  fi
+  echo fs.inotify.max_user_watches=524288 | "${SUDO[@]}" tee /etc/sysctl.d/99-autumn-capy.conf >/dev/null
+  "${SUDO[@]}" sysctl --system >/dev/null
+fi
+
 if ! command -v psql >/dev/null 2>&1; then
   log "installing PostgreSQL client"
   if [ "$EUID" -eq 0 ]; then
@@ -57,8 +69,8 @@ log "psql ready"
 log "bun install --frozen-lockfile (workspace deps)"
 ( cd "$REPO_ROOT" && bun install --frozen-lockfile )
 
-# Pull only local infrastructure services. The ngrok profile is intentionally
-# excluded; Capy v2 discovers listening services without a tunnel container.
+# Pull local infrastructure into the snapshot. The ngrok profile is
+# intentionally excluded; Capy v2 discovers listening services directly.
 log "pulling local service images"
 (
   cd "$REPO_ROOT"
@@ -69,5 +81,9 @@ log "pulling local service images"
     docker compose -f scripts/setup/dw.compose.yml pull \
       dragonfly elasticmq dynamodb
 )
+
+docker compose -f scripts/setup/trigger.compose.yml config --images \
+  | sort -u \
+  | xargs -n1 docker pull
 
 log "init complete"

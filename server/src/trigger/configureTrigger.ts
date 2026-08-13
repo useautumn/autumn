@@ -17,12 +17,11 @@ if (process.env.TRIGGER_SERVER_SECRET_KEY) {
 	const previewBranch = process.env.TRIGGER_DEV_BRANCH?.trim();
 	configure({
 		secretKey: process.env.TRIGGER_SERVER_SECRET_KEY,
+		baseURL: process.env.TRIGGER_API_URL,
 		// Must match `bunx trigger.dev dev --branch` from scripts/dev.ts —
 		// otherwise local triggers land on `default` while the worker listens
 		// on the isolated branch and never receives them.
-		...(previewBranch && previewBranch !== "default"
-			? { previewBranch }
-			: {}),
+		...(previewBranch && previewBranch !== "default" ? { previewBranch } : {}),
 	});
 }
 

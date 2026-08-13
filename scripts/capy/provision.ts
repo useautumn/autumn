@@ -19,7 +19,7 @@
 // Run via `bun scripts/capy/provision.ts`. Idempotent: a second run is a
 // no-op for the Neon branch and refreshes env files in place.
 //
-import { createHash, randomBytes } from "node:crypto";
+import { createCipheriv, createHash, randomBytes } from "node:crypto";
 import {
 	chmodSync,
 	existsSync,
@@ -60,6 +60,8 @@ const VITE_PORT = 3000;
 const DRAGONFLY_PORT = 6379;
 const ELASTICMQ_PORT = 9324;
 const DYNAMODB_PORT = 8000;
+const TRIGGER_PORT = 8030;
+const TRIGGER_PROJECT_REF = "proj_cwiutfmpdzfcshxevkok";
 
 // ---------------------------------------------------------------------------
 // Tiny logging / shell helpers (we don't reuse dw's helpers because they tag
@@ -127,6 +129,25 @@ type State = {
 		encryptionPassword: string;
 	};
 };
+
+const triggerEnvironmentSql = ({
+	apiKey,
+	id,
+	memberId,
+	pkApiKey,
+	shortcode,
+	slug,
+	type,
+}: {
+	apiKey: string;
+	id: string;
+	memberId?: string;
+	pkApiKey: string;
+	shortcode: string;
+	slug: string;
+	type: "DEVELOPMENT" | "PRODUCTION";
+}) =>
+	`INSERT INTO "RuntimeEnvironment" (id, slug, "apiKey", "pkApiKey", type, shortcode, "organizationId", "projectId", "orgMemberId", "updatedAt") VALUES ('${id}', '${slug}', '${apiKey}', '${pkApiKey}', '${type}', '${shortcode}', 'capy-org', 'capy-project', ${memberId ? `'${memberId}'` : "NULL"}, now()) ON CONFLICT (id) DO NOTHING;`;
 
 // URL-safe base64 random string. Same shape as scripts/setup/writeAgentEnv.ts
 // (`genUrlSafeBase64`) — server/src/utils/initUtils.ts::checkEnvVars exits
@@ -215,8 +236,13 @@ async function isHttpServiceUp(port: number): Promise<boolean> {
 	}
 }
 
-async function waitForHttpService(name: string, port: number): Promise<void> {
-	for (let i = 0; i < 60; i++) {
+async function waitForHttpService(
+	name: string,
+	port: number,
+	timeoutSeconds = 15,
+): Promise<void> {
+	const attempts = timeoutSeconds * 4;
+	for (let i = 0; i < attempts; i++) {
 		if (await isHttpServiceUp(port)) {
 			log(`${name} ready on :${port}`);
 			return;
@@ -224,7 +250,7 @@ async function waitForHttpService(name: string, port: number): Promise<void> {
 		await Bun.sleep(250);
 	}
 	fatal(
-		`${name} did not become ready within 15s; inspect \`docker compose logs\``,
+		`${name} did not become ready within ${timeoutSeconds}s; inspect \`docker compose logs\``,
 	);
 }
 
@@ -294,6 +320,8 @@ function writeEnvFile(relPath: string, managed: Record<string, string>): void {
 function writeEnvFiles(
 	databaseUrl: string,
 	secrets: NonNullable<State["secrets"]>,
+	triggerSecretKey: string,
+	triggerAccessToken: string,
 ): void {
 	const serverUrl = `http://localhost:${SERVER_PORT}`;
 	const viteUrl = `http://localhost:${VITE_PORT}`;
@@ -324,6 +352,9 @@ function writeEnvFiles(
 		TRACK_ASYNC_SQS_QUEUE_URL: `${sqsBase}/autumn-track.fifo`,
 		TRACK_ASYNC_STANDARD_SQS_QUEUE_URL: `${sqsBase}/autumn-track-async`,
 		STRIPE_WEBHOOK_SQS_QUEUE_URL: `${sqsBase}/autumn-stripe-webhook.fifo`,
+		TRIGGER_API_URL: `http://localhost:${TRIGGER_PORT}`,
+		TRIGGER_ACCESS_TOKEN: triggerAccessToken,
+		TRIGGER_SERVER_SECRET_KEY: triggerSecretKey,
 		AWS_REGION: "us-east-1",
 		AWS_ACCESS_KEY_ID: "x",
 		AWS_SECRET_ACCESS_KEY: "x",
@@ -352,6 +383,151 @@ function writeEnvFiles(
 	log(`wrote .env.local for server/, vite/, apps/checkout/`);
 	log(`  server: ${serverUrl}`);
 	log(`  vite:   ${viteUrl}`);
+}
+
+function triggerCompose(args: string[]) {
+	const triggerEnv = join(CAPY_PREFIX, "trigger.env");
+	const result = Bun.spawnSync(
+		[
+			"docker",
+			"compose",
+			"--env-file",
+			triggerEnv,
+			"-f",
+			join(PROJECT_ROOT, "scripts/setup/trigger.compose.yml"),
+			"-p",
+			"autumn-capy-trigger",
+			...args,
+		],
+		{ cwd: PROJECT_ROOT, stdout: "pipe", stderr: "pipe" },
+	);
+	if (result.exitCode !== 0) {
+		fatal(new TextDecoder().decode(result.stderr).trim());
+	}
+	return result;
+}
+
+function readTriggerAccessToken(): string | undefined {
+	const contents = readFileSync(join(CAPY_PREFIX, "trigger.env"), "utf-8");
+	return contents.match(/^TRIGGER_ACCESS_TOKEN=(tr_pat_[A-Za-z0-9]+)$/m)?.[1];
+}
+
+function readTriggerEnv(): Record<string, string> {
+	return Object.fromEntries(
+		readFileSync(join(CAPY_PREFIX, "trigger.env"), "utf-8")
+			.split(/\r?\n/)
+			.map((line) => line.match(/^([A-Za-z_][A-Za-z0-9_]*)=(.*)$/))
+			.filter((match): match is RegExpMatchArray => Boolean(match))
+			.map((match) => [match[1], match[2]]),
+	);
+}
+
+function saveTriggerAccessToken(token: string): void {
+	const envPath = join(CAPY_PREFIX, "trigger.env");
+	const contents = readFileSync(envPath, "utf-8").replace(
+		/^TRIGGER_ACCESS_TOKEN=.*\n?/m,
+		"",
+	);
+	writeFileSync(
+		envPath,
+		`${contents.trimEnd()}\nTRIGGER_ACCESS_TOKEN=${token}\n`,
+		{
+			mode: 0o600,
+		},
+	);
+	chmodSync(envPath, 0o600);
+}
+
+function ensureTriggerProject(): {
+	secretKey: string;
+	accessToken: string;
+} {
+	const selectKey = `SELECT "apiKey" FROM "RuntimeEnvironment" WHERE "projectId" = (SELECT id FROM "Project" WHERE "externalRef" = '${TRIGGER_PROJECT_REF}') AND type = 'DEVELOPMENT' ORDER BY "createdAt" LIMIT 1;`;
+
+	let result = triggerCompose([
+		"exec",
+		"-T",
+		"postgres",
+		"psql",
+		"-U",
+		"postgres",
+		"-d",
+		"main",
+		"-Atc",
+		selectKey,
+	]);
+	let key =
+		new TextDecoder().decode(result.stdout).trim().split("\n").at(-1) ||
+		undefined;
+	let accessToken = readTriggerAccessToken();
+	if (key?.startsWith("tr_dev_") && accessToken) {
+		return { secretKey: key, accessToken };
+	}
+
+	log("seeding Trigger.dev local user and Autumn project");
+	accessToken ??= `tr_pat_${randomBytes(20).toString("hex")}`;
+	saveTriggerAccessToken(accessToken);
+	key ??= `tr_dev_${randomBytes(12).toString("hex")}`;
+	const prodKey = `tr_prod_${randomBytes(12).toString("hex")}`;
+	const env = readTriggerEnv();
+	const encryptionKey = env.TRIGGER_ENCRYPTION_KEY;
+	if (encryptionKey?.length !== 32) {
+		fatal("TRIGGER_ENCRYPTION_KEY must be exactly 32 bytes");
+	}
+	const nonce = randomBytes(12);
+	const cipher = createCipheriv("aes-256-gcm", encryptionKey, nonce);
+	const ciphertext = Buffer.concat([
+		cipher.update(accessToken, "utf8"),
+		cipher.final(),
+	]);
+	const encryptedToken = JSON.stringify({
+		nonce: nonce.toString("hex"),
+		ciphertext: ciphertext.toString("hex"),
+		tag: cipher.getAuthTag().toString("hex"),
+	}).replaceAll("'", "''");
+	const tokenHash = createHash("sha256").update(accessToken).digest("hex");
+	const sql = [
+		`INSERT INTO "User" (id, email, "authenticationMethod", admin, "confirmedBasicDetails", "updatedAt") VALUES ('capy-user', 'capy@local.invalid', 'MAGIC_LINK', true, true, now()) ON CONFLICT (id) DO NOTHING;`,
+		`INSERT INTO "Organization" (id, slug, title, "v3Enabled", "updatedAt") VALUES ('capy-org', 'autumn-capy', 'Autumn Capy', true, now()) ON CONFLICT (id) DO NOTHING;`,
+		`INSERT INTO "OrgMember" (id, "organizationId", "userId", role, "updatedAt") VALUES ('capy-member', 'capy-org', 'capy-user', 'ADMIN', now()) ON CONFLICT (id) DO NOTHING;`,
+		`INSERT INTO "Project" (id, slug, name, "externalRef", "organizationId", version, engine, "updatedAt") VALUES ('capy-project', 'autumn-capy', 'Autumn', '${TRIGGER_PROJECT_REF}', 'capy-org', 'V3', 'V2', now()) ON CONFLICT (id) DO NOTHING;`,
+		triggerEnvironmentSql({
+			apiKey: key,
+			id: "capy-dev-env",
+			memberId: "capy-member",
+			pkApiKey: `pk_${randomBytes(12).toString("hex")}`,
+			shortcode: "capy-dev",
+			slug: "dev",
+			type: "DEVELOPMENT",
+		}),
+		triggerEnvironmentSql({
+			apiKey: prodKey,
+			id: "capy-prod-env",
+			pkApiKey: `pk_${randomBytes(12).toString("hex")}`,
+			shortcode: "capy-prod",
+			slug: "prod",
+			type: "PRODUCTION",
+		}),
+		`INSERT INTO "PersonalAccessToken" (id, name, "encryptedToken", "obfuscatedToken", "hashedToken", "userId", "updatedAt") VALUES ('capy-cli-token', 'capy-cli', '${encryptedToken}'::jsonb, 'tr_pat_local', '${tokenHash}', 'capy-user', now()) ON CONFLICT (id) DO UPDATE SET "encryptedToken" = EXCLUDED."encryptedToken", "hashedToken" = EXCLUDED."hashedToken", "revokedAt" = NULL, "updatedAt" = now();`,
+		selectKey,
+	].join(" ");
+	result = triggerCompose([
+		"exec",
+		"-T",
+		"postgres",
+		"psql",
+		"-U",
+		"postgres",
+		"-d",
+		"main",
+		"-Atc",
+		sql,
+	]);
+	key = new TextDecoder().decode(result.stdout).trim().split("\n").at(-1);
+	if (!key?.startsWith("tr_dev_")) {
+		fatal("Trigger.dev seed did not create Autumn's development environment");
+	}
+	return { secretKey: key, accessToken };
 }
 
 // ---------------------------------------------------------------------------
@@ -442,7 +618,9 @@ async function main(): Promise<void> {
 	await Promise.all([
 		waitForHttpService("elasticmq", ELASTICMQ_PORT),
 		waitForHttpService("dynamodb", DYNAMODB_PORT),
+		waitForHttpService("trigger.dev", TRIGGER_PORT, 120),
 	]);
+	const trigger = ensureTriggerProject();
 
 	// 2. Neon auth + branch + migrations.
 	ensureNeonAuth();
@@ -467,7 +645,12 @@ async function main(): Promise<void> {
 	if (nextState.branchName) ensureChatDatabase(nextState.branchName);
 
 	// 3. Env files. preload-env.ts at every bun entry point auto-loads these.
-	writeEnvFiles(nextState.databaseUrl, nextState.secrets);
+	writeEnvFiles(
+		nextState.databaseUrl,
+		nextState.secrets,
+		trigger.secretKey,
+		trigger.accessToken,
+	);
 
 	log("capy provision complete — run `bun dev` to start the stack");
 }

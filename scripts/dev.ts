@@ -278,8 +278,8 @@ async function startDev() {
 			// Run the installed CLI, not bunx — bunx resolves latest and can
 			// mismatch the pinned @trigger.dev/* packages.
 			const triggerCmd = isWindows
-				? `set AXIOM_TOKEN= && bun run trigger dev --branch ${triggerDevBranch}`
-				: `env -u AXIOM_TOKEN bun run trigger dev --branch ${triggerDevBranch}`;
+				? `set AXIOM_TOKEN= && bun run trigger dev --branch ${triggerDevBranch} --api-url ${process.env.TRIGGER_API_URL ?? "https://api.trigger.dev"}`
+				: `env -u AXIOM_TOKEN bun run trigger dev --branch ${triggerDevBranch} --api-url ${process.env.TRIGGER_API_URL ?? "https://api.trigger.dev"}`;
 			cmds.push(`"${triggerCmd}"`);
 
 			names.push("vite", "checkout");

@@ -1,0 +1,200 @@
+services:
+  webapp:
+    image: ghcr.io/triggerdotdev/trigger.dev:v4.5.10
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:${TRIGGER_WEBAPP_PORT:-8030}:3000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      clickhouse:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+      s2:
+        condition: service_started
+    volumes:
+      - trigger-shared:/home/node/shared
+    user: root
+    command: sh -c "chown -R node:node /home/node/shared && exec ./scripts/entrypoint.sh"
+    environment:
+      APP_ORIGIN: http://localhost:${TRIGGER_WEBAPP_PORT:-8030}
+      LOGIN_ORIGIN: http://localhost:${TRIGGER_WEBAPP_PORT:-8030}
+      API_ORIGIN: http://localhost:${TRIGGER_WEBAPP_PORT:-8030}
+      ELECTRIC_ORIGIN: http://electric:3000
+      DATABASE_URL: postgresql://postgres:${TRIGGER_POSTGRES_PASSWORD}@postgres:5432/main?schema=public&sslmode=disable
+      DIRECT_URL: postgresql://postgres:${TRIGGER_POSTGRES_PASSWORD}@postgres:5432/main?schema=public&sslmode=disable
+      SESSION_SECRET: ${TRIGGER_SESSION_SECRET}
+      MAGIC_LINK_SECRET: ${TRIGGER_MAGIC_LINK_SECRET}
+      ENCRYPTION_KEY: ${TRIGGER_ENCRYPTION_KEY}
+      PROVIDER_SECRET: ${TRIGGER_PROVIDER_SECRET}
+      COORDINATOR_SECRET: ${TRIGGER_COORDINATOR_SECRET}
+      MANAGED_WORKER_SECRET: ${TRIGGER_MANAGED_WORKER_SECRET}
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      REDIS_TLS_DISABLED: "true"
+      APP_LOG_LEVEL: info
+      DEV_OTEL_EXPORTER_OTLP_ENDPOINT: http://localhost:${TRIGGER_WEBAPP_PORT:-8030}/otel
+      DEPLOY_REGISTRY_HOST: localhost:5000
+      DEPLOY_REGISTRY_NAMESPACE: trigger
+      V4_DEPLOY_REGISTRY_HOST: localhost:5000
+      V4_DEPLOY_REGISTRY_NAMESPACE: trigger
+      OBJECT_STORE_BASE_URL: http://minio:9000
+      OBJECT_STORE_ACCESS_KEY_ID: ${TRIGGER_OBJECT_STORE_ACCESS_KEY_ID}
+      OBJECT_STORE_SECRET_ACCESS_KEY: ${TRIGGER_OBJECT_STORE_SECRET_ACCESS_KEY}
+      REALTIME_STREAMS_DEFAULT_VERSION: v2
+      REALTIME_STREAMS_S2_BASIN: trigger-realtime
+      REALTIME_STREAMS_S2_ENDPOINT: http://s2/v1
+      REALTIME_STREAMS_S2_SKIP_ACCESS_TOKENS: "true"
+      CLICKHOUSE_URL: http://default:${TRIGGER_CLICKHOUSE_PASSWORD}@clickhouse:8123?secure=false
+      RUN_REPLICATION_ENABLED: "1"
+      RUN_REPLICATION_CLICKHOUSE_URL: http://default:${TRIGGER_CLICKHOUSE_PASSWORD}@clickhouse:8123
+      TRIGGER_BOOTSTRAP_ENABLED: "0"
+      TRIGGER_TELEMETRY_DISABLED: "1"
+      NODE_MAX_OLD_SPACE_SIZE: "3200"
+    healthcheck:
+      test:
+        - CMD
+        - node
+        - -e
+        - "http.get('http://localhost:3000/healthcheck', res => process.exit(res.statusCode === 200 ? 0 : 1)).on('error', () => process.exit(1))"
+      interval: 10s
+      timeout: 5s
+      retries: 30
+      start_period: 30s
+
+  postgres:
+    image: postgres:14
+    restart: unless-stopped
+    command: ["-c", "wal_level=logical"]
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: ${TRIGGER_POSTGRES_PASSWORD}
+      POSTGRES_DB: postgres
+    volumes:
+      - trigger-postgres:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  redis:
+    image: redis:7
+    restart: unless-stopped
+    volumes:
+      - trigger-redis:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  electric:
+    image: electricsql/electric:1.2.4
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgresql://postgres:${TRIGGER_POSTGRES_PASSWORD}@postgres:5432/main?schema=public&sslmode=disable
+      ELECTRIC_INSECURE: "true"
+      ELECTRIC_USAGE_REPORTING: "false"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/v1/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 20
+
+  clickhouse:
+    image: clickhouse/clickhouse-server:26.2
+    restart: unless-stopped
+    ulimits:
+      nofile:
+        soft: 262144
+        hard: 262144
+    environment:
+      CLICKHOUSE_USER: default
+      CLICKHOUSE_PASSWORD: ${TRIGGER_CLICKHOUSE_PASSWORD}
+      CLICKHOUSE_DEFAULT_ACCESS_MANAGEMENT: "1"
+    volumes:
+      - trigger-clickhouse:/var/lib/clickhouse
+      - ./trigger/clickhouse-data-paths.xml:/etc/clickhouse-server/config.d/data-paths.xml:ro
+      - ./trigger/clickhouse-override.xml:/etc/clickhouse-server/config.d/override.xml:ro
+    healthcheck:
+      test:
+        - CMD
+        - clickhouse-client
+        - --host
+        - localhost
+        - --port
+        - "9000"
+        - --user
+        - default
+        - --password
+        - ${TRIGGER_CLICKHOUSE_PASSWORD}
+        - --query
+        - SELECT 1
+      interval: 5s
+      timeout: 5s
+      retries: 20
+      start_period: 10s
+
+  minio:
+    image: bitnamilegacy/minio:latest
+    restart: unless-stopped
+    environment:
+      MINIO_ROOT_USER: ${TRIGGER_OBJECT_STORE_ACCESS_KEY_ID}
+      MINIO_ROOT_PASSWORD: ${TRIGGER_OBJECT_STORE_SECRET_ACCESS_KEY}
+      MINIO_DEFAULT_BUCKETS: packets
+      MINIO_BROWSER: "off"
+    volumes:
+      - trigger-minio:/bitnami/minio/data
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 5s
+      timeout: 10s
+      retries: 20
+
+  s2-init:
+    image: busybox:1.37
+    restart: "no"
+    command:
+      - sh
+      - -c
+      - |
+        cat > /config/s2-spec.json <<'JSON'
+        {
+          "basins": [
+            {
+              "name": "trigger-realtime",
+              "config": { "create_stream_on_append": true, "create_stream_on_read": true }
+            }
+          ]
+        }
+        JSON
+    volumes:
+      - trigger-s2-config:/config
+
+  s2:
+    image: ghcr.io/s2-streamstore/s2:latest@sha256:d6ded5ca7dd619fa7c946f06e39a98f9c95c6883c8bb884e5eaa129f232c920c
+    restart: unless-stopped
+    depends_on:
+      s2-init:
+        condition: service_completed_successfully
+    command: ["lite", "--init-file", "/config/s2-spec.json", "--local-root", "/data"]
+    user: "0:0"
+    volumes:
+      - trigger-s2-config:/config
+      - trigger-s2:/data
+
+volumes:
+  trigger-clickhouse:
+  trigger-minio:
+  trigger-postgres:
+  trigger-redis:
+  trigger-s2:
+  trigger-s2-config:
+  trigger-shared:

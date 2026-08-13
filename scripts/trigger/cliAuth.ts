@@ -22,6 +22,16 @@ export function readTriggerCliAuth(): {
 	accessToken: string;
 	apiUrl: string;
 } {
+	const accessToken = process.env.TRIGGER_ACCESS_TOKEN?.trim();
+	if (accessToken) {
+		return {
+			accessToken,
+			apiUrl: (
+				process.env.TRIGGER_API_URL ?? "https://api.trigger.dev"
+			).replace(/\/$/, ""),
+		};
+	}
+
 	for (const path of CONFIG_CANDIDATES) {
 		if (!existsSync(path)) continue;
 		const config = JSON.parse(readFileSync(path, "utf-8")) as TriggerCliConfig;
@@ -31,10 +41,7 @@ export function readTriggerCliAuth(): {
 		if (!accessToken) continue;
 		return {
 			accessToken,
-			apiUrl: (profile?.apiUrl ?? "https://api.trigger.dev").replace(
-				/\/$/,
-				"",
-			),
+			apiUrl: (profile?.apiUrl ?? "https://api.trigger.dev").replace(/\/$/, ""),
 		};
 	}
 	throw new Error(
