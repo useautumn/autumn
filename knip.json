@@ -89,10 +89,6 @@
 			"entry": ["tests/**/*.ts"],
 			"project": ["src/**/*.ts", "tests/**/*.ts"]
 		},
-		"packages/env": {
-			"entry": ["src/**/*.test.ts"],
-			"project": ["src/**/*.ts"]
-		},
 		"packages/gateway": {
 			"entry": ["tests/**/*.test.ts"],
 			"project": ["src/**/*.ts", "tests/**/*.ts"]

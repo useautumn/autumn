@@ -42,7 +42,7 @@ export const expireAndActivateCustomerProducts = async ({
 
 		if (!onStripeSubscription) continue;
 
-		// 2. Expire and activate free successor (with tracking)
+		// 2. Expire and activate free successor
 		const {
 			expiredCustomerProduct,
 			activatedCustomerProduct,

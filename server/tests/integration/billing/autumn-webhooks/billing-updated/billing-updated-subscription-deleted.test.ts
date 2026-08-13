@@ -4,7 +4,7 @@
  *
  * Setup: attach a paid plan, cancel the Stripe subscription directly. Our
  * `handleStripeSubscriptionDeleted` handler expires the customer product and
- * `emitBillingChangeWebhook` fires the webhook with an `expired` change.
+ * `flushBillingUpdated` fires the webhook with an `expired` change.
  */
 
 import { afterAll, beforeAll, expect, test } from "bun:test";

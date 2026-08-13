@@ -2,7 +2,7 @@ import { describe, expect, test } from "bun:test";
 import { CusProductStatus, type InsertCustomerProduct } from "@autumn/shared";
 import type { StripeSubscriptionUpdatedContext } from "@/external/stripe/webhookHandlers/handleStripeSubscriptionUpdated/stripeSubscriptionUpdatedContext";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
-import { buildBillingChangeResponse } from "@/internal/billing/v2/utils/billingChangeResponse";
+import { buildBillingChangeResponse } from "@/internal/billing/v2/actions/buildBillingChanges/buildBillingChangeResponse";
 import { collectorToAutumnBillingPlan } from "@/internal/billing/v2/workflows/sendBillingUpdatedWebhook/billingChangeCollector";
 import {
 	expectBillingChangeResponse,

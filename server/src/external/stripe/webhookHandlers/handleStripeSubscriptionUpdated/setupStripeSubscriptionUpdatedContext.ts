@@ -2,6 +2,7 @@ import type Stripe from "stripe";
 import { createStripeCli } from "@/external/connect/createStripeCli";
 import { getExpandedStripeSubscription } from "@/external/stripe/subscriptions/operations/getExpandedStripeSubscription.js";
 import { stripeSubscriptionToNowMs } from "@/external/stripe/subscriptions/utils/convertStripeSubscription";
+import { createBillingChangeCollector } from "@/internal/billing/v2/workflows/sendBillingUpdatedWebhook/billingChangeCollector";
 import type { StripeWebhookContext } from "../../webhookMiddlewares/stripeWebhookContext.js";
 import type { StripeSubscriptionUpdatedContext } from "./stripeSubscriptionUpdatedContext.js";
 
@@ -34,15 +35,13 @@ export const setupStripeSubscriptionUpdatedContext = async ({
 	});
 
 	return {
+		...createBillingChangeCollector({
+			fullCustomer,
+			customerProducts: [...fullCustomer.customer_products],
+		}),
 		stripeSubscription,
 		previousAttributes,
-		fullCustomer,
-		customerProducts: [...fullCustomer.customer_products],
 		nowMs,
-		updatedCustomerProducts: [],
-		deletedCustomerProducts: [],
-		insertedCustomerProducts: [],
 		oneOffPrepaidCarryOvers: [],
-		billingChangeTags: new Set<string>(),
 	};
 };

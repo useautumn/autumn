@@ -3,7 +3,7 @@ import { handleStripeSubscriptionCanceled } from "@/external/stripe/webhookHandl
 import { syncAutumnSubscription } from "@/external/stripe/webhookHandlers/handleStripeSubscriptionUpdated/tasks/syncAutumnSubscription.js";
 import { flushBillingUpdated } from "@/internal/billing/v2/workflows/sendBillingUpdatedWebhook/emitBillingUpdated";
 import type { StripeWebhookContext } from "../../webhookMiddlewares/stripeWebhookContext.js";
-import { logCustomerProductUpdates } from "../common";
+import { logCustomerProductUpdates } from "../common/logCustomerProductUpdates";
 import { setupStripeSubscriptionUpdatedContext } from "./setupStripeSubscriptionUpdatedContext.js";
 import { applyPooledBalanceTransitions } from "./tasks/applyPooledBalanceTransitions";
 import { autoSyncUpdatedSubscription } from "./tasks/autoSyncUpdatedSubscription.js";

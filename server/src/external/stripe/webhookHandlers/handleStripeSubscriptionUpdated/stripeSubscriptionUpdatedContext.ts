@@ -1,4 +1,3 @@
-import type { FullCusProduct } from "@autumn/shared";
 import type Stripe from "stripe";
 import type { ExpandedStripeSubscription } from "@/external/stripe/subscriptions/operations/getExpandedStripeSubscription";
 import type { BillingChangeCollector } from "@/internal/billing/v2/workflows/sendBillingUpdatedWebhook/billingChangeCollector";
@@ -20,15 +19,6 @@ export interface StripeSubscriptionUpdatedContext
 	extends BillingChangeCollector {
 	stripeSubscription: ExpandedStripeSubscription;
 	previousAttributes: SubscriptionPreviousAttributes;
-	/**
-	 * Mutable list of customer products. Updated in place by the
-	 * `trackCustomerProduct{Update,Deletion,Insertion}` helpers so subsequent
-	 * tasks see the current state. Callers iterating this array while those
-	 * helpers may run (directly or transitively) must iterate over a snapshot,
-	 * e.g. `for (const cp of [...customerProducts])`, to avoid iterator
-	 * invalidation.
-	 */
-	customerProducts: FullCusProduct[];
 	/** Current time in ms, respecting test clocks */
 	nowMs: number;
 	/**

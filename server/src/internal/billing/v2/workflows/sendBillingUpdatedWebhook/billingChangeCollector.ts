@@ -8,8 +8,11 @@ import type {
 export type BillingChangeCollector = {
 	/** FullCustomer the flush reports against. */
 	fullCustomer: FullCustomer;
-	/** Optional scoped subset (Stripe: products on the subscription) kept in sync. */
-	customerProducts?: FullCusProduct[];
+	/**
+	 * Products in scope (Stripe: those on the subscription), mutated in place by
+	 * the trackers — iterate a snapshot (`[...customerProducts]`) while tracking.
+	 */
+	customerProducts: FullCusProduct[];
 	updatedCustomerProducts: {
 		customerProduct: FullCusProduct;
 		updates: Partial<InsertCustomerProduct>;
@@ -22,7 +25,7 @@ export type BillingChangeCollector = {
 
 export const createBillingChangeCollector = ({
 	fullCustomer,
-	customerProducts,
+	customerProducts = [],
 }: {
 	fullCustomer: FullCustomer;
 	customerProducts?: FullCusProduct[];
@@ -35,16 +38,7 @@ export const createBillingChangeCollector = ({
 	billingChangeTags: new Set<string>(),
 });
 
-/**
- * Tracks a customer product update for subscription event workflows.
- * - Adds to updatedCustomerProducts list for logging/audit
- * - Updates customerProducts array in place so subsequent tasks see the change
- * - Updates fullCustomer.customer_products so actions can see the change
- *
- * Note: callers iterating `customerProducts` while this helper (or
- * `trackCustomerProductDeletion`) may run must iterate over a snapshot, e.g.
- * `for (const cp of [...customerProducts])`, to avoid iterator invalidation.
- */
+/** Records an update and applies it in place so later tasks see the change. */
 export const trackCustomerProductUpdate = ({
 	collector,
 	customerProduct,
@@ -60,13 +54,9 @@ export const trackCustomerProductUpdate = ({
 
 	const updatedProduct = { ...customerProduct, ...updates } as FullCusProduct;
 
-	if (customerProducts) {
-		const idx = customerProducts.findIndex(
-			(cp) => cp.id === customerProduct.id,
-		);
-		if (idx >= 0) {
-			customerProducts[idx] = updatedProduct;
-		}
+	const idx = customerProducts.findIndex((cp) => cp.id === customerProduct.id);
+	if (idx >= 0) {
+		customerProducts[idx] = updatedProduct;
 	}
 
 	const fullCustomerIdx = fullCustomer.customer_products.findIndex(
@@ -79,16 +69,7 @@ export const trackCustomerProductUpdate = ({
 	return updatedProduct;
 };
 
-/**
- * Tracks a customer product deletion for subscription event workflows.
- * - Adds to deletedCustomerProducts list for logging/audit
- * - Removes from customerProducts array in place so subsequent tasks see the change
- * - Removes from fullCustomer.customer_products so actions can see the change
- *
- * Note: callers iterating `customerProducts` while this helper (or
- * `trackCustomerProductUpdate`) may run must iterate over a snapshot, e.g.
- * `for (const cp of [...customerProducts])`, to avoid iterator invalidation.
- */
+/** Records a deletion and removes the product in place so later tasks skip it. */
 export const trackCustomerProductDeletion = ({
 	collector,
 	customerProduct,
@@ -100,13 +81,9 @@ export const trackCustomerProductDeletion = ({
 
 	deletedCustomerProducts.push(customerProduct);
 
-	if (customerProducts) {
-		const idx = customerProducts.findIndex(
-			(cp) => cp.id === customerProduct.id,
-		);
-		if (idx >= 0) {
-			customerProducts.splice(idx, 1);
-		}
+	const idx = customerProducts.findIndex((cp) => cp.id === customerProduct.id);
+	if (idx >= 0) {
+		customerProducts.splice(idx, 1);
 	}
 
 	const fullCustomerIdx = fullCustomer.customer_products.findIndex(
@@ -117,12 +94,7 @@ export const trackCustomerProductDeletion = ({
 	}
 };
 
-/**
- * Tracks a customer product insertion for subscription event workflows.
- * - Adds to insertedCustomerProducts list for logging/audit
- * - Adds to customerProducts array in place so subsequent tasks see the change
- * - Note: fullCustomer.customer_products should already be updated by the action
- */
+/** Records an insertion; `fullCustomer.customer_products` is the action's job. */
 export const trackCustomerProductInsertion = ({
 	collector,
 	customerProduct,
@@ -134,11 +106,9 @@ export const trackCustomerProductInsertion = ({
 
 	insertedCustomerProducts.push(customerProduct);
 
-	if (customerProducts) {
-		const exists = customerProducts.some((cp) => cp.id === customerProduct.id);
-		if (!exists) {
-			customerProducts.push(customerProduct);
-		}
+	const exists = customerProducts.some((cp) => cp.id === customerProduct.id);
+	if (!exists) {
+		customerProducts.push(customerProduct);
 	}
 };
 

@@ -1,7 +1,4 @@
-import {
-	type FullCusProduct,
-	isCustomerProductOnStripeSubscription,
-} from "@autumn/shared";
+import { isCustomerProductOnStripeSubscription } from "@autumn/shared";
 import type Stripe from "stripe";
 import { getStripeSubscriptionLock } from "@/external/redis/actions/stripeSubscriptionLock/stripeSubscriptionLock.js";
 import {
@@ -14,21 +11,16 @@ import {
 	getExpandedStripeSubscription,
 } from "@/external/stripe/subscriptions/operations/getExpandedStripeSubscription";
 import { stripeSubscriptionToNowMs } from "@/external/stripe/subscriptions/utils/convertStripeSubscription";
-import type { BillingChangeCollector } from "@/internal/billing/v2/workflows/sendBillingUpdatedWebhook/billingChangeCollector";
+import {
+	type BillingChangeCollector,
+	createBillingChangeCollector,
+} from "@/internal/billing/v2/workflows/sendBillingUpdatedWebhook/billingChangeCollector";
 import type { StripeWebhookContext } from "../../webhookMiddlewares/stripeWebhookContext";
 
 export interface StripeSubscriptionDeletedContext
 	extends BillingChangeCollector {
 	stripeSubscription: ExpandedStripeSubscription;
 	stripeCustomer: ExpandedStripeCustomer;
-	/**
-	 * Mutable list of customer products on this subscription. Updated in place
-	 * by the `trackCustomerProduct{Update,Deletion,Insertion}` helpers.
-	 * Callers iterating this array while those helpers may run (directly or
-	 * transitively) must iterate over a snapshot, e.g.
-	 * `for (const cp of [...customerProducts])`, to avoid iterator invalidation.
-	 */
-	customerProducts: FullCusProduct[];
 	/** Current time in ms, respecting test clocks */
 	nowMs: number;
 	/** Customer's payment method for paying arrear invoices */
@@ -117,15 +109,10 @@ export const setupStripeSubscriptionDeletedContext = async ({
 	});
 
 	return {
+		...createBillingChangeCollector({ fullCustomer, customerProducts }),
 		stripeSubscription,
 		stripeCustomer,
-		fullCustomer,
-		customerProducts,
 		nowMs,
 		paymentMethod,
-		updatedCustomerProducts: [],
-		deletedCustomerProducts: [],
-		insertedCustomerProducts: [],
-		billingChangeTags: new Set<string>(),
 	};
 };

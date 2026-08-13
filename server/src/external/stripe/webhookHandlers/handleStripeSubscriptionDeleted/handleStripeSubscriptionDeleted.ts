@@ -1,7 +1,7 @@
 import type Stripe from "stripe";
 import { flushBillingUpdated } from "@/internal/billing/v2/workflows/sendBillingUpdatedWebhook/emitBillingUpdated";
 import type { StripeWebhookContext } from "../../webhookMiddlewares/stripeWebhookContext";
-import { logCustomerProductUpdates } from "../common";
+import { logCustomerProductUpdates } from "../common/logCustomerProductUpdates";
 import { setupStripeSubscriptionDeletedContext } from "./setupStripeSubscriptionDeletedContext";
 import { expireAndActivateCustomerProducts } from "./tasks/expireAndActivateCustomerProducts";
 import { processConsumablePricesForSubscriptionDeleted } from "./tasks/processConsumablePricesForSubscriptionDeleted";
