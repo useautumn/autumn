@@ -1,0 +1,253 @@
+import {
+	BillingInterval,
+	CusProductStatus,
+	EntInterval,
+	type EntitlementWithFeature,
+	isBooleanEntitlement,
+	MIGRATABLE_STATUSES,
+} from "@autumn/shared";
+import { sql } from "drizzle-orm";
+import { z } from "zod/v4";
+import type { DrizzleCli } from "@/db/initDrizzle.js";
+import { sqlList } from "@/internal/billing/v2/actions/batchTransition/execute/sql/batchTransitionSqlUtils.js";
+import type { OperationScope } from "../scope/operationScope.js";
+import { operationScopeSql } from "../scope/operationScope.js";
+import { canonicalPoolLateralSql } from "./addLicenseEntitlementsForPage/licensePoolSql.js";
+
+const nullableNumeric = z.preprocess(
+	(value) => (value === null || value === undefined ? null : Number(value)),
+	z.number().nullable(),
+);
+
+const LicenseCandidateRowSchema = z.object({
+	customerEntitlementId: z.string().nullable(),
+	customerProductId: z.string(),
+	internalCustomerId: z.string(),
+	customerId: z.string().nullable(),
+	entityId: z.string().nullable(),
+	internalEntityId: z.string().nullable(),
+	entitlementId: z.string(),
+	internalFeatureId: z.string(),
+	featureId: z.string(),
+	status: z.enum(CusProductStatus),
+	startsAt: nullableNumeric,
+	assignmentStartsAt: nullableNumeric,
+	canceledAt: nullableNumeric,
+	endedAt: nullableNumeric,
+	trialEndsAt: nullableNumeric,
+	isPaidRecurring: z.boolean(),
+	billingCycleAnchor: nullableNumeric,
+	subscriptionCycleAnchor: nullableNumeric,
+	siblingResetCycleAnchor: nullableNumeric,
+});
+
+export type LicenseCandidateRow = z.infer<typeof LicenseCandidateRowSchema>;
+
+export type LicenseReplaceCandidateRow = LicenseCandidateRow & {
+	customerEntitlementId: string;
+};
+
+const LicenseReplaceCandidateRowSchema = LicenseCandidateRowSchema.extend({
+	customerEntitlementId: z.string(),
+});
+
+type SelectLicenseCandidateRowsBase = {
+	db: DrizzleCli;
+	internalCustomerIds: string[];
+	scope: OperationScope;
+	entitlement: EntitlementWithFeature;
+	licensePlanId: string;
+	afterCustomerProductId?: string;
+	limit: number;
+};
+
+export type SelectLicenseCandidateRowsArgs = SelectLicenseCandidateRowsBase &
+	(
+		| { match: "add" }
+		| { match: "replace"; fromEntitlementIds: string[] }
+	);
+
+const matchSql = ({
+	match,
+	entitlement,
+	fromEntitlementIds,
+	targetInterval,
+	targetIntervalCount,
+}: {
+	match: SelectLicenseCandidateRowsArgs["match"];
+	entitlement: EntitlementWithFeature;
+	fromEntitlementIds: string[];
+	targetInterval: string;
+	targetIntervalCount: number;
+}) => {
+	if (match === "add") {
+		const dedupIntervalCondition = isBooleanEntitlement({ entitlement })
+			? sql``
+			: sql`AND COALESCE(existing_definition.interval, ${EntInterval.Lifetime}) = ${targetInterval}
+				AND COALESCE(existing_definition.interval_count, 1) = ${targetIntervalCount}`;
+		return {
+			join: sql`
+				INNER JOIN license_entitlements AS le
+					ON le.plan_license_id = pool.plan_license_id
+				INNER JOIN entitlements AS e
+					ON e.id = le.entitlement_id
+				INNER JOIN features AS f
+					ON f.internal_id = e.internal_feature_id`,
+			customerEntitlementId: sql`NULL::text`,
+			entitlementId: sql`e.id`,
+			internalFeatureId: sql`e.internal_feature_id`,
+			featureId: sql`f.id`,
+			siblingAnchor: sql`sibling.reset_cycle_anchor`,
+			siblingExcludeLive: sql``,
+			extraWhere: sql`
+				AND e.id = ${entitlement.id}
+				AND NOT EXISTS (
+					SELECT 1
+					FROM customer_entitlements AS existing
+					INNER JOIN entitlements AS existing_definition
+						ON existing_definition.id = existing.entitlement_id
+					WHERE existing.customer_product_id = assignment.id
+						AND existing.internal_feature_id = ${entitlement.internal_feature_id}
+						${dedupIntervalCondition}
+				)`,
+		};
+	}
+
+	return {
+		join: sql`
+			INNER JOIN customer_entitlements AS live
+				ON live.customer_product_id = assignment.id
+				AND live.entitlement_id IN (${sqlList({ values: fromEntitlementIds })})`,
+		customerEntitlementId: sql`live.id`,
+		entitlementId: sql`${entitlement.id}`,
+		internalFeatureId: sql`${entitlement.internal_feature_id}`,
+		featureId: sql`${entitlement.feature.id}`,
+		siblingAnchor: sql`COALESCE(sibling.reset_cycle_anchor, live.reset_cycle_anchor)`,
+		siblingExcludeLive: sql`AND sibling_entitlement.id <> live.id`,
+		extraWhere: sql``,
+	};
+};
+
+/**
+ * Live assignments under the page's license pool, with parent-anchor sources.
+ * `add` is insert-if-absent; `replace` is rows already holding a from-definition.
+ */
+export async function selectLicenseCandidateRows(
+	args: SelectLicenseCandidateRowsBase & { match: "add" },
+): Promise<LicenseCandidateRow[]>;
+export async function selectLicenseCandidateRows(
+	args: SelectLicenseCandidateRowsBase & {
+		match: "replace";
+		fromEntitlementIds: string[];
+	},
+): Promise<LicenseReplaceCandidateRow[]>;
+export async function selectLicenseCandidateRows({
+	db,
+	internalCustomerIds,
+	scope,
+	entitlement,
+	licensePlanId,
+	afterCustomerProductId,
+	limit,
+	match,
+	...rest
+}: SelectLicenseCandidateRowsArgs): Promise<
+	LicenseCandidateRow[] | LicenseReplaceCandidateRow[]
+> {
+	const fromEntitlementIds =
+		"fromEntitlementIds" in rest ? rest.fromEntitlementIds : [];
+	if (
+		internalCustomerIds.length === 0 ||
+		(match === "replace" && fromEntitlementIds.length === 0)
+	) {
+		return [];
+	}
+
+	const targetInterval = String(entitlement.interval ?? EntInterval.Lifetime);
+	const targetIntervalCount = entitlement.interval_count ?? 1;
+	const matched = matchSql({
+		match,
+		entitlement,
+		fromEntitlementIds,
+		targetInterval,
+		targetIntervalCount,
+	});
+
+	const rows = await db.execute(sql`
+		SELECT
+			${matched.customerEntitlementId} AS "customerEntitlementId",
+			assignment.id AS "customerProductId",
+			assignment.internal_customer_id AS "internalCustomerId",
+			customer.id AS "customerId",
+			entity.id AS "entityId",
+			assignment.internal_entity_id AS "internalEntityId",
+			${matched.entitlementId} AS "entitlementId",
+			${matched.internalFeatureId} AS "internalFeatureId",
+			${matched.featureId} AS "featureId",
+			assignment.status AS "status",
+			COALESCE(cp.starts_at, assignment.starts_at) AS "startsAt",
+			assignment.starts_at AS "assignmentStartsAt",
+			assignment.canceled_at AS "canceledAt",
+			assignment.ended_at AS "endedAt",
+			assignment.trial_ends_at AS "trialEndsAt",
+			EXISTS (
+				SELECT 1
+				FROM customer_prices AS customer_price
+				INNER JOIN prices AS price ON price.id = customer_price.price_id
+				WHERE customer_price.customer_product_id = assignment.id
+					AND price.config->>'interval' IS DISTINCT FROM ${BillingInterval.OneOff}
+			) AS "isPaidRecurring",
+			COALESCE(
+				assignment.billing_cycle_anchor,
+				cp.billing_cycle_anchor
+			) AS "billingCycleAnchor",
+			sub_anchor.billing_cycle_anchor_ms AS "subscriptionCycleAnchor",
+			${matched.siblingAnchor} AS "siblingResetCycleAnchor"
+		FROM customer_products AS assignment
+		${canonicalPoolLateralSql({ licensePlanId, columns: sql`pool.*` })}
+		INNER JOIN customer_products AS cp
+			ON cp.id = pool.parent_customer_product_id
+		${matched.join}
+		INNER JOIN customers AS customer
+			ON customer.internal_id = assignment.internal_customer_id
+		LEFT JOIN entities AS entity
+			ON entity.internal_id = assignment.internal_entity_id
+		LEFT JOIN LATERAL (
+			SELECT subscription.billing_cycle_anchor_seconds * 1000 AS billing_cycle_anchor_ms
+			FROM UNNEST(COALESCE(cp.subscription_ids, ARRAY[]::text[])) AS cp_subscription(stripe_id)
+			INNER JOIN subscriptions AS subscription
+				ON subscription.stripe_id = cp_subscription.stripe_id
+			WHERE subscription.billing_cycle_anchor_seconds IS NOT NULL
+			ORDER BY subscription.created_at, subscription.id
+			LIMIT 1
+		) AS sub_anchor ON true
+		LEFT JOIN LATERAL (
+			SELECT sibling_entitlement.reset_cycle_anchor
+			FROM customer_entitlements AS sibling_entitlement
+			INNER JOIN entitlements AS sibling_definition
+				ON sibling_definition.id = sibling_entitlement.entitlement_id
+			WHERE sibling_entitlement.customer_product_id = assignment.id
+				${matched.siblingExcludeLive}
+				AND NOT sibling_entitlement.separate_interval
+				AND sibling_entitlement.reset_cycle_anchor IS NOT NULL
+				AND sibling_entitlement.next_reset_at IS NOT NULL
+				AND COALESCE(sibling_definition.interval, ${EntInterval.Lifetime}) = ${targetInterval}
+				AND COALESCE(sibling_definition.interval_count, 1) = ${targetIntervalCount}
+			ORDER BY sibling_entitlement.created_at, sibling_entitlement.id
+			LIMIT 1
+		) AS sibling ON true
+		WHERE assignment.internal_customer_id = ANY(${sql.param(internalCustomerIds)}::text[])
+			AND assignment.internal_entity_id IS NOT NULL
+			AND assignment.status IN (${sqlList({ values: [...MIGRATABLE_STATUSES] })})
+			AND ${operationScopeSql({ scope })}
+			${afterCustomerProductId ? sql`AND assignment.id > ${afterCustomerProductId}` : sql``}
+			${matched.extraWhere}
+		ORDER BY assignment.id
+		LIMIT ${limit}
+	`);
+
+	if (match === "replace") {
+		return rows.map((row) => LicenseReplaceCandidateRowSchema.parse(row));
+	}
+	return rows.map((row) => LicenseCandidateRowSchema.parse(row));
+}

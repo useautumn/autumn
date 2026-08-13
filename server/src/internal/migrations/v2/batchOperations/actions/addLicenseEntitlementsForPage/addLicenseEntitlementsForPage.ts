@@ -16,9 +16,9 @@ import {
 } from "../../execute/utils/pagePhaseTimings.js";
 import type { OperationScope } from "../../scope/operationScope.js";
 import type { BatchMigrationExecutionLicenseOp } from "../../types/batchMigrationExecutionPlan.js";
+import { replaceLicenseEntitlementsForPage } from "../replaceLicenseEntitlementsForPage/replaceLicenseEntitlementsForPage.js";
 import { enrichAndInsertLicenseCandidates } from "./enrichAndInsertLicenseCandidates.js";
 import { removeLicenseEntitlementRows } from "./removeLicenseEntitlementRows.js";
-import { replaceLicenseEntitlementRows } from "./replaceLicenseEntitlementRows.js";
 import { repointLicensePoolsForPage } from "./repointLicensePoolsForPage.js";
 import { selectLicenseAddCandidateRows } from "./selectLicenseAddCandidateRows.js";
 
@@ -108,31 +108,34 @@ export const addLicenseEntitlementsForPage = async ({
 		};
 	}
 
+	if (operation.kind === "replace") {
+		const replaced = await replaceLicenseEntitlementsForPage({
+			db,
+			features,
+			scope,
+			internalCustomerIds,
+			replace: operation,
+			now,
+			phases,
+			candidateRowBatchSize,
+		});
+		return {
+			affected: replaced.affected,
+			candidateCount: replaced.insertedItems.length,
+			repointedPools: repointed.pools,
+			repointedInternalCustomerIds: [
+				...repointed.internalCustomerIds,
+				...replaced.replacedInternalCustomerIds,
+			],
+			insertedItems: replaced.insertedItems,
+			removedItems: [],
+			excludedInternalCustomerIds: replaced.excludedInternalCustomerIds,
+		};
+	}
+
 	const resetting = isResettingEntitlement({
 		entitlement: operation.entitlement,
 	});
-	const replaced =
-		operation.kind === "replace"
-			? await timePhase({
-					phases,
-					phase: "replace",
-					run: () =>
-						withStatementTimeout(
-							db,
-							(transaction) =>
-								replaceLicenseEntitlementRows({
-									db: transaction,
-									internalCustomerIds,
-									scope,
-									fromEntitlementId: operation.fromEntitlementId,
-									toEntitlementId: operation.entitlement.id,
-									licensePlanId: operation.licensePlanId,
-									initialState: operation.initialState,
-								}),
-							BATCH_MIGRATION_PAGE_STATEMENT_TIMEOUT_MS,
-						),
-				})
-			: { rows: 0, internalCustomerIds: [] };
 
 	const { rowCount } = await iterateCustomerProductPages({
 		db,
@@ -178,13 +181,10 @@ export const addLicenseEntitlementsForPage = async ({
 	});
 
 	return {
-		affected: insertedItems.length + replaced.rows,
+		affected: insertedItems.length,
 		candidateCount: rowCount,
 		repointedPools: repointed.pools,
-		repointedInternalCustomerIds: [
-			...repointed.internalCustomerIds,
-			...replaced.internalCustomerIds,
-		],
+		repointedInternalCustomerIds: [...repointed.internalCustomerIds],
 		insertedItems,
 		removedItems: [],
 		excludedInternalCustomerIds: [...excludedIds],
