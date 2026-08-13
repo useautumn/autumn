@@ -42,7 +42,14 @@ const PreviewFilterBody = z.object({
 	migrationId: z.string().optional(),
 	executionStatuses: z
 		.array(
-			z.enum(["queued", "running", "succeeded", "skipped", "failed", "not_run"]),
+			z.enum([
+				"queued",
+				"running",
+				"succeeded",
+				"skipped",
+				"failed",
+				"not_run",
+			]),
 		)
 		.optional()
 		.default([]),

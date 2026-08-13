@@ -1,13 +1,10 @@
 import type { AutumnContext } from "../../../../honoUtils/HonoEnv.js";
-import type { ImplicitPrepInstance } from "./getImplicitPrepareModules.js";
+import type {
+	ImplicitPrepInstance,
+	PrepInstance,
+} from "./getImplicitPrepareModules.js";
 import type { PreparedState, PrepareModuleResult } from "./types/index.js";
 
-/**
- * Pure orchestrator. Walks a list of prep module instances under a
- * given `scopeId`, runs plan → apply per module (apply skipped on
- * dry-run), threads `preparedState` through. No DB reads/writes
- * outside what the modules themselves do — script-callable.
- */
 export const runPrepareModules = async ({
 	ctx,
 	scopeId,
@@ -25,13 +22,25 @@ export const runPrepareModules = async ({
 	const results: PrepareModuleResult[] = [];
 	const nextState: PreparedState = {};
 
-	for (const { key, module, input } of modules) {
+	/** Deliberately blind to result shapes — consumers re-parse
+	 * `prepared_state` with their own schema. */
+	const runInstance = async (
+		instance: ImplicitPrepInstance,
+	): Promise<unknown> => {
+		const { module, input } = instance as PrepInstance;
 		const planned = await module.plan({ ctx, scopeId, input });
-		const result = dryRun
-			? planned
-			: await module.apply({ ctx, scopeId, input, planned });
-		nextState[key] = result;
-		results.push({ key, kind: module.kind, result });
+		if (dryRun) return planned;
+		return module.apply({ ctx, scopeId, input, planned });
+	};
+
+	for (const instance of modules) {
+		const result = await runInstance(instance);
+		nextState[instance.key] = result;
+		results.push({
+			key: instance.key,
+			kind: instance.module.kind,
+			result,
+		});
 	}
 
 	return { results, preparedState: nextState };

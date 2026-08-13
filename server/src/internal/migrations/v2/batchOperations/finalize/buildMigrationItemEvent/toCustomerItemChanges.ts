@@ -3,16 +3,14 @@ import {
 	type ApiFlagV0,
 	type EntitlementWithFeature,
 	FeatureType,
+	isOneOffProduct,
 } from "@autumn/shared";
 import type { BatchMigrationInsertedItem } from "../../execute/types/batchMigrationExecutionTypes.js";
 import type { BatchMigrationExecutionPlan } from "../../types/index.js";
 
-/** One customer's inserted rows, split by how the response renders them. */
 export type CustomerItemChanges = {
 	balances: Record<string, ApiBalanceV1>;
 	flags: Record<string, ApiFlagV0>;
-	/** Feature added per plan, deduped — a customer may hold several products
-	 * on the same plan, but the plan gained the item once. */
 	addedEntitlementsByPlan: Map<string, EntitlementWithFeature[]>;
 };
 
@@ -44,19 +42,50 @@ const toApiFlag = ({
 	expires_at: null,
 });
 
-/** Catalog entitlement per (plan, feature) — the item snapshot source. */
 export const buildEntitlementLookup = ({
 	plan,
 }: {
 	plan: BatchMigrationExecutionPlan;
 }): Map<string, EntitlementWithFeature> =>
 	new Map(
-		plan.patches.flatMap((patch) =>
-			patch.addEntitlementOps.map((add) => [
-				`${patch.fromProduct.id}:${add.entitlement.feature.id}`,
-				add.entitlement,
+		plan.patches.flatMap((patch) => [
+			...patch.addEntitlementOps.map(
+				(add): [string, EntitlementWithFeature] => [
+					`${patch.fromProduct.id}:${add.entitlement.feature.id}`,
+					add.entitlement,
+				],
+			),
+			// License rows key on their own plan, not the parent the patch filtered on.
+			...patch.addLicenseEntitlementOps.flatMap(
+				(add): [string, EntitlementWithFeature][] =>
+					add.kind === "remove"
+						? []
+						: [
+								[
+									`${add.licensePlanId}:${add.entitlement.feature.id}`,
+									add.entitlement,
+								],
+							],
+			),
+		]),
+	);
+
+export const buildOneOffByPlanId = ({
+	plan,
+}: {
+	plan: BatchMigrationExecutionPlan;
+}): Map<string, boolean> =>
+	new Map(
+		plan.patches.flatMap((patch): [string, boolean][] => [
+			[
+				patch.fromProduct.id,
+				isOneOffProduct({ prices: patch.fromProduct.prices }),
+			],
+			...patch.addLicenseEntitlementOps.map((add): [string, boolean] => [
+				add.licensePlanId,
+				add.isOneOff,
 			]),
-		),
+		]),
 	);
 
 export const toCustomerItemChanges = ({

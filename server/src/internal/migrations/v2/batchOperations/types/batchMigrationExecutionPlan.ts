@@ -1,6 +1,7 @@
 import {
 	EntitlementWithFeatureSchema,
 	FullProductWithoutLicensesSchema,
+	type PlanItemFilter,
 } from "@autumn/shared";
 import { z } from "zod/v4";
 import { OperationScopeSchema } from "../scope/operationScope.js";
@@ -16,25 +17,57 @@ export const BatchMigrationExecutionAddSchema = z.object({
 	initialState: BatchMigrationInitialStateSchema,
 });
 
-/** One op × one plan-filter-matched product. One field per operation
- * category (batchTransition style). `fromProduct` is authoritative for
- * catalog facts; `scope` is the plan filter's lowered row-level residue —
- * which customer product rows the patch may touch. */
+const BatchMigrationLicenseOpBaseSchema = z.object({
+	licensePlanId: z.string(),
+	planLicenseId: z.string(),
+	licenseInternalProductId: z.string(),
+	isOneOff: z.boolean(),
+});
+
+const BatchMigrationLicenseMintedSchema =
+	BatchMigrationLicenseOpBaseSchema.extend({
+		entitlement: EntitlementWithFeatureSchema,
+		initialState: BatchMigrationInitialStateSchema,
+	});
+
+export const BatchMigrationExecutionLicenseOpSchema = z.discriminatedUnion(
+	"kind",
+	[
+		BatchMigrationLicenseMintedSchema.extend({ kind: z.literal("add") }),
+		BatchMigrationLicenseMintedSchema.extend({
+			kind: z.literal("replace"),
+			fromEntitlementId: z.string(),
+		}),
+		BatchMigrationLicenseOpBaseSchema.extend({
+			kind: z.literal("remove"),
+			filter: z.custom<PlanItemFilter>(),
+		}),
+	],
+);
+
 export const BatchMigrationExecutionPatchSchema = z.object({
 	opIndex: z.number().int(),
 	scope: OperationScopeSchema,
 	fromProduct: FullProductWithoutLicensesSchema,
 	addEntitlementOps: z.array(BatchMigrationExecutionAddSchema),
+	addLicenseEntitlementOps: z
+		.array(BatchMigrationExecutionLicenseOpSchema)
+		.default([]),
 });
 
-/** The immutable, serializable plan chunk tasks execute — computed once at
- * run start, carried in every chunk payload. Only what execution needs. */
 export const BatchMigrationExecutionPlanSchema = z.object({
 	patches: z.array(BatchMigrationExecutionPatchSchema),
 });
 
 export type BatchMigrationExecutionAdd = z.infer<
 	typeof BatchMigrationExecutionAddSchema
+>;
+export type BatchMigrationMintedLicenseOp = z.infer<
+	typeof BatchMigrationLicenseMintedSchema
+> & { kind: "add" | "replace" };
+
+export type BatchMigrationExecutionLicenseOp = z.infer<
+	typeof BatchMigrationExecutionLicenseOpSchema
 >;
 export type BatchMigrationExecutionPatch = z.infer<
 	typeof BatchMigrationExecutionPatchSchema

@@ -165,7 +165,9 @@ const buildCustomerListWhere = ({
 		search,
 		statusFilters: parseDashboardStatusFilter(customerFilters?.status),
 		noneFilter: customerFilters?.none,
-		productVersionFilters: parseDashboardVersionFilter(customerFilters?.version),
+		productVersionFilters: parseDashboardVersionFilter(
+			customerFilters?.version,
+		),
 		processors: parseDashboardProcessorFilter(customerFilters?.processor),
 	});
 
@@ -179,10 +181,9 @@ const buildProcessedIn = (includeProcessed: IncludeProcessed): SQL => sql`
 
 const buildExecutionScope = (
 	migrationInternalId: string,
-	filter: Pick<
-		CustomerExecutionStatusFilter,
-		"migrationRunId" | "dryRun"
-	> | undefined,
+	filter:
+		| Pick<CustomerExecutionStatusFilter, "migrationRunId" | "dryRun">
+		| undefined,
 ): SQL => {
 	const dryRunScope =
 		filter?.dryRun !== undefined

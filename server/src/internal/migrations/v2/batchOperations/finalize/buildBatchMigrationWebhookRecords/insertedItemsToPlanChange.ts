@@ -1,8 +1,8 @@
 import type { EntitlementWithFeature, Feature } from "@autumn/shared";
 import type { CustomerPlanChange } from "@autumn/shared/api/billing/common/customerPlanChange.js";
 import { toCustomerPlanSnapshotFromFields } from "@/internal/billing/v2/actions/buildBillingChanges";
-import type { BatchMigrationInsertedItem } from "../../execute/types/batchMigrationExecutionTypes.js";
-import { buildCreatedItemChanges } from "../buildMigrationItemEvent/buildAddedPlanChanges.js";
+import { buildItemChanges } from "../buildMigrationItemEvent/buildAddedPlanChanges.js";
+import type { ChangedItem } from "./buildBatchMigrationWebhookRecords.js";
 
 /** One customer product's inserted rows → one `updated` plan change: the
  * lifecycle snapshot off the rows plus `created` item changes. */
@@ -12,7 +12,7 @@ export const insertedItemsToPlanChange = ({
 	entitlementLookup,
 	features,
 }: {
-	items: BatchMigrationInsertedItem[];
+	items: ChangedItem[];
 	isOneOff: boolean;
 	entitlementLookup: Map<string, EntitlementWithFeature>;
 	features: Feature[];
@@ -20,13 +20,14 @@ export const insertedItemsToPlanChange = ({
 	const [first] = items;
 	if (!first) return null;
 
-	const entitlements = items.flatMap((item) => {
-		const entitlement = entitlementLookup.get(
-			`${item.planId}:${item.featureId}`,
-		);
-		return entitlement ? [entitlement] : [];
+	const changes = items.flatMap((item) => {
+		const entitlement =
+			item.action === "deleted"
+				? item.entitlement
+				: entitlementLookup.get(`${item.planId}:${item.featureId}`);
+		return entitlement ? [{ entitlement, action: item.action }] : [];
 	});
-	if (entitlements.length === 0) return null;
+	if (changes.length === 0) return null;
 
 	return {
 		action: "updated" as const,
@@ -39,7 +40,7 @@ export const insertedItemsToPlanChange = ({
 			endedAt: first.endedAt,
 			trialEndsAt: first.trialEndsAt,
 		}),
-		previous_attributes: null,
-		item_changes: buildCreatedItemChanges({ entitlements, features }),
+		previous_attributes: {},
+		item_changes: buildItemChanges({ changes, features }),
 	};
 };
