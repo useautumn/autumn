@@ -1,9 +1,8 @@
 /**
  * catalogV2.preview_update — customize.free_trial lane.
  *
- * RED twice: trial persistence AND changes are unimplemented. Spec asserts
- * freeTrialsEqual normalization (card_required true / on_end "bill" /
- * duration_type month ≡ omitted).
+ * Spec asserts freeTrialsEqual normalization (card_required true / on_end
+ * "bill" / duration_type month ≡ omitted).
  */
 
 import { test } from "bun:test";
@@ -34,9 +33,8 @@ const trial14 = {
 	card_required: false,
 };
 
-// RED
 test.concurrent(
-	`${chalk.yellowBright("RED: catalogV2 changes-free-trial: add trial → customize.free_trial")}`,
+	`${chalk.yellowBright("catalogV2 changes-free-trial: add trial → customize.free_trial")}`,
 	async () => {
 		const { autumnV2_3, ctx } = await initScenario({ setup: [], actions: [] });
 		const planId = uniqueTestId("cv2_cft_add");
@@ -65,9 +63,9 @@ test.concurrent(
 	},
 );
 
-// RED — duration_length / duration_type change
+// duration_length / duration_type change
 test.concurrent(
-	`${chalk.yellowBright("RED: catalogV2 changes-free-trial: duration_length / duration_type change")}`,
+	`${chalk.yellowBright("catalogV2 changes-free-trial: duration_length / duration_type change")}`,
 	async () => {
 		const { autumnV2_3, ctx } = await initScenario({ setup: [], actions: [] });
 		const planId = uniqueTestId("cv2_cft_dur");
@@ -111,9 +109,9 @@ test.concurrent(
 	},
 );
 
-// RED — card_required flip diffs; explicit true ≡ omitted → no trial diff
+// card_required flip diffs; explicit true ≡ omitted → no trial diff
 test.concurrent(
-	`${chalk.yellowBright("RED: catalogV2 changes-free-trial: card_required flip vs explicit true ≡ omit")}`,
+	`${chalk.yellowBright("catalogV2 changes-free-trial: card_required flip vs explicit true ≡ omit")}`,
 	async () => {
 		const { autumnV2_3, ctx } = await initScenario({ setup: [], actions: [] });
 		const planId = uniqueTestId("cv2_cft_card");
@@ -148,7 +146,7 @@ test.concurrent(
 			// Once trial persists + changes wired: action none / no free_trial lane.
 			// Today trial doesn't persist so this may look like an add — still RED.
 			const row = findPlanPreviewRow({ preview: noDiff, planId });
-			if (row.changes?.customize?.free_trial !== undefined) {
+			if (row.plan_change?.customize?.free_trial !== undefined) {
 				throw new Error(
 					"explicit card_required:true must not produce free_trial diff",
 				);
@@ -187,9 +185,9 @@ test.concurrent(
 	},
 );
 
-// RED — on_end change; explicit "bill" ≡ omitted
+// on_end change; explicit "bill" ≡ omitted
 test.concurrent(
-	`${chalk.yellowBright("RED: catalogV2 changes-free-trial: on_end change vs explicit bill ≡ omit")}`,
+	`${chalk.yellowBright("catalogV2 changes-free-trial: on_end change vs explicit bill ≡ omit")}`,
 	async () => {
 		const { autumnV2_3, ctx } = await initScenario({ setup: [], actions: [] });
 		const planId = uniqueTestId("cv2_cft_end");
@@ -224,7 +222,7 @@ test.concurrent(
 				}),
 			);
 			const noDiffRow = findPlanPreviewRow({ preview: noDiff, planId });
-			if (noDiffRow.changes?.customize?.free_trial !== undefined) {
+			if (noDiffRow.plan_change?.customize?.free_trial !== undefined) {
 				throw new Error(
 					"explicit on_end:bill must not produce free_trial diff",
 				);
@@ -265,9 +263,8 @@ test.concurrent(
 	},
 );
 
-// RED
 test.concurrent(
-	`${chalk.yellowBright("RED: catalogV2 changes-free-trial: remove trial → customize.free_trial null")}`,
+	`${chalk.yellowBright("catalogV2 changes-free-trial: remove trial → customize.free_trial null")}`,
 	async () => {
 		const { autumnV2_3, ctx } = await initScenario({ setup: [], actions: [] });
 		const planId = uniqueTestId("cv2_cft_rm");

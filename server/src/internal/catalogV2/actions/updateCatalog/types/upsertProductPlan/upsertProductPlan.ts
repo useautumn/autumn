@@ -1,4 +1,7 @@
-import type { FullProduct } from "@autumn/shared";
+import type {
+	CatalogPlanVersioningStrategy,
+	FullProduct,
+} from "@autumn/shared";
 import type { EntitlementPricesPlan } from "@/internal/products/actions/computeEntitlementPricesPlan";
 import type { FreeTrialPlan } from "./freeTrialPlan";
 import type { ProductDetailsPlan } from "./productDetailsPlan";
@@ -21,8 +24,12 @@ export type UpsertProductRow = {
 	version: number;
 	op: UpsertProductOp;
 	source: UpsertProductSource;
-	/** Baseline row; null on first create. */
+	/** Resolved versioning strategy for this write (params default → existing). */
+	versioning: CatalogPlanVersioningStrategy;
+	/** Baseline row at this version; null on create / mint. */
 	currentFullProduct: FullProduct | null;
+	/** Set only on `new_version` mint — the latest row cloned from. */
+	baseFullProduct: FullProduct | null;
 	/** Projected row after this op applies — feeds the state fold. */
 	nextFullProduct: FullProduct;
 };

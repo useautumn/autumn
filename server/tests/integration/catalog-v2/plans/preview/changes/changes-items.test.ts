@@ -1,8 +1,8 @@
 /**
  * catalogV2.preview_update — item_changes + customize.add_items/remove_items.
  *
- * RED: changes stubbed null. Match key = feature_id|billing_method|interval|
- * interval_count. In-place mods = remove filter (OLD key) + add entry.
+ * Match key = feature_id|billing_method|interval|interval_count.
+ * In-place mods = remove filter (OLD key) + add entry.
  * toCreatePlanItemParams omits default-valued fields.
  */
 
@@ -87,18 +87,21 @@ const expectItemCustomize = ({
 	removeItems?: unknown;
 }) => {
 	const row = findPlanPreviewRow({ preview, planId });
-	expect(row.changes, "changes must be non-null").not.toBeNull();
+	expect(row.plan_change != null, "plan_change must be present").toBe(true);
 	if (addItems !== undefined) {
-		expect(row.changes?.customize?.add_items).toEqual(addItems as never);
+		expect(row.plan_change?.customize?.add_items).toMatchObject(
+			addItems as never,
+		);
 	}
 	if (removeItems !== undefined) {
-		expect(row.changes?.customize?.remove_items).toEqual(removeItems as never);
+		expect(row.plan_change?.customize?.remove_items).toMatchObject(
+			removeItems as never,
+		);
 	}
 };
 
-// RED
 test.concurrent(
-	`${chalk.yellowBright("RED: catalogV2 changes-items: add free item")}`,
+	`${chalk.yellowBright("catalogV2 changes-items: add free item")}`,
 	async () => {
 		const { autumnV2_3, ctx } = await initScenario({ setup: [], actions: [] });
 		const planId = uniqueTestId("cv2_ci_addf");
@@ -131,8 +134,8 @@ test.concurrent(
 				removeItems: undefined,
 			});
 			const row = findPlanPreviewRow({ preview, planId });
-			expect(row.changes?.customize?.remove_items).toBeUndefined();
-			expect(row.changes?.item_changes).toEqual([
+			expect(row.plan_change?.customize?.remove_items).toBeUndefined();
+			expect(row.plan_change?.item_changes).toEqual([
 				expect.objectContaining({
 					action: "created",
 					feature_id: TestFeature.Messages,
@@ -148,9 +151,8 @@ test.concurrent(
 	},
 );
 
-// RED
 test.concurrent(
-	`${chalk.yellowBright("RED: catalogV2 changes-items: add priced item")}`,
+	`${chalk.yellowBright("catalogV2 changes-items: add priced item")}`,
 	async () => {
 		const { autumnV2_3, ctx } = await initScenario({ setup: [], actions: [] });
 		const planId = uniqueTestId("cv2_ci_addp");
@@ -179,16 +181,15 @@ test.concurrent(
 				],
 			});
 			const row = findPlanPreviewRow({ preview, planId });
-			expect(row.changes?.item_changes?.[0]?.action).toBe("created");
+			expect(row.plan_change?.item_changes?.[0]?.action).toBe("created");
 		} finally {
 			await deleteDbPlans({ ctx, planIds: [planId] });
 		}
 	},
 );
 
-// RED
 test.concurrent(
-	`${chalk.yellowBright("RED: catalogV2 changes-items: remove item → deleted + remove_items filter")}`,
+	`${chalk.yellowBright("catalogV2 changes-items: remove item → deleted + remove_items filter")}`,
 	async () => {
 		const { autumnV2_3, ctx } = await initScenario({ setup: [], actions: [] });
 		const planId = uniqueTestId("cv2_ci_rm");
@@ -221,8 +222,8 @@ test.concurrent(
 				],
 			});
 			const row = findPlanPreviewRow({ preview, planId });
-			expect(row.changes?.customize?.add_items).toBeUndefined();
-			expect(row.changes?.item_changes).toEqual([
+			expect(row.plan_change?.customize?.add_items).toBeUndefined();
+			expect(row.plan_change?.item_changes).toEqual([
 				expect.objectContaining({
 					action: "deleted",
 					feature_id: TestFeature.Messages,
@@ -234,9 +235,9 @@ test.concurrent(
 	},
 );
 
-// RED — same match key → deleted+created pair
+// same match key → deleted+created pair
 test.concurrent(
-	`${chalk.yellowBright("RED: catalogV2 changes-items: included bump → remove+add same key")}`,
+	`${chalk.yellowBright("catalogV2 changes-items: included bump → remove+add same key")}`,
 	async () => {
 		const { autumnV2_3, ctx } = await initScenario({ setup: [], actions: [] });
 		const planId = uniqueTestId("cv2_ci_inc");
@@ -275,7 +276,7 @@ test.concurrent(
 				],
 			});
 			const row = findPlanPreviewRow({ preview, planId });
-			const actions = (row.changes?.item_changes ?? []).map((c) => c.action);
+			const actions = (row.plan_change?.item_changes ?? []).map((c) => c.action);
 			expect(actions.sort()).toEqual(["created", "deleted"]);
 		} finally {
 			await deleteDbPlans({ ctx, planIds: [planId] });
@@ -283,9 +284,8 @@ test.concurrent(
 	},
 );
 
-// RED
 test.concurrent(
-	`${chalk.yellowBright("RED: catalogV2 changes-items: priced amount change → remove+add")}`,
+	`${chalk.yellowBright("catalogV2 changes-items: priced amount change → remove+add")}`,
 	async () => {
 		const { autumnV2_3, ctx } = await initScenario({ setup: [], actions: [] });
 		const planId = uniqueTestId("cv2_ci_pamt");
@@ -318,16 +318,16 @@ test.concurrent(
 				],
 			});
 			const row = findPlanPreviewRow({ preview, planId });
-			expect(row.changes?.customize?.add_items?.[0]?.price?.amount).toBe(9);
+			expect(row.plan_change?.customize?.add_items?.[0]?.price?.amount).toBe(9);
 		} finally {
 			await deleteDbPlans({ ctx, planIds: [planId] });
 		}
 	},
 );
 
-// RED — match key CHANGES: remove filter carries OLD interval
+// match key CHANGES: remove filter carries OLD interval
 test.concurrent(
-	`${chalk.yellowBright("RED: catalogV2 changes-items: reset/billing interval change → old key on remove")}`,
+	`${chalk.yellowBright("catalogV2 changes-items: reset/billing interval change → old key on remove")}`,
 	async () => {
 		const { autumnV2_3, ctx } = await initScenario({ setup: [], actions: [] });
 		const planId = uniqueTestId("cv2_ci_ivl");
@@ -382,9 +382,8 @@ test.concurrent(
 	},
 );
 
-// RED
 test.concurrent(
-	`${chalk.yellowBright("RED: catalogV2 changes-items: billing_method prepaid → usage_based")}`,
+	`${chalk.yellowBright("catalogV2 changes-items: billing_method prepaid → usage_based")}`,
 	async () => {
 		const { autumnV2_3, ctx } = await initScenario({ setup: [], actions: [] });
 		const planId = uniqueTestId("cv2_ci_bm");
@@ -434,9 +433,8 @@ test.concurrent(
 	},
 );
 
-// RED
 test.concurrent(
-	`${chalk.yellowBright("RED: catalogV2 changes-items: free → paid / paid → free")}`,
+	`${chalk.yellowBright("catalogV2 changes-items: free → paid / paid → free")}`,
 	async () => {
 		const { autumnV2_3, ctx } = await initScenario({ setup: [], actions: [] });
 		const freeToPaid = uniqueTestId("cv2_ci_f2p");
@@ -508,9 +506,9 @@ test.concurrent(
 	},
 );
 
-// RED — unlimited / pooled toggles
+// unlimited / pooled toggles
 test.concurrent(
-	`${chalk.yellowBright("RED: catalogV2 changes-items: unlimited + pooled toggles → remove+add")}`,
+	`${chalk.yellowBright("catalogV2 changes-items: unlimited + pooled toggles → remove+add")}`,
 	async () => {
 		const { autumnV2_3, ctx } = await initScenario({ setup: [], actions: [] });
 		const planId = uniqueTestId("cv2_ci_flags");
@@ -571,9 +569,9 @@ test.concurrent(
 	},
 );
 
-// RED — rollover / proration / billing_units / max_purchase / tiers / tier_behavior
+// rollover / proration / billing_units / max_purchase / tiers / tier_behavior
 test.concurrent(
-	`${chalk.yellowBright("RED: catalogV2 changes-items: rollover / proration / units / tiers / tier_behavior")}`,
+	`${chalk.yellowBright("catalogV2 changes-items: rollover / proration / units / tiers / tier_behavior")}`,
 	async () => {
 		const { autumnV2_3, ctx } = await initScenario({ setup: [], actions: [] });
 		const planId = uniqueTestId("cv2_ci_shape");
@@ -655,8 +653,8 @@ test.concurrent(
 				],
 			});
 			const row = findPlanPreviewRow({ preview, planId });
-			expect(row.changes?.customize?.add_items?.[0]?.rollover).toBeDefined();
-			expect(row.changes?.customize?.add_items?.[0]?.price?.tier_behavior).toBe(
+			expect(row.plan_change?.customize?.add_items?.[0]?.rollover).toBeDefined();
+			expect(row.plan_change?.customize?.add_items?.[0]?.price?.tier_behavior).toBe(
 				TierBehavior.VolumeBased,
 			);
 		} finally {
@@ -665,9 +663,9 @@ test.concurrent(
 	},
 );
 
-// RED — graduated explicit ≡ default → no diff; volume flip diffs
+// graduated explicit ≡ default → no diff; volume flip diffs
 test.concurrent(
-	`${chalk.yellowBright("RED: catalogV2 changes-items: tier_behavior graduated explicit → no diff; → volume diffs")}`,
+	`${chalk.yellowBright("catalogV2 changes-items: tier_behavior graduated explicit → no diff; → volume diffs")}`,
 	async () => {
 		const { autumnV2_3, ctx } = await initScenario({ setup: [], actions: [] });
 		const planId = uniqueTestId("cv2_ci_tb");
@@ -724,7 +722,7 @@ test.concurrent(
 			);
 			expectPlanPreviewRowCorrect({
 				preview: noDiff,
-				expected: { planId, action: "none", changes: null },
+				expected: { planId, action: "none", planChange: null },
 			});
 
 			const withDiff = parsePlanPreview(
@@ -751,17 +749,17 @@ test.concurrent(
 				}),
 			);
 			expect(
-				findPlanPreviewRow({ preview: withDiff, planId }).changes,
-			).not.toBeNull();
+				findPlanPreviewRow({ preview: withDiff, planId }).plan_change != null,
+			).toBe(true);
 		} finally {
 			await deleteDbPlans({ ctx, planIds: [planId] });
 		}
 	},
 );
 
-// RED — item FX amount change diffs; currency add/remove no item diff
+// Item FX amount change diffs; currency add/remove no item diff
 test.concurrent(
-	`${chalk.yellowBright("RED: catalogV2 changes-items: item currency amount change vs add/remove")}`,
+	`${chalk.yellowBright("catalogV2 changes-items: item currency amount change vs add/remove")}`,
 	async () => {
 		const { autumnV2_3, ctx } = await initScenario({ setup: [], actions: [] });
 		const planId = uniqueTestId("cv2_ci_fx");
@@ -814,8 +812,9 @@ test.concurrent(
 				}),
 			);
 			expect(
-				findPlanPreviewRow({ preview: amountChange, planId }).changes,
-			).not.toBeNull();
+				findPlanPreviewRow({ preview: amountChange, planId }).plan_change !=
+					null,
+			).toBe(true);
 
 			const currencyRemoved = parsePlanPreview(
 				await autumnV2_3.catalogV2.previewUpdate({
@@ -841,7 +840,7 @@ test.concurrent(
 			);
 			expectPlanPreviewRowCorrect({
 				preview: currencyRemoved,
-				expected: { planId, action: "none", changes: null },
+				expected: { planId, action: "none", planChange: null },
 			});
 		} finally {
 			await deleteDbPlans({ ctx, planIds: [planId] });
@@ -849,9 +848,9 @@ test.concurrent(
 	},
 );
 
-// RED — two items same feature different intervals; only edited key diffs
+// two items same feature different intervals; only edited key diffs
 test.concurrent(
-	`${chalk.yellowBright("RED: catalogV2 changes-items: sibling intervals — only edited key diffs")}`,
+	`${chalk.yellowBright("catalogV2 changes-items: sibling intervals — only edited key diffs")}`,
 	async () => {
 		const { autumnV2_3, ctx } = await initScenario({ setup: [], actions: [] });
 		const planId = uniqueTestId("cv2_ci_sib");
@@ -900,7 +899,7 @@ test.concurrent(
 				],
 			});
 			const row = findPlanPreviewRow({ preview, planId });
-			const removeIntervals = (row.changes?.customize?.remove_items ?? []).map(
+			const removeIntervals = (row.plan_change?.customize?.remove_items ?? []).map(
 				(f) => f.interval,
 			);
 			expect(removeIntervals).not.toContain(BillingInterval.Year);
@@ -910,9 +909,90 @@ test.concurrent(
 	},
 );
 
-// RED — explicit defaults → empty item_changes / no customize lanes
+// Split one prepaid month line into month + one_off (different match keys)
 test.concurrent(
-	`${chalk.yellowBright("RED: catalogV2 changes-items: explicit item defaults → empty changes")}`,
+	`${chalk.yellowBright("catalogV2 changes-items: 100/mo → 50/mo + 50/one_off → 1 deleted + 2 created")}`,
+	async () => {
+		const { autumnV2_3, ctx } = await initScenario({ setup: [], actions: [] });
+		const planId = uniqueTestId("cv2_ci_split");
+		await deleteDbPlans({ ctx, planIds: [planId] });
+		const month100 = messagesPrepaid({ amount: 100 });
+		const month50 = messagesPrepaid({ amount: 50 });
+		const oneOff50 = {
+			feature_id: TestFeature.Messages,
+			included: 0,
+			price: {
+				amount: 50,
+				interval: BillingInterval.OneOff,
+				billing_method: BillingMethod.Prepaid,
+				billing_units: 1,
+			},
+		};
+		try {
+			await autumnV2_3.catalogV2.update({
+				plans: [
+					{
+						plan_id: planId,
+						name: "Split",
+						items: [month100],
+					},
+				],
+			});
+			const preview = parsePlanPreview(
+				await autumnV2_3.catalogV2.previewUpdate({
+					plans: [{ plan_id: planId, items: [month50, oneOff50] }],
+				}),
+			);
+			const row = findPlanPreviewRow({ preview, planId });
+			const changes = row.plan_change?.item_changes ?? [];
+			expect(changes.map((c) => c.action).sort()).toEqual([
+				"created",
+				"created",
+				"deleted",
+			]);
+			expect(changes).toEqual(
+				expect.arrayContaining([
+					expect.objectContaining({
+						action: "deleted",
+						feature_id: TestFeature.Messages,
+						item: expect.objectContaining({
+							price: expect.objectContaining({
+								amount: 100,
+								interval: BillingInterval.Month,
+							}),
+						}),
+					}),
+					expect.objectContaining({
+						action: "created",
+						feature_id: TestFeature.Messages,
+						item: expect.objectContaining({
+							price: expect.objectContaining({
+								amount: 50,
+								interval: BillingInterval.Month,
+							}),
+						}),
+					}),
+					expect.objectContaining({
+						action: "created",
+						feature_id: TestFeature.Messages,
+						item: expect.objectContaining({
+							price: expect.objectContaining({
+								amount: 50,
+								interval: BillingInterval.OneOff,
+							}),
+						}),
+					}),
+				]),
+			);
+		} finally {
+			await deleteDbPlans({ ctx, planIds: [planId] });
+		}
+	},
+);
+
+// explicit defaults → empty item_changes / no customize lanes
+test.concurrent(
+	`${chalk.yellowBright("catalogV2 changes-items: explicit item defaults → empty changes")}`,
 	async () => {
 		const { autumnV2_3, ctx } = await initScenario({ setup: [], actions: [] });
 		const planId = uniqueTestId("cv2_ci_defs");
@@ -948,7 +1028,7 @@ test.concurrent(
 				expected: {
 					planId,
 					action: "none",
-					changes: null,
+					planChange: null,
 				},
 			});
 		} finally {

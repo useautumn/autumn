@@ -16,9 +16,6 @@ import {
 	customerPrices,
 	customerProducts,
 	customers,
-	entitlements,
-	isFixedPrice,
-	prices,
 	ResetInterval,
 } from "@autumn/shared";
 import { TestFeature } from "@tests/setup/v2Features.js";
@@ -31,74 +28,10 @@ import { generateId } from "@/utils/genUtils.js";
 import { expectCatalogResultsCorrect } from "../../utils/expectCatalogUpdate.js";
 import { uniqueTestId } from "../../utils/uniqueTestId.js";
 import { deleteDbPlans } from "../utils/expectCatalogPlans.js";
-
-const getFull = async ({
-	ctx,
-	planId,
-}: {
-	ctx: AutumnContext;
-	planId: string;
-}) =>
-	ProductService.getFull({
-		db: ctx.db,
-		idOrInternalId: planId,
-		orgId: ctx.org.id,
-		env: ctx.env,
-	});
-
-const entByFeature = async ({
-	ctx,
-	planId,
-	featureId,
-}: {
-	ctx: AutumnContext;
-	planId: string;
-	featureId: string;
-}) => {
-	const full = await getFull({ ctx, planId });
-	return full.entitlements.find((ent) => ent.feature.id === featureId);
-};
-
-const basePriceRow = async ({
-	ctx,
-	planId,
-}: {
-	ctx: AutumnContext;
-	planId: string;
-}) => {
-	const full = await getFull({ ctx, planId });
-	return full.prices.find(isFixedPrice);
-};
-
-const fetchEntRow = async ({
-	ctx,
-	entId,
-}: {
-	ctx: AutumnContext;
-	entId: string;
-}) => {
-	const [row] = await ctx.db
-		.select()
-		.from(entitlements)
-		.where(eq(entitlements.id, entId))
-		.limit(1);
-	return row ?? null;
-};
-
-const fetchPriceRow = async ({
-	ctx,
-	priceId,
-}: {
-	ctx: AutumnContext;
-	priceId: string;
-}) => {
-	const [row] = await ctx.db
-		.select()
-		.from(prices)
-		.where(eq(prices.id, priceId))
-		.limit(1);
-	return row ?? null;
-};
+import {
+	expectPlanRowsCorrect,
+	snapshotPlanRows,
+} from "../utils/expectPlanRows.js";
 
 /** Minimal customer + cus_product (+ optional cus_ent / cus_price) for protect refs. */
 const seedCustomerProductRef = async ({
@@ -116,7 +49,12 @@ const seedCustomerProductRef = async ({
 	internalFeatureId?: string;
 	priceId?: string;
 }) => {
-	const full = await getFull({ ctx, planId });
+	const full = await ProductService.getFull({
+		db: ctx.db,
+		idOrInternalId: planId,
+		orgId: ctx.org.id,
+		env: ctx.env,
+	});
 	const customerId = uniqueTestId("cv2_cus");
 	const internalCustomerId = generateId("cus");
 	const cusProductId = generateId("cus_prod");
@@ -176,16 +114,25 @@ const cleanupPlanRefs = async ({
 	ctx: AutumnContext;
 	planId: string;
 }) => {
-	const full = await getFull({ ctx, planId }).catch(() => null);
-	if (!full) {
-		await deleteDbPlans({ ctx, planIds: [planId] });
-		return;
+	const full = await ProductService.getFull({
+		db: ctx.db,
+		idOrInternalId: planId,
+		orgId: ctx.org.id,
+		env: ctx.env,
+	}).catch(() => null);
+	if (full) {
+		await ctx.db
+			.delete(customerProducts)
+			.where(eq(customerProducts.internal_product_id, full.internal_id));
 	}
-	await ctx.db
-		.delete(customerProducts)
-		.where(eq(customerProducts.internal_product_id, full.internal_id));
 	await deleteDbPlans({ ctx, planIds: [planId] });
 };
+
+const messagesItem = (included: number) => ({
+	feature_id: TestFeature.Messages,
+	included,
+	reset: { interval: ResetInterval.Month },
+});
 
 test.concurrent(
 	`${chalk.yellowBright("catalogV2 rows: base price change keeps feature rows; old base deleted (no customers)")}`,
@@ -200,26 +147,11 @@ test.concurrent(
 						plan_id: planId,
 						name: "Rows Base",
 						price: { amount: 20, interval: BillingInterval.Month },
-						items: [
-							{
-								feature_id: TestFeature.Messages,
-								included: 100,
-								reset: { interval: ResetInterval.Month },
-							},
-							{ feature_id: TestFeature.Dashboard },
-						],
+						items: [messagesItem(100), { feature_id: TestFeature.Dashboard }],
 					},
 				],
 			});
-
-			const before = await getFull({ ctx, planId });
-			const beforeEntIds = before.entitlements.map((ent) => ent.id).sort();
-			const beforeFeaturePriceIds = before.prices
-				.filter((price) => !isFixedPrice(price))
-				.map((price) => price.id)
-				.sort();
-			const oldBaseId = before.prices.find(isFixedPrice)?.id;
-			expect(oldBaseId).toBeDefined();
+			const before = await snapshotPlanRows({ ctx, planId });
 
 			await autumnV2_3.catalogV2.update({
 				plans: [
@@ -230,20 +162,16 @@ test.concurrent(
 				],
 			});
 
-			const after = await getFull({ ctx, planId });
-			expect(after.entitlements.map((ent) => ent.id).sort()).toEqual(
-				beforeEntIds,
-			);
-			expect(
-				after.prices
-					.filter((price) => !isFixedPrice(price))
-					.map((price) => price.id)
-					.sort(),
-			).toEqual(beforeFeaturePriceIds);
-			const newBase = after.prices.find(isFixedPrice);
-			expect(newBase?.id).not.toBe(oldBaseId);
-			expect((newBase?.config as { amount?: number })?.amount).toBe(40);
-			expect(await fetchPriceRow({ ctx, priceId: oldBaseId! })).toBeNull();
+			await expectPlanRowsCorrect({
+				ctx,
+				before,
+				expected: {
+					stableEnts: true,
+					stableFeaturePrices: true,
+					mintedBase: { amount: 40 },
+					deletedPrices: [before.basePriceId!],
+				},
+			});
 		} finally {
 			await deleteDbPlans({ ctx, planIds: [planId] });
 		}
@@ -262,60 +190,25 @@ test.concurrent(
 					{
 						plan_id: planId,
 						name: "Rows Remove",
-						items: [
-							{
-								feature_id: TestFeature.Messages,
-								included: 100,
-								reset: { interval: ResetInterval.Month },
-							},
-							{ feature_id: TestFeature.Dashboard },
-						],
+						items: [messagesItem(100), { feature_id: TestFeature.Dashboard }],
 					},
 				],
 			});
-
-			const beforeDash = await entByFeature({
-				ctx,
-				planId,
-				featureId: TestFeature.Dashboard,
-			});
-			const beforeMsg = await entByFeature({
-				ctx,
-				planId,
-				featureId: TestFeature.Messages,
-			});
-			expect(beforeDash).toBeDefined();
-			expect(beforeMsg).toBeDefined();
+			const before = await snapshotPlanRows({ ctx, planId });
 
 			await autumnV2_3.catalogV2.update({
-				plans: [
-					{
-						plan_id: planId,
-						items: [
-							{
-								feature_id: TestFeature.Messages,
-								included: 100,
-								reset: { interval: ResetInterval.Month },
-							},
-						],
-					},
-				],
+				plans: [{ plan_id: planId, items: [messagesItem(100)] }],
 			});
 
-			const afterMsg = await entByFeature({
+			await expectPlanRowsCorrect({
 				ctx,
-				planId,
-				featureId: TestFeature.Messages,
+				before,
+				expected: {
+					stableEnts: [TestFeature.Messages],
+					absentFeatures: [TestFeature.Dashboard],
+					deletedEnts: [before.ents[TestFeature.Dashboard].id],
+				},
 			});
-			expect(afterMsg?.id).toBe(beforeMsg?.id);
-			expect(
-				await entByFeature({
-					ctx,
-					planId,
-					featureId: TestFeature.Dashboard,
-				}),
-			).toBeUndefined();
-			expect(await fetchEntRow({ ctx, entId: beforeDash!.id })).toBeNull();
 		} finally {
 			await deleteDbPlans({ ctx, planIds: [planId] });
 		}
@@ -331,57 +224,32 @@ test.concurrent(
 		try {
 			await autumnV2_3.catalogV2.update({
 				plans: [
-					{
-						plan_id: planId,
-						name: "Rows Incl",
-						items: [
-							{
-								feature_id: TestFeature.Messages,
-								included: 100,
-								reset: { interval: ResetInterval.Month },
-							},
-						],
-					},
+					{ plan_id: planId, name: "Rows Incl", items: [messagesItem(100)] },
 				],
 			});
-			const oldEnt = await entByFeature({
-				ctx,
-				planId,
-				featureId: TestFeature.Messages,
-			});
+			const before = await snapshotPlanRows({ ctx, planId });
 
 			await autumnV2_3.catalogV2.update({
-				plans: [
-					{
-						plan_id: planId,
-						items: [
-							{
-								feature_id: TestFeature.Messages,
-								included: 250,
-								reset: { interval: ResetInterval.Month },
-							},
-						],
-					},
-				],
+				plans: [{ plan_id: planId, items: [messagesItem(250)] }],
 			});
 
-			const newEnt = await entByFeature({
+			await expectPlanRowsCorrect({
 				ctx,
-				planId,
-				featureId: TestFeature.Messages,
+				before,
+				expected: {
+					mintedEnts: [{ featureId: TestFeature.Messages, allowance: 250 }],
+					deletedEnts: [before.ents[TestFeature.Messages].id],
+				},
 			});
-			expect(newEnt?.id).not.toBe(oldEnt?.id);
-			expect(newEnt?.allowance).toBe(250);
-			expect(await fetchEntRow({ ctx, entId: oldEnt!.id })).toBeNull();
 		} finally {
 			await deleteDbPlans({ ctx, planIds: [planId] });
 		}
 	},
 );
 
-// RED: executeUpsertProducts ignores entitlementPricesPlan.retired (no is_custom stamp)
+// Retired lane: stamp is_custom so customer refs survive.
 test.concurrent(
-	`${chalk.yellowBright("RED: catalogV2 rows: with customer — included bump retires old ent (is_custom)")}`,
+	`${chalk.yellowBright("catalogV2 rows: with customer — included bump retires old ent (is_custom)")}`,
 	async () => {
 		const { autumnV2_3, ctx } = await initScenario({ setup: [], actions: [] });
 		const planId = uniqueTestId("cv2_row_cus_incl");
@@ -389,77 +257,41 @@ test.concurrent(
 		try {
 			await autumnV2_3.catalogV2.update({
 				plans: [
-					{
-						plan_id: planId,
-						name: "Cus Incl",
-						items: [
-							{
-								feature_id: TestFeature.Messages,
-								included: 100,
-								reset: { interval: ResetInterval.Month },
-							},
-						],
-					},
+					{ plan_id: planId, name: "Cus Incl", items: [messagesItem(100)] },
 				],
 			});
-
-			const oldEnt = await entByFeature({
-				ctx,
-				planId,
-				featureId: TestFeature.Messages,
-			});
-			expect(oldEnt).toBeDefined();
+			const before = await snapshotPlanRows({ ctx, planId });
+			const oldEnt = before.ents[TestFeature.Messages];
 
 			await seedCustomerProductRef({
 				ctx,
 				planId,
-				entitlementId: oldEnt!.id,
-				internalFeatureId: oldEnt!.internal_feature_id,
+				entitlementId: oldEnt.id,
+				internalFeatureId: oldEnt.internalFeatureId,
 			});
 
 			await autumnV2_3.catalogV2.update({
-				plans: [
-					{
-						plan_id: planId,
-						items: [
-							{
-								feature_id: TestFeature.Messages,
-								included: 200,
-								reset: { interval: ResetInterval.Month },
-							},
-						],
-					},
-				],
+				plans: [{ plan_id: planId, items: [messagesItem(200)] }],
 			});
 
-			const newEnt = await entByFeature({
+			await expectPlanRowsCorrect({
 				ctx,
-				planId,
-				featureId: TestFeature.Messages,
+				before,
+				expected: {
+					mintedEnts: [{ featureId: TestFeature.Messages, allowance: 200 }],
+					retiredEnts: [oldEnt.id],
+					survivingCusEnts: [oldEnt.id],
+				},
 			});
-			expect(newEnt?.id).not.toBe(oldEnt?.id);
-			expect(newEnt?.allowance).toBe(200);
-			expect(newEnt?.is_custom).toBe(false);
-
-			const retired = await fetchEntRow({ ctx, entId: oldEnt!.id });
-			expect(retired).toBeTruthy();
-			expect(retired?.is_custom).toBe(true);
-
-			const [cusEnt] = await ctx.db
-				.select()
-				.from(customerEntitlements)
-				.where(eq(customerEntitlements.entitlement_id, oldEnt!.id))
-				.limit(1);
-			expect(cusEnt).toBeDefined();
 		} finally {
 			await cleanupPlanRefs({ ctx, planId });
 		}
 	},
 );
 
-// RED: executeUpsertProducts ignores entitlementPricesPlan.retired (no is_custom stamp)
+// Retired lane: stamp is_custom so customer refs survive.
 test.concurrent(
-	`${chalk.yellowBright("RED: catalogV2 rows: with customer — remove item retires rows; customer keeps grant")}`,
+	`${chalk.yellowBright("catalogV2 rows: with customer — remove item retires rows; customer keeps grant")}`,
 	async () => {
 		const { autumnV2_3, ctx } = await initScenario({ setup: [], actions: [] });
 		const planId = uniqueTestId("cv2_row_cus_rm");
@@ -470,74 +302,42 @@ test.concurrent(
 					{
 						plan_id: planId,
 						name: "Cus Remove",
-						items: [
-							{
-								feature_id: TestFeature.Messages,
-								included: 100,
-								reset: { interval: ResetInterval.Month },
-							},
-							{ feature_id: TestFeature.Dashboard },
-						],
+						items: [messagesItem(100), { feature_id: TestFeature.Dashboard }],
 					},
 				],
 			});
-
-			const oldDash = await entByFeature({
-				ctx,
-				planId,
-				featureId: TestFeature.Dashboard,
-			});
-			expect(oldDash).toBeDefined();
+			const before = await snapshotPlanRows({ ctx, planId });
+			const oldDash = before.ents[TestFeature.Dashboard];
 
 			await seedCustomerProductRef({
 				ctx,
 				planId,
-				entitlementId: oldDash!.id,
-				internalFeatureId: oldDash!.internal_feature_id,
+				entitlementId: oldDash.id,
+				internalFeatureId: oldDash.internalFeatureId,
 			});
 
 			await autumnV2_3.catalogV2.update({
-				plans: [
-					{
-						plan_id: planId,
-						items: [
-							{
-								feature_id: TestFeature.Messages,
-								included: 100,
-								reset: { interval: ResetInterval.Month },
-							},
-						],
-					},
-				],
+				plans: [{ plan_id: planId, items: [messagesItem(100)] }],
 			});
 
-			expect(
-				await entByFeature({
-					ctx,
-					planId,
-					featureId: TestFeature.Dashboard,
-				}),
-			).toBeUndefined();
-
-			const retired = await fetchEntRow({ ctx, entId: oldDash!.id });
-			expect(retired).toBeTruthy();
-			expect(retired?.is_custom).toBe(true);
-
-			const [cusEnt] = await ctx.db
-				.select()
-				.from(customerEntitlements)
-				.where(eq(customerEntitlements.entitlement_id, oldDash!.id))
-				.limit(1);
-			expect(cusEnt).toBeDefined();
+			await expectPlanRowsCorrect({
+				ctx,
+				before,
+				expected: {
+					absentFeatures: [TestFeature.Dashboard],
+					retiredEnts: [oldDash.id],
+					survivingCusEnts: [oldDash.id],
+				},
+			});
 		} finally {
 			await cleanupPlanRefs({ ctx, planId });
 		}
 	},
 );
 
-// RED: executeUpsertProducts ignores entitlementPricesPlan.retired (no is_custom stamp)
+// Retired lane: stamp is_custom so customer refs survive.
 test.concurrent(
-	`${chalk.yellowBright("RED: catalogV2 rows: with customer — base price change retires old base")}`,
+	`${chalk.yellowBright("catalogV2 rows: with customer — base price change retires old base")}`,
 	async () => {
 		const { autumnV2_3, ctx } = await initScenario({ setup: [], actions: [] });
 		const planId = uniqueTestId("cv2_row_cus_base");
@@ -549,24 +349,16 @@ test.concurrent(
 						plan_id: planId,
 						name: "Cus Base",
 						price: { amount: 20, interval: BillingInterval.Month },
-						items: [
-							{
-								feature_id: TestFeature.Messages,
-								included: 100,
-								reset: { interval: ResetInterval.Month },
-							},
-						],
+						items: [messagesItem(100)],
 					},
 				],
 			});
-
-			const oldBase = await basePriceRow({ ctx, planId });
-			expect((oldBase?.config as { amount?: number })?.amount).toBe(20);
+			const before = await snapshotPlanRows({ ctx, planId });
 
 			await seedCustomerProductRef({
 				ctx,
 				planId,
-				priceId: oldBase!.id,
+				priceId: before.basePriceId!,
 			});
 
 			await autumnV2_3.catalogV2.update({
@@ -574,42 +366,156 @@ test.concurrent(
 					{
 						plan_id: planId,
 						price: { amount: 35, interval: BillingInterval.Month },
-						items: [
-							{
-								feature_id: TestFeature.Messages,
-								included: 100,
-								reset: { interval: ResetInterval.Month },
-							},
-						],
+						items: [messagesItem(100)],
 					},
 				],
 			});
 
-			const newBase = await basePriceRow({ ctx, planId });
-			expect(newBase?.id).not.toBe(oldBase?.id);
-			expect((newBase?.config as { amount?: number })?.amount).toBe(35);
-			expect(newBase?.is_custom).toBe(false);
-
-			const retired = await fetchPriceRow({ ctx, priceId: oldBase!.id });
-			expect(retired).toBeTruthy();
-			expect(retired?.is_custom).toBe(true);
-
-			const [cusPrice] = await ctx.db
-				.select()
-				.from(customerPrices)
-				.where(eq(customerPrices.price_id, oldBase!.id))
-				.limit(1);
-			expect(cusPrice).toBeDefined();
+			await expectPlanRowsCorrect({
+				ctx,
+				before,
+				expected: {
+					mintedBase: { amount: 35 },
+					retiredPrices: [before.basePriceId!],
+					survivingCusPrices: [before.basePriceId!],
+				},
+			});
 		} finally {
 			await cleanupPlanRefs({ ctx, planId });
 		}
 	},
 );
 
-// RED: protectReferencedRows uses hasAnyCustomerProducts (includes expired);
-// SPEC wants expired-only treated as no-customers (hard-delete).
+// Cross-version row refs: v1 ents still referenced by a versionable cus_ent on v2.
 test.concurrent(
-	`${chalk.yellowBright("RED: catalogV2 rows: expired-only customers → rows deleted (not retired)")}`,
+	`${chalk.yellowBright("catalogV2 rows: bad state — cus_ent on v1, customer on v2 → v1 update retires, cus_ent survives")}`,
+	async () => {
+		const { autumnV2_3, ctx } = await initScenario({ setup: [], actions: [] });
+		const planId = uniqueTestId("cv2_row_xver_ent");
+		await deleteDbPlans({ ctx, planIds: [planId] });
+		try {
+			await autumnV2_3.catalogV2.update({
+				plans: [
+					{ plan_id: planId, name: "XVer Ent V1", items: [messagesItem(100)] },
+				],
+			});
+			await autumnV2_3.catalogV2.update({
+				plans: [
+					{
+						plan_id: planId,
+						version: 2,
+						name: "XVer Ent V2",
+						items: [messagesItem(150)],
+					},
+				],
+			});
+
+			const v1Before = await snapshotPlanRows({ ctx, planId, version: 1 });
+			const v2Before = await snapshotPlanRows({ ctx, planId, version: 2 });
+			const oldEnt = v1Before.ents[TestFeature.Messages];
+
+			// cus_product attaches to latest (v2); cus_ent references v1's ent.
+			await seedCustomerProductRef({
+				ctx,
+				planId,
+				entitlementId: oldEnt.id,
+				internalFeatureId: oldEnt.internalFeatureId,
+			});
+
+			await autumnV2_3.catalogV2.update({
+				plans: [{ plan_id: planId, version: 1, items: [messagesItem(200)] }],
+			});
+
+			await expectPlanRowsCorrect({
+				ctx,
+				before: v1Before,
+				expected: {
+					mintedEnts: [{ featureId: TestFeature.Messages, allowance: 200 }],
+					retiredEnts: [oldEnt.id],
+					survivingCusEnts: [oldEnt.id],
+				},
+			});
+			await expectPlanRowsCorrect({
+				ctx,
+				before: v2Before,
+				expected: { stableEnts: true, stableFeaturePrices: true },
+			});
+		} finally {
+			await cleanupPlanRefs({ ctx, planId });
+		}
+	},
+);
+
+// Cross-version row refs: v1 prices still referenced by a versionable cus_price on v2.
+test.concurrent(
+	`${chalk.yellowBright("catalogV2 rows: bad state — cus_price on v1 base, customer on v2 → v1 price change retires old base")}`,
+	async () => {
+		const { autumnV2_3, ctx } = await initScenario({ setup: [], actions: [] });
+		const planId = uniqueTestId("cv2_row_xver_price");
+		await deleteDbPlans({ ctx, planIds: [planId] });
+		try {
+			await autumnV2_3.catalogV2.update({
+				plans: [
+					{
+						plan_id: planId,
+						name: "XVer Price V1",
+						price: { amount: 20, interval: BillingInterval.Month },
+					},
+				],
+			});
+			await autumnV2_3.catalogV2.update({
+				plans: [
+					{
+						plan_id: planId,
+						version: 2,
+						name: "XVer Price V2",
+						price: { amount: 30, interval: BillingInterval.Month },
+					},
+				],
+			});
+
+			const v1Before = await snapshotPlanRows({ ctx, planId, version: 1 });
+			const v2Before = await snapshotPlanRows({ ctx, planId, version: 2 });
+
+			await seedCustomerProductRef({
+				ctx,
+				planId,
+				priceId: v1Before.basePriceId!,
+			});
+
+			await autumnV2_3.catalogV2.update({
+				plans: [
+					{
+						plan_id: planId,
+						version: 1,
+						price: { amount: 25, interval: BillingInterval.Month },
+					},
+				],
+			});
+
+			await expectPlanRowsCorrect({
+				ctx,
+				before: v1Before,
+				expected: {
+					mintedBase: { amount: 25 },
+					retiredPrices: [v1Before.basePriceId!],
+					survivingCusPrices: [v1Before.basePriceId!],
+				},
+			});
+			await expectPlanRowsCorrect({
+				ctx,
+				before: v2Before,
+				expected: { stableBase: true },
+			});
+		} finally {
+			await cleanupPlanRefs({ ctx, planId });
+		}
+	},
+);
+
+// Expired-only customers are not versionable — hard-delete, don't retire.
+test.concurrent(
+	`${chalk.yellowBright("catalogV2 rows: expired-only customers → rows deleted (not retired)")}`,
 	async () => {
 		const { autumnV2_3, ctx } = await initScenario({ setup: [], actions: [] });
 		const planId = uniqueTestId("cv2_row_exp");
@@ -620,75 +526,43 @@ test.concurrent(
 					{
 						plan_id: planId,
 						name: "Expired Only",
-						items: [
-							{
-								feature_id: TestFeature.Messages,
-								included: 100,
-								reset: { interval: ResetInterval.Month },
-							},
-						],
+						items: [messagesItem(100)],
 					},
 				],
 			});
-
-			const oldEnt = await entByFeature({
-				ctx,
-				planId,
-				featureId: TestFeature.Messages,
-			});
+			const before = await snapshotPlanRows({ ctx, planId });
+			const oldEnt = before.ents[TestFeature.Messages];
 
 			await seedCustomerProductRef({
 				ctx,
 				planId,
 				status: CusProductStatus.Expired,
-				entitlementId: oldEnt!.id,
-				internalFeatureId: oldEnt!.internal_feature_id,
+				entitlementId: oldEnt.id,
+				internalFeatureId: oldEnt.internalFeatureId,
 			});
 
 			const preview = await autumnV2_3.catalogV2.previewUpdate({
-				plans: [
-					{
-						plan_id: planId,
-						items: [
-							{
-								feature_id: TestFeature.Messages,
-								included: 200,
-								reset: { interval: ResetInterval.Month },
-							},
-						],
-					},
-				],
+				plans: [{ plan_id: planId, items: [messagesItem(200)] }],
 			});
 			const entry = preview.plans.find((p) => p.plan_id === planId);
 			expect(entry?.state.has_customers).toBe(false);
 
 			const response = await autumnV2_3.catalogV2.update({
-				plans: [
-					{
-						plan_id: planId,
-						items: [
-							{
-								feature_id: TestFeature.Messages,
-								included: 200,
-								reset: { interval: ResetInterval.Month },
-							},
-						],
-					},
-				],
+				plans: [{ plan_id: planId, items: [messagesItem(200)] }],
 			});
 			expectCatalogResultsCorrect({
 				response,
 				plans: [{ id: planId, action: "update" }],
 			});
 
-			const newEnt = await entByFeature({
+			await expectPlanRowsCorrect({
 				ctx,
-				planId,
-				featureId: TestFeature.Messages,
+				before,
+				expected: {
+					mintedEnts: [{ featureId: TestFeature.Messages, allowance: 200 }],
+					deletedEnts: [oldEnt.id],
+				},
 			});
-			expect(newEnt?.id).not.toBe(oldEnt?.id);
-			expect(newEnt?.allowance).toBe(200);
-			expect(await fetchEntRow({ ctx, entId: oldEnt!.id })).toBeNull();
 		} finally {
 			await cleanupPlanRefs({ ctx, planId });
 		}

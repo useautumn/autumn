@@ -19,16 +19,24 @@ export const computeProductDetailsPlan = ({
 	planParams,
 	currentFullProduct,
 	version,
+	baseFullProduct,
 }: {
 	ctx: AutumnContext;
 	planParams: UpdateCatalogPlanParams;
 	currentFullProduct: FullProduct | null;
 	version: number;
+	/** Content baseline — clone source when minting (ignored when current set). */
+	baseFullProduct?: FullProduct | null;
 }): ProductDetailsPlan => {
 	if (!currentFullProduct) {
 		return {
 			changed: true,
-			product: initProductRow({ ctx, planParams, version }),
+			product: initProductRow({
+				ctx,
+				planParams,
+				version,
+				...(baseFullProduct ? { base: baseFullProduct } : {}),
+			}),
 		};
 	}
 

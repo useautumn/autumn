@@ -41,6 +41,9 @@ export const handleUpdateCatalogV2 = createRoute({
 				plans: catalogResult?.plans ?? [],
 				features: catalogResult?.features ?? [],
 			},
+			...(catalogResult?.migrations.length
+				? { migrations: catalogResult.migrations }
+				: {}),
 		});
 		return c.json(response);
 	},

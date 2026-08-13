@@ -29,6 +29,7 @@ export const handleUpdateCatalogErrors = ({
 	handleUpsertProductRenameErrors({
 		params,
 		productStatesContext: catalogContext.productStatesContext,
+		updateCatalogPlan,
 	});
 	handleUpsertProductErrors({
 		updateCatalogPlan,

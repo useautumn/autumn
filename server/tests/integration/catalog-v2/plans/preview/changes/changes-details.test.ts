@@ -1,16 +1,11 @@
 /**
  * catalogV2.preview_update — previous_attributes for plan detail fields.
  *
- * RED: buildUpsertProductsPreview stubs changes: null. Spec asserts
- * previous_attributes holds old values for exactly the changed keys;
+ * Spec: previous_attributes holds old values for exactly the changed keys;
  * customize null; item_changes empty; no price_change.
- *
- * Ambiguity: diffPlanV1PreviousAttributes keys today are id/name/description/
- * group/add_on/auto_enable/free_trial/config/billing_controls — not archived
- * or metadata. CASES wants those too; tests assert the CASES contract.
  */
 
-import { test } from "bun:test";
+import { expect, test } from "bun:test";
 import { PreviewUpdateCatalogResponseSchema } from "@autumn/shared";
 import { TestFeature } from "@tests/setup/v2Features.js";
 import { initScenario } from "@tests/utils/testInitUtils/initScenario.js";
@@ -22,6 +17,7 @@ import {
 } from "../../utils/expectCatalogPlans.js";
 import {
 	expectPlanPreviewRowCorrect,
+	findPlanPreviewRow,
 	parsePlanPreview,
 } from "../utils/expectPlanPreview.js";
 
@@ -73,9 +69,8 @@ const assertDetailChange = async ({
 	void ctx;
 };
 
-// RED: changes stubbed null
 test.concurrent(
-	`${chalk.yellowBright("RED: catalogV2 changes-details: name → previous_attributes.name")}`,
+	`${chalk.yellowBright("catalogV2 changes-details: name → previous_attributes.name")}`,
 	async () => {
 		const { autumnV2_3, ctx } = await initScenario({ setup: [], actions: [] });
 		const planId = uniqueTestId("cv2_cd_name");
@@ -95,9 +90,8 @@ test.concurrent(
 	},
 );
 
-// RED
 test.concurrent(
-	`${chalk.yellowBright("RED: catalogV2 changes-details: description / group / add_on individually")}`,
+	`${chalk.yellowBright("catalogV2 changes-details: description / group / add_on individually")}`,
 	async () => {
 		const { autumnV2_3, ctx } = await initScenario({ setup: [], actions: [] });
 		const planDesc = uniqueTestId("cv2_cd_desc");
@@ -141,9 +135,9 @@ test.concurrent(
 	},
 );
 
-// RED — CASES allows is_default or auto_enable key; assert auto_enable (ApiPlanV1 field)
+// CASES allows is_default or auto_enable key; assert auto_enable (ApiPlanV1 field)
 test.concurrent(
-	`${chalk.yellowBright("RED: catalogV2 changes-details: auto_enable flip → previous auto_enable")}`,
+	`${chalk.yellowBright("catalogV2 changes-details: auto_enable flip → previous auto_enable")}`,
 	async () => {
 		const { autumnV2_3, ctx } = await initScenario({ setup: [], actions: [] });
 		const planId = uniqueTestId("cv2_cd_ae");
@@ -167,9 +161,9 @@ test.concurrent(
 	},
 );
 
-// RED — archived not in diffPlanV1PreviousAttributes today; CASES wants it
+// archived not in diffPlanV1PreviousAttributes today; CASES wants it
 test.concurrent(
-	`${chalk.yellowBright("RED: catalogV2 changes-details: archived flip → previous value")}`,
+	`${chalk.yellowBright("catalogV2 changes-details: archived flip → previous value")}`,
 	async () => {
 		const { autumnV2_3, ctx } = await initScenario({ setup: [], actions: [] });
 		const planId = uniqueTestId("cv2_cd_arch");
@@ -189,9 +183,9 @@ test.concurrent(
 	},
 );
 
-// RED — metadata not in diffPlanV1PreviousAttributes today; CASES wants it
+// metadata not in diffPlanV1PreviousAttributes today; CASES wants it
 test.concurrent(
-	`${chalk.yellowBright("RED: catalogV2 changes-details: metadata → previous metadata object")}`,
+	`${chalk.yellowBright("catalogV2 changes-details: metadata → previous metadata object")}`,
 	async () => {
 		const { autumnV2_3, ctx } = await initScenario({ setup: [], actions: [] });
 		const planId = uniqueTestId("cv2_cd_meta");
@@ -211,9 +205,9 @@ test.concurrent(
 	},
 );
 
-// RED — billing_controls previous value exposed nested (API shape), not per column
+// billing_controls previous value exposed nested (API shape), not per column
 test.concurrent(
-	`${chalk.yellowBright("RED: catalogV2 changes-details: billing_controls change → previous billing_controls")}`,
+	`${chalk.yellowBright("catalogV2 changes-details: billing_controls change → previous billing_controls")}`,
 	async () => {
 		const { autumnV2_3, ctx } = await initScenario({ setup: [], actions: [] });
 		const planId = uniqueTestId("cv2_cd_bc");
@@ -252,9 +246,124 @@ test.concurrent(
 	},
 );
 
-// RED
+// Only the control keys that changed appear under billing_controls.
 test.concurrent(
-	`${chalk.yellowBright("RED: catalogV2 changes-details: config.ignore_past_due flip")}`,
+	`${chalk.yellowBright("catalogV2 changes-details: billing_controls sparse — only auto_topups in previous")}`,
+	async () => {
+		const { autumnV2_3, ctx } = await initScenario({ setup: [], actions: [] });
+		const planId = uniqueTestId("cv2_cd_bc_sparse");
+		await deleteDbPlans({ ctx, planIds: [planId] });
+		const usageAlerts = [
+			{
+				feature_id: TestFeature.Messages,
+				enabled: true,
+				threshold: 80,
+				threshold_type: "usage_percentage" as const,
+			},
+		];
+		const autoTopupsOld = [
+			{
+				feature_id: TestFeature.Messages,
+				enabled: true,
+				threshold: 10,
+				quantity: 100,
+			},
+		];
+		const autoTopupsNew = [
+			{
+				feature_id: TestFeature.Messages,
+				enabled: true,
+				threshold: 5,
+				quantity: 100,
+			},
+		];
+		try {
+			await autumnV2_3.catalogV2.update({
+				plans: [
+					{
+						plan_id: planId,
+						name: "BC Sparse",
+						billing_controls: {
+							auto_topups: autoTopupsOld,
+							usage_alerts: usageAlerts,
+						},
+					},
+				],
+			});
+			const preview = parsePlanPreview(
+				await autumnV2_3.catalogV2.previewUpdate({
+					plans: [
+						{
+							plan_id: planId,
+							billing_controls: {
+								auto_topups: autoTopupsNew,
+								usage_alerts: usageAlerts,
+							},
+						},
+					],
+				}),
+			);
+			PreviewUpdateCatalogResponseSchema.parse(preview);
+			expectPlanPreviewRowCorrect({
+				preview,
+				expected: {
+					planId,
+					action: "update",
+					previousAttributes: {
+						billing_controls: { auto_topups: autoTopupsOld },
+					},
+					customize: null,
+					itemChanges: [],
+					priceChange: null,
+				},
+			});
+			const bc =
+				findPlanPreviewRow({ preview, planId }).plan_change
+					?.previous_attributes?.billing_controls ?? {};
+			expect(Object.keys(bc)).toEqual(["auto_topups"]);
+		} finally {
+			await deleteDbPlans({ ctx, planIds: [planId] });
+		}
+	},
+);
+
+// new_plan_id rename → previous_attributes.id holds the old id
+test.concurrent(
+	`${chalk.yellowBright("catalogV2 changes-details: new_plan_id A→B → previous_attributes.id")}`,
+	async () => {
+		const { autumnV2_3, ctx } = await initScenario({ setup: [], actions: [] });
+		const fromId = uniqueTestId("cv2_cd_id_from");
+		const toId = uniqueTestId("cv2_cd_id_to");
+		await deleteDbPlans({ ctx, planIds: [fromId, toId] });
+		try {
+			await autumnV2_3.catalogV2.update({
+				plans: [{ plan_id: fromId, name: "Rename Me" }],
+			});
+			const preview = parsePlanPreview(
+				await autumnV2_3.catalogV2.previewUpdate({
+					plans: [{ plan_id: fromId, new_plan_id: toId }],
+				}),
+			);
+			PreviewUpdateCatalogResponseSchema.parse(preview);
+			expectPlanPreviewRowCorrect({
+				preview,
+				expected: {
+					planId: fromId,
+					action: "update",
+					previousAttributes: { id: fromId },
+					customize: null,
+					itemChanges: [],
+					priceChange: null,
+				},
+			});
+		} finally {
+			await deleteDbPlans({ ctx, planIds: [fromId, toId] });
+		}
+	},
+);
+
+test.concurrent(
+	`${chalk.yellowBright("catalogV2 changes-details: config.ignore_past_due flip")}`,
 	async () => {
 		const { autumnV2_3, ctx } = await initScenario({ setup: [], actions: [] });
 		const planId = uniqueTestId("cv2_cd_cfg");
@@ -274,9 +383,8 @@ test.concurrent(
 	},
 );
 
-// RED
 test.concurrent(
-	`${chalk.yellowBright("RED: catalogV2 changes-details: multi-detail → only changed keys")}`,
+	`${chalk.yellowBright("catalogV2 changes-details: multi-detail → only changed keys")}`,
 	async () => {
 		const { autumnV2_3, ctx } = await initScenario({ setup: [], actions: [] });
 		const planId = uniqueTestId("cv2_cd_multi");
@@ -309,9 +417,9 @@ test.concurrent(
 	},
 );
 
-// RED — setting field to current value must not appear in previous_attributes
+// setting field to current value must not appear in previous_attributes
 test.concurrent(
-	`${chalk.yellowBright("RED: catalogV2 changes-details: explicit same value → absent from previous_attributes")}`,
+	`${chalk.yellowBright("catalogV2 changes-details: explicit same value → absent from previous_attributes")}`,
 	async () => {
 		const { autumnV2_3, ctx } = await initScenario({ setup: [], actions: [] });
 		const planId = uniqueTestId("cv2_cd_same");

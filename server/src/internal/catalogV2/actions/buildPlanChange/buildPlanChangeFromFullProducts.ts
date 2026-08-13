@@ -7,7 +7,7 @@ import {
 } from "@autumn/shared";
 import { buildPlanChange } from "./buildPlanChange.js";
 
-const toApiPlanV1 = ({
+export const fullProductToApiPlanV1Sync = ({
 	product,
 	features,
 }: {
@@ -23,17 +23,18 @@ const toApiPlanV1 = ({
 };
 
 /** Full-product orchestrator over the plan-change kernel: convert both sides
- * to ApiPlanV1, then diff. Undefined when the definitions are identical. */
+ * to ApiPlanV1, then diff. Undefined when either side is missing or the
+ * definitions are identical. */
 export const buildPlanChangeFromFullProducts = ({
 	from,
 	to,
 	features,
 }: {
-	from: FullProduct;
-	to: FullProduct;
+	from?: FullProduct;
+	to?: FullProduct;
 	features?: Feature[];
 }): PlanChangeV0 | undefined =>
 	buildPlanChange({
-		from: toApiPlanV1({ product: from, features }),
-		to: toApiPlanV1({ product: to, features }),
+		from: from ? fullProductToApiPlanV1Sync({ product: from, features }) : undefined,
+		to: to ? fullProductToApiPlanV1Sync({ product: to, features }) : undefined,
 	});

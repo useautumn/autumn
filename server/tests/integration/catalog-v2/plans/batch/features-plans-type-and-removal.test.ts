@@ -2,8 +2,9 @@
  * catalogV2.update — feature type changes and removals × plan upsert in one call.
  *
  * Plan compute resolves items against the projected feature set (post
- * update/remove), so type changes are visible to same-call items and removed
- * ids are a 404 `feature_not_found`.
+ * update/remove), so type changes are visible to same-call items. Remove +
+ * upsert of the same id is invalid_feature; a plan still referencing a
+ * removed id is feature_not_found.
  */
 
 import { expect, test } from "bun:test";
@@ -83,10 +84,9 @@ test.concurrent(
 	},
 );
 
-// No validateProductItems rule rejects metered config on a boolean feature
-// (only pooled booleans); today included/reset persist as-is instead of coercing.
+// Boolean items have no included/reset — planner coerces metered config away.
 test.concurrent(
-	`${chalk.yellowBright("RED: catalogV2 interplay: metered→boolean + plan item with metered config → boolean item")}`,
+	`${chalk.yellowBright("catalogV2 interplay: metered→boolean + plan item with metered config → boolean item")}`,
 	async () => {
 		const { autumnV2_3, ctx } = await initScenario({ setup: [], actions: [] });
 		const featureId = uniqueTestId("cv2_int_mtb");
@@ -140,7 +140,7 @@ test.concurrent(
 			expect(plan, `missing plan ${planId}`).toBeDefined();
 			const item = plan?.items.find((i) => i.feature_id === featureId);
 			expect(item, "item should exist for boolean feature").toBeDefined();
-			expect(item?.included ?? null).toBeNull();
+			expect(item?.included).toBe(0);
 			expect(item?.reset ?? null).toBeNull();
 		} finally {
 			await deleteDbPlans({ ctx, planIds: [planId] });
@@ -211,10 +211,9 @@ test.concurrent(
 	},
 );
 
-// Spec: the remove+upsert same-call guard (invalid_feature) should win. Today plan
-// item resolution 404s first (feature_not_found), so the error depends on plan refs.
+// Same-call remove + upsert of one feature_id is invalid_feature, not a 404.
 test.concurrent(
-	`${chalk.yellowBright("RED: catalogV2 interplay: remove + recreate feature + plan referencing it → same-call conflict error")}`,
+	`${chalk.yellowBright("catalogV2 interplay: remove + recreate feature + plan referencing it → same-call conflict error")}`,
 	async () => {
 		const { autumnV2_3, ctx } = await initScenario({ setup: [], actions: [] });
 		const featureId = uniqueTestId("cv2_int_rm_rc");
