@@ -132,9 +132,7 @@ export const presentWebApproval = async ({
 
 	return previewed.map((request, index) => ({
 		approvalId: ids[index],
-		params:
-			getRequest(publicToolArgs(request.toolArgs)) ??
-			publicToolArgs(request.toolArgs),
+		params: getRequest(publicToolArgs(request.toolArgs)),
 		preview: request.preview,
 		toolName: request.toolName,
 	}));

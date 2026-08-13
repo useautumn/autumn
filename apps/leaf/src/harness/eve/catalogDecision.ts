@@ -7,6 +7,10 @@ import type {
 import type { ThreadRef } from "../../agent/runMessage/types.js";
 import { normalizeToolName } from "../../agent/tools/toolPolicy.js";
 import { fetchApprovalPreview } from "../../internal/approvals/utils/fetchApprovalPreview.js";
+import {
+	getRequest,
+	publicToolArgs,
+} from "../../internal/approvals/utils/toolArgs.js";
 import { db } from "../../lib/db.js";
 import type { Suspension } from "../../types.js";
 import { parsePreviewPayload } from "../../ui/previewContent.js";
@@ -115,16 +119,8 @@ const hasExplicitVersioning = (request: Record<string, unknown>) => {
 	);
 };
 
-const requestFromSuspension = (suspension: Suspension) => {
-	const {
-		_eveApproveOptionId: _approve,
-		_eveDenyOptionId: _deny,
-		...rest
-	} = suspension.toolArgs;
-	return rest.request && typeof rest.request === "object"
-		? (rest.request as Record<string, unknown>)
-		: rest;
-};
+const requestFromSuspension = (suspension: Suspension) =>
+	getRequest(publicToolArgs(suspension.toolArgs));
 
 /** The one chokepoint the model can't skip: an `updateCatalog` suspension.
  * When the (flag-forced) preview shows the plan needs versioning/variant/

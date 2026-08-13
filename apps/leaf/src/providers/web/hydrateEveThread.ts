@@ -1,5 +1,4 @@
 import type { AppEnv, CatalogPlanPreview, ChatProvider } from "@autumn/shared";
-import { normalizeToolName } from "../../agent/tools/toolPolicy.js";
 import type {
 	LeafApprovalStatus,
 	LeafUiMessage,
@@ -13,6 +12,7 @@ import {
 	type EveAction,
 	type EveActionResult,
 	type EveInputRequest,
+	isGatedRequest,
 	isPreviewToolName,
 	labelForResult,
 	textForInputRequests,
@@ -177,12 +177,7 @@ const eveEventsToUiMessages = async ({
 		} else if (event.type === "input.requested") {
 			const requests = (event.data?.requests ?? []) as EveInputRequest[];
 			// Approval-shaped requests re-render from chat_approvals, not replay.
-			const isApproval = requests.some(
-				(request) =>
-					request.requestId &&
-					request.action?.toolName &&
-					normalizeToolName(request.action.toolName) !== "ask_question",
-			);
+			const isApproval = requests.some(isGatedRequest);
 			if (!isApproval) {
 				const assistant = assistantForTurn(event.data?.turnId, ts);
 				const optioned = requests.find(

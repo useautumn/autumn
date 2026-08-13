@@ -29,7 +29,6 @@ const rowToSession = ({
 	if (!state) return undefined;
 	return {
 		env,
-		newSession: false,
 		sessionId: row.session_id,
 		state,
 		threadKey,

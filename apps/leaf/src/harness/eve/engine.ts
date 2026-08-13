@@ -210,7 +210,6 @@ export const eveEngine: AgentEngine = {
 		if (!session) {
 			session = {
 				env,
-				newSession: true,
 				sessionId: posted.sessionId,
 				state: initialState(posted.continuationToken),
 				threadKey: buildThreadKey({ env, thread }),
