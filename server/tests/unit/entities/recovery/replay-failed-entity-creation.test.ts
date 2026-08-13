@@ -2,7 +2,16 @@ import { afterAll, beforeEach, describe, expect, mock, test } from "bun:test";
 import { ApiVersion, ApiVersionClass, AppEnv } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 
-const state = { existing: false, inserts: 0, attaches: 0 };
+const state = {
+	attachDb: undefined as unknown,
+	attaches: 0,
+	existing: false,
+	insertDb: undefined as unknown,
+	inserts: 0,
+	transactions: 0,
+};
+
+const transactionDb = { name: "transaction" };
 
 const mockedPaths = [
 	"@/internal/customers/CusService.js",
@@ -34,13 +43,16 @@ mock.module("@/internal/api/entities/EntityService.js", () => ({
 	EntityService: {
 		get: async () => (state.existing ? { id: "entity" } : undefined),
 		insert: async ({
+			db,
 			data,
 			ignoreConflicts,
 		}: {
+			db: unknown;
 			data: unknown[];
 			ignoreConflicts?: boolean;
 		}) => {
 			state.inserts++;
+			state.insertDb = db;
 			if (ignoreConflicts && state.existing) return [];
 			return data;
 		},
@@ -49,8 +61,13 @@ mock.module("@/internal/api/entities/EntityService.js", () => ({
 mock.module(
 	"@/internal/entities/actions/batchCreateEntities/attachDefaultProductsToEntities.js",
 	() => ({
-		attachDefaultProductsToEntities: async () => {
+		attachDefaultProductsToEntities: async ({
+			ctx,
+		}: {
+			ctx: AutumnContext;
+		}) => {
 			state.attaches++;
+			state.attachDb = ctx.db;
 		},
 	}),
 );
@@ -67,14 +84,22 @@ const context = () =>
 		apiVersion: new ApiVersionClass(ApiVersion.V0_2),
 		features: [{ id: "seats", internal_id: "feature_internal" }],
 		skipCache: false,
-		db: { transaction: async (fn: (tx: object) => Promise<void>) => fn({}) },
+		db: {
+			transaction: async (fn: (tx: object) => Promise<void>) => {
+				state.transactions++;
+				return fn(transactionDb);
+			},
+		},
 	}) as unknown as AutumnContext;
 
 describe("replayFailedEntityCreation", () => {
 	beforeEach(() => {
+		state.attachDb = undefined;
 		state.existing = false;
+		state.insertDb = undefined;
 		state.inserts = 0;
 		state.attaches = 0;
+		state.transactions = 0;
 	});
 	test("inserts only missing stable-ID entities with their defaults in one transaction", async () => {
 		await replayFailedEntityCreation({
@@ -94,6 +119,9 @@ describe("replayFailedEntityCreation", () => {
 		});
 		expect(state.inserts).toBe(1);
 		expect(state.attaches).toBe(1);
+		expect(state.transactions).toBe(1);
+		expect(state.insertDb).toBe(transactionDb);
+		expect(state.attachDb).toBe(transactionDb);
 	});
 	test("does not attach defaults when the entity already exists", async () => {
 		state.existing = true;

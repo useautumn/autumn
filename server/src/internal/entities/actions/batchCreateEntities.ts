@@ -4,7 +4,6 @@ import {
 	type Entity,
 	findFeatureById,
 } from "@autumn/shared";
-import type { DrizzleCli } from "@/db/initDrizzle.js";
 import { shed503OnTransientError } from "@/db/shed503OnTransientError.js";
 import { withLock } from "@/external/redis/utils/lockUtils/withLock.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
@@ -45,120 +44,100 @@ const createEntities = async ({
 		customerData,
 		createEntityData,
 	});
-	let canReplay = false;
-	const run = async () => {
-		for (const cusProduct of cusProducts) {
-			await createEntityForCusProduct({
-				ctx,
-				customer: fullCus,
-				cusProduct,
-				inputEntities,
-			});
-		}
 
-		let data = inputEntities.map((e) =>
-			constructEntity({
-				inputEntity: e,
-				feature: findFeatureById({
-					features,
-					featureId: e.feature_id,
-					errorOnNotFound: true,
-				}),
-				internalCustomerId: fullCus.internal_id,
-				orgId: org.id,
-				env,
+	for (const cusProduct of cusProducts) {
+		await createEntityForCusProduct({
+			ctx,
+			customer: fullCus,
+			cusProduct,
+			inputEntities,
+		});
+	}
+
+	let data = inputEntities.map((e) =>
+		constructEntity({
+			inputEntity: e,
+			feature: findFeatureById({
+				features,
+				featureId: e.feature_id,
+				errorOnNotFound: true,
 			}),
-		);
+			internalCustomerId: fullCus.internal_id,
+			orgId: org.id,
+			env,
+		}),
+	);
 
-		const newEntities: Entity[] = [];
+	const newEntities: Entity[] = [];
 
-		const noIdEntity = existingEntities.find((e) => e.id === null);
-		if (noIdEntity) {
-			const updatedEntity = await EntityService.update({
-				db,
-				internalId: noIdEntity.internal_id,
-				update: {
-					id: inputEntities[0].id,
-					name: inputEntities[0].name,
-					...(inputEntities[0].billing_controls && {
-						spend_limits: inputEntities[0].billing_controls.spend_limits,
-						usage_limits: inputEntities[0].billing_controls.usage_limits,
-						usage_alerts: inputEntities[0].billing_controls.usage_alerts,
-						overage_allowed: inputEntities[0].billing_controls.overage_allowed,
-					}),
-				},
-			});
+	const noIdEntity = existingEntities.find((e) => e.id === null);
+	if (noIdEntity) {
+		const updatedEntity = await EntityService.update({
+			db,
+			internalId: noIdEntity.internal_id,
+			update: {
+				id: inputEntities[0].id,
+				name: inputEntities[0].name,
+				...(inputEntities[0].billing_controls && {
+					spend_limits: inputEntities[0].billing_controls.spend_limits,
+					usage_limits: inputEntities[0].billing_controls.usage_limits,
+					usage_alerts: inputEntities[0].billing_controls.usage_alerts,
+					overage_allowed: inputEntities[0].billing_controls.overage_allowed,
+				}),
+			},
+		});
 
-			data = data.slice(1);
-			newEntities.push(updatedEntity);
-		}
+		data = data.slice(1);
+		newEntities.push(updatedEntity);
+	}
 
-		const insertAndAttach = async ({
-			transactionDb,
-		}: {
-			transactionDb: DrizzleCli;
-		}) => {
-			const transactionCtx = { ...ctx, db: transactionDb };
-			const insertedEntities = await EntityService.insert({
-				db: transactionDb,
-				data,
-			});
-			newEntities.push(...insertedEntities);
-			await attachDefaultProductsToEntities({
-				ctx: transactionCtx,
-				fullCustomer: fullCus,
-				entities: newEntities,
-				customerData,
-			});
-		};
+	let insertedEntities: Entity[];
+	if (inputEntities.some((entity) => !entity.id) || noIdEntity) {
+		insertedEntities = await EntityService.insert({ db, data });
+	} else {
+		insertedEntities = await shed503OnTransientError({
+			ctx,
+			source: "entities.create",
+			run: () => EntityService.insert({ db, data }),
+			onTransientError: async () => {
+				await queueFailedEntityCreation({
+					ctx,
+					params: {
+						customer_id: customerId,
+						create_entity_data: inputEntities,
+						customer_data: customerData,
+					},
+				});
+			},
+		});
+	}
 
-		if (inputEntities.some((entity) => !entity.id) || noIdEntity) {
-			await insertAndAttach({ transactionDb: db });
-		} else {
-			canReplay = true;
-			await db.transaction(
-				async (transactionDb) =>
-					await insertAndAttach({
-						transactionDb: transactionDb as unknown as DrizzleCli,
-					}),
-			);
-		}
+	newEntities.push(...insertedEntities);
 
-		// Get api entity for each entity...
-		const apiEntities = [];
-		for (const entity of newEntities) {
-			const clonedFullCus = structuredClone(fullCus);
-			clonedFullCus.entity = entity;
-
-			const apiEntity = await getApiEntity({
-				ctx,
-				customerId,
-				entityId: entity.id ?? entity.internal_id,
-				fullCus: clonedFullCus,
-				withAutumnId,
-			});
-			apiEntities.push(apiEntity);
-		}
-
-		return apiEntities;
-	};
-
-	return shed503OnTransientError({
+	await attachDefaultProductsToEntities({
 		ctx,
-		source: "entities.create",
-		run,
-		onTransientError: async () => {
-			if (!canReplay) return;
-			await queueFailedEntityCreation({
-				ctx,
-				params: {
-					customer_id: customerId,
-					create_entity_data: inputEntities,
-					customer_data: customerData,
-				},
-			});
-		},
+		fullCustomer: fullCus,
+		entities: newEntities,
+		customerData,
 	});
+
+	// Get api entity for each entity...
+	const apiEntities = [];
+	for (const entity of newEntities) {
+		const clonedFullCus = structuredClone(fullCus);
+		clonedFullCus.entity = entity;
+
+		const apiEntity = await getApiEntity({
+			ctx,
+			customerId,
+			entityId: entity.id ?? entity.internal_id,
+			fullCus: clonedFullCus,
+			withAutumnId,
+		});
+		apiEntities.push(apiEntity);
+	}
+
+	return apiEntities;
 };
 
 export const batchCreateEntities = async (
