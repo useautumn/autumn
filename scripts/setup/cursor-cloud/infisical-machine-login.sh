@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Mint a short-lived Infisical token from the machine-identity client credentials
 # Cursor injects as INFISICAL_CLIENT_ID / INFISICAL_CLIENT_SECRET. Prints the
-# token to stdout. Caches for 30 minutes so nested shells don't re-login.
+# token to stdout. Always talks to the real CLI binary (not the PATH shim).
 set -euo pipefail
 CACHE="${HOME}/.cache/autumn-infisical-token"
 mkdir -p "${HOME}/.cache"
@@ -26,13 +26,21 @@ if [ -s "$CACHE" ] && [ -n "$(find "$CACHE" -mmin -30 2>/dev/null)" ]; then
 fi
 
 ROOT="$(cd "$(dirname "$0")/../../.." && pwd)"
-PATH="${ROOT}/node_modules/.bin:${HOME}/.bun/bin:/usr/local/bin:${PATH}"
-if ! command -v infisical >/dev/null 2>&1; then
-	echo "infisical CLI not on PATH (expected ${ROOT}/node_modules/.bin/infisical)" >&2
+REAL="${ROOT}/node_modules/@infisical/cli/bin/infisical"
+if [ ! -x "$REAL" ]; then
+	echo "infisical CLI missing (expected ${REAL})" >&2
 	exit 1
 fi
 
-token="$(infisical login --method=universal-auth \
+# Persist a CLI session so any later `infisical run` (bun dw) is authenticated
+# even in shells that never sourced start's INFISICAL_TOKEN.
+# --plain skips that write, so do a silent login first, then capture the token.
+"$REAL" login --method=universal-auth \
+	--client-id="$INFISICAL_CLIENT_ID" \
+	--client-secret="$INFISICAL_CLIENT_SECRET" \
+	--silent >/dev/null
+
+token="$("$REAL" login --method=universal-auth \
 	--client-id="$INFISICAL_CLIENT_ID" \
 	--client-secret="$INFISICAL_CLIENT_SECRET" \
 	--plain --silent)"

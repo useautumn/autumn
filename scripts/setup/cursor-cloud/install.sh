@@ -14,6 +14,7 @@ git submodule update --init --recursive
 
 log "workspace install"
 "$BUN" install --frozen-lockfile
+bash scripts/setup/cursor-cloud/wrap-infisical-bin.sh
 
 if [ ! -x /usr/local/bin/stripe ]; then
 	log "installing Stripe CLI (stripe listen → localhost webhooks)"

@@ -12,9 +12,10 @@ snapshot already has Postgres 18, Redis Stack, ClickHouse, JRE, and ElasticMQ.
 `package.json` is unchanged from laptop: `bun dw` is still
 `infisical run --env=dev --recursive -- bun scripts/dw/index.ts`.
 
-Cloud `start` mints `INFISICAL_TOKEN` from the machine-identity Runtime Secrets
-and puts `node_modules/.bin` on PATH, so that existing wrapper works. It does
-**not** start the app. Run `bun dw` yourself when the task needs server/vite.
+Cloud `start` logs the machine identity in as a real Infisical CLI session and
+shims `node_modules/.bin/infisical` so `bun dw` (still plain `infisical run`)
+does not open an interactive US/EU login prompt. It does **not** start the app.
+Run `bun dw` yourself when the task needs server/vite.
 
 `DW_HEADLESS=1` is set on start. That skips portless HTTPS aliases, the emulate
 daemon, and Neon (even if Infisical has `NEON_WORKTREE_API_KEY`). Worktree #1

@@ -5,6 +5,7 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/../../.." && pwd)"
 cd "$ROOT"
 export PATH="$ROOT/node_modules/.bin:/usr/local/bin:$HOME/.bun/bin:$PATH"
+bash "$ROOT/scripts/setup/cursor-cloud/wrap-infisical-bin.sh"
 
 export DW_HEADLESS=1
 append_once() {
