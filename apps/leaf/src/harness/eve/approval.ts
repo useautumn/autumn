@@ -1,8 +1,8 @@
 import type { ChatApproval } from "@autumn/shared";
-import { normalizeToolName } from "../../agent/tools/toolPolicy.js";
 import { chatApprovalRepo } from "../../internal/approvals/repos/chatApprovalRepo.js";
 import type { ApprovalRunResult } from "../../internal/approvals/types.js";
 import { fetchApprovalPreview } from "../../internal/approvals/utils/fetchApprovalPreview.js";
+import { toolRequestFromArgs } from "../../internal/approvals/utils/toolRequest.js";
 import { getOrgInstallationToken } from "../../internal/installations/actions/getOrgInstallationToken.js";
 import { db } from "../../lib/db.js";
 import { logger } from "../../lib/logger.js";
@@ -85,21 +85,19 @@ export const drainParkedEveTurn = async ({
 				if (event.type === "turn.started") {
 					turnStarted = true;
 				} else if (event.type === "input.requested") {
-					const requests = (event.data?.requests ?? []) as EveInputRequest[];
-					const gated = requests.find(
-						(request) =>
-							request.requestId &&
-							request.action?.toolName &&
-							normalizeToolName(request.action.toolName) !== "ask_question",
-					);
-					if (gated?.requestId && denies < MAX_DRAIN_DENIES) {
+					const parked = classifyParkedEveInput({
+						requests: (event.data?.requests ?? []) as EveInputRequest[],
+					});
+					if (parked?.kind === "gated" && denies < MAX_DRAIN_DENIES) {
 						denies += 1;
-						const options = approvalOptionIds(gated);
+						const options = approvalOptionIds({
+							options: parked.chained.options,
+						});
 						const posted = await postEveInputResponse({
 							auth,
 							note: DRAIN_DENY_NOTE,
 							optionId: options.deny,
-							requestId: gated.requestId,
+							requestId: parked.chained.requestId,
 							session,
 						});
 						adoptPostedEveSession({ posted, session });
@@ -266,6 +264,58 @@ const collectText = async ({
 	return { chained, question, text: text || pendingText };
 };
 
+/** Answers a parked request and consumes the turn it resumes, surfacing any
+ * gated write that turn chained into as a fresh card. */
+const answerParkedRequest = async ({
+	auth,
+	note,
+	optionId,
+	orgId,
+	providerUserId,
+	requestId,
+	session,
+}: {
+	auth: EveAuthContext;
+	note?: string;
+	optionId: string;
+	orgId: string;
+	providerUserId: string;
+	requestId: string;
+	session: EveSessionRef;
+}) => {
+	const posted = await postEveInputResponse({
+		auth,
+		note,
+		optionId,
+		requestId,
+		session,
+	});
+	adoptPostedEveSession({ posted, session, status: "running" });
+	await upsertEveSession({
+		db,
+		env: session.env,
+		orgId,
+		sessionId: session.sessionId,
+		state: session.state,
+		threadKey: session.threadKey,
+	});
+	const { chained, question, text } = await collectText({
+		auth,
+		orgId,
+		session,
+		skipRequestId: requestId,
+	});
+	const chainedApprovalId = chained
+		? await insertChainedApproval({
+				auth,
+				chained,
+				providerUserId,
+				sessionId: session.sessionId,
+			})
+		: undefined;
+	return { chainedApprovalId, question, text };
+};
+
 const answerEveApproval = async ({
 	approval,
 	note,
@@ -277,7 +327,7 @@ const answerEveApproval = async ({
 	optionId: string;
 	providerUserId: string;
 }): Promise<ApprovalRunResult> => {
-	if (!approval.run_id || !approval.tool_call_id) {
+	if (!(approval.run_id && approval.tool_call_id)) {
 		return {
 			error: true,
 			message: "Eve approval is missing session state.",
@@ -296,37 +346,15 @@ const answerEveApproval = async ({
 			retryable: true,
 		};
 	}
-	const auth = authFromApproval(approval, providerUserId);
-	const posted = await postEveInputResponse({
-		auth,
+	const { chainedApprovalId, question, text } = await answerParkedRequest({
+		auth: authFromApproval(approval, providerUserId),
 		note,
 		optionId,
+		orgId: approval.org_id,
+		providerUserId,
 		requestId: approval.tool_call_id,
 		session,
 	});
-	adoptPostedEveSession({ posted, session, status: "running" });
-	await upsertEveSession({
-		db,
-		env: session.env,
-		orgId: approval.org_id,
-		sessionId: session.sessionId,
-		state: session.state,
-		threadKey: session.threadKey,
-	});
-	const { chained, question, text } = await collectText({
-		auth,
-		orgId: approval.org_id,
-		session,
-		skipRequestId: approval.tool_call_id,
-	});
-	const chainedApprovalId = chained
-		? await insertChainedApproval({
-				auth,
-				chained,
-				providerUserId,
-				sessionId: session.sessionId,
-			})
-		: undefined;
 	return {
 		chainedApprovalId,
 		question: question
@@ -369,15 +397,10 @@ const insertChainedApproval = async ({
 			userId: credentialUserId,
 			workspaceId: auth.workspaceId,
 		});
-		const input = chained.input ?? {};
-		const request =
-			input.request && typeof input.request === "object"
-				? (input.request as Record<string, unknown>)
-				: input;
 		preview = await fetchApprovalPreview({
 			env,
 			logger,
-			request,
+			request: toolRequestFromArgs(chained.input) ?? {},
 			token: accessToken,
 			toolName: chained.toolName,
 		});
@@ -438,36 +461,14 @@ export const answerEveQuestion = async ({
 > => {
 	const session = await getEveSessionBySessionId({ db, orgId, sessionId });
 	if (!session) return { error: true, message: "Eve session not found." };
-	const posted = await postEveInputResponse({
+	const { chainedApprovalId, question, text } = await answerParkedRequest({
 		auth,
 		optionId,
+		orgId,
+		providerUserId: auth.providerUserId,
 		requestId,
 		session,
 	});
-	adoptPostedEveSession({ posted, session, status: "running" });
-	await upsertEveSession({
-		db,
-		env: session.env,
-		orgId,
-		sessionId: session.sessionId,
-		state: session.state,
-		threadKey: session.threadKey,
-	});
-	const { chained, question, text } = await collectText({
-		auth,
-		orgId,
-		session,
-		skipRequestId: requestId,
-	});
-	// An answered question can chain straight into a gated write.
-	const chainedApprovalId = chained
-		? await insertChainedApproval({
-				auth,
-				chained,
-				providerUserId: auth.providerUserId,
-				sessionId: session.sessionId,
-			})
-		: undefined;
 	return { chainedApprovalId, question, sessionId: session.sessionId, text };
 };
 

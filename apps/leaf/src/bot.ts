@@ -72,6 +72,7 @@ import {
 	questionAnsweredCard,
 	questionCard,
 } from "./ui/eveCards.js";
+import { NO_REPLY_MESSAGE } from "./ui/messages.js";
 import {
 	finishLoading,
 	type LoadingState,
@@ -562,10 +563,7 @@ const runAndReply = async ({
 		// Empty output with nothing to show is a failed run, not a silent success.
 		if (!output.text?.trim()) {
 			await finishLoading(target, loading, "No reply produced.");
-			await target.post({
-				markdown:
-					":warning: I couldn't produce a reply to that — please send it again.",
-			});
+			await target.post({ markdown: `:warning: ${NO_REPLY_MESSAGE}` });
 			logger.warn("Agent produced no reply", {
 				event: "leaf.slack_empty_response",
 				data: {
