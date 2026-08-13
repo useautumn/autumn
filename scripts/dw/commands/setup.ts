@@ -59,7 +59,12 @@ function ensureAiSubmoduleSynced(): void {
 	// Full sync everywhere: syncMcps now drops the cloud-root servers instead of
 	// aborting, so headless boxes get .mcp.json too. `sync devin` skipped it and
 	// left cloud workspaces with skills but no MCP servers.
-	const syncCode = shInherit("bun", ["sync"], { cwd: aiDir });
+	// Run from the autumn root so findRepoRoot sees workspaces and writes
+	// into .cursor/ at the repo root — not into ai/.cursor (the TTY-less
+	// fallback when cwd is ai/).
+	const syncCode = shInherit("bun", ["ai/src/cli.ts", "sync"], {
+		cwd: PROJECT_ROOT,
+	});
 	if (syncCode !== 0) {
 		fatal(`bun sync failed in ai submodule (exit ${syncCode})`);
 	}

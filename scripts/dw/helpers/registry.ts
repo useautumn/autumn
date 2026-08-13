@@ -7,6 +7,7 @@ import {
 	getCurrentBranch,
 	getDefaultBranch,
 } from "./git.ts";
+import { isHeadless } from "./headless.ts";
 import { deleteBranch } from "./neon.ts";
 import {
 	REGISTRY_PATH,
@@ -69,6 +70,12 @@ export function wantsCanonicalProvision(
 	gitBranch: string,
 	defaultBranch: string,
 ): boolean {
+	// Cursor Cloud / Devin / CI: no Neon key and no browser for neonctl auth.
+	// Stay on the local Postgres from agent-services instead of provisioning
+	// a Neon branch that would fail the setup.
+	if (isHeadless() && !process.env.NEON_WORKTREE_API_KEY) {
+		return false;
+	}
 	return cwd === canonical && gitBranch !== defaultBranch;
 }
 

@@ -1,0 +1,18 @@
+{
+	"snapshot": "snapshot-20260629-79e36c0f-6ca4-4802-a2de-639ef4c29d70",
+	"install": "bash scripts/setup/cursor-cloud-install.sh",
+	"start": "bash scripts/setup/cursor-cloud-start.sh",
+	"terminals": [
+		{
+			"name": "dw",
+			"command": "DW_HEADLESS=1 bun dw",
+			"description": "Autumn dev stack: API :8080, vite :3000, checkout :3001. Headless — local Postgres/Redis/ElasticMQ, no Infisical/portless/Neon unless those secrets are set."
+		}
+	],
+	"ports": [
+		{ "name": "API", "port": 8080 },
+		{ "name": "Vite", "port": 3000 },
+		{ "name": "Checkout", "port": 3001 }
+	],
+	"repositoryDependencies": ["github.com/useautumn/ai"]
+}

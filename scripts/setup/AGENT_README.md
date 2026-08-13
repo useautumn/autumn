@@ -29,7 +29,7 @@ Starts all local services, creates the database, writes env files, runs migratio
 2. Starts ElasticMQ in the background on `:9324` (skipped if already running)
 3. Creates the `autumn` Postgres database if it does not exist, ensures the `pg_trgm` extension is enabled
 4. Writes `server/.env` (skips if already present) and `vite/.env` from `vite/.env.example`
-5. Runs `bun db:migrate`
+5. Runs `bun db migrate`
 6. Launches server `:8080`, vite `:3000`, checkout `:3001`, and workers via `scripts/dev.ts`
 
 ## Static team-wide env vars

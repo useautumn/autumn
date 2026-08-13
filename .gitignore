@@ -138,7 +138,8 @@ TAKEHOME.md
 
 # ai-sync: generated files (source of truth is ai/)
 .pi-subagents/
-.cursor/
+.cursor/*
+!.cursor/environment.json
 .claude/
 .codex/
 .agents/
