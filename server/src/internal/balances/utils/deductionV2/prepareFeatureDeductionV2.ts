@@ -145,7 +145,10 @@ export const prepareFeatureDeductionV2 = ({
 	// bounds with no provenance, not an unenforceable cap.
 	for (const windowLimit of usageWindowLimits) {
 		windowLimit.new_window_id = generateId("uw");
-		if (windowLimit.anchor_customer_entitlement_id === null) {
+		if (
+			windowLimit.anchor_mode === "billing_cycle" &&
+			windowLimit.anchor_customer_entitlement_id === null
+		) {
 			ctx.logger.warn(
 				`usage window for feature ${windowLimit.feature_id} has no anchor entitlement; using calendar-aligned bounds with no provenance.`,
 			);

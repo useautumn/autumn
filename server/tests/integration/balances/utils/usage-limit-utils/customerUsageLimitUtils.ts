@@ -19,12 +19,14 @@ export const setCustomerUsageLimit = async ({
 	featureId,
 	limit,
 	interval = ResetInterval.Month,
+	anchor,
 }: {
 	autumn: AutumnInt;
 	customerId: string;
 	featureId: string;
 	limit: number;
 	interval?: DbUsageLimit["interval"];
+	anchor?: DbUsageLimit["anchor"];
 }) => {
 	const billingControls: CustomerBillingControls = {
 		usage_limits: [
@@ -33,12 +35,13 @@ export const setCustomerUsageLimit = async ({
 				enabled: true,
 				limit,
 				interval,
+				...(anchor && { anchor }),
 			},
 		],
 	};
 
 	await timeout(2000);
-	await autumn.customers.update(customerId, {
+	await autumn.customers.updateRpc(customerId, {
 		billing_controls: billingControls,
 	});
 	await timeout(3000);
