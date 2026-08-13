@@ -20,6 +20,7 @@ function hasCustomizations(customize: UpdatePlanOp["customize"]): boolean {
 	if ((customize.add_items?.length ?? 0) > 0) return true;
 	if ((customize.remove_items?.length ?? 0) > 0) return true;
 	if (customize.price !== undefined) return true;
+	if ((customize.upsert_licenses?.length ?? 0) > 0) return true;
 	return false;
 }
 
