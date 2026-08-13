@@ -40,6 +40,10 @@ import {
 	textForInputRequests,
 } from "./events.js";
 import { deleteEveSession, getEveSession, upsertEveSession } from "./repo.js";
+import {
+	type EveEmptyTurnEnding,
+	shouldDropEveSession,
+} from "./shouldDropEveSession.js";
 import { eveTurnProducedOutput } from "./turnOutput.js";
 import type {
 	EveAuthContext,
@@ -259,7 +263,7 @@ export const eveEngine: AgentEngine = {
 			let turnStarted = false;
 			let sawAnyEvent = false;
 			let resyncedAfterSilence = false;
-			let endedWithoutOutput = false;
+			let endedWithoutOutput: EveEmptyTurnEnding | undefined;
 
 			try {
 				// Eve resumes turns asynchronously: right after posting a message or
@@ -407,8 +411,13 @@ export const eveEngine: AgentEngine = {
 										},
 									};
 								}
-								finalText =
-									textForInputRequests(requests) || WAITING_FALLBACK_TEXT;
+								// Whatever the model said before parking beats the generic
+								// waiting line, which only fills in for a silent turn.
+								if (pendingText) finalText = pendingText;
+								if (!eveTurnProducedOutput({ text: finalText })) {
+									finalText =
+										textForInputRequests(requests) || WAITING_FALLBACK_TEXT;
+								}
 								await updateState({
 									orgId: org.id,
 									session,
@@ -440,15 +449,12 @@ export const eveEngine: AgentEngine = {
 									event.type === "session.completed")
 							) {
 								if (pendingText) finalText = pendingText;
+								const ending: EveEmptyTurnEnding =
+									event.type === "session.completed" ? "completed" : "waiting";
 								await updateState({
 									orgId: org.id,
 									session,
-									state: {
-										status:
-											event.type === "session.completed"
-												? "completed"
-												: "waiting",
-									},
+									state: { status: ending },
 								});
 								// The model may (correctly) stop after a preview that needs
 								// versioning/variant/migration choices — surface the decision
@@ -469,9 +475,9 @@ export const eveEngine: AgentEngine = {
 											: undefined,
 									};
 								}
-								// The turn ended with nothing to show: the run is awake but
-								// stuck behind a request nobody can answer. Recover outside.
-								endedWithoutOutput = true;
+								// Nothing to show. Waiting means the run is stuck behind a
+								// request nobody can answer; completed is just an empty turn.
+								endedWithoutOutput = ending;
 								break;
 							}
 
@@ -566,10 +572,12 @@ export const eveEngine: AgentEngine = {
 				return { env, runId: session.sessionId, text: finalText };
 			}
 
-			// This session can no longer answer — either it is gone (eve answers
-			// every post with a 200 even when it silently re-homed) or it is awake
-			// but stuck behind a request nobody can answer. Drop it either way, so
-			// the thread's next message opens a clean run instead of wedging here.
+			// Dropping the session also drops the thread's transcript, so a turn
+			// that merely said nothing keeps it and renders the ordinary notice.
+			const dropSession = shouldDropEveSession({
+				endedWithoutOutput,
+				streamedAnyEvent: sawAnyEvent,
+			});
 			const retryOnFreshSession = canRetryOnFreshEveSession({
 				alreadyRetried: restartedOnFreshSession,
 				answeringParkedQuestion: Boolean(params.questionResponse),
@@ -579,11 +587,17 @@ export const eveEngine: AgentEngine = {
 			logger.warn("Eve session produced no reply", {
 				event: "leaf.eve_session_no_reply",
 				data: {
-					reason: sawAnyEvent ? "no_output" : "no_events",
+					dropped: dropSession,
+					ended_on: endedWithoutOutput ?? "no_terminal_event",
 					retrying: retryOnFreshSession,
 					session_id: session.sessionId,
+					streamed_events: sawAnyEvent,
 				},
 			});
+			if (!dropSession) {
+				return { env, runId: session.sessionId, text: finalText };
+			}
+
 			await deleteEveSession({
 				db,
 				env,
