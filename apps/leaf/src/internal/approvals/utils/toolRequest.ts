@@ -26,8 +26,9 @@ const canonicalJson = (value: unknown) =>
 	);
 
 /** Whether two tool calls carry the same payload, ignoring key order — the
- * model emits its JSON arguments in whatever order it likes. */
+ * model emits its JSON arguments in whatever order it likes. Both payloads are
+ * required: an absent one is unknown, not equal to another absent one. */
 export const isSameToolRequest = (
-	left?: Record<string, unknown>,
-	right?: Record<string, unknown>,
+	left: Record<string, unknown>,
+	right: Record<string, unknown>,
 ) => canonicalJson(left) === canonicalJson(right);

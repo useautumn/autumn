@@ -66,11 +66,13 @@ const rehomeUndecidedApprovals = async ({
 	sessionId: string;
 }) => {
 	for (const approval of approvals) {
-		if (approval.run_id === sessionId) continue;
-		await chatApprovalRepo.setRunId({
+		// Listed by run_id, so a row without one already moved on.
+		if (!approval.run_id || approval.run_id === sessionId) continue;
+		await chatApprovalRepo.moveToRun({
 			approvalId: approval.id,
 			db,
-			runId: sessionId,
+			fromRunId: approval.run_id,
+			toRunId: sessionId,
 		});
 	}
 };

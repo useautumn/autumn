@@ -29,10 +29,10 @@ export const previewForParkedWrite = ({
 }) => {
 	if (!captured) return undefined;
 	if (writeToPreviewTool(toolName) !== captured.previewTool) return undefined;
-	// updatePlan and updateCatalog share previewUpdateCatalog, so the tool alone
-	// can match a preview taken for an entirely different write.
-	if (!isSameToolRequest(captured.request, toolRequestFromArgs(input))) {
-		return undefined;
-	}
+	// Two writes can share a preview tool (updatePlan/updateCatalog), and eve
+	// need not report either payload — an unproven match must not reach the card.
+	const parkedRequest = toolRequestFromArgs(input);
+	if (!(captured.request && parkedRequest)) return undefined;
+	if (!isSameToolRequest(captured.request, parkedRequest)) return undefined;
 	return parsePreviewPayload(captured.preview);
 };

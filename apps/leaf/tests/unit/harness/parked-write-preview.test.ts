@@ -62,6 +62,31 @@ describe("previewForParkedWrite", () => {
 		).toBeUndefined();
 	});
 
+	test("withholds it when the preview's own payload went unrecorded", () => {
+		expect(
+			previewForParkedWrite({
+				captured: { preview: attachPreview, previewTool: "previewAttach" },
+				input: { request: attachRequest },
+				toolName: "autumn__attach",
+			}),
+		).toBeUndefined();
+	});
+
+	test("withholds it when the parked write reports no payload", () => {
+		expect(
+			previewForParkedWrite({ captured, toolName: "autumn__attach" }),
+		).toBeUndefined();
+	});
+
+	test("withholds it when neither side reports a payload", () => {
+		expect(
+			previewForParkedWrite({
+				captured: { preview: attachPreview, previewTool: "previewAttach" },
+				toolName: "autumn__attach",
+			}),
+		).toBeUndefined();
+	});
+
 	test("withholds it from a write with no preview tool at all", () => {
 		expect(
 			previewForParkedWrite({

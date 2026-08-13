@@ -15,7 +15,11 @@ mock.module("../../../src/lib/db.js", () => ({ db: {} }));
 
 let pendingApprovals: ChatApproval[] = [];
 const cancelledApprovalIds: string[] = [];
-const rehomedRunIds: Array<{ approvalId: string; runId: string }> = [];
+const rehomedRuns: Array<{
+	approvalId: string;
+	fromRunId: string;
+	toRunId: string;
+}> = [];
 mock.module(
 	"../../../src/internal/approvals/repos/chatApprovalRepo.js",
 	() => ({
@@ -25,14 +29,16 @@ mock.module(
 				return pendingApprovals.find((approval) => approval.id === approvalId);
 			},
 			listPendingForRun: async () => pendingApprovals,
-			setRunId: async ({
-				approvalId,
-				runId,
-			}: {
+			moveToRun: async (move: {
 				approvalId: string;
-				runId: string;
+				fromRunId: string;
+				toRunId: string;
 			}) => {
-				rehomedRunIds.push({ approvalId, runId });
+				rehomedRuns.push({
+					approvalId: move.approvalId,
+					fromRunId: move.fromRunId,
+					toRunId: move.toRunId,
+				});
 			},
 		},
 	}),
@@ -125,7 +131,7 @@ describe("withdrawSupersededEveApprovals", () => {
 		postedRequestIds.length = 0;
 		drainedSessionIds.length = 0;
 		savedSessionIds.length = 0;
-		rehomedRunIds.length = 0;
+		rehomedRuns.length = 0;
 		supersededBatches = [];
 		session = {
 			env: AppEnv.Sandbox,
@@ -204,8 +210,13 @@ describe("withdrawSupersededEveApprovals", () => {
 
 		await withdraw().catch(() => {});
 
-		expect(rehomedRunIds).toEqual([
-			{ approvalId: "a_2", runId: "eve_rehomed_tc_1" },
+		// Guarded on the run it was listed under, so a concurrent re-home wins.
+		expect(rehomedRuns).toEqual([
+			{
+				approvalId: "a_2",
+				fromRunId: "eve_session_1",
+				toRunId: "eve_rehomed_tc_1",
+			},
 		]);
 	});
 
@@ -215,7 +226,7 @@ describe("withdrawSupersededEveApprovals", () => {
 
 		await withdraw().catch(() => {});
 
-		expect(rehomedRunIds).toEqual([]);
+		expect(rehomedRuns).toEqual([]);
 	});
 
 	test("does nothing when the thread has no pending cards", async () => {
