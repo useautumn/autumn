@@ -3,6 +3,7 @@ import { task } from "@trigger.dev/sdk/v3";
 import { z } from "zod/v4";
 import { runWithTriggerContext } from "@/trigger/utils/runWithTriggerContext.js";
 import { batchTransition } from "../batchTransition.js";
+import { batchTransitionQueue } from "./batchTransitionQueue.js";
 
 const BatchTransitionTaskPayloadSchema = z.object({
 	orgId: z.string(),
@@ -21,6 +22,7 @@ type BatchTransitionTaskPayload = z.infer<
 
 export const batchTransitionTask = task({
 	id: "batch-transition",
+	queue: batchTransitionQueue,
 	maxDuration: 1_800,
 	run: async (raw: BatchTransitionTaskPayload, { ctx: triggerCtx }) => {
 		const { orgId, env, customerId, transition, executionScope } =
