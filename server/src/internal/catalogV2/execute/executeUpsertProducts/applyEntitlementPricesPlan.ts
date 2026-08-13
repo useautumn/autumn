@@ -39,6 +39,21 @@ export const applyEntitlementPricesPlan = async ({
 		});
 	}
 
+	for (const entitlement of plan.entitlements.retired) {
+		await EntitlementService.update({
+			db: ctx.db,
+			id: entitlement.id,
+			updates: { is_custom: true },
+		});
+	}
+	for (const price of plan.prices.retired) {
+		await PriceService.update({
+			db: ctx.db,
+			id: price.id,
+			update: { is_custom: true },
+		});
+	}
+
 	if (plan.prices.deleted.length > 0) {
 		await PriceService.deleteInIds({
 			db: ctx.db,

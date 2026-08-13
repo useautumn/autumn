@@ -1,10 +1,9 @@
 /**
  * catalogV2.preview_update — price_change + customize.price.
  *
- * RED: changes stubbed null. Spec asserts BOTH price_change { previous,
- * current } and customize.price (toBasePriceParams shape). Additional
- * currencies: amount change for shared currency diffs; add/remove alone does
- * not.
+ * Spec asserts BOTH price_change { previous, current } and customize.price
+ * (toBasePriceParams shape). Additional currencies: amount change for shared
+ * currency diffs; add/remove alone should not (still RED).
  */
 
 import { expect, test } from "bun:test";
@@ -36,9 +35,8 @@ const month30 = {
 	interval: BillingInterval.Month,
 } as const;
 
-// RED
 test.concurrent(
-	`${chalk.yellowBright("RED: catalogV2 changes-base-price: add base price none → $20/mo")}`,
+	`${chalk.yellowBright("catalogV2 changes-base-price: add base price none → $20/mo")}`,
 	async () => {
 		const { autumnV2_3, ctx } = await initScenario({ setup: [], actions: [] });
 		const planId = uniqueTestId("cv2_cbp_add");
@@ -75,9 +73,8 @@ test.concurrent(
 	},
 );
 
-// RED
 test.concurrent(
-	`${chalk.yellowBright("RED: catalogV2 changes-base-price: amount 20 → 30")}`,
+	`${chalk.yellowBright("catalogV2 changes-base-price: amount 20 → 30")}`,
 	async () => {
 		const { autumnV2_3, ctx } = await initScenario({ setup: [], actions: [] });
 		const planId = uniqueTestId("cv2_cbp_amt");
@@ -113,9 +110,8 @@ test.concurrent(
 	},
 );
 
-// RED
 test.concurrent(
-	`${chalk.yellowBright("RED: catalogV2 changes-base-price: interval month → year")}`,
+	`${chalk.yellowBright("catalogV2 changes-base-price: interval month → year")}`,
 	async () => {
 		const { autumnV2_3, ctx } = await initScenario({ setup: [], actions: [] });
 		const planId = uniqueTestId("cv2_cbp_ivl");
@@ -151,9 +147,9 @@ test.concurrent(
 	},
 );
 
-// RED — interval_count 1→3 diffs; explicit 1 ≡ omitted → no price diff
+// interval_count 1→3 diffs; explicit 1 ≡ omitted → no price diff
 test.concurrent(
-	`${chalk.yellowBright("RED: catalogV2 changes-base-price: interval_count 1→3; explicit 1 → no diff")}`,
+	`${chalk.yellowBright("catalogV2 changes-base-price: interval_count 1→3; explicit 1 → no diff")}`,
 	async () => {
 		const { autumnV2_3, ctx } = await initScenario({ setup: [], actions: [] });
 		const planId = uniqueTestId("cv2_cbp_ic");
@@ -178,7 +174,7 @@ test.concurrent(
 				expected: {
 					planId,
 					action: "none",
-					changes: null,
+					planChange: null,
 				},
 			});
 
@@ -212,9 +208,8 @@ test.concurrent(
 	},
 );
 
-// RED
 test.concurrent(
-	`${chalk.yellowBright("RED: catalogV2 changes-base-price: remove price → null")}`,
+	`${chalk.yellowBright("catalogV2 changes-base-price: remove price → null")}`,
 	async () => {
 		const { autumnV2_3, ctx } = await initScenario({ setup: [], actions: [] });
 		const planId = uniqueTestId("cv2_cbp_rm");
@@ -246,9 +241,9 @@ test.concurrent(
 	},
 );
 
-// RED — shared currency amount change diffs
+// shared currency amount change diffs
 test.concurrent(
-	`${chalk.yellowBright("RED: catalogV2 changes-base-price: additional currency amount change → diff")}`,
+	`${chalk.yellowBright("catalogV2 changes-base-price: additional currency amount change → diff")}`,
 	async () => {
 		const { autumnV2_3, ctx } = await initScenario({ setup: [], actions: [] });
 		const planId = uniqueTestId("cv2_cbp_fx");
@@ -298,9 +293,9 @@ test.concurrent(
 	},
 );
 
-// RED — currency add/remove alone is NOT a price diff (compatible rule)
+// Currency add/remove alone is NOT a price diff (compatible rule)
 test.concurrent(
-	`${chalk.yellowBright("RED: catalogV2 changes-base-price: currency add/remove only → no price diff")}`,
+	`${chalk.yellowBright("catalogV2 changes-base-price: currency add/remove only → no price diff")}`,
 	async () => {
 		const { autumnV2_3, ctx } = await initScenario({ setup: [], actions: [] });
 		const planId = uniqueTestId("cv2_cbp_fxn");
@@ -333,7 +328,7 @@ test.concurrent(
 				expected: {
 					planId,
 					action: "none",
-					changes: null,
+					planChange: null,
 				},
 			});
 		} finally {
@@ -342,9 +337,9 @@ test.concurrent(
 	},
 );
 
-// RED — items-only update must not populate price_change / customize.price
+// items-only update must not populate price_change / customize.price
 test.concurrent(
-	`${chalk.yellowBright("RED: catalogV2 changes-base-price: items-only → no price_change")}`,
+	`${chalk.yellowBright("catalogV2 changes-base-price: items-only → no price_change")}`,
 	async () => {
 		const { autumnV2_3, ctx } = await initScenario({ setup: [], actions: [] });
 		const planId = uniqueTestId("cv2_cbp_items");
@@ -393,11 +388,11 @@ test.concurrent(
 			});
 			const row = preview.plans.find((p) => p.plan_id === planId);
 			expect(
-				row?.changes,
-				"changes must be wired for items-only",
-			).not.toBeNull();
-			expect(row?.changes?.customize?.price).toBeUndefined();
-			expect((row?.changes?.item_changes ?? []).length).toBeGreaterThan(0);
+				row?.plan_change != null,
+				"plan_change must be present for items-only",
+			).toBe(true);
+			expect(row?.plan_change?.customize?.price == null).toBe(true);
+			expect((row?.plan_change?.item_changes ?? []).length).toBeGreaterThan(0);
 		} finally {
 			await deleteDbPlans({ ctx, planIds: [planId] });
 		}

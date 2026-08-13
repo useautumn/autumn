@@ -26,7 +26,9 @@ plans/
   utils/expectCatalogPlans.ts
   create/
     create-plans.test.ts
-    create-plan-items.test.ts
+    create-plan-items-free.test.ts
+    create-plan-items-priced.test.ts
+    utils/createAndAssert.ts
   update/
     idempotent-plans.test.ts
     update-plan-details.test.ts
@@ -34,8 +36,20 @@ plans/
     update-plan-rows.test.ts
     update-plan-free-trial.test.ts
     stripe-reuse.test.ts
+    stripe-reuse-mint.test.ts
   versions/
     plan-versions.test.ts
+    new-version-mint.test.ts
+    new-version-free-trial.test.ts
+    all-versions-items.test.ts
+    mixed-versioning-strategies.test.ts
+    default-version-attach.test.ts
+  migrations/
+    utils/seedVersionableCustomer.ts
+    utils/expectMigrationDrafts.ts
+    existing-drafts.test.ts
+    versioning-drafts.test.ts
+    draft-guards.test.ts
   validation/
     default-flag.test.ts
     free-trial-validation.test.ts
@@ -48,6 +62,7 @@ plans/
     utils/expectPlanPreview.ts
     preview-actions.test.ts
     preview-state-versioning.test.ts
+    preview-migrations.test.ts
     changes/
       changes-details.test.ts
       changes-base-price.test.ts
@@ -65,10 +80,13 @@ plans/
 | Boolean item + metered included + `$20/mo` base price | ✓ |
 | Trial + `add_on` + `auto_enable` (+ `is_default`) + metadata + config + billing_controls | ✓ |
 
-## 2. Create item shapes — `create/create-plan-items.test.ts`
+## 2. Create item shapes — `create/create-plan-items-free.test.ts` + `create/create-plan-items-priced.test.ts`
 
 One case per `CreatePlanItemParamsV1` field/knob; assert round-trip through
-`catalogV2.get` (extend `ExpectedPlan` with a full `items` matcher).
+`catalogV2.get` (extend `ExpectedPlan` with a full `items` matcher). Split by
+free vs priced so the billing-model matrix stays navigable.
+
+### Free — `create/create-plan-items-free.test.ts`
 
 | Case | Status |
 |---|---|
@@ -77,15 +95,22 @@ One case per `CreatePlanItemParamsV1` field/knob; assert round-trip through
 | Non-resetting consumable (omit `reset`) | ✓ |
 | `unlimited: true` | ✓ |
 | `pooled: true` (unpriced boolean + unlimited metered — the accepted shapes) | ✓ |
-| Reset AND priced (usage_based, `reset.interval === price.interval`) | ✓ |
-| Prepaid flat `amount` + `billing_units: 100` + `max_purchase` | ✓ |
-| Prepaid with `price.interval` differing from `reset.interval` (allowed for prepaid only) | ✓ |
-| Usage-based graduated tiers (multi-tier, `to` boundaries above `included`) | ✓ |
-| Volume tiers + `flat_amount` (prepaid; `tier_behavior: volume_based`) | ✓ |
-| `additional_currencies` on flat amount + on tiers (org must have multi-currency enabled — check scenario setup; skip if not supported by harness) | ✓ |
-| `proration` `on_increase`/`on_decrease` on prepaid | ✓ |
 | `rollover` max / `max_percentage` / expiry duration | ✓ |
 | `entity_feature_id` (allocated / per-entity item) | ✓ |
+
+### Priced (billing-model matrix) — `create/create-plan-items-priced.test.ts`
+
+| Case | Status |
+|---|---|
+| Consumable usage-based — reset + priced (matched intervals) | ✓ |
+| Consumable usage-based — graduated tiers | ✓ |
+| Consumable prepaid — flat + `billing_units` + `max_purchase` | ✓ |
+| Prepaid with `price.interval` differing from `reset.interval` | ✓ |
+| Volume tiers + `flat_amount` (prepaid) | ✓ |
+| Allocated prepaid — `proration` on_increase / on_decrease (Users) | ✓ |
+| Allocated usage-based (arrear / v2) — `allocated_billing_behavior: arrear`, `should_prorate: false` | ✓ |
+| `price.stripe_price_id` threaded to price config (internal param) | ✓ |
+| `additional_currencies` on flat amount + on tiers | ✓ |
 | Base `price` with `interval_count: 3` and `additional_currencies` | ✓ |
 
 ## 3. Idempotent — `update/idempotent-plans.test.ts`
@@ -148,27 +173,32 @@ Customer refs are DB-seeded (Stripe Connect harness currently broken for
 | Base price only change: feature ent/price row ids stable; old base price row gone (no customers) | ✓ |
 | Remove one item: remaining rows stable; removed rows deleted (no customers) | ✓ |
 | Included bump: new ent row id; old ent deleted (no customers) | ✓ |
-| With attached customer — included bump: old ent retained + `is_custom: true`; customer's cus_ent still references old ent id | red (execute ignores `retired` — no `is_custom` stamp) |
-| With attached customer — remove item: old rows retained/retired; customer keeps grant | red (execute ignores `retired`) |
-| With attached customer — base price change: old base price retired; customer billing rows untouched | red (execute ignores `retired`) |
-| Expired-only customers → treated as no-customers (rows deleted, not retired) | red (`hasAnyCustomerProducts` includes expired) |
+| With attached customer — included bump: old ent retained + `is_custom: true`; customer's cus_ent still references old ent id | ✓ |
+| With attached customer — remove item: old rows retained/retired; customer keeps grant | ✓ |
+| With attached customer — base price change: old base price retired; customer billing rows untouched | ✓ |
+| Expired-only customers → treated as no-customers (rows deleted, not retired) | ✓ |
+| **Bad state — customer's cus_product on v2 but cus_ent references v1's ent: pinned v1 update retires (never deletes) v1 rows; cus_ent survives** | ✓ |
+| **Bad state — same shape with cus_price → v1 base price: pinned v1 price change retires old base; update succeeds** | ✓ |
 
 ## 7. Stripe ID re-use — `update/stripe-reuse.test.ts`
 
-Seed stripe ids on rows (or attach once to create them), then update via
-catalogV2 and assert `processor` ids on DB rows. Mirror
-`update-plan-paid-item-stripe-carryforward` + `reuse-stripe-prices-versioning`
-scenarios for the in-place path.
+Init real Stripe resources via `initStripeResourcesForProducts` (same path
+`updateProduct` uses — see `initPlanStripeResources`), then update via
+catalogV2 and assert reuse levels with
+`expectPriceStripeReuseCorrect` / `expectPriceStripeResourcesAbsent`
+(`server/tests/integration/utils/expectStripePriceResources.ts`). Levels
+match `PriceStripeReuseLevel`: `full` / `stripeProductOnly` / `none`.
 
 | Case | Status |
 |---|---|
-| Unchanged paid item across update → `stripe_price_id` + `stripe_product_id` carried | ✓ |
-| Details-only update → all stripe ids carried | ✓ |
-| Price amount change on item → `stripe_product_id` (+ meter) carried, `stripe_price_id` NOT reused | ✓ |
-| Prepaid amount change → `stripe_price_id` not reused | ✓ |
-| Graduated → volume switch → `stripe_price_id` not reused | ✓ |
-| Base price change → new base row carries stripe product; old price id dropped | ✓ (reclassified: fixed amount change gets no stripe carry — usage-only product carry; new row has null ids) |
+| Unchanged paid item across update → `full` reuse | ✓ |
+| Details-only update → `full` reuse on paid + base | ✓ |
+| Usage amount change → `stripeProductOnly` (product + meter; not price id) | ✓ |
+| Prepaid amount change → `stripeProductOnly` | ✓ |
+| Graduated → volume switch → `stripeProductOnly` | ✓ |
+| Base price change → `none` (fixed ≠ usage); new row has null ids | ✓ |
 | Add new paid item → no stripe ids (minted lazily later) | ✓ |
+| `new_version` mint carries full stripe ids on matching item | ✓ (`update/stripe-reuse.test.ts`; expanded in `update/stripe-reuse-mint.test.ts` / §15) |
 
 ## 8. Versions — `versions/plan-versions.test.ts`
 
@@ -178,6 +208,7 @@ scenarios for the in-place path.
 | Omit version targets latest | ✓ |
 | Multi-entry same plan_id (v1 + v2 different payloads) in one call | ✓ |
 | Mint ladder: existing v1; entries v1 (update) + v2 (create) → v2 row created | ✓ |
+| `versioning: "new_version"` mints max+1 clone; customers stay on old version | ✓ (expanded in §15) |
 | `all_versions` (omit version): change propagates to every existing version | ✓ |
 | `all_versions` on brand-new plan → plain create, no error | ✓ |
 | `all_versions` propagates `free_trial` to every version (section 14 cross-ref) | ✓ (passed via per-row free-trial facet; no versioning work needed) |
@@ -203,9 +234,16 @@ wiring validation into catalogV2.
 
 ## 10. Errors — `validation/plan-errors.test.ts`
 
+`versioning: "new_version"` is a valid mint strategy (see §15), not an
+unconditional 400. The rows below are combination / missing-plan guards only.
+Preview `options` include `new_version` when the latest version has customers
+(see §13 C).
+
 | Case | Status |
 |---|---|
-| `versioning: "new_version"` → 400 `invalid_request` | ✓ |
+| `versioning: "new_version"` + explicit `version` → 400 | ✓ |
+| `versioning: "new_version"` + `migration.draft` → 400 | ✓ |
+| `versioning: "new_version"` on missing plan → 400 | ✓ |
 | `versioning: "all_versions"` + explicit `version` → 400 | ✓ |
 | Duplicate `(plan_id, version)` entries → error | ✓ |
 | Two unpinned entries for same plan_id → error | ✓ |
@@ -221,9 +259,9 @@ wiring validation into catalogV2.
 |---|---|
 | Create + update + archive (3 plans) in one call; preview reports all three, writes nothing | ✓ |
 | Create two plans with the same `plan_id` → error | ✓ |
-| Rename A→B while plan B already exists → error | red (throws `internal_error` today — want `invalid_request`) |
-| Rename A→B while B is also being created in the same call → error | red |
-| Create + update of the same plan_id in one call (create entry + pinned v1 entry) → deterministic single outcome or error | red (needs spec decision — encode error) |
+| Rename A→B while plan B already exists → error | ✓ |
+| Rename A→B while B is also being created in the same call → error | ✓ |
+| Create + update of the same plan_id in one call (create entry + pinned v1 entry) → error | ✓ |
 | Rename A→B and separately update A in same call → error (stale reference) | ✓ (caught as duplicate unpinned plan_id) |
 
 ## 12. Feature × plan interplay — `batch/features-plans-resolution.test.ts` + `batch/features-plans-type-and-removal.test.ts`
@@ -247,19 +285,29 @@ ids are a 404 `feature_not_found`.
 | Case | Status |
 |---|---|
 | Change feature type (boolean→metered) + plan item using metered config, one call | ✓ |
-| Change feature type (metered→boolean) + plan item with metered config (`100 X/mo`) → coerced to bare boolean item (no included/reset) | red (item persists included/reset as-is; no coercion and no validateProductItems rule) |
+| Change feature type (metered→boolean) + plan item with metered config (`100 X/mo`) → coerced to boolean item (`included: 0`, `reset: null`) | ✓ |
 | Remove feature + create/update plan that references it → 404 `feature_not_found` | ✓ |
-| Remove + recreate same feature id + plan referencing it → `invalid_feature` same-call conflict | red (plan compute throws `feature_not_found` first, so the guard error depends on whether a plan references the feature) |
+| Remove + recreate same feature id + plan referencing it → `invalid_feature` same-call conflict | ✓ |
 | Remove feature + update plan dropping its item in same call → OK | ✓ |
 
 ## 13. Preview completeness — `preview/`
 
-`buildUpsertProductsPreview` currently stubs `versioning: null`, `changes:
-null`, `will_archive: false` — so all `changes`/`versioning` cases are red
-spec. Every test here also parses the response with
-`PreviewUpdateCatalogResponseSchema` and asserts preview writes nothing.
+Orchestrator: `preview/buildUpdateCatalogPreview` → `plans/` + `features/`.
+Plan rows carry `action`, `state`, `versioning`, `plan_change` (nullish on
+create / none). Every test parses with `PreviewUpdateCatalogResponseSchema`
+and asserts preview writes nothing.
 
-Diff semantics under test (from `diffPlanV1` — the contract for `customize`):
+**Versioning options** (pickable-only — no `available`/`reason`):
+
+- `existing` when the pinned version has customers
+- `all_versions` when the plan has >1 version
+- `new_version` when has customers **and** targeting latest (matches
+  `PlanChangeDialog` — past versions never get it)
+
+**`plan_change` shape:** `previous_attributes` | `price_change?` |
+`free_trial_change?` | `item_changes[]` | `customize?`. Create → nullish.
+
+Diff semantics (from `diffPlanV1` — the contract for `customize`):
 
 - Item identity (match key) = `feature_id | billing_method | interval |
   interval_count`. In-place modification = `remove_items` filter + `add_items`
@@ -271,9 +319,12 @@ Diff semantics under test (from `diffPlanV1` — the contract for `customize`):
 - Additional currencies: adding/removing a currency is NOT a diff; only a
   changed amount for a currency present on both sides is.
 - `customize` lanes: `price`, `add_items`, `remove_items`, `free_trial`.
+- `billing_controls` in `previous_attributes` must be **sparse** (only the
+  control keys that changed — e.g. `auto_topups` only if that's what flipped).
 
 Known schema gap (flag, don't test): preview rows have no top-level `version`;
 multi-version entries are only distinguishable via `versioning.current_version`.
+Skip `description` in detail coverage (not a product surface we care about).
 
 ### A. Actions — `preview/preview-actions.test.ts`
 
@@ -293,21 +344,22 @@ multi-version entries are only distinguishable via `versioning.current_version`.
 
 ### B1. Detail changes — `preview/changes/changes-details.test.ts`
 
-All red until `changes` is wired. Each case: `previous_attributes` holds the
-old value for exactly the changed keys; `customize` null; `item_changes`
-empty; no `price_change`.
+Each case: `previous_attributes` holds the old value for exactly the changed
+keys; `customize` null; `item_changes` empty; no `price_change`.
 
 | Case | Status |
 |---|---|
-| `name` change → `previous_attributes.name` = old name, nothing else | red (changes stubbed null) |
-| `description` / `group` / `add_on` each individually | red (changes stubbed null) |
-| `auto_enable` flip → previous `is_default` (or `auto_enable`) exposed | red (changes stubbed null) |
-| `archived` flip → previous value exposed | red (changes stubbed null; also not in diffPlanV1PreviousAttributes keys today) |
-| `metadata` change → previous metadata object | red (changes stubbed null; also not in diffPlanV1PreviousAttributes keys today) |
-| `billing_controls` change → previous nested `billing_controls` | red (changes stubbed null) |
-| `config.ignore_past_due` flip → previous config | red (changes stubbed null) |
-| Multi-detail change → all changed keys present, unchanged keys absent | red (changes stubbed null) |
-| Field explicitly set to its current value → NOT in `previous_attributes` | red (changes stubbed null) |
+| `name` change → `previous_attributes.name` = old name, nothing else | ✓ |
+| `group` / `add_on` each individually (skip description) | ✓ |
+| `auto_enable` flip → previous `auto_enable` | ✓ |
+| `archived` flip → previous value | ✓ |
+| `metadata` change → previous metadata object | ✓ |
+| `billing_controls` whole-object change → previous nested `billing_controls` | ✓ |
+| **`billing_controls` sparse: only `auto_topups` flips, `usage_alerts` unchanged → previous holds only `auto_topups`** | ✓ |
+| **`new_plan_id` A→B → `previous_attributes.id` = A** | ✓ |
+| `config.ignore_past_due` flip → previous config | ✓ |
+| Multi-detail change → all changed keys present, unchanged keys absent | ✓ |
+| Field explicitly set to its current value → NOT in `previous_attributes` | ✓ |
 
 ### B2. Base price changes — `preview/changes/changes-base-price.test.ts`
 
@@ -316,14 +368,14 @@ Each case asserts BOTH `price_change { previous, current }` and the
 
 | Case | Status |
 |---|---|
-| Add base price (none → `$20/mo`) → `previous: null`, `current` populated; `customize.price` = full params | red (changes stubbed null) |
-| Amount change (`20 → 30`) | red (changes stubbed null) |
-| Interval change (month → year) | red (changes stubbed null) |
-| `interval_count` change (1 → 3); explicit `interval_count: 1` → no diff | red (changes stubbed null; explicit-1 half expects action `none`) |
-| Remove (`price: null`) → `current: null`; `customize.price: null` | red (changes stubbed null) |
-| Additional currency amount change (currency on both sides) → diff | red (changes stubbed null) |
-| Additional currency added/removed only → NO price diff (compatible rule) | red (changes stubbed null; compute currently reports action `update` — ambiguity vs diffPlanV1) |
-| Items-only update → no `price_change`, `customize.price` absent | red (changes stubbed null) |
+| Add base price (none → `$20/mo`) → `previous: null`, `current` populated; `customize.price` = full params | ✓ |
+| Amount change (`20 → 30`) | ✓ |
+| Interval change (month → year) | ✓ |
+| `interval_count` change (1 → 3); explicit `interval_count: 1` → no diff | ✓ |
+| Remove (`price: null`) → `current: null`; `customize.price: null` | ✓ |
+| Additional currency amount change (currency on both sides) → diff | ✓ |
+| Additional currency added/removed only → NO price diff (compatible rule) | ✓ |
+| Items-only update → no `price_change`, `customize.price` absent | ✓ |
 
 ### B3. Item changes — `preview/changes/changes-items.test.ts`
 
@@ -333,56 +385,60 @@ Each case asserts BOTH `item_changes` (created/deleted snapshots) and the
 
 | Case | Status |
 |---|---|
-| Add free item → `created` entry; `add_items` full params; no `remove_items` | red (changes stubbed null) |
-| Add priced item → `created`; `add_items` includes price block | red (changes stubbed null) |
-| Remove item → `deleted`; `remove_items` filter only | red (changes stubbed null) |
-| Included bump (same match key) → `deleted`+`created` pair; `remove_items` filter + `add_items` new shape | red (changes stubbed null) |
-| Price amount change on priced item (same key) → remove+add pair | red (changes stubbed null) |
-| Reset/billing interval change (match key CHANGES) → `remove_items` filter carries the OLD interval, `add_items` the new | red (changes stubbed null) |
-| `billing_method` change prepaid → usage_based (key change) → remove(old method)+add(new) | red (changes stubbed null) |
-| Free → paid on same feature → remove(free key)+add(paid key) | red (changes stubbed null) |
-| Paid → free | red (changes stubbed null) |
-| `unlimited` toggle → remove+add (same key) | red (changes stubbed null) |
-| `pooled` toggle → remove+add | red (changes stubbed null) |
-| Rollover add / change / remove → remove+add | red (changes stubbed null) |
-| Proration change on prepaid → remove+add | red (changes stubbed null) |
-| `billing_units` / `max_purchase` change → remove+add | red (changes stubbed null) |
-| Tier edit (amount, `to` boundary, `flat_amount`) → remove+add | red (changes stubbed null) |
-| `tier_behavior` graduated → volume → remove+add; explicit `graduated` with tiers → no diff | red (volume half stubbed; graduated-explicit expects `none`) |
-| Item additional-currency amount change → diff; currency add/remove only → no diff | red (amount half stubbed; remove-only expects `none` — compute may still update) |
-| Two items same feature, different intervals → only the edited keyed pair diffs, sibling untouched | red (changes stubbed null) |
+| Add free item → `created` entry; `add_items` full params; no `remove_items` | ✓ |
+| Add priced item → `created`; `add_items` includes price block | ✓ |
+| Remove item → `deleted`; `remove_items` filter only | ✓ |
+| Included bump (same match key) → `deleted`+`created` pair; `remove_items` filter + `add_items` new shape | ✓ |
+| Price amount change on priced item (same key) → remove+add pair | ✓ |
+| Reset/billing interval change (match key CHANGES) → `remove_items` filter carries the OLD interval, `add_items` the new | ✓ |
+| `billing_method` change prepaid → usage_based (key change) → remove(old method)+add(new) | ✓ |
+| Free → paid on same feature → remove(free key)+add(paid key) | ✓ |
+| Paid → free | ✓ |
+| `unlimited` toggle → remove+add (same key) | ✓ |
+| `pooled` toggle → remove+add | ✓ |
+| Rollover add / change / remove → remove+add | ✓ |
+| Proration change on prepaid → remove+add | ✓ |
+| `billing_units` / `max_purchase` change → remove+add | ✓ |
+| Tier edit (amount, `to` boundary, `flat_amount`) → remove+add | ✓ |
+| `tier_behavior` graduated → volume → remove+add; explicit `graduated` with tiers → no diff | ✓ |
+| Item additional-currency amount change → diff; currency add/remove only → no diff | ✓ |
+| Two items same feature, different intervals → only the edited keyed pair diffs, sibling untouched | ✓ |
+| **Split: `100 X/mo` → `50 X/mo` + `50 X/one_off` → 1 deleted (mo@100) + 2 created (mo@50, one_off@50)** | ✓ |
 | Re-send with explicit defaults on items → `item_changes` empty, no customize lanes | ✓ |
 
 ### B4. Free trial lane — `preview/changes/changes-free-trial.test.ts`
 
-Red twice over: trial persistence AND changes are unimplemented.
-
 | Case | Status |
 |---|---|
-| Add trial → `customize.free_trial` = params | red (changes stubbed; trial also not in upsert op → action may stay `none`) |
-| `duration_length` / `duration_type` change → diff | red (changes stubbed; trial persistence missing) |
-| `card_required` flip → diff; explicit `card_required: true` ≡ omitted → no diff | red (changes stubbed; trial persistence missing) |
-| `on_end` change → diff; explicit `"bill"` ≡ omitted → no diff | red (changes stubbed; trial persistence missing) |
-| Remove trial (`free_trial: null`) → `customize.free_trial: null` | red (changes stubbed; trial persistence missing) |
+| Add trial → `customize.free_trial` = params | ✓ |
+| `duration_length` / `duration_type` change → diff | ✓ |
+| `card_required` flip → diff; explicit `card_required: true` ≡ omitted → no diff | ✓ |
+| `on_end` change → diff; explicit `"bill"` ≡ omitted → no diff | ✓ |
+| Remove trial (`free_trial: null`) → `customize.free_trial: null` | ✓ |
 
 ### B5. Mixed changes — `preview/changes/changes-mixed.test.ts`
 
 | Case | Status |
 |---|---|
-| Details + base price + items + trial in one entry → `previous_attributes`, `price_change`, `item_changes`, and all `customize` lanes populated coherently | red (changes stubbed null) |
-| Create with full shape → `changes` non-null: `customize` carries entire desired shape (price + add_items), `previous_attributes` null | red (changes stubbed null) |
-| Items + price change, details untouched → `previous_attributes` null/empty | red (changes stubbed null) |
-| Multi-plan call → each row's `changes` scoped to its own plan | red (changes stubbed null) |
+| Details + base price + items + trial in one entry → all lanes coherent | ✓ |
+| Create with full shape → `plan_change` nullish (`null` or `undefined`); `action: "create"` | ✓ |
+| Items + price change, details untouched → `previous_attributes` null/empty | ✓ |
+| Multi-plan call → each row's `plan_change` scoped to its own plan | ✓ |
 
 ### C. State + versioning — `preview/preview-state-versioning.test.ts`
+
+Pickable-only `options` (no `available`/`reason`). `new_version` requires
+customers **and** latest.
 
 | Case | Status |
 |---|---|
 | Plan with attached customer → `has_customers: true`; without → `false` | ✓ |
 | Expired-only customers → `has_customers: false` | ✓ |
-| Update targeting latest of a 2-version plan → `versioning { current_version: 2, new_version: null, resolved: "existing" }` | red (versioning stubbed null) |
-| `versioning.options` lists all three strategies; `new_version` has `available: false` + `reason` while unimplemented | red (versioning stubbed null) |
-| `all_versions` on a multi-version plan → one preview row per affected version, each identifiable via `versioning.current_version`, `resolved: "all_versions"` | red (versioning stubbed null; today only one preview row) |
+| Latest of 2-version, no customers → `options: [all_versions]`, `resolved: existing` | ✓ |
+| Latest + customers + multi-version → `options: [existing, new_version, all_versions]` | ✓ |
+| **Pinned `version: 1` (not latest) + customers → `options` has `existing`+`all_versions`, never `new_version`** | ✓ |
+| `versioning: "new_version"` preview → `create` row, `resolved: new_version`, `plan_change` from base | ✓ |
+| `all_versions` → one preview row per version; each `resolved: all_versions` | ✓ |
 
 ## 14. Free trials — `update/update-plan-free-trial.test.ts` + `validation/free-trial-validation.test.ts`
 
@@ -451,6 +507,7 @@ update-plan-details (section 4 → moved).
 | `customize.free_trial` diff lane (add/change/remove/defaults) | `preview/changes/changes-free-trial.test.ts` (B4) |
 | Cardless-trial default plan allowed | `validation/default-flag.test.ts` |
 | `all_versions` trial propagation; version-pinned trial edit | `versions/plan-versions.test.ts` — both ✓ via per-row trial facet |
+| `new_version` trial copy / null / change | `versions/new-version-free-trial.test.ts` — §15 |
 
 ### Comparator unit matrix (impl agent owns, listed for completeness)
 
@@ -459,13 +516,110 @@ field differing (length, type, card_required, on_end); defaults normalization
 (month / card true / on_end bill ≡ omitted); `unique_fingerprint` ignored for
 params-side comparison.
 
+## 15. Versioning — new_version mint / all_versions / mixed
+
+Mint clones the latest version (`id` stable, `version = max+1`, new
+`internal_id`, `processor` copied), remints entitlements/prices/free-trial
+rows, then applies param changes. Omitted facets are carried. Known gaps not
+covered here: `initStripeResourcesForProducts` is not wired after execute
+(carry only works from pre-seeded ids), reward migration is not queued,
+license links are not copied.
+
+### A1 — mint mechanics — `versions/new-version-mint.test.ts`
+
+| Case | Status |
+|---|---|
+| Old version byte-untouched after details mint (stable ents/prices/base, no `is_custom` stamps, v1 name/items/price/trial unchanged) | ✓ |
+| Mint + items change: changed item new row on v2; untouched items copied with new row ids; v1 untouched | ✓ |
+| Omitted facets carried (name-only mint → v2 keeps items/base/trial/metadata/billing_controls); all v2 row ids reminted | ✓ |
+| `is_default` moves: minted version is default, old version flag cleared (`auto_enable: true` on create) | ✓ |
+| `new_version` with no customers → mint allowed (spec decision pending) | ✓ |
+| `new_version` with identical params (zero diff) → still mints v2 (spec decision pending) | ✓ |
+
+### A2 — trial on mint — `versions/new-version-free-trial.test.ts`
+
+| Case | Status |
+|---|---|
+| `free_trial` omitted + base has trial → v2 trial copied with new row id, same shape; v1 trial row untouched | ✓ |
+| `free_trial: null` on mint → v2 has no trial; v1 trial intact | ✓ |
+| `free_trial: {...changed}` on mint → v2 new shape; v1 unchanged. Trial-only mint (no items/price) still copies items | ✓ |
+
+### A3 — stripe carry on mint — `update/stripe-reuse-mint.test.ts`
+
+| Case | Status |
+|---|---|
+| Untouched paid item → full reuse on v2 (`stripe_price_id` + `stripe_product_id`) | ✓ |
+| Amount change on mint → product id carried, stripe price id not reused | ✓ |
+| New paid item on mint → no stripe ids; plan-level `processor.id` carried onto the v2 products row | ✓ |
+
+### C — all_versions items — `versions/all-versions-items.test.ts`
+
+| Case | Status |
+|---|---|
+| `all_versions` items change propagates to every version (in-place; version count unchanged) | ✓ |
+| No accidental mint: after all_versions update, max version is still 2 | ✓ |
+| Customer attached on v1 only → all_versions still patches both versions in place | ✓ |
+
+### D — mixed strategies — `versions/mixed-versioning-strategies.test.ts`
+
+| Case | Status |
+|---|---|
+| One call: A `new_version` (v3 minted, v1+v2 untouched) + B `all_versions` (both patched, no mint) + C pinned `version: 1` (only v1 changed) + D create (v1) | ✓ |
+| Preview parity for the same call: per-plan `versioning` block / action matches each strategy | ✓ |
+
+### E — default version attach — `versions/default-version-attach.test.ts`
+
+Attach picks one row per plan id via `ProductService.listDefault` →
+`getLatestProducts` (max version among `is_default` rows), so even a dual-flag
+bad state attaches only the latest.
+
+| Case | Status |
+|---|---|
+| Default free v1 → mint v2 → customer created after mint attaches v2 only; pre-mint customer stays on v1 | ✓ |
+| Bad state: v1 AND v2 both `is_default` (forced via DB) → new customer attaches exactly one cusProduct, on latest | ✓ |
+
+## 16. Migration drafts — `migrations/*.test.ts` + `preview/preview-migrations.test.ts`
+
+One draft covering every plan that sets `migration.draft: true` with `existing` / `all_versions`.
+`new_version` + `draft: true` is a 400 (the mint is the opt-out). Filter is `$or` across
+plans, version `$in` within a plan; collapse drops the version pin only when multiple
+targeted versions cover every customer-bearing version. Ops bucket by customize + `include_custom`.
+
+| Case | Status |
+|---|---|
+| `existing` + item diff + versionable customers → version-pinned draft, `custom: false` | ✓ `migrations/existing-drafts.test.ts` |
+| Omitted `migration` / no customers / name-only → no draft | ✓ |
+| `new_version` + `draft: true` → 400 | ✓ `validation/plan-errors.test.ts` |
+| `all_versions` identical per-version diffs → one op, unversioned filter | ✓ |
+| `all_versions` differing sibling diff → two version-pinned ops | ✓ |
+| `all_versions`, customers only on v1 → version-pinned to v1, sibling excluded | ✓ |
+| Mixed A `new_version` + B `existing` → one draft covering only B | ✓ |
+| `include_custom` omitted → `custom: false` on filter AND every `update_plan.plan_filter` | ✓ `migrations/draft-guards.test.ts` |
+| `include_custom: true` omits `custom` from filter AND every op | ✓ |
+| Price change stamps `previous_price`, `no_billing_changes: false` | ✓ |
+| Two plans, different `include_custom` → one draft, `$or` filter, per-op guards | ✓ |
+| Preview `migrations` block matches compute; preview does not persist | ✓ `preview/preview-migrations.test.ts` |
+| Update response `migrations: [{ id, plans: [{ plan_id, versions }] }]` | ✓ |
+| Pinned historical v1 (v2 exists) stays version-pinned | ✓ `migrations/filter-collapse.test.ts` |
+| `all_versions` covering every customer-bearing version collapses even if a customer-free v3 exists | ✓ |
+| Mixed `all_versions` + pinned v1 + create → one draft, create skipped, independent filters | ✓ |
+| Paused customer → draft; expired-only → no draft; create + draft → no draft | ✓ `migrations/eligibility-status.test.ts` |
+| Add paid item → `add_items`, `no_billing_changes: false` | ✓ `migrations/customize-lanes.test.ts` |
+| Remove paid item → `remove_items`, `no_billing_changes: false` | ✓ |
+| `price: null` stamps `previous_price`; trial+items drops trial from customize | ✓ |
+| Two plans, identical item diff → one op with `$or` plan_filter | ✓ `migrations/customize-buckets.test.ts` |
+| Interval change → remove old match key + add new key | ✓ |
+| Price + items in one update → one op with both lanes | ✓ |
+| Feature rename + item bump → remove old feature_id, add new | ✓ `migrations/customize-buckets.test.ts` |
+| One paid plan poisons `no_billing_changes` for the whole draft | ✓ `migrations/billing-flag.test.ts` |
+| Additional-currency add only → no draft | ✓ |
+| Free-item edit with paid sibling on same `feature_id` → billing change (lossy lookup) | ✓ |
+
 ## Deferred (later slice)
 
 | Case |
 |---|
-| `new_version` strategy (currently rejected) |
 | `all_versions` + direct per-version override ordering |
 | Variants / licenses in catalog params |
-| Stripe price re-use on version mint (needs new_version) |
 | `create_in_stripe` behavior (currently unused) |
 | In-place `updated` EP bucket (never populated today) |

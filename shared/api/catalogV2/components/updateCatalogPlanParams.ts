@@ -1,5 +1,6 @@
 import { FreeTrialParamsV1Schema } from "@api/common/freeTrial/freeTrialParamsV1.js";
 import { BasePriceParamsSchema } from "@api/products/components/basePrice/basePrice.js";
+import { MigrationParamsSchema } from "@api/products/crud/migrationParams.js";
 import { CreatePlanItemParamsV1Schema } from "@api/products/items/crud/createPlanItemParamsV1.js";
 import { CustomerBillingControlsParamsSchema } from "@models/cusModels/billingControls/customerBillingControls.js";
 import { ProductConfigParamsSchema } from "@models/productModels/productConfig/productConfig.js";
@@ -15,7 +16,7 @@ export const CatalogPlanVersioningStrategySchema = z.enum([
 
 /**
  * CatalogV2 plan entry — create/update fields only.
- * Variants, licenses, and migration are rejected until those slices land.
+ * Variants and licenses are rejected until those slices land.
  */
 export const UpdateCatalogPlanParamsSchema = z.object({
 	plan_id: z.string().nonempty().regex(idRegex).meta({
@@ -31,7 +32,7 @@ export const UpdateCatalogPlanParamsSchema = z.object({
 	}),
 	versioning: CatalogPlanVersioningStrategySchema.optional().meta({
 		description:
-			"How this entry applies across versions. Omit or `existing` = the resolved row only; `all_versions` = also apply to every other existing version of this plan; `new_version` is not implemented yet.",
+			"How this entry applies across versions. Omit or `existing` = the resolved row only; `all_versions` = also apply to every other existing version of this plan; `new_version` = mint max+1 cloned from latest (customers stay on old).",
 	}),
 
 	name: z.string().nonempty().optional().meta({
@@ -79,8 +80,15 @@ export const UpdateCatalogPlanParamsSchema = z.object({
 		internal: true,
 		description: "When false, skip Stripe product/price creation on create.",
 	}),
+	migration: MigrationParamsSchema.optional().meta({
+		description:
+			"When draft is true, create a migration for customers on this plan after an in-place / all_versions update. Rejected with new_version — minting a version opts out of propagating to existing customers.",
+	}),
 });
 
+export type CatalogPlanVersioningStrategy = z.infer<
+	typeof CatalogPlanVersioningStrategySchema
+>;
 export type UpdateCatalogPlanParams = z.infer<
 	typeof UpdateCatalogPlanParamsSchema
 >;

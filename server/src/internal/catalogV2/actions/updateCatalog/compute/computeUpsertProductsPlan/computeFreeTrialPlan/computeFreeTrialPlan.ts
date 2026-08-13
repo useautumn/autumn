@@ -4,13 +4,14 @@ import {
 	freeTrialsAreSame,
 } from "@autumn/shared";
 import type { FreeTrialPlan } from "@/internal/catalogV2/actions/updateCatalog/types/upsertProductPlan";
+import { buildFreeTrialPlan } from "./buildFreeTrialPlan";
+import { copyFreeTrialToProduct } from "./copyFreeTrialToProduct";
 import { initFreeTrialRow } from "./initFreeTrialRow";
 
-/**
- * Claim-style free-trial planner: omit preserves, null retires, object mints
- * unless the current row matches (then claim same id).
- */
-export const computeFreeTrialPlan = ({
+export type FreeTrialPlanMode = { type: "update" } | { type: "version" };
+
+/** Expand free_trial params into the desired row content. */
+const resolveDesiredFreeTrial = ({
 	freeTrialParams,
 	currentFreeTrial,
 	internalProductId,
@@ -18,50 +19,83 @@ export const computeFreeTrialPlan = ({
 	freeTrialParams: FreeTrialParamsV1 | null | undefined;
 	currentFreeTrial: FreeTrial | null;
 	internalProductId: string;
-}): FreeTrialPlan => {
+}): FreeTrial | null => {
+	if (freeTrialParams === undefined) return currentFreeTrial;
+	if (freeTrialParams === null) return null;
+	return initFreeTrialRow({ freeTrialParams, internalProductId });
+};
+
+/** Pair desired vs current by mode — version never claims/retires the base row. */
+const claimFreeTrial = ({
+	mode,
+	freeTrialParams,
+	desired,
+	currentFreeTrial,
+	internalProductId,
+}: {
+	mode: FreeTrialPlanMode;
+	freeTrialParams: FreeTrialParamsV1 | null | undefined;
+	desired: FreeTrial | null;
+	currentFreeTrial: FreeTrial | null;
+	internalProductId: string;
+}): {
+	new?: FreeTrial | null;
+	same?: FreeTrial | null;
+	retired?: FreeTrial | null;
+} => {
+	if (mode.type === "version") {
+		if (!desired) return {};
+		return {
+			new: copyFreeTrialToProduct({
+				freeTrial: desired,
+				internalProductId,
+			}),
+		};
+	}
+
 	if (freeTrialParams === undefined) {
-		return {
-			changed: false,
-			new: null,
-			same: currentFreeTrial,
-			retired: null,
-			projected: currentFreeTrial,
-		};
+		return { same: currentFreeTrial };
 	}
 
-	if (freeTrialParams === null) {
-		return {
-			changed: currentFreeTrial !== null,
-			new: null,
-			same: null,
-			retired: currentFreeTrial,
-			projected: null,
-		};
+	if (desired == null) {
+		return { retired: currentFreeTrial };
 	}
-
-	const desired = initFreeTrialRow({
-		freeTrialParams,
-		internalProductId,
-	});
 
 	if (
 		currentFreeTrial &&
 		freeTrialsAreSame({ ft1: currentFreeTrial, ft2: desired })
 	) {
-		return {
-			changed: false,
-			new: null,
-			same: currentFreeTrial,
-			retired: null,
-			projected: currentFreeTrial,
-		};
+		return { same: currentFreeTrial };
 	}
 
-	return {
-		changed: true,
-		new: desired,
-		same: null,
-		retired: currentFreeTrial,
-		projected: desired,
-	};
+	return { new: desired, retired: currentFreeTrial };
+};
+
+/** Resolve desired → claim by mode → bucket plan. */
+export const computeFreeTrialPlan = ({
+	freeTrialParams,
+	currentFreeTrial,
+	internalProductId,
+	mode = { type: "update" },
+}: {
+	freeTrialParams: FreeTrialParamsV1 | null | undefined;
+	currentFreeTrial: FreeTrial | null;
+	internalProductId: string;
+	mode?: FreeTrialPlanMode;
+}): FreeTrialPlan => {
+	const desired = resolveDesiredFreeTrial({
+		freeTrialParams,
+		currentFreeTrial,
+		internalProductId,
+	});
+
+	const claim = claimFreeTrial({
+		mode,
+		freeTrialParams,
+		desired,
+		currentFreeTrial,
+		internalProductId,
+	});
+
+	return buildFreeTrialPlan({ claim });
 };

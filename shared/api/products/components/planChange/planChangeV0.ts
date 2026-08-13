@@ -1,3 +1,4 @@
+import { DiffedCustomizePlanV1Schema } from "@utils/planV1Utils/diff/diffPlanV1.js";
 import { z } from "zod/v4";
 import { ApiPlanV1Schema } from "../../apiPlanV1.js";
 import { ApiFreeTrialV2Schema } from "../apiFreeTrialV2.js";
@@ -45,6 +46,10 @@ export const PlanChangeV0Schema = z.object({
 	}),
 	item_changes: z.array(PlanItemChangeV0Schema).default([]).meta({
 		description: "Feature items added to or removed from the plan.",
+	}),
+	customize: DiffedCustomizePlanV1Schema.optional().meta({
+		description:
+			"Params that would transform the previous plan into the current one. Omitted when nothing customizable changed.",
 	}),
 });
 

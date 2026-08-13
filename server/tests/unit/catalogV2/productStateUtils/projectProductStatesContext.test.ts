@@ -13,6 +13,7 @@ const usage = (
 	hasAnyCustomerProducts: false,
 	hasVersionableCustomerProducts: false,
 	versionableCustomerCount: 0,
+	hasVersionableRowRefs: false,
 	...overrides,
 });
 
@@ -52,7 +53,9 @@ const updateUpsert = ({
 		version: next.version,
 		op: "update",
 		source: "direct",
+		versioning: "existing",
 		currentFullProduct: current,
+		baseFullProduct: null,
 		nextFullProduct: next,
 	},
 	state: { hasCustomers: false },
@@ -64,7 +67,9 @@ const createUpsert = ({ next }: { next: FullProduct }): UpsertProductPlan => ({
 		version: next.version,
 		op: "create",
 		source: "direct",
+		versioning: "existing",
 		currentFullProduct: null,
+		baseFullProduct: null,
 		nextFullProduct: next,
 	},
 	state: { hasCustomers: false },

@@ -1,9 +1,7 @@
 /**
  * catalogV2.preview_update — mixed changes blocks in one entry / multi-plan.
  *
- * RED: changes stubbed null. Create with full shape should still emit
- * changes.customize carrying the desired shape (price + add_items) with
- * previous_attributes null.
+ * Mixed change blocks in one entry / multi-plan; create → plan_change omitted.
  */
 
 import { expect, test } from "bun:test";
@@ -27,9 +25,8 @@ import {
 	parsePlanPreview,
 } from "../utils/expectPlanPreview.js";
 
-// RED
 test.concurrent(
-	`${chalk.yellowBright("RED: catalogV2 changes-mixed: details + price + items + trial coherent")}`,
+	`${chalk.yellowBright("catalogV2 changes-mixed: details + price + items + trial coherent")}`,
 	async () => {
 		const { autumnV2_3, ctx } = await initScenario({ setup: [], actions: [] });
 		const planId = uniqueTestId("cv2_cm_all");
@@ -75,23 +72,23 @@ test.concurrent(
 			);
 			PreviewUpdateCatalogResponseSchema.parse(preview);
 			const row = findPlanPreviewRow({ preview, planId });
-			expect(row.changes).not.toBeNull();
-			expect(row.changes?.previous_attributes).toMatchObject({ name: "Old" });
-			expect(row.changes?.price_change).toBeDefined();
-			expect((row.changes?.item_changes ?? []).length).toBeGreaterThan(0);
-			expect(row.changes?.customize?.price).toBeDefined();
-			expect(row.changes?.customize?.add_items).toBeDefined();
-			expect(row.changes?.customize?.remove_items).toBeDefined();
-			expect(row.changes?.customize?.free_trial).toBeDefined();
+			expect(row.plan_change != null).toBe(true);
+			expect(row.plan_change?.previous_attributes).toMatchObject({ name: "Old" });
+			expect(row.plan_change?.price_change != null).toBe(true);
+			expect((row.plan_change?.item_changes ?? []).length).toBeGreaterThan(0);
+			expect(row.plan_change?.customize?.price != null).toBe(true);
+			expect(row.plan_change?.customize?.add_items != null).toBe(true);
+			expect(row.plan_change?.customize?.remove_items != null).toBe(true);
+			expect(row.plan_change?.customize?.free_trial != null).toBe(true);
 		} finally {
 			await deleteDbPlans({ ctx, planIds: [planId] });
 		}
 	},
 );
 
-// RED — create full shape: previous_attributes null, customize carries desired
+// Creates have no diff — plan_change is omitted; the row action conveys it.
 test.concurrent(
-	`${chalk.yellowBright("RED: catalogV2 changes-mixed: create full shape → customize desired, previous null")}`,
+	`${chalk.yellowBright("catalogV2 changes-mixed: create full shape → plan_change omitted")}`,
 	async () => {
 		const { autumnV2_3, ctx } = await initScenario({ setup: [], actions: [] });
 		const planId = uniqueTestId("cv2_cm_create");
@@ -120,17 +117,7 @@ test.concurrent(
 				expected: {
 					planId,
 					action: "create",
-					previousAttributes: null,
-					customize: {
-						price: { amount: 20, interval: BillingInterval.Month },
-						add_items: [
-							{
-								feature_id: TestFeature.Messages,
-								included: 10,
-								reset: { interval: ResetInterval.Month },
-							},
-						],
-					},
+					planChange: null,
 				},
 			});
 			await expectDbPlansAbsent({ ctx, planIds: [planId] });
@@ -140,9 +127,9 @@ test.concurrent(
 	},
 );
 
-// RED — items + price, details untouched → previous_attributes null/empty
+// items + price, details untouched → previous_attributes null/empty
 test.concurrent(
-	`${chalk.yellowBright("RED: catalogV2 changes-mixed: items+price, details untouched → no previous_attributes")}`,
+	`${chalk.yellowBright("catalogV2 changes-mixed: items+price, details untouched → no previous_attributes")}`,
 	async () => {
 		const { autumnV2_3, ctx } = await initScenario({ setup: [], actions: [] });
 		const planId = uniqueTestId("cv2_cm_nodet");
@@ -182,19 +169,19 @@ test.concurrent(
 				}),
 			);
 			const row = findPlanPreviewRow({ preview, planId });
-			expect(row.changes).not.toBeNull();
-			expect(row.changes?.previous_attributes ?? null).toBeNull();
-			expect(row.changes?.price_change).toBeDefined();
-			expect((row.changes?.item_changes ?? []).length).toBeGreaterThan(0);
+			expect(row.plan_change != null).toBe(true);
+			expect(row.plan_change?.previous_attributes == null).toBe(true);
+			expect(row.plan_change?.price_change != null).toBe(true);
+			expect((row.plan_change?.item_changes ?? []).length).toBeGreaterThan(0);
 		} finally {
 			await deleteDbPlans({ ctx, planIds: [planId] });
 		}
 	},
 );
 
-// RED — multi-plan: each row's changes scoped to its own plan
+// multi-plan: each row's changes scoped to its own plan
 test.concurrent(
-	`${chalk.yellowBright("RED: catalogV2 changes-mixed: multi-plan changes scoped per row")}`,
+	`${chalk.yellowBright("catalogV2 changes-mixed: multi-plan changes scoped per row")}`,
 	async () => {
 		const { autumnV2_3, ctx } = await initScenario({ setup: [], actions: [] });
 		const planA = uniqueTestId("cv2_cm_a");
@@ -220,12 +207,12 @@ test.concurrent(
 			);
 			const rowA = findPlanPreviewRow({ preview, planId: planA });
 			const rowB = findPlanPreviewRow({ preview, planId: planB });
-			expect(rowA.changes).not.toBeNull();
-			expect(rowB.changes).not.toBeNull();
-			expect(rowA.changes?.previous_attributes).toMatchObject({ name: "A1" });
-			expect(rowA.changes?.price_change).toBeUndefined();
-			expect(rowB.changes?.price_change).toBeDefined();
-			expect(rowB.changes?.previous_attributes ?? null).toBeNull();
+			expect(rowA.plan_change != null).toBe(true);
+			expect(rowB.plan_change != null).toBe(true);
+			expect(rowA.plan_change?.previous_attributes).toMatchObject({ name: "A1" });
+			expect(rowA.plan_change?.price_change == null).toBe(true);
+			expect(rowB.plan_change?.price_change != null).toBe(true);
+			expect(rowB.plan_change?.previous_attributes == null).toBe(true);
 		} finally {
 			await deleteDbPlans({ ctx, planIds: [planA, planB] });
 		}

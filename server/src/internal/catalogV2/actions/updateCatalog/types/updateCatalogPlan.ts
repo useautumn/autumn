@@ -1,4 +1,4 @@
-import type { Feature } from "@autumn/shared";
+import type { CatalogMigration, Feature } from "@autumn/shared";
 import type { ProjectedCatalog } from "@/internal/catalogV2/actions/updateCatalog/types/catalogComputeState";
 import type { UpdateFeaturePlan } from "@/internal/catalogV2/actions/updateCatalog/types/updateFeaturePlan";
 import type { UpsertProductPlan } from "@/internal/catalogV2/actions/updateCatalog/types/upsertProductPlan";
@@ -23,6 +23,8 @@ export type UpdateCatalogPlan = {
 	removeFeatures: RemoveFeaturePlan[];
 	/** Ordered product-row ops — create / update / none (execute order). */
 	upsertProducts: UpsertProductPlan[];
+	/** At most one draft covering every requesting plan; empty when none qualify. */
+	migrationDrafts: CatalogMigration[];
 
 	/** Catalog after the fold's last advance — original + cumulative plan. */
 	projected: ProjectedCatalog;

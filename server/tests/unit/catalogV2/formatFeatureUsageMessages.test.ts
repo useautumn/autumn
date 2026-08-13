@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import { emptyCatalogFeatureUsage } from "@autumn/shared";
-import { formatFeatureUsageMessages } from "@/internal/catalogV2/actions/updateCatalog/preview/featureUsage/formatFeatureUsageMessages";
+import { formatFeatureUsageMessages } from "@/internal/catalogV2/actions/updateCatalog/preview/features/featureUsage/formatFeatureUsageMessages";
 
 describe("formatFeatureUsageMessages", () => {
 	test("empty usage → no reasons", () => {

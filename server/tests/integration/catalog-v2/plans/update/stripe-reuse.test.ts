@@ -1,99 +1,56 @@
 /**
  * catalogV2.update — Stripe id carry-forward on entitlement/price rows.
  *
+ * Seeds real Stripe resources via `initStripeResourcesForProducts` (the same
+ * production path `updateProduct` uses), then updates via catalogV2 and
+ * asserts reuse levels with shared expect helpers.
+ *
  * Full carry (stripe_price_id + stripe_product_id + meter) when price AND
  * entitlement definitions match; product-only carry when same usage feature +
  * entity scope; otherwise nothing.
  */
 
-import { expect, test } from "bun:test";
+import { test } from "bun:test";
 import {
 	BillingInterval,
 	BillingMethod,
 	type FullProduct,
-	findPriceByFeatureId,
-	isFixedPrice,
-	type Price,
 	ResetInterval,
 	TierBehavior,
 	TierInfinite,
 } from "@autumn/shared";
+import {
+	expectPriceStripeResourcesAbsent,
+	expectPriceStripeReuseCorrect,
+	expectProductProcessorCorrect,
+	findBasePrice,
+	findFeaturePrice,
+} from "@tests/integration/utils/expectStripePriceResources.js";
+import { initPlanStripeResources } from "@tests/integration/utils/initPlanStripeResources.js";
 import { TestFeature } from "@tests/setup/v2Features.js";
 import { initScenario } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { ProductService } from "@/internal/products/ProductService.js";
-import { PriceService } from "@/internal/products/prices/PriceService.js";
 import { uniqueTestId } from "../../utils/uniqueTestId.js";
 import { deleteDbPlans } from "../utils/expectCatalogPlans.js";
-
-type StripeConfig = {
-	stripe_product_id?: string | null;
-	stripe_price_id?: string | null;
-	stripe_meter_id?: string | null;
-};
 
 const getFull = async ({
 	ctx,
 	planId,
+	version,
 }: {
 	ctx: AutumnContext;
 	planId: string;
+	version?: number;
 }): Promise<FullProduct> =>
 	ProductService.getFull({
 		db: ctx.db,
 		idOrInternalId: planId,
 		orgId: ctx.org.id,
 		env: ctx.env,
+		version,
 	});
-
-const seedPriceStripe = async ({
-	ctx,
-	price,
-	stripeProductId,
-	stripePriceId,
-	stripeMeterId,
-}: {
-	ctx: AutumnContext;
-	price: Price;
-	stripeProductId?: string;
-	stripePriceId?: string;
-	stripeMeterId?: string;
-}) => {
-	await PriceService.update({
-		db: ctx.db,
-		id: price.id,
-		update: {
-			config: {
-				...price.config,
-				...(stripeProductId !== undefined
-					? { stripe_product_id: stripeProductId }
-					: {}),
-				...(stripePriceId !== undefined
-					? { stripe_price_id: stripePriceId }
-					: {}),
-				...(stripeMeterId !== undefined
-					? { stripe_meter_id: stripeMeterId }
-					: {}),
-			} as Price["config"],
-		},
-	});
-};
-
-const priceConfig = ({
-	product,
-	featureId,
-}: {
-	product: FullProduct;
-	featureId: string;
-}): StripeConfig => {
-	const price = findPriceByFeatureId({
-		prices: product.prices,
-		featureId,
-	});
-	if (!price) throw new Error(`missing price for ${featureId}`);
-	return price.config as StripeConfig;
-};
 
 const prepaidMessagesItem = ({ amount }: { amount: number }) => ({
 	feature_id: TestFeature.Messages,
@@ -126,19 +83,12 @@ test.concurrent(
 				],
 			});
 
-			const before = await getFull({ ctx, planId });
-			const paid = findPriceByFeatureId({
-				prices: before.prices,
+			const before = await initPlanStripeResources({ ctx, planId });
+			const paidBefore = findFeaturePrice({
+				product: before,
 				featureId: TestFeature.Messages,
 			})!;
-			const stripeProductId = `prod_${planId}`;
-			const stripePriceId = `price_${planId}`;
-			await seedPriceStripe({
-				ctx,
-				price: paid,
-				stripeProductId,
-				stripePriceId,
-			});
+			expectProductProcessorCorrect({ product: before, present: true });
 
 			await autumnV2_3.catalogV2.update({
 				plans: [
@@ -154,17 +104,16 @@ test.concurrent(
 			});
 
 			const after = await getFull({ ctx, planId });
-			const config = priceConfig({
+			const paidAfter = findFeaturePrice({
 				product: after,
 				featureId: TestFeature.Messages,
 			});
-			expect(config.stripe_product_id).toBe(stripeProductId);
-			expect(config.stripe_price_id).toBe(stripePriceId);
-			const afterPaid = findPriceByFeatureId({
-				prices: after.prices,
-				featureId: TestFeature.Messages,
+			expectPriceStripeReuseCorrect({
+				before: paidBefore,
+				after: paidAfter,
+				reuse: "full",
+				label: "unchanged prepaid",
 			});
-			expect(afterPaid?.id).toBe(paid.id);
 		} finally {
 			await deleteDbPlans({ ctx, planIds: [planId] });
 		}
@@ -189,43 +138,33 @@ test.concurrent(
 				],
 			});
 
-			const before = await getFull({ ctx, planId });
-			const paid = findPriceByFeatureId({
-				prices: before.prices,
+			const before = await initPlanStripeResources({ ctx, planId });
+			const paidBefore = findFeaturePrice({
+				product: before,
 				featureId: TestFeature.Messages,
 			})!;
-			const base = before.prices.find(isFixedPrice)!;
-			await seedPriceStripe({
-				ctx,
-				price: paid,
-				stripeProductId: `prod_paid_${planId}`,
-				stripePriceId: `price_paid_${planId}`,
-			});
-			await seedPriceStripe({
-				ctx,
-				price: base,
-				stripeProductId: `prod_base_${planId}`,
-				stripePriceId: `price_base_${planId}`,
-			});
+			const baseBefore = findBasePrice({ product: before })!;
 
 			await autumnV2_3.catalogV2.update({
 				plans: [{ plan_id: planId, name: "Stripe Details Renamed" }],
 			});
 
 			const after = await getFull({ ctx, planId });
-			const paidConfig = priceConfig({
-				product: after,
-				featureId: TestFeature.Messages,
+			expectPriceStripeReuseCorrect({
+				before: paidBefore,
+				after: findFeaturePrice({
+					product: after,
+					featureId: TestFeature.Messages,
+				}),
+				reuse: "full",
+				label: "details-only paid",
 			});
-			const afterBase = after.prices.find(isFixedPrice)!;
-			expect(paidConfig.stripe_product_id).toBe(`prod_paid_${planId}`);
-			expect(paidConfig.stripe_price_id).toBe(`price_paid_${planId}`);
-			expect((afterBase.config as StripeConfig).stripe_product_id).toBe(
-				`prod_base_${planId}`,
-			);
-			expect((afterBase.config as StripeConfig).stripe_price_id).toBe(
-				`price_base_${planId}`,
-			);
+			expectPriceStripeReuseCorrect({
+				before: baseBefore,
+				after: findBasePrice({ product: after }),
+				reuse: "full",
+				label: "details-only base",
+			});
 		} finally {
 			await deleteDbPlans({ ctx, planIds: [planId] });
 		}
@@ -261,21 +200,11 @@ test.concurrent(
 				],
 			});
 
-			const before = await getFull({ ctx, planId });
-			const paid = findPriceByFeatureId({
-				prices: before.prices,
+			const before = await initPlanStripeResources({ ctx, planId });
+			const paidBefore = findFeaturePrice({
+				product: before,
 				featureId: TestFeature.Messages,
 			})!;
-			const stripeProductId = `prod_${planId}`;
-			const stripePriceId = `price_${planId}`;
-			const stripeMeterId = `meter_${planId}`;
-			await seedPriceStripe({
-				ctx,
-				price: paid,
-				stripeProductId,
-				stripePriceId,
-				stripeMeterId,
-			});
 
 			await autumnV2_3.catalogV2.update({
 				plans: [
@@ -299,13 +228,15 @@ test.concurrent(
 			});
 
 			const after = await getFull({ ctx, planId });
-			const config = priceConfig({
-				product: after,
-				featureId: TestFeature.Messages,
+			expectPriceStripeReuseCorrect({
+				before: paidBefore,
+				after: findFeaturePrice({
+					product: after,
+					featureId: TestFeature.Messages,
+				}),
+				reuse: "stripeProductOnly",
+				label: "usage amount change",
 			});
-			expect(config.stripe_product_id).toBe(stripeProductId);
-			expect(config.stripe_meter_id).toBe(stripeMeterId);
-			expect(config.stripe_price_id).not.toBe(stripePriceId);
 		} finally {
 			await deleteDbPlans({ ctx, planIds: [planId] });
 		}
@@ -329,18 +260,11 @@ test.concurrent(
 				],
 			});
 
-			const before = await getFull({ ctx, planId });
-			const paid = findPriceByFeatureId({
-				prices: before.prices,
+			const before = await initPlanStripeResources({ ctx, planId });
+			const paidBefore = findFeaturePrice({
+				product: before,
 				featureId: TestFeature.Messages,
 			})!;
-			const stripePriceId = `price_${planId}`;
-			await seedPriceStripe({
-				ctx,
-				price: paid,
-				stripeProductId: `prod_${planId}`,
-				stripePriceId,
-			});
 
 			await autumnV2_3.catalogV2.update({
 				plans: [
@@ -352,12 +276,15 @@ test.concurrent(
 			});
 
 			const after = await getFull({ ctx, planId });
-			const config = priceConfig({
-				product: after,
-				featureId: TestFeature.Messages,
+			expectPriceStripeReuseCorrect({
+				before: paidBefore,
+				after: findFeaturePrice({
+					product: after,
+					featureId: TestFeature.Messages,
+				}),
+				reuse: "stripeProductOnly",
+				label: "prepaid amount change",
 			});
-			expect(config.stripe_product_id).toBe(`prod_${planId}`);
-			expect(config.stripe_price_id).not.toBe(stripePriceId);
 		} finally {
 			await deleteDbPlans({ ctx, planIds: [planId] });
 		}
@@ -395,18 +322,11 @@ test.concurrent(
 				],
 			});
 
-			const before = await getFull({ ctx, planId });
-			const paid = findPriceByFeatureId({
-				prices: before.prices,
+			const before = await initPlanStripeResources({ ctx, planId });
+			const paidBefore = findFeaturePrice({
+				product: before,
 				featureId: TestFeature.Messages,
 			})!;
-			const stripePriceId = `price_${planId}`;
-			await seedPriceStripe({
-				ctx,
-				price: paid,
-				stripeProductId: `prod_${planId}`,
-				stripePriceId,
-			});
 
 			await autumnV2_3.catalogV2.update({
 				plans: [
@@ -433,12 +353,15 @@ test.concurrent(
 			});
 
 			const after = await getFull({ ctx, planId });
-			const config = priceConfig({
-				product: after,
-				featureId: TestFeature.Messages,
+			expectPriceStripeReuseCorrect({
+				before: paidBefore,
+				after: findFeaturePrice({
+					product: after,
+					featureId: TestFeature.Messages,
+				}),
+				reuse: "stripeProductOnly",
+				label: "graduated→volume",
 			});
-			expect(config.stripe_price_id).not.toBe(stripePriceId);
-			expect(config.stripe_product_id).toBe(`prod_${planId}`);
 		} finally {
 			await deleteDbPlans({ ctx, planIds: [planId] });
 		}
@@ -465,16 +388,8 @@ test.concurrent(
 				],
 			});
 
-			const before = await getFull({ ctx, planId });
-			const base = before.prices.find(isFixedPrice)!;
-			const stripeProductId = `prod_base_${planId}`;
-			const stripePriceId = `price_base_${planId}`;
-			await seedPriceStripe({
-				ctx,
-				price: base,
-				stripeProductId,
-				stripePriceId,
-			});
+			const before = await initPlanStripeResources({ ctx, planId });
+			const baseBefore = findBasePrice({ product: before })!;
 
 			await autumnV2_3.catalogV2.update({
 				plans: [
@@ -486,11 +401,17 @@ test.concurrent(
 			});
 
 			const after = await getFull({ ctx, planId });
-			const newBase = after.prices.find(isFixedPrice)!;
-			expect(newBase.id).not.toBe(base.id);
-			const config = newBase.config as StripeConfig;
-			expect(config.stripe_product_id ?? null).toBeNull();
-			expect(config.stripe_price_id ?? null).toBeNull();
+			const baseAfter = findBasePrice({ product: after });
+			expectPriceStripeReuseCorrect({
+				before: baseBefore,
+				after: baseAfter,
+				reuse: "none",
+				label: "base amount change",
+			});
+			expectPriceStripeResourcesAbsent({
+				price: baseAfter,
+				label: "new base row",
+			});
 		} finally {
 			await deleteDbPlans({ ctx, planIds: [planId] });
 		}
@@ -527,12 +448,62 @@ test.concurrent(
 			});
 
 			const after = await getFull({ ctx, planId });
-			const config = priceConfig({
-				product: after,
-				featureId: TestFeature.Messages,
+			expectPriceStripeResourcesAbsent({
+				price: findFeaturePrice({
+					product: after,
+					featureId: TestFeature.Messages,
+				}),
+				label: "newly added paid item",
 			});
-			expect(config.stripe_product_id ?? null).toBeNull();
-			expect(config.stripe_price_id ?? null).toBeNull();
+		} finally {
+			await deleteDbPlans({ ctx, planIds: [planId] });
+		}
+	},
+);
+
+test.concurrent(
+	`${chalk.yellowBright("catalogV2 stripe: new_version mint carries full stripe ids on matching item")}`,
+	async () => {
+		const { autumnV2_3, ctx } = await initScenario({ setup: [], actions: [] });
+		const planId = uniqueTestId("cv2_str_nv");
+		await deleteDbPlans({ ctx, planIds: [planId] });
+		try {
+			await autumnV2_3.catalogV2.update({
+				plans: [
+					{
+						plan_id: planId,
+						name: "Stripe Mint",
+						items: [prepaidMessagesItem({ amount: 10 })],
+					},
+				],
+			});
+			const before = await initPlanStripeResources({ ctx, planId });
+			const priceBefore = findFeaturePrice({
+				product: before,
+				featureId: TestFeature.Messages,
+			})!;
+
+			await autumnV2_3.catalogV2.update({
+				plans: [
+					{
+						plan_id: planId,
+						name: "Stripe Mint V2",
+						items: [prepaidMessagesItem({ amount: 10 })],
+						versioning: "new_version",
+					},
+				],
+			});
+
+			const after = await getFull({ ctx, planId, version: 2 });
+			expectPriceStripeReuseCorrect({
+				before: priceBefore,
+				after: findFeaturePrice({
+					product: after,
+					featureId: TestFeature.Messages,
+				}),
+				reuse: "full",
+				label: "new_version mint matching prepaid item",
+			});
 		} finally {
 			await deleteDbPlans({ ctx, planIds: [planId] });
 		}
