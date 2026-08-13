@@ -67,17 +67,16 @@ export const postApprovalCardForGroup = async ({
  * gated call has to show its own cost — an approver must never see another
  * customer's number next to this one's arguments. */
 const withBackfilledPreview = async ({
-	installation,
 	logger,
-	orgId,
 	request,
+	token,
 }: {
-	installation: ChatInstallation;
 	logger: AutumnLogger;
-	orgId: string;
 	request: ApprovalRequest;
+	token?: string;
 }) => {
 	if (
+		!token ||
 		!shouldRefreshApprovalPreview({
 			preview: request.preview,
 			toolName: request.toolName,
@@ -86,17 +85,10 @@ const withBackfilledPreview = async ({
 		return request;
 	}
 	try {
-		const token = await getInstallationOAuthAccessToken({
-			installation,
-			env: request.env,
-			orgId,
-		});
-		const body = getRequest(publicToolArgs(request.toolArgs));
-		if (!body) return request;
 		const preview = await fetchApprovalPreview({
 			env: request.env,
 			logger,
-			request: body,
+			request: getRequest(publicToolArgs(request.toolArgs)),
 			token,
 			toolName: request.toolName,
 		});
@@ -108,6 +100,39 @@ const withBackfilledPreview = async ({
 			error,
 		});
 		return request;
+	}
+};
+
+/** One credential read per card. Fetching inside the per-write fan-out raced N
+ * refreshes against the same rotating token. */
+const backfillTokenForGroup = async ({
+	env,
+	installation,
+	logger,
+	orgId,
+	requests,
+}: {
+	env: AgentOutput["env"];
+	installation: ChatInstallation;
+	logger: AutumnLogger;
+	orgId: string;
+	requests: ApprovalRequest[];
+}) => {
+	const needsBackfill = requests.some((request) =>
+		shouldRefreshApprovalPreview({
+			preview: request.preview,
+			toolName: request.toolName,
+		}),
+	);
+	if (!needsBackfill) return undefined;
+	try {
+		return await getInstallationOAuthAccessToken({ installation, env, orgId });
+	} catch (error) {
+		logger.warn("Could not load token to backfill approval previews", {
+			event: "leaf.approval_preview_backfill_failed",
+			error,
+		});
+		return undefined;
 	}
 };
 
@@ -149,9 +174,16 @@ export const presentApproval = async ({
 
 	// Catalog decisions change write args, so refresh against the exact request;
 	// other writes only backfill when their preview is absent.
+	const token = await backfillTokenForGroup({
+		env: output.env,
+		installation,
+		logger,
+		orgId,
+		requests,
+	});
 	const previewed = await Promise.all(
 		requests.map((request) =>
-			withBackfilledPreview({ installation, logger, orgId, request }),
+			withBackfilledPreview({ logger, request, token }),
 		),
 	);
 

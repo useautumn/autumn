@@ -734,7 +734,7 @@ const main = async () => {
 				text: `In sandbox: attach the plan "${prepaidPlanId}" to customer "${customerId}" and put them on 4,500 ${prepaidFeatureId}.`,
 				threadId,
 			});
-			const args = (turn.output.suspensions?.[0].toolArgs ?? {}) as {
+			const args = (turn.output.suspensions?.[0]?.toolArgs ?? {}) as {
 				request?: {
 					customize?: { add_items?: unknown[]; remove_items?: unknown[] };
 					feature_quantities?: { feature_id?: string; quantity?: number }[];

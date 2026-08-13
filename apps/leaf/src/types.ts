@@ -18,33 +18,35 @@ export const agentOutputSchema = z.preprocess(
 			value && typeof value === "object"
 				? (value as Record<string, unknown>)
 				: {};
-		const suspensions = payload.suspensions as
-			| Record<string, unknown>[]
-			| undefined;
-		const catalogDecision = payload.catalogDecision as
-			| Record<string, unknown>
-			| undefined;
-		const question = payload.question as Record<string, unknown> | undefined;
+		const { catalogDecision, question, suspensions } = payload;
+		// Malformed shapes pass through untouched so the schema below reports them;
+		// projecting them here would throw before Zod ever sees the value.
+		const isRecord = (value: unknown): value is Record<string, unknown> =>
+			Boolean(value) && typeof value === "object";
 		return {
 			text: payload.text,
 			env: payload.env,
 			finishReason: payload.finishReason,
 			stopReason: payload.stopReason,
 			runId: payload.runId,
-			suspensions: suspensions?.map((suspension) => ({
-				toolCallId: suspension.toolCallId,
-				toolName: suspension.toolName,
-				toolArgs: suspension.toolArgs,
-				preview: suspension.preview,
-			})),
-			catalogDecision: catalogDecision && {
-				plan: catalogDecision.plan,
-			},
-			question: question && {
-				prompt: question.prompt,
-				options: question.options,
-				requestId: question.requestId,
-			},
+			suspensions: Array.isArray(suspensions)
+				? suspensions.map((suspension: Record<string, unknown>) => ({
+						toolCallId: suspension.toolCallId,
+						toolName: suspension.toolName,
+						toolArgs: suspension.toolArgs,
+						preview: suspension.preview,
+					}))
+				: suspensions,
+			catalogDecision: isRecord(catalogDecision)
+				? { plan: catalogDecision.plan }
+				: catalogDecision,
+			question: isRecord(question)
+				? {
+						prompt: question.prompt,
+						options: question.options,
+						requestId: question.requestId,
+					}
+				: question,
 		};
 	},
 	z.strictObject({

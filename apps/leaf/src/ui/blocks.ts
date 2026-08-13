@@ -813,6 +813,9 @@ const groupDueNowText = (items: ApprovalCardItem[]) => {
 			: [];
 	});
 	if (charges.length < 2) return null;
+	// A total that silently omits items whose preview never arrived would
+	// understate what the click actually costs.
+	if (charges.length !== items.length) return null;
 	const [first] = charges;
 	if (charges.some((charge) => charge.currency !== first.currency)) return null;
 	return formatMoney({
