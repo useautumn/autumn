@@ -15,6 +15,7 @@ import { computeManualTopUpPlan } from "@/internal/billing/v2/actions/updateSubs
 import { computeUpdateLicenseQuantityPlan } from "@/internal/billing/v2/actions/updateSubscription/compute/updateLicenseQuantity/computeUpdateLicenseQuantityPlan";
 import { computeUpdateQuantityPlan } from "@/internal/billing/v2/actions/updateSubscription/compute/updateQuantity/computeUpdateQuantityPlan";
 import { buildAutumnLineItems } from "@/internal/billing/v2/compute/computeAutumnUtils/buildAutumnLineItems";
+import { computeRetainedCustomerEntitlementUpdates } from "@/internal/billing/v2/compute/computeAutumnUtils/computeRetainedCustomerEntitlementUpdates";
 import { addStripeSubscriptionIdToBillingPlan } from "@/internal/billing/v2/execute/addStripeSubscriptionIdToBillingPlan";
 import { computeFieldUpdates } from "./computeFieldUpdates";
 
@@ -70,7 +71,10 @@ export const computeUpdateSubscriptionPlan = async ({
 				customEntitlements: [],
 				customFreeTrial: undefined,
 				lineItems: computeAnchorResetLineItems({ ctx, billingContext }),
-				updateCustomerEntitlements: undefined,
+				updateCustomerEntitlements: computeRetainedCustomerEntitlementUpdates({
+					updateSubscriptionContext: billingContext,
+					finalCustomerProduct: billingContext.customerProduct,
+				}),
 			};
 
 			break;

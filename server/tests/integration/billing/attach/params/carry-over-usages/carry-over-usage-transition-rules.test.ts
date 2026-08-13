@@ -278,3 +278,50 @@ test(`${chalk.yellowBright("transition-rules 4: updateSubscription inherits rest
 		await clearTransitionRule({ secretKey: ctx.orgSecretKey });
 	}
 });
+
+test(`${chalk.yellowBright("transition-rules 5: inherited usage reset does not reset cancellation")}`, async () => {
+	const pro = products.pro({
+		id: "tr-cancel-pro",
+		items: [items.monthlyMessages({ includedUsage: 100 })],
+	});
+
+	const { customerId, autumnV1, autumnV2_3, ctx } = await initScenario({
+		customerId: "transition-rules-cancel",
+		setup: [
+			s.customer({ paymentMethod: "success" }),
+			s.products({ list: [pro] }),
+		],
+		actions: [s.billing.attach({ productId: pro.id })],
+	});
+
+	try {
+		await autumnV2_3.track(
+			{
+				customer_id: customerId,
+				feature_id: TestFeature.Messages,
+				value: 40,
+			},
+			{ timeout: 2000 },
+		);
+		await setTransitionRule({
+			secretKey: ctx.orgSecretKey,
+			carryOverUsages: { enabled: false },
+		});
+
+		await autumnV2_3.billing.update({
+			customer_id: customerId,
+			plan_id: pro.id,
+			cancel_action: "cancel_end_of_cycle",
+		});
+
+		const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
+		expectCustomerFeatureCorrect({
+			customer,
+			featureId: TestFeature.Messages,
+			balance: 60,
+			usage: 40,
+		});
+	} finally {
+		await clearTransitionRule({ secretKey: ctx.orgSecretKey });
+	}
+});
