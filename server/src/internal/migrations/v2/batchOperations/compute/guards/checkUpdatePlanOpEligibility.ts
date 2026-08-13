@@ -1,3 +1,9 @@
+import {
+	type CreatePlanItemParamsV1,
+	composeMatchKey,
+	type PlanItemFilter,
+	planItemFilterMatchKey,
+} from "@autumn/shared";
 import type { PlanFilter } from "@autumn/shared/api/migrations/filters/planFilter.js";
 import type { UpdatePlanOp } from "@autumn/shared/api/migrations/operations/customer/updatePlan/index.js";
 import type { BatchMigrationRejection } from "../../types/index.js";
@@ -9,12 +15,77 @@ const planFilterHasItem = (filter: PlanFilter): boolean => {
 	return filter.$or?.some((subFilter) => planFilterHasItem(subFilter)) ?? false;
 };
 
-/**
- * Scalar guards on a single update_plan op. Everything rejected here is
- * either per-customer-variable (quantity strategies), billing-affecting
- * (proration, base price, priced items), or deprecated — i.e. provably not
- * a uniform free-entitlement mutation.
- */
+/** diffPlanV1 expresses a modify-in-place as a remove plus an add sharing one
+ * match key. A remove without a matching add is a standalone deletion. */
+export const isModifyInPlaceOnly = ({
+	addItems,
+	removeItems,
+}: {
+	addItems: CreatePlanItemParamsV1[] | undefined;
+	removeItems: PlanItemFilter[] | undefined;
+}): boolean => {
+	if (!removeItems?.length) return true;
+	const addedKeys = new Set((addItems ?? []).map(composeMatchKey));
+	return removeItems.every((filter) =>
+		addedKeys.has(planItemFilterMatchKey(filter)),
+	);
+};
+
+const checkUpsertLicensesEligibility = ({
+	op,
+	opIndex,
+}: {
+	op: UpdatePlanOp;
+	opIndex: number;
+}): BatchMigrationRejection[] =>
+	(op.customize?.upsert_licenses ?? []).flatMap(
+		(entry): BatchMigrationRejection[] => {
+			const customize = entry.customize;
+			const details = { licensePlanId: entry.license_plan_id };
+
+			if (
+				(customize?.add_items?.length ?? 0) === 0 &&
+				(customize?.remove_items?.length ?? 0) === 0
+			) {
+				return [
+					{
+						code: "unsupported_upsert_licenses" as const,
+						opIndex,
+						message:
+							"upsert_licenses without add_items or remove_items resets the link to catalog inheritance; only the per-customer lane applies it.",
+						details,
+					},
+				];
+			}
+
+			const changesLinkFields =
+				entry.included !== undefined ||
+				entry.prepaid_only !== undefined ||
+				entry.metadata !== undefined;
+			if (changesLinkFields || customize?.price !== undefined) {
+				return [
+					{
+						code: "unsupported_upsert_licenses" as const,
+						opIndex,
+						message:
+							"customize.upsert_licenses link fields and base price are per-customer definition work.",
+						details,
+					},
+				];
+			}
+
+			return (customize?.add_items ?? [])
+				.filter((item) => item.price !== undefined)
+				.map((item) => ({
+					code: "priced_add_item" as const,
+					opIndex,
+					message:
+						"upsert_licenses add_items with a price attaches a paid item; only free entitlements are batch-lowered.",
+					details: { ...details, featureId: item.feature_id },
+				}));
+		},
+	);
+
 export const checkUpdatePlanOpEligibility = ({
 	op,
 	opIndex,
@@ -68,6 +139,8 @@ export const checkUpdatePlanOpEligibility = ({
 				"customize.remove_items is not batch-lowered yet; the batch lane is add_items-only.",
 		});
 	}
+
+	rejections.push(...checkUpsertLicensesEligibility({ op, opIndex }));
 
 	if (op.customize?.price !== undefined) {
 		rejections.push({

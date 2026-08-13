@@ -29,13 +29,17 @@ export type CycleEnrichmentCandidate = {
 	siblingResetCycleAnchor: number | null;
 };
 
-export type EnrichedCycleCandidate = CycleEnrichmentCandidate & {
+export type CycleFields = {
 	resetCycleAnchor: number | null;
 	nextResetAt: number | null;
 };
 
-export type CycleEnrichmentResult = {
-	rows: EnrichedCycleCandidate[];
+export type EnrichedCycleCandidate = CycleEnrichmentCandidate & CycleFields;
+
+export type CycleEnrichmentResult<
+	Candidate extends CycleEnrichmentCandidate = CycleEnrichmentCandidate,
+> = {
+	rows: (Candidate & CycleFields)[];
 	/** Customers a rung refused — routed to skipped (per-customer lane). */
 	excludedInternalCustomerIds: string[];
 };
@@ -60,16 +64,18 @@ const resolveAnchor = ({
  * anchor → setupResetCycleAnchor-parity fallback. nextResetAt always steps
  * through getCycleEnd — the same primitive the per-customer init path uses.
  */
-export const enrichCustomerEntitlementCycles = ({
+export const enrichCustomerEntitlementCycles = <
+	Candidate extends CycleEnrichmentCandidate,
+>({
 	candidates,
 	entitlement,
 	now,
 }: {
-	candidates: CycleEnrichmentCandidate[];
+	candidates: Candidate[];
 	entitlement: EntitlementWithFeature;
 	now: number;
-}): CycleEnrichmentResult => {
-	const rows: EnrichedCycleCandidate[] = candidates.map((candidate) => {
+}): CycleEnrichmentResult<Candidate> => {
+	const rows = candidates.map((candidate) => {
 		const anchor = resolveAnchor({ candidate, now });
 		return {
 			...candidate,

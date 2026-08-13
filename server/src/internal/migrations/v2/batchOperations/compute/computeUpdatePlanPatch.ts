@@ -9,6 +9,7 @@ import type {
 	BatchMigrationRejection,
 } from "../types/index.js";
 import { checkUpdatePlanTransitionEligibility } from "./guards/index.js";
+import { computeBatchMigrationLicenseOperations } from "./operations/computeBatchMigrationLicenseOperations.js";
 import { computeBatchMigrationOperations } from "./operations/index.js";
 import { resolvePreparedAddItemEntitlements } from "./utils/resolvePreparedAddItemEntitlements.js";
 
@@ -42,7 +43,19 @@ export const computeUpdatePlanPatch = ({
 		});
 	if (preparedRejections.length > 0) return { rejections: preparedRejections };
 
-	if (addItemEntitlements.length === 0) return { rejections: [] };
+	const { operations: licenseOperations, rejections: licenseRejections } =
+		computeBatchMigrationLicenseOperations({
+			migration,
+			op,
+			opIndex,
+			fromProduct,
+			features,
+		});
+	if (licenseRejections.length > 0) return { rejections: licenseRejections };
+
+	if (addItemEntitlements.length === 0 && licenseOperations.length === 0) {
+		return { rejections: [] };
+	}
 
 	const productTransitions = computePatchProductTransitions({
 		fromProduct,
@@ -60,7 +73,9 @@ export const computeUpdatePlanPatch = ({
 		operations,
 	});
 	if (rejections.length > 0) return { rejections };
-	if (operations.length === 0) return { rejections: [] };
+	if (operations.length === 0 && licenseOperations.length === 0) {
+		return { rejections: [] };
+	}
 
 	// Adds are additive, so customization is not an implicit exclusion — the
 	// scope narrows only when the filter says so.
@@ -89,7 +104,10 @@ export const computeUpdatePlanPatch = ({
 			planId: fromProduct.id,
 			fromProduct,
 			toProduct: productTransitions.toProduct,
-			operations: { entitlements: operations },
+			operations: {
+				entitlements: operations,
+				licenseEntitlements: licenseOperations,
+			},
 		},
 	};
 };

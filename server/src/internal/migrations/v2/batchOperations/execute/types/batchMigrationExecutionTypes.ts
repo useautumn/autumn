@@ -1,4 +1,4 @@
-import type { CusProductStatus } from "@autumn/shared";
+import type { CusProductStatus, EntitlementWithFeature } from "@autumn/shared";
 
 /** One claimed customer flowing through a page. Preview fields feed the
  * Tinybird item events; `id` also keys the cache bust. */
@@ -34,6 +34,11 @@ export type BatchMigrationInsertedItem = {
 	trialEndsAt: number | null;
 };
 
+export type BatchMigrationRemovedItem = Omit<
+	BatchMigrationInsertedItem,
+	"granted" | "unlimited" | "nextResetAt"
+> & { entitlement: EntitlementWithFeature };
+
 export type BatchMigrationPageResult = {
 	/** Customers with a matching customer product — mutated and marked succeeded. */
 	succeeded: BatchMigrationPageCustomer[];
@@ -42,6 +47,7 @@ export type BatchMigrationPageResult = {
 	skipped: BatchMigrationPageCustomer[];
 	/** Rows inserted this page, in patch order. */
 	insertedItems: BatchMigrationInsertedItem[];
+	removedItems: BatchMigrationRemovedItem[];
 };
 
 export type BatchMigrationExecutionSummary = {

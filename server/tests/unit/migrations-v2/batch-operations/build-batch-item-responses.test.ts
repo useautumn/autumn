@@ -60,6 +60,7 @@ const plan: BatchMigrationExecutionPlan = {
 			opIndex: 0,
 			scope: buildOperationScope({ internalProductId: "prod_pro_internal" }),
 			fromProduct,
+			addLicenseEntitlementOps: [],
 			addEntitlementOps: [
 				{
 					entitlement: entitlement({
@@ -94,6 +95,7 @@ const productState = {
 	canceledAt: null,
 	endedAt: null,
 	trialEndsAt: null,
+	action: "created" as const,
 };
 
 describe("buildBatchMigrationItemResponses", () => {
@@ -102,7 +104,7 @@ describe("buildBatchMigrationItemResponses", () => {
 			plan,
 			customers,
 			features,
-			insertedItems: [
+			changedItems: [
 				{
 					internalCustomerId: "cus_1",
 					customerProductId: "cp_1",
@@ -165,7 +167,7 @@ describe("buildBatchMigrationItemResponses", () => {
 			plan,
 			customers,
 			features,
-			insertedItems: [],
+			changedItems: [],
 		});
 
 		const response = responses.get("cus_2");
@@ -180,7 +182,7 @@ describe("buildBatchMigrationItemResponses", () => {
 			plan,
 			customers: [customers[0]],
 			features,
-			insertedItems: [
+			changedItems: [
 				{
 					internalCustomerId: "cus_1",
 					customerProductId: "cp_a",

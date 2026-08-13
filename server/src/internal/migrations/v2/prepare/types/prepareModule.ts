@@ -9,8 +9,8 @@ import type { AutumnContext } from "../../../../../honoUtils/HonoEnv";
  * are created — `mig_<internal_id>` for migrations, or any other prefix
  * for ad-hoc script invocations.
  */
-export type PrepareModule<Input, Result> = {
-	kind: string;
+export type PrepareModule<Input, Result, Kind extends string = string> = {
+	kind: Kind;
 
 	/** Pure planning. No writes. */
 	plan: (args: {
