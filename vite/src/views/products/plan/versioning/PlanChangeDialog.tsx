@@ -50,8 +50,8 @@ import {
 	useHasLicenseChanges,
 } from "../components/plan-licenses/useLicenseSaveRegistry";
 import {
-	buildMigrateTargets,
 	buildSelectedLicenseParentUpdates,
+	buildMigrateTargets,
 	getLicenseParentTargetId,
 } from "./buildMigrateTargets";
 import {

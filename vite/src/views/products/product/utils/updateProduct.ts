@@ -14,8 +14,6 @@ import { stripEditorFields } from "@/utils/product/productItemUtils";
 import { normalizeItemCurrencies } from "../../plan/utils/currencyUtils";
 import { validateItemsBeforeSave } from "../../plan/utils/validateItemsBeforeSave";
 
-// The editor models the base plan link as `base_id`; the API calls it
-// `base_plan_id`, and Zod strips the unknown key without the rename.
 type EditableProductUpdate = UpdateProductV2Params & {
 	base_id?: string | null;
 };
@@ -54,7 +52,6 @@ export const updateProduct = async ({
 		const sortedItems = stripEditorFields({
 			items: sortPlanItems({ items }),
 		});
-		// Undefined means the link was never edited; null means detach.
 		const { base_id, ...productUpdates } = product;
 		const updateData = UpdateProductV2ParamsSchema.parse({
 			...productUpdates,

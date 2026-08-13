@@ -13,7 +13,7 @@ import { usePlanVariants } from "@/hooks/queries/usePlanVariants";
 import { useProductsQuery } from "@/hooks/queries/useProductsQuery";
 import {
 	useHasChanges,
-	useIsBasePlanOnlyChange,
+	useHasContentChanges,
 	useIsCusPlanEditor,
 	useIsMetadataOnlyChange,
 	useProductStore,
@@ -66,10 +66,7 @@ export const SaveChangesBar = ({
 
 	const isCusPlanEditor = useIsCusPlanEditor();
 	const isMetadataOnlyChange = useIsMetadataOnlyChange();
-	const isBasePlanOnlyChange = useIsBasePlanOnlyChange();
-	// Linking a plan to a base never versions, so it must not trigger any of the
-	// version/propagation prompts on its own.
-	const planHasContentChanges = planHasChanges && !isBasePlanOnlyChange;
+	const planHasContentChanges = useHasContentChanges();
 	let saveButtonText = "Save";
 	if (isCusPlanEditor) {
 		saveButtonText = "Save and Return";
@@ -167,7 +164,8 @@ export const SaveChangesBar = ({
 				})
 			: false;
 
-		// Each step toasts its own failure, so only the combined success toasts here.
+		// License failures already toast their own error, so only the combined
+		// success gets a toast here.
 		if (planSaved && licensesSaved) {
 			toast.success("Changes saved successfully");
 		}

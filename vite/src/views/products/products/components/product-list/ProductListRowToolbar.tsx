@@ -62,17 +62,8 @@ export const ProductListRowToolbar = ({
 	const currentSandboxId = inNamedSandbox ? activeSandbox?.id : undefined;
 	const otherSandboxes = sandboxes.filter((s) => s.id !== currentSandboxId);
 
-	// Menu items sit inside a clickable table row, so every one of them has to
-	// swallow the event before running its action.
-	const closeDropdownThen =
-		(action: () => void) => (event: React.MouseEvent) => {
-			event.stopPropagation();
-			event.preventDefault();
-			setDropdownOpen(false);
-			action();
-		};
-
 	const handleCopyToSandbox = async (target: SandboxSummary) => {
+		setDropdownOpen(false);
 		try {
 			await copySandbox.mutateAsync({
 				...(inNamedSandbox && activeSandbox
@@ -177,19 +168,25 @@ export const ProductListRowToolbar = ({
 							<DropdownMenuSubContent>
 								<DropdownMenuItem
 									className="flex gap-2"
-									onClick={closeDropdownThen(() => {
+									onClick={(e) => {
+										e.stopPropagation();
+										e.preventDefault();
+										setDropdownOpen(false);
 										setCopyToEnv(AppEnv.Sandbox);
 										setCopyOpen(true);
-									})}
+									}}
 								>
 									Sandbox
 								</DropdownMenuItem>
 								<DropdownMenuItem
 									className="flex gap-2"
-									onClick={closeDropdownThen(() => {
+									onClick={(e) => {
+										e.stopPropagation();
+										e.preventDefault();
+										setDropdownOpen(false);
 										setCopyToEnv(AppEnv.Live);
 										setCopyOpen(true);
-									})}
+									}}
 								>
 									Production
 								</DropdownMenuItem>
@@ -198,9 +195,11 @@ export const ProductListRowToolbar = ({
 									<DropdownMenuItem
 										key={s.id}
 										className="flex gap-2"
-										onClick={closeDropdownThen(() => {
+										onClick={(e) => {
+											e.stopPropagation();
+											e.preventDefault();
 											handleCopyToSandbox(s);
-										})}
+										}}
 									>
 										{s.name}
 									</DropdownMenuItem>
@@ -211,7 +210,12 @@ export const ProductListRowToolbar = ({
 					{!isVariant && !product.archived && (
 						<DropdownMenuItem
 							className="flex gap-2"
-							onClick={closeDropdownThen(() => setCreateVariantOpen(true))}
+							onClick={(e) => {
+								e.stopPropagation();
+								e.preventDefault();
+								setDropdownOpen(false);
+								setCreateVariantOpen(true);
+							}}
 						>
 							<GitForkIcon />
 							Create variant
@@ -219,7 +223,12 @@ export const ProductListRowToolbar = ({
 					)}
 					<DropdownMenuItem
 						className="flex gap-2"
-						onClick={closeDropdownThen(() => onDeleteClick?.(product))}
+						onClick={(e) => {
+							e.stopPropagation();
+							e.preventDefault();
+							setDropdownOpen(false);
+							onDeleteClick?.(product);
+						}}
 					>
 						<DeleteIcon />
 						{deleteText}
