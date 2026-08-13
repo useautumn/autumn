@@ -132,16 +132,19 @@ export default defineConfig({
 		...(process.env.VITE_FRONTEND_URL && {
 			origin: process.env.VITE_FRONTEND_URL,
 		}),
-		allowedHosts: [
-			"dev.useautumn.com",
-			"client.dev.useautumn.com",
-			"localhost",
-			".localhost",
-			// Cloud sandboxes reach the dashboard through a per-worktree ngrok
-			// tunnel; without this Vite answers 403 "This host is not allowed".
-			".ngrok.app",
-			".ngrok-free.app",
-		],
+		allowedHosts:
+			process.env.DW_HEADLESS === "1" || process.env.DW_HEADLESS === "true"
+				? true
+				: [
+						"dev.useautumn.com",
+						"client.dev.useautumn.com",
+						"localhost",
+						".localhost",
+						// Cloud sandboxes reach the dashboard through a per-worktree ngrok
+						// tunnel; without this Vite answers 403 "This host is not allowed".
+						".ngrok.app",
+						".ngrok-free.app",
+					],
 		watch: {
 			usePolling: true, // Required for file watching in Docker on Windows
 			interval: 1000,

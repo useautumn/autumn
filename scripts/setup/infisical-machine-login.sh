@@ -11,6 +11,11 @@ if [ -n "${INFISICAL_TOKEN:-}" ]; then
 	exit 0
 fi
 
+if [ -z "${INFISICAL_CLIENT_ID:-}" ] && [ -n "${INFISICAL_UNIVERSAL_AUTH_CLIENT_ID:-}" ]; then
+	INFISICAL_CLIENT_ID="$INFISICAL_UNIVERSAL_AUTH_CLIENT_ID"
+	INFISICAL_CLIENT_SECRET="${INFISICAL_UNIVERSAL_AUTH_CLIENT_SECRET:-}"
+fi
+
 if [ -z "${INFISICAL_CLIENT_ID:-}" ] || [ -z "${INFISICAL_CLIENT_SECRET:-}" ]; then
 	exit 1
 fi
@@ -20,9 +25,10 @@ if [ -s "$CACHE" ] && [ -n "$(find "$CACHE" -mmin -30 2>/dev/null)" ]; then
 	exit 0
 fi
 
-PATH="${PATH}:$(cd "$(dirname "$0")/../.." && pwd)/node_modules/.bin:${HOME}/.bun/bin"
+ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
+PATH="${ROOT}/node_modules/.bin:${HOME}/.bun/bin:/usr/local/bin:${PATH}"
 if ! command -v infisical >/dev/null 2>&1; then
-	echo "infisical CLI not on PATH" >&2
+	echo "infisical CLI not on PATH (expected ${ROOT}/node_modules/.bin/infisical)" >&2
 	exit 1
 fi
 

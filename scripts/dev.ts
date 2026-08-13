@@ -305,53 +305,64 @@ async function startDev() {
 					: `"cd apps/leaf && PORT=${CHAT_PORT} bun dev"`,
 			);
 
-			// Stripe CLI webhook tunnel — silently skip if CLI absent.
+			// Stripe CLI webhook tunnel — skip if CLI absent.
 			// Forwards to the direct localhost port (not portless) so we avoid CA trust issues.
-			const stripeAvailable = Bun.spawnSync(["which", "stripe"]).exitCode === 0;
-			if (stripeAvailable) {
+			const stripeBin = existsSync("/usr/local/bin/stripe")
+				? "/usr/local/bin/stripe"
+				: Bun.spawnSync(["which", "stripe"]).exitCode === 0
+					? "stripe"
+					: null;
+			const stripeKey = process.env.STRIPE_SANDBOX_SECRET_KEY?.trim();
+			const headless =
+				process.env.DW_HEADLESS === "1" ||
+				process.env.DW_HEADLESS === "true";
+			if (stripeBin) {
 				// Sandbox key only — never the live key. Passed via STRIPE_API_KEY so
 				// headless boxes need no `stripe login`, and via env rather than argv
 				// so it never shows up in `ps`.
-				const stripeEnv = {
-					...(process.env as Record<string, string>),
-					...(process.env.STRIPE_SANDBOX_SECRET_KEY
-						? { STRIPE_API_KEY: process.env.STRIPE_SANDBOX_SECRET_KEY }
-						: {}),
-				};
-				const auth = Bun.spawnSync(
-					["stripe", "customers", "list", "--limit", "1"],
-					{ stdout: "pipe", stderr: "pipe", env: stripeEnv },
-				);
-				if (auth.exitCode !== 0) {
-					const stderr = new TextDecoder().decode(auth.stderr);
-					const headless =
-						process.env.DW_HEADLESS === "1" ||
-						process.env.DW_HEADLESS === "true";
-					console.error(
-						"\nStripe CLI is installed but not authenticated (or key expired).",
-					);
-					console.error(
-						`  ${stderr.trim().split("\n").slice(-3).join("\n  ")}`,
-					);
-					if (headless) {
-						// Cursor Cloud / Devin: don't take down server+vite because
-						// stripe listen isn't ready. Infisical keys may land on a later boot.
-						console.error(
-							"DW_HEADLESS=1 — skipping stripe listen; the rest of the stack will start.\n",
-						);
-					} else {
-						console.error("\nRun `stripe login` and try again.\n");
-						process.exit(1);
-					}
-				} else {
+				const startListen = () => {
 					const forwardUrl = `http://localhost:${SERVER_PORT}/webhooks/connect/sandbox`;
 					names.push("stripe");
 					colors.push("cyan");
 					// --forward-connect-to forwards events from connected accounts;
 					// the /webhooks/connect/* endpoint expects Connect-mode events.
-					const stripeCmd = `stripe listen --forward-connect-to ${forwardUrl} --skip-verify`;
+					const stripeCmd = `${stripeBin} listen --forward-connect-to ${forwardUrl} --skip-verify`;
 					cmds.push(isWindows ? `"${stripeCmd}"` : `"${stripeCmd}"`);
+					console.error(`stripe listen → ${forwardUrl}`);
+				};
+				if (stripeKey) {
+					// Key from Infisical: skip `stripe login` / customers-list preflight.
+					startListen();
+				} else {
+					const stripeEnv = {
+						...(process.env as Record<string, string>),
+					};
+					const auth = Bun.spawnSync(
+						[stripeBin, "customers", "list", "--limit", "1"],
+						{ stdout: "pipe", stderr: "pipe", env: stripeEnv },
+					);
+					if (auth.exitCode === 0) {
+						startListen();
+					} else if (headless) {
+						console.error(
+							"DW_HEADLESS=1 — no STRIPE_SANDBOX_SECRET_KEY; skipping stripe listen. Add Infisical machine-identity Runtime Secrets so bun dw run can attach webhooks.\n",
+						);
+					} else {
+						const stderr = new TextDecoder().decode(auth.stderr);
+						console.error(
+							"\nStripe CLI is installed but not authenticated (or key expired).",
+						);
+						console.error(
+							`  ${stderr.trim().split("\n").slice(-3).join("\n  ")}`,
+						);
+						console.error("\nRun `stripe login` and try again.\n");
+						process.exit(1);
+					}
 				}
+			} else if (headless) {
+				console.error(
+					"DW_HEADLESS=1 — Stripe CLI not installed; skipping stripe listen.\n",
+				);
 			}
 
 			shellArgs = [

@@ -9,25 +9,31 @@ snapshot already has Postgres 18, Redis Stack, ClickHouse, JRE, and ElasticMQ.
 
 ## `bun dw`
 
-`bun dw` works here. `scripts/dw/with-env.sh` uses Infisical when
-`INFISICAL_TOKEN` or universal-auth credentials are in the environment; otherwise
-it runs `scripts/dw/index.ts` against `server/.env` (written on boot).
+`bun dw` and `bun dw run` go through `scripts/dw/with-env.sh` →
+`scripts/setup/with-infisical.sh`. That mints an Infisical token from the Cursor
+Runtime Secrets machine identity, then `infisical run --env=dev --recursive`.
+Isolation env (`scripts/setup/cursor-cloud-isolation.env`) is applied *after*
+Infisical so DATABASE_URL / Redis / SQS stay on localhost.
+
+Without the machine identity, headless `bun dw` still starts against `server/.env`.
 
 `DW_HEADLESS=1` is set on start. That skips portless HTTPS aliases, the emulate
-daemon, and (unless `NEON_WORKTREE_API_KEY` is set) Neon branch provisioning.
-Worktree #1 uses the local Postgres/Redis/ElasticMQ from `agent-services.sh`.
+daemon, and Neon branch provisioning (`NEON_WORKTREE_API_KEY` is unset even if
+Infisical has it). Worktree #1 uses the local Postgres/Redis/ElasticMQ from
+`agent-services.sh`.
 
 ```sh
 bun dw          # provision-if-needed is a no-op without Neon; starts the app
+bun dw run      # same stack; stripe listen attaches when STRIPE_SANDBOX_SECRET_KEY is present
 bun dw setup    # bun install + ai submodule sync; no Neon/Docker
 bun dw identify # URLs / ports
 ```
 
 Stack: server `:8080`, vite `:3000`, checkout `:3001`, workers, leaf `:3099`.
 
-Other `package.json` aliases that still wrap `infisical run` (`bun d`, `bun t`,
-`bun db` without `AUTUMN_DB_DIRECT=1`) work once the Infisical machine identity
-is in Cursor secrets (start exports `INFISICAL_TOKEN`).
+`bun d` also goes through `with-infisical.sh`. Other `package.json` aliases that
+still wrap `infisical run` (`bun t`, `bun db` without `AUTUMN_DB_DIRECT=1`) work
+once start has exported `INFISICAL_TOKEN` into `~/.autumn-agent/env.sh`.
 
 Non-blocking noise: `trigger` waits for a login; `leaf` may crash without
 `SLACK_*` / `FIRECRAWL_API_KEY`.
@@ -83,10 +89,13 @@ Email OTP login. With no `RESEND_API_KEY`, the code is printed to the server log
 
 ## Secrets (Infisical machine identity)
 
-**Do not paste client IDs or secrets into chat.** Add them as **Runtime Secrets**
-(redacted from the transcript) on the environment:
+**Do not paste client IDs or secrets into chat.** They would land in the
+transcript. Add them as **Runtime Secrets** (redacted from the model and
+commits) on the environment:
 
 [https://cursor.com/dashboard/cloud-agents/environments/e/401b82fb-73ca-11f1-a8a0-cafc5ef88358](https://cursor.com/dashboard/cloud-agents/environments/e/401b82fb-73ca-11f1-a8a0-cafc5ef88358)
+
+Secrets → add:
 
 | Name | Type | Why |
 |---|---|---|
@@ -94,34 +103,48 @@ Email OTP login. With no `RESEND_API_KEY`, the code is printed to the server log
 | `INFISICAL_CLIENT_SECRET` | Runtime Secret | Machine identity |
 
 That is the only pair you need. Start runs `infisical login --method=universal-auth`,
-caches a short-lived `INFISICAL_TOKEN`, and `bun dw` does `infisical run --env=dev --recursive`.
-Every Infisical `dev` secret (Stripe, ngrok, Resend, …) is then in the process.
+caches a short-lived `INFISICAL_TOKEN`, dumps Infisical `dev` into
+`~/.autumn-agent/dev-secrets.env` (isolation keys stripped), and `bun dw` /
+`bun dw run` do `infisical run --env=dev --recursive`. Every Infisical `dev`
+secret (Stripe, ngrok, Resend, …) is then in the process.
 
-`server/.env` is an **overlay**, not the vault: it pins `DATABASE_URL` / Redis / SQS
-to localhost so this VM does not share the team Neon DB or AWS queue. Empty
-`STRIPE_*=` lines are stripped so they cannot clobber Infisical.
+`server/.env` and `cursor-cloud-isolation.env` are an **overlay**, not the vault:
+they pin `DATABASE_URL` / Redis / SQS to localhost so this VM does not share the
+team Neon DB or AWS queue. Empty `STRIPE_*=` lines are stripped so they cannot
+clobber Infisical.
 
 ## Stripe webhooks
 
 `scripts/dev.ts` starts `stripe listen --forward-connect-to http://localhost:8080/webhooks/connect/sandbox`
 when the Stripe CLI is installed and `STRIPE_SANDBOX_SECRET_KEY` is present (from Infisical).
-Stripe's CLI opens an outbound tunnel — **no public URL / ngrok required** for webhooks.
+Stripe's CLI opens an outbound tunnel — **no public URL / ngrok / port-forward
+required** for webhooks. This is attached by `bun dw` / `bun dw run`.
 
-`STRIPE_WEBHOOK_SKIP_VERIFY=true` is set in `server/.env` because the CLI's `whsec_`
-is not the Infisical dashboard endpoint secret. Signature skip is localhost-only.
+`STRIPE_WEBHOOK_SKIP_VERIFY=true` is set in the isolation overlay because the
+CLI's `whsec_` is not the Infisical dashboard endpoint secret. Signature skip is
+localhost-only.
 
-If the CLI is present but not yet authenticated, `DW_HEADLESS=1` skips `stripe listen`
-instead of killing the whole stack.
+If the CLI is present but the sandbox key is missing, `DW_HEADLESS=1` skips
+`stripe listen` instead of killing the whole stack.
 
 ## Opening the dashboard from your laptop
 
-Cursor Cloud does not SSH-mount the VM. Three options, best first:
+There is no SSH into this VM, so a manual `ssh -L` port-forward is not an option.
+Three ways to click around the running app:
 
-1. **Remote desktop** on the agent page — take control, open Chrome with `--no-sandbox`, go to `http://localhost:3000`. Best for “click around this agent's app”.
-2. **ngrok terminal** (`scripts/setup/cursor-cloud-ngrok.sh`) — if Infisical has `NGROK_AUTHTOKEN`, it tunnels `:3000` (dashboard) and `:8080` (API) on **random** `*.ngrok.app` URLs (reserved names collide across concurrent VMs). Watch the `ngrok` tmux pane for the URLs.
-3. **`ports` in `.cursor/environment.json`** (8080 / 3000 / 3001) — Cursor may offer these in the agent UI like devcontainer port forwarding. If a forwarded link appears, use it; if not, use (1) or (2).
+1. **Cursor port forwarding** (closest to SSH `-L`). `.cursor/environment.json`
+   declares `ports` 8080 / 3000 / 3001. In the agent editor, open the plug /
+   Ports panel — Cursor forwards them to **localhost on your laptop**. Then
+   open `http://localhost:3000`. Vite `allowedHosts` is wide open when
+   `DW_HEADLESS=1` so preview hostnames do not 403.
+2. **Remote desktop** on the agent page — take control, open Chrome with
+   `--no-sandbox`, go to `http://localhost:3000`. Most reliable if Ports is empty.
+3. **ngrok** (`scripts/setup/cursor-cloud-ngrok.sh`) — if Infisical has
+   `NGROK_AUTHTOKEN`, it tunnels `:3000` and `:8080` on random `*.ngrok.app`
+   URLs (reserved names collide across concurrent VMs). Watch the `ngrok` or
+   `access` tmux pane, or `~/.autumn-agent/public-urls.txt`.
 
-Vite will 403 unknown hosts; `.ngrok.app` is already in `server.allowedHosts` from the Conductor work. Remote desktop / localhost does not hit that.
+The `access` terminal reprints these instructions on every boot.
 
 ## Lint / typecheck / test
 
