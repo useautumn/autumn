@@ -138,9 +138,12 @@ describe("license transitions lower into operations", () => {
 		});
 
 		expect(rejections).toHaveLength(0);
-		expect(operations).toHaveLength(1);
+		expect(operations.map((operation) => operation.type)).toEqual([
+			"repoint_license_pool",
+			"add_license_entitlement",
+		]);
 		expect(operations[0]?.licensePlanId).toBe(LICENSE_PLAN_ID);
-		const [added] = operations;
+		const added = operations[1];
 		if (added?.type !== "add_license_entitlement")
 			throw new Error("expected a minted op");
 		expect(added.initialState.tracksBalance).toBe(false);
@@ -153,8 +156,11 @@ describe("license transitions lower into operations", () => {
 		});
 
 		expect(rejections).toHaveLength(0);
-		expect(operations).toHaveLength(1);
-		const [minted] = operations;
+		expect(operations.map((operation) => operation.type)).toEqual([
+			"repoint_license_pool",
+			"add_license_entitlement",
+		]);
+		const minted = operations[1];
 		if (minted?.type !== "add_license_entitlement")
 			throw new Error("expected a minted op");
 		expect(minted.initialState.tracksBalance).toBe(true);
