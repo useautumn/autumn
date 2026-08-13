@@ -39,6 +39,8 @@ const LicenseCandidateRowSchema = z.object({
 	billingCycleAnchor: nullableNumeric,
 	subscriptionCycleAnchor: nullableNumeric,
 	siblingResetCycleAnchor: nullableNumeric,
+	liveBalance: nullableNumeric,
+	liveNextResetAt: nullableNumeric,
 });
 
 export type LicenseCandidateRow = z.infer<typeof LicenseCandidateRowSchema>;
@@ -99,6 +101,8 @@ const matchSql = ({
 			featureId: sql`f.id`,
 			siblingAnchor: sql`sibling.reset_cycle_anchor`,
 			siblingExcludeLive: sql``,
+			liveBalance: sql`NULL::numeric`,
+			liveNextResetAt: sql`NULL::numeric`,
 			extraWhere: sql`
 				AND e.id = ${entitlement.id}
 				AND NOT EXISTS (
@@ -124,6 +128,8 @@ const matchSql = ({
 		featureId: sql`${entitlement.feature.id}`,
 		siblingAnchor: sql`COALESCE(sibling.reset_cycle_anchor, live.reset_cycle_anchor)`,
 		siblingExcludeLive: sql`AND sibling_entitlement.id <> live.id`,
+		liveBalance: sql`live.balance`,
+		liveNextResetAt: sql`live.next_reset_at`,
 		extraWhere: sql``,
 	};
 };
@@ -202,7 +208,9 @@ export async function selectLicenseCandidateRows({
 				cp.billing_cycle_anchor
 			) AS "billingCycleAnchor",
 			sub_anchor.billing_cycle_anchor_ms AS "subscriptionCycleAnchor",
-			${matched.siblingAnchor} AS "siblingResetCycleAnchor"
+			${matched.siblingAnchor} AS "siblingResetCycleAnchor",
+			${matched.liveBalance} AS "liveBalance",
+			${matched.liveNextResetAt} AS "liveNextResetAt"
 		FROM customer_products AS assignment
 		${canonicalPoolLateralSql({ licensePlanId, columns: sql`pool.*` })}
 		INNER JOIN customer_products AS cp

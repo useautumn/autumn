@@ -30,9 +30,9 @@ const groupByCustomer = ({
 
 /**
  * Per-customer migration response for a page, without loading any customer:
- * the candidate dedup guarantees an inserted feature was ABSENT beforehand,
- * so the pre-migration state is empty by construction and the inserted rows
- * are exactly the diff. Same shape the per-customer lane emits.
+ * the changed rows ARE the diff — created rows carry the after-state, deleted
+ * rows the before-state (a replace contributes one of each). Same shape the
+ * per-customer lane emits.
  */
 export const buildBatchMigrationItemResponses = ({
 	plan,
@@ -53,7 +53,7 @@ export const buildBatchMigrationItemResponses = ({
 		customers.map((customer) => {
 			const customerItems = itemsByCustomer.get(customer.internalId) ?? [];
 			const changes = toCustomerItemChanges({
-				items: customerItems.filter((item) => item.action === "created"),
+				items: customerItems,
 				entitlementLookup,
 			});
 
@@ -85,12 +85,12 @@ export const buildBatchMigrationItemResponses = ({
 				customer_id: customer.id ?? customer.internalId,
 				plan_changes: planChanges,
 				balance_changes: buildBalanceChanges({
-					beforeBalances: {},
-					afterBalances: changes.balances,
+					beforeBalances: changes.beforeBalances,
+					afterBalances: changes.afterBalances,
 				}),
 				flag_changes: buildFlagChanges({
-					beforeFlags: {},
-					afterFlags: changes.flags,
+					beforeFlags: changes.beforeFlags,
+					afterFlags: changes.afterFlags,
 				}),
 			};
 			return [customer.internalId, preview];
