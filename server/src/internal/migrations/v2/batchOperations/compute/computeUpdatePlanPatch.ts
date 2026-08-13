@@ -9,8 +9,8 @@ import type {
 	BatchMigrationRejection,
 } from "../types/index.js";
 import { checkUpdatePlanTransitionEligibility } from "./guards/index.js";
-import { computeBatchMigrationLicenseOperations } from "./operations/computeBatchMigrationLicenseOperations.js";
 import { computeBatchMigrationOperations } from "./operations/index.js";
+import { resolveLicenseCustomizeTransitions } from "./transitions/resolveLicenseCustomizeTransitions.js";
 import { resolvePreparedAddItemEntitlements } from "./utils/resolvePreparedAddItemEntitlements.js";
 
 /** Computes one (op, fromProduct) pair into an add-only batch patch: resolve
@@ -43,8 +43,8 @@ export const computeUpdatePlanPatch = ({
 		});
 	if (preparedRejections.length > 0) return { rejections: preparedRejections };
 
-	const { operations: licenseOperations, rejections: licenseRejections } =
-		computeBatchMigrationLicenseOperations({
+	const { links: licenseLinks, rejections: licenseRejections } =
+		resolveLicenseCustomizeTransitions({
 			migration,
 			op,
 			opIndex,
@@ -53,7 +53,7 @@ export const computeUpdatePlanPatch = ({
 		});
 	if (licenseRejections.length > 0) return { rejections: licenseRejections };
 
-	if (addItemEntitlements.length === 0 && licenseOperations.length === 0) {
+	if (addItemEntitlements.length === 0 && licenseLinks.length === 0) {
 		return { rejections: [] };
 	}
 
@@ -63,17 +63,22 @@ export const computeUpdatePlanPatch = ({
 	});
 
 	const operations = computeBatchMigrationOperations({
-		addedEntitlementPrices: productTransitions.entitlementPrices.added,
+		productTransitions,
+		licenseLinks,
 	});
 
 	const rejections = checkUpdatePlanTransitionEligibility({
 		opIndex,
 		fromProduct,
 		productTransitions,
-		operations,
+		licenseLinks,
+		operations: operations.entitlements,
 	});
 	if (rejections.length > 0) return { rejections };
-	if (operations.length === 0 && licenseOperations.length === 0) {
+	if (
+		operations.entitlements.length === 0 &&
+		operations.licenseEntitlements.length === 0
+	) {
 		return { rejections: [] };
 	}
 
@@ -104,10 +109,7 @@ export const computeUpdatePlanPatch = ({
 			planId: fromProduct.id,
 			fromProduct,
 			toProduct: productTransitions.toProduct,
-			operations: {
-				entitlements: operations,
-				licenseEntitlements: licenseOperations,
-			},
+			operations,
 		},
 	};
 };

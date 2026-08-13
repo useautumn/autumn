@@ -1,4 +1,4 @@
-import { entsAreSame, type EntitlementWithFeature } from "@autumn/shared";
+import { type EntitlementWithFeature, entsAreSame } from "@autumn/shared";
 
 /** Live ids whose definition matches the catalog from-entitlement. Exact id
  * always counts; entsAreSame catches custom/old rows with the same meaning. */

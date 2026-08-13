@@ -1,8 +1,8 @@
 import {
 	type Entitlement,
 	type EntitlementWithFeature,
-	type Feature,
 	entitlements,
+	type Feature,
 	MIGRATABLE_STATUSES,
 } from "@autumn/shared";
 import { enrichEntitlementsWithFeatures } from "@autumn/shared/utils/productUtils/entUtils/enrichEntitlement.js";
