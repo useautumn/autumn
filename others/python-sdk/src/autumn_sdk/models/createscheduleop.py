@@ -1433,6 +1433,13 @@ UnscheduledPlanUsageLimitInterval = Literal[
 r"""Interval for the cap, aligned to the customer's billing cycle."""
 
 
+UnscheduledPlanAnchor = Literal[
+    "billing_cycle",
+    "utc",
+]
+r"""Window alignment. 'billing_cycle' phases the interval to the customer's renewal time; 'utc' aligns to the UTC calendar."""
+
+
 CreateSchedulePropertiesTypedDict = TypeAliasType(
     "CreateSchedulePropertiesTypedDict", Union[str, float, bool]
 )
@@ -1464,6 +1471,8 @@ class UnscheduledPlanUsageLimitTypedDict(TypedDict):
     r"""Interval for the cap, aligned to the customer's billing cycle."""
     enabled: NotRequired[bool]
     r"""Whether this usage limit is enabled."""
+    anchor: NotRequired[UnscheduledPlanAnchor]
+    r"""Window alignment. 'billing_cycle' phases the interval to the customer's renewal time; 'utc' aligns to the UTC calendar."""
     filter_: NotRequired[UnscheduledPlanFilterTypedDict]
     r"""When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature."""
 
@@ -1481,6 +1490,9 @@ class UnscheduledPlanUsageLimit(BaseModel):
     enabled: Optional[bool] = True
     r"""Whether this usage limit is enabled."""
 
+    anchor: Optional[UnscheduledPlanAnchor] = None
+    r"""Window alignment. 'billing_cycle' phases the interval to the customer's renewal time; 'utc' aligns to the UTC calendar."""
+
     filter_: Annotated[
         Optional[UnscheduledPlanFilter], pydantic.Field(alias="filter")
     ] = None
@@ -1488,7 +1500,7 @@ class UnscheduledPlanUsageLimit(BaseModel):
 
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
-        optional_fields = set(["enabled", "filter"])
+        optional_fields = set(["enabled", "anchor", "filter"])
         serialized = handler(self)
         m = {}
 
@@ -2959,6 +2971,13 @@ PhaseStartUsageLimitInterval = Literal[
 r"""Interval for the cap, aligned to the customer's billing cycle."""
 
 
+PhaseStartAnchor = Literal[
+    "billing_cycle",
+    "utc",
+]
+r"""Window alignment. 'billing_cycle' phases the interval to the customer's renewal time; 'utc' aligns to the UTC calendar."""
+
+
 class PhaseStartFilterTypedDict(TypedDict):
     r"""When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature."""
 
@@ -2980,6 +2999,8 @@ class PhaseStartUsageLimitTypedDict(TypedDict):
     r"""Interval for the cap, aligned to the customer's billing cycle."""
     enabled: NotRequired[bool]
     r"""Whether this usage limit is enabled."""
+    anchor: NotRequired[PhaseStartAnchor]
+    r"""Window alignment. 'billing_cycle' phases the interval to the customer's renewal time; 'utc' aligns to the UTC calendar."""
     filter_: NotRequired[PhaseStartFilterTypedDict]
     r"""When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature."""
 
@@ -2997,6 +3018,9 @@ class PhaseStartUsageLimit(BaseModel):
     enabled: Optional[bool] = True
     r"""Whether this usage limit is enabled."""
 
+    anchor: Optional[PhaseStartAnchor] = None
+    r"""Window alignment. 'billing_cycle' phases the interval to the customer's renewal time; 'utc' aligns to the UTC calendar."""
+
     filter_: Annotated[Optional[PhaseStartFilter], pydantic.Field(alias="filter")] = (
         None
     )
@@ -3004,7 +3028,7 @@ class PhaseStartUsageLimit(BaseModel):
 
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
-        optional_fields = set(["enabled", "filter"])
+        optional_fields = set(["enabled", "anchor", "filter"])
         serialized = handler(self)
         m = {}
 
@@ -3366,6 +3390,8 @@ class CreateScheduleParamsTypedDict(TypedDict):
     r"""Controls when to return a checkout URL for the immediate phase. 'always' forces a confirmation or checkout flow, 'if_required' only redirects when needed, and 'never' disables redirects."""
     billing_behavior: NotRequired[CreateScheduleBillingBehavior]
     r"""Whether to prorate the immediate phase. 'none' skips proration charges and credits."""
+    no_billing_changes: NotRequired[bool]
+    r"""If true, skips any billing changes for the schedule."""
     billing_cycle_anchor: Literal["now"]
     r"""Pass 'now' to reset the billing cycle anchor of the immediate phase to the current time."""
     enable_plan_immediately: NotRequired[bool]
@@ -3410,6 +3436,9 @@ class CreateScheduleParams(BaseModel):
     billing_behavior: Optional[CreateScheduleBillingBehavior] = None
     r"""Whether to prorate the immediate phase. 'none' skips proration charges and credits."""
 
+    no_billing_changes: Optional[bool] = None
+    r"""If true, skips any billing changes for the schedule."""
+
     billing_cycle_anchor: Annotated[
         Annotated[Optional[Literal["now"]], AfterValidator(validate_const("now"))],
         pydantic.Field(alias="billing_cycle_anchor"),
@@ -3438,6 +3467,7 @@ class CreateScheduleParams(BaseModel):
                 "checkout_session_params",
                 "redirect_mode",
                 "billing_behavior",
+                "no_billing_changes",
                 "billing_cycle_anchor",
                 "enable_plan_immediately",
                 "preserve_add_ons",

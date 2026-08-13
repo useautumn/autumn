@@ -484,6 +484,7 @@ class Billing(BaseSDK):
         checkout_session_params: Optional[Dict[str, Any]] = None,
         redirect_mode: Optional[models.CreateScheduleRedirectMode] = "if_required",
         billing_behavior: Optional[models.CreateScheduleBillingBehavior] = None,
+        no_billing_changes: Optional[bool] = None,
         enable_plan_immediately: Optional[bool] = None,
         preserve_add_ons: Optional[bool] = None,
         unscheduled_plans: Optional[
@@ -509,6 +510,7 @@ class Billing(BaseSDK):
         :param checkout_session_params: Additional parameters to pass into the creation of the Stripe checkout session.
         :param redirect_mode: Controls when to return a checkout URL for the immediate phase. 'always' forces a confirmation or checkout flow, 'if_required' only redirects when needed, and 'never' disables redirects.
         :param billing_behavior: Whether to prorate the immediate phase. 'none' skips proration charges and credits.
+        :param no_billing_changes: If true, skips any billing changes for the schedule.
         :param enable_plan_immediately: If true, the immediate-phase cusProducts are activated immediately (and scheduled-phase cusProducts pre-inserted) even when payment is pending via Stripe checkout. The Autumn schedule rows are persisted on checkout.session.completed.
         :param preserve_add_ons: Deprecated and ignored. Active plans the schedule does not declare are always retained.
         :param unscheduled_plans: Plans billed with the immediate phase that the schedule never expires or replaces. No phase may declare a plan in the same group and scope.
@@ -544,6 +546,7 @@ class Billing(BaseSDK):
             checkout_session_params=checkout_session_params,
             redirect_mode=redirect_mode,
             billing_behavior=billing_behavior,
+            no_billing_changes=no_billing_changes,
             enable_plan_immediately=enable_plan_immediately,
             preserve_add_ons=preserve_add_ons,
             unscheduled_plans=utils.get_pydantic_model(
@@ -642,6 +645,7 @@ class Billing(BaseSDK):
         checkout_session_params: Optional[Dict[str, Any]] = None,
         redirect_mode: Optional[models.CreateScheduleRedirectMode] = "if_required",
         billing_behavior: Optional[models.CreateScheduleBillingBehavior] = None,
+        no_billing_changes: Optional[bool] = None,
         enable_plan_immediately: Optional[bool] = None,
         preserve_add_ons: Optional[bool] = None,
         unscheduled_plans: Optional[
@@ -667,6 +671,7 @@ class Billing(BaseSDK):
         :param checkout_session_params: Additional parameters to pass into the creation of the Stripe checkout session.
         :param redirect_mode: Controls when to return a checkout URL for the immediate phase. 'always' forces a confirmation or checkout flow, 'if_required' only redirects when needed, and 'never' disables redirects.
         :param billing_behavior: Whether to prorate the immediate phase. 'none' skips proration charges and credits.
+        :param no_billing_changes: If true, skips any billing changes for the schedule.
         :param enable_plan_immediately: If true, the immediate-phase cusProducts are activated immediately (and scheduled-phase cusProducts pre-inserted) even when payment is pending via Stripe checkout. The Autumn schedule rows are persisted on checkout.session.completed.
         :param preserve_add_ons: Deprecated and ignored. Active plans the schedule does not declare are always retained.
         :param unscheduled_plans: Plans billed with the immediate phase that the schedule never expires or replaces. No phase may declare a plan in the same group and scope.
@@ -702,6 +707,7 @@ class Billing(BaseSDK):
             checkout_session_params=checkout_session_params,
             redirect_mode=redirect_mode,
             billing_behavior=billing_behavior,
+            no_billing_changes=no_billing_changes,
             enable_plan_immediately=enable_plan_immediately,
             preserve_add_ons=preserve_add_ons,
             unscheduled_plans=utils.get_pydantic_model(

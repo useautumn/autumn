@@ -195,9 +195,9 @@ class PreviewMultiUpdateLineItemTypedDict(TypedDict):
     description: str
     r"""A detailed description of the line item."""
     subtotal: float
-    r"""The amount in cents before discounts and tax for this line item."""
+    r"""The amount before discounts and tax for this line item."""
     total: float
-    r"""The final amount in cents after discounts and tax for this line item."""
+    r"""The final amount after discounts and tax for this line item."""
     plan_id: str
     r"""The ID of the plan that this line item belongs to."""
     feature_id: Nullable[str]
@@ -218,10 +218,10 @@ class PreviewMultiUpdateLineItem(BaseModel):
     r"""A detailed description of the line item."""
 
     subtotal: float
-    r"""The amount in cents before discounts and tax for this line item."""
+    r"""The amount before discounts and tax for this line item."""
 
     total: float
-    r"""The final amount in cents after discounts and tax for this line item."""
+    r"""The final amount after discounts and tax for this line item."""
 
     plan_id: str
     r"""The ID of the plan that this line item belongs to."""
@@ -322,9 +322,9 @@ class PreviewMultiUpdateNextCycleLineItemTypedDict(TypedDict):
     description: str
     r"""A detailed description of the line item."""
     subtotal: float
-    r"""The amount in cents before discounts and tax for this line item."""
+    r"""The amount before discounts and tax for this line item."""
     total: float
-    r"""The final amount in cents after discounts and tax for this line item."""
+    r"""The final amount after discounts and tax for this line item."""
     plan_id: str
     r"""The ID of the plan that this line item belongs to."""
     feature_id: Nullable[str]
@@ -345,10 +345,10 @@ class PreviewMultiUpdateNextCycleLineItem(BaseModel):
     r"""A detailed description of the line item."""
 
     subtotal: float
-    r"""The amount in cents before discounts and tax for this line item."""
+    r"""The amount before discounts and tax for this line item."""
 
     total: float
-    r"""The final amount in cents after discounts and tax for this line item."""
+    r"""The final amount after discounts and tax for this line item."""
 
     plan_id: str
     r"""The ID of the plan that this line item belongs to."""
@@ -466,9 +466,9 @@ class PreviewMultiUpdateNextCycleTypedDict(TypedDict):
     starts_at: float
     r"""Unix timestamp (milliseconds) when the next billing cycle starts."""
     subtotal: float
-    r"""The total amount in cents before discounts and tax for the next cycle."""
+    r"""The total amount before discounts and tax for the next cycle."""
     total: float
-    r"""The final amount in cents after discounts and tax for the next cycle."""
+    r"""The final amount after discounts and tax for the next cycle."""
     line_items: List[PreviewMultiUpdateNextCycleLineItemTypedDict]
     r"""List of line items for the next billing cycle."""
     usage_line_items: List[PreviewMultiUpdateUsageLineItemTypedDict]
@@ -482,10 +482,10 @@ class PreviewMultiUpdateNextCycle(BaseModel):
     r"""Unix timestamp (milliseconds) when the next billing cycle starts."""
 
     subtotal: float
-    r"""The total amount in cents before discounts and tax for the next cycle."""
+    r"""The total amount before discounts and tax for the next cycle."""
 
     total: float
-    r"""The final amount in cents after discounts and tax for the next cycle."""
+    r"""The final amount after discounts and tax for the next cycle."""
 
     line_items: List[PreviewMultiUpdateNextCycleLineItem]
     r"""List of line items for the next billing cycle."""
@@ -646,11 +646,11 @@ class PreviewMultiUpdateSubscriptionTypedDict(TypedDict):
     line_items: List[PreviewMultiUpdateLineItemTypedDict]
     r"""List of line items for the current billing period."""
     subtotal: float
-    r"""The total amount in cents before discounts and tax for the current billing period."""
+    r"""The total amount before discounts and tax for the current billing period."""
     total: float
-    r"""The final amount in cents after discounts and tax for the current billing period."""
+    r"""The final amount after discounts and tax for the current billing period."""
     currency: str
-    r"""The three-letter ISO currency code (e.g., 'usd')."""
+    r"""The three-letter ISO currency code. All amounts are in the currency's major unit (e.g., dollars for USD)."""
     incoming: List[PreviewMultiUpdateIncomingTypedDict]
     r"""Products or subscription changes being added or updated."""
     outgoing: List[PreviewMultiUpdateOutgoingTypedDict]
@@ -671,13 +671,13 @@ class PreviewMultiUpdateSubscription(BaseModel):
     r"""List of line items for the current billing period."""
 
     subtotal: float
-    r"""The total amount in cents before discounts and tax for the current billing period."""
+    r"""The total amount before discounts and tax for the current billing period."""
 
     total: float
-    r"""The final amount in cents after discounts and tax for the current billing period."""
+    r"""The final amount after discounts and tax for the current billing period."""
 
     currency: str
-    r"""The three-letter ISO currency code (e.g., 'usd')."""
+    r"""The three-letter ISO currency code. All amounts are in the currency's major unit (e.g., dollars for USD)."""
 
     incoming: List[PreviewMultiUpdateIncoming]
     r"""Products or subscription changes being added or updated."""
@@ -717,7 +717,7 @@ class MultiUpdatePreviewResponseTypedDict(TypedDict):
     customer_id: str
     r"""The ID of the customer the preview applies to."""
     currency: str
-    r"""The three-letter ISO currency code (e.g., 'usd')."""
+    r"""The three-letter ISO currency code. All amounts are in the currency's major unit (e.g., dollars for USD)."""
     total: float
     r"""The combined amount due today across all subscriptions (sum of subscriptions[].total)."""
     subscriptions: List[PreviewMultiUpdateSubscriptionTypedDict]
@@ -731,7 +731,7 @@ class MultiUpdatePreviewResponse(BaseModel):
     r"""The ID of the customer the preview applies to."""
 
     currency: str
-    r"""The three-letter ISO currency code (e.g., 'usd')."""
+    r"""The three-letter ISO currency code. All amounts are in the currency's major unit (e.g., dollars for USD)."""
 
     total: float
     r"""The combined amount due today across all subscriptions (sum of subscriptions[].total)."""

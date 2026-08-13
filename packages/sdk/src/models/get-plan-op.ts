@@ -1006,6 +1006,20 @@ export type GetPlanVariantDetailsUsageLimitInterval = OpenEnum<
 >;
 
 /**
+ * Window alignment. 'billing_cycle' phases the interval to the customer's renewal time; 'utc' aligns to the UTC calendar.
+ */
+export const GetPlanVariantDetailsAnchor = {
+  BillingCycle: "billing_cycle",
+  Utc: "utc",
+} as const;
+/**
+ * Window alignment. 'billing_cycle' phases the interval to the customer's renewal time; 'utc' aligns to the UTC calendar.
+ */
+export type GetPlanVariantDetailsAnchor = OpenEnum<
+  typeof GetPlanVariantDetailsAnchor
+>;
+
+/**
  * When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature.
  */
 export type GetPlanVariantDetailsFilter = {
@@ -1029,6 +1043,10 @@ export type GetPlanVariantDetailsUsageLimit = {
    * Interval for the cap, aligned to the customer's billing cycle.
    */
   interval: GetPlanVariantDetailsUsageLimitInterval;
+  /**
+   * Window alignment. 'billing_cycle' phases the interval to the customer's renewal time; 'utc' aligns to the UTC calendar.
+   */
+  anchor?: GetPlanVariantDetailsAnchor | undefined;
   /**
    * When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature.
    */
@@ -1274,6 +1292,18 @@ export type GetPlanUsageLimitInterval = OpenEnum<
 >;
 
 /**
+ * Window alignment. 'billing_cycle' phases the interval to the customer's renewal time; 'utc' aligns to the UTC calendar.
+ */
+export const GetPlanAnchor = {
+  BillingCycle: "billing_cycle",
+  Utc: "utc",
+} as const;
+/**
+ * Window alignment. 'billing_cycle' phases the interval to the customer's renewal time; 'utc' aligns to the UTC calendar.
+ */
+export type GetPlanAnchor = OpenEnum<typeof GetPlanAnchor>;
+
+/**
  * When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature.
  */
 export type GetPlanFilter = {
@@ -1297,6 +1327,10 @@ export type GetPlanUsageLimit = {
    * Interval for the cap, aligned to the customer's billing cycle.
    */
   interval: GetPlanUsageLimitInterval;
+  /**
+   * Window alignment. 'billing_cycle' phases the interval to the customer's renewal time; 'utc' aligns to the UTC calendar.
+   */
+  anchor?: GetPlanAnchor | undefined;
   /**
    * When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature.
    */
@@ -2615,6 +2649,12 @@ export const GetPlanVariantDetailsUsageLimitInterval$inboundSchema:
     .inboundSchema(GetPlanVariantDetailsUsageLimitInterval);
 
 /** @internal */
+export const GetPlanVariantDetailsAnchor$inboundSchema: z.ZodMiniType<
+  GetPlanVariantDetailsAnchor,
+  unknown
+> = openEnums.inboundSchema(GetPlanVariantDetailsAnchor);
+
+/** @internal */
 export const GetPlanVariantDetailsFilter$inboundSchema: z.ZodMiniType<
   GetPlanVariantDetailsFilter,
   unknown
@@ -2642,6 +2682,7 @@ export const GetPlanVariantDetailsUsageLimit$inboundSchema: z.ZodMiniType<
     enabled: z._default(types.boolean(), true),
     limit: types.number(),
     interval: GetPlanVariantDetailsUsageLimitInterval$inboundSchema,
+    anchor: types.optional(GetPlanVariantDetailsAnchor$inboundSchema),
     filter: types.optional(
       z.lazy(() => GetPlanVariantDetailsFilter$inboundSchema),
     ),
@@ -2973,6 +3014,12 @@ export const GetPlanUsageLimitInterval$inboundSchema: z.ZodMiniType<
 > = openEnums.inboundSchema(GetPlanUsageLimitInterval);
 
 /** @internal */
+export const GetPlanAnchor$inboundSchema: z.ZodMiniType<
+  GetPlanAnchor,
+  unknown
+> = openEnums.inboundSchema(GetPlanAnchor);
+
+/** @internal */
 export const GetPlanFilter$inboundSchema: z.ZodMiniType<
   GetPlanFilter,
   unknown
@@ -3000,6 +3047,7 @@ export const GetPlanUsageLimit$inboundSchema: z.ZodMiniType<
     enabled: z._default(types.boolean(), true),
     limit: types.number(),
     interval: GetPlanUsageLimitInterval$inboundSchema,
+    anchor: types.optional(GetPlanAnchor$inboundSchema),
     filter: types.optional(z.lazy(() => GetPlanFilter$inboundSchema)),
   }),
   z.transform((v) => {

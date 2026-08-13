@@ -9,10 +9,9 @@ from autumn_sdk.types import (
     UNSET_SENTINEL,
     UnrecognizedStr,
 )
-from autumn_sdk.utils import FieldMetadata, HeaderMetadata, validate_const
+from autumn_sdk.utils import FieldMetadata, HeaderMetadata
 import pydantic
 from pydantic import model_serializer
-from pydantic.functional_validators import AfterValidator
 from typing import Dict, List, Literal, Optional, Union
 from typing_extensions import Annotated, NotRequired, TypeAliasType, TypedDict
 
@@ -93,6 +92,10 @@ class AggregateEventsCustomRange(BaseModel):
     end: float
 
 
+AggregateOn = Literal["deducted",]
+r"""Set to \"deducted\" to additionally return a per-balance breakdown of what each event consumed, under `deductions`. Purely additive: `list` and `total` are unchanged. Requires customer_id."""
+
+
 class EventsAggregateParamsTypedDict(TypedDict):
     feature_id: AggregateEventsFeatureIDTypedDict
     r"""Feature ID(s) to aggregate events for"""
@@ -112,7 +115,7 @@ class EventsAggregateParamsTypedDict(TypedDict):
     r"""Filter events by property values, e.g. {\"model\": \"gpt-4\", \"region\": \"us\"}. Maximum 5 filters."""
     max_groups: NotRequired[int]
     r"""Maximum number of distinct group values to return per time bin when using group_by. Remaining values are bundled into an 'Other' bucket. Defaults to 9"""
-    aggregate_on: Literal["deducted"]
+    aggregate_on: NotRequired[AggregateOn]
     r"""Set to \"deducted\" to additionally return a per-balance breakdown of what each event consumed, under `deductions`. Purely additive: `list` and `total` are unchanged. Requires customer_id."""
 
 
@@ -144,12 +147,7 @@ class EventsAggregateParams(BaseModel):
     max_groups: Optional[int] = None
     r"""Maximum number of distinct group values to return per time bin when using group_by. Remaining values are bundled into an 'Other' bucket. Defaults to 9"""
 
-    aggregate_on: Annotated[
-        Annotated[
-            Optional[Literal["deducted"]], AfterValidator(validate_const("deducted"))
-        ],
-        pydantic.Field(alias="aggregate_on"),
-    ] = "deducted"
+    aggregate_on: Optional[AggregateOn] = None
     r"""Set to \"deducted\" to additionally return a per-balance breakdown of what each event consumed, under `deductions`. Purely additive: `list` and `total` are unchanged. Requires customer_id."""
 
     @model_serializer(mode="wrap")
@@ -446,9 +444,3 @@ class AggregateEventsResponse(BaseModel):
                     m[k] = val
 
         return m
-
-
-try:
-    EventsAggregateParams.model_rebuild()
-except NameError:
-    pass

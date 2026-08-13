@@ -3,9 +3,9 @@ import { oauthClientRepo } from "../repos/index.js";
 
 const ATMN_OAUTH_CLIENT_NAMES = new Set(["atmn", "autumn cli"]);
 
-// Fixed scope set the pinned legacy atmn CLI requests. Self-heal is limited to
-// these so an unauthenticated /authorize can never widen the reserved client.
-const ATMN_LEGACY_OAUTH_SCOPES = new Set<string>([
+// Fixed scope set for first-party atmn CLI releases. Self-heal is limited so
+// unauthenticated /authorize requests cannot widen the reserved client.
+const ATMN_OAUTH_SCOPES = new Set<string>([
 	"organisation:read",
 	"customers:create",
 	"customers:read",
@@ -24,6 +24,8 @@ const ATMN_LEGACY_OAUTH_SCOPES = new Set<string>([
 	"plans:delete",
 	"apiKeys:create",
 	"apiKeys:read",
+	"rewards:read",
+	"rewards:write",
 ]);
 
 const configuredAtmnClientIds = () =>
@@ -116,9 +118,7 @@ export const ensureAtmnAuthorizeScopes = async ({
 }) => {
 	if (!scope) return;
 
-	const requested = scope
-		.split(/\s+/)
-		.filter((s) => ATMN_LEGACY_OAUTH_SCOPES.has(s));
+	const requested = scope.split(/\s+/).filter((s) => ATMN_OAUTH_SCOPES.has(s));
 	if (requested.length === 0) return;
 
 	const client = await oauthClientRepo.getByClientId({ db, clientId });

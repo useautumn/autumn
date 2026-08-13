@@ -117,7 +117,7 @@
 		"tw:kill": "ENV_FILE=.env infisical run --env=dev --recursive -- bun scripts/tw/index.ts kill",
 		"tw:kill-all": "ENV_FILE=.env infisical run --env=dev --recursive -- bun scripts/tw/index.ts kill-all",
 		"tw:spike": "bun scripts/tw/spike.ts",
-		"dw": "ENV_FILE=.env infisical run --env=dev --recursive -- bun scripts/dw/index.ts",
+		"dw": "bun install && ENV_FILE=.env infisical run --env=dev --recursive -- bun scripts/dw/index.ts",
 		"dw:teardown": "ENV_FILE=.env infisical run --env=dev --recursive -- bun scripts/dw/index.ts teardown",
 		"dw:list": "ENV_FILE=.env infisical run --env=dev --recursive -- bun scripts/dw/index.ts list",
 		"dw:cleanup": "ENV_FILE=.env infisical run --env=dev --recursive -- bun scripts/dw/index.ts cleanup",

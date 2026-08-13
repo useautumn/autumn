@@ -15,6 +15,10 @@ export const USAGE_LIMIT_INTERVALS = [
 	ResetInterval.Year,
 ] as const;
 
+export const USAGE_LIMIT_ANCHORS = ["billing_cycle", "utc"] as const;
+export const UsageLimitAnchorSchema = z.enum(USAGE_LIMIT_ANCHORS);
+export type UsageLimitAnchor = z.infer<typeof UsageLimitAnchorSchema>;
+
 export const USAGE_LIMIT_FILTER_MAX_KEYS = 4;
 export const USAGE_LIMIT_FILTER_MAX_KEY_LENGTH = 64;
 export const USAGE_LIMIT_FILTER_MAX_VALUE_LENGTH = 128;
@@ -68,6 +72,10 @@ export const DbUsageLimitSchema = z.object({
 	interval: z.enum(USAGE_LIMIT_INTERVALS).meta({
 		description:
 			"Interval for the cap, aligned to the customer's billing cycle.",
+	}),
+	anchor: UsageLimitAnchorSchema.optional().meta({
+		description:
+			"Window alignment. 'billing_cycle' phases the interval to the customer's renewal time; 'utc' aligns to the UTC calendar.",
 	}),
 	filter: UsageLimitFilterSchema.optional().meta({
 		description:
@@ -129,6 +137,7 @@ const usageLimitPerDay = (usageLimit: DbUsageLimit) =>
 
 // Enabled beats disabled. Same interval: lower limit wins. Different intervals:
 // lower per-day rate wins (the resolver enforces a single window per feature).
+// Equal rates: utc beats billing_cycle, whose bounds a plan change can refill.
 export const pickStricterUsageLimit = (
 	left: DbUsageLimit,
 	right: DbUsageLimit,
@@ -137,8 +146,21 @@ export const pickStricterUsageLimit = (
 	const leftEnabled = left.enabled ?? true;
 	const rightEnabled = right.enabled ?? true;
 	if (leftEnabled !== rightEnabled) return leftEnabled ? left : right;
+
 	if (left.interval === right.interval) {
-		return right.limit < left.limit ? right : left;
+		if (left.limit !== right.limit) {
+			return right.limit < left.limit ? right : left;
+		}
+	} else {
+		const leftPerDay = usageLimitPerDay(left);
+		const rightPerDay = usageLimitPerDay(right);
+		if (leftPerDay !== rightPerDay) {
+			return rightPerDay < leftPerDay ? right : left;
+		}
 	}
-	return usageLimitPerDay(right) < usageLimitPerDay(left) ? right : left;
+
+	const leftAnchor = left.anchor ?? "billing_cycle";
+	const rightAnchor = right.anchor ?? "billing_cycle";
+	if (leftAnchor !== rightAnchor) return leftAnchor === "utc" ? left : right;
+	return left;
 };

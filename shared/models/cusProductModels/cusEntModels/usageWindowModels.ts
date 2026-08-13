@@ -1,4 +1,5 @@
 import { z } from "zod/v4";
+import { UsageLimitAnchorSchema } from "../../cusModels/billingControls/usageLimit.js";
 import { EntInterval } from "../../productModels/intervals/entitlementInterval.js";
 
 /**
@@ -50,6 +51,7 @@ export const UsageWindowLimitSchema = z.object({
 	// creation; storage no longer depends on it, so null just means calendar
 	// bounds with no provenance.
 	anchor_customer_entitlement_id: z.string().nullable(),
+	anchor_mode: UsageLimitAnchorSchema.default("billing_cycle"),
 	// Candidate row id (ksuid) minted server-side per request. Lua uses it ONLY
 	// when this request creates the counter row; lookups match the logical key
 	// (window_start_at + entity), never the id.

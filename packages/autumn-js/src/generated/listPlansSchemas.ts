@@ -355,11 +355,16 @@ export const listPlansVariantDetailsSpendLimitSchema = z.object({
 
 export const listPlansVariantDetailsUsageLimitIntervalSchema = openEnumSchema;
 
+export const listPlansVariantDetailsAnchorSchema = openEnumSchema;
+
 export const listPlansVariantDetailsUsageLimitSchema = z.object({
 	featureId: z.string(),
 	enabled: z.boolean(),
 	limit: z.number(),
 	interval: listPlansVariantDetailsUsageLimitIntervalSchema,
+	anchor: z
+		.union([listPlansVariantDetailsAnchorSchema, z.undefined()])
+		.optional(),
 	filter: z
 		.union([listPlansVariantDetailsFilterSchema, z.undefined()])
 		.optional(),
@@ -452,11 +457,14 @@ export const listPlansSpendLimitSchema = z.object({
 
 export const listPlansUsageLimitIntervalSchema = openEnumSchema;
 
+export const listPlansAnchorSchema = openEnumSchema;
+
 export const listPlansUsageLimitSchema = z.object({
 	featureId: z.string(),
 	enabled: z.boolean(),
 	limit: z.number(),
 	interval: listPlansUsageLimitIntervalSchema,
+	anchor: z.union([listPlansAnchorSchema, z.undefined()]).optional(),
 	filter: z.union([listPlansFilterSchema, z.undefined()]).optional(),
 });
 

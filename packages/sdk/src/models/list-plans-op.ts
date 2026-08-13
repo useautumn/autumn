@@ -997,6 +997,20 @@ export type ListPlansVariantDetailsUsageLimitInterval = OpenEnum<
 >;
 
 /**
+ * Window alignment. 'billing_cycle' phases the interval to the customer's renewal time; 'utc' aligns to the UTC calendar.
+ */
+export const ListPlansVariantDetailsAnchor = {
+  BillingCycle: "billing_cycle",
+  Utc: "utc",
+} as const;
+/**
+ * Window alignment. 'billing_cycle' phases the interval to the customer's renewal time; 'utc' aligns to the UTC calendar.
+ */
+export type ListPlansVariantDetailsAnchor = OpenEnum<
+  typeof ListPlansVariantDetailsAnchor
+>;
+
+/**
  * When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature.
  */
 export type ListPlansVariantDetailsFilter = {
@@ -1020,6 +1034,10 @@ export type ListPlansVariantDetailsUsageLimit = {
    * Interval for the cap, aligned to the customer's billing cycle.
    */
   interval: ListPlansVariantDetailsUsageLimitInterval;
+  /**
+   * Window alignment. 'billing_cycle' phases the interval to the customer's renewal time; 'utc' aligns to the UTC calendar.
+   */
+  anchor?: ListPlansVariantDetailsAnchor | undefined;
   /**
    * When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature.
    */
@@ -1265,6 +1283,18 @@ export type ListPlansUsageLimitInterval = OpenEnum<
 >;
 
 /**
+ * Window alignment. 'billing_cycle' phases the interval to the customer's renewal time; 'utc' aligns to the UTC calendar.
+ */
+export const ListPlansAnchor = {
+  BillingCycle: "billing_cycle",
+  Utc: "utc",
+} as const;
+/**
+ * Window alignment. 'billing_cycle' phases the interval to the customer's renewal time; 'utc' aligns to the UTC calendar.
+ */
+export type ListPlansAnchor = OpenEnum<typeof ListPlansAnchor>;
+
+/**
  * When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature.
  */
 export type ListPlansFilter = {
@@ -1288,6 +1318,10 @@ export type ListPlansUsageLimit = {
    * Interval for the cap, aligned to the customer's billing cycle.
    */
   interval: ListPlansUsageLimitInterval;
+  /**
+   * Window alignment. 'billing_cycle' phases the interval to the customer's renewal time; 'utc' aligns to the UTC calendar.
+   */
+  anchor?: ListPlansAnchor | undefined;
   /**
    * When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature.
    */
@@ -2583,6 +2617,12 @@ export const ListPlansVariantDetailsUsageLimitInterval$inboundSchema:
     .inboundSchema(ListPlansVariantDetailsUsageLimitInterval);
 
 /** @internal */
+export const ListPlansVariantDetailsAnchor$inboundSchema: z.ZodMiniType<
+  ListPlansVariantDetailsAnchor,
+  unknown
+> = openEnums.inboundSchema(ListPlansVariantDetailsAnchor);
+
+/** @internal */
 export const ListPlansVariantDetailsFilter$inboundSchema: z.ZodMiniType<
   ListPlansVariantDetailsFilter,
   unknown
@@ -2610,6 +2650,7 @@ export const ListPlansVariantDetailsUsageLimit$inboundSchema: z.ZodMiniType<
     enabled: z._default(types.boolean(), true),
     limit: types.number(),
     interval: ListPlansVariantDetailsUsageLimitInterval$inboundSchema,
+    anchor: types.optional(ListPlansVariantDetailsAnchor$inboundSchema),
     filter: types.optional(
       z.lazy(() => ListPlansVariantDetailsFilter$inboundSchema),
     ),
@@ -2941,6 +2982,12 @@ export const ListPlansUsageLimitInterval$inboundSchema: z.ZodMiniType<
 > = openEnums.inboundSchema(ListPlansUsageLimitInterval);
 
 /** @internal */
+export const ListPlansAnchor$inboundSchema: z.ZodMiniType<
+  ListPlansAnchor,
+  unknown
+> = openEnums.inboundSchema(ListPlansAnchor);
+
+/** @internal */
 export const ListPlansFilter$inboundSchema: z.ZodMiniType<
   ListPlansFilter,
   unknown
@@ -2968,6 +3015,7 @@ export const ListPlansUsageLimit$inboundSchema: z.ZodMiniType<
     enabled: z._default(types.boolean(), true),
     limit: types.number(),
     interval: ListPlansUsageLimitInterval$inboundSchema,
+    anchor: types.optional(ListPlansAnchor$inboundSchema),
     filter: types.optional(z.lazy(() => ListPlansFilter$inboundSchema)),
   }),
   z.transform((v) => {

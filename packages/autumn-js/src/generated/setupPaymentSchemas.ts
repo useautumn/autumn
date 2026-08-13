@@ -387,6 +387,7 @@ export const setupPaymentUsageLimitOutboundSchema = z.object({
 	enabled: z.boolean(),
 	limit: z.number(),
 	interval: z.string(),
+	anchor: z.union([z.string(), z.undefined()]).optional(),
 	filter: z.union([setupPaymentFilterOutboundSchema, z.undefined()]).optional(),
 });
 
@@ -862,11 +863,14 @@ export const setupPaymentSpendLimitSchema = z.object({
 
 export const setupPaymentUsageLimitIntervalSchema = closedEnumSchema;
 
+export const setupPaymentAnchorSchema = closedEnumSchema;
+
 export const setupPaymentUsageLimitSchema = z.object({
 	featureId: z.string(),
 	enabled: z.union([z.boolean(), z.undefined()]).optional(),
 	limit: z.number(),
 	interval: setupPaymentUsageLimitIntervalSchema,
+	anchor: z.union([setupPaymentAnchorSchema, z.undefined()]).optional(),
 	filter: z.union([setupPaymentFilterSchema, z.undefined()]).optional(),
 });
 
