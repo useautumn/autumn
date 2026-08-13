@@ -148,7 +148,7 @@ export default function Hero() {
 						<div className="flex flex-col gap-6 w-full px-0 lg:px-0">
 							<h1 className="hero-reveal lg:opacity-0 text-[44px] md:text-[56px] w-full max-w-sm sm:max-w-[480px] md:max-w-xl leading-[44px] tracking-[-4%] md:leading-14 font-sans">
 								<span className="text-[#FFFFFF99] font-normal">
-									The control plane for
+									The control plane&nbsp;for
 								</span>{" "}
 								<span className="text-white block md:inline">
 									usage-based pricing
