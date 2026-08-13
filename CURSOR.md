@@ -12,10 +12,15 @@ snapshot already has Postgres 18, Redis Stack, ClickHouse, JRE, and ElasticMQ.
 `package.json` is unchanged from laptop: `bun dw` is still
 `infisical run --env=dev --recursive -- bun scripts/dw/index.ts`.
 
-Cloud `start` logs the machine identity in as a real Infisical CLI session and
-shims `node_modules/.bin/infisical` so `bun dw` (still plain `infisical run`)
-does not open an interactive US/EU login prompt. It does **not** start the app.
-Run `bun dw` yourself when the task needs server/vite.
+Infisical CLI **does not** treat `INFISICAL_CLIENT_ID` / `INFISICAL_CLIENT_SECRET`
+as a session for `infisical run`. Those credentials are for `infisical login`
+(Infisical's own names: `INFISICAL_UNIVERSAL_AUTH_CLIENT_ID` / `_SECRET`).
+`run` only accepts a minted `INFISICAL_TOKEN` (or `--token`). Cloud `start`
+aliases Cursor's Runtime Secrets to Infisical's names, runs the documented
+`login --method=universal-auth --plain --silent`, and shims
+`node_modules/.bin/infisical` so agent shells that never source bashrc still
+get a token. It does **not** start the app. Run `bun dw` yourself when the
+task needs server/vite.
 
 `DW_HEADLESS=1` is set on start. That skips portless HTTPS aliases, the emulate
 daemon, and Neon (even if Infisical has `NEON_WORKTREE_API_KEY`). Worktree #1
@@ -97,9 +102,11 @@ Secrets → add:
 | `INFISICAL_CLIENT_ID` | Runtime Secret | Machine identity (universal-auth) |
 | `INFISICAL_CLIENT_SECRET` | Runtime Secret | Machine identity |
 
-That is the only pair you need. Start runs `infisical login --method=universal-auth`
-and caches a short-lived `INFISICAL_TOKEN`. Existing `package.json` scripts
-(`bun dw`, `bun d`, `bun t`, …) then work as on a laptop.
+That is the only pair you need (same names as Autumn's Node SDK). Do **not**
+expect `infisical run` to pick them up by itself — Infisical's docs still
+require exchanging them for `INFISICAL_TOKEN` first
+(https://infisical.com/docs/cli/commands/run). Existing `package.json`
+scripts (`bun dw`, `bun d`, `bun t`, …) then work as on a laptop.
 
 `server/.env` and `scripts/setup/cursor-cloud/isolation.env` are an **overlay**,
 not the vault: they pin `DATABASE_URL` / Redis / SQS to localhost so this VM
