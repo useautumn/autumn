@@ -99,6 +99,10 @@ import { DynamicResponseExample } from "/snippets/dynamic-response-example.jsx";
   Whether to prorate the immediate phase. 'none' skips proration charges and credits.
 </DynamicParamField>
 
+<DynamicParamField body="no_billing_changes" type="boolean">
+  If true, skips any billing changes for the schedule.
+</DynamicParamField>
+
 <DynamicParamField body="billing_cycle_anchor" type="any">
   Pass 'now' to reset the billing cycle anchor of the immediate phase to the current time.
 </DynamicParamField>
@@ -579,6 +583,10 @@ import { DynamicResponseExample } from "/snippets/dynamic-response-example.jsx";
 
                 <DynamicParamField body="interval" type="'day' | 'week' | 'month' | 'year'" required>
                   Interval for the cap, aligned to the customer's billing cycle.
+                </DynamicParamField>
+
+                <DynamicParamField body="anchor" type="'billing_cycle' | 'utc'">
+                  Window alignment. 'billing_cycle' phases the interval to the customer's renewal time; 'utc' aligns to the UTC calendar.
                 </DynamicParamField>
 
                 <DynamicParamField body="filter" type="object">
@@ -1106,6 +1114,10 @@ import { DynamicResponseExample } from "/snippets/dynamic-response-example.jsx";
 
                     <DynamicParamField body="interval" type="'day' | 'week' | 'month' | 'year'" required>
                       Interval for the cap, aligned to the customer's billing cycle.
+                    </DynamicParamField>
+
+                    <DynamicParamField body="anchor" type="'billing_cycle' | 'utc'">
+                      Window alignment. 'billing_cycle' phases the interval to the customer's renewal time; 'utc' aligns to the UTC calendar.
                     </DynamicParamField>
 
                     <DynamicParamField body="filter" type="object">
