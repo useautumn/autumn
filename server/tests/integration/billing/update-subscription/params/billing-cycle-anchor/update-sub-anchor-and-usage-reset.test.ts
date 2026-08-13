@@ -146,6 +146,15 @@ test.concurrent(
 			actions: [s.billing.attach({ productId: pro.id })],
 		});
 
+		await autumnV2_3.track(
+			{
+				customer_id: customerId,
+				feature_id: TestFeature.Messages,
+				value: 40,
+			},
+			{ timeout: 2000 },
+		);
+
 		await autumnV2_3.subscriptions.update<UpdateSubscriptionV1ParamsInput>({
 			customer_id: customerId,
 			plan_id: pro.id,
@@ -158,8 +167,8 @@ test.concurrent(
 			autumn: autumnV2_3,
 			featureId: TestFeature.Messages,
 			planId: pro.id,
-			remaining: 100,
-			usage: 0,
+			remaining: 60,
+			usage: 40,
 			nextResetAt: null,
 		});
 	},
