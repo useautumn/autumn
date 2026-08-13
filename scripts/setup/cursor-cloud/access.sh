@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Prints how to open the dashboard/API from a laptop. Stays alive as a tmux pane.
 set -euo pipefail
-ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
+ROOT="$(cd "$(dirname "$0")/../../.." && pwd)"
 URLS="${HOME}/.autumn-agent/public-urls.txt"
 
 # Sibling tmux panes (dw / ngrok) start at the same time.

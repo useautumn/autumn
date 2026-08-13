@@ -1,7 +1,7 @@
 {
 	"snapshot": "snapshot-20260629-79e36c0f-6ca4-4802-a2de-639ef4c29d70",
-	"install": "bash scripts/setup/cursor-cloud-install.sh",
-	"start": "bash scripts/setup/cursor-cloud-start.sh",
+	"install": "bash scripts/setup/cursor-cloud/install.sh",
+	"start": "bash scripts/setup/cursor-cloud/start.sh",
 	"terminals": [
 		{
 			"name": "dw",
@@ -10,12 +10,12 @@
 		},
 		{
 			"name": "ngrok",
-			"command": "bash scripts/setup/cursor-cloud-ngrok.sh",
+			"command": "bash scripts/setup/cursor-cloud/ngrok.sh",
 			"description": "Public ngrok tunnels for :3000 (dashboard) and :8080 (API) when NGROK_AUTHTOKEN is in Infisical. Stripe webhooks use stripe listen, not ngrok."
 		},
 		{
 			"name": "access",
-			"command": "bash scripts/setup/cursor-cloud-access.sh",
+			"command": "bash scripts/setup/cursor-cloud/access.sh",
 			"description": "How to open the dashboard from a laptop: Cursor port forwarding, remote desktop, or ngrok URLs."
 		}
 	],

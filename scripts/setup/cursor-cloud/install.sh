@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Cursor Cloud `install` — durable, must terminate. Services belong in start.
 set -euo pipefail
-cd "$(dirname "$0")/../.."
+cd "$(dirname "$0")/../../.."
 log() { echo "[cursor-cloud-install] $*"; }
 
 BUN="${HOME}/.bun/bin/bun"

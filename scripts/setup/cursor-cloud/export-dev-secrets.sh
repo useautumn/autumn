@@ -2,7 +2,7 @@
 # Dump Infisical `dev` secrets (no values logged) for agent shells, minus the
 # isolation keys that must stay pointed at localhost.
 set -euo pipefail
-ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
+ROOT="$(cd "$(dirname "$0")/../../.." && pwd)"
 cd "$ROOT"
 export PATH="$ROOT/node_modules/.bin:$HOME/.bun/bin:/usr/local/bin:$PATH"
 
@@ -10,7 +10,7 @@ OUT="${HOME}/.autumn-agent/dev-secrets.env"
 mkdir -p "${HOME}/.autumn-agent"
 
 if [ -z "${INFISICAL_TOKEN:-}" ]; then
-	INFISICAL_TOKEN="$(bash "$ROOT/scripts/setup/infisical-machine-login.sh" 2>/dev/null || true)"
+	INFISICAL_TOKEN="$(bash "$ROOT/scripts/setup/cursor-cloud/infisical-machine-login.sh" 2>/dev/null || true)"
 	export INFISICAL_TOKEN
 fi
 

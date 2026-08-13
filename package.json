@@ -128,7 +128,7 @@
 		"dw:enable": "bun scripts/dw/index.ts enable",
 		"dw:disable": "bun scripts/dw/index.ts disable",
 		"dw:admin": "bash scripts/dw/with-env.sh admin",
-		"d": "bash scripts/setup/with-infisical.sh -- bun scripts/dev.ts",
+		"d": "bash scripts/setup/cursor-cloud/with-infisical.sh -- bun scripts/dev.ts",
 		"d:prod": "ENV_FILE=.env infisical run --env=dev --recursive -- bun scripts/dev.ts --production",
 		"dx": "bun scripts/dx.ts",
 		"d:test": "ENV_FILE=.env infisical run --env=test --recursive -- bun scripts/dev.ts",

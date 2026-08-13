@@ -8,7 +8,7 @@
 #
 # Usage: with-infisical.sh [--env=dev] -- command [args...]
 set -euo pipefail
-ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
+ROOT="$(cd "$(dirname "$0")/../../.." && pwd)"
 cd "$ROOT"
 export PATH="$ROOT/node_modules/.bin:$HOME/.bun/bin:/usr/local/bin:$PATH"
 
@@ -56,7 +56,7 @@ if [ -n "${INFISICAL_CLIENT_ID:-}" ]; then
 fi
 
 if [ -z "${INFISICAL_TOKEN:-}" ]; then
-	INFISICAL_TOKEN="$(bash "$ROOT/scripts/setup/infisical-machine-login.sh" 2>/dev/null || true)"
+	INFISICAL_TOKEN="$(bash "$ROOT/scripts/setup/cursor-cloud/infisical-machine-login.sh" 2>/dev/null || true)"
 	export INFISICAL_TOKEN
 fi
 
@@ -82,7 +82,7 @@ if [ "$can_run" -eq 1 ]; then
 				""|\#*) continue ;;
 				*) isolation+=("$line") ;;
 			esac
-		done < "$ROOT/scripts/setup/cursor-cloud-isolation.env"
+		done < "$ROOT/scripts/setup/cursor-cloud/isolation.env"
 		# Infisical injects first; `env` then pins local services and drops Neon.
 		exec env ENV_FILE="$ENV_FILE" infisical run --env="$INFISICAL_ENV" --recursive --silent -- \
 			env -u NEON_WORKTREE_API_KEY "${isolation[@]}" "$@"

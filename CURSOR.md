@@ -10,9 +10,9 @@ snapshot already has Postgres 18, Redis Stack, ClickHouse, JRE, and ElasticMQ.
 ## `bun dw`
 
 `bun dw` and `bun dw run` go through `scripts/dw/with-env.sh` →
-`scripts/setup/with-infisical.sh`. That mints an Infisical token from the Cursor
+`scripts/setup/cursor-cloud/with-infisical.sh`. That mints an Infisical token from the Cursor
 Runtime Secrets machine identity, then `infisical run --env=dev --recursive`.
-Isolation env (`scripts/setup/cursor-cloud-isolation.env`) is applied *after*
+Isolation env (`scripts/setup/cursor-cloud/isolation.env`) is applied *after*
 Infisical so DATABASE_URL / Redis / SQS stay on localhost.
 
 Without the machine identity, headless `bun dw` still starts against `server/.env`.
@@ -40,7 +40,7 @@ Non-blocking noise: `trigger` waits for a login; `leaf` may crash without
 
 ## Backing services
 
-Started every boot by `scripts/setup/cursor-cloud-start.sh` → `agent-services.sh`:
+Started every boot by `scripts/setup/cursor-cloud/start.sh` → `agent-services.sh`:
 
 | Service | Port |
 |---|---|
@@ -108,7 +108,7 @@ caches a short-lived `INFISICAL_TOKEN`, dumps Infisical `dev` into
 `bun dw run` do `infisical run --env=dev --recursive`. Every Infisical `dev`
 secret (Stripe, ngrok, Resend, …) is then in the process.
 
-`server/.env` and `cursor-cloud-isolation.env` are an **overlay**, not the vault:
+`server/.env` and `scripts/setup/cursor-cloud/isolation.env` are an **overlay**, not the vault:
 they pin `DATABASE_URL` / Redis / SQS to localhost so this VM does not share the
 team Neon DB or AWS queue. Empty `STRIPE_*=` lines are stripped so they cannot
 clobber Infisical.
@@ -139,7 +139,7 @@ Three ways to click around the running app:
    `DW_HEADLESS=1` so preview hostnames do not 403.
 2. **Remote desktop** on the agent page — take control, open Chrome with
    `--no-sandbox`, go to `http://localhost:3000`. Most reliable if Ports is empty.
-3. **ngrok** (`scripts/setup/cursor-cloud-ngrok.sh`) — if Infisical has
+3. **ngrok** (`scripts/setup/cursor-cloud/ngrok.sh`) — if Infisical has
    `NGROK_AUTHTOKEN`, it tunnels `:3000` and `:8080` on random `*.ngrok.app`
    URLs (reserved names collide across concurrent VMs). Watch the `ngrok` or
    `access` tmux pane, or `~/.autumn-agent/public-urls.txt`.

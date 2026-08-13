@@ -25,7 +25,7 @@ if [ -s "$CACHE" ] && [ -n "$(find "$CACHE" -mmin -30 2>/dev/null)" ]; then
 	exit 0
 fi
 
-ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
+ROOT="$(cd "$(dirname "$0")/../../.." && pwd)"
 PATH="${ROOT}/node_modules/.bin:${HOME}/.bun/bin:/usr/local/bin:${PATH}"
 if ! command -v infisical >/dev/null 2>&1; then
 	echo "infisical CLI not on PATH (expected ${ROOT}/node_modules/.bin/infisical)" >&2
