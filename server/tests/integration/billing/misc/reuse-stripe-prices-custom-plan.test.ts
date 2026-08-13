@@ -36,8 +36,6 @@ import {
 	type AttachParamsV1Input,
 	BillingInterval,
 	BillingMethod,
-	OnDecrease,
-	OnIncrease,
 	RolloverExpiryDurationType,
 	TierBehavior,
 	TierInfinite,
@@ -111,7 +109,8 @@ test.concurrent(`${chalk.yellowBright("custom plan: paid feature shapes unchange
 			items.monthlyMessages({ includedUsage: 100 }),
 			items.prepaidUsers({ billingUnits: 1 }),
 			items.consumableWords({ includedUsage: 0 }),
-			items.allocatedWorkflows({ includedUsage: 0 }),
+			// V2 UsageBased forbids top-level proration; catalog must be arrear to match.
+			items.allocatedV2Workflows({ includedUsage: 0 }),
 		],
 	});
 
@@ -398,10 +397,12 @@ test.concurrent(`${chalk.yellowBright("custom plan: add flat_amount to tier → 
 });
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// TEST 8 (negative): change proration_config on allocated → stripe_price_id not reused
+// TEST 8 (negative): prorated allocated catalog → arrear V2 customize → not reused
+// Public V2 rejects proration on UsageBased; the allowed shape flip is V1 prorated
+// catalog → V2 UsageBased without proration (arrear).
 // ═══════════════════════════════════════════════════════════════════════════════
 
-test.concurrent(`${chalk.yellowBright("custom plan: change proration_config on allocated → stripe_price_id NOT reused")}`, async () => {
+test.concurrent(`${chalk.yellowBright("custom plan: prorated allocated → arrear customize → stripe_price_id NOT reused")}`, async () => {
 	const customerId = "reuse-custom-proration";
 
 	const proPlan = products.pro({
@@ -423,22 +424,7 @@ test.concurrent(`${chalk.yellowBright("custom plan: change proration_config on a
 		plan_id: proPlan.id,
 		customize: {
 			price: itemsV2.monthlyPrice({ amount: 20 }),
-			items: [
-				{
-					feature_id: TestFeature.Workflows,
-					included: 0,
-					price: {
-						amount: 10,
-						interval: BillingInterval.Month,
-						billing_method: BillingMethod.UsageBased,
-						billing_units: 1,
-					},
-					proration: {
-						on_increase: OnIncrease.ProrateImmediately,
-						on_decrease: OnDecrease.Prorate,
-					},
-				},
-			],
+			items: [itemsV2.allocatedWorkflows({ amount: 10 })],
 		},
 	};
 
