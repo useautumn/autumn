@@ -4,24 +4,23 @@ import {
 	buildFlagChanges,
 } from "@/internal/billing/v2/actions/buildBillingChanges";
 import type { PreviewMigrateCustomer } from "@/internal/migrations/v2/preview/previewMigrateCustomer/types/index.js";
-import type {
-	BatchMigrationInsertedItem,
-	BatchMigrationPageCustomer,
-} from "../execute/types/batchMigrationExecutionTypes.js";
+import type { BatchMigrationPageCustomer } from "../execute/types/batchMigrationExecutionTypes.js";
 import type { BatchMigrationExecutionPlan } from "../types/index.js";
+import type { ChangedItem } from "./buildBatchMigrationWebhookRecords/buildBatchMigrationWebhookRecords.js";
 import { insertedItemsToPlanChange } from "./buildBatchMigrationWebhookRecords/insertedItemsToPlanChange.js";
 import {
 	buildEntitlementLookup,
+	buildOneOffByPlanId,
 	toCustomerItemChanges,
 } from "./buildMigrationItemEvent/toCustomerItemChanges.js";
 
 const groupByCustomer = ({
-	insertedItems,
+	changedItems,
 }: {
-	insertedItems: BatchMigrationInsertedItem[];
-}): Map<string, BatchMigrationInsertedItem[]> => {
-	const grouped = new Map<string, BatchMigrationInsertedItem[]>();
-	for (const item of insertedItems) {
+	changedItems: ChangedItem[];
+}): Map<string, ChangedItem[]> => {
+	const grouped = new Map<string, ChangedItem[]>();
+	for (const item of changedItems) {
 		const existing = grouped.get(item.internalCustomerId) ?? [];
 		existing.push(item);
 		grouped.set(item.internalCustomerId, existing);
@@ -38,28 +37,23 @@ const groupByCustomer = ({
 export const buildBatchMigrationItemResponses = ({
 	plan,
 	customers,
-	insertedItems,
+	changedItems,
 	features,
 }: {
 	plan: BatchMigrationExecutionPlan;
 	customers: BatchMigrationPageCustomer[];
-	insertedItems: BatchMigrationInsertedItem[];
+	changedItems: ChangedItem[];
 	features: Feature[];
 }): Map<string, PreviewMigrateCustomer> => {
 	const entitlementLookup = buildEntitlementLookup({ plan });
-	const itemsByCustomer = groupByCustomer({ insertedItems });
-	const oneOffByPlanId = new Map(
-		plan.patches.map((patch) => [
-			patch.fromProduct.id,
-			isOneOffProduct({ prices: patch.fromProduct.prices }),
-		]),
-	);
+	const itemsByCustomer = groupByCustomer({ changedItems });
+	const oneOffByPlanId = buildOneOffByPlanId({ plan });
 
 	return new Map(
 		customers.map((customer) => {
 			const customerItems = itemsByCustomer.get(customer.internalId) ?? [];
 			const changes = toCustomerItemChanges({
-				items: customerItems,
+				items: customerItems.filter((item) => item.action === "created"),
 				entitlementLookup,
 			});
 

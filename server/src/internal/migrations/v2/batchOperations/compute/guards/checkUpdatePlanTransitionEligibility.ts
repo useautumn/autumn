@@ -77,7 +77,7 @@ export const checkUpdatePlanTransitionEligibility = ({
 
 		if (entitlement.entity_feature_id) {
 			rejections.push({
-				code: "entity_scoped_entitlement_add",
+				code: "entity_scoped_entitlement",
 				opIndex,
 				planId: fromProduct.id,
 				message:
