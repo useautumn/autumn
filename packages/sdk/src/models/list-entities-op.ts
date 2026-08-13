@@ -403,6 +403,18 @@ export const ListEntitiesInterval = {
 export type ListEntitiesInterval = OpenEnum<typeof ListEntitiesInterval>;
 
 /**
+ * Window alignment. 'billing_cycle' phases the interval to the customer's renewal time; 'utc' aligns to the UTC calendar.
+ */
+export const ListEntitiesAnchor = {
+  BillingCycle: "billing_cycle",
+  Utc: "utc",
+} as const;
+/**
+ * Window alignment. 'billing_cycle' phases the interval to the customer's renewal time; 'utc' aligns to the UTC calendar.
+ */
+export type ListEntitiesAnchor = OpenEnum<typeof ListEntitiesAnchor>;
+
+/**
  * When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature.
  */
 export type ListEntitiesFilter = {
@@ -440,6 +452,10 @@ export type ListEntitiesUsageLimit = {
    * Interval for the cap, aligned to the customer's billing cycle.
    */
   interval: ListEntitiesInterval;
+  /**
+   * Window alignment. 'billing_cycle' phases the interval to the customer's renewal time; 'utc' aligns to the UTC calendar.
+   */
+  anchor?: ListEntitiesAnchor | undefined;
   /**
    * When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature.
    */
@@ -1075,6 +1091,12 @@ export const ListEntitiesInterval$inboundSchema: z.ZodMiniType<
 > = openEnums.inboundSchema(ListEntitiesInterval);
 
 /** @internal */
+export const ListEntitiesAnchor$inboundSchema: z.ZodMiniType<
+  ListEntitiesAnchor,
+  unknown
+> = openEnums.inboundSchema(ListEntitiesAnchor);
+
+/** @internal */
 export const ListEntitiesFilter$inboundSchema: z.ZodMiniType<
   ListEntitiesFilter,
   unknown
@@ -1108,6 +1130,7 @@ export const ListEntitiesUsageLimit$inboundSchema: z.ZodMiniType<
     enabled: z._default(types.boolean(), true),
     limit: types.number(),
     interval: ListEntitiesInterval$inboundSchema,
+    anchor: types.optional(ListEntitiesAnchor$inboundSchema),
     filter: types.optional(z.lazy(() => ListEntitiesFilter$inboundSchema)),
     usage: types.optional(types.number()),
     source: types.optional(ListEntitiesUsageLimitSource$inboundSchema),

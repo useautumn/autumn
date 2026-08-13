@@ -930,6 +930,18 @@ export type UnscheduledPlanUsageLimitInterval = ClosedEnum<
   typeof UnscheduledPlanUsageLimitInterval
 >;
 
+/**
+ * Window alignment. 'billing_cycle' phases the interval to the customer's renewal time; 'utc' aligns to the UTC calendar.
+ */
+export const UnscheduledPlanAnchor = {
+  BillingCycle: "billing_cycle",
+  Utc: "utc",
+} as const;
+/**
+ * Window alignment. 'billing_cycle' phases the interval to the customer's renewal time; 'utc' aligns to the UTC calendar.
+ */
+export type UnscheduledPlanAnchor = ClosedEnum<typeof UnscheduledPlanAnchor>;
+
 export type CreateScheduleProperties = string | number | boolean;
 
 /**
@@ -956,6 +968,10 @@ export type UnscheduledPlanUsageLimit = {
    * Interval for the cap, aligned to the customer's billing cycle.
    */
   interval: UnscheduledPlanUsageLimitInterval;
+  /**
+   * Window alignment. 'billing_cycle' phases the interval to the customer's renewal time; 'utc' aligns to the UTC calendar.
+   */
+  anchor?: UnscheduledPlanAnchor | undefined;
   /**
    * When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature.
    */
@@ -1875,6 +1891,18 @@ export type PhaseStartUsageLimitInterval = ClosedEnum<
 >;
 
 /**
+ * Window alignment. 'billing_cycle' phases the interval to the customer's renewal time; 'utc' aligns to the UTC calendar.
+ */
+export const PhaseStartAnchor = {
+  BillingCycle: "billing_cycle",
+  Utc: "utc",
+} as const;
+/**
+ * Window alignment. 'billing_cycle' phases the interval to the customer's renewal time; 'utc' aligns to the UTC calendar.
+ */
+export type PhaseStartAnchor = ClosedEnum<typeof PhaseStartAnchor>;
+
+/**
  * When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature.
  */
 export type PhaseStartFilter = {
@@ -1898,6 +1926,10 @@ export type PhaseStartUsageLimit = {
    * Interval for the cap, aligned to the customer's billing cycle.
    */
   interval: PhaseStartUsageLimitInterval;
+  /**
+   * Window alignment. 'billing_cycle' phases the interval to the customer's renewal time; 'utc' aligns to the UTC calendar.
+   */
+  anchor?: PhaseStartAnchor | undefined;
   /**
    * When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature.
    */
@@ -2106,6 +2138,10 @@ export type CreateScheduleParams = {
    * Whether to prorate the immediate phase. 'none' skips proration charges and credits.
    */
   billingBehavior?: CreateScheduleBillingBehavior | undefined;
+  /**
+   * If true, skips any billing changes for the schedule.
+   */
+  noBillingChanges?: boolean | undefined;
   /**
    * Pass 'now' to reset the billing cycle anchor of the immediate phase to the current time.
    */
@@ -3418,6 +3454,11 @@ export const UnscheduledPlanUsageLimitInterval$outboundSchema: z.ZodMiniEnum<
 > = z.enum(UnscheduledPlanUsageLimitInterval);
 
 /** @internal */
+export const UnscheduledPlanAnchor$outboundSchema: z.ZodMiniEnum<
+  typeof UnscheduledPlanAnchor
+> = z.enum(UnscheduledPlanAnchor);
+
+/** @internal */
 export type CreateScheduleProperties$Outbound = string | number | boolean;
 
 /** @internal */
@@ -3464,6 +3505,7 @@ export type UnscheduledPlanUsageLimit$Outbound = {
   enabled: boolean;
   limit: number;
   interval: string;
+  anchor?: string | undefined;
   filter?: UnscheduledPlanFilter$Outbound | undefined;
 };
 
@@ -3477,6 +3519,7 @@ export const UnscheduledPlanUsageLimit$outboundSchema: z.ZodMiniType<
     enabled: z._default(z.boolean(), true),
     limit: z.number(),
     interval: UnscheduledPlanUsageLimitInterval$outboundSchema,
+    anchor: z.optional(UnscheduledPlanAnchor$outboundSchema),
     filter: z.optional(z.lazy(() => UnscheduledPlanFilter$outboundSchema)),
   }),
   z.transform((v) => {
@@ -4646,6 +4689,11 @@ export const PhaseStartUsageLimitInterval$outboundSchema: z.ZodMiniEnum<
 > = z.enum(PhaseStartUsageLimitInterval);
 
 /** @internal */
+export const PhaseStartAnchor$outboundSchema: z.ZodMiniEnum<
+  typeof PhaseStartAnchor
+> = z.enum(PhaseStartAnchor);
+
+/** @internal */
 export type PhaseStartFilter$Outbound = {
   properties: { [k: string]: any };
 };
@@ -4672,6 +4720,7 @@ export type PhaseStartUsageLimit$Outbound = {
   enabled: boolean;
   limit: number;
   interval: string;
+  anchor?: string | undefined;
   filter?: PhaseStartFilter$Outbound | undefined;
 };
 
@@ -4685,6 +4734,7 @@ export const PhaseStartUsageLimit$outboundSchema: z.ZodMiniType<
     enabled: z._default(z.boolean(), true),
     limit: z.number(),
     interval: PhaseStartUsageLimitInterval$outboundSchema,
+    anchor: z.optional(PhaseStartAnchor$outboundSchema),
     filter: z.optional(z.lazy(() => PhaseStartFilter$outboundSchema)),
   }),
   z.transform((v) => {
@@ -4979,6 +5029,7 @@ export type CreateScheduleParams$Outbound = {
   checkout_session_params?: { [k: string]: any } | undefined;
   redirect_mode: string;
   billing_behavior?: string | undefined;
+  no_billing_changes?: boolean | undefined;
   billing_cycle_anchor?: "now" | undefined;
   enable_plan_immediately?: boolean | undefined;
   preserve_add_ons?: boolean | undefined;
@@ -5011,6 +5062,7 @@ export const CreateScheduleParams$outboundSchema: z.ZodMiniType<
       "if_required",
     ),
     billingBehavior: z.optional(CreateScheduleBillingBehavior$outboundSchema),
+    noBillingChanges: z.optional(z.boolean()),
     billingCycleAnchor: z.optional(z.literal("now")),
     enablePlanImmediately: z.optional(z.boolean()),
     preserveAddOns: z.optional(z.boolean()),
@@ -5029,6 +5081,7 @@ export const CreateScheduleParams$outboundSchema: z.ZodMiniType<
       checkoutSessionParams: "checkout_session_params",
       redirectMode: "redirect_mode",
       billingBehavior: "billing_behavior",
+      noBillingChanges: "no_billing_changes",
       billingCycleAnchor: "billing_cycle_anchor",
       enablePlanImmediately: "enable_plan_immediately",
       preserveAddOns: "preserve_add_ons",

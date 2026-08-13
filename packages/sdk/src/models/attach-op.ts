@@ -859,6 +859,18 @@ export type AttachUsageLimitInterval = ClosedEnum<
   typeof AttachUsageLimitInterval
 >;
 
+/**
+ * Window alignment. 'billing_cycle' phases the interval to the customer's renewal time; 'utc' aligns to the UTC calendar.
+ */
+export const AttachAnchor = {
+  BillingCycle: "billing_cycle",
+  Utc: "utc",
+} as const;
+/**
+ * Window alignment. 'billing_cycle' phases the interval to the customer's renewal time; 'utc' aligns to the UTC calendar.
+ */
+export type AttachAnchor = ClosedEnum<typeof AttachAnchor>;
+
 export type AttachProperties = string | number | boolean;
 
 /**
@@ -885,6 +897,10 @@ export type AttachUsageLimit = {
    * Interval for the cap, aligned to the customer's billing cycle.
    */
   interval: AttachUsageLimitInterval;
+  /**
+   * Window alignment. 'billing_cycle' phases the interval to the customer's renewal time; 'utc' aligns to the UTC calendar.
+   */
+  anchor?: AttachAnchor | undefined;
   /**
    * When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature.
    */
@@ -2743,6 +2759,10 @@ export const AttachUsageLimitInterval$outboundSchema: z.ZodMiniEnum<
 > = z.enum(AttachUsageLimitInterval);
 
 /** @internal */
+export const AttachAnchor$outboundSchema: z.ZodMiniEnum<typeof AttachAnchor> = z
+  .enum(AttachAnchor);
+
+/** @internal */
 export type AttachProperties$Outbound = string | number | boolean;
 
 /** @internal */
@@ -2785,6 +2805,7 @@ export type AttachUsageLimit$Outbound = {
   enabled: boolean;
   limit: number;
   interval: string;
+  anchor?: string | undefined;
   filter?: AttachFilter$Outbound | undefined;
 };
 
@@ -2798,6 +2819,7 @@ export const AttachUsageLimit$outboundSchema: z.ZodMiniType<
     enabled: z._default(z.boolean(), true),
     limit: z.number(),
     interval: AttachUsageLimitInterval$outboundSchema,
+    anchor: z.optional(AttachAnchor$outboundSchema),
     filter: z.optional(z.lazy(() => AttachFilter$outboundSchema)),
   }),
   z.transform((v) => {
