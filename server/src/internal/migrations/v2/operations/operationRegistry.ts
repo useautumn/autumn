@@ -19,7 +19,9 @@ const processors: Record<
 
 export function getProcessor({
 	type,
-}: { type: string }): OperationProcessor<CustomerOperation> {
+}: {
+	type: string;
+}): OperationProcessor<CustomerOperation> {
 	const processor = processors[type as CustomerOperation["type"]];
 	if (!processor)
 		throw new Error(`No processor registered for operation type "${type}"`);

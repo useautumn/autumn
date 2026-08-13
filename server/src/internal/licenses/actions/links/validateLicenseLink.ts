@@ -36,6 +36,22 @@ export const validateLicenseLink = ({
 			statusCode: 400,
 		});
 	}
+	// Variants never inherit their base's links and never draft a parent
+	// migration, so a link either side of one silently diverges.
+	if (licenseProduct.base_internal_product_id) {
+		throw new RecaseError({
+			message: `A variant cannot be used as a plan license (${licensePlanId ?? licenseProduct.id}).`,
+			code: ErrCode.InvalidRequest,
+		});
+	}
+
+	if (parentProduct?.base_internal_product_id) {
+		throw new RecaseError({
+			message: `A variant cannot link a plan license (${parentProduct.id}).`,
+			code: ErrCode.InvalidRequest,
+		});
+	}
+
 	if (parentProduct && licenseProduct.id === parentProduct.id) {
 		throw new RecaseError({
 			message: `A plan cannot be linked as a license to itself (${licensePlanId ?? licenseProduct.id}).`,
