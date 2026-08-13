@@ -3,6 +3,7 @@ import type { AppEnv } from "@autumn/shared";
 import type { ActiveRun } from "../../internal/runs/runRegistry.js";
 import {
 	applyEveEvent,
+	closeReasoningStream,
 	type EveEventContext,
 	type EveTurnOutcome,
 	type EveTurnProgress,
@@ -67,8 +68,23 @@ export const consumeEveTurn = async ({
 	let idleRetries = 0;
 	let disconnectRetries = 0;
 
+	const abandonForStop = async (
+		stop: NonNullable<ActiveRun["stop"]>,
+	): Promise<EveTurnOutcome> => {
+		abortController.abort();
+		await saveEveSessionState({ orgId, session, state: { status: "waiting" } });
+		return {
+			kind: "stopped",
+			stopReason: stop.reason,
+			text: progress.finalText,
+		};
+	};
+
 	try {
 		while (idleRetries < MAX_IDLE_RETRIES) {
+			// Eve is never interrupted server-side, so a stop is only honored where
+			// the harness looks: here, and on the next streamed event.
+			if (run?.stop) return await abandonForStop(run.stop);
 			let sawEvent = false;
 			try {
 				for await (const event of streamEveEvents({
@@ -83,19 +99,7 @@ export const consumeEveTurn = async ({
 					session.state.streamIndex += 1;
 					session.state.lastEventAt = Date.now();
 
-					if (run?.stop) {
-						abortController.abort();
-						await saveEveSessionState({
-							orgId,
-							session,
-							state: { status: "waiting" },
-						});
-						return {
-							kind: "stopped",
-							stopReason: run.stop.reason,
-							text: progress.finalText,
-						};
-					}
+					if (run?.stop) return await abandonForStop(run.stop);
 
 					const outcome = await applyEveEvent({
 						env,
@@ -147,7 +151,10 @@ export const consumeEveTurn = async ({
 					state: { status: "waiting" },
 				});
 				const partialText = progress.finalText || progress.pendingText;
-				if (partialText) return { kind: "answered", text: partialText };
+				if (partialText) {
+					closeReasoningStream({ onReasoning, progress });
+					return { kind: "answered", text: partialText };
+				}
 				throw new Error(
 					"Eve stopped responding mid-turn — please send your message again.",
 				);
@@ -169,6 +176,9 @@ export const consumeEveTurn = async ({
 					},
 				});
 				await resyncEveStreamIndex({ auth, session });
+				// Persisted right away: a turn that later throws would otherwise leave
+				// the drifted cursor in the row and repeat this cycle next message.
+				await saveEveSessionState({ orgId, session });
 				idleRetries = 0;
 				continue;
 			}
@@ -184,6 +194,7 @@ export const consumeEveTurn = async ({
 	// model managed to say, otherwise report how empty the turn really was.
 	if (progress.pendingText) progress.finalText = progress.pendingText;
 	if (eveTurnProducedOutput({ text: progress.finalText })) {
+		closeReasoningStream({ onReasoning, progress });
 		await saveEveSessionState({ orgId, session, state: { status: "waiting" } });
 		return { kind: "answered", text: progress.finalText };
 	}

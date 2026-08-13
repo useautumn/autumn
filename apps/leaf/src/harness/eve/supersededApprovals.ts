@@ -6,6 +6,7 @@ import { db } from "../../lib/db.js";
 import { adoptPostedEveSession } from "./adoptPostedSession.js";
 import { denyOptionFromApproval, drainParkedEveTurn } from "./approval.js";
 import { postEveInputResponse } from "./client.js";
+import { saveEveSessionState } from "./sessionState.js";
 import type { EveAuthContext, EveSessionRef } from "./types.js";
 
 const WITHDRAWN_NOTE =
@@ -37,6 +38,9 @@ const withdrawInEve = async ({
 	// streaming.
 	await drainParkedEveTurn({ auth, orgId, session });
 };
+
+const STILL_PARKED_MESSAGE =
+	"there's still an open approval card on this thread — approve or discard it before sending a new message";
 
 /** Cancels the approval cards the user answered with a new message rather than
  * a decision, in eve as well as locally, so this turn streams from a clean
@@ -70,6 +74,7 @@ export const withdrawSupersededEveApprovals = async ({
 	if (pendingApprovals.length === 0) return;
 
 	const cancelledApprovals: ChatApproval[] = [];
+	let stillParked = false;
 	for (const approval of pendingApprovals) {
 		if (approval.tool_call_id) {
 			try {
@@ -88,6 +93,10 @@ export const withdrawSupersededEveApprovals = async ({
 						error: error instanceof Error ? error.message : String(error),
 					},
 				});
+				// Leave the row pending: the card stays decidable, and the next
+				// message retries the withdrawal.
+				stillParked = true;
+				continue;
 			}
 		}
 		const cancelled = await chatApprovalRepo.cancel({
@@ -97,5 +106,13 @@ export const withdrawSupersededEveApprovals = async ({
 		});
 		cancelledApprovals.push(cancelled ?? approval);
 	}
-	await onApprovalsSuperseded?.(cancelledApprovals);
+	if (cancelledApprovals.length > 0) {
+		await onApprovalsSuperseded?.(cancelledApprovals);
+	}
+	if (stillParked) {
+		// A partial withdrawal may already have re-homed eve onto a new session
+		// id — persist it or the next message resumes a run that no longer exists.
+		await saveEveSessionState({ orgId, session });
+		throw new Error(STILL_PARKED_MESSAGE);
+	}
 };

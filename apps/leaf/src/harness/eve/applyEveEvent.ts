@@ -1,5 +1,8 @@
 import type { AppEnv, CatalogPlanPreview } from "@autumn/shared";
-import { isSilentTool } from "../../agent/tools/toolPolicy.js";
+import {
+	isSilentTool,
+	normalizeToolName,
+} from "../../agent/tools/toolPolicy.js";
 import { executeAutumnMcpTool } from "../../internal/autumnMcp/client.js";
 import type { RunStopReason } from "../../internal/runs/runRegistry.js";
 import type { Suspension } from "../../types.js";
@@ -24,6 +27,10 @@ import {
 	labelForResult,
 	textForInputRequests,
 } from "./events.js";
+import {
+	type CapturedPreview,
+	previewForParkedWrite,
+} from "./parkedWritePreview.js";
 import { saveEveSessionState } from "./sessionState.js";
 import { eveTurnProducedOutput } from "./turnOutput.js";
 import type { EveSessionRef } from "./types.js";
@@ -41,7 +48,7 @@ export type EveTurnOutcome =
 /** What the turn has accumulated so far, mutated as events arrive. */
 export type EveTurnProgress = {
 	finalText: string;
-	lastPreview: unknown;
+	lastPreview?: CapturedPreview;
 	pendingText: string;
 	reasoningStreamId?: string;
 	toolInputs: Map<string, Record<string, unknown>>;
@@ -94,18 +101,25 @@ const absorbActionResult = async ({
 	token,
 }: EveEventContext) => {
 	const result = event.data?.result as EveActionResult | undefined;
-	if (
-		event.data?.status === "completed" &&
-		result?.toolName &&
-		isPreviewToolName(result.toolName)
-	) {
-		// Enriched (variant/version flags forced) so the approval card and the
-		// suspension decision gate both see the full preview.
-		progress.lastPreview = await enrichCatalogPreview({
-			executeTool: (call) => executeAutumnMcpTool({ env, token, ...call }),
-			input: result.callId ? progress.toolInputs.get(result.callId) : undefined,
-			preview: parsePreviewPayload(result.output) ?? result.output,
-		});
+	if (result?.toolName && isPreviewToolName(result.toolName)) {
+		// A failed preview leaves nothing to show, so it must also retire the one
+		// before it — the write is about to be previewed, not re-described.
+		progress.lastPreview =
+			event.data?.status === "completed"
+				? {
+						// Enriched (variant/version flags forced) so the approval card and
+						// the suspension decision gate both see the full preview.
+						preview: await enrichCatalogPreview({
+							executeTool: (call) =>
+								executeAutumnMcpTool({ env, token, ...call }),
+							input: result.callId
+								? progress.toolInputs.get(result.callId)
+								: undefined,
+							preview: parsePreviewPayload(result.output) ?? result.output,
+						}),
+						previewTool: normalizeToolName(result.toolName),
+					}
+				: undefined;
 	}
 	if (!result?.callId) return;
 	// actions.requested already surfaced this tool as a step; announcing it here
@@ -130,19 +144,33 @@ const appendMessageDelta = ({
 	onReasoning?.({ id: progress.reasoningStreamId, text: progress.pendingText });
 };
 
+/** Blanks the open reasoning stream so the text about to be posted as the reply
+ * isn't also left rendered as live thinking. */
+export const closeReasoningStream = ({
+	onReasoning,
+	progress,
+}: {
+	onReasoning?: EveEventContext["onReasoning"];
+	progress: EveTurnProgress;
+}) => {
+	if (progress.reasoningStreamId) {
+		onReasoning?.({ id: progress.reasoningStreamId, text: "" });
+	}
+	progress.reasoningStreamId = undefined;
+};
+
 const completeMessage = ({ event, onReasoning, progress }: EveEventContext) => {
 	const message = String(event.data?.message ?? progress.pendingText);
 	progress.pendingText = "";
 	if (event.data?.finishReason === "tool-calls") {
+		// Reasoning that preceded a tool call stays on screen as a step.
 		progress.reasoningStreamId ??= crypto.randomUUID();
 		onReasoning?.({ id: progress.reasoningStreamId, text: message });
-	} else {
-		if (progress.reasoningStreamId) {
-			onReasoning?.({ id: progress.reasoningStreamId, text: "" });
-		}
-		progress.finalText = message;
+		progress.reasoningStreamId = undefined;
+		return;
 	}
-	progress.reasoningStreamId = undefined;
+	closeReasoningStream({ onReasoning, progress });
+	progress.finalText = message;
 };
 
 const parkOnInputRequest = async ({
@@ -167,7 +195,10 @@ const parkOnInputRequest = async ({
 					_eveApproveOptionId: options.approve,
 					_eveDenyOptionId: options.deny,
 				},
-				preview: parsePreviewPayload(progress.lastPreview),
+				preview: previewForParkedWrite({
+					captured: progress.lastPreview,
+					toolName: parked.chained.toolName,
+				}),
 			},
 			text: progress.finalText,
 		};
@@ -205,7 +236,9 @@ const finishOnTerminalEvent = async ({
 	});
 	// The model may (correctly) stop after a preview that needs versioning/
 	// variant/migration choices — surface that decision now the turn is over.
-	const catalogDecision = catalogPlanNeedingDecision(progress.lastPreview);
+	const catalogDecision = catalogPlanNeedingDecision(
+		progress.lastPreview?.preview,
+	);
 	if (eveTurnProducedOutput({ catalogDecision, text: progress.finalText })) {
 		return { kind: "answered", catalogDecision, text: progress.finalText };
 	}
