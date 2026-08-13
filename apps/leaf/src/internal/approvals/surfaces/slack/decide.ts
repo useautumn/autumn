@@ -230,6 +230,17 @@ export const handleApprovalActionWithDeps = async ({
 			const pending = approvals.filter(
 				(approval) => approval.status === "pending",
 			);
+			// Dismissal is all-or-nothing: cancelling the pending rows while a
+			// sibling already runs would show Dismissed over a write that lands.
+			if (pending.length !== approvals.length) {
+				deps.logger.warn("Approval cancellation ignored", {
+					event: "leaf.approval_cancel_ignored",
+					approval_id: approvalId,
+					data: { pending: pending.length, expected: approvals.length },
+				});
+				await editToCurrentStatus();
+				return;
+			}
 			if (first.harness === "eve" && pending.length > 0) {
 				const denied = await denyEveApprovalGroup({
 					approvals: pending,
@@ -253,10 +264,11 @@ export const handleApprovalActionWithDeps = async ({
 				approvals,
 				providerUserId,
 			});
-			if (cancelled.length === 0) {
+			if (cancelled.length !== approvals.length) {
 				deps.logger.warn("Approval cancellation ignored", {
 					event: "leaf.approval_cancel_ignored",
 					approval_id: approvalId,
+					data: { cancelled: cancelled.length, expected: approvals.length },
 				});
 				await editToCurrentStatus();
 				return;

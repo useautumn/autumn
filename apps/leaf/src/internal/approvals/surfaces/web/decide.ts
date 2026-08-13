@@ -38,6 +38,11 @@ export const decideWebApproval = async ({
 	if (pending.length === 0) {
 		return { error: `Approval already ${first.status}` };
 	}
+	// The group is decided as a unit, so a half-settled one can't be decided
+	// again without stranding or double-running its siblings.
+	if (pending.length !== approvals.length) {
+		return { error: "Approval is already being resolved" };
+	}
 
 	if (action === "reject") {
 		// Eve parks the whole turn on the approvals — deny them in the session
@@ -77,8 +82,24 @@ export const decideWebApproval = async ({
 		return { status: "rejected", text };
 	}
 
-	const result = await resolveApprovalGroup({
+	// Claim before resolving so a double submit can't resume the same parked
+	// turn twice and run every write in the group a second time.
+	const claimed = await chatApprovalRepo.claimGroup({
 		approvals: pending,
+		db,
+		providerUserId,
+	});
+	if (claimed.length !== pending.length) {
+		await chatApprovalRepo.releaseGroup({
+			approvals: claimed,
+			db,
+			providerUserId,
+		});
+		return { error: "Approval is already being resolved" };
+	}
+
+	const result = await resolveApprovalGroup({
+		approvals: claimed,
 		providerUserId,
 	});
 	if ("error" in result) {

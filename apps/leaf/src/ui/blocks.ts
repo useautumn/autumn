@@ -14,6 +14,7 @@ import {
 	Modal,
 } from "chat";
 import { normalizeToolName, toolLabel } from "../agent/tools/toolPolicy.js";
+import { getRequest } from "../internal/approvals/utils/toolArgs.js";
 import { parsePreviewPayload, previewElements } from "./previewContent.js";
 
 export type ApprovalCardStatus =
@@ -23,11 +24,6 @@ export type ApprovalCardStatus =
 	| "failed"
 	| "running"
 	| "superseded";
-
-const getRequest = (args?: Record<string, unknown>) =>
-	(args?.request && typeof args.request === "object" ? args.request : args) as
-		| Record<string, unknown>
-		| undefined;
 
 const getRecord = (value: unknown) =>
 	value && typeof value === "object" ? (value as Record<string, unknown>) : {};
@@ -806,8 +802,14 @@ const billingDisplayFor = (item: ApprovalCardItem) =>
 const groupDueNowText = (items: ApprovalCardItem[]) => {
 	const charges = items.flatMap((item) => {
 		const display = billingDisplayFor(item);
+		// Currency casing varies by preview source, so compare normalized.
 		return display?.dueNow
-			? [{ amount: display.dueNow.amount, currency: display.currency }]
+			? [
+					{
+						amount: display.dueNow.amount,
+						currency: display.currency?.toLowerCase(),
+					},
+				]
 			: [];
 	});
 	if (charges.length < 2) return null;

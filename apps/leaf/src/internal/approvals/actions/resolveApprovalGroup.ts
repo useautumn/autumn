@@ -59,14 +59,18 @@ export const resolveApprovalGroup = async ({
 		return approvalErrorResult(error, { retryable: true });
 	}
 
-	// Retryable errors leave the rows pending; everything else is finalized.
-	if (!("error" in result && result.retryable)) {
-		await chatApprovalRepo.finalizeGroup({
-			approvals,
-			db,
-			providerUserId,
-			status: "error" in result ? "failed" : "approved",
-		});
+	// A retryable error means the writes never ran, so hand the group back to
+	// pending — leaving it claimed would make the promised retry unclaimable.
+	if ("error" in result && result.retryable) {
+		await chatApprovalRepo.releaseGroup({ approvals, db, providerUserId });
+		return result;
 	}
+
+	await chatApprovalRepo.finalizeGroup({
+		approvals,
+		db,
+		providerUserId,
+		status: "error" in result ? "failed" : "approved",
+	});
 	return result;
 };
