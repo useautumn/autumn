@@ -133,18 +133,6 @@ export const postEveInputResponses = async ({
 	return parseSessionResponse({ existing: session, response });
 };
 
-export const postEveInputResponse = async ({
-	optionId,
-	requestId,
-	...rest
-}: {
-	auth: EveAuthContext;
-	note?: string;
-	optionId: string;
-	requestId: string;
-	session: EveSessionRef;
-}) => postEveInputResponses({ ...rest, responses: [{ optionId, requestId }] });
-
 /** Longest observed gap between events on a healthy turn is ~60s (model
  * latency on a large context), so anything past this reads as a dead stream. */
 const STREAM_IDLE_TIMEOUT_MS = 120_000;

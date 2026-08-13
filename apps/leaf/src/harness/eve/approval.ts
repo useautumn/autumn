@@ -1,5 +1,4 @@
 import type { ChatApproval } from "@autumn/shared";
-import { normalizeToolName } from "../../agent/tools/toolPolicy.js";
 import { chatApprovalRepo } from "../../internal/approvals/repos/chatApprovalRepo.js";
 import type { ApprovalGroupRunResult } from "../../internal/approvals/types.js";
 import { fetchApprovalPreview } from "../../internal/approvals/utils/fetchApprovalPreview.js";
@@ -12,7 +11,11 @@ import {
 	resyncEveStreamIndex,
 	streamEveEvents,
 } from "./client.js";
-import { approvalOptionIds, type EveInputRequest } from "./events.js";
+import {
+	approvalOptionIds,
+	type EveInputRequest,
+	isGatedRequest,
+} from "./events.js";
 import { getEveSessionBySessionId, upsertEveSession } from "./repo.js";
 import type { EveAuthContext, EveSessionRef } from "./types.js";
 
@@ -50,15 +53,6 @@ const authFromApproval = (
 	threadId: approval.channel_id,
 	workspaceId: approval.workspace_id,
 });
-
-/** Eve's own `ask_question` carries a populated `action.toolName` too, so it has
- * to be excluded — only a real approval-gated call is a write. */
-const isGatedRequest = (request: EveInputRequest) =>
-	Boolean(
-		request.requestId &&
-			request.action?.toolName &&
-			normalizeToolName(request.action.toolName) !== "ask_question",
-	);
 
 const gatedRequestsFrom = ({
 	event,

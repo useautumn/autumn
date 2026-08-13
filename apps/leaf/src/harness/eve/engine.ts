@@ -1,8 +1,5 @@
 import type { AgentEngine } from "../../agent/runMessage/types.js";
-import {
-	isSilentTool,
-	normalizeToolName,
-} from "../../agent/tools/toolPolicy.js";
+import { isSilentTool } from "../../agent/tools/toolPolicy.js";
 import { chatApprovalRepo } from "../../internal/approvals/repos/chatApprovalRepo.js";
 import { executeAutumnMcpTool } from "../../internal/autumnMcp/client.js";
 import { autumnOrgContextService } from "../../internal/autumnMcp/orgContextService.js";
@@ -31,6 +28,7 @@ import {
 	type EveAction,
 	type EveActionResult,
 	type EveInputRequest,
+	isGatedRequest,
 	isPreviewToolName,
 	labelForResult,
 	textForInputRequests,
@@ -362,17 +360,9 @@ export const eveEngine: AgentEngine = {
 						} else if (event.type === "input.requested" && turnStarted) {
 							const requests = (event.data?.requests ??
 								[]) as EveInputRequest[];
-							// Eve's built-in `ask_question` also carries a populated
-							// `action.toolName` (its own), so exclude it — only a real
-							// approval-gated tool call should render as an approval card.
-							// Keep every gated request: dropping the siblings would strand
-							// them parked in the session forever.
-							const approvals = requests.filter(
-								(request) =>
-									request.requestId &&
-									request.action?.toolName &&
-									normalizeToolName(request.action.toolName) !== "ask_question",
-							);
+							// Keep every gated request: dropping the siblings would strand them
+							// parked in the session forever.
+							const approvals = requests.filter(isGatedRequest);
 							if (approvals.length > 0) {
 								await updateState({
 									orgId: org.id,
@@ -405,9 +395,8 @@ export const eveEngine: AgentEngine = {
 												_eveApproveOptionId: options.approve,
 												_eveDenyOptionId: options.deny,
 											},
-											// The turn captures one preview, so it only belongs to a
-											// lone write — otherwise each card item is backfilled
-											// per write and nobody sees another customer's cost.
+											// The turn captures a single preview, so it can only be
+											// trusted for a lone write; a group backfills per item.
 											preview:
 												approvals.length === 1
 													? parsePreviewPayload(lastPreview)

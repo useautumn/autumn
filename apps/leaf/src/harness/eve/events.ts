@@ -67,6 +67,16 @@ export const displayEveToolLabel = (actionOrLabel: EveAction | string) => {
 export const isPreviewToolName = (toolName: string) =>
 	/^preview/i.test(normalizeToolName(toolName));
 
+/** A request parked on the approval gate. Eve's own `ask_question` carries a
+ * populated `action.toolName` too, so it has to be excluded — only a real
+ * gated call is a write. */
+export const isGatedRequest = (request: EveInputRequest) =>
+	Boolean(
+		request.requestId &&
+			request.action?.toolName &&
+			normalizeToolName(request.action.toolName) !== "ask_question",
+	);
+
 export const approvalOptionIds = (request: EveInputRequest) => {
 	const options = request.options ?? [];
 	const optionText = (option: { id?: string; label?: string }) =>

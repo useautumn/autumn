@@ -804,19 +804,18 @@ const billingDisplayFor = (item: ApprovalCardItem) =>
 /** What the group charges today, or null when the items don't share a currency
  * — summing across currencies would be a lie. */
 const groupDueNowText = (items: ApprovalCardItem[]) => {
-	const displays = items
-		.map(billingDisplayFor)
-		.filter((display) => display?.dueNow);
-	if (displays.length < 2) return null;
-	const currencies = new Set(displays.map((display) => display?.currency));
-	if (currencies.size > 1) return null;
-	const total = displays.reduce(
-		(sum, display) => sum + (display?.dueNow?.amount ?? 0),
-		0,
-	);
+	const charges = items.flatMap((item) => {
+		const display = billingDisplayFor(item);
+		return display?.dueNow
+			? [{ amount: display.dueNow.amount, currency: display.currency }]
+			: [];
+	});
+	if (charges.length < 2) return null;
+	const [first] = charges;
+	if (charges.some((charge) => charge.currency !== first.currency)) return null;
 	return formatMoney({
-		amount: total,
-		currency: displays[0]?.currency,
+		amount: charges.reduce((sum, charge) => sum + charge.amount, 0),
+		currency: first.currency,
 	});
 };
 
@@ -855,36 +854,32 @@ const approvalBodyBlocks = ({
 			: [];
 	}
 
-	const detailed = items.length <= MAX_DETAILED_ITEMS;
-	const blocks: CardChild[] = [];
-	for (const [index, item] of items.entries()) {
-		if (detailed) {
-			blocks.push(Divider());
-			blocks.push(CardText(itemSentence({ env, index, item, phrase })));
-			blocks.push(
-				...approvalPreviewBlocks({
-					preview: item.preview,
-					toolArgs: item.toolArgs,
-					toolName: item.toolName,
-				}),
-			);
-			continue;
-		}
-		const dueNow = billingDisplayFor(item)?.dueNow;
-		blocks.push(
-			CardText(
-				`${itemSentence({ env, index, item, phrase })}${
-					dueNow ? ` — ${dueNow.text}` : ""
-				}`,
-			),
-		);
-	}
+	const blocks: CardChild[] =
+		items.length <= MAX_DETAILED_ITEMS
+			? items.flatMap((item, index) => [
+					Divider(),
+					CardText(itemSentence({ env, index, item, phrase })),
+					...approvalPreviewBlocks({
+						preview: item.preview,
+						toolArgs: item.toolArgs,
+						toolName: item.toolName,
+					}),
+				])
+			: items.map((item, index) => {
+					const dueNow = billingDisplayFor(item)?.dueNow;
+					const cost = dueNow ? ` — ${dueNow.text}` : "";
+					return CardText(
+						`${itemSentence({ env, index, item, phrase })}${cost}`,
+					);
+				});
+
 	const total = groupDueNowText(items);
-	if (total) {
-		blocks.push(Divider());
-		blocks.push(CardText(`${bold("Total due now")}  ${bold(total)}`));
-	}
-	return blocks;
+	if (!total) return blocks;
+	return [
+		...blocks,
+		Divider(),
+		CardText(`${bold("Total due now")}  ${bold(total)}`),
+	];
 };
 
 const SUMMARY_MAX_LENGTH = 1500;

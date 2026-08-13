@@ -126,9 +126,8 @@ const defaultApprovalActionDeps: ApprovalActionDeps = {
 	},
 };
 
-// Maps the group's rows to the card state shown when a click can no longer act
-// on it. A mixed group takes the least-settled state so the card never claims
-// more finality than the rows have.
+// The card state shown when a click can no longer act on the group. Every row
+// is decided in one statement, so the first row's status speaks for all of them.
 const cardStatusForApprovals = ({
 	approvals,
 }: {
@@ -161,9 +160,7 @@ const authorizeGroup = async ({
 			providerUserId,
 		});
 		if (authorization && !authorization.allowed) return authorization;
-		approverToken ??= authorization?.allowed
-			? authorization.approverToken
-			: undefined;
+		approverToken ??= authorization?.approverToken;
 	}
 	return { allowed: true as const, approverToken };
 };
@@ -429,6 +426,8 @@ export const handleApprovalActionWithDeps = async ({
 			}
 		}
 
+		const toolOutputs =
+			!failed && "results" in result ? result.results : undefined;
 		await deps.editActionMessage({
 			content: approvalStatusCard({
 				status: failed ? "failed" : "approved",
@@ -436,11 +435,8 @@ export const handleApprovalActionWithDeps = async ({
 				env,
 				failure: failed ? result : undefined,
 				items,
-				results: failed
-					? undefined
-					: claimed.map((approval) =>
-							"results" in result ? result.results?.[approval.id] : undefined,
-						),
+				results:
+					toolOutputs && claimed.map((approval) => toolOutputs[approval.id]),
 			}),
 			event,
 		});

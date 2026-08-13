@@ -320,14 +320,14 @@ const main = async () => {
 			});
 			check("S2 approval row exists", Boolean(approval));
 			if (approval) {
-				const claimed = await chatApprovalRepo.claim({
-					approvalId: approval.id,
+				const claimed = await chatApprovalRepo.claimGroup({
+					approvals: [approval],
 					db,
 					providerUserId: USER_B,
 				});
-				check("S2 another user can claim/approve", Boolean(claimed));
+				check("S2 another user can claim/approve", claimed.length === 1);
 				const result = await resolveApprovalGroup({
-					approvals: [claimed ?? approval],
+					approvals: claimed.length ? claimed : [approval],
 					providerUserId: USER_B,
 				});
 				const failed = "error" in result && result.error === true;

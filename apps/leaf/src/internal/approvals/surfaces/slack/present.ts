@@ -21,12 +21,8 @@ import {
 	fetchApprovalPreview,
 	shouldRefreshApprovalPreview,
 } from "../../utils/fetchApprovalPreview.js";
-import { approvalCardItems, publicToolArgs } from "./cardItems.js";
-
-const getRequest = (args?: Record<string, unknown>) =>
-	args?.request && typeof args.request === "object"
-		? (args.request as Record<string, unknown>)
-		: args;
+import { getRequest, publicToolArgs } from "../../utils/toolArgs.js";
+import { approvalCardItems } from "./cardItems.js";
 
 /** Posts the card for approvals that already exist (chained writes surfaced by
  * an approve/answer resume, which never flow through `presentApproval`). */
@@ -50,7 +46,8 @@ export const postApprovalCardForGroup = async ({
 			requesterId: first.provider_user_id,
 		}),
 	);
-	// Stored on the clicked row so a later turn can replace the card.
+	// Only the group's first row carries the message id; superseding redraws the
+	// whole group under it.
 	try {
 		await chatApprovalRepo.setMessageTs({
 			approvalId: first.id,

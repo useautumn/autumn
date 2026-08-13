@@ -11,7 +11,9 @@ const byGroup = (approvals: ChatApproval[]) => {
 	const groups = new Map<string, ChatApproval[]>();
 	for (const approval of approvals) {
 		const key = approval.group_id ?? approval.id;
-		groups.set(key, [...(groups.get(key) ?? []), approval]);
+		const group = groups.get(key);
+		if (group) group.push(approval);
+		else groups.set(key, [approval]);
 	}
 	return [...groups.values()];
 };

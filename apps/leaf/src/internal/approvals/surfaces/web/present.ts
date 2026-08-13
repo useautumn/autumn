@@ -13,16 +13,7 @@ import {
 	fetchApprovalPreview,
 	shouldRefreshApprovalPreview,
 } from "../../utils/fetchApprovalPreview.js";
-
-const getRequest = (args?: Record<string, unknown>) =>
-	args?.request && typeof args.request === "object"
-		? (args.request as Record<string, unknown>)
-		: args;
-
-const publicToolArgs = (args: Record<string, unknown>) =>
-	Object.fromEntries(
-		Object.entries(args).filter(([key]) => !key.startsWith("_eve")),
-	);
+import { getRequest, publicToolArgs } from "../../utils/toolArgs.js";
 
 const withBackfilledPreview = async ({
 	logger,

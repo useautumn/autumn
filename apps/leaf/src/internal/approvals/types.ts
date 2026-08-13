@@ -9,7 +9,7 @@ export type ActionMessageContent = Parameters<
 	NonNullable<ActionEvent["adapter"]["editMessage"]>
 >[2];
 
-export type ApprovalRunError = {
+type ApprovalRunError = {
 	// `retryable` means the write never ran to completion (a session crash /
 	// interruption), so the approval stays pending and the user can re-apply.
 	error: true;
