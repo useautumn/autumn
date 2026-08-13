@@ -16,7 +16,7 @@ Infisical-wrapped npm aliases.
 ## Backing services (local, installed in the VM snapshot)
 
 Installed once via `scripts/setup/agent-bootstrap.sh` (Postgres 18, Redis Stack —
-RedisJSON required, ClickHouse, JRE, ElasticMQ jar). They are NOT running on a fresh
+RedisJSON required, ClickHouse, GoAWS). They are NOT running on a fresh
 boot — start them each session with:
 
 ```sh
@@ -24,7 +24,7 @@ bash scripts/setup/agent-services.sh
 ```
 
 This starts Postgres (`:5432`, db `autumn`, `postgres`/`postgres`), Redis Stack
-(`:6379`), ClickHouse (`:8123`), ElasticMQ (`:9324`) and (re)writes `server/.env`.
+(`:6379`), ClickHouse (`:8123`), GoAWS (`:9324`) and (re)writes `server/.env`.
 It ends with `error: Script not found "db:migrate"` — that line in the script is
 stale (the real command is `bun db migrate`, with a space). Harmless: services and
 `server/.env` are already set up by then and the DB is already migrated in the snapshot.

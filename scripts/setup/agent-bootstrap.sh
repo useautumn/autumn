@@ -18,7 +18,6 @@ if [ "$OS" = "Darwin" ]; then
   command -v psql             >/dev/null 2>&1 || BREW_NEEDED+=(postgresql@18)
   command -v redis-stack-server >/dev/null 2>&1 || BREW_NEEDED+=(redis-stack)
   command -v clickhouse       >/dev/null 2>&1 || BREW_NEEDED+=(clickhouse)
-  command -v java             >/dev/null 2>&1 || BREW_NEEDED+=(openjdk)
 
   # redis-stack lives in the redis-stack tap
   if [[ " ${BREW_NEEDED[*]} " == *" redis-stack "* ]]; then
@@ -34,15 +33,6 @@ if [ "$OS" = "Darwin" ]; then
   if ! command -v pg_ctl >/dev/null 2>&1; then
     log "postgresql@18 is installed but not on PATH; add it to your shell rc:"
     log "  export PATH=\"$(brew --prefix postgresql@18)/bin:\$PATH\""
-  fi
-
-  # brew openjdk needs a symlink into the default JDK directory
-  if ! java -version >/dev/null 2>&1; then
-    JDK_DST="/Library/Java/JavaVirtualMachines/openjdk.jdk"
-    if [ ! -e "$JDK_DST" ]; then
-      log "Linking openjdk for system Java detection (requires sudo)"
-      sudo ln -sfn "$(brew --prefix openjdk)/libexec/openjdk.jdk" "$JDK_DST"
-    fi
   fi
 
 # =============================================================
@@ -81,7 +71,6 @@ else
   APT_NEEDED=()
   command -v pg_ctlcluster       >/dev/null 2>&1 || APT_NEEDED+=(postgresql-18)
   command -v redis-stack-server  >/dev/null 2>&1 || APT_NEEDED+=(redis-stack-server)
-  command -v java                >/dev/null 2>&1 || APT_NEEDED+=(default-jre-headless)
 
   if [ ${#APT_NEEDED[@]} -gt 0 ]; then
     log "Installing via apt: ${APT_NEEDED[*]}"
@@ -105,46 +94,31 @@ else
 fi
 
 # =============================================================
-# ElasticMQ jar (cross-platform, per-user dir, no sudo needed)
+# GoAWS (cross-platform, per-user dir, no sudo needed)
 # =============================================================
-ELASTICMQ_VERSION="1.6.11"
-ELASTICMQ_DIR="${HOME}/.autumn-agent/elasticmq"
-ELASTICMQ_JAR="${ELASTICMQ_DIR}/elasticmq.jar"
-ELASTICMQ_CONF="${ELASTICMQ_DIR}/elasticmq.conf"
+GOAWS_VERSION="v0.5.4"
+GOAWS_DIR="${HOME}/.autumn-agent/goaws"
+GOAWS_BIN="${GOAWS_DIR}/goaws"
+GOAWS_CONF="${GOAWS_DIR}/goaws.yaml"
 
-mkdir -p "$ELASTICMQ_DIR"
+mkdir -p "$GOAWS_DIR"
 
-if [ ! -f "$ELASTICMQ_JAR" ]; then
-  log "Downloading ElasticMQ $ELASTICMQ_VERSION"
-  curl -fsSL -o "$ELASTICMQ_JAR" \
-    "https://s3-eu-west-1.amazonaws.com/softwaremill-public/elasticmq-server-${ELASTICMQ_VERSION}.jar"
+if [ ! -x "$GOAWS_BIN" ]; then
+  case "$(uname -m)" in
+    x86_64) GOAWS_ARCH="x86_64" ;;
+    arm64 | aarch64) GOAWS_ARCH="arm64" ;;
+    *) echo "[agent-bootstrap] ERROR: unsupported architecture for GoAWS: $(uname -m)" >&2; exit 1 ;;
+  esac
+  log "Downloading GoAWS $GOAWS_VERSION"
+  GOAWS_TMP="$(mktemp -d)"
+  curl -fsSL -o "$GOAWS_TMP/goaws.tar.gz" \
+    "https://github.com/Admiral-Piett/goaws/releases/download/${GOAWS_VERSION}/goaws_${OS}_${GOAWS_ARCH}.tar.gz"
+  tar -xzf "$GOAWS_TMP/goaws.tar.gz" -C "$GOAWS_TMP" goaws
+  install -m 0755 "$GOAWS_TMP/goaws" "$GOAWS_BIN"
+  rm -rf "$GOAWS_TMP"
 fi
 
-if [ ! -f "$ELASTICMQ_CONF" ]; then
-  cat > "$ELASTICMQ_CONF" <<'EOF'
-include classpath("application.conf")
-node-address {
-  protocol = http
-  host = "localhost"
-  port = 9324
-  context-path = ""
-}
-rest-sqs {
-  enabled = true
-  bind-port = 9324
-  bind-hostname = "0.0.0.0"
-  sqs-limits = strict
-}
-queues {
-  "autumn.fifo" {
-    defaultVisibilityTimeout = 30 seconds
-    receiveMessageWait = 0 seconds
-    fifo = true
-    contentBasedDeduplication = true
-  }
-}
-EOF
-fi
+cp scripts/setup/goaws.yaml "$GOAWS_CONF"
 
 # =============================================================
 # Bun workspace install

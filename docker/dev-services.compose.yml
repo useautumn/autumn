@@ -43,6 +43,14 @@ services:
       - "8000:8000"
     command: ["-jar", "DynamoDBLocal.jar", "-inMemory", "-sharedDb"]
 
+  goaws:
+    image: admiralpiett/goaws:v0.5.4@sha256:18589afe16517751cc981354536c148854157a718bee9059494d6cdee3dc4e2d
+    ports:
+      - "${GOAWS_PORT:-9324}:9324"
+    volumes:
+      - ../scripts/setup/goaws.yaml:/app/conf/autumn.yaml:ro
+    command: ["-config", "/app/conf/autumn.yaml"]
+
   ngrok:
     image: ngrok/ngrok:latest
     profiles:

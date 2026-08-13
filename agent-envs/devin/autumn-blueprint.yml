@@ -46,7 +46,7 @@ knowledge:
     contents: |
       Before running the server or any integration test, run `bun dw setup` in
       the repo root. It provisions this session's own Neon branch, Dragonfly,
-      ElasticMQ and DynamoDB, and writes .env.local. It has NOT been run for you.
+      GoAWS and DynamoDB, and writes .env.local. It has NOT been run for you.
 
       Then start the stack in the background:
         bun dw run

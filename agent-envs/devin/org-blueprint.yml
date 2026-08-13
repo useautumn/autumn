@@ -48,7 +48,7 @@ initialize:
   - name: Pre-pull dev stack images
     run: |
       docker pull docker.dragonflydb.io/dragonflydb/dragonfly
-      docker pull softwaremill/elasticmq-native:latest
+      docker pull admiralpiett/goaws:v0.5.4
       docker pull amazon/dynamodb-local:latest
       docker images
 

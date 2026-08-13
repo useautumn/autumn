@@ -21,12 +21,14 @@ const localConfig = {
 	miscCachePort: 6379,
 	dragonflyPort: 6380,
 	dynamoDbPort: 8000,
+	goawsPort: 9324,
 	apiServerPort: 8080,
 	databaseUrl: "postgresql://postgres:postgres@localhost:5432/autumn",
 	chatStateDatabaseUrl: "postgresql://postgres:postgres@localhost:5432/chat",
 	miscCacheUrl: "redis://localhost:6379",
 	dragonflyUrl: "redis://localhost:6380",
 	dynamoDbEndpoint: "http://localhost:8000",
+	sqsBaseUrl: "http://localhost:9324/000000000000",
 };
 
 const command = process.argv[2] ?? "help";
@@ -285,6 +287,10 @@ const doctor = async () => {
 			fn: () =>
 				waitForTcp({ port: localConfig.dynamoDbPort, label: "DynamoDB" }),
 		}),
+		check({
+			label: "GoAWS :9324",
+			fn: () => waitForTcp({ port: localConfig.goawsPort, label: "GoAWS" }),
+		}),
 	]);
 
 	if (results.some((result) => !result)) process.exit(1);
@@ -385,6 +391,7 @@ const up = async () => {
 		}),
 		waitForTcp({ port: localConfig.dragonflyPort, label: "Dragonfly" }),
 		waitForTcp({ port: localConfig.dynamoDbPort, label: "DynamoDB" }),
+		waitForTcp({ port: localConfig.goawsPort, label: "GoAWS" }),
 		waitForTcp({ port: localConfig.ngrokApiPort, label: "ngrok" }),
 	]);
 
@@ -428,7 +435,7 @@ const help = () => {
 	console.log(`Usage: bun dev:services <command>
 
 Commands:
-  up                         Start local Postgres, Dragonfly (misc cache + cache v2), DynamoDB, and ngrok
+  up                         Start local Postgres, Dragonfly (misc cache + cache v2), DynamoDB, GoAWS, and ngrok
   down                       Stop local services and keep all data
   down --volumes             Stop services and delete Dragonfly data
   down --postgres            Stop services and delete Postgres data
@@ -443,6 +450,10 @@ Local service values:
   MISC_CACHE_DRAGONFLY_PUBLIC_URL=${localConfig.miscCacheUrl}
   CACHE_V2_DRAGONFLY_URL=${localConfig.dragonflyUrl}
   DYNAMODB_ENDPOINT=${localConfig.dynamoDbEndpoint}
+  SQS_QUEUE_URL_V2=${localConfig.sqsBaseUrl}/autumn.fifo
+  TRACK_SQS_QUEUE_URL=${localConfig.sqsBaseUrl}/autumn-track.fifo
+  TRACK_ASYNC_STANDARD_SQS_QUEUE_URL=${localConfig.sqsBaseUrl}/autumn-track-async
+  STRIPE_WEBHOOK_SQS_QUEUE_URL=${localConfig.sqsBaseUrl}/autumn-stripe-webhook.fifo
 `);
 };
 

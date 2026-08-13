@@ -38,32 +38,40 @@ else
 fi
 
 # =============================================================
-# 2. ElasticMQ (cross-platform, per-user dir)
+# 2. GoAWS (cross-platform, per-user dir)
 # =============================================================
-ELASTICMQ_DIR="${HOME}/.autumn-agent/elasticmq"
-ELASTICMQ_JAR="${ELASTICMQ_DIR}/elasticmq.jar"
-ELASTICMQ_CONF="${ELASTICMQ_DIR}/elasticmq.conf"
-ELASTICMQ_LOG_DIR="${HOME}/.autumn-agent/logs"
-mkdir -p "$ELASTICMQ_LOG_DIR"
+GOAWS_DIR="${HOME}/.autumn-agent/goaws"
+GOAWS_BIN="${GOAWS_DIR}/goaws"
+GOAWS_CONF="${GOAWS_DIR}/goaws.yaml"
+GOAWS_LOG_DIR="${HOME}/.autumn-agent/logs"
+mkdir -p "$GOAWS_LOG_DIR"
 
-if ! pgrep -f 'elasticmq.*\.jar' >/dev/null 2>&1; then
-  log "Starting ElasticMQ on :9324"
-  nohup java \
-    -Dconfig.file="$ELASTICMQ_CONF" \
-    -jar "$ELASTICMQ_JAR" \
-    >"$ELASTICMQ_LOG_DIR/elasticmq.log" 2>&1 &
+if pgrep -f 'elasticmq.*\.jar' >/dev/null 2>&1; then
+  log "Stopping legacy ElasticMQ"
+  pkill -TERM -f 'elasticmq.*\.jar' || true
+  for i in $(seq 1 30); do
+    pgrep -f 'elasticmq.*\.jar' >/dev/null 2>&1 || break
+    sleep 0.1
+  done
+  pkill -KILL -f 'elasticmq.*\.jar' >/dev/null 2>&1 || true
+fi
+
+if ! pgrep -f "$GOAWS_BIN" >/dev/null 2>&1; then
+  log "Starting GoAWS on :9324"
+  nohup "$GOAWS_BIN" -config "$GOAWS_CONF" \
+    >"$GOAWS_LOG_DIR/goaws.log" 2>&1 &
   disown || true
-  log "Waiting for ElasticMQ to be ready"
-  ELASTICMQ_READY=0
+  log "Waiting for GoAWS to be ready"
+  GOAWS_READY=0
   for i in $(seq 1 30); do
     if curl -sf -o /dev/null 'http://localhost:9324/?Action=ListQueues&Version=2012-11-05'; then
-      ELASTICMQ_READY=1
+      GOAWS_READY=1
       break
     fi
     sleep 0.5
   done
-  if [ "$ELASTICMQ_READY" -eq 0 ]; then
-    echo "[agent-services] ERROR: ElasticMQ did not become ready after 15s. Check $ELASTICMQ_LOG_DIR/elasticmq.log" >&2
+  if [ "$GOAWS_READY" -eq 0 ]; then
+    echo "[agent-services] ERROR: GoAWS did not become ready after 15s. Check $GOAWS_LOG_DIR/goaws.log" >&2
     exit 1
   fi
 fi

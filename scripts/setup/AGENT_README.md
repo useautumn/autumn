@@ -11,14 +11,14 @@ Installs all system dependencies and downloads required binaries. Safe to re-run
 **Ubuntu/Debian** (via apt):
 - Adds the official PostgreSQL apt repo (PGDG) for PG18
 - Adds the official Redis apt repo for Redis Stack (required for RedisJSON)
-- Installs `postgresql-18`, `redis-stack-server`, `default-jre-headless`
+- Installs `postgresql-18` and `redis-stack-server`
 - Installs `clickhouse-server` and `clickhouse-client` from the official ClickHouse apt repo
 
 **macOS** (via Homebrew — install brew first if you don't have it):
-- Installs `postgresql@18`, `redis-stack`, `clickhouse`, `openjdk` via brew
+- Installs `postgresql@18`, `redis-stack`, and `clickhouse` via brew
 
 **Both**:
-- Downloads the ElasticMQ jar to `~/.autumn-agent/elasticmq/elasticmq.jar` and writes its config
+- Downloads GoAWS to `~/.autumn-agent/goaws/goaws` and writes its config
 - Runs `bun install --frozen-lockfile` if `node_modules` is missing
 
 ### `bun dev:agent` — every session
@@ -26,7 +26,7 @@ Installs all system dependencies and downloads required binaries. Safe to re-run
 Starts all local services, creates the database, writes env files, runs migrations, then starts the dev servers.
 
 1. Starts `postgresql`, `redis-server`, and `clickhouse-server` (via `service` on Linux, `brew services` on macOS)
-2. Starts ElasticMQ in the background on `:9324` (skipped if already running)
+2. Starts GoAWS in the background on `:9324` (skipped if already running)
 3. Creates the `autumn` Postgres database if it does not exist, ensures the `pg_trgm` extension is enabled
 4. Writes `server/.env` (skips if already present) and `vite/.env` from `vite/.env.example`
 5. Runs `bun db:migrate`
@@ -57,7 +57,7 @@ Set these in the process environment before running `bun dev:agent` and they wil
 |---|---|---|
 | PostgreSQL | 5432 | Database: `autumn`, user: `postgres`, password: `postgres` |
 | Redis Stack | 6379 | Used for `MISC_CACHE_DRAGONFLY_PUBLIC_URL` (RedisJSON required) |
-| ElasticMQ | 9324 | Local SQS replacement, queue: `autumn.fifo` |
+| GoAWS | 9324 | Local SQS replacement, queue: `autumn.fifo` |
 | ClickHouse | 8123 | Used for `TINYBIRD_CLICKHOUSE_URL` |
 | Server | 8080 | Autumn API server |
 | Vite | 3000 | Frontend dev server |
@@ -65,7 +65,7 @@ Set these in the process environment before running `bun dev:agent` and they wil
 
 ## SQS isolation
 
-Each agent instance gets its own local ElasticMQ. `SQS_QUEUE_URL_V2` is always hardcoded to `http://localhost:9324/000000000000/autumn.fifo` in `server/.env` — the shared `SQS_QUEUE_URL_V2` from the Capy environment is intentionally ignored to prevent agents from consuming a shared queue.
+Each agent instance gets its own local GoAWS. `SQS_QUEUE_URL_V2` is always hardcoded to `http://localhost:9324/000000000000/autumn.fifo` in `server/.env` — the shared `SQS_QUEUE_URL_V2` from the Capy environment is intentionally ignored to prevent agents from consuming a shared queue.
 
 ## Known limitations
 

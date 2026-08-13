@@ -1,9 +1,16 @@
+import {
+	afterAll,
+	afterEach,
+	beforeAll,
+	describe,
+	expect,
+	test,
+} from "bun:test";
+import { type ChildProcess, spawn } from "node:child_process";
+import { randomUUID } from "node:crypto";
 import { mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { randomUUID } from "node:crypto";
-import { spawn, type ChildProcess } from "node:child_process";
-import { afterAll, afterEach, beforeAll, describe, expect, test } from "bun:test";
 import {
 	CreateQueueCommand,
 	DeleteQueueCommand,
@@ -12,7 +19,7 @@ import {
 	SQSClient,
 } from "@aws-sdk/client-sqs";
 
-const ELASTICMQ_JAR = `${process.env.HOME}/.autumn-agent/elasticmq/elasticmq.jar`;
+const GOAWS_BIN = `${process.env.HOME}/.autumn-agent/goaws/goaws`;
 const WORKER_FIXTURE_PATH = new URL(
 	"./fixtures/livePollingWorker.ts",
 	import.meta.url,
@@ -20,7 +27,7 @@ const WORKER_FIXTURE_PATH = new URL(
 
 const children: ChildProcess[] = [];
 const queueUrls: string[] = [];
-let elasticmq: ChildProcess | null = null;
+let goaws: ChildProcess | null = null;
 let tempDir: string | null = null;
 let sqsEndpoint = "";
 let sqs: SQSClient;
@@ -69,43 +76,28 @@ const waitFor = async ({
 
 beforeAll(async () => {
 	const port = 19_000 + Math.floor(Math.random() * 1_000);
-	const statsPort = port + 1;
-	tempDir = await mkdtemp(join(tmpdir(), "elasticmq-"));
-	const configPath = join(tempDir, "elasticmq.conf");
+	tempDir = await mkdtemp(join(tmpdir(), "goaws-"));
+	const configPath = join(tempDir, "goaws.yaml");
 	sqsEndpoint = `http://127.0.0.1:${port}`;
 
 	await writeFile(
 		configPath,
-		`include classpath("application.conf")
-node-address {
-  protocol = http
-  host = "127.0.0.1"
-  port = ${port}
-  context-path = ""
-}
-rest-sqs {
-  enabled = true
-  bind-port = ${port}
-  bind-hostname = "127.0.0.1"
-  sqs-limits = strict
-}
-generate-node-address = false
-rest-stats {
-  enabled = true
-  bind-port = ${statsPort}
-  bind-hostname = "127.0.0.1"
-}
-queues {}
+		`Local:
+  Host: 127.0.0.1
+  Scheme: http
+  Port: ${port}
+  Region: us-east-1
+  AccountId: "000000000000"
+  LogToFile: false
+  LogLevel: warn
+  EnableDuplicates: true
+  Queues: []
 `,
 	);
 
-	elasticmq = spawn(
-		"java",
-		[`-Dconfig.file=${configPath}`, "-jar", ELASTICMQ_JAR],
-		{
-			stdio: ["ignore", "pipe", "pipe"],
-		},
-	);
+	goaws = spawn(GOAWS_BIN, ["-config", configPath], {
+		stdio: ["ignore", "pipe", "pipe"],
+	});
 
 	sqs = new SQSClient({
 		region: "us-east-1",
@@ -132,9 +124,9 @@ queues {}
 });
 
 afterAll(async () => {
-	if (elasticmq) {
-		elasticmq.kill("SIGTERM");
-		await waitForExit({ child: elasticmq });
+	if (goaws) {
+		goaws.kill("SIGTERM");
+		await waitForExit({ child: goaws });
 	}
 
 	if (tempDir) {
@@ -193,20 +185,16 @@ const startWorker = ({
 	queueUrl: string;
 	shouldPoll: boolean;
 }) => {
-	const child = spawn(
-		"bun",
-		[WORKER_FIXTURE_PATH],
-		{
-			cwd: process.cwd(),
-			env: {
-				...process.env,
-				TEST_QUEUE_URL: queueUrl,
-				TEST_SQS_ENDPOINT: sqsEndpoint,
-				TEST_SHOULD_POLL: shouldPoll ? "true" : "false",
-			},
-			stdio: ["ignore", "pipe", "pipe"],
+	const child = spawn("bun", [WORKER_FIXTURE_PATH], {
+		cwd: process.cwd(),
+		env: {
+			...process.env,
+			TEST_QUEUE_URL: queueUrl,
+			TEST_SQS_ENDPOINT: sqsEndpoint,
+			TEST_SHOULD_POLL: shouldPoll ? "true" : "false",
 		},
-	);
+		stdio: ["ignore", "pipe", "pipe"],
+	});
 
 	children.push(child);
 	return child;

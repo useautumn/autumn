@@ -6,7 +6,7 @@ import {
 	composeProjectName,
 	dragonflyPortFor,
 	dynamoDbPortFor,
-	elasticMqPortFor,
+	goawsPortFor,
 	ngrokApiPortFor,
 	ngrokViteApiPortFor,
 	serverPortFor,
@@ -45,7 +45,7 @@ export function ensureComposeStack(
 
 	const project = composeProjectName(worktreeNum);
 	const dragonflyPort = String(dragonflyPortFor(worktreeNum));
-	const elasticMqPort = String(elasticMqPortFor(worktreeNum));
+	const goawsPort = String(goawsPortFor(worktreeNum));
 	const dynamoDbPort = String(dynamoDbPortFor(worktreeNum));
 	const serverPort = String(serverPortFor(worktreeNum));
 	const ngrokApiPort = String(ngrokApiPortFor(worktreeNum));
@@ -76,7 +76,7 @@ export function ensureComposeStack(
 		...(process.env as Record<string, string>),
 		COMPOSE_PROJECT_NAME: project,
 		DRAGONFLY_PORT: dragonflyPort,
-		ELASTICMQ_PORT: elasticMqPort,
+		GOAWS_PORT: goawsPort,
 		DYNAMODB_PORT: dynamoDbPort,
 		SERVER_PORT: serverPort,
 		VITE_PORT: vitePort,
@@ -93,7 +93,7 @@ export function ensureComposeStack(
 	const up = sh("docker", args, { env });
 	if (up.code === 0) {
 		log(
-			`compose stack ${project} up (dragonfly :${dragonflyPort}, elasticmq :${elasticMqPort}, dynamodb :${dynamoDbPort}${
+			`compose stack ${project} up (dragonfly :${dragonflyPort}, goaws :${goawsPort}, dynamodb :${dynamoDbPort}${
 				ngrokEnabled
 					? `, ngrok -> :${serverPort} (api :${ngrokApiPort}${ngrokDomain ? `, domain ${ngrokDomain}` : ", random"})`
 					: ""

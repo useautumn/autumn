@@ -59,7 +59,7 @@ DATABASE_URL=postgresql://postgres:postgres@localhost:5432/autumn
 MISC_CACHE_DRAGONFLY_PUBLIC_URL=redis://localhost:6379
 REDIS_URL=redis://localhost:6379
 
-# ElasticMQ (local SQS, per-agent isolated queue)
+# GoAWS (local SQS, per-agent isolated queue)
 SQS_QUEUE_URL_V2=http://localhost:9324/000000000000/autumn.fifo
 AWS_REGION=us-east-1
 AWS_ACCESS_KEY_ID=x

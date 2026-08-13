@@ -52,10 +52,10 @@ sudo chmod +x /usr/libexec/docker/cli-plugins/docker-compose
 docker compose version
 
 # --- pre-pull the dw stack (~1.1GB; baked here, free per workspace) ---------
-# Tags omitted deliberately — `:latest` is the default, and an explicit tag got
-# mangled to `:late` somewhere between the config field and the daemon.
+# Dragonfly and DynamoDB use their default tags; GoAWS is pinned to match the
+# compose file and native agent bootstrap.
 sudo docker pull -q docker.dragonflydb.io/dragonflydb/dragonfly
-sudo docker pull -q softwaremill/elasticmq-native
+sudo docker pull -q admiralpiett/goaws:v0.5.4
 sudo docker pull -q amazon/dynamodb-local
 
 # --- infisical login helper ------------------------------------------------

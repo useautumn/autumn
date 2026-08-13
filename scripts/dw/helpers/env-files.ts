@@ -19,7 +19,7 @@ import {
 	aliasesFor,
 	dragonflyPortFor,
 	dynamoDbPortFor,
-	elasticMqPortFor,
+	goawsPortFor,
 	portlessHttpsUrl,
 	serverPortFor,
 } from "./ports.ts";
@@ -83,10 +83,10 @@ export function mergeEnvFile(
 export function provisionedInfraEnv(
 	worktreeNum: number,
 ): Record<string, string> {
-	const elasticMqPort = elasticMqPortFor(worktreeNum);
+	const goawsPort = goawsPortFor(worktreeNum);
 	const redisUrl = `redis://localhost:${dragonflyPortFor(worktreeNum)}`;
 	const queueUrl = (queueName: string) =>
-		`http://localhost:${elasticMqPort}/000000000000/${queueName}`;
+		`http://localhost:${goawsPort}/000000000000/${queueName}`;
 	return {
 		REDIS_URL: redisUrl,
 		MISC_CACHE_DRAGONFLY_PUBLIC_URL: redisUrl,

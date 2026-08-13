@@ -10,7 +10,7 @@ export function dragonflyPortFor(worktreeNum: number): number {
 	return 6379 + (worktreeNum - 1) * 100;
 }
 
-export function elasticMqPortFor(worktreeNum: number): number {
+export function goawsPortFor(worktreeNum: number): number {
 	return 9324 + (worktreeNum - 1) * 100;
 }
 

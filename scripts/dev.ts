@@ -86,6 +86,7 @@ const useLocalAuthUrls = viteAppEnv === "dev" && !isProductionMode;
 const LOCAL_MISC_CACHE_URL = "redis://localhost:6379";
 const useLocalMiscCache =
 	viteAppEnv === "dev" && !isProductionMode && worktreeNum === 1;
+const LOCAL_SQS_BASE_URL = "http://localhost:9324/000000000000";
 const localUrl = (value: string | undefined, fallback: string) =>
 	value && !value.includes(".useautumn.com") ? value : fallback;
 const AUTUMN_API_URL = useLocalAuthUrls
@@ -394,6 +395,14 @@ async function startDev() {
 				}),
 				...(useLocalMiscCache && {
 					MISC_CACHE_DRAGONFLY_PUBLIC_URL: LOCAL_MISC_CACHE_URL,
+				}),
+				...(useLocalMiscCache && {
+					SQS_QUEUE_URL: `${LOCAL_SQS_BASE_URL}/autumn.fifo`,
+					SQS_QUEUE_URL_V2: `${LOCAL_SQS_BASE_URL}/autumn.fifo`,
+					TRACK_SQS_QUEUE_URL: `${LOCAL_SQS_BASE_URL}/autumn-track.fifo`,
+					TRACK_ASYNC_SQS_QUEUE_URL: `${LOCAL_SQS_BASE_URL}/autumn-track.fifo`,
+					TRACK_ASYNC_STANDARD_SQS_QUEUE_URL: `${LOCAL_SQS_BASE_URL}/autumn-track-async`,
+					STRIPE_WEBHOOK_SQS_QUEUE_URL: `${LOCAL_SQS_BASE_URL}/autumn-stripe-webhook.fifo`,
 				}),
 				...(process.env.DB_SCHEMA && { DB_SCHEMA: process.env.DB_SCHEMA }),
 				...(worktreeNum > 1 && {
