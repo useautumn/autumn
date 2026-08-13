@@ -1,13 +1,15 @@
 import {
 	addCusProductToCusEnt,
 	type AutumnBillingPlan,
-	EntInterval,
+	cusProductToProduct,
 	featureUtils,
 	getCycleEnd,
 	isBooleanEntitlement,
 	isOneOffPrepaidConsumableCustomerEntitlement,
+	isResettingEntitlement,
 	isUnlimitedEntitlement,
 	type UpdateSubscriptionBillingContext,
+	UpdateSubscriptionIntent,
 } from "@autumn/shared";
 import { entitlementToResetCycleAnchor } from "@/internal/billing/v2/utils/initFullCustomerProduct/cycleAnchorUtils";
 import { initCustomerEntitlementBalance } from "@/internal/billing/v2/utils/initFullCustomerProduct/initCustomerEntitlement/initCustomerEntitlementBalance";
@@ -22,16 +24,19 @@ export const computeRetainedCustomerEntitlementUpdates = ({
 	const resetsBillingCycle =
 		updateSubscriptionContext.requestedBillingCycleAnchor === "now";
 	const resetsUsage =
+		updateSubscriptionContext.intent === UpdateSubscriptionIntent.UpdatePlan &&
 		updateSubscriptionContext.carryOverUsages?.enabled === false;
 	if (!resetsBillingCycle && !resetsUsage) return [];
+
+	const finalFullProduct = resetsUsage
+		? cusProductToProduct({ cusProduct: finalCustomerProduct })
+		: undefined;
 
 	return finalCustomerProduct.customer_entitlements
 		.map((customerEntitlement) => {
 			const { entitlement } = customerEntitlement;
 			const resetsEntitlementBillingCycle =
-				resetsBillingCycle &&
-				!isBooleanEntitlement({ entitlement }) &&
-				entitlement.allowance !== null;
+				resetsBillingCycle && isResettingEntitlement({ entitlement });
 			const resetsCustomerEntitlementUsage =
 				resetsUsage &&
 				!isBooleanEntitlement({ entitlement }) &&
@@ -50,7 +55,7 @@ export const computeRetainedCustomerEntitlementUpdates = ({
 				? initCustomerEntitlementBalance({
 						initContext: {
 							fullCustomer: updateSubscriptionContext.fullCustomer,
-							fullProduct: updateSubscriptionContext.fullProducts[0],
+							fullProduct: finalFullProduct!,
 							featureQuantities: updateSubscriptionContext.featureQuantities,
 						},
 						entitlement: customerEntitlement.entitlement,
@@ -77,9 +82,7 @@ export const computeRetainedCustomerEntitlementUpdates = ({
 								}),
 								next_reset_at: getCycleEnd({
 									anchor: updateSubscriptionContext.resetCycleAnchorMs,
-									interval:
-										customerEntitlement.entitlement.interval ??
-										EntInterval.Month,
+									interval: customerEntitlement.entitlement.interval!,
 									intervalCount:
 										customerEntitlement.entitlement.interval_count,
 									now: updateSubscriptionContext.currentEpochMs,
