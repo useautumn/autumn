@@ -26,7 +26,7 @@ describe("migration task scheduler", () => {
 
 	test("keeps fleet and per-run concurrency independently tunable", () => {
 		expect(MIGRATION_TASK_QUEUE_CONCURRENCY).toBe(1);
-		expect(MIGRATION_RUN_CUSTOMER_CONCURRENCY).toBe(1);
+		expect(MIGRATION_RUN_CUSTOMER_CONCURRENCY).toBe(25);
 	});
 
 	test("uses a bounded customer-work slice", () => {
