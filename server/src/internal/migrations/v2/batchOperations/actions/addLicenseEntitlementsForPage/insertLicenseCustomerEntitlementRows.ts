@@ -6,8 +6,8 @@ import type { OperationScope } from "../../scope/operationScope.js";
 import { operationScopeSql } from "../../scope/operationScope.js";
 import type { CustomerEntitlementInitialState } from "../../types/index.js";
 import type { EnrichedCycleCandidate } from "../../utils/enrichCustomerEntitlementCycles.js";
+import type { LicenseCandidateRow } from "../selectLicenseCandidateRows.js";
 import { canonicalPoolLateralSql } from "./licensePoolSql.js";
-import type { LicenseCandidateRow } from "./selectLicenseAddCandidateRows.js";
 
 export type InsertableLicenseRow = LicenseCandidateRow &
 	Pick<EnrichedCycleCandidate, "resetCycleAnchor" | "nextResetAt"> & {
