@@ -32,7 +32,7 @@ export type UpdateEntityLimitTypeRequestBody = ClosedEnum<
   typeof UpdateEntityLimitTypeRequestBody
 >;
 
-export type UpdateEntitySpendLimitRequest = {
+export type UpdateEntitySpendLimitRequestBody = {
   /**
    * Optional feature ID this spend limit applies to.
    */
@@ -71,16 +71,30 @@ export type UpdateEntityIntervalRequestBody = ClosedEnum<
   typeof UpdateEntityIntervalRequestBody
 >;
 
+/**
+ * Window alignment. 'billing_cycle' phases the interval to the customer's renewal time; 'utc' aligns to the UTC calendar.
+ */
+export const UpdateEntityAnchorRequestBody = {
+  BillingCycle: "billing_cycle",
+  Utc: "utc",
+} as const;
+/**
+ * Window alignment. 'billing_cycle' phases the interval to the customer's renewal time; 'utc' aligns to the UTC calendar.
+ */
+export type UpdateEntityAnchorRequestBody = ClosedEnum<
+  typeof UpdateEntityAnchorRequestBody
+>;
+
 export type UpdateEntityProperties = string | number | boolean;
 
 /**
  * When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature.
  */
-export type UpdateEntityFilterRequest = {
+export type UpdateEntityFilterRequestBody = {
   properties: { [k: string]: string | number | boolean };
 };
 
-export type UpdateEntityUsageLimitRequest = {
+export type UpdateEntityUsageLimitRequestBody = {
   /**
    * The feature this usage limit applies to.
    */
@@ -98,9 +112,13 @@ export type UpdateEntityUsageLimitRequest = {
    */
   interval: UpdateEntityIntervalRequestBody;
   /**
+   * Window alignment. 'billing_cycle' phases the interval to the customer's renewal time; 'utc' aligns to the UTC calendar.
+   */
+  anchor?: UpdateEntityAnchorRequestBody | undefined;
+  /**
    * When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature.
    */
-  filter?: UpdateEntityFilterRequest | undefined;
+  filter?: UpdateEntityFilterRequestBody | undefined;
 };
 
 /**
@@ -142,7 +160,7 @@ export type UpdateEntityUsageAlertRequestBody = {
   name?: string | undefined;
 };
 
-export type UpdateEntityOverageAllowedRequest = {
+export type UpdateEntityOverageAllowedRequestBody = {
   /**
    * The feature ID this overage allowed control applies to.
    */
@@ -156,15 +174,15 @@ export type UpdateEntityOverageAllowedRequest = {
 /**
  * Billing controls to replace on the entity.
  */
-export type UpdateEntityBillingControlsRequest = {
+export type UpdateEntityBillingControlsRequestBody = {
   /**
    * List of spend limits per feature. Each entry caps overage (overage_limit) and/or per-interval usage (usage_limit).
    */
-  spendLimits?: Array<UpdateEntitySpendLimitRequest> | undefined;
+  spendLimits?: Array<UpdateEntitySpendLimitRequestBody> | undefined;
   /**
    * List of hard usage caps per feature for this entity. An entity entry overrides the customer's for that feature.
    */
-  usageLimits?: Array<UpdateEntityUsageLimitRequest> | undefined;
+  usageLimits?: Array<UpdateEntityUsageLimitRequestBody> | undefined;
   /**
    * List of usage alert configurations per feature.
    */
@@ -172,7 +190,7 @@ export type UpdateEntityBillingControlsRequest = {
   /**
    * List of overage allowed controls per feature. When enabled, usage can exceed balance.
    */
-  overageAllowed?: Array<UpdateEntityOverageAllowedRequest> | undefined;
+  overageAllowed?: Array<UpdateEntityOverageAllowedRequestBody> | undefined;
 };
 
 export type UpdateEntityParams = {
@@ -187,7 +205,7 @@ export type UpdateEntityParams = {
   /**
    * Billing controls to replace on the entity.
    */
-  billingControls?: UpdateEntityBillingControlsRequest | undefined;
+  billingControls?: UpdateEntityBillingControlsRequestBody | undefined;
 };
 
 /**
@@ -523,10 +541,24 @@ export type UpdateEntityIntervalResponse = OpenEnum<
 >;
 
 /**
+ * Window alignment. 'billing_cycle' phases the interval to the customer's renewal time; 'utc' aligns to the UTC calendar.
+ */
+export const UpdateEntityAnchorResponse = {
+  BillingCycle: "billing_cycle",
+  Utc: "utc",
+} as const;
+/**
+ * Window alignment. 'billing_cycle' phases the interval to the customer's renewal time; 'utc' aligns to the UTC calendar.
+ */
+export type UpdateEntityAnchorResponse = OpenEnum<
+  typeof UpdateEntityAnchorResponse
+>;
+
+/**
  * When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature.
  */
 export type UpdateEntityFilterResponse = {
-  properties: { [k: string]: any };
+  properties: { [k: string]: string };
 };
 
 /**
@@ -560,6 +592,10 @@ export type UpdateEntityUsageLimitResponse = {
    * Interval for the cap, aligned to the customer's billing cycle.
    */
   interval: UpdateEntityIntervalResponse;
+  /**
+   * Window alignment. 'billing_cycle' phases the interval to the customer's renewal time; 'utc' aligns to the UTC calendar.
+   */
+  anchor?: UpdateEntityAnchorResponse | undefined;
   /**
    * When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature.
    */
@@ -779,7 +815,7 @@ export const UpdateEntityLimitTypeRequestBody$outboundSchema: z.ZodMiniEnum<
 > = z.enum(UpdateEntityLimitTypeRequestBody);
 
 /** @internal */
-export type UpdateEntitySpendLimitRequest$Outbound = {
+export type UpdateEntitySpendLimitRequestBody$Outbound = {
   feature_id?: string | undefined;
   enabled: boolean;
   limit_type?: string | undefined;
@@ -788,9 +824,9 @@ export type UpdateEntitySpendLimitRequest$Outbound = {
 };
 
 /** @internal */
-export const UpdateEntitySpendLimitRequest$outboundSchema: z.ZodMiniType<
-  UpdateEntitySpendLimitRequest$Outbound,
-  UpdateEntitySpendLimitRequest
+export const UpdateEntitySpendLimitRequestBody$outboundSchema: z.ZodMiniType<
+  UpdateEntitySpendLimitRequestBody$Outbound,
+  UpdateEntitySpendLimitRequestBody
 > = z.pipe(
   z.object({
     featureId: z.optional(z.string()),
@@ -809,12 +845,12 @@ export const UpdateEntitySpendLimitRequest$outboundSchema: z.ZodMiniType<
   }),
 );
 
-export function updateEntitySpendLimitRequestToJSON(
-  updateEntitySpendLimitRequest: UpdateEntitySpendLimitRequest,
+export function updateEntitySpendLimitRequestBodyToJSON(
+  updateEntitySpendLimitRequestBody: UpdateEntitySpendLimitRequestBody,
 ): string {
   return JSON.stringify(
-    UpdateEntitySpendLimitRequest$outboundSchema.parse(
-      updateEntitySpendLimitRequest,
+    UpdateEntitySpendLimitRequestBody$outboundSchema.parse(
+      updateEntitySpendLimitRequestBody,
     ),
   );
 }
@@ -823,6 +859,11 @@ export function updateEntitySpendLimitRequestToJSON(
 export const UpdateEntityIntervalRequestBody$outboundSchema: z.ZodMiniEnum<
   typeof UpdateEntityIntervalRequestBody
 > = z.enum(UpdateEntityIntervalRequestBody);
+
+/** @internal */
+export const UpdateEntityAnchorRequestBody$outboundSchema: z.ZodMiniEnum<
+  typeof UpdateEntityAnchorRequestBody
+> = z.enum(UpdateEntityAnchorRequestBody);
 
 /** @internal */
 export type UpdateEntityProperties$Outbound = string | number | boolean;
@@ -842,14 +883,14 @@ export function updateEntityPropertiesToJSON(
 }
 
 /** @internal */
-export type UpdateEntityFilterRequest$Outbound = {
+export type UpdateEntityFilterRequestBody$Outbound = {
   properties: { [k: string]: string | number | boolean };
 };
 
 /** @internal */
-export const UpdateEntityFilterRequest$outboundSchema: z.ZodMiniType<
-  UpdateEntityFilterRequest$Outbound,
-  UpdateEntityFilterRequest
+export const UpdateEntityFilterRequestBody$outboundSchema: z.ZodMiniType<
+  UpdateEntityFilterRequestBody$Outbound,
+  UpdateEntityFilterRequestBody
 > = z.object({
   properties: z.record(
     z.string(),
@@ -857,34 +898,40 @@ export const UpdateEntityFilterRequest$outboundSchema: z.ZodMiniType<
   ),
 });
 
-export function updateEntityFilterRequestToJSON(
-  updateEntityFilterRequest: UpdateEntityFilterRequest,
+export function updateEntityFilterRequestBodyToJSON(
+  updateEntityFilterRequestBody: UpdateEntityFilterRequestBody,
 ): string {
   return JSON.stringify(
-    UpdateEntityFilterRequest$outboundSchema.parse(updateEntityFilterRequest),
+    UpdateEntityFilterRequestBody$outboundSchema.parse(
+      updateEntityFilterRequestBody,
+    ),
   );
 }
 
 /** @internal */
-export type UpdateEntityUsageLimitRequest$Outbound = {
+export type UpdateEntityUsageLimitRequestBody$Outbound = {
   feature_id: string;
   enabled: boolean;
   limit: number;
   interval: string;
-  filter?: UpdateEntityFilterRequest$Outbound | undefined;
+  anchor?: string | undefined;
+  filter?: UpdateEntityFilterRequestBody$Outbound | undefined;
 };
 
 /** @internal */
-export const UpdateEntityUsageLimitRequest$outboundSchema: z.ZodMiniType<
-  UpdateEntityUsageLimitRequest$Outbound,
-  UpdateEntityUsageLimitRequest
+export const UpdateEntityUsageLimitRequestBody$outboundSchema: z.ZodMiniType<
+  UpdateEntityUsageLimitRequestBody$Outbound,
+  UpdateEntityUsageLimitRequestBody
 > = z.pipe(
   z.object({
     featureId: z.string(),
     enabled: z._default(z.boolean(), true),
     limit: z.number(),
     interval: UpdateEntityIntervalRequestBody$outboundSchema,
-    filter: z.optional(z.lazy(() => UpdateEntityFilterRequest$outboundSchema)),
+    anchor: z.optional(UpdateEntityAnchorRequestBody$outboundSchema),
+    filter: z.optional(
+      z.lazy(() => UpdateEntityFilterRequestBody$outboundSchema),
+    ),
   }),
   z.transform((v) => {
     return remap$(v, {
@@ -893,12 +940,12 @@ export const UpdateEntityUsageLimitRequest$outboundSchema: z.ZodMiniType<
   }),
 );
 
-export function updateEntityUsageLimitRequestToJSON(
-  updateEntityUsageLimitRequest: UpdateEntityUsageLimitRequest,
+export function updateEntityUsageLimitRequestBodyToJSON(
+  updateEntityUsageLimitRequestBody: UpdateEntityUsageLimitRequestBody,
 ): string {
   return JSON.stringify(
-    UpdateEntityUsageLimitRequest$outboundSchema.parse(
-      updateEntityUsageLimitRequest,
+    UpdateEntityUsageLimitRequestBody$outboundSchema.parse(
+      updateEntityUsageLimitRequestBody,
     ),
   );
 }
@@ -948,82 +995,85 @@ export function updateEntityUsageAlertRequestBodyToJSON(
 }
 
 /** @internal */
-export type UpdateEntityOverageAllowedRequest$Outbound = {
+export type UpdateEntityOverageAllowedRequestBody$Outbound = {
   feature_id: string;
   enabled: boolean;
 };
 
 /** @internal */
-export const UpdateEntityOverageAllowedRequest$outboundSchema: z.ZodMiniType<
-  UpdateEntityOverageAllowedRequest$Outbound,
-  UpdateEntityOverageAllowedRequest
-> = z.pipe(
-  z.object({
-    featureId: z.string(),
-    enabled: z._default(z.boolean(), false),
-  }),
-  z.transform((v) => {
-    return remap$(v, {
-      featureId: "feature_id",
-    });
-  }),
-);
+export const UpdateEntityOverageAllowedRequestBody$outboundSchema:
+  z.ZodMiniType<
+    UpdateEntityOverageAllowedRequestBody$Outbound,
+    UpdateEntityOverageAllowedRequestBody
+  > = z.pipe(
+    z.object({
+      featureId: z.string(),
+      enabled: z._default(z.boolean(), false),
+    }),
+    z.transform((v) => {
+      return remap$(v, {
+        featureId: "feature_id",
+      });
+    }),
+  );
 
-export function updateEntityOverageAllowedRequestToJSON(
-  updateEntityOverageAllowedRequest: UpdateEntityOverageAllowedRequest,
+export function updateEntityOverageAllowedRequestBodyToJSON(
+  updateEntityOverageAllowedRequestBody: UpdateEntityOverageAllowedRequestBody,
 ): string {
   return JSON.stringify(
-    UpdateEntityOverageAllowedRequest$outboundSchema.parse(
-      updateEntityOverageAllowedRequest,
+    UpdateEntityOverageAllowedRequestBody$outboundSchema.parse(
+      updateEntityOverageAllowedRequestBody,
     ),
   );
 }
 
 /** @internal */
-export type UpdateEntityBillingControlsRequest$Outbound = {
-  spend_limits?: Array<UpdateEntitySpendLimitRequest$Outbound> | undefined;
-  usage_limits?: Array<UpdateEntityUsageLimitRequest$Outbound> | undefined;
+export type UpdateEntityBillingControlsRequestBody$Outbound = {
+  spend_limits?: Array<UpdateEntitySpendLimitRequestBody$Outbound> | undefined;
+  usage_limits?: Array<UpdateEntityUsageLimitRequestBody$Outbound> | undefined;
   usage_alerts?: Array<UpdateEntityUsageAlertRequestBody$Outbound> | undefined;
   overage_allowed?:
-    | Array<UpdateEntityOverageAllowedRequest$Outbound>
+    | Array<UpdateEntityOverageAllowedRequestBody$Outbound>
     | undefined;
 };
 
 /** @internal */
-export const UpdateEntityBillingControlsRequest$outboundSchema: z.ZodMiniType<
-  UpdateEntityBillingControlsRequest$Outbound,
-  UpdateEntityBillingControlsRequest
-> = z.pipe(
-  z.object({
-    spendLimits: z.optional(
-      z.array(z.lazy(() => UpdateEntitySpendLimitRequest$outboundSchema)),
-    ),
-    usageLimits: z.optional(
-      z.array(z.lazy(() => UpdateEntityUsageLimitRequest$outboundSchema)),
-    ),
-    usageAlerts: z.optional(
-      z.array(z.lazy(() => UpdateEntityUsageAlertRequestBody$outboundSchema)),
-    ),
-    overageAllowed: z.optional(
-      z.array(z.lazy(() => UpdateEntityOverageAllowedRequest$outboundSchema)),
-    ),
-  }),
-  z.transform((v) => {
-    return remap$(v, {
-      spendLimits: "spend_limits",
-      usageLimits: "usage_limits",
-      usageAlerts: "usage_alerts",
-      overageAllowed: "overage_allowed",
-    });
-  }),
-);
+export const UpdateEntityBillingControlsRequestBody$outboundSchema:
+  z.ZodMiniType<
+    UpdateEntityBillingControlsRequestBody$Outbound,
+    UpdateEntityBillingControlsRequestBody
+  > = z.pipe(
+    z.object({
+      spendLimits: z.optional(
+        z.array(z.lazy(() => UpdateEntitySpendLimitRequestBody$outboundSchema)),
+      ),
+      usageLimits: z.optional(
+        z.array(z.lazy(() => UpdateEntityUsageLimitRequestBody$outboundSchema)),
+      ),
+      usageAlerts: z.optional(
+        z.array(z.lazy(() => UpdateEntityUsageAlertRequestBody$outboundSchema)),
+      ),
+      overageAllowed: z.optional(z.array(z.lazy(() =>
+        UpdateEntityOverageAllowedRequestBody$outboundSchema
+      ))),
+    }),
+    z.transform((v) => {
+      return remap$(v, {
+        spendLimits: "spend_limits",
+        usageLimits: "usage_limits",
+        usageAlerts: "usage_alerts",
+        overageAllowed: "overage_allowed",
+      });
+    }),
+  );
 
-export function updateEntityBillingControlsRequestToJSON(
-  updateEntityBillingControlsRequest: UpdateEntityBillingControlsRequest,
+export function updateEntityBillingControlsRequestBodyToJSON(
+  updateEntityBillingControlsRequestBody:
+    UpdateEntityBillingControlsRequestBody,
 ): string {
   return JSON.stringify(
-    UpdateEntityBillingControlsRequest$outboundSchema.parse(
-      updateEntityBillingControlsRequest,
+    UpdateEntityBillingControlsRequestBody$outboundSchema.parse(
+      updateEntityBillingControlsRequestBody,
     ),
   );
 }
@@ -1032,7 +1082,9 @@ export function updateEntityBillingControlsRequestToJSON(
 export type UpdateEntityParams$Outbound = {
   customer_id?: string | undefined;
   entity_id: string;
-  billing_controls?: UpdateEntityBillingControlsRequest$Outbound | undefined;
+  billing_controls?:
+    | UpdateEntityBillingControlsRequestBody$Outbound
+    | undefined;
 };
 
 /** @internal */
@@ -1044,7 +1096,7 @@ export const UpdateEntityParams$outboundSchema: z.ZodMiniType<
     customerId: z.optional(z.string()),
     entityId: z.string(),
     billingControls: z.optional(
-      z.lazy(() => UpdateEntityBillingControlsRequest$outboundSchema),
+      z.lazy(() => UpdateEntityBillingControlsRequestBody$outboundSchema),
     ),
   }),
   z.transform((v) => {
@@ -1398,11 +1450,17 @@ export const UpdateEntityIntervalResponse$inboundSchema: z.ZodMiniType<
 > = openEnums.inboundSchema(UpdateEntityIntervalResponse);
 
 /** @internal */
+export const UpdateEntityAnchorResponse$inboundSchema: z.ZodMiniType<
+  UpdateEntityAnchorResponse,
+  unknown
+> = openEnums.inboundSchema(UpdateEntityAnchorResponse);
+
+/** @internal */
 export const UpdateEntityFilterResponse$inboundSchema: z.ZodMiniType<
   UpdateEntityFilterResponse,
   unknown
 > = z.object({
-  properties: z.record(z.string(), z.any()),
+  properties: z.record(z.string(), types.string()),
 });
 
 export function updateEntityFilterResponseFromJSON(
@@ -1431,6 +1489,7 @@ export const UpdateEntityUsageLimitResponse$inboundSchema: z.ZodMiniType<
     enabled: z._default(types.boolean(), true),
     limit: types.number(),
     interval: UpdateEntityIntervalResponse$inboundSchema,
+    anchor: types.optional(UpdateEntityAnchorResponse$inboundSchema),
     filter: types.optional(
       z.lazy(() => UpdateEntityFilterResponse$inboundSchema),
     ),

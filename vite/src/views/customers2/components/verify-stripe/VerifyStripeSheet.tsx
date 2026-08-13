@@ -2,12 +2,13 @@ import { Button, SmallSpinner } from "@autumn/ui";
 import { SheetHeader } from "@/components/v2/sheets/SharedSheetComponents";
 import { getBackendErr } from "@/utils/genUtils";
 import { useVerifyStripeQuery } from "./hooks/useVerifyStripeQuery";
+import { MismatchTable } from "./MismatchTable";
 import { SubscriptionVerifyGroup } from "./SubscriptionVerifyGroup";
 
 export function VerifyStripeSheet() {
 	const {
 		subscriptions,
-		mismatchCount,
+		customerMismatches,
 		isLoading,
 		error,
 		refetch,
@@ -45,9 +46,23 @@ export function VerifyStripeSheet() {
 					</div>
 				)}
 
-				{!isLoading && !error && subscriptions.length === 0 && (
-					<div className="rounded-lg border border-border border-dashed px-4 py-6 text-center text-sm text-tertiary-foreground">
-						No Stripe subscriptions to verify for this customer.
+				{!isLoading &&
+					!error &&
+					subscriptions.length === 0 &&
+					customerMismatches.length === 0 && (
+						<div className="rounded-lg border border-border border-dashed px-4 py-6 text-center text-sm text-tertiary-foreground">
+							No Stripe subscriptions to verify for this customer.
+						</div>
+					)}
+
+				{!isLoading && !error && customerMismatches.length > 0 && (
+					<div>
+						<div className="flex items-center gap-3 pb-2">
+							<span className="text-xs font-medium text-tertiary-foreground">
+								Account
+							</span>
+						</div>
+						<MismatchTable mismatches={customerMismatches} />
 					</div>
 				)}
 
@@ -57,11 +72,6 @@ export function VerifyStripeSheet() {
 							{subscriptions.length}{" "}
 							{subscriptions.length === 1 ? "subscription" : "subscriptions"}{" "}
 							checked
-						</span>
-						<span className="tabular-nums">
-							{mismatchCount === 0
-								? "No drift found"
-								: `${mismatchCount} ${mismatchCount === 1 ? "issue" : "issues"} found`}
 						</span>
 					</div>
 				)}

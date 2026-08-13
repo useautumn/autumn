@@ -5,7 +5,8 @@
 import * as z from "zod/v4-mini";
 import { remap as remap$ } from "../lib/primitives.js";
 import { safeParse } from "../lib/schemas.js";
-import { ClosedEnum } from "../types/enums.js";
+import * as openEnums from "../types/enums.js";
+import { ClosedEnum, OpenEnum } from "../types/enums.js";
 import { Result as SafeParseResult } from "../types/fp.js";
 import * as types from "../types/primitives.js";
 import { smartUnion } from "../types/smart-union.js";
@@ -59,6 +60,17 @@ export type AggregateEventsCustomRange = {
   end: number;
 };
 
+/**
+ * Set to "deducted" to additionally return a per-balance breakdown of what each event consumed, under `deductions`. Purely additive: `list` and `total` are unchanged. Requires customer_id.
+ */
+export const AggregateOn = {
+  Deducted: "deducted",
+} as const;
+/**
+ * Set to "deducted" to additionally return a per-balance breakdown of what each event consumed, under `deductions`. Purely additive: `list` and `total` are unchanged. Requires customer_id.
+ */
+export type AggregateOn = ClosedEnum<typeof AggregateOn>;
+
 export type EventsAggregateParams = {
   /**
    * Customer ID to aggregate events for
@@ -96,6 +108,10 @@ export type EventsAggregateParams = {
    * Maximum number of distinct group values to return per time bin when using group_by. Remaining values are bundled into an 'Other' bucket. Defaults to 9
    */
   maxGroups?: number | undefined;
+  /**
+   * Set to "deducted" to additionally return a per-balance breakdown of what each event consumed, under `deductions`. Purely additive: `list` and `total` are unchanged. Requires customer_id.
+   */
+  aggregateOn?: AggregateOn | undefined;
 };
 
 export type AggregateEventsList = {
@@ -125,6 +141,80 @@ export type Total = {
 };
 
 /**
+ * credit_system means `deducted` is credits; metered means it is that feature's own amount.
+ */
+export const AggregateEventsFeatureType = {
+  Metered: "metered",
+  CreditSystem: "credit_system",
+} as const;
+/**
+ * credit_system means `deducted` is credits; metered means it is that feature's own amount.
+ */
+export type AggregateEventsFeatureType = OpenEnum<
+  typeof AggregateEventsFeatureType
+>;
+
+export type AggregateEventsReset = {
+  interval: string;
+  resetsAt: number | null;
+};
+
+export type AggregateEventsBalance = {
+  /**
+   * ID of the balance row drawn from (customer_entitlement or rollover).
+   */
+  balanceId: string;
+  /**
+   * Entity that owns this balance, or null when it is customer-level and shared.
+   */
+  entityId: string | null;
+  /**
+   * Plan the balance came with. Null for balances created outside a plan.
+   */
+  planId: string | null;
+  /**
+   * Reset config for this balance, captured at deduction time.
+   */
+  reset: AggregateEventsReset | null;
+  /**
+   * Multiplier applied converting the tracked feature into this balance. Null when 1:1, or when the query spans sources converting at different rates.
+   */
+  creditCost: number | null;
+  deducted: number;
+  events: number;
+};
+
+export type Values = {
+  /**
+   * credit_system means `deducted` is credits; metered means it is that feature's own amount.
+   */
+  featureType: AggregateEventsFeatureType;
+  deducted: number;
+  events: number;
+  balances: Array<AggregateEventsBalance>;
+};
+
+export type GroupedValues = {
+  deducted: number;
+  creditCost?: number | null | undefined;
+};
+
+export type AggregateEventsDeduction = {
+  /**
+   * Unix timestamp (epoch ms), same basis as `list`.
+   */
+  period: number;
+  /**
+   * Keyed by the feature that OWNS the balance drawn from, not the feature that was tracked.
+   */
+  values: { [k: string]: Values };
+  /**
+   * Present only when group_by is used. Keyed by balance_id, then by group value — the only way to attribute a shared balance to the entity that spent from it.
+   */
+  groupedValues?: { [k: string]: { [k: string]: GroupedValues } } | undefined;
+};
+
+/**
  * OK
  */
 export type AggregateEventsResponse = {
@@ -136,6 +226,10 @@ export type AggregateEventsResponse = {
    * Total aggregations per feature. Keys are feature IDs, values contain count and sum.
    */
   total: { [k: string]: Total };
+  /**
+   * Per-balance breakdown of what was consumed. Present only when aggregate_on is "deducted".
+   */
+  deductions?: Array<AggregateEventsDeduction> | undefined;
 };
 
 /** @internal */
@@ -187,6 +281,10 @@ export function aggregateEventsCustomRangeToJSON(
 }
 
 /** @internal */
+export const AggregateOn$outboundSchema: z.ZodMiniEnum<typeof AggregateOn> = z
+  .enum(AggregateOn);
+
+/** @internal */
 export type EventsAggregateParams$Outbound = {
   customer_id?: string | undefined;
   entity_id?: string | undefined;
@@ -197,6 +295,7 @@ export type EventsAggregateParams$Outbound = {
   custom_range?: AggregateEventsCustomRange$Outbound | undefined;
   filter_by?: { [k: string]: string } | undefined;
   max_groups?: number | undefined;
+  aggregate_on?: string | undefined;
 };
 
 /** @internal */
@@ -216,6 +315,7 @@ export const EventsAggregateParams$outboundSchema: z.ZodMiniType<
     ),
     filterBy: z.optional(z.record(z.string(), z.string())),
     maxGroups: z.optional(z.int()),
+    aggregateOn: z.optional(AggregateOn$outboundSchema),
   }),
   z.transform((v) => {
     return remap$(v, {
@@ -227,6 +327,7 @@ export const EventsAggregateParams$outboundSchema: z.ZodMiniType<
       customRange: "custom_range",
       filterBy: "filter_by",
       maxGroups: "max_groups",
+      aggregateOn: "aggregate_on",
     });
   }),
 );
@@ -285,12 +386,164 @@ export function totalFromJSON(
 }
 
 /** @internal */
+export const AggregateEventsFeatureType$inboundSchema: z.ZodMiniType<
+  AggregateEventsFeatureType,
+  unknown
+> = openEnums.inboundSchema(AggregateEventsFeatureType);
+
+/** @internal */
+export const AggregateEventsReset$inboundSchema: z.ZodMiniType<
+  AggregateEventsReset,
+  unknown
+> = z.pipe(
+  z.object({
+    interval: types.string(),
+    resets_at: types.nullable(types.number()),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      "resets_at": "resetsAt",
+    });
+  }),
+);
+
+export function aggregateEventsResetFromJSON(
+  jsonString: string,
+): SafeParseResult<AggregateEventsReset, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => AggregateEventsReset$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'AggregateEventsReset' from JSON`,
+  );
+}
+
+/** @internal */
+export const AggregateEventsBalance$inboundSchema: z.ZodMiniType<
+  AggregateEventsBalance,
+  unknown
+> = z.pipe(
+  z.object({
+    balance_id: types.string(),
+    entity_id: types.nullable(types.string()),
+    plan_id: types.nullable(types.string()),
+    reset: types.nullable(z.lazy(() => AggregateEventsReset$inboundSchema)),
+    credit_cost: types.nullable(types.number()),
+    deducted: types.number(),
+    events: types.number(),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      "balance_id": "balanceId",
+      "entity_id": "entityId",
+      "plan_id": "planId",
+      "credit_cost": "creditCost",
+    });
+  }),
+);
+
+export function aggregateEventsBalanceFromJSON(
+  jsonString: string,
+): SafeParseResult<AggregateEventsBalance, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => AggregateEventsBalance$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'AggregateEventsBalance' from JSON`,
+  );
+}
+
+/** @internal */
+export const Values$inboundSchema: z.ZodMiniType<Values, unknown> = z.pipe(
+  z.object({
+    feature_type: AggregateEventsFeatureType$inboundSchema,
+    deducted: types.number(),
+    events: types.number(),
+    balances: z.array(z.lazy(() => AggregateEventsBalance$inboundSchema)),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      "feature_type": "featureType",
+    });
+  }),
+);
+
+export function valuesFromJSON(
+  jsonString: string,
+): SafeParseResult<Values, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => Values$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'Values' from JSON`,
+  );
+}
+
+/** @internal */
+export const GroupedValues$inboundSchema: z.ZodMiniType<
+  GroupedValues,
+  unknown
+> = z.pipe(
+  z.object({
+    deducted: types.number(),
+    credit_cost: z.optional(z.nullable(types.number())),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      "credit_cost": "creditCost",
+    });
+  }),
+);
+
+export function groupedValuesFromJSON(
+  jsonString: string,
+): SafeParseResult<GroupedValues, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => GroupedValues$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'GroupedValues' from JSON`,
+  );
+}
+
+/** @internal */
+export const AggregateEventsDeduction$inboundSchema: z.ZodMiniType<
+  AggregateEventsDeduction,
+  unknown
+> = z.pipe(
+  z.object({
+    period: types.number(),
+    values: z.record(z.string(), z.lazy(() => Values$inboundSchema)),
+    grouped_values: types.optional(
+      z.record(
+        z.string(),
+        z.record(z.string(), z.lazy(() => GroupedValues$inboundSchema)),
+      ),
+    ),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      "grouped_values": "groupedValues",
+    });
+  }),
+);
+
+export function aggregateEventsDeductionFromJSON(
+  jsonString: string,
+): SafeParseResult<AggregateEventsDeduction, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => AggregateEventsDeduction$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'AggregateEventsDeduction' from JSON`,
+  );
+}
+
+/** @internal */
 export const AggregateEventsResponse$inboundSchema: z.ZodMiniType<
   AggregateEventsResponse,
   unknown
 > = z.object({
   list: z.array(z.lazy(() => AggregateEventsList$inboundSchema)),
   total: z.record(z.string(), z.lazy(() => Total$inboundSchema)),
+  deductions: types.optional(
+    z.array(z.lazy(() => AggregateEventsDeduction$inboundSchema)),
+  ),
 });
 
 export function aggregateEventsResponseFromJSON(

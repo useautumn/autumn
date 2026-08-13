@@ -137,6 +137,10 @@ import { DynamicResponseExample } from "/snippets/dynamic-response-example.jsx";
           Interval for the cap, aligned to the customer's billing cycle.
         </DynamicParamField>
 
+        <DynamicParamField body="anchor" type="'billing_cycle' | 'utc'">
+          Window alignment. 'billing_cycle' phases the interval to the customer's renewal time; 'utc' aligns to the UTC calendar.
+        </DynamicParamField>
+
         <DynamicParamField body="filter" type="object">
           When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature.
           <Expandable title="properties">
@@ -356,10 +360,14 @@ import { DynamicResponseExample } from "/snippets/dynamic-response-example.jsx";
           Interval for the cap, aligned to the customer's billing cycle.
         </DynamicResponseField>
 
+        <DynamicResponseField name="anchor" type="'billing_cycle' | 'utc'">
+          Window alignment. 'billing_cycle' phases the interval to the customer's renewal time; 'utc' aligns to the UTC calendar.
+        </DynamicResponseField>
+
         <DynamicResponseField name="filter" type="object">
           When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature.
           <Expandable title="properties">
-            <DynamicResponseField name="properties" type="object" />
+            <DynamicResponseField name="properties.{key}" type="string" />
 
           </Expandable>
         </DynamicResponseField>
@@ -1074,10 +1082,14 @@ import { DynamicResponseExample } from "/snippets/dynamic-response-example.jsx";
                           Interval for the cap, aligned to the customer's billing cycle.
                         </DynamicResponseField>
 
+                        <DynamicResponseField name="anchor" type="'billing_cycle' | 'utc'">
+                          Window alignment. 'billing_cycle' phases the interval to the customer's renewal time; 'utc' aligns to the UTC calendar.
+                        </DynamicResponseField>
+
                         <DynamicResponseField name="filter" type="object">
                           When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature.
                           <Expandable title="properties">
-                            <DynamicResponseField name="properties" type="object" />
+                            <DynamicResponseField name="properties.{key}" type="string" />
 
                           </Expandable>
                         </DynamicResponseField>
@@ -1236,10 +1248,14 @@ import { DynamicResponseExample } from "/snippets/dynamic-response-example.jsx";
                   Interval for the cap, aligned to the customer's billing cycle.
                 </DynamicResponseField>
 
+                <DynamicResponseField name="anchor" type="'billing_cycle' | 'utc'">
+                  Window alignment. 'billing_cycle' phases the interval to the customer's renewal time; 'utc' aligns to the UTC calendar.
+                </DynamicResponseField>
+
                 <DynamicResponseField name="filter" type="object">
                   When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature.
                   <Expandable title="properties">
-                    <DynamicResponseField name="properties" type="object" />
+                    <DynamicResponseField name="properties.{key}" type="string" />
 
                   </Expandable>
                 </DynamicResponseField>
@@ -2021,10 +2037,14 @@ import { DynamicResponseExample } from "/snippets/dynamic-response-example.jsx";
                           Interval for the cap, aligned to the customer's billing cycle.
                         </DynamicResponseField>
 
+                        <DynamicResponseField name="anchor" type="'billing_cycle' | 'utc'">
+                          Window alignment. 'billing_cycle' phases the interval to the customer's renewal time; 'utc' aligns to the UTC calendar.
+                        </DynamicResponseField>
+
                         <DynamicResponseField name="filter" type="object">
                           When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature.
                           <Expandable title="properties">
-                            <DynamicResponseField name="properties" type="object" />
+                            <DynamicResponseField name="properties.{key}" type="string" />
 
                           </Expandable>
                         </DynamicResponseField>
@@ -2183,10 +2203,14 @@ import { DynamicResponseExample } from "/snippets/dynamic-response-example.jsx";
                   Interval for the cap, aligned to the customer's billing cycle.
                 </DynamicResponseField>
 
+                <DynamicResponseField name="anchor" type="'billing_cycle' | 'utc'">
+                  Window alignment. 'billing_cycle' phases the interval to the customer's renewal time; 'utc' aligns to the UTC calendar.
+                </DynamicResponseField>
+
                 <DynamicResponseField name="filter" type="object">
                   When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature.
                   <Expandable title="properties">
-                    <DynamicResponseField name="properties" type="object" />
+                    <DynamicResponseField name="properties.{key}" type="string" />
 
                   </Expandable>
                 </DynamicResponseField>

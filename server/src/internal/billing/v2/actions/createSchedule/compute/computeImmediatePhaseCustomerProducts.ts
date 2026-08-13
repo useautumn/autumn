@@ -61,6 +61,7 @@ const insertImmediateCustomerProducts = ({
 		const newCustomerProduct = computeAttachNewCustomerProduct({
 			ctx,
 			attachBillingContext,
+			params: { no_billing_changes: billingContext.skipBillingChanges },
 		});
 
 		if (expiredSameProduct) {
@@ -73,6 +74,10 @@ const insertImmediateCustomerProducts = ({
 			// boundary as its end date.
 			endedAt: productContext.unscheduled ? null : (nextPhaseStartsAt ?? null),
 		});
+		if (billingContext.skipBillingChanges) {
+			newCustomerProduct.scheduled_ids =
+				attachBillingContext.currentCustomerProduct?.scheduled_ids;
+		}
 
 		return {
 			customerProduct: newCustomerProduct,

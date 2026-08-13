@@ -1332,6 +1332,13 @@ BillingUpdateUsageLimitInterval = Literal[
 r"""Interval for the cap, aligned to the customer's billing cycle."""
 
 
+BillingUpdateAnchor = Literal[
+    "billing_cycle",
+    "utc",
+]
+r"""Window alignment. 'billing_cycle' phases the interval to the customer's renewal time; 'utc' aligns to the UTC calendar."""
+
+
 BillingUpdatePropertiesTypedDict = TypeAliasType(
     "BillingUpdatePropertiesTypedDict", Union[str, float, bool]
 )
@@ -1363,6 +1370,8 @@ class BillingUpdateUsageLimitTypedDict(TypedDict):
     r"""Interval for the cap, aligned to the customer's billing cycle."""
     enabled: NotRequired[bool]
     r"""Whether this usage limit is enabled."""
+    anchor: NotRequired[BillingUpdateAnchor]
+    r"""Window alignment. 'billing_cycle' phases the interval to the customer's renewal time; 'utc' aligns to the UTC calendar."""
     filter_: NotRequired[BillingUpdateFilterTypedDict]
     r"""When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature."""
 
@@ -1380,6 +1389,9 @@ class BillingUpdateUsageLimit(BaseModel):
     enabled: Optional[bool] = True
     r"""Whether this usage limit is enabled."""
 
+    anchor: Optional[BillingUpdateAnchor] = None
+    r"""Window alignment. 'billing_cycle' phases the interval to the customer's renewal time; 'utc' aligns to the UTC calendar."""
+
     filter_: Annotated[
         Optional[BillingUpdateFilter], pydantic.Field(alias="filter")
     ] = None
@@ -1387,7 +1399,7 @@ class BillingUpdateUsageLimit(BaseModel):
 
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
-        optional_fields = set(["enabled", "filter"])
+        optional_fields = set(["enabled", "anchor", "filter"])
         serialized = handler(self)
         m = {}
 

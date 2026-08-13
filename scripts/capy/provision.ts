@@ -322,13 +322,14 @@ function writeEnvFiles(
 		SQS_QUEUE_URL_V2: `${sqsBase}/autumn.fifo`,
 		TRACK_SQS_QUEUE_URL: `${sqsBase}/autumn-track.fifo`,
 		TRACK_ASYNC_SQS_QUEUE_URL: `${sqsBase}/autumn-track.fifo`,
+		TRACK_ASYNC_STANDARD_SQS_QUEUE_URL: `${sqsBase}/autumn-track-async`,
 		STRIPE_WEBHOOK_SQS_QUEUE_URL: `${sqsBase}/autumn-stripe-webhook.fifo`,
 		AWS_REGION: "us-east-1",
 		AWS_ACCESS_KEY_ID: "x",
 		AWS_SECRET_ACCESS_KEY: "x",
-		BETTER_AUTH_URL: serverUrl,
+		AUTUMN_API_URL: serverUrl,
+		AUTUMN_PUBLIC_API_URL: serverUrl,
 		CLIENT_URL: viteUrl,
-		STRIPE_WEBHOOK_URL: serverUrl,
 		STRIPE_WEBHOOK_SKIP_VERIFY: "true",
 		// Login flow that works without external services: dev `sendOTPEmail`
 		// prints the OTP to the server log. The README documents this path.

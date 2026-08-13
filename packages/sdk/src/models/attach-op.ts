@@ -859,6 +859,18 @@ export type AttachUsageLimitInterval = ClosedEnum<
   typeof AttachUsageLimitInterval
 >;
 
+/**
+ * Window alignment. 'billing_cycle' phases the interval to the customer's renewal time; 'utc' aligns to the UTC calendar.
+ */
+export const AttachAnchor = {
+  BillingCycle: "billing_cycle",
+  Utc: "utc",
+} as const;
+/**
+ * Window alignment. 'billing_cycle' phases the interval to the customer's renewal time; 'utc' aligns to the UTC calendar.
+ */
+export type AttachAnchor = ClosedEnum<typeof AttachAnchor>;
+
 export type AttachProperties = string | number | boolean;
 
 /**
@@ -885,6 +897,10 @@ export type AttachUsageLimit = {
    * Interval for the cap, aligned to the customer's billing cycle.
    */
   interval: AttachUsageLimitInterval;
+  /**
+   * Window alignment. 'billing_cycle' phases the interval to the customer's renewal time; 'utc' aligns to the UTC calendar.
+   */
+  anchor?: AttachAnchor | undefined;
   /**
    * When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature.
    */
@@ -1643,6 +1659,10 @@ export type AttachParams = {
    * Currency to bill this attach in (e.g. usd, eur). Must match the customer's currency if they are already locked to one, and the plan must offer a paid price in it. Defaults to the customer's currency, then the org default.
    */
   currency?: string | undefined;
+  /**
+   * Plan IDs to expire on the customer as part of this attach. Each must be an active plan billed on the same subscription as the attach (or a free plan); plans on a separate subscription are rejected.
+   */
+  removePlanIds?: Array<string> | undefined;
 };
 
 /**
@@ -2739,6 +2759,10 @@ export const AttachUsageLimitInterval$outboundSchema: z.ZodMiniEnum<
 > = z.enum(AttachUsageLimitInterval);
 
 /** @internal */
+export const AttachAnchor$outboundSchema: z.ZodMiniEnum<typeof AttachAnchor> = z
+  .enum(AttachAnchor);
+
+/** @internal */
 export type AttachProperties$Outbound = string | number | boolean;
 
 /** @internal */
@@ -2781,6 +2805,7 @@ export type AttachUsageLimit$Outbound = {
   enabled: boolean;
   limit: number;
   interval: string;
+  anchor?: string | undefined;
   filter?: AttachFilter$Outbound | undefined;
 };
 
@@ -2794,6 +2819,7 @@ export const AttachUsageLimit$outboundSchema: z.ZodMiniType<
     enabled: z._default(z.boolean(), true),
     limit: z.number(),
     interval: AttachUsageLimitInterval$outboundSchema,
+    anchor: z.optional(AttachAnchor$outboundSchema),
     filter: z.optional(z.lazy(() => AttachFilter$outboundSchema)),
   }),
   z.transform((v) => {
@@ -3756,6 +3782,7 @@ export type AttachParams$Outbound = {
   enable_plan_immediately?: boolean | undefined;
   tax_rate_id?: string | undefined;
   currency?: string | undefined;
+  remove_plan_ids?: Array<string> | undefined;
 };
 
 /** @internal */
@@ -3805,6 +3832,7 @@ export const AttachParams$outboundSchema: z.ZodMiniType<
     enablePlanImmediately: z.optional(z.boolean()),
     taxRateId: z.optional(z.string()),
     currency: z.optional(z.string()),
+    removePlanIds: z.optional(z.array(z.string())),
   }),
   z.transform((v) => {
     return remap$(v, {
@@ -3832,6 +3860,7 @@ export const AttachParams$outboundSchema: z.ZodMiniType<
       noBillingChanges: "no_billing_changes",
       enablePlanImmediately: "enable_plan_immediately",
       taxRateId: "tax_rate_id",
+      removePlanIds: "remove_plan_ids",
     });
   }),
 );

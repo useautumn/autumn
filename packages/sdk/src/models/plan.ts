@@ -79,7 +79,7 @@ export type PlanPrice = {
 /**
  * The type of the feature
  */
-export const PlanType = {
+export const PlanType1 = {
   Static: "static",
   Boolean: "boolean",
   SingleUse: "single_use",
@@ -90,9 +90,9 @@ export const PlanType = {
 /**
  * The type of the feature
  */
-export type PlanType = OpenEnum<typeof PlanType>;
+export type PlanType1 = OpenEnum<typeof PlanType1>;
 
-export type PlanFeatureDisplay = {
+export type PlanFeatureDisplay1 = {
   /**
    * The singular display name for the feature.
    */
@@ -103,7 +103,7 @@ export type PlanFeatureDisplay = {
   plural: string;
 };
 
-export type PlanCreditSchema = {
+export type PlanCreditSchema1 = {
   /**
    * The ID of the metered feature (should be a single_use feature).
    */
@@ -117,7 +117,7 @@ export type PlanCreditSchema = {
 /**
  * The full feature object if expanded.
  */
-export type PlanFeature = {
+export type PlanFeature1 = {
   /**
    * The ID of the feature, used to refer to it in other API calls like /track or /check.
    */
@@ -129,15 +129,15 @@ export type PlanFeature = {
   /**
    * The type of the feature
    */
-  type: PlanType;
+  type: PlanType1;
   /**
    * Singular and plural display names for the feature.
    */
-  display?: PlanFeatureDisplay | null | undefined;
+  display?: PlanFeatureDisplay1 | null | undefined;
   /**
    * Credit cost schema for credit system features.
    */
-  creditSchema?: Array<PlanCreditSchema> | null | undefined;
+  creditSchema?: Array<PlanCreditSchema1> | null | undefined;
   /**
    * Whether or not the feature is archived.
    */
@@ -282,7 +282,7 @@ export type PlanItemPrice = {
 /**
  * Display text for showing this item in pricing pages.
  */
-export type PlanItemDisplay = {
+export type PlanItemDisplay1 = {
   /**
    * Main display text (e.g. '$10' or '100 messages').
    */
@@ -335,7 +335,7 @@ export type Item = {
   /**
    * The full feature object if expanded.
    */
-  feature?: PlanFeature | undefined;
+  feature?: PlanFeature1 | undefined;
   /**
    * Number of free units included. For consumable features, balance resets to this number each interval.
    */
@@ -359,7 +359,7 @@ export type Item = {
   /**
    * Display text for showing this item in pricing pages.
    */
-  display?: PlanItemDisplay | undefined;
+  display?: PlanItemDisplay1 | undefined;
   /**
    * Rollover configuration for unused units. If set, unused included units roll over to the next period.
    */
@@ -369,7 +369,7 @@ export type Item = {
 /**
  * Unit of time for the trial duration ('day', 'month', 'year').
  */
-export const PlanDurationType = {
+export const PlanDurationType1 = {
   Day: "day",
   Month: "month",
   Year: "year",
@@ -377,7 +377,7 @@ export const PlanDurationType = {
 /**
  * Unit of time for the trial duration ('day', 'month', 'year').
  */
-export type PlanDurationType = OpenEnum<typeof PlanDurationType>;
+export type PlanDurationType1 = OpenEnum<typeof PlanDurationType1>;
 
 export const OnEnd = {
   Bill: "bill",
@@ -396,7 +396,7 @@ export type FreeTrial = {
   /**
    * Unit of time for the trial duration ('day', 'month', 'year').
    */
-  durationType: PlanDurationType;
+  durationType: PlanDurationType1;
   /**
    * Whether a payment method is required to start the trial. If true, customer will be charged after trial ends.
    */
@@ -473,7 +473,7 @@ export type BasePrice = {
 /**
  * Interval at which balance resets (e.g. 'month', 'year'). For consumable features only.
  */
-export const PlanVariantDetailsResetInterval = {
+export const PlanAddItemResetInterval = {
   OneOff: "one_off",
   Minute: "minute",
   Hour: "hour",
@@ -487,8 +487,8 @@ export const PlanVariantDetailsResetInterval = {
 /**
  * Interval at which balance resets (e.g. 'month', 'year'). For consumable features only.
  */
-export type PlanVariantDetailsResetInterval = OpenEnum<
-  typeof PlanVariantDetailsResetInterval
+export type PlanAddItemResetInterval = OpenEnum<
+  typeof PlanAddItemResetInterval
 >;
 
 /**
@@ -498,7 +498,7 @@ export type PlanVariantDetailsReset = {
   /**
    * Interval at which balance resets (e.g. 'month', 'year'). For consumable features only.
    */
-  interval: PlanVariantDetailsResetInterval;
+  interval: PlanAddItemResetInterval;
   /**
    * Number of intervals between resets. Defaults to 1.
    */
@@ -703,7 +703,7 @@ export type PlanVariantDetailsRollover = {
 /**
  * Configuration for a feature item in a plan, including usage limits, pricing, and rollover settings.
  */
-export type PlanItem = {
+export type PlanPlanItem = {
   /**
    * The ID of the feature to configure.
    */
@@ -814,7 +814,7 @@ export type PlanItemFilter = {
 /**
  * Unit of time for the trial ('day', 'month', 'year').
  */
-export const PlanVariantDetailsDurationType = {
+export const PlanVariantDetailsDurationType1 = {
   Day: "day",
   Month: "month",
   Year: "year",
@@ -822,8 +822,8 @@ export const PlanVariantDetailsDurationType = {
 /**
  * Unit of time for the trial ('day', 'month', 'year').
  */
-export type PlanVariantDetailsDurationType = OpenEnum<
-  typeof PlanVariantDetailsDurationType
+export type PlanVariantDetailsDurationType1 = OpenEnum<
+  typeof PlanVariantDetailsDurationType1
 >;
 
 /**
@@ -849,7 +849,7 @@ export type FreeTrialParams = {
   /**
    * Unit of time for the trial ('day', 'month', 'year').
    */
-  durationType: PlanVariantDetailsDurationType;
+  durationType: PlanVariantDetailsDurationType1;
   /**
    * If true, payment method required to start trial. Customer is charged after trial ends.
    */
@@ -979,10 +979,24 @@ export type PlanVariantDetailsUsageLimitInterval = OpenEnum<
 >;
 
 /**
+ * Window alignment. 'billing_cycle' phases the interval to the customer's renewal time; 'utc' aligns to the UTC calendar.
+ */
+export const PlanVariantDetailsAnchor = {
+  BillingCycle: "billing_cycle",
+  Utc: "utc",
+} as const;
+/**
+ * Window alignment. 'billing_cycle' phases the interval to the customer's renewal time; 'utc' aligns to the UTC calendar.
+ */
+export type PlanVariantDetailsAnchor = OpenEnum<
+  typeof PlanVariantDetailsAnchor
+>;
+
+/**
  * When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature.
  */
 export type PlanVariantDetailsFilter = {
-  properties: { [k: string]: any };
+  properties: { [k: string]: string };
 };
 
 export type PlanVariantDetailsUsageLimit = {
@@ -1002,6 +1016,10 @@ export type PlanVariantDetailsUsageLimit = {
    * Interval for the cap, aligned to the customer's billing cycle.
    */
   interval: PlanVariantDetailsUsageLimitInterval;
+  /**
+   * Window alignment. 'billing_cycle' phases the interval to the customer's renewal time; 'utc' aligns to the UTC calendar.
+   */
+  anchor?: PlanVariantDetailsAnchor | undefined;
   /**
    * When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature.
    */
@@ -1095,7 +1113,7 @@ export type Customize1 = {
   /**
    * Items to add to the plan.
    */
-  addItems?: Array<PlanItem> | undefined;
+  addItems?: Array<PlanPlanItem> | undefined;
   /**
    * Filters selecting items to remove from the plan.
    */
@@ -1127,7 +1145,7 @@ export type VariantDetails = {
 /**
  * Miscellaneous plan-level configuration flags.
  */
-export type PlanConfig = {
+export type PlanConfig1 = {
   /**
    * If true, entitlements attached to this plan will still reset on schedule even when the customer's product is in a past_due state.
    */
@@ -1245,10 +1263,22 @@ export const PlanUsageLimitInterval = {
 export type PlanUsageLimitInterval = OpenEnum<typeof PlanUsageLimitInterval>;
 
 /**
+ * Window alignment. 'billing_cycle' phases the interval to the customer's renewal time; 'utc' aligns to the UTC calendar.
+ */
+export const PlanAnchor = {
+  BillingCycle: "billing_cycle",
+  Utc: "utc",
+} as const;
+/**
+ * Window alignment. 'billing_cycle' phases the interval to the customer's renewal time; 'utc' aligns to the UTC calendar.
+ */
+export type PlanAnchor = OpenEnum<typeof PlanAnchor>;
+
+/**
  * When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature.
  */
 export type PlanFilter = {
-  properties: { [k: string]: any };
+  properties: { [k: string]: string };
 };
 
 export type PlanUsageLimit = {
@@ -1268,6 +1298,10 @@ export type PlanUsageLimit = {
    * Interval for the cap, aligned to the customer's billing cycle.
    */
   interval: PlanUsageLimitInterval;
+  /**
+   * Window alignment. 'billing_cycle' phases the interval to the customer's renewal time; 'utc' aligns to the UTC calendar.
+   */
+  anchor?: PlanAnchor | undefined;
   /**
    * When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature.
    */
@@ -1462,7 +1496,7 @@ export type Plan = {
   /**
    * Miscellaneous plan-level configuration flags.
    */
-  config: PlanConfig;
+  config: PlanConfig1;
   /**
    * Plan-level billing controls used as customer defaults.
    */
@@ -1557,31 +1591,31 @@ export function planPriceFromJSON(
 }
 
 /** @internal */
-export const PlanType$inboundSchema: z.ZodMiniType<PlanType, unknown> =
-  openEnums.inboundSchema(PlanType);
+export const PlanType1$inboundSchema: z.ZodMiniType<PlanType1, unknown> =
+  openEnums.inboundSchema(PlanType1);
 
 /** @internal */
-export const PlanFeatureDisplay$inboundSchema: z.ZodMiniType<
-  PlanFeatureDisplay,
+export const PlanFeatureDisplay1$inboundSchema: z.ZodMiniType<
+  PlanFeatureDisplay1,
   unknown
 > = z.object({
   singular: types.string(),
   plural: types.string(),
 });
 
-export function planFeatureDisplayFromJSON(
+export function planFeatureDisplay1FromJSON(
   jsonString: string,
-): SafeParseResult<PlanFeatureDisplay, SDKValidationError> {
+): SafeParseResult<PlanFeatureDisplay1, SDKValidationError> {
   return safeParse(
     jsonString,
-    (x) => PlanFeatureDisplay$inboundSchema.parse(JSON.parse(x)),
-    `Failed to parse 'PlanFeatureDisplay' from JSON`,
+    (x) => PlanFeatureDisplay1$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'PlanFeatureDisplay1' from JSON`,
   );
 }
 
 /** @internal */
-export const PlanCreditSchema$inboundSchema: z.ZodMiniType<
-  PlanCreditSchema,
+export const PlanCreditSchema1$inboundSchema: z.ZodMiniType<
+  PlanCreditSchema1,
   unknown
 > = z.pipe(
   z.object({
@@ -1596,28 +1630,28 @@ export const PlanCreditSchema$inboundSchema: z.ZodMiniType<
   }),
 );
 
-export function planCreditSchemaFromJSON(
+export function planCreditSchema1FromJSON(
   jsonString: string,
-): SafeParseResult<PlanCreditSchema, SDKValidationError> {
+): SafeParseResult<PlanCreditSchema1, SDKValidationError> {
   return safeParse(
     jsonString,
-    (x) => PlanCreditSchema$inboundSchema.parse(JSON.parse(x)),
-    `Failed to parse 'PlanCreditSchema' from JSON`,
+    (x) => PlanCreditSchema1$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'PlanCreditSchema1' from JSON`,
   );
 }
 
 /** @internal */
-export const PlanFeature$inboundSchema: z.ZodMiniType<PlanFeature, unknown> = z
-  .pipe(
+export const PlanFeature1$inboundSchema: z.ZodMiniType<PlanFeature1, unknown> =
+  z.pipe(
     z.object({
       id: types.string(),
       name: z.optional(z.nullable(types.string())),
-      type: PlanType$inboundSchema,
+      type: PlanType1$inboundSchema,
       display: z.optional(
-        z.nullable(z.lazy(() => PlanFeatureDisplay$inboundSchema)),
+        z.nullable(z.lazy(() => PlanFeatureDisplay1$inboundSchema)),
       ),
       credit_schema: z.optional(
-        z.nullable(z.array(z.lazy(() => PlanCreditSchema$inboundSchema))),
+        z.nullable(z.array(z.lazy(() => PlanCreditSchema1$inboundSchema))),
       ),
       archived: z.optional(z.nullable(types.boolean())),
     }),
@@ -1628,13 +1662,13 @@ export const PlanFeature$inboundSchema: z.ZodMiniType<PlanFeature, unknown> = z
     }),
   );
 
-export function planFeatureFromJSON(
+export function planFeature1FromJSON(
   jsonString: string,
-): SafeParseResult<PlanFeature, SDKValidationError> {
+): SafeParseResult<PlanFeature1, SDKValidationError> {
   return safeParse(
     jsonString,
-    (x) => PlanFeature$inboundSchema.parse(JSON.parse(x)),
-    `Failed to parse 'PlanFeature' from JSON`,
+    (x) => PlanFeature1$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'PlanFeature1' from JSON`,
   );
 }
 
@@ -1818,8 +1852,8 @@ export function planItemPriceFromJSON(
 }
 
 /** @internal */
-export const PlanItemDisplay$inboundSchema: z.ZodMiniType<
-  PlanItemDisplay,
+export const PlanItemDisplay1$inboundSchema: z.ZodMiniType<
+  PlanItemDisplay1,
   unknown
 > = z.pipe(
   z.object({
@@ -1834,13 +1868,13 @@ export const PlanItemDisplay$inboundSchema: z.ZodMiniType<
   }),
 );
 
-export function planItemDisplayFromJSON(
+export function planItemDisplay1FromJSON(
   jsonString: string,
-): SafeParseResult<PlanItemDisplay, SDKValidationError> {
+): SafeParseResult<PlanItemDisplay1, SDKValidationError> {
   return safeParse(
     jsonString,
-    (x) => PlanItemDisplay$inboundSchema.parse(JSON.parse(x)),
-    `Failed to parse 'PlanItemDisplay' from JSON`,
+    (x) => PlanItemDisplay1$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'PlanItemDisplay1' from JSON`,
   );
 }
 
@@ -1884,13 +1918,13 @@ export function planItemRolloverFromJSON(
 export const Item$inboundSchema: z.ZodMiniType<Item, unknown> = z.pipe(
   z.object({
     feature_id: types.string(),
-    feature: types.optional(z.lazy(() => PlanFeature$inboundSchema)),
+    feature: types.optional(z.lazy(() => PlanFeature1$inboundSchema)),
     included: types.number(),
     unlimited: types.boolean(),
     pooled: z._default(types.boolean(), false),
     reset: types.nullable(z.lazy(() => PlanItemReset$inboundSchema)),
     price: types.nullable(z.lazy(() => PlanItemPrice$inboundSchema)),
-    display: types.optional(z.lazy(() => PlanItemDisplay$inboundSchema)),
+    display: types.optional(z.lazy(() => PlanItemDisplay1$inboundSchema)),
     rollover: types.optional(z.lazy(() => PlanItemRollover$inboundSchema)),
   }),
   z.transform((v) => {
@@ -1911,10 +1945,10 @@ export function itemFromJSON(
 }
 
 /** @internal */
-export const PlanDurationType$inboundSchema: z.ZodMiniType<
-  PlanDurationType,
+export const PlanDurationType1$inboundSchema: z.ZodMiniType<
+  PlanDurationType1,
   unknown
-> = openEnums.inboundSchema(PlanDurationType);
+> = openEnums.inboundSchema(PlanDurationType1);
 
 /** @internal */
 export const OnEnd$inboundSchema: z.ZodMiniType<OnEnd, unknown> = openEnums
@@ -1925,7 +1959,7 @@ export const FreeTrial$inboundSchema: z.ZodMiniType<FreeTrial, unknown> = z
   .pipe(
     z.object({
       duration_length: types.number(),
-      duration_type: PlanDurationType$inboundSchema,
+      duration_type: PlanDurationType1$inboundSchema,
       card_required: types.boolean(),
       on_end: z.optional(z.nullable(OnEnd$inboundSchema)),
     }),
@@ -2008,10 +2042,10 @@ export function basePriceFromJSON(
 }
 
 /** @internal */
-export const PlanVariantDetailsResetInterval$inboundSchema: z.ZodMiniType<
-  PlanVariantDetailsResetInterval,
+export const PlanAddItemResetInterval$inboundSchema: z.ZodMiniType<
+  PlanAddItemResetInterval,
   unknown
-> = openEnums.inboundSchema(PlanVariantDetailsResetInterval);
+> = openEnums.inboundSchema(PlanAddItemResetInterval);
 
 /** @internal */
 export const PlanVariantDetailsReset$inboundSchema: z.ZodMiniType<
@@ -2019,7 +2053,7 @@ export const PlanVariantDetailsReset$inboundSchema: z.ZodMiniType<
   unknown
 > = z.pipe(
   z.object({
-    interval: PlanVariantDetailsResetInterval$inboundSchema,
+    interval: PlanAddItemResetInterval$inboundSchema,
     interval_count: types.optional(types.number()),
   }),
   z.transform((v) => {
@@ -2263,33 +2297,38 @@ export function planVariantDetailsRolloverFromJSON(
 }
 
 /** @internal */
-export const PlanItem$inboundSchema: z.ZodMiniType<PlanItem, unknown> = z.pipe(
-  z.object({
-    feature_id: types.string(),
-    included: types.optional(types.number()),
-    unlimited: types.optional(types.boolean()),
-    pooled: z._default(types.boolean(), false),
-    reset: types.optional(z.lazy(() => PlanVariantDetailsReset$inboundSchema)),
-    price: types.optional(z.lazy(() => PlanVariantDetailsPrice$inboundSchema)),
-    proration: types.optional(z.lazy(() => Proration$inboundSchema)),
-    rollover: types.optional(z.lazy(() =>
-      PlanVariantDetailsRollover$inboundSchema
-    )),
-  }),
-  z.transform((v) => {
-    return remap$(v, {
-      "feature_id": "featureId",
-    });
-  }),
-);
+export const PlanPlanItem$inboundSchema: z.ZodMiniType<PlanPlanItem, unknown> =
+  z.pipe(
+    z.object({
+      feature_id: types.string(),
+      included: types.optional(types.number()),
+      unlimited: types.optional(types.boolean()),
+      pooled: z._default(types.boolean(), false),
+      reset: types.optional(
+        z.lazy(() => PlanVariantDetailsReset$inboundSchema),
+      ),
+      price: types.optional(
+        z.lazy(() => PlanVariantDetailsPrice$inboundSchema),
+      ),
+      proration: types.optional(z.lazy(() => Proration$inboundSchema)),
+      rollover: types.optional(
+        z.lazy(() => PlanVariantDetailsRollover$inboundSchema),
+      ),
+    }),
+    z.transform((v) => {
+      return remap$(v, {
+        "feature_id": "featureId",
+      });
+    }),
+  );
 
-export function planItemFromJSON(
+export function planPlanItemFromJSON(
   jsonString: string,
-): SafeParseResult<PlanItem, SDKValidationError> {
+): SafeParseResult<PlanPlanItem, SDKValidationError> {
   return safeParse(
     jsonString,
-    (x) => PlanItem$inboundSchema.parse(JSON.parse(x)),
-    `Failed to parse 'PlanItem' from JSON`,
+    (x) => PlanPlanItem$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'PlanPlanItem' from JSON`,
   );
 }
 
@@ -2366,10 +2405,10 @@ export function planItemFilterFromJSON(
 }
 
 /** @internal */
-export const PlanVariantDetailsDurationType$inboundSchema: z.ZodMiniType<
-  PlanVariantDetailsDurationType,
+export const PlanVariantDetailsDurationType1$inboundSchema: z.ZodMiniType<
+  PlanVariantDetailsDurationType1,
   unknown
-> = openEnums.inboundSchema(PlanVariantDetailsDurationType);
+> = openEnums.inboundSchema(PlanVariantDetailsDurationType1);
 
 /** @internal */
 export const VariantDetailsOnEnd$inboundSchema: z.ZodMiniType<
@@ -2385,7 +2424,7 @@ export const FreeTrialParams$inboundSchema: z.ZodMiniType<
   z.object({
     duration_length: types.number(),
     duration_type: z._default(
-      PlanVariantDetailsDurationType$inboundSchema,
+      PlanVariantDetailsDurationType1$inboundSchema,
       "month",
     ),
     card_required: z._default(types.boolean(), true),
@@ -2523,11 +2562,17 @@ export const PlanVariantDetailsUsageLimitInterval$inboundSchema: z.ZodMiniType<
 > = openEnums.inboundSchema(PlanVariantDetailsUsageLimitInterval);
 
 /** @internal */
+export const PlanVariantDetailsAnchor$inboundSchema: z.ZodMiniType<
+  PlanVariantDetailsAnchor,
+  unknown
+> = openEnums.inboundSchema(PlanVariantDetailsAnchor);
+
+/** @internal */
 export const PlanVariantDetailsFilter$inboundSchema: z.ZodMiniType<
   PlanVariantDetailsFilter,
   unknown
 > = z.object({
-  properties: z.record(z.string(), z.any()),
+  properties: z.record(z.string(), types.string()),
 });
 
 export function planVariantDetailsFilterFromJSON(
@@ -2550,6 +2595,7 @@ export const PlanVariantDetailsUsageLimit$inboundSchema: z.ZodMiniType<
     enabled: z._default(types.boolean(), true),
     limit: types.number(),
     interval: PlanVariantDetailsUsageLimitInterval$inboundSchema,
+    anchor: types.optional(PlanVariantDetailsAnchor$inboundSchema),
     filter: types.optional(
       z.lazy(() => PlanVariantDetailsFilter$inboundSchema),
     ),
@@ -2681,7 +2727,9 @@ export const Customize1$inboundSchema: z.ZodMiniType<Customize1, unknown> = z
   .pipe(
     z.object({
       price: z.optional(z.nullable(z.lazy(() => BasePrice$inboundSchema))),
-      add_items: types.optional(z.array(z.lazy(() => PlanItem$inboundSchema))),
+      add_items: types.optional(
+        z.array(z.lazy(() => PlanPlanItem$inboundSchema)),
+      ),
       remove_items: types.optional(
         z.array(z.lazy(() => PlanItemFilter$inboundSchema)),
       ),
@@ -2739,7 +2787,7 @@ export function variantDetailsFromJSON(
 }
 
 /** @internal */
-export const PlanConfig$inboundSchema: z.ZodMiniType<PlanConfig, unknown> = z
+export const PlanConfig1$inboundSchema: z.ZodMiniType<PlanConfig1, unknown> = z
   .pipe(
     z.object({
       ignore_past_due: z._default(types.boolean(), false),
@@ -2751,13 +2799,13 @@ export const PlanConfig$inboundSchema: z.ZodMiniType<PlanConfig, unknown> = z
     }),
   );
 
-export function planConfigFromJSON(
+export function planConfig1FromJSON(
   jsonString: string,
-): SafeParseResult<PlanConfig, SDKValidationError> {
+): SafeParseResult<PlanConfig1, SDKValidationError> {
   return safeParse(
     jsonString,
-    (x) => PlanConfig$inboundSchema.parse(JSON.parse(x)),
-    `Failed to parse 'PlanConfig' from JSON`,
+    (x) => PlanConfig1$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'PlanConfig1' from JSON`,
   );
 }
 
@@ -2873,9 +2921,13 @@ export const PlanUsageLimitInterval$inboundSchema: z.ZodMiniType<
 > = openEnums.inboundSchema(PlanUsageLimitInterval);
 
 /** @internal */
+export const PlanAnchor$inboundSchema: z.ZodMiniType<PlanAnchor, unknown> =
+  openEnums.inboundSchema(PlanAnchor);
+
+/** @internal */
 export const PlanFilter$inboundSchema: z.ZodMiniType<PlanFilter, unknown> = z
   .object({
-    properties: z.record(z.string(), z.any()),
+    properties: z.record(z.string(), types.string()),
   });
 
 export function planFilterFromJSON(
@@ -2898,6 +2950,7 @@ export const PlanUsageLimit$inboundSchema: z.ZodMiniType<
     enabled: z._default(types.boolean(), true),
     limit: types.number(),
     interval: PlanUsageLimitInterval$inboundSchema,
+    anchor: types.optional(PlanAnchor$inboundSchema),
     filter: types.optional(z.lazy(() => PlanFilter$inboundSchema)),
   }),
   z.transform((v) => {
@@ -3078,7 +3131,7 @@ export const Plan$inboundSchema: z.ZodMiniType<Plan, unknown> = z.pipe(
     archived: types.boolean(),
     base_variant_id: types.nullable(types.string()),
     variant_details: types.optional(z.lazy(() => VariantDetails$inboundSchema)),
-    config: z.lazy(() => PlanConfig$inboundSchema),
+    config: z.lazy(() => PlanConfig1$inboundSchema),
     billing_controls: types.optional(z.lazy(() =>
       PlanBillingControls$inboundSchema
     )),

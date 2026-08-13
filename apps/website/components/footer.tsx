@@ -162,6 +162,47 @@ export default function Footer() {
 							</div>
 						</div>
 
+						<div className="flex flex-row md:flex-row border-b md:border-b-0 border-[#292929] w-full md:w-auto">
+							<div className="px-4 sm:px-8 py-4.5 md:py-0 border-r border-[#292929] tracking-[-2%] flex items-center justify-center md:justify-start text-[12px] md:text-[14px]">
+								LEGAL
+							</div>
+							<div className="px-6 sm:px-8 py-4 md:py-0 flex items-center justify-center md:justify-start gap-3 sm:gap-4 md:border-r border-[#292929]">
+								<Link
+									href="/terms"
+									className="group/strip flex items-center text-[14px] tracking-[-2%] transition-colors duration-300"
+								>
+									<span className="relative">
+										<span className="text-[#FFFFFF99] group-hover/strip:text-[#ffffff] text-[12px] md:text-[14px] transition-colors duration-300">
+											TERMS
+										</span>
+										<span
+											className="absolute inset-y-0 left-0 w-0 group-hover/strip:w-full group-active/strip:w-full overflow-hidden transition-all duration-300 ease-in-out bg-white text-black font-normal pointer-events-none flex items-center"
+											aria-hidden="true"
+										>
+											<span className="whitespace-nowrap">TERMS</span>
+										</span>
+									</span>
+								</Link>
+								<div className="w-[5px] h-[5px] bg-[#FFFFFF]" />
+								<Link
+									href="/privacy"
+									className="group/strip flex items-center text-[14px] tracking-[-2%] transition-colors duration-300"
+								>
+									<span className="relative">
+										<span className="text-[#FFFFFF99] group-hover/strip:text-[#ffffff] transition-colors duration-300 text-[12px] md:text-[14px]">
+											PRIVACY
+										</span>
+										<span
+											className="absolute inset-y-0 left-0 w-0 group-hover/strip:w-full group-active/strip:w-full overflow-hidden transition-all duration-300 ease-in-out bg-white text-black font-normal pointer-events-none flex items-center"
+											aria-hidden="true"
+										>
+											<span className="whitespace-nowrap">PRIVACY</span>
+										</span>
+									</span>
+								</Link>
+							</div>
+						</div>
+
 						<div className="px-4.5 py-4 md:py-0 flex items-center justify-start md:justify-end text-center md:text-right text-[#FFFFFF99] text-[12px] md:text-[14px] tracking-[-2%] border-b md:border-b-0 border-[#292929] w-full md:w-auto">
 							Copyright © 2026 Autumn All rights reserved
 							<div className="hidden lg:flex gap-3 ml-[15px] h-[54px]">

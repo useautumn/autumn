@@ -70,6 +70,7 @@ class Billing(BaseSDK):
         enable_plan_immediately: Optional[bool] = None,
         tax_rate_id: Optional[str] = None,
         currency: Optional[str] = None,
+        remove_plan_ids: Optional[List[str]] = None,
         retries: OptionalNullable[utils.RetryConfig] = UNSET,
         server_url: Optional[str] = None,
         timeout_ms: Optional[int] = None,
@@ -107,6 +108,7 @@ class Billing(BaseSDK):
         :param enable_plan_immediately: If true, the customer's plan is activated immediately even when payment is deferred (invoice mode) or pending (Stripe checkout). For Stripe checkout, the customer_product is inserted before the customer completes the hosted form.
         :param tax_rate_id: Stripe tax rate ID (txr_...) to apply as the default tax rate on the created subscription, invoice, or checkout session line items.
         :param currency: Currency to bill this attach in (e.g. usd, eur). Must match the customer's currency if they are already locked to one, and the plan must offer a paid price in it. Defaults to the customer's currency, then the org default.
+        :param remove_plan_ids: Plan IDs to expire on the customer as part of this attach. Each must be an active plan billed on the same subscription as the attach (or a free plan); plans on a separate subscription are rejected.
         :param retries: Override the default retry configuration for this method
         :param server_url: Override the default server URL for this method
         :param timeout_ms: Override the default request timeout configuration for this method in milliseconds
@@ -167,6 +169,7 @@ class Billing(BaseSDK):
             enable_plan_immediately=enable_plan_immediately,
             tax_rate_id=tax_rate_id,
             currency=currency,
+            remove_plan_ids=remove_plan_ids,
         )
 
         req = self._build_request(
@@ -289,6 +292,7 @@ class Billing(BaseSDK):
         enable_plan_immediately: Optional[bool] = None,
         tax_rate_id: Optional[str] = None,
         currency: Optional[str] = None,
+        remove_plan_ids: Optional[List[str]] = None,
         retries: OptionalNullable[utils.RetryConfig] = UNSET,
         server_url: Optional[str] = None,
         timeout_ms: Optional[int] = None,
@@ -326,6 +330,7 @@ class Billing(BaseSDK):
         :param enable_plan_immediately: If true, the customer's plan is activated immediately even when payment is deferred (invoice mode) or pending (Stripe checkout). For Stripe checkout, the customer_product is inserted before the customer completes the hosted form.
         :param tax_rate_id: Stripe tax rate ID (txr_...) to apply as the default tax rate on the created subscription, invoice, or checkout session line items.
         :param currency: Currency to bill this attach in (e.g. usd, eur). Must match the customer's currency if they are already locked to one, and the plan must offer a paid price in it. Defaults to the customer's currency, then the org default.
+        :param remove_plan_ids: Plan IDs to expire on the customer as part of this attach. Each must be an active plan billed on the same subscription as the attach (or a free plan); plans on a separate subscription are rejected.
         :param retries: Override the default retry configuration for this method
         :param server_url: Override the default server URL for this method
         :param timeout_ms: Override the default request timeout configuration for this method in milliseconds
@@ -386,6 +391,7 @@ class Billing(BaseSDK):
             enable_plan_immediately=enable_plan_immediately,
             tax_rate_id=tax_rate_id,
             currency=currency,
+            remove_plan_ids=remove_plan_ids,
         )
 
         req = self._build_request_async(
@@ -478,6 +484,7 @@ class Billing(BaseSDK):
         checkout_session_params: Optional[Dict[str, Any]] = None,
         redirect_mode: Optional[models.CreateScheduleRedirectMode] = "if_required",
         billing_behavior: Optional[models.CreateScheduleBillingBehavior] = None,
+        no_billing_changes: Optional[bool] = None,
         enable_plan_immediately: Optional[bool] = None,
         preserve_add_ons: Optional[bool] = None,
         unscheduled_plans: Optional[
@@ -503,6 +510,7 @@ class Billing(BaseSDK):
         :param checkout_session_params: Additional parameters to pass into the creation of the Stripe checkout session.
         :param redirect_mode: Controls when to return a checkout URL for the immediate phase. 'always' forces a confirmation or checkout flow, 'if_required' only redirects when needed, and 'never' disables redirects.
         :param billing_behavior: Whether to prorate the immediate phase. 'none' skips proration charges and credits.
+        :param no_billing_changes: If true, skips any billing changes for the schedule.
         :param enable_plan_immediately: If true, the immediate-phase cusProducts are activated immediately (and scheduled-phase cusProducts pre-inserted) even when payment is pending via Stripe checkout. The Autumn schedule rows are persisted on checkout.session.completed.
         :param preserve_add_ons: Deprecated and ignored. Active plans the schedule does not declare are always retained.
         :param unscheduled_plans: Plans billed with the immediate phase that the schedule never expires or replaces. No phase may declare a plan in the same group and scope.
@@ -538,6 +546,7 @@ class Billing(BaseSDK):
             checkout_session_params=checkout_session_params,
             redirect_mode=redirect_mode,
             billing_behavior=billing_behavior,
+            no_billing_changes=no_billing_changes,
             enable_plan_immediately=enable_plan_immediately,
             preserve_add_ons=preserve_add_ons,
             unscheduled_plans=utils.get_pydantic_model(
@@ -636,6 +645,7 @@ class Billing(BaseSDK):
         checkout_session_params: Optional[Dict[str, Any]] = None,
         redirect_mode: Optional[models.CreateScheduleRedirectMode] = "if_required",
         billing_behavior: Optional[models.CreateScheduleBillingBehavior] = None,
+        no_billing_changes: Optional[bool] = None,
         enable_plan_immediately: Optional[bool] = None,
         preserve_add_ons: Optional[bool] = None,
         unscheduled_plans: Optional[
@@ -661,6 +671,7 @@ class Billing(BaseSDK):
         :param checkout_session_params: Additional parameters to pass into the creation of the Stripe checkout session.
         :param redirect_mode: Controls when to return a checkout URL for the immediate phase. 'always' forces a confirmation or checkout flow, 'if_required' only redirects when needed, and 'never' disables redirects.
         :param billing_behavior: Whether to prorate the immediate phase. 'none' skips proration charges and credits.
+        :param no_billing_changes: If true, skips any billing changes for the schedule.
         :param enable_plan_immediately: If true, the immediate-phase cusProducts are activated immediately (and scheduled-phase cusProducts pre-inserted) even when payment is pending via Stripe checkout. The Autumn schedule rows are persisted on checkout.session.completed.
         :param preserve_add_ons: Deprecated and ignored. Active plans the schedule does not declare are always retained.
         :param unscheduled_plans: Plans billed with the immediate phase that the schedule never expires or replaces. No phase may declare a plan in the same group and scope.
@@ -696,6 +707,7 @@ class Billing(BaseSDK):
             checkout_session_params=checkout_session_params,
             redirect_mode=redirect_mode,
             billing_behavior=billing_behavior,
+            no_billing_changes=no_billing_changes,
             enable_plan_immediately=enable_plan_immediately,
             preserve_add_ons=preserve_add_ons,
             unscheduled_plans=utils.get_pydantic_model(
@@ -1161,6 +1173,7 @@ class Billing(BaseSDK):
         enable_plan_immediately: Optional[bool] = None,
         tax_rate_id: Optional[str] = None,
         currency: Optional[str] = None,
+        remove_plan_ids: Optional[List[str]] = None,
         retries: OptionalNullable[utils.RetryConfig] = UNSET,
         server_url: Optional[str] = None,
         timeout_ms: Optional[int] = None,
@@ -1198,6 +1211,7 @@ class Billing(BaseSDK):
         :param enable_plan_immediately: If true, the customer's plan is activated immediately even when payment is deferred (invoice mode) or pending (Stripe checkout). For Stripe checkout, the customer_product is inserted before the customer completes the hosted form.
         :param tax_rate_id: Stripe tax rate ID (txr_...) to apply as the default tax rate on the created subscription, invoice, or checkout session line items.
         :param currency: Currency to bill this attach in (e.g. usd, eur). Must match the customer's currency if they are already locked to one, and the plan must offer a paid price in it. Defaults to the customer's currency, then the org default.
+        :param remove_plan_ids: Plan IDs to expire on the customer as part of this attach. Each must be an active plan billed on the same subscription as the attach (or a free plan); plans on a separate subscription are rejected.
         :param retries: Override the default retry configuration for this method
         :param server_url: Override the default server URL for this method
         :param timeout_ms: Override the default request timeout configuration for this method in milliseconds
@@ -1259,6 +1273,7 @@ class Billing(BaseSDK):
             enable_plan_immediately=enable_plan_immediately,
             tax_rate_id=tax_rate_id,
             currency=currency,
+            remove_plan_ids=remove_plan_ids,
         )
 
         req = self._build_request(
@@ -1388,6 +1403,7 @@ class Billing(BaseSDK):
         enable_plan_immediately: Optional[bool] = None,
         tax_rate_id: Optional[str] = None,
         currency: Optional[str] = None,
+        remove_plan_ids: Optional[List[str]] = None,
         retries: OptionalNullable[utils.RetryConfig] = UNSET,
         server_url: Optional[str] = None,
         timeout_ms: Optional[int] = None,
@@ -1425,6 +1441,7 @@ class Billing(BaseSDK):
         :param enable_plan_immediately: If true, the customer's plan is activated immediately even when payment is deferred (invoice mode) or pending (Stripe checkout). For Stripe checkout, the customer_product is inserted before the customer completes the hosted form.
         :param tax_rate_id: Stripe tax rate ID (txr_...) to apply as the default tax rate on the created subscription, invoice, or checkout session line items.
         :param currency: Currency to bill this attach in (e.g. usd, eur). Must match the customer's currency if they are already locked to one, and the plan must offer a paid price in it. Defaults to the customer's currency, then the org default.
+        :param remove_plan_ids: Plan IDs to expire on the customer as part of this attach. Each must be an active plan billed on the same subscription as the attach (or a free plan); plans on a separate subscription are rejected.
         :param retries: Override the default retry configuration for this method
         :param server_url: Override the default server URL for this method
         :param timeout_ms: Override the default request timeout configuration for this method in milliseconds
@@ -1486,6 +1503,7 @@ class Billing(BaseSDK):
             enable_plan_immediately=enable_plan_immediately,
             tax_rate_id=tax_rate_id,
             currency=currency,
+            remove_plan_ids=remove_plan_ids,
         )
 
         req = self._build_request_async(
@@ -3293,6 +3311,7 @@ class Billing(BaseSDK):
         enable_plan_immediately: Optional[bool] = None,
         tax_rate_id: Optional[str] = None,
         currency: Optional[str] = None,
+        remove_plan_ids: Optional[List[str]] = None,
         retries: OptionalNullable[utils.RetryConfig] = UNSET,
         server_url: Optional[str] = None,
         timeout_ms: Optional[int] = None,
@@ -3323,6 +3342,7 @@ class Billing(BaseSDK):
         :param enable_plan_immediately: If true, the customer's plan is activated immediately even when payment is deferred (invoice mode) or pending (Stripe checkout). For Stripe checkout, the customer_product is inserted before the customer completes the hosted form.
         :param tax_rate_id: Stripe tax rate ID (txr_...) to apply as the default tax rate on the created subscription, invoice, or checkout session line items.
         :param currency: Currency to bill this attach in (e.g. usd, eur). Must match the customer's currency if they are already locked to one, and the plan must offer a paid price in it. Defaults to the customer's currency, then the org default.
+        :param remove_plan_ids: Plan IDs to expire on the customer as part of this attach. Each must be an active plan billed on the same subscription as the attach (or a free plan); plans on a separate subscription are rejected.
         :param retries: Override the default retry configuration for this method
         :param server_url: Override the default server URL for this method
         :param timeout_ms: Override the default request timeout configuration for this method in milliseconds
@@ -3376,6 +3396,7 @@ class Billing(BaseSDK):
             enable_plan_immediately=enable_plan_immediately,
             tax_rate_id=tax_rate_id,
             currency=currency,
+            remove_plan_ids=remove_plan_ids,
         )
 
         req = self._build_request(
@@ -3495,6 +3516,7 @@ class Billing(BaseSDK):
         enable_plan_immediately: Optional[bool] = None,
         tax_rate_id: Optional[str] = None,
         currency: Optional[str] = None,
+        remove_plan_ids: Optional[List[str]] = None,
         retries: OptionalNullable[utils.RetryConfig] = UNSET,
         server_url: Optional[str] = None,
         timeout_ms: Optional[int] = None,
@@ -3525,6 +3547,7 @@ class Billing(BaseSDK):
         :param enable_plan_immediately: If true, the customer's plan is activated immediately even when payment is deferred (invoice mode) or pending (Stripe checkout). For Stripe checkout, the customer_product is inserted before the customer completes the hosted form.
         :param tax_rate_id: Stripe tax rate ID (txr_...) to apply as the default tax rate on the created subscription, invoice, or checkout session line items.
         :param currency: Currency to bill this attach in (e.g. usd, eur). Must match the customer's currency if they are already locked to one, and the plan must offer a paid price in it. Defaults to the customer's currency, then the org default.
+        :param remove_plan_ids: Plan IDs to expire on the customer as part of this attach. Each must be an active plan billed on the same subscription as the attach (or a free plan); plans on a separate subscription are rejected.
         :param retries: Override the default retry configuration for this method
         :param server_url: Override the default server URL for this method
         :param timeout_ms: Override the default request timeout configuration for this method in milliseconds
@@ -3578,6 +3601,7 @@ class Billing(BaseSDK):
             enable_plan_immediately=enable_plan_immediately,
             tax_rate_id=tax_rate_id,
             currency=currency,
+            remove_plan_ids=remove_plan_ids,
         )
 
         req = self._build_request_async(

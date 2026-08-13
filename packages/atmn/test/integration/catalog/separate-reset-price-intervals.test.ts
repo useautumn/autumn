@@ -1,9 +1,9 @@
-/** Verifies the built package preserves separate prepaid reset and billing intervals. */
+/** Verifies built-CLI constant IDs and separate reset/billing intervals. */
 import { expect, test } from "bun:test";
 import { readFile, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { ApiVersion, type ApiPlanV1 } from "@autumn/shared";
+import { type ApiPlanV1, ApiVersion } from "@autumn/shared";
 import chalk from "chalk";
 import { AutumnRpcCli } from "../../../../../server/src/external/autumn/autumnRpcCli.js";
 import {
@@ -15,7 +15,7 @@ import {
 const atmnPackageDir = fileURLToPath(new URL("../../../", import.meta.url));
 const builtCliPath = join(atmnPackageDir, "dist/cli.js");
 
-test(`${chalk.yellowBright("atmn built CLI: push → pull → push preserves separate intervals")}`, async () => {
+test(`${chalk.yellowBright("atmn built CLI: constant-ID push → pull → push preserves separate intervals")}`, async () => {
 	const planId = "atmn_split_cycle_scale_annual";
 	const ctx = await createCleanAtmnIntegrationContext();
 	const build = Bun.spawn(["bun", "run", "build"], {
@@ -28,10 +28,15 @@ test(`${chalk.yellowBright("atmn built CLI: push → pull → push preserves sep
 		atmnPackageDir,
 		secretKey: ctx.orgSecretKey,
 	});
+	await writeFile(
+		join(workspace.workspaceDir, "ids.ts"),
+		`export const PLAN_IDS = { SPLIT_CYCLE: '${planId}' } as const;\n`,
+	);
 
 	await writeFile(
 		workspace.configPath,
 		`import { feature, item, plan } from 'atmn';
+import { PLAN_IDS } from './ids';
 
 export const splitCycleCredits = feature({
 \tid: 'atmn_split_cycle_credits',
@@ -41,7 +46,7 @@ export const splitCycleCredits = feature({
 });
 
 export const splitCycleScaleAnnual = plan({
-\tid: '${planId}',
+\tid: PLAN_IDS.SPLIT_CYCLE,
 \tname: 'Split Cycle Scale Annual',
 \titems: [
 \t\titem({
@@ -79,13 +84,16 @@ export const splitCycleScaleAnnual = plan({
 	});
 
 	await runAtmnWorkspaceCli({
-		args: ["--force", "--no-declaration-file"],
+		args: ["--no-declaration-file"],
 		cliPath: builtCliPath,
 		command: "pull",
 		headless: true,
 		workspace,
 	});
 	const pulledConfig = await readFile(workspace.configPath, "utf8");
+	expect(
+		pulledConfig.match(/export const splitCycleScaleAnnual/g),
+	).toHaveLength(1);
 	expect(pulledConfig).toContain("reset: {");
 	expect(pulledConfig).toContain("interval: 'month'");
 	expect(pulledConfig).toContain("interval: 'year'");

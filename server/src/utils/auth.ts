@@ -1,4 +1,5 @@
 import "dotenv/config";
+import { getAutumnEnv } from "@autumn/env";
 import {
 	ALL_SCOPES,
 	ac,
@@ -77,10 +78,7 @@ const emulateGoogleUrl =
 // OAuth flow leaves and returns via a third-party host (emulate.dev), so the
 // state cookie must be SameSite=None+Secure to survive the round trip.
 const isProductionAuth = process.env.NODE_ENV === "production";
-const configuredAuthBaseUrl = process.env.BETTER_AUTH_URL?.trim() || undefined;
-export const authBaseUrl =
-	configuredAuthBaseUrl ??
-	(isProductionAuth ? undefined : "http://localhost:8080");
+export const authBaseUrl = getAutumnEnv().AUTUMN_API_URL;
 const isHttpsBaseUrl = authBaseUrl?.startsWith("https://");
 
 const parseMcpResourceUrl = (rawUrl: string) => {
@@ -97,7 +95,7 @@ const parseMcpResourceUrl = (rawUrl: string) => {
 
 // Public hosts that serve OAuth-protected MCP endpoints. leaf serves both the
 // MCP server (MCP_SERVER_URL) and the chat/slackbot (CHAT_SERVER_URL); the
-// autumn server can also proxy /mcp under its own origin (BETTER_AUTH_URL).
+// autumn server can also proxy /mcp under its own API origin.
 // The OAuth `resource` indicator is host-based, so every public host + path
 // must be a registered audience. MCP_RESOURCE_URLS is an explicit override.
 const mcpServerUrl =
@@ -285,6 +283,9 @@ const options = {
 		oauthProvider({
 			loginPage: `${process.env.CLIENT_URL}/sign-in`,
 			consentPage: `${process.env.CLIENT_URL}/consent`,
+			silenceWarnings: {
+				oauthAuthServerConfig: true,
+			},
 			// Resource-based scopes with R/W actions (plus legacy CRUDL +
 			// meta scopes — see shared/utils/scopeDefinitions.ts).
 			scopes: [...ALL_SCOPES],

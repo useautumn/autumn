@@ -464,6 +464,61 @@ describe("runRedisOp standby failover", () => {
 		expect(Date.now() - startedAt).toBeLessThan(390);
 	});
 
+	test("uses the reserved retry budget when timeout delivery is late", async () => {
+		const { primary, standby, redis } = createPair();
+		const startedAt = Date.now();
+		primary.get = async (key) => {
+			primary.calls.push(`get:${key}`);
+			setSystemTime(new Date(startedAt + 500));
+			throw new Error("[redis] standby-test timeout after 300ms");
+		};
+
+		try {
+			const result = await runRedisOp({
+				redisInstance: redis,
+				source: "standby-test",
+				retryOnStandby: true,
+				timeoutMs: 400,
+				operation: (connection) => connection.get("subject"),
+			});
+
+			expect(result).toBe("standby");
+			expect(primary.calls).toEqual(["get:subject"]);
+			expect(standby.calls).toEqual(["get:subject"]);
+		} finally {
+			setSystemTime();
+		}
+	});
+
+	test("bounds a late standby retry to the reserved budget", async () => {
+		const { primary, standby, redis } = createPair();
+		const startedAt = Date.now();
+		primary.get = async (key) => {
+			primary.calls.push(`get:${key}`);
+			setSystemTime(new Date(startedAt + 500));
+			throw new Error("[redis] standby-test timeout after 300ms");
+		};
+		standby.hangGetForMs = 5_000;
+		const attemptStartedAt = performance.now();
+
+		try {
+			await expect(
+				runRedisOp({
+					redisInstance: redis,
+					source: "standby-test",
+					retryOnStandby: true,
+					timeoutMs: 400,
+					operation: (connection) => connection.get("subject"),
+				}),
+			).rejects.toBeInstanceOf(RedisUnavailableError);
+
+			expect(standby.calls).toEqual(["get:subject"]);
+			expect(performance.now() - attemptStartedAt).toBeLessThan(250);
+		} finally {
+			setSystemTime();
+		}
+	});
+
 	// The reserve has to fit inside the headroom each deadline was sized with,
 	// not eat into the tail it was sized to cover. Feature balances measure a
 	// p99.9 of 297ms, so the preferred attempt must stay clear of that.

@@ -893,7 +893,7 @@ class ListPlansBasePrice(BaseModel):
         return m
 
 
-ListPlansVariantDetailsResetInterval = Union[
+ListPlansAddItemResetInterval = Union[
     Literal[
         "one_off",
         "minute",
@@ -913,7 +913,7 @@ r"""Interval at which balance resets (e.g. 'month', 'year'). For consumable feat
 class ListPlansVariantDetailsResetTypedDict(TypedDict):
     r"""Reset configuration for consumable features. Omit for non-consumable features like seats."""
 
-    interval: ListPlansVariantDetailsResetInterval
+    interval: ListPlansAddItemResetInterval
     r"""Interval at which balance resets (e.g. 'month', 'year'). For consumable features only."""
     interval_count: NotRequired[float]
     r"""Number of intervals between resets. Defaults to 1."""
@@ -922,7 +922,7 @@ class ListPlansVariantDetailsResetTypedDict(TypedDict):
 class ListPlansVariantDetailsReset(BaseModel):
     r"""Reset configuration for consumable features. Omit for non-consumable features like seats."""
 
-    interval: ListPlansVariantDetailsResetInterval
+    interval: ListPlansAddItemResetInterval
     r"""Interval at which balance resets (e.g. 'month', 'year'). For consumable features only."""
 
     interval_count: Optional[float] = None
@@ -1639,16 +1639,26 @@ ListPlansVariantDetailsUsageLimitInterval = Union[
 r"""Interval for the cap, aligned to the customer's billing cycle."""
 
 
+ListPlansVariantDetailsAnchor = Union[
+    Literal[
+        "billing_cycle",
+        "utc",
+    ],
+    UnrecognizedStr,
+]
+r"""Window alignment. 'billing_cycle' phases the interval to the customer's renewal time; 'utc' aligns to the UTC calendar."""
+
+
 class ListPlansVariantDetailsFilterTypedDict(TypedDict):
     r"""When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature."""
 
-    properties: Dict[str, Any]
+    properties: Dict[str, str]
 
 
 class ListPlansVariantDetailsFilter(BaseModel):
     r"""When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature."""
 
-    properties: Dict[str, Any]
+    properties: Dict[str, str]
 
 
 class ListPlansVariantDetailsUsageLimitTypedDict(TypedDict):
@@ -1660,6 +1670,8 @@ class ListPlansVariantDetailsUsageLimitTypedDict(TypedDict):
     r"""Interval for the cap, aligned to the customer's billing cycle."""
     enabled: NotRequired[bool]
     r"""Whether this usage limit is enabled."""
+    anchor: NotRequired[ListPlansVariantDetailsAnchor]
+    r"""Window alignment. 'billing_cycle' phases the interval to the customer's renewal time; 'utc' aligns to the UTC calendar."""
     filter_: NotRequired[ListPlansVariantDetailsFilterTypedDict]
     r"""When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature."""
 
@@ -1677,6 +1689,9 @@ class ListPlansVariantDetailsUsageLimit(BaseModel):
     enabled: Optional[bool] = True
     r"""Whether this usage limit is enabled."""
 
+    anchor: Optional[ListPlansVariantDetailsAnchor] = None
+    r"""Window alignment. 'billing_cycle' phases the interval to the customer's renewal time; 'utc' aligns to the UTC calendar."""
+
     filter_: Annotated[
         Optional[ListPlansVariantDetailsFilter], pydantic.Field(alias="filter")
     ] = None
@@ -1684,7 +1699,7 @@ class ListPlansVariantDetailsUsageLimit(BaseModel):
 
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
-        optional_fields = set(["enabled", "filter"])
+        optional_fields = set(["enabled", "anchor", "filter"])
         serialized = handler(self)
         m = {}
 
@@ -2151,16 +2166,26 @@ ListPlansUsageLimitInterval = Union[
 r"""Interval for the cap, aligned to the customer's billing cycle."""
 
 
+ListPlansAnchor = Union[
+    Literal[
+        "billing_cycle",
+        "utc",
+    ],
+    UnrecognizedStr,
+]
+r"""Window alignment. 'billing_cycle' phases the interval to the customer's renewal time; 'utc' aligns to the UTC calendar."""
+
+
 class ListPlansFilterTypedDict(TypedDict):
     r"""When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature."""
 
-    properties: Dict[str, Any]
+    properties: Dict[str, str]
 
 
 class ListPlansFilter(BaseModel):
     r"""When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature."""
 
-    properties: Dict[str, Any]
+    properties: Dict[str, str]
 
 
 class ListPlansUsageLimitTypedDict(TypedDict):
@@ -2172,6 +2197,8 @@ class ListPlansUsageLimitTypedDict(TypedDict):
     r"""Interval for the cap, aligned to the customer's billing cycle."""
     enabled: NotRequired[bool]
     r"""Whether this usage limit is enabled."""
+    anchor: NotRequired[ListPlansAnchor]
+    r"""Window alignment. 'billing_cycle' phases the interval to the customer's renewal time; 'utc' aligns to the UTC calendar."""
     filter_: NotRequired[ListPlansFilterTypedDict]
     r"""When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature."""
 
@@ -2189,12 +2216,15 @@ class ListPlansUsageLimit(BaseModel):
     enabled: Optional[bool] = True
     r"""Whether this usage limit is enabled."""
 
+    anchor: Optional[ListPlansAnchor] = None
+    r"""Window alignment. 'billing_cycle' phases the interval to the customer's renewal time; 'utc' aligns to the UTC calendar."""
+
     filter_: Annotated[Optional[ListPlansFilter], pydantic.Field(alias="filter")] = None
     r"""When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature."""
 
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
-        optional_fields = set(["enabled", "filter"])
+        optional_fields = set(["enabled", "anchor", "filter"])
         serialized = handler(self)
         m = {}
 

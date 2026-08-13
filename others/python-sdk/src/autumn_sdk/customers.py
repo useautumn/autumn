@@ -738,14 +738,14 @@ class Customers(BaseSDK):
         currency: OptionalNullable[str] = UNSET,
         billing_controls: Optional[
             Union[
-                models.UpdateCustomerBillingControlsRequest,
-                models.UpdateCustomerBillingControlsRequestTypedDict,
+                models.UpdateCustomerBillingControlsRequestBody,
+                models.UpdateCustomerBillingControlsRequestBodyTypedDict,
             ]
         ] = None,
         config: Optional[
             Union[
-                models.UpdateCustomerConfigRequest,
-                models.UpdateCustomerConfigRequestTypedDict,
+                models.UpdateCustomerConfigRequestBody,
+                models.UpdateCustomerConfigRequestBodyTypedDict,
             ]
         ] = None,
         new_customer_id: Optional[str] = None,
@@ -792,10 +792,11 @@ class Customers(BaseSDK):
             send_email_receipts=send_email_receipts,
             currency=currency,
             billing_controls=utils.get_pydantic_model(
-                billing_controls, Optional[models.UpdateCustomerBillingControlsRequest]
+                billing_controls,
+                Optional[models.UpdateCustomerBillingControlsRequestBody],
             ),
             config=utils.get_pydantic_model(
-                config, Optional[models.UpdateCustomerConfigRequest]
+                config, Optional[models.UpdateCustomerConfigRequestBody]
             ),
             new_customer_id=new_customer_id,
         )
@@ -872,14 +873,14 @@ class Customers(BaseSDK):
         currency: OptionalNullable[str] = UNSET,
         billing_controls: Optional[
             Union[
-                models.UpdateCustomerBillingControlsRequest,
-                models.UpdateCustomerBillingControlsRequestTypedDict,
+                models.UpdateCustomerBillingControlsRequestBody,
+                models.UpdateCustomerBillingControlsRequestBodyTypedDict,
             ]
         ] = None,
         config: Optional[
             Union[
-                models.UpdateCustomerConfigRequest,
-                models.UpdateCustomerConfigRequestTypedDict,
+                models.UpdateCustomerConfigRequestBody,
+                models.UpdateCustomerConfigRequestBodyTypedDict,
             ]
         ] = None,
         new_customer_id: Optional[str] = None,
@@ -926,10 +927,11 @@ class Customers(BaseSDK):
             send_email_receipts=send_email_receipts,
             currency=currency,
             billing_controls=utils.get_pydantic_model(
-                billing_controls, Optional[models.UpdateCustomerBillingControlsRequest]
+                billing_controls,
+                Optional[models.UpdateCustomerBillingControlsRequestBody],
             ),
             config=utils.get_pydantic_model(
-                config, Optional[models.UpdateCustomerConfigRequest]
+                config, Optional[models.UpdateCustomerConfigRequestBody]
             ),
             new_customer_id=new_customer_id,
         )

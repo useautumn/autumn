@@ -1318,6 +1318,13 @@ AttachUsageLimitInterval = Literal[
 r"""Interval for the cap, aligned to the customer's billing cycle."""
 
 
+AttachAnchor = Literal[
+    "billing_cycle",
+    "utc",
+]
+r"""Window alignment. 'billing_cycle' phases the interval to the customer's renewal time; 'utc' aligns to the UTC calendar."""
+
+
 AttachPropertiesTypedDict = TypeAliasType(
     "AttachPropertiesTypedDict", Union[str, float, bool]
 )
@@ -1347,6 +1354,8 @@ class AttachUsageLimitTypedDict(TypedDict):
     r"""Interval for the cap, aligned to the customer's billing cycle."""
     enabled: NotRequired[bool]
     r"""Whether this usage limit is enabled."""
+    anchor: NotRequired[AttachAnchor]
+    r"""Window alignment. 'billing_cycle' phases the interval to the customer's renewal time; 'utc' aligns to the UTC calendar."""
     filter_: NotRequired[AttachFilterTypedDict]
     r"""When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature."""
 
@@ -1364,12 +1373,15 @@ class AttachUsageLimit(BaseModel):
     enabled: Optional[bool] = True
     r"""Whether this usage limit is enabled."""
 
+    anchor: Optional[AttachAnchor] = None
+    r"""Window alignment. 'billing_cycle' phases the interval to the customer's renewal time; 'utc' aligns to the UTC calendar."""
+
     filter_: Annotated[Optional[AttachFilter], pydantic.Field(alias="filter")] = None
     r"""When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature."""
 
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
-        optional_fields = set(["enabled", "filter"])
+        optional_fields = set(["enabled", "anchor", "filter"])
         serialized = handler(self)
         m = {}
 
@@ -2513,6 +2525,8 @@ class AttachParamsTypedDict(TypedDict):
     r"""Stripe tax rate ID (txr_...) to apply as the default tax rate on the created subscription, invoice, or checkout session line items."""
     currency: NotRequired[str]
     r"""Currency to bill this attach in (e.g. usd, eur). Must match the customer's currency if they are already locked to one, and the plan must offer a paid price in it. Defaults to the customer's currency, then the org default."""
+    remove_plan_ids: NotRequired[List[str]]
+    r"""Plan IDs to expire on the customer as part of this attach. Each must be an active plan billed on the same subscription as the attach (or a free plan); plans on a separate subscription are rejected."""
 
 
 class AttachParams(BaseModel):
@@ -2606,6 +2620,9 @@ class AttachParams(BaseModel):
     currency: Optional[str] = None
     r"""Currency to bill this attach in (e.g. usd, eur). Must match the customer's currency if they are already locked to one, and the plan must offer a paid price in it. Defaults to the customer's currency, then the org default."""
 
+    remove_plan_ids: Optional[List[str]] = None
+    r"""Plan IDs to expire on the customer as part of this attach. Each must be an active plan billed on the same subscription as the attach (or a free plan); plans on a separate subscription are rejected."""
+
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
         optional_fields = set(
@@ -2637,6 +2654,7 @@ class AttachParams(BaseModel):
                 "enable_plan_immediately",
                 "tax_rate_id",
                 "currency",
+                "remove_plan_ids",
             ]
         )
         serialized = handler(self)

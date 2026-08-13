@@ -31,9 +31,24 @@ export const totalSchema = z.object({
 	sum: z.number(),
 });
 
-export const aggregateEventsResponseSchema = z.object({
-	list: z.array(aggregateEventsListSchema),
-	total: z.record(z.string(), totalSchema),
+export const aggregateEventsResetSchema = z.object({
+	interval: z.string(),
+	resetsAt: z.number().nullable(),
+});
+
+export const aggregateEventsBalanceSchema = z.object({
+	balanceId: z.string(),
+	entityId: z.string().nullable(),
+	planId: z.string().nullable(),
+	reset: aggregateEventsResetSchema.nullable(),
+	creditCost: z.number().nullable(),
+	deducted: z.number(),
+	events: z.number(),
+});
+
+export const groupedValuesSchema = z.object({
+	deducted: z.number(),
+	creditCost: z.union([z.number(), z.undefined()]).optional().nullable(),
 });
 
 export const aggregateEventsFeatureIdOutboundSchema = z.union([
@@ -60,13 +75,18 @@ export const eventsAggregateParamsOutboundSchema = z.object({
 		.union([z.record(z.string(), z.string()), z.undefined()])
 		.optional(),
 	max_groups: z.union([z.number(), z.undefined()]).optional(),
+	aggregate_on: z.union([z.string(), z.undefined()]).optional(),
 });
 
 const closedEnumSchema = z.any();
 
+const openEnumSchema = z.any();
+
 export const rangeSchema = closedEnumSchema;
 
 export const binSizeSchema = closedEnumSchema;
+
+export const aggregateOnSchema = closedEnumSchema;
 
 export const eventsAggregateParamsSchema = z.object({
 	customerId: z.union([z.string(), z.undefined()]).optional(),
@@ -82,4 +102,33 @@ export const eventsAggregateParamsSchema = z.object({
 		.union([z.record(z.string(), z.string()), z.undefined()])
 		.optional(),
 	maxGroups: z.union([z.number(), z.undefined()]).optional(),
+	aggregateOn: z.union([aggregateOnSchema, z.undefined()]).optional(),
+});
+
+export const aggregateEventsFeatureTypeSchema = openEnumSchema;
+
+export const valuesSchema = z.object({
+	featureType: aggregateEventsFeatureTypeSchema,
+	deducted: z.number(),
+	events: z.number(),
+	balances: z.array(aggregateEventsBalanceSchema),
+});
+
+export const aggregateEventsDeductionSchema = z.object({
+	period: z.number(),
+	values: z.record(z.string(), valuesSchema),
+	groupedValues: z
+		.union([
+			z.record(z.string(), z.record(z.string(), groupedValuesSchema)),
+			z.undefined(),
+		])
+		.optional(),
+});
+
+export const aggregateEventsResponseSchema = z.object({
+	list: z.array(aggregateEventsListSchema),
+	total: z.record(z.string(), totalSchema),
+	deductions: z
+		.union([z.array(aggregateEventsDeductionSchema), z.undefined()])
+		.optional(),
 });

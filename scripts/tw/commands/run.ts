@@ -50,6 +50,7 @@ import {
 	SERVER_PORT,
 	SQS_QUEUE_URL_V2,
 	TRACK_ASYNC_SQS_QUEUE_URL,
+	TRACK_ASYNC_STANDARD_SQS_QUEUE_URL,
 	TRACK_SQS_QUEUE_URL,
 	TW_ENV,
 	WARM_SANDBOX_PREFIX,
@@ -674,13 +675,15 @@ const buildWorkerEnv = ({
 		// localhost service URLs (the µVM's own daemons).
 		DATABASE_URL,
 		DATABASE_CRITICAL_URL,
-		BETTER_AUTH_URL: `http://localhost:${SERVER_PORT}`,
+		AUTUMN_API_URL: `http://localhost:${SERVER_PORT}`,
+		AUTUMN_PUBLIC_API_URL: `http://localhost:${SERVER_PORT}`,
 		REDIS_URL,
 		MISC_CACHE_DRAGONFLY_PUBLIC_URL: REDIS_URL,
 		CACHE_V2_DRAGONFLY_URL: REDIS_URL,
 		SQS_QUEUE_URL_V2,
 		TRACK_SQS_QUEUE_URL,
 		TRACK_ASYNC_SQS_QUEUE_URL,
+		TRACK_ASYNC_STANDARD_SQS_QUEUE_URL,
 		DYNAMODB_ENDPOINT,
 		// baked secrets (every worker).
 		ENCRYPTION_IV: requireSecret("ENCRYPTION_IV"),
@@ -787,6 +790,7 @@ const buildWarmEnv = (): Record<string, string> => ({
 	SQS_QUEUE_URL_V2,
 	TRACK_SQS_QUEUE_URL,
 	TRACK_ASYNC_SQS_QUEUE_URL,
+	TRACK_ASYNC_STANDARD_SQS_QUEUE_URL,
 	DYNAMODB_ENDPOINT,
 	AUTUMN_DB_DIRECT: "1",
 	TW_WORKER_MODE: "1",
@@ -794,7 +798,8 @@ const buildWarmEnv = (): Record<string, string> => ({
 	ENCRYPTION_IV: requireSecret("ENCRYPTION_IV"),
 	ENCRYPTION_PASSWORD: requireSecret("ENCRYPTION_PASSWORD"),
 	BETTER_AUTH_SECRET: requireSecret("BETTER_AUTH_SECRET"),
-	BETTER_AUTH_URL: `http://localhost:${SERVER_PORT}`,
+	AUTUMN_API_URL: `http://localhost:${SERVER_PORT}`,
+	AUTUMN_PUBLIC_API_URL: `http://localhost:${SERVER_PORT}`,
 });
 
 /**

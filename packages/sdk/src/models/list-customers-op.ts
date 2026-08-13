@@ -306,10 +306,22 @@ export type ListCustomersUsageLimitInterval = OpenEnum<
 >;
 
 /**
+ * Window alignment. 'billing_cycle' phases the interval to the customer's renewal time; 'utc' aligns to the UTC calendar.
+ */
+export const ListCustomersAnchor = {
+  BillingCycle: "billing_cycle",
+  Utc: "utc",
+} as const;
+/**
+ * Window alignment. 'billing_cycle' phases the interval to the customer's renewal time; 'utc' aligns to the UTC calendar.
+ */
+export type ListCustomersAnchor = OpenEnum<typeof ListCustomersAnchor>;
+
+/**
  * When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature.
  */
 export type ListCustomersFilter = {
-  properties: { [k: string]: any };
+  properties: { [k: string]: string };
 };
 
 /**
@@ -343,6 +355,10 @@ export type ListCustomersUsageLimit = {
    * Interval for the cap, aligned to the customer's billing cycle.
    */
   interval: ListCustomersUsageLimitInterval;
+  /**
+   * Window alignment. 'billing_cycle' phases the interval to the customer's renewal time; 'utc' aligns to the UTC calendar.
+   */
+  anchor?: ListCustomersAnchor | undefined;
   /**
    * When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature.
    */
@@ -1192,11 +1208,17 @@ export const ListCustomersUsageLimitInterval$inboundSchema: z.ZodMiniType<
 > = openEnums.inboundSchema(ListCustomersUsageLimitInterval);
 
 /** @internal */
+export const ListCustomersAnchor$inboundSchema: z.ZodMiniType<
+  ListCustomersAnchor,
+  unknown
+> = openEnums.inboundSchema(ListCustomersAnchor);
+
+/** @internal */
 export const ListCustomersFilter$inboundSchema: z.ZodMiniType<
   ListCustomersFilter,
   unknown
 > = z.object({
-  properties: z.record(z.string(), z.any()),
+  properties: z.record(z.string(), types.string()),
 });
 
 export function listCustomersFilterFromJSON(
@@ -1225,6 +1247,7 @@ export const ListCustomersUsageLimit$inboundSchema: z.ZodMiniType<
     enabled: z._default(types.boolean(), true),
     limit: types.number(),
     interval: ListCustomersUsageLimitInterval$inboundSchema,
+    anchor: types.optional(ListCustomersAnchor$inboundSchema),
     filter: types.optional(z.lazy(() => ListCustomersFilter$inboundSchema)),
     usage: types.optional(types.number()),
     source: types.optional(ListCustomersUsageLimitSource$inboundSchema),

@@ -71,6 +71,7 @@ export class Billing extends ClientSDK {
    * @param enablePlanImmediately - If true, the customer's plan is activated immediately even when payment is deferred (invoice mode) or pending (Stripe checkout). For Stripe checkout, the customer_product is inserted before the customer completes the hosted form. (optional)
    * @param taxRateId - Stripe tax rate ID (txr_...) to apply as the default tax rate on the created subscription, invoice, or checkout session line items. (optional)
    * @param currency - Currency to bill this attach in (e.g. usd, eur). Must match the customer's currency if they are already locked to one, and the plan must offer a paid price in it. Defaults to the customer's currency, then the org default. (optional)
+   * @param removePlanIds - Plan IDs to expire on the customer as part of this attach. Each must be an active plan billed on the same subscription as the attach (or a free plan); plans on a separate subscription are rejected. (optional)
    *
    * @returns A billing response with customer ID, invoice details, and payment URL (if checkout required).
    */
@@ -106,6 +107,7 @@ export class Billing extends ClientSDK {
    * @param checkoutSessionParams - Additional parameters to pass into the creation of the Stripe checkout session. (optional)
    * @param redirectMode - Controls when to return a checkout URL for the immediate phase. 'always' forces a confirmation or checkout flow, 'if_required' only redirects when needed, and 'never' disables redirects. (optional)
    * @param billingBehavior - Whether to prorate the immediate phase. 'none' skips proration charges and credits. (optional)
+   * @param noBillingChanges - If true, skips any billing changes for the schedule. (optional)
    * @param billingCycleAnchor - Pass 'now' to reset the billing cycle anchor of the immediate phase to the current time. (optional)
    * @param enablePlanImmediately - If true, the immediate-phase cusProducts are activated immediately (and scheduled-phase cusProducts pre-inserted) even when payment is pending via Stripe checkout. The Autumn schedule rows are persisted on checkout.session.completed. (optional)
    * @param preserveAddOns - Deprecated and ignored. Active plans the schedule does not declare are always retained. (optional)
@@ -216,6 +218,7 @@ export class Billing extends ClientSDK {
    * @param enablePlanImmediately - If true, the customer's plan is activated immediately even when payment is deferred (invoice mode) or pending (Stripe checkout). For Stripe checkout, the customer_product is inserted before the customer completes the hosted form. (optional)
    * @param taxRateId - Stripe tax rate ID (txr_...) to apply as the default tax rate on the created subscription, invoice, or checkout session line items. (optional)
    * @param currency - Currency to bill this attach in (e.g. usd, eur). Must match the customer's currency if they are already locked to one, and the plan must offer a paid price in it. Defaults to the customer's currency, then the org default. (optional)
+   * @param removePlanIds - Plan IDs to expire on the customer as part of this attach. Each must be an active plan billed on the same subscription as the attach (or a free plan); plans on a separate subscription are rejected. (optional)
    *
    * @returns A preview response with line items, totals, and effective dates for the proposed changes.
    */

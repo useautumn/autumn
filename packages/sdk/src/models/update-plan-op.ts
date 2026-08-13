@@ -48,7 +48,7 @@ export type UpdatePlanAdditionalCurrencyRequestBody = {
 /**
  * Base price configuration for a plan.
  */
-export type UpdatePlanBasePriceRequest = {
+export type UpdatePlanBasePriceRequestBody = {
   /**
    * Base price amount for the plan.
    */
@@ -755,7 +755,7 @@ export type UpdatePlanLicense = {
 /**
  * Unit of time for the trial ('day', 'month', 'year').
  */
-export const UpdatePlanDurationTypeRequest = {
+export const UpdatePlanDurationTypeRequestBody = {
   Day: "day",
   Month: "month",
   Year: "year",
@@ -763,26 +763,28 @@ export const UpdatePlanDurationTypeRequest = {
 /**
  * Unit of time for the trial ('day', 'month', 'year').
  */
-export type UpdatePlanDurationTypeRequest = ClosedEnum<
-  typeof UpdatePlanDurationTypeRequest
+export type UpdatePlanDurationTypeRequestBody = ClosedEnum<
+  typeof UpdatePlanDurationTypeRequestBody
 >;
 
 /**
  * Behavior when the trial ends. 'bill' charges the customer (default). 'revert' expires the trial and restores the customer's previous plan.
  */
-export const UpdatePlanOnEndRequest = {
+export const UpdatePlanOnEndRequestBody = {
   Bill: "bill",
   Revert: "revert",
 } as const;
 /**
  * Behavior when the trial ends. 'bill' charges the customer (default). 'revert' expires the trial and restores the customer's previous plan.
  */
-export type UpdatePlanOnEndRequest = ClosedEnum<typeof UpdatePlanOnEndRequest>;
+export type UpdatePlanOnEndRequestBody = ClosedEnum<
+  typeof UpdatePlanOnEndRequestBody
+>;
 
 /**
  * Free trial configuration for a plan.
  */
-export type UpdatePlanFreeTrialParamsRequest = {
+export type UpdatePlanFreeTrialParamsRequestBody = {
   /**
    * Number of duration_type periods the trial lasts.
    */
@@ -790,7 +792,7 @@ export type UpdatePlanFreeTrialParamsRequest = {
   /**
    * Unit of time for the trial ('day', 'month', 'year').
    */
-  durationType?: UpdatePlanDurationTypeRequest | undefined;
+  durationType?: UpdatePlanDurationTypeRequestBody | undefined;
   /**
    * If true, payment method required to start trial. Customer is charged after trial ends.
    */
@@ -798,13 +800,13 @@ export type UpdatePlanFreeTrialParamsRequest = {
   /**
    * Behavior when the trial ends. 'bill' charges the customer (default). 'revert' expires the trial and restores the customer's previous plan.
    */
-  onEnd?: UpdatePlanOnEndRequest | undefined;
+  onEnd?: UpdatePlanOnEndRequestBody | undefined;
 };
 
 /**
  * Miscellaneous plan-level configuration flags.
  */
-export type UpdatePlanConfigRequest = {
+export type UpdatePlanConfigRequestBody = {
   /**
    * If true, entitlements attached to this plan will still reset on schedule even when the customer's product is in a past_due state.
    */
@@ -830,7 +832,7 @@ export type UpdatePlanPurchaseLimitIntervalRequestBody = ClosedEnum<
 /**
  * Optional rate limit to cap how often auto top-ups occur. Pass count to set the current window's consumed top-ups.
  */
-export type UpdatePlanPurchaseLimitRequest = {
+export type UpdatePlanPurchaseLimitRequestBody = {
   /**
    * The time interval for the purchase limit window.
    */
@@ -849,7 +851,7 @@ export type UpdatePlanPurchaseLimitRequest = {
   count?: number | undefined;
 };
 
-export type UpdatePlanAutoTopupRequest = {
+export type UpdatePlanAutoTopupRequestBody = {
   /**
    * The ID of the feature (credit balance) to auto top-up.
    */
@@ -869,7 +871,7 @@ export type UpdatePlanAutoTopupRequest = {
   /**
    * Optional rate limit to cap how often auto top-ups occur. Pass count to set the current window's consumed top-ups.
    */
-  purchaseLimit?: UpdatePlanPurchaseLimitRequest | undefined;
+  purchaseLimit?: UpdatePlanPurchaseLimitRequestBody | undefined;
   /**
    * When true, auto top-up creates a send_invoice invoice instead of auto-charging.
    */
@@ -890,7 +892,7 @@ export type UpdatePlanLimitTypeRequestBody = ClosedEnum<
   typeof UpdatePlanLimitTypeRequestBody
 >;
 
-export type UpdatePlanSpendLimitRequest = {
+export type UpdatePlanSpendLimitRequestBody = {
   /**
    * Optional feature ID this spend limit applies to.
    */
@@ -929,16 +931,30 @@ export type UpdatePlanUsageLimitIntervalRequestBody = ClosedEnum<
   typeof UpdatePlanUsageLimitIntervalRequestBody
 >;
 
+/**
+ * Window alignment. 'billing_cycle' phases the interval to the customer's renewal time; 'utc' aligns to the UTC calendar.
+ */
+export const UpdatePlanAnchorRequestBody = {
+  BillingCycle: "billing_cycle",
+  Utc: "utc",
+} as const;
+/**
+ * Window alignment. 'billing_cycle' phases the interval to the customer's renewal time; 'utc' aligns to the UTC calendar.
+ */
+export type UpdatePlanAnchorRequestBody = ClosedEnum<
+  typeof UpdatePlanAnchorRequestBody
+>;
+
 export type UpdatePlanProperties = string | number | boolean;
 
 /**
  * When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature.
  */
-export type UpdatePlanFilterRequest = {
+export type UpdatePlanFilterRequestBody = {
   properties: { [k: string]: string | number | boolean };
 };
 
-export type UpdatePlanUsageLimitRequest = {
+export type UpdatePlanUsageLimitRequestBody = {
   /**
    * The feature this usage limit applies to.
    */
@@ -956,9 +972,13 @@ export type UpdatePlanUsageLimitRequest = {
    */
   interval: UpdatePlanUsageLimitIntervalRequestBody;
   /**
+   * Window alignment. 'billing_cycle' phases the interval to the customer's renewal time; 'utc' aligns to the UTC calendar.
+   */
+  anchor?: UpdatePlanAnchorRequestBody | undefined;
+  /**
    * When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature.
    */
-  filter?: UpdatePlanFilterRequest | undefined;
+  filter?: UpdatePlanFilterRequestBody | undefined;
 };
 
 /**
@@ -1000,7 +1020,7 @@ export type UpdatePlanUsageAlertRequestBody = {
   name?: string | undefined;
 };
 
-export type UpdatePlanOverageAllowedRequest = {
+export type UpdatePlanOverageAllowedRequestBody = {
   /**
    * The feature ID this overage allowed control applies to.
    */
@@ -1014,19 +1034,19 @@ export type UpdatePlanOverageAllowedRequest = {
 /**
  * Plan-level billing controls used as customer defaults.
  */
-export type UpdatePlanBillingControlsRequest = {
+export type UpdatePlanBillingControlsRequestBody = {
   /**
    * List of auto top-up configurations per feature.
    */
-  autoTopups?: Array<UpdatePlanAutoTopupRequest> | undefined;
+  autoTopups?: Array<UpdatePlanAutoTopupRequestBody> | undefined;
   /**
    * List of overage spend limits per feature (caps overage spend).
    */
-  spendLimits?: Array<UpdatePlanSpendLimitRequest> | undefined;
+  spendLimits?: Array<UpdatePlanSpendLimitRequestBody> | undefined;
   /**
    * List of hard usage caps per feature (max units per interval).
    */
-  usageLimits?: Array<UpdatePlanUsageLimitRequest> | undefined;
+  usageLimits?: Array<UpdatePlanUsageLimitRequestBody> | undefined;
   /**
    * List of usage alert configurations per feature.
    */
@@ -1034,7 +1054,7 @@ export type UpdatePlanBillingControlsRequest = {
   /**
    * List of overage allowed controls per feature. When enabled, usage can exceed balance.
    */
-  overageAllowed?: Array<UpdatePlanOverageAllowedRequest> | undefined;
+  overageAllowed?: Array<UpdatePlanOverageAllowedRequestBody> | undefined;
 };
 
 export type Migration = {
@@ -1583,6 +1603,18 @@ export type VariantUsageLimitInterval = ClosedEnum<
 >;
 
 /**
+ * Window alignment. 'billing_cycle' phases the interval to the customer's renewal time; 'utc' aligns to the UTC calendar.
+ */
+export const VariantAnchor = {
+  BillingCycle: "billing_cycle",
+  Utc: "utc",
+} as const;
+/**
+ * Window alignment. 'billing_cycle' phases the interval to the customer's renewal time; 'utc' aligns to the UTC calendar.
+ */
+export type VariantAnchor = ClosedEnum<typeof VariantAnchor>;
+
+/**
  * When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature.
  */
 export type VariantFilter = {
@@ -1606,6 +1638,10 @@ export type VariantUsageLimit = {
    * Interval for the cap, aligned to the customer's billing cycle.
    */
   interval: VariantUsageLimitInterval;
+  /**
+   * Window alignment. 'billing_cycle' phases the interval to the customer's renewal time; 'utc' aligns to the UTC calendar.
+   */
+  anchor?: VariantAnchor | undefined;
   /**
    * When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature.
    */
@@ -1771,7 +1807,7 @@ export type UpdatePlanParams = {
   /**
    * The price of the plan. Set to null to remove the base price.
    */
-  price?: UpdatePlanBasePriceRequest | null | undefined;
+  price?: UpdatePlanBasePriceRequestBody | null | undefined;
   /**
    * Feature configurations for this plan. Each item defines included units, pricing, and reset behavior.
    */
@@ -1783,15 +1819,15 @@ export type UpdatePlanParams = {
   /**
    * The free trial of the plan. Set to null to remove the free trial.
    */
-  freeTrial?: UpdatePlanFreeTrialParamsRequest | null | undefined;
+  freeTrial?: UpdatePlanFreeTrialParamsRequestBody | null | undefined;
   /**
    * Miscellaneous plan-level configuration flags.
    */
-  config?: UpdatePlanConfigRequest | undefined;
+  config?: UpdatePlanConfigRequestBody | undefined;
   /**
    * Plan-level billing controls used as customer defaults.
    */
-  billingControls?: UpdatePlanBillingControlsRequest | undefined;
+  billingControls?: UpdatePlanBillingControlsRequestBody | undefined;
   /**
    * Arbitrary key-value metadata defined by you for your own use (e.g. UI copy, feature highlights). Values can be any JSON-serializable value. Shared across all versions of the plan.
    */
@@ -2168,7 +2204,7 @@ export type UpdatePlanItemRolloverResponse = {
   expiryDurationLength?: number | undefined;
 };
 
-export type UpdatePlanItem = {
+export type PlansUpdatePlanItem = {
   /**
    * The ID of the feature this item configures.
    */
@@ -2416,15 +2452,15 @@ export type UpdatePlanVariantDetailsAddItemPriceInterval = OpenEnum<
 /**
  * 'prepaid' for upfront payment (seats), 'usage_based' for pay-as-you-go.
  */
-export const UpdatePlanVariantDetailsAddItemBillingMethod = {
+export const UpdatePlanAddItemBillingMethodResponse = {
   Prepaid: "prepaid",
   UsageBased: "usage_based",
 } as const;
 /**
  * 'prepaid' for upfront payment (seats), 'usage_based' for pay-as-you-go.
  */
-export type UpdatePlanVariantDetailsAddItemBillingMethod = OpenEnum<
-  typeof UpdatePlanVariantDetailsAddItemBillingMethod
+export type UpdatePlanAddItemBillingMethodResponse = OpenEnum<
+  typeof UpdatePlanAddItemBillingMethodResponse
 >;
 
 /**
@@ -2461,7 +2497,7 @@ export type UpdatePlanVariantDetailsPrice = {
   /**
    * 'prepaid' for upfront payment (seats), 'usage_based' for pay-as-you-go.
    */
-  billingMethod: UpdatePlanVariantDetailsAddItemBillingMethod;
+  billingMethod: UpdatePlanAddItemBillingMethodResponse;
   /**
    * Max units purchasable beyond included. E.g. included=100, max_purchase=300 allows 400 total. Null for no limit.
    */
@@ -2471,7 +2507,7 @@ export type UpdatePlanVariantDetailsPrice = {
 /**
  * Billing behavior when quantity increases mid-cycle.
  */
-export const UpdatePlanVariantDetailsOnIncrease = {
+export const UpdatePlanOnIncreaseResponse = {
   BillImmediately: "bill_immediately",
   ProrateImmediately: "prorate_immediately",
   ProrateNextCycle: "prorate_next_cycle",
@@ -2480,14 +2516,14 @@ export const UpdatePlanVariantDetailsOnIncrease = {
 /**
  * Billing behavior when quantity increases mid-cycle.
  */
-export type UpdatePlanVariantDetailsOnIncrease = OpenEnum<
-  typeof UpdatePlanVariantDetailsOnIncrease
+export type UpdatePlanOnIncreaseResponse = OpenEnum<
+  typeof UpdatePlanOnIncreaseResponse
 >;
 
 /**
  * Credit behavior when quantity decreases mid-cycle.
  */
-export const UpdatePlanVariantDetailsOnDecrease = {
+export const UpdatePlanOnDecreaseResponse = {
   Prorate: "prorate",
   ProrateImmediately: "prorate_immediately",
   ProrateNextCycle: "prorate_next_cycle",
@@ -2497,8 +2533,8 @@ export const UpdatePlanVariantDetailsOnDecrease = {
 /**
  * Credit behavior when quantity decreases mid-cycle.
  */
-export type UpdatePlanVariantDetailsOnDecrease = OpenEnum<
-  typeof UpdatePlanVariantDetailsOnDecrease
+export type UpdatePlanOnDecreaseResponse = OpenEnum<
+  typeof UpdatePlanOnDecreaseResponse
 >;
 
 /**
@@ -2508,11 +2544,11 @@ export type UpdatePlanProrationResponse = {
   /**
    * Billing behavior when quantity increases mid-cycle.
    */
-  onIncrease: UpdatePlanVariantDetailsOnIncrease;
+  onIncrease: UpdatePlanOnIncreaseResponse;
   /**
    * Credit behavior when quantity decreases mid-cycle.
    */
-  onDecrease: UpdatePlanVariantDetailsOnDecrease;
+  onDecrease: UpdatePlanOnDecreaseResponse;
 };
 
 /**
@@ -2592,15 +2628,15 @@ export type UpdatePlanPlanItemResponse = {
 /**
  * Match items with this billing method (prepaid or usage_based).
  */
-export const UpdatePlanVariantDetailsRemoveItemBillingMethod = {
+export const UpdatePlanRemoveItemBillingMethodResponse = {
   Prepaid: "prepaid",
   UsageBased: "usage_based",
 } as const;
 /**
  * Match items with this billing method (prepaid or usage_based).
  */
-export type UpdatePlanVariantDetailsRemoveItemBillingMethod = OpenEnum<
-  typeof UpdatePlanVariantDetailsRemoveItemBillingMethod
+export type UpdatePlanRemoveItemBillingMethodResponse = OpenEnum<
+  typeof UpdatePlanRemoveItemBillingMethodResponse
 >;
 
 export const UpdatePlanIntervalVariantDetailsRemoveItemEnum2 = {
@@ -2648,7 +2684,7 @@ export type UpdatePlanPlanItemFilterResponse = {
   /**
    * Match items with this billing method (prepaid or usage_based).
    */
-  billingMethod?: UpdatePlanVariantDetailsRemoveItemBillingMethod | undefined;
+  billingMethod?: UpdatePlanRemoveItemBillingMethodResponse | undefined;
   /**
    * Match items with this interval. Accepts either a BillingInterval (price-side) or a ResetInterval (reset-side, includes day/hour/minute) so price-less items keyed by reset.interval can be disambiguated.
    */
@@ -2832,10 +2868,24 @@ export type UpdatePlanVariantDetailsUsageLimitInterval = OpenEnum<
 >;
 
 /**
+ * Window alignment. 'billing_cycle' phases the interval to the customer's renewal time; 'utc' aligns to the UTC calendar.
+ */
+export const UpdatePlanVariantDetailsAnchor = {
+  BillingCycle: "billing_cycle",
+  Utc: "utc",
+} as const;
+/**
+ * Window alignment. 'billing_cycle' phases the interval to the customer's renewal time; 'utc' aligns to the UTC calendar.
+ */
+export type UpdatePlanVariantDetailsAnchor = OpenEnum<
+  typeof UpdatePlanVariantDetailsAnchor
+>;
+
+/**
  * When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature.
  */
 export type UpdatePlanVariantDetailsFilter = {
-  properties: { [k: string]: any };
+  properties: { [k: string]: string };
 };
 
 export type UpdatePlanVariantDetailsUsageLimit = {
@@ -2855,6 +2905,10 @@ export type UpdatePlanVariantDetailsUsageLimit = {
    * Interval for the cap, aligned to the customer's billing cycle.
    */
   interval: UpdatePlanVariantDetailsUsageLimitInterval;
+  /**
+   * Window alignment. 'billing_cycle' phases the interval to the customer's renewal time; 'utc' aligns to the UTC calendar.
+   */
+  anchor?: UpdatePlanVariantDetailsAnchor | undefined;
   /**
    * When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature.
    */
@@ -3102,10 +3156,24 @@ export type UpdatePlanUsageLimitIntervalResponse = OpenEnum<
 >;
 
 /**
+ * Window alignment. 'billing_cycle' phases the interval to the customer's renewal time; 'utc' aligns to the UTC calendar.
+ */
+export const UpdatePlanAnchorResponse = {
+  BillingCycle: "billing_cycle",
+  Utc: "utc",
+} as const;
+/**
+ * Window alignment. 'billing_cycle' phases the interval to the customer's renewal time; 'utc' aligns to the UTC calendar.
+ */
+export type UpdatePlanAnchorResponse = OpenEnum<
+  typeof UpdatePlanAnchorResponse
+>;
+
+/**
  * When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature.
  */
 export type UpdatePlanFilterResponse = {
-  properties: { [k: string]: any };
+  properties: { [k: string]: string };
 };
 
 export type UpdatePlanUsageLimitResponse = {
@@ -3125,6 +3193,10 @@ export type UpdatePlanUsageLimitResponse = {
    * Interval for the cap, aligned to the customer's billing cycle.
    */
   interval: UpdatePlanUsageLimitIntervalResponse;
+  /**
+   * Window alignment. 'billing_cycle' phases the interval to the customer's renewal time; 'utc' aligns to the UTC calendar.
+   */
+  anchor?: UpdatePlanAnchorResponse | undefined;
   /**
    * When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature.
    */
@@ -3296,7 +3368,7 @@ export type UpdatePlanResponse = {
   /**
    * Feature configurations included in this plan. Each item defines included units, pricing, and reset behavior for a feature.
    */
-  items: Array<UpdatePlanItem>;
+  items: Array<PlansUpdatePlanItem>;
   /**
    * Free trial configuration. If set, new customers can try this plan before being charged.
    */
@@ -3369,7 +3441,7 @@ export function updatePlanAdditionalCurrencyRequestBodyToJSON(
 }
 
 /** @internal */
-export type UpdatePlanBasePriceRequest$Outbound = {
+export type UpdatePlanBasePriceRequestBody$Outbound = {
   amount: number;
   interval: string;
   interval_count?: number | undefined;
@@ -3379,9 +3451,9 @@ export type UpdatePlanBasePriceRequest$Outbound = {
 };
 
 /** @internal */
-export const UpdatePlanBasePriceRequest$outboundSchema: z.ZodMiniType<
-  UpdatePlanBasePriceRequest$Outbound,
-  UpdatePlanBasePriceRequest
+export const UpdatePlanBasePriceRequestBody$outboundSchema: z.ZodMiniType<
+  UpdatePlanBasePriceRequestBody$Outbound,
+  UpdatePlanBasePriceRequestBody
 > = z.pipe(
   z.object({
     amount: z.number(),
@@ -3399,11 +3471,13 @@ export const UpdatePlanBasePriceRequest$outboundSchema: z.ZodMiniType<
   }),
 );
 
-export function updatePlanBasePriceRequestToJSON(
-  updatePlanBasePriceRequest: UpdatePlanBasePriceRequest,
+export function updatePlanBasePriceRequestBodyToJSON(
+  updatePlanBasePriceRequestBody: UpdatePlanBasePriceRequestBody,
 ): string {
   return JSON.stringify(
-    UpdatePlanBasePriceRequest$outboundSchema.parse(updatePlanBasePriceRequest),
+    UpdatePlanBasePriceRequestBody$outboundSchema.parse(
+      updatePlanBasePriceRequestBody,
+    ),
   );
 }
 
@@ -4366,17 +4440,17 @@ export function updatePlanLicenseToJSON(
 }
 
 /** @internal */
-export const UpdatePlanDurationTypeRequest$outboundSchema: z.ZodMiniEnum<
-  typeof UpdatePlanDurationTypeRequest
-> = z.enum(UpdatePlanDurationTypeRequest);
+export const UpdatePlanDurationTypeRequestBody$outboundSchema: z.ZodMiniEnum<
+  typeof UpdatePlanDurationTypeRequestBody
+> = z.enum(UpdatePlanDurationTypeRequestBody);
 
 /** @internal */
-export const UpdatePlanOnEndRequest$outboundSchema: z.ZodMiniEnum<
-  typeof UpdatePlanOnEndRequest
-> = z.enum(UpdatePlanOnEndRequest);
+export const UpdatePlanOnEndRequestBody$outboundSchema: z.ZodMiniEnum<
+  typeof UpdatePlanOnEndRequestBody
+> = z.enum(UpdatePlanOnEndRequestBody);
 
 /** @internal */
-export type UpdatePlanFreeTrialParamsRequest$Outbound = {
+export type UpdatePlanFreeTrialParamsRequestBody$Outbound = {
   duration_length: number;
   duration_type: string;
   card_required: boolean;
@@ -4384,18 +4458,18 @@ export type UpdatePlanFreeTrialParamsRequest$Outbound = {
 };
 
 /** @internal */
-export const UpdatePlanFreeTrialParamsRequest$outboundSchema: z.ZodMiniType<
-  UpdatePlanFreeTrialParamsRequest$Outbound,
-  UpdatePlanFreeTrialParamsRequest
+export const UpdatePlanFreeTrialParamsRequestBody$outboundSchema: z.ZodMiniType<
+  UpdatePlanFreeTrialParamsRequestBody$Outbound,
+  UpdatePlanFreeTrialParamsRequestBody
 > = z.pipe(
   z.object({
     durationLength: z.number(),
     durationType: z._default(
-      UpdatePlanDurationTypeRequest$outboundSchema,
+      UpdatePlanDurationTypeRequestBody$outboundSchema,
       "month",
     ),
     cardRequired: z._default(z.boolean(), true),
-    onEnd: z.optional(UpdatePlanOnEndRequest$outboundSchema),
+    onEnd: z.optional(UpdatePlanOnEndRequestBody$outboundSchema),
   }),
   z.transform((v) => {
     return remap$(v, {
@@ -4407,25 +4481,25 @@ export const UpdatePlanFreeTrialParamsRequest$outboundSchema: z.ZodMiniType<
   }),
 );
 
-export function updatePlanFreeTrialParamsRequestToJSON(
-  updatePlanFreeTrialParamsRequest: UpdatePlanFreeTrialParamsRequest,
+export function updatePlanFreeTrialParamsRequestBodyToJSON(
+  updatePlanFreeTrialParamsRequestBody: UpdatePlanFreeTrialParamsRequestBody,
 ): string {
   return JSON.stringify(
-    UpdatePlanFreeTrialParamsRequest$outboundSchema.parse(
-      updatePlanFreeTrialParamsRequest,
+    UpdatePlanFreeTrialParamsRequestBody$outboundSchema.parse(
+      updatePlanFreeTrialParamsRequestBody,
     ),
   );
 }
 
 /** @internal */
-export type UpdatePlanConfigRequest$Outbound = {
+export type UpdatePlanConfigRequestBody$Outbound = {
   ignore_past_due: boolean;
 };
 
 /** @internal */
-export const UpdatePlanConfigRequest$outboundSchema: z.ZodMiniType<
-  UpdatePlanConfigRequest$Outbound,
-  UpdatePlanConfigRequest
+export const UpdatePlanConfigRequestBody$outboundSchema: z.ZodMiniType<
+  UpdatePlanConfigRequestBody$Outbound,
+  UpdatePlanConfigRequestBody
 > = z.pipe(
   z.object({
     ignorePastDue: z._default(z.boolean(), false),
@@ -4437,11 +4511,13 @@ export const UpdatePlanConfigRequest$outboundSchema: z.ZodMiniType<
   }),
 );
 
-export function updatePlanConfigRequestToJSON(
-  updatePlanConfigRequest: UpdatePlanConfigRequest,
+export function updatePlanConfigRequestBodyToJSON(
+  updatePlanConfigRequestBody: UpdatePlanConfigRequestBody,
 ): string {
   return JSON.stringify(
-    UpdatePlanConfigRequest$outboundSchema.parse(updatePlanConfigRequest),
+    UpdatePlanConfigRequestBody$outboundSchema.parse(
+      updatePlanConfigRequestBody,
+    ),
   );
 }
 
@@ -4452,7 +4528,7 @@ export const UpdatePlanPurchaseLimitIntervalRequestBody$outboundSchema:
   );
 
 /** @internal */
-export type UpdatePlanPurchaseLimitRequest$Outbound = {
+export type UpdatePlanPurchaseLimitRequestBody$Outbound = {
   interval: string;
   interval_count: number;
   limit: number;
@@ -4460,9 +4536,9 @@ export type UpdatePlanPurchaseLimitRequest$Outbound = {
 };
 
 /** @internal */
-export const UpdatePlanPurchaseLimitRequest$outboundSchema: z.ZodMiniType<
-  UpdatePlanPurchaseLimitRequest$Outbound,
-  UpdatePlanPurchaseLimitRequest
+export const UpdatePlanPurchaseLimitRequestBody$outboundSchema: z.ZodMiniType<
+  UpdatePlanPurchaseLimitRequestBody$Outbound,
+  UpdatePlanPurchaseLimitRequestBody
 > = z.pipe(
   z.object({
     interval: UpdatePlanPurchaseLimitIntervalRequestBody$outboundSchema,
@@ -4477,30 +4553,30 @@ export const UpdatePlanPurchaseLimitRequest$outboundSchema: z.ZodMiniType<
   }),
 );
 
-export function updatePlanPurchaseLimitRequestToJSON(
-  updatePlanPurchaseLimitRequest: UpdatePlanPurchaseLimitRequest,
+export function updatePlanPurchaseLimitRequestBodyToJSON(
+  updatePlanPurchaseLimitRequestBody: UpdatePlanPurchaseLimitRequestBody,
 ): string {
   return JSON.stringify(
-    UpdatePlanPurchaseLimitRequest$outboundSchema.parse(
-      updatePlanPurchaseLimitRequest,
+    UpdatePlanPurchaseLimitRequestBody$outboundSchema.parse(
+      updatePlanPurchaseLimitRequestBody,
     ),
   );
 }
 
 /** @internal */
-export type UpdatePlanAutoTopupRequest$Outbound = {
+export type UpdatePlanAutoTopupRequestBody$Outbound = {
   feature_id: string;
   enabled: boolean;
   threshold: number;
   quantity: number;
-  purchase_limit?: UpdatePlanPurchaseLimitRequest$Outbound | undefined;
+  purchase_limit?: UpdatePlanPurchaseLimitRequestBody$Outbound | undefined;
   invoice_mode?: boolean | undefined;
 };
 
 /** @internal */
-export const UpdatePlanAutoTopupRequest$outboundSchema: z.ZodMiniType<
-  UpdatePlanAutoTopupRequest$Outbound,
-  UpdatePlanAutoTopupRequest
+export const UpdatePlanAutoTopupRequestBody$outboundSchema: z.ZodMiniType<
+  UpdatePlanAutoTopupRequestBody$Outbound,
+  UpdatePlanAutoTopupRequestBody
 > = z.pipe(
   z.object({
     featureId: z.string(),
@@ -4508,7 +4584,7 @@ export const UpdatePlanAutoTopupRequest$outboundSchema: z.ZodMiniType<
     threshold: z.number(),
     quantity: z.number(),
     purchaseLimit: z.optional(
-      z.lazy(() => UpdatePlanPurchaseLimitRequest$outboundSchema),
+      z.lazy(() => UpdatePlanPurchaseLimitRequestBody$outboundSchema),
     ),
     invoiceMode: z.optional(z.boolean()),
   }),
@@ -4521,11 +4597,13 @@ export const UpdatePlanAutoTopupRequest$outboundSchema: z.ZodMiniType<
   }),
 );
 
-export function updatePlanAutoTopupRequestToJSON(
-  updatePlanAutoTopupRequest: UpdatePlanAutoTopupRequest,
+export function updatePlanAutoTopupRequestBodyToJSON(
+  updatePlanAutoTopupRequestBody: UpdatePlanAutoTopupRequestBody,
 ): string {
   return JSON.stringify(
-    UpdatePlanAutoTopupRequest$outboundSchema.parse(updatePlanAutoTopupRequest),
+    UpdatePlanAutoTopupRequestBody$outboundSchema.parse(
+      updatePlanAutoTopupRequestBody,
+    ),
   );
 }
 
@@ -4535,7 +4613,7 @@ export const UpdatePlanLimitTypeRequestBody$outboundSchema: z.ZodMiniEnum<
 > = z.enum(UpdatePlanLimitTypeRequestBody);
 
 /** @internal */
-export type UpdatePlanSpendLimitRequest$Outbound = {
+export type UpdatePlanSpendLimitRequestBody$Outbound = {
   feature_id?: string | undefined;
   enabled: boolean;
   limit_type?: string | undefined;
@@ -4544,9 +4622,9 @@ export type UpdatePlanSpendLimitRequest$Outbound = {
 };
 
 /** @internal */
-export const UpdatePlanSpendLimitRequest$outboundSchema: z.ZodMiniType<
-  UpdatePlanSpendLimitRequest$Outbound,
-  UpdatePlanSpendLimitRequest
+export const UpdatePlanSpendLimitRequestBody$outboundSchema: z.ZodMiniType<
+  UpdatePlanSpendLimitRequestBody$Outbound,
+  UpdatePlanSpendLimitRequestBody
 > = z.pipe(
   z.object({
     featureId: z.optional(z.string()),
@@ -4565,12 +4643,12 @@ export const UpdatePlanSpendLimitRequest$outboundSchema: z.ZodMiniType<
   }),
 );
 
-export function updatePlanSpendLimitRequestToJSON(
-  updatePlanSpendLimitRequest: UpdatePlanSpendLimitRequest,
+export function updatePlanSpendLimitRequestBodyToJSON(
+  updatePlanSpendLimitRequestBody: UpdatePlanSpendLimitRequestBody,
 ): string {
   return JSON.stringify(
-    UpdatePlanSpendLimitRequest$outboundSchema.parse(
-      updatePlanSpendLimitRequest,
+    UpdatePlanSpendLimitRequestBody$outboundSchema.parse(
+      updatePlanSpendLimitRequestBody,
     ),
   );
 }
@@ -4580,6 +4658,11 @@ export const UpdatePlanUsageLimitIntervalRequestBody$outboundSchema:
   z.ZodMiniEnum<typeof UpdatePlanUsageLimitIntervalRequestBody> = z.enum(
     UpdatePlanUsageLimitIntervalRequestBody,
   );
+
+/** @internal */
+export const UpdatePlanAnchorRequestBody$outboundSchema: z.ZodMiniEnum<
+  typeof UpdatePlanAnchorRequestBody
+> = z.enum(UpdatePlanAnchorRequestBody);
 
 /** @internal */
 export type UpdatePlanProperties$Outbound = string | number | boolean;
@@ -4599,14 +4682,14 @@ export function updatePlanPropertiesToJSON(
 }
 
 /** @internal */
-export type UpdatePlanFilterRequest$Outbound = {
+export type UpdatePlanFilterRequestBody$Outbound = {
   properties: { [k: string]: string | number | boolean };
 };
 
 /** @internal */
-export const UpdatePlanFilterRequest$outboundSchema: z.ZodMiniType<
-  UpdatePlanFilterRequest$Outbound,
-  UpdatePlanFilterRequest
+export const UpdatePlanFilterRequestBody$outboundSchema: z.ZodMiniType<
+  UpdatePlanFilterRequestBody$Outbound,
+  UpdatePlanFilterRequestBody
 > = z.object({
   properties: z.record(
     z.string(),
@@ -4614,34 +4697,40 @@ export const UpdatePlanFilterRequest$outboundSchema: z.ZodMiniType<
   ),
 });
 
-export function updatePlanFilterRequestToJSON(
-  updatePlanFilterRequest: UpdatePlanFilterRequest,
+export function updatePlanFilterRequestBodyToJSON(
+  updatePlanFilterRequestBody: UpdatePlanFilterRequestBody,
 ): string {
   return JSON.stringify(
-    UpdatePlanFilterRequest$outboundSchema.parse(updatePlanFilterRequest),
+    UpdatePlanFilterRequestBody$outboundSchema.parse(
+      updatePlanFilterRequestBody,
+    ),
   );
 }
 
 /** @internal */
-export type UpdatePlanUsageLimitRequest$Outbound = {
+export type UpdatePlanUsageLimitRequestBody$Outbound = {
   feature_id: string;
   enabled: boolean;
   limit: number;
   interval: string;
-  filter?: UpdatePlanFilterRequest$Outbound | undefined;
+  anchor?: string | undefined;
+  filter?: UpdatePlanFilterRequestBody$Outbound | undefined;
 };
 
 /** @internal */
-export const UpdatePlanUsageLimitRequest$outboundSchema: z.ZodMiniType<
-  UpdatePlanUsageLimitRequest$Outbound,
-  UpdatePlanUsageLimitRequest
+export const UpdatePlanUsageLimitRequestBody$outboundSchema: z.ZodMiniType<
+  UpdatePlanUsageLimitRequestBody$Outbound,
+  UpdatePlanUsageLimitRequestBody
 > = z.pipe(
   z.object({
     featureId: z.string(),
     enabled: z._default(z.boolean(), true),
     limit: z.number(),
     interval: UpdatePlanUsageLimitIntervalRequestBody$outboundSchema,
-    filter: z.optional(z.lazy(() => UpdatePlanFilterRequest$outboundSchema)),
+    anchor: z.optional(UpdatePlanAnchorRequestBody$outboundSchema),
+    filter: z.optional(
+      z.lazy(() => UpdatePlanFilterRequestBody$outboundSchema),
+    ),
   }),
   z.transform((v) => {
     return remap$(v, {
@@ -4650,12 +4739,12 @@ export const UpdatePlanUsageLimitRequest$outboundSchema: z.ZodMiniType<
   }),
 );
 
-export function updatePlanUsageLimitRequestToJSON(
-  updatePlanUsageLimitRequest: UpdatePlanUsageLimitRequest,
+export function updatePlanUsageLimitRequestBodyToJSON(
+  updatePlanUsageLimitRequestBody: UpdatePlanUsageLimitRequestBody,
 ): string {
   return JSON.stringify(
-    UpdatePlanUsageLimitRequest$outboundSchema.parse(
-      updatePlanUsageLimitRequest,
+    UpdatePlanUsageLimitRequestBody$outboundSchema.parse(
+      updatePlanUsageLimitRequestBody,
     ),
   );
 }
@@ -4705,15 +4794,15 @@ export function updatePlanUsageAlertRequestBodyToJSON(
 }
 
 /** @internal */
-export type UpdatePlanOverageAllowedRequest$Outbound = {
+export type UpdatePlanOverageAllowedRequestBody$Outbound = {
   feature_id: string;
   enabled: boolean;
 };
 
 /** @internal */
-export const UpdatePlanOverageAllowedRequest$outboundSchema: z.ZodMiniType<
-  UpdatePlanOverageAllowedRequest$Outbound,
-  UpdatePlanOverageAllowedRequest
+export const UpdatePlanOverageAllowedRequestBody$outboundSchema: z.ZodMiniType<
+  UpdatePlanOverageAllowedRequestBody$Outbound,
+  UpdatePlanOverageAllowedRequestBody
 > = z.pipe(
   z.object({
     featureId: z.string(),
@@ -4726,45 +4815,47 @@ export const UpdatePlanOverageAllowedRequest$outboundSchema: z.ZodMiniType<
   }),
 );
 
-export function updatePlanOverageAllowedRequestToJSON(
-  updatePlanOverageAllowedRequest: UpdatePlanOverageAllowedRequest,
+export function updatePlanOverageAllowedRequestBodyToJSON(
+  updatePlanOverageAllowedRequestBody: UpdatePlanOverageAllowedRequestBody,
 ): string {
   return JSON.stringify(
-    UpdatePlanOverageAllowedRequest$outboundSchema.parse(
-      updatePlanOverageAllowedRequest,
+    UpdatePlanOverageAllowedRequestBody$outboundSchema.parse(
+      updatePlanOverageAllowedRequestBody,
     ),
   );
 }
 
 /** @internal */
-export type UpdatePlanBillingControlsRequest$Outbound = {
-  auto_topups?: Array<UpdatePlanAutoTopupRequest$Outbound> | undefined;
-  spend_limits?: Array<UpdatePlanSpendLimitRequest$Outbound> | undefined;
-  usage_limits?: Array<UpdatePlanUsageLimitRequest$Outbound> | undefined;
+export type UpdatePlanBillingControlsRequestBody$Outbound = {
+  auto_topups?: Array<UpdatePlanAutoTopupRequestBody$Outbound> | undefined;
+  spend_limits?: Array<UpdatePlanSpendLimitRequestBody$Outbound> | undefined;
+  usage_limits?: Array<UpdatePlanUsageLimitRequestBody$Outbound> | undefined;
   usage_alerts?: Array<UpdatePlanUsageAlertRequestBody$Outbound> | undefined;
-  overage_allowed?: Array<UpdatePlanOverageAllowedRequest$Outbound> | undefined;
+  overage_allowed?:
+    | Array<UpdatePlanOverageAllowedRequestBody$Outbound>
+    | undefined;
 };
 
 /** @internal */
-export const UpdatePlanBillingControlsRequest$outboundSchema: z.ZodMiniType<
-  UpdatePlanBillingControlsRequest$Outbound,
-  UpdatePlanBillingControlsRequest
+export const UpdatePlanBillingControlsRequestBody$outboundSchema: z.ZodMiniType<
+  UpdatePlanBillingControlsRequestBody$Outbound,
+  UpdatePlanBillingControlsRequestBody
 > = z.pipe(
   z.object({
     autoTopups: z.optional(
-      z.array(z.lazy(() => UpdatePlanAutoTopupRequest$outboundSchema)),
+      z.array(z.lazy(() => UpdatePlanAutoTopupRequestBody$outboundSchema)),
     ),
     spendLimits: z.optional(
-      z.array(z.lazy(() => UpdatePlanSpendLimitRequest$outboundSchema)),
+      z.array(z.lazy(() => UpdatePlanSpendLimitRequestBody$outboundSchema)),
     ),
     usageLimits: z.optional(
-      z.array(z.lazy(() => UpdatePlanUsageLimitRequest$outboundSchema)),
+      z.array(z.lazy(() => UpdatePlanUsageLimitRequestBody$outboundSchema)),
     ),
     usageAlerts: z.optional(
       z.array(z.lazy(() => UpdatePlanUsageAlertRequestBody$outboundSchema)),
     ),
     overageAllowed: z.optional(
-      z.array(z.lazy(() => UpdatePlanOverageAllowedRequest$outboundSchema)),
+      z.array(z.lazy(() => UpdatePlanOverageAllowedRequestBody$outboundSchema)),
     ),
   }),
   z.transform((v) => {
@@ -4778,12 +4869,12 @@ export const UpdatePlanBillingControlsRequest$outboundSchema: z.ZodMiniType<
   }),
 );
 
-export function updatePlanBillingControlsRequestToJSON(
-  updatePlanBillingControlsRequest: UpdatePlanBillingControlsRequest,
+export function updatePlanBillingControlsRequestBodyToJSON(
+  updatePlanBillingControlsRequestBody: UpdatePlanBillingControlsRequestBody,
 ): string {
   return JSON.stringify(
-    UpdatePlanBillingControlsRequest$outboundSchema.parse(
-      updatePlanBillingControlsRequest,
+    UpdatePlanBillingControlsRequestBody$outboundSchema.parse(
+      updatePlanBillingControlsRequestBody,
     ),
   );
 }
@@ -5450,6 +5541,10 @@ export const VariantUsageLimitInterval$outboundSchema: z.ZodMiniEnum<
 > = z.enum(VariantUsageLimitInterval);
 
 /** @internal */
+export const VariantAnchor$outboundSchema: z.ZodMiniEnum<typeof VariantAnchor> =
+  z.enum(VariantAnchor);
+
+/** @internal */
 export type VariantFilter$Outbound = {
   properties: { [k: string]: any };
 };
@@ -5472,6 +5567,7 @@ export type VariantUsageLimit$Outbound = {
   enabled: boolean;
   limit: number;
   interval: string;
+  anchor?: string | undefined;
   filter?: VariantFilter$Outbound | undefined;
 };
 
@@ -5485,6 +5581,7 @@ export const VariantUsageLimit$outboundSchema: z.ZodMiniType<
     enabled: z._default(z.boolean(), true),
     limit: z.number(),
     interval: VariantUsageLimitInterval$outboundSchema,
+    anchor: z.optional(VariantAnchor$outboundSchema),
     filter: z.optional(z.lazy(() => VariantFilter$outboundSchema)),
   }),
   z.transform((v) => {
@@ -5764,12 +5861,12 @@ export type UpdatePlanParams$Outbound = {
   description?: string | undefined;
   add_on?: boolean | undefined;
   auto_enable?: boolean | undefined;
-  price?: UpdatePlanBasePriceRequest$Outbound | null | undefined;
+  price?: UpdatePlanBasePriceRequestBody$Outbound | null | undefined;
   items?: Array<UpdatePlanItemPlanItem$Outbound> | undefined;
   licenses?: Array<UpdatePlanLicense$Outbound> | undefined;
-  free_trial?: UpdatePlanFreeTrialParamsRequest$Outbound | null | undefined;
-  config?: UpdatePlanConfigRequest$Outbound | undefined;
-  billing_controls?: UpdatePlanBillingControlsRequest$Outbound | undefined;
+  free_trial?: UpdatePlanFreeTrialParamsRequestBody$Outbound | null | undefined;
+  config?: UpdatePlanConfigRequestBody$Outbound | undefined;
+  billing_controls?: UpdatePlanBillingControlsRequestBody$Outbound | undefined;
   metadata?: { [k: string]: any } | undefined;
   create_in_stripe: boolean;
   version?: number | undefined;
@@ -5799,7 +5896,7 @@ export const UpdatePlanParams$outboundSchema: z.ZodMiniType<
     addOn: z.optional(z.boolean()),
     autoEnable: z.optional(z.boolean()),
     price: z.optional(
-      z.nullable(z.lazy(() => UpdatePlanBasePriceRequest$outboundSchema)),
+      z.nullable(z.lazy(() => UpdatePlanBasePriceRequestBody$outboundSchema)),
     ),
     items: z.optional(
       z.array(z.lazy(() => UpdatePlanItemPlanItem$outboundSchema)),
@@ -5808,11 +5905,15 @@ export const UpdatePlanParams$outboundSchema: z.ZodMiniType<
       z.array(z.lazy(() => UpdatePlanLicense$outboundSchema)),
     ),
     freeTrial: z.optional(
-      z.nullable(z.lazy(() => UpdatePlanFreeTrialParamsRequest$outboundSchema)),
+      z.nullable(z.lazy(() =>
+        UpdatePlanFreeTrialParamsRequestBody$outboundSchema
+      )),
     ),
-    config: z.optional(z.lazy(() => UpdatePlanConfigRequest$outboundSchema)),
+    config: z.optional(
+      z.lazy(() => UpdatePlanConfigRequestBody$outboundSchema),
+    ),
     billingControls: z.optional(
-      z.lazy(() => UpdatePlanBillingControlsRequest$outboundSchema),
+      z.lazy(() => UpdatePlanBillingControlsRequestBody$outboundSchema),
     ),
     metadata: z.optional(z.record(z.string(), z.any())),
     createInStripe: z._default(z.boolean(), true),
@@ -6289,8 +6390,8 @@ export function updatePlanItemRolloverResponseFromJSON(
 }
 
 /** @internal */
-export const UpdatePlanItem$inboundSchema: z.ZodMiniType<
-  UpdatePlanItem,
+export const PlansUpdatePlanItem$inboundSchema: z.ZodMiniType<
+  PlansUpdatePlanItem,
   unknown
 > = z.pipe(
   z.object({
@@ -6317,13 +6418,13 @@ export const UpdatePlanItem$inboundSchema: z.ZodMiniType<
   }),
 );
 
-export function updatePlanItemFromJSON(
+export function plansUpdatePlanItemFromJSON(
   jsonString: string,
-): SafeParseResult<UpdatePlanItem, SDKValidationError> {
+): SafeParseResult<PlansUpdatePlanItem, SDKValidationError> {
   return safeParse(
     jsonString,
-    (x) => UpdatePlanItem$inboundSchema.parse(JSON.parse(x)),
-    `Failed to parse 'UpdatePlanItem' from JSON`,
+    (x) => PlansUpdatePlanItem$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'PlansUpdatePlanItem' from JSON`,
   );
 }
 
@@ -6585,9 +6686,9 @@ export const UpdatePlanVariantDetailsAddItemPriceInterval$inboundSchema:
     openEnums.inboundSchema(UpdatePlanVariantDetailsAddItemPriceInterval);
 
 /** @internal */
-export const UpdatePlanVariantDetailsAddItemBillingMethod$inboundSchema:
-  z.ZodMiniType<UpdatePlanVariantDetailsAddItemBillingMethod, unknown> =
-    openEnums.inboundSchema(UpdatePlanVariantDetailsAddItemBillingMethod);
+export const UpdatePlanAddItemBillingMethodResponse$inboundSchema:
+  z.ZodMiniType<UpdatePlanAddItemBillingMethodResponse, unknown> = openEnums
+    .inboundSchema(UpdatePlanAddItemBillingMethodResponse);
 
 /** @internal */
 export const UpdatePlanVariantDetailsPrice$inboundSchema: z.ZodMiniType<
@@ -6608,7 +6709,7 @@ export const UpdatePlanVariantDetailsPrice$inboundSchema: z.ZodMiniType<
     interval: UpdatePlanVariantDetailsAddItemPriceInterval$inboundSchema,
     interval_count: z._default(types.number(), 1),
     billing_units: z._default(types.number(), 1),
-    billing_method: UpdatePlanVariantDetailsAddItemBillingMethod$inboundSchema,
+    billing_method: UpdatePlanAddItemBillingMethodResponse$inboundSchema,
     max_purchase: z.optional(z.nullable(types.number())),
   }),
   z.transform((v) => {
@@ -6634,16 +6735,16 @@ export function updatePlanVariantDetailsPriceFromJSON(
 }
 
 /** @internal */
-export const UpdatePlanVariantDetailsOnIncrease$inboundSchema: z.ZodMiniType<
-  UpdatePlanVariantDetailsOnIncrease,
+export const UpdatePlanOnIncreaseResponse$inboundSchema: z.ZodMiniType<
+  UpdatePlanOnIncreaseResponse,
   unknown
-> = openEnums.inboundSchema(UpdatePlanVariantDetailsOnIncrease);
+> = openEnums.inboundSchema(UpdatePlanOnIncreaseResponse);
 
 /** @internal */
-export const UpdatePlanVariantDetailsOnDecrease$inboundSchema: z.ZodMiniType<
-  UpdatePlanVariantDetailsOnDecrease,
+export const UpdatePlanOnDecreaseResponse$inboundSchema: z.ZodMiniType<
+  UpdatePlanOnDecreaseResponse,
   unknown
-> = openEnums.inboundSchema(UpdatePlanVariantDetailsOnDecrease);
+> = openEnums.inboundSchema(UpdatePlanOnDecreaseResponse);
 
 /** @internal */
 export const UpdatePlanProrationResponse$inboundSchema: z.ZodMiniType<
@@ -6651,8 +6752,8 @@ export const UpdatePlanProrationResponse$inboundSchema: z.ZodMiniType<
   unknown
 > = z.pipe(
   z.object({
-    on_increase: UpdatePlanVariantDetailsOnIncrease$inboundSchema,
-    on_decrease: UpdatePlanVariantDetailsOnDecrease$inboundSchema,
+    on_increase: UpdatePlanOnIncreaseResponse$inboundSchema,
+    on_decrease: UpdatePlanOnDecreaseResponse$inboundSchema,
   }),
   z.transform((v) => {
     return remap$(v, {
@@ -6749,9 +6850,9 @@ export function updatePlanPlanItemResponseFromJSON(
 }
 
 /** @internal */
-export const UpdatePlanVariantDetailsRemoveItemBillingMethod$inboundSchema:
-  z.ZodMiniType<UpdatePlanVariantDetailsRemoveItemBillingMethod, unknown> =
-    openEnums.inboundSchema(UpdatePlanVariantDetailsRemoveItemBillingMethod);
+export const UpdatePlanRemoveItemBillingMethodResponse$inboundSchema:
+  z.ZodMiniType<UpdatePlanRemoveItemBillingMethodResponse, unknown> = openEnums
+    .inboundSchema(UpdatePlanRemoveItemBillingMethodResponse);
 
 /** @internal */
 export const UpdatePlanIntervalVariantDetailsRemoveItemEnum2$inboundSchema:
@@ -6791,7 +6892,7 @@ export const UpdatePlanPlanItemFilterResponse$inboundSchema: z.ZodMiniType<
   z.object({
     feature_id: types.optional(types.string()),
     billing_method: types.optional(
-      UpdatePlanVariantDetailsRemoveItemBillingMethod$inboundSchema,
+      UpdatePlanRemoveItemBillingMethodResponse$inboundSchema,
     ),
     interval: types.optional(
       smartUnion([
@@ -6979,11 +7080,17 @@ export const UpdatePlanVariantDetailsUsageLimitInterval$inboundSchema:
     .inboundSchema(UpdatePlanVariantDetailsUsageLimitInterval);
 
 /** @internal */
+export const UpdatePlanVariantDetailsAnchor$inboundSchema: z.ZodMiniType<
+  UpdatePlanVariantDetailsAnchor,
+  unknown
+> = openEnums.inboundSchema(UpdatePlanVariantDetailsAnchor);
+
+/** @internal */
 export const UpdatePlanVariantDetailsFilter$inboundSchema: z.ZodMiniType<
   UpdatePlanVariantDetailsFilter,
   unknown
 > = z.object({
-  properties: z.record(z.string(), z.any()),
+  properties: z.record(z.string(), types.string()),
 });
 
 export function updatePlanVariantDetailsFilterFromJSON(
@@ -7006,6 +7113,7 @@ export const UpdatePlanVariantDetailsUsageLimit$inboundSchema: z.ZodMiniType<
     enabled: z._default(types.boolean(), true),
     limit: types.number(),
     interval: UpdatePlanVariantDetailsUsageLimitInterval$inboundSchema,
+    anchor: types.optional(UpdatePlanVariantDetailsAnchor$inboundSchema),
     filter: types.optional(
       z.lazy(() => UpdatePlanVariantDetailsFilter$inboundSchema),
     ),
@@ -7343,11 +7451,17 @@ export const UpdatePlanUsageLimitIntervalResponse$inboundSchema: z.ZodMiniType<
 > = openEnums.inboundSchema(UpdatePlanUsageLimitIntervalResponse);
 
 /** @internal */
+export const UpdatePlanAnchorResponse$inboundSchema: z.ZodMiniType<
+  UpdatePlanAnchorResponse,
+  unknown
+> = openEnums.inboundSchema(UpdatePlanAnchorResponse);
+
+/** @internal */
 export const UpdatePlanFilterResponse$inboundSchema: z.ZodMiniType<
   UpdatePlanFilterResponse,
   unknown
 > = z.object({
-  properties: z.record(z.string(), z.any()),
+  properties: z.record(z.string(), types.string()),
 });
 
 export function updatePlanFilterResponseFromJSON(
@@ -7370,6 +7484,7 @@ export const UpdatePlanUsageLimitResponse$inboundSchema: z.ZodMiniType<
     enabled: z._default(types.boolean(), true),
     limit: types.number(),
     interval: UpdatePlanUsageLimitIntervalResponse$inboundSchema,
+    anchor: types.optional(UpdatePlanAnchorResponse$inboundSchema),
     filter: types.optional(
       z.lazy(() => UpdatePlanFilterResponse$inboundSchema),
     ),
@@ -7552,7 +7667,7 @@ export const UpdatePlanResponse$inboundSchema: z.ZodMiniType<
     add_on: types.boolean(),
     auto_enable: types.boolean(),
     price: types.nullable(z.lazy(() => UpdatePlanPriceResponse$inboundSchema)),
-    items: z.array(z.lazy(() => UpdatePlanItem$inboundSchema)),
+    items: z.array(z.lazy(() => PlansUpdatePlanItem$inboundSchema)),
     free_trial: types.optional(z.lazy(() => UpdatePlanFreeTrial$inboundSchema)),
     created_at: types.number(),
     env: UpdatePlanEnv$inboundSchema,

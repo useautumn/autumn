@@ -32,6 +32,7 @@ import {
 	hasBillingControls,
 } from "@/components/billing-controls/BillingControlsDisplay";
 import { OVERAGE_BILLING_OPTIONS } from "@/components/billing-controls/overageBillingOptions";
+import { UsageAnchorTooltip } from "@/components/billing-controls/UsageAnchorTooltip";
 import { FieldInfo } from "@/components/general/form/field-info";
 import { FeatureSearchDropdown } from "@/components/v2/dropdowns/FeatureSearchDropdown";
 import { useProduct } from "@/components/v2/inline-custom-plan-editor/PlanEditorContext";
@@ -400,21 +401,37 @@ function SpendLimitFields({ form }: { form: UsePlanBillingControlForm }) {
 
 function UsageLimitFields({ form }: { form: UsePlanBillingControlForm }) {
 	return (
-		<div className="grid grid-cols-2 gap-2.5">
-			<NumberFieldRow
-				form={form}
-				name="usage_limit"
-				label="Limit"
-				placeholder="eg. 1000"
-				parse="float"
-			/>
-			<SelectFieldRow
-				form={form}
-				name="usage_interval"
-				label="Interval"
-				placeholder="Interval"
-				options={USAGE_INTERVAL_OPTIONS}
-			/>
+		<div className="flex flex-col gap-2.5">
+			<div className="grid grid-cols-2 gap-2.5">
+				<NumberFieldRow
+					form={form}
+					name="usage_limit"
+					label="Limit"
+					placeholder="eg. 1000"
+					parse="float"
+				/>
+				<SelectFieldRow
+					form={form}
+					name="usage_interval"
+					label="Interval"
+					placeholder="Interval"
+					options={USAGE_INTERVAL_OPTIONS}
+				/>
+			</div>
+			<form.Field name="usage_anchor_utc">
+				{(field) => (
+					<div className="flex items-center justify-between">
+						<div className="flex items-center gap-1.5">
+							<FormLabel className="mb-0">Anchor to UTC time</FormLabel>
+							<UsageAnchorTooltip />
+						</div>
+						<Switch
+							checked={field.state.value}
+							onCheckedChange={field.handleChange}
+						/>
+					</div>
+				)}
+			</form.Field>
 		</div>
 	);
 }

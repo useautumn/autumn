@@ -876,6 +876,18 @@ export type PreviewAttachUsageLimitInterval = ClosedEnum<
   typeof PreviewAttachUsageLimitInterval
 >;
 
+/**
+ * Window alignment. 'billing_cycle' phases the interval to the customer's renewal time; 'utc' aligns to the UTC calendar.
+ */
+export const PreviewAttachAnchor = {
+  BillingCycle: "billing_cycle",
+  Utc: "utc",
+} as const;
+/**
+ * Window alignment. 'billing_cycle' phases the interval to the customer's renewal time; 'utc' aligns to the UTC calendar.
+ */
+export type PreviewAttachAnchor = ClosedEnum<typeof PreviewAttachAnchor>;
+
 export type PreviewAttachProperties = string | number | boolean;
 
 /**
@@ -902,6 +914,10 @@ export type PreviewAttachUsageLimit = {
    * Interval for the cap, aligned to the customer's billing cycle.
    */
   interval: PreviewAttachUsageLimitInterval;
+  /**
+   * Window alignment. 'billing_cycle' phases the interval to the customer's renewal time; 'utc' aligns to the UTC calendar.
+   */
+  anchor?: PreviewAttachAnchor | undefined;
   /**
    * When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature.
    */
@@ -1666,6 +1682,10 @@ export type PreviewAttachParams = {
    * Currency to bill this attach in (e.g. usd, eur). Must match the customer's currency if they are already locked to one, and the plan must offer a paid price in it. Defaults to the customer's currency, then the org default.
    */
   currency?: string | undefined;
+  /**
+   * Plan IDs to expire on the customer as part of this attach. Each must be an active plan billed on the same subscription as the attach (or a free plan); plans on a separate subscription are rejected.
+   */
+  removePlanIds?: Array<string> | undefined;
 };
 
 export type PreviewAttachDiscount = {
@@ -1699,11 +1719,11 @@ export type PreviewAttachLineItem = {
    */
   description: string;
   /**
-   * The amount in cents before discounts and tax for this line item.
+   * The amount before discounts and tax for this line item.
    */
   subtotal: number;
   /**
-   * The final amount in cents after discounts and tax for this line item.
+   * The final amount after discounts and tax for this line item.
    */
   total: number;
   /**
@@ -1759,11 +1779,11 @@ export type PreviewAttachNextCycleLineItem = {
    */
   description: string;
   /**
-   * The amount in cents before discounts and tax for this line item.
+   * The amount before discounts and tax for this line item.
    */
   subtotal: number;
   /**
-   * The final amount in cents after discounts and tax for this line item.
+   * The final amount after discounts and tax for this line item.
    */
   total: number;
   /**
@@ -1830,11 +1850,11 @@ export type PreviewAttachNextCycle = {
    */
   startsAt: number;
   /**
-   * The total amount in cents before discounts and tax for the next cycle.
+   * The total amount before discounts and tax for the next cycle.
    */
   subtotal: number;
   /**
-   * The final amount in cents after discounts and tax for the next cycle.
+   * The final amount after discounts and tax for the next cycle.
    */
   total: number;
   /**
@@ -1987,15 +2007,15 @@ export type PreviewAttachResponse = {
   customerId: string;
   lineItems: Array<PreviewAttachLineItem>;
   /**
-   * The total amount in cents before discounts and tax for the current billing period.
+   * The total amount before discounts and tax for the current billing period.
    */
   subtotal: number;
   /**
-   * The final amount in cents after discounts and tax for the current billing period.
+   * The final amount after discounts and tax for the current billing period.
    */
   total: number;
   /**
-   * The three-letter ISO currency code (e.g., 'usd').
+   * The three-letter ISO currency code. All amounts are in the currency's major unit (e.g., dollars for USD).
    */
   currency: string;
   /**
@@ -3104,6 +3124,11 @@ export const PreviewAttachUsageLimitInterval$outboundSchema: z.ZodMiniEnum<
 > = z.enum(PreviewAttachUsageLimitInterval);
 
 /** @internal */
+export const PreviewAttachAnchor$outboundSchema: z.ZodMiniEnum<
+  typeof PreviewAttachAnchor
+> = z.enum(PreviewAttachAnchor);
+
+/** @internal */
 export type PreviewAttachProperties$Outbound = string | number | boolean;
 
 /** @internal */
@@ -3150,6 +3175,7 @@ export type PreviewAttachUsageLimit$Outbound = {
   enabled: boolean;
   limit: number;
   interval: string;
+  anchor?: string | undefined;
   filter?: PreviewAttachFilter$Outbound | undefined;
 };
 
@@ -3163,6 +3189,7 @@ export const PreviewAttachUsageLimit$outboundSchema: z.ZodMiniType<
     enabled: z._default(z.boolean(), true),
     limit: z.number(),
     interval: PreviewAttachUsageLimitInterval$outboundSchema,
+    anchor: z.optional(PreviewAttachAnchor$outboundSchema),
     filter: z.optional(z.lazy(() => PreviewAttachFilter$outboundSchema)),
   }),
   z.transform((v) => {
@@ -4166,6 +4193,7 @@ export type PreviewAttachParams$Outbound = {
   enable_plan_immediately?: boolean | undefined;
   tax_rate_id?: string | undefined;
   currency?: string | undefined;
+  remove_plan_ids?: Array<string> | undefined;
 };
 
 /** @internal */
@@ -4222,6 +4250,7 @@ export const PreviewAttachParams$outboundSchema: z.ZodMiniType<
     enablePlanImmediately: z.optional(z.boolean()),
     taxRateId: z.optional(z.string()),
     currency: z.optional(z.string()),
+    removePlanIds: z.optional(z.array(z.string())),
   }),
   z.transform((v) => {
     return remap$(v, {
@@ -4249,6 +4278,7 @@ export const PreviewAttachParams$outboundSchema: z.ZodMiniType<
       noBillingChanges: "no_billing_changes",
       enablePlanImmediately: "enable_plan_immediately",
       taxRateId: "tax_rate_id",
+      removePlanIds: "remove_plan_ids",
     });
   }),
 );

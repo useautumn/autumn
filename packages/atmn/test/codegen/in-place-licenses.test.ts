@@ -37,6 +37,12 @@ test.concurrent(
 			expect(config.indexOf("export const pro")).toBeLessThan(
 				config.indexOf("export const seats"),
 			);
+			await writeConfig({ features: [], plans, cwd });
+			expect(
+				[
+					...readFileSync(configPath, "utf8").matchAll(/export const (\w+)/g),
+				].map(([, varName]) => varName),
+			).toEqual(["pro", "seats"]);
 		} finally {
 			rmSync(cwd, { recursive: true, force: true });
 		}

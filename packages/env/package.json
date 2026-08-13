@@ -1,0 +1,27 @@
+{
+	"name": "@autumn/env",
+	"version": "0.0.1",
+	"private": true,
+	"type": "module",
+	"sideEffects": false,
+	"exports": {
+		".": {
+			"types": "./src/index.ts",
+			"import": "./src/index.ts",
+			"default": "./src/index.ts"
+		}
+	},
+	"scripts": {
+		"ts": "tsc --noEmit",
+		"test": "UNIT_TESTS=1 bun test src"
+	},
+	"dependencies": {
+		"@t3-oss/env-core": "0.13.11",
+		"zod": "^3.25.23"
+	},
+	"devDependencies": {
+		"@types/bun": "^1.3.1",
+		"@types/node": "^25.0.7",
+		"typescript": "^5.7.3"
+	}
+}

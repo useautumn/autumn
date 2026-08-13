@@ -387,6 +387,7 @@ export const setupPaymentUsageLimitOutboundSchema = z.object({
 	enabled: z.boolean(),
 	limit: z.number(),
 	interval: z.string(),
+	anchor: z.union([z.string(), z.undefined()]).optional(),
 	filter: z.union([setupPaymentFilterOutboundSchema, z.undefined()]).optional(),
 });
 
@@ -646,6 +647,7 @@ export const setupPaymentParamsOutboundSchema = z.object({
 	enable_plan_immediately: z.union([z.boolean(), z.undefined()]).optional(),
 	tax_rate_id: z.union([z.string(), z.undefined()]).optional(),
 	currency: z.union([z.string(), z.undefined()]).optional(),
+	remove_plan_ids: z.union([z.array(z.string()), z.undefined()]).optional(),
 });
 
 const closedEnumSchema = z.any();
@@ -861,11 +863,14 @@ export const setupPaymentSpendLimitSchema = z.object({
 
 export const setupPaymentUsageLimitIntervalSchema = closedEnumSchema;
 
+export const setupPaymentAnchorSchema = closedEnumSchema;
+
 export const setupPaymentUsageLimitSchema = z.object({
 	featureId: z.string(),
 	enabled: z.union([z.boolean(), z.undefined()]).optional(),
 	limit: z.number(),
 	interval: setupPaymentUsageLimitIntervalSchema,
+	anchor: z.union([setupPaymentAnchorSchema, z.undefined()]).optional(),
 	filter: z.union([setupPaymentFilterSchema, z.undefined()]).optional(),
 });
 
@@ -1115,4 +1120,5 @@ export const setupPaymentParamsSchema = z.object({
 	enablePlanImmediately: z.union([z.boolean(), z.undefined()]).optional(),
 	taxRateId: z.union([z.string(), z.undefined()]).optional(),
 	currency: z.union([z.string(), z.undefined()]).optional(),
+	removePlanIds: z.union([z.array(z.string()), z.undefined()]).optional(),
 });

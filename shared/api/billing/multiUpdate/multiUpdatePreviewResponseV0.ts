@@ -24,7 +24,8 @@ const multiUpdatePreviewBase = {
 		description: "The ID of the customer the preview applies to.",
 	}),
 	currency: z.string().meta({
-		description: "The three-letter ISO currency code (e.g., 'usd').",
+		description:
+			"The three-letter ISO currency code. All amounts are in the currency's major unit (e.g., dollars for USD).",
 	}),
 	total: z.number().meta({
 		description:

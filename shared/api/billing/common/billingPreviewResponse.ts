@@ -68,12 +68,10 @@ export const ExtPreviewLineItemSchema = z.object({
 		.string()
 		.meta({ description: "A detailed description of the line item." }),
 	subtotal: z.number().meta({
-		description:
-			"The amount in cents before discounts and tax for this line item.",
+		description: "The amount before discounts and tax for this line item.",
 	}),
 	total: z.number().meta({
-		description:
-			"The final amount in cents after discounts and tax for this line item.",
+		description: "The final amount after discounts and tax for this line item.",
 	}),
 	discounts: z.array(PreviewLineItemDiscountSchema).default([]).meta({
 		description: "List of discounts applied to this line item.",
@@ -123,16 +121,17 @@ export const ExtBillingPreviewResponseSchema = z.object({
 	}),
 	subtotal: z.number().meta({
 		description:
-			"The total amount in cents before discounts and tax for the current billing period.",
+			"The total amount before discounts and tax for the current billing period.",
 	}),
 
 	total: z.number().meta({
 		description:
-			"The final amount in cents after discounts and tax for the current billing period.",
+			"The final amount after discounts and tax for the current billing period.",
 	}),
 
 	currency: z.string().meta({
-		description: "The three-letter ISO currency code (e.g., 'usd').",
+		description:
+			"The three-letter ISO currency code. All amounts are in the currency's major unit (e.g., dollars for USD).",
 	}),
 
 	next_cycle: z
@@ -143,11 +142,11 @@ export const ExtBillingPreviewResponseSchema = z.object({
 			}),
 			subtotal: z.number().meta({
 				description:
-					"The total amount in cents before discounts and tax for the next cycle.",
+					"The total amount before discounts and tax for the next cycle.",
 			}),
 			total: z.number().meta({
 				description:
-					"The final amount in cents after discounts and tax for the next cycle.",
+					"The final amount after discounts and tax for the next cycle.",
 			}),
 			line_items: z.array(PreviewLineItemSchema).meta({
 				description: "List of line items for the next billing cycle.",
