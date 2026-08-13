@@ -130,16 +130,21 @@ test.concurrent(
 		expect(convergedRows).toHaveLength(ASSIGNED_SEATS);
 
 		// The whole point: a metered row must track a balance AND reset.
-		const parentAnchor = liveAssignments[0]?.billing_cycle_anchor ?? null;
+		const { products } = await getLicenseDbState({ db: ctx.db, customerId });
+		const parentProduct = products.find(
+			(product) => !product.customer_license_link_id,
+		);
+		const parentAnchor =
+			parentProduct?.billing_cycle_anchor ?? parentProduct?.starts_at ?? null;
+		expect(parentAnchor).not.toBeNull();
+
 		for (const row of convergedRows) {
 			expect(row.entitlementId).toBe(meteredEntitlement?.id ?? "");
 			expect(Number(row.balance)).toBe(ADDED_WORDS);
 			expect(row.resetCycleAnchor).not.toBeNull();
 			expect(row.nextResetAt).not.toBeNull();
 			expect(Number(row.nextResetAt)).toBeGreaterThan(Date.now());
-			if (parentAnchor !== null) {
-				expect(Number(row.resetCycleAnchor)).toBe(Number(parentAnchor));
-			}
+			expect(Number(row.resetCycleAnchor)).toBe(Number(parentAnchor));
 		}
 
 		// Replay: the migration must be idempotent. pollUntil returns on FIRST

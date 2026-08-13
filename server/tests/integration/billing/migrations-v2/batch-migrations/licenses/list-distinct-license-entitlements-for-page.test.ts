@@ -13,13 +13,13 @@
 
 import { expect, test } from "bun:test";
 import { customerEntitlements, EntInterval } from "@autumn/shared";
-import { listDistinctLicenseEntitlementsForPage } from "@/internal/migrations/v2/batchOperations/actions/replaceLicenseEntitlementsForPage/listDistinctLicenseEntitlementsForPage.js";
-import { buildOperationScope } from "@/internal/migrations/v2/batchOperations/scope/operationScope.js";
 import { setupLicenseUpdateScenario } from "@tests/integration/licenses/billing/update/setupLicenseUpdateScenario";
 import { TestFeature } from "@tests/setup/v2Features";
 import { items } from "@tests/utils/fixtures/items";
 import chalk from "chalk";
 import { and, eq } from "drizzle-orm";
+import { listDistinctLicenseEntitlementsForPage } from "@/internal/migrations/v2/batchOperations/actions/replaceLicenseEntitlementsForPage/listDistinctLicenseEntitlementsForPage.js";
+import { buildOperationScope } from "@/internal/migrations/v2/batchOperations/scope/operationScope.js";
 import {
 	cloneAssignmentEntitlement,
 	licenseReplacePageContext,
