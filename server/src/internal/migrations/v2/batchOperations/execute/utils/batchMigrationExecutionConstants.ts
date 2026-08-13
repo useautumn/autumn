@@ -17,6 +17,10 @@ export const BATCH_MIGRATION_CANDIDATE_ROW_BATCH = 10_000;
  * is never intended; fail loudly instead. */
 export const BATCH_MIGRATION_MAX_CANDIDATE_ROWS_PER_PAGE = 1_000_000;
 
+/** Distinct live entitlement definitions for one feature on one page. One
+ * unique id per customer is the pathological ceiling; over this, refuse. */
+export const BATCH_MIGRATION_MAX_DISTINCT_ENTITLEMENTS = 5_000;
+
 /** Runaway backstop: 2000 pages × 5000 customers = 10M per run. */
 export const BATCH_MIGRATION_MAX_PAGES = 2000;
 
