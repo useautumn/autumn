@@ -8,6 +8,7 @@ import {
 import type { CreatePlanItemParamsV1 } from "@autumn/shared/api/products/items/crud/createPlanItemParamsV1.js";
 import type { PlanItemFilter } from "@autumn/shared/api/products/items/filter/planItemFilter.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
+import { handleCustomizeDeleteItems } from "@/internal/billing/v2/setup/patch/handleCustomizeDeleteItems.js";
 
 const getAddItemEntitlementInterval = ({
 	item,
@@ -17,36 +18,6 @@ const getAddItemEntitlementInterval = ({
 	(item.reset?.interval ??
 		item.price?.interval ??
 		EntInterval.Lifetime) as EntInterval;
-
-const itemWillReplaceRemovedItem = ({
-	item,
-	removeItems,
-}: {
-	item: CreatePlanItemParamsV1;
-	removeItems?: PlanItemFilter[];
-}) => {
-	if (!removeItems?.length) return false;
-
-	const itemInterval = getAddItemEntitlementInterval({ item });
-
-	return removeItems.some((removeItem) => {
-		if (
-			removeItem.feature_id !== undefined &&
-			removeItem.feature_id !== item.feature_id
-		) {
-			return false;
-		}
-
-		if (
-			removeItem.interval !== undefined &&
-			String(removeItem.interval) !== String(itemInterval)
-		) {
-			return false;
-		}
-
-		return true;
-	});
-};
 
 export const itemAlreadyExists = ({
 	ctx,
@@ -59,7 +30,19 @@ export const itemAlreadyExists = ({
 	item: CreatePlanItemParamsV1;
 	removeItems?: PlanItemFilter[];
 }): boolean => {
-	if (itemWillReplaceRemovedItem({ item, removeItems })) return false;
+	const remainingCustomerProduct = removeItems?.length
+		? {
+				...customerProduct,
+				customer_prices: [...customerProduct.customer_prices],
+				customer_entitlements: [...customerProduct.customer_entitlements],
+			}
+		: customerProduct;
+	if (removeItems?.length) {
+		handleCustomizeDeleteItems({
+			customize: { remove_items: removeItems },
+			targetCustomerProduct: remainingCustomerProduct,
+		});
+	}
 
 	const feature = findFeatureById({
 		features: ctx.features,
@@ -70,7 +53,7 @@ export const itemAlreadyExists = ({
 	if (isBooleanFeature({ feature })) {
 		return Boolean(
 			findCustomerEntitlementByFeature({
-				cusEnts: customerProduct.customer_entitlements,
+				cusEnts: remainingCustomerProduct.customer_entitlements,
 				featureId: item.feature_id,
 			}),
 		);
@@ -78,7 +61,7 @@ export const itemAlreadyExists = ({
 
 	const itemInterval = getAddItemEntitlementInterval({ item });
 
-	return customerProduct.customer_entitlements.some(
+	return remainingCustomerProduct.customer_entitlements.some(
 		(customerEntitlement) =>
 			customerEntitlement.feature_id === item.feature_id &&
 			String(
