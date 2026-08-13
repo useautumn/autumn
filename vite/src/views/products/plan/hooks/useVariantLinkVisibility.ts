@@ -21,8 +21,12 @@ export function useVariantLinkVisibility(product: ProductV2) {
 	);
 
 	// The editor leaves base_id undefined until edited; null means detach.
+	// A self-link is never a real link, so it reads as the persisted value.
+	const editedBasePlanId = product.base_id;
 	const selectedBasePlanId =
-		product.base_id === undefined ? basePlanId : product.base_id;
+		editedBasePlanId === undefined || editedBasePlanId === product.id
+			? basePlanId
+			: editedBasePlanId;
 
 	return {
 		isVariant: basePlanId !== null,

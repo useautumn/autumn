@@ -141,21 +141,23 @@ export const SaveChangesBar = ({
 			});
 		}
 
-		const planSaved = planHasChanges
-			? await updateProduct({
-					axiosInstance,
-					productId: product.id,
-					product,
-					version: product.version,
-					orgCurrency: org?.default_currency,
-					onSuccess: async () => {
-						await queryRefetch();
-						await Promise.all([invalidateProduct(), invalidateProducts()]);
-					},
-				})
-			: true;
-		const basePlanLinkSaved = planSaved ? await applyBasePlanLink() : false;
-		const licensesSaved = basePlanLinkSaved
+		// Linking first keeps a failure retryable; a new version inherits the link.
+		const basePlanLinkSaved = await applyBasePlanLink();
+		const planSaved =
+			basePlanLinkSaved && planHasChanges
+				? await updateProduct({
+						axiosInstance,
+						productId: product.id,
+						product,
+						version: product.version,
+						orgCurrency: org?.default_currency,
+						onSuccess: async () => {
+							await queryRefetch();
+							await Promise.all([invalidateProduct(), invalidateProducts()]);
+						},
+					})
+				: basePlanLinkSaved;
+		const licensesSaved = planSaved
 			? await saveAllLicenses({
 					axiosInstance,
 					parentPlanId: product.id,

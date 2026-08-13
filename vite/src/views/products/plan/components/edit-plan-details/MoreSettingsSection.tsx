@@ -139,6 +139,7 @@ export const MoreSettingsSection = () => {
 						>
 							<Select
 								value={selectedBasePlanId ?? NO_BASE_PLAN}
+								disabled={hasVariants}
 								onValueChange={(value) =>
 									setBasePlan(value === NO_BASE_PLAN ? null : value)
 								}

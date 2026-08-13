@@ -364,7 +364,7 @@ const VariantSelect = () => {
 	const variantOptions = useMemo(() => {
 		const base = products.find((p) => p.id === baseId);
 		const variants = products
-			.filter((p) => p.base_id === baseId)
+			.filter((p) => p.id !== baseId && p.base_id === baseId)
 			.sort((a, b) => a.name.localeCompare(b.name));
 		return base ? [base, ...variants] : variants;
 	}, [products, baseId]);
