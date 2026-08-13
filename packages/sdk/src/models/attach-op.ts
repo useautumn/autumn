@@ -1643,6 +1643,10 @@ export type AttachParams = {
    * Currency to bill this attach in (e.g. usd, eur). Must match the customer's currency if they are already locked to one, and the plan must offer a paid price in it. Defaults to the customer's currency, then the org default.
    */
   currency?: string | undefined;
+  /**
+   * Plan IDs to expire on the customer as part of this attach. Each must be an active plan billed on the same subscription as the attach (or a free plan); plans on a separate subscription are rejected.
+   */
+  removePlanIds?: Array<string> | undefined;
 };
 
 /**
@@ -3756,6 +3760,7 @@ export type AttachParams$Outbound = {
   enable_plan_immediately?: boolean | undefined;
   tax_rate_id?: string | undefined;
   currency?: string | undefined;
+  remove_plan_ids?: Array<string> | undefined;
 };
 
 /** @internal */
@@ -3805,6 +3810,7 @@ export const AttachParams$outboundSchema: z.ZodMiniType<
     enablePlanImmediately: z.optional(z.boolean()),
     taxRateId: z.optional(z.string()),
     currency: z.optional(z.string()),
+    removePlanIds: z.optional(z.array(z.string())),
   }),
   z.transform((v) => {
     return remap$(v, {
@@ -3832,6 +3838,7 @@ export const AttachParams$outboundSchema: z.ZodMiniType<
       noBillingChanges: "no_billing_changes",
       enablePlanImmediately: "enable_plan_immediately",
       taxRateId: "tax_rate_id",
+      removePlanIds: "remove_plan_ids",
     });
   }),
 );

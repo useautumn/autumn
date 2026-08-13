@@ -366,13 +366,13 @@ r"""Interval for the cap, aligned to the customer's billing cycle."""
 class GetCustomerFilterTypedDict(TypedDict):
     r"""When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature."""
 
-    properties: Dict[str, Any]
+    properties: Dict[str, str]
 
 
 class GetCustomerFilter(BaseModel):
     r"""When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature."""
 
-    properties: Dict[str, Any]
+    properties: Dict[str, str]
 
 
 GetCustomerUsageLimitSource = Union[

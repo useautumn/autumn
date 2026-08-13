@@ -375,7 +375,7 @@ Pass `currency` to bill this customer in a currency other than your organization
         <DynamicResponseField name="filter" type="object">
           When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature.
           <Expandable title="properties">
-            <DynamicResponseField name="properties" type="object" />
+            <DynamicResponseField name="properties.{key}" type="string" />
 
           </Expandable>
         </DynamicResponseField>
@@ -1093,7 +1093,7 @@ Pass `currency` to bill this customer in a currency other than your organization
                         <DynamicResponseField name="filter" type="object">
                           When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature.
                           <Expandable title="properties">
-                            <DynamicResponseField name="properties" type="object" />
+                            <DynamicResponseField name="properties.{key}" type="string" />
 
                           </Expandable>
                         </DynamicResponseField>
@@ -1255,7 +1255,7 @@ Pass `currency` to bill this customer in a currency other than your organization
                 <DynamicResponseField name="filter" type="object">
                   When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature.
                   <Expandable title="properties">
-                    <DynamicResponseField name="properties" type="object" />
+                    <DynamicResponseField name="properties.{key}" type="string" />
 
                   </Expandable>
                 </DynamicResponseField>
@@ -2040,7 +2040,7 @@ Pass `currency` to bill this customer in a currency other than your organization
                         <DynamicResponseField name="filter" type="object">
                           When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature.
                           <Expandable title="properties">
-                            <DynamicResponseField name="properties" type="object" />
+                            <DynamicResponseField name="properties.{key}" type="string" />
 
                           </Expandable>
                         </DynamicResponseField>
@@ -2202,7 +2202,7 @@ Pass `currency` to bill this customer in a currency other than your organization
                 <DynamicResponseField name="filter" type="object">
                   When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature.
                   <Expandable title="properties">
-                    <DynamicResponseField name="properties" type="object" />
+                    <DynamicResponseField name="properties.{key}" type="string" />
 
                   </Expandable>
                 </DynamicResponseField>
@@ -2782,15 +2782,15 @@ Pass `currency` to bill this customer in a currency other than your organization
     </DynamicResponseField>
 
     <DynamicResponseField name="currency" type="string">
-      The three-letter ISO currency code (e.g., 'usd').
+      The three-letter ISO currency code. All amounts are in the currency's major unit (e.g., dollars for USD).
     </DynamicResponseField>
 
     <DynamicResponseField name="subtotal" type="number">
-      The total before discounts, in major currency units.
+      The total before discounts.
     </DynamicResponseField>
 
     <DynamicResponseField name="total" type="number">
-      The total after discounts, in major currency units.
+      The total after discounts.
     </DynamicResponseField>
 
     <DynamicResponseField name="line_items" type="object[]">
@@ -2805,11 +2805,11 @@ Pass `currency` to bill this customer in a currency other than your organization
         </DynamicResponseField>
 
         <DynamicResponseField name="subtotal" type="number">
-          The amount in cents before discounts and tax for this line item.
+          The amount before discounts and tax for this line item.
         </DynamicResponseField>
 
         <DynamicResponseField name="total" type="number">
-          The final amount in cents after discounts and tax for this line item.
+          The final amount after discounts and tax for this line item.
         </DynamicResponseField>
 
         <DynamicResponseField name="discounts" type="object[]">

@@ -406,7 +406,7 @@ export type ListEntitiesInterval = OpenEnum<typeof ListEntitiesInterval>;
  * When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature.
  */
 export type ListEntitiesFilter = {
-  properties: { [k: string]: any };
+  properties: { [k: string]: string };
 };
 
 /**
@@ -1079,7 +1079,7 @@ export const ListEntitiesFilter$inboundSchema: z.ZodMiniType<
   ListEntitiesFilter,
   unknown
 > = z.object({
-  properties: z.record(z.string(), z.any()),
+  properties: z.record(z.string(), types.string()),
 });
 
 export function listEntitiesFilterFromJSON(

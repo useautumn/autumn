@@ -37,7 +37,7 @@ export type UpdateCustomerPurchaseLimitIntervalRequestBody = ClosedEnum<
 /**
  * Optional rate limit to cap how often auto top-ups occur. Pass count to set the current window's consumed top-ups.
  */
-export type UpdateCustomerPurchaseLimitRequest = {
+export type UpdateCustomerPurchaseLimitRequestBody = {
   /**
    * The time interval for the purchase limit window.
    */
@@ -56,7 +56,7 @@ export type UpdateCustomerPurchaseLimitRequest = {
   count?: number | undefined;
 };
 
-export type UpdateCustomerAutoTopupRequest = {
+export type UpdateCustomerAutoTopupRequestBody = {
   /**
    * The ID of the feature (credit balance) to auto top-up.
    */
@@ -76,7 +76,7 @@ export type UpdateCustomerAutoTopupRequest = {
   /**
    * Optional rate limit to cap how often auto top-ups occur. Pass count to set the current window's consumed top-ups.
    */
-  purchaseLimit?: UpdateCustomerPurchaseLimitRequest | undefined;
+  purchaseLimit?: UpdateCustomerPurchaseLimitRequestBody | undefined;
   /**
    * When true, auto top-up creates a send_invoice invoice instead of auto-charging.
    */
@@ -97,7 +97,7 @@ export type UpdateCustomerLimitTypeRequestBody = ClosedEnum<
   typeof UpdateCustomerLimitTypeRequestBody
 >;
 
-export type UpdateCustomerSpendLimitRequest = {
+export type UpdateCustomerSpendLimitRequestBody = {
   /**
    * Optional feature ID this spend limit applies to.
    */
@@ -141,11 +141,11 @@ export type UpdateCustomerProperties = string | number | boolean;
 /**
  * When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature.
  */
-export type UpdateCustomerFilterRequest = {
+export type UpdateCustomerFilterRequestBody = {
   properties: { [k: string]: string | number | boolean };
 };
 
-export type UpdateCustomerUsageLimitRequest = {
+export type UpdateCustomerUsageLimitRequestBody = {
   /**
    * The feature this usage limit applies to.
    */
@@ -165,7 +165,7 @@ export type UpdateCustomerUsageLimitRequest = {
   /**
    * When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature.
    */
-  filter?: UpdateCustomerFilterRequest | undefined;
+  filter?: UpdateCustomerFilterRequestBody | undefined;
 };
 
 /**
@@ -207,7 +207,7 @@ export type UpdateCustomerUsageAlertRequestBody = {
   name?: string | undefined;
 };
 
-export type UpdateCustomerOverageAllowedRequest = {
+export type UpdateCustomerOverageAllowedRequestBody = {
   /**
    * The feature ID this overage allowed control applies to.
    */
@@ -221,19 +221,19 @@ export type UpdateCustomerOverageAllowedRequest = {
 /**
  * Billing controls for the customer (auto top-ups, etc.)
  */
-export type UpdateCustomerBillingControlsRequest = {
+export type UpdateCustomerBillingControlsRequestBody = {
   /**
    * List of auto top-up configurations per feature.
    */
-  autoTopups?: Array<UpdateCustomerAutoTopupRequest> | undefined;
+  autoTopups?: Array<UpdateCustomerAutoTopupRequestBody> | undefined;
   /**
    * List of overage spend limits per feature (caps overage spend).
    */
-  spendLimits?: Array<UpdateCustomerSpendLimitRequest> | undefined;
+  spendLimits?: Array<UpdateCustomerSpendLimitRequestBody> | undefined;
   /**
    * List of hard usage caps per feature (max units per interval).
    */
-  usageLimits?: Array<UpdateCustomerUsageLimitRequest> | undefined;
+  usageLimits?: Array<UpdateCustomerUsageLimitRequestBody> | undefined;
   /**
    * List of usage alert configurations per feature.
    */
@@ -241,13 +241,13 @@ export type UpdateCustomerBillingControlsRequest = {
   /**
    * List of overage allowed controls per feature. When enabled, usage can exceed balance.
    */
-  overageAllowed?: Array<UpdateCustomerOverageAllowedRequest> | undefined;
+  overageAllowed?: Array<UpdateCustomerOverageAllowedRequestBody> | undefined;
 };
 
 /**
  * Miscellaneous configurations for the customer.
  */
-export type UpdateCustomerConfigRequest = {
+export type UpdateCustomerConfigRequestBody = {
   /**
    * Whether to disable the shared customer-level pool for entities.
    */
@@ -294,11 +294,11 @@ export type UpdateCustomerParams = {
   /**
    * Billing controls for the customer (auto top-ups, etc.)
    */
-  billingControls?: UpdateCustomerBillingControlsRequest | undefined;
+  billingControls?: UpdateCustomerBillingControlsRequestBody | undefined;
   /**
    * Miscellaneous configurations for the customer.
    */
-  config?: UpdateCustomerConfigRequest | undefined;
+  config?: UpdateCustomerConfigRequestBody | undefined;
   /**
    * Your unique identifier for the customer
    */
@@ -511,7 +511,7 @@ export type UpdateCustomerUsageLimitIntervalResponse = OpenEnum<
  * When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature.
  */
 export type UpdateCustomerFilterResponse = {
-  properties: { [k: string]: any };
+  properties: { [k: string]: string };
 };
 
 /**
@@ -1098,7 +1098,7 @@ export const UpdateCustomerPurchaseLimitIntervalRequestBody$outboundSchema:
   );
 
 /** @internal */
-export type UpdateCustomerPurchaseLimitRequest$Outbound = {
+export type UpdateCustomerPurchaseLimitRequestBody$Outbound = {
   interval: string;
   interval_count: number;
   limit: number;
@@ -1106,47 +1106,49 @@ export type UpdateCustomerPurchaseLimitRequest$Outbound = {
 };
 
 /** @internal */
-export const UpdateCustomerPurchaseLimitRequest$outboundSchema: z.ZodMiniType<
-  UpdateCustomerPurchaseLimitRequest$Outbound,
-  UpdateCustomerPurchaseLimitRequest
-> = z.pipe(
-  z.object({
-    interval: UpdateCustomerPurchaseLimitIntervalRequestBody$outboundSchema,
-    intervalCount: z._default(z.number(), 1),
-    limit: z.number(),
-    count: z.optional(z.number()),
-  }),
-  z.transform((v) => {
-    return remap$(v, {
-      intervalCount: "interval_count",
-    });
-  }),
-);
+export const UpdateCustomerPurchaseLimitRequestBody$outboundSchema:
+  z.ZodMiniType<
+    UpdateCustomerPurchaseLimitRequestBody$Outbound,
+    UpdateCustomerPurchaseLimitRequestBody
+  > = z.pipe(
+    z.object({
+      interval: UpdateCustomerPurchaseLimitIntervalRequestBody$outboundSchema,
+      intervalCount: z._default(z.number(), 1),
+      limit: z.number(),
+      count: z.optional(z.number()),
+    }),
+    z.transform((v) => {
+      return remap$(v, {
+        intervalCount: "interval_count",
+      });
+    }),
+  );
 
-export function updateCustomerPurchaseLimitRequestToJSON(
-  updateCustomerPurchaseLimitRequest: UpdateCustomerPurchaseLimitRequest,
+export function updateCustomerPurchaseLimitRequestBodyToJSON(
+  updateCustomerPurchaseLimitRequestBody:
+    UpdateCustomerPurchaseLimitRequestBody,
 ): string {
   return JSON.stringify(
-    UpdateCustomerPurchaseLimitRequest$outboundSchema.parse(
-      updateCustomerPurchaseLimitRequest,
+    UpdateCustomerPurchaseLimitRequestBody$outboundSchema.parse(
+      updateCustomerPurchaseLimitRequestBody,
     ),
   );
 }
 
 /** @internal */
-export type UpdateCustomerAutoTopupRequest$Outbound = {
+export type UpdateCustomerAutoTopupRequestBody$Outbound = {
   feature_id: string;
   enabled: boolean;
   threshold: number;
   quantity: number;
-  purchase_limit?: UpdateCustomerPurchaseLimitRequest$Outbound | undefined;
+  purchase_limit?: UpdateCustomerPurchaseLimitRequestBody$Outbound | undefined;
   invoice_mode?: boolean | undefined;
 };
 
 /** @internal */
-export const UpdateCustomerAutoTopupRequest$outboundSchema: z.ZodMiniType<
-  UpdateCustomerAutoTopupRequest$Outbound,
-  UpdateCustomerAutoTopupRequest
+export const UpdateCustomerAutoTopupRequestBody$outboundSchema: z.ZodMiniType<
+  UpdateCustomerAutoTopupRequestBody$Outbound,
+  UpdateCustomerAutoTopupRequestBody
 > = z.pipe(
   z.object({
     featureId: z.string(),
@@ -1154,7 +1156,7 @@ export const UpdateCustomerAutoTopupRequest$outboundSchema: z.ZodMiniType<
     threshold: z.number(),
     quantity: z.number(),
     purchaseLimit: z.optional(
-      z.lazy(() => UpdateCustomerPurchaseLimitRequest$outboundSchema),
+      z.lazy(() => UpdateCustomerPurchaseLimitRequestBody$outboundSchema),
     ),
     invoiceMode: z.optional(z.boolean()),
   }),
@@ -1167,12 +1169,12 @@ export const UpdateCustomerAutoTopupRequest$outboundSchema: z.ZodMiniType<
   }),
 );
 
-export function updateCustomerAutoTopupRequestToJSON(
-  updateCustomerAutoTopupRequest: UpdateCustomerAutoTopupRequest,
+export function updateCustomerAutoTopupRequestBodyToJSON(
+  updateCustomerAutoTopupRequestBody: UpdateCustomerAutoTopupRequestBody,
 ): string {
   return JSON.stringify(
-    UpdateCustomerAutoTopupRequest$outboundSchema.parse(
-      updateCustomerAutoTopupRequest,
+    UpdateCustomerAutoTopupRequestBody$outboundSchema.parse(
+      updateCustomerAutoTopupRequestBody,
     ),
   );
 }
@@ -1183,7 +1185,7 @@ export const UpdateCustomerLimitTypeRequestBody$outboundSchema: z.ZodMiniEnum<
 > = z.enum(UpdateCustomerLimitTypeRequestBody);
 
 /** @internal */
-export type UpdateCustomerSpendLimitRequest$Outbound = {
+export type UpdateCustomerSpendLimitRequestBody$Outbound = {
   feature_id?: string | undefined;
   enabled: boolean;
   limit_type?: string | undefined;
@@ -1192,9 +1194,9 @@ export type UpdateCustomerSpendLimitRequest$Outbound = {
 };
 
 /** @internal */
-export const UpdateCustomerSpendLimitRequest$outboundSchema: z.ZodMiniType<
-  UpdateCustomerSpendLimitRequest$Outbound,
-  UpdateCustomerSpendLimitRequest
+export const UpdateCustomerSpendLimitRequestBody$outboundSchema: z.ZodMiniType<
+  UpdateCustomerSpendLimitRequestBody$Outbound,
+  UpdateCustomerSpendLimitRequestBody
 > = z.pipe(
   z.object({
     featureId: z.optional(z.string()),
@@ -1213,12 +1215,12 @@ export const UpdateCustomerSpendLimitRequest$outboundSchema: z.ZodMiniType<
   }),
 );
 
-export function updateCustomerSpendLimitRequestToJSON(
-  updateCustomerSpendLimitRequest: UpdateCustomerSpendLimitRequest,
+export function updateCustomerSpendLimitRequestBodyToJSON(
+  updateCustomerSpendLimitRequestBody: UpdateCustomerSpendLimitRequestBody,
 ): string {
   return JSON.stringify(
-    UpdateCustomerSpendLimitRequest$outboundSchema.parse(
-      updateCustomerSpendLimitRequest,
+    UpdateCustomerSpendLimitRequestBody$outboundSchema.parse(
+      updateCustomerSpendLimitRequestBody,
     ),
   );
 }
@@ -1247,14 +1249,14 @@ export function updateCustomerPropertiesToJSON(
 }
 
 /** @internal */
-export type UpdateCustomerFilterRequest$Outbound = {
+export type UpdateCustomerFilterRequestBody$Outbound = {
   properties: { [k: string]: string | number | boolean };
 };
 
 /** @internal */
-export const UpdateCustomerFilterRequest$outboundSchema: z.ZodMiniType<
-  UpdateCustomerFilterRequest$Outbound,
-  UpdateCustomerFilterRequest
+export const UpdateCustomerFilterRequestBody$outboundSchema: z.ZodMiniType<
+  UpdateCustomerFilterRequestBody$Outbound,
+  UpdateCustomerFilterRequestBody
 > = z.object({
   properties: z.record(
     z.string(),
@@ -1262,29 +1264,29 @@ export const UpdateCustomerFilterRequest$outboundSchema: z.ZodMiniType<
   ),
 });
 
-export function updateCustomerFilterRequestToJSON(
-  updateCustomerFilterRequest: UpdateCustomerFilterRequest,
+export function updateCustomerFilterRequestBodyToJSON(
+  updateCustomerFilterRequestBody: UpdateCustomerFilterRequestBody,
 ): string {
   return JSON.stringify(
-    UpdateCustomerFilterRequest$outboundSchema.parse(
-      updateCustomerFilterRequest,
+    UpdateCustomerFilterRequestBody$outboundSchema.parse(
+      updateCustomerFilterRequestBody,
     ),
   );
 }
 
 /** @internal */
-export type UpdateCustomerUsageLimitRequest$Outbound = {
+export type UpdateCustomerUsageLimitRequestBody$Outbound = {
   feature_id: string;
   enabled: boolean;
   limit: number;
   interval: string;
-  filter?: UpdateCustomerFilterRequest$Outbound | undefined;
+  filter?: UpdateCustomerFilterRequestBody$Outbound | undefined;
 };
 
 /** @internal */
-export const UpdateCustomerUsageLimitRequest$outboundSchema: z.ZodMiniType<
-  UpdateCustomerUsageLimitRequest$Outbound,
-  UpdateCustomerUsageLimitRequest
+export const UpdateCustomerUsageLimitRequestBody$outboundSchema: z.ZodMiniType<
+  UpdateCustomerUsageLimitRequestBody$Outbound,
+  UpdateCustomerUsageLimitRequestBody
 > = z.pipe(
   z.object({
     featureId: z.string(),
@@ -1292,7 +1294,7 @@ export const UpdateCustomerUsageLimitRequest$outboundSchema: z.ZodMiniType<
     limit: z.number(),
     interval: UpdateCustomerUsageLimitIntervalRequestBody$outboundSchema,
     filter: z.optional(
-      z.lazy(() => UpdateCustomerFilterRequest$outboundSchema),
+      z.lazy(() => UpdateCustomerFilterRequestBody$outboundSchema),
     ),
   }),
   z.transform((v) => {
@@ -1302,12 +1304,12 @@ export const UpdateCustomerUsageLimitRequest$outboundSchema: z.ZodMiniType<
   }),
 );
 
-export function updateCustomerUsageLimitRequestToJSON(
-  updateCustomerUsageLimitRequest: UpdateCustomerUsageLimitRequest,
+export function updateCustomerUsageLimitRequestBodyToJSON(
+  updateCustomerUsageLimitRequestBody: UpdateCustomerUsageLimitRequestBody,
 ): string {
   return JSON.stringify(
-    UpdateCustomerUsageLimitRequest$outboundSchema.parse(
-      updateCustomerUsageLimitRequest,
+    UpdateCustomerUsageLimitRequestBody$outboundSchema.parse(
+      updateCustomerUsageLimitRequestBody,
     ),
   );
 }
@@ -1358,103 +1360,121 @@ export function updateCustomerUsageAlertRequestBodyToJSON(
 }
 
 /** @internal */
-export type UpdateCustomerOverageAllowedRequest$Outbound = {
+export type UpdateCustomerOverageAllowedRequestBody$Outbound = {
   feature_id: string;
   enabled: boolean;
 };
 
 /** @internal */
-export const UpdateCustomerOverageAllowedRequest$outboundSchema: z.ZodMiniType<
-  UpdateCustomerOverageAllowedRequest$Outbound,
-  UpdateCustomerOverageAllowedRequest
-> = z.pipe(
-  z.object({
-    featureId: z.string(),
-    enabled: z._default(z.boolean(), false),
-  }),
-  z.transform((v) => {
-    return remap$(v, {
-      featureId: "feature_id",
-    });
-  }),
-);
+export const UpdateCustomerOverageAllowedRequestBody$outboundSchema:
+  z.ZodMiniType<
+    UpdateCustomerOverageAllowedRequestBody$Outbound,
+    UpdateCustomerOverageAllowedRequestBody
+  > = z.pipe(
+    z.object({
+      featureId: z.string(),
+      enabled: z._default(z.boolean(), false),
+    }),
+    z.transform((v) => {
+      return remap$(v, {
+        featureId: "feature_id",
+      });
+    }),
+  );
 
-export function updateCustomerOverageAllowedRequestToJSON(
-  updateCustomerOverageAllowedRequest: UpdateCustomerOverageAllowedRequest,
+export function updateCustomerOverageAllowedRequestBodyToJSON(
+  updateCustomerOverageAllowedRequestBody:
+    UpdateCustomerOverageAllowedRequestBody,
 ): string {
   return JSON.stringify(
-    UpdateCustomerOverageAllowedRequest$outboundSchema.parse(
-      updateCustomerOverageAllowedRequest,
+    UpdateCustomerOverageAllowedRequestBody$outboundSchema.parse(
+      updateCustomerOverageAllowedRequestBody,
     ),
   );
 }
 
 /** @internal */
-export type UpdateCustomerBillingControlsRequest$Outbound = {
-  auto_topups?: Array<UpdateCustomerAutoTopupRequest$Outbound> | undefined;
-  spend_limits?: Array<UpdateCustomerSpendLimitRequest$Outbound> | undefined;
-  usage_limits?: Array<UpdateCustomerUsageLimitRequest$Outbound> | undefined;
+export type UpdateCustomerBillingControlsRequestBody$Outbound = {
+  auto_topups?: Array<UpdateCustomerAutoTopupRequestBody$Outbound> | undefined;
+  spend_limits?:
+    | Array<UpdateCustomerSpendLimitRequestBody$Outbound>
+    | undefined;
+  usage_limits?:
+    | Array<UpdateCustomerUsageLimitRequestBody$Outbound>
+    | undefined;
   usage_alerts?:
     | Array<UpdateCustomerUsageAlertRequestBody$Outbound>
     | undefined;
   overage_allowed?:
-    | Array<UpdateCustomerOverageAllowedRequest$Outbound>
+    | Array<UpdateCustomerOverageAllowedRequestBody$Outbound>
     | undefined;
 };
 
 /** @internal */
-export const UpdateCustomerBillingControlsRequest$outboundSchema: z.ZodMiniType<
-  UpdateCustomerBillingControlsRequest$Outbound,
-  UpdateCustomerBillingControlsRequest
-> = z.pipe(
-  z.object({
-    autoTopups: z.optional(
-      z.array(z.lazy(() => UpdateCustomerAutoTopupRequest$outboundSchema)),
-    ),
-    spendLimits: z.optional(
-      z.array(z.lazy(() => UpdateCustomerSpendLimitRequest$outboundSchema)),
-    ),
-    usageLimits: z.optional(
-      z.array(z.lazy(() => UpdateCustomerUsageLimitRequest$outboundSchema)),
-    ),
-    usageAlerts: z.optional(
-      z.array(z.lazy(() => UpdateCustomerUsageAlertRequestBody$outboundSchema)),
-    ),
-    overageAllowed: z.optional(
-      z.array(z.lazy(() => UpdateCustomerOverageAllowedRequest$outboundSchema)),
-    ),
-  }),
-  z.transform((v) => {
-    return remap$(v, {
-      autoTopups: "auto_topups",
-      spendLimits: "spend_limits",
-      usageLimits: "usage_limits",
-      usageAlerts: "usage_alerts",
-      overageAllowed: "overage_allowed",
-    });
-  }),
-);
+export const UpdateCustomerBillingControlsRequestBody$outboundSchema:
+  z.ZodMiniType<
+    UpdateCustomerBillingControlsRequestBody$Outbound,
+    UpdateCustomerBillingControlsRequestBody
+  > = z.pipe(
+    z.object({
+      autoTopups: z.optional(
+        z.array(
+          z.lazy(() => UpdateCustomerAutoTopupRequestBody$outboundSchema),
+        ),
+      ),
+      spendLimits: z.optional(
+        z.array(
+          z.lazy(() => UpdateCustomerSpendLimitRequestBody$outboundSchema),
+        ),
+      ),
+      usageLimits: z.optional(
+        z.array(
+          z.lazy(() => UpdateCustomerUsageLimitRequestBody$outboundSchema),
+        ),
+      ),
+      usageAlerts: z.optional(
+        z.array(
+          z.lazy(() => UpdateCustomerUsageAlertRequestBody$outboundSchema),
+        ),
+      ),
+      overageAllowed: z.optional(
+        z.array(z.lazy(() =>
+          UpdateCustomerOverageAllowedRequestBody$outboundSchema
+        )),
+      ),
+    }),
+    z.transform((v) => {
+      return remap$(v, {
+        autoTopups: "auto_topups",
+        spendLimits: "spend_limits",
+        usageLimits: "usage_limits",
+        usageAlerts: "usage_alerts",
+        overageAllowed: "overage_allowed",
+      });
+    }),
+  );
 
-export function updateCustomerBillingControlsRequestToJSON(
-  updateCustomerBillingControlsRequest: UpdateCustomerBillingControlsRequest,
+export function updateCustomerBillingControlsRequestBodyToJSON(
+  updateCustomerBillingControlsRequestBody:
+    UpdateCustomerBillingControlsRequestBody,
 ): string {
   return JSON.stringify(
-    UpdateCustomerBillingControlsRequest$outboundSchema.parse(
-      updateCustomerBillingControlsRequest,
+    UpdateCustomerBillingControlsRequestBody$outboundSchema.parse(
+      updateCustomerBillingControlsRequestBody,
     ),
   );
 }
 
 /** @internal */
-export type UpdateCustomerConfigRequest$Outbound = {
+export type UpdateCustomerConfigRequestBody$Outbound = {
   disable_pooled_balance?: boolean | undefined;
   disable_overage_billing?: boolean | undefined;
 };
 
 /** @internal */
-export const UpdateCustomerConfigRequest$outboundSchema: z.ZodMiniType<
-  UpdateCustomerConfigRequest$Outbound,
-  UpdateCustomerConfigRequest
+export const UpdateCustomerConfigRequestBody$outboundSchema: z.ZodMiniType<
+  UpdateCustomerConfigRequestBody$Outbound,
+  UpdateCustomerConfigRequestBody
 > = z.pipe(
   z.object({
     disablePooledBalance: z.optional(z.boolean()),
@@ -1468,12 +1488,12 @@ export const UpdateCustomerConfigRequest$outboundSchema: z.ZodMiniType<
   }),
 );
 
-export function updateCustomerConfigRequestToJSON(
-  updateCustomerConfigRequest: UpdateCustomerConfigRequest,
+export function updateCustomerConfigRequestBodyToJSON(
+  updateCustomerConfigRequestBody: UpdateCustomerConfigRequestBody,
 ): string {
   return JSON.stringify(
-    UpdateCustomerConfigRequest$outboundSchema.parse(
-      updateCustomerConfigRequest,
+    UpdateCustomerConfigRequestBody$outboundSchema.parse(
+      updateCustomerConfigRequestBody,
     ),
   );
 }
@@ -1488,8 +1508,10 @@ export type UpdateCustomerParams$Outbound = {
   stripe_id?: string | null | undefined;
   send_email_receipts?: boolean | undefined;
   currency?: string | null | undefined;
-  billing_controls?: UpdateCustomerBillingControlsRequest$Outbound | undefined;
-  config?: UpdateCustomerConfigRequest$Outbound | undefined;
+  billing_controls?:
+    | UpdateCustomerBillingControlsRequestBody$Outbound
+    | undefined;
+  config?: UpdateCustomerConfigRequestBody$Outbound | undefined;
   new_customer_id?: string | undefined;
 };
 
@@ -1508,10 +1530,10 @@ export const UpdateCustomerParams$outboundSchema: z.ZodMiniType<
     sendEmailReceipts: z.optional(z.boolean()),
     currency: z.optional(z.nullable(z.string())),
     billingControls: z.optional(
-      z.lazy(() => UpdateCustomerBillingControlsRequest$outboundSchema),
+      z.lazy(() => UpdateCustomerBillingControlsRequestBody$outboundSchema),
     ),
     config: z.optional(
-      z.lazy(() => UpdateCustomerConfigRequest$outboundSchema),
+      z.lazy(() => UpdateCustomerConfigRequestBody$outboundSchema),
     ),
     newCustomerId: z.optional(z.string()),
   }),
@@ -1727,7 +1749,7 @@ export const UpdateCustomerFilterResponse$inboundSchema: z.ZodMiniType<
   UpdateCustomerFilterResponse,
   unknown
 > = z.object({
-  properties: z.record(z.string(), z.any()),
+  properties: z.record(z.string(), types.string()),
 });
 
 export function updateCustomerFilterResponseFromJSON(

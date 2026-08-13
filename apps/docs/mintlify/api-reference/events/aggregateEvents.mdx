@@ -118,6 +118,134 @@ When grouping is specified, `values` contains the total sum while `grouped_value
   The `grouped_values` field is only present when `group_by` is provided in the request.
 </Note>
 
+## Deduction Breakdowns
+
+By default, aggregations answer *"how much usage was tracked?"*. Passing `aggregate_on: "deducted"` additionally answers *"which balances did that usage actually come out of?"* — the response gains a `deductions` array, keyed by the **balance-owning feature** rather than the tracked event. The `list` and `total` fields are unchanged.
+
+A `customer_id` is required in this mode, since deductions are resolved against a specific customer's balances.
+
+There are two situations where this matters:
+
+### Case 1: Usage spilling into a credit system
+
+A feature can have its own included allowance *and* feed a credit system — usage drains the allowance first, then overflows into credits at the feature's credit cost. The standard aggregation only shows tracked totals, so the overflow is invisible. With `aggregate_on: "deducted"`, the two sides show up separately:
+
+```typescript
+const result = await autumn.events.aggregate({
+  customerId: "cus_123",
+  featureId: "observability_events",
+  range: "30d",
+  aggregateOn: "deducted"
+});
+```
+
+```json
+{
+  "deductions": [
+    {
+      "period": 1762905600000,
+      "values": {
+        "observability_events": {
+          "feature_type": "metered",
+          "deducted": 1000000,
+          "events": 12,
+          "balances": [
+            {
+              "balance_id": "cus_ent_abc",
+              "entity_id": null,
+              "plan_id": "team",
+              "reset": { "interval": "month", "resets_at": 1789218895573 },
+              "credit_cost": null,
+              "deducted": 1000000,
+              "events": 12
+            }
+          ]
+        },
+        "usage_credits": {
+          "feature_type": "credit_system",
+          "deducted": 0.8,
+          "events": 1,
+          "balances": [
+            {
+              "balance_id": "cus_ent_def",
+              "entity_id": null,
+              "plan_id": "team",
+              "reset": { "interval": "month", "resets_at": 1789218895573 },
+              "credit_cost": 0.00008,
+              "deducted": 0.8,
+              "events": 1
+            }
+          ]
+        }
+      }
+    }
+  ]
+}
+```
+
+Reading this: the customer's 1M-event allowance absorbed the tracked usage, and 10,000 events overflowed into the `usage_credits` pool, burning 0.8 credits at the feature's credit cost of 0.00008. Each entry is in **that balance's own unit** — events for the metered feature, credits for the credit system.
+
+<Note>
+  `credit_cost` is only populated when the request pins a single non-credit feature via `feature_id`, since several features feeding one pool each convert at a different rate. It reflects the credit system's current schema.
+</Note>
+
+### Case 2: Per-entity balances falling through to a shared pool
+
+When entities (e.g. seats) each carry their own balance and overflow lands on a customer-level shared balance, group by `$entity_id` to see who spent from where:
+
+```typescript
+const result = await autumn.events.aggregate({
+  customerId: "cus_123",
+  featureId: "ai_credits",
+  range: "30d",
+  aggregateOn: "deducted",
+  groupBy: "$entity_id"
+});
+```
+
+```json
+{
+  "deductions": [
+    {
+      "period": 1762905600000,
+      "values": {
+        "ai_credits": {
+          "feature_type": "credit_system",
+          "deducted": 1650,
+          "events": 5,
+          "balances": [
+            { "balance_id": "cus_ent_seat_3", "entity_id": "seat_3", "plan_id": "team_seat", "deducted": 600, "events": 2, ... },
+            { "balance_id": "cus_ent_seat_4", "entity_id": "seat_4", "plan_id": "team_seat", "deducted": 600, "events": 1, ... },
+            { "balance_id": "cus_ent_shared", "entity_id": null, "plan_id": "team_yearly", "deducted": 50, "events": 3, ... }
+          ]
+        }
+      },
+      "grouped_values": {
+        "cus_ent_seat_3": { "seat_3": { "deducted": 600 } },
+        "cus_ent_seat_4": { "seat_4": { "deducted": 600 } },
+        "cus_ent_shared": {
+          "seat_3": { "deducted": 25 },
+          "seat_4": { "deducted": 25 }
+        }
+      }
+    }
+  ]
+}
+```
+
+**Finding each entity's spillover** takes one join between the two halves of the response:
+
+1. In `balances`, find the entry whose `entity_id` is `null`. That's the customer-level shared balance — the pool that entities fall through to when their own balance runs out. (Entries with an `entity_id` are balances owned by that entity.)
+2. Take that entry's `balance_id` and look it up in `grouped_values`. The keys of that object are the entities that spent from the shared pool, and each `deducted` is exactly how much they overdrew.
+
+Here `cus_ent_shared` is the shared balance, and `grouped_values["cus_ent_shared"]` shows seats 3 and 4 each pulled 25 credits from it beyond their own 600-credit seat balances — the "used 25 extra credits" number to show next to each seat.
+
+The seat-owned balances appear in `grouped_values` too, but for them the owner and the spender are the same entity, so the split just restates the balance total.
+
+<Note>
+  `group_by: "$plan_id"` is rejected with `aggregate_on` — every balance belongs to exactly one plan, so `balances[].plan_id` already carries the plan split.
+</Note>
+
 ### Body Parameters
 
 <DynamicParamField body="customer_id" type="string">
@@ -162,6 +290,10 @@ When grouping is specified, `values` contains the total sum while `grouped_value
   Maximum number of distinct group values to return per time bin when using group_by. Remaining values are bundled into an 'Other' bucket. Defaults to 9
 </DynamicParamField>
 
+<DynamicParamField body="aggregate_on" type="any">
+  Set to "deducted" to additionally return a per-balance breakdown of what each event consumed, under `deductions`. Purely additive: `list` and `total` are unchanged. Requires customer_id.
+</DynamicParamField>
+
 
 ### Response
 
@@ -196,6 +328,80 @@ When grouping is specified, `values` contains the total sum while `grouped_value
 
     <DynamicResponseField name="sum" type="number">
       Sum of event values for this feature
+    </DynamicResponseField>
+
+  </Expandable>
+</DynamicResponseField>
+
+<DynamicResponseField name="deductions" type="object[]">
+  Per-balance breakdown of what was consumed. Present only when aggregate_on is "deducted".
+  <Expandable title="properties">
+    <DynamicResponseField name="period" type="number">
+      Unix timestamp (epoch ms), same basis as `list`.
+    </DynamicResponseField>
+
+    <DynamicResponseField name="values.{key}" type="object">
+      Keyed by the feature that OWNS the balance drawn from, not the feature that was tracked.
+      <Expandable title="properties">
+        <DynamicResponseField name="feature_type" type="'metered' | 'credit_system'">
+          credit_system means `deducted` is credits; metered means it is that feature's own amount.
+        </DynamicResponseField>
+
+        <DynamicResponseField name="deducted" type="number" />
+
+        <DynamicResponseField name="events" type="number" />
+
+        <DynamicResponseField name="balances" type="object[]">
+          <Expandable title="properties">
+            <DynamicResponseField name="balance_id" type="string">
+              ID of the balance row drawn from (customer_entitlement or rollover).
+            </DynamicResponseField>
+
+            <DynamicResponseField name="entity_id" type="string | null">
+              Entity that owns this balance, or null when it is customer-level and shared.
+            </DynamicResponseField>
+
+            <DynamicResponseField name="plan_id" type="string | null">
+              Plan the balance came with. Null for balances created outside a plan.
+            </DynamicResponseField>
+
+            <DynamicResponseField name="reset" type="object | null">
+              Reset config for this balance, captured at deduction time.
+              <Expandable title="properties">
+                <DynamicResponseField name="interval" type="string" />
+
+                <DynamicResponseField name="resets_at" type="number | null" />
+
+              </Expandable>
+            </DynamicResponseField>
+
+            <DynamicResponseField name="credit_cost" type="number | null">
+              Multiplier applied converting the tracked feature into this balance. Null when 1:1, or when the query spans sources converting at different rates.
+            </DynamicResponseField>
+
+            <DynamicResponseField name="deducted" type="number" />
+
+            <DynamicResponseField name="events" type="number" />
+
+          </Expandable>
+        </DynamicResponseField>
+
+      </Expandable>
+    </DynamicResponseField>
+
+    <DynamicResponseField name="grouped_values" type="object">
+      Present only when group_by is used. Keyed by balance_id, then by group value — the only way to attribute a shared balance to the entity that spent from it.
+      <Expandable title="properties">
+        <DynamicResponseField name="{key}.{key}" type="object">
+          <Expandable title="properties">
+            <DynamicResponseField name="deducted" type="number" />
+
+            <DynamicResponseField name="credit_cost" type="number | null" />
+
+          </Expandable>
+        </DynamicResponseField>
+
+      </Expandable>
     </DynamicResponseField>
 
   </Expandable>

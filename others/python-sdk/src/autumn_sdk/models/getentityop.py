@@ -14,7 +14,7 @@ from autumn_sdk.types import (
 from autumn_sdk.utils import FieldMetadata, HeaderMetadata
 import pydantic
 from pydantic import model_serializer
-from typing import Any, Dict, List, Literal, Optional, Union
+from typing import Dict, List, Literal, Optional, Union
 from typing_extensions import Annotated, NotRequired, TypedDict
 
 
@@ -645,13 +645,13 @@ r"""Interval for the cap, aligned to the customer's billing cycle."""
 class GetEntityFilterTypedDict(TypedDict):
     r"""When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature."""
 
-    properties: Dict[str, Any]
+    properties: Dict[str, str]
 
 
 class GetEntityFilter(BaseModel):
     r"""When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature."""
 
-    properties: Dict[str, Any]
+    properties: Dict[str, str]
 
 
 GetEntityUsageLimitSource = Union[
