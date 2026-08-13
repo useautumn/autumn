@@ -1,8 +1,4 @@
-import type {
-	FrontendProduct,
-	PlanUpdatePreview,
-	PlanUpdatePreviewPlanChanges,
-} from "@autumn/shared";
+import type { FrontendProduct, PlanUpdatePreview } from "@autumn/shared";
 import {
 	AreaRadioGroupItem,
 	Dialog,
@@ -29,7 +25,6 @@ import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router";
 import { toast } from "sonner";
 import { PlanPriceHeader } from "@/components/forms/shared/plan-items/PlanPriceHeader";
-import { ItemChangeList } from "@/components/v2/ItemChangeList";
 import { LAYOUT_TRANSITION } from "@/components/v2/sheets/SharedSheetComponents";
 import { useOrg } from "@/hooks/common/useOrg";
 import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
@@ -66,6 +61,7 @@ import {
 import { getDefaultPropagationTargetIds } from "./getDefaultPropagationTargetIds";
 import { LicenseChangeList } from "./LicenseChangeList";
 import { MigrateTargetsStep } from "./MigrateTargetsStep";
+import { PlanItemChanges } from "./PlanItemChanges";
 import {
 	PlanSettingsChanges,
 	previousAttributesToSettingChanges,
@@ -126,36 +122,24 @@ function ConfirmInput({
 	);
 }
 
-const hasMigratableDiff = (
-	changes: Pick<PlanUpdatePreviewPlanChanges, "item_changes" | "price_change">,
-) =>
-	(changes.item_changes?.length ?? 0) > 0 || changes.price_change !== undefined;
-
-// Free-trial edits version without producing a migratable diff, and a linked
-// license's item/price changes count because they reach live assignments.
+// A version needs a migration only when it has customers to move AND a
+// migratable diff (item/price changes; free-trial edits version without one).
 const entryNeedsMigration = (
 	entry: Pick<
 		PlanUpdatePreview,
-		"item_changes" | "price_change" | "has_customers" | "license_changes"
+		"item_changes" | "price_change" | "has_customers"
 	>,
 ) =>
 	entry.has_customers &&
-	(hasMigratableDiff(entry) ||
-		(entry.license_changes ?? []).some(
-			(license) =>
-				license.plan_changes !== null &&
-				hasMigratableDiff(license.plan_changes),
-		));
+	((entry.item_changes?.length ?? 0) > 0 || entry.price_change !== undefined);
 
 const hasMigrationTargets = ({
 	preview,
 	selectedVariantIds,
-	selectedLicenseParentIds,
 	versionChoice,
 }: {
 	preview: PlanUpdatePreview | undefined;
 	selectedVariantIds: string[];
-	selectedLicenseParentIds: string[];
 	versionChoice: VersionChoice;
 }): boolean => {
 	// New-version grandfathers everyone; update/all patch live versions.
@@ -167,17 +151,6 @@ const hasMigrationTargets = ({
 		...(includeHistorical ? (preview.other_versions ?? []) : []),
 	];
 	if (baseEntries.some(entryNeedsMigration)) return true;
-
-	const selectedParentIdSet = new Set(selectedLicenseParentIds);
-	if (
-		preview.license_parents.some(
-			(parent) =>
-				selectedParentIdSet.has(getLicenseParentTargetId(parent)) &&
-				entryNeedsMigration(parent),
-		)
-	) {
-		return true;
-	}
 
 	return selectedVariantIds.some((variantId) => {
 		const entries = preview.variants
@@ -245,8 +218,9 @@ export default function PlanChangeDialog({
 		[open, licenseHasChanges, planLicenses],
 	);
 
-	// A malformed draft (e.g. a half-entered price) must degrade to "no preview",
-	// never throw during render.
+	// Preview the in-place update so versioning, customer impact, item changes
+	// and variant conflicts come from the backend. A malformed draft (e.g. a
+	// half-entered price) must degrade to "no preview", never throw during render.
 	const previewParams = useMemo(() => {
 		try {
 			return buildPreviewUpdatePlanParams({
@@ -289,14 +263,16 @@ export default function PlanChangeDialog({
 		[versionCounts],
 	);
 
-	// Older versions can't patch variants at a matching version, so "update this
-	// version" never propagates to them.
+	// The latest version is numVersions; older versions can't patch variants at a
+	// matching version, so "update this version" never propagates to them.
 	const isLatest = product.version >= numVersions;
 	const { data: variants = [] } = usePlanVariants(product.id, open);
 	const hasVariants = variants.length > 0;
 	const showVersionStrategy =
 		!isMetadataOnly && !!preview && previewHasVersionableTargets(preview);
 	const effectiveVersionChoice = showVersionStrategy ? versionChoice : "update";
+	// Only main-plan changes propagate to variants; license-link edits stay on
+	// the selected parent version.
 	const showVariantScope =
 		hasPlanVersionableChange &&
 		hasVariants &&
@@ -369,15 +345,9 @@ export default function PlanChangeDialog({
 			hasMigrationTargets({
 				preview,
 				selectedVariantIds: effectiveVariantIds,
-				selectedLicenseParentIds: effectiveLicenseParentIds,
 				versionChoice: effectiveVersionChoice,
 			}),
-		[
-			preview,
-			effectiveVariantIds,
-			effectiveLicenseParentIds,
-			effectiveVersionChoice,
-		],
+		[preview, effectiveVariantIds, effectiveVersionChoice],
 	);
 
 	// Metadata-only edits always apply across all versions; there's no strategy
@@ -454,10 +424,12 @@ export default function PlanChangeDialog({
 		resetState();
 	};
 
+	// Apply the base edit (in-place, new version, or all versions) + propagate to
+	// selected variants. plans.update creates the migration server-side.
 	const applyChanges = async ({ migrate }: { migrate: boolean }) => {
-		// Type-to-confirm only gates the migration step, the only point where
-		// existing customers are moved.
-		if (step === "migrate" && !confirmed) {
+		// Type-to-confirm only gates the migration step (the only point where
+		// existing customers are moved). Lower-impact applies skip it.
+		if (step === "migrate" && migrateNeeded && !confirmed) {
 			toast.error("Confirmation text is incorrect");
 			return;
 		}
@@ -535,15 +507,12 @@ export default function PlanChangeDialog({
 
 			if (willMigrate) {
 				void invalidateMigrations();
-				const migrationIds =
-					(
-						result as { migrations?: { id: string }[] } | undefined
-					)?.migrations?.map(({ id }) => id) ?? [];
-				// Deep-linking would auto-run one migration and hide the others, so
-				// send the user to the list to run each deliberately.
+				const migrationId = (
+					result as { migration?: { id?: string } } | undefined
+				)?.migration?.id;
 				navigateTo(
-					migrationIds.length === 1
-						? `/migrations/${migrationIds[0]}?step=live&run=true`
+					migrationId
+						? `/migrations/${migrationId}?step=live&run=true`
 						: "/migrations",
 					navigate,
 				);
@@ -662,8 +631,11 @@ export default function PlanChangeDialog({
 													currency={currency}
 												/>
 											)}
-											<ItemChangeList
-												itemChanges={preview?.item_changes ?? []}
+											<PlanItemChanges
+												product={product}
+												originalItems={baseProduct?.items}
+												features={features}
+												currency={currency}
 											/>
 											<PlanSettingsChanges changes={settingsChanges} />
 											<LicenseChangeList
@@ -802,6 +774,12 @@ export default function PlanChangeDialog({
 															currency={currency}
 														/>
 													)}
+													<PlanItemChanges
+														product={product}
+														originalItems={baseProduct?.items}
+														features={features}
+														currency={currency}
+													/>
 													<PlanSettingsChanges changes={settingsChanges} />
 												</div>
 											) : (
@@ -877,7 +855,7 @@ export default function PlanChangeDialog({
 					</motion.div>
 				</div>
 
-				{step === "migrate" && (
+				{step === "migrate" && migrateNeeded && (
 					<div className="px-4 pt-3 pb-2">
 						<ConfirmInput
 							productId={product.id}
@@ -910,7 +888,9 @@ export default function PlanChangeDialog({
 						metaShortcut="enter"
 						onClick={advance}
 						isLoading={isLoading}
-						disabled={isLoading || (step === "migrate" && !confirmed)}
+						disabled={
+							isLoading || (step === "migrate" && migrateNeeded && !confirmed)
+						}
 						className="flex-1 justify-center"
 					>
 						{primaryText}

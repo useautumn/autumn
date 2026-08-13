@@ -208,6 +208,18 @@ export type CustomerUsageLimitInterval = OpenEnum<
 >;
 
 /**
+ * Window alignment. 'billing_cycle' phases the interval to the customer's renewal time; 'utc' aligns to the UTC calendar.
+ */
+export const CustomerAnchor = {
+  BillingCycle: "billing_cycle",
+  Utc: "utc",
+} as const;
+/**
+ * Window alignment. 'billing_cycle' phases the interval to the customer's renewal time; 'utc' aligns to the UTC calendar.
+ */
+export type CustomerAnchor = OpenEnum<typeof CustomerAnchor>;
+
+/**
  * When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature.
  */
 export type CustomerFilter = {
@@ -243,6 +255,10 @@ export type CustomerUsageLimit = {
    * Interval for the cap, aligned to the customer's billing cycle.
    */
   interval: CustomerUsageLimitInterval;
+  /**
+   * Window alignment. 'billing_cycle' phases the interval to the customer's renewal time; 'utc' aligns to the UTC calendar.
+   */
+  anchor?: CustomerAnchor | undefined;
   /**
    * When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature.
    */
@@ -780,11 +796,11 @@ export type LineItem = {
    */
   description: string;
   /**
-   * The amount in cents before discounts and tax for this line item.
+   * The amount before discounts and tax for this line item.
    */
   subtotal: number;
   /**
-   * The final amount in cents after discounts and tax for this line item.
+   * The final amount after discounts and tax for this line item.
    */
   total: number;
   /**
@@ -819,15 +835,15 @@ export type InvoicePreview = {
    */
   invoiceAt: number;
   /**
-   * The three-letter ISO currency code (e.g., 'usd').
+   * The three-letter ISO currency code. All amounts are in the currency's major unit (e.g., dollars for USD).
    */
   currency: string;
   /**
-   * The total before discounts, in major currency units.
+   * The total before discounts.
    */
   subtotal: number;
   /**
-   * The total after discounts, in major currency units.
+   * The total after discounts.
    */
   total: number;
   /**
@@ -1261,6 +1277,12 @@ export const CustomerUsageLimitInterval$inboundSchema: z.ZodMiniType<
 > = openEnums.inboundSchema(CustomerUsageLimitInterval);
 
 /** @internal */
+export const CustomerAnchor$inboundSchema: z.ZodMiniType<
+  CustomerAnchor,
+  unknown
+> = openEnums.inboundSchema(CustomerAnchor);
+
+/** @internal */
 export const CustomerFilter$inboundSchema: z.ZodMiniType<
   CustomerFilter,
   unknown
@@ -1294,6 +1316,7 @@ export const CustomerUsageLimit$inboundSchema: z.ZodMiniType<
     enabled: z._default(types.boolean(), true),
     limit: types.number(),
     interval: CustomerUsageLimitInterval$inboundSchema,
+    anchor: types.optional(CustomerAnchor$inboundSchema),
     filter: types.optional(z.lazy(() => CustomerFilter$inboundSchema)),
     usage: types.optional(types.number()),
     source: types.optional(UsageLimitSource$inboundSchema),

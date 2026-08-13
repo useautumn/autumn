@@ -14,15 +14,15 @@ import {
 	customerEntitlements,
 	EntInterval,
 } from "@autumn/shared";
+import type { DrizzleCli } from "@/db/initDrizzle.js";
+import { computeCustomerEntitlementInitialState } from "@/internal/billing/v2/actions/batchTransition/compute/operations/entitlementPriceOperations/computeCustomerEntitlementPatch.js";
+import { replaceLicenseEntitlementsForPage } from "@/internal/migrations/v2/batchOperations/actions/replaceLicenseEntitlementsForPage/replaceLicenseEntitlementsForPage.js";
 import { expectAssignmentEntitlementCyclesMatchStripe } from "@tests/integration/licenses/billing/transitions/utils/expectAssignmentEntitlementCyclesMatchStripe";
 import { setupLicenseUpdateScenario } from "@tests/integration/licenses/billing/update/setupLicenseUpdateScenario";
 import { TestFeature } from "@tests/setup/v2Features";
 import { items } from "@tests/utils/fixtures/items";
 import chalk from "chalk";
 import { and, eq, inArray } from "drizzle-orm";
-import type { DrizzleCli } from "@/db/initDrizzle.js";
-import { computeCustomerEntitlementInitialState } from "@/internal/billing/v2/actions/batchTransition/compute/operations/entitlementPriceOperations/computeCustomerEntitlementPatch.js";
-import { replaceLicenseEntitlementsForPage } from "@/internal/migrations/v2/batchOperations/actions/replaceLicenseEntitlementsForPage/replaceLicenseEntitlementsForPage.js";
 import {
 	cloneAssignmentEntitlement,
 	licenseReplacePageContext,
@@ -118,7 +118,7 @@ test.concurrent(
 			features: scenario.ctx.features,
 			scope: page.scope,
 			internalCustomerIds: [page.internalCustomerId],
-			replace: {
+			operation: {
 				type: "replace_license_entitlement",
 				fromEntitlementId: fromEntitlement.id,
 				entitlement: toEntitlement,
@@ -150,7 +150,7 @@ test.concurrent(
 				.sort((a, b) => (a ?? 0) - (b ?? 0)),
 		).toEqual([NEW_SEAT_MESSAGES - CONSUMED, NEW_SEAT_MESSAGES]);
 
-		// The from-half of each replace: the outgoing definition + pre-write balance.
+		// The from-half of each operation: the outgoing definition + pre-write balance.
 		expect(result.removedItems).toHaveLength(ASSIGNED_SEATS);
 		expect(
 			result.removedItems.every(
@@ -184,7 +184,7 @@ test.concurrent(
 			features: scenario.ctx.features,
 			scope: page.scope,
 			internalCustomerIds: [page.internalCustomerId],
-			replace: {
+			operation: {
 				type: "replace_license_entitlement",
 				fromEntitlementId: fromEntitlement.id,
 				entitlement: toEntitlement,
@@ -255,7 +255,7 @@ test.concurrent(
 			features: scenario.ctx.features,
 			scope: page.scope,
 			internalCustomerIds: [page.internalCustomerId],
-			replace: {
+			operation: {
 				type: "replace_license_entitlement",
 				fromEntitlementId: fromEntitlement.id,
 				entitlement: toEntitlement,
@@ -341,7 +341,7 @@ test.concurrent(
 			features: scenario.ctx.features,
 			scope: page.scope,
 			internalCustomerIds: [page.internalCustomerId],
-			replace: {
+			operation: {
 				type: "replace_license_entitlement",
 				fromEntitlementId: fromEntitlement.id,
 				entitlement: toEntitlement,

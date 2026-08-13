@@ -979,6 +979,20 @@ export type PlanVariantDetailsUsageLimitInterval = OpenEnum<
 >;
 
 /**
+ * Window alignment. 'billing_cycle' phases the interval to the customer's renewal time; 'utc' aligns to the UTC calendar.
+ */
+export const PlanVariantDetailsAnchor = {
+  BillingCycle: "billing_cycle",
+  Utc: "utc",
+} as const;
+/**
+ * Window alignment. 'billing_cycle' phases the interval to the customer's renewal time; 'utc' aligns to the UTC calendar.
+ */
+export type PlanVariantDetailsAnchor = OpenEnum<
+  typeof PlanVariantDetailsAnchor
+>;
+
+/**
  * When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature.
  */
 export type PlanVariantDetailsFilter = {
@@ -1002,6 +1016,10 @@ export type PlanVariantDetailsUsageLimit = {
    * Interval for the cap, aligned to the customer's billing cycle.
    */
   interval: PlanVariantDetailsUsageLimitInterval;
+  /**
+   * Window alignment. 'billing_cycle' phases the interval to the customer's renewal time; 'utc' aligns to the UTC calendar.
+   */
+  anchor?: PlanVariantDetailsAnchor | undefined;
   /**
    * When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature.
    */
@@ -1245,6 +1263,18 @@ export const PlanUsageLimitInterval = {
 export type PlanUsageLimitInterval = OpenEnum<typeof PlanUsageLimitInterval>;
 
 /**
+ * Window alignment. 'billing_cycle' phases the interval to the customer's renewal time; 'utc' aligns to the UTC calendar.
+ */
+export const PlanAnchor = {
+  BillingCycle: "billing_cycle",
+  Utc: "utc",
+} as const;
+/**
+ * Window alignment. 'billing_cycle' phases the interval to the customer's renewal time; 'utc' aligns to the UTC calendar.
+ */
+export type PlanAnchor = OpenEnum<typeof PlanAnchor>;
+
+/**
  * When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature.
  */
 export type PlanFilter = {
@@ -1268,6 +1298,10 @@ export type PlanUsageLimit = {
    * Interval for the cap, aligned to the customer's billing cycle.
    */
   interval: PlanUsageLimitInterval;
+  /**
+   * Window alignment. 'billing_cycle' phases the interval to the customer's renewal time; 'utc' aligns to the UTC calendar.
+   */
+  anchor?: PlanAnchor | undefined;
   /**
    * When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature.
    */
@@ -2528,6 +2562,12 @@ export const PlanVariantDetailsUsageLimitInterval$inboundSchema: z.ZodMiniType<
 > = openEnums.inboundSchema(PlanVariantDetailsUsageLimitInterval);
 
 /** @internal */
+export const PlanVariantDetailsAnchor$inboundSchema: z.ZodMiniType<
+  PlanVariantDetailsAnchor,
+  unknown
+> = openEnums.inboundSchema(PlanVariantDetailsAnchor);
+
+/** @internal */
 export const PlanVariantDetailsFilter$inboundSchema: z.ZodMiniType<
   PlanVariantDetailsFilter,
   unknown
@@ -2555,6 +2595,7 @@ export const PlanVariantDetailsUsageLimit$inboundSchema: z.ZodMiniType<
     enabled: z._default(types.boolean(), true),
     limit: types.number(),
     interval: PlanVariantDetailsUsageLimitInterval$inboundSchema,
+    anchor: types.optional(PlanVariantDetailsAnchor$inboundSchema),
     filter: types.optional(
       z.lazy(() => PlanVariantDetailsFilter$inboundSchema),
     ),
@@ -2880,6 +2921,10 @@ export const PlanUsageLimitInterval$inboundSchema: z.ZodMiniType<
 > = openEnums.inboundSchema(PlanUsageLimitInterval);
 
 /** @internal */
+export const PlanAnchor$inboundSchema: z.ZodMiniType<PlanAnchor, unknown> =
+  openEnums.inboundSchema(PlanAnchor);
+
+/** @internal */
 export const PlanFilter$inboundSchema: z.ZodMiniType<PlanFilter, unknown> = z
   .object({
     properties: z.record(z.string(), types.string()),
@@ -2905,6 +2950,7 @@ export const PlanUsageLimit$inboundSchema: z.ZodMiniType<
     enabled: z._default(types.boolean(), true),
     limit: types.number(),
     interval: PlanUsageLimitInterval$inboundSchema,
+    anchor: types.optional(PlanAnchor$inboundSchema),
     filter: types.optional(z.lazy(() => PlanFilter$inboundSchema)),
   }),
   z.transform((v) => {

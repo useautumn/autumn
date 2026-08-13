@@ -76,6 +76,20 @@ export type CreateEntityIntervalRequestBody = ClosedEnum<
   typeof CreateEntityIntervalRequestBody
 >;
 
+/**
+ * Window alignment. 'billing_cycle' phases the interval to the customer's renewal time; 'utc' aligns to the UTC calendar.
+ */
+export const CreateEntityAnchorRequestBody = {
+  BillingCycle: "billing_cycle",
+  Utc: "utc",
+} as const;
+/**
+ * Window alignment. 'billing_cycle' phases the interval to the customer's renewal time; 'utc' aligns to the UTC calendar.
+ */
+export type CreateEntityAnchorRequestBody = ClosedEnum<
+  typeof CreateEntityAnchorRequestBody
+>;
+
 export type CreateEntityProperties = string | number | boolean;
 
 /**
@@ -102,6 +116,10 @@ export type CreateEntityUsageLimitRequestBody = {
    * Interval for the cap, aligned to the customer's billing cycle.
    */
   interval: CreateEntityIntervalRequestBody;
+  /**
+   * Window alignment. 'billing_cycle' phases the interval to the customer's renewal time; 'utc' aligns to the UTC calendar.
+   */
+  anchor?: CreateEntityAnchorRequestBody | undefined;
   /**
    * When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature.
    */
@@ -540,6 +558,20 @@ export type CreateEntityIntervalResponse = OpenEnum<
 >;
 
 /**
+ * Window alignment. 'billing_cycle' phases the interval to the customer's renewal time; 'utc' aligns to the UTC calendar.
+ */
+export const CreateEntityAnchorResponse = {
+  BillingCycle: "billing_cycle",
+  Utc: "utc",
+} as const;
+/**
+ * Window alignment. 'billing_cycle' phases the interval to the customer's renewal time; 'utc' aligns to the UTC calendar.
+ */
+export type CreateEntityAnchorResponse = OpenEnum<
+  typeof CreateEntityAnchorResponse
+>;
+
+/**
  * When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature.
  */
 export type CreateEntityFilterResponse = {
@@ -577,6 +609,10 @@ export type CreateEntityUsageLimitResponse = {
    * Interval for the cap, aligned to the customer's billing cycle.
    */
   interval: CreateEntityIntervalResponse;
+  /**
+   * Window alignment. 'billing_cycle' phases the interval to the customer's renewal time; 'utc' aligns to the UTC calendar.
+   */
+  anchor?: CreateEntityAnchorResponse | undefined;
   /**
    * When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature.
    */
@@ -842,6 +878,11 @@ export const CreateEntityIntervalRequestBody$outboundSchema: z.ZodMiniEnum<
 > = z.enum(CreateEntityIntervalRequestBody);
 
 /** @internal */
+export const CreateEntityAnchorRequestBody$outboundSchema: z.ZodMiniEnum<
+  typeof CreateEntityAnchorRequestBody
+> = z.enum(CreateEntityAnchorRequestBody);
+
+/** @internal */
 export type CreateEntityProperties$Outbound = string | number | boolean;
 
 /** @internal */
@@ -890,6 +931,7 @@ export type CreateEntityUsageLimitRequestBody$Outbound = {
   enabled: boolean;
   limit: number;
   interval: string;
+  anchor?: string | undefined;
   filter?: CreateEntityFilterRequestBody$Outbound | undefined;
 };
 
@@ -903,6 +945,7 @@ export const CreateEntityUsageLimitRequestBody$outboundSchema: z.ZodMiniType<
     enabled: z._default(z.boolean(), true),
     limit: z.number(),
     interval: CreateEntityIntervalRequestBody$outboundSchema,
+    anchor: z.optional(CreateEntityAnchorRequestBody$outboundSchema),
     filter: z.optional(
       z.lazy(() => CreateEntityFilterRequestBody$outboundSchema),
     ),
@@ -1432,6 +1475,12 @@ export const CreateEntityIntervalResponse$inboundSchema: z.ZodMiniType<
 > = openEnums.inboundSchema(CreateEntityIntervalResponse);
 
 /** @internal */
+export const CreateEntityAnchorResponse$inboundSchema: z.ZodMiniType<
+  CreateEntityAnchorResponse,
+  unknown
+> = openEnums.inboundSchema(CreateEntityAnchorResponse);
+
+/** @internal */
 export const CreateEntityFilterResponse$inboundSchema: z.ZodMiniType<
   CreateEntityFilterResponse,
   unknown
@@ -1465,6 +1514,7 @@ export const CreateEntityUsageLimitResponse$inboundSchema: z.ZodMiniType<
     enabled: z._default(types.boolean(), true),
     limit: types.number(),
     interval: CreateEntityIntervalResponse$inboundSchema,
+    anchor: types.optional(CreateEntityAnchorResponse$inboundSchema),
     filter: types.optional(
       z.lazy(() => CreateEntityFilterResponse$inboundSchema),
     ),

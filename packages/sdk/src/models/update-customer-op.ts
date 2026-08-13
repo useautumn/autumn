@@ -136,6 +136,20 @@ export type UpdateCustomerUsageLimitIntervalRequestBody = ClosedEnum<
   typeof UpdateCustomerUsageLimitIntervalRequestBody
 >;
 
+/**
+ * Window alignment. 'billing_cycle' phases the interval to the customer's renewal time; 'utc' aligns to the UTC calendar.
+ */
+export const UpdateCustomerAnchorRequestBody = {
+  BillingCycle: "billing_cycle",
+  Utc: "utc",
+} as const;
+/**
+ * Window alignment. 'billing_cycle' phases the interval to the customer's renewal time; 'utc' aligns to the UTC calendar.
+ */
+export type UpdateCustomerAnchorRequestBody = ClosedEnum<
+  typeof UpdateCustomerAnchorRequestBody
+>;
+
 export type UpdateCustomerProperties = string | number | boolean;
 
 /**
@@ -162,6 +176,10 @@ export type UpdateCustomerUsageLimitRequestBody = {
    * Interval for the cap, aligned to the customer's billing cycle.
    */
   interval: UpdateCustomerUsageLimitIntervalRequestBody;
+  /**
+   * Window alignment. 'billing_cycle' phases the interval to the customer's renewal time; 'utc' aligns to the UTC calendar.
+   */
+  anchor?: UpdateCustomerAnchorRequestBody | undefined;
   /**
    * When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature.
    */
@@ -508,6 +526,20 @@ export type UpdateCustomerUsageLimitIntervalResponse = OpenEnum<
 >;
 
 /**
+ * Window alignment. 'billing_cycle' phases the interval to the customer's renewal time; 'utc' aligns to the UTC calendar.
+ */
+export const UpdateCustomerAnchorResponse = {
+  BillingCycle: "billing_cycle",
+  Utc: "utc",
+} as const;
+/**
+ * Window alignment. 'billing_cycle' phases the interval to the customer's renewal time; 'utc' aligns to the UTC calendar.
+ */
+export type UpdateCustomerAnchorResponse = OpenEnum<
+  typeof UpdateCustomerAnchorResponse
+>;
+
+/**
  * When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature.
  */
 export type UpdateCustomerFilterResponse = {
@@ -545,6 +577,10 @@ export type UpdateCustomerUsageLimitResponse = {
    * Interval for the cap, aligned to the customer's billing cycle.
    */
   interval: UpdateCustomerUsageLimitIntervalResponse;
+  /**
+   * Window alignment. 'billing_cycle' phases the interval to the customer's renewal time; 'utc' aligns to the UTC calendar.
+   */
+  anchor?: UpdateCustomerAnchorResponse | undefined;
   /**
    * When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature.
    */
@@ -1232,6 +1268,11 @@ export const UpdateCustomerUsageLimitIntervalRequestBody$outboundSchema:
   );
 
 /** @internal */
+export const UpdateCustomerAnchorRequestBody$outboundSchema: z.ZodMiniEnum<
+  typeof UpdateCustomerAnchorRequestBody
+> = z.enum(UpdateCustomerAnchorRequestBody);
+
+/** @internal */
 export type UpdateCustomerProperties$Outbound = string | number | boolean;
 
 /** @internal */
@@ -1280,6 +1321,7 @@ export type UpdateCustomerUsageLimitRequestBody$Outbound = {
   enabled: boolean;
   limit: number;
   interval: string;
+  anchor?: string | undefined;
   filter?: UpdateCustomerFilterRequestBody$Outbound | undefined;
 };
 
@@ -1293,6 +1335,7 @@ export const UpdateCustomerUsageLimitRequestBody$outboundSchema: z.ZodMiniType<
     enabled: z._default(z.boolean(), true),
     limit: z.number(),
     interval: UpdateCustomerUsageLimitIntervalRequestBody$outboundSchema,
+    anchor: z.optional(UpdateCustomerAnchorRequestBody$outboundSchema),
     filter: z.optional(
       z.lazy(() => UpdateCustomerFilterRequestBody$outboundSchema),
     ),
@@ -1745,6 +1788,12 @@ export const UpdateCustomerUsageLimitIntervalResponse$inboundSchema:
     .inboundSchema(UpdateCustomerUsageLimitIntervalResponse);
 
 /** @internal */
+export const UpdateCustomerAnchorResponse$inboundSchema: z.ZodMiniType<
+  UpdateCustomerAnchorResponse,
+  unknown
+> = openEnums.inboundSchema(UpdateCustomerAnchorResponse);
+
+/** @internal */
 export const UpdateCustomerFilterResponse$inboundSchema: z.ZodMiniType<
   UpdateCustomerFilterResponse,
   unknown
@@ -1778,6 +1827,7 @@ export const UpdateCustomerUsageLimitResponse$inboundSchema: z.ZodMiniType<
     enabled: z._default(types.boolean(), true),
     limit: types.number(),
     interval: UpdateCustomerUsageLimitIntervalResponse$inboundSchema,
+    anchor: types.optional(UpdateCustomerAnchorResponse$inboundSchema),
     filter: types.optional(
       z.lazy(() => UpdateCustomerFilterResponse$inboundSchema),
     ),

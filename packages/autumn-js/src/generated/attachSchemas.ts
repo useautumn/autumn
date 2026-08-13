@@ -368,6 +368,7 @@ export const attachUsageLimitOutboundSchema = z.object({
 	enabled: z.boolean(),
 	limit: z.number(),
 	interval: z.string(),
+	anchor: z.union([z.string(), z.undefined()]).optional(),
 	filter: z.union([attachFilterOutboundSchema, z.undefined()]).optional(),
 });
 
@@ -834,11 +835,14 @@ export const attachSpendLimitSchema = z.object({
 
 export const attachUsageLimitIntervalSchema = closedEnumSchema;
 
+export const attachAnchorSchema = closedEnumSchema;
+
 export const attachUsageLimitSchema = z.object({
 	featureId: z.string(),
 	enabled: z.union([z.boolean(), z.undefined()]).optional(),
 	limit: z.number(),
 	interval: attachUsageLimitIntervalSchema,
+	anchor: z.union([attachAnchorSchema, z.undefined()]).optional(),
 	filter: z.union([attachFilterSchema, z.undefined()]).optional(),
 });
 
