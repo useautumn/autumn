@@ -8,7 +8,7 @@
  */
 
 import type { StripeWebhookContext } from "@/external/stripe/webhookMiddlewares/stripeWebhookContext";
-import { addBillingChangeTag } from "../../../common";
+import { addBillingChangeTag } from "@/internal/billing/v2/workflows/sendBillingUpdatedWebhook/billingChangeCollector";
 import type { StripeSubscriptionUpdatedContext } from "../../stripeSubscriptionUpdatedContext";
 
 export const handleStripeSubscriptionTrialEnded = ({
@@ -27,5 +27,8 @@ export const handleStripeSubscriptionTrialEnded = ({
 		`[trialEnded] customer ${subscriptionUpdatedContext.fullCustomer.id ?? subscriptionUpdatedContext.fullCustomer.internal_id} sub ${stripeSubscription.id} status ${previousAttributes.status} → ${stripeSubscription.status}`,
 	);
 
-	addBillingChangeTag(subscriptionUpdatedContext, "trial_ended");
+	addBillingChangeTag({
+		collector: subscriptionUpdatedContext,
+		tag: "trial_ended",
+	});
 };

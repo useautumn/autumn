@@ -7,6 +7,7 @@ import {
 	type InsertCustomerProduct,
 } from "@autumn/shared";
 import { getStripeInvoice } from "@/external/stripe/invoices/operations/getStripeInvoice";
+import { isManualBillingUpdateInvoice } from "@/external/stripe/invoices/utils/classifyStripeInvoice";
 import type { ExpandedStripeSubscription } from "@/external/stripe/subscriptions/operations/getExpandedStripeSubscription";
 import { isStripeSubscriptionPastDue } from "@/external/stripe/subscriptions/utils/classifyStripeSubscriptionUtils";
 import {
@@ -22,12 +23,6 @@ import type {
 	SubscriptionPreviousAttributes,
 } from "../../stripeSubscriptionUpdatedContext";
 import { fixUnexpectedStatuses } from "./fixUnexpectedStatuses";
-
-const isManualBillingUpdateInvoice = (invoice: {
-	metadata?: Record<string, string> | null;
-}) =>
-	invoice.metadata?.autumn_billing_update &&
-	invoice.metadata?.autumn_invoice_mode !== "true";
 
 const getInvoiceId = (invoice: string | { id?: string } | null | undefined) =>
 	typeof invoice === "string" ? invoice : invoice?.id;
@@ -102,7 +97,7 @@ export const syncCustomerProductStatus = async ({
 	ctx: StripeWebhookContext;
 	subscriptionUpdatedContext: StripeSubscriptionUpdatedContext;
 }): Promise<void> => {
-	const { db, logger, org, env } = ctx;
+	const { logger, org, env } = ctx;
 	const {
 		stripeSubscription,
 		customerProducts,

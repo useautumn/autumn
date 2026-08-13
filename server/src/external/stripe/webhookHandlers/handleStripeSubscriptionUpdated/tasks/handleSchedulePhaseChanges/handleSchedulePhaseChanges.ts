@@ -2,8 +2,8 @@ import { formatMs, notNullish } from "@autumn/shared";
 import { getStripeSubscriptionLock } from "@/external/redis/actions/stripeSubscriptionLock/stripeSubscriptionLock.js";
 import { stripeSubscriptionScheduleToPhaseIndex } from "@/external/stripe/subscriptionSchedules/utils/convertStripeSubscriptionScheduleUtils";
 import type { StripeWebhookContext } from "@/external/stripe/webhookMiddlewares/stripeWebhookContext";
+import { addBillingChangeTag } from "@/internal/billing/v2/workflows/sendBillingUpdatedWebhook/billingChangeCollector";
 import { reconcileLicenseStateForCustomer } from "@/internal/licenses/actions/reconcile/reconcileLicenseState";
-import { addBillingChangeTag } from "../../../common";
 import type { StripeSubscriptionUpdatedContext } from "../../stripeSubscriptionUpdatedContext";
 import { activateScheduledCustomerProducts } from "./activateScheduledCustomerProducts";
 import { expireEndedCustomerProducts } from "./expireEndedCustomerProducts";
@@ -77,7 +77,7 @@ export const handleSchedulePhaseChanges = async ({
 		eventContext.updatedCustomerProducts.length > updatesBefore ||
 		eventContext.insertedCustomerProducts.length > insertsBefore
 	) {
-		addBillingChangeTag(eventContext, "phase_changed");
+		addBillingChangeTag({ collector: eventContext, tag: "phase_changed" });
 
 		// Phase transitions swap license parents outside any billing action —
 		// converge now instead of on the customer's next read. No route

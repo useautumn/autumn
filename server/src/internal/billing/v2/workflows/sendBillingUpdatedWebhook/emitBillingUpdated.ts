@@ -1,20 +1,12 @@
-import type {
-	CustomerProductUpdate,
-	FullCusProduct,
-	FullCustomer,
-} from "@autumn/shared";
+import type { CustomerProductUpdate, FullCustomer } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import {
 	type BillingChangeCollector,
 	collectorToAutumnBillingPlan,
-	createBillingChangeCollector,
 } from "./billingChangeCollector";
 import { sendBillingUpdatedWebhook } from "./sendBillingUpdatedWebhook";
 
-/**
- * Central emission point for `billing.updated`. Builds the AutumnBillingPlan
- * from a collector's tracked mutations and fires the webhook fire-and-forget.
- */
+/** Fires `billing.updated` for everything a collector accumulated across tasks. */
 export const flushBillingUpdated = ({
 	ctx,
 	collector,
@@ -22,35 +14,31 @@ export const flushBillingUpdated = ({
 	ctx: AutumnContext;
 	collector: BillingChangeCollector;
 }): void => {
-	const autumnBillingPlan = collectorToAutumnBillingPlan(collector);
-	const tags = Array.from(collector.billingChangeTags);
-
 	void sendBillingUpdatedWebhook({
 		ctx,
-		autumnBillingPlan,
+		autumnBillingPlan: collectorToAutumnBillingPlan(collector),
 		originalFullCustomer: collector.originalFullCustomer,
-		tags,
+		tags: Array.from(collector.billingChangeTags),
 	});
 };
 
-/** One-shot emission for callers that don't accumulate changes across tasks. */
+/** Fires `billing.updated` for a lifecycle action that owns its single change. */
 export const emitBillingUpdated = ({
 	ctx,
 	originalFullCustomer,
-	updateCustomerProducts = [],
-	insertCustomerProducts = [],
+	updateCustomerProducts,
 }: {
 	ctx: AutumnContext;
 	originalFullCustomer: FullCustomer;
-	updateCustomerProducts?: CustomerProductUpdate[];
-	insertCustomerProducts?: FullCusProduct[];
+	updateCustomerProducts: CustomerProductUpdate[];
 }): void => {
-	const collector = createBillingChangeCollector({
-		fullCustomer: originalFullCustomer,
+	void sendBillingUpdatedWebhook({
+		ctx,
+		autumnBillingPlan: {
+			customerId: originalFullCustomer.id ?? originalFullCustomer.internal_id,
+			insertCustomerProducts: [],
+			updateCustomerProducts,
+		},
+		originalFullCustomer,
 	});
-
-	collector.updatedCustomerProducts.push(...updateCustomerProducts);
-	collector.insertedCustomerProducts.push(...insertCustomerProducts);
-
-	flushBillingUpdated({ ctx, collector });
 };

@@ -10,26 +10,17 @@ import { addProductsUpdatedWebhookTask } from "@/internal/analytics/handlers/han
 import { executeAutumnBillingPlan } from "@/internal/billing/v2/execute/executeAutumnBillingPlan.js";
 import {
 	type BillingChangeCollector,
+	createBillingChangeCollector,
 	trackCustomerProductInsertion,
 	trackCustomerProductUpdate,
 } from "@/internal/billing/v2/workflows/sendBillingUpdatedWebhook/billingChangeCollector";
-import { emitBillingUpdated } from "@/internal/billing/v2/workflows/sendBillingUpdatedWebhook/emitBillingUpdated";
+import { flushBillingUpdated } from "@/internal/billing/v2/workflows/sendBillingUpdatedWebhook/emitBillingUpdated";
 import { activateFreeSuccessorProduct } from "@/internal/customers/cusProducts/actions/activateFreeSuccessorProduct";
 
 /**
- * Expires a customer product and activates the default product if needed.
- *
- * This action:
- * 1. Sets status to Expired
- * 2. Sends the products_updated (Expired) webhook
- * 3. Activates free successor (scheduled or default) if no other active product in group
- * 4. Records the transitions on `collector` when given, otherwise emits
- *    billing.updated itself
- *
- * @returns updates - The updates applied to the expired customer product
- * @returns expiredCustomerProduct - The expired product with `updates` applied
- * @returns activatedCustomerProduct - If a scheduled product was activated (UPDATE)
- * @returns insertedCustomerProduct - If a new default product was created (INSERT)
+ * Expires a customer product, then activates its free successor (scheduled or
+ * default) when nothing else in its group is live. Callers mid-workflow pass a
+ * `collector` and flush once at the end; standalone callers emit here.
  */
 export const expireCustomerProductAndActivateDefault = async ({
 	ctx,
@@ -51,7 +42,9 @@ export const expireCustomerProductAndActivateDefault = async ({
 }> => {
 	const { org, env } = ctx;
 
-	const originalFullCustomer = structuredClone(fullCustomer);
+	// Constructed up here because that is what snapshots the pre-change customer
+	// the emitted diff is built against.
+	const changes = collector ?? createBillingChangeCollector({ fullCustomer });
 
 	// 1. Expire the product
 	const updates: CustomerProductUpdates = {
@@ -103,45 +96,26 @@ export const expireCustomerProductAndActivateDefault = async ({
 			fullCustomer,
 		});
 
-	// 4. Record the transitions (payload needs the activated/inserted products).
-	// Entry order feeds plan-change collapsing, so expired must land first.
-	if (collector) {
-		trackCustomerProductUpdate({ collector, customerProduct, updates });
+	// 4. Record the transitions. Entry order feeds plan-change collapsing, so
+	// the expired product must land before its successor.
+	trackCustomerProductUpdate({ collector: changes, customerProduct, updates });
 
-		if (activatedCustomerProduct) {
-			trackCustomerProductUpdate({
-				collector,
-				customerProduct: activatedCustomerProduct,
-				updates: { status: CusProductStatus.Active },
-			});
-		}
-
-		if (insertedCustomerProduct) {
-			trackCustomerProductInsertion({
-				collector,
-				customerProduct: insertedCustomerProduct,
-			});
-		}
-	} else {
-		emitBillingUpdated({
-			ctx,
-			originalFullCustomer,
-			updateCustomerProducts: [
-				{ customerProduct, updates },
-				...(activatedCustomerProduct
-					? [
-							{
-								customerProduct: activatedCustomerProduct,
-								updates: { status: CusProductStatus.Active },
-							},
-						]
-					: []),
-			],
-			insertCustomerProducts: insertedCustomerProduct
-				? [insertedCustomerProduct]
-				: [],
+	if (activatedCustomerProduct) {
+		trackCustomerProductUpdate({
+			collector: changes,
+			customerProduct: activatedCustomerProduct,
+			updates: { status: CusProductStatus.Active },
 		});
 	}
+
+	if (insertedCustomerProduct) {
+		trackCustomerProductInsertion({
+			collector: changes,
+			customerProduct: insertedCustomerProduct,
+		});
+	}
+
+	if (!collector) flushBillingUpdated({ ctx, collector: changes });
 
 	return {
 		updates,

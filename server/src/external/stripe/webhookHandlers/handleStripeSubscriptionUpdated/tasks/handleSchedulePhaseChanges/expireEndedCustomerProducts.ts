@@ -32,11 +32,8 @@ export const expireEndedCustomerProducts = async ({
 			`Expiring product: ${customerProduct.product.name}${customerProduct.entity_id ? `@${customerProduct.entity_id}` : ""}`,
 		);
 
-		// Auto-preserve remaining one-off prepaid balances as lifetime cusEnts
-		// before the product is expired. Billing-action flows already do this
-		// at compute time; this is the webhook-driven equivalent for scheduled
-		// phase transitions. The eventContext entry is consumed by
-		// logCustomerProductUpdates so the structured summary lands in one place.
+		// Preserve remaining one-off prepaid balances as lifetime cusEnts before
+		// expiry — the webhook equivalent of what attach does at compute time.
 		const carryOver = await customerProductActions.preserveOneOffPrepaid({
 			ctx,
 			customerProduct,

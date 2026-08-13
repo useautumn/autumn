@@ -11,18 +11,17 @@ export type BillingChangeCollector = {
 	/** Pre-change snapshot taken at construction — the flush diffs against this,
 	 * and `fullCustomer` is already mutated by the time it runs. */
 	originalFullCustomer: FullCustomer;
-	/**
-	 * Products in scope (Stripe: those on the subscription), mutated in place by
-	 * the trackers — iterate a snapshot (`[...customerProducts]`) while tracking.
-	 */
+	/** Products in scope, mutated in place by the trackers — iterate a snapshot
+	 * (`[...customerProducts]`) while tracking. */
 	customerProducts: FullCusProduct[];
+	/** Wider than the payload's `CustomerProductUpdates` because tasks sync
+	 * columns the plan schema doesn't model (e.g. `collection_method`). */
 	updatedCustomerProducts: {
 		customerProduct: FullCusProduct;
 		updates: Partial<InsertCustomerProduct>;
 	}[];
 	insertedCustomerProducts: FullCusProduct[];
 	deletedCustomerProducts: FullCusProduct[];
-	/** Signals pushed via `addBillingChangeTag`, appended to the payload. */
 	billingChangeTags: Set<string>;
 };
 
@@ -114,6 +113,20 @@ export const trackCustomerProductInsertion = ({
 	if (!exists) {
 		customerProducts.push(customerProduct);
 	}
+};
+
+/**
+ * Records a signal (e.g. "trial_ended") for the payload's `tags`. Only call it
+ * once the condition is actually detected — tags describe what happened.
+ */
+export const addBillingChangeTag = ({
+	collector,
+	tag,
+}: {
+	collector: BillingChangeCollector;
+	tag: string;
+}): void => {
+	collector.billingChangeTags.add(tag);
 };
 
 export const collectorToAutumnBillingPlan = (

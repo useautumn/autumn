@@ -1,13 +1,6 @@
 /**
- * Sends the `billing.updated` webhook with a freshly built BillingChangeResponse.
- *
- * Skips when:
- *   - `ctx.testOptions?.skipWebhooks` is set
- *   - the resulting response has no `plan_changes` and no `tags`
- *
- * Intended to be called fire-and-forget from emission sites:
- *   `void sendBillingUpdatedWebhook({ ctx, autumnBillingPlan, originalFullCustomer });`
- * Errors are caught and logged internally.
+ * Sends `billing.updated` with a freshly built BillingChangeResponse. Call it
+ * fire-and-forget — errors are caught and logged rather than thrown.
  */
 
 import {
@@ -18,10 +11,8 @@ import {
 } from "@autumn/shared";
 import { sendSvixEvent } from "@/external/svix/svixHelpers.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
-import {
-	billingChangeResponseHasContent,
-	buildBillingChangeResponse,
-} from "@/internal/billing/v2/actions/buildBillingChanges";
+import { billingChangeResponseHasContent } from "@/internal/billing/v2/actions/buildBillingChanges/billingChangeResponseHasContent";
+import { buildBillingChangeResponse } from "@/internal/billing/v2/actions/buildBillingChanges/buildBillingChangeResponse";
 
 export const sendBillingUpdatedWebhook = async ({
 	ctx,
@@ -43,10 +34,6 @@ export const sendBillingUpdatedWebhook = async ({
 			autumnBillingPlan,
 			tags,
 		});
-
-		// console.log("response", response);
-		// console.log("response", response);
-		// console.log("response", response);
 
 		if (!billingChangeResponseHasContent(response)) return;
 

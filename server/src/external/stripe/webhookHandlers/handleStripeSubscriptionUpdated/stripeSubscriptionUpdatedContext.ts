@@ -21,11 +21,8 @@ export interface StripeSubscriptionUpdatedContext
 	previousAttributes: SubscriptionPreviousAttributes;
 	/** Current time in ms, respecting test clocks */
 	nowMs: number;
-	/**
-	 * Tracks one-off prepaid lifetime cusEnts persisted by
-	 * `customerProductActions.preserveOneOffPrepaid` as each outgoing cusProduct
-	 * is expired. Surfaced in the structured summary by logCustomerProductUpdates.
-	 */
+	/** One-off prepaid lifetime cusEnts preserved as each outgoing cusProduct is
+	 * expired; surfaced in the handler's structured log summary. */
 	oneOffPrepaidCarryOvers: {
 		customerProductId: string;
 		productName: string;
