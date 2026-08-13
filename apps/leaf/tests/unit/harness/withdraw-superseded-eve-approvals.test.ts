@@ -8,11 +8,14 @@ import type {
 } from "../../../src/harness/eve/types.js";
 
 // The real modules reach for a Postgres pool and eve's HTTP API; the withdrawal
-// decision under test only cares about which of them succeeded.
+// decision under test only cares about which of them succeeded. They stay mocked
+// for the rest of the process — the real namespaces cannot be captured first,
+// because importing them parses leaf's full env schema.
 mock.module("../../../src/lib/db.js", () => ({ db: {} }));
 
 let pendingApprovals: ChatApproval[] = [];
 const cancelledApprovalIds: string[] = [];
+const rehomedRunIds: Array<{ approvalId: string; runId: string }> = [];
 mock.module(
 	"../../../src/internal/approvals/repos/chatApprovalRepo.js",
 	() => ({
@@ -22,6 +25,15 @@ mock.module(
 				return pendingApprovals.find((approval) => approval.id === approvalId);
 			},
 			listPendingForRun: async () => pendingApprovals,
+			setRunId: async ({
+				approvalId,
+				runId,
+			}: {
+				approvalId: string;
+				runId: string;
+			}) => {
+				rehomedRunIds.push({ approvalId, runId });
+			},
 		},
 	}),
 );
@@ -63,7 +75,12 @@ const { withdrawSupersededEveApprovals } = await import(
 );
 
 const approval = (id: string, toolCallId?: string) =>
-	({ id, tool_args: {}, tool_call_id: toolCallId }) as unknown as ChatApproval;
+	({
+		id,
+		run_id: "eve_session_1",
+		tool_args: {},
+		tool_call_id: toolCallId,
+	}) as unknown as ChatApproval;
 
 const auth = {
 	appEnv: AppEnv.Sandbox,
@@ -108,6 +125,7 @@ describe("withdrawSupersededEveApprovals", () => {
 		postedRequestIds.length = 0;
 		drainedSessionIds.length = 0;
 		savedSessionIds.length = 0;
+		rehomedRunIds.length = 0;
 		supersededBatches = [];
 		session = {
 			env: AppEnv.Sandbox,
@@ -178,6 +196,26 @@ describe("withdrawSupersededEveApprovals", () => {
 		await withdraw().catch(() => {});
 
 		expect(savedSessionIds).toEqual(["eve_rehomed_tc_1"]);
+	});
+
+	test("moves the card it could not withdraw onto the re-homed run", async () => {
+		pendingApprovals = [approval("a_1", "tc_1"), approval("a_2", "tc_2")];
+		failingRequestIds.add("tc_2");
+
+		await withdraw().catch(() => {});
+
+		expect(rehomedRunIds).toEqual([
+			{ approvalId: "a_2", runId: "eve_rehomed_tc_1" },
+		]);
+	});
+
+	test("leaves the card alone when the run was never re-homed", async () => {
+		pendingApprovals = [approval("a_1", "tc_1")];
+		failingRequestIds.add("tc_1");
+
+		await withdraw().catch(() => {});
+
+		expect(rehomedRunIds).toEqual([]);
 	});
 
 	test("does nothing when the thread has no pending cards", async () => {

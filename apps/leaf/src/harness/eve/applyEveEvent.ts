@@ -3,6 +3,7 @@ import {
 	isSilentTool,
 	normalizeToolName,
 } from "../../agent/tools/toolPolicy.js";
+import { toolRequestFromArgs } from "../../internal/approvals/utils/toolRequest.js";
 import { executeAutumnMcpTool } from "../../internal/autumnMcp/client.js";
 import type { RunStopReason } from "../../internal/runs/runRegistry.js";
 import type { Suspension } from "../../types.js";
@@ -12,6 +13,7 @@ import {
 	enrichCatalogPreview,
 } from "./catalogDecision.js";
 import {
+	type ChainedPendingRequest,
 	classifyParkedEveInput,
 	type PendingQuestion,
 	WAITING_FALLBACK_TEXT,
@@ -93,6 +95,30 @@ const announceRequestedActions = async ({
 	}
 };
 
+const capturePreviewResult = async ({
+	env,
+	input,
+	output,
+	toolName,
+	token,
+}: {
+	env: AppEnv;
+	input?: Record<string, unknown>;
+	output: unknown;
+	toolName: string;
+	token: string;
+}): Promise<CapturedPreview> => ({
+	// Enriched (variant/version flags forced) so the approval card and the
+	// suspension decision gate both see the full preview.
+	preview: await enrichCatalogPreview({
+		executeTool: (call) => executeAutumnMcpTool({ env, token, ...call }),
+		input,
+		preview: parsePreviewPayload(output) ?? output,
+	}),
+	previewTool: normalizeToolName(toolName),
+	request: toolRequestFromArgs(input),
+});
+
 const absorbActionResult = async ({
 	env,
 	event,
@@ -102,23 +128,20 @@ const absorbActionResult = async ({
 }: EveEventContext) => {
 	const result = event.data?.result as EveActionResult | undefined;
 	if (result?.toolName && isPreviewToolName(result.toolName)) {
+		const input = result.callId
+			? progress.toolInputs.get(result.callId)
+			: undefined;
 		// A failed preview leaves nothing to show, so it must also retire the one
 		// before it — the write is about to be previewed, not re-described.
 		progress.lastPreview =
 			event.data?.status === "completed"
-				? {
-						// Enriched (variant/version flags forced) so the approval card and
-						// the suspension decision gate both see the full preview.
-						preview: await enrichCatalogPreview({
-							executeTool: (call) =>
-								executeAutumnMcpTool({ env, token, ...call }),
-							input: result.callId
-								? progress.toolInputs.get(result.callId)
-								: undefined,
-							preview: parsePreviewPayload(result.output) ?? result.output,
-						}),
-						previewTool: normalizeToolName(result.toolName),
-					}
+				? await capturePreviewResult({
+						env,
+						input,
+						output: result.output,
+						toolName: result.toolName,
+						token,
+					})
 				: undefined;
 	}
 	if (!result?.callId) return;
@@ -173,6 +196,32 @@ const completeMessage = ({ event, onReasoning, progress }: EveEventContext) => {
 	progress.finalText = message;
 };
 
+/** The approval card's payload: the write's own args plus the option ids the
+ * resume path answers eve with, and the preview if this turn took one. */
+const suspensionForGatedWrite = ({
+	chained,
+	progress,
+}: {
+	chained: ChainedPendingRequest;
+	progress: EveTurnProgress;
+}): Suspension => {
+	const options = approvalOptionIds({ options: chained.options });
+	return {
+		toolCallId: chained.requestId,
+		toolName: chained.toolName,
+		toolArgs: {
+			...(chained.input ?? {}),
+			_eveApproveOptionId: options.approve,
+			_eveDenyOptionId: options.deny,
+		},
+		preview: previewForParkedWrite({
+			captured: progress.lastPreview,
+			input: chained.input,
+			toolName: chained.toolName,
+		}),
+	};
+};
+
 const parkOnInputRequest = async ({
 	event,
 	orgId,
@@ -184,22 +233,12 @@ const parkOnInputRequest = async ({
 	await saveEveSessionState({ orgId, session, state: { status: "waiting" } });
 
 	if (parked?.kind === "gated") {
-		const options = approvalOptionIds({ options: parked.chained.options });
 		return {
 			kind: "suspended",
-			suspension: {
-				toolCallId: parked.chained.requestId,
-				toolName: parked.chained.toolName,
-				toolArgs: {
-					...(parked.chained.input ?? {}),
-					_eveApproveOptionId: options.approve,
-					_eveDenyOptionId: options.deny,
-				},
-				preview: previewForParkedWrite({
-					captured: progress.lastPreview,
-					toolName: parked.chained.toolName,
-				}),
-			},
+			suspension: suspensionForGatedWrite({
+				chained: parked.chained,
+				progress,
+			}),
 			text: progress.finalText,
 		};
 	}

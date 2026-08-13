@@ -7,27 +7,68 @@ const attachPreview = {
 	total: 20,
 };
 
+const attachRequest = { customer_id: "cus_1", plan_id: "pro" };
+
 const captured = {
 	preview: attachPreview,
 	previewTool: "previewAttach",
+	request: attachRequest,
 };
 
 describe("previewForParkedWrite", () => {
 	test("hands the preview to the write it previewed", () => {
 		expect(
-			previewForParkedWrite({ captured, toolName: "autumn__attach" }),
+			previewForParkedWrite({
+				captured,
+				input: { request: attachRequest },
+				toolName: "autumn__attach",
+			}),
+		).toMatchObject({ total: 20 });
+	});
+
+	test("matches a request whose keys arrived in a different order", () => {
+		expect(
+			previewForParkedWrite({
+				captured,
+				input: { request: { plan_id: "pro", customer_id: "cus_1" } },
+				toolName: "autumn__attach",
+			}),
 		).toMatchObject({ total: 20 });
 	});
 
 	test("withholds it from a different write in the same turn", () => {
 		expect(
-			previewForParkedWrite({ captured, toolName: "autumn__createBalance" }),
+			previewForParkedWrite({
+				captured,
+				input: { request: attachRequest },
+				toolName: "autumn__createBalance",
+			}),
+		).toBeUndefined();
+	});
+
+	test("withholds it from another write sharing the same preview tool", () => {
+		const catalogPreview = {
+			preview: { plan_changes: [] },
+			previewTool: "previewUpdateCatalog",
+			request: { plans: [{ plan_id: "pro" }] },
+		};
+
+		expect(
+			previewForParkedWrite({
+				captured: catalogPreview,
+				input: { request: { plans: [{ plan_id: "starter" }] } },
+				toolName: "autumn__updateCatalog",
+			}),
 		).toBeUndefined();
 	});
 
 	test("withholds it from a write with no preview tool at all", () => {
 		expect(
-			previewForParkedWrite({ captured, toolName: "autumn__createEntity" }),
+			previewForParkedWrite({
+				captured,
+				input: { request: attachRequest },
+				toolName: "autumn__createEntity",
+			}),
 		).toBeUndefined();
 	});
 
@@ -35,6 +76,7 @@ describe("previewForParkedWrite", () => {
 		expect(
 			previewForParkedWrite({
 				captured: undefined,
+				input: { request: attachRequest },
 				toolName: "autumn__attach",
 			}),
 		).toBeUndefined();
