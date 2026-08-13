@@ -1016,13 +1016,14 @@ components:
                 description: Unix timestamp (milliseconds) when this invoice will be created.
               currency:
                 type: string
-                description: The three-letter ISO currency code (e.g., 'usd').
+                description: The three-letter ISO currency code. All amounts are in the
+                  currency's major unit (e.g., dollars for USD).
               subtotal:
                 type: number
-                description: The total before discounts, in major currency units.
+                description: The total before discounts.
               total:
                 type: number
-                description: The total after discounts, in major currency units.
+                description: The total after discounts.
               line_items:
                 type: array
                 items:
@@ -1038,11 +1039,10 @@ components:
                       description: A detailed description of the line item.
                     subtotal:
                       type: number
-                      description: The amount in cents before discounts and tax for this line item.
+                      description: The amount before discounts and tax for this line item.
                     total:
                       type: number
-                      description: The final amount in cents after discounts and tax for this line
-                        item.
+                      description: The final amount after discounts and tax for this line item.
                     discounts:
                       type: array
                       items:
@@ -4044,13 +4044,14 @@ paths:
                           description: Unix timestamp (milliseconds) when this invoice will be created.
                         currency:
                           type: string
-                          description: The three-letter ISO currency code (e.g., 'usd').
+                          description: The three-letter ISO currency code. All amounts are in the
+                            currency's major unit (e.g., dollars for USD).
                         subtotal:
                           type: number
-                          description: The total before discounts, in major currency units.
+                          description: The total before discounts.
                         total:
                           type: number
-                          description: The total after discounts, in major currency units.
+                          description: The total after discounts.
                         line_items:
                           type: array
                           items:
@@ -4066,11 +4067,10 @@ paths:
                                 description: A detailed description of the line item.
                               subtotal:
                                 type: number
-                                description: The amount in cents before discounts and tax for this line item.
+                                description: The amount before discounts and tax for this line item.
                               total:
                                 type: number
-                                description: The final amount in cents after discounts and tax for this line
-                                  item.
+                                description: The final amount after discounts and tax for this line item.
                               discounts:
                                 type: array
                                 items:
@@ -21518,11 +21518,10 @@ paths:
                           description: A detailed description of the line item.
                         subtotal:
                           type: number
-                          description: The amount in cents before discounts and tax for this line item.
+                          description: The amount before discounts and tax for this line item.
                         total:
                           type: number
-                          description: The final amount in cents after discounts and tax for this line
-                            item.
+                          description: The final amount after discounts and tax for this line item.
                         discounts:
                           type: array
                           items:
@@ -21574,15 +21573,16 @@ paths:
                         - quantity
                   subtotal:
                     type: number
-                    description: The total amount in cents before discounts and tax for the current
-                      billing period.
+                    description: The total amount before discounts and tax for the current billing
+                      period.
                   total:
                     type: number
-                    description: The final amount in cents after discounts and tax for the current
-                      billing period.
+                    description: The final amount after discounts and tax for the current billing
+                      period.
                   currency:
                     type: string
-                    description: The three-letter ISO currency code (e.g., 'usd').
+                    description: The three-letter ISO currency code. All amounts are in the
+                      currency's major unit (e.g., dollars for USD).
                   next_cycle:
                     type: object
                     properties:
@@ -21591,12 +21591,10 @@ paths:
                         description: Unix timestamp (milliseconds) when the next billing cycle starts.
                       subtotal:
                         type: number
-                        description: The total amount in cents before discounts and tax for the next
-                          cycle.
+                        description: The total amount before discounts and tax for the next cycle.
                       total:
                         type: number
-                        description: The final amount in cents after discounts and tax for the next
-                          cycle.
+                        description: The final amount after discounts and tax for the next cycle.
                       line_items:
                         type: array
                         items:
@@ -21612,11 +21610,10 @@ paths:
                               description: A detailed description of the line item.
                             subtotal:
                               type: number
-                              description: The amount in cents before discounts and tax for this line item.
+                              description: The amount before discounts and tax for this line item.
                             total:
                               type: number
-                              description: The final amount in cents after discounts and tax for this line
-                                item.
+                              description: The final amount after discounts and tax for this line item.
                             discounts:
                               type: array
                               items:
@@ -22559,11 +22556,10 @@ paths:
                           description: A detailed description of the line item.
                         subtotal:
                           type: number
-                          description: The amount in cents before discounts and tax for this line item.
+                          description: The amount before discounts and tax for this line item.
                         total:
                           type: number
-                          description: The final amount in cents after discounts and tax for this line
-                            item.
+                          description: The final amount after discounts and tax for this line item.
                         discounts:
                           type: array
                           items:
@@ -22615,15 +22611,16 @@ paths:
                         - quantity
                   subtotal:
                     type: number
-                    description: The total amount in cents before discounts and tax for the current
-                      billing period.
+                    description: The total amount before discounts and tax for the current billing
+                      period.
                   total:
                     type: number
-                    description: The final amount in cents after discounts and tax for the current
-                      billing period.
+                    description: The final amount after discounts and tax for the current billing
+                      period.
                   currency:
                     type: string
-                    description: The three-letter ISO currency code (e.g., 'usd').
+                    description: The three-letter ISO currency code. All amounts are in the
+                      currency's major unit (e.g., dollars for USD).
                   next_cycle:
                     type: object
                     properties:
@@ -22632,12 +22629,10 @@ paths:
                         description: Unix timestamp (milliseconds) when the next billing cycle starts.
                       subtotal:
                         type: number
-                        description: The total amount in cents before discounts and tax for the next
-                          cycle.
+                        description: The total amount before discounts and tax for the next cycle.
                       total:
                         type: number
-                        description: The final amount in cents after discounts and tax for the next
-                          cycle.
+                        description: The final amount after discounts and tax for the next cycle.
                       line_items:
                         type: array
                         items:
@@ -22653,11 +22648,10 @@ paths:
                               description: A detailed description of the line item.
                             subtotal:
                               type: number
-                              description: The amount in cents before discounts and tax for this line item.
+                              description: The amount before discounts and tax for this line item.
                             total:
                               type: number
-                              description: The final amount in cents after discounts and tax for this line
-                                item.
+                              description: The final amount after discounts and tax for this line item.
                             discounts:
                               type: array
                               items:
@@ -25756,11 +25750,10 @@ paths:
                           description: A detailed description of the line item.
                         subtotal:
                           type: number
-                          description: The amount in cents before discounts and tax for this line item.
+                          description: The amount before discounts and tax for this line item.
                         total:
                           type: number
-                          description: The final amount in cents after discounts and tax for this line
-                            item.
+                          description: The final amount after discounts and tax for this line item.
                         discounts:
                           type: array
                           items:
@@ -25813,15 +25806,16 @@ paths:
                     description: List of line items for the current billing period.
                   subtotal:
                     type: number
-                    description: The total amount in cents before discounts and tax for the current
-                      billing period.
+                    description: The total amount before discounts and tax for the current billing
+                      period.
                   total:
                     type: number
-                    description: The final amount in cents after discounts and tax for the current
-                      billing period.
+                    description: The final amount after discounts and tax for the current billing
+                      period.
                   currency:
                     type: string
-                    description: The three-letter ISO currency code (e.g., 'usd').
+                    description: The three-letter ISO currency code. All amounts are in the
+                      currency's major unit (e.g., dollars for USD).
                   next_cycle:
                     type: object
                     properties:
@@ -25830,12 +25824,10 @@ paths:
                         description: Unix timestamp (milliseconds) when the next billing cycle starts.
                       subtotal:
                         type: number
-                        description: The total amount in cents before discounts and tax for the next
-                          cycle.
+                        description: The total amount before discounts and tax for the next cycle.
                       total:
                         type: number
-                        description: The final amount in cents after discounts and tax for the next
-                          cycle.
+                        description: The final amount after discounts and tax for the next cycle.
                       line_items:
                         type: array
                         items:
@@ -25851,11 +25843,10 @@ paths:
                               description: A detailed description of the line item.
                             subtotal:
                               type: number
-                              description: The amount in cents before discounts and tax for this line item.
+                              description: The amount before discounts and tax for this line item.
                             total:
                               type: number
-                              description: The final amount in cents after discounts and tax for this line
-                                item.
+                              description: The final amount after discounts and tax for this line item.
                             discounts:
                               type: array
                               items:
@@ -26410,7 +26401,8 @@ paths:
                     description: The ID of the customer the preview applies to.
                   currency:
                     type: string
-                    description: The three-letter ISO currency code (e.g., 'usd').
+                    description: The three-letter ISO currency code. All amounts are in the
+                      currency's major unit (e.g., dollars for USD).
                   total:
                     type: number
                     description: The combined amount due today across all subscriptions (sum of
@@ -26438,11 +26430,10 @@ paths:
                                 description: A detailed description of the line item.
                               subtotal:
                                 type: number
-                                description: The amount in cents before discounts and tax for this line item.
+                                description: The amount before discounts and tax for this line item.
                               total:
                                 type: number
-                                description: The final amount in cents after discounts and tax for this line
-                                  item.
+                                description: The final amount after discounts and tax for this line item.
                               discounts:
                                 type: array
                                 items:
@@ -26495,15 +26486,16 @@ paths:
                           description: List of line items for the current billing period.
                         subtotal:
                           type: number
-                          description: The total amount in cents before discounts and tax for the current
-                            billing period.
+                          description: The total amount before discounts and tax for the current billing
+                            period.
                         total:
                           type: number
-                          description: The final amount in cents after discounts and tax for the current
-                            billing period.
+                          description: The final amount after discounts and tax for the current billing
+                            period.
                         currency:
                           type: string
-                          description: The three-letter ISO currency code (e.g., 'usd').
+                          description: The three-letter ISO currency code. All amounts are in the
+                            currency's major unit (e.g., dollars for USD).
                         next_cycle:
                           type: object
                           properties:
@@ -26512,12 +26504,10 @@ paths:
                               description: Unix timestamp (milliseconds) when the next billing cycle starts.
                             subtotal:
                               type: number
-                              description: The total amount in cents before discounts and tax for the next
-                                cycle.
+                              description: The total amount before discounts and tax for the next cycle.
                             total:
                               type: number
-                              description: The final amount in cents after discounts and tax for the next
-                                cycle.
+                              description: The final amount after discounts and tax for the next cycle.
                             line_items:
                               type: array
                               items:
@@ -26533,11 +26523,10 @@ paths:
                                     description: A detailed description of the line item.
                                   subtotal:
                                     type: number
-                                    description: The amount in cents before discounts and tax for this line item.
+                                    description: The amount before discounts and tax for this line item.
                                   total:
                                     type: number
-                                    description: The final amount in cents after discounts and tax for this line
-                                      item.
+                                    description: The final amount after discounts and tax for this line item.
                                   discounts:
                                     type: array
                                     items:
