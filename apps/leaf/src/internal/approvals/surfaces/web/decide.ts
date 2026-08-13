@@ -74,11 +74,21 @@ export const decideWebApproval = async ({
 				});
 			}
 		}
-		await chatApprovalRepo.cancelGroup({
+		const cancelled = await chatApprovalRepo.cancelGroup({
 			approvals: pending,
 			db,
 			providerUserId,
 		});
+		// The read above is stale by now — an approve click can have claimed the
+		// group since, and reporting Dismissed over running writes would lie.
+		if (cancelled.length !== pending.length) {
+			logger.warn("Approval cancellation ignored", {
+				event: "leaf.approval_cancel_ignored",
+				approval_id: approvalId,
+				data: { cancelled: cancelled.length, expected: pending.length },
+			});
+			return { error: "Approval is already being resolved" };
+		}
 		return { status: "rejected", text };
 	}
 

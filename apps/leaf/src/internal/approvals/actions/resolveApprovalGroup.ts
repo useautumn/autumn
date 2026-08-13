@@ -66,11 +66,20 @@ export const resolveApprovalGroup = async ({
 		return result;
 	}
 
-	await chatApprovalRepo.finalizeGroup({
+	const finalized = await chatApprovalRepo.finalizeGroup({
 		approvals,
 		db,
 		providerUserId,
 		status: "error" in result ? "failed" : "approved",
 	});
+	// The writes already ran, so a short stamp means the claim was lost mid-run
+	// and some rows now read as something other than what actually happened.
+	if (finalized.length !== approvals.length) {
+		logger.warn("[chat] Approval group finalized short", {
+			event: "leaf.approval_finalize_short",
+			approval_id: first.id,
+			data: { finalized: finalized.length, expected: approvals.length },
+		});
+	}
 	return result;
 };

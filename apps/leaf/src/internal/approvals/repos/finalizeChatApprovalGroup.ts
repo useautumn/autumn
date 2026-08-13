@@ -1,7 +1,11 @@
 import { type ChatApproval, chatApprovals } from "@autumn/shared";
-import { inArray } from "drizzle-orm";
+import { and, eq, inArray } from "drizzle-orm";
 import type { ChatDb } from "../../../lib/db.js";
 
+/**
+ * Stamp the outcome on rows the caller still holds. Scoped to its own running
+ * claim so a group taken over mid-run can't be stamped by the loser.
+ */
 export const finalizeChatApprovalGroup = async ({
 	approvals,
 	db,
@@ -13,8 +17,8 @@ export const finalizeChatApprovalGroup = async ({
 	providerUserId: string;
 	status: "approved" | "failed";
 }) => {
-	if (approvals.length === 0) return;
-	await db
+	if (approvals.length === 0) return [];
+	return await db
 		.update(chatApprovals)
 		.set({
 			status,
@@ -22,9 +26,14 @@ export const finalizeChatApprovalGroup = async ({
 			decided_by_provider_user_id: providerUserId,
 		})
 		.where(
-			inArray(
-				chatApprovals.id,
-				approvals.map((approval) => approval.id),
+			and(
+				inArray(
+					chatApprovals.id,
+					approvals.map((approval) => approval.id),
+				),
+				eq(chatApprovals.status, "running"),
+				eq(chatApprovals.decided_by_provider_user_id, providerUserId),
 			),
-		);
+		)
+		.returning();
 };
