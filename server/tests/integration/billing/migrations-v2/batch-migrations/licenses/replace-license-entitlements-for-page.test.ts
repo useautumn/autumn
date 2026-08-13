@@ -119,7 +119,7 @@ test.concurrent(
 			scope: page.scope,
 			internalCustomerIds: [page.internalCustomerId],
 			replace: {
-				kind: "replace",
+				type: "replace_license_entitlement",
 				fromEntitlementId: fromEntitlement.id,
 				entitlement: toEntitlement,
 				initialState: computeCustomerEntitlementInitialState({
@@ -185,7 +185,7 @@ test.concurrent(
 			scope: page.scope,
 			internalCustomerIds: [page.internalCustomerId],
 			replace: {
-				kind: "replace",
+				type: "replace_license_entitlement",
 				fromEntitlementId: fromEntitlement.id,
 				entitlement: toEntitlement,
 				initialState: computeCustomerEntitlementInitialState({
@@ -256,7 +256,7 @@ test.concurrent(
 			scope: page.scope,
 			internalCustomerIds: [page.internalCustomerId],
 			replace: {
-				kind: "replace",
+				type: "replace_license_entitlement",
 				fromEntitlementId: fromEntitlement.id,
 				entitlement: toEntitlement,
 				initialState: computeCustomerEntitlementInitialState({
@@ -342,7 +342,7 @@ test.concurrent(
 			scope: page.scope,
 			internalCustomerIds: [page.internalCustomerId],
 			replace: {
-				kind: "replace",
+				type: "replace_license_entitlement",
 				fromEntitlementId: fromEntitlement.id,
 				entitlement: toEntitlement,
 				initialState: computeCustomerEntitlementInitialState({

@@ -74,7 +74,7 @@ export const addLicenseEntitlementsForPage = async ({
 			),
 	});
 
-	if (operation.kind === "remove") {
+	if (operation.type === "remove_license_entitlement") {
 		const removed = await timePhase({
 			phases,
 			phase: "remove",
@@ -108,7 +108,7 @@ export const addLicenseEntitlementsForPage = async ({
 		};
 	}
 
-	if (operation.kind === "replace") {
+	if (operation.type === "replace_license_entitlement") {
 		const replaced = await replaceLicenseEntitlementsForPage({
 			db,
 			features,

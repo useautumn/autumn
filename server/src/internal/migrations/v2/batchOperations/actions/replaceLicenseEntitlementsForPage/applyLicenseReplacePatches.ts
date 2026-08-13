@@ -12,11 +12,7 @@ import type { EnrichedCycleCandidate } from "../../utils/enrichCustomerEntitleme
 import { canonicalPoolLateralSql } from "../addLicenseEntitlementsForPage/licensePoolSql.js";
 import type { LicenseReplaceCandidateRow } from "../selectLicenseCandidateRows.js";
 
-const balanceAssignment = ({
-	patch,
-}: {
-	patch: CustomerEntitlementPatch;
-}) => {
+const balanceAssignment = ({ patch }: { patch: CustomerEntitlementPatch }) => {
 	const balance = patch.balance;
 	if (!balance) return sql``;
 	if (balance.type === "increment") {

@@ -8,7 +8,8 @@ import {
 	type FullProduct,
 } from "@autumn/shared";
 import type { UpdatePlanOp } from "@autumn/shared/api/migrations/operations/customer/updatePlan/index.js";
-import { computeBatchMigrationLicenseOperations } from "@/internal/migrations/v2/batchOperations/compute/operations/computeBatchMigrationLicenseOperations.js";
+import { computeBatchMigrationOperations } from "@/internal/migrations/v2/batchOperations/compute/operations/computeBatchMigrationOperations.js";
+import { resolveLicenseCustomizeTransitions } from "@/internal/migrations/v2/batchOperations/compute/transitions/resolveLicenseCustomizeTransitions.js";
 import type { MigrationRuntime } from "@/internal/migrations/v2/types/migrationDefinition.js";
 
 const PARENT_INTERNAL_ID = "prod_internal_pro";
@@ -53,6 +54,16 @@ const meteredEntitlement = {
 const fromProduct = {
 	id: "pro",
 	internal_id: PARENT_INTERNAL_ID,
+	licenses: [
+		{
+			product: {
+				id: LICENSE_PLAN_ID,
+				internal_id: "prod_internal_seat",
+				entitlements: [],
+				prices: [],
+			},
+		},
+	],
 } as unknown as FullProduct;
 
 const buildMigration = ({
@@ -92,13 +103,37 @@ const op: UpdatePlanOp = {
 	},
 } as unknown as UpdatePlanOp;
 
-describe("computeBatchMigrationLicenseOperations", () => {
+describe("license transitions lower into operations", () => {
+	const lower = ({
+		entitlement,
+		features,
+	}: {
+		entitlement: Entitlement;
+		features: Feature[];
+	}) => {
+		const { links: licenseLinks, rejections } =
+			resolveLicenseCustomizeTransitions({
+				migration: buildMigration({ entitlement }),
+				op,
+				opIndex: 0,
+				fromProduct,
+				features,
+			});
+		const { licenseEntitlements } = computeBatchMigrationOperations({
+			productTransitions: {
+				basePrice: undefined,
+				customerProduct: undefined,
+				entitlementPrices: { transitions: [], added: [], deleted: [] },
+				toProduct: fromProduct,
+			},
+			licenseLinks,
+		});
+		return { operations: licenseEntitlements, rejections };
+	};
+
 	test("lowers a non-resetting entitlement into an add operation", () => {
-		const { operations, rejections } = computeBatchMigrationLicenseOperations({
-			migration: buildMigration({ entitlement: booleanEntitlement }),
-			op,
-			opIndex: 0,
-			fromProduct,
+		const { operations, rejections } = lower({
+			entitlement: booleanEntitlement,
 			features: [dashboardFeature],
 		});
 
@@ -106,24 +141,23 @@ describe("computeBatchMigrationLicenseOperations", () => {
 		expect(operations).toHaveLength(1);
 		expect(operations[0]?.licensePlanId).toBe(LICENSE_PLAN_ID);
 		const [added] = operations;
-		if (added?.kind === "remove") throw new Error("expected a minted op");
-		expect(added?.initialState.tracksBalance).toBe(false);
+		if (added?.type !== "add_license_entitlement")
+			throw new Error("expected a minted op");
+		expect(added.initialState.tracksBalance).toBe(false);
 	});
 
 	test("lowers a resetting entitlement with a tracked balance", () => {
-		const { operations, rejections } = computeBatchMigrationLicenseOperations({
-			migration: buildMigration({ entitlement: meteredEntitlement }),
-			op,
-			opIndex: 0,
-			fromProduct,
+		const { operations, rejections } = lower({
+			entitlement: meteredEntitlement,
 			features: [messagesFeature],
 		});
 
 		expect(rejections).toHaveLength(0);
 		expect(operations).toHaveLength(1);
 		const [minted] = operations;
-		if (minted?.kind === "remove") throw new Error("expected a minted op");
-		expect(minted?.initialState.tracksBalance).toBe(true);
-		expect(minted?.initialState.granted).toBe(100);
+		if (minted?.type !== "add_license_entitlement")
+			throw new Error("expected a minted op");
+		expect(minted.initialState.tracksBalance).toBe(true);
+		expect(minted.initialState.granted).toBe(100);
 	});
 });

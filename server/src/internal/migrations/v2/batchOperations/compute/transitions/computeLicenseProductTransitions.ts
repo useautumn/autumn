@@ -20,9 +20,7 @@ export const computeLicenseProductTransitions = ({
 	removedInternalFeatureIds?: string[];
 }): ComputedEntitlementPriceTransitions => {
 	const droppedFeatureIds = new Set([
-		...mintedEntitlements.map(
-			(entitlement) => entitlement.internal_feature_id,
-		),
+		...mintedEntitlements.map((entitlement) => entitlement.internal_feature_id),
 		...removedInternalFeatureIds,
 	]);
 

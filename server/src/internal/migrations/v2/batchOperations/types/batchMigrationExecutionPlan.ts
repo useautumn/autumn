@@ -31,15 +31,17 @@ const BatchMigrationLicenseMintedSchema =
 	});
 
 export const BatchMigrationExecutionLicenseOpSchema = z.discriminatedUnion(
-	"kind",
+	"type",
 	[
-		BatchMigrationLicenseMintedSchema.extend({ kind: z.literal("add") }),
 		BatchMigrationLicenseMintedSchema.extend({
-			kind: z.literal("replace"),
+			type: z.literal("add_license_entitlement"),
+		}),
+		BatchMigrationLicenseMintedSchema.extend({
+			type: z.literal("replace_license_entitlement"),
 			fromEntitlementId: z.string(),
 		}),
 		BatchMigrationLicenseOpBaseSchema.extend({
-			kind: z.literal("remove"),
+			type: z.literal("remove_license_entitlement"),
 			filter: z.custom<PlanItemFilter>(),
 		}),
 	],
@@ -50,7 +52,7 @@ export const BatchMigrationExecutionPatchSchema = z.object({
 	scope: OperationScopeSchema,
 	fromProduct: FullProductWithoutLicensesSchema,
 	addEntitlementOps: z.array(BatchMigrationExecutionAddSchema),
-	addLicenseEntitlementOps: z
+	licenseEntitlementOps: z
 		.array(BatchMigrationExecutionLicenseOpSchema)
 		.default([]),
 });
@@ -64,7 +66,7 @@ export type BatchMigrationExecutionAdd = z.infer<
 >;
 export type BatchMigrationMintedLicenseOp = z.infer<
 	typeof BatchMigrationLicenseMintedSchema
-> & { kind: "add" | "replace" };
+> & { type: "add_license_entitlement" | "replace_license_entitlement" };
 
 export type BatchMigrationExecutionLicenseOp = z.infer<
 	typeof BatchMigrationExecutionLicenseOpSchema

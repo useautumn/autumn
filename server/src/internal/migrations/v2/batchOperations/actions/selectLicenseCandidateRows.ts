@@ -64,10 +64,7 @@ type SelectLicenseCandidateRowsBase = {
 };
 
 export type SelectLicenseCandidateRowsArgs = SelectLicenseCandidateRowsBase &
-	(
-		| { match: "add" }
-		| { match: "replace"; fromEntitlementIds: string[] }
-	);
+	({ match: "add" } | { match: "replace"; fromEntitlementIds: string[] });
 
 const matchSql = ({
 	match,

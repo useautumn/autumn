@@ -43,11 +43,7 @@ const messagesEnt = ({
 		feature: messagesFeature,
 	}) as unknown as EntitlementWithFeature;
 
-const dashboardEnt = ({
-	id,
-}: {
-	id: string;
-}): EntitlementWithFeature =>
+const dashboardEnt = ({ id }: { id: string }): EntitlementWithFeature =>
 	({
 		id,
 		created_at: 0,

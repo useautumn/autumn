@@ -82,7 +82,7 @@ export const executeBatchMigrationPage = async ({
 			});
 		}
 
-		for (const operation of patch.addLicenseEntitlementOps) {
+		for (const operation of patch.licenseEntitlementOps) {
 			const result = await addLicenseEntitlementsForPage({
 				db: ctx.db,
 				features: ctx.features,
@@ -104,7 +104,7 @@ export const executeBatchMigrationPage = async ({
 				data: {
 					opIndex: patch.opIndex,
 					licensePlanId: operation.licensePlanId,
-					kind: operation.kind,
+					operation: operation.type,
 					candidateCount: result.candidateCount,
 					affected: result.affected,
 					repointedPools: result.repointedPools,

@@ -60,7 +60,7 @@ const plan: BatchMigrationExecutionPlan = {
 			opIndex: 0,
 			scope: buildOperationScope({ internalProductId: "prod_pro_internal" }),
 			fromProduct,
-			addLicenseEntitlementOps: [],
+			licenseEntitlementOps: [],
 			addEntitlementOps: [
 				{
 					entitlement: entitlement({

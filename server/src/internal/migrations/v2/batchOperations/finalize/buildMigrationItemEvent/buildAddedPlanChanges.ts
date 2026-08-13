@@ -1,12 +1,12 @@
+import type {
+	CustomerPlanChange,
+	CustomerPlanItemChange,
+} from "@autumn/shared";
 import {
 	type EntitlementWithFeature,
 	type Feature,
 	productItemsToPlanItemsV1,
 	toProductItem,
-} from "@autumn/shared";
-import type {
-	CustomerPlanChange,
-	CustomerPlanItemChange,
 } from "@autumn/shared";
 import type { CustomerItemChanges } from "./toCustomerItemChanges.js";
 

@@ -54,14 +54,14 @@ export const buildEntitlementLookup = ({
 				],
 			),
 			// License rows key on their own plan, not the parent the patch filtered on.
-			...patch.addLicenseEntitlementOps.flatMap(
-				(add): [string, EntitlementWithFeature][] =>
-					add.kind === "remove"
+			...patch.licenseEntitlementOps.flatMap(
+				(operation): [string, EntitlementWithFeature][] =>
+					operation.type === "remove_license_entitlement"
 						? []
 						: [
 								[
-									`${add.licensePlanId}:${add.entitlement.feature.id}`,
-									add.entitlement,
+									`${operation.licensePlanId}:${operation.entitlement.feature.id}`,
+									operation.entitlement,
 								],
 							],
 			),
@@ -79,9 +79,9 @@ export const buildOneOffByPlanId = ({
 				patch.fromProduct.id,
 				isOneOffProduct({ prices: patch.fromProduct.prices }),
 			],
-			...patch.addLicenseEntitlementOps.map((add): [string, boolean] => [
-				add.licensePlanId,
-				add.isOneOff,
+			...patch.licenseEntitlementOps.map((operation): [string, boolean] => [
+				operation.licensePlanId,
+				operation.isOneOff,
 			]),
 		]),
 	);
