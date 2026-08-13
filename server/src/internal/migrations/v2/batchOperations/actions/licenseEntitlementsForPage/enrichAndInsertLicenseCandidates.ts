@@ -8,8 +8,8 @@ import {
 import type { OperationScope } from "../../scope/operationScope.js";
 import type { BatchMigrationMintedLicenseOp } from "../../types/batchMigrationExecutionPlan.js";
 import { enrichCustomerEntitlementCycles } from "../../utils/enrichCustomerEntitlementCycles.js";
+import type { LicenseCandidateRow } from "../selectLicenseCandidateRows.js";
 import { insertLicenseCustomerEntitlementRows } from "./insertLicenseCustomerEntitlementRows.js";
-import type { LicenseCandidateRow } from "./selectLicenseAddCandidateRows.js";
 
 export type EnrichAndInsertLicenseCandidatesResult = {
 	insertedItems: BatchMigrationInsertedItem[];
