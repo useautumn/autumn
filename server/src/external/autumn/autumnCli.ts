@@ -37,6 +37,8 @@ import {
 	EntityExpand,
 	ErrCode,
 	type FinalizeLockParamsV0,
+	type GetCatalogParams,
+	type GetCatalogResponse,
 	type LegacyVersion,
 	type ListEntitiesParams,
 	type Migration,
@@ -841,6 +843,13 @@ export class AutumnInt {
 	};
 
 	catalogV2 = {
+		get: async <TResponse = GetCatalogResponse>(
+			params?: GetCatalogParams,
+		): Promise<TResponse> => {
+			const data = await this.post(`/catalogV2.get`, params ?? {});
+			return data as TResponse;
+		},
+
 		previewUpdate: async <
 			TResponse = PreviewUpdateCatalogResponse,
 			TInput = UpdateCatalogParamsInput,

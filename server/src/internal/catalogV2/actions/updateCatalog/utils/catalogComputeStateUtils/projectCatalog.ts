@@ -1,21 +1,23 @@
-import type { Feature } from "@autumn/shared";
+import type { Feature, FullProduct } from "@autumn/shared";
 import type {
 	CatalogPlanDraft,
 	ProjectedCatalog,
 } from "@/internal/catalogV2/actions/updateCatalog/types/catalogComputeState";
 
 /**
- * Pure projection: what the feature catalog looks like after `plan` applies.
- * Always derived from `originalFeatures` + the full draft (billing's applyPlan analogue).
+ * Pure projection: catalog after `plan` applies.
+ * Always derived from originals + the full draft (billing's applyPlan analogue).
  */
 export const projectCatalog = ({
 	originalFeatures,
+	originalProducts,
 	plan,
 }: {
 	originalFeatures: Feature[];
+	originalProducts: FullProduct[];
 	plan: CatalogPlanDraft;
 }): ProjectedCatalog => {
-	const nextByInternalId = new Map(
+	const nextFeatureByInternalId = new Map(
 		plan.updateFeatures.flatMap((updateFeaturePlan) =>
 			updateFeaturePlan.current.internal_id
 				? [
@@ -27,7 +29,7 @@ export const projectCatalog = ({
 				: [],
 		),
 	);
-	const removedInternalIds = new Set(
+	const removedFeatureInternalIds = new Set(
 		plan.removeFeatures.flatMap((removeFeaturePlan) =>
 			removeFeaturePlan.current?.internal_id
 				? [removeFeaturePlan.current.internal_id]
@@ -35,20 +37,40 @@ export const projectCatalog = ({
 		),
 	);
 
+	const nextProductByInternalId = new Map(
+		plan.upsertProducts.flatMap((upsertProductPlan) => {
+			const { op, currentFullProduct, nextFullProduct } = upsertProductPlan.row;
+			return op !== "create" && currentFullProduct?.internal_id
+				? ([[currentFullProduct.internal_id, nextFullProduct]] as const)
+				: [];
+		}),
+	);
+	const createdProducts = plan.upsertProducts
+		.filter((upsertProductPlan) => upsertProductPlan.row.op === "create")
+		.map((upsertProductPlan) => upsertProductPlan.row.nextFullProduct);
+
 	return {
 		features: [
 			...originalFeatures
 				.filter(
 					(feature) =>
 						!feature.internal_id ||
-						!removedInternalIds.has(feature.internal_id),
+						!removedFeatureInternalIds.has(feature.internal_id),
 				)
 				.map(
 					(feature) =>
-						(feature.internal_id && nextByInternalId.get(feature.internal_id)) ||
+						(feature.internal_id &&
+							nextFeatureByInternalId.get(feature.internal_id)) ||
 						feature,
 				),
 			...plan.insertFeatures,
+		],
+		products: [
+			...originalProducts.map(
+				(product) =>
+					nextProductByInternalId.get(product.internal_id) ?? product,
+			),
+			...createdProducts,
 		],
 	};
 };

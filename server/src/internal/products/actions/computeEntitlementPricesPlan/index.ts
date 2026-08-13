@@ -1,6 +1,7 @@
 export { computeEntitlementPricesPlan } from "./computeEntitlementPricesPlan";
 export type {
 	ComputeEntitlementPricesPlanParams,
+	EntitlementPricesCustomize,
 	EntitlementPricesPlanMode,
 } from "./types/computeEntitlementPricesPlanParams";
 export {
