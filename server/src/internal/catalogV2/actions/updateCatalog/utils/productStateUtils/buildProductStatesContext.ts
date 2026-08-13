@@ -10,6 +10,7 @@ const emptyCustomerUsage = (): CustomerProductVersioningUsage => ({
 	hasAnyCustomerProducts: false,
 	hasVersionableCustomerProducts: false,
 	versionableCustomerCount: 0,
+	hasVersionableRowRefs: false,
 });
 
 /** One ProductState per existing productKey, plus plan-scoped indexes. */

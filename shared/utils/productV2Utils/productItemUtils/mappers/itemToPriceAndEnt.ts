@@ -156,7 +156,11 @@ export const toFeature = ({
 		internal_feature_id: internalFeatureId,
 		feature_id: item.feature_id!,
 
-		allowance: item.included_usage === Infinite ? null : item.included_usage!,
+		allowance: isBoolean
+			? null
+			: item.included_usage === Infinite
+				? null
+				: item.included_usage!,
 		allowance_type: isBoolean
 			? null
 			: item.included_usage === Infinite
@@ -166,8 +170,8 @@ export const toFeature = ({
 		interval: isBoolean ? null : (itemToEntInterval({ item }) as EntInterval),
 		interval_count: itemToEntIntervalCount({ item }),
 
-		carry_from_previous: !resetUsage,
-		entity_feature_id: item.entity_feature_id,
+		carry_from_previous: isBoolean ? false : !resetUsage,
+		entity_feature_id: isBoolean ? null : item.entity_feature_id,
 		pooled: item.pooled ?? false,
 		usage_limit: null,
 

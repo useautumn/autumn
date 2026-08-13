@@ -10,6 +10,7 @@ const emptyCustomerUsage = (): CustomerProductVersioningUsage => ({
 	hasAnyCustomerProducts: false,
 	hasVersionableCustomerProducts: false,
 	versionableCustomerCount: 0,
+	hasVersionableRowRefs: false,
 });
 
 export type ProductKeyState = {

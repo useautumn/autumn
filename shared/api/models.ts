@@ -10,7 +10,7 @@ export * from "./catalog/utils/index.js";
 export * from "./catalogV2/components/catalogAction.js";
 export * from "./catalogV2/components/catalogFeatureUpdatePreview/catalogFeatureUpdatePreview.js";
 export * from "./catalogV2/components/catalogFeatureUpdatePreview/catalogFeatureUsageBucket.js";
-export * from "./catalogV2/components/catalogPlanUpdatePreview/catalogPlanChanges.js";
+export * from "./catalogV2/components/catalogMigration.js";
 export * from "./catalogV2/components/catalogPlanUpdatePreview/catalogPlanVersioning.js";
 export * from "./catalogV2/components/updateCatalogPlanParams.js";
 export * from "./catalogV2/getCatalogParams.js";

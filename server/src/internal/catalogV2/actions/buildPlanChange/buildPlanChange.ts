@@ -43,13 +43,17 @@ const buildFreeTrialChange = ({
 	};
 };
 
+/** Diff between two versions of one plan definition. Undefined when either
+ * side is missing (create/remove — no diff exists) or nothing changed. */
 export const buildPlanChange = ({
 	from,
 	to,
 }: {
-	from: ApiPlanV1;
-	to: ApiPlanV1;
+	from?: ApiPlanV1;
+	to?: ApiPlanV1;
 }): PlanChangeV0 | undefined => {
+	if (!from || !to) return undefined;
+
 	const customize = diffPlanV1({ from, to });
 	const previous_attributes = buildPlanPreviousAttributes({ from, to });
 	const price_change = buildPriceChange({ from, to, customize });
@@ -70,5 +74,6 @@ export const buildPlanChange = ({
 		...(price_change !== undefined ? { price_change } : {}),
 		...(free_trial_change !== undefined ? { free_trial_change } : {}),
 		item_changes,
+		...(Object.keys(customize).length > 0 ? { customize } : {}),
 	};
 };

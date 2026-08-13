@@ -1,6 +1,10 @@
-import { enrichCtxWithFeatures, type UpdateCatalogParams } from "@autumn/shared";
+import {
+	enrichCtxWithFeatures,
+	type UpdateCatalogParams,
+} from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { computeInsertFeaturesPlan } from "@/internal/catalogV2/actions/updateCatalog/compute/computeInsertFeaturesPlan/computeInsertFeaturesPlan";
+import { computeMigrationDraftPlans } from "@/internal/catalogV2/actions/updateCatalog/compute/computeMigrationDraftPlans/computeMigrationDraftPlans";
 import { computeRemoveFeaturesPlan } from "@/internal/catalogV2/actions/updateCatalog/compute/computeRemoveFeaturesPlan/computeRemoveFeaturesPlan";
 import { computeUpdateFeaturesPlan } from "@/internal/catalogV2/actions/updateCatalog/compute/computeUpdateFeaturesPlan/computeUpdateFeaturesPlan";
 import { computeUpsertProductsPlan } from "@/internal/catalogV2/actions/updateCatalog/compute/computeUpsertProductsPlan/computeUpsertProductsPlan";
@@ -65,5 +69,13 @@ export const computeUpdateCatalogPlan = ({
 		}),
 	});
 
-	return compute.toPlan();
+	const plan = compute.toPlan();
+	return {
+		...plan,
+		migrationDrafts: computeMigrationDraftPlans({
+			upsertProductPlans: plan.upsertProducts,
+			params,
+			productStatesContext: catalogContext.productStatesContext,
+		}),
+	};
 };

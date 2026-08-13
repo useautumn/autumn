@@ -6,19 +6,25 @@
 import { expect, test } from "bun:test";
 import {
 	BillingInterval,
+	CusProductStatus,
+	customerProducts,
+	customers,
 	FreeTrialDuration,
 	ResetInterval,
 } from "@autumn/shared";
 import { TestFeature } from "@tests/setup/v2Features.js";
 import { initScenario } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";
+import { eq } from "drizzle-orm";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { ProductService } from "@/internal/products/ProductService.js";
+import { generateId } from "@/utils/genUtils.js";
 import {
 	expectCatalogPreviewCorrect,
 	expectCatalogResultsCorrect,
 } from "../../utils/expectCatalogUpdate.js";
 import { uniqueTestId } from "../../utils/uniqueTestId.js";
+import { cleanupPlanCustomerRefs } from "../utils/cleanupPlanCustomerRefs.js";
 import {
 	deleteDbPlans,
 	expectCatalogPlansCorrect,
@@ -41,6 +47,44 @@ const getFull = async ({
 		env: ctx.env,
 		version,
 	});
+
+const seedCustomerProductRef = async ({
+	ctx,
+	planId,
+}: {
+	ctx: AutumnContext;
+	planId: string;
+}) => {
+	const full = await getFull({ ctx, planId });
+	const customerId = uniqueTestId("cv2_ver_cus");
+	const internalCustomerId = generateId("cus");
+	const cusProductId = generateId("cus_prod");
+
+	await ctx.db.insert(customers).values({
+		internal_id: internalCustomerId,
+		id: customerId,
+		org_id: ctx.org.id,
+		env: ctx.env,
+		created_at: Date.now(),
+		name: customerId,
+		email: `${customerId}@test.com`,
+	});
+
+	await ctx.db.insert(customerProducts).values({
+		id: cusProductId,
+		internal_customer_id: internalCustomerId,
+		product_id: planId,
+		internal_product_id: full.internal_id,
+		status: CusProductStatus.Active,
+		created_at: Date.now(),
+		starts_at: Date.now(),
+		quantity: 1,
+		options: [],
+		is_custom: false,
+	});
+
+	return { cusProductId, internalProductId: full.internal_id };
+};
 
 const seedV1AndV2 = async ({
 	autumn,
@@ -482,6 +526,80 @@ test.concurrent(
 				],
 			});
 		} finally {
+			await deleteDbPlans({ ctx, planIds: [planId] });
+		}
+	},
+);
+
+test.concurrent(
+	`${chalk.yellowBright("catalogV2 versions: new_version mints clone; customers stay on old")}`,
+	async () => {
+		const { autumnV2_3, ctx } = await initScenario({ setup: [], actions: [] });
+		const planId = uniqueTestId("cv2_ver_nv");
+		await deleteDbPlans({ ctx, planIds: [planId] });
+		try {
+			await autumnV2_3.catalogV2.update({
+				plans: [
+					{
+						plan_id: planId,
+						name: "V1 Name",
+						items: [
+							{
+								feature_id: TestFeature.Messages,
+								included: 100,
+								reset: { interval: ResetInterval.Month },
+							},
+						],
+						free_trial: {
+							duration_length: 7,
+							duration_type: FreeTrialDuration.Day,
+							card_required: false,
+						},
+					},
+				],
+			});
+
+			const v1Before = await getFull({ ctx, planId, version: 1 });
+			const { cusProductId } = await seedCustomerProductRef({
+				ctx,
+				planId,
+			});
+
+			await autumnV2_3.catalogV2.update({
+				plans: [
+					{
+						plan_id: planId,
+						name: "V2 Name",
+						items: [
+							{
+								feature_id: TestFeature.Messages,
+								included: 200,
+								reset: { interval: ResetInterval.Month },
+							},
+						],
+						versioning: "new_version",
+					},
+				],
+			});
+
+			const v1After = await getFull({ ctx, planId, version: 1 });
+			const v2 = await getFull({ ctx, planId, version: 2 });
+			expect(v1After.internal_id).toBe(v1Before.internal_id);
+			expect(v1After.name).toBe("V1 Name");
+			expect(v1After.entitlements[0]?.allowance).toBe(100);
+			expect(v2.name).toBe("V2 Name");
+			expect(v2.entitlements[0]?.allowance).toBe(200);
+			expect(v2.free_trial?.length).toBe(7);
+			expect(v2.internal_id).not.toBe(v1Before.internal_id);
+
+			const [cusProd] = await ctx.db
+				.select()
+				.from(customerProducts)
+				.where(eq(customerProducts.id, cusProductId))
+				.limit(1);
+			expect(cusProd?.internal_product_id).toBe(v1Before.internal_id);
+		} finally {
+			await cleanupPlanCustomerRefs({ ctx, planIds: [planId] });
 			await deleteDbPlans({ ctx, planIds: [planId] });
 		}
 	},

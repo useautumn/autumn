@@ -170,10 +170,10 @@ const cleanupRefs = async ({
 };
 
 test.concurrent(
-	`${chalk.yellowBright("catalogV2 plan-errors: versioning new_version → 400")}`,
+	`${chalk.yellowBright("catalogV2 plan-errors: new_version + explicit version → 400")}`,
 	async () => {
 		const { autumnV2_3, ctx } = await initScenario({ setup: [], actions: [] });
-		const planId = uniqueTestId("cv2_err_nv");
+		const planId = uniqueTestId("cv2_err_nv_pin");
 		await deleteDbPlans({ ctx, planIds: [planId] });
 		try {
 			await autumnV2_3.catalogV2.update({
@@ -181,13 +181,73 @@ test.concurrent(
 			});
 			await expectAutumnError({
 				errCode: ErrCode.InvalidRequest,
-				errMessage: 'versioning "new_version" is not implemented yet',
+				errMessage: 'versioning "new_version" cannot be combined with an explicit version',
 				func: () =>
 					autumnV2_3.catalogV2.update({
 						plans: [
 							{
 								plan_id: planId,
+								version: 1,
 								name: "Next",
+								versioning: "new_version",
+							},
+						],
+					}),
+			});
+		} finally {
+			await deleteDbPlans({ ctx, planIds: [planId] });
+		}
+	},
+);
+
+test.concurrent(
+	`${chalk.yellowBright("catalogV2 plan-errors: new_version + migration.draft → 400")}`,
+	async () => {
+		const { autumnV2_3, ctx } = await initScenario({ setup: [], actions: [] });
+		const planId = uniqueTestId("cv2_err_nv_mig");
+		await deleteDbPlans({ ctx, planIds: [planId] });
+		try {
+			await autumnV2_3.catalogV2.update({
+				plans: [{ plan_id: planId, name: "Base" }],
+			});
+			await expectAutumnError({
+				errCode: ErrCode.InvalidRequest,
+				errMessage:
+					'versioning "new_version" cannot be combined with migration.draft',
+				func: () =>
+					autumnV2_3.catalogV2.update({
+						plans: [
+							{
+								plan_id: planId,
+								versioning: "new_version",
+								name: "Next",
+								migration: { draft: true },
+							},
+						],
+					}),
+			});
+		} finally {
+			await deleteDbPlans({ ctx, planIds: [planId] });
+		}
+	},
+);
+
+test.concurrent(
+	`${chalk.yellowBright("catalogV2 plan-errors: new_version on missing plan → 400")}`,
+	async () => {
+		const { autumnV2_3, ctx } = await initScenario({ setup: [], actions: [] });
+		const planId = uniqueTestId("cv2_err_nv_miss");
+		await deleteDbPlans({ ctx, planIds: [planId] });
+		try {
+			await expectAutumnError({
+				errCode: ErrCode.InvalidRequest,
+				errMessage: 'versioning "new_version" requires an existing plan',
+				func: () =>
+					autumnV2_3.catalogV2.update({
+						plans: [
+							{
+								plan_id: planId,
+								name: "Ghost",
 								versioning: "new_version",
 							},
 						],

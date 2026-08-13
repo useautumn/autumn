@@ -3,7 +3,7 @@
  *
  * Green path: create + update + archive across three distinct plan_ids with
  * preview reporting all three and writing nothing.
- * Red: duplicate plan_id creates, rename collisions / stale refs.
+ * Errors: duplicate plan_id creates, rename occupancy, stale refs.
  */
 
 import { test } from "bun:test";
@@ -142,9 +142,9 @@ test.concurrent(
 	},
 );
 
-// RED: rename into existing plan_id not rejected
+// Occupancy: new_plan_id already persisted
 test.concurrent(
-	`${chalk.yellowBright("RED: catalogV2 batch-ops: rename A→B while B already exists → error")}`,
+	`${chalk.yellowBright("catalogV2 batch-ops: rename A→B while B already exists → error")}`,
 	async () => {
 		const { autumnV2_3, ctx } = await initScenario({ setup: [], actions: [] });
 		const planA = uniqueTestId("cv2_batch_ra");
@@ -170,9 +170,9 @@ test.concurrent(
 	},
 );
 
-// RED: rename into same-call create not rejected
+// Occupancy: new_plan_id is also a create in this call
 test.concurrent(
-	`${chalk.yellowBright("RED: catalogV2 batch-ops: rename A→B while B created in same call → error")}`,
+	`${chalk.yellowBright("catalogV2 batch-ops: rename A→B while B created in same call → error")}`,
 	async () => {
 		const { autumnV2_3, ctx } = await initScenario({ setup: [], actions: [] });
 		const planA = uniqueTestId("cv2_batch_rca");
@@ -198,9 +198,9 @@ test.concurrent(
 	},
 );
 
-// RED: create + pinned update same plan_id — encode as error until spec decides
+// Request shape: creating a missing plan with two entries (unpinned + pinned)
 test.concurrent(
-	`${chalk.yellowBright("RED: catalogV2 batch-ops: create + pinned v1 update same plan_id → error")}`,
+	`${chalk.yellowBright("catalogV2 batch-ops: create + pinned v1 update same plan_id → error")}`,
 	async () => {
 		const { autumnV2_3, ctx } = await initScenario({ setup: [], actions: [] });
 		const planId = uniqueTestId("cv2_batch_cup");

@@ -1,8 +1,10 @@
 /**
  * catalogV2.preview_update — state.has_customers + versioning block.
  *
- * has_customers is already populated from upsert.state (green-expected).
- * versioning is stubbed null → RED for versioning cases.
+ * options lists only strategies pickable today:
+ * - existing when the pinned version has customers
+ * - new_version when latest has customers (mint only from latest)
+ * - all_versions when the plan has more than one version
  */
 
 import { expect, test } from "bun:test";
@@ -108,9 +110,6 @@ const cleanupCustomerRefs = async ({
 	}
 };
 
-const unimplementedNewVersionReason =
-	'versioning "new_version" is not implemented yet';
-
 test.concurrent(
 	`${chalk.yellowBright("catalogV2 preview-state: has_customers true with attached customer; false without")}`,
 	async () => {
@@ -142,6 +141,12 @@ test.concurrent(
 					planId: withCus,
 					action: "update",
 					hasCustomers: true,
+					versioning: {
+						current_version: 1,
+						new_version: null,
+						resolved: "existing",
+						options: ["existing", "new_version"],
+					},
 				},
 			});
 			expectPlanPreviewRowCorrect({
@@ -150,6 +155,12 @@ test.concurrent(
 					planId: withoutCus,
 					action: "update",
 					hasCustomers: false,
+					versioning: {
+						current_version: 1,
+						new_version: null,
+						resolved: "existing",
+						options: [],
+					},
 				},
 			});
 		} finally {
@@ -186,6 +197,12 @@ test.concurrent(
 					planId,
 					action: "update",
 					hasCustomers: false,
+					versioning: {
+						current_version: 1,
+						new_version: null,
+						resolved: "existing",
+						options: [],
+					},
 				},
 			});
 		} finally {
@@ -195,9 +212,8 @@ test.concurrent(
 	},
 );
 
-// RED: versioning stubbed null
 test.concurrent(
-	`${chalk.yellowBright("RED: catalogV2 preview-versioning: latest of 2-version → existing resolved")}`,
+	`${chalk.yellowBright("catalogV2 preview-versioning: latest of 2-version → existing resolved; all_versions option")}`,
 	async () => {
 		const { autumnV2_3, ctx } = await initScenario({ setup: [], actions: [] });
 		const planId = uniqueTestId("cv2_pv_ver");
@@ -224,15 +240,7 @@ test.concurrent(
 						current_version: 2,
 						new_version: null,
 						resolved: "existing",
-						options: [
-							{ strategy: "existing", available: true },
-							{
-								strategy: "new_version",
-								available: false,
-								reason: unimplementedNewVersionReason,
-							},
-							{ strategy: "all_versions", available: true },
-						],
+						options: ["all_versions"],
 					},
 				},
 			});
@@ -242,20 +250,24 @@ test.concurrent(
 	},
 );
 
-// RED — options list; new_version unavailable
 test.concurrent(
-	`${chalk.yellowBright("RED: catalogV2 preview-versioning: options list; new_version unavailable")}`,
+	`${chalk.yellowBright("catalogV2 preview-versioning: has customers + multi-version → existing and all_versions")}`,
 	async () => {
 		const { autumnV2_3, ctx } = await initScenario({ setup: [], actions: [] });
 		const planId = uniqueTestId("cv2_pv_opts");
 		await deleteDbPlans({ ctx, planIds: [planId] });
 		try {
 			await autumnV2_3.catalogV2.update({
-				plans: [{ plan_id: planId, name: "Opts" }],
+				plans: [{ plan_id: planId, name: "V1" }],
 			});
+			await autumnV2_3.catalogV2.update({
+				plans: [{ plan_id: planId, version: 2, name: "V2" }],
+			});
+			await seedCustomerProductRef({ ctx, planId, version: 2 });
+
 			const preview = parsePlanPreview(
 				await autumnV2_3.catalogV2.previewUpdate({
-					plans: [{ plan_id: planId, name: "Opts2" }],
+					plans: [{ plan_id: planId, name: "V2 Renamed" }],
 				}),
 			);
 			expectPlanPreviewRowCorrect({
@@ -263,38 +275,108 @@ test.concurrent(
 				expected: {
 					planId,
 					versioning: {
-						current_version: 1,
+						current_version: 2,
 						new_version: null,
 						resolved: "existing",
-						options: [
-							{ strategy: "existing", available: true },
-							{
-								strategy: "new_version",
-								available: false,
-								reason: unimplementedNewVersionReason,
-							},
-							{ strategy: "all_versions", available: true },
-						],
+						options: ["existing", "new_version", "all_versions"],
 					},
 				},
 			});
-			const strategies = (
-				findPlanPreviewRow({ preview, planId }).versioning?.options ?? []
-			).map((o) => o.strategy);
-			expect(strategies.sort()).toEqual([
-				"all_versions",
-				"existing",
-				"new_version",
-			]);
 		} finally {
+			await cleanupCustomerRefs({ ctx, planIds: [planId] });
 			await deleteDbPlans({ ctx, planIds: [planId] });
 		}
 	},
 );
 
-// RED — all_versions → one preview row per affected version
+// Past pinned version never offers new_version (mint only on latest).
 test.concurrent(
-	`${chalk.yellowBright("RED: catalogV2 preview-versioning: all_versions → one row per version")}`,
+	`${chalk.yellowBright("catalogV2 preview-versioning: pinned non-latest + customers → no new_version")}`,
+	async () => {
+		const { autumnV2_3, ctx } = await initScenario({ setup: [], actions: [] });
+		const planId = uniqueTestId("cv2_pv_pin");
+		await deleteDbPlans({ ctx, planIds: [planId] });
+		try {
+			await autumnV2_3.catalogV2.update({
+				plans: [{ plan_id: planId, name: "V1" }],
+			});
+			await autumnV2_3.catalogV2.update({
+				plans: [{ plan_id: planId, version: 2, name: "V2" }],
+			});
+			await seedCustomerProductRef({ ctx, planId, version: 1 });
+
+			const preview = parsePlanPreview(
+				await autumnV2_3.catalogV2.previewUpdate({
+					plans: [{ plan_id: planId, version: 1, name: "V1 Renamed" }],
+				}),
+			);
+			expectPlanPreviewRowCorrect({
+				preview,
+				expected: {
+					planId,
+					hasCustomers: true,
+					versioning: {
+						current_version: 1,
+						new_version: null,
+						resolved: "existing",
+						options: ["existing", "all_versions"],
+					},
+				},
+			});
+			expect(
+				findPlanPreviewRow({ preview, planId }).versioning?.options,
+			).not.toContain("new_version");
+		} finally {
+			await cleanupCustomerRefs({ ctx, planIds: [planId] });
+			await deleteDbPlans({ ctx, planIds: [planId] });
+		}
+	},
+);
+
+test.concurrent(
+	`${chalk.yellowBright("catalogV2 preview-versioning: new_version mint → create row with new_version + plan_change")}`,
+	async () => {
+		const { autumnV2_3, ctx } = await initScenario({ setup: [], actions: [] });
+		const planId = uniqueTestId("cv2_pv_nv");
+		await deleteDbPlans({ ctx, planIds: [planId] });
+		try {
+			await autumnV2_3.catalogV2.update({
+				plans: [{ plan_id: planId, name: "Old Name" }],
+			});
+			await seedCustomerProductRef({ ctx, planId });
+
+			const preview = parsePlanPreview(
+				await autumnV2_3.catalogV2.previewUpdate({
+					plans: [
+						{
+							plan_id: planId,
+							name: "New Name",
+							versioning: "new_version",
+						},
+					],
+				}),
+			);
+			const row = findPlanPreviewRow({ preview, planId });
+			expect(row.action).toBe("create");
+			expect(row.state.has_customers).toBe(true);
+			expect(row.versioning).toEqual({
+				current_version: 1,
+				new_version: 2,
+				resolved: "new_version",
+				options: ["existing", "new_version"],
+			});
+			expect(row.plan_change?.previous_attributes).toMatchObject({
+				name: "Old Name",
+			});
+		} finally {
+			await cleanupCustomerRefs({ ctx, planIds: [planId] });
+			await deleteDbPlans({ ctx, planIds: [planId] });
+		}
+	},
+);
+
+test.concurrent(
+	`${chalk.yellowBright("catalogV2 preview-versioning: all_versions → one row per version")}`,
 	async () => {
 		const { autumnV2_3, ctx } = await initScenario({ setup: [], actions: [] });
 		const planId = uniqueTestId("cv2_pv_all");
@@ -327,15 +409,7 @@ test.concurrent(
 			for (const row of rows) {
 				expect(row.versioning?.resolved).toBe("all_versions");
 				expect(row.versioning?.new_version).toBeNull();
-				expect(row.versioning?.options).toEqual([
-					{ strategy: "existing", available: true },
-					{
-						strategy: "new_version",
-						available: false,
-						reason: unimplementedNewVersionReason,
-					},
-					{ strategy: "all_versions", available: true },
-				]);
+				expect(row.versioning?.options).toEqual(["all_versions"]);
 			}
 		} finally {
 			await deleteDbPlans({ ctx, planIds: [planId] });
