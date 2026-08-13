@@ -6,8 +6,6 @@ import {
 	selectLicenseCandidateRows,
 } from "../selectLicenseCandidateRows.js";
 
-export type { LicenseCandidateRow };
-
 /** Insert-if-absent assignments under the page's license pool. */
 export const selectLicenseAddCandidateRows = async ({
 	db,

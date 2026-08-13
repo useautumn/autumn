@@ -1,7 +1,7 @@
 import { withStatementTimeout } from "@/db/withStatementTimeout.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { addCustomerEntitlementsForPage } from "../actions/addCustomerEntitlementsForPage/addCustomerEntitlementsForPage.js";
-import { addLicenseEntitlementsForPage } from "../actions/addLicenseEntitlementsForPage/addLicenseEntitlementsForPage.js";
+import { addLicenseEntitlementsForPage } from "../actions/licenseEntitlementsForPage/addLicenseEntitlementsForPage.js";
 import type { BatchMigrationExecutionPlan } from "../types/index.js";
 import { markPageItemRuns } from "./claim/index.js";
 import type {

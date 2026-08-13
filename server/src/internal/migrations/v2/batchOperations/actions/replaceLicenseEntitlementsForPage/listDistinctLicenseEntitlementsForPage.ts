@@ -12,7 +12,7 @@ import { sqlList } from "@/internal/billing/v2/actions/batchTransition/execute/s
 import { BATCH_MIGRATION_MAX_DISTINCT_ENTITLEMENTS } from "../../execute/utils/batchMigrationExecutionConstants.js";
 import type { OperationScope } from "../../scope/operationScope.js";
 import { operationScopeSql } from "../../scope/operationScope.js";
-import { canonicalPoolLateralSql } from "../addLicenseEntitlementsForPage/licensePoolSql.js";
+import { canonicalPoolLateralSql } from "../licenseEntitlementsForPage/licensePoolSql.js";
 
 export type DistinctLicenseEntitlementsForPage = {
 	distinct: EntitlementWithFeature[];
