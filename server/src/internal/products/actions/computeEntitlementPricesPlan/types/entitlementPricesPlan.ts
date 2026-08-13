@@ -1,4 +1,4 @@
-import type { Entitlement, Feature, Price } from "@autumn/shared";
+import type { Entitlement, Price } from "@autumn/shared";
 
 export type RowBuckets<Row> = {
 	/** Insert — fresh catalog (or is_custom) rows. */
@@ -23,7 +23,6 @@ export type EntitlementPricesDiff = {
 export type EntitlementPricesPlan = {
 	prices: RowBuckets<Price>;
 	entitlements: RowBuckets<Entitlement>;
-	newFeatures: Feature[];
 	/** Product content after this plan: new + updated + same (not deleted/retired). */
 	projected: {
 		prices: Price[];
@@ -34,7 +33,6 @@ export type EntitlementPricesPlan = {
 export const emptyEntitlementPricesPlan = (): EntitlementPricesPlan => ({
 	prices: { new: [], updated: [], same: [], deleted: [], retired: [] },
 	entitlements: { new: [], updated: [], same: [], deleted: [], retired: [] },
-	newFeatures: [],
 	projected: { prices: [], entitlements: [] },
 });
 
@@ -43,7 +41,6 @@ export const entitlementPricesPlanHasWrites = ({
 }: {
 	plan: EntitlementPricesPlan;
 }): boolean =>
-	plan.newFeatures.length > 0 ||
 	plan.prices.new.length > 0 ||
 	plan.prices.updated.length > 0 ||
 	plan.prices.deleted.length > 0 ||

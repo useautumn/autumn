@@ -28,7 +28,7 @@ export const createOneOffProductLookup = ({ db }: { db: DrizzleCli }) => {
 		// matches isOneOffProduct({ product }) everywhere else.
 		const rows = (await db.query.products.findMany({
 			where: inArray(products.internal_id, missing),
-			with: composeFullProductQuery({ excludeEnts: true }),
+			with: composeFullProductQuery(),
 		})) as ProductWithLicenseRelations[];
 
 		for (const row of rows) {

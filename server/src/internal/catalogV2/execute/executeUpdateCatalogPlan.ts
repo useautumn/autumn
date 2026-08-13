@@ -6,6 +6,7 @@ import {
 	executeCreditSystemSchemaRewrites,
 	executeFeatureReferenceRewrites,
 } from "@/internal/catalogV2/execute/executeFeatureReferenceRewrites";
+import { executeUpsertProducts } from "@/internal/catalogV2/execute/executeUpsertProducts/executeUpsertProducts";
 import { FeatureService } from "@/internal/features/FeatureService.js";
 import type { ClearCreditSystemCachePayload } from "@/internal/features/featureActions/runClearCreditSystemCacheTask.js";
 import { clearOrgCache } from "@/internal/orgs/orgUtils/clearOrgCache";
@@ -17,6 +18,7 @@ export type CatalogAppliedResult = { id: string; action: CatalogAction };
 
 export type CatalogResult = {
 	features: CatalogAppliedResult[];
+	plans: CatalogAppliedResult[];
 };
 
 const executeInsertFeatures = async ({
@@ -148,6 +150,7 @@ export const executeUpdateCatalogPlan = async ({
 	await executeInsertFeatures({ ctx, updateCatalogPlan });
 	await executeUpdateFeatures({ ctx, updateCatalogPlan });
 	await executeRemoveFeatures({ ctx, updateCatalogPlan });
+	const plans = await executeUpsertProducts({ ctx, updateCatalogPlan });
 
 	await clearOrgCache({
 		db: ctx.db,
@@ -173,5 +176,6 @@ export const executeUpdateCatalogPlan = async ({
 				action: "delete" as const,
 			})),
 		],
+		plans,
 	};
 };
