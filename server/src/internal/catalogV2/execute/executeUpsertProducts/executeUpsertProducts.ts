@@ -7,6 +7,7 @@ import { ProductService } from "@/internal/products/ProductService.js";
 import { applyEntitlementPricesPlan } from "./applyEntitlementPricesPlan";
 import { applyFreeTrialPlan } from "./applyFreeTrialPlan";
 import { applyProductDetailsUpdate } from "./applyProductDetailsUpdate";
+import { clearDefaultFlagFromOtherVersions } from "./clearDefaultFlagFromOtherVersions";
 
 const executeUpsertProduct = async ({
 	ctx,
@@ -18,6 +19,7 @@ const executeUpsertProduct = async ({
 	if (upsert.row.op === "create") {
 		const product = upsert.details?.product ?? upsert.row.nextFullProduct;
 		await ProductService.insert({ db: ctx.db, product });
+		await clearDefaultFlagFromOtherVersions({ ctx, product });
 	}
 
 	await applyEntitlementPricesPlan({ ctx, upsert });

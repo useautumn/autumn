@@ -11,10 +11,12 @@ import {
 	isFixedPrice,
 	type OnDecrease,
 	type OnIncrease,
+	products,
 	type ResetInterval,
 	type RolloverExpiryDurationType,
 	type TierBehavior,
 } from "@autumn/shared";
+import { and, eq } from "drizzle-orm";
 import type { AutumnInt } from "@/external/autumn/autumnCli.js";
 import { invalidateProductsCache } from "@/external/redis/actions/productsCache/productsCache.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
@@ -456,6 +458,32 @@ export const expectDbPlansCorrect = async ({
 			);
 		}
 	}
+};
+
+/** Assert the exact set of version numbers that exist for a plan id. */
+export const expectPlanVersionsCorrect = async ({
+	ctx,
+	planId,
+	versions,
+}: {
+	ctx: AutumnContext;
+	planId: string;
+	versions: number[];
+}) => {
+	const rows = await ctx.db
+		.select({ version: products.version })
+		.from(products)
+		.where(
+			and(
+				eq(products.id, planId),
+				eq(products.org_id, ctx.org.id),
+				eq(products.env, ctx.env),
+			),
+		);
+	expect(
+		rows.map((row) => row.version).sort((a, b) => a - b),
+		`${planId}: version set`,
+	).toEqual([...versions].sort((a, b) => a - b));
 };
 
 export const expectDbPlansAbsent = async ({

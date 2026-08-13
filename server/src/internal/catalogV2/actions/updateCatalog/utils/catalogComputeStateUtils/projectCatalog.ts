@@ -29,9 +29,19 @@ export const projectCatalog = ({
 				: [],
 		),
 	);
+	// Keep upserted+removed features in the projection so later compute can
+	// resolve items; errors owns the same-call conflict.
+	const upsertedFeatureIds = new Set([
+		...plan.insertFeatures.map((feature) => feature.id),
+		...plan.updateFeatures.flatMap((updateFeaturePlan) => [
+			updateFeaturePlan.current.id,
+			updateFeaturePlan.next.id,
+		]),
+	]);
 	const removedFeatureInternalIds = new Set(
 		plan.removeFeatures.flatMap((removeFeaturePlan) =>
-			removeFeaturePlan.current?.internal_id
+			removeFeaturePlan.current?.internal_id &&
+			!upsertedFeatureIds.has(removeFeaturePlan.featureId)
 				? [removeFeaturePlan.current.internal_id]
 				: [],
 		),

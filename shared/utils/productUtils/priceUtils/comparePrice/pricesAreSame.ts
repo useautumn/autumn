@@ -32,23 +32,48 @@ export const tiersAreSame = (tiers1: UsageTier[], tiers2: UsageTier[]) => {
 	return true;
 };
 
-const currenciesAreSame = (
+const hasCatalogCurrencies = (
+	currencies: Record<string, PriceCurrencyConfig> | null | undefined,
+) => Object.keys(currencies ?? {}).length > 0;
+
+// Add/remove of a catalog currency is compatible (existing customers keep
+// snapshots); only amount mismatches for a currency present on both sides differ.
+const currenciesAreCompatible = (
 	currencies1: Record<string, PriceCurrencyConfig> | null | undefined,
 	currencies2: Record<string, PriceCurrencyConfig> | null | undefined,
 ) => {
-	const keys1 = Object.keys(currencies1 ?? {});
-	const keys2 = Object.keys(currencies2 ?? {});
-	if (keys1.length !== keys2.length) return false;
-	for (const key of keys1) {
-		const block1 = currencies1?.[key];
-		const block2 = currencies2?.[key];
-		if (!block2) return false;
+	const map1 = currencies1 ?? {};
+	const map2 = currencies2 ?? {};
+	for (const key of Object.keys(map1)) {
+		const block2 = map2[key];
+		if (!block2) continue;
+		const block1 = map1[key];
 		if ((block1?.amount ?? null) !== (block2.amount ?? null)) return false;
 		if (!tiersAreSame(block1?.usage_tiers ?? [], block2.usage_tiers ?? [])) {
 			return false;
 		}
 	}
 	return true;
+};
+
+// base_currency is FX bookkeeping — it appears/disappears with the currencies
+// map. Only treat a mismatch as a change when both sides already carry FX.
+const baseCurrenciesAreCompatible = ({
+	base1,
+	base2,
+	currencies1,
+	currencies2,
+}: {
+	base1: string | null | undefined;
+	base2: string | null | undefined;
+	currencies1: Record<string, PriceCurrencyConfig> | null | undefined;
+	currencies2: Record<string, PriceCurrencyConfig> | null | undefined;
+}) => {
+	if ((base1 ?? null) === (base2 ?? null)) return true;
+	if (hasCatalogCurrencies(currencies1) !== hasCatalogCurrencies(currencies2)) {
+		return true;
+	}
+	return false;
 };
 
 export const pricesAreSame = (
@@ -71,10 +96,13 @@ export const pricesAreSame = (
 			intervalCount:
 				(fixedConfig1.interval_count ?? 1) !==
 				(fixedConfig2.interval_count ?? 1),
-			baseCurrency:
-				(fixedConfig1.base_currency ?? null) !==
-				(fixedConfig2.base_currency ?? null),
-			currencies: !currenciesAreSame(
+			baseCurrency: !baseCurrenciesAreCompatible({
+				base1: fixedConfig1.base_currency,
+				base2: fixedConfig2.base_currency,
+				currencies1: fixedConfig1.currencies,
+				currencies2: fixedConfig2.currencies,
+			}),
+			currencies: !currenciesAreCompatible(
 				fixedConfig1.currencies,
 				fixedConfig2.currencies,
 			),
@@ -107,10 +135,13 @@ export const pricesAreSame = (
 			usageConfig1.usage_tiers,
 			usageConfig2.usage_tiers,
 		),
-		baseCurrency:
-			(usageConfig1.base_currency ?? null) !==
-			(usageConfig2.base_currency ?? null),
-		currencies: !currenciesAreSame(
+		baseCurrency: !baseCurrenciesAreCompatible({
+			base1: usageConfig1.base_currency,
+			base2: usageConfig2.base_currency,
+			currencies1: usageConfig1.currencies,
+			currencies2: usageConfig2.currencies,
+		}),
+		currencies: !currenciesAreCompatible(
 			usageConfig1.currencies,
 			usageConfig2.currencies,
 		),

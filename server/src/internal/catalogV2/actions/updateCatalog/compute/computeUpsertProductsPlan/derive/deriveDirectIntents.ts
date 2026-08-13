@@ -34,7 +34,8 @@ const groupPlanParamsByPlanId = ({
 	return byPlanId;
 };
 
-/** Explicit versions ascending, then omit→latest (or v1 if plan absent). */
+/** Explicit versions ascending, then omit→latest (or v1 if plan absent).
+ * `new_version` always mints at max+1 (requires an existing plan — guarded elsewhere). */
 const resolveVersionsForPlan = ({
 	planId,
 	planParamsList,
@@ -48,12 +49,16 @@ const resolveVersionsForPlan = ({
 		.filter(hasExplicitVersion)
 		.sort((a, b) => a.version - b.version);
 
-	const latestOrV1 =
-		latestVersionForPlan({ planId, productStatesContext }) || 1;
+	const maxVersion = latestVersionForPlan({ planId, productStatesContext });
+	const latestOrV1 = maxVersion || 1;
 
 	const targetingLatest = planParamsList
 		.filter((planParams) => !hasExplicitVersion(planParams))
-		.map((planParams) => ({ ...planParams, version: latestOrV1 }));
+		.map((planParams) => ({
+			...planParams,
+			version:
+				planParams.versioning === "new_version" ? maxVersion + 1 : latestOrV1,
+		}));
 
 	return [...withExplicitVersion, ...targetingLatest];
 };

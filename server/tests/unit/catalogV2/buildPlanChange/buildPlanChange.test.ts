@@ -168,7 +168,7 @@ test("trial add/change/remove", () => {
 	});
 });
 
-test("no-op returns null", () => {
+test("no-op returns undefined", () => {
 	const base = plan({
 		price: monthPrice(10),
 		items: [messagesItem()],
@@ -176,6 +176,21 @@ test("no-op returns null", () => {
 	});
 
 	expect(buildPlanChange({ from: base, to: { ...base } })).toBeUndefined();
+});
+
+test("missing from or to returns undefined", () => {
+	expect(buildPlanChange({ from: undefined, to: plan() })).toBeUndefined();
+	expect(buildPlanChange({ from: plan(), to: undefined })).toBeUndefined();
+	expect(buildPlanChange({})).toBeUndefined();
+});
+
+test("price change includes customize lane", () => {
+	const change = buildPlanChange({
+		from: plan({ price: null }),
+		to: plan({ price: monthPrice(10) }),
+	});
+
+	expect(change?.customize).toEqual({ price: monthPrice(10) });
 });
 
 test("buildPlanItemChangesFromLists assembles explicit created/deleted", () => {

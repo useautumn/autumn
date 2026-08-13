@@ -6,7 +6,7 @@ import { planParamsToProductRowPatch } from "./planParamsToProductRowPatch";
 /**
  * Mint a fresh product row for a create (constructProduct conventions:
  * `group || ""`, nullish fallbacks, generated internal_id).
- * `base` reserved for new-version / variant mints (clone with fresh ids).
+ * With `base`: clone then overlay params patch (new_version / variant mint).
  */
 export const initProductRow = ({
 	ctx,
@@ -20,7 +20,18 @@ export const initProductRow = ({
 	base?: Product;
 }): Product => {
 	if (base) {
-		throw new Error("initProductRow: base mint not implemented yet");
+		const patch = planParamsToProductRowPatch({
+			planParams,
+			current: base,
+		});
+		return {
+			...base,
+			...patch,
+			version,
+			internal_id: generateId("prod"),
+			created_at: Date.now(),
+			group: (patch.group ?? base.group) || "",
+		};
 	}
 
 	const patch = planParamsToProductRowPatch({ planParams, current: null });

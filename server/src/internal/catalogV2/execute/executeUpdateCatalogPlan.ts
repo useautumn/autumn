@@ -1,4 +1,4 @@
-import type { CatalogAction } from "@autumn/shared";
+import type { CatalogAction, CatalogMigration } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import type { UpdateCatalogPlan } from "@/internal/catalogV2/actions/updateCatalog/types/updateCatalogPlan";
 import {
@@ -6,6 +6,7 @@ import {
 	executeCreditSystemSchemaRewrites,
 	executeFeatureReferenceRewrites,
 } from "@/internal/catalogV2/execute/executeFeatureReferenceRewrites";
+import { executeMigrationDrafts } from "@/internal/catalogV2/execute/executeMigrationDrafts";
 import { executeUpsertProducts } from "@/internal/catalogV2/execute/executeUpsertProducts/executeUpsertProducts";
 import { FeatureService } from "@/internal/features/FeatureService.js";
 import type { ClearCreditSystemCachePayload } from "@/internal/features/featureActions/runClearCreditSystemCacheTask.js";
@@ -19,6 +20,7 @@ export type CatalogAppliedResult = { id: string; action: CatalogAction };
 export type CatalogResult = {
 	features: CatalogAppliedResult[];
 	plans: CatalogAppliedResult[];
+	migrations: CatalogMigration[];
 };
 
 const executeInsertFeatures = async ({
@@ -151,6 +153,7 @@ export const executeUpdateCatalogPlan = async ({
 	await executeUpdateFeatures({ ctx, updateCatalogPlan });
 	await executeRemoveFeatures({ ctx, updateCatalogPlan });
 	const plans = await executeUpsertProducts({ ctx, updateCatalogPlan });
+	const migrations = await executeMigrationDrafts({ ctx, updateCatalogPlan });
 
 	await clearOrgCache({
 		db: ctx.db,
@@ -177,5 +180,6 @@ export const executeUpdateCatalogPlan = async ({
 			})),
 		],
 		plans,
+		migrations,
 	};
 };

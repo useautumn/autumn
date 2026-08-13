@@ -27,15 +27,14 @@ const withCurrentRowFeatures = ({
 	features: Feature[];
 	currentRows: ComputeEntitlementPricesPlanParams["currentRows"];
 }): Feature[] => {
-	const byInternalId = new Map(
-		features.map((feature) => [feature.internal_id, feature]),
-	);
+	const byId = new Map(features.map((feature) => [feature.id, feature]));
 	for (const entitlement of currentRows?.entitlements ?? []) {
-		if (!byInternalId.has(entitlement.feature.internal_id)) {
-			byInternalId.set(entitlement.feature.internal_id, entitlement.feature);
+		const feature = entitlement.feature;
+		if (feature && !byId.has(feature.id)) {
+			byId.set(feature.id, feature);
 		}
 	}
-	return [...byInternalId.values()];
+	return [...byId.values()];
 };
 
 const hasCustomizeField = ({
@@ -61,7 +60,8 @@ export const resolveEntitlementPricesCustomize = ({
 }): ResolvedEntitlementPricesDesired => {
 	const { customize, currentRows } = params;
 
-	if (!hasCustomizeField({ customize })) {
+	// Version mint with empty customize = full copy from currentRows.
+	if (!hasCustomizeField({ customize }) && params.mode.type !== "version") {
 		throw new RecaseError({
 			message:
 				"computeEntitlementPricesPlan requires at least one of price, items, add_items, remove_items",
@@ -94,8 +94,8 @@ export const resolveEntitlementPricesCustomize = ({
 		});
 	}
 
-	// ctx.features may be projected (e.g. a feature removed this call);
-	// current rows still reference the old set, so union in their embedded features.
+	// ctx.features may be projected (removed or renamed this call). Current
+	// rows still reference the old public ids, so union those in by id.
 	const currentRowFeatures = withCurrentRowFeatures({
 		features: ctx.features,
 		currentRows,

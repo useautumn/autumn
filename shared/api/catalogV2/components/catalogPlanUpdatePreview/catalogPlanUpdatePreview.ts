@@ -1,6 +1,6 @@
+import { PlanChangeV0Schema } from "@api/products/components/planChange/planChangeV0.js";
 import { z } from "zod/v4";
 import { CatalogActionSchema } from "../catalogAction.js";
-import { CatalogPlanChangesSchema } from "./catalogPlanChanges.js";
 import { CatalogPlanVersioningSchema } from "./catalogPlanVersioning.js";
 
 export const CatalogPlanUpdatePreviewSchema = z.object({
@@ -15,7 +15,10 @@ export const CatalogPlanUpdatePreviewSchema = z.object({
 		}),
 	}),
 	versioning: CatalogPlanVersioningSchema.nullable(),
-	changes: CatalogPlanChangesSchema.nullable(),
+	plan_change: PlanChangeV0Schema.nullish().meta({
+		description:
+			"Diff between the current and desired plan definition. Omitted (or null) when the plan is new, removed, or unchanged.",
+	}),
 });
 
 export type CatalogPlanUpdatePreview = z.infer<

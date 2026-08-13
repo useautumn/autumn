@@ -2,13 +2,13 @@ import type {
 	CatalogFeatureUpdatePreview,
 	PreviewUpdateCatalogResponse,
 } from "@autumn/shared";
-import { buildFeatureUsage } from "@/internal/catalogV2/actions/updateCatalog/preview/featureUsage/buildFeatureUsage";
-import { formatFeatureUsageMessages } from "@/internal/catalogV2/actions/updateCatalog/preview/featureUsage/formatFeatureUsageMessages";
+import { buildFeatureUsage } from "@/internal/catalogV2/actions/updateCatalog/preview/features/featureUsage/buildFeatureUsage";
+import { formatFeatureUsageMessages } from "@/internal/catalogV2/actions/updateCatalog/preview/features/featureUsage/formatFeatureUsageMessages";
 import type { UpdateCatalogContext } from "@/internal/catalogV2/actions/updateCatalog/types/updateCatalogContext";
 import type { UpdateCatalogPlan } from "@/internal/catalogV2/actions/updateCatalog/types/updateCatalogPlan";
 
 /** Pure map: computed plan + previewContext facts → preview response features. */
-export const buildUpdateCatalogPlanPreview = ({
+export const buildFeaturesPreview = ({
 	catalogContext,
 	updateCatalogPlan,
 }: {

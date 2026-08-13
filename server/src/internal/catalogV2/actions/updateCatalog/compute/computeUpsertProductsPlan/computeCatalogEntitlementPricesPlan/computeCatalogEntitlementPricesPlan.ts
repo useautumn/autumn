@@ -1,6 +1,6 @@
 import type {
-	EntitlementWithFeature,
-	Price,
+	CatalogPlanVersioningStrategy,
+	FullProduct,
 	Product,
 	UpdateCatalogPlanParams,
 } from "@autumn/shared";
@@ -8,6 +8,7 @@ import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import {
 	computeEntitlementPricesPlan,
 	type EntitlementPricesPlan,
+	type EntitlementPricesPlanMode,
 	entitlementPricesPlanHasWrites,
 } from "@/internal/products/actions/computeEntitlementPricesPlan";
 
@@ -18,27 +19,42 @@ import {
 export const computeCatalogEntitlementPricesPlan = ({
 	ctx,
 	product,
-	currentRows,
+	baseFullProduct,
 	planParams,
+	versioning,
 	protectReferencedRows,
 }: {
 	ctx: AutumnContext;
 	product: Product;
-	currentRows?: {
-		prices: Price[];
-		entitlements: EntitlementWithFeature[];
-	};
+	baseFullProduct: FullProduct | null;
 	planParams: UpdateCatalogPlanParams;
+	versioning: CatalogPlanVersioningStrategy;
 	protectReferencedRows: boolean;
 }): EntitlementPricesPlan | undefined => {
-	if (planParams.price === undefined && planParams.items === undefined) {
+	const currentRows = baseFullProduct
+		? {
+				prices: baseFullProduct.prices,
+				entitlements: baseFullProduct.entitlements,
+			}
+		: undefined;
+
+	const mode: EntitlementPricesPlanMode =
+		versioning === "new_version"
+			? { type: "version" }
+			: { type: "update", protectReferencedRows };
+
+	const hasCustomize =
+		planParams.price !== undefined || planParams.items !== undefined;
+
+	// Version mint always runs so omitted items/price expand from base.
+	if (!hasCustomize && mode.type !== "version") {
 		return undefined;
 	}
 
 	const plan = computeEntitlementPricesPlan({
 		ctx,
 		params: {
-			mode: { type: "update", protectReferencedRows },
+			mode,
 			product,
 			customize: {
 				...(planParams.price !== undefined ? { price: planParams.price } : {}),

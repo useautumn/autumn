@@ -28,13 +28,17 @@ const params = (
 	...overrides,
 });
 
-describe("computeFreeTrialPlan", () => {
+const updateMode = { type: "update" as const };
+const versionMode = { type: "version" as const };
+
+describe("computeFreeTrialPlan — update", () => {
 	test("omitted params → preserve current", () => {
 		const current = currentRow();
 		const plan = computeFreeTrialPlan({
 			freeTrialParams: undefined,
 			currentFreeTrial: current,
 			internalProductId: "prod_1",
+			mode: updateMode,
 		});
 		expect(plan).toEqual({
 			changed: false,
@@ -50,6 +54,7 @@ describe("computeFreeTrialPlan", () => {
 			freeTrialParams: undefined,
 			currentFreeTrial: null,
 			internalProductId: "prod_1",
+			mode: updateMode,
 		});
 		expect(plan.changed).toBe(false);
 		expect(plan.projected).toBeNull();
@@ -64,6 +69,7 @@ describe("computeFreeTrialPlan", () => {
 			freeTrialParams: null,
 			currentFreeTrial: current,
 			internalProductId: "prod_1",
+			mode: updateMode,
 		});
 		expect(plan).toEqual({
 			changed: true,
@@ -79,6 +85,7 @@ describe("computeFreeTrialPlan", () => {
 			freeTrialParams: null,
 			currentFreeTrial: null,
 			internalProductId: "prod_1",
+			mode: updateMode,
 		});
 		expect(plan.changed).toBe(false);
 		expect(plan.projected).toBeNull();
@@ -90,6 +97,7 @@ describe("computeFreeTrialPlan", () => {
 			freeTrialParams: params(),
 			currentFreeTrial: current,
 			internalProductId: "prod_1",
+			mode: updateMode,
 		});
 		expect(plan.changed).toBe(false);
 		expect(plan.new).toBeNull();
@@ -105,6 +113,7 @@ describe("computeFreeTrialPlan", () => {
 			freeTrialParams: params({ duration_length: 30 }),
 			currentFreeTrial: current,
 			internalProductId: "prod_1",
+			mode: updateMode,
 		});
 		expect(plan.changed).toBe(true);
 		expect(plan.retired).toBe(current);
@@ -121,6 +130,7 @@ describe("computeFreeTrialPlan", () => {
 			freeTrialParams: params({ card_required: false }),
 			currentFreeTrial: null,
 			internalProductId: "prod_new",
+			mode: updateMode,
 		});
 		expect(plan.changed).toBe(true);
 		expect(plan.retired).toBeNull();
@@ -137,9 +147,91 @@ describe("computeFreeTrialPlan", () => {
 			freeTrialParams: params({ on_end: "bill" }),
 			currentFreeTrial: current,
 			internalProductId: "prod_1",
+			mode: updateMode,
 		});
 		expect(plan.changed).toBe(false);
 		expect(plan.same).toBe(current);
 		expect(plan.new).toBeNull();
+	});
+});
+
+describe("computeFreeTrialPlan — version", () => {
+	test("omit with current → copy to .new (fresh id, new product id, no retire)", () => {
+		const current = currentRow();
+		const plan = computeFreeTrialPlan({
+			freeTrialParams: undefined,
+			currentFreeTrial: current,
+			internalProductId: "prod_v2",
+			mode: versionMode,
+		});
+		expect(plan.changed).toBe(true);
+		expect(plan.same).toBeNull();
+		expect(plan.retired).toBeNull();
+		expect(plan.new).not.toBeNull();
+		expect(plan.new?.id).not.toBe("ft_current");
+		expect(plan.new?.internal_product_id).toBe("prod_v2");
+		expect(plan.new?.length).toBe(14);
+		expect(plan.projected).toBe(plan.new);
+	});
+
+	test("omit with no current → empty unchanged", () => {
+		const plan = computeFreeTrialPlan({
+			freeTrialParams: undefined,
+			currentFreeTrial: null,
+			internalProductId: "prod_v2",
+			mode: versionMode,
+		});
+		expect(plan.changed).toBe(false);
+		expect(plan.new).toBeNull();
+		expect(plan.same).toBeNull();
+		expect(plan.retired).toBeNull();
+		expect(plan.projected).toBeNull();
+	});
+
+	test("null → empty, never retires base", () => {
+		const current = currentRow();
+		const plan = computeFreeTrialPlan({
+			freeTrialParams: null,
+			currentFreeTrial: current,
+			internalProductId: "prod_v2",
+			mode: versionMode,
+		});
+		expect(plan.changed).toBe(false);
+		expect(plan.new).toBeNull();
+		expect(plan.same).toBeNull();
+		expect(plan.retired).toBeNull();
+		expect(plan.projected).toBeNull();
+	});
+
+	test("object matching current content → still mints (never same)", () => {
+		const current = currentRow();
+		const plan = computeFreeTrialPlan({
+			freeTrialParams: params(),
+			currentFreeTrial: current,
+			internalProductId: "prod_v2",
+			mode: versionMode,
+		});
+		expect(plan.changed).toBe(true);
+		expect(plan.same).toBeNull();
+		expect(plan.retired).toBeNull();
+		expect(plan.new).not.toBeNull();
+		expect(plan.new?.id).not.toBe("ft_current");
+		expect(plan.new?.internal_product_id).toBe("prod_v2");
+		expect(plan.projected).toBe(plan.new);
+	});
+
+	test("object differing → mint only, no retire", () => {
+		const current = currentRow();
+		const plan = computeFreeTrialPlan({
+			freeTrialParams: params({ duration_length: 30 }),
+			currentFreeTrial: current,
+			internalProductId: "prod_v2",
+			mode: versionMode,
+		});
+		expect(plan.changed).toBe(true);
+		expect(plan.retired).toBeNull();
+		expect(plan.same).toBeNull();
+		expect(plan.new?.length).toBe(30);
+		expect(plan.new?.internal_product_id).toBe("prod_v2");
 	});
 });

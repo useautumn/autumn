@@ -15,6 +15,8 @@ export const PlanPreviousAttributesV0Schema = ApiPlanV1Schema.pick({
 	add_on: true,
 	auto_enable: true,
 	config: true,
+	archived: true,
+	metadata: true,
 })
 	.partial()
 	.extend({
@@ -23,10 +25,13 @@ export const PlanPreviousAttributesV0Schema = ApiPlanV1Schema.pick({
 			description:
 				"Previous free trial when it changed. Null when the plan had none.",
 		}),
-		billing_controls: CustomerBillingControlsSchema.nullable().optional().meta({
-			description:
-				"Previous billing controls when they changed. Null when unset.",
-		}),
+		billing_controls: CustomerBillingControlsSchema.partial()
+			.nullable()
+			.optional()
+			.meta({
+				description:
+					"Sparse previous billing_controls — only keys that changed. Null when unset.",
+			}),
 	});
 
 export type PlanPreviousAttributesV0 = z.infer<

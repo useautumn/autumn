@@ -25,16 +25,30 @@ describe("pricesAreSame: additional currencies", () => {
 		).toBe(true);
 	});
 
-	test("adding a currency is a change", () => {
+	test("adding or removing a currency alone is compatible", () => {
 		expect(
 			pricesAreSame(
 				fixedPrice({ ...base }),
-				fixedPrice({ ...base, currencies: { eur: { amount: 9 } } }),
+				fixedPrice({
+					...base,
+					base_currency: "usd",
+					currencies: { eur: { amount: 9 } },
+				}),
 			),
-		).toBe(false);
+		).toBe(true);
+		expect(
+			pricesAreSame(
+				fixedPrice({
+					...base,
+					base_currency: "usd",
+					currencies: { eur: { amount: 9 } },
+				}),
+				fixedPrice({ ...base }),
+			),
+		).toBe(true);
 	});
 
-	test("differing base_currency is a change", () => {
+	test("differing base_currency with FX on both sides is a change", () => {
 		expect(
 			pricesAreSame(
 				fixedPrice({
