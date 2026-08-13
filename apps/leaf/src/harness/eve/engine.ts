@@ -1,91 +1,16 @@
-import type { ChatApproval } from "@autumn/shared";
 import type { AgentEngine } from "../../agent/runMessage/types.js";
-import { isSilentTool } from "../../agent/tools/toolPolicy.js";
-import { chatApprovalRepo } from "../../internal/approvals/repos/chatApprovalRepo.js";
-import { executeAutumnMcpTool } from "../../internal/autumnMcp/client.js";
-import { autumnOrgContextService } from "../../internal/autumnMcp/orgContextService.js";
+import {
+	type AutumnOrgContext,
+	autumnOrgContextService,
+} from "../../internal/autumnMcp/orgContextService.js";
 import { db } from "../../lib/db.js";
-import { env as leafEnv } from "../../lib/env.js";
-import { parsePreviewPayload } from "../../ui/previewContent.js";
-import { buildHarnessMessageText } from "../common/messageText.js";
-import { buildThreadKey } from "../common/threadKey.js";
-import { adoptPostedEveSession } from "./adoptPostedSession.js";
-import { denyOptionFromApproval, drainParkedEveTurn } from "./approval.js";
-import { canRetryOnFreshEveSession } from "./canRetryOnFreshEveSession.js";
-import {
-	catalogPlanNeedingDecision,
-	enrichCatalogPreview,
-} from "./catalogDecision.js";
-import {
-	classifyParkedEveInput,
-	WAITING_FALLBACK_TEXT,
-} from "./classifyParkedInput.js";
-import {
-	type EveMessageContent,
-	EveStreamDisconnectedError,
-	EveStreamIdleTimeoutError,
-	postEveInputResponse,
-	postEveMessage,
-	resyncEveStreamIndex,
-	streamEveEvents,
-} from "./client.js";
-import {
-	approvalOptionIds,
-	displayEveToolLabel,
-	type EveAction,
-	type EveActionResult,
-	type EveInputRequest,
-	isPreviewToolName,
-	labelForResult,
-	textForInputRequests,
-} from "./events.js";
-import { deleteEveSession, getEveSession, upsertEveSession } from "./repo.js";
-import {
-	type EveEmptyTurnEnding,
-	shouldDropEveSession,
-} from "./shouldDropEveSession.js";
-import { eveTurnProducedOutput } from "./turnOutput.js";
-import type {
-	EveAuthContext,
-	EveSessionRef,
-	EveSessionState,
-} from "./types.js";
-
-/** Together ~10s of reconnects: eve resumes turns asynchronously, so the first
- * stream after a post can legitimately close empty a few times. */
-const MAX_IDLE_RETRIES = 20;
-const STREAM_RETRY_DELAY_MS = 500;
-
-const MAX_STREAM_DISCONNECT_RETRIES = 5;
-
-const initialState = (continuationToken: string): EveSessionState => ({
-	version: 1,
-	continuationToken,
-	streamIndex: 0,
-	status: "running",
-	lastEventAt: Date.now(),
-});
-
-const updateState = async ({
-	orgId,
-	session,
-	state,
-}: {
-	orgId: string;
-	session: EveSessionRef;
-	state: Partial<EveSessionState>;
-}) => {
-	const next = { ...session.state, ...state, lastEventAt: Date.now() };
-	session.state = next;
-	await upsertEveSession({
-		db,
-		env: session.env,
-		orgId,
-		sessionId: session.sessionId,
-		state: next,
-		threadKey: session.threadKey,
-	});
-};
+import { consumeEveTurn } from "./consumeEveTurn.js";
+import { getEveSession } from "./repo.js";
+import { resolveEveTurnOutcome } from "./resolveTurnOutcome.js";
+import { startEveTurn } from "./startTurn.js";
+import { withdrawSupersededEveApprovals } from "./supersededApprovals.js";
+import { buildEveTurnMessage } from "./turnMessage.js";
+import type { EveAuthContext } from "./types.js";
 
 export const eveEngine: AgentEngine = {
 	name: "eve",
@@ -116,512 +41,68 @@ export const eveEngine: AgentEngine = {
 			workspaceId: thread.workspaceId,
 		};
 
-		let session =
+		// 1. Resolve the thread's session — a first message has none.
+		const existingSession =
 			ctx.eveSession ??
 			(await getEveSession({ db, env, orgId: org.id, thread }));
-		const newSession = !session;
-		let orgContext: Awaited<ReturnType<typeof autumnOrgContextService.load>>;
 
-		if (newSession) {
+		// 2. A resumed thread can carry approval cards the user answered with a
+		//    new message instead; a brand-new one needs the org catalog preloaded.
+		let orgContext: AutumnOrgContext | undefined;
+		if (existingSession) {
+			await withdrawSupersededEveApprovals({
+				auth,
+				logger,
+				onApprovalsSuperseded,
+				orgId: org.id,
+				providerUserId,
+				session: existingSession,
+				thread,
+			});
+		} else {
 			await onAction?.("Loading context");
 			orgContext = await autumnOrgContextService.load({ env, logger, token });
-		} else if (session) {
-			const pendingApprovals = await chatApprovalRepo.listPendingForRun({
-				db,
-				channelId: thread.channelId,
-				env,
-				orgId: org.id,
-				provider: thread.provider,
-				runId: session.sessionId,
-				workspaceId: thread.workspaceId,
-			});
-			if (pendingApprovals.length > 0) {
-				const cancelledApprovals: ChatApproval[] = [];
-				for (const approval of pendingApprovals) {
-					if (approval.tool_call_id) {
-						try {
-							const posted = await postEveInputResponse({
-								auth,
-								note: "(The user replied with a new message instead of deciding on this pending request, so it was withdrawn. Do not rebuild or ask anything — reply with nothing; their new message follows immediately and you should act on that, treating it as a refinement of the withdrawn change where it reads like one.)",
-								optionId: denyOptionFromApproval(approval),
-								requestId: approval.tool_call_id,
-								session,
-							});
-							adoptPostedEveSession({ posted, session, status: "running" });
-							// Discard the withdrawal turn's reply — without this, its
-							// text would end THIS run and the user's actual message
-							// would be processed with nobody streaming.
-							await drainParkedEveTurn({ auth, orgId: org.id, session });
-						} catch (error) {
-							logger.warn("Could not deny superseded Eve approval", {
-								event: "leaf.eve_superseded_approval_deny_failed",
-								approval_id: approval.id,
-								data: {
-									error: error instanceof Error ? error.message : String(error),
-								},
-							});
-						}
-					}
-					const cancelled = await chatApprovalRepo.cancel({
-						approvalId: approval.id,
-						db,
-						providerUserId,
-					});
-					cancelledApprovals.push(cancelled ?? approval);
-				}
-				await onApprovalsSuperseded?.(cancelledApprovals);
-			}
 		}
 
-		// Binary attachments ride as file parts (base64 data: URLs) beside the
-		// text; eve stages them for the model call. Behind a flag until eve's
-		// queue boundary stops corrupting file bytes — meanwhile the model gets
-		// an honest note instead of a hard turn failure.
-		const sendFileParts =
-			Boolean(params.attachments?.length) && leafEnv.EVE_ATTACHMENTS_ENABLED;
-		const composeEveMessage = ({
-			isNewSession,
-		}: {
-			isNewSession: boolean;
-		}): EveMessageContent => {
-			let messageText = buildHarnessMessageText({
+		// 3. Compose and post the turn.
+		const session = await startEveTurn({
+			auth,
+			env,
+			message: buildEveTurnMessage({
 				env,
-				newSession: isNewSession,
+				newSession: !existingSession,
 				orgContext,
 				params,
-			});
-			if (params.attachments?.length && !sendFileParts) {
-				const names = params.attachments
-					.map((attachment) => attachment.name ?? attachment.mimeType)
-					.join(", ");
-				messageText = `${messageText}\n\n(The user attached file(s) — ${names} — but file ingestion isn't available on this channel yet. Acknowledge this and ask them to paste the relevant content as text.)`;
-			}
-			return sendFileParts
-				? [
-						{ text: messageText, type: "text" as const },
-						...(params.attachments ?? []).map((attachment) => ({
-							data: `data:${attachment.mimeType};base64,${attachment.data.toString("base64")}`,
-							filename: attachment.name,
-							mediaType: attachment.mimeType,
-							type: "file" as const,
-						})),
-					]
-				: messageText;
-		};
-		let message = composeEveMessage({ isNewSession: newSession });
-		let restartedOnFreshSession = false;
+			}),
+			orgId: org.id,
+			params,
+			session: existingSession,
+			thread,
+		});
+		run?.resolveSessionId(session.sessionId);
+		await onAgentReady?.();
 
-		// Outer attempt: a session whose stream never yields a single event is
-		// dead, and only a brand-new eve session can answer the message.
-		while (true) {
-			// A chip answer resolves the parked request structurally; sending the
-			// wrapped message too would replay it as a second user turn.
-			const answeringQuestion = Boolean(params.questionResponse && session);
-			const posted = await postEveMessage({
-				auth,
-				clientContext: params.clientContext,
-				inputResponses: answeringQuestion
-					? [params.questionResponse as { optionId: string; requestId: string }]
-					: undefined,
-				message: answeringQuestion ? undefined : message,
-				session,
-			});
-			if (session) {
-				adoptPostedEveSession({ posted, session, status: "running" });
-			} else {
-				session = {
-					env,
-					newSession: true,
-					sessionId: posted.sessionId,
-					state: initialState(posted.continuationToken),
-					threadKey: buildThreadKey({ env, thread }),
-				};
-			}
-			await upsertEveSession({
-				db,
-				env,
-				orgId: org.id,
-				sessionId: session.sessionId,
-				state: session.state,
-				threadKey: session.threadKey,
-			});
-			run?.resolveSessionId(session.sessionId);
-			await onAgentReady?.();
+		// 4. Stream it to its end.
+		const outcome = await consumeEveTurn({
+			auth,
+			env,
+			logger,
+			onAction,
+			onReasoning,
+			onThinking,
+			orgId: org.id,
+			run,
+			session,
+			token,
+		});
 
-			const abortController = new AbortController();
-			let finalText = "";
-			let pendingText = "";
-			let lastPreview: unknown;
-			let reasoningStreamId: string | undefined;
-			const toolLabels = new Map<string, string>();
-			const toolInputs = new Map<string, Record<string, unknown>>();
-			// The previous turn's tail (step/turn.completed, session.waiting) lands
-			// AFTER input.requested, past where the last run stopped consuming — so it
-			// replays at the start of this run's stream. Ignore terminal events until
-			// this turn's own turn.started arrives, or a stale session.waiting ends
-			// the run before the resumed turn's events ever show up.
-			let turnStarted = false;
-			let sawAnyEvent = false;
-			let resyncedAfterSilence = false;
-			let endedWithoutOutput: EveEmptyTurnEnding | undefined;
-
-			try {
-				// Eve resumes turns asynchronously: right after posting a message or
-				// input response the session can still look idle, and the event stream
-				// closes with nothing. Reconnect through that window instead of
-				// returning an empty turn; give up only after sustained silence.
-				let idleRetries = 0;
-				let disconnectRetries = 0;
-				while (idleRetries < MAX_IDLE_RETRIES) {
-					let sawEvent = false;
-					try {
-						for await (const event of streamEveEvents({
-							auth,
-							session,
-							signal: abortController.signal,
-						})) {
-							sawEvent = true;
-							// Recorded here rather than after the stream closes — a stream
-							// that yields events and then drops must not look silent.
-							sawAnyEvent = true;
-							session.state.streamIndex += 1;
-							session.state.lastEventAt = Date.now();
-							if (run?.stop) {
-								abortController.abort();
-								await updateState({
-									orgId: org.id,
-									session,
-									state: { status: "waiting" },
-								});
-								return {
-									env,
-									finishReason: "stopped",
-									stopReason: run.stop.reason,
-									text: finalText,
-								};
-							}
-
-							if (event.type === "turn.started") {
-								turnStarted = true;
-								// A follow-up turn must not inherit the prior turn's preview,
-								// or a preview-less turn ends on a stale catalog decision.
-								lastPreview = undefined;
-							} else if (event.type === "step.started") {
-								if (turnStarted) onThinking?.();
-							} else if (event.type === "actions.requested") {
-								const actions = (event.data?.actions ?? []) as EveAction[];
-								for (const action of actions) {
-									const label = displayEveToolLabel(action);
-									// Utility tools (date converters) aren't worth a status blip.
-									const silent =
-										action.toolName && isSilentTool(action.toolName);
-									if (turnStarted && !silent) await onAction?.(label);
-									if (action.callId) {
-										toolLabels.set(action.callId, label);
-										if (action.input && typeof action.input === "object") {
-											toolInputs.set(
-												action.callId,
-												action.input as Record<string, unknown>,
-											);
-										}
-									}
-								}
-							} else if (event.type === "action.result") {
-								const result = event.data?.result as
-									| EveActionResult
-									| undefined;
-								if (
-									event.data?.status === "completed" &&
-									result?.toolName &&
-									isPreviewToolName(result.toolName)
-								) {
-									// Enriched (variant/version flags forced) so the approval card and
-									// the suspension-point decision gate both see the full preview.
-									// Returning mid-turn here would abandon the still-running eve
-									// turn — the decision gate lives at the updateCatalog suspension
-									// in streamWebChat, the one point that pauses the run for real.
-									lastPreview = await enrichCatalogPreview({
-										executeTool: (call) =>
-											executeAutumnMcpTool({ env, token, ...call }),
-										input: result.callId
-											? toolInputs.get(result.callId)
-											: undefined,
-										preview:
-											parsePreviewPayload(result.output) ?? result.output,
-									});
-								}
-								if (result?.callId) {
-									// actions.requested already surfaced this tool as a step;
-									// onAction here again would render every call twice. Only
-									// surface results that never had a requested event.
-									if (turnStarted && !toolLabels.has(result.callId)) {
-										await onAction?.(
-											displayEveToolLabel(labelForResult(result)),
-										);
-									}
-									toolLabels.delete(result.callId);
-								}
-							} else if (event.type === "message.appended" && turnStarted) {
-								const messageSoFar = event.data?.messageSoFar;
-								pendingText =
-									typeof messageSoFar === "string"
-										? messageSoFar
-										: `${pendingText}${String(event.data?.messageDelta ?? "")}`;
-								reasoningStreamId ??= crypto.randomUUID();
-								onReasoning?.({ id: reasoningStreamId, text: pendingText });
-							} else if (event.type === "message.completed" && turnStarted) {
-								const message = String(event.data?.message ?? pendingText);
-								pendingText = "";
-								if (event.data?.finishReason === "tool-calls") {
-									reasoningStreamId ??= crypto.randomUUID();
-									onReasoning?.({ id: reasoningStreamId, text: message });
-								} else {
-									if (reasoningStreamId) {
-										onReasoning?.({ id: reasoningStreamId, text: "" });
-									}
-									finalText = message;
-								}
-								reasoningStreamId = undefined;
-							} else if (event.type === "input.requested" && turnStarted) {
-								const requests = (event.data?.requests ??
-									[]) as EveInputRequest[];
-								const parked = classifyParkedEveInput({ requests });
-								if (parked?.kind === "gated") {
-									await updateState({
-										orgId: org.id,
-										session,
-										state: { status: "waiting" },
-									});
-									const options = approvalOptionIds({
-										options: parked.chained.options,
-									});
-									return {
-										env,
-										runId: session.sessionId,
-										text: finalText,
-										suspension: {
-											toolCallId: parked.chained.requestId,
-											toolName: parked.chained.toolName,
-											toolArgs: {
-												...(parked.chained.input ?? {}),
-												_eveApproveOptionId: options.approve,
-												_eveDenyOptionId: options.deny,
-											},
-											preview: parsePreviewPayload(lastPreview),
-										},
-									};
-								}
-								// Whatever the model said before parking beats the generic
-								// waiting line, which only fills in for a silent turn.
-								if (pendingText) finalText = pendingText;
-								if (!eveTurnProducedOutput({ text: finalText })) {
-									finalText =
-										textForInputRequests(requests) || WAITING_FALLBACK_TEXT;
-								}
-								await updateState({
-									orgId: org.id,
-									session,
-									state: { status: "waiting" },
-								});
-								// An optioned question also rides structurally so rich surfaces
-								// can render answer buttons; `text` keeps the flat fallback.
-								return {
-									env,
-									runId: session.sessionId,
-									text: finalText,
-									question:
-										parked?.kind === "question" ? parked.question : undefined,
-								};
-							} else if (
-								turnStarted &&
-								(event.type === "turn.failed" ||
-									event.type === "session.failed")
-							) {
-								await updateState({
-									orgId: org.id,
-									session,
-									state: { status: "failed" },
-								});
-								throw new Error(String(event.data?.message ?? "Eve failed"));
-							} else if (
-								turnStarted &&
-								(event.type === "session.waiting" ||
-									event.type === "session.completed")
-							) {
-								if (pendingText) finalText = pendingText;
-								const ending: EveEmptyTurnEnding =
-									event.type === "session.completed" ? "completed" : "waiting";
-								await updateState({
-									orgId: org.id,
-									session,
-									state: { status: ending },
-								});
-								// The model may (correctly) stop after a preview that needs
-								// versioning/variant/migration choices — surface the decision
-								// card now that the turn is genuinely over.
-								const decisionPlan = catalogPlanNeedingDecision(lastPreview);
-								if (
-									eveTurnProducedOutput({
-										catalogDecision: decisionPlan,
-										text: finalText,
-									})
-								) {
-									return {
-										env,
-										runId: session.sessionId,
-										text: finalText,
-										catalogDecision: decisionPlan
-											? { plan: decisionPlan }
-											: undefined,
-									};
-								}
-								// Nothing to show. Waiting means the run is stuck behind a
-								// request nobody can answer; completed is just an empty turn.
-								endedWithoutOutput = ending;
-								break;
-							}
-
-							if (session.state.streamIndex % 10 === 0) {
-								await upsertEveSession({
-									db,
-									env,
-									orgId: org.id,
-									sessionId: session.sessionId,
-									state: session.state,
-									threadKey: session.threadKey,
-								});
-							}
-						}
-					} catch (error) {
-						if (error instanceof EveStreamDisconnectedError) {
-							disconnectRetries += 1;
-							logger.warn("Eve stream disconnected; reconnecting", {
-								event: "leaf.eve_stream_disconnected",
-								data: {
-									attempt: disconnectRetries,
-									error: error instanceof Error ? error.message : String(error),
-									session_id: session.sessionId,
-									stream_index: session.state.streamIndex,
-								},
-							});
-							if (disconnectRetries >= MAX_STREAM_DISCONNECT_RETRIES) {
-								throw error;
-							}
-							continue;
-						}
-						if (!(error instanceof EveStreamIdleTimeoutError)) throw error;
-						// Silence this long means the cursor drifted past eve's replay
-						// buffer or the turn died without a terminal event — heal the
-						// cursor and fail visibly rather than spin forever.
-						logger.warn("Eve stream went idle; resyncing cursor", {
-							event: "leaf.eve_stream_idle_timeout",
-							data: {
-								session_id: session.sessionId,
-								stream_index: session.state.streamIndex,
-							},
-						});
-						await resyncEveStreamIndex({ auth, session });
-						await updateState({
-							orgId: org.id,
-							session,
-							state: { status: "waiting" },
-						});
-						const partialText = finalText || pendingText;
-						if (partialText) {
-							return { env, runId: session.sessionId, text: partialText };
-						}
-						throw new Error(
-							"Eve stopped responding mid-turn — please send your message again.",
-						);
-					}
-					if (endedWithoutOutput) break;
-					idleRetries = sawEvent ? 0 : idleRetries + 1;
-					// Nothing at all came back: the cursor may have drifted past
-					// eve's replay buffer, so heal it once and re-arm the budget.
-					const silentlyExhausted =
-						idleRetries >= MAX_IDLE_RETRIES &&
-						!(sawAnyEvent || resyncedAfterSilence);
-					if (silentlyExhausted) {
-						resyncedAfterSilence = true;
-						logger.warn("Eve stream produced nothing; resyncing cursor", {
-							event: "leaf.eve_stream_silent_resync",
-							data: {
-								session_id: session.sessionId,
-								stream_index: session.state.streamIndex,
-							},
-						});
-						await resyncEveStreamIndex({ auth, session });
-						idleRetries = 0;
-						continue;
-					}
-					await new Promise((resolve) =>
-						setTimeout(resolve, STREAM_RETRY_DELAY_MS),
-					);
-				}
-			} finally {
-				abortController.abort();
-			}
-
-			if (pendingText) finalText = pendingText;
-			if (eveTurnProducedOutput({ text: finalText })) {
-				await updateState({
-					orgId: org.id,
-					session,
-					state: { status: "waiting" },
-				});
-				return { env, runId: session.sessionId, text: finalText };
-			}
-
-			// Dropping the session also drops the thread's transcript, so a turn
-			// that merely said nothing keeps it and renders the ordinary notice.
-			const dropSession = shouldDropEveSession({
-				endedWithoutOutput,
-				streamedAnyEvent: sawAnyEvent,
-			});
-			const retryOnFreshSession = canRetryOnFreshEveSession({
-				alreadyRetried: restartedOnFreshSession,
-				answeringParkedQuestion: Boolean(params.questionResponse),
-				sessionIsNew: session.newSession,
-				streamedAnyEvent: sawAnyEvent,
-			});
-			logger.warn("Eve session produced no reply", {
-				event: "leaf.eve_session_no_reply",
-				data: {
-					dropped: dropSession,
-					ended_on: endedWithoutOutput ?? "no_terminal_event",
-					retrying: retryOnFreshSession,
-					session_id: session.sessionId,
-					streamed_events: sawAnyEvent,
-				},
-			});
-			if (!dropSession) {
-				return { env, runId: session.sessionId, text: finalText };
-			}
-
-			await deleteEveSession({
-				db,
-				env,
-				orgId: org.id,
-				sessionId: session.sessionId,
-				threadKey: session.threadKey,
-			});
-			// A turn that streamed events already did whatever it did; replaying the
-			// message on a fresh session would re-run those side effects, so ask the
-			// user to resend instead of deciding that for them.
-			if (!retryOnFreshSession) {
-				return {
-					env,
-					runId: session.sessionId,
-					sessionDead: true,
-					text: finalText,
-				};
-			}
-
-			restartedOnFreshSession = true;
-			session = undefined;
-			await onAction?.("Loading context");
-			orgContext = await autumnOrgContextService.load({ env, logger, token });
-			message = composeEveMessage({ isNewSession: true });
-		}
+		// 5. Interpret how it ended.
+		return await resolveEveTurnOutcome({
+			env,
+			logger,
+			orgId: org.id,
+			outcome,
+			session,
+		});
 	},
 };

@@ -31,7 +31,6 @@ export const agentOutputSchema = z.preprocess(
 			finishReason: payload.finishReason,
 			stopReason: payload.stopReason,
 			runId: payload.runId,
-			sessionDead: payload.sessionDead,
 			suspension: suspension && {
 				toolCallId: suspension.toolCallId,
 				toolName: suspension.toolName,
@@ -54,9 +53,6 @@ export const agentOutputSchema = z.preprocess(
 		finishReason: z.string().optional(),
 		stopReason: z.enum(["timeout", "user"]).optional(),
 		runId: z.string().optional(),
-		// Set when the harness had to abandon the thread's session — an empty
-		// reply then means "lost the session", not "nothing to say".
-		sessionDead: z.boolean().optional(),
 		// Set when the agent paused on a destructive write awaiting approval.
 		suspension: z
 			.strictObject({

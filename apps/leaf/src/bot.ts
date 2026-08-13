@@ -61,7 +61,6 @@ import {
 	persistThreadTitle,
 } from "./providers/web/threadTitle.js";
 import type { ChatContextMessage } from "./types.js";
-import { emptyReplyNotice } from "./ui/emptyReplyNotice.js";
 import {
 	ANSWER_QUESTION_ACTION,
 	CATALOG_DECISION_ACTION,
@@ -564,14 +563,14 @@ const runAndReply = async ({
 		if (!output.text?.trim()) {
 			await finishLoading(target, loading, "No reply produced.");
 			await target.post({
-				markdown: `:warning: ${emptyReplyNotice({ sessionDead: output.sessionDead })}`,
+				markdown:
+					":warning: I couldn't produce a reply to that — please send it again.",
 			});
 			logger.warn("Agent produced no reply", {
 				event: "leaf.slack_empty_response",
 				data: {
 					finish_reason: output.finishReason,
 					run_id: output.runId,
-					session_dead: Boolean(output.sessionDead),
 				},
 			});
 			return;

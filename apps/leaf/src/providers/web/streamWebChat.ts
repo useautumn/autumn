@@ -21,7 +21,6 @@ import { getOrgInstallationToken } from "../../internal/installations/actions/ge
 import { db } from "../../lib/db.js";
 import { env as chatEnv } from "../../lib/env.js";
 import { logger as rootLogger } from "../../lib/logger.js";
-import { emptyReplyNotice } from "../../ui/emptyReplyNotice.js";
 import { parsePreviewPayload } from "../../ui/previewContent.js";
 import { resolveDashboardEnv } from "./dashboardEnv.js";
 import { generateThreadTitle, persistThreadTitle } from "./threadTitle.js";
@@ -310,7 +309,7 @@ export const streamWebChat = async ({
 			} else if (!(output.catalogDecision || output.suspension)) {
 				// Nothing to render at all — say so rather than ending the stream
 				// on an empty assistant bubble.
-				writeText(emptyReplyNotice({ sessionDead: output.sessionDead }));
+				writeText("I couldn't produce a reply to that — please send it again.");
 			}
 
 			if (output.suspension) {
