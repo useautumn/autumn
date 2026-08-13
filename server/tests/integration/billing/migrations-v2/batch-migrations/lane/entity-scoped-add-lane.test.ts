@@ -5,7 +5,7 @@
  *   - An add_items whose item carries `entity_feature_id` fans out one row per
  *     entity, so a page's row count stops being a function of its customer
  *     count. `checkUpdatePlanTransitionEligibility` rejects it
- *     (`entity_scoped_entitlement_add`) and the whole run takes the
+ *     (`entity_scoped_entitlement`) and the whole run takes the
  *     per-customer lane.
  *   - The add still lands — routing to the other lane must not drop work.
  *   - The identical migration WITHOUT `entity_feature_id` stays on the batch
