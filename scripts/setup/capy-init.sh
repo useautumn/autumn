@@ -82,6 +82,7 @@ log "pulling local service images"
       dragonfly elasticmq dynamodb
 )
 
+export TRIGGER_IMAGE_TAG="v$(bun -e 'console.log(require("./package.json").devDependencies["trigger.dev"])')"
 docker compose -f scripts/setup/trigger.compose.yml config --images \
   | sort -u \
   | xargs -n1 docker pull

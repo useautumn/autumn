@@ -62,6 +62,13 @@ const ELASTICMQ_PORT = 9324;
 const DYNAMODB_PORT = 8000;
 const TRIGGER_PORT = 8030;
 const TRIGGER_PROJECT_REF = "proj_cwiutfmpdzfcshxevkok";
+const TRIGGER_IMAGE_TAG = `v${
+	(
+		JSON.parse(readFileSync(join(PROJECT_ROOT, "package.json"), "utf-8")) as {
+			devDependencies: Record<string, string>;
+		}
+	).devDependencies["trigger.dev"]
+}`;
 
 // ---------------------------------------------------------------------------
 // Tiny logging / shell helpers (we don't reuse dw's helpers because they tag
@@ -399,7 +406,12 @@ function triggerCompose(args: string[]) {
 			"autumn-capy-trigger",
 			...args,
 		],
-		{ cwd: PROJECT_ROOT, stdout: "pipe", stderr: "pipe" },
+		{
+			cwd: PROJECT_ROOT,
+			env: { ...process.env, TRIGGER_IMAGE_TAG },
+			stdout: "pipe",
+			stderr: "pipe",
+		},
 	);
 	if (result.exitCode !== 0) {
 		fatal(new TextDecoder().decode(result.stderr).trim());

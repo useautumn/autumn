@@ -1,6 +1,6 @@
 services:
   webapp:
-    image: ghcr.io/triggerdotdev/trigger.dev:v4.5.10
+    image: ghcr.io/triggerdotdev/trigger.dev:${TRIGGER_IMAGE_TAG:?set TRIGGER_IMAGE_TAG to match the trigger.dev package version}
     restart: unless-stopped
     ports:
       - "127.0.0.1:${TRIGGER_WEBAPP_PORT:-8030}:3000"

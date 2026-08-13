@@ -51,12 +51,13 @@ Trigger.dev control plane in `scripts/setup/trigger.compose.yml`:
 | 8030 | Trigger.dev webapp and API |
 | 9324 | ElasticMQ |
 
-Trigger.dev runs its pinned v4.5.10 control plane locally. Startup creates its
-datastore credentials in `~/.autumn-capy/trigger.env`, seeds the matching
-Autumn project, and writes `TRIGGER_API_URL`, `TRIGGER_ACCESS_TOKEN`, and
-`TRIGGER_SERVER_SECRET_KEY` into `server/.env.local`. `bun dev` therefore keeps
-using the repository's existing local Trigger worker, but its queues and run
-data are isolated to this VM instead of the shared Trigger.dev cloud project.
+Trigger.dev runs a control plane matching the exact `trigger.dev` version in
+the root `package.json`. Startup creates its datastore credentials in
+`~/.autumn-capy/trigger.env`, seeds the matching Autumn project, and writes
+`TRIGGER_API_URL`, `TRIGGER_ACCESS_TOKEN`, and `TRIGGER_SERVER_SECRET_KEY` into
+`server/.env.local`. `bun dev` therefore keeps using the repository's existing
+local Trigger worker, but its queues and run data are isolated to this VM
+instead of the shared Trigger.dev cloud project.
 The control plane uses about 2 GB of RAM after startup on the standard 16 GB
 Capy VM; the source worker and application stack bring steady-state use to
 about 9 GB on the current image.
