@@ -25,6 +25,7 @@ export const runCheckWithRollout = async ({
 				body,
 				requiredBalance,
 				error: new Error("org aggregate rate cap exceeded"),
+				reason: "org_rate_limit",
 			}) as Record<string, unknown>,
 		};
 	}
@@ -40,6 +41,7 @@ export const runCheckWithRollout = async ({
 				body,
 				requiredBalance,
 				error,
+				reason: "dependency_error",
 			}) as Record<string, unknown>,
 		}),
 	});
