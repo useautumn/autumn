@@ -60,6 +60,17 @@ export type AggregateEventsCustomRange = {
   end: number;
 };
 
+/**
+ * Set to "deducted" to additionally return a per-balance breakdown of what each event consumed, under `deductions`. Purely additive: `list` and `total` are unchanged. Requires customer_id.
+ */
+export const AggregateOn = {
+  Deducted: "deducted",
+} as const;
+/**
+ * Set to "deducted" to additionally return a per-balance breakdown of what each event consumed, under `deductions`. Purely additive: `list` and `total` are unchanged. Requires customer_id.
+ */
+export type AggregateOn = ClosedEnum<typeof AggregateOn>;
+
 export type EventsAggregateParams = {
   /**
    * Customer ID to aggregate events for
@@ -100,7 +111,7 @@ export type EventsAggregateParams = {
   /**
    * Set to "deducted" to additionally return a per-balance breakdown of what each event consumed, under `deductions`. Purely additive: `list` and `total` are unchanged. Requires customer_id.
    */
-  aggregateOn?: "deducted" | undefined;
+  aggregateOn?: AggregateOn | undefined;
 };
 
 export type AggregateEventsList = {
@@ -270,6 +281,10 @@ export function aggregateEventsCustomRangeToJSON(
 }
 
 /** @internal */
+export const AggregateOn$outboundSchema: z.ZodMiniEnum<typeof AggregateOn> = z
+  .enum(AggregateOn);
+
+/** @internal */
 export type EventsAggregateParams$Outbound = {
   customer_id?: string | undefined;
   entity_id?: string | undefined;
@@ -280,7 +295,7 @@ export type EventsAggregateParams$Outbound = {
   custom_range?: AggregateEventsCustomRange$Outbound | undefined;
   filter_by?: { [k: string]: string } | undefined;
   max_groups?: number | undefined;
-  aggregate_on?: "deducted" | undefined;
+  aggregate_on?: string | undefined;
 };
 
 /** @internal */
@@ -300,7 +315,7 @@ export const EventsAggregateParams$outboundSchema: z.ZodMiniType<
     ),
     filterBy: z.optional(z.record(z.string(), z.string())),
     maxGroups: z.optional(z.int()),
-    aggregateOn: z.optional(z.literal("deducted")),
+    aggregateOn: z.optional(AggregateOn$outboundSchema),
   }),
   z.transform((v) => {
     return remap$(v, {

@@ -133,6 +133,20 @@ export type GetOrCreateCustomerUsageLimitInterval = ClosedEnum<
   typeof GetOrCreateCustomerUsageLimitInterval
 >;
 
+/**
+ * Window alignment. 'billing_cycle' phases the interval to the customer's renewal time; 'utc' aligns to the UTC calendar.
+ */
+export const GetOrCreateCustomerAnchor = {
+  BillingCycle: "billing_cycle",
+  Utc: "utc",
+} as const;
+/**
+ * Window alignment. 'billing_cycle' phases the interval to the customer's renewal time; 'utc' aligns to the UTC calendar.
+ */
+export type GetOrCreateCustomerAnchor = ClosedEnum<
+  typeof GetOrCreateCustomerAnchor
+>;
+
 export type GetOrCreateCustomerProperties = string | number | boolean;
 
 /**
@@ -159,6 +173,10 @@ export type GetOrCreateCustomerUsageLimit = {
    * Interval for the cap, aligned to the customer's billing cycle.
    */
   interval: GetOrCreateCustomerUsageLimitInterval;
+  /**
+   * Window alignment. 'billing_cycle' phases the interval to the customer's renewal time; 'utc' aligns to the UTC calendar.
+   */
+  anchor?: GetOrCreateCustomerAnchor | undefined;
   /**
    * When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature.
    */
@@ -446,6 +464,11 @@ export const GetOrCreateCustomerUsageLimitInterval$outboundSchema:
   );
 
 /** @internal */
+export const GetOrCreateCustomerAnchor$outboundSchema: z.ZodMiniEnum<
+  typeof GetOrCreateCustomerAnchor
+> = z.enum(GetOrCreateCustomerAnchor);
+
+/** @internal */
 export type GetOrCreateCustomerProperties$Outbound = string | number | boolean;
 
 /** @internal */
@@ -494,6 +517,7 @@ export type GetOrCreateCustomerUsageLimit$Outbound = {
   enabled: boolean;
   limit: number;
   interval: string;
+  anchor?: string | undefined;
   filter?: GetOrCreateCustomerFilter$Outbound | undefined;
 };
 
@@ -507,6 +531,7 @@ export const GetOrCreateCustomerUsageLimit$outboundSchema: z.ZodMiniType<
     enabled: z._default(z.boolean(), true),
     limit: z.number(),
     interval: GetOrCreateCustomerUsageLimitInterval$outboundSchema,
+    anchor: z.optional(GetOrCreateCustomerAnchor$outboundSchema),
     filter: z.optional(z.lazy(() => GetOrCreateCustomerFilter$outboundSchema)),
   }),
   z.transform((v) => {

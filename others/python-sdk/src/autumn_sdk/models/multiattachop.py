@@ -916,6 +916,13 @@ MultiAttachEntityDataInterval = Literal[
 r"""Interval for the cap, aligned to the customer's billing cycle."""
 
 
+MultiAttachAnchor = Literal[
+    "billing_cycle",
+    "utc",
+]
+r"""Window alignment. 'billing_cycle' phases the interval to the customer's renewal time; 'utc' aligns to the UTC calendar."""
+
+
 MultiAttachPropertiesTypedDict = TypeAliasType(
     "MultiAttachPropertiesTypedDict", Union[str, float, bool]
 )
@@ -945,6 +952,8 @@ class MultiAttachUsageLimitTypedDict(TypedDict):
     r"""Interval for the cap, aligned to the customer's billing cycle."""
     enabled: NotRequired[bool]
     r"""Whether this usage limit is enabled."""
+    anchor: NotRequired[MultiAttachAnchor]
+    r"""Window alignment. 'billing_cycle' phases the interval to the customer's renewal time; 'utc' aligns to the UTC calendar."""
     filter_: NotRequired[MultiAttachFilterTypedDict]
     r"""When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature."""
 
@@ -962,6 +971,9 @@ class MultiAttachUsageLimit(BaseModel):
     enabled: Optional[bool] = True
     r"""Whether this usage limit is enabled."""
 
+    anchor: Optional[MultiAttachAnchor] = None
+    r"""Window alignment. 'billing_cycle' phases the interval to the customer's renewal time; 'utc' aligns to the UTC calendar."""
+
     filter_: Annotated[Optional[MultiAttachFilter], pydantic.Field(alias="filter")] = (
         None
     )
@@ -969,7 +981,7 @@ class MultiAttachUsageLimit(BaseModel):
 
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
-        optional_fields = set(["enabled", "filter"])
+        optional_fields = set(["enabled", "anchor", "filter"])
         serialized = handler(self)
         m = {}
 

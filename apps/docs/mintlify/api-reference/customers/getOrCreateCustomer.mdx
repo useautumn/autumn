@@ -153,6 +153,10 @@ Pass `currency` to bill this customer in a currency other than your organization
           Interval for the cap, aligned to the customer's billing cycle.
         </DynamicParamField>
 
+        <DynamicParamField body="anchor" type="'billing_cycle' | 'utc'">
+          Window alignment. 'billing_cycle' phases the interval to the customer's renewal time; 'utc' aligns to the UTC calendar.
+        </DynamicParamField>
+
         <DynamicParamField body="filter" type="object">
           When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature.
           <Expandable title="properties">
@@ -370,6 +374,10 @@ Pass `currency` to bill this customer in a currency other than your organization
 
         <DynamicResponseField name="interval" type="'day' | 'week' | 'month' | 'year'">
           Interval for the cap, aligned to the customer's billing cycle.
+        </DynamicResponseField>
+
+        <DynamicResponseField name="anchor" type="'billing_cycle' | 'utc'">
+          Window alignment. 'billing_cycle' phases the interval to the customer's renewal time; 'utc' aligns to the UTC calendar.
         </DynamicResponseField>
 
         <DynamicResponseField name="filter" type="object">
@@ -1090,6 +1098,10 @@ Pass `currency` to bill this customer in a currency other than your organization
                           Interval for the cap, aligned to the customer's billing cycle.
                         </DynamicResponseField>
 
+                        <DynamicResponseField name="anchor" type="'billing_cycle' | 'utc'">
+                          Window alignment. 'billing_cycle' phases the interval to the customer's renewal time; 'utc' aligns to the UTC calendar.
+                        </DynamicResponseField>
+
                         <DynamicResponseField name="filter" type="object">
                           When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature.
                           <Expandable title="properties">
@@ -1250,6 +1262,10 @@ Pass `currency` to bill this customer in a currency other than your organization
 
                 <DynamicResponseField name="interval" type="'day' | 'week' | 'month' | 'year'">
                   Interval for the cap, aligned to the customer's billing cycle.
+                </DynamicResponseField>
+
+                <DynamicResponseField name="anchor" type="'billing_cycle' | 'utc'">
+                  Window alignment. 'billing_cycle' phases the interval to the customer's renewal time; 'utc' aligns to the UTC calendar.
                 </DynamicResponseField>
 
                 <DynamicResponseField name="filter" type="object">
@@ -2037,6 +2053,10 @@ Pass `currency` to bill this customer in a currency other than your organization
                           Interval for the cap, aligned to the customer's billing cycle.
                         </DynamicResponseField>
 
+                        <DynamicResponseField name="anchor" type="'billing_cycle' | 'utc'">
+                          Window alignment. 'billing_cycle' phases the interval to the customer's renewal time; 'utc' aligns to the UTC calendar.
+                        </DynamicResponseField>
+
                         <DynamicResponseField name="filter" type="object">
                           When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature.
                           <Expandable title="properties">
@@ -2197,6 +2217,10 @@ Pass `currency` to bill this customer in a currency other than your organization
 
                 <DynamicResponseField name="interval" type="'day' | 'week' | 'month' | 'year'">
                   Interval for the cap, aligned to the customer's billing cycle.
+                </DynamicResponseField>
+
+                <DynamicResponseField name="anchor" type="'billing_cycle' | 'utc'">
+                  Window alignment. 'billing_cycle' phases the interval to the customer's renewal time; 'utc' aligns to the UTC calendar.
                 </DynamicResponseField>
 
                 <DynamicResponseField name="filter" type="object">

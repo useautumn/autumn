@@ -531,6 +531,18 @@ export type CheckUsageLimitInterval2 = OpenEnum<
 >;
 
 /**
+ * Window alignment. 'billing_cycle' phases the interval to the customer's renewal time; 'utc' aligns to the UTC calendar.
+ */
+export const CheckAnchor2 = {
+  BillingCycle: "billing_cycle",
+  Utc: "utc",
+} as const;
+/**
+ * Window alignment. 'billing_cycle' phases the interval to the customer's renewal time; 'utc' aligns to the UTC calendar.
+ */
+export type CheckAnchor2 = OpenEnum<typeof CheckAnchor2>;
+
+/**
  * When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature.
  */
 export type CheckFilter2 = {
@@ -554,6 +566,10 @@ export type CheckUsageLimit2 = {
    * Interval for the cap, aligned to the customer's billing cycle.
    */
   interval: CheckUsageLimitInterval2;
+  /**
+   * Window alignment. 'billing_cycle' phases the interval to the customer's renewal time; 'utc' aligns to the UTC calendar.
+   */
+  anchor?: CheckAnchor2 | undefined;
   /**
    * When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature.
    */
@@ -1266,6 +1282,18 @@ export type CheckUsageLimitInterval1 = OpenEnum<
 >;
 
 /**
+ * Window alignment. 'billing_cycle' phases the interval to the customer's renewal time; 'utc' aligns to the UTC calendar.
+ */
+export const CheckAnchor1 = {
+  BillingCycle: "billing_cycle",
+  Utc: "utc",
+} as const;
+/**
+ * Window alignment. 'billing_cycle' phases the interval to the customer's renewal time; 'utc' aligns to the UTC calendar.
+ */
+export type CheckAnchor1 = OpenEnum<typeof CheckAnchor1>;
+
+/**
  * When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature.
  */
 export type CheckFilter1 = {
@@ -1289,6 +1317,10 @@ export type CheckUsageLimit1 = {
    * Interval for the cap, aligned to the customer's billing cycle.
    */
   interval: CheckUsageLimitInterval1;
+  /**
+   * Window alignment. 'billing_cycle' phases the interval to the customer's renewal time; 'utc' aligns to the UTC calendar.
+   */
+  anchor?: CheckAnchor1 | undefined;
   /**
    * When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature.
    */
@@ -2145,6 +2177,10 @@ export const CheckUsageLimitInterval2$inboundSchema: z.ZodMiniType<
 > = openEnums.inboundSchema(CheckUsageLimitInterval2);
 
 /** @internal */
+export const CheckAnchor2$inboundSchema: z.ZodMiniType<CheckAnchor2, unknown> =
+  openEnums.inboundSchema(CheckAnchor2);
+
+/** @internal */
 export const CheckFilter2$inboundSchema: z.ZodMiniType<CheckFilter2, unknown> =
   z.object({
     properties: z.record(z.string(), types.string()),
@@ -2170,6 +2206,7 @@ export const CheckUsageLimit2$inboundSchema: z.ZodMiniType<
     enabled: z._default(types.boolean(), true),
     limit: types.number(),
     interval: CheckUsageLimitInterval2$inboundSchema,
+    anchor: types.optional(CheckAnchor2$inboundSchema),
     filter: types.optional(z.lazy(() => CheckFilter2$inboundSchema)),
   }),
   z.transform((v) => {
@@ -2973,6 +3010,10 @@ export const CheckUsageLimitInterval1$inboundSchema: z.ZodMiniType<
 > = openEnums.inboundSchema(CheckUsageLimitInterval1);
 
 /** @internal */
+export const CheckAnchor1$inboundSchema: z.ZodMiniType<CheckAnchor1, unknown> =
+  openEnums.inboundSchema(CheckAnchor1);
+
+/** @internal */
 export const CheckFilter1$inboundSchema: z.ZodMiniType<CheckFilter1, unknown> =
   z.object({
     properties: z.record(z.string(), types.string()),
@@ -2998,6 +3039,7 @@ export const CheckUsageLimit1$inboundSchema: z.ZodMiniType<
     enabled: z._default(types.boolean(), true),
     limit: types.number(),
     interval: CheckUsageLimitInterval1$inboundSchema,
+    anchor: types.optional(CheckAnchor1$inboundSchema),
     filter: types.optional(z.lazy(() => CheckFilter1$inboundSchema)),
   }),
   z.transform((v) => {

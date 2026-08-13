@@ -301,6 +301,16 @@ CustomerUsageLimitInterval = Union[
 r"""Interval for the cap, aligned to the customer's billing cycle."""
 
 
+CustomerAnchor = Union[
+    Literal[
+        "billing_cycle",
+        "utc",
+    ],
+    UnrecognizedStr,
+]
+r"""Window alignment. 'billing_cycle' phases the interval to the customer's renewal time; 'utc' aligns to the UTC calendar."""
+
+
 class CustomerFilterTypedDict(TypedDict):
     r"""When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature."""
 
@@ -332,6 +342,8 @@ class CustomerUsageLimitTypedDict(TypedDict):
     r"""Interval for the cap, aligned to the customer's billing cycle."""
     enabled: NotRequired[bool]
     r"""Whether this usage limit is enabled."""
+    anchor: NotRequired[CustomerAnchor]
+    r"""Window alignment. 'billing_cycle' phases the interval to the customer's renewal time; 'utc' aligns to the UTC calendar."""
     filter_: NotRequired[CustomerFilterTypedDict]
     r"""When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature."""
     usage: NotRequired[float]
@@ -353,6 +365,9 @@ class CustomerUsageLimit(BaseModel):
     enabled: Optional[bool] = True
     r"""Whether this usage limit is enabled."""
 
+    anchor: Optional[CustomerAnchor] = None
+    r"""Window alignment. 'billing_cycle' phases the interval to the customer's renewal time; 'utc' aligns to the UTC calendar."""
+
     filter_: Annotated[Optional[CustomerFilter], pydantic.Field(alias="filter")] = None
     r"""When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature."""
 
@@ -364,7 +379,7 @@ class CustomerUsageLimit(BaseModel):
 
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
-        optional_fields = set(["enabled", "filter", "usage", "source"])
+        optional_fields = set(["enabled", "anchor", "filter", "usage", "source"])
         serialized = handler(self)
         m = {}
 
@@ -1331,9 +1346,9 @@ class LineItemTypedDict(TypedDict):
     description: str
     r"""A detailed description of the line item."""
     subtotal: float
-    r"""The amount in cents before discounts and tax for this line item."""
+    r"""The amount before discounts and tax for this line item."""
     total: float
-    r"""The final amount in cents after discounts and tax for this line item."""
+    r"""The final amount after discounts and tax for this line item."""
     plan_id: str
     r"""The ID of the plan that this line item belongs to."""
     feature_id: Nullable[str]
@@ -1354,10 +1369,10 @@ class LineItem(BaseModel):
     r"""A detailed description of the line item."""
 
     subtotal: float
-    r"""The amount in cents before discounts and tax for this line item."""
+    r"""The amount before discounts and tax for this line item."""
 
     total: float
-    r"""The final amount in cents after discounts and tax for this line item."""
+    r"""The final amount after discounts and tax for this line item."""
 
     plan_id: str
     r"""The ID of the plan that this line item belongs to."""
@@ -1406,11 +1421,11 @@ class InvoicePreviewTypedDict(TypedDict):
     invoice_at: float
     r"""Unix timestamp (milliseconds) when this invoice will be created."""
     currency: str
-    r"""The three-letter ISO currency code (e.g., 'usd')."""
+    r"""The three-letter ISO currency code. All amounts are in the currency's major unit (e.g., dollars for USD)."""
     subtotal: float
-    r"""The total before discounts, in major currency units."""
+    r"""The total before discounts."""
     total: float
-    r"""The total after discounts, in major currency units."""
+    r"""The total after discounts."""
     line_items: List[LineItemTypedDict]
     r"""The line items this invoice will contain: usage accrued in the closing cycle, plus recurring charges for the opening cycle."""
 
@@ -1423,13 +1438,13 @@ class InvoicePreview(BaseModel):
     r"""Unix timestamp (milliseconds) when this invoice will be created."""
 
     currency: str
-    r"""The three-letter ISO currency code (e.g., 'usd')."""
+    r"""The three-letter ISO currency code. All amounts are in the currency's major unit (e.g., dollars for USD)."""
 
     subtotal: float
-    r"""The total before discounts, in major currency units."""
+    r"""The total before discounts."""
 
     total: float
-    r"""The total after discounts, in major currency units."""
+    r"""The total after discounts."""
 
     line_items: List[LineItem]
     r"""The line items this invoice will contain: usage accrued in the closing cycle, plus recurring charges for the opening cycle."""

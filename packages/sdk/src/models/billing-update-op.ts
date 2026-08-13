@@ -875,6 +875,18 @@ export type BillingUpdateUsageLimitInterval = ClosedEnum<
   typeof BillingUpdateUsageLimitInterval
 >;
 
+/**
+ * Window alignment. 'billing_cycle' phases the interval to the customer's renewal time; 'utc' aligns to the UTC calendar.
+ */
+export const BillingUpdateAnchor = {
+  BillingCycle: "billing_cycle",
+  Utc: "utc",
+} as const;
+/**
+ * Window alignment. 'billing_cycle' phases the interval to the customer's renewal time; 'utc' aligns to the UTC calendar.
+ */
+export type BillingUpdateAnchor = ClosedEnum<typeof BillingUpdateAnchor>;
+
 export type BillingUpdateProperties = string | number | boolean;
 
 /**
@@ -901,6 +913,10 @@ export type BillingUpdateUsageLimit = {
    * Interval for the cap, aligned to the customer's billing cycle.
    */
   interval: BillingUpdateUsageLimitInterval;
+  /**
+   * Window alignment. 'billing_cycle' phases the interval to the customer's renewal time; 'utc' aligns to the UTC calendar.
+   */
+  anchor?: BillingUpdateAnchor | undefined;
   /**
    * When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature.
    */
@@ -2775,6 +2791,11 @@ export const BillingUpdateUsageLimitInterval$outboundSchema: z.ZodMiniEnum<
 > = z.enum(BillingUpdateUsageLimitInterval);
 
 /** @internal */
+export const BillingUpdateAnchor$outboundSchema: z.ZodMiniEnum<
+  typeof BillingUpdateAnchor
+> = z.enum(BillingUpdateAnchor);
+
+/** @internal */
 export type BillingUpdateProperties$Outbound = string | number | boolean;
 
 /** @internal */
@@ -2821,6 +2842,7 @@ export type BillingUpdateUsageLimit$Outbound = {
   enabled: boolean;
   limit: number;
   interval: string;
+  anchor?: string | undefined;
   filter?: BillingUpdateFilter$Outbound | undefined;
 };
 
@@ -2834,6 +2856,7 @@ export const BillingUpdateUsageLimit$outboundSchema: z.ZodMiniType<
     enabled: z._default(z.boolean(), true),
     limit: z.number(),
     interval: BillingUpdateUsageLimitInterval$outboundSchema,
+    anchor: z.optional(BillingUpdateAnchor$outboundSchema),
     filter: z.optional(z.lazy(() => BillingUpdateFilter$outboundSchema)),
   }),
   z.transform((v) => {
