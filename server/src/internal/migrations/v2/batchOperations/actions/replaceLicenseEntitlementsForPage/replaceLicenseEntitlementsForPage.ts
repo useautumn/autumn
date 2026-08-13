@@ -20,7 +20,7 @@ import {
 	timePhase,
 } from "../../execute/utils/pagePhaseTimings.js";
 import type { OperationScope } from "../../scope/operationScope.js";
-import type { BatchMigrationExecutionLicenseOp } from "../../types/batchMigrationExecutionPlan.js";
+import type { BatchMigrationReplaceLicenseEntitlementOp } from "../../types/batchMigrationOperations.js";
 import { enrichCustomerEntitlementCycles } from "../../utils/enrichCustomerEntitlementCycles.js";
 import { selectLicenseCandidateRows } from "../selectLicenseCandidateRows.js";
 import {
@@ -59,10 +59,7 @@ const toInsertedItem = ({
 	customerEntitlementPatch,
 }: {
 	row: LicenseReplaceRow;
-	replace: Extract<
-		BatchMigrationExecutionLicenseOp,
-		{ type: "replace_license_entitlement" }
-	>;
+	replace: BatchMigrationReplaceLicenseEntitlementOp;
 	customerEntitlementPatch: CustomerEntitlementPatch;
 }): BatchMigrationInsertedItem => ({
 	internalCustomerId: row.internalCustomerId,
@@ -92,10 +89,7 @@ const toRemovedItem = ({
 	fromEntitlement,
 }: {
 	row: LicenseReplaceRow;
-	replace: Extract<
-		BatchMigrationExecutionLicenseOp,
-		{ type: "replace_license_entitlement" }
-	>;
+	replace: BatchMigrationReplaceLicenseEntitlementOp;
 	fromEntitlement: EntitlementWithFeature;
 }): BatchMigrationRemovedItem => {
 	const fromInitialState = computeCustomerEntitlementInitialState({
@@ -139,10 +133,7 @@ export const replaceLicenseEntitlementsForPage = async ({
 	features: Feature[];
 	scope: OperationScope;
 	internalCustomerIds: string[];
-	replace: Extract<
-		BatchMigrationExecutionLicenseOp,
-		{ type: "replace_license_entitlement" }
-	>;
+	replace: BatchMigrationReplaceLicenseEntitlementOp;
 	now: number;
 	phases?: BatchMigrationPagePhases;
 	candidateRowBatchSize?: number;

@@ -8,7 +8,7 @@ import {
 	timePhase,
 } from "../../execute/utils/pagePhaseTimings.js";
 import type { OperationScope } from "../../scope/operationScope.js";
-import type { BatchMigrationExecutionLicenseOp } from "../../types/batchMigrationExecutionPlan.js";
+import type { BatchMigrationAddLicenseEntitlementOp } from "../../types/batchMigrationOperations.js";
 import type { LicenseOpPageResult } from "../licenseOpPageResult.js";
 import { selectLicenseCandidateRows } from "../selectLicenseCandidateRows.js";
 import { enrichAndInsertLicenseCandidates } from "./enrichAndInsertLicenseCandidates.js";
@@ -29,10 +29,7 @@ export const addLicenseEntitlementsForPage = async ({
 	db: DrizzleCli;
 	scope: OperationScope;
 	internalCustomerIds: string[];
-	operation: Extract<
-		BatchMigrationExecutionLicenseOp,
-		{ type: "add_license_entitlement" }
-	>;
+	operation: BatchMigrationAddLicenseEntitlementOp;
 	now: number;
 	phases?: BatchMigrationPagePhases;
 	candidateRowBatchSize?: number;

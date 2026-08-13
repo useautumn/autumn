@@ -6,7 +6,7 @@ import {
 	timePhase,
 } from "../../execute/utils/pagePhaseTimings.js";
 import type { OperationScope } from "../../scope/operationScope.js";
-import type { BatchMigrationExecutionLicenseOp } from "../../types/batchMigrationExecutionPlan.js";
+import type { BatchMigrationRepointLicensePoolOp } from "../../types/batchMigrationOperations.js";
 import type { LicenseOpPageResult } from "../licenseOpPageResult.js";
 import { repointLicensePoolRows } from "./repointLicensePoolRows.js";
 
@@ -26,10 +26,7 @@ export const repointLicensePoolForPage = async ({
 	db: DrizzleCli;
 	scope: OperationScope;
 	internalCustomerIds: string[];
-	operation: Extract<
-		BatchMigrationExecutionLicenseOp,
-		{ type: "repoint_license_pool" }
-	>;
+	operation: BatchMigrationRepointLicensePoolOp;
 	phases?: BatchMigrationPagePhases;
 }): Promise<RepointLicensePoolForPageResult> => {
 	const repointed = await timePhase({
