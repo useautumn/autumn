@@ -7,7 +7,7 @@ import {
 	timePhase,
 } from "../../execute/utils/pagePhaseTimings.js";
 import type { OperationScope } from "../../scope/operationScope.js";
-import type { BatchMigrationExecutionLicenseOp } from "../../types/batchMigrationExecutionPlan.js";
+import type { BatchMigrationRemoveLicenseEntitlementOp } from "../../types/batchMigrationOperations.js";
 import type { LicenseOpPageResult } from "../licenseOpPageResult.js";
 import { removeLicenseEntitlementRows } from "./removeLicenseEntitlementRows.js";
 
@@ -27,10 +27,7 @@ export const removeLicenseEntitlementsForPage = async ({
 	features: Feature[];
 	scope: OperationScope;
 	internalCustomerIds: string[];
-	operation: Extract<
-		BatchMigrationExecutionLicenseOp,
-		{ type: "remove_license_entitlement" }
-	>;
+	operation: BatchMigrationRemoveLicenseEntitlementOp;
 	phases?: BatchMigrationPagePhases;
 }): Promise<RemoveLicenseEntitlementsForPageResult> => {
 	const removed = await timePhase({
