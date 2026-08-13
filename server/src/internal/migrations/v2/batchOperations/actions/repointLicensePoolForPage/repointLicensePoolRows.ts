@@ -5,10 +5,10 @@ import { operationScopeSql } from "../../scope/operationScope.js";
 import {
 	canonicalPoolOrderingSql,
 	poolLicensePlanSql,
-} from "./licensePoolSql.js";
+} from "../licensePoolSql.js";
 
 /** Granted stays derived: included moves, paid_quantity is billing-owned. */
-export const repointLicensePoolsForPage = async ({
+export const repointLicensePoolRows = async ({
 	db,
 	internalCustomerIds,
 	scope,

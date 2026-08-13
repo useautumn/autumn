@@ -21,7 +21,8 @@ import { items } from "@tests/utils/fixtures/items";
 import { itemsV2 } from "@tests/utils/fixtures/itemsV2";
 import chalk from "chalk";
 import { inArray } from "drizzle-orm";
-import { addLicenseEntitlementsForPage } from "@/internal/migrations/v2/batchOperations/actions/licenseEntitlementsForPage/addLicenseEntitlementsForPage.js";
+import { addLicenseEntitlementsForPage } from "@/internal/migrations/v2/batchOperations/actions/addLicenseEntitlementsForPage/addLicenseEntitlementsForPage.js";
+import { repointLicensePoolForPage } from "@/internal/migrations/v2/batchOperations/actions/repointLicensePoolForPage/repointLicensePoolForPage.js";
 import { batchMigrationPlanToExecutionPlan } from "@/internal/migrations/v2/batchOperations/compute/index.js";
 import { prepareMigration } from "@/internal/migrations/v2/run/runMigration.js";
 import { shouldRunBatchLane } from "@/internal/migrations/v2/utils/shouldRunBatchLane.js";
@@ -99,15 +100,29 @@ test.concurrent(
 		const [patch] = batchMigrationPlanToExecutionPlan({
 			plan: batchLane.plan,
 		}).patches;
-		const [operation] = patch.licenseEntitlementOps;
+		const operation = patch.licenseEntitlementOps.find(
+			(candidate) => candidate.type === "add_license_entitlement",
+		);
+		if (!operation) throw new Error("expected an add op");
 		const internalCustomerIds = [
 			await getInternalCustomerId({ ctx, customerId }),
 		];
 
 		// One assignment per batch: every boundary crossed.
+		const repointOperation = patch.licenseEntitlementOps.find(
+			(candidate) => candidate.type === "repoint_license_pool",
+		);
+		if (!repointOperation) throw new Error("expected a repoint op");
+		const repointed = await repointLicensePoolForPage({
+			db: ctx.db,
+			scope: patch.scope,
+			internalCustomerIds,
+			operation: repointOperation,
+		});
+		expect(repointed.repointedPools).toBe(1);
+
 		const result = await addLicenseEntitlementsForPage({
 			db: ctx.db,
-			features: ctx.features,
 			scope: patch.scope,
 			internalCustomerIds,
 			operation,
@@ -115,9 +130,8 @@ test.concurrent(
 			candidateRowBatchSize: 1,
 		});
 
-		expect(result.affected).toBe(ASSIGNED_SEATS);
+		expect(result.insertedItems).toHaveLength(ASSIGNED_SEATS);
 		expect(result.candidateCount).toBe(ASSIGNED_SEATS);
-		expect(result.repointedPools).toBe(1);
 		expect(result.excludedInternalCustomerIds).toEqual([]);
 		expect([
 			...new Set(result.insertedItems.map((item) => item.customerProductId)),
@@ -140,18 +154,24 @@ test.concurrent(
 		expect(await countDashboardRows()).toBe(ASSIGNED_SEATS);
 
 		// Replay over the paginated path: per-batch dedup still holds.
+		const replayRepoint = await repointLicensePoolForPage({
+			db: ctx.db,
+			scope: patch.scope,
+			internalCustomerIds,
+			operation: repointOperation,
+		});
+		expect(replayRepoint.repointedPools).toBe(0);
+
 		const replay = await addLicenseEntitlementsForPage({
 			db: ctx.db,
-			features: ctx.features,
 			scope: patch.scope,
 			internalCustomerIds,
 			operation,
 			now: Date.now(),
 			candidateRowBatchSize: 1,
 		});
-		expect(replay.affected).toBe(0);
+		expect(replay.insertedItems).toHaveLength(0);
 		expect(replay.candidateCount).toBe(0);
-		expect(replay.repointedPools).toBe(0);
 		expect(await countDashboardRows()).toBe(ASSIGNED_SEATS);
 	},
 );

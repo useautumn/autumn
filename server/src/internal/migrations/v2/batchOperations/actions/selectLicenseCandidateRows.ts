@@ -12,7 +12,7 @@ import type { DrizzleCli } from "@/db/initDrizzle.js";
 import { sqlList } from "@/internal/billing/v2/actions/batchTransition/execute/sql/batchTransitionSqlUtils.js";
 import type { OperationScope } from "../scope/operationScope.js";
 import { operationScopeSql } from "../scope/operationScope.js";
-import { canonicalPoolLateralSql } from "./licenseEntitlementsForPage/licensePoolSql.js";
+import { canonicalPoolLateralSql } from "./licensePoolSql.js";
 
 const nullableNumeric = z.preprocess(
 	(value) => (value === null || value === undefined ? null : Number(value)),
