@@ -44,17 +44,15 @@ export const expireCustomerProductAndActivateDefault = async ({
 
 	// Constructed up here because that is what snapshots the pre-change customer
 	// the emitted diff is built against.
-	const changes = collector ?? createBillingChangeCollector({ fullCustomer });
+	const ownsEmission = !collector;
+	const billingChanges =
+		collector ?? createBillingChangeCollector({ fullCustomer });
 
 	// 1. Expire the product
 	const updates: CustomerProductUpdates = {
 		status: CusProductStatus.Expired,
 		...extraUpdates,
 	};
-	const expiredCustomerProduct = {
-		...customerProduct,
-		...updates,
-	} as FullCusProduct;
 
 	// Executing through the shared plan runs the license lifecycle when the
 	// expiring product carried license state.
@@ -71,10 +69,13 @@ export const expireCustomerProductAndActivateDefault = async ({
 		`[expireCustomerProduct]: expiring ${customerProduct.product.name}`,
 	);
 
-	// Update full customer
-	fullCustomer.customer_products = fullCustomer.customer_products.map((cp) =>
-		cp.id === customerProduct.id ? expiredCustomerProduct : cp,
-	);
+	// Tracking applies the update to `fullCustomer` in place, so successor
+	// activation below already sees the expired status.
+	const expiredCustomerProduct = trackCustomerProductUpdate({
+		collector: billingChanges,
+		customerProduct,
+		updates,
+	});
 
 	// 2. Send products_updated (Expired) — must be enqueued before successor
 	// activation, which enqueues its own products_updated (New).
@@ -96,13 +97,11 @@ export const expireCustomerProductAndActivateDefault = async ({
 			fullCustomer,
 		});
 
-	// 4. Record the transitions. Entry order feeds plan-change collapsing, so
-	// the expired product must land before its successor.
-	trackCustomerProductUpdate({ collector: changes, customerProduct, updates });
-
+	// 4. Record the successor transition, which plan-change collapsing pairs with
+	// the expiry tracked above.
 	if (activatedCustomerProduct) {
 		trackCustomerProductUpdate({
-			collector: changes,
+			collector: billingChanges,
 			customerProduct: activatedCustomerProduct,
 			updates: { status: CusProductStatus.Active },
 		});
@@ -110,12 +109,13 @@ export const expireCustomerProductAndActivateDefault = async ({
 
 	if (insertedCustomerProduct) {
 		trackCustomerProductInsertion({
-			collector: changes,
+			collector: billingChanges,
 			customerProduct: insertedCustomerProduct,
 		});
 	}
 
-	if (!collector) flushBillingUpdated({ ctx, collector: changes });
+	// Mid-workflow callers pass a collector and flush once at the end.
+	if (ownsEmission) flushBillingUpdated({ ctx, collector: billingChanges });
 
 	return {
 		updates,

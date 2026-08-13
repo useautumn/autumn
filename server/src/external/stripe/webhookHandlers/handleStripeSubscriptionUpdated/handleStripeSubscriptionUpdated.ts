@@ -96,7 +96,8 @@ export const handleStripeSubscriptionUpdated = async ({
 		eventContext: subscriptionUpdatedContext,
 	});
 
-	// 8. Emit billing.updated webhook (fire-and-forget) if anything changed
+	// 8. Emit billing.updated for everything the tasks collected (fire-and-forget;
+	// an empty change set is dropped downstream).
 	flushBillingUpdated({
 		ctx,
 		collector: subscriptionUpdatedContext,

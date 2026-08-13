@@ -50,7 +50,8 @@ export const handleStripeSubscriptionDeleted = async ({
 		eventContext,
 	});
 
-	// Task 5: Emit billing.updated webhook (fire-and-forget) if anything changed
+	// Task 5: Emit billing.updated for everything the tasks collected
+	// (fire-and-forget; an empty change set is dropped downstream).
 	flushBillingUpdated({
 		ctx,
 		collector: eventContext,

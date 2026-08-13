@@ -1,11 +1,23 @@
+import type { FullCusProduct } from "@autumn/shared";
 import type { StripeWebhookContext } from "@/external/stripe/webhookMiddlewares/stripeWebhookContext";
+import type { BillingChangeCollector } from "@/internal/billing/v2/workflows/sendBillingUpdatedWebhook/billingChangeCollector";
 import { addToExtraLogs } from "@/utils/logging/addToExtraLogs";
-import type { StripeSubscriptionDeletedContext } from "../handleStripeSubscriptionDeleted/setupStripeSubscriptionDeletedContext";
-import type { StripeSubscriptionUpdatedContext } from "../handleStripeSubscriptionUpdated/stripeSubscriptionUpdatedContext";
 
-type EventContext =
-	| StripeSubscriptionUpdatedContext
-	| StripeSubscriptionDeletedContext;
+/** Only the sub.updated context carries carry-overs, so it stays optional here. */
+type LoggableEventContext = BillingChangeCollector & {
+	oneOffPrepaidCarryOvers?: unknown[];
+};
+
+const toIdentity = (customerProduct: FullCusProduct) => ({
+	id: customerProduct.id,
+	productId: customerProduct.product.id,
+	productName: customerProduct.product.name,
+});
+
+const toStatusSummary = (customerProduct: FullCusProduct) => ({
+	...toIdentity(customerProduct),
+	status: customerProduct.status,
+});
 
 /**
  * Logs all customer product updates, deletions, and insertions in a structured format for easy querying in Axiom.
@@ -16,42 +28,25 @@ export const logCustomerProductUpdates = ({
 	eventContext,
 }: {
 	ctx: StripeWebhookContext;
-	eventContext: EventContext;
+	eventContext: LoggableEventContext;
 }): void => {
 	const {
 		updatedCustomerProducts,
 		deletedCustomerProducts,
 		insertedCustomerProducts,
+		oneOffPrepaidCarryOvers = [],
 	} = eventContext;
 
 	const updates = updatedCustomerProducts.map(
 		({ customerProduct, updates }) => ({
-			id: customerProduct.id,
-			productId: customerProduct.product.id,
-			productName: customerProduct.product.name,
+			...toIdentity(customerProduct),
 			statusBefore: customerProduct.status,
 			updates,
 		}),
 	);
 
-	const deletions = deletedCustomerProducts.map((customerProduct) => ({
-		id: customerProduct.id,
-		productId: customerProduct.product.id,
-		productName: customerProduct.product.name,
-		status: customerProduct.status,
-	}));
-
-	const insertions = insertedCustomerProducts.map((customerProduct) => ({
-		id: customerProduct.id,
-		productId: customerProduct.product.id,
-		productName: customerProduct.product.name,
-		status: customerProduct.status,
-	}));
-
-	const oneOffPrepaidCarryOvers =
-		"oneOffPrepaidCarryOvers" in eventContext
-			? eventContext.oneOffPrepaidCarryOvers
-			: [];
+	const deletions = deletedCustomerProducts.map(toStatusSummary);
+	const insertions = insertedCustomerProducts.map(toStatusSummary);
 
 	if (
 		updates.length === 0 &&

@@ -1,4 +1,4 @@
-import { isCustomerProductOnStripeSubscription } from "@autumn/shared";
+import { filterCustomerProductsByStripeSubscriptionId } from "@autumn/shared";
 import type Stripe from "stripe";
 import { getStripeSubscriptionLock } from "@/external/redis/actions/stripeSubscriptionLock/stripeSubscriptionLock.js";
 import {
@@ -52,12 +52,10 @@ export const setupStripeSubscriptionDeletedContext = async ({
 	const stripeSubscriptionId = event.data.object.id;
 
 	// 1. Filter customer products on this subscription
-	const customerProducts = fullCustomer.customer_products.filter((cp) =>
-		isCustomerProductOnStripeSubscription({
-			customerProduct: cp,
-			stripeSubscriptionId,
-		}),
-	);
+	const customerProducts = filterCustomerProductsByStripeSubscriptionId({
+		customerProducts: fullCustomer.customer_products,
+		stripeSubscriptionId,
+	});
 
 	if (customerProducts.length === 0) {
 		logger.info(

@@ -129,6 +129,8 @@ export const addBillingChangeTag = ({
 	collector.billingChangeTags.add(tag);
 };
 
+/** The cast is load-bearing: `updatedCustomerProducts` is wider than the plan
+ * schema's `updates`, and the extra columns are dropped when the payload is built. */
 export const collectorToAutumnBillingPlan = (
 	collector: BillingChangeCollector,
 ): AutumnBillingPlan =>
