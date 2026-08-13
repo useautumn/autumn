@@ -28,6 +28,7 @@ const productRoutes = [
 
 	// Batch catalog write (features + plans upsert)
 	{ method: "POST", url: "/catalog.update" },
+	{ method: "POST", url: "/catalogV2.update" },
 ];
 
 /**

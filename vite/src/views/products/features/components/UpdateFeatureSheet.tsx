@@ -1,22 +1,20 @@
-import { type Feature, FeatureUsageType } from "@autumn/shared";
+import type { Feature } from "@autumn/shared";
 import { Sheet, SheetContent, ShortcutButton } from "@autumn/ui";
 import type { AxiosError } from "axios";
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import { toast } from "sonner";
 import {
 	SheetFooter,
 	SheetHeader,
 } from "@/components/v2/sheets/SharedSheetComponents";
-import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
+import { useUpdateCatalogMutation } from "@/hooks/queries/catalog/useUpdateCatalogMutation";
 import { useFeatureStore } from "@/hooks/stores/useFeatureStore";
-import { FeatureService } from "@/services/FeatureService";
-import { useAxiosInstance } from "@/services/useAxiosInstance";
 import { getBackendErr } from "@/utils/genUtils";
 import { NewFeatureAdvanced } from "../../plan/components/new-feature/NewFeatureAdvanced";
 import { NewFeatureBehaviour } from "../../plan/components/new-feature/NewFeatureBehaviour";
 import { NewFeatureDetails } from "../../plan/components/new-feature/NewFeatureDetails";
 import { NewFeatureType } from "../../plan/components/new-feature/NewFeatureType";
-import { buildFeatureMarkupParams } from "../utils/buildFeatureMutationParams";
+import { featureToCatalogFeatureParams } from "../utils/buildFeatureMutationParams";
 
 interface UpdateFeatureSheetProps {
 	open: boolean;
@@ -31,14 +29,11 @@ function UpdateFeatureSheet({
 	selectedFeature,
 	onSuccess,
 }: UpdateFeatureSheetProps) {
-	const [loading, setLoading] = useState(false);
-
 	const feature = useFeatureStore((s) => s.feature);
 	const setFeature = useFeatureStore((s) => s.setFeature);
 	const setBaseFeature = useFeatureStore((s) => s.setBaseFeature);
 
-	const axiosInstance = useAxiosInstance();
-	const { refetch } = useFeaturesQuery();
+	const { mutateAsync: updateCatalog, isPending } = useUpdateCatalogMutation();
 
 	// Initialize feature store when selectedFeature changes
 	useEffect(() => {
@@ -51,26 +46,17 @@ function UpdateFeatureSheet({
 	const handleUpdateFeature = async () => {
 		if (!selectedFeature) return;
 
-		setLoading(true);
 		try {
-			await FeatureService.updateFeature(axiosInstance, selectedFeature.id, {
-				...feature,
-				id: feature.id || undefined,
-				name: feature.name || undefined,
-				type: feature.type,
-				consumable: feature.config?.usage_type === FeatureUsageType.Single,
-				event_names: feature.event_names,
-				display: undefined,
-				...buildFeatureMarkupParams({
-					type: feature.type,
-					modelMarkups: feature.model_markups ?? undefined,
-					defaultMarkup: feature.config?.default_markup,
-					providerMarkups: feature.config?.provider_markups,
-					schema: feature.config?.schema,
-				}),
+			await updateCatalog({
+				features: [
+					featureToCatalogFeatureParams({
+						feature,
+						featureId: selectedFeature.id,
+						newFeatureId: feature.id,
+					}),
+				],
 			});
 
-			await refetch();
 			toast.success("Feature updated successfully");
 
 			// Call onSuccess with old and new IDs, if it's updated from the plan editor to update the plan items.
@@ -84,8 +70,6 @@ function UpdateFeatureSheet({
 			toast.error(
 				getBackendErr(error as AxiosError, "Failed to update feature"),
 			);
-		} finally {
-			setLoading(false);
 		}
 	};
 
@@ -121,7 +105,7 @@ function UpdateFeatureSheet({
 						className="w-full"
 						onClick={handleUpdateFeature}
 						metaShortcut="enter"
-						isLoading={loading}
+						isLoading={isPending}
 					>
 						Update feature
 					</ShortcutButton>

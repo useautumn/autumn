@@ -1,9 +1,12 @@
 import {
 	type CreditSchemaItem,
+	type Feature,
 	type FeatureType,
+	FeatureUsageType,
 	isAiCreditSystem,
 	type ModelMarkups,
 	type ProviderMarkups,
+	type UpdateCatalogFeatureParams,
 } from "@autumn/shared";
 
 interface BuildFeatureMarkupParamsArgs {
@@ -45,5 +48,42 @@ export const buildFeatureMarkupParams = ({
 					credit_cost:
 						item.credit_amount != null ? Number(item.credit_amount) : 0,
 				})),
+	};
+};
+
+/** Maps a feature draft/row to a catalogV2 features[] entry (create or update). */
+export const featureToCatalogFeatureParams = ({
+	feature,
+	featureId = feature.id,
+	newFeatureId,
+	archived,
+}: {
+	feature: Pick<Feature, "id" | "name" | "type" | "config" | "event_names"> & {
+		model_markups?: Feature["model_markups"];
+	};
+	featureId?: string;
+	newFeatureId?: string;
+	archived?: boolean;
+}): UpdateCatalogFeatureParams => {
+	const renamed =
+		newFeatureId !== undefined && newFeatureId !== featureId
+			? newFeatureId
+			: undefined;
+
+	return {
+		feature_id: featureId,
+		...(renamed ? { new_feature_id: renamed } : {}),
+		name: feature.name,
+		type: feature.type,
+		consumable: feature.config?.usage_type === FeatureUsageType.Single,
+		event_names: feature.event_names,
+		...buildFeatureMarkupParams({
+			type: feature.type,
+			modelMarkups: feature.model_markups ?? undefined,
+			defaultMarkup: feature.config?.default_markup,
+			providerMarkups: feature.config?.provider_markups,
+			schema: feature.config?.schema,
+		}),
+		...(archived !== undefined ? { archived } : {}),
 	};
 };

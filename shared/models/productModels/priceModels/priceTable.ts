@@ -53,6 +53,10 @@ export const prices = pgTable(
 		unique("prices_id_key").on(table.id),
 		index("idx_prices_internal_product_id").on(table.internal_product_id),
 		index("idx_prices_entitlement_id").on(table.entitlement_id),
+		index("idx_prices_config_internal_feature_id")
+			.on(sql`(${table.config} ->> 'internal_feature_id')`)
+			.where(sql`(${table.config} ->> 'internal_feature_id') IS NOT NULL`)
+			.concurrently(),
 	],
 );
 

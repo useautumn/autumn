@@ -4,9 +4,7 @@ import type { AxiosError } from "axios";
 import { forwardRef, useCallback, useState } from "react";
 import { toast } from "sonner";
 import { useAutoSlug } from "@/hooks/common/useAutoSlug";
-import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
-import { FeatureService } from "@/services/FeatureService";
-import { useAxiosInstance } from "@/services/useAxiosInstance";
+import { useUpdateCatalogMutation } from "@/hooks/queries/catalog/useUpdateCatalogMutation";
 import { getBackendErr } from "@/utils/genUtils";
 
 export const InlineCreateFeatureForm = forwardRef<
@@ -15,10 +13,8 @@ export const InlineCreateFeatureForm = forwardRef<
 		onCreated: (featureId: string) => void;
 	}
 >(({ onCreated }, ref) => {
-	const [isCreating, setIsCreating] = useState(false);
 	const [newFeature, setNewFeature] = useState({ name: "", id: "" });
-	const axiosInstance = useAxiosInstance();
-	const { refetch } = useFeaturesQuery();
+	const { mutateAsync: updateCatalog, isPending } = useUpdateCatalogMutation();
 
 	const setNewFeatureState = useCallback(
 		(
@@ -50,24 +46,24 @@ export const InlineCreateFeatureForm = forwardRef<
 			return;
 		}
 
-		setIsCreating(true);
 		try {
-			await FeatureService.createFeature(axiosInstance, {
-				name: newFeature.name,
-				id: newFeature.id,
-				type: FeatureType.Metered,
-				consumable: true,
+			await updateCatalog({
+				features: [
+					{
+						feature_id: newFeature.id,
+						name: newFeature.name,
+						type: FeatureType.Metered,
+						consumable: true,
+					},
+				],
 			});
 
-			await refetch();
 			onCreated(newFeature.id);
 			toast.success("Feature created");
 		} catch (error: unknown) {
 			toast.error(
 				getBackendErr(error as AxiosError, "Failed to create feature"),
 			);
-		} finally {
-			setIsCreating(false);
 		}
 	};
 
@@ -95,7 +91,7 @@ export const InlineCreateFeatureForm = forwardRef<
 					/>
 				</div>
 			</div>
-			<Button className="w-full" onClick={handleCreate} isLoading={isCreating}>
+			<Button className="w-full" onClick={handleCreate} isLoading={isPending}>
 				Create
 			</Button>
 		</div>

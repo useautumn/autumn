@@ -211,7 +211,7 @@ async function main() {
 
 	if (args.length === 0) {
 		console.log(
-			"Usage: bun t <group|suite|script|pattern> [...] [--max=N] [--verbose]",
+			"Usage: bun t <group|suite|script|pattern> [...] [--max=N] [--verbose] [--headless|--tui]",
 		);
 		console.log("");
 		console.log("Examples:");
@@ -225,6 +225,9 @@ async function main() {
 			"  bun t multi-attach      # pattern-match folders under server/tests/",
 		);
 		console.log("  bun t multi-attach --max=3 --verbose");
+		console.log(
+			"  bun t integration/catalog-v2 --headless  # plain logs (agents/CI)",
+		);
 		process.exit(0);
 	}
 
