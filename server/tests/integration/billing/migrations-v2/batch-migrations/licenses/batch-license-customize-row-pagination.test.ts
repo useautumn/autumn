@@ -99,7 +99,7 @@ test.concurrent(
 		const [patch] = batchMigrationPlanToExecutionPlan({
 			plan: batchLane.plan,
 		}).patches;
-		const [operation] = patch.addLicenseEntitlementOps;
+		const [operation] = patch.licenseEntitlementOps;
 		const internalCustomerIds = [
 			await getInternalCustomerId({ ctx, customerId }),
 		];
