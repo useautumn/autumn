@@ -6,7 +6,11 @@
  * Green: each assignment carries both rows, one per interval_count.
  */
 import { expect, test } from "bun:test";
-import { customerEntitlements, entitlements, ResetInterval } from "@autumn/shared";
+import {
+	customerEntitlements,
+	entitlements,
+	ResetInterval,
+} from "@autumn/shared";
 import { runChunkedMigration } from "@tests/integration/billing/migrations-v2/utils/runChunkedMigration";
 import { setupLicenseUpdateScenario } from "@tests/integration/licenses/billing/update/setupLicenseUpdateScenario";
 import { getLicenseDbState } from "@tests/integration/licenses/licenseTestUtils";
@@ -56,9 +60,7 @@ test(`${chalk.yellowBright("batch-license-customize: an add differing only by in
 				entitlements,
 				eq(entitlements.id, customerEntitlements.entitlement_id),
 			)
-			.where(
-				inArray(customerEntitlements.customer_product_id, assignmentIds),
-			);
+			.where(inArray(customerEntitlements.customer_product_id, assignmentIds));
 		return rows.filter((row) => row.featureId === TestFeature.Messages);
 	};
 

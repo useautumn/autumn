@@ -1,6 +1,6 @@
 import {
-	type EntitlementWithFeature,
 	customerEntitlements,
+	type EntitlementWithFeature,
 	entitlements,
 } from "@autumn/shared";
 import { getLicenseDbState } from "@tests/integration/licenses/licenseTestUtils";

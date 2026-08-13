@@ -56,14 +56,14 @@ export const buildEntitlementLookup = ({
 			// License rows key on their own plan, not the parent the patch filtered on.
 			...patch.licenseEntitlementOps.flatMap(
 				(operation): [string, EntitlementWithFeature][] =>
-					operation.type === "remove_license_entitlement"
-						? []
-						: [
+					"entitlement" in operation
+						? [
 								[
 									`${operation.licensePlanId}:${operation.entitlement.feature.id}`,
 									operation.entitlement,
 								],
-							],
+							]
+						: [],
 			),
 		]),
 	);

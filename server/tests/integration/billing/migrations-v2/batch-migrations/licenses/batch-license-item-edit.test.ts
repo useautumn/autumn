@@ -111,9 +111,7 @@ test(`${chalk.yellowBright("batch-license-customize: editing an existing allowan
 	const itemRuns = await ctx.db
 		.select({ status: migrationItemRuns.status })
 		.from(migrationItemRuns)
-		.where(
-			eq(migrationItemRuns.migration_internal_id, migration.internal_id),
-		);
+		.where(eq(migrationItemRuns.migration_internal_id, migration.internal_id));
 	expect(itemRuns.length).toBeGreaterThan(0);
 	expect(itemRuns.every((run) => run.status !== "skipped")).toBe(true);
 
