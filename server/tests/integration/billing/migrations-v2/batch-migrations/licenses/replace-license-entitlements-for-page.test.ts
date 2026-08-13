@@ -118,7 +118,7 @@ test.concurrent(
 			features: scenario.ctx.features,
 			scope: page.scope,
 			internalCustomerIds: [page.internalCustomerId],
-			replace: {
+			operation: {
 				type: "replace_license_entitlement",
 				fromEntitlementId: fromEntitlement.id,
 				entitlement: toEntitlement,
@@ -150,7 +150,7 @@ test.concurrent(
 				.sort((a, b) => (a ?? 0) - (b ?? 0)),
 		).toEqual([NEW_SEAT_MESSAGES - CONSUMED, NEW_SEAT_MESSAGES]);
 
-		// The from-half of each replace: the outgoing definition + pre-write balance.
+		// The from-half of each operation: the outgoing definition + pre-write balance.
 		expect(result.removedItems).toHaveLength(ASSIGNED_SEATS);
 		expect(
 			result.removedItems.every(
@@ -184,7 +184,7 @@ test.concurrent(
 			features: scenario.ctx.features,
 			scope: page.scope,
 			internalCustomerIds: [page.internalCustomerId],
-			replace: {
+			operation: {
 				type: "replace_license_entitlement",
 				fromEntitlementId: fromEntitlement.id,
 				entitlement: toEntitlement,
@@ -255,7 +255,7 @@ test.concurrent(
 			features: scenario.ctx.features,
 			scope: page.scope,
 			internalCustomerIds: [page.internalCustomerId],
-			replace: {
+			operation: {
 				type: "replace_license_entitlement",
 				fromEntitlementId: fromEntitlement.id,
 				entitlement: toEntitlement,
@@ -341,7 +341,7 @@ test.concurrent(
 			features: scenario.ctx.features,
 			scope: page.scope,
 			internalCustomerIds: [page.internalCustomerId],
-			replace: {
+			operation: {
 				type: "replace_license_entitlement",
 				fromEntitlementId: fromEntitlement.id,
 				entitlement: toEntitlement,

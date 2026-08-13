@@ -33,7 +33,7 @@ export const runLicenseEntitlementOp = async ({
 }): Promise<LicenseOpPageResult> => {
 	switch (operation.type) {
 		case "repoint_license_pool":
-			return await repointLicensePoolForPage({
+			return repointLicensePoolForPage({
 				db,
 				scope,
 				internalCustomerIds,
@@ -42,7 +42,7 @@ export const runLicenseEntitlementOp = async ({
 			});
 
 		case "remove_license_entitlement":
-			return await removeLicenseEntitlementsForPage({
+			return removeLicenseEntitlementsForPage({
 				db,
 				features,
 				scope,
@@ -51,27 +51,20 @@ export const runLicenseEntitlementOp = async ({
 				phases,
 			});
 
-		case "replace_license_entitlement": {
-			const replaced = await replaceLicenseEntitlementsForPage({
+		case "replace_license_entitlement":
+			return replaceLicenseEntitlementsForPage({
 				db,
 				features,
 				scope,
 				internalCustomerIds,
-				replace: operation,
+				operation,
 				now,
 				phases,
 				candidateRowBatchSize,
 			});
-			return {
-				insertedItems: replaced.insertedItems,
-				removedItems: replaced.removedItems,
-				changedInternalCustomerIds: replaced.replacedInternalCustomerIds,
-				excludedInternalCustomerIds: replaced.excludedInternalCustomerIds,
-			};
-		}
 
 		case "add_license_entitlement":
-			return await addLicenseEntitlementsForPage({
+			return addLicenseEntitlementsForPage({
 				db,
 				scope,
 				internalCustomerIds,
