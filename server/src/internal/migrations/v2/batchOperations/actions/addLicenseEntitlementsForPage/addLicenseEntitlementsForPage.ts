@@ -74,6 +74,18 @@ export const addLicenseEntitlementsForPage = async ({
 			),
 	});
 
+	if (operation.type === "repoint_license_pool") {
+		return {
+			affected: repointed.pools,
+			candidateCount: 0,
+			repointedPools: repointed.pools,
+			repointedInternalCustomerIds: [...repointed.internalCustomerIds],
+			insertedItems: [],
+			removedItems: [],
+			excludedInternalCustomerIds: [],
+		};
+	}
+
 	if (operation.type === "remove_license_entitlement") {
 		const removed = await timePhase({
 			phases,
