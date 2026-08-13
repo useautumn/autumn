@@ -67,11 +67,13 @@ without repository preview configuration.
 
 ## Provisioning model
 
-`scripts/capy/provision.ts` reads the VM's `bindingId` from the file referenced
-by `CAPY_MACHINE_CONFIG`, hashes it into a `capy-<hash>` Neon branch name, and
-stores non-secret branch metadata plus generated local auth secrets in
-the mode-`0600` file `~/.autumn-capy/state.json`. A resumed VM reuses that
-branch and refreshes its connection string. A new VM gets a new branch.
+`scripts/capy/provision.ts` reads the VM's unique `bindingId` from the file
+referenced by `CAPY_MACHINE_CONFIG` and uses the complete ID in the Neon branch
+name. It stores branch metadata plus generated local auth secrets in the
+mode-`0600` file `~/.autumn-capy/state.json`. A resumed VM reuses that branch
+and refreshes its connection string. A new VM gets a new branch. If a snapshot
+ever contains another VM's state file, Startup discards it before selecting the
+branch or secrets.
 
 The script writes managed values into:
 

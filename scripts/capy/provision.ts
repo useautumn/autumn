@@ -19,7 +19,7 @@
 // Run via `bun scripts/capy/provision.ts`. Idempotent: a second run is a
 // no-op for the Neon branch and refreshes env files in place.
 //
-import { createHash, randomBytes } from "node:crypto";
+import { randomBytes } from "node:crypto";
 import {
 	chmodSync,
 	existsSync,
@@ -28,7 +28,7 @@ import {
 	writeFileSync,
 } from "node:fs";
 import { connect } from "node:net";
-import { homedir, hostname } from "node:os";
+import { homedir } from "node:os";
 import { dirname, join } from "node:path";
 import {
 	applyCommittedMigrations,
@@ -41,6 +41,11 @@ import {
 	ensureTemplateBranch,
 	findBranchByName,
 } from "../dw/helpers/neon.ts";
+import {
+	type CapyState,
+	deriveBranchName,
+	stateForMachine,
+} from "./identity.ts";
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -80,29 +85,23 @@ function fatal(msg: string): never {
 // Machine identity
 // ---------------------------------------------------------------------------
 
-function shortHash(input: string): string {
-	return createHash("sha1").update(input).digest("hex").slice(0, 7);
-}
-
 function getMachineId(): string {
 	const configPath = process.env.CAPY_MACHINE_CONFIG?.trim();
-	if (configPath && existsSync(configPath)) {
-		try {
-			const config = JSON.parse(readFileSync(configPath, "utf-8")) as {
-				bindingId?: string;
-			};
-			if (config.bindingId?.trim()) return config.bindingId.trim();
-		} catch {
-			log(`machine config at ${configPath} is unreadable, using hostname`);
-		}
+	if (!configPath) fatal("CAPY_MACHINE_CONFIG is not set");
+	if (!existsSync(configPath)) {
+		fatal(`Capy machine config does not exist at ${configPath}`);
 	}
-	// Local repros do not have Capy's machine config. The hostname keeps the
-	// branch stable for the lifetime of that host.
-	return (process.env.HOSTNAME ?? hostname() ?? "unknown").trim();
-}
-
-function deriveBranchName(machineId: string): string {
-	return `capy-${shortHash(machineId)}`;
+	try {
+		const config = JSON.parse(readFileSync(configPath, "utf-8")) as {
+			bindingId?: string;
+		};
+		if (!config.bindingId?.trim()) {
+			fatal(`Capy machine config at ${configPath} has no bindingId`);
+		}
+		return config.bindingId.trim();
+	} catch (error) {
+		fatal(`Could not read Capy machine config at ${configPath}: ${error}`);
+	}
 }
 
 // ---------------------------------------------------------------------------
@@ -110,23 +109,6 @@ function deriveBranchName(machineId: string): string {
 // or re-migrate on every startup. Lives in $CAPY_PREFIX so it persists for
 // the lifetime of the sandbox filesystem.
 // ---------------------------------------------------------------------------
-
-type State = {
-	machineId: string;
-	branchName?: string;
-	branchId?: string;
-	databaseUrl?: string;
-	createdAt: number;
-	// Per-machine secrets — generated once on first run, persisted, then
-	// re-used so a server restart doesn't invalidate every session.
-	// scripts/setup/writeAgentEnv.ts does the same for the legacy bootstrap;
-	// the dw flow inherits these from infisical instead.
-	secrets?: {
-		betterAuthSecret: string;
-		encryptionIv: string;
-		encryptionPassword: string;
-	};
-};
 
 // URL-safe base64 random string. Same shape as scripts/setup/writeAgentEnv.ts
 // (`genUrlSafeBase64`) — server/src/utils/initUtils.ts::checkEnvVars exits
@@ -140,7 +122,9 @@ function genUrlSafeBase64(bytes: number): string {
 		.replace(/=+$/g, "");
 }
 
-function ensureSecrets(state: State | null): NonNullable<State["secrets"]> {
+function ensureSecrets(
+	state: CapyState | null,
+): NonNullable<CapyState["secrets"]> {
 	if (state?.secrets) return state.secrets;
 	log(
 		"minting per-machine secrets (BETTER_AUTH_SECRET, ENCRYPTION_IV, ENCRYPTION_PASSWORD)",
@@ -152,17 +136,17 @@ function ensureSecrets(state: State | null): NonNullable<State["secrets"]> {
 	};
 }
 
-function loadState(): State | null {
+function loadState(): CapyState | null {
 	if (!existsSync(CAPY_STATE)) return null;
 	try {
-		return JSON.parse(readFileSync(CAPY_STATE, "utf-8")) as State;
+		return JSON.parse(readFileSync(CAPY_STATE, "utf-8")) as CapyState;
 	} catch {
 		log(`state file at ${CAPY_STATE} unreadable, ignoring`);
 		return null;
 	}
 }
 
-function saveState(state: State): void {
+function saveState(state: CapyState): void {
 	mkdirSync(dirname(CAPY_STATE), { recursive: true });
 	writeFileSync(CAPY_STATE, JSON.stringify(state, null, 2), { mode: 0o600 });
 	chmodSync(CAPY_STATE, 0o600);
@@ -293,7 +277,7 @@ function writeEnvFile(relPath: string, managed: Record<string, string>): void {
 
 function writeEnvFiles(
 	databaseUrl: string,
-	secrets: NonNullable<State["secrets"]>,
+	secrets: NonNullable<CapyState["secrets"]>,
 ): void {
 	const serverUrl = `http://localhost:${SERVER_PORT}`;
 	const viteUrl = `http://localhost:${VITE_PORT}`;
@@ -376,7 +360,10 @@ function ensureNeonAuth(): void {
 	}
 }
 
-function ensureNeonBranch(machineId: string, state: State | null): State {
+function ensureNeonBranch(
+	machineId: string,
+	state: CapyState | null,
+): CapyState {
 	const branchName = deriveBranchName(machineId);
 
 	// Branch already provisioned in state file and still exists on Neon →
@@ -385,8 +372,8 @@ function ensureNeonBranch(machineId: string, state: State | null): State {
 		const existing = findBranchByName(branchName);
 		if (existing) {
 			log(`reusing existing Neon branch ${branchName} (${state.branchId})`);
-			const pooledUrl = connectionString(branchName, { pooled: true });
-			return { ...state, databaseUrl: pooledUrl };
+			const pooledUrl = connectionString(existing.id, { pooled: true });
+			return { ...state, branchId: existing.id, databaseUrl: pooledUrl };
 		}
 		log(
 			`state references ${branchName} but Neon no longer has it — reprovisioning`,
@@ -398,7 +385,7 @@ function ensureNeonBranch(machineId: string, state: State | null): State {
 	const existingByName = findBranchByName(branchName);
 	if (existingByName) {
 		log(`adopting existing Neon branch ${branchName} (${existingByName.id})`);
-		const pooledUrl = connectionString(branchName, { pooled: true });
+		const pooledUrl = connectionString(existingByName.id, { pooled: true });
 		return {
 			machineId,
 			branchName,
@@ -414,7 +401,7 @@ function ensureNeonBranch(machineId: string, state: State | null): State {
 	);
 	ensureTemplateBranch();
 	const branch = createBranch(branchName, NEON_TEMPLATE_BRANCH);
-	const pooledUrl = connectionString(branchName, { pooled: true });
+	const pooledUrl = connectionString(branch.id, { pooled: true });
 	return {
 		machineId,
 		branchName,
@@ -446,10 +433,15 @@ async function main(): Promise<void> {
 
 	// 2. Neon auth + branch + migrations.
 	ensureNeonAuth();
-	const priorState = loadState();
+	const storedState = loadState();
+	const priorState = stateForMachine(storedState, machineId);
+	if (storedState && !priorState) {
+		log("discarding state copied from a different Capy VM");
+	}
 	const nextState = ensureNeonBranch(machineId, priorState);
 	if (!nextState.branchName) fatal("provisioning produced no branchName");
-	const directUrl = connectionString(nextState.branchName, { pooled: false });
+	if (!nextState.branchId) fatal("provisioning produced no branchId");
+	const directUrl = connectionString(nextState.branchId, { pooled: false });
 	applyCommittedMigrations(nextState.branchName, directUrl);
 	loadDbFunctions(nextState.branchName, directUrl);
 
