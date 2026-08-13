@@ -9,7 +9,7 @@ import type { CustomerEntitlementPatch } from "@/internal/billing/v2/actions/bat
 import type { OperationScope } from "../../scope/operationScope.js";
 import { operationScopeSql } from "../../scope/operationScope.js";
 import type { EnrichedCycleCandidate } from "../../utils/enrichCustomerEntitlementCycles.js";
-import { canonicalPoolLateralSql } from "../licenseEntitlementsForPage/licensePoolSql.js";
+import { canonicalPoolLateralSql } from "../licensePoolSql.js";
 import type { LicenseReplaceCandidateRow } from "../selectLicenseCandidateRows.js";
 
 const balanceAssignment = ({ patch }: { patch: CustomerEntitlementPatch }) => {

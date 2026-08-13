@@ -15,7 +15,7 @@ import {
 	type OperationScope,
 	operationScopeSql,
 } from "../../scope/operationScope.js";
-import { canonicalPoolLateralSql } from "./licensePoolSql.js";
+import { canonicalPoolLateralSql } from "../licensePoolSql.js";
 
 /** Pool anchors are excluded because the anchor FK is RESTRICT — deleting one
  * would abort the whole page. */
