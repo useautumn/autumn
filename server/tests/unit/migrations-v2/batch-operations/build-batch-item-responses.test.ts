@@ -162,6 +162,132 @@ describe("buildBatchMigrationItemResponses", () => {
 		).toEqual(["words", "dashboard"]);
 	});
 
+	test("a replace pair diffs the deleted before-state against the created after-state", () => {
+		const rowFields = {
+			internalCustomerId: "cus_1",
+			customerProductId: "cp_1",
+			planId: "pro",
+		};
+		const responses = buildBatchMigrationItemResponses({
+			plan,
+			customers: [customers[0]],
+			features,
+			changedItems: [
+				{
+					...rowFields,
+					featureId: "words",
+					granted: 200,
+					remaining: 160,
+					unlimited: false,
+					nextResetAt: 1_800_000_000_000,
+					...productState,
+				},
+				{
+					...rowFields,
+					featureId: "words",
+					entitlement: entitlement({
+						feature: meteredFeature,
+						allowance: 100,
+						interval: EntInterval.Month,
+					}),
+					granted: 100,
+					remaining: 60,
+					unlimited: false,
+					nextResetAt: 1_750_000_000_000,
+					...productState,
+					action: "deleted" as const,
+				},
+			],
+		});
+
+		const response = responses.get("cus_1");
+		expect(response?.balance_changes).toEqual([
+			{
+				feature_id: "words",
+				balance: {
+					granted: 200,
+					remaining: 160,
+					usage: 40,
+					unlimited: false,
+					next_reset_at: 1_800_000_000_000,
+				},
+				// usage is 40 on both sides, so the diff drops it.
+				previous_attributes: {
+					granted: 100,
+					remaining: 60,
+					next_reset_at: 1_750_000_000_000,
+				},
+			},
+		]);
+
+		expect(response?.plan_changes).toHaveLength(1);
+		expect(
+			response?.plan_changes[0].item_changes.map((change) => ({
+				action: change.action,
+				feature_id: change.feature_id,
+			})),
+		).toEqual([
+			{ action: "created", feature_id: "words" },
+			{ action: "deleted", feature_id: "words" },
+		]);
+	});
+
+	test("a pure remove emits a deleted item change but no balance change", () => {
+		const responses = buildBatchMigrationItemResponses({
+			plan,
+			customers: [customers[0]],
+			features,
+			changedItems: [
+				{
+					internalCustomerId: "cus_1",
+					customerProductId: "cp_1",
+					planId: "pro",
+					featureId: "words",
+					entitlement: entitlement({
+						feature: meteredFeature,
+						allowance: 100,
+						interval: EntInterval.Month,
+					}),
+					...productState,
+					action: "deleted" as const,
+				},
+			],
+		});
+
+		const response = responses.get("cus_1");
+		expect(response?.balance_changes).toEqual([]);
+		expect(
+			response?.plan_changes[0].item_changes.map((change) => change.action),
+		).toEqual(["deleted"]);
+	});
+
+	test("a removed boolean feature emits a deleted flag change", () => {
+		const responses = buildBatchMigrationItemResponses({
+			plan,
+			customers: [customers[0]],
+			features,
+			changedItems: [
+				{
+					internalCustomerId: "cus_1",
+					customerProductId: "cp_1",
+					planId: "pro",
+					featureId: "dashboard",
+					entitlement: entitlement({
+						feature: booleanFeature,
+						allowance: null,
+						interval: null,
+					}),
+					...productState,
+					action: "deleted" as const,
+				},
+			],
+		});
+
+		expect(responses.get("cus_1")?.flag_changes).toEqual([
+			{ action: "deleted", feature_id: "dashboard" },
+		]);
+	});
+
 	test("a customer with no inserted rows gets an empty diff", () => {
 		const responses = buildBatchMigrationItemResponses({
 			plan,

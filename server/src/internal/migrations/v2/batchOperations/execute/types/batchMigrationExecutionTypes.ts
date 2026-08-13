@@ -21,6 +21,8 @@ export type BatchMigrationInsertedItem = {
 	planId: string;
 	featureId: string;
 	granted: number | null;
+	/** After-write remaining; omit when remaining equals granted. */
+	remaining?: number | null;
 	unlimited: boolean;
 	nextResetAt: number | null;
 	/** Public id of the owning entity when the customer product is entity-level. */
@@ -36,8 +38,15 @@ export type BatchMigrationInsertedItem = {
 
 export type BatchMigrationRemovedItem = Omit<
 	BatchMigrationInsertedItem,
-	"granted" | "unlimited" | "nextResetAt"
-> & { entitlement: EntitlementWithFeature };
+	"granted" | "unlimited" | "nextResetAt" | "remaining"
+> & {
+	entitlement: EntitlementWithFeature;
+	/** Before-state, set when the removal is the from-half of a replace. */
+	granted?: number | null;
+	remaining?: number | null;
+	unlimited?: boolean;
+	nextResetAt?: number | null;
+};
 
 export type BatchMigrationPageResult = {
 	/** Customers with a matching customer product — mutated and marked succeeded. */

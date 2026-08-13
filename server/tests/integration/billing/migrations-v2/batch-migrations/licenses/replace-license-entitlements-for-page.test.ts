@@ -144,6 +144,27 @@ test.concurrent(
 					item.nextResetAt != null,
 			),
 		).toBe(true);
+		expect(
+			result.insertedItems
+				.map((item) => item.remaining)
+				.sort((a, b) => (a ?? 0) - (b ?? 0)),
+		).toEqual([NEW_SEAT_MESSAGES - CONSUMED, NEW_SEAT_MESSAGES]);
+
+		// The from-half of each replace: the outgoing definition + pre-write balance.
+		expect(result.removedItems).toHaveLength(ASSIGNED_SEATS);
+		expect(
+			result.removedItems.every(
+				(item) =>
+					item.entitlement.id === fromEntitlement.id &&
+					item.granted === SEAT_MESSAGES &&
+					item.nextResetAt != null,
+			),
+		).toBe(true);
+		expect(
+			result.removedItems
+				.map((item) => item.remaining)
+				.sort((a, b) => (a ?? 0) - (b ?? 0)),
+		).toEqual([SEAT_MESSAGES - CONSUMED, SEAT_MESSAGES]);
 
 		const rows = await messageRows({
 			db: scenario.ctx.db,
