@@ -37,4 +37,24 @@ describe("plan item currency diffs", () => {
 			{ currency: "sgd", amount: 1.4 },
 		]);
 	});
+
+	test("deduplicates currencies across multiple tiers", () => {
+		const item = topUpItem();
+		item.tiers = [
+			{
+				to: 100,
+				amount: 1,
+				additional_currencies: [{ currency: "eur", amount: 0.9 }],
+			},
+			{
+				to: "inf",
+				amount: 0.8,
+				additional_currencies: [{ currency: "EUR", amount: 0.7 }],
+			},
+		];
+
+		expect(getItemAdditionalCurrencies(item)).toEqual([
+			{ currency: "eur", amount: 0.9 },
+		]);
+	});
 });
