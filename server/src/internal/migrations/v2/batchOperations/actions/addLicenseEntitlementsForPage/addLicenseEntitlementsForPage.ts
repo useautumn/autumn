@@ -128,7 +128,7 @@ export const addLicenseEntitlementsForPage = async ({
 				...replaced.replacedInternalCustomerIds,
 			],
 			insertedItems: replaced.insertedItems,
-			removedItems: [],
+			removedItems: replaced.removedItems,
 			excludedInternalCustomerIds: replaced.excludedInternalCustomerIds,
 		};
 	}
