@@ -141,6 +141,29 @@ describe("buildInPlaceUpdatePlanParams", () => {
 		expect(() => UpdatePlanParamsV2Schema.parse(body)).not.toThrow();
 	});
 
+	test("only sends base_plan_id when the base plan link was edited", () => {
+		const untouched = buildInPlaceUpdatePlanParams({
+			baseProduct,
+			editedProduct: baseProduct,
+			features,
+		});
+		expect(untouched).not.toHaveProperty("base_plan_id");
+
+		const linked = buildInPlaceUpdatePlanParams({
+			baseProduct,
+			editedProduct: { ...baseProduct, base_id: "enterprise" },
+			features,
+		});
+		expect(linked.base_plan_id).toBe("enterprise");
+
+		const detached = buildInPlaceUpdatePlanParams({
+			baseProduct,
+			editedProduct: { ...baseProduct, base_id: null },
+			features,
+		});
+		expect(detached.base_plan_id).toBeNull();
+	});
+
 	test("uses the same staged licenses in preview and update bodies", () => {
 		const licenses = [{ license_plan_id: "developer-seat", included: 0 }];
 		const editedProduct = { ...baseProduct, name: "Pro Plus" };

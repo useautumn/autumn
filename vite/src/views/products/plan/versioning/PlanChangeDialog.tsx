@@ -49,7 +49,6 @@ import {
 	getLicenseUpdatePayload,
 	useHasLicenseChanges,
 } from "../components/plan-licenses/useLicenseSaveRegistry";
-import { useApplyBasePlanLink } from "../hooks/useApplyBasePlanLink";
 import {
 	buildMigrateTargets,
 	buildSelectedLicenseParentUpdates,
@@ -189,7 +188,6 @@ export default function PlanChangeDialog({
 	const licenseHasChanges = useHasLicenseChanges();
 	const { invalidate: invalidateMigrations } = useMigrationsQuery();
 	const { org } = useOrg();
-	const applyBasePlanLink = useApplyBasePlanLink();
 
 	const [step, setStep] = useState<StepKey>("review");
 	const [versionChoice, setVersionChoice] = useState<VersionChoice>("new");
@@ -437,9 +435,6 @@ export default function PlanChangeDialog({
 		}
 		setIsLoading(true);
 		try {
-			// Linking first keeps a failure retryable; a new version inherits the link.
-			if (!(await applyBasePlanLink())) return;
-
 			const willMigrate = migrateNeeded && migrate;
 			let updateParams: ReturnType<typeof buildInPlaceUpdatePlanParams>;
 			if (

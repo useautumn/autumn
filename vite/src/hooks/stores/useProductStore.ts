@@ -118,6 +118,25 @@ export const useIsMetadataOnlyChange = () => {
 	}, [product, baseProduct, features]);
 };
 
+// True when the base plan link is the only pending change — linking never
+// versions, so such saves skip the "create new version?" dialog.
+export const useIsBasePlanOnlyChange = () => {
+	const product = useProductStore((s) => s.product);
+	const baseProduct = useProductStore((s) => s.baseProduct);
+	const { features = [] } = useFeaturesQuery();
+
+	return useMemo(() => {
+		if (!baseProduct) return false;
+		if (product.base_id === baseProduct.base_id) return false;
+
+		return productsAreSame({
+			newProductV2: product as unknown as FrontendProduct,
+			curProductV2: baseProduct as unknown as FrontendProduct,
+			features,
+		}).same;
+	}, [product, baseProduct, features]);
+};
+
 export const useHasBillingChanges = ({
 	baseProduct,
 	newProduct,

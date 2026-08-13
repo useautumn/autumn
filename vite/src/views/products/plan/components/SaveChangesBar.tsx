@@ -13,6 +13,7 @@ import { usePlanVariants } from "@/hooks/queries/usePlanVariants";
 import { useProductsQuery } from "@/hooks/queries/useProductsQuery";
 import {
 	useHasChanges,
+	useIsBasePlanOnlyChange,
 	useIsCusPlanEditor,
 	useIsMetadataOnlyChange,
 	useProductStore,
@@ -23,7 +24,6 @@ import { getBackendErr } from "@/utils/genUtils";
 import { useProductQuery } from "../../product/hooks/useProductQuery";
 import { useProductContext } from "../../product/ProductContext";
 import { updateProduct } from "../../product/utils/updateProduct";
-import { useApplyBasePlanLink } from "../hooks/useApplyBasePlanLink";
 import { checkItemCurrenciesValid } from "../utils/currencyUtils";
 import { buildPreviewUpdatePlanParams } from "../versioning/buildMigrationDraft";
 import { previewHasLicenseParentTargets } from "../versioning/previewHasAffectedCustomers";
@@ -54,7 +54,6 @@ export const SaveChangesBar = ({
 	const planHasChanges = useHasChanges();
 	const licenseHasChanges = useHasLicenseChanges();
 	const hasChanges = planHasChanges || licenseHasChanges;
-	const applyBasePlanLink = useApplyBasePlanLink();
 	const planLicenses = catalogLicenses.map(({ planLicense }) => planLicense);
 	const { features = [] } = useFeaturesQuery();
 	const fetchPlanUpdatePreview = useFetchPlanUpdatePreview();
@@ -67,6 +66,10 @@ export const SaveChangesBar = ({
 
 	const isCusPlanEditor = useIsCusPlanEditor();
 	const isMetadataOnlyChange = useIsMetadataOnlyChange();
+	const isBasePlanOnlyChange = useIsBasePlanOnlyChange();
+	// Linking a plan to a base never versions, so it must not trigger any of the
+	// version/propagation prompts on its own.
+	const planHasContentChanges = planHasChanges && !isBasePlanOnlyChange;
 	let saveButtonText = "Save";
 	if (isCusPlanEditor) {
 		saveButtonText = "Save and Return";
@@ -116,14 +119,14 @@ export const SaveChangesBar = ({
 			}
 
 			const needsVersionChoice =
-				licenseHasChanges || (planHasChanges && !isMetadataOnlyChange);
+				licenseHasChanges || (planHasContentChanges && !isMetadataOnlyChange);
 			const hasCustomers = preview.has_customers && needsVersionChoice;
 			const hasParentPropagationDecision =
-				planHasChanges && previewHasLicenseParentTargets(preview);
+				planHasContentChanges && previewHasLicenseParentTargets(preview);
 			if (
 				hasCustomers ||
 				hasParentPropagationDecision ||
-				(planHasChanges && variants.length > 0)
+				(planHasContentChanges && variants.length > 0)
 			) {
 				setShowNewVersionDialog(true);
 				return;
@@ -141,22 +144,19 @@ export const SaveChangesBar = ({
 			});
 		}
 
-		// Linking first keeps a failure retryable; a new version inherits the link.
-		const basePlanLinkSaved = await applyBasePlanLink();
-		const planSaved =
-			basePlanLinkSaved && planHasChanges
-				? await updateProduct({
-						axiosInstance,
-						productId: product.id,
-						product,
-						version: product.version,
-						orgCurrency: org?.default_currency,
-						onSuccess: async () => {
-							await queryRefetch();
-							await Promise.all([invalidateProduct(), invalidateProducts()]);
-						},
-					})
-				: basePlanLinkSaved;
+		const planSaved = planHasChanges
+			? await updateProduct({
+					axiosInstance,
+					productId: product.id,
+					product,
+					version: product.version,
+					orgCurrency: org?.default_currency,
+					onSuccess: async () => {
+						await queryRefetch();
+						await Promise.all([invalidateProduct(), invalidateProducts()]);
+					},
+				})
+			: true;
 		const licensesSaved = planSaved
 			? await saveAllLicenses({
 					axiosInstance,
@@ -168,7 +168,7 @@ export const SaveChangesBar = ({
 			: false;
 
 		// Each step toasts its own failure, so only the combined success toasts here.
-		if (planSaved && basePlanLinkSaved && licensesSaved) {
+		if (planSaved && licensesSaved) {
 			toast.success("Changes saved successfully");
 		}
 

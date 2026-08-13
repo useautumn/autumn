@@ -148,6 +148,11 @@ export function buildInPlaceUpdatePlanParams({
 		config: plan.config,
 		billing_controls: plan.billing_controls,
 		...(licenses !== undefined ? { licenses } : {}),
+		// The backend keys off the field being present, so only send an edited
+		// link. Undefined means untouched; null means detach.
+		...(editedProduct.base_id !== undefined
+			? { base_plan_id: editedProduct.base_id }
+			: {}),
 		disable_version: true,
 	} satisfies UpdatePlanParamsV2Input;
 }
