@@ -35,9 +35,11 @@ export const classifyParkedEveInput = ({
 	requests: EveInputRequest[];
 	skipRequestId?: string;
 }): ParkedEveInput | undefined => {
-	const pending = requests.filter(
-		(request) => request.requestId !== skipRequestId,
-	);
+	// Guarded on skipRequestId: an unconditional filter drops every id-less
+	// request, orphaning the very parks this exists to surface.
+	const pending = skipRequestId
+		? requests.filter((request) => request.requestId !== skipRequestId)
+		: requests;
 	if (pending.length === 0) return undefined;
 
 	// Eve's built-in `ask_question` also carries a populated `action.toolName`

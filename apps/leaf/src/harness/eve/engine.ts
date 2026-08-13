@@ -572,6 +572,7 @@ export const eveEngine: AgentEngine = {
 			// the thread's next message opens a clean run instead of wedging here.
 			const retryOnFreshSession = canRetryOnFreshEveSession({
 				alreadyRetried: restartedOnFreshSession,
+				answeringParkedQuestion: Boolean(params.questionResponse),
 				sessionIsNew: session.newSession,
 				streamedAnyEvent: sawAnyEvent,
 			});
@@ -587,6 +588,7 @@ export const eveEngine: AgentEngine = {
 				db,
 				env,
 				orgId: org.id,
+				sessionId: session.sessionId,
 				threadKey: session.threadKey,
 			});
 			// A turn that streamed events already did whatever it did; replaying the

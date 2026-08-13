@@ -6,6 +6,7 @@ describe("canRetryOnFreshEveSession", () => {
 		expect(
 			canRetryOnFreshEveSession({
 				alreadyRetried: false,
+				answeringParkedQuestion: false,
 				sessionIsNew: false,
 				streamedAnyEvent: false,
 			}),
@@ -16,6 +17,7 @@ describe("canRetryOnFreshEveSession", () => {
 		expect(
 			canRetryOnFreshEveSession({
 				alreadyRetried: false,
+				answeringParkedQuestion: false,
 				sessionIsNew: false,
 				streamedAnyEvent: true,
 			}),
@@ -26,6 +28,7 @@ describe("canRetryOnFreshEveSession", () => {
 		expect(
 			canRetryOnFreshEveSession({
 				alreadyRetried: true,
+				answeringParkedQuestion: false,
 				sessionIsNew: false,
 				streamedAnyEvent: false,
 			}),
@@ -36,7 +39,19 @@ describe("canRetryOnFreshEveSession", () => {
 		expect(
 			canRetryOnFreshEveSession({
 				alreadyRetried: false,
+				answeringParkedQuestion: false,
 				sessionIsNew: true,
+				streamedAnyEvent: false,
+			}),
+		).toBe(false);
+	});
+
+	test("does not replay a chip answer onto a session that never asked", () => {
+		expect(
+			canRetryOnFreshEveSession({
+				alreadyRetried: false,
+				answeringParkedQuestion: true,
+				sessionIsNew: false,
 				streamedAnyEvent: false,
 			}),
 		).toBe(false);

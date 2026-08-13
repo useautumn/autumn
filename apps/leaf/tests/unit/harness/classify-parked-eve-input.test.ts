@@ -31,6 +31,14 @@ describe("classifyParkedEveInput", () => {
 		});
 	});
 
+	test("surfaces a park that carries no request id", () => {
+		expect(
+			classifyParkedEveInput({
+				requests: [{ prompt: "Which plan?" }],
+			}),
+		).toEqual({ kind: "waiting", text: "Which plan?" });
+	});
+
 	test("captures a chained gated write", () => {
 		const parked = classifyParkedEveInput({
 			requests: [

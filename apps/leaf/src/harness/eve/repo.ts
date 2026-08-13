@@ -137,16 +137,19 @@ export const upsertEveSession = async ({
 		});
 };
 
-/** Drops a thread's session so the next message opens a brand-new eve run. */
+/** Drops a thread's session so the next message opens a brand-new eve run.
+ * Matched on session_id so an overlapping turn's newer session survives. */
 export const deleteEveSession = async ({
 	db,
 	env,
 	orgId,
+	sessionId,
 	threadKey,
 }: {
 	db: ChatDb;
 	env: AppEnv;
 	orgId: string;
+	sessionId: string;
 	threadKey: string;
 }) => {
 	await db
@@ -156,6 +159,7 @@ export const deleteEveSession = async ({
 				eq(harnessSessions.org_id, orgId),
 				eq(harnessSessions.env, env),
 				eq(harnessSessions.thread_key, threadKey),
+				eq(harnessSessions.session_id, sessionId),
 			),
 		);
 };
