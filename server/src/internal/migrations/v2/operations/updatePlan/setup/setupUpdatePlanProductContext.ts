@@ -77,7 +77,9 @@ export const setupUpdatePlanProductContext = async ({
 		(customize.add_items === undefined || customize.add_items.length === 0) &&
 		customize.remove_items === undefined &&
 		(customize.update_items === undefined ||
-			customize.update_items.length === 0)
+			customize.update_items.length === 0) &&
+		(customize.upsert_licenses === undefined ||
+			customize.upsert_licenses.length === 0)
 	) {
 		return undefined;
 	}
@@ -128,6 +130,7 @@ export const setupUpdatePlanProductContext = async ({
 		patchContext,
 		customPrices,
 		customEnts,
+		insertPlanLicenses,
 	} = await setupUpdateSubscriptionProductContext({
 		ctx,
 		fullCustomer: productFullCustomer,
@@ -202,6 +205,7 @@ export const setupUpdatePlanProductContext = async ({
 		adjustableFeatureQuantities: setupAdjustableQuantities({ params }),
 		customPrices,
 		customEnts,
+		insertPlanLicenses,
 		trialContext: operationBillingContext.trialContext,
 		isCustom: targetCustomerProduct.is_custom,
 		billingVersion: BillingVersion.V2,
