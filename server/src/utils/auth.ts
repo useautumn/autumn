@@ -283,6 +283,9 @@ const options = {
 		oauthProvider({
 			loginPage: `${process.env.CLIENT_URL}/sign-in`,
 			consentPage: `${process.env.CLIENT_URL}/consent`,
+			silenceWarnings: {
+				oauthAuthServerConfig: true,
+			},
 			// Resource-based scopes with R/W actions (plus legacy CRUDL +
 			// meta scopes — see shared/utils/scopeDefinitions.ts).
 			scopes: [...ALL_SCOPES],
