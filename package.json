@@ -219,7 +219,7 @@
 		"knip": "^6.7.0",
 		"trigger.dev": "4.5.10",
 		"ts-to-zod": "^5.1.0",
-		"turbo": "^2.9.6"
+		"turbo": "2.10.9"
 	},
 	"trustedDependencies": [
 		"@infisical/cli"

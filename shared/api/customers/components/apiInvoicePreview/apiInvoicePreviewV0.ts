@@ -17,15 +17,16 @@ export const ApiInvoicePreviewV0Schema = z.object({
 		example: 1788220800000,
 	}),
 	currency: z.string().meta({
-		description: "The three-letter ISO currency code (e.g., 'usd').",
+		description:
+			"The three-letter ISO currency code. All amounts are in the currency's major unit (e.g., dollars for USD).",
 		example: "usd",
 	}),
 	subtotal: z.number().meta({
-		description: "The total before discounts, in major currency units.",
+		description: "The total before discounts.",
 		example: 15,
 	}),
 	total: z.number().meta({
-		description: "The total after discounts, in major currency units.",
+		description: "The total after discounts.",
 		example: 15,
 	}),
 	line_items: z.array(ExtPreviewLineItemSchema).meta({

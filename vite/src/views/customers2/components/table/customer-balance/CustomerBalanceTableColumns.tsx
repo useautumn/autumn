@@ -192,8 +192,8 @@ function SubRowUsageCell({
 		ent,
 		entityId,
 	});
-	const shouldShowOutOfBalance = allowance > 0 || balance > 0;
-	const shouldShowUsed = balance < 0 || (balance === 0 && allowance <= 0);
+	const shouldShowOutOfBalance = allowance > 0 || balance >= 0;
+	const shouldShowUsed = balance < 0;
 
 	return (
 		<FeatureBalanceDisplay

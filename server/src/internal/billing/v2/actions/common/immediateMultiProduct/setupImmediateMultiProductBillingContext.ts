@@ -35,6 +35,10 @@ import {
 	handleFreeTrialParam,
 } from "@/internal/billing/v2/setup/trialContext";
 
+type ImmediateMultiProductParams = MultiAttachParamsV0 & {
+	no_billing_changes?: boolean;
+};
+
 const getSubscriptionTarget = ({
 	productContext,
 }: {
@@ -153,7 +157,7 @@ export const setupImmediateMultiProductBillingContext = async ({
 	includeScheduledProductsForScheduleLookup,
 }: {
 	ctx: AutumnContext;
-	params: MultiAttachParamsV0;
+	params: ImmediateMultiProductParams;
 	preview?: boolean;
 	billingStartsAt?: number;
 	billingStartsAtToleranceMs?: number;
@@ -284,7 +288,8 @@ export const setupImmediateMultiProductBillingContext = async ({
 		),
 		newBillingSubscription: forceNewSubscription || undefined,
 		includeScheduledProductsForScheduleLookup,
-		createStripeCustomerIfMissing: !preview,
+		createStripeCustomerIfMissing:
+			!preview && params.no_billing_changes !== true,
 	});
 
 	const invoiceMode = await setupInvoiceModeContext({ ctx, params });
@@ -380,7 +385,8 @@ export const setupImmediateMultiProductBillingContext = async ({
 		customPrices,
 		customEnts,
 		trialContext,
-		skipBillingChanges: trialContext?.onEnd === "revert",
+		skipBillingChanges:
+			params.no_billing_changes === true || trialContext?.onEnd === "revert",
 		isCustom: customPrices.length > 0 || customEnts.length > 0,
 		checkoutMode: setupImmediateMultiProductCheckoutMode({
 			paymentMethod,
