@@ -16,7 +16,9 @@ import { useOrg } from "@/hooks/common/useOrg";
 import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
 import { cn } from "@/lib/utils";
 import { intervalIsNone } from "@/utils/product/productItemUtils";
+import { AdditionalCurrenciesHint } from "@/views/products/plan/components/plan-card/AdditionalCurrenciesHint";
 import { PlanFeatureIcon } from "@/views/products/plan/components/plan-card/PlanFeatureIcon";
+import { getItemAdditionalCurrencies } from "./planItemCurrencyUtils";
 
 export const CustomDotIcon = () => (
 	<div className="w-[2px] h-[2px] mx-0.5 bg-current rounded-full" />
@@ -346,6 +348,7 @@ export function PlanItemLabel({
 	const hasFeatureName = feature?.name && feature.name.trim() !== "";
 	const displayText = hasFeatureName ? display.primary_text : unnamedText;
 	const rollover = itemCanRollOver(item) ? item.config?.rollover : undefined;
+	const additionalCurrencies = getItemAdditionalCurrencies(item);
 
 	const icons = showFeatureIcons ? (
 		<FeatureIconCluster item={item} leftIcon={featureIcon} />
@@ -380,6 +383,9 @@ export function PlanItemLabel({
 					/>
 				)}
 			</p>
+			{additionalCurrencies.length > 0 && (
+				<AdditionalCurrenciesHint currencies={additionalCurrencies} />
+			)}
 			{rollover && <RolloverIndicator rollover={rollover} />}
 		</>
 	);
