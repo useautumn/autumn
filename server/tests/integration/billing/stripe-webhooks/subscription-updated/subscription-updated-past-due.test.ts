@@ -115,6 +115,7 @@ const syncManualPastDue = async ({
 			stripeSubscription: pastDueSubscription,
 			previousAttributes,
 			fullCustomer,
+			originalFullCustomer: structuredClone(fullCustomer),
 			customerProducts: [...fullCustomer.customer_products],
 			nowMs: Date.now(),
 			updatedCustomerProducts: [],

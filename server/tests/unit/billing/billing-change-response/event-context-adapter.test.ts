@@ -26,8 +26,10 @@ const makeUpdatedContext = ({
 	updated?: StripeSubscriptionUpdatedContext["updatedCustomerProducts"];
 	deleted?: StripeSubscriptionUpdatedContext["deletedCustomerProducts"];
 } = {}): StripeSubscriptionUpdatedContext => {
+	const fullCustomer = makeFullCustomer();
 	return {
-		fullCustomer: makeFullCustomer(),
+		fullCustomer,
+		originalFullCustomer: structuredClone(fullCustomer),
 		customerProducts: [],
 		nowMs: NOW,
 		stripeSubscription:

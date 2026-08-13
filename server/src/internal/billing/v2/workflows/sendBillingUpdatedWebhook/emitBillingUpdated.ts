@@ -28,7 +28,7 @@ export const flushBillingUpdated = ({
 	void sendBillingUpdatedWebhook({
 		ctx,
 		autumnBillingPlan,
-		originalFullCustomer: collector.fullCustomer,
+		originalFullCustomer: collector.originalFullCustomer,
 		tags,
 	});
 };

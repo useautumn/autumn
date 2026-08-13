@@ -6,8 +6,11 @@ import type {
 } from "@autumn/shared";
 
 export type BillingChangeCollector = {
-	/** FullCustomer the flush reports against. */
+	/** Live customer the tasks read and the trackers mutate. */
 	fullCustomer: FullCustomer;
+	/** Pre-change snapshot taken at construction — the flush diffs against this,
+	 * and `fullCustomer` is already mutated by the time it runs. */
+	originalFullCustomer: FullCustomer;
 	/**
 	 * Products in scope (Stripe: those on the subscription), mutated in place by
 	 * the trackers — iterate a snapshot (`[...customerProducts]`) while tracking.
@@ -31,6 +34,7 @@ export const createBillingChangeCollector = ({
 	customerProducts?: FullCusProduct[];
 }): BillingChangeCollector => ({
 	fullCustomer,
+	originalFullCustomer: structuredClone(fullCustomer),
 	customerProducts,
 	updatedCustomerProducts: [],
 	insertedCustomerProducts: [],
