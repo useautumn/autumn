@@ -53,10 +53,6 @@ import {
 } from "./providers/slack/files.js";
 import { findInstallationWithOrg } from "./providers/slack/installations.js";
 import { getRecentMessages } from "./providers/slack/threadContext.js";
-import {
-	generateThreadTitle,
-	persistThreadTitle,
-} from "./providers/web/threadTitle.js";
 import { runSlackAgentTurn } from "./providers/slack/actions/runSlackAgentTurn.js";
 import {
 	ANSWER_QUESTION_ACTION,
@@ -302,18 +298,11 @@ const runAndReply = async ({
 			return;
 		}
 
-		const isFollowUp = recentMessages?.some((m) => m.isBot) ?? false;
 		run = registerRun({
 			key: runKey,
 			kind: "message",
 			ownerProviderUserId: providerUserId,
 		});
-		// Label the thread off its opening message, in parallel with the run;
-		// persisted fire-and-forget below so the reply is never delayed.
-		const titlePromise =
-			!(isFollowUp || clientContext) && text.trim()
-				? generateThreadTitle({ logger, text })
-				: undefined;
 		const logAction = (message: string) => {
 			ticker.activity(message);
 		};
@@ -369,21 +358,6 @@ const runAndReply = async ({
 		const orgId =
 			output.kind === "blocked" ? outputInstallation.org_id : output.org.id;
 
-		if (titlePromise) {
-			void persistThreadTitle({
-				db,
-				env: output.env,
-				logger,
-				orgId,
-				thread: {
-					channelId,
-					provider: outputInstallation.provider,
-					threadId,
-					workspaceId: outputInstallation.workspace_id,
-				},
-				titlePromise,
-			});
-		}
 		if (output.kind === "blocked") {
 			ticker.stop();
 			await target.post({ markdown: output.text });

@@ -17,7 +17,6 @@ import {
 	WEB_CHAT_PROVIDER,
 } from "../../internal/installations/actions/ensureWebChatAuth.js";
 import { getOrgInstallationToken } from "../../internal/installations/actions/getOrgInstallationToken.js";
-import { db } from "../../lib/db.js";
 import { logger as rootLogger } from "../../lib/logger.js";
 import {
 	CATALOG_DECISION_NEEDED_MESSAGE,
@@ -26,7 +25,6 @@ import {
 } from "../../ui/messages.js";
 import { parsePreviewPayload } from "../../ui/previewContent.js";
 import { resolveDashboardEnv } from "./dashboardEnv.js";
-import { generateThreadTitle, persistThreadTitle } from "./threadTitle.js";
 import type { LeafUiMessage } from "./types.js";
 import { buildWebChatThreadId, webThreadRef } from "./webThread.js";
 
@@ -128,13 +126,6 @@ export const streamWebChat = async ({
 	const chatThreadId = buildWebChatThreadId({ conversationId, orgId, userId });
 	const thread = webThreadRef({ chatThreadId, orgId });
 
-	// Title the thread off its opening message, in parallel with the run — the
-	// session row it lands on is upserted by the engine during the run.
-	const titlePromise =
-		isFirstUserMessage && text.trim()
-			? generateThreadTitle({ logger, text })
-			: undefined;
-
 	const stream = createUIMessageStream<LeafUiMessage>({
 		execute: async ({ writer }) => {
 			await ensureWebChatAuth({ orgId, userId, userScopes: scopes });
@@ -204,26 +195,11 @@ export const streamWebChat = async ({
 				token: accessToken,
 			};
 
-			let output: Awaited<ReturnType<typeof runAgentTurn>>;
-			try {
-				output = await runAgentTurn({
-					ctx,
-					params: { attachments, clientContext, questionResponse, text },
-				});
-			} finally {
-				// Fire-and-forget so a failed run still labels the thread (the
-				// session row is upserted early in the run) and teardown stays fast.
-				if (titlePromise) {
-					void persistThreadTitle({
-						db,
-						env,
-						logger,
-						orgId,
-						thread,
-						titlePromise,
-					});
-				}
-			}
+			const output = await runAgentTurn({
+				ctx,
+				params: { attachments, clientContext, questionResponse, text },
+				titleSourceText: isFirstUserMessage ? text : undefined,
+			});
 
 			finishLastStep();
 			if (output.kind === "approval") {

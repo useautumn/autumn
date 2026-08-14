@@ -14,10 +14,14 @@ const executeSlackAgentTurn = async (
 ): Promise<SlackAgentTurnResult> => {
 	const setup = await setupSlackAgentTurn(params);
 	if (setup.kind === "blocked") return setup;
+	const isFollowUp =
+		params.recentMessages?.some((message) => message.isBot) ?? false;
 
 	const result = await runAgentTurn({
 		ctx: setup.context,
 		params: setup.params,
+		titleSourceText:
+			!isFollowUp && !params.clientContext ? params.text : undefined,
 	});
 	return {
 		...result,

@@ -2,18 +2,17 @@ import type { AutumnLogger } from "@autumn/logging";
 import type { AppEnv } from "@autumn/shared";
 import { Agent } from "@mastra/core/agent";
 import { z } from "zod";
-import type { AgentThreadRef } from "../../internal/agentRuntime/domain/agentTurnContext.js";
-import { buildAgentThreadKey } from "../../internal/agentRuntime/sessions/agentThreadKey.js";
-import { setHarnessSessionTitleIfEmpty } from "../../internal/agentRuntime/eve/repo.js";
-import { DEFAULT_CHAT_ENV_MODEL } from "../../lib/chatAgentConfig.js";
-import type { ChatDb } from "../../lib/db.js";
+import type { ChatDb } from "../../../lib/db.js";
+import { DEFAULT_CHAT_ENV_MODEL } from "../../../lib/chatAgentConfig.js";
+import type { AgentThreadRef } from "../domain/agentTurnContext.js";
+import { setHarnessSessionTitleIfEmpty } from "../eve/repo.js";
+import { buildAgentThreadKey } from "./agentThreadKey.js";
 
 const titleSchema = z.strictObject({ title: z.string().min(1).max(60) });
 
 const TITLE_INSTRUCTIONS = `You title chat conversations for a billing dashboard.
 Given the user's first message, produce a short noun-phrase title (3-6 words, no quotes, no trailing punctuation) describing what they want. Examples: "Increase Pro plan price", "Set up usage billing", "List current plans".`;
 
-/** Kick this off in parallel with the agent run — it's a cheap one-shot. */
 export const generateThreadTitle = async ({
 	logger,
 	text,
@@ -42,7 +41,6 @@ export const generateThreadTitle = async ({
 	}
 };
 
-/** Await only after the engine run — the session row must exist to title it. */
 export const persistThreadTitle = async ({
 	db,
 	env,
