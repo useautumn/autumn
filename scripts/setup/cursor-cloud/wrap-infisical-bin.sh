@@ -5,6 +5,10 @@
 # Cursor agent terminals often do not inherit start's env and may not see Runtime
 # Secrets. This shim mints or reuses ~/.cache/autumn-infisical-token, then execs
 # the real CLI. Laptop installs are untouched — Cloud install/start only.
+#
+# Machine-identity `run` also requires INFISICAL_PROJECT_ID (CLI 0.43.116 does
+# not read .infisical.json workspaceId for this auth mode). Load it from the
+# committed workspaceId when unset — do not store it as a Cursor Runtime Secret.
 set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/../../.." && pwd)"
 BIN="${ROOT}/node_modules/.bin/infisical"
@@ -41,6 +45,14 @@ fi
 if [ -z "\${INFISICAL_TOKEN:-}" ]; then
 	echo "infisical: no INFISICAL_TOKEN in this process and no cached token from start." >&2
 	echo "infisical: Runtime Secrets must be Team-scoped (not Environment). Repo environment.json does not inherit the dashboard environment's secrets." >&2
+	exit 1
+fi
+if [ -z "\${INFISICAL_PROJECT_ID:-}" ] && [ -f "${ROOT}/.infisical.json" ]; then
+	INFISICAL_PROJECT_ID="\$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1])).get("workspaceId") or "")' "${ROOT}/.infisical.json" 2>/dev/null || true)"
+	[ -n "\$INFISICAL_PROJECT_ID" ] && export INFISICAL_PROJECT_ID
+fi
+if [ -z "\${INFISICAL_PROJECT_ID:-}" ]; then
+	echo "infisical: machine identity requires INFISICAL_PROJECT_ID (workspaceId in .infisical.json)." >&2
 	exit 1
 fi
 exec "\$REAL" "\$@"
