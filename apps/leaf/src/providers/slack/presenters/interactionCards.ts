@@ -1,64 +1,79 @@
 import type { CatalogDecisionModel } from "@autumn/render";
 import { formatMoney } from "@autumn/render";
-import type { AppEnv, CatalogPlanPreview } from "@autumn/shared";
+import { AppEnv, type CatalogPlanPreview } from "@autumn/shared";
 import { Actions, Button, Card, type CardChild, CardText } from "chat";
+import { z } from "zod";
 
-/** Compact JSON payloads carried in Slack button values (2000-char cap). */
-export type QuestionButtonPayload = {
-	/** AppEnv */
-	e: string;
-	/** orgId */
-	g: string;
-	/** option label, for the answered-card record */
-	l: string;
-	/** optionId */
-	o: string;
-	/** prompt (truncated), for the answered-card record */
-	q: string;
-	/** requestId */
-	r: string;
-	/** eve sessionId */
-	s: string;
+const questionButtonPayloadSchema = z.strictObject({
+	e: z.nativeEnum(AppEnv),
+	g: z.string(),
+	l: z.string(),
+	o: z.string(),
+	q: z.string(),
+	r: z.string(),
+	s: z.string(),
+});
+
+const catalogDecisionButtonPayloadSchema = z.strictObject({
+	e: z.nativeEnum(AppEnv),
+	g: z.string(),
+	l: z.string(),
+	m: z.union([z.literal(0), z.literal(1)]),
+	p: z.string(),
+	pv: z.array(z.string()),
+	v: z.string(),
+});
+
+type QuestionButtonPayload = z.infer<typeof questionButtonPayloadSchema>;
+type CatalogDecisionButtonPayload = z.infer<
+	typeof catalogDecisionButtonPayloadSchema
+>;
+
+const parsePayload = <T>({
+	schema,
+	value,
+}: {
+	schema: z.ZodType<T>;
+	value?: string;
+}): T | null => {
+	if (!value) return null;
+	try {
+		const parsed = schema.safeParse(JSON.parse(value));
+		return parsed.success ? parsed.data : null;
+	} catch {
+		return null;
+	}
 };
 
-export type CatalogDecisionButtonPayload = {
-	/** AppEnv */
-	e: string;
-	/** orgId */
-	g: string;
-	/** choice label, for the submitted-card record */
-	l: string;
-	/** migrationDraft */
-	m: 0 | 1;
-	/** planId */
-	p: string;
-	/** propagate variant ids */
-	pv: string[];
-	/** versioning choice */
-	v: string;
-};
+export const parseQuestionButtonPayload = (value?: string) =>
+	parsePayload({ schema: questionButtonPayloadSchema, value });
+
+export const parseCatalogDecisionButtonPayload = (value?: string) =>
+	parsePayload({ schema: catalogDecisionButtonPayloadSchema, value });
 
 const PROMPT_PAYLOAD_MAX = 400;
 const SLACK_BUTTON_VALUE_MAX = 2000;
+const ANSWER_QUESTION_ACTION = "answer_agent_question";
+const CATALOG_DECISION_ACTION = "catalog_decision_choice";
+const MAX_ACTION_BUTTONS = 10;
+const BUTTON_LABEL_MAX = 75;
+
+const indexedActionIds = (action: string) =>
+	Array.from(
+		{ length: MAX_ACTION_BUTTONS },
+		(_, index) => `${action}_${index}`,
+	);
+
+export const questionAnswerActionIds = indexedActionIds(ANSWER_QUESTION_ACTION);
+export const catalogDecisionActionIds = indexedActionIds(
+	CATALOG_DECISION_ACTION,
+);
 
 const truncatePrompt = (prompt: string) =>
 	prompt.length > PROMPT_PAYLOAD_MAX
 		? `${prompt.slice(0, PROMPT_PAYLOAD_MAX)}…`
 		: prompt;
 
-export const ANSWER_QUESTION_ACTION = "answer_agent_question";
-export const CATALOG_DECISION_ACTION = "catalog_decision_choice";
-
-// Slack requires unique action_ids within a block, so each button gets an
-// indexed id; handlers register the full indexed set.
-export const MAX_ACTION_BUTTONS = 10;
-export const indexedActionIds = (action: string) =>
-	Array.from(
-		{ length: MAX_ACTION_BUTTONS },
-		(_, index) => `${action}_${index}`,
-	);
-
-const BUTTON_LABEL_MAX = 75;
 const buttonLabel = (label: string) =>
 	label.length > BUTTON_LABEL_MAX
 		? `${label.slice(0, BUTTON_LABEL_MAX - 1)}…`
@@ -110,7 +125,6 @@ export const questionCard = ({
 	});
 };
 
-/** The question card after someone answered — buttons collapse to a record. */
 export const questionAnsweredCard = ({
 	actorId,
 	answerLabel,
@@ -130,7 +144,6 @@ export const questionAnsweredCard = ({
 		],
 	});
 
-/** The decision card after someone chose — buttons collapse to a record. */
 export const catalogDecisionSubmittedCard = ({
 	actorId,
 	choiceLabel,
@@ -169,9 +182,6 @@ const variantLines = (model: CatalogDecisionModel) => {
 	return [`**Variants**`, ...lines];
 };
 
-/** Versioning / variant / migration decisions as one-click buttons. The
- * defaults (conflict-free variant propagation, no migration) ride in each
- * button's payload; refinements can be typed in the thread instead. */
 export const catalogDecisionCard = ({
 	env,
 	model,
@@ -204,8 +214,6 @@ export const catalogDecisionCard = ({
 		v: choice,
 	});
 
-	// Slack rejects button values over the cap outright, which would leave the
-	// click dead; shedding the propagate list degrades to a model re-confirm.
 	const payloadValue = (payload: CatalogDecisionButtonPayload) => {
 		const value = JSON.stringify(payload);
 		if (value.length <= SLACK_BUTTON_VALUE_MAX) return value;

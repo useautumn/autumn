@@ -23,7 +23,7 @@ import { runSlackAgentTurn } from "../../src/providers/slack/actions/runSlackAge
 import type { SlackChatInstallation } from "../../src/providers/slack/domain/slackAgentTurn.js";
 import { createEveSlackPresenter } from "../../src/providers/slack/evePresenter.js";
 import { findInstallationWithOrg } from "../../src/providers/slack/installations.js";
-import { catalogDecisionCard } from "../../src/ui/eveCards.js";
+import { catalogDecisionCard } from "../../src/providers/slack/presenters/interactionCards.js";
 import { createStatusTicker } from "../../src/ui/statusTicker.js";
 
 const WORKSPACE_ID = process.env.E2E_SLACK_WORKSPACE ?? "T07NPTDCU69";

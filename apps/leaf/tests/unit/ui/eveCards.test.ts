@@ -1,6 +1,9 @@
 import { describe, expect, test } from "bun:test";
 import { AppEnv } from "@autumn/shared";
-import { catalogDecisionCard, questionCard } from "../../../src/ui/eveCards.js";
+import {
+	catalogDecisionCard,
+	questionCard,
+} from "../../../src/providers/slack/presenters/interactionCards.js";
 
 const collectActionIds = (card: unknown): string[] => {
 	const ids: string[] = [];

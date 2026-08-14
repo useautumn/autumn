@@ -1,6 +1,7 @@
+import { ms } from "@autumn/shared";
 import type { StatusTicker } from "../../ui/statusTicker.js";
 
-const REASONING_STATUS_INTERVAL_MS = 3000;
+const REASONING_STATUS_INTERVAL_MS = ms.seconds(3);
 const REASONING_STATUS_MAX_CHARS = 100;
 
 const reasoningSnippet = (text: string) => {

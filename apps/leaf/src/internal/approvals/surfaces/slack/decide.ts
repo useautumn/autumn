@@ -7,15 +7,15 @@ import {
 import type { ActionEvent } from "chat";
 import { differenceInMilliseconds } from "date-fns";
 import { and, eq } from "drizzle-orm";
-import { resolveSlackCallerAuth } from "../../../../providers/slack/setup/resolveSlackCallerAuth.js";
-import { discardApproval } from "../../actions/discardApproval.js";
 import { db } from "../../../../lib/db.js";
 import { logger as rootLogger } from "../../../../lib/logger.js";
+import { questionCard } from "../../../../providers/slack/presenters/interactionCards.js";
+import { resolveSlackCallerAuth } from "../../../../providers/slack/setup/resolveSlackCallerAuth.js";
 import { approvalStatusCard } from "../../../../ui/blocks.js";
-import { questionCard } from "../../../../ui/eveCards.js";
 import { createThrottledCardEditor } from "../../../../ui/throttledEditor.js";
 import { validateSlackAdminAccess } from "../../../slackAdmin/access.js";
 import { isInternalAutumnSlackProvider } from "../../../slackAdmin/provider.js";
+import { discardApproval } from "../../actions/discardApproval.js";
 import { resolveApproval } from "../../actions/resolveApproval.js";
 import { chatApprovalRepo } from "../../repos/chatApprovalRepo.js";
 import type {
