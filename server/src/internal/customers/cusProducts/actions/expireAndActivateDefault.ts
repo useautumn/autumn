@@ -55,8 +55,6 @@ export const expireCustomerProductAndActivateDefault = async ({
 		...extraUpdates,
 	};
 
-	// Executing through the shared plan runs the license lifecycle when the
-	// expiring product carried license state.
 	await executeAutumnBillingPlan({
 		ctx,
 		autumnBillingPlan: {
@@ -75,7 +73,6 @@ export const expireCustomerProductAndActivateDefault = async ({
 		`[expireCustomerProduct]: expiring ${customerProduct.product.name}`,
 	);
 
-	// Update full customer
 	fullCustomer.customer_products = fullCustomer.customer_products.map((cp) =>
 		cp.id === customerProduct.id
 			? ({ ...cp, ...updates } as FullCusProduct)

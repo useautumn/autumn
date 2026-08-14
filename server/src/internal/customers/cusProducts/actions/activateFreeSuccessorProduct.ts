@@ -89,7 +89,6 @@ export const activateFreeSuccessorProduct = async ({
 			...updates,
 		} as FullCusProduct;
 
-		// Update fullCustomer in memory
 		fullCustomer.customer_products = fullCustomer.customer_products.map((cp) =>
 			cp.id === scheduledCustomerProduct.id ? activatedCustomerProduct : cp,
 		);

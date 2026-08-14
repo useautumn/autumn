@@ -68,8 +68,6 @@ export const activateScheduledCustomerProduct = async ({
 			})
 		: [];
 
-	// Executing through the shared plan runs the license lifecycle for
-	// activations that bring license-bearing parents live.
 	await executeAutumnBillingPlan({
 		ctx,
 		autumnBillingPlan: {
