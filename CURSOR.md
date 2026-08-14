@@ -39,7 +39,8 @@ that cannot decrypt vault/DB Dragonfly backups (BAD_DECRYPT). Do not pin dummy
 dummy keys make S3 edge-config fail (`Access Key Id does not exist`).
 `agent-services.sh` CreateQueue-s `autumn.fifo`, `autumn-track.fifo`,
 `autumn-track-async`, and `autumn-stripe-webhook.fifo` (snapshot conf may
-only have `autumn.fifo`).
+only have `autumn.fifo`). Misc Redis **backup** from S3 edge-config is
+skipped under `DW_HEADLESS=1` so workers do not connect to Dragonfly Cloud.
 
 ```sh
 bun dw          # provision-if-needed is a no-op without Neon; starts the app

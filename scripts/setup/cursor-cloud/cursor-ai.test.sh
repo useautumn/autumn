@@ -120,6 +120,9 @@ if bash "$ROOT/scripts/setup/cursor-cloud/with-isolation.sh" printenv MISC_CACHE
 fi
 neon="$(bash "$ROOT/scripts/setup/cursor-cloud/with-isolation.sh" bash -c 'printf %s "${NEON_WORKTREE_API_KEY-}"')"
 [[ -z "$neon" ]] || fail "NEON_WORKTREE_API_KEY should be unset"
+export CACHE_BACKUP_URL="rediss://example.dragonflydb.cloud:6385"
+backup="$(bash "$ROOT/scripts/setup/cursor-cloud/with-isolation.sh" bash -c 'printf %s "${CACHE_BACKUP_URL-}"')"
+[[ -z "$backup" ]] || fail "CACHE_BACKUP_URL should be unset, got $backup"
 sqs="$(bash "$ROOT/scripts/setup/cursor-cloud/with-isolation.sh" printenv SQS_QUEUE_URL)"
 [[ "$sqs" == *localhost:9324* ]] || fail "SQS overlay, got $sqs"
 pass "with-isolation.sh overlays Infisical laptop Redis/SQS"
