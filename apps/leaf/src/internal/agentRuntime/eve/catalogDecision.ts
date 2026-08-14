@@ -4,16 +4,16 @@ import type {
 	CatalogPlanPreview,
 	CatalogPreviewUpdateResponse,
 } from "@autumn/shared";
-import type { ThreadRef } from "../../agent/runMessage/types.js";
-import { normalizeToolName } from "../../agent/tools/toolPolicy.js";
-import { fetchApprovalPreview } from "../../internal/approvals/utils/fetchApprovalPreview.js";
+import type { ThreadRef } from "../../../agent/runMessage/types.js";
+import { normalizeToolName } from "../../../agent/tools/toolPolicy.js";
+import { fetchApprovalPreview } from "../../approvals/utils/fetchApprovalPreview.js";
 import {
 	publicToolArgs,
 	toolRequestFromArgs,
-} from "../../internal/approvals/utils/toolRequest.js";
-import { db } from "../../lib/db.js";
-import type { Suspension } from "../../types.js";
-import { parsePreviewPayload } from "../../ui/previewContent.js";
+} from "../../approvals/utils/toolRequest.js";
+import { db } from "../../../lib/db.js";
+import type { Suspension } from "../../../types.js";
+import { parsePreviewPayload } from "../../../ui/previewContent.js";
 import { adoptPostedEveSession } from "./adoptPostedSession.js";
 import { siblingRequestIdsFromToolArgs } from "./classifyParkedInput.js";
 import { postEveInputResponse } from "./client.js";

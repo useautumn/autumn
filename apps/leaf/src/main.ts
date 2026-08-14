@@ -6,7 +6,7 @@ import type { UIMessage } from "ai";
 import type { Message } from "chat";
 import { type Context, Hono } from "hono";
 import { bot, chatAdapterNames } from "./bot.js";
-import { getEveSession } from "./harness/eve/repo.js";
+import { getEveSession } from "./internal/agentRuntime/eve/repo.js";
 import { decideWebApproval } from "./internal/approvals/surfaces/web/decide.js";
 import { listWebApprovals } from "./internal/approvals/surfaces/web/list.js";
 import { WEB_CHAT_PROVIDER } from "./internal/installations/actions/ensureWebChatAuth.js";

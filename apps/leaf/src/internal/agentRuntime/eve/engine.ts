@@ -1,12 +1,12 @@
 import type {
 	MessageContext,
 	MessageParams,
-} from "../../agent/runMessage/types.js";
+} from "../../../agent/runMessage/types.js";
 import {
 	type AutumnOrgContext,
 	autumnOrgContextService,
-} from "../../internal/autumnMcp/orgContextService.js";
-import { db } from "../../lib/db.js";
+} from "../../autumnMcp/orgContextService.js";
+import { db } from "../../../lib/db.js";
 import { consumeEveTurn } from "./consumeEveTurn.js";
 import { getEveSession } from "./repo.js";
 import { resolveEveTurnOutcome } from "./resolveTurnOutcome.js";

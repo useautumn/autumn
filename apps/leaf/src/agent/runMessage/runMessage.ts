@@ -1,6 +1,6 @@
 import type { ChatInstallation } from "@autumn/shared";
-import { runEveMessage } from "../../harness/eve/engine.js";
-import { findEveSessionForThread } from "../../harness/eve/repo.js";
+import { runEveMessage } from "../../internal/agentRuntime/eve/engine.js";
+import { findEveSessionForThread } from "../../internal/agentRuntime/eve/repo.js";
 import { getInstallationOAuthAccessToken } from "../../internal/installations/actions/getInstallationOAuthAccessToken.js";
 import { MESSAGE_TIMEOUT_MS } from "../../lib/chatAgentConfig.js";
 import { db } from "../../lib/db.js";

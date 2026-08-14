@@ -1,12 +1,12 @@
 import type { ChatApproval } from "@autumn/shared";
-import { chatApprovalRepo } from "../../internal/approvals/repos/chatApprovalRepo.js";
-import type { ApprovalRunResult } from "../../internal/approvals/types.js";
-import { fetchApprovalPreview } from "../../internal/approvals/utils/fetchApprovalPreview.js";
-import { toolRequestFromArgs } from "../../internal/approvals/utils/toolRequest.js";
-import { getOrgInstallationToken } from "../../internal/installations/actions/getOrgInstallationToken.js";
-import { db } from "../../lib/db.js";
-import { logger } from "../../lib/logger.js";
-import { APPROVAL_NOT_EXECUTED_MESSAGE } from "../../ui/messages.js";
+import { chatApprovalRepo } from "../../approvals/repos/chatApprovalRepo.js";
+import type { ApprovalRunResult } from "../../approvals/types.js";
+import { fetchApprovalPreview } from "../../approvals/utils/fetchApprovalPreview.js";
+import { toolRequestFromArgs } from "../../approvals/utils/toolRequest.js";
+import { getOrgInstallationToken } from "../../installations/actions/getOrgInstallationToken.js";
+import { db } from "../../../lib/db.js";
+import { logger } from "../../../lib/logger.js";
+import { APPROVAL_NOT_EXECUTED_MESSAGE } from "../../../ui/messages.js";
 import { adoptPostedEveSession } from "./adoptPostedSession.js";
 import {
 	type ChainedPendingRequest,
@@ -15,12 +15,14 @@ import {
 	siblingRequestIdsFromToolArgs,
 } from "./classifyParkedInput.js";
 import {
-	EveStreamIdleTimeoutError,
 	postEveInputResponse,
-	resyncEveStreamIndex,
 	streamEveEvents,
 } from "./client.js";
 import { approvalOptionIds, type EveInputRequest } from "./events.js";
+import {
+	denyOptionFromApproval,
+	drainParkedEveTurn,
+} from "./parkedTurn.js";
 import { getEveSessionBySessionId, upsertEveSession } from "./repo.js";
 import type { EveAuthContext, EveSessionRef } from "./types.js";
 
@@ -29,13 +31,6 @@ export const approveOptionFromApproval = (approval: ChatApproval) => {
 	return typeof args._eveApproveOptionId === "string"
 		? args._eveApproveOptionId
 		: "approve";
-};
-
-export const denyOptionFromApproval = (approval: ChatApproval) => {
-	const args = approval.tool_args as Record<string, unknown>;
-	return typeof args._eveDenyOptionId === "string"
-		? args._eveDenyOptionId
-		: "deny";
 };
 
 const authFromApproval = (
@@ -50,134 +45,6 @@ const authFromApproval = (
 	threadId: approval.channel_id,
 	workspaceId: approval.workspace_id,
 });
-
-const DRAIN_DENY_NOTE =
-	"(The user sent a newer message before this was shown, so it was withdrawn. Do not rebuild or ask anything — reply with nothing; act on the user's next message instead.)";
-const MAX_DRAIN_DENIES = 3;
-/** Drain discards a dead-end turn — give up on silence much sooner than a
- * live run would, an incomplete drain beats blocking the user's message. */
-const DRAIN_IDLE_TIMEOUT_MS = 60_000;
-
-/** Consumes (and discards) the turn that resumes after a deny, so its reply
- * never posts and the next user message streams from a clean park. Any gated
- * write the model chains into during the drain is denied too. */
-export const drainParkedEveTurn = async ({
-	auth,
-	orgId,
-	session,
-}: {
-	auth: EveAuthContext;
-	orgId: string;
-	session: EveSessionRef;
-}) => {
-	let denies = 0;
-	while (true) {
-		let parkedAgain = false;
-		// Per-iteration: a chained deny reopens the stream, and replayed terminal
-		// events must not be accepted before that stream's own turn.started.
-		let turnStarted = false;
-		try {
-			for await (const event of streamEveEvents({
-				auth,
-				idleTimeoutMs: DRAIN_IDLE_TIMEOUT_MS,
-				session,
-			})) {
-				session.state.streamIndex += 1;
-				session.state.lastEventAt = Date.now();
-				if (event.type === "turn.started") {
-					turnStarted = true;
-				} else if (event.type === "input.requested") {
-					const parked = classifyParkedEveInput({
-						requests: (event.data?.requests ?? []) as EveInputRequest[],
-					});
-					if (parked?.kind === "gated" && denies < MAX_DRAIN_DENIES) {
-						denies += 1;
-						const options = approvalOptionIds({
-							options: parked.chained.options,
-						});
-						const posted = await postEveInputResponse({
-							auth,
-							note: DRAIN_DENY_NOTE,
-							optionId: options.deny,
-							requestId: parked.chained.requestId,
-							session,
-							siblingRequestIds: parked.siblingRequestIds,
-						});
-						adoptPostedEveSession({ posted, session });
-						parkedAgain = true;
-						break;
-					}
-					// An ask_question park is fine — the next user message answers it.
-					session.state.status = "waiting";
-					break;
-				} else if (
-					turnStarted &&
-					(event.type === "session.waiting" ||
-						event.type === "session.completed" ||
-						event.type === "turn.failed" ||
-						event.type === "session.failed")
-				) {
-					session.state.status =
-						event.type === "session.completed" ? "completed" : "waiting";
-					break;
-				}
-			}
-		} catch (error) {
-			if (!(error instanceof EveStreamIdleTimeoutError)) throw error;
-			// The parked turn died silently — heal the cursor and move on so
-			// the user's new message isn't blocked behind a dead drain.
-			await resyncEveStreamIndex({ auth, session });
-			session.state.status = "waiting";
-		}
-		if (!parkedAgain) break;
-	}
-	await upsertEveSession({
-		db,
-		env: session.env,
-		orgId,
-		sessionId: session.sessionId,
-		state: session.state,
-		threadKey: session.threadKey,
-	});
-};
-
-/** Withdraws a parked gated write silently (no card was ever shown) and
- * drains the resumed turn — used when a newer user message is already queued,
- * so the thread gets exactly one response. */
-export const withdrawEveSuspension = async ({
-	auth,
-	orgId,
-	runId,
-	suspension,
-}: {
-	auth: EveAuthContext;
-	orgId: string;
-	runId: string;
-	suspension: { toolArgs: Record<string, unknown>; toolCallId?: string };
-}) => {
-	if (!suspension.toolCallId) return false;
-	const session = await getEveSessionBySessionId({
-		db,
-		orgId,
-		sessionId: runId,
-	});
-	if (!session) return false;
-	const denyOptionId =
-		typeof suspension.toolArgs._eveDenyOptionId === "string"
-			? suspension.toolArgs._eveDenyOptionId
-			: "deny";
-	const posted = await postEveInputResponse({
-		auth,
-		note: DRAIN_DENY_NOTE,
-		optionId: denyOptionId,
-		requestId: suspension.toolCallId,
-		session,
-		siblingRequestIds: siblingRequestIdsFromToolArgs(suspension.toolArgs),
-	});
-	adoptPostedEveSession({ posted, session, status: "running" });
-	await drainParkedEveTurn({ auth, orgId, session });
-	return true;
-};
 
 const collectText = async ({
 	auth,

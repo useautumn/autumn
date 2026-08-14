@@ -1,8 +1,8 @@
 import type { AppEnv, CatalogPlanPreview, ChatProvider } from "@autumn/shared";
 import { normalizeToolName } from "../../agent/tools/toolPolicy.js";
 import { extractUserMessageText } from "../../harness/common/messageText.js";
-import { catalogPlanNeedingDecision } from "../../harness/eve/catalogDecision.js";
-import { streamEveEvents } from "../../harness/eve/client.js";
+import { catalogPlanNeedingDecision } from "../../internal/agentRuntime/eve/catalogDecision.js";
+import { streamEveEvents } from "../../internal/agentRuntime/eve/client.js";
 import {
 	displayEveToolLabel,
 	type EveAction,
@@ -11,8 +11,11 @@ import {
 	isPreviewToolName,
 	labelForResult,
 	textForInputRequests,
-} from "../../harness/eve/events.js";
-import type { EveAuthContext, EveSessionRef } from "../../harness/eve/types.js";
+} from "../../internal/agentRuntime/eve/events.js";
+import type {
+	EveAuthContext,
+	EveSessionRef,
+} from "../../internal/agentRuntime/eve/types.js";
 import { chatApprovalRepo } from "../../internal/approvals/repos/chatApprovalRepo.js";
 import type { ChatDb } from "../../lib/db.js";
 import { parsePreviewPayload } from "../../ui/previewContent.js";

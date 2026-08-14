@@ -1,9 +1,9 @@
 import { AppEnv, harnessSessions } from "@autumn/shared";
 import { all } from "better-all";
 import { and, desc, eq, isNull, like } from "drizzle-orm";
-import type { ThreadRef } from "../../agent/runMessage/types.js";
-import type { ChatDb } from "../../lib/db.js";
-import { buildThreadKey } from "../common/threadKey.js";
+import type { ThreadRef } from "../../../agent/runMessage/types.js";
+import type { ChatDb } from "../../../lib/db.js";
+import { buildThreadKey } from "../../../harness/common/threadKey.js";
 import {
 	type EveSessionRef,
 	type EveSessionState,

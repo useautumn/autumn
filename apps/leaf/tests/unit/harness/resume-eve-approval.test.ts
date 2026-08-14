@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, mock, test } from "bun:test";
 import { AppEnv, type ChatApproval } from "@autumn/shared";
-import type { EveEvent } from "../../../src/harness/eve/client.js";
-import type { EveSessionRef } from "../../../src/harness/eve/types.js";
+import type { EveEvent } from "../../../src/internal/agentRuntime/eve/client.js";
+import type { EveSessionRef } from "../../../src/internal/agentRuntime/eve/types.js";
 import { mockModuleWithRestore } from "../utils/mockModuleWithRestore.js";
 
 // Stubbed first and left stubbed: `env` parses leaf's whole schema at import and
@@ -24,8 +24,9 @@ const postedResponses: {
 	requestId: string;
 	siblingRequestIds?: string[];
 }[] = [];
+let session: EveSessionRef;
 await mockLeafModule({
-	specifier: "../../../src/harness/eve/client.js",
+	specifier: "../../../src/internal/agentRuntime/eve/client.js",
 	factory: () => ({
 		postEveInputResponse: async (input: {
 			optionId: string;
@@ -45,9 +46,8 @@ await mockLeafModule({
 	}),
 });
 
-let session: EveSessionRef;
 await mockLeafModule({
-	specifier: "../../../src/harness/eve/repo.js",
+	specifier: "../../../src/internal/agentRuntime/eve/repo.js",
 	factory: () => ({
 		getEveSessionBySessionId: async () => session,
 		upsertEveSession: async () => undefined,
@@ -69,7 +69,7 @@ await mockLeafModule({
 });
 
 const { denyEveApproval, resumeEveApproval } = await import(
-	"../../../src/harness/eve/approval.js"
+	"../../../src/internal/agentRuntime/eve/approval.js"
 );
 
 const approval = (toolArgs: Record<string, unknown> = {}) =>

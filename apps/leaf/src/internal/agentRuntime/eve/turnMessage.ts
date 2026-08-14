@@ -1,7 +1,7 @@
-import type { MessageParams } from "../../agent/runMessage/types.js";
-import type { AutumnOrgContext } from "../../internal/autumnMcp/orgContextService.js";
-import { env as leafEnv } from "../../lib/env.js";
-import { buildHarnessMessageText } from "../common/messageText.js";
+import type { MessageParams } from "../../../agent/runMessage/types.js";
+import type { AutumnOrgContext } from "../../autumnMcp/orgContextService.js";
+import { env as leafEnv } from "../../../lib/env.js";
+import { buildHarnessMessageText } from "../../../harness/common/messageText.js";
 import type { EveMessageContent } from "./client.js";
 
 /** The turn's payload for eve. Attachments ride as file parts (base64 `data:`

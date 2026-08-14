@@ -2,7 +2,7 @@ import { describe, expect, test } from "bun:test";
 import {
 	classifyParkedEveInput,
 	siblingRequestIdsFromToolArgs,
-} from "../../../src/harness/eve/classifyParkedInput.js";
+} from "../../../src/internal/agentRuntime/eve/classifyParkedInput.js";
 
 // Every park blocks the run until it is answered, so the only wrong answer is
 // `undefined` — each case pins one park shape to the surface that can answer it.

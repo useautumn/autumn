@@ -1,4 +1,4 @@
-import { normalizeToolName, toolGerund } from "../../agent/tools/toolPolicy.js";
+import { normalizeToolName, toolGerund } from "../../../agent/tools/toolPolicy.js";
 
 export type EveAction = {
 	callId?: string;

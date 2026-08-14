@@ -1,4 +1,4 @@
-import { env } from "../../lib/env.js";
+import { env } from "../../../lib/env.js";
 import { isRetryableEveStreamError } from "./streamErrors.js";
 import type { EveAuthContext, EveSessionRef } from "./types.js";
 

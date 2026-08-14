@@ -1,13 +1,13 @@
 import type { AutumnLogger } from "@autumn/logging";
 import type { ChatApproval } from "@autumn/shared";
-import type { ThreadRef } from "../../agent/runMessage/types.js";
-import { chatApprovalRepo } from "../../internal/approvals/repos/chatApprovalRepo.js";
-import { db } from "../../lib/db.js";
-import { APPROVAL_STILL_OPEN_MESSAGE } from "../../ui/messages.js";
+import type { ThreadRef } from "../../../agent/runMessage/types.js";
+import { chatApprovalRepo } from "../../approvals/repos/chatApprovalRepo.js";
+import { db } from "../../../lib/db.js";
+import { APPROVAL_STILL_OPEN_MESSAGE } from "../../../ui/messages.js";
 import { adoptPostedEveSession } from "./adoptPostedSession.js";
-import { denyOptionFromApproval, drainParkedEveTurn } from "./approval.js";
 import { siblingRequestIdsFromToolArgs } from "./classifyParkedInput.js";
 import { postEveInputResponse } from "./client.js";
+import { denyOptionFromApproval, drainParkedEveTurn } from "./parkedTurn.js";
 import { saveEveSessionState } from "./sessionState.js";
 import type { EveAuthContext, EveSessionRef } from "./types.js";
 

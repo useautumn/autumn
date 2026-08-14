@@ -1,4 +1,4 @@
-import { denyEveApproval } from "../../../../harness/eve/approval.js";
+import { denyEveApproval } from "../../../agentRuntime/eve/approval.js";
 import { db } from "../../../../lib/db.js";
 import { logger } from "../../../../lib/logger.js";
 import { resolveApproval } from "../../actions/resolveApproval.js";

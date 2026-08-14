@@ -1,7 +1,7 @@
 import type { AutumnLogger } from "@autumn/logging";
 import type { AppEnv } from "@autumn/shared";
-import type { ActiveRun } from "../../internal/runs/runRegistry.js";
-import { AGENT_UNREACHABLE_MESSAGE } from "../../ui/messages.js";
+import type { ActiveRun } from "../../runs/runRegistry.js";
+import { AGENT_UNREACHABLE_MESSAGE } from "../../../ui/messages.js";
 import {
 	applyEveEvent,
 	closeReasoningStream,

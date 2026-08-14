@@ -13,8 +13,8 @@ import { runMessage } from "../../src/agent/runMessage/runMessage.js";
 import {
 	answerEveQuestion,
 	denyEveApproval,
-} from "../../src/harness/eve/approval.js";
-import { redirectCatalogSuspensionToDecision } from "../../src/harness/eve/catalogDecision.js";
+} from "../../src/internal/agentRuntime/eve/approval.js";
+import { redirectCatalogSuspensionToDecision } from "../../src/internal/agentRuntime/eve/catalogDecision.js";
 import { resolveApproval } from "../../src/internal/approvals/actions/resolveApproval.js";
 import { chatApprovalRepo } from "../../src/internal/approvals/repos/chatApprovalRepo.js";
 import { presentApproval } from "../../src/internal/approvals/surfaces/slack/present.js";

@@ -3,7 +3,7 @@ import type { ThreadRef } from "../../agent/runMessage/types.js";
 import {
 	deleteHarnessSessionsByPrefix,
 	listHarnessSessions,
-} from "../../harness/eve/repo.js";
+} from "../../internal/agentRuntime/eve/repo.js";
 import { WEB_CHAT_PROVIDER } from "../../internal/installations/actions/ensureWebChatAuth.js";
 import type { ChatDb } from "../../lib/db.js";
 

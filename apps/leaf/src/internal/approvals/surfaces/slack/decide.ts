@@ -6,7 +6,7 @@ import {
 import type { ActionEvent } from "chat";
 import { and, eq } from "drizzle-orm";
 import { resolveSlackCallerAuth } from "../../../../agent/runMessage/setup/resolveSlackCallerAuth.js";
-import { denyEveApproval } from "../../../../harness/eve/approval.js";
+import { denyEveApproval } from "../../../agentRuntime/eve/approval.js";
 import { db } from "../../../../lib/db.js";
 import { logger as rootLogger } from "../../../../lib/logger.js";
 import { approvalStatusCard } from "../../../../ui/blocks.js";

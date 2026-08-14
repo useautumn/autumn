@@ -1,9 +1,9 @@
-import { writeToPreviewTool } from "../../internal/approvals/utils/toolRegistry.js";
+import { writeToPreviewTool } from "../../approvals/utils/toolRegistry.js";
 import {
 	isSameToolRequest,
 	toolRequestFromArgs,
-} from "../../internal/approvals/utils/toolRequest.js";
-import { parsePreviewPayload } from "../../ui/previewContent.js";
+} from "../../approvals/utils/toolRequest.js";
+import { parsePreviewPayload } from "../../../ui/previewContent.js";
 
 /** A preview payload kept with the (normalized) preview tool that produced it
  * and the request it was previewing. */

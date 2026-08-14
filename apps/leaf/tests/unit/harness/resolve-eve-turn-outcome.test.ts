@@ -11,7 +11,7 @@ mock.module("../../../src/lib/db.js", () => ({ db: {} }));
 const deletedSessionIds: string[] = [];
 await mockModuleWithRestore({
 	baseUrl: import.meta.url,
-	specifier: "../../../src/harness/eve/repo.js",
+	specifier: "../../../src/internal/agentRuntime/eve/repo.js",
 	factory: () => ({
 		deleteEveSession: async ({ sessionId }: { sessionId: string }) => {
 			deletedSessionIds.push(sessionId);
@@ -20,7 +20,7 @@ await mockModuleWithRestore({
 });
 
 const { resolveEveTurnOutcome } = await import(
-	"../../../src/harness/eve/resolveTurnOutcome.js"
+	"../../../src/internal/agentRuntime/eve/resolveTurnOutcome.js"
 );
 
 const logger = { warn: () => {} } as unknown as AutumnLogger;

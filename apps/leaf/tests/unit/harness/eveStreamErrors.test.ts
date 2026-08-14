@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { isRetryableEveStreamError } from "../../../src/harness/eve/streamErrors.js";
+import { isRetryableEveStreamError } from "../../../src/internal/agentRuntime/eve/streamErrors.js";
 
 describe("isRetryableEveStreamError", () => {
 	test("recognizes the production Bun socket closure", () => {

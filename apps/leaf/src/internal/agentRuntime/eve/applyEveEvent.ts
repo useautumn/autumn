@@ -2,13 +2,13 @@ import type { AppEnv, CatalogPlanPreview } from "@autumn/shared";
 import {
 	isSilentTool,
 	normalizeToolName,
-} from "../../agent/tools/toolPolicy.js";
-import { toolRequestFromArgs } from "../../internal/approvals/utils/toolRequest.js";
-import { executeAutumnMcpTool } from "../../internal/autumnMcp/client.js";
-import type { RunStopReason } from "../../internal/runs/runRegistry.js";
-import type { Suspension } from "../../types.js";
-import { WAITING_FOR_INPUT_MESSAGE } from "../../ui/messages.js";
-import { parsePreviewPayload } from "../../ui/previewContent.js";
+} from "../../../agent/tools/toolPolicy.js";
+import { toolRequestFromArgs } from "../../approvals/utils/toolRequest.js";
+import { executeAutumnMcpTool } from "../../autumnMcp/client.js";
+import type { RunStopReason } from "../../runs/runRegistry.js";
+import type { Suspension } from "../../../types.js";
+import { WAITING_FOR_INPUT_MESSAGE } from "../../../ui/messages.js";
+import { parsePreviewPayload } from "../../../ui/previewContent.js";
 import {
 	catalogPlanNeedingDecision,
 	enrichCatalogPreview,

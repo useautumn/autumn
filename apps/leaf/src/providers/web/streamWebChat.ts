@@ -9,8 +9,8 @@ import type {
 	MessageAttachment,
 	MessageContext,
 } from "../../agent/runMessage/types.js";
-import { redirectCatalogSuspensionToDecision } from "../../harness/eve/catalogDecision.js";
-import { runEveMessage } from "../../harness/eve/engine.js";
+import { redirectCatalogSuspensionToDecision } from "../../internal/agentRuntime/eve/catalogDecision.js";
+import { runEveMessage } from "../../internal/agentRuntime/eve/engine.js";
 import { presentWebApproval } from "../../internal/approvals/surfaces/web/present.js";
 import {
 	ensureWebChatAuth,

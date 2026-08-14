@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { previewForParkedWrite } from "../../../src/harness/eve/parkedWritePreview.js";
+import { previewForParkedWrite } from "../../../src/internal/agentRuntime/eve/parkedWritePreview.js";
 
 const attachPreview = {
 	currency: "usd",

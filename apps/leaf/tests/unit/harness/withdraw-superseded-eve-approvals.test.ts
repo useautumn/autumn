@@ -5,7 +5,7 @@ import type { ThreadRef } from "../../../src/agent/runMessage/types.js";
 import type {
 	EveAuthContext,
 	EveSessionRef,
-} from "../../../src/harness/eve/types.js";
+} from "../../../src/internal/agentRuntime/eve/types.js";
 import { mockModuleWithRestore } from "../utils/mockModuleWithRestore.js";
 
 // Stubbed first and left stubbed: `env` parses leaf's whole schema at import and
@@ -57,7 +57,7 @@ await mockLeafModule({
 const failingRequestIds = new Set<string>();
 const postedRequestIds: string[] = [];
 await mockLeafModule({
-	specifier: "../../../src/harness/eve/client.js",
+	specifier: "../../../src/internal/agentRuntime/eve/client.js",
 	factory: () => ({
 		postEveInputResponse: async ({ requestId }: { requestId: string }) => {
 			postedRequestIds.push(requestId);
@@ -76,7 +76,7 @@ await mockLeafModule({
 
 const drainedSessionIds: string[] = [];
 await mockLeafModule({
-	specifier: "../../../src/harness/eve/approval.js",
+	specifier: "../../../src/internal/agentRuntime/eve/parkedTurn.js",
 	factory: () => ({
 		denyOptionFromApproval: () => "deny",
 		drainParkedEveTurn: async ({ session }: { session: EveSessionRef }) => {
@@ -87,7 +87,7 @@ await mockLeafModule({
 
 const savedSessionIds: string[] = [];
 await mockLeafModule({
-	specifier: "../../../src/harness/eve/sessionState.js",
+	specifier: "../../../src/internal/agentRuntime/eve/sessionState.js",
 	factory: () => ({
 		saveEveSessionState: async ({ session }: { session: EveSessionRef }) => {
 			savedSessionIds.push(session.sessionId);
@@ -96,7 +96,7 @@ await mockLeafModule({
 });
 
 const { withdrawSupersededEveApprovals } = await import(
-	"../../../src/harness/eve/supersededApprovals.js"
+	"../../../src/internal/agentRuntime/eve/supersededApprovals.js"
 );
 
 const approval = (id: string, toolCallId?: string) =>

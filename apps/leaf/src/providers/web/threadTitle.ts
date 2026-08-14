@@ -4,7 +4,7 @@ import { Agent } from "@mastra/core/agent";
 import { z } from "zod";
 import type { ThreadRef } from "../../agent/runMessage/types.js";
 import { buildThreadKey } from "../../harness/common/threadKey.js";
-import { setHarnessSessionTitleIfEmpty } from "../../harness/eve/repo.js";
+import { setHarnessSessionTitleIfEmpty } from "../../internal/agentRuntime/eve/repo.js";
 import { DEFAULT_CHAT_ENV_MODEL } from "../../lib/chatAgentConfig.js";
 import type { ChatDb } from "../../lib/db.js";
 

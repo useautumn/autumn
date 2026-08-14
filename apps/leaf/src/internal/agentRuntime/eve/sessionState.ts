@@ -1,4 +1,4 @@
-import { db } from "../../lib/db.js";
+import { db } from "../../../lib/db.js";
 import { upsertEveSession } from "./repo.js";
 import type { EveSessionRef, EveSessionState } from "./types.js";
 

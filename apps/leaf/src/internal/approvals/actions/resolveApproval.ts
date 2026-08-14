@@ -1,5 +1,5 @@
 import type { ChatApproval } from "@autumn/shared";
-import { resumeEveApproval } from "../../../harness/eve/approval.js";
+import { resumeEveApproval } from "../../agentRuntime/eve/approval.js";
 import { db } from "../../../lib/db.js";
 import { logger } from "../../../lib/logger.js";
 import { chatApprovalRepo } from "../repos/chatApprovalRepo.js";

@@ -1,6 +1,6 @@
 import type { AppEnv } from "@autumn/shared";
-import type { MessageParams, ThreadRef } from "../../agent/runMessage/types.js";
-import { buildThreadKey } from "../common/threadKey.js";
+import type { MessageParams, ThreadRef } from "../../../agent/runMessage/types.js";
+import { buildThreadKey } from "../../../harness/common/threadKey.js";
 import { adoptPostedEveSession } from "./adoptPostedSession.js";
 import { type EveMessageContent, postEveMessage } from "./client.js";
 import { initialEveSessionState, saveEveSessionState } from "./sessionState.js";

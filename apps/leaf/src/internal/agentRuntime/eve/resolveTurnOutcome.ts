@@ -1,7 +1,7 @@
 import type { AutumnLogger } from "@autumn/logging";
 import type { AppEnv } from "@autumn/shared";
-import { db } from "../../lib/db.js";
-import type { AgentOutput } from "../../types.js";
+import { db } from "../../../lib/db.js";
+import type { AgentOutput } from "../../../types.js";
 import type { EveTurnOutcome } from "./applyEveEvent.js";
 import { deleteEveSession } from "./repo.js";
 import type { EveSessionRef } from "./types.js";

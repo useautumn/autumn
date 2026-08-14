@@ -8,11 +8,9 @@ import { createWebAdapter } from "@chat-adapter/web";
 import type { Attachment, Message, Thread } from "chat";
 import { Chat } from "chat";
 import { runMessage } from "./agent/runMessage/runMessage.js";
-import {
-	answerEveQuestion,
-	withdrawEveSuspension,
-} from "./harness/eve/approval.js";
-import { redirectCatalogSuspensionToDecision } from "./harness/eve/catalogDecision.js";
+import { answerEveQuestion } from "./internal/agentRuntime/eve/approval.js";
+import { redirectCatalogSuspensionToDecision } from "./internal/agentRuntime/eve/catalogDecision.js";
+import { withdrawEveSuspension } from "./internal/agentRuntime/eve/parkedTurn.js";
 import { chatApprovalRepo } from "./internal/approvals/repos/chatApprovalRepo.js";
 import { handleApprovalAction } from "./internal/approvals/surfaces/slack/decide.js";
 import {

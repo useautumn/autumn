@@ -1,6 +1,6 @@
 import type { AutumnLogger } from "@autumn/logging";
 import type { AppEnv, ChatApproval, ChatProvider } from "@autumn/shared";
-import type { EveSessionRef } from "../../harness/eve/types.js";
+import type { EveSessionRef } from "../../internal/agentRuntime/eve/types.js";
 import type { ActiveRun } from "../../internal/runs/runRegistry.js";
 import type { ChatContextMessage } from "../../types.js";
 
