@@ -17,6 +17,7 @@ export function parseCloudPublicUrls(text: string): CloudPublicUrls {
 		const url = https[0].replace(/[.,;]+$/, "");
 		if (/\bvite\b/i.test(line) || line.includes(":3000")) out.vite = url;
 		else if (/\bapi\b/i.test(line) || line.includes(":8080")) out.api = url;
+		else out.vite ??= url;
 	}
 	return out;
 }

@@ -60,6 +60,24 @@ dump_log() {
 	fi
 }
 
+# Free ngrok assigns one static hostname per authtoken. ERR_NGROK_334 means
+# another session (other Cloud agent, leftover process, laptop) already holds it.
+already_online_url() {
+	python3 - "$LOG" <<'PY'
+import re, sys
+from pathlib import Path
+log = Path(sys.argv[1])
+if not log.is_file():
+	sys.exit(0)
+text = log.read_text(errors="replace")
+if "ERR_NGROK_334" not in text and "already online" not in text:
+	sys.exit(0)
+m = re.search(r"https://[a-zA-Z0-9.-]+\.ngrok(?:-free)?\.(?:dev|app)", text)
+if m:
+	print(m.group(0))
+PY
+}
+
 if curl -sf http://127.0.0.1:4040/api/tunnels >/dev/null 2>&1; then
 	echo "[cursor-cloud-ngrok] already running"
 	write_tunnels
@@ -84,6 +102,7 @@ tunnels:
   vite:
     addr: 3000
     proto: http
+    pooling_enabled: true
 EOF
 chmod 600 "$CFG"
 echo "[cursor-cloud-ngrok] starting dashboard tunnel → :3000"
@@ -105,6 +124,13 @@ for _ in $(seq 1 60); do
 	sleep 0.5
 done
 if [ "$wrote" -eq 0 ]; then
+	held="$(already_online_url || true)"
+	if [ -n "${held:-}" ]; then
+		echo "[cursor-cloud-ngrok] free endpoint already online: ${held}" >&2
+		echo "[cursor-cloud-ngrok] that hostname is shared by this Infisical authtoken — another agent or leftover session owns it. This VM is not serving it." >&2
+		echo "vite (http://localhost:3000): ${held}" >"$URLS"
+		exit 0
+	fi
 	echo "[cursor-cloud-ngrok] inspector :4040 never came up" >&2
 	dump_log
 	if [ -f "$PIDFILE" ]; then

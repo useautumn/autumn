@@ -56,7 +56,7 @@ export function cmdIdentify(): void {
 			: ngrokViteUrl
 				? "(none — vite tunnel below)"
 				: isHeadless()
-					? "(no public tunnel — NGROK_AUTHTOKEN missing from Infisical dev)"
+					? "(no public tunnel — ngrok failed; see log above)"
 					: "(canonical — no ngrok)");
 
 	const branchLabel =

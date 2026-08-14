@@ -142,6 +142,9 @@ const t = "api (http://localhost:8080): https://api.example.ngrok.app\nvite (htt
 const u = parseCloudPublicUrls(t);
 if (u.api !== "https://api.example.ngrok.app") throw new Error("api "+u.api);
 if (u.vite !== "https://vite.example.ngrok.app") throw new Error("vite "+u.vite);
+const t2 = "vite (http://localhost:3000): https://may-waspy-marquis.ngrok-free.dev\n";
+const u2 = parseCloudPublicUrls(t2);
+if (u2.vite !== "https://may-waspy-marquis.ngrok-free.dev") throw new Error("334 url "+u2.vite);
 console.log("ok");
 ')"
 [[ "$got" == "ok" ]] || fail "parseCloudPublicUrls, got $got"
@@ -165,6 +168,8 @@ grep -q 'addr: 3000' "$ROOT/scripts/setup/cursor-cloud/ngrok-up.sh" \
 if grep -q 'addr: 8080' "$ROOT/scripts/setup/cursor-cloud/ngrok-up.sh"; then
 	fail "Cloud ngrok must not start a second :8080 tunnel (free plan is one endpoint)"
 fi
+grep -q 'pooling_enabled: true' "$ROOT/scripts/setup/cursor-cloud/ngrok-up.sh" \
+	|| fail "Cloud ngrok should enable pooling for the shared free endpoint"
 pass "Cloud ngrok is a single dashboard tunnel"
 
 echo "all cursor_ai.py tests passed"
