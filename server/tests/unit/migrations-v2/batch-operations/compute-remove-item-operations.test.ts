@@ -100,7 +100,7 @@ const lower = ({
 		fromProduct,
 		productTransitions,
 		licenseLinks: [],
-		operations: operations.entitlements,
+		operations: operations.addEntitlements,
 	});
 	return { operations, rejections };
 };
@@ -117,7 +117,7 @@ describe("plain plan item removal lowering", () => {
 		expect(
 			operations.removeEntitlements[0]?.entitlementPrice.entitlement.id,
 		).toBe("ent_messages");
-		expect(operations.entitlements).toHaveLength(0);
+		expect(operations.addEntitlements).toHaveLength(0);
 	});
 
 	test("a priced removal is rejected", () => {

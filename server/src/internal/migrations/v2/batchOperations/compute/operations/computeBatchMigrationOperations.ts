@@ -69,11 +69,10 @@ export const computeBatchMigrationOperations = ({
 	productTransitions: ProductTransitions;
 	licenseLinks: LicenseLinkTransitions[];
 }): BatchMigrationOperations => {
-	const entitlements: BatchMigrationAddEntitlementOp[] =
+	const addEntitlements: BatchMigrationAddEntitlementOp[] =
 		productTransitions.entitlementPrices.added
 			.filter((entitlementPrice) => !entitlementPrice.price)
 			.map((entitlementPrice) => ({
-				type: "add",
 				entitlementPrice,
 				initialState: computeCustomerEntitlementInitialState({
 					entitlement: entitlementPrice.entitlement,
@@ -83,10 +82,10 @@ export const computeBatchMigrationOperations = ({
 	const removeEntitlements: BatchMigrationRemoveEntitlementOp[] =
 		productTransitions.entitlementPrices.deleted
 			.filter((entitlementPrice) => !entitlementPrice.price)
-			.map((entitlementPrice) => ({ type: "remove", entitlementPrice }));
+			.map((entitlementPrice) => ({ entitlementPrice }));
 
 	return {
-		entitlements,
+		addEntitlements,
 		removeEntitlements,
 		licenseEntitlements: licenseLinks.flatMap(toLicenseOps),
 	};

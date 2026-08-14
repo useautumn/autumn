@@ -6,20 +6,20 @@ import {
 	operationScopeSql,
 } from "@/internal/migrations/v2/batchOperations/scope/operationScope.js";
 
-/** Scope is re-asserted here because the select took its own snapshot. Pooled
- * rows are excluded: the anchor FK is RESTRICT and would abort the page. */
+/** Matches by definition id so a custom or grandfathered row stays out of
+ * reach, and re-asserts scope because the select took its own snapshot. */
 export const deleteCustomerEntitlementRows = async ({
 	db,
 	customerProductIds,
-	entitlementIds,
+	entitlementId,
 	scope,
 }: {
 	db: DrizzleCli;
 	customerProductIds: string[];
-	entitlementIds: string[];
+	entitlementId: string;
 	scope: OperationScope;
 }): Promise<string[]> => {
-	if (customerProductIds.length === 0 || entitlementIds.length === 0) return [];
+	if (customerProductIds.length === 0) return [];
 
 	const deleted = await db.execute<{ customer_product_id: string }>(sql`
 		WITH dropped AS (
@@ -28,7 +28,7 @@ export const deleteCustomerEntitlementRows = async ({
 			WHERE cp.id = target.customer_product_id
 				AND ${operationScopeSql({ scope })}
 				AND target.customer_product_id IN (${sqlList({ values: customerProductIds })})
-				AND target.entitlement_id IN (${sqlList({ values: entitlementIds })})
+				AND target.entitlement_id = ${entitlementId}
 				AND NOT target.is_pooled_balance
 				AND target.pooled_contribution_id IS NULL
 			RETURNING target.customer_product_id, target.entitlement_id

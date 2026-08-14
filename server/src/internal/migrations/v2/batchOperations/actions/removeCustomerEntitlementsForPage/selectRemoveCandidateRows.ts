@@ -2,7 +2,6 @@ import { CusProductStatus } from "@autumn/shared";
 import { sql } from "drizzle-orm";
 import { z } from "zod/v4";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
-import { sqlList } from "@/internal/billing/v2/actions/batchTransition/execute/sql/batchTransitionSqlUtils.js";
 import {
 	type OperationScope,
 	operationScopeSql,
@@ -30,25 +29,23 @@ export type RemoveCandidateRow = {
 	trialEndsAt: number | null;
 };
 
-/** The add's dedup predicate inverted: it skips customer products already
- * holding the row, this one wants exactly those. */
+/** Narrows the page to customer products that still hold one of the target
+ * definitions, so the delete never visits a product with nothing to drop. */
 export const selectRemoveCandidateRows = async ({
 	db,
 	internalCustomerIds,
 	scope,
-	entitlementIds,
+	entitlementId,
 	afterCustomerProductId,
 	limit,
 }: {
 	db: DrizzleCli;
 	internalCustomerIds: string[];
 	scope: OperationScope;
-	entitlementIds: string[];
+	entitlementId: string;
 	afterCustomerProductId?: string;
 	limit?: number;
 }): Promise<RemoveCandidateRow[]> => {
-	if (entitlementIds.length === 0) return [];
-
 	const rows = await db.execute(sql`
 		SELECT
 			cp.id AS customer_product_id,
@@ -69,7 +66,7 @@ export const selectRemoveCandidateRows = async ({
 				SELECT 1
 				FROM customer_entitlements AS existing
 				WHERE existing.customer_product_id = cp.id
-					AND existing.entitlement_id IN (${sqlList({ values: entitlementIds })})
+					AND existing.entitlement_id = ${entitlementId}
 					AND NOT existing.is_pooled_balance
 					AND existing.pooled_contribution_id IS NULL
 			)
