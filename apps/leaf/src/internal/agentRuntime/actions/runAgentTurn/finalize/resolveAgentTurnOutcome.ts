@@ -1,14 +1,13 @@
 import type { AutumnLogger } from "@autumn/logging";
 import type { AppEnv } from "@autumn/shared";
-import { db } from "../../../lib/db.js";
-import type { AgentTurnResult } from "../domain/agentTurn.js";
-import type { EveTurnOutcome } from "./applyEveEvent.js";
-import { deleteEveSession } from "./repo.js";
-import type { EveSessionRef } from "./types.js";
+import { db } from "../../../../../lib/db.js";
+import type { AgentTurnResult } from "../../../domain/agentTurn.js";
+import type { EveTurnOutcome } from "../execute/applyEveEvent.js";
+import { deleteEveSession } from "../../../eve/repo.js";
+import type { EveSessionRef } from "../../../eve/types.js";
 
-/** Shapes a finished turn into the harness's output. Dropping the session row
- * also drops the thread from the dashboard, so only `unreachable` earns it. */
-export const resolveEveTurnOutcome = async ({
+// Deleting the session also removes the dashboard thread.
+export const resolveAgentTurnOutcome = async ({
 	env,
 	logger,
 	orgId,

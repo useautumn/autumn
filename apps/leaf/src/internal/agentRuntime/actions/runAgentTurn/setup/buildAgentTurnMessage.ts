@@ -1,13 +1,10 @@
-import type { MessageParams } from "../../../agent/runMessage/types.js";
-import type { AutumnOrgContext } from "../../autumnMcp/orgContextService.js";
-import { env as leafEnv } from "../../../lib/env.js";
-import { buildHarnessMessageText } from "../../../harness/common/messageText.js";
-import type { EveMessageContent } from "./client.js";
+import type { MessageParams } from "../../../../../agent/runMessage/types.js";
+import type { AutumnOrgContext } from "../../../../autumnMcp/orgContextService.js";
+import { env as leafEnv } from "../../../../../lib/env.js";
+import { buildHarnessMessageText } from "../../../../../harness/common/messageText.js";
+import type { EveMessageContent } from "../../../eve/client.js";
 
-/** The turn's payload for eve. Attachments ride as file parts (base64 `data:`
- * URLs) only behind a flag — eve's queue boundary still corrupts file bytes,
- * so otherwise the model gets an honest note instead of a hard turn failure. */
-export const buildEveTurnMessage = ({
+export const buildAgentTurnMessage = ({
 	env,
 	newSession,
 	orgContext,
@@ -27,6 +24,7 @@ export const buildEveTurnMessage = ({
 	});
 	if (attachments.length === 0) return messageText;
 
+	// Eve corrupts queued file bytes, so attachments stay flag-gated.
 	if (leafEnv.EVE_ATTACHMENTS_ENABLED) {
 		return [
 			{ text: messageText, type: "text" as const },

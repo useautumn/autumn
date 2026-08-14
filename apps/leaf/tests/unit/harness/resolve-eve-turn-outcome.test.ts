@@ -19,8 +19,8 @@ await mockModuleWithRestore({
 	}),
 });
 
-const { resolveEveTurnOutcome } = await import(
-	"../../../src/internal/agentRuntime/eve/resolveTurnOutcome.js"
+const { resolveAgentTurnOutcome } = await import(
+	"../../../src/internal/agentRuntime/actions/runAgentTurn/finalize/resolveAgentTurnOutcome.js"
 );
 
 const logger = { warn: () => {} } as unknown as AutumnLogger;
@@ -39,9 +39,9 @@ const session = {
 };
 
 const resolve = (
-	outcome: Parameters<typeof resolveEveTurnOutcome>[0]["outcome"],
+	outcome: Parameters<typeof resolveAgentTurnOutcome>[0]["outcome"],
 ) =>
-	resolveEveTurnOutcome({
+	resolveAgentTurnOutcome({
 		env: AppEnv.Sandbox,
 		logger,
 		orgId: "org_1",
@@ -49,7 +49,7 @@ const resolve = (
 		session,
 	});
 
-describe("resolveEveTurnOutcome", () => {
+describe("resolveAgentTurnOutcome", () => {
 	beforeEach(() => {
 		deletedSessionIds.length = 0;
 	});

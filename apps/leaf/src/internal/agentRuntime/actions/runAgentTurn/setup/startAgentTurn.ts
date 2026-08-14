@@ -1,14 +1,18 @@
 import type { AppEnv } from "@autumn/shared";
-import type { MessageParams, ThreadRef } from "../../../agent/runMessage/types.js";
-import { buildThreadKey } from "../../../harness/common/threadKey.js";
-import { adoptPostedEveSession } from "./adoptPostedSession.js";
-import { type EveMessageContent, postEveMessage } from "./client.js";
-import { initialEveSessionState, saveEveSessionState } from "./sessionState.js";
-import type { EveAuthContext, EveSessionRef } from "./types.js";
+import type {
+	MessageParams,
+	ThreadRef,
+} from "../../../../../agent/runMessage/types.js";
+import { buildThreadKey } from "../../../../../harness/common/threadKey.js";
+import { adoptPostedEveSession } from "../../../eve/adoptPostedSession.js";
+import { type EveMessageContent, postEveMessage } from "../../../eve/client.js";
+import {
+	initialEveSessionState,
+	saveEveSessionState,
+} from "../../../eve/sessionState.js";
+import type { EveAuthContext, EveSessionRef } from "../../../eve/types.js";
 
-/** Posts this turn onto the thread's session (opening one when there is none)
- * and persists the cursor the stream then resumes from. */
-export const startEveTurn = async ({
+export const startAgentTurn = async ({
 	auth,
 	env,
 	message,
@@ -25,8 +29,7 @@ export const startEveTurn = async ({
 	session?: EveSessionRef;
 	thread: ThreadRef;
 }): Promise<EveSessionRef> => {
-	// A chip answer resolves the parked request structurally; sending the
-	// wrapped message too would replay it as a second user turn.
+	// Sending chip answers as messages would replay them as a second user turn.
 	const inputResponses =
 		session && params.questionResponse ? [params.questionResponse] : undefined;
 	const posted = await postEveMessage({

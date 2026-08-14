@@ -1,6 +1,6 @@
 import type { AppEnv, ChatInstallation } from "@autumn/shared";
 import type { AgentTurnResult } from "../../internal/agentRuntime/domain/agentTurn.js";
-import { runEveMessage } from "../../internal/agentRuntime/eve/engine.js";
+import { runAgentTurn } from "../../internal/agentRuntime/actions/runAgentTurn/runAgentTurn.js";
 import { findEveSessionForThread } from "../../internal/agentRuntime/eve/repo.js";
 import { getInstallationOAuthAccessToken } from "../../internal/installations/actions/getInstallationOAuthAccessToken.js";
 import { MESSAGE_TIMEOUT_MS } from "../../lib/chatAgentConfig.js";
@@ -185,7 +185,7 @@ export const runMessage = async ({
 				token,
 			};
 
-			const output = await runEveMessage({ ctx, params });
+			const output = await runAgentTurn({ ctx, params });
 			return {
 				...output,
 				env,

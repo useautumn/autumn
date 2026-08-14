@@ -10,7 +10,7 @@ import type {
 	MessageContext,
 } from "../../agent/runMessage/types.js";
 import { redirectCatalogSuspensionToDecision } from "../../internal/agentRuntime/eve/catalogDecision.js";
-import { runEveMessage } from "../../internal/agentRuntime/eve/engine.js";
+import { runAgentTurn } from "../../internal/agentRuntime/actions/runAgentTurn/runAgentTurn.js";
 import { presentWebApproval } from "../../internal/approvals/surfaces/web/present.js";
 import {
 	ensureWebChatAuth,
@@ -204,9 +204,9 @@ export const streamWebChat = async ({
 				token: accessToken,
 			};
 
-			let output: Awaited<ReturnType<typeof runEveMessage>>;
+			let output: Awaited<ReturnType<typeof runAgentTurn>>;
 			try {
-				output = await runEveMessage({
+				output = await runAgentTurn({
 					ctx,
 					params: { attachments, clientContext, questionResponse, text },
 				});

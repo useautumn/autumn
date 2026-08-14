@@ -2,36 +2,36 @@ import type { AppEnv, CatalogPlanPreview } from "@autumn/shared";
 import {
 	isSilentTool,
 	normalizeToolName,
-} from "../../../agent/tools/toolPolicy.js";
-import type { AgentApprovalRequest } from "../domain/agentTurn.js";
-import { toolRequestFromArgs } from "../../approvals/utils/toolRequest.js";
-import { executeAutumnMcpTool } from "../../autumnMcp/client.js";
-import type { RunStopReason } from "../../runs/runRegistry.js";
-import { WAITING_FOR_INPUT_MESSAGE } from "../../../ui/messages.js";
-import { parsePreviewPayload } from "../../../ui/previewContent.js";
+} from "../../../../../agent/tools/toolPolicy.js";
+import type { AgentApprovalRequest } from "../../../domain/agentTurn.js";
+import { toolRequestFromArgs } from "../../../../approvals/utils/toolRequest.js";
+import { executeAutumnMcpTool } from "../../../../autumnMcp/client.js";
+import type { RunStopReason } from "../../../../runs/runRegistry.js";
+import { WAITING_FOR_INPUT_MESSAGE } from "../../../../../ui/messages.js";
+import { parsePreviewPayload } from "../../../../../ui/previewContent.js";
 import {
 	catalogPlanNeedingDecision,
 	enrichCatalogPreview,
-} from "./catalogDecision.js";
+} from "../../../eve/catalogDecision.js";
 import {
 	type ChainedPendingRequest,
 	classifyParkedEveInput,
 	type PendingQuestion,
-} from "./classifyParkedInput.js";
-import type { EveEvent } from "./eveEventSchemas.js";
+} from "../../../eve/classifyParkedInput.js";
+import type { EveEvent } from "../../../eve/eveEventSchemas.js";
 import {
 	approvalOptionIds,
 	displayEveToolLabel,
 	isPreviewToolName,
 	labelForResult,
 	textForInputRequests,
-} from "./events.js";
+} from "../../../eve/events.js";
 import {
 	type CapturedPreview,
 	previewForParkedWrite,
-} from "./parkedWritePreview.js";
-import { saveEveSessionState } from "./sessionState.js";
-import type { EveSessionRef } from "./types.js";
+} from "../../../eve/parkedWritePreview.js";
+import { saveEveSessionState } from "../../../eve/sessionState.js";
+import type { EveSessionRef } from "../../../eve/types.js";
 
 export type EveTurnOutcome =
 	| { kind: "answered"; catalogDecision?: CatalogPlanPreview; text: string }
@@ -41,8 +41,6 @@ export type EveTurnOutcome =
 	| { approval: AgentApprovalRequest; kind: "suspended"; text: string }
 	| { kind: "unreachable" };
 
-/** Whether a finished turn left the user anything. Eve can end a turn cleanly
- * while parked, so a caller that trusts "ended" alone wedges the thread. */
 export const eveTurnProducedOutput = ({
 	catalogDecision,
 	text,
@@ -51,7 +49,6 @@ export const eveTurnProducedOutput = ({
 	text?: string;
 }) => Boolean(text?.trim() || catalogDecision);
 
-/** What the turn has accumulated so far, mutated as events arrive. */
 export type EveTurnProgress = {
 	finalText: string;
 	lastPreview?: CapturedPreview;
@@ -59,9 +56,7 @@ export type EveTurnProgress = {
 	reasoningStreamId?: string;
 	toolInputs: Map<string, Record<string, unknown>>;
 	toolLabels: Map<string, string>;
-	/** The previous turn's tail (turn.completed, session.waiting) lands after
-	 * input.requested and so replays first — terminal events only count once
-	 * this turn's own turn.started has arrived. */
+	// Eve replays the previous turn's terminal events before this turn starts.
 	turnStarted: boolean;
 };
 
@@ -88,7 +83,6 @@ const announceRequestedActions = async ({
 	const actions = event.actions;
 	for (const action of actions) {
 		const label = displayEveToolLabel(action);
-		// Utility tools (date converters) aren't worth a status blip.
 		const silent = action.toolName && isSilentTool(action.toolName);
 		if (progress.turnStarted && !silent) await onAction?.(label);
 		if (!action.callId) continue;
@@ -110,8 +104,7 @@ const capturePreviewResult = async ({
 	toolName: string;
 	token: string;
 }): Promise<CapturedPreview> => ({
-	// Enriched (variant/version flags forced) so the approval card and the
-	// suspension decision gate both see the full preview.
+	// Catalog decisions and approval cards need the same enriched preview.
 	preview: await enrichCatalogPreview({
 		executeTool: (call) => executeAutumnMcpTool({ env, token, ...call }),
 		input,
@@ -133,8 +126,7 @@ const absorbActionResult = async ({
 		const input = result.callId
 			? progress.toolInputs.get(result.callId)
 			: undefined;
-		// A failed preview leaves nothing to show, so it must also retire the one
-		// before it — the write is about to be previewed, not re-described.
+		// Failed previews retire any prior preview to avoid stale approval data.
 		progress.lastPreview =
 			event.status === "completed"
 				? await capturePreviewResult({
@@ -147,8 +139,7 @@ const absorbActionResult = async ({
 				: undefined;
 	}
 	if (!result?.callId) return;
-	// actions.requested already surfaced this tool as a step; announcing it here
-	// too would render every call twice.
+	// Requested actions already surfaced their status.
 	if (progress.turnStarted && !progress.toolLabels.has(result.callId)) {
 		await onAction?.(displayEveToolLabel(labelForResult(result)));
 	}
@@ -169,8 +160,6 @@ const appendMessageDelta = ({
 	onReasoning?.({ id: progress.reasoningStreamId, text: progress.pendingText });
 };
 
-/** Blanks the open reasoning stream so the text about to be posted as the reply
- * isn't also left rendered as live thinking. */
 export const closeReasoningStream = ({
 	onReasoning,
 	progress,
@@ -192,7 +181,6 @@ const completeMessage = ({
 	const message = event.message || progress.pendingText;
 	progress.pendingText = "";
 	if (event.finishReason === "tool-calls") {
-		// Reasoning that preceded a tool call stays on screen as a step.
 		progress.reasoningStreamId ??= crypto.randomUUID();
 		onReasoning?.({ id: progress.reasoningStreamId, text: message });
 		progress.reasoningStreamId = undefined;
@@ -251,15 +239,11 @@ const parkOnInputRequest = async ({
 		};
 	}
 
-	// Whatever the model said before parking beats the generic waiting line,
-	// which only fills in for a silent turn.
 	if (progress.pendingText) progress.finalText = progress.pendingText;
 	if (!eveTurnProducedOutput({ text: progress.finalText })) {
 		progress.finalText =
 			textForInputRequests(requests) || WAITING_FOR_INPUT_MESSAGE;
 	}
-	// An optioned question also rides structurally so rich surfaces can render
-	// answer buttons; `text` keeps the flat fallback.
 	return {
 		kind: "parked",
 		question: parked?.kind === "question" ? parked.question : undefined,
@@ -281,8 +265,6 @@ const finishOnTerminalEvent = async ({
 			status: event.type === "session.completed" ? "completed" : "waiting",
 		},
 	});
-	// The model may (correctly) stop after a preview that needs versioning/
-	// variant/migration choices — surface that decision now the turn is over.
 	const catalogDecision = catalogPlanNeedingDecision(
 		progress.lastPreview?.preview,
 	);
@@ -292,10 +274,6 @@ const finishOnTerminalEvent = async ({
 	return { kind: "silent" };
 };
 
-/**
- * Folds one streamed event into the turn's progress. Returns an outcome only
- * when that event ended the turn; `undefined` means keep streaming.
- */
 export const applyEveEvent = async (
 	context: EveEventContext,
 ): Promise<EveTurnOutcome | undefined> => {
@@ -303,8 +281,7 @@ export const applyEveEvent = async (
 	switch (event.type) {
 		case "turn.started":
 			progress.turnStarted = true;
-			// A follow-up turn must not inherit the prior turn's preview, or a
-			// preview-less turn ends on a stale catalog decision.
+			// Follow-up turns must not inherit stale previews.
 			progress.lastPreview = undefined;
 			return undefined;
 

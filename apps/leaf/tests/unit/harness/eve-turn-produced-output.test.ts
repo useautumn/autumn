@@ -5,7 +5,7 @@ import { describe, expect, mock, test } from "bun:test";
 mock.module("../../../src/lib/env.js", () => ({ env: {} }));
 
 const { eveTurnProducedOutput } = await import(
-	"../../../src/internal/agentRuntime/eve/applyEveEvent.js"
+	"../../../src/internal/agentRuntime/actions/runAgentTurn/execute/applyEveEvent.js"
 );
 
 // This predicate decides whether a finished turn is posted to the user or

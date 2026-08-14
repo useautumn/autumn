@@ -1,7 +1,7 @@
 import type { AutumnLogger } from "@autumn/logging";
 import type { AppEnv } from "@autumn/shared";
-import type { ActiveRun } from "../../runs/runRegistry.js";
-import { AGENT_UNREACHABLE_MESSAGE } from "../../../ui/messages.js";
+import type { ActiveRun } from "../../../../runs/runRegistry.js";
+import { AGENT_UNREACHABLE_MESSAGE } from "../../../../../ui/messages.js";
 import {
 	applyEveEvent,
 	closeReasoningStream,
@@ -14,25 +14,19 @@ import {
 	EveStreamIdleTimeoutError,
 	resyncEveStreamIndex,
 	streamEveEvents,
-} from "./client.js";
-import { saveEveSessionState } from "./sessionState.js";
-import type { EveAuthContext, EveSessionRef } from "./types.js";
+} from "../../../eve/client.js";
+import { saveEveSessionState } from "../../../eve/sessionState.js";
+import type { EveAuthContext, EveSessionRef } from "../../../eve/types.js";
 
-/** ~10s of reconnects (doubled once by the silent-cursor resync below): eve
- * resumes turns asynchronously, so the first stream after a post can
- * legitimately close empty a few times. */
+// Eve can close empty while asynchronously resuming a turn.
 const MAX_IDLE_RETRIES = 20;
 const STREAM_RETRY_DELAY_MS = 500;
 const MAX_STREAM_DISCONNECT_RETRIES = 5;
 const PERSIST_CURSOR_EVERY_EVENTS = 10;
 
-/** Everything one turn needs, accumulated in `progress` and `session` as
- * events arrive. */
 type EveTurnContext = Omit<EveEventContext, "event"> & { auth: EveAuthContext };
 
-/** What one pass over the stream produced. The stream's error is returned
- * rather than thrown so a pass that yielded events before dying still reports
- * them — otherwise a dropped connection looks like a silent turn. */
+// Preserve events yielded before a stream error.
 type EveStreamPass = {
 	error?: unknown;
 	outcome?: EveTurnOutcome;
@@ -76,9 +70,6 @@ const streamPassEvents = async ({
 	return { sawEvent };
 };
 
-/** Silence this long means the cursor drifted past eve's replay buffer or the
- * turn died without a terminal event — heal the cursor and fail visibly rather
- * than spin forever. */
 const recoverFromIdleStream = async ({
 	logger,
 	turn,
@@ -102,8 +93,6 @@ const recoverFromIdleStream = async ({
 	return { kind: "answered", text: partialText };
 };
 
-/** Persisted right away: a turn that later throws would otherwise leave the
- * drifted cursor in the row and repeat this cycle next message. */
 const healSilentCursor = async ({
 	logger,
 	turn,
@@ -123,8 +112,6 @@ const healSilentCursor = async ({
 	await saveEveSessionState({ orgId, session });
 };
 
-/** The retry budget ran out before any terminal event: keep whatever the model
- * managed to say, otherwise report how empty the turn really was. */
 const outcomeForExhaustedRetries = async ({
 	streamedAnyEvent,
 	turn,
@@ -142,12 +129,7 @@ const outcomeForExhaustedRetries = async ({
 	return { kind: "answered", text: progress.finalText };
 };
 
-/**
- * Streams one eve turn to its end. Reconnects through eve's async resume
- * window and heals a drifted cursor; throws only when the turn failed or the
- * stream died with nothing to show for it.
- */
-export const consumeEveTurn = async ({
+export const consumeAgentTurn = async ({
 	auth,
 	env,
 	logger,
@@ -208,8 +190,7 @@ export const consumeEveTurn = async ({
 
 	try {
 		while (idleRetries < MAX_IDLE_RETRIES) {
-			// Eve is never interrupted server-side, so a stop is only honored where
-			// the harness looks: here, and on the next streamed event.
+			// Eve cannot be interrupted server-side.
 			if (run?.stop) return await abandonForStop(run.stop);
 
 			const pass = await streamPassEvents({
@@ -242,8 +223,6 @@ export const consumeEveTurn = async ({
 			if (pass.error !== undefined) throw pass.error;
 
 			idleRetries = pass.sawEvent ? 0 : idleRetries + 1;
-			// Nothing at all came back, so the cursor may have drifted past eve's
-			// replay buffer: heal it once and re-arm the budget.
 			const silentlyExhausted =
 				idleRetries >= MAX_IDLE_RETRIES &&
 				!(streamedAnyEvent || healedSilentCursor);
