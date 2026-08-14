@@ -1,6 +1,7 @@
 import { withStatementTimeout } from "@/db/withStatementTimeout.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { addCustomerEntitlementsForPage } from "../actions/addCustomerEntitlementsForPage/addCustomerEntitlementsForPage.js";
+import { removeCustomerEntitlementsForPage } from "../actions/removeCustomerEntitlementsForPage/removeCustomerEntitlementsForPage.js";
 import { runLicenseEntitlementOp } from "../actions/runLicenseEntitlementOp.js";
 import type { BatchMigrationExecutionPlan } from "../types/index.js";
 import { markPageItemRuns } from "./claim/index.js";
@@ -82,6 +83,27 @@ export const executeBatchMigrationPage = async ({
 			});
 		}
 
+		for (const remove of patch.removeEntitlementOps) {
+			const result = await removeCustomerEntitlementsForPage({
+				db: ctx.db,
+				scope: patch.scope,
+				internalCustomerIds: pageInternalIds,
+				fromProduct: patch.fromProduct,
+				remove,
+				phases,
+			});
+			removedItems.push(...result.removedItems);
+			ctx.logger.debug("batch-migration: remove operation", {
+				data: {
+					opIndex: patch.opIndex,
+					planId: patch.fromProduct.id,
+					featureId: remove.entitlement.feature.id,
+					candidateCount: result.candidateCount,
+					affected: result.affected,
+				},
+			});
+		}
+
 		for (const operation of patch.licenseEntitlementOps) {
 			const result = await runLicenseEntitlementOp({
 				db: ctx.db,
@@ -113,13 +135,20 @@ export const executeBatchMigrationPage = async ({
 		}
 	}
 
-	// A repointed pool is a real change even with no assignment rows inserted;
-	// leaving it out of `succeeded` would skip its cache invalidation.
+	// A repointed pool or a dropped row is a real change even with nothing
+	// inserted; leaving it out of `succeeded` would skip its cache invalidation.
 	const succeeded = new Set([
 		...insertedItems.map((item) => item.internalCustomerId),
+		...removedItems.map((item) => item.internalCustomerId),
 		...repointedIds,
 	]);
-	for (const id of excludedIds) succeeded.delete(id);
+	// An exclusion refuses an add, so it cannot un-commit a delete that landed.
+	const removedIds = new Set(
+		removedItems.map((item) => item.internalCustomerId),
+	);
+	for (const id of excludedIds) {
+		if (!removedIds.has(id)) succeeded.delete(id);
+	}
 	const skippedIds = pageInternalIds.filter((id) => !succeeded.has(id));
 
 	await timePhase({

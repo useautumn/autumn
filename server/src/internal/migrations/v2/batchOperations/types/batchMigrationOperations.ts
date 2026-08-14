@@ -17,7 +17,15 @@ export type BatchMigrationAddEntitlementOp = {
 	initialState: CustomerEntitlementInitialState;
 };
 
-export type BatchMigrationEntitlementOp = BatchMigrationAddEntitlementOp;
+/** Drops one free entitlement's rows across the patch's customer products. */
+export type BatchMigrationRemoveEntitlementOp = {
+	type: "remove";
+	entitlementPrice: EntitlementPrice;
+};
+
+export type BatchMigrationEntitlementOp =
+	| BatchMigrationAddEntitlementOp
+	| BatchMigrationRemoveEntitlementOp;
 
 type BatchMigrationLicenseOpTarget = {
 	licensePlanId: string;
@@ -64,6 +72,7 @@ export type BatchMigrationLicenseEntitlementOp =
 	| BatchMigrationRemoveLicenseEntitlementOp;
 
 export type BatchMigrationOperations = {
-	entitlements: BatchMigrationEntitlementOp[];
+	entitlements: BatchMigrationAddEntitlementOp[];
+	removeEntitlements: BatchMigrationRemoveEntitlementOp[];
 	licenseEntitlements: BatchMigrationLicenseEntitlementOp[];
 };
