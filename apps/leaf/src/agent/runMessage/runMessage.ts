@@ -1,20 +1,15 @@
 import type { ChatInstallation } from "@autumn/shared";
-import type { ClaudeManagedSessionRef } from "../../harness/claudeManaged/session/ensureSession.js";
-import { findClaudeManagedSessionForThread } from "../../harness/claudeManaged/session/ensureSession.js";
+import { runEveMessage } from "../../harness/eve/engine.js";
 import { findEveSessionForThread } from "../../harness/eve/repo.js";
-import type { EveSessionRef } from "../../harness/eve/types.js";
 import { getInstallationOAuthAccessToken } from "../../internal/installations/actions/getInstallationOAuthAccessToken.js";
-import { messageTimeoutMs } from "../../lib/chatAgentConfig.js";
+import { MESSAGE_TIMEOUT_MS } from "../../lib/chatAgentConfig.js";
 import { db } from "../../lib/db.js";
-import { env as chatEnv } from "../../lib/env.js";
 import { logger as rootLogger } from "../../lib/logger.js";
 import type { AgentOutput, BotMessage } from "../../types.js";
-import { agentEngines } from "./engines/engines.js";
 import { prepareAttachmentMessage } from "./setup/prepareAttachments.js";
 import { resolveSlackAdminOrgContext } from "./setup/resolveSlackAdminOrg.js";
 import { resolveSlackCallerAuth } from "./setup/resolveSlackCallerAuth.js";
 import { getDefaultChatEnv, selectChatEnv } from "./setup/selectChatEnv.js";
-import { setupAgentToolContext } from "./setup/setupAgentToolContext.js";
 import type { MessageContext, MessageParams } from "./types.js";
 
 const withTimeout = <T>(promise: Promise<T>, ms: number) =>
@@ -42,12 +37,9 @@ export const runMessage = async ({
 	installation,
 	logger = rootLogger,
 	onAction,
-	onActionKeyed,
-	onAgentReady,
 	onApprovalsSuperseded,
 	onReasoning,
 	onThinking,
-	onTurnComplete,
 	providerUserId,
 	recentMessages,
 	run,
@@ -55,13 +47,9 @@ export const runMessage = async ({
 	channelId,
 	threadId,
 }: BotMessage): Promise<RunMessageOutput> => {
-	// The engine interrupts the session at the deadline; the wider outer
-	// timeout only fires if the stream itself wedges.
-	const harness = chatEnv.SLACK_AGENT_HARNESS;
-	const deadlineAt = Date.now() + messageTimeoutMs[harness];
+	const deadlineAt = Date.now() + MESSAGE_TIMEOUT_MS;
 	return withTimeout(
 		(async () => {
-			const engine = agentEngines[harness];
 			const thread = {
 				channelId,
 				provider: installation.provider,
@@ -77,7 +65,6 @@ export const runMessage = async ({
 				thread,
 			});
 			if ("blockedText" in orgContext) {
-				await onAgentReady?.();
 				return { env: getDefaultChatEnv(), text: orgContext.blockedText };
 			}
 			const effectiveInstallation = orgContext.installation;
@@ -99,7 +86,6 @@ export const runMessage = async ({
 					slackUserId: providerUserId,
 				});
 				if (callerAuth.usePerUser && !callerAuth.ok) {
-					await onAgentReady?.();
 					return {
 						env: getDefaultChatEnv(),
 						text: callerAuth.text,
@@ -116,26 +102,13 @@ export const runMessage = async ({
 				logger,
 				text,
 			});
-			const existingSessionPromise = (() => {
-				if (engine.name === "claude-managed") {
-					return findClaudeManagedSessionForThread({
-						db,
-						orgId: org.id,
-						thread: effectiveThread,
-						userId: autumnUserId,
-					});
-				}
-				if (engine.name === "eve") {
-					return findEveSessionForThread({
-						db,
-						orgId: org.id,
-						thread: effectiveThread,
-					});
-				}
-				return Promise.resolve(undefined);
-			})();
+			const existingSessionPromise = findEveSessionForThread({
+				db,
+				orgId: org.id,
+				thread: effectiveThread,
+			});
 
-			const [prepared, existingHarnessSession] = await Promise.all([
+			const [prepared, existingSession] = await Promise.all([
 				preparedPromise,
 				existingSessionPromise,
 			]);
@@ -151,7 +124,7 @@ export const runMessage = async ({
 			};
 
 			const env =
-				existingHarnessSession?.env ??
+				existingSession?.env ??
 				(await selectChatEnv({
 					message: prepared.envSelectionText,
 					recentMessages,
@@ -165,7 +138,7 @@ export const runMessage = async ({
 					provider: effectiveInstallation.provider,
 				},
 				data: {
-					source: existingHarnessSession ? "existing_session" : "selector",
+						source: existingSession ? "existing_session" : "selector",
 				},
 			});
 
@@ -185,34 +158,17 @@ export const runMessage = async ({
 				userId: tokenUserId,
 			});
 
-			const agentTools =
-				engine.name === "claude-managed" || engine.name === "eve"
-					? { destructiveTools: new Set<string>() }
-					: await setupAgentToolContext({ env, logger, token });
-
 			const ctx: MessageContext = {
-				agentTools,
 				autumnUserId,
-				claudeManagedSession:
-					engine.name === "claude-managed"
-						? (existingHarnessSession as ClaudeManagedSessionRef | undefined)
-						: undefined,
-				eveSession:
-					engine.name === "eve"
-						? (existingHarnessSession as EveSessionRef | undefined)
-						: undefined,
-				deadlineAt,
+				eveSession: existingSession,
 				env,
 				id: agentRunId ?? crypto.randomUUID(),
 				logger,
 				onAction,
-				onActionKeyed,
-				onAgentReady,
 				onApprovalsSuperseded,
 				onReasoning,
 				onThinking,
 				org,
-				onTurnComplete,
 				providerUserId,
 				run,
 				thread: effectiveThread,
@@ -220,7 +176,7 @@ export const runMessage = async ({
 				token,
 			};
 
-			const output = await engine.run({ ctx, params });
+			const output = await runEveMessage({ ctx, params });
 			return { ...output, installation: effectiveInstallation, org };
 		})(),
 		deadlineAt - Date.now() + TIMEOUT_BACKSTOP_GRACE_MS,

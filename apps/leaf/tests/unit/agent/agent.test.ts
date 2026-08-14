@@ -7,7 +7,6 @@ process.env.ENCRYPTION_PASSWORD ??= "test";
 process.env.SLACK_CLIENT_ID ??= "test";
 process.env.SLACK_CLIENT_SECRET ??= "test";
 process.env.SLACK_SIGNING_SECRET ??= "test";
-process.env.FIRECRAWL_API_KEY ??= "fc_test";
 
 const { leafSystemPrompt, leafSkills } = await import(
 	"@autumn/agent-docs/agent"
@@ -24,27 +23,6 @@ const {
 	shouldUseSlackAdminInstallationForWorkspace,
 	validateSlackAdminAccessConfig,
 } = await import("../../../src/internal/slackAdmin/access.js");
-const { createFirecrawlTools } = await import(
-	"../../../src/agent/tools/firecrawl.js"
-);
-const { isCmaVaultStale } = await import(
-	"../../../src/harness/claudeManaged/vaults/ensureAutumnVault.js"
-);
-const { buildAgentSystem } = await import(
-	"../../../src/harness/claudeManaged/ensureLeafResources.js"
-);
-const { containsInternalToolCall } = await import(
-	"../../../src/harness/common/output.js"
-);
-
-const execute = async (
-	tool: { execute?: (...args: never[]) => Promise<unknown> } | undefined,
-	input: unknown,
-) => {
-	if (!tool?.execute) throw new Error("Tool is not executable");
-	return tool.execute(input as never, {} as never);
-};
-
 const originalNodeEnv = process.env.NODE_ENV;
 
 afterEach(() => {
@@ -65,7 +43,7 @@ describe("chat environment selection", () => {
 		]);
 	});
 
-	test("includes the Autumn rules in the managed agent prompt", () => {
+	test("includes the Autumn rules in the agent prompt", () => {
 		expect(autumnChatInstructions).toContain(
 			"Use Autumn MCP tools for Autumn customer",
 		);
@@ -91,15 +69,6 @@ describe("chat environment selection", () => {
 
 	test("points the dashboard to the catalog knowledge", () => {
 		expect(leafSystemPrompt("dashboard")).toContain("autumn-catalog");
-	});
-
-	test("detects raw tool-call markup before posting output", () => {
-		expect(
-			containsInternalToolCall(
-				'<tool_call>\n{"name":"listCustomers","arguments":{}}\n</tool_call>',
-			),
-		).toBe(true);
-		expect(containsInternalToolCall("Here are the customers.")).toBe(false);
 	});
 
 	test("defaults to sandbox outside production", () => {
@@ -167,84 +136,6 @@ describe("chat environment selection", () => {
 				select: () => ({ org_identifier: 42 }),
 			}),
 		).rejects.toThrow();
-	});
-});
-
-describe("Firecrawl tools", () => {
-	test("registers search and scrape tools", () => {
-		const tools = createFirecrawlTools({
-			apiKey: "fc_test",
-			client: {
-				search: async () => ({ web: [] }),
-				scrape: async () => ({}),
-			},
-		});
-
-		expect(Object.keys(tools).sort()).toEqual(["scrapeUrl", "searchWeb"]);
-	});
-
-	test("maps search results into compact output", async () => {
-		const tools = createFirecrawlTools({
-			apiKey: "fc_test",
-			client: {
-				search: async (query, options) => {
-					expect(query).toBe("autumn billing docs");
-					expect(options).toEqual({ limit: 2, sources: ["web"] });
-					return {
-						web: [
-							{
-								title: "Autumn Docs",
-								url: "https://docs.useautumn.com",
-								description: "Billing docs",
-							},
-						],
-					};
-				},
-				scrape: async () => ({}),
-			},
-		});
-
-		await expect(
-			execute(tools.searchWeb, { query: "autumn billing docs", limit: 2 }),
-		).resolves.toEqual({
-			results: [
-				{
-					title: "Autumn Docs",
-					url: "https://docs.useautumn.com",
-					description: "Billing docs",
-				},
-			],
-		});
-	});
-
-	test("scrapes one URL and bounds returned markdown", async () => {
-		const tools = createFirecrawlTools({
-			apiKey: "fc_test",
-			client: {
-				search: async () => ({ web: [] }),
-				scrape: async (url, options) => {
-					expect(url).toBe("https://example.com");
-					expect(options).toEqual({ formats: ["markdown"] });
-					return {
-						markdown: `${"a".repeat(13_000)}\n\n\nextra`,
-						metadata: {
-							title: "Example",
-							sourceURL: "https://example.com",
-						},
-					};
-				},
-			},
-		});
-
-		const result = await execute(tools.scrapeUrl, {
-			url: "https://example.com",
-		});
-
-		expect(result).toMatchObject({
-			title: "Example",
-			url: "https://example.com",
-		});
-		expect((result as { markdown: string }).markdown.length).toBe(12_000);
 	});
 });
 
@@ -323,53 +214,5 @@ describe("Slack admin access gate", () => {
 				workspaceId: "T_ADMIN",
 			}),
 		).toBe(false);
-	});
-});
-
-describe("Claude Managed vault sync", () => {
-	test("builds managed agent system from current Autumn instructions", () => {
-		const system = buildAgentSystem({ surface: "slack" });
-
-		expect(system).toContain("One fact answers in one short sentence");
-		expect(system).toContain("goes in bullets");
-		expect(system).toContain("Use Autumn MCP tools for Autumn customer");
-		expect(system).toContain("Preview before every write.");
-		// The slack surface points at the billing knowledge.
-		expect(system).toContain("autumn-billing");
-	});
-
-	test("treats the vault as stale when local OAuth credentials are newer", () => {
-		expect(
-			isCmaVaultStale({
-				credentialUpdatedAt: 2000,
-				currentMcpServerUrl: "https://j.dev.useautumn.com/mcp",
-				storedMcpServerUrl: "https://j.dev.useautumn.com/mcp",
-				vaultUpdatedAt: 1000,
-			}),
-		).toBe(true);
-		expect(
-			isCmaVaultStale({
-				credentialUpdatedAt: 1000,
-				currentMcpServerUrl: "https://j.dev.useautumn.com/mcp",
-				storedMcpServerUrl: "https://j.dev.useautumn.com/mcp",
-				vaultUpdatedAt: 2000,
-			}),
-		).toBe(false);
-		expect(
-			isCmaVaultStale({
-				credentialUpdatedAt: 1000,
-				currentMcpServerUrl: "https://j.dev.useautumn.com/mcp",
-				storedMcpServerUrl: "https://j.dev.useautumn.com/mcp",
-				vaultUpdatedAt: null,
-			}),
-		).toBe(true);
-		expect(
-			isCmaVaultStale({
-				credentialUpdatedAt: 1000,
-				currentMcpServerUrl: "https://j.dev.useautumn.com/mcp",
-				storedMcpServerUrl: "https://old.dev.useautumn.com/mcp",
-				vaultUpdatedAt: 2000,
-			}),
-		).toBe(true);
 	});
 });

@@ -6,7 +6,6 @@ import type { UIMessage } from "ai";
 import type { Message } from "chat";
 import { type Context, Hono } from "hono";
 import { bot, chatAdapterNames } from "./bot.js";
-import { getClaudeManagedSession } from "./harness/claudeManaged/session/ensureSession.js";
 import { getEveSession } from "./harness/eve/repo.js";
 import { decideWebApproval } from "./internal/approvals/surfaces/web/decide.js";
 import { listWebApprovals } from "./internal/approvals/surfaces/web/list.js";
@@ -18,7 +17,7 @@ import { createMcpRouter } from "./mcp/mcpRouter.js";
 import { slackRoutes } from "./providers/slack/routes.js";
 import { resolveDashboardEnv } from "./providers/web/dashboardEnv.js";
 import { buildEveWebHistory } from "./providers/web/hydrateEveThread.js";
-import { buildWebHistory } from "./providers/web/hydrateWebThread.js";
+import { buildLegacyClaudeHistory } from "./providers/web/legacyClaudeHistory.js";
 import { streamWebChat } from "./providers/web/streamWebChat.js";
 import {
 	buildWebChatThreadId,
@@ -87,50 +86,13 @@ app.route(
 
 app.route("/slack", slackRoutes);
 
-// Dashboard chat (brokered through the main server). Auth happens in the web
-// adapter's getUser via the dashboard's better-auth session.
 app.post("/agent/chat", async (c) => {
-	// claude-managed owns its stream (native data-step / data-approval parts);
-	// mastra stays on the chat-sdk web adapter's text-only path below.
-	if (
-		env.WEB_AGENT_HARNESS === "claude-managed" ||
-		env.WEB_AGENT_HARNESS === "eve"
-	) {
-		const auth = await authDashboard(c.req.header("cookie"));
-		if (!auth) return c.json({ error: "Not authenticated" }, 401);
-		return await streamWebChat({
-			auth,
-			origin: c.req.header("origin"),
-			request: c.req.raw,
-		});
-	}
-	if (!bot.webhooks.web) {
-		return c.text("Web chat is not configured", 503);
-	}
-	const response = await bot.webhooks.web(c.req.raw, {
-		waitUntil: (task) => {
-			task.catch((error) =>
-				logger.error("Web chat task failed", {
-					event: "leaf.web_chat_task_failed",
-					data: { error: String(error) },
-				}),
-			);
-		},
-	});
-	// The chat SDK returns a raw Response, so the CORS middleware's c.header()
-	// doesn't apply — add credential-safe CORS directly for the browser.
-	const origin = c.req.header("origin");
-	if (!origin) {
-		return response;
-	}
-	const headers = new Headers(response.headers);
-	headers.set("Access-Control-Allow-Origin", origin);
-	headers.set("Access-Control-Allow-Credentials", "true");
-	headers.set("Vary", "Origin");
-	return new Response(response.body, {
-		status: response.status,
-		statusText: response.statusText,
-		headers,
+	const auth = await authDashboard(c.req.header("cookie"));
+	if (!auth) return c.json({ error: "Not authenticated" }, 401);
+	return await streamWebChat({
+		auth,
+		origin: c.req.header("origin"),
+		request: c.req.raw,
 	});
 });
 
@@ -172,22 +134,18 @@ app.get("/agent/chat/:threadId/messages", async (c) => {
 		userId: auth.userId,
 	});
 
-	// Durable harness sessions are the transcript — replay them (text + tool
-	// steps) merged with historical approval cards. Falls back to chat-sdk text
-	// history for mastra/legacy threads with no durable session.
-	const cmaEnv = resolveDashboardEnv(c.req.header("app_env"));
+	const appEnv = resolveDashboardEnv(c.req.header("app_env"));
 	const thread = webThreadRef({ chatThreadId, orgId: auth.orgId });
-	const readEveMessages = async () => {
-		const eveSession = await getEveSession({
-			db,
-			env: cmaEnv,
-			orgId: auth.orgId,
-			thread,
-		});
-		if (!eveSession) return undefined;
-		return buildEveWebHistory({
+	const eveSession = await getEveSession({
+		db,
+		env: appEnv,
+		orgId: auth.orgId,
+		thread,
+	});
+	if (eveSession) {
+		const messages = await buildEveWebHistory({
 			auth: {
-				appEnv: cmaEnv,
+				appEnv,
 				channelId: thread.channelId,
 				orgId: auth.orgId,
 				provider: WEB_CHAT_PROVIDER,
@@ -197,41 +155,26 @@ app.get("/agent/chat/:threadId/messages", async (c) => {
 			},
 			channelId: chatThreadId,
 			db,
-			env: cmaEnv,
+			env: appEnv,
 			orgId: auth.orgId,
 			provider: WEB_CHAT_PROVIDER as ChatProvider,
 			session: eveSession,
 			workspaceId: auth.orgId,
 		});
-	};
-
-	if (env.WEB_AGENT_HARNESS === "eve") {
-		const messages = await readEveMessages();
-		if (messages) return c.json({ messages });
-	}
-
-	const session = await getClaudeManagedSession({
-		db,
-		env: cmaEnv,
-		orgId: auth.orgId,
-		thread,
-	});
-	if (session) {
-		const messages = await buildWebHistory({
-			channelId: chatThreadId,
-			db,
-			env: cmaEnv,
-			orgId: auth.orgId,
-			provider: WEB_CHAT_PROVIDER as ChatProvider,
-			sessionId: session.sessionId,
-			workspaceId: auth.orgId,
-		});
 		return c.json({ messages });
 	}
+	const legacyMessages = await buildLegacyClaudeHistory({
+		channelId: chatThreadId,
+		db,
+		env: appEnv,
+		orgId: auth.orgId,
+		provider: WEB_CHAT_PROVIDER,
+		thread,
+		workspaceId: auth.orgId,
+	});
+	if (legacyMessages) return c.json({ messages: legacyMessages });
 
-	const eveMessages = await readEveMessages();
-	if (eveMessages) return c.json({ messages: eveMessages });
-
+	// Keep text-only history readable for threads created before Eve.
 	await bot.initialize();
 	const chatThread = bot.thread(chatThreadId);
 	const messages = [];

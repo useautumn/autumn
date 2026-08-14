@@ -1,9 +1,5 @@
 import { Eval } from "braintrust";
 import type { AutumnMcpAuth } from "../../../../../packages/mcp/src/server/auth/auth.js";
-import {
-	type AgentHarnessName,
-	DEFAULT_EVAL_DRIVER,
-} from "../../../src/lib/chatAgentConfig.js";
 import type { EvalSetup } from "../fixtures/types.js";
 import {
 	type EvalExpected,
@@ -17,23 +13,9 @@ import {
 	type EvalRunResult,
 	type EvalTurn,
 } from "./createEvalContext.js";
-import { createClaudeManagedLiveDriver } from "./drivers/claudeManagedLiveAgent.js";
 import { createLeafAgentDriver } from "./drivers/leafAgent.js";
 import type { EvalAgentDriver } from "./drivers/types.js";
 import type { EvalTraceLevel } from "./tracing/types.js";
-
-// Single toggle: default lives in chatAgentConfig (DEFAULT_EVAL_DRIVER);
-// EVAL_DRIVER=mastra|claude-managed overrides per run. Explicit `driver` on
-// initEval always wins (e.g. generic-mcp policy evals).
-const evalDrivers: Partial<Record<AgentHarnessName, () => EvalAgentDriver>> = {
-	"claude-managed": createClaudeManagedLiveDriver,
-	mastra: createLeafAgentDriver,
-};
-
-const selectedDriverKey = (): AgentHarnessName => {
-	const key = process.env.EVAL_DRIVER as AgentHarnessName | undefined;
-	return key && key in evalDrivers ? key : DEFAULT_EVAL_DRIVER;
-};
 
 type EvalCaseMetadata = Record<string, unknown>;
 
@@ -102,37 +84,15 @@ export const initEval = <Metadata extends EvalCaseMetadata>({
 	today,
 	trace,
 }: InitEvalOptions<Metadata>) => {
-	const driverKey = selectedDriverKey();
-	const driverFactory = evalDrivers[driverKey];
-	if (!(driver || driverFactory)) {
-		throw new Error(`No eval driver wired for harness "${driverKey}"`);
-	}
-	const resolvedDriver = driver ?? driverFactory?.() ?? createLeafAgentDriver();
+	const resolvedDriver = driver ?? createLeafAgentDriver();
 	// Default panel: one named scorer per expectation type the cases declare,
 	// so Braintrust only shows columns a case can actually fail.
 	const resolvedScores =
 		scores ?? scoresFromExpectations(cases.map((testCase) => testCase.expect));
-	// Base experiment names belong to the default driver; non-default toggles
-	// get a suffix so Braintrust series stay per-driver.
-	const resolvedExperimentName =
-		!driver && driverKey !== DEFAULT_EVAL_DRIVER
-			? `${experimentName}--${resolvedDriver.name}`
-			: experimentName;
-	// The claude-managed drivers need more headroom than in-process Mastra: the
-	// in-process subprocess ~2x, and the live CMA path (cloud loop + tunnel +
-	// opus-4-8 thinking per turn) much more.
-	const timeoutMultiplier =
-		resolvedDriver.name === "claude-managed-live"
-			? 6
-			: resolvedDriver.name.startsWith("claude-managed")
-				? 2
-				: 1;
-	const resolvedTimeout = timeout * timeoutMultiplier;
-
 	return Eval<InitEvalInput, EvalRunResult, EvalExpected, EvalCaseMetadata>(
 		"leaf",
 		{
-			experimentName: resolvedExperimentName,
+			experimentName,
 			data: cases.map((testCase) => ({
 				expected: testCase.expect ?? {},
 				input: { conversation: testCase.conversation },
@@ -154,7 +114,7 @@ export const initEval = <Metadata extends EvalCaseMetadata>({
 					auth,
 					autumnApiOverrides,
 					driver: resolvedDriver,
-					name: resolvedExperimentName,
+					name: experimentName,
 					setup,
 					today,
 					trace,
@@ -165,7 +125,7 @@ export const initEval = <Metadata extends EvalCaseMetadata>({
 					await context.cleanup();
 				}
 			},
-			timeout: resolvedTimeout,
+			timeout,
 		},
 		{ noSendLogs: !process.env.BRAINTRUST_API_KEY },
 	);

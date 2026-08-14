@@ -5,13 +5,12 @@ import {
 	createUIMessageStreamResponse,
 	type UIMessage,
 } from "ai";
-import { agentEngines } from "../../agent/runMessage/engines/engines.js";
 import type {
 	MessageAttachment,
 	MessageContext,
 } from "../../agent/runMessage/types.js";
-import type { LeafUiMessage } from "../../harness/claudeManaged/session/sessionEventsToUiMessages.js";
 import { redirectCatalogSuspensionToDecision } from "../../harness/eve/catalogDecision.js";
+import { runEveMessage } from "../../harness/eve/engine.js";
 import { presentWebApproval } from "../../internal/approvals/surfaces/web/present.js";
 import {
 	ensureWebChatAuth,
@@ -19,7 +18,6 @@ import {
 } from "../../internal/installations/actions/ensureWebChatAuth.js";
 import { getOrgInstallationToken } from "../../internal/installations/actions/getOrgInstallationToken.js";
 import { db } from "../../lib/db.js";
-import { env as chatEnv } from "../../lib/env.js";
 import { logger as rootLogger } from "../../lib/logger.js";
 import {
 	CATALOG_DECISION_NEEDED_MESSAGE,
@@ -29,6 +27,7 @@ import {
 import { parsePreviewPayload } from "../../ui/previewContent.js";
 import { resolveDashboardEnv } from "./dashboardEnv.js";
 import { generateThreadTitle, persistThreadTitle } from "./threadTitle.js";
+import type { LeafUiMessage } from "./types.js";
 import { buildWebChatThreadId, webThreadRef } from "./webThread.js";
 
 const DATA_URL_REGEX = /^data:([^;]+);base64,(.*)$/s;
@@ -95,12 +94,7 @@ const withCors = (response: Response, origin?: string) => {
 	});
 };
 
-/**
- * Dashboard chat for durable harnesses: run the agent and emit a native
- * AI SDK stream (text + `data-step` tool activity + `data-approval`) instead of
- * the chat-sdk web adapter's text-only path. Harness session state is persisted
- * separately, so refresh can hydrate from session/approval history.
- */
+/** Runs Eve and emits the dashboard's native AI SDK stream. */
 export const streamWebChat = async ({
 	auth,
 	origin,
@@ -130,7 +124,6 @@ export const streamWebChat = async ({
 	// Scope the session + vault + OAuth credential to the dashboard's active env,
 	// forwarded as the `app_env` header (server chat proxy passes it through).
 	const env = resolveDashboardEnv(request.headers.get("app_env"));
-	const harness = chatEnv.WEB_AGENT_HARNESS;
 	const logger = rootLogger;
 	const chatThreadId = buildWebChatThreadId({ conversationId, orgId, userId });
 	const thread = webThreadRef({ chatThreadId, orgId });
@@ -180,7 +173,6 @@ export const streamWebChat = async ({
 			};
 
 			const ctx: MessageContext = {
-				agentTools: { destructiveTools: new Set<string>() },
 				env,
 				id: crypto.randomUUID(),
 				logger,
@@ -195,25 +187,7 @@ export const streamWebChat = async ({
 						type: "data-step",
 					});
 				},
-				// Tool errors / transient retries — surface as an error step so the
-				// user sees something went wrong mid-turn.
-				onActionKeyed: ({ message }) => {
-					finishLastStep();
-					const now = Date.now();
-					writer.write({
-						data: {
-							finishedAt: now,
-							label: message,
-							startedAt: now,
-							status: "error",
-						},
-						id: crypto.randomUUID(),
-						type: "data-step",
-					});
-				},
-				// The managed-agent API exposes thinking only as a progress ping (no
-				// text). Use it to close the last tool step once inference resumes, so
-				// it stops showing a running clock while the model reasons.
+				// Thinking closes the active tool step while the model reasons.
 				onThinking: () => finishLastStep(),
 				onReasoning: ({ id, text }) => {
 					finishLastStep();
@@ -223,10 +197,6 @@ export const streamWebChat = async ({
 						type: "data-reasoning",
 					});
 				},
-				onTurnComplete: (turnText) => {
-					finishLastStep();
-					writeText(turnText);
-				},
 				org: { id: orgId },
 				providerUserId: userId,
 				thread,
@@ -234,11 +204,9 @@ export const streamWebChat = async ({
 				token: accessToken,
 			};
 
-			let output: Awaited<
-				ReturnType<(typeof agentEngines)[typeof harness]["run"]>
-			>;
+			let output: Awaited<ReturnType<typeof runEveMessage>>;
 			try {
-				output = await agentEngines[harness].run({
+				output = await runEveMessage({
 					ctx,
 					params: { attachments, clientContext, questionResponse, text },
 				});
@@ -261,7 +229,7 @@ export const streamWebChat = async ({
 			// updateCatalog is the chokepoint the model can't skip: if the change
 			// needs versioning/variant/migration decisions and none were given,
 			// deny the parked call and render the decision card instead.
-			if (output.suspension && harness === "eve") {
+			if (output.suspension) {
 				const decisionPlan = await redirectCatalogSuspensionToDecision({
 					decisionProvided: Boolean(clientContext?.catalogDecision),
 					env,
@@ -321,7 +289,6 @@ export const streamWebChat = async ({
 				// not output.suspension.preview, which can be empty.
 				const approval = await presentWebApproval({
 					channelId: thread.channelId,
-					harness,
 					logger,
 					orgId,
 					output,

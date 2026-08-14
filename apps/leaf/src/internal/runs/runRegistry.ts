@@ -1,7 +1,4 @@
-import Anthropic from "@anthropic-ai/sdk";
 import { logger } from "../../lib/logger.js";
-
-const client = new Anthropic();
 
 const SESSION_RESOLVE_TIMEOUT_MS = 15_000;
 
@@ -43,22 +40,9 @@ export const runKeyForThread = ({
 	workspaceId: string;
 }) => [provider, workspaceId, channelId, threadId].join(":");
 
-const defaultSendInterrupt = async (sessionId: string) => {
-	await client.beta.sessions.events.send(sessionId, {
-		events: [{ type: "user.interrupt" }],
-	});
-};
-
-const defaultSendUserMessage = async ({
-	sessionId,
-	text,
-}: {
-	sessionId: string;
-	text: string;
-}) => {
-	await client.beta.sessions.events.send(sessionId, {
-		events: [{ content: [{ text, type: "text" }], type: "user.message" }],
-	});
+const defaultSendInterrupt = async () => {};
+const defaultSendUserMessage = async () => {
+	throw new Error("Eve follow-up injection is queued after the active run");
 };
 
 export const registerRun = ({

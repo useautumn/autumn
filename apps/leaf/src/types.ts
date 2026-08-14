@@ -109,18 +109,11 @@ export type BotMessage = {
 	installation: LeafChatInstallation;
 	logger?: AutumnLogger;
 	onAction?: (message: string) => Promise<void> | void;
-	onActionKeyed?: (input: {
-		key: string;
-		message: string;
-	}) => Promise<void> | void;
 	onApprovalsSuperseded?: (approvals: ChatApproval[]) => Promise<void> | void;
-	/** Fires once the managed agent is ready to run its first turn (startup done). */
-	onAgentReady?: () => Promise<void> | void;
 	/** Fires when the agent starts an inference or emits thinking — drives the live status. */
 	onThinking?: () => void;
 	/** Streams interim narration (message deltas before the final reply). */
 	onReasoning?: (input: { id: string; text: string }) => void;
-	onTurnComplete?: (text: string) => Promise<void> | void;
 	providerUserId: string;
 	run?: ActiveRun;
 	recentMessages?: ChatContextMessage[];

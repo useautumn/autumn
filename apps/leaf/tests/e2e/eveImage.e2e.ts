@@ -18,6 +18,7 @@ import type { LeafChatInstallation } from "../../src/types.js";
 import { createStatusTicker } from "../../src/ui/statusTicker.js";
 
 const WORKSPACE_ID = process.env.E2E_SLACK_WORKSPACE ?? "T07NPTDCU69";
+let SLACK_USER_ID = process.env.E2E_SLACK_USER ?? "";
 const RUN_TAG = Date.now().toString(36);
 
 const RED_PIXEL_PNG = Buffer.from(
@@ -63,10 +64,9 @@ const runSlackImageTurn = async ({
 		installation,
 		logger,
 		onAction: (message) => presenter.onAction(message),
-		onActionKeyed: ({ message }) => presenter.onActionError(message),
 		onReasoning: presenter.onReasoning,
 		onThinking: ticker.thinking,
-		providerUserId: "U_E2E_ALICE",
+		providerUserId: SLACK_USER_ID,
 		text: PROMPT,
 		threadId,
 	});
@@ -173,6 +173,8 @@ const main = async () => {
 	if (!installation) {
 		throw new Error(`No slack installation for workspace ${WORKSPACE_ID}`);
 	}
+	SLACK_USER_ID ||= installation.installed_by_provider_user_id ?? "";
+	if (!SLACK_USER_ID) throw new Error("No Slack user configured for the E2E run");
 	console.log(`Installation org=${installation.org_id}`);
 
 	if (process.env.E2E_ONLY !== "web") {
