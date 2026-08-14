@@ -19,8 +19,11 @@ as a session for `infisical run`. Those credentials are for `infisical login`
 aliases Cursor's Runtime Secrets to Infisical's names, runs the documented
 `login --method=universal-auth --plain --silent`, and shims
 `node_modules/.bin/infisical` so agent shells that never source bashrc still
-get a token. It does **not** start the app. Run `bun dw` yourself when the
-task needs server/vite.
+get a token. Machine-identity `run` also needs `INFISICAL_PROJECT_ID`; the
+shim reads it from `.infisical.json` `workspaceId` (not a Cursor secret).
+Start seeds `~/.autumn-worktrees.json` as worktree #1 so `bun dw identify`
+works without auto-running the app. It does **not** start the app. Run
+`bun dw` yourself when the task needs server/vite.
 
 `DW_HEADLESS=1` is set on start. That skips portless HTTPS aliases, the emulate
 daemon, and Neon (even if Infisical has `NEON_WORKTREE_API_KEY`). Worktree #1

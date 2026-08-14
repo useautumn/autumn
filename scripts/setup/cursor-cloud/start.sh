@@ -59,6 +59,10 @@ if [ -z "\${INFISICAL_TOKEN:-}" ] && [ -z "\${AUTUMN_INFISICAL_LOGIN_RUNNING:-}"
   unset AUTUMN_INFISICAL_LOGIN_RUNNING
   [ -n "\$INFISICAL_TOKEN" ] && export INFISICAL_TOKEN
 fi
+if [ -z "\${INFISICAL_PROJECT_ID:-}" ] && [ -f "${ROOT}/.infisical.json" ]; then
+  INFISICAL_PROJECT_ID="\$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1])).get("workspaceId") or "")' "${ROOT}/.infisical.json" 2>/dev/null || true)"
+  [ -n "\$INFISICAL_PROJECT_ID" ] && export INFISICAL_PROJECT_ID
+fi
 if [ -f "${ROOT}/scripts/setup/cursor-cloud/isolation.env" ]; then
   set -a
   # shellcheck disable=SC1091
@@ -81,5 +85,29 @@ export BASH_ENV="$env_sh"
 # Current start process (and anything it execs) should see Infisical too.
 # shellcheck disable=SC1090
 . "$env_sh"
+
+# bun dw identify reads ~/.autumn-worktrees.json. Cloud start does not run bun dw
+# (app is opt-in), so seed canonical worktree #1 against local agent-services.
+reg="${HOME}/.autumn-worktrees.json"
+if [ ! -s "$reg" ]; then
+	python3 - "$ROOT" "$reg" <<'PY'
+import json, sys, time
+root, path = sys.argv[1], sys.argv[2]
+with open(path, "w") as f:
+	json.dump(
+		{
+			root: {
+				"path": root,
+				"worktreeNum": 1,
+				"createdAt": int(time.time() * 1000),
+			}
+		},
+		f,
+		indent=2,
+	)
+	f.write("\n")
+PY
+	echo "[cursor-cloud-start] registered canonical worktree #1 for bun dw identify"
+fi
 
 bash scripts/setup/agent-services.sh
