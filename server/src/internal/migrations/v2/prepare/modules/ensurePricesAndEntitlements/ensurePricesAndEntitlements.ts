@@ -443,7 +443,11 @@ export const ensurePricesAndEntitlements: PrepareModule<
 							candidateProducts: resolved,
 							reuseProcessor: false,
 						});
-						await initStripeResourcesForProducts({ ctx, products: [product] });
+						await initStripeResourcesForProducts({
+							ctx,
+							products: [product],
+							allowLiveCreate: true,
+						});
 						resolved.push(product);
 					}
 				}),

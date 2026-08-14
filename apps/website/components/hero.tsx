@@ -148,19 +148,20 @@ export default function Hero() {
 						<div className="flex flex-col gap-6 w-full px-0 lg:px-0">
 							<h1 className="hero-reveal lg:opacity-0 text-[44px] md:text-[56px] w-full max-w-sm sm:max-w-[480px] md:max-w-xl leading-[44px] tracking-[-4%] md:leading-14 font-sans">
 								<span className="text-[#FFFFFF99] font-normal">
-									The API for
+									The control plane&nbsp;for
 								</span>{" "}
 								<span className="text-white block md:inline">
-									plans, usage and AI credits
+									usage-based pricing
 								</span>
 							</h1>
 							<p className="hero-reveal lg:opacity-0 tracking-[-2%] w-full max-w-xs sm:max-w-[480px] md:max-w-xl text-[#FFFFFF99] md:text-[16px] text-[14px] font-light leading-5 font-sans">
-								Replace your in-house usage tracking, gating and asynchronous
-								billing logic. Autumn gives you a{" "}
+								One layer for billing, ledgering and entitlements. Autumn
+								moves pricing{" "}
 								<span className="text-white font-light">
-									flexible source of truth
-								</span>{" "}
-								across self-serve payments and enterprise deals.
+									from code into config
+								</span>
+								, so you can change your plans and sell custom contracts 10x
+								faster.
 							</p>
 						</div>
 					</div>
