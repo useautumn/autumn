@@ -151,6 +151,8 @@ Secrets** on [Cloud Agents → Secrets](https://cursor.com/dashboard/cloud-agent
 |---|---|---|
 | `INFISICAL_CLIENT_ID` | Runtime Secret | **Team** (not Environment) |
 | `INFISICAL_CLIENT_SECRET` | Runtime Secret | **Team** (not Environment) |
+| `EXECUTOR_API_KEY` | Runtime Secret | **Team** (optional; also in Infisical `dev`) |
+| `NGROK_AUTHTOKEN` | Runtime Secret | **Team** (optional; public dashboard/API URL) |
 
 That is the durable pair (same names as Autumn's Node SDK). `start` exchanges
 them for `INFISICAL_TOKEN` and writes `~/.cache/autumn-infisical-token`.
@@ -188,9 +190,12 @@ Three ways to click around the running app:
    `DW_HEADLESS=1` so preview hostnames do not 403.
 2. **Remote desktop** on the agent page — take control, open Chrome with
    `--no-sandbox`, go to `http://localhost:3000`. Most reliable if Ports is empty.
-3. **ngrok** (`bash scripts/setup/cursor-cloud/ngrok.sh`) — opt-in, not on boot.
-   If Infisical has `NGROK_AUTHTOKEN`, it tunnels `:3000` and `:8080` on random
-   `*.ngrok.app` URLs. URLs go to stdout and `~/.autumn-agent/public-urls.txt`.
+3. **ngrok** — a `ngrok` terminal starts `scripts/setup/cursor-cloud/ngrok.sh`
+   when `NGROK_AUTHTOKEN` is set (Team Runtime Secret, or Infisical `dev`).
+   Random `*.ngrok.app` URLs for `:3000` and `:8080` go to stdout and
+   `~/.autumn-agent/public-urls.txt`. `bun dw identify` on Cloud reads that
+   file. Canonical worktree #1 never starts laptop Docker ngrok (`NGROK_API_KEY`
+   is withheld so reserved domains do not collide across VMs).
 
 The `access` terminal reprints these instructions on every boot. It does not
 start the app.

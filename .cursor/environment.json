@@ -7,6 +7,11 @@
 			"name": "access",
 			"command": "bash scripts/setup/cursor-cloud/access.sh",
 			"description": "How to open the dashboard from a laptop. Does not start bun dw — run that yourself if the task needs the app."
+		},
+		{
+			"name": "ngrok",
+			"command": "bash scripts/setup/cursor-cloud/ngrok.sh",
+			"description": "Public *.ngrok.app tunnels for :3000 and :8080 when NGROK_AUTHTOKEN is set. Cursor Ports also forwards localhost."
 		}
 	],
 	"ports": [

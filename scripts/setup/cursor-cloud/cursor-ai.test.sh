@@ -135,4 +135,16 @@ if grep -q 'skipping eve (npx' "$ROOT/scripts/dev.ts"; then
 fi
 pass "isolation.env has no dummy AWS keys; eve skip is not a concurrently echo"
 
+# --- Cloud public-urls.txt parser used by bun dw identify -------------------
+got="$(cd "$ROOT" && DW_HEADLESS=1 bun -e '
+import { parseCloudPublicUrls } from "./scripts/dw/helpers/cloudPublicUrls.ts";
+const t = "api (http://localhost:8080): https://api.example.ngrok.app\nvite (http://localhost:3000): https://vite.example.ngrok.app\n";
+const u = parseCloudPublicUrls(t);
+if (u.api !== "https://api.example.ngrok.app") throw new Error("api "+u.api);
+if (u.vite !== "https://vite.example.ngrok.app") throw new Error("vite "+u.vite);
+console.log("ok");
+')"
+[[ "$got" == "ok" ]] || fail "parseCloudPublicUrls, got $got"
+pass "identify Cloud public-urls parser"
+
 echo "all cursor_ai.py tests passed"

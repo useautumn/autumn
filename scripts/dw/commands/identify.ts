@@ -1,5 +1,7 @@
+import { cloudPublicUrls } from "../helpers/cloudPublicUrls.ts";
 import { isPlainCanonical, isProvisioned } from "../helpers/entry.ts";
 import { getCurrentWorktree } from "../helpers/git.ts";
+import { isHeadless } from "../helpers/headless.ts";
 import { aliasesFor } from "../helpers/ports.ts";
 import { loadRegistry } from "../helpers/registry.ts";
 import { tmuxSessionName } from "../helpers/tmux.ts";
@@ -37,12 +39,18 @@ export function cmdIdentify(): void {
 		(isPlainCanonical(entry)
 			? "(canonical worktree — not in tmux)"
 			: "(inline dev)");
-	const ngrokUrl = entry.ngrokUrl ?? "";
+	const cloud = cloudPublicUrls();
+	const ngrokUrl = entry.ngrokUrl ?? cloud.api ?? "";
+	const ngrokViteUrl = entry.ngrokViteUrl ?? cloud.vite;
 	const ngrokHuman =
 		ngrokUrl ||
 		(isProvisioned(entry)
 			? "(no public tunnel — run 'bun dw setup')"
-			: "(canonical — no ngrok)");
+			: ngrokViteUrl
+				? "(none — vite tunnel below)"
+				: isHeadless()
+					? "(canonical — no ngrok; Cloud needs NGROK_AUTHTOKEN)"
+					: "(canonical — no ngrok)");
 
 	const branchLabel =
 		gitBranch && worktreeNum === 1
@@ -54,7 +62,7 @@ export function cmdIdentify(): void {
 	console.log(`  Server URL:    ${serverUrl}`);
 	console.log(`  Vite URL:      ${viteUrl}`);
 	console.log(`  Ngrok URL:     ${ngrokHuman}`);
-	console.log(`  Ngrok Vite:    ${entry.ngrokViteUrl ?? "(none)"}`);
+	console.log(`  Ngrok Vite:    ${ngrokViteUrl ?? "(none)"}`);
 	console.log(`  Tmux session:  ${tmuxHuman}`);
 	console.log(`  Server port:   ${serverPort}`);
 	console.log(`  Vite port:     ${vitePort}`);
@@ -63,7 +71,7 @@ export function cmdIdentify(): void {
 	console.log(`DW_API_URL=${serverUrl}`);
 	console.log(`DW_VITE_URL=${viteUrl}`);
 	console.log(`DW_PUBLIC_API_URL=${ngrokUrl}`);
-	console.log(`DW_NGROK_VITE_URL=${entry.ngrokViteUrl ?? ""}`);
+	console.log(`DW_NGROK_VITE_URL=${ngrokViteUrl ?? ""}`);
 	console.log(`DW_TMUX_SESSION=${tmux}`);
 	console.log(`DW_SERVER_PORT=${serverPort}`);
 	console.log(`DW_VITE_PORT=${vitePort}`);

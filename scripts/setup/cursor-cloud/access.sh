@@ -28,7 +28,12 @@ echo
 echo "Open the dashboard from your laptop (best first):"
 echo "  1. Cursor port forwarding — plug / Ports in the agent editor → http://localhost:3000"
 echo "  2. Remote desktop on the agent page → Chrome --no-sandbox → http://localhost:3000"
-echo "  3. Opt-in ngrok: bash scripts/setup/cursor-cloud/ngrok.sh"
+echo "  3. Public URL — ngrok terminal (needs Team Runtime Secret NGROK_AUTHTOKEN)"
+if [ -s "${HOME}/.autumn-agent/public-urls.txt" ]; then
+	echo
+	echo "Public URLs:"
+	sed 's/^/  /' "${HOME}/.autumn-agent/public-urls.txt"
+fi
 echo
 echo "(this pane sleeps so the instructions stay visible)"
 exec sleep infinity

@@ -110,6 +110,31 @@ bash "$ROOT/scripts/setup/cursor-cloud/configure-executor-mcp.sh" || \
 # shellcheck disable=SC1090
 . "$env_sh"
 
+# NGROK_AUTHTOKEN: Team Runtime Secret or Infisical. Never log the value.
+if [ -z "${NGROK_AUTHTOKEN:-}" ] && command -v infisical >/dev/null 2>&1; then
+	set +e
+	ngrok_tok="$(infisical run --env=dev --recursive --silent -- printenv NGROK_AUTHTOKEN 2>/dev/null)"
+	st=$?
+	set -e
+	if [ "$st" -eq 0 ]; then
+		ngrok_tok="${ngrok_tok%%$'\n'*}"
+		if [ -n "$ngrok_tok" ]; then
+			export NGROK_AUTHTOKEN="$ngrok_tok"
+		fi
+	fi
+fi
+if [ -n "${NGROK_AUTHTOKEN:-}" ]; then
+	grep -v '^export NGROK_AUTHTOKEN=' "$env_sh" >"${env_sh}.tmp" || true
+	mv "${env_sh}.tmp" "$env_sh"
+	printf 'export NGROK_AUTHTOKEN=%q\n' "$NGROK_AUTHTOKEN" >>"$env_sh"
+	chmod 600 "$env_sh"
+	echo "[cursor-cloud-start] NGROK_AUTHTOKEN ready (len=${#NGROK_AUTHTOKEN})"
+else
+	echo "[cursor-cloud-start] NGROK_AUTHTOKEN unset — ngrok terminal will idle. Add a Team Runtime Secret of that name (or Infisical dev)."
+fi
+# shellcheck disable=SC1090
+. "$env_sh"
+
 # bun dw identify reads ~/.autumn-worktrees.json. Cloud start does not run bun dw
 # (app is opt-in), so seed canonical worktree #1 against local agent-services.
 reg="${HOME}/.autumn-worktrees.json"
