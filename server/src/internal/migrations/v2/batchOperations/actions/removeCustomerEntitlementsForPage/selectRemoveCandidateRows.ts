@@ -65,10 +65,16 @@ export const selectRemoveCandidateRows = async ({
 			AND EXISTS (
 				SELECT 1
 				FROM customer_entitlements AS existing
+				INNER JOIN entitlements AS definition
+					ON definition.id = existing.entitlement_id
 				WHERE existing.customer_product_id = cp.id
 					AND existing.entitlement_id = ${entitlementId}
+					AND definition.pooled IS NOT TRUE
 					AND NOT existing.is_pooled_balance
 					AND existing.pooled_contribution_id IS NULL
+					AND NOT EXISTS (
+						SELECT 1 FROM rollovers WHERE rollovers.cus_ent_id = existing.id
+					)
 			)
 		ORDER BY cp.id
 		${limit !== undefined ? sql`LIMIT ${limit}` : sql``}
